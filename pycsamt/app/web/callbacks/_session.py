@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,12 +21,12 @@ import uuid
 from datetime import datetime, timezone
 
 from dash import (
-    Input, Output, State,
-    callback_context as ctx,
-    clientside_callback,
+    Input,
+    Output,
+    State,
+    dcc,
     html,
     no_update,
-    dcc,
 )
 
 from pycsamt.app.web.layout import IDs

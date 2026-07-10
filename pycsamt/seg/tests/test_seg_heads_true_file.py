@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
 from pycsamt.seg.heads import (
     Head,
-    Info,
-    Heads,
     HeadMixin,
+    Heads,
+    Info,
     InfoMixin,
 )
 

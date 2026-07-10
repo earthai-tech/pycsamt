@@ -28,8 +28,6 @@ the horizontal axis scale below, not the resistivity values themselves.
 # between two adjacent stations, one row per frequency.
 
 import matplotlib.pyplot as plt
-import numpy as np
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

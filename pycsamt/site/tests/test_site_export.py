@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
 import csv
 import zipfile
+from pathlib import Path
 
 import pytest
 
 from pycsamt.site import export as xp
-
 
 # ---------------------------- test doubles --------------------------------- #
 

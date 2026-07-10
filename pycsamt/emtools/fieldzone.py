@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ._core import (
-    ensure_sites,
-    _iter_items,
     _get_z_block,
+    _iter_items,
     _name,
+    ensure_sites,
 )
 
 __all__ = [
@@ -106,9 +106,9 @@ def _nf_correction(
 
 def _resolve_offset(
     ed: Any,
-    source_offset: Union[float, Dict[str, float], None],
+    source_offset: float | dict[str, float] | None,
     station: str,
-) -> Optional[float]:
+) -> float | None:
     if isinstance(source_offset, (int, float)):
         return float(source_offset)
     if isinstance(source_offset, dict):
@@ -134,10 +134,10 @@ def _unwrap(ed: Any) -> Any:
     return ed
 
 
-def _sorted_stations(stations: List[str], S: Any, sort_by: str) -> List[str]:
+def _sorted_stations(stations: list[str], S: Any, sort_by: str) -> list[str]:
     if sort_by not in ("lon", "lat"):
         return sorted(stations)
-    coords: Dict[str, float] = {}
+    coords: dict[str, float] = {}
     for i, ed in enumerate(_iter_items(S)):
         ed = _unwrap(ed)
         nm = _name(ed, i)
@@ -152,7 +152,7 @@ def _sorted_stations(stations: List[str], S: Any, sort_by: str) -> List[str]:
 
 def classify_field_zones(
     sites: Any,
-    source_offset: Union[float, Dict[str, float], None] = None,
+    source_offset: float | dict[str, float] | None = None,
     *,
     far_threshold: float = 3.0,
     near_threshold: float = 0.3,
@@ -260,7 +260,7 @@ def classify_field_zones(
 
 def near_field_factor(
     sites: Any,
-    source_offset: Union[float, Dict[str, float], None] = None,
+    source_offset: float | dict[str, float] | None = None,
     *,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -343,21 +343,21 @@ def near_field_factor(
 
 def plot_field_zones(
     sites: Any,
-    source_offset: Union[float, Dict[str, float], None] = None,
+    source_offset: float | dict[str, float] | None = None,
     *,
     far_threshold: float = 3.0,
     near_threshold: float = 0.3,
     contour_kr: bool = True,
-    kr_levels: Tuple[float, ...] = (0.1, 0.3, 1.0, 3.0, 10.0),
+    kr_levels: tuple[float, ...] = (0.1, 0.3, 1.0, 3.0, 10.0),
     sort_by: str = "name",
     period_axis: bool = True,
     log_y: bool = True,
-    figsize: Tuple[float, float] = (10.0, 5.0),
+    figsize: tuple[float, float] = (10.0, 5.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[Any] = None,
+    ax: Any | None = None,
 ) -> Any:
     """
     Pseudosection of CSAMT field zones across stations and frequencies.
@@ -397,9 +397,9 @@ def plot_field_zones(
     -------
     matplotlib.axes.Axes
     """
-    import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
     import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
 
     df = classify_field_zones(
         sites,

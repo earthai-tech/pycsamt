@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,11 +10,8 @@ _render_to_fig(); single-axes functions use the provided axes directly.
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple  # Tuple kept for _auto_rho_bounds
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 
 # ── Theme style dicts (same palette as PlotController) ────────────────────────
 
@@ -276,7 +272,10 @@ class QCController:
         if not station_ids or self._sites is None:
             return
         try:
-            from pycsamt.emtools._core import ensure_sites, _iter_items
+            from pycsamt.emtools._core import (
+                _iter_items,
+                ensure_sites,
+            )
             all_edis = list(_iter_items(self._sites))
             sel = set(station_ids)
             filtered = [ed for ed in all_edis
@@ -293,8 +292,8 @@ class QCController:
     # ── Main entry-point ──────────────────────────────────────────────────────
 
     def draw(self, fn_name: str, has_ax: bool, fig,
-             figsize: Optional[Tuple[float, float]] = None,
-             **draw_kwargs) -> Optional[object]:
+             figsize: tuple[float, float] | None = None,
+             **draw_kwargs) -> object | None:
         """Render *fn_name* with optional kwargs forwarded to the emtools function.
 
         Only kwargs whose names appear in the function's signature are passed;
@@ -315,6 +314,7 @@ class QCController:
             Forwarded to the underlying emtools function (filtered by signature).
         """
         import inspect
+
         import pycsamt.emtools as et
 
         if figsize:
@@ -374,7 +374,7 @@ class QCController:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _call_figure_fn(self, fn, **kwargs) -> Optional[object]:
+    def _call_figure_fn(self, fn, **kwargs) -> object | None:
         """Call a multi-axes function and return the Figure it creates."""
         before = set(plt.get_fignums())
         result = fn(self._sites, verbose=0, **kwargs)
@@ -393,7 +393,7 @@ def _auto_rho_bounds(
     sites,
     lo_pct: float = 5.0,
     hi_pct: float = 95.0,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Compute data-driven (q_lo, q_hi) as percentiles of observed ρ_a(xy)
     across all loaded stations.  Used when the QC panel calls
@@ -401,10 +401,13 @@ def _auto_rho_bounds(
     """
     try:
         from pycsamt.emtools.diag import (
-            _iter_items, _unwrap, _get_z_block, _rho_a_from_z
+            _get_z_block,
+            _iter_items,
+            _rho_a_from_z,
+            _unwrap,
         )
         rho_vals = []
-        for i, ed in enumerate(_iter_items(sites)):
+        for _i, ed in enumerate(_iter_items(sites)):
             ed = _unwrap(ed)
             _, z_block, freqs = _get_z_block(ed)
             if z_block is None or freqs is None or freqs.size == 0:
@@ -422,14 +425,14 @@ def _auto_rho_bounds(
     return 0.5, 5000.0
 
 
-def _dispatch_polar_coverage(ctrl: "QCController", fn, fig, **kw) -> None:
+def _dispatch_polar_coverage(ctrl: QCController, fn, fig, **kw) -> None:
     """Special dispatcher for plot_polar_coverage — adds polar axes and auto-bounds."""
     q_lo, q_hi = _auto_rho_bounds(ctrl._sites)
     ax = fig.add_subplot(111, projection="polar")
     fn(ctrl._sites, q_lo, q_hi, ax=ax, verbose=0)
 
 
-def _dispatch_polar_ax(ctrl: "QCController", fn, fig, **kw) -> None:
+def _dispatch_polar_ax(ctrl: QCController, fn, fig, **kw) -> None:
     """Special dispatcher for single-panel polar plots."""
     ax = fig.add_subplot(111, projection="polar")
     fn(ctrl._sites, ax=ax, verbose=0)

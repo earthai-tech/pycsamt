@@ -106,12 +106,13 @@ LLM providers supported
 * **OpenAI**                      — ``llm_provider="openai"``
 * **Google Gemini**               — ``llm_provider="gemini"``
 * **DeepSeek**                    — ``llm_provider="deepseek"``
+* **MiniMax**                     — ``llm_provider="minimax"``
 
 Install the relevant client library before use:
 ``pip install anthropic`` / ``pip install openai`` /
 ``pip install google-generativeai``
-DeepSeek reuses the ``openai`` package with a custom
-``base_url``; no extra install is needed.
+DeepSeek and MiniMax reuse the ``openai`` package with a
+custom ``base_url``; no extra install is needed.
 """
 
 from __future__ import annotations
@@ -119,21 +120,28 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
+from ..api.agents import (
+    AGENT_CONFIG,
+    AgentConfig,
+    BudgetExceededError,
+    configure_agents,
+    reset_agents,
+)
+
 # ── always-available, zero-cost exports ──────────────────────────────────────
 from ._base import AgentResult, BaseAgent
 from ._pricing import (
-    estimate_cost, format_cost, get_rate, PROVIDER_RATES,
+    PROVIDER_RATES,
+    estimate_cost,
+    format_cost,
+    get_rate,
 )
 from ._workflow_plan import (
+    VALID_WORKFLOWS,
     WorkflowPlan,
     validate_workflow_plan,
-    VALID_WORKFLOWS,
 )
 from .coordinator import AgentCoordinator, WorkflowStep
-from ..api.agents import (
-    AGENT_CONFIG, AgentConfig, BudgetExceededError,
-    configure_agents, reset_agents,
-)
 
 # ── lazy agent map ────────────────────────────────────────────────────────────
 _LAZY: dict[str, str] = {
@@ -189,44 +197,44 @@ def __getattr__(name: str):
 
 
 if TYPE_CHECKING:
-    from .master           import AgentMaster
-    from .context          import ContextInputAgent
-    from .router           import IntentRouter, RouterDecision
-    from .package_qa       import PackageQAAgent
-    from .loader           import MTLoaderAgent
-    from .qc               import DataQCAgent
-    from .static_shift     import StaticShiftAgent
-    from .phase_analysis   import PhaseAnalysisAgent
-    from .forward          import ForwardModelAgent
-    from .inversion_prep   import InversionPrepAgent
-    from .inversion_eval   import InversionEvaluationAgent
-    from .interpretation   import InterpretationAgent
-    from .report           import ReportAgent
-    from .code_gen         import CodeGenerationAgent
-    from .orchestrator     import WorkflowOrchestratorAgent
-    from .denoising        import DenoisingAgent
-    from .ai_inversion     import AIInversionAgent
-    from .occam2d_agent    import Occam2DAgent
-    from .modem_agent      import ModEmAgent
-    from .anomaly_agent    import AnomalyDetectionAgent
-    from .inv2d_agent      import Inv2DAgent
-    from .inv3d_agent      import Inv3DAgent
-    from .ensemble_agent   import EnsembleAgent
-    from .joint_agent      import JointInversionAgent
-    from .model_zoo_agent       import ModelZooAgent
-    from .tensor_rotation       import TensorRotationAgent
-    from .edi_export            import EDIExportAgent
-    from .tipper_analysis       import TipperAnalysisAgent
-    from .sensitivity           import SensitivityAgent
-    from .freq_decimation       import FrequencyDecimationAgent
-    from .inversion_comparison  import InversionComparisonAgent
-    from .resistivity_map       import ResistivityMapAgent
-    from .batch_survey          import BatchSurveyAgent
-    from .inversion_backend     import InversionBackendAgent
-    from .pipeline_agent        import PipelineAgent
-    from .mare2dem_agent        import Mare2DEMAgent
-    from .pinn_agent            import PINNInversionAgent
-    from .hybrid_agent          import HybridInversionAgent
+    from .ai_inversion import AIInversionAgent
+    from .anomaly_agent import AnomalyDetectionAgent
+    from .batch_survey import BatchSurveyAgent
+    from .code_gen import CodeGenerationAgent
+    from .context import ContextInputAgent
+    from .denoising import DenoisingAgent
+    from .edi_export import EDIExportAgent
+    from .ensemble_agent import EnsembleAgent
+    from .forward import ForwardModelAgent
+    from .freq_decimation import FrequencyDecimationAgent
+    from .hybrid_agent import HybridInversionAgent
+    from .interpretation import InterpretationAgent
+    from .inv2d_agent import Inv2DAgent
+    from .inv3d_agent import Inv3DAgent
+    from .inversion_backend import InversionBackendAgent
+    from .inversion_comparison import InversionComparisonAgent
+    from .inversion_eval import InversionEvaluationAgent
+    from .inversion_prep import InversionPrepAgent
+    from .joint_agent import JointInversionAgent
+    from .loader import MTLoaderAgent
+    from .mare2dem_agent import Mare2DEMAgent
+    from .master import AgentMaster
+    from .model_zoo_agent import ModelZooAgent
+    from .modem_agent import ModEmAgent
+    from .occam2d_agent import Occam2DAgent
+    from .orchestrator import WorkflowOrchestratorAgent
+    from .package_qa import PackageQAAgent
+    from .phase_analysis import PhaseAnalysisAgent
+    from .pinn_agent import PINNInversionAgent
+    from .pipeline_agent import PipelineAgent
+    from .qc import DataQCAgent
+    from .report import ReportAgent
+    from .resistivity_map import ResistivityMapAgent
+    from .router import IntentRouter, RouterDecision
+    from .sensitivity import SensitivityAgent
+    from .static_shift import StaticShiftAgent
+    from .tensor_rotation import TensorRotationAgent
+    from .tipper_analysis import TipperAnalysisAgent
 
 
 __version__ = "2.0.0"

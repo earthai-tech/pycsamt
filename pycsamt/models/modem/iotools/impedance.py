@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Old-format impedance Z file I/O — Python translation of the MATLAB ioAscii/ scripts.
@@ -56,7 +55,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -103,14 +102,14 @@ class ZBlock:
         Geographic coordinates (optional).
     """
     period:     float
-    site_names: List[str]
+    site_names: list[str]
     site_loc:   np.ndarray         # (n_sites, 3) in m
-    comp_names: List[str]
+    comp_names: list[str]
     Z:          np.ndarray         # (n_sites, n_comp) complex
     Zerr:       np.ndarray         # (n_sites, n_comp) float
     mode:       str = ""
-    lat:        Optional[np.ndarray] = None
-    lon:        Optional[np.ndarray] = None
+    lat:        np.ndarray | None = None
+    lon:        np.ndarray | None = None
 
     @property
     def n_sites(self) -> int:
@@ -143,8 +142,8 @@ class ImpedanceFile:
     description: str = "ModEM impedance data"
     units:       str = "[V/m]/[T]"
     sign:        int = -1
-    blocks:      List[ZBlock] = field(default_factory=list)
-    origin:      Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    blocks:      list[ZBlock] = field(default_factory=list)
+    origin:      tuple[float, float, float] = (0.0, 0.0, 0.0)
     orientation: float = 0.0
 
     @property

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -55,8 +54,8 @@ API Reference
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, Literal, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, Literal
 
 try:
     import yaml as _yaml
@@ -107,7 +106,7 @@ class SensorSpec:
 
     sensor_type: SensorType = "induction_coil"
     model: str = ""
-    frequency_range: Optional[Tuple[float, float]] = None
+    frequency_range: tuple[float, float] | None = None
     notes: str = ""
 
     # ------------------------------------------------------------------
@@ -133,14 +132,14 @@ class SensorSpec:
     # ------------------------------------------------------------------
     # (de)serialisation helpers used by InstrumentMeta
     # ------------------------------------------------------------------
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         if d["frequency_range"] is not None:
             d["frequency_range"] = list(d["frequency_range"])
         return d
 
     @classmethod
-    def _from_dict(cls, d: Dict[str, Any]) -> "SensorSpec":
+    def _from_dict(cls, d: dict[str, Any]) -> SensorSpec:
         fr = d.get("frequency_range")
         return cls(
             sensor_type=d.get("sensor_type", "induction_coil"),
@@ -189,9 +188,9 @@ class InstrumentMeta:
     """
 
     system: str = ""
-    serial: Optional[str] = None
-    magnetic_sensor: Optional[SensorSpec] = None
-    electric_sensor: Optional[SensorSpec] = None
+    serial: str | None = None
+    magnetic_sensor: SensorSpec | None = None
+    electric_sensor: SensorSpec | None = None
     software_version: str = ""
     notes: str = ""
 
@@ -230,7 +229,7 @@ class InstrumentMeta:
     # ------------------------------------------------------------------
     # EDI HEAD integration
     # ------------------------------------------------------------------
-    def to_head_fields(self) -> Dict[str, str]:
+    def to_head_fields(self) -> dict[str, str]:
         """Return a dict of EDI ``>HEAD`` key-value pairs.
 
         The mapping is::
@@ -243,16 +242,18 @@ class InstrumentMeta:
         dict
             Ready to pass to :meth:`~pycsamt.seg.heads.Head.update`.
         """
-        from pycsamt import __version__ as _ver  # lazy import to avoid cycles
+        from pycsamt import (
+            __version__ as _ver,  # lazy import to avoid cycles
+        )
 
-        fields: Dict[str, str] = {}
+        fields: dict[str, str] = {}
         if self.system:
             fields["acqby"] = self.label
         fields["progvers"] = self.software_version or f"pyCSAMT {_ver}"
         return fields
 
     @classmethod
-    def from_head(cls, head: Any) -> "InstrumentMeta":
+    def from_head(cls, head: Any) -> InstrumentMeta:
         """Construct from a :class:`~pycsamt.seg.heads.Head` object.
 
         Only ``acqby`` and ``progvers`` are extracted; sensor details
@@ -286,7 +287,7 @@ class InstrumentMeta:
     # Presets
     # ------------------------------------------------------------------
     @classmethod
-    def from_preset(cls, name: str) -> "InstrumentMeta":
+    def from_preset(cls, name: str) -> InstrumentMeta:
         """Build from a named preset in :data:`KNOWN_SYSTEMS`.
 
         Parameters
@@ -321,9 +322,9 @@ class InstrumentMeta:
     # ------------------------------------------------------------------
     # Serialisation
     # ------------------------------------------------------------------
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise to a plain dict (JSON-safe)."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "system": self.system,
             "serial": self.serial,
             "software_version": self.software_version,
@@ -336,7 +337,7 @@ class InstrumentMeta:
         return d
 
     @classmethod
-    def _from_dict(cls, d: Dict[str, Any]) -> "InstrumentMeta":
+    def _from_dict(cls, d: dict[str, Any]) -> InstrumentMeta:
         mag = d.get("magnetic_sensor")
         elec = d.get("electric_sensor")
         return cls(
@@ -353,7 +354,7 @@ class InstrumentMeta:
         return json.dumps(self.to_dict(), indent=indent)
 
     @classmethod
-    def from_json(cls, s: str) -> "InstrumentMeta":
+    def from_json(cls, s: str) -> InstrumentMeta:
         """Deserialise from a JSON string."""
         return cls._from_dict(json.loads(s))
 
@@ -366,7 +367,7 @@ class InstrumentMeta:
         return _yaml.dump(self.to_dict(), default_flow_style=False)
 
     @classmethod
-    def from_yaml(cls, s: str) -> "InstrumentMeta":
+    def from_yaml(cls, s: str) -> InstrumentMeta:
         """Deserialise from a YAML string (requires *PyYAML*)."""
         if not _HAS_YAML:
             raise ImportError(
@@ -394,7 +395,7 @@ class InstrumentMeta:
             raise ValueError(f"Unknown format {fmt!r}; choose 'json' or 'yaml'.")
 
     @classmethod
-    def load(cls, path: str) -> "InstrumentMeta":
+    def load(cls, path: str) -> InstrumentMeta:
         """Load from a JSON or YAML file (format detected by extension)."""
         from pathlib import Path
 
@@ -410,7 +411,7 @@ class InstrumentMeta:
 # ---------------------------------------------------------------------------
 #: Registry of known acquisition systems.
 #: Each value is a dict compatible with :meth:`InstrumentMeta._from_dict`.
-KNOWN_SYSTEMS: Dict[str, Dict[str, Any]] = {
+KNOWN_SYSTEMS: dict[str, dict[str, Any]] = {
     # ── Phoenix Geophysics ──────────────────────────────────────────────
     "phoenix_v8": {
         "system": "Phoenix V8",

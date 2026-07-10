@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.strike"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from pycsamt.emtools.strike import (
-    estimate_strike_sweep,
-    estimate_strike_phase_tensor,
     estimate_strike_consensus,
+    estimate_strike_phase_tensor,
+    estimate_strike_sweep,
     rotate_to_strike,
     strike_curve_sweep,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers

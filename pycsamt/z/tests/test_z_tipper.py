@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from pycsamt.z.tipper import Tipper
 from pycsamt.exceptions import ZError
 from pycsamt.utils.zmath import rotatevector_incl_errors
+from pycsamt.z.tipper import Tipper
 
 
 def _cplx(a, b=0.0):

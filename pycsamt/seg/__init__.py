@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+
 from importlib import import_module
 from typing import TYPE_CHECKING
 
@@ -54,10 +55,15 @@ def __getattr__(name: str):
 
 # Type checkers/IDE intellisense still see the symbols:
 if TYPE_CHECKING:
-    from .edi import EDIMixin, EDIOMixin, EDIFile
-    from .spectra import Spectra, SpectraSECT, SpectraIO
-    from .time_series import TimeSeries, TSect, TSIO
-    from .other import OtherSECT, OtherIO
+    from .edi import EDIFile, EDIMixin, EDIOMixin
+    from .other import OtherIO, OtherSECT
+    from .spectra import Spectra, SpectraIO, SpectraSECT
+    from .survey import (
+        EDIProfile,
+        Stations,
+        SurveyBase,
+        Topography,
+    )
+    from .time_series import TSIO, TimeSeries, TSect
     from .validation import IsEdi
-    from .survey import SurveyBase, EDIProfile, Stations, Topography
-    from .xa import XAMixin, build_dataset, EDIAcc
+    from .xa import EDIAcc, XAMixin, build_dataset

@@ -77,8 +77,8 @@ import time
 from importlib.metadata import version as _pkg_version
 from typing import Any
 
-from ._base import AgentResult, BaseAgent
 from ..api.agents import AGENT_CONFIG
+from ._base import AgentResult, BaseAgent
 
 _SYSTEM_PROMPT = """\
 You are a pycsamt MT workflow routing expert.
@@ -138,7 +138,6 @@ Return ONLY the JSON.
 # pycsamt.agents._workflows (shared with ContextInputAgent).  Kept under the
 # old private name so any external references keep working.
 from ._workflows import (  # noqa: E402
-    WORKFLOW_KEYWORDS as _WORKFLOW_KEYWORDS,
     classify_workflow as _classify_workflow,
 )
 
@@ -192,7 +191,6 @@ def _ifn_ai_inv_model(r):
         # best_model empty — try first prediction
         preds = ai_r.get("predictions") or {}
         if preds:
-            import numpy as _np
             nm, log_r = next(iter(preds.items()))
             n = len(log_r)
             ths = [
@@ -1052,10 +1050,10 @@ def _keyword_classify(text: str) -> tuple[str, str]:
 
 
 def _build_registry(
-    pinn_init: "dict | None" = None,
-    hybrid_init: "dict | None" = None,
-    ai_inv_init: "dict | None" = None,
-) -> "tuple[dict[str, Any], dict[str, str]]":
+    pinn_init: dict | None = None,
+    hybrid_init: dict | None = None,
+    ai_inv_init: dict | None = None,
+) -> tuple[dict[str, Any], dict[str, str]]:
     r"""Instantiate all known agent classes.
 
     Each agent resolves its LLM config via

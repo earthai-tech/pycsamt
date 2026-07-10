@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -7,11 +6,12 @@ validate_generated_code + workflow runners.
 """
 from __future__ import annotations
 
-import os
 import unittest
 from pathlib import Path
 
-from pycsamt.assistant.tools.validation_tools import validate_generated_code
+from pycsamt.assistant.tools.validation_tools import (
+    validate_generated_code,
+)
 from pycsamt.assistant.tools.workflow_tools import (
     resolve_target,
     run_workflow,

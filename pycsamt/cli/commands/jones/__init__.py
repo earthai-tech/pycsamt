@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,12 +22,13 @@ blocks     ``pycsamt jones blocks``    — data block inspection (kind/comp/rows
 select     ``pycsamt jones select``    — filter collection, export subset.
 """
 
+from . import (
+    blocks,  # noqa: F401  (registers @jones.command("blocks"))
+    info,  # noqa: F401  (registers @jones.command("info"))
+    select,  # noqa: F401  (registers @jones.command("select"))
+    stations,  # noqa: F401  (registers @jones.command("stations"))
+    validate,  # noqa: F401  (registers @jones.command("validate"))
+)
 from ._base import jones  # noqa: F401
-
-from . import info      # noqa: F401  (registers @jones.command("info"))
-from . import validate  # noqa: F401  (registers @jones.command("validate"))
-from . import stations  # noqa: F401  (registers @jones.command("stations"))
-from . import blocks    # noqa: F401  (registers @jones.command("blocks"))
-from . import select    # noqa: F401  (registers @jones.command("select"))
 
 __all__ = ["jones"]

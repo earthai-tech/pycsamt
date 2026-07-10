@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Phase 4 tests: StratagemRawReader enhancements and station-matching fix."""
 
 from __future__ import annotations
@@ -134,7 +133,10 @@ class TestStationsAttribute:
 class TestMatchToEdis:
     def test_exact_match(self, tmp_path):
         """Raw 1-4, EDI starting at 2: EDI[0]=station2 → raw[1]."""
-        from pycsamt.stratagem.io import EDIBatch, StratagemRawReader
+        from pycsamt.stratagem.io import (
+            EDIBatch,
+            StratagemRawReader,
+        )
 
         _make_raw_dir(tmp_path, n=4)
         _make_edi_dir(tmp_path, n=3, start=2)   # Z2HX002..Z2HX004
@@ -149,7 +151,10 @@ class TestMatchToEdis:
 
     def test_no_match_missing_station(self, tmp_path):
         """EDI station 5 has no raw file when raw only goes to 4."""
-        from pycsamt.stratagem.io import EDIBatch, StratagemRawReader
+        from pycsamt.stratagem.io import (
+            EDIBatch,
+            StratagemRawReader,
+        )
 
         _make_raw_dir(tmp_path, n=4)
         _make_edi_dir(tmp_path, n=1, start=5)   # Z2HX005.edi — no raw file
@@ -160,7 +165,10 @@ class TestMatchToEdis:
         assert 0 not in mapping   # no match for station 5
 
     def test_returns_dict(self, tmp_path):
-        from pycsamt.stratagem.io import EDIBatch, StratagemRawReader
+        from pycsamt.stratagem.io import (
+            EDIBatch,
+            StratagemRawReader,
+        )
 
         _make_raw_dir(tmp_path, n=3)
         _make_edi_dir(tmp_path, n=2, start=2)
@@ -305,7 +313,10 @@ class TestFrequencyFilterAlignment:
         """Raw stations 1-4, EDIs from station 2.
         The hardware mask for EDI[0] (station 2) should come from raw[1], NOT raw[0].
         """
-        from pycsamt.stratagem.io import EDIBatch, StratagemRawReader
+        from pycsamt.stratagem.io import (
+            EDIBatch,
+            StratagemRawReader,
+        )
         from pycsamt.stratagem.qc import FrequencyFilter
 
         # raw: 4 stations (1-4), station 1 has ALL bad freqs

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt edi info — metadata summary for one EDI file or a whole directory."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import edi, _get_edi, _get_collection
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_collection, _get_edi, edi
 
 
 @edi.command("info")
@@ -190,7 +193,7 @@ def _info_collection(
     # Text table
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table(
             "Station", "n_freq", "Freq min", "Freq max",
             "Tipper", "Lat", "Lon", "Elev",

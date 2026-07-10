@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -9,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
+from pycsamt.exceptions import EdIDataError
 from pycsamt.seg.spectra import (
-    SpectraSECT,
     SpectraIO,
     SpectraMixin,
+    SpectraSECT,
 )
-from pycsamt.exceptions import EdIDataError
 
 
 def _write(tmp: Path, name: str, text: str) -> Path:
@@ -70,7 +69,7 @@ def test_spectraio_from_file_parses_blocks(tmp_path: Path):
         """
         >HEAD
           DATAID="A2"
-          
+
         >=SPECTRASECT
           SECTID="SP2"
           NCHAN=2
@@ -189,10 +188,10 @@ def test_spectraio_missing_blocks_raises(tmp_path: Path):
 def test_spectramixin_helpers(tmp_path: Path):
     edi = textwrap.dedent(
         """
-        
+
         >HEAD
           DATAID="A5"
-          
+
         >=SPECTRASECT
           SECTID="MX"
           NCHAN=2

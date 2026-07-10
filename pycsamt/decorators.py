@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,21 +5,21 @@
 pycsamt.decorators
 """
 from __future__ import annotations
+
 import functools
+import inspect
 import os
-import inspect 
-import warnings
 import subprocess
-from typing import( 
-    Literal, 
-    Any, 
+import warnings
+from typing import (
+    Any,
     Callable,
-    Optional, 
-    TypeVar, 
-    Union, 
+    Literal,
+    TypeVar,
 )
 
-import pandas as pd 
+import pandas as pd
+
 from .log.logger import get_logger
 
 logger = get_logger(__name__)
@@ -31,9 +30,9 @@ __all__ = [
     'Deprecated',
     'GdalDataCheck',
     'ReplaceBy',
-    'isdf', 
-    'check_empty', 
-    'has_fit', 
+    'isdf',
+    'check_empty',
+    'has_fit',
 ]
 
 _T = TypeVar("_T", bound=type)
@@ -60,18 +59,18 @@ def has_fit(
        transparently forwards the call to
        ``obj.read(*args, **kw)``.
 
-    3. **Else** neither *fit* nor *read* are present.  
+    3. **Else** neither *fit* nor *read* are present.
        The *error* policy determines the outcome:
 
-       ``"raise"``  
+       ``"raise"``
            Raise :class:`AttributeError`
            (default – safest behaviour).
 
-       ``"warn"``  
+       ``"warn"``
            Emit :class:`RuntimeWarning` **and** install a silent
            no-op ``fit`` placeholder.
 
-       ``"ignore"``  
+       ``"ignore"``
            Silently add the no-op alias without warnings.
 
     Notes
@@ -141,7 +140,7 @@ def has_fit(
 
 
 
-def noop(reason: Optional[str] = None) -> Callable[[F], F]:
+def noop(reason: str | None = None) -> Callable[[F], F]:
     """
     No-op decorator. Returns the original function or class unchanged.
 
@@ -228,8 +227,7 @@ class GdalDataCheck:
         try:
             proc = subprocess.run(
                 ['gdal-config', '--datadir'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=True,
                 text=True
             )
@@ -259,8 +257,8 @@ class ReplaceBy:
     """
     def __init__(
         self,
-        new_obj: Union[Callable[..., Any], type],
-        reason: Optional[str] = None
+        new_obj: Callable[..., Any] | type,
+        reason: str | None = None
     ) -> None:
         self.new_obj = new_obj
         self.reason = reason or f"Use {new_obj.__name__} instead."
@@ -283,11 +281,11 @@ class ReplaceBy:
 
 def isdf(func):
     """
-    Decorator that ensures the first positional argument passed to the 
+    Decorator that ensures the first positional argument passed to the
     decorated callable is a pandas DataFrame. If it's not, attempts to convert
-    it to a DataFrame using an optional `columns` keyword argument. 
-    
-    Function is designed to be flexible and efficient, suitable for 
+    it to a DataFrame using an optional `columns` keyword argument.
+
+    Function is designed to be flexible and efficient, suitable for
     both functions and methods.
     """
     @functools.wraps(func)
@@ -296,12 +294,12 @@ def isdf(func):
         sig = inspect.signature(func)
         params = sig.parameters
         param_list = list(params.values())
-        
+
         # Check if the function has any parameters
         if not param_list:
             # No parameters to process
             return func(*args, **kwargs)
-        
+
         # Determine if we're decorating a method (with 'self' or 'cls')
         is_method = False
         start_idx = 0
@@ -312,11 +310,11 @@ def isdf(func):
         # Map arguments to their names
         bound_args = sig.bind_partial(*args, **kwargs)
         bound_args.apply_defaults()
-        
+
         # Identify the data parameter name
         # Prefer 'data' if it's among the parameters
         data_param_name = None
-        for idx, param in enumerate(param_list[start_idx:], start=start_idx):
+        for _idx, param in enumerate(param_list[start_idx:], start=start_idx):
             if param.name == 'data':
                 data_param_name = 'data'
                 break
@@ -335,13 +333,13 @@ def isdf(func):
             'columns', kwargs.get('columns', None))
         if isinstance(columns, str):
             columns = [columns]
-        
+
         # Proceed with conversion if necessary
         if data is not None and not isinstance(data, pd.DataFrame):
             try:
                 if columns and len(columns) != data.shape[1]:
                     data = pd.DataFrame(data)
-                else: 
+                else:
                     data = pd.DataFrame(data, columns=columns)
             except Exception as e:
                 raise ValueError(
@@ -350,10 +348,10 @@ def isdf(func):
             data.columns = data.columns.astype(str)
             # Update the bound arguments with the new data
             bound_args.arguments[data_param_name] = data
-        
+
         # Call the original function with the updated arguments
         return func(*bound_args.args, **bound_args.kwargs)
-    
+
     return wrapper
 
 
@@ -366,7 +364,7 @@ def check_empty(
     error='raise'
 ):
     r"""
-    Validate that certain inputs are non-empty or valid 
+    Validate that certain inputs are non-empty or valid
     (not :math:`\varnothing`). Can be used in two modes:
 
     - **No parentheses** (e.g. ``@check_empty``):
@@ -390,47 +388,47 @@ def check_empty(
     Parameters
     ----------
     func : callable, optional
-        The function being decorated. If this parameter is 
+        The function being decorated. If this parameter is
         provided without parentheses (e.g. ``@check_empty``), then
-        the first argument to `func` is validated. If omitted 
-        (i.e., ``@check_empty(...)``), the returned decorator 
+        the first argument to `func` is validated. If omitted
+        (i.e., ``@check_empty(...)``), the returned decorator
         checks only the parameters listed in `params`.
     params : list of str, optional
-        A list of parameter names that should be checked for 
-        emptiness. Only used when the decorator is invoked with 
-        parentheses (e.g. 
-        ``@check_empty(params=['data'], allow_none=True)``). If 
-        this is ``None``, no parameter is explicitly checked in 
+        A list of parameter names that should be checked for
+        emptiness. Only used when the decorator is invoked with
+        parentheses (e.g.
+        ``@check_empty(params=['data'], allow_none=True)``). If
+        this is ``None``, no parameter is explicitly checked in
         this mode.
     allow_none : bool, default=True
-        Indicates whether `None` is acceptable. If set to 
-        ``False``, any encounter of `None` triggers the defined 
+        Indicates whether `None` is acceptable. If set to
+        ``False``, any encounter of `None` triggers the defined
         error handling strategy in `<error>`.
     none_as_empty : bool, default=False
-        If ``True``, `None` is treated as empty 
-        (i.e. :math:`\varnothing`). Hence, if any parameter is 
+        If ``True``, `None` is treated as empty
+        (i.e. :math:`\varnothing`). Hence, if any parameter is
         `None`, it is considered a violation of non-emptiness,
         regardless of `<allow_none>`.
     error : {'raise', 'warn', 'ignore'}, default='raise'
-        Determines the behavior when an empty parameter is 
-        detected. 
-        - ``'raise'`` : Raises :class:`ValueError` (stops 
+        Determines the behavior when an empty parameter is
+        detected.
+        - ``'raise'`` : Raises :class:`ValueError` (stops
                        execution).
-        - ``'warn'``  : Issues a :func:`warnings.warn` (allows 
+        - ``'warn'``  : Issues a :func:`warnings.warn` (allows
                        execution to continue).
         - ``'ignore'``: Takes no action.
 
     Returns
     -------
     callable
-        A decorator function if used with parentheses (or if 
-        `func` is not given). Otherwise, a wrapper function that 
+        A decorator function if used with parentheses (or if
+        `func` is not given). Otherwise, a wrapper function that
         checks the first argument of the decorated function.
 
     Notes
     -----
     - When used without parentheses, only the *first argument* of
-      the decorated function is checked—no matter if it is 
+      the decorated function is checked—no matter if it is
       positional or a keyword.
     - When used with parentheses (and `params` is specified),
       *only* those parameters named in `<params>` are checked. The
@@ -438,21 +436,21 @@ def check_empty(
       ignored.
     - To detect emptiness, this function attempts :func:`len`. If
       length is zero, it is considered empty. If no length
-      (e.g. an integer), it is not considered empty unless it is 
-      `None` and `<none_as_empty>` is ``True`` or 
+      (e.g. an integer), it is not considered empty unless it is
+      `None` and `<none_as_empty>` is ``True`` or
       `<allow_none>` is ``False``.
 
     Examples
     --------
     Minimal usage with no parentheses:
-    
+
     >>> from fusionlab.core.checks import check_empty
     >>> @check_empty
     ... def process_data(data, *args, **kwargs):
     ...     print("Data:", data)
 
     Using parentheses with custom parameters:
-    
+
     >>> from fusionlab.core.checks import check_empty
     >>> @check_empty(params=['data'], allow_none=False)
     ... def load_data(data, path=None):
@@ -460,30 +458,30 @@ def check_empty(
 
     See Also
     --------
-    some_other_checker : Another hypothetical checker function for 
+    some_other_checker : Another hypothetical checker function for
         demonstration purposes.
 
     References
     ----------
-    .. [1] *Doe, J.*, *Smith, A.*, "On Data Quality," Journal of 
+    .. [1] *Doe, J.*, *Smith, A.*, "On Data Quality," Journal of
            Integrity, 2021.
 
     """
     # This function operates in two distinct modes:
     #
     # 1) No parentheses -> e.g. @check_empty
-    #    In this scenario, we have a direct reference to the 
-    #    decorated function as `func`. The decorator will check the 
+    #    In this scenario, we have a direct reference to the
+    #    decorated function as `func`. The decorator will check the
     #    first argument in the function call.
     #
     # 2) With parentheses -> e.g. @check_empty(params=['x'])
-    #    Here, `func` is None or not yet bound, and we return a 
-    #    decorator function that can handle multiple specified 
+    #    Here, `func` is None or not yet bound, and we return a
+    #    decorator function that can handle multiple specified
     #    parameters listed in `params`.
 
     def _handle_violation(param_name):
         """
-        Internal method to manage empty or None parameter 
+        Internal method to manage empty or None parameter
         violations based on <error> strategy.
         """
         msg = (
@@ -493,13 +491,13 @@ def check_empty(
         if error == 'raise':
             raise ValueError(msg)
         elif error == 'warn':
-            warnings.warn(msg, UserWarning)
+            warnings.warn(msg, UserWarning, stacklevel=2)
         # 'ignore' => do nothing
 
     def _check_val(val, param_name):
         """
-        Internal checker for a single parameter <param_name> 
-        against emptiness or None depending on <allow_none>, 
+        Internal checker for a single parameter <param_name>
+        against emptiness or None depending on <allow_none>,
         <none_as_empty>, etc.
         """
         # If <val> is None and:
@@ -524,8 +522,8 @@ def check_empty(
         """
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Use signature to map positional and keyword 
-            # arguments to parameter names. Then check only 
+            # Use signature to map positional and keyword
+            # arguments to parameter names. Then check only
             # those listed in <params>.
             sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
@@ -542,7 +540,7 @@ def check_empty(
     def decorator_no_args(func):
         """
         Decorator for the scenario: @check_empty
-        Only checks the first argument (positional or 
+        Only checks the first argument (positional or
         first keyword).
         """
         @functools.wraps(func)
@@ -559,8 +557,8 @@ def check_empty(
         return wrapper
 
     # Distinguish between the two usage modes:
-    #  - If <func> is a callable, user did @check_empty without 
-    #    parentheses. 
+    #  - If <func> is a callable, user did @check_empty without
+    #    parentheses.
     #  - Otherwise, user did @check_empty(...) with parentheses.
     if callable(func):
         return decorator_no_args(func)
@@ -568,7 +566,7 @@ def check_empty(
         return decorator_with_args
 
 
-def ensure_fit( 
+def ensure_fit(
     error: Literal["raise", "warn", "ignore"] = "raise"
     ) -> Callable[[_T], _T]:
     """
@@ -585,9 +583,9 @@ def ensure_fit(
     * If the class implements **neither** method the response depends on
       *error*:
 
-      ``"raise"``   → :class:`AttributeError`  
+      ``"raise"``   → :class:`AttributeError`
       ``"warn"``    → a *RuntimeWarning* is emitted and ``fit()`` becomes
-                      a silent no-op.  
+                      a silent no-op.
       ``"ignore"``  → silent no-op.
 
     Examples
@@ -605,7 +603,7 @@ def ensure_fit(
 
         # fallback to `.read`
         if hasattr(cls, "read"):
-            @functools.wraps(getattr(cls, "read"))
+            @functools.wraps(cls.read)
             def _fit(self, *args, **kwargs):               # type: ignore[no-self-use]
                 return self.read(*args, **kwargs)          # pyright: ignore[reportGeneralTypeIssues]
             cls.fit = _fit                                 # type: ignore[attr-defined]

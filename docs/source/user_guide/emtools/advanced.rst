@@ -1099,45 +1099,6 @@ Weak period bands
     Compare advanced plots with QC and SNR figures. A coherent-looking
     pattern in a low-SNR band is weak evidence.
 
-Function Reference
-------------------
-
-The following reference blocks are pulled from the implementation
-docstrings in :mod:`pycsamt.emtools.advanced`, so the signatures,
-parameters, return types, and examples stay close to the code.
-
-.. autofunction:: pycsamt.emtools.advanced.plot_impedance_mohr_circles
-
-.. autofunction:: pycsamt.emtools.advanced.plot_zt_argand
-
-.. autofunction:: pycsamt.emtools.advanced.plot_rho_phase_bode
-
-.. autofunction:: pycsamt.emtools.advanced.plot_apparent_resistivity_polar
-
-.. autofunction:: pycsamt.emtools.advanced.plot_pt_period_clock
-
-.. autofunction:: pycsamt.emtools.advanced.plot_dimensionality_ternary
-
-.. autofunction:: pycsamt.emtools.advanced.plot_distortion_radar
-
-.. autofunction:: pycsamt.emtools.advanced.plot_sensitivity_depth_section
-
-.. autofunction:: pycsamt.emtools.advanced.plot_apparent_anisotropy_section
-
-.. autofunction:: pycsamt.emtools.advanced.plot_dimensionality_depth_profile
-
-.. autofunction:: pycsamt.emtools.advanced.plot_z_invariants_section
-
-.. autofunction:: pycsamt.emtools.advanced.plot_survey_fingerprint
-
-.. autofunction:: pycsamt.emtools.advanced.plot_mt_composite_section
-
-.. autofunction:: pycsamt.emtools.advanced.plot_snr_section
-
-.. autofunction:: pycsamt.emtools.advanced.plot_strike_stability_bands
-
-.. autofunction:: pycsamt.emtools.advanced.plot_tf_coherence_network
-
 Worked Example
 --------------
 

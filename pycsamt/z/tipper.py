@@ -1,19 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 """
-Tipper 
+Tipper
 """
 
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
-from ..log.logger import get_logger
 from ..exceptions import ZError
+from ..log.logger import get_logger
 from ..utils.zmath import (
     propagate_error_rect2polar,
     rotatevector_incl_errors,
@@ -148,32 +148,32 @@ class Tipper(BaseEM):
 
     def __init__(
         self,
-        tipper_array: Optional[np.ndarray] = None,
-        tipper_err_array: Optional[np.ndarray] = None,
-        freq: Optional[Sequence[float]] = None,
-        *, 
-        name: Optional[str] = None,
+        tipper_array: np.ndarray | None = None,
+        tipper_err_array: np.ndarray | None = None,
+        freq: Sequence[float] | None = None,
+        *,
+        name: str | None = None,
         **kw:  Any
     ) -> None:
         super().__init__(name=name,**kw)
-        
-        self._tipper: Optional[np.ndarray] = None
-        self._tipper_err: Optional[np.ndarray] = None
-        self._freq: Optional[np.ndarray] = None
+
+        self._tipper: np.ndarray | None = None
+        self._tipper_err: np.ndarray | None = None
+        self._freq: np.ndarray | None = None
 
         self.rotation_angle: float | np.ndarray = 0.0
 
-        self._amplitude: Optional[np.ndarray] = None
-        self._amplitude_err: Optional[np.ndarray] = None
-        self._phase: Optional[np.ndarray] = None
-        self._phase_err: Optional[np.ndarray] = None
+        self._amplitude: np.ndarray | None = None
+        self._amplitude_err: np.ndarray | None = None
+        self._phase: np.ndarray | None = None
+        self._phase_err: np.ndarray | None = None
 
-        self._mag_real: Optional[np.ndarray] = None
-        self._mag_imag: Optional[np.ndarray] = None
-        self._angle_real: Optional[np.ndarray] = None
-        self._angle_imag: Optional[np.ndarray] = None
-        self._mag_err: Optional[np.ndarray] = None
-        self._angle_err: Optional[np.ndarray] = None
+        self._mag_real: np.ndarray | None = None
+        self._mag_imag: np.ndarray | None = None
+        self._angle_real: np.ndarray | None = None
+        self._angle_imag: np.ndarray | None = None
+        self._mag_err: np.ndarray | None = None
+        self._angle_err: np.ndarray | None = None
 
         if tipper_array is not None:
             self.tipper = tipper_array
@@ -195,7 +195,7 @@ class Tipper(BaseEM):
             self.compute_mag_direction()
 
     @property
-    def tipper(self) -> Optional[np.ndarray]:
+    def tipper(self) -> np.ndarray | None:
         return self._tipper
 
     @tipper.setter
@@ -233,11 +233,11 @@ class Tipper(BaseEM):
             )
 
     @property
-    def tipper_err(self) -> Optional[np.ndarray]:
+    def tipper_err(self) -> np.ndarray | None:
         return self._tipper_err
 
     @tipper_err.setter
-    def tipper_err(self, arr: Optional[np.ndarray]) -> None:
+    def tipper_err(self, arr: np.ndarray | None) -> None:
         if arr is None:
             self._tipper_err = None
             return
@@ -276,11 +276,11 @@ class Tipper(BaseEM):
         self._tipper_err = e.astype(float, copy=False)
 
     @property
-    def freq(self) -> Optional[np.ndarray]:
+    def freq(self) -> np.ndarray | None:
         return self._freq
 
     @freq.setter
-    def freq(self, f: Optional[Sequence[float]]) -> None:
+    def freq(self, f: Sequence[float] | None) -> None:
         if f is None:
             self._freq = None
             return
@@ -306,17 +306,17 @@ class Tipper(BaseEM):
     def compute_amp_phase(self) -> None:
         r"""
         Compute :math:`|T|` and phase (deg) for each component.
-    
+
         For every frequency and for both components
         :math:`(T_x, T_y)`, the amplitude is
         :math:`|T| = \sqrt{(\Re T)^2 + (\Im T)^2}` and the
         phase is the argument of the complex number in
         degrees.
-    
+
         When :pyattr:`tipper_err` is present, uncertainties
         are propagated component-wise using
         :func:`pycsamt.utils.zmath.propagate_error_rect2polar`.
-    
+
         Returns
         -------
         None
@@ -324,12 +324,12 @@ class Tipper(BaseEM):
             :pyattr:`amplitude`, :pyattr:`phase`,
             and, when applicable,
             :pyattr:`amplitude_err`, :pyattr:`phase_err`.
-    
+
         Notes
         -----
         If :pyattr:`tipper` is ``None``, the method exits
         silently and leaves derived fields unchanged.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -376,24 +376,24 @@ class Tipper(BaseEM):
     def compute_mag_direction(self) -> None:
         r"""
         Compute Parkinson arrow magnitudes and directions.
-    
+
         Real-part arrow:
-    
+
         .. math::
-    
+
            M_{\Re} = \sqrt{(\Re T_x)^2 + (\Re T_y)^2}
-    
+
         .. math::
-    
+
            \theta_{\Re}
            = \operatorname{atan2}(-\Re T_y,\,-\Re T_x)
-    
+
         Imag-part arrow is computed identically, using
         :math:`\Im T_x` and :math:`\Im T_y`.
-    
+
         The minus sign makes arrows point **towards**
         conductors (Parkinson convention).
-    
+
         Returns
         -------
         None
@@ -403,13 +403,13 @@ class Tipper(BaseEM):
             If :pyattr:`tipper_err` is present, heuristic
             proxies :pyattr:`mag_err` and :pyattr:`angle_err`
             are also set.
-    
+
         Notes
         -----
         Angle uncertainties are estimated via a bounded
         small-angle proxy and wrapped within a legacy
         45° cap.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -458,45 +458,45 @@ class Tipper(BaseEM):
         self._angle_err = np.mod(ang, 45.0)
 
     @property
-    def amplitude(self) -> Optional[np.ndarray]:
+    def amplitude(self) -> np.ndarray | None:
         return self._amplitude
 
     @property
-    def phase(self) -> Optional[np.ndarray]:
+    def phase(self) -> np.ndarray | None:
         return self._phase
 
     @property
-    def amplitude_err(self) -> Optional[np.ndarray]:
+    def amplitude_err(self) -> np.ndarray | None:
         return self._amplitude_err
 
     @property
-    def phase_err(self) -> Optional[np.ndarray]:
+    def phase_err(self) -> np.ndarray | None:
         return self._phase_err
 
     @property
-    def mag_real(self) -> Optional[np.ndarray]:
+    def mag_real(self) -> np.ndarray | None:
         return self._mag_real
 
     @property
-    def mag_imag(self) -> Optional[np.ndarray]:
+    def mag_imag(self) -> np.ndarray | None:
         return self._mag_imag
 
     @property
-    def angle_real(self) -> Optional[np.ndarray]:
+    def angle_real(self) -> np.ndarray | None:
         return self._angle_real
 
     @property
-    def angle_imag(self) -> Optional[np.ndarray]:
+    def angle_imag(self) -> np.ndarray | None:
         return self._angle_imag
 
     @property
-    def mag_err(self) -> Optional[np.ndarray]:
+    def mag_err(self) -> np.ndarray | None:
         return self._mag_err
 
     @property
-    def angle_err(self) -> Optional[np.ndarray]:
+    def angle_err(self) -> np.ndarray | None:
         return self._angle_err
-    
+
     def set_amp_phase(
         self,
         r_array: np.ndarray,
@@ -504,18 +504,18 @@ class Tipper(BaseEM):
     ) -> None:
         r"""
         Set tipper from amplitude :math:`r` and phase :math:`\phi`.
-    
+
         Converts the provided real arrays to complex tipper
         values via
-    
+
         .. math::
-    
+
            T = r \, e^{j \, \phi},
-    
+
         where :math:`\phi` is given in **degrees**.  Shapes
         are normalized to ``(n_freq, 1, 2)`` following the
         same rules as :pyattr:`tipper`.
-    
+
         Parameters
         ----------
         r_array : array-like
@@ -524,24 +524,24 @@ class Tipper(BaseEM):
         phi_array : array-like
             Real phases in **degrees**.  Same shape rules as
             ``r_array``.
-    
+
         Raises
         ------
         ZError
             If shapes are incompatible or inputs are not
             real after normalization.
-    
+
         Returns
         -------
         None
             The method updates :pyattr:`tipper` and then
             recomputes amplitude / phase and arrow metrics.
-    
+
         Notes
         -----
         If :pyattr:`tipper` already exists, both arrays must
         match its normalized shape.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -554,7 +554,7 @@ class Tipper(BaseEM):
         >>> tip.tipper.shape
         (2, 1, 2)
         """
-        
+
         def _normalize(a: np.ndarray, name: str) -> np.ndarray:
             x = np.asarray(a)
             if np.iscomplexobj(x):
@@ -616,19 +616,19 @@ class Tipper(BaseEM):
     ) -> None:
         r"""
         Set tipper from Parkinson magnitudes and directions.
-    
+
         For each frequency, reconstruct components per the
         Parkinson convention:
-    
+
         .. math::
-    
+
            T_x = -M \cos\theta,\quad
            T_y = -M \sin\theta,
-    
+
         applied separately to the **real** and the
         **imaginary** parts.  Angles are provided in
         **degrees**.
-    
+
         Parameters
         ----------
         mag_real, mag_imag : array-like
@@ -637,20 +637,20 @@ class Tipper(BaseEM):
         ang_real, ang_imag : array-like
             Arrow directions (deg) for real and imaginary
             parts.  Scalar or length ``n_freq``.
-    
+
         Raises
         ------
         ZError
             If :pyattr:`tipper` is not initialized or if the
             supplied vectors are not scalar or length
             ``n_freq``.
-    
+
         Returns
         -------
         None
             The method updates :pyattr:`tipper` and then
             recomputes arrow metrics and amplitude / phase.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -704,22 +704,22 @@ class Tipper(BaseEM):
     def rotate(self, alpha: float | Sequence[float]) -> None:
         r"""
         Rotate tipper(s) clockwise by the given angle(s).
-    
+
         Angles are referenced to geographic North
         (X→North, Y→East).  Positive angles are clockwise.
-    
+
         Parameters
         ----------
         alpha : float or sequence of float
             Single angle applied to all frequencies, or a
             length ``n_freq`` sequence of angles (deg).
-    
+
         Raises
         ------
         ZError
             If :pyattr:`tipper` is missing, or if the number
             of angles is not 1 or ``n_freq``.
-    
+
         Returns
         -------
         None
@@ -727,14 +727,14 @@ class Tipper(BaseEM):
             :pyattr:`tipper_err` (if present), and
             :pyattr:`rotation_angle`, then recomputes
             amplitude / phase and arrow metrics.
-    
+
         Notes
         -----
         Error propagation uses
         :func:`pycsamt.utils.zmath.rotatevector_incl_errors`.
         Angles are reduced modulo 360° in the rotation
         history.
-    
+
         Examples
         --------
         >>> import numpy as np

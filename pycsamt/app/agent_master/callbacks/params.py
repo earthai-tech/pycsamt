@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Smart parameter-collection modal callbacks."""
@@ -8,10 +7,17 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from dash import ALL, Input, Output, State, ctx
-from dash import html, dcc, no_update
-from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    dcc,
+    html,
+)
+from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 from .chat import (
@@ -2110,7 +2116,9 @@ def _corr_field_from_spec(ps) -> dict:
 def _build_correction_schemas() -> None:
     try:
         from pycsamt.agents._corrections import (
-            CORRECTION_METHODS, param_specs, method_desc,
+            CORRECTION_METHODS,
+            method_desc,
+            param_specs,
         )
     except Exception:  # noqa: BLE001 — corrections optional
         return

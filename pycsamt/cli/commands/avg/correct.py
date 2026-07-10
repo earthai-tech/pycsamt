@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt avg correct — apply static-shift or capacitive-coupling correction."""
@@ -17,7 +16,7 @@ from ....api.cli.options import (
     output_dir_option,
     verbose_option,
 )
-from ._base import avg, _get_avg
+from ._base import _get_avg, avg
 
 
 @avg.command("correct")
@@ -132,7 +131,9 @@ def correct(
 
     obj = _get_avg(source, verbose=verbose)
 
-    from pycsamt.zonge.processing import ASTATIC  # noqa: PLC0415
+    from pycsamt.zonge.processing import (
+        ASTATIC,  # noqa: PLC0415
+    )
 
     proc = ASTATIC(verbose=bool(verbose)).read(obj)
 
@@ -220,4 +221,4 @@ def correct(
                     f"(mean {r['shift_mean']:.3f})"
                 )
             else:
-                click.echo(f"  Capacitive coupling corrected")
+                click.echo("  Capacitive coupling corrected")

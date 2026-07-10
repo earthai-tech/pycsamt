@@ -23,19 +23,18 @@ lines together for the multi-profile strip grid.
 # :math:`\phi_{max}` / :math:`\phi_{min}`, rotation from strike, fill
 # colour from skew. This is the flagship phase-tensor view.
 
-from _datasets import load_sites, line_groups
-
 import numpy as np
+from _datasets import line_groups, load_sites
 
 from pycsamt.emtools.tensor import (
-    plot_phase_tensor_psection,
-    plot_phase_tensor_summary,
-    plot_phase_tensor_rose,
     plot_phase_tensor_map,
+    plot_phase_tensor_psection,
+    plot_phase_tensor_rose,
     plot_phase_tensor_strip,
     plot_phase_tensor_strip_grid,
-    plot_theta_vs_period,
+    plot_phase_tensor_summary,
     plot_strike_director_field,
+    plot_theta_vs_period,
 )
 
 L22 = load_sites("amt_l22plt")

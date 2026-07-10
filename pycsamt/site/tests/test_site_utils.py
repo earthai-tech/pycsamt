@@ -1,23 +1,33 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import math
-from pathlib import Path
 import re
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from pycsamt.seg.edi import EDIFile
-
 from pycsamt.site.utils import (
-    is_pathlike, is_edi_file, is_edi_collection,
-    iter_edifiles, as_edicollection,
-    station_name, set_station_name,
-    get_coords, set_coords,
-    maybe_copy, apply_inplace,
-    get_freq, freq_match, freq_select,
-    match_name, select_by_name,
-    wrap_azimuth, deg_to_mrad, mrad_to_deg,
+    apply_inplace,
+    as_edicollection,
+    deg_to_mrad,
+    freq_match,
+    freq_select,
+    get_coords,
+    get_freq,
+    is_edi_collection,
+    is_edi_file,
+    is_pathlike,
+    iter_edifiles,
+    match_name,
+    maybe_copy,
+    mrad_to_deg,
+    select_by_name,
+    set_coords,
+    set_station_name,
+    station_name,
+    wrap_azimuth,
 )
 
 
@@ -119,16 +129,16 @@ def test_freq_and_selectors(simulated_edi: Path):
     # assert sel3.tolist() == [0, 1]
 
     assert {round(float(x), 5) for x in f[:2]} == {100.0, 200.0}
-    
+
     idx = freq_match(f, 200.0)
     assert np.isclose(f[idx], 200.0, atol=1e-5).any()
-    
+
     sel1 = freq_select(f, slice(90.0, 150.0))
     assert np.allclose(np.sort(f[sel1]), [100.0], atol=1e-5)
-    
+
     sel2 = freq_select(f, (150.0, 250.0))
     assert np.allclose(np.sort(f[sel2]), [200.0], atol=1e-5)
-    
+
     sel3 = freq_select(f, [100.0, 200.0])
     assert set(np.round(f[sel3], 5)) == {100.0, 200.0}
 

@@ -36,6 +36,7 @@ for rho in (8.0, 40.0, 200.0, 1500.0):
 # (The next example covers the hydrogeology it adds on top.)
 
 from _interp_data import demo_model
+
 from pycsamt.interp import HydroInterpreter
 
 rm = demo_model()
@@ -53,7 +54,10 @@ print(f"{len(logs)} logs, e.g. {_mid.station_name!r} with "
 # two-track column: hatched lithology on the left, the resistivity curve on
 # the right. This is the figure you would hand a hydrogeologist.
 
-from pycsamt.interp.plot import PlotStratigraphicLog, PlotFenceDiagram
+from pycsamt.interp.plot import (
+    PlotFenceDiagram,
+    PlotStratigraphicLog,
+)
 
 PlotStratigraphicLog(logs[len(logs) // 2]).plot()
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.topo.drape — terrain-following coordinate transforms.
@@ -21,7 +20,6 @@ from pycsamt.topo.drape import (
     mask_above_topo,
     station_surface_z,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers shared across test classes
@@ -132,9 +130,14 @@ class TestInterpElev:
 
     def test_real_willy_l18_chainage(self):
         """End-to-end: interpolate onto fine grid using real WILLY L18 data."""
-        import glob, os
+        import glob
+        import os
+
         from pycsamt.seg.edi import EDIFile
-        from pycsamt.topo.extract import extract_elevation, extract_chainage
+        from pycsamt.topo.extract import (
+            extract_chainage,
+            extract_elevation,
+        )
 
         base = os.path.join(
             os.path.dirname(__file__),
@@ -249,9 +252,14 @@ class TestDrapeSection:
         elev_at_centres is the elevation interpolated to midpoints between
         adjacent stations.
         """
-        import glob, os
+        import glob
+        import os
+
         from pycsamt.seg.edi import EDIFile
-        from pycsamt.topo.extract import extract_elevation, extract_chainage
+        from pycsamt.topo.extract import (
+            extract_chainage,
+            extract_elevation,
+        )
 
         base = os.path.join(
             os.path.dirname(__file__),
@@ -367,9 +375,14 @@ class TestStationSurfaceZ:
 
     def test_real_willy_l18_markers(self):
         """Station marker z-coords for L18PLT should span the known elev range."""
-        import glob, os
+        import glob
+        import os
+
         from pycsamt.seg.edi import EDIFile
-        from pycsamt.topo.extract import extract_elevation, extract_chainage
+        from pycsamt.topo.extract import (
+            extract_chainage,
+            extract_elevation,
+        )
 
         base = os.path.join(
             os.path.dirname(__file__),

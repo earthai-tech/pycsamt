@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,14 +21,17 @@ results     ``pycsamt invert results`` — summarise completed results.
 plot        ``pycsamt invert plot``    — visualise results (sub-group).
 """
 
-from ._base import invert  # noqa: F401  (re-exported as package public API)
-
 # Importing each sub-module triggers the @invert.command / @invert.group
 # decorators, which register the commands on the group defined in _base.
-from . import build    # noqa: F401
-from . import run      # noqa: F401
-from . import status   # noqa: F401
-from . import results  # noqa: F401
-from . import plot     # noqa: F401
+from . import (
+    build,  # noqa: F401
+    plot,  # noqa: F401
+    results,  # noqa: F401
+    run,  # noqa: F401
+    status,  # noqa: F401
+)
+from ._base import (
+    invert,  # noqa: F401  (re-exported as package public API)
+)
 
 __all__ = ["invert"]

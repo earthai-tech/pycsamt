@@ -1,22 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
 from ._core import (
-    ensure_sites,
     _apply_each,
     _axes_list,
-    _iter_items,
-    _get_z_block,
     _get_t_block,
+    _get_z_block,
+    _iter_items,
     _name,
     _station_positions,
+    ensure_sites,
 )
 
 
@@ -104,13 +106,13 @@ def emi_mitigation_report(
     sites: Any,
     *,
     remote_reference_attempted: bool = False,
-    remote_reference_reason: Optional[str] = None,
+    remote_reference_reason: str | None = None,
     mains_hz: float = 50.0,
     n_harm: int = 30,
     tol_hz: float = 0.08,
     notch_mode: str = "interp",
     coherent_noise_subtraction: bool = False,
-    applied_measures: Optional[Sequence[str]] = None,
+    applied_measures: Sequence[str] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -146,7 +148,7 @@ def emi_mitigation_report(
             "remote-reference time series not available in pyCSAMT input; "
             "processed transfer functions were mitigated after estimation"
         )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for i, ed in enumerate(_iter_items(S)):
         station = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -315,7 +317,7 @@ def smooth_logfreq(
     win: int = 5,
     kind: str = "tri",         # box|tri
     also: str = "both",        # z|tipper|both
-    gate_snr: Optional[float] = None,
+    gate_snr: float | None = None,
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -358,7 +360,7 @@ def smooth_logfreq(
 
 # ----------------------- rho/phase trend smoothing ----------------------- #
 
-_COMPONENT_INDEX: Dict[str, Tuple[int, int]] = {
+_COMPONENT_INDEX: dict[str, tuple[int, int]] = {
     "xx": (0, 0),
     "xy": (0, 1),
     "yx": (1, 0),
@@ -366,7 +368,7 @@ _COMPONENT_INDEX: Dict[str, Tuple[int, int]] = {
 }
 
 
-def _resolve_components(components: str | Sequence[str]) -> Tuple[str, ...]:
+def _resolve_components(components: str | Sequence[str]) -> tuple[str, ...]:
     if isinstance(components, str):
         key = components.strip().lower().replace("-", "_")
         aliases = {
@@ -385,7 +387,7 @@ def _resolve_components(components: str | Sequence[str]) -> Tuple[str, ...]:
         parts = [p.strip().lower() for p in key.replace(",", " ").split()]
     else:
         parts = [str(p).strip().lower() for p in components]
-    out: List[str] = []
+    out: list[str] = []
     for part in parts:
         if part not in _COMPONENT_INDEX:
             raise ValueError(
@@ -479,7 +481,7 @@ def smooth_rho_phase(
     *,
     components: str | Sequence[str] = "offdiag",
     degree: int = 3,
-    min_points: Optional[int] = None,
+    min_points: int | None = None,
     smooth_rho: bool = True,
     smooth_phase: bool = True,
     robust: bool = True,
@@ -645,7 +647,7 @@ or sequence, default "offdiag"
             z2[ok, i, j] = amp_new[ok] * np.exp(1j * np.deg2rad(phase_new[ok]))
 
         try:
-            z_full = np.asarray(getattr(Z, "z"), dtype=np.complex128).copy()
+            z_full = np.asarray(Z.z, dtype=np.complex128).copy()
             z_full[:n] = z2
             Z.z = z_full
         except Exception:
@@ -658,13 +660,13 @@ or sequence, default "offdiag"
 
 def _build_group_trend(
     sites: Any,
-    groups: Dict[str, List[str]],
-) -> Dict[str, Dict[str, Tuple[np.ndarray, np.ndarray]]]:
+    groups: dict[str, list[str]],
+) -> dict[str, dict[str, tuple[np.ndarray, np.ndarray]]]:
     # trend[grp][station_ref] = (fr_union, z_med_on_union)
-    trend: Dict[str, Dict[str, Tuple[np.ndarray, np.ndarray]]] = {}
+    trend: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]] = {}
     # union frequency per group
     for g, sts in groups.items():
-        G: List[float] = []
+        G: list[float] = []
         pool = []
         for i, ed in enumerate(_iter_items(sites)):
             st = _name(ed, i)
@@ -694,8 +696,8 @@ def _build_group_trend(
 def shrink_to_group_trend(
     sites: Any,
     *,
-    groups: Optional[Dict[str, List[str]]] = None,
-    group_key: Optional[str] = None,
+    groups: dict[str, list[str]] | None = None,
+    group_key: str | None = None,
     lam: float = 0.25,          # 0..1; 0=no change, 1=trend
     gate_harm: bool = True,
     mains_hz: float = 50.0,
@@ -764,10 +766,10 @@ def remove_noise_pipeline(
     notch_mode: str = "interp",
     smooth_win: int = 5,
     smooth_kind: str = "tri",
-    gate_snr: Optional[float] = 2.5,
+    gate_snr: float | None = 2.5,
     group_shrink: bool = False,
     shrink_lam: float = 0.25,
-    groups: Optional[Dict[str, List[str]]] = None,
+    groups: dict[str, list[str]] | None = None,
     also: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -927,7 +929,7 @@ def spatial_median_filter(
     # via _sta_name()).
     name_to_index = {_name(ed, i): i for i, ed in enumerate(items)}
 
-    def _nbrs(i: int) -> List[int]:
+    def _nbrs(i: int) -> list[int]:
         lo = max(0, i - half_window)
         hi = min(n - 1, i + half_window)
         ids = list(range(lo, hi + 1))
@@ -1298,7 +1300,7 @@ def drop_freqs_manual(
         z_err_sliced = _slice_first_axis(z_err_value, keep)
         if z_err_sliced is not None:
             try:
-                setattr(Z, "_z_err", z_err_sliced)
+                Z._z_err = z_err_sliced
             except Exception:
                 pass
         _assign(Z, "z", "_z", np.asarray(z, dtype=np.complex128)[keep].copy())
@@ -1444,8 +1446,8 @@ def correct_static_shift(
     N         = len(items)
 
     # --- collect ρ_a on native frequency grids ---------------------------
-    rho_data: List[Tuple[Optional[np.ndarray], Optional[np.ndarray]]] = []
-    all_freqs: List[np.ndarray] = []
+    rho_data: list[tuple[np.ndarray | None, np.ndarray | None]] = []
+    all_freqs: list[np.ndarray] = []
 
     for ed in items:
         Z, z, fr = _get_z_block(ed)
@@ -1522,7 +1524,7 @@ def correct_static_shift(
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
-def _emap_component_indices(component: str) -> Tuple[Tuple[int, int], ...]:
+def _emap_component_indices(component: str) -> tuple[tuple[int, int], ...]:
     """Return tensor component indices selected by an EMAP filter."""
     component = str(component).lower()
     mapping = {
@@ -1548,7 +1550,7 @@ def _nearest_frequency_row(
     freq: float,
     *,
     rtol: float,
-) -> Optional[np.ndarray]:
+) -> np.ndarray | None:
     """Return the nearest tensor row when the frequency matches."""
     if fr.size == 0 or not np.isfinite(freq):
         return None
@@ -1595,12 +1597,12 @@ def _boxcar_spatial_filter(
         for i, ed in enumerate(items)
     }
 
-    def _neighbors(index: int) -> List[int]:
+    def _neighbors(index: int) -> list[int]:
         lo = max(0, index - half)
         hi = min(len(items), index + half + 1)
         return list(range(lo, hi))
 
-    def _filtered_row(index: int, freq: float) -> Optional[np.ndarray]:
+    def _filtered_row(index: int, freq: float) -> np.ndarray | None:
         rows = []
         for j in _neighbors(index):
             Zj, zj, frj = blocks[j]
@@ -1846,13 +1848,13 @@ def _emap_decision_report(decisions: pd.DataFrame) -> pd.DataFrame:
 def confidence_gated_emap_filter(
     sites: Any,
     *,
-    before_sites: Optional[Any] = None,
+    before_sites: Any | None = None,
     method: str = "flma",
     confidence_method: str = "composite",
     component: str = "xy",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     blend_power: float = 1.0,
     window: int = 5,
     window_m: float = 1500.0,
@@ -2005,7 +2007,7 @@ def _offdiag_logmag(z: np.ndarray) -> np.ndarray:
 
 def _union_offdiag_matrix(
     sites: Any,
-) -> Tuple[List[str], np.ndarray, np.ndarray]:
+) -> tuple[list[str], np.ndarray, np.ndarray]:
     S = ensure_sites(sites, recursive=False, strict=False)
     sts, Gs, Ms = [], [], []
     for i, ed in enumerate(_iter_items(S)):
@@ -2042,7 +2044,7 @@ def _union_offdiag_matrix(
 def _union_component_logmag_matrix(
     sites: Any,
     component: str,
-) -> Tuple[List[str], np.ndarray, np.ndarray]:
+) -> tuple[list[str], np.ndarray, np.ndarray]:
     """Return station, union-frequency, log10 selected-component matrix."""
     S = ensure_sites(sites, recursive=False, strict=False)
     a, b = _component_index(component)
@@ -2099,12 +2101,13 @@ def _station_style_top(
     ax: plt.Axes,
     labels: Sequence[str],
     *,
-    station_label_step: Optional[int],
+    station_label_step: int | None,
     station_preset: str,
-    station_style: Optional[Any],
+    station_style: Any | None,
 ) -> None:
     """Apply top station rendering for EMTools profile plots."""
     import copy
+
     from pycsamt.api.station import PYCSAMT_STATION_RENDERING
 
     style = station_style or PYCSAMT_STATION_RENDERING.style_for(
@@ -2120,7 +2123,7 @@ def _station_style_top(
     style.apply(ax, x, labels, xlim=(-0.5, len(labels) - 0.5))
 
 
-def _component_index(component: str) -> Tuple[int, int]:
+def _component_index(component: str) -> tuple[int, int]:
     """Return one tensor component index."""
     component = str(component).lower()
     mapping = {
@@ -2136,7 +2139,7 @@ def _component_index(component: str) -> Tuple[int, int]:
 
 
 def _paired_z_items(before_sites: Any,
-                    after_sites: Any) -> List[Tuple[str, Any, Any]]:
+                    after_sites: Any) -> list[tuple[str, Any, Any]]:
     """Pair before/after Z-bearing items by station name."""
     before = ensure_sites(before_sites, recursive=False, strict=False)
     after = ensure_sites(after_sites, recursive=False, strict=False)
@@ -2157,8 +2160,8 @@ def _paired_z_items(before_sites: Any,
 
 
 def _nearest_component_value(ed: Any,
-                             freq_hz: Optional[float],
-                             component: str) -> Tuple[float, complex]:
+                             freq_hz: float | None,
+                             component: str) -> tuple[float, complex]:
     """Return nearest frequency and complex tensor component magnitude."""
     _, z, fr = _get_z_block(ed)
     a, b = _component_index(component)
@@ -2174,8 +2177,8 @@ def emap_filter_report(
     after_sites: Any,
     *,
     component: str = "xy",
-    period_s: Optional[float] = None,
-    frequency_hz: Optional[float] = None,
+    period_s: float | None = None,
+    frequency_hz: float | None = None,
 ) -> pd.DataFrame:
     """Summarize station-level changes after an EMAP-style filter.
 
@@ -2240,21 +2243,21 @@ def emap_filter_report(
 
 def plot_emap_filter_profile(
     before_sites: Any,
-    after_sites: Optional[Any] = None,
+    after_sites: Any | None = None,
     *,
     method: str = "flma",
     component: str = "xy",
-    period_s: Optional[float] = None,
-    frequency_hz: Optional[float] = None,
+    period_s: float | None = None,
+    frequency_hz: float | None = None,
     window: int = 5,
     window_m: float = 1500.0,
     spacing_m: float = 200.0,
     comp: str = "det",
-    figsize: Tuple[float, float] = (9.5, 4.0),
-    station_label_step: Optional[int] = 1,
+    figsize: tuple[float, float] = (9.5, 4.0),
+    station_label_step: int | None = 1,
     station_preset: str = "pseudosection",
-    station_style: Optional[Any] = None,
-    ax: Optional[plt.Axes] = None,
+    station_style: Any | None = None,
+    ax: plt.Axes | None = None,
     **filter_kws: Any,
 ) -> plt.Axes:
     """Plot a before/after EMAP filter station profile."""
@@ -2321,7 +2324,7 @@ def plot_emap_filter_profile(
 
 def plot_emap_filter_psection(
     before_sites: Any,
-    after_sites: Optional[Any] = None,
+    after_sites: Any | None = None,
     *,
     method: str = "flma",
     component: str = "xy",
@@ -2331,15 +2334,15 @@ def plot_emap_filter_psection(
     comp: str = "det",
     cmap: str = "RdYlBu_r",
     delta_cmap: str = "RdBu_r",
-    clim: Optional[Tuple[float, float]] = None,
-    clim_pct: Tuple[float, float] = (2.0, 98.0),
-    delta_vlim: Optional[float] = None,
+    clim: tuple[float, float] | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
+    delta_vlim: float | None = None,
     delta_vlim_pct: float = 95.0,
     axes=None,
-    figsize: Tuple[float, float] = (11.0, 8.2),
-    station_label_step: Optional[int] = 1,
+    figsize: tuple[float, float] = (11.0, 8.2),
+    station_label_step: int | None = 1,
     station_preset: str = "pseudosection",
-    station_style: Optional[Any] = None,
+    station_style: Any | None = None,
     **filter_kws: Any,
 ) -> plt.Figure:
     """Plot before/after/delta pseudo-sections for an EMAP filter."""
@@ -2490,9 +2493,9 @@ def nr_qc_delta_offdiag_psection(
     sites: Any,
     *,
     method: str = "pipeline",
-    vlim: Optional[float] = None,
-    figsize: Tuple[float, float] = (9.0, 4.8),
-    ax: Optional[plt.Axes] = None,
+    vlim: float | None = None,
+    figsize: tuple[float, float] = (9.0, 4.8),
+    ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
     S0 = ensure_sites(sites, recursive=False, strict=False)
@@ -2573,9 +2576,9 @@ def nr_qc_snr_gain_profile(
     sites: Any,
     *,
     method: str = "pipeline",
-    pband: Optional[Tuple[float, float]] = None,
-    figsize: Tuple[float, float] = (8.6, 3.6),
-    ax: Optional[plt.Axes] = None,
+    pband: tuple[float, float] | None = None,
+    figsize: tuple[float, float] = (8.6, 3.6),
+    ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
     S0 = ensure_sites(sites, recursive=False, strict=False)
@@ -2634,8 +2637,8 @@ def nr_qc_harmonic_waterfall(
     mains_hz: float = 50.0,
     n_harm: int = 30,
     tol_hz: float = 0.08,
-    figsize: Tuple[float, float] = (9.0, 4.6),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (9.0, 4.6),
+    ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
     S0 = ensure_sites(sites, recursive=False, strict=False)
@@ -2645,7 +2648,7 @@ def nr_qc_harmonic_waterfall(
         **denoise,
     )
     sts = []
-    for i, (S, tag) in enumerate([(S0, "b"), (S1, "a")]):
+    for i, (S, _tag) in enumerate([(S0, "b"), (S1, "a")]):
         rows = []
         labs = []
         for j, ed in enumerate(_iter_items(S)):
@@ -2706,12 +2709,12 @@ def nr_qc_station_offdiag_curves(
     sites: Any,
     *,
     method: str = "pipeline",
-    station: Optional[str] = None,
+    station: str | None = None,
     mains_hz: float = 50.0,
     n_harm: int = 12,
     tol_hz: float = 0.08,
-    figsize: Tuple[float, float] = (8.0, 4.2),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (8.0, 4.2),
+    ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
     S0 = ensure_sites(sites, recursive=False, strict=False)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,12 +20,10 @@ _rich_pipe_table    Pretty-print a key/value summary (rich or plain).
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import click
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -44,7 +41,10 @@ def _resolve_pipeline(
     Priority: *config* > *preset* > *steps* (explicit codes).
     Raises :class:`click.UsageError` when none of the three is supplied.
     """
-    from pycsamt.pipeline import Pipeline, Step  # noqa: PLC0415
+    from pycsamt.pipeline import (  # noqa: PLC0415
+        Pipeline,
+        Step,
+    )
 
     if config is not None:
         suffix = config.suffix.lower()
@@ -70,7 +70,9 @@ def _resolve_pipeline(
         try:
             pipe = Pipeline.from_preset(preset)
         except KeyError:
-            from pycsamt.pipeline import list_presets  # noqa: PLC0415
+            from pycsamt.pipeline import (
+                list_presets,  # noqa: PLC0415
+            )
             names = [p.name for p in list_presets()]
             raise click.BadParameter(
                 f"Unknown preset {preset!r}.  Available: {names}",
@@ -83,7 +85,9 @@ def _resolve_pipeline(
         return pipe
 
     if steps:
-        from pycsamt.pipeline import lookup_step  # noqa: PLC0415
+        from pycsamt.pipeline import (
+            lookup_step,  # noqa: PLC0415
+        )
         step_objects = [
             (lookup_step(code).name, Step(code))
             for code in steps
@@ -113,7 +117,9 @@ def _resolve_sites(
     verbose: int,
 ) -> Any:
     """Resolve any combination of positional path / --survey / active context."""
-    from pycsamt.cli.survey import resolve_survey  # noqa: PLC0415
+    from pycsamt.cli.survey import (
+        resolve_survey,  # noqa: PLC0415
+    )
     return resolve_survey(
         edi_source or survey_path,
         fresh=fresh,
@@ -205,7 +211,6 @@ def _format_run_result(
         return json.dumps(data, indent=2, default=str)
 
     if output_format == "csv":
-        import io  # noqa: PLC0415
         lines = [
             "idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,error"
         ]
@@ -230,7 +235,7 @@ def _rich_pipe_table(
     """Print a two-column key/value table (rich if available, plain fallback)."""
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table      # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         console = Console()
         t = Table(title=title, border_style=style, show_header=False)
         t.add_column("Key",   style="bold")

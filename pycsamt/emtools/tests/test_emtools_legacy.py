@@ -46,20 +46,20 @@ def test_import_legacy_module():
 
 def test_all_symbols_importable():
     from pycsamt.emtools.legacy import (
-        check_em_kind,
-        extract_z_list,
-        parse_tensor,
-        compute_qc,
-        full_freq,
-        tensor2d,
         align_tensor,
+        check_em_kind,
+        compute_qc,
         export_edis,
+        extract_z_list,
+        full_freq,
+        parse_tensor,
         plot_confidence,
+        plot_lcurve,
+        plot_station_tensors,
         plot_strike,
         plot_tensors,
-        plot_station_tensors,
+        tensor2d,
         wrap_phase,
-        plot_lcurve,
     )
     for fn in (
         check_em_kind, extract_z_list, parse_tensor, compute_qc,
@@ -329,8 +329,8 @@ def test_compute_qc_return_freq():
 
 
 def test_compute_qc_return_qco():
-    from pycsamt.emtools.legacy import compute_qc
     from pycsamt.api.bunch import Bunch
+    from pycsamt.emtools.legacy import compute_qc
     zs = _z_list(3)
     rep = compute_qc(zs, return_qco=True)
     assert isinstance(rep, Bunch)
@@ -400,6 +400,7 @@ def test_plot_lcurve_returns_axes():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     from pycsamt.emtools.legacy import plot_lcurve
 
     n = 10
@@ -416,6 +417,7 @@ def test_plot_lcurve_no_lambda():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     from pycsamt.emtools.legacy import plot_lcurve
 
     rms = np.linspace(1.0, 0.1, 8)
@@ -434,6 +436,7 @@ def test_plot_confidence_1d_smoke():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     from pycsamt.emtools.legacy import plot_confidence
     from pycsamt.z.z import Z
 

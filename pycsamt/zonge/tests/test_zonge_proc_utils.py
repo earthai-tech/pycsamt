@@ -1,17 +1,21 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the processing utility functions in proc_utils.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
-from pycsamt.zonge.proc_utils import (
-    tma, flma, ama, interpolate_to_log_space, smooth_rho_from_phase
-)
 from pycsamt.constants import MU_0, PI
+from pycsamt.zonge.proc_utils import (
+    ama,
+    flma,
+    interpolate_to_log_space,
+    smooth_rho_from_phase,
+    tma,
+)
+
 
 # --- Test Data Fixture --------------------------------------------
 @pytest.fixture(scope="module")
@@ -22,7 +26,7 @@ def processing_data_fixture() -> pd.DataFrame:
     """
     stations = np.repeat([100, 200, 300], 5)
     freqs = np.tile([1024, 512, 256, 128, 64], 3)
-    
+
     data = {
         "station": stations,
         "freq":    freqs,
@@ -109,5 +113,5 @@ class TestProcessingUtils:
         )
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -19,21 +18,16 @@ Supported component labels:
 
 from __future__ import annotations
 
-from typing import ( 
-    Any, 
-    Dict, 
-    Iterable, 
-    Mapping, 
-    Optional, 
-    Sequence, 
-    Tuple, 
-    Union
+from collections.abc import Iterable, Mapping, Sequence
+from typing import (
+    Any,
 )
+
 import numpy as np
 import pandas as pd
 
-from ..utils._dependency import import_optional_dependency 
 from ..exceptions import AvgDataError, TensorError
+from ..utils._dependency import import_optional_dependency
 from .base import AVGComponentBase
 
 # --------------------------------------------------------------------------- #
@@ -44,7 +38,7 @@ from .base import AVGComponentBase
 
 __all__ = ["TensorBase"]
 
-_COMP_POS: Dict[str, Tuple[int, int]] = {
+_COMP_POS: dict[str, tuple[int, int]] = {
     # MT naming
     "ZXX": (0, 0), "ZXY": (0, 1),
     "ZYX": (1, 0), "ZYY": (1, 1),
@@ -154,12 +148,12 @@ class TensorBase(AVGComponentBase):
         self,
         *,
         var: str,
-        station: Optional[Union[int, float]] = None,
+        station: int | float | None = None,
         agg: str | None = "mean",
         fill_value: float = np.nan,
         sort_freq: bool = True,
         align: str = "union",
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Convert per-component values into a 2×2 tensor per frequency.
 
@@ -235,32 +229,32 @@ class TensorBase(AVGComponentBase):
 
         if sort_freq:
             freqs = np.sort(freqs)
-        
-        T = np.full((stations.size, freqs.size, 2, 2), 
+
+        T = np.full((stations.size, freqs.size, 2, 2),
                     fill_value, dtype=float)
-        
+
         for si, st in enumerate(stations):
             mask = np.isclose(
-                pd.to_numeric(work["station"], errors="coerce"), 
-                float(st), 
+                pd.to_numeric(work["station"], errors="coerce"),
+                float(st),
                 equal_nan=False
             )
             ws = work.loc[mask]
-        
+
             for _, row in ws.iterrows():
                 f = row["freq"]
                 c = row["__comp_norm__"]
                 val = row[var]
                 if pd.isna(val) or c is None or pd.isna(f):
                     continue
-        
+
                 # find insertion point in the (sorted) freqs grid
                 fi = int(np.searchsorted(freqs, f))
-                # guard: if f is not exactly on 
+                # guard: if f is not exactly on
                 # the grid, skip (intersection case)
                 if fi >= freqs.size or freqs[fi] != f:
                     continue
-        
+
                 i, j = _COMP_POS[c]
                 T[si, fi, i, j] = float(val)
 
@@ -272,7 +266,7 @@ class TensorBase(AVGComponentBase):
         freqs: Sequence[float],
         *,
         var: str,
-        stations: Optional[Sequence[Union[int, float, str]]] = None,
+        stations: Sequence[int | float | str] | None = None,
         comp_style: str = "mt",
     ) -> pd.DataFrame:
         """
@@ -340,10 +334,10 @@ class TensorBase(AVGComponentBase):
         self,
         *,
         var: str,
-        station: Optional[Union[int, float]] = None,
+        station: int | float | None = None,
         agg: str | None = "mean",
         fill_value: float = np.nan,
-        attrs: Optional[Mapping[str, Any]] = None,
+        attrs: Mapping[str, Any] | None = None,
     ):
         """
         Return a 3-D or 4-D xarray.DataArray with dims:
@@ -418,7 +412,7 @@ class TensorBase(AVGComponentBase):
     __repr__ = __str__
 
 
-def _norm_comp(label: Any) -> Optional[str]:
+def _norm_comp(label: Any) -> str | None:
     """
     Normalize a component label (‘ExHy’, ‘Zxy’, etc.) to an
     uppercase token present in _COMP_POS. Return None if unknown.

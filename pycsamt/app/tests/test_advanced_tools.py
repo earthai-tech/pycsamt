@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,10 +20,10 @@ Strategy
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pytest
@@ -62,19 +61,25 @@ def willy_sites():
 
 @pytest.fixture(scope="session")
 def adv_ctrl():
-    from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+    from pycsamt.app.desktop.controllers.advanced_controller import (
+        AdvancedController,
+    )
     return AdvancedController()
 
 
 @pytest.fixture(scope="session")
 def topo_ctrl():
-    from pycsamt.app.desktop.controllers.advanced_controller import TopoPreviewController
+    from pycsamt.app.desktop.controllers.advanced_controller import (
+        TopoPreviewController,
+    )
     return TopoPreviewController()
 
 
 @pytest.fixture(scope="session")
 def conv_ctrl():
-    from pycsamt.app.desktop.controllers.advanced_controller import ConversionController
+    from pycsamt.app.desktop.controllers.advanced_controller import (
+        ConversionController,
+    )
     return ConversionController()
 
 
@@ -93,26 +98,36 @@ def _close():
 
 class TestAdvancedControllerConstruction:
     def test_creates(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         assert ctrl is not None
 
     def test_default_dark(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         assert AdvancedController().dark is True
 
     def test_default_sites_none(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         assert AdvancedController()._sites is None
 
     def test_set_sites(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites("dummy")
         assert ctrl._sites == "dummy"
 
     def test_clear(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites("dummy")
         ctrl.clear()
@@ -141,7 +156,9 @@ class TestDrawNoData:
 
     def test_unknown_function_annotates_figure(self):
         # Must have sites set so the controller reaches the "function not found" branch
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites(object())   # truthy mock — any non-None value is enough
         fig = _fig()
@@ -175,8 +192,12 @@ def _catalogue_params(group):
 # Strike ──────────────────────────────────────────────────────────────────────
 
 from pycsamt.app.desktop.controllers.advanced_controller import (
-    STRIKE_PLOTS, PHASE_TENSOR_PLOTS, INDUCTION_PLOTS,
-    IMPEDANCE_PLOTS, DEPTH_PLOTS, SURVEY_PLOTS, _POLAR_FNS,
+    DEPTH_PLOTS,
+    IMPEDANCE_PLOTS,
+    INDUCTION_PLOTS,
+    PHASE_TENSOR_PLOTS,
+    STRIKE_PLOTS,
+    SURVEY_PLOTS,
 )
 
 
@@ -535,8 +556,9 @@ class TestEmtoolsDirectDepth:
 
     def test_plot_atom_psection_requires_model(self, willy_sites):
         """Verify the function signature: model is a required positional arg."""
-        import pycsamt.emtools as et
         import inspect
+
+        import pycsamt.emtools as et
         sig = inspect.signature(et.plot_atom_psection)
         params = list(sig.parameters.keys())
         assert "model" in params
@@ -544,7 +566,9 @@ class TestEmtoolsDirectDepth:
 
     def test_plot_atom_psection_no_model_shows_instruction(self, willy_sites):
         """Without a trained model, draw() shows an instruction, not a traceback."""
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -555,7 +579,9 @@ class TestEmtoolsDirectDepth:
 
     def test_train_dim_model_returns_dict(self, willy_sites):
         """train_dim_model must return a dict with keys D, mu, sd, feat."""
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         model = ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -565,14 +591,18 @@ class TestEmtoolsDirectDepth:
 
     def test_train_dim_model_no_sites_raises(self):
         """train_dim_model raises ValueError when no sites are loaded."""
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         with pytest.raises(ValueError, match="No survey data"):
             ctrl.train_dim_model()
 
     def test_plot_atom_psection_after_training_renders(self, willy_sites):
         """After training the model, draw() produces real axes (not error text)."""
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -586,7 +616,9 @@ class TestEmtoolsDirectDepth:
 
     def test_clear_resets_dim_model(self, willy_sites):
         """clear() must reset the stored dim model."""
-        from pycsamt.app.desktop.controllers.advanced_controller import AdvancedController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -644,12 +676,16 @@ class TestEmtoolsDirectSurvey:
 
 class TestTopoPreviewController:
     def test_creates(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import TopoPreviewController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            TopoPreviewController,
+        )
         ctrl = TopoPreviewController()
         assert ctrl is not None
 
     def test_default_dark(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import TopoPreviewController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            TopoPreviewController,
+        )
         assert TopoPreviewController().dark is True
 
     def test_elevation_profile_no_data_does_not_raise(self, topo_ctrl):
@@ -698,7 +734,9 @@ class TestTopoPreviewController:
         _close()
 
     def test_style_both_modes(self):
-        from pycsamt.app.desktop.controllers.advanced_controller import TopoPreviewController
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            TopoPreviewController,
+        )
         ctrl = TopoPreviewController()
         for dark in (True, False):
             ctrl.dark = dark
@@ -980,8 +1018,8 @@ class TestRegressions:
         """plot_sites_panels was calling _get_z_block(return_errors=True) instead
         of _get_z_block(with_errors=True). Verify the correct kwarg now works."""
         import logging; logging.disable(logging.CRITICAL)
-        from pycsamt.emtools._core import _get_z_block
         from pycsamt.emtools import ensure_sites
+        from pycsamt.emtools._core import _get_z_block
         if not _HAS_WILLY:
             pytest.skip("WILLY data not available")
         sites = ensure_sites(str(_WILLY))
@@ -991,8 +1029,8 @@ class TestRegressions:
 
     def test_get_z_block_bad_kwarg_raises(self):
         """The old broken keyword 'return_errors' must raise TypeError."""
-        from pycsamt.emtools._core import _get_z_block
         from pycsamt.emtools import ensure_sites
+        from pycsamt.emtools._core import _get_z_block
         if not _HAS_WILLY:
             pytest.skip("WILLY data not available")
         sites = ensure_sites(str(_WILLY))

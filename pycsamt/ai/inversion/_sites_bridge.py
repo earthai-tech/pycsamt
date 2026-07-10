@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -16,7 +15,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -85,10 +84,10 @@ def _normalize_sites(
 def _extract_rho_phase(
     site: Any,
     comp: str,
-) -> Tuple[
-    Optional[np.ndarray],
-    Optional[np.ndarray],
-    Optional[np.ndarray],
+) -> tuple[
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
 ]:
     """
     Return (freq, rho_c, phase_c) for one site.
@@ -141,10 +140,10 @@ def _extract_rho_phase(
 
 
 def _make_common_grid(
-    all_freq: List[np.ndarray],
+    all_freq: list[np.ndarray],
     n_freqs: int = 32,
-    freq_min: Optional[float] = None,
-    freq_max: Optional[float] = None,
+    freq_min: float | None = None,
+    freq_max: float | None = None,
 ) -> np.ndarray:
     """Build a log-spaced common frequency grid."""
     all_f = np.concatenate(all_freq)
@@ -165,7 +164,7 @@ def _interp_to_grid(
     rho_c: np.ndarray,
     ph_c: np.ndarray,
     freqs_grid: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Interpolate rho/phase to a common log-freq grid."""
     from scipy.interpolate import interp1d
 
@@ -210,7 +209,7 @@ def sites_to_obs_1d(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> List[SiteObs1D]:
+) -> list[SiteObs1D]:
     """
     Convert any site input to observed-data containers.
 
@@ -254,7 +253,7 @@ def sites_to_obs_1d(
         strict=strict,
         verbose=verbose,
     )
-    out: List[SiteObs1D] = []
+    out: list[SiteObs1D] = []
     for site in S:
         name = getattr(site, "name", str(id(site)))
         freq, rho_c, ph_c = _extract_rho_phase(
@@ -290,13 +289,13 @@ def sites_to_features_1d(
     *,
     comp: str = "xy",
     n_freqs: int = 32,
-    freq_min: Optional[float] = None,
-    freq_max: Optional[float] = None,
+    freq_min: float | None = None,
+    freq_max: float | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """
     Convert any site input to an ML feature matrix.
 
@@ -343,8 +342,8 @@ def sites_to_features_1d(
         freq_min=freq_min,
         freq_max=freq_max,
     )
-    rows: List[np.ndarray] = []
-    names: List[str] = []
+    rows: list[np.ndarray] = []
+    names: list[str] = []
     for o in obs:
         log_rho_g, ph_g = _interp_to_grid(
             o.freq, o.rho_obs, o.phase_obs, freqs_grid
@@ -361,12 +360,12 @@ def sites_to_features_1d(
 
 
 def obs_to_features_1d(
-    obs: List,
+    obs: list,
     n_freqs: int = 32,
     *,
-    freq_min: Optional[float] = None,
-    freq_max: Optional[float] = None,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    freq_min: float | None = None,
+    freq_max: float | None = None,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """
     Build a feature matrix from a list of obs objects.
 
@@ -393,8 +392,8 @@ def obs_to_features_1d(
         freq_min=freq_min,
         freq_max=freq_max,
     )
-    rows: List[np.ndarray] = []
-    names: List[str] = []
+    rows: list[np.ndarray] = []
+    names: list[str] = []
     for o in obs:
         # Support SiteObs1D (rho_obs) and SiteObs2D
         # (rho_te).
@@ -474,12 +473,12 @@ def _extract_rho_phase_2d(
     site: Any,
     comp_te: str,
     comp_tm: str,
-) -> Tuple[
-    Optional[np.ndarray],
-    Optional[np.ndarray],
-    Optional[np.ndarray],
-    Optional[np.ndarray],
-    Optional[np.ndarray],
+) -> tuple[
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
 ]:
     """
     Return (freq, rho_te, ph_te, rho_tm, ph_tm)
@@ -555,7 +554,7 @@ def sites_to_obs_2d(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> List[SiteObs2D]:
+) -> list[SiteObs2D]:
     """
     Convert any site input to 2-D observation containers.
 
@@ -602,7 +601,7 @@ def sites_to_obs_2d(
         strict=strict,
         verbose=verbose,
     )
-    out: List[SiteObs2D] = []
+    out: list[SiteObs2D] = []
     for site in S:
         name = getattr(
             site, "name", str(id(site))
@@ -646,13 +645,13 @@ def sites_to_panel_2d(
     n_components: int = 4,
     comp_te: str = "xy",
     comp_tm: str = "yx",
-    freq_min: Optional[float] = None,
-    freq_max: Optional[float] = None,
+    freq_min: float | None = None,
+    freq_max: float | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """
     Build an ``EMInverter2D`` input panel from sites.
 
@@ -676,7 +675,7 @@ def sites_to_panel_2d(
         and sites
         and isinstance(sites[0], SiteObs2D)
     ):
-        obs: List[SiteObs2D] = sites
+        obs: list[SiteObs2D] = sites
     else:
         obs = sites_to_obs_2d(
             sites,
@@ -700,7 +699,7 @@ def sites_to_panel_2d(
         np.nan,
         dtype=np.float32,
     )
-    names: List[str] = []
+    names: list[str] = []
     for k, o in enumerate(obs):
         log_rho_te, ph_te = _interp_to_grid(
             o.freq, o.rho_te, o.phase_te, freqs_grid

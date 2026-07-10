@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Chrome callbacks: seed adoption, theme, help, sidebar, dock."""
@@ -8,8 +7,8 @@ from __future__ import annotations
 from dash import Input, Output, State, no_update
 
 from .._ids import IDs
-from ..cache import set_view, take_seed
 from .._render import store_from_view
+from ..cache import set_view, take_seed
 
 
 def register_chrome(app) -> None:

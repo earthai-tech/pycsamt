@@ -1,8 +1,8 @@
 """User-facing result views for pyCSAMT public APIs."""
 
 from .config import (
-    APIViewConfig,
     PYCSAMT_API_VIEW,
+    APIViewConfig,
     configure_api_view,
     reset_api_view,
 )
@@ -14,7 +14,11 @@ from .frame import (
     wrap_frame,
 )
 from .io import read_edi, read_edis, read_sites
-from .progress import ProgressConfig, iter_progress, progress_enabled
+from .progress import (
+    ProgressConfig,
+    iter_progress,
+    progress_enabled,
+)
 from .result import APIResult, wrap_result
 from .survey import APISurvey
 from .tables import (

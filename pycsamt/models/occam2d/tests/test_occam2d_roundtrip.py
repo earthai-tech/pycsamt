@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """Round-trip tests: read → write → read-back → compare."""
 
 import math
-import pytest
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 DATA_DIR    = Path(__file__).parents[4] / "data" / "occam2D"
 STARTUP_FILE = DATA_DIR / "Startup"

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import (
+    Any,
+)
 
 import pandas as pd
 
@@ -62,8 +65,8 @@ def _normalise_enum(value: Any, enum_cls: type[Enum], name: str) -> Enum:
 
 def _normalise_capabilities(
     values: Iterable[IoTCapability | str],
-) -> List[IoTCapability]:
-    out: List[IoTCapability] = []
+) -> list[IoTCapability]:
+    out: list[IoTCapability] = []
     for value in values:
         cap = _normalise_enum(value, IoTCapability, "capability")
         if cap not in out:
@@ -76,13 +79,13 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
     """Configuration for one field IoT node or recorder gateway."""
 
     device_id: str
-    station: Optional[str] = None
+    station: str | None = None
     protocol: str = "mqtt"
-    sample_rate_hz: Optional[float] = None
-    channels: List[str] = field(default_factory=list)
+    sample_rate_hz: float | None = None
+    channels: list[str] = field(default_factory=list)
     role: DeviceRole | str = DeviceRole.SENSOR_NODE
     enabled: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -115,7 +118,7 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
         self,
         kind: PacketKind | str,
         *,
-        survey_id: Optional[str] = None,
+        survey_id: str | None = None,
     ) -> str:
         """Return a canonical telemetry topic for this device."""
         pkt_kind = _normalise_enum(kind, PacketKind, "kind")
@@ -123,7 +126,7 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
         station = self.station or "unassigned"
         return f"{prefix}/{station}/{self.device_id}/{pkt_kind.value}"
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a serialisable representation."""
         return dict(
             device_id=self.device_id,
@@ -138,7 +141,7 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
         )
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "DeviceConfig":
+    def from_mapping(cls, data: Mapping[str, Any]) -> DeviceConfig:
         """Build a device config from a mapping."""
         return cls(**dict(data))
 
@@ -150,7 +153,7 @@ class TelemetryPacket(PyCSAMTObject):
     device_id: str
     timestamp: float
     topic: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     qos: int = 0
     kind: PacketKind | str = PacketKind.DATA
     retained: bool = False
@@ -169,7 +172,7 @@ class TelemetryPacket(PyCSAMTObject):
         self.kind = _normalise_enum(self.kind, PacketKind, "kind")
         self.retained = _c.as_bool(self.retained)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a flat packet dictionary suitable for logging."""
         return dict(
             device_id=self.device_id,
@@ -190,10 +193,10 @@ class TelemetryPacket(PyCSAMTObject):
         timestamp: float,
         payload: Mapping[str, Any],
         kind: PacketKind | str = PacketKind.DATA,
-        survey_id: Optional[str] = None,
+        survey_id: str | None = None,
         qos: int = 0,
         retained: bool = False,
-    ) -> "TelemetryPacket":
+    ) -> TelemetryPacket:
         """Create a packet using a device's canonical topic."""
         return cls(
             device_id=device.device_id,
@@ -211,10 +214,10 @@ class DeploymentConfig(PyCSAMTObject, MetadataMixin):
     """Survey-level IoT deployment metadata."""
 
     survey_id: str
-    devices: List[DeviceConfig] = field(default_factory=list)
-    capabilities: List[IoTCapability] = field(default_factory=list)
+    devices: list[DeviceConfig] = field(default_factory=list)
+    capabilities: list[IoTCapability] = field(default_factory=list)
     notes: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -261,7 +264,7 @@ class DeploymentConfig(PyCSAMTObject, MetadataMixin):
                 return device
         raise KeyError(f"Unknown device_id {key!r}.")
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a serialisable deployment dictionary."""
         return dict(
             survey_id=self.survey_id,

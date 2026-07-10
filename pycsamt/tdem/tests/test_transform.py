@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.tdem transforms and data model."""
 
 import numpy as np
@@ -6,29 +5,31 @@ import pytest
 
 from pycsamt.tdem._base import TEMSounding
 from pycsamt.tdem.transform import (
-    LateTimeTransform,
+    MU0,
     FourierTransform,
-    _rho_a_late_time,
-    _rho_a_in_loop,
-    _rho_a_offset_loop,
-    _biot_savart_rect_hz,
+    LateTimeTransform,
+    _apply_waveform_correction,
     _biot_savart_circle_hz,
-    _biot_savart_rect_hz_segments,
     _biot_savart_circle_hz_segments,
+    _biot_savart_rect_hz,
+    _biot_savart_rect_hz_segments,
+    _build_z_array,
     _in_loop_geometry_factor,
     _in_loop_geometry_factor_td,
     _loop_inner_radius,
-    _pseudo_freq,
     _phase_from_rho,
-    _build_z_array,
+    _pseudo_freq,
+    _rho_a_in_loop,
+    _rho_a_late_time,
+    _rho_a_offset_loop,
     _waveform_moments,
-    _apply_waveform_correction,
-    MU0,
 )
 from pycsamt.tdem.waveform import (
-    SquareWaveform, RampWaveform, HalfSineWaveform, CustomWaveform,
+    CustomWaveform,
+    HalfSineWaveform,
+    RampWaveform,
+    SquareWaveform,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -644,7 +645,9 @@ class TestFourierTransform:
 
     def test_analytical_negative_dBdt_gives_correct_im_sign(self):
         """Physically correct (negative) dBdt must yield Im[K] < 0."""
-        from pycsamt.tdem.transform import _cosine_transform_1d
+        from pycsamt.tdem.transform import (
+            _cosine_transform_1d,
+        )
         snd = self._sounding_analytical()
         t = snd.time_gates
         dBdt = snd.dBdt()
@@ -705,11 +708,11 @@ class TestFourierTransform:
         t = np.logspace(-4, -2, 30)
         dBdt = _analytical_halfsapce_dBdt(t)
         wf = RampWaveform(base_frequency=25.0, ramp_off=2e-4)
-        snd_ramp = TEMSounding(
+        TEMSounding(
             time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2,
             waveform=wf,
         )
-        snd_no = TEMSounding(time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2)
+        TEMSounding(time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2)
         # ramp correction drops early gates that fall within the ramp window
         corrected_d, corrected_t, _ = _apply_waveform_correction(dBdt, t, wf)
         assert len(corrected_t) < len(t)
@@ -811,7 +814,7 @@ class TestApplyWaveformCorrection:
         return np.logspace(-4, -2, n)
 
     def _data(self, t):
-        M = 1.0 * (50.0 ** 2) * np.pi
+        1.0 * (50.0 ** 2) * np.pi
         return _analytical_halfsapce_dBdt(t)
 
     def test_none_waveform_noop(self):

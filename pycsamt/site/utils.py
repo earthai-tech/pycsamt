@@ -1,24 +1,26 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import (Any, Callable, Iterator, List, Optional,
-                    Sequence, Tuple, Union)
-from collections import namedtuple
-from pathlib import Path
-from os import PathLike 
-
 import copy
 import math
 import re
+from collections import namedtuple
+from collections.abc import Iterator, Sequence
+from os import PathLike
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+)
+
 import numpy as np
 
-from ..core.base import ensure_station  
-from ..seg.edi import EDIFile  
-from ..seg.collection import EDICollection  
-from ..seg.heads import Head  
+from ..core.base import ensure_station
+from ..seg.collection import EDICollection
+from ..seg.edi import EDIFile
+from ..seg.heads import Head
 
 __all__ = [
     "is_pathlike", "is_edi_file", "is_edi_collection",
@@ -37,23 +39,23 @@ _Coord = namedtuple("_Coord", ["lat", "lon", "elev"])
 def is_pathlike(x: Any) -> bool:
     r"""
     Return True if *x* looks like a filesystem path.
-    
+
     Parameters
     ----------
     x : Any
         Object to test.
-    
+
     Returns
     -------
     bool
         True when *x* is a `str` or `pathlib.Path`, otherwise
         False.
-    
+
     Notes
     -----
     This helper is intentionally conservative. Containers that
     happen to be iterable but are not paths will return False.
-    
+
     Examples
     --------
     >>> from pathlib import Path
@@ -64,7 +66,7 @@ def is_pathlike(x: Any) -> bool:
     True
     >>> is_pathlike(["a", "b"])
     False
-    
+
     See Also
     --------
     pathlib.Path
@@ -76,23 +78,23 @@ def is_pathlike(x: Any) -> bool:
 def is_edi_file(x: Any) -> bool:
     r"""
     Heuristically detect an EDI file object.
-    
+
     Parameters
     ----------
     x : Any
         Object to test.
-    
+
     Returns
     -------
     bool
         True if *x* exposes both ``get_section`` and an attribute
         named ``Z`` (the impedance section). Otherwise False.
-    
+
     Notes
     -----
     This check is duck-typed and does not import the backend
     class. It is compatible with multiple EDI implementations.
-    
+
     Examples
     --------
     >>> class Dummy:
@@ -104,7 +106,7 @@ def is_edi_file(x: Any) -> bool:
     True
     >>> is_edi_file(object())
     False
-    
+
     See Also
     --------
     is_edi_collection, iter_edifiles
@@ -118,24 +120,24 @@ def is_edi_file(x: Any) -> bool:
 def is_edi_collection(x: Any) -> bool:
     r"""
     Detect whether *x* is an iterable collection of EDI objects.
-    
+
     Parameters
     ----------
     x : Any
         Candidate collection. May be an `EDICollection` instance,
         or any iterable containing EDI-like objects.
-    
+
     Returns
     -------
     bool
         True if *x* looks like a collection of EDI files.
-    
+
     Notes
     -----
     The check is non-destructive. It peeks at the first element
     of the iterable to decide. Pathlike objects are not treated
     as iterables here, even though `str` is iterable.
-    
+
     Examples
     --------
     >>> from pycsamt.site.utils import is_edi_collection, is_edi_file
@@ -168,23 +170,23 @@ def is_edi_collection(x: Any) -> bool:
 def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
     r"""
     Iterate over EDI files contained in *edic*.
-    
+
     Parameters
     ----------
     edic : Any
         Single EDI object or an iterable of EDI objects. Pathlike
         inputs are ignored (yield nothing).
-    
+
     Yields
     ------
     pycsamt.seg.edi.EDIFile
         Each detected EDI-like object from *edic*.
-    
+
     Notes
     -----
     This is a safe iterator. Non EDI elements are skipped. A
     single EDI object will be yielded once.
-    
+
     Examples
     --------
     >>> from pycsamt.site.utils import iter_edifiles
@@ -197,7 +199,7 @@ def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
     >>> lst = [E(), object(), E()]
     >>> len(list(iter_edifiles(lst)))
     2
-    
+
     See Also
     --------
     is_edi_file, is_edi_collection, as_edicollection
@@ -235,7 +237,7 @@ def as_edicollection(
     strict: bool = False,
     on_dup: str = "replace",
     verbose: int = 0,
-) -> Optional["EDICollection"]:
+) -> EDICollection | None:
     r"""
     Coerce *edic* into an :class:`EDICollection` when possible.
 
@@ -285,15 +287,15 @@ def as_edicollection(
     True
     >>> as_edicollection([]) is None
     True
-    
+
     See Also
     --------
     iter_edifiles, is_edi_collection
-    
+
     References
     ----------
     .. [1] Robust factory patterns for heterogeneous inputs.
-    
+
     True
     """
 
@@ -324,33 +326,33 @@ def as_edicollection(
 def station_name(ed: Any) -> str:
     r"""
     Return a best-effort station name for an EDI-like object.
-    
+
     The lookup order is:
-    
+
     1. Attribute ``station`` on the object itself (if truthy).
     2. Header field ``dataid`` (via an internal head accessor).
     3. Fallback attributes on the object: ``name``, ``site``,
        or ``dataid`` (first non-empty one).
     4. Empty string when nothing suitable is found.
-    
+
     Parameters
     ----------
     ed : Any
         EDI-like object exposing either a header section or plain
         attributes for station naming.
-    
+
     Returns
     -------
     str
         The resolved station name, possibly an empty string.
-    
+
     Notes
     -----
     This helper is intentionally tolerant so it can work across
     different EDI backends. It prefers explicit ``station`` on
     the object, then the header ``dataid`` which is commonly used
     as the unique site identifier.
-    
+
     Examples
     --------
     >>> from types import SimpleNamespace
@@ -361,18 +363,18 @@ def station_name(ed: Any) -> str:
     >>> ed = SimpleNamespace(name="Alt01")
     >>> station_name(ed)
     'Alt01'
-    
+
     See Also
     --------
     set_station_name : Synchronously update object and header names.
     get_coords : Read latitude, longitude and elevation from header.
     """
 
-    if hasattr(ed, "station") and getattr(ed, "station"):
-        return str(getattr(ed, "station"))
+    if hasattr(ed, "station") and ed.station:
+        return str(ed.station)
     h = _get_head(ed)
     if h is not None and getattr(h, "dataid", None):
-        return str(getattr(h, "dataid"))
+        return str(h.dataid)
     for k in ("name", "site", "dataid"):
         v = getattr(ed, k, None)
         if v:
@@ -382,18 +384,18 @@ def station_name(ed: Any) -> str:
 
 def set_station_name(
     ed: Any,
-    name: Optional[str] = None,
+    name: str | None = None,
     *,
-    station_id: Optional[Union[str, int]] = None,
+    station_id: str | int | None = None,
     policy: Any = None,
     inplace: bool = True,
 ) -> Any:
     r"""
     Set the station name on an EDI-like object and its header.
-    
+
     This function updates multiple common identifiers so that the
     object-level name and the header ``dataid`` stay in sync.
-    
+
     Parameters
     ----------
     ed : Any
@@ -410,19 +412,19 @@ def set_station_name(
     inplace : bool, default True
         If True, mutate *ed* in place; otherwise return a modified
         copy when possible.
-    
+
     Returns
     -------
     Any
         The same object (when ``inplace=True``) or a best-effort
         copy with the new identifiers applied.
-    
+
     Notes
     -----
     Internally, the header object is created if missing. Both
     ``ed.station`` and ``head.dataid`` are written when available.
     Errors from non-writable fields are suppressed.
-    
+
     Examples
     --------
     >>> from types import SimpleNamespace
@@ -433,7 +435,7 @@ def set_station_name(
     <...>
     >>> station_name(ed)
     'X01'
-    
+
     See Also
     --------
     station_name : Read the current station name.
@@ -443,7 +445,7 @@ def set_station_name(
     tgt = ed if inplace else maybe_copy(ed)
     nm = ensure_station(name, station_id, policy=policy)
     try:
-        setattr(tgt, "station", nm)
+        tgt.station = nm
     except Exception:
         pass
     try:
@@ -458,24 +460,24 @@ def set_station_name(
 def get_coords(ed: Any) -> _Coord:
     r"""
     Read latitude, longitude and elevation from an EDI header.
-    
+
     Parameters
     ----------
     ed : Any
         EDI-like object holding a header section.
-    
+
     Returns
     -------
     _Coord
         A small tuple-like object with fields ``lat``, ``lon`` and
         ``elev``. Missing values are returned as ``nan``.
-    
+
     Notes
     -----
     Both ``lon`` and legacy ``long`` header attribute names are
     supported. If the header is missing or fields cannot be read,
     all values are ``nan``.
-    
+
     Examples
     --------
     >>> from types import SimpleNamespace
@@ -485,7 +487,7 @@ def get_coords(ed: Any) -> _Coord:
     >>> c = get_coords(ed)
     >>> (c.lat, c.lon, c.elev)
     (10.0, 20.0, 300.0)
-    
+
     See Also
     --------
     set_coords : Write latitude, longitude and elevation to header.
@@ -504,14 +506,14 @@ def get_coords(ed: Any) -> _Coord:
 def set_coords(
     ed: Any,
     *,
-    lat: Optional[float] = None,
-    lon: Optional[float] = None,
-    elev: Optional[float] = None,
+    lat: float | None = None,
+    lon: float | None = None,
+    elev: float | None = None,
     inplace: bool = True,
 ) -> Any:
     r"""
     Write latitude, longitude and/or elevation into the header.
-    
+
     Parameters
     ----------
     ed : Any
@@ -525,19 +527,19 @@ def set_coords(
     inplace : bool, default True
         If True, mutate *ed* in place; otherwise apply the update to
         a copy and return it.
-    
+
     Returns
     -------
     Any
         The updated object (in place) or a best-effort copy.
-    
+
     Notes
     -----
     Both ``lon`` and ``long`` attribute names are supported on the
     header. If neither exists, a small adapter header may be created
     and attached back to the object when possible. Failures to write
     individual fields are ignored to maximize portability.
-    
+
     Examples
     --------
     >>> from types import SimpleNamespace
@@ -549,7 +551,7 @@ def set_coords(
     <...>
     >>> tuple(map(float, get_coords(ed)))
     (12.5, 1.2, 350.0)
-    
+
     See Also
     --------
     get_coords : Read header coordinates.
@@ -599,23 +601,23 @@ def set_coords(
 def maybe_copy(x: Any) -> Any:
     r"""
     Attempt a deep copy of *x*, falling back to identity.
-    
+
     Parameters
     ----------
     x : Any
         Object to copy.
-    
+
     Returns
     -------
     Any
         A deep-copied object when possible; otherwise *x* itself.
-    
+
     Notes
     -----
     Some EDI backends contain objects that are not deepcopyable.
     This helper catches such cases and simply returns the original
     object to avoid raising.
-    
+
     Examples
     --------
     >>> from pycsamt.site.utils import maybe_copy
@@ -637,7 +639,7 @@ def apply_inplace(
 ) -> Any:
     r"""
     Apply a function to an object with optional in-place semantics.
-    
+
     Parameters
     ----------
     x : Any
@@ -648,18 +650,18 @@ def apply_inplace(
     inplace : bool, default False
         If True, call ``fn`` directly on *x*. Otherwise a deep copy
         is attempted first.
-    
+
     Returns
     -------
     Any
         The result of applying ``fn`` to the chosen object.
-    
+
     Notes
     -----
     This utility centralizes a common pattern used across the
     package: honor an ``inplace`` flag while being resilient to
     objects that cannot be deep-copied.
-    
+
     Examples
     --------
     >>> from pycsamt.site.utils import apply_inplace
@@ -685,25 +687,25 @@ def apply_inplace(
 def get_freq(ed: Any) -> np.ndarray:
     r"""
     Return the frequency vector from the impedance section.
-    
+
     Parameters
     ----------
     ed : Any
         EDI-like object exposing a ``Z`` section with either a
         public ``freq`` array or a private ``_freq`` array.
-    
+
     Returns
     -------
     numpy.ndarray
         A 1-D float array sorted in ascending order. Returns an
         empty array when no frequency information is available.
-    
+
     Notes
     -----
     This is a read-only accessor. When both ``freq`` and ``_freq``
     are absent or unreadable, an empty array is returned. Non-finite
     values are preserved; only ordering is enforced.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -713,7 +715,7 @@ def get_freq(ed: Any) -> np.ndarray:
     >>> ed = SimpleNamespace(Z=Z)
     >>> get_freq(ed)
     array([1., 2..])
-    
+
     See Also
     --------
     freq_match : Find indices of exact matches within a tolerance.
@@ -739,13 +741,13 @@ def get_freq(ed: Any) -> np.ndarray:
 
 def freq_match(
     f: np.ndarray,
-    target: Union[float, Sequence[float]],
+    target: float | Sequence[float],
     *,
     tol: float = 1e-6,
 ) -> np.ndarray:
     r"""
     Indices where frequency values match targets within tolerance.
-    
+
     Parameters
     ----------
     f : numpy.ndarray
@@ -756,18 +758,18 @@ def freq_match(
         Absolute tolerance for a match. A value ``v`` in ``f`` is
         considered a match to ``t`` when
         :math:`|v - t| \\leq \\mathrm{tol}`.
-    
+
     Returns
     -------
     numpy.ndarray
         Sorted integer indices into ``f`` where matches occur. May be
         empty when no value matches within ``tol``.
-    
+
     Notes
     -----
     Non-finite values in ``f`` never match. Duplicates in ``f`` are
     all returned if they fall within the tolerance window.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -777,7 +779,7 @@ def freq_match(
     array([1, 2])
     >>> freq_match(f, [5.0, 30.0])
     array([3])
-    
+
     See Also
     --------
     freq_select : More general selection by ranges or slices.
@@ -795,14 +797,13 @@ def freq_match(
 
 def freq_select(
     f: np.ndarray,
-    sel: Union[slice, float, Sequence[float],
-               Tuple[float, float]],
+    sel: slice | float | Sequence[float] | tuple[float, float],
     *,
     tol: float = 1e-6,
 ) -> np.ndarray:
     r"""
     Build an index selection from ranges, slices or scalars.
-    
+
     Parameters
     ----------
     f : numpy.ndarray
@@ -816,20 +817,20 @@ def freq_select(
     tol : float, default 1e-6
         Absolute tolerance used for end inclusions and exact
         matching.
-    
+
     Returns
     -------
     numpy.ndarray
         Sorted integer indices into ``f`` that satisfy the selection.
         Returns an empty array when nothing matches.
-    
+
     Notes
     -----
     Bounds are treated as inclusive with a tolerance, i.e.
     :math:`\\mathrm{lo} - \\mathrm{tol} \\le f \\le
     \\mathrm{hi} + \\mathrm{tol}`. For exact targets, matching is
     performed by :func:`freq_match`.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -841,7 +842,7 @@ def freq_select(
     array([0])
     >>> freq_select(f, [10.0, 999.0])
     array([1])
-    
+
     See Also
     --------
     freq_match : Matching by exact targets with tolerance.
@@ -867,12 +868,12 @@ def freq_select(
 
 
 def match_name(
-    pat: Union[str, re.Pattern[str], Callable[[str], bool]],
+    pat: str | re.Pattern[str] | Callable[[str], bool],
     name: str,
 ) -> bool:
     r"""
     Case-insensitive station-name matcher with flexible patterns.
-    
+
     Parameters
     ----------
     pat : str or Pattern or callable
@@ -883,19 +884,19 @@ def match_name(
         strings, and finally a case-insensitive literal compare.
     name : str
         The candidate station name.
-    
+
     Returns
     -------
     bool
         ``True`` if the pattern matches ``name``, ``False`` on any
         error or no match.
-    
+
     Notes
     -----
     Glob-like patterns are translated to regular expressions with
     ``re.IGNORECASE``. Strings that contain typical regex meta-
     characters (e.g. ``. ^ $ + | ( ) \\``) are treated as regexes.
-    
+
     Examples
     --------
     >>> import re
@@ -906,7 +907,7 @@ def match_name(
     True
     >>> match_name(lambda s: s.endswith("99"), "A99")
     True
-    
+
     See Also
     --------
     select_by_name : Collect items from an iterable using a pattern.
@@ -937,11 +938,11 @@ def match_name(
 
 def select_by_name(
     edic: Any,
-    pat: Union[str, re.Pattern[str], Callable[[str], bool]],
-) -> List[EDIFile]:
+    pat: str | re.Pattern[str] | Callable[[str], bool],
+) -> list[EDIFile]:
     r"""
     Collect EDI-like objects whose station names match a pattern.
-    
+
     Parameters
     ----------
     edic : Any
@@ -950,12 +951,12 @@ def select_by_name(
         returned depending on the match.
     pat : str or Pattern or callable
         Pattern passed to :func:`match_name`.
-    
+
     Returns
     -------
     list of pycsamt.seg.edi.EDIFile
         Items whose names match ``pat`` in iteration order.
-    
+
     Examples
     --------
     >>> from types import SimpleNamespace
@@ -965,14 +966,14 @@ def select_by_name(
     >>> keep = select_by_name(eds, "E*")
     >>> [getattr(x, "station") for x in keep]
     ['E01']
-    
+
     See Also
     --------
     match_name : Flexible single-name predicate.
     iter_edifiles : Safe iterator over EDI-like inputs.
     """
 
-    out: List[EDIFile] = []
+    out: list[EDIFile] = []
     for ed in iter_edifiles(edic):
         nm = station_name(ed)
         if match_name(pat, nm):
@@ -983,22 +984,22 @@ def select_by_name(
 def wrap_azimuth(az: float) -> float:
     r"""
     Wrap an azimuth angle in degrees to the half-open range [0, 360).
-    
+
     Parameters
     ----------
     az : float
         Angle in degrees, possibly outside the canonical range.
-    
+
     Returns
     -------
     float
         Angle in degrees in the interval ``[0, 360)``.
-    
+
     Notes
     -----
     The operation is equivalent to ``az % 360`` with care for
     negative inputs.
-    
+
     Examples
     --------
     >>> from pycsamt.site.utils import wrap_azimuth
@@ -1011,26 +1012,26 @@ def wrap_azimuth(az: float) -> float:
     return a if a >= 0 else a + 360.0
 
 
-def deg_to_mrad(x: Union[float, np.ndarray]) -> np.ndarray:
+def deg_to_mrad(x: float | np.ndarray) -> np.ndarray:
     r"""
     Convert degrees to milliradians.
-    
+
     Parameters
     ----------
     x : float or numpy.ndarray
         Angle(s) in degrees.
-    
+
     Returns
     -------
     numpy.ndarray
         Converted values in milliradians.
-    
+
     Notes
     -----
     The conversion uses:
     :math:`\\mathrm{mrad} = \\mathrm{deg} \\times
     \\pi / 180 \\times 1000`.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -1045,26 +1046,26 @@ def deg_to_mrad(x: Union[float, np.ndarray]) -> np.ndarray:
     return a * (math.pi / 180.0) * 1000.0
 
 
-def mrad_to_deg(x: Union[float, np.ndarray]) -> np.ndarray:
+def mrad_to_deg(x: float | np.ndarray) -> np.ndarray:
     r"""
     Convert milliradians to degrees.
-    
+
     Parameters
     ----------
     x : float or numpy.ndarray
         Angle(s) in milliradians.
-    
+
     Returns
     -------
     numpy.ndarray
         Converted values in degrees.
-    
+
     Notes
     -----
     The conversion uses:
     :math:`\\mathrm{deg} = \\mathrm{mrad} \\times
     180 / (\\pi \\times 1000)`.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -1100,7 +1101,7 @@ def _ensure_head(ed: EDIFile) -> Any:
         ed.set_section("head", h)  # type: ignore
     except Exception:
         try:
-            setattr(ed, "Head", h)
+            ed.Head = h
         except Exception:
             pass
     return h

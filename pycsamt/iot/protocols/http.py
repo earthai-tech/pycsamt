@@ -8,10 +8,14 @@ through options or a :class:`~pycsamt.iot.security.SecurityConfig`.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, IoTProtocol, TelemetryError
+from .base import (
+    BaseTelemetryClient,
+    IoTProtocol,
+    TelemetryError,
+)
 
 __all__ = ["HTTPTelemetryClient"]
 
@@ -23,12 +27,12 @@ class HTTPTelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         dry_run: bool = False,
         timeout: float = 10.0,
-        token: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        token: str | None = None,
+        headers: dict[str, str] | None = None,
         method: str = "POST",
         **options: Any,
     ) -> None:
@@ -50,7 +54,7 @@ class HTTPTelemetryClient(BaseTelemetryClient):
                 f"HTTP endpoint must start with http:// or https:// (got {url!r})."
             )
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
         extra = self.options.get("headers") or {}
         headers.update({str(k): str(v) for k, v in extra.items()})

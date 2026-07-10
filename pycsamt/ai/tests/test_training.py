@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.ai training utilities — Normalizer, EMDataset, augmenters, metrics."""
@@ -173,26 +172,34 @@ class TestAugmentStaticShift(unittest.TestCase):
         self.X = self.rng.standard_normal((30, 20)).astype(np.float32)
 
     def test_tuple_range(self):
-        from pycsamt.ai.training.augment import AugmentStaticShift
+        from pycsamt.ai.training.augment import (
+            AugmentStaticShift,
+        )
         aug = AugmentStaticShift(shift_range=(0.3, 3.0))
         Xa, _ = aug(self.X)
         self.assertEqual(Xa.shape, self.X.shape)
 
     def test_scalar_range_coerced(self):
         """Scalar 0.1 → (10^-0.1, 10^+0.1)."""
-        from pycsamt.ai.training.augment import AugmentStaticShift
+        from pycsamt.ai.training.augment import (
+            AugmentStaticShift,
+        )
         aug = AugmentStaticShift(0.1)
         self.assertAlmostEqual(aug.shift_range[0], 10 ** -0.1, places=6)
         self.assertAlmostEqual(aug.shift_range[1], 10 ** 0.1, places=6)
 
     def test_scalar_no_error(self):
-        from pycsamt.ai.training.augment import AugmentStaticShift
+        from pycsamt.ai.training.augment import (
+            AugmentStaticShift,
+        )
         aug = AugmentStaticShift(0.3)
         Xa, _ = aug(self.X)
         self.assertEqual(Xa.shape, self.X.shape)
 
     def test_per_sample_variation(self):
-        from pycsamt.ai.training.augment import AugmentStaticShift
+        from pycsamt.ai.training.augment import (
+            AugmentStaticShift,
+        )
         aug = AugmentStaticShift(shift_range=(0.01, 100.0), per_sample=True)
         Xa, _ = aug(self.X)
         diffs = np.abs(Xa - self.X).mean(axis=1)
@@ -202,14 +209,18 @@ class TestAugmentStaticShift(unittest.TestCase):
 class TestAugmentFreqDrop(unittest.TestCase):
 
     def test_zeros_introduced(self):
-        from pycsamt.ai.training.augment import AugmentFreqDrop
+        from pycsamt.ai.training.augment import (
+            AugmentFreqDrop,
+        )
         X = np.ones((20, 40), dtype=np.float32)
         aug = AugmentFreqDrop(drop_rate=0.25)
         Xa, _ = aug(X)
         self.assertGreater((Xa == 0.0).sum(), 0)
 
     def test_contiguous(self):
-        from pycsamt.ai.training.augment import AugmentFreqDrop
+        from pycsamt.ai.training.augment import (
+            AugmentFreqDrop,
+        )
         X = np.ones((10, 50), dtype=np.float32)
         aug = AugmentFreqDrop(drop_rate=0.1, contiguous=True)
         Xa, _ = aug(X)
@@ -238,7 +249,11 @@ class TestAugmentMixup(unittest.TestCase):
 class TestCompose(unittest.TestCase):
 
     def setUp(self):
-        from pycsamt.ai.training.augment import AugmentNoise, AugmentStaticShift, Compose
+        from pycsamt.ai.training.augment import (
+            AugmentNoise,
+            AugmentStaticShift,
+            Compose,
+        )
         self.aug = Compose([
             AugmentNoise(sigma=0.03),
             AugmentStaticShift(0.2),
@@ -263,7 +278,10 @@ class TestCompose(unittest.TestCase):
 class TestRandomApply(unittest.TestCase):
 
     def test_p0_never_applies(self):
-        from pycsamt.ai.training.augment import AugmentNoise, RandomApply
+        from pycsamt.ai.training.augment import (
+            AugmentNoise,
+            RandomApply,
+        )
         aug = RandomApply(AugmentNoise(sigma=10.0), p=0.0, seed=0)
         X = np.ones((20, 10), dtype=np.float32)
         for _ in range(10):
@@ -271,7 +289,10 @@ class TestRandomApply(unittest.TestCase):
             np.testing.assert_array_equal(Xa, X)
 
     def test_p1_always_applies(self):
-        from pycsamt.ai.training.augment import AugmentNoise, RandomApply
+        from pycsamt.ai.training.augment import (
+            AugmentNoise,
+            RandomApply,
+        )
         aug = RandomApply(AugmentNoise(sigma=5.0), p=1.0, seed=0)
         X = np.ones((20, 10), dtype=np.float32)
         Xa, _ = aug(X)
@@ -338,8 +359,8 @@ class TestMetrics(unittest.TestCase):
 
     def test_add_noise_forward(self):
         """add_noise in forward.noise operates on ForwardResponse objects."""
+        from pycsamt.forward import LayeredModel, MT1DForward
         from pycsamt.forward.noise import add_noise
-        from pycsamt.forward import MT1DForward, LayeredModel
         model = LayeredModel(resistivity=[100., 10., 500.], thickness=[30., 200.])
         freqs = np.logspace(0, 3, 20)
         resp = MT1DForward(freqs).run(model)

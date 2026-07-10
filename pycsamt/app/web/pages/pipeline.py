@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Processing pipeline page v2 — redesigned to match Correction / QC layout.
@@ -28,10 +27,12 @@ from __future__ import annotations
 
 import os
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
-from pycsamt.app.desktop.controllers.pipeline_controller import _build_steps
+from pycsamt.app.desktop.controllers.pipeline_controller import (
+    _build_steps,
+)
 from pycsamt.app.web.layout import IDs, _command_bar
 from pycsamt.app.web.utils import empty_src
 

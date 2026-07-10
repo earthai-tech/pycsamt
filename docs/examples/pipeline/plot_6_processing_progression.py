@@ -16,11 +16,21 @@ quality-control metrics that improved.
 # None of these change the frequency axis, so every processed sounding lines
 # up with its raw counterpart for a clean before/after comparison.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from _pipe_data import (
+    demo_sites,
+    quiet_logs,
+    scratch_dir,
+    station_rho,
+)
 
-from _pipe_data import demo_sites, scratch_dir, quiet_logs, station_rho
-from pycsamt.pipeline import Pipeline, Step, configure_pipe, reset_pipe
+from pycsamt.pipeline import (
+    Pipeline,
+    Step,
+    configure_pipe,
+    reset_pipe,
+)
 
 raw = demo_sites(n=10)
 configure_pipe(show_progress=False, plot_dpi=72)

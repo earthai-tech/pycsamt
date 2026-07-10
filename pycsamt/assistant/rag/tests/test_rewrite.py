@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for conversational query rewriting (RAG Tier 2)."""
@@ -6,7 +5,10 @@ from __future__ import annotations
 
 import unittest
 
-from pycsamt.assistant.rag.rewrite import is_follow_up, rewrite_query
+from pycsamt.assistant.rag.rewrite import (
+    is_follow_up,
+    rewrite_query,
+)
 
 
 class TestIsFollowUp(unittest.TestCase):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the AgentMaster façade (pycsamt.agents.master)."""
 
 from __future__ import annotations
@@ -25,6 +24,7 @@ def test_lazy_export_and_light_import():
         ("OpenAI", "openai"),
         ("google", "gemini"),
         ("deepseek", "deepseek"),
+        ("minimax", "minimax"),
     ],
 )
 def test_provider_aliases(alias, canonical):

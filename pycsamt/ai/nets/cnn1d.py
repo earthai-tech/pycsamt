@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,7 +19,7 @@ time-domain EM data with CNNs. *Computers & Geosciences*, 149, 104681.
 """
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 __all__ = ["CNN1DNet"]
 

@@ -37,8 +37,6 @@ logger = logging.getLogger(__name__)
 # Workflow descriptions, keyword table, and alias map all live in the single
 # source of truth: pycsamt.agents._workflows (shared with the orchestrator).
 from ._workflows import (  # noqa: E402
-    WORKFLOW_DESCRIPTIONS as _KNOWN_WORKFLOWS,
-    WORKFLOW_ALIASES as _WORKFLOW_ALIASES,
     normalise_workflow as _normalise_workflow,
 )
 

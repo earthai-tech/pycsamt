@@ -1,6 +1,7 @@
 
 import pandas as pd
 
+
 class Config:
     """
     Container of un‐modifiable I/O settings and lookup tables.

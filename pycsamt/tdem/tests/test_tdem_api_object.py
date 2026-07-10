@@ -14,7 +14,10 @@ from pycsamt.tdem import (
     read_temavg_survey,
     transform_temavg_survey,
 )
-from pycsamt.tdem.transform import FourierTransform, LateTimeTransform
+from pycsamt.tdem.transform import (
+    FourierTransform,
+    LateTimeTransform,
+)
 from pycsamt.tdem.waveform import SquareWaveform
 
 DATA_DIR = (

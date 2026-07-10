@@ -13,8 +13,9 @@ installed it is used automatically for a better PSD.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -68,9 +69,9 @@ def _welch_psd(
     x: np.ndarray,
     fs: float,
     *,
-    nperseg: Optional[int] = None,
+    nperseg: int | None = None,
     detrend: bool = True,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """One-sided power spectral density via Welch's method (numpy).
 
     Falls back to :func:`scipy.signal.welch` when SciPy is available.
@@ -168,7 +169,7 @@ class HarmonicPeak(PyCSAMTObject):
     power_ratio: float
     flagged: bool
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return dict(
             order=self.order,
             frequency_hz=self.frequency_hz,
@@ -182,18 +183,18 @@ class PowerlineHarmonics(PyCSAMTObject):
     """Result of :func:`detect_powerline_harmonics`."""
 
     mains_hz: float
-    peaks: List[HarmonicPeak] = field(default_factory=list)
+    peaks: list[HarmonicPeak] = field(default_factory=list)
     total_ratio: float = 0.0
     contaminated: bool = False
 
     @property
-    def dominant(self) -> Optional[HarmonicPeak]:
+    def dominant(self) -> HarmonicPeak | None:
         """Return the strongest harmonic, if any were measured."""
         if not self.peaks:
             return None
         return max(self.peaks, key=lambda p: p.power_ratio)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return dict(
             mains_hz=self.mains_hz,
             total_ratio=self.total_ratio,
@@ -281,9 +282,9 @@ def detect_powerline_harmonics(
 # ---------------------------------------------------------------------------
 def estimate_channel_snr(
     data: Any,
-    sample_rate: Optional[float] = None,
+    sample_rate: float | None = None,
     *,
-    signal_band_hz: Optional[Tuple[float, float]] = None,
+    signal_band_hz: tuple[float, float] | None = None,
 ) -> float:
     """Estimate channel SNR in decibels.
 
@@ -322,10 +323,10 @@ def estimate_channel_snr(
 def check_channel_saturation(
     data: Any,
     *,
-    limit: Optional[float] = None,
+    limit: float | None = None,
     max_clip_fraction: float = 0.01,
     tol: float = 1e-9,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Detect ADC clipping / saturation in a channel.
 
     When ``limit`` is provided, samples with ``abs(x) >= limit`` count as
@@ -367,9 +368,9 @@ def check_contact_resistance(
     ex: Any,
     ey: Any = None,
     *,
-    sample_rate: Optional[float] = None,
-    noise_rms_threshold: Optional[float] = None,
-) -> Dict[str, Any]:
+    sample_rate: float | None = None,
+    noise_rms_threshold: float | None = None,
+) -> dict[str, Any]:
     """Proxy assessment of electrode contact quality.
 
     True contact resistance requires a current injection measurement. On
@@ -379,7 +380,7 @@ def check_contact_resistance(
     channel when its high-pass noise RMS exceeds ``noise_rms_threshold``
     (when provided) or when Ex/Ey noise is strongly imbalanced.
     """
-    def _stats(sig: Any) -> Optional[Dict[str, float]]:
+    def _stats(sig: Any) -> dict[str, float] | None:
         x = _prep_signal(sig)
         if x.size < 3:
             return None
@@ -394,9 +395,9 @@ def check_contact_resistance(
 
     ex_stats = _stats(ex)
     ey_stats = _stats(ey) if ey is not None else None
-    out: Dict[str, Any] = dict(ex=ex_stats, ey=ey_stats)
+    out: dict[str, Any] = dict(ex=ex_stats, ey=ey_stats)
 
-    flags: List[str] = []
+    flags: list[str] = []
     if noise_rms_threshold is not None:
         thr = _c.as_positive(noise_rms_threshold, "noise_rms_threshold")
         for name, st in (("ex", ex_stats), ("ey", ey_stats)):
@@ -431,9 +432,9 @@ class FrequencyCoverage(PyCSAMTObject):
     f_high_hz: float
     n_decades: float
     coverage_fraction: float = float("nan")
-    missing_bands: List[Tuple[float, float]] = field(default_factory=list)
+    missing_bands: list[tuple[float, float]] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return dict(
             sample_rate_hz=self.sample_rate_hz,
             nyquist_hz=self.nyquist_hz,
@@ -449,7 +450,7 @@ def estimate_frequency_coverage(
     timeseries: Any,
     sample_rate: float,
     *,
-    target_bands: Optional[Iterable[Tuple[float, float]]] = None,
+    target_bands: Iterable[tuple[float, float]] | None = None,
     snr_floor_db: float = 6.0,
 ) -> FrequencyCoverage:
     """Estimate the resolvable frequency band of a recording.
@@ -509,8 +510,8 @@ def compute_live_spectra(
     data: Any,
     sample_rate: float,
     *,
-    nperseg: Optional[int] = None,
-) -> Dict[str, np.ndarray]:
+    nperseg: int | None = None,
+) -> dict[str, np.ndarray]:
     """Return ``{"frequency_hz": ..., "psd": ...}`` for live display."""
     fs = _positive_sample_rate(sample_rate)
     x = _prep_signal(data)
@@ -530,7 +531,7 @@ class ImpedanceStability(PyCSAMTObject):
     phase_std_deg: float
     stable: bool
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return dict(
             n_windows=self.n_windows,
             cv_magnitude=self.cv_magnitude,
@@ -598,7 +599,7 @@ def detect_sensor_dropout(
     *,
     min_flat_run: int = 8,
     flat_tol: float = 1e-12,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Detect NaN gaps and stuck-value (flatline) runs in a channel.
 
     Returns counts for NaN samples and the longest run of (near-)constant
@@ -655,8 +656,8 @@ def amt_edge_report(
     sample_rate: float,
     *,
     mains_hz: float = 50.0,
-    signal_band_hz: Optional[Tuple[float, float]] = None,
-) -> Dict[str, Any]:
+    signal_band_hz: tuple[float, float] | None = None,
+) -> dict[str, Any]:
     """Run the core AMT edge diagnostics on one channel and collate them."""
     harmonics = detect_powerline_harmonics(
         data, sample_rate, mains_hz=mains_hz
@@ -674,7 +675,7 @@ def amt_edge_report(
 
 
 def amt_edge_table(
-    reports: Dict[str, Dict[str, Any]] | Iterable[Tuple[str, Dict[str, Any]]],
+    reports: dict[str, dict[str, Any]] | Iterable[tuple[str, dict[str, Any]]],
     *,
     api: bool | None = None,
 ) -> Any:
@@ -687,7 +688,7 @@ def amt_edge_table(
         list(reports.items()) if isinstance(reports, dict)
         else list(reports)
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for channel, report in items:
         powerline = report.get("powerline", {})
         saturation = report.get("saturation", {})

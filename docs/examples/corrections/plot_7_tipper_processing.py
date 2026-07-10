@@ -24,10 +24,12 @@ from pathlib import Path
 
 import numpy as np
 
-from pycsamt.seg.spectra import Spectra
 from pycsamt.emtools import (
-    spectra_summary, plot_psd, plot_tipper_from_spectra,
+    plot_psd,
+    plot_tipper_from_spectra,
+    spectra_summary,
 )
+from pycsamt.seg.spectra import Spectra
 
 ROOT = Path(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."))
 sp = Spectra.from_file(str(ROOT / "data" / "MT" / "SPECTRA" / "spectra01.edi"))
@@ -52,12 +54,17 @@ _tzx = plot_tipper_from_spectra(sp)
 # 25 s - 17,067 s, and unlike the AMT lines it carries a genuine vertical
 # field, so every induction arrow below is real tipper.
 
-from pycsamt.emtools._core import ensure_sites, _iter_items
 from pycsamt.emtools import (
-    drop_duplicates, select_band, drop_low_confidence_frequencies,
-    notch_powerline, smooth_logfreq,
-    plot_induction_arrows, plot_induction_section, plot_induction_rose,
+    drop_duplicates,
+    drop_low_confidence_frequencies,
+    notch_powerline,
+    plot_induction_arrows,
+    plot_induction_rose,
+    plot_induction_section,
+    select_band,
+    smooth_logfreq,
 )
+from pycsamt.emtools._core import _iter_items, ensure_sites
 from pycsamt.site.export import write_sites
 
 K = ensure_sites(str(ROOT / "data" / "MT" / "kap03lmt_edis"))

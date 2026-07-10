@@ -45,10 +45,8 @@ The module has two distinct halves:
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from _datasets import load_survey
 
-from pycsamt.emtools.csumt import F_MAX_CSUMT, F_MIN_CSUMT
 from pycsamt.emtools import (
     bostick_depth,
     bostick_depth_from_rho,
@@ -59,6 +57,7 @@ from pycsamt.emtools import (
     vertical_resolution,
     vertical_resolution_pair,
 )
+from pycsamt.emtools.csumt import F_MAX_CSUMT, F_MIN_CSUMT
 
 freq = np.logspace(-1, 6, 300)  # 0.1 Hz to 1 MHz - spans AMT and CSUMT
 fig, ax = plt.subplots(figsize=(7, 5))

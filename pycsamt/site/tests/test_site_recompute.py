@@ -1,11 +1,14 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
 import csv
+from pathlib import Path
 
 from pycsamt.seg.edi import EDIFile
-from pycsamt.site import EDIRecomputer, recompute_edi, recompute_edis
+from pycsamt.site import (
+    EDIRecomputer,
+    recompute_edi,
+    recompute_edis,
+)
 from pycsamt.site.recompute import EDIRecomputeResult
 
 

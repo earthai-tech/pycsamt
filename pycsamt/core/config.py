@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Callable, Dict, Iterator, Mapping
-from typing import Optional
-from contextlib import contextmanager
-from pathlib import Path
-import os
-import re
-import math 
 import copy
 import json
 import logging
+import math
+import os
+import re
 import warnings
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Callable
 
 try:  # 3.11+
     import tomllib  # type: ignore[attr-defined]
@@ -37,11 +36,11 @@ __all__ = [
 class StationNamePolicy:
     r"""
     Rules to validate and synthesize station names.
-    
+
     This policy is applied during inter-format conversion (AVG or
     Jones -> EDI). When a provided name is missing or invalid, a
     synthetic name is derived from the station id.
-    
+
     Parameters
     ----------
     allow_pattern : str, optional
@@ -59,13 +58,13 @@ class StationNamePolicy:
     custom_normalize : Callable[[str], str], optional
         Hook called before validation. Can perform additional
         transliteration or case normalization.
-    
+
     Notes
     -----
     Normalization runs as: strip → custom_normalize → filter by
     ``allow_pattern`` → truncate to ``maxlen``. Empty results are
     treated as invalid.
-    
+
     Examples
     --------
     >>> from pycsamt.core.config import StationNamePolicy
@@ -84,7 +83,7 @@ class StationNamePolicy:
     custom_normalize: Callable[[str], str] = staticmethod(
         lambda s: s
     )
-    def _try_float(self, v) -> Optional[float]:
+    def _try_float(self, v) -> float | None:
         try:
             x = float(v)
             if math.isfinite(x):
@@ -92,21 +91,21 @@ class StationNamePolicy:
         except Exception:
             pass
         return None
-    
-    def validate(self, name: Optional[str]) -> Optional[str]:
+
+    def validate(self, name: str | None) -> str | None:
         r"""
         Validate and normalize a name.
-        
+
         Parameters
         ----------
         name : str or None
             Candidate station name.
-        
+
         Returns
         -------
         str or None
             Normalized name if valid; otherwise ``None``.
-        
+
         Notes
         -----
         The method does not synthesize names. Use ``ensure`` for a
@@ -121,21 +120,21 @@ class StationNamePolicy:
         s = s[: self.maxlen]
         return s or None
 
-    def synthesize(self, station_id: Optional[Any]) -> str:
+    def synthesize(self, station_id: Any | None) -> str:
         r"""
         Create a deterministic synthetic name from a station id.
-        
+
         Parameters
         ----------
         station_id : Any or None
             Station identifier. Numeric ids are zero-padded. Non-
             numeric ids are compacted by removing non-word chars.
-        
+
         Returns
         -------
         str
             Synthetic station name.
-        
+
         Examples
         --------
         >>> StationNamePolicy().synthesize(12)
@@ -156,27 +155,27 @@ class StationNamePolicy:
         sid = str(station_id).strip()
         token = re.sub(r"\W+", "", sid)[: self.maxlen]
         return token or f"{self.prefix}UNK"
-    
+
     def ensure(
         self,
-        name: Optional[str],
-        station_id: Optional[Any],
+        name: str | None,
+        station_id: Any | None,
     ) -> str:
         r"""
         Return a valid station name, validating or synthesizing.
-        
+
         Parameters
         ----------
         name : str or None
             Provided station name.
         station_id : Any or None
             Station identifier used if ``name`` is invalid.
-        
+
         Returns
         -------
         str
             Validated name or a synthetic fallback.
-        
+
         See Also
         --------
         validate : Validate only, without fallback.
@@ -199,7 +198,7 @@ class StationNamePolicy:
 
         # last resort
         return s or self.synthesize(station_id)
-    
+
 @dataclass
 class CoreConfig:
     empty: float = 1.0e32
@@ -221,17 +220,17 @@ class CoreConfig:
     infer_errors: bool = True
     encoding: str = "utf-8"
     newline: str = "\n"
-    backend: Dict[str, Any] = field(default_factory=dict)
+    backend: dict[str, Any] = field(default_factory=dict)
 
-    def copy(self) -> "CoreConfig":
+    def copy(self) -> CoreConfig:
         r"""
         Return a deep copy of the configuration.
-        
+
         Returns
         -------
         CoreConfig
             A detached copy that can be safely mutated.
-        
+
         Notes
         -----
         Used internally by :func:`config_context` to restore the
@@ -241,18 +240,18 @@ class CoreConfig:
 
 
 _CFG: CoreConfig = CoreConfig()
-_ADAPTERS: Dict[str, Callable[..., Any]] = {}
+_ADAPTERS: dict[str, Callable[..., Any]] = {}
 
 
 def get_config() -> CoreConfig:
     r"""
     Return the live :class:`CoreConfig` singleton.
-    
+
     Returns
     -------
     CoreConfig
         The active configuration object.
-    
+
     Notes
     -----
     The returned instance is mutable. Prefer :func:`configure`
@@ -261,15 +260,15 @@ def get_config() -> CoreConfig:
     return _CFG
 
 
-def to_dict() -> Dict[str, Any]:
+def to_dict() -> dict[str, Any]:
     r"""
     Serialize the current configuration to a plain dict.
-    
+
     Returns
     -------
     dict
         A JSON-serializable mapping of all fields.
-    
+
     Examples
     --------
     >>> from pycsamt.core.config import to_dict
@@ -283,29 +282,29 @@ def to_dict() -> Dict[str, Any]:
 def configure(**kwargs: Any) -> CoreConfig:
     r"""
     Update configuration fields with validation.
-    
+
     Parameters
     ----------
     **kwargs : Any
         Field names and values to set on the global config.
-    
+
     Returns
     -------
     CoreConfig
         The updated configuration object.
-    
+
     Raises
     ------
     AttributeError
         If an unknown field name is provided.
     ValueError
         If a value is invalid for a known field.
-    
+
     Notes
     -----
     Also aligns the package logger level to ``log_level``,
     if that logger has been created.
-    
+
     Examples
     --------
     >>> from pycsamt.core.config import configure
@@ -329,7 +328,7 @@ def configure(**kwargs: Any) -> CoreConfig:
             raise ValueError("freq_order must be 'asc' or 'desc'")
         if key == "target_format" and value != "edi":
             warnings.warn(
-                "Only 'edi' is supported as target_format"
+                "Only 'edi' is supported as target_format", stacklevel=2
             )
         setattr(_CFG, key, value)
 
@@ -348,7 +347,7 @@ def configure(**kwargs: Any) -> CoreConfig:
 def reset_config() -> None:
     r"""
     Reset the global configuration to factory defaults.
-    
+
     Notes
     -----
     A new :class:`CoreConfig` instance replaces the existing
@@ -363,22 +362,22 @@ def reset_config() -> None:
 def config_context(**overrides: Any) -> Iterator[CoreConfig]:
     r"""
     Context manager for temporary configuration overrides.
-    
+
     Parameters
     ----------
     **overrides : Any
         Field names and temporary values.
-    
+
     Yields
     ------
     CoreConfig
         The active configuration during the context.
-    
+
     Notes
     -----
     On exit, the previous configuration is restored atomically,
     even if an exception is raised.
-    
+
     Examples
     --------
     >>> from pycsamt.core.config import config_context, get_config
@@ -402,7 +401,7 @@ def register_adapter(
     r"""
     Register a format adapter that yields an EDI object or
     collection.
-    
+
     Parameters
     ----------
     key : str
@@ -410,17 +409,17 @@ def register_adapter(
     factory : Callable[..., Any]
         Callable that accepts a source object and returns an EDI
         object or an EDICollection.
-    
+
     Raises
     ------
     ValueError
         If ``key`` is not a non-empty string.
-    
+
     Notes
     -----
     Adapters are resolved lazily at call time, which avoids heavy
     imports and circular dependencies.
-    
+
     See Also
     --------
     get_adapter : Retrieve a registered adapter.
@@ -432,15 +431,15 @@ def register_adapter(
     _ADAPTERS[key.lower()] = factory
 
 
-def get_adapter(key: str) -> Optional[Callable[..., Any]]:
+def get_adapter(key: str) -> Callable[..., Any] | None:
     r"""
     Return the adapter factory for a key.
-    
+
     Parameters
     ----------
     key : str
         Format key used during registration.
-    
+
     Returns
     -------
     Callable or None
@@ -449,22 +448,22 @@ def get_adapter(key: str) -> Optional[Callable[..., Any]]:
     return _ADAPTERS.get(key.lower())
 
 
-def list_adapters() -> Dict[str, str]:
+def list_adapters() -> dict[str, str]:
     r"""
     List registered adapters with readable names.
-    
+
     Returns
     -------
     dict
         Mapping ``{key: 'qualname'}`` for registered factories.
-    
+
     Examples
     --------
     >>> from pycsamt.core.config import list_adapters
     >>> isinstance(list_adapters(), dict)
     True
     """
-    out: Dict[str, str] = {}
+    out: dict[str, str] = {}
     for k, f in _ADAPTERS.items():
         try:
             out[k] = getattr(
@@ -488,20 +487,20 @@ _DEF_PATHS = (
 def _load_user_config() -> None:
     r"""
     Best-effort user config loader (TOML or JSON).
-    
+
     Search order is:
-    
+
     1. ``$PYCSAMT_CONFIG`` if set,
     2. ``~/.config/pycsamt.toml``,
     3. ``~/.pycsamt.toml``,
     4. ``~/.pycsamt.json``.
-    
+
     Notes
     -----
     Only keys matching :class:`CoreConfig` are applied via
     :func:`configure`. If ``{\"core\": {...}}`` exists, that
     sub-mapping is used.
-    
+
     Errors are downgraded to warnings and do not stop import.
     """
 
@@ -525,7 +524,7 @@ def _load_user_config() -> None:
                 return
             except Exception as exc:
                 warnings.warn(
-                    f"Failed to load config from {p}: {exc}"
+                    f"Failed to load config from {p}: {exc}", stacklevel=2
                 )
                 return
 

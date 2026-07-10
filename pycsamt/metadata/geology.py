@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -56,7 +55,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ..api.view import maybe_wrap_frame
 
@@ -110,12 +109,12 @@ class Formation:
     """
 
     name: str
-    resistivity_range: Tuple[float, float]
-    depth_range: Tuple[float, float]
-    n_layers_range: Tuple[int, int]
+    resistivity_range: tuple[float, float]
+    depth_range: tuple[float, float]
+    n_layers_range: tuple[int, int]
     description: str = ""
-    rock_types: List[str] = field(default_factory=list)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    rock_types: list[str] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         rlo, rhi = self.resistivity_range
@@ -135,7 +134,7 @@ class Formation:
     # ------------------------------------------------------------------
 
     @property
-    def log_rho_range(self) -> Tuple[float, float]:
+    def log_rho_range(self) -> tuple[float, float]:
         """Log10-resistivity interval ``(log_rho_min, log_rho_max)``."""
         lo, hi = self.resistivity_range
         return (math.log10(lo), math.log10(hi))
@@ -160,7 +159,7 @@ class Formation:
     # Compatibility helpers
     # ------------------------------------------------------------------
 
-    def to_prior(self) -> Dict[str, Any]:
+    def to_prior(self) -> dict[str, Any]:
         """Return a dict compatible with ``LayeredModel.from_geology(name)``.
 
         The returned dict has keys ``n_layers``, ``log_rho_range``,
@@ -174,7 +173,7 @@ class Formation:
             "description":    self.description,
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name":              self.name,
             "resistivity_range": list(self.resistivity_range),
@@ -186,7 +185,7 @@ class Formation:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Formation":
+    def from_dict(cls, d: dict[str, Any]) -> Formation:
         known = {
             "name", "resistivity_range", "depth_range",
             "n_layers_range", "description", "rock_types",
@@ -203,7 +202,7 @@ class Formation:
         )
 
     @classmethod
-    def from_prior(cls, name: str, prior: Dict[str, Any]) -> "Formation":
+    def from_prior(cls, name: str, prior: dict[str, Any]) -> Formation:
         """Build a :class:`Formation` from a ``GEOLOGY_PRIORS`` entry."""
         log_lo, log_hi = prior["log_rho_range"]
         depth_lo, depth_hi = prior["depth_max_range"]
@@ -228,7 +227,7 @@ class Formation:
 # Built-in formation definitions
 # ---------------------------------------------------------------------------
 
-_BUILTIN_FORMATIONS: List[Dict[str, Any]] = [
+_BUILTIN_FORMATIONS: list[dict[str, Any]] = [
     # ── Sedimentary / basin ─────────────────────────────────────────────
     dict(name="sedimentary",
          resistivity_range=(3.0, 3162.0),
@@ -373,9 +372,9 @@ class GeologyCatalog:
 
     def __init__(
         self,
-        formations: Optional[List[Formation]] = None,
+        formations: list[Formation] | None = None,
     ) -> None:
-        self._store: Dict[str, Formation] = {}
+        self._store: dict[str, Formation] = {}
         if formations is not None:
             for f in formations:
                 self._store[f.name] = f
@@ -420,7 +419,7 @@ class GeologyCatalog:
             )
         return self._store[key]
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """Return a sorted list of all registered formation names."""
         return sorted(self._store.keys())
 
@@ -437,7 +436,7 @@ class GeologyCatalog:
         self,
         rho: float,
         n: int = 3,
-    ) -> List[Formation]:
+    ) -> list[Formation]:
         """Return the *n* formations whose resistivity range best covers *rho*.
 
         Matching priority:
@@ -476,7 +475,7 @@ class GeologyCatalog:
         self,
         depth_m: float,
         n: int = 3,
-    ) -> List[Formation]:
+    ) -> list[Formation]:
         """Return formations whose depth range contains *depth_m* (metres)."""
         containing = [
             f for f in self._store.values()
@@ -495,7 +494,7 @@ class GeologyCatalog:
             )
         )[:n]
 
-    def lookup_by_rock_type(self, rock_type: str) -> List[Formation]:
+    def lookup_by_rock_type(self, rock_type: str) -> list[Formation]:
         """Return formations that list *rock_type* in their ``rock_types``."""
         q = rock_type.lower()
         return [
@@ -503,7 +502,7 @@ class GeologyCatalog:
             if any(q in rt.lower() for rt in f.rock_types)
         ]
 
-    def all_scenarios(self) -> Dict[str, Formation]:
+    def all_scenarios(self) -> dict[str, Formation]:
         """Return a copy of the internal store (name → Formation)."""
         return dict(self._store)
 
@@ -511,7 +510,7 @@ class GeologyCatalog:
     # Compatibility
     # ------------------------------------------------------------------
 
-    def to_prior(self, name: str) -> Dict[str, Any]:
+    def to_prior(self, name: str) -> dict[str, Any]:
         """Return a ``GEOLOGY_PRIORS``-compatible dict for *name*.
 
         This is the adapter used by
@@ -582,7 +581,7 @@ class GeologyCatalog:
 CATALOG = GeologyCatalog()
 
 
-def geology_prior(name: str) -> Dict[str, Any]:
+def geology_prior(name: str) -> dict[str, Any]:
     """Return a ``GEOLOGY_PRIORS``-compatible dict for *name*.
 
     This is a drop-in replacement for direct access to the old

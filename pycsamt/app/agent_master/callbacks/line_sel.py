@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Line-selection modal callbacks.
@@ -14,20 +13,24 @@ from __future__ import annotations
 
 import threading
 
-from dash import ALL, Input, Output, State
-from dash import ctx, html, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 from .chat import (
-    _new_job,
-    _run_agent,
     _drop_workflow,
-    _thinking_bubble,
-    _ts,
-    _waiting_bubble,
+    _new_job,
     _quick_workflow,
-    _WF_LABELS,
+    _run_agent,
+    _thinking_bubble,
+    _waiting_bubble,
 )
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,7 +25,9 @@ def _get_survey(path: Path, pattern: str = "*.AVG", verbose: int = 0):
 
     Raises :class:`click.UsageError` when no AVG files are found.
     """
-    from pycsamt.tdem.survey import read_temavg_survey  # noqa: PLC0415
+    from pycsamt.tdem.survey import (
+        read_temavg_survey,  # noqa: PLC0415
+    )
 
     survey = read_temavg_survey(path, pattern=pattern, verbose=verbose)
     if not survey.avg_files:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,14 +11,12 @@ Handles two special cases transparently:
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import matplotlib.pyplot as plt
 import numpy as np
 
 from pycsamt.app.desktop.controllers.qc_controller import (
-    _style_all_axes,
     _annotate_empty,
+    _style_all_axes,
 )
 
 # Functions that internally call set_theta_zero_location() or other
@@ -381,7 +378,7 @@ class AdvancedController:
 
     # ── Main entry-point ──────────────────────────────────────────────────────
 
-    def draw(self, fn_name: str, has_ax: bool, fig, **kwargs) -> Optional[object]:
+    def draw(self, fn_name: str, has_ax: bool, fig, **kwargs) -> object | None:
         """
         Render *fn_name*.
 
@@ -496,7 +493,7 @@ class AdvancedController:
         except Exception:
             pass
 
-    def _call_figure_fn(self, fn, **kwargs) -> Optional[object]:
+    def _call_figure_fn(self, fn, **kwargs) -> object | None:
         """Call a multi-axes function and return the Figure it creates."""
         before = set(plt.get_fignums())
         try:
@@ -558,12 +555,12 @@ class TopoPreviewController:
         ax.set_facecolor(s["bg"])
 
         try:
+            from pycsamt.topo.config import PYCSAMT_TOPO
             from pycsamt.topo.extract import (
                 extract_chainage,
                 extract_elevation,
                 extract_station_names,
             )
-            from pycsamt.topo.config import PYCSAMT_TOPO
 
             if self._sites is None:
                 ax.text(
@@ -577,7 +574,7 @@ class TopoPreviewController:
 
             chain = extract_chainage(self._sites)   # km
             elev  = extract_elevation(self._sites)  # m
-            names = extract_station_names(self._sites)
+            extract_station_names(self._sites)
 
             if chain.size == 0 or elev.size == 0:
                 ax.text(
@@ -648,7 +645,9 @@ class TopoPreviewController:
             # Determine number of stations
             if self._sites is not None:
                 try:
-                    from pycsamt.topo.extract import extract_chainage
+                    from pycsamt.topo.extract import (
+                        extract_chainage,
+                    )
                     chain = extract_chainage(self._sites)
                     n_st = max(int(chain.size), 4)
                 except Exception:
@@ -727,8 +726,8 @@ class TopoPreviewController:
         ax.set_facecolor(s["bg"])
 
         try:
-            from pycsamt.topo.extract import extract_elevation
             from pycsamt.topo.config import PYCSAMT_TOPO
+            from pycsamt.topo.extract import extract_elevation
 
             if self._sites is None:
                 ax.text(
@@ -796,8 +795,8 @@ class TopoPreviewController:
 
         try:
             from pycsamt.topo.extract import (
-                extract_elevation,
                 extract_chainage,
+                extract_elevation,
                 has_elevation,
             )
             elev  = extract_elevation(self._sites)
@@ -988,6 +987,7 @@ class ConversionController:
             return 0
 
         from pathlib import Path
+
         from pycsamt.emtools._core import _iter_items
 
         Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -1089,7 +1089,11 @@ class ConversionController:
             return stats
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block, _name
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+                _name,
+            )
 
             rows = []
             for i, ed in enumerate(_iter_items(collection)):
@@ -1181,7 +1185,10 @@ class ConversionController:
             return
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+            )
             items = list(_iter_items(self._result))
             n = len(items)
             if n == 0:
@@ -1256,7 +1263,10 @@ class ConversionController:
             return
 
         try:
-            from pycsamt.emtools._core import _iter_items, _name
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _name,
+            )
 
             lats, lons, names_list = [], [], []
             for i, ed in enumerate(_iter_items(self._result)):

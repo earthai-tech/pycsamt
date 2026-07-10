@@ -19,9 +19,13 @@ array-moving-average (AMA) and the Hanning-EMAP filter.
 # average) and reading each station's departure from that smooth trend.
 
 import numpy as np
+from _corr_data import curves, demo_line, plot_before_after
 
-from _corr_data import demo_line, curves, plot_before_after
-from pycsamt.emtools import estimate_ss_ama, correct_ss_ama, correct_static_shift
+from pycsamt.emtools import (
+                  correct_ss_ama,
+                  correct_static_shift,
+                  estimate_ss_ama,
+)
 
 S = demo_line("L18PLT")
 raw = curves(S, "rho")

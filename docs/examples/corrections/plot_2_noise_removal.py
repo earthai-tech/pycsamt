@@ -19,9 +19,13 @@ touch first.
 # bins, so running it can never hurt.
 
 import numpy as np
+from _corr_data import curves, demo_line, plot_before_after
 
-from _corr_data import demo_line, curves, plot_before_after
-from pycsamt.emtools import notch_powerline, smooth_logfreq, smooth_rho_phase
+from pycsamt.emtools import (
+    notch_powerline,
+    smooth_logfreq,
+    smooth_rho_phase,
+)
 
 S = demo_line("L18PLT")
 raw = curves(S, "rho")

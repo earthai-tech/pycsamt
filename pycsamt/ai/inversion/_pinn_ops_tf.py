@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -25,7 +24,6 @@ Parameter clamping uses ``var.assign``.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -129,7 +127,7 @@ def _mt1d_tf_batch(freqs_t, log_rho, log_thick):
     """
     import tensorflow as tf
 
-    S, L = (
+    _S, L = (
         log_rho.shape[0],
         log_rho.shape[1],
     )
@@ -215,9 +213,9 @@ def _fit_station_tf(
     epochs: int,
     device: str,
     log_every: int,
-    init_log_rho: Optional[np.ndarray] = None,
-    init_log_thick: Optional[np.ndarray] = None,
-) -> Dict:
+    init_log_rho: np.ndarray | None = None,
+    init_log_thick: np.ndarray | None = None,
+) -> dict:
     """
     TensorFlow 1-D station optimisation.
 
@@ -281,7 +279,7 @@ def _fit_station_tf(
     opt = tf.keras.optimizers.Adam(
         learning_rate=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:
@@ -420,7 +418,7 @@ def _fit_2d_joint_tf(
     opt = tf.keras.optimizers.Adam(
         learning_rate=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:
@@ -579,7 +577,7 @@ def _fit_3d_joint_tf(
     opt = tf.keras.optimizers.Adam(
         learning_rate=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:

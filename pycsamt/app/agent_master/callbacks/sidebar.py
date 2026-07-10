@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Sidebar toggle, history, and figure callbacks."""
@@ -7,13 +6,19 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from dash import ALL, Input, Output, State
-from dash import ctx, dcc, html, no_update
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    dcc,
+    html,
+)
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 from ..layout import _chat_welcome
-
 
 # ── helpers ────────────────────────────────────────
 

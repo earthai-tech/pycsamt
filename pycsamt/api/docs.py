@@ -38,6 +38,6 @@ class DocstringComponents:
 
     @classmethod
     def from_nested_components(
-        cls, **kwargs: "DocstringComponents"
-    ) -> "DocstringComponents":
+        cls, **kwargs: DocstringComponents
+    ) -> DocstringComponents:
         return cls(kwargs, strip_whitespace=False)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -52,8 +51,7 @@ smooth, two-dimensional models from magnetotelluric data. *Geophysics*,
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, Sequence, Tuple, Union
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -290,7 +288,7 @@ class Grid2D:
     def column_profile(
         self,
         col: int,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return the 1-D resistivity/thickness profile of column *col*.
 
         Used by the FD solver to compute Dirichlet boundary conditions at
@@ -381,9 +379,9 @@ class Grid2D:
         cmap: str = "jet_r",
         clip_core: bool = True,
         show_stations: bool = True,
-        figsize: Tuple[float, float] = (10, 5),
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
+        figsize: tuple[float, float] = (10, 5),
+        vmin: float | None = None,
+        vmax: float | None = None,
     ):
         """Plot the 2-D resistivity model.
 
@@ -476,9 +474,9 @@ class Grid2D:
         n_pad: int = 8,
         pad_factor: float = 1.3,
         n_stations: int = 10,
-        station_x_max: Optional[float] = None,
+        station_x_max: float | None = None,
         name: str = "halfspace",
-    ) -> "Grid2D":
+    ) -> Grid2D:
         """Create a uniform resistivity halfspace grid.
 
         Parameters
@@ -543,10 +541,10 @@ class Grid2D:
         n_pad: int = 8,
         pad_factor: float = 1.3,
         n_stations: int = 10,
-        station_x_max: Optional[float] = None,
+        station_x_max: float | None = None,
         dz_min: float = 10.0,
         name: str = "",
-    ) -> "Grid2D":
+    ) -> Grid2D:
         """Build a 2-D grid by extending a 1-D :class:`~pycsamt.forward.synthetic.LayeredModel`.
 
         Every column has the same 1-D layer stack.  This is useful as a
@@ -587,12 +585,12 @@ class Grid2D:
         thick = np.asarray(model.thickness, dtype=float)
         dz_core = np.concatenate([np.maximum(thick, dz_min),
                                    [np.maximum(thick[-1] * 3.0, dz_min)]])
-        nz_core = len(dz_core)
+        len(dz_core)
         dz_pad  = make_padding(dz_core[-1], n_pad, pad_factor)
         dz_full = np.concatenate([dz_core, dz_pad])
 
         nx_total = len(dx_full)
-        nz_total = len(dz_full)
+        len(dz_full)
 
         # Assign resistivity: repeat 1D column across all x positions.
         # model.resistivity has n_layers values; dz_core has len(thick)+1
@@ -620,7 +618,7 @@ class Grid2D:
         cls,
         bg_rho: float = 100.0,
         anomaly_rho: float = 5.0,
-        anomaly_bounds: Tuple[float, float, float, float] = (2_000.0, 4_000.0, 200.0, 800.0),
+        anomaly_bounds: tuple[float, float, float, float] = (2_000.0, 4_000.0, 200.0, 800.0),
         *,
         nx: int = 50,
         nz: int = 35,
@@ -629,9 +627,9 @@ class Grid2D:
         n_pad: int = 8,
         pad_factor: float = 1.3,
         n_stations: int = 12,
-        station_x_max: Optional[float] = None,
+        station_x_max: float | None = None,
         name: str = "",
-    ) -> "Grid2D":
+    ) -> Grid2D:
         """Create a background halfspace with one rectangular anomaly.
 
         Parameters
@@ -682,7 +680,6 @@ class Grid2D:
 
         # Identify which cells fall inside the anomaly (core coords)
         x_pad_offset = make_padding(x_max / nx, n_pad, pad_factor).sum()
-        z_pad_offset = 0.0  # no top padding
 
         xc = g.x_centers - x_pad_offset
         zc = g.z_centers
@@ -711,7 +708,7 @@ class Grid2D:
         lateral_variation: bool = True,
         seed=None,
         name: str = "random",
-    ) -> "Grid2D":
+    ) -> Grid2D:
         """Generate a random layered model with optional lateral variation.
 
         Resistivities for ``n_layers`` horizontal layers are drawn from a

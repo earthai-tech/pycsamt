@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 import numpy as np
 import pytest
 
-from pycsamt.z.z import Z
 from pycsamt.exceptions import ZError
+from pycsamt.z.z import Z
 
 
 def _z2x2():

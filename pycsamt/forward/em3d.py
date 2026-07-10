@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -68,15 +67,19 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 import numpy as np
 from scipy import sparse
-from scipy.sparse.linalg import bicgstab, spilu, LinearOperator, spsolve
+from scipy.sparse.linalg import (
+    LinearOperator,
+    bicgstab,
+    spilu,
+    spsolve,
+)
 
+from .batch import SurveyDataset3D
 from .em2d import MT2DForward, _z_to_rho_phase
 from .grid3d import Grid3D
-from .batch import SurveyDataset3D
 
 __all__ = [
     "MT3DForward",
@@ -194,7 +197,7 @@ class ForwardResponse3D:
 
     def to_survey_dataset(
         self,
-        y_models: Optional[np.ndarray] = None,
+        y_models: np.ndarray | None = None,
         *,
         components: str = "xy_yx",
     ) -> SurveyDataset3D:
@@ -387,7 +390,7 @@ class MT3DForward:
                 zyx_yz[:, global_i] = resp_yz.zyx[:, local_i]
 
         if self.verbose:
-            print(f"  [MT3D quasi3d] done.                          ")
+            print("  [MT3D quasi3d] done.                          ")
 
         # ── Assemble quasi-3D tensor ─────────────────────────────────────────
         # Average contributions from both profile directions
@@ -497,7 +500,7 @@ class MT3DForward:
             zyy_all[fi] = zyy
 
         if self.verbose:
-            print(f"  [MT3D fd3d] done.                          ")
+            print("  [MT3D fd3d] done.                          ")
 
         omega2d = 2.0 * np.pi * freqs[:, None]
         rho_a_xy, phase_xy = _z_to_rho_phase(zxy_all, omega2d)
@@ -569,7 +572,7 @@ class MT3DForward:
 
 # ── Edge / face dimension helpers ─────────────────────────────────────────────
 
-def _fd3d_edge_counts(nx: int, ny: int, nz: int) -> Tuple[int, int, int]:
+def _fd3d_edge_counts(nx: int, ny: int, nz: int) -> tuple[int, int, int]:
     """Return (n_ex, n_ey, n_ez) edge counts for a nx×ny×nz cell grid."""
     n_ex = nx * (ny + 1) * (nz + 1)
     n_ey = (nx + 1) * ny * (nz + 1)
@@ -577,7 +580,7 @@ def _fd3d_edge_counts(nx: int, ny: int, nz: int) -> Tuple[int, int, int]:
     return n_ex, n_ey, n_ez
 
 
-def _fd3d_face_counts(nx: int, ny: int, nz: int) -> Tuple[int, int, int]:
+def _fd3d_face_counts(nx: int, ny: int, nz: int) -> tuple[int, int, int]:
     n_hx = (nx + 1) * ny * nz
     n_hy = nx * (ny + 1) * nz
     n_hz = nx * ny * (nz + 1)
@@ -704,7 +707,7 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     -------
     sigma_edge : ndarray, shape (n_edges,)
     """
-    dx, dy, dz = grid.dx, grid.dy, grid.dz
+    _dx, _dy, _dz = grid.dx, grid.dy, grid.dz
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     sigma = grid.conductivity   # (nz, ny, nx)
 
@@ -815,7 +818,7 @@ def _bc_vector_3d(grid: Grid3D, omega: float, pol: str) -> np.ndarray:
     -------
     b : ndarray of complex, shape (n_edges,)
     """
-    dx, dy, dz = grid.dx, grid.dy, grid.dz
+    _dx, _dy, _dz = grid.dx, grid.dy, grid.dz
     nx, ny, nz = grid.nx, grid.ny, grid.nz
     sigma  = grid.conductivity     # (nz, ny, nx)
     z_nodes = grid.z_nodes         # (nz+1,)
@@ -876,7 +879,7 @@ def _apply_dirichlet_3d(
     b: np.ndarray,
     bc_mask: np.ndarray,
     bc_idx: np.ndarray,
-) -> Tuple[sparse.csr_matrix, np.ndarray]:
+) -> tuple[sparse.csr_matrix, np.ndarray]:
     """Enforce Dirichlet BCs symmetrically.
 
     Uses the projection ``A_mod = P A P + I_bc`` where *P* is a diagonal
@@ -916,7 +919,7 @@ def _extract_z_tensor_fd3d(
     n_ex: int,
     n_ey: int,
     n_ez: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Extract the full impedance tensor at surface stations.
 
     Uses the two polarisation solutions to assemble:

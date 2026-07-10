@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -40,7 +39,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Allowed values
@@ -59,7 +58,7 @@ class LogConfig:
 
     level: int = 0
     color: bool = True
-    file: Optional[Path] = None
+    file: Path | None = None
 
     def __post_init__(self) -> None:
         if self.level not in _VERBOSE_LEVELS:
@@ -90,7 +89,7 @@ class BuildConfig:
 
     n_jobs: int = 1
     cache: bool = True
-    cache_dir: Optional[Path] = None
+    cache_dir: Path | None = None
 
     def __post_init__(self) -> None:
         if self.n_jobs < 1:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,15 +19,14 @@ an MplCanvas tab.  All methods are pure (no Qt imports).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
-
 
 # ── Workflow catalogue ─────────────────────────────────────────────────────────
 # Maps category name → list of (label, method_name, description)
 
-WORKFLOW_CATALOGUE: Dict[str, List[tuple]] = {
+WORKFLOW_CATALOGUE: dict[str, list[tuple]] = {
     "Setup & Model": [
         ("Model summary",        "plot_model_summary",       "2-D rho section overview"),
         ("Borehole locations",   "plot_borehole_map",        "Station + borehole location map"),
@@ -100,15 +98,15 @@ CATEGORIES = list(WORKFLOW_CATALOGUE.keys())
 class InterpState:
     sites:          Any  = None   # pycsamt Sites
     model:          Any  = None   # ResistivityModel
-    boreholes:      List = field(default_factory=list)
+    boreholes:      list = field(default_factory=list)
     db:             Any  = None   # RockDatabase
     petro_cfg:      Any  = None   # PetrophysicalConfig
-    strat_logs:     List = field(default_factory=list)
+    strat_logs:     list = field(default_factory=list)
     hydro_result:   Any  = None   # EMHydroResult
     mc_result:      Any  = None   # UncertaintyResult
-    constraints:    List = field(default_factory=list)
+    constraints:    list = field(default_factory=list)
     fusion_model:   Any  = None   # ResistivityModel (fused)
-    timelapse_surveys: List = field(default_factory=list)
+    timelapse_surveys: list = field(default_factory=list)
 
 
 # ── Controller ─────────────────────────────────────────────────────────────────
@@ -136,7 +134,9 @@ class InterpController:
 
     def set_model_from_occam2d(self, result_dir: str) -> None:
         from pycsamt.interp._base import ResistivityModel
-        from pycsamt.models.occam2d.plot import InversionResult
+        from pycsamt.models.occam2d.plot import (
+            InversionResult,
+        )
         res = InversionResult(result_dir)
         self.state.model = ResistivityModel.from_occam2d(res)
 
@@ -164,7 +164,9 @@ class InterpController:
         self.state.db = RockDatabase.from_csv(path)
 
     def set_petro_config(self, **kwargs) -> None:
-        from pycsamt.interp.hydromodel import PetrophysicalConfig
+        from pycsamt.interp.hydromodel import (
+            PetrophysicalConfig,
+        )
         from pycsamt.interp.petrophysics import ArchieModel
         m   = float(kwargs.get("m", 2.0))
         n   = float(kwargs.get("n", 2.0))
@@ -232,7 +234,9 @@ class InterpController:
         self.state.strat_logs = logs
         if self.state.boreholes:
             try:
-                from pycsamt.interp.calibrate import ModelCalibrator
+                from pycsamt.interp.calibrate import (
+                    ModelCalibrator,
+                )
                 cal = ModelCalibrator(db=db)
                 cal.fit(model, self.state.boreholes)
                 self.state.model = cal.calibrated_model()
@@ -264,7 +268,8 @@ class InterpController:
             return "Run hydro estimation first."
         try:
             from pycsamt.interp.uncertainty import (
-                MonteCarloHydro, UncertaintyBounds
+                MonteCarloHydro,
+                UncertaintyBounds,
             )
             bounds = UncertaintyBounds(
                 rho_w_range=rho_w_range,
@@ -283,7 +288,7 @@ class InterpController:
 
     # ── Plot dispatcher ────────────────────────────────────────────────────────
 
-    def generate(self, method_name: str, **kwargs) -> "matplotlib.figure.Figure":
+    def generate(self, method_name: str, **kwargs) -> matplotlib.figure.Figure:
         """Dispatch to the correct plot method. Returns a Figure."""
         fn = getattr(self, method_name, None)
         if fn is None:
@@ -297,11 +302,11 @@ class InterpController:
 
     # ── Setup & Model ──────────────────────────────────────────────────────
 
-    def plot_model_summary(self, **kw) -> "Figure":
+    def plot_model_summary(self, **kw) -> Figure:
         if self.state.model is None:
             return self._no_model_fig()
         import matplotlib.pyplot as plt
-        from pycsamt.interp._base import ResistivityModel
+
         model = self.state.model
         fig, ax = plt.subplots(figsize=(12, 5))
         self._apply_fig_style(fig, ax)
@@ -332,10 +337,11 @@ class InterpController:
                     ha="center", color="#f38ba8")
         return fig
 
-    def plot_depth_coverage(self, **kw) -> "Figure":
+    def plot_depth_coverage(self, **kw) -> Figure:
         if self.state.sites is None:
             return self._no_sites_fig()
         import matplotlib.pyplot as plt
+
         import pycsamt.emtools as et
         fig, ax = plt.subplots(figsize=(12, 5))
         self._apply_fig_style(fig, ax)
@@ -350,7 +356,7 @@ class InterpController:
             ax.text(0.5, 0.5, f"{exc}", transform=ax.transAxes, ha="center")
         return fig
 
-    def plot_borehole_map(self, **kw) -> "Figure":
+    def plot_borehole_map(self, **kw) -> Figure:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(figsize=(10, 4))
         self._apply_fig_style(fig, ax)
@@ -379,12 +385,13 @@ class InterpController:
 
     # ── Geological ────────────────────────────────────────────────────────
 
-    def plot_strat_log(self, station: str = "", **kw) -> "Figure":
+    def plot_strat_log(self, station: str = "", **kw) -> Figure:
         if not self.state.strat_logs:
             return self._needs_run_fig("Run Geological Classification first")
-        import matplotlib.pyplot as plt
         try:
-            from pycsamt.interp.plot import PlotStratigraphicLog
+            from pycsamt.interp.plot import (
+                PlotStratigraphicLog,
+            )
             log = (next((l for l in self.state.strat_logs if l.station_name == station),
                         self.state.strat_logs[0]))
             plotter = PlotStratigraphicLog(log)
@@ -394,7 +401,7 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_fence_diagram(self, **kw) -> "Figure":
+    def plot_fence_diagram(self, **kw) -> Figure:
         if not self.state.strat_logs:
             return self._needs_run_fig("Run Geological Classification first")
         try:
@@ -406,11 +413,13 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_calibrated_model(self, **kw) -> "Figure":
+    def plot_calibrated_model(self, **kw) -> Figure:
         if self.state.model is None:
             return self._no_model_fig()
         try:
-            from pycsamt.interp.plot import PlotCalibratedModel
+            from pycsamt.interp.plot import (
+                PlotCalibratedModel,
+            )
             plotter = PlotCalibratedModel(self.state.model)
             fig = plotter.plot()
             self._apply_fig_style_minimal(fig)
@@ -418,13 +427,12 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_rock_db(self, **kw) -> "Figure":
+    def plot_rock_db(self, **kw) -> Figure:
         db = self.state.db
         if db is None:
             self.set_rock_db_default()
             db = self.state.db
         import matplotlib.pyplot as plt
-        from matplotlib.patches import FancyBboxPatch
         rocks = list(db)
         fig, ax = plt.subplots(figsize=(10, max(4, len(rocks) * 0.4 + 1)))
         self._apply_fig_style(fig, ax)
@@ -449,7 +457,7 @@ class InterpController:
 
     def _hydro_section_plot(self, attr: str, title: str,
                              cmap: str = "Blues_r",
-                             label: str = "") -> "Figure":
+                             label: str = "") -> Figure:
         if self.state.hydro_result is None:
             return self._needs_run_fig("Run Hydrology Estimation first")
         import matplotlib.pyplot as plt
@@ -487,11 +495,13 @@ class InterpController:
         return self._hydro_section_plot("saturation", "Water Saturation Sw",
                                          "Blues", "Sw")
 
-    def plot_water_table(self, **kw) -> "Figure":
+    def plot_water_table(self, **kw) -> Figure:
         if self.state.hydro_result is None:
             return self._needs_run_fig("Run Hydrology Estimation first")
         try:
-            from pycsamt.interp.plot import PlotWaterTableProfile
+            from pycsamt.interp.plot import (
+                PlotWaterTableProfile,
+            )
             fig = PlotWaterTableProfile(
                 self.state.model, self.state.hydro_result
             ).plot()
@@ -500,7 +510,7 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_aquifer_zones(self, **kw) -> "Figure":
+    def plot_aquifer_zones(self, **kw) -> Figure:
         if self.state.model is None:
             return self._no_model_fig()
         import matplotlib.pyplot as plt
@@ -536,7 +546,7 @@ class InterpController:
             ax.text(0.5, 0.5, str(exc), transform=ax.transAxes, ha="center")
         return fig
 
-    def plot_transmissivity(self, **kw) -> "Figure":
+    def plot_transmissivity(self, **kw) -> Figure:
         if self.state.hydro_result is None:
             return self._needs_run_fig("Run Hydrology Estimation first")
         import matplotlib.pyplot as plt
@@ -555,11 +565,13 @@ class InterpController:
             ax.text(0.5, 0.5, str(exc), transform=ax.transAxes, ha="center")
         return fig
 
-    def plot_aquifer_char(self, **kw) -> "Figure":
+    def plot_aquifer_char(self, **kw) -> Figure:
         if self.state.hydro_result is None:
             return self._needs_run_fig("Run Hydrology Estimation first")
         try:
-            from pycsamt.interp.plot import PlotAquiferCharacterization
+            from pycsamt.interp.plot import (
+                PlotAquiferCharacterization,
+            )
             fig = PlotAquiferCharacterization(
                 self.state.model, self.state.hydro_result
             ).plot()
@@ -568,11 +580,13 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_petrophys_xplot(self, **kw) -> "Figure":
+    def plot_petrophys_xplot(self, **kw) -> Figure:
         if self.state.hydro_result is None:
             return self._needs_run_fig("Run Hydrology Estimation first")
         try:
-            from pycsamt.interp.plot import PlotPetrophysicalCrossPlot
+            from pycsamt.interp.plot import (
+                PlotPetrophysicalCrossPlot,
+            )
             fig = PlotPetrophysicalCrossPlot(
                 self.state.model, self.state.hydro_result,
                 self.state.petro_cfg
@@ -584,20 +598,22 @@ class InterpController:
 
     # ── Field Constraints ─────────────────────────────────────────────────
 
-    def plot_constraint_misfit(self, **kw) -> "Figure":
+    def plot_constraint_misfit(self, **kw) -> Figure:
         return self._needs_run_fig("Run Constraint Calibration first")
 
-    def plot_calib_history(self, **kw) -> "Figure":
+    def plot_calib_history(self, **kw) -> Figure:
         return self._needs_run_fig("Run Constraint Calibration first")
 
     # ── EM Diagnostics ────────────────────────────────────────────────────
 
     def _emtools_plot(self, fn_name: str, title: str,
-                      polar: bool = False, **kw) -> "Figure":
+                      polar: bool = False, **kw) -> Figure:
         if self.state.sites is None:
             return self._no_sites_fig()
         import inspect
+
         import matplotlib.pyplot as plt
+
         import pycsamt.emtools as et
         fn = getattr(et, fn_name, None)
         if fn is None:
@@ -658,11 +674,13 @@ class InterpController:
 
     # ── Uncertainty ───────────────────────────────────────────────────────
 
-    def plot_mc_K_section(self, **kw) -> "Figure":
+    def plot_mc_K_section(self, **kw) -> Figure:
         if self.state.mc_result is None:
             return self._needs_run_fig("Run Monte Carlo first")
         try:
-            from pycsamt.interp.plot import PlotUncertaintySection
+            from pycsamt.interp.plot import (
+                PlotUncertaintySection,
+            )
             fig = PlotUncertaintySection(
                 self.state.model, self.state.mc_result
             ).plot()
@@ -671,11 +689,13 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_mc_wt_profile(self, **kw) -> "Figure":
+    def plot_mc_wt_profile(self, **kw) -> Figure:
         if self.state.mc_result is None:
             return self._needs_run_fig("Run Monte Carlo first")
         try:
-            from pycsamt.interp.plot import PlotUncertaintyProfile
+            from pycsamt.interp.plot import (
+                PlotUncertaintyProfile,
+            )
             fig = PlotUncertaintyProfile(
                 self.state.model, self.state.mc_result
             ).plot()
@@ -684,11 +704,13 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_mc_histograms(self, **kw) -> "Figure":
+    def plot_mc_histograms(self, **kw) -> Figure:
         if self.state.mc_result is None:
             return self._needs_run_fig("Run Monte Carlo first")
         try:
-            from pycsamt.interp.plot import PlotUncertaintyHistogram
+            from pycsamt.interp.plot import (
+                PlotUncertaintyHistogram,
+            )
             fig = PlotUncertaintyHistogram(self.state.mc_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
@@ -732,7 +754,7 @@ class InterpController:
 
     # ── Fusion & Time-Lapse ───────────────────────────────────────────────
 
-    def plot_fused_model(self, **kw) -> "Figure":
+    def plot_fused_model(self, **kw) -> Figure:
         if self.state.fusion_model is None:
             return self._needs_run_fig("Run Fusion first")
         self_copy = type("_", (), {"state": type("_", (), {"model": self.state.fusion_model})()})()
@@ -744,7 +766,7 @@ class InterpController:
         self_copy._style_cb = self._style_cb
         return self.plot_model_summary.__func__(self_copy)
 
-    def plot_timelapse_change(self, **kw) -> "Figure":
+    def plot_timelapse_change(self, **kw) -> Figure:
         if not self.state.timelapse_surveys:
             return self._needs_run_fig("Load at least 2 surveys for time-lapse")
         try:
@@ -768,13 +790,13 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
-    def plot_timelapse_sat(self, **kw) -> "Figure":
+    def plot_timelapse_sat(self, **kw) -> Figure:
         return self._needs_run_fig("Time-lapse ΔSw — run time-lapse analysis first")
 
-    def plot_timelapse_wt(self, **kw) -> "Figure":
+    def plot_timelapse_wt(self, **kw) -> Figure:
         return self._needs_run_fig("Time-lapse WT displacement — run analysis first")
 
-    def plot_export_preview(self, **kw) -> "Figure":
+    def plot_export_preview(self, **kw) -> Figure:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(figsize=(8, 5))
         self._apply_fig_style(fig, ax)
@@ -863,8 +885,11 @@ class InterpController:
             if not PYCSAMT_TOPO.enabled:
                 return
             from pycsamt.topo.drape import interp_elev
+            from pycsamt.topo.extract import (
+                extract_chainage,
+                extract_elevation,
+            )
             from pycsamt.topo.overlay import draw_topo_section
-            from pycsamt.topo.extract import extract_elevation, extract_chainage
             # Try to get station positions and elevations from the model
             sx_m = np.asarray(getattr(model, "station_x", []))
             if len(sx_m) == 0:
@@ -887,24 +912,24 @@ class InterpController:
         except Exception:
             pass   # topo is always optional; never break the main figure
 
-    def _no_model_fig(self) -> "Figure":
+    def _no_model_fig(self) -> Figure:
         return self._msg_fig("No resistivity model loaded.\n"
                              "Load from inversion results or from file.")
 
-    def _no_sites_fig(self) -> "Figure":
+    def _no_sites_fig(self) -> Figure:
         return self._msg_fig("No survey data loaded.\n"
                              "Open EDI files from the main window first.")
 
-    def _needs_run_fig(self, msg: str) -> "Figure":
+    def _needs_run_fig(self, msg: str) -> Figure:
         return self._msg_fig(f"⚠  {msg}")
 
-    def _not_implemented(self, name: str) -> "Figure":
+    def _not_implemented(self, name: str) -> Figure:
         return self._msg_fig(f"Plot '{name}' is not yet implemented.")
 
-    def _error_fig(self, msg: str) -> "Figure":
+    def _error_fig(self, msg: str) -> Figure:
         return self._msg_fig(f"✕  {msg}", color="#f38ba8")
 
-    def _msg_fig(self, msg: str, color: str | None = None) -> "Figure":
+    def _msg_fig(self, msg: str, color: str | None = None) -> Figure:
         import matplotlib.pyplot as plt
         s = _DARK if self.dark else _LIGHT
         fig, ax = plt.subplots(figsize=(8, 4))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,7 +25,6 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
-
 
 # ---------------------------------------------------------------------------
 # Project paths
@@ -123,8 +121,8 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     constants computed once at import time, so we patch them directly rather
     than patching ``Path.home()``.
     """
-    import pycsamt.cli.survey as _survey
     import pycsamt.cli.commands.survey as _cmd_survey
+    import pycsamt.cli.survey as _survey
 
     fake_home   = tmp_path / "home"
     pycsamt_dir = fake_home / ".pycsamt"
@@ -208,8 +206,8 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     constants computed once at import time, so we patch them directly rather
     than patching ``Path.home()``.
     """
-    import pycsamt.cli.survey as _survey
     import pycsamt.cli.commands.survey as _cmd_survey
+    import pycsamt.cli.survey as _survey
 
     fake_home   = tmp_path / "home"
     pycsamt_dir = fake_home / ".pycsamt"

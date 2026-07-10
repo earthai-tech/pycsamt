@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Mesh descriptions and builders for EM inversion workflows."""
@@ -75,7 +74,7 @@ class InversionMesh(PyCSAMTObject, MetadataMixin):
         self.validate()
 
     @classmethod
-    def for_1d(cls, depths: Any) -> "InversionMesh":
+    def for_1d(cls, depths: Any) -> InversionMesh:
         """Build a 1-D mesh descriptor from depth centres.
 
         Parameters
@@ -215,8 +214,8 @@ def build_1d_tensor_mesh(
     [25.0, 75.0]
     """
     options = dict(options or {})
-    n_layers = int(getattr(start, "n_layers", len(getattr(start, "resistivities"))))
-    thicknesses = np.asarray(getattr(start, "thicknesses"), dtype=float)
+    n_layers = int(getattr(start, "n_layers", len(start.resistivities)))
+    thicknesses = np.asarray(start.thicknesses, dtype=float)
     n_cells = int(options.get("n_cells", max(32, n_layers * 12)))
     depth_max = float(options.get(
         "depth_max",
@@ -390,7 +389,7 @@ def build_fd2d_grid(
     x_offset = float(dx_pad.sum() + x_margin)
     x_stations = shifted + x_offset
 
-    thicknesses = np.asarray(getattr(start, "thicknesses"), dtype=float)
+    thicknesses = np.asarray(start.thicknesses, dtype=float)
     dz_core = thicknesses.copy()
     last = dz_core[-1] if dz_core.size else float(options.get("dz_min", 100.0))
     dz_core = np.r_[dz_core, float(options.get("halfspace_thickness", 3.0 * last))]
@@ -439,7 +438,7 @@ def core_rho_from_start(start: Any, nz: int, nx: int) -> np.ndarray:
     >>> core_rho_from_start(start, 3, 2).tolist()
     [[100.0, 100.0], [300.0, 300.0], [300.0, 300.0]]
     """
-    rho_col = np.asarray(getattr(start, "resistivities"), dtype=float)
+    rho_col = np.asarray(start.resistivities, dtype=float)
     if rho_col.size < nz:
         rho_col = np.r_[rho_col, np.repeat(rho_col[-1], nz - rho_col.size)]
     rho_col = rho_col[:nz]

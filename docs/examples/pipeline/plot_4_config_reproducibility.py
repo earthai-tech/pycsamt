@@ -73,7 +73,7 @@ for (lbl, code) in restored:
 # glance — the sequence of steps the config encodes.
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 fig, ax = plt.subplots(figsize=(10, 2.4), constrained_layout=True)
 ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)

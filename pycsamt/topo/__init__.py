@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Topography subpackage for pycsamt.
@@ -58,28 +57,28 @@ Public API
     Draw rotated station name labels at marker positions.
 """
 
-from .config import (           # noqa: F401
-    TopoConfig,
+from .config import (  # noqa: F401
     PYCSAMT_TOPO,
+    TopoConfig,
     configure_topo,
     reset_topo,
 )
-from .extract import (          # noqa: F401
-    extract_elevation,
-    extract_chainage,
-    has_elevation,
-    extract_station_names,
-)
-from .drape import (            # noqa: F401
-    interp_elev,
+from .drape import (  # noqa: F401
     drape_section,
+    interp_elev,
     mask_above_topo,
     station_surface_z,
 )
-from .overlay import (          # noqa: F401
+from .extract import (  # noqa: F401
+    extract_chainage,
+    extract_elevation,
+    extract_station_names,
+    has_elevation,
+)
+from .overlay import (  # noqa: F401
+    add_station_labels,
     draw_topo_section,
     draw_topo_strip,
-    add_station_labels,
 )
 
 __all__ = [

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,7 +17,7 @@ all channels, missing-data awareness, and rich site metadata.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -32,7 +31,7 @@ __all__ = ["TSData", "CHANNEL_ORDER"]
 #: Canonical channel ordering used across :mod:`pycsamt.ts`
 #: (matches the SEG EDI recommendation Hx, Hy, Hz, Ex, Ey and
 #: the LiMS/EMSLAB multiplex order).  Remote channels follow.
-CHANNEL_ORDER: Tuple[str, ...] = (
+CHANNEL_ORDER: tuple[str, ...] = (
     "HX", "HY", "HZ", "EX", "EY", "RHX", "RHY",
 )
 
@@ -124,10 +123,10 @@ class TSData(BaseEM):
 
     def __init__(
         self,
-        data: Optional[Dict[str, np.ndarray]] = None,
-        dt: Optional[float] = None,
+        data: dict[str, np.ndarray] | None = None,
+        dt: float | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: int = 0,
         **meta,
     ) -> None:
@@ -135,47 +134,47 @@ class TSData(BaseEM):
         super().__init__(
             name=name or station, verbose=verbose
         )
-        self.ids: List[str] = []
-        self.data: Dict[str, np.ndarray] = {}
-        self.dt: Optional[float] = (
+        self.ids: list[str] = []
+        self.data: dict[str, np.ndarray] = {}
+        self.dt: float | None = (
             float(dt) if dt is not None else None
         )
 
-        self.station: Optional[str] = station
-        self.lat: Optional[float] = meta.pop("lat", None)
-        self.lon: Optional[float] = meta.pop("lon", None)
-        self.elev: Optional[float] = meta.pop("elev", None)
-        self.declination: Optional[float] = meta.pop(
+        self.station: str | None = station
+        self.lat: float | None = meta.pop("lat", None)
+        self.lon: float | None = meta.pop("lon", None)
+        self.elev: float | None = meta.pop("elev", None)
+        self.declination: float | None = meta.pop(
             "declination", None
         )
-        self.coordsys: Optional[str] = meta.pop(
+        self.coordsys: str | None = meta.pop(
             "coordsys", None
         )
-        self.start: Optional[str] = meta.pop("start", None)
-        self.stop: Optional[str] = meta.pop("stop", None)
+        self.start: str | None = meta.pop("start", None)
+        self.stop: str | None = meta.pop("stop", None)
 
-        self.azim: Dict[str, float] = dict(
+        self.azim: dict[str, float] = dict(
             meta.pop("azim", {}) or {}
         )
-        self.units: Dict[str, str] = dict(
+        self.units: dict[str, str] = dict(
             meta.pop("units", {}) or {}
         )
-        self.gain: Dict[str, float] = dict(
+        self.gain: dict[str, float] = dict(
             meta.pop("gain", {}) or {}
         )
-        self.baseline: Dict[str, float] = dict(
+        self.baseline: dict[str, float] = dict(
             meta.pop("baseline", {}) or {}
         )
-        self.dipole: Dict[str, float] = dict(
+        self.dipole: dict[str, float] = dict(
             meta.pop("dipole", {}) or {}
         )
-        self.sensor: Dict[str, str] = dict(
+        self.sensor: dict[str, str] = dict(
             meta.pop("sensor", {}) or {}
         )
-        self.missing: Optional[float] = meta.pop(
+        self.missing: float | None = meta.pop(
             "missing", None
         )
-        self.meta: Dict[str, object] = dict(meta)
+        self.meta: dict[str, object] = dict(meta)
 
         for cid, arr in (data or {}).items():
             self.add_channel(cid, arr)
@@ -183,7 +182,7 @@ class TSData(BaseEM):
     # ------------------------------------------------ basic API
     def add_channel(
         self, cid: str, samples: Sequence[float]
-    ) -> "TSData":
+    ) -> TSData:
         """Register (or replace) a channel array."""
         key = _norm_cid(cid)
         arr = np.asarray(samples, dtype=float).ravel()
@@ -196,7 +195,7 @@ class TSData(BaseEM):
         """Return the sample array for channel ``cid``."""
         return self.data[_norm_cid(cid)]
 
-    def channels(self) -> List[str]:
+    def channels(self) -> list[str]:
         """Ordered channel identifiers."""
         return list(self.ids)
 
@@ -212,13 +211,13 @@ class TSData(BaseEM):
         return max(a.size for a in self.data.values())
 
     @property
-    def duration(self) -> Optional[float]:
+    def duration(self) -> float | None:
         """Record length in seconds (``n_samples * dt``)."""
         if self.dt is None or self.n_samples == 0:
             return None
         return float(self.n_samples) * float(self.dt)
 
-    def time(self, cid: Optional[str] = None) -> np.ndarray:
+    def time(self, cid: str | None = None) -> np.ndarray:
         """Relative time vector (s) for ``cid`` (or longest)."""
         n = (
             self.get(cid).size if cid is not None
@@ -229,8 +228,8 @@ class TSData(BaseEM):
 
     def matrix(
         self,
-        ids: Optional[Sequence[str]] = None,
-    ) -> Tuple[np.ndarray, List[str]]:
+        ids: Sequence[str] | None = None,
+    ) -> tuple[np.ndarray, list[str]]:
         """
         Return samples as a 2-D array ``(n_samples, n_chan)``.
 
@@ -255,14 +254,14 @@ class TSData(BaseEM):
             return 1.0
         return float(np.isnan(x).mean())
 
-    def slice(self, start: int, stop: int) -> "TSData":
+    def slice(self, start: int, stop: int) -> TSData:
         """Return a sample-index slice as a new :class:`TSData`."""
         out = self.copy_meta()
         for cid in self.ids:
             out.add_channel(cid, self.data[cid][start:stop])
         return out
 
-    def copy_meta(self) -> "TSData":
+    def copy_meta(self) -> TSData:
         """New empty :class:`TSData` carrying the same metadata."""
         out = TSData(
             dt=self.dt,
@@ -286,7 +285,7 @@ class TSData(BaseEM):
     def to_seg_timeseries(
         self,
         *,
-        max_samples: Optional[int] = None,
+        max_samples: int | None = None,
         step: int = 1,
     ):
         """

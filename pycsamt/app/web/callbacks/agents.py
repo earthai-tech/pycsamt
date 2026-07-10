@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """callbacks/agents.py — AI agent execution panel."""
@@ -9,8 +8,11 @@ import traceback
 
 from dash import Input, Output, State, no_update
 
-from pycsamt.app.desktop.agent_registry import default_params, get_entry
-from pycsamt.app.web.cache import cache_get, HAS_BG_MANAGER
+from pycsamt.app.desktop.agent_registry import (
+    default_params,
+    get_entry,
+)
+from pycsamt.app.web.cache import HAS_BG_MANAGER, cache_get
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import empty_src, fig_to_src
 
@@ -48,7 +50,9 @@ def _exec_agent(
 
     try:
         import inspect
+
         import matplotlib
+
         import pycsamt.emtools as et
 
         matplotlib.use("Agg")

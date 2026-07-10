@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -406,7 +405,9 @@ class TestJonesSelect:
 
 class TestJonesHelpers:
     def test_get_jfile(self, j_single: Path) -> None:
-        from pycsamt.cli.commands.jones._base import _get_jfile
+        from pycsamt.cli.commands.jones._base import (
+            _get_jfile,
+        )
         from pycsamt.jones.j import JFile
         jf = _get_jfile(j_single)
         assert isinstance(jf, JFile)
@@ -414,26 +415,34 @@ class TestJonesHelpers:
         assert jf.n_freq == 3
 
     def test_get_collection(self, j_dir: Path) -> None:
-        from pycsamt.cli.commands.jones._base import _get_collection
+        from pycsamt.cli.commands.jones._base import (
+            _get_collection,
+        )
         from pycsamt.jones.collection import JCollection
         coll = _get_collection(j_dir)
         assert isinstance(coll, JCollection)
         assert len(coll) == 2
 
     def test_jfile_has_res(self, j_single: Path) -> None:
-        from pycsamt.cli.commands.jones._base import _get_jfile
+        from pycsamt.cli.commands.jones._base import (
+            _get_jfile,
+        )
         jf = _get_jfile(j_single)
         assert jf.Res is not None
 
     def test_jfile_coordinates(self, j_single: Path) -> None:
-        from pycsamt.cli.commands.jones._base import _get_jfile
+        from pycsamt.cli.commands.jones._base import (
+            _get_jfile,
+        )
         jf = _get_jfile(j_single)
         assert jf.lat == pytest.approx(30.0)
         assert jf.lon == pytest.approx(100.0)
         assert jf.elev == pytest.approx(500.0)
 
     def test_blocks_qa_summary(self, j_single: Path) -> None:
-        from pycsamt.cli.commands.jones._base import _get_jfile
+        from pycsamt.cli.commands.jones._base import (
+            _get_jfile,
+        )
         jf = _get_jfile(j_single)
         blks = jf.blocks
         assert blks is not None and blks.n == 2

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -15,7 +14,7 @@ is what the retriever hands to the context/prompt builder.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 __all__ = ["RAGChunk", "RetrievedContext"]
@@ -66,7 +65,7 @@ class RAGChunk:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "RAGChunk":
+    def from_dict(cls, d: dict[str, Any]) -> RAGChunk:
         """Rebuild a chunk from :meth:`to_dict` output."""
         known = {f for f in cls.__dataclass_fields__}  # noqa: PLC0208
         return cls(**{k: v for k, v in d.items() if k in known})

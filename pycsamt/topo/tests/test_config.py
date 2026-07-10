@@ -1,14 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.topo.config — TopoConfig singleton and helpers."""
 
 import contextlib
+
 import pytest
 
-from pycsamt.topo.config import TopoConfig, PYCSAMT_TOPO, configure_topo, reset_topo
 import pycsamt.api.topo as api_topo
-
+from pycsamt.topo.config import (
+    PYCSAMT_TOPO,
+    TopoConfig,
+    configure_topo,
+    reset_topo,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures

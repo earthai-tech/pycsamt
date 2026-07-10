@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio  <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -8,9 +7,10 @@ pycsamt.metadata
 Metadata classes for citations, authorship, and software/licensing info.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, Any
+
 import re
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 
 class MetadataError(Exception):
@@ -43,12 +43,12 @@ class Reference:
     """
     author: str
     title: str
-    journal: Optional[str] = None
-    year: Optional[int] = None
-    volume: Optional[str] = None
-    pages: Optional[str] = None
-    doi: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    journal: str | None = None
+    year: int | None = None
+    volume: str | None = None
+    pages: str | None = None
+    doi: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[-._;()/:A-Z0-9]+$", re.IGNORECASE)
 
@@ -60,7 +60,7 @@ class Reference:
             if not self.DOI_PATTERN.match(self.doi):
                 raise MetadataError(f"Invalid DOI format: {self.doi}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Return all reference fields as a dict.
         """
@@ -70,7 +70,7 @@ class Reference:
         return base
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Reference:
+    def from_dict(cls, data: dict[str, Any]) -> Reference:
         """
         Construct a Reference from a dict.
         """
@@ -137,9 +137,9 @@ class CopyrightInfo:
     release_status: str
     conditions_of_use: str
     reference: Reference = field(default_factory=Reference)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d['reference'] = self.reference.to_dict()
         d.update(self.extra)
@@ -163,13 +163,13 @@ class Person:
     organization_url : Optional[str]
     extra : Dict[str, Any]
     """
-    name: Optional[str] = None
-    email: Optional[str] = None
-    organization: Optional[str] = None
-    organization_url: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    name: str | None = None
+    email: str | None = None
+    organization: str | None = None
+    organization_url: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.update(self.extra)
         d.pop('extra', None)
@@ -192,12 +192,12 @@ class Software:
     extra : Dict[str, Any]
     """
     name: str
-    version: Optional[str] = None
-    release: Optional[str] = None
+    version: str | None = None
+    release: str | None = None
     author: Person = field(default_factory=Person)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d['author'] = self.author.to_dict()
         d.update(self.extra)

@@ -8,10 +8,10 @@ import pytest
 
 from pycsamt.emtools.source_effects import (
     BETA_THRESH_PCT,
-    overprint_beta,
     detect_source_overprint,
-    source_overprint_table,
+    overprint_beta,
     plot_overprint_section,
+    source_overprint_table,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────

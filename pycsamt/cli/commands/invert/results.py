@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt invert results — summarise a completed inversion."""
@@ -13,9 +12,17 @@ from typing import Any
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-
-from ._base import invert, _load_inversion_result, _resolve_solver, _rich_table
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import (
+    _load_inversion_result,
+    _resolve_solver,
+    _rich_table,
+    invert,
+)
 
 
 @invert.command("results")

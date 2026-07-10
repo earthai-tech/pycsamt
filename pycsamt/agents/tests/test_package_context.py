@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -21,11 +20,11 @@ import unittest
 
 from pycsamt.agents._package_context import (
     PACKAGE_CONTEXT,
-    build_package_context,
     _collect_agents,
     _collect_core,
     _short_doc,
     _sig,
+    build_package_context,
 )
 from pycsamt.agents.package_qa import _keywords
 

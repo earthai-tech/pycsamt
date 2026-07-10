@@ -31,7 +31,6 @@ import numpy as np
 from .iotools.emdata import (
     CSEMConfig,
     EMDataFile,
-    MTConfig,
     read_emdata,
     write_emdata,
 )
@@ -117,7 +116,7 @@ def _merge_mt(
     if out.mt is None:
         out.mt = src.mt
         # remap DATA rows: trivial since indices already 1-based from source
-        existing_mt = out.data[:, 0].astype(int)
+        out.data[:, 0].astype(int)
         out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
         return out
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,7 +17,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.station_table import StationTable
+from pycsamt.app.desktop.widgets.station_table import (
+    StationTable,
+)
 
 
 class StationPanel(QWidget):

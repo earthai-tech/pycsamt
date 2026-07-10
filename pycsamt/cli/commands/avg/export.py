@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt avg export — write a Zonge AVG file to modern, legacy, or netCDF."""
@@ -18,7 +17,7 @@ from ....api.cli.options import (
     overwrite_option,
     verbose_option,
 )
-from ._base import avg, _get_avg
+from ._base import _get_avg, avg
 
 
 @avg.command("export")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,10 +17,7 @@ Design contract
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import numpy as np
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Dark-style helpers (applied to every axes we touch)
@@ -185,7 +181,9 @@ def _add_station_markers(ax, dark: bool = True) -> None:
     The dark flag adjusts edgecolor for visibility against the panel background.
     """
     try:
-        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+        from pycsamt.api.station import (
+            PYCSAMT_STATION_RENDERING,
+        )
         xticks = np.asarray(ax.get_xticks(), dtype=float)
         xlim   = ax.get_xlim()
         valid  = xticks[(xticks >= xlim[0] - 0.5) & (xticks <= xlim[1] + 0.5)]
@@ -291,10 +289,10 @@ class PlotController:
 
     def __init__(self) -> None:
         self._sites         = None
-        self._station_id:   Optional[str]   = None
-        self._period_range: Optional[Tuple[float, float]] = None
-        self._components:   Tuple[str, ...] = ("xy", "yx")
-        self._phase_ylim:   Optional[Tuple[float, float]] = None
+        self._station_id:   str | None   = None
+        self._period_range: tuple[float, float] | None = None
+        self._components:   tuple[str, ...] = ("xy", "yx")
+        self._phase_ylim:   tuple[float, float] | None = None
         self._show_errbar:  bool = True
         self._bw_mode:      bool = False
         self.dark: bool     = True
@@ -308,20 +306,20 @@ class PlotController:
         self._sites = sites
         self._pt_df_cache.clear()   # stale when new data loaded
 
-    def set_station(self, station_id: Optional[str]) -> None:
+    def set_station(self, station_id: str | None) -> None:
         self._station_id = station_id
 
     def set_period_range(
         self,
-        T_min: Optional[float],
-        T_max: Optional[float],
+        T_min: float | None,
+        T_max: float | None,
     ) -> None:
         if T_min is None and T_max is None:
             self._period_range = None
         else:
             self._period_range = (T_min or 0.0, T_max or 1e9)
 
-    def set_components(self, components: Tuple[str, ...]) -> None:
+    def set_components(self, components: tuple[str, ...]) -> None:
         """Set which impedance components to plot (e.g. ('xy','yx','xx','yy'))."""
         self._components = components if components else ("xy", "yx")
 
@@ -339,8 +337,8 @@ class PlotController:
 
     def set_phase_ylim(
         self,
-        ymin: Optional[float],
-        ymax: Optional[float],
+        ymin: float | None,
+        ymax: float | None,
     ) -> None:
         """Force the phase axes y-limits.  Pass (None, None) for auto."""
         if ymin is None and ymax is None:
@@ -376,7 +374,9 @@ class PlotController:
             return pd.DataFrame()
         key = id(self._sites)
         if key not in self._pt_df_cache:
-            from pycsamt.emtools.tensor import build_phase_tensor_table
+            from pycsamt.emtools.tensor import (
+                build_phase_tensor_table,
+            )
             self._pt_df_cache[key] = build_phase_tensor_table(
                 self._sites, verbose=0
             )
@@ -456,10 +456,10 @@ class PlotController:
         """
         from pycsamt.emtools.plot import (
             _comp_slice,
+            _err_phase_deg,
+            _err_rhoa,
             _phase_deg,
             _rhoa_from,
-            _err_rhoa,
-            _err_phase_deg,
             _zblk_flex,
         )
 
@@ -658,6 +658,7 @@ class PlotController:
         dark background.  The rest of the contrast fixes are in _style_figure_full.
         """
         import numpy as np
+
         import pycsamt.emtools as et
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
@@ -792,11 +793,15 @@ class PlotController:
         drawn into *fig* and never creates its own window — the caller is
         responsible for displaying it (e.g. ``PublicationViewDialog``).
         """
-        from pycsamt.emtools.plot import (
-            _comp_slice, _phase_deg, _rhoa_from,
-            _err_rhoa, _err_phase_deg, _zblk_flex,
-        )
         from pycsamt.emtools._core import _get_t_block
+        from pycsamt.emtools.plot import (
+            _comp_slice,
+            _err_phase_deg,
+            _err_rhoa,
+            _phase_deg,
+            _rhoa_from,
+            _zblk_flex,
+        )
 
         fig.clear()
 
@@ -829,7 +834,6 @@ class PlotController:
                 _, tipper, tfr, terr = t_out
             else:
                 _, tipper, tfr = t_out[:3]
-                terr = None
             has_tipper = (
                 tipper is not None and tfr is not None
                 and np.asarray(tipper).size > 0

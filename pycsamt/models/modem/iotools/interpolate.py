@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Grid-to-grid model and data interpolation — Python translation of MATLAB ioAscii/.
@@ -26,7 +25,6 @@ locations to a new set of locations using cubic scattered-data interpolation
 from __future__ import annotations
 
 import copy
-from typing import List, Optional, Union
 
 import numpy as np
 
@@ -53,7 +51,7 @@ def _cell_centers(
     return nodes[:-1] + widths / 2.0
 
 
-def _bg_loge(bg_rho: Union[float, np.ndarray], nz: int) -> np.ndarray:
+def _bg_loge(bg_rho: float | np.ndarray, nz: int) -> np.ndarray:
     """Convert background resistivity to a per-layer ln(ρ) array."""
     bg = np.asarray(bg_rho, dtype=float)
     if bg.ndim == 0:
@@ -68,10 +66,10 @@ def _bg_loge(bg_rho: Union[float, np.ndarray], nz: int) -> np.ndarray:
 # -------------------------------------------------------------------------
 
 def interp_model3d(
-    source: "ModEmModel3D",  # noqa: F821
-    target: "ModEmModel3D",  # noqa: F821
-    bg_rho: Union[float, np.ndarray] = 1e3,
-) -> "ModEmModel3D":  # noqa: F821
+    source: ModEmModel3D,  # noqa: F821
+    target: ModEmModel3D,  # noqa: F821
+    bg_rho: float | np.ndarray = 1e3,
+) -> ModEmModel3D:  # noqa: F821
     """Interpolate a 3-D resistivity model onto a new grid.
 
     Equivalent to ``interpCond_3D(newgrid, oldCond, bg)`` in MATLAB.
@@ -156,8 +154,8 @@ def interp_model3d(
 def interp_z3d(
     imp: ImpedanceFile,
     new_site_loc: np.ndarray,
-    new_site_names: Optional[List[str]] = None,
-    pct_error: Optional[float] = None,
+    new_site_names: list[str] | None = None,
+    pct_error: float | None = None,
 ) -> ImpedanceFile:
     """Interpolate 3-D MT impedance data to new site locations.
 

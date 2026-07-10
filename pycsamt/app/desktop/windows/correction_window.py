@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,7 @@ MainWindow can replace the global dataset.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -33,7 +32,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QListWidgetItem,
     QMenu,
     QPlainTextEdit,
     QProgressBar,
@@ -43,9 +41,9 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QSplitter,
     QStackedWidget,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -61,17 +59,21 @@ _CAT_ICON = {
 }
 
 from pycsamt.app.desktop.controllers.correction_controller import (
-    CorrectionController,
     CATALOGUE,
     CATEGORIES,
     COORD_CATEGORIES,
     ROTATION_CATEGORIES,
     STATIC_SHIFT_CATEGORIES,
     STRATAGEM_CATEGORIES,
+    CorrectionController,
     ParamSpec,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 
 class CorrectionWindow(PanelWindow):
@@ -623,7 +625,7 @@ class CorrectionWindow(PanelWindow):
         return w
 
     def _get_param_values(self) -> dict:
-        from PySide6.QtWidgets import QCheckBox, QLineEdit
+        from PySide6.QtWidgets import QLineEdit
         vals = {}
         for name, widget in self._param_widgets.items():
             if isinstance(widget, QSpinBox):
@@ -889,7 +891,9 @@ class CorrectionWindow(PanelWindow):
         sites = self._ctrl.current_sites
         # Apply any coordinate corrections to the EDI headers (only at commit time)
         if self._ctrl.has_coord_corrections:
-            from pycsamt.gis.coord_correction import apply_coords_df_to_sites
+            from pycsamt.gis.coord_correction import (
+                apply_coords_df_to_sites,
+            )
             final_coords = self._ctrl.current_coords_df()
             if final_coords is not None:
                 apply_coords_df_to_sites(sites, final_coords)
@@ -908,7 +912,9 @@ class CorrectionWindow(PanelWindow):
         self._view_status.setText("Reverted to raw data in this panel.")
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         mode = self._combo_mode.currentText()
         fig = (
             self._canvas_single.figure

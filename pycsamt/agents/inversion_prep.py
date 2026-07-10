@@ -78,7 +78,11 @@ class InversionPrepAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -98,7 +102,7 @@ class InversionPrepAgent(BaseAgent):
         # count stations + periods
         n_st = 0; per_all = []
         import numpy as np
-        for i, ed in enumerate(_iter_items(sites)):
+        for _i, ed in enumerate(_iter_items(sites)):
             n_st += 1
             Z_obj, z, fr = _get_z_block(ed)
             if fr is not None:
@@ -113,7 +117,9 @@ class InversionPrepAgent(BaseAgent):
         data_file_path: str | None = None
         if code == "occam2d":
             try:
-                from ..models.occam2d import write_occam2d_data
+                from ..models.occam2d import (
+                    write_occam2d_data,
+                )
                 out_path = os.path.join(output_dir, "OccamDataFile.dat")
                 write_occam2d_data(
                     sites, out_path,

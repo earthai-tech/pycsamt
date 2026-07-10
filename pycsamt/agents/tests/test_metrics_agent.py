@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for MetricsAgent — inline computed-value answers about a line."""
@@ -8,10 +7,10 @@ import os
 import unittest
 
 from pycsamt.agents.metrics import (  # noqa: E402
-    MetricsAgent,
     METRIC_KINDS,
-    parse_metric_request,
+    MetricsAgent,
     looks_like_metric_query,
+    parse_metric_request,
 )
 
 _DATA = os.path.join("data", "3edis")

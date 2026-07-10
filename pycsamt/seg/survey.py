@@ -1,30 +1,28 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Iterable, List, Optional, Dict, Tuple
-from typing import Sequence
 import fnmatch
-import re
-
 import math
-import numpy as np
-import pandas as pd 
-import matplotlib.pyplot as plt
+import re
+from collections.abc import Iterable, Sequence
+from pathlib import Path
 
-from ..log.logger import get_logger
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 from ..gis.utils import (
-    to_utm,
-    project_point_utm2ll,
     get_utm_zone,
     normalize_lat_lon,
+    project_point_utm2ll,
+    to_utm,
 )
-from .base import SurveyBase 
-from .edi import EDIFile
+from ..log.logger import get_logger
+from .base import SurveyBase
 from .collection import EDICollection
+from .edi import EDIFile
 
 logger = get_logger(__name__)
 
@@ -125,16 +123,16 @@ class Stations(SurveyBase):
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-        
+
         if isinstance(items, EDIProfile):
             eds = [r["ed"] for r in items._rows]  # noqa: SLF001
         else:
             eds = _as_collection(items)
-        self._rows: List[Dict[str, object]] = []
+        self._rows: list[dict[str, object]] = []
         self._load(eds)
 
     def _load(self, eds: Sequence[EDIFile]) -> None:
-        rows: List[Dict[str, object]] = []
+        rows: list[dict[str, object]] = []
         for k, ed in enumerate(eds):
             lat, lon, elev = _coerce_ll(ed)
             sid = _station(ed)
@@ -165,20 +163,20 @@ class Stations(SurveyBase):
                 r["zone"] = z if np.isscalar(z) else str(z[i])
         self._rows = rows
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return [str(r["station"]) for r in self._rows]
 
-    def table(self) -> List[Dict[str, object]]:
+    def table(self) -> list[dict[str, object]]:
         return [dict(r) for r in self._rows]
 
-    def get(self, key: str) -> Optional[EDIFile]:
+    def get(self, key: str) -> EDIFile | None:
         key = str(key)
         for r in self._rows:
             if str(r["station"]) == key:
                 return r["ed"]  # type: ignore[return-value]
         return None
 
-    def row(self, key: str) -> Optional[Dict[str, object]]:
+    def row(self, key: str) -> dict[str, object] | None:
         key = str(key)
         for r in self._rows:
             if str(r["station"]) == key:
@@ -192,13 +190,13 @@ class Stations(SurveyBase):
         pattern: str | None = None,
         regex: str | None = None,
         pred=None,
-    ) -> "Stations":
+    ) -> Stations:
         r"""
         Return a filtered view of the stations table.
-    
+
         Multiple filters are combined with logical **AND**.  When
         no filter is given the original view is returned.
-    
+
         Parameters
         ----------
         keys : sequence of str, optional
@@ -214,22 +212,22 @@ class Stations(SurveyBase):
             A predicate ``pred(row) -> bool`` evaluated on each
             row dict.  Keep rows for which the predicate returns
             ``True``.
-    
+
         Returns
         -------
         Stations
             A new :class:`Stations` view with rows that match the
             filters.
-    
+
         Notes
         -----
         Filtering does not modify the original container.  Rows
         lacking a station id are always dropped.
-    
+
         Examples
         --------
         Keep stations starting with ``'K'`` and above 800 m::
-    
+
             sel = sts.select(pattern="K*", pred=lambda r: r["elev"] > 800)
         """
 
@@ -255,17 +253,17 @@ class Stations(SurveyBase):
         out.verbose = self.verbose
         out._rows = [dict(r) for r in rows]  # noqa: SLF001
         return out
-    
+
     def sort(
         self,
         *,
         by: str = "station",
         reverse: bool = False,
         inplace: bool = True,
-    ) -> "Stations":
+    ) -> Stations:
         r"""
         Sort the stations table by a column.
-    
+
         Parameters
         ----------
         by : str, default ``'station'``
@@ -276,12 +274,12 @@ class Stations(SurveyBase):
         inplace : bool, default ``True``
             If ``True`` modify this instance and return it.
             Otherwise return a new sorted view.
-    
+
         Returns
         -------
         Stations
             The sorted :class:`Stations` object (self or a copy).
-    
+
         Notes
         -----
         Missing values are placed at the end.  Unknown columns
@@ -304,16 +302,16 @@ class Stations(SurveyBase):
     def offsets(
         self,
         *,
-        origin: Tuple[float, float] | None = None,
+        origin: tuple[float, float] | None = None,
         azimuth: float | None = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Compute along-line and cross-line offsets (meters).
-    
+
         Offsets are computed from projected coordinates.  The
         along-line axis is defined by the given ``azimuth``; the
         cross-line axis is perpendicular to it.
-    
+
         Parameters
         ----------
         origin : tuple of float, optional
@@ -323,14 +321,14 @@ class Stations(SurveyBase):
             Bearing in degrees, clockwise from North.  When
             omitted it is inferred from the first and last
             stations.
-    
+
         Returns
         -------
         along : ndarray of float
             Distances projected on the profile axis.
         across : ndarray of float
             Signed distances perpendicular to the profile axis.
-    
+
         Notes
         -----
         Rows without valid projected coordinates are skipped in
@@ -370,7 +368,7 @@ class Stations(SurveyBase):
     ) -> None:
         r"""
         Update coordinates for a single station.
-    
+
         Parameters
         ----------
         key : str
@@ -381,11 +379,11 @@ class Stations(SurveyBase):
             New longitude in decimal degrees.
         elev : float, optional
             New elevation in meters.
-    
+
         Returns
         -------
         None
-    
+
         Notes
         -----
         The in-memory row is updated.  If the backing
@@ -409,10 +407,10 @@ class Stations(SurveyBase):
         columns: Sequence[str] | None = None,
         index: str | None = "station",
         coerce_numeric: bool = True,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         r"""
         Return a pandas ``DataFrame`` view of the station table.
-    
+
         Parameters
         ----------
         columns : sequence of str, optional
@@ -428,38 +426,38 @@ class Stations(SurveyBase):
             Try converting known numeric columns (``lat``, ``lon``,
             ``elev``, ``e``, ``n``) to numeric dtypes.  Non
             convertible values become ``NaN``.
-    
+
         Returns
         -------
         pandas.DataFrame
             A DataFrame with one row per station.
-    
+
         Notes
         -----
         ``pandas`` is imported lazily.  If it is not available, an
         :class:`ImportError` is raised.  The method is read-only and
         does not mutate the underlying table.
-    
+
         Examples
         --------
         Basic usage::
-    
+
             df = Stations(coll).to_dataframe()
             print(df.head())
-    
+
         Custom subset and index::
-    
+
             df = Stations(coll).to_dataframe(
                 columns=("station", "elev", "e", "n"),
                 index="station",
             )
-    
+
         See Also
         --------
         table : List-of-dicts representation of the rows.
         bounds : Geographic bounding box.
         select : Filter rows prior to conversion.
-    
+
         """
         rows = self.table()
         if not rows:
@@ -478,23 +476,23 @@ class Stations(SurveyBase):
                 ]
             )
             return pd.DataFrame(columns=cols)
-    
+
         df = pd.DataFrame.from_records(rows)
-    
+
         if columns is not None:
             keep = [c for c in columns if c in df.columns]
             df = df.loc[:, keep]
-    
+
         if coerce_numeric:
             for c in ("lat", "lon", "elev", "e", "n"):
                 if c in df.columns:
                     df[c] = pd.to_numeric(
                         df[c], errors="coerce"
                     )
-    
+
         if index is not None and index in df.columns:
             df = df.set_index(index, drop=True)
-    
+
         return df
 
 class Topography(SurveyBase):
@@ -589,7 +587,7 @@ class Topography(SurveyBase):
         super().__init__(verbose=verbose)
         self._d = np.asarray([], float)
         self._z = np.asarray([], float)
-        self._trend: Optional[np.ndarray] = None
+        self._trend: np.ndarray | None = None
         self._load(items, use_profile_step=use_profile_step)
 
     def _load(
@@ -604,7 +602,7 @@ class Topography(SurveyBase):
             # raw XY (east,north). Fall back to triggering the
             # profile's lazy computation when needed.
             profile = items
-    
+
             # 1) distance
             if use_profile_step:
                 d = getattr(profile, "distance", None)
@@ -625,23 +623,23 @@ class Topography(SurveyBase):
                     np.asarray(e, float),
                     np.asarray(n, float),
                 )
-    
+
             # 2) elevation (keep as provided by profile)
             z = getattr(profile, "elev", None)
             z = (
                 np.asarray(z, float)
                 if z is not None else np.array([], float)
             )
-    
+
             # 3) length guard in case inputs disagree
             if d.size != z.size:
                 m = int(min(d.size, z.size))
                 d = d[:m]
                 z = z[:m]
-    
+
             self._d, self._z = d, z
             return
-    
+
         if isinstance(items, Stations):
             rows = items.table()
             e = np.array([r.get("e", np.nan) for r in rows], float)
@@ -652,7 +650,7 @@ class Topography(SurveyBase):
                 [r.get("elev", 0.0) for r in rows], float
             )[ok]
             return
-    
+
         eds = _as_collection(items)
         rows = Stations(eds).table()
         e = np.array([r.get("e", np.nan) for r in rows], float)
@@ -684,16 +682,16 @@ class Topography(SurveyBase):
     @property
     def elevation(self) -> np.ndarray:
         return self._z.copy()
-    
+
     def smooth(
         self,
         *,
         window: int = 5,
         method: str = "median",
-    ) -> "Topography":
+    ) -> Topography:
         r"""
         Smooth the elevation series with a sliding window.
-    
+
         Parameters
         ----------
         window : int, default ``5``
@@ -702,12 +700,12 @@ class Topography(SurveyBase):
         method : {'median', 'mean'}, default ``'median'``
             Smoothing kernel. ``'median'`` is robust to spikes;
             ``'mean'`` uses a simple moving average.
-    
+
         Returns
         -------
         Topography
             The instance (in place), allowing chaining.
-    
+
         Notes
         -----
         Edge handling is performed by shrinking the window near
@@ -731,7 +729,7 @@ class Topography(SurveyBase):
         self._z = zs
         return self
 
-    def detrend(self) -> "Topography":
+    def detrend(self) -> Topography:
         if self._d.size < 2:
             self._trend = None
             return self
@@ -745,20 +743,20 @@ class Topography(SurveyBase):
         self,
         *,
         step: float,
-    ) -> "Topography":
+    ) -> Topography:
         r"""
         Resample distance/elevation to a fixed along-line step.
-    
+
         Parameters
         ----------
         step : float
             Target spacing in meters for the resampled profile.
-    
+
         Returns
         -------
         Topography
             The instance (in place), allowing chaining.
-    
+
         Notes
         -----
         Distances are regridded on ``[dmin, dmax]`` with uniform
@@ -781,13 +779,13 @@ class Topography(SurveyBase):
     ) -> np.ndarray:
         r"""
         Compute local slope between consecutive samples.
-    
+
         Parameters
         ----------
         as_degrees : bool, default ``False``
             If ``True``, return the slope angle in degrees. If
             ``False``, return the rise-over-run ratio.
-    
+
         Returns
         -------
         ndarray
@@ -809,13 +807,13 @@ class Topography(SurveyBase):
     def plot(
         self,
         *,
-        ax: Optional[plt.Axes] = None,
+        ax: plt.Axes | None = None,
         title: str | None = None,
         show_trend: bool = True,
     ) -> plt.Axes:
         r"""
         Plot elevation versus distance.
-    
+
         Parameters
         ----------
         ax : matplotlib.axes.Axes, optional
@@ -826,7 +824,7 @@ class Topography(SurveyBase):
         show_trend : bool, default ``True``
             Overlay the last computed trend line (from
             :meth:`detrend`) when available.
-    
+
         Returns
         -------
         matplotlib.axes.Axes
@@ -845,10 +843,10 @@ class Topography(SurveyBase):
             ax.set_title(title)
         return ax
 
-    def as_arrays(self) -> Tuple[np.ndarray, np.ndarray]:
+    def as_arrays(self) -> tuple[np.ndarray, np.ndarray]:
         return self.distance, self.elevation
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {"distance": self.distance, "elevation": self.elevation}
 
 
@@ -947,7 +945,7 @@ class EDIProfile(SurveyBase):
     .. [2] Snyder, J. P. (1987). *Map Projections – A Working
        Manual*, USGS Prof. Paper 1395.
     """
-  
+
     def __init__(
         self,
         items: EDIFile | Iterable[EDIFile] | EDICollection,
@@ -955,19 +953,19 @@ class EDIProfile(SurveyBase):
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-        
-        self._eds: List[EDIFile] = _as_collection(items)
-        self._rows: List[Dict[str, object]] = []
-        self._e: Optional[np.ndarray] = None
-        self._n: Optional[np.ndarray] = None
-        self._zone: Optional[List[str | None]] = None
-        self._az: Optional[float] = None
-        self._d: Optional[np.ndarray] = None
-        self._adj_e: Optional[np.ndarray] = None
-        self._adj_n: Optional[np.ndarray] = None
-        self._adj_lat: Optional[np.ndarray] = None
-        self._adj_lon: Optional[np.ndarray] = None
-        
+
+        self._eds: list[EDIFile] = _as_collection(items)
+        self._rows: list[dict[str, object]] = []
+        self._e: np.ndarray | None = None
+        self._n: np.ndarray | None = None
+        self._zone: list[str | None] | None = None
+        self._az: float | None = None
+        self._d: np.ndarray | None = None
+        self._adj_e: np.ndarray | None = None
+        self._adj_n: np.ndarray | None = None
+        self._adj_lat: np.ndarray | None = None
+        self._adj_lon: np.ndarray | None = None
+
         self._distance = None
         self._azimuth = None
 
@@ -975,7 +973,7 @@ class EDIProfile(SurveyBase):
 
 
     def _load(self) -> None:
-        rows: List[Dict[str, object]] = []
+        rows: list[dict[str, object]] = []
         for ed in self._eds:
             lat, lon, elev = _coerce_ll(ed)
             sid = _station(ed)
@@ -1008,9 +1006,9 @@ class EDIProfile(SurveyBase):
         else:
             self._zone = [str(a) if a is not None else None
                           for a in np.asarray(z)]
-            
+
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         return [str(r["station"]) for r in self._rows]
 
     @property
@@ -1029,13 +1027,13 @@ class EDIProfile(SurveyBase):
         )
 
     @property
-    def xy(self) -> Tuple[np.ndarray, np.ndarray]:
+    def xy(self) -> tuple[np.ndarray, np.ndarray]:
         if self._e is None or self._n is None:
             return (np.asarray([]), np.asarray([]))
         return (self._e.copy(), self._n.copy())
 
     def _compute_xy(self) -> tuple[np.ndarray, np.ndarray]:
-        # small-area equirectangular to avoid 
+        # small-area equirectangular to avoid
         # hard deps; good for profiles
         lon = np.asarray(self.lon, float)
         lat = np.asarray(self.lat, float)
@@ -1049,7 +1047,7 @@ class EDIProfile(SurveyBase):
         x = (br - lon0) * np.cos(lr.mean()) * R
         y = (lr - lat0) * R
         return x, y
-    
+
     def _ensure_distance_bearing(self) -> None:
         if self._distance is not None and self._azimuth is not None:
             return
@@ -1070,13 +1068,13 @@ class EDIProfile(SurveyBase):
         if self._distance is None:
             self._ensure_distance_bearing()
         return np.asarray(self._distance, float)
-    
+
     @property
     def azimuth(self) -> float:
         if self._azimuth is None:
             self._ensure_distance_bearing()
         return float(self._azimuth)
-    
+
 
     def get_bearing(
         self,
@@ -1085,20 +1083,20 @@ class EDIProfile(SurveyBase):
     ) -> float | None:
         r"""
         Estimate the survey bearing (azimuth) in degrees.
-    
+
         Parameters
         ----------
         method : {'endpoints', 'linear'}, default ``'endpoints'``
             With ``'endpoints'`` the azimuth is computed from the
             first to the last station.  With ``'linear'`` a best-fit
             axis is estimated by SVD of centered coordinates.
-    
+
         Returns
         -------
         float or None
             Bearing in ``[0, 360)`` (clockwise from north), or
             ``None`` if fewer than two valid stations exist.
-    
+
         Notes
         -----
         Uses working projected coordinates (easting/northing),
@@ -1140,7 +1138,7 @@ class EDIProfile(SurveyBase):
     ) -> float | np.ndarray:
         r"""
         Derive the inter-station spacing from the track.
-    
+
         Parameters
         ----------
         method : {'mean', 'median'}, default ``'mean'``
@@ -1149,12 +1147,12 @@ class EDIProfile(SurveyBase):
             If ``True``, return the pairwise segment lengths as a
             1-D array of size ``n-1``.  If ``False``, return a
             single spacing computed with ``method``.
-    
+
         Returns
         -------
         float or ndarray
             Either a scalar spacing or the per-segment distances.
-    
+
         Notes
         -----
         Distances are computed from consecutive projected
@@ -1165,15 +1163,15 @@ class EDIProfile(SurveyBase):
             return np.asarray([]) if as_array else 0.0
         if self._e.size < 2:
             return np.asarray([]) if as_array else 0.0
-    
+
         seg = np.hypot(np.diff(self._e), np.diff(self._n))
         if as_array:
             return seg
-    
+
         if method.lower() == "median":
             return float(np.median(seg))
         return float(np.mean(seg))
-    
+
 
     def _mode_zone(self) -> str | None:
         if not self._zone:
@@ -1183,20 +1181,20 @@ class EDIProfile(SurveyBase):
             return None
         uniq, cnt = np.unique(np.asarray(vals), return_counts=True)
         return str(uniq[int(np.argmax(cnt))])
-        
+
     def adjust(
         self,
         *,
-        origin: Tuple[float, float] | None = None,
+        origin: tuple[float, float] | None = None,
         azimuth: float | None = None,
         spacing: float | None = None,
         step: float | None = None,
         use_mean: bool = True,
-    ) -> "EDIProfile":
+    ) -> EDIProfile:
         r"""
         Build an idealized, straightened profile and store the
         adjusted coordinates.
-    
+
         Parameters
         ----------
         origin : tuple(float, float), optional
@@ -1213,12 +1211,12 @@ class EDIProfile(SurveyBase):
             When both ``spacing`` and ``step`` are ``None``,
             compute spacing from observed distances using mean if
             ``True`` or median if ``False``.
-    
+
         Returns
         -------
         EDIProfile
             The instance (allows chaining).
-    
+
         Notes
         -----
         Adjusted easting/northing are projected back to latitude
@@ -1233,7 +1231,7 @@ class EDIProfile(SurveyBase):
         n = x.size
         if n == 0:
             return self
-    
+
         # azimuth
         if azimuth is None:
             az = self.get_bearing() or 0.0
@@ -1242,14 +1240,14 @@ class EDIProfile(SurveyBase):
         rad = math.radians(az)
         ve = math.sin(rad)
         vn = math.cos(rad)
-    
+
         # origin
         if origin is None:
             e0 = float(x[0])
             n0 = float(y[0])
         else:
             e0, n0 = float(origin[0]), float(origin[1])
-    
+
         # spacing (use step alias if given)
         if step is not None:
             sp = float(step)
@@ -1259,17 +1257,17 @@ class EDIProfile(SurveyBase):
             sp = self.get_step(
                 method=("mean" if use_mean else "median")
             )
-    
+
         idx = np.arange(n, dtype=float)
         adj_e = e0 + idx * sp * ve
         adj_n = n0 + idx * sp * vn
         self._adj_e = adj_e
         self._adj_n = adj_n
- 
+
         # to lat/lon using dominant UTM zone
         z = self._mode_zone()
-        lat: List[float] = []
-        lon: List[float] = []
+        lat: list[float] = []
+        lon: list[float] = []
         for i in range(n):
             if z is None:
                 # derive zone from raw geographic
@@ -1294,11 +1292,11 @@ class EDIProfile(SurveyBase):
         *,
         use_adjusted: bool = True,
         update_elev: bool = False,
-    ) -> "EDIProfile":
+    ) -> EDIProfile:
         r"""
         Push current coordinates back into the underlying EDI
         headers.
-    
+
         Parameters
         ----------
         use_adjusted : bool, default ``True``
@@ -1308,12 +1306,12 @@ class EDIProfile(SurveyBase):
         update_elev : bool, default ``False``
             Also write elevations when present in the profile
             table.
-    
+
         Returns
         -------
         EDIProfile
             The instance (allows chaining).
-    
+
         Notes
         -----
         This mutates the in-memory :class:`~.edi.EDIFile` objects
@@ -1342,14 +1340,14 @@ class EDIProfile(SurveyBase):
     def plot_profile(
         self,
         *,
-        ax: Optional[plt.Axes] = None,
+        ax: plt.Axes | None = None,
         use_adjusted: bool = False,
         annotate: bool = True,
         title: str | None = None,
     ) -> plt.Axes:
         r"""
         Plot elevation versus along-profile distance.
-    
+
         Parameters
         ----------
         ax : matplotlib.axes.Axes, optional
@@ -1362,12 +1360,12 @@ class EDIProfile(SurveyBase):
             Draw station labels next to points.
         title : str, optional
             Axes title.
-    
+
         Returns
         -------
         matplotlib.axes.Axes
             The axes with the profile plot.
-    
+
         Notes
         -----
         Uses the profile's cached cumulative distances.  Call
@@ -1376,10 +1374,10 @@ class EDIProfile(SurveyBase):
 
         if ax is None:
             _, ax = plt.subplots()
-        d = self.distance 
+        d = self.distance
         if d.size == 0:
             return ax
-        
+
         z = self.elev
         if use_adjusted and (self._adj_lat is not None):
             # recompute elevation vs along-line distances
@@ -1418,13 +1416,13 @@ class EDIProfile(SurveyBase):
     def plot_track(
         self,
         *,
-        ax: Optional[plt.Axes] = None,
+        ax: plt.Axes | None = None,
         use_adjusted: bool = False,
         title: str | None = None,
     ) -> plt.Axes:
         r"""
         Plot plan-view station positions (easting vs. northing).
-    
+
         Parameters
         ----------
         ax : matplotlib.axes.Axes, optional
@@ -1434,12 +1432,12 @@ class EDIProfile(SurveyBase):
             exist; otherwise plot raw positions.
         title : str, optional
             Axes title.
-    
+
         Returns
         -------
         matplotlib.axes.Axes
             The axes with the track plot.
-    
+
         Notes
         -----
         Axes aspect is set to equal for a faithful plan view.
@@ -1470,8 +1468,8 @@ class EDIProfile(SurveyBase):
             ax.set_title(title)
         return ax
 
-    def as_table(self) -> List[Dict[str, object]]:
-        out: List[Dict[str, object]] = []
+    def as_table(self) -> list[dict[str, object]]:
+        out: list[dict[str, object]] = []
         for i, r in enumerate(self._rows):
             e = None if self._e is None else float(self._e[i])
             n = None if self._n is None else float(self._n[i])
@@ -1492,7 +1490,7 @@ class EDIProfile(SurveyBase):
 
 def _as_collection(
     obj: EDIFile | Iterable[EDIFile] | EDICollection
-) -> List[EDIFile]:
+) -> list[EDIFile]:
     if isinstance(obj, EDIFile):
         return [obj]
     if isinstance(obj, EDICollection):
@@ -1510,7 +1508,7 @@ def _station(ed: EDIFile) -> str:
 
 def _coerce_ll(
     ed: EDIFile,
-) -> Tuple[float | None, float | None, float | None]:
+) -> tuple[float | None, float | None, float | None]:
     # accept either properties or HEAD fields
     lat = getattr(ed, "lat", None)
     lon = getattr(ed, "lon", None)

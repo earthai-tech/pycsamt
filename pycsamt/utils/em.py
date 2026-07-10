@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,43 +6,43 @@ Electromagnetic utilities.
 
 Aggregates helpers for AMT/CSAMT processing.
 """
-from __future__ import annotations 
+from __future__ import annotations
 
 import os
 import re
-from typing import Optional, Iterable, Tuple, Union, List, Any
-import numpy as np
+from collections.abc import Iterable
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import gridspec
 
-from ..api.typing import ArrayLike, NDArray, DType, EDIO, ZO
-from ..api.bunch import Bunch 
+from ..api.bunch import Bunch
+from ..api.typing import EDIO, ZO, ArrayLike, DType, NDArray
+from ..compat.aliases import compat_alias
 from ..context import nullify_output
-from ..compat.aliases import compat_alias 
 from ..exceptions import EdIDataError, EMError
 from ..seg.validation import IsEdi
-
 from .arrayops import (
-    reshape,
-    is_iterable,
     concat_array_from_list,
-    interpolate_grid
+    is_iterable,
+    reshape,
 )
 from .cleaner import ismissing
 from .conversion import convert_value
-from .stats import get_confidence_ratio, remove_outliers
-from .validation import isinstance_relaxed, assert_ratio
 from .plot import plot_errorbar
+from .stats import get_confidence_ratio, remove_outliers
+from .validation import assert_ratio, isinstance_relaxed
 
-__all__ =[ 
-    'check_em_kind', 
-    'extract_z_list', 
-    'parse_tensor', 
-    'compute_qc', 
-    'full_freq', 
-    'tensor2d', 
-    'align_tensor', 
-    'export_edis', 
+__all__ =[
+    'check_em_kind',
+    'extract_z_list',
+    'parse_tensor',
+    'compute_qc',
+    'full_freq',
+    'tensor2d',
+    'align_tensor',
+    'export_edis',
     'plot_confidence',
     'plot_strike',
     'plot_tensors',
@@ -103,7 +102,9 @@ def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
     'Z'
     """
     # Local imports to avoid import cycles during module init.
-    from ..seg.edi import EDIFile as Edi  # v2: EDIFile replaced Edi
+    from ..seg.edi import (
+        EDIFile as Edi,  # v2: EDIFile replaced Edi
+    )
     from ..z.z import Z
 
     # Basic iterable validation (exclude str/bytes).
@@ -200,11 +201,11 @@ def extract_z_list(objs, /): # get_z_from
 def parse_tensor(                                           # validate_tensor
     out: str = "resxy",
     *,
-    tensor: Optional[str] = None,
-    component: Optional[str] = None,
+    tensor: str | None = None,
+    component: str | None = None,
     kind: str = "complex",
     **kws,
-) -> Tuple[str, Optional[str]]:
+) -> tuple[str, str | None]:
     """
     Parse and validate a tensor request, returning name and component.
 
@@ -349,11 +350,11 @@ def parse_tensor(                                           # validate_tensor
     # function's contract matches the legacy behavior.
     return name, comp
 
-def align_tensor(                         # fittensor 
+def align_tensor(                         # fittensor
     ref_freq: ArrayLike,
     site_freq: ArrayLike,
     z: NDArray[DType[complex]],
-    fill_value: Optional[float] = np.nan,
+    fill_value: float | None = np.nan,
 ) -> NDArray[DType[complex]]:
     """
     Align a tensor component to a reference frequency grid.
@@ -450,9 +451,9 @@ def align_tensor(                         # fittensor
     return z_aligned
 
 def export_edis(                                                # exportEDIS
-    edi_objs: List[EDIO],
-    new_z: List[ZO],
-    savepath: Optional[str] = None,
+    edi_objs: list[EDIO],
+    new_z: list[ZO],
+    savepath: str | None = None,
     **kws,
 ) -> None:
     """
@@ -537,21 +538,21 @@ def export_edis(                                                # exportEDIS
 
 
 def plot_confidence(   # plot_confidence_in
-    z_or_edis_obj_list: List[Union[EDIO, ZO]],
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
     tensor: str = "res",
     view: str = "1d",
     drop_outliers: bool = True,
-    distance: Optional[float] = None,
+    distance: float | None = None,
     c_line: bool = False,
     view_ci: bool = True,
-    figsize: Tuple[float, float] = (6.0, 2.0),
+    figsize: tuple[float, float] = (6.0, 2.0),
     fontsize: float = 4.0,
     dpi: int = 300,
     top_label: str = "Stations",
     rotate_xlabel: float = 90.0,
     fbtw: bool = True,
-    savefig: Optional[str] = None,
+    savefig: str | None = None,
     **plot_kws: Any,
 ):
     """
@@ -690,7 +691,9 @@ def plot_confidence(   # plot_confidence_in
     )
 
     if view == "2d":
-        from ..plot.utils import plot2d  # only needed for 2D path
+        from ..plot.utils import (
+            plot2d,  # only needed for 2D path
+        )
         # Optional outlier removal for cleaner 2-D maps.
         ar2d = (
             remove_outliers(rerr, fill_value=np.nan)
@@ -841,14 +844,14 @@ def plot_confidence(   # plot_confidence_in
     extra=(f"Use 'tensor2d'. Removal in "
            f"v{_BACKWARD_REMOVE}."),
 )
-def tensor2d(                                                 # get2dtensor 
-    z_or_edis_obj_list: List[Union[EDIO, ZO]],
+def tensor2d(                                                 # get2dtensor
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
     tensor: str = "z",
     component: str = "xy",
     kind: str = "modulus",
     return_freqs: bool = False,
-    freqs: Optional[ArrayLike] = None,
+    freqs: ArrayLike | None = None,
     **kws,
 ):
     """
@@ -1008,8 +1011,8 @@ def tensor2d(                                                 # get2dtensor
     extra=(f"Use 'compute_qc'. Removal in "
            f"v{_BACKWARD_REMOVE}."),
 )
-def compute_qc(                                                    
-    z_or_edis_obj_list: List[Union[EDIO, ZO]],
+def compute_qc(
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
     tol: float = 0.5,
     *,
@@ -1019,12 +1022,7 @@ def compute_qc(
     return_data: bool = False,
     to_log10: bool = False,
     return_qco: bool = False,
-) -> Union[
-    Tuple[float],
-    Tuple[float, np.ndarray],
-    Tuple[float, np.ndarray, np.ndarray],
-    Bunch,
-]:
+) -> tuple[float] | tuple[float, np.ndarray] | tuple[float, np.ndarray, np.ndarray] | Bunch:
     """
     Assess data quality across a collection of EDI/Z objects.
 
@@ -1180,12 +1178,7 @@ def compute_qc(
         return_data = True
 
     # Assemble the return payload.
-    out: Union[
-        Tuple[float],
-        Tuple[float, np.ndarray],
-        Tuple[float, np.ndarray, np.ndarray],
-        Bunch,
-    ]
+    out: tuple[float] | tuple[float, np.ndarray] | tuple[float, np.ndarray, np.ndarray] | Bunch
 
     if return_qco:
         out = Bunch(
@@ -1217,7 +1210,7 @@ def compute_qc(
            f"v{_BACKWARD_REMOVE}."),
 )
 def full_freq(
-    z_or_edis_obj_list: List[Union[EDIO, ZO]],
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
     to_log10: bool = False,
 ) -> ArrayLike:
@@ -1311,15 +1304,15 @@ def full_freq(
     extra=(f"Use 'plot_station_tensors'. Removal in "
            f"v{_BACKWARD_REMOVE}."),
 )
-def plot_station_tensors(   # plot_tensors2 
-    z_or_edis_obj_list: List[Union["EDIO", "ZO"]],
+def plot_station_tensors(   # plot_tensors2
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
-    station: Union[int, str] = "S00",
+    station: int | str = "S00",
     *,
     plot_z: bool = False,
     show_error_bars: bool = True,
     **kwargs: Any,
-) -> "ZO":
+) -> ZO:
     """
     Plot tensors for one station: resistivity/phase or Z real/imag.
 
@@ -1421,7 +1414,7 @@ def plot_station_tensors(   # plot_tensors2
     return z_obj
 
 
-def _parse_station_index(station: Union[int, str]) -> int:
+def _parse_station_index(station: int | str) -> int:
     """
     Extract the 0-based station index from ``station``.
 
@@ -1440,9 +1433,9 @@ def _parse_station_index(station: Union[int, str]) -> int:
 
 
 def _select_station_obj(
-    z_or_edis_obj_list: List[Union["EDIO", "ZO"]],
+    z_or_edis_obj_list: list[EDIO | ZO],
     idx: int,
-) -> Tuple[str, "ZO"]:
+) -> tuple[str, ZO]:
     """
     Determine object type (EDI or Z) and return the station's Z.
     """
@@ -1458,7 +1451,7 @@ def _select_station_obj(
     return obj_type, z_obj
 
 
-def _init_axes(**kwargs: Any) -> Tuple[plt.Figure, List[plt.Axes]]:
+def _init_axes(**kwargs: Any) -> tuple[plt.Figure, list[plt.Axes]]:
     """
     Initialize the 2×4 panel layout and return (figure, axes).
     """
@@ -1477,9 +1470,9 @@ def _init_axes(**kwargs: Any) -> Tuple[plt.Figure, List[plt.Axes]]:
 
 
 def _prepare_station_data(
-    z_obj: "ZO",
+    z_obj: ZO,
     plot_z: bool,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Collect arrays for plotting at the station, with errors.
     """
@@ -1512,7 +1505,7 @@ def _apply_filters(
     phs: np.ndarray,
     phs_err: np.ndarray,
     **kwargs: Any,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Apply frequency/period limits and (optionally) phase wrapping.
     """
@@ -1581,7 +1574,7 @@ def _apply_filters(
 
 def _draw_station_panels(
     fig: plt.Figure,
-    axes: List[plt.Axes],
+    axes: list[plt.Axes],
     freq: np.ndarray,
     res: np.ndarray,
     res_err: np.ndarray,
@@ -1641,7 +1634,7 @@ def _draw_station_panels(
     #          'lw': lw,
     #          'e_capsize': e_capsize,
     #          'e_capthick': e_capthick}
-    
+
     # kw_yy = {'color': ctmd,
     #          'marker': mtmd,
     #          'ms': ms,
@@ -1649,21 +1642,21 @@ def _draw_station_panels(
     #          'lw': lw,
     #          'e_capsize': e_capsize,
     #          'e_capthick': e_capthick}
-    
+
     # period = 1 / freq  # Convert frequency to period
-    
+
     # # Correctly mapping components to their indices in the
     # # 2x2 matrix and respective colors
     # components_info = {
     #     'xx': {'index': (0, 0), 'kw': 'kw_xx'},
     #      # xx and xy share the same color and marker style
-    #     'xy': {'index': (0, 1), 'kw': 'kw_xx'}, 
+    #     'xy': {'index': (0, 1), 'kw': 'kw_xx'},
     #     'yx': {'index': (1, 0), 'kw': 'kw_yy'},
     #      # yx and yy share the same color and marker style
-    #     'yy': {'index': (1, 1), 'kw': 'kw_yy'}  
+    #     'yy': {'index': (1, 1), 'kw': 'kw_yy'}
     # }
-    # res_labels = [] 
-    # phase_labels =[] 
+    # res_labels = []
+    # phase_labels =[]
     # res_leg_objs =[]
     # phase_leg_objs=[]
     # for i, component in enumerate(components_info):
@@ -1677,10 +1670,10 @@ def _draw_station_panels(
     #     phase = plot_phase[:, index[0], index[1]]
     #     phase_err = plot_phase_err[:, index[0], index[1]]
 
-    #     # Keyword arguments for plotting, differentiating 
+    #     # Keyword arguments for plotting, differentiating
     #     # between xx/xy and yx/yy components
     #     # Dynamically access the appropriate kwargs based on the component
-    #     plot_kwargs = locals()[kw_arg]  
+    #     plot_kwargs = locals()[kw_arg]
 
     #     # Plot resistivity
     #     er_res=plot_errorbar(
@@ -1692,12 +1685,12 @@ def _draw_station_panels(
     #         ax_phase, period, phase, phase_err if show_error_bars else None,
     #         **plot_kwargs
     #     )
-        
+
     # X axis in period (s) for both rows.
     period = 1.0 / np.asarray(freq, dtype=float)
 
-    res_labels: List[str] = []
-    phs_labels: List[str] = []
+    res_labels: list[str] = []
+    phs_labels: list[str] = []
     res_legs = []
     phs_legs = []
 
@@ -1751,7 +1744,7 @@ def _draw_station_panels(
         ax_p.grid(True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5)
 
         # Data-driven y limits (guard against non-finite).
-        def _finite_min_max(a: np.ndarray) -> Tuple[float, float]:
+        def _finite_min_max(a: np.ndarray) -> tuple[float, float]:
             a = a[np.isfinite(a)]
             if a.size == 0:
                 return (1e-3, 1.0)
@@ -1849,8 +1842,8 @@ def _draw_station_panels(
 
 
 def wrap_phase(
-    phase: Union[np.ndarray, float, int],
-    value_range: Optional[Union[Tuple[float, float], list, float, int]] = None,
+    phase: np.ndarray | float | int,
+    value_range: tuple[float, float] | list | float | int | None = None,
     mod_base: int = 360,
 ) -> np.ndarray:
     """
@@ -1945,13 +1938,13 @@ def wrap_phase(
 
 
 def plot_tensors(
-    z_or_edis_obj_list: List[Union["EDIO", "ZO"]],
+    z_or_edis_obj_list: list[EDIO | ZO],
     /,
-    station: Union[int, str] = "S00",
+    station: int | str = "S00",
     zplot: bool = False,
     show_error_bars: bool = False,
     **kwargs: Any,
-) -> "ZO":
+) -> ZO:
     """
     Plot tensors for one station (compat wrapper).
 
@@ -2007,7 +2000,7 @@ def plot_tensors(
 
 
 def plot_strike(
-    list_of_edis: Union[str, Iterable[str]],
+    list_of_edis: str | Iterable[str],
     /,
     kind: int = 2,
     period_tolerance: float = 0.05,
@@ -2064,10 +2057,10 @@ def plot_strike(
     """
     # Lazy imports to avoid hard deps at module import.
     # XXX TODO: Replace with version v-2
-    from mtpy.imaging.plotstrike import PlotStrike  
-    
+    from mtpy.imaging.plotstrike import PlotStrike
+
     # ---- normalize input into a list of .edi paths ---------------------
-    paths: List[str]
+    paths: list[str]
     if isinstance(list_of_edis, str):
         p = list_of_edis
         if os.path.isdir(p):
@@ -2120,18 +2113,18 @@ def plot_strike(
 )
 
 def plot_lcurve(
-    rms: Iterable[Union[float, int]],
-    roughness: Iterable[Union[float, int]],
-    tau: Optional[Iterable[Union[float, int]]] = None,
-    hansen_point: Optional[Union[str, Tuple[float, float]]] = None,
-    rms_target: Optional[Union[float, int]] = None,
+    rms: Iterable[float | int],
+    roughness: Iterable[float | int],
+    tau: Iterable[float | int] | None = None,
+    hansen_point: str | tuple[float, float] | None = None,
+    rms_target: float | int | None = None,
     view_tline: bool = False,
-    hpoint_kws: Optional[dict] = None,
-    fig_size: Tuple[float, float] = (10.0, 4.0),
-    ax: Optional[plt.Axes] = None,
-    fig: Optional[plt.Figure] = None,
-    style: Optional[str] = "classic",
-    savefig: Optional[str] = None,
+    hpoint_kws: dict | None = None,
+    fig_size: tuple[float, float] = (10.0, 4.0),
+    ax: plt.Axes | None = None,
+    fig: plt.Figure | None = None,
+    style: str | None = "classic",
+    savefig: str | None = None,
     **plot_kws: Any,
 ) -> plt.Axes:
     """
@@ -2275,7 +2268,9 @@ def plot_lcurve(
         # Target RMS line and/or y-limits centered on target.
         if rms_target is not None:
             try:
-                from .validation import _assert_all_types as _aat
+                from .validation import (
+                    _assert_all_types as _aat,
+                )
                 rms_target_val = float(_aat(rms_target, float, int, objname="RMS target"))
             except Exception:
                 rms_target_val = float(rms_target)
@@ -2316,7 +2311,7 @@ def plot_lcurve(
 def _hansen_knee(
     roughness: np.ndarray,
     rms: np.ndarray,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Estimate the Hansen knee point using a triangle-area surrogate.
 
@@ -2369,7 +2364,7 @@ def _hansen_knee(
 
 
 def _merge_plot_kws(
-    user_kws: Optional[dict],
+    user_kws: dict | None,
     defaults: dict,
 ) -> dict:
     """

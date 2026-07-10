@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,9 +20,6 @@ Right content
 
 from __future__ import annotations
 
-from typing import Optional
-
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -36,9 +32,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.panels.profile_panel import ProfilePanel
-from pycsamt.app.desktop.widgets.searchable_combo import SearchableComboBox
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.panels.profile_panel import (
+    ProfilePanel,
+)
+from pycsamt.app.desktop.widgets.searchable_combo import (
+    SearchableComboBox,
+)
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 
 class ProfileViewerWindow(PanelWindow):
@@ -325,7 +329,9 @@ class ProfileViewerWindow(PanelWindow):
         self._profile_panel._redraw_current_tab()
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         tab  = self._profile_panel._tabs.currentIndex()
         canvases = [
             self._profile_panel._canvas_rho_phi,
@@ -372,7 +378,6 @@ class ProfileViewerWindow(PanelWindow):
         self._combo_station.set_names(names)
 
     def _update_period_range(self, sites) -> None:
-        import numpy as np
         try:
             all_f = []
             for site in sites:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,15 +18,16 @@ Test strategy
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
-from pycsamt.cli.tests.conftest import make_fake_sites, _FakeSites
+from pycsamt.cli.tests.conftest import (
+    _FakeSites,
+    make_fake_sites,
+)
 
 # ---------------------------------------------------------------------------
 # Module-level helpers
@@ -50,7 +50,10 @@ def _patch_resolve_sites(monkeypatch: pytest.MonkeyPatch, sites: _FakeSites) -> 
 
 def _make_fake_result(fake_sites: _FakeSites, outdir: Path | None = None):
     """Build a minimal :class:`~pycsamt.pipeline.PipelineResult` for mocking."""
-    from pycsamt.pipeline import PipelineResult, StepResult  # noqa: PLC0415
+    from pycsamt.pipeline import (  # noqa: PLC0415
+        PipelineResult,
+        StepResult,
+    )
 
     sr = StepResult(
         step_idx=1,
@@ -160,12 +163,14 @@ class TestPipeStepList:
 
     def test_unknown_code_raises_bad_param(self) -> None:
         from click import BadParameter
+
         from pycsamt.api.cli.params import PipeStepList
         with pytest.raises(BadParameter, match="Unknown step"):
             PipeStepList().convert("NR001,DOES_NOT_EXIST", None, None)
 
     def test_empty_string_raises(self) -> None:
         from click import BadParameter
+
         from pycsamt.api.cli.params import PipeStepList
         with pytest.raises(BadParameter):
             PipeStepList().convert("", None, None)
@@ -694,7 +699,11 @@ class TestPipeRunUnit:
         fake_sites: _FakeSites,
     ) -> None:
         """A pipeline with at least one failed step should exit with code 1."""
-        from pycsamt.pipeline import Pipeline, PipelineResult, StepResult  # noqa: PLC0415
+        from pycsamt.pipeline import (  # noqa: PLC0415
+            Pipeline,
+            PipelineResult,
+            StepResult,
+        )
 
         _patch_resolve_sites(monkeypatch, fake_sites)
 

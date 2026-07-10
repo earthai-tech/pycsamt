@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -206,7 +205,7 @@ class _MapPopOutButton(QPushButton):
         background:   rgba(80, 86, 130, 0.95);
     }"""
 
-    def __init__(self, container: "MapPanel") -> None:
+    def __init__(self, container: MapPanel) -> None:
         super().__init__("⤢", container)
         self._container = container
         self._shown     = False
@@ -253,7 +252,9 @@ class _MapPopOutButton(QPushButton):
     def _on_click(self) -> None:
         panel = self._container
         # Deferred import avoids circular dependency (map_window imports MapPanel)
-        from pycsamt.app.desktop.windows.map_window import MapDetailWindow
+        from pycsamt.app.desktop.windows.map_window import (
+            MapDetailWindow,
+        )
         win = MapDetailWindow(parent=panel.window())
         # Load data into the new window
         if not panel._df.empty:

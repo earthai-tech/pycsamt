@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -153,7 +152,10 @@ def build_index(
         out_dir.mkdir(parents=True, exist_ok=True)
         save_chunks(chunks, out_dir / "chunks.jsonl")
         if vectors is not None:
-            from .embeddings import VECTOR_FILENAME, save_vectors
+            from .embeddings import (
+                VECTOR_FILENAME,
+                save_vectors,
+            )
 
             save_vectors(
                 out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors

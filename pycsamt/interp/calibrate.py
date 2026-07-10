@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """ModelCalibrator — constrain a 2-D EM model with borehole ground truth.
@@ -49,7 +48,7 @@ Example
 """
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -84,7 +83,7 @@ class ModelCalibrator:
         ptol: float = 0.10,
         *,
         max_borehole_distance: float = 500.0,
-        db: Optional[RockDatabase] = None,
+        db: RockDatabase | None = None,
         verbose: bool = True,
     ) -> None:
         self.ptol = float(ptol)
@@ -92,10 +91,10 @@ class ModelCalibrator:
         self.db = db if db is not None else RockDatabase.default()
         self.verbose = verbose
 
-        self._model: Optional[ResistivityModel] = None
-        self._boreholes: List[Borehole] = []
-        self._nm_rho_2d: Optional[np.ndarray] = None
-        self._misfit_map: Optional[np.ndarray] = None
+        self._model: ResistivityModel | None = None
+        self._boreholes: list[Borehole] = []
+        self._nm_rho_2d: np.ndarray | None = None
+        self._misfit_map: np.ndarray | None = None
         self._is_fitted: bool = False
 
     # ------------------------------------------------------------------
@@ -105,8 +104,8 @@ class ModelCalibrator:
     def fit(
         self,
         model: ResistivityModel,
-        boreholes: Optional[Sequence[Borehole]] = None,
-    ) -> "ModelCalibrator":
+        boreholes: Sequence[Borehole] | None = None,
+    ) -> ModelCalibrator:
         """Calibrate *model* against *boreholes*.
 
         Parameters
@@ -188,10 +187,10 @@ class ModelCalibrator:
     def stratigraphic_logs(
         self,
         *,
-        db: Optional[RockDatabase] = None,
+        db: RockDatabase | None = None,
         model: str = "nm",
         merge_tolerance: float = 0.2,
-    ) -> List[StratigraphicLog]:
+    ) -> list[StratigraphicLog]:
         """Build a :class:`~pycsamt.interp.lithology.StratigraphicLog`
         for every station.
 
@@ -214,8 +213,8 @@ class ModelCalibrator:
         m = self._model
         rho_2d = self._nm_rho_2d if model == "nm" else m.rho_2d
 
-        logs: List[StratigraphicLog] = []
-        for i, (sta_x, sta_name) in enumerate(
+        logs: list[StratigraphicLog] = []
+        for _i, (sta_x, sta_name) in enumerate(
             zip(m.station_x, m.station_names)
         ):
             ix = int(np.argmin(np.abs(m.x_centers - sta_x)))
@@ -250,7 +249,7 @@ class ModelCalibrator:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _nearest_borehole(self, x: float) -> Optional[Borehole]:
+    def _nearest_borehole(self, x: float) -> Borehole | None:
         if not self._boreholes:
             return None
         dists = [abs(bh.x - x) for bh in self._boreholes]

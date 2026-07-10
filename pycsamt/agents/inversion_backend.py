@@ -123,9 +123,9 @@ class InversionBackendAgent(BaseAgent):
 
         try:
             from ..inversion import (
-                run_inversion,
                 InversionConfig,
                 available_backends,
+                run_inversion,
             )
         except ImportError as exc:
             return AgentResult.failed(
@@ -251,7 +251,9 @@ class InversionBackendAgent(BaseAgent):
         try:
             history = getattr(inv_result, "history", None)
             if history is not None:
-                from ..ai.plot.convergence import plot_convergence
+                from ..ai.plot.convergence import (
+                    plot_convergence,
+                )
                 fig_cv = plot_convergence(history)
                 if fig_cv is not None:
                     f = fig_cv if hasattr(fig_cv, "savefig") else (
@@ -321,6 +323,7 @@ def _plot_inversion_section(
 ) -> Any:
     """Plot recovered log₁₀ρ section using PYCSAMT_SECTION API."""
     import matplotlib.pyplot as plt
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import PYCSAMT_STATION_RENDERING
 

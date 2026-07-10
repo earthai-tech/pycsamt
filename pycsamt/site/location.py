@@ -1,26 +1,28 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Sequence, Tuple, Iterable
+import copy
 import math
 import re
-import copy
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+from typing import Any
+
 import numpy as np
 
 from ..constants import _EARTH_R
+from ..gis.config import HAS_GDAL
 from ..gis.utils import (
-    assert_lat_value, assert_lon_value, assert_elevation_value,
+    assert_elevation_value,
+    assert_lat_value,
+    assert_lon_value,
 )
-from ..gis.config import HAS_GDAL  
-from .utils import _get_head, _ensure_head  
-
+from .utils import _ensure_head, _get_head
 
 __all__ = [
-    "Coord", 
+    "Coord",
     "parse_lat", "parse_lon", "parse_elev",
     "ensure_head_coords", "apply_topography",
     "project",
@@ -46,7 +48,7 @@ _DMS_RX = re.compile(
 class Coord:
     r"""
     Lightweight geographic coordinate container.
-    
+
     Parameters
     ----------
     lat : float
@@ -55,14 +57,14 @@ class Coord:
         Longitude in decimal degrees. East is positive.
     elev : float, optional
         Elevation in meters. Defaults to 0.0.
-    
+
     Notes
     -----
     This class is a convenience container used across the site
     tools. Values are not validated at construction time. Use
     ``pycsamt.gis.utils.assert_lat_value`` and related helpers
     if you need strict range checking.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import Coord
@@ -79,28 +81,28 @@ class Coord:
 def parse_lat(x: Any) -> float:
     r"""
     Parse a latitude value from decimal or DMS text.
-    
+
     Accepts floats, ints, or strings like
     ``"10"``, ``"-3.2"``, ``"12 30 00 N"``, ``"12:30:00N"``,
     ``"12d30mE"`` (hemisphere letter required for disambiguation
     when not using sign).
-    
+
     Parameters
     ----------
     x : any
         Numeric or string representation of a latitude value.
-    
+
     Returns
     -------
     float
         Parsed latitude in decimal degrees. Returns ``nan`` on
         parsing failure.
-    
+
     Notes
     -----
     Hemisphere letters are interpreted as ``N=+1`` and ``S=-1``.
     Signed decimal values override hemisphere if both are given.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import parse_lat
@@ -108,7 +110,7 @@ def parse_lat(x: Any) -> float:
     12.5
     >>> parse_lat("-7.25")
     -7.25
-    
+
     See Also
     --------
     parse_lon, parse_elev
@@ -120,33 +122,33 @@ def parse_lat(x: Any) -> float:
 def parse_lon(x: Any) -> float:
     r"""
     Parse a longitude value from decimal or DMS text.
-    
+
     Accepts floats, ints, or strings like
     ``"20"``, ``"3.5W"``, ``"12 30 00 E"``, or
     ``"12:30:00W"``.
-    
+
     Parameters
     ----------
     x : any
         Numeric or string representation of a longitude value.
-    
+
     Returns
     -------
     float
         Parsed longitude in decimal degrees. Returns ``nan`` on
         parsing failure.
-    
+
     Notes
     -----
     Hemisphere letters are interpreted as ``E=+1`` and ``W=-1``.
     Signed decimal values override hemisphere if both are given.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import parse_lon
     >>> parse_lon("3.5W")
     -3.5
-    
+
     See Also
     --------
     parse_lat, parse_elev
@@ -158,17 +160,17 @@ def parse_lon(x: Any) -> float:
 def parse_elev(x: Any) -> float:
     r"""
     Parse elevation from a numeric or string value.
-    
+
     Parameters
     ----------
     x : any
         Numeric or string representation of elevation in meters.
-    
+
     Returns
     -------
     float
         Elevation in meters. Returns ``nan`` on parsing failure.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import parse_elev
@@ -191,7 +193,7 @@ def ensure_head_coords(
 ) -> Any:
     r"""
     Create or update HEAD coordinates on an EDI-like object.
-    
+
     This function guarantees that the EDI "head" section exists
     and that the ``lat``, ``lon`` and ``long`` aliases, and
     ``elev`` fields are present and numeric. Inputs are parsed
@@ -200,7 +202,7 @@ def ensure_head_coords(
     ``pycsamt.gis.utils.assert_*``, and then written back. When
     a value is missing or not finite, a default empty sentinel
     is used (0.0 by default).
-    
+
     Parameters
     ----------
     ed : any
@@ -214,18 +216,18 @@ def ensure_head_coords(
         the ``empty`` value is used.
     empty : float, optional
         Empty sentinel for lat, lon and elev. Default is 0.0.
-    
+
     Returns
     -------
     any
         The head section object that now carries ``lat``, ``lon``
         (and alias ``long``) and ``elev``.
-    
+
     Notes
     -----
     This routine writes both ``lon`` and ``long`` to maximize
     compatibility with various EDI headers.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import ensure_head_coords
@@ -239,7 +241,7 @@ def ensure_head_coords(
     >>> h = ensure_head_coords(ed, lat="12N", lon="3E", elev="10")
     >>> (h.lat, h.lon, h.elev)
     (12.0, 3.0, 10.0)
-    
+
     See Also
     --------
     parse_lat, parse_lon, parse_elev
@@ -269,23 +271,23 @@ def ensure_head_coords(
 
     # write both 'lon' and 'long' (and survive slots)
     try:
-        setattr(h, "lat", float(la))
+        h.lat = float(la)
     except Exception:
         pass
 
     wrote_lon = False
     try:
-        setattr(h, "lon", float(lo))
+        h.lon = float(lo)
         wrote_lon = True
     except Exception:
         pass
     try:
-        setattr(h, "long", float(lo))
+        h.long = float(lo)
         wrote_lon = True or wrote_lon
     except Exception:
         pass
     try:
-        setattr(h, "elev", float(ev))
+        h.elev = float(ev)
     except Exception:
         pass
 
@@ -297,15 +299,15 @@ def ensure_head_coords(
                       "station", "name", "sitename"):
                 if hasattr(h, k):
                     setattr(nh, k, getattr(h, k))
-            setattr(nh, "lon", float(lo))
-            setattr(nh, "long", float(lo))
+            nh.lon = float(lo)
+            nh.long = float(lo)
             ed.set_section("head", nh)  # preferred API
             h = nh
         except Exception:
             # if set_section isn't available, also assign attribute
             # so that get_section can still discover it.
             try:
-                setattr(ed, "Head", nh)  # fallback path
+                ed.Head = nh  # fallback path
             except Exception:
                 pass
 
@@ -321,11 +323,11 @@ def apply_topography(
 ) -> Any:
     r"""
     Update site coordinates from a tabular frame by station id.
-    
+
     Matches rows in ``frame`` against the EDI "station" or
     related identifiers and writes the associated ``latitude``,
     ``longitude`` and ``elevation`` into the EDI head section.
-    
+
     Parameters
     ----------
     ed_or_sites : any or iterable
@@ -345,19 +347,19 @@ def apply_topography(
     inplace : bool, optional
         If ``True`` (default), update the provided objects. If
         ``False``, return a deep-copied updated structure.
-    
+
     Returns
     -------
     any
         The updated object(s). For lists or containers, the
         return type mirrors the input.
-    
+
     Notes
     -----
     Matching is case-insensitive and robust to whitespace. For
     containers, the function duck-types a ``._items`` attribute
     and attempts to update the underlying ``.edi`` objects.
-    
+
     Examples
     --------
     >>> import pandas as pd
@@ -412,14 +414,14 @@ def apply_topography(
 
 
 def project(
-    pts: Sequence[Tuple[float, float]] | Tuple[float, float],
+    pts: Sequence[tuple[float, float]] | tuple[float, float],
     *,
     crs_from: Any,
     crs_to: Any,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     r"""
     Project points from one CRS to another using pyproj or GDAL.
-    
+
     Parameters
     ----------
     pts : sequence of (float, float) or (float, float)
@@ -431,31 +433,31 @@ def project(
         or a SpatialReference.
     crs_to : any
         Target CRS in the same form as ``crs_from``.
-    
+
     Returns
     -------
     numpy.ndarray, numpy.ndarray
         Arrays ``(X, Y)`` holding transformed coordinates.
-    
+
     Raises
     ------
     RuntimeError
         If neither pyproj nor GDAL are available.
     TypeError
         If CRS specification cannot be parsed.
-    
+
     Notes
     -----
     When both pyproj and GDAL are available, pyproj is used. The
     axis order is forced to the traditional GIS order
     ``(x, y)``.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import project
     >>> X, Y = project([(0.0, 0.0)], crs_from="EPSG:4326",
     ...                crs_to="EPSG:3857")  # doctest: +SKIP
-    
+
     See Also
     --------
     pycsamt.site.location.distance
@@ -532,15 +534,15 @@ def project(
 
 
 def distance(
-    a: Coord | Tuple[float, float],
-    b: Coord | Tuple[float, float],
+    a: Coord | tuple[float, float],
+    b: Coord | tuple[float, float],
     *,
     mode: str = "geodetic",
     crs_to: Any | None = None,
 ) -> float:
     r"""
     Compute distance between two geographic points.
-    
+
     Supports three modes:
     ``geodetic`` uses a haversine approximation on a spherical
     Earth of radius ``_EARTH_R``.
@@ -548,7 +550,7 @@ def distance(
     (about the mid-latitude).
     ``utm`` projects both points to UTM (auto zone unless
     ``crs_to`` is given) and computes the Euclidean distance.
-    
+
     Parameters
     ----------
     a, b : Coord or (float, float)
@@ -558,34 +560,34 @@ def distance(
     crs_to : any, optional
         Target CRS for ``'utm'`` mode. If omitted, the UTM zone
         is inferred from the mean coordinate.
-    
+
     Returns
     -------
     float
         Distance in meters.
-    
+
     Raises
     ------
     ValueError
         If ``mode`` is not one of the supported options.
-    
+
     Notes
     -----
     Geodetic mode implements the haversine formula:
-    
+
     .. math::
-    
+
        d = 2 R \arcsin\left( \sqrt{ \sin^2\Delta\phi/2 +
            \cos\phi_1 \cos\phi_2 \sin^2\Delta\lambda/2 } \right)
-    
+
     where angles are in radians.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import distance, Coord
     >>> distance(Coord(0,0,0), Coord(0,1,0), mode='geodetic')
     111000.0  # doctest: +ELLIPSIS
-    
+
     See Also
     --------
     pycsamt.site.location.bearing
@@ -622,19 +624,19 @@ def distance(
 
 
 def bearing(
-    a: Coord | Tuple[float, float],
-    b: Coord | Tuple[float, float],
+    a: Coord | tuple[float, float],
+    b: Coord | tuple[float, float],
     *,
     mode: str = "geodetic",
     crs_to: Any | None = None,
 ) -> float:
     r"""
     Compute the azimuth from point ``a`` to point ``b``.
-    
+
     Supports the same three modes as :func:`distance`:
     ``geodetic``, ``flat``, and ``utm``. The azimuth is expressed
     in degrees with 0 deg pointing to north and 90 deg to east.
-    
+
     Parameters
     ----------
     a, b : Coord or (float, float)
@@ -644,29 +646,29 @@ def bearing(
     crs_to : any, optional
         Target CRS for ``'utm'`` mode. If omitted, the UTM zone
         is inferred.
-    
+
     Returns
     -------
     float
         Azimuth in degrees in the range ``[0, 360)``.
-    
+
     Raises
     ------
     ValueError
         If ``mode`` is not supported.
-    
+
     Notes
     -----
     Geodetic mode uses the spherical forward azimuth:
-    
+
     .. math::
-    
+
        \theta = \operatorname{atan2}(\sin\Delta\lambda\cos\phi_2,\,
                \cos\phi_1\sin\phi_2 -
                \sin\phi_1\cos\phi_2\cos\Delta\lambda)
-    
+
     Angles are converted to degrees and wrapped to ``[0, 360)``.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import bearing, Coord
@@ -674,7 +676,7 @@ def bearing(
     0.0
     >>> bearing(Coord(0,0,0), Coord(0,1,0))
     90.0
-    
+
     See Also
     --------
     pycsamt.site.location.distance
@@ -716,19 +718,19 @@ def bearing(
 
 
 def chainage_along(
-    origin: Coord | Tuple[float, float],
+    origin: Coord | tuple[float, float],
     azimuth: float,
-    pts: Sequence[Coord | Tuple[float, float]]
-    | Coord | Tuple[float, float],
+    pts: Sequence[Coord | tuple[float, float]]
+    | Coord | tuple[float, float],
 ) -> np.ndarray | float:
     r"""
     Project points onto a profile axis and return chainages.
-    
+
     Chainage is the signed distance along the axis defined by an
     origin and an azimuth (0 deg north, 90 deg east). A local
     flat-Earth approximation is used, with 1 deg roughly equal
     to 111 km scaled by cosine of latitude for the east axis.
-    
+
     Parameters
     ----------
     origin : Coord or (float, float)
@@ -737,33 +739,33 @@ def chainage_along(
         Axis azimuth in degrees, 0 deg north, 90 deg east.
     pts : sequence of Coord or (float, float) or single
         Single point or a sequence of points to be projected.
-    
+
     Returns
     -------
     numpy.ndarray or float
         Chainage(s) in meters. Returns a scalar for a single
         point, or a 1-D array for multiple points.
-    
+
     Notes
     -----
     Let local offsets be ``dx`` east and ``dy`` north from the
     origin. The chainage uses
-    
+
     .. math::
-    
+
        s = dx \sin A + dy \cos A
-    
+
     where :math:`A` is the azimuth in radians and
     :math:`dx, dy` are derived from degree differences using a
     local metric scale.
-    
+
     Examples
     --------
     >>> from pycsamt.site.location import chainage_along
     >>> s = chainage_along((0.0, 0.0), 90.0, (0.0, 1.0))
     >>> s > 100000.0
     True
-    
+
     See Also
     --------
     pycsamt.site.location.bearing
@@ -779,7 +781,7 @@ def chainage_along(
     az = math.radians(float(azimuth))
     mperdeg = 111_000.0
 
-    def _one(p: Coord | Tuple[float, float]) -> float:
+    def _one(p: Coord | tuple[float, float]) -> float:
         if isinstance(p, Coord):
             la, lo = p.lat, p.lon
         else:
@@ -862,7 +864,7 @@ def _set_coords_from_row(
     lo = parse_lon(row[lonc]) if lonc else math.nan  # type: ignore
     ev = parse_elev(row[elvc]) if elvc else math.nan  # type: ignore
     ensure_head_coords(ed, lat=la, lon=lo, elev=ev, empty=empty)
-    
+
 
 def _rad(x: float) -> float:
     return math.radians(float(x))
@@ -875,7 +877,7 @@ def _infer_utm_epsg(lat: float, lon: float) -> int:
 
 def _flat_offsets_m(
     la1: float, lo1: float, la2: float, lo2: float,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     la_mid = math.radians((la1 + la2) * 0.5)
     m_lat = 111_000.0
     m_lon = 111_000.0 * math.cos(la_mid)

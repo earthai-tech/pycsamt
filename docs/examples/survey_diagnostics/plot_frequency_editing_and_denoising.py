@@ -34,8 +34,8 @@ from _datasets import load_sites
 
 from pycsamt.emtools.frequency import (
     edit_frequencies_by_confidence,
-    plot_frequency_edit_summary,
     plot_frequency_edit_decisions,
+    plot_frequency_edit_summary,
 )
 
 

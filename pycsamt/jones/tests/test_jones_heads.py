@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 from pathlib import Path
 
-from pycsamt.jones.heads import Info, Head, Heads
+from pycsamt.jones.heads import Head, Heads, Info
+
 
 def _sample_lines():
     # comment + info block

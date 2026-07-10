@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Phase 2 tests — ModEmData, ModEmModel2D, ModEmControl, ModEmLog."""
 
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 _EX2D = Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 _EX3D = Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
@@ -103,8 +103,8 @@ def _make_site(name, y_offset, n_freq=6):
 
 
 def test_from_edi_n_sites():
-    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     sites = [_make_site(f"S{i:02d}", i * 500.0) for i in range(5)]
     cfg   = ModEmConfig(mode="3d", component_type="Full_Impedance")
     d     = ModEmData.from_edi(sites, config=cfg)
@@ -187,9 +187,9 @@ def test_model2d_roundtrip(model2d, tmp_path):
 
 
 def test_model2d_halfspace():
-    from pycsamt.models.modem.model2d import ModEmModel2D
-    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
+    from pycsamt.models.modem.model2d import ModEmModel2D
     sites = [_make_site(f"S{i:02d}", i * 500.0) for i in range(3)]
     cfg   = ModEmConfig(mode="2d")
     d     = ModEmData.from_edi(sites, config=cfg)
@@ -215,8 +215,8 @@ def test_model2d_missing_file_raises():
 # ---------------------------------------------------------------------------
 
 def test_control_from_config():
+    from pycsamt.models.modem.config import ModEmConfig
     from pycsamt.models.modem.control import ModEmControl
-    from pycsamt.models.modem.config  import ModEmConfig
     cfg  = ModEmConfig(max_iterations=50, target_rms=1.03)
     ctrl = ModEmControl.from_config(cfg)
     assert ctrl.max_iterations == 50
@@ -232,7 +232,10 @@ def test_control_read():
 
 
 def test_control_roundtrip(tmp_path):
-    from pycsamt.models.modem.control import ModEmControl, ModEmConfig
+    from pycsamt.models.modem.control import (
+        ModEmConfig,
+        ModEmControl,
+    )
     ctrl = ModEmControl.from_config(ModEmConfig(max_iterations=80))
     out  = tmp_path / "test.inv"
     ctrl.write(out)

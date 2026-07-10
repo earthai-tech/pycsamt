@@ -171,7 +171,7 @@ class ModelZooAgent(BaseAgent):
     # ── action handlers ───────────────────────────────────────────────────────
 
     def _action_list(self, t0: float) -> AgentResult:
-        from ..ai._zoo import list_pretrained, _MODEL_ZOO
+        from ..ai._zoo import _MODEL_ZOO, list_pretrained
 
         models = list_pretrained()
         rows = []
@@ -186,7 +186,7 @@ class ModelZooAgent(BaseAgent):
             })
 
         summary_lines = [f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows]
-        summary = (
+        (
             f"Model zoo — {len(models)} pre-trained models available:\n"
             + "\n".join(summary_lines)
         )
@@ -207,7 +207,10 @@ class ModelZooAgent(BaseAgent):
         )
 
     def _action_download(self, model_name: str, t0: float) -> AgentResult:
-        from ..ai._zoo import download_checkpoint, get_pretrained_info
+        from ..ai._zoo import (
+            download_checkpoint,
+            get_pretrained_info,
+        )
 
         warnings: list[str] = []
         ckpt_path = None
@@ -258,7 +261,10 @@ class ModelZooAgent(BaseAgent):
         output_dir: str | None,
         t0: float,
     ) -> AgentResult:
-        from ..ai._zoo import download_checkpoint, get_pretrained_info
+        from ..ai._zoo import (
+            download_checkpoint,
+            get_pretrained_info,
+        )
 
         warnings: list[str] = []
         figures: dict[str, Any] = {}

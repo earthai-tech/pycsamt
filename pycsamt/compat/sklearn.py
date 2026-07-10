@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
@@ -21,9 +20,15 @@ from sklearn.utils._param_validation import (
     InvalidParameterError,
     StrOptions,
 )
-from sklearn.utils._param_validation import Interval as sklearn_Interval
-from sklearn.utils._param_validation import validate_params as sklearn_validate_params
-from sklearn.utils.validation import check_is_fitted as sklearn_check_is_fitted
+from sklearn.utils._param_validation import (
+    Interval as sklearn_Interval,
+)
+from sklearn.utils._param_validation import (
+    validate_params as sklearn_validate_params,
+)
+from sklearn.utils.validation import (
+    check_is_fitted as sklearn_check_is_fitted,
+)
 
 # Determine the installed scikit-learn version
 SKLEARN_VERSION = parse(sklearn.__version__)
@@ -238,7 +243,9 @@ def type_of_target(y):
     """
     # Attempt to import type_of_target from scikit-learn
     try:
-        from sklearn.utils.multiclass import type_of_target as skl_type_of_target
+        from sklearn.utils.multiclass import (
+            type_of_target as skl_type_of_target,
+        )
 
         return skl_type_of_target(y)
     except ImportError:
@@ -686,7 +693,9 @@ def adjusted_mutual_info_score(labels_true, labels_pred, average_method="arithme
     - ami : float
        Adjusted Mutual Information Score.
     """
-    from sklearn.metrics import adjusted_mutual_info_score as ami_score
+    from sklearn.metrics import (
+        adjusted_mutual_info_score as ami_score,
+    )
 
     if SKLEARN_LT_0_22:
         return ami_score(labels_true, labels_pred)

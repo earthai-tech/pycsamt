@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Iterator, Optional
+from collections.abc import Iterator
+from typing import Any
 
-from .base import TFBundle, ensure_station, to_edi
-from .base import CoreObject
+from .base import CoreObject, TFBundle, ensure_station, to_edi
 
 __all__ = [
     "bundle_from_edi",
@@ -26,11 +25,11 @@ def _get(obj: Any, *names: str) -> Any:
 def bundle_from_edi(obj: Any) -> TFBundle:
     r"""
     Build a :class:`TFBundle` from an EDI-like object.
-    
+
     The function probes common attribute names found in EDI objects
     and populates a neutral bundle. It tolerates missing fields and
     does not enforce array types.
-    
+
     Parameters
     ----------
     obj : Any
@@ -38,17 +37,17 @@ def bundle_from_edi(obj: Any) -> TFBundle:
         ``z_err``, ``tipper``, ``rho``, ``phase``, ``station``,
         ``lat``, ``lon``, ``elev``, ``azimuth`` are searched with
         several conventional aliases.
-    
+
     Returns
     -------
     TFBundle
         A bundle with fields filled where data could be found.
-    
+
     Notes
     -----
     If the tipper has shape ``(n, 1, 2)`` it is normalized to
     ``(n, 2)``. Unknown shapes are left unchanged.
-    
+
     Examples
     --------
     >>> from pycsamt.core.mixins import bundle_from_edi
@@ -102,21 +101,21 @@ def bundle_from_edi(obj: Any) -> TFBundle:
 def _looks_collection(obj: Any) -> bool:
     r"""
     Heuristically decide if ``obj`` behaves like a collection.
-    
+
     Criteria are conservative: basic sequences return True, while
     strings and bytes return False. Any iterable that does not
     expose a ``z`` attribute is considered a collection.
-    
+
     Parameters
     ----------
     obj : Any
         Candidate object.
-    
+
     Returns
     -------
     bool
         True when it looks like a collection of items.
-    
+
     Notes
     -----
     This is a soft check used by :meth:`BundleMixin.from_edi`
@@ -135,17 +134,17 @@ def _looks_collection(obj: Any) -> bool:
 class BundleMixin(CoreObject):
     r"""
     Mixin for single items convertible to and from bundles.
-    
+
     Subclasses implement ``to_bundle`` and ``from_bundle`` to map
     between their internal representation and the neutral
     :class:`TFBundle`.
-    
+
     Notes
     -----
     ``to_edi`` delegates to
     :func:`pycsamt.core.base.to_edi`, which uses the adapter
     registry to pick the right converter.
-    
+
     Examples
     --------
     >>> from pycsamt.core.mixins import BundleMixin
@@ -174,33 +173,33 @@ class BundleMixin(CoreObject):
     def from_bundle(cls, bundle: TFBundle):  # noqa: D401
         r"""
         Construct an instance from a :class:`TFBundle`.
-        
+
         Returns a new instance of the implementing class.
-        
+
         Must be implemented by subclasses.
         """
         raise NotImplementedError
 
     @staticmethod
     def ensure_station_name(
-        name: Optional[str],
-        station_id: Optional[str | int],
+        name: str | None,
+        station_id: str | int | None,
     ) -> str:
         r"""
         Validate or synthesize a station name via policy.
-        
+
         Parameters
         ----------
         name : str or None
             Preferred station/site name if available.
         station_id : str, int or None
             Identifier used to synthesize a name when needed.
-        
+
         Returns
         -------
         str
             Validated or synthetic name.
-        
+
         See Also
         --------
         pycsamt.core.base.ensure_station
@@ -209,22 +208,22 @@ class BundleMixin(CoreObject):
 
         return ensure_station(name, station_id)
 
-    def to_edi(self, *, key: Optional[str] = None, **k: Any) -> Any:
+    def to_edi(self, *, key: str | None = None, **k: Any) -> Any:
         r"""
         Convert ``self`` to EDI or EDICollection via dispatch.
-        
+
         Parameters
         ----------
         key : str, optional
             Adapter key override (e.g. ``'avg'``, ``'j'``).
         **k : Any
             Extra keyword arguments forwarded to the adapter.
-        
+
         Returns
         -------
         Any
             EDI object or EDICollection, depending on adapter.
-        
+
         Notes
         -----
         Dispatch is handled by
@@ -238,22 +237,22 @@ class BundleMixin(CoreObject):
     def from_edi(cls, edi_obj: Any):
         r"""
         Construct instance(s) from an EDI object or a collection.
-        
+
         If ``edi_obj`` looks like a collection, every element is
         converted to a :class:`TFBundle` and fed to
         ``from_bundle``. Otherwise the single object is converted
         and fed to ``from_bundle``.
-        
+
         Parameters
         ----------
         edi_obj : Any
             EDI object or an iterable of EDI objects.
-        
+
         Returns
         -------
         Any
             Instance or list of instances of the implementing class.
-        
+
         Examples
         --------
         >>> from pycsamt.core.mixins import BundleMixin, bundle_from_edi
@@ -280,17 +279,17 @@ class BundleMixin(CoreObject):
 class BundleContainerMixin(BundleMixin):
     r"""
     Mixin for containers of items that implement ``to_bundle``.
-    
+
     This mixin provides iteration over bundles and a convenience
     method to convert all items to an EDI collection using the
     adapter dispatch.
-    
+
     Notes
     -----
     Detection of children is permissive: if the container has an
     ``items()`` method, values are inspected; otherwise the
     container is iterated directly.
-    
+
     Examples
     --------
     >>> from pycsamt.core.mixins import BundleContainerMixin
@@ -318,25 +317,25 @@ class BundleContainerMixin(BundleMixin):
     def to_edi_collection(
         self,
         *,
-        key: Optional[str] = None,
+        key: str | None = None,
         **k: Any,
     ) -> list[Any]:
         r"""
         Convert all child bundles through adapter dispatch.
-        
+
         Parameters
         ----------
         key : str, optional
             Adapter key override for all children.
         **k : Any
             Extra keyword arguments forwarded to the adapter.
-        
+
         Returns
         -------
         list of Any
             A list of EDI objects. Callers may wrap this into an
             actual :class:`~pycsamt.seg.collection.EDICollection`.
-        
+
         Examples
         --------
         >>> from pycsamt.core.mixins import BundleContainerMixin
@@ -354,7 +353,7 @@ class BundleContainerMixin(BundleMixin):
 class _ProxyFromBundle:
     r"""
     Tiny proxy that exposes ``to_bundle`` for a stored bundle.
-    
+
     Used internally to feed :func:`pycsamt.core.base.to_edi`
     with a minimal object that satisfies the dispatch contract.
     """

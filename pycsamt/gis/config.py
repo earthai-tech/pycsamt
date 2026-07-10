@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -39,7 +38,6 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Dict
 
 import numpy as np
 
@@ -63,7 +61,7 @@ if not _HAS_GDAL:
 
 
 # Build EPSG dictionary
-EPSG_DICT: Dict[int, str] = {}
+EPSG_DICT: dict[int, str] = {}
 
 try:
     import pyproj  # noqa: F401
@@ -75,7 +73,7 @@ try:
     )
 
     if epsg_path and os.path.isfile(epsg_path):
-        with open(epsg_path, "r", encoding="utf-8") as f:
+        with open(epsg_path, encoding="utf-8") as f:
             for line in f:
                 if line.strip().startswith("#"):
                     continue
@@ -132,7 +130,7 @@ class GisError(Exception):
 # Create a configuration class for elevation APIs
 class ElevationAPIConfig:
     """Configuration for elevation API services."""
-    
+
     # Available elevation API endpoints
     APIS = {
         'open_meteo': {
@@ -153,10 +151,10 @@ class ElevationAPIConfig:
             )
         }
     }
-    
+
     # Default API to use
     DEFAULT_API = 'open_meteo'
-    
+
     @classmethod
     def get_api_config(cls, api_name=None):
         """Get configuration for a specific API."""

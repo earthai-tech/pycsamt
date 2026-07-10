@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt.models.modem — Python interface to the ModEM MT inversion code.
@@ -28,42 +27,58 @@ Quick start — 3D
 >>> result.plot_model().savefig('model.png')
 """
 
-from .config     import ModEmConfig
+from .builder import InputBuilder
+from .config import ModEmConfig
+from .control import ModEmControl
+from .covariance import ModEmCovariance
+from .data import ModEmData
+from .iotools import (
+    ImpedanceFile,
+    ZBlock,
+    convert_z2d,
+    convert_z3d,
+    imp_units_factor,
+    interp_model3d,
+    interp_z3d,
+    linear_to_loge,
+    log10_to_loge,
+    loge_to_linear,
+    loge_to_log10,
+    read_mackie2d,
+    read_mackie3d,
+    read_z2d_old,
+    read_z3d_old,
+    skin_depth,
+    write_mackie2d,
+    write_mackie3d,
+    write_meshtools3d,
+    write_z2d_list,
+    write_z2d_old,
+    write_z3d_list,
+    write_z3d_old,
+)
+from .log import ModEmLog
+from .model2d import ModEmModel2D
+from .model3d import ModEmModel3D
+from .plot import (
+    PlotMisfit,
+    PlotModel2D,
+    PlotModel3D,
+    PlotPseudo,
+    PlotResponse,
+)
+from .results import InversionResult
+from .runner import ModEmRunner
 from .validation import (
     ModEmFileType,
     detect_file_type,
+    is_control_file,
+    is_covariance_file,
     is_data_file,
-    is_model_file,
+    is_log_file,
     is_model_2d_file,
     is_model_3d_file,
-    is_covariance_file,
-    is_control_file,
-    is_log_file,
-)
-from .data       import ModEmData
-from .model2d    import ModEmModel2D
-from .model3d    import ModEmModel3D
-from .covariance import ModEmCovariance
-from .control    import ModEmControl
-from .log        import ModEmLog
-from .results    import InversionResult
-from .runner     import ModEmRunner
-from .plot       import (PlotMisfit, PlotModel2D, PlotModel3D,
-                         PlotResponse, PlotPseudo)
-from .builder    import InputBuilder
-from .iotools     import (
-    interp_model3d, interp_z3d,
-    write_meshtools3d,
-    skin_depth, imp_units_factor,
-    loge_to_log10, log10_to_loge,
-    loge_to_linear, linear_to_loge,
-    read_mackie2d, write_mackie2d,
-    read_mackie3d, write_mackie3d,
-    ZBlock, ImpedanceFile,
-    read_z3d_old, write_z3d_old,
-    read_z2d_old, write_z2d_old,
-    write_z3d_list, write_z2d_list,
-    convert_z3d, convert_z2d,
+    is_model_file,
 )
 
 __all__ = [

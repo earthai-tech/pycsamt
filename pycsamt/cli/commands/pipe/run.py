@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt pipe run — run a processing pipeline against MT/AMT EDI data."""
@@ -7,7 +6,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -17,19 +15,16 @@ from ....api.cli.options import (
     fresh_option,
     n_jobs_option,
     no_color_option,
-    output_dir_option,
     survey_option,
     verbose_option,
 )
 from ....api.cli.params import PipeStepList
-
 from ._base import (
-    pipe,
+    _format_run_result,
     _resolve_pipeline,
     _resolve_sites,
     _trim_pipeline,
-    _format_run_result,
-    _rich_pipe_table,
+    pipe,
 )
 
 
@@ -229,7 +224,9 @@ def run(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from pycsamt.api.pipe import configure_pipe  # noqa: PLC0415
+    from pycsamt.api.pipe import (
+        configure_pipe,  # noqa: PLC0415
+    )
 
     # Apply pipeline-level config overrides
     configure_pipe(

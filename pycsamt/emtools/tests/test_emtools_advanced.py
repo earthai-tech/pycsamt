@@ -1,27 +1,25 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.advanced (novel diagnostic plots)"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.advanced import (
-    plot_impedance_mohr_circles,
-    plot_zt_argand,
-    plot_survey_fingerprint,
+    plot_apparent_anisotropy_section,
+    plot_apparent_resistivity_polar,
     plot_dimensionality_ternary,
     plot_distortion_radar,
-    plot_rho_phase_bode,
+    plot_impedance_mohr_circles,
     plot_pt_period_clock,
-    plot_apparent_resistivity_polar,
-    plot_apparent_anisotropy_section,
+    plot_rho_phase_bode,
     plot_snr_section,
+    plot_survey_fingerprint,
     plot_z_invariants_section,
+    plot_zt_argand,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers
@@ -179,7 +177,7 @@ class TestPlotSurveyFingerprint:
 
     def test_empty_sites_no_crash(self):
         try:
-            fig = plot_survey_fingerprint([])
+            plot_survey_fingerprint([])
             plt.close("all")
         except Exception:
             plt.close("all")

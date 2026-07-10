@@ -30,17 +30,17 @@ required.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ._core import (
-    ensure_sites,
-    _iter_items,
     _get_z_block,
+    _iter_items,
     _name,
     _station_positions,
+    ensure_sites,
 )
 
 __all__ = [
@@ -109,7 +109,7 @@ def _build_rho_grid(
     on_dup: str,
     strict: bool,
     verbose: int,
-) -> Tuple[List[str], np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[list[str], np.ndarray, np.ndarray, np.ndarray]:
     """
     Build a 2-D apparent resistivity grid from a ``Sites`` object.
 
@@ -142,9 +142,9 @@ def _build_rho_grid(
     if not items:
         return [], np.array([]), np.array([]), np.zeros((0, 0))
 
-    raw_list: List[Any] = []
-    names: List[str] = []
-    freq_rho: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    raw_list: list[Any] = []
+    names: list[str] = []
+    freq_rho: dict[str, tuple[np.ndarray, np.ndarray]] = {}
 
     for i, ed in enumerate(items):
         raw = _unwrap(ed)
@@ -271,7 +271,7 @@ def rho_spatial_gradient(
     dx      = x_pos[1:] - x_pos[:-1]                # (N-1,)
     rho_mid = 0.5 * (rho_grid[1:, :] + rho_grid[:-1, :])  # (N-1, F)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for j in range(N - 1):
         for k in range(F):
             rho_m = float(rho_mid[j, k])
@@ -373,7 +373,7 @@ def rho_frequency_gradient(
     rho_mean = 0.5 * (rho_grid[:, 1:] + rho_grid[:, :-1])   # (N, F-1)
     freq_k   = freqs[1:]                                      # (F-1,) upper frequencies
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for i in range(N):
         for k in range(F - 1):
             rho_m = float(rho_mean[i, k])
@@ -501,7 +501,7 @@ def rho_joint_gradient(
         axis=0,
     )   # (N-1, F-1)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for j in range(N - 1):
         for k in range(F - 1):
             rho_m = float(rho_corners[j, k])
@@ -533,14 +533,14 @@ def plot_gradient_section(
     comp: str = "det",
     period_axis: bool = True,
     log_y: bool = True,
-    figsize: Tuple[float, float] = (10.0, 5.0),
+    figsize: tuple[float, float] = (10.0, 5.0),
     cmap: str = "RdBu_r",
-    vlim: Optional[Tuple[float, float]] = None,
+    vlim: tuple[float, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[Any] = None,
+    ax: Any | None = None,
 ) -> Any:
     r"""
     Pseudo-section of a gradient apparent resistivity quantity.
@@ -593,7 +593,7 @@ def plot_gradient_section(
     doi:10.1111/1365-2478.13059.
     """
     import matplotlib.pyplot as plt
-    from matplotlib.colors import TwoSlopeNorm, Normalize
+    from matplotlib.colors import Normalize, TwoSlopeNorm
 
     _Q = {"joint": "joint", "zx": "joint",
           "spatial": "spatial", "x": "spatial",

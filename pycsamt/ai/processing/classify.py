@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -40,13 +39,18 @@ instance from the DataFrame returned by
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
 from .._base import BaseEMProcessor
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
 
 __all__ = ["DimensionalityClassifier"]
 
@@ -61,7 +65,7 @@ _N_FEATURES = len(_FEATURE_COLS)
 def _build_dim_mlp_torch(
     n_features: int,
     n_classes: int,
-    hidden: Tuple[int, ...],
+    hidden: tuple[int, ...],
     dropout: float,
 ) -> Any:
     """MLP with shared backbone + classification and strike-regression heads — PyTorch."""
@@ -101,7 +105,7 @@ def _build_dim_mlp_torch(
 def _build_dim_mlp_tf(
     n_features: int,
     n_classes: int,
-    hidden: Tuple[int, ...],
+    hidden: tuple[int, ...],
     dropout: float,
 ) -> Any:
     """
@@ -111,7 +115,7 @@ def _build_dim_mlp_tf(
     """
     try:
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
     except ImportError as exc:
         raise ImportError("TensorFlow is required for DimensionalityClassifier (TF backend)") from exc
 
@@ -187,11 +191,11 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def __init__(
         self,
-        hidden: Tuple[int, ...] = (128, 64),
+        hidden: tuple[int, ...] = (128, 64),
         dropout: float = 0.2,
         n_classes: int = 3,
         lr: float = 1e-3,
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         self.hidden = tuple(hidden)
         self.dropout = float(dropout)
@@ -202,11 +206,11 @@ class DimensionalityClassifier(BaseEMProcessor):
         self._network: Any = None
         self._rf: Any = None
         self._use_rf: bool = False
-        self._backend_name: Optional[str] = None
-        self._x_mean: Optional[np.ndarray] = None
-        self._x_std: Optional[np.ndarray] = None
+        self._backend_name: str | None = None
+        self._x_mean: np.ndarray | None = None
+        self._x_std: np.ndarray | None = None
         self._is_fitted: bool = False
-        self._history: Dict[str, list] = {}
+        self._history: dict[str, list] = {}
 
     # ─── factory from emtools ─────────────────────────────────────────────
 
@@ -215,12 +219,12 @@ class DimensionalityClassifier(BaseEMProcessor):
         cls,
         df: pd.DataFrame,
         *,
-        label_col: Optional[str] = "dim",
-        strike_col: Optional[str] = None,
+        label_col: str | None = "dim",
+        strike_col: str | None = None,
         skew_th: float = 3.0,
         ellipt_th: float = 0.2,
         **fit_kwargs,
-    ) -> "DimensionalityClassifier":
+    ) -> DimensionalityClassifier:
         """
         Construct and train a classifier from a
         :func:`~pycsamt.emtools.dimensionality.phase_features_table`
@@ -251,17 +255,17 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def fit(
         self,
-        X: Union[np.ndarray, pd.DataFrame],
-        y: Optional[np.ndarray] = None,
+        X: np.ndarray | pd.DataFrame,
+        y: np.ndarray | None = None,
         *,
-        strike: Optional[np.ndarray] = None,
+        strike: np.ndarray | None = None,
         epochs: int = 80,
         batch_size: int = 256,
-        lr: Optional[float] = None,
+        lr: float | None = None,
         val_frac: float = 0.15,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "DimensionalityClassifier":
+    ) -> DimensionalityClassifier:
         """
         Train the dimensionality classifier.
 
@@ -307,7 +311,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         self._is_fitted = True
         return self
 
-    def transform(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+    def transform(self, X: np.ndarray | pd.DataFrame) -> np.ndarray:
         """
         Compute class probabilities.
 
@@ -320,12 +324,12 @@ class DimensionalityClassifier(BaseEMProcessor):
         Xn = (self._coerce_X(X) - self._x_mean) / self._x_std
         return self._predict_proba(Xn)
 
-    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+    def predict(self, X: np.ndarray | pd.DataFrame) -> np.ndarray:
         """Predict dimensionality class (0=1D, 1=2D, 2=3D)."""
         return self.transform(X).argmax(axis=1)
 
     def predict_strike(
-        self, X: Union[np.ndarray, pd.DataFrame]
+        self, X: np.ndarray | pd.DataFrame
     ) -> np.ndarray:
         """
         Predict geoelectric strike direction (degrees).
@@ -372,7 +376,9 @@ class DimensionalityClassifier(BaseEMProcessor):
             dim_label (str), strike (°), confidence.
         """
         try:
-            from pycsamt.emtools.dimensionality import phase_features_table
+            from pycsamt.emtools.dimensionality import (
+                phase_features_table,
+            )
         except ImportError as exc:
             raise ImportError("emtools is required for predict_table") from exc
 
@@ -400,7 +406,7 @@ class DimensionalityClassifier(BaseEMProcessor):
     ) -> None:
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         rng = np.random.default_rng(seed)
         dev = resolve_device(self.device)
@@ -540,7 +546,9 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def _fit_rf(self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool) -> None:
         try:
-            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.ensemble import (
+                RandomForestClassifier,
+            )
         except ImportError as exc:
             raise ImportError(
                 "PyTorch, TensorFlow, or scikit-learn is required for "
@@ -609,7 +617,7 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "hidden": list(self.hidden),
             "dropout": self.dropout,
@@ -618,8 +626,8 @@ class DimensionalityClassifier(BaseEMProcessor):
             "device": self.device,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._x_mean is not None:
             out["_x_mean"] = self._x_mean
             out["_x_std"] = self._x_std
@@ -630,7 +638,8 @@ class DimensionalityClassifier(BaseEMProcessor):
                 out[k] = v
         elif self._rf is not None:
             try:
-                import pickle, io
+                import io
+                import pickle
                 buf = io.BytesIO()
                 pickle.dump(self._rf, buf)
                 out["_rf_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
@@ -638,7 +647,7 @@ class DimensionalityClassifier(BaseEMProcessor):
                 pass
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         backend_blob = weights.pop("_backend", None)
@@ -647,7 +656,8 @@ class DimensionalityClassifier(BaseEMProcessor):
         rf_blob = weights.pop("_rf_pickle", None)
         if rf_blob is not None:
             try:
-                import pickle, io
+                import io
+                import pickle
                 self._rf = pickle.load(io.BytesIO(bytes(rf_blob)))
                 self._use_rf = True
                 self._is_fitted = True
@@ -691,11 +701,11 @@ def _df_to_feature_matrix(df: pd.DataFrame) -> np.ndarray:
 
 def _df_to_Xy(
     df: pd.DataFrame,
-    label_col: Optional[str],
-    strike_col: Optional[str],
+    label_col: str | None,
+    strike_col: str | None,
     skew_th: float,
     ellipt_th: float,
-) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     X = _df_to_feature_matrix(df)
 
     if label_col is not None and label_col in df.columns:
@@ -705,7 +715,7 @@ def _df_to_Xy(
         ellipt = df["ellipt_abs"].to_numpy(dtype=float) if "ellipt_abs" in df.columns else np.zeros(len(df))
         y = _rule_labels(beta, ellipt, skew_th, ellipt_th)
 
-    strike: Optional[np.ndarray] = None
+    strike: np.ndarray | None = None
     if strike_col is not None and strike_col in df.columns:
         strike = df[strike_col].to_numpy(dtype=float)
 

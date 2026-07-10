@@ -24,15 +24,18 @@ frequency axis between log-period and linear period.
 # One sedimentary and one conductive-layer model, each with its MT
 # response, are enough to demonstrate every style.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
+from pycsamt.api.control import configure_control
+from pycsamt.api.style import reset_style, use_style
 from pycsamt.forward import (
-    LayeredModel, MT1DForward, plot_model_1d, plot_response_1d,
+    LayeredModel,
+    MT1DForward,
+    plot_model_1d,
+    plot_response_1d,
     plot_response_and_model_1d,
 )
-from pycsamt.api.style import use_style, reset_style
-from pycsamt.api.control import configure_control
 
 # Use the dark-style figure (2nd) as the section thumbnail.
 # sphinx_gallery_thumbnail_number = 2

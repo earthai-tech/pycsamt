@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -9,14 +8,10 @@ Generic 2-D pseudosection plotter used by emtools functions
 """
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import numpy as np
 from matplotlib.colors import BoundaryNorm
-
-from ..utils.plot import _get_xticks_formatage
 
 
 def plot2d(
@@ -25,7 +20,7 @@ def plot2d(
     y=None,
     x=None,
     distance: float = 50.0,
-    stnlist: Optional[List[str]] = None,
+    stnlist: list[str] | None = None,
     prefix: str = "S",
     how: str = "py",
     to_log10: bool = False,
@@ -35,10 +30,10 @@ def plot2d(
     rotate_xlabel: float = 0.0,
     cmap: str = "jet_r",
     plt_style: str = "pcolormesh",
-    fig_size: Tuple[float, float] = (8.0, 4.0),
+    fig_size: tuple[float, float] = (8.0, 4.0),
     fig_dpi: int = 150,
     font_size: float = 7.0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     **_extra,          # absorb legacy BasePlot kwargs without error
 ) -> plt.Axes:
     """Plot a 2-D pseudosection from a matrix.

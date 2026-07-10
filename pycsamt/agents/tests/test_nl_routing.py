@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -24,13 +23,11 @@ module-level fixture):
 """
 from __future__ import annotations
 
-import re
 import unittest
-from typing import Optional
 
 # ── test cases ────────────────────────────────────────────────────────────────
 # (request, expected_workflow, expected_path_or_None)
-_CASES: list[tuple[str, str, Optional[str]]] = [
+_CASES: list[tuple[str, str, str | None]] = [
     # ── qc ────────────────────────────────────────────────────────────────────
     (
         "Load EDI files from /data/willy and run quality control",
@@ -418,7 +415,10 @@ class TestNLRoutingBenchmark(unittest.TestCase):
 
     def test_workflow_plan_returned(self):
         """ContextInputAgent always returns a WorkflowPlan object."""
-        from pycsamt.agents import ContextInputAgent, WorkflowPlan
+        from pycsamt.agents import (
+            ContextInputAgent,
+            WorkflowPlan,
+        )
         ag = ContextInputAgent()
         r = ag.execute({
             "request": "AI inversion on /data/willy EDIs"
@@ -430,7 +430,7 @@ class TestNLRoutingBenchmark(unittest.TestCase):
         """WorkflowPlan.workflow_type must equal config['workflow']."""
         from pycsamt.agents import ContextInputAgent
         ag = ContextInputAgent()
-        for req, exp_wf, _ in _CASES[:10]:
+        for req, _exp_wf, _ in _CASES[:10]:
             r = ag.execute({"request": req})
             plan = r["workflow_plan"]
             cfg  = r["config"]

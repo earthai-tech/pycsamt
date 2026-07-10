@@ -20,16 +20,21 @@ to show it generalises.
 # quality over station x frequency — the "before" picture. Ragged edges and
 # low-quality (dark) cells are what the frequency-editing steps will trim.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from _corr_data import curves, demo_line, plot_before_after
 
-from _corr_data import demo_line, curves, plot_before_after
-from pycsamt.emtools._core import _iter_items
 from pycsamt.emtools import (
-    drop_duplicates, select_band, drop_low_confidence_frequencies,
-    notch_powerline, smooth_logfreq, correct_ss_ama, rotate_to_strike,
+    correct_ss_ama,
+    drop_duplicates,
+    drop_low_confidence_frequencies,
+    notch_powerline,
     plot_coverage_quality_heatmap,
+    rotate_to_strike,
+    select_band,
+    smooth_logfreq,
 )
+from pycsamt.emtools._core import _iter_items
 from pycsamt.site.export import write_sites
 
 
@@ -135,6 +140,7 @@ print(f"wrote {len(paths)} sanitised EDIs, e.g. {[p.name for p in paths[:3]]}")
 
 # round-trip: the output is real, re-loadable EDI data
 from pycsamt.emtools._core import ensure_sites
+
 reloaded = ensure_sites(str(outdir))
 print(f"re-loaded {len(n_freq(reloaded))} EDIs, "
       f"{n_freq(reloaded).min()}-{n_freq(reloaded).max()} frequencies each")

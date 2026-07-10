@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,7 +19,6 @@ Usage in MainWindow
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
 
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
@@ -54,7 +52,7 @@ class _ExportWorker(QThread):
 
     def __init__(
         self,
-        figures: List[Tuple[str, object]],
+        figures: list[tuple[str, object]],
         out_dir: Path,
         fmt: str,
         dpi: int,
@@ -104,7 +102,7 @@ class BatchExportDialog(QDialog):
 
     def __init__(
         self,
-        figures: List[Tuple[str, object]],
+        figures: list[tuple[str, object]],
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,10 +16,8 @@ Test strategy
 from __future__ import annotations
 
 import json
-import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -132,7 +129,7 @@ class TestSpectraToEDIUnit:
 
     def test_write_to_output_dir(self, tmp_path: Path) -> None:
         from pycsamt.transformers import SpectraToEDI
-        col = SpectraToEDI().transform(
+        SpectraToEDI().transform(
             _SPECTRA_DIR / "HBH03.edi",
             output_dir=tmp_path,
         )
@@ -194,8 +191,9 @@ class TestSpectraToEDIUnit:
             SpectraToEDI()._resolve_sources(12345)
 
     def test_z_shape(self) -> None:
-        from pycsamt.transformers import SpectraToEDI
         import numpy as np
+
+        from pycsamt.transformers import SpectraToEDI
         col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
         z = col[0].Z.z
         assert z.ndim == 3

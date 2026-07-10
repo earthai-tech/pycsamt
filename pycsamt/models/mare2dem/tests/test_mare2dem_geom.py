@@ -12,21 +12,28 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
 
 from pycsamt.models.mare2dem import (
-    parse_topo, topo_depth, topo_slope,
-    get_intersections, do_rects_overlap,
+    do_rects_overlap,
     dp_simplify,
-    get_centroids, triangle_centroids, triangle_areas,
-    lonlat_to_utm, utm_to_lonlat,
     estimate_area_of_interest,
-    get_line_orientation, project_onto_line,
+    get_centroids,
+    get_intersections,
+    get_line_orientation,
+    lonlat_to_utm,
+    parse_topo,
+    project_onto_line,
     simplify_poly,
+    topo_depth,
+    topo_slope,
+    triangle_areas,
+    triangle_centroids,
+    utm_to_lonlat,
 )
-from pycsamt.models.mare2dem.geom.triangle_regions import get_triangle_regions
-from pycsamt.models.mare2dem.iotools.emdata import EMDataFile, MTConfig, CSEMConfig
-
+from pycsamt.models.mare2dem.iotools.emdata import (
+    EMDataFile,
+    MTConfig,
+)
 
 # ==========================================================================
 # parse_topo

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Vendored from https://github.com/pypa/packaging/blob/main/packaging/_structures.py
 # and https://github.com/pypa/packaging/blob/main/packaging/_structures.py
 # changeset ae891fd74d6dd4c6063bb04f2faeadaac6fc6313
@@ -12,6 +11,8 @@ from __future__ import annotations
 import collections
 import itertools
 import re
+import warnings
+
 from ..api.typing import (
     Callable,
     Iterator,
@@ -19,7 +20,6 @@ from ..api.typing import (
     Tuple,
     Union,
 )
-import warnings
 
 __all__ = ["parse", "Version", "LegacyVersion", "InvalidVersion", "VERSION_PATTERN"]
 
@@ -187,7 +187,7 @@ class LegacyVersion(_BaseVersion):
         warnings.warn(
             "Creating a LegacyVersion has been deprecated and will be "
             "removed in the next major release.",
-            DeprecationWarning,
+            DeprecationWarning, stacklevel=2,
         )
 
     def __str__(self) -> str:

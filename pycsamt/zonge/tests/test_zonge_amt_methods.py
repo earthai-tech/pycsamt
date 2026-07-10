@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the analytical methods of the AMTAVG class.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
+from pycsamt.constants import MU_0, PI
 from pycsamt.zonge.avg import AMTAVG
-from pycsamt.constants import PI, MU_0
+
 
 # --- Test Data Fixture --------------------------------------------
 @pytest.fixture(scope="module")
@@ -35,7 +35,7 @@ def analytical_avg_data() -> pd.DataFrame:
         # Add  QC columns
         "E.%err":  [3.0, 3.2, 2.8, 2.9, 4.0, 4.2, 4.1, 4.3],
         "B.%err":  [4.0, 4.2, 3.8, 3.9, 5.0, 5.2, 5.1, 5.3],
-        
+
         "ARes.%err": [5.0, 6.0, 4.5, 5.5, 7.0, 8.0, 7.5, 8.5],
         "Z.perr":  [20, 25, 18, 22, 28, 30, 29, 31],
         # Dummy Zxx/Zyy data for rotation test
@@ -145,5 +145,5 @@ class TestAMTAVGMethods:
         assert np.isclose(new_rho_val, expected_rho)
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

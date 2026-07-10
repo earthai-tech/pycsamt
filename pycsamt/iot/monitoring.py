@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import (
+    Any,
+)
 
 import numpy as np
 import pandas as pd
@@ -50,7 +53,7 @@ def _as_probability(value: Any, name: str) -> float:
     return out
 
 
-def _as_optional_positive(value: Any, name: str) -> Optional[float]:
+def _as_optional_positive(value: Any, name: str) -> float | None:
     if value is None:
         return None
     out = float(value)
@@ -59,14 +62,14 @@ def _as_optional_positive(value: Any, name: str) -> Optional[float]:
     return out
 
 
-def _payload(packet: TelemetryPacket | Mapping[str, Any]) -> Dict[str, Any]:
+def _payload(packet: TelemetryPacket | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(packet, TelemetryPacket):
         return dict(packet.payload or {})
     payload = dict(packet).get("payload", {})
     return dict(payload or {})
 
 
-def _packet_dict(packet: TelemetryPacket | Mapping[str, Any]) -> Dict[str, Any]:
+def _packet_dict(packet: TelemetryPacket | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(packet, TelemetryPacket):
         return packet.as_dict()
     out = dict(packet)
@@ -128,16 +131,16 @@ class MonitoringConfig(PyCSAMTObject, MetadataMixin):
     """Thresholds used to monitor AMT/MT/CSAMT telemetry streams."""
 
     method: EMMethod | str = EMMethod.UNKNOWN
-    expected_interval_s: Optional[float] = None
-    max_latency_s: Optional[float] = 30.0
-    max_gap_s: Optional[float] = None
+    expected_interval_s: float | None = None
+    max_latency_s: float | None = 30.0
+    max_gap_s: float | None = None
     min_packet_success_rate: float = 0.95
     min_edge_acceptance_rate: float = 0.85
-    min_battery_v: Optional[float] = None
-    max_clock_offset_ms: Optional[float] = None
-    frequency_band_hz: Optional[tuple[float, float]] = None
-    required_channels: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    min_battery_v: float | None = None
+    max_clock_offset_ms: float | None = None
+    frequency_band_hz: tuple[float, float] | None = None
+    required_channels: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -199,12 +202,12 @@ class MonitoringStatus(PyCSAMTObject):
     max_gap_s: float
     battery_min_v: float
     clock_offset_max_ms: float
-    methods: List[str] = field(default_factory=list)
-    stations: List[str] = field(default_factory=list)
-    channels: List[str] = field(default_factory=list)
+    methods: list[str] = field(default_factory=list)
+    stations: list[str] = field(default_factory=list)
+    channels: list[str] = field(default_factory=list)
     frequency_min_hz: float = float("nan")
     frequency_max_hz: float = float("nan")
-    issues: List[str] = field(default_factory=list)
+    issues: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -239,7 +242,7 @@ class MonitoringStatus(PyCSAMTObject):
         """Return whether the monitored stream is acceptable."""
         return self.level == MonitoringLevel.OK
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a flat serialisable status dictionary."""
         return dict(
             level=self.level.value if isinstance(self.level, MonitoringLevel)
@@ -263,7 +266,7 @@ class MonitoringStatus(PyCSAMTObject):
 class TelemetryMonitor(PyCSAMTObject):
     """Monitor field telemetry from AMT, MT, CSAMT, and related surveys."""
 
-    def __init__(self, config: Optional[MonitoringConfig] = None) -> None:
+    def __init__(self, config: MonitoringConfig | None = None) -> None:
         self.config = config or MonitoringConfig()
         self.config.validate()
 
@@ -271,7 +274,7 @@ class TelemetryMonitor(PyCSAMTObject):
         self,
         packets: Iterable[TelemetryPacket | Mapping[str, Any]],
         *,
-        now: Optional[float] = None,
+        now: float | None = None,
     ) -> MonitoringStatus:
         """Assess a telemetry packet stream against configured thresholds."""
         self.config.validate()
@@ -329,7 +332,7 @@ class TelemetryMonitor(PyCSAMTObject):
         self,
         packets: Iterable[TelemetryPacket | Mapping[str, Any]],
         *,
-        now: Optional[float] = None,
+        now: float | None = None,
         api: bool | None = None,
     ) -> Any:
         """Return enriched packet rows used by the monitor."""
@@ -351,8 +354,8 @@ class TelemetryMonitor(PyCSAMTObject):
         self,
         row: Mapping[str, Any],
         *,
-        now: Optional[float],
-    ) -> Dict[str, Any]:
+        now: float | None,
+    ) -> dict[str, Any]:
         out = dict(row)
         payload = dict(out.get("payload") or {})
         method = _method_from_payload(payload)
@@ -397,7 +400,7 @@ class TelemetryMonitor(PyCSAMTObject):
         )
         return out
 
-    def _edge_accepted(self, payload: Mapping[str, Any]) -> Optional[bool]:
+    def _edge_accepted(self, payload: Mapping[str, Any]) -> bool | None:
         value = _payload_value(
             payload,
             ("accepted", "edge_accepted", "qc_accepted"),
@@ -409,8 +412,8 @@ class TelemetryMonitor(PyCSAMTObject):
             return str(decision).strip().lower() in {"accept", "ok", "pass"}
         return None
 
-    def _issues(self, rows: List[Mapping[str, Any]]) -> List[str]:
-        issues: List[str] = []
+    def _issues(self, rows: list[Mapping[str, Any]]) -> list[str]:
+        issues: list[str] = []
         success = self._packet_success_rate(rows)
         edge = self._edge_acceptance_rate(rows)
         max_gap = self._max_gap(rows)
@@ -470,7 +473,7 @@ class TelemetryMonitor(PyCSAMTObject):
                 issues.append("frequency_outside_configured_band")
         return sorted(dict.fromkeys(issues))
 
-    def _level(self, issues: List[str]) -> MonitoringLevel:
+    def _level(self, issues: list[str]) -> MonitoringLevel:
         if not issues:
             return MonitoringLevel.OK
         critical = {
@@ -485,12 +488,12 @@ class TelemetryMonitor(PyCSAMTObject):
             return MonitoringLevel.CRITICAL
         return MonitoringLevel.WARNING
 
-    def _packet_success_rate(self, rows: List[Mapping[str, Any]]) -> float:
+    def _packet_success_rate(self, rows: list[Mapping[str, Any]]) -> float:
         if not rows:
             return 0.0
         return float(np.mean([bool(row.get("ack_ok", True)) for row in rows]))
 
-    def _edge_acceptance_rate(self, rows: List[Mapping[str, Any]]) -> float:
+    def _edge_acceptance_rate(self, rows: list[Mapping[str, Any]]) -> float:
         values = [
             row.get("edge_accepted")
             for row in rows
@@ -500,7 +503,7 @@ class TelemetryMonitor(PyCSAMTObject):
             return 1.0
         return float(np.mean([bool(value) for value in values]))
 
-    def _max_gap(self, rows: List[Mapping[str, Any]]) -> float:
+    def _max_gap(self, rows: list[Mapping[str, Any]]) -> float:
         times = sorted(
             _as_float_or_nan(row.get("timestamp"))
             for row in rows
@@ -517,7 +520,7 @@ def packet_table(
     api: bool | None = None,
 ) -> Any:
     """Return telemetry packets as a pyCSAMT table."""
-    rows: List[dict] = []
+    rows: list[dict] = []
     for packet in packets:
         row = _packet_dict(packet)
         row["payload_keys"] = ";".join(sorted(row["payload"].keys()))
@@ -583,8 +586,8 @@ def monitoring_status_table(
 def assess_telemetry(
     packets: Iterable[TelemetryPacket | Mapping[str, Any]],
     *,
-    config: Optional[MonitoringConfig] = None,
-    now: Optional[float] = None,
+    config: MonitoringConfig | None = None,
+    now: float | None = None,
 ) -> MonitoringStatus:
     """Convenience wrapper around :class:`TelemetryMonitor`."""
     return TelemetryMonitor(config).assess(packets, now=now)

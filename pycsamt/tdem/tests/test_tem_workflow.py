@@ -11,7 +11,9 @@ from pycsamt.tdem import (
     read_temavg_soundings,
     transform_temavg_survey,
 )
-from pycsamt.tdem.io import read_temavg_soundings as read_soundings_io
+from pycsamt.tdem.io import (
+    read_temavg_soundings as read_soundings_io,
+)
 
 DATA_DIR = (
     Path(__file__).parents[3]

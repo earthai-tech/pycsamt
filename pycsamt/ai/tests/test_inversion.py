@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.ai.inversion — EMInverter1D, EnsembleInverter."""
@@ -98,8 +97,8 @@ class TestEMInverter1DWithBackend(unittest.TestCase):
         self.assertGreater(len(inv._history["train_loss"]), 0)
 
     def test_ensemble_predict_shape(self):
-        from pycsamt.ai.inversion.inv1d import EMInverter1D
         from pycsamt.ai.inversion import EnsembleInverter
+        from pycsamt.ai.inversion.inv1d import EMInverter1D
         base = EMInverter1D(arch="cnn1d", n_layers=3)
         ens = EnsembleInverter(base_estimator=base, n_estimators=2)
         ens.fit(self.ds, epochs=3, verbose=False)
@@ -128,13 +127,6 @@ class TestEMInverter1DInterface(unittest.TestCase):
 
     def test_ai_package_imports(self):
         """Top-level pycsamt.ai should export all public classes."""
-        from pycsamt.ai import (
-            EMInverter1D, EnsembleInverter,
-            CNN1DNet, ResNet1DNet, FCN1DNet,
-            Normalizer, EMDataset, EMTrainer,
-            EMDenoiser, AnomalyDetector, DimensionalityClassifier,
-            EMQCScorer,
-        )
 
     def test_list_pretrained_returns_list(self):
         from pycsamt.ai import list_pretrained
@@ -249,14 +241,17 @@ class TestGCNInverter3DWithBackend(unittest.TestCase):
         self.assertGreater(len(inv._history["train_loss"]), 0)
 
     def test_save_load_roundtrip(self):
-        import tempfile, os
+        import os
+        import tempfile
         inv = self._make_inv()
         inv.fit(self.X, self.y, adjacency=self.A, epochs=3, verbose=False)
         y1 = inv.predict(self.X[:3])
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "gcn3d.npz")
             inv.save(path)
-            from pycsamt.ai.inversion.inv3d import GCNInverter3D
+            from pycsamt.ai.inversion.inv3d import (
+                GCNInverter3D,
+            )
             inv2 = GCNInverter3D.load(path)
         y2 = inv2.predict(self.X[:3])
         np.testing.assert_allclose(y1, y2, rtol=1e-4)
@@ -308,25 +303,33 @@ class TestConformalPredictor(unittest.TestCase):
         return pred, X_cal, y_cal, n_params
 
     def test_importable(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         cp = ConformalPredictor(None)
         self.assertIsNotNone(cp)
 
     def test_calibrate_returns_self(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, _ = self._make_predictor()
         cp = ConformalPredictor(pred)
         result = cp.calibrate(X_cal, y_cal)
         self.assertIs(result, cp)
 
     def test_is_calibrated_after_calibrate(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, _ = self._make_predictor()
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal)
         self.assertTrue(cp._is_calibrated)
 
     def test_predict_intervals_shapes(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, n_p = self._make_predictor()
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal)
         rng = np.random.default_rng(1)
@@ -337,7 +340,9 @@ class TestConformalPredictor(unittest.TestCase):
         self.assertEqual(hi.shape,     (20, n_p))
 
     def test_intervals_ordered(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, _ = self._make_predictor()
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal)
         X_test = np.random.default_rng(2).standard_normal((30, 10))
@@ -346,7 +351,9 @@ class TestConformalPredictor(unittest.TestCase):
         self.assertTrue(np.all(center <= hi))
 
     def test_coverage_in_range(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, n_p = self._make_predictor(n_cal=200)
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal, alpha=0.10)
         rng = np.random.default_rng(3)
@@ -359,13 +366,17 @@ class TestConformalPredictor(unittest.TestCase):
         self.assertLessEqual(cov, 1.0)
 
     def test_predict_before_calibrate_raises(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         cp = ConformalPredictor(None)
         with self.assertRaises(RuntimeError):
             cp.predict_intervals(np.ones((5, 4)))
 
     def test_coverage_diagnostics_returns_dict(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, n_p = self._make_predictor(n_cal=100)
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal)
         rng = np.random.default_rng(4)
@@ -380,7 +391,9 @@ class TestConformalPredictor(unittest.TestCase):
             self.assertLessEqual(v, 1.0)
 
     def test_repr_contains_calibrated(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         pred, X_cal, y_cal, _ = self._make_predictor()
         cp = ConformalPredictor(pred).calibrate(X_cal, y_cal)
         self.assertIn("calibrated", repr(cp))
@@ -401,25 +414,33 @@ class TestPosteriorCalibrator(unittest.TestCase):
         return y_true, y_pred, sigma
 
     def test_importable(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         pc = PosteriorCalibrator()
         self.assertIsNotNone(pc)
 
     def test_fit_returns_self(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data()
         pc = PosteriorCalibrator()
         result = pc.fit(y_true, y_pred, sigma)
         self.assertIs(result, pc)
 
     def test_fitted_flag(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data()
         pc = PosteriorCalibrator().fit(y_true, y_pred, sigma)
         self.assertTrue(pc._is_fitted)
 
     def test_predict_posterior_shape(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data(n=100, n_params=3)
         pc = PosteriorCalibrator().fit(y_true, y_pred, sigma)
         rng = np.random.default_rng(5)
@@ -429,7 +450,9 @@ class TestPosteriorCalibrator(unittest.TestCase):
         self.assertEqual(draws.shape, (50, 20, 3))
 
     def test_posterior_mean_close_to_pred(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data(n=200)
         pc = PosteriorCalibrator().fit(y_true, y_pred, sigma)
         rng = np.random.default_rng(8)
@@ -440,7 +463,9 @@ class TestPosteriorCalibrator(unittest.TestCase):
         np.testing.assert_allclose(draws.mean(axis=0), y_p2, atol=0.15)
 
     def test_calibrated_std_returns_array(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data()
         pc = PosteriorCalibrator().fit(y_true, y_pred, sigma)
         sigma_cal = pc.calibrated_std(sigma[:10])
@@ -448,7 +473,9 @@ class TestPosteriorCalibrator(unittest.TestCase):
         self.assertTrue(np.all(sigma_cal > 0))
 
     def test_mace_in_range(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         y_true, y_pred, sigma = self._make_data(n=200)
         pc = PosteriorCalibrator().fit(y_true, y_pred, sigma)
         y_t2, y_p2, s2 = self._make_data(n=100, seed=99)
@@ -457,13 +484,17 @@ class TestPosteriorCalibrator(unittest.TestCase):
         self.assertLessEqual(mace, 1.0)
 
     def test_predict_before_fit_raises(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         pc = PosteriorCalibrator()
         with self.assertRaises(RuntimeError):
             pc.calibrated_std(np.ones((5, 3)))
 
     def test_repr_contains_status(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         pc = PosteriorCalibrator().fit(*self._make_data())
         self.assertIn("fitted", repr(pc))
 
@@ -477,7 +508,9 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
 
     def _make_ensemble_stub(self, n_params=4, seed=0):
         """Return a minimal EnsembleInverter-like object with stub members."""
-        from pycsamt.ai.inversion.ensemble import EnsembleInverter
+        from pycsamt.ai.inversion.ensemble import (
+            EnsembleInverter,
+        )
 
         class _StubMember:
             def __init__(self, rng):
@@ -498,7 +531,9 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         return ens, n_params
 
     def test_calibrate_attaches_conformal(self):
-        from pycsamt.ai.inversion.calibration import ConformalPredictor
+        from pycsamt.ai.inversion.calibration import (
+            ConformalPredictor,
+        )
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(0)
         X_cal = rng.standard_normal((80, 6))
@@ -508,7 +543,9 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         self.assertIsInstance(ens._conformal, ConformalPredictor)
 
     def test_calibrate_attaches_posterior(self):
-        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+        from pycsamt.ai.inversion.calibration import (
+            PosteriorCalibrator,
+        )
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(1)
         X_cal = rng.standard_normal((80, 6))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -23,8 +22,8 @@ Examples
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterable, Iterator
 
 from .ast_indexer import index_python_file
 from .config import INDEX_ROOTS, ROOT_DOCS, should_index

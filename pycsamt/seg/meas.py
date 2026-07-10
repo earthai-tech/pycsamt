@@ -1,36 +1,38 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+import re
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
-import re
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+)
 
-from ..gis.utils import dms_to_decimal, decimal_to_dms
 from ..exceptions import (
-    FileHandlingError,
     EdIDataError,
+    FileHandlingError,
     HeaderError,
 )
+from ..gis.utils import decimal_to_dms, dms_to_decimal
 from .base import EDIComponentBase
-from .validation import ( 
-    _to_float_or_none, 
-    _is_tag, 
-    _extract_tag, 
-    _norm_str, 
-    IsEdi, 
+from .validation import (
+    IsEdi,
+    _extract_tag,
+    _is_tag,
+    _norm_str,
+    _to_float_or_none,
 )
 
-__all__= [ 
-    "Hmeasurement", 
-    "Emeasurement", 
-    "DefineMeas", 
-    "MeasMixin", 
-    "EMeasMixin", 
-    "DefineMeasMixin", 
+__all__= [
+    "Hmeasurement",
+    "Emeasurement",
+    "DefineMeas",
+    "MeasMixin",
+    "EMeasMixin",
+    "DefineMeasMixin",
     "HMeasMixin"
     ]
 
@@ -42,8 +44,8 @@ _TOKEN_RE = re.compile(
 )
 
 
-def _kv_tokens_from_line(line: str) -> Dict[str, str]:
-    out: Dict[str, str] = {}
+def _kv_tokens_from_line(line: str) -> dict[str, str]:
+    out: dict[str, str] = {}
     for m in _TOKEN_RE.finditer(line):
         k = m.group("k").strip().lower()
         v = m.group("v").strip().strip('"').strip("'")
@@ -54,8 +56,8 @@ def _kv_tokens_from_line(line: str) -> Dict[str, str]:
 def _slice_section(
     lines: Sequence[str],
     start_tag: str,
-    after_tags: Optional[Sequence[str]] = None,
-) -> Tuple[List[str], int, int]:
+    after_tags: Sequence[str] | None = None,
+) -> tuple[list[str], int, int]:
     """
     Return payload between `start_tag` and the next section begin
     (a line that starts with '>=' and is not `start_tag`).
@@ -112,24 +114,24 @@ class Hmeasurement(EDIComponentBase):
     _ALLOWED = {"HX", "HY", "HZ", "RHX", "RHY"}
 
     def __init__(self, **kws: Any):
-        self.id: Optional[str] = None
-        self.chtype: Optional[str] = None
-        self.x: Optional[float] = 0.0
-        self.y: Optional[float] = 0.0
-        self.z: Optional[float] = 0.0
-        self.azm: Optional[float] = 0.0
-        self.dip: Optional[float] = None
-        self.acqchan: Optional[str] = None
-        self.filter: Optional[str] = None
-        self.sensor: Optional[str] = None
-        self.gain: Optional[float] = None
-        self.measdate: Optional[str] = datetime.utcnow().strftime(
+        self.id: str | None = None
+        self.chtype: str | None = None
+        self.x: float | None = 0.0
+        self.y: float | None = 0.0
+        self.z: float | None = 0.0
+        self.azm: float | None = 0.0
+        self.dip: float | None = None
+        self.acqchan: str | None = None
+        self.filter: str | None = None
+        self.sensor: str | None = None
+        self.gain: float | None = None
+        self.measdate: str | None = datetime.utcnow().strftime(
             "%Y-%m-%d %H:%M:%S"
         )
         if kws:
             self.update_from_dict(kws)
 
-    def update_from_dict(self, d: Dict[str, Any]) -> "Hmeasurement":
+    def update_from_dict(self, d: dict[str, Any]) -> Hmeasurement:
         for k, v in d.items():
             kk = str(k).lower()
             if kk == "id":
@@ -146,15 +148,15 @@ class Hmeasurement(EDIComponentBase):
         return self
 
     @classmethod
-    def from_line(cls, line: str) -> "Hmeasurement":
+    def from_line(cls, line: str) -> Hmeasurement:
         kv = _kv_tokens_from_line(line)
         return cls(**kv)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.hmeasurementkey}
 
     def to_line(self) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         for k in self.hmeasurementkey:
             v = getattr(self, k, None)
             if v in (None, "", "None"):
@@ -183,25 +185,25 @@ class Emeasurement(EDIComponentBase):
     _ALLOWED = {"EX", "EY"}
 
     def __init__(self, **kws: Any):
-        self.id: Optional[str] = None
-        self.chtype: Optional[str] = None
-        self.x: Optional[float] = 0.0
-        self.y: Optional[float] = 0.0
-        self.z: Optional[float] = 0.0
-        self.x2: Optional[float] = 0.0
-        self.y2: Optional[float] = 0.0
-        self.z2: Optional[float] = 0.0
-        self.acqchan: Optional[str] = None
-        self.filter: Optional[str] = None
-        self.sensor: Optional[str] = None
-        self.gain: Optional[float] = None
-        self.measdate: Optional[str] = datetime.utcnow().strftime(
+        self.id: str | None = None
+        self.chtype: str | None = None
+        self.x: float | None = 0.0
+        self.y: float | None = 0.0
+        self.z: float | None = 0.0
+        self.x2: float | None = 0.0
+        self.y2: float | None = 0.0
+        self.z2: float | None = 0.0
+        self.acqchan: str | None = None
+        self.filter: str | None = None
+        self.sensor: str | None = None
+        self.gain: float | None = None
+        self.measdate: str | None = datetime.utcnow().strftime(
             "%Y-%m-%d %H:%M:%S"
         )
         if kws:
             self.update_from_dict(kws)
 
-    def update_from_dict(self, d: Dict[str, Any]) -> "Emeasurement":
+    def update_from_dict(self, d: dict[str, Any]) -> Emeasurement:
         for k, v in d.items():
             kk = str(k).lower()
             if kk == "id":
@@ -218,15 +220,15 @@ class Emeasurement(EDIComponentBase):
         return self
 
     @classmethod
-    def from_line(cls, line: str) -> "Emeasurement":
+    def from_line(cls, line: str) -> Emeasurement:
         kv = _kv_tokens_from_line(line)
         return cls(**kv)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.emeasurementkey}
 
     def to_line(self) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         for k in self.emeasurementkey:
             v = getattr(self, k, None)
             if v in (None, "", "None"):
@@ -242,25 +244,25 @@ class DefineMeas(EDIComponentBase):
     """
 
     def __init__(self, **kws: Any):
-        self.maxchan: Optional[int] = None
-        self.maxrun: Optional[int] = None
-        self.maxmeas: Optional[int] = None
-        self.units: Optional[str] = None
-        self.reftype: Optional[str] = None
+        self.maxchan: int | None = None
+        self.maxrun: int | None = None
+        self.maxmeas: int | None = None
+        self.units: str | None = None
+        self.reftype: str | None = None
 
-        self.reflat: Optional[float] = None
-        self.reflong: Optional[float] = None
-        self.refelev: Optional[float] = None
+        self.reflat: float | None = None
+        self.reflong: float | None = None
+        self.refelev: float | None = None
 
-        self.hmeas: List[Hmeasurement] = []
-        self.emeas: List[Emeasurement] = []
+        self.hmeas: list[Hmeasurement] = []
+        self.emeas: list[Emeasurement] = []
 
         if kws:
             for k, v in kws.items():
                 setattr(self, str(k).lower(), v)
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> "DefineMeas":
+    def from_file(cls, edi_fn: str | Path) -> DefineMeas:
         if edi_fn is None:
             raise FileHandlingError("No EDI path provided.")
         p = Path(edi_fn)
@@ -276,7 +278,7 @@ class DefineMeas(EDIComponentBase):
         obj = cls()
         return obj.read(payload)
 
-    def read(self, lines: Sequence[str]) -> "DefineMeas":
+    def read(self, lines: Sequence[str]) -> DefineMeas:
         if not lines:
             raise HeaderError("Empty DEFINEMEAS payload.")
 
@@ -322,8 +324,8 @@ class DefineMeas(EDIComponentBase):
 
         return self
 
-    def write(self) -> List[str]:
-        out: List[str] = [">=DEFINEMEAS\n"]
+    def write(self) -> list[str]:
+        out: list[str] = [">=DEFINEMEAS\n"]
         if self.maxchan is not None:
             out.append(f"  MAXCHAN={self.maxchan}\n")
         if self.maxrun is not None:
@@ -353,7 +355,7 @@ class DefineMeas(EDIComponentBase):
         return out
 
     # convenience
-    def all_meas(self) -> List[Union[Hmeasurement, Emeasurement]]:
+    def all_meas(self) -> list[Hmeasurement | Emeasurement]:
         return list(self.hmeas) + list(self.emeas)
 
 
@@ -363,7 +365,7 @@ class MeasMixin:
     """
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> DefineMeas:
+    def from_file(cls, edi_fn: str | Path) -> DefineMeas:
         return DefineMeas.from_file(edi_fn)
 
 
@@ -373,7 +375,7 @@ class DefineMeasMixin:
     """
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> DefineMeas:
+    def from_file(cls, edi_fn: str | Path) -> DefineMeas:
         return DefineMeas.from_file(edi_fn)
 
 
@@ -384,8 +386,8 @@ class EMeasMixin:
 
     @classmethod
     def from_file(
-        cls, edi_fn: Union[str, Path]
-    ) -> List[Emeasurement]:
+        cls, edi_fn: str | Path
+    ) -> list[Emeasurement]:
         dm = DefineMeas.from_file(edi_fn)
         return dm.emeas
 
@@ -397,7 +399,7 @@ class HMeasMixin:
 
     @classmethod
     def from_file(
-        cls, edi_fn: Union[str, Path]
-    ) -> List[Hmeasurement]:
+        cls, edi_fn: str | Path
+    ) -> list[Hmeasurement]:
         dm = DefineMeas.from_file(edi_fn)
         return dm.hmeas

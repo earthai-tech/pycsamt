@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -12,14 +11,14 @@ deviation) modules into a single, easy-to-import namespace.
 from __future__ import annotations
 
 from .var_pc import (
+    EmagPctErr,
+    HmagPctErr,
     PcEmag,
     PcHmag,
     PcRho,
-    EmagPctErr,
-    HmagPctErr,
     RhoPctErr,
 )
-from .var_std import SEphz, SHphz, SPhz, PhaseSigma
+from .var_std import PhaseSigma, SEphz, SHphz, SPhz
 
 __all__ = [
     "PcEmag",

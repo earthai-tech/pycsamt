@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for MainWindow (Phase 1) — runs headless via Qt offscreen platform."""
@@ -13,7 +12,9 @@ pytest.importorskip("PySide6", reason="PySide6 required")
 @pytest.fixture
 def window(qapp, monkeypatch):
     # Isolate from real on-disk session so theme/state defaults are predictable.
-    from pycsamt.app.desktop.models.session import SessionState
+    from pycsamt.app.desktop.models.session import (
+        SessionState,
+    )
     monkeypatch.setattr(SessionState, "load", classmethod(lambda cls: cls()))
     from pycsamt.app.desktop.main_window import MainWindow
     win = MainWindow()
@@ -45,22 +46,30 @@ def test_minimum_size(window):
 # as a proper QDockWidget.
 
 def test_station_panel_exists(window):
-    from pycsamt.app.desktop.panels.station_panel import StationPanel
+    from pycsamt.app.desktop.panels.station_panel import (
+        StationPanel,
+    )
     assert isinstance(window._station_panel, StationPanel)
 
 
 def test_map_window_exists(window):
-    from pycsamt.app.desktop.windows.map_window import MapViewerWindow
+    from pycsamt.app.desktop.windows.map_window import (
+        MapViewerWindow,
+    )
     assert isinstance(window._map_win, MapViewerWindow)
 
 
 def test_profile_window_exists(window):
-    from pycsamt.app.desktop.windows.profile_window import ProfileViewerWindow
+    from pycsamt.app.desktop.windows.profile_window import (
+        ProfileViewerWindow,
+    )
     assert isinstance(window._profile_win, ProfileViewerWindow)
 
 
 def test_agent_window_exists(window):
-    from pycsamt.app.desktop.windows.agent_window import AgentRunnerWindow
+    from pycsamt.app.desktop.windows.agent_window import (
+        AgentRunnerWindow,
+    )
     assert isinstance(window._agent_win, AgentRunnerWindow)
 
 
@@ -188,7 +197,6 @@ def test_save_layout_populates_state(window):
 
 
 def test_close_saves_session(window, tmp_path, monkeypatch):
-    from pycsamt.app.desktop.models.session import _SESSION_PATH
     target = tmp_path / "session.json"
     monkeypatch.setattr(
         "pycsamt.app.desktop.models.session._SESSION_PATH", target

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -44,7 +43,7 @@ from typing import Any
 
 import click
 
-from ...api.cli.config import PYCSAMT_CLI, configure_cli
+from ...api.cli.config import configure_cli
 from ...api.cli.options import (
     format_option,
     no_color_option,
@@ -80,7 +79,9 @@ def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
     """Convert a Jones J-file to EDI."""
     try:
         from pycsamt.jones import JFile  # noqa: PLC0415
-        from pycsamt.jones.xa import _meta_from_jfile  # noqa: PLC0415
+        from pycsamt.jones.xa import (
+            _meta_from_jfile,  # noqa: PLC0415
+        )
     except ImportError as exc:
         return {"src": str(src), "dst": str(dst), "status": "error",
                 "message": f"jones package unavailable: {exc}"}

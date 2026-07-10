@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -15,8 +14,6 @@ Test strategy
 from __future__ import annotations
 
 import json
-import shutil
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -227,13 +224,17 @@ class TestTdemWorkflowUnit:
             pytest.skip("data/TEMAVG/JIANGSU/ not found")
 
     def test_read_temavg_soundings_returns_list(self) -> None:
-        from pycsamt.tdem.workflow import read_temavg_soundings
+        from pycsamt.tdem.workflow import (
+            read_temavg_soundings,
+        )
         soundings = read_temavg_soundings(_TEMAVG_DIR)
         assert isinstance(soundings, list)
         assert len(soundings) > 0
 
     def test_sounding_has_time_gates(self) -> None:
-        from pycsamt.tdem.workflow import read_temavg_soundings
+        from pycsamt.tdem.workflow import (
+            read_temavg_soundings,
+        )
         soundings = read_temavg_soundings(_TEMAVG_DIR)
         snd = soundings[0]
         assert len(snd.time_gates) > 0
@@ -244,12 +245,16 @@ class TestTdemWorkflowUnit:
         assert len(survey.avg_files) > 0
 
     def test_transform_returns_conversion_bundle(self) -> None:
-        from pycsamt.tdem.workflow import transform_temavg_survey
+        from pycsamt.tdem.workflow import (
+            transform_temavg_survey,
+        )
         result = transform_temavg_survey(_TEMAVG_DIR)
         assert result.n_soundings > 0
 
     def test_transform_writes_edis(self, tmp_path: Path) -> None:
-        from pycsamt.tdem.workflow import transform_temavg_survey
+        from pycsamt.tdem.workflow import (
+            transform_temavg_survey,
+        )
         result = transform_temavg_survey(_TEMAVG_DIR, savepath=tmp_path)
         assert result.n_soundings > 0
         assert len(result.written_paths) > 0

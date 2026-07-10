@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,11 +13,11 @@ stays responsive.  Signals:
 
 from __future__ import annotations
 
-from typing import List
-
 from PySide6.QtCore import QThread, Signal
 
-from pycsamt.app.desktop.controllers.data_controller import DataController
+from pycsamt.app.desktop.controllers.data_controller import (
+    DataController,
+)
 
 
 class LoaderWorker(QThread):
@@ -28,7 +27,7 @@ class LoaderWorker(QThread):
     finished = Signal(object)   # Sites
     error    = Signal(str)
 
-    def __init__(self, paths: List[str], parent=None) -> None:
+    def __init__(self, paths: list[str], parent=None) -> None:
         super().__init__(parent)
         self._paths = list(paths)
         self._ctrl  = DataController(progress_callback=self.progress.emit)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Occam2D plotting — Python replacement for the MATLAB Occam2DMT scripts.
@@ -27,12 +26,9 @@ All plot classes accept an ``InversionResult`` object and expose a
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 import numpy as np
 
 from ...api.section import PYCSAMT_SECTION, SectionStyle
-
 from .base import OccamBase
 
 __all__ = [
@@ -78,7 +74,7 @@ class _OccamPlotBase(OccamBase):
     def __init__(
         self,
         result=None,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: tuple[float, float] | None = None,
         cmap: str = "jet_r",
         dpi: int = 100,
         **kwargs,
@@ -357,7 +353,7 @@ class PlotModel(_OccamPlotBase):
         result=None,
         rho_min: float = 1.0,
         rho_max: float = 1000.0,
-        depth_max: Optional[float] = None,
+        depth_max: float | None = None,
         show_stations: bool = True,
         profile_distance_unit: str = "km",
         section: str | SectionStyle = "inversion",
@@ -576,7 +572,7 @@ class PlotResponse(_OccamPlotBase):
         self,
         result=None,
         stations=None,
-        modes: Optional[List[str]] = None,
+        modes: list[str] | None = None,
         period_axis: bool = True,
         max_stations: int = 9,
         **kwargs,
@@ -975,7 +971,7 @@ class PlotSounding1D(_OccamPlotBase):
         result=None,
         stations=None,
         max_stations: int = 16,
-        depth_max: Optional[float] = None,
+        depth_max: float | None = None,
         rho_min: float = 1.0,
         rho_max: float = 1000.0,
         overlay: bool = False,
@@ -996,8 +992,8 @@ class PlotSounding1D(_OccamPlotBase):
         -------
         matplotlib.figure.Figure
         """
-        import matplotlib.pyplot as plt
         import matplotlib.cm as cm
+        import matplotlib.pyplot as plt
 
         result = self.result
         if result is None or result.rho_2d is None:
@@ -1173,7 +1169,7 @@ class PlotSiteMisfit(_OccamPlotBase):
     def __init__(
         self,
         result=None,
-        modes: Optional[List[str]] = None,
+        modes: list[str] | None = None,
         show_residual_map: bool = True,
         rms_target: float = 1.0,
         **kwargs,
@@ -1417,7 +1413,7 @@ class PlotResponseGrid(_OccamPlotBase):
         result=None,
         stations=None,
         n_cols: int = 5,
-        modes: Optional[List[str]] = None,
+        modes: list[str] | None = None,
         max_stations: int = 25,
         **kwargs,
     ):
@@ -1729,14 +1725,14 @@ class PlotStation1DFit(_OccamPlotBase):
     def __init__(
         self,
         result=None,
-        station: "int | str" = 1,
-        modes: Optional[List[str]] = None,
-        depth_max: Optional[float] = None,
-        rho_lim: Optional[Tuple[float, float]] = None,
-        phase_lim: Tuple[float, float] = (0.0, 90.0),
-        rho_depth_lim: Optional[Tuple[float, float]] = None,
+        station: int | str = 1,
+        modes: list[str] | None = None,
+        depth_max: float | None = None,
+        rho_lim: tuple[float, float] | None = None,
+        phase_lim: tuple[float, float] = (0.0, 90.0),
+        rho_depth_lim: tuple[float, float] | None = None,
         title: str = "",
-        mode_colors: Optional[dict] = None,
+        mode_colors: dict | None = None,
         max_rho_err: float = 0.5,
         max_phs_err: float = 20.0,
         **kwargs,
@@ -1760,8 +1756,8 @@ class PlotStation1DFit(_OccamPlotBase):
         -------
         matplotlib.figure.Figure
         """
-        import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
+        import matplotlib.pyplot as plt
 
         result = self.result
         if result is None:
@@ -1934,20 +1930,20 @@ class PlotStation1DFit(_OccamPlotBase):
 
 def plot_station_1d_fit(
     result,
-    station: "int | str" = 1,
+    station: int | str = 1,
     *,
-    modes: Optional[List[str]] = None,
-    depth_max: Optional[float] = None,
-    rho_lim: Optional[Tuple[float, float]] = None,
-    phase_lim: Tuple[float, float] = (0.0, 90.0),
-    rho_depth_lim: Optional[Tuple[float, float]] = None,
+    modes: list[str] | None = None,
+    depth_max: float | None = None,
+    rho_lim: tuple[float, float] | None = None,
+    phase_lim: tuple[float, float] = (0.0, 90.0),
+    rho_depth_lim: tuple[float, float] | None = None,
     title: str = "",
-    mode_colors: Optional[dict] = None,
+    mode_colors: dict | None = None,
     max_rho_err: float = 0.5,
     max_phs_err: float = 20.0,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     dpi: int = 100,
-) -> "plt.Figure":
+) -> plt.Figure:
     """Convenience wrapper around :class:`PlotStation1DFit`.
 
     Plots the observed vs modelled ρa / phase curves together with the
@@ -1988,7 +1984,6 @@ def plot_station_1d_fit(
     >>> fig = plot_station_1d_fit(result, station="S07", depth_max=20.0)
     >>> fig.savefig("S07_fit.png", dpi=150, bbox_inches="tight")
     """
-    import matplotlib.pyplot as plt
 
     return PlotStation1DFit(
         result        = result,

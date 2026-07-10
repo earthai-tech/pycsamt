@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -116,7 +115,9 @@ class TestRunWorkflowTracing(unittest.TestCase):
 
     def test_history_records_run(self):
         # run_workflow records to history when one is supplied
-        from pycsamt.assistant.tools import workflow_tools as wt
+        from pycsamt.assistant.tools import (
+            workflow_tools as wt,
+        )
 
         # stub the agent so no real data is needed
         class _FakeResult:
@@ -132,7 +133,7 @@ class TestRunWorkflowTracing(unittest.TestCase):
                 return _FakeResult()
 
         import pycsamt.agents as A
-        orig = getattr(A, "DataQCAgent")
+        orig = A.DataQCAgent
         A.DataQCAgent = _FakeAgent
         try:
             reg = type(

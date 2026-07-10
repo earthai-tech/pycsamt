@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for WorkflowOrchestratorAgent — routing, dry-run, keyword classification."""
@@ -9,7 +8,9 @@ import unittest
 class TestKeywordClassification(unittest.TestCase):
 
     def _classify(self, text):
-        from pycsamt.agents.orchestrator import _keyword_classify
+        from pycsamt.agents.orchestrator import (
+            _keyword_classify,
+        )
         wf, reason = _keyword_classify(text)
         return wf
 
@@ -61,19 +62,25 @@ class TestKeywordClassification(unittest.TestCase):
 class TestWorkflowStepsRegistry(unittest.TestCase):
 
     def test_all_phase4_workflows_registered(self):
-        from pycsamt.agents.orchestrator import _WORKFLOW_STEPS
+        from pycsamt.agents.orchestrator import (
+            _WORKFLOW_STEPS,
+        )
         for wf in ("inv2d", "inv3d", "ensemble_inversion", "joint_inversion"):
             self.assertIn(wf, _WORKFLOW_STEPS)
             self.assertGreater(len(_WORKFLOW_STEPS[wf]), 0)
 
     def test_all_classic_workflows_registered(self):
-        from pycsamt.agents.orchestrator import _WORKFLOW_STEPS
+        from pycsamt.agents.orchestrator import (
+            _WORKFLOW_STEPS,
+        )
         for wf in ("qc", "phase_analysis", "pre_inversion",
                    "ai_inversion", "modem", "full"):
             self.assertIn(wf, _WORKFLOW_STEPS)
 
     def test_step_tuples_have_4_or_5_elements(self):
-        from pycsamt.agents.orchestrator import _WORKFLOW_STEPS
+        from pycsamt.agents.orchestrator import (
+            _WORKFLOW_STEPS,
+        )
         for wf, steps in _WORKFLOW_STEPS.items():
             for step in steps:
                 self.assertIn(

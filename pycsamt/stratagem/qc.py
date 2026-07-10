@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -29,10 +28,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import numpy as np
-import pandas as pd
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from ..emtools._core import _iter_items
@@ -206,8 +203,8 @@ class QualityController(PyCSAMTObject, MetadataMixin):
     def fit(
         self,
         edi_objects: list,
-        raw_reader: "Optional[StratagemRawReader]" = None,
-    ) -> "QualityController":
+        raw_reader: StratagemRawReader | None = None,
+    ) -> QualityController:
         """Build the QC report.
 
         Parameters
@@ -304,7 +301,7 @@ class QualityController(PyCSAMTObject, MetadataMixin):
                 lines.append(f"  skew_med : {r['skew_med'].median():.1f}° median")
 
         # flag breakdown
-        all_flags: Dict[str, int] = {}
+        all_flags: dict[str, int] = {}
         for row_flags in f["flags"].dropna():
             for flag in str(row_flags).split(","):
                 flag = flag.strip()
@@ -317,7 +314,7 @@ class QualityController(PyCSAMTObject, MetadataMixin):
 
         return "\n".join(lines)
 
-    def flagged_stations(self) -> List[str]:
+    def flagged_stations(self) -> list[str]:
         """Return station names with at least one QC flag.
 
         Returns
@@ -392,8 +389,8 @@ class FrequencyFilter(PyCSAMTObject):
     def __init__(
         self,
         *,
-        fmin: Optional[float] = None,
-        fmax: Optional[float] = None,
+        fmin: float | None = None,
+        fmax: float | None = None,
         snr_thresh: float = 2.5,
         min_frac: float = 0.4,
         use_hardware_mask: bool = True,
@@ -410,10 +407,10 @@ class FrequencyFilter(PyCSAMTObject):
     def fit(
         self,
         edi_objects: list,
-        raw_reader: "Optional[StratagemRawReader]" = None,
+        raw_reader: StratagemRawReader | None = None,
         *,
         copy: bool = False,
-    ) -> "FrequencyFilter":
+    ) -> FrequencyFilter:
         """Apply frequency filters.
 
         Parameters
@@ -470,7 +467,7 @@ class FrequencyFilter(PyCSAMTObject):
                 int(np.sum(np.isfinite(getattr(e.Z, "z", np.array([])).ravel())))
                 for e in edi_objects
             ]
-            filtered = select_band(
+            select_band(
                 edi_objects,
                 fmin=self.fmin,
                 fmax=self.fmax,
@@ -517,10 +514,10 @@ class FrequencyFilter(PyCSAMTObject):
     # ------------------------------------------------------------------
     def out(
         self,
-        savepath: "Union[str, Path, None]" = None,
+        savepath: str | Path | None = None,
         *,
         overwrite: bool = False,
-    ) -> "Union[List, List[Path]]":
+    ) -> list | list[Path]:
         """Write filtered EDI files to disk or return objects.
 
         Parameters
@@ -543,7 +540,7 @@ class FrequencyFilter(PyCSAMTObject):
 
         out_dir = Path(savepath).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
-        written: List[Path] = []
+        written: list[Path] = []
 
         for edi in self.edi_objects_:
             fname = (

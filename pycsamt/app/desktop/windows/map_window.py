@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -28,7 +27,7 @@ Right content
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtCore    import Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -37,7 +36,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -49,14 +47,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.panels.map_panel   import MapPanel
-from pycsamt.app.desktop.windows._base      import (
+from pycsamt.app.desktop.panels.map_panel import MapPanel
+from pycsamt.app.desktop.windows._base import (
     PanelWindow,
-    make_group,
-    icon_button,
     _icon,
+    icon_button,
+    make_group,
 )
-
 
 # ── available colormaps ───────────────────────────────────────────────────────
 
@@ -451,7 +448,9 @@ class MapViewerWindow(PanelWindow):
         vals: list[float] = []
         for site in sites:
             try:
-                from pycsamt.site.base import _extract_z_arrays
+                from pycsamt.site.base import (
+                    _extract_z_arrays,
+                )
                 arrs = _extract_z_arrays(site.edi)
                 z = arrs.get("z")
                 f = arrs.get("freq")
@@ -690,7 +689,9 @@ class MapViewerWindow(PanelWindow):
                 pass
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()
 
 
@@ -1142,5 +1143,7 @@ class MapDetailWindow(QDialog):
         )
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()

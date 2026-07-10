@@ -65,7 +65,7 @@ fig.axes[0].legend(ARCHS, fontsize=8, frameon=False)
 # (log10 rho, the primary target — all on one scale) rather than mixing in
 # layer thicknesses which live in metres and would dominate the numbers.
 
-from pycsamt.ai import rmse, mae, r2
+from pycsamt.ai import mae, r2, rmse
 
 N_LAYERS = 4
 rho = slice(0, N_LAYERS)                     # log10-resistivity columns
@@ -92,7 +92,7 @@ print("best (lowest resistivity RMSE):", best)
 # zero mean the network is neither over- nor under-estimating that
 # parameter.
 
-from pycsamt.ai.plot import plot_residuals, plot_layer_errors
+from pycsamt.ai.plot import plot_layer_errors, plot_residuals
 
 y_best = inverters[best].predict(test.X)
 fig = plot_residuals(test.y, y_best)

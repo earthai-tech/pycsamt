@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.map.inversion — importing ModEM 3-D results."""
 
 from __future__ import annotations
@@ -7,7 +6,10 @@ import numpy as np
 import pytest
 
 from pycsamt.map._core import StationRecord
-from pycsamt.map.inversion import group_modem_stations, load_modem_lines
+from pycsamt.map.inversion import (
+    group_modem_stations,
+    load_modem_lines,
+)
 from pycsamt.map.view import MapView
 
 
@@ -134,7 +136,7 @@ def test_load_modem_lines_builds_multiline_mapdata(tmp_path):
     assert map_data.has_geo  # native ModEM lat/lon resolved
     sections = map_data.metadata["sections"]
     assert set(sections) == {"18", "22"}
-    for line, section in sections.items():
+    for _line, section in sections.items():
         assert section["rho"].shape[1] == section["stations"].size
 
 

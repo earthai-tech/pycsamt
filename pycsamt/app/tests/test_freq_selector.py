@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for FreqSelector (Phase 3)."""
 
 from __future__ import annotations
 
-import math
 import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.widgets.freq_selector import FreqSelector, _RangeSlider
-
+from pycsamt.app.desktop.widgets.freq_selector import (
+    FreqSelector,
+    _RangeSlider,
+)
 
 # ── _RangeSlider unit tests ───────────────────────────────────────────────
 

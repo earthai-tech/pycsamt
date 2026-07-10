@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -105,7 +104,9 @@ class TestPredictionOutputParsing(unittest.TestCase):
     """
 
     def test_predictions_have_n_layers_and_finite_rms(self):
-        from pycsamt.agents.ai_inversion import AIInversionAgent
+        from pycsamt.agents.ai_inversion import (
+            AIInversionAgent,
+        )
         n_layers = 5
         r = AIInversionAgent(
             arch="resnet", n_layers=n_layers,

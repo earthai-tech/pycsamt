@@ -26,16 +26,16 @@ reproduced here under its SAMTEX attribution; see ``data/MT/README.md``.
 
 from _datasets import load_sites
 
+from pycsamt.emtools.strike import plot_strike_analysis
 from pycsamt.emtools.tf import (
+    plot_induction_arrows,
+    plot_induction_convention,
+    plot_induction_map,
+    plot_induction_rose,
+    plot_induction_section,
     plot_tipper_hodograms,
     plot_tipper_polar,
-    plot_induction_arrows,
-    plot_induction_map,
-    plot_induction_section,
-    plot_induction_convention,
-    plot_induction_rose,
 )
-from pycsamt.emtools.strike import plot_strike_analysis
 
 KAP = load_sites("mt_kap03")
 

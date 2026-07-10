@@ -2762,7 +2762,12 @@ body {
   max-width: 100%;
 }
 
-/* ── typed responses (per-kind header chip + accent) ───────────── */
+/* ── typed responses ─────────────────────────────────────────────
+   Per-kind accent bars, tinted callouts and label chips are retired:
+   every reply — errors and clarifications included — renders flat in
+   the main chat, ChatGPT/Claude-style. The .am-bubble-<kind> classes
+   are still emitted and .am-kind-header is kept below so a themed
+   treatment can be re-enabled from callbacks/chat.py if wanted. */
 .am-kind-header {
   display: inline-flex;
   align-items: center;
@@ -2775,30 +2780,6 @@ body {
   margin: 0 0 7px;
   padding-bottom: 5px;
   border-bottom: 1px solid var(--srf1);
-}
-/* left accent bar keyed to the response kind */
-.am-bubble.agent.am-bubble-answer   { border-left: 3px solid var(--blue); }
-.am-bubble.agent.am-bubble-code     { border-left: 3px solid var(--green); }
-.am-bubble.agent.am-bubble-workflow { border-left: 3px solid var(--blue); }
-.am-bubble.agent.am-bubble-clarify  { border-left: 3px solid var(--yellow); }
-.am-bubble.agent.am-bubble-meta     { border-left: 3px solid var(--blue); }
-.am-bubble.agent.am-bubble-error    { border-left: 3px solid var(--red); }
-.am-bubble.agent.am-bubble-error    { background: rgba(243,139,168,.06); }
-.am-bubble.agent.am-bubble-clarify  { background: rgba(249,226,175,.06); }
-/* Exposed (flat) replies drop the per-kind left accent bar so normal
-   answers read as open content; errors & clarifications keep a subtle
-   callout (bar + tint + a little padding) as a visual cue. */
-.am-bubble.agent.am-bubble-flat.am-bubble-answer,
-.am-bubble.agent.am-bubble-flat.am-bubble-code,
-.am-bubble.agent.am-bubble-flat.am-bubble-workflow,
-.am-bubble.agent.am-bubble-flat.am-bubble-meta {
-  border-left: none;
-  padding-left: 0;
-}
-.am-bubble.agent.am-bubble-flat.am-bubble-error,
-.am-bubble.agent.am-bubble-flat.am-bubble-clarify {
-  padding: 9px 13px;
-  border-radius: var(--radius-sm);
 }
 /* headings inside markdown answers */
 .am-bubble .am-md-h {

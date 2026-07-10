@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Built-in dependency-light EM inversion backend.
@@ -23,15 +22,27 @@ from typing import Any
 import numpy as np
 
 from ..base import BaseInversionBackend
-from ..mesh import InversionMesh, build_fd2d_grid, core_rho_from_start
+from ..mesh import (
+    InversionMesh,
+    build_fd2d_grid,
+    core_rho_from_start,
+)
 from ..model import StartingModel
-from ..objective import component_errors, component_mask, weighted_rms
+from ..objective import (
+    component_errors,
+    component_mask,
+    weighted_rms,
+)
 from ..regularization import (
     regularization_from_config,
     regularization_residual,
     regularization_weight,
 )
-from ..results import InversionHistory, InversionResult, InversionUncertainty
+from ..results import (
+    InversionHistory,
+    InversionResult,
+    InversionUncertainty,
+)
 
 __all__ = ["Builtin1DBackend"]
 
@@ -207,7 +218,11 @@ class Builtin1DBackend(BaseInversionBackend):
         except ImportError as exc:
             raise ImportError("builtin 2-D inversion requires scipy.optimize.") from exc
 
-        from ...forward import Grid2D, MT2DForward, make_padding
+        from ...forward import (
+            Grid2D,
+            MT2DForward,
+            make_padding,
+        )
 
         opts = cfg.backend_options
         start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)

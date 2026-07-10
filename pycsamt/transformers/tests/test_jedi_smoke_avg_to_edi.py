@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # tiny smoke test for AVG -> EDI
 
 from __future__ import annotations
@@ -6,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from pycsamt.zonge.avg import BaseAVG
 from pycsamt.transformers.jedi import AVGtoEDI
+from pycsamt.zonge.avg import BaseAVG
 
 
 class _Comp:
@@ -88,9 +87,9 @@ def _mtsect(ed):
 def _nfreq_from(sec) -> int:
     # accept dict-like or object with attr
     if hasattr(sec, "NFREQ"):
-        return int(getattr(sec, "NFREQ"))
+        return int(sec.NFREQ)
     if hasattr(sec, "nfreq"):
-        return int(getattr(sec, "nfreq"))
+        return int(sec.nfreq)
     if isinstance(sec, dict):
         if "NFREQ" in sec:
             return int(sec["NFREQ"])

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -12,15 +11,15 @@ and various QC metrics) into a single, convenient container.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any
 
 import pandas as pd
 
 from ..exceptions import AvgDataError
-
 from .base import AVGFrame
-from .config import Zonge 
+from .config import Zonge
 from .heads import Header
 from .meas import Amps, CompMeas, Frequency
 from .resphase import Phase, Resistivity
@@ -109,13 +108,13 @@ class DataInfo (Zonge):
     """
 
     def __init__(self, verbose: bool = False) -> None:
-        super().__init__(verbose = verbose) 
-        
+        super().__init__(verbose = verbose)
+
         # Core data holders
-        self._frame: Optional[AVGFrame] = None
-        self.df: Optional[pd.DataFrame] = None
-        self.meta: Optional[Mapping[str, Any]] = None
-        
+        self._frame: AVGFrame | None = None
+        self.df: pd.DataFrame | None = None
+        self.meta: Mapping[str, Any] | None = None
+
         # Component containers
         self.header: Header = Header()
         self.station: Station = Station()
@@ -137,13 +136,10 @@ class DataInfo (Zonge):
     @classmethod
     def from_avg(
         cls,
-        avg: Union[
-            str, Path, AVGFrame, pd.DataFrame,
-            Tuple[pd.DataFrame, Mapping[str, Any]]
-        ],
+        avg: str | Path | AVGFrame | pd.DataFrame | tuple[pd.DataFrame, Mapping[str, Any]],
         *,
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> "DataInfo":
+        meta: Mapping[str, Any] | None = None,
+    ) -> DataInfo:
         """
         Build a DataInfo object from a path, AVGFrame, or DataFrame.
         """
@@ -171,7 +167,7 @@ class DataInfo (Zonge):
     def read(
         self,
         source: pd.DataFrame,
-        meta: Optional[Mapping[str, Any]] = None,
+        meta: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Orchestrate reading data into all sub-components.
@@ -202,8 +198,8 @@ class DataInfo (Zonge):
                 if self.verbose:
                     self._logger.warning(msg)
                 else:
-                    warnings.warn(msg)
-                    
+                    warnings.warn(msg, stacklevel=2)
+
             except Exception as e:
                 msg = (
                     f"Warning: Unexpected error loading "
@@ -212,10 +208,10 @@ class DataInfo (Zonge):
                 if self.verbose:
                     self._logger.error(msg)
                 else:
-                    warnings.warn(msg)
-        
-        return self 
-    
+                    warnings.warn(msg, stacklevel=2)
+
+        return self
+
     def __str__(self) -> str:
         if self.df is None:
             return "DataInfo(empty)"

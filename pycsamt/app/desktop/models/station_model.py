@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -16,7 +15,11 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+)
 
 _COLUMNS = ["ID", "Latitude", "Longitude", "Elevation", "N_freq", "Tipper"]
 _PRECISION = {"Latitude": 5, "Longitude": 5, "Elevation": 1}

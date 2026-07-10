@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
-import re
 import math
+import re
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from pycsamt.jones.j import JFile
 from pycsamt.jones.blocks import JBlocks
 from pycsamt.jones.heads import Heads
+from pycsamt.jones.j import JFile
 
 
 def _read_text(p: Path) -> str:

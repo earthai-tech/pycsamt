@@ -21,8 +21,9 @@ parse padding/core-zone boundaries.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -78,8 +79,8 @@ def _grid_offset(widths: np.ndarray, coords: np.ndarray) -> float:
 
 
 def station_curtain(
-    model: "ModEmModel3D",
-    data: "ModEmData",
+    model: ModEmModel3D,
+    data: ModEmData,
     station_names: Sequence[str],
 ) -> ModemSection:
     """Sample *model*'s 3-D resistivity volume along *station_names*.

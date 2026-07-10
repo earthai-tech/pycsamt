@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -28,10 +27,10 @@ Design principles
 from __future__ import annotations
 
 import json
-import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -70,17 +69,17 @@ class EMCheckpoint:
 
     def __init__(
         self,
-        params: Dict[str, Any],
-        weights: Optional[Dict[str, np.ndarray]] = None,
-        history: Optional[Dict[str, list]] = None,
-        meta: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any],
+        weights: dict[str, np.ndarray] | None = None,
+        history: dict[str, list] | None = None,
+        meta: dict[str, Any] | None = None,
     ):
         self.params = params
         self.weights = weights or {}
         self.history = history or {}
         self.meta = meta or {}
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """Save to a ``.npz`` checkpoint file."""
         path = Path(path)
         arrays = {f"w_{k}": v for k, v in self.weights.items()}
@@ -90,7 +89,7 @@ class EMCheckpoint:
         np.savez_compressed(path, **arrays)
 
     @classmethod
-    def load(cls, path: Union[str, Path]) -> "EMCheckpoint":
+    def load(cls, path: str | Path) -> EMCheckpoint:
         """Load from a ``.npz`` checkpoint file."""
         path = Path(path)
         if not path.exists():
@@ -141,7 +140,7 @@ class BaseEMNet(ABC):
         arch: str = "cnn1d",
         n_layers: int = 5,
         solver: str = "mt1d",
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.arch = arch
         self.n_layers = n_layers
@@ -149,9 +148,9 @@ class BaseEMNet(ABC):
         self.device = device
         self._network = None
         self._is_fitted: bool = False
-        self._history: Dict[str, list] = {}
-        self._params: Dict[str, Any] = {}
-        self._meta: Dict[str, Any] = {}
+        self._history: dict[str, list] = {}
+        self._params: dict[str, Any] = {}
+        self._meta: dict[str, Any] = {}
 
     # ─── abstract interface ───────────────────────────────────────────────
 
@@ -167,10 +166,10 @@ class BaseEMNet(ABC):
     @abstractmethod
     def fit(
         self,
-        X: Union[np.ndarray, str, "ForwardDataset"],
-        y: Optional[np.ndarray] = None,
+        X: np.ndarray | str | ForwardDataset,
+        y: np.ndarray | None = None,
         **kwargs,
-    ) -> "BaseEMNet":
+    ) -> BaseEMNet:
         """
         Train the network.
 
@@ -193,7 +192,7 @@ class BaseEMNet(ABC):
     @abstractmethod
     def predict(
         self,
-        X: Union[np.ndarray, "Z", Sequence],
+        X: np.ndarray | Z | Sequence,
     ) -> np.ndarray:
         """
         Predict subsurface model parameters from data.
@@ -250,7 +249,7 @@ class BaseEMNet(ABC):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """
         Save the model weights and hyperparameters to *path*.
 
@@ -269,7 +268,7 @@ class BaseEMNet(ABC):
         ckpt.save(path)
 
     @classmethod
-    def load(cls, path: Union[str, Path]) -> "BaseEMNet":
+    def load(cls, path: str | Path) -> BaseEMNet:
         """
         Load a model saved with :meth:`save`.
 
@@ -292,7 +291,7 @@ class BaseEMNet(ABC):
         return obj
 
     @classmethod
-    def from_pretrained(cls, name: str) -> "BaseEMNet":
+    def from_pretrained(cls, name: str) -> BaseEMNet:
         """
         Load a pre-trained model from the pycsamt model zoo.
 
@@ -365,7 +364,7 @@ class BaseEMNet(ABC):
 
     # ─── hooks for subclasses ─────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         """Return JSON-serialisable hyperparameter dict."""
         return {
             "arch": self.arch,
@@ -374,11 +373,11 @@ class BaseEMNet(ABC):
             "device": self.device,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
+    def _get_weights(self) -> dict[str, np.ndarray]:
         """Return a dict of numpy weight arrays.  Override in subclass."""
         return {}
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         """Restore weights from a dict of numpy arrays.  Override in subclass."""
         pass
 
@@ -416,7 +415,7 @@ class BaseEMProcessor(ABC):
     """
 
     @abstractmethod
-    def fit(self, X: np.ndarray, **kwargs) -> "BaseEMProcessor":
+    def fit(self, X: np.ndarray, **kwargs) -> BaseEMProcessor:
         """Fit the processor to training data."""
 
     @abstractmethod
@@ -427,7 +426,7 @@ class BaseEMProcessor(ABC):
         """Fit then transform in one call."""
         return self.fit(X, **kwargs).transform(X)
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """Save to a checkpoint file."""
         ckpt = EMCheckpoint(
             params=self._get_params(),
@@ -436,7 +435,7 @@ class BaseEMProcessor(ABC):
         ckpt.save(path)
 
     @classmethod
-    def load(cls, path: Union[str, Path]) -> "BaseEMProcessor":
+    def load(cls, path: str | Path) -> BaseEMProcessor:
         ckpt = EMCheckpoint.load(path)
         obj = cls.__new__(cls)
         obj.__init__(**ckpt.params)
@@ -445,18 +444,18 @@ class BaseEMProcessor(ABC):
         return obj
 
     @classmethod
-    def load_pretrained(cls, name: str) -> "BaseEMProcessor":
+    def load_pretrained(cls, name: str) -> BaseEMProcessor:
         raise NotImplementedError(
             "Pre-trained processor weights are scheduled for Phase 5."
         )
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {}
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
+    def _get_weights(self) -> dict[str, np.ndarray]:
         return {}
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         pass
 
     def __repr__(self) -> str:
@@ -501,7 +500,7 @@ class BasePINNInverter(PyCSAMTObject, ABC):
         self,
         n_layers: int = 5,
         depth_max: float = 1000.0,
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         self.n_layers = int(n_layers)
         self.depth_max = float(depth_max)
@@ -512,7 +511,7 @@ class BasePINNInverter(PyCSAMTObject, ABC):
     # ── abstract interface ────────────────────────────
 
     @abstractmethod
-    def fit(self, **kwargs) -> "BasePINNInverter":
+    def fit(self, **kwargs) -> BasePINNInverter:
         """
         Minimise the physics-informed loss.
 
@@ -615,7 +614,7 @@ class BaseHybridInverter(BasePINNInverter):
         self,
         n_layers: int = 5,
         depth_max: float = 1000.0,
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         super().__init__(
             n_layers=n_layers,

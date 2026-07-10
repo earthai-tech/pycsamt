@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,15 +18,13 @@ from click.testing import CliRunner
 
 from pycsamt.cli import main
 from pycsamt.cli.commands.config._base import (
-    TOML_PATH,
     _read_toml,
     _write_toml,
     apply_section,
     coerce,
-    parse_key,
     load_all_config,
+    parse_key,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixture: redirect TOML_PATH to a tmp file

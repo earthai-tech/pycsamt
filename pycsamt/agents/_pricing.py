@@ -22,7 +22,7 @@ from __future__ import annotations
 # Lazy import to avoid a hard dependency at module load time.
 # AGENT_CONFIG is a singleton — importing it here is safe because
 # api/agents.py has no circular dependency back into _pricing.py.
-from ..api.agents import AGENT_CONFIG, _BUILTIN_RATES
+from ..api.agents import _BUILTIN_RATES, AGENT_CONFIG
 
 # ---------------------------------------------------------------------------
 # Public rate table (built-in baseline, no runtime overrides)
@@ -48,7 +48,7 @@ def get_rate(provider: str, model: str) -> dict[str, float]:
     ----------
     provider : str
         One of ``"claude"``, ``"openai"``,
-        ``"gemini"``, ``"deepseek"``.
+        ``"gemini"``, ``"deepseek"``, ``"minimax"``.
     model : str
         Model identifier, e.g. ``"claude-sonnet-4-6"``.
 

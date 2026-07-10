@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """callbacks/map.py — station map figure, map-type controls, selection sync."""
@@ -7,11 +6,22 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from dash import ALL, ctx, clientside_callback, Input, Output, State, no_update
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    no_update,
+)
 
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.utils import build_station_map, build_contour_overlay
+from pycsamt.app.web.utils import (
+    build_contour_overlay,
+    build_station_map,
+)
 
 
 def _station_dataframe(store_data) -> pd.DataFrame:
@@ -322,7 +332,9 @@ def _register_map_update(app) -> None:
                         value_map = dep_map
 
         elif mtype in ("inv_profile", "inv_depth_slice") and session_id:
-            from pycsamt.app.web.cache import cache_get_inversion_result
+            from pycsamt.app.web.cache import (
+                cache_get_inversion_result,
+            )
             result = cache_get_inversion_result(session_id)
             if result is not None:
                 try:
@@ -472,7 +484,9 @@ def _register_inv_controls(app) -> None:
     def populate_inv_lines(store_data, session_id):
         if not session_id:
             return [], None
-        from pycsamt.app.web.cache import cache_get_inversion_result
+        from pycsamt.app.web.cache import (
+            cache_get_inversion_result,
+        )
         result = cache_get_inversion_result(session_id)
         if result is None:
             return [{"label": "No inversion result cached", "value": "none", "disabled": True}], None
@@ -491,7 +505,9 @@ def _register_inv_controls(app) -> None:
     def update_inv_depth_info(depth_m, session_id):
         if not depth_m or not session_id:
             return ""
-        from pycsamt.app.web.cache import cache_get_inversion_result
+        from pycsamt.app.web.cache import (
+            cache_get_inversion_result,
+        )
         result = cache_get_inversion_result(session_id)
         if result is None:
             return "No inversion result cached."
@@ -631,9 +647,9 @@ def _register_selection_sync(app, *, include_home_map: bool) -> None:
 
 def _inject_contour(
     fig,
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     overlay: str,
-    value_map: "dict | None",
+    value_map: dict | None,
     *,
     contour_mode: str,
     contour_cmap: str,
@@ -714,7 +730,7 @@ def _inject_contour(
     text_col   = "#cdd6f4" if dark else "#4c4f69"
     bg_rgba    = "rgba(30,30,46,.72)" if dark else "rgba(239,241,245,.80)"
 
-    label = str(overlay).lstrip("_")
+    str(overlay).lstrip("_")
     if log_scale:
         stamp = f"Contour (log₁₀) {vmin:.3g} – {vmax:.3g}"
     else:
@@ -779,7 +795,8 @@ def _register_status_station(app) -> None:
 # ── Map toolbar — info chip, toggles, basemap quick-switch, export ────────────
 
 def _register_toolbar(app) -> None:
-    from dash import html as _html, clientside_callback
+    from dash import clientside_callback
+    from dash import html as _html
 
     # ── Station / line count chip ─────────────────────────────────────────────
     @app.callback(

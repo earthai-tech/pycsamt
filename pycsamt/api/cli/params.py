@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -213,7 +212,9 @@ class PipeStepList(click.ParamType):
                 ctx,
             )
         try:
-            from pycsamt.pipeline import lookup_step  # noqa: PLC0415
+            from pycsamt.pipeline import (
+                lookup_step,  # noqa: PLC0415
+            )
         except ImportError:
             return tokens  # best-effort if pipeline not yet importable
         codes: list[str] = []

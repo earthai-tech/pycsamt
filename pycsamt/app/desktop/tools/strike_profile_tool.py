@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,9 +17,9 @@ Usage
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
@@ -29,10 +28,8 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
-    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -59,8 +56,10 @@ class _ProfileWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.strike import plot_strike_profile
-            before = set(plt.get_fignums())
+            from pycsamt.emtools.strike import (
+                plot_strike_profile,
+            )
+            set(plt.get_fignums())
             ax = plot_strike_profile(
                 self._sites,
                 method=self._method,

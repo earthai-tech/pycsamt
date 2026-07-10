@@ -1,18 +1,20 @@
-# -*- coding: utf-8 -*-
 
 from __future__ import annotations
 
 import re
+
 import pytest
+
+from pycsamt.zonge.heads import Header
 from pycsamt.zonge.property import (
-    SkipFlag,
     Hardware,
+    Receiver,
+    SkipFlag,
     SurveyAnnotation,
     SurveyConfiguration,
-    Receiver,
     Transmitter,
 )
-from pycsamt.zonge.heads import Header
+
 
 # -------------------------------------------------------------------- #
 # SkipFlag                                                             #
@@ -134,7 +136,7 @@ def test_config_update_and_export():
     assert kw["Unit.Phase"] == "mrad"
 
 
-# Receiver / Transmitter                                              
+# Receiver / Transmitter
 def test_rx_update_and_export_minimal():
     rx = Receiver()
     rx.update_from_keywords(
@@ -186,7 +188,7 @@ def test_tx_update_and_export_minimal():
 
 
 
-# Header facade                                                        
+# Header facade
 
 LEGACY_HEADER_LINES = [
     r'\ AMTAVG 7.76: "LCS01.fld", Dated 99-01-01, Processed 22 Jul 16',
@@ -280,5 +282,5 @@ def test_strs_are_informative():
     assert "Transmitter" in Transmitter().__str__()
     assert "Header(" in Header().__str__()
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

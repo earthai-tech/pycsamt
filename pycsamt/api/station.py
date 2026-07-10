@@ -10,7 +10,6 @@ from typing import Any
 
 import numpy as np
 
-
 _NICE_STEPS = (1, 2, 3, 4, 5, 8, 10, 12, 15, 20, 25, 50, 100)
 _SIDES = {"top", "bottom"}
 _PRESETS = {"pseudosection", "inversion", "survey"}
@@ -329,7 +328,7 @@ class PyCSAMTStationRendering:
         self,
         preset: str | None = None,
         **kw: Any,
-    ) -> Generator["PyCSAMTStationRendering", None, None]:
+    ) -> Generator[PyCSAMTStationRendering, None, None]:
         """Temporarily override station rendering, then restore it."""
         snapshot = self._snapshot()
         try:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for SectionPanel (Phase 5)."""
@@ -9,9 +8,13 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.panels.section_panel import SectionPanel
+from pycsamt.app.desktop.panels.section_panel import (
+    SectionPanel,
+)
+from pycsamt.app.desktop.widgets.colorbar_widget import (
+    ColorbarWidget,
+)
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.widgets.colorbar_widget import ColorbarWidget
 
 
 @pytest.fixture

@@ -1,15 +1,19 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
-from pycsamt.jones.j import JFile
-from pycsamt.jones.heads import Heads
 from pycsamt.jones.blocks import JBlocks
+from pycsamt.jones.cbase import (
+    JCBBase,
+    JCoreParser,
+    JParseMixin,
+)
 from pycsamt.jones.collection import JCollection
+from pycsamt.jones.heads import Heads
+from pycsamt.jones.j import JFile
 
-from pycsamt.jones.cbase import JParseMixin, JCoreParser, JCBBase
 
 class _Dummy(JParseMixin):
     """Lightweight concrete to access JParseMixin helpers."""

@@ -60,7 +60,7 @@ CLIENT_REGISTRY: dict[IoTProtocol, type[BaseTelemetryClient]] = {
 def build_telemetry_client(
     protocol: str | IoTProtocol,
     *,
-    endpoint: Optional[str] = None,
+    endpoint: str | None = None,
     dry_run: bool = True,
     **options: Any,
 ) -> BaseTelemetryClient:

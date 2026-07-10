@@ -7,7 +7,7 @@ Not an example itself: see the note at the top of ``_datasets.py``.
 
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -59,7 +59,7 @@ class SyntheticSite:
 
 def synthetic_line(
     n: int = 12, spacing: float = 200.0
-) -> Tuple[list, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[list, np.ndarray, np.ndarray, np.ndarray]:
     """A fully made-up straight station line: names, east, north, freq."""
     names = [f"S{i:02d}" for i in range(n)]
     east = np.arange(n) * float(spacing)
@@ -74,7 +74,7 @@ def conductor_tipper_sites(
     north: np.ndarray,
     freq: np.ndarray,
     *,
-    conductor_xy: Optional[Tuple[float, float]] = None,
+    conductor_xy: tuple[float, float] | None = None,
     seed: int = 0,
 ) -> list:
     """Synthetic tipper-bearing sites shaped like one buried conductor.

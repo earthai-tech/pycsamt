@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import os
 import time
-from pathlib import Path
 from typing import Any
 
 from ._base import AgentResult, BaseAgent
@@ -94,7 +93,9 @@ class EDIExportAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        from ..emtools._core import ensure_sites, _iter_items, _name
+        from ..emtools._core import (
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:

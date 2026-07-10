@@ -19,7 +19,6 @@ USGS Bulletin 1532, 2nd Edition, USGPO, Washington D.C.
 from __future__ import annotations
 
 import math
-from typing import Union
 
 import numpy as np
 
@@ -140,9 +139,9 @@ def _utm_to_ll_pure(
     lambda0 = ((-180 + zone * 6) - 3) * _DEG2RAD
 
     M0 = 1 - e2 * 0.25 - e4 * 0.046875 - e6 * 0.01953125
-    M1 = e2 * 0.375 + e4 * 0.09375 + e6 * 0.043945313
-    M2 = e4 * 0.05859375 + e6 * 0.043945313
-    M3 = e6 * 0.011393229
+    e2 * 0.375 + e4 * 0.09375 + e6 * 0.043945313
+    e4 * 0.05859375 + e6 * 0.043945313
+    e6 * 0.011393229
 
     mu = y / (a * M0)
     e1 = (1 - np.sqrt(1 - e2)) / (1 + np.sqrt(1 - e2))
@@ -188,8 +187,8 @@ def _utm_to_ll_pure(
 # ---------------------------------------------------------------------------
 
 def lonlat_to_utm(
-    lon: Union[float, np.ndarray],
-    lat: Union[float, np.ndarray],
+    lon: float | np.ndarray,
+    lat: float | np.ndarray,
     *,
     zone: int | None = None,
     south_hemi: bool | None = None,
@@ -264,8 +263,8 @@ def lonlat_to_utm(
 
 
 def utm_to_lonlat(
-    easting: Union[float, np.ndarray],
-    northing: Union[float, np.ndarray],
+    easting: float | np.ndarray,
+    northing: float | np.ndarray,
     zone: int,
     south_hemi: bool | str = False,
     *,

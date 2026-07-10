@@ -29,7 +29,7 @@ Earth wavenumber for CSAMT (real part of complex k₁):
 """
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -57,7 +57,7 @@ _C0:  float = 299_792_458.0         # m/s  (free-space speed of light)
 
 def wavenumber(
     freq: float,
-    rho: Optional[float] = None,
+    rho: float | None = None,
 ) -> float:
     """
     Effective real wavenumber k [m⁻¹] for CSAMT or free-space propagation.
@@ -92,7 +92,7 @@ def wavenumber(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def sdas_element_pattern(
-    theta_deg: Union[float, np.ndarray],
+    theta_deg: float | np.ndarray,
     l: float,
     k: float,
     *,
@@ -148,7 +148,7 @@ def sdas_element_pattern(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def array_factor(
-    theta_b_deg: Union[float, np.ndarray],
+    theta_b_deg: float | np.ndarray,
     N: int,
     d: float,
     k: float,
@@ -203,7 +203,7 @@ def array_factor(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def pas_pattern(
-    theta_b_deg: Union[float, np.ndarray],
+    theta_b_deg: float | np.ndarray,
     N: int,
     d: float,
     k: float,
@@ -389,16 +389,16 @@ def snr_gain_db(N: int) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def plot_radiation_pattern(
-    theta_b_deg: Union[np.ndarray, Sequence],
-    patterns: Union[np.ndarray, Sequence],
+    theta_b_deg: np.ndarray | Sequence,
+    patterns: np.ndarray | Sequence,
     *,
-    labels: Optional[Sequence[str]] = None,
+    labels: Sequence[str] | None = None,
     polar: bool = True,
     normalize: bool = True,
     log_scale: bool = False,
     db_floor: float = -40.0,
     title: str = "Radiation pattern",
-    figsize: Tuple[float, float] = (7.0, 7.0),
+    figsize: tuple[float, float] = (7.0, 7.0),
     ax=None,
 ):
     """

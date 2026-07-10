@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 
 from pycsamt.emtools.source_effects import (
-    normalize_response,
     correct_near_field,
+    normalize_response,
     plot_normalized_response,
 )
 
@@ -307,9 +307,9 @@ def test_correct_near_field_inplace_modifies_original():
     offset = 1.0
     s = _site("S01", rho=1000.0, n=4, offset=offset)
     # Grab a reference to the underlying Z wrapper
-    z_id_before = id(s.Z.z)
+    id(s.Z.z)
     correct_near_field([s], source_offset=offset, inplace=True)
-    z_id_after = id(s.Z.z)
+    id(s.Z.z)
     # The object may be replaced (Z.z = new_array), but values should differ
     # from what they would be without correction (which we can check via
     # a fresh uncorrected site with the same rho)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """InputBuilder — produce all Occam2D input files from EDI data.
@@ -26,15 +25,15 @@ Usage
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Union
 
-from .base     import OccamBase
-from .config   import OccamConfig
-from .data     import OccamData
-from .mesh     import OccamMesh
-from .model    import OccamModel
-from .startup  import OccamStartup
+from .base import OccamBase
+from .config import OccamConfig
+from .data import OccamData
 from .doc import _occam_param_docs as _params
+from .mesh import OccamMesh
+from .model import OccamModel
+from .startup import OccamStartup
 
 PathLike = Union[str, Path]
 
@@ -46,7 +45,7 @@ class InputBuilder(OccamBase):
         self,
         source,
         workdir: PathLike = ".",
-        config: Optional[OccamConfig] = None,
+        config: OccamConfig | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -54,26 +53,26 @@ class InputBuilder(OccamBase):
         self.workdir = Path(workdir)
         self.config  = config or OccamConfig()
 
-        self.data:    Optional[OccamData]    = None
-        self.mesh:    Optional[OccamMesh]    = None
-        self.model:   Optional[OccamModel]   = None
-        self.startup: Optional[OccamStartup] = None
+        self.data:    OccamData | None    = None
+        self.mesh:    OccamMesh | None    = None
+        self.model:   OccamModel | None   = None
+        self.startup: OccamStartup | None = None
 
     # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
     def build(
         self,
-        modes: Optional[List[str]] = None,
-        n_layers: Optional[int]    = None,
-        cell_size: Optional[float] = None,
-        error_floor_rho: Optional[float]   = None,
-        error_floor_phase: Optional[float] = None,
-        freq_min: Optional[float] = None,
-        freq_max: Optional[float] = None,
+        modes: list[str] | None = None,
+        n_layers: int | None    = None,
+        cell_size: float | None = None,
+        error_floor_rho: float | None   = None,
+        error_floor_phase: float | None = None,
+        freq_min: float | None = None,
+        freq_max: float | None = None,
         title: str = "pycsamt Occam2D run",
         **kwargs,
-    ) -> "InputBuilder":
+    ) -> InputBuilder:
         # Apply one-shot overrides
         cfg = self.config
         if modes is not None:

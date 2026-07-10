@@ -33,15 +33,22 @@ simplify_poly
     (``m2d_simplify_poly``).
 """
 
-from .topo import parse_topo, topo_depth, topo_slope
-from .intersections import get_intersections, do_rects_overlap
-from .simplify import dp_simplify
-from .centroids import get_centroids, triangle_centroids, triangle_areas
-from .utm import lonlat_to_utm, utm_to_lonlat, ELLIPSOIDS
 from .area_of_interest import estimate_area_of_interest
-from .triangle_regions import get_triangle_regions
-from .line_orientation import get_line_orientation, project_onto_line
+from .centroids import (
+    get_centroids,
+    triangle_areas,
+    triangle_centroids,
+)
+from .intersections import do_rects_overlap, get_intersections
+from .line_orientation import (
+    get_line_orientation,
+    project_onto_line,
+)
+from .simplify import dp_simplify
 from .simplify_poly import simplify_poly
+from .topo import parse_topo, topo_depth, topo_slope
+from .triangle_regions import get_triangle_regions
+from .utm import ELLIPSOIDS, lonlat_to_utm, utm_to_lonlat
 
 __all__ = [
     # topo

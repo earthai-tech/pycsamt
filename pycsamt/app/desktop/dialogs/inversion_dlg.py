@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,13 +18,11 @@ via ``get_result()``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
-    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -338,8 +335,13 @@ class InversionWizardDialog(QDialog):
     # ── Launch / Stop ─────────────────────────────────────────────────
 
     def _on_launch(self) -> None:
-        from pycsamt.models.occam2d import InputBuilder, OccamConfig
-        from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
+        from pycsamt.app.desktop.workers.inversion_worker import (
+            InversionWorker,
+        )
+        from pycsamt.models.occam2d import (
+            InputBuilder,
+            OccamConfig,
+        )
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:

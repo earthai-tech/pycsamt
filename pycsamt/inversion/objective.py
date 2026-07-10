@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Objective-function helpers for inversion backends."""
@@ -135,7 +134,7 @@ class ErrorModel:
         return np.broadcast_to(mask, arr.shape)
 
 
-ErrorModel.__doc__ = """
+ErrorModel.__doc__ = f"""
 Component-aware data-error settings for inversion backends.
 
 ``ErrorModel`` centralizes the floors used when packing objective functions for
@@ -174,13 +173,10 @@ Configuration helpers read overrides from ``backend_options`` and nested
 ``backend_options["error_model"]`` dictionaries. Explicit observed-data errors
 can still be passed to :meth:`errors` or :func:`component_errors`.
 
-{examples}
+{_inversion_param_docs.errors.error_model_examples}
 
-{references}
-""".format(
-    examples=_inversion_param_docs.errors.error_model_examples,
-    references=_inversion_param_docs.errors.error_model_references,
-)
+{_inversion_param_docs.errors.error_model_references}
+"""
 
 
 def relative_errors(values, floor: float = 0.05) -> np.ndarray:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Inversion Results Viewer page.
@@ -31,8 +30,8 @@ Left panel (260 px, analysis-layout grid):
 """
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from pycsamt.app.web.layout import IDs, _command_bar
 from pycsamt.app.web.utils import empty_src

@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -89,7 +88,7 @@ class TestPrepareFromExisting:
 
     def test_output_dir_created(self, agent, hill_emdata, tmp_path):
         out = tmp_path / "subdir" / "run"
-        result = agent.execute({
+        agent.execute({
             "emdata":     hill_emdata,
             "output_dir": str(out),
         })

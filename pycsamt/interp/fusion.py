@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Multi-method EM fusion — merge shallow and deep resistivity models.
@@ -44,8 +43,7 @@ Typical use (TDEM + AMT)
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -163,11 +161,11 @@ class MultiMethodEMModel(PyCSAMTObject):
         primary: ResistivityModel,
         secondary: ResistivityModel,
         *,
-        primary_max_depth: Optional[float] = None,
-        secondary_min_depth: Optional[float] = None,
+        primary_max_depth: float | None = None,
+        secondary_min_depth: float | None = None,
         blend: str = "linear",
-        blend_overlap: Optional[float] = None,
-        z_grid: Optional[np.ndarray] = None,
+        blend_overlap: float | None = None,
+        z_grid: np.ndarray | None = None,
         sigmoid_k: float = 0.02,
     ) -> None:
         if blend not in _BLEND_MODES:
@@ -182,7 +180,7 @@ class MultiMethodEMModel(PyCSAMTObject):
         self.blend_overlap = blend_overlap
         self.z_grid        = z_grid
         self.sigmoid_k     = float(sigmoid_k)
-        self.diagnostics_: Optional[FusionDiagnostics] = None
+        self.diagnostics_: FusionDiagnostics | None = None
 
     # ── public ─────────────────────────────────────────────────────────────
 
@@ -209,8 +207,8 @@ class MultiMethodEMModel(PyCSAMTObject):
         z_p_max  = float(self.primary_max_depth   or p.z_centers[-1])
         z_s_min  = float(self.secondary_min_depth or s.z_centers[0])
 
-        z_p_min  = float(p.z_centers[0])
-        z_s_max  = float(s.z_centers[-1])
+        float(p.z_centers[0])
+        float(s.z_centers[-1])
 
         has_overlap = z_s_min < z_p_max
 

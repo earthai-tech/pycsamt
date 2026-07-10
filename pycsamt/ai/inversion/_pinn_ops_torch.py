@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -13,7 +12,6 @@ systems without PyTorch.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -166,9 +164,9 @@ def _fit_station_torch(
     epochs: int,
     device: str,
     log_every: int,
-    init_log_rho: Optional[np.ndarray] = None,
-    init_log_thick: Optional[np.ndarray] = None,
-) -> Dict:
+    init_log_rho: np.ndarray | None = None,
+    init_log_thick: np.ndarray | None = None,
+) -> dict:
     """
     Optimise log-rho and log-thick for one station.
 
@@ -261,7 +259,7 @@ def _fit_station_torch(
     opt = torch.optim.Adam(
         [log_rho, log_thick], lr=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     valid = (
         torch.isfinite(log_rho_obs_t)
@@ -427,7 +425,7 @@ def _fit_2d_joint_torch(
     opt = torch.optim.Adam(
         [log_rho, log_thick], lr=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     for ep in range(1, epochs + 1):
         opt.zero_grad()
@@ -616,7 +614,7 @@ def _fit_3d_joint_torch(
     opt = torch.optim.Adam(
         [log_rho, log_thick], lr=lr
     )
-    history: List[float] = []
+    history: list[float] = []
 
     for ep in range(1, epochs + 1):
         opt.zero_grad()

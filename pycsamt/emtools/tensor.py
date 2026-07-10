@@ -1,37 +1,39 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple, List, Any
-import numpy as np
+from typing import Any
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from matplotlib.patches import Ellipse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
-from ..site.base import Sites
-from ..site import edit as _edit
+from ..api._rose_style import (
+    _UNSET,
+    RoseStyle,
+    resolve_rose_style,
+)
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.style import PYCSAMT_STYLE
 from ..site import compute as _compute
+from ..site import edit as _edit
+from ..site.base import Sites
 from ..z import utils as zutils
-
 from ._core import (
-    ensure_sites,
+    _apply_each,
     _axes_list,
+    _get_t_block,
+    _get_z_block,
     _iter_items,
     _name,
-    _get_z_block,
-    _get_t_block,
-    _apply_each,
+    ensure_sites,
     hide_polar_radius_labels,
 )
-from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
-from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
-from ..api.style import PYCSAMT_STYLE
-from ..api.station import PYCSAMT_STATION_RENDERING
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -371,7 +373,7 @@ def balance_offdiag(
 
 
 
-def _get_z(ed: Any) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+def _get_z(ed: Any) -> tuple[np.ndarray | None, np.ndarray | None]:
     Zobj = getattr(ed, "Z", None) or getattr(ed, "z", None)
     if Zobj is None:
         return None, None
@@ -393,7 +395,7 @@ def _period(fr: np.ndarray) -> np.ndarray:
 
 
 def _angles_deg(a: np.ndarray, b: np.ndarray,
-                c: np.ndarray, d: np.ndarray) -> Tuple[
+                c: np.ndarray, d: np.ndarray) -> tuple[
                     np.ndarray, np.ndarray]:
     num_b = b + c
     den_b = a - d
@@ -421,7 +423,7 @@ def _phi_from_z(z: np.ndarray) -> np.ndarray:
     return phi
 
 
-def _svd_axes(phi: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _svd_axes(phi: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     # returns s (n,2) and angle of major axis (deg), shape (n,)
     n = phi.shape[0]
     s = np.empty((n, 2), dtype=float)
@@ -484,7 +486,7 @@ def build_phase_tensor_table(
         strict=strict,
         verbose=verbose,
     )
-    dfs: List[pd.DataFrame] = []
+    dfs: list[pd.DataFrame] = []
     for i, ed in enumerate(_iter_items(S)):
         nm = _name(ed, i)
         z, fr = _get_z(ed)
@@ -514,7 +516,7 @@ def build_phase_tensor_table(
 # ─── Plotting helpers ─────────────────────────────────────────────────────────
 
 # Human-readable labels for each c_by specifier
-_C_LABEL: Dict[str, str] = {
+_C_LABEL: dict[str, str] = {
     "skew":     "Skew β (°)",
     "beta":     "Skew β (°)",
     "alpha":    "α (°)",
@@ -535,7 +537,7 @@ _C_LABEL: Dict[str, str] = {
 _SYMMETRIC_C: frozenset = frozenset(("skew", "beta", "alpha", "|skew|", "|beta|"))
 
 
-def _resolve_cvals(df: pd.DataFrame, c_by: str) -> Tuple[np.ndarray, str]:
+def _resolve_cvals(df: pd.DataFrame, c_by: str) -> tuple[np.ndarray, str]:
     """Return ``(colour_array, colorbar_label)`` for a *c_by* specifier."""
     if c_by.startswith("|") and c_by.endswith("|"):
         inner = c_by[1:-1]
@@ -576,20 +578,20 @@ def plot_phase_tensor_psection(
     sites: Any,
     *,
     # ── data selection ────────────────────────────────────────────────────
-    stations: Optional[List[str]] = None,
-    period_range: Optional[Tuple[float, float]] = None,
+    stations: list[str] | None = None,
+    period_range: tuple[float, float] | None = None,
     # ── y-axis ────────────────────────────────────────────────────────────
     axis_y: str = "logperiod",
     period_up: bool = True,
     # ── ellipse sizing ────────────────────────────────────────────────────
     scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
     normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
-    s1_ref: Optional[float] = None,
+    s1_ref: float | None = None,
     min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
     # ── colour ────────────────────────────────────────────────────────────
     c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
     cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
-    clim: Optional[Tuple[float, float]] = None,
+    clim: tuple[float, float] | None = None,
     clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
     symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
     # ── aesthetics ────────────────────────────────────────────────────────
@@ -606,13 +608,13 @@ def plot_phase_tensor_psection(
     xlabel: str = "",
     ylabel: str = "",
     tick_label_rotation: float = 45.0,
-    figsize: Tuple[float, float] = (10.0, 5.5),
+    figsize: tuple[float, float] = (10.0, 5.5),
     # ── standard emtools ──────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Phase-tensor ellipse pseudo-section (Caldwell et al. 2004 style).
@@ -760,7 +762,7 @@ def plot_phase_tensor_psection(
 
     # ── station ordering & y-axis ─────────────────────────────────────────
     st_list = list(dict.fromkeys(df["station"].tolist()))   # preserve order
-    st_map: Dict[str, int] = {s: i for i, s in enumerate(st_list)}
+    st_map: dict[str, int] = {s: i for i, s in enumerate(st_list)}
     n_st = len(st_list)
 
     if axis_y == "logperiod":
@@ -947,12 +949,12 @@ def plot_phase_tensor_skewmap(
     *,
     axis_y: str = "logperiod",
     agg: str = "median",
-    figsize: Tuple[float, float] = (9.0, 4.0),
+    figsize: tuple[float, float] = (9.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -1030,12 +1032,12 @@ def _coords_of_sites(sites) -> dict:
 def plot_theta_vs_period(
     sites: Any,
     *,
-    figsize: Tuple[float, float] = (8.0, 4.0),
+    figsize: tuple[float, float] = (8.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -1111,20 +1113,20 @@ def plot_strike_director_field(
     sites: Any,
     *,
     color_by: str = "skew",
-    length_by: Optional[str] = "ellipt",
+    length_by: str | None = "ellipt",
     streamlines: bool = True,
     skew_max: float = 6.0,
-    cmap: Optional[str] = None,
-    period_subsample: Optional[int] = None,
+    cmap: str | None = None,
+    period_subsample: int | None = None,
     bar_scale: float = 26.0,
     show_legend: bool = True,
-    title: Optional[str] = None,
-    figsize: Tuple[float, float] = (12.0, 5.2),
+    title: str | None = None,
+    figsize: tuple[float, float] = (12.0, 5.2),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Geoelectric-strike **director field** over station and period.
 
@@ -1302,13 +1304,13 @@ def plot_strike_director_field(
 def plot_ellipticity_psection(
     sites: Any,
     *,
-    figsize: Tuple[float, float] = (8.5, 4.0),
+    figsize: tuple[float, float] = (8.5, 4.0),
     agg: str = "median",
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -1364,12 +1366,12 @@ def plot_dimensionality_psection(
     *,
     skew_th: float = 3.0,
     ellipt_th: float = 0.2,
-    figsize: Tuple[float, float] = (8.5, 4.0),
+    figsize: tuple[float, float] = (8.5, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -1432,12 +1434,12 @@ def plot_phase_tensor_rose(
     sites: Any,
     *,
     # ── visual style ─────────────────────────────────────────────────────
-    style: "str | RoseStyle | None" = "pycsamt",
+    style: str | RoseStyle | None = "pycsamt",
     # ── data selection ───────────────────────────────────────────────────
-    band: Optional[Tuple[float, float]] = None,
-    freq_bands: Optional[List[Tuple[float, float]]] = None,
-    band_labels: Optional[List[str]] = None,
-    band_colors: Optional[List] = None,
+    band: tuple[float, float] | None = None,
+    freq_bands: list[tuple[float, float]] | None = None,
+    band_labels: list[str] | None = None,
+    band_colors: list | None = None,
     # ── histogram ────────────────────────────────────────────────────────
     bins: int = 36,
     # ── visual overrides (sentinel → taken from *style*) ─────────────────
@@ -1481,7 +1483,7 @@ def plot_phase_tensor_rose(
     annotation_ec=_UNSET,
     show_n=_UNSET,
     # ── layout ───────────────────────────────────────────────────────────
-    figsize: Tuple[float, float] = (5.5, 5.5),
+    figsize: tuple[float, float] = (5.5, 5.5),
     title: str = "",
     title_fontsize: float = 10.0,
     # ── core ─────────────────────────────────────────────────────────────
@@ -1489,7 +1491,7 @@ def plot_phase_tensor_rose(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Publication-quality phase-tensor θ rose diagram.
 
@@ -1725,12 +1727,12 @@ def plot_phase_tensor_rose(
 
     if use_bands:
         n_fb = len(freq_bands)  # type: ignore[arg-type]
-        _bc: List = (list(band_colors) if band_colors is not None
+        _bc: list = (list(band_colors) if band_colors is not None
                      else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb))))
-        _bl: List[str] = (list(band_labels) if band_labels is not None
+        _bl: list[str] = (list(band_labels) if band_labels is not None
                           else [f"{lo_:.4g}–{hi_:.4g} s"
                                 for lo_, hi_ in freq_bands])  # type: ignore
-        hists: List[np.ndarray] = []
+        hists: list[np.ndarray] = []
         for fb in freq_bands:  # type: ignore[union-attr]
             lo_, hi_ = float(fb[0]), float(fb[1])
             sel_fb = (df["period"] >= lo_) & (df["period"] <= hi_)
@@ -1905,7 +1907,7 @@ def plot_phase_tensor_map(
     min_aspect     = _UNSET,
     c_by           = _UNSET,
     cmap           = _UNSET,
-    clim: Optional[Tuple[float, float]]            = None,
+    clim: tuple[float, float] | None            = None,
     clim_pct       = _UNSET,
     symmetric_clim = _UNSET,
     alpha          = _UNSET,
@@ -1919,11 +1921,11 @@ def plot_phase_tensor_map(
     show_tipper: bool = True,
     tipper_convention: str = "parkinson",
     tipper_component: str = "real",
-    tipper_scale: Optional[float] = None,
+    tipper_scale: float | None = None,
     tipper_color: str = "k",
     tipper_lw: float = 1.4,
     # ── optional background grid ──────────────────────────────────────
-    bg_grid: Optional[Dict[str, Any]] = None,
+    bg_grid: dict[str, Any] | None = None,
     # ── map decoration ────────────────────────────────────────────────
     station_labels: bool = True,
     station_marker: str = "v",
@@ -1931,17 +1933,17 @@ def plot_phase_tensor_map(
     station_color: str = "k",
     label_fontsize: float = 7.0,
     title: str = "",
-    colorbar_label: Optional[str] = None,
+    colorbar_label: str | None = None,
     # ── coordinate override (station → (lat, lon)) ────────────────────
-    coords: Optional[Dict[str, Tuple[float, float]]] = None,
+    coords: dict[str, tuple[float, float]] | None = None,
     # ── layout ────────────────────────────────────────────────────────
-    figsize: Tuple[float, float] = (9.0, 7.0),
+    figsize: tuple[float, float] = (9.0, 7.0),
     # ── core ──────────────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Publication-quality phase-tensor map at a single period.
 
@@ -2080,8 +2082,9 @@ def plot_phase_tensor_map(
     ...                  cmap="RdYlGn", alpha=0.45, label="Gravity (gu)"),
     ... )
     """
-    from ..api.plot import add_colorbar
     import matplotlib.colors as _mc
+
+    from ..api.plot import add_colorbar
 
     # ── 1. resolve style ──────────────────────────────────────────────────
     _es = PYCSAMT_STYLE.pt_ellipse
@@ -2155,7 +2158,7 @@ def plot_phase_tensor_map(
         return ax
 
     # ── 4. select nearest period per station ─────────────────────────────
-    rows: List[Any] = []
+    rows: list[Any] = []
     for st, sdf in df.groupby("station"):
         if st not in coords:
             continue
@@ -2174,7 +2177,7 @@ def plot_phase_tensor_map(
     s1s  = np.array([float(r["s1"]) for r in rows], float)
     s2s  = np.array([float(r["s2"]) for r in rows], float)
     ths  = np.array([float(r["theta"]) for r in rows], float)
-    betas = np.array([float(r.get("skew", r.get("beta", np.nan))) for r in rows], float)
+    np.array([float(r.get("skew", r.get("beta", np.nan))) for r in rows], float)
 
     # ── 5. auto scale from grid spacing ──────────────────────────────────
     if scale is _UNSET:
@@ -2271,7 +2274,7 @@ def plot_phase_tensor_map(
 
     # ── 10. tipper arrows ─────────────────────────────────────────────────
     if show_tipper:
-        _tip_data: Dict[str, Tuple[float, float]] = {}
+        _tip_data: dict[str, tuple[float, float]] = {}
         for i, ed in enumerate(_iter_items(S)):
             st = _name(ed, i)
             if st not in coords:
@@ -2319,7 +2322,7 @@ def plot_phase_tensor_map(
 
             # imaginary component if "both"
             if tipper_component == "both":
-                _tip_im: Dict[str, Tuple[float, float]] = {}
+                _tip_im: dict[str, tuple[float, float]] = {}
                 for i, ed in enumerate(_iter_items(S)):
                     st = _name(ed, i)
                     if st not in coords:
@@ -2419,16 +2422,16 @@ def plot_phase_tensor_map(
 def plot_phase_tensor_summary(
     sites: Any,
     *,
-    stations: Optional[List[str]] = None,
-    period_range: Optional[Tuple[float, float]] = None,
+    stations: list[str] | None = None,
+    period_range: tuple[float, float] | None = None,
     scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
     c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
     cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
-    clim: Optional[Tuple[float, float]] = None,
+    clim: tuple[float, float] | None = None,
     skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     ellipt_threshold: float = 0.2,
     axes=None,
-    figsize: Tuple[float, float] = (12.0, 9.0),
+    figsize: tuple[float, float] = (12.0, 9.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -2572,7 +2575,7 @@ def _draw_dim_grid(
     df["_dim"] = lab
 
     st_list = list(dict.fromkeys(df["station"].tolist()))
-    st_map  = {s: i for i, s in enumerate(st_list)}
+    {s: i for i, s in enumerate(st_list)}
 
     piv = df.pivot_table(
         index="_logp", columns="station", values="_dim", aggfunc="median",
@@ -2658,8 +2661,8 @@ def _draw_skew_ellipt_density(
 def phase_tensor_legend(
     *,
     size: float = 1.0,
-    figsize: Tuple[float, float] = (2.5, 2.5),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (2.5, 2.5),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
@@ -2731,12 +2734,12 @@ def plot_dimensionality_grid(
     *,
     skew_th: float = 3.0,
     ellipt_th: float = 0.2,
-    figsize: Tuple[float, float] = (8.5, 4.0),
+    figsize: tuple[float, float] = (8.5, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -2802,12 +2805,12 @@ def plot_theta_stability_stripe(
     sites: Any,
     *,
     win: int = 5,
-    figsize: Tuple[float, float] = (9.0, 4.0),
+    figsize: tuple[float, float] = (9.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -2894,14 +2897,14 @@ def plot_theta_stability_stripe(
 def plot_skew_ellipt_density(
     sites: Any,
     *,
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     gridsize: int = 40,
-    figsize: Tuple[float, float] = (6.5, 5.5),
+    figsize: tuple[float, float] = (6.5, 5.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
         sites,
@@ -2946,9 +2949,9 @@ def plot_theta_rose_grid(
     *,
     n_bands: int = 6,
     axes=None,
-    figsize: Tuple[float, float] = (13.0, 3.8),
+    figsize: tuple[float, float] = (13.0, 3.8),
     bins: int = 24,
-    style: "str | RoseStyle | None" = "pycsamt",
+    style: str | RoseStyle | None = "pycsamt",
     panel_title_fontsize: float = 7.5,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -3157,8 +3160,8 @@ def plot_theta_rose_grid(
 def _pt_size_reference(
     s1_vals: np.ndarray,
     normalise_by: str,
-    s1_ref: Optional[float],
-) -> Optional[float]:
+    s1_ref: float | None,
+) -> float | None:
     """Resolve the ellipse-size reference for ``"cell"``/``"unity"``/``"abs"``.
 
     Mirrors the sizing rule used by :func:`plot_phase_tensor_psection` so
@@ -3180,18 +3183,18 @@ def plot_phase_tensor_strip(
     sites: Any,
     *,
     # ── data selection ────────────────────────────────────────────────────
-    station: Optional[str] = None,
-    period_range: Optional[Tuple[float, float]] = None,
+    station: str | None = None,
+    period_range: tuple[float, float] | None = None,
     # ── ellipse sizing ────────────────────────────────────────────────────
     scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
     normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
-    s1_ref: Optional[float] = None,
+    s1_ref: float | None = None,
     min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
     cells_per_decade: float = 7.0,
     # ── colour ────────────────────────────────────────────────────────────
     c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
     cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
-    clim: Optional[Tuple[float, float]] = None,
+    clim: tuple[float, float] | None = None,
     clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
     symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
     # ── aesthetics ────────────────────────────────────────────────────────
@@ -3202,7 +3205,7 @@ def plot_phase_tensor_strip(
     skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
     # ── decorative phase scale (y-axis) ───────────────────────────────────
-    phase_ticks: Optional[Tuple[float, float, float]] = (0.0, 45.0, 90.0),
+    phase_ticks: tuple[float, float, float] | None = (0.0, 45.0, 90.0),
     ylabel: str = "",
     # ── station corner label ──────────────────────────────────────────────
     station_label: bool = True,
@@ -3210,15 +3213,15 @@ def plot_phase_tensor_strip(
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
-    figsize: Tuple[float, float] = (6.0, 1.4),
+    figsize: tuple[float, float] = (6.0, 1.4),
     show_colorbar: bool = True,
-    colorbar_label: Optional[str] = None,
+    colorbar_label: str | None = None,
     # ── standard emtools ──────────────────────────────────────────────────
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Single-station phase-tensor ellipse strip vs period.
 
@@ -3469,17 +3472,17 @@ def plot_phase_tensor_strip(
 
 def plot_phase_tensor_strip_grid(
     sites: Any,
-    profiles: Dict[str, List[str]],
+    profiles: dict[str, list[str]],
     *,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     scale          = _UNSET,
     normalise_by   = _UNSET,
-    s1_ref: Optional[float] = None,
+    s1_ref: float | None = None,
     min_aspect     = _UNSET,
     cells_per_decade: float = 7.0,
     c_by           = _UNSET,
     cmap           = _UNSET,
-    clim: Optional[Tuple[float, float]] = None,
+    clim: tuple[float, float] | None = None,
     clim_pct       = _UNSET,
     symmetric_clim = _UNSET,
     edgecolor      = _UNSET,
@@ -3487,17 +3490,17 @@ def plot_phase_tensor_strip_grid(
     alpha          = _UNSET,
     skew_threshold = _UNSET,
     mark_3d        = _UNSET,
-    phase_ticks: Optional[Tuple[float, float, float]] = (0.0, 45.0, 90.0),
-    col_titles: Optional[Dict[str, str]] = None,
+    phase_ticks: tuple[float, float, float] | None = (0.0, 45.0, 90.0),
+    col_titles: dict[str, str] | None = None,
     xlabel: str = "Period (s)",
     suptitle: str = "",
-    colorbar_label: Optional[str] = None,
-    panel_size: Tuple[float, float] = (4.4, 1.05),
+    colorbar_label: str | None = None,
+    panel_size: tuple[float, float] = (4.4, 1.05),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    axes: Optional[Any] = None,
+    axes: Any | None = None,
 ) -> plt.Figure:
     """Phase-tensor ellipse strips for several stations, grouped by profile.
 

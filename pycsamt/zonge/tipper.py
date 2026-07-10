@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -11,13 +10,9 @@ vertical magnetic field (Hz) to the horizontal components
 """
 from __future__ import annotations
 
-from typing import ( 
-    Any, 
-    Mapping, 
-    Optional, 
-    Sequence, 
-    Dict, 
-    List
+from collections.abc import Mapping, Sequence
+from typing import (
+    Any,
 )
 
 import numpy as np
@@ -25,9 +20,8 @@ import pandas as pd
 
 from ..exceptions import AvgDataError
 from .base import AVGComponentBase
-from .utils import to_xarray as _to_xr 
-from .utils import _to_complex 
-from .utils import _standardise_columns
+from .utils import _standardise_columns, _to_complex
+from .utils import to_xarray as _to_xr
 
 __all__ = ["Tipper"]
 
@@ -59,10 +53,10 @@ class Tipper(AVGComponentBase):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: bool = False
     ) -> None:
         """Initializes the Tipper component."""
@@ -74,7 +68,7 @@ class Tipper(AVGComponentBase):
     def read(
         self,
         source: pd.DataFrame,
-        meta: Optional[Mapping[str, Any]] = None,
+        meta: Mapping[str, Any] | None = None,
         **kws: Any,
     ) -> None:
         """
@@ -118,23 +112,23 @@ class Tipper(AVGComponentBase):
         self._frame = df.loc[
             :, [c for c in keep_cols if c in df.columns]
         ]
-        
-        return self 
-    
-    def write(self) -> List[str]:
+
+        return self
+
+    def write(self) -> list[str]:
         """
         Serialise to a compact CSV block with a meta preamble.
         """
         if self._frame.empty:
             return []
-            
+
         return self._write_csv_block(
             cols=["station", "freq", "tx", "ty"],
             title="$Tipper Block",
             include_meta=True,
             stamp=True,
         )
-    
+
     @property
     def tx(self) -> pd.Series:
         """The complex Tipper component Tx."""
@@ -149,7 +143,7 @@ class Tipper(AVGComponentBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq"),
-        attrs: Optional[Dict[str, Any]] = None,
+        attrs: dict[str, Any] | None = None,
     ):
         """
         Convert the Tipper data into an xarray.Dataset.

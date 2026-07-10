@@ -1,16 +1,20 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.models.modem.iotools.impedance."""
 
-import pytest
+
 import numpy as np
-from pathlib import Path
+import pytest
 
 from pycsamt.models.modem.iotools.impedance import (
-    ZBlock, ImpedanceFile,
-    read_z3d_old, write_z3d_old,
-    read_z2d_old, write_z2d_old,
-    write_z3d_list, write_z2d_list,
-    convert_z3d, convert_z2d,
+    ImpedanceFile,
+    ZBlock,
+    convert_z2d,
+    convert_z3d,
+    read_z2d_old,
+    read_z3d_old,
+    write_z2d_list,
+    write_z2d_old,
+    write_z3d_list,
+    write_z3d_old,
 )
 
 # ---------------------------------------------------------------------------

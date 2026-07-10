@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Tests for OccamModel.read()."""
 
 import math
-import pytest
 from pathlib import Path
+
+import pytest
 
 DATA_DIR   = Path(__file__).parents[4] / "data" / "occam2D"
 MODEL_FILE = DATA_DIR / "Occam2DModel"

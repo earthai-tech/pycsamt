@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Inspector controls → STORE_CONTROLS, and frequency-slider population."""
 
 from __future__ import annotations
 
-from dash import ctx, Input, Output, State
+from dash import Input, Output, State, ctx
 
 from .._ids import IDs
-
 
 _DEPTH_PRESETS = {
     IDs.BTN_DEPTH_FULL: (None, None),

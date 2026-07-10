@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,16 +16,14 @@ Phase 4: Contains:
 from __future__ import annotations
 
 import datetime
-from typing import Optional
 
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
-    QSizePolicy,
     QTabWidget,
     QTextBrowser,
     QVBoxLayout,
@@ -53,7 +50,7 @@ class AgentPanel(QWidget):
     def __init__(self, app_controller=None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._ctrl   = app_controller
-        self._worker: Optional[object] = None   # AgentWorker (set on run)
+        self._worker: object | None = None   # AgentWorker (set on run)
         self._result_figure = None              # last matplotlib Figure
         self._build_ui()
 
@@ -137,14 +134,16 @@ class AgentPanel(QWidget):
     # ── Run / Stop ────────────────────────────────────────────────────
 
     def _on_run(self) -> None:
-        from pycsamt.app.desktop.dialogs.run_agent_dlg import RunAgentDialog
+        from pycsamt.app.desktop.dialogs.run_agent_dlg import (
+            RunAgentDialog,
+        )
 
         if self._ctrl is None or self._ctrl.sites is None:
             self._status_lbl.setText("Load survey data before running an agent.")
             return
 
         # Get API key from session if available
-        api_key: Optional[str] = None
+        api_key: str | None = None
         if self._ctrl is not None and hasattr(self._ctrl.session, "api_key"):
             api_key = self._ctrl.session.api_key or None
 
@@ -162,9 +161,11 @@ class AgentPanel(QWidget):
         self,
         agent_name: str,
         params: dict,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> None:
-        from pycsamt.app.desktop.workers.agent_worker import AgentWorker
+        from pycsamt.app.desktop.workers.agent_worker import (
+            AgentWorker,
+        )
 
         self.agent_started.emit(agent_name)   # let the dock show itself first
 
@@ -273,7 +274,9 @@ class AgentPanel(QWidget):
     # ── Export ────────────────────────────────────────────────────────
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         fig = self._result_figure or self._result_canvas.figure
         if fig is None:
             return

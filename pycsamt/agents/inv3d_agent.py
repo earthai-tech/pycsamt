@@ -44,7 +44,7 @@ from typing import Any
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
-from .ai_inversion import _z_to_features, _default_thicknesses
+from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
 You are an expert in 3-D MT inversion using graph-convolutional deep learning.
@@ -165,9 +165,9 @@ class Inv3DAgent(BaseAgent):
         # ── backend check ─────────────────────────────────────────────────────
         try:
             from ..ai.inversion.inv3d import GCNInverter3D
-            from ..ai.nets.gcn         import build_adjacency
-            from ..forward.batch       import generate_dataset
-            from ..backends            import get_backend_instance
+            from ..ai.nets.gcn import build_adjacency
+            from ..backends import get_backend_instance
+            from ..forward.batch import generate_dataset
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -177,7 +177,12 @@ class Inv3DAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         # ── load sites ────────────────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
@@ -434,7 +439,7 @@ class Inv3DAgent(BaseAgent):
 
         elapsed = time.time() - t0
         rms_disp = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        unc_disp = f", MC σ computed" if pred_uncertainty is not None else ""
+        unc_disp = ", MC σ computed" if pred_uncertainty is not None else ""
         return AgentResult(
             status="success",
             summary=(
@@ -473,7 +478,6 @@ def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:
         lat, lon = 0.0, float(idx) * 0.001  # fallback: spaced 1 m apart
 
     # approximate UTM-like local projection (metres)
-    lat_ref = 0.0   # updated per-survey in _build_obs_features
     x_m = lon * 111_320.0 * np.cos(np.radians(lat))
     y_m = lat * 110_574.0
     return np.array([x_m, y_m], dtype=np.float64)
@@ -509,8 +513,8 @@ def _forward_rms_3d(
 ) -> float | None:
     """Compute forward RMS for one predicted station."""
     try:
-        from ..forward import MT1DForward, LayeredModel
         from ..emtools._core import _get_z_block
+        from ..forward import LayeredModel, MT1DForward
 
         _, z, fr = _get_z_block(ed)
         if z is None or fr is None:
@@ -553,12 +557,12 @@ def _plot_depth_slices(
 ) -> Any:
     """Horizontal depth-slice maps at 3 representative depths."""
     import matplotlib.pyplot as plt
-    import matplotlib.colors as mcolors
     from matplotlib.tri import Triangulation
+
     from ..api.section import PYCSAMT_SECTION
 
     n_sta    = len(station_names)
-    section  = PYCSAMT_SECTION.style_for("inversion")
+    PYCSAMT_SECTION.style_for("inversion")
     n_slices = min(3, n_layers)
     layer_idxs = np.linspace(0, n_layers - 1, n_slices, dtype=int)
 
@@ -624,6 +628,7 @@ def _plot_resistivity_section(
 ) -> Any:
     """Pseudo-section along the survey profile (distance vs depth)."""
     import matplotlib.pyplot as plt
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import PYCSAMT_STATION_RENDERING
 
@@ -687,6 +692,7 @@ def _plot_uncertainty_depth_map(
     """Uncertainty map at the shallowest and deepest depth slices."""
     import matplotlib.pyplot as plt
     from matplotlib.tri import Triangulation
+
     from ..api.section import PYCSAMT_SECTION
 
     n_sta, n_layers = pred_unc.shape

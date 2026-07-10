@@ -16,13 +16,15 @@ placed above the model.
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 import numpy as np
 
 from .iotools.poly import PolyFile, write_poly
-from .iotools.resistivity import ResistivityFile, write_resistivity
+from .iotools.resistivity import (
+    ResistivityFile,
+    write_resistivity,
+)
 from .iotools.settings import SettingsFile, write_settings
 
 __all__ = ["grid_to_mare2dem"]

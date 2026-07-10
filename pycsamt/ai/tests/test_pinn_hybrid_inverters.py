@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""Tests for PINNInverter[1-3]D and HybridInverter[1-3]D.
@@ -16,7 +15,6 @@ is installed actually execute.
 import unittest
 
 import numpy as np
-
 
 # ── global constants ─────────────────────────────────
 
@@ -392,15 +390,15 @@ class TestPINNHybridInterface(unittest.TestCase):
             )
 
     def test_all_inherit_pycsamt_object(self):
-        from pycsamt.api.property import PyCSAMTObject
         from pycsamt.ai.inversion import (
-            PINNInverter1D,
-            PINNInverter2D,
-            PINNInverter3D,
             HybridInverter1D,
             HybridInverter2D,
             HybridInverter3D,
+            PINNInverter1D,
+            PINNInverter2D,
+            PINNInverter3D,
         )
+        from pycsamt.api.property import PyCSAMTObject
         for cls in (
             PINNInverter1D,
             PINNInverter2D,

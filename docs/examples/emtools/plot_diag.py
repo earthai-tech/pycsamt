@@ -89,7 +89,6 @@ from pycsamt.emtools import (  # noqa: E402
     plot_polar_errors,
     plot_width_drift,
     rho_coverage,
-    rho_error_stats,
 )
 
 survey = load_survey("amt_l18plt")

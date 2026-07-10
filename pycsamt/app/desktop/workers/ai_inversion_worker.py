@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -67,8 +66,9 @@ class AIInversionWorker(QThread):
 
     def _run_1d(self) -> dict:
         import numpy as np
-        from pycsamt.forward.batch import generate_dataset
+
         from pycsamt.ai.inversion.inv1d import EMInverter1D
+        from pycsamt.forward.batch import generate_dataset
 
         p          = self._params
         arch       = p.get("arch",         "resnet")
@@ -136,8 +136,8 @@ class AIInversionWorker(QThread):
     # ── 2-D  (EMInverter2D) ───────────────────────────────────────────────────
 
     def _run_2d(self) -> dict:
-        from pycsamt.forward.batch import generate_dataset
         from pycsamt.ai.inversion.inv2d import EMInverter2D
+        from pycsamt.forward.batch import generate_dataset
 
         p           = self._params
         n_components = int(p.get("n_components", 4))
@@ -210,8 +210,8 @@ class AIInversionWorker(QThread):
     # ── 3-D  (GCNInverter3D) ──────────────────────────────────────────────────
 
     def _run_3d(self) -> dict:
-        from pycsamt.forward.batch import generate_dataset
         from pycsamt.ai.inversion.inv3d import GCNInverter3D
+        from pycsamt.forward.batch import generate_dataset
 
         p          = self._params
         n_features = int(p.get("n_features",  40))

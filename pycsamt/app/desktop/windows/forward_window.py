@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -43,7 +42,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -57,19 +55,23 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QSplitter,
     QStackedWidget,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from pycsamt.app.desktop.controllers.forward_controller import (
-    ForwardController,
     GEOLOGY_PRESET_NAMES,
+    ForwardController,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -726,7 +728,9 @@ class ForwardModelWindow(PanelWindow):
     def _on_compute(self) -> None:
         if self._worker and self._worker.isRunning():
             return
-        from pycsamt.app.desktop.workers.forward_worker import ForwardWorker
+        from pycsamt.app.desktop.workers.forward_worker import (
+            ForwardWorker,
+        )
         params = self._build_params_dict()
         self._btn_compute.setEnabled(False)
         self._compute_label.setText("Computing…")
@@ -793,10 +797,10 @@ class ForwardModelWindow(PanelWindow):
                           label="model")
         except Exception:
             depths = np.concatenate([[0], np.cumsum(h), [np.sum(h) * 1.5]])
-            for i, r in enumerate(rho):
+            for i, _r in enumerate(rho):
                 ax.axhline(y=depths[i], color="gray", lw=0.5, ls="--")
-            xs = np.repeat(rho, 2)[1:-1]
-            ys = np.repeat(depths[:-1], 2)[1:]
+            np.repeat(rho, 2)[1:-1]
+            np.repeat(depths[:-1], 2)[1:]
             ax.plot(rho, depths[:-1], drawstyle="steps-post")
             ax.set_xscale("log")
             ax.invert_yaxis()
@@ -818,7 +822,7 @@ class ForwardModelWindow(PanelWindow):
         return ax1, ax2
 
     def _plot_1d_sensitivity(self, resp) -> None:
-        from pycsamt.forward import MT1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, MT1DForward
         rho, h = self._read_1d_model()
         n_layers  = len(rho)
         n_freq    = len(resp.freqs)
@@ -851,8 +855,8 @@ class ForwardModelWindow(PanelWindow):
 
     def _plot_2d(self, resp) -> None:
         from pycsamt.forward.plot import (
-            plot_pseudosection_2d,
             plot_model_2d,
+            plot_pseudosection_2d,
             plot_response_profiles,
         )
         # Tab 0: pseudosection
@@ -887,8 +891,10 @@ class ForwardModelWindow(PanelWindow):
 
     def _plot_3d(self, resp) -> None:
         import io
+
         import matplotlib.pyplot as plt
         from matplotlib.image import imread as _imread
+
         from pycsamt.forward.plot import (
             plot_model_3d,
             plot_response_map_3d,
@@ -1068,7 +1074,9 @@ class ForwardModelWindow(PanelWindow):
     # =========================================================================
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         current = self._tab_widget.currentWidget()
         if not isinstance(current, MplCanvas):
             return

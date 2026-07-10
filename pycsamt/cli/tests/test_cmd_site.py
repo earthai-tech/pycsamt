@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,13 +19,14 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
-from pycsamt.cli.tests.conftest import make_fake_sites, _FakeSites
+from pycsamt.cli.tests.conftest import (
+    make_fake_sites,
+)
 
 # ---------------------------------------------------------------------------
 # Convenience helpers
@@ -91,7 +91,6 @@ class TestSiteInfo:
 
         # Also stub SitesReport to avoid real numpy computation
         from pycsamt.site.report import SitesReport
-        original_report = SitesReport.report
 
         def _noop_report(self, **kw): pass  # noqa: ANN001
         monkeypatch.setattr(SitesReport, "report", _noop_report)
@@ -325,7 +324,7 @@ class TestSiteEdit:
         self, runner: CliRunner, site_edi_dir_writable: Path, tmp_path: Path
     ) -> None:
         out = tmp_path / "rotated"
-        n_in = len(list(site_edi_dir_writable.glob("*.edi")))
+        len(list(site_edi_dir_writable.glob("*.edi")))
         result = runner.invoke(
             main,
             ["site", "edit", str(site_edi_dir_writable),
@@ -383,7 +382,7 @@ class TestSiteExport:
         self, runner: CliRunner, site_edi_dir: Path, tmp_path: Path
     ) -> None:
         out = tmp_path / "exported"
-        n_in = len(list(site_edi_dir.glob("*.edi")))
+        len(list(site_edi_dir.glob("*.edi")))
         result = runner.invoke(
             main,
             ["site", "export", str(site_edi_dir),
@@ -658,12 +657,13 @@ class TestSiteWorkflow:
         site_edi_dir: Path,
         tmp_path: Path,
     ) -> None:
-        from unittest.mock import patch  # noqa: PLC0415
-        from pycsamt.cli.tests.conftest import _FakeSites, _FakeSite  # noqa: PLC0415
 
         # Build a real Sites from the EDI dir and cache it
         from pycsamt.seg.edi import EDIFile  # noqa: PLC0415
-        from pycsamt.site.base import Site, Sites  # noqa: PLC0415
+        from pycsamt.site.base import (  # noqa: PLC0415
+            Site,
+            Sites,
+        )
 
         edis = sorted(site_edi_dir.glob("*.edi"))
         sites = Sites([Site(EDIFile(str(p))).edi for p in edis])

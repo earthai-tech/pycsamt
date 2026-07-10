@@ -9,11 +9,15 @@ work without it installed.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, IoTProtocol, TelemetryError
+from .base import (
+    BaseTelemetryClient,
+    IoTProtocol,
+    TelemetryError,
+)
 
 __all__ = ["MQTTTelemetryClient"]
 
@@ -36,16 +40,16 @@ class MQTTTelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         dry_run: bool = False,
-        host: Optional[str] = None,
+        host: str | None = None,
         port: int = 1883,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str | None = None,
+        password: str | None = None,
         tls: bool = False,
         keepalive: int = 60,
-        client_id: Optional[str] = None,
+        client_id: str | None = None,
         **options: Any,
     ) -> None:
         super().__init__(
@@ -60,7 +64,7 @@ class MQTTTelemetryClient(BaseTelemetryClient):
             client_id=client_id,
             **options,
         )
-        self._inbox: list[Dict[str, Any]] = []
+        self._inbox: list[dict[str, Any]] = []
 
     def _resolve_host_port(self) -> tuple[str, int]:
         host = self.options.get("host")
@@ -129,8 +133,8 @@ class MQTTTelemetryClient(BaseTelemetryClient):
         self._handle.subscribe(topic)
 
     def _transport_receive(
-        self, *, timeout: Optional[float] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         if self._inbox:
             return self._inbox.pop(0)
         return None

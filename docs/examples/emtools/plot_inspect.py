@@ -20,10 +20,7 @@ grid) matter most.
 # starting point: one row per station with frequency count, tipper
 # presence, period range, and coordinates.
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

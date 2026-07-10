@@ -25,9 +25,8 @@ This first example builds the shared synthetic section and reads it as
 # resistive dry overburden, a conductive sand aquifer, a very conductive
 # clay aquitard, and a resistive basement.
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from _interp_data import demo_model
 
 # Use the resistivity section (2nd figure) as the card thumbnail.
@@ -36,8 +35,7 @@ from _interp_data import demo_model
 rm = demo_model()
 print(rm)
 print("grid (n_z, n_x):", rm.rho_2d.shape,
-      " depth 0-{:.0f} m,  distance 0-{:.0f} m".format(
-          rm.z_centers.max(), rm.x_centers.max()))
+      f" depth 0-{rm.z_centers.max():.0f} m,  distance 0-{rm.x_centers.max():.0f} m")
 
 # %%
 # The section itself

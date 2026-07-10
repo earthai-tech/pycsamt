@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Monte Carlo uncertainty propagation for EM hydro-geophysical models.
@@ -51,13 +50,16 @@ import csv
 import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Union
 
 import numpy as np
 
 from ..api.property import PyCSAMTObject
 from ._base import ResistivityModel
-from .hydromodel import EMHydroModel, EMHydroResult, PetrophysicalConfig
+from .hydromodel import (
+    EMHydroModel,
+    PetrophysicalConfig,
+)
 from .petrophysics import ArchieModel, WaxmanSmitsModel
 
 __all__ = [
@@ -106,10 +108,10 @@ class UncertaintyBounds(PyCSAMTObject):
     the dominant source of uncertainty in most shallow EM surveys.
     """
 
-    rho_w_range:     Optional[Tuple[float, float]] = None
-    m_range:         Optional[Tuple[float, float]] = None
-    n_range:         Optional[Tuple[float, float]] = None
-    phi_prior_range: Optional[Tuple[float, float]] = None
+    rho_w_range:     tuple[float, float] | None = None
+    m_range:         tuple[float, float] | None = None
+    n_range:         tuple[float, float] | None = None
+    phi_prior_range: tuple[float, float] | None = None
     dist: str = "uniform"
 
     def __post_init__(self) -> None:
@@ -129,7 +131,7 @@ class UncertaintyBounds(PyCSAMTObject):
         ])
 
     @property
-    def free_names(self) -> List[str]:
+    def free_names(self) -> list[str]:
         """Names of the free parameters."""
         names = []
         if self.rho_w_range is not None:     names.append("rho_w")
@@ -143,7 +145,7 @@ class UncertaintyBounds(PyCSAMTObject):
         cfg: PetrophysicalConfig,
         n: int,
         rng: np.random.Generator,
-    ) -> List[PetrophysicalConfig]:
+    ) -> list[PetrophysicalConfig]:
         """Draw *n* parameter samples and return a list of configs.
 
         Parameters
@@ -271,7 +273,7 @@ class UncertaintyResult(PyCSAMTObject):
         self,
         depth_m: float,
         *,
-        wt_ensemble: Optional[np.ndarray] = None,
+        wt_ensemble: np.ndarray | None = None,
     ) -> np.ndarray:
         """P(water-table depth < *depth_m*) per station column.
 
@@ -298,7 +300,7 @@ class UncertaintyResult(PyCSAMTObject):
         p[mask_fixed] = (self.mean_wt[mask_fixed] < depth_m).astype(float)
         return p
 
-    def station_report(self) -> List[dict]:
+    def station_report(self) -> list[dict]:
         """Per-station uncertainty summary."""
         model = self.resistivity_model
         rows = []
@@ -493,7 +495,7 @@ class MonteCarloHydro(PyCSAMTObject):
             p10_T=p10_T, p50_T=p50_T, p90_T=p90_T,
         )
 
-    def run_ensemble(self) -> Tuple[UncertaintyResult, np.ndarray, np.ndarray]:
+    def run_ensemble(self) -> tuple[UncertaintyResult, np.ndarray, np.ndarray]:
         """Like :meth:`run` but also returns the raw WT and T ensembles.
 
         Returns
@@ -557,12 +559,12 @@ class MonteCarloHydro(PyCSAMTObject):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _draw(
-    rng_spec: Optional[Tuple[float, float]],
+    rng_spec: tuple[float, float] | None,
     central: float,
     n: int,
     rng: np.random.Generator,
     dist: str,
-    physical_clip: Tuple[float, float],
+    physical_clip: tuple[float, float],
 ) -> np.ndarray:
     """Draw n samples from prior; return central value repeated if not free."""
     if rng_spec is None:
@@ -576,10 +578,10 @@ def _draw(
 
 
 def _perturb_petro(
-    petro: Union[ArchieModel, WaxmanSmitsModel],
+    petro: ArchieModel | WaxmanSmitsModel,
     m: float,
     n: float,
-) -> Union[ArchieModel, WaxmanSmitsModel]:
+) -> ArchieModel | WaxmanSmitsModel:
     """Return a new petrophysical model with updated m and n."""
     return dataclasses.replace(petro, m=float(m), n=float(n))
 

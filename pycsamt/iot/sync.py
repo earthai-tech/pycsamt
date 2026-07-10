@@ -8,9 +8,12 @@ detection across a deployment.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+)
 
 import numpy as np
 import pandas as pd
@@ -50,8 +53,8 @@ class SyncConfig(PyCSAMTObject):
 
     tolerance_ms: float = 1.0
     reference: str = "gps"
-    max_drift_ppm: Optional[float] = None
-    max_jitter_ms: Optional[float] = None
+    max_drift_ppm: float | None = None
+    max_jitter_ms: float | None = None
     min_reference_points: int = 2
 
     def __post_init__(self) -> None:
@@ -82,7 +85,7 @@ class SyncStatus(PyCSAMTObject):
     reference: str = "gps"
     drift_ppm: float = float("nan")
     jitter_ms: float = float("nan")
-    gps_lock: Optional[bool] = None
+    gps_lock: bool | None = None
     n_reference_points: int = 0
     quality: SyncQuality | str = SyncQuality.UNKNOWN
 
@@ -104,7 +107,7 @@ class SyncStatus(PyCSAMTObject):
             raise ValueError("n_reference_points must be >= 0.")
         self.quality = _c.normalise_enum(self.quality, SyncQuality, "quality")
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a flat, serialisable status dictionary."""
         return dict(
             device_id=self.device_id,
@@ -120,7 +123,7 @@ class SyncStatus(PyCSAMTObject):
         )
 
 
-def _paired(local: Any, reference: Any) -> Tuple[np.ndarray, np.ndarray]:
+def _paired(local: Any, reference: Any) -> tuple[np.ndarray, np.ndarray]:
     loc = np.asarray(local, dtype=float).ravel()
     ref = np.asarray(reference, dtype=float).ravel()
     n = min(loc.size, ref.size)
@@ -181,7 +184,7 @@ def assess_sync_quality(
     offset_ms: float,
     drift_ppm: float = float("nan"),
     jitter_ms: float = float("nan"),
-    gps_lock: Optional[bool] = None,
+    gps_lock: bool | None = None,
     tolerance_ms: float = 1.0,
 ) -> SyncQuality:
     """Grade synchronisation from offset, drift, jitter, and GPS lock."""
@@ -209,7 +212,7 @@ def assess_sync_quality(
 class ClockSynchronizer:
     """Evaluate device clock status against a reference."""
 
-    def __init__(self, config: Optional[SyncConfig] = None) -> None:
+    def __init__(self, config: SyncConfig | None = None) -> None:
         self.config = config or SyncConfig()
         self.config.validate()
 
@@ -219,7 +222,7 @@ class ClockSynchronizer:
         local_timestamps: Any,
         reference_timestamps: Any,
         *,
-        gps_lock: Optional[bool] = None,
+        gps_lock: bool | None = None,
     ) -> SyncStatus:
         """Return offset, drift, jitter, and an overall quality grade."""
         loc, ref = _paired(local_timestamps, reference_timestamps)
@@ -259,7 +262,7 @@ class ClockSynchronizer:
 def batch_assess_sync(
     references: Mapping[str, Any],
     *,
-    config: Optional[SyncConfig] = None,
+    config: SyncConfig | None = None,
     api: bool | None = None,
 ) -> Any:
     """Assess many devices at once and return a status table.
@@ -276,7 +279,7 @@ def batch_assess_sync(
         Frame-wrapping override passed to :func:`maybe_wrap_frame`.
     """
     synchronizer = ClockSynchronizer(config)
-    statuses: List[SyncStatus] = []
+    statuses: list[SyncStatus] = []
     for device_id, spec in dict(references).items():
         local, reference, gps_lock = _unpack_reference_spec(spec)
         statuses.append(
@@ -289,7 +292,7 @@ def batch_assess_sync(
 
 def _unpack_reference_spec(
     spec: Any,
-) -> Tuple[Any, Any, Optional[bool]]:
+) -> tuple[Any, Any, bool | None]:
     if isinstance(spec, Mapping):
         local = spec.get("local", spec.get("local_timestamps"))
         reference = spec.get("reference", spec.get("reference_timestamps"))
@@ -310,10 +313,10 @@ def _unpack_reference_spec(
 
 def detect_gps_dropout(
     gps_lock: Iterable[Any],
-    timestamps: Optional[Iterable[Any]] = None,
+    timestamps: Iterable[Any] | None = None,
     *,
     min_lock_fraction: float = 0.9,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Summarise GPS-lock dropouts across a sample sequence.
 
     Parameters
@@ -358,7 +361,7 @@ def detect_gps_dropout(
     events = 0
     longest = 0
     longest_s = 0.0
-    run_start: Optional[int] = None
+    run_start: int | None = None
     for i, locked in enumerate(flags):
         if not locked and run_start is None:
             run_start = i

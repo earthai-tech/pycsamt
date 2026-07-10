@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Data containers for physics-based EM inversion workflows."""
@@ -12,7 +11,6 @@ from typing import Any
 import numpy as np
 
 from ..api.property import MetadataMixin, PyCSAMTObject
-
 from .doc import _inversion_param_docs
 
 __all__ = ["EMData"]
@@ -45,7 +43,7 @@ class EMData(PyCSAMTObject, MetadataMixin):
         self.validate()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], **overrides: Any) -> "EMData":
+    def from_dict(cls, data: dict[str, Any], **overrides: Any) -> EMData:
         """Build :class:`EMData` from a mapping.
 
         Parameters
@@ -98,7 +96,7 @@ class EMData(PyCSAMTObject, MetadataMixin):
         return cls(**values)
 
     @classmethod
-    def coerce(cls, data: Any, *, method: str = "mt") -> "EMData":
+    def coerce(cls, data: Any, *, method: str = "mt") -> EMData:
         """Return *data* as an :class:`EMData` instance.
 
         Parameters
@@ -234,7 +232,7 @@ class EMData(PyCSAMTObject, MetadataMixin):
             raise ValueError("station_names must match number of stations.")
 
 
-EMData.__doc__ = """
+EMData.__doc__ = f"""
 Normalized EM observation container.
 
 ``EMData`` is the backend-neutral observation object used by
@@ -252,17 +250,17 @@ provided, must match the first dimension of these arrays.
 
 Parameters
 ----------
-{method}
-{frequencies}
-{times}
-{rho_a}
-{phase}
-{values}
-{errors}
-{station_names}
-{station_x}
-{source}
-{metadata}
+{_inversion_param_docs.data.method}
+{_inversion_param_docs.data.frequencies}
+{_inversion_param_docs.data.times}
+{_inversion_param_docs.data.rho_a}
+{_inversion_param_docs.data.phase}
+{_inversion_param_docs.data.values}
+{_inversion_param_docs.data.errors}
+{_inversion_param_docs.data.station_names}
+{_inversion_param_docs.data.station_x}
+{_inversion_param_docs.data.source}
+{_inversion_param_docs.data.metadata}
 
 Notes
 -----
@@ -271,24 +269,10 @@ response-like objects, station collections, TDEM sounding collections, and TDEM
 survey objects exposing ``to_soundings()``. The original input object is kept in
 ``source`` for provenance and backend-specific adapters.
 
-{examples}
+{_inversion_param_docs.data.examples}
 
-{references}
-""".format(
-    method=_inversion_param_docs.data.method,
-    frequencies=_inversion_param_docs.data.frequencies,
-    times=_inversion_param_docs.data.times,
-    rho_a=_inversion_param_docs.data.rho_a,
-    phase=_inversion_param_docs.data.phase,
-    values=_inversion_param_docs.data.values,
-    errors=_inversion_param_docs.data.errors,
-    station_names=_inversion_param_docs.data.station_names,
-    station_x=_inversion_param_docs.data.station_x,
-    source=_inversion_param_docs.data.source,
-    metadata=_inversion_param_docs.data.metadata,
-    examples=_inversion_param_docs.data.examples,
-    references=_inversion_param_docs.data.references,
-)
+{_inversion_param_docs.data.references}
+"""
 
 
 def _as_float_array(value: Any) -> np.ndarray | None:

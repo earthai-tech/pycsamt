@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,10 +11,8 @@ frequency range, and selected station across restarts.  Written to
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List, Optional
-
 
 _SESSION_PATH = Path.home() / ".pycsamt" / "session.json"
 
@@ -25,14 +22,14 @@ class SessionState:
     """Persistent session state for the pycsamt desktop application."""
 
     theme: str = "dark"
-    recent_files: List[str] = field(default_factory=list)
+    recent_files: list[str] = field(default_factory=list)
     last_data_dir: str = ""
-    selected_station: Optional[str] = None
-    freq_min_hz: Optional[float] = None
-    freq_max_hz: Optional[float] = None
+    selected_station: str | None = None
+    freq_min_hz: float | None = None
+    freq_max_hz: float | None = None
     overlay: str = "Apparent Resistivity"
-    dock_geometry: Optional[str] = None  # base64-encoded QMainWindow geometry
-    dock_state: Optional[str] = None    # base64-encoded QMainWindow state (docks/toolbars)
+    dock_geometry: str | None = None  # base64-encoded QMainWindow geometry
+    dock_state: str | None = None    # base64-encoded QMainWindow state (docks/toolbars)
 
     # ── Per-window geometries (profile / map / qc / agent) ────────────
     # Each value is {"geometry": "<base64>", "visible": bool}
@@ -60,7 +57,7 @@ class SessionState:
             json.dump(asdict(self), fh, indent=2)
 
     @classmethod
-    def load(cls, path: Path = _SESSION_PATH) -> "SessionState":
+    def load(cls, path: Path = _SESSION_PATH) -> SessionState:
         if not path.exists():
             return cls()
         try:

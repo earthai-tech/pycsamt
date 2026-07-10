@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Settings callbacks — API keys, theme, export."""
@@ -9,8 +8,7 @@ import json
 import os
 from pathlib import Path
 
-from dash import Input, Output, State
-from dash import html, no_update
+from dash import Input, Output, State, html, no_update
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs

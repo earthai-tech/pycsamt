@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import pandas as pd
 
@@ -71,7 +72,7 @@ class APIResult(PyCSAMTObject):
             if isinstance(v, APIFrame)
         }
 
-    def update_meta(self, /, **kwargs: Any) -> "APIResult":
+    def update_meta(self, /, **kwargs: Any) -> APIResult:
         """Update metadata in-place and return ``self``."""
         self.meta.update(kwargs)
         return self

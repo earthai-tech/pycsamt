@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -57,19 +56,18 @@ from pathlib import Path
 import click
 
 from ...api.cli.config import configure_cli
-from ...api.cli.options import format_option, no_color_option, verbose_option
+from ...api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ..survey import (
-    SurveyContext,
     _CACHE_ROOT,
-    _PYCSAMT_DIR,
-    _cache_dir,
-    _cache_is_valid,
-    _cache_key,
+    SurveyContext,
     _purge_cache,
     set_survey,
     survey_summary,
 )
-
 
 # ---------------------------------------------------------------------------
 # Rich helpers
@@ -78,7 +76,7 @@ from ..survey import (
 def _rich_kv(title: str, rows: list[tuple[str, str]], style: str = "cyan") -> None:
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table      # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         console = Console()
         t = Table(title=title, border_style=style, show_header=False,
                   box=None, padding=(0, 2))
@@ -216,9 +214,9 @@ def survey_show(
     )
     try:
         from rich.markup import escape  # noqa: PLC0415
-        path_str = escape(summary["survey_path"])
+        escape(summary["survey_path"])
     except ImportError:
-        path_str = summary["survey_path"]
+        summary["survey_path"]
         cache_status = "valid" if summary["cache_valid"] else "stale"
 
     rows = [

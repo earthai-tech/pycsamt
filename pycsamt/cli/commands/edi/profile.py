@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt edi profile — survey profile geometry (bearing, step, distances)."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import edi, _get_collection
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_collection, edi
 
 
 @edi.command("profile")
@@ -96,7 +99,6 @@ def profile(
     }
 
     if distances:
-        import numpy as np  # noqa: PLC0415
         dist = prof.distance if hasattr(prof, "distance") else None
         dist_list = dist.tolist() if dist is not None else None
         summary["distances_m"] = dist_list
@@ -129,7 +131,6 @@ def profile(
         click.echo(f"  Step (avg) : {float(step_m):.0f} m  ({step_method})")
 
     if distances and tbl:
-        import numpy as np  # noqa: PLC0415
         dist = prof.distance if hasattr(prof, "distance") else None
         click.echo()
         hdr = f"  {'Station':<22} {'Lat':>10} {'Lon':>10} {'Elev':>7} {'Dist (m)':>10}"

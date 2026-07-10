@@ -27,16 +27,18 @@ The functions come from :mod:`pycsamt.emtools.dimensionality`,
 
 from _datasets import load_sites
 
+from pycsamt.emtools.anisotropy import plot_anisotropy
+from pycsamt.emtools.dimensionality import (
+    plot_dim_confidence_grid,
+)
+from pycsamt.emtools.skew import (
+    plot_skew_percentile_ribbon,
+    plot_skew_traffic_psection,
+)
 from pycsamt.emtools.tensor import (
     plot_dimensionality_psection,
     plot_skew_ellipt_density,
 )
-from pycsamt.emtools.dimensionality import plot_dim_confidence_grid
-from pycsamt.emtools.skew import (
-    plot_skew_traffic_psection,
-    plot_skew_percentile_ribbon,
-)
-from pycsamt.emtools.anisotropy import plot_anisotropy
 
 L22 = load_sites("amt_l22plt")
 

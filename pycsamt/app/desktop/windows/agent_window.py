@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -30,10 +29,9 @@ Right column: QSplitter(Vertical) — tabs / chat proportions resizable.
 from __future__ import annotations
 
 import datetime
-from typing import Dict, Optional
 
-from PySide6.QtCore import QEvent, Qt, Signal, Slot
-from PySide6.QtGui  import QKeyEvent, QPixmap
+from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtGui import QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -61,10 +59,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.agent_browser import AgentBrowserWidget
-from pycsamt.app.desktop.widgets.mpl_canvas    import MplCanvas
-from pycsamt.app.desktop.windows._base         import PanelWindow, _icon
-
+from pycsamt.app.desktop.widgets.agent_browser import (
+    AgentBrowserWidget,
+)
+from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    _icon,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Figure pop-out: hover-reveal overlay button + publication-ready viewer
@@ -470,7 +472,7 @@ class AgentRunnerWindow(PanelWindow):
         self._worker               = None
         self._ctrl                 = None
         self._current_agent: str   = ""
-        self._params_widgets: Dict[str, QWidget] = {}
+        self._params_widgets: dict[str, QWidget] = {}
         self._last_agent           = None   # last-run LLM agent instance
         self._last_result_context  = ""     # text context for follow-up chat
         self._last_interpretation  = ""     # raw LLM interpretation (for copy)
@@ -823,7 +825,9 @@ class AgentRunnerWindow(PanelWindow):
     # ── Run / Stop ─────────────────────────────────────────────────────────────
 
     def _on_run(self) -> None:
-        from pycsamt.app.desktop.workers.agent_worker import AgentWorker
+        from pycsamt.app.desktop.workers.agent_worker import (
+            AgentWorker,
+        )
 
         if self._ctrl is None or getattr(self._ctrl, "sites", None) is None:
             self._status_lbl.setText("Load survey data first.")
@@ -880,7 +884,9 @@ class AgentRunnerWindow(PanelWindow):
 
     @Slot(object)
     def _on_result(self, result) -> None:
-        from pycsamt.app.desktop.panels.agent_panel import _extract_all_renderables
+        from pycsamt.app.desktop.panels.agent_panel import (
+            _extract_all_renderables,
+        )
 
         figs = _extract_all_renderables(result)
         if figs:
@@ -943,7 +949,9 @@ class AgentRunnerWindow(PanelWindow):
     # ── Form helpers ──────────────────────────────────────────────────────────
 
     def _rebuild_params_form(self, agent_name: str) -> None:
-        from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
+        from pycsamt.app.desktop.agent_registry import (
+            AGENT_REGISTRY,
+        )
 
         while self._form_params.rowCount():
             self._form_params.removeRow(0)
@@ -1010,13 +1018,15 @@ class AgentRunnerWindow(PanelWindow):
         return w
 
     def _collect_params(self) -> dict:
-        from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
+        from pycsamt.app.desktop.agent_registry import (
+            AGENT_REGISTRY,
+        )
 
         meta        = AGENT_REGISTRY.get(self._current_agent, {})
         params_spec = meta.get("params", {})
         result: dict = {}
 
-        for param_name, spec in params_spec.items():
+        for param_name, _spec in params_spec.items():
             w = self._params_widgets.get(param_name)
             if w is None:
                 continue
@@ -1069,7 +1079,9 @@ class AgentRunnerWindow(PanelWindow):
         self._chat_status.setText("")
 
     def _on_chat_send(self) -> None:
-        from pycsamt.app.desktop.workers.agent_worker import ChatWorker
+        from pycsamt.app.desktop.workers.agent_worker import (
+            ChatWorker,
+        )
 
         question = self._chat_input.toPlainText().strip()
         if not question:

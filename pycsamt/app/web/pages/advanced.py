@@ -1,23 +1,21 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Advanced emtools plots page — fixed tab bar + per-group persistent figures."""
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from pycsamt.app.desktop.controllers.advanced_controller import (
-    ADVANCED_GROUPS,
     ADVANCED_PLOT_DESCRIPTIONS,
-    STRIKE_PLOTS,
-    PHASE_TENSOR_PLOTS,
-    INDUCTION_PLOTS,
-    IMPEDANCE_PLOTS,
     DEPTH_PLOTS,
+    IMPEDANCE_PLOTS,
+    INDUCTION_PLOTS,
+    PHASE_TENSOR_PLOTS,
+    STRIKE_PLOTS,
     SURVEY_PLOTS,
 )
-from pycsamt.app.web.layout import IDs, _icon
+from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import empty_src
 
 PAGE_ID = "advanced"

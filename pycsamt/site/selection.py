@@ -1,20 +1,21 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, List
-import re
 import math
+import re
+from collections.abc import Iterable
+from typing import Any, Callable
+
 import numpy as np
 
 from .utils import (
-    iter_edifiles,
-    station_name,
-    get_freq,
     get_coords,
+    get_freq,
+    iter_edifiles,
     match_name,
+    station_name,
 )
 
 __all__ = [
@@ -38,19 +39,19 @@ def by_names(
     r"""
     Select sites by matching station names against one or more
     patterns.
-    
+
     This is a flexible name-based selector that accepts several
     pattern types:
-    
+
     * string with optional glob-like wildcards ``*`` and ``?``
     * compiled regular expression (``re.Pattern``)
     * callable ``fn(name)->bool``
     * iterable of any mix of the above
-    
+
     A site is kept if **any** pattern matches its station name.
     Matching is stable: the relative order of kept sites is the
     same as in the input.
-    
+
     Parameters
     ----------
     sites : Any
@@ -64,24 +65,24 @@ def by_names(
         If ``True``, perform case-sensitive matching. If
         ``False`` (default) names and string patterns are
         upper-cased before comparison.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper containing only the matched
         EDI items. The original container is not modified.
-    
+
     Notes
     -----
     String patterns support a minimal glob syntax. ``*`` matches
     any sequence (possibly empty) and ``?`` matches any single
     character. If you need full regular expressions, pass a
     compiled ``re.Pattern``.
-    
+
     When multiple patterns are given, the match is an OR over all
     patterns. Matching uses the station name as returned by
     ``station_name(ed)`` which reflects header normalization.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -90,17 +91,17 @@ def by_names(
     >>> out = by_names(sites, "K*")  # glob: all names starting K
     >>> [s.name for s in out]
     ['K01', 'K02']
-    
+
     >>> import re
     >>> rx = re.compile(r"^S0[1-3]$")
     >>> out = by_names(sites, rx)
     >>> [s.name for s in out]
     ['S01', 'S02', 'S03']
-    
+
     >>> out = by_names(sites, lambda n: n.endswith("A"))
     >>> [s.name for s in out]
     ['X1A', 'X2A']
-    
+
     See Also
     --------
     pycsamt.site.selection.by_index :
@@ -109,7 +110,7 @@ def by_names(
         Keep sites for which a boolean predicate returns True.
     pycsamt.site.selection.by_freq :
         Keep sites that contain data within a frequency window.
-    
+
     References
     ----------
     .. [1] Python re module documentation.
@@ -135,13 +136,13 @@ def by_index(sites: Any, indices: Iterable[int] | int):
     r"""
     Select sites by zero-based numeric indices, supporting negative
     indices.
-    
+
     Indices are normalized exactly like Python sequence indexing:
     ``-1`` addresses the last item, ``-2`` the one before last,
     and so on. Out-of-range or non-integer indices are ignored.
     The resulting subset preserves the original ordering of the
     selected items, not the order in which indices are provided.
-    
+
     Parameters
     ----------
     sites : Any
@@ -151,21 +152,21 @@ def by_index(sites: Any, indices: Iterable[int] | int):
     indices : Iterable[int] or int
         One index or an iterable of indices. Negative indices
         are supported and mapped to their Python equivalents.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper containing only items at the
         requested positions. If no valid indices remain after
         normalization, an empty ``Sites`` is returned.
-    
+
     Notes
     -----
     Duplicate indices are de-duplicated in the output since the
     selection is implemented as a membership test over the set
     of normalized indices. The relative order of kept items is
     the same as in the original sequence.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -174,15 +175,15 @@ def by_index(sites: Any, indices: Iterable[int] | int):
     >>> out = by_index(sites, [0, -1])   # first and last
     >>> [s.name for s in out]
     ['A', 'C']
-    
+
     >>> out = by_index(sites, 1)  # single integer
     >>> [s.name for s in out]
     ['B']
-    
+
     >>> out = by_index(sites, [10, -10])  # both invalid -> empty
     >>> len(out)
     0
-    
+
     See Also
     --------
     pycsamt.site.selection.by_names :
@@ -216,12 +217,12 @@ def by_chainage(sites: Any, smin: float, smax: float):
     r"""
     Select sites whose stored chainage falls within a closed
     interval.
-    
+
     This helper reads the chainage value first from the EDI
     ``HEAD`` section (``head.chainage``) and, if missing, from a
     top-level attribute ``edi.chainage``. Sites for which a
     numeric chainage cannot be determined are silently skipped.
-    
+
     Parameters
     ----------
     sites : Any
@@ -232,14 +233,14 @@ def by_chainage(sites: Any, smin: float, smax: float):
         Minimum chainage (inclusive).
     smax : float
         Maximum chainage (inclusive).
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper containing only the EDI items
         whose chainage :math:`c` satisfies
         :math:`smin \\le c \\le smax`.
-    
+
     Notes
     -----
     Chainage is a linear reference commonly used along profiles
@@ -247,7 +248,7 @@ def by_chainage(sites: Any, smin: float, smax: float):
     If chainage is not present on a site, that site is excluded.
     The original order of sites is preserved among the kept
     items.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -256,7 +257,7 @@ def by_chainage(sites: Any, smin: float, smax: float):
     >>> out = by_chainage(s, smin=100.0, smax=300.0)
     >>> [t.name for t in out]
     ['L02', 'L03']
-    
+
     See Also
     --------
     pycsamt.site.selection.by_index :
@@ -267,7 +268,7 @@ def by_chainage(sites: Any, smin: float, smax: float):
         Keep sites that contain data in a frequency window.
     pycsamt.site.base.Sites.to_profile :
         Build a profile or ordered view along a line.
-    
+
     References
     ----------
     .. [1] Linear referencing and chainage in civil engineering.
@@ -293,11 +294,11 @@ def by_freq(sites: Any, fmin: float, fmax: float):
     r"""
     Select sites that contain at least one data row with
     frequency inside a closed interval.
-    
+
     A site is kept if its frequency array ``f`` contains any
     finite value satisfying :math:`fmin \le f \le fmax`. Sites
     with empty or non-finite frequency arrays are skipped.
-    
+
     Parameters
     ----------
     sites : Any
@@ -308,13 +309,13 @@ def by_freq(sites: Any, fmin: float, fmax: float):
         Minimum frequency (inclusive).
     fmax : float
         Maximum frequency (inclusive).
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper containing only the EDI items with
         at least one finite frequency in the requested window.
-    
+
     Notes
     -----
     Frequencies are obtained via
@@ -322,7 +323,7 @@ def by_freq(sites: Any, fmin: float, fmax: float):
     based (any row in range), not a full slicing or resampling.
     Use :func:`pycsamt.site.edit.select_freq` to actually subset
     rows by frequency.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -331,7 +332,7 @@ def by_freq(sites: Any, fmin: float, fmax: float):
     >>> out = by_freq(s, fmin=0.5, fmax=2.0)
     >>> [t.name for t in out]
     ['A02', 'A03']
-    
+
     See Also
     --------
     pycsamt.site.selection.by_names :
@@ -363,16 +364,16 @@ def by_bbox(
 ):
     r"""
     Select sites that fall inside an axis-aligned geographic box.
-    
+
     The selection is performed in latitude/longitude degrees and
     assumes a geographic CRS (WGS84-like). A site is kept if its
     stored coordinates satisfy
-    
+
     .. math::
-    
+
        minlat \le lat \le maxlat \;\;\text{and}\;\;
        minlon \le lon \le maxlon .
-    
+
     Parameters
     ----------
     sites : Any
@@ -382,13 +383,13 @@ def by_bbox(
     minlat, minlon, maxlat, maxlon : float
         Latitude and longitude bounds in degrees. Bounds are
         inclusive.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper with only the items whose coords
         are inside the box.
-    
+
     Notes
     -----
     This is a simple axis-aligned test in lat/lon and does not
@@ -397,7 +398,7 @@ def by_bbox(
     selection into two boxes and union the results. Coordinates
     are retrieved via
     :func:`pycsamt.site.utils.get_coords`.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -406,7 +407,7 @@ def by_bbox(
     >>> out = by_bbox(s, 24.0, 9.0, 27.0, 11.0)
     >>> [site.name for site in out]
     ['S01', 'S03']
-    
+
     See Also
     --------
     pycsamt.site.selection.by_freq :
@@ -417,7 +418,7 @@ def by_bbox(
         Arbitrary user-defined filtering.
     pycsamt.site.base.Sites.closest :
         Find the closest site to a target coordinate.
-    
+
     References
     ----------
     .. [1] Snyder, J. P., "Map Projections: A Working Manual",
@@ -436,13 +437,13 @@ def by_bbox(
 def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     r"""
     Select sites using a user-supplied predicate function.
-    
+
     The predicate is called for each EDI-like object and should
     return ``True`` to keep the site. Any exception raised by the
     predicate is caught and treated as a ``False`` (site is not
     kept). This makes bulk filtering robust against occasional
     data issues.
-    
+
     Parameters
     ----------
     sites : Any
@@ -452,25 +453,25 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     pred : Callable[[Any], bool]
         Function receiving a single EDI-like object and returning
         a boolean.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper containing only the sites for
         which ``pred(site)`` returned ``True``.
-    
+
     Notes
     -----
     The objects passed to ``pred`` are the raw EDI containers, not
     the :class:`~pycsamt.site.base.Site` wrapper. If you prefer
     the wrapper API, wrap the object inside the predicate:
-    
+
     ``lambda ed: Site(ed).has_component("Zxy")``.
-    
+
     Examples
     --------
     Keep sites that have at least 3 frequency rows:
-    
+
     >>> from pycsamt.site.base import Sites, Site
     >>> from pycsamt.site.selection import by_predicate
     >>> s = Sites([e1, e2, e3])
@@ -480,9 +481,9 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     ... )
     >>> [t.name for t in out]
     ['A01', 'A03']
-    
+
     Keep sites whose name matches a rule:
-    
+
     >>> import re
     >>> from pycsamt.site.utils import station_name
     >>> rule = re.compile(r"^X_")
@@ -490,7 +491,7 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     ...     station_name(ed))))
     >>> [t.name for t in out]
     ['X_E01', 'X_E02']
-    
+
     See Also
     --------
     pycsamt.site.selection.by_names :
@@ -499,7 +500,7 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
         Remove sites with no usable data arrays.
     pycsamt.site.base.Sites.select :
         Selection API on the wrapper.
-    
+
     References
     ----------
     .. [1] Gamble, T. D. et al., "Magnetotellurics with a remote
@@ -520,29 +521,29 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
 def keep_finite_z(sites: Any):
     r"""
     Keep sites that contain at least one finite impedance value.
-    
+
     A site is considered to have finite data if either of the
     following is true:
-    
+
     1. The impedance tensor array (``Z.z`` or ``Z._z``) contains
        any finite real or imaginary entry.
     2. If the tensor is not present, a resistivity array
        (``Z._resistivity`` or ``Z.rho``) exists and has at least
        one finite value.
-    
+
     Parameters
     ----------
     sites : Any
         A :class:`~pycsamt.site.base.Sites` instance, an
         ``EDICollection``, a sequence of ``EDIFile`` objects, or
         any iterable yielding EDI-like items.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A new ``Sites`` wrapper with only the sites that contain
         finite impedance (or resistivity) values.
-    
+
     Notes
     -----
     This function is intended as a coarse pre-filter to remove
@@ -550,7 +551,7 @@ def keep_finite_z(sites: Any):
     processing. It does not inspect errors or phases, and it does
     not modify the data. If a site has a ``Z`` container but all
     arrays are missing or fully non-finite, the site is dropped.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -559,7 +560,7 @@ def keep_finite_z(sites: Any):
     >>> out = keep_finite_z(s)
     >>> [t.name for t in out]
     ['MT01', 'MT03']
-    
+
     See Also
     --------
     pycsamt.site.selection.drop_empty :
@@ -580,14 +581,14 @@ def keep_finite_z(sites: Any):
 def mask_large_phase_err(sites: Any, thresh: float):
     r"""
     Filter out sites whose maximum phase-error exceeds a threshold.
-    
+
     For each site, the function inspects the phase-error array
     when present (common attribute names are tried, e.g.
     ``_phase_err`` or ``phase_err``). If no phase-error array is
     found, the site is conservatively **kept**. Otherwise, the
     site is kept only when the maximum finite phase-error is less
     than or equal to ``thresh``.
-    
+
     Parameters
     ----------
     sites : Any
@@ -597,13 +598,13 @@ def mask_large_phase_err(sites: Any, thresh: float):
     thresh : float
         Threshold on phase-error (same units as stored by the
         processing pipeline, usually degrees).
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         New wrapper containing only sites that pass the phase
         error test.
-    
+
     Notes
     -----
     The check uses a "best effort" attribute lookup and ignores
@@ -611,7 +612,7 @@ def mask_large_phase_err(sites: Any, thresh: float):
     phase-error array is entirely missing, the site is kept.
     This behavior makes the filter robust when some sites did not
     store uncertainty products.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -620,7 +621,7 @@ def mask_large_phase_err(sites: Any, thresh: float):
     >>> out = mask_large_phase_err(s, thresh=10.0)
     >>> [t.name for t in out]
     ['E01', 'E03']
-    
+
     See Also
     --------
     pycsamt.site.selection.keep_finite_z :
@@ -629,7 +630,7 @@ def mask_large_phase_err(sites: Any, thresh: float):
         Remove sites with no usable arrays.
     pycsamt.site.edit.fill_missing :
         Allocate arrays and replace invalid entries.
-    
+
     References
     ----------
     .. [1] Gamble, T. D., Goubau, W. M., Clarke, J., "Magneto-
@@ -651,33 +652,33 @@ def mask_large_phase_err(sites: Any, thresh: float):
 def drop_empty(sites: Any):
     r"""
     Drop sites that are effectively empty.
-    
+
     A site is considered empty when either:
-    
+
     * The frequency vector is missing or has zero length.
     * The impedance container ``Z`` is missing.
     * The ``Z`` container is present but holds no usable arrays
       (for example, no ``z`` and no resistivity surrogate).
-    
+
     Parameters
     ----------
     sites : Any
         A :class:`~pycsamt.site.base.Sites` object, an
         ``EDICollection``, a sequence of ``EDIFile`` objects, or
         any iterable yielding EDI-like items.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         New wrapper that excludes empty sites.
-    
+
     Notes
     -----
     This is a coarse, fast filter that checks structural
     presence and basic array availability. It does **not** test
     for NaN-only content; for that, consider
     :func:`pycsamt.site.selection.keep_finite_z`.
-    
+
     Examples
     --------
     >>> from pycsamt.site.base import Sites
@@ -686,7 +687,7 @@ def drop_empty(sites: Any):
     >>> out = drop_empty(s)
     >>> [t.name for t in out]
     ['MT01', 'MT02']
-    
+
     See Also
     --------
     pycsamt.site.selection.keep_finite_z :
@@ -703,12 +704,12 @@ def drop_empty(sites: Any):
 
 # ------------- Internal helpers --------------------------
 
-def _to_sites (x: Any): 
+def _to_sites (x: Any):
     """Coerce any edi-like into a Sites wrapper."""
-    from .base import _to_sites as __to_sites 
+    from .base import _to_sites as __to_sites
     return __to_sites (x )
 
-def _new_sites(src: Any, items: List[Any]):
+def _new_sites(src: Any, items: list[Any]):
     """Build a new Sites preserving wrapper semantics."""
     from .base import Sites  # lazy import
     try:
@@ -793,7 +794,7 @@ def _is_empty_site(ed: Any) -> bool:
 
     # If Z present, consider "empty" when there is no usable
     # impedance nor valid resistivity (sentinel-aware).
-    arr =  _get_attr_any(z, "_z", "z") 
+    arr =  _get_attr_any(z, "_z", "z")
     if arr is not None:
         a = np.asarray(arr)
         with np.errstate(all="ignore"):

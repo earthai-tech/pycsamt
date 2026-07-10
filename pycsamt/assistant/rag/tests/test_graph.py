@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Symbol cross-reference graph + signature-aware metadata (RAG Tier 3)."""
@@ -8,8 +7,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pycsamt.assistant.rag.ast_indexer import index_python_file
-from pycsamt.assistant.rag.graph import SymbolGraph, build_symbol_graph
+from pycsamt.assistant.rag.ast_indexer import (
+    index_python_file,
+)
+from pycsamt.assistant.rag.graph import (
+    SymbolGraph,
+    build_symbol_graph,
+)
 from pycsamt.assistant.rag.schemas import RAGChunk
 
 _SRC = '''"""Static-shift helpers."""

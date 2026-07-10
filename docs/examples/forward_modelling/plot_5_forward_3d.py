@@ -22,8 +22,11 @@ map views, pseudo-sections, and full-tensor component panels.
 import numpy as np
 
 from pycsamt.forward import (
-    Grid3D, MT3DForward,
-    plot_model_3d, plot_response_map_3d, plot_response_section_3d,
+    Grid3D,
+    MT3DForward,
+    plot_model_3d,
+    plot_response_map_3d,
+    plot_response_section_3d,
     plot_tensor_components_3d,
 )
 

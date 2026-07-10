@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -34,7 +33,9 @@ def _get_edi(path: Path, verbose: int = 0):
 
 def _get_collection(path: Path, verbose: int = 0):
     """Load an EDI directory (or file) and return an :class:`EDICollection`."""
-    from pycsamt.seg.collection import EDICollection  # noqa: PLC0415
+    from pycsamt.seg.collection import (
+        EDICollection,  # noqa: PLC0415
+    )
 
     return EDICollection.from_sources(path, verbose=verbose)
 

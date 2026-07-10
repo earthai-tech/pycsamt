@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Regression tests for the web 3D map figure builders."""
 
 from __future__ import annotations
@@ -28,7 +27,9 @@ def test_empty_map3d_figure_uses_transparent_canvas():
 
 
 def test_survey_line_profiles_require_named_lines():
-    from pycsamt.app.web.callbacks.map3d import _has_survey_line_profiles
+    from pycsamt.app.web.callbacks.map3d import (
+        _has_survey_line_profiles,
+    )
 
     assert not _has_survey_line_profiles(None)
     assert not _has_survey_line_profiles({"line_counts": {"L1": 4}})
@@ -36,7 +37,9 @@ def test_survey_line_profiles_require_named_lines():
 
 
 def test_inversion_result_converts_to_linear_map3d_profile():
-    from pycsamt.app.web.callbacks.map3d import _profiles_from_inversion_result
+    from pycsamt.app.web.callbacks.map3d import (
+        _profiles_from_inversion_result,
+    )
     from pycsamt.inversion.results import InversionResult
 
     result = InversionResult(
@@ -59,7 +62,9 @@ def test_inversion_result_converts_to_linear_map3d_profile():
 
 
 def test_block_fig_drops_non_finite_cells_and_clamps_iso_band():
-    from pycsamt.app.web.callbacks.map3d import _build_block_fig
+    from pycsamt.app.web.callbacks.map3d import (
+        _build_block_fig,
+    )
 
     x = np.linspace(-100.0, 300.0, 5)
     y = np.array([0.0, 1000.0])
@@ -106,7 +111,9 @@ def test_block_fig_drops_non_finite_cells_and_clamps_iso_band():
 
 
 def test_block_fig_clips_axes_from_axis_bounds_not_axis_maximum():
-    from pycsamt.app.web.callbacks.map3d import _build_block_fig
+    from pycsamt.app.web.callbacks.map3d import (
+        _build_block_fig,
+    )
 
     x = np.linspace(-500.0, 500.0, 6)
     y = np.array([-750.0, 750.0])
@@ -144,7 +151,9 @@ def test_block_fig_clips_axes_from_axis_bounds_not_axis_maximum():
 
 
 def test_block_fig_uses_finite_profile_neighbour_when_other_line_is_missing():
-    from pycsamt.app.web.callbacks.map3d import _build_block_fig
+    from pycsamt.app.web.callbacks.map3d import (
+        _build_block_fig,
+    )
 
     x = np.array([0.0, 100.0])
     y = np.array([0.0, 1000.0])

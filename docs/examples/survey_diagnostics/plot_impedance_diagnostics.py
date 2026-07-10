@@ -23,7 +23,10 @@ period. Both are drawn for line **L22PLT** and both come from
 
 from _datasets import load_sites
 
-from pycsamt.emtools.impedance import plot_phasor_wheel, plot_determinant_track
+from pycsamt.emtools.impedance import (
+    plot_determinant_track,
+    plot_phasor_wheel,
+)
 
 L22 = load_sites("amt_l22plt")
 

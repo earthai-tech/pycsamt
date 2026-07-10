@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Dict, Any
 import math
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
 
-from pycsamt.jones.j import JFile
+from pycsamt.constants import MU_0
 from pycsamt.jones.blocks import JBlocks
 from pycsamt.jones.heads import Head
-from pycsamt.constants import MU_0
+from pycsamt.jones.j import JFile
 
 
 def _head(st: str = "S01") -> Head:
@@ -22,7 +21,7 @@ def _head(st: str = "S01") -> Head:
     return h
 
 
-def _comp_r_only() -> Dict[str, Dict[str, Any]]:
+def _comp_r_only() -> dict[str, dict[str, Any]]:
     # R parts for XY and YX, two rows, simple values
     p = np.array([1.0, 2.0], float)  # periods (s)
     return {
@@ -41,7 +40,7 @@ def _comp_r_only() -> Dict[str, Dict[str, Any]]:
     }
 
 
-def _comp_z_only() -> Dict[str, Dict[str, Any]]:
+def _comp_z_only() -> dict[str, dict[str, Any]]:
     # Z parts for all tensor entries, two rows
     p = np.array([1.0, 2.0], float)  # periods (s)
     f = 1.0 / p
@@ -63,7 +62,7 @@ def _comp_z_only() -> Dict[str, Dict[str, Any]]:
     zyx1 = zyx0 * 1.2
     zyy1 = zyy0 * 0.8
 
-    def pack(v0: complex, v1: complex) -> Dict[str, Any]:
+    def pack(v0: complex, v1: complex) -> dict[str, Any]:
         return {
             "period": p,
             "real": np.array([v0.real, v1.real], float),
@@ -80,7 +79,7 @@ def _comp_z_only() -> Dict[str, Dict[str, Any]]:
     }
 
 
-def _comp_t_only() -> Dict[str, Dict[str, Any]]:
+def _comp_t_only() -> dict[str, dict[str, Any]]:
     p = np.array([5.0, 10.0, 20.0], float)
     zx = np.array([0.1 + 0.2j, 0.0 + 0.0j, -0.2 + 0.1j], complex)
     zy = np.array([0.05 - 0.1j, 0.0 + 0.0j, 0.3 + 0.0j], complex)
@@ -132,9 +131,9 @@ def test_build_from_comp_R_only():
     z, tip, rp = jf._build_from_comp(_comp_r_only())
     assert z is not None and tip is None
     assert rp is not None
-    assert getattr(z, "z").shape[1:] == (2, 2)  # type: ignore
+    assert z.z.shape[1:] == (2, 2)  # type: ignore
     # freq must match 1/periods
-    f = getattr(z, "freq")
+    f = z.freq
     assert f is not None and np.all(f > 0.0)
 
 
@@ -143,7 +142,7 @@ def test_build_from_comp_Z_only():
     z, tip, rp = jf._build_from_comp(_comp_z_only())
     assert z is not None and tip is None
     # keep shape and name from head
-    assert getattr(z, "z").shape[1:] == (2, 2)  # type: ignore
+    assert z.z.shape[1:] == (2, 2)  # type: ignore
     # assert getattr(z, "name") == "S02"  # type: ignore
 
 
@@ -151,7 +150,7 @@ def test_build_from_comp_T_only():
     jf = JFile(verbose=0)
     z, tip, rp = jf._build_from_comp(_comp_t_only())
     assert z is None and tip is not None
-    ta = getattr(tip, "tipper")  # type: ignore[union-attr]
+    ta = tip.tipper  # type: ignore[union-attr]
     assert ta is not None and np.asarray(ta).shape[-1] == 2
 
 

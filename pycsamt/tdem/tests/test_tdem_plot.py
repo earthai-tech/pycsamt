@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from pycsamt.api.style import MultilineStyle
 from pycsamt.api.control import PYCSAMT_CONTROL
+from pycsamt.api.style import MultilineStyle
 from pycsamt.tdem import (
     TEMAVG,
     PlotDecayCurve,

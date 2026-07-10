@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,7 +32,6 @@ TOML layout
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -219,41 +217,62 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
 
     try:
         if section == "cli":
-            from pycsamt.api.cli.config import configure_cli  # noqa: PLC0415
+            from pycsamt.api.cli.config import (
+                configure_cli,  # noqa: PLC0415
+            )
             _apply_flat_or_nested(kw, configure_cli)
 
         elif section == "control":
-            from pycsamt.api.control import configure_control  # noqa: PLC0415
+            from pycsamt.api.control import (
+                configure_control,  # noqa: PLC0415
+            )
             configure_control(**kw)
 
         elif section == "style":
             preset = kw.pop("preset", None)
             if preset:
-                from pycsamt.api.style import use_style  # noqa: PLC0415
+                from pycsamt.api.style import (
+                    use_style,  # noqa: PLC0415
+                )
                 use_style(preset)
             if kw:
-                from pycsamt.api.style import configure_style  # noqa: PLC0415
+                from pycsamt.api.style import (
+                    configure_style,  # noqa: PLC0415
+                )
                 configure_style(**kw)
 
         elif section == "section_view":
-            from pycsamt.api.section import configure_section  # noqa: PLC0415
+            from pycsamt.api.section import (
+                configure_section,  # noqa: PLC0415
+            )
             configure_section(**kw)
 
         elif section == "station":
-            from pycsamt.api.station import configure_station_rendering  # noqa: PLC0415
+            from pycsamt.api.station import (
+                configure_station_rendering,  # noqa: PLC0415
+            )
             configure_station_rendering(**kw)
 
         elif section == "interp":
             preset = kw.pop("preset", None)
             if preset:
-                from pycsamt.api.interp import use_interp  # noqa: PLC0415
+                from pycsamt.api.interp import (
+                    use_interp,  # noqa: PLC0415
+                )
                 use_interp(preset)
             if kw:
-                from pycsamt.api.interp import configure_interp  # noqa: PLC0415
+                from pycsamt.api.interp import (
+                    configure_interp,  # noqa: PLC0415
+                )
                 configure_interp(**kw)
 
         elif section == "plot":
-            from pycsamt.api.plot import PLOT_CONFIG, set_dpi, set_fmt, set_savedir  # noqa: PLC0415
+            from pycsamt.api.plot import (  # noqa: PLC0415
+                PLOT_CONFIG,
+                set_dpi,
+                set_fmt,
+                set_savedir,
+            )
             fmt      = kw.pop("fmt", None)
             dpi      = kw.pop("dpi", None)
             savedir  = kw.pop("savedir", None)
@@ -271,7 +290,9 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                     setattr(PLOT_CONFIG, k, v)
 
         elif section == "agent":
-            from pycsamt.api.agents import AGENT_CONFIG  # noqa: PLC0415
+            from pycsamt.api.agents import (
+                AGENT_CONFIG,  # noqa: PLC0415
+            )
             provider   = kw.pop("provider", None)
             model      = kw.pop("model", None)
             budget_usd = kw.pop("budget_usd", None)
@@ -286,11 +307,15 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                 AGENT_CONFIG.set_budget(usd=float(budget_usd))
 
         elif section == "pipe":
-            from pycsamt.api.pipe.config import configure_pipe  # noqa: PLC0415
+            from pycsamt.api.pipe.config import (
+                configure_pipe,  # noqa: PLC0415
+            )
             configure_pipe(**kw)
 
         elif section == "view":
-            from pycsamt.api.view.config import configure_api_view  # noqa: PLC0415
+            from pycsamt.api.view.config import (
+                configure_api_view,  # noqa: PLC0415
+            )
             configure_api_view(**kw)
 
     except Exception as exc:  # noqa: BLE001

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -34,9 +33,11 @@ Predictive Uncertainty Estimation using Deep Ensembles.
 from __future__ import annotations
 
 import copy
-import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+)
 
 import numpy as np
 
@@ -44,7 +45,10 @@ __all__ = ["EnsembleInverter"]
 
 # lazy import so calibration module is not pulled in unless used
 def _get_calibrators():
-    from .calibration import ConformalPredictor, PosteriorCalibrator
+    from .calibration import (
+        ConformalPredictor,
+        PosteriorCalibrator,
+    )
     return ConformalPredictor, PosteriorCalibrator
 
 
@@ -78,7 +82,7 @@ class EnsembleInverter:
         self,
         base_estimator: Any,
         n_estimators: int = 5,
-        seeds: Optional[Sequence[int]] = None,
+        seeds: Sequence[int] | None = None,
     ) -> None:
         self.base_estimator = base_estimator
         self.n_estimators = int(n_estimators)
@@ -90,10 +94,10 @@ class EnsembleInverter:
             extra = range(len(self.seeds), n_estimators)
             self.seeds += list(extra)
 
-        self._members: List[Any] = []
+        self._members: list[Any] = []
         self._is_fitted: bool = False
-        self._conformal: Optional[Any] = None       # ConformalPredictor
-        self._posterior_cal: Optional[Any] = None   # PosteriorCalibrator
+        self._conformal: Any | None = None       # ConformalPredictor
+        self._posterior_cal: Any | None = None   # PosteriorCalibrator
 
     # ─── fit ──────────────────────────────────────────────────────────────
 
@@ -107,9 +111,9 @@ class EnsembleInverter:
         lr: float = 1e-3,
         patience: int = 20,
         val_frac: float = 0.1,
-        grad_clip: Optional[float] = 1.0,
+        grad_clip: float | None = 1.0,
         verbose: bool = True,
-    ) -> "EnsembleInverter":
+    ) -> EnsembleInverter:
         """
         Train all ensemble members.
 
@@ -171,7 +175,7 @@ class EnsembleInverter:
         X: np.ndarray,
         _use_calibrated: bool = True,
         **kwargs,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Return (mean, std) ensemble prediction.
 
@@ -206,7 +210,7 @@ class EnsembleInverter:
         X: np.ndarray,
         q: Sequence[float] = (0.05, 0.25, 0.5, 0.75, 0.95),
         **kwargs,
-    ) -> Dict[float, np.ndarray]:
+    ) -> dict[float, np.ndarray]:
         """
         Return per-quantile predictions.
 
@@ -234,7 +238,7 @@ class EnsembleInverter:
         y_cal: np.ndarray,
         *,
         alpha: float = 0.10,
-    ) -> "EnsembleInverter":
+    ) -> EnsembleInverter:
         """
         Attach a :class:`~pycsamt.ai.inversion.calibration.ConformalPredictor`
         and a :class:`~pycsamt.ai.inversion.calibration.PosteriorCalibrator`
@@ -280,8 +284,8 @@ class EnsembleInverter:
     def predict_intervals(
         self,
         X: np.ndarray,
-        alpha: Optional[float] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        alpha: float | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Conformal prediction intervals with guaranteed marginal coverage.
 
@@ -310,7 +314,7 @@ class EnsembleInverter:
         self,
         X: np.ndarray,
         n_samples: int = 500,
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
     ) -> np.ndarray:
         """
         Draw calibrated posterior samples via the Gaussianization normalising
@@ -342,8 +346,8 @@ class EnsembleInverter:
         self,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        alphas: Optional[Sequence[float]] = None,
-    ) -> Dict[float, float]:
+        alphas: Sequence[float] | None = None,
+    ) -> dict[float, float]:
         """
         Per-alpha empirical coverage table (requires prior :meth:`calibrate`).
 
@@ -423,7 +427,7 @@ class EnsembleInverter:
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """
         Save all ensemble members.
 
@@ -448,9 +452,9 @@ class EnsembleInverter:
     @classmethod
     def load(
         cls,
-        path: Union[str, Path],
-        base_class: Optional[type] = None,
-    ) -> "EnsembleInverter":
+        path: str | Path,
+        base_class: type | None = None,
+    ) -> EnsembleInverter:
         """
         Load a saved ensemble.
 
@@ -506,7 +510,7 @@ class EnsembleInverter:
         X: np.ndarray,
         sample_idx: int = 0,
         *,
-        y_true: Optional[np.ndarray] = None,
+        y_true: np.ndarray | None = None,
         n_sigma: float = 1.96,
         **plot_kwargs,
     ):

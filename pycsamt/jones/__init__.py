@@ -1,32 +1,35 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
+from .blocks import (  # noqa: F401
+    JBlock,
+    JBlocks,
+    RBlock,
+    RRow,
+    TFBlock,
+    TFRow,
+)
+from .cbase import (  # noqa: F401
+    JCBBase,
+    JCoreParser,
+    JParseMixin,
+)
+from .collection import JCollection, JCollectionMixin
+from .components import JComponentMixin
 from .heads import (  # noqa: F401
     Banner,
     Head,
-    Heads,
     HeadMixin,
+    Heads,
     Info,
     InfoMixin,
 )
-from .property import  JSiteProperty
-from .blocks import (  # noqa: F401
-    RRow,
-    TFRow,
-    JBlock,
-    RBlock,
-    TFBlock,
-    JBlocks,
-)
-from .j import JMixin, JIOMixin, JFile
+from .j import JFile, JIOMixin, JMixin
+from .property import JSiteProperty
+from .utils import iter_lines, parse_datatype_units
 from .validation import IsJ, is_j_file
-from .cbase import JParseMixin, JCoreParser, JCBBase # noqa: F401
-from .collection import JCollectionMixin, JCollection
-from .components import JComponentMixin
-from .utils import  iter_lines, parse_datatype_units
 
 __all__ = [
     # heads / header API

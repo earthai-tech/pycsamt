@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from ..core import TelemetryPacket
 
@@ -86,9 +86,9 @@ class BaseTelemetryClient:
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
-        protocol: Optional[IoTProtocol] = None,
+        protocol: IoTProtocol | None = None,
         dry_run: bool = False,
         **options: Any,
     ) -> None:
@@ -99,14 +99,14 @@ class BaseTelemetryClient:
             )
         self.endpoint = endpoint
         self.dry_run = bool(dry_run)
-        self.options: Dict[str, Any] = dict(options)
-        self.sent: List[TelemetryPacket] = []
-        self.subscriptions: List[str] = []
+        self.options: dict[str, Any] = dict(options)
+        self.sent: list[TelemetryPacket] = []
+        self.subscriptions: list[str] = []
         self.connected = False
         self._handle: Any = None
 
     # -- context management ------------------------------------------------
-    def __enter__(self) -> "BaseTelemetryClient":
+    def __enter__(self) -> BaseTelemetryClient:
         self.connect()
         return self
 
@@ -173,7 +173,7 @@ class BaseTelemetryClient:
             detail=detail or "sent",
         )
 
-    def receive(self, *, timeout: Optional[float] = None) -> Optional[Dict[str, Any]]:
+    def receive(self, *, timeout: float | None = None) -> dict[str, Any] | None:
         """Receive one payload, or ``None`` in dry-run/unsupported mode."""
         if self.dry_run:
             return None
@@ -195,10 +195,10 @@ class BaseTelemetryClient:
 
     def listen(
         self,
-        callback: Callable[[Dict[str, Any]], None],
+        callback: Callable[[dict[str, Any]], None],
         *,
-        max_messages: Optional[int] = None,
-        timeout: Optional[float] = None,
+        max_messages: int | None = None,
+        timeout: float | None = None,
     ) -> int:
         """Poll :meth:`receive`, invoking *callback* per payload.
 
@@ -261,8 +261,8 @@ class BaseTelemetryClient:
         )
 
     def _transport_receive(
-        self, *, timeout: Optional[float] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         raise TelemetryError(
             f"{self.protocol.value} transport does not support receive()."
         )
@@ -287,7 +287,7 @@ class TelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         protocol: IoTProtocol | str = IoTProtocol.FILE,
         dry_run: bool = True,

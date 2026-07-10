@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -34,12 +33,17 @@ to PCA-based reconstruction using :class:`sklearn.decomposition.PCA`.
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
 from .._base import BaseEMProcessor
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
 
 __all__ = ["AnomalyDetector"]
 
@@ -51,7 +55,7 @@ __all__ = ["AnomalyDetector"]
 def _build_fc_ae_torch(
     n_features: int,
     latent_dim: int,
-    channels: Tuple[int, ...],
+    channels: tuple[int, ...],
 ) -> Any:
     """Fully-connected autoencoder — PyTorch."""
     try:
@@ -98,12 +102,12 @@ def _build_fc_ae_torch(
 def _build_fc_ae_tf(
     n_features: int,
     latent_dim: int,
-    channels: Tuple[int, ...],
+    channels: tuple[int, ...],
 ) -> Any:
     """Fully-connected autoencoder — TensorFlow/Keras."""
     try:
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
     except ImportError as exc:
         raise ImportError("TensorFlow is required for AnomalyDetector (TF backend)") from exc
 
@@ -172,12 +176,12 @@ class AnomalyDetector(BaseEMProcessor):
 
     def __init__(
         self,
-        n_features: Optional[int] = None,
+        n_features: int | None = None,
         latent_dim: int = 32,
         *,
-        channels: Tuple[int, ...] = (128, 64),
+        channels: tuple[int, ...] = (128, 64),
         threshold_percentile: float = 95.0,
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         self.n_features = None if n_features is None else int(n_features)
         self.latent_dim = int(latent_dim)
@@ -188,12 +192,12 @@ class AnomalyDetector(BaseEMProcessor):
         self._network: Any = None
         self._pca: Any = None
         self._use_pca: bool = False
-        self._backend_name: Optional[str] = None
-        self._threshold: Optional[float] = None
-        self._x_mean: Optional[np.ndarray] = None
-        self._x_std: Optional[np.ndarray] = None
+        self._backend_name: str | None = None
+        self._threshold: float | None = None
+        self._x_mean: np.ndarray | None = None
+        self._x_std: np.ndarray | None = None
         self._is_fitted: bool = False
-        self._history: Dict[str, list] = {}
+        self._history: dict[str, list] = {}
 
     # ─── BaseEMProcessor interface ────────────────────────────────────────
 
@@ -205,9 +209,9 @@ class AnomalyDetector(BaseEMProcessor):
         batch_size: int = 32,
         lr: float = 1e-3,
         val_frac: float = 0.1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "AnomalyDetector":
+    ) -> AnomalyDetector:
         """
         Train the anomaly detector on profile data.
 
@@ -302,11 +306,11 @@ class AnomalyDetector(BaseEMProcessor):
 
     def _fit_torch(
         self, Xn: np.ndarray, *, epochs: int, batch_size: int,
-        lr: float, val_frac: float, seed: Optional[int], verbose: bool,
+        lr: float, val_frac: float, seed: int | None, verbose: bool,
     ) -> None:
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         rng = np.random.default_rng(seed)
         dev = resolve_device(self.device)
@@ -366,7 +370,7 @@ class AnomalyDetector(BaseEMProcessor):
 
     def _fit_tensorflow(
         self, Xn: np.ndarray, *, epochs: int, batch_size: int,
-        lr: float, val_frac: float, seed: Optional[int], verbose: bool,
+        lr: float, val_frac: float, seed: int | None, verbose: bool,
     ) -> None:
         import tensorflow as tf
 
@@ -441,7 +445,7 @@ class AnomalyDetector(BaseEMProcessor):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "n_features": self.n_features,
             "latent_dim": self.latent_dim,
@@ -450,8 +454,8 @@ class AnomalyDetector(BaseEMProcessor):
             "device": self.device,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._x_mean is not None:
             out["_x_mean"] = self._x_mean
             out["_x_std"] = self._x_std
@@ -464,7 +468,8 @@ class AnomalyDetector(BaseEMProcessor):
                 out[k] = v
         elif self._pca is not None:
             try:
-                import pickle, io
+                import io
+                import pickle
                 buf = io.BytesIO()
                 pickle.dump(self._pca, buf)
                 out["_pca_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
@@ -472,7 +477,7 @@ class AnomalyDetector(BaseEMProcessor):
                 pass
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         thr = weights.pop("_threshold", None)
@@ -483,7 +488,8 @@ class AnomalyDetector(BaseEMProcessor):
         pca_blob = weights.pop("_pca_pickle", None)
         if pca_blob is not None:
             try:
-                import pickle, io
+                import io
+                import pickle
                 self._pca = pickle.load(io.BytesIO(bytes(pca_blob)))
                 self._use_pca = True
                 self._is_fitted = True

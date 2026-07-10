@@ -7,21 +7,19 @@ Uses the example files in ``data/mare2dem/``.
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 from pycsamt.models.mare2dem import (
-    Mare2DEMLog,
     InversionResult,
+    Mare2DEMLog,
     diff_resistivity,
-    read_resistivity,
     read_emdata,
 )
-from pycsamt.models.mare2dem.noise import NoiseConfig, add_synthetic_noise
-
+from pycsamt.models.mare2dem.noise import (
+    NoiseConfig,
+    add_synthetic_noise,
+)
 
 # ==========================================================================
 # Mare2DEMLog — OccamLog.2012.0 format
@@ -228,8 +226,9 @@ class TestAddSyntheticNoise:
         assert not np.allclose(n1.data[:, 4], n2.data[:, 4])
 
     def test_noise_requires_8col_data(self):
-        from pycsamt.models.mare2dem import EMDataFile
         import numpy as np
+
+        from pycsamt.models.mare2dem import EMDataFile
         em = EMDataFile()
         em.data = np.zeros((5, 6))  # 6-column data, not a response file
         nc = NoiseConfig()

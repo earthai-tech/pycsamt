@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,10 +40,13 @@ import sys
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import n_jobs_option, no_color_option, verbose_option
+from ....api.cli.options import (
+    n_jobs_option,
+    no_color_option,
+    verbose_option,
+)
 from ....api.cli.params import FreqRange
 from ._base import forward
-
 
 # ---------------------------------------------------------------------------
 # generate command
@@ -177,6 +179,7 @@ def generate(
     configure_cli(log__level=verbose, log__color=not no_color)
 
     import numpy as np  # noqa: PLC0415
+
     from ....forward import generate_dataset  # noqa: PLC0415
 
     # ── parse --n-layers ─────────────────────────────────────────────────────

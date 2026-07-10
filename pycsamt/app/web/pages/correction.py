@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Data correction / conditioning page — v2 redesign.
@@ -27,10 +26,13 @@ clientside callback driven by the `corr-active-tab` dcc.Store.
 """
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
-from pycsamt.app.desktop.controllers.correction_controller import CATALOGUE, CATEGORIES
+from pycsamt.app.desktop.controllers.correction_controller import (
+    CATALOGUE,
+    CATEGORIES,
+)
 from pycsamt.app.web.layout import IDs, _command_bar
 from pycsamt.app.web.utils import empty_src
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """End-to-end integration tests for the full topo pipeline.
@@ -20,21 +19,32 @@ import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from pycsamt.seg.edi import EDIFile
 from pycsamt.seg.collection import EDICollection
-from pycsamt.topo.config import TopoConfig, PYCSAMT_TOPO, configure_topo, reset_topo
-from pycsamt.topo.drape import drape_section, interp_elev, station_surface_z
+from pycsamt.seg.edi import EDIFile
+from pycsamt.topo.config import (
+    PYCSAMT_TOPO,
+    TopoConfig,
+    configure_topo,
+    reset_topo,
+)
+from pycsamt.topo.drape import (
+    drape_section,
+    interp_elev,
+    station_surface_z,
+)
 from pycsamt.topo.extract import (
     extract_chainage,
     extract_elevation,
     extract_station_names,
-    has_elevation,
 )
-from pycsamt.topo.overlay import draw_topo_section, draw_topo_strip
-
+from pycsamt.topo.overlay import (
+    draw_topo_section,
+    draw_topo_strip,
+)
 
 # ---------------------------------------------------------------------------
 # Data helpers
@@ -193,7 +203,7 @@ class TestExtractToOverlay:
         _, zd, rho_out = drape_section(x_nodes, z_nodes, rho, el_c)
 
         fig, ax = plt.subplots()
-        pcm = ax.pcolormesh(x_nodes, zd, rho_out, shading="flat",
+        ax.pcolormesh(x_nodes, zd, rho_out, shading="flat",
                             cmap="jet", vmin=0, vmax=3)
         draw_topo_section(ax, chain, elev, names)
         ax.set_xlabel("Chainage (km)")

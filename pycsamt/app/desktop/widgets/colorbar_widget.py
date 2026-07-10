@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,14 +11,20 @@ recreating the widget.
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("QtAgg")
 
-import matplotlib.colorbar as mcolorbar
-import matplotlib.colors as mcolors
 import matplotlib.cm as mcm
+import matplotlib.colors as mcolors
+from matplotlib.backends.backend_qtagg import (
+    FigureCanvasQTAgg,
+)
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class ColorbarWidget(QWidget):

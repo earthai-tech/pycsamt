@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -39,10 +38,10 @@ Quick start
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
-from datetime import date, datetime
+from dataclasses import asdict, dataclass, field
+from datetime import date
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 __all__ = ["BBox", "SurveyMeta"]
 
@@ -125,11 +124,11 @@ class BBox:
         except (TypeError, ValueError):
             return False
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "BBox":
+    def from_dict(cls, d: dict[str, Any]) -> BBox:
         return cls(**{k: float(v) for k, v in d.items()})
 
     @classmethod
@@ -137,7 +136,7 @@ class BBox:
         cls,
         lats: list[float],
         lons: list[float],
-    ) -> "BBox":
+    ) -> BBox:
         """Build a tight bounding box from lists of coordinates."""
         if not lats or not lons:
             raise ValueError("lats and lons must be non-empty")
@@ -210,16 +209,16 @@ class SurveyMeta:
     """
 
     name: str
-    project: Optional[str] = None
-    operator: Optional[str] = None
+    project: str | None = None
+    operator: str | None = None
     method: str = "MT"
-    bbox: Optional[BBox] = None
-    date_start: Optional[date] = None
-    date_end: Optional[date] = None
+    bbox: BBox | None = None
+    date_start: date | None = None
+    date_end: date | None = None
     crs: str = "WGS84"
-    n_stations: Optional[int] = None
+    n_stations: int | None = None
     notes: str = ""
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         m = self.method.upper()
@@ -238,7 +237,7 @@ class SurveyMeta:
     # ------------------------------------------------------------------
 
     @property
-    def duration_days(self) -> Optional[int]:
+    def duration_days(self) -> int | None:
         """Number of acquisition days, or None when dates are incomplete."""
         if self.date_start and self.date_end:
             return (self.date_end - self.date_start).days
@@ -265,7 +264,7 @@ class SurveyMeta:
         name: str = "survey",
         method: str = "MT",
         **kwargs: Any,
-    ) -> "SurveyMeta":
+    ) -> SurveyMeta:
         """Build a :class:`SurveyMeta` from a Sites collection.
 
         Parameters
@@ -327,9 +326,9 @@ class SurveyMeta:
     # Serialisation
     # ------------------------------------------------------------------
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return all fields as a plain JSON-serialisable dict."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "name":       self.name,
             "project":    self.project,
             "operator":   self.operator,
@@ -345,13 +344,13 @@ class SurveyMeta:
         return d
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "SurveyMeta":
+    def from_dict(cls, d: dict[str, Any]) -> SurveyMeta:
         """Reconstruct from a plain dict (as produced by :meth:`to_dict`)."""
         d = dict(d)
         bbox_raw = d.pop("bbox", None)
         bbox = BBox.from_dict(bbox_raw) if bbox_raw else None
 
-        def _parse_date(v: Any) -> Optional[date]:
+        def _parse_date(v: Any) -> date | None:
             if v is None:
                 return None
             if isinstance(v, date):
@@ -377,7 +376,7 @@ class SurveyMeta:
             extra=extra,
         )
 
-    def to_json(self, path: Optional[str | Path] = None) -> str:
+    def to_json(self, path: str | Path | None = None) -> str:
         """Serialise to a JSON string (optionally write to *path*)."""
         text = json.dumps(self.to_dict(), indent=2, default=str)
         if path is not None:
@@ -385,12 +384,12 @@ class SurveyMeta:
         return text
 
     @classmethod
-    def from_json(cls, path: str | Path) -> "SurveyMeta":
+    def from_json(cls, path: str | Path) -> SurveyMeta:
         """Load from a JSON file."""
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         return cls.from_dict(data)
 
-    def to_yaml(self, path: Optional[str | Path] = None) -> str:
+    def to_yaml(self, path: str | Path | None = None) -> str:
         """Serialise to a YAML string (optionally write to *path*)."""
         try:
             import yaml  # noqa: PLC0415
@@ -403,7 +402,7 @@ class SurveyMeta:
         return text
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "SurveyMeta":
+    def from_yaml(cls, path: str | Path) -> SurveyMeta:
         """Load from a YAML file."""
         try:
             import yaml  # noqa: PLC0415

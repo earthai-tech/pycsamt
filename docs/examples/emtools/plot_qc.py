@@ -26,7 +26,6 @@ the uncertainty-aware scores and the fan chart.
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

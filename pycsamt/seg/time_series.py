@@ -1,23 +1,24 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
-from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
+
 import os
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 
-from ..log.logger import get_logger
 from ..exceptions import EdIDataError
-from ..z.base import BaseEM 
+from ..log.logger import get_logger
+from ..z.base import BaseEM
 from .base import EDIComponentBase
-from .validation import ( 
-    _strip_norm, 
-    _to_int_or_none, 
-    _to_float_or_none, 
-    _split_comment, 
-    IsEdi
- )
+from .validation import (
+    IsEdi,
+    _split_comment,
+    _strip_norm,
+    _to_float_or_none,
+    _to_int_or_none,
+)
 
 logger = get_logger(__name__)
 
@@ -31,7 +32,7 @@ class TSect(EDIComponentBase):
     measurement IDs that follow the header.  The class keeps a
     pointer to where the first ``>TSERIES`` data block starts so
     downstream readers can jump straight to the data.
-    
+
     Parameters
     ----------
     verbose : int or bool, optional
@@ -41,7 +42,7 @@ class TSect(EDIComponentBase):
     **kws
         Keyword overrides for any public attribute.  Unknown
         keys are ignored.
-    
+
     Attributes
     ----------
     sectid : str or None
@@ -65,7 +66,7 @@ class TSect(EDIComponentBase):
     start_data_lines_num : int or None
         Absolute line index where the first ``>TSERIES`` block
         begins.  Useful for fast data scans.
-    
+
     Methods
     -------
     from_file(edi_path)
@@ -75,7 +76,7 @@ class TSect(EDIComponentBase):
     write()
         Serialize the section back to EDI lines including the
         measurement ID list.
-    
+
     Notes
     -----
     Parsing is tolerant.  Unknown keys are stored in ``extra``.
@@ -83,7 +84,7 @@ class TSect(EDIComponentBase):
     ignored.  If multiple time-series sections exist, call
     :meth:`from_file` on the desired file view or use a higher
     level iterator to locate the right header first.
-    
+
     Examples
     --------
     >>> sect = TSect.from_file("sound.edi")
@@ -91,14 +92,14 @@ class TSect(EDIComponentBase):
     (3, 0.01)
     >>> print("IDs:", sect.meas_ids[:2])
     IDs: ['HX', 'HY']
-    
+
     See Also
     --------
     TSIO
         Reader and writer for ``>TSERIES`` data blocks.
     validation.IsEdi
         Lightweight EDI file validator used during reading.
-    
+
     References
     ----------
     .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
@@ -106,7 +107,7 @@ class TSect(EDIComponentBase):
     """
 
 
-    KEY_ORDER: List[str] = [
+    KEY_ORDER: list[str] = [
         "sectid",
         "nchan",
         "nmeas",
@@ -123,28 +124,28 @@ class TSect(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.sectid: Optional[str] = None
-        self.nchan: Optional[int] = None
-        self.nmeas: Optional[int] = None
-        self.npts: Optional[int] = None
-        self.maxblks: Optional[int] = None
-        self.dt: Optional[float] = None
-        self.meas_ids: List[str] = []
-        self.extra: Dict[str, Any] = {}
-        self.start_data_lines_num: Optional[int] = None
+        self.sectid: str | None = None
+        self.nchan: int | None = None
+        self.nmeas: int | None = None
+        self.npts: int | None = None
+        self.maxblks: int | None = None
+        self.dt: float | None = None
+        self.meas_ids: list[str] = []
+        self.extra: dict[str, Any] = {}
+        self.start_data_lines_num: int | None = None
 
         for k, v in kws.items():
             setattr(self, k, v)
 
     @classmethod
-    def from_file(cls, edi_path: str) -> "TSect":
+    def from_file(cls, edi_path: str) -> TSect:
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
-    
+
         lines = p.read_text(
             encoding="utf-8-sig", errors="replace"
         ).splitlines()
-    
+
         start = None
         for i, ln in enumerate(lines):
             if ln.lstrip().upper().startswith(">=TSERIESSECT"):
@@ -152,7 +153,7 @@ class TSect(EDIComponentBase):
                 break
         if start is None:
             raise EdIDataError("No >=TSERIESSECT found.")
-    
+
         # stop at first >TSERIES, next >=..., or EOF
         stop = len(lines)
         for j in range(start + 1, len(lines)):
@@ -160,7 +161,7 @@ class TSect(EDIComponentBase):
             if u.startswith(">TSERIES") or u.startswith(">="):
                 stop = j
                 break
-    
+
         inst = cls()
         for raw in lines[start + 1 : stop]:
             s = raw.strip()
@@ -187,13 +188,13 @@ class TSect(EDIComponentBase):
             else:
                 if s:
                     inst.meas_ids.append(_strip_norm(s))
-    
+
         inst.start_data_lines_num = stop
         return inst
 
-    def write(self) -> List[str]:
-        out: List[str] = [">=TSERIESSECT\n"]
-        vals: Dict[str, Any] = {
+    def write(self) -> list[str]:
+        out: list[str] = [">=TSERIESSECT\n"]
+        vals: dict[str, Any] = {
             "sectid": self.sectid,
             "nchan": self.nchan,
             "nmeas": self.nmeas,
@@ -233,14 +234,14 @@ class _TSBlock(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.options: Dict[str, Any] = {}
-        self.nvals_hint: Optional[int] = None
-        self.values: List[float] = []
+        self.options: dict[str, Any] = {}
+        self.nvals_hint: int | None = None
+        self.values: list[float] = []
 
         # common aliases if present in header
-        self.npts: Optional[int] = None
-        self.dt: Optional[float] = None
-        self.id: Optional[str] = None
+        self.npts: int | None = None
+        self.dt: float | None = None
+        self.id: str | None = None
 
         for k, v in kws.items():
             setattr(self, k, v)
@@ -264,7 +265,7 @@ class TSIO(EDIComponentBase):
     block line starts with a flexible option list (e.g.
     ``ID=HX NPTS=4 DT=0.25``) followed by a ``// N`` hint and
     then one or more lines of numeric samples.
-    
+
     Parameters
     ----------
     verbose : int or bool, optional
@@ -273,20 +274,20 @@ class TSIO(EDIComponentBase):
         Logger instance inherited from :class:`EDIComponentBase`.
     **kws
         Keyword overrides for public attributes.
-    
+
     Attributes
     ----------
     blocks : list of _TSBlock
         Parsed time-series blocks in file order.  Every block
         exposes:
-            
+
             - ``options`` : dict of parsed header options.
             - ``nvals_hint`` : int or None from the ``//`` count.
             - ``values`` : list[float] of samples.
             - ``id`` : str or None (alias of ``options['id']``).
             - ``npts`` : int or None (alias of ``options['npts']``).
             - ``dt`` : float or None (alias of ``options['dt']``).
-    
+
     Methods
     -------
     from_file(edi_path, start_line=None, *, verbose=0, logger=None)
@@ -298,7 +299,7 @@ class TSIO(EDIComponentBase):
         Serialize every block.  ``per_line`` controls how many
         samples are printed per line.  ``float_fmt`` controls the
         numeric format (e.g. ``"{: .6E}"``).
-    
+
     Notes
     -----
     Header options are typed heuristically.  Integer-like tokens
@@ -306,7 +307,7 @@ class TSIO(EDIComponentBase):
     possible, and finally left as strings.  The common aliases
     ``id``, ``npts`` and ``dt`` are mirrored onto block fields
     for convenience.
-    
+
     Examples
     --------
     >>> sect = TSect.from_file("sound.edi")
@@ -319,14 +320,14 @@ class TSIO(EDIComponentBase):
     >>> lines = io.write(per_line=5, float_fmt="{: .3E}")
     >>> print("".join(lines).splitlines()[0])
     >TSERIES ID=HX NPTS=4 DT=0.25 // 4
-    
+
     See Also
     --------
     TSect
         Header reader for ``>=TSERIESSECT``.
     SpectraIO
         Similar reader for ``>SPECTRA`` blocks.
-    
+
     References
     ----------
     .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
@@ -341,7 +342,7 @@ class TSIO(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.blocks: List[_TSBlock] = []
+        self.blocks: list[_TSBlock] = []
         for k, v in kws.items():
             setattr(self, k, v)
 
@@ -349,16 +350,16 @@ class TSIO(EDIComponentBase):
     def from_file(
         cls,
         edi_path: str,
-        start_line: Optional[int] = None,
+        start_line: int | None = None,
         *,
         verbose: int | bool = 0,
         logger=None,
-    ) -> "TSIO":
+    ) -> TSIO:
         if not os.path.isfile(edi_path):
             raise FileNotFoundError(
                 f"{edi_path!r} is not a file."
             )
-        with open(edi_path, "r", encoding="utf-8") as f:
+        with open(edi_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         if start_line is None:
@@ -391,12 +392,12 @@ class TSIO(EDIComponentBase):
 
     @staticmethod
     def _parse_block(
-        lines: List[str],
+        lines: list[str],
         i: int,
         *,
         verbose: int | bool = 0,
         logger=None,
-    ) -> Tuple[_TSBlock, int]:
+    ) -> tuple[_TSBlock, int]:
         head = lines[i].rstrip("\n")
         body, cmt = _split_comment(head)
         toks = body.split()
@@ -423,7 +424,7 @@ class TSIO(EDIComponentBase):
                 vlow.isdigit()
                 or (vlow.startswith(("+", "-")) and vlow[1:].isdigit())
             )
-            
+
             if is_int_like:
                 blk.options[key] = _to_int_or_none(val)
             else:
@@ -457,13 +458,13 @@ class TSIO(EDIComponentBase):
 
     def write(
         self,
-        per_line: Optional[int] = None,
-        float_fmt: Optional[str] = None,
-    ) -> List[str]:
+        per_line: int | None = None,
+        float_fmt: str | None = None,
+    ) -> list[str]:
         kpl = self.PER_LINE if per_line is None else per_line
         ffmt = self.FLOAT_FMT if float_fmt is None else float_fmt
 
-        out: List[str] = []
+        out: list[str] = []
         for blk in self.blocks:
             head = [">TSERIES"]
             # keep deterministic order for common keys
@@ -485,7 +486,7 @@ class TSIO(EDIComponentBase):
             )
             out.append(" ".join(head) + f" // {n_hint}\n")
 
-            vals: List[str] = []
+            vals: list[str] = []
             cnt = 0
             for v in blk.values:
                 vals.append(ffmt.format(v))
@@ -514,7 +515,7 @@ class TimeSeriesMixin:
     Convenience mixin that exposes two helpers so host classes
     can read time-series content without depending on concrete
     implementations.
-    
+
     Methods
     -------
     read_tseries_header(edi_fn, *, verbose=0, logger=None)
@@ -525,13 +526,13 @@ class TimeSeriesMixin:
         Return a :class:`TSIO` built from the same file.  The
         method internally calls :class:`TSect` to find the first
         ``>TSERIES`` and then streams all blocks.
-    
+
     Notes
     -----
     Use this mixin in higher level readers or project classes to
     offer a thin, stable API.  The methods only read data and do
     not modify files on disk.
-    
+
     Examples
     --------
     >>> class Reader(TimeSeriesMixin):
@@ -540,14 +541,14 @@ class TimeSeriesMixin:
     >>> ts = Reader.read_tseries_blocks("sound.edi")
     >>> hdr.nchan, len(ts.blocks)
     (2, 3)
-    
+
     See Also
     --------
     TSect
         Header parser for time-series sections.
     TSIO
         Data block reader and writer.
-    
+
     References
     ----------
     .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
@@ -686,18 +687,18 @@ class TimeSeries(BaseEM):
 
     def __init__(
         self,
-        name: Optional[str] = None,
+        name: str | None = None,
         *,
         verbose: int = 0,
     ) -> None:
         super().__init__(name=name, verbose=verbose)
-        self.ids: List[str] = []
-        self.data: Dict[str, np.ndarray] = {}
-        self.dt_map: Dict[str, float] = {}
-        self.npts_map: Dict[str, int] = {}
-        self.extra_blocks: List[Dict[str, object]] = []
+        self.ids: list[str] = []
+        self.data: dict[str, np.ndarray] = {}
+        self.dt_map: dict[str, float] = {}
+        self.npts_map: dict[str, int] = {}
+        self.extra_blocks: list[dict[str, object]] = []
 
-    def channels(self) -> List[str]:
+    def channels(self) -> list[str]:
         return list(self.ids)
 
     def get(self, cid: str) -> np.ndarray:
@@ -711,11 +712,11 @@ class TimeSeries(BaseEM):
 
     @classmethod
     def from_io(
-        cls, 
-        sect: TSect, 
-        io: TSIO, *, 
+        cls,
+        sect: TSect,
+        io: TSIO, *,
         empty: float | None = None
-    ) -> "TimeSeries":
+    ) -> TimeSeries:
         inst = cls()
         inst._order: list[str] = []
         inst._data: dict[str, np.ndarray] = {}
@@ -756,12 +757,12 @@ class TimeSeries(BaseEM):
         inst._channels = list(inst._order)
         inst.channels = lambda: list(inst._channels)
         inst.get = lambda c: inst._data[str(c)]
-        
+
         def _time(ch: str) -> np.ndarray:
             x = inst._data[str(ch)]
             dt = float(inst.dt_map.get(str(ch), 1.0))
             return np.arange(x.size, dtype=float) * dt
-        
+
         inst.time = _time
 
         return inst
@@ -776,8 +777,8 @@ class TimeSeries(BaseEM):
             npts=total,
             dt=self._sect_dt,
         )
-        
-        sect.meas_ids = list(chans)  
+
+        sect.meas_ids = list(chans)
         io = TSIO()
         blks: list[_TSBlock] = []
         for cid in chans:
@@ -798,10 +799,10 @@ class TimeSeries(BaseEM):
 
     def align(
         self,
-        ids: Optional[List[str]] = None,
+        ids: list[str] | None = None,
         *,
         fill: float = 0.0,
-    ) -> Tuple[np.ndarray, List[str]]:
+    ) -> tuple[np.ndarray, list[str]]:
         ch = self.ids if ids is None else ids
         nmax = max(self.data[c].size for c in ch)
         M = np.full((nmax, len(ch)), fill, float)

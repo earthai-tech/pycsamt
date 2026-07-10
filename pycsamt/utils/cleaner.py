@@ -3,25 +3,28 @@ Cleaning utilities for DataFrame and Series columns.
 """
 
 import re
-import numpy as np
-import pandas as pd
-from typing import ( 
-    Any, Callable, 
-    Optional, Sequence, 
-    Union, Tuple 
+from collections.abc import Sequence
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Union,
 )
 
-from ..decorators import isdf, check_empty
+import numpy as np
+import pandas as pd
+
+from ..decorators import check_empty, isdf
 
 __all__ = [
     'sanitize_frame_cols',
     'drop_constant_columns',
-    'impute_missing', 
-    'fill_nan', 
+    'impute_missing',
+    'fill_nan',
     'ismissing'
 ]
 
-@check_empty 
+@check_empty
 def sanitize_frame_cols(
     df_or_cols: Union[pd.DataFrame, pd.Series, Sequence[str]],
     *,
@@ -125,7 +128,7 @@ def sanitize_frame_cols(
     return [_clean(item) for item in seq]
 
 
-@isdf 
+@isdf
 def drop_constant_columns(
     df: pd.DataFrame,
     *,
@@ -215,7 +218,7 @@ def drop_constant_columns(
 
     return df2
 
-@isdf 
+@isdf
 def impute_missing(
     df: pd.DataFrame,
     *,
@@ -395,8 +398,8 @@ def ismissing(
     *,
     fill_value: Any = np.nan,
     return_index: Union[bool, str] = False
-) -> Union[Tuple[np.ndarray, np.ndarray],
-           Tuple[np.ndarray, Sequence[int]]]:
+) -> Union[tuple[np.ndarray, np.ndarray],
+           tuple[np.ndarray, Sequence[int]]]:
     """
     Identify missing entries of `arr` in `refarr` and fill.
 
@@ -476,4 +479,3 @@ def ismissing(
         missing = ~mask
     return filled, missing
 
-    

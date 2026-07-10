@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """Tests for OccamResponse.read()."""
 
 import math
-import pytest
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
 RESP_FILE = DATA_DIR / "RESP17.resp"

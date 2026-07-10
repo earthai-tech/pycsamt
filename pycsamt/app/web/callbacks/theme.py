@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """callbacks/theme.py — dark / light theme toggle."""
 
 from __future__ import annotations
 
-from dash import Input, Output, State, no_update
+from dash import Input, Output, State
 
 from pycsamt.app.web.layout import IDs
 

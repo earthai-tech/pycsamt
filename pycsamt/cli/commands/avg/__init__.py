@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,12 +19,13 @@ correct     ``pycsamt avg correct``   — static-shift / capacitive-coupling.
 export      ``pycsamt avg export``    — write modern, legacy, or netCDF.
 """
 
+from . import (
+    correct,  # noqa: F401  (registers @avg.command("correct"))
+    export,  # noqa: F401  (registers @avg.command("export"))
+    info,  # noqa: F401  (registers @avg.command("info"))
+    stations,  # noqa: F401  (registers @avg.command("stations"))
+    validate,  # noqa: F401  (registers @avg.command("validate"))
+)
 from ._base import avg  # noqa: F401
-
-from . import info      # noqa: F401  (registers @avg.command("info"))
-from . import validate  # noqa: F401  (registers @avg.command("validate"))
-from . import stations  # noqa: F401  (registers @avg.command("stations"))
-from . import correct   # noqa: F401  (registers @avg.command("correct"))
-from . import export    # noqa: F401  (registers @avg.command("export"))
 
 __all__ = ["avg"]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -31,7 +30,7 @@ SEG MT/EMAP EDI v1.0 (1991) — consolidated into
 
 from __future__ import annotations
 
-from typing import Dict, FrozenSet, Mapping, Optional
+from collections.abc import Mapping
 
 # ---------------------------------------------------------------------------
 # Top-level file structure (BNF skeleton)
@@ -51,11 +50,11 @@ BNF_EDI_SKELETON: str = (
 # Canonical section openers / structural tags
 # ---------------------------------------------------------------------------
 
-HEAD_TAGS: FrozenSet[str] = frozenset({
+HEAD_TAGS: frozenset[str] = frozenset({
     ">HEAD", ">INFO", ">FREQ", ">ZROT", ">RHOROT", ">END",
 })
 
-SECTION_OPENERS: FrozenSet[str] = frozenset({
+SECTION_OPENERS: frozenset[str] = frozenset({
     ">=DEFINEMEAS", ">=TSERIESSECT", ">=SPECTRASECT",
     ">=MTSECT", ">=EMAPSECT", ">=OTHERSECT",
 })
@@ -63,98 +62,98 @@ SECTION_OPENERS: FrozenSet[str] = frozenset({
 # Comments ("pseudo-tag" used by the format). Kept for completeness.
 COMMENT_TAG: str = ">!"
 
-MEAS_DEF_BLOCKS: FrozenSet[str] = frozenset({">EMEAS", ">HMEAS"})
-TSERIES_BLOCKS: FrozenSet[str] = frozenset({">TSERIES"})
-SPECTRA_BLOCKS: FrozenSet[str] = frozenset({">SPECTRA"})
+MEAS_DEF_BLOCKS: frozenset[str] = frozenset({">EMEAS", ">HMEAS"})
+TSERIES_BLOCKS: frozenset[str] = frozenset({">TSERIES"})
+SPECTRA_BLOCKS: frozenset[str] = frozenset({">SPECTRA"})
 
 # ---------------------------------------------------------------------------
 # Option sets for stable blocks (used by validators)
 # ---------------------------------------------------------------------------
 
-HEAD_ALLOWED: FrozenSet[str] = frozenset({
+HEAD_ALLOWED: frozenset[str] = frozenset({
     "DATAID", "ACQBY", "FILEBY", "ACQDATE", "ENDDATE",
     "FILEDATE", "COUNTRY", "STATE", "COUNTY", "PROSPECT",
     "LOC", "LAT", "LONG", "ELEV", "UNITS", "STDVERS",
     "PROGVERS", "PROGDATE", "MAXSECT", "BINDATA", "EMPTY",
     # Some writers also include non-standard free fields; we ignore.
 })
-HEAD_REQUIRED: FrozenSet[str] = frozenset({
+HEAD_REQUIRED: frozenset[str] = frozenset({
     "DATAID", "ACQBY", "FILEBY", "ACQDATE", "FILEDATE",
     "STDVERS", "PROGVERS", "PROGDATE",
 })
 
-INFO_ALLOWED: FrozenSet[str] = frozenset({"MAXINFO"})
+INFO_ALLOWED: frozenset[str] = frozenset({"MAXINFO"})
 
-FREQ_ALLOWED: FrozenSet[str] = frozenset({"NFREQ", "ORDER", "CHKSUM"})
-FREQ_REQUIRED: FrozenSet[str] = frozenset({"NFREQ"})
-FREQ_ENUMS: Mapping[str, FrozenSet[str]] = {
+FREQ_ALLOWED: frozenset[str] = frozenset({"NFREQ", "ORDER", "CHKSUM"})
+FREQ_REQUIRED: frozenset[str] = frozenset({"NFREQ"})
+FREQ_ENUMS: Mapping[str, frozenset[str]] = {
     "ORDER": frozenset({"INC", "DEC"}),
 }
 
-ZROT_ALLOWED: FrozenSet[str] = frozenset({"NFREQ", "CHKSUM"})
-ZROT_REQUIRED: FrozenSet[str] = frozenset({})  # dataset length must==NFREQ
+ZROT_ALLOWED: frozenset[str] = frozenset({"NFREQ", "CHKSUM"})
+ZROT_REQUIRED: frozenset[str] = frozenset({})  # dataset length must==NFREQ
 
-RHOROT_ALLOWED: FrozenSet[str] = frozenset({"NFREQ", "CHKSUM"})
-RHOROT_REQUIRED: FrozenSet[str] = frozenset({})
+RHOROT_ALLOWED: frozenset[str] = frozenset({"NFREQ", "CHKSUM"})
+RHOROT_REQUIRED: frozenset[str] = frozenset({})
 
-DEFINEMEAS_ALLOWED: FrozenSet[str] = frozenset({
+DEFINEMEAS_ALLOWED: frozenset[str] = frozenset({
     "MAXCHAN", "MAXRUN", "MAXMEAS", "UNITS", "REFTYPE",
     "REFLOC", "REFLAT", "REFLONG", "REFELEV",
 })
 # Required per standard: for measured data REFLAT/REFLONG/REFELEV;
 # we treat them as conditionally required in validators.
-DEFINEMEAS_REQUIRED: FrozenSet[str] = frozenset({})
+DEFINEMEAS_REQUIRED: frozenset[str] = frozenset({})
 
-EMEAS_ALLOWED: FrozenSet[str] = frozenset({
+EMEAS_ALLOWED: frozenset[str] = frozenset({
     "ID", "CHTYPE", "X", "Y", "Z", "X2", "Y2", "Z2",
     "ACQCHAN", "FILTER", "SENSOR", "GAIN", "MEASDATE",
 })
-EMEAS_REQUIRED_CORE: FrozenSet[str] = frozenset({
+EMEAS_REQUIRED_CORE: frozenset[str] = frozenset({
     "ID", "CHTYPE", "X", "Y", "X2", "Y2",
 })
-EMEAS_ENUMS: Mapping[str, FrozenSet[str]] = {
+EMEAS_ENUMS: Mapping[str, frozenset[str]] = {
     "CHTYPE": frozenset({"EX", "EY"}),
 }
 
-HMEAS_ALLOWED: FrozenSet[str] = frozenset({
+HMEAS_ALLOWED: frozenset[str] = frozenset({
     "ID", "CHTYPE", "X", "Y", "Z", "AZM", "DIP",
     "ACQCHAN", "FILTER", "SENSOR", "GAIN", "MEASDATE",
 })
-HMEAS_REQUIRED_CORE: FrozenSet[str] = frozenset({
+HMEAS_REQUIRED_CORE: frozenset[str] = frozenset({
     "ID", "CHTYPE", "X", "Y", "AZM",
 })
-HMEAS_ENUMS: Mapping[str, FrozenSet[str]] = {
+HMEAS_ENUMS: Mapping[str, frozenset[str]] = {
     "CHTYPE": frozenset({"HX", "HY", "HZ"}),
 }
 
-TSERIESSECT_ALLOWED: FrozenSet[str] = frozenset({
+TSERIESSECT_ALLOWED: frozenset[str] = frozenset({
     "SECTID", "NCHAN", "MAXBLKS", "CHKSUM",
 })
-TSERIES_ALLOWED: FrozenSet[str] = frozenset({
+TSERIES_ALLOWED: frozenset[str] = frozenset({
     # Core, kept minimal — systems add many more (e.g. NC, DT,...)
     "SECTID", "NPTS", "SR", "CHKSUM",
 })
 
-SPECTRASECT_ALLOWED: FrozenSet[str] = frozenset({
+SPECTRASECT_ALLOWED: frozenset[str] = frozenset({
     "SECTID", "NC", "MAXBLKS", "CHKSUM",
 })
-SPECTRA_ALLOWED: FrozenSet[str] = frozenset({
+SPECTRA_ALLOWED: frozenset[str] = frozenset({
     # Intentional minimal core; writers often include BW/NAV/DT, etc.
     "FREQ", "BWIDTH", "AVGF", "AVGT", "NC", "CHKSUM",
 })
 
-MTSECT_ALLOWED: FrozenSet[str] = frozenset({
+MTSECT_ALLOWED: frozenset[str] = frozenset({
     "SECTID", "NFREQ", "MAXBLKS", "HX", "HY", "HZ",
     "EX", "EY", "RX", "RY",
 })
-EMAPSECT_ALLOWED: FrozenSet[str] = frozenset({
+EMAPSECT_ALLOWED: frozenset[str] = frozenset({
     "SECTID", "NFREQ", "MAXBLKS", "NDIPOLE", "TYPE",
     "HX", "HY", "RX", "RY", "CHKSUM",
 })
-OTHERSECT_ALLOWED: FrozenSet[str] = frozenset({"SECTID", "MAXBLKS"})
+OTHERSECT_ALLOWED: frozenset[str] = frozenset({"SECTID", "MAXBLKS"})
 
 # Convenience registry (options we care about by tag)
-BLOCK_OPTIONS: Mapping[str, Mapping[str, FrozenSet[str]]] = {
+BLOCK_OPTIONS: Mapping[str, Mapping[str, frozenset[str]]] = {
     ">HEAD": {"allowed": HEAD_ALLOWED, "required": HEAD_REQUIRED},
     ">INFO": {"allowed": INFO_ALLOWED, "required": frozenset()},
     ">FREQ": {"allowed": FREQ_ALLOWED, "required": FREQ_REQUIRED},
@@ -187,27 +186,27 @@ BLOCK_OPTIONS: Mapping[str, Mapping[str, FrozenSet[str]]] = {
 # ---------------------------------------------------------------------------
 
 # Impedance (Z) blocks — real/imag, variance, covariance
-Z_REAL_IMAG: FrozenSet[str] = frozenset({
+Z_REAL_IMAG: frozenset[str] = frozenset({
     ">ZXXR", ">ZXXI", ">ZXYR", ">ZXYI",
     ">ZYXR", ">ZYXI", ">ZYYR", ">ZYYI",
 })
-Z_VAR_COV: FrozenSet[str] = frozenset({
+Z_VAR_COV: frozenset[str] = frozenset({
     ">ZXXR.VAR", ">ZXXI.VAR", ">ZXX.VAR", ">ZXX.COV",
     ">ZXYR.VAR", ">ZXYI.VAR", ">ZXY.VAR", ">ZXY.COV",
     ">ZYXR.VAR", ">ZYXI.VAR", ">ZYX.VAR", ">ZYX.COV",
     ">ZYYR.VAR", ">ZYYI.VAR", ">ZYY.VAR", ">ZYY.COV",
 })
 # EMAP-filtered impedances
-FZ_REAL_IMAG: FrozenSet[str] = frozenset({
+FZ_REAL_IMAG: frozenset[str] = frozenset({
     ">FZXXR", ">FZXXI", ">FZXYR", ">FZXYI",
 })
 
 # Apparent resistivity / phase
-RHO_BLOCKS: FrozenSet[str] = frozenset({
+RHO_BLOCKS: frozenset[str] = frozenset({
     ">RHOXX", ">RHOXY", ">RHOYX", ">RHOYY",
     ">FRHOXX", ">FRHOXY",  # filtered (EMAP)
 })
-RHO_STATS: FrozenSet[str] = frozenset({
+RHO_STATS: frozenset[str] = frozenset({
     ">RHOXX.VAR", ">RHOXX.ERR", ">RHOXX.FIT",
     ">RHOXY.VAR", ">RHOXY.ERR", ">RHOXY.FIT",
     ">RHOYX.VAR", ">RHOYX.ERR", ">RHOYX.FIT",
@@ -215,11 +214,11 @@ RHO_STATS: FrozenSet[str] = frozenset({
     ">FRHOXX.VAR", ">FRHOXX.ERR", ">FRHOXX.FIT",
     ">FRHOXY.VAR", ">FRHOXY.ERR", ">FRHOXY.FIT",
 })
-PHS_BLOCKS: FrozenSet[str] = frozenset({
+PHS_BLOCKS: frozenset[str] = frozenset({
     ">PHSXX", ">PHSXY", ">PHSYX", ">PHSYY",
     ">FPHSXX", ">FPHSXY",
 })
-PHS_STATS: FrozenSet[str] = frozenset({
+PHS_STATS: frozenset[str] = frozenset({
     ">PHSXX.VAR", ">PHSXX.ERR", ">PHSXX.FIT",
     ">PHSXY.VAR", ">PHSXY.ERR", ">PHSXY.FIT",
     ">PHSYX.VAR", ">PHSYX.ERR", ">PHSYX.FIT",
@@ -229,41 +228,41 @@ PHS_STATS: FrozenSet[str] = frozenset({
 })
 
 # Tipper and tipper-related experiment outputs
-TIPPER_BLOCKS: FrozenSet[str] = frozenset({
+TIPPER_BLOCKS: frozenset[str] = frozenset({
     ">TIPMAG", ">TIPPHS",
 })
-TIPPER_AUX: FrozenSet[str] = frozenset({
+TIPPER_AUX: frozenset[str] = frozenset({
     ">TIPMAG.ERR", ">TIPMAG.FIT", ">TIPPHS.FIT",
     ">TXR.EXP", ">TXI.EXP", ">TXVAR.EXP",
     ">TYR.EXP", ">TYI.EXP", ">TYVAR.EXP",
 })
 
 # Coherency, signal, and noise diagnostics
-COH_BLOCKS: FrozenSet[str] = frozenset({
+COH_BLOCKS: frozenset[str] = frozenset({
     ">COH", ">EPREDCOH", ">HPREDCOH",
     ">SIGAMP", ">SIGNOISE",
 })
 
 # Strike / skew / ellipticity
-GEOM_BLOCKS: FrozenSet[str] = frozenset({
+GEOM_BLOCKS: frozenset[str] = frozenset({
     ">ZSTRIKE", ">ZSKEW", ">ZELLIP",
     ">TSTRIKE", ">TSKEW", ">TELLIP",
 })
 
 # Spatial filters (EMAP)
-SPATIAL_FILTER_BLOCKS: FrozenSet[str] = frozenset({
+SPATIAL_FILTER_BLOCKS: frozenset[str] = frozenset({
     ">FILWIDTH", ">FILANGLE", ">EQUIVLEN",
 })
 
 # 1D continuous inversion summaries
-INV1D_BLOCKS: FrozenSet[str] = frozenset({
+INV1D_BLOCKS: frozenset[str] = frozenset({
     ">RES1DXX", ">DEP1DXX", ">RES1DXY", ">DEP1DXY",
     ">RES1DYX", ">DEP1DYX", ">RES1DYY", ">DEP1DYY",
     ">FRES1DXX", ">FDEP1DXX", ">FRES1DXY", ">FDEP1DXY",
 })
 
 # Union of all known data keywords
-DATA_KEYWORDS: FrozenSet[str] = frozenset().union(
+DATA_KEYWORDS: frozenset[str] = frozenset().union(
     Z_REAL_IMAG, Z_VAR_COV, FZ_REAL_IMAG,
     RHO_BLOCKS, RHO_STATS, PHS_BLOCKS, PHS_STATS,
     TIPPER_BLOCKS, TIPPER_AUX, COH_BLOCKS,
@@ -271,13 +270,13 @@ DATA_KEYWORDS: FrozenSet[str] = frozenset().union(
 )
 
 # Everything we recognize as a tag/keyword in EDI files
-ALL_KEYWORDS: FrozenSet[str] = frozenset().union(
+ALL_KEYWORDS: frozenset[str] = frozenset().union(
     HEAD_TAGS, SECTION_OPENERS, MEAS_DEF_BLOCKS,
     TSERIES_BLOCKS, SPECTRA_BLOCKS, DATA_KEYWORDS,
 )
 
 # Families (category names used by parsers/writers)
-FAMILY_BY_TAG: Dict[str, str] = {}
+FAMILY_BY_TAG: dict[str, str] = {}
 for t in Z_REAL_IMAG | Z_VAR_COV | FZ_REAL_IMAG:
     FAMILY_BY_TAG[t] = "impedance"
 for t in RHO_BLOCKS | RHO_STATS:
@@ -335,7 +334,7 @@ def normalize_tag(tag: str) -> str:
     return ">" + t[1:].upper()
 
 
-def tag_family(tag: str) -> Optional[str]:
+def tag_family(tag: str) -> str | None:
     """Return family/category name for *tag* if known."""
     return FAMILY_BY_TAG.get(normalize_tag(tag))
 

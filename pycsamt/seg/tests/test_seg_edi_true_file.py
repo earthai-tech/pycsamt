@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
 from pathlib import Path
+
 import numpy as np
 import pytest
 
-from pycsamt.seg.edi import EDIFile
 from pycsamt.exceptions import EdIDataError
+from pycsamt.seg.edi import EDIFile
 
 
 def _has(ed: EDIFile, key: str) -> bool:

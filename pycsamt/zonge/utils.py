@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 #       Author: LKouadio <etanoyau@gmail.com>
-#       License: LGPL-3.0 
+#       License: LGPL-3.0
 
 """
 General‑purpose helpers for **Zonge** AVG / AMTAVG files and
@@ -17,61 +16,55 @@ case schema (``station, freq, emag, rho, phase, …``).
 """
 from __future__ import annotations
 
-from datetime import datetime 
+import io
+import re
+import warnings  # noqa
+from collections.abc import Iterable, Sequence
+from datetime import datetime
 from numbers import Integral
 from pathlib import Path
-import re
-import io
-import warnings # noqa
 from typing import (
-    List, 
-    Tuple, 
-    Dict, 
-    Optional, 
-    Sequence,
-    Any, 
-    Iterable,
-    Union
+    Any,
 )
 
 import numpy as np
 import pandas as pd
+
 try:
     import xarray as xr  # type: ignore
 except ImportError:  # pragma: no cover
-    pass 
+    pass
     # warnings.warn(
     #     "xarray is required for the package"
     # )
+from ..compat.aliases import compat_alias
 from ..decorators import isdf
-from ..compat.aliases import compat_alias 
-from ..gis.utils import to_utm # type: ignore
 from ..exceptions import (
-    AvgFileError, 
     AvgDataError,
-    StationError
-  )
+    AvgFileError,
+    StationError,
+)
+from ..gis.utils import to_utm  # type: ignore
 from ..log.logger import get_logger
 from ..utils._dependency import import_optional_dependency
-
-from .schema import ( 
-    _CANONICAL_MAP,
+from .schema import (
     _CANON_TO_MODERN,
-    _FLEXIBLE_LOOKUP, 
-    _CSAVGW_ORDERED, 
-    get_aliases, 
+    _CANONICAL_MAP,
+    _CSAVGW_ORDERED,
+    _FLEXIBLE_LOOKUP,
+    get_aliases,
 )
 
 __all__ = [
-    "load_avg", 
-    "round_dipole_length", 
+    "load_avg",
+    "round_dipole_length",
     "validate_stn_profile",
-    "classify_avg_format", 
+    "classify_avg_format",
     "extract_core_columns",
-    "number_stations", 
-    "chunk_by_frequency", 
-    "write_avg", 
-    "to_xarray", 
+    "number_stations",
+    "chunk_by_frequency",
+    "write_avg",
+    "to_xarray",
 
 ]
 
@@ -97,16 +90,16 @@ def find_and_rename_column(
     """
     # Use the get_aliases function we already built
     aliases = get_aliases(canonical_name, kind="all")
-    
+
     col_found = None
     for alias in aliases:
         if alias in df.columns:
             col_found = alias
             break
-            
+
     if col_found and col_found != canonical_name:
         return df.rename(columns={col_found: canonical_name})
-        
+
     return df
 
 
@@ -134,7 +127,7 @@ def classify_avg_format(lines: Sequence[str]) -> int:
     first checks for explicit headers and then falls back to
     analyzing structural clues like keyword format and data
     delimiters.
-    
+
     Parameters
     ----------
     lines : Sequence[str]
@@ -144,7 +137,7 @@ def classify_avg_format(lines: Sequence[str]) -> int:
     ------
     AvgFileError
         When the function cannot detect a valid header.
-        
+
     """
     # First pass: Look for the most definitive header lines.
     # This is the fastest and most reliable method.
@@ -207,7 +200,7 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
         raise AvgFileError("Header row not found in kind‑1 file")
 
     hdr_tokens = _RX_WS.sub(' ', lines[idx].strip()).split()
-    data_rows: List[List[Any]] = []
+    data_rows: list[list[Any]] = []
     for ln in lines[idx + 1:]:
         if not ln.strip() or _RX_K1_HEADER.search(ln):
             break
@@ -249,7 +242,7 @@ def _next_block(lines, i):
 
 def _parse_kind2(
     lines: Sequence[str]
-) -> Tuple[pd.DataFrame, Dict[str, str]]:
+) -> tuple[pd.DataFrame, dict[str, str]]:
     """
     Parse a modern CSAVGW (kind-2) AVG file that contains
     repeated CSV blocks, typically one per station/component.
@@ -281,11 +274,11 @@ def _parse_kind2(
     AvgDataError
         If no data blocks are found.
     """
-    global_meta: Dict[str, str] = {}
-    blocks_meta: List[Dict[str, str]] = []
-    frames: List[pd.DataFrame] = []
+    global_meta: dict[str, str] = {}
+    blocks_meta: list[dict[str, str]] = []
+    frames: list[pd.DataFrame] = []
 
-    block_meta: Dict[str, str] = {}
+    block_meta: dict[str, str] = {}
     i, n = 0, len(lines)
     seen_table = False
 
@@ -320,9 +313,9 @@ def _parse_kind2(
             start, j = _next_block(lines, i)
             if start is None:
                 break
-    
+
             seen_table = True
-    
+
             # Assemble header + rows for this block while skipping
             # inline comment lines that may appear among rows.
             table_txt = '\n'.join(
@@ -331,7 +324,7 @@ def _parse_kind2(
                     if not _is_comment(s)
                 ]
             )
-    
+
             # Parse CSV with forgiving whitespace.  Convert numeric
             # strings (including '*', '.5', '1.') with _to_float.
             dfb = pd.read_csv(
@@ -343,7 +336,7 @@ def _parse_kind2(
             dfb = _dfb_map(
                 lambda v: _to_float(v) if isinstance(v, str) else v
             )
-    
+
             # Stamp station and a few helpful block-level fields as
             # columns.  Prefer client station number ($Rx.Stn).
             stn = (
@@ -356,7 +349,7 @@ def _parse_kind2(
                     dfb['station'] = _to_float(stn)
                 except Exception:
                     dfb['station'] = stn  # keep as text if odd
-    
+
             # Component label and a couple of helpers can be handy for
             # QC.  They are optional and harmless if missing.
             if 'Rx.Cmp' in block_meta:
@@ -364,29 +357,29 @@ def _parse_kind2(
             for k in ('Rx.Length', 'Rx.GdpStn'):
                 if k in block_meta:
                     dfb[k.replace('.', '_').lower()] = block_meta[k]
-    
+
             # Standardise to canonical lowercase names (e.g., ARes.mag
             # → 'rho', Z.phz → 'phase', etc.).
             dfb = _standardise_columns(dfb)
-    
+
             # Keep this block and record its per-block metadata.
             frames.append(dfb)
             blocks_meta.append(dict(block_meta))
-    
+
             # # Optional: keep "sticky" Rx.* meta for subsequent blocks that
             # # omit it; otherwise clear fully
             # sticky = ('Rx.Stn', 'Rx.GdpStn', 'Rx.Cmp', 'Rx.Length')
             # block_meta = {k: v for k, v in block_meta.items() if k in sticky}
-        
+
             # Reset block meta and continue scanning from block end.
             block_meta.clear()
             i = j
-            continue 
-        
+            continue
+
         # 4) Anything else (blank lines, stray text)
         # Non-meta, non-table line → just advance
         i += 1
-    
+
     if not frames:
         raise AvgDataError("Data block(s) missing in kind-2 file")
 
@@ -404,13 +397,13 @@ def _parse_kind2(
         df['use'] = mw & pw
 
     # Merge top-level meta with collected per-block meta.
-    meta: Dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
+    meta: dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
     return df, meta
 
-def _get_weight_bool (df, comp ='z.mwgt'): 
+def _get_weight_bool (df, comp ='z.mwgt'):
     """ Get the bool weight for construction use. """
-    val =df.get(comp, 1) 
-    if isinstance (val, (float, int)): 
+    val =df.get(comp, 1)
+    if isinstance (val, (float, int)):
         return val  > 0
     return df.get(comp, 1).fillna(1).astype(float) > 0
 
@@ -428,7 +421,7 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
         # Normalize the column name for flexible lookup
         norm_col = str(col).lower().strip()# .replace(
             # '.', '').replace('_', '').replace('%', '')
- 
+
         # 1. Try flexible lookup first for QC/weight columns
         if norm_col in _FLEXIBLE_LOOKUP:
             rename_dict[col] = _FLEXIBLE_LOOKUP[norm_col]
@@ -443,7 +436,7 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def split_by_station(
     df: pd.DataFrame
-) -> Dict[Any, pd.DataFrame]:
+) -> dict[Any, pd.DataFrame]:
     """
     Split a tidy AVG DataFrame into per-station sub-frames.
 
@@ -479,7 +472,7 @@ def split_by_station(
             df['station'], errors='coerce'
         )
 
-    out: Dict[Any, pd.DataFrame] = {}
+    out: dict[Any, pd.DataFrame] = {}
 
     # Use dropna=False so NaN stations (if any) are still grouped
     # and visible to the caller.
@@ -513,9 +506,9 @@ def to_xarray(
     df: pd.DataFrame,
     *,
     coords: Sequence[str] = ("station", "freq", "comp"),
-    data_vars: Optional[Sequence[str]] = None,
-    attrs: Optional[Dict[str, Any]] = None,
-) -> "xr.Dataset":
+    data_vars: Sequence[str] | None = None,
+    attrs: dict[str, Any] | None = None,
+) -> xr.Dataset:
     """
     Convert a tidy Zonge table to an :class:`xarray.Dataset`.
 
@@ -669,7 +662,7 @@ def write_avg(
     float_fmt: str = "%.6g",
     na_rep: str = "*",
     header_spaces: bool = False,   # use $k=v by default
-    banner_lines: Optional[Sequence[str]] = None,
+    banner_lines: Sequence[str] | None = None,
 ) -> Path:
     r"""Serialize a DataFrame to a Zonge kind-2 AVG file.
 
@@ -747,12 +740,12 @@ def write_avg(
     pycsamt.zonge.utils.load_avg : The corresponding function for
         reading AVG files.
     """
-    # --- 0) destination 
+    # --- 0) destination
     if path is None:
         path = Path.cwd() / "exported_kind2.avg"
     path = Path(path).expanduser().resolve()
 
-    # --- 1) build header (global $meta) 
+    # --- 1) build header (global $meta)
     # filter out non-$ keys like 'blocks'
     meta = dict(meta or {})
     meta.pop("blocks", None)
@@ -760,8 +753,8 @@ def write_avg(
     eq = " = " if header_spaces else "="
     header_lines: list[str] = list(banner_lines or [])
     if banner_lines:
-        header_lines.append("")  
-        
+        header_lines.append("")
+
     for k, v in meta.items():
         header_lines.append(f"${k}{eq}{v}")
     if stamp:
@@ -772,11 +765,11 @@ def write_avg(
     header_lines.append("")
     out_chunks: list[str] = ["\n".join(header_lines)]
 
-    # --- 2) assemble data block(s) 
+    # --- 2) assemble data block(s)
     block = pd.concat(
         [core, extra], axis=1) if extra is not None else core
     block = block.copy()
-    
+
     # Drop any "extra" columns that are completely empty
     extra_cols_to_check = [
         'coh', 'gdp_blk', 'gdp_chn', 'gdp_time', 'zabs'
@@ -793,17 +786,17 @@ def write_avg(
 
     def _order_cols(df: pd.DataFrame) -> list[str]:
         # Expected CSAVGW order; extras will be appended after these.
-        
+
         present = [c for c in _CSAVGW_ORDERED if c in df.columns]
         extras  = [c for c in df.columns if c not in present]
         # Exclude all columns that are part of the block's metadata
-        extras = [ 
-            c for c in extras if c.lower() not in ( 
+        extras = [
+            c for c in extras if c.lower() not in (
                 "station", "comp", "rx_length", "rx_gdpstn"
                 )
             ]
         return present + extras
-    
+
     # Identify the actual column name (case may vary)
     stn_col = next(
         (c for c in block.columns if c.lower() == "station"), None
@@ -813,7 +806,7 @@ def write_avg(
     #     # Identify the actual column name (case may vary)
     #     stn_col = next(c for c in block.columns if c.lower() == "station")
     if stn_col:
-        
+
         for stn, sub in block.groupby(stn_col, sort=True, dropna=False):
             # Defensive: skip NaN station group
             if pd.isna(stn):
@@ -838,13 +831,13 @@ def write_avg(
                     rx_lines.append(f"$Rx.Cmp{eq}{vals[0]}")
 
             out_chunks.append("\n".join(rx_lines))
-            
+
             cols_to_write = _order_cols(sub)
             dfw = sub[cols_to_write]
             out_chunks.append(
                 _format_aligned_csv(dfw, float_fmt, na_rep)
             )
-            
+
             out_chunks.append("")  # blank line after the block
     else:
         # Single-block writer
@@ -853,7 +846,7 @@ def write_avg(
         out_chunks.append(
             _format_aligned_csv(dfw, float_fmt, na_rep)
         )
-    # --- 3) write to disk 
+    # --- 3) write to disk
     path.write_text("\n".join(out_chunks), encoding="utf8")
     logger.info("AVG written → %s", path)
     return path
@@ -895,10 +888,10 @@ def _format_aligned_csv(
 def load_avg(
     path: str | Path,
     *,
-    ll_columns: Tuple[str, str] = ('latitude', 'longitude'),
-    utm_zone: Optional[int] = None,
+    ll_columns: tuple[str, str] = ('latitude', 'longitude'),
+    utm_zone: int | None = None,
     inplace: bool = False
-) -> Tuple[pd.DataFrame, Dict[str, str]]:
+) -> tuple[pd.DataFrame, dict[str, str]]:
     r"""Read a Zonge AVG file and return a tidy DataFrame and metadata.
 
     This function serves as the primary parser for both legacy
@@ -1006,14 +999,14 @@ def load_avg(
 
     return df, meta
 
-def read_stn(path: Union[str, Path]) -> pd.DataFrame:
+def read_stn(path: str | Path) -> pd.DataFrame:
     r"""
     Parse Zonge ``.stn`` files (legacy and extended forms).
 
     Supports:
     - legacy, space-delimited with four columns
       (``station easting northing elevation``)
-    - CSV with quoted headers 
+    - CSV with quoted headers
     - extended CSV headers containing optional columns
       (e.g., heading, pitch, roll)
     - embedded first-data row at end of header line
@@ -1027,7 +1020,7 @@ def read_stn(path: Union[str, Path]) -> pd.DataFrame:
     names).
     """
     try:
-        with open(Path(path), "r", encoding="utf-8") as f:
+        with open(Path(path), encoding="utf-8") as f:
             raw = f.read().splitlines()
     except Exception as exc:
         raise StationError(
@@ -1040,7 +1033,7 @@ def read_stn(path: Union[str, Path]) -> pd.DataFrame:
         s = s.lstrip()
         return (not s) or s[0] in {"!", "/", "\\", "#", ";"}
 
-    lines: List[str] = [ln.strip() for ln in raw if not _is_comment(ln)]
+    lines: list[str] = [ln.strip() for ln in raw if not _is_comment(ln)]
 
     if not lines:
         raise StationError("Empty or comment-only STN file.")
@@ -1134,7 +1127,7 @@ def read_stn(path: Union[str, Path]) -> pd.DataFrame:
 def detect_stn_header(
     profile: Sequence[str],
     splitter: str | None = None,
-) -> Tuple[int, List[Tuple[str, int]]]:
+) -> tuple[int, list[tuple[str, int]]]:
     r"""
     Heuristically detect a ``.stn`` header and map token
     positions.
@@ -1272,7 +1265,7 @@ def extract_core_columns(
      df: pd.DataFrame,
      *,
     keep: Iterable[str] | None = None
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Split a kind‑2 frame into **core** and **extra** columns.
 
     Parameters
@@ -1306,9 +1299,9 @@ def extract_core_columns(
     return core.reset_index(drop=True), extra.reset_index(drop=True)
 
 
-def _block_to_dict(block: Sequence[str]) -> Dict[str, Any]:
+def _block_to_dict(block: Sequence[str]) -> dict[str, Any]:
     """Convert ``key=value`` lines to a dict (case‑insensitive keys)."""
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for ln in block:
         if '=' not in ln:
             continue
@@ -1317,7 +1310,7 @@ def _block_to_dict(block: Sequence[str]) -> Dict[str, Any]:
     return out
 
 
-def _dict_to_lines(data: Any) -> List[str]:
+def _dict_to_lines(data: Any) -> list[str]:
     """Serialise dict‑like *data* to ``key=value`` text lines."""
     if isinstance(data, str):
         import json
@@ -1332,7 +1325,7 @@ def number_stations(
     n_freq:     int | Integral,
     *,
     prefix: str = "S"
-) -> Tuple[List[str], List[str]]:
+) -> tuple[list[str], list[str]]:
     """
     Generate station IDs and a frequency-expanded copy.
 
@@ -1363,7 +1356,7 @@ def chunk_by_frequency(
     n_per_chunk: int | Integral,
     *,
     drop_remainder: bool = False
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Split *data* into equally sized chunks (one per frequency).
 
@@ -1394,7 +1387,7 @@ def chunk_by_frequency(
     arr   = np.asarray(data)
     total = arr.size
     idx   = np.arange(0, total, int(n_per_chunk))
-    chunks: List[np.ndarray] = [
+    chunks: list[np.ndarray] = [
         arr[i : i + n_per_chunk] for i in idx
     ]
     if drop_remainder and chunks and chunks[-1].size < n_per_chunk:
@@ -1403,7 +1396,7 @@ def chunk_by_frequency(
 
 def _find_col(
     df: pd.DataFrame, candidates: Sequence[str]
-) -> Optional[str]:
+) -> str | None:
     """
     Return the first column name present in *df* among
     *candidates*.  Matching is case-insensitive and ignores
@@ -1471,7 +1464,7 @@ def _norm_comp(x: object) -> str:
 def _first_present(
     df: pd.DataFrame,
     candidates: Sequence[str],
-) -> Optional[str]:
+) -> str | None:
     """
     Return the first column name found in *df*
     among *candidates*.
@@ -1488,7 +1481,7 @@ def _first_present(
     str or None
         The first matching column name, or *None* if absent.
     """
- 
+
     cols_lc = {str(c).strip().lower(): c for c in df.columns}
     for a in candidates:
         a_lc = str(a).strip().lower()
@@ -1507,7 +1500,7 @@ def _to_numeric_percent(series: pd.Series) -> pd.Series:
         {"": np.nan, "*": np.nan})
     return pd.to_numeric(s, errors="coerce")
 
-def _to_complex(x: Any) -> Union[complex, float]:
+def _to_complex(x: Any) -> complex | float:
     """
     Robustly convert a value to a complex number.
 

@@ -1,33 +1,35 @@
 # pycsamt/emtools/strike.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
-
 import re
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from matplotlib import colors as mcolors
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Patch as _Patch
 
-
-import numpy as np
-import pandas as pd
-
-from ._core import (
-    ensure_sites,
-    _axes_list,
-    _iter_items,
-    _apply_each,
-    _get_z_block,
-    _get_t_block,
-    _name,
-    hide_polar_radius_labels,
+from ..api._rose_style import (
+    _UNSET,
+    RoseStyle,
+    resolve_rose_style,
 )
-from ..site import edit as _edit
-from .tensor import build_phase_tensor_table
-from ..api._rose_style import RoseStyle, resolve_rose_style, _UNSET
 from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ..site import edit as _edit
+from ._core import (
+    _apply_each,
+    _axes_list,
+    _get_t_block,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+    hide_polar_radius_labels,
+)
+from .tensor import build_phase_tensor_table
 
 # -------------------------- small helpers ------------------------------- #
 
@@ -46,7 +48,7 @@ def _rotate_tensor(z: np.ndarray, deg: float) -> np.ndarray:
     return out
 
 
-def _diag_offdiag_norm(z: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _diag_offdiag_norm(z: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     d = np.sqrt(np.abs(z[:, 0, 0]) ** 2 + np.abs(z[:, 1, 1]) ** 2)
     o = np.sqrt(np.abs(z[:, 0, 1]) ** 2 + np.abs(z[:, 1, 0]) ** 2)
     return d, o
@@ -80,7 +82,7 @@ def _unwrap_deg_180(a: np.ndarray) -> np.ndarray:
     return x
 
 
-def _band_edges(p: np.ndarray, band: Optional[Tuple[float, float]]):
+def _band_edges(p: np.ndarray, band: tuple[float, float] | None):
     if band is None:
         lo = max(1e-6, float(np.nanmin(p)))
         hi = float(np.nanmax(p))
@@ -88,7 +90,7 @@ def _band_edges(p: np.ndarray, band: Optional[Tuple[float, float]]):
     return float(band[0]), float(band[1])
 
 
-def _site_lonlat(ed: Any) -> Tuple[Optional[float], Optional[float]]:
+def _site_lonlat(ed: Any) -> tuple[float | None, float | None]:
     """Return ``(lon, lat)`` for a Site/EDI object, or ``(None, None)``.
 
     Real ``Site`` objects expose coordinates only via ``.coords``
@@ -122,7 +124,7 @@ def estimate_strike_sweep(
     *,
     angles: np.ndarray = np.arange(-90.0, 91.0, 1.0),
     metric: str = "diag_ratio",
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -133,7 +135,7 @@ def estimate_strike_sweep(
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
-    rows: List[Dict[str, float]] = []
+    rows: list[dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -173,7 +175,7 @@ def estimate_strike_sweep(
 def estimate_strike_phase_tensor(
     sites: Any,
     *,
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     robust: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -193,7 +195,7 @@ def estimate_strike_phase_tensor(
         return pd.DataFrame(
             columns=["station", "ang", "iqr", "lo", "hi", "n"]
         )
-    rows: List[Dict[str, float]] = []
+    rows: list[dict[str, float]] = []
     for st, sdf in df.groupby("station"):
         p = sdf["period"].to_numpy()
         lo, hi = _band_edges(p, band)
@@ -224,7 +226,7 @@ def estimate_strike_phase_tensor(
 def estimate_strike_consensus(
     sites: Any,
     *,
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     w_sweep: float = 0.5,
     w_pt: float = 0.5,
     angles: np.ndarray = np.arange(-90.0, 91.0, 1.0),
@@ -302,7 +304,7 @@ def rotate_to_strike(
     sites: Any,
     *,
     method: str = "consensus",  # consensus|sweep|pt
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     angles: np.ndarray = np.arange(-90.0, 91.0, 1.0),
     metric: str = "diag_ratio",
     inplace: bool = False,
@@ -376,7 +378,7 @@ def strike_curve_sweep(
         recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
-    rows: List[Dict[str, float]] = []
+    rows: list[dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -558,14 +560,14 @@ def plot_strike_rose(
     sites: Any,
     *,
     # ── visual style ─────────────────────────────────────────────────────
-    style: "str | RoseStyle | None" = "pycsamt",
+    style: str | RoseStyle | None = "pycsamt",
     # ── data / algorithm ─────────────────────────────────────────────────
-    groups: Optional[Dict[str, List[str]]] = None,
-    group_key: Optional[str] = None,
-    band: Optional[Tuple[float, float]] = None,
-    freq_bands: Optional[List[Tuple[float, float]]] = None,
-    band_labels: Optional[List[str]] = None,
-    band_colors: Optional[List] = None,
+    groups: dict[str, list[str]] | None = None,
+    group_key: str | None = None,
+    band: tuple[float, float] | None = None,
+    freq_bands: list[tuple[float, float]] | None = None,
+    band_labels: list[str] | None = None,
+    band_colors: list | None = None,
     method: str = "consensus",
     bins: int = 36,
     weight: str = "inv_iqr",
@@ -611,9 +613,9 @@ def plot_strike_rose(
     show_n_stations=_UNSET,
     # ── layout ───────────────────────────────────────────────────────────
     subplot_size: float = 3.2,
-    n_cols: Optional[int] = None,
+    n_cols: int | None = None,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     suptitle: str = "",
     suptitle_fontsize: float = 10.0,
     tight_layout: bool = True,
@@ -803,7 +805,7 @@ def plot_strike_rose(
                      strict=strict, verbose=verbose)
 
     # ---- strike estimation -------------------------------------------------
-    def _est(b: Optional[Tuple[float, float]]):
+    def _est(b: tuple[float, float] | None):
         if method == "sweep":
             return estimate_strike_sweep(
                 S, band=b, recursive=False, on_dup=on_dup,
@@ -836,9 +838,9 @@ def plot_strike_rose(
 
     # ---- optional per-band tables (bar_style="bands") ----------------------
     use_bands = bar_style == "bands" and bool(freq_bands)
-    TB_list: List[pd.DataFrame] = []
-    _bc: List = []
-    _bl: List[str] = []
+    TB_list: list[pd.DataFrame] = []
+    _bc: list = []
+    _bl: list[str] = []
     if use_bands:
         n_fb = len(freq_bands)  # type: ignore[arg-type]
         _bc = (list(band_colors) if band_colors is not None
@@ -857,7 +859,7 @@ def plot_strike_rose(
 
     # ---- build groups ------------------------------------------------------
     if groups is None:
-        lab: Dict[str, str] = {}
+        lab: dict[str, str] = {}
         for ii, ed in enumerate(_iter_items(S)):
             st = _name(ed, ii)
             if group_key and hasattr(ed, group_key):
@@ -924,7 +926,7 @@ def plot_strike_rose(
         th = np.radians(np.concatenate([cen, cen + 180.0]))
 
         if use_bands:
-            h_stacks: List[np.ndarray] = []
+            h_stacks: list[np.ndarray] = []
             for tb_b in TB_list:
                 if tb_b.empty:
                     h_stacks.append(np.zeros(bins_))
@@ -1337,10 +1339,10 @@ def plot_strike_mapsticks(
 def _draw_rose_on_ax(
     ax: plt.Axes,
     angles_deg: np.ndarray,
-    rs: "RoseStyle",
+    rs: RoseStyle,
     *,
     bins: int = 36,
-    cmap_override: Optional[str] = None,
+    cmap_override: str | None = None,
     title: str = "",
     title_fc: str = "white",
     title_ec: str = "0.35",
@@ -1469,15 +1471,15 @@ def plot_strike_analysis(
     sites: Any,
     *,
     # ── visual style ─────────────────────────────────────────────────────
-    style: "str | RoseStyle | None" = "pycsamt",
+    style: str | RoseStyle | None = "pycsamt",
     # ── data / algorithm ─────────────────────────────────────────────────
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     bins: int = 36,
     method: str = "sweep",
     # ── per-panel colormap overrides (None → rs.cmap from style) ─────────
-    cmap_z: Optional[str] = None,
-    cmap_pt: Optional[str] = None,
-    cmap_tipper: Optional[str] = None,
+    cmap_z: str | None = None,
+    cmap_pt: str | None = None,
+    cmap_tipper: str | None = None,
     # ── title box colours ─────────────────────────────────────────────────
     title_fc_z: str = "#ffe0e0",
     title_fc_pt: str = "#ffffd0",
@@ -1485,7 +1487,7 @@ def plot_strike_analysis(
     title_ec: str = "0.35",
     # ── layout ───────────────────────────────────────────────────────────
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     subplot_size: float = 3.8,
     suptitle: str = "",
     tight_layout: bool = True,
@@ -1608,8 +1610,8 @@ def plot_strike_analysis(
         ang_pt = np.empty(0)
 
     # ── 3. Tipper-strike angles (per frequency × station) ───────────────────
-    _tip_list: List[float] = []
-    for i, ed in enumerate(_iter_items(S)):
+    _tip_list: list[float] = []
+    for _i, ed in enumerate(_iter_items(S)):
         _T, t, fr = _get_t_block(ed)
         if t is None or fr is None:
             continue

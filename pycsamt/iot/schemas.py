@@ -19,9 +19,10 @@ through the schema registered for a given :class:`~pycsamt.iot.core.PacketKind`.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any
 
 from ..api.property import PyCSAMTObject
 from . import _common as _c
@@ -70,8 +71,8 @@ class TelemetryPayload(PyCSAMTObject):
 
     #: Canonical packet kind the schema describes. Overridden per subclass.
     kind: PacketKind = PacketKind.DATA
-    station: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    station: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     # ---- shared field alias groups -------------------------------------
     _STATION_ALIASES = ("station", "site", "station_id", "station_name")
@@ -82,21 +83,21 @@ class TelemetryPayload(PyCSAMTObject):
             self.extra = dict(self.extra or {})
 
     @classmethod
-    def _consume_station(cls, data: Dict[str, Any]) -> Optional[str]:
+    def _consume_station(cls, data: dict[str, Any]) -> str | None:
         return _c.as_optional_str(
             _first(data, cls._STATION_ALIASES), "station"
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         """Return a flat payload dictionary with canonical keys."""
         raise NotImplementedError  # pragma: no cover - overridden
 
     def _finish(
         self,
-        canonical: Dict[str, Any],
+        canonical: dict[str, Any],
         *,
         drop_none: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         out = dict(self.extra)
         for key, value in canonical.items():
             if drop_none and value is None:
@@ -110,12 +111,12 @@ class HealthPayload(TelemetryPayload):
     """Device-health telemetry (battery, temperature, link quality)."""
 
     kind: PacketKind = PacketKind.HEALTH
-    battery_v: Optional[float] = None
-    temperature_c: Optional[float] = None
-    uptime_s: Optional[float] = None
-    free_storage_mb: Optional[float] = None
-    rssi_dbm: Optional[float] = None
-    firmware: Optional[str] = None
+    battery_v: float | None = None
+    temperature_c: float | None = None
+    uptime_s: float | None = None
+    free_storage_mb: float | None = None
+    rssi_dbm: float | None = None
+    firmware: str | None = None
 
     _BATTERY = ("battery_v", "battery_voltage", "battery_voltage_v",
                 "voltage", "batt_v")
@@ -143,7 +144,7 @@ class HealthPayload(TelemetryPayload):
         self.firmware = _c.as_optional_str(self.firmware, "firmware")
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "HealthPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> HealthPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._BATTERY, cls._TEMPERATURE,
@@ -160,7 +161,7 @@ class HealthPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         return self._finish(
             dict(
                 station=self.station,
@@ -180,16 +181,16 @@ class QCPayload(TelemetryPayload):
     """Edge quality-control telemetry for one acquisition window."""
 
     kind: PacketKind = PacketKind.QC
-    accepted: Optional[bool] = None
-    decision: Optional[str] = None
-    snr_db: Optional[float] = None
-    finite_coverage: Optional[float] = None
-    spike_fraction: Optional[float] = None
-    rms: Optional[float] = None
-    method: Optional[str] = None
-    channels: List[str] = field(default_factory=list)
-    frequency_band_hz: Optional[tuple[float, float]] = None
-    reasons: List[str] = field(default_factory=list)
+    accepted: bool | None = None
+    decision: str | None = None
+    snr_db: float | None = None
+    finite_coverage: float | None = None
+    spike_fraction: float | None = None
+    rms: float | None = None
+    method: str | None = None
+    channels: list[str] = field(default_factory=list)
+    frequency_band_hz: tuple[float, float] | None = None
+    reasons: list[str] = field(default_factory=list)
 
     _ACCEPTED = ("accepted", "edge_accepted", "qc_accepted", "ok")
     _DECISION = ("decision", "edge_decision", "qc_decision")
@@ -230,7 +231,7 @@ class QCPayload(TelemetryPayload):
         self.reasons = _as_str_list(self.reasons)
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "QCPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> QCPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._ACCEPTED, cls._DECISION, cls._SNR,
@@ -252,7 +253,7 @@ class QCPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         return self._finish(
             dict(
                 station=self.station,
@@ -279,12 +280,12 @@ class PowerPayload(TelemetryPayload):
     """Energy-budget telemetry for a field node."""
 
     kind: PacketKind = PacketKind.POWER
-    battery_v: Optional[float] = None
-    state: Optional[str] = None
-    runtime_days: Optional[float] = None
-    net_wh_per_day: Optional[float] = None
-    solar_w: Optional[float] = None
-    load_w: Optional[float] = None
+    battery_v: float | None = None
+    state: str | None = None
+    runtime_days: float | None = None
+    net_wh_per_day: float | None = None
+    solar_w: float | None = None
+    load_w: float | None = None
 
     _BATTERY = ("battery_v", "battery_voltage", "voltage")
     _STATE = ("state", "power_state")
@@ -312,7 +313,7 @@ class PowerPayload(TelemetryPayload):
         self.load_w = _c.as_optional_finite_float(self.load_w, "load_w")
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "PowerPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> PowerPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._BATTERY, cls._STATE, cls._RUNTIME,
@@ -329,7 +330,7 @@ class PowerPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         return self._finish(
             dict(
                 station=self.station,
@@ -349,12 +350,12 @@ class SyncPayload(TelemetryPayload):
     """Clock-synchronisation telemetry for a field node."""
 
     kind: PacketKind = PacketKind.SYNC
-    offset_ms: Optional[float] = None
-    drift_ppm: Optional[float] = None
-    jitter_ms: Optional[float] = None
-    gps_lock: Optional[bool] = None
-    n_reference_points: Optional[int] = None
-    reference: Optional[str] = None
+    offset_ms: float | None = None
+    drift_ppm: float | None = None
+    jitter_ms: float | None = None
+    gps_lock: bool | None = None
+    n_reference_points: int | None = None
+    reference: str | None = None
 
     _OFFSET = ("offset_ms", "clock_offset_ms")
     _DRIFT = ("drift_ppm", "clock_drift_ppm")
@@ -381,7 +382,7 @@ class SyncPayload(TelemetryPayload):
         self.reference = _c.as_optional_str(self.reference, "reference")
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "SyncPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> SyncPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._OFFSET, cls._DRIFT, cls._JITTER,
@@ -398,7 +399,7 @@ class SyncPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         return self._finish(
             dict(
                 station=self.station,
@@ -418,10 +419,10 @@ class EventPayload(TelemetryPayload):
     """Discrete field event (state change, alarm, operator note)."""
 
     kind: PacketKind = PacketKind.EVENT
-    event: Optional[str] = None
+    event: str | None = None
     severity: EventSeverity | str = EventSeverity.INFO
-    message: Optional[str] = None
-    code: Optional[str] = None
+    message: str | None = None
+    code: str | None = None
 
     _EVENT = ("event", "event_type", "name")
     _SEVERITY = ("severity", "level")
@@ -441,7 +442,7 @@ class EventPayload(TelemetryPayload):
         self.code = _c.as_optional_str(self.code, "code")
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "EventPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> EventPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._EVENT, cls._SEVERITY, cls._MESSAGE,
@@ -456,7 +457,7 @@ class EventPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         severity = (
             self.severity.value if isinstance(self.severity, EventSeverity)
             else str(self.severity)
@@ -478,14 +479,14 @@ class AcquisitionPayload(TelemetryPayload):
     """Metadata describing one raw acquisition record/window."""
 
     kind: PacketKind = PacketKind.DATA
-    method: Optional[str] = None
-    channels: List[str] = field(default_factory=list)
-    sample_rate_hz: Optional[float] = None
-    frequency_hz: Optional[float] = None
-    frequency_band_hz: Optional[tuple[float, float]] = None
-    n_samples: Optional[int] = None
-    gain: Optional[float] = None
-    duration_s: Optional[float] = None
+    method: str | None = None
+    channels: list[str] = field(default_factory=list)
+    sample_rate_hz: float | None = None
+    frequency_hz: float | None = None
+    frequency_band_hz: tuple[float, float] | None = None
+    n_samples: int | None = None
+    gain: float | None = None
+    duration_s: float | None = None
 
     _METHOD = ("method", "survey_method", "em_method")
     _CHANNELS = ("channels", "channel")
@@ -520,7 +521,7 @@ class AcquisitionPayload(TelemetryPayload):
         self.duration_s = _c.as_optional_positive(self.duration_s, "duration_s")
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "AcquisitionPayload":
+    def from_mapping(cls, payload: Mapping[str, Any]) -> AcquisitionPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._METHOD, cls._CHANNELS, cls._RATE,
@@ -539,7 +540,7 @@ class AcquisitionPayload(TelemetryPayload):
             extra={k: v for k, v in data.items() if k not in known},
         )
 
-    def as_dict(self, *, drop_none: bool = False) -> Dict[str, Any]:
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         return self._finish(
             dict(
                 station=self.station,
@@ -559,7 +560,7 @@ class AcquisitionPayload(TelemetryPayload):
         )
 
 
-def _normalise_band(value: Any) -> Optional[tuple[float, float]]:
+def _normalise_band(value: Any) -> tuple[float, float] | None:
     if value is None:
         return None
     try:
@@ -575,7 +576,7 @@ def _normalise_band(value: Any) -> Optional[tuple[float, float]]:
     return (lo, hi)
 
 
-def _as_str_list(value: Any) -> List[str]:
+def _as_str_list(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
@@ -586,7 +587,7 @@ def _as_str_list(value: Any) -> List[str]:
 
 
 #: Map each packet kind to its canonical payload schema.
-PAYLOAD_SCHEMAS: Dict[PacketKind, type[TelemetryPayload]] = {
+PAYLOAD_SCHEMAS: dict[PacketKind, type[TelemetryPayload]] = {
     PacketKind.HEALTH: HealthPayload,
     PacketKind.QC: QCPayload,
     PacketKind.POWER: PowerPayload,
@@ -618,7 +619,7 @@ def validate_payload(
     payload: Mapping[str, Any],
     *,
     drop_none: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return a canonicalised payload dictionary for *kind*.
 
     Aliased keys are folded into canonical names and values are range

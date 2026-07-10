@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Session save / load callbacks."""
@@ -6,12 +5,10 @@
 from __future__ import annotations
 
 import json
-import time
 from datetime import datetime
 from pathlib import Path
 
-from dash import Input, Output, State
-from dash import dcc, html, no_update
+from dash import Input, Output, State, html
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs

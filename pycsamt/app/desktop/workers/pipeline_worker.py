@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -8,7 +7,6 @@ emitting granular signals so the UI can update in real-time.
 from __future__ import annotations
 
 import datetime
-from typing import List, Optional
 
 from PySide6.QtCore import QThread, Signal
 
@@ -39,7 +37,7 @@ class PipelineWorker(QThread):
     def __init__(
         self,
         controller,
-        step_ids: List[int],
+        step_ids: list[int],
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -56,7 +54,9 @@ class PipelineWorker(QThread):
                 break
 
             step = self._ctrl.steps[step_id]
-            from pycsamt.app.desktop.controllers.pipeline_controller import StepStatus
+            from pycsamt.app.desktop.controllers.pipeline_controller import (
+                StepStatus,
+            )
 
             # Skip steps explicitly marked as SKIPPED by the user
             if step.status == StepStatus.SKIPPED:

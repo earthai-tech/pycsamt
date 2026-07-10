@@ -129,7 +129,9 @@ def test_progress_auto_is_boolean():
 
 def test_quality_dataframe_follows_global_config_by_default():
     reset_api_view()  # global backend = "pycsamt"
-    from pycsamt.metadata.quality import quality_dataframe as internal_quality_df
+    from pycsamt.metadata.quality import (
+        quality_dataframe as internal_quality_df,
+    )
 
     class Site:
         name = "S1"
@@ -168,7 +170,9 @@ def test_public_geology_wrapper_returns_api_frame():
 def test_metadata_api_flag_overrides_global():
     """Explicit api=True/False override the global config in either direction."""
     from pycsamt.metadata.geology import CATALOG
-    from pycsamt.metadata.quality import quality_dataframe as quality_df
+    from pycsamt.metadata.quality import (
+        quality_dataframe as quality_df,
+    )
 
     class Site:
         name = "S1"
@@ -199,7 +203,9 @@ def test_metadata_api_flag_overrides_global():
 def test_api_view_config_can_disable_wrapping():
     """configure_api_view(backend=False) disables wrapping for api=None calls;
     an explicit api=True per-call override still forces an APIFrame."""
-    from pycsamt.metadata.quality import quality_dataframe as quality_df
+    from pycsamt.metadata.quality import (
+        quality_dataframe as quality_df,
+    )
 
     class Site:
         name = "S1"

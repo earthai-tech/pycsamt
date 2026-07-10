@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com>
 # License: GPL-3.0
 """
@@ -11,16 +10,16 @@ Contains:
  - FieldAliases: standardized lists of common column/field name variants
  - FileRecognizer: logic to infer file type based on path or content
 """
-# import warnings 
-from __future__ import annotations 
+# import warnings
+from __future__ import annotations
+
 import os
-from typing import List
 
 import numpy as np
 
 from .api.property import PyCSAMTObject
-from .log.logger import get_logger
 from .exceptions import FileHandlingError
+from .log.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -50,7 +49,7 @@ UTM_ZONE_DESIGNATOR = {
     'C': [-80, -72],
     'Z': [-80, 84],
 }
- 
+
 
 class TermDefinitions(PyCSAMTObject):
     """
@@ -103,15 +102,15 @@ class FieldAliases(PyCSAMTObject):
     """
     Common field/column name variants for ease of lookup.
     """
-    missing_values: List = [' ', 'nan', np.nan, '*', 'NaN', 'none', None]
+    missing_values: list = [' ', 'nan', np.nan, '*', 'NaN', 'none', None]
 
-    longitude: List[str] = ['lon', 'longitude', 'LONG', 'LON']
-    latitude:  List[str] = ['lat', 'latitude', 'LAT', 'LATITUDE']
-    easting:   List[str] = ['e', 'east', 'easting', 'EASTING']
-    northing:  List[str] = ['n', 'north', 'northing', 'NORTHING']
-    station:   List[str] = ['sta', 'station', 'stn']
-    elevation: List[str] = ['elev', 'elevation', 'ELEV', 'ELEVATION']
-    azimuth:   List[str] = ['azim', 'azimuth']
+    longitude: list[str] = ['lon', 'longitude', 'LONG', 'LON']
+    latitude:  list[str] = ['lat', 'latitude', 'LAT', 'LATITUDE']
+    easting:   list[str] = ['e', 'east', 'easting', 'EASTING']
+    northing:  list[str] = ['n', 'north', 'northing', 'NORTHING']
+    station:   list[str] = ['sta', 'station', 'stn']
+    elevation: list[str] = ['elev', 'elevation', 'ELEV', 'ELEVATION']
+    azimuth:   list[str] = ['azim', 'azimuth']
 
 
 class FileRecognizer(PyCSAMTObject):
@@ -165,7 +164,7 @@ class FileRecognizer(PyCSAMTObject):
 
         # Read lines
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding='utf-8') as f:
                 lines = f.read().splitlines()
         except Exception as e:
             raise FileHandlingError(f"Cannot read file: {e}")
@@ -180,7 +179,7 @@ class FileRecognizer(PyCSAMTObject):
         raise FileHandlingError(f"Unrecognized file format: {filepath}")
 
     @staticmethod
-    def _is_numeric_file(lines: List[str]) -> bool:
+    def _is_numeric_file(lines: list[str]) -> bool:
         """
         Heuristic: all tokens in first and last lines are numeric.
         """

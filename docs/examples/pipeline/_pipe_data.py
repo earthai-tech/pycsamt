@@ -43,6 +43,7 @@ def station_rho(sites, component: str = "xy"):
     apparent-resistivity comparisons directly from a ``Sites`` object.
     """
     import numpy as np
+
     from pycsamt.emtools._core import _iter_items, _name
 
     ij = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}[component]

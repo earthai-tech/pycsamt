@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -72,8 +71,8 @@ HIGH_PRIORITY_PATHS = (
     "pycsamt/site",
     "pycsamt/seg",
     "pycsamt/z",
-    "pycsamt/zonge", 
-    "pycsamt/models", 
+    "pycsamt/zonge",
+    "pycsamt/models",
     "pycsamt/tdem",
     "pycsamt/transformers",
     "pycsamt/pipeline",

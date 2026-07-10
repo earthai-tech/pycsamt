@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,9 +21,9 @@ mare2dem
     loader, and plot utilities.
 """
 
-from importlib import import_module as _imp
-import types as _types
 import sys as _sys
+import types as _types
+from importlib import import_module as _imp
 
 _subpackages = ["occam2d", "mare2dem"]
 

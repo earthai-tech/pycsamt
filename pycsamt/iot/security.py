@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..api.property import PyCSAMTObject
 from . import _common as _c
@@ -37,7 +37,7 @@ __all__ = [
 _REDACTED = "***REDACTED***"
 
 
-def redact_secret(value: Any) -> Optional[str]:
+def redact_secret(value: Any) -> str | None:
     """Return a redaction placeholder when *value* is a non-empty secret."""
     if value is None or value == "":
         return None
@@ -58,11 +58,11 @@ class TLSConfig(PyCSAMTObject):
     """Transport-layer security material for a telemetry client."""
 
     enabled: bool = False
-    ca_cert: Optional[str] = None
-    certfile: Optional[str] = None
-    keyfile: Optional[str] = None
+    ca_cert: str | None = None
+    certfile: str | None = None
+    keyfile: str | None = None
     verify: bool = True
-    min_version: Optional[str] = None
+    min_version: str | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -79,7 +79,7 @@ class TLSConfig(PyCSAMTObject):
                 "certfile and keyfile must be provided together."
             )
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return TLS configuration (paths are not secrets)."""
         return dict(
             enabled=self.enabled,
@@ -103,10 +103,10 @@ class Credential(PyCSAMTObject):
     __repr_exclude__ = {"token", "password", "api_key", "logger", "verbose"}
 
     scheme: AuthScheme | str = AuthScheme.NONE
-    token: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    api_key: Optional[str] = None
+    token: str | None = None
+    username: str | None = None
+    password: str | None = None
+    api_key: str | None = None
     api_key_header: str = "X-API-Key"
 
     def __post_init__(self) -> None:
@@ -130,21 +130,21 @@ class Credential(PyCSAMTObject):
         if self.scheme is AuthScheme.API_KEY and not self.api_key:
             raise ValueError("api_key scheme requires an api_key.")
 
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> dict[str, str]:
         """Return HTTP headers implementing the configured scheme."""
         if self.scheme is AuthScheme.BEARER and self.token:
             return {"Authorization": f"Bearer {self.token}"}
         if self.scheme is AuthScheme.BASIC and self.username:
             import base64
 
-            raw = f"{self.username}:{self.password or ''}".encode("utf-8")
+            raw = f"{self.username}:{self.password or ''}".encode()
             token = base64.b64encode(raw).decode("ascii")
             return {"Authorization": f"Basic {token}"}
         if self.scheme is AuthScheme.API_KEY and self.api_key:
             return {self.api_key_header: self.api_key}
         return {}
 
-    def reveal(self) -> Dict[str, Any]:
+    def reveal(self) -> dict[str, Any]:
         """Return the raw credential values (handle with care)."""
         return dict(
             scheme=self.scheme.value if isinstance(self.scheme, AuthScheme)
@@ -156,7 +156,7 @@ class Credential(PyCSAMTObject):
             api_key_header=self.api_key_header,
         )
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a redacted, serialisable credential summary."""
         return dict(
             scheme=self.scheme.value if isinstance(self.scheme, AuthScheme)
@@ -176,7 +176,7 @@ class SecurityConfig(PyCSAMTObject):
     tls: TLSConfig = field(default_factory=TLSConfig)
     credential: Credential = field(default_factory=Credential)
     require_tls: bool = False
-    allowed_protocols: Optional[List[str]] = None
+    allowed_protocols: list[str] | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -207,14 +207,14 @@ class SecurityConfig(PyCSAMTObject):
             return True
         return str(protocol).lower() in self.allowed_protocols
 
-    def client_options(self) -> Dict[str, Any]:
+    def client_options(self) -> dict[str, Any]:
         """Return options for :func:`build_telemetry_client`.
 
         Includes TLS flags, credential headers, and (for MQTT) username /
         password so a transport can authenticate. Raw secrets are included
         because this feeds the live client, not a log.
         """
-        options: Dict[str, Any] = {}
+        options: dict[str, Any] = {}
         if self.tls.enabled:
             options["tls"] = True
             if self.tls.certfile:
@@ -234,7 +234,7 @@ class SecurityConfig(PyCSAMTObject):
             options["password"] = self.credential.password
         return options
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a redacted, serialisable security summary."""
         return dict(
             tls=self.tls.as_dict(),
@@ -247,14 +247,14 @@ class SecurityConfig(PyCSAMTObject):
         )
 
     @classmethod
-    def from_env(cls, prefix: str = "PYCSAMT_IOT_") -> "SecurityConfig":
+    def from_env(cls, prefix: str = "PYCSAMT_IOT_") -> SecurityConfig:
         """Build a security config from environment variables.
 
         Recognised variables (with *prefix*): ``TOKEN``, ``API_KEY``,
         ``USERNAME``, ``PASSWORD``, ``TLS`` (truthy), ``CA_CERT``,
         ``CERTFILE``, ``KEYFILE``.
         """
-        def _env(name: str) -> Optional[str]:
+        def _env(name: str) -> str | None:
             return os.environ.get(prefix + name)
 
         token = _env("TOKEN")

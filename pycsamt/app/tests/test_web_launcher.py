@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """Tests for the ``pycsamt-web`` launcher."""
 
 from __future__ import annotations
+
 
 def test_browser_url_uses_loopback_for_public_bind():
     from pycsamt.app.web.app import _browser_url

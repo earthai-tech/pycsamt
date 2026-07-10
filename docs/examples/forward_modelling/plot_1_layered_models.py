@@ -23,7 +23,6 @@ sounding, 2-D, and 3-D examples that follow.
 # geothermal profile with a shallow conductive clay cap, a uniform
 # half-space, and a buried conductive layer.
 
-import numpy as np
 
 from pycsamt.forward import LayeredModel, plot_model_1d
 

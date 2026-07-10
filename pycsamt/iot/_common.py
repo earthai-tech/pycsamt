@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Iterable
 from enum import Enum
-from typing import Any, Iterable, List, Optional
+from typing import Any
 
 __all__ = [
     "as_nonempty_str",
@@ -46,7 +47,7 @@ def as_nonempty_str(value: Any, name: str) -> str:
     return text
 
 
-def as_optional_str(value: Any, name: str) -> Optional[str]:
+def as_optional_str(value: Any, name: str) -> str | None:
     """Return a stripped string, or ``None`` when *value* is empty/None."""
     if value is None:
         return None
@@ -54,7 +55,7 @@ def as_optional_str(value: Any, name: str) -> Optional[str]:
     return text or None
 
 
-def as_bool(value: Any, *, default: Optional[bool] = None) -> bool:
+def as_bool(value: Any, *, default: bool | None = None) -> bool:
     """Interpret *value* as a boolean, parsing strings explicitly.
 
     Unlike :func:`bool`, string values such as ``"false"``, ``"0"``,
@@ -86,7 +87,7 @@ def as_finite_float(value: Any, name: str) -> float:
     return out
 
 
-def as_optional_finite_float(value: Any, name: str) -> Optional[float]:
+def as_optional_finite_float(value: Any, name: str) -> float | None:
     """Return a finite float, or ``None`` when *value* is ``None``."""
     if value is None:
         return None
@@ -109,7 +110,7 @@ def as_nonnegative(value: Any, name: str) -> float:
     return out
 
 
-def as_optional_positive(value: Any, name: str) -> Optional[float]:
+def as_optional_positive(value: Any, name: str) -> float | None:
     """Return a strictly positive finite float, or ``None``."""
     if value is None:
         return None
@@ -160,7 +161,7 @@ def normalise_enum(value: Any, enum_cls: type[Enum], name: str) -> Enum:
     raise ValueError(f"{name} must be one of: {allowed}.")
 
 
-def as_latitude(value: Any, name: str = "lat") -> Optional[float]:
+def as_latitude(value: Any, name: str = "lat") -> float | None:
     """Return a latitude in ``[-90, 90]`` degrees, or ``None``."""
     if value is None:
         return None
@@ -170,7 +171,7 @@ def as_latitude(value: Any, name: str = "lat") -> Optional[float]:
     return out
 
 
-def as_longitude(value: Any, name: str = "lon") -> Optional[float]:
+def as_longitude(value: Any, name: str = "lon") -> float | None:
     """Return a longitude in ``[-180, 360]`` degrees, or ``None``.
 
     Both ``[-180, 180]`` and ``[0, 360]`` conventions are accepted so
@@ -184,20 +185,20 @@ def as_longitude(value: Any, name: str = "lon") -> Optional[float]:
     return out
 
 
-def as_elevation(value: Any, name: str = "elevation") -> Optional[float]:
+def as_elevation(value: Any, name: str = "elevation") -> float | None:
     """Return a finite elevation in metres, or ``None``."""
     if value is None:
         return None
     return as_finite_float(value, name)
 
 
-def as_channel_list(values: Any) -> List[str]:
+def as_channel_list(values: Any) -> list[str]:
     """Return a list of lower-case, non-empty channel labels."""
     if values is None:
         return []
     if isinstance(values, str):
         values = [values]
-    out: List[str] = []
+    out: list[str] = []
     for value in list(values):
         text = str(value).strip().lower()
         if not text:
@@ -206,10 +207,10 @@ def as_channel_list(values: Any) -> List[str]:
     return out
 
 
-def unique_preserving(values: Iterable[Any]) -> List[Any]:
+def unique_preserving(values: Iterable[Any]) -> list[Any]:
     """Return *values* with duplicates removed, order preserved."""
     seen: set[Any] = set()
-    out: List[Any] = []
+    out: list[Any] = []
     for value in values:
         if value not in seen:
             seen.add(value)

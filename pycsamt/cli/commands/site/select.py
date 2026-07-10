@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt site select — filter sites and optionally write the subset to disk."""
@@ -23,8 +22,7 @@ from ....api.cli.options import (
     verbose_option,
 )
 from ....api.cli.params import FreqRange, StationList
-
-from ._base import site, _get_sites
+from ._base import _get_sites, site
 
 
 @site.command("select")
@@ -221,7 +219,9 @@ def select(
     # --- write to disk if requested ---
     if str(output_dir) != ".":
         output_dir.mkdir(parents=True, exist_ok=True)
-        from pycsamt.site.export import write_sites  # noqa: PLC0415
+        from pycsamt.site.export import (
+            write_sites,  # noqa: PLC0415
+        )
         written = write_sites(result, output_dir, exist_ok=overwrite)
         summary["written"] = [str(p) for p in written]
         if verbose >= 1:

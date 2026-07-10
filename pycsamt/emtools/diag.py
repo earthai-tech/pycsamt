@@ -25,16 +25,16 @@ Relative-error polar histogram (analogous to polar violin, Fig 2b):
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ._core import (
-    ensure_sites,
-    _iter_items,
     _get_z_block,
+    _iter_items,
     _name,
+    ensure_sites,
     hide_polar_radius_labels,
 )
 
@@ -92,10 +92,10 @@ def _fmt_hz(f: float) -> str:
 
 
 def _resolve_bounds(
-    bounds: Union[Dict, np.ndarray, float],
+    bounds: dict | np.ndarray | float,
     station: str,
     n: int,
-) -> Optional[np.ndarray]:
+) -> np.ndarray | None:
     """Return per-frequency bound array for *station*, or None if missing."""
     if isinstance(bounds, dict):
         arr = bounds.get(station)
@@ -106,9 +106,9 @@ def _resolve_bounds(
     return np.full(n, float(arr)) if arr.ndim == 0 else arr
 
 
-def _rho_dict_from_sites(sites_obj: Any, comp: str) -> Dict[str, np.ndarray]:
+def _rho_dict_from_sites(sites_obj: Any, comp: str) -> dict[str, np.ndarray]:
     """Build {station: rho_a_array} from a sites-like object."""
-    result: Dict[str, np.ndarray] = {}
+    result: dict[str, np.ndarray] = {}
     try:
         for i, ed in enumerate(_iter_items(sites_obj)):
             ed = _unwrap(ed)
@@ -127,9 +127,9 @@ def _rho_dict_from_sites(sites_obj: Any, comp: str) -> Dict[str, np.ndarray]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def coverage_score(
-    y_true: Union[np.ndarray, float],
-    y_lo: Union[np.ndarray, float],
-    y_hi: Union[np.ndarray, float],
+    y_true: np.ndarray | float,
+    y_lo: np.ndarray | float,
+    y_hi: np.ndarray | float,
 ) -> float:
     """
     Empirical coverage fraction of a prediction interval (kouadio2025 eq. 1).
@@ -158,8 +158,8 @@ def coverage_score(
 
 def rho_coverage(
     sites: Any,
-    q_lo: Union[Dict[str, np.ndarray], np.ndarray, float],
-    q_hi: Union[Dict[str, np.ndarray], np.ndarray, float],
+    q_lo: dict[str, np.ndarray] | np.ndarray | float,
+    q_hi: dict[str, np.ndarray] | np.ndarray | float,
     *,
     rho_comp: str = "xy",
     recursive: bool = True,
@@ -201,7 +201,7 @@ def rho_coverage(
 
     sites = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
                          strict=strict, verbose=verbose)
-    rows: List[Dict] = []
+    rows: list[dict] = []
 
     for i, ed in enumerate(_iter_items(sites)):
         ed = _unwrap(ed)
@@ -240,7 +240,7 @@ def rho_coverage(
 
 def rho_error_stats(
     sites: Any,
-    model_rho: Union[Dict[str, np.ndarray], Any],
+    model_rho: dict[str, np.ndarray] | Any,
     *,
     rho_comp: str = "xy",
     recursive: bool = True,
@@ -286,7 +286,7 @@ def rho_error_stats(
     else:
         pred_dict = _rho_dict_from_sites(model_rho, rho_comp)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for i, ed in enumerate(_iter_items(sites)):
         ed = _unwrap(ed)
         station = _name(ed, i)
@@ -325,8 +325,8 @@ def rho_error_stats(
 
 def coverage_table(
     sites: Any,
-    q_lo: Union[Dict[str, np.ndarray], np.ndarray, float],
-    q_hi: Union[Dict[str, np.ndarray], np.ndarray, float],
+    q_lo: dict[str, np.ndarray] | np.ndarray | float,
+    q_hi: dict[str, np.ndarray] | np.ndarray | float,
     *,
     rho_comp: str = "xy",
     nominal: float = COVERAGE_THRESH,
@@ -359,7 +359,7 @@ def coverage_table(
     if detail.empty:
         return pd.DataFrame(columns=_COLS)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for station, grp in detail.groupby("station", sort=False):
         emp = float(grp["covered"].mean())
         w   = float(grp["width_pct"].dropna().mean()) \
@@ -380,8 +380,8 @@ def coverage_table(
 
 def plot_polar_coverage(
     sites: Any,
-    q_lo: Union[Dict, np.ndarray, float],
-    q_hi: Union[Dict, np.ndarray, float],
+    q_lo: dict | np.ndarray | float,
+    q_hi: dict | np.ndarray | float,
     *,
     rho_comp: str = "xy",
     log_radius: bool = True,
@@ -470,7 +470,7 @@ def plot_polar_coverage(
 
 def plot_polar_errors(
     sites: Any,
-    model_rho: Union[Dict[str, np.ndarray], Any],
+    model_rho: dict[str, np.ndarray] | Any,
     *,
     rho_comp: str = "xy",
     n_bins: int = 18,
@@ -536,8 +536,8 @@ def plot_polar_errors(
 
 def plot_width_drift(
     sites: Any,
-    q_lo: Union[Dict, np.ndarray, float],
-    q_hi: Union[Dict, np.ndarray, float],
+    q_lo: dict | np.ndarray | float,
+    q_hi: dict | np.ndarray | float,
     *,
     rho_comp: str = "xy",
     n_bands: int = 8,

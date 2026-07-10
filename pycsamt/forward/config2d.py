@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -244,7 +244,7 @@ class ForwardConfig2D:
 
     # ── Stations ─────────────────────────────────────────────────────────────
     n_stations:    int             = 10
-    station_x_max: Optional[float] = None
+    station_x_max: float | None = None
 
     # ── Output ───────────────────────────────────────────────────────────────
     verbose: bool = True
@@ -292,7 +292,7 @@ class ForwardConfig2D:
             np.log10(self.freq_min), np.log10(self.freq_max), self.n_freqs
         )
 
-    def to_grid(self, seed=None) -> "Grid2D":
+    def to_grid(self, seed=None) -> Grid2D:
         """Construct a :class:`~pycsamt.forward.grid2d.Grid2D` from this config.
 
         Parameters
@@ -327,7 +327,7 @@ class ForwardConfig2D:
         # random
         return Grid2D.random(seed=seed, **kw)
 
-    def to_solver_kwargs(self) -> Dict[str, Any]:
+    def to_solver_kwargs(self) -> dict[str, Any]:
         """Return kwargs for :class:`~pycsamt.forward.em2d.MT2DForward`."""
         return dict(freqs=self.freq_grid(), verbose=self.verbose)
 
@@ -337,9 +337,9 @@ class ForwardConfig2D:
 
     def to_template(
         self,
-        path: Union[str, Path] = "forward_config_2d.py",
+        path: str | Path = "forward_config_2d.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Write to an annotated source-of-truth file."""
         return write_config_template(
@@ -350,9 +350,9 @@ class ForwardConfig2D:
     @classmethod
     def write_template(
         cls,
-        path: Union[str, Path] = "forward_config_2d.py",
+        path: str | Path = "forward_config_2d.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Generate a documented source-of-truth file with default values.
 
@@ -370,10 +370,10 @@ class ForwardConfig2D:
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         strict: bool = True,
-    ) -> "ForwardConfig2D":
+    ) -> ForwardConfig2D:
         """Load from a generated source-of-truth file.
 
         Parameters

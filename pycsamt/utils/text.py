@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,13 +5,13 @@
 Text formatting utilities for pycsamt.
 """
 import re
-from typing import Any, Iterable, Sequence, Optional, Union
-
+from collections.abc import Iterable, Sequence
+from typing import Any, Optional, Union
 
 __all__ = [
-    'smart_format', 
-    'fmt_text', 
-    'str2columns', 
+    'smart_format',
+    'fmt_text',
+    'str2columns',
     'listing_items_format'
     ]
 
@@ -146,10 +145,10 @@ def str2columns(
 ) -> list:
     """
     Split a string into tokens using non-alphanumeric separators.
-    
-    Remove all string non-alphanumeric and some operator indicators,  and 
-    fetch attributes names. 
-    
+
+    Remove all string non-alphanumeric and some operator indicators,  and
+    fetch attributes names.
+
     """
     txt = str(text)
     # determine splitter

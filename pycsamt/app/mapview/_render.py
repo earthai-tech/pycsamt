@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Bridge between :class:`pycsamt.map.MapView` and the Dash figures.
@@ -175,7 +174,10 @@ def reproject_view(view, mode, zone, hem, epsg):
     if code in (4326, None):
         return view
     try:
-        from pycsamt.map.overlays import CRSConfig, transform_xy
+        from pycsamt.map.overlays import (
+            CRSConfig,
+            transform_xy,
+        )
     except Exception:
         return view
 
@@ -223,7 +225,10 @@ def project_to_crs(lons, lats, mode, zone, hem, epsg):
     if not mode or mode == "geo" or code in (4326, None):
         return None, None, code
     try:
-        from pycsamt.map.overlays import CRSConfig, transform_xy
+        from pycsamt.map.overlays import (
+            CRSConfig,
+            transform_xy,
+        )
 
         east, north = transform_xy(
             np.asarray(lons, dtype=float),

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for ``pycsamt info`` command."""
@@ -7,7 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
@@ -50,7 +48,7 @@ class TestInfoCommand:
     ) -> None:
         result = runner.invoke(main, ["info", str(edi_dir)])
         assert result.exit_code == 0
-        n_edis = len(list(edi_dir.glob("*.edi")))
+        len(list(edi_dir.glob("*.edi")))
         # At least one station block in the output
         assert result.output.count("Station") >= 1 or result.output.count("File") >= 1
 
@@ -110,7 +108,7 @@ class TestInfoCommand:
     def test_survey_flag_uses_given_dir(
         self, runner: CliRunner, edi_dir: Path, isolated_home: Path
     ) -> None:
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock
         fake_sites = MagicMock()
         fake_sites.__len__ = lambda _: 0
         fake_sites.__iter__ = lambda _: iter([])

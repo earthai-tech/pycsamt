@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -44,7 +43,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import pickle
 from datetime import datetime
 from pathlib import Path
@@ -126,7 +124,7 @@ class SurveyContext:
     # -- class methods -------------------------------------------------------
 
     @classmethod
-    def load(cls) -> "SurveyContext | None":
+    def load(cls) -> SurveyContext | None:
         """Return the active context or ``None`` if none is set."""
         if not _CONTEXT_FILE.exists():
             return None
@@ -137,7 +135,7 @@ class SurveyContext:
             return None
 
     @classmethod
-    def save(cls, path: Path, sites: "Sites") -> "SurveyContext":
+    def save(cls, path: Path, sites: Sites) -> SurveyContext:
         """Write a new context for *path* after *sites* has been built."""
         _PYCSAMT_DIR.mkdir(parents=True, exist_ok=True)
         key = _cache_key(path)
@@ -180,7 +178,7 @@ def _cache_meta(key: str) -> Path:
     return _cache_dir(key) / "meta.json"
 
 
-def _write_cache(key: str, path: Path, sites: "Sites") -> None:
+def _write_cache(key: str, path: Path, sites: Sites) -> None:
     """Pickle *sites* and write metadata under ``~/.pycsamt/cache/<key>/``."""
     d = _cache_dir(key)
     d.mkdir(parents=True, exist_ok=True)
@@ -195,7 +193,7 @@ def _write_cache(key: str, path: Path, sites: "Sites") -> None:
     _cache_meta(key).write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
-def _read_cache(key: str) -> "Sites | None":
+def _read_cache(key: str) -> Sites | None:
     """Return a cached ``Sites`` or ``None`` on any failure."""
     pkl = _cache_pkl(key)
     if not pkl.exists():
@@ -231,9 +229,11 @@ def _purge_cache(key: str) -> None:
 # Core: build Sites from source
 # ---------------------------------------------------------------------------
 
-def _build_sites(path: Path, verbose: int = 0) -> "Sites":
+def _build_sites(path: Path, verbose: int = 0) -> Sites:
     """Call ``ensure_sites`` and return a ``Sites`` object for *path*."""
-    from pycsamt.emtools._core import ensure_sites  # noqa: PLC0415
+    from pycsamt.emtools._core import (
+        ensure_sites,  # noqa: PLC0415
+    )
 
     if verbose >= 1:
         click.echo(f"  Parsing EDI files in {path} …", err=True)
@@ -244,7 +244,7 @@ def _build_sites(path: Path, verbose: int = 0) -> "Sites":
 # Public API
 # ---------------------------------------------------------------------------
 
-def set_survey(path: Path, *, force: bool = False, verbose: int = 0) -> "Sites":
+def set_survey(path: Path, *, force: bool = False, verbose: int = 0) -> Sites:
     """Build (or load cached) ``Sites`` for *path* and write the context.
 
     Parameters
@@ -286,7 +286,7 @@ def resolve_survey(
     *,
     fresh: bool = False,
     verbose: int = 0,
-) -> "Sites":
+) -> Sites:
     """Resolve the active survey to a ``Sites`` object.
 
     Resolution priority

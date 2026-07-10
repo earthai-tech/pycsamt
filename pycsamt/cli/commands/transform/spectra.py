@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt transform spectra — convert Spectra EDI to Impedance EDI."""
@@ -18,7 +17,6 @@ from ....api.cli.options import (
     overwrite_option,
     verbose_option,
 )
-
 from ._base import transform
 
 
@@ -192,7 +190,9 @@ def spectra(
     if str(output_dir) == ".":
         raise click.UsageError("--output-dir is required when not using --dry-run")
 
-    from pycsamt.transformers import SpectraToEDI  # noqa: PLC0415
+    from pycsamt.transformers import (
+        SpectraToEDI,  # noqa: PLC0415
+    )
 
     transformer = SpectraToEDI(
         e_labels=tuple(e_list),

@@ -124,10 +124,12 @@ from __future__ import annotations
 import configparser
 import copy
 import os
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator, List, Optional, Sequence, Union
-
+from typing import (
+    Any,
+)
 
 # ── supported format extensions ───────────────────────────────────────────────
 _VALID_FMTS = frozenset({"png", "svg", "pdf", "eps", "tiff", "jpg", "jpeg"})
@@ -146,7 +148,7 @@ def _normalise_token(tok: str) -> str:
     return tok.strip().lstrip(".")
 
 
-def _parse_fmt_tokens(raw: Union[str, Sequence]) -> List[str]:
+def _parse_fmt_tokens(raw: str | Sequence) -> list[str]:
     """Return a list of format tokens (preserving ``+`` prefix) from *raw*.
 
     Accepts a string (comma-separated), a single token, or an iterable.
@@ -161,7 +163,7 @@ def _parse_fmt_tokens(raw: Union[str, Sequence]) -> List[str]:
     return [_normalise_token(p) for p in parts]
 
 
-def _resolve_formats(tokens: List[str], base_fmt: str) -> List[str]:
+def _resolve_formats(tokens: list[str], base_fmt: str) -> list[str]:
     """Expand additive tokens and return a deduplicated ordered format list.
 
     Parameters
@@ -190,7 +192,7 @@ def _resolve_formats(tokens: List[str], base_fmt: str) -> List[str]:
     ['png', 'svg']
     """
     base_fmt = _normalise_token(base_fmt)
-    result: List[str] = []
+    result: list[str] = []
     has_additive = any(t.startswith("+") for t in tokens)
     if has_additive:
         result.append(base_fmt)
@@ -204,7 +206,7 @@ def _resolve_formats(tokens: List[str], base_fmt: str) -> List[str]:
     return result if result else [base_fmt]
 
 
-def _validate_fmt(fmts: List[str]) -> None:
+def _validate_fmt(fmts: list[str]) -> None:
     """Warn about unrecognised format names (does not raise)."""
     for f in fmts:
         if f.lower() not in _VALID_FMTS:
@@ -317,13 +319,13 @@ class PlotConfig:
     def __init__(
         self,
         *,
-        fmt: Union[str, List[str]] = "png",
+        fmt: str | list[str] = "png",
         base_fmt: str = "png",
         dpi: int = 150,
         bbox_inches: str = "tight",
         transparent: bool = False,
         facecolor: str = "white",
-        savedir: Optional[Union[str, Path]] = None,
+        savedir: str | Path | None = None,
         close_after_save: bool = False,
         verbose: bool = True,
     ) -> None:
@@ -341,8 +343,8 @@ class PlotConfig:
 
     def resolve_formats(
         self,
-        fmt: Optional[Union[str, List[str]]] = None,
-    ) -> List[str]:
+        fmt: str | list[str] | None = None,
+    ) -> list[str]:
         """Return the resolved list of format strings for this call.
 
         Parameters
@@ -376,15 +378,15 @@ class PlotConfig:
     def save(
         self,
         fig_or_ax: Any,
-        path: Union[str, Path],
+        path: str | Path,
         *,
-        fmt: Optional[Union[str, List[str]]] = None,
-        dpi: Optional[int] = None,
-        bbox_inches: Optional[str] = None,
-        transparent: Optional[bool] = None,
-        facecolor: Optional[str] = None,
+        fmt: str | list[str] | None = None,
+        dpi: int | None = None,
+        bbox_inches: str | None = None,
+        transparent: bool | None = None,
+        facecolor: str | None = None,
         **savefig_kw: Any,
-    ) -> List[Path]:
+    ) -> list[Path]:
         """Save *fig_or_ax* to one or more format files.
 
         Parameters
@@ -445,7 +447,7 @@ class PlotConfig:
         _facecolor   = facecolor   if facecolor  is not None else self.facecolor
 
         fmts = self.resolve_formats(fmt)
-        saved: List[Path] = []
+        saved: list[Path] = []
         for f in fmts:
             out = path.with_suffix(f".{f}")
             fig.savefig(
@@ -505,7 +507,7 @@ class PlotConfig:
     # ── context manager ───────────────────────────────────────────────────────
 
     @contextmanager
-    def context(self, **kw: Any) -> Generator["PlotConfig", None, None]:
+    def context(self, **kw: Any) -> Generator[PlotConfig, None, None]:
         """Temporarily override config attributes, then restore.
 
         Parameters
@@ -560,7 +562,7 @@ class PlotConfig:
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
-    def _fields(self) -> List[str]:
+    def _fields(self) -> list[str]:
         return [
             "fmt", "base_fmt", "dpi", "bbox_inches",
             "transparent", "facecolor", "savedir",
@@ -607,12 +609,12 @@ PLOT_CONFIG: PlotConfig = _build_singleton()
 
 def save_fig(
     fig_or_ax: Any,
-    path: Union[str, Path],
+    path: str | Path,
     *,
-    fmt: Optional[Union[str, List[str]]] = None,
-    dpi: Optional[int] = None,
+    fmt: str | list[str] | None = None,
+    dpi: int | None = None,
     **kw: Any,
-) -> List[Path]:
+) -> list[Path]:
     """Save a pyCSAMT figure using the global :data:`PLOT_CONFIG` settings.
 
     Parameters
@@ -668,7 +670,10 @@ def add_colorbar(
     plotted axes.  This avoids overly tall colorbars on equal-aspect maps
     and gives package plots a consistent colorbar geometry.
     """
-    from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+    from matplotlib.ticker import (
+        FormatStrFormatter,
+        MaxNLocator,
+    )
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     side = side.lower()
@@ -718,7 +723,10 @@ def add_polar_colorbar(
     bounding boxes.  This helper keeps the same tick-density policy while
     using Matplotlib's polar-friendly colorbar placement.
     """
-    from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+    from matplotlib.ticker import (
+        FormatStrFormatter,
+        MaxNLocator,
+    )
 
     cbar = ax.figure.colorbar(
         mappable,
@@ -774,7 +782,7 @@ def set_dpi(dpi: int) -> None:
     PLOT_CONFIG.dpi = int(dpi)
 
 
-def set_savedir(path: Union[str, Path]) -> None:
+def set_savedir(path: str | Path) -> None:
     """Set the global output directory on :data:`PLOT_CONFIG`.
 
     Parameters
@@ -803,7 +811,7 @@ def reset_plot_config() -> None:
     PLOT_CONFIG.reset()
 
 
-def load_plot_config(path: Optional[Union[str, Path]] = None) -> None:
+def load_plot_config(path: str | Path | None = None) -> None:
     """(Re-)load a config file into :data:`PLOT_CONFIG`.
 
     Parameters
@@ -862,7 +870,7 @@ def load_plot_config(path: Optional[Union[str, Path]] = None) -> None:
         setattr(PLOT_CONFIG, k, v)
 
 
-def write_default_config(path: Union[str, Path] = "pycsamt_plot.cfg") -> Path:
+def write_default_config(path: str | Path = "pycsamt_plot.cfg") -> Path:
     """Write a template config file with the current :data:`PLOT_CONFIG` values.
 
     Useful for users who want to tweak settings without touching Python code.

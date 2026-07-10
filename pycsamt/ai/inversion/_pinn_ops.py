@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,8 +13,6 @@ classes) should import from here rather than from the
 backend-specific modules.
 """
 from __future__ import annotations
-
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -54,10 +51,10 @@ def fit_station(
     epochs: int,
     device: str,
     log_every: int,
-    init_log_rho: Optional[np.ndarray] = None,
-    init_log_thick: Optional[np.ndarray] = None,
-    backend: Optional[str] = None,
-) -> Dict:
+    init_log_rho: np.ndarray | None = None,
+    init_log_thick: np.ndarray | None = None,
+    backend: str | None = None,
+) -> dict:
     """
     Optimise log-rho/log-thick for one station.
 
@@ -130,10 +127,10 @@ def fit_2d_joint(
     epochs: int,
     device: str,
     log_every: int,
-    init_log_rho: Optional[np.ndarray] = None,
-    init_log_thick: Optional[np.ndarray] = None,
-    backend: Optional[str] = None,
-) -> Dict:
+    init_log_rho: np.ndarray | None = None,
+    init_log_thick: np.ndarray | None = None,
+    backend: str | None = None,
+) -> dict:
     """
     Jointly optimise a pseudo-2D section via Adam.
 
@@ -207,10 +204,10 @@ def fit_3d_joint(
     epochs: int,
     device: str,
     log_every: int,
-    init_log_rho: Optional[np.ndarray] = None,
-    init_log_thick: Optional[np.ndarray] = None,
-    backend: Optional[str] = None,
-) -> Dict:
+    init_log_rho: np.ndarray | None = None,
+    init_log_thick: np.ndarray | None = None,
+    backend: str | None = None,
+) -> dict:
     """
     Jointly optimise a quasi-3D section via Adam.
 

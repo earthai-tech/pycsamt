@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt edi select — filter a collection and export a subset."""
@@ -18,7 +17,7 @@ from ....api.cli.options import (
     overwrite_option,
     verbose_option,
 )
-from ._base import edi, _get_collection
+from ._base import _get_collection, edi
 
 
 @edi.command("select")
@@ -198,13 +197,16 @@ def select(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    from pycsamt.seg.collection import EDICollection  # noqa: PLC0415
+    from pycsamt.seg.collection import (
+        EDICollection,  # noqa: PLC0415
+    )
 
     sub = EDICollection(items=keep, verbose=verbose)
     # Redirect tqdm to stderr so JSON stdout stays clean
     try:
-        import tqdm as _tqdm  # noqa: PLC0415
         import sys as _sys
+
+        import tqdm as _tqdm  # noqa: PLC0415
         _orig = _tqdm.tqdm.__init__
         def _patched_init(self, *a, file=None, **kw):
             _orig(self, *a, file=_sys.stderr, **kw)

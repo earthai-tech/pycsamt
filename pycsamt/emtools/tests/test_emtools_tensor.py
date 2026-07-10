@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.tensor"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.tensor import (
-    rotate,
     antisymmetrize,
-    invert,
-    sigma_clip_z,
     balance_offdiag,
     build_phase_tensor_table,
+    invert,
+    rotate,
+    sigma_clip_z,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers
@@ -136,7 +134,10 @@ class TestRotate:
         z0 = _iso_z(fr)
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = rotate(sites, 0.0)
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -149,7 +150,10 @@ class TestRotate:
         z0 = _iso_z(fr)
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = rotate(sites, 360.0)
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -181,7 +185,10 @@ class TestAntisymmetrize:
         z0 = _3d_z(fr)   # asymmetric off-diagonal
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = antisymmetrize(sites, how="rms")
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -213,7 +220,10 @@ class TestInvert:
         z0 = _iso_z(fr)
         sites = [_FakeSite("S00", z0.copy(), fr)]
         twice = invert(invert(sites))
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(twice))
         _, z2, _ = _get_z_block(ed)
         if z2 is not None:
@@ -245,7 +255,10 @@ class TestSigmaClipZ:
         z0 = _iso_z(fr)
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = sigma_clip_z(sites, sigma=3.0)
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -271,7 +284,10 @@ class TestBalanceOffdiag:
         z0 = _3d_z(fr)   # |Zxy| != |Zyx|
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = balance_offdiag(sites, mode="avgabs")
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -296,7 +312,9 @@ class TestPlotStrikeDirectorField:
                 for i in range(n_sta)]
 
     def test_returns_axes(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         ax = plot_strike_director_field(self._sites())
         assert isinstance(ax, plt.Axes)
         plt.close("all")
@@ -306,13 +324,17 @@ class TestPlotStrikeDirectorField:
         assert callable(plot_strike_director_field)
 
     def test_empty_input_no_crash(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         ax = plot_strike_director_field([])
         assert isinstance(ax, plt.Axes)
         plt.close("all")
 
     def test_draws_one_director_per_cell(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         n_sta, n_freq = 4, 10
         ax = plot_strike_director_field(self._sites(n_sta, n_freq),
                                         streamlines=False)
@@ -324,13 +346,17 @@ class TestPlotStrikeDirectorField:
         plt.close("all")
 
     def test_streamlines_toggle(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         ax = plot_strike_director_field(self._sites(), streamlines=True)
         assert isinstance(ax, plt.Axes)
         plt.close("all")
 
     def test_color_and_length_options(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         ax = plot_strike_director_field(
             self._sites(), color_by="ellipt", length_by=None,
             streamlines=False, show_legend=False,
@@ -339,7 +365,9 @@ class TestPlotStrikeDirectorField:
         plt.close("all")
 
     def test_accepts_external_axes(self):
-        from pycsamt.emtools.tensor import plot_strike_director_field
+        from pycsamt.emtools.tensor import (
+            plot_strike_director_field,
+        )
         fig, ax0 = plt.subplots()
         ax = plot_strike_director_field(self._sites(), ax=ax0,
                                         streamlines=False)

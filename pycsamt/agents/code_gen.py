@@ -430,7 +430,7 @@ class CodeGenerationAgent(BaseAgent):
 
         if workflow in ("static_shift", "full") or "static_shift" in results:
             hw = 3
-            ss_r = results.get("static_shift")
+            results.get("static_shift")
             code += _SS_BLOCK.format(
                 hw=hw, out=out_dir
             )
@@ -438,7 +438,7 @@ class CodeGenerationAgent(BaseAgent):
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
         if workflow in ("phase_analysis", "full") or "phase_analysis" in results:
-            pt_r      = results.get("phase_analysis")
+            results.get("phase_analysis")
             skew_th   = 5.0
             ellipt_th = 0.1
             code += _PT_BLOCK.format(
@@ -492,7 +492,7 @@ class CodeGenerationAgent(BaseAgent):
 
         if (workflow in ("ensemble_inversion",)
                 or "ensemble" in results):
-            ens_r    = results.get("ensemble") or {}
+            results.get("ensemble") or {}
             n_layers = int(cfg.get("n_layers", 5))
             arch     = str(cfg.get("arch", "cnn1d"))
             code += _ENSEMBLE_BLOCK.format(

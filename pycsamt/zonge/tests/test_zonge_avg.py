@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 """
 Pytest suite for the BaseAVG and AVG classes.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 # Assuming the package structure is set up correctly
-from pycsamt.zonge.avg import BaseAVG, AVG
+from pycsamt.zonge.avg import AVG, BaseAVG
 from pycsamt.zonge.info import DataInfo
 
 # Note: The fixtures `modern_data_file` and `legacy_data_file`
@@ -224,5 +223,5 @@ class TestAVG:
         assert freqs.shape == (avg.frequency.n_unique,)
         assert stations.shape == (avg.station.n_unique,)
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

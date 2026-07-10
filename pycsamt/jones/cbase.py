@@ -1,30 +1,29 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
     Union,
 )
 
 import numpy as np
 
 from ..log.logger import get_logger
-from .validation import IsJ
+from .config import (
+    RE_BLANK,
+    RE_COMMENT,
+    RE_DATATYPE_UNITS,
+    RE_INFO,
+    RE_NPOINTS,
+    RE_STATION,
+)
 from .j import JFile
-from .config import RE_STATION, RE_COMMENT, RE_INFO, RE_BLANK
-from .config import RE_DATATYPE_UNITS, RE_NPOINTS
+from .validation import IsJ
 
 logger = get_logger(__name__)
 
@@ -109,8 +108,8 @@ class JParseMixin:
     def _push_error(self, src: Pathish, msg: str) -> None:
         store = getattr(self, "_errors", None)
         if store is None:
-            setattr(self, "_errors", [])  # type: ignore[attr-defined]
-            store = getattr(self, "_errors")
+            self._errors = []  # type: ignore[attr-defined]
+            store = self._errors
         err = FileNotFoundError(msg)
         store.append((self._as_path(src), err))
 
@@ -174,7 +173,7 @@ class JParseMixin:
             # anything else
             self._push_error(src, f"Not found: {src}")
 
-    def _fast_station(self, p: Path) -> Optional[str]:
+    def _fast_station(self, p: Path) -> str | None:
         """Quick scan for the first station line."""
         try:
             with p.open("r", encoding="utf-8") as f:
@@ -190,18 +189,18 @@ class JParseMixin:
         except Exception:
             return None
         return None
-    
+
     def is_j_like(self, src: Pathish, *, deep: bool = True) -> bool:
         """
         Light heuristic to decide if ``src`` looks like a Jones file.
-    
+
         Parameters
         ----------
         src : path-like
             File path.
         deep : bool, default=True
             If ``False``, only extension + existence is checked.
-    
+
         Returns
         -------
         bool
@@ -212,7 +211,7 @@ class JParseMixin:
             return False
         if not deep:
             return True
-    
+
         try:
             with p.open("r", encoding="utf-8", errors="replace") as f:
                 lines = []
@@ -224,28 +223,28 @@ class JParseMixin:
                     lines.append(ln.rstrip("\n"))
         except Exception:
             return False
-    
+
         found_banner = False
         found_info = False
         found_triple = False
-    
+
         for i, s in enumerate(lines):
             if not s or RE_BLANK.match(s):
                 continue
-    
+
             # banner (very permissive)
             if s.lstrip().upper().startswith("#WRITTEN BY"):
                 found_banner = True
-    
+
             # any info line (>KEY=VAL)
             if RE_INFO.match(s):
                 found_info = True
-    
+
             # station + dtype/count nearby
             m = RE_STATION.match(s)
             if not m:
                 continue
-    
+
             # scan a few lines ahead to find dtype/count
             j = i + 1
             n = min(len(lines), i + 10)
@@ -271,8 +270,8 @@ class JParseMixin:
                 break
         # Require at least a header triple; banner/info are helpful hints
         return bool(found_triple or (found_banner and found_info))
-    
-    
+
+
     def is_j_file(
         self, src: Pathish, *, deep: bool = True
     ) -> bool:
@@ -291,13 +290,13 @@ class JParseMixin:
         Alias of :meth:`is_j_like`. Some call-sites prefer this name.
         """
         return self.is_j_like(src, deep=deep)
-    
+
 
 @dataclass
 class _JParseResult:
     path: Path
-    jf: Optional[JFile]
-    error: Optional[BaseException]
+    jf: JFile | None
+    error: BaseException | None
 
 class JCoreParser(JParseMixin):
     r"""
@@ -385,8 +384,8 @@ class JCoreParser(JParseMixin):
         if self.on_dup not in {"replace", "keep"}:
             raise ValueError("on_dup must be keep|replace")
 
-        self.results: List[_JParseResult] = []
-        self._errors: List[Tuple[Path, BaseException]] = []
+        self.results: list[_JParseResult] = []
+        self._errors: list[tuple[Path, BaseException]] = []
 
     def _read_one(self, p: Path) -> _JParseResult:
         try:
@@ -399,11 +398,11 @@ class JCoreParser(JParseMixin):
             logger.debug("Skip %s: %s", p, exc)
             return _JParseResult(path=p, jf=None, error=exc)
 
-    def parse(self, sources: SrcType) -> List[JFile]:
+    def parse(self, sources: SrcType) -> list[JFile]:
         self.results.clear()
         self._errors.clear()
 
-        jfs: List[JFile] = []
+        jfs: list[JFile] = []
         src_list = (
             sources if isinstance(sources, list)
             else list(self._iter_paths(sources))
@@ -415,7 +414,7 @@ class JCoreParser(JParseMixin):
                 continue
             jfs.append(res.jf)
 
-        by_key: Dict[str, JFile] = {}
+        by_key: dict[str, JFile] = {}
         for jf in jfs:
             sid = jf.site or self._fast_station(jf.path)  # type: ignore[arg-type]  # noqa: E501
             sid = sid or (str(jf.path) if jf.path else "-")
@@ -425,7 +424,7 @@ class JCoreParser(JParseMixin):
 
         return list(by_key.values())
 
-    def errors(self) -> List[Tuple[Path, BaseException]]:
+    def errors(self) -> list[tuple[Path, BaseException]]:
         out = [(r.path, r.error) for r in self.results if r.error]
         out.extend(self._errors)
         return out
@@ -510,13 +509,13 @@ class JCBBase:
     """
     def __init__(
         self,
-        items: Optional[Iterable[JFile]] = None,
+        items: Iterable[JFile] | None = None,
         *,
         verbose: int = 0,
     ) -> None:
         self.verbose = int(verbose)
-        self._items: List[JFile] = []
-        self._index: Dict[str, int] = {}
+        self._items: list[JFile] = []
+        self._index: dict[str, int] = {}
 
         if items is not None:
             for jf in items:
@@ -528,7 +527,7 @@ class JCBBase:
     def __iter__(self) -> Iterator[JFile]:
         return iter(self._items)
 
-    def __getitem__(self, key: Union[int, str]) -> JFile:
+    def __getitem__(self, key: int | str) -> JFile:
         if isinstance(key, int):
             return self._items[key]
         idx = self._index.get(str(key), None)
@@ -545,7 +544,7 @@ class JCBBase:
         self._index[sid] = len(self._items)
         self._items.append(jf)
 
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         return list(self._index.keys())
 
     @classmethod
@@ -553,12 +552,12 @@ class JCBBase:
         cls,
         sources: SrcType,
         *,
-        parser: Optional[JCoreParser] = None,
+        parser: JCoreParser | None = None,
         recursive: bool = True,
         strict: bool = False,
         on_dup: str = "replace",
         verbose: int = 0,
-    ) -> "JCBBase":
+    ) -> JCBBase:
         pr = parser or JCoreParser(
             recursive=recursive,
             strict=strict,
@@ -572,8 +571,8 @@ class JCBBase:
             logger.info("Load completed with %d errors.", len(errs))
         return col
 
-    def map(self, fn: Callable[[JFile], object]) -> List[object]:
-        out: List[object] = []
+    def map(self, fn: Callable[[JFile], object]) -> list[object]:
+        out: list[object] = []
         for jf in self._items:
             out.append(fn(jf))
         return out
@@ -584,11 +583,11 @@ class JCBBase:
         *,
         pattern: str = "{station}.j",
         **kwargs,
-    ) -> List[str]:
+    ) -> list[str]:
         out_dir = Path(str(savepath)).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        paths: List[str] = []
+        paths: list[str] = []
         for jf in self._items:
             sid = jf.site or "site"
             name = pattern.format(station=sid)
@@ -597,8 +596,8 @@ class JCBBase:
             paths.append(s)
         return paths
 
-    def summary(self) -> List[Dict[str, object]]:
-        rows: List[Dict[str, object]] = []
+    def summary(self) -> list[dict[str, object]]:
+        rows: list[dict[str, object]] = []
         for jf in self._items:
             sid = jf.site or "-"
             f = jf.freq
@@ -620,8 +619,8 @@ class JCBBase:
                 }
             )
         return rows
-    
-    @property 
+
+    @property
     def items(self):
         """Internal: unified iterator over stored items."""
         return getattr(self, "_items", [])

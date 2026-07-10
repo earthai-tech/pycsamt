@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Unit tests for SurveyContext and resolve_survey cache logic."""
@@ -6,7 +5,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,17 +12,16 @@ import pytest
 
 from pycsamt.cli.survey import (
     SurveyContext,
-    _cache_key,
     _cache_is_valid,
+    _cache_key,
     _cache_meta,
     _cache_pkl,
-    _write_cache,
     _read_cache,
+    _write_cache,
     resolve_survey,
     set_survey,
     survey_summary,
 )
-
 
 # ---------------------------------------------------------------------------
 # Picklable fake Sites (MagicMock is not picklable across subprocesses)

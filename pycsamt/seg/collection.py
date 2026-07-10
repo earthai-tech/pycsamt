@@ -1,26 +1,22 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import (
+    Any,
     Callable,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
     Union,
-    Any
 )
 
 import numpy as np
 
-from ..core.config import get_config, StationNamePolicy
-from ..exceptions import SiteError 
+from ..core.config import StationNamePolicy, get_config
+from ..exceptions import SiteError
 from ..log.logger import get_logger
-from ..utils.handlers import columns_manager 
+from ..utils.handlers import columns_manager
 from .cbase import CBBase, CoreParser, ParseMixin
 from .edi import EDIFile
 
@@ -115,13 +111,13 @@ class CollectionMixin(ParseMixin):
 
     def add_from(
         self,
-        sources: Union[Pathish, Sequence[Pathish]],
+        sources: Pathish | Sequence[Pathish],
         *,
         recursive: bool = True,
         strict: bool = False,
         on_dup: str = "replace",
-        verbose: Optional[int] = None,
-    ) -> "CollectionMixin":
+        verbose: int | None = None,
+    ) -> CollectionMixin:
         v = self.verbose if verbose is None else int(verbose)
         pr = CoreParser(
             recursive=recursive,
@@ -139,9 +135,9 @@ class CollectionMixin(ParseMixin):
 
     def select(
         self, stations: Sequence[str]
-    ) -> "EDICollection":
-        stations = columns_manager( stations, empty_as_none=False ) 
-        
+    ) -> EDICollection:
+        stations = columns_manager( stations, empty_as_none=False )
+
         keep = {str(s) for s in stations}
         out = EDICollection(verbose=self.verbose)
         for ed in self:  # type: ignore[operator]
@@ -152,7 +148,7 @@ class CollectionMixin(ParseMixin):
 
     def where(
         self, fn: Callable[[EDIFile], bool]
-    ) -> "EDICollection":
+    ) -> EDICollection:
         out = EDICollection(verbose=self.verbose)
         for ed in self:  # type: ignore[operator]
             if fn(ed):
@@ -161,10 +157,10 @@ class CollectionMixin(ParseMixin):
 
     def sort(
         self,
-        key: Union[str, Callable[[EDIFile], object]] = "station",
+        key: str | Callable[[EDIFile], object] = "station",
         *,
         reverse: bool = False,
-    ) -> "EDICollection":
+    ) -> EDICollection:
         def _key(ed: EDIFile) -> object:
             if callable(key):
                 return key(ed)
@@ -187,14 +183,14 @@ class CollectionMixin(ParseMixin):
         return out
 
     @property
-    def paths(self) -> List[str]:
-        p: List[str] = []
+    def paths(self) -> list[str]:
+        p: list[str] = []
         for ed in self:  # type: ignore[operator]
             p.append(str(ed.path) if ed.path else "-")
         return p
 
     def nf_stats(self) -> dict:
-        vals: List[int] = []
+        vals: list[int] = []
         for ed in self:  # type: ignore[operator]
             vals.append(int(getattr(ed.Z, "n_freq", 0) or 0))
         a = np.asarray(vals, int)
@@ -325,7 +321,7 @@ class EDICollection(CBBase, CollectionMixin):
 
     def __init__(
         self,
-        items: Optional[Iterable[EDIFile]] = None,
+        items: Iterable[EDIFile] | None = None,
         *,
         verbose: int = 0,
     ) -> None:
@@ -335,13 +331,13 @@ class EDICollection(CBBase, CollectionMixin):
     @classmethod
     def from_sources(
         cls,
-        sources: Union[Pathish, Sequence[Pathish]],
+        sources: Pathish | Sequence[Pathish],
         *,
         recursive: bool = True,
         strict: bool = False,
         on_dup: str = "replace",
         verbose: int = 0,
-    ) -> "EDICollection":
+    ) -> EDICollection:
         pr = CoreParser(
             recursive=recursive,
             strict=strict,
@@ -362,10 +358,10 @@ class EDICollection(CBBase, CollectionMixin):
 
     def merge(
         self,
-        other: "EDICollection",
+        other: EDICollection,
         *,
         on_dup: str = "replace",
-    ) -> "EDICollection":
+    ) -> EDICollection:
         out = EDICollection(
             items=list(self),
             verbose=self.verbose,
@@ -386,18 +382,18 @@ class EDICollection(CBBase, CollectionMixin):
         (case-insensitive)."""
         want = str(site).upper()
         cands = set(_site_candidates(want))
-    
+
         # fast path: index keys (case-insensitive)
         for key, idx in self._index.items():
             if str(key).upper() in cands:
                 return self._items[idx]
-    
+
         # scan stations
         for ed in self:
             sid = getattr(ed, "station", None)
             if sid and str(sid).upper() in cands:
                 return ed
-    
+
         # scan paths
         low = want.lower()
         for ed in self:
@@ -411,7 +407,7 @@ class EDICollection(CBBase, CollectionMixin):
                 or str(p).lower() == low
             ):
                 return ed
-    
+
         all_sites = ", ".join(self.stations())
         raise SiteError(
             f"site not found: {site!r}. Try one of: "
@@ -421,7 +417,7 @@ class EDICollection(CBBase, CollectionMixin):
 
     def _head(self, ed: EDIFile):
         return ed.get_section("head")
-    
+
 
     def get(
         self,
@@ -442,9 +438,9 @@ class EDICollection(CBBase, CollectionMixin):
             ed = self._resolve(site)
         except KeyError:
             return default
-    
+
         w = str(what).lower()
-    
+
         # transfer functions
         if w == "freq":
             return getattr(ed.Z, "freq", None)
@@ -457,7 +453,7 @@ class EDICollection(CBBase, CollectionMixin):
             if z is None:
                 return default
             return z[:, m[0], m[1]]
-    
+
         if w in {"tip", "tx", "ty"}:
             t = getattr(ed.Tip, "tipper", None)
             if t is None or getattr(t, "size", 0) == 0:
@@ -465,7 +461,7 @@ class EDICollection(CBBase, CollectionMixin):
             if w == "tip":
                 return t
             return t[:, 0, 0] if w == "tx" else t[:, 0, 1]
-    
+
         # headers / identity
         head = self._head(ed)
         if w == "station":
@@ -482,22 +478,22 @@ class EDICollection(CBBase, CollectionMixin):
                 v = getattr(head, "long", None)
                 return v if v is not None else getattr(head, "lon", None)
             return getattr(head, "elev", None)
-    
+
         # path-ish
         if w in {"path", "filename"}:
             p = getattr(ed, "path", None)
             if p is None:
                 return default
             return str(p) if w == "path" else p.name
-    
+
         # higher-level blocks
         if w == "spectra":
             return ed.get_section("spectra")
         if w in {"ts", "timeseries"}:
             return ed.get_section("timeseries")
-    
+
         return default
-    
+
     def set(
         self,
         site: str,
@@ -507,14 +503,14 @@ class EDICollection(CBBase, CollectionMixin):
     ) -> EDIFile:
         """
         Replace or mutate a site's EDI.
-    
+
         - If 'edi' is given, replace the stored object.
         - Else apply 'update' fields on the existing object:
           keys: 'station','dataid','lat','lon','elev','z',
                 'freq','tip','spectra','timeseries'
         """
         ed = self._resolve(site)
-    
+
         # replace whole object
         if edi is not None:
             # try a collection-level replace
@@ -530,27 +526,27 @@ class EDICollection(CBBase, CollectionMixin):
                 if isinstance(idx, dict):
                     idx[site] = edi
             return edi
-    
+
         # mutate in place
         upd = update or {}
         head = self._head(ed)
-    
+
         if "station" in upd:
             try:
                 ed.station = str(upd["station"])
             except Exception:
                 if head:
                     head.dataid = str(upd["station"])
-    
+
         if "dataid" in upd and head:
             head.dataid = str(upd["dataid"])
-    
+
         if "lat" in upd and head:
             try:
                 head.lat = float(upd["lat"])  # type: ignore[arg-type]
             except Exception:
                 pass
-    
+
         if "lon" in upd and head:
             try:
                 # support LONG or LON
@@ -560,32 +556,32 @@ class EDICollection(CBBase, CollectionMixin):
                     head.lon = float(upd["lon"])  # type: ignore[attr-defined]
             except Exception:
                 pass
-    
+
         if "elev" in upd and head:
             try:
                 head.elev = float(upd["elev"])  # type: ignore[arg-type]
             except Exception:
                 pass
-    
+
         if "freq" in upd and hasattr(ed.Z, "freq"):
             ed.Z._freq = np.asarray(upd["freq"], float)
-    
+
         if "z" in upd and hasattr(ed.Z, "z"):
             ed.Z._z = np.asarray(upd["z"], complex)
-    
+
         if "tip" in upd and hasattr(ed.Tip, "tipper"):
             ed.Tip._tipper = np.asarray(upd["tip"], complex)
-    
+
         if "spectra" in upd:
             ed.add_section("spectra", upd["spectra"])
-    
+
         if "timeseries" in upd or "ts" in upd:
             val = upd.get("timeseries", upd.get("ts"))
             ed.add_section("timeseries", val)
-    
+
         return ed
-    
-    
+
+
     def adjust(
         self,
         site: str,
@@ -604,14 +600,14 @@ class EDICollection(CBBase, CollectionMixin):
         head = self._head(ed)
         if head is None:
             raise ValueError("no >HEAD to adjust")
-    
+
         # rename first so index logic can react later if needed
         if rename:
             try:
                 ed.station = str(rename)
             except Exception:
                 head.dataid = str(rename)
-    
+
         if lat is not None:
             try:
                 head.lat = float(lat)
@@ -630,7 +626,7 @@ class EDICollection(CBBase, CollectionMixin):
                 head.elev = float(elev)
             except Exception:
                 pass
-    
+
         # relative shifts
         if dlat is not None:
             try:
@@ -645,7 +641,7 @@ class EDICollection(CBBase, CollectionMixin):
                     head.lon = float(head.lon) + float(dlon)  # type: ignore[attr-defined]
             except Exception:
                 pass
-    
+
         return ed
 
     def export(
@@ -657,11 +653,11 @@ class EDICollection(CBBase, CollectionMixin):
     ) -> dict:
         """
         Exports all EDIFile items to a directory with advanced options.
-    
+
         This method orchestrates the writing of each EDIFile in the
         collection to a specified directory, with flexible naming and
         clear error reporting.
-    
+
         Parameters
         ----------
         output_dir : Pathish
@@ -674,7 +670,7 @@ class EDICollection(CBBase, CollectionMixin):
             Keyword arguments to be passed directly to each
             `EDIFile.write()` call (e.g., `datatype="mt"`,
             `synthesize_spectra=True`).
-    
+
         Returns
         -------
         dict
@@ -685,27 +681,27 @@ class EDICollection(CBBase, CollectionMixin):
         """
         out_dir = Path(str(output_dir)).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
-    
+
         successful_paths = []
         failed_items = []
-        
+
         items_iterator = self._items
-        
+
         # Optional: Use tqdm for a progress bar if available
         try:
             from tqdm import tqdm
         except ImportError:
             tqdm = None
-        
+
         if tqdm:
             items_iterator = tqdm(self._items, desc="Exporting EDI Files")
-    
+
         for ed in items_iterator:
             sid = self._site_of(ed) or "unknown_station"
             try:
                 filename = file_pattern.format(station=sid)
                 output_path = out_dir / filename
-                
+
                 # Delegate the actual writing to the EDIFile instance
                 written_path = ed.write(
                     new_edifn=str(output_path), **edi_write_kwargs
@@ -714,30 +710,30 @@ class EDICollection(CBBase, CollectionMixin):
             except Exception as e:
                 failed_items.append((sid, e))
                 logger.error(f"Failed to write EDI for station {sid}: {e}")
-    
+
         return {"successful": successful_paths, "failed": failed_items}
 
     def fetch(
         self,
-        site: Optional[str] = None,
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
+        site: str | None = None,
+        lat: float | None = None,
+        lon: float | None = None,
         tol: float = 0.001,
         first: bool = False,
         strict: bool = False,
-        policy: Optional[StationNamePolicy] = None,
+        policy: StationNamePolicy | None = None,
         **kwargs,
-    ) -> Optional[Union["EDIFile", List["EDIFile"]]]:
+    ) -> EDIFile | list[EDIFile] | None:
 
         r"""
         Fetch EDI files by station, coordinates, or other metadata.
-        
+
         This method searches the collection for
         :class:`~pycsamt.seg.edi.EDIFile` objects by
         station name, geographic coordinates, or any
         attribute exposed on the EDI or its ``>HEAD``
         section.
-        
+
         Parameters
         ----------
         site : str or int or float, optional
@@ -779,7 +775,7 @@ class EDICollection(CBBase, CollectionMixin):
             on its ``head`` section. String values compare in
             a case-insensitive way; non-strings compare by
             equality.
-        
+
         Returns
         -------
         EDIFile or list of EDIFile or None
@@ -787,14 +783,14 @@ class EDICollection(CBBase, CollectionMixin):
             when no match and ``strict=False``. If
             ``first=False``, a list of matches (possibly
             empty).
-        
+
         Raises
         ------
         SiteError
             Raised when no match is found and ``strict=True``.
             The error message lists available stations and
             suggests calling ``<collection>.stations()``.
-        
+
         Notes
         -----
         - Station matching expands candidate variants using the
@@ -807,35 +803,35 @@ class EDICollection(CBBase, CollectionMixin):
         - Arbitrary filters in ``**kwargs`` are applied after
           station and coordinate tests. String comparisons are
           case-insensitive; other types use equality.
-        
+
         Examples
         --------
         >>> # List available stations
         >>> coll.stations()
         ['S150', 'S200', 'S250', 'S300', ...]
-        
+
         >>> # Fetch a single station by numeric label
         >>> ed = coll.fetch(site=150, first=True)
-        
+
         >>> # Enforce a helpful error when not found
         >>> coll.fetch(site='S999', first=True, strict=True)
         Traceback (most recent call last):
             ...
         SiteError: No station found. Try one of: ...
-        
+
         >>> # Fetch by coordinates within tolerance
         >>> ed = coll.fetch(lat=-22.37, lon=139.19, first=True)
-        
+
         >>> # Filter by metadata on >HEAD (case-insensitive)
         >>> zs = coll.fetch(acqby='Zonge')
-        
+
         See Also
         --------
         pycsamt.core.config.StationNamePolicy
         pycsamt.core.config.ensure_station
         pycsamt.seg.collection.EDICollection.stations
         pycsamt.seg.collection.EDICollection._resolve
-        
+
         References
         ----------
         .. [1] SEG EDI 1.0 Electromagnetic Data Interchange
@@ -843,17 +839,17 @@ class EDICollection(CBBase, CollectionMixin):
         """
 
 
-        matches: List["EDIFile"] = []
-        
+        matches: list[EDIFile] = []
+
         site_cands = (
             set(_site_candidates(site, policy))
             if site is not None else set()
         )
-    
+
         for edi in self:
             head = edi.get_section("head")
             ok = True
-    
+
             # --- station match (case-insensitive, with variants)
             if site is not None:
                 est = getattr(edi, "station", None)
@@ -861,18 +857,18 @@ class EDICollection(CBBase, CollectionMixin):
                     est and est.upper() in site_cands
                 ):
                     ok = False
-    
+
             # --- geo match with tolerance
             if lat is not None and ok:
                 hlat = getattr(head, "lat", None)
                 if hlat is None or abs(hlat - lat) > tol:
                     ok = False
-    
+
             if lon is not None and ok:
                 hlon = getattr(head, "long", None)
                 if hlon is None or abs(hlon - lon) > tol:
                     ok = False
-    
+
             # --- arbitrary attribute matches
             for key, val in kwargs.items():
                 if not ok:
@@ -885,10 +881,10 @@ class EDICollection(CBBase, CollectionMixin):
                         ok = False
                 elif aval != val:
                     ok = False
-    
+
             if ok:
                 matches.append(edi)
-    
+
         if first:
             if matches:
                 return matches[0]
@@ -900,7 +896,7 @@ class EDICollection(CBBase, CollectionMixin):
                     "`<collection>.stations()` to list."
                 )
             return None
-    
+
         # first=False
         if not matches and strict:
             all_sites = ", ".join(self.stations())
@@ -913,36 +909,36 @@ class EDICollection(CBBase, CollectionMixin):
 
     @staticmethod
     def _site_of(it: EDIFile) -> str | None:
-        """Safely extract the site/station 
+        """Safely extract the site/station
         name from an EDIFile."""
         return getattr(it, "station", None)
-    
+
     @staticmethod
     def _lat_of(it: EDIFile) -> float | None:
-        """Safely extract the latitude from 
+        """Safely extract the latitude from
         an EDIFile's HEAD section."""
         head = it.get_section("head")
         v = getattr(head, "lat", None)
         return float(v) if isinstance(v, (int, float)) else None
-    
+
     @staticmethod
     def _lon_of(it: EDIFile) -> float | None:
-        """Safely extract the longitude from 
+        """Safely extract the longitude from
         an EDIFile's HEAD section."""
         head = it.get_section("head")
         v = getattr(head, "long", None)
         return float(v) if isinstance(v, (int, float)) else None
-    
+
     @property
     def sites(self) -> list[str]:
-        """Returns a list of best-effort 
+        """Returns a list of best-effort
         station names for each item."""
         out: list[str] = []
         for it in self._items:
             s = self._site_of(it)
             out.append(s if s is not None else "")
         return out
-    
+
     @property
     def latitude(self) -> np.ndarray:
         """Returns a numpy array of latitudes
@@ -952,10 +948,10 @@ class EDICollection(CBBase, CollectionMixin):
             v = self._lat_of(it)
             vals.append(np.nan if v is None else float(v))
         return np.asarray(vals, dtype=float)
-    
+
     @property
     def longitude(self) -> np.ndarray:
-        """Returns a numpy array of longitudes 
+        """Returns a numpy array of longitudes
         (np.nan for missing values)."""
         vals: list[float] = []
         for it in self._items:
@@ -970,38 +966,38 @@ class EDICollection(CBBase, CollectionMixin):
         )
 
 
-    def _summary_stats(self, summary_data: List[dict]) -> str:
+    def _summary_stats(self, summary_data: list[dict]) -> str:
         """Creates a statistical summary block from summary data."""
         if not summary_data:
             return "  (No statistics available for an empty collection)\n"
-    
+
         total_files = len(summary_data)
         with_tipper = sum(1 for r in summary_data if r.get("tipper"))
         with_spectra = sum(1 for r in summary_data if r.get("spectra"))
         with_ts = sum(1 for r in summary_data if r.get("ts"))
-    
+
         # Get all frequencies from all files to find the true min/max
         all_freqs = np.concatenate([
-            edi.Z.freq for edi in self if edi.Z.freq is not None 
+            edi.Z.freq for edi in self if edi.Z.freq is not None
             and edi.Z.freq.size > 0
         ]) if total_files > 0 else np.array([])
-        
+
         lats = self.latitude[~np.isnan(self.latitude)]
         lons = self.longitude[~np.isnan(self.longitude)]
-    
+
         freq_range = (
-            f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}" 
+            f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}"
             if all_freqs.size > 0 else "N/A"
         )
-        lat_range =( 
-            f"{min(lats):.4f} to {max(lats):.4f}" 
+        lat_range =(
+            f"{min(lats):.4f} to {max(lats):.4f}"
             if len(lats) > 0 else "N/A"
         )
-        lon_range = ( 
-            f"{min(lons):.4f} to {max(lons):.4f}" 
+        lon_range = (
+            f"{min(lons):.4f} to {max(lons):.4f}"
             if len(lons) > 0 else "N/A"
         )
-    
+
         lines = [
             "  " + "-"*65,
             "  Statistical Summary:",
@@ -1014,14 +1010,14 @@ class EDICollection(CBBase, CollectionMixin):
             "  " + "-"*65,
         ]
         return "\n".join(lines)
-    
+
 
     def __str__(self) -> str:  # pragma: no cover
         """Provides a detailed and statistical summary of the collection."""
         summary_data = self.summary()
         if not summary_data:
             return "EDICollection(n=0, stations=[])"
-    
+
         # --- Header ---
         title = f" EDICollection Summary (Total Sites: {len(summary_data)}) "
         width = 70
@@ -1030,12 +1026,12 @@ class EDICollection(CBBase, CollectionMixin):
             title.center(width),
             "=" * width
         ]
-    
+
         # --- Per-Site Details ---
         details = ["\nSite Details:"]
         max_station_len = max(
             [len(r['station']) for r in summary_data] + [len("Station")])
-        
+
         table_header = (
             f"  {'Station'.ljust(max_station_len)} | Freqs"
             " | Tipper | Spectra | TimeSeries"
@@ -1043,33 +1039,33 @@ class EDICollection(CBBase, CollectionMixin):
         table_width = len(table_header) - 2
         details.append(table_header)
         details.append("  " + "-" * table_width)
-    
+
         for r in summary_data:
             tip = "Y" if r["tipper"] else "N"
             sp = "Y" if r["spectra"] else "N"
             ts = "Y" if r["ts"] else "N"
-    
+
             details.append(
                 f"  {r['station'].ljust(max_station_len)} | "
                 f"{r['n_freq']:<5} | {tip:^6} | {sp:^7} | {ts:^10}"
             )
-        
+
         details.append("  " + "-" * table_width)
         details.append(
             "  *Y = Yes (data present); *N = No (data not present)"
             )
-        
+
         # --- Statistical Summary ---
         stats_str = self._summary_stats(summary_data)
-    
+
         # --- Combine and Return ---
         return "\n".join(header + [stats_str] + details)
-    
+
 
 def _site_candidates(
     site: Any,
-    policy: Optional[StationNamePolicy] = None,
-) -> List[str]:
+    policy: StationNamePolicy | None = None,
+) -> list[str]:
     pol = policy or get_config().station_policy
 
     def _try_float(v):

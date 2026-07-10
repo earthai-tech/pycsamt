@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for PreferencesDialog (Phase 5)."""
@@ -9,7 +8,9 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.dialogs.preferences_dlg import PreferencesDialog
+from pycsamt.app.desktop.dialogs.preferences_dlg import (
+    PreferencesDialog,
+)
 from pycsamt.app.desktop.models.session import SessionState
 
 

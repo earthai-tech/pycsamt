@@ -103,7 +103,9 @@ class DenoisingAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -115,7 +117,7 @@ class DenoisingAgent(BaseAgent):
 
         method     = str(input_data.get("method", self.method)).lower()
         output_dir = input_data.get("output_dir")
-        per_range  = input_data.get("period_range")
+        input_data.get("period_range")
 
         if method not in _METHODS:
             warnings.append(f"Unknown method {method!r}; using 'rpca'.")
@@ -127,10 +129,7 @@ class DenoisingAgent(BaseAgent):
         # ── apply denoising ───────────────────────────────────────────────────
         denoised_sites = sites
         from ..emtools.remove_noise import (
-            rpca_offdiag_denoise,
-            hampel_filter_freq,
             remove_noise_pipeline,
-            snr_table,
         )
 
         if method == "rpca":
@@ -141,7 +140,9 @@ class DenoisingAgent(BaseAgent):
 
         elif method == "emap":
             try:
-                from ..emtools.remove_noise import apply_emap_filter
+                from ..emtools.remove_noise import (
+                    apply_emap_filter,
+                )
                 denoised_sites = apply_emap_filter(sites, verbose=0)
             except Exception as exc:
                 warnings.append(f"EMAP filter failed: {exc}. No denoising applied.")
@@ -179,14 +180,15 @@ class DenoisingAgent(BaseAgent):
         fig_paths: dict[str, str] = {}
 
         try:
-            from ..emtools.inspect import pseudosection
             import matplotlib.pyplot as plt
+
+            from ..emtools.inspect import pseudosection
             fig, axes = plt.subplots(1, 2, figsize=(14, 5))
             # before
-            ax_b = pseudosection(sites,            quantity="rho_xy", ax=axes[0])
+            pseudosection(sites,            quantity="rho_xy", ax=axes[0])
             axes[0].set_title("ρa before denoising", fontsize=9)
             # after
-            ax_a = pseudosection(denoised_sites,   quantity="rho_xy", ax=axes[1])
+            pseudosection(denoised_sites,   quantity="rho_xy", ax=axes[1])
             axes[1].set_title("ρa after denoising",  fontsize=9)
             fig.suptitle(f"Denoising comparison ({method})",
                          fontsize=10, fontweight="bold")
@@ -241,15 +243,15 @@ class DenoisingAgent(BaseAgent):
 
 def _compute_snr_proxy(sites: Any) -> np.ndarray | None:
     """Return a flat array of |Zxy| / std(|Zxy|) per (station, freq) cell."""
-    from ..emtools._core import _iter_items, _get_z_block
+    from ..emtools._core import _get_z_block, _iter_items
     vals = []
-    for i, ed in enumerate(_iter_items(sites)):
+    for _i, ed in enumerate(_iter_items(sites)):
         _, z, fr = _get_z_block(ed)
         if z is None:
             continue
         zxy = np.abs(z[:, 0, 1])
         if zxy.size > 2:
-            mu = np.nanmean(zxy)
+            np.nanmean(zxy)
             sd = np.nanstd(zxy) + 1e-30
             vals.extend((zxy / sd).tolist())
     return np.asarray(vals, float) if vals else None
@@ -257,9 +259,8 @@ def _compute_snr_proxy(sites: Any) -> np.ndarray | None:
 
 def _apply_rpca(sites: Any, rank: int, warnings: list) -> Any:
     """Apply RPCA off-diagonal denoising to each station in *sites*."""
-    from ..emtools._core import _iter_items, _name, _get_z_block
+
     from ..emtools.remove_noise import rpca_offdiag_denoise
-    from copy import deepcopy
 
     try:
         result = rpca_offdiag_denoise(sites, rank=rank, verbose=0)
@@ -283,15 +284,22 @@ def _apply_hampel(sites: Any, half_window: int, warnings: list) -> Any:
 def _apply_ai_denoiser(sites: Any, warnings: list) -> Any:
     """Apply the AI convolutional autoencoder denoiser."""
     try:
-        from ..ai.processing.denoise import EMDenoiser
-        from ..ai.processing.denoise import prepare_z_features
-        from ..emtools._core import _iter_items, _name, _get_z_block
         import numpy as np
+
+        from ..ai.processing.denoise import (
+            EMDenoiser,
+            prepare_z_features,
+        )
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+        )
 
         # collect all Z data
         all_z = []
         items = list(_iter_items(sites))
-        for i, ed in enumerate(items):
+        for _i, ed in enumerate(items):
             _, z, fr = _get_z_block(ed)
             if z is None:
                 continue
@@ -307,7 +315,7 @@ def _apply_ai_denoiser(sites: Any, warnings: list) -> Any:
         # prepare features: (batch, n_freqs, n_components=4)
         X = prepare_z_features(np.stack(all_z, axis=0))
         denoiser.fit(X, epochs=20, verbose=False)
-        X_clean = denoiser.predict(X)
+        denoiser.predict(X)
 
         warnings.append(
             "AI denoiser applied (light training on this dataset). "

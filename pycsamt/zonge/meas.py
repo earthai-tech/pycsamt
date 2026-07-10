@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #  Author : LKouadio <etanoyau@gmail.com>
 #  License: LGPL-3.0
 """
@@ -20,28 +19,22 @@ when available, which helps downstream grouping and reshaping.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import ( 
-    Any, 
-    Dict, 
-    List, 
-    Mapping, 
-    Optional, 
-    Sequence, 
-    Union, 
+from typing import (
+    Any,
 )
 
 import numpy as np
 import pandas as pd
 
 from ..exceptions import FrequencyError, InputError
-from ..utils._dependency import import_optional_dependency 
-
+from ..utils._dependency import import_optional_dependency
 from .base import AVGComponentBase
-from .utils import to_xarray as _to_xr  
 from .utils import _standardise_columns
+from .utils import to_xarray as _to_xr
 
-__all__ = ["CompMeas", "Amps", "Frequency"]  
+__all__ = ["CompMeas", "Amps", "Frequency"]
 
 
 _NUMERIC_NA = {"", "*", "nan", "NaN", "None", None}
@@ -69,7 +62,7 @@ class CompMeas(AVGComponentBase):
     }
 
     # tolerant normalisation map (upper/lower → canonical)
-    _NORM: Dict[str, str] = {
+    _NORM: dict[str, str] = {
         "EXHY": "ExHy", "EXHX": "ExHx",
         "EYHY": "EyHy", "EYHX": "EyHx",
         "exhy": "ExHy", "exhx": "ExHx",
@@ -104,11 +97,11 @@ class CompMeas(AVGComponentBase):
             return self._NORM.get(s.upper(), s)
 
         df["comp"] = df["comp"].map(_norm_one)
-        
+
         # Drop rows with NaN or unrecognized components that may
         # have been introduced during xarray conversion
         df = df[df["comp"].isin(self._VALID)].copy()
-        
+
         # validate – bail early with a friendly message
         bad = sorted(set(df["comp"]) - self._VALID)
         if bad:
@@ -138,7 +131,7 @@ class CompMeas(AVGComponentBase):
         )
 
     @property
-    def unique(self) -> List[str]:
+    def unique(self) -> list[str]:
         """Sorted unique component labels."""
         if "comp" not in self._frame:
             return []
@@ -181,10 +174,10 @@ class Amps(AVGComponentBase):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None
+        name: str | None = None
     ) -> None:
         super().__init__(data=data, meta=meta, name=name)
         self._stats = _AmpStats()
@@ -213,8 +206,8 @@ class Amps(AVGComponentBase):
         self._frame = df
         self._meta  = dict(meta or {})
         self._compute_stats()
-        
-        return self 
+
+        return self
 
     def _compute_stats(self) -> None:
         """Compute quick stats on finite ``amps`` values."""
@@ -256,7 +249,7 @@ class Amps(AVGComponentBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: Optional[Dict[str, Any]] = None
+        attrs: dict[str, Any] | None = None
     ):
         """
         Optional convenience: grid the column into an xarray
@@ -322,10 +315,10 @@ class Frequency(AVGComponentBase):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None
+        name: str | None = None
         ) -> None:
         super().__init__(
             data=data, meta=meta, name=name or "Frequency")
@@ -333,8 +326,7 @@ class Frequency(AVGComponentBase):
         self._meta.setdefault("Unit.Freq", "Hz")
 
     def read(self,
-        source: Union[pd.DataFrame, Sequence[float],
-                      np.ndarray, pd.Series],
+        source: pd.DataFrame | Sequence[float] | np.ndarray | pd.Series,
         meta: Mapping[str, Any] | None = None,
         **kws: Any
     ) -> None:
@@ -390,17 +382,17 @@ class Frequency(AVGComponentBase):
 
         self._frame = df[["station", "freq", "comp"]].copy()
         self._validate_positive()
-        
-        return self 
 
-    def write(self) -> List[str]:
+        return self
+
+    def write(self) -> list[str]:
         """
         Emit a compact CSV block with the contextual columns that we
         manage (`station`, `freq`, `comp`), suitable for round-tripping.
         """
         if self._frame.empty:
             return []
-        cols: List[str] = []
+        cols: list[str] = []
         for c in ("station", "freq", "comp"):
             if c in self._frame.columns:
                 cols.append(c)
@@ -453,11 +445,11 @@ class Frequency(AVGComponentBase):
         *,
         rtol: float = 1e-6,
         atol: float = 1e-12
-    ) -> Dict[float, np.ndarray]:
+    ) -> dict[float, np.ndarray]:
         """
         Per-station unique frequency grids (sorted).
         """
-        out: Dict[float, np.ndarray] = {}
+        out: dict[float, np.ndarray] = {}
         if self._frame.empty:
             return out
         tmp = self._frame.copy()
@@ -500,32 +492,32 @@ class Frequency(AVGComponentBase):
             extra="xarray is required for to_xarray()",
             errors="raise",
         )
-     
+
         import xarray as xr
 
         # 1) Build a base dataset that has the dims we need
         df = self._frame.copy()
         df["present"] = True  # any simple data var to force a dense grid
-    
+
         attrs = dict(self._meta or {})
         attrs.setdefault("Unit.Freq", "Hz")
-    
+
         ds = _to_xr(
             df,
             coords=coords,
             data_vars=["present"],
             attrs=attrs,
         )
-    
+
         # 2) Grab the coordinate values for broadcasting, then
         #    drop the 1-D 'freq' coord so we can use that
         # name for a data-var.
         st = ds.coords["station"].values
         cp = ds.coords["comp"].values
         fq = ds.coords["freq"].values  # 1-D list of freqs
-    
+
         ds = ds.drop_vars("freq")  # remove the 1-D coord variable named 'freq'
-    
+
         # 3) Broadcast freq values over (station, freq, comp)
         freq3 = np.broadcast_to(
             fq[np.newaxis, :, np.newaxis],
@@ -536,7 +528,7 @@ class Frequency(AVGComponentBase):
             dims=("station", "freq", "comp"),
             coords={"station": st, "comp": cp},
         )
-    
+
         return ds
 
     def __str__(self) -> str:

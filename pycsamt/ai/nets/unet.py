@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,7 +32,7 @@ Oh S. et al. (2020) *JGR Solid Earth* — generalisation to salt.
 """
 from __future__ import annotations
 
-from typing import Any, Tuple
+from typing import Any
 
 __all__ = ["UNet2DNet"]
 
@@ -179,7 +178,7 @@ class UNet2DNet:
         n_in: int,
         n_out: int = 1,
         *,
-        channels: Tuple[int, ...] = (
+        channels: tuple[int, ...] = (
             32, 64, 128, 256, 512
         ),
         dropout: float = 0.2,
@@ -212,7 +211,7 @@ class UNet2DNet:
 def _build_unet2d(
     n_in: int,
     n_out: int,
-    channels: Tuple[int, ...],
+    channels: tuple[int, ...],
     dropout: float,
 ) -> Any:
     """Return an ``nn.Module`` implementing 2-D U-Net."""

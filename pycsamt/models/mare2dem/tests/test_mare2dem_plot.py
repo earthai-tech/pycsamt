@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Real-data integration tests for models/mare2dem/plot.py.
 
 Data sources
@@ -26,13 +25,14 @@ Run:
 """
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.figure
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------
 # Data paths
@@ -57,19 +57,25 @@ _SKIP_HILL = pytest.mark.skipif(not _HILL_DIR.exists(),
 
 @pytest.fixture(scope="module")
 def result_mt():
-    from pycsamt.models.mare2dem.results import InversionResult
+    from pycsamt.models.mare2dem.results import (
+        InversionResult,
+    )
     return InversionResult(workdir=_MT_DIR)
 
 
 @pytest.fixture(scope="module")
 def result_csem():
-    from pycsamt.models.mare2dem.results import InversionResult
+    from pycsamt.models.mare2dem.results import (
+        InversionResult,
+    )
     return InversionResult(workdir=_CSEM_DIR)
 
 
 @pytest.fixture(scope="module")
 def result_hill():
-    from pycsamt.models.mare2dem.results import InversionResult
+    from pycsamt.models.mare2dem.results import (
+        InversionResult,
+    )
     return InversionResult(workdir=_HILL_DIR)
 
 
@@ -151,26 +157,34 @@ class TestPlotConvergence:
 
     @_SKIP_MT
     def test_returns_figure(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         assert _is_figure(fig)
 
     @_SKIP_MT
     def test_figure_has_axes(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         assert len(fig.get_axes()) >= 1
 
     @_SKIP_MT
     def test_y_label_is_rms(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         ylabel = fig.get_axes()[0].get_ylabel().lower()
         assert "rms" in ylabel or "misfit" in ylabel
 
     @_SKIP_MT
     def test_curve_has_6_points(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         ax  = fig.get_axes()[0]
         lines = ax.get_lines()
@@ -179,28 +193,36 @@ class TestPlotConvergence:
 
     @_SKIP_MT
     def test_rms_decreases_overall(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         rms = fig.get_axes()[0].get_lines()[0].get_ydata()
         assert float(rms[0]) > float(rms[-1])
 
     @_SKIP_MT
     def test_final_rms_near_one(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         rms = fig.get_axes()[0].get_lines()[0].get_ydata()
         assert abs(float(rms[-1]) - 1.0) < 0.1
 
     @_SKIP_MT
     def test_figure_size_reasonable(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         w, h = fig.get_size_inches()
         assert w >= 4 and h >= 2
 
     @_SKIP_MT
     def test_x_axis_is_iteration_number(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         fig = PlotConvergence(result_mt).plot()
         ax  = fig.get_axes()[0]
         lines = ax.get_lines()
@@ -211,7 +233,9 @@ class TestPlotConvergence:
 
     def test_no_log_raises(self):
         """PlotConvergence rejects objects that are not a log or InversionResult."""
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
 
         with pytest.raises((ValueError, AttributeError, TypeError)):
             PlotConvergence(object()).plot()
@@ -219,7 +243,9 @@ class TestPlotConvergence:
     @_SKIP_CSEM
     def test_forward_only_result_raises(self, result_csem):
         """CSEM-only forward dataset has no logfile → should raise."""
-        from pycsamt.models.mare2dem.plot import PlotConvergence
+        from pycsamt.models.mare2dem.plot import (
+            PlotConvergence,
+        )
         with pytest.raises((ValueError, AttributeError)):
             PlotConvergence(result_csem).plot()
 
@@ -232,14 +258,18 @@ class TestPlotSurveyLayout:
 
     @_SKIP_MT
     def test_mt_survey_returns_axes(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots()
         PlotSurveyLayout(result_mt.data).plot(ax=ax)
         assert ax is not None
 
     @_SKIP_MT
     def test_mt_survey_has_xlabel(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots()
         PlotSurveyLayout(result_mt.data).plot(ax=ax)
         xlabel = ax.get_xlabel().lower()
@@ -247,7 +277,9 @@ class TestPlotSurveyLayout:
 
     @_SKIP_MT
     def test_mt_survey_no_crash_on_replot(self, result_mt):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         plotter = PlotSurveyLayout(result_mt.data)
         for _ in range(2):
             fig, ax = plt.subplots()
@@ -256,14 +288,18 @@ class TestPlotSurveyLayout:
 
     @_SKIP_CSEM
     def test_csem_survey_returns_axes(self, result_csem):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots()
         PlotSurveyLayout(result_csem.data).plot(ax=ax)
         assert ax is not None
 
     @_SKIP_CSEM
     def test_csem_survey_xlabel(self, result_csem):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots()
         PlotSurveyLayout(result_csem.data).plot(ax=ax)
         xlabel = ax.get_xlabel().lower()
@@ -271,7 +307,9 @@ class TestPlotSurveyLayout:
 
     @_SKIP_HILL
     def test_hill_survey_returns_axes(self, result_hill):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots()
         PlotSurveyLayout(result_hill.data).plot(ax=ax)
         assert ax is not None
@@ -279,7 +317,9 @@ class TestPlotSurveyLayout:
     @_SKIP_HILL
     def test_hill_survey_228_receivers_visible(self, result_hill):
         """Hill dataset has 228 MT receivers; the plot must not raise."""
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         fig, ax = plt.subplots(figsize=(12, 4))
         PlotSurveyLayout(result_hill.data).plot(ax=ax)
         assert ax is not None
@@ -288,13 +328,19 @@ class TestPlotSurveyLayout:
         """PlotSurveyLayout must work when ax is not provided (creates its own)."""
         if not _MT_DIR.exists():
             pytest.skip("MT data not available")
-        from pycsamt.models.mare2dem.results import InversionResult
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
+        from pycsamt.models.mare2dem.results import (
+            InversionResult,
+        )
         r = InversionResult(workdir=_MT_DIR)
         PlotSurveyLayout(r.data).plot()   # no ax argument
 
     def test_survey_invalid_data_raises(self):
-        from pycsamt.models.mare2dem.plot import PlotSurveyLayout
+        from pycsamt.models.mare2dem.plot import (
+            PlotSurveyLayout,
+        )
         with pytest.raises((AttributeError, TypeError, ValueError)):
             PlotSurveyLayout(None).plot()
 
@@ -326,8 +372,10 @@ class TestPlotModel:
 
     def test_fallback_histogram(self):
         """No path -> no mesh -> histogram fallback."""
+        from pycsamt.models.mare2dem.mesh import (
+            ResistivityModel,
+        )
         from pycsamt.models.mare2dem.plot import PlotModel
-        from pycsamt.models.mare2dem.mesh import ResistivityModel
         fig = PlotModel(ResistivityModel()).plot()
         assert _is_figure(fig)
 
@@ -375,9 +423,12 @@ class TestPlotResponse:
 
     def test_no_mt_raises(self):
         """Empty workdir -> no MT data -> ValueError."""
-        from pycsamt.models.mare2dem.plot import PlotResponse
-        from pycsamt.models.mare2dem.results import InversionResult
         import tempfile
+
+        from pycsamt.models.mare2dem.plot import PlotResponse
+        from pycsamt.models.mare2dem.results import (
+            InversionResult,
+        )
         with tempfile.TemporaryDirectory() as tmp:
             r = InversionResult(tmp)
             with pytest.raises(ValueError):

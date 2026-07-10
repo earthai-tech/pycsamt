@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,7 +40,11 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from ._config import BackendConfig
-from ._detect import detect_available_backends, probe_backend, get_backend_versions
+from ._detect import (
+    detect_available_backends,
+    get_backend_versions,
+    probe_backend,
+)
 
 __all__ = [
     "get_backend",
@@ -136,7 +139,7 @@ def auto_detect() -> str:
     return _CFG.backend_name
 
 
-def list_backends() -> Dict[str, bool]:
+def list_backends() -> dict[str, bool]:
     """
     Return availability status for all known backends.
 

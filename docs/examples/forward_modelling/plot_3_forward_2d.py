@@ -21,12 +21,15 @@ itself, TE/TM pseudo-sections, lateral response profiles, and a combined
 # is a 5000 Ohm-m block in a 50 Ohm-m host (a salt dome / igneous
 # intrusion). Both use 12 stations and a padded 45x32 mesh.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pycsamt.forward import (
-    Grid2D, MT2DForward,
-    plot_model_2d, plot_pseudosection_2d, plot_response_profiles,
+    Grid2D,
+    MT2DForward,
+    plot_model_2d,
+    plot_pseudosection_2d,
+    plot_response_profiles,
 )
 
 # Use the fault-zone validate panel (9th figure) as the section thumbnail.

@@ -60,21 +60,22 @@ Quick start
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import (
+    Any,
+)
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ..api._rose_style import _UNSET
-from ..api.style import PYCSAMT_STYLE
 from ..api.control import PYCSAMT_CONTROL
-from ..api.section import PYCSAMT_SECTION, SectionStyle
-from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.plot import add_colorbar
+from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.style import PYCSAMT_STYLE
 from ..api.view import maybe_wrap_frame
 from ._core import _axes_list
 
@@ -124,8 +125,8 @@ def _check_spectra(sp: Any) -> None:
 
 def _resolve_pairs(
     sp: Any,
-    pairs: Optional[List[Tuple[int, int]]],
-) -> List[Tuple[int, int]]:
+    pairs: list[tuple[int, int]] | None,
+) -> list[tuple[int, int]]:
     """Return (i, j) index pairs; default = all upper-triangle pairs."""
     nc = sp.n_chan
     if pairs is not None:
@@ -146,10 +147,12 @@ def _chan_label(sp: Any, idx: int) -> str:
 
 def _sp_to_dict(
     sp_input: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Normalise single Spectra / list / dict to ``{name: Spectra}``."""
     # avoid importing Spectra at module level to prevent circular deps
-    from ..seg.spectra import Spectra as _Spectra  # noqa: PLC0415
+    from ..seg.spectra import (
+        Spectra as _Spectra,  # noqa: PLC0415
+    )
 
     if isinstance(sp_input, _Spectra):
         name = getattr(sp_input, "name", None) or "site"
@@ -168,7 +171,7 @@ def _sp_to_dict(
     )
 
 
-def _resolve_section_style(section: Union[str, SectionStyle]) -> SectionStyle:
+def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
     if isinstance(section, SectionStyle):
         return section.copy()
     return PYCSAMT_SECTION.style_for(str(section)).copy()
@@ -264,7 +267,7 @@ def psd_table(
 def coherence_table(
     sp_input: Any,
     *,
-    pairs: Optional[List[Tuple[int, int]]] = None,
+    pairs: list[tuple[int, int]] | None = None,
     api: bool | None = None,
 ) -> Any:
     """Inter-channel squared coherence as a tidy DataFrame.
@@ -317,7 +320,7 @@ def coherence_table(
 def snr_table(
     sp_input: Any,
     *,
-    pairs: Optional[List[Tuple[int, int]]] = None,
+    pairs: list[tuple[int, int]] | None = None,
     api: bool | None = None,
 ) -> Any:
     r"""Signal-to-noise ratio estimated from squared coherence.
@@ -379,7 +382,9 @@ def band_select(
     Spectra
         A shallow copy with arrays sliced to the band.
     """
-    from ..seg.spectra import Spectra as _Spectra  # noqa: PLC0415
+    from ..seg.spectra import (
+        Spectra as _Spectra,  # noqa: PLC0415
+    )
 
     _check_spectra(sp)
     mask = (sp.freq >= float(f_min)) & (sp.freq <= float(f_max))
@@ -406,7 +411,7 @@ def band_select(
 def mask_low_coherence(
     sp: Any,
     *,
-    pairs: Optional[List[Tuple[int, int]]] = None,
+    pairs: list[tuple[int, int]] | None = None,
     threshold: float = 0.5,
     require_all: bool = False,
 ) -> np.ndarray:
@@ -493,13 +498,13 @@ def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
 def plot_psd(
     sp: Any,
     *,
-    channels: Optional[Sequence[int]] = None,
+    channels: Sequence[int] | None = None,
     log_psd: bool = True,
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (9, 5),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (9, 5),
+    ax: Axes | None = None,
 ) -> Axes:
     """Plot the power spectral density per channel.
 
@@ -562,14 +567,14 @@ def plot_psd(
 def plot_coherence(
     sp: Any,
     *,
-    pairs: Optional[List[Tuple[int, int]]] = None,
+    pairs: list[tuple[int, int]] | None = None,
     threshold: float = 0.5,
     show_threshold: bool = True,
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
 ) -> np.ndarray:
     """Plot squared coherence for selected channel pairs.
 
@@ -661,7 +666,7 @@ def plot_spectra_matrix(
     log_scale: bool = True,
     title: str = "",
     ax=None,
-    figsize: Tuple[float, float] = (7, 6),
+    figsize: tuple[float, float] = (7, 6),
 ) -> Figure:
     """Visualise the full cross-spectral density matrix at one frequency.
 
@@ -751,14 +756,14 @@ def plot_spectra_matrix(
 def plot_z_from_spectra(
     sp: Any,
     *,
-    e_labels: Tuple[str, str] = ("EX", "EY"),
-    h_labels: Tuple[str, str] = ("HX", "HY"),
-    ridge: Optional[float] = None,
+    e_labels: tuple[str, str] = ("EX", "EY"),
+    h_labels: tuple[str, str] = ("HX", "HY"),
+    ridge: float | None = None,
     estimate_error: bool = False,
     show_error: bool = True,
     title: str = "",
     axes=None,
-    figsize: Tuple[float, float] = (10, 5),
+    figsize: tuple[float, float] = (10, 5),
 ) -> Figure:
     """Plot apparent resistivity and phase recovered from spectra.
 
@@ -814,7 +819,7 @@ def plot_z_from_spectra(
         ("xy", (0, 1), _st.xy),
         ("yx", (1, 0), _st.yx),
     ]
-    for comp, (r, c), sty in pairs:
+    for _comp, (r, c), sty in pairs:
         rho_c = np.log10(np.maximum(rho[:, r, c], 1e-12))
         phi_c = phi[:, r, c]
         kw = sty.plot_kwargs()
@@ -856,13 +861,13 @@ def plot_z_from_spectra(
 def plot_tipper_from_spectra(
     sp: Any,
     *,
-    h_labels: Tuple[str, str] = ("HX", "HY"),
-    ridge: Optional[float] = None,
+    h_labels: tuple[str, str] = ("HX", "HY"),
+    ridge: float | None = None,
     estimate_error: bool = False,
     show_error: bool = True,
     title: str = "",
     axes=None,
-    figsize: Tuple[float, float] = (10, 5),
+    figsize: tuple[float, float] = (10, 5),
 ) -> np.ndarray:
     """Plot the induction tipper magnitude and phase from spectra.
 
@@ -961,12 +966,12 @@ def plot_psd_section(
     channel: int = 0,
     log_psd: bool = True,
     cmap: str = "viridis",
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    section: Union[str, SectionStyle] = "pseudosection",
+    vmin: float | None = None,
+    vmax: float | None = None,
+    section: str | SectionStyle = "pseudosection",
     title: str = "",
-    figsize: Optional[Tuple[float, float]] = None,
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] | None = None,
+    ax: Axes | None = None,
 ) -> Axes:
     """Pseudo-section of PSD across stations (station × period).
 
@@ -1023,7 +1028,7 @@ def plot_psd_section(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     else:
-        fig = ax.get_figure()
+        ax.get_figure()
 
     # pixel edges
     st_x    = np.arange(len(sps), dtype=float)
@@ -1061,14 +1066,14 @@ def plot_psd_section(
 def plot_coherence_section(
     sp_input: Any,
     *,
-    pair: Optional[Tuple[int, int]] = None,
+    pair: tuple[int, int] | None = None,
     threshold: float = 0.5,
     show_threshold: bool = True,
     cmap: str = "RdYlGn",
-    section: Union[str, SectionStyle] = "pseudosection",
+    section: str | SectionStyle = "pseudosection",
     title: str = "",
-    figsize: Optional[Tuple[float, float]] = None,
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] | None = None,
+    ax: Axes | None = None,
 ) -> Axes:
     """Pseudo-section of coherence across stations (station × period).
 
@@ -1128,9 +1133,9 @@ def plot_coherence_section(
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-        fig = ax.get_figure()
+        ax.get_figure()
     else:
-        fig = ax.get_figure()
+        ax.get_figure()
 
     st_x    = np.arange(len(sps), dtype=float)
     dx_half = 0.5

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,21 +13,34 @@ Responsibilities
 """
 from __future__ import annotations
 
-import json
 import io
 import os
 
 import dash_bootstrap_components as dbc
 from dash import (
-    ALL, Input, Output, State,
-    callback_context as ctx, set_props,
-    no_update, html, dcc, dash_table,
+    ALL,
+    Input,
+    Output,
+    State,
+    dash_table,
+    dcc,
+    html,
+    no_update,
+    set_props,
+)
+from dash import (
+    callback_context as ctx,
 )
 from dash.exceptions import PreventUpdate
 
-from pycsamt.app.web.layout import IDs, _TOOL_REGISTRY, _TOOL_BY_ID, _tool_panel, _icon
+from pycsamt.app.web.layout import (
+    _TOOL_BY_ID,
+    _TOOL_REGISTRY,
+    IDs,
+    _icon,
+    _tool_panel,
+)
 from pycsamt.app.web.utils import filter_sites_by_lines
-
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -68,15 +80,16 @@ def _freq_before_after_heatmaps(
     bg, fg, grid, ax_bg, heatmap_fn,
 ) -> list:
     """Return a list of Div children showing before/after coverage heatmaps."""
-    import io, base64
     import matplotlib
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     children = []
 
     def _counts(sites_obj):
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+            )
             total = sum(
                 1 for _, ed in enumerate(_iter_items(sites_obj))
                 for Z, z, fr in [_get_z_block(ed)]
@@ -84,7 +97,7 @@ def _freq_before_after_heatmaps(
                 for _ in [None]
             )
             freqs = set()
-            for i, ed in enumerate(_iter_items(sites_obj)):
+            for _i, ed in enumerate(_iter_items(sites_obj)):
                 Z, z, fr = _get_z_block(ed)
                 if Z is not None:
                     freqs.update(fr.tolist())
@@ -353,7 +366,11 @@ def _filter_sites_by_station_ids(sites, station_ids):
     if not station_ids:
         return sites
     try:
-        from pycsamt.emtools._core import _iter_items, _name, ensure_sites
+        from pycsamt.emtools._core import (
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
         wanted = {str(s) for s in station_ids}
         items = [
             getattr(ed, "edi", ed)
@@ -3554,7 +3571,9 @@ def register_tools(app) -> None:
     def _coord_parse_csv(contents, filename):
         if not contents:
             return no_update, no_update, no_update, no_update, no_update
-        import base64, pandas as pd
+        import base64
+
+        import pandas as pd
         try:
             _, encoded = contents.split(",", 1)
             raw = base64.b64decode(encoded).decode("utf-8", errors="replace")
@@ -3632,8 +3651,12 @@ def register_tools(app) -> None:
         hide_prog  = {"display": "none"}
         show_prog  = {}
 
-        from pycsamt.gis.utils import project_point_utm2ll, project_point_ll2utm
         import pandas as pd
+
+        from pycsamt.gis.utils import (
+            project_point_ll2utm,
+            project_point_utm2ll,
+        )
 
         # ── helpers ──────────────────────────────────────────────────────────
         def _result_table(rows: list[dict]) -> html.Div:
@@ -4059,16 +4082,26 @@ def register_tools(app) -> None:
         if not n:
             return no_update, no_update, no_update
         try:
-            import io, base64, json
-            import numpy as np
+            import base64
+            import io
+
             import matplotlib
+            import numpy as np
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
+
             from pycsamt.forward import (
-                LayeredModel, MT1DForward, CSAMT1DForward, TEM1DForward,
-                add_gaussian_noise, add_noise,
-                GaussianNoise, FieldRealisticNoise, MultiplicativeNoise,
-                plot_model_1d, plot_response_and_model_1d, plot_response_1d,
+                CSAMT1DForward,
+                FieldRealisticNoise,
+                GaussianNoise,
+                LayeredModel,
+                MT1DForward,
+                MultiplicativeNoise,
+                TEM1DForward,
+                add_noise,
+                plot_model_1d,
+                plot_response_1d,
+                plot_response_and_model_1d,
             )
 
             dark   = (theme or "dark") == "dark"
@@ -4235,7 +4268,7 @@ def register_tools(app) -> None:
                             sigma_log10=float(mult_sigma or 0.05),
                         )
                         noisy_resp = add_noise(response, noise_model=nm, level=0.05)
-                except Exception as noise_exc:
+                except Exception:
                     noisy_resp = None
 
             # ── 4. PLOT ───────────────────────────────────────────────────
@@ -4365,6 +4398,7 @@ def register_tools(app) -> None:
             return no_update, no_update
         try:
             import json
+
             import numpy as np
             import pandas as pd
             payload = (saved_outputs or {}).get("layered-model", {})
@@ -4457,6 +4491,7 @@ def register_tools(app) -> None:
             return no_update, no_update, no_update
         try:
             import numpy as np
+
             from pycsamt.emtools.strike import (
                 estimate_strike_consensus,
                 estimate_strike_phase_tensor,
@@ -4778,6 +4813,7 @@ def register_tools(app) -> None:
             return _warn("Enter a source AVG/J/Spectra path first."), no_update
         try:
             from pathlib import Path
+
             from pycsamt.app.desktop.controllers.advanced_controller import (
                 ConversionController,
             )
@@ -4881,17 +4917,20 @@ def register_tools(app) -> None:
         if not n:
             return no_update, no_update
         try:
-            import io, base64
-            import numpy as np
+            import base64
+            import io
+
             import matplotlib
+            import numpy as np
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
             import plotly.graph_objects as go
+
             from pycsamt.emtools.dimensionality import (
                 classify_dimensionality,
                 plot_dim_confidence_grid,
-                plot_dim_occupancy_area,
                 plot_dim_map,
+                plot_dim_occupancy_area,
             )
 
             sub, err = _scoped_sites(
@@ -5272,28 +5311,31 @@ def register_tools(app) -> None:
         if not n:
             return no_update, no_update, no_update
         try:
-            import io, base64
-            import numpy as np
+            import base64
+            import io
+
             import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
-            import plotly.graph_objects as go
+
             from pycsamt.app.web.cache import (
-                cache_get, cache_set_freq_edit,
-            )
-            from pycsamt.emtools.frequency import (
-                edit_frequencies_by_confidence,
-                drop_low_confidence_frequencies,
-                mask_low_confidence_frequencies,
-                regrid_logspace, select_band, align_grid,
-                decimate_step, smooth_mavg, drop_duplicates,
-                plot_frequency_edit_summary,
-                plot_frequency_edit_decisions,
-                plot_coverage_quality_heatmap,
-                plot_band_microstrips,
-                plot_apparent_depth_psection,
+                cache_set_freq_edit,
             )
             from pycsamt.emtools._core import ensure_sites
+            from pycsamt.emtools.frequency import (
+                align_grid,
+                decimate_step,
+                drop_duplicates,
+                edit_frequencies_by_confidence,
+                plot_apparent_depth_psection,
+                plot_band_microstrips,
+                plot_coverage_quality_heatmap,
+                plot_frequency_edit_decisions,
+                plot_frequency_edit_summary,
+                regrid_logspace,
+                select_band,
+                smooth_mavg,
+            )
 
             # ── resolve source ────────────────────────────────────────────
             if source == "folder" and folder:
@@ -5607,8 +5649,11 @@ def register_tools(app) -> None:
         if not out_path:
             return html.Span("⚠ No output folder specified.", className="text-warning")
         try:
-            from pycsamt.app.web.cache import cache_get_freq_edit
             import pathlib
+
+            from pycsamt.app.web.cache import (
+                cache_get_freq_edit,
+            )
             edited = cache_get_freq_edit(session_id)
             if edited is None:
                 return html.Span(
@@ -5787,7 +5832,9 @@ def register_tools(app) -> None:
         prevent_initial_call=True,
     )
     def _elev_parse_upload(contents, filename):
-        import base64, io
+        import base64
+        import io
+
         import pandas as pd
         if not contents:
             return (no_update,) * 10
@@ -5966,7 +6013,9 @@ def register_tools(app) -> None:
                 n_ok = sum(1 for r in rows_out if r["elev"] is not None)
                 label = f"{n_ok}/{total} stations have elevation in EDI headers"
             else:
-                from pycsamt.gis.utils import get_elevation_from_api
+                from pycsamt.gis.utils import (
+                    get_elevation_from_api,
+                )
                 lats, lons, sids = [], [], []
                 for r in records:
                     sid = r.get("ID") or r.get("station") or r.get("name", "")
@@ -6085,12 +6134,16 @@ def register_tools(app) -> None:
                 x_idx  = np.arange(len(elev_work), dtype=float)
                 if valid.sum() >= 3:
                     if method == "loess":
-                        from pycsamt.gis.coord_correction import _loess_smooth
+                        from pycsamt.gis.coord_correction import (
+                            _loess_smooth,
+                        )
                         elev_work[valid] = _loess_smooth(
                             x_idx[valid], elev_work[valid], span=window // 2
                         )
                     elif method == "mean":
-                        from scipy.ndimage import uniform_filter1d
+                        from scipy.ndimage import (
+                            uniform_filter1d,
+                        )
                         elev_work = uniform_filter1d(
                             np.where(np.isnan(elev_work), 0, elev_work),
                             size=window,
@@ -6104,13 +6157,17 @@ def register_tools(app) -> None:
                             polyorder=polyorder,
                         )
                     elif method == "gaussian":
-                        from scipy.ndimage import gaussian_filter1d
+                        from scipy.ndimage import (
+                            gaussian_filter1d,
+                        )
                         elev_work = gaussian_filter1d(
                             np.where(np.isnan(elev_work), 0, elev_work),
                             sigma=window / 3.0,
                         )
                     elif method == "median":
-                        from scipy.ndimage import median_filter
+                        from scipy.ndimage import (
+                            median_filter,
+                        )
                         elev_work = median_filter(
                             np.where(np.isnan(elev_work), 0, elev_work),
                             size=window,
@@ -6242,9 +6299,13 @@ def register_tools(app) -> None:
         prevent_initial_call=True,
     )
     def _elev_export_h5(n, corrected, raw):
+        import base64
+        import io
+        import os
+        import tempfile
+
         import numpy as np
         import pandas as pd
-        import base64, io, tempfile, os
         if not n:
             return no_update, no_update
         src = corrected or raw
@@ -6315,7 +6376,10 @@ def register_tools(app) -> None:
         if not n or not corrected:
             return no_update
         try:
-            from pycsamt.app.web.cache import cache_get, cache_set
+            from pycsamt.app.web.cache import (
+                cache_get,
+                cache_set,
+            )
             sites = cache_get(session_id)
             if sites is None:
                 return _warn("Session expired — reload data.")
@@ -6432,6 +6496,7 @@ def register_tools(app) -> None:
             import numpy as np
             import plotly.graph_objects as go
             from plotly.subplots import make_subplots
+
             from pycsamt.app.web.cache import cache_get
 
             # Apparent resistivity from the STORED impedance, which pycsamt
@@ -6783,13 +6848,13 @@ def register_tools(app) -> None:
         try:
             import numpy as np
             import plotly.graph_objects as go
-            import plotly.express as px
             from plotly.subplots import make_subplots
+
             from pycsamt.app.web.cache import cache_get
             from pycsamt.emtools.strike import (
-                estimate_strike_sweep,
-                estimate_strike_phase_tensor,
                 estimate_strike_consensus,
+                estimate_strike_phase_tensor,
+                estimate_strike_sweep,
             )
 
             sites = cache_get(session_id)
@@ -6862,7 +6927,9 @@ def register_tools(app) -> None:
             skew_map: dict[str, float] = {}
             if do_skew or colorby == "skew" or do_flag3d:
                 try:
-                    from pycsamt.emtools.anisotropy import analyze_anisotropy
+                    from pycsamt.emtools.anisotropy import (
+                        analyze_anisotropy,
+                    )
                     adf = analyze_anisotropy(sub)
                     if not adf.empty and "swift_skew" in adf.columns:
                         # apply same period filter as band
@@ -6910,7 +6977,9 @@ def register_tools(app) -> None:
             # ── HEATMAP view ─────────────────────────────────────────────────
             if display == "heatmap":
                 try:
-                    from pycsamt.emtools.anisotropy import analyze_anisotropy
+                    from pycsamt.emtools.anisotropy import (
+                        analyze_anisotropy,
+                    )
                     adf = analyze_anisotropy(sub)
                     if adf.empty or "strike_deg" not in adf.columns:
                         raise ValueError("no per-freq strike data")
@@ -7230,12 +7299,15 @@ def register_tools(app) -> None:
         if not n:
             return no_update, no_update
         try:
-            import io, base64
+            import base64
+            import io
+
+            import matplotlib
             import numpy as np
             import plotly.graph_objects as go
-            import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
+
             from pycsamt.app.web.cache import cache_get
             from pycsamt.emtools.tensor import (
                 build_phase_tensor_table,
@@ -7301,7 +7373,7 @@ def register_tools(app) -> None:
             children: list = []
 
             # ── helper: matplotlib fig → base64 PNG ───────────────────────────
-            def _mpl_to_img(mpl_fig: "plt.Figure") -> html.Img:
+            def _mpl_to_img(mpl_fig: plt.Figure) -> html.Img:
                 buf = io.BytesIO()
                 mpl_fig.savefig(buf, format="png", dpi=120,
                                 bbox_inches="tight",
@@ -7316,7 +7388,7 @@ def register_tools(app) -> None:
                 )
 
             # ── helper: theme matplotlib axes ─────────────────────────────────
-            def _style_ax(ax_: "plt.Axes", fig_: "plt.Figure") -> None:
+            def _style_ax(ax_: plt.Axes, fig_: plt.Figure) -> None:
                 fig_.patch.set_facecolor(BG)
                 ax_.set_facecolor(AX_BG)
                 ax_.tick_params(colors=FG, labelsize=8)
@@ -7702,9 +7774,9 @@ def _save_mpl_figure(fig, path, *, dpi: int, transparent: bool, overwrite: bool)
 
 
 def _plot_station_map_mpl(store_data: dict | None, active_lines_store: dict | None):
+    import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
 
     records = list((store_data or {}).get("station_records", []) or [])
     df = pd.DataFrame(records)
@@ -7772,6 +7844,7 @@ def _batch_export_tool_figures(
     active_lines_store: dict,
 ) -> dict:
     import csv
+
     import matplotlib.pyplot as plt
 
     fmt = (fmt or "png").lower().lstrip(".")
@@ -7831,6 +7904,7 @@ def _batch_export_tool_figures(
     if "rho_pseudo" in selected:
         def _rho_ps():
             import matplotlib.pyplot as plt
+
             from pycsamt.emtools.inspect import pseudosection
 
             fig, ax = plt.subplots(figsize=(9.2, 5.0))
@@ -7848,6 +7922,7 @@ def _batch_export_tool_figures(
     if "phi_pseudo" in selected:
         def _phi_ps():
             import matplotlib.pyplot as plt
+
             from pycsamt.emtools.inspect import pseudosection
 
             fig, ax = plt.subplots(figsize=(9.2, 5.0))
@@ -7871,7 +7946,10 @@ def _batch_export_tool_figures(
     if "strike" in selected:
         def _skew():
             import matplotlib.pyplot as plt
-            from pycsamt.emtools.skew import plot_skew_traffic_psection
+
+            from pycsamt.emtools.skew import (
+                plot_skew_traffic_psection,
+            )
 
             fig, ax = plt.subplots(figsize=(9.0, 5.0))
             plot_skew_traffic_psection(sites, ax=ax, verbose=0)
@@ -7880,7 +7958,10 @@ def _batch_export_tool_figures(
 
         def _dim():
             import matplotlib.pyplot as plt
-            from pycsamt.emtools.tensor import plot_dimensionality_psection
+
+            from pycsamt.emtools.tensor import (
+                plot_dimensionality_psection,
+            )
 
             fig, ax = plt.subplots(figsize=(9.0, 5.0))
             plot_dimensionality_psection(sites, ax=ax, verbose=0)
@@ -7990,8 +8071,8 @@ def _render_stored_tool_result(tool_id: str, run_store: dict | None, theme: str 
 
 
 def _render_strike_result(payload: dict, theme: str | None):
-    import pandas as pd
     import numpy as np
+    import pandas as pd
 
     records = payload.get("records", [])
     df = pd.DataFrame(records)
@@ -8195,9 +8276,9 @@ def _validator_status_bar(n_pass: int, n_warn: int, n_fail: int) -> html.Div:
 
 def _validate_sites_rows(sites, *, store_data, checks: set, min_freq: int) -> list[dict]:
     import numpy as np
+
     from pycsamt.emtools._core import (
         _get_t_block,
-        _get_z_block,
         _iter_items,
         _name,
     )
@@ -8408,7 +8489,9 @@ def _converter_options_from_values(
 
 
 def _converted_sites_to_store(sites, *, old_store: dict | None, data_dir: str) -> dict:
-    from pycsamt.app.desktop.controllers.data_controller import DataController
+    from pycsamt.app.desktop.controllers.data_controller import (
+        DataController,
+    )
 
     ctrl = DataController()
     ctrl._sites = sites
@@ -8444,7 +8527,7 @@ def _converter_result_view(*, stats: dict, failures: list, output_dir: str, load
         if _is_finite_number(r.get("lat")) and _is_finite_number(r.get("lon"))
     )
     n_with_elev = sum(1 for r in rows if _is_finite_number(r.get("elev")))
-    n_with_z = sum(1 for r in rows if bool(r.get("has_Z")))
+    sum(1 for r in rows if bool(r.get("has_Z")))
     table_rows = []
     for r in rows:
         table_rows.append({

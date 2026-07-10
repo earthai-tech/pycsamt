@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt jones info — metadata summary for one J-file or a directory."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import jones, _get_jfile, _get_collection
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_collection, _get_jfile, jones
 
 
 @jones.command("info")
@@ -167,7 +170,7 @@ def _info_collection(
 
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table(
             title=f"Jones J collection — {path}  ({len(rows)} stations)",
         )

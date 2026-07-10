@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -10,14 +9,17 @@ embedding in composite figures.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
-
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
-from ._style import EMStyle, EM_COLORS, EM_FIGSIZE, add_colorbar
+from ._style import (
+    EM_COLORS,
+    EM_FIGSIZE,
+    EMStyle,
+    add_colorbar,
+)
 
 __all__ = [
     "plot_confusion_matrix",
@@ -39,12 +41,12 @@ def plot_confusion_matrix(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     *,
-    class_names: Optional[List[str]] = None,
+    class_names: list[str] | None = None,
     normalise: bool = True,
     cmap: str = "Blues",
     title: str = "Confusion Matrix",
-    figsize: Optional[Tuple[float, float]] = None,
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] | None = None,
+    ax: Axes | None = None,
     style: bool = True,
 ) -> Figure:
     """
@@ -139,9 +141,9 @@ def plot_residuals(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     *,
-    param_names: Optional[List[str]] = None,
+    param_names: list[str] | None = None,
     n_cols: int = 4,
-    figsize_per_panel: Tuple[float, float] = (2.5, 2.5),
+    figsize_per_panel: tuple[float, float] = (2.5, 2.5),
     style: bool = True,
 ) -> Figure:
     """
@@ -226,8 +228,8 @@ def plot_layer_errors(
     n_layers: int,
     *,
     log_rho: bool = True,
-    ax: Optional[Axes] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] | None = None,
     style: bool = True,
 ) -> Figure:
     """
@@ -279,7 +281,7 @@ def plot_layer_errors(
         fig = ax.get_figure()
 
     x = np.arange(len(labels))
-    bars = ax.bar(x, values, color=colors, width=0.6, edgecolor="white", lw=0.5)
+    ax.bar(x, values, color=colors, width=0.6, edgecolor="white", lw=0.5)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=8, rotation=45, ha="right")
     ax.set_ylabel("Mean absolute error", fontsize=9)
@@ -310,13 +312,13 @@ def plot_uncertainty_bands(
     y_pred: np.ndarray,
     y_upper: np.ndarray,
     y_lower: np.ndarray,
-    y_true: Optional[np.ndarray] = None,
+    y_true: np.ndarray | None = None,
     *,
-    ax: Optional[Axes] = None,
+    ax: Axes | None = None,
     xlabel: str = "",
     ylabel: str = "",
     title: str = "Prediction with Uncertainty",
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     style: bool = True,
 ) -> Figure:
     """
@@ -386,12 +388,12 @@ def plot_uncertainty_bands(
 @EMStyle()
 def plot_feature_importance(
     importances: np.ndarray,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
     *,
     top_n: int = 20,
     horizontal: bool = True,
-    ax: Optional[Axes] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "Feature Importance",
     style: bool = True,
 ) -> Figure:

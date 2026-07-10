@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -12,6 +11,7 @@ for tests that do not rely on repository data.
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
 

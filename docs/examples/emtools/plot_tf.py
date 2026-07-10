@@ -47,7 +47,6 @@ both are safe regardless of the underlying convention.
 # already-parsed data — no re-reading from disk between figures.
 
 import numpy as np
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

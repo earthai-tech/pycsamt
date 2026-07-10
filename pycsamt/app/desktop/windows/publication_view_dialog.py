@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -89,7 +88,9 @@ class PublicationViewDialog(QDialog):
 
     def _on_export(self) -> None:
         try:
-            from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+            from pycsamt.app.desktop.dialogs.export_dlg import (
+                ExportDialog,
+            )
             ExportDialog(figure=self._canvas.figure, parent=self).exec()
         except Exception:
             from PySide6.QtWidgets import QFileDialog

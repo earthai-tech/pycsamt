@@ -1,20 +1,22 @@
-from __future__ import annotations 
-
-
 # pycsamt/emtools/inspect.py
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
 
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-
 from ..api.style import PYCSAMT_STYLE
 from ..api.view import maybe_wrap_frame
-from ._core import ensure_sites, _axes_list, _get_z_block, _get_t_block
+from ._core import (
+    _axes_list,
+    _get_t_block,
+    _get_z_block,
+    ensure_sites,
+)
 
 # ------------------------- small helpers --------------------------------- #
 
@@ -30,7 +32,7 @@ def _name(ed: Any, idx: int) -> str:
     return f"site_{idx}"
 
 
-def _coords(ed: Any) -> Tuple[Optional[float], Optional[float]]:
+def _coords(ed: Any) -> tuple[float | None, float | None]:
     coords = getattr(ed, "coords", None)
     if coords is not None:
         try:
@@ -75,7 +77,7 @@ def _has(ed: Any, sect: str) -> bool:
     return hasattr(ed, sect) or hasattr(ed, sect.capitalize())
 
 
-def _get_freq(ed: Any) -> Optional[np.ndarray]:
+def _get_freq(ed: Any) -> np.ndarray | None:
     # try Z first
     for a in ("Z", "z", "ResPhase", "resphase", "Tipper", "tipper"):
         obj = getattr(ed, a, None)
@@ -122,7 +124,7 @@ def _period(fr: np.ndarray) -> np.ndarray:
     return p
 
 
-def _union_freq(freqs: List[np.ndarray]) -> np.ndarray:
+def _union_freq(freqs: list[np.ndarray]) -> np.ndarray:
     if not freqs:
         return np.array([], dtype=float)
     allf = np.unique(np.concatenate(freqs))
@@ -144,8 +146,8 @@ def _presence_vec(fr: np.ndarray, grid: np.ndarray) -> np.ndarray:
 
 
 def _df_from_kv(
-    rows: List[Dict[str, Any]],
-    cols: List[str],
+    rows: list[dict[str, Any]],
+    cols: list[str],
 ) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=cols)
@@ -157,7 +159,7 @@ def _df_from_kv(
 def sites_summary(
     sites: Any,
     *,
-    fields: Tuple[str, ...] = (
+    fields: tuple[str, ...] = (
         "station",
         "n_freq",
         "has_tipper",
@@ -179,7 +181,7 @@ def sites_summary(
         strict=strict,
         verbose=verbose,
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for i, ed in enumerate(_iter_items(S)):
         fr = _get_freq(ed)
         nm = _name(ed, i)
@@ -220,12 +222,12 @@ def sites_summary(
 def list_missing_sections(
     sites: Any,
     *,
-    require: Tuple[str, ...] = ("mt", "tipper"),
+    require: tuple[str, ...] = ("mt", "tipper"),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -233,10 +235,10 @@ def list_missing_sections(
         strict=strict,
         verbose=verbose,
     )
-    out: Dict[str, List[str]] = {}
+    out: dict[str, list[str]] = {}
     for i, ed in enumerate(_iter_items(S)):
         nm = _name(ed, i)
-        miss: List[str] = []
+        miss: list[str] = []
         for sec in require:
             if not _has(ed, sec):
                 miss.append(sec)
@@ -261,7 +263,7 @@ def frequency_coverage(
         strict=strict,
         verbose=verbose,
     )
-    freqs: Dict[str, np.ndarray] = {}
+    freqs: dict[str, np.ndarray] = {}
     for i, ed in enumerate(_iter_items(S)):
         nm = _name(ed, i)
         fr = _get_freq(ed)
@@ -292,12 +294,12 @@ def plot_coverage(
     *,
     axis: str = "period",
     show_mask: bool = True,
-    figsize: Tuple[float, float] = (7.0, 4.0),
+    figsize: tuple[float, float] = (7.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
@@ -323,7 +325,7 @@ def plot_coverage(
         ax.text(0.5, 0.5, "no data", ha="center", va="center")
         return ax
     M = np.vstack([_presence_vec(fr, grid) for fr in arr])
-    y = _period(grid) if axis == "period" else grid
+    _period(grid) if axis == "period" else grid
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
@@ -359,7 +361,7 @@ def _df_resphase(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     # Try the object's own to_dataframe first (works for a single Site)
     get_df = getattr(sites, "to_dataframe", None)
     if callable(get_df):
@@ -377,7 +379,7 @@ def _df_resphase(
             return normed
 
     # Fallback: sites is a collection (Sites is iterable, yields Site objects)
-    dfs: List[pd.DataFrame] = []
+    dfs: list[pd.DataFrame] = []
     try:
         for i, item in enumerate(_iter_items(sites)):
             item_get = getattr(item, "to_dataframe", None)
@@ -398,7 +400,7 @@ def _df_resphase(
     return None
 
 
-def _unwrap_frame(obj: Any) -> Optional[pd.DataFrame]:
+def _unwrap_frame(obj: Any) -> pd.DataFrame | None:
     """Return a plain pd.DataFrame from obj, unwrapping APIFrame if needed."""
     if isinstance(obj, pd.DataFrame):
         return obj
@@ -409,7 +411,7 @@ def _unwrap_frame(obj: Any) -> Optional[pd.DataFrame]:
     return None
 
 
-def _normalise_resphase_df(raw: Any, station: str) -> Optional[pd.DataFrame]:
+def _normalise_resphase_df(raw: Any, station: str) -> pd.DataFrame | None:
     """Add station/freq columns and normalise column names from to_dataframe output."""
     df = _unwrap_frame(raw)
     if df is None:
@@ -429,17 +431,17 @@ def _normalise_resphase_df(raw: Any, station: str) -> Optional[pd.DataFrame]:
 def plot_rhoa_phi(
     sites: Any,
     *,
-    components: Tuple[str, ...] = ("xy", "yx"),
+    components: tuple[str, ...] = ("xy", "yx"),
     axis: str = "period",
     errorbar: bool = True,
-    figsize: Tuple[float, float] = (7.5, 6.0),
+    figsize: tuple[float, float] = (7.5, 6.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax_r: Optional[plt.Axes] = None,
-    ax_p: Optional[plt.Axes] = None,
-) -> Tuple[plt.Axes, plt.Axes]:
+    ax_r: plt.Axes | None = None,
+    ax_p: plt.Axes | None = None,
+) -> tuple[plt.Axes, plt.Axes]:
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -513,16 +515,16 @@ def plot_rhoa_phi(
 def plot_tipper_components(
     sites: Any,
     *,
-    kind: Tuple[str, ...] = ("real", "imag"),
+    kind: tuple[str, ...] = ("real", "imag"),
     axis: str = "period",
-    figsize: Tuple[float, float] = (7.5, 4.5),
+    figsize: tuple[float, float] = (7.5, 4.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
-    from ._core import _iter_items, _name, _get_t_block
+    from ._core import _get_t_block, _iter_items, _name
 
     S = ensure_sites(
         sites,
@@ -587,16 +589,16 @@ def pseudosection(
     quantity: str = "rho_xy",
     axis_x: str = "station",
     axis_y: str = "period",
-    period_range: Optional[Tuple[float, float]] = None,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    figsize: Tuple[float, float] = (7.5, 4.5),
+    period_range: tuple[float, float] | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    figsize: tuple[float, float] = (7.5, 4.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
-    topo: Optional[bool] = None,
+    ax: plt.Axes | None = None,
+    topo: bool | None = None,
     dark: bool = True,
 ) -> plt.Axes:
     """Draw a period-vs-station pseudosection.
@@ -698,7 +700,9 @@ def pseudosection(
     if _topo_enabled:
         try:
             from pycsamt.topo.extract import (
-                extract_elevation, extract_chainage, extract_station_names,
+                extract_chainage,
+                extract_elevation,
+                extract_station_names,
             )
             from pycsamt.topo.overlay import draw_topo_strip
             chain_km = extract_chainage(S)
@@ -774,19 +778,19 @@ def _pick_station(S, station):
 def plot_station_response(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    sites_model: Optional[Any] = None,
-    components: Tuple[str, ...] = ("xx", "xy", "yx", "yy"),
-    period_range: Optional[Tuple[float, float]] = None,
-    rho_lim: Optional[Tuple[float, float]] = None,
-    phase_lim: Optional[Tuple[float, float]] = None,
-    tipper_lim: Tuple[float, float] = (-0.5, 0.5),
+    station: str | None = None,
+    sites_model: Any | None = None,
+    components: tuple[str, ...] = ("xx", "xy", "yx", "yy"),
+    period_range: tuple[float, float] | None = None,
+    rho_lim: tuple[float, float] | None = None,
+    phase_lim: tuple[float, float] | None = None,
+    tipper_lim: tuple[float, float] = (-0.5, 0.5),
     show_tipper: bool = True,
     show_error_bars: bool = True,
     show_rms: bool = True,
     title: str = "",
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,

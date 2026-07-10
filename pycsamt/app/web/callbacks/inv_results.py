@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Inversion Results Viewer page.
@@ -15,26 +14,31 @@ re-loading files on every click.
 """
 from __future__ import annotations
 
-import io
-import os
-import json
 import base64
-import traceback
+import io
+import json
+import os
 from pathlib import Path
 
 import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
-from dash import (
-    Input, Output, State, ALL,
-    clientside_callback, ctx, no_update, dcc, html,
-)
+matplotlib.use("Agg")
 import dash_bootstrap_components as dbc
+import matplotlib.pyplot as plt
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.utils import fig_to_src, PUB_RC
+from pycsamt.app.web.utils import PUB_RC, fig_to_src
 
 # ── Tab slugs and solver→tab mapping ─────────────────────────────────────────
 
@@ -114,7 +118,9 @@ def _load_occam2d(workdir: Path):
 
 
 def _load_mare2dem(workdir: Path):
-    from pycsamt.models.mare2dem.results import InversionResult
+    from pycsamt.models.mare2dem.results import (
+        InversionResult,
+    )
     return InversionResult(workdir=workdir)
 
 
@@ -132,8 +138,13 @@ _DEFAULT_TABS = {
 
 def _make_fig_modem(result, tab: str, controls: dict) -> plt.Figure:
     from pycsamt.models.modem.plot import (
-        PlotMisfit, PlotSection, PlotDepthMap, PlotAllProfiles,
-        PlotCovariance, PlotResponse, PlotPseudo,
+        PlotAllProfiles,
+        PlotCovariance,
+        PlotDepthMap,
+        PlotMisfit,
+        PlotPseudo,
+        PlotResponse,
+        PlotSection,
     )
     rho_min    = float(controls.get("rho_min",    1.0)   or 1.0)
     rho_max    = float(controls.get("rho_max",    1000.) or 1000.)
@@ -259,8 +270,13 @@ def _make_fig_modem(result, tab: str, controls: dict) -> plt.Figure:
 
 def _make_fig_occam2d(result, tab: str, controls: dict) -> plt.Figure:
     from pycsamt.models.occam2d.plot import (
-        PlotMisfit, PlotModel, PlotResponse, PlotPseudo,
-        PlotSounding1D, PlotSiteMisfit, PlotResponseGrid,
+        PlotMisfit,
+        PlotModel,
+        PlotPseudo,
+        PlotResponse,
+        PlotResponseGrid,
+        PlotSiteMisfit,
+        PlotSounding1D,
     )
     rho_min   = float(controls.get("rho_min",   1.0)   or 1.0)
     rho_max   = float(controls.get("rho_max",   1000.) or 1000.)
@@ -294,7 +310,10 @@ def _make_fig_occam2d(result, tab: str, controls: dict) -> plt.Figure:
 
 def _make_fig_mare2dem(result, tab: str, controls: dict) -> plt.Figure:
     from pycsamt.models.mare2dem.plot import (
-        PlotConvergence, PlotSurveyLayout, PlotModel, PlotResponse,
+        PlotConvergence,
+        PlotModel,
+        PlotResponse,
+        PlotSurveyLayout,
     )
 
     if tab == "conv":

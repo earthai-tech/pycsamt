@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Tuple
-
 import math
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,6 +14,7 @@ from pycsamt.api import APIFrame, reset_api_view
 from pycsamt.seg.edi import EDIFile
 from pycsamt.site import compute as cmp
 from pycsamt.site import edit as ed
+
 
 def _load_edi(p: Path) -> EDIFile:
     return EDIFile(p)  # type: ignore
@@ -33,7 +32,7 @@ def _mk_two_edifiles(
     simulated_edi: Path,
     n1: str = "C01",
     n2: str = "C02",
-) -> Tuple[EDIFile, EDIFile]:
+) -> tuple[EDIFile, EDIFile]:
     p1 = _dup_edi(tmp_path, simulated_edi, n1)
     p2 = _dup_edi(tmp_path, simulated_edi, n2)
     return _load_edi(p1), _load_edi(p2)
@@ -205,12 +204,12 @@ def test_tipper_magnitude_presence_and_stats(
     class _Tip: pass
     tp = _Tip()
     tp._tipper = np.zeros((n, 2), complex)
-    setattr(e1, "Tip", tp)
-    
+    e1.Tip = tp
+
     # Now fill_missing can operate on the existing tipper
     e1 = ed.fill_missing(e1, how="zero", components=("Tip",),
                          inplace=True)
-    
+
     s = cmp.tipper_magnitude(e1, per_freq=False)
     assert s["mean"] == pytest.approx(0.0)
     assert s["median"] == pytest.approx(0.0)

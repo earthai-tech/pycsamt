@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -47,7 +46,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -95,7 +94,7 @@ class QualityFlag(str, Enum):
     MISSING = "missing"
 
     @classmethod
-    def from_coverage(cls, coverage: float) -> "QualityFlag":
+    def from_coverage(cls, coverage: float) -> QualityFlag:
         """Return the flag that matches *coverage* (0–1)."""
         if coverage <= 0.0:
             return cls.MISSING
@@ -111,14 +110,14 @@ class QualityFlag(str, Enum):
         return {"missing": 0, "poor": 1, "partial": 2, "good": 3}[self.value]
 
     @classmethod
-    def worst(cls, flags: "List[QualityFlag]") -> "QualityFlag":
+    def worst(cls, flags: list[QualityFlag]) -> QualityFlag:
         """Return the worst (lowest-rank) flag in *flags*."""
         if not flags:
             return cls.MISSING
         return min(flags, key=lambda f: f.rank)
 
     @classmethod
-    def best(cls, flags: "List[QualityFlag]") -> "QualityFlag":
+    def best(cls, flags: list[QualityFlag]) -> QualityFlag:
         """Return the best (highest-rank) flag in *flags*."""
         if not flags:
             return cls.MISSING
@@ -165,8 +164,8 @@ class ComponentQuality:
     n_valid: int
     n_total: int
     flag: QualityFlag = field(init=False)
-    snr_mean: Optional[float] = None
-    snr_std: Optional[float] = None
+    snr_mean: float | None = None
+    snr_std: float | None = None
 
     def __post_init__(self) -> None:
         self.flag = QualityFlag.from_coverage(self.coverage)
@@ -181,8 +180,8 @@ class ComponentQuality:
         cls,
         name: str,
         arr: Any,
-        snr: Optional[Any] = None,
-    ) -> "ComponentQuality":
+        snr: Any | None = None,
+    ) -> ComponentQuality:
         """Compute quality from a raw array.
 
         Parameters
@@ -229,7 +228,7 @@ class ComponentQuality:
             snr_std=snr_std,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name":     self.name,
             "coverage": round(self.coverage, 4),
@@ -286,9 +285,9 @@ class DataQuality:
 
     station: str
     n_freq: int
-    freq_min: Optional[float] = None
-    freq_max: Optional[float] = None
-    components: List[ComponentQuality] = field(default_factory=list)
+    freq_min: float | None = None
+    freq_max: float | None = None
+    components: list[ComponentQuality] = field(default_factory=list)
     overall: QualityFlag = field(init=False)
 
     def __post_init__(self) -> None:
@@ -301,7 +300,7 @@ class DataQuality:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_site(cls, site: Any) -> "DataQuality":
+    def from_site(cls, site: Any) -> DataQuality:
         """Build a :class:`DataQuality` from a Site-like object.
 
         Accepts any object exposing ``.name``, ``.freq``, ``.z``,
@@ -316,7 +315,7 @@ class DataQuality:
         freq_min  = float(freq.min()) if freq is not None and freq.size else None
         freq_max  = float(freq.max()) if freq is not None and freq.size else None
 
-        comps: List[ComponentQuality] = []
+        comps: list[ComponentQuality] = []
         if z is not None:
             z_arr = np.asarray(z)
             for idx, cname in enumerate(_Z_COMPONENTS):
@@ -335,10 +334,10 @@ class DataQuality:
         )
 
     @classmethod
-    def from_edi(cls, edi_path: Any) -> "DataQuality":
+    def from_edi(cls, edi_path: Any) -> DataQuality:
         """Build from a spectra/impedance EDI file path."""
         from pycsamt.seg.edi import EDIFile  # noqa: PLC0415
-        from pycsamt.site.base import Site   # noqa: PLC0415
+        from pycsamt.site.base import Site  # noqa: PLC0415
         ed = EDIFile(str(edi_path))
         site = Site(ed)
         return cls.from_site(site)
@@ -347,7 +346,7 @@ class DataQuality:
     # Accessors
     # ------------------------------------------------------------------
 
-    def get(self, name: str) -> Optional[ComponentQuality]:
+    def get(self, name: str) -> ComponentQuality | None:
         """Return :class:`ComponentQuality` for *name*, or None."""
         for c in self.components:
             if c.name.lower() == name.lower():
@@ -355,7 +354,7 @@ class DataQuality:
         return None
 
     @property
-    def z_components(self) -> List[ComponentQuality]:
+    def z_components(self) -> list[ComponentQuality]:
         """Return only the Z-tensor component records."""
         return [c for c in self.components if c.name in _Z_COMPONENTS]
 
@@ -390,7 +389,7 @@ class DataQuality:
             )
         return "\n".join(lines)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "station":   self.station,
             "n_freq":    self.n_freq,
@@ -412,7 +411,7 @@ class DataQuality:
 # Collection utilities
 # ---------------------------------------------------------------------------
 
-def assess_collection(sites: Any) -> List[DataQuality]:
+def assess_collection(sites: Any) -> list[DataQuality]:
     """Compute :class:`DataQuality` for every site in *sites*.
 
     Parameters
@@ -442,7 +441,7 @@ def quality_dataframe(sites: Any, *, api: bool | None = None) -> Any:
 
     rows = []
     for dq in assess_collection(sites):
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "station":       dq.station,
             "n_freq":        dq.n_freq,
             "freq_min":      dq.freq_min,
@@ -470,7 +469,7 @@ def quality_dataframe(sites: Any, *, api: bool | None = None) -> Any:
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _safe_array(arr: Any) -> Optional[np.ndarray]:
+def _safe_array(arr: Any) -> np.ndarray | None:
     if arr is None:
         return None
     a = np.asarray(arr)

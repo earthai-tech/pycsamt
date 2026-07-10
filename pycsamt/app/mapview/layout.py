@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Workbench layout for the pyCSAMT Map View platform.
@@ -12,8 +11,8 @@ from __future__ import annotations
 
 import uuid
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from ._ids import IDs
 

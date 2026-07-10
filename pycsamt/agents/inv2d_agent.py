@@ -29,7 +29,7 @@ from typing import Any
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
-from .ai_inversion import _z_to_features, _default_thicknesses
+from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
 You are an expert in 2-D MT inversion using deep learning (U-Net architecture).
@@ -122,8 +122,8 @@ class Inv2DAgent(BaseAgent):
         # ── backend check ──────────────────────────────────────────────────────
         try:
             from ..ai.inversion.inv2d import EMInverter2D
-            from ..forward.batch      import generate_dataset
-            from ..backends           import get_backend_instance
+            from ..backends import get_backend_instance
+            from ..forward.batch import generate_dataset
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -133,7 +133,12 @@ class Inv2DAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -261,7 +266,9 @@ class Inv2DAgent(BaseAgent):
         fig_paths: dict[str, str] = {}
 
         try:
-            from ..ai.plot.inversion import plot_inversion_result_2d
+            from ..ai.plot.inversion import (
+                plot_inversion_result_2d,
+            )
             station_pos = np.arange(n_sta, dtype=float) * 0.5  # 0.5 km spacing
             fig_inv = plot_inversion_result_2d(
                 pred_2d,
@@ -285,7 +292,10 @@ class Inv2DAgent(BaseAgent):
             # fallback: simple imshow
             try:
                 import matplotlib.pyplot as plt
-                from ..api.station import PYCSAMT_STATION_RENDERING
+
+                from ..api.station import (
+                    PYCSAMT_STATION_RENDERING,
+                )
                 fig, ax = plt.subplots(figsize=(12, 5))
                 vv = pred_2d[np.isfinite(pred_2d)]
                 im = ax.imshow(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Figure export callbacks."""
@@ -8,8 +7,7 @@ from __future__ import annotations
 import base64
 import io
 
-from dash import ALL, Input, Output, State
-from dash import ctx, dcc
+from dash import ALL, Input, Output, State, ctx, dcc
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
@@ -30,7 +28,6 @@ def _convert_png_to(
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    import matplotlib.image as mpimg
     import numpy as np
 
     raw = base64.b64decode(b64_png)

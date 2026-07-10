@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Quantitative hydro-geophysical model from EM resistivity sections.
@@ -47,7 +46,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -125,7 +124,7 @@ class PetrophysicalConfig(PyCSAMTObject):
     d50_m: float = 2.5e-4
     kozeny_C: float = 180.0
     kozeny_tortuosity: float = 0.5
-    fracture_depth_m: Optional[float] = None
+    fracture_depth_m: float | None = None
     fracture_rho_matrix: float = 5000.0
     specific_storage: float = 1e-4
     min_wt_search_depth: float = 0.5
@@ -206,10 +205,10 @@ class EMHydroResult(PyCSAMTObject):
 
     # ── per-station summary ────────────────────────────────────────────────
 
-    def station_report(self) -> List[dict]:
+    def station_report(self) -> list[dict]:
         """Return one dict per model column with key hydro indicators."""
         model = self.resistivity_model
-        rows: List[dict] = []
+        rows: list[dict] = []
         for ix, x in enumerate(model.x_centers):
             name = _station_name(model, ix)
             wt = float(self.water_table[ix])
@@ -329,11 +328,11 @@ class EMHydroModel(PyCSAMTObject):
     def __init__(
         self,
         resistivity_model: ResistivityModel,
-        config: Optional[PetrophysicalConfig] = None,
+        config: PetrophysicalConfig | None = None,
         *,
-        petro: Optional[_PetroModel] = None,
-        rho_w: Optional[float] = None,
-        porosity_prior: Optional[float] = None,
+        petro: _PetroModel | None = None,
+        rho_w: float | None = None,
+        porosity_prior: float | None = None,
         method_tag: str = "",
     ) -> None:
         self.resistivity_model = resistivity_model
@@ -347,7 +346,7 @@ class EMHydroModel(PyCSAMTObject):
             base = _replace_config(base, porosity_prior=porosity_prior)
         self.config = base
         self.method_tag = method_tag
-        self._result: Optional[EMHydroResult] = None
+        self._result: EMHydroResult | None = None
 
     # ── public ─────────────────────────────────────────────────────────────
 

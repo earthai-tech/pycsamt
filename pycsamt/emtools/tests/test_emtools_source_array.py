@@ -7,17 +7,16 @@ import numpy as np
 import pytest
 
 from pycsamt.emtools.source_array import (
-    wavenumber,
-    sdas_element_pattern,
     array_factor,
-    pas_pattern,
     beam_steer,
-    steering_angles,
-    sdas_directivity,
-    snr_gain_db,
+    pas_pattern,
     plot_radiation_pattern,
+    sdas_directivity,
+    sdas_element_pattern,
+    snr_gain_db,
+    steering_angles,
+    wavenumber,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # wavenumber

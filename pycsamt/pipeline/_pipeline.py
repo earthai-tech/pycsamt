@@ -51,10 +51,10 @@ import time
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
-from ._steps import Step, StepResult
 from ._base import PipelineBase
+from ._steps import Step, StepResult
 
 # Sentinel: distinguishes "user did not pass outdir" from "user passed None".
 _UNSET = object()
@@ -88,10 +88,10 @@ class PipelineResult:
 
     sites_in: Any
     sites_out: Any
-    step_results: List[StepResult]
-    outdir: Optional[Path]
+    step_results: list[StepResult]
+    outdir: Path | None
     elapsed_sec: float
-    processed_paths: List[Path] = field(default_factory=list)
+    processed_paths: list[Path] = field(default_factory=list)
     pipeline_name: str = "pipeline"
 
     # ------------------------------------------------------------------
@@ -99,7 +99,7 @@ class PipelineResult:
     # ------------------------------------------------------------------
 
     @property
-    def plots(self) -> List[Path]:
+    def plots(self) -> list[Path]:
         """All figure paths generated across every step."""
         return [p for sr in self.step_results for p in sr.plots]
 
@@ -169,24 +169,21 @@ class Pipeline(PipelineBase):
 
     def __init__(
         self,
-        steps: Union[
-            List[Tuple[str, Step]],
-            List[Step],
-        ],
+        steps: list[tuple[str, Step]] | list[Step],
         *,
         name: str = "pipeline",
-        _output_dir: Optional[str | Path] = None,
+        _output_dir: str | Path | None = None,
     ) -> None:
         self.name = name
         self._output_dir = _output_dir
-        self._steps: List[Tuple[str, Step]] = self._normalise(steps)
+        self._steps: list[tuple[str, Step]] = self._normalise(steps)
         self._running = False
 
     # ------------------------------------------------------------------
     # Building the pipeline
     # ------------------------------------------------------------------
 
-    def append(self, label: str, step: Step) -> "Pipeline":
+    def append(self, label: str, step: Step) -> Pipeline:
         """Add *step* to the end of the pipeline.
 
         Returns *self* so calls can be chained.
@@ -195,7 +192,7 @@ class Pipeline(PipelineBase):
         self._steps.append((label, step))
         return self
 
-    def insert(self, idx: int, label: str, step: Step) -> "Pipeline":
+    def insert(self, idx: int, label: str, step: Step) -> Pipeline:
         """Insert *step* at position *idx* (0-based).
 
         Returns *self*.
@@ -204,7 +201,7 @@ class Pipeline(PipelineBase):
         self._steps.insert(idx, (label, step))
         return self
 
-    def remove(self, label: str) -> "Pipeline":
+    def remove(self, label: str) -> Pipeline:
         """Remove the first step whose label matches *label*.
 
         Returns *self*.
@@ -221,7 +218,7 @@ class Pipeline(PipelineBase):
                 return self
         raise KeyError(f"No step labelled {label!r} in the pipeline.")
 
-    def replace(self, label: str, step: Step) -> "Pipeline":
+    def replace(self, label: str, step: Step) -> Pipeline:
         """Replace the step labelled *label* with *step*.
 
         Returns *self*.
@@ -233,7 +230,7 @@ class Pipeline(PipelineBase):
                 return self
         raise KeyError(f"No step labelled {label!r} in the pipeline.")
 
-    def clone(self) -> "Pipeline":
+    def clone(self) -> Pipeline:
         """Return a deep copy of this pipeline."""
         return copy.deepcopy(self)
 
@@ -292,7 +289,7 @@ class Pipeline(PipelineBase):
         self._running = True
         t_start = time.perf_counter()
         current_sites = sites
-        step_results: List[StepResult] = []
+        step_results: list[StepResult] = []
 
         # Save initial pipeline config for reproducibility
         yaml_str = self.to_yaml_string()
@@ -303,8 +300,8 @@ class Pipeline(PipelineBase):
         for step_idx, (label, step) in enumerate(self._steps, start=1):
             n_in = _count_sites(current_sites)
             t_step = time.perf_counter()
-            error: Optional[Exception] = None
-            plot_paths: List[Path] = []
+            error: Exception | None = None
+            plot_paths: list[Path] = []
             sites_after = current_sites
 
             # Progress output
@@ -349,7 +346,9 @@ class Pipeline(PipelineBase):
                 snap_dir = out.step_plot_dir(step_idx, label) / "edi_snapshot"
                 snap_dir.mkdir(exist_ok=True)
                 try:
-                    from pycsamt.site.export import write_sites
+                    from pycsamt.site.export import (
+                        write_sites,
+                    )
                     write_sites(sites_after, snap_dir, exist_ok=True)
                 except Exception:
                     pass
@@ -379,13 +378,16 @@ class Pipeline(PipelineBase):
         total_elapsed = time.perf_counter() - t_start
 
         # Write final processed EDIs
-        processed_paths: List[Path] = []
+        processed_paths: list[Path] = []
         if save_edis and out is not None:
             processed_paths = out.write_edis(current_sites)
 
         # Write reports
         if save_report and out is not None:
-            from ._report import make_text_report, make_html_report
+            from ._report import (
+                make_html_report,
+                make_text_report,
+            )
             n_in_total = _count_sites(sites)
             n_out_total = _count_sites(current_sites)
             txt = make_text_report(
@@ -424,28 +426,28 @@ class Pipeline(PipelineBase):
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "Pipeline":
+    def from_yaml(cls, path: str | Path) -> Pipeline:
         """Load a pipeline from a YAML config file."""
-        from ._config import load_yaml, _pipeline_from_dict
+        from ._config import _pipeline_from_dict, load_yaml
         raw = load_yaml(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
 
     @classmethod
-    def from_json(cls, path: str | Path) -> "Pipeline":
+    def from_json(cls, path: str | Path) -> Pipeline:
         """Load a pipeline from a JSON config file."""
-        from ._config import load_json, _pipeline_from_dict
+        from ._config import _pipeline_from_dict, load_json
         raw = load_json(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
 
     @classmethod
-    def from_py(cls, path: str | Path) -> "Pipeline":
+    def from_py(cls, path: str | Path) -> Pipeline:
         """Load a pipeline from a Python config file.
 
         The file must expose a ``pipeline_config`` dict.
         """
-        from ._config import load_py, _pipeline_from_dict
+        from ._config import _pipeline_from_dict, load_py
         raw = load_py(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
@@ -454,8 +456,8 @@ class Pipeline(PipelineBase):
     def from_preset(
         cls,
         name: str,
-        pipeline_name: Optional[str] = None,
-    ) -> "Pipeline":
+        pipeline_name: str | None = None,
+    ) -> Pipeline:
         """Build a pipeline from a named preset.
 
         Parameters
@@ -493,8 +495,10 @@ class Pipeline(PipelineBase):
     def to_json(self, path: str | Path) -> None:
         """Write this pipeline config to *path* as JSON."""
         import json as _json
-        from ._config import pipeline_to_yaml
+
         import yaml
+
+        from ._config import pipeline_to_yaml
 
         data_str = pipeline_to_yaml(
             self._steps,
@@ -534,7 +538,7 @@ class Pipeline(PipelineBase):
             })
         return pd.DataFrame(rows).set_index("#")
 
-    def steps_in_category(self, category: str) -> List[Tuple[str, Step]]:
+    def steps_in_category(self, category: str) -> list[tuple[str, Step]]:
         """Return steps belonging to *category*."""
         return [(lbl, s) for lbl, s in self._steps
                 if s.spec.category == category]
@@ -568,7 +572,7 @@ class Pipeline(PipelineBase):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _normalise(steps: Any) -> List[Tuple[str, Step]]:
+    def _normalise(steps: Any) -> list[tuple[str, Step]]:
         """Accept ``[Step, ...]`` or ``[(label, Step), ...]``."""
         normalised = []
         for item in steps:
@@ -631,7 +635,7 @@ def _print_run_done(result: PipelineResult) -> None:
 
 
 def _format_repr(
-    steps: List[Tuple[str, Step]],
+    steps: list[tuple[str, Step]],
     name: str,
 ) -> str:
     """scikit-learn-style multi-line repr."""
@@ -678,7 +682,7 @@ def _format_repr(
 
 
 def _format_html(
-    steps: List[Tuple[str, Step]],
+    steps: list[tuple[str, Step]],
     name: str,
 ) -> str:
     """Jupyter-friendly HTML repr."""

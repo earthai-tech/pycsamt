@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -16,9 +15,18 @@ pub       — Publication-ready MT response   → matplotlib PNG  (IMG_PUB.src)
 """
 from __future__ import annotations
 
-from dash import ctx, clientside_callback, Input, Output, State, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    no_update,
+)
 
-from pycsamt.app.desktop.controllers.plot_controller import PlotController
+from pycsamt.app.desktop.controllers.plot_controller import (
+    PlotController,
+)
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import (
@@ -343,15 +351,15 @@ def register_profile(app) -> None:
         src, filename = src_map[active_tab]
         if not src or not src.startswith("data:image"):
             return no_update
-        import base64
         _, b64 = src.split(",", 1)
         return dict(content=b64, filename=filename, base64=True, type="image/png")
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────
 
-def _draw_section(ctrl: "PlotController") -> str:
+def _draw_section(ctrl: PlotController) -> str:
     import matplotlib.pyplot as plt
+
     from pycsamt.app.web.utils import fig_to_src
 
     fig_mpl, ax = plt.subplots(figsize=(11, 4))

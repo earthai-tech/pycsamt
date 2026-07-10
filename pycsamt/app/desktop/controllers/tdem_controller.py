@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,18 +18,12 @@ Each draw_*(fig) method:
 """
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 import matplotlib.pyplot as plt
-import numpy as np
-
-from typing import Optional
 
 from pycsamt.app.desktop.controllers.qc_controller import (
-    _style_all_axes,
     _annotate_empty,
+    _style_all_axes,
 )
-
 
 # ── Plot catalogue ─────────────────────────────────────────────────────────────
 # Each entry: (display_label, class_name, has_ax, data_key)
@@ -83,7 +76,7 @@ class TDEMController:
 
     def __init__(self) -> None:
         self._survey   = None          # TEMSurvey
-        self._soundings: List = []     # list[TEMSounding]
+        self._soundings: list = []     # list[TEMSounding]
         self._folder:  str  = ""
         self.dark: bool = True
 
@@ -145,7 +138,7 @@ class TDEMController:
         has_ax: bool,
         data_key: str,
         fig,
-    ) -> Optional[object]:
+    ) -> object | None:
         """
         Render a TDEM plot.
 
@@ -233,7 +226,7 @@ class TDEMController:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _call_figure_cls(self, cls, data) -> Optional[object]:
+    def _call_figure_cls(self, cls, data) -> object | None:
         """Instantiate cls(data).plot() and return the Figure it creates.
 
         For the dashboard, `data` is None and both avg/zplot come from the

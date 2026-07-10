@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
 from pathlib import Path
+
 import numpy as np
 
 from pycsamt.seg.edi import EDIFile
@@ -29,11 +29,11 @@ def _mk_dmeas() -> str:
 
 
 def _mk_mtsect(sectid: str = "S1") -> str:
-    return ">=MTSECT\n  SECTID={}\n".format(sectid)
+    return f">=MTSECT\n  SECTID={sectid}\n"
 
 
 def _mk_emapsect(sectid: str = "S1") -> str:
-    return ">=EMAPSECT\n  SECTID={}\n".format(sectid)
+    return f">=EMAPSECT\n  SECTID={sectid}\n"
 
 
 def _mk_freq_block(freq: list[float]) -> str:
@@ -146,7 +146,7 @@ def test_read_mt_minimal(tmp_path: Path) -> None:
 
     ed = EDIFile(fn)
     assert ed.Z.n_freq == 2
-    assert np.allclose(ed.Z.freq, [10.0 , 1.0]) # reverse ascending 
+    assert np.allclose(ed.Z.freq, [10.0 , 1.0]) # reverse ascending
     # ZXX real non-zero, imag zero as crafted
     assert np.allclose(ed.Z.z[:, 0, 0].imag, 0.0)
     assert np.all(ed.Z.z[:, 0, 0].real > 0.0)

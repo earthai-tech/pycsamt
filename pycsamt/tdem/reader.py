@@ -533,7 +533,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
 
     # ── Configure ─────────────────────────────────────────────────────────────
 
-    def configure(self, **kwargs: Any) -> "TEMReader":
+    def configure(self, **kwargs: Any) -> TEMReader:
         """Update acquisition defaults in-place.
 
         Returns *self* for chaining::

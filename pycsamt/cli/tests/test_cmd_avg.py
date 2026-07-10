@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -416,8 +415,9 @@ class TestAvgHelpers:
         assert obj.df is not None
 
     def test_load_raw_returns_df(self) -> None:
-        from pycsamt.cli.commands.avg._base import _load_raw
         import pandas as pd
+
+        from pycsamt.cli.commands.avg._base import _load_raw
         df, meta, kind = _load_raw(_K2_AVG)
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0

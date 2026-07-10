@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,8 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -58,7 +56,10 @@ class _ConvertWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools._core import _iter_items, _unwrap
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _unwrap,
+            )
             items = list(_iter_items(self._sites))
         except Exception:
             try:
@@ -186,7 +187,7 @@ class FormatConverterDialog(QDialog):
         # ── Source ────────────────────────────────────────────────────────────
         grp_src = QGroupBox("Source")
         form_src = QFormLayout(grp_src)
-        n = getattr(self._sites, "__len__", None)
+        getattr(self._sites, "__len__", None)
         src_lbl = "Loaded survey"
         if self._sites is not None:
             try:

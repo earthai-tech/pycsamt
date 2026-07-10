@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Processing Pipeline page."""
@@ -7,15 +6,25 @@ from __future__ import annotations
 import os
 
 import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
+matplotlib.use("Agg")
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, State, ctx, html, no_update
+import matplotlib.pyplot as plt
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.desktop.controllers.pipeline_controller import (
-    PipelineController, _build_steps, StepStatus,
+    PipelineController,
+    StepStatus,
+    _build_steps,
 )
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs

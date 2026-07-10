@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional
-
+from collections.abc import Iterable
+from typing import Any
 
 __all__ = ["ComponentsMixin"]
 
@@ -181,8 +180,8 @@ class ComponentsMixin:
         if isinstance(sec, dict) and k in sec:
             del sec[k]
 
-    def snapshot(self, keys: Optional[Iterable[str]] = None
-                 ) -> Dict[str, Any]:
+    def snapshot(self, keys: Iterable[str] | None = None
+                 ) -> dict[str, Any]:
         """
         Return a shallow snapshot mapping key -> component or
         ``None`` if absent.  If ``keys`` is omitted, use all
@@ -193,7 +192,7 @@ class ComponentsMixin:
             return {}
         if keys is None:
             keys = list(sec.keys())
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for k in keys:
             kk = self._norm(k)
             out[kk] = sec.get(kk, None)
@@ -295,7 +294,7 @@ class ComponentsMixin:
     # ---------- composition helpers ----------
 
     def compose_headers_from(
-        self, keys_order: Optional[List[str]] = None
+        self, keys_order: list[str] | None = None
     ) -> str:
         """
         Compose textual headers by calling ``write()`` on
@@ -308,7 +307,7 @@ class ComponentsMixin:
         if not isinstance(sec, dict):
             return ""
 
-        out: List[str] = []
+        out: list[str] = []
         seen: set[str] = set()
 
         def _emit_one(k: str) -> None:

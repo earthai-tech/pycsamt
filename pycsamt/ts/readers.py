@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -42,9 +41,9 @@ References
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -69,7 +68,7 @@ _EMSLAB_HDR = re.compile(
     r"^([A-Z][A-Z0-9]{2,5})(\d{10})\s*$"
 )
 #: EMSLAB multiplex order (README.emslab)
-_EMSLAB_CHAN: Tuple[str, ...] = (
+_EMSLAB_CHAN: tuple[str, ...] = (
     "HX", "HY", "HZ", "EX", "EY"
 )
 _EMSLAB_UNITS = {
@@ -79,7 +78,7 @@ _EMSLAB_UNITS = {
 
 
 # --------------------------------------------------------------- sniffing
-def sniff_format(path: Union[str, Path]) -> str:
+def sniff_format(path: str | Path) -> str:
     """
     Guess the time-series file format.
 
@@ -87,7 +86,7 @@ def sniff_format(path: Union[str, Path]) -> str:
     ``"ascii"`` (fallback).
     """
     p = Path(path)
-    head: List[str] = []
+    head: list[str] = []
     with p.open(
         "r", encoding="utf-8-sig", errors="replace"
     ) as f:
@@ -117,8 +116,8 @@ def sniff_format(path: Union[str, Path]) -> str:
 
 # ------------------------------------------------------------ LiMS reader
 def _lims_header(
-    lines: List[str],
-) -> Tuple[Dict[str, str], List[str], int]:
+    lines: list[str],
+) -> tuple[dict[str, str], list[str], int]:
     """
     Split a LiMS file head into ``(info, comments, data_start)``.
 
@@ -126,8 +125,8 @@ def _lims_header(
     ``comments`` keeps the ``#`` block, and ``data_start`` is
     the line index of the first sample row.
     """
-    info: Dict[str, str] = {}
-    comments: List[str] = []
+    info: dict[str, str] = {}
+    comments: list[str] = []
     data_start = 0
     for i, raw in enumerate(lines):
         s = raw.strip()
@@ -155,7 +154,7 @@ def _lims_header(
 
 
 def read_lims(
-    path: Union[str, Path],
+    path: str | Path,
     *,
     verbose: int = 0,
 ) -> TSData:
@@ -181,7 +180,7 @@ def read_lims(
         raise FileHandlingError(f"{p} is not a file.")
 
     # header is small: read the first chunk line by line
-    head_lines: List[str] = []
+    head_lines: list[str] = []
     with p.open(
         "r", encoding="utf-8-sig", errors="replace"
     ) as f:
@@ -203,12 +202,12 @@ def read_lims(
             f"{p}: NCHAN missing or invalid in INFO block."
         )
 
-    chan: List[str] = []
-    azim: Dict[str, float] = {}
-    units: Dict[str, str] = {}
-    gain: Dict[str, float] = {}
-    baseline: Dict[str, float] = {}
-    sensor: Dict[str, str] = {}
+    chan: list[str] = []
+    azim: dict[str, float] = {}
+    units: dict[str, str] = {}
+    gain: dict[str, float] = {}
+    baseline: dict[str, float] = {}
+    sensor: dict[str, str] = {}
     for k in range(1, nchan + 1):
         cid = (
             info.get(f"CHAN_{k}", f"CH{k}") or f"CH{k}"
@@ -234,7 +233,7 @@ def read_lims(
         if f"SENSOR_{k}" in info:
             sensor[cid] = info[f"SENSOR_{k}"]
 
-    def _f(key: str) -> Optional[float]:
+    def _f(key: str) -> float | None:
         v = info.get(key)
         if v in (None, ""):
             return None
@@ -247,7 +246,7 @@ def read_lims(
     missing = _f("MIS_DATA")
 
     # electric dipole lengths live in the '#' comments
-    dipole: Dict[str, float] = {}
+    dipole: dict[str, float] = {}
     for c in comments:
         m = re.search(
             r"#\s*(E[xy])\s+line\s+length\s*\(m\)\s*:\s*"
@@ -350,12 +349,12 @@ def _emslab_time(stamp: str) -> datetime:
 
 
 def read_emslab(
-    path: Union[str, Path],
+    path: str | Path,
     *,
     dt: float = 20.0,
     scale: float = 0.1,
     chan: Sequence[str] = _EMSLAB_CHAN,
-    declination: Optional[float] = None,
+    declination: float | None = None,
     verbose: int = 0,
 ) -> TSData:
     """
@@ -390,9 +389,9 @@ def read_emslab(
         raise FileHandlingError(f"{p} is not a file.")
 
     nch = len(chan)
-    station: Optional[str] = None
-    hours: List[Tuple[datetime, List[str]]] = []
-    current: Optional[List[str]] = None
+    station: str | None = None
+    hours: list[tuple[datetime, list[str]]] = []
+    current: list[str] | None = None
 
     with p.open(
         "r", encoding="utf-8-sig", errors="replace"
@@ -422,8 +421,8 @@ def read_emslab(
         )
 
     # fixed-width decode of one hour block -> (nsamp, nch)
-    def _decode(lines: List[str]) -> np.ndarray:
-        vals: List[float] = []
+    def _decode(lines: list[str]) -> np.ndarray:
+        vals: list[float] = []
         for ln in lines:
             # 15 fields of width 5 (last line may be short)
             n = min(len(ln), 75)
@@ -437,8 +436,8 @@ def read_emslab(
         return arr
 
     t0 = hours[0][0]
-    blocks: List[np.ndarray] = []
-    prev_end: Optional[datetime] = None
+    blocks: list[np.ndarray] = []
+    prev_end: datetime | None = None
     samples_per_hour = int(round(3600.0 / dt))
 
     for tstamp, lines in hours:
@@ -511,7 +510,7 @@ def read_emslab(
 
 # ------------------------------------------------------------ EDI reader
 def read_edi_tseries(
-    path: Union[str, Path],
+    path: str | Path,
     *,
     verbose: int = 0,
 ) -> TSData:
@@ -521,7 +520,7 @@ def read_edi_tseries(
     Thin bridge over :class:`pycsamt.seg.time_series.TSect`
     and :class:`~pycsamt.seg.time_series.TSIO`.
     """
-    from ..seg.time_series import TSIO, TSect, TimeSeries
+    from ..seg.time_series import TSIO, TimeSeries, TSect
 
     sect = TSect.from_file(str(path))
     io = TSIO.from_file(
@@ -530,7 +529,7 @@ def read_edi_tseries(
     seg_ts = TimeSeries.from_io(sect, io)
 
     dt = None
-    data: Dict[str, np.ndarray] = {}
+    data: dict[str, np.ndarray] = {}
     for cid in seg_ts.channels():
         data[cid] = np.asarray(seg_ts.get(cid), float)
         dt = seg_ts.dt_map.get(cid, dt)
@@ -548,11 +547,11 @@ def read_edi_tseries(
 
 # -------------------------------------------------------- generic ASCII
 def read_ascii(
-    path: Union[str, Path],
+    path: str | Path,
     *,
     dt: float,
-    chan: Optional[Sequence[str]] = None,
-    missing: Optional[float] = None,
+    chan: Sequence[str] | None = None,
+    missing: float | None = None,
     skiprows: int = 0,
     verbose: int = 0,
 ) -> TSData:
@@ -615,8 +614,8 @@ def read_ascii(
 
 # ---------------------------------------------------------------- entry
 def read_ts(
-    path: Union[str, Path],
-    format: Optional[str] = None,
+    path: str | Path,
+    format: str | None = None,
     **kws,
 ) -> TSData:
     """

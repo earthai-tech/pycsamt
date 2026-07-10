@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,8 +25,7 @@ and at the **bottom** in z, consistent with :class:`~pycsamt.forward.grid2d.Grid
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, Tuple, Union
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -186,7 +184,7 @@ class Grid3D:
 
     # ── 2-D slice extraction (used by the quasi-3D solver) ───────────────────
 
-    def xz_slice(self, yi: int) -> Tuple[Grid2D, np.ndarray]:
+    def xz_slice(self, yi: int) -> tuple[Grid2D, np.ndarray]:
         """Extract an XZ (east-west) 2-D slice at y-cell *yi*.
 
         Returns a :class:`~pycsamt.forward.grid2d.Grid2D` whose horizontal
@@ -219,7 +217,7 @@ class Grid3D:
         )
         return g2d, indices
 
-    def yz_slice(self, xi: int) -> Tuple[Grid2D, np.ndarray]:
+    def yz_slice(self, xi: int) -> tuple[Grid2D, np.ndarray]:
         """Extract a YZ (north-south) 2-D slice at x-cell *xi*.
 
         The ``Grid2D`` horizontal axis is mapped to y (northing); its
@@ -251,7 +249,7 @@ class Grid3D:
         )
         return g2d, indices
 
-    def column_profile_3d(self, xi: int, yi: int) -> Tuple[np.ndarray, np.ndarray]:
+    def column_profile_3d(self, xi: int, yi: int) -> tuple[np.ndarray, np.ndarray]:
         """Return the 1-D resistivity/thickness profile at cell (xi, yi).
 
         Parameters
@@ -299,9 +297,9 @@ class Grid3D:
         log_scale: bool = True,
         clip_core: bool = True,
         show_stations: bool = True,
-        figsize: Tuple[float, float] = (13, 4.5),
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
+        figsize: tuple[float, float] = (13, 4.5),
+        vmin: float | None = None,
+        vmax: float | None = None,
     ):
         """Plot orthogonal slices: XZ (mid-y), YZ (mid-x), XY (mid-z).
 
@@ -400,7 +398,7 @@ class Grid3D:
         nx_stations: int = 5,
         ny_stations: int = 5,
         name: str = "halfspace",
-    ) -> "Grid3D":
+    ) -> Grid3D:
         """Create a uniform resistivity 3-D halfspace with a regular station grid.
 
         Parameters
@@ -461,7 +459,7 @@ class Grid3D:
         cls,
         bg_rho: float = 100.0,
         anomaly_rho: float = 5.0,
-        bounds: Tuple[float, float, float, float, float, float] = (
+        bounds: tuple[float, float, float, float, float, float] = (
             2_000.0, 6_000.0, 2_000.0, 6_000.0, 300.0, 1_500.0
         ),
         *,
@@ -476,7 +474,7 @@ class Grid3D:
         nx_stations: int = 5,
         ny_stations: int = 5,
         name: str = "",
-    ) -> "Grid3D":
+    ) -> Grid3D:
         """Create a background halfspace with one rectangular 3-D anomaly.
 
         Parameters
@@ -550,7 +548,7 @@ class Grid3D:
         corr_length: float = 2_000.0,
         seed=None,
         name: str = "random_3d",
-    ) -> "Grid3D":
+    ) -> Grid3D:
         """Generate a random layered 3-D model with optional lateral variation.
 
         Resistivities for *n_layers* horizontal layers are drawn from a
@@ -594,8 +592,6 @@ class Grid3D:
 
         if lateral_variation:
             # 2-D Gaussian random field in xy for each depth layer
-            xc = g.x_centers
-            yc = g.y_centers
             for iz in range(nz_tot):
                 # Fast approximation: convolve white noise with a Gaussian kernel
                 noise = rng.standard_normal((ny_tot, nx_tot))

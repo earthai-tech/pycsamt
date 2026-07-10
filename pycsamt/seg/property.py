@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -10,12 +9,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
 )
-
-
 
 __all__ = [
     "PlainMeta",
@@ -31,19 +25,19 @@ __all__ = [
 class PlainMeta:
     """Small helper for to_dict/update/clone/validate."""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         try:
             return asdict(self)  # type: ignore[arg-type]
         except Exception:  # pragma: no cover
             return dict(self.__dict__)
 
-    def update(self, /, **kw: Any) -> "PlainMeta":
+    def update(self, /, **kw: Any) -> PlainMeta:
         for k, v in kw.items():
             setattr(self, k, v)
         self.validate()
         return self
 
-    def clone(self, /, **over: Any) -> "PlainMeta":
+    def clone(self, /, **over: Any) -> PlainMeta:
         cp = self.__class__(**self.to_dict())  # type: ignore
         for k, v in over.items():
             setattr(cp, k, v)
@@ -57,13 +51,13 @@ class PlainMeta:
 # Metadata value objects (no EDI formatting, embed-friendly)
 @dataclass
 class References(PlainMeta):
-    author: Optional[str] = None
-    title: Optional[str] = None
-    journal: Optional[str] = None
-    doi: Optional[str] = None
-    year: Optional[int] = None
-    volume: Optional[str] = None
-    pages: Optional[str] = None
+    author: str | None = None
+    title: str | None = None
+    journal: str | None = None
+    doi: str | None = None
+    year: int | None = None
+    volume: str | None = None
+    pages: str | None = None
 
     def validate(self) -> None:
         if self.year is not None and self.year < 0:
@@ -72,11 +66,11 @@ class References(PlainMeta):
 
 @dataclass
 class Person(PlainMeta):
-    name: Optional[str] = None
-    organization: Optional[str] = None
-    email: Optional[str] = None
-    role: Optional[str] = None
-    phone: Optional[str] = None
+    name: str | None = None
+    organization: str | None = None
+    email: str | None = None
+    role: str | None = None
+    phone: str | None = None
 
     def validate(self) -> None:
         if self.email and "@" not in self.email:
@@ -85,13 +79,13 @@ class Person(PlainMeta):
 
 @dataclass
 class Software(PlainMeta):
-    name: Optional[str] = None
-    version: Optional[str] = None
-    release: Optional[str] = None
+    name: str | None = None
+    version: str | None = None
+    release: str | None = None
     author: Person = field(default_factory=Person)
-    url: Optional[str] = None
-    license: Optional[str] = None
-    description: Optional[str] = None
+    url: str | None = None
+    license: str | None = None
+    description: str | None = None
 
     def validate(self) -> None:
         if self.name is not None and not str(self.name).strip():
@@ -106,9 +100,9 @@ class Software(PlainMeta):
 
 @dataclass
 class Source(PlainMeta):
-    project: Optional[str] = None
-    survey: Optional[str] = None
-    sitename: Optional[str] = None
+    project: str | None = None
+    survey: str | None = None
+    sitename: str | None = None
     creationdate: str = field(
         default_factory=lambda: (
             datetime.now(timezone.utc)
@@ -120,8 +114,8 @@ class Source(PlainMeta):
     creatingsoftware: str = "pyCSAMT"
     author: Person = field(default_factory=Person)
     recipient: Person = field(default_factory=Person)
-    archive: Optional[str] = None
-    reprocessed_by: Optional[str] = None
+    archive: str | None = None
+    reprocessed_by: str | None = None
 
     def validate(self) -> None:
         if not self.creatingsoftware:
@@ -131,11 +125,11 @@ class Source(PlainMeta):
 @dataclass
 class Processing(PlainMeta):
     ProcessingSoftware: Software = field(default_factory=Software)
-    processedby: Optional[str] = None
-    processingtag: Optional[str] = None
-    runlist: Optional[List[str]] = None
-    remoteref: Optional[str] = None
-    remotesite: Optional[str] = None
+    processedby: str | None = None
+    processingtag: str | None = None
+    runlist: list[str] | None = None
+    remoteref: str | None = None
+    remotesite: str | None = None
     signconvention: str = "exp(+i ω t)"
 
     @staticmethod
@@ -174,10 +168,10 @@ class Copyright(PlainMeta):
             "permission from original source."
         )
     )
-    release_status: Optional[str] = None
-    owner: Optional[str] = None
-    contact: Optional[str] = None
-    additional_info: Optional[str] = None
+    release_status: str | None = None
+    owner: str | None = None
+    contact: str | None = None
+    additional_info: str | None = None
 
     def validate(self) -> None:
         if self.release_status is None:
@@ -230,22 +224,22 @@ class PropertiesMixin:
             pass
         # ensure holders exist (preserve if already attached)
         if not hasattr(self, "Source") or not isinstance(
-            getattr(self, "Source"), Source
+            self.Source, Source
         ):
             self.Source = Source()
         if not hasattr(self, "Processing") or not isinstance(
-            getattr(self, "Processing"), Processing
+            self.Processing, Processing
         ):
             self.Processing = Processing()
         if not hasattr(self, "Copyright") or not isinstance(
-            getattr(self, "Copyright"), Copyright
+            self.Copyright, Copyright
         ):
             self.Copyright = Copyright()
 
     # ----------------------------
     # ensure / attach / validate
     # ----------------------------
-    def ensure_properties(self) -> "PropertiesMixin":
+    def ensure_properties(self) -> PropertiesMixin:
         if not isinstance(self.Source, Source):
             self.Source = Source()
         if not isinstance(self.Processing, Processing):
@@ -257,10 +251,10 @@ class PropertiesMixin:
     def attach_properties(
         self,
         *,
-        source: Optional[Source] = None,
-        processing: Optional[Processing] = None,
-        copyright: Optional[Copyright] = None,
-    ) -> "PropertiesMixin":
+        source: Source | None = None,
+        processing: Processing | None = None,
+        copyright: Copyright | None = None,
+    ) -> PropertiesMixin:
         if source is not None:
             if not isinstance(source, Source):
                 raise TypeError("source must be Source")
@@ -286,11 +280,11 @@ class PropertiesMixin:
     def update_properties(
         self,
         *,
-        source: Optional[Dict[str, Any]] = None,
-        processing: Optional[Dict[str, Any]] = None,
-        copyright: Optional[Dict[str, Any]] = None,
+        source: dict[str, Any] | None = None,
+        processing: dict[str, Any] | None = None,
+        copyright: dict[str, Any] | None = None,
         **flat: Any,
-    ) -> "PropertiesMixin":
+    ) -> PropertiesMixin:
         """
         Update nested holders via dicts and/or flat keys.
 
@@ -338,14 +332,14 @@ class PropertiesMixin:
     # ----------------------------
     # accessors
     # ----------------------------
-    def properties_as_dict(self) -> Dict[str, Any]:
+    def properties_as_dict(self) -> dict[str, Any]:
         return {
             "source": self.Source.to_dict(),
             "processing": self.Processing.to_dict(),
             "copyright": self.Copyright.to_dict(),
         }
 
-    def copy_properties(self) -> Dict[str, PlainMeta]:
+    def copy_properties(self) -> dict[str, PlainMeta]:
         return {
             "source": self.Source.clone(),
             "processing": self.Processing.clone(),
@@ -356,7 +350,7 @@ class PropertiesMixin:
         s = self.Source
         p = self.Processing
         c = self.Copyright
-        parts: List[str] = []
+        parts: list[str] = []
         if s.project or s.survey or s.sitename:
             parts.append(
                 f"Source(project={s.project!r}, survey={s.survey!r}, "

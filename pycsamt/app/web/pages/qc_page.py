@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """QC page v2 — quality-control dashboard.
@@ -9,10 +8,12 @@ Layout mirrors the Correction page design:
 """
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
-from pycsamt.app.desktop.controllers.qc_controller import ALL_GROUPS
+from pycsamt.app.desktop.controllers.qc_controller import (
+    ALL_GROUPS,
+)
 from pycsamt.app.web.layout import IDs, _command_bar
 from pycsamt.app.web.utils import empty_src
 

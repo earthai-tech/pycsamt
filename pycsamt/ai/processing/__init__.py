@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 pycsamt.ai.processing
 =====================
@@ -24,18 +23,18 @@ Phase 3 modules
     MLP classifier that labels MT observations as 1-D, 2-D, or 3-D and
     predicts the geoelectric strike direction for 2-D sites.
 """
-from .denoise import EMDenoiser, prepare_z_features
-from .qc import EMQCScorer
 from .anomaly import AnomalyDetector
 from .classify import DimensionalityClassifier
+from .denoise import EMDenoiser, prepare_z_features
 from .plot import (
-    plot_qc_scores,
-    plot_qc_heatmap,
     plot_qc_feature_heatmap,
+    plot_qc_heatmap,
     plot_qc_score_distribution,
     plot_qc_score_spread,
+    plot_qc_scores,
     plot_qc_summary,
 )
+from .qc import EMQCScorer
 
 __all__ = [
     "EMDenoiser",

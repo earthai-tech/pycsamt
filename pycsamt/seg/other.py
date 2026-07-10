@@ -1,22 +1,21 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
 
-from pathlib import Path 
-from typing import List, Optional, Dict, Any, Tuple
+from pathlib import Path
+from typing import Any
 
-from ..log.logger import get_logger
 from ..exceptions import EdIDataError
+from ..log.logger import get_logger
 from .base import EDIComponentBase
 from .validation import (
-    _strip_norm,
-    _to_int_or_none,
-    _to_float_or_none,
-    _split_comment,
+    IsEdi,
     _is_tag,
+    _split_comment,
+    _strip_norm,
+    _to_float_or_none,
+    _to_int_or_none,
 )
-from .validation import IsEdi 
 
 logger = get_logger(__name__)
 
@@ -101,7 +100,7 @@ class OtherSECT(EDIComponentBase):
     .. [1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
     """
 
-    KEY_ORDER: List[str] = [
+    KEY_ORDER: list[str] = [
         "sectid",
         "nchan",
         "nfreq",
@@ -118,25 +117,25 @@ class OtherSECT(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.sectid: Optional[str] = None
-        self.nchan: Optional[int] = None
-        self.nfreq: Optional[int] = None
-        self.maxblks: Optional[int] = None
-        self.ndipole: Optional[int] = None
-        self.type: Optional[str] = None
-        self.extra: Dict[str, Any] = {}
-        self.meas_ids: List[str] = []
-        self.start_data_lines_num: Optional[int] = None
+        self.sectid: str | None = None
+        self.nchan: int | None = None
+        self.nfreq: int | None = None
+        self.maxblks: int | None = None
+        self.ndipole: int | None = None
+        self.type: str | None = None
+        self.extra: dict[str, Any] = {}
+        self.meas_ids: list[str] = []
+        self.start_data_lines_num: int | None = None
 
         for k, v in kws.items():
             setattr(self, k, v)
 
     @classmethod
-    def from_file(cls, edi_path: str) -> "OtherSECT":
+    def from_file(cls, edi_path: str) -> OtherSECT:
 
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
-    
+
         lines = p.read_text(
             encoding="utf-8-sig", errors="replace"
         ).splitlines()
@@ -191,10 +190,10 @@ class OtherSECT(EDIComponentBase):
         inst.start_data_lines_num = stop
         return inst
 
-    def write(self) -> List[str]:
-        out: List[str] = [">=OTHERSECT\n"]
+    def write(self) -> list[str]:
+        out: list[str] = [">=OTHERSECT\n"]
 
-        vals: Dict[str, Any] = {
+        vals: dict[str, Any] = {
             "sectid": self.sectid,
             "nchan": self.nchan,
             "nfreq": self.nfreq,
@@ -235,19 +234,19 @@ class _OtherBlock(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.keyword: Optional[str] = None
-        self.options: Dict[str, Any] = {}
-        self.nitems_hint: Optional[int] = None
-        self.values: List[float] = []
-        self.raw_lines: List[str] = []
+        self.keyword: str | None = None
+        self.options: dict[str, Any] = {}
+        self.nitems_hint: int | None = None
+        self.values: list[float] = []
+        self.raw_lines: list[str] = []
         for k, v in kws.items():
             setattr(self, k, v)
 
-    def _format_values(self) -> List[str]:
+    def _format_values(self) -> list[str]:
         kpl = int(self.PER_LINE)
         ffmt = str(self.FLOAT_FMT)
-        out: List[str] = []
-        buf: List[str] = []
+        out: list[str] = []
+        buf: list[str] = []
         for v in self.values:
             buf.append(ffmt.format(v))
             if len(buf) == kpl:
@@ -332,7 +331,7 @@ class OtherIO(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.blocks: List[_OtherBlock] = []
+        self.blocks: list[_OtherBlock] = []
         for k, v in kws.items():
             setattr(self, k, v)
 
@@ -341,14 +340,14 @@ class OtherIO(EDIComponentBase):
     def from_file(
         cls,
         edi_path: str,
-        start_line: Optional[int] = None,
+        start_line: int | None = None,
         *,
         verbose: int | bool = 0,
         logger=None,
-    ) -> "OtherIO":
+    ) -> OtherIO:
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
-    
+
         lines = p.read_text(
             encoding="utf-8-sig", errors="replace"
         ).splitlines()
@@ -399,12 +398,12 @@ class OtherIO(EDIComponentBase):
 
     @staticmethod
     def _parse_block(
-        lines: List[str],
+        lines: list[str],
         i: int,
         *,
         verbose: int | bool = 0,
         logger=None,
-    ) -> Tuple[_OtherBlock, int]:
+    ) -> tuple[_OtherBlock, int]:
         head = lines[i].rstrip("\n")
         before, cmt = _split_comment(head)
         toks = before.split()
@@ -450,7 +449,7 @@ class OtherIO(EDIComponentBase):
             body, _ = _split_comment(st)
             toks = body.split()
             # try parse floats; if any token non-float, keep raw
-            row_vals: List[float] = []
+            row_vals: list[float] = []
             numeric_row = True
             for tok in toks:
                 try:
@@ -466,8 +465,8 @@ class OtherIO(EDIComponentBase):
 
         return blk, j
 
-    def write(self) -> List[str]:
-        out: List[str] = []
+    def write(self) -> list[str]:
+        out: list[str] = []
         for blk in self.blocks:
             if not blk.keyword:
                 continue

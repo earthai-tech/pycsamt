@@ -1,17 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pytest
 
 from pycsamt.seg.edi import EDIFile
-from pycsamt.seg.survey import EDIProfile, Stations, Topography
+from pycsamt.seg.survey import (
+    EDIProfile,
+    Stations,
+    Topography,
+)
 
 
 def _mk_edi(
@@ -22,7 +24,7 @@ def _mk_edi(
     lon: str,
     elev: float = 1000.0,
 ) -> Path:
-    lines: List[str] = [
+    lines: list[str] = [
         ">HEAD",
         f"  DATAID={dataid}",
         f"  LAT={lat}",

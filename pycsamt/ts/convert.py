@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -46,7 +45,6 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -64,9 +62,9 @@ _CHAN_C = {"HX": 1, "HY": 2, "HZ": 3, "EX": 4, "EY": 5}
 
 
 def _as_tsdata(
-    source: Union[TSData, str, Path],
+    source: TSData | str | Path,
     verbose: int = 0,
-    reader_kws: Optional[dict] = None,
+    reader_kws: dict | None = None,
 ) -> TSData:
     if isinstance(source, TSData):
         return source
@@ -81,7 +79,7 @@ def _as_tsdata(
 def _rr_estimate(
     sp,
     *,
-    ridge: Optional[float] = None,
+    ridge: float | None = None,
     estimate_error: bool = True,
 ):
     """
@@ -184,12 +182,12 @@ def _rr_estimate(
 
 # ---------------------------------------------------------------- ts→Z
 def ts_to_z(
-    source: Union[TSData, str, Path],
+    source: TSData | str | Path,
     *,
     estimator: str = "ls",
-    ridge: Optional[float] = None,
+    ridge: float | None = None,
     estimate_error: bool = True,
-    reader_kws: Optional[dict] = None,
+    reader_kws: dict | None = None,
     verbose: int = 0,
     **spectra_kws,
 ):
@@ -255,7 +253,7 @@ def ts_to_z(
 
 
 # ----------------------------------------------------- header synthesis
-def _edi_date(stamp: Optional[str]) -> Optional[str]:
+def _edi_date(stamp: str | None) -> str | None:
     """``YYYY-MM-DD hh:mm:ss`` → EDI ``MM/DD/YY`` date."""
     if not stamp:
         return None
@@ -269,9 +267,9 @@ def _edi_date(stamp: Optional[str]) -> Optional[str]:
 
 def _meas_ids(
     ts: TSData, site_num: int = 1
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """SEG-style measurement ids ``(10*site + C).run``."""
-    ids: Dict[str, str] = {}
+    ids: dict[str, str] = {}
     extra = 6
     for cid in ts.channels():
         c = _CHAN_C.get(cid)
@@ -343,7 +341,7 @@ def _make_info(ts: TSData, sp, estimator: str):
 
 
 def _make_definemeas(
-    ts: TSData, ids: Dict[str, str]
+    ts: TSData, ids: dict[str, str]
 ):
     from ..seg.meas import (
         DefineMeas,
@@ -401,7 +399,7 @@ def _make_definemeas(
 
 
 def _make_mtsect(
-    station: str, nfreq: int, ids: Dict[str, str]
+    station: str, nfreq: int, ids: dict[str, str]
 ):
     from ..seg.mtemap import MTEMAP
 
@@ -420,16 +418,16 @@ def _make_mtsect(
 
 # --------------------------------------------------------------- ts→EDI
 def ts_to_edifile(
-    source: Union[TSData, str, Path],
+    source: TSData | str | Path,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     estimator: str = "ls",
-    ridge: Optional[float] = None,
+    ridge: float | None = None,
     estimate_error: bool = True,
     include_spectra: bool = False,
     include_tseries: bool = False,
     tseries_max_samples: int = 20000,
-    reader_kws: Optional[dict] = None,
+    reader_kws: dict | None = None,
     verbose: int = 0,
     **spectra_kws,
 ):
@@ -522,18 +520,18 @@ reader_kws, verbose, **spectra_kws
 
 
 def ts_to_edi(
-    source: Union[TSData, str, Path],
-    out: Optional[str] = None,
+    source: TSData | str | Path,
+    out: str | None = None,
     *,
-    savepath: Union[str, Path, None] = None,
-    station: Optional[str] = None,
+    savepath: str | Path | None = None,
+    station: str | None = None,
     estimator: str = "ls",
-    ridge: Optional[float] = None,
+    ridge: float | None = None,
     estimate_error: bool = True,
     include_spectra: bool = False,
     include_tseries: bool = False,
     tseries_max_samples: int = 20000,
-    reader_kws: Optional[dict] = None,
+    reader_kws: dict | None = None,
     verbose: int = 0,
     **spectra_kws,
 ) -> str:

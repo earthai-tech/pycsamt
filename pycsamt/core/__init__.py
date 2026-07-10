@@ -1,40 +1,39 @@
-# -*- coding: utf-8 -*-
 
 from ._registry import (
-    RegistryError,
-    Record,
+    FileManifestStore,
     Manifest,
     ManifestStore,
-    FileManifestStore,
+    Record,
     Registry,
+    RegistryError,
     guess_kind,
 )
 from .base import CoreObject, MTBase, TFBundle, to_edi
+from .config import (
+    CoreConfig,
+    StationNamePolicy,
+    config_context,
+    configure,
+    get_adapter,
+    get_config,
+    list_adapters,
+    register_adapter,
+    reset_config,
+    to_dict,
+)
+from .mixins import (
+    BundleContainerMixin,
+    BundleMixin,
+    bundle_from_edi,
+)
 from .registry import (
     Packer,
-    register_packer,
+    RegistryAPI,
     get_packer,
     list_packers,
     pack_to_file,
+    register_packer,
     unpack_from_file,
-    RegistryAPI,
-)
-from .mixins import (
-    bundle_from_edi,
-    BundleMixin,
-    BundleContainerMixin,
-)
-from .config import (
-    StationNamePolicy,
-    CoreConfig,
-    get_config,
-    configure,
-    reset_config,
-    config_context,
-    to_dict,
-    register_adapter,
-    get_adapter,
-    list_adapters,
 )
 
 # Transformers were moved from pycsamt.core to the top-level

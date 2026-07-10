@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt.models.mare2dem — Python interface to the MARE2DEM EM inversion code.
@@ -100,101 +99,38 @@ International*, 207(1), 571–588. doi:10.1093/gji/ggw290.
 """
 
 # ---- configuration ----
+from .builder import InputBuilder
 from .config import Mare2DEMConfig
 
-# ---- source management ----
-from .source import SourceManager
+# ---- compatibility wrappers (original stub API) ----
+from .data import EMData
 
-# ---- file-type detection ----
-from .validation import (
-    Mare2DEMFileType,
-    detect_file_type,
-    is_emdata_file,
-    is_resistivity_file,
-    is_settings_file,
-    is_log_file,
-    is_response_file,
-)
+# ---- model diff ----
+from .diff import diff_resistivity
 
-# ---- I/O tools (full parsers) ----
-from .iotools import (
-    # data codes
-    DATA_CODES,
-    code_label,
-    code_component,
-    code_representation,
-    is_mt_code,
-    is_csem_code,
-    # emdata
-    EMDataFile,
-    UTMOrigin,
-    CSEMConfig,
-    MTConfig,
-    DCConfig,
-    read_emdata,
-    write_emdata,
-    # resistivity
-    ResistivityFile,
-    read_resistivity,
-    write_resistivity,
-    # poly
-    PolyFile,
-    read_poly,
-    write_poly,
-    # settings
-    SettingsFile,
-    write_settings,
-    # group RMS log
-    GroupRMSLog,
-    read_group_rms_log,
-    # data group
-    DataGroupFile,
-    read_data_group,
-    write_data_group,
-    # most recent
-    get_most_recent,
-)
+# ---- EDI → MT data builder ----
+from .edi import make_mt_data_from_edi, stations_from_edi
 
 # ---- geometry utilities ----
 from .geom import (
-    parse_topo,
-    topo_depth,
-    topo_slope,
-    get_intersections,
+    ELLIPSOIDS,
     do_rects_overlap,
     dp_simplify,
-    simplify_poly,
-    get_centroids,
-    triangle_centroids,
-    triangle_areas,
-    lonlat_to_utm,
-    utm_to_lonlat,
-    ELLIPSOIDS,
     estimate_area_of_interest,
-    get_triangle_regions,
+    get_centroids,
+    get_intersections,
     get_line_orientation,
+    get_triangle_regions,
+    lonlat_to_utm,
+    parse_topo,
     project_onto_line,
+    simplify_poly,
+    topo_depth,
+    topo_slope,
+    triangle_areas,
+    triangle_centroids,
+    utm_to_lonlat,
 )
-
-# ---- survey data builder ----
-from .survey import MTSurveyConfig, CSEMSurveyConfig, make_data_file
-
-# ---- ZMM reader + MT data builder ----
-from .zmm import (
-    ZMMStation,
-    read_zmm,
-    make_mt_data_from_zmm,
-    make_mt_data_from_stations,
-)
-
-# ---- EDI → MT data builder ----
-from .edi import stations_from_edi, make_mt_data_from_edi
-
-# ---- synthetic noise ----
-from .noise import NoiseConfig, add_synthetic_noise, make_synthetic_data
-
-# ---- file merge ----
-from .merge import merge_data_files, merge_emdata
 
 # ---- model construction from grid ----
 from .grid_to_m2d import grid_to_mare2dem
@@ -202,32 +138,107 @@ from .grid_to_m2d import grid_to_mare2dem
 # ---- topography import ----
 from .import_topo import TopoConfig, TopoProfile, import_topo
 
-# ---- model diff ----
-from .diff import diff_resistivity
-
-# ---- compatibility wrappers (original stub API) ----
-from .data import EMData
-from .mesh import ResistivityModel, PolyMesh
+# ---- I/O tools (full parsers) ----
+from .iotools import (
+    # data codes
+    DATA_CODES,
+    CSEMConfig,
+    # data group
+    DataGroupFile,
+    DCConfig,
+    # emdata
+    EMDataFile,
+    # group RMS log
+    GroupRMSLog,
+    MTConfig,
+    # poly
+    PolyFile,
+    # resistivity
+    ResistivityFile,
+    # settings
+    SettingsFile,
+    UTMOrigin,
+    code_component,
+    code_label,
+    code_representation,
+    # most recent
+    get_most_recent,
+    is_csem_code,
+    is_mt_code,
+    read_data_group,
+    read_emdata,
+    read_group_rms_log,
+    read_poly,
+    read_resistivity,
+    write_data_group,
+    write_emdata,
+    write_poly,
+    write_resistivity,
+    write_settings,
+)
 
 # ---- log parsers ----
-from .log import Mare2DEMLog, IterationRecord, GroupRMSLog, read_group_rms_log
+from .log import (
+    GroupRMSLog,
+    IterationRecord,
+    Mare2DEMLog,
+    read_group_rms_log,
+)
 
-# ---- run lifecycle ----
-from .results import InversionResult
-from .runner import Mare2DEMRunner
-from .builder import InputBuilder
+# ---- file merge ----
+from .merge import merge_data_files, merge_emdata
+from .mesh import PolyMesh, ResistivityModel
+
+# ---- synthetic noise ----
+from .noise import (
+    NoiseConfig,
+    add_synthetic_noise,
+    make_synthetic_data,
+)
 
 # ---- plots ----
 from .plot import (
     PlotConvergence,
-    PlotSurveyLayout,
-    PlotRxParams,
-    PlotTxParams,
-    plot_poly,
     PlotModel,
     PlotResponse,
+    PlotRxParams,
+    PlotSurveyLayout,
+    PlotTxParams,
+    plot_poly,
 )
 
+# ---- run lifecycle ----
+from .results import InversionResult
+from .runner import Mare2DEMRunner
+
+# ---- source management ----
+from .source import SourceManager
+
+# ---- survey data builder ----
+from .survey import (
+    CSEMSurveyConfig,
+    MTSurveyConfig,
+    make_data_file,
+)
+
+# ---- file-type detection ----
+from .validation import (
+    Mare2DEMFileType,
+    detect_file_type,
+    is_emdata_file,
+    is_log_file,
+    is_resistivity_file,
+    is_response_file,
+    is_settings_file,
+)
+
+# ---- ZMM reader + MT data builder ----
+from .zmm import (
+    ZMMStation,
+    make_mt_data_from_stations,
+    make_mt_data_from_zmm,
+    read_zmm,
+)
 
 __all__ = [
     # config

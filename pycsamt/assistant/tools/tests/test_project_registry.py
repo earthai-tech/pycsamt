@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,7 +16,6 @@ from tempfile import mkdtemp
 
 from pycsamt.assistant.tools.project_registry import (
     ProjectRegistry,
-    find_default_registry,
     resolve_line,
 )
 

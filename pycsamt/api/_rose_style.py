@@ -50,8 +50,8 @@ Usage
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
-from typing import List, Optional, Any
+from dataclasses import dataclass
+from typing import Any
 
 # ── Sentinel ────────────────────────────────────────────────────────────────────
 # Used as the default for visual kwargs in rose-plot functions.
@@ -175,7 +175,7 @@ class RoseStyle:
     ring_color:         str               = "0.75"
     ring_ls:            str               = ":"
     ring_lw:            float             = 0.7
-    ring_labels:        Optional[List[float]] = None  # None → auto-spaced
+    ring_labels:        list[float] | None = None  # None → auto-spaced
     ring_label_angle:   float             = 22.5
     ring_label_fontsize: float            = 7.0
     ring_label_color:   str               = "0.30"
@@ -199,9 +199,9 @@ class RoseStyle:
     mean_lw:        float           = 2.2
     mean_ls:        str             = "-"
     show_secondary: bool            = True
-    secondary_color: Optional[str]  = None   # None → same as mean_color
+    secondary_color: str | None  = None   # None → same as mean_color
     secondary_ls:   str             = "--"
-    secondary_lw:   Optional[float] = None   # None → same as mean_lw
+    secondary_lw:   float | None = None   # None → same as mean_lw
 
     # ── annotation box ────────────────────────────────────────────────────────
     show_annotation:    bool          = True
@@ -213,7 +213,7 @@ class RoseStyle:
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
-    def copy(self, **overrides: Any) -> "RoseStyle":
+    def copy(self, **overrides: Any) -> RoseStyle:
         """Return a shallow copy with *overrides* applied.
 
         Parameters
@@ -316,7 +316,7 @@ _reg(
 # ── Public resolver ─────────────────────────────────────────────────────────────
 
 def resolve_rose_style(
-    style: "str | RoseStyle | None",
+    style: str | RoseStyle | None,
     **overrides: Any,
 ) -> RoseStyle:
     """Resolve *style* to a :class:`RoseStyle`, then apply *overrides*.

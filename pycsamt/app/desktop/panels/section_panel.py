@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,12 +17,9 @@ Wired as the content of Profile tab "2D Section" inside ProfilePanel.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from matplotlib.colors import LogNorm
-import matplotlib.cm as mcm
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -33,7 +29,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QSplitter,
     QTextBrowser,
@@ -41,9 +36,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pycsamt.app.desktop.controllers.plot_controller import (
+    style_axes,
+)
+from pycsamt.app.desktop.widgets.colorbar_widget import (
+    ColorbarWidget,
+)
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.widgets.colorbar_widget import ColorbarWidget
-from pycsamt.app.desktop.controllers.plot_controller import style_axes
 
 _COLORMAPS = ["jet_r", "RdBu_r", "viridis_r", "plasma_r", "rainbow_r", "bwr_r"]
 
@@ -413,7 +412,10 @@ class SectionPanel(QWidget):
     ) -> None:
         """Terrain-following variant of _draw_section."""
         from pycsamt.topo.config import PYCSAMT_TOPO
-        from pycsamt.topo.drape import interp_elev, drape_section
+        from pycsamt.topo.drape import (
+            drape_section,
+            interp_elev,
+        )
         from pycsamt.topo.overlay import draw_topo_section
 
         # Try to get station elevations from the result object
@@ -511,5 +513,7 @@ class SectionPanel(QWidget):
     # ── Export ────────────────────────────────────────────────────────
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._canvas.figure, parent=self).exec()

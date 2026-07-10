@@ -1,12 +1,13 @@
 
 import logging
+
 import numpy as np
 import pytest
 
+from pycsamt.exceptions import ZError
 from pycsamt.z.base import (
     BaseEM,
 )
-from pycsamt.exceptions import ZError
 
 
 class Dummy(BaseEM):

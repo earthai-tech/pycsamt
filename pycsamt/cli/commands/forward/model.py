@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -32,9 +31,12 @@ import sys
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ._base import forward
-
 
 # ---------------------------------------------------------------------------
 # model — sub-group
@@ -102,7 +104,9 @@ def model_geology(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from ....forward.synthetic import GEOLOGY_PRIORS  # noqa: PLC0415
+    from ....forward.synthetic import (
+        GEOLOGY_PRIORS,  # noqa: PLC0415
+    )
 
     try:
         if name is not None:

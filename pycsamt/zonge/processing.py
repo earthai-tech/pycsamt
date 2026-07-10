@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -12,29 +11,25 @@ capabilities of Zonge's ASTATIC program.
 """
 from __future__ import annotations
 
-from typing import ( 
-    TYPE_CHECKING, 
-    Any, 
-    Union, 
+from collections.abc import Mapping
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
     Literal,
-    Optional, 
-    Mapping
 )
-from pathlib import Path 
+
 import numpy as np
 import pandas as pd
 
-from ..constants import PI, MU_0  
-from ..exceptions import ( 
-    ProcessingError, 
-    NotReadError
-)
+from ..constants import MU_0, PI
+from ..exceptions import NotReadError, ProcessingError
 from ..utils.validation import has_read
-from .config import Zonge 
-from .proc_utils import tma, flma, ama 
+from .config import Zonge
+from .proc_utils import ama, flma, tma
 
 if TYPE_CHECKING:
-    from .avg import BaseAVG, AMTAVG
+    from .avg import AMTAVG, BaseAVG
     from .base import AVGFrame
 
 __all__ = ["ASTATIC"]
@@ -122,21 +117,21 @@ class ASTATIC(Zonge):
 
     def __init__(
         self,
-        avg_data: Union["BaseAVG", "AMTAVG", None]=None, 
-        verbose: bool = False, 
+        avg_data: BaseAVG | AMTAVG | None=None,
+        verbose: bool = False,
         **kws
         ):
         super().__init__( verbose = verbose )
-        self.avg: Union["BaseAVG", "AMTAVG", None] = avg_data
-        
-        if self.avg is not None : 
+        self.avg: BaseAVG | AMTAVG | None = avg_data
+
+        if self.avg is not None :
             self.read(avg_data)
 
     def read(
         self,
-        source: Union[str, Path, "AVGFrame", pd.DataFrame, "BaseAVG"],
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> "ASTATIC":
+        source: str | Path | AVGFrame | pd.DataFrame | BaseAVG,
+        meta: Mapping[str, Any] | None = None,
+    ) -> ASTATIC:
         r"""Load a data source into the processor.
 
         This is the primary method for associating a dataset with
@@ -149,7 +144,7 @@ class ASTATIC(Zonge):
         ----------
         source : str, Path, AVGFrame, pd.DataFrame, or BaseAVG
             The data source to load. This can be:
-                
+
             - A string or `pathlib.Path` pointing to a Zonge AVG
               file. A new :class:`~.avg.AMTAVG` instance will be
               created internally to read the file.
@@ -158,7 +153,7 @@ class ASTATIC(Zonge):
             - A pre-existing, loaded object that inherits from
               :class:`~.avg.BaseAVG` (e.g., an `AVG` or `AMTAVG`
               instance).
-              
+
         meta : mapping, optional
             An optional dictionary of metadata. This is only used
             when `source` is a `pd.DataFrame`.
@@ -202,7 +197,7 @@ class ASTATIC(Zonge):
         pycsamt.utils.validation.has_read : The underlying utility
             used to validate loaded data objects.
         """
-        from .avg import AMTAVG  
+        from .avg import AMTAVG
 
         if isinstance(source, (str, Path, pd.DataFrame)):
             # If source is a file or raw DataFrame, create a new
@@ -229,12 +224,12 @@ class ASTATIC(Zonge):
                 f"ASTATIC processor initialized with data from '{src_name}'."
             )
         return self
-    
+
     def correct_capacitive_coupling(
         self,
-        contact_resistance: Union[float, pd.Series, str],
-        setup_length: Union[float, pd.Series, str],
-        wire_capacitance: Union[float, pd.Series, str] = 15.0,
+        contact_resistance: float | pd.Series | str,
+        setup_length: float | pd.Series | str,
+        wire_capacitance: float | pd.Series | str = 15.0,
         update_components: bool = True,
     ) -> pd.DataFrame:
         r"""Correct for capacitive coupling effects in E-field data.
@@ -295,7 +290,7 @@ class ASTATIC(Zonge):
 
         # --- Standardize inputs into Series ---
         def _resolve_param(
-            param: Union[float, pd.Series, str], name: str
+            param: float | pd.Series | str, name: str
         ) -> pd.Series:
             if isinstance(param, str):
                 if param not in df.columns:
@@ -340,7 +335,7 @@ class ASTATIC(Zonge):
                 )
 
         return df[['emag', 'ephz']]
-    
+
     def correct_static_shift(
         self,
         reference_freq: float,
@@ -394,13 +389,13 @@ class ASTATIC(Zonge):
             )
 
         stations = sorted(df['station'].unique())
-        
+
         # Interpolate data to the reference frequency for all stations
         interp_data = {}
         for station in stations:
             st_data = df[df['station'] == station].sort_values('freq')
             if len(st_data) < 2: continue
-            
+
             log_freq = np.log(st_data['freq'])
             interp_data[station] = {
                 'rho': np.exp(np.interp(
@@ -410,15 +405,15 @@ class ASTATIC(Zonge):
                     np.log(reference_freq), log_freq, st_data['phase']
                 )
             }
-        
+
         rho_profile = pd.Series(
             {s: d['rho'] for s, d in interp_data.items()}
         )
-        
+
         # Dispatch to the appropriate filter
         if filter_method == 'tma':
             smoothed_rho = tma(rho_profile, **kwargs)
-        
+
         elif filter_method in ('flma', 'ama'):
             omega = 2 * PI * reference_freq
             phase_profile = pd.Series(
@@ -436,19 +431,19 @@ class ASTATIC(Zonge):
                     z_profile, rho_profile.index, frequency=reference_freq,
                     **kwargs
                 )
-            
+
             # Convert smoothed impedance back to resistivity
             smoothed_rho = (np.abs(smoothed_z)**2) / (omega * MU_0)
         else:
             raise ValueError(f"Unknown filter method: '{filter_method}'")
 
         shift_factors = smoothed_rho / rho_profile
-        
+
         if update_components:
             df_copy = df.copy()
             df_copy['rho'] *= df_copy['station'].map(shift_factors)
             df_copy['rho_sc'] = df_copy['rho']
-            
+
             self.avg.info.read(df_copy, self.avg.info.meta)
             if self.avg.verbose:
                 self._logger.info(

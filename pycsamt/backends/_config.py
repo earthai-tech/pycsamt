@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,6 @@ import json
 import os
 import threading
 from pathlib import Path
-from typing import Optional
 
 __all__ = ["BackendConfig"]
 
@@ -32,13 +30,13 @@ _LOCK = threading.Lock()
 class BackendConfig:
     """Thread-safe global backend configuration (singleton)."""
 
-    _instance: Optional["BackendConfig"] = None
+    _instance: BackendConfig | None = None
 
-    def __new__(cls) -> "BackendConfig":
+    def __new__(cls) -> BackendConfig:
         with _LOCK:
             if cls._instance is None:
                 obj = object.__new__(cls)
-                obj._backend_name: Optional[str] = None  # None = not yet resolved
+                obj._backend_name: str | None = None  # None = not yet resolved
                 cls._instance = obj
         return cls._instance
 
@@ -104,7 +102,7 @@ class BackendConfig:
         return self._auto_detect()
 
     @staticmethod
-    def _read_config_file() -> Optional[str]:
+    def _read_config_file() -> str | None:
         """Read ai_backend from ~/.pycsamt/config.json if it exists."""
         fpath = Path.home() / ".pycsamt" / "config.json"
         try:

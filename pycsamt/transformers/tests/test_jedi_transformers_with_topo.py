@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
-import pytest
-
-import pandas as pd
 from types import SimpleNamespace
 
-from pycsamt.zonge.avg import AVG
+import pandas as pd
+import pytest
 
 from pycsamt.seg.collection import EDICollection
 from pycsamt.transformers import jedi as tr
+from pycsamt.zonge.avg import AVG
 
 
 def test_avgtoedi_k1_stn_utm_coordinates_are_written_to_edi(tmp_path):
@@ -92,7 +90,7 @@ def test_avg_with_topo_injection_adds_head(
     stn = _read_stn(stn_file_k2)
     topo = SimpleNamespace(frame=stn)
     try:
-        setattr(avg, "topo", topo)
+        avg.topo = topo
     except Exception:
         avg.topo = topo  # type: ignore
 
@@ -101,7 +99,7 @@ def test_avg_with_topo_injection_adds_head(
     ed = next(iter(out))
     has_head = False
     if hasattr(ed, "sections"):
-        has_head = "head" in getattr(ed, "sections")
+        has_head = "head" in ed.sections
     if not has_head and hasattr(ed, "Head"):
         has_head = True
     assert has_head is True

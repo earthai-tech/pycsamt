@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """callbacks/lines.py — survey-line management panel.
@@ -11,13 +10,19 @@ Three detection modes:
 
 from __future__ import annotations
 
-from dash import ALL, Input, Output, State, ctx, no_update
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.web.layout import IDs
-
 
 # ── Mode → hint text ─────────────────────────────────────────────────────────
 
@@ -136,7 +141,9 @@ def _register_auto_detect(app) -> None:
         if not n_clicks or not store_data:
             raise PreventUpdate
 
-        from pycsamt.site.lines import detect_lines_from_station_ids
+        from pycsamt.site.lines import (
+            detect_lines_from_station_ids,
+        )
 
         records = store_data.get("station_records", [])
         if not records:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Inversion page — Traditional (builtin/Occam2D) + AI Neural (1D/2D/3D).
@@ -18,8 +17,8 @@ View area (right):
 """
 from __future__ import annotations
 
-from dash import dash_table, dcc, html
 import dash_bootstrap_components as dbc
+from dash import dash_table, dcc, html
 
 try:
     import torch as _torch

@@ -10,7 +10,6 @@ from typing import Any
 import numpy as np
 
 from ..api.property import PyCSAMTObject
-
 from ._base import TEMSounding
 
 PathLike = str | Path

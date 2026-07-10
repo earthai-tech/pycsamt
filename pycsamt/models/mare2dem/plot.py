@@ -69,12 +69,12 @@ class PlotConvergence(Mare2DEMBase):
 
     def plot(
         self,
-        ax: "matplotlib.axes.Axes | None" = None,
+        ax: matplotlib.axes.Axes | None = None,
         *,
         savefig: str | Path | None = None,
         dpi: int = 150,
         target_rms: float | None = None,
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         """Draw the RMS-vs-iteration convergence curve."""
         import matplotlib.pyplot as plt
 
@@ -135,12 +135,12 @@ class PlotSurveyLayout(Mare2DEMBase):
 
     def plot(
         self,
-        ax: "matplotlib.axes.Axes | None" = None,
+        ax: matplotlib.axes.Axes | None = None,
         *,
         savefig: str | Path | None = None,
         dpi: int = 150,
         units: str = "km",
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         """Draw the survey map: receivers and transmitters in UTM.
 
         Parameters
@@ -242,7 +242,7 @@ class PlotRxParams(Mare2DEMBase):
         savefig: str | Path | None = None,
         dpi: int = 150,
         units: str = "km",
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         """Draw 6-panel receiver parameter overview."""
         import matplotlib.pyplot as plt
 
@@ -312,7 +312,7 @@ class PlotTxParams(Mare2DEMBase):
         savefig: str | Path | None = None,
         dpi: int = 150,
         units: str = "km",
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         """Draw transmitter parameter overview."""
         import matplotlib.pyplot as plt
 
@@ -358,13 +358,13 @@ class PlotTxParams(Mare2DEMBase):
 
 def plot_poly(
     poly_file: str | Path,
-    ax: "matplotlib.axes.Axes | None" = None,
+    ax: matplotlib.axes.Axes | None = None,
     *,
     linewidth: float = 1.0,
     color: str = "k",
     savefig: str | Path | None = None,
     dpi: int = 150,
-) -> "matplotlib.axes.Axes":
+) -> matplotlib.axes.Axes:
     """Plot a Triangle ``.poly`` PSLG mesh file.
 
     Port of ``m2d_plot_poly.m``.
@@ -391,6 +391,7 @@ def plot_poly(
     >>> ax = plot_poly("mare2dem.poly")
     """
     import matplotlib.pyplot as plt
+
     from .iotools.poly import read_poly
 
     pf = read_poly(poly_file)
@@ -454,11 +455,11 @@ class PlotModel(Mare2DEMBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        from .iotools.resistivity import ResistivityFile
         from .mesh import ResistivityModel
         from .results import InversionResult
-        from .iotools.resistivity import ResistivityFile
 
-        self._rf: "ResistivityFile | None" = None
+        self._rf: ResistivityFile | None = None
         self._workdir: Path | None = None
         self._title_stem: str = ""
 
@@ -637,9 +638,9 @@ class PlotModel(Mare2DEMBase):
         savefig=None,
         dpi: int = 150,
         cmap: str = "turbo_r",
-        vmin: "float | None" = None,
-        vmax: "float | None" = None,
-    ) -> "matplotlib.figure.Figure":
+        vmin: float | None = None,
+        vmax: float | None = None,
+    ) -> matplotlib.figure.Figure:
         r"""Plot the 2-D resistivity section.
 
         When Triangle mesh output files (``.node`` + ``.ele``)
@@ -758,10 +759,10 @@ class PlotResponse(Mare2DEMBase):
         *,
         savefig=None,
         dpi: int = 150,
-        station: "str | None" = None,
+        station: str | None = None,
         max_rx: int = 4,
-        figsize: "tuple | None" = None,
-    ) -> "matplotlib.figure.Figure":
+        figsize: tuple | None = None,
+    ) -> matplotlib.figure.Figure:
         r"""Plot observed vs predicted MT responses.
 
         One figure row per receiver, two columns: apparent

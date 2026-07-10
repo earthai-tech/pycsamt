@@ -247,7 +247,9 @@ def build_geo_contour_image(
     import base64
     import io
 
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.backends.backend_agg import (
+        FigureCanvasAgg,
+    )
     from matplotlib.figure import Figure
 
     lon = np.asarray(lons, dtype=float).ravel()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -42,7 +41,11 @@ import time
 from typing import Any
 
 from ._base import AgentResult
-from .plotting import _as_list, _filter_sites, _period_range, _truthy
+from .plotting import (
+    _as_list,
+    _filter_sites,
+    _period_range,
+)
 
 __all__ = ["ToolAgent", "TOOL_KINDS"]
 
@@ -180,8 +183,8 @@ def _corr_coord_figure(raw_sites, corrected_sites, label: str):
     ρ_a curves are unchanged by coordinate corrections, so a position map is
     the informative before/after view. Returns a Figure or ``None``.
     """
-    import numpy as np
     import matplotlib.pyplot as plt
+
     from ..gis.coord_correction import _get_coords_df
 
     try:
@@ -341,9 +344,9 @@ class ToolAgent:
     # ── tools ────────────────────────────────────────────────────────────────
     def _strike(self, sites, d, warnings):
         from ..emtools.strike import (
-            estimate_strike_sweep,
-            estimate_strike_phase_tensor,
             estimate_strike_consensus,
+            estimate_strike_phase_tensor,
+            estimate_strike_sweep,
             plot_strike_analysis,
         )
         method = str(d.get("method", "consensus") or "consensus").lower()
@@ -377,7 +380,9 @@ class ToolAgent:
         return summary, table, figs
 
     def _dimensionality(self, sites, d, warnings):
-        from ..emtools.dimensionality import classify_dimensionality
+        from ..emtools.dimensionality import (
+            classify_dimensionality,
+        )
         try:
             skew_th = float(d.get("skew_th", 3.0) or 3.0)
         except (TypeError, ValueError):
@@ -391,8 +396,6 @@ class ToolAgent:
             sites, skew_th=skew_th, ellipt_th=ellipt_th, verbose=0
         )
         df = res.frame if hasattr(res, "frame") else res
-        import numpy as np
-        import pandas as pd
 
         _LBL = {0: "indet.", 1: "1-D", 2: "2-D", 3: "3-D"}
         counts = df["dim"].value_counts().to_dict() if "dim" in df else {}
@@ -420,7 +423,9 @@ class ToolAgent:
 
         figs = {}
         try:
-            from ..emtools.tensor import plot_dimensionality_psection
+            from ..emtools.tensor import (
+                plot_dimensionality_psection,
+            )
             fig = _as_fig(plot_dimensionality_psection(sites, verbose=0))
             if fig is not None:
                 figs["Dimensionality pseudo-section"] = fig
@@ -429,8 +434,9 @@ class ToolAgent:
         return summary, table, figs
 
     def _validator(self, sites, d, warnings):
-        from ..agents.loader import _quality_scan
         import pandas as pd
+
+        from ..agents.loader import _quality_scan
         rows, scan_warn = _quality_scan(sites)
         if not rows:
             return (
@@ -466,7 +472,6 @@ class ToolAgent:
     # ── data / IO tools (Wave C) ──────────────────────────────────────────────
     def _coords(self, sites, d, warnings):
         """Transform every station's lat/lon to UTM easting/northing."""
-        import numpy as np
         import pandas as pd
 
         datum = str(d.get("datum", "WGS84") or "WGS84")
@@ -569,7 +574,13 @@ class ToolAgent:
         """Re-export the survey metadata (and optionally EDIs) to a folder."""
         import numpy as np
         import pandas as pd
-        from ..emtools._core import _get_z_block, _iter_items, _name, _unwrap
+
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            _unwrap,
+        )
 
         fmt = str(d.get("format", "csv") or "csv").lower()
         if fmt not in ("csv", "json", "edi"):
@@ -673,6 +684,7 @@ class ToolAgent:
         """Render a bundle of standard plots and save them to a folder."""
         import matplotlib.pyplot as plt
         import pandas as pd
+
         from .plotting import PlotAgent
 
         bundle = str(d.get("plots", "overview") or "overview").lower()
@@ -730,7 +742,6 @@ class ToolAgent:
     def _freq_editor(self, sites, d, warnings):
         """Confidence-based frequency QC. Edits out-of-place and stashes the
         edited Sites in ``self._corrected`` for the post-processing modal."""
-        import matplotlib.pyplot as plt
         from ..emtools.frequency import (
             edit_frequencies_by_confidence,
             plot_frequency_edit_summary,
@@ -809,13 +820,18 @@ class ToolAgent:
         """
         import matplotlib.pyplot as plt
         import pandas as pd
-        from ._corrections import (
-            CORRECTION_METHODS, coerce_kwargs, fn_for,
-        )
+
         from ..app.desktop.controllers.correction_controller import (
-            CorrectionController, _COORD_FN_NAMES, _STRAT_FN_NAMES,
+            _COORD_FN_NAMES,
+            _STRAT_FN_NAMES,
+            CorrectionController,
         )
         from ..emtools._core import _iter_items
+        from ._corrections import (
+            CORRECTION_METHODS,
+            coerce_kwargs,
+            fn_for,
+        )
 
         wf_id = str(d.get("corr_wf") or "").strip()
         fn_name = str(d.get("fn_name") or "").strip()
@@ -927,9 +943,9 @@ class ToolAgent:
 
     def _layered_model(self, d, warnings):
         """Build and preview a synthetic 1-D layered resistivity model."""
-        import numpy as np
-        import pandas as pd
         import matplotlib.pyplot as plt
+        import pandas as pd
+
         from ..forward.synthetic import LayeredModel
 
         preset = str(d.get("preset", "custom") or "custom").lower()

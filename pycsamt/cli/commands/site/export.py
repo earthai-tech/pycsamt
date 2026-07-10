@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt site export — write Sites to EDI files or a zip archive."""
@@ -19,8 +18,7 @@ from ....api.cli.options import (
     survey_option,
     verbose_option,
 )
-
-from ._base import site, _get_sites
+from ._base import _get_sites, site
 
 
 @site.command("export")
@@ -121,7 +119,9 @@ def export(
             )
             sys.exit(1)
 
-        from pycsamt.site.export import pack_zip as _pack_zip  # noqa: PLC0415
+        from pycsamt.site.export import (
+            pack_zip as _pack_zip,  # noqa: PLC0415
+        )
         try:
             out = _pack_zip(sites_obj, archive_path)
         except Exception as exc:  # noqa: BLE001
@@ -131,7 +131,9 @@ def export(
         return
 
     # --- write individual EDI files ---
-    from pycsamt.site.export import write_sites  # noqa: PLC0415
+    from pycsamt.site.export import (
+        write_sites,  # noqa: PLC0415
+    )
     try:
         written = write_sites(
             sites_obj,

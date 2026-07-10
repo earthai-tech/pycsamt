@@ -21,9 +21,10 @@ Change global defaults::
 from __future__ import annotations
 
 import copy
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field, fields
-from typing import Any, Generator
+from typing import Any
 
 _ON_STEP_ERROR = {"raise", "warn", "skip"}
 _PROGRESS_STYLES = {"bar", "log", "silent"}
@@ -99,7 +100,7 @@ class PipelineAPIConfig:
             setattr(self, k, v)
 
     @contextmanager
-    def context(self, **kw: Any) -> Generator["PipelineAPIConfig", None, None]:
+    def context(self, **kw: Any) -> Generator[PipelineAPIConfig, None, None]:
         """Temporarily override config values, then restore them."""
         snapshot = {k: getattr(self, k) for k in kw}
         try:
@@ -115,7 +116,7 @@ class PipelineAPIConfig:
         for f in fields(self):
             setattr(self, f.name, getattr(_defaults, f.name))
 
-    def clone(self) -> "PipelineAPIConfig":
+    def clone(self) -> PipelineAPIConfig:
         """Return a deep copy of this config."""
         return copy.deepcopy(self)
 

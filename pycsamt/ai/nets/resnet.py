@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,7 @@ residual-based deep convolutional neural network.
 """
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 __all__ = ["ResNet1DNet"]
 

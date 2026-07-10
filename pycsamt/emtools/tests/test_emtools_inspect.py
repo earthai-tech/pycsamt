@@ -1,22 +1,22 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.inspect"""
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.api import reset_api_view
 from pycsamt.emtools.inspect import (
-    sites_summary,
-    list_missing_sections,
     frequency_coverage,
+    list_missing_sections,
     plot_coverage,
     plot_rhoa_phi,
     plot_tipper_components,
     pseudosection,
+    sites_summary,
 )
 
 
@@ -133,6 +133,7 @@ class TestSitesSummary:
 
     def test_empty_input(self):
         import pandas as pd
+
         from pycsamt.api.view.frame import APIFrame
         df = sites_summary([])
         assert isinstance(df, (pd.DataFrame, APIFrame))

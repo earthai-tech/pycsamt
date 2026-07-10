@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt pipe steps — browse and inspect available processing steps."""
@@ -10,8 +9,11 @@ import json
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ._base import pipe
 
 
@@ -86,7 +88,6 @@ def steps(
         categories,
         list_steps,
         lookup_step,
-        step_codes,
     )
 
     # ── --info: single step detail ────────────────────────────────────────

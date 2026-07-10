@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """3D Map page — fence diagram, volumetric block, and depth-slice visualizations."""
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from pycsamt.app.web.layout import IDs, _command_bar
 

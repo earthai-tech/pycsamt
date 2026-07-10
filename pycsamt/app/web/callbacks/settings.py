@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,12 +18,14 @@ import base64
 import json
 
 from dash import (
-    Input, Output, State,
-    callback_context as ctx,
-    no_update,
-    dcc,
-    clientside_callback,
     ALL,
+    Input,
+    Output,
+    State,
+    no_update,
+)
+from dash import (
+    callback_context as ctx,
 )
 
 from pycsamt.app.web.layout import IDs

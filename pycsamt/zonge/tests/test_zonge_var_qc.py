@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,13 +6,15 @@ import pandas as pd
 import pytest
 
 from pycsamt.zonge.var_pc import (
-    PcEmag, PcHmag, PcRho,
-
+    PcEmag,
+    PcHmag,
+    PcRho,
 )
-from pycsamt.zonge.var_std import ( 
-    SPhz, SEphz,
+from pycsamt.zonge.var_std import (
+    SEphz,
     # SHphz # test this also
-    )
+    SPhz,
+)
 
 
 def _has_line(lines, pred):
@@ -49,7 +50,7 @@ def test_phase_convert_unit_roundtrip_mrad_deg():
     s = SPhz.from_avg((df, {"Unit.Phase": "mrad"}))
     # mrad -> deg
     s.convert_unit("deg")
-    v_deg = float(s.frame["s_phz"].iloc[0]) 
+    v_deg = float(s.frame["s_phz"].iloc[0])
     expected_deg = 1000.0 * (180.0 / (np.pi * 1000.0))
     assert np.isclose(v_deg, expected_deg, rtol=0, atol=1e-8)
     assert s.meta["Unit.Phase"].lower() == "deg"
@@ -168,5 +169,5 @@ def test_pc_rho_to_xarray_dims_and_var():
     v = np.asarray(v).reshape(-1)
     assert np.allclose(v[:2], [1.1, 2.2])
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

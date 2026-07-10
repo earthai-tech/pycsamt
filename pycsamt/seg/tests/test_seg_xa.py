@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterable, Iterator, List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import matplotlib.pyplot as plt
 
-from pycsamt.seg.edi import EDIFile
 from pycsamt.seg.collection import EDICollection
-from pycsamt.seg.xa import build_dataset, XAMixin
+from pycsamt.seg.edi import EDIFile
+from pycsamt.seg.xa import XAMixin, build_dataset
 
 # Mark all tests in this file as requiring the 'xarray' package
 pytestmark = pytest.mark.requires_xarray
@@ -22,7 +21,7 @@ class _DummyColl(XAMixin):
     """Minimal iterable collection to test XAMixin."""
 
     def __init__(self, items: Iterable[EDIFile]) -> None:
-        self._items: List[EDIFile] = list(items)
+        self._items: list[EDIFile] = list(items)
 
     def __iter__(self) -> Iterator[EDIFile]:
         return iter(self._items)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,7 +10,7 @@ Dash callback targets.  Both share identical business logic.
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional
+from typing import Callable
 
 from pycsamt.app.desktop.models.session import SessionState
 
@@ -33,12 +32,12 @@ class AppController:
     def __init__(self, session: SessionState | None = None) -> None:
         self.session: SessionState = session or SessionState.load()
         self.sites = None
-        self.selected_station: Optional[str] = self.session.selected_station
+        self.selected_station: str | None = self.session.selected_station
 
         # ── Callback lists (listeners register here) ──────────────────
-        self._on_data_loaded:        List[Callable] = []
-        self._on_station_selected:   List[Callable] = []
-        self._on_status_message:     List[Callable] = []
+        self._on_data_loaded:        list[Callable] = []
+        self._on_station_selected:   list[Callable] = []
+        self._on_status_message:     list[Callable] = []
 
     # ── Registration ──────────────────────────────────────────────────
 

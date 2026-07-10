@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Sphinx configuration for pyCSAMT v2 documentation.
 #
 # Build with:
@@ -32,6 +31,7 @@ os.environ.setdefault("PYCSAMT_DOCS_REPO_ROOT", os.path.abspath("../../"))
 # sphinx-gallery executes example scripts at build time; force a headless
 # backend before anything else has a chance to pick an interactive one.
 import matplotlib
+
 matplotlib.use("Agg")
 
 # -- Path setup ----------------------------------------------------------------
@@ -92,7 +92,10 @@ toggleprompt_offset_right = 40
 # "Examples" navbar entry *is* the card-grid landing page. To add a new
 # section, create ``docs/examples/<name>/README.txt`` plus ``plot_*.py``
 # scripts and list the section in ``subsection_order`` below.
-from sphinx_gallery.sorting import ExplicitOrder, FileNameSortKey
+from sphinx_gallery.sorting import (
+    ExplicitOrder,
+    FileNameSortKey,
+)
 
 sphinx_gallery_conf = {
     "examples_dirs":  ["../examples"],

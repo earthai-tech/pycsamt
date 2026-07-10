@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Base classes for inversion backends."""
@@ -9,7 +8,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from ..api.property import PyCSAMTObject
-
 from .config import InversionConfig
 from .data import EMData
 from .results import InversionResult

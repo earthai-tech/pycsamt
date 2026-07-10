@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Time-lapse EM monitoring for hydrogeological change detection.
@@ -39,13 +38,18 @@ Typical use
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
 from ..api.property import PyCSAMTObject
 from ._base import ResistivityModel
-from .petrophysics import ArchieModel, WaxmanSmitsModel, water_table_from_profile
+from .petrophysics import (
+    ArchieModel,
+    WaxmanSmitsModel,
+    water_table_from_profile,
+)
 
 __all__ = [
     "TimeLapseEM",
@@ -118,8 +122,8 @@ class TimeLapseEM(PyCSAMTObject):
         self,
         surveys: Sequence[ResistivityModel],
         *,
-        times: Optional[Sequence[float]] = None,
-        labels: Optional[Sequence[str]] = None,
+        times: Sequence[float] | None = None,
+        labels: Sequence[str] | None = None,
     ) -> None:
         if len(surveys) < 2:
             raise ValueError("At least two surveys are required.")
@@ -153,7 +157,7 @@ class TimeLapseEM(PyCSAMTObject):
     def resistivity_change(
         self,
         baseline_idx: int = 0,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         r"""Resistivity change relative to the baseline survey.
 
         .. math::
@@ -185,10 +189,10 @@ class TimeLapseEM(PyCSAMTObject):
         self,
         petro: _PetroModel,
         *,
-        phi: Union[float, np.ndarray] = 0.25,
+        phi: float | np.ndarray = 0.25,
         rho_w: float = 0.025,
         baseline_idx: int = 0,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         r"""Water-saturation change Δ*Sw* via Archie/WS inverse.
 
         .. math::
@@ -235,10 +239,10 @@ class TimeLapseEM(PyCSAMTObject):
         self,
         petro: _PetroModel,
         *,
-        phi: Union[float, np.ndarray] = 0.25,
+        phi: float | np.ndarray = 0.25,
         rho_w: float = 0.025,
         baseline_idx: int = 0,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         r"""Volumetric water-content change Δθ = φ · ΔSw.
 
         Parameters

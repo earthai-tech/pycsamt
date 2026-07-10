@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
@@ -8,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from pycsamt.seg.other import OtherSECT, OtherIO, OtherMixin
 from pycsamt.exceptions import EdIDataError
+from pycsamt.seg.other import OtherIO, OtherMixin, OtherSECT
 
 
 def _write(tmp: Path, name: str, text: str) -> Path:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -48,7 +47,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 
 def _cmd_stats(args: argparse.Namespace) -> int:
-    from .index_store import read_manifest, index_exists
+    from .index_store import index_exists, read_manifest
     if not index_exists(out_dir=args.out, root=args.root):
         print("No persisted index. Run: python -m pycsamt.assistant.rag build")
         return 1
@@ -88,7 +87,11 @@ def _cmd_query(args: argparse.Namespace) -> int:
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
-    from ..evals.harness import evaluate, load_suite, suites_dir
+    from ..evals.harness import (
+        evaluate,
+        load_suite,
+        suites_dir,
+    )
     suite = args.suite or (suites_dir() / "rag_questions.jsonl")
     records = load_suite(suite)
     report = evaluate(records, k=args.k)

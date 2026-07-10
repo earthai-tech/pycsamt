@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -16,24 +15,22 @@ Usage
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union
-
 import numpy as np
 
 __all__ = ["plot_convergence", "plot_lr_schedule"]
 
 
 def plot_convergence(
-    history: Union[Dict[str, list], List[Dict[str, list]]],
+    history: dict[str, list] | list[dict[str, list]],
     *,
     ax=None,
     log_scale: bool = True,
-    best_epoch: Optional[int] = None,
+    best_epoch: int | None = None,
     smoothing: float = 0.0,
     show_lr: bool = True,
     title: str = "Training convergence",
     style: bool = True,
-) -> "Figure":  # noqa: F821
+) -> Figure:  # noqa: F821
     """
     Plot train / validation loss curves from a trainer history dict.
 
@@ -66,7 +63,8 @@ def plot_convergence(
     fig : Figure
     """
     import matplotlib.pyplot as plt
-    from ._style import EMStyle, EM_COLORS, EM_FIGSIZE
+
+    from ._style import EM_COLORS, EM_FIGSIZE, EMStyle
 
     ctx = EMStyle() if style else _NullCtx()
     with ctx:
@@ -159,7 +157,8 @@ def plot_lr_schedule(
     ax : Axes
     """
     import matplotlib.pyplot as plt
-    from ._style import EMStyle, EM_FIGSIZE
+
+    from ._style import EM_FIGSIZE, EMStyle
 
     ctx = EMStyle() if style else _NullCtx()
     with ctx:

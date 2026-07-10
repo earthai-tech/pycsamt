@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """API-contract tests for :mod:`pycsamt.ai.training`.
 
 The older training tests cover common workflows.  These tests focus on

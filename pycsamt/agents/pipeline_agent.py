@@ -227,7 +227,11 @@ class PipelineAgent(BaseAgent):
                     )
 
         # ── build pipeline ────────────────────────────────────────────────────
-        from ..pipeline import Pipeline, Step, get_preset, configure_pipe, PYCSAMT_PIPE
+        from ..pipeline import (
+            PYCSAMT_PIPE,
+            Pipeline,
+            Step,
+        )
 
         try:
             if effective_preset:

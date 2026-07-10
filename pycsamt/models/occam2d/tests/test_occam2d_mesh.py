@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """Tests for OccamMesh.read()."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
 MESH_FILE = DATA_DIR / "Occam2DMesh"

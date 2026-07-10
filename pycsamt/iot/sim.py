@@ -11,7 +11,10 @@ Randomness is controlled through a ``seed`` argument for reproducibility.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from collections.abc import Iterable, Sequence
+from typing import (
+    Any,
+)
 
 import numpy as np
 
@@ -31,7 +34,7 @@ __all__ = [
 _EPOCH_BASE = 1_700_000_000.0  # a fixed, plausible POSIX base time (2023-11)
 
 
-def _rng(seed: Optional[int]) -> np.random.Generator:
+def _rng(seed: int | None) -> np.random.Generator:
     return np.random.default_rng(seed)
 
 
@@ -42,7 +45,7 @@ def simulate_powerline_noise(
     mains_hz: float = 50.0,
     amplitude: float = 1.0,
     n_harmonics: int = 3,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Return a powerline-noise time series (fundamental + harmonics)."""
     n_samples = int(n_samples)
@@ -63,10 +66,10 @@ def simulate_amt_channel(
     sample_rate: float,
     *,
     snr_db: float = 20.0,
-    mains_hz: Optional[float] = 50.0,
+    mains_hz: float | None = 50.0,
     powerline_amplitude: float = 0.0,
     dropout_rate: float = 0.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Simulate one AMT channel: band-limited signal + noise + artefacts."""
     n_samples = int(n_samples)
@@ -129,14 +132,14 @@ def simulate_amt_station(
     snr_db: float = 20.0,
     powerline_amplitude: float = 0.2,
     dropout_rate: float = 0.0,
-    survey_id: Optional[str] = None,
-    profile: Optional[str] = None,
-    position_m: Optional[float] = None,
-    lat: Optional[float] = None,
-    lon: Optional[float] = None,
-    timestamp: Optional[float] = None,
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
+    survey_id: str | None = None,
+    profile: str | None = None,
+    position_m: float | None = None,
+    lat: float | None = None,
+    lon: float | None = None,
+    timestamp: float | None = None,
+    seed: int | None = None,
+) -> dict[str, Any]:
     """Simulate a full AMT station: config, channel data, and packets.
 
     Returns
@@ -168,7 +171,7 @@ def simulate_amt_station(
         device_ids=[device_id],
     )
 
-    data: Dict[str, np.ndarray] = {}
+    data: dict[str, np.ndarray] = {}
     for channel in channels:
         data[channel] = simulate_amt_channel(
             n_samples, sample_rate,
@@ -233,7 +236,7 @@ def simulate_iot_network(
     dropout_rate: float = 0.05,
     survey_id: str = "SIM",
     station_spacing_m: float = 50.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     detail: bool = False,
 ) -> Any:
     """Simulate a network of AMT stations across one or more profiles.
@@ -256,10 +259,10 @@ def simulate_iot_network(
     rng = _rng(seed)
     profiles = list(profiles) or ["L1"]
     n_stations = max(0, int(n_stations))
-    per_profile_counts: Dict[str, int] = {p: 0 for p in profiles}
+    per_profile_counts: dict[str, int] = {p: 0 for p in profiles}
 
-    stations: List[Dict[str, Any]] = []
-    packets: List[TelemetryPacket] = []
+    stations: list[dict[str, Any]] = []
+    packets: list[TelemetryPacket] = []
     for i in range(n_stations):
         profile = profiles[i % len(profiles)]
         idx = per_profile_counts[profile]
@@ -291,8 +294,8 @@ def simulate_packet_loss(
     packets: Iterable[TelemetryPacket],
     dropout_rate: float = 0.05,
     *,
-    seed: Optional[int] = None,
-) -> List[TelemetryPacket]:
+    seed: int | None = None,
+) -> list[TelemetryPacket]:
     """Return *packets* with a fraction randomly dropped."""
     rng = _rng(seed)
     items = list(packets)
@@ -311,8 +314,8 @@ def simulate_gps_drift(
     offset_ms: float = 0.0,
     dropout_rate: float = 0.0,
     start_time: float = _EPOCH_BASE,
-    seed: Optional[int] = None,
-) -> Dict[str, np.ndarray]:
+    seed: int | None = None,
+) -> dict[str, np.ndarray]:
     """Simulate paired reference/local clocks with drift, jitter, dropout.
 
     Returns
@@ -347,7 +350,7 @@ def simulate_battery_decay(
     initial_v: float = 13.2,
     final_v: float = 10.5,
     noise_v: float = 0.05,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Simulate a monotonic-ish battery discharge curve with noise."""
     n_samples = int(n_samples)

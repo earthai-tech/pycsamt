@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,10 +13,13 @@ Populates:
 from __future__ import annotations
 
 from dash import (
-    Input, Output, State, clientside_callback,
-    callback_context as ctx, no_update, html,
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    html,
+    no_update,
 )
-import dash_bootstrap_components as dbc
 
 from pycsamt.app.web.layout import IDs
 
@@ -384,7 +386,7 @@ def register_dashboard(app) -> None:
         is_multi    = len(line_names) > 1
         line_color  = {ln: _LINE_PALETTE[i % len(_LINE_PALETTE)]
                        for i, ln in enumerate(line_names)}
-        rec_line    = dict(zip(
+        dict(zip(
             [r.get("ID", f"S{i}") for i, r in enumerate(records)],
             raw_lines,
         ))
@@ -394,8 +396,9 @@ def register_dashboard(app) -> None:
         n_no_tip = n_sta - n_tipper
         pct_tip  = int(n_tipper / n_sta * 100) if n_sta else 0
 
-        _title = lambda t: {"text": t, "font": {"size": 10, "color": fc},
-                             "x": 0.5, "xanchor": "center", "pad": {"t": 2}}
+        def _title(t):
+            return {"text": t, "font": {"size": 10, "color": fc},
+                                     "x": 0.5, "xanchor": "center", "pad": {"t": 2}}
 
         # ══ 1. Tipper coverage ════════════════════════════════════════════
         # Single-line: donut.  Multi-line: stacked bar per line.
@@ -1100,7 +1103,7 @@ def register_dashboard(app) -> None:
         ]
 
         # Per-profile breakdown (up to 4 shown)
-        for i, (line_id, cnt) in enumerate(list(lc.items())[:4]):
+        for _i, (line_id, cnt) in enumerate(list(lc.items())[:4]):
             chips.append(
                 html.Span(f"{line_id}: {cnt}", className="si-chip si-chip-sub")
             )

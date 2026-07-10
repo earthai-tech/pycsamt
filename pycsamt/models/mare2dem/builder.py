@@ -22,9 +22,16 @@ from .base import Mare2DEMBase
 from .config import Mare2DEMConfig
 from .doc import _mare2dem_param_docs as _params
 from .iotools.emdata import EMDataFile, read_emdata
-from .iotools.resistivity import ResistivityFile, write_resistivity
+from .iotools.resistivity import (
+    ResistivityFile,
+    write_resistivity,
+)
 from .iotools.settings import SettingsFile, write_settings
-from .survey import CSEMSurveyConfig, MTSurveyConfig, make_data_file
+from .survey import (
+    CSEMSurveyConfig,
+    MTSurveyConfig,
+    make_data_file,
+)
 
 PathLike = str | Path
 

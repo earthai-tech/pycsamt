@@ -16,9 +16,12 @@ worked.
 # curve shape, then rotate onto strike. Each function takes ``Sites`` and
 # returns corrected ``Sites``, so the workflow is a simple sequence.
 
-from _corr_data import demo_line, curves, plot_before_after
+from _corr_data import curves, demo_line, plot_before_after
+
 from pycsamt.emtools import (
-    correct_ss_ama, smooth_rho_phase, rotate_to_strike,
+    correct_ss_ama,
+    rotate_to_strike,
+    smooth_rho_phase,
 )
 
 raw_sites = demo_line("L18PLT")
@@ -65,8 +68,8 @@ plot_before_after(raw_ph, fin_ph, pick, quantity="phase",
 # raw section are conditioned away and the tensor is re-expressed on strike,
 # leaving a smoother section to hand to the inverter.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 names = [s for s in raw if np.array_equal(raw[s][0], fin[s][0])]
 periods = raw[names[0]][0]

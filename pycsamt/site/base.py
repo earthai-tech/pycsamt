@@ -1,39 +1,35 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
-from typing import List, Tuple, Sequence, Dict, Union
-
 import copy
-from pathlib import Path
-from os import PathLike
+import math
 import warnings
+from collections.abc import Sequence
+from os import PathLike
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+)
 
-import math 
 import numpy as np
 import pandas as pd
 
+from ..api.view import iter_progress, maybe_wrap_frame
 from ..core.base import CoreObject
-from ..seg.edi import EDIFile
-from ..seg.collection import EDICollection
-from ..session import normalize_session
 from ..gis.utils import (
     assert_lat_value,
     assert_lon_value,
 )
-
-from .utils import (
-    get_coords as _get_coords,
-    set_coords as _set_coords,
-    maybe_copy as _maybe_copy,
-    _get_head,
-    _ensure_head,
-    as_edicollection
-)
-from ..api.view import maybe_wrap_frame, iter_progress
+from ..seg.collection import EDICollection
+from ..seg.edi import EDIFile
+from ..session import normalize_session
+from .utils import _ensure_head, _get_head, as_edicollection
+from .utils import get_coords as _get_coords
+from .utils import maybe_copy as _maybe_copy
+from .utils import set_coords as _set_coords
 
 __all__ = ["SiteMixin", "Site", "Sites", "to_sites", "to_edis"]
 
@@ -95,7 +91,7 @@ class SiteMixin(CoreObject):
         return _station_name(self.edi)
 
     @property
-    def coords(self) -> Tuple[float, float, float]:
+    def coords(self) -> tuple[float, float, float]:
         r"""
         Geographic coordinates of the site.
 
@@ -213,7 +209,7 @@ class SiteMixin(CoreObject):
         return _extract_z_arrays(self.edi)["tipper"]
 
     @property
-    def meta(self) -> Dict[str, Any]:
+    def meta(self) -> dict[str, Any]:
         r"""
         Minimal metadata snapshot collected from the EDI.
 
@@ -232,7 +228,7 @@ class SiteMixin(CoreObject):
 
         h = _get_head(self.edi)
         info = _safe_get(self.edi, "INFO")
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         if h is not None:
             for k in ("station", "name", "lat", "lon", "elev",
                       "dataid", "sitename"):
@@ -299,7 +295,7 @@ class SiteMixin(CoreObject):
                 kind=f"site.{kind.strip().lower()}",
                 source=getattr(self, "name", None),
             )
-    
+
         k = kind.strip().lower()
         if k in ("z", "imp", "impedance"):
             z = arrs["z"]
@@ -307,21 +303,21 @@ class SiteMixin(CoreObject):
             if z is None or z.size == 0:
                 return _out(pd.DataFrame(index=idx))
             cols = _component_names()
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             for i, c in enumerate(cols):
                 try:
                     data[c] = z[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
             return _out(pd.DataFrame(data, index=idx))
-    
+
         if k in ("resphase", "rp", "rho_phase"):
             rho = arrs["rho"]
             ph = arrs["phase"]
             rho = None if rho is None else _z_to_2d(rho)
             ph = None if ph is None else _z_to_2d(ph)
             cols = _component_names()
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             for i, c in enumerate(cols):
                 rr = np.full(idx.size, np.nan, float)
                 pp = np.full(idx.size, np.nan, float)
@@ -338,24 +334,24 @@ class SiteMixin(CoreObject):
                 data[f"rho_{c.lower()}"] = rr
                 data[f"phi_{c.lower()}"] = pp
             return _out(pd.DataFrame(data, index=idx))
-    
+
         if k in ("tip", "tipper", "t"):
             tip = arrs["tipper"]
             if tip is None:
                 return _out(pd.DataFrame(index=idx))
             tip = np.asarray(tip)
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             for i, c in enumerate(("Tx", "Ty")):
                 try:
                     data[c] = tip[:, i]
                 except Exception:
                     data[c] = np.full(idx.size, np.nan, float)
             return _out(pd.DataFrame(data, index=idx))
-    
+
         raise ValueError(f"Unknown kind: {kind!r}")
 
 
-    def quality_flags(self) -> Dict[str, bool]:
+    def quality_flags(self) -> dict[str, bool]:
         r"""
         Report presence and basic validity of key arrays.
 
@@ -427,30 +423,30 @@ class SiteMixin(CoreObject):
             except (TypeError, ValueError):
                 return False
             return a.size > 0 and np.any(np.isfinite(a))
-    
+
         z = _extract_z_arrays(self.edi)["z"]
         if z is None:
             return False
         z = _z_to_2d(z)
-    
+
         names = [n.lower() for n in _component_names()]
         try:
             i = names.index(c)
         except ValueError:
             return False
-    
+
         try:
             ncols = z.shape[1]
         except Exception:
             ncols = 0
         if i >= ncols:
             return False
-    
+
         a = z[:, i]
         return a.size > 0 and np.any(np.isfinite(a))
 
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         r"""
         Summarize site identity, geometry, and data coverage.
 
@@ -491,7 +487,7 @@ class SiteMixin(CoreObject):
         new: str,
         *,
         inplace: bool = False,
-    ) -> "Site":
+    ) -> Site:
         r"""
         Set a new station identifier across common header
         fields.
@@ -535,10 +531,10 @@ class SiteMixin(CoreObject):
         self,
         lat: float,
         lon: float,
-        elev: Optional[float] = None,
+        elev: float | None = None,
         *,
         inplace: bool = False,
-    ) -> "Site":
+    ) -> Site:
         r"""
         Update the site coordinates in the EDI HEAD section.
 
@@ -587,7 +583,7 @@ class SiteMixin(CoreObject):
         )
         return Site(ed)
 
-    def set_empty(self, *, inplace: bool = False) -> "Site":
+    def set_empty(self, *, inplace: bool = False) -> Site:
         r"""
         Clear Z-related arrays to an empty dataset.
 
@@ -621,11 +617,11 @@ class SiteMixin(CoreObject):
             if Z is None:
                 tgt.Z = type("Z", (), {})()  # type: ignore
                 Z = tgt.Z  # type: ignore[attr-defined]
-            setattr(Z, "freq", np.asarray([], float))
-            setattr(Z, "z", np.asarray([], float))
-            setattr(Z, "z_error", np.asarray([], float))
-            setattr(Z, "rho", np.asarray([], float))
-            setattr(Z, "phase", np.asarray([], float))
+            Z.freq = np.asarray([], float)
+            Z.z = np.asarray([], float)
+            Z.z_error = np.asarray([], float)
+            Z.rho = np.asarray([], float)
+            Z.phase = np.asarray([], float)
         except Exception:
             pass
         return self if inplace else Site(tgt)
@@ -765,9 +761,9 @@ class Site(SiteMixin):
             h = _ensure_head(self.edi)
             nm = _stem_from_edi(self.edi)
             if nm:
-                setattr(h, "dataid", nm)                
+                h.dataid = nm
                 if not getattr(h, "station", None):
-                    setattr(h, "station", nm)           
+                    h.station = nm
         except Exception:
             pass
 
@@ -976,30 +972,30 @@ class Sites(CoreObject):
 
     def __init__(
         self,
-        edic: Union[EDICollection, Sequence[EDIFile]],
+        edic: EDICollection | Sequence[EDIFile],
     ) -> None:
-        if isinstance (edic, EDIFile): 
-            edic= [edic] 
-            
+        if isinstance (edic, EDIFile):
+            edic= [edic]
+
         items = list(edic)
-        self._items: List[Site] = [Site(e) for e in items]
+        self._items: list[Site] = [Site(e) for e in items]
 
     @property
-    def edic(self) -> List[EDIFile]:
+    def edic(self) -> list[EDIFile]:
         # Back-compat: expose the iterable of EDIFile expected by
         # selection utilities (iter_edifiles works on sequences).
         return [s.edi for s in self._items]
-    
+
     def __len__(self) -> int:
         r"""
         Number of sites in the container.
-    
+
         Returns
         -------
         int
             Count of contained :class:`~pycsamt.site.base.Site`
             objects.
-    
+
         Examples
         --------
         >>> len(sites) >= 0
@@ -1012,12 +1008,12 @@ class Sites(CoreObject):
         r"""
         Iterate over contained :class:`~pycsamt.site.base.Site`
         objects.
-    
+
         Returns
         -------
         iterator of Site
             Iterator yielding sites in input order.
-    
+
         Examples
         --------
         >>> names = [s.name for s in sites]
@@ -1027,34 +1023,34 @@ class Sites(CoreObject):
 
         return iter(self._items)
 
-    def __getitem__(self, key: Union[int, str]) -> Site:
+    def __getitem__(self, key: int | str) -> Site:
         r"""
         Retrieve a site by zero-based index or by case-insensitive
         station name.
-    
+
         Parameters
         ----------
         key : int or str
             Integer index or station name. Name comparison is
             case-insensitive.
-    
+
         Returns
         -------
         Site
             The matching site.
-    
+
         Raises
         ------
         KeyError
             If ``key`` is a name and no site matches.
-    
+
         Examples
         --------
         >>> sites[0].name  # by index
         'E01'
         >>> sites["e02"].name  # by name, case-insensitive
         'E02'
-    
+
         See Also
         --------
         get : Safe lookup returning ``None`` on failure.
@@ -1072,17 +1068,17 @@ class Sites(CoreObject):
     def by_index(self, i: int) -> Site:
         r"""
         Retrieve a site by zero-based index.
-    
+
         Parameters
         ----------
         i : int
             Position in the container.
-    
+
         Returns
         -------
         Site
             The site at the requested index.
-    
+
         Examples
         --------
         >>> sites.by_index(0).name == sites[0].name
@@ -1091,27 +1087,27 @@ class Sites(CoreObject):
 
         return self._items[i]
 
-    def get(self, name: str) -> Optional[Site]:
+    def get(self, name: str) -> Site | None:
         r"""
         Safe lookup by case-insensitive station name.
-    
+
         Parameters
         ----------
         name : str
             Station identifier to find.
-    
+
         Returns
         -------
         Site or None
             Matching site, or ``None`` if not present.
-    
+
         Examples
         --------
         >>> sites.get("missing") is None
         True
         >>> sites.get("E01").name
         'E01'
-    
+
         See Also
         --------
         __getitem__ : Raises on missing names.
@@ -1121,22 +1117,22 @@ class Sites(CoreObject):
             return self[name]
         except Exception:
             return None
-        
 
-    def as_list(self) -> List[EDIFile]:
+
+    def as_list(self) -> list[EDIFile]:
         r"""
         Return the underlying list of EDI objects.
-    
+
         Returns
         -------
         list of pycsamt.seg.edi.EDIFile
             The EDI objects corresponding to each site.
-    
+
         Notes
         -----
         This is useful when passing the dataset to utilities that
         operate on EDI-level structures rather than on sites.
-    
+
         Examples
         --------
         >>> edis = sites.as_list()
@@ -1152,7 +1148,7 @@ class Sites(CoreObject):
         copy: bool = False,
         progress: bool | str = False,
         verbose: int = 0,
-    ) -> List[EDIFile]:
+    ) -> list[EDIFile]:
         r"""
         Return the underlying EDI objects as a list.
 
@@ -1223,12 +1219,12 @@ class Sites(CoreObject):
         self,
         lat: float,
         lon: float,
-        tol: Optional[float] = None,
-    ) -> Optional[Site]:
+        tol: float | None = None,
+    ) -> Site | None:
         r"""
         Find the closest site to a target coordinate using geodetic
         distance.
-    
+
         Parameters
         ----------
         lat : float
@@ -1239,19 +1235,19 @@ class Sites(CoreObject):
             Maximum allowed distance in meters. If provided and the
             nearest site is farther than ``tol``, return ``None``.
             The default is ``None``.
-    
+
         Returns
         -------
         Site or None
             Nearest site or ``None`` if all sites are too far or
             lack valid coordinates.
-    
+
         Notes
         -----
         Coordinates are validated. Sites with non-finite values are
         skipped. Distance is computed in meters using a geodetic
         model.
-    
+
         Examples
         --------
         >>> near = sites.closest(10.0, 20.0)
@@ -1266,7 +1262,7 @@ class Sites(CoreObject):
         la = float(assert_lat_value(lat))   # type: ignore[arg-type]
         lo = float(assert_lon_value(lon))   # type: ignore[arg-type]
 
-        best: Tuple[Optional[Site], float]
+        best: tuple[Site | None, float]
         best = (None, float("inf"))
         for s in self._items:
             sla, slo, _ = s.coords
@@ -1282,20 +1278,20 @@ class Sites(CoreObject):
             return None
         return best[0]
 
-    def map(self, fn: Callable[[Site], Any]) -> List[Any]:
+    def map(self, fn: Callable[[Site], Any]) -> list[Any]:
         r"""
         Apply a function to every site and collect the results.
-    
+
         Parameters
         ----------
         fn : callable
             Function of signature ``fn(site) -> Any``.
-    
+
         Returns
         -------
         list
             Results collected in order.
-    
+
         Examples
         --------
         >>> sites.map(lambda s: s.name)[:2]
@@ -1307,15 +1303,15 @@ class Sites(CoreObject):
     def edit_all(
         self,
         *,
-        rename: Optional[Callable[[str], str]] = None,
-        freq_slice: Optional[slice] = None,
-        mask: Optional[Callable[[pd.DataFrame], pd.Series]] = None,
+        rename: Callable[[str], str] | None = None,
+        freq_slice: slice | None = None,
+        mask: Callable[[pd.DataFrame], pd.Series] | None = None,
         inplace: bool = False,
-    ) -> "Sites":
+    ) -> Sites:
         r"""
         Bulk-edit all sites with optional rename, frequency slicing,
         and tensor masking.
-    
+
         Parameters
         ----------
         rename : callable, optional
@@ -1332,12 +1328,12 @@ class Sites(CoreObject):
             If ``True``, modify this container and return it. If
             ``False``, return a new :class:`Sites`. Default is
             ``False``.
-    
+
         Returns
         -------
         Sites
             The edited container (possibly the same instance).
-    
+
         Notes
         -----
         - When ``inplace=False``, sites are shallow-cloned so that
@@ -1345,7 +1341,7 @@ class Sites(CoreObject):
         - Frequency slicing is applied atomically to avoid temporary
           shape mismatches between ``freq`` and Z-derived arrays.
         - Missing arrays are tolerated on a best-effort basis.
-    
+
         Examples
         --------
         Rename with a prefix
@@ -1353,13 +1349,13 @@ class Sites(CoreObject):
             >>> out = sites.edit_all(rename=rnm)
             >>> [s.name for s in out][:2]
             ['X_E01', 'X_E02']
-    
+
         Slice away the first frequency
             >>> sl = slice(1, None)
             >>> out2 = sites.edit_all(freq_slice=sl)
             >>> len(out2["E01"].freq) == len(sites["E01"].freq) - 1
             True
-    
+
         Mask the top half of rows in Z
             >>> def top_half(frame):
             ...     m = np.ones(len(frame), dtype=bool)
@@ -1369,14 +1365,14 @@ class Sites(CoreObject):
             >>> df = out3["E01"].to_dataframe("z")
             >>> np.isnan(df.iloc[0].values).all()
             True
-    
+
         See Also
         --------
         Site.rename : Per-site rename helper.
         Site.to_dataframe : Source for building masks.
         """
 
-        items: List[EDIFile] = []
+        items: list[EDIFile] = []
         for s in self._items:
             t = s if inplace else Site(_clone_edi(s.edi))
 
@@ -1395,10 +1391,10 @@ class Sites(CoreObject):
                     m = np.asarray(mask(df))
                     Z = _safe_get(t.edi, "Z", default=None)
                     if Z is not None and hasattr(Z, "z"):
-                        z = np.asarray(getattr(Z, "z"))
+                        z = np.asarray(Z.z)
                         z = z.copy()
                         z[~m] = np.nan
-                        setattr(Z, "z", z)
+                        Z.z = z
                 except Exception:
                     pass
 
@@ -1411,10 +1407,10 @@ class Sites(CoreObject):
         frame: Any,
         *,
         inplace: bool = False,
-    ) -> "Sites":
+    ) -> Sites:
         r"""
         Align site coordinates and elevation from a tabular frame.
-    
+
         Parameters
         ----------
         frame : Any
@@ -1426,18 +1422,18 @@ class Sites(CoreObject):
             If ``True``, modify this container and return it. If
             ``False``, return a new :class:`Sites`. Default is
             ``False``.
-    
+
         Returns
         -------
         Sites
             Container with updated coordinates.
-    
+
         Notes
         -----
         Sites are matched by normalized station identifiers. The
         operation is performed on a best-effort basis; unmatched
         stations are left unchanged.
-    
+
         Examples
         --------
         >>> import pandas as pd
@@ -1452,20 +1448,20 @@ class Sites(CoreObject):
         (10.0, 20.0, 100.0)
         """
 
-        from .location import apply_topography  
+        from .location import apply_topography
         edis = self.as_list()
         out = apply_topography(edis, frame, inplace=inplace)
         # apply_topography returns list when given list
         return self if inplace else Sites(out)
-    
+
     def select(
         self,
-        names: Optional[Sequence[str]] = None,
-        predicate: Optional[Callable[[Site], bool]] = None,
-    ) -> "Sites":
+        names: Sequence[str] | None = None,
+        predicate: Callable[[Site], bool] | None = None,
+    ) -> Sites:
         r"""
         Filter sites by explicit names or by a boolean predicate.
-    
+
         Parameters
         ----------
         names : sequence of str, optional
@@ -1474,17 +1470,17 @@ class Sites(CoreObject):
         predicate : callable, optional
             Function ``predicate(site) -> bool``. Sites for which
             the function returns ``True`` are retained.
-    
+
         Returns
         -------
         Sites
             New container with the selected sites.
-    
+
         Notes
         -----
         If neither ``names`` nor ``predicate`` is provided, the
         method returns a shallow copy of the current container.
-    
+
         Examples
         --------
         >>> subset = sites.select(names=["E02"])
@@ -1495,7 +1491,7 @@ class Sites(CoreObject):
         True
         """
 
-        out: List[EDIFile] = []
+        out: list[EDIFile] = []
         if names:
             wanted = {str(n).lower() for n in names}
             out.extend(
@@ -1513,11 +1509,11 @@ class Sites(CoreObject):
         cls,
         source: Any,
         topo_src: Any | None = None,
-    ) -> "Sites":
+    ) -> Sites:
         r"""
         Construct a container from heterogeneous inputs by using a
         normalized loading session.
-    
+
         Parameters
         ----------
         source : Any
@@ -1530,19 +1526,19 @@ class Sites(CoreObject):
         topo_src : Any, optional
             Optional topography source passed to the session for
             use during loading. The default is ``None``.
-    
+
         Returns
         -------
         Sites
             Parsed container. Returns an empty container if the
             input cannot be interpreted.
-    
+
         Notes
         -----
         The method uses :func:`~pycsamt.session.normalize_session`
         to handle parsing, discovery, and optional topography
         alignment in a consistent way.
-    
+
         Examples
         --------
         >>> from pycsamt.seg.collection import EDICollection
@@ -1569,14 +1565,14 @@ class Sites(CoreObject):
 
     def write(
         self,
-        outdir: Union[str, Path],
+        outdir: str | Path,
         *,
         template: str = "{station}.edi",
         exist_ok: bool = False,
-    ) -> List[Path]:
+    ) -> list[Path]:
         r"""
         Write one EDI file per site to a directory.
-    
+
         Parameters
         ----------
         outdir : str or pathlib.Path
@@ -1589,22 +1585,22 @@ class Sites(CoreObject):
             If ``False`` and a file already exists, raise
             ``FileExistsError``. If ``True``, overwrite. Default is
             ``False``.
-    
+
         Returns
         -------
         list of pathlib.Path
             Paths to the written files.
-    
+
         Raises
         ------
         FileExistsError
             If a target file exists and ``exist_ok`` is ``False``.
-    
+
         Notes
         -----
         If an EDI object implements ``to_file``, it is used to
         serialize. Otherwise a small placeholder file is written.
-    
+
         Examples
         --------
         >>> import tempfile, pathlib
@@ -1616,7 +1612,7 @@ class Sites(CoreObject):
 
         outp = Path(outdir)
         outp.mkdir(parents=True, exist_ok=True)
-        paths: List[Path] = []
+        paths: list[Path] = []
         for s in self._items:
             name = s.name or "site"
             fn = template.format(station=name)
@@ -1636,19 +1632,19 @@ class Sites(CoreObject):
                 f.write(f"# EDI placeholder for {name}\n")
             paths.append(p)
         return paths
-    
+
     def to_profile(
         self,
-        origin: Tuple[float, float],
+        origin: tuple[float, float],
         azimuth: float,
         *,
-        crs: Optional[int] = None,
+        crs: int | None = None,
     ) -> Any:
         r"""
         Convert sites to a 1D profile aligned with a specified
         azimuth, returning either a rich Profile object or a
         lightweight fallback.
-    
+
         Parameters
         ----------
         origin : tuple of float
@@ -1660,7 +1656,7 @@ class Sites(CoreObject):
         crs : int, optional
             Optional CRS code for libraries that require it. Not
             used in the lightweight fallback. Default is ``None``.
-    
+
         Returns
         -------
         Profile or dict
@@ -1668,25 +1664,25 @@ class Sites(CoreObject):
             a Profile is returned. Otherwise a dict is returned with
             keys ``"origin"``, ``"azimuth"``, and ``"sites"`` in
             chainage order.
-    
+
         Notes
         -----
         The fallback computes local chainage by a flat approximation
         around ``origin``:
-    
+
         .. math::
-    
+
            ch = dx * \\sin(az) + dy * \\cos(az)
-    
+
         where ``dx`` and ``dy`` are metric offsets relative to the
         origin. Sites lacking valid coordinates are skipped.
-    
+
         Examples
         --------
         >>> prof = sites.to_profile(origin=(0.0, 0.0), azimuth=90.0)
         >>> hasattr(prof, "chainages") or isinstance(prof, dict)
         True
-    
+
         See Also
         --------
         pycsamt.site.profile.Profile
@@ -1695,8 +1691,8 @@ class Sites(CoreObject):
 
         # Try to return a real Profile first
         try:
-            from .profile import Profile  # type: ignore
             from .location import Coord
+            from .profile import Profile  # type: ignore
             prof = Profile.from_sites(
                 self._items,
                 origin=Coord(float(origin[0]), float(origin[1]), 0.0),
@@ -1705,14 +1701,14 @@ class Sites(CoreObject):
             return prof
         except Exception:
             pass
-    
+
         # Lightweight fallback: sort by chainage using local flat metric
         la0, lo0 = origin
         la0 = float(assert_lat_value(la0))  # type: ignore[arg-type]
         lo0 = float(assert_lon_value(lo0))  # type: ignore[arg-type]
         az = math.radians(float(azimuth))
-    
-        items: List[Tuple[float, Site]] = []
+
+        items: list[tuple[float, Site]] = []
         for s in self._items:
             la, lo, _ = s.coords
             if not np.isfinite(la) or not np.isfinite(lo):
@@ -1730,70 +1726,70 @@ class Sites(CoreObject):
         }
 
 def to_sites (
-    x: Any, 
-    *, 
+    x: Any,
+    *,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ): 
+    ):
     r"""
     Coerce an arbitrary EDI-like input into a ``Sites`` wrapper.
-    
+
     This helper normalizes many inputs to a uniform
     :class:`~pycsamt.site.base.Sites` interface:
-    
+
     * If ``x`` is already a ``Sites`` instance, it is returned
       unchanged.
     * If ``x`` is an ``EDICollection`` or a sequence of
       ``EDIFile`` objects, a new ``Sites`` wrapper is created.
     * If ``x`` is an iterable yielding EDI-like items, they are
       collected and wrapped.
-    
+
     The operation is light-weight and does not deep-copy the
     underlying EDI objects. The returned ``Sites`` simply holds
     references to the same items.
-    
+
     Parameters
     ----------
     x : Any
         A ``Sites`` instance, an ``EDICollection``, a sequence of
         ``EDIFile`` objects, or an iterable yielding EDI-like
         items.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A ``Sites`` wrapper over the provided items.
-    
+
     Notes
     -----
     Use this utility at API boundaries to conveniently accept
     multiple input forms while providing a consistent downstream
     interface. If you need independent copies of the underlying
     data, perform your own cloning before calling ``to_sites``.
-    
+
     Examples
     --------
     Wrap a list of EDIFile objects:
-    
+
     >>> from pycsamt.site.selection import to_sites
     >>> s = to_sites([e1, e2, e3])
     >>> len(s)
     3
-    
+
     Wrap an existing Sites (no-op):
-    
+
     >>> s2 = to_sites(s)
     >>> s2 is s
     True
-    
+
     Wrap an EDICollection:
-    
+
     >>> s3 = to_sites(coll)  # coll is an EDICollection
     >>> [t.name for t in s3]
     ['A01', 'A02']
-    
+
     See Also
     --------
     pycsamt.site.base.Sites :
@@ -1802,10 +1798,10 @@ def to_sites (
         Alternate constructor with session normalization.
     """
     return _to_sites (
-        x, recursive = recursive, 
-        on_dup =on_dup, 
-        strict= strict, 
-        verbose= verbose 
+        x, recursive = recursive,
+        on_dup =on_dup,
+        strict= strict,
+        verbose= verbose
     )
 
 
@@ -2002,7 +1998,7 @@ def _collect_edis(
     strict: bool = False,
     verbose: int = 0,
     progress: bool | str = False,
-) -> List[EDIFile]:
+) -> list[EDIFile]:
     if isinstance(x, Sites):
         seq = list(x)
     elif isinstance(x, Site) or _is_edi_like(x):
@@ -2031,7 +2027,7 @@ def _collect_edis(
         except Exception:
             seq = [x]
 
-    out: List[EDIFile] = []
+    out: list[EDIFile] = []
     iterator = iter_progress(
         seq,
         enabled=progress,
@@ -2121,8 +2117,8 @@ def _dedup_collection_names(
                     return v
         return f"site_{i}"
 
-    name_to_idx: Dict[str, int] = {}
-    names: List[str] = []
+    name_to_idx: dict[str, int] = {}
+    names: list[str] = []
     for i, it in enumerate(items):
         n = _name(it, i)
         names.append(n)
@@ -2294,7 +2290,7 @@ def _clone_edi(ed: EDIFile) -> EDIFile:
                 setattr(c, k, v)
         return c
 
-def _component_names() -> List[str]:
+def _component_names() -> list[str]:
     return ["Zxx", "Zxy", "Zyx", "Zyy"]
 
 
@@ -2315,9 +2311,9 @@ def _stem_from_edi(edi: EDIFile) -> str:
     return ""
 
 
-def _extract_z_arrays(ed: EDIFile) -> Dict[str, Any]:
+def _extract_z_arrays(ed: EDIFile) -> dict[str, Any]:
     Z = _safe_get(ed, "Z", default=None)
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     out["freq"] = _safe_get(Z, "freq", "frequency")
     out["z"] = _safe_get(Z, "z", "impedance")
     out["z_err"] = _safe_get(
@@ -2362,15 +2358,15 @@ def _slice_fields(Z: Any, sl: slice) -> None:
 
     # Assign to private storage to prevent immediate recompute
     if fs is not None and hasattr(Z, "_freq"):
-        setattr(Z, "_freq", fs)
+        Z._freq = fs
     if zs is not None and hasattr(Z, "_z"):
-        setattr(Z, "_z", zs)
+        Z._z = zs
     if zes is not None and hasattr(Z, "_z_err"):
-        setattr(Z, "_z_err", zes)
+        Z._z_err = zes
     if rhos is not None and hasattr(Z, "_rho"):
-        setattr(Z, "_rho", rhos)
+        Z._rho = rhos
     if phs is not None and hasattr(Z, "_phase"):
-        setattr(Z, "_phase", phs)
+        Z._phase = phs
 
     # Keep rotation vector aligned if it’s an array
     try:

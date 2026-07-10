@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt pipe show — pretty-print a pipeline config file or preset."""
@@ -11,8 +10,11 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ._base import pipe
 
 
@@ -87,7 +89,10 @@ def show(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from ._base import _resolve_pipeline, _trim_pipeline  # noqa: PLC0415
+    from ._base import (  # noqa: PLC0415
+        _resolve_pipeline,
+        _trim_pipeline,
+    )
 
     if config_file is None and preset is None:
         raise click.UsageError(

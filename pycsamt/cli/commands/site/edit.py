@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt site edit — rotate, slice, fill or re-coordinate sites."""
@@ -20,8 +19,7 @@ from ....api.cli.options import (
     verbose_option,
 )
 from ....api.cli.params import FreqRange
-
-from ._base import site, _get_sites
+from ._base import _get_sites, site
 
 
 @site.command("edit")
@@ -205,7 +203,9 @@ def edit(
 
     # --- write modified sites ---
     output_dir.mkdir(parents=True, exist_ok=True)
-    from pycsamt.site.export import write_sites  # noqa: PLC0415
+    from pycsamt.site.export import (
+        write_sites,  # noqa: PLC0415
+    )
     try:
         written = write_sites(result, output_dir, exist_ok=overwrite)
     except Exception as exc:  # noqa: BLE001

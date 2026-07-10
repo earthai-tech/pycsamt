@@ -1,34 +1,36 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from matplotlib.patches import FancyArrowPatch
-
-from ._core import (
-    ensure_sites,
-    _axes_list,
-    _iter_items,
-    _get_t_block,
-    _get_z_block,
-    _name,
-    hide_polar_radius_labels,
+from collections.abc import Sequence
+from typing import (
+    Any,
 )
 
-from .tensor import build_phase_tensor_table
-from ..api._rose_style import _UNSET, RoseStyle, resolve_rose_style
-from ..api.style import PYCSAMT_STYLE
-from ..api.control import PYCSAMT_CONTROL
-from ..api.section import PYCSAMT_SECTION, SectionStyle
-from ..api.labels import LOG10_PERIOD_LABEL
-from ..api.station import PYCSAMT_STATION_RENDERING
-from ..api.plot import add_colorbar, add_polar_colorbar
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
 
+from ..api._rose_style import (
+    _UNSET,
+    resolve_rose_style,
+)
+from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.plot import add_colorbar, add_polar_colorbar
+from ..api.section import PYCSAMT_SECTION, SectionStyle
+from ..api.style import PYCSAMT_STYLE
+from ._core import (
+    _axes_list,
+    _get_t_block,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+    hide_polar_radius_labels,
+)
+from .tensor import build_phase_tensor_table
 
 # ------------------------------- helpers -------------------------------- #
 
-def _pick_station(S, station: Optional[str]) -> Tuple[str, Any]:
+def _pick_station(S, station: str | None) -> tuple[str, Any]:
     pool = {}
     for i, ed in enumerate(_iter_items(S)):
         pool[_name(ed, i)] = ed
@@ -45,9 +47,9 @@ def _pick_station(S, station: Optional[str]) -> Tuple[str, Any]:
 def _bands_from_periods(
     per: np.ndarray,
     *,
-    bands: Optional[Sequence[Tuple[float, float]]] = None,
+    bands: Sequence[tuple[float, float]] | None = None,
     n_bands: int = 3,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     if bands:
         ms = []
         for (lo, hi) in bands:
@@ -67,7 +69,7 @@ def _bands_from_periods(
     return ms
 
 
-def _station_xy(ed: Any, i: int) -> Tuple[float, float]:
+def _station_xy(ed: Any, i: int) -> tuple[float, float]:
     for kx, ky in [
         ("east", "north"), ("easting", "northing"),
         ("x", "y"), ("lon", "lat"),
@@ -88,7 +90,7 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 def _pt_angle(
     S, station: str, per: np.ndarray
-) -> Optional[np.ndarray]:
+) -> np.ndarray | None:
     if build_phase_tensor_table is None:
         return None
     tb = build_phase_tensor_table(
@@ -114,18 +116,18 @@ def _pt_angle(
 def plot_tipper_hodograms(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    bands: Optional[Sequence[Tuple[float, float]]] = None,
+    station: str | None = None,
+    bands: Sequence[tuple[float, float]] | None = None,
     n_bands: int = 3,
     normalize: bool = False,
-    colors: Optional[Sequence[str]] = None,
+    colors: Sequence[str] | None = None,
     marker: str = "o",
     ms: float = 3.0,
     lw: float = 1.0,
     ls: str = "-",
     unit_circle: bool = True,
     axes=None,
-    figsize: Tuple[float, float] = (6.4, 3.2),
+    figsize: tuple[float, float] = (6.4, 3.2),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -221,20 +223,20 @@ def plot_induction_arrows(
     normalize: bool = True,
     strike_ticks: bool = True,
     tick_len: float = 0.25,
-    figsize: Tuple[float, float] = (7.2, 3.4),
+    figsize: tuple[float, float] = (7.2, 3.4),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ):
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
     # collect site positions and arrows per requested period
-    sts, XY, AR = [], [], []
-    per_layers: List[Tuple[float, np.ndarray]] = []
+    sts, _XY, _AR = [], [], []
+    per_layers: list[tuple[float, np.ndarray]] = []
     for p in periods:
         xs, ys, u, v = [], [], [], []
         for i, ed in enumerate(_iter_items(S)):
@@ -413,11 +415,11 @@ def _thin_label_indices(
 
 def _collect_tipper_spectrum(
     S: Any,
-) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray], Dict[str, Any]]:
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
     """Return dicts keyed by station: tipper (nf,2), freq, xy."""
-    tip_dict: Dict[str, np.ndarray] = {}
-    freq_dict: Dict[str, np.ndarray] = {}
-    xy_dict:   Dict[str, Tuple[float, float]] = {}
+    tip_dict: dict[str, np.ndarray] = {}
+    freq_dict: dict[str, np.ndarray] = {}
+    xy_dict:   dict[str, tuple[float, float]] = {}
     for i, ed in enumerate(_iter_items(S)):
         T, t, fr = _get_t_block(ed)
         if T is None or t is None:
@@ -431,9 +433,11 @@ def _collect_tipper_spectrum(
 
 def _tipper_from_spectra(
     sp_input: Any,
-) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
     """Extract tipper from a Spectra object or collection."""
-    from ..seg.spectra import Spectra as _Spectra  # noqa: PLC0415
+    from ..seg.spectra import (
+        Spectra as _Spectra,  # noqa: PLC0415
+    )
 
     if isinstance(sp_input, _Spectra):
         items = {"site": sp_input}
@@ -445,8 +449,8 @@ def _tipper_from_spectra(
     else:
         raise TypeError(type(sp_input))
 
-    tip_dict: Dict[str, np.ndarray] = {}
-    freq_dict: Dict[str, np.ndarray] = {}
+    tip_dict: dict[str, np.ndarray] = {}
+    freq_dict: dict[str, np.ndarray] = {}
     for name, sp in items.items():
         _, tip = sp.to_Z(estimate_error=False)
         if tip is None or tip.tipper is None:
@@ -469,17 +473,17 @@ def plot_induction_map(
     show_imag: bool = True,
     scale: float = _UNSET,
     cmap: str = "plasma",
-    clim: Optional[Tuple[float, float]] = None,
+    clim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
     reference_arrow: float = 0.1,
     station_labels: bool = True,
     title: str = "",
-    figsize: Tuple[float, float] = (8, 7),
+    figsize: tuple[float, float] = (8, 7),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Map-view induction arrows at one period.
 
@@ -634,15 +638,15 @@ def plot_induction_section(
     component: str = "abs",
     n_periods: int = 20,
     cmap: str = "RdBu_r",
-    clim: Optional[Tuple[float, float]] = None,
-    section: Union[str, SectionStyle] = "pseudosection",
+    clim: tuple[float, float] | None = None,
+    section: str | SectionStyle = "pseudosection",
     title: str = "",
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Period × station pseudo-section coloured by |T| magnitude.
 
@@ -698,9 +702,9 @@ def plot_induction_section(
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-        fig = ax.get_figure()
+        ax.get_figure()
     else:
-        fig = ax.get_figure()
+        ax.get_figure()
 
     st_x    = np.arange(n_st, dtype=float)
     x_edges = np.r_[st_x[0] - 0.5, st_x + 0.5]
@@ -741,7 +745,7 @@ def plot_induction_convention(
     station_labels: bool = True,
     title: str = "",
     axes=None,
-    figsize: Tuple[float, float] = (11, 10),
+    figsize: tuple[float, float] = (11, 10),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -857,18 +861,18 @@ def plot_induction_convention(
 def plot_tipper_polar(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     component: str = "real",
     cmap: str = _UNSET,
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (5.5, 5.5),
+    figsize: tuple[float, float] = (5.5, 5.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Polar view: tipper azimuth (angle) and magnitude (radius) vs period.
 
@@ -953,16 +957,16 @@ def plot_induction_rose(
     sites: Any,
     *,
     component: str = "real",
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     nbins: int = 36,
     style=_UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (5, 5),
+    figsize: tuple[float, float] = (5, 5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Rose diagram of induction arrow azimuths (all stations & periods).
 
@@ -984,8 +988,8 @@ def plot_induction_rose(
     S  = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
                       strict=strict, verbose=verbose)
 
-    azimuths: List[float] = []
-    for i, ed in enumerate(_iter_items(S)):
+    azimuths: list[float] = []
+    for _i, ed in enumerate(_iter_items(S)):
         T, t, fr = _get_t_block(ed)
         if T is None or t is None: continue
         per  = 1.0 / fr
@@ -1051,15 +1055,15 @@ def plot_induction_map_from_spectra(
     sp_input: Any,
     *,
     period: float = 1.0,
-    coords: Optional[Dict[str, Tuple[float, float]]] = None,
+    coords: dict[str, tuple[float, float]] | None = None,
     show_real: bool = True,
     show_imag: bool = True,
     scale: float = _UNSET,
     cmap: str = "plasma",
     station_labels: bool = True,
     title: str = "",
-    figsize: Tuple[float, float] = (8, 5),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (8, 5),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Map-view induction arrows from :class:`~pycsamt.seg.spectra.Spectra`.
 
@@ -1171,7 +1175,7 @@ def plot_tipper_polar_from_spectra(
     cmap: str = "viridis",
     title: str = "",
     ax=None,
-    figsize: Tuple[float, float] = (5.5, 5.5),
+    figsize: tuple[float, float] = (5.5, 5.5),
 ) -> plt.Axes:
     """Polar tipper from a :class:`~pycsamt.seg.spectra.Spectra` object.
 
@@ -1239,12 +1243,12 @@ def plot_induction_rose_from_spectra(
     sp_input: Any,
     *,
     component: str = "real",
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     nbins: int = 36,
     style=_UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (5, 5),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (5, 5),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Rose diagram of induction arrow directions from Spectra objects.
 
@@ -1265,7 +1269,7 @@ def plot_induction_rose_from_spectra(
           else resolve_rose_style(style))
     tip_dict, freq_dict = _tipper_from_spectra(sp_input)
 
-    azimuths: List[float] = []
+    azimuths: list[float] = []
     for name, t in tip_dict.items():
         fr  = freq_dict[name]
         per = 1.0 / np.maximum(fr, 1e-24)
@@ -1337,7 +1341,7 @@ def _synthetic_background(
     seed: int = 42,
     elev_min: float = 1000.0,
     elev_max: float = 2200.0,
-) -> Tuple[np.ndarray, Tuple[float, float, float, float]]:
+) -> tuple[np.ndarray, tuple[float, float, float, float]]:
     """Return a smooth synthetic terrain image (ny, nx) and its extent."""
     from scipy.ndimage import gaussian_filter as _gf
     rng  = np.random.default_rng(seed)
@@ -1353,14 +1357,14 @@ def plot_induction_multiperiod_map(
     sites: Any,
     *,
     periods: Sequence[float] = (1.0, 10.0, 100.0, 1000.0),
-    tipper_data: Optional[Dict[str, np.ndarray]] = None,
+    tipper_data: dict[str, np.ndarray] | None = None,
     convention: str = "park",
-    panel_labels: Optional[Sequence[str]] = None,
-    background: Optional[np.ndarray] = None,
-    background_extent: Optional[Tuple[float, float, float, float]] = None,
+    panel_labels: Sequence[str] | None = None,
+    background: np.ndarray | None = None,
+    background_extent: tuple[float, float, float, float] | None = None,
     background_cmap: str = "terrain",
     background_alpha: float = 0.75,
-    background_clim: Optional[Tuple[float, float]] = None,
+    background_clim: tuple[float, float] | None = None,
     bg_colorbar_label: str = "Elevation  (m)",
     bg_colorbar_side: str = "right",
     show_background_cbar: bool = True,
@@ -1372,7 +1376,7 @@ def plot_induction_multiperiod_map(
     reference_label: str = _UNSET,
     show_stations: bool = True,
     station_labels: bool = False,
-    annotations: Optional[Dict[str, Any]] = None,
+    annotations: dict[str, Any] | None = None,
     annotation_color: str = "navy",
     annotation_fontsize: float = 8.0,
     title: str = "",
@@ -1384,7 +1388,7 @@ def plot_induction_multiperiod_map(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Tuple[plt.Figure, np.ndarray]:
+) -> tuple[plt.Figure, np.ndarray]:
     r"""Stacked multi-period induction vector map.
 
     Produces one panel per period (stacked vertically), each showing the
@@ -1505,16 +1509,16 @@ def plot_induction_multiperiod_map(
         )
     """
     import string
+
     import matplotlib.gridspec as gridspec
-    from scipy.ndimage import gaussian_filter as _gf
 
     S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
                      strict=strict, verbose=verbose)
 
     # ── Collect station positions ──────────────────────────────────────────
     all_items = list(_iter_items(S))
-    st_names: List[str] = []
-    st_xy:    List[Tuple[float, float]] = []
+    st_names: list[str] = []
+    st_xy:    list[tuple[float, float]] = []
     for i, ed in enumerate(all_items):
         st_names.append(_name(ed, i))
         st_xy.append(_station_xy(ed, i))
@@ -1575,7 +1579,7 @@ def plot_induction_multiperiod_map(
         reference_label = f"Vector length  {reference_arrow}"
 
     # ── Tipper per period ─────────────────────────────────────────────────
-    def _get_tip(period: float) -> Optional[np.ndarray]:
+    def _get_tip(period: float) -> np.ndarray | None:
         """Return (n_st, 2) complex tipper at *period*, or None."""
         if tipper_data is not None:
             # find nearest key
@@ -1585,8 +1589,8 @@ def plot_induction_multiperiod_map(
             if arr.shape[0] == n_st:
                 return arr
         # fall back to EDI tipper
-        vecs: List[complex] = []
-        for i, ed in enumerate(all_items):
+        vecs: list[complex] = []
+        for _i, ed in enumerate(all_items):
             T, t, fr = _get_t_block(ed)
             if T is None or t is None:
                 vecs.append(0.0 + 0.0j)

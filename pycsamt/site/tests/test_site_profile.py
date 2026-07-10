@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 import math
+
 import pytest
 
-from pycsamt.site.profile import (
-    infer_line_orientation,
-    Profile,
-)
 from pycsamt.site.location import Coord, chainage_along
-
+from pycsamt.site.profile import (
+    Profile,
+    infer_line_orientation,
+)
 
 # ----- tiny EDI-like mocks ---------------------------------------
 
@@ -51,7 +50,7 @@ def test_infer_line_orientation_cardinals():
         d = (a - target) % 180.0
         d = min(d, 180.0 - d)
         assert d <= tol
-    
+
     # East-West line (constant lat, increasing lon) -> ~90°
     east_line = _make_line("E", 5, lat0=0.0, lon0=0.0, d_lon_deg=0.01)
     az_e = infer_line_orientation(east_line)

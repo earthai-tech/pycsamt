@@ -1,16 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Home page — station map + profile view (the original main layout)."""
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
-from dash import dash_table
+from dash import dash_table, dcc, html
 
 from pycsamt.app.desktop.agent_registry import agent_names
 from pycsamt.app.web.layout import IDs, _icon
-from pycsamt.app.web.utils import empty_src, _empty_map, _empty_plotly_heatmap
+from pycsamt.app.web.utils import (
+    _empty_map,
+    _empty_plotly_heatmap,
+    empty_src,
+)
 
 PAGE_ID = "home"
 

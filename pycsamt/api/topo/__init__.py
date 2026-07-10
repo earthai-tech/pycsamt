@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Public API interface for pycsamt topography configuration.
@@ -14,8 +13,8 @@ dataclass documentation.
 """
 
 from pycsamt.topo.config import (  # noqa: F401
-    TopoConfig,
     PYCSAMT_TOPO,
+    TopoConfig,
     configure_topo,
     reset_topo,
 )

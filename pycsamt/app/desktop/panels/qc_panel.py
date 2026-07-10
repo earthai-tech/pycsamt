@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -30,10 +29,12 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.controllers.qc_controller import (
-    QCController,
     ALL_GROUPS,
+    QCController,
 )
-from pycsamt.app.desktop.widgets.category_bar import CategoryComboBar
+from pycsamt.app.desktop.widgets.category_bar import (
+    CategoryComboBar,
+)
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 
@@ -113,7 +114,9 @@ class QCPanel(QWidget):
         self.refresh()
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── Helpers ───────────────────────────────────────────────────────
@@ -126,7 +129,8 @@ class QCPanel(QWidget):
 
     def _draw_empty(self) -> None:
         from pycsamt.app.desktop.controllers.plot_controller import (
-            _annotate_empty, style_axes,
+            _annotate_empty,
+            style_axes,
         )
         fig = self._canvas.figure
         fig.clear()

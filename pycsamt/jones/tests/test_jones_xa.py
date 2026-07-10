@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
+import numpy as np
 import pytest
 import xarray as xr
-import numpy as np
 
-from pycsamt.jones.j import JFile
 from pycsamt.jones.collection import JCollection
+from pycsamt.jones.j import JFile
 from pycsamt.jones.xa import (
-    build_jdataset,
     XAJMixin,
+    build_jdataset,
 )
 
 # Mark all tests in this file as requiring the 'xarray' package
@@ -29,12 +28,12 @@ def jcollection(jc_files):
 def test_build_dataset_single_file(single_jfile):
     """Test building a dataset from a single JFile."""
     ds = build_jdataset([single_jfile])
-    
+
     assert isinstance(ds, xr.Dataset)
     assert "site" in ds.dims
     assert ds.sizes["site"] == 1
     assert ds.coords["site"].values[0] == "KB0001"
-    
+
     # Test data variables and shapes with new coordinate names
     assert "z" in ds.data_vars
     assert ds["z"].shape == (1, single_jfile.n_freq, 2, 2)
@@ -52,17 +51,17 @@ def test_build_dataset_single_file(single_jfile):
 def test_build_dataset_from_collection(jcollection):
     """Test building a dataset from a JCollection."""
     ds = build_jdataset(jcollection)
-    
+
     assert isinstance(ds, xr.Dataset)
     assert ds.sizes["site"] == len(jcollection)
     assert 'NIA000' in ds.coords["site"].values
-    
+
     # Test for metadata as non-dimensional coordinates
     assert "lat" in ds.coords
     assert "lon" in ds.coords
     assert "azimuth" in ds.coords
     assert ds["lat"].dims == ("site",)
-    
+
     # Check a specific metadata value
     s01_lat = jcollection.get("NIA001", "lat")
     assert np.isclose(ds["lat"].sel(site="NIA001").item(), s01_lat)
@@ -135,7 +134,7 @@ def test_jfileacc_attrs_compatibility(main_dataset):
     # in the future or its behavior clarified. For now, test it works.
     attrs = main_dataset.jfile.attrs()
     assert isinstance(attrs, dict)
-    
+
 def test_jfileacc_components(main_dataset):
     """Test the component naming from the accessor."""
     comps = main_dataset.jfile.components()

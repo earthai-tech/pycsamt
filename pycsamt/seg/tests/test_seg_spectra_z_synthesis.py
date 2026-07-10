@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
+from pycsamt.seg.edi import EDIFile
 from pycsamt.seg.ops import synthesize_spectra_from_z
 from pycsamt.seg.spectra import Spectra, spectra_from_Z
-from pycsamt.seg.edi import EDIFile
 
 
 def _rand_cx(shape, scale=1.0, rng=None):

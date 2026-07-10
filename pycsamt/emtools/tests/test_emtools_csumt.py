@@ -8,16 +8,16 @@ import pytest
 
 from pycsamt.emtools.csumt import (
     BOSTICK_CONST,
-    F_MIN_CSUMT,
     F_MAX_CSUMT,
+    F_MIN_CSUMT,
+    bostick_depth,
     bostick_depth_from_rho,
-    vertical_resolution_pair,
+    depth_coverage_table,
     frequency_for_depth,
     frequency_schedule,
-    bostick_depth,
-    vertical_resolution,
-    depth_coverage_table,
     plot_depth_section,
+    vertical_resolution,
+    vertical_resolution_pair,
 )
 
 # ----------------------------- fixtures ----------------------------------- #

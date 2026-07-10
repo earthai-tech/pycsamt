@@ -1,9 +1,18 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pycsamt.api import PyCSAMTObject
-from pycsamt.loc import BaseLoc, Bounds, GeoPath, Location, UTMZone
-from pycsamt.property import FieldAliases, FileRecognizer, TermDefinitions
+from pycsamt.loc import (
+    BaseLoc,
+    Bounds,
+    GeoPath,
+    Location,
+    UTMZone,
+)
+from pycsamt.property import (
+    FieldAliases,
+    FileRecognizer,
+    TermDefinitions,
+)
 
 
 def test_location_helpers_inherit_pycsamt_object():

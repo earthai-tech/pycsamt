@@ -31,29 +31,28 @@ into period-vs-station pseudo-sections.
 # parts of the MT spectrum.
 
 import numpy as np
-
 from _datasets import dataset_path
 
-from pycsamt.seg.spectra import Spectra
+from pycsamt.emtools import (
+    band_select,
+    coherence_table,
+    mask_low_coherence,
+    plot_coherence,
+    plot_coherence_section,
+    plot_psd,
+    plot_psd_section,
+    plot_spectra_matrix,
+    plot_tipper_from_spectra,
+    plot_z_from_spectra,
+    psd_table,
+    spectra_summary,
+)
+
 # snr_table is ambiguous at the top level (pycsamt.emtools.snr_table
 # happens to resolve to this module's version today, but that depends
 # on import order in emtools/__init__.py) -- import it explicitly.
 from pycsamt.emtools.spectra import snr_table
-from pycsamt.emtools import (
-    coherence_matrix,
-    psd_table,
-    coherence_table,
-    band_select,
-    mask_low_coherence,
-    spectra_summary,
-    plot_psd,
-    plot_coherence,
-    plot_spectra_matrix,
-    plot_z_from_spectra,
-    plot_tipper_from_spectra,
-    plot_psd_section,
-    plot_coherence_section,
-)
+from pycsamt.seg.spectra import Spectra
 
 spectra_dir = dataset_path("mt_spectra")
 sp1 = Spectra.from_file(spectra_dir / "spectra01.edi")

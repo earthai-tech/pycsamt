@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """View-rail switching and the main canvas figure render."""
 
 from __future__ import annotations
 
-from dash import ctx, Input, Output, State
+from dash import Input, Output, State, ctx
 
 from .._ids import IDs
-from ..cache import get_view
 from .._render import VIEW_TITLES, empty_figure, figure_for
+from ..cache import get_view
 
 _RAIL = {
     IDs.RAIL_MAP: "map",

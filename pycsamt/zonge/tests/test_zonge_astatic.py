@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the ASTATIC processing class.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
+from pycsamt.exceptions import NotReadError
 from pycsamt.zonge.avg import AMTAVG
 from pycsamt.zonge.processing import ASTATIC
-from pycsamt.exceptions import NotReadError
 
 # --- Test Data Fixture --------------------------------------------
 
@@ -52,7 +51,7 @@ class TestASTATIC:
         """Test that ASTATIC raises an error if given an unloaded AVG."""
         unloaded_avg = ASTATIC()
         with pytest.raises(NotReadError):
-            # let try to apply correction statistic shift 
+            # let try to apply correction statistic shift
             unloaded_avg.correct_static_shift(
                 reference_freq=10.24, dipole_length= 20
             )
@@ -104,5 +103,5 @@ class TestASTATIC:
         # Check if Z was recomputed (rho will change as a result)
         assert "rho" in avg_obj.df.columns
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

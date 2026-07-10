@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Entry point: python -m pycsamt.app.desktop"""
@@ -20,6 +19,7 @@ def main() -> None:
         raise SystemExit(1) from exc
 
     from PySide6.QtGui import QIcon
+
     from pycsamt.app.desktop.main_window import MainWindow
 
     app = QApplication(sys.argv)

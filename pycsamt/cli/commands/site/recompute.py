@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt site recompute - normalize and rewrite EDI files."""
@@ -18,7 +17,6 @@ from ....api.cli.options import (
     verbose_option,
 )
 from ....api.cli.params import FreqRange
-
 from ._base import site
 
 
@@ -179,7 +177,9 @@ def recompute(
     if freq_range is not None:
         fmin, fmax = freq_range
 
-    from pycsamt.site.recompute import EDIRecomputer  # noqa: PLC0415
+    from pycsamt.site.recompute import (
+        EDIRecomputer,  # noqa: PLC0415
+    )
 
     try:
         result = EDIRecomputer(
@@ -248,7 +248,9 @@ def _resolve_source(
     if survey_path is not None:
         return survey_path
 
-    from pycsamt.cli.survey import survey_summary  # noqa: PLC0415
+    from pycsamt.cli.survey import (
+        survey_summary,  # noqa: PLC0415
+    )
 
     summary = survey_summary()
     if summary and summary.get("survey_path"):

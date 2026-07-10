@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
 
 import pytest
 
+from pycsamt.seg.base import EDIComponentBase
 from pycsamt.seg.sections import (
     SECT_REGISTRY,
     iter_sections,
 )
-from pycsamt.seg.base import EDIComponentBase
 
 
-def _collect(path: Path) -> List[Tuple[str, EDIComponentBase, int]]:
+def _collect(path: Path) -> list[tuple[str, EDIComponentBase, int]]:
     return list(iter_sections(str(path)))
 
 

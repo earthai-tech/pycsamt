@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -27,8 +26,8 @@ Features
   3-mode survey-line detection.
 - Persistent session save / reload.
 - Settings panel: Claude / OpenAI / Gemini /
-  DeepSeek API keys, model selection, default
-  export format.
+  DeepSeek / MiniMax API keys, model selection,
+  default export format.
 - Inline figure cards with full-screen viewer
   and export to PNG / SVG / EPS / PDF.
 - Light and dark themes (CSS custom properties,

@@ -33,10 +33,14 @@ from __future__ import annotations
 import json
 import textwrap
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ._registry import STEP_REGISTRY, categories, list_steps, lookup_step
-
+from ._registry import (
+    STEP_REGISTRY,
+    categories,
+    list_steps,
+    lookup_step,
+)
 
 # ── formatting helpers ────────────────────────────────────────────────────────
 
@@ -72,7 +76,7 @@ class PipelineBase:
     # =========================================================================
 
     @staticmethod
-    def available_steps(category: Optional[str] = None) -> list:
+    def available_steps(category: str | None = None) -> list:
         """Return all registered :class:`~._registry.StepSpec` objects.
 
         Parameters
@@ -147,7 +151,7 @@ class PipelineBase:
         return "\n".join(lines)
 
     @classmethod
-    def catalogue(cls, category: Optional[str] = None) -> str:
+    def catalogue(cls, category: str | None = None) -> str:
         """Return a full formatted catalogue of all available steps.
 
         Parameters
@@ -199,7 +203,7 @@ class PipelineBase:
     # 2. Export — to_py (instance method; to_yaml / to_json stay on Pipeline)
     # =========================================================================
 
-    def to_py(self, path: Optional[str | Path] = None) -> str:
+    def to_py(self, path: str | Path | None = None) -> str:
         """Serialize this pipeline to a Python config script.
 
         Produces a ``pipeline_config`` dict in a clean, readable ``.py``
@@ -241,7 +245,7 @@ class PipelineBase:
             "    steps      = [",
         ]
 
-        current_cat: Optional[str] = None
+        current_cat: str | None = None
         for label, step in steps:
             cat = step.spec.category
             if cat != current_cat:
@@ -278,10 +282,10 @@ class PipelineBase:
     @classmethod
     def scaffold(
         cls,
-        path: Optional[str | Path] = None,
+        path: str | Path | None = None,
         *,
         fmt: str = "yaml",
-        preset: Optional[str] = None,
+        preset: str | None = None,
         name: str = "my_workflow",
         outdir: str = "pipe_results",
     ) -> str:
@@ -344,7 +348,7 @@ class PipelineBase:
 
 # ── internal scaffold helpers ─────────────────────────────────────────────────
 
-def _resolve_scaffold_steps(preset_name: Optional[str]) -> list:
+def _resolve_scaffold_steps(preset_name: str | None) -> list:
     """Return (label, StepSpec, params) triples for the scaffold active steps."""
     if preset_name is not None:
         from ._presets import get_preset
@@ -409,7 +413,7 @@ def _scaffold_yaml(name: str, outdir: str, active: list) -> str:
         specs = list_steps(cat)
         step_lines.append(f"  # ── {cat} ({'─' * max(0, 56 - len(cat))})")
         for sp in specs:
-            d = _step_to_dict("", sp, sp.defaults)
+            _step_to_dict("", sp, sp.defaults)
             entry = f"  - {{name: {sp.name}, code: {sp.code}"
             if sp.defaults:
                 defs_yaml = ", ".join(
@@ -453,7 +457,7 @@ def _scaffold_py(
     name: str,
     outdir: str,
     active: list,
-    preset_name: Optional[str],
+    preset_name: str | None,
 ) -> str:
     """Generate the Python scaffold."""
     subtitle = f"Preset: {preset_name}" if preset_name else f"Pipeline: {name}"
@@ -477,7 +481,7 @@ def _scaffold_py(
         "    steps      = [",
     ]
 
-    current_cat: Optional[str] = None
+    current_cat: str | None = None
     for cat in categories():
         specs = list_steps(cat)
         for sp in specs:

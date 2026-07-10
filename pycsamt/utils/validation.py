@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -9,38 +8,30 @@ from __future__ import annotations
 
 import inspect
 import warnings
-from functools import wraps 
-from typing import ( 
-    List, 
-    Optional, 
-    Any, 
-    Union, 
-    Sequence, 
-    Callable, 
-    Iterable, 
-    Tuple
+from collections.abc import Iterable, Sequence
+from functools import wraps
+from typing import (
+    Any,
+    Callable,
 )
 
-import numpy as np 
-import pandas as pd 
+import numpy as np
+import pandas as pd
 
-from ..exceptions import ( 
-    NotFittedError, 
-    NotReadError 
-)
+from ..exceptions import NotFittedError, NotReadError
 
 __all__ = [
-    'check_is_fitted', 
+    'check_is_fitted',
     '_assert_all_types',
     '_isin',
     'assert_ratio',
-    '_validate_name_in', 
-    '_is_numeric_dtype', 
-    'check_consistency_size', 
-    '_is_arraylike_1d', 
-    'isinstance_relaxed', 
-    "has_read", 
-    "check_has_read", 
+    '_validate_name_in',
+    '_is_numeric_dtype',
+    'check_consistency_size',
+    '_is_arraylike_1d',
+    'isinstance_relaxed',
+    "has_read",
+    "check_has_read",
     "isin", "isin_if",
     "ensure_n_items"
 ]
@@ -56,11 +47,11 @@ def ensure_n_items(
     to_string: bool = False,
     allow_none: bool = False,
     allow_nan: bool = False,
-    bounds: Optional[Tuple[float, float]] = None,
+    bounds: tuple[float, float] | None = None,
     unique: bool = False,
     return_as: str = "tuple",
     dtype: Any = None,
-    name: Optional[str] = None,
+    name: str | None = None,
     error: str = "raise",
 ):
     r"""
@@ -286,8 +277,8 @@ def _to_float(x: Any) -> float:
 def has_read(
     obj: Any = None,
     *,
-    attributes: Union[str, List[str], None] = None,
-    msg: Optional[str] = None,
+    attributes: str | list[str] | None = None,
+    msg: str | None = None,
 ) -> bool:
     r"""Check if an object has been populated with data.
 
@@ -376,7 +367,7 @@ def has_read(
 
     # 1) Custom __has_read__ method
     if hasattr(obj, '__has_read__') and callable(
-        getattr(obj, '__has_read__')
+        obj.__has_read__
     ):
         if not obj.__has_read__():
             custom_msg = msg or (
@@ -388,7 +379,7 @@ def has_read(
 
     # 2) Boolean flag
     if hasattr(obj, '_has_read'):
-        flag = getattr(obj, '_has_read')
+        flag = obj._has_read
         if flag is False:
             custom_msg = msg or (
                 f"'{obj.__class__.__name__}' has `_has_read` "
@@ -428,13 +419,13 @@ def has_read(
                 "read or from_* method first."
             )
             raise NotReadError(custom_msg)
-            
+
     return True
 
 def check_has_read(
-    attributes: Union[str, List[str], None] = None,
+    attributes: str | list[str] | None = None,
     *,
-    msg: Optional[str] = None,
+    msg: str | None = None,
 ) -> Callable:
     r"""Decorator to verify an object has been read.
 
@@ -493,15 +484,15 @@ def check_has_read(
     return decorator
 
 def check_is_fitted(
-        obj: Any = None, attributes: Optional[List[str]] = None
+        obj: Any = None, attributes: list[str] | None = None
     ) -> bool:
     r"""
     Validate that an object is "fitted" before use.
 
     - If `obj` has a __is_fitted__ method, it is called.
-    - Else if `attributes` is provided, each named attribute on 
+    - Else if `attributes` is provided, each named attribute on
     `obj` must be non-None.
-    - Else, if `obj` has an `_fitted` or `_is_fitted` attribute, 
+    - Else, if `obj` has an `_fitted` or `_is_fitted` attribute,
     it must be True.
 
     If no `obj` is passed, attempts to use `self` from the caller's frame.
@@ -536,7 +527,7 @@ def check_is_fitted(
 
     # 2) Explicit attribute presence
     if attributes:
-        missing = [attr for attr in attributes 
+        missing = [attr for attr in attributes
                    if getattr(obj, attr, None) is None]
         if missing:
             raise NotFittedError(
@@ -548,9 +539,9 @@ def check_is_fitted(
     # 3) Boolean flag
     flag = None
     if hasattr(obj, '_is_fitted'):
-        flag = getattr(obj, '_is_fitted')  # type: ignore
+        flag = obj._is_fitted  # type: ignore
     elif hasattr(obj, '_fitted'):
-        flag = getattr(obj, '_fitted')  # type: ignore
+        flag = obj._fitted  # type: ignore
 
     if isinstance(flag, bool):
         if not flag:
@@ -613,11 +604,11 @@ def _assert_all_types(
 
 
 def _isin(
-    arr: Union[np.ndarray, Any],
-    subarr: Union[np.ndarray, Any],
+    arr: np.ndarray | Any,
+    subarr: np.ndarray | Any,
     *,
     return_mask: bool = False,
-) -> Union[bool, np.ndarray]:
+) -> bool | np.ndarray:
     r"""
     Test membership of ``subarr`` in ``arr``, or return mask.
 
@@ -692,12 +683,12 @@ def isin(
         shape as ``arr`` (membership of ``arr`` in ``subarr``).
     match : {"all","any","count"}, default "all"
         Reduction mode when ``return_mask`` is ``False``:
-            
+
         - ``"all"``  → True if all of ``subarr`` in ``arr``.
         - ``"any"``  → True if any of ``subarr`` in ``arr``.
         - ``"count"``→ Number of elements of ``subarr`` in
           ``arr`` (unique-sensitive per NumPy rules).
-          
+
     assume_unique : bool, default False
         Forwarded to :func:`numpy.isin` for speed when both
         inputs have unique values.
@@ -796,12 +787,12 @@ def isin(
 
 def isin_if(
     o: Iterable,
-    items: Union[str, Iterable],
+    items: str | Iterable,
     *,
     error: str = "raise",
     return_diff: bool = False,
     return_intersect: bool = False,
-) -> Optional[List]:
+) -> list | None:
     r"""
     Check presence of ``items`` inside iterable ``o``.
 
@@ -884,8 +875,8 @@ def isin_if(
 
 def assert_ratio(
     v: Any,
-    bounds: Optional[Sequence[float]] = None,
-    exclude_value: Optional[float] = None,
+    bounds: Sequence[float] | None = None,
+    exclude_value: float | None = None,
     in_percent: bool = False,
     name: str = 'rate'
 ) -> float:
@@ -956,7 +947,7 @@ def assert_ratio(
             excl = low
             if excl is None:
                 warnings.warn(
-                    "Cannot exclude value without valid bounds"
+                    "Cannot exclude value without valid bounds", stacklevel=2
                 )
         if val == excl:
             raise ValueError(
@@ -970,11 +961,11 @@ def assert_ratio(
 
 def _validate_name_in(
     name: str,
-    defaults: Union[Sequence[str], str] = '',
-    expect_name: Optional[str] = None,
-    exception: Optional[Exception] = None,
+    defaults: Sequence[str] | str = '',
+    expect_name: str | None = None,
+    exception: Exception | None = None,
     deep: bool = False
-) -> Union[bool, str]:
+) -> bool | str:
     """
     Assert that `name` exists within `defaults`.
 
@@ -1027,7 +1018,7 @@ def _validate_name_in(
 
 def isinstance_relaxed(
     instance: Any,
-    cls: Union[type, Tuple[type, ...]],
+    cls: type | tuple[type, ...],
 ) -> bool:
     r"""
     Robust ``isinstance`` variant tolerant to reloads/tuples.
@@ -1070,7 +1061,7 @@ def isinstance_relaxed(
         return True
 
     # normalize target to a tuple
-    targets: Tuple[type, ...]
+    targets: tuple[type, ...]
     if isinstance(cls, tuple):
         targets = cls
     else:
@@ -1121,9 +1112,7 @@ def _is_numeric_dtype(o, /, to_array: bool = False) -> bool:
 
     if not hasattr(o, "__iter__"):
         raise TypeError(
-            "'o' must be iterable. Got: {!r}".format(
-                type(o).__name__
-            )
+            f"'o' must be iterable. Got: {type(o).__name__!r}"
         )
 
     if to_array:
@@ -1131,9 +1120,7 @@ def _is_numeric_dtype(o, /, to_array: bool = False) -> bool:
 
     if not hasattr(o, "__array__"):
         raise ValueError(
-            "Expect array-like. Got: {!r}".format(
-                type(o).__name__
-            )
+            f"Expect array-like. Got: {type(o).__name__!r}"
         )
 
     # prefer dtype.kind on ndarray/Series/DataFrame
@@ -1164,8 +1151,8 @@ def _check_consistency_size(ar1, ar2, /, error: str = "raise") -> bool:
     same = len(ar1) == len(ar2)
     if not same and error == "raise":
         msg = (
-            "Array sizes must match: '{}' vs '{}'."
-        ).format(len(ar1), len(ar2))
+            f"Array sizes must match: '{len(ar1)}' vs '{len(ar2)}'."
+        )
         raise AssertionError(msg)
     return same
 
@@ -1188,9 +1175,7 @@ def check_consistency_size(*arrays) -> None:
     uniques = np.unique(lengths)
     if len(uniques) > 1:
         raise ValueError(
-            "Inconsistent sample sizes: {}".format(
-                [int(l) for l in lengths]
-            )
+            f"Inconsistent sample sizes: {[int(l) for l in lengths]}"
         )
 
 
@@ -1205,9 +1190,7 @@ def _is_arraylike_1d(x) -> bool:
     """
     if not hasattr(x, "__array__"):
         raise TypeError(
-            "Expect a 1-D array. Got: {!r}".format(
-                type(x).__name__
-            )
+            f"Expect a 1-D array. Got: {type(x).__name__!r}"
         )
     if not _is_arraylike_not_scalar(x):
         return False

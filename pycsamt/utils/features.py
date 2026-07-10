@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,14 +6,19 @@ Anomaly peak and boundary selection utilities.
 """
 
 import warnings
-from typing import Any, Dict, Optional, Sequence, Union, Tuple, List
+from collections.abc import Sequence
+from typing import (
+    Any,
+    Optional,
+    Union,
+)
 
-import numpy as np 
+import numpy as np
 
 __all__ = [
     'select_anomaly_peak',
     'find_position_bounds',
-    'find_closest_positions', 
+    'find_closest_positions',
     'find_nearest_indices'
 ]
 
@@ -25,9 +29,9 @@ def select_anomaly_peak(
     dipole: Optional[float] = None,
     rank: int = 1,
     user_peak: Optional[float] = None,
-    anomaly_infos: Optional[Dict[str, np.ndarray]] = None,
+    anomaly_infos: Optional[dict[str, np.ndarray]] = None,
     return_bounds: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Select anomaly peak position and its boundaries.
 
@@ -133,7 +137,7 @@ def select_anomaly_peak(
         mn, mx = positions.min(), positions.max()
         if not (mn <= up <= mx):
             warnings.warn(
-                f"user_peak {up} outside [{mn},{mx}]"
+                f"user_peak {up} outside [{mn},{mx}]", stacklevel=2
             )
         else:
             peak_pos = up
@@ -157,7 +161,7 @@ def find_position_bounds(
     rho_range: Sequence[float],
     positions: Optional[Sequence[float]] = None,
     dipole: float = 1.0
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute spatial and resistivity bounds around an anomaly peak.
 
@@ -240,7 +244,7 @@ def find_closest_positions(
     targets: Sequence[float],
     *,
     return_values: bool = False
-) -> Union[List[int], Tuple[List[int], List[float]]]:
+) -> Union[list[int], tuple[list[int], list[float]]]:
     """
     For each target, find index of nearest reference element.
 
@@ -278,7 +282,7 @@ def find_nearest_indices(
     *,
     side: str = 'both',
     return_values: bool = False
-) -> Union[List[int], Tuple[List[int], List[float]]]:
+) -> Union[list[int], tuple[list[int], list[float]]]:
     """
     Find nearest index(es) in `reference` for each `target`.
 
@@ -325,8 +329,8 @@ def find_nearest_indices(
     side = side.lower()
     if side not in ('both','left','right'):
         raise ValueError(f"Invalid side argument: {side!r}")
-    idxs: List[int] = []
-    vals: List[float] = []
+    idxs: list[int] = []
+    vals: list[float] = []
     for t in tgt:
         if side == 'left':
             mask = ref <= t

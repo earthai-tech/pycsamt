@@ -1,34 +1,35 @@
 # pycsamt/emtools/dimensionality.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
 
+from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.view import maybe_wrap_frame
 from ._core import (
-    ensure_sites,
     _apply_each,
-    _iter_items,
-    _name,
     _get_t_block,
     _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
 )
-from .tensor import build_phase_tensor_table
-from .tensor import rotate as _tensor_rotate
-from .tensor import rotate_to_strike as _tensor_rotate_to_strike
 from .strike import (
     estimate_strike_consensus,
     estimate_strike_phase_tensor,
     estimate_strike_sweep,
     strike_curve_sweep,
 )
-from ..api.labels import LOG10_PERIOD_LABEL
-from ..api.station import PYCSAMT_STATION_RENDERING
-from ..api.view import maybe_wrap_frame
+from .tensor import build_phase_tensor_table
+from .tensor import rotate as _tensor_rotate
+from .tensor import (
+    rotate_to_strike as _tensor_rotate_to_strike,
+)
 
 # -------------------------- local helpers ------------------------------- #
 
@@ -46,7 +47,7 @@ def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     return rdet
 
 
-def _tip_amp(t: Optional[np.ndarray]) -> Optional[np.ndarray]:
+def _tip_amp(t: np.ndarray | None) -> np.ndarray | None:
     if t is None:
         return None
     return np.sqrt(np.abs(t[:, 0]) ** 2 + np.abs(t[:, 1]) ** 2)
@@ -89,7 +90,7 @@ def phase_features_table(
             kind="emtools.dimensionality.features",
             source=sites,
         )
-    rows: List[Dict[str, float]] = []
+    rows: list[dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -185,14 +186,14 @@ def classify_dimensionality(
 def pre2d_inversion_assessment(
     sites: Any,
     *,
-    band: Optional[Tuple[float, float]] = None,
+    band: tuple[float, float] | None = None,
     skew_th: float = 3.0,
     ellipt_th: float = 0.2,
     rotation_applied: bool = False,
     rotation_method: str = "consensus",
     groom_bailey_attempted: bool = False,
     groom_bailey_applied: bool = False,
-    groom_bailey_reason: Optional[str] = None,
+    groom_bailey_reason: str | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -288,7 +289,7 @@ def pre2d_inversion_assessment(
             "or groom_bailey_decomposition to estimate and document it."
         )
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for station in stations:
         sdf = dim[dim["station"].astype(str) == str(station)]
         n = int(len(sdf))
@@ -363,7 +364,7 @@ def pre2d_inversion_assessment(
 def mask_by_dimensionality(
     sites: Any,
     *,
-    keep: Tuple[int, ...] = (0, 1),
+    keep: tuple[int, ...] = (0, 1),
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -419,7 +420,7 @@ def mask_by_dimensionality(
 def project_to_2d(
     sites: Any,
     *,
-    strike: Optional[float] = None,
+    strike: float | None = None,
     method: str = "swift",
     antisym: bool = True,
     inplace: bool = False,
@@ -498,7 +499,7 @@ def _mod_update(X: np.ndarray, A: np.ndarray) -> np.ndarray:
     return D
 
 
-def _feature_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
+def _feature_matrix(df: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
     cols = ["beta_abs", "ellipt_abs", "logrho_det", "tip_amp"]
     # copy=True: recent pandas can hand back a read-only view for a
     # single-dtype frame, which the in-place NaN fill below cannot write to.
@@ -518,7 +519,7 @@ def learn_dim_dictionary(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     df = phase_features_table(
         sites,
         recursive=recursive,
@@ -540,7 +541,7 @@ def learn_dim_dictionary(
     # normalize initial atoms
     D = D / (np.linalg.norm(D, axis=0) + 1e-12)
     A = np.zeros((k, n), dtype=float)
-    for it in range(n_iter):
+    for _it in range(n_iter):
         # code step
         for i in range(n):
             A[:, i] = _ista(D, Z[i], lam, code_iter)
@@ -555,7 +556,7 @@ def learn_dim_dictionary(
     return dict(D=D, A=A, mu=mu, sd=sd, feat=feats, meta=meta)
 
 
-def _auto_label_atoms(D: np.ndarray, feats: List[str]) -> np.ndarray:
+def _auto_label_atoms(D: np.ndarray, feats: list[str]) -> np.ndarray:
     # simple rule on atom means (beta vs ellipticity)
     jB = feats.index("beta_abs")
     jE = feats.index("ellipt_abs")
@@ -569,7 +570,7 @@ def _auto_label_atoms(D: np.ndarray, feats: List[str]) -> np.ndarray:
 
 def encode_dimensionality(
     sites: Any,
-    model: Dict[str, Any],
+    model: dict[str, Any],
     *,
     lam: float = 0.05,
     code_iter: int = 50,
@@ -636,9 +637,9 @@ def encode_dimensionality(
 
 def mask_by_dictionary(
     sites: Any,
-    model: Dict[str, Any],
+    model: dict[str, Any],
     *,
-    keep: Tuple[int, ...] = (0, 1),
+    keep: tuple[int, ...] = (0, 1),
     lam: float = 0.05,
     code_iter: int = 50,
     inplace: bool = False,

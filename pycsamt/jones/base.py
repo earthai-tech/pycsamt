@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,14 +5,14 @@
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, ClassVar, Dict, Iterable
 import io
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, ClassVar
 
+from ..utils.validation import has_read
 from .config import ENCODING_DEFAULT
 from .utils import iter_lines
-from ..utils.validation import has_read
-
 
 __all__ = ["BaseJones", "JComponentBase"]
 
@@ -41,7 +40,7 @@ class BaseJones:
         encoding: str = ENCODING_DEFAULT,
         verbose: int | bool = 0,
         **kws: Any,
-    ) -> "BaseJones":
+    ) -> BaseJones:
         lines = iter_lines(obj, encoding=encoding)
         inst = cls.from_lines(lines, verbose=verbose, **kws)
         if isinstance(obj, (str, Path)):
@@ -56,13 +55,13 @@ class BaseJones:
         *,
         verbose: int | bool = 0,
         **kws: Any,
-    ) -> "BaseJones":
+    ) -> BaseJones:
         raise NotImplementedError(
             f"{cls.__name__}.from_lines() not implemented"
         )
 
 
-    def read(self, *args: Any, **kws: Any) -> "BaseJones":
+    def read(self, *args: Any, **kws: Any) -> BaseJones:
         raise NotImplementedError(
             f"{self.__class__.__name__}.read() not implemented"
         )
@@ -94,8 +93,8 @@ class BaseJones:
         has_read(self, attributes=attributes, msg=msg)
 
 
-    def to_dict(self) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
+    def to_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
         for k, v in vars(self).items():
             if k.startswith("_"):
                 continue

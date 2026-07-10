@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """OccamData — build and parse OccamDataFile.dat from EDI sources.
@@ -43,11 +42,11 @@ File format (OCCAM2MTDATA_1.0)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Union
 
 import numpy as np
 
-from .base   import OccamBase
+from .base import OccamBase
 from .config import OccamConfig
 from .doc import _occam_param_docs as _params
 
@@ -315,14 +314,14 @@ class OccamData(OccamBase):
     def __init__(
         self,
         title: str = "pycsamt Occam2D data file",
-        config: Optional[OccamConfig] = None,
+        config: OccamConfig | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.format_str:  str          = _FORMAT_TAG
         self.title:       str          = title
         self.config:      OccamConfig  = config or OccamConfig()
-        self.sites:       List[str]    = []
+        self.sites:       list[str]    = []
         self.offsets:     np.ndarray   = np.array([])
         self.frequencies: np.ndarray   = np.array([])
         self.data_blocks: np.ndarray   = np.empty((0, 5))
@@ -334,11 +333,11 @@ class OccamData(OccamBase):
     def from_edi(
         cls,
         source,
-        modes: Optional[List[str]] = None,
-        config: Optional[OccamConfig] = None,
+        modes: list[str] | None = None,
+        config: OccamConfig | None = None,
         title: str = "pycsamt Occam2D data file",
         **kwargs,
-    ) -> "OccamData":
+    ) -> OccamData:
         cfg   = config or OccamConfig()
         modes = modes or cfg.modes
 
@@ -392,7 +391,7 @@ class OccamData(OccamBase):
         _ln10 = float(np.log(10.0))
         data_rows: list[list] = []
 
-        for si, (name, site) in enumerate(zip(names, items)):
+        for si, (_name, site) in enumerate(zip(names, items)):
             s_freq    = _site_attr(site, "freq")
             s_rho     = _site_attr(site, "rho")
             s_phs     = _site_attr(site, "phase")
@@ -416,7 +415,7 @@ class OccamData(OccamBase):
                 if fdiff[mi] > 0.01:
                     continue
 
-                for mode_name, (ri, ci, rho_code, phs_code) in mode_spec.items():
+                for _mode_name, (ri, ci, rho_code, phs_code) in mode_spec.items():
                     rho_val = float(s_rho[mi, ri, ci]) if s_rho.ndim == 3 else float(s_rho[mi])
                     phs_val = float(s_phs[mi, ri, ci]) if s_phs.ndim == 3 else float(s_phs[mi])
 
@@ -467,7 +466,7 @@ class OccamData(OccamBase):
     # I/O
     # ------------------------------------------------------------------
     @classmethod
-    def read(cls, path: PathLike, **kwargs) -> "OccamData":
+    def read(cls, path: PathLike, **kwargs) -> OccamData:
         p      = Path(path)
         parsed = _parse_data(p)
         obj    = cls(**kwargs)

@@ -37,7 +37,6 @@ Quick example
 
 from . import io, plot
 from ._base import TEMSounding
-from .reader import TEMReader
 from .avg import TEMAVG, TEMAVGRecord, is_temavg_file
 from .coordinates import (
     TEMCoordinate,
@@ -67,8 +66,13 @@ from .plot import (
     plot_temavg_section,
     plot_transformed_rho,
 )
+from .reader import TEMReader
 from .survey import TEMSurvey, read_temavg_survey
-from .transform import FourierTransform, LateTimeTransform, TEMtoEDI
+from .transform import (
+    FourierTransform,
+    LateTimeTransform,
+    TEMtoEDI,
+)
 from .waveform import (
     CustomWaveform,
     HalfSineWaveform,

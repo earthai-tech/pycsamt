@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
-from pycsamt.jones.cbase import ( 
-    JParseMixin, 
-    JCoreParser, 
-    JCBBase
-    )
-
+from pycsamt.jones.cbase import (
+    JCBBase,
+    JCoreParser,
+    JParseMixin,
+)
 
 
 def _has(obj, *names: str) -> bool:

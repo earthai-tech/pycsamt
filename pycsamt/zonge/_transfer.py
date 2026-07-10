@@ -1,33 +1,28 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
 import math
-import warnings 
+import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import ( 
-    Any, 
-    Dict, 
-    Optional, 
-    Sequence, 
-    Union
-)
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ..log.logger import get_logger 
-from .utils import load_avg, AvgDataError
-from .schema import _CANONICAL_MAP 
+from ..log.logger import get_logger
+from .schema import _CANONICAL_MAP
+from .utils import AvgDataError, load_avg
+
 try:
     from .utils import to_xarray
 except ImportError:  # pragma: no cover
     warnings.warn(
-        "xarray is required for transferring legacy AVG."
+        "xarray is required for transferring legacy AVG.", stacklevel=2
     )
 logger = get_logger(__name__)
 
@@ -79,12 +74,12 @@ class LegacyAVGBase:
     # When both routes to |Z| exist, prefer E/B over ρa–ω.
     prefer_emh_over_rho: bool = True
 
-    # public API 
+    # public API
     def from_path(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         *,
-        utm_zone: Optional[int] = None,
+        utm_zone: int | None = None,
     ):
         """
         Read a legacy ``*.avg`` file and return a dataset.
@@ -108,9 +103,9 @@ class LegacyAVGBase:
         self,
         df: pd.DataFrame,
         *,
-        meta: Optional[Dict[str, Any]] = None,
+        meta: dict[str, Any] | None = None,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        data_vars: Optional[Sequence[str]] = None,
+        data_vars: Sequence[str] | None = None,
     ):
         """
         Transform an already-parsed legacy table into a dataset.
@@ -163,11 +158,11 @@ class LegacyAVGBase:
 
         Rename legacy / mixed-case columns into canonical names
         and trim whitespace.  No type coercion here.
-   
+
         """
         if df.empty:
             raise AvgDataError("Empty legacy table.")
-        
+
         # Use a case-insensitive match against the global map
         lower_to_canon = {
             k.lower(): v for k, v in _CANONICAL_MAP.items()
@@ -269,7 +264,7 @@ class LegacyAVGBase:
     def _derive_safe_quantities(
         self,
         df: pd.DataFrame,
-        meta: Dict[str, Any],
+        meta: dict[str, Any],
     ) -> pd.DataFrame:
         """
         Compute conservative derived values only when units are
@@ -321,15 +316,15 @@ class LegacyAVGBase:
     def _build_attrs(
         self,
         df: pd.DataFrame,
-        meta: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        meta: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Compose dataset attributes from file meta and data
         introspection.  Adds conservative defaults for missing
         survey descriptors so downstream consumers have a stable
         header to read.
         """
-        attrs: Dict[str, Any] = {}
+        attrs: dict[str, Any] = {}
 
         # 1) Copy existing meta (omit heavy per-block details).
         for k, v in meta.items():
@@ -374,16 +369,16 @@ class LegacyAVGBase:
         attrs["history"] = f"{hist} | {tag}" if hist else tag
 
         return attrs
-    
+
     # ---------- public ergonomic adapters --------------------
     def to_xarray(
         self,
-        obj: Union[pd.DataFrame, str, Path],
+        obj: pd.DataFrame | str | Path,
         *,
-        meta: Optional[Dict[str, Any]] = None,
+        meta: dict[str, Any] | None = None,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        data_vars: Optional[Sequence[str]] = None,
-        utm_zone: Optional[int] = None,
+        data_vars: Sequence[str] | None = None,
+        utm_zone: int | None = None,
     ):
         """
         Convert a legacy table (DataFrame) **or** a path to a legacy
@@ -418,9 +413,9 @@ class LegacyAVGBase:
         self,
         df: pd.DataFrame,
         *,
-        meta: Optional[Dict[str, Any]] = None,
+        meta: dict[str, Any] | None = None,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        data_vars: Optional[Sequence[str]] = None,
+        data_vars: Sequence[str] | None = None,
     ):
         """
         Compatibility alias that mirrors scikit-learn-style

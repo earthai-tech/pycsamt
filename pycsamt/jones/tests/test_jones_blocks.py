@@ -1,23 +1,21 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from pathlib import Path
-import math
 import importlib.util as _imp
+import math
+from pathlib import Path
 
 import pytest
 
 from pycsamt.jones.blocks import (
+    JBlocks,
     RBlock,
     TFBlock,
-    JBlocks,
 )
 from pycsamt.jones.config import (
-    RE_STATION,
     RE_DATATYPE_UNITS,
     RE_NPOINTS,
+    RE_STATION,
 )
-
 
 # --------------------------- helpers ---------------------------
 
@@ -102,7 +100,7 @@ def test_tfblock_read_normalize_numpy_qa():
     assert math.isnan(a["real"][1])
     assert math.isnan(a["error"][1])
     # rejection by weight < 0
-        
+
     # TFBlock test
     assert bool(a["rej"][0]) is False
     assert bool(a["rej"][1]) is True
@@ -126,7 +124,7 @@ def test_blocks_from_lines_multiple_blocks():
     # write() must reproduce two header triples
     out = col.write()
     txt = "\n".join(out)
-    assert "S01" in txt 
+    assert "S01" in txt
 
     # basic header sanity in output
     st_seen = sum(1 for s in out if RE_STATION.match(s))

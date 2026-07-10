@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import importlib
 import sys
 import types
-import importlib
 from types import SimpleNamespace
 
 import pytest
+
 from pycsamt.core import base as b
-from pycsamt.transformers import jedi as tr 
+from pycsamt.transformers import jedi as tr
 
 
 def _install_stubs(monkeypatch):
@@ -189,7 +189,7 @@ def test_normalize_routes_j_path(env, tmp_path, monkeypatch):
     ctx = _import_ctx()
     seg_edi = sys.modules["pycsamt.seg.edi"]
     # seg_coll = sys.modules["pycsamt.seg.collection"]
-    
+
     def tj(self, j):  # noqa: ANN001
         return seg_edi.EDIFile()
     monkeypatch.setattr(tr.JtoEDI, "transform", tj, raising=False)
@@ -235,7 +235,7 @@ def test_normalize_passthrough_collection(env, tmp_path):
     seg_edi = sys.modules["pycsamt.seg.edi"]
     seg_coll = sys.modules["pycsamt.seg.collection"]
     coll = seg_coll.EDICollection(items=[seg_edi.EDIFile()], verbose=0)
-    
+
     with ctx.normalize_session(tmp_path) as nx:
         out = nx.load(coll)
     assert out is coll

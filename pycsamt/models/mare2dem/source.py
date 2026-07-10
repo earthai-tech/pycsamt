@@ -42,7 +42,6 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -229,7 +228,7 @@ class SourceManager(Mare2DEMBase):
 
     def __init__(
         self,
-        config: "Mare2DEMConfig | None" = None,
+        config: Mare2DEMConfig | None = None,
         source_dir: str | Path | None = None,
         **kwargs,
     ):
@@ -562,7 +561,7 @@ class SourceManager(Mare2DEMBase):
                 "SourceManager: %s (cwd=%s)", " ".join(cmd), src
             )
 
-        print(f"Building MARE2DEM (this may take several minutes) …")
+        print("Building MARE2DEM (this may take several minutes) …")
         print(f"  FC = {_fc}")
         print(f"  CC = {_cc}")
         print(f"  MKLROOT = {mklroot or '(not found)'}")

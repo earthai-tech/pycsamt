@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,7 +19,7 @@ induction data using CNN. *Geophysical Journal International*,
 """
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 __all__ = ["FCN1DNet"]
 

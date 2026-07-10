@@ -1,39 +1,37 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, Sequence
-from typing import Tuple
-import math
+from typing import Any
 
 import numpy as np
 
-from ..log.logger import get_logger 
+from ..log.logger import get_logger
 from .base import JComponentBase
-from .config import ( 
-    ENCODING_DEFAULT,
-    DTYPE_SPECS,
-    KIND_RHO_PHI, 
-    KIND_COMPLEX_TF,
-    RE_BLANK, 
-    MISSING_FLOAT
-)
-
 from .config import (
-    RE_STATION,
-    RE_DATATYPE_UNITS,
-    RE_NPOINTS,
-    RE_INFO,
+    DTYPE_SPECS,
+    ENCODING_DEFAULT,
+    KIND_COMPLEX_TF,
+    KIND_RHO_PHI,
+    MISSING_FLOAT,
+    RE_BLANK,
     RE_COMMENT,
+    RE_DATATYPE_UNITS,
+    RE_INFO,
+    RE_NPOINTS,
+    RE_STATION,
 )
-from .utils import parse_datatype_units, JParseError
-
-from .utils import iter_lines
 from .heads import Head
+from .utils import (
+    JParseError,
+    iter_lines,
+    parse_datatype_units,
+)
 
 logger = get_logger(__name__)
 
@@ -144,14 +142,14 @@ class JBlock(JComponentBase):
 
     def __init__(
         self,
-        head: Optional[Head] = None,
+        head: Head | None = None,
         *,
-        rows: Optional[Sequence[Any]] = None,
+        rows: Sequence[Any] | None = None,
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
         self.head: Head | None = head
-        self.rows: List[Any] = list(rows or [])
+        self.rows: list[Any] = list(rows or [])
 
     @classmethod
     def from_file(
@@ -159,7 +157,7 @@ class JBlock(JComponentBase):
         j_fn: str | Path,
         *,
         verbose: int = 0,
-    ) -> "JBlock":
+    ) -> JBlock:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         return cls.from_lines(lines, verbose=verbose)
 
@@ -169,22 +167,22 @@ class JBlock(JComponentBase):
         lines: Sequence[str],
         *,
         verbose: int = 0,
-    ) -> "JBlock":
+    ) -> JBlock:
         head, body = _extract_first_head_and_body(lines)
         blk = _block_factory(head, verbose=verbose)
         return blk.read((head, body))
 
     def read(
         self,
-        data: Tuple[Head, Sequence[str]] | None = None,
-    ) -> "JBlock":
+        data: tuple[Head, Sequence[str]] | None = None,
+    ) -> JBlock:
         raise NotImplementedError("override in subclass")
 
-    def write(self) -> List[str]:
+    def write(self) -> list[str]:
         raise NotImplementedError("override in subclass")
 
     # ---- normalization & QA (common facade) ----
-    def normalize(self) -> "JBlock":
+    def normalize(self) -> JBlock:
         """
         Apply row-level normalization:
 
@@ -198,7 +196,7 @@ class JBlock(JComponentBase):
         """
         Quick QA metrics (counts and basic stats).
         """
-        return {}  
+        return {}
 
     # ---- exports ----
     def to_numpy(self) -> dict[str, np.ndarray]:
@@ -221,45 +219,45 @@ class JBlock(JComponentBase):
 
     @property
     def station(self) -> str | None:
-        return ( 
-            None if self.head is None 
+        return (
+            None if self.head is None
             else self.head.station
             )
-    
+
     @property
     def kind(self) -> str | None:
-        return ( 
-            None if self.head is None 
+        return (
+            None if self.head is None
             else self.head.kind
             )
-    
+
     @property
     def comp(self) -> str | None:
-        return ( 
-            None if self.head is None 
+        return (
+            None if self.head is None
             else self.head.comp
         )
-    
+
     @property
     def units(self) -> str | None:
-        return ( 
-            None if self.head is None 
+        return (
+            None if self.head is None
             else self.head.units
         )
-    
+
     @property
     def has_units(self) -> bool:
         return bool(self.units)
-    
+
     @property
     def columns(self) -> tuple[str, ...]:
         # default; subclasses override if needed
         return tuple([])
-    
+
     @property
     def shape(self) -> tuple[int, int]:
         return (self.nrows, len(self.columns))
-    
+
     @property
     def periods(self):
         # cheap view; avoids pandas dep
@@ -338,13 +336,13 @@ class RBlock(JBlock):
 
     def read(
         self,
-        data: Tuple[Head, Sequence[str]] | None = None,
-    ) -> "RBlock":
+        data: tuple[Head, Sequence[str]] | None = None,
+    ) -> RBlock:
         if data is None:
             raise ValueError("data is required")
         head, body = data
         spec = DTYPE_SPECS[head.dtype.kind]
-        rows: List[RRow] = []
+        rows: list[RRow] = []
         n = head.n or 0
         i = 0
         for ln in body:
@@ -376,7 +374,7 @@ class RBlock(JBlock):
         # apply default normalization
         return self.normalize()
 
-    def normalize(self) -> "RBlock":
+    def normalize(self) -> RBlock:
         for r in self.rows:
             # period: if negative => frequency (Hz)
             if r.period < 0:
@@ -445,19 +443,16 @@ class RBlock(JBlock):
             "period_max": float(pmax),
         }
 
-    def write(self) -> List[str]:
+    def write(self) -> list[str]:
         if not self.head or self.head.n is None:
             raise ValueError("missing head")
-        out: List[str] = []
+        out: list[str] = []
         out.extend(self.head.write())
         for r in self.rows:
             out.append(
                 (
-                    "{: .6e} {: .6e} {: .6e} {: .6e} {: .6e} "
-                    "{: .6e} {: .6e} {: .6e} {: .6e}"
-                ).format(
-                    r.period, r.rho, r.pha, r.rhomax, r.rhomin,
-                    r.phamax, r.phamin, r.wrho, r.wpha
+                    f"{r.period: .6e} {r.rho: .6e} {r.pha: .6e} {r.rhomax: .6e} {r.rhomin: .6e} "
+                    f"{r.phamax: .6e} {r.phamin: .6e} {r.wrho: .6e} {r.wpha: .6e}"
                 ).strip()
             )
         return out
@@ -529,13 +524,13 @@ class TFBlock(JBlock):
     """
     def read(
         self,
-        data: Tuple[Head, Sequence[str]] | None = None,
-    ) -> "TFBlock":
+        data: tuple[Head, Sequence[str]] | None = None,
+    ) -> TFBlock:
         if data is None:
             raise ValueError("data is required")
         head, body = data
         spec = DTYPE_SPECS[head.dtype.kind]
-        rows: List[TFRow] = []
+        rows: list[TFRow] = []
         n = head.n or 0
         i = 0
         for ln in body:
@@ -562,7 +557,7 @@ class TFBlock(JBlock):
         self._mark_read(True)
         return self.normalize()
 
-    def normalize(self) -> "TFBlock":
+    def normalize(self) -> TFBlock:
         for r in self.rows:
             if r.period < 0:
                 f = abs(r.period)
@@ -616,17 +611,15 @@ class TFBlock(JBlock):
             "error_rms": float(rms),
         }
 
-    def write(self) -> List[str]:
+    def write(self) -> list[str]:
         if not self.head or self.head.n is None:
             raise ValueError("missing head")
-        out: List[str] = []
+        out: list[str] = []
         out.extend(self.head.write())
         for r in self.rows:
             out.append(
                 (
-                    "{: .6e} {: .6e} {: .6e} {: .6e} {: .6e}"
-                ).format(
-                    r.period, r.real, r.imag, r.error, r.weight
+                    f"{r.period: .6e} {r.real: .6e} {r.imag: .6e} {r.error: .6e} {r.weight: .6e}"
                 ).strip()
             )
         return out
@@ -705,15 +698,15 @@ class JBlocks(JComponentBase):
     .. [1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
-    
+
     def __init__(
         self,
-        blocks: Optional[Sequence[JBlock]] = None,
+        blocks: Sequence[JBlock] | None = None,
         *,
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-        self.blocks: List[JBlock] = list(blocks or [])
+        self.blocks: list[JBlock] = list(blocks or [])
 
     @property
     def n(self) -> int:
@@ -725,7 +718,7 @@ class JBlocks(JComponentBase):
         j_fn: str | Path,
         *,
         verbose: int = 0,
-    ) -> "JBlocks":
+    ) -> JBlocks:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         inst = cls.from_lines(lines, verbose=verbose)
         # inst is already marked by from_lines (see below)
@@ -737,7 +730,7 @@ class JBlocks(JComponentBase):
         lines: Sequence[str],
         *,
         verbose: int = 0,
-    ) -> "JBlocks":
+    ) -> JBlocks:
         blocks = _extract_all_blocks(lines, verbose=verbose)
         inst= cls(blocks=blocks, verbose=verbose)
         inst._mark_read(True)           # ← important
@@ -746,7 +739,7 @@ class JBlocks(JComponentBase):
     def read(
         self,
         lines: Sequence[str] | None = None,
-    ) -> "JBlocks":
+    ) -> JBlocks:
         if lines is None:
             raise ValueError("lines are required")
         blk = self.from_lines(lines, verbose=self.verbose)
@@ -754,14 +747,14 @@ class JBlocks(JComponentBase):
         self._mark_read(True)
         return self
 
-    def write(self) -> List[str]:
-        out: List[str] = []
+    def write(self) -> list[str]:
+        out: list[str] = []
         for b in self.blocks:
             out.extend(b.write())
         return out
 
     # convenience exports
-    def to_numpy(self) -> List[dict[str, np.ndarray]]:
+    def to_numpy(self) -> list[dict[str, np.ndarray]]:
         return [b.to_numpy() for b in self.blocks]
 
     def to_dataframe(self):
@@ -776,7 +769,7 @@ class JBlocks(JComponentBase):
             return pd.DataFrame()
         return pd.concat(dfs, ignore_index=True)
 
-    def qa_summary(self) -> List[dict[str, Any]]:
+    def qa_summary(self) -> list[dict[str, Any]]:
         return [b.qa_summary() for b in self.blocks]
 
     @property
@@ -790,7 +783,7 @@ class JBlocks(JComponentBase):
     @property
     def station(self) -> str | None:
         """
-        Return the single, unique station name for 
+        Return the single, unique station name for
         the block collection.
         Returns None if no blocks are present.
         """
@@ -799,7 +792,7 @@ class JBlocks(JComponentBase):
         # All blocks should have the same
         # station name after correct parsing
         return self.blocks[0].station
-    
+
     @property
     def kinds(self) -> list[str]:
         out: list[str] = []
@@ -807,10 +800,10 @@ class JBlocks(JComponentBase):
             if b.kind is not None:
                 out.append(b.kind)
         return out
-    
+
     def select(
         self, *, kind: str | None = None, comp: str | None = None
-    ) -> list["JBlock"]:
+    ) -> list[JBlock]:
         out: list[JBlock] = []
         for b in self.blocks:
             if kind is not None and b.kind != kind:
@@ -819,7 +812,7 @@ class JBlocks(JComponentBase):
                 continue
             out.append(b)
         return out
-    
+
     def period_range(self) -> tuple[float, float] | None:
         lo, hi = None, None
         for b in self.blocks:
@@ -833,7 +826,7 @@ class JBlocks(JComponentBase):
         if lo is None or hi is None:
             return None
         return (lo, hi)
-    
+
 
 def _is_miss(x: float) -> bool:
     return x == MISSING_FLOAT
@@ -866,7 +859,7 @@ def _index_of_subsequence(
             return i
     return -1
 
-def _block_factory(head: Head, *, verbose: int) -> "JBlock":
+def _block_factory(head: Head, *, verbose: int) -> JBlock:
     k = head.dtype.kind
     if k in KIND_RHO_PHI:
         return RBlock(head=head, verbose=verbose)
@@ -877,7 +870,7 @@ def _block_factory(head: Head, *, verbose: int) -> "JBlock":
 
 def _extract_first_head_and_body(
     lines: Sequence[str],
-) -> Tuple[Head, List[str]]:
+) -> tuple[Head, list[str]]:
     seq = list(lines)
     h = Head.from_lines(seq)
     trip = h.write()
@@ -892,18 +885,18 @@ def _extract_first_head_and_body(
 
 def _extract_all_blocks(
         lines: Sequence[str], *, verbose: int = 0
-    ) -> List["JBlock"]:
+    ) -> list[JBlock]:
     """
-    Robustly parse all data blocks from a J-file for 
+    Robustly parse all data blocks from a J-file for
     a single station.
 
-    This parser finds the single station name for the 
-    file and then iteratively finds all subsequent data blocks, 
+    This parser finds the single station name for the
+    file and then iteratively finds all subsequent data blocks,
     which are identified by a [data_type, count] pair.
     """
     seq = list(lines)
-    blocks: List[JBlock] = []
-    
+    blocks: list[JBlock] = []
+
     # 1. Find the first station line in the entire file. This will be the
     #    station for ALL subsequent blocks.
     station_line = None
@@ -917,7 +910,7 @@ def _extract_all_blocks(
             station_line = line
             first_data_line_index = i + 1
             break
-            
+
     if station_line is None:
         # If no station is found in the file, there are no blocks to parse.
         if verbose:
@@ -926,7 +919,7 @@ def _extract_all_blocks(
             )
         return []
 
-    # 2. Now, loop through the rest of the 
+    # 2. Now, loop through the rest of the
     # file from where we found the station.
     i = first_data_line_index
     while i < len(seq):
@@ -947,7 +940,7 @@ def _extract_all_blocks(
                 # This line is not a dtype, probably
                 # leftover data or garbage. Skip it.
                 i += 1
-        
+
         if not dtype_line:
             break # No more data type lines found, we are done.
 
@@ -966,8 +959,8 @@ def _extract_all_blocks(
                 break
             # If we find something that is not
             # a count, the header is malformed.
-            break 
-            
+            break
+
         if not count_line:
             # Could not find a count for the detected
             # data type, stop parsing.
@@ -982,18 +975,18 @@ def _extract_all_blocks(
         # 4. We have the full header. Create the block.
         header_lines = [station_line, dtype_line, count_line]
         head = Head(verbose=verbose).read(header_lines)
-        
+
         body_start_index = count_idx + 1
         body_lines = seq[body_start_index:]
-        
+
         # Create the block and let its `read` method consume the data rows
         blk = _block_factory(head, verbose=verbose).read((head, body_lines))
         blocks.append(blk)
-        
+
         # 5. Advance the main loop index past the data we just consumed.
         rows_consumed = max(head.n or 0, 0)
         i = body_start_index + rows_consumed
-        
+
     return blocks
 
 def _locate_header_indices(

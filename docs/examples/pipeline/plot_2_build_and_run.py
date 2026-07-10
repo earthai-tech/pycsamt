@@ -16,8 +16,14 @@ EDIs, QC plots, and a reproducible config).
 # order. This chain de-duplicates and band-limits frequencies, aligns the
 # frequency axis, notches the 50 Hz power line, then snaps a QC summary.
 
-from _pipe_data import demo_sites, scratch_dir, quiet_logs
-from pycsamt.pipeline import Pipeline, Step, configure_pipe, reset_pipe
+from _pipe_data import demo_sites, quiet_logs, scratch_dir
+
+from pycsamt.pipeline import (
+    Pipeline,
+    Step,
+    configure_pipe,
+    reset_pipe,
+)
 
 sites = demo_sites(n=8)
 print(f"loaded {len(sites)} stations from WILLY_DATA L22")
@@ -71,7 +77,6 @@ for sr in result.step_results:
 # each plotting step produced, and ``pipeline.yaml`` — the recipe needed to
 # reproduce the run (see :doc:`plot_4_config_reproducibility`).
 
-from pathlib import Path
 
 files = sorted(p.relative_to(outdir).as_posix() for p in outdir.rglob("*") if p.is_file())
 print(f"{len(files)} files written to the output directory:")
@@ -85,8 +90,8 @@ for f in files:
 # is one of them, loaded straight from the output package — this is the
 # pipeline's own output, not a plot made for this page.
 
-import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
 pngs = sorted(outdir.rglob("*.png"))
 pick = next((p for p in pngs if "snr" in p.name.lower()), pngs[0])

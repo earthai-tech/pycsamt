@@ -30,12 +30,17 @@ Three sources are tried, in order, for each ModEM station:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
-from ._core import MapData, StationRecord, normalize_station_id
+from ._core import (
+    MapData,
+    StationRecord,
+    normalize_station_id,
+)
 
 __all__ = ["group_modem_stations", "load_modem_lines"]
 

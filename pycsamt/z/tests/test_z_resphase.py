@@ -2,12 +2,12 @@
 import numpy as np
 import pytest
 
-from pycsamt.z.resphase import ResPhase
 from pycsamt.exceptions import (
-    ZError,
     PhaseError,
     ResistivityError,
+    ZError,
 )
+from pycsamt.z.resphase import ResPhase
 
 
 def _mk_stack(n=2, val=1.0 + 0.0j):

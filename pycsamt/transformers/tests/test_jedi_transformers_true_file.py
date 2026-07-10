@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,12 +5,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-
+from pycsamt.jones.collection import JCollection
+from pycsamt.jones.j import JFile
 from pycsamt.seg.collection import EDICollection
 from pycsamt.seg.edi import EDIFile
-from pycsamt.jones.j import JFile
-from pycsamt.jones.collection import JCollection
 from pycsamt.transformers import jedi as tr
+
 
 @pytest.mark.usefixtures("legacy_data_file", "j_single_file")
 def test_public_api_all():

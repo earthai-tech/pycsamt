@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.dimensionality"""
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from pycsamt.api import reset_api_view
 from pycsamt.emtools.dimensionality import (
-    phase_features_table,
     classify_dimensionality,
-    mask_by_dimensionality,
     encode_dimensionality,
+    mask_by_dimensionality,
+    phase_features_table,
 )
 
 
@@ -107,6 +106,7 @@ class TestPhaseFeatureTable:
 
     def test_empty_input_returns_empty(self):
         import pandas as pd
+
         from pycsamt.api.view.frame import APIFrame
         df = phase_features_table([])
         assert isinstance(df, (pd.DataFrame, APIFrame))
@@ -141,6 +141,7 @@ class TestClassifyDimensionality:
 
     def test_empty_input(self):
         import pandas as pd
+
         from pycsamt.api.view.frame import APIFrame
         df = classify_dimensionality([])
         assert isinstance(df, (pd.DataFrame, APIFrame))
@@ -201,6 +202,7 @@ class TestEncodeDimensionality:
 
     def test_empty_model_returns_dataframe(self):
         import pandas as pd
+
         from pycsamt.api.view.frame import APIFrame
         sites = [_iso_site("S00")]
         df = encode_dimensionality(sites, {})

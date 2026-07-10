@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Thumbs up/down feedback → retrieval hard negatives (RAG Tier 3)."""
@@ -8,7 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pycsamt.assistant.rag.feedback import FeedbackStore, chunk_key
+from pycsamt.assistant.rag.feedback import (
+    FeedbackStore,
+    chunk_key,
+)
 from pycsamt.assistant.rag.retriever import Retriever
 from pycsamt.assistant.rag.schemas import RAGChunk
 

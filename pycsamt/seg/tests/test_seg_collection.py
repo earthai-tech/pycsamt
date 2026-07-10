@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import numpy as np
 
@@ -15,7 +13,7 @@ from pycsamt.seg.collection import EDICollection
 def _mk_edi(tmp: Path, station: str, nf: int = 3) -> Path:
     fvals = np.geomspace(1.0, 100.0, nf)
     fstr = "  " + "  ".join(f"{v: .6E}" for v in fvals)
-    lines: List[str] = [
+    lines: list[str] = [
         ">HEAD",
         f"  DATAID={station}",
         "  LAT=26:00:00N",
@@ -42,8 +40,8 @@ def _mk_edi(tmp: Path, station: str, nf: int = 3) -> Path:
 
 
 def test_from_sources_and_add_from(tmp_path: Path) -> None:
-    a = _mk_edi(tmp_path, "S1", nf=2)
-    b = _mk_edi(tmp_path, "S2", nf=4)
+    _mk_edi(tmp_path, "S1", nf=2)
+    _mk_edi(tmp_path, "S2", nf=4)
 
     # from directory
     col = EDICollection.from_sources(tmp_path)

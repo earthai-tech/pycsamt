@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,7 +18,6 @@ from pycsamt.assistant.rag.index_store import (
     read_manifest,
 )
 from pycsamt.assistant.rag.retriever import build_retriever
-
 
 _PY = '''\
 """Static-shift helpers."""

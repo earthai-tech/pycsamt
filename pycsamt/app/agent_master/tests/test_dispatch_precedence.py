@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,11 +22,14 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 class TestWorkflowTypeAuthority(unittest.TestCase):
 
     def test_router_workflow_slot_does_not_override(self):
-        import pycsamt.app.agent_master.callbacks.chat as C
-        import pycsamt.agents.router as R
-        from pycsamt.agents.router import RouterDecision, WORKFLOW
-        from pycsamt.agents._base import AgentResult
         import pycsamt.agents.orchestrator as O
+        import pycsamt.agents.router as R
+        import pycsamt.app.agent_master.callbacks.chat as C
+        from pycsamt.agents._base import AgentResult
+        from pycsamt.agents.router import (
+            WORKFLOW,
+            RouterDecision,
+        )
 
         # 1. Router returns the correct intent but a WRONG workflow slot.
         orig_route = R.IntentRouter.route

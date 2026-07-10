@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -11,15 +10,15 @@ the object APIs in :mod:`pycsamt.z`.
 """
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
-from ..log.logger import get_logger
 from ..exceptions import ZError
+from ..log.logger import get_logger
 from ..utils.zmath import (
-    rotatematrix_incl_errors,
     invertmatrix_incl_errors,
+    rotatematrix_incl_errors,
     z_error2r_phi_error,
 )
 
@@ -32,8 +31,8 @@ def correct_for_sensor_orientation(
     by: float = 90.0,
     ex: float = 0.0,
     ey: float = 90.0,
-    z_prime_err: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    z_prime_err: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Correct an impedance tensor for sensor misorientation.
 
@@ -156,7 +155,7 @@ def correct_for_sensor_orientation(
     else:
         Ze = None
 
-    # build T and U transformation 
+    # build T and U transformation
     def _rotmat(ax: float, ay: float) -> np.ndarray:
         # angles in degrees (clockwise positive)
         a = np.deg2rad(ax)
@@ -176,13 +175,13 @@ def correct_for_sensor_orientation(
             "Check angles 'bx' and 'by'."
         ) from exc
 
-    # apply transformation 
+    # apply transformation
     # Z = T * Z' * U^{-1}
     # vectorized over frequencies
     Z_left = np.einsum("ik,nkj->nij", T, Zp, optimize=True)
     Z = np.einsum("nij,jl->nil", Z_left, Uinv, optimize=True)
 
-    # error propagation 
+    # error propagation
     if Ze is not None:
         # ΔZ ≈ |T| ΔZ' |U^{-1}|  (elementwise bound by summation)
         Tabs = np.abs(T)
@@ -195,7 +194,7 @@ def correct_for_sensor_orientation(
     else:
         Zerr = None
 
-    # finish 
+    # finish
     if squeeze_output:
         Z = Z[0]
         if Zerr is not None:
@@ -293,8 +292,8 @@ def ensure_z3(z: np.ndarray) -> np.ndarray:
 def rho_phi_from_z(
     z: np.ndarray,
     freq: Sequence[float],
-    z_err: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+    z_err: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None]:
     """
     Compute apparent resistivity and phase from Z.
 
@@ -351,8 +350,8 @@ def rho_phi_from_z(
 
 # Antisymmetry enforcement (Zxy ~ -Zyx)
 def enforce_offdiag_antisymmetry(
-    z: np.ndarray, z_err: Optional[np.ndarray] = None
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    z: np.ndarray, z_err: np.ndarray | None = None
+) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Enforce the magnetotelluric property ``Zxy = -Zyx``.
 
@@ -413,8 +412,8 @@ def enforce_offdiag_antisymmetry(
 def rotate_z(
     z: np.ndarray,
     angle_deg: float | Sequence[float],
-    z_err: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    z_err: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Rotate Z by ``angle_deg`` (CW positive), vectorized over freq.
 
@@ -464,8 +463,8 @@ def rotate_z(
 
 
 def invert_z(
-    z: np.ndarray, z_err: Optional[np.ndarray] = None
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    z: np.ndarray, z_err: np.ndarray | None = None
+) -> tuple[np.ndarray, np.ndarray | None]:
     """
     Invert Z (or each Z slice) with optional error propagation.
 

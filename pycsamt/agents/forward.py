@@ -140,8 +140,12 @@ class ForwardModelAgent(BaseAgent):
 
         try:
             from ..forward import (
-                MT1DForward, MT2DForward, MT3DForward,
-                LayeredModel, Grid2D, Grid3D,
+                Grid2D,
+                Grid3D,
+                LayeredModel,
+                MT1DForward,
+                MT2DForward,
+                MT3DForward,
             )
         except ImportError as exc:
             return AgentResult.failed(
@@ -309,8 +313,11 @@ class ForwardModelAgent(BaseAgent):
     # ── figure helpers ────────────────────────────────────────────────────────
 
     def _plot_1d(self, response, layered, output_dir, warnings):
-        from ..forward import (plot_response_1d, plot_model_1d,
-                               plot_response_and_model_1d)
+        from ..forward import (
+            plot_model_1d,
+            plot_response_1d,
+            plot_response_and_model_1d,
+        )
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
 
@@ -345,9 +352,12 @@ class ForwardModelAgent(BaseAgent):
         return figures, fig_paths
 
     def _plot_2d(self, grid, response, output_dir, warnings):
-        from ..forward import (plot_model_2d, plot_pseudosection_2d,
-                               plot_response_profiles)
-        import matplotlib.pyplot as plt
+
+        from ..forward import (
+            plot_model_2d,
+            plot_pseudosection_2d,
+            plot_response_profiles,
+        )
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
 
@@ -376,9 +386,12 @@ class ForwardModelAgent(BaseAgent):
         return figures, fig_paths
 
     def _plot_3d(self, grid, response, output_dir, warnings):
-        from ..forward import (plot_model_3d, plot_response_map_3d,
-                               plot_response_section_3d)
-        import matplotlib.pyplot as plt
+
+        from ..forward import (
+            plot_model_3d,
+            plot_response_map_3d,
+            plot_response_section_3d,
+        )
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
 
@@ -644,7 +657,11 @@ def _unwrap_fig(obj):
 
 def _compute_rms_1d(sites_raw, response, freqs_fwd, ri, ci):
     """Compute mean-log-ρa RMS between 1-D forward and observed sites."""
-    from ..emtools._core import ensure_sites, _iter_items, _get_z_block
+    from ..emtools._core import (
+        _get_z_block,
+        _iter_items,
+        ensure_sites,
+    )
 
     sites = ensure_sites(sites_raw, verbose=0)
     residuals: list[float] = []

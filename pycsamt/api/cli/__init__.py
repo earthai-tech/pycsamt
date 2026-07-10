@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """CLI configuration API for pyCSAMT.
@@ -24,10 +23,10 @@ Example
 """
 
 from .config import (
+    PYCSAMT_CLI,
     BuildConfig,
     LogConfig,
     OutputConfig,
-    PYCSAMT_CLI,
     PyCSAMTCLI,
     configure_cli,
     reset_cli,

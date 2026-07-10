@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -27,7 +26,7 @@ import platform
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QRectF, QUrl
+from PySide6.QtCore import QRectF, Qt, QUrl
 from PySide6.QtGui import (
     QColor,
     QDesktopServices,
@@ -40,7 +39,6 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QFrame,
     QHBoxLayout,
     QLabel,

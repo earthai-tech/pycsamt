@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,26 +18,20 @@ Usage
 """
 from __future__ import annotations
 
-import numpy as np
-
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
-    QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QPushButton,
-    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -174,7 +167,7 @@ class LayeredModelDialog(QDialog):
     def _append_row(self, idx: int, rho: float, thick) -> None:
         r = self._table.rowCount()
         self._table.insertRow(r)
-        label = f"Halfspace" if thick is None else f"Layer {idx}"
+        label = "Halfspace" if thick is None else f"Layer {idx}"
         self._table.setItem(r, 0, QTableWidgetItem(label))
         self._table.setItem(r, 1, QTableWidgetItem(f"{rho:.1f}"))
         self._table.setItem(r, 2, QTableWidgetItem(

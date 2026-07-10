@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -108,7 +107,9 @@ class TestConsumersAgree(unittest.TestCase):
 
     def test_context_and_orchestrator_agree(self):
         from pycsamt.agents.context import _regex_extract
-        from pycsamt.agents.orchestrator import _keyword_classify
+        from pycsamt.agents.orchestrator import (
+            _keyword_classify,
+        )
 
         disagreements = []
         for phrase in _PROBES:

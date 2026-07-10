@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,8 +17,6 @@ Metrics
 ``layer_rmse``     Per-layer RMSE vector.
 """
 from __future__ import annotations
-
-from typing import Optional
 
 import numpy as np
 
@@ -146,7 +143,7 @@ def layer_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
 def summarise(
     y_true: np.ndarray,
     y_pred: np.ndarray,
-    n_layers: Optional[int] = None,
+    n_layers: int | None = None,
 ) -> dict:
     """
     Compute all scalar metrics and return as a dict.

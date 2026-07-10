@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pycsamt.zonge.resphase import Resistivity, Phase
+from pycsamt.zonge.resphase import Phase, Resistivity
 
 
 def _has_line(lines, pred):
@@ -32,7 +31,7 @@ def test_resistivity_read_legacy_and_to_xarray():
     assert set(r.frame["comp"].unique()) == {"ExHy"}
 
     # xarray dataset has dims/vars/attrs as expected
-    xr = pytest.importorskip("xarray")
+    pytest.importorskip("xarray")
     ds = r.to_xarray()
     assert set(ds.dims) == {"station", "freq", "comp"}
     assert "rho" in ds.variables
@@ -174,5 +173,5 @@ def test_phase_write_block_has_banner_and_unit_meta():
     assert _has_line(lines, lambda s: s.strip().startswith(r"\ $Phase Block"))
     assert _has_line(lines, lambda s: s.strip().startswith("$Unit.Phase="))
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

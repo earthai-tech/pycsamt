@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,14 +16,14 @@ pycsamt only needs to:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
 __all__ = ["NeuralBackend", "BackendSpec"]
 
 # Architecture specification — a JSON-serialisable dict describing a network.
-BackendSpec = Dict[str, Any]
+BackendSpec = dict[str, Any]
 
 
 class NeuralBackend(ABC):
@@ -57,7 +56,7 @@ class NeuralBackend(ABC):
     # ─── device ───────────────────────────────────────────────────────────
 
     @abstractmethod
-    def resolve_device(self, device: Optional[str] = None) -> str:
+    def resolve_device(self, device: str | None = None) -> str:
         """
         Return a concrete device string.
 
@@ -101,11 +100,11 @@ class NeuralBackend(ABC):
         batch_size: int = 256,
         lr: float = 1e-3,
         patience: int = 20,
-        grad_clip: Optional[float] = None,
-        device: Optional[str] = None,
+        grad_clip: float | None = None,
+        device: str | None = None,
         verbose: bool = True,
         loss: str = "mse",
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         """
         Run a training loop.
 
@@ -135,7 +134,7 @@ class NeuralBackend(ABC):
         model: Any,
         X: np.ndarray,
         *,
-        device: Optional[str] = None,
+        device: str | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
         """
@@ -156,7 +155,7 @@ class NeuralBackend(ABC):
     # ─── serialisation ────────────────────────────────────────────────────
 
     @abstractmethod
-    def get_weights(self, model: Any) -> Dict[str, np.ndarray]:
+    def get_weights(self, model: Any) -> dict[str, np.ndarray]:
         """
         Return model weights as a ``name → numpy`` array dict.
 
@@ -164,7 +163,7 @@ class NeuralBackend(ABC):
         """
 
     @abstractmethod
-    def set_weights(self, model: Any, weights: Dict[str, np.ndarray]) -> None:
+    def set_weights(self, model: Any, weights: dict[str, np.ndarray]) -> None:
         """Restore weights from a ``name → numpy`` array dict."""
 
     # ─── dunder ───────────────────────────────────────────────────────────

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """AI Agents page — 3-column professional layout with run history."""
@@ -8,13 +7,22 @@ import json
 import uuid
 from datetime import datetime
 
-from dash import ALL, Input, Output, State, ctx, dcc, html, no_update
 import dash_bootstrap_components as dbc
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
 
 from pycsamt.app.desktop.agent_registry import (
     AGENT_REGISTRY,
-    agents_by_category,
     agent_names,
+    agents_by_category,
     default_params,
     get_entry,
     processing_agents,
@@ -978,7 +986,9 @@ def register_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def _run_agent(_n, agent_name, _param_vals, station_filter, session_id, history):
-        from pycsamt.app.web.callbacks.agents import _exec_agent
+        from pycsamt.app.web.callbacks.agents import (
+            _exec_agent,
+        )
 
         if not agent_name:
             return "No agent selected.", no_update, "", no_update, no_update, no_update
@@ -1134,8 +1144,8 @@ def register_callbacks(app) -> None:
 
         try:
             if has_data:
-                from pycsamt.app.web.cache import cache_get
                 from pycsamt.agents import ContextInputAgent
+                from pycsamt.app.web.cache import cache_get
                 sites = cache_get(session_id)
                 if sites is not None:
                     agent  = ContextInputAgent()
@@ -1203,7 +1213,9 @@ def register_callbacks(app) -> None:
         prevent_initial_call=True,
     )
     def _confirm_plan(_clicks, chat_history, session_id, station_filter):
-        from pycsamt.app.web.callbacks.agents import _exec_agent
+        from pycsamt.app.web.callbacks.agents import (
+            _exec_agent,
+        )
 
         # Pattern-match ALL fires for every newly-added button (n_clicks=0).
         # Only proceed when a real click occurred.

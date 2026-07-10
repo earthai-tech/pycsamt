@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: Kouadio Laurent alias Daniel <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,7 +10,7 @@ Static GIS constants and lookup tables for pycsamt:
 """
 import numpy as np
 
-# 
+#
 # UTM zone designator ranges: letter -> [min_longitude, max_longitude]
 UTM_ZONE_DESIGNATOR = {
     'X': [72, 84],
@@ -68,7 +67,7 @@ EPSG_PROJ4 = {
     32617: ['+proj=utm +zone=17 +ellps=WGS84 +datum=WGS84 +units=m +no_defs', 17],
     32618: ['+proj=utm +zone=18 +ellps=WGS84 +datum=WGS84 +units=m +no_defs', 18],
     32619: ['+proj=utm +zone=19 +ellps=WGS84 +datum=WGS84 +units=m +no_defs', 19],
-} 
+}
 
 # Reference ellipsoids: [id, name, equatorial_radius (m), eccentricity_squared]
 ELLIPSOIDS = [
@@ -133,8 +132,8 @@ __all__ = [
     'DEG2RAD',
     'RAD2DEG',
     'ELLIPSOIDS',
-    'EPSG_PROJ4', 
+    'EPSG_PROJ4',
     '_ECC_SQUARED_IDX',
-    '_EQUATORIAL_RADIUS_IDX', 
+    '_EQUATORIAL_RADIUS_IDX',
     'utm_letter_designator',
 ]

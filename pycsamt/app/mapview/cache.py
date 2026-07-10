@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Server-side session storage for the map-view platform.
@@ -21,6 +20,8 @@ from typing import Any
 try:
     from pycsamt.app.web.cache import (
         cache_get as _web_get,
+    )
+    from pycsamt.app.web.cache import (
         cache_set as _web_set,
     )
 except Exception:  # pragma: no cover - web extra missing

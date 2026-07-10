@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.spectra (analysis functions)"""
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
-import pytest
+matplotlib.use("Agg")
+
 from pycsamt.api import reset_api_view
 from pycsamt.emtools.spectra import (
-    coherence_matrix,
-    psd_table,
-    coherence_table,
-    snr_table,
     band_select,
+    coherence_matrix,
+    coherence_table,
     mask_low_coherence,
+    psd_table,
+    snr_table,
     spectra_summary,
 )
 
@@ -209,6 +207,7 @@ class TestSnrTable:
 
     def test_returns_tabular(self):
         import pandas as pd
+
         from pycsamt.api.view.frame import APIFrame
         sp = _sp()
         df = snr_table({"STA01": sp})

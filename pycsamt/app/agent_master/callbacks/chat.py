@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -30,18 +29,28 @@ from datetime import datetime
 from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
+
 # Silence plt.show() globally — agent code
 # must never open OS windows in a web app.
 plt.show = lambda *a, **kw: None
 
 from contextlib import nullcontext as _nullctx
 
-from dash import ALL, Input, Output, State
-from dash import ctx, dcc, html, no_update
-from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
+from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 
@@ -94,7 +103,10 @@ _TOOL_KIND = {
 # Correction methods (Static Shift, Noise Removal, Tensor Rotation, …) all run
 # through the single parameterised ``correction`` ToolAgent kind; the registry
 # is the single source of truth (see pycsamt.agents._corrections).
-from pycsamt.agents._corrections import CORRECTION_METHODS as _CORR_METHODS
+from pycsamt.agents._corrections import (
+    CORRECTION_METHODS as _CORR_METHODS,
+)
+
 _TOOL_KIND.update({_wf: "correction" for _wf in _CORR_METHODS})
 _TOOL_WORKFLOWS = frozenset(_TOOL_KIND)
 
@@ -656,7 +668,6 @@ def _stop_job_response(
 # unit-tested without importing Dash / the GUI package.
 from .._markdown import (
     split_inline_bold as _split_inline_bold,
-    parse_markdown as _parse_markdown,
 )
 
 
@@ -755,10 +766,11 @@ def _render_markdown(text: str) -> list:
     ]
 
 
-# Only these kinds still show the little label chip — normal replies
-# (answer / meta / workflow / code) read cleaner without it, ChatGPT-style;
-# errors and clarifications keep a visual cue.
-_HEADER_KINDS = frozenset({KIND_ERROR, KIND_CLARIFY})
+# Kind label chips ("Needs input", "Couldn't proceed") are retired:
+# every reply — errors and clarifications included — renders as plain
+# flat text in the main chat, exactly like the Claude / ChatGPT reply
+# stream. Add a kind back here to restore its chip.
+_HEADER_KINDS: frozenset = frozenset()
 
 
 def _kind_header(kind: str | None) -> html.Div | None:
@@ -1106,8 +1118,8 @@ def _quick_workflow(text: str) -> str | None:
     """
     try:
         from pycsamt.agents.context import (
-            _regex_extract,
             _normalise_config,
+            _regex_extract,
         )
         cfg = _regex_extract(text)
         cfg = _normalise_config(cfg, text)
@@ -1233,7 +1245,9 @@ def _extract_line_ref(
         r"\b(?:line|profile)\s+(\S+)", t
     )
     if m:
-        return m.group(1)
+        tok = m.group(1).strip(".,;:!?\"'”’")
+        if tok:
+            return tok
     _ordinals = {
         "first": "1", "second": "2",
         "third": "3", "fourth": "4",
@@ -1253,16 +1267,41 @@ def _extract_line_ref(
 def _match_group(
     ref: str, groups: dict
 ) -> str | None:
-    """Return the group key matching ref exactly
-    or case-insensitively. No ordinal resolution —
-    numeric refs always trigger the line picker.
+    """Return the group key matching ref.
+
+    Exact first, then case-insensitive,
+    then — so "line 22" finds L22PLT — a
+    unique embedded-number match for
+    numeric refs, or a unique substring
+    match for named refs ("l22").
+    Ambiguous or unmatched refs return
+    None and go to the line picker; an
+    ordinal like "line 2" stays
+    picker-bound unless a group actually
+    carries that number.
     """
     if ref in groups:
         return ref
-    ref_l = ref.lower()
+    ref_l = ref.lower().strip()
     for key in groups:
         if key.lower() == ref_l:
             return key
+    if ref_l.isdigit():
+        n = int(ref_l)
+        hits = [
+            key for key in groups
+            if n in [
+                int(run) for run in
+                re.findall(r"\d+", key)
+            ]
+        ]
+    else:
+        hits = [
+            key for key in groups
+            if ref_l in key.lower()
+        ]
+    if len(hits) == 1:
+        return hits[0]
     return None
 
 
@@ -1668,7 +1707,7 @@ def _api_key_hint() -> str:
     return (
         "**Want richer, more natural answers?** Open **Settings** (top-right)"
         " and add an API key for any one provider — **Anthropic (Claude)**,"
-        " **OpenAI**, **Google Gemini**, or **DeepSeek**. With a key I switch"
+        " **OpenAI**, **Google Gemini**, **DeepSeek**, or **MiniMax**. With a key I switch"
         " to online mode, which most improves:\n"
         "- **Questions** about pyCSAMT — fluent, synthesised answers"
         " (grounded in the package via RAG) instead of the offline summary;\n"
@@ -1685,7 +1724,7 @@ def _correction_capability_block() -> str:
     registered (one bullet per catalogue category, with a few example methods).
     """
     from collections import OrderedDict
-    by_cat: "OrderedDict[str, list[str]]" = OrderedDict()
+    by_cat: OrderedDict[str, list[str]] = OrderedDict()
     for meta in _CORR_METHODS.values():
         by_cat.setdefault(meta.get("category", "Correction"), []).append(
             meta.get("label", "")
@@ -1802,6 +1841,14 @@ _PLOT_VERB_RE = re.compile(
     r"\b(plot|draw|display|render|graph|visuali[sz]e|show|view)\b"
 )
 
+# Generic analysis verbs — a request like "analyse only the line 22"
+# names no concrete workflow; it resolves to the flagship phase-tensor
+# analysis instead of bouncing an "unknown task" reply at the user.
+_GENERIC_ANALYSIS_RE = re.compile(
+    r"\b(?:re-?)?analy(?:se|ze|sis|ses|sed|zed|sing|zing)\b",
+    re.IGNORECASE,
+)
+
 # (label, example) — the examples use the workflow-registry trigger
 # phrases, so the suggested wording routes straight to the right plot.
 _PLOT_MENU: tuple[tuple[str, str], ...] = (
@@ -1842,7 +1889,19 @@ def _smart_unknown_reply(
 
     line_lbl: str | None = None
     ordinal_note = ""
-    if groups:
+    sel = [
+        str(s)
+        for s in (
+            (edi_store or {}).get("selected_lines") or []
+        )
+        if not groups or s in groups
+    ]
+    if sel:
+        # Line(s) already chosen via the line picker — that settles
+        # the line question, so a textual ref ("line 22") is never
+        # re-litigated into a "couldn't find that line" bounce.
+        line_lbl = ", ".join(sel)
+    elif groups:
         ref = _extract_line_ref(text, groups)
         if ref is not None:
             hit = _match_group(ref, groups)
@@ -1945,7 +2004,7 @@ def _dispatch_question(
             answer
             + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
             " For a fuller, synthesised response, add an API key (Claude,"
-            " OpenAI, Gemini or DeepSeek) in **Settings**.*"
+            " OpenAI, Gemini, DeepSeek or MiniMax) in **Settings**.*"
         )
     step("Answer ready", "done")
     _update_job(
@@ -1970,6 +2029,7 @@ def _dispatch_plot(
     or tipper) via the PlotAgent and publish the figure(s) to the chat +
     Figures panel. ``label`` names the dataset/line for user-facing messages."""
     import matplotlib.pyplot as plt
+
     from pycsamt.agents.plotting import PlotAgent
 
     _labels = {
@@ -2057,6 +2117,7 @@ def _dispatch_tool(
     """Run an analysis tool (strike / dimensionality / validator) via the
     ToolAgent and publish its table + optional figure to the chat."""
     import matplotlib.pyplot as plt
+
     from pycsamt.agents.tooling import ToolAgent
 
     _labels = {
@@ -2166,7 +2227,9 @@ def _resolve_metric_targets(
 
     # A known survey line from the project registry ("strike of L22PLT").
     try:
-        from pycsamt.assistant.tools.project_registry import ProjectRegistry
+        from pycsamt.assistant.tools.project_registry import (
+            ProjectRegistry,
+        )
         reg = ProjectRegistry.from_default()
         if reg is not None:
             ln = reg.find_line_in_text(text)
@@ -2198,7 +2261,10 @@ def _dispatch_metrics(
     step,
 ) -> None:
     """Answer a question about computed line value(s) inline via MetricsAgent."""
-    from pycsamt.agents.metrics import MetricsAgent, parse_metric_request
+    from pycsamt.agents.metrics import (
+        MetricsAgent,
+        parse_metric_request,
+    )
 
     kinds, all_lines = parse_metric_request(text)
     if not kinds:
@@ -2429,7 +2495,10 @@ def _dispatch_inversion_prep(
 ) -> None:
     """Build the inversion input file set, one orchestrator run per line."""
     import os
-    from pycsamt.agents.orchestrator import WorkflowOrchestratorAgent
+
+    from pycsamt.agents.orchestrator import (
+        WorkflowOrchestratorAgent,
+    )
     from pycsamt.api.agents import AGENT_CONFIG
 
     code = _PREP_CODE_LABEL.get(wtype, wtype)
@@ -2657,6 +2726,7 @@ def _line_stats(
 ) -> dict:
     """Per-line statistics shown on the overview card."""
     import numpy as np
+
     from pycsamt.agents.metrics import (
         MetricsAgent,
         _has_tipper,
@@ -3059,8 +3129,8 @@ def _dispatch_code(
     step,
 ) -> None:
     """Generate a standalone pyCSAMT script via CodeGenerationAgent."""
-    from pycsamt.agents.context import ContextInputAgent
     from pycsamt.agents.code_gen import CodeGenerationAgent
+    from pycsamt.agents.context import ContextInputAgent
     from pycsamt.api.agents import AGENT_CONFIG
 
     step("Extracting configuration...", "done")
@@ -3225,6 +3295,7 @@ def _run_agent(
             "openai": "OPENAI_API_KEY",
             "gemini": "GOOGLE_API_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
+            "minimax": "MINIMAX_API_KEY",
         }
         api_key: str | None = None
         if provider in key_map:
@@ -3275,12 +3346,22 @@ def _run_agent(
         # capability requests never touch the workflow
         # pipeline (and never need an EDI dataset).
         from pycsamt.agents.router import (
-            IntentRouter,
-            QUESTION as _I_QUESTION,
-            CODE as _I_CODE,
-            META as _I_META,
             CLARIFY as _I_CLARIFY,
+        )
+        from pycsamt.agents.router import (
+            CODE as _I_CODE,
+        )
+        from pycsamt.agents.router import (
+            META as _I_META,
+        )
+        from pycsamt.agents.router import (
             METRICS as _I_METRICS,
+        )
+        from pycsamt.agents.router import (
+            QUESTION as _I_QUESTION,
+        )
+        from pycsamt.agents.router import (
+            IntentRouter,
         )
 
         # Deterministic data-overview gate: "read the EDI data /
@@ -3406,7 +3487,9 @@ def _run_agent(
         # confusing). Authority order: param-modal form → registry keyword
         # match → LLM router slot → LLM ContextInputAgent (only when it gave a
         # genuine, non-default classification).
-        from pycsamt.agents._workflows import classify_workflow as _cwf
+        from pycsamt.agents._workflows import (
+            classify_workflow as _cwf,
+        )
         from pycsamt.agents.orchestrator import (
             _WORKFLOW_STEPS as _WF_STEPS,
         )
@@ -3428,6 +3511,19 @@ def _run_agent(
         # The user genuinely wants QC only when QC keywords actually matched.
         if _resolved_wf is None and _kw_wf == "qc":
             _resolved_wf = "qc"
+        # A generic "analyse …" that names no concrete workflow (e.g.
+        # "analyse only the line 22", typically straight after the line
+        # picker) runs the flagship phase-tensor analysis on the
+        # loaded/selected data instead of an "unknown task" bounce.
+        if (
+            _resolved_wf is None
+            and _GENERIC_ANALYSIS_RE.search(text or "")
+            and (
+                (edi_store or {}).get("path")
+                or (edi_store or {}).get("groups")
+            )
+        ):
+            _resolved_wf = "phase_analysis"
         _known_wf = (
             _resolved_wf in _WF_STEPS
             or _resolved_wf in _PLOT_WORKFLOWS
@@ -4251,8 +4347,8 @@ def register_chat(app) -> None:
         # line picker, and param modal and let the
         # router (inside _run_agent) dispatch them.
         from pycsamt.agents.router import (
-            classify_intent_offline,
             NO_DATA_INTENTS,
+            classify_intent_offline,
         )
         _qi, _ = classify_intent_offline(text)
         # Data-overview requests skip the EDI guard too: with no data

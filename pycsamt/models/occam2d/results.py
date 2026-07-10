@@ -30,7 +30,12 @@ from .mesh import OccamMesh
 from .model import OccamModel
 from .response import OccamResponse
 from .startup import OccamIter
-from .validation import is_data_file, is_log_file, is_mesh_file, is_model_file
+from .validation import (
+    is_data_file,
+    is_log_file,
+    is_mesh_file,
+    is_model_file,
+)
 
 PathLike = Union[str, Path]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,15 +40,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont, QIcon
+from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
@@ -332,7 +329,10 @@ class EDIValidatorDialog(QDialog):
             self._summary_lbl.setText("No survey loaded.")
             return
         try:
-            from pycsamt.emtools._core import _iter_items, _unwrap
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _unwrap,
+            )
             items = list(_iter_items(self._sites))
         except Exception:
             try:

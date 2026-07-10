@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -24,15 +23,18 @@ recompute   ``pycsamt site recompute`` — normalize and rewrite EDI files.
 compute     ``pycsamt site compute`` — strike, resistivity, phase-slope, tipper.
 """
 
-from ._base import site  # noqa: F401  (re-exported as package public API)
-
 # Importing each sub-module triggers @site.command / @site.group decorators,
 # which register the commands on the group defined in _base.
-from . import info     # noqa: F401
-from . import select   # noqa: F401
-from . import edit     # noqa: F401
-from . import export   # noqa: F401
-from . import recompute  # noqa: F401
-from . import compute  # noqa: F401
+from . import (
+    compute,  # noqa: F401
+    edit,  # noqa: F401
+    export,  # noqa: F401
+    info,  # noqa: F401
+    recompute,  # noqa: F401
+    select,  # noqa: F401
+)
+from ._base import (
+    site,  # noqa: F401  (re-exported as package public API)
+)
 
 __all__ = ["site"]

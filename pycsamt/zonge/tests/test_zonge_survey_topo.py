@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the Topography and Station classes.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from pycsamt.zonge.survey import Topography
 
@@ -105,10 +104,10 @@ class TestTopography:
         }
         df = pd.DataFrame(data)
         topo = Topography(data=df)
-        
+
         # Correct the coordinates in place
         topo.correct_coords(step=100)
-        
+
         # Check that the new coordinates form a perfect line
         # i.e., the slope between consecutive points is constant
         dx = np.diff(topo.eastings)
@@ -125,5 +124,5 @@ class TestTopography:
         # Check that the grid has interpolated values
         assert not np.all(np.isnan(grid_z))
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

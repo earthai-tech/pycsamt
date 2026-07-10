@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -10,9 +9,18 @@ Each module exposes:
   register_callbacks(app)  — registers this page's Dash callbacks
 """
 from pycsamt.app.web.pages import (
-    home, qc_page, correction, advanced, tdem,
-    pipeline, forward, inversion, interpretation, map3d, agents_page,
+    advanced,
+    agents_page,
+    correction,
+    forward,
+    home,
+    interpretation,
     inv_results,
+    inversion,
+    map3d,
+    pipeline,
+    qc_page,
+    tdem,
 )
 
 ALL_PAGES = [

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -11,13 +10,9 @@ analysis capabilities.
 """
 from __future__ import annotations
 
-from typing import ( 
-    Any, 
-    Mapping, 
-    Optional, 
-    Sequence, 
-    Tuple, 
-    Union
+from collections.abc import Mapping, Sequence
+from typing import (
+    Any,
 )
 
 import numpy as np
@@ -25,14 +20,12 @@ import pandas as pd
 
 from ..constants import MU_0, PI
 from ..exceptions import AvgDataError
-from ..log.logger import get_logger 
+from ..log.logger import get_logger
 from ..utils._dependency import import_optional_dependency
 from .tensor import TensorBase, _norm_comp
-from .utils import ( 
-    _to_num, 
-    _standardise_columns
-)
-logger = get_logger(__name__) 
+from .utils import _standardise_columns, _to_num
+
+logger = get_logger(__name__)
 
 __all__ = ["Z"]
 
@@ -92,7 +85,7 @@ class Z(TensorBase):
     def read(
         self,
         source: pd.DataFrame,
-        meta: Optional[Mapping[str, Any]] = None,
+        meta: Mapping[str, Any] | None = None,
         **kws: Any,
     ) -> None:
         """
@@ -108,7 +101,7 @@ class Z(TensorBase):
         self._meta = dict(meta or {})
 
         # # --- Required columns ---
- 
+
         # missing = [k for k, v in required.items() if v is None]
         required = ["rho", "phase", "freq"]
         missing = [c for c in required if c not in df.columns]
@@ -131,11 +124,11 @@ class Z(TensorBase):
             df["station"] = np.nan
         if "comp" not in df.columns:
             df["comp"] = "ExHy"
-        
+
         # Normalize component labels to uppercase canonical form
         df["comp"] = df["comp"].map(_norm_comp)
         df.dropna(subset=['comp'], inplace=True)
-        
+
         # Normalize types
         for col in ["rho", "phase", "freq", "pc_rho", "s_phz"]:
             if col in df.columns:
@@ -148,12 +141,12 @@ class Z(TensorBase):
         self._frame = df.loc[
             :, [c for c in keep_cols if c in df.columns]
         ]
-        
-        return self 
-    
+
+        return self
+
     def _get_component_series(
         self,
-        comp_names: Tuple[str, ...],
+        comp_names: tuple[str, ...],
         series: pd.Series
     ) -> pd.Series:
         """Helper to filter a property series by component."""
@@ -162,7 +155,7 @@ class Z(TensorBase):
 
         mask = self._frame["comp"].isin(comp_names)
         return series[mask]
-    
+
     @property
     def z(self) -> pd.Series:
         """
@@ -178,10 +171,10 @@ class Z(TensorBase):
         # Convert phase from milliradians to radians
         phase_rad = phase_mrad * 1e-3
         omega = 2 * PI * freq
-        
+
         # Calculate magnitude of Z
         z_mag = np.sqrt(rho * omega * MU_0)
-        
+
         # Calculate complex impedance
         return z_mag * np.exp(1j * phase_rad)
 
@@ -213,15 +206,15 @@ class Z(TensorBase):
             (\frac{\partial |Z|}{\partial \rho} d\rho)^2 +
             (|Z| d\phi)^2
             }
-        
+
         Since phase errors are often dominant and uncorrelated,
         a simpler estimate is often used:
 
         .. math::
             |dZ| \approx \frac{1}{2} |Z| \frac{d\rho}{\rho}
         """
-        if ( 
-                self._frame.empty 
+        if (
+                self._frame.empty
                 or "rho" not in self._frame.columns
             ):
             return pd.Series(dtype="float64")
@@ -230,7 +223,7 @@ class Z(TensorBase):
         has_phi_err = "s_phz" in self._frame.columns
 
         if not has_rho_err and not has_phi_err:
-            return pd.Series(dtype="float64", 
+            return pd.Series(dtype="float64",
                              index=self._frame.index)
 
         z_mag = np.sqrt(
@@ -249,10 +242,10 @@ class Z(TensorBase):
         if has_phi_err:
             dphi_rad = self._frame["s_phz"] * 1e-3
             term_phi_sq = dphi_rad**2
-        
+
         # Propagated error in magnitude |Z|
         # d|Z| = 0.5 * |Z| * (drho/rho)
-        
+
         return z_mag * np.sqrt(term_rho_sq + term_phi_sq)
 
     @property
@@ -307,12 +300,12 @@ class Z(TensorBase):
         self,
         *,
         var: str = "z",
-        station: Optional[Union[int, float]] = None,
+        station: int | float | None = None,
         agg: str | None = "mean",
         fill_value: float = np.nan,
         sort_freq: bool = True,
         align: str = "union",
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Convert impedance data into a 2x2 tensor.
         """
@@ -321,11 +314,11 @@ class Z(TensorBase):
         if var == "z":
             temp_frame["__real"] = self.z_real
             temp_frame["__imag"] = self.z_imag
-            
+
             # Create a temporary instance for base method call
             tb = TensorBase()
             tb._frame = temp_frame
-            
+
             T_real, freqs, stations = tb.to_tensor(
                 var="__real", station=station, agg=agg,
                 fill_value=fill_value, sort_freq=sort_freq,
@@ -337,7 +330,7 @@ class Z(TensorBase):
                 align=align
             )
             return T_real + 1j * T_imag, freqs, stations
-            
+
         elif var in ("z_real", "z_imag", "z_err"):
             temp_frame[var] = getattr(self, var)
             tb = TensorBase()
@@ -358,10 +351,10 @@ class Z(TensorBase):
         self,
         *,
         var: str = "z",
-        station: Optional[Union[int, float]] = None,
+        station: int | float | None = None,
         agg: str | None = "mean",
         fill_value: float = np.nan,
-        attrs: Optional[Mapping[str, Any]] = None,
+        attrs: Mapping[str, Any] | None = None,
     ):
         """
         Return a 3D or 4D xarray.DataArray.
@@ -371,7 +364,7 @@ class Z(TensorBase):
             extra="xarray is required for to_xarray()",
             errors="raise",
         )
-        
+
         import xarray as xr
 
         # Use the new to_tensor method to get the data
@@ -379,14 +372,14 @@ class Z(TensorBase):
             var=var, station=station, agg=agg,
             fill_value=fill_value
         )
-        
+
         e_axis = np.array(["Ex", "Ey"])
         h_axis = np.array(["Hx", "Hy"])
-        
+
         merged_attrs = dict(self._meta)
         if attrs:
             merged_attrs.update(attrs)
-            
+
         if stations.size == 0:
             da = xr.DataArray(
                 T, dims=("freq", "e", "h"),
@@ -417,7 +410,7 @@ class Z(TensorBase):
         df_write = self._frame[
             ["station", "freq", "comp"]
         ].copy()
-        
+
         df_write["z_real"] = self.z_real
         df_write["z_imag"] = self.z_imag
         df_write["z_err"] = self.z_err
@@ -431,7 +424,7 @@ class Z(TensorBase):
 
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
-        
+
         if self._frame.empty:
             return "Z(status=empty)"
 

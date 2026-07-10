@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """Tests for OccamLog.read()."""
 
 import math
-import pytest
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 LOG_FILE  = DATA_DIR / "LogFile.logfile"

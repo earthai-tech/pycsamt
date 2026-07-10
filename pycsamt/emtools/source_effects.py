@@ -18,19 +18,19 @@ a resistivity contrast beneath the source dipole.
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ._core import (
-    ensure_sites,
-    _apply_each,
-    _iter_items,
-    _get_z_block,
-    _name,
-)
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ._core import (
+    _apply_each,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 __all__ = [
     "BETA_THRESH_PCT",
@@ -93,7 +93,7 @@ def _kr(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
     return k1_abs * abs(offset)
 
 
-def _resolve_offset(ed: Any, source_offset: Any, station: str) -> Optional[float]:
+def _resolve_offset(ed: Any, source_offset: Any, station: str) -> float | None:
     if isinstance(source_offset, dict):
         return source_offset.get(station, None)
     if source_offset is not None:
@@ -110,7 +110,10 @@ def _resolve_offset(ed: Any, source_offset: Any, station: str) -> Optional[float
 
 def _bessel_I0K0(p: complex, q: complex) -> complex:
     """I₀(p) K₀(q) with complex arguments via scipy (AMOS)."""
-    from scipy.special import iv, kv  # noqa: F401 — lazy import
+    from scipy.special import (  # noqa: F401 — lazy import
+        iv,
+        kv,
+    )
     return complex(iv(0, p)) * complex(kv(0, q))
 
 
@@ -189,9 +192,9 @@ def _log_slope(log_f: np.ndarray, log_rho: np.ndarray) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def overprint_beta(
-    rho: Union[float, np.ndarray],
-    freq: Union[float, np.ndarray],
-    offset: Union[float, np.ndarray],
+    rho: float | np.ndarray,
+    freq: float | np.ndarray,
+    offset: float | np.ndarray,
     *,
     dh_frac: float = 1e-3,
 ) -> np.ndarray:
@@ -291,7 +294,7 @@ def detect_source_overprint(
         strict=strict,
         verbose=verbose,
     )
-    rows: List[Dict] = []
+    rows: list[dict] = []
 
     for i, ed in enumerate(_iter_items(sites)):
         ed = _unwrap(ed)
@@ -392,7 +395,7 @@ def source_overprint_table(
     if detail.empty:
         return pd.DataFrame(columns=_TABLE_COLS)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for station, grp in detail.groupby("station", sort=False):
         grp = grp.sort_values("freq_hz")
         valid_beta = grp["beta_pct"].dropna()
@@ -648,7 +651,7 @@ def _F_complex(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
 
 def _label_pseudo_ax(
     ax: Any,
-    stations: List[str],
+    stations: list[str],
     all_y: np.ndarray,
     period_axis: bool,
     title: str,
@@ -734,7 +737,7 @@ def normalize_response(
         strict=strict,
         verbose=verbose,
     )
-    rows: List[Dict] = []
+    rows: list[dict] = []
 
     for i, ed in enumerate(_iter_items(S)):
         ed = _unwrap(ed)
@@ -873,8 +876,8 @@ def plot_normalized_response(
     figsize: tuple = (12.0, 5.0),
     cmap_rho: str = "RdBu_r",
     cmap_phi: str = "RdBu",
-    rho_n_lim: Optional[tuple] = None,
-    phi_diff_lim: Optional[tuple] = None,
+    rho_n_lim: tuple | None = None,
+    phi_diff_lim: tuple | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -919,7 +922,7 @@ def plot_normalized_response(
     Wang & Lin (2023), *Geophysics* **88**(6), E215–E230 (Figs. 8e–f).
     """
     import matplotlib.pyplot as plt
-    from matplotlib.colors import TwoSlopeNorm, Normalize
+    from matplotlib.colors import Normalize, TwoSlopeNorm
 
     df = normalize_response(
         sites,

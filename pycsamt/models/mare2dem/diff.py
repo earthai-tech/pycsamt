@@ -25,7 +25,11 @@ from typing import Callable
 
 import numpy as np
 
-from .iotools.resistivity import ResistivityFile, read_resistivity, write_resistivity
+from .iotools.resistivity import (
+    ResistivityFile,
+    read_resistivity,
+    write_resistivity,
+)
 
 __all__ = ["diff_resistivity"]
 

@@ -1,15 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
 
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
 import pytest
 
-from pycsamt.seg.time_series import TSect, TSIO, TimeSeriesMixin
 from pycsamt.exceptions import EdIDataError
+from pycsamt.seg.time_series import (
+    TSIO,
+    TimeSeriesMixin,
+    TSect,
+)
 
 
 def _write(tmp: Path, name: str, txt: str) -> Path:
@@ -95,7 +98,7 @@ def test_tsio_from_file_parses_blocks(tmp_path: Path):
         """
         >HEAD
           DATAID="TS2"
-          
+
         >=TSERIESSECT
           SECTID=S
           NCHAN=2

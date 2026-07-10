@@ -9,8 +9,11 @@ practice, where a recorder may be redeployed across several stations.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import (
+    Any,
+)
 
 import pandas as pd
 
@@ -64,19 +67,19 @@ class StationConfig(PyCSAMTObject, MetadataMixin):
     """
 
     station_id: str
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    elevation: Optional[float] = None
-    profile: Optional[str] = None
-    position_m: Optional[float] = None
-    channels: List[str] = field(default_factory=list)
-    dipole_length_m: Optional[float] = None
-    ex_azimuth_deg: Optional[float] = None
-    ey_azimuth_deg: Optional[float] = None
-    device_ids: List[str] = field(default_factory=list)
-    operator: Optional[str] = None
+    lat: float | None = None
+    lon: float | None = None
+    elevation: float | None = None
+    profile: str | None = None
+    position_m: float | None = None
+    channels: list[str] = field(default_factory=list)
+    dipole_length_m: float | None = None
+    ex_azimuth_deg: float | None = None
+    ey_azimuth_deg: float | None = None
+    device_ids: list[str] = field(default_factory=list)
+    operator: str | None = None
     notes: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -116,7 +119,7 @@ class StationConfig(PyCSAMTObject, MetadataMixin):
         return self.lat is not None and self.lon is not None
 
     @property
-    def coords(self) -> Optional[tuple[float, float, float]]:
+    def coords(self) -> tuple[float, float, float] | None:
         """Return ``(lat, lon, elevation)`` if a location is set."""
         if not self.has_location:
             return None
@@ -127,14 +130,14 @@ class StationConfig(PyCSAMTObject, MetadataMixin):
         """Number of declared acquisition channels."""
         return len(self.channels)
 
-    def attach_device(self, device_id: str) -> "StationConfig":
+    def attach_device(self, device_id: str) -> StationConfig:
         """Associate an IoT node with this station (idempotent)."""
         key = _c.as_nonempty_str(device_id, "device_id")
         if key not in self.device_ids:
             self.device_ids.append(key)
         return self
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a serialisable station dictionary."""
         return dict(
             station_id=self.station_id,
@@ -154,7 +157,7 @@ class StationConfig(PyCSAMTObject, MetadataMixin):
         )
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "StationConfig":
+    def from_mapping(cls, data: Mapping[str, Any]) -> StationConfig:
         """Build a station config from a mapping, ignoring unknown keys."""
         allowed = {f.name for f in cls.__dataclass_fields__.values()}
         return cls(**{k: v for k, v in dict(data).items() if k in allowed})
@@ -170,7 +173,7 @@ def station_table(
         [stations] if isinstance(stations, StationConfig)
         else list(stations)
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for station in items:
         station.validate()
         row = station.as_dict()

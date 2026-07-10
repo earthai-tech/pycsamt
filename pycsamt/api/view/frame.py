@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -33,7 +34,7 @@ class FrameProfile:
     memory_bytes: int
 
     @classmethod
-    def from_frame(cls, df: pd.DataFrame) -> "FrameProfile":
+    def from_frame(cls, df: pd.DataFrame) -> FrameProfile:
         total = int(df.size)
         missing = int(df.isna().sum().sum()) if total else 0
         numeric = tuple(
@@ -125,7 +126,7 @@ class APIFrame(PyCSAMTObject):
         *,
         columns: Sequence[str] | None = None,
         **kwargs: Any,
-    ) -> "APIFrame":
+    ) -> APIFrame:
         """Build an ``APIFrame`` from record dictionaries."""
         df = pd.DataFrame.from_records(records, columns=columns)
         return cls(df, **kwargs)
@@ -262,11 +263,11 @@ class APIFrame(PyCSAMTObject):
             kwargs = {"orient": "list"}
         return self._df.to_dict(*args, **kwargs)
 
-    def copy(self, *, deep: bool = True) -> "APIFrame":
+    def copy(self, *, deep: bool = True) -> APIFrame:
         """Return a copied view preserving metadata."""
         return self.with_df(self._df.copy(deep=deep))
 
-    def with_df(self, df: Any, **overrides: Any) -> "APIFrame":
+    def with_df(self, df: Any, **overrides: Any) -> APIFrame:
         """Return a new ``APIFrame`` with another dataframe."""
         params = {
             "name": self.name,
@@ -279,12 +280,12 @@ class APIFrame(PyCSAMTObject):
         params.update(overrides)
         return APIFrame(df, **params)
 
-    def update_meta(self, /, **kwargs: Any) -> "APIFrame":
+    def update_meta(self, /, **kwargs: Any) -> APIFrame:
         """Update metadata in-place and return ``self``."""
         self.meta.update(kwargs)
         return self
 
-    def set_units(self, /, **kwargs: str) -> "APIFrame":
+    def set_units(self, /, **kwargs: str) -> APIFrame:
         """Update column units in-place and return ``self``."""
         self.units.update({str(k): str(v) for k, v in kwargs.items()})
         return self

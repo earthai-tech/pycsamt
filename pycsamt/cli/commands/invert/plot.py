@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -50,9 +49,15 @@ from typing import Any
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, verbose_option
-
-from ._base import invert, _load_inversion_result, _resolve_solver
+from ....api.cli.options import (
+    no_color_option,
+    verbose_option,
+)
+from ._base import (
+    _load_inversion_result,
+    _resolve_solver,
+    invert,
+)
 
 # ---------------------------------------------------------------------------
 # Shared plot options
@@ -210,7 +215,9 @@ def plot_model(
 
     try:
         if solver_name == "occam2d":
-            from pycsamt.models.occam2d.plot import PlotModel  # noqa: PLC0415
+            from pycsamt.models.occam2d.plot import (
+                PlotModel,  # noqa: PLC0415
+            )
             fig = PlotModel(
                 result,
                 rho_min=rho_min,
@@ -221,7 +228,9 @@ def plot_model(
                 dpi=dpi,
             ).plot()
         else:
-            from pycsamt.models.modem.plot import PlotModel2D  # noqa: PLC0415
+            from pycsamt.models.modem.plot import (
+                PlotModel2D,  # noqa: PLC0415
+            )
             fig = PlotModel2D(
                 result,
                 rho_min=rho_min,
@@ -282,7 +291,9 @@ def plot_misfit(
 
     try:
         if solver_name == "occam2d":
-            from pycsamt.models.occam2d.plot import PlotMisfit  # noqa: PLC0415
+            from pycsamt.models.occam2d.plot import (
+                PlotMisfit,  # noqa: PLC0415
+            )
             fig = PlotMisfit(
                 result,
                 show_roughness=not no_roughness,
@@ -290,7 +301,9 @@ def plot_misfit(
                 dpi=dpi,
             ).plot()
         else:
-            from pycsamt.models.modem.plot import PlotMisfit  # noqa: PLC0415
+            from pycsamt.models.modem.plot import (
+                PlotMisfit,  # noqa: PLC0415
+            )
             fig = PlotMisfit(result, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -341,10 +354,14 @@ def plot_response(
 
     try:
         if solver_name == "occam2d":
-            from pycsamt.models.occam2d.plot import PlotResponse  # noqa: PLC0415
+            from pycsamt.models.occam2d.plot import (
+                PlotResponse,  # noqa: PLC0415
+            )
             fig = PlotResponse(result, station=station, dpi=dpi).plot()
         else:
-            from pycsamt.models.modem.plot import PlotResponse  # noqa: PLC0415
+            from pycsamt.models.modem.plot import (
+                PlotResponse,  # noqa: PLC0415
+            )
             fig = PlotResponse(result, station=station, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -394,10 +411,14 @@ def plot_pseudo(
 
     try:
         if solver_name == "occam2d":
-            from pycsamt.models.occam2d.plot import PlotPseudo  # noqa: PLC0415
+            from pycsamt.models.occam2d.plot import (
+                PlotPseudo,  # noqa: PLC0415
+            )
             fig = PlotPseudo(result, cmap=cmap, dpi=dpi).plot()
         else:
-            from pycsamt.models.modem.plot import PlotPseudo  # noqa: PLC0415
+            from pycsamt.models.modem.plot import (
+                PlotPseudo,  # noqa: PLC0415
+            )
             fig = PlotPseudo(result, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -454,7 +475,9 @@ def plot_section(
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
 
     try:
-        from pycsamt.models.modem.plot import PlotSection  # noqa: PLC0415
+        from pycsamt.models.modem.plot import (
+            PlotSection,  # noqa: PLC0415
+        )
         fig = PlotSection(result, depth=depth, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -514,7 +537,9 @@ def plot_1d(
     )
 
     try:
-        from pycsamt.models.occam2d.plot import PlotSounding1D  # noqa: PLC0415
+        from pycsamt.models.occam2d.plot import (
+            PlotSounding1D,  # noqa: PLC0415
+        )
         fig = PlotSounding1D(
             result, stations=station_list, cmap=cmap, dpi=dpi
         ).plot()
@@ -569,7 +594,9 @@ def plot_per_site(
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
 
     try:
-        from pycsamt.models.occam2d.plot import PlotSiteMisfit  # noqa: PLC0415
+        from pycsamt.models.occam2d.plot import (
+            PlotSiteMisfit,  # noqa: PLC0415
+        )
         fig = PlotSiteMisfit(result, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -620,7 +647,9 @@ def plot_grid(
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
 
     try:
-        from pycsamt.models.occam2d.plot import PlotResponseGrid  # noqa: PLC0415
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,  # noqa: PLC0415
+        )
         fig = PlotResponseGrid(result, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)

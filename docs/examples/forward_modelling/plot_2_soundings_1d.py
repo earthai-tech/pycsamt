@@ -19,15 +19,19 @@ view, and a multi-model comparison.
 # frequency/time grids each method samples: a broad MT/AMT band, a
 # narrower CSAMT band (10 Hz - 10 kHz), and a set of TEM gate times.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from pycsamt.forward import (
-    LayeredModel, MT1DForward, CSAMT1DForward, TEM1DForward,
-    plot_response_1d, plot_response_and_model_1d,
-)
-from pycsamt.api.style import PYCSAMT_STYLE
 from pycsamt.api.control import PYCSAMT_CONTROL
+from pycsamt.api.style import PYCSAMT_STYLE
+from pycsamt.forward import (
+    CSAMT1DForward,
+    LayeredModel,
+    MT1DForward,
+    TEM1DForward,
+    plot_response_1d,
+    plot_response_and_model_1d,
+)
 
 # Use the multi-model comparison (5th figure) as the gallery thumbnail.
 # sphinx_gallery_thumbnail_number = 5

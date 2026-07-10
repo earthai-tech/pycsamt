@@ -26,10 +26,8 @@ the module.
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from _datasets import load_survey
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 from pycsamt.emtools import (
     bahr_skewness,
     close_skew_gaps,
@@ -42,6 +40,11 @@ from pycsamt.emtools import (
     plot_skewness,
     select_low_skew_band,
     skew_table,
+)
+from pycsamt.emtools._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
 )
 
 survey = load_survey("amt_l18plt")
@@ -273,7 +276,9 @@ plot_skew_vote_band(survey, thresh=30.0)
 # every station's vote down at once, even at periods where its raw
 # skew was briefly fine.
 
-from pycsamt.emtools import build_phase_tensor_table  # noqa: E402
+from pycsamt.emtools import (
+    build_phase_tensor_table,  # noqa: E402
+)
 
 pt = build_phase_tensor_table(survey, recursive=False)
 p = pt["period"].to_numpy(dtype=float)

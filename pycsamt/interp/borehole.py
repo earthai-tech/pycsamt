@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Borehole — ground-truth data model for EM geological interpretation.
@@ -24,9 +23,10 @@ Example
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Union
 
 import numpy as np
 
@@ -59,7 +59,7 @@ class Interval:
     top:          float
     bottom:       float
     lithology:    str
-    resistivity:  Optional[float] = None
+    resistivity:  float | None = None
 
     # ------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ class Borehole:
         self.name = name
         self.x = float(x)
         self.collar_elevation = float(collar_elevation)
-        self.intervals: List[Interval] = sorted(
+        self.intervals: list[Interval] = sorted(
             list(intervals), key=lambda iv: iv.top
         )
 
@@ -116,19 +116,19 @@ class Borehole:
     # Accessors
     # ------------------------------------------------------------------
 
-    def interval_at_depth(self, z: float) -> Optional[Interval]:
+    def interval_at_depth(self, z: float) -> Interval | None:
         """Return the interval that contains depth *z*, or ``None``."""
         for iv in self.intervals:
             if iv.contains(z):
                 return iv
         return None
 
-    def tres_at_depth(self, z: float) -> Optional[float]:
+    def tres_at_depth(self, z: float) -> float | None:
         """Return TRES (Ω·m) at depth *z*, or ``None`` if unknown."""
         iv = self.interval_at_depth(z)
         return iv.resistivity if iv is not None else None
 
-    def lithology_at_depth(self, z: float) -> Optional[str]:
+    def lithology_at_depth(self, z: float) -> str | None:
         """Return the lithology name at depth *z*, or ``None``."""
         iv = self.interval_at_depth(z)
         return iv.lithology if iv is not None else None
@@ -163,7 +163,7 @@ class Borehole:
         cls,
         path: PathLike,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         x: float = 0.0,
         collar_elevation: float = 0.0,
         delimiter: str = ",",
@@ -171,7 +171,7 @@ class Borehole:
         bottom_col: str = "bottom",
         lithology_col: str = "lithology",
         resistivity_col: str = "resistivity",
-    ) -> "Borehole":
+    ) -> Borehole:
         """Load from a CSV file.
 
         Expected columns (case-insensitive header):
@@ -197,7 +197,7 @@ class Borehole:
         if name is None:
             name = p.stem
 
-        intervals: List[Interval] = []
+        intervals: list[Interval] = []
         with p.open(newline="") as fh:
             reader = csv.DictReader(fh, delimiter=delimiter)
             if reader.fieldnames is None:
@@ -212,7 +212,7 @@ class Borehole:
                 bot = float(row[_col(bottom_col)])
                 lith = row.get(_col(lithology_col), "").strip()
                 res_raw = row.get(_col(resistivity_col), "")
-                res: Optional[float] = None
+                res: float | None = None
                 if res_raw.strip() not in ("", "nan", "None", "NA"):
                     try:
                         res = float(res_raw)
@@ -232,10 +232,10 @@ class Borehole:
         collar_elevation: float = 0.0,
         depth_curve: str = "DEPT",
         resistivity_curve: str = "RESD",
-        lithology_curve: Optional[str] = "LITH",
+        lithology_curve: str | None = "LITH",
         null_value: float = -9999.25,
-        step: Optional[float] = None,
-    ) -> "Borehole":
+        step: float | None = None,
+    ) -> Borehole:
         """Load from a LAS 2.0 well-log file.
 
         Converts the continuous depth log into discrete intervals by
@@ -261,13 +261,13 @@ class Borehole:
         p = Path(path)
         name = p.stem
 
-        curves: Dict[str, List[float]] = {}
+        curves: dict[str, list[float]] = {}
         well_name = name
         null_val = null_value
 
         section = None
-        curve_order: List[str] = []
-        data_lines: List[str] = []
+        curve_order: list[str] = []
+        data_lines: list[str] = []
 
         with p.open() as fh:
             for raw in fh:
@@ -326,7 +326,7 @@ class Borehole:
         resis = np.where(mask_null, np.nan, resis)
 
         # Build intervals: group consecutive same-lithology / same-depth-step
-        intervals: List[Interval] = []
+        intervals: list[Interval] = []
         if len(depths) < 2:
             return cls(well_name, x, intervals, collar_elevation=collar_elevation)
 

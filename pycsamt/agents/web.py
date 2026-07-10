@@ -94,11 +94,18 @@ def _get_agent(name: str, api_key: str = "", llm_provider: str = "claude"):
     key = f"{name}_{llm_provider}"
     if key not in _SESSION or (_SESSION.get(f"{key}_key") != api_key):
         from . import (
-            ContextInputAgent, MTLoaderAgent, DataQCAgent,
-            StaticShiftAgent, PhaseAnalysisAgent, ForwardModelAgent,
-            AIInversionAgent, ReportAgent,
-            Inv2DAgent, Inv3DAgent, EnsembleAgent, JointInversionAgent,
+            AIInversionAgent,
+            DataQCAgent,
+            EnsembleAgent,
+            ForwardModelAgent,
+            Inv2DAgent,
+            Inv3DAgent,
+            JointInversionAgent,
             ModelZooAgent,
+            MTLoaderAgent,
+            PhaseAnalysisAgent,
+            ReportAgent,
+            StaticShiftAgent,
         )
         from .orchestrator import WorkflowOrchestratorAgent
         kw = dict(
@@ -574,7 +581,6 @@ def _report_run(title: str, api_key: str, llm_provider: str):
     """Report tab."""
     out_dir = tempfile.mkdtemp(prefix="pycsamt_report_")
 
-    from ._base import AgentResult as _AR
     results = {}
     for key, sess_key in [
         ("load",          "_last_load"),
@@ -622,6 +628,7 @@ def build_app():
                     "openai",
                     "gemini",
                     "deepseek",
+                    "minimax",
                 ],
                 value="claude",
                 label="Provider",

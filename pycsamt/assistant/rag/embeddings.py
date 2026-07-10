@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -30,9 +29,13 @@ module is free on installs that never use dense retrieval.
 
 from __future__ import annotations
 
-import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, Sequence, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Protocol,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
@@ -57,12 +60,12 @@ class EmbeddingBackend(Protocol):
 
     name: str
 
-    def embed(self, texts: Sequence[str]) -> "np.ndarray":
+    def embed(self, texts: Sequence[str]) -> np.ndarray:
         """Return a ``(len(texts), dim)`` float32 array, rows unit-norm."""
         ...
 
 
-def _l2_normalize(mat: "np.ndarray") -> "np.ndarray":
+def _l2_normalize(mat: np.ndarray) -> np.ndarray:
     import numpy as np
 
     mat = np.asarray(mat, dtype=np.float32)
@@ -98,7 +101,7 @@ class OpenAIEmbeddingBackend:
         self.batch_size = batch_size
         self.name = f"openai:{model}"
 
-    def embed(self, texts: Sequence[str]) -> "np.ndarray":
+    def embed(self, texts: Sequence[str]) -> np.ndarray:
         import numpy as np
         import openai
 
@@ -140,7 +143,7 @@ def resolve_embedding_backend(
 # ── persisted vector store ──────────────────────────────────────────────────────
 
 def save_vectors(
-    path: Path | str, ids: Sequence[str], vectors: "np.ndarray"
+    path: Path | str, ids: Sequence[str], vectors: np.ndarray
 ) -> Path:
     """Persist ``ids`` + a ``(n, dim)`` matrix to ``path`` (``.npz``)."""
     import numpy as np
@@ -158,7 +161,7 @@ def save_vectors(
 
 def load_vectors(
     path: Path | str,
-) -> "tuple[list[str], np.ndarray] | None":
+) -> tuple[list[str], np.ndarray] | None:
     """Load ``(ids, vectors)`` written by :func:`save_vectors`, or ``None``."""
     import numpy as np
 
@@ -176,7 +179,7 @@ def load_vectors(
 
 # ── fusion ──────────────────────────────────────────────────────────────────────
 
-def cosine_scores(qvec: "np.ndarray", matrix: "np.ndarray") -> "np.ndarray":
+def cosine_scores(qvec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
     """Cosine similarity of a query vector against every row of *matrix*.
 
     Assumes rows (and *qvec*) are L2-normalised, so cosine reduces to a

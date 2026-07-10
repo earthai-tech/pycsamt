@@ -1,20 +1,22 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+import csv
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
+from os import PathLike
 from os.path import commonpath
 from pathlib import Path
-from os import PathLike
-from typing import Any, Callable, Iterable, Iterator, List, Sequence
+from typing import (
+    Any,
+    Callable,
+)
 
-import csv
 import numpy as np
 
 from ..api.view import progress_enabled
-from ..seg.collection import EDICollection
 from ..seg.edi import EDIFile
 from .base import Sites, to_edis
 from .edit import (
@@ -22,10 +24,12 @@ from .edit import (
     _rotm,
     _set_attr_first,
     fill_missing,
-    rename,
     recompute_res_phase,
-    rotate as _rotate_site,
+    rename,
     select_freq,
+)
+from .edit import (
+    rotate as _rotate_site,
 )
 from .utils import maybe_copy, station_name
 

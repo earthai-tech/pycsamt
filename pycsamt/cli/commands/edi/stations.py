@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt edi stations — station coordinate table."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import edi, _get_collection
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_collection, edi
 
 
 @edi.command("stations")
@@ -68,8 +71,9 @@ def stations(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from pycsamt.seg.survey import Stations  # noqa: PLC0415
     import fnmatch  # noqa: PLC0415
+
+    from pycsamt.seg.survey import Stations  # noqa: PLC0415
 
     coll = _get_collection(source, verbose=verbose)
     if len(coll) == 0:
@@ -114,7 +118,7 @@ def stations(
     # Rich text table
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table(
             title=f"Station coordinates — {source}  ({len(rows)} stations)",
             show_header=True,

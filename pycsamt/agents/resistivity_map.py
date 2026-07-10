@@ -263,7 +263,10 @@ def _interpolate_map(
     method: str,
 ) -> np.ndarray:
     """Interpolate scattered station values onto a regular grid."""
-    from scipy.interpolate import griddata, NearestNDInterpolator
+    from scipy.interpolate import (
+        NearestNDInterpolator,
+        griddata,
+    )
 
     points = np.column_stack([cx, cy])
     xi     = np.column_stack([Xg.ravel(), Yg.ravel()])
@@ -289,7 +292,6 @@ def _interpolate_map(
 def _plot_depth_maps(depth_maps: list[dict], station_names: list[str]) -> Any:
     """Panel of horizontal depth-slice maps."""
     import matplotlib.pyplot as plt
-    from matplotlib.tri import Triangulation
 
     n = len(depth_maps)
     if n == 0:

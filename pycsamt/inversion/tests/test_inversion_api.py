@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -9,8 +8,13 @@ import importlib.util
 import numpy as np
 import pytest
 
-from pycsamt.forward import MT1DForward, TEM1DForward, LayeredModel
-from pycsamt.forward import Grid2D, MT2DForward
+from pycsamt.forward import (
+    Grid2D,
+    LayeredModel,
+    MT1DForward,
+    MT2DForward,
+    TEM1DForward,
+)
 from pycsamt.inversion import (
     EMData,
     ErrorModel,
@@ -33,6 +37,28 @@ from pycsamt.inversion import (
     regularization_weight,
     run_inversion,
 )
+from pycsamt.inversion.amt import (
+    AMT1DInversion,
+    AMT2DInversion,
+)
+from pycsamt.inversion.backends import modem as modem_backend
+from pycsamt.inversion.backends import (
+    occam2d as occam2d_backend,
+)
+from pycsamt.inversion.backends import (
+    pygimli as pygimli_backend,
+)
+from pycsamt.inversion.backends import (
+    simpeg as simpeg_backend,
+)
+from pycsamt.inversion.backends.builtin import (
+    Builtin1DBackend,
+)
+from pycsamt.inversion.backends.modem import ModEMBackend
+from pycsamt.inversion.backends.occam2d import Occam2DBackend
+from pycsamt.inversion.backends.pygimli import PyGIMLiBackend
+from pycsamt.inversion.backends.simpeg import SimPEGBackend
+from pycsamt.inversion.emap import EMAP2DInversion
 from pycsamt.inversion.mesh import (
     InversionMesh,
     build_1d_tensor_mesh,
@@ -41,21 +67,19 @@ from pycsamt.inversion.mesh import (
     core_rho_from_start,
     depth_widths,
 )
-from pycsamt.inversion.objective import relative_errors, weighted_rms
-from pycsamt.inversion.mt import MT1DInversion
-from pycsamt.inversion.mt import MT2DInversion, MT3DInversion
-from pycsamt.inversion.amt import AMT1DInversion, AMT2DInversion
-from pycsamt.inversion.emap import EMAP2DInversion
-from pycsamt.inversion.tdem import TDEM1DInversion, TDEM2DInversion
-from pycsamt.inversion.backends.builtin import Builtin1DBackend
-from pycsamt.inversion.backends.modem import ModEMBackend
-from pycsamt.inversion.backends.occam2d import Occam2DBackend
-from pycsamt.inversion.backends.pygimli import PyGIMLiBackend
-from pycsamt.inversion.backends.simpeg import SimPEGBackend
-from pycsamt.inversion.backends import simpeg as simpeg_backend
-from pycsamt.inversion.backends import pygimli as pygimli_backend
-from pycsamt.inversion.backends import modem as modem_backend
-from pycsamt.inversion.backends import occam2d as occam2d_backend
+from pycsamt.inversion.mt import (
+    MT1DInversion,
+    MT2DInversion,
+    MT3DInversion,
+)
+from pycsamt.inversion.objective import (
+    relative_errors,
+    weighted_rms,
+)
+from pycsamt.inversion.tdem import (
+    TDEM1DInversion,
+    TDEM2DInversion,
+)
 
 
 def test_config_template_roundtrip(tmp_path):

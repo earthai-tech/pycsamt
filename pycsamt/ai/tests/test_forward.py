@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.forward — LayeredModel, forward solvers, ForwardDataset."""
@@ -63,7 +62,7 @@ class TestLayeredModel(unittest.TestCase):
 class TestForwardResponse(unittest.TestCase):
 
     def _mt_response(self):
-        from pycsamt.forward import MT1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, MT1DForward
         model = LayeredModel(
             resistivity=np.array([100., 10., 1000.]),
             thickness=np.array([30., 200.]),
@@ -113,7 +112,7 @@ class TestMT1DForward(unittest.TestCase):
 
     def test_homogeneous_space(self):
         """Half-space: apparent resistivity should equal halfspace resistivity."""
-        from pycsamt.forward import MT1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, MT1DForward
         rho0 = 100.0
         model_hs = LayeredModel(
             resistivity=np.array([rho0]),
@@ -136,7 +135,11 @@ class TestCSAMT1DForward(unittest.TestCase):
 
     def test_farfield_equals_mt(self):
         """Very large offset: CSAMT result should approach MT result."""
-        from pycsamt.forward import CSAMT1DForward, MT1DForward, LayeredModel
+        from pycsamt.forward import (
+            CSAMT1DForward,
+            LayeredModel,
+            MT1DForward,
+        )
         model = LayeredModel(
             resistivity=np.array([100., 500.]),
             thickness=np.array([50.]),
@@ -153,7 +156,7 @@ class TestCSAMT1DForward(unittest.TestCase):
 class TestTEM1DForward(unittest.TestCase):
 
     def test_output_shape(self):
-        from pycsamt.forward import TEM1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, TEM1DForward
         model = LayeredModel(
             resistivity=np.array([100., 10., 1000.]),
             thickness=np.array([30., 200.]),
@@ -171,7 +174,7 @@ class TestTEM1DForward(unittest.TestCase):
         of the response is generally decreasing: the linear trend (slope of a
         least-squares fit in log-log space) must be negative.
         """
-        from pycsamt.forward import TEM1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, TEM1DForward
         model = LayeredModel(
             resistivity=np.array([100.]),
             thickness=np.array([]),
@@ -253,8 +256,13 @@ class TestGenerateDataset(unittest.TestCase):
         self.assertEqual(total, 20)
 
     def test_dataset_save_load(self):
-        import tempfile, os
-        from pycsamt.forward.batch import generate_dataset, ForwardDataset
+        import os
+        import tempfile
+
+        from pycsamt.forward.batch import (
+            ForwardDataset,
+            generate_dataset,
+        )
         ds = generate_dataset(
             solver="MT1D",
             n_samples=8,
@@ -331,7 +339,9 @@ class TestSurveyDataset3D(unittest.TestCase):
         np.testing.assert_array_equal(val.coords, self.ds.coords)
 
     def test_save_load_roundtrip(self):
-        import tempfile, os
+        import os
+        import tempfile
+
         from pycsamt.forward.batch import SurveyDataset3D
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "ds3d.npz")

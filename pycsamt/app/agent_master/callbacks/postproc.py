@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Post-correction action modal callbacks.
@@ -15,8 +14,7 @@ import logging
 import time
 from pathlib import Path
 
-from dash import Input, Output, State
-from dash import html, no_update
+from dash import Input, Output, State, html, no_update
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs

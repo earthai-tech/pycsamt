@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -39,7 +38,6 @@ import os
 import unittest
 
 import pytest
-
 
 # ── fixtures / helpers ────────────────────────────────────────────────────────
 

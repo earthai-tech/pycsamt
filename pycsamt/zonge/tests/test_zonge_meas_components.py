@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 # Tests for pycsamt.zonge.meas
 from __future__ import annotations
 
 import math
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from pycsamt.exceptions import InputError  # type: ignore
-from pycsamt.zonge.meas import CompMeas, Amps
+from pycsamt.zonge.meas import Amps, CompMeas
 
 # ---------------------------------------------------------------------
 # CompMeas
@@ -133,5 +133,5 @@ def test_amps_write_emits_csv_with_context():
     assert "station" in header and "amps" in header
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

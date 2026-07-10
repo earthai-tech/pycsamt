@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import pandas as pd
 
@@ -139,7 +140,7 @@ class APISurvey(PyCSAMTObject):
         """Return the underlying collection."""
         return self.collection
 
-    def update_meta(self, /, **kwargs: Any) -> "APISurvey":
+    def update_meta(self, /, **kwargs: Any) -> APISurvey:
         """Update metadata in-place and return ``self``."""
         self.meta.update(kwargs)
         return self

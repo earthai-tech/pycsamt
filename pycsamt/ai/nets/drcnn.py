@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -38,7 +37,8 @@ Guo R. et al. (2021) *IEEE TGRS* — DRCNN for joint AMT+seismic.
 """
 from __future__ import annotations
 
-from typing import Any, List, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 __all__ = ["DRCNNNet"]
 
@@ -61,7 +61,7 @@ try:
             dropout: float,
         ) -> None:
             super().__init__()
-            dims: List[int] = [in_features]
+            dims: list[int] = [in_features]
             self.sub_layers = nn.ModuleList()
             for _ in range(n_layers):
                 d_in = sum(dims)
@@ -101,7 +101,7 @@ try:
     class _DRCNN(nn.Module):
         def __init__(
             self,
-            n_features_list: Tuple[int, ...],
+            n_features_list: tuple[int, ...],
             n_out: int,
             growth_rate: int,
             n_layers: int,
@@ -241,7 +241,7 @@ def _dense_block_1d(
 
 
 def _build_drcnn(
-    n_features_list: Tuple[int, ...],
+    n_features_list: tuple[int, ...],
     n_out: int,
     growth_rate: int,
     n_layers: int,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,9 +10,8 @@ tests can instantiate Qt widgets without a real display.
 from __future__ import annotations
 
 import os
-import sys
-import pytest
 
+import pytest
 
 # ── Qt / offscreen setup ───────────────────────────────────────────────────
 
@@ -44,7 +42,6 @@ def qapp():
 @pytest.fixture(scope="session")
 def simulated_edi(tmp_path_factory):
     """Return a path to a minimal synthetic EDI file."""
-    from pycsamt.seg.edi import EDIFile
     import numpy as np
 
     tmp = tmp_path_factory.mktemp("edi")
@@ -54,7 +51,7 @@ def simulated_edi(tmp_path_factory):
     nfreq = 8
     freqs = np.logspace(2, -1, nfreq)
     z_real = np.ones(nfreq) * 10.0
-    z_imag = np.ones(nfreq) * 8.0
+    np.ones(nfreq) * 8.0
 
     lines = [
         ">HEAD",

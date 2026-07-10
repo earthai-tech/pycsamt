@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -60,12 +59,18 @@ from __future__ import annotations
 
 import copy
 import warnings
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
-from .._base import BaseEMNet, EMCheckpoint
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
+from .._base import BaseEMNet
 
 __all__ = ["GCNInverter3D"]
 
@@ -105,7 +110,7 @@ class GCNInverter3D(BaseEMNet):
         n_layers: int = 5,
         hidden: Sequence[int] = (256, 128, 64),
         dropout: float = 0.1,
-        device: Optional[str] = None,
+        device: str | None = None,
         **net_kwargs,
     ) -> None:
         super().__init__(arch="gcn", n_layers=n_layers, solver="mt3d", device=device)
@@ -115,12 +120,12 @@ class GCNInverter3D(BaseEMNet):
         self.dropout = float(dropout)
         self._net_kwargs = net_kwargs
 
-        self._x_mean: Optional[float] = None
-        self._x_std: Optional[float] = None
-        self._y_mean: Optional[float] = None
-        self._y_std: Optional[float] = None
-        self._backend_name: Optional[str] = None
-        self._A_stored: Optional[np.ndarray] = None  # adjacency from training
+        self._x_mean: float | None = None
+        self._x_std: float | None = None
+        self._y_mean: float | None = None
+        self._y_std: float | None = None
+        self._backend_name: str | None = None
+        self._A_stored: np.ndarray | None = None  # adjacency from training
 
     # ── internal helpers ──────────────────────────────────────────────────────
 
@@ -139,8 +144,8 @@ class GCNInverter3D(BaseEMNet):
 
     @staticmethod
     def _prepare_adjacency(
-        adjacency: Optional[np.ndarray],
-        coords: Optional[np.ndarray],
+        adjacency: np.ndarray | None,
+        coords: np.ndarray | None,
         radius: float,
         n_stations: int,
     ) -> np.ndarray:
@@ -175,20 +180,20 @@ class GCNInverter3D(BaseEMNet):
     def fit(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
-        adjacency: Optional[np.ndarray] = None,
+        y: np.ndarray | None = None,
+        adjacency: np.ndarray | None = None,
         *,
-        coords: Optional[np.ndarray] = None,
+        coords: np.ndarray | None = None,
         radius: float = 5_000.0,
         epochs: int = 100,
         batch_size: int = 16,
         lr: float = 1e-3,
         patience: int = 15,
         val_frac: float = 0.15,
-        grad_clip: Optional[float] = 1.0,
-        seed: Optional[int] = None,
+        grad_clip: float | None = 1.0,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "GCNInverter3D":
+    ) -> GCNInverter3D:
         """
         Train the 3-D GCN inversion network.
 
@@ -281,7 +286,7 @@ class GCNInverter3D(BaseEMNet):
     ):
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         dev = resolve_device(self.device)
         self._network = self._network.to(dev)
@@ -435,9 +440,9 @@ class GCNInverter3D(BaseEMNet):
     def predict(
         self,
         X: np.ndarray,
-        adjacency: Optional[np.ndarray] = None,
+        adjacency: np.ndarray | None = None,
         *,
-        coords: Optional[np.ndarray] = None,
+        coords: np.ndarray | None = None,
         radius: float = 5_000.0,
         as_log_rho: bool = True,
     ) -> np.ndarray:
@@ -509,12 +514,12 @@ class GCNInverter3D(BaseEMNet):
     def predict_with_uncertainty(
         self,
         X: np.ndarray,
-        adjacency: Optional[np.ndarray] = None,
+        adjacency: np.ndarray | None = None,
         *,
-        coords: Optional[np.ndarray] = None,
+        coords: np.ndarray | None = None,
         radius: float = 5_000.0,
         n_mc: int = 30,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         MC-dropout uncertainty estimate for 3-D predictions.
 
@@ -590,7 +595,7 @@ class GCNInverter3D(BaseEMNet):
 
     # ── serialisation ─────────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "n_features": self.n_features,
             "n_layers":   self.n_layers,
@@ -599,8 +604,8 @@ class GCNInverter3D(BaseEMNet):
             "device":     self.device,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._network is not None:
             out.update(get_weights(self._network))
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
@@ -613,7 +618,7 @@ class GCNInverter3D(BaseEMNet):
             out["_A_stored"] = self._A_stored
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         backend_name = str(weights.pop("_backend", np.array("torch")))
         self._backend_name = backend_name
 

@@ -126,7 +126,7 @@ class AgentCoordinator:
         input_fn=None,
         description: str = "",
         required: bool = True,
-    ) -> "AgentCoordinator":
+    ) -> AgentCoordinator:
         """Append a workflow step.  Returns ``self`` for chaining.
 
         Parameters

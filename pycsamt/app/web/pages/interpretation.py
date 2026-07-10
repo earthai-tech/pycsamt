@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Geological interpretation page — 9 categories, 40+ workflows."""
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from pycsamt.app.desktop.controllers.interp_controller import (
-    WORKFLOW_CATALOGUE, CATEGORIES,
+    CATEGORIES,
+    WORKFLOW_CATALOGUE,
 )
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import empty_src

@@ -9,12 +9,12 @@ import pytest
 from pycsamt.emtools.diag import (
     COVERAGE_THRESH,
     coverage_score,
-    rho_coverage,
-    rho_error_stats,
     coverage_table,
     plot_polar_coverage,
     plot_polar_errors,
     plot_width_drift,
+    rho_coverage,
+    rho_error_stats,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────

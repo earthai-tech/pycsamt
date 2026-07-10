@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """EDI load + line detection callbacks."""
@@ -6,15 +5,21 @@
 from __future__ import annotations
 
 import base64
-import os
 import re
 import tempfile
 from pathlib import Path
 
-from dash import ALL, Input, Output, State
-from dash import ctx, html, no_update
-from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    html,
+    no_update,
+)
+from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 

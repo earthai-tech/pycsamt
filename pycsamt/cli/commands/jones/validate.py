@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt jones validate — structural validation of Jones J-files."""
@@ -12,7 +11,10 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, verbose_option
+from ....api.cli.options import (
+    no_color_option,
+    verbose_option,
+)
 from ._base import jones
 
 
@@ -67,7 +69,9 @@ def validate(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from pycsamt.jones.validation import is_j_file  # noqa: PLC0415
+    from pycsamt.jones.validation import (
+        is_j_file,  # noqa: PLC0415
+    )
 
     # Collect target files — accept any extension used for J-files
     _J_EXTS = {".j", ".dat", ".txt"}

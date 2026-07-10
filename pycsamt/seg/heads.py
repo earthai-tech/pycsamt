@@ -1,20 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from pathlib import Path
 import datetime as _dt
-import re
 import math
-from typing import List, Optional, Sequence, Union, Iterable, Tuple
+import re
+from collections.abc import Iterable, Sequence
+from pathlib import Path
 
 from .. import __version__ as _PKG_VERSION
 from ..log.logger import get_logger
 
 try:
-    from ..gis.utils import dms_to_decimal, decimal_to_dms
+    from ..gis.utils import decimal_to_dms, dms_to_decimal
 except (ImportError, RuntimeError):
     def dms_to_decimal(s, hem=None):  # type: ignore[misc]
         try:
@@ -25,10 +24,11 @@ except (ImportError, RuntimeError):
     def decimal_to_dms(v, hem="N"):  # type: ignore[misc]
         return f"{float(v):.6f}"
 from ..exceptions import (
-    HeaderError,
     EdIDataError,
     FileHandlingError,
+    HeaderError,
 )
+
 try:
     from ..loc import Location
 except (ImportError, RuntimeError):
@@ -39,8 +39,8 @@ except (ImportError, RuntimeError):
             self.elevation = None
 
 from .base import EDIComponentBase
-from .property import Source, Processing, Copyright, Software
-from .validation import IsEdi 
+from .property import Copyright, Processing, Software, Source
+from .validation import IsEdi
 
 logger = get_logger(__name__)
 
@@ -93,14 +93,14 @@ def _is_tag(line: str, tag: str) -> bool:
 
 
 def _slice_section(
-    lines: Sequence[str], start_tag: str, 
+    lines: Sequence[str], start_tag: str,
     after_tags: Iterable[str]
-    ) -> Tuple[List[str], int, int]:
+    ) -> tuple[list[str], int, int]:
     """
-    Slice section content between start_tag and 
+    Slice section content between start_tag and
     the next tag in after_tags.
 
-    Returns (payload_lines, i_start, i_stop). 
+    Returns (payload_lines, i_start, i_stop).
     Payload excludes the start_tag line.
     Raises EdIDataError if start_tag not present.
     """
@@ -234,13 +234,13 @@ class Head(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
-    # prog details  
+    # prog details
     _PROGVERS = f"pyCSAMT {_PKG_VERSION}"
     _PROGDATE = _dt.datetime.utcnow().strftime("%Y/%m/%d")
     _FILEDATE = _dt.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC")
 
     # Canonical keys order for serialization
-    head_keys: List[str] = [
+    head_keys: list[str] = [
         "dataid",
         "acqby",
         "fileby",
@@ -255,7 +255,7 @@ class Head(EDIComponentBase):
         "lat",
         "long",
         "elev",
-        "chainage", 
+        "chainage",
         "declination",
         "datum",
         "units",
@@ -274,7 +274,7 @@ class Head(EDIComponentBase):
     _quoted_keys = {"dataid", "stdvers", "progvers"}
 
     def __init__(
-        self, edi_header_list: Optional[Sequence[str]] = None, 
+        self, edi_header_list: Sequence[str] | None = None,
         verbose =0, logger =None, **kwargs
         ):
         super().__init__(verbose = verbose, logger=logger)
@@ -282,35 +282,35 @@ class Head(EDIComponentBase):
         self.Location = Location()
 
         # Defaults
-        self.dataid: Optional[str] = None
-        self.acqby: Optional[str] = None
-        self.fileby: Optional[str] = None
-        self.acqdate: Optional[str] = None
-        self.enddate: Optional[str] = None
+        self.dataid: str | None = None
+        self.acqby: str | None = None
+        self.fileby: str | None = None
+        self.acqdate: str | None = None
+        self.enddate: str | None = None
         self.filedate: str = self._FILEDATE
 
-        self.country: Optional[str] = None
-        self.state: Optional[str] = None
-        self.county: Optional[str] = None
-        self.prospect: Optional[str] = None
-        self.loc: Optional[str] = None
+        self.country: str | None = None
+        self.state: str | None = None
+        self.county: str | None = None
+        self.prospect: str | None = None
+        self.loc: str | None = None
 
-        self.units: str = "M".lower() if False else "m"  
+        self.units: str = "M".lower() if False else "m"
         self.stdvers: str = "SEG 1.0"
         self.progvers: str = self._PROGVERS
-        self.progdate: str = self._PROGDATE 
+        self.progdate: str = self._PROGDATE
         self.coordsys: str = "Geomagnetic North"
-        self.declination: Optional[float] = None
+        self.declination: float | None = None
         self.datum: str = "WGS84"
-        self.maxsect: Optional[int] = None
-        self.bindata: Optional[str] = None
-        self.project: Optional[str] = None
-        self.survey: Optional[str] = None
+        self.maxsect: int | None = None
+        self.bindata: str | None = None
+        self.project: str | None = None
+        self.survey: str | None = None
         self.empty: float = 1.0e32
 
-        self.chainage: Optional[float] = None
+        self.chainage: float | None = None
 
-        self.edi_header: Optional[List[str]] = list(
+        self.edi_header: list[str] | None = list(
             edi_header_list) if edi_header_list else None
 
         # User overrides (unknown keys allowed)
@@ -323,11 +323,11 @@ class Head(EDIComponentBase):
 
     # --------- Geographic IO via Location ----------
     @property
-    def lat(self) -> Optional[float]:
+    def lat(self) -> float | None:
         return self.Location.latitude
 
     @lat.setter
-    def lat(self, value: Union[str, float, int, None]) -> None:
+    def lat(self, value: str | float | int | None) -> None:
         if value is None:
             self.Location.latitude = None
             return
@@ -341,11 +341,11 @@ class Head(EDIComponentBase):
                 )
 
     @property
-    def long(self) -> Optional[float]:
+    def long(self) -> float | None:
         return self.Location.longitude
 
     @long.setter
-    def long(self, value: Union[str, float, int, None]) -> None:
+    def long(self, value: str | float | int | None) -> None:
         if value is None:
             self.Location.longitude = None
             return
@@ -359,28 +359,28 @@ class Head(EDIComponentBase):
                     )
 
     @property
-    def lon(self) -> Optional[float]:
+    def lon(self) -> float | None:
         return self.long
-    
+
     @lon.setter
-    def lon(self, value: Union[str, float, int, None]) -> None:
-        self.long = value 
-    
+    def lon(self, value: str | float | int | None) -> None:
+        self.long = value
+
     @property
-    def elev(self) -> Optional[float]:
+    def elev(self) -> float | None:
         return self.Location.elevation
 
     @elev.setter
-    def elev(self, value: Union[str, float, int, None]) -> None:
+    def elev(self, value: str | float | int | None) -> None:
         if value is None or (isinstance(value, str) and not value.strip()):
             self.Location.elevation = None
         else:
             self.Location.elevation = float(value)
-            
+
 
     # --------- API ----------
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Head:
+    def from_file(cls, edi_fn: str | Path) -> Head:
         """
         Extract and parse the >HEAD block from an EDI file path.
         """
@@ -399,7 +399,7 @@ class Head(EDIComponentBase):
         payload = [ln.replace('"', "") for ln in payload]
         return cls(edi_header_list=payload)
 
-    def read(self, edi_header_list: Optional[Sequence[str]] = None) -> Head:
+    def read(self, edi_header_list: Sequence[str] | None = None) -> Head:
         """
         Parse HEAD KV lines and set attributes.
         """
@@ -408,7 +408,7 @@ class Head(EDIComponentBase):
         if not self.edi_header:
             raise HeaderError("No HEAD items to read.")
 
-        normalized: List[str] = []
+        normalized: list[str] = []
         for raw in self.edi_header:
             line = raw.strip()
             if not line or line.startswith(">"):
@@ -418,19 +418,19 @@ class Head(EDIComponentBase):
                 continue
             key = _norm_key(m.group("key"))
             val = _unquote(m.group("val"))
-            
+
             if key == "chainage":
                 try:
-                    setattr(self, "chainage", float(val))
+                    self.chainage = float(val)
                 except Exception:
-                    setattr(self, "chainage", None)
+                    self.chainage = None
                 normalized.append(f"{key.upper()}={val}")
                 continue
 
             if key == "coordsys":
-                setattr(self, "coordsys", val)
+                self.coordsys = val
             elif key == "lon":
-                setattr(self, "long", val)
+                self.long = val
             else:
                 setattr(self, key, val)
 
@@ -440,17 +440,17 @@ class Head(EDIComponentBase):
         return self
 
     def write(
-        self, head_list_infos: Optional[Sequence[str]] = None, 
-        stamp: bool=True, 
-        ) -> List[str]:
+        self, head_list_infos: Sequence[str] | None = None,
+        stamp: bool=True,
+        ) -> list[str]:
         """
         Build formatted >HEAD lines (including trailing blank line).
         """
-        lines: List[str] = [">HEAD\n"]
+        lines: list[str] = [">HEAD\n"]
 
         # If given explicit lines, normalize & echo them
         if head_list_infos is not None:
-            cleaned: List[str] = []
+            cleaned: list[str] = []
             for raw in head_list_infos:
                 s = raw.strip()
                 if not s or s.startswith(">"):
@@ -475,14 +475,14 @@ class Head(EDIComponentBase):
                 val = self._PROGVERS  # This gets the current default value
             elif stamp and key == "progdate":
                 val = self._PROGDATE  # This gets the current default value
-            elif stamp and key=="filedate": 
-                val= self._FILEDATE 
+            elif stamp and key=="filedate":
+                val= self._FILEDATE
             else:
                 val = getattr(self, key, None)
-            
+
             if val in (None, "", "None"):
                 continue
-    
+
             if key in {"lat", "long"}:
                 vnum = getattr(self, key)
                 try:
@@ -523,7 +523,7 @@ class Head(EDIComponentBase):
         for k, v in kwargs.items():
             setattr(self, k, v)
         return self
-    
+
     def compute_chainage(
         self,
         origin: tuple[float, float],
@@ -534,10 +534,10 @@ class Head(EDIComponentBase):
         """
         Compute chainage (meters) along a profile defined by an
         origin and azimuth, using a local flat metric.
-    
+
         Chainage is positive in the forward profile direction and
         negative behind the origin.
-    
+
         Parameters
         ----------
         origin : tuple of float
@@ -547,30 +547,30 @@ class Head(EDIComponentBase):
         set_attr : bool, optional
             If True, store the computed value into
             ``self.chainage``.
-    
+
         Returns
         -------
         float
             Chainage in meters. Returns ``nan`` if coordinates
             are missing.
         """
-        
+
         la0, lo0 = origin
         if self.lat is None or self.long is None:
             ch = float("nan")
             if set_attr:
                 self.chainage = ch
             return ch
-    
+
         # local flat approximation
         dy = (float(self.lat) - float(la0)) * 111_000.0
         dx = ((float(self.long) - float(lo0)) * 111_000.0
               * math.cos(math.radians(float(la0))))
-    
+
         az = math.radians(float(azimuth))
         # north=0 => dx*sin + dy*cos
         ch = dx * math.sin(az) + dy * math.cos(az)
-    
+
         if set_attr:
             try:
                 self.chainage = float(ch)
@@ -668,9 +668,9 @@ class Info(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
-    _PROCESSEDBY = f"pyCSAMT v{_PKG_VERSION}" 
+    _PROCESSEDBY = f"pyCSAMT v{_PKG_VERSION}"
     _PROCESSINGSOFTWARE =Software(name= "PYCSAMT")
-    
+
     # canonical key serialization order
     infokeys = [
         "maxinfo",
@@ -692,30 +692,30 @@ class Info(EDIComponentBase):
 
     def __init__(
         self,
-        edi_info_list: Optional[Sequence[str]] = None,
+        edi_info_list: Sequence[str] | None = None,
         *,
         verbose: int = 0,
         logger=None,
-        info_text: Optional[Sequence[str]] = None,
+        info_text: Sequence[str] | None = None,
         **kwargs,
     ):
         super().__init__(verbose=verbose, logger=logger)
 
         # Raw KV lines we could parse (normalized later)
-        self.ediinfo: Optional[List[str]] = list(
+        self.ediinfo: list[str] | None = list(
             edi_info_list
         ) if edi_info_list else None
         # Free-text payload (lines that are *not* KEY=VALUE)
-        self.info_text: List[str] = list(info_text) if info_text else []
+        self.info_text: list[str] = list(info_text) if info_text else []
 
-        self.filter: Optional[str] = None  # used in some EMAP/processing contexts
+        self.filter: str | None = None  # used in some EMAP/processing contexts
         self.maxinfo: int = 999
 
         # nested containers
         self.Source = Source()
         self.Processing = Processing(
-            processedby=self._PROCESSEDBY, 
-            ProcessingSoftware = self._PROCESSINGSOFTWARE, 
+            processedby=self._PROCESSEDBY,
+            ProcessingSoftware = self._PROCESSINGSOFTWARE,
         )
         self.Copyright = Copyright()
 
@@ -728,7 +728,7 @@ class Info(EDIComponentBase):
 
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> "Info":
+    def from_file(cls, edi_fn: str | Path) -> Info:
         """
         Extract and parse the ``>INFO`` block from an EDI file.
 
@@ -766,8 +766,8 @@ class Info(EDIComponentBase):
         payload = lines[start + 1 : stop]
 
         # Split payload into KV lines vs free text; strip outer quotes on KV.
-        kv_lines: List[str] = []
-        text_lines: List[str] = []
+        kv_lines: list[str] = []
+        text_lines: list[str] = []
         for raw in payload:
             s = raw.strip()
             if not s:
@@ -787,8 +787,8 @@ class Info(EDIComponentBase):
         return obj
 
     def read(
-            self, edi_info_list: Optional[Sequence[str]] = None, 
-        ) -> "Info":
+            self, edi_info_list: Sequence[str] | None = None,
+        ) -> Info:
         """
         Parse an INFO key-value list and set attributes.
 
@@ -805,7 +805,7 @@ class Info(EDIComponentBase):
             self.ediinfo = []
             return self
 
-        normalized: List[str] = []
+        normalized: list[str] = []
         for raw in self.ediinfo:
             line = raw.strip()
             if not line or line.startswith(">"):
@@ -851,7 +851,7 @@ class Info(EDIComponentBase):
         return self
 
 
-    def write(self, edi_info_list: Optional[Sequence[str]] = None) -> List[str]:
+    def write(self, edi_info_list: Sequence[str] | None = None) -> list[str]:
         """
         Build formatted ``>INFO`` lines ready to write to an EDI file.
 
@@ -859,12 +859,12 @@ class Info(EDIComponentBase):
         - Otherwise, current attributes are serialized in canonical order,
           followed by any preserved free-text lines stored in ``info_text``.
         """
-        out: List[str] = [">INFO\n"]
+        out: list[str] = [">INFO\n"]
 
         # If caller supplied lines, normalize KV and pass through non-KV as text.
         if edi_info_list is not None:
-            cleaned: List[str] = []
-            text_passthru: List[str] = []
+            cleaned: list[str] = []
+            text_passthru: list[str] = []
             for raw in edi_info_list:
                 s = raw.strip()
                 if not s or s.startswith(">"):
@@ -943,7 +943,7 @@ class Info(EDIComponentBase):
         )
         return d
 
-    def update(self, **kwargs) -> "Info":
+    def update(self, **kwargs) -> Info:
         """Update INFO fields (routes to nested containers where appropriate)."""
         for k, v in kwargs.items():
             key = _norm_key(k)
@@ -1038,14 +1038,14 @@ class Heads(EDIComponentBase):
 
 
     def __init__(
-            self, head: Optional[Head] = None, info: Optional[Info] = None, 
+            self, head: Head | None = None, info: Info | None = None,
             verbose: int = 0, logger=None ):
         super().__init__(verbose=verbose, logger=logger )
         self.head: Head = head if head is not None else Head()
         self.info: Info = info if info is not None else Info()
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Heads:
+    def from_file(cls, edi_fn: str | Path) -> Heads:
         """
         Load >HEAD and >INFO from EDI path and return an aggregate container.
         """
@@ -1076,7 +1076,7 @@ class Heads(EDIComponentBase):
 
         return cls(head=head, info=info)
 
-    def read(self, text_or_lines: Union[str, Sequence[str]]) -> Heads:
+    def read(self, text_or_lines: str | Sequence[str]) -> Heads:
         """
         Parse >HEAD and >INFO from provided content (string or list of lines).
         """
@@ -1101,11 +1101,11 @@ class Heads(EDIComponentBase):
             self.info = Info()  # leave empty
         return self
 
-    def write(self) -> List[str]:
+    def write(self) -> list[str]:
         """
         Serialize >HEAD + >INFO blocks back-to-back.
         """
-        out: List[str] = []
+        out: list[str] = []
         out.extend(self.head.write())
         out.extend(self.info.write())
         return out
@@ -1116,7 +1116,7 @@ class Heads(EDIComponentBase):
         return "".join(self.write())
 
     def __repr__(self) -> str:
-        return ( 
+        return (
             f"<Heads dataid={self.head.dataid!r}"
             f" project={self.info.Source.project!r}>"
             )
@@ -1165,18 +1165,18 @@ class HeadMixin:
 
     # -- class-level convenience --
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Head:
+    def from_file(cls, edi_fn: str | Path) -> Head:
         """Return a parsed Head instance from EDI path."""
         return Head.from_file(edi_fn)
 
     # -- instance-level --
-    def read(self, edi_header_list: Optional[Sequence[str]] = None) -> Head:
+    def read(self, edi_header_list: Sequence[str] | None = None) -> Head:
         """Parse HEAD KV lines into `self.head` and return it."""
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
         return self.head.read(edi_header_list)
 
-    def write(self, head_list_infos: Optional[Sequence[str]] = None) -> List[str]:
+    def write(self, head_list_infos: Sequence[str] | None = None) -> list[str]:
         """Serialize the host's `head` as >HEAD lines."""
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
@@ -1227,18 +1227,18 @@ class InfoMixin:
 
     # -- class-level convenience --
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Info:
+    def from_file(cls, edi_fn: str | Path) -> Info:
         """Return a parsed Info instance from EDI path."""
         return Info.from_file(edi_fn)
 
     # -- instance-level --
-    def read(self, edi_info_list: Optional[Sequence[str]] = None) -> Info:
+    def read(self, edi_info_list: Sequence[str] | None = None) -> Info:
         """Parse INFO KV lines into `self.info` and return it."""
         if not hasattr(self, "info") or self.info is None:
             self.info = Info()
         return self.info.read(edi_info_list)
 
-    def write(self, edi_info_list: Optional[Sequence[str]] = None) -> List[str]:
+    def write(self, edi_info_list: Sequence[str] | None = None) -> list[str]:
         """Serialize the host's `info` as >INFO lines."""
         if not hasattr(self, "info") or self.info is None:
             self.info = Info()

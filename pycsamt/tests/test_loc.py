@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 # License: LGPL-3.0
 
 from __future__ import annotations
 
 import math
-from typing import Tuple
 
 import pytest
 
@@ -22,7 +20,7 @@ def stub_ll_utm(monkeypatch):
         reference_ellipsoid: int,
         lat: float,
         lon: float,
-    ) -> Tuple[str, float, float]:
+    ) -> tuple[str, float, float]:
         n = int(math.floor((lon + 180.0) / 6.0) + 1)
         n = min(60, max(1, n))
         hem = "N" if float(lat) >= 0.0 else "S"
@@ -37,7 +35,7 @@ def stub_ll_utm(monkeypatch):
         northing: float,
         easting: float,
         zone: str,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         lat = float(northing) / 1000.0 - 90.0
         lon = float(easting) / 1000.0 - 180.0
         return lat, lon

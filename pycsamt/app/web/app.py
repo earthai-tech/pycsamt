@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -30,7 +29,7 @@ import socket
 import sys
 import threading
 import webbrowser
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 # Absolute path to the shared SVG icon set
 _ICONS_DIR = os.path.join(
@@ -149,9 +148,9 @@ def create_app(debug: bool = False):
             "Install them with:  pip install 'pycsamt[app]'"
         ) from exc
 
-    from pycsamt.app.web.layout import layout
-    from pycsamt.app.web.callbacks import register_callbacks
     from pycsamt.app.web.cache import bg_manager
+    from pycsamt.app.web.callbacks import register_callbacks
+    from pycsamt.app.web.layout import layout
 
     dash_kwargs: dict = dict(
         external_stylesheets=[
@@ -195,7 +194,7 @@ def main(
     open_browser: bool = True,
     strict_port: bool = False,
     browser_delay: float = 1.0,
-    argv: Optional[Sequence[str]] = None,
+    argv: Sequence[str] | None = None,
 ) -> None:
     """
     Entry point: ``python -m pycsamt.app.web`` or ``pycsamt-web``.

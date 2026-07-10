@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,9 +18,12 @@ stations    ``pycsamt map stations`` - list/export station coordinates.
 plot        ``pycsamt map plot`` - save a static station map figure.
 """
 
-from ._base import map  # noqa: F401,A001  (re-exported as package public API)
-
-from . import stations  # noqa: F401
-from . import plot      # noqa: F401
+from . import (
+    plot,  # noqa: F401
+    stations,  # noqa: F401
+)
+from ._base import (
+    map,  # noqa: F401,A001  (re-exported as package public API)
+)
 
 __all__ = ["map"]

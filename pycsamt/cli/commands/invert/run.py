@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt invert run — launch an inversion binary."""
@@ -11,9 +10,11 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, verbose_option
-
-from ._base import invert, _resolve_solver
+from ....api.cli.options import (
+    no_color_option,
+    verbose_option,
+)
+from ._base import _resolve_solver, invert
 
 
 @invert.command("run")
@@ -99,7 +100,9 @@ def _run_occam2d(
     run_async: bool,
     verbose: int,
 ) -> None:
-    from pycsamt.models.occam2d.runner import OccamRunner  # noqa: PLC0415
+    from pycsamt.models.occam2d.runner import (
+        OccamRunner,  # noqa: PLC0415
+    )
 
     runner = OccamRunner(workdir=workdir, verbose=verbose)
     if run_async:
@@ -124,7 +127,9 @@ def _run_modem(
     run_async: bool,
     verbose: int,
 ) -> None:
-    from pycsamt.models.modem.runner import ModEmRunner  # noqa: PLC0415
+    from pycsamt.models.modem.runner import (
+        ModEmRunner,  # noqa: PLC0415
+    )
 
     runner = ModEmRunner(workdir=workdir, verbose=verbose)
     if run_async:

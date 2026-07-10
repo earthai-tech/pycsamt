@@ -53,43 +53,43 @@ Configure pipeline output globally::
 
 from __future__ import annotations
 
-# ── Pipeline engine (relative — lives in this package) ───────────────────────
-from ._base import PipelineBase
-from ._pipeline import Pipeline, PipelineResult
-from ._steps import Step, StepResult
-from ._registry import (
-    StepSpec,
-    STEP_REGISTRY,
-    lookup_step,
-    list_steps,
-    step_codes,
-    step_names,
-    categories,
-)
-from ._presets import (
-    Preset,
-    PRESETS,
-    get_preset,
-    list_presets,
-    preset_catalogue,
-)
-from ._config import load_yaml, load_json, load_py
-from .stratagem import (
-    StratagemPreset,
-    STRATAGEM_PRESETS,
-    StratagemPipeline,
-    get_stratagem_preset,
-    list_stratagem_presets,
-    run_stratagem_preset,
-    stratagem_preset_catalogue,
-)
-
 # ── Pipeline API configuration (relative — sibling package api/pipe) ─────────
 from ..api.pipe import (
     PYCSAMT_PIPE,
     PipelineAPIConfig,
     configure_pipe,
     reset_pipe,
+)
+
+# ── Pipeline engine (relative — lives in this package) ───────────────────────
+from ._base import PipelineBase
+from ._config import load_json, load_py, load_yaml
+from ._pipeline import Pipeline, PipelineResult
+from ._presets import (
+    PRESETS,
+    Preset,
+    get_preset,
+    list_presets,
+    preset_catalogue,
+)
+from ._registry import (
+    STEP_REGISTRY,
+    StepSpec,
+    categories,
+    list_steps,
+    lookup_step,
+    step_codes,
+    step_names,
+)
+from ._steps import Step, StepResult
+from .stratagem import (
+    STRATAGEM_PRESETS,
+    StratagemPipeline,
+    StratagemPreset,
+    get_stratagem_preset,
+    list_stratagem_presets,
+    run_stratagem_preset,
+    stratagem_preset_catalogue,
 )
 
 __all__ = [

@@ -24,18 +24,18 @@ strike information (non-zero for anisotropic / 3-D structures).
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ._core import (
-    ensure_sites,
-    _iter_items,
-    _get_z_block,
-    _name,
-)
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 __all__ = [
     "ANISO_RATIO_THRESH",
@@ -198,7 +198,7 @@ def analyze_anisotropy(
         strict=strict,
         verbose=verbose,
     )
-    rows: List[Dict] = []
+    rows: list[dict] = []
 
     for i, ed in enumerate(_iter_items(sites)):
         ed = _unwrap(ed)
@@ -287,7 +287,7 @@ def anisotropy_table(
     if detail.empty:
         return pd.DataFrame(columns=_TABLE_COLS)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for station, grp in detail.groupby("station", sort=False):
         ratio  = grp["ratio_log10"].dropna()
         pdiff  = grp["phase_diff_deg"].dropna()
@@ -363,7 +363,7 @@ def plot_anisotropy(
     ax : matplotlib.axes.Axes
     """
     import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize, SymLogNorm
+    from matplotlib.colors import Normalize
 
     df = analyze_anisotropy(
         sites,

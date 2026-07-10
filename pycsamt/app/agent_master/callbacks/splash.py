@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Splash overlay dismiss callback."""
 
 from __future__ import annotations
 
-from dash import Input, Output, State
+from dash import Input, Output
 from dash.exceptions import PreventUpdate
 
 from .._ids import IDs

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -7,6 +6,7 @@ Pytest suite for the Z (impedance) component.
 import numpy as np
 import pandas as pd
 import pytest
+
 from pycsamt.constants import MU_0, PI
 from pycsamt.exceptions import AvgDataError
 from pycsamt.zonge.z import Z
@@ -97,14 +97,14 @@ class TestZ:
         z_mag_exp = np.sqrt(rho * omega * MU_0)
         rel_err_rho = pc_rho / 100.0
         dphi_rad = sphz_mrad * 1e-3
-        
+
         term_rho_sq = (0.5 * rel_err_rho)**2
         term_phi_sq = dphi_rad**2
         z_err_exp = z_mag_exp * np.sqrt(term_rho_sq + term_phi_sq)
 
         z_err_calc = z_comp.z_err.iloc[0]
         assert np.isclose(z_err_calc, z_err_exp)
-        
+
     def test_component_properties(self, sample_avg_data):
         """
         Test component-specific properties like z_xy and z_xy_err.
@@ -126,14 +126,14 @@ class TestZ:
         # Z_xy corresponds to EXHY
         z_xy = z_comp.z_xy
         z_xy_err = z_comp.z_xy_err
-        
+
         assert len(z_xy) == 3
         assert len(z_xy_err) == 3
-        
+
         # Verify first value corresponds to the first ExHy row
         assert np.isclose(z_xy.iloc[0], z_comp.z.iloc[0])
         assert np.isclose(z_xy_err.iloc[0], z_comp.z_err.iloc[0])
-        
+
         # Z_yx corresponds to EyHx
         z_yx = z_comp.z_yx
         assert len(z_yx) == 3
@@ -145,17 +145,17 @@ class TestZ:
         """
         z_comp = Z()
         z_comp.read(sample_avg_data)
-        
+
         T, freqs, stations = z_comp.to_tensor(station=100)
-        
+
         assert T.shape == (2, 2, 2)  # (n_freq, 2, 2)
         assert stations.size == 0
         assert np.allclose(freqs, [512, 1024])
-        
+
         # Check values for freq=1024 (index 1)
         z_xy_val = z_comp.z.iloc[0]
         z_yx_val = z_comp.z.iloc[1]
-        
+
         assert np.isclose(T[1, 0, 1], z_xy_val) # ExHy -> (0, 1)
         assert np.isclose(T[1, 1, 0], z_yx_val) # EyHx -> (1, 0)
         assert np.isnan(T[1, 0, 0]) # Zxx is NaN
@@ -166,13 +166,13 @@ class TestZ:
         """
         z_comp = Z()
         z_comp.read(sample_avg_data)
-        
+
         T, freqs, stations = z_comp.to_tensor()
-        
+
         assert T.shape == (2, 2, 2, 2) # (n_st, n_freq, 2, 2)
         assert np.allclose(stations, [100, 200])
         assert np.allclose(freqs, [512, 1024])
-        
+
         # Check station 200 (index 1), freq 1024 (index 1)
         z_xy_st200 = z_comp.z.iloc[4]
         assert np.isclose(T[1, 1, 0, 1], z_xy_st200)
@@ -183,17 +183,17 @@ class TestZ:
         """
         z_comp = Z()
         z_comp.read(sample_avg_data)
-        
+
         da = z_comp.to_xarray()
-        
+
         assert da.name == "z"
         assert da.dims == ("station", "freq", "e", "h")
         assert da.shape == (2, 2, 2, 2)
         assert np.allclose(da.coords["station"], [100, 200])
-        
+
         # Check a value
         val = da.sel(station=100, freq=1024, e="Ex", h="Hy").item()
         assert np.isclose(val, z_comp.z.iloc[0])
-        
-if __name__=='__main__': # pragma: no-cover 
+
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

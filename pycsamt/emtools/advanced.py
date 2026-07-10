@@ -29,30 +29,28 @@ plot_sensitivity_depth_section
 """
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize
-import matplotlib.gridspec as gridspec
 
-from ..api.style import PYCSAMT_STYLE
 from ..api.plot import add_colorbar
 from ..api.station import PYCSAMT_STATION_RENDERING
-
+from ..api.style import PYCSAMT_STYLE
 from ._core import (
-    ensure_sites,
+    _get_t_block,
+    _get_z_block,
     _iter_items,
     _name,
-    _get_z_block,
-    _get_t_block,
+    ensure_sites,
     hide_polar_radius_labels,
 )
 from .tensor import build_phase_tensor_table
 
-    
 __all__ = [
     "plot_dimensionality_ternary",
     "plot_distortion_radar",
@@ -87,7 +85,7 @@ def _z_at_theta(z0: np.ndarray, theta: float) -> np.ndarray:
     return R @ z0 @ R.T
 
 
-def _axes_list(axes: Any, n: int, *, label: str = "axes") -> Optional[List[Any]]:
+def _axes_list(axes: Any, n: int, *, label: str = "axes") -> list[Any] | None:
     """Return *n* flattened axes, or ``None`` when axes were not supplied."""
     if axes is None:
         return None
@@ -109,16 +107,16 @@ def _axes_list(axes: Any, n: int, *, label: str = "axes") -> Optional[List[Any]]
 def plot_impedance_mohr_circles(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    periods: Optional[List[float]] = None,
+    station: str | None = None,
+    periods: list[float] | None = None,
     n_periods: int = 8,
     n_theta: int = 360,
-    components: Tuple[str, str] = ("xx", "xy"),
+    components: tuple[str, str] = ("xx", "xy"),
     cmap: str = "plasma",
     alpha: float = 0.75,
     mark_zero: bool = True,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -275,16 +273,16 @@ def plot_impedance_mohr_circles(
 def plot_zt_argand(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    components: Tuple[str, ...] = ("xy", "yx"),
-    period_range: Optional[Tuple[float, float]] = None,
+    station: str | None = None,
+    components: tuple[str, ...] = ("xy", "yx"),
+    period_range: tuple[float, float] | None = None,
     cmap: str = "viridis",
     lw: float = 1.6,
     ms: float = 4.5,
     arrow_every: int = 4,
     normalize: bool = False,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -365,7 +363,6 @@ def plot_zt_argand(
     per = per[order]; z = z[order]
 
     n_comp = len(components)
-    mt = PYCSAMT_STYLE.mt
     axes_given = _axes_list(axes, n_comp)
     if axes_given is None:
         if figsize is None:
@@ -391,7 +388,7 @@ def plot_zt_argand(
             scale = np.abs(vals).max() + 1e-30
             vals = vals / scale
         re_v = vals.real; im_v = vals.imag
-        col_arr = cmap_obj(lper_norm)
+        cmap_obj(lper_norm)
 
         # gradient coloured line segments
         for k in range(len(per) - 1):
@@ -456,12 +453,12 @@ _FINGERPRINT_QUANTITIES = {
 def plot_survey_fingerprint(
     sites: Any,
     *,
-    quantities: Optional[List[str]] = None,
-    period_range: Optional[Tuple[float, float]] = None,
-    station_order: Optional[List[str]] = None,
+    quantities: list[str] | None = None,
+    period_range: tuple[float, float] | None = None,
+    station_order: list[str] | None = None,
     cell_aspect: float = 1.0,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -651,17 +648,17 @@ def plot_sensitivity_depth_section(
     sites: Any,
     *,
     component: str = "xy",
-    period_range: Optional[Tuple[float, float]] = None,
-    depth_max: Optional[float] = None,
+    period_range: tuple[float, float] | None = None,
+    depth_max: float | None = None,
     depth_unit: str = "km",
     cmap: str = "jet_r",
     alpha_bar: float = 0.55,
     bar_width_fraction: float = 0.70,
-    rho_lim: Optional[Tuple[float, float]] = None,
-    station_order: Optional[List[str]] = None,
+    rho_lim: tuple[float, float] | None = None,
+    station_order: list[str] | None = None,
     show_bostick_depth: bool = True,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -894,14 +891,14 @@ def plot_dimensionality_ternary(
     *,
     beta_thresh: float = 5.0,
     ellipt_thresh: float = 0.1,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     color_by: str = "period",
     cmap: str = "plasma",
     ms: float = 4.0,
     alpha: float = 0.65,
     add_density: bool = True,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1026,7 +1023,6 @@ def plot_dimensionality_ternary(
 
     # threshold boundary lines
     # |beta| = beta_thresh ↔ u3d = 1 → y = sqrt(3)/2 line segment
-    frac = 1.0  # u3d = 1 → top vertex only; show partial lines
     # line where u3d = 0.5 (|beta| = beta_thresh/2)
     u3_half = 0.5
     x_line = np.linspace(0, 1 - u3_half, 50)
@@ -1102,7 +1098,7 @@ def _distortion_params(z: np.ndarray, rho: np.ndarray, phase: np.ndarray,
 
     # 5. 1 − λ (ellipticity complement) from ρa components
     rho_xy = rho[:, 0, 1]; rho_yx = rho[:, 1, 0]
-    rho_sum = rho_xy + rho_yx + 1e-30
+    rho_xy + rho_yx + 1e-30
     ellipt  = np.minimum(rho_xy, rho_yx) / np.maximum(rho_xy, rho_yx)
     p_ellipt = float(1.0 - np.nanmedian(ellipt))
     p_ellipt = np.clip(p_ellipt, 0.0, 1.0)
@@ -1129,15 +1125,15 @@ def _distortion_params(z: np.ndarray, rho: np.ndarray, phase: np.ndarray,
 def plot_distortion_radar(
     sites: Any,
     *,
-    stations: Optional[List[str]] = None,
+    stations: list[str] | None = None,
     max_stations: int = 8,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     fill_alpha: float = 0.18,
     line_alpha: float = 0.85,
     lw: float = 1.5,
     cmap: str = "tab10",
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1265,7 +1261,7 @@ def plot_tf_coherence_network(
     sites: Any,
     *,
     component: str = "xy",
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     threshold: float = 0.85,
     max_edges: int = 120,
     node_c_by: str = "skew",
@@ -1275,7 +1271,7 @@ def plot_tf_coherence_network(
     lw_max: float = 2.5,
     alpha_edge: float = 0.65,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1324,7 +1320,6 @@ def plot_tf_coherence_network(
     >>> fig = plot_tf_coherence_network(all_sites, threshold=0.90)
     """
     from scipy.stats import pearsonr as _pearsonr
-    from ..api.plot import add_colorbar
 
     S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
                      strict=strict, verbose=verbose)
@@ -1466,8 +1461,8 @@ def plot_tf_coherence_network(
                 alpha=alpha_edge, zorder=2, solid_capstyle="round")
 
     # draw nodes
-    nc_obj = plt.get_cmap(node_cmap)
-    nn_norm = Normalize(vmin=nv0, vmax=nv1)
+    plt.get_cmap(node_cmap)
+    Normalize(vmin=nv0, vmax=nv1)
     sc = ax.scatter(lons, lats, c=nv_arr, cmap=node_cmap,
                     vmin=nv0, vmax=nv1, s=node_ms**2,
                     zorder=4, linewidths=0.5, edgecolors="0.3")
@@ -1518,17 +1513,17 @@ def plot_tf_coherence_network(
 def plot_strike_stability_bands(
     sites: Any,
     *,
-    methods: Tuple[str, ...] = ("sweep", "pt", "tipper"),
-    period_range: Optional[Tuple[float, float]] = None,
+    methods: tuple[str, ...] = ("sweep", "pt", "tipper"),
+    period_range: tuple[float, float] | None = None,
     n_period_bins: int = 30,
     agreement_tol: float = 10.0,
     smooth_window: int = 3,
-    method_colors: Optional[dict] = None,
+    method_colors: dict | None = None,
     fill_alpha: float = 0.25,
     line_alpha: float = 0.90,
     consensus_alpha: float = 0.18,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1615,7 +1610,7 @@ def plot_strike_stability_bands(
 
     if "tipper" in methods:
         tip_rows = []
-        for i, ed in enumerate(_iter_items(S)):
+        for _i, ed in enumerate(_iter_items(S)):
             T_o, t, fr = _get_t_block(ed)
             if t is None or fr is None:
                 continue
@@ -1740,12 +1735,12 @@ def plot_strike_stability_bands(
 def plot_rho_phase_bode(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     component: str = "xy",
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     smooth_window: int = 0,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1877,12 +1872,12 @@ def plot_rho_phase_bode(
 def plot_pt_period_clock(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     n_rings: int = 6,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     cmap: str = "plasma",
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2010,13 +2005,13 @@ def plot_pt_period_clock(
 def plot_apparent_resistivity_polar(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     n_periods: int = 8,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     normalize: bool = True,
     cmap: str = "plasma",
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2132,9 +2127,9 @@ def _build_psection_image(
     extract_fn,
     *,
     n_grid: int = 50,
-    period_range: Optional[Tuple[float, float]] = None,
-    station_order: Optional[List[str]] = None,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    period_range: tuple[float, float] | None = None,
+    station_order: list[str] | None = None,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Build a (n_grid × n_sta) pseudosection image using *extract_fn*.
 
     extract_fn(ed, fr, per) → 1-D value array aligned with fr/per.
@@ -2187,14 +2182,14 @@ def _build_psection_image(
 def plot_apparent_anisotropy_section(
     sites: Any,
     *,
-    period_range: Optional[Tuple[float, float]] = None,
+    period_range: tuple[float, float] | None = None,
     show_pt_arrows: bool = False,
     arrow_every: int = 4,
     cmap: str = "RdBu_r",
     vmax: float = 1.0,
-    station_order: Optional[List[str]] = None,
+    station_order: list[str] | None = None,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2325,13 +2320,13 @@ def plot_dimensionality_depth_profile(
     component: str = "xy",
     beta_thresh: float = 5.0,
     ellipt_thresh: float = 0.1,
-    period_range: Optional[Tuple[float, float]] = None,
-    depth_max: Optional[float] = None,
+    period_range: tuple[float, float] | None = None,
+    depth_max: float | None = None,
     depth_unit: str = "km",
     cmap: str = "RdYlGn_r",
-    station_order: Optional[List[str]] = None,
+    station_order: list[str] | None = None,
     ax=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2406,7 +2401,7 @@ def plot_dimensionality_depth_profile(
                 j = int(np.argmin(dist))
                 if dist[j] < 0.3:
                     beta_v = float(abs(sub["beta"].iloc[j]))
-                    ellipt_v = float(sub["ellipt"].iloc[j])
+                    float(sub["ellipt"].iloc[j])
                     u3d = min(1.0, beta_v / float(beta_thresh))
             rows.append(dict(station=nm, depth=d_b, u3d=u3d))
 
@@ -2437,8 +2432,7 @@ def plot_dimensionality_depth_profile(
 
     cmap_obj = plt.get_cmap(cmap)
     u3d_vals = df["u3d"].to_numpy(float)
-    u3d_finite = u3d_vals[np.isfinite(u3d_vals)]
-    vmin = 0.0; vmax_u = 1.0
+    u3d_vals[np.isfinite(u3d_vals)]
 
     for _, row in df.iterrows():
         st = row["station"]
@@ -2493,11 +2487,11 @@ def plot_mt_composite_section(
     sites: Any,
     *,
     component: str = "xy",
-    quantities: Optional[List[str]] = None,
-    period_range: Optional[Tuple[float, float]] = None,
-    station_order: Optional[List[str]] = None,
+    quantities: list[str] | None = None,
+    period_range: tuple[float, float] | None = None,
+    station_order: list[str] | None = None,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2692,14 +2686,14 @@ def plot_mt_composite_section(
 def plot_snr_section(
     sites: Any,
     *,
-    components: Tuple[str, ...] = ("xy", "yx"),
-    period_range: Optional[Tuple[float, float]] = None,
+    components: tuple[str, ...] = ("xy", "yx"),
+    period_range: tuple[float, float] | None = None,
     snr_thresh: float = 3.0,
     cmap: str = "RdYlGn",
     vmax: float = 10.0,
-    station_order: Optional[List[str]] = None,
+    station_order: list[str] | None = None,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2855,10 +2849,10 @@ def plot_snr_section(
 def plot_z_invariants_section(
     sites: Any,
     *,
-    period_range: Optional[Tuple[float, float]] = None,
-    station_order: Optional[List[str]] = None,
+    period_range: tuple[float, float] | None = None,
+    station_order: list[str] | None = None,
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     recursive: bool = True,
     on_dup: str = "replace",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 from __future__ import annotations
 
@@ -9,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pycsamt.zonge.meas import Frequency
 from pycsamt.exceptions import FrequencyError
+from pycsamt.zonge.meas import Frequency
 
 
 def _has_line(lines, predicate):
@@ -138,5 +137,5 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     assert any(re.match(r"^100(\.0)?,1(\.0)?,ExHy$", ln.strip()) for ln in csv_rows)
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

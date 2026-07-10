@@ -36,31 +36,30 @@ in :func:`pycsamt.emtools.tensor.plot_phase_tensor_map` (see
 # Per Lilley (1998), a 1-D response degenerates every circle to a
 # point; 2-D circles all pass through the origin; 3-D circles do not.
 
-from _datasets import load_survey, dataset_path
+import numpy as np
+from _datasets import load_survey
 
-from pycsamt.emtools._core import _iter_items, _name
 from pycsamt.emtools import (
     build_phase_tensor_table,
     ensure_sites,
-    plot_impedance_mohr_circles,
-    plot_zt_argand,
-    plot_rho_phase_bode,
+    plot_apparent_anisotropy_section,
     plot_apparent_resistivity_polar,
-    plot_pt_period_clock,
+    plot_dimensionality_depth_profile,
     plot_dimensionality_ternary,
     plot_distortion_radar,
-    plot_sensitivity_depth_section,
-    plot_apparent_anisotropy_section,
-    plot_dimensionality_depth_profile,
-    plot_z_invariants_section,
-    plot_survey_fingerprint,
+    plot_impedance_mohr_circles,
     plot_mt_composite_section,
+    plot_pt_period_clock,
+    plot_rho_phase_bode,
+    plot_sensitivity_depth_section,
     plot_snr_section,
     plot_strike_stability_bands,
+    plot_survey_fingerprint,
     plot_tf_coherence_network,
+    plot_z_invariants_section,
+    plot_zt_argand,
 )
-
-import numpy as np
+from pycsamt.emtools._core import _iter_items, _name
 
 survey = load_survey("amt_l18plt")
 S = ensure_sites(survey, recursive=False, on_dup="replace", strict=False, verbose=0)
@@ -322,7 +321,7 @@ print("KAP03 (no usable coords):",
 # stress test of the figsize/aspect fix at a completely different
 # physical scale:
 
-for i, ed in enumerate(_iter_items(S_kap)):
+for _i, ed in enumerate(_iter_items(S_kap)):
     dm = ed.edi.sections.get("definemeas")
     ed.set_coords(float(dm.reflat), float(dm.reflong), inplace=True)
 

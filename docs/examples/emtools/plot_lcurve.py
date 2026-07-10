@@ -68,8 +68,12 @@ plot_lcurve(misfit_demo, rough_demo, lam_demo)
 
 from _datasets import load_survey  # noqa: E402
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name  # noqa: E402
 from pycsamt.emtools import ensure_sites  # noqa: E402
+from pycsamt.emtools._core import (  # noqa: E402
+    _get_z_block,
+    _iter_items,
+    _name,
+)
 
 survey = ensure_sites(load_survey("amt_l18plt"), recursive=False)
 

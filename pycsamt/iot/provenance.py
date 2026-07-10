@@ -17,9 +17,12 @@ import json
 import os
 import platform
 import zipfile
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import (
+    Any,
+)
 
 from ..api.property import PyCSAMTObject
 from . import _common as _c
@@ -52,7 +55,7 @@ def _tool_version() -> str:
             return "unknown"
 
 
-def _utc_iso(timestamp: Optional[float] = None) -> str:
+def _utc_iso(timestamp: float | None = None) -> str:
     if timestamp is None:
         dt = datetime.now(timezone.utc)
     else:
@@ -80,7 +83,7 @@ def hash_raw_file(
     *,
     algo: str = "sha256",
     chunk_size: int = 1 << 20,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Hash a raw acquisition file and return its integrity record.
 
     Returns a mapping with ``path``, ``bytes``, ``algo``, ``digest``, and
@@ -112,12 +115,12 @@ def log_qc_decision(
     station: str,
     decision: str,
     *,
-    channel: Optional[str] = None,
-    reasons: Optional[Iterable[str]] = None,
-    operator: Optional[str] = None,
-    timestamp: Optional[float] = None,
-    window: Optional[Tuple[float, float]] = None,
-) -> Dict[str, Any]:
+    channel: str | None = None,
+    reasons: Iterable[str] | None = None,
+    operator: str | None = None,
+    timestamp: float | None = None,
+    window: tuple[float, float] | None = None,
+) -> dict[str, Any]:
     """Return a normalised QC-decision record for the audit trail."""
     return dict(
         station=_c.as_nonempty_str(station, "station"),
@@ -135,25 +138,25 @@ class ProvenanceRecord(PyCSAMTObject):
     """Per-station occupation provenance for one field session."""
 
     station_id: str
-    instrument_serial: Optional[str] = None
-    firmware: Optional[str] = None
-    operator: Optional[str] = None
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    elevation: Optional[float] = None
-    ex_azimuth_deg: Optional[float] = None
-    ey_azimuth_deg: Optional[float] = None
-    occupation_start: Optional[float] = None
-    occupation_end: Optional[float] = None
-    sample_rate_hz: Optional[float] = None
-    gps_quality: Optional[str] = None
-    battery_status: Optional[str] = None
-    accepted_band_hz: Optional[Tuple[float, float]] = None
+    instrument_serial: str | None = None
+    firmware: str | None = None
+    operator: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    elevation: float | None = None
+    ex_azimuth_deg: float | None = None
+    ey_azimuth_deg: float | None = None
+    occupation_start: float | None = None
+    occupation_end: float | None = None
+    sample_rate_hz: float | None = None
+    gps_quality: str | None = None
+    battery_status: str | None = None
+    accepted_band_hz: tuple[float, float] | None = None
     field_notes: str = ""
-    qc_decisions: List[Dict[str, Any]] = field(default_factory=list)
-    rejected_windows: List[Any] = field(default_factory=list)
-    processing_steps: List[str] = field(default_factory=list)
-    raw_files: List[Dict[str, Any]] = field(default_factory=list)
+    qc_decisions: list[dict[str, Any]] = field(default_factory=list)
+    rejected_windows: list[Any] = field(default_factory=list)
+    processing_steps: list[str] = field(default_factory=list)
+    raw_files: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -177,19 +180,19 @@ class ProvenanceRecord(PyCSAMTObject):
             )
 
     @property
-    def occupation_seconds(self) -> Optional[float]:
+    def occupation_seconds(self) -> float | None:
         """Occupation duration in seconds, if both bounds are known."""
         if self.occupation_start is None or self.occupation_end is None:
             return None
         return float(self.occupation_end - self.occupation_start)
 
-    def add_raw_file(self, path: str, *, algo: str = "sha256") -> Dict[str, Any]:
+    def add_raw_file(self, path: str, *, algo: str = "sha256") -> dict[str, Any]:
         """Hash *path* and attach the integrity record."""
         record = hash_raw_file(path, algo=algo)
         self.raw_files.append(record)
         return record
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return dict(
             station_id=self.station_id,
             instrument_serial=self.instrument_serial,
@@ -226,15 +229,15 @@ class AcquisitionManifest(PyCSAMTObject):
     created_utc: str = field(default_factory=_utc_iso)
     tool: str = "pycsamt.iot"
     tool_version: str = field(default_factory=_tool_version)
-    method: Optional[str] = None
-    operator: Optional[str] = None
-    records: List[ProvenanceRecord] = field(default_factory=list)
-    devices: List[Dict[str, Any]] = field(default_factory=list)
-    files: List[Dict[str, Any]] = field(default_factory=list)
-    qc_decisions: List[Dict[str, Any]] = field(default_factory=list)
-    processing_steps: List[str] = field(default_factory=list)
-    environment: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    method: str | None = None
+    operator: str | None = None
+    records: list[ProvenanceRecord] = field(default_factory=list)
+    devices: list[dict[str, Any]] = field(default_factory=list)
+    files: list[dict[str, Any]] = field(default_factory=list)
+    qc_decisions: list[dict[str, Any]] = field(default_factory=list)
+    processing_steps: list[str] = field(default_factory=list)
+    environment: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -255,12 +258,12 @@ class AcquisitionManifest(PyCSAMTObject):
             else ProvenanceRecord(**dict(record))
         )
 
-    def add_file(self, path: str, *, algo: str = "sha256") -> Dict[str, Any]:
+    def add_file(self, path: str, *, algo: str = "sha256") -> dict[str, Any]:
         record = hash_raw_file(path, algo=algo)
         self.files.append(record)
         return record
 
-    def add_qc_decision(self, **kwargs: Any) -> Dict[str, Any]:
+    def add_qc_decision(self, **kwargs: Any) -> dict[str, Any]:
         decision = log_qc_decision(**kwargs)
         self.qc_decisions.append(decision)
         return decision
@@ -268,7 +271,7 @@ class AcquisitionManifest(PyCSAMTObject):
     def add_processing_step(self, step: str) -> None:
         self.processing_steps.append(_c.as_nonempty_str(step, "step"))
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         payload = dict(
             survey_id=self.survey_id,
             created_utc=self.created_utc,
@@ -299,7 +302,7 @@ class AcquisitionManifest(PyCSAMTObject):
         return os.path.abspath(path)
 
 
-def _default_environment() -> Dict[str, Any]:
+def _default_environment() -> dict[str, Any]:
     return dict(
         python=platform.python_version(),
         platform=platform.platform(),
@@ -310,13 +313,13 @@ def _default_environment() -> Dict[str, Any]:
 def build_acquisition_manifest(
     survey_id: str,
     *,
-    records: Optional[Iterable[ProvenanceRecord | Mapping[str, Any]]] = None,
-    devices: Optional[Iterable[Mapping[str, Any]]] = None,
-    qc_decisions: Optional[Iterable[Mapping[str, Any]]] = None,
-    processing_steps: Optional[Iterable[str]] = None,
-    method: Optional[str] = None,
-    operator: Optional[str] = None,
-    metadata: Optional[Mapping[str, Any]] = None,
+    records: Iterable[ProvenanceRecord | Mapping[str, Any]] | None = None,
+    devices: Iterable[Mapping[str, Any]] | None = None,
+    qc_decisions: Iterable[Mapping[str, Any]] | None = None,
+    processing_steps: Iterable[str] | None = None,
+    method: str | None = None,
+    operator: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
 ) -> AcquisitionManifest:
     """Assemble an :class:`AcquisitionManifest` from session components."""
     manifest = AcquisitionManifest(
@@ -380,7 +383,7 @@ def export_reproducibility_bundle(
     *,
     include_raw: bool = False,
     zip_bundle: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Write a manifest and per-station audits into *out_dir*.
 
     Parameters
@@ -407,13 +410,13 @@ def export_reproducibility_bundle(
 
     audits_dir = os.path.join(out_dir, "audits")
     os.makedirs(audits_dir, exist_ok=True)
-    audit_paths: List[str] = []
+    audit_paths: list[str] = []
     for record in manifest.records:
         audit_path = os.path.join(audits_dir, f"{record.station_id}.json")
         export_station_audit(record, audit_path)
         audit_paths.append(audit_path)
 
-    result: Dict[str, Any] = dict(
+    result: dict[str, Any] = dict(
         manifest=os.path.abspath(manifest_path),
         audits=audit_paths,
     )
@@ -423,8 +426,8 @@ def export_reproducibility_bundle(
 
         raw_dir = os.path.join(out_dir, "raw")
         os.makedirs(raw_dir, exist_ok=True)
-        copied: List[str] = []
-        seen: List[Dict[str, Any]] = list(manifest.files)
+        copied: list[str] = []
+        seen: list[dict[str, Any]] = list(manifest.files)
         for record in manifest.records:
             seen.extend(record.raw_files)
         for entry in seen:

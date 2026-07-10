@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,8 +10,6 @@ scrolls to and highlights the matching row.
 
 from __future__ import annotations
 
-from typing import List
-
 import pandas as pd
 from PySide6.QtCore import QSortFilterProxyModel, Qt, Signal
 from PySide6.QtWidgets import (
@@ -22,7 +19,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.models.station_model import StationModel
+from pycsamt.app.desktop.models.station_model import (
+    StationModel,
+)
 
 
 class StationTable(QTableView):
@@ -90,7 +89,7 @@ class StationTable(QTableView):
 
     def _on_selection_changed(self, selected, deselected) -> None:
         rows = self.selectionModel().selectedRows()
-        ids: List[str] = []
+        ids: list[str] = []
         for proxy_idx in rows:
             src_idx = self._proxy.mapToSource(proxy_idx)
             sid = self._model.station_id_at_row(src_idx.row())

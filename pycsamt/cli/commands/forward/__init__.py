@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,12 +22,15 @@ generate    ``pycsamt forward generate`` — batch-generate synthetic
             (model, response) training datasets.
 """
 
-from ._base import forward  # noqa: F401  (re-exported as package public API)
-
 # Importing each sub-module triggers its @forward.command / @forward.group
 # decorator, which registers the sub-command on the group defined in _base.
-from . import model     # noqa: F401
-from . import run       # noqa: F401
-from . import generate  # noqa: F401
+from . import (
+    generate,  # noqa: F401
+    model,  # noqa: F401
+    run,  # noqa: F401
+)
+from ._base import (
+    forward,  # noqa: F401  (re-exported as package public API)
+)
 
 __all__ = ["forward"]

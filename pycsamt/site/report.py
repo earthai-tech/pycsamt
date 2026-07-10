@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -48,7 +47,7 @@ reported as ``"—"`` in the output.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -59,9 +58,9 @@ from ..api.view import maybe_wrap_frame
 # ---------------------------------------------------------------------------
 try:
     from rich.console import Console
-    from rich.panel   import Panel
-    from rich.table   import Table
-    from rich.text    import Text
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
     _RICH = True
 except ImportError:
     _RICH = False
@@ -150,7 +149,7 @@ def _safe_arr(arr: Any, *, real_only: bool = True) -> np.ndarray | None:
 def _rho_stats(
     rho: np.ndarray | None,
     comp_idx: int,
-) -> Tuple[float | None, float | None]:
+) -> tuple[float | None, float | None]:
     """Return (mean, std) of log10-ρ_a for component *comp_idx*."""
     if rho is None:
         return None, None
@@ -174,7 +173,7 @@ def _rho_stats(
 def _phase_stats(
     phase: np.ndarray | None,
     comp_idx: int,
-) -> Tuple[float | None, float | None]:
+) -> tuple[float | None, float | None]:
     """Return (mean, std) of phase (degrees) for component *comp_idx*."""
     if phase is None:
         return None, None
@@ -243,7 +242,7 @@ def _console() -> Any:
     return None
 
 
-def _print_plain(lines: List[str]) -> None:
+def _print_plain(lines: list[str]) -> None:
     for ln in lines:
         print(ln)  # noqa: T201
 
@@ -303,7 +302,7 @@ class SiteReport:
             f"φ_xy={_fmt_phi(s['phi_xy_mean'], None)})"
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a plain dict of all computed statistics."""
         return dict(self._stats)
 
@@ -328,7 +327,7 @@ class SiteReport:
     # Statistics
     # ------------------------------------------------------------------
 
-    def _compute(self) -> Dict[str, Any]:
+    def _compute(self) -> dict[str, Any]:
         site = self._site
         try:
             lat, lon, elev = site.coords
@@ -459,7 +458,7 @@ class SiteReport:
     # Plain-text output
     # ------------------------------------------------------------------
 
-    def _plain_lines(self, *, detail: bool = False) -> List[str]:
+    def _plain_lines(self, *, detail: bool = False) -> list[str]:
         s = self._stats
         lines = [
             f"\nSite: {s['name']}",
@@ -522,7 +521,7 @@ class SitesReport:
 
     def __init__(self, sites: Any) -> None:
         self._sites   = list(sites)
-        self._records: List[Dict[str, Any]] = [
+        self._records: list[dict[str, Any]] = [
             SiteReport(s)._compute() for s in self._sites
         ]
         self._survey  = self._survey_stats()
@@ -560,7 +559,7 @@ class SitesReport:
             f"{_fmt_freq(sv['freq_max_common'])})"
         )
 
-    def to_dict(self) -> List[Dict[str, Any]]:
+    def to_dict(self) -> list[dict[str, Any]]:
         """Return a list of per-station stat dicts."""
         return [dict(r) for r in self._records]
 
@@ -609,7 +608,7 @@ class SitesReport:
     # Survey-level statistics
     # ------------------------------------------------------------------
 
-    def _survey_stats(self) -> Dict[str, Any]:
+    def _survey_stats(self) -> dict[str, Any]:
         recs = self._records
         if not recs:
             return {"n_stations": 0}
@@ -622,7 +621,7 @@ class SitesReport:
         fmaxs = [r["freq_max"] for r in recs if r["freq_max"] is not None]
 
         # Component availability counts
-        comp_counts: Dict[str, int] = {c: 0 for c in _COMPONENTS}
+        comp_counts: dict[str, int] = {c: 0 for c in _COMPONENTS}
         tip_count = 0
         nfreq_vals = []
         for r in recs:
@@ -656,7 +655,7 @@ class SitesReport:
 
     def _rich_report(
         self,
-        records: List[Dict[str, Any]],
+        records: list[dict[str, Any]],
         *,
         detail: bool = False,
     ) -> None:
@@ -788,10 +787,10 @@ class SitesReport:
 
     def _plain_lines(
         self,
-        records: List[Dict[str, Any]],
+        records: list[dict[str, Any]],
         *,
         detail: bool = False,
-    ) -> List[str]:
+    ) -> list[str]:
         sv = self._survey
         n  = sv["n_stations"]
         lines = [

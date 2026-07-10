@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -42,7 +41,6 @@ from ....api.cli.config import configure_cli
 from ....api.cli.options import (
     format_option,
     no_color_option,
-    output_dir_option,
     verbose_option,
 )
 from ._base import interp
@@ -169,8 +167,13 @@ def classify(
 
     # ── load model ────────────────────────────────────────────────────────────
     try:
-        from ....models.occam2d.results import InversionResult  # noqa: PLC0415
-        from ....interp import ResistivityModel, ModelCalibrator  # noqa: PLC0415
+        from ....interp import (  # noqa: PLC0415
+            ModelCalibrator,
+            ResistivityModel,
+        )
+        from ....models.occam2d.results import (
+            InversionResult,  # noqa: PLC0415
+        )
 
         if verbose >= 1:
             click.echo(
@@ -183,7 +186,6 @@ def classify(
         model  = ResistivityModel.from_occam2d(result)
 
         if max_depth is not None:
-            import numpy as np  # noqa: PLC0415
             mask = model.z_centers <= max_depth
             model = ResistivityModel(
                 x_centers=model.x_centers,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,22 +5,16 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import (
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    Any
-)
 import os
 import re
+from abc import ABC, abstractmethod
+from collections.abc import Iterable, Sequence
+from pathlib import Path
+from typing import (
+    Any,
+)
 
 from ..exceptions import EdIDataError, FileHandlingError
-
 
 _TAG_RE = re.compile(r"^\s*>(=)?\s*([A-Za-z0-9!.]+)")
 _FLOAT_RE = re.compile(
@@ -35,7 +28,7 @@ def _strip_norm(s: str) -> str:
     return s.strip().strip('"').strip("'")
 
 
-def _to_int_or_none(v: Any) -> Optional[int]:
+def _to_int_or_none(v: Any) -> int | None:
     if v in (None, "", "None"):
         return None
     try:
@@ -43,7 +36,7 @@ def _to_int_or_none(v: Any) -> Optional[int]:
     except Exception:
         return None
 
-def _to_float_or_none(v: Any) -> Optional[float]:
+def _to_float_or_none(v: Any) -> float | None:
     if v in (None, "", "None"):
         return None
     try:
@@ -52,7 +45,7 @@ def _to_float_or_none(v: Any) -> Optional[float]:
         return None
 
 
-def _split_comment(s: str) -> Tuple[str, Optional[str]]:
+def _split_comment(s: str) -> tuple[str, str | None]:
     """Return (before, after) around '//' if present."""
     i = s.find("//")
     if i < 0:
@@ -60,7 +53,7 @@ def _split_comment(s: str) -> Tuple[str, Optional[str]]:
     return (s[:i], s[i + 2 :].strip())
 
 
-def _norm_str(value: Any) -> Optional[str]:
+def _norm_str(value: Any) -> str | None:
     if value is None:
         return None
     s = str(value).strip().strip('"').strip("'")
@@ -73,7 +66,7 @@ def _is_tag(line: str, tag: str) -> bool:
         return False
     return s.upper().startswith(tag.upper())
 
-def _extract_tag(line: str) -> Optional[str]:
+def _extract_tag(line: str) -> str | None:
     s = line.strip()
     if not s.startswith(">"):
         return None
@@ -81,7 +74,7 @@ def _extract_tag(line: str) -> Optional[str]:
     parts = s.split(None, 1)
     return parts[0]
 
-def _extract_tag_in(line: str) -> Optional[str]:
+def _extract_tag_in(line: str) -> str | None:
     m = _TAG_RE.match(line)
     if not m:
         return None
@@ -90,8 +83,8 @@ def _extract_tag_in(line: str) -> Optional[str]:
     return f"{prefix}{tag.upper()}"
 
 
-def _iter_blocks(lines: Sequence[str]) -> List[str]:
-    tags: List[str] = []
+def _iter_blocks(lines: Sequence[str]) -> list[str]:
+    tags: list[str] = []
     for ln in lines:
         t = _extract_tag_in(ln)
         if t:
@@ -101,7 +94,7 @@ def _iter_blocks(lines: Sequence[str]) -> List[str]:
 
 def _count_freq_values(
     lines: Sequence[str], start_idx: int
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     n = 0
     i = start_idx + 1
     N = len(lines)
@@ -113,7 +106,7 @@ def _count_freq_values(
     return n, i
 
 
-def _expected_nfreq_from_header(line: str) -> Optional[int]:
+def _expected_nfreq_from_header(line: str) -> int | None:
     m = _NFREQ_RE.search(line)
     if m:
         return int(m.group(1))
@@ -244,7 +237,7 @@ class IsEdi(ABC):
 
     @staticmethod
     def _assert_edi(
-        file: Union[str, os.PathLike, "IsEdi"], *, deep: bool = True
+        file: str | os.PathLike | IsEdi, *, deep: bool = True
     ) -> bool:
         r"""
         Validate that ``file`` is a SEG-EDI file (or object).
@@ -387,7 +380,7 @@ class IsEdi(ABC):
             }
             for t in tags
         ) or any(t.startswith(">=DEFINEMEAS") for t in tags)
-        
+
         # Spectra-style markers
         have_spectra_sect = any(
             t.startswith(">=SPECTRASECT") for t in tags
@@ -395,7 +388,7 @@ class IsEdi(ABC):
         have_spectra_blocks = any(
             t.startswith(">SPECTRA") for t in tags
         )
-        
+
         # Time-series markers
         have_tseries_sect = any(
             t.startswith(">=TSERIESSECT") for t in tags
@@ -403,14 +396,14 @@ class IsEdi(ABC):
         have_tseries_blocks = any(
             t.startswith(">TSERIES") for t in tags
         )
-        
+
         # NEW: Other-style markers (may exist without >FREQ)
         have_other_sect = any(
             t.startswith(">=OTHERSECT") for t in tags
         )
         # You can be permissive and accept header-only OTHER
         valid_other = have_other_sect
-        
+
         valid_impedance = have_freq and (
             have_meas_section or have_spectra_sect
         )
@@ -420,7 +413,7 @@ class IsEdi(ABC):
         valid_tseries = (
             have_tseries_sect or have_tseries_blocks
         )
-        
+
         if not (
             valid_impedance
             or valid_spectra

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,6 @@ Layout
 from __future__ import annotations
 
 import numpy as np
-
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
@@ -29,7 +27,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
     QMessageBox,
@@ -42,7 +39,6 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
@@ -59,7 +55,9 @@ class _StrikeWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.strike import estimate_strike_consensus
+            from pycsamt.emtools.strike import (
+                estimate_strike_consensus,
+            )
             df = estimate_strike_consensus(
                 self._sites,
                 band=self._band,

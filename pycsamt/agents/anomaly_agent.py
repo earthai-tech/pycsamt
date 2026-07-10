@@ -98,8 +98,10 @@ class AnomalyDetectionAgent(BaseAgent):
 
         # ── backend check ──────────────────────────────────────────────────────
         try:
-            from ..ai.processing.anomaly import AnomalyDetector
-            from ..backends              import get_backend_instance
+            from ..ai.processing.anomaly import (
+                AnomalyDetector,
+            )
+            from ..backends import get_backend_instance
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -109,8 +111,13 @@ class AnomalyDetectionAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
-        from .ai_inversion   import _z_to_features
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
+        from .ai_inversion import _z_to_features
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:

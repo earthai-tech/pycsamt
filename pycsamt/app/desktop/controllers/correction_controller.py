@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -37,7 +36,7 @@ ParamSpec = namedtuple(
 # ── Correction catalogue ───────────────────────────────────────────────────────
 # Structure: {category_name: {correction_label: {fn, desc, params}}}
 
-CATALOGUE: Dict[str, Dict[str, Dict]] = {
+CATALOGUE: dict[str, dict[str, dict]] = {
     "Static Shift": {
         "AMA (spatial average)": {
             "fn":   "correct_ss_ama",
@@ -463,7 +462,7 @@ _STRAT_FN_NAMES = {
 class CorrectionStep:
     label:       str
     fn_name:     str
-    kwargs:      Dict[str, Any]
+    kwargs:      dict[str, Any]
     sites_after: Any                        # Sites — result (unchanged for coord steps)
     coords_df:   Any = field(default=None)  # pd.DataFrame — only for coord corrections
     index:       int = field(default=0)
@@ -484,7 +483,7 @@ class CorrectionController:
         self._raw_sites = None
         self._raw_coords_df = None       # snapshot taken at set_raw_sites
         self._preview_coords_df = None   # result of last Preview for coord corrections
-        self._stack: List[CorrectionStep] = []
+        self._stack: list[CorrectionStep] = []
         self.dark: bool = True
 
         # ── Stratagem parallel state ──────────────────────────────────────────
@@ -504,7 +503,9 @@ class CorrectionController:
         self._stack.clear()
         self._preview_coords_df = None
         try:
-            from pycsamt.gis.coord_correction import _get_coords_df
+            from pycsamt.gis.coord_correction import (
+                _get_coords_df,
+            )
             self._raw_coords_df = _get_coords_df(sites).copy()
         except Exception:
             self._raw_coords_df = None
@@ -549,7 +550,7 @@ class CorrectionController:
         return self._raw_coords_df
 
     @property
-    def stack(self) -> List[CorrectionStep]:
+    def stack(self) -> list[CorrectionStep]:
         return list(self._stack)
 
     @property
@@ -558,7 +559,7 @@ class CorrectionController:
 
     # ── Correction operations ─────────────────────────────────────────────────
 
-    def preview(self, fn_name: str, kwargs: Dict) -> Optional[Any]:
+    def preview(self, fn_name: str, kwargs: dict) -> Any | None:
         """Compute correction without adding to the stack.
         For coord corrections returns the corrected DataFrame; otherwise Sites."""
         if fn_name in _STRAT_FN_NAMES:
@@ -578,7 +579,9 @@ class CorrectionController:
             return None
         if fn_name in _COORD_FN_NAMES:
             try:
-                from pycsamt.gis.coord_correction import apply_coord_correction_to_df
+                from pycsamt.gis.coord_correction import (
+                    apply_coord_correction_to_df,
+                )
                 _cdf = self.current_coords_df()
                 base_df = (_cdf if _cdf is not None else self._raw_coords_df).copy()
                 corrected_df = apply_coord_correction_to_df(fn_name, base_df, **kwargs)
@@ -591,11 +594,11 @@ class CorrectionController:
             result = self._call_fn(fn_name, self.current_sites, **kwargs)
             self._preview_coords_df = None
             return result
-        except Exception as exc:
+        except Exception:
             self._preview_coords_df = None
             raise  # re-raise so window can show the message
 
-    def apply(self, fn_name: str, kwargs: Dict, label: str) -> Optional[CorrectionStep]:
+    def apply(self, fn_name: str, kwargs: dict, label: str) -> CorrectionStep | None:
         """Compute correction and push it to the stack. Returns the new step."""
         if fn_name in _STRAT_FN_NAMES:
             try:
@@ -615,7 +618,9 @@ class CorrectionController:
             return None
         if fn_name in _COORD_FN_NAMES:
             try:
-                from pycsamt.gis.coord_correction import apply_coord_correction_to_df
+                from pycsamt.gis.coord_correction import (
+                    apply_coord_correction_to_df,
+                )
                 _cdf = self.current_coords_df()
                 base_df = (_cdf if _cdf is not None else self._raw_coords_df).copy()
                 corrected_df = apply_coord_correction_to_df(fn_name, base_df, **kwargs)
@@ -628,7 +633,7 @@ class CorrectionController:
                 self._stack.append(step)
                 self._preview_coords_df = None
                 return step
-            except Exception as exc:
+            except Exception:
                 raise
         try:
             result = self._call_fn(fn_name, self.current_sites, **kwargs)
@@ -667,6 +672,7 @@ class CorrectionController:
         Returns the number of stations loaded.
         """
         import copy
+
         from pycsamt.stratagem.io import EDIBatch
         batch = EDIBatch().fit(edi_dir=edi_dir)
         self._strat_raw_edi_objects = copy.deepcopy(batch.edi_objects_)
@@ -718,7 +724,10 @@ class CorrectionController:
         if not self._strat_edi_objects:
             raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
-        from pycsamt.stratagem.process import StaticShiftCorrector
+
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
         pband = None
         if float(pband_lo) > 0 and float(pband_hi) > float(pband_lo):
             pband = (float(pband_lo), float(pband_hi))
@@ -743,6 +752,7 @@ class CorrectionController:
         if not self._strat_edi_objects:
             raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
+
         from pycsamt.stratagem.process import NoiseRemover
         remover = NoiseRemover(
             mains_hz   = float(mains_hz),
@@ -765,6 +775,7 @@ class CorrectionController:
         if not self._strat_edi_objects:
             raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
+
         from pycsamt.stratagem.qc import FrequencyFilter
         ff = FrequencyFilter(
             fmin       = float(fmin)      if float(fmin)  > 0 else None,
@@ -783,8 +794,15 @@ class CorrectionController:
         if not self._strat_edi_objects:
             raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
-        from pycsamt.stratagem.qc import QualityController, FrequencyFilter
-        from pycsamt.stratagem.process import StaticShiftCorrector, NoiseRemover
+
+        from pycsamt.stratagem.process import (
+            NoiseRemover,
+            StaticShiftCorrector,
+        )
+        from pycsamt.stratagem.qc import (
+            FrequencyFilter,
+            QualityController,
+        )
 
         edis = copy.deepcopy(self._strat_edi_objects)
 
@@ -829,8 +847,7 @@ class CorrectionController:
         if not self._strat_edi_objects:
             raise RuntimeError("No EDI objects to export.")
         from pathlib import Path
-        import copy
-        from pycsamt.stratagem.io import EDIBatch
+
         # Build a minimal EDIBatch-like exporter directly
         out_path = Path(savepath)
         out_path.mkdir(parents=True, exist_ok=True)
@@ -879,7 +896,7 @@ class CorrectionController:
         cmaps  = {"frac_ok": "RdYlGn", "snr_med": "plasma", "skew_med": "RdYlBu_r"}
         for ax, col in zip(axes, cols):
             vals = df[col].values.astype(float)
-            sc   = ax.barh(np.arange(n), vals, color=plt.cm.get_cmap(cmaps[col])(
+            ax.barh(np.arange(n), vals, color=plt.cm.get_cmap(cmaps[col])(
                 vals / (np.nanmax(vals) + 1e-12)), edgecolor=s["spine"], lw=0.5)
             ax.set_facecolor(s["bg"])
             ax.tick_params(colors=s["tick"], labelsize=6)
@@ -1013,8 +1030,8 @@ class CorrectionController:
     def _wrap_rotate(sites, angle=0.0, **_):
         # _edit.rotate works on a single EDI; _edit.rotate_all broadcasts
         # over a Sites collection and returns a new Sites.
-        from pycsamt.site import edit as _edit
         from pycsamt.emtools._core import ensure_sites
+        from pycsamt.site import edit as _edit
         S = ensure_sites(sites, recursive=True, on_dup="replace",
                          strict=False, verbose=0)
         return _edit.rotate_all(S, float(angle), inplace=False)
@@ -1022,15 +1039,17 @@ class CorrectionController:
     @staticmethod
     def _wrap_rotate_to_strike(sites, method="swift", **_):
         # Estimate per-station strike then rotate each site individually.
-        from pycsamt.site import edit as _edit, compute as _compute
         from pycsamt.emtools._core import (
-            ensure_sites, _iter_items, _name, _get_z_block
+            _iter_items,
+            ensure_sites,
         )
+        from pycsamt.site import compute as _compute
+        from pycsamt.site import edit as _edit
         from pycsamt.site.base import Sites
         S = ensure_sites(sites, recursive=True, on_dup="replace",
                          strict=False, verbose=0)
         rotated_items = []
-        for i, ed in enumerate(_iter_items(S)):
+        for _i, ed in enumerate(_iter_items(S)):
             Si = ensure_sites([getattr(ed, "edi", ed)],
                               recursive=False, strict=False)
             ang = 0.0
@@ -1055,13 +1074,15 @@ class CorrectionController:
     @staticmethod
     def _wrap_rotate_pt_strike(sites, band_lo=0.001, band_hi=1000.0,
                                 robust=True, **_):
-        from pycsamt.site import edit as _edit
-        from pycsamt.emtools._core import (
-            ensure_sites, _iter_items, _name
-        )
-        from pycsamt.site.base import Sites
-        from pycsamt.seg.collection import EDICollection
         import pycsamt.emtools as et
+        from pycsamt.emtools._core import (
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
+        from pycsamt.seg.collection import EDICollection
+        from pycsamt.site import edit as _edit
+        from pycsamt.site.base import Sites
         S = ensure_sites(sites, recursive=True, on_dup="replace",
                          strict=False, verbose=0)
         band = (float(band_lo), float(band_hi))
@@ -1088,9 +1109,13 @@ class CorrectionController:
 
     @staticmethod
     def _wrap_rotate_to_profile(sites, azimuth=-1.0, **_):
-        from pycsamt.gis.coord_correction import _get_coords_df, _to_utm_arrays, _pca_azimuth
-        from pycsamt.site import edit as _edit
         from pycsamt.emtools._core import ensure_sites
+        from pycsamt.gis.coord_correction import (
+            _get_coords_df,
+            _pca_azimuth,
+            _to_utm_arrays,
+        )
+        from pycsamt.site import edit as _edit
         S = ensure_sites(sites, recursive=True, on_dup="replace",
                          strict=False, verbose=0)
         if float(azimuth) < 0:
@@ -1107,7 +1132,9 @@ class CorrectionController:
 
     @staticmethod
     def _coord_profile_projection(sites, azimuth=-1.0, keep_elevation=True, **_):
-        from pycsamt.gis.coord_correction import correct_profile_projection
+        from pycsamt.gis.coord_correction import (
+            correct_profile_projection,
+        )
         az = None if azimuth < 0 else float(azimuth)
         return correct_profile_projection(
             sites, azimuth=az, keep_elevation=bool(keep_elevation), inplace=False
@@ -1116,7 +1143,9 @@ class CorrectionController:
     @staticmethod
     def _coord_spacing_regularize(sites, spacing_m=200.0, azimuth=-1.0,
                                    preserve_extent=True, **_):
-        from pycsamt.gis.coord_correction import correct_spacing_regularize
+        from pycsamt.gis.coord_correction import (
+            correct_spacing_regularize,
+        )
         az = None if azimuth < 0 else float(azimuth)
         return correct_spacing_regularize(
             sites, spacing_m=float(spacing_m), azimuth=az,
@@ -1125,7 +1154,9 @@ class CorrectionController:
 
     @staticmethod
     def _coord_outlier_snap(sites, threshold_m=50.0, azimuth=-1.0, **_):
-        from pycsamt.gis.coord_correction import correct_outlier_snap
+        from pycsamt.gis.coord_correction import (
+            correct_outlier_snap,
+        )
         az = None if azimuth < 0 else float(azimuth)
         return correct_outlier_snap(
             sites, threshold_m=float(threshold_m), azimuth=az, inplace=False
@@ -1133,14 +1164,18 @@ class CorrectionController:
 
     @staticmethod
     def _coord_elevation_smooth(sites, method="loess", window=5, **_):
-        from pycsamt.gis.coord_correction import correct_elevation_smooth
+        from pycsamt.gis.coord_correction import (
+            correct_elevation_smooth,
+        )
         return correct_elevation_smooth(
             sites, method=str(method), window=int(window), inplace=False
         )
 
     @staticmethod
     def _coord_shift(sites, delta_lat=0.0, delta_lon=0.0, delta_elev=0.0, **_):
-        from pycsamt.gis.coord_correction import correct_coordinate_shift
+        from pycsamt.gis.coord_correction import (
+            correct_coordinate_shift,
+        )
         return correct_coordinate_shift(
             sites, delta_lat=float(delta_lat),
             delta_lon=float(delta_lon), delta_elev=float(delta_elev), inplace=False
@@ -1148,7 +1183,9 @@ class CorrectionController:
 
     @staticmethod
     def _coord_interpolate_missing(sites, fill_nan_only=True, **_):
-        from pycsamt.gis.coord_correction import correct_interpolate_missing
+        from pycsamt.gis.coord_correction import (
+            correct_interpolate_missing,
+        )
         return correct_interpolate_missing(
             sites, fill_nan_only=bool(fill_nan_only), inplace=False
         )
@@ -1170,7 +1207,10 @@ class CorrectionController:
             return
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+            )
             items = list(_iter_items(sites))
             n = len(items)
             if n == 0:
@@ -1235,7 +1275,11 @@ class CorrectionController:
             return
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block, _name
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+                _name,
+            )
             items = list(_iter_items(sites))
             n_st = len(items)
             if n_st == 0:
@@ -1389,9 +1433,13 @@ class CorrectionController:
             if PYCSAMT_TOPO.enabled:
                 from pycsamt.topo.extract import (
                     extract_elevation,
+                )
+                from pycsamt.topo.extract import (
                     extract_station_names as _ext_names,
                 )
-                from pycsamt.topo.overlay import draw_topo_strip
+                from pycsamt.topo.overlay import (
+                    draw_topo_strip,
+                )
                 elev  = extract_elevation(sites)
                 names = _ext_names(sites)
                 if len(elev) == n_st and np.any(elev > 0):
@@ -1419,7 +1467,10 @@ class CorrectionController:
         ax.set_facecolor(s["bg"])
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+            )
 
             def _draw(sites, ls, alpha, lw):
                 items = list(_iter_items(sites))
@@ -1479,7 +1530,10 @@ class CorrectionController:
             return
 
         try:
-            from pycsamt.emtools._core import _iter_items, _get_z_block
+            from pycsamt.emtools._core import (
+                _get_z_block,
+                _iter_items,
+            )
             b_items = list(_iter_items(before))
             a_items = list(_iter_items(after))
             n = min(len(b_items), len(a_items))
@@ -1514,7 +1568,6 @@ class CorrectionController:
                 s=4, cmap="RdBu_r", vmin=-50, vmax=50,
                 alpha=0.7,
             )
-            from matplotlib import colorbar as mcb
             cb = ax.get_figure().colorbar(sc, ax=ax, pad=0.02)
             cb.set_label("Δρ_a / ρ_a [%]", fontsize=7, color=s["fg"])
             cb.ax.yaxis.set_tick_params(color=s["tick"], labelcolor=s["tick"])
@@ -1536,7 +1589,7 @@ class CorrectionController:
 
     # ── Coordinate / map plots ────────────────────────────────────────────────
 
-    def _df_from(self, data) -> "Optional[pd.DataFrame]":
+    def _df_from(self, data) -> pd.DataFrame | None:
         """Normalise *data* to a coords DataFrame."""
         import pandas as pd
         if isinstance(data, pd.DataFrame):
@@ -1544,14 +1597,18 @@ class CorrectionController:
         if data is None:
             return None
         try:
-            from pycsamt.gis.coord_correction import _get_coords_df
+            from pycsamt.gis.coord_correction import (
+                _get_coords_df,
+            )
             return _get_coords_df(data)
         except Exception:
             return None
 
     def plot_station_map(self, data, ax, title: str = "") -> None:
         """Scatter of station positions.  *data* may be a coords DataFrame or Sites."""
-        from pycsamt.gis.coord_correction import _to_utm_arrays
+        from pycsamt.gis.coord_correction import (
+            _to_utm_arrays,
+        )
         s = _DARK if self.dark else _LIGHT
         _init_ax(ax, s)
 
@@ -1611,7 +1668,9 @@ class CorrectionController:
 
     def plot_station_map_overlay(self, before_data, after_data, ax) -> None:
         """Before (gray ▲) + after (coloured ●) on same axes, with station names."""
-        from pycsamt.gis.coord_correction import _to_utm_arrays
+        from pycsamt.gis.coord_correction import (
+            _to_utm_arrays,
+        )
         s = _DARK if self.dark else _LIGHT
         _init_ax(ax, s)
 
@@ -1628,7 +1687,7 @@ class CorrectionController:
             e, n, _ = _to_utm_arrays(v["lat"].values, v["lon"].values)
             stations = v["station"].values if "station" in v.columns else [str(i+1) for i in range(len(e))]
             n_st = len(e)
-            for i, (ei, ni, st) in enumerate(zip(e, n, stations)):
+            for i, (ei, ni, _st) in enumerate(zip(e, n, stations)):
                 ax.scatter(ei, ni, marker=marker,
                            color=color_fn(i, n_st), alpha=alpha,
                            s=55, edgecolors=s["spine"], linewidths=0.5, zorder=3)
@@ -1660,7 +1719,10 @@ class CorrectionController:
 
     def plot_station_elevation(self, data, ax, title: str = "") -> None:
         """Elevation profile: chainage along profile vs elevation, coloured + contoured."""
-        from pycsamt.gis.coord_correction import _to_utm_arrays, _pca_azimuth
+        from pycsamt.gis.coord_correction import (
+            _pca_azimuth,
+            _to_utm_arrays,
+        )
         s = _DARK if self.dark else _LIGHT
         _init_ax(ax, s)
 
@@ -1686,6 +1748,7 @@ class CorrectionController:
             ch_s, el_s, st_s = chain[order], elev[order], stations[order]
 
             import matplotlib.pyplot as plt
+
             from pycsamt.compat.numpy import ptp as _ptp
             cmap = plt.cm.terrain
             norm = plt.Normalize(el_s.min(), el_s.max()) if _ptp(el_s) > 0 else plt.Normalize(el_s.min()-1, el_s.min()+1)
@@ -1732,7 +1795,10 @@ class CorrectionController:
 
         Before → blue dashed line.   After → green solid line.
         """
-        from pycsamt.gis.coord_correction import _to_utm_arrays, _pca_azimuth
+        from pycsamt.gis.coord_correction import (
+            _pca_azimuth,
+            _to_utm_arrays,
+        )
         s = _DARK if self.dark else _LIGHT
         _init_ax(ax, s)
 
@@ -1864,7 +1930,10 @@ class CorrectionController:
 
     def _draw_strike_rose(self, sites, ax, s) -> None:
         """Compute per-station |Zxy| amplitude weighted by azimuth and plot rose."""
-        from pycsamt.emtools._core import _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
 
         angles, weights = [], []
         for ed in _iter_items(sites):
@@ -1874,7 +1943,7 @@ class CorrectionController:
             # Apparent resistivity for xy and yx — ratio tells us strike proximity
             # field-unit ρ_a = 0.2·|Z|²/f (used here only as a relative weight)
             rho_xy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(freqs, 1e-30)
-            rho_yx = 0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(freqs, 1e-30)
+            0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(freqs, 1e-30)
             # Angle: direction of maximum off-diagonal element
             # Sweep through 0–180° and find angle that maximises |Zxy|
             from pycsamt.emtools.strike import _rotate_tensor
@@ -1903,7 +1972,7 @@ class CorrectionController:
         import matplotlib.pyplot as plt
         cmap = plt.cm.plasma
         max_c = counts.max() if counts.max() > 0 else 1
-        bars = ax.bar(theta, counts, width=width, bottom=0.0,
+        ax.bar(theta, counts, width=width, bottom=0.0,
                       color=[cmap(c / max_c) for c in counts],
                       edgecolor=s["spine"], linewidth=0.4, alpha=0.85)
         ax.set_theta_zero_location("N")
@@ -1915,7 +1984,10 @@ class CorrectionController:
 
     def plot_displacement_diff(self, before, after, ax) -> None:
         """Horizontal bar chart of displacement per station (metres moved)."""
-        from pycsamt.gis.coord_correction import _get_coords_df, _to_utm_arrays
+        from pycsamt.gis.coord_correction import (
+            _get_coords_df,
+            _to_utm_arrays,
+        )
         s = _DARK if self.dark else _LIGHT
         ax.set_facecolor(s["bg"])
         fig = ax.get_figure()
@@ -1947,9 +2019,9 @@ class CorrectionController:
             elev_disp  = merged["elev_a"].values - merged["elev_b"].values
 
             y = np.arange(len(merged))
-            bars_h = ax.barh(y - 0.2, horiz_disp, height=0.35,
+            ax.barh(y - 0.2, horiz_disp, height=0.35,
                              color="#89b4fa", alpha=0.8, label="Horiz. (m)")
-            bars_e = ax.barh(y + 0.2, np.abs(elev_disp), height=0.35,
+            ax.barh(y + 0.2, np.abs(elev_disp), height=0.35,
                              color="#a6e3a1", alpha=0.8, label="Elev. |Δ| (m)")
             ax.set_yticks(y)
             ax.set_yticklabels(merged["station"].values, fontsize=6)

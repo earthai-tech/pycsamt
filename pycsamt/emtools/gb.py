@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ..api.view import maybe_wrap_frame
 from ._core import (
-    ensure_sites,
     _apply_each,
     _get_z_block,
     _iter_items,
     _name,
+    ensure_sites,
 )
 
 
-def _gb_items(sites: Any, resolved: Any) -> List[Any]:
+def _gb_items(sites: Any, resolved: Any) -> list[Any]:
     """Return resolved sites, or direct EDI-like items if coercion was empty."""
     items = list(_iter_items(resolved))
     if items:
@@ -73,7 +73,7 @@ def _rotate_tensor(z: np.ndarray, deg: float) -> np.ndarray:
 def _select_band(
     z: np.ndarray,
     fr: np.ndarray,
-    band: Optional[Tuple[float, float]],
+    band: tuple[float, float] | None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     fr = np.asarray(fr, dtype=float).ravel()
     n = min(z.shape[0], fr.size)
@@ -153,7 +153,7 @@ def _fit_gb_distortion(
     max_iter: int,
     tol: float,
     robust: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     D = np.eye(2, dtype=float)
     weights = np.ones(z.shape[0], dtype=float)
     last = np.inf
@@ -190,7 +190,7 @@ def _fit_gb_distortion(
     return dict(D=D, regional=z2, corrected=corrected, rms_fit=rms)
 
 
-def _gb_parameters(D: np.ndarray) -> Dict[str, float]:
+def _gb_parameters(D: np.ndarray) -> dict[str, float]:
     gain = float(np.sqrt(abs(np.linalg.det(D))))
     Dn = D / gain if np.isfinite(gain) and gain > 0 else D.copy()
     twist_rad = np.arctan2(
@@ -231,8 +231,8 @@ def _diag_ratio(z: np.ndarray) -> float:
 def groom_bailey_table(
     sites: Any,
     *,
-    band: Optional[Tuple[float, float]] = None,
-    rotate_deg: Optional[float] = None,
+    band: tuple[float, float] | None = None,
+    rotate_deg: float | None = None,
     min_freq: int = 4,
     max_iter: int = 30,
     tol: float = 1e-6,
@@ -257,7 +257,7 @@ def groom_bailey_table(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for i, ed in enumerate(_gb_items(sites, S)):
         station = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -319,8 +319,8 @@ def groom_bailey_table(
     )
 
 
-def _distortion_map(table: pd.DataFrame) -> Dict[str, np.ndarray]:
-    out: Dict[str, np.ndarray] = {}
+def _distortion_map(table: pd.DataFrame) -> dict[str, np.ndarray]:
+    out: dict[str, np.ndarray] = {}
     if table is None or table.empty:
         return out
     for _, row in table.iterrows():
@@ -342,10 +342,10 @@ def _distortion_map(table: pd.DataFrame) -> Dict[str, np.ndarray]:
 
 def apply_groom_bailey(
     sites: Any,
-    table: Optional[pd.DataFrame] = None,
+    table: pd.DataFrame | None = None,
     *,
-    band: Optional[Tuple[float, float]] = None,
-    rotate_deg: Optional[float] = None,
+    band: tuple[float, float] | None = None,
+    rotate_deg: float | None = None,
     min_freq: int = 4,
     max_iter: int = 30,
     tol: float = 1e-6,
@@ -405,8 +405,8 @@ def groom_bailey_decomposition(
     sites: Any,
     *,
     apply: bool = False,
-    band: Optional[Tuple[float, float]] = None,
-    rotate_deg: Optional[float] = None,
+    band: tuple[float, float] | None = None,
+    rotate_deg: float | None = None,
     min_freq: int = 4,
     max_iter: int = 30,
     tol: float = 1e-6,

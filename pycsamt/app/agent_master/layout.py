@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Main layout for pyCSAMT Agent Master."""
 
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from ._ids import IDs
-
 from ._providers import (  # noqa: E402
     OFFLINE,
+)
+from ._providers import (
     PROVIDER_OPTIONS as _PROVIDER_OPTIONS,
 )
 

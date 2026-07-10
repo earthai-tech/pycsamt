@@ -21,24 +21,31 @@ Covered parsers
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from pycsamt.models.mare2dem import (
-    read_emdata, write_emdata,
-    read_resistivity, write_resistivity,
-    read_poly, write_poly,
-    write_settings, SettingsFile,
-    read_group_rms_log,
-    DataGroupFile, read_data_group, write_data_group,
+    DataGroupFile,
+    Mare2DEMFileType,
+    SettingsFile,
+    detect_file_type,
     get_most_recent,
-    detect_file_type, Mare2DEMFileType,
-    is_emdata_file, is_resistivity_file, is_response_file,
-    is_log_file, is_settings_file,
+    is_emdata_file,
+    is_resistivity_file,
+    is_response_file,
+    is_settings_file,
+    read_data_group,
+    read_emdata,
+    read_group_rms_log,
+    read_poly,
+    read_resistivity,
+    write_data_group,
+    write_emdata,
+    write_poly,
+    write_resistivity,
+    write_settings,
 )
-
 
 # ==========================================================================
 # EMData / EMResp I/O — Wannamaker hill example (MT)
@@ -244,7 +251,7 @@ class TestPolyIO:
     def test_hill_poly_coordinates(self, hill_dir):
         pf = read_poly(hill_dir / "hill.poly")
         y = pf.nodes[:, 0]
-        z = pf.nodes[:, 1]
+        pf.nodes[:, 1]
         # Profile spans ±100 km
         assert y.min() < -50000
         assert y.max() > 50000

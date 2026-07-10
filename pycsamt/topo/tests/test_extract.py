@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.topo.extract using real WILLY AMT EDI data.
@@ -15,18 +14,17 @@ from __future__ import annotations
 
 import glob
 import os
-import warnings
 
 import numpy as np
 import pytest
 
-from pycsamt.seg.edi import EDIFile
 from pycsamt.seg.collection import EDICollection
+from pycsamt.seg.edi import EDIFile
 from pycsamt.topo.extract import (
-    extract_elevation,
     extract_chainage,
-    has_elevation,
+    extract_elevation,
     extract_station_names,
+    has_elevation,
 )
 
 # ---------------------------------------------------------------------------

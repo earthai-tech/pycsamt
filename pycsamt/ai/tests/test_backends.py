@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.backends — detection, graceful degradation, API."""
@@ -34,7 +33,7 @@ class TestBackendDetection(unittest.TestCase):
 
     def test_set_backend_auto_no_crash(self):
         """set_backend('auto') must not crash even when no framework is present."""
-        from pycsamt.backends import set_backend, get_backend
+        from pycsamt.backends import get_backend, set_backend
         # Reset to auto — should select first available or 'none'
         set_backend("auto")
         name = get_backend()

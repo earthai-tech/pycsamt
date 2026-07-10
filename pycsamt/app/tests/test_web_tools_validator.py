@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from pycsamt.app.web.callbacks.tools import _validate_sites_rows
+from pycsamt.app.web.callbacks.tools import (
+    _validate_sites_rows,
+)
 
 
 class _FakeZ:

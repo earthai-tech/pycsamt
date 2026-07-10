@@ -17,10 +17,12 @@ corrects it. This wave diagnoses the overprint first, then removes it.
 # the diagnostic you check before deciding to correct.
 
 import numpy as np
+from _corr_data import curves, demo_line, plot_before_after
 
-from _corr_data import demo_line, curves, plot_before_after
 from pycsamt.emtools import (
-    detect_source_overprint, source_overprint_table, correct_near_field,
+    correct_near_field,
+    detect_source_overprint,
+    source_overprint_table,
 )
 
 S = demo_line("L18PLT")
@@ -70,6 +72,7 @@ periods = raw[names[0]][0]
 delta = np.column_stack([np.log10(nf[s][1]) - np.log10(raw[s][1]) for s in names])
 vmax = float(np.nanpercentile(np.abs(delta), 98)) or 0.1
 import matplotlib.pyplot as plt
+
 fig, ax = plt.subplots(figsize=(10, 4.6), constrained_layout=True)
 im = ax.pcolormesh(np.arange(len(names)), np.log10(periods), delta,
                    cmap="PuOr_r", vmin=-vmax, vmax=vmax, shading="auto")

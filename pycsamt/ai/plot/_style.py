@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,7 +40,6 @@ Alternatively use as a decorator:
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Optional
 
 __all__ = [
     "EMStyle",
@@ -139,7 +137,7 @@ class EMStyle:
     ...     ax.semilogy(period, rho_a)
     """
 
-    def __init__(self, overrides: Optional[dict] = None):
+    def __init__(self, overrides: dict | None = None):
         self._overrides = overrides or {}
 
     def __enter__(self):
@@ -222,7 +220,7 @@ class StationTickConfig:
 
     def __init__(
         self,
-        every: "Union[int, str]" = "auto",
+        every: Union[int, str] = "auto",
         rotation: float = 45.0,
         fontsize: int = 7,
         fmt: str = "{}",
@@ -284,11 +282,11 @@ class StationTickConfig:
 
     def apply(
         self,
-        ax: "plt.Axes",
-        positions: "np.ndarray",
-        labels: "List[str]",
+        ax: plt.Axes,
+        positions: np.ndarray,
+        labels: List[str],
         xlabel: str = "",
-        xlim: "Optional[Tuple[float, float]]" = None,
+        xlim: Tuple[float, float] | None = None,
     ) -> None:
         """
         Set x-ticks on *ax*, showing only every ``compute_every``-th label.
@@ -308,7 +306,6 @@ class StationTickConfig:
         xlim : (lo, hi) or None
             Passed to ``ax.set_xlim`` when provided.
         """
-        import numpy as _np
         import matplotlib.pyplot as _plt  # noqa: F401 — ensure plt available
 
         n  = len(labels)

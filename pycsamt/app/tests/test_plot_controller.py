@@ -1,20 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for PlotController (Phase 3) — no Qt required."""
 
 from __future__ import annotations
 
-import pytest
-
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.app.desktop.controllers.plot_controller import (
-    PlotController, style_axes, _annotate_empty,
+    PlotController,
+    _annotate_empty,
+    style_axes,
 )
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for stratagem.rename and stratagem.survey."""
 
 from __future__ import annotations
@@ -6,7 +5,6 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -141,8 +139,8 @@ class TestEDIRenamer:
             assert (out / name).exists(), f"{name} not found"
 
     def test_dataid_updated(self, tmp_path):
-        from pycsamt.stratagem.rename import EDIRenamer
         from pycsamt.seg.edi import EDIFile
+        from pycsamt.stratagem.rename import EDIRenamer
 
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
@@ -172,7 +170,7 @@ class TestEDIRenamer:
 
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
-        rn1 = EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
+        EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
         rn2 = EDIRenamer(basename="T.", overwrite=False).fit(tmp_path / "edis", out)
         assert len(rn2.skipped_) == 2
 
@@ -219,8 +217,8 @@ class TestEDIWriter:
         assert wr.n_written_ == 3
 
     def test_dataid_prefix_applied(self, tmp_path):
-        from pycsamt.stratagem.rename import EDIWriter
         from pycsamt.seg.edi import EDIFile
+        from pycsamt.stratagem.rename import EDIWriter
 
         edis = _load_edis(tmp_path, n=2)
         out = tmp_path / "out"

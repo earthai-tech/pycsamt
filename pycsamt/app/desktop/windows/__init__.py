@@ -1,13 +1,13 @@
-from .profile_window    import ProfileViewerWindow
-from .map_window        import MapViewerWindow
-from .qc_window         import QCDashboardWindow
+from .advanced_window import AdvancedToolsWindow
+from .agent_window import AgentRunnerWindow
 from .correction_window import CorrectionWindow
-from .agent_window      import AgentRunnerWindow
-from .advanced_window   import AdvancedToolsWindow
-from .tdem_window       import TDEMWindow
-from .forward_window    import ForwardModelWindow
-from .inversion_window  import InversionWindow
-from .interp_window     import InterpretationWindow
+from .forward_window import ForwardModelWindow
+from .interp_window import InterpretationWindow
+from .inversion_window import InversionWindow
+from .map_window import MapViewerWindow
+from .profile_window import ProfileViewerWindow
+from .qc_window import QCDashboardWindow
+from .tdem_window import TDEMWindow
 
 __all__ = [
     "ProfileViewerWindow",

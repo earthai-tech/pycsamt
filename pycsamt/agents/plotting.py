@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -105,7 +104,7 @@ def _truthy(v: Any) -> bool:
 
 def _has_tipper(sites: Any) -> bool:
     """True when at least one station carries a vertical-field tipper (T)."""
-    from ..emtools._core import _iter_items, _get_t_block
+    from ..emtools._core import _get_t_block, _iter_items
     for ed in _iter_items(sites):
         try:
             _, t, fr = _get_t_block(ed)
@@ -131,7 +130,10 @@ def _filter_sites(sites: Any, station_names: list[str]):
     if not station_names:
         return sites
     from ..emtools._core import (
-        _iter_items, _name, _unwrap, _sites_from_items,
+        _iter_items,
+        _name,
+        _sites_from_items,
+        _unwrap,
     )
     wanted = {s.lower() for s in station_names}
     keep = []
@@ -352,8 +354,8 @@ class PlotAgent:
     def _station_response(self, plt, sites, stations, d, warnings):
         """Per-station impedance response (Bode ρa/φ consistency diagram),
         one figure per requested component."""
-        from ..emtools.advanced import plot_rho_phase_bode
         from ..emtools._core import _iter_items, _name
+        from ..emtools.advanced import plot_rho_phase_bode
 
         comps = [c for c in _norm_components(d.get("components"))
                  if c in ("xy", "yx")] or ["xy"]
@@ -430,7 +432,9 @@ class PlotAgent:
         return fig, "Phase-tensor map"
 
     def _pt_psection(self, plt, sites, stations, d, warnings):
-        from ..emtools.tensor import plot_phase_tensor_psection
+        from ..emtools.tensor import (
+            plot_phase_tensor_psection,
+        )
 
         pr = _period_range(d)
         c_by = str(d.get("color_by", "") or "").strip().lower() or None
@@ -458,8 +462,8 @@ class PlotAgent:
         return fig, "Phase-tensor (Φ) pseudo-section"
 
     def _pt_strip(self, plt, sites, stations, d, warnings):
-        from ..emtools.tensor import plot_phase_tensor_strip
         from ..emtools._core import _iter_items, _name
+        from ..emtools.tensor import plot_phase_tensor_strip
 
         station = stations[0] if stations else None
         if station is None:
@@ -479,10 +483,13 @@ class PlotAgent:
         return fig, f"Phase-tensor ellipse strip — {station}"
 
     def _pt_strip_grid(self, plt, sites, stations, d, warnings):
-        from ..emtools.tensor import plot_phase_tensor_strip_grid
         from ..emtools._core import _iter_items, _name
+        from ..emtools.tensor import (
+            plot_phase_tensor_strip_grid,
+        )
         from ..site.lines import (
-            detect_lines_from_station_ids, pick_representative_stations,
+            detect_lines_from_station_ids,
+            pick_representative_stations,
         )
 
         names = [_name(ed, i) for i, ed in enumerate(_iter_items(sites))]

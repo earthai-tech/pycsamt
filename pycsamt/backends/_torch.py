@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -10,11 +9,11 @@ never fails without PyTorch installed.
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
-from ._base import NeuralBackend, BackendSpec
+from ._base import BackendSpec, NeuralBackend
 from ._detect import probe_backend
 
 __all__ = ["TorchBackend"]
@@ -31,7 +30,7 @@ class TorchBackend(NeuralBackend):
 
     # ─── device ───────────────────────────────────────────────────────────
 
-    def resolve_device(self, device: Optional[str] = None) -> str:
+    def resolve_device(self, device: str | None = None) -> str:
         if device is not None:
             return device
         try:
@@ -127,7 +126,7 @@ class TorchBackend(NeuralBackend):
         self.require()
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         dev = self.resolve_device(device)
         model = model.to(dev)
@@ -212,7 +211,7 @@ class TorchBackend(NeuralBackend):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def get_weights(self, model) -> Dict[str, np.ndarray]:
+    def get_weights(self, model) -> dict[str, np.ndarray]:
         return {k: v.cpu().numpy() for k, v in model.state_dict().items()}
 
     def set_weights(self, model, weights) -> None:

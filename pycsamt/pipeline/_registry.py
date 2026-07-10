@@ -20,8 +20,7 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple
-
+from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
 # Special-case wrappers
@@ -29,27 +28,38 @@ from typing import Any, Callable, List, Optional, Tuple
 
 def _emap_confidence_fn(sites: Any, **kw: Any) -> Any:
     """Wrap confidence_gated_emap_filter → return result.sites."""
-    from pycsamt.emtools.remove_noise import confidence_gated_emap_filter
+    from pycsamt.emtools.remove_noise import (
+        confidence_gated_emap_filter,
+    )
     return confidence_gated_emap_filter(sites, **kw).sites
 
 
 def _ss_loess_fn(sites: Any, **kw: Any) -> Any:
     """Two-phase SS: estimate via LOESS, then apply."""
-    from pycsamt.emtools.ss import estimate_ss_loess, apply_ss_factors
+    from pycsamt.emtools.ss import (
+        apply_ss_factors,
+        estimate_ss_loess,
+    )
     factors = estimate_ss_loess(sites, **kw)
     return apply_ss_factors(sites, factors)
 
 
 def _ss_refmedian_fn(sites: Any, **kw: Any) -> Any:
     """Two-phase SS: estimate via reference-median, then apply."""
-    from pycsamt.emtools.ss import estimate_ss_refmedian, apply_ss_factors
+    from pycsamt.emtools.ss import (
+        apply_ss_factors,
+        estimate_ss_refmedian,
+    )
     factors = estimate_ss_refmedian(sites, **kw)
     return apply_ss_factors(sites, factors)
 
 
 def _ss_bilateral_fn(sites: Any, **kw: Any) -> Any:
     """Two-phase SS: estimate via bilateral filter, then apply."""
-    from pycsamt.emtools.ss import estimate_ss_bilateral, apply_ss_factors
+    from pycsamt.emtools.ss import (
+        apply_ss_factors,
+        estimate_ss_bilateral,
+    )
     factors = estimate_ss_bilateral(sites, **kw)
     return apply_ss_factors(sites, factors)
 
@@ -104,10 +114,10 @@ class StepSpec:
     category: str
     defaults: dict = field(default_factory=dict)
     returns_sites: bool = True
-    mod: Optional[str] = None
-    fn_name: Optional[str] = None
-    qc_defs: List[Tuple[str, str]] = field(default_factory=list)
-    override_fn: Optional[Callable] = field(default=None, repr=False)
+    mod: str | None = None
+    fn_name: str | None = None
+    qc_defs: list[tuple[str, str]] = field(default_factory=list)
+    override_fn: Callable | None = field(default=None, repr=False)
 
     # ------------------------------------------------------------------
     # Resolution helpers
@@ -125,9 +135,9 @@ class StepSpec:
         m = importlib.import_module(self.mod)
         return getattr(m, self.fn_name)
 
-    def get_qc_fns(self) -> List[Tuple[str, Callable]]:
+    def get_qc_fns(self) -> list[tuple[str, Callable]]:
         """Return list of ``(fn_name, callable)`` QC plot functions."""
-        out: List[Tuple[str, Callable]] = []
+        out: list[tuple[str, Callable]] = []
         for mod_path, fn_name in self.qc_defs:
             try:
                 m = importlib.import_module(mod_path)
@@ -795,7 +805,7 @@ def lookup_step(code_or_name: str) -> StepSpec:
     )
 
 
-def list_steps(category: Optional[str] = None) -> list[StepSpec]:
+def list_steps(category: str | None = None) -> list[StepSpec]:
     """Return all registered :class:`StepSpec` objects, optionally filtered.
 
     Parameters

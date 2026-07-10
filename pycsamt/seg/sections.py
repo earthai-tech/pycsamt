@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple
 import os
+from collections.abc import Iterator
 
-from ..log.logger import get_logger
 from ..exceptions import EdIDataError
+from ..log.logger import get_logger
 from .base import EDIComponentBase
-from .validation import _extract_tag
-
 from .mtemap import MTEMAP
+from .other import OtherSECT
 from .spectra import SpectraSECT
 from .time_series import TSect
-from .other import OtherSECT
+from .validation import _extract_tag
 
 logger = get_logger(__name__)
 
@@ -22,7 +20,7 @@ __all__ = ["SECT_REGISTRY", "iter_sections"]
 
 
 # Tag -> header loader
-SECT_REGISTRY: Dict[str, type[EDIComponentBase]] = {
+SECT_REGISTRY: dict[str, type[EDIComponentBase]] = {
     ">=MTSECT": MTEMAP,
     ">=EMAPSECT": MTEMAP,
     ">=SPECTRASECT": SpectraSECT,
@@ -31,7 +29,7 @@ SECT_REGISTRY: Dict[str, type[EDIComponentBase]] = {
 }
 
 
-def _find_header_end(lines: List[str], start: int) -> int:
+def _find_header_end(lines: list[str], start: int) -> int:
     """
     Return index of first line after header. Stop at next line
     that starts with '>' (either '>BLOCK' or '>=' new section).
@@ -48,7 +46,7 @@ def _find_header_end(lines: List[str], start: int) -> int:
 
 def _make_header(
     tag: str,
-    header_lines: List[str],
+    header_lines: list[str],
     body_start: int,
 ) -> EDIComponentBase:
     """
@@ -70,7 +68,7 @@ def _make_header(
 
     # Attach where body starts for IO loaders.
     try:
-        setattr(inst, "start_data_lines_num", body_start)
+        inst.start_data_lines_num = body_start
     except Exception:
         pass
 
@@ -80,8 +78,8 @@ def _make_header(
 def iter_sections(
     edi_path: str,
     *,
-    include: Optional[List[str]] = None,
-) -> Iterator[Tuple[str, EDIComponentBase, int]]:
+    include: list[str] | None = None,
+) -> Iterator[tuple[str, EDIComponentBase, int]]:
     """
     Yield (tag, header_obj, body_start_line) for each '>=...' block.
 
@@ -105,7 +103,7 @@ def iter_sections(
     if not os.path.isfile(edi_path):
         raise FileNotFoundError(f"{edi_path!r} is not a file.")
 
-    with open(edi_path, "r", encoding="utf-8") as f:
+    with open(edi_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     want = (

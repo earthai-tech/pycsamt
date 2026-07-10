@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 
 from pathlib import Path
+
 import pytest
 
 from pycsamt.jones.base import BaseJones, JComponentBase

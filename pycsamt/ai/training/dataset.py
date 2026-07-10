@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,9 +21,6 @@ Usage
 >>> train_ds.x_norm.mean.shape   # (n_features,)
 """
 from __future__ import annotations
-
-import warnings
-from typing import Optional, Tuple
 
 import numpy as np
 
@@ -52,10 +48,10 @@ class Normalizer:
 
     def __init__(self, eps: float = 1e-8):
         self.eps = eps
-        self.mean: Optional[np.ndarray] = None
-        self.std: Optional[np.ndarray] = None
+        self.mean: np.ndarray | None = None
+        self.std: np.ndarray | None = None
 
-    def fit(self, X: np.ndarray) -> "Normalizer":
+    def fit(self, X: np.ndarray) -> Normalizer:
         """Compute mean and std from *X*, ignoring NaN."""
         self.mean = np.nanmean(X, axis=0)
         self.std = np.nanstd(X, axis=0) + self.eps
@@ -80,7 +76,7 @@ class Normalizer:
         return {"mean": self.mean.tolist(), "std": self.std.tolist()}
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Normalizer":
+    def from_dict(cls, d: dict) -> Normalizer:
         obj = cls()
         obj.mean = np.asarray(d["mean"])
         obj.std = np.asarray(d["std"])
@@ -130,10 +126,10 @@ class EMDataset:
         self,
         forward_ds,
         *,
-        n_layers: Optional[int] = None,
+        n_layers: int | None = None,
         log_thickness: bool = True,
-        x_norm: Optional[Normalizer] = None,
-        y_norm: Optional[Normalizer] = None,
+        x_norm: Normalizer | None = None,
+        y_norm: Normalizer | None = None,
         augment_noise: float = 0.0,
     ):
         X_raw = forward_ds.X.astype(np.float32)
@@ -186,7 +182,7 @@ class EMDataset:
     # ─── static helpers ───────────────────────────────────────────────────
 
     @staticmethod
-    def _log_thickness(y: np.ndarray, n_layers: Optional[int]) -> np.ndarray:
+    def _log_thickness(y: np.ndarray, n_layers: int | None) -> np.ndarray:
         """
         Apply log₁₀ to the thickness sub-vector in *y*.
 
@@ -245,8 +241,8 @@ class EMDataset:
     def split(
         self,
         val_frac: float = 0.1,
-        seed: Optional[int] = None,
-    ) -> Tuple["EMDataset", "EMDataset"]:
+        seed: int | None = None,
+    ) -> tuple[EMDataset, EMDataset]:
         """
         Split into train and validation ``EMDataset`` objects.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -77,7 +76,7 @@ def _rich_table(
     """Print a two-column key/value table via rich (plain fallback)."""
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table  import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         console = Console()
         t = Table(title=title, border_style=style, show_header=False)
         t.add_column("Key",   style="bold")
@@ -103,9 +102,13 @@ def _load_inversion_result(
 ) -> Any:
     """Instantiate and return an InversionResult for *solver*."""
     if solver == "occam2d":
-        from pycsamt.models.occam2d.results import InversionResult  # noqa: PLC0415
+        from pycsamt.models.occam2d.results import (
+            InversionResult,  # noqa: PLC0415
+        )
     else:
-        from pycsamt.models.modem.results import InversionResult    # noqa: PLC0415
+        from pycsamt.models.modem.results import (
+            InversionResult,  # noqa: PLC0415
+        )
 
     kw: dict[str, Any] = {"workdir": workdir, "verbose": verbose}
     if iteration is not None:

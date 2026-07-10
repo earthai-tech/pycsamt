@@ -18,7 +18,8 @@ The result is an :class:`~pycsamt.interp.EMHydroResult`, which the
 # result object with one map/profile per property.
 
 from _interp_data import demo_model
-from pycsamt.interp import PetrophysicalConfig, EMHydroModel
+
+from pycsamt.interp import EMHydroModel, PetrophysicalConfig
 
 # Use the hydraulic-conductivity section (2nd figure) as the thumbnail.
 # sphinx_gallery_thumbnail_number = 2
@@ -28,6 +29,7 @@ cfg = PetrophysicalConfig(rho_w=20.0, porosity_prior=0.25)
 result = EMHydroModel(rm, cfg, method_tag="AMT").fit()
 
 import numpy as np
+
 print("porosity range:", np.round([result.porosity.min(), result.porosity.max()], 2))
 print("K range (m/s):", np.format_float_scientific(np.nanmin(result.hydraulic_K), 1),
       "-", np.format_float_scientific(np.nanmax(result.hydraulic_K), 1))
@@ -41,7 +43,9 @@ print("water table (m), first 5 stations:", np.round(result.water_table[:5], 1))
 # clean sand aquifer, low in the clay.
 
 from pycsamt.interp.plot import (
-    PlotHydroSection, PlotWaterTableProfile, PlotAquiferCharacterization,
+      PlotAquiferCharacterization,
+      PlotHydroSection,
+      PlotWaterTableProfile,
 )
 
 PlotHydroSection(result, quantity="K").plot()

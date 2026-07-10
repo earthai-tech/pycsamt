@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """One-line front door to the pyCSAMT agent stack.
@@ -24,7 +23,7 @@ and free of circular imports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..api.property import PyCSAMTObject
 
@@ -35,7 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 __all__ = ["AgentMaster"]
 
 # Friendly names accepted in addition to the canonical BaseAgent
-# providers ({"claude", "openai", "gemini", "deepseek"}).
+# providers ({"claude", "openai", "gemini", "deepseek", "minimax"}).
 _PROVIDER_ALIASES = {
     "anthropic": "claude",
     "claude": "claude",
@@ -44,6 +43,7 @@ _PROVIDER_ALIASES = {
     "gemini": "gemini",
     "google": "gemini",
     "deepseek": "deepseek",
+    "minimax": "minimax",
 }
 
 
@@ -95,8 +95,8 @@ class AgentMaster(PyCSAMTObject):
         self,
         provider: str = "claude",
         *,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        api_key: str | None = None,
+        model: str | None = None,
         default_workflow: str = "qc",
     ) -> None:
         key = str(provider).strip().lower()
@@ -109,7 +109,7 @@ class AgentMaster(PyCSAMTObject):
         self.default_workflow = default_workflow
         self._api_key = api_key
         self._model = model
-        self._orchestrator: Optional[WorkflowOrchestratorAgent] = None
+        self._orchestrator: WorkflowOrchestratorAgent | None = None
 
     # ------------------------------------------------------------------
     @property
@@ -134,8 +134,8 @@ class AgentMaster(PyCSAMTObject):
         self,
         request: str,
         *,
-        data_path: Optional[str] = None,
-        output_dir: Optional[str] = None,
+        data_path: str | None = None,
+        output_dir: str | None = None,
         dry_run: bool = False,
         **extra: Any,
     ) -> AgentResult:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt map plot - save a static station-location map."""
@@ -17,7 +16,6 @@ from ....api.cli.options import (
     survey_option,
     verbose_option,
 )
-
 from ._base import _get_sites, _station_rows, map
 
 

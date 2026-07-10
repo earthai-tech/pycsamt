@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -89,5 +88,5 @@ class WorkflowHistory:
             self.path.unlink()
 
     @classmethod
-    def default(cls, root: Path | str | None = None) -> "WorkflowHistory":
+    def default(cls, root: Path | str | None = None) -> WorkflowHistory:
         return cls(_default_path(root))

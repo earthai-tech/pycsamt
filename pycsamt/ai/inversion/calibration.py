@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,7 +11,7 @@ rigorous* intervals:
 
 1. :class:`ConformalPredictor` — split conformal prediction
    (Vovk et al. 2005; Angelopoulos & Bates 2023).
-   Guarantees exact marginal coverage :math:`P(y \in \hat{C}(x)) \ge 1-\alpha`
+   Guarantees exact marginal coverage :math:`P(y \\in \\hat{C}(x)) \\ge 1-\alpha`
    without distributional assumptions.
 
 2. :class:`PosteriorCalibrator` — Gaussianization normalising flow
@@ -49,7 +48,7 @@ learning using calibrated regression. *Proceedings of ICML*, PMLR 80,
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -171,8 +170,8 @@ class ConformalPredictor:
         self.alpha = float(alpha)
         self.eps = float(eps)
 
-        self._scores: Optional[np.ndarray] = None
-        self._alpha_fit: Optional[float] = None
+        self._scores: np.ndarray | None = None
+        self._alpha_fit: float | None = None
         self._is_calibrated: bool = False
 
     # ── calibration ──────────────────────────────────────────────────────────
@@ -181,8 +180,8 @@ class ConformalPredictor:
         self,
         X_cal: np.ndarray,
         y_cal: np.ndarray,
-        alpha: Optional[float] = None,
-    ) -> "ConformalPredictor":
+        alpha: float | None = None,
+    ) -> ConformalPredictor:
         """
         Fit nonconformity scores on a held-out calibration set.
 
@@ -229,8 +228,8 @@ class ConformalPredictor:
     def predict_intervals(
         self,
         X: np.ndarray,
-        alpha: Optional[float] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        alpha: float | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return calibrated prediction intervals.
 
@@ -266,7 +265,7 @@ class ConformalPredictor:
         self,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        alpha: Optional[float] = None,
+        alpha: float | None = None,
     ) -> float:
         """
         Empirical marginal coverage on a test set.
@@ -294,8 +293,8 @@ class ConformalPredictor:
         self,
         X_test: np.ndarray,
         y_test: np.ndarray,
-        alphas: Optional[Sequence[float]] = None,
-    ) -> Dict[float, float]:
+        alphas: Sequence[float] | None = None,
+    ) -> dict[float, float]:
         """
         Coverage table across a range of significance levels.
 
@@ -401,9 +400,9 @@ class PosteriorCalibrator:
         self.n_bins = int(n_bins)
 
         # fitted quantities
-        self._p_knots: Optional[np.ndarray] = None     # sorted predicted CDF
-        self._q_targets: Optional[np.ndarray] = None   # empirical CDF targets
-        self._sigma_scale: Optional[float] = None      # global variance scale
+        self._p_knots: np.ndarray | None = None     # sorted predicted CDF
+        self._q_targets: np.ndarray | None = None   # empirical CDF targets
+        self._sigma_scale: float | None = None      # global variance scale
         self._is_fitted: bool = False
 
     # ── fitting ──────────────────────────────────────────────────────────────
@@ -413,7 +412,7 @@ class PosteriorCalibrator:
         y_cal: np.ndarray,
         y_pred_cal: np.ndarray,
         sigma_cal: np.ndarray,
-    ) -> "PosteriorCalibrator":
+    ) -> PosteriorCalibrator:
         """
         Fit the Gaussianization recalibration map.
 
@@ -430,7 +429,9 @@ class PosteriorCalibrator:
         -------
         self
         """
-        from scipy.special import ndtr, ndtri  # fast normal CDF / quantile
+        from scipy.special import (  # fast normal CDF / quantile
+            ndtr,
+        )
 
         y_cal      = np.asarray(y_cal,      dtype=float)
         y_pred_cal = np.asarray(y_pred_cal, dtype=float)
@@ -482,7 +483,7 @@ class PosteriorCalibrator:
         y_pred: np.ndarray,
         sigma_pred: np.ndarray,
         n_samples: int = 500,
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
     ) -> np.ndarray:
         """
         Draw samples from the calibrated posterior via inverse-CDF sampling.

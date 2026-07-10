@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from ..api.property import PyCSAMTObject
-
 from ._base import TEMSounding
 from .avg import TEMAVG
 from .coordinates import (

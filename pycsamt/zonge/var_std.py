@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,16 +25,12 @@ Notes
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 # from dataclasses import dataclass
-from typing import ( 
-    Any, 
-    Dict, 
-    List, 
-    Mapping, 
-    Optional, 
-    Sequence, 
-    Tuple, 
-    ClassVar, 
+from typing import (
+    Any,
+    ClassVar,
 )
 
 import numpy as np
@@ -78,20 +73,20 @@ class PhaseStdBase(AVGComponentBase):
     VAR_NAME: ClassVar[str] = ""
     # KEY_CANDIDATES: ClassVar[Tuple[str, ...]] = ()
     LABEL: ClassVar[str] = ""
-    
+
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: bool = False
     ) -> None:
         # Explicitly call the parent's initializer
         super().__init__(
             data=data, meta=meta, name=name, verbose=verbose
         )
-        
+
     def read(                                   # noqa: D401 (docstring above)
         self,
         source: pd.DataFrame
@@ -113,7 +108,7 @@ class PhaseStdBase(AVGComponentBase):
             raise RuntimeError(
                 f"{self.__class__.__name__}: subclass constants not set."
             )
-    
+
         self._meta = dict(meta or {})
 
         # ensure Unit.Phase presence for roundtrip/export
@@ -129,7 +124,7 @@ class PhaseStdBase(AVGComponentBase):
             self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
             return
 
-        # dataframe path 
+        # dataframe path
         if not isinstance(source, pd.DataFrame):
             raise TypeError(
                 f"{self.__class__.__name__}.read expects "
@@ -146,7 +141,7 @@ class PhaseStdBase(AVGComponentBase):
         #         f"{self.LABEL}: no compatible phase-stdev column "
         #         f"found among {self.KEY_CANDIDATES!r}"
         #     )
-        
+
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
@@ -154,7 +149,7 @@ class PhaseStdBase(AVGComponentBase):
                     f"'{self.VAR_NAME}' not found in source. "
                     "Creating as empty column."
                 )
-                
+
         # df = df.rename(columns={col: self.VAR_NAME})
 
         # coords – inject conservative defaults if missing
@@ -175,7 +170,7 @@ class PhaseStdBase(AVGComponentBase):
         self._meta.setdefault("Unit.Phase", "mrad")
 
 
-    def write(self) -> List[str]:
+    def write(self) -> list[str]:
         """
         Serialise to a compact CSV block with a small meta preamble.
 
@@ -190,7 +185,7 @@ class PhaseStdBase(AVGComponentBase):
         tmp = self.__class__()  # ephemeral holder for helpers
         tmp._frame = self._frame.copy()
         tmp._meta = meta
-        
+
         return tmp._write_csv_block(
             cols=["station", "freq", "comp", self.VAR_NAME],
             title=title,
@@ -202,22 +197,22 @@ class PhaseStdBase(AVGComponentBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: Optional[Dict[str, Any]] = None,
+        attrs: dict[str, Any] | None = None,
     ):
         r"""
         Convert the component table into an :class:`xarray.Dataset`
         with a single data variable named ``VAR_NAME`` arranged on
         the requested coordinate grid.
-    
+
         The output uses the intersection of the requested *coords*
         that are present in the component frame, preserving the
         order of dimensions (default:
         :math:`\text{station} \rightarrow \text{freq} \rightarrow
         \text{comp}`).
-    
+
         Duplicate rows with identical coordinates are averaged so
         each grid cell contains a unique value.
-    
+
         Parameters
         ----------
         coords : sequence of str, optional
@@ -226,13 +221,13 @@ class PhaseStdBase(AVGComponentBase):
             ``("station", "freq", "comp")``.
         attrs : mapping, optional
             Extra attributes to merge into dataset-level metadata.
-    
+
         Returns
         -------
         xarray.Dataset
             Dataset with dimensions given by the present subset of
             *coords* and one data variable named ``self.VAR_NAME``.
-    
+
         Notes
         -----
         If the variable represents phase standard deviation
@@ -242,14 +237,14 @@ class PhaseStdBase(AVGComponentBase):
         """
         if self._frame.empty:
             raise AvgDataError("empty frame; nothing to export.")
-    
+
         # Work on a copy; we'll normalize a few columns below.
         df = self._frame.copy()
-    
+
         # Ensure a 'comp' column exists so we always get a comp dim.
         if "comp" not in df.columns:
             df["comp"] = "ExHy"
-    
+
         # Determine which coord columns we actually have.
         idx_cols = [c for c in coords if c in df.columns]
         if not idx_cols:
@@ -257,7 +252,7 @@ class PhaseStdBase(AVGComponentBase):
                 "no coordinate columns found; expected any of "
                 f"{coords!r}"
             )
-    
+
         # Light type normalization:
         # - station may be float or label → avoid coercion that would
         #   mangle labels; keep as-is when not numeric.
@@ -266,7 +261,7 @@ class PhaseStdBase(AVGComponentBase):
             df["station"] = pd.to_numeric(df["station"], errors="ignore")
         if "freq" in idx_cols:
             df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
-    
+
         # Provide a stable, interpretable order for 'comp'. We put a
         # canonical list first and append any unexpected labels.
         if "comp" in idx_cols:
@@ -281,14 +276,14 @@ class PhaseStdBase(AVGComponentBase):
             df["comp"] = pd.Categorical(
                 df["comp"].astype(str), categories=cats, ordered=True
             )
-    
+
         # We will export only the single data variable of interest.
         var = self.VAR_NAME
         if var not in df.columns:
             raise AvgDataError(
                 f"{var!r} not found in frame columns {list(df.columns)!r}"
             )
-    
+
         # Deduplicate: average numeric values across identical coords.
         dup = df.duplicated(subset=idx_cols, keep=False)
         if bool(dup.any()):
@@ -297,14 +292,14 @@ class PhaseStdBase(AVGComponentBase):
             tidy = dfv.reset_index()
         else:
             tidy = df.sort_values(idx_cols, kind="mergesort")
-    
+
         # Build the Dataset: MultiIndex → dense grid.
         ds = tidy.set_index(idx_cols)[[var]].to_xarray()
-    
+
         # Order dimensions as requested, dropping any that are absent.
         dim_order = [d for d in coords if d in ds.dims]
         ds = ds.transpose(*dim_order)
-    
+
         # Compose/merge attributes. Start from the component meta,
         # ensure unit hints for phase variables, then layer user attrs.
         merged = dict(self._meta)
@@ -313,7 +308,7 @@ class PhaseStdBase(AVGComponentBase):
         if attrs:
             merged.update(attrs)
         ds.attrs.update(merged)
-    
+
         return ds
 
     def to_tensor_like(
@@ -324,7 +319,7 @@ class PhaseStdBase(AVGComponentBase):
         fill_value: float = np.nan,
         sort_freq: bool = True,
         agg: str | None = "mean",
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Place scalar values into a (·, ·, 2, 2) grid at the slot
         indicated by each row's component label.
@@ -342,7 +337,9 @@ class PhaseStdBase(AVGComponentBase):
             Station axis (empty for single-station requests).
         """
         # local import to avoid a hard dependency / import cycles
-        from .tensor import TensorBase  # pylint: disable=import-outside-toplevel
+        from .tensor import (
+            TensorBase,  # pylint: disable=import-outside-toplevel
+        )
 
         keep = ["station", "freq", "comp", self.VAR_NAME]
         df = self._frame.loc[:, [c for c in keep if c in self._frame]]
@@ -363,25 +360,25 @@ class PhaseStdBase(AVGComponentBase):
         Convert the phase-stdev column **in place** between
         :math:`\mathrm{mrad}` and :math:`\mathrm{deg}` and update
         ``Unit.Phase`` in :pyattr:`meta`.
-    
+
         The conversion factors come from:
-    
+
         .. math::
            1~\mathrm{rad} = 1000~\mathrm{mrad},\qquad
            1~\mathrm{deg} = \frac{\pi}{180}~\mathrm{rad}
-    
+
         Hence:
-    
+
         .. math::
            1~\mathrm{mrad} =
            \frac{180}{\pi \cdot 1000}~\mathrm{deg}
            \approx 0.05729578~\mathrm{deg}
-    
+
         Parameters
         ----------
         target : {'mrad', 'deg'}, default 'mrad'
             Desired output unit for the stored values.
-    
+
         Notes
         -----
         * If the current unit already matches *target*, this is a
@@ -397,16 +394,16 @@ class PhaseStdBase(AVGComponentBase):
             return
         if tgt not in {"mrad", "deg"}:
             raise ValueError("target must be 'mrad' or 'deg'")
-    
+
         # Identify the canonical data column.
         col = self.VAR_NAME
         if col not in self._frame.columns:
             # Nothing to convert; keep meta unchanged.
             return
-    
+
         # Coerce to float; preserve NaNs for missing / bad cells.
         x = pd.to_numeric(self._frame[col], errors="coerce")
-    
+
         # Compute the scale once, using exact constants.
         if cur == "mrad" and tgt == "deg":
             # 1 mrad = 180 / (π * 1000) deg
@@ -417,7 +414,7 @@ class PhaseStdBase(AVGComponentBase):
         else:
             # Future-proof against unexpected unit labels.
             raise ValueError(f"unsupported conversion {cur} → {tgt}")
-    
+
         # Apply conversion and update unit metadata.
         self._frame[col] = x * factor
         self._meta["Unit.Phase"] = tgt
@@ -479,7 +476,7 @@ class SHphz(PhaseStdBase):
 def _find_col(
     df: pd.DataFrame,
     candidates: Sequence[str],
-) -> Optional[str]:
+) -> str | None:
     """
     Return the first column name present in *df* among *candidates*.
 
@@ -520,4 +517,4 @@ def _norm_comp(x: Any) -> str:
     return str(x).strip() or "ExHy"
 
 
-PhaseSigma = SPhz  # dedicated aliases per field 
+PhaseSigma = SPhz  # dedicated aliases per field

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,9 +16,9 @@ Usage
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -31,7 +30,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QPushButton,
-    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -64,8 +62,10 @@ class _MapWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.tensor import plot_phase_tensor_map
-            before = set(plt.get_fignums())
+            from pycsamt.emtools.tensor import (
+                plot_phase_tensor_map,
+            )
+            set(plt.get_fignums())
             ax = plot_phase_tensor_map(
                 self._sites,
                 period=self._period,

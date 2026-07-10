@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -15,14 +14,17 @@ Six public functions cover the main inspection use-cases:
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-from ..plot._style import EMStyle, EM_COLORS, EM_CMAPS, StationTickConfig
+from ..plot._style import (
+    EMStyle,
+    StationTickConfig,
+)
 
 __all__ = [
     "plot_qc_scores",
@@ -40,7 +42,7 @@ _PROFILE_COLORS = [
     "#e377c2", "#7f7f7f", "#bcbd22",
 ]
 
-_FEATURE_LABELS: Dict[str, str] = {
+_FEATURE_LABELS: dict[str, str] = {
     "snr":        "SNR",
     "swift_skew": "Swift skew |β|",
     "asym":       r"Asymmetry  log$_{10}$(|Z$_{xy}$|/|Z$_{yx}$|)",
@@ -55,9 +57,9 @@ _FEATURE_LABELS: Dict[str, str] = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _resolve_profile_colors(
-    profile_names: List[str],
-    user_colors: Optional[Any],
-) -> Dict[str, str]:
+    profile_names: list[str],
+    user_colors: Any | None,
+) -> dict[str, str]:
     if isinstance(user_colors, dict):
         return {p: user_colors.get(p, _PROFILE_COLORS[i % len(_PROFILE_COLORS)])
                 for i, p in enumerate(profile_names)}
@@ -70,8 +72,8 @@ def _resolve_profile_colors(
 
 def _normalise_qc_input(
     scores: Any,
-    station_labels: Optional[List[str]],
-) -> Tuple[Dict[str, np.ndarray], Dict[str, Optional[List[str]]]]:
+    station_labels: list[str] | None,
+) -> tuple[dict[str, np.ndarray], dict[str, list[str] | None]]:
     """
     Convert flexible input to ``{profile → 1-D score array}`` + label dicts.
 
@@ -127,10 +129,10 @@ def _normalise_qc_input(
 
 
 def _make_tick_config(
-    every: Union[int, str],
+    every: int | str,
     rotation: float,
     fontsize: int,
-    override: Optional[StationTickConfig],
+    override: StationTickConfig | None,
 ) -> StationTickConfig:
     """Build a StationTickConfig from individual params or use *override*."""
     if override is not None:
@@ -140,8 +142,8 @@ def _make_tick_config(
 
 def _logT_grid_from_df(
     df: pd.DataFrame,
-    station_order: List[str],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    station_order: list[str],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     freqs = np.sort(df["freq"].unique())[::-1]
     n_f, n_st = freqs.size, len(station_order)
     mat = np.full((n_f, n_st), np.nan)
@@ -161,13 +163,13 @@ def _logT_grid_from_df(
 
 def _render_bar_chart(
     ax: plt.Axes,
-    pscores: Dict[str, np.ndarray],
-    plabels: Dict[str, Optional[List[str]]],
-    pcolors: Dict[str, str],
+    pscores: dict[str, np.ndarray],
+    plabels: dict[str, list[str] | None],
+    pcolors: dict[str, str],
     *,
     score_threshold: float,
     show_scatter: bool,
-    scatter_src: Optional[pd.DataFrame],
+    scatter_src: pd.DataFrame | None,
     tick_cfg: StationTickConfig,
     bar_width: float = 0.80,
     bar_alpha: float = 0.88,
@@ -193,8 +195,8 @@ def _render_bar_chart(
 
     profiles = list(pscores.keys())
     x_offset = 0
-    all_positions: List[float] = []
-    all_labels:    List[str]   = []
+    all_positions: list[float] = []
+    all_labels:    list[str]   = []
 
     for i, prof in enumerate(profiles):
         sc   = pscores[prof]
@@ -294,8 +296,8 @@ def _render_bar_chart(
 def plot_qc_scores(
     scores: Any,
     *,
-    station_labels: Optional[List[str]] = None,
-    profile_colors: Optional[Any] = None,
+    station_labels: list[str] | None = None,
+    profile_colors: Any | None = None,
     score_threshold: float = 0.5,
     # threshold styling
     threshold_color: str = "#c0392b",
@@ -320,18 +322,18 @@ def plot_qc_scores(
     show_zone_labels: bool = True,
     zone_label_fontsize: int = 8,
     # ── station tick control ───────────────────────────────────────────────
-    tick_every: Union[int, str] = "auto",
+    tick_every: int | str = "auto",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 7,
-    station_tick_config: Optional[StationTickConfig] = None,
+    station_tick_config: StationTickConfig | None = None,
     # ── axes styling ──────────────────────────────────────────────────────
     xlabel: str = "Station",
     ylabel: str = "QC score",
     title: str = "",
-    ylim: Optional[Tuple[float, float]] = None,
+    ylim: tuple[float, float] | None = None,
     show_grid: bool = True,
-    figsize: Tuple[float, float] = (10.0, 4.2),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (10.0, 4.2),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Per-station QC-score bar chart, optionally grouped by profile.
@@ -466,7 +468,7 @@ def plot_qc_scores(
 def plot_qc_heatmap(
     scores: Any,
     *,
-    station_labels: Optional[List[str]] = None,
+    station_labels: list[str] | None = None,
     score_threshold: float = 0.5,
     cmap: str = "RdYlGn",
     vmin: float = 0.0,
@@ -480,12 +482,12 @@ def plot_qc_heatmap(
     xlabel: str = "Station",
     ylabel: str = "Period (s)",
     title: str = "",
-    tick_every: Union[int, str] = "auto",
+    tick_every: int | str = "auto",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 7,
-    station_tick_config: Optional[StationTickConfig] = None,
-    figsize: Tuple[float, float] = (10.0, 5.2),
-    ax: Optional[plt.Axes] = None,
+    station_tick_config: StationTickConfig | None = None,
+    figsize: tuple[float, float] = (10.0, 5.2),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Station × frequency QC-score heat-map.
@@ -600,18 +602,18 @@ def plot_qc_heatmap(
 def plot_qc_feature_heatmap(
     df: pd.DataFrame,
     *,
-    features: Optional[List[str]] = None,
-    station_labels: Optional[List[str]] = None,
-    cmaps: Optional[Dict[str, str]] = None,
+    features: list[str] | None = None,
+    station_labels: list[str] | None = None,
+    cmaps: dict[str, str] | None = None,
     period_up: bool = True,
     n_yticks: int = 5,
-    tick_every: Union[int, str] = "auto",
+    tick_every: int | str = "auto",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 6,
-    station_tick_config: Optional[StationTickConfig] = None,
-    clim_pct: Tuple[float, float] = (2.0, 98.0),
+    station_tick_config: StationTickConfig | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
     title: str = "",
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
 ) -> plt.Figure:
     """
     One panel per QC feature — station × frequency heat-maps.
@@ -761,12 +763,12 @@ def plot_qc_feature_heatmap(
 def plot_qc_score_distribution(
     scores: Any,
     *,
-    station_labels: Optional[List[str]] = None,
-    profile_colors: Optional[Any] = None,
+    station_labels: list[str] | None = None,
+    profile_colors: Any | None = None,
     score_threshold: float = 0.5,
     n_bins: int = 20,
     show_kde: bool = True,
-    kde_bw: Optional[Union[float, str]] = None,
+    kde_bw: float | str | None = None,
     fill_alpha: float = 0.35,
     line_lw: float = 1.8,
     threshold_color: str = "#c0392b",
@@ -776,8 +778,8 @@ def plot_qc_score_distribution(
     ylabel: str = "Density",
     title: str = "",
     show_legend: bool = True,
-    figsize: Tuple[float, float] = (6.0, 4.0),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (6.0, 4.0),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Score histogram and optional KDE per profile.
@@ -865,8 +867,8 @@ def plot_qc_score_distribution(
 def plot_qc_score_spread(
     scores: Any,
     *,
-    station_labels: Optional[List[str]] = None,
-    profile_colors: Optional[Any] = None,
+    station_labels: list[str] | None = None,
+    profile_colors: Any | None = None,
     score_threshold: float = 0.5,
     kind: str = "violin",
     show_scatter: bool = True,
@@ -880,8 +882,8 @@ def plot_qc_score_spread(
     ylabel: str = "QC score",
     title: str = "",
     show_legend: bool = False,
-    figsize: Tuple[float, float] = (6.0, 4.0),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (6.0, 4.0),
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Per-profile score spread: violin, box, or jitter-strip plot.
@@ -916,9 +918,9 @@ def plot_qc_score_spread(
     profiles   = list(pscores.keys())
     pcolors    = _resolve_profile_colors(profiles, profile_colors)
 
-    vio_data:   List[np.ndarray] = []
-    vio_labels: List[str]        = []
-    vio_colors: List[str]        = []
+    vio_data:   list[np.ndarray] = []
+    vio_labels: list[str]        = []
+    vio_colors: list[str]        = []
 
     for prof in profiles:
         sc  = pscores[prof]
@@ -986,20 +988,20 @@ def plot_qc_score_spread(
 def plot_qc_summary(
     scores: Any,
     *,
-    station_labels: Optional[List[str]] = None,
-    profile_colors: Optional[Any] = None,
+    station_labels: list[str] | None = None,
+    profile_colors: Any | None = None,
     score_threshold: float = 0.5,
     show_scatter: bool = True,
     n_bins: int = 20,
     show_kde: bool = True,
-    kde_bw: Optional[Union[float, str]] = None,
+    kde_bw: float | str | None = None,
     spread_kind: str = "violin",
-    tick_every: Union[int, str] = "auto",
+    tick_every: int | str = "auto",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 7,
-    station_tick_config: Optional[StationTickConfig] = None,
+    station_tick_config: StationTickConfig | None = None,
     suptitle: str = "",
-    figsize: Tuple[float, float] = (13.0, 9.5),
+    figsize: tuple[float, float] = (13.0, 9.5),
 ) -> plt.Figure:
     """
     Three-panel QC summary figure.

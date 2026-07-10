@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for stratagem.qc and stratagem.process."""
 
 from __future__ import annotations
@@ -152,7 +151,6 @@ class TestQualityController:
             qc.summary()
 
     def test_hardware_enrichment_adds_columns(self, tmp_path):
-        from pycsamt.stratagem.io import StratagemRawReader
         from pycsamt.stratagem.qc import QualityController
 
         edis = _load_edis(tmp_path, n=2)
@@ -254,14 +252,18 @@ class TestFrequencyFilter:
 
 class TestStaticShiftCorrector:
     def test_fit_returns_self(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         sc = StaticShiftCorrector()
         assert sc.fit(edis) is sc
 
     def test_factors_dataframe(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         sc = StaticShiftCorrector().fit(edis)
@@ -270,7 +272,9 @@ class TestStaticShiftCorrector:
         assert len(sc.factors_) > 0
 
     def test_edi_objects_populated(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         sc = StaticShiftCorrector().fit(edis)
@@ -278,7 +282,9 @@ class TestStaticShiftCorrector:
         assert len(sc.edi_objects_) == 5
 
     def test_z_modified_in_place(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         z0_before = edis[0].Z.z.copy() if edis[0].Z.z is not None else None
@@ -290,7 +296,9 @@ class TestStaticShiftCorrector:
             pass  # cannot guarantee sign; just check no exception
 
     def test_out_none_returns_list(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         sc = StaticShiftCorrector().fit(edis)
@@ -298,7 +306,9 @@ class TestStaticShiftCorrector:
         assert isinstance(result, list)
 
     def test_out_writes_files(self, tmp_path):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         edis = _load_edis(tmp_path, n=5)
         sc = StaticShiftCorrector().fit(edis)
@@ -308,7 +318,9 @@ class TestStaticShiftCorrector:
         assert all(p.exists() for p in paths)
 
     def test_out_before_fit_raises(self):
-        from pycsamt.stratagem.process import StaticShiftCorrector
+        from pycsamt.stratagem.process import (
+            StaticShiftCorrector,
+        )
 
         with pytest.raises(Exception):
             StaticShiftCorrector().out()

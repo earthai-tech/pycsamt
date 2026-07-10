@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,8 +25,15 @@ import threading
 import time
 from typing import Any
 
-from dash import Input, Output, State, clientside_callback, ctx, no_update, html
-import dash_bootstrap_components as dbc
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 
 from pycsamt.app.web.cache import cache_get, cache_set
 from pycsamt.app.web.layout import IDs
@@ -53,8 +59,8 @@ def _worker(session_id: str, sites_or_path, opts: dict) -> None:
     Two-phase worker.  ``sites_or_path`` is either a loaded Sites object
     (source=="current") or a folder path string (source=="path").
     """
-    from pycsamt.site.recompute import EDIRecomputer
     from pycsamt.site.base import Sites
+    from pycsamt.site.recompute import EDIRecomputer
 
     try:
         # ── Phase 1: load from folder if needed ──────────────────────────
@@ -165,7 +171,9 @@ def _safe_name(edi, idx: int) -> str:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _sites_to_store(sites, old_store: dict | None = None) -> dict:
-    from pycsamt.app.desktop.controllers.data_controller import DataController
+    from pycsamt.app.desktop.controllers.data_controller import (
+        DataController,
+    )
 
     ctrl = DataController()
     ctrl._sites = sites

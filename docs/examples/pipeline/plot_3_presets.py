@@ -14,8 +14,11 @@ run in one line. This example browses the catalogue and runs one end to end.
 # purpose and step list — the menu of ready-made workflows.
 
 from pycsamt.pipeline import (
-    list_presets, get_preset, preset_catalogue,
-    Pipeline, configure_pipe, reset_pipe,
+    Pipeline,
+    configure_pipe,
+    get_preset,
+    list_presets,
+    preset_catalogue,
 )
 
 print(preset_catalogue())
@@ -49,7 +52,7 @@ for label, step in preset.steps:
 # A preset drops straight into :class:`~pycsamt.pipeline.Pipeline` — its
 # steps *are* a pipeline definition — so running it is one call on the data.
 
-from _pipe_data import demo_sites, scratch_dir, quiet_logs
+from _pipe_data import demo_sites, quiet_logs, scratch_dir
 
 sites = demo_sites(n=8)
 configure_pipe(show_progress=False, plot_dpi=72)

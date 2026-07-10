@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt invert build — build inversion input files from an EDI collection."""
@@ -20,7 +19,6 @@ from ....api.cli.options import (
 )
 from ....api.cli.params import FreqRange
 from ...survey import resolve_survey
-
 from ._base import invert
 
 
@@ -207,8 +205,12 @@ def _build_occam2d(
     cell_size: float | None,
     verbose: int,
 ) -> None:
-    from pycsamt.models.occam2d.config  import OccamConfig   # noqa: PLC0415
-    from pycsamt.models.occam2d.builder import InputBuilder  # noqa: PLC0415
+    from pycsamt.models.occam2d.builder import (
+        InputBuilder,  # noqa: PLC0415
+    )
+    from pycsamt.models.occam2d.config import (
+        OccamConfig,  # noqa: PLC0415
+    )
 
     cfg = OccamConfig(modes=modes)
     if error_floor_rho   is not None: cfg.error_floor_rho       = error_floor_rho
@@ -230,8 +232,12 @@ def _build_modem(
     cell_size: float | None,
     verbose: int,
 ) -> None:
-    from pycsamt.models.modem.config  import ModEmConfig   # noqa: PLC0415
-    from pycsamt.models.modem.builder import InputBuilder  # noqa: PLC0415
+    from pycsamt.models.modem.builder import (
+        InputBuilder,  # noqa: PLC0415
+    )
+    from pycsamt.models.modem.config import (
+        ModEmConfig,  # noqa: PLC0415
+    )
 
     cfg = ModEmConfig(mode=modem_mode)
     if freq_range   is not None: cfg.freq_min, cfg.freq_max = freq_range

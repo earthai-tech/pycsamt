@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the AMTAVG class.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from pycsamt.zonge.avg import AMTAVG
+
 
 @pytest.fixture(scope="module")
 def full_modern_avg_content():
@@ -133,5 +133,5 @@ class TestAMTAVG:
         assert "AMTAVG.from_file(" in repr(amtavg_instance)
         assert "full_modern.avg" in repr(amtavg_instance)
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

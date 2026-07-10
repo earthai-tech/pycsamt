@@ -9,14 +9,17 @@ preserve the original stub API (``path``, ``header``, ``write``).
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from .iotools.poly import PolyFile, read_poly, write_poly
-from .iotools.resistivity import ResistivityFile, read_resistivity, write_resistivity
+from .iotools.resistivity import (
+    ResistivityFile,
+    read_resistivity,
+    write_resistivity,
+)
 
 __all__ = [
     # full objects
@@ -83,7 +86,7 @@ class ResistivityModel:
         log10_rho: float = 0.0,
         *,
         n_nodes: int = 0,
-    ) -> "ResistivityModel":
+    ) -> ResistivityModel:
         """Return a homogeneous half-space resistivity model stub."""
         m = cls()
         m._rf = ResistivityFile()

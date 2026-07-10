@@ -22,8 +22,8 @@ Currently implemented
 
 from __future__ import annotations
 
-from pathlib import Path
 import re as _re
+from pathlib import Path
 
 import numpy as np
 
@@ -32,7 +32,10 @@ from .avg import TEMAVG
 from .coordinates import read_tem_coordinates
 from .log import TEMLog
 from .survey import read_temavg_survey
-from .workflow import read_temavg_soundings, transform_temavg_survey
+from .workflow import (
+    read_temavg_soundings,
+    transform_temavg_survey,
+)
 from .zplot import TEMZPlot
 
 __all__ = [
@@ -1415,7 +1418,7 @@ def read_walkttem(
     # The first non-numeric column line is a header; skip it.
 
     soundings: list[TEMSounding] = []
-    for row_i, ln in enumerate(data_lines):
+    for _row_i, ln in enumerate(data_lines):
         parts = ln.split()
         if not parts:
             continue

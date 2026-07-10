@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -28,7 +27,7 @@ Available augmenters
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -52,10 +51,10 @@ class _BaseAugmenter(ABC):
     def __call__(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
+        y: np.ndarray | None = None,
         *,
-        rng: Optional[np.random.Generator] = None,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        rng: np.random.Generator | None = None,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Apply the augmentation.
 
@@ -79,9 +78,9 @@ class _BaseAugmenter(ABC):
     def _apply(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray],
+        y: np.ndarray | None,
         rng: np.random.Generator,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    ) -> tuple[np.ndarray, np.ndarray | None]:
         """Subclass implementation."""
 
 
@@ -117,8 +116,8 @@ class AugmentNoise(_BaseAugmenter):
     def __init__(
         self,
         sigma: float = 0.05,
-        phase_sigma: Optional[float] = None,
-        clip: Optional[float] = 3.0,
+        phase_sigma: float | None = None,
+        clip: float | None = 3.0,
     ) -> None:
         self.sigma = float(sigma)
         self.phase_sigma = float(phase_sigma) if phase_sigma is not None else sigma
@@ -165,8 +164,8 @@ class AugmentStaticShift(_BaseAugmenter):
 
     def __init__(
         self,
-        shift_range: Union[float, Tuple[float, float]] = (0.3, 3.0),
-        n_amp_features: Optional[int] = None,
+        shift_range: float | tuple[float, float] = (0.3, 3.0),
+        n_amp_features: int | None = None,
         per_sample: bool = True,
     ) -> None:
         if np.isscalar(shift_range):
@@ -337,7 +336,7 @@ class Compose:
     def __init__(
         self,
         augmenters: Sequence[_BaseAugmenter],
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         self.augmenters = list(augmenters)
         self._rng = np.random.default_rng(seed)
@@ -345,8 +344,8 @@ class Compose:
     def __call__(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        y: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
         for aug in self.augmenters:
             # Only _BaseAugmenter subclasses accept the rng kwarg;
             # wrappers (RandomApply, Compose) manage their own rngs.
@@ -385,7 +384,7 @@ class RandomApply:
         self,
         augmenter: _BaseAugmenter,
         p: float = 0.5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         self.augmenter = augmenter
         self.p = float(p)
@@ -394,8 +393,8 @@ class RandomApply:
     def __call__(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        y: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
         if self._rng.random() < self.p:
             return self.augmenter(X, y, rng=self._rng)
         return X, y

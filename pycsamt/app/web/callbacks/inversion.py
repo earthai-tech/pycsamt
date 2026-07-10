@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Inversion page (Traditional + AI Neural + PyTorch installer)."""
@@ -11,13 +10,20 @@ import sys
 import threading
 import time
 
+import matplotlib
 import numpy as np
 
-import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from dash import ctx, clientside_callback, Input, Output, State, html, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 _INV_TRACK_IDS = ["trad", "ai", "pinn", "hybrid"]
@@ -219,8 +225,8 @@ def _make_synthetic_1d(model_true, method, freqs, noise):
 
 
 def _make_synthetic_2d(model_true, method, freqs, noise, n_stations, profile_len):
-    from pycsamt.inversion.data import EMData
     from pycsamt.forward.em1d import MT1DForward
+    from pycsamt.inversion.data import EMData
     n_st = int(n_stations or 8)
     noise = float(noise or 0.05)
     rho_all, phase_all = [], []
@@ -374,8 +380,8 @@ def _generate_2d_dataset(
     X : (n_profiles, 2, n_freqs, n_stations)   channels: log10_rho_a, norm_phase
     y : (n_profiles, n_layers, n_stations)       log10(rho) sections
     """
-    from pycsamt.forward.em1d import MT1DForward
     from pycsamt.forward import LayeredModel
+    from pycsamt.forward.em1d import MT1DForward
 
     n_freqs = len(freqs)
     rng = np.random.default_rng(seed)
@@ -1313,8 +1319,12 @@ def register_inversion(app) -> None:
 
                 # ── 1-D ──────────────────────────────────────────────────
                 if ai_dim == "1d":
-                    from pycsamt.ai.inversion import EMInverter1D
-                    from pycsamt.forward.batch import generate_dataset
+                    from pycsamt.ai.inversion import (
+                        EMInverter1D,
+                    )
+                    from pycsamt.forward.batch import (
+                        generate_dataset,
+                    )
 
                     _log(f"Generating {n_samp} 1-D training samples …")
                     ds_train = generate_dataset(
@@ -1358,8 +1368,12 @@ def register_inversion(app) -> None:
 
                 # ── 2-D ──────────────────────────────────────────────────
                 elif ai_dim == "2d":
-                    from pycsamt.ai.inversion import EMInverter2D
-                    from pycsamt.app.web.cache import cache_get_fwd
+                    from pycsamt.ai.inversion import (
+                        EMInverter2D,
+                    )
+                    from pycsamt.app.web.cache import (
+                        cache_get_fwd,
+                    )
 
                     # Resolve 2D-specific user params
                     n_comp   = int(ai_n_components or 2)
@@ -1455,9 +1469,15 @@ def register_inversion(app) -> None:
 
                 # ── 3-D ──────────────────────────────────────────────────
                 else:  # ai_dim == "3d"
-                    from pycsamt.ai.inversion import GCNInverter3D
-                    from pycsamt.ai.nets.gcn import build_adjacency
-                    from pycsamt.forward.batch import generate_dataset_3d
+                    from pycsamt.ai.inversion import (
+                        GCNInverter3D,
+                    )
+                    from pycsamt.ai.nets.gcn import (
+                        build_adjacency,
+                    )
+                    from pycsamt.forward.batch import (
+                        generate_dataset_3d,
+                    )
 
                     n_sta_3d = int(ai_n_stations_3d or 20)
                     _log(f"Generating {n_samp} pseudo-3D surveys "
@@ -1556,8 +1576,12 @@ def register_inversion(app) -> None:
                        msg, "log")
 
         try:
-            from pycsamt.inversion.config import InversionConfig
-            from pycsamt.inversion.workflow import InversionWorkflow
+            from pycsamt.inversion.config import (
+                InversionConfig,
+            )
+            from pycsamt.inversion.workflow import (
+                InversionWorkflow,
+            )
 
             model_true = None
 
@@ -1617,7 +1641,9 @@ def register_inversion(app) -> None:
             )
             result = InversionWorkflow(cfg).run()
             try:
-                from pycsamt.app.web.cache import cache_set_inversion_result
+                from pycsamt.app.web.cache import (
+                    cache_set_inversion_result,
+                )
                 cache_set_inversion_result(session_id, result)
             except Exception:
                 pass
@@ -1692,10 +1718,11 @@ def register_inversion(app) -> None:
         if not contents:
             raise PreventUpdate
         try:
+            import numpy as _np
+
             from pycsamt.app.web.utils_pinn import (
                 decode_npz_checkpoint,
             )
-            import numpy as _np
             path = decode_npz_checkpoint(contents)
             with _np.load(path) as npz:
                 keys = list(npz.keys())
@@ -1836,14 +1863,14 @@ def register_inversion(app) -> None:
             log_lines.append(m)
 
         from pycsamt.app.web.utils_pinn import (
+            build_hybrid_inv,
+            build_pinn_inv,
+            decode_npz_checkpoint,
+            pinn_stats_div,
+            plot_pinn_convergence,
+            plot_pinn_section,
             session_to_obs_1d,
             session_to_obs_2d,
-            decode_npz_checkpoint,
-            build_pinn_inv,
-            build_hybrid_inv,
-            plot_pinn_section,
-            plot_pinn_convergence,
-            pinn_stats_div,
         )
 
         # ── PINN track ────────────────────────────────
@@ -2206,6 +2233,7 @@ def register_inversion(app) -> None:
             raise PreventUpdate
 
         import pandas as pd
+
         from pycsamt.app.web.utils_pinn import (
             plot_pinn_data_fit,
         )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,13 +17,13 @@ The root group:
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any
 
 import click
 
 from pycsamt import __version__
+
 from ..api.cli.config import PYCSAMT_CLI, configure_cli
 
 # ---------------------------------------------------------------------------
@@ -122,7 +121,9 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
     toml_cfg = _load_toml_config(toml_path)
     if toml_cfg:
         try:
-            from pycsamt.cli.commands.config import load_all_config  # noqa: PLC0415
+            from pycsamt.cli.commands.config import (
+                load_all_config,  # noqa: PLC0415
+            )
             load_all_config(toml_cfg)
         except Exception:  # noqa: BLE001
             pass
@@ -141,21 +142,47 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
 # ---------------------------------------------------------------------------
 
 def _register_commands() -> None:
-    from pycsamt.cli.commands.info       import info       # noqa: PLC0415
-    from pycsamt.cli.commands.convert    import convert    # noqa: PLC0415
-    from pycsamt.cli.commands.invert     import invert     # noqa: PLC0415
-    from pycsamt.cli.commands.pipe       import pipe       # noqa: PLC0415
-    from pycsamt.cli.commands.survey     import survey     # noqa: PLC0415
-    from pycsamt.cli.commands.site       import site       # noqa: PLC0415
-    from pycsamt.cli.commands.transform  import transform  # noqa: PLC0415
-    from pycsamt.cli.commands.forward    import forward    # noqa: PLC0415
-    from pycsamt.cli.commands.interp     import interp     # noqa: PLC0415
-    from pycsamt.cli.commands.tdem       import tdem       # noqa: PLC0415
-    from pycsamt.cli.commands.config     import config     # noqa: PLC0415
-    from pycsamt.cli.commands.edi        import edi        # noqa: PLC0415
-    from pycsamt.cli.commands.jones      import jones      # noqa: PLC0415
-    from pycsamt.cli.commands.avg        import avg        # noqa: PLC0415
-    from pycsamt.cli.commands.map        import map        # noqa: PLC0415,A001
+    from pycsamt.cli.commands.avg import avg  # noqa: PLC0415
+    from pycsamt.cli.commands.config import (
+        config,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.convert import (
+        convert,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.edi import edi  # noqa: PLC0415
+    from pycsamt.cli.commands.forward import (
+        forward,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.info import (
+        info,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.interp import (
+        interp,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.invert import (
+        invert,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.jones import (
+        jones,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.map import (
+        map,  # noqa: PLC0415,A001
+    )
+    from pycsamt.cli.commands.pipe import (
+        pipe,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.site import (
+        site,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.survey import (
+        survey,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.tdem import (
+        tdem,  # noqa: PLC0415
+    )
+    from pycsamt.cli.commands.transform import (
+        transform,  # noqa: PLC0415
+    )
 
     main.add_command(survey)
     main.add_command(site)

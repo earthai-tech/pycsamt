@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #       Author: LKouadio <etanoyau@gmail.com>
 #       License: LGPL-3.0
 """
@@ -20,7 +19,6 @@ from __future__ import annotations
 import math
 from typing import Final
 
-
 __all__ = [
     # maths
     "PI", "TAU", "DEG2RAD", "RAD2DEG", "LN10", "MRAD",
@@ -36,7 +34,7 @@ __all__ = [
     "METERS_TO_KILOMETERS", "PERCENT_FACTOR",
     # zonge conventions
     "ZONGE_RHO_FACTOR",
-    # earth radius 
+    # earth radius
     "_EARTH_R"
 ]
 # ---------------------------------------------------------------------

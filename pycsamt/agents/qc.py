@@ -131,11 +131,11 @@ class DataQCAgent(BaseAgent):
         # ── import emtools.qc functions ───────────────────────────────────────
         from ..emtools.qc import (
             build_qc_table,
-            qc_flags,
             frequency_confidence_table,
-            station_confidence_table,
-            plot_frequency_confidence_psection,
             plot_confidence_profile,
+            plot_frequency_confidence_psection,
+            qc_flags,
+            station_confidence_table,
         )
 
         # ── build tables ──────────────────────────────────────────────────────

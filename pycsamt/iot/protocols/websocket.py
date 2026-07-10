@@ -8,10 +8,14 @@ package is imported lazily.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, IoTProtocol, TelemetryError
+from .base import (
+    BaseTelemetryClient,
+    IoTProtocol,
+    TelemetryError,
+)
 
 __all__ = ["WebSocketTelemetryClient"]
 
@@ -34,7 +38,7 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         dry_run: bool = False,
         timeout: float = 10.0,
@@ -67,8 +71,8 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
         return f"sent {packet.topic} over websocket"
 
     def _transport_receive(
-        self, *, timeout: Optional[float] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         if self._handle is None:
             raise TelemetryError("WebSocket client is not connected.")
         try:

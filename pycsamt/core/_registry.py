@@ -1,15 +1,16 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Iterable, List, Optional
-from pathlib import Path
+import builtins
 import hashlib
 import json
 import time
 import uuid
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any
 
-from .base import CoreObject 
+from .base import CoreObject
 
 try:  # 3.11+
     import tomllib  # type: ignore[attr-defined]
@@ -30,7 +31,7 @@ __all__ = [
 class RegistryError(RuntimeError):
     r"""
     Error raised for registry and manifest operations.
-    
+
     Use this for signaling inconsistencies, corruption, or
     unsupported formats detected while loading or saving
     manifests or while mutating registry content.
@@ -41,20 +42,20 @@ class RegistryError(RuntimeError):
 def _now() -> float:
     r"""
     Return the current POSIX time as ``float`` seconds.
-    
+
     Returns
     -------
     float
         Seconds since the Unix epoch as returned by
         :func:`time.time`.
-    
+
     Notes
     -----
     This is wall-clock time and may jump if the system clock
     changes.  For measuring durations prefer
     :func:`time.monotonic` (not used here to keep values
     serializable and human-interpretable).
-    
+
     Examples
     --------
     >>> ts = _now()
@@ -68,19 +69,19 @@ def _now() -> float:
 def _uuid() -> str:
     r"""
     Return a random UUID4 hex string without dashes.
-    
+
     Returns
     -------
     str
         32 lowercase hexadecimal characters, suitable as a
         compact record id.
-    
+
     Notes
     -----
     Implemented via :func:`uuid.uuid4().hex`.  The value is not
     cryptographically stable across processes, but is unique with
     very high probability.
-    
+
     Examples
     --------
     >>> rid = _uuid()
@@ -94,7 +95,7 @@ def _uuid() -> str:
 def _sha256(path: Path, block: int = 1 << 20) -> str:
     r"""
     Compute a streaming SHA-256 hex digest for a file.
-    
+
     Parameters
     ----------
     path : pathlib.Path
@@ -103,12 +104,12 @@ def _sha256(path: Path, block: int = 1 << 20) -> str:
     block : int, optional
         Block size in bytes.  Defaults to ``1 << 20`` (1 MiB).
         Larger blocks may be faster on fast disks.
-    
+
     Returns
     -------
     str
         Lowercase hexadecimal SHA-256 digest.
-    
+
     Raises
     ------
     FileNotFoundError
@@ -117,18 +118,18 @@ def _sha256(path: Path, block: int = 1 << 20) -> str:
         If the file cannot be opened.
     OSError
         For other I/O errors during reading.
-    
+
     Notes
     -----
     Reads the file incrementally to keep memory usage bounded.
-    
+
     Examples
     --------
     >>> from pathlib import Path
     >>> digest = _sha256(Path(__file__).parent / "__init__.py")
     >>> len(digest)
     64
-    
+
     See Also
     --------
     hashlib.sha256
@@ -147,23 +148,23 @@ def _sha256(path: Path, block: int = 1 << 20) -> str:
 def guess_kind(obj: Any) -> str:
     r"""
     Best-effort classification for common MT/EM artefacts.
-    
+
     The function inspects ``obj.__class__.__module__`` and class
     name to assign a coarse category usable by higher-level
     tools.  It recognizes common terms such as ``"seg"``,
     ``"edi"``, ``"zonge"``, ``"avg"``, and ``"jones"``.
-    
+
     Parameters
     ----------
     obj : Any
         Any Python object.  Only its class name and module path
         are inspected.  Iterables are handled specially.
-    
+
     Returns
     -------
     str
         One of the following labels:
-    
+
         * ``"edi"``       — an EDI item.
         * ``"edi_col"``   — an EDI collection.
         * ``"avg"``       — a Zonge AVG artefact.
@@ -171,13 +172,13 @@ def guess_kind(obj: Any) -> str:
         * ``"j_col"``     — a collection of J-files.
         * ``"list"``      — a list or tuple of items.
         * ``"meta"``      — a fallback for other metadata.
-    
+
     Notes
     -----
     This is heuristic and string-based.  It is intentionally
     liberal to remain dependency-free.  Extend or override at the
     call site if stricter typing is needed.
-    
+
     Examples
     --------
     >>> class Dummy: ...
@@ -185,7 +186,7 @@ def guess_kind(obj: Any) -> str:
     'meta'
     >>> guess_kind([])
     'list'
-    
+
     See Also
     --------
     Record
@@ -216,7 +217,7 @@ def guess_kind(obj: Any) -> str:
 class Record(CoreObject):
     r"""
     A single registry item with identifiers and metadata.
-    
+
     Parameters
     ----------
     rid : str
@@ -247,7 +248,7 @@ class Record(CoreObject):
     updated : float, optional
         Last update timestamp in seconds since epoch.  Defaults
         to :func:`_now`.
-    
+
     Attributes
     ----------
     rid : str
@@ -261,21 +262,21 @@ class Record(CoreObject):
     checksum : str or None
     created : float
     updated : float
-    
+
     Notes
     -----
     The class is a :mod:`dataclasses` dataclass and is designed
     to round-trip with :meth:`to_dict` and :meth:`from_dict`.
-    
+
     Examples
     --------
     Create a record with a checksum::
-    
+
         from pathlib import Path
         p = Path("data/site001.edi")
         r = Record(rid=_uuid(), kind="edi", path=str(p),
                    checksum=_sha256(p))
-    
+
     See Also
     --------
     Manifest
@@ -284,30 +285,30 @@ class Record(CoreObject):
 
     rid: str
     kind: str
-    path: Optional[str] = None
-    fmt: Optional[str] = None
-    dataid: Optional[str] = None
-    station_id: Optional[str] = None
-    tags: List[str] = field(default_factory=list)
-    meta: Dict[str, Any] = field(default_factory=dict)
-    checksum: Optional[str] = None
+    path: str | None = None
+    fmt: str | None = None
+    dataid: str | None = None
+    station_id: str | None = None
+    tags: list[str] = field(default_factory=list)
+    meta: dict[str, Any] = field(default_factory=dict)
+    checksum: str | None = None
     created: float = field(default_factory=_now)
     updated: float = field(default_factory=_now)
 
     def touch(self) -> None:
         r"""
         Bump :attr:`updated` to the current time.
-        
+
         Notes
         -----
         Uses :func:`_now`.  Does not mutate any other fields.
         """
         self.updated = _now()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         r"""
         Return a JSON-ready mapping for this record.
-        
+
         Returns
         -------
         dict
@@ -316,15 +317,15 @@ class Record(CoreObject):
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Record":
+    def from_dict(cls, d: dict[str, Any]) -> Record:
         r"""
         Create a :class:`Record` from a mapping.
-        
+
         Parameters
         ----------
         d : dict
             Mapping with the same keys as :meth:`to_dict`.
-        
+
         Returns
         -------
         Record
@@ -337,7 +338,7 @@ class Record(CoreObject):
 class Manifest(CoreObject):
     r"""
     Container mapping record ids to :class:`Record` objects.
-    
+
     Parameters
     ----------
     root : str
@@ -348,27 +349,27 @@ class Manifest(CoreObject):
     records : dict[str, Record], optional
         Mapping of record id to :class:`Record`.  Defaults to an
         empty mapping.
-    
+
     Attributes
     ----------
     root : str
     version : int
     records : dict[str, Record]
-    
+
     Notes
     -----
     The manifest is serializable through :meth:`to_dict` and
     :meth:`from_dict`.  Storage format (JSON, TOML, etc.) is
     left to :class:`ManifestStore` implementations.
-    
+
     Examples
     --------
     Build a manifest programmatically::
-    
+
         man = Manifest(root="data")
         rec = Record(rid=_uuid(), kind="edi", path="a.edi")
         man.records[rec.rid] = rec
-    
+
     See Also
     --------
     Record
@@ -377,12 +378,12 @@ class Manifest(CoreObject):
     """
     root: str
     version: int = 1
-    records: Dict[str, Record] = field(default_factory=dict)
+    records: dict[str, Record] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         r"""
         Return a nested mapping suitable for JSON or TOML.
-        
+
         A ``dict`` with ``root``, ``version``, and a nested
         ``records`` mapping of ids to plain dicts.
         """
@@ -394,15 +395,15 @@ class Manifest(CoreObject):
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Manifest":
+    def from_dict(cls, d: dict[str, Any]) -> Manifest:
         r"""
         Create a :class:`Manifest` from a nested mapping.
-        
+
         Parameters
         ----------
         d : dict
             Mapping previously produced by :meth:`to_dict`.
-        
+
         Returns
         -------
         Manifest
@@ -410,7 +411,7 @@ class Manifest(CoreObject):
         """
 
         recs = {
-            k: Record.from_dict(v) 
+            k: Record.from_dict(v)
             for k, v in d.get("records", {}).items()
         }
         return cls(
@@ -421,27 +422,27 @@ class Manifest(CoreObject):
 class ManifestStore(CoreObject):
     r"""
     Interface for loading and saving :class:`Manifest` objects.
-    
+
     Subclasses provide concrete persistence (e.g. JSON on disk,
     TOML, or a database).  The interface is intentionally small.
-    
+
     Notes
     -----
     Implementations should validate the manifest version and any
     schema expectations relevant to their storage.
-    
+
     Examples
     --------
     A minimal JSON store sketch::
-    
+
         class JsonStore(ManifestStore):
             def load(self, path: Path) -> Manifest:
                 data = json.loads(path.read_text())
                 return Manifest.from_dict(data)
-    
+
             def save(self, man: Manifest, path: Path) -> None:
                 path.write_text(json.dumps(man.to_dict(), indent=2))
-    
+
     See Also
     --------
     Manifest
@@ -459,12 +460,12 @@ class ManifestStore(CoreObject):
 class FileManifestStore(ManifestStore):
     r"""
     Disk-backed :class:`Manifest` persistence utilities.
-    
+
     This store loads and saves manifests from files on disk.
     Reading supports JSON by default, and can parse TOML when
     :mod:`tomllib` is available. Saving is JSON-only in this
     implementation.
-    
+
     Behavior
     --------
     * If the given ``path`` does not exist on load, a new empty
@@ -473,13 +474,13 @@ class FileManifestStore(ManifestStore):
     * Files are read and written with ``utf-8`` encoding.
     * TOML saving is not implemented and raises
       :class:`RegistryError`.
-    
+
     Notes
     -----
     This class is intentionally minimal and does not implement
     atomic writes or file locking. For concurrent writers use a
     safer store or wrap calls with your own locking.
-    
+
     Examples
     --------
     >>> from pathlib import Path
@@ -491,14 +492,14 @@ class FileManifestStore(ManifestStore):
     >>> isinstance(man, Manifest)              # doctest: +SKIP
     True
     >>> store.save(man, mpath)                 # doctest: +SKIP
-    
+
     See Also
     --------
     Manifest
     ManifestStore
     json
     tomllib
-    
+
     References
     ----------
     .. [1] Python Standard Library. *json* module.
@@ -508,25 +509,25 @@ class FileManifestStore(ManifestStore):
     def load(self, path: Path) -> Manifest:
         r"""
         Load a :class:`Manifest` from ``path``.
-        
+
         Parameters
         ----------
         path : pathlib.Path
             File to read. If it does not exist, return a new empty
             manifest with ``root`` set to ``path.parent``.
-        
+
         Returns
         -------
         Manifest
             Deserialized manifest.
-        
+
         Raises
         ------
         json.JSONDecodeError
             If JSON parsing fails.
         OSError
             For I/O errors.
-        
+
         Notes
         -----
         When the suffix is ``.toml`` and :mod:`tomllib` is missing,
@@ -546,21 +547,21 @@ class FileManifestStore(ManifestStore):
     def save(self, man: Manifest, path: Path) -> None:
         r"""
         Serialize ``man`` to JSON at ``path`` using ``utf-8``.
-        
+
         Parameters
         ----------
         man : Manifest
             Manifest to write.
         path : pathlib.Path
             Destination file. The suffix determines support.
-        
+
         Raises
         ------
         RegistryError
             If a TOML file is requested (``.toml`` suffix).
         OSError
             For write or permission errors.
-        
+
         Notes
         -----
         This method writes pretty-printed JSON (``indent=2``). TOML
@@ -576,11 +577,11 @@ class FileManifestStore(ManifestStore):
 class Registry(CoreObject):
     r"""
     High-level helper to manage a file-backed registry.
-    
+
     A :class:`Registry` binds a filesystem ``root`` with a
     manifest file and provides convenience methods to add files
     or objects, query records, and persist changes.
-    
+
     Parameters
     ----------
     root : path-like
@@ -591,7 +592,7 @@ class Registry(CoreObject):
     store : ManifestStore or None, optional
         Custom persistence backend. Defaults to
         :class:`FileManifestStore`.
-    
+
     Attributes
     ----------
     root : pathlib.Path
@@ -602,27 +603,27 @@ class Registry(CoreObject):
         Persistence backend in use.
     manifest : Manifest
         In-memory manifest loaded at construction.
-    
+
     Notes
     -----
     On initialization, the manifest is loaded (or created if
     missing) and its ``root`` is set to the absolute ``root``
     path. All relative paths passed later are resolved under
     ``root``.
-    
+
     Examples
     --------
     Create a registry and register an EDI file::
-    
+
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
         >>> reg = Registry("data")                       # doctest: +SKIP
         >>> rec = reg.add_path("site001.edi", kind="edi",
         ...                   fmt="edi")                 # doctest: +SKIP
         >>> reg.get(rec.rid).kind                        # doctest: +SKIP
         'edi'
-    
+
     Register a Python object and tag it::
-    
+
         >>> class Dummy:                                 # doctest: +SKIP
         ...     station = "S01"
         ...     station_id = 1
@@ -630,13 +631,13 @@ class Registry(CoreObject):
         >>> rec = reg.add_obj(d, tags=["demo"])          # doctest: +SKIP
         >>> "demo" in rec.tags                           # doctest: +SKIP
         True
-    
+
     Query and update metadata::
-    
+
         >>> regs = reg.list(kind="edi")                  # doctest: +SKIP
         >>> found = reg.find(kind="edi")                 # doctest: +SKIP
         >>> _ = reg.update_meta(rec.rid, site="S001")    # doctest: +SKIP
-    
+
     See Also
     --------
     Record
@@ -644,7 +645,7 @@ class Registry(CoreObject):
     ManifestStore
     FileManifestStore
     guess_kind
-    
+
     References
     ----------
     .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
@@ -657,7 +658,7 @@ class Registry(CoreObject):
         root: Path | str,
         *,
         manifest_name: str = "manifest.json",
-        store: Optional[ManifestStore] = None,
+        store: ManifestStore | None = None,
     ) -> None:
         self.root = Path(root)
         self.manifest_path = self.root / manifest_name
@@ -665,11 +666,11 @@ class Registry(CoreObject):
         self.manifest = self.store.load(self.manifest_path)
         self.manifest.root = str(self.root)
 
-    #  basic ops 
+    #  basic ops
     def save(self) -> None:
         r"""
         Persist the in-memory manifest to :attr:`manifest_path`.
-        
+
         Notes
         -----
         Delegates to :attr:`store`. Use this after batch updates if
@@ -682,17 +683,17 @@ class Registry(CoreObject):
         self,
         p: Path | str,
         *,
-        kind: Optional[str] = None,
-        fmt: Optional[str] = None,
-        dataid: Optional[str] = None,
-        station_id: Optional[str] = None,
-        tags: Optional[Iterable[str]] = None,
-        meta: Optional[Dict[str, Any]] = None,
+        kind: str | None = None,
+        fmt: str | None = None,
+        dataid: str | None = None,
+        station_id: str | None = None,
+        tags: Iterable[str] | None = None,
+        meta: dict[str, Any] | None = None,
         with_hash: bool = True,
     ) -> Record:
         r"""
         Add a file-based record into the registry.
-        
+
         Parameters
         ----------
         p : path-like
@@ -714,17 +715,17 @@ class Registry(CoreObject):
         with_hash : bool, optional
             If ``True`` and the file exists, compute SHA-256 and set
             :attr:`Record.checksum`. Defaults to ``True``.
-        
+
         Returns
         -------
         Record
             The created record.
-        
+
         Notes
         -----
         When the file does not exist, the checksum is left unset.
         The manifest is saved immediately after insertion.
-        
+
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
@@ -757,15 +758,15 @@ class Registry(CoreObject):
         self,
         obj: Any,
         *,
-        rid: Optional[str] = None,
-        kind: Optional[str] = None,
-        tags: Optional[Iterable[str]] = None,
-        meta: Optional[Dict[str, Any]] = None,
-        path: Optional[str | Path] = None,
+        rid: str | None = None,
+        kind: str | None = None,
+        tags: Iterable[str] | None = None,
+        meta: dict[str, Any] | None = None,
+        path: str | Path | None = None,
     ) -> Record:
         r"""
         Add an object-backed record using heuristics for ``kind``.
-        
+
         Parameters
         ----------
         obj : Any
@@ -781,18 +782,18 @@ class Registry(CoreObject):
             Extra JSON-serializable metadata.
         path : str or pathlib.Path or None, optional
             Optional path reference to associate with the object.
-        
+
         Returns
         -------
         Record
             The created record.
-        
+
         Notes
         -----
         If the object exposes attributes ``station`` or
         ``station_id``, they are copied into the record when
         available. The manifest is saved immediately.
-        
+
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
@@ -828,16 +829,16 @@ class Registry(CoreObject):
         except KeyError as exc:
             raise RegistryError(f"unknown rid: {rid}") from exc
 
-    def list(self, *, kind: Optional[str] = None) -> List[Record]:
+    def list(self, *, kind: str | None = None) -> builtins.list[Record]:
         r"""
         List records, optionally filtering by ``kind``.
-        
+
         Parameters
         ----------
         kind : str or None, optional
             If provided, only records whose ``kind`` matches are
             returned.
-        
+
         Returns
         -------
         list of Record
@@ -852,13 +853,13 @@ class Registry(CoreObject):
     def find(
         self,
         *,
-        tag: Optional[str] = None,
-        kind: Optional[str] = None,
-        dataid: Optional[str] = None,
-    ) -> List[Record]:
+        tag: str | None = None,
+        kind: str | None = None,
+        dataid: str | None = None,
+    ) -> builtins.list[Record]:
         r"""
         Filter records by any combination of tag, kind, or dataid.
-        
+
         Parameters
         ----------
         tag : str or None, optional
@@ -867,12 +868,12 @@ class Registry(CoreObject):
             Require that the record kind matches this value.
         dataid : str or None, optional
             Require that the record data id matches this value.
-        
+
         Returns
         -------
         list of Record
             Records satisfying all provided predicates.
-        
+
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
@@ -880,11 +881,11 @@ class Registry(CoreObject):
         >>> reg.find(kind="edi")                         # doctest: +SKIP
         """
 
-        out: List[Record] = []
+        out: list[Record] = []
         for r in self.manifest.records.values():
             if kind and r.kind != kind:
                 continue
-            if tag and tag not in (r.tags or ()): 
+            if tag and tag not in (r.tags or ()):
                 continue
             if dataid and r.dataid != dataid:
                 continue
@@ -898,19 +899,19 @@ class Registry(CoreObject):
     ) -> Record:
         r"""
         Update ``meta`` fields of the record with id ``rid``.
-        
+
         Parameters
         ----------
         rid : str
             Record identifier.
         **fields : Any
             Key-value pairs merged into :attr:`Record.meta`.
-        
+
         Returns
         -------
         Record
             The updated record.
-        
+
         Notes
         -----
         Updates the ``updated`` timestamp and saves the manifest.
@@ -925,12 +926,12 @@ class Registry(CoreObject):
     def remove(self, rid: str) -> None:
         r"""
         Remove the record with id ``rid`` and persist the manifest.
-        
+
         Parameters
         ----------
         rid : str
             Record identifier.
-        
+
         Notes
         -----
         The removal is silent when the id is unknown. The manifest

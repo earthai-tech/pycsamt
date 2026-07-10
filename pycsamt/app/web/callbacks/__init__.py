@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,30 +19,50 @@ All submodules export a single ``register_<name>(app)`` function.
 
 from __future__ import annotations
 
-from pycsamt.app.web.callbacks._session    import register_session
-from pycsamt.app.web.callbacks.data        import register_data
-from pycsamt.app.web.callbacks.map         import register_map
-from pycsamt.app.web.callbacks.profile     import register_profile
-from pycsamt.app.web.callbacks.agents      import register_agents
-from pycsamt.app.web.callbacks.theme       import register_theme
-from pycsamt.app.web.callbacks.freq        import register_freq
-from pycsamt.app.web.callbacks.qc          import register_qc
-from pycsamt.app.web.callbacks.navigation  import register_navigation
-from pycsamt.app.web.callbacks.advanced    import register_advanced
-from pycsamt.app.web.callbacks.tdem        import register_tdem
-from pycsamt.app.web.callbacks.correction  import register_correction
-from pycsamt.app.web.callbacks.pipeline    import register_pipeline
-from pycsamt.app.web.callbacks.forward     import register_forward
-from pycsamt.app.web.callbacks.interp      import register_interp
-from pycsamt.app.web.callbacks.inversion   import register_inversion
-from pycsamt.app.web.callbacks.tools       import register_tools
-from pycsamt.app.web.callbacks.settings    import register_settings
-from pycsamt.app.web.callbacks.help        import register_help
-from pycsamt.app.web.callbacks.dashboard   import register_dashboard
-from pycsamt.app.web.callbacks.recompute   import register_recompute
-from pycsamt.app.web.callbacks.lines       import register_lines
-from pycsamt.app.web.callbacks.map3d       import register_map3d
-from pycsamt.app.web.callbacks.inv_results import register_inv_results
+from pycsamt.app.web.callbacks._session import (
+    register_session,
+)
+from pycsamt.app.web.callbacks.advanced import (
+    register_advanced,
+)
+from pycsamt.app.web.callbacks.agents import register_agents
+from pycsamt.app.web.callbacks.correction import (
+    register_correction,
+)
+from pycsamt.app.web.callbacks.dashboard import (
+    register_dashboard,
+)
+from pycsamt.app.web.callbacks.data import register_data
+from pycsamt.app.web.callbacks.forward import register_forward
+from pycsamt.app.web.callbacks.freq import register_freq
+from pycsamt.app.web.callbacks.help import register_help
+from pycsamt.app.web.callbacks.interp import register_interp
+from pycsamt.app.web.callbacks.inv_results import (
+    register_inv_results,
+)
+from pycsamt.app.web.callbacks.inversion import (
+    register_inversion,
+)
+from pycsamt.app.web.callbacks.lines import register_lines
+from pycsamt.app.web.callbacks.map import register_map
+from pycsamt.app.web.callbacks.map3d import register_map3d
+from pycsamt.app.web.callbacks.navigation import (
+    register_navigation,
+)
+from pycsamt.app.web.callbacks.pipeline import (
+    register_pipeline,
+)
+from pycsamt.app.web.callbacks.profile import register_profile
+from pycsamt.app.web.callbacks.qc import register_qc
+from pycsamt.app.web.callbacks.recompute import (
+    register_recompute,
+)
+from pycsamt.app.web.callbacks.settings import (
+    register_settings,
+)
+from pycsamt.app.web.callbacks.tdem import register_tdem
+from pycsamt.app.web.callbacks.theme import register_theme
+from pycsamt.app.web.callbacks.tools import register_tools
 
 
 def register_callbacks(app) -> None:
@@ -73,5 +92,7 @@ def register_callbacks(app) -> None:
     register_map3d(app)
     register_inv_results(app)
     # Page-level card/selection callbacks
-    from pycsamt.app.web.pages.agents_page import register_callbacks as _reg_agents_page
+    from pycsamt.app.web.pages.agents_page import (
+        register_callbacks as _reg_agents_page,
+    )
     _reg_agents_page(app)

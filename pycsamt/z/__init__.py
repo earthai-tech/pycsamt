@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Impedance-tensor
 """
 
-from .z import Z
-from .resphase import ResPhase
 from ..exceptions import ZError
+from .resphase import ResPhase
+from .z import Z
 
 __all__ = ["Z", "ResPhase", "ZError"]

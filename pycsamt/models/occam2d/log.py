@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """OccamLog — parse Occam2D log files.
@@ -70,7 +69,7 @@ class OccamLog(OccamBase):
     # I/O
     # ------------------------------------------------------------------
     @classmethod
-    def read(cls, path: PathLike, **kwargs) -> "OccamLog":
+    def read(cls, path: PathLike, **kwargs) -> OccamLog:
         p = Path(path)
         if not p.exists():
             raise FileNotFoundError(f"Occam log file not found: {p}")

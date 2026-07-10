@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,21 +32,28 @@ Before/After distinction
 """
 from __future__ import annotations
 
-import io
-import base64
-
 import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import numpy as np
 
-from dash import ALL, Input, Output, State, ctx, html, no_update, dcc
-from dash.exceptions import PreventUpdate
+matplotlib.use("Agg")
 import dash_bootstrap_components as dbc
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
+from dash.exceptions import PreventUpdate
 
 from pycsamt.app.desktop.controllers.correction_controller import (
-    CATALOGUE, CorrectionController,
+    CATALOGUE,
+    CorrectionController,
 )
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
@@ -59,7 +65,6 @@ from pycsamt.app.web.utils import (
     filter_sites_by_lines,
     no_active_lines_src,
 )
-
 
 # ── Catalogue helpers ─────────────────────────────────────────────────────────
 
@@ -372,7 +377,7 @@ def _render_overlay_median_band(raw_sites, cur_sites, dark, comp="both"):
         f"Station ensemble — Median ± IQR  ({len(edis_raw)} stations)",
         color=txt_col, fontsize=10, pad=6,
     )
-    leg = ax_rho.legend(fontsize=8, facecolor=ax_bg, edgecolor=grid_col,
+    ax_rho.legend(fontsize=8, facecolor=ax_bg, edgecolor=grid_col,
                         labelcolor=txt_col, framealpha=0.85)
     fig.patch.set_facecolor(bg)
     plt.setp(ax_rho.get_xticklabels(), visible=False)

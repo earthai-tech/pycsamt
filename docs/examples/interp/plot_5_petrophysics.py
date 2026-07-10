@@ -18,11 +18,13 @@ cross-plot that ties them to the actual section.
 # saturation at a fixed porosity shows the strong resistivity increase as
 # pores drain.
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pycsamt.interp.petrophysics import (
-    ArchieModel, HashinShtrikmanBounds, kozeny_carman_K,
+    ArchieModel,
+    HashinShtrikmanBounds,
+    kozeny_carman_K,
 )
 
 # Use the resistivity vs porosity model curve (2nd figure) as the thumbnail.
@@ -93,7 +95,8 @@ ax.grid(alpha=0.3, which="both")
 # the rock-physics model actually matches the data.
 
 from _interp_data import demo_model
-from pycsamt.interp import PetrophysicalConfig, EMHydroModel
+
+from pycsamt.interp import EMHydroModel, PetrophysicalConfig
 from pycsamt.interp.plot import PlotPetrophysicalCrossPlot
 
 result = EMHydroModel(demo_model(), PetrophysicalConfig(rho_w=20.0),

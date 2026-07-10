@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pyGIMLi backend for EM inversion.
@@ -27,7 +26,10 @@ from ..data import EMData
 from ..mesh import InversionMesh
 from ..model import StartingModel
 from ..objective import component_errors, weighted_rms
-from ..regularization import pygimli_lambda, regularization_from_config
+from ..regularization import (
+    pygimli_lambda,
+    regularization_from_config,
+)
 from ..results import InversionResult
 
 __all__ = ["PyGIMLiBackend"]
@@ -203,7 +205,7 @@ class PyGIMLiBackend(BaseInversionBackend):
         em = modules.em
         start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)
         periods = 1.0 / np.asarray(em_data.frequencies, dtype=float)
-        thk = np.asarray(start.thicknesses, dtype=float)
+        np.asarray(start.thicknesses, dtype=float)
         observed = _pack_mt_observations(em_data)
         errors = _pack_mt_errors(em_data, cfg)
 

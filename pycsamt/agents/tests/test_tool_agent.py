@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for ToolAgent (strike / dimensionality / validator)."""
@@ -8,18 +7,19 @@ import os
 import unittest
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from pycsamt.agents.tooling import (  # noqa: E402
-    ToolAgent,
-    TOOL_KINDS,
-    _df_to_text,
-    _circular_strike_mean,
-    _ll_to_utm,
-    _get_latlon,
-    _safe_filename,
     _EXPORT_BUNDLES,
+    TOOL_KINDS,
+    ToolAgent,
+    _circular_strike_mean,
+    _df_to_text,
+    _get_latlon,
+    _ll_to_utm,
+    _safe_filename,
 )
 
 _DATA = os.path.join("data", "3edis")
@@ -42,7 +42,10 @@ class TestToolHelpers(unittest.TestCase):
     def test_correction_registry_coercion(self):
         # registry metadata + parameter coercion (no EDI data needed).
         from pycsamt.agents._corrections import (
-            CORRECTION_METHODS, param_specs, coerce_kwargs, fn_for,
+            CORRECTION_METHODS,
+            coerce_kwargs,
+            fn_for,
+            param_specs,
         )
         self.assertIn("corr_ss_ama", CORRECTION_METHODS)
         self.assertEqual(fn_for("corr_ss_ama"), "correct_ss_ama")
@@ -65,7 +68,9 @@ class TestToolHelpers(unittest.TestCase):
     def test_static_shift_method_routing(self):
         # Specific static-shift phrases route to their correction workflow,
         # while the bare phrase still routes to the legacy static_shift wf.
-        from pycsamt.agents._workflows import classify_workflow
+        from pycsamt.agents._workflows import (
+            classify_workflow,
+        )
         cases = {
             "apply ama static shift":          "corr_ss_ama",
             "loess static shift correction":   "corr_ss_loess",
@@ -100,8 +105,13 @@ class TestToolHelpers(unittest.TestCase):
     def test_correction_schemas_generated(self):
         # Every registered correction method gets a param-modal schema whose
         # field keys match its catalogue ParamSpec names.
-        from pycsamt.agents._corrections import CORRECTION_METHODS, param_specs
-        from pycsamt.app.agent_master.callbacks.params import _SCHEMAS
+        from pycsamt.agents._corrections import (
+            CORRECTION_METHODS,
+            param_specs,
+        )
+        from pycsamt.app.agent_master.callbacks.params import (
+            _SCHEMAS,
+        )
         for wf in CORRECTION_METHODS:
             self.assertIn(wf, _SCHEMAS, msg=wf)
             keys = {f["key"] for f in _SCHEMAS[wf]["fields"]}
@@ -110,7 +120,9 @@ class TestToolHelpers(unittest.TestCase):
 
     def test_all_catalogue_methods_registered(self):
         # Every catalogue method (every category) is exposed as a workflow id.
-        from pycsamt.agents._corrections import CORRECTION_METHODS
+        from pycsamt.agents._corrections import (
+            CORRECTION_METHODS,
+        )
         from pycsamt.app.desktop.controllers.correction_controller import (
             CATALOGUE,
         )
@@ -125,7 +137,9 @@ class TestToolHelpers(unittest.TestCase):
     # ── Wave F: conversational Q&A vs commands ───────────────────────────────
     def test_correction_questions_route_to_question(self):
         # Conceptual questions answer (QUESTION) rather than triggering a run.
-        from pycsamt.agents.router import classify_intent_offline
+        from pycsamt.agents.router import (
+            classify_intent_offline,
+        )
         for q in ["what is static shift?",
                   "when should I rotate to strike?",
                   "what does the notch filter remove?",
@@ -133,8 +147,12 @@ class TestToolHelpers(unittest.TestCase):
             self.assertEqual(classify_intent_offline(q)[0], "question", msg=q)
 
     def test_correction_commands_route_to_workflow(self):
-        from pycsamt.agents.router import classify_intent_offline
-        from pycsamt.agents._workflows import classify_workflow
+        from pycsamt.agents._workflows import (
+            classify_workflow,
+        )
+        from pycsamt.agents.router import (
+            classify_intent_offline,
+        )
         cases = {
             "apply ama static shift":     "corr_ss_ama",
             "rotate to geoelectric strike": "corr_rotate_strike",
@@ -147,7 +165,9 @@ class TestToolHelpers(unittest.TestCase):
             self.assertEqual(classify_workflow(text), wf, msg=text)
 
     def test_capability_text_lists_corrections(self):
-        from pycsamt.app.agent_master.callbacks.chat import _capability_text
+        from pycsamt.app.agent_master.callbacks.chat import (
+            _capability_text,
+        )
         txt = _capability_text()
         self.assertIn("Correct & condition", txt)
         for cat in ("Static Shift", "Noise Removal", "Tensor Rotation",
@@ -313,8 +333,10 @@ class TestToolAgent(unittest.TestCase):
 
     def test_correction_coord_shift(self):
         # A pure offset must change the stored coordinates.
-        from pycsamt.gis.coord_correction import _get_coords_df
         from pycsamt.emtools._core import ensure_sites
+        from pycsamt.gis.coord_correction import (
+            _get_coords_df,
+        )
         r = self._run_correction("corr_coord_shift", delta_lat=0.001,
                                  delta_lon=0.002, delta_elev=5.0)
         before = _get_coords_df(ensure_sites(_DATA, recursive=True, verbose=0))
@@ -384,7 +406,7 @@ class TestToolAgent(unittest.TestCase):
                       format="png", dpi=80, output_dir=out)
         saved = [f for f in os.listdir(out) if f.endswith(".png")]
         self.assertTrue(saved, msg="no figures written")
-        self.assertTrue((r.data.get("figures") or {}))
+        self.assertTrue(r.data.get("figures") or {})
 
     def test_elevation_offline(self):
         # Stations without coordinates → graceful, no network call.

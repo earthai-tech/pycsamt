@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 # Author: L. Kouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Optional, Union, Tuple, Any, Iterable
 import math
+from collections.abc import Iterable
+from typing import Any, Union
+
 import numpy as np
 
 from .api.property import PyCSAMTObject
 from .api.typing import ArrayLike
-from .log.logger import get_logger
 from .exceptions import LocationError
 from .gis.utils import (
     assert_lat_value,
@@ -18,7 +18,8 @@ from .gis.utils import (
     ll_to_utm,
     utm_to_ll,
 )
-from .utils.arrayops import is_iterable, assert_xy_in
+from .log.logger import get_logger
+from .utils.arrayops import assert_xy_in, is_iterable
 from .utils.validation import _check_consistency_size
 
 logger = get_logger(__name__)
@@ -35,21 +36,21 @@ class BaseLoc(PyCSAMTObject):
     """
     Base mixin for point-like location objects with lat/lon and
     UTM representations.
-    
+
     This class does not store data by itself. Subclasses are
     expected to define the following private attributes:
-    
+
     - _latitude : float or None
     - _longitude : float or None
     - _elevation : float
     - _utm_zone : str or None
     - _easting : float or None
     - _northing : float or None
-    
+
     It provides robust validation, conversion, vectorized
     helpers, and convenience operations such as distance and
     approximate equality.
-    
+
     Notes
     -----
     - Latitude and longitude are validated and coerced using
@@ -60,7 +61,7 @@ class BaseLoc(PyCSAMTObject):
       the minimal fields for each representation are present.
     - Methods prefixed with ``_require_*`` assert presence and
       return normalized values or raise :class:`LocationError`.
-    
+
     Examples
     --------
     >>> class Station(BaseLoc):
@@ -80,7 +81,7 @@ class BaseLoc(PyCSAMTObject):
     >>> s2 = Station(10.0001, 5.0001)
     >>> round(s.distance_to(s2), 1) >= 0.0
     True
-    
+
     See Also
     --------
     Location
@@ -90,7 +91,7 @@ class BaseLoc(PyCSAMTObject):
         Coordinate converters.
     assert_lat_value, assert_lon_value
         Validators for latitude and longitude.
-    
+
     References
     ----------
     .. [1] Snyder, J. P. 1987. Map Projections, A Working
@@ -107,7 +108,7 @@ class BaseLoc(PyCSAMTObject):
     def has_latlon(self) -> bool:
         r"""
         bool: True if both latitude and longitude are present.
-        
+
         Notes
         -----
         This does not validate numerical ranges. Use
@@ -121,7 +122,7 @@ class BaseLoc(PyCSAMTObject):
     def has_utm(self) -> bool:
         r"""
         bool: True if UTM zone, easting, and northing are present.
-        
+
         Notes
         -----
         The zone string is not normalized here. Use
@@ -135,20 +136,20 @@ class BaseLoc(PyCSAMTObject):
         return bool(z) and e is not None and n is not None
 
 
-    def _require_latlon(self) -> Tuple[float, float]:
+    def _require_latlon(self) -> tuple[float, float]:
         r"""
         Return normalized latitude and longitude.
-        
+
         Returns
         -------
         tuple of float
             ``(latitude, longitude)`` in decimal degrees.
-        
+
         Raises
         ------
         LocationError
             If either component is missing or invalid.
-        
+
         Notes
         -----
         Validation and coercion are delegated to
@@ -161,21 +162,21 @@ class BaseLoc(PyCSAMTObject):
             raise LocationError("lat/lon not set")
         return _coerce_latlon(la, lo)
 
-    def _require_utm(self) -> Tuple[str, float, float]:
+    def _require_utm(self) -> tuple[str, float, float]:
         r"""
         Return normalized UTM triple.
-        
+
         Returns
         -------
         tuple
             ``(zone, easting, northing)`` where ``zone`` is a
             normalized ``"NNH"`` string and coordinates are floats.
-        
+
         Raises
         ------
         LocationError
             If any component is missing or cannot be coerced.
-        
+
         Notes
         -----
         The zone string is normalized by ``_norm_zone``.
@@ -196,7 +197,7 @@ class BaseLoc(PyCSAMTObject):
     def _set_latlon(self, la: Any, lo: Any) -> None:
         r"""
         Set latitude and longitude after coercion and validation.
-        
+
         Parameters
         ----------
         la : Any
@@ -205,7 +206,7 @@ class BaseLoc(PyCSAMTObject):
         lo : Any
             Longitude value or string parsable by
             :func:`assert_lon_value`.
-        
+
         Raises
         ------
         LocationError
@@ -213,8 +214,8 @@ class BaseLoc(PyCSAMTObject):
         """
 
         la_f, lo_f = _coerce_latlon(la, lo)
-        setattr(self, "_latitude", la_f)
-        setattr(self, "_longitude", lo_f)
+        self._latitude = la_f
+        self._longitude = lo_f
 
     def _set_utm(
         self,
@@ -224,7 +225,7 @@ class BaseLoc(PyCSAMTObject):
     ) -> None:
         r"""
         Set UTM components after normalization and coercion.
-        
+
         Parameters
         ----------
         zone : Any
@@ -234,7 +235,7 @@ class BaseLoc(PyCSAMTObject):
             Easting in meters.
         northing : Any
             Northing in meters.
-        
+
         Raises
         ------
         LocationError
@@ -244,9 +245,9 @@ class BaseLoc(PyCSAMTObject):
         z = _norm_zone(zone)
         e = _as_float(easting, "easting")
         n = _as_float(northing, "northing")
-        setattr(self, "_utm_zone", z)
-        setattr(self, "_easting", float(e))
-        setattr(self, "_northing", float(n))
+        self._utm_zone = z
+        self._easting = float(e)
+        self._northing = float(n)
 
     def _clear_ll(self) -> None:
         r"""
@@ -254,8 +255,8 @@ class BaseLoc(PyCSAMTObject):
         ``None``.
         """
 
-        setattr(self, "_latitude", None)
-        setattr(self, "_longitude", None)
+        self._latitude = None
+        self._longitude = None
 
     def _clear_utm(self) -> None:
         r"""
@@ -263,31 +264,31 @@ class BaseLoc(PyCSAMTObject):
         ``None``.
         """
 
-        setattr(self, "_utm_zone", None)
-        setattr(self, "_easting", None)
-        setattr(self, "_northing", None)
+        self._utm_zone = None
+        self._easting = None
+        self._northing = None
 
 
-    def ensure_utm(self) -> Tuple[str, float, float]:
+    def ensure_utm(self) -> tuple[str, float, float]:
         r"""
         Ensure UTM is available, converting from lat/lon if needed.
-        
+
         Returns
         -------
         tuple
             ``(zone, easting, northing)`` as normalized values.
-        
+
         Raises
         ------
         LocationError
             If neither lat/lon nor UTM is sufficiently defined.
-        
+
         Notes
         -----
         - If UTM is already present it is returned unchanged.
         - Otherwise lat/lon are required and converted via
           :func:`ll_to_utm` with ``reference_ellipsoid=23``.
-        
+
         Examples
         --------
         >>> class P(BaseLoc):
@@ -314,20 +315,20 @@ class BaseLoc(PyCSAMTObject):
         self._set_utm(z, e, n)
         return self._require_utm()
 
-    def ensure_latlon(self) -> Tuple[float, float]:
+    def ensure_latlon(self) -> tuple[float, float]:
         r"""
         Ensure lat/lon are available, converting from UTM if needed.
-        
+
         Returns
         -------
         tuple of float
             ``(latitude, longitude)`` in decimal degrees.
-        
+
         Raises
         ------
         LocationError
             If neither UTM nor lat/lon is sufficiently defined.
-        
+
         Notes
         -----
         - If lat/lon are already present they are returned.
@@ -351,34 +352,34 @@ class BaseLoc(PyCSAMTObject):
     def to_utm_batch(
         lats: Iterable[Any],
         lons: Iterable[Any],
-    ) -> Tuple[np.ndarray, np.ndarray, list[str]]:
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
         r"""
         Vectorized conversion from lat/lon arrays to UTM arrays.
-        
+
         Parameters
         ----------
         lats : Iterable[Any]
             Iterable of latitude values or parsable strings.
         lons : Iterable[Any]
             Iterable of longitude values or parsable strings.
-        
+
         Returns
         -------
         tuple
             ``(eastings, northings, zones)`` where the first two are
             ``numpy.ndarray`` and zones is a ``list[str]``.
-        
+
         Raises
         ------
         LocationError
             If sizes mismatch or any item cannot be coerced.
-        
+
         Notes
         -----
         - Each input pair is validated with
           :func:`assert_lat_value` and :func:`assert_lon_value`.
         - Per-point conversion uses :func:`ll_to_utm`.
-        
+
         See Also
         --------
         to_latlon_batch
@@ -409,10 +410,10 @@ class BaseLoc(PyCSAMTObject):
         easts: Iterable[Any],
         norths: Iterable[Any],
         zones: Iterable[Any],
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Vectorized conversion from UTM arrays to lat/lon arrays.
-        
+
         Parameters
         ----------
         easts : Iterable[Any]
@@ -421,17 +422,17 @@ class BaseLoc(PyCSAMTObject):
             Northing values in meters.
         zones : Iterable[Any]
             Zone designators, normalized by ``_norm_zone``.
-        
+
         Returns
         -------
         tuple
             ``(lats, lons)`` as ``numpy.ndarray`` of floats.
-        
+
         Raises
         ------
         LocationError
             If sizes mismatch or zone normalization fails.
-        
+
         Notes
         -----
         Per-point conversion uses :func:`utm_to_ll`.
@@ -465,42 +466,42 @@ class BaseLoc(PyCSAMTObject):
     def distance_to(self, other: Any) -> float:
         r"""
         Great-circle distance between this object and another.
-        
+
         Parameters
         ----------
         other : Any
             Another point-like object. If it exposes ``latitude``
             and ``longitude`` attributes, they are used. If it has
             ``ensure_latlon()``, that method is called.
-        
+
         Returns
         -------
         float
             Distance in meters computed via the haversine formula.
-        
+
         Raises
         ------
         LocationError
             If the other object cannot provide lat/lon.
-        
+
         Notes
         -----
         The haversine distance is given by
-        
+
         .. math::
-        
+
            d = 2 R \\arcsin\\Big(\\sqrt{a}\\Big)
-        
+
         with
-        
+
         .. math::
-        
+
            a = \\sin^2(\\Delta\\varphi/2) +
                \\cos\\varphi_1\\cos\\varphi_2\\sin^2(\\Delta\\lambda/2)
-        
+
         where angles are in radians and :math:`R` is the mean Earth
         radius.
-        
+
         References
         ----------
         .. [1] Sinnott, R. W. 1984. Virtues of the Haversine.
@@ -531,19 +532,19 @@ class BaseLoc(PyCSAMTObject):
     ) -> bool:
         r"""
         Approximate equality based on geodesic tolerance.
-        
+
         Parameters
         ----------
         other : Any
             Another point-like object.
         tol_m : float, optional
             Distance tolerance in meters. Default is 0.25 m.
-        
+
         Returns
         -------
         bool
             True if ``distance_to(other) <= tol_m``.
-        
+
         Notes
         -----
         This is useful to compare coordinates that differ by small
@@ -560,14 +561,14 @@ class BaseLoc(PyCSAMTObject):
     def to_dict(self) -> dict[str, Any]:
         r"""
         Serialize the object to a dictionary of primitive values.
-        
+
         Returns
         -------
         dict
             Dictionary with keys
             ``latitude``, ``longitude``, ``elevation``,
             ``utm_zone``, ``easting``, ``northing``.
-        
+
         Notes
         -----
         Fields may be ``None`` if not set.
@@ -594,19 +595,19 @@ class BaseLoc(PyCSAMTObject):
     def from_dict(cls, d: dict[str, Any]):
         r"""
         Construct an instance from a dictionary.
-        
+
         Parameters
         ----------
         d : dict
             Mapping with optional keys
             ``latitude``, ``longitude``, ``elevation``,
             ``utm_zone``, ``easting``, ``northing``.
-        
+
         Returns
         -------
         BaseLoc
             Instance of ``cls`` with fields set.
-        
+
         Notes
         -----
         - Missing fields default to ``None`` or ``0.0`` for
@@ -616,16 +617,12 @@ class BaseLoc(PyCSAMTObject):
         """
 
         obj = cls.__new__(cls)  # type: ignore[misc]
-        setattr(obj, "_latitude", None)
-        setattr(obj, "_longitude", None)
-        setattr(
-            obj,
-            "_elevation",
-            float(d.get("elevation", 0.0)),
-        )
-        setattr(obj, "_utm_zone", None)
-        setattr(obj, "_easting", None)
-        setattr(obj, "_northing", None)
+        obj._latitude = None
+        obj._longitude = None
+        obj._elevation = float(d.get("elevation", 0.0))
+        obj._utm_zone = None
+        obj._easting = None
+        obj._northing = None
         la = d.get("latitude", None)
         lo = d.get("longitude", None)
         z = d.get("utm_zone", None)
@@ -641,12 +638,12 @@ class BaseLoc(PyCSAMTObject):
     def __eq__(self, other: object) -> bool:
         r"""
         Semantic equality for location objects.
-        
+
         Parameters
         ----------
         other : object
             Object to compare against.
-        
+
         Returns
         -------
         bool
@@ -655,7 +652,7 @@ class BaseLoc(PyCSAMTObject):
               integers.
             - Else fall back to ``nearly_equals`` with a very small
               tolerance.
-        
+
         Notes
         -----
         Returns ``NotImplemented`` for non-BaseLoc objects, which
@@ -690,14 +687,14 @@ class BaseLoc(PyCSAMTObject):
     def __hash__(self) -> int:
         r"""
         Hash compatible with equality semantics.
-        
+
         Returns
         -------
         int
             - If lat/lon are present, hash rounded lat/lon.
             - Else if UTM is present, hash zone and rounded meters.
             - Else hash a unique placeholder with object id.
-        
+
         Notes
         -----
         This enables use in sets and as dict keys when locations
@@ -716,17 +713,17 @@ class BaseLoc(PyCSAMTObject):
 class Location(BaseLoc):
     r"""
     Concrete point-like location with lat/lon and UTM fields.
-    
+
     This class stores one station or point in two coordinate
     systems: geographic (latitude, longitude) and UTM
     (zone, easting, northing). It inherits robust validation,
     conversion, and small utilities from :class:`BaseLoc`.
-    
+
     Initialization favors lat/lon. If both lat/lon are given,
     UTM fields passed at the same time are ignored and UTM is
     computed from lat/lon. If only UTM is provided, a valid
     UTM zone string is required.
-    
+
     Notes
     -----
     - Validation for latitude and longitude is delegated to
@@ -739,25 +736,25 @@ class Location(BaseLoc):
     - Use :meth:`to_utm` and :meth:`to_latlon` to perform
       on-demand conversions. These methods call the base
       ``ensure_*`` utilities and update cached fields.
-    
+
     Examples
     --------
     Create from lat/lon and compute UTM:
-    
+
     >>> loc = Location(latitude=10.0, longitude=5.0)
     >>> z, e, n = loc.to_utm()  # doctest: +ELLIPSIS
     >>> isinstance(z, str) and isinstance(e, float)
     True
-    
+
     Create from UTM:
-    
+
     >>> loc = Location(utm_zone="31N",
     ...                easting=500000.0,
     ...                northing=4649776.0)
     >>> la, lo = loc.to_latlon()  # doctest: +ELLIPSIS
     >>> isinstance(la, float) and isinstance(lo, float)
     True
-    
+
     See Also
     --------
     BaseLoc
@@ -766,7 +763,7 @@ class Location(BaseLoc):
         Zone parser and formatter.
     Bounds, GeoPath
         Light geometry helpers useful around locations.
-    
+
     References
     ----------
     .. [1] Snyder, J. P. 1987. Map Projections, A Working
@@ -775,20 +772,20 @@ class Location(BaseLoc):
 
     def __init__(
         self,
-        latitude: Optional[_Number] = None,
-        longitude: Optional[_Number] = None,
+        latitude: _Number | None = None,
+        longitude: _Number | None = None,
         *,
         elevation: _Number = 0.0,
-        utm_zone: Optional[str] = None,
-        easting: Optional[_Number] = None,
-        northing: Optional[_Number] = None,
+        utm_zone: str | None = None,
+        easting: _Number | None = None,
+        northing: _Number | None = None,
     ):
-        self._latitude: Optional[float] = None
-        self._longitude: Optional[float] = None
+        self._latitude: float | None = None
+        self._longitude: float | None = None
         self._elevation: float = 0.0
-        self._utm_zone: Optional[str] = None
-        self._easting: Optional[float] = None
-        self._northing: Optional[float] = None
+        self._utm_zone: str | None = None
+        self._easting: float | None = None
+        self._northing: float | None = None
 
         self.elevation = elevation
 
@@ -821,27 +818,27 @@ class Location(BaseLoc):
                 "Initialized empty Location; set coordinates "
                 "before converting."
             )
-            
+
     @property
-    def latitude(self) -> Optional[float]:
+    def latitude(self) -> float | None:
         return self._latitude
 
     @latitude.setter
     def latitude(self, val: _Number) -> None:
         r"""
         float or None : Geographic latitude in decimal degrees.
-        
+
         Setting this property validates and coerces the input using
         :func:`assert_lat_value`. Any error is raised as
         :class:`LocationError`.
-        
+
         Notes
         -----
         - Accepts float-like numbers or sexagesimal strings as
           supported by the validator.
         - Setting latitude does not automatically update UTM.
           Call :meth:`to_utm` or :meth:`ensure_utm` when needed.
-        
+
         Examples
         --------
         >>> loc = Location()
@@ -859,27 +856,27 @@ class Location(BaseLoc):
         if v is None:
             raise LocationError("Invalid latitude: None")
         self._latitude = float(v)
-    
+
     @property
-    def longitude(self) -> Optional[float]:
+    def longitude(self) -> float | None:
         return self._longitude
 
     @longitude.setter
     def longitude(self, val: _Number) -> None:
         r"""
         float or None : Geographic longitude in decimal degrees.
-        
+
         Setting this property validates and coerces the input using
         :func:`assert_lon_value`. Any error is raised as
         :class:`LocationError`.
-        
+
         Notes
         -----
         - Accepts float-like numbers or sexagesimal strings as
           supported by the validator.
         - Setting longitude does not automatically update UTM.
           Call :meth:`to_utm` or :meth:`ensure_utm` when needed.
-        
+
         Examples
         --------
         >>> loc = Location()
@@ -907,10 +904,10 @@ class Location(BaseLoc):
     def elevation(self, val: _Number) -> None:
         r"""
         float : Elevation in meters above reference datum.
-        
+
         The value is coerced to float. Invalid inputs raise
         :class:`LocationError`.
-        
+
         Notes
         -----
         Elevation is not involved in UTM or lat/lon conversions,
@@ -920,19 +917,19 @@ class Location(BaseLoc):
         self._elevation = _as_float(val, "elevation")
 
     @property
-    def utm_zone(self) -> Optional[str]:
+    def utm_zone(self) -> str | None:
         return self._utm_zone
 
     @utm_zone.setter
     def utm_zone(self, val: str) -> None:
         r"""
         str or None : UTM zone designator.
-        
+
         Setting this property normalizes the value to ``"NNH"``,
         where ``NN`` is the zone number in ``[1, 60]`` and
         ``H`` is the hemisphere letter ``"N"`` or ``"S"``.
         Invalid inputs raise :class:`LocationError`.
-        
+
         Notes
         -----
         Normalization is performed by the internal ``_norm_zone``.
@@ -941,10 +938,10 @@ class Location(BaseLoc):
         self._utm_zone = _norm_zone(val)
 
     @property
-    def easting(self) -> Optional[float]:
+    def easting(self) -> float | None:
         r"""
         float or None : UTM easting in meters.
-        
+
         Notes
         -----
         This is a read-only view of the internal field. Use
@@ -954,10 +951,10 @@ class Location(BaseLoc):
         return self._easting
 
     @property
-    def northing(self) -> Optional[float]:
+    def northing(self) -> float | None:
         r"""
         float or None : UTM northing in meters.
-        
+
         Notes
         -----
         This is a read-only view of the internal field. Use
@@ -965,28 +962,28 @@ class Location(BaseLoc):
         """
         return self._northing
 
-    def to_utm(self) -> Tuple[str, float, float]:
+    def to_utm(self) -> tuple[str, float, float]:
         r"""
         Convert to UTM and return the normalized triple.
-        
+
         Returns
         -------
         tuple
             ``(zone, easting, northing)`` where zone is ``"NNH"`` and
             coordinates are floats.
-        
+
         Raises
         ------
         LocationError
             If geographic coordinates are not set or invalid.
-        
+
         Notes
         -----
         - Calls :meth:`BaseLoc.ensure_utm`. If UTM is already
           present, it is returned. Otherwise, lat/lon are required.
         - Conversion uses :func:`ll_to_utm` with
           ``reference_ellipsoid=23``.
-        
+
         Examples
         --------
         >>> loc = Location(latitude=10.0, longitude=5.0)
@@ -1004,20 +1001,20 @@ class Location(BaseLoc):
         )
         return z, e, n
 
-    def to_latlon(self) -> Tuple[float, float]:
+    def to_latlon(self) -> tuple[float, float]:
         r"""
         Convert to geographic lat/lon and return the pair.
-        
+
         Returns
         -------
         tuple of float
             ``(latitude, longitude)`` in decimal degrees.
-        
+
         Raises
         ------
         LocationError
             If UTM fields are not set or invalid.
-        
+
         Notes
         -----
         - Calls :meth:`BaseLoc.ensure_latlon`. If lat/lon are
@@ -1025,7 +1022,7 @@ class Location(BaseLoc):
           be present.
         - Conversion uses :func:`utm_to_ll` with
           ``reference_ellipsoid=23``.
-        
+
         Examples
         --------
         >>> loc = Location(utm_zone="31N",
@@ -1050,13 +1047,13 @@ class Location(BaseLoc):
         lons: ArrayLike,
         *,
         data=None,
-        utm_zone: Optional[str] = None,
-        datum: Optional[str] = None,
+        utm_zone: str | None = None,
+        datum: str | None = None,
         **kws,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Vectorized conversion of lat/lon arrays to UTM arrays.
-        
+
         Parameters
         ----------
         lats : ArrayLike
@@ -1077,12 +1074,12 @@ class Location(BaseLoc):
             Kept for backward compatibility. Not used.
         **kws :
             Accepted for compatibility. Ignored.
-        
+
         Returns
         -------
         tuple
             ``(eastings, northings)`` as ``numpy.ndarray`` of float.
-        
+
         Raises
         ------
         TypeError
@@ -1090,19 +1087,19 @@ class Location(BaseLoc):
             or if arrays are not the same size.
         LocationError
             If an element cannot be validated or coerced.
-        
+
         Notes
         -----
         - Each point is validated via the scalar validators and
           converted with :func:`ll_to_utm`.
         - For batch conversion that also returns zones, see
           :meth:`BaseLoc.to_utm_batch`.
-        
+
         See Also
         --------
         BaseLoc.to_utm_batch
             Returns eastings, northings, and zones.
-        
+
         References
         ----------
         .. [1] Snyder, J. P. 1987. Map Projections, A Working
@@ -1173,13 +1170,13 @@ class Location(BaseLoc):
         norths: ArrayLike,
         *,
         data=None,
-        utm_zone: Optional[str] = None,
-        datum: Optional[str] = None,
+        utm_zone: str | None = None,
+        datum: str | None = None,
         **kws,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Vectorized conversion of UTM arrays to lat/lon arrays.
-        
+
         Parameters
         ----------
         easts : ArrayLike
@@ -1196,12 +1193,12 @@ class Location(BaseLoc):
             Kept for backward compatibility. Not used.
         **kws :
             Accepted for compatibility. Ignored.
-        
+
         Returns
         -------
         tuple
             ``(lats, lons)`` as ``numpy.ndarray`` of float.
-        
+
         Raises
         ------
         TypeError
@@ -1209,7 +1206,7 @@ class Location(BaseLoc):
             or if arrays are not the same size.
         LocationError
             If ``utm_zone`` is missing or cannot be normalized.
-        
+
         Notes
         -----
         - The zone string is normalized once and applied to all
@@ -1217,13 +1214,13 @@ class Location(BaseLoc):
         - Per-point conversion uses :func:`utm_to_ll`.
         - For batch conversion with per-row zones, use
           :meth:`BaseLoc.to_latlon_batch`.
-        
+
         See Also
         --------
         BaseLoc.to_latlon_batch
             Inverse vectorized conversion that accepts per-row
             zones.
-        
+
         References
         ----------
         .. [1] Snyder, J. P. 1987. Map Projections, A Working
@@ -1284,12 +1281,12 @@ class Location(BaseLoc):
     def __repr__(self) -> str:
         """
         Return a concise representation for debugging.
-        
+
         Returns
         -------
         str
             A one-line string with current field values.
-        
+
         Notes
         -----
         The representation is not a strict round-trip and may be
@@ -1310,10 +1307,10 @@ class Location(BaseLoc):
 class UTMZone(PyCSAMTObject):
     r"""
     Lightweight UTM zone parser and formatter.
-    
+
     This class normalizes a zone designator to the canonical
     ``"NNH"`` form and exposes the numeric zone and hemisphere.
-    
+
     Notes
     -----
     - Normalization is delegated to the internal helper
@@ -1321,19 +1318,19 @@ class UTMZone(PyCSAMTObject):
       hemisphere in ``{"N","S"}``.
     - Instances are immutable in practice; use :meth:`as_str`
       to render the canonical string.
-    
+
     Examples
     --------
     >>> UTMZone("31n").as_str()
     '31N'
     >>> UTMZone("-31").as_str()  # negative implies south
     '31S'
-    
+
     See Also
     --------
     Location
         Concrete point holding both lat/lon and UTM values.
-    
+
     References
     ----------
     .. [1] NGA. 2014. The Universal Grids and the Transverse
@@ -1358,13 +1355,13 @@ class UTMZone(PyCSAMTObject):
     def as_str(self) -> str:
         r"""
         Return the canonical ``"NNH"`` string.
-        
+
         Returns
         -------
         str
             Canonical zone string composed of the zone number and
             hemisphere letter.
-        
+
         Examples
         --------
         >>> UTMZone("31n").as_str()
@@ -1374,29 +1371,29 @@ class UTMZone(PyCSAMTObject):
         return f"{self.number}{self.hemisphere}"
 
     @classmethod
-    def from_latlon(cls, lat: float, lon: float) -> "UTMZone":
+    def from_latlon(cls, lat: float, lon: float) -> UTMZone:
         r"""
         Infer a UTM zone from geographic coordinates.
-        
+
         Parameters
         ----------
         lat : float
             Latitude in decimal degrees.
         lon : float
             Longitude in decimal degrees.
-        
+
         Returns
         -------
         UTMZone
             New instance for the inferred zone.
-        
+
         Notes
         -----
         - Latitude and longitude are validated via ``_lat_ok`` and
           ``_lon_ok``. Errors are raised as :class:`LocationError`.
         - The zone is obtained via :func:`ll_to_utm` using
           ``reference_ellipsoid=23``.
-        
+
         Examples
         --------
         >>> UTMZone.from_latlon(10.0, 5.0).as_str()
@@ -1417,11 +1414,11 @@ class UTMZone(PyCSAMTObject):
 class Bounds(PyCSAMTObject):
     r"""
     Axis-aligned geographic bounding box.
-    
+
     The box is defined in degrees by ``min_lat``, ``min_lon``,
     ``max_lat``, and ``max_lon``. Inputs are validated and
     swapped as needed so that minimums are less than maximums.
-    
+
     Notes
     -----
     - Coordinates are validated and coerced with ``_lat_ok``
@@ -1430,7 +1427,7 @@ class Bounds(PyCSAMTObject):
     - Methods such as :meth:`buffer_m`, :meth:`union`,
       :meth:`intersection`, and :meth:`to_utm_rect` provide
       convenient spatial operations.
-    
+
     Examples
     --------
     >>> b = Bounds(-2.0, 9.5, 1.0, 12.0)
@@ -1438,7 +1435,7 @@ class Bounds(PyCSAMTObject):
     (-0.5, 10.75)
     >>> b.contains(0.0, 10.0)
     True
-    
+
     See Also
     --------
     Location
@@ -1468,10 +1465,10 @@ class Bounds(PyCSAMTObject):
         self.max_lon = d
 
     @classmethod
-    def from_points(cls, lats, lons, *, data=None) -> "Bounds":
+    def from_points(cls, lats, lons, *, data=None) -> Bounds:
         r"""
         Create a bounding box from arrays of points.
-        
+
         Parameters
         ----------
         lats : array-like or str
@@ -1481,12 +1478,12 @@ class Bounds(PyCSAMTObject):
         data : Any, optional
             Tabular container used with column names. Resolved via
             :func:`assert_xy_in`.
-        
+
         Returns
         -------
         Bounds
             The minimal box spanning the given points.
-        
+
         Raises
         ------
         TypeError
@@ -1494,12 +1491,12 @@ class Bounds(PyCSAMTObject):
             mismatch.
         LocationError
             If any element cannot be validated.
-        
+
         Notes
         -----
         - Elements are validated with ``_lat_ok`` and ``_lon_ok``.
         - NaN-aware min and max are computed with NumPy.
-        
+
         Examples
         --------
         >>> Bounds.from_points([0, 1], [10, 12]).to_tuple()
@@ -1536,7 +1533,7 @@ class Bounds(PyCSAMTObject):
     def to_tuple(self) -> tuple[float, float, float, float]:
         r"""
         Return the box as a 4-tuple.
-        
+
         Returns
         -------
         tuple of float
@@ -1553,7 +1550,7 @@ class Bounds(PyCSAMTObject):
     def center(self) -> tuple[float, float]:
         r"""
         Return the center point of the box.
-        
+
         Returns
         -------
         tuple of float
@@ -1568,19 +1565,19 @@ class Bounds(PyCSAMTObject):
     def contains(self, lat: float, lon: float) -> bool:
         r"""
         Test whether a point lies inside the box (inclusive).
-        
+
         Parameters
         ----------
         lat : float
             Latitude in degrees.
         lon : float
             Longitude in degrees.
-        
+
         Returns
         -------
         bool
             True if the point lies inside or on the edges.
-        
+
         Notes
         -----
         Inputs are validated with ``_lat_ok`` and ``_lon_ok``.
@@ -1593,27 +1590,27 @@ class Bounds(PyCSAMTObject):
             and self.min_lon <= lo <= self.max_lon
         )
 
-    def buffer_m(self, m: float) -> "Bounds":
+    def buffer_m(self, m: float) -> Bounds:
         r"""
         Return a new box expanded by a metric buffer.
-        
+
         Parameters
         ----------
         m : float
             Buffer distance in meters added to all sides.
-        
+
         Returns
         -------
         Bounds
             Expanded bounding box.
-        
+
         Notes
         -----
         - Conversion meters-to-degrees uses a simple local scale:
           ``1 deg lat = 111320 m`` and
           ``1 deg lon = 111320 m * cos(lat)`` at the box center.
         - This is an approximation intended for small buffers.
-        
+
         Examples
         --------
         >>> b = Bounds(0.0, 0.0, 1.0, 1.0)
@@ -1632,27 +1629,27 @@ class Bounds(PyCSAMTObject):
             self.max_lon + d_lo,
         )
 
-    def union(self, other: "Bounds") -> "Bounds":
+    def union(self, other: Bounds) -> Bounds:
         r"""
         Return a new box expanded by a metric buffer.
-        
+
         Parameters
         ----------
         m : float
             Buffer distance in meters added to all sides.
-        
+
         Returns
         -------
         Bounds
             Expanded bounding box.
-        
+
         Notes
         -----
         - Conversion meters-to-degrees uses a simple local scale:
           ``1 deg lat = 111320 m`` and
           ``1 deg lon = 111320 m * cos(lat)`` at the box center.
         - This is an approximation intended for small buffers.
-        
+
         Examples
         --------
         >>> b = Bounds(0.0, 0.0, 1.0, 1.0)
@@ -1668,15 +1665,15 @@ class Bounds(PyCSAMTObject):
             max(self.max_lon, other.max_lon),
         )
 
-    def intersection(self, other: "Bounds") -> Optional["Bounds"]:
+    def intersection(self, other: Bounds) -> Bounds | None:
         r"""
         Return the minimal box containing both boxes.
-        
+
         Parameters
         ----------
         other : Bounds
             Another bounding box.
-        
+
         Returns
         -------
         Bounds
@@ -1693,23 +1690,23 @@ class Bounds(PyCSAMTObject):
 
     def to_utm_rect(
         self,
-        zone: Optional[str] = None,
+        zone: str | None = None,
     ) -> tuple[str, float, float, float, float]:
         r"""
         Map the geographic box to a UTM-aligned rectangle.
-        
+
         Parameters
         ----------
         zone : str, optional
             Target UTM zone. If not given, the zone at the box
             center is used. The value is normalized to ``"NNH"``.
-        
+
         Returns
         -------
         tuple
             ``(zone, min_easting, min_northing, max_easting,
             max_northing)``.
-        
+
         Notes
         -----
         - Each geographic corner is converted via :func:`ll_to_utm`.
@@ -1717,7 +1714,7 @@ class Bounds(PyCSAMTObject):
           one, a warning is logged and the requested zone is kept.
         - The returned rectangle is axis-aligned in the chosen UTM
           zone. It may over-approximate the true projected shape.
-        
+
         References
         ----------
         .. [1] Snyder, J. P. 1987. Map Projections, A Working
@@ -1767,13 +1764,13 @@ class Bounds(PyCSAMTObject):
 class GeoPath(PyCSAMTObject):
     r"""
     Lightweight polyline over geographic points.
-    
+
     A ``GeoPath`` stores an ordered list of points as pairs of
     ``(latitude, longitude)`` in decimal degrees. It provides
     basic geometry such as bounding box, cumulative length on
     the sphere (haversine), UTM export, and path simplification
     via the Ramer Douglas Peucker algorithm.
-    
+
     Notes
     -----
     - Points are stored as floats in degrees in the order they
@@ -1783,7 +1780,7 @@ class GeoPath(PyCSAMTObject):
       a good approximation for short to medium paths.
     - :meth:`simplify` applies RDP in a local planar frame
       derived from the path bounding box.
-    
+
     Examples
     --------
     >>> g = GeoPath([(0.0, 0.0), (0.0, 0.01), (0.01, 0.01)])
@@ -1793,7 +1790,7 @@ class GeoPath(PyCSAMTObject):
     (0.0, 0.0, 0.01, 0.01)
     >>> L = g.length_m(); L >= 0.0
     True
-    
+
     See Also
     --------
     Bounds
@@ -1802,7 +1799,7 @@ class GeoPath(PyCSAMTObject):
         Single point object with conversion helpers.
     BaseLoc.distance_to
         Great circle distance used internally.
-    
+
     References
     ----------
     .. [1] Ramer, U. 1972. An iterative procedure for the
@@ -1820,19 +1817,19 @@ class GeoPath(PyCSAMTObject):
     def append(self, lat: _Number, lon: _Number) -> None:
         r"""
         Append one point to the end of the path.
-        
+
         Parameters
         ----------
         lat : float or int or str
             Latitude in decimal degrees or parsable string.
         lon : float or int or str
             Longitude in decimal degrees or parsable string.
-        
+
         Raises
         ------
         LocationError
             If the input cannot be validated.
-        
+
         Notes
         -----
         Validation uses ``_lat_ok`` and ``_lon_ok`` which wrap the
@@ -1846,19 +1843,19 @@ class GeoPath(PyCSAMTObject):
     def extend(self, pts) -> None:
         r"""
         Append multiple points to the path.
-        
+
         Parameters
         ----------
         pts : iterable
             Iterable of ``(lat, lon)`` pairs or :class:`Location`
             objects. Locations are converted with
             ``ensure_latlon()``.
-        
+
         Raises
         ------
         LocationError
             If any element fails validation.
-        
+
         Examples
         --------
         >>> g = GeoPath()
@@ -1878,7 +1875,7 @@ class GeoPath(PyCSAMTObject):
     def __len__(self) -> int:
         r"""
         Return the number of vertices in the path.
-        
+
         Returns
         -------
         int
@@ -1889,7 +1886,7 @@ class GeoPath(PyCSAMTObject):
     def __iter__(self):
         r"""
         Iterate over points as ``(lat, lon)`` tuples.
-        
+
         Yields
         ------
         tuple of float
@@ -1901,17 +1898,17 @@ class GeoPath(PyCSAMTObject):
     def bbox(self) -> Bounds:
         r"""
         Compute the minimal axis aligned bounding box.
-        
+
         Returns
         -------
         Bounds
             Bounding box that contains all points.
-        
+
         Raises
         ------
         LocationError
             If the path has no points.
-        
+
         Notes
         -----
         The result is computed with NaN aware min and max over the
@@ -1931,18 +1928,18 @@ class GeoPath(PyCSAMTObject):
     def length_m(self) -> float:
         r"""
         Total great circle length of the path in meters.
-        
+
         Returns
         -------
         float
             Sum of haversine distances between consecutive points.
-        
+
         Notes
         -----
         - If the path has fewer than two points, the length is 0.
         - The haversine distance is computed with a fixed Earth
           radius. See :meth:`BaseLoc.distance_to` for the formula.
-        
+
         Examples
         --------
         >>> GeoPath([(0, 0), (0, 0.01)]).length_m() >= 0.0
@@ -1965,25 +1962,25 @@ class GeoPath(PyCSAMTObject):
     ):
         r"""
         Project all vertices to UTM.
-        
+
         Parameters
         ----------
         ensure_single_zone : bool, optional
             If True, raise an error when points span multiple UTM
             zones. Default is False.
-        
+
         Returns
         -------
         tuple
             ``(zones, eastings, northings)`` where ``zones`` is a
             ``list[str]`` and coordinates are ``numpy.ndarray``.
-        
+
         Raises
         ------
         LocationError
             If ``ensure_single_zone`` is True and more than one UTM
             zone is found.
-        
+
         Notes
         -----
         - Each vertex is converted via :func:`ll_to_utm`.
@@ -2003,20 +2000,20 @@ class GeoPath(PyCSAMTObject):
             raise LocationError("Multiple UTM zones in path.")
         return zones, np.asarray(easts), np.asarray(norths)
 
-    def simplify(self, eps_m: float) -> "GeoPath":
+    def simplify(self, eps_m: float) -> GeoPath:
         r"""
         Return a simplified path using RDP in a local planar frame.
-        
+
         Parameters
         ----------
         eps_m : float
             Tolerance in meters. Larger values produce fewer points.
-        
+
         Returns
         -------
         GeoPath
             New path containing a subset of the original vertices.
-        
+
         Notes
         -----
         - The path is projected to a local planar metric frame by
@@ -2026,14 +2023,14 @@ class GeoPath(PyCSAMTObject):
         - The RDP algorithm keeps endpoints and removes interior
           points whose perpendicular distance to the current segment
           is at most ``eps_m``.
-        
+
         Examples
         --------
         >>> g = GeoPath([(0.0, 0.0), (0.0, 0.001), (0.0, 0.01)])
         >>> g2 = g.simplify(eps_m=100.0)
         >>> len(g2) <= len(g)
         True
-        
+
         References
         ----------
         .. [1] Ramer, U. 1972. An iterative procedure for the
@@ -2129,7 +2126,7 @@ def _haversine_m(
     return r * c
 
 
-def _coerce_latlon(la: Any, lo: Any) -> Tuple[float, float]:
+def _coerce_latlon(la: Any, lo: Any) -> tuple[float, float]:
     try:
         la_v = assert_lat_value(la)
         lo_v = assert_lon_value(lo)

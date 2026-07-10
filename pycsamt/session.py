@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from ._session import (
-    Session,
-    work_session,
     Normalize,
+    Session,
     normalize_session,
+    work_session,
 )
 
 __all__ = [

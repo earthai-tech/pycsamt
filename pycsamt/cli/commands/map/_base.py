@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -39,7 +38,9 @@ def _get_sites(
     This mirrors ``site`` and ``invert build`` so map commands behave
     consistently with the rest of the CLI.
     """
-    from pycsamt.cli.survey import resolve_survey  # noqa: PLC0415
+    from pycsamt.cli.survey import (
+        resolve_survey,  # noqa: PLC0415
+    )
 
     return resolve_survey(explicit or survey_path, fresh=fresh, verbose=verbose)
 
@@ -122,8 +123,12 @@ def _station_rows_from_map_api(
 ) -> list[dict[str, Any]] | None:
     """Return station rows through ``pycsamt.map`` when possible."""
     try:
-        from pycsamt.map import ensure_map_data  # noqa: PLC0415
-        from pycsamt.map._core import station_dataframe  # noqa: PLC0415
+        from pycsamt.map import (
+            ensure_map_data,  # noqa: PLC0415
+        )
+        from pycsamt.map._core import (
+            station_dataframe,  # noqa: PLC0415
+        )
 
         data = ensure_map_data(sites)
         df = station_dataframe(data)

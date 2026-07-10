@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -44,10 +43,7 @@ Quick start
 """
 from __future__ import annotations
 
-import json
-import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
@@ -59,9 +55,12 @@ __all__ = ["EMInverter1D"]
 # from_pretrained helper (module-level to avoid class-level redefinition)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _load_pretrained(name: str, cache_dir: Optional[str] = None) -> "EMInverter1D":
+def _load_pretrained(name: str, cache_dir: str | None = None) -> EMInverter1D:
     """Download (if needed) and load a pre-trained checkpoint."""
-    from .._zoo import download_checkpoint, get_pretrained_info
+    from .._zoo import (
+        download_checkpoint,
+        get_pretrained_info,
+    )
     get_pretrained_info(name)  # validates name early
     fpath = download_checkpoint(name, cache_dir=cache_dir)
     return EMInverter1D.load(fpath)
@@ -110,7 +109,7 @@ class EMInverter1D(BaseEMNet):
         n_layers: int = 5,
         solver: str = "mt1d",
         *,
-        device: Optional[str] = None,
+        device: str | None = None,
         log_thickness: bool = True,
         include_phase: bool = True,
         augment_noise: float = 0.02,
@@ -124,7 +123,7 @@ class EMInverter1D(BaseEMNet):
 
         # Set after fit
         self._em_dataset = None    # EMDataset (holds normalizers)
-        self._n_features: Optional[int] = None
+        self._n_features: int | None = None
         self._n_out: int = 2 * n_layers - 1
 
     # ─── fit ──────────────────────────────────────────────────────────────
@@ -139,10 +138,10 @@ class EMInverter1D(BaseEMNet):
         lr: float = 1e-3,
         patience: int = 20,
         val_frac: float = 0.1,
-        grad_clip: Optional[float] = 1.0,
-        seed: Optional[int] = None,
+        grad_clip: float | None = 1.0,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "EMInverter1D":
+    ) -> EMInverter1D:
         """
         Train the inverter on a :class:`~pycsamt.forward.batch.ForwardDataset`
         or a ``.npz`` file path.
@@ -174,8 +173,12 @@ class EMInverter1D(BaseEMNet):
         -------
         self
         """
+        from pycsamt.backends import (
+            get_backend,
+            get_backend_instance,
+        )
+
         from ..training.dataset import EMDataset
-        from pycsamt.backends import get_backend, get_backend_instance
 
         # ── Load data ────────────────────────────────────────────────────
         ds = self._load_dataset(X, y)
@@ -308,7 +311,7 @@ class EMInverter1D(BaseEMNet):
             models.append(m)
         return models
 
-    def predict_response(self, response) -> "LayeredModel":
+    def predict_response(self, response) -> LayeredModel:
         """
         Convenience: invert a single
         :class:`~pycsamt.forward.em1d.ForwardResponse` and return the
@@ -322,7 +325,7 @@ class EMInverter1D(BaseEMNet):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """Save weights + normaliser + hyperparameters to *path*."""
         from pycsamt.backends import get_backend_instance
         weights = get_backend_instance().get_weights(self._network)
@@ -342,10 +345,14 @@ class EMInverter1D(BaseEMNet):
         ckpt.save(path)
 
     @classmethod
-    def load(cls, path: Union[str, Path]) -> "EMInverter1D":
+    def load(cls, path: str | Path) -> EMInverter1D:
         """Load a saved inverter from *path*."""
-        from ..training.dataset import Normalizer, EMDataset
-        from pycsamt.backends import set_backend, get_backend_instance
+        from pycsamt.backends import (
+            get_backend_instance,
+            set_backend,
+        )
+
+        from ..training.dataset import EMDataset, Normalizer
 
         ckpt = EMCheckpoint.load(path)
         p = ckpt.params
@@ -385,8 +392,8 @@ class EMInverter1D(BaseEMNet):
         cls,
         name: str,
         *,
-        cache_dir: Optional[str] = None,
-    ) -> "EMInverter1D":
+        cache_dir: str | None = None,
+    ) -> EMInverter1D:
         """
         Load a pre-trained model from the pycsamt model zoo.
 

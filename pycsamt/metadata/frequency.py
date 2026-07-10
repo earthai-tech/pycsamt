@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,8 +40,8 @@ Quick start
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -143,12 +142,12 @@ class FrequencyBand:
         return 1.0 / self.f_min
 
     @property
-    def period_range(self) -> Tuple[float, float]:
+    def period_range(self) -> tuple[float, float]:
         """``(period_min, period_max)`` in seconds."""
         return (self.period_min, self.period_max)
 
     @property
-    def frequency_range(self) -> Tuple[float, float]:
+    def frequency_range(self) -> tuple[float, float]:
         """``(f_min, f_max)`` in Hz."""
         return (self.f_min, self.f_max)
 
@@ -161,7 +160,7 @@ class FrequencyBand:
     # DOI estimation via skin depth
     # ------------------------------------------------------------------
 
-    def skin_depth_m(self, f: float, rho: Optional[float] = None) -> float:
+    def skin_depth_m(self, f: float, rho: float | None = None) -> float:
         """Skin depth δ (m) at frequency *f* and resistivity *rho*.
 
         Formula: δ ≈ 503.3 √(ρ / f)
@@ -178,8 +177,8 @@ class FrequencyBand:
 
     def doi_range_m(
         self,
-        rho: Optional[float] = None,
-    ) -> Tuple[float, float]:
+        rho: float | None = None,
+    ) -> tuple[float, float]:
         """Return the *(shallow, deep)* depth-of-investigation estimate in metres.
 
         Shallow DOI corresponds to ``f_max``; deep DOI to ``f_min``.
@@ -216,13 +215,13 @@ class FrequencyBand:
         """Return True when *f* (Hz) lies within the band."""
         return self.f_min <= f <= self.f_max
 
-    def overlaps(self, other: "FrequencyBand") -> bool:
+    def overlaps(self, other: FrequencyBand) -> bool:
         """Return True when *self* and *other* share any frequency."""
         return self.f_min <= other.f_max and other.f_min <= self.f_max
 
     def intersection(
-        self, other: "FrequencyBand"
-    ) -> Optional[Tuple[float, float]]:
+        self, other: FrequencyBand
+    ) -> tuple[float, float] | None:
         """Return the (f_min, f_max) intersection with *other*, or None."""
         lo = max(self.f_min, other.f_min)
         hi = min(self.f_max, other.f_max)
@@ -239,7 +238,7 @@ class FrequencyBand:
         except (TypeError, ValueError):
             return False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name":        self.name,
             "label":       self.label,
@@ -270,7 +269,7 @@ class FrequencyBand:
 # ---------------------------------------------------------------------------
 
 #: Dictionary of all pre-defined frequency bands.
-MT_BANDS: Dict[str, FrequencyBand] = {
+MT_BANDS: dict[str, FrequencyBand] = {
     # ── Passive MT / broadband ──────────────────────────────────────────
     "LMT": FrequencyBand(
         name="LMT",
@@ -347,7 +346,7 @@ MT_BANDS: Dict[str, FrequencyBand] = {
 }
 
 #: Global mutable registry — start with MT_BANDS; users can add custom bands.
-REGISTRY: Dict[str, FrequencyBand] = dict(MT_BANDS)
+REGISTRY: dict[str, FrequencyBand] = dict(MT_BANDS)
 
 
 # ---------------------------------------------------------------------------
@@ -367,8 +366,8 @@ def register_band(band: FrequencyBand) -> None:
 
 def band_for_frequency(
     f: float,
-    registry: Optional[Dict[str, FrequencyBand]] = None,
-) -> List[FrequencyBand]:
+    registry: dict[str, FrequencyBand] | None = None,
+) -> list[FrequencyBand]:
     """Return all bands in the registry that contain *f* Hz.
 
     Parameters
@@ -390,8 +389,8 @@ def band_for_frequency(
 
 def frequency_range(
     method: str,
-    registry: Optional[Dict[str, FrequencyBand]] = None,
-) -> Tuple[float, float]:
+    registry: dict[str, FrequencyBand] | None = None,
+) -> tuple[float, float]:
     """Return ``(f_min, f_max)`` for a named method or band.
 
     Parameters

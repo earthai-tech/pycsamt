@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from pycsamt.emtools._core import ensure_sites, _iter_items, _name
+from pycsamt.emtools._core import (
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 _IJ = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}
 

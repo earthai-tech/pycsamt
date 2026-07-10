@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 import pytest
 
 from pycsamt.api import APIFrame, reset_api_view
-from pycsamt.seg.edi import EDIFile 
 from pycsamt.seg.collection import EDICollection
+from pycsamt.seg.edi import EDIFile
 from pycsamt.site.base import Site, Sites, to_edis
 from pycsamt.site.report import SiteReport, SitesReport
 
@@ -30,7 +28,7 @@ def _mk_two_sites(
     simulated_edi: Path,
     n1: str = "S01",
     n2: str = "S02",
-) -> Tuple[Site, Site]:
+) -> tuple[Site, Site]:
 
     p1 = _dup_edi(tmp_path, simulated_edi, n1)
     p2 = _dup_edi(tmp_path, simulated_edi, n2)
@@ -252,7 +250,7 @@ def test_sites_with_topography(tmp_path: Path,
     # grab station ids from HEAD.dataid
     def sid(site: Site) -> str:
         h = site.edi.get_section("head")  # type: ignore
-        return str(getattr(h, "dataid"))
+        return str(h.dataid)
 
     df = pd.DataFrame(
         {
@@ -292,7 +290,7 @@ def test_sites_to_profile_order(tmp_path: Path,
         # P02 should be farther east -> larger chainage
         assert ch["P02"] > ch["P01"]
     else:
-        seq: List[Site] = prof["sites"]  # type: ignore[index]
+        seq: list[Site] = prof["sites"]  # type: ignore[index]
         assert [s.name for s in seq] == ["P01", "P02"]
 
 

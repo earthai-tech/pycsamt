@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json
 import re
 from pathlib import Path
@@ -6,16 +5,17 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pycsamt.zonge._transfer import LegacyAVGBase  
 from pycsamt.exceptions import AvgDataError
+from pycsamt.zonge._transfer import LegacyAVGBase
 from pycsamt.zonge.base import (
-    FieldAliases,
-    AvgRow,
-    AVGFrame,
     AVGComponentBase,
+    AVGFrame,
+    AvgRow,
+    FieldAliases,
 )
 
-def _norm_field (field_value): 
+
+def _norm_field (field_value):
     return (str(v).lower() for v in field_value )
 
 def test_field_aliases_have_expected_members():
@@ -144,7 +144,7 @@ def test_legacyavgbase_minimal_contract():
     if hasattr(obj, "to_xarray"):
         with pytest.raises (
                 AvgDataError, match=re.escape ("Empty legacy table.")
-            ): 
+            ):
             # try:
             out = obj.to_xarray(pd.DataFrame())
             # duck-type check for xarray.Dataset (no hard import)
@@ -155,7 +155,7 @@ def test_legacyavgbase_minimal_contract():
     if hasattr(obj, "transform"):
         with pytest.raises (
                 AvgDataError, match=re.escape ("Empty legacy table.")
-            ): 
+            ):
         # try:
             out = obj.transform(pd.DataFrame(), meta={})
             assert isinstance(out, (pd.DataFrame, dict))
@@ -163,5 +163,5 @@ def test_legacyavgbase_minimal_contract():
         #     pass
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

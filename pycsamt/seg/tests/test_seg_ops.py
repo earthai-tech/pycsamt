@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
@@ -9,16 +8,16 @@ import pytest
 
 from pycsamt.seg.ops import (
     MU0,
-    rotate_impedance,
-    rotate_tipper,
-    z_to_rho_phi,
-    rho_phi_to_z,
-    time_vector,
+    amp_or_psd,
     coherence_ms,
     pack_hermitian,
-    unpack_hermitian,
+    rho_phi_to_z,
+    rotate_impedance,
     rotate_spectra,
-    amp_or_psd,
+    rotate_tipper,
+    time_vector,
+    unpack_hermitian,
+    z_to_rho_phi,
 )
 
 

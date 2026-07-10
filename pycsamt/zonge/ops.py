@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -8,6 +7,7 @@ calculations, based on the GDP DATA PROCESSING MANUAL.
 """
 
 import numpy as np
+
 
 def calculate_rho(mag_e, mag_h, asp, freq):
     """
@@ -67,10 +67,10 @@ def calculate_std_dev(values):
     a = np.sum(np.square(values))
     b = np.mean(values)
     variance = (a - n * (b**2)) / (n - 1)
-    
+
     if variance < 0:
         return 0.0
-        
+
     return np.sqrt(variance)
 
 def calculate_e_field_std_dev(e_vals, asp, current):
@@ -147,10 +147,10 @@ def calculate_std_dev_rho_c(rho_c, e_avg, h_avg,
     """
     if e_avg == 0 or h_avg == 0:
         return 0.0
-    
+
     b_e = (sigma_e / e_avg)**2
     b_h = (sigma_h / h_avg)**2
-    
+
     return rho_c * 2 * np.sqrt(b_e + b_h)
 
 def calculate_avg_magnitude(mag_values):
@@ -347,8 +347,8 @@ def calculate_relative_error(rho, sigma_rho):
         float: The relative error in resistivity as a percentage.
 
     .. math::
-        \text{Relative Error} = \frac{\sigma_{\rho}}{\rho} \times 100
-        \text{Where }\sigma_{\rho}\\\
+        \text{Relative Error} = \frac{\\sigma_{\rho}}{\rho} \times 100
+        \text{Where }\\sigma_{\rho}\\\
             text{ is the standard deviation of resistivity.}
     """
     if rho == 0:
@@ -397,7 +397,7 @@ def calculate_resistivity_phase(rho, phase_e, phase_h):
 
 def calculate_frequency_dependent_resistivity(e_mag, h_mag, freq):
     """
-    Calculates frequency-dependent resistivity (Rho) based on the E-field 
+    Calculates frequency-dependent resistivity (Rho) based on the E-field
     and H-field magnitudes.
 
     Args:
@@ -410,7 +410,7 @@ def calculate_frequency_dependent_resistivity(e_mag, h_mag, freq):
 
     .. math::
         \rho_{\text{freq}} = \frac{E_{\text{mag}}}\\
-            {H_{\text{mag}}} \cdot \frac{1}{f}
+            {H_{\text{mag}}} \\cdot \frac{1}{f}
         \text{Where } f \text{ is the frequency in Hz.}
     """
     return (e_mag / h_mag) / freq
@@ -431,11 +431,11 @@ def calculate_rho_correction(rho, e_std, h_std, e_avg, h_avg):
         float: The corrected resistivity value.
 
     .. math::
-        \rho_{\text{corr}} = \rho \cdot \left\\
-            ( 1 + \frac{\sigma_E}{E_{\text{avg}}} +\\
-             \frac{\sigma_H}{H_{\text{avg}}} \right)
-        \text{Where } \sigma_E \text{ and }\\
-            \sigma_H \text{ are the standard deviations of E-field and H-field.}
+        \rho_{\text{corr}} = \rho \\cdot \\left\\
+            ( 1 + \frac{\\sigma_E}{E_{\text{avg}}} +\\
+             \frac{\\sigma_H}{H_{\text{avg}}} \right)
+        \text{Where } \\sigma_E \text{ and }\\
+            \\sigma_H \text{ are the standard deviations of E-field and H-field.}
     """
     return rho * (1 + (e_std / e_avg) + (h_std / h_avg))
 
@@ -451,7 +451,7 @@ def calculate_averaged_magnitude(values):
         float: The average magnitude.
 
     .. math::
-        \text{Avg Magnitude} = \frac{1}{N} \sum_{i=1}^N |x_i|
+        \text{Avg Magnitude} = \frac{1}{N} \\sum_{i=1}^N |x_i|
         \text{Where } x_i\text{ represents individual field values.}
     """
     return np.mean(np.abs(values))
@@ -467,7 +467,7 @@ def calculate_conductivity(rho):
         float: The calculated conductivity (Sigma) in S/m.
 
     .. math::
-        \sigma = \frac{1}{\rho}
+        \\sigma = \frac{1}{\rho}
         \text{Where } \rho \text{ is the resistivity in Ωm.}
     """
     return 1 / rho
@@ -475,7 +475,7 @@ def calculate_conductivity(rho):
 def calculate_error_propagation_amplitude(
         e_std, h_std, rho_std, e_avg, h_avg, rho):
     """
-    Propagates error for the amplitude based on the standard deviations 
+    Propagates error for the amplitude based on the standard deviations
     of the E-field, H-field, and resistivity.
 
     Args:
@@ -490,16 +490,16 @@ def calculate_error_propagation_amplitude(
         float: The propagated error for amplitude.
 
     .. math::
-        \text{Error in Amplitude} = \sqrt{ \left( \frac{\sigma_E}\\
+        \text{Error in Amplitude} = \\sqrt{ \\left( \frac{\\sigma_E}\\
                                                  {E_{\text{avg}}} \right)^2
-        + \left( \frac{\sigma_H}{H_{\text{avg}}}\\
-                \right)^2 + \left( \frac{\sigma_{\rho}}{\rho} \right)^2 }
-        \text{Where }\sigma_E\text{, }\sigma_H\text{, and }\\
-        \sigma_{\rho}\text{ are the standard deviations\\
+        + \\left( \frac{\\sigma_H}{H_{\text{avg}}}\\
+                \right)^2 + \\left( \frac{\\sigma_{\rho}}{\rho} \right)^2 }
+        \text{Where }\\sigma_E\text{, }\\sigma_H\text{, and }\\
+        \\sigma_{\rho}\text{ are the standard deviations\\
                            for E-field, H-field, and resistivity.}
     """
     return np.sqrt(
-        (e_std / e_avg)**2 + (h_std / h_avg)**2 + 
+        (e_std / e_avg)**2 + (h_std / h_avg)**2 +
         (rho_std / rho)**2)
 
 
@@ -517,9 +517,9 @@ def calculate_e_field_error(e_vals, asp, current):
         float: The calculated error for the E-field.
 
     .. math::
-        \text{E-field Error} = \frac{1}{N} \sum_{i=1}^N\\
-            \left| E_{\text{val}} - \frac{E_{\text{avg}}}{\text{current}} \right|
-        \text{Where } E_{\text{val}} \text{ are the individual E-field values and } 
+        \text{E-field Error} = \frac{1}{N} \\sum_{i=1}^N\\
+            \\left| E_{\text{val}} - \frac{E_{\text{avg}}}{\text{current}} \right|
+        \text{Where } E_{\text{val}} \text{ are the individual E-field values and }
         E_{\text{avg}} \text{ is the average E-field.}
     """
     e_conv = [(v / asp) / current for v in e_vals]

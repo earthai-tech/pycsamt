@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -13,7 +12,11 @@ import unittest
 from pathlib import Path
 
 from pycsamt.assistant.rag.ingest import build_chunks
-from pycsamt.assistant.rag.retriever import BM25, Retriever, tokenize
+from pycsamt.assistant.rag.retriever import (
+    BM25,
+    Retriever,
+    tokenize,
+)
 from pycsamt.assistant.rag.schemas import RAGChunk
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import math
@@ -8,19 +7,19 @@ import numpy as np
 import pytest
 
 from pycsamt.seg.edi import EDIFile
-
 from pycsamt.site.location import (
     Coord,
-    parse_lat, 
-    parse_lon, 
-    parse_elev,
-    ensure_head_coords, 
     apply_topography,
-    project, 
-    distance, 
-    bearing, 
+    bearing,
     chainage_along,
+    distance,
+    ensure_head_coords,
+    parse_elev,
+    parse_lat,
+    parse_lon,
+    project,
 )
+
 
 def _load_edi(p: Path) -> EDIFile:
     return EDIFile(p)  # type: ignore
@@ -72,10 +71,10 @@ def test_ensure_head_coords_on_stub():
     h = ensure_head_coords(
         ed, lat="10N", lon="20E", elev="300",
     )
-    assert getattr(h, "lat") == pytest.approx(10.0)
-    assert getattr(h, "lon") == pytest.approx(20.0)
-    assert getattr(h, "elev") == pytest.approx(300.0)
-    assert getattr(h, "long") == pytest.approx(20.0)
+    assert h.lat == pytest.approx(10.0)
+    assert h.lon == pytest.approx(20.0)
+    assert h.elev == pytest.approx(300.0)
+    assert h.long == pytest.approx(20.0)
 
 
 def test_ensure_head_coords_on_real_edi(simulated_edi: Path):
@@ -83,9 +82,9 @@ def test_ensure_head_coords_on_real_edi(simulated_edi: Path):
     h0 = ed.get_section("head")  # type: ignore
     ensure_head_coords(ed, lat=26.25, lon=11.5, elev=777)
     h1 = ed.get_section("head")  # type: ignore
-    assert getattr(h1, "lat") == pytest.approx(26.25)
-    assert getattr(h1, "lon") == pytest.approx(11.5)
-    assert getattr(h1, "elev") == pytest.approx(777.0)
+    assert h1.lat == pytest.approx(26.25)
+    assert h1.lon == pytest.approx(11.5)
+    assert h1.elev == pytest.approx(777.0)
     # ensure we didn't drop other head fields
     assert getattr(h1, "dataid", None) == getattr(h0, "dataid", None)
 
@@ -102,7 +101,7 @@ def test_apply_topography_updates_coords(
     p = _dup_edi(tmp_path, simulated_edi, "T01")
     ed = _load_edi(p)
 
-    sid = getattr(ed.get_section("head"), "dataid")  # type: ignore
+    sid = ed.get_section("head").dataid  # type: ignore
 
     df = pd.DataFrame({
         "station": [sid, "OTHER"],
@@ -116,8 +115,8 @@ def test_apply_topography_updates_coords(
 
     def _coords(e):
         h = e.get_section("head")  # type: ignore
-        return float(getattr(h, "lat")), float(getattr(h, "lon")), \
-            float(getattr(h, "elev"))
+        return float(h.lat), float(h.lon), \
+            float(h.elev)
 
     if use_list and not inplace:
         # new list returned; original unchanged

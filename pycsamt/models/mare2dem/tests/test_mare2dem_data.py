@@ -8,21 +8,26 @@ example files in ``data/mare2dem/``.
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from pycsamt.models.mare2dem import (
-    read_emdata, write_emdata, EMDataFile,
-    read_resistivity,
-    make_data_file, MTSurveyConfig, CSEMSurveyConfig,
-    merge_data_files, merge_emdata,
+    CSEMSurveyConfig,
+    EMDataFile,
+    MTSurveyConfig,
     grid_to_mare2dem,
+    make_data_file,
+    merge_data_files,
+    merge_emdata,
+    read_emdata,
+    read_resistivity,
+    write_emdata,
 )
-from pycsamt.models.mare2dem.iotools.emdata import MTConfig, CSEMConfig
+from pycsamt.models.mare2dem.iotools.emdata import (
+    MTConfig,
+)
 
 
 def test_edi_confidence_weighting_inflates_export_errors(monkeypatch):
@@ -291,7 +296,9 @@ class TestMergeDataFiles:
             merge_emdata([em])
 
     def test_merge_utm_mismatch_raises(self, tmp_path):
-        from pycsamt.models.mare2dem.iotools.emdata import UTMOrigin
+        from pycsamt.models.mare2dem.iotools.emdata import (
+            UTMOrigin,
+        )
         em1 = self._make_mt_em([1.0], np.array([0.]))
         em2 = self._make_mt_em([1.0], np.array([0.]))
         em1.utm = UTMOrigin(grid=19, hemi="N", north0=1000.0, east0=500000.0, theta=0.0)

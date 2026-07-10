@@ -202,8 +202,12 @@ fig.tight_layout()
 # :math:`F(p)=1-3/p^2+3/p^3`. In the far field :math:`F\to 1` and the
 # correction does nothing; in the near field it can be large.
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name  # noqa: E402
 from pycsamt.emtools import ensure_sites  # noqa: E402
+from pycsamt.emtools._core import (  # noqa: E402
+    _get_z_block,
+    _iter_items,
+    _name,
+)
 
 
 def rho_xy(sites, name="18-016A"):

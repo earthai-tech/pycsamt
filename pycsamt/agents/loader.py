@@ -46,8 +46,14 @@ from typing import Any
 
 import numpy as np
 
+from ..emtools._core import (
+    _get_t_block,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 from ._base import AgentResult, BaseAgent
-from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block, _get_t_block
 
 logger = logging.getLogger(__name__)
 

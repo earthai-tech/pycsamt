@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,7 +19,6 @@ _load_raw(path)          → (df, meta, kind) without xarray requirement
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -52,7 +50,10 @@ def _load_raw(path: Path):
     Uses ``load_avg()`` and ``classify_avg_format()`` directly.
     Suitable for QC and metadata inspection when xarray is absent.
     """
-    from pycsamt.zonge.utils import load_avg, classify_avg_format  # noqa: PLC0415
+    from pycsamt.zonge.utils import (  # noqa: PLC0415
+        classify_avg_format,
+        load_avg,
+    )
 
     with open(path, encoding="utf-8", errors="replace") as fh:
         lines = fh.read().splitlines()

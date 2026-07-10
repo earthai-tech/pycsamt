@@ -28,24 +28,6 @@ from .core import (
     TelemetryPacket,
     deployment_report,
 )
-from .station import (
-    StationConfig,
-    station_table,
-)
-from .schemas import (
-    PAYLOAD_SCHEMAS,
-    AcquisitionPayload,
-    EventPayload,
-    EventSeverity,
-    HealthPayload,
-    PowerPayload,
-    QCPayload,
-    SyncPayload,
-    TelemetryPayload,
-    parse_payload,
-    schema_for,
-    validate_payload,
-)
 from .edge import (
     EdgeChannelSummary,
     EdgeDecision,
@@ -81,6 +63,12 @@ from .monitoring import (
     packet_table,
     telemetry_summary,
 )
+from .plot import (
+    plot_edge_qc_summary,
+    plot_field_dashboard,
+    plot_power_budget,
+    plot_sync_quality,
+)
 from .power import (
     DevicePowerProfile,
     EnergyConfig,
@@ -89,12 +77,6 @@ from .power import (
     estimate_deployment_energy,
     estimate_energy_budget,
     power_summary_table,
-)
-from .plot import (
-    plot_edge_qc_summary,
-    plot_field_dashboard,
-    plot_power_budget,
-    plot_sync_quality,
 )
 from .protocols import (
     BaseTelemetryClient,
@@ -109,6 +91,53 @@ from .protocols import (
     WebSocketTelemetryClient,
     build_telemetry_client,
 )
+from .provenance import (
+    AcquisitionManifest,
+    ProvenanceRecord,
+    build_acquisition_manifest,
+    export_acquisition_manifest,
+    export_reproducibility_bundle,
+    export_station_audit,
+    hash_bytes,
+    hash_mapping,
+    hash_raw_file,
+    log_qc_decision,
+)
+from .schemas import (
+    PAYLOAD_SCHEMAS,
+    AcquisitionPayload,
+    EventPayload,
+    EventSeverity,
+    HealthPayload,
+    PowerPayload,
+    QCPayload,
+    SyncPayload,
+    TelemetryPayload,
+    parse_payload,
+    schema_for,
+    validate_payload,
+)
+from .security import (
+    AuthScheme,
+    Credential,
+    SecurityConfig,
+    TLSConfig,
+    redact_secret,
+)
+from .session import FieldSession
+from .sim import (
+    simulate_amt_channel,
+    simulate_amt_station,
+    simulate_battery_decay,
+    simulate_gps_drift,
+    simulate_iot_network,
+    simulate_packet_loss,
+    simulate_powerline_noise,
+)
+from .station import (
+    StationConfig,
+    station_table,
+)
 from .sync import (
     ClockSynchronizer,
     SyncConfig,
@@ -122,35 +151,6 @@ from .sync import (
     estimate_clock_offset_ms,
     sync_status_table,
 )
-from .provenance import (
-    AcquisitionManifest,
-    ProvenanceRecord,
-    build_acquisition_manifest,
-    export_acquisition_manifest,
-    export_reproducibility_bundle,
-    export_station_audit,
-    hash_bytes,
-    hash_mapping,
-    hash_raw_file,
-    log_qc_decision,
-)
-from .security import (
-    AuthScheme,
-    Credential,
-    SecurityConfig,
-    TLSConfig,
-    redact_secret,
-)
-from .sim import (
-    simulate_amt_channel,
-    simulate_amt_station,
-    simulate_battery_decay,
-    simulate_gps_drift,
-    simulate_iot_network,
-    simulate_packet_loss,
-    simulate_powerline_noise,
-)
-from .session import FieldSession
 
 __all__ = [
     # core

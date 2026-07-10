@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,7 +18,7 @@ Usage
 """
 from __future__ import annotations
 
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -36,12 +35,12 @@ def plot_compare(
     *,
     n_cols: int = 5,
     max_sites: int = 20,
-    depth_max: Optional[float] = None,
+    depth_max: float | None = None,
     log_scale: bool = True,
     show_rmse: bool = True,
-    site_labels: Optional[Sequence[str]] = None,
+    site_labels: Sequence[str] | None = None,
     figsize_per_panel: tuple = (2.2, 4.0),
-    title: Optional[str] = None,
+    title: str | None = None,
     style: bool = True,
 ):
     """
@@ -77,7 +76,8 @@ def plot_compare(
     fig : Figure
     """
     import matplotlib.pyplot as plt
-    from ._style import EMStyle, EM_COLORS
+
+    from ._style import EM_COLORS, EMStyle
 
     n_sites = min(len(true_models), len(pred_models), max_sites)
     n_rows = int(np.ceil(n_sites / n_cols))
@@ -121,7 +121,7 @@ def plot_profile_pair(
     pred_model,
     *,
     ax=None,
-    depth_max: Optional[float] = None,
+    depth_max: float | None = None,
     log_scale: bool = True,
     show_rmse: bool = True,
     legend: bool = True,
@@ -145,7 +145,8 @@ def plot_profile_pair(
     ax : Axes
     """
     import matplotlib.pyplot as plt
-    from ._style import EMStyle, EM_COLORS
+
+    from ._style import EM_COLORS, EMStyle
 
     if ax is None:
         ctx = EMStyle() if style else _NullContext()

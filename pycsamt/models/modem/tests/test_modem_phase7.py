@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """Phase 7 tests — InputBuilder."""
 
-import pytest
+
 import numpy as np
-from pathlib import Path
+import pytest
 
 
 def _make_site(name, x_offset, y_offset=0.0, n_freq=5):
@@ -40,10 +39,10 @@ def sites_3d():
 
 def test_builder_3d_creates_files(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
-    files = b.build(sites_3d, workdir=tmp_path)
+    b.build(sites_3d, workdir=tmp_path)
     assert (tmp_path / "data.dat").exists()
     assert (tmp_path / "m0.ws").exists()
     assert (tmp_path / "covariance.cov").exists()
@@ -52,7 +51,7 @@ def test_builder_3d_creates_files(tmp_path, sites_3d):
 
 def test_builder_3d_files_key(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
     files = b.build(sites_3d, workdir=tmp_path)
@@ -61,8 +60,8 @@ def test_builder_3d_files_key(tmp_path, sites_3d):
 
 def test_builder_3d_model_attribute(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.model3d  import ModEmModel3D
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.model3d import ModEmModel3D
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
     b.build(sites_3d, workdir=tmp_path)
@@ -72,8 +71,8 @@ def test_builder_3d_model_attribute(tmp_path, sites_3d):
 
 def test_builder_3d_data_attribute(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.data     import ModEmData
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
     b.build(sites_3d, workdir=tmp_path)
@@ -82,9 +81,11 @@ def test_builder_3d_data_attribute(tmp_path, sites_3d):
 
 
 def test_builder_3d_covariance_dims(tmp_path, sites_3d):
-    from pycsamt.models.modem.builder    import InputBuilder
-    from pycsamt.models.modem.covariance import ModEmCovariance
-    from pycsamt.models.modem.config      import ModEmConfig
+    from pycsamt.models.modem.builder import InputBuilder
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
     b.build(sites_3d, workdir=tmp_path)
@@ -96,7 +97,7 @@ def test_builder_3d_covariance_dims(tmp_path, sites_3d):
 
 def test_builder_3d_custom_filenames(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     b   = InputBuilder(config=cfg)
     b.build(sites_3d, workdir=tmp_path,
@@ -112,7 +113,7 @@ def test_builder_3d_custom_filenames(tmp_path, sites_3d):
 
 def test_builder_3d_empty_source_raises(tmp_path):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="3d")
     b   = InputBuilder(config=cfg)
     with pytest.raises(ValueError, match="empty"):
@@ -130,11 +131,11 @@ def sites_2d():
 
 def test_builder_2d_creates_files(tmp_path, sites_2d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="2d", nz_2d=10, n_airlayers_2d=3,
                       component_type="TE_Impedance")
     b   = InputBuilder(config=cfg)
-    files = b.build(sites_2d, workdir=tmp_path)
+    b.build(sites_2d, workdir=tmp_path)
     assert (tmp_path / "data.dat").exists()
     assert (tmp_path / "m0.rho").exists()
     assert (tmp_path / "control.inv").exists()
@@ -142,7 +143,7 @@ def test_builder_2d_creates_files(tmp_path, sites_2d):
 
 def test_builder_2d_no_covariance(tmp_path, sites_2d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
     cfg = ModEmConfig(mode="2d", nz_2d=10, n_airlayers_2d=3,
                       component_type="TE_Impedance")
     b   = InputBuilder(config=cfg)
@@ -152,8 +153,8 @@ def test_builder_2d_no_covariance(tmp_path, sites_2d):
 
 def test_builder_2d_model_type(tmp_path, sites_2d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.model2d  import ModEmModel2D
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.model2d import ModEmModel2D
     cfg = ModEmConfig(mode="2d", nz_2d=10, n_airlayers_2d=3,
                       component_type="TE_Impedance")
     b   = InputBuilder(config=cfg)
@@ -167,8 +168,8 @@ def test_builder_2d_model_type(tmp_path, sites_2d):
 
 def test_builder_build_from_data(tmp_path, sites_3d):
     from pycsamt.models.modem.builder import InputBuilder
-    from pycsamt.models.modem.data     import ModEmData
-    from pycsamt.models.modem.config   import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     cfg  = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     data = ModEmData.from_edi(sites_3d, config=cfg)
     b    = InputBuilder(config=cfg)

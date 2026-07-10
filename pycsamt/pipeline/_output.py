@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import matplotlib.figure
@@ -46,7 +46,7 @@ class OutputDir:
 
     def __init__(
         self,
-        root: Optional[str | Path],
+        root: str | Path | None,
         *,
         api: Any = None,
     ) -> None:
@@ -84,13 +84,13 @@ class OutputDir:
 
     def save_figure(
         self,
-        fig: "matplotlib.figure.Figure",
+        fig: matplotlib.figure.Figure,
         fn_name: str,
         step_idx: int,
         step_name: str,
         *,
         api: Any = None,
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Save *fig* into the step's plot sub-directory.
 
         Parameters
@@ -128,7 +128,7 @@ class OutputDir:
     # Writing processed EDIs
     # ------------------------------------------------------------------
 
-    def write_edis(self, sites: Any) -> List[Path]:
+    def write_edis(self, sites: Any) -> list[Path]:
         """Write processed EDI files to the ``processed/`` sub-directory.
 
         Uses :func:`pycsamt.site.export.write_sites`.
@@ -157,7 +157,7 @@ class OutputDir:
     # Config snapshot
     # ------------------------------------------------------------------
 
-    def save_pipeline_config(self, yaml_str: str) -> Optional[Path]:
+    def save_pipeline_config(self, yaml_str: str) -> Path | None:
         """Write *yaml_str* as ``pipeline.yaml`` in the root directory."""
         path = self.root / "pipeline.yaml"
         try:
@@ -167,7 +167,7 @@ class OutputDir:
             warnings.warn(f"Could not save pipeline.yaml: {exc}", stacklevel=2)
             return None
 
-    def save_text(self, text: str, filename: str) -> Optional[Path]:
+    def save_text(self, text: str, filename: str) -> Path | None:
         """Write *text* to *filename* in the root directory."""
         path = self.root / filename
         try:

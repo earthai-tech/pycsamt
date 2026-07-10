@@ -25,7 +25,6 @@ from pycsamt.iot import (
     SecurityConfig,
     StationConfig,
     SyncQuality,
-    TelemetryError,
     TelemetryPacket,
     TLSConfig,
     assess_impedance_stability,

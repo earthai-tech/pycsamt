@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from io import StringIO
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -621,7 +619,6 @@ class _EMDataReader:
                 n_data = int(value)
                 n_cols = _RESP_NCOLS if file_type == "response" else _DATA_NCOLS
                 # Skip optional comment header line
-                pos_save = self._pos
                 line_peek = self._next_line()
                 if line_peek is not None:
                     s2, is_c2 = _parse_line(line_peek)
@@ -665,7 +662,7 @@ def _write_float_col(f, arr: np.ndarray) -> None:
         f.write(f"{v:.14g}\n")
 
 
-def _write_emdata_file(out_file: "TextIO", em: EMDataFile) -> None:
+def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
     """Low-level writer that mirrors m2d_writeEMData2DFile.m."""
     n_cols = len(em.data[0]) if len(em.data) and len(em.data.shape) > 1 else _DATA_NCOLS
     fmt_str = "EMResp_2.3" if (n_cols == _RESP_NCOLS or em.is_response) else "EMData_2.3"

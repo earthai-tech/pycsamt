@@ -36,11 +36,18 @@ from typing import Any
 
 import numpy as np
 
-from .geom.line_orientation import get_line_orientation, project_onto_line
-from .geom.utm import lonlat_to_utm
+from .geom.line_orientation import (
+    get_line_orientation,
+    project_onto_line,
+)
 from .geom.topo import parse_topo
-from .geom.simplify import dp_simplify
-from .iotools.emdata import EMDataFile, MTConfig, UTMOrigin, write_emdata
+from .geom.utm import lonlat_to_utm
+from .iotools.emdata import (
+    EMDataFile,
+    MTConfig,
+    UTMOrigin,
+    write_emdata,
+)
 
 __all__ = [
     "ZMMStation",
@@ -157,7 +164,6 @@ def read_zmm(path: str | Path) -> ZMMStation:
 
     lines = path.read_text(errors="replace").splitlines()
     i = 0
-    n_freq = 0
     periods_list: list[float] = []
     zxy_list: list[complex] = []
     zyx_list: list[complex] = []
@@ -195,7 +201,7 @@ def read_zmm(path: str | Path) -> ZMMStation:
 
         elif low.startswith("numfreq") or low.startswith("nfreq"):
             try:
-                n_freq = int(raw.split()[1])
+                int(raw.split()[1])
             except (IndexError, ValueError):
                 pass
 
@@ -528,7 +534,7 @@ def make_mt_data_from_stations(
     rows: list[list[float]] = []
 
     for ifreq in range(1, len(freqs) + 1):
-        T = periods[ifreq - 1]
+        periods[ifreq - 1]
         for irx, s in enumerate(stations, start=1):
             if ifreq > len(s.periods):
                 continue

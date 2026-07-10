@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -10,16 +9,20 @@ or :class:`~matplotlib.axes.Axes` objects for downstream composition.
 """
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any
 
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.axes import Axes
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.figure import Figure
 
-from ._style import EMStyle, EM_COLORS, EM_CMAPS, EM_FIGSIZE, add_colorbar
+from ._style import (
+    EM_CMAPS,
+    EM_COLORS,
+    EM_FIGSIZE,
+    EMStyle,
+    add_colorbar,
+)
 
 __all__ = [
     "plot_section",
@@ -46,8 +49,8 @@ def _section_im(
     stations: np.ndarray,
     *,
     log_scale: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     cmap: str = "RdYlBu_r",
     aspect: str = "auto",
 ) -> Any:
@@ -83,20 +86,20 @@ def _section_im(
 def plot_section(
     rho_2d: np.ndarray,
     *,
-    depths: Optional[np.ndarray] = None,
-    stations: Optional[np.ndarray] = None,
+    depths: np.ndarray | None = None,
+    stations: np.ndarray | None = None,
     depth_max: float = 2000.0,
     station_spacing: float = 1.0,
     log_scale: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    cmap: Optional[str] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap: str | None = None,
     title: str = "",
     xlabel: str = "Station",
     ylabel: str = "Depth (m)",
     show_sites: bool = True,
-    figsize: Optional[Tuple[float, float]] = None,
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] | None = None,
+    ax: Axes | None = None,
     style: bool = True,
 ) -> Figure:
     """
@@ -182,16 +185,16 @@ def plot_section_pair(
     true_2d: np.ndarray,
     pred_2d: np.ndarray,
     *,
-    depths: Optional[np.ndarray] = None,
-    stations: Optional[np.ndarray] = None,
+    depths: np.ndarray | None = None,
+    stations: np.ndarray | None = None,
     depth_max: float = 2000.0,
     station_spacing: float = 1.0,
     log_scale: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    cmap: Optional[str] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap: str | None = None,
     show_difference: bool = True,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     style: bool = True,
 ) -> Figure:
     """
@@ -282,18 +285,18 @@ def plot_section_pair(
 def plot_pseudo_section(
     rho_a_2d: np.ndarray,
     *,
-    freqs: Optional[np.ndarray] = None,
-    stations: Optional[np.ndarray] = None,
+    freqs: np.ndarray | None = None,
+    stations: np.ndarray | None = None,
     station_spacing: float = 1.0,
     log_freq: bool = True,
     log_rho: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    cmap: Optional[str] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap: str | None = None,
     component: str = "xy",
     title: str = "",
-    figsize: Optional[Tuple[float, float]] = None,
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] | None = None,
+    ax: Axes | None = None,
     style: bool = True,
 ) -> Figure:
     """

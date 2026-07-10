@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,6 +16,7 @@ Usage::
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("QtAgg")  # must be set before importing Figure / canvas
 
 from matplotlib.backends.backend_qtagg import (
@@ -25,7 +25,11 @@ from matplotlib.backends.backend_qtagg import (
 )
 from matplotlib.figure import Figure
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class MplCanvas(QWidget):

@@ -1,24 +1,40 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """callbacks/map3d.py — 3D resistivity map: fence, volume-block, depth-slices."""
 from __future__ import annotations
 
-import io
 import base64
+import io
 
 import numpy as np
 import plotly.graph_objects as go
-
-from dash import (Input, Output, State, ctx, no_update, dcc,
-                  clientside_callback, html)
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
+from pycsamt.app.web.cache import (
+    cache_get,
+    cache_get_inversion_result,
+)
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.cache import cache_get, cache_get_inversion_result
-from pycsamt.app.web.pages.map3d import _empty_3d_fig, _MAP3D_MODES, _DEFAULT_MODE
-from pycsamt.map.geometry import normalize_offsets, resolve_offset, survey_uv
-
+from pycsamt.app.web.pages.map3d import (
+    _DEFAULT_MODE,
+    _MAP3D_MODES,
+    _empty_3d_fig,
+)
+from pycsamt.map.geometry import (
+    normalize_offsets,
+    resolve_offset,
+    survey_uv,
+)
 
 # ── Mode metadata ─────────────────────────────────────────────────────────────
 _MODE_SLUGS = [slug for slug, _, _ in _MAP3D_MODES]
@@ -76,7 +92,8 @@ def _dark_scene(title: str = "", dark: bool = True) -> dict:
         tickfont=dict(color=colors["tick"], size=9),
         title=dict(font=dict(color=colors["text"], size=10)),
     )
-    _t = lambda s: dict(text=s, font=dict(color=colors["text"], size=10))
+    def _t(s):
+        return dict(text=s, font=dict(color=colors["text"], size=10))
     return dict(
         scene=dict(
             xaxis={**axis, "title": _t("Distance (m)")},
@@ -222,7 +239,7 @@ def _build_fence_fig(
     traces = []
     annotations = []
     line_names = list(profiles.keys())
-    n_lines = len(line_names)
+    len(line_names)
     real_offsets = _line_real_offsets(profiles)
     az_rad = np.deg2rad(azimuth_deg)
     colors = _scene_colors(dark)
@@ -521,7 +538,7 @@ def _build_depth_slices_fig(
         try:
             from scipy.interpolate import griddata
             pts_x, pts_y, pts_e = [], [], []
-            for j, (name, p) in enumerate(profiles.items()):
+            for j, (_name, p) in enumerate(profiles.items()):
                 sta_x    = np.asarray(p.get("sta_x", []), float)
                 sta_elev = _resolve_profile_elevs(p, topo_src)
                 y_center = y_arr[j] if j < len(y_arr) else float(y_arr[-1])
@@ -711,7 +728,7 @@ def _build_topo_strip_trace(
     opacity: float, dark: bool,
 ) -> go.Surface:
     """Return a terrain ribbon go.Surface for one fence line."""
-    colors = _scene_colors(dark)
+    _scene_colors(dark)
     half = max(float(panel_thick) / 2.0, 25.0)
     n_x  = len(sta_x)
     X    = np.tile(sta_x, (2, 1))
@@ -815,7 +832,6 @@ def _parse_topo_upload(contents: str, filename: str) -> list[dict]:
     Supported formats: CSV, H5/HDF5, NPZ.
     Expected columns/arrays: station (or ID/name) + elevation (or elev/Elevation).
     """
-    import base64, io
     _, enc = contents.split(",", 1)
     raw = base64.b64decode(enc)
     fname = (filename or "").lower()
@@ -1150,7 +1166,9 @@ def _profiles_from_inversion(session_id: str) -> dict:
 
     # Fallback kept for legacy desktop-controller sessions.
     try:
-        from pycsamt.app.desktop.controllers.inversion_controller import InversionController
+        from pycsamt.app.desktop.controllers.inversion_controller import (
+            InversionController,
+        )
         ctrl  = InversionController()
         model = getattr(getattr(ctrl, "state", None), "model", None)
         if model is None:
@@ -1781,7 +1799,9 @@ def _assemble_3d_grid(profiles: dict, line_spacing: float = 1.0):
         if rho_i.shape != (n_x, n_z):
             x_i = np.asarray(p["x"])
             z_i = np.asarray(p["z"])
-            from scipy.interpolate import RegularGridInterpolator
+            from scipy.interpolate import (
+                RegularGridInterpolator,
+            )
             try:
                 interp = RegularGridInterpolator(
                     (z_i, x_i), np.asarray(p["rho"]),

@@ -1,16 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the advanced analytical functions in proc_utils.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from pycsamt.zonge.proc_utils import (
-    get_reference_frequency, get_skew, get_strike
+    get_reference_frequency,
+    get_skew,
+    get_strike,
 )
+
+
 # --- Test Data Fixture --------------------------------------------
 @pytest.fixture(scope="module")
 def dimensional_data_fixture() -> pd.DataFrame:
@@ -98,5 +101,5 @@ class TestAdvancedProcUtils:
         assert np.isclose(calculated_strike, expected_strike_deg)
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,7 +10,6 @@ dependency) when this module is loaded.
 from __future__ import annotations
 
 import importlib.util
-from typing import Dict, List, Optional
 
 __all__ = [
     "detect_available_backends",
@@ -46,7 +44,7 @@ def probe_backend(name: str) -> bool:
     return importlib.util.find_spec(pkg) is not None
 
 
-def detect_available_backends() -> List[str]:
+def detect_available_backends() -> list[str]:
     """
     Return a list of available deep-learning backends.
 
@@ -63,7 +61,7 @@ def detect_available_backends() -> List[str]:
     >>> available = detect_available_backends()
     >>> print(available)          # e.g. ['torch'] or ['torch', 'tensorflow']
     """
-    found: List[str] = []
+    found: list[str] = []
     if probe_backend("torch"):
         found.append("torch")
     if probe_backend("tensorflow"):
@@ -71,7 +69,7 @@ def detect_available_backends() -> List[str]:
     return found
 
 
-def get_backend_versions() -> Dict[str, Optional[str]]:
+def get_backend_versions() -> dict[str, str | None]:
     """
     Return version strings for installed backends.
 
@@ -84,7 +82,7 @@ def get_backend_versions() -> Dict[str, Optional[str]]:
         ``{'torch': '2.x.x', 'tensorflow': None}`` — ``None`` means
         not installed.
     """
-    result: Dict[str, Optional[str]] = {
+    result: dict[str, str | None] = {
         "torch": None,
         "tensorflow": None,
     }

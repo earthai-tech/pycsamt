@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import importlib
 import sys
 import types
-import importlib
 
 import numpy as np
 import pytest
+
 from pycsamt.transformers import jedi as tr
 
 

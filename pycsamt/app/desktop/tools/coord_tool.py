@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,7 +21,6 @@ Features
 from __future__ import annotations
 
 import re
-from typing import List, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -35,7 +33,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QPushButton,
     QRadioButton,
     QSpinBox,
@@ -82,7 +79,7 @@ def _utm_to_ll(easting: float, northing: float, zone: int, hem: str, datum: str)
         return res["lat"], res["lon"]
 
 
-def _parse_pairs(text: str) -> List[Tuple[float, float]]:
+def _parse_pairs(text: str) -> list[tuple[float, float]]:
     """Parse whitespace / comma / tab separated pairs from multi-line text."""
     pairs = []
     for line in text.strip().splitlines():
@@ -229,11 +226,14 @@ class CoordTransformDialog(QDialog):
 
     def _populate_survey_table(self) -> None:
         try:
-            from pycsamt.emtools._core import _iter_items, _unwrap
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _unwrap,
+            )
             items = list(_iter_items(self._sites))
         except Exception:
             return
-        zone   = self._zone_spin.value()
+        self._zone_spin.value()
         hem    = "N" if self._hem_n.isChecked() else "S"
         datum  = self._datum_combo.currentText()
         self._surv_table.setRowCount(0)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -18,12 +17,12 @@ Usage::
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 # Force non-interactive backend before any
 # other matplotlib import can claim a display.
 import matplotlib
+
 matplotlib.use("Agg", force=True)
 
 _ICONS_DIR = (

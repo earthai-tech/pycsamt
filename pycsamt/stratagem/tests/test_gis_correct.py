@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for stratagem.gis_correct (CoordinateInjector, StationLocator)."""
 
 from __future__ import annotations
@@ -14,7 +13,6 @@ from pycsamt.stratagem.gis_correct import (
     CoordinateInjector,
     StationLocator,
     _detect_coord_cols,
-    _load_coord_frame,
 )
 from pycsamt.stratagem.io import EDIBatch
 

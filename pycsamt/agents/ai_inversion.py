@@ -109,7 +109,7 @@ class AIInversionAgent(BaseAgent):
         llm_provider: str = "claude",
         cache_dir: str | None = None,
         force_download: bool = False,
-    ) -> "AIInversionAgent":
+    ) -> AIInversionAgent:
         """Return an :class:`AIInversionAgent` pre-loaded with a zoo checkpoint.
 
         Parameters
@@ -126,7 +126,10 @@ class AIInversionAgent(BaseAgent):
         >>> agent = AIInversionAgent.from_pretrained("mt1d-resnet-5layer-v1")
         >>> result = agent.execute({"path": "/data/L22PLT"})
         """
-        from ..ai._zoo import download_checkpoint, get_pretrained_info
+        from ..ai._zoo import (
+            download_checkpoint,
+            get_pretrained_info,
+        )
 
         info      = get_pretrained_info(model_name)
         ckpt_path = download_checkpoint(
@@ -176,8 +179,11 @@ class AIInversionAgent(BaseAgent):
         # ── check AI backend ──────────────────────────────────────────────────
         try:
             from ..ai.inversion.inv1d import EMInverter1D
-            from ..forward.batch import generate_dataset, ForwardDataset
             from ..backends import get_backend_instance
+            from ..forward.batch import (
+                ForwardDataset,
+                generate_dataset,
+            )
             if get_backend_instance() is None:
                 raise ImportError("No DL backend available (torch or tensorflow).")
         except ImportError as exc:
@@ -190,7 +196,12 @@ class AIInversionAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -392,7 +403,9 @@ class AIInversionAgent(BaseAgent):
         # training convergence
         if train_history:
             try:
-                from ..ai.plot.convergence import plot_convergence
+                from ..ai.plot.convergence import (
+                    plot_convergence,
+                )
                 fig_cv = plot_convergence(train_history)
                 if fig_cv is not None:
                     f = fig_cv if hasattr(fig_cv,"savefig") else (
@@ -555,7 +568,7 @@ def _plot_ai_section(
 ) -> Any:
     """Plot a station × layer colour-coded predicted resistivity section."""
     import matplotlib.pyplot as plt
-    import matplotlib.colors as mcolors
+
     from ..api.section import PYCSAMT_SECTION
 
     station_names = list(predictions.keys())

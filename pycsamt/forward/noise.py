@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -45,7 +44,6 @@ processing. *Geophysical Journal International*, 130, 475–496.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional, Union
 
 import numpy as np
 
@@ -72,7 +70,7 @@ class _BaseNoiseModel(ABC):
         self,
         response: ForwardResponse,
         *,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> ForwardResponse:
         """
         Return a new :class:`~pycsamt.forward.em1d.ForwardResponse`
@@ -128,7 +126,7 @@ class GaussianNoise(_BaseNoiseModel):
         self,
         level: float = 0.05,
         apply_to: str = "rho_phase",
-        phase_level: Optional[float] = None,
+        phase_level: float | None = None,
     ):
         if not 0.0 < level < 1.0:
             raise ValueError(f"level must be in (0, 1), got {level}")
@@ -140,7 +138,7 @@ class GaussianNoise(_BaseNoiseModel):
         self,
         response: ForwardResponse,
         *,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> ForwardResponse:
         rng = np.random.default_rng(seed)
 
@@ -209,7 +207,7 @@ class MultiplicativeNoise(_BaseNoiseModel):
         self,
         response: ForwardResponse,
         *,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> ForwardResponse:
         rng = np.random.default_rng(seed)
         import copy
@@ -312,7 +310,7 @@ class FieldRealisticNoise(_BaseNoiseModel):
         self,
         response: ForwardResponse,
         *,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> ForwardResponse:
         if response.freqs is None:
             raise ValueError("FieldRealisticNoise requires freqs; use GaussianNoise for TEM.")
@@ -361,7 +359,7 @@ def add_gaussian_noise(
     response: ForwardResponse,
     level: float = 0.05,
     *,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> ForwardResponse:
     """
     Convenience wrapper: add Gaussian noise at a given relative level.
@@ -383,10 +381,10 @@ def add_gaussian_noise(
 
 def add_noise(
     response: ForwardResponse,
-    noise_model: Union[_BaseNoiseModel, str] = "gaussian",
+    noise_model: _BaseNoiseModel | str = "gaussian",
     level: float = 0.05,
     *,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     **kwargs,
 ) -> ForwardResponse:
     """

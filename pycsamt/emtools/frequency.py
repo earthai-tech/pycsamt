@@ -1,22 +1,27 @@
 
-from __future__ import annotations 
+from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Any, Dict, Optional, Sequence, Tuple
-import numpy as np
+from typing import Any
 
-from ._core import (
-    ensure_sites,
-    _apply_each,
-    _iter_items,
-    _get_z_block,
-    _get_t_block,
-    _name,
-)
+import numpy as np
 
 # re-use package editors when it saves code
 from ..api.station import PYCSAMT_STATION_RENDERING
-from ..api.view import PYCSAMT_API_VIEW, maybe_wrap_frame, wrap_result
+from ..api.view import (
+    PYCSAMT_API_VIEW,
+    maybe_wrap_frame,
+    wrap_result,
+)
+from ._core import (
+    _apply_each,
+    _get_t_block,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
@@ -170,7 +175,7 @@ def _confidence_decision_table(
     method: str,
     ci_hi: float,
     ci_lo: float,
-    weights: Optional[Dict[str, float]],
+    weights: dict[str, float] | None,
     recursive: bool,
     on_dup: str,
     strict: bool,
@@ -196,12 +201,13 @@ def _apply_station_rendering(
     positions: Sequence[float],
     labels: Sequence[Any],
     *,
-    station_label_step: Optional[int],
+    station_label_step: int | None,
     station_preset: str,
-    station_style: Optional[Any],
+    station_style: Any | None,
 ) -> None:
     """Apply the package station-axis API to frequency-edit plots."""
     import copy
+
     from pycsamt.api.station import PYCSAMT_STATION_RENDERING
 
     style = station_style or PYCSAMT_STATION_RENDERING.style_for(
@@ -226,7 +232,7 @@ def _station_confidence_vectors(
     table: Any,
     station: str,
     fr: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Return confidence and matching flags for station frequencies."""
     confidence = np.full(fr.size, np.nan, dtype=float)
     flags = np.full(fr.size, "", dtype=object)
@@ -412,7 +418,7 @@ def _apply_grid_one(
         _set_block_freq(T, fnew)
 
 
-def _valid_freq_of(ed: Any) -> Optional[np.ndarray]:
+def _valid_freq_of(ed: Any) -> np.ndarray | None:
     Z, z, fr = _get_z_block(ed)
     if isinstance(fr, np.ndarray) and fr.size:
         return _sorted_unique(fr)
@@ -423,7 +429,7 @@ def _valid_freq_of(ed: Any) -> Optional[np.ndarray]:
 
 
 def _union_grid(SitesObj) -> np.ndarray:
-    frs: List[np.ndarray] = []
+    frs: list[np.ndarray] = []
     for ed in _iter_items(SitesObj):
         fr = _valid_freq_of(ed)
         if isinstance(fr, np.ndarray) and fr.size:
@@ -435,7 +441,7 @@ def _union_grid(SitesObj) -> np.ndarray:
 
 
 def _intersect_grid(SitesObj) -> np.ndarray:
-    frs: List[np.ndarray] = []
+    frs: list[np.ndarray] = []
     for ed in _iter_items(SitesObj):
         fr = _valid_freq_of(ed)
         if isinstance(fr, np.ndarray) and fr.size:
@@ -453,10 +459,10 @@ def _intersect_grid(SitesObj) -> np.ndarray:
 def select_band(
     sites: Any,
     *,
-    fmin: Optional[float] = None,
-    fmax: Optional[float] = None,
-    band_hz: Optional[Sequence[float]] = None,
-    keep: Optional[Sequence[float]] = None,
+    fmin: float | None = None,
+    fmax: float | None = None,
+    band_hz: Sequence[float] | None = None,
+    keep: Sequence[float] | None = None,
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -567,7 +573,7 @@ def drop_low_confidence_frequencies(
     *,
     method: str = "composite",
     threshold: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     also: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -632,7 +638,7 @@ def mask_low_confidence_frequencies(
     *,
     method: str = "composite",
     threshold: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     also: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -686,7 +692,7 @@ def recover_low_confidence_frequencies(
     method: str = "composite",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     interpolation: str = "linear",
     reject: str = "mask",
     also: str = "both",
@@ -777,12 +783,12 @@ def edit_frequencies_by_confidence(
     sites: Any,
     *,
     mode: str = "recover",
-    before_sites: Optional[Any] = None,
+    before_sites: Any | None = None,
     method: str = "composite",
     threshold: float = 0.50,
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     interpolation: str = "linear",
     reject: str = "drop",
     also: str = "both",
@@ -966,7 +972,7 @@ def frequency_edit_report(
     method: str = "composite",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -1114,7 +1120,7 @@ def frequency_edit_decision_table(
     method: str = "composite",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -1242,14 +1248,15 @@ def plot_frequency_edit_summary(
     method: str = "composite",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    figsize: Tuple[float, float] = (9.0, 4.0),
-    station_label_step: Optional[int] = 1,
+    figsize: tuple[float, float] = (9.0, 4.0),
+    station_label_step: int | None = 1,
     station_preset: str = "pseudosection",
-    station_style: Optional[Any] = None,
-    ax: Optional[Any] = None,
+    station_style: Any | None = None,
+    ax: Any | None = None,
 ):
     """Plot station-level before/after frequency-edit summary."""
     import matplotlib.pyplot as plt
+
     from pycsamt.api.style import PYCSAMT_STYLE
 
     report = frequency_edit_report(
@@ -1311,15 +1318,15 @@ def plot_frequency_edit_decisions(
     method: str = "composite",
     ci_hi: float = 0.90,
     ci_lo: float = 0.50,
-    figsize: Tuple[float, float] = (10.0, 5.0),
-    station_label_step: Optional[int] = 1,
+    figsize: tuple[float, float] = (10.0, 5.0),
+    station_label_step: int | None = 1,
     station_preset: str = "pseudosection",
-    station_style: Optional[Any] = None,
-    ax: Optional[Any] = None,
+    station_style: Any | None = None,
+    ax: Any | None = None,
 ):
     """Plot dropped, masked, recovered, and kept frequency decisions."""
     import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap, BoundaryNorm
+    from matplotlib.colors import BoundaryNorm, ListedColormap
 
     table = frequency_edit_decision_table(
         before_sites,
@@ -1410,11 +1417,11 @@ def regrid_to(
 def regrid_logspace(
     sites: Any,
     *,
-    fmin: Optional[float] = None,
-    fmax: Optional[float] = None,
-    band_hz: Optional[Sequence[float]] = None,
+    fmin: float | None = None,
+    fmax: float | None = None,
+    band_hz: Sequence[float] | None = None,
     per_decade: int = 6,
-    n_per_decade: Optional[int] = None,
+    n_per_decade: int | None = None,
     method: str = "nearest",
     inplace: bool = False,
     recursive: bool = True,
@@ -1503,7 +1510,7 @@ def smooth_mavg(
     sites: Any,
     *,
     k: int = 3,
-    window: Optional[int] = None,
+    window: int | None = None,
     on: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -1563,7 +1570,7 @@ def align_grid(
     sites: Any,
     *,
     mode: str = "union",
-    ref_station: Optional[str] = None,
+    ref_station: str | None = None,
     method: str = "nearest",
     inplace: bool = False,
     recursive: bool = True,
@@ -1614,7 +1621,7 @@ def align_grid(
 import matplotlib.pyplot as plt
 
 
-def _rel_err_block(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _rel_err_block(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return np.zeros(z.shape[0], dtype=float)
     # avg relative err across off-diagonals (fallback: all)
@@ -1637,12 +1644,12 @@ def plot_coverage_quality_heatmap(
     sites: Any,
     *,
     axis: str = "period",
-    figsize: Tuple[float, float] = (7.5, 4.5),
+    figsize: tuple[float, float] = (7.5, 4.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
@@ -1652,9 +1659,9 @@ def plot_coverage_quality_heatmap(
         verbose=verbose,
     )
     # assemble presence & quality per site on union grid
-    labs: List[str] = []
-    frs: List[np.ndarray] = []
-    quals: List[np.ndarray] = []
+    labs: list[str] = []
+    frs: list[np.ndarray] = []
+    quals: list[np.ndarray] = []
     for i, ed in enumerate(_iter_items(S)):
         nm = getattr(ed, "station", None) or getattr(ed, "name", None)
         nm = nm or f"site_{i}"
@@ -1753,13 +1760,13 @@ def plot_apparent_depth_psection(
     *,
     axis_y: str = "period",
     agg: str = "median",
-    figsize: Tuple[float, float] = (7.5, 4.5),
+    figsize: tuple[float, float] = (7.5, 4.5),
     log_color: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
@@ -1769,7 +1776,7 @@ def plot_apparent_depth_psection(
         verbose=verbose,
     )
     # gather rows: station, freq, period, depth
-    rows: List[Tuple[str, float, float, float]] = []
+    rows: list[tuple[str, float, float, float]] = []
     for i, ed in enumerate(_iter_items(S)):
         nm = getattr(ed, "station", None) or getattr(ed, "name", None)
         nm = nm or f"site_{i}"
@@ -1849,7 +1856,7 @@ def _det_phase_from_z(z: np.ndarray) -> np.ndarray:
     return np.degrees(np.angle(detz))
 
 
-def _tip_amp(t: Optional[np.ndarray]) -> Optional[np.ndarray]:
+def _tip_amp(t: np.ndarray | None) -> np.ndarray | None:
     if t is None:
         return None
     return np.sqrt(np.abs(t[:, 0]) ** 2 + np.abs(t[:, 1]) ** 2)
@@ -1866,15 +1873,15 @@ def _bands_auto(all_period: np.ndarray, n: int) -> np.ndarray:
 def plot_band_microstrips(
     sites: Any,
     *,
-    bands: Optional[Sequence[Tuple[float, float]]] = None,
+    bands: Sequence[tuple[float, float]] | None = None,
     n_bands: int = 6,
-    figsize: Tuple[float, float] = (9.0, 6.0),
+    figsize: tuple[float, float] = (9.0, 6.0),
     marker_size: float = 16.0,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
@@ -1930,7 +1937,7 @@ def plot_band_microstrips(
         rows, columns=["station", "band", "logrho", "phi", "tamp"]
     )
     # global min/max (robust) for color normalization
-    def _rng(s: pd.Series) -> Tuple[float, float]:
+    def _rng(s: pd.Series) -> tuple[float, float]:
         v = s.to_numpy()
         v = v[np.isfinite(v)]
         if v.size == 0:

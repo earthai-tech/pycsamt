@@ -17,7 +17,8 @@ recipes themselves.
 # instrument workflows and what each does.
 
 from pycsamt.pipeline import (
-    list_stratagem_presets, stratagem_preset_catalogue,
+    list_stratagem_presets,
+    stratagem_preset_catalogue,
 )
 
 print(stratagem_preset_catalogue())

@@ -213,7 +213,7 @@ class SectionStyle:
         from pycsamt.topo.config import PYCSAMT_TOPO
         return PYCSAMT_TOPO.is_active_for(self.axis.y_type)
 
-    def copy(self, **kw: Any) -> "SectionStyle":
+    def copy(self, **kw: Any) -> SectionStyle:
         """Return a modified deep copy of this section style."""
         new = copy.deepcopy(self)
         for key, value in kw.items():
@@ -430,7 +430,7 @@ class PyCSAMTSection:
         self,
         preset: str | None = None,
         **kw: Any,
-    ) -> Generator["PyCSAMTSection", None, None]:
+    ) -> Generator[PyCSAMTSection, None, None]:
         """Temporarily override section styles, then restore them."""
         snapshot = self._snapshot()
         try:

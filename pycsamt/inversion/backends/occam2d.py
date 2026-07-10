@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Occam2D adapter backend.
@@ -113,9 +112,11 @@ class Occam2DBackend(BaseInversionBackend):
         try:
             from ...models.occam2d import (
                 InputBuilder,
-                InversionResult as OccamResult,
                 OccamConfig,
                 OccamRunner,
+            )
+            from ...models.occam2d import (
+                InversionResult as OccamResult,
             )
         except ImportError as exc:
             raise ImportError("Occam2D backend requires pycsamt.models.occam2d.") from exc

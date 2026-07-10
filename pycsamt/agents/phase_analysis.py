@@ -127,19 +127,18 @@ class PhaseAnalysisAgent(BaseAgent):
         band           = period_range or self.band
 
         # ── phase tensor table ────────────────────────────────────────────────
-        from ..emtools.tensor import (
-            build_phase_tensor_table,
-            plot_phase_tensor_psection,
-            plot_phase_tensor_rose,
+        from ..emtools.dimensionality import (
+            classify_dimensionality,
+            plot_dim_confidence_grid,
         )
         from ..emtools.strike import (
             estimate_strike_consensus,
             plot_strike_analysis,
-            plot_strike_rose,
         )
-        from ..emtools.dimensionality import (
-            classify_dimensionality,
-            plot_dim_confidence_grid,
+        from ..emtools.tensor import (
+            build_phase_tensor_table,
+            plot_phase_tensor_psection,
+            plot_phase_tensor_rose,
         )
 
         pt_table  = None
@@ -271,7 +270,9 @@ class PhaseAnalysisAgent(BaseAgent):
         # 5. Optional: survey fingerprint (station × period, 4 metrics)
         if run_fingerprint:
             try:
-                from ..emtools.advanced import plot_survey_fingerprint
+                from ..emtools.advanced import (
+                    plot_survey_fingerprint,
+                )
                 fig_fp = plot_survey_fingerprint(
                     sites,
                     quantities=["skew", "ellipt", "theta", "s1"],
@@ -288,7 +289,9 @@ class PhaseAnalysisAgent(BaseAgent):
         # 6. Optional: Mohr circles for first station
         if run_mohr:
             try:
-                from ..emtools.advanced import plot_impedance_mohr_circles
+                from ..emtools.advanced import (
+                    plot_impedance_mohr_circles,
+                )
                 fig_mohr = plot_impedance_mohr_circles(
                     sites, n_periods=8, verbose=0,
                 )

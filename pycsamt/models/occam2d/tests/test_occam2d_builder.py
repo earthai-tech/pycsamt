@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """Tests for InputBuilder."""
 
-import pytest
-from pathlib import Path
 
 
 def test_builder_imports():

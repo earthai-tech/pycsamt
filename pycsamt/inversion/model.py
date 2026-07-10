@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Model containers used by :mod:`pycsamt.inversion`."""
@@ -11,7 +10,6 @@ from typing import Any
 import numpy as np
 
 from ..api.property import MetadataMixin, PyCSAMTObject
-
 from .doc import _inversion_param_docs
 
 __all__ = ["StartingModel", "ReferenceModel"]
@@ -30,7 +28,7 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
         self.validate()
 
     @classmethod
-    def default(cls, n_layers: int = 4) -> "StartingModel":
+    def default(cls, n_layers: int = 4) -> StartingModel:
         """Return a conservative layered starting model.
 
         Parameters
@@ -66,7 +64,7 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
         return cls(resistivities, thicknesses, name="default")
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "StartingModel":
+    def from_dict(cls, data: dict[str, Any]) -> StartingModel:
         """Build from singular or plural mapping keys.
 
         Parameters
@@ -101,7 +99,7 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
         )
 
     @classmethod
-    def coerce(cls, value: Any, *, n_layers: int = 4) -> "StartingModel":
+    def coerce(cls, value: Any, *, n_layers: int = 4) -> StartingModel:
         """Return *value* as a :class:`StartingModel`.
 
         Parameters
@@ -217,7 +215,7 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
 
 ReferenceModel = StartingModel
 
-StartingModel.__doc__ = """
+StartingModel.__doc__ = f"""
 Starting or recovered layered-earth model.
 
 Resistivities are linear ohm-m values. The final layer is a halfspace, so
@@ -229,10 +227,10 @@ as an optimizer starting point.
 
 Parameters
 ----------
-{resistivities}
-{thicknesses}
-{name}
-{metadata}
+{_inversion_param_docs.model.resistivities}
+{_inversion_param_docs.model.thicknesses}
+{_inversion_param_docs.model.name}
+{_inversion_param_docs.model.metadata}
 
 Notes
 -----
@@ -240,14 +238,7 @@ The model is deliberately small and backend-neutral. Built-in solvers optimize
 ``log10(resistivity)`` and ``log10(thickness)`` internally, but this public
 container stores physical linear values in ohm metres and metres.
 
-{examples}
+{_inversion_param_docs.model.examples}
 
-{references}
-""".format(
-    resistivities=_inversion_param_docs.model.resistivities,
-    thicknesses=_inversion_param_docs.model.thicknesses,
-    name=_inversion_param_docs.model.name,
-    metadata=_inversion_param_docs.model.metadata,
-    examples=_inversion_param_docs.model.examples,
-    references=_inversion_param_docs.model.references,
-)
+{_inversion_param_docs.model.references}
+"""

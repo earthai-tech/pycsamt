@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -30,7 +29,6 @@ Usage
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -44,9 +42,7 @@ from ....api.cli.options import (
     survey_option,
     verbose_option,
 )
-
-from ._base import site, _get_sites, _unwrap_edis
-
+from ._base import _get_sites, _unwrap_edis, site
 
 # ---------------------------------------------------------------------------
 # compute — sub-group
@@ -150,7 +146,9 @@ def compute_strike(
     configure_cli(log__level=verbose, log__color=not no_color)
     sites_obj = _get_sites(edi_source, survey_path, fresh, verbose)
 
-    from pycsamt.site.compute import strike_estimate  # noqa: PLC0415
+    from pycsamt.site.compute import (
+        strike_estimate,  # noqa: PLC0415
+    )
     try:
         result = strike_estimate(_unwrap_edis(sites_obj), method=method)
     except Exception as exc:  # noqa: BLE001
@@ -214,7 +212,9 @@ def compute_resistivity(
     configure_cli(log__level=verbose, log__color=not no_color)
     sites_obj = _get_sites(edi_source, survey_path, fresh, verbose)
 
-    from pycsamt.site.compute import res_at_freq  # noqa: PLC0415
+    from pycsamt.site.compute import (
+        res_at_freq,  # noqa: PLC0415
+    )
     try:
         result = res_at_freq(_unwrap_edis(sites_obj), target_freq, how=how)
     except Exception as exc:  # noqa: BLE001
@@ -302,7 +302,9 @@ def compute_phase_slope(
             )
         freq_band = (min(all_freqs), max(all_freqs))
 
-    from pycsamt.site.compute import phase_slope  # noqa: PLC0415
+    from pycsamt.site.compute import (
+        phase_slope,  # noqa: PLC0415
+    )
     try:
         result = phase_slope(_unwrap_edis(sites_obj), freq_band)
     except Exception as exc:  # noqa: BLE001
@@ -358,7 +360,9 @@ def compute_tipper(
     configure_cli(log__level=verbose, log__color=not no_color)
     sites_obj = _get_sites(edi_source, survey_path, fresh, verbose)
 
-    from pycsamt.site.compute import tipper_magnitude  # noqa: PLC0415
+    from pycsamt.site.compute import (
+        tipper_magnitude,  # noqa: PLC0415
+    )
     try:
         result = tipper_magnitude(_unwrap_edis(sites_obj))
     except Exception as exc:  # noqa: BLE001

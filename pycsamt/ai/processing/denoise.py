@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,12 +32,17 @@ Input tensor shape
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
-from .._base import BaseEMProcessor, EMCheckpoint
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
+from .._base import BaseEMProcessor
 
 __all__ = ["EMDenoiser", "prepare_z_features"]
 
@@ -52,7 +56,7 @@ def prepare_z_features(
     *,
     n_components: int = 4,
     log_amp: bool = True,
-    freq_ref: Optional[np.ndarray] = None,
+    freq_ref: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Extract an impedance feature array from a site collection.
@@ -77,15 +81,19 @@ def prepare_z_features(
         Feature array ready for :class:`EMDenoiser`.
     """
     try:
-        from pycsamt.emtools._core import ensure_sites, _iter_items, _get_z_block
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+            ensure_sites,
+        )
     except ImportError as exc:
         raise ImportError("emtools is required for prepare_z_features") from exc
 
     S = ensure_sites(sites, recursive=True, on_dup="replace")
-    rows: List[np.ndarray] = []
-    freq_grid: Optional[np.ndarray] = freq_ref
+    rows: list[np.ndarray] = []
+    freq_grid: np.ndarray | None = freq_ref
 
-    for i, ed in enumerate(_iter_items(S)):
+    for _i, ed in enumerate(_iter_items(S)):
         result = _get_z_block(ed, with_errors=False)
         if len(result) == 3:
             _, z, fr = result
@@ -97,7 +105,7 @@ def prepare_z_features(
         if freq_grid is None:
             freq_grid = fr
 
-        comps: List[np.ndarray] = []
+        comps: list[np.ndarray] = []
 
         def _amp(z_comp: np.ndarray) -> np.ndarray:
             amp = np.abs(z_comp)
@@ -142,7 +150,7 @@ def prepare_z_features(
 def _build_cae_torch(
     n_components: int,
     n_freqs: int,
-    channels: Tuple[int, ...],
+    channels: tuple[int, ...],
     dropout: float,
 ) -> Any:
     """1-D CAE using PyTorch Conv1d (channels-first)."""
@@ -190,7 +198,7 @@ def _build_cae_torch(
 def _build_cae_tf(
     n_components: int,
     n_freqs: int,
-    channels: Tuple[int, ...],
+    channels: tuple[int, ...],
     dropout: float,
 ) -> Any:
     """
@@ -202,7 +210,7 @@ def _build_cae_tf(
     """
     try:
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
     except ImportError as exc:
         raise ImportError("TensorFlow is required for EMDenoiser (TF backend)") from exc
 
@@ -293,12 +301,12 @@ class EMDenoiser(BaseEMProcessor):
 
     def __init__(
         self,
-        n_freqs: Optional[int] = None,
+        n_freqs: int | None = None,
         n_components: int = 4,
         *,
-        channels: Tuple[int, ...] = (64, 128, 64),
+        channels: tuple[int, ...] = (64, 128, 64),
         dropout: float = 0.1,
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         self.n_freqs = None if n_freqs is None else int(n_freqs)
         self.n_components = int(n_components)
@@ -309,10 +317,10 @@ class EMDenoiser(BaseEMProcessor):
         self._network: Any = None
         self._use_numpy: bool = False
         self._is_fitted: bool = False
-        self._backend_name: Optional[str] = None
-        self._x_mean: Optional[np.ndarray] = None
-        self._x_std: Optional[np.ndarray] = None
-        self._history: Dict[str, list] = {}
+        self._backend_name: str | None = None
+        self._x_mean: np.ndarray | None = None
+        self._x_std: np.ndarray | None = None
+        self._history: dict[str, list] = {}
 
     # ─── BaseEMProcessor interface ────────────────────────────────────────
 
@@ -325,9 +333,9 @@ class EMDenoiser(BaseEMProcessor):
         batch_size: int = 64,
         lr: float = 1e-3,
         val_frac: float = 0.1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "EMDenoiser":
+    ) -> EMDenoiser:
         """
         Train the denoiser on clean impedance data.
 
@@ -453,7 +461,7 @@ class EMDenoiser(BaseEMProcessor):
     ) -> None:
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         dev = resolve_device(self.device)
         self._network = _build_cae_torch(
@@ -467,7 +475,7 @@ class EMDenoiser(BaseEMProcessor):
         mse = nn.MSELoss()
         per_ch_std = Xtr.std(axis=(0, 2), keepdims=True)
 
-        def _make_noisy(batch: np.ndarray) -> "torch.Tensor":
+        def _make_noisy(batch: np.ndarray) -> torch.Tensor:
             noise = rng.normal(0.0, noise_level, batch.shape).astype(np.float32)
             noise *= per_ch_std
             return torch.from_numpy(batch + noise).to(dev)
@@ -570,7 +578,7 @@ class EMDenoiser(BaseEMProcessor):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "n_freqs": self.n_freqs,   # may still be None if save() called before fit()
             "n_components": self.n_components,
@@ -579,8 +587,8 @@ class EMDenoiser(BaseEMProcessor):
             "device": self.device,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._x_mean is not None:
             out["_x_mean"] = self._x_mean
             out["_x_std"] = self._x_std
@@ -591,7 +599,7 @@ class EMDenoiser(BaseEMProcessor):
                 out[k] = v
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         backend_blob = weights.pop("_backend", None)

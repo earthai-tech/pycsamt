@@ -8,18 +8,24 @@ what happened before EDI/impedance processing.
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Mapping, Optional
-
 import math
+from collections import defaultdict
+from collections.abc import Iterable, Mapping
+from typing import (
+    Any,
+)
 
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 import numpy as np
+from matplotlib.lines import Line2D
 
 from .core import PacketKind, TelemetryPacket
 from .edge import EdgeProcessingResult
-from .power import EnergyConfig, EnergyEstimate, estimate_energy_budget
+from .power import (
+    EnergyConfig,
+    EnergyEstimate,
+    estimate_energy_budget,
+)
 from .session import FieldSession
 from .sync import SyncStatus
 
@@ -49,11 +55,11 @@ _LEVEL_COLORS = {
 def plot_field_dashboard(
     session: FieldSession | Mapping[str, Any],
     *,
-    now: Optional[float] = None,
+    now: float | None = None,
     figsize: tuple[float, float] = (13.0, 8.0),
     station_axis: str = "auto",
-    title: Optional[str] = None,
-    output_path: Optional[str] = None,
+    title: str | None = None,
+    output_path: str | None = None,
     close: bool = False,
 ) -> Any:
     """Plot a compact IoT acquisition dashboard.
@@ -128,7 +134,7 @@ def plot_edge_qc_summary(
     *,
     figsize: tuple[float, float] = (12.0, 7.5),
     title: str = "Edge QC summary",
-    output_path: Optional[str] = None,
+    output_path: str | None = None,
     close: bool = False,
 ) -> Any:
     """Plot edge quality-control decisions and channel metrics.
@@ -183,7 +189,7 @@ def plot_power_budget(
     *,
     figsize: tuple[float, float] = (12.0, 7.5),
     title: str = "IoT power budget",
-    output_path: Optional[str] = None,
+    output_path: str | None = None,
     close: bool = False,
 ) -> Any:
     """Plot IoT energy budget, runtime, and power-state summaries.
@@ -237,10 +243,10 @@ def plot_sync_quality(
     *,
     figsize: tuple[float, float] = (12.0, 7.5),
     title: str = "Clock synchronisation quality",
-    tolerance_ms: Optional[float] = 1.0,
-    max_drift_ppm: Optional[float] = None,
-    max_jitter_ms: Optional[float] = None,
-    output_path: Optional[str] = None,
+    tolerance_ms: float | None = 1.0,
+    max_drift_ppm: float | None = None,
+    max_jitter_ms: float | None = None,
+    output_path: str | None = None,
     close: bool = False,
 ) -> Any:
     """Plot clock offset, drift, jitter, GPS lock, and quality grades.
@@ -300,15 +306,15 @@ def _as_session(session: FieldSession | Mapping[str, Any]) -> FieldSession:
     raise TypeError("session must be a FieldSession or session mapping.")
 
 
-def _sync_rows(sync: Any) -> List[Dict[str, Any]]:
+def _sync_rows(sync: Any) -> list[dict[str, Any]]:
     items = _sync_items(sync)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         rows.append(_sync_row(item, index=index))
     return rows
 
 
-def _sync_items(sync: Any) -> List[Any]:
+def _sync_items(sync: Any) -> list[Any]:
     if isinstance(sync, FieldSession):
         return [
             packet for packet in sync.packets
@@ -323,7 +329,7 @@ def _sync_items(sync: Any) -> List[Any]:
             return [TelemetryPacket(**dict(sync))]
         return [SyncStatus(**dict(sync))]
     if isinstance(sync, Iterable) and not isinstance(sync, (str, bytes)):
-        out: List[Any] = []
+        out: list[Any] = []
         for item in sync:
             out.extend(_sync_items(item))
         return out
@@ -333,7 +339,7 @@ def _sync_items(sync: Any) -> List[Any]:
     )
 
 
-def _sync_row(item: Any, *, index: int) -> Dict[str, Any]:
+def _sync_row(item: Any, *, index: int) -> dict[str, Any]:
     if isinstance(item, SyncStatus):
         row = item.as_dict()
     elif isinstance(item, TelemetryPacket):
@@ -360,9 +366,9 @@ def _sync_row(item: Any, *, index: int) -> Dict[str, Any]:
 
 def _plot_sync_offset(
     ax: Any,
-    rows: List[Mapping[str, Any]],
+    rows: list[Mapping[str, Any]],
     *,
-    tolerance_ms: Optional[float],
+    tolerance_ms: float | None,
 ) -> None:
     ax.set_title("Clock offset")
     if not rows:
@@ -390,10 +396,10 @@ def _plot_sync_offset(
 
 def _plot_sync_drift_jitter(
     ax: Any,
-    rows: List[Mapping[str, Any]],
+    rows: list[Mapping[str, Any]],
     *,
-    max_drift_ppm: Optional[float],
-    max_jitter_ms: Optional[float],
+    max_drift_ppm: float | None,
+    max_jitter_ms: float | None,
 ) -> None:
     ax.set_title("Drift and jitter")
     if not rows:
@@ -421,7 +427,7 @@ def _plot_sync_drift_jitter(
     ax.grid(True, axis="y", alpha=0.25)
 
 
-def _plot_sync_quality_counts(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_sync_quality_counts(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Quality grades")
     if not rows:
         _empty_panel(ax, "No quality data")
@@ -438,7 +444,7 @@ def _plot_sync_quality_counts(ax: Any, rows: List[Mapping[str, Any]]) -> None:
 
 def _plot_sync_reference_points(
     ax: Any,
-    rows: List[Mapping[str, Any]],
+    rows: list[Mapping[str, Any]],
 ) -> None:
     ax.set_title("Reference support and GPS lock")
     if not rows:
@@ -467,7 +473,7 @@ def _plot_sync_reference_points(
     ax.legend(handles=handles, frameon=False, fontsize=8, loc="best")
 
 
-def _sync_labels(rows: List[Mapping[str, Any]]) -> List[str]:
+def _sync_labels(rows: list[Mapping[str, Any]]) -> list[str]:
     return [
         str(row.get("device_id") or f"device-{idx + 1}")
         for idx, row in enumerate(rows)
@@ -479,7 +485,7 @@ def _sync_quality_color(quality: str) -> str:
     return _LEVEL_COLORS.get(quality, "#9e9e9e")
 
 
-def _optional_bool(value: Any) -> Optional[bool]:
+def _optional_bool(value: Any) -> bool | None:
     if value is None or value == "":
         return None
     if isinstance(value, str):
@@ -491,15 +497,15 @@ def _optional_bool(value: Any) -> Optional[bool]:
     return bool(value)
 
 
-def _power_rows(power: Any) -> List[Dict[str, Any]]:
+def _power_rows(power: Any) -> list[dict[str, Any]]:
     items = _power_items(power)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         rows.append(_power_row(item, index=index))
     return rows
 
 
-def _power_items(power: Any) -> List[Any]:
+def _power_items(power: Any) -> list[Any]:
     if isinstance(power, FieldSession):
         return [
             packet for packet in power.packets
@@ -516,7 +522,7 @@ def _power_items(power: Any) -> List[Any]:
             return [EnergyConfig(**dict(power))]
         return [EnergyEstimate(**dict(power))]
     if isinstance(power, Iterable) and not isinstance(power, (str, bytes)):
-        out: List[Any] = []
+        out: list[Any] = []
         for item in power:
             out.extend(_power_items(item))
         return out
@@ -526,8 +532,8 @@ def _power_items(power: Any) -> List[Any]:
     )
 
 
-def _power_row(item: Any, *, index: int) -> Dict[str, Any]:
-    device_id: Optional[str] = None
+def _power_row(item: Any, *, index: int) -> dict[str, Any]:
+    device_id: str | None = None
     if isinstance(item, EnergyConfig):
         device_id = item.device_id
         estimate = estimate_energy_budget(item)
@@ -563,7 +569,7 @@ def _power_row(item: Any, *, index: int) -> Dict[str, Any]:
     return row
 
 
-def _plot_power_load_harvest(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_power_load_harvest(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Daily load and harvest")
     if not rows:
         _empty_panel(ax, "No power data")
@@ -582,7 +588,7 @@ def _plot_power_load_harvest(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     ax.legend(frameon=False)
 
 
-def _plot_power_runtime(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_power_runtime(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Runtime and no-harvest autonomy")
     if not rows:
         _empty_panel(ax, "No runtime data")
@@ -614,7 +620,7 @@ def _plot_power_runtime(ax: Any, rows: List[Mapping[str, Any]]) -> None:
             ax.text(idx - width / 2, runtime[idx], "inf", ha="center", fontsize=8)
 
 
-def _plot_power_breakdown(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_power_breakdown(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Daily load breakdown")
     if not rows:
         _empty_panel(ax, "No load data")
@@ -650,7 +656,7 @@ def _plot_power_breakdown(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     ax.legend(frameon=False, fontsize=8)
 
 
-def _plot_power_states(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_power_states(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Power states and issues")
     if not rows:
         _empty_panel(ax, "No states")
@@ -662,7 +668,7 @@ def _plot_power_states(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     ax.bar(labels, list(counts.values()), color=colors, edgecolor="black")
     ax.set_ylabel("Device count")
     ax.tick_params(axis="x", rotation=25)
-    issue_counts: Dict[str, int] = defaultdict(int)
+    issue_counts: dict[str, int] = defaultdict(int)
     for row in rows:
         for issue in row.get("issues") or []:
             issue_counts[str(issue)] += 1
@@ -686,7 +692,7 @@ def _plot_power_states(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     ax.grid(True, axis="y", alpha=0.25)
 
 
-def _power_labels(rows: List[Mapping[str, Any]]) -> List[str]:
+def _power_labels(rows: list[Mapping[str, Any]]) -> list[str]:
     return [str(row.get("device_id") or f"device-{i + 1}") for i, row in enumerate(rows)]
 
 
@@ -713,9 +719,9 @@ def _float_allow_inf(value: Any) -> float:
         return float("nan")
 
 
-def _edge_qc_rows(edge: Any) -> List[Dict[str, Any]]:
+def _edge_qc_rows(edge: Any) -> list[dict[str, Any]]:
     items = _edge_items(edge)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         if isinstance(item, EdgeProcessingResult):
             rows.extend(_rows_from_edge_result(item, result_index=index))
@@ -724,7 +730,7 @@ def _edge_qc_rows(edge: Any) -> List[Dict[str, Any]]:
     return rows
 
 
-def _edge_items(edge: Any) -> List[Any]:
+def _edge_items(edge: Any) -> list[Any]:
     if isinstance(edge, FieldSession):
         return [packet for packet in edge.packets if packet.kind is PacketKind.QC]
     if isinstance(edge, EdgeProcessingResult):
@@ -740,7 +746,7 @@ def _edge_items(edge: Any) -> List[Any]:
             return [EdgeProcessingResult(**dict(edge))]
         raise TypeError("edge mapping must describe a session, packet, or result.")
     if isinstance(edge, Iterable) and not isinstance(edge, (str, bytes)):
-        out: List[Any] = []
+        out: list[Any] = []
         for item in edge:
             out.extend(_edge_items(item))
         return out
@@ -754,7 +760,7 @@ def _rows_from_edge_result(
     result: EdgeProcessingResult,
     *,
     result_index: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     metrics = dict(result.metrics or {})
     base = dict(
         result_index=result_index,
@@ -767,7 +773,7 @@ def _rows_from_edge_result(
         reasons=list(result.reasons or []),
         warnings=_split_reasons(metrics.get("warnings")),
     )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for channel in result.channels:
         row = dict(base)
         row.update(
@@ -794,7 +800,7 @@ def _rows_from_qc_packet(
     packet: TelemetryPacket | Mapping[str, Any],
     *,
     result_index: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     pkt = packet if isinstance(packet, TelemetryPacket) else TelemetryPacket(**dict(packet))
     payload = dict(pkt.payload or {})
     metrics = dict(payload.get("metrics") or {})
@@ -824,7 +830,7 @@ def _rows_from_qc_packet(
         warnings=warnings,
     )
     channels = payload.get("channels")
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     if isinstance(channels, list) and channels and isinstance(channels[0], Mapping):
         for channel in channels:
             row = dict(base)
@@ -856,7 +862,7 @@ def _rows_from_qc_packet(
     return rows
 
 
-def _split_reasons(value: Any) -> List[str]:
+def _split_reasons(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
@@ -866,7 +872,7 @@ def _split_reasons(value: Any) -> List[str]:
     return [str(value)]
 
 
-def _plot_qc_decisions(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_qc_decisions(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("QC decisions")
     if not rows:
         _empty_panel(ax, "No QC rows")
@@ -882,7 +888,7 @@ def _plot_qc_decisions(ax: Any, rows: List[Mapping[str, Any]]) -> None:
         ax.text(idx, value + 0.05, str(value), ha="center", fontsize=8)
 
 
-def _plot_qc_coverage(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_qc_coverage(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Finite coverage by channel")
     _plot_qc_metric(
         ax,
@@ -894,7 +900,7 @@ def _plot_qc_coverage(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     )
 
 
-def _plot_qc_spikes(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_qc_spikes(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Spike fraction by channel")
     _plot_qc_metric(
         ax,
@@ -909,11 +915,11 @@ def _plot_qc_spikes(ax: Any, rows: List[Mapping[str, Any]]) -> None:
 
 def _plot_qc_metric(
     ax: Any,
-    rows: List[Mapping[str, Any]],
+    rows: list[Mapping[str, Any]],
     *,
     key: str,
     ylabel: str,
-    ylim: tuple[float, Optional[float]],
+    ylim: tuple[float, float | None],
     thresholds: tuple[float, ...] = (),
     high_bad: bool = False,
 ) -> None:
@@ -940,9 +946,9 @@ def _plot_qc_metric(
     ax.grid(True, axis="y", alpha=0.25)
 
 
-def _plot_qc_reasons(ax: Any, rows: List[Mapping[str, Any]]) -> None:
+def _plot_qc_reasons(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Reasons and warnings")
-    reason_counts: Dict[str, int] = defaultdict(int)
+    reason_counts: dict[str, int] = defaultdict(int)
     for row in rows:
         for reason in list(row.get("reasons") or []) + list(row.get("channel_reasons") or []):
             reason_counts[str(reason)] += 1
@@ -962,7 +968,7 @@ def _plot_qc_reasons(ax: Any, rows: List[Mapping[str, Any]]) -> None:
     ax.grid(True, axis="x", alpha=0.25)
 
 
-def _qc_labels(rows: List[Mapping[str, Any]]) -> List[str]:
+def _qc_labels(rows: list[Mapping[str, Any]]) -> list[str]:
     labels = []
     for row in rows:
         station = row.get("station")
@@ -987,8 +993,8 @@ def _decision_color(decision: str) -> str:
 def _dashboard_data(
     session: FieldSession,
     *,
-    now: Optional[float],
-) -> Dict[str, Any]:
+    now: float | None,
+) -> dict[str, Any]:
     pipeline = session.to_pipeline_input()
     stations = [dict(row) for row in pipeline.get("stations", [])]
     packets = [_packet_row(packet) for packet in session.packets]
@@ -1011,7 +1017,7 @@ def _dashboard_data(
     )
 
 
-def _packet_row(packet: TelemetryPacket) -> Dict[str, Any]:
+def _packet_row(packet: TelemetryPacket) -> dict[str, Any]:
     row = packet.as_dict()
     payload = dict(row.get("payload") or {})
     row["kind"] = (
@@ -1045,7 +1051,7 @@ def _payload_first(payload: Mapping[str, Any], *keys: str) -> Any:
     return None
 
 
-def _accepted_from_payload(payload: Mapping[str, Any]) -> Optional[bool]:
+def _accepted_from_payload(payload: Mapping[str, Any]) -> bool | None:
     value = _payload_first(payload, "accepted", "edge_accepted", "qc_accepted")
     if value is not None:
         return _as_bool(value)
@@ -1072,8 +1078,8 @@ def _float_or_nan(value: Any) -> float:
 def _latest_station_metrics(
     packets: Iterable[Mapping[str, Any]],
     session: FieldSession,
-) -> Dict[str, Dict[str, Any]]:
-    latest: Dict[str, Dict[str, Any]] = defaultdict(dict)
+) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = defaultdict(dict)
     by_device = {
         device_id: device.station
         for device_id, device in session.devices.items()
@@ -1160,7 +1166,7 @@ def _plot_station_panel(ax: Any, data: Mapping[str, Any], *, station_axis: str) 
     ax.grid(True, alpha=0.25)
 
 
-def _use_map_axis(stations: List[Mapping[str, Any]], station_axis: str) -> bool:
+def _use_map_axis(stations: list[Mapping[str, Any]], station_axis: str) -> bool:
     mode = station_axis.lower()
     if mode not in {"auto", "profile", "map"}:
         raise ValueError("station_axis must be 'auto', 'profile', or 'map'.")

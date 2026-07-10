@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Bridge from the desktop app to the Agent Master web interface."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 import subprocess
 import sys
 import threading
 import time
+import webbrowser
+from dataclasses import dataclass
 from urllib.error import URLError
 from urllib.request import urlopen
-import webbrowser
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765

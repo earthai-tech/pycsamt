@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -15,15 +14,26 @@ is not installed.  Install diskcache for background agent execution:
 
 from __future__ import annotations
 
-from dash import ALL, clientside_callback, ctx, dcc, html, Input, Output, State, no_update
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
 
-from pycsamt.app.desktop.controllers.data_controller import DataController
-from pycsamt.app.web.cache import cache_set, cache_merge_sites
+from pycsamt.app.desktop.controllers.data_controller import (
+    DataController,
+)
+from pycsamt.app.web.cache import cache_merge_sites, cache_set
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import (
-    decode_upload_to_tempdir,
     decode_folder_upload_to_tempdir,
-    find_edi_files_by_line,
+    decode_upload_to_tempdir,
 )
 
 _MODE_REPLACE = "replace"
@@ -67,7 +77,6 @@ def _register_modal_toggle(app) -> None:
         prevent_initial_call=True,
     )
     def toggle_modal(_nb, _nadd, _close, _cta, _cl, _cp, _ca, _cv, is_open):
-        from dash import html as _html
         tid = ctx.triggered_id
         if tid == "modal-close-btn":
             return False, no_update, no_update, no_update, no_update, no_update

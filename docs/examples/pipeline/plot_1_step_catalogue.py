@@ -16,7 +16,12 @@ steps across eight categories, and this example browses it.
 # :class:`~pycsamt.pipeline.StepSpec` entries. Together they answer "what
 # can this pipeline do?".
 
-from pycsamt.pipeline import categories, list_steps, step_codes, lookup_step
+from pycsamt.pipeline import (
+    categories,
+    list_steps,
+    lookup_step,
+    step_codes,
+)
 
 cats = categories()
 print(f"{len(step_codes())} steps across {len(cats)} categories\n")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -15,11 +14,12 @@ import pickle
 import unittest
 
 import matplotlib
+
 matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 
-from pycsamt.agents.coordinator import AgentCoordinator
 from pycsamt.agents._base import AgentResult
+from pycsamt.agents.coordinator import AgentCoordinator
 
 
 class TestCheckpointSafe(unittest.TestCase):

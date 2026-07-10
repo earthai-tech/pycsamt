@@ -16,8 +16,9 @@ from collections.abc import Sequence
 import numpy as np
 
 from ...api.section import PYCSAMT_SECTION, SectionStyle
-from ...api.station import PYCSAMT_STATION_RENDERING, StationMarkerStyle
-
+from ...api.station import (
+    PYCSAMT_STATION_RENDERING,
+)
 from .base import ModEmBase
 from .results import InversionResult
 
@@ -812,7 +813,7 @@ class PlotSection(_ModEmPlotBase):
         st_names: list[str] = []
         if self.show_stations and r.data_obs is not None:
             mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
-            for nm, (x_m, y_m, z_m) in r.data_obs.site_coords.items():
+            for nm, (x_m, y_m, _z_m) in r.data_obs.site_coords.items():
                 perp = y_m if self.direction == "NS" else x_m
                 along = x_m if self.direction == "NS" else y_m
                 if abs(perp - self.profile_offset) <= self.station_tol:
@@ -1245,8 +1246,10 @@ class PlotResponse(_ModEmPlotBase):
     def plot(self):
         """Return a matplotlib figure with the per-station response panels."""
         import contextlib
-        import matplotlib.pyplot as plt
+
         import matplotlib.gridspec as mgridspec
+        import matplotlib.pyplot as plt
+
         from ...api.style import PYCSAMT_STYLE
 
         r = self._check_result()

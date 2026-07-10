@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Real-data integration tests for models/occam2d/plot.py.
 
 Two data sources are exercised:
@@ -25,14 +24,15 @@ Run one group:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.figure
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------
 # Data paths
@@ -278,25 +278,33 @@ class TestPycsamtData:
 
     @_SKIP_PYCSAMT
     def test_response_grid_returns_figure(self, result_pycsamt):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_pycsamt).plot()
         assert _is_figure(fig)
 
     @_SKIP_PYCSAMT
     def test_response_grid_has_subpanels(self, result_pycsamt):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_pycsamt).plot()
         assert len(fig.get_axes()) >= 2
 
     @_SKIP_PYCSAMT
     def test_response_grid_te_only(self, result_pycsamt):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_pycsamt, modes=["TE"]).plot()
         assert _is_figure(fig)
 
     @_SKIP_PYCSAMT
     def test_response_grid_subset_sites(self, result_pycsamt):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         sites = np.unique(result_pycsamt.response.site_indices).tolist()
         fig = PlotResponseGrid(result=result_pycsamt, station=sites[:5]).plot()
         assert _is_figure(fig)
@@ -428,19 +436,25 @@ class TestOccamMT2:
 
     @_SKIP_TEST2
     def test_response_grid_returns_figure(self, result_test2):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_test2).plot()
         assert _is_figure(fig)
 
     @_SKIP_TEST2
     def test_response_grid_subpanels_ge_2(self, result_test2):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_test2).plot()
         assert len(fig.get_axes()) >= 2
 
     @_SKIP_TEST2
     def test_response_grid_first_site_subset(self, result_test2):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         sites = np.unique(result_test2.response.site_indices).tolist()
         fig = PlotResponseGrid(result=result_test2, station=sites[:2]).plot()
         assert _is_figure(fig)
@@ -537,20 +551,26 @@ class TestOccamMT4:
 
     @_SKIP_TEST4
     def test_response_grid_returns_figure(self, result_test4):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_test4).plot()
         assert _is_figure(fig)
 
     @_SKIP_TEST4
     def test_response_grid_subset_sites(self, result_test4):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         sites = np.unique(result_test4.response.site_indices).tolist()
         fig = PlotResponseGrid(result=result_test4, station=sites[:3]).plot()
         assert _is_figure(fig)
 
     @_SKIP_TEST4
     def test_response_grid_tm_only(self, result_test4):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         fig = PlotResponseGrid(result=result_test4, modes=["TM"]).plot()
         assert _is_figure(fig)
 
@@ -579,7 +599,9 @@ class TestCrossDataset:
         reason="needs OCCAM2DMT Test2 and Test4 data",
     )
     def test_response_grid_two_occam_examples(self, result_test2, result_test4):
-        from pycsamt.models.occam2d.plot import PlotResponseGrid
+        from pycsamt.models.occam2d.plot import (
+            PlotResponseGrid,
+        )
         for result in (result_test2, result_test4):
             fig = PlotResponseGrid(result=result).plot()
             assert _is_figure(fig)

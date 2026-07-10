@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,14 +6,14 @@ from __future__ import annotations
 import pytest
 
 from pycsamt.seg.property import (
-    PlainMeta,
-    References,
+    Copyright,
     Person,
+    PlainMeta,
+    Processing,
+    PropertiesMixin,
+    References,
     Software,
     Source,
-    Processing,
-    Copyright,
-    PropertiesMixin,
 )
 
 __all__ = [

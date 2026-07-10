@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 pycsamt/config.py
 
@@ -7,7 +6,8 @@ Utilities for managing the pycsamt data directory.
 import os
 import shutil
 import warnings
-import yaml 
+
+import yaml
 
 
 def get_data_home(data_home: str = None) -> str:
@@ -52,7 +52,7 @@ def get_data_home(data_home: str = None) -> str:
         os.makedirs(data_home, exist_ok=True)
     except OSError as e:
         warnings.warn(
-            f"Could not create pycsamt data home {data_home}: {e}"
+            f"Could not create pycsamt data home {data_home}: {e}", stacklevel=2
         )
     return data_home
 
@@ -87,7 +87,7 @@ def remove_data(data_home: str = None) -> None:
         shutil.rmtree(data_dir)
     else:
         warnings.warn(
-            f"pycsamt data directory not found: {data_dir}"
+            f"pycsamt data directory not found: {data_dir}", stacklevel=2
         )
 
 
@@ -131,7 +131,7 @@ def get_config_home(config_home: str = None) -> str:
         os.makedirs(config_home, exist_ok=True)
     except OSError as e:
         warnings.warn(
-            f"Could not create config home {config_home}: {e}"
+            f"Could not create config home {config_home}: {e}", stacklevel=2
         )
     return config_home
 
@@ -175,5 +175,5 @@ def load_config(
         raise FileNotFoundError(
             f"Config file not found: {path}"
         )
-    with open(path, "rt", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)

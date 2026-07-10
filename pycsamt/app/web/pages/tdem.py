@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """TDEM analysis page — folder browser, fixed tab bar, per-category figures,
@@ -7,13 +6,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 from pycsamt.app.desktop.controllers.tdem_controller import (
-    DECAY_PLOTS, SECTION_PLOTS, MAP_PLOTS, DASHBOARD_PLOTS,
+    DASHBOARD_PLOTS,
+    DECAY_PLOTS,
+    MAP_PLOTS,
+    SECTION_PLOTS,
 )
-from pycsamt.app.web.layout import IDs, _icon
+from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import empty_src
 
 PAGE_ID = "tdem"

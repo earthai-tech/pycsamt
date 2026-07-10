@@ -53,9 +53,11 @@ Style sections
 from __future__ import annotations
 
 import copy
+from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import dataclass, field, fields as dc_fields
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from dataclasses import dataclass, field
+from dataclasses import fields as dc_fields
+from typing import Any
 
 import numpy as np
 
@@ -65,7 +67,6 @@ from ._rose_style import (
     resolve_rose_style,
 )
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # MultilineStyle
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -73,7 +74,7 @@ from ._rose_style import (
 # Maps common color names → sequential matplotlib cmaps (dark-first variant)
 # Map base_color → sequential cmap where HIGH fraction = DARK shade.
 # We use non-reversed cmaps so linspace(dark, light) = dark-first.
-_COLOR_TO_CMAP: Dict[str, str] = {
+_COLOR_TO_CMAP: dict[str, str] = {
     "blue":    "Blues",    "b":      "Blues",
     "red":     "Reds",     "r":      "Reds",
     "green":   "Greens",   "g":      "Greens",
@@ -129,13 +130,13 @@ class MultilineStyle:
 
     mode:           str            = "gradient"
     base_color:     str            = "blue"
-    cmap:           Optional[str]  = None
+    cmap:           str | None  = None
     dark:           float          = 0.85
     light:          float          = 0.25
     reverse:        bool           = False
     lw:             float          = 1.5
     alpha:          float          = 0.85
-    cycle_palette:  List[str]      = field(default_factory=lambda: [
+    cycle_palette:  list[str]      = field(default_factory=lambda: [
         "#1f77b4", "#d62728", "#2ca02c", "#ff7f0e",
         "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
         "#bcbd22", "#17becf",
@@ -143,7 +144,7 @@ class MultilineStyle:
 
     # ── public API ────────────────────────────────────────────────────────────
 
-    def colors(self, n: int) -> List[Any]:
+    def colors(self, n: int) -> list[Any]:
         """Return *n* colours for a multi-line plot.
 
         Parameters
@@ -183,7 +184,7 @@ class MultilineStyle:
             fracs = fracs[::-1]
         return [cm(float(f)) for f in fracs]
 
-    def line_kwargs(self, idx: int, n: int, **overrides: Any) -> Dict[str, Any]:
+    def line_kwargs(self, idx: int, n: int, **overrides: Any) -> dict[str, Any]:
         """Return ``ax.plot`` keyword arguments for line *idx* of *n*.
 
         Parameters
@@ -201,11 +202,11 @@ class MultilineStyle:
         >>> ax.plot(x, y, **kw)
         """
         c = self.colors(n)[idx]
-        d: Dict[str, Any] = dict(color=c, lw=self.lw, alpha=self.alpha)
+        d: dict[str, Any] = dict(color=c, lw=self.lw, alpha=self.alpha)
         d.update(overrides)
         return d
 
-    def copy(self, **kw: Any) -> "MultilineStyle":
+    def copy(self, **kw: Any) -> MultilineStyle:
         """Return a modified copy."""
         new = copy.copy(self)
         for k, v in kw.items():
@@ -261,14 +262,14 @@ class _MTComp:
     predicted_color: str   = ""  # empty → fall back to `color`
     predicted_ls:    str   = ":" # line style for model-predicted overlay
 
-    def plot_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def plot_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for :func:`matplotlib.axes.Axes.plot`.
 
         Examples
         --------
         >>> ax.plot(period, rho_xy, **style.mt.xy.plot_kwargs())
         """
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.color, ls=self.ls, lw=self.lw,
             marker=self.marker, ms=self.ms,
             mfc=self.mfc, mew=self.mew, alpha=self.alpha,
@@ -278,7 +279,7 @@ class _MTComp:
         d.update(overrides)
         return d
 
-    def errorbar_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def errorbar_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for :func:`matplotlib.axes.Axes.errorbar`.
 
         The error bars are drawn in a 50 %-transparent version of the
@@ -300,7 +301,7 @@ class _MTComp:
         d.update(overrides)
         return d
 
-    def copy(self, **kw: Any) -> "_MTComp":
+    def copy(self, **kw: Any) -> _MTComp:
         """Return a modified copy."""
         new = copy.copy(self)
         for k, v in kw.items():
@@ -402,7 +403,7 @@ class MTComponentStyle:
                 f"Valid keys: {valid}"
             ) from None
 
-    def copy(self) -> "MTComponentStyle":
+    def copy(self) -> MTComponentStyle:
         """Return a deep copy."""
         return copy.deepcopy(self)
 
@@ -480,7 +481,7 @@ class CorrectionStyle:
         label="after",
     ))
 
-    def copy(self) -> "CorrectionStyle":
+    def copy(self) -> CorrectionStyle:
         """Return a deep copy."""
         return copy.deepcopy(self)
 
@@ -520,9 +521,9 @@ class RawDataStyle:
     elinewidth: float = 0.6
     label: str = "raw"
 
-    def plot_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def plot_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Return keyword arguments for raw-data line plots."""
-        kwargs: Dict[str, Any] = dict(
+        kwargs: dict[str, Any] = dict(
             color=self.color,
             ls=self.ls,
             lw=self.lw,
@@ -537,7 +538,7 @@ class RawDataStyle:
         kwargs.update(overrides)
         return kwargs
 
-    def errorbar_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def errorbar_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Return keyword arguments for raw-data error bars."""
         kwargs = self.plot_kwargs()
         kwargs.update(
@@ -548,7 +549,7 @@ class RawDataStyle:
         kwargs.update(overrides)
         return kwargs
 
-    def copy(self, **kw: Any) -> "RawDataStyle":
+    def copy(self, **kw: Any) -> RawDataStyle:
         """Return a modified copy."""
         new = copy.copy(self)
         for k, v in kw.items():
@@ -561,7 +562,7 @@ class RawDataStyle:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Recognised c_by values and their natural cmaps / symmetry flag
-_PT_CMAP_DEFAULTS: Dict[str, Tuple[str, bool]] = {
+_PT_CMAP_DEFAULTS: dict[str, tuple[str, bool]] = {
     "skew":      ("RdBu_r",  True),   # diverging — symmetric around 0
     "beta":      ("RdBu_r",  True),
     "|skew|":    ("Reds",    False),   # absolute → sequential
@@ -694,14 +695,14 @@ class PhaseTensorEllipseStyle:
     # ── sizing ────────────────────────────────────────────────────────────────
     normalise_by:  str             = "cell"
     scale:         float           = 0.85
-    s1_ref:        Optional[float] = None
+    s1_ref:        float | None = None
     min_aspect:    float           = 0.18
 
     # ── fill colour ───────────────────────────────────────────────────────────
     c_by:           str                            = "skew"
-    cmap:           Optional[str]                  = "RdBu_r"
-    clim:           Optional[Tuple[float, float]]  = None
-    clim_pct:       Tuple[float, float]            = (5.0, 95.0)
+    cmap:           str | None                  = "RdBu_r"
+    clim:           tuple[float, float] | None  = None
+    clim_pct:       tuple[float, float]            = (5.0, 95.0)
     symmetric_clim: bool                           = True
     alpha:          float                          = 0.92
 
@@ -710,7 +711,7 @@ class PhaseTensorEllipseStyle:
     linewidth:  float = 0.2
 
     # ── 3-D cell marker ───────────────────────────────────────────────────────
-    skew_threshold: Optional[float] = 3.0
+    skew_threshold: float | None = 3.0
     mark_3d:        bool            = True
     lw_3d_factor:   float           = 3.0  # applied when plot functions support it
 
@@ -740,7 +741,7 @@ class PhaseTensorEllipseStyle:
         _, natural_sym = _PT_CMAP_DEFAULTS.get(self.c_by, ("RdBu_r", True))
         return self.symmetric_clim and natural_sym
 
-    def to_kwargs(self) -> Dict[str, Any]:
+    def to_kwargs(self) -> dict[str, Any]:
         """Return a dict of kwargs ready to spread into any phase-tensor plot function.
 
         The dict covers every parameter currently accepted by
@@ -775,7 +776,7 @@ class PhaseTensorEllipseStyle:
             ref_ellipse    = self.show_ref,
         )
 
-    def copy(self, **kw: Any) -> "PhaseTensorEllipseStyle":
+    def copy(self, **kw: Any) -> PhaseTensorEllipseStyle:
         """Return a modified shallow copy.
 
         Examples
@@ -848,9 +849,9 @@ class PyCSAMTStyle:
     """
 
     #: Named full-package presets registered at import time.
-    _PRESETS: Dict[str, Dict[str, Any]] = {}
+    _PRESETS: dict[str, dict[str, Any]] = {}
 
-    def __init__(self, preset: Optional[str] = None) -> None:
+    def __init__(self, preset: str | None = None) -> None:
         self._init_defaults()
         if preset is not None:
             self.use(preset)
@@ -907,7 +908,7 @@ class PyCSAMTStyle:
         if "pt_ellipse" in spec:
             self._apply_pt_ellipse(spec["pt_ellipse"])
 
-    def _apply_mt(self, mt_spec: Dict[str, Any]) -> None:
+    def _apply_mt(self, mt_spec: dict[str, Any]) -> None:
         for comp_name, attrs in mt_spec.items():
             comp = getattr(self.mt, comp_name, None)
             if comp is None:
@@ -915,7 +916,7 @@ class PyCSAMTStyle:
             for k, v in attrs.items():
                 setattr(comp, k, v)
 
-    def _apply_correction(self, corr_spec: Dict[str, Any]) -> None:
+    def _apply_correction(self, corr_spec: dict[str, Any]) -> None:
         for curve_name, attrs in corr_spec.items():   # "before" / "after"
             comp = getattr(self.correction, curve_name, None)
             if comp is None:
@@ -923,11 +924,11 @@ class PyCSAMTStyle:
             for k, v in attrs.items():
                 setattr(comp, k, v)
 
-    def _apply_pt_ellipse(self, spec: Dict[str, Any]) -> None:
+    def _apply_pt_ellipse(self, spec: dict[str, Any]) -> None:
         for k, v in spec.items():
             setattr(self.pt_ellipse, k, v)
 
-    def _apply_raw(self, spec: Dict[str, Any]) -> None:
+    def _apply_raw(self, spec: dict[str, Any]) -> None:
         for k, v in spec.items():
             setattr(self.raw, k, v)
 
@@ -967,9 +968,9 @@ class PyCSAMTStyle:
     @contextmanager
     def context(
         self,
-        preset: Optional[str] = None,
+        preset: str | None = None,
         **kw: Any,
-    ) -> Generator["PyCSAMTStyle", None, None]:
+    ) -> Generator[PyCSAMTStyle, None, None]:
         """Temporarily apply a preset and/or overrides, then restore.
 
         Parameters
@@ -1065,7 +1066,7 @@ class PyCSAMTStyle:
 # Full-package presets
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _register_preset(name: str, spec: Dict[str, Any]) -> None:
+def _register_preset(name: str, spec: dict[str, Any]) -> None:
     PyCSAMTStyle._PRESETS[name.lower()] = spec
 
 

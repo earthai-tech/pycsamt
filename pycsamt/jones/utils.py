@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Lightweight parsing utilities for A.G. Jones J‑format files.
 
@@ -10,13 +9,17 @@ messages.
 """
 from __future__ import annotations
 
+import io
+from collections.abc import (
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator, Mapping, Sequence
-import io
 
-from ..exceptions import JParseError 
-
+from ..exceptions import JParseError
 from .config import (
     ENCODING_DEFAULT,
     INFO_KEY_ALIASES,
@@ -33,7 +36,6 @@ from .config import (
     TE_TM_TO_TENSOR,
     UNITS_CANONICAL,
 )
-
 
 __all__ = [
     "JParseError", "DataType", "ParsedRow",
@@ -111,7 +113,7 @@ def iter_lines(obj: io.TextIOBase | str | Path | Sequence[str], *,
         One line at a time.
     """
     if isinstance(obj, (str, Path)):
-        with open(obj, "r", encoding=encoding) as f:
+        with open(obj, encoding=encoding) as f:
             for ln in f:
                 yield ln if keepends else ln.rstrip("\r\n")
         return
@@ -165,7 +167,7 @@ def parse_datatype_units(line: str, *, lineno: int | None = None) -> DataType:
     ``tensor_hint`` for TE/TM modes.
     """
     line = " ".join(str(line).strip().split())
-    
+
     m = RE_DATATYPE_UNITS.match(line)
     if not m:
         raise JParseError(_fmt_err("Malformed data‑type", lineno, line))
@@ -285,7 +287,7 @@ def strip_nondata(lines: Iterable[str]) -> Iterator[str]:
 
     This keeps structure intact while removing comment noise.
     """
-    for i, ln in enumerate(lines, 1):
+    for _i, ln in enumerate(lines, 1):
         if is_comment(ln):
             continue
         yield ln

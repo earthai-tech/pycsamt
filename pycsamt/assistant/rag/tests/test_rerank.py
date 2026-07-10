@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for the optional LLM re-ranker (RAG Tier 1). No network."""
@@ -7,9 +6,9 @@ from __future__ import annotations
 import unittest
 
 from pycsamt.assistant.rag.rerank import (
+    build_rerank_prompt,
     llm_rerank,
     parse_ranking,
-    build_rerank_prompt,
 )
 from pycsamt.assistant.rag.schemas import RAGChunk
 

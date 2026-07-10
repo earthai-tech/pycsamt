@@ -30,48 +30,44 @@ resolve a callable function without actually calling it.
 from __future__ import annotations
 
 import json
-import tempfile
 import warnings
-from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
 import pytest
 
 # ─── pipeline imports — all via the public namespace ────────────────────────
 from pycsamt.pipeline import (
+    PRESETS,
+    # config — also re-exported from pycsamt.pipeline
+    PYCSAMT_PIPE,
+    STEP_REGISTRY,
     Pipeline,
+    PipelineAPIConfig,
     PipelineResult,
     Preset,
-    PRESETS,
-    STEP_REGISTRY,
     Step,
     StepResult,
-    StepSpec,
     categories,
+    configure_pipe,
     get_preset,
     list_presets,
     list_steps,
-    load_json,
-    load_py,
-    load_yaml,
     lookup_step,
     preset_catalogue,
+    reset_pipe,
     step_codes,
     step_names,
-    # config — also re-exported from pycsamt.pipeline
-    PYCSAMT_PIPE,
-    PipelineAPIConfig,
-    configure_pipe,
-    reset_pipe,
 )
+
 # internal implementation modules — imported directly for unit-testing internals
 from pycsamt.pipeline._output import OutputDir
-from pycsamt.pipeline._report import make_html_report, make_text_report
-
+from pycsamt.pipeline._report import (
+    make_html_report,
+    make_text_report,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Test doubles

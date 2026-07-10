@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for RunAgentDialog (Phase 4)."""
@@ -9,8 +8,14 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.dialogs.run_agent_dlg import RunAgentDialog, _ParamPage
-from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY, agent_names
+from pycsamt.app.desktop.agent_registry import (
+    AGENT_REGISTRY,
+    agent_names,
+)
+from pycsamt.app.desktop.dialogs.run_agent_dlg import (
+    RunAgentDialog,
+    _ParamPage,
+)
 
 
 @pytest.fixture

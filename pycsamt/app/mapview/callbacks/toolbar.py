@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Canvas toolbar (Fit / layer toggles / basemap / markers) and the
@@ -11,7 +10,7 @@ of truth and the two stay in sync.
 
 from __future__ import annotations
 
-from dash import ctx, Input, Output, State, no_update, html
+from dash import Input, Output, State, ctx, html, no_update
 
 from .._ids import IDs
 

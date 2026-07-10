@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,10 +21,7 @@ error(str)          Human-readable error message on failure
 from __future__ import annotations
 
 import logging
-import subprocess
-import sys
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import QThread, Signal
 
@@ -43,7 +39,7 @@ class InversionWorker(QThread):
     def __init__(
         self,
         workdir: str,
-        binary_path: Optional[str] = None,
+        binary_path: str | None = None,
         max_iter: int = 100,
         target_misfit: float = 1.0,
         parent=None,
@@ -70,7 +66,10 @@ class InversionWorker(QThread):
             self.error.emit(str(exc))
 
     def _run_inversion(self) -> None:
-        from pycsamt.models.occam2d import OccamRunner, InversionResult
+        from pycsamt.models.occam2d import (
+            InversionResult,
+            OccamRunner,
+        )
 
         if not self._workdir.exists():
             raise FileNotFoundError(

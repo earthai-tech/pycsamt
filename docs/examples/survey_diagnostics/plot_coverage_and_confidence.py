@@ -25,15 +25,15 @@ All figures come straight from :mod:`pycsamt.emtools.inspect`,
 
 from _datasets import load_sites
 
-from pycsamt.emtools.inspect import plot_coverage
 from pycsamt.emtools.frequency import (
-    plot_coverage_quality_heatmap,
     plot_apparent_depth_psection,
+    plot_coverage_quality_heatmap,
 )
+from pycsamt.emtools.inspect import plot_coverage
 from pycsamt.emtools.qc import (
+    plot_confidence_band_summary,
     plot_confidence_profile,
     plot_frequency_confidence_psection,
-    plot_confidence_band_summary,
     plot_station_confidence_dashboard,
 )
 

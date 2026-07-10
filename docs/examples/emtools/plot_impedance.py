@@ -24,15 +24,18 @@ those pages' own station rankings.
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
 from _datasets import load_survey
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 from pycsamt.emtools import (
     ensure_sites,
     plot_determinant_track,
     plot_offdiag_antisym_residual,
     plot_phasor_wheel,
+)
+from pycsamt.emtools._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
 )
 
 survey = load_survey("amt_l18plt")

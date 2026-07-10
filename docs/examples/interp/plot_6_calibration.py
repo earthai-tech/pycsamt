@@ -16,7 +16,8 @@ against two boreholes and compares before and after.
 # :class:`~pycsamt.interp.borehole.Borehole` holds a list of depth
 # ``Interval`` s with lithology labels.
 
-from _interp_data import demo_model, demo_boreholes
+from _interp_data import demo_boreholes, demo_model
+
 from pycsamt.interp import ModelCalibrator
 
 # Use the before/after calibrated-model panel (1st figure) as the thumbnail.

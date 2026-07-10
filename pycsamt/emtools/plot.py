@@ -1,24 +1,24 @@
 # pycsamt/emtools/plot.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
-import numpy as np
+from collections.abc import Sequence
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
 
-from ._core import (
-    ensure_sites,
-    _axes_list,
-    _iter_items,
-    _get_t_block,
-    _get_z_block,
-    _name,
-)
-
-from ..utils.plot import plot_errorbar
 from ..api._rose_style import _UNSET
 from ..api.control import PYCSAMT_CONTROL, wrap_phase
 from ..api.style import PYCSAMT_STYLE
-
+from ..utils.plot import plot_errorbar
+from ._core import (
+    _axes_list,
+    _get_t_block,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 # ------------------------------- helpers -------------------------------- #
 
@@ -50,13 +50,13 @@ def _comp_slice(z: np.ndarray, comp: str) -> np.ndarray:
 def _phase_deg(z: np.ndarray) -> np.ndarray:
     return np.degrees(np.angle(z))
 
-def _wrap_phase(ph: np.ndarray, rng: Tuple[float, float]) -> np.ndarray:
+def _wrap_phase(ph: np.ndarray, rng: tuple[float, float]) -> np.ndarray:
     return wrap_phase(ph, rng)
 
 def _rhoa_from(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     return (0.2 * (np.abs(z) ** 2)) / (fr + 1e-24)
 
-def _err_log10_rhoa(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _err_log10_rhoa(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return None
     # δ log10 ρ ≈ 2/(ln10) · σ/|Z|
@@ -64,7 +64,7 @@ def _err_log10_rhoa(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
     m = np.abs(z) + 1e-24
     return (2.0 / np.log(10.0)) * (s / m)
 
-def _err_log10_mag(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _err_log10_mag(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return None
     # δ log10|Z| ≈ σ/(|Z| ln 10)
@@ -72,7 +72,7 @@ def _err_log10_mag(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
     m = np.abs(z) + 1e-24
     return s / (m * np.log(10.0))
 
-def _err_phase_deg(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _err_phase_deg(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return None
     # small-angle approx: δφ ≈ σ/|Z| (rad)
@@ -81,7 +81,7 @@ def _err_phase_deg(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
     return np.degrees(s / m)
 
 
-def _err_rhoa(z: np.ndarray, ze: Optional[np.ndarray],
+def _err_rhoa(z: np.ndarray, ze: np.ndarray | None,
               fr: np.ndarray) -> np.ndarray | None:
     """Return approximate apparent-resistivity uncertainty."""
     if ze is None:
@@ -141,7 +141,7 @@ def _x_from_freq(fr: np.ndarray, control) -> tuple[np.ndarray, str, bool]:
 
 def _rho_display(
     z: np.ndarray,
-    ze: Optional[np.ndarray],
+    ze: np.ndarray | None,
     fr: np.ndarray,
     control,
 ) -> tuple[np.ndarray, np.ndarray | None, str]:
@@ -154,7 +154,7 @@ def _rho_display(
 
 def _phase_display(
     z: np.ndarray,
-    ze: Optional[np.ndarray],
+    ze: np.ndarray | None,
     control,
     phase_range: tuple[float, float] | None,
 ) -> tuple[np.ndarray, np.ndarray | None, str, tuple[float, float] | None]:
@@ -337,18 +337,18 @@ def _raw_label_mode(
 def plot_sites_panels(
     sites: Any,
     *,
-    components: Tuple[str, ...] = ("xy", "yx"),
+    components: tuple[str, ...] = ("xy", "yx"),
     quantity: str = "rhoa",          # rhoa|impedance
     x_axis: str = "period",          # period|frequency
-    phase_range: Tuple[float, float] | None = (-90.0, 90.0),
-    stations: Optional[List[str]] = None,
+    phase_range: tuple[float, float] | None = (-90.0, 90.0),
+    stations: list[str] | None = None,
     ncols: int = 6,
     wspace: float = 0.20,
     hspace: float = 0.08,
-    height_ratio: Tuple[int, int] = (2, 1),
+    height_ratio: tuple[int, int] = (2, 1),
     axes=None,
-    figsize_scale: Tuple[float, float] = (2.6, 2.6),
-    colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
+    figsize_scale: tuple[float, float] = (2.6, 2.6),
+    colors: dict[str, str] | None = None,  # None → from PYCSAMT_STYLE.mt
     marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
     ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
     lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
@@ -356,8 +356,8 @@ def plot_sites_panels(
     show_error_bars: bool = True,
     show_legend: bool = False,
     title_fmt: str = "{station}",
-    ylim_rhoa: Tuple[float, float] | None = None,
-    ylim_phase: Tuple[float, float] | None = None,
+    ylim_rhoa: tuple[float, float] | None = None,
+    ylim_phase: tuple[float, float] | None = None,
     grid: bool = True,
     preserve_duplicates: bool = False,
     recursive: bool = True,
@@ -411,7 +411,7 @@ def plot_sites_panels(
         outer = fig.add_gridspec(
             nrows, ncols, wspace=wspace, hspace=hspace
         )
-        axs: List[plt.Axes] = []
+        axs: list[plt.Axes] = []
         for k in range(nrows * ncols):
             r, c = divmod(k, ncols)
             if k >= n:
@@ -516,19 +516,19 @@ def plot_sites_panels(
 def plot_raw_sites_1d(
     sites: Any,
     *,
-    stations: Optional[List[str]] = None,
-    components: Tuple[str, ...] = ("xx", "xy", "yx", "yy"),
+    stations: list[str] | None = None,
+    components: tuple[str, ...] = ("xx", "xy", "yx", "yy"),
     raw: bool = True,
     force_style: bool = False,
     control: Any | None = None,
-    phase_range: Tuple[float, float] | None = None,
+    phase_range: tuple[float, float] | None = None,
     ncols_groups: int = 3,
     comp_wspace: float = 0.12,
     group_hspace: float = 0.25,
-    height_ratio: Tuple[int, int] = (2, 1),
+    height_ratio: tuple[int, int] = (2, 1),
     axes=None,
-    figsize_scale: Tuple[float, float] = (4.2, 3.1),
-    colors: Optional[Dict[str, str]] = None,
+    figsize_scale: tuple[float, float] = (4.2, 3.1),
+    colors: dict[str, str] | None = None,
     title_group_fmt: str = "{station}",
     title_comp_fmt: str = "Z{component}",
     shared_group_labels: bool = True,
@@ -538,8 +538,8 @@ def plot_raw_sites_1d(
     tick_fontsize: int = 7,
     show_error_bars: bool = True,
     show_component_legend: bool = True,
-    ylim_rhoa: Tuple[float, float] | None = None,
-    ylim_phase: Tuple[float, float] | None = None,
+    ylim_rhoa: tuple[float, float] | None = None,
+    ylim_phase: tuple[float, float] | None = None,
     grid: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -879,20 +879,20 @@ def _plot_tipper_part(
 def plot_response_tipper(
     sites: Any,
     *,
-    stations: Optional[List[str]] = None,
-    components: Tuple[str, ...] = ("xy", "yx"),
-    tipper_components: Tuple[str, ...] = ("tx", "ty"),
+    stations: list[str] | None = None,
+    components: tuple[str, ...] = ("xy", "yx"),
+    tipper_components: tuple[str, ...] = ("tx", "ty"),
     raw: bool = False,
     force_style: bool = False,
     control: Any | None = None,
-    phase_range: Tuple[float, float] | None = None,
+    phase_range: tuple[float, float] | None = None,
     ncols_groups: int = 3,
     comp_wspace: float = 0.12,
     group_hspace: float = 0.32,
-    height_ratios: Tuple[float, ...] = (2.2, 1.1, 0.75, 0.75),
+    height_ratios: tuple[float, ...] = (2.2, 1.1, 0.75, 0.75),
     axes=None,
-    figsize_scale: Tuple[float, float] = (4.8, 4.6),
-    colors: Optional[Dict[str, str]] = None,
+    figsize_scale: tuple[float, float] = (4.8, 4.6),
+    colors: dict[str, str] | None = None,
     tipper_span_group: bool = False,
     line_style: str | None = None,
     tipper_line_style: str | None = ":",
@@ -908,9 +908,9 @@ def plot_response_tipper(
     show_tipper_error_bars: bool = False,
     show_component_legend: bool = True,
     show_tipper_legend: bool = True,
-    ylim_rhoa: Tuple[float, float] | None = None,
-    ylim_phase: Tuple[float, float] | None = None,
-    ylim_tipper: Tuple[float, float] | None = (-0.6, 0.6),
+    ylim_rhoa: tuple[float, float] | None = None,
+    ylim_phase: tuple[float, float] | None = None,
+    ylim_tipper: tuple[float, float] | None = (-0.6, 0.6),
     grid: bool = True,
     preserve_duplicates: bool = False,
     recursive: bool = True,
@@ -1403,18 +1403,18 @@ def plot_response_tipper(
 
 def _pair_by_station(
     sites: Any, new_sites: Any | None
-) -> List[Tuple[str, Any, Any | None]]:
+) -> list[tuple[str, Any, Any | None]]:
     S0 = ensure_sites(sites, recursive=False, strict=False)
-    M0: Dict[str, Any] = {}
+    M0: dict[str, Any] = {}
     for i, ed in enumerate(_iter_items(S0)):
         M0[_name(ed, i)] = ed
     if new_sites is None:
         return [(k, v, None) for k, v in M0.items()]
     S1 = ensure_sites(new_sites, recursive=False, strict=False)
-    M1: Dict[str, Any] = {}
+    M1: dict[str, Any] = {}
     for i, ed in enumerate(_iter_items(S1)):
         M1[_name(ed, i)] = ed
-    out: List[Tuple[str, Any, Any | None]] = []
+    out: list[tuple[str, Any, Any | None]] = []
     for st, ed in M0.items():
         out.append((st, ed, M1.get(st, None)))
     return out
@@ -1424,30 +1424,30 @@ def plot_sites_compare(
     sites: Any,
     new_sites: Any | None = None,
     *,
-    components: Tuple[str, ...] = ("xy", "yx"),
+    components: tuple[str, ...] = ("xy", "yx"),
     quantity: str = "rhoa",      # rhoa|impedance
     x_axis: str = "period",      # period|frequency
-    phase_range: Tuple[float, float] | None = (-90.0, 90.0),
-    stations: Optional[List[str]] = None,
+    phase_range: tuple[float, float] | None = (-90.0, 90.0),
+    stations: list[str] | None = None,
     ncols_groups: int = 3,       # station groups per row
     group_gap: float = 0.35,     # space between station groups
     pair_wspace: float = 0.06,   # space between raw/after
     hspace: float = 0.06,
-    height_ratio: Tuple[int, int] = (2, 1),
+    height_ratio: tuple[int, int] = (2, 1),
     axes=None,
-    figsize_scale: Tuple[float, float] = (3.0, 3.0),
-    colors: Optional[Dict[str, str]] = None,  # None → from PYCSAMT_STYLE.mt
+    figsize_scale: tuple[float, float] = (3.0, 3.0),
+    colors: dict[str, str] | None = None,  # None → from PYCSAMT_STYLE.mt
     marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
     ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
     lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
     ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
     show_error_bars: bool = True,
-    labels: Tuple[str, str] = ("raw", "after"),
+    labels: tuple[str, str] = ("raw", "after"),
     title_group_fmt: str = "{station}",
     title_col_fmt: str = "{tag}",
     show_legend: bool = False,
-    ylim_rhoa: Tuple[float, float] | None = None,
-    ylim_phase: Tuple[float, float] | None = None,
+    ylim_rhoa: tuple[float, float] | None = None,
+    ylim_phase: tuple[float, float] | None = None,
     grid: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1485,8 +1485,8 @@ def plot_sites_compare(
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
     # prebuild inner axes
-    AxR: List[List[plt.Axes]] = []
-    AxP: List[List[plt.Axes]] = []
+    AxR: list[list[plt.Axes]] = []
+    AxP: list[list[plt.Axes]] = []
     axes_given = _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
     if axes_given is None:
         fig = plt.figure(
@@ -1619,7 +1619,7 @@ def plot_sites_compare(
 
 def _pairs_meas_pred(
     sites: Any, pred_sites: Any
-) -> List[Tuple[str, Any, Any]]:
+) -> list[tuple[str, Any, Any]]:
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = ensure_sites(pred_sites, recursive=False, strict=False)
     m0 = { _name(ed, i): ed for i, ed in enumerate(_iter_items(S0)) }
@@ -1656,7 +1656,7 @@ def _align_pred(fr_m: np.ndarray, fr_p: np.ndarray,
 def _rms_from(
     zm: np.ndarray,
     zp: np.ndarray,
-    ze: Optional[np.ndarray],
+    ze: np.ndarray | None,
     fr: np.ndarray,
     *,
     quantity: str,
@@ -1686,18 +1686,18 @@ def plot_sites_fit_grid(
     sites: Any,
     pred_sites: Any,
     *,
-    components: Tuple[str, ...] = ("xx", "xy", "yx", "yy"),
+    components: tuple[str, ...] = ("xx", "xy", "yx", "yy"),
     quantity: str = "rhoa",      # rhoa|impedance
     x_axis: str = "period",      # period|frequency
-    phase_range: Tuple[float, float] | None = (-180.0, 180.0),
-    stations: Optional[List[str]] = None,
+    phase_range: tuple[float, float] | None = (-180.0, 180.0),
+    stations: list[str] | None = None,
     ncols_groups: int = 2,       # station groups per row
     comp_wspace: float = 0.10,   # space between components
     group_hspace: float = 0.18,
-    height_ratio: Tuple[int, int] = (2, 1),
+    height_ratio: tuple[int, int] = (2, 1),
     axes=None,
-    figsize_scale: Tuple[float, float] = (4.0, 3.0),
-    colors_meas: Optional[Dict[str, str]] = None,  # None → PYCSAMT_STYLE.mt
+    figsize_scale: tuple[float, float] = (4.0, 3.0),
+    colors_meas: dict[str, str] | None = None,  # None → PYCSAMT_STYLE.mt
     color_fit_te   = _UNSET,   # default: PYCSAMT_STYLE.mt.te.color
     color_fit_tm   = _UNSET,   # default: PYCSAMT_STYLE.mt.tm.color
     marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
@@ -1709,8 +1709,8 @@ def plot_sites_fit_grid(
     show_error_bars: bool = True,
     show_mode_legend: bool = True,
     title_group_fmt: str = "{station}",
-    ylim_rhoa: Tuple[float, float] | None = None,
-    ylim_phase: Tuple[float, float] | None = None,
+    ylim_rhoa: tuple[float, float] | None = None,
+    ylim_phase: tuple[float, float] | None = None,
     grid: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",

@@ -11,10 +11,10 @@ import numpy as np
 import pytest
 
 from pycsamt.emtools.gradient_imaging import (
-    rho_spatial_gradient,
+    plot_gradient_section,
     rho_frequency_gradient,
     rho_joint_gradient,
-    plot_gradient_section,
+    rho_spatial_gradient,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ def test_spatial_gradient_magnitude():
 
 def test_spatial_rho_a_is_mean_of_pair():
     """rho_a_ohmm column is the mean of the two adjacent stations."""
-    n, n_freq = 2, 3
+    _n, n_freq = 2, 3
     freqs = np.logspace(0, 2, n_freq)
     sites = [
         _FakeSite("A", _make_z(freqs, 100.0), freqs, east=0.0, north=0.0),

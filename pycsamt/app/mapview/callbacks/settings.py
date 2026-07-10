@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Station / sites settings: line visibility + per-site masking.
@@ -9,7 +8,15 @@ Masked stations and inactive lines are removed from every view (map,
 
 from __future__ import annotations
 
-from dash import ALL, ctx, html, no_update, Input, Output, State
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    ctx,
+    html,
+    no_update,
+)
 
 from .._ids import IDs
 

@@ -1,20 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from pathlib import Path
 from math import isclose
+from pathlib import Path
 
 from pycsamt.seg.meas import (
-    Hmeasurement,
-    Emeasurement,
     DefineMeas,
-    MeasMixin,
-    EMeasMixin,
     DefineMeasMixin,
+    EMeasMixin,
+    Emeasurement,
     HMeasMixin,
+    Hmeasurement,
+    MeasMixin,
 )
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,7 +11,7 @@ Phase 4: Two-column layout:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -29,7 +28,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPlainTextEdit,
-    QSizePolicy,
     QSpinBox,
     QStackedWidget,
     QVBoxLayout,
@@ -37,12 +35,10 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.agent_registry import (
-    AGENT_REGISTRY,
     agent_names,
     agents_by_category,
     get_entry,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Per-agent parameter page
@@ -54,7 +50,7 @@ class _ParamPage(QWidget):
     def __init__(self, entry: dict, parent=None) -> None:
         super().__init__(parent)
         self._entry    = entry
-        self._widgets: Dict[str, QWidget] = {}
+        self._widgets: dict[str, QWidget] = {}
         self._build()
 
     def _build(self) -> None:
@@ -118,9 +114,9 @@ class _ParamPage(QWidget):
         w.setText(str(spec.get("default", "")))
         return w
 
-    def current_params(self) -> Dict[str, Any]:
+    def current_params(self) -> dict[str, Any]:
         """Return {param_name: current_value} dict."""
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for name, widget in self._widgets.items():
             if isinstance(widget, QComboBox):
                 result[name] = widget.currentText()
@@ -151,7 +147,7 @@ class RunAgentDialog(QDialog):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -159,10 +155,10 @@ class RunAgentDialog(QDialog):
         self.setMinimumSize(680, 440)
 
         self.selected_agent: str = ""
-        self.params:         Dict[str, Any] = {}
+        self.params:         dict[str, Any] = {}
         self.api_key:        str = api_key or ""
 
-        self._pages: Dict[str, _ParamPage] = {}
+        self._pages: dict[str, _ParamPage] = {}
         self._build_ui()
         # Select first item by default
         if self._list.count() > 0:

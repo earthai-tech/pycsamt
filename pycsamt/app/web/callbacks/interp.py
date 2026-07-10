@@ -1,25 +1,38 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Geological Interpretation page."""
 from __future__ import annotations
 
-import io
 import base64
+import io
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from dash import Input, Output, State, no_update, dcc, ctx, clientside_callback, html
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    dcc,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.desktop.controllers.interp_controller import (
-    InterpController, WORKFLOW_CATALOGUE, CATEGORIES,
+    WORKFLOW_CATALOGUE,
+    InterpController,
 )
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.utils import apply_web_dark_theme, empty_src, fig_to_src
+from pycsamt.app.web.utils import (
+    apply_web_dark_theme,
+    empty_src,
+    fig_to_src,
+)
 
 _CTRL = InterpController()
 
@@ -79,7 +92,9 @@ _FLEX_STY = (
 
 
 def _get_corrected_sites(session_id: str, corr_store: dict | None, dark: bool):
-    from pycsamt.app.desktop.controllers.correction_controller import CorrectionController
+    from pycsamt.app.desktop.controllers.correction_controller import (
+        CorrectionController,
+    )
     raw = cache_get(session_id)
     if raw is None:
         return None

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._steps import StepResult
@@ -21,9 +21,9 @@ if TYPE_CHECKING:
 
 def make_text_report(
     pipeline_name: str,
-    step_results: List["StepResult"],
+    step_results: list[StepResult],
     elapsed_sec: float,
-    outdir: Optional[Path],
+    outdir: Path | None,
     n_sites_in: int,
     n_sites_out: int,
 ) -> str:
@@ -34,7 +34,7 @@ def make_text_report(
 
     lines = [
         sep,
-        f"  pyCSAMT Pipeline Report",
+        "  pyCSAMT Pipeline Report",
         f"  Pipeline : {pipeline_name}",
         f"  Run at   : {now}",
         f"  Sites    : {n_sites_in} in → {n_sites_out} out",
@@ -108,7 +108,7 @@ _CSS = """
 """
 
 
-def _plot_thumbs(plots: List[Path], outdir: Optional[Path]) -> str:
+def _plot_thumbs(plots: list[Path], outdir: Path | None) -> str:
     """Return HTML <a><img></a> tags for a list of plot paths."""
     if not plots or outdir is None:
         return ""
@@ -124,9 +124,9 @@ def _plot_thumbs(plots: List[Path], outdir: Optional[Path]) -> str:
 
 def make_html_report(
     pipeline_name: str,
-    step_results: List["StepResult"],
+    step_results: list[StepResult],
     elapsed_sec: float,
-    outdir: Optional[Path],
+    outdir: Path | None,
     n_sites_in: int,
     n_sites_out: int,
     pipeline_yaml: str = "",

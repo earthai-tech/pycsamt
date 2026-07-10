@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,26 +17,36 @@ Each tab keeps its own persistent figure (img-adv-{tab}).
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from dash import html, ctx, clientside_callback, Input, Output, State, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.desktop.controllers.advanced_controller import (
-    AdvancedController,
-    ADVANCED_GROUPS,
     ADVANCED_PLOT_DESCRIPTIONS,
-    STRIKE_PLOTS,
-    PHASE_TENSOR_PLOTS,
-    INDUCTION_PLOTS,
-    IMPEDANCE_PLOTS,
     DEPTH_PLOTS,
+    IMPEDANCE_PLOTS,
+    INDUCTION_PLOTS,
+    PHASE_TENSOR_PLOTS,
+    STRIKE_PLOTS,
     SURVEY_PLOTS,
+    AdvancedController,
 )
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.utils import apply_web_dark_theme, empty_src, fig_to_src
+from pycsamt.app.web.utils import (
+    apply_web_dark_theme,
+    fig_to_src,
+)
 
 # Singleton controller
 _CTRL = AdvancedController()
@@ -137,7 +146,9 @@ def _pt_grid_profiles(store_data, active_lines_store, per_line: int) -> dict:
     """Group ``station_records`` by ``Line`` (active lines only) into
     ``{line_name: [representative_station, ...]}`` for
     ``plot_phase_tensor_strip_grid``."""
-    from pycsamt.site.lines import pick_representative_stations
+    from pycsamt.site.lines import (
+        pick_representative_stations,
+    )
 
     records      = (store_data or {}).get("station_records", [])
     active_lines = (active_lines_store or {}).get("active", [])
@@ -465,7 +476,9 @@ def register_advanced(app) -> None:
                 if not pt_station:
                     return (*([no_update] * 6), "", True,
                             "Pick a station for the ellipse strip.")
-                from pycsamt.emtools.tensor import plot_phase_tensor_strip
+                from pycsamt.emtools.tensor import (
+                    plot_phase_tensor_strip,
+                )
                 fig = plt.figure(figsize=(w, h))
                 ax  = fig.add_subplot(111)
                 plot_phase_tensor_strip(
@@ -479,7 +492,9 @@ def register_advanced(app) -> None:
                 if not profiles:
                     return (*([no_update] * 6), "", True,
                             "No survey lines detected for the strip grid.")
-                from pycsamt.emtools.tensor import plot_phase_tensor_strip_grid
+                from pycsamt.emtools.tensor import (
+                    plot_phase_tensor_strip_grid,
+                )
                 render_fig = plot_phase_tensor_strip_grid(
                     sites, profiles=profiles, verbose=0,
                 )

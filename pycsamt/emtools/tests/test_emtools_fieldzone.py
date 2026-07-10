@@ -141,7 +141,7 @@ def test_classify_empty_input_returns_empty_df():
 
 def test_classify_custom_thresholds():
     site = _one_site(rho=100.0, offset=3000.0)
-    df_default = classify_field_zones([site], source_offset=3000.0)
+    classify_field_zones([site], source_offset=3000.0)
     df_strict  = classify_field_zones([site], source_offset=3000.0,
                                       far_threshold=100.0,
                                       near_threshold=50.0)

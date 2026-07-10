@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,12 +6,12 @@ Unit conversion utilities.
 """
 
 import re
-from typing import Union, Optional
+from typing import Optional, Union
 
 __all__ = [
     'convert_value',
     'convert_temperature',
-    'convert_time', 
+    'convert_time',
     'convert'
 ]
 

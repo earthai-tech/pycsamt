@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # This file has been superseded by the callbacks/ package in this directory.
 # Python's import system selects the package over this module automatically.
 # All callback code now lives in:

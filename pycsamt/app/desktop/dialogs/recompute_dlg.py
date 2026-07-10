@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -40,7 +39,7 @@ Layout
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QFont, QIcon
@@ -48,7 +47,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFrame,
@@ -66,7 +64,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 
 _ICONS = Path(__file__).resolve().parents[1] / "resources" / "icons"
 
@@ -105,7 +102,7 @@ class RecomputeDialog(QDialog):
     def __init__(
         self,
         sites: Any = None,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._sites   = sites
@@ -412,7 +409,9 @@ class RecomputeDialog(QDialog):
         self._reset_progress()
         self._set_running(True)
 
-        from pycsamt.app.desktop.workers.recompute_worker import RecomputeWorker
+        from pycsamt.app.desktop.workers.recompute_worker import (
+            RecomputeWorker,
+        )
         self._worker = RecomputeWorker(source, parent=self, **kw)
         self._worker.station_done.connect(self._on_station_done)
         self._worker.finished.connect(self._on_finished)

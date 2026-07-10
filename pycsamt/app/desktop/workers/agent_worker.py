@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -25,16 +24,14 @@ error(str)          Human-readable error on failure
 
 from __future__ import annotations
 
-import logging
 import io
-import sys
-from contextlib import redirect_stdout, redirect_stderr
-from typing import Any, Dict, Optional
+import logging
+from contextlib import redirect_stderr, redirect_stdout
+from typing import Any
 
 from PySide6.QtCore import QThread, Signal
 
 from pycsamt.app.desktop.agent_registry import get_entry
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Logging bridge
@@ -90,8 +87,8 @@ class AgentWorker(QThread):
         self,
         agent_name: str,
         sites,
-        params:  Dict[str, Any],
-        api_key: Optional[str] = None,
+        params:  dict[str, Any],
+        api_key: str | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -124,6 +121,7 @@ class AgentWorker(QThread):
             # Suppress plt.show() calls inside emtools/agent functions — we
             # render figures ourselves via MplCanvas.show_figure().
             import unittest.mock as _mock
+
             import matplotlib.pyplot as _plt
             with redirect_stdout(cap), redirect_stderr(cap), \
                     _mock.patch.object(_plt, "show", lambda *a, **k: None):
@@ -180,6 +178,7 @@ class AgentWorker(QThread):
 
     def _run_processing(self, entry: dict):
         import inspect
+
         import pycsamt.emtools as et
 
         fn_name = entry["fn_name"]

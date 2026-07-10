@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -27,20 +26,16 @@ Usage
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ..exceptions import AvgDataError
 from .tensor import TensorBase
-from .utils import ( 
-
-    _to_num, 
-    _norm_comp, 
-    to_xarray as _to_xr, 
-    find_and_rename_column
-)
+from .utils import _norm_comp, _to_num, find_and_rename_column
+from .utils import to_xarray as _to_xr
 
 __all__ = ["Resistivity", "Phase"]
 
@@ -75,10 +70,10 @@ class Resistivity(TensorBase):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: bool = False
     ) -> None:
         super().__init__(
@@ -88,10 +83,8 @@ class Resistivity(TensorBase):
 
     def read(  # noqa: D401
         self,
-        source: Union[
-            pd.DataFrame, Sequence[float], np.ndarray, pd.Series
-        ],
-        meta: Optional[Mapping[str, Any]] = None,
+        source: pd.DataFrame | Sequence[float] | np.ndarray | pd.Series,
+        meta: Mapping[str, Any] | None = None,
         **kws: Any,
     ) -> None:
         """
@@ -118,7 +111,7 @@ class Resistivity(TensorBase):
             raise TypeError(
                 "Resistivity.read expects DataFrame or vector-like."
             )
-        
+
         df= find_and_rename_column(source.copy(), self.VAR_NAME)
 
         if self.VAR_NAME not in df.columns:
@@ -143,8 +136,8 @@ class Resistivity(TensorBase):
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
 
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
-        
-        return self 
+
+        return self
 
     def write(
         self,
@@ -160,7 +153,7 @@ class Resistivity(TensorBase):
         tmp = self.__class__()  # ephemeral for helper reuse
         tmp._frame = self._frame.copy()
         tmp._meta = meta
-        
+
         return tmp._write_csv_block(
             cols=["station", "freq", "comp", self.VAR_NAME],
             title=r"$Resistivity Block",
@@ -174,7 +167,7 @@ class Resistivity(TensorBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: Optional[Mapping[str, Any]] = None,
+        attrs: Mapping[str, Any] | None = None,
     ):
         """
         Convert to an :class:`xarray.Dataset` with one data
@@ -248,10 +241,10 @@ class Phase(TensorBase):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: bool = False
     ) -> None:
         super().__init__(
@@ -261,10 +254,8 @@ class Phase(TensorBase):
 
     def read(  # noqa: D401
         self,
-        source: Union[
-            pd.DataFrame, Sequence[float], np.ndarray, pd.Series
-        ],
-        meta: Optional[Mapping[str, Any]] = None,
+        source: pd.DataFrame | Sequence[float] | np.ndarray | pd.Series,
+        meta: Mapping[str, Any] | None = None,
         **kws: Any,
     ) -> None:
         """
@@ -313,9 +304,9 @@ class Phase(TensorBase):
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
 
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
-        
-        return self 
-    
+
+        return self
+
 
     def write(
         self,
@@ -344,7 +335,7 @@ class Phase(TensorBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: Optional[Mapping[str, Any]] = None,
+        attrs: Mapping[str, Any] | None = None,
     ):
         """
         Convert to an :class:`xarray.Dataset` with one data

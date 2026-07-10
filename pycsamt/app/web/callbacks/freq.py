@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,7 +11,7 @@ from __future__ import annotations
 
 import math
 
-from dash import Input, Output, State, no_update
+from dash import Input, Output, State
 
 from pycsamt.app.web.cache import cache_get
 from pycsamt.app.web.layout import IDs
@@ -22,6 +21,7 @@ def _log10_range(sites):
     """Return (log10_T_min, log10_T_max) from the loaded Sites object."""
     try:
         import numpy as np
+
         from pycsamt.emtools._core import ensure_sites
 
         sites = ensure_sites(sites)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -33,13 +32,19 @@ uses to detect a value question and pull out which kinds / scope were asked.
 
 from __future__ import annotations
 
-import re
 import time
 from typing import Any
 
 from ._base import AgentResult
-from .plotting import _filter_sites, _has_tipper, _period_range
-from .tooling import _circular_strike_mean, _ll_to_utm, _station_coords
+from .plotting import (
+    _filter_sites,
+    _has_tipper,
+)
+from .tooling import (
+    _circular_strike_mean,
+    _ll_to_utm,
+    _station_coords,
+)
 
 __all__ = [
     "MetricsAgent",
@@ -294,6 +299,7 @@ class MetricsAgent:
 
     def _m_azimuth(self, sites, warnings) -> str:
         import numpy as np
+
         from ..gis.coord_correction import _pca_azimuth
         es, ns = [], []
         for _, lat, lon in _station_coords(sites):
@@ -314,7 +320,9 @@ class MetricsAgent:
         )
 
     def _m_dimensionality(self, sites, warnings) -> str:
-        from ..emtools.dimensionality import classify_dimensionality
+        from ..emtools.dimensionality import (
+            classify_dimensionality,
+        )
         res = classify_dimensionality(sites, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
         if "dim" not in df or df.empty:
@@ -334,7 +342,10 @@ class MetricsAgent:
 
     def _m_skew(self, sites, warnings) -> str:
         import numpy as np
-        from ..emtools.dimensionality import classify_dimensionality
+
+        from ..emtools.dimensionality import (
+            classify_dimensionality,
+        )
         res = classify_dimensionality(sites, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
         if "beta_abs" not in df or df.empty:
@@ -351,7 +362,6 @@ class MetricsAgent:
         return f"{len(names)} station(s): {head}{more}" if names else "no stations found"
 
     def _m_periods(self, sites, warnings) -> str:
-        import numpy as np
         rows = self._scan(sites)
         tmins = [r["t_min_s"] for r in rows if r.get("t_min_s")]
         tmaxs = [r["t_max_s"] for r in rows if r.get("t_max_s")]

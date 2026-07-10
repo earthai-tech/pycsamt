@@ -1,14 +1,16 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Clientside navigation — page switching, active-button highlight, sidebar toggle."""
 from __future__ import annotations
 
-from dash import ALL, ClientsideFunction, Input, Output, State, clientside_callback
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+)
 
-from dash import Input, Output
-
-from pycsamt.app.web.layout import IDs, _NAV_ENTRIES
+from pycsamt.app.web.layout import _NAV_ENTRIES, IDs
 
 _PAGE_IDS = [pid for pid, _, _ in _NAV_ENTRIES]
 

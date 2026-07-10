@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -56,9 +55,7 @@ magnetic field. *Geophysics* 19, 281-289.
 """
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -186,7 +183,7 @@ class ForwardResponse2D:
         station: int = 0,
         ax=None,
         *,
-        figsize: Tuple[float, float] = (9, 5),
+        figsize: tuple[float, float] = (9, 5),
     ):
         """Quick diagnostic plot of ρ_a and phase for one station.
 
@@ -261,7 +258,7 @@ def _ey_1d_profile(
         # Find which layer z falls in
         lay = np.searchsorted(z_top, z, side="right") - 1
         lay = min(lay, len(rho) - 1)
-        dz = z - z_top[lay]
+        z - z_top[lay]
         k_j = k[lay]
         # Propagate E_y into this layer using the upward-recursion impedance
         # E_y(z) = E_y(z_top) * cosh(k_j*dz) + (Z(z_top)/iωμ₀/k_j) * ...
@@ -629,7 +626,7 @@ def _surface_impedance_tm(
 def _z_to_rho_phase(
     Z: np.ndarray,
     omega: float,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Convert impedance to apparent resistivity and phase.
 
     Parameters
@@ -795,7 +792,7 @@ def _apply_dirichlet(
     A: sparse.csr_matrix,
     b: np.ndarray,
     grid: Grid2D,
-) -> Tuple[sparse.csr_matrix, np.ndarray]:
+) -> tuple[sparse.csr_matrix, np.ndarray]:
     """Replace boundary rows of A with identity and b with BC values.
 
     The assemblers already set boundary rows to identity; this function

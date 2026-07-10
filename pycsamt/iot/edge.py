@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import (
+    Any,
+)
 
 import numpy as np
 import pandas as pd
@@ -74,7 +77,7 @@ def _finite_stat(values: np.ndarray, fn: str) -> float:
 def _robust_spike_fraction(
     values: np.ndarray,
     *,
-    threshold: Optional[float],
+    threshold: float | None,
 ) -> float:
     if threshold is None:
         return 0.0
@@ -95,8 +98,8 @@ def _robust_spike_fraction(
 
 def _channel_names(
     n_channel: int,
-    provided: Optional[Iterable[str]],
-) -> List[str]:
+    provided: Iterable[str] | None,
+) -> list[str]:
     if provided is None:
         return [f"ch{i}" for i in range(n_channel)]
     names = [str(name).strip().lower() for name in provided]
@@ -116,16 +119,16 @@ class EdgeProcessingConfig(PyCSAMTObject):
     decimation: int = 1
     finite_threshold: float = 0.9
     sample_axis: int = 0
-    channel_names: Optional[List[str]] = None
+    channel_names: list[str] | None = None
     compute_rms: bool = True
     compute_coverage: bool = True
     compute_spikes: bool = True
-    spike_threshold: Optional[float] = 6.0
+    spike_threshold: float | None = 6.0
     max_spike_fraction: float = 0.05
-    warn_finite_threshold: Optional[float] = None
-    warn_spike_fraction: Optional[float] = None
+    warn_finite_threshold: float | None = None
+    warn_spike_fraction: float | None = None
     retain_payload_samples: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -193,7 +196,7 @@ class EdgeChannelSummary(PyCSAMTObject):
     max: float
     spike_fraction: float
     accepted: bool
-    reasons: List[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -222,7 +225,7 @@ class EdgeChannelSummary(PyCSAMTObject):
         self.accepted = bool(self.accepted)
         self.reasons = [str(reason) for reason in list(self.reasons or [])]
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a serialisable channel summary."""
         return dict(
             channel=self.channel,
@@ -244,11 +247,11 @@ class EdgeProcessingResult(PyCSAMTObject):
     """Summary returned by :class:`EdgeProcessor`."""
 
     data: np.ndarray
-    metrics: Dict[str, Any]
+    metrics: dict[str, Any]
     accepted: bool
-    reasons: List[str] = field(default_factory=list)
-    channels: List[EdgeChannelSummary] = field(default_factory=list)
-    decision_override: Optional[EdgeDecision | str] = None
+    reasons: list[str] = field(default_factory=list)
+    channels: list[EdgeChannelSummary] = field(default_factory=list)
+    decision_override: EdgeDecision | str | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -281,7 +284,7 @@ class EdgeProcessingResult(PyCSAMTObject):
             return self.decision_override
         return EdgeDecision.ACCEPT if self.accepted else EdgeDecision.REJECT
 
-    def payload(self, *, include_data: Optional[bool] = None) -> Dict[str, Any]:
+    def payload(self, *, include_data: bool | None = None) -> dict[str, Any]:
         """Return a serialisable QC payload for telemetry."""
         keep_data = bool(include_data)
         out = dict(
@@ -300,10 +303,10 @@ class EdgeProcessingResult(PyCSAMTObject):
         device: DeviceConfig,
         *,
         timestamp: float,
-        survey_id: Optional[str] = None,
+        survey_id: str | None = None,
         qos: int = 0,
         retained: bool = False,
-        include_data: Optional[bool] = None,
+        include_data: bool | None = None,
     ) -> TelemetryPacket:
         """Encode this edge result as a QC telemetry packet."""
         return TelemetryPacket.from_device(
@@ -320,7 +323,7 @@ class EdgeProcessingResult(PyCSAMTObject):
 class EdgeProcessor(PyCSAMTObject):
     """Small edge-processing block for telemetry payload reduction."""
 
-    def __init__(self, config: Optional[EdgeProcessingConfig] = None) -> None:
+    def __init__(self, config: EdgeProcessingConfig | None = None) -> None:
         self.config = config or EdgeProcessingConfig()
         self.config.validate()
 
@@ -328,7 +331,7 @@ class EdgeProcessor(PyCSAMTObject):
         self,
         data: Any,
         *,
-        channel_names: Optional[Iterable[str]] = None,
+        channel_names: Iterable[str] | None = None,
     ) -> EdgeProcessingResult:
         """Decimate numeric data and compute simple quality metrics."""
         self.config.validate()
@@ -354,7 +357,7 @@ class EdgeProcessor(PyCSAMTObject):
             finite_coverage=coverage,
             max_spike_fraction=max_spike,
         )
-        metrics: Dict[str, Any] = dict(
+        metrics: dict[str, Any] = dict(
             original_samples=int(arr.shape[sample_axis]),
             emitted_samples=int(reduced.shape[sample_axis]),
             finite_coverage=coverage,
@@ -395,9 +398,9 @@ class EdgeProcessor(PyCSAMTObject):
         *,
         finite_coverage: float,
         max_spike_fraction: float,
-    ) -> List[str]:
+    ) -> list[str]:
         """Return marginal-quality reasons for an otherwise accepted result."""
-        warnings: List[str] = []
+        warnings: list[str] = []
         warn_cov = self.config.warn_finite_threshold
         warn_spike = self.config.warn_spike_fraction
         if warn_cov is not None and finite_coverage < warn_cov:
@@ -419,8 +422,8 @@ class EdgeProcessor(PyCSAMTObject):
         data: np.ndarray,
         *,
         sample_axis: int,
-        channel_names: Optional[Iterable[str]],
-    ) -> List[EdgeChannelSummary]:
+        channel_names: Iterable[str] | None,
+    ) -> list[EdgeChannelSummary]:
         sample_first = np.moveaxis(np.asarray(data, dtype=float), sample_axis, 0)
         if sample_first.ndim == 1:
             matrix = sample_first.reshape(sample_first.shape[0], 1)
@@ -430,7 +433,7 @@ class EdgeProcessor(PyCSAMTObject):
             matrix.shape[1],
             channel_names or self.config.channel_names,
         )
-        summaries: List[EdgeChannelSummary] = []
+        summaries: list[EdgeChannelSummary] = []
         for idx, name in enumerate(names):
             values = matrix[:, idx]
             finite = np.isfinite(values)
@@ -442,7 +445,7 @@ class EdgeProcessor(PyCSAMTObject):
                 )
                 if self.config.compute_spikes else 0.0
             )
-            reasons: List[str] = []
+            reasons: list[str] = []
             if self.config.compute_coverage and (
                 coverage < self.config.finite_threshold
             ):
@@ -474,8 +477,8 @@ class EdgeProcessor(PyCSAMTObject):
         *,
         finite_coverage: float,
         max_spike_fraction: float,
-    ) -> List[str]:
-        reasons: List[str] = []
+    ) -> list[str]:
+        reasons: list[str] = []
         if data.size == 0:
             reasons.append("empty_data")
         if self.config.compute_coverage and (
@@ -499,7 +502,7 @@ def edge_summary_table(
         [result] if isinstance(result, EdgeProcessingResult)
         else list(result)
     )
-    rows: List[Mapping[str, Any]] = []
+    rows: list[Mapping[str, Any]] = []
     for idx, item in enumerate(results):
         item.validate()
         for channel in item.channels:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt tdem plot — visualise TEMAVG decay curves, sections, and maps."""
@@ -11,9 +10,11 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, verbose_option
-
-from ._base import tdem, _get_survey
+from ....api.cli.options import (
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_survey, tdem
 
 _KINDS = [
     "decay",
@@ -170,7 +171,9 @@ def plot(
                 err=True,
             )
 
-    from pycsamt.tdem import plot as _tdem_plot  # noqa: PLC0415
+    from pycsamt.tdem import (
+        plot as _tdem_plot,  # noqa: PLC0415
+    )
 
     ax_or_axes = None
 

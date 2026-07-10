@@ -1,5 +1,6 @@
 
 import os
+
 from .config import Config
 
 
@@ -12,7 +13,7 @@ def read_any(path: str, **kwargs):
     path : str
         Path to file. Extension must be one of Config().parsers.keys().
     **kwargs
-        Passed directly to the pandas reader (e.g. sep, sheet_name, 
+        Passed directly to the pandas reader (e.g. sep, sheet_name,
         parse_dates, etc.)
 
     Returns

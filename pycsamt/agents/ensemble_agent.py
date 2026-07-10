@@ -23,13 +23,12 @@ Requires PyTorch **or** TensorFlow.
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
-from .ai_inversion import _z_to_features, _default_thicknesses
+from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
 You are an expert in Bayesian and ensemble methods for geophysical inversion.
@@ -124,10 +123,12 @@ class EnsembleAgent(BaseAgent):
 
         # ── backend check ──────────────────────────────────────────────────────
         try:
-            from ..ai.inversion.ensemble import EnsembleInverter
-            from ..ai.inversion.inv1d    import EMInverter1D
-            from ..forward.batch         import generate_dataset
-            from ..backends              import get_backend_instance
+            from ..ai.inversion.ensemble import (
+                EnsembleInverter,
+            )
+            from ..ai.inversion.inv1d import EMInverter1D
+            from ..backends import get_backend_instance
+            from ..forward.batch import generate_dataset
             if get_backend_instance() is None:
                 raise ImportError("No DL backend (torch / tensorflow).")
         except ImportError as exc:
@@ -137,7 +138,12 @@ class EnsembleAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -358,8 +364,8 @@ def _forward_rms(ed: Any, log_rho: np.ndarray, freqs: np.ndarray,
                  n_layers: int) -> float | None:
     """Re-run forward on predicted model and compute log-ρa RMS."""
     try:
-        from ..forward import MT1DForward, LayeredModel
         from ..emtools._core import _get_z_block
+        from ..forward import LayeredModel, MT1DForward
         _, z, fr = _get_z_block(ed)
         if z is None:
             return None
@@ -404,7 +410,7 @@ def _plot_uncertainty_section(
 ) -> Any:
     """Plot mean ± 2σ uncertainty section for all stations."""
     import matplotlib.pyplot as plt
-    import matplotlib.colors as mcolors
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import PYCSAMT_STATION_RENDERING
 

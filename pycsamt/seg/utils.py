@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -15,26 +14,20 @@ from __future__ import annotations
 
 import math
 import re
-import sys
-from pathlib import Path
-from collections.abc import Sized
 import shutil
+import sys
 import warnings
-import numpy as np
-from typing import ( 
-    Any, 
-    Dict, 
-    Iterable, 
-    List, 
-    Mapping, 
-    Optional, 
-    Sequence,  
-    Union, 
-    TextIO, 
-    Tuple, 
-    TypeVar, 
-    TYPE_CHECKING
+from collections.abc import Iterable, Mapping, Sequence, Sized
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    TextIO,
+    TypeVar,
+    Union,
 )
+
+import numpy as np
 
 from ..exceptions import FileHandlingError
 from ..log.logger import get_logger
@@ -45,8 +38,10 @@ Container = Union[StrLike, Sequence[StrLike], np.ndarray]
 # Generic TypeVar bound to *Edi* (forward-referenced to avoid
 # import cycles when the module is imported very early).
 if TYPE_CHECKING:
-    from .edi import Edi  # only evaluated by Mypy/Pylance/pyright
-    
+    from .edi import (
+        Edi,  # only evaluated by Mypy/Pylance/pyright
+    )
+
 _Edi = TypeVar("_Edi", bound="Edi")
 
 
@@ -128,9 +123,9 @@ def sort_edis_by_location(
     by: str = "index",
     method: str = "strict",
     metric: str = "cartesian",
-    reference: Tuple[float, float] | None = None,
+    reference: tuple[float, float] | None = None,
     verbose: int = 0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Order *EDI* sites according to geographic criteria.
 
@@ -208,7 +203,7 @@ def sort_edis_by_location(
     )
 
     # pre-extract criteria
-    recs: List[dict] = []
+    recs: list[dict] = []
     _idx_re = re.compile(r"\d+")
     for edi in edi_list:
         file_name = Path(edi.path or "").name
@@ -234,11 +229,14 @@ def sort_edis_by_location(
 
     # define sorting key
     if by in {"ll", "lonlat"}:
-        key_fun = lambda r: (r["lon"], r["lat"])
+        def key_fun(r):
+            return (r["lon"], r["lat"])
     elif by == "latlon":
-        key_fun = lambda r: (r["lat"], r["lon"])
+        def key_fun(r):
+            return (r["lat"], r["lon"])
     else:
-        key_fun = lambda r: r[by]
+        def key_fun(r):
+            return r[by]
 
     recs_sorted = sorted(recs, key=key_fun)
 
@@ -263,7 +261,7 @@ def sort_edis_by_location(
 
     return edi_sorted, names
 
-def _safe_number(s: str) -> Union[int, float, str]:
+def _safe_number(s: str) -> int | float | str:
     """
     Try to parse a string as int/float (including E-format). If it
     fails, return the original string (stripped of quotes).
@@ -288,7 +286,7 @@ def _safe_number(s: str) -> Union[int, float, str]:
     return s
 
 
-def _dms_to_deg(s: str) -> Optional[float]:
+def _dms_to_deg(s: str) -> float | None:
     """
     Convert 'DD:MM:SS(.sss)' (optionally ending with N/S/E/W) to degrees.
 
@@ -313,7 +311,7 @@ def _dms_to_deg(s: str) -> Optional[float]:
     return val
 
 
-def parse_kv_pairs(s: str) -> Dict[str, Any]:
+def parse_kv_pairs(s: str) -> dict[str, Any]:
     """
     Parse `KEY=VALUE` pairs from a single line.
 
@@ -326,7 +324,7 @@ def parse_kv_pairs(s: str) -> Dict[str, Any]:
     >>> parse_kv_pairs('ID=10011.001 CHTYPE=HX X=0.0 Y=0.0 AZM=0')
     {'ID': 10011.001, 'CHTYPE': 'HX', 'X': 0.0, 'Y': 0.0, 'AZM': 0}
     """
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for m in KVPAIR_RE.finditer(s):
         key = m.group("key")
         val_raw = m.group("val").strip()
@@ -339,7 +337,7 @@ def parse_kv_pairs(s: str) -> Dict[str, Any]:
 # Public: measurement parser
 def gather_measurement_key_value_with_str_parser(
     lines: Iterable[str],
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Parse measurement definitions from lines.
 
@@ -378,7 +376,7 @@ def gather_measurement_key_value_with_str_parser(
     >>> gather_measurement_key_value_with_str_parser(src)[0]["CHTYPE"]
     'HX'
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for raw in lines:
         s = raw.strip()
         if not s.startswith(">"):
@@ -406,8 +404,8 @@ def _format_block_numbers(
     Format a 1-D sequence of numbers into a block like the EDI
     examples (6 entries per line, scientific format).
     """
-    buf: List[str] = []
-    line: List[str] = []
+    buf: list[str] = []
+    line: list[str] = []
     for i, v in enumerate(arr):
         line.append(fmt.format(float(v)))
         if (i + 1) % per_line == 0:
@@ -455,7 +453,7 @@ def _format_kv(k: str, v):
     # quote if whitespace or quotes present
     return f'{k}="{s.replace(chr(34), "")}"'
 
-def _ensure_1d(a: Union[Sequence[float], np.ndarray]) -> np.ndarray:
+def _ensure_1d(a: Sequence[float] | np.ndarray) -> np.ndarray:
     v = np.asarray(a).ravel()
     return v.astype(float, copy=False)
 
@@ -542,7 +540,7 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     >>> edi_text.startswith(">HEAD")
     True
     """
-    lines: List[str] = []
+    lines: list[str] = []
 
     # >HEAD
     head = dict(obj.get("head") or {})
@@ -550,7 +548,7 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
         lines.append(">HEAD")
         for k, v in head.items():
             lines.append("  " + _format_kv(k, v))
-            
+
         lines.append("")
 
     # >INFO
@@ -664,10 +662,10 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 def strip_item(
-    item_to_clean: Optional[Container],
-    item: Optional[str] = None,
+    item_to_clean: Container | None,
+    item: str | None = None,
     multi_space: int = 12,
-) -> Optional[Container]:
+) -> Container | None:
     """
     Strip a token repeatedly from both ends of strings.
 
@@ -740,7 +738,7 @@ def strip_item(
     input_is_scalar = isinstance(item_to_clean, (str, np.str_))
 
     if input_is_scalar:
-        data_list: List[str] = [str(item_to_clean)]
+        data_list: list[str] = [str(item_to_clean)]
         orig_dtype = None
     elif input_is_array:
         # Ensure 1D iteration over elements (even for object dtype)
@@ -758,7 +756,7 @@ def strip_item(
 
     # Build the stripper
     token = (item or "").strip("\n\r")
-    cleaned: List[str] = []
+    cleaned: list[str] = []
 
     if token == "":
         # Whitespace strip

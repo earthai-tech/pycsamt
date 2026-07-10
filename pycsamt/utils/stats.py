@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,25 +5,21 @@
 Statistical utilities.
 """
 
-from typing import ( 
-    Sequence, 
-    Any, Iterable,
-    Optional, Union
-    
-)
-from scipy.optimize import curve_fit
-import matplotlib.pyplot as plt
+from collections.abc import Iterable, Sequence
+from typing import Any, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.optimize import curve_fit
 
-from ..exceptions import StatsError 
+from ..exceptions import StatsError
 
 __all__ = [
     'get_confidence_ratio',
-    'drawn_boundaries', 
-    'remove_outliers', 
-    'scale_position', 
+    'drawn_boundaries',
+    'remove_outliers',
+    'scale_position',
 ]
 
 def get_confidence_ratio(
@@ -139,113 +134,113 @@ def remove_outliers(
     interpolate: bool = False,
     kind: str = 'linear'
 ) -> Any:
-    """ Efficient strategy to remove outliers in the data. 
-    
-    Indeed, an outlier is the data point of the given sample, 
-    observation, or distribution that shall lie outside the overall pattern. 
-    A commonly used rule says that one will consider a data point an 
-    outlier if it has more than 1.5 IQR below the first quartile or above 
-    the third. 
-    
-    Two approaches are used to remove the outliers. 
+    """ Efficient strategy to remove outliers in the data.
+
+    Indeed, an outlier is the data point of the given sample,
+    observation, or distribution that shall lie outside the overall pattern.
+    A commonly used rule says that one will consider a data point an
+    outlier if it has more than 1.5 IQR below the first quartile or above
+    the third.
+
+    Two approaches are used to remove the outliers.
 
     - Inter Quartile Range (``IQR``)
-      IQR is the most commonly used and most trusted approach used in 
-      the research field. Said differently, low outliers shall 
-      lie below Q1-1.5 IQR, and high outliers shall lie Q3+1.5IQR. 
-      One needs to calculate median, quartiles, including IQR, Q1, 
-      and Q3. 
-      
-      .. math:: 
-          
+      IQR is the most commonly used and most trusted approach used in
+      the research field. Said differently, low outliers shall
+      lie below Q1-1.5 IQR, and high outliers shall lie Q3+1.5IQR.
+      One needs to calculate median, quartiles, including IQR, Q1,
+      and Q3.
+
+      .. math::
+
         Q1 = 1/4(n + 1)
-        
+
         Q3 = 1/4 (n + 1)
-        
+
         Q2 = Q3 – Q1
-      
-      To define the outlier base value is defined above and below 
-      datasets normal range namely Upper and Lower bounds, define the 
+
+      To define the outlier base value is defined above and below
+      datasets normal range namely Upper and Lower bounds, define the
       upper and the lower bound (1.5*IQR value is considered) :
-      
-      .. math:: 
-          
+
+      .. math::
+
          upper = Q3 +1.5*IQR
 
          lower = Q1 – 1.5*IQR
-         
-      In the above formula as according to statistics, the 0.5 
-      scale-up of :math:`IQR (new_IQR = IQR + 0.5*IQR)` is taken, to consider 
-      all the data between 2.7 standard deviations in the Gaussian 
+
+      In the above formula as according to statistics, the 0.5
+      scale-up of :math:`IQR (new_IQR = IQR + 0.5*IQR)` is taken, to consider
+      all the data between 2.7 standard deviations in the Gaussian
       Distribution
-    
-    - Z-score 
-      Is also called a standard score. This value/score helps to understand 
-      that how far is the data point from the mean. And after setting up 
-      a threshold value one can utilize z score values of data points 
+
+    - Z-score
+      Is also called a standard score. This value/score helps to understand
+      that how far is the data point from the mean. And after setting up
+      a threshold value one can utilize z score values of data points
       to define the outliers.
-      
-      .. math:: 
-          
+
+      .. math::
+
           Zscore = (\text{data_point} -\text{mean}) / \text{std. deviation}
-      
-    Now to define an outlier threshold value is chosen which is 
-    generally 3.0. As 99.7% of the data points lie between +/- 3 standard 
-    deviation (using Gaussian Distribution approach). 
-    
-    .. versionadded: 0.1.5 
-    
-    Parameters 
+
+    Now to define an outlier threshold value is chosen which is
+    generally 3.0. As 99.7% of the data points lie between +/- 3 standard
+    deviation (using Gaussian Distribution approach).
+
+    .. versionadded: 0.1.5
+
+    Parameters
     -----------
-    ar: Arraylike, pd.dataframe 
-       Arraylike  containing outliers to remove. 
-       
-       .. versionadded:: 0.2.7 
-          Accepts dataframe and can remove outliers using the `z_score`. 
-          
+    ar: Arraylike, pd.dataframe
+       Arraylike  containing outliers to remove.
+
+       .. versionadded:: 0.2.7
+          Accepts dataframe and can remove outliers using the `z_score`.
+
     method: str, default='IQR'
       The selected approach to remove the outliers. It can be
-      ['IQR'|'Z-score']. See Above for outlier explanations.  Note that 
-      when selecting ``"z-score"`` the threshold value greatly influence 
-      the quality of data considering as ooutliers. 
-      
-    threshold: float, default=3 
-      Thershold values is useful for ``"z-score"`` as the value for considering 
-      data above as outliers. 
-      
+      ['IQR'|'Z-score']. See Above for outlier explanations.  Note that
+      when selecting ``"z-score"`` the threshold value greatly influence
+      the quality of data considering as ooutliers.
+
+    threshold: float, default=3
+      Thershold values is useful for ``"z-score"`` as the value for considering
+      data above as outliers.
+
     fill_value: float, optional
-      Value to replace the outliers. If not given, outliers are suppressed 
-      in the array. 
-    
-    axis: int, default=1 
-      axis from which to remove values. This is useful when two dimensional 
-      array is supplied. Default, delete outlier from the rows. 
-      
-    interpolate: bool, default=False, 
-       If ``fill_value='NaN'``, interpolation can be triggered to get the 
-       closest value in array to replace missing values. Note that 
-       `fill_value` should be NaN for interpolation to be concise. 
-       
+      Value to replace the outliers. If not given, outliers are suppressed
+      in the array.
+
+    axis: int, default=1
+      axis from which to remove values. This is useful when two dimensional
+      array is supplied. Default, delete outlier from the rows.
+
+    interpolate: bool, default=False,
+       If ``fill_value='NaN'``, interpolation can be triggered to get the
+       closest value in array to replace missing values. Note that
+       `fill_value` should be NaN for interpolation to be concise.
+
     kind: str, default='linear'
-      kind of interpolation. It could be ['nearest'|'linear'|'cubic']. 
-      
-    .. versionadded:: 0.2.8 
-       Interpolate NaN value after outliers removal. 
-    
-      
+      kind of interpolation. It could be ['nearest'|'linear'|'cubic'].
+
+    .. versionadded:: 0.2.8
+       Interpolate NaN value after outliers removal.
+
+
     Returns
     --------
-    arr: Array_like 
-        New array whith removed outliers. 
-        
+    arr: Array_like
+        New array whith removed outliers.
+
     Examples
     ---------
-    >>> import numpy as np 
+    >>> import numpy as np
     >>> np.random.seed (42 )
-    >>> from watex.utils.funcutils import remove_outliers 
+    >>> from watex.utils.funcutils import remove_outliers
     >>> data = np.random.randn (7, 3 )
     >>> data_r = remove_outliers ( data )
-    >>> data.shape , data_r.shape 
+    >>> data.shape , data_r.shape
     (7, 3) (5, 3)
     >>> remove_outliers ( data, fill_value =np.nan )
     array([[ 0.49671415, -0.1382643 ,  0.64768854],
@@ -255,12 +250,12 @@ def remove_outliers(
            [ 0.24196227,         nan,         nan],
            [-0.56228753, -1.01283112,  0.31424733],
            [-0.90802408,         nan,  1.46564877]])
-    >>> # for one dimensional 
+    >>> # for one dimensional
     >>> remove_outliers ( data[:, 0] , fill_value =np.nan )
     array([ 0.49671415,  1.52302986,  1.57921282,  0.54256004,  0.24196227,
            -0.56228753,         nan])
     >>> remove_outliers ( data[:, 0] , fill_value =np.nan, interpolate=True  )
-    >>> import matplotlib.pyplot as plt 
+    >>> import matplotlib.pyplot as plt
     >>> plt.plot (np.arange (len(data ), data, ))
     """
 
@@ -334,7 +329,7 @@ def scale_position(
     xy_numeric: bool = False,
     asarray: bool = True,
     show: bool = False,
-    plot_kwargs: dict = {}
+    plot_kwargs: dict = None
 ) -> Union[tuple, np.ndarray]:
     """
     Fit and rescale y vs. x using a model, return scaled y.
@@ -369,6 +364,8 @@ def scale_position(
     y_scaled, popt, pcov
     """
 
+    if plot_kwargs is None:
+        plot_kwargs = {}
     def _linear(x, a, b):
         return a * x + b
 

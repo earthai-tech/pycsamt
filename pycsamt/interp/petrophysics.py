@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Petrophysical transforms for EM hydrogeophysics.
@@ -57,8 +56,8 @@ References
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from scipy.optimize import brentq
@@ -467,7 +466,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
 
         it = np.nditer([rho, phi, sigma_w_si, F_arr, result],
                        op_flags=[['readonly']] * 4 + [['writeonly']])
-        for rho_i, phi_i, sw_i, F_i, out_i in it:
+        for rho_i, _phi_i, sw_i, F_i, out_i in it:
             sigma_obs = 1.0 / float(rho_i)
             sw_si     = float(sw_i)
             F_v       = float(F_i)
@@ -590,7 +589,7 @@ class HashinShtrikmanBounds(PyCSAMTObject):
     def bounds(
         self,
         phi: Any,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         r"""Compute Hashin-Shtrikman lower and upper conductivity bounds.
 
         Parameters
@@ -611,7 +610,7 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         s_m     = 1.0 / self.rho_matrix
 
         # HS+ (fluid is the more conductive reference = lower ρ bound)
-        denom_plus  = f_mat / (s_m - s_f + 3.0 * s_f)
+        f_mat / (s_m - s_f + 3.0 * s_f)
         sigma_plus  = s_f + f_mat / (1.0 / (s_m - s_f) + f_phi / (3.0 * s_f))
 
         # HS- (matrix is reference = upper ρ bound)
@@ -975,7 +974,7 @@ def aquifer_top_from_profile(
     rho_threshold_ohm_m: float = 300.0,
     direction: str = "low",
     min_depth: float = 0.0,
-) -> Optional[float]:
+) -> float | None:
     r"""Detect the top of an aquifer/conductor in a 1-D resistivity profile.
 
     Scans the profile from the surface down and returns the depth of the
@@ -1021,7 +1020,7 @@ def water_table_from_profile(
     rho_w: float = 0.025,
     Sw_threshold: float = 0.85,
     min_depth: float = 0.5,
-) -> Optional[float]:
+) -> float | None:
     r"""Estimate water table depth from a 1-D EM resistivity column.
 
     Converts each cell's log₁₀ρ to water saturation S_w via Archie's

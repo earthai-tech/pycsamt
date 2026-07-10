@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from .frame import api_frame, wrap_frame
 
@@ -38,7 +39,9 @@ def sites_summary(
     verbose: int = 0,
 ) -> Any:
     """Return a public APIFrame wrapper around ``emtools`` site summary."""
-    from ...emtools.inspect import sites_summary as _sites_summary
+    from ...emtools.inspect import (
+        sites_summary as _sites_summary,
+    )
 
     return _sites_summary(
         sites,
@@ -57,7 +60,9 @@ def sites_summary(
 )
 def quality_dataframe(sites: Any) -> Any:
     """Return a public APIFrame wrapper around metadata quality rows."""
-    from ...metadata.quality import quality_dataframe as _quality_dataframe
+    from ...metadata.quality import (
+        quality_dataframe as _quality_dataframe,
+    )
 
     return _quality_dataframe(sites)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Topography rendering helpers for 2-D section and pseudosection plots.
@@ -34,7 +33,8 @@ Typical usage::
 
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
@@ -59,9 +59,9 @@ def draw_topo_section(
     ax,
     chainage_km: np.ndarray,
     elev_m: np.ndarray,
-    station_names: Optional[Sequence[str]] = None,
+    station_names: Sequence[str] | None = None,
     *,
-    station_x_km: Optional[np.ndarray] = None,
+    station_x_km: np.ndarray | None = None,
     cfg=None,
     dark: bool = True,
 ) -> None:
@@ -190,7 +190,7 @@ def draw_topo_strip(
     main_ax,
     chainage_km: np.ndarray,
     elev_m: np.ndarray,
-    station_names: Optional[Sequence[str]] = None,
+    station_names: Sequence[str] | None = None,
     *,
     cfg=None,
     dark: bool = True,
@@ -269,7 +269,10 @@ def draw_topo_strip(
             zorder=3,
         )
     # Station pins — use marker style from global rendering config
-    from pycsamt.api.station import PYCSAMT_STATION_RENDERING, StationAxisStyle
+    from pycsamt.api.station import (
+        PYCSAMT_STATION_RENDERING,
+        StationAxisStyle,
+    )
     _mstyle = PYCSAMT_STATION_RENDERING.pseudosection.marker
     ax_s.scatter(
         x_idx, elev_ex,

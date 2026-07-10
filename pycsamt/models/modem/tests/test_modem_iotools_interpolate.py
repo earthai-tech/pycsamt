@@ -1,13 +1,18 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.models.modem.iotools.interpolate."""
 
-import pytest
 import numpy as np
+import pytest
 
 pytest.importorskip("scipy")
 
-from pycsamt.models.modem.iotools.interpolate import interp_model3d, interp_z3d
-from pycsamt.models.modem.iotools.impedance import ZBlock, ImpedanceFile
+from pycsamt.models.modem.iotools.impedance import (
+    ImpedanceFile,
+    ZBlock,
+)
+from pycsamt.models.modem.iotools.interpolate import (
+    interp_model3d,
+    interp_z3d,
+)
 
 # ---------------------------------------------------------------------------
 # Synthetic model / data builders

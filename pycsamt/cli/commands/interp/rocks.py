@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -31,7 +30,11 @@ import sys
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ._base import interp
 
 
@@ -85,7 +88,9 @@ def rocks(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from ....interp.lithology import RockDatabase  # noqa: PLC0415
+    from ....interp.lithology import (
+        RockDatabase,  # noqa: PLC0415
+    )
 
     try:
         db = RockDatabase.default()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Site‑level properties parsed from the J‑format information block.
 
@@ -10,22 +9,25 @@ wrapping, latitude/longitude hemispheres, and missing sentinels).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, Iterable, Mapping
 import io
 import math
 import warnings
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
 
+from ..exceptions import JParseError
 from ..gis.utils import (
-    convert_position_str2float as _to_deg,
     assert_lat_value as _assert_lat,
+)
+from ..gis.utils import (
     assert_lon_value as _assert_lon,
 )
-from ..exceptions import JParseError
+from ..gis.utils import (
+    convert_position_str2float as _to_deg,
+)
 from .config import ENCODING_DEFAULT, MISSING_FLOAT
-from .utils import iter_lines, iter_info
-
+from .utils import iter_info, iter_lines
 
 __all__ = ["JSiteProperty"]
 
@@ -97,7 +99,7 @@ class JSiteProperty:
     latitude: float | None = None
     longitude: float | None = None
     elevation: float | None = None
-    extra: Dict[str, str] = field(default_factory=dict)
+    extra: dict[str, str] = field(default_factory=dict)
     verbose: int | bool = 0
     strict: bool = False
 
@@ -109,7 +111,7 @@ class JSiteProperty:
         encoding: str = ENCODING_DEFAULT,
         strict: bool = False,
         verbose: int | bool = 0,
-    ) -> "JSiteProperty":
+    ) -> JSiteProperty:
         r"""
         Build a :class:`JSiteProperty` from a J file path or
         file-like object.
@@ -168,7 +170,7 @@ class JSiteProperty:
         *,
         strict: bool = False,
         verbose: int | bool = 0,
-    ) -> "JSiteProperty":
+    ) -> JSiteProperty:
         r"""
         Build a :class:`JSiteProperty` from an iterable of lines.
 
@@ -221,8 +223,8 @@ class JSiteProperty:
            J-format, version 2.0.
         """
 
-        props: Dict[str, float | None] = {}
-        extra: Dict[str, str] = {}
+        props: dict[str, float | None] = {}
+        extra: dict[str, str] = {}
         for key, val in iter_info(lines):
             key_up = key.upper()
             try:
@@ -251,7 +253,7 @@ class JSiteProperty:
                 if strict:
                     raise JParseError(msg) from exc
                 _vwarn(msg, verbose)
-                
+
         return cls(
             azimuth=props.get("azimuth"),
             latitude=props.get("latitude"),
@@ -270,7 +272,7 @@ class JSiteProperty:
         *,
         strict: bool = False,
         verbose: int | bool = 0,
-    ) -> "JSiteProperty":
+    ) -> JSiteProperty:
         r"""
         Build a :class:`JSiteProperty` from a dict of key-value
         pairs.
@@ -324,7 +326,7 @@ class JSiteProperty:
         lines = (f">{k}={v}" for k, v in mapping.items())
         return cls.from_lines(lines, strict=strict, verbose=verbose)
 
-    def asdict(self) -> Dict[str, float | None]:
+    def asdict(self) -> dict[str, float | None]:
         return {
             "azimuth": self.azimuth,
             "latitude": self.latitude,
@@ -377,7 +379,7 @@ def _parse_latitude(
     - Otherwise, parse with :func:`convert_position_str2float` and
       coerce into ``[-90, 90]`` with a warning if needed.
     """
-    
+
     if strict:
         return _assert_lat(value)
     lat = _to_deg(value)
@@ -411,7 +413,7 @@ def _parse_longitude(
             lon = float(str(value).strip())
         except Exception:
             return None
-        
+
     fixed = _coerce_lon(lon)
     if abs(fixed - lon) > 1e-12:
         _vwarn(
@@ -425,12 +427,12 @@ def _vwarn(msg: str, verbose: int | bool) -> None:
         warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
 def _to_float_safe(s: str) -> float:
-    """Best‑effort float parser for simple 
+    """Best‑effort float parser for simple
     numeric fields (e.g., azimuth).
 
-    Unlike :func:`_to_deg`, this does *not* 
-    parse DMS — it's meant for scalar numeric 
-    tokens where non‑numeric input should 
+    Unlike :func:`_to_deg`, this does *not*
+    parse DMS — it's meant for scalar numeric
+    tokens where non‑numeric input should
     surface quickly.
     """
     s = str(s).strip()

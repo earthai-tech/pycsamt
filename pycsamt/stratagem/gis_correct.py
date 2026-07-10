@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -42,13 +41,16 @@ from __future__ import annotations
 import re
 from copy import copy as _copy
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 from ..api.property import MetadataMixin, PyCSAMTObject
-from ..exceptions import FileHandlingError, NotFittedError, ValidationError
+from ..exceptions import (
+    FileHandlingError,
+    NotFittedError,
+    ValidationError,
+)
 from ..gis.utils import project_point_utm2ll
 from ..io.parsers import read_any
 from .io import EDIBatch
@@ -83,10 +85,10 @@ def _isnan_median(series) -> bool:
 
 def _detect_coord_cols(
     df,
-    easting_col: Optional[str],
-    northing_col: Optional[str],
+    easting_col: str | None,
+    northing_col: str | None,
     exclude: set,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Auto-detect easting / northing column names from a DataFrame.
 
     Selects the two numeric columns with the most different medians:
@@ -209,7 +211,7 @@ class StationLocator(PyCSAMTObject):
         self,
         *,
         order: str = "auto",
-        mapping: Optional[List[int]] = None,
+        mapping: list[int] | None = None,
         verbose: int = 0,
     ) -> None:
         self.order = order
@@ -221,7 +223,7 @@ class StationLocator(PyCSAMTObject):
         edi_objects: list,
         latitudes: np.ndarray,
         longitudes: np.ndarray,
-    ) -> "StationLocator":
+    ) -> StationLocator:
         """Compute the index map.
 
         Parameters
@@ -391,16 +393,16 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
     # ------------------------------------------------------------------
     def fit(
         self,
-        edi_batch: "Union[EDIBatch, list]",
-        coord_file: "Union[str, Path]",
+        edi_batch: EDIBatch | list,
+        coord_file: str | Path,
         *,
-        easting_col: Optional[str] = None,
-        northing_col: Optional[str] = None,
+        easting_col: str | None = None,
+        northing_col: str | None = None,
         elev_col: str = "elev",
         station_col: str = "stations",
-        read_kwargs: Optional[Dict] = None,
+        read_kwargs: dict | None = None,
         copy: bool = False,
-    ) -> "CoordinateInjector":
+    ) -> CoordinateInjector:
         """Load coordinates and inject them into EDI HEAD sections.
 
         Parameters
@@ -481,8 +483,8 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
             else np.zeros(n_coord, dtype=float)
         )
 
-        lats: List[float] = []
-        lons: List[float] = []
+        lats: list[float] = []
+        lons: list[float] = []
         for e, n in zip(easting_vals, northing_vals):
             lat_i, lon_i = project_point_utm2ll(
                 e, n,
@@ -509,11 +511,11 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
             order=self.order, verbose=self.verbose
         )
         locator.fit(edi_objects, self.latitudes_, self.longitudes_)
-        self._index_map: List[int] = locator.index_map_
+        self._index_map: list[int] = locator.index_map_
         self.reversed_ = locator.reversed_
 
         # ── inject into EDI HEAD sections (in-memory) ─────────────────
-        self.edi_objects_: List = []
+        self.edi_objects_: list = []
         for edi_idx, coord_idx in enumerate(self._index_map):
             edi = _copy(edi_objects[edi_idx]) if copy else edi_objects[edi_idx]
             head = edi.get_section("head")
@@ -539,11 +541,11 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
     # ------------------------------------------------------------------
     def export(
         self,
-        savepath: "Union[str, Path]",
+        savepath: str | Path,
         *,
-        basename: Optional[str] = None,
+        basename: str | None = None,
         overwrite: bool = False,
-    ) -> List[Path]:
+    ) -> list[Path]:
         """Write coordinate-injected EDI files to *savepath*.
 
         Parameters
@@ -569,7 +571,7 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
         out_dir = Path(savepath).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        written: List[Path] = []
+        written: list[Path] = []
         for i, edi in enumerate(self.edi_objects_):
             if basename:
                 fname = f"{basename}{i + 1:03d}.edi"

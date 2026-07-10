@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: L. Kouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,14 +6,14 @@ pycsamt.utils.io
 
 I/O utility functions for PyCSAMT v2.0.
 """
-import os 
+import os
 import re
+from typing import Optional, Union
+
 import numpy as np
 from scipy.interpolate import interp1d
-from typing import Tuple, Union, Dict, Optional 
 
-from ..exceptions import ValidationError, PycsamtError 
-
+from ..exceptions import PycsamtError, ValidationError
 
 __all__ = [
     'stn_separation',
@@ -25,7 +24,7 @@ def stn_separation(
     easting: Union[np.ndarray, list, tuple],
     northing: Union[np.ndarray, list, tuple],
     interpolate: bool = False
-) -> Tuple[np.ndarray, float]:
+) -> tuple[np.ndarray, float]:
     """
     Compute station separations (distance between successive points).
 
@@ -82,7 +81,7 @@ def stn_separation(
 def parse_stn_profile(
     file_path: str,
     delimiter: Optional[str] = None
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """
     Parse a station profile file (.stn) containing columns such as
     station position (dot), easting, northing, elevation.
@@ -111,7 +110,7 @@ def parse_stn_profile(
     if not os.path.isfile(file_path):
         raise PycsamtError(f"File not found: {file_path}")
 
-    with open(file_path, 'r', encoding='utf8') as f:
+    with open(file_path, encoding='utf8') as f:
         lines = [ln.strip() for ln in f if ln.strip()]
 
     # Skip comment lines starting with '>' or '!'

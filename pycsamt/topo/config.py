@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Package-wide topography configuration for 2-D section displays.
@@ -29,9 +28,10 @@ Temporarily override inside a ``with`` block::
 from __future__ import annotations
 
 import copy
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field, fields
-from typing import Any, Generator
+from typing import Any
 
 __all__ = [
     "TopoConfig",
@@ -139,7 +139,7 @@ class TopoConfig:
 
     # ── Public API ────────────────────────────────────────────────────
 
-    def configure(self, **kw: Any) -> "TopoConfig":
+    def configure(self, **kw: Any) -> TopoConfig:
         """Set one or more configuration attributes by keyword."""
         for k, v in kw.items():
             if not hasattr(self, k):
@@ -151,7 +151,7 @@ class TopoConfig:
         return self
 
     @contextmanager
-    def context(self, **kw: Any) -> Generator["TopoConfig", None, None]:
+    def context(self, **kw: Any) -> Generator[TopoConfig, None, None]:
         """Temporarily override config values, then restore them."""
         snapshot = {k: getattr(self, k) for k in kw}
         try:
@@ -167,7 +167,7 @@ class TopoConfig:
         for f in fields(self):
             setattr(self, f.name, getattr(_defaults, f.name))
 
-    def clone(self) -> "TopoConfig":
+    def clone(self) -> TopoConfig:
         """Return a deep copy of this config."""
         return copy.deepcopy(self)
 

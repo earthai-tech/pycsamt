@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -79,6 +78,6 @@ class SessionState:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "SessionState":
+    def from_dict(cls, d: dict[str, Any]) -> SessionState:
         known = {f for f in cls.__dataclass_fields__}  # noqa: PLC0208
         return cls(**{k: v for k, v in (d or {}).items() if k in known})

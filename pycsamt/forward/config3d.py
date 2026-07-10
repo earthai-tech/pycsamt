@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -331,7 +331,7 @@ class ForwardConfig3D:
             np.log10(self.freq_min), np.log10(self.freq_max), self.n_freqs
         )
 
-    def to_grid(self, seed=None) -> "Grid3D":
+    def to_grid(self, seed=None) -> Grid3D:
         """Construct a :class:`~pycsamt.forward.grid3d.Grid3D` from this config.
 
         Parameters
@@ -376,7 +376,7 @@ class ForwardConfig3D:
             **kw,
         )
 
-    def to_solver_kwargs(self) -> Dict[str, Any]:
+    def to_solver_kwargs(self) -> dict[str, Any]:
         """Return kwargs for :class:`~pycsamt.forward.em3d.MT3DForward`."""
         return dict(
             freqs=self.freq_grid(),
@@ -390,9 +390,9 @@ class ForwardConfig3D:
 
     def to_template(
         self,
-        path: Union[str, Path] = "forward_config_3d.py",
+        path: str | Path = "forward_config_3d.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Write an annotated source-of-truth file."""
         return write_config_template(
@@ -403,9 +403,9 @@ class ForwardConfig3D:
     @classmethod
     def write_template(
         cls,
-        path: Union[str, Path] = "forward_config_3d.py",
+        path: str | Path = "forward_config_3d.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Generate a documented source-of-truth configuration file.
 
@@ -423,10 +423,10 @@ class ForwardConfig3D:
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         strict: bool = True,
-    ) -> "ForwardConfig3D":
+    ) -> ForwardConfig3D:
         """Load from a source-of-truth file.
 
         Parameters

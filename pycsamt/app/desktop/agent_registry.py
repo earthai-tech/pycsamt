@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -30,14 +29,14 @@ tip       optional tooltip
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-ParamSpec  = Dict[str, Any]
-AgentEntry = Dict[str, Any]
+ParamSpec  = dict[str, Any]
+AgentEntry = dict[str, Any]
 
-AGENT_REGISTRY: Dict[str, AgentEntry] = {
+AGENT_REGISTRY: dict[str, AgentEntry] = {
 
     # ══════════════════════════════════════════════════════════════════════════
     # LLM agents (require API key)
@@ -1050,22 +1049,22 @@ AGENT_REGISTRY: Dict[str, AgentEntry] = {
 # Helper functions used by RunAgentDialog and AgentWorker
 # ──────────────────────────────────────────────────────────────────────────────
 
-def agent_names() -> List[str]:
+def agent_names() -> list[str]:
     """Return all registered agent display names."""
     return list(AGENT_REGISTRY.keys())
 
 
-def llm_agents() -> List[str]:
+def llm_agents() -> list[str]:
     return [n for n, e in AGENT_REGISTRY.items() if e["type"] == "llm"]
 
 
-def processing_agents() -> List[str]:
+def processing_agents() -> list[str]:
     return [n for n, e in AGENT_REGISTRY.items() if e["type"] == "processing"]
 
 
-def agents_by_category() -> Dict[str, List[str]]:
+def agents_by_category() -> dict[str, list[str]]:
     """Return {category: [display_names]} for LLM agents (preserves insertion order)."""
-    cats: Dict[str, List[str]] = {}
+    cats: dict[str, list[str]] = {}
     for name, entry in AGENT_REGISTRY.items():
         if entry["type"] != "llm":
             continue
@@ -1074,11 +1073,11 @@ def agents_by_category() -> Dict[str, List[str]]:
     return cats
 
 
-def get_entry(name: str) -> Optional[AgentEntry]:
+def get_entry(name: str) -> AgentEntry | None:
     return AGENT_REGISTRY.get(name)
 
 
-def default_params(name: str) -> Dict[str, Any]:
+def default_params(name: str) -> dict[str, Any]:
     """Return a {param_name: default_value} dict for the named agent."""
     entry = AGENT_REGISTRY.get(name, {})
     return {

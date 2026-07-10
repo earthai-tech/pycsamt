@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.lcurve"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.lcurve import lcurve_table, plot_lcurve
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Synthetic L-curve data

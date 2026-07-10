@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt tdem convert — convert a TEMAVG survey folder to impedance EDI."""
@@ -17,7 +16,6 @@ from ....api.cli.options import (
     output_dir_option,
     verbose_option,
 )
-
 from ._base import tdem
 
 
@@ -156,7 +154,9 @@ def convert(
     )
 
     if dry_run:
-        from pycsamt.tdem.workflow import read_temavg_soundings  # noqa: PLC0415
+        from pycsamt.tdem.workflow import (
+            read_temavg_soundings,  # noqa: PLC0415
+        )
 
         soundings = read_temavg_soundings(
             survey_dir,
@@ -178,7 +178,9 @@ def convert(
             "--output-dir is required (or use --dry-run to inspect soundings)"
         )
 
-    from pycsamt.tdem.workflow import transform_temavg_survey  # noqa: PLC0415
+    from pycsamt.tdem.workflow import (
+        transform_temavg_survey,  # noqa: PLC0415
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
 

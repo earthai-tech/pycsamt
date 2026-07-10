@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Import a ModEM 3-D inversion result folder into the map-view session.
@@ -25,8 +24,8 @@ from pathlib import Path
 from dash import Input, Output, State, no_update
 
 from .._ids import IDs
-from ..cache import get_view, set_view
 from .._render import merge_views, store_from_view
+from ..cache import get_view, set_view
 
 _MODE_APPEND = "append"
 

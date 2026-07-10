@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -6,7 +5,7 @@ Backend-aware utility helpers shared by AI processing and inversion modules.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 
@@ -18,7 +17,7 @@ __all__ = [
 ]
 
 
-def resolve_device(device: Optional[str] = None) -> str:
+def resolve_device(device: str | None = None) -> str:
     """
     Return a device string appropriate for the active backend.
 
@@ -34,7 +33,7 @@ def resolve_device(device: Optional[str] = None) -> str:
         return device or "cpu"
 
 
-def get_weights(model: Any) -> Dict[str, np.ndarray]:
+def get_weights(model: Any) -> dict[str, np.ndarray]:
     """Return model weights via the active backend."""
     from pycsamt.backends import get_backend_instance
     inst = get_backend_instance()
@@ -43,7 +42,7 @@ def get_weights(model: Any) -> Dict[str, np.ndarray]:
     return inst.get_weights(model)
 
 
-def set_weights(model: Any, weights: Dict[str, np.ndarray]) -> None:
+def set_weights(model: Any, weights: dict[str, np.ndarray]) -> None:
     """Restore model weights via the active backend."""
     from pycsamt.backends import get_backend_instance
     inst = get_backend_instance()

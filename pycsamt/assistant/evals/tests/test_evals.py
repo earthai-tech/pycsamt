@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -17,11 +16,9 @@ from pycsamt.assistant.evals.harness import (
     EvalReport,
     evaluate,
     load_all_suites,
-    suites_dir,
 )
 from pycsamt.assistant.rag.retriever import Retriever
 from pycsamt.assistant.rag.schemas import RAGChunk
-
 
 # ── thresholds (kept below observed over all suites: intent ~92 /
 #    wf ~91 / line 100 / symbol-recall 100) so honest dips don't

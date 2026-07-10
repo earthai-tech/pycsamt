@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """ModEM adapter backend.
@@ -223,7 +222,7 @@ class ModEMBackend(BaseInversionBackend):
 
 
 def _modem_config(modem: Any, cfg: Any) -> Any:
-    cfg_cls = getattr(modem, "ModEmConfig")
+    cfg_cls = modem.ModEmConfig
     raw = cfg.backend_options.get("config")
     if raw is None:
         values = {

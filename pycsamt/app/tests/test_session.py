@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for SessionState (Phase 1)."""
@@ -6,12 +5,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
 from pycsamt.app.desktop.models.session import SessionState
-
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 

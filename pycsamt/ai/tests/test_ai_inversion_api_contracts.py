@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """API-contract tests for :mod:`pycsamt.ai.inversion`.
 
 These tests intentionally avoid fitting neural networks.  They protect the

@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*- 
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Tuple
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Any, Callable
 
 import numpy as np
 
-from ._registry  import Registry, guess_kind 
-from .base import TFBundle, CoreObject
-from .base import to_edi
+from ._registry import Registry, guess_kind
+from .base import CoreObject, TFBundle, to_edi
 
 __all__ = [
     "Packer",
@@ -25,18 +23,18 @@ __all__ = [
 ]
 
 
-Packer = Tuple[
-    Callable[[Any], Dict[str, Any]],
-    Callable[[Dict[str, Any]], Any],
+Packer = tuple[
+    Callable[[Any], dict[str, Any]],
+    Callable[[dict[str, Any]], Any],
 ]
 
-_PACKERS: Dict[str, Packer] = {}
+_PACKERS: dict[str, Packer] = {}
 
 
 def register_packer(kind: str, packer: Packer) -> None:
     r"""
     Register a serializer/deserializer pair for a given ``kind``.
-    
+
     Parameters
     ----------
     kind : str
@@ -45,18 +43,18 @@ def register_packer(kind: str, packer: Packer) -> None:
         Pair ``(pack, unpack)``. The first callable takes an
         object and returns a ``dict``; the second takes that
         mapping and returns the reconstructed object.
-    
+
     Raises
     ------
     ValueError
         If ``kind`` is empty or not a ``str``.
-    
+
     Notes
     -----
     Registration is global to the current process via an
     internal dictionary. Re-registering the same ``kind`` will
     overwrite the previous pair.
-    
+
     Examples
     --------
     >>> def pack(x): return {"v": x}
@@ -64,14 +62,14 @@ def register_packer(kind: str, packer: Packer) -> None:
     >>> register_packer("toy", (pack, unpack))
     >>> get_packer("toy") is not None
     True
-    
+
     See Also
     --------
     get_packer
     list_packers
     pack_to_file
     unpack_from_file
-    
+
     References
     ----------
     .. [1] NumPy. ``np.savez_compressed`` for NPZ payloads.
@@ -82,20 +80,20 @@ def register_packer(kind: str, packer: Packer) -> None:
     _PACKERS[kind.lower()] = packer
 
 
-def get_packer(kind: str) -> Optional[Packer]:
+def get_packer(kind: str) -> Packer | None:
     r"""
     Return the registered packer for ``kind`` or ``None``.
-    
+
     Parameters
     ----------
     kind : str
         Case-insensitive key used at registration time.
-    
+
     Returns
     -------
     tuple(callable, callable) or None
         The ``(pack, unpack)`` pair if found, else ``None``.
-    
+
     Examples
     --------
     >>> _ = get_packer("missing") is None
@@ -104,7 +102,7 @@ def get_packer(kind: str) -> Optional[Packer]:
     >>> pk = get_packer("toy")
     >>> callable(pk[0]) and callable(pk[1])
     True
-    
+
     See Also
     --------
     register_packer
@@ -114,33 +112,33 @@ def get_packer(kind: str) -> Optional[Packer]:
     return _PACKERS.get(kind.lower())
 
 
-def list_packers() -> Dict[str, str]:
+def list_packers() -> dict[str, str]:
     r"""
     List available packers as a mapping of kind to signatures.
-    
+
     Returns
     -------
     dict[str, str]
         Mapping ``kind -> "pack_name | unpack_name"`` for quick
         inspection.
-    
+
     Notes
     -----
     Only names available via ``__name__`` are shown. For
     callables without a name, ``repr`` is used.
-    
+
     Examples
     --------
     >>> isinstance(list_packers(), dict)
     True
-    
+
     See Also
     --------
     register_packer
     get_packer
     """
 
-    out: Dict[str, str] = {}
+    out: dict[str, str] = {}
     for k, (pk, up) in _PACKERS.items():
         a = getattr(pk, "__name__", repr(pk))
         b = getattr(up, "__name__", repr(up))
@@ -148,7 +146,7 @@ def list_packers() -> Dict[str, str]:
     return out
 
 
-def _bundle_pack(obj: Any) -> Dict[str, Any]:
+def _bundle_pack(obj: Any) -> dict[str, Any]:
     r"""
     Pack a :class:`TFBundle` into an NPZ-friendly mapping.
     Validates type and converts arrays/scalars.
@@ -181,11 +179,11 @@ def _bundle_pack(obj: Any) -> Dict[str, Any]:
     return {k: v for k, v in payload.items() if v is not None}
 
 
-def _bundle_unpack(d: Dict[str, Any]) -> TFBundle:
+def _bundle_unpack(d: dict[str, Any]) -> TFBundle:
     r"""
     Rebuild a :class:`TFBundle` from a mapping produced by
     ``_bundle_pack``.
-    
+
     Unboxes 0-D arrays and parses JSON attrs.
     """
     def _sc(x):
@@ -226,7 +224,7 @@ def pack_to_file(
 ) -> Path:
     r"""
     Serialize an object to ``.npz`` using a registered packer.
-    
+
     Parameters
     ----------
     obj : Any
@@ -236,40 +234,40 @@ def pack_to_file(
         Output file path. ``.npz`` is recommended.
     kind : str, optional
         Packer name. Defaults to ``"bundle"``.
-    
+
     Returns
     -------
     pathlib.Path
         The path actually written.
-    
+
     Raises
     ------
     ValueError
         If no packer is registered for ``kind``.
     OSError
         For filesystem write errors.
-    
+
     Notes
     -----
     Data are written with :func:`numpy.savez_compressed`, which
     stores arrays losslessly and compresses the archive.
-    
+
     Examples
     --------
     Pack a bundle to disk::
-    
+
         >>> # Assume a TFBundle instance: bndl
         >>> out = pack_to_file(bndl, "site001.npz", kind="bundle")
         >>> out.name.endswith(".npz")
         True
-    
+
     See Also
     --------
     unpack_from_file
     register_packer
     get_packer
     numpy.savez_compressed
-    
+
     References
     ----------
     .. [1] NumPy Reference. *np.savez_compressed*.
@@ -288,7 +286,7 @@ def unpack_from_file(path: Path | str, *, kind: str = "bundle") -> Any:
     r"""
     Deserialize an object from ``.npz`` using a registered
     packer.
-    
+
     Parameters
     ----------
     path : path-like
@@ -296,12 +294,12 @@ def unpack_from_file(path: Path | str, *, kind: str = "bundle") -> Any:
     kind : str, optional
         Packer name. Defaults to ``"bundle"``. Must match the
         packer used during serialization.
-    
+
     Returns
     -------
     Any
         The reconstructed object.
-    
+
     Raises
     ------
     ValueError
@@ -310,26 +308,26 @@ def unpack_from_file(path: Path | str, *, kind: str = "bundle") -> Any:
         For filesystem read errors.
     KeyError
         If expected payload keys are missing for the packer.
-    
+
     Notes
     -----
     Loading uses ``allow_pickle=False`` for safety; payloads must
     be composed of basic NumPy/JSON types.
-    
+
     Examples
     --------
     Load a previously saved bundle::
-    
+
         >>> obj = unpack_from_file("site001.npz", kind="bundle")
         >>> hasattr(obj, "z") and hasattr(obj, "freq")
         True
-    
+
     See Also
     --------
     pack_to_file
     register_packer
     get_packer
-    
+
     """
 
     p = Path(path)
@@ -344,13 +342,13 @@ def unpack_from_file(path: Path | str, *, kind: str = "bundle") -> Any:
 class RegistryAPI(CoreObject):
     r"""
     Convenience façade over :class:`~pycsamt.core.registry.Registry`.
-    
+
     This high-level helper wires a registry root, ensures a
     ``packs/`` folder exists under that root, and exposes both
     thin proxies to low-level registry calls and ergonomic
     helpers for packing objects to NPZ bundles and restoring
     them later.
-    
+
     Parameters
     ----------
     root : path-like
@@ -359,7 +357,7 @@ class RegistryAPI(CoreObject):
     manifest_name : str, optional
         Manifest filename within ``root``. Defaults to
         ``"manifest.json"``.
-    
+
     Attributes
     ----------
     low : Registry
@@ -369,44 +367,44 @@ class RegistryAPI(CoreObject):
         Absolute path to the registry root directory.
     pack_dir : pathlib.Path
         Directory where NPZ bundles are stored (``root/packs``).
-    
+
     Notes
     -----
     ``RegistryAPI`` aims to be pragmatic and file-system first.
     It does not do locking or concurrency control. For multi-
     process scenarios, add your own synchronization.
-    
+
     The packing flow defaults to the ``"bundle"`` packer, which
     serializes :class:`TFBundle`-compatible objects into NPZ
     using :func:`numpy.savez_compressed`.
-    
+
     Examples
     --------
     Create an API, add an EDI file, and list records::
-    
+
         >>> from pycsamt.core.registry import RegistryAPI
         >>> api = RegistryAPI("data")
         >>> _ = api.add_file("site001.edi", kind="edi", fmt="edi")
         >>> [r.kind for r in api.list(kind="edi")]
         ['edi']
-    
+
     Pack an object to an NPZ bundle and store it in ``packs``::
-    
+
         >>> class Dummy:
         ...     station = "S01"; station_id = 1
         >>> rec = api.add_object(Dummy(), pack=True,
         ...                      pack_name="S01.npz")
         >>> rec.kind
         'bundle'
-    
+
     Materialize a record back into a Python object::
-    
+
         >>> obj = api.materialize(rec.rid)  # may be Dummy or path
-    
+
     Convert a record to an EDI representation::
-    
+
         >>> edi_like = api.to_edi(rec.rid)
-    
+
     See Also
     --------
     pycsamt.core.registry.Registry
@@ -417,7 +415,7 @@ class RegistryAPI(CoreObject):
     pycsamt.zonge.avg.AVG
     pycsamt.jones.j.JFile
     pycsamt.core.base.to_edi
-    
+
     References
     ----------
     .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
@@ -438,32 +436,32 @@ class RegistryAPI(CoreObject):
         self.pack_dir = self.root / "packs"
         self.pack_dir.mkdir(parents=True, exist_ok=True)
 
-    # direct proxies 
+    # direct proxies
     def save(self) -> None:
         r"""
         Persist the manifest to disk.
-        
+
         Thin proxy to :meth:`Registry.save`. Use after mutating the
         underlying manifest directly, though typical helpers call
         save for you.
         """
         self.low.save()
 
-    def list(self, *, kind: Optional[str] = None):
+    def list(self, *, kind: str | None = None):
         r"""
         List all records, optionally filtered by kind.
-        
+
         Parameters
         ----------
         kind : str or None, optional
             If provided, only records whose ``kind`` matches are
             returned.
-        
+
         Returns
         -------
         list of Record
             Shallow views of stored :class:`Record` objects.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
@@ -476,17 +474,17 @@ class RegistryAPI(CoreObject):
     def get(self, rid: str):
         r"""
         Return the record by id or raise an error.
-        
+
         Parameters
         ----------
         rid : str
             Record identifier returned at insertion time.
-        
+
         Returns
         -------
         Record
             The matching record.
-        
+
         Raises
         ------
         RegistryError
@@ -498,13 +496,13 @@ class RegistryAPI(CoreObject):
     def find(
         self,
         *,
-        tag: Optional[str] = None,
-        kind: Optional[str] = None,
-        dataid: Optional[str] = None,
+        tag: str | None = None,
+        kind: str | None = None,
+        dataid: str | None = None,
     ):
         r"""
         Filter records by tag, kind, and/or data id.
-        
+
         Parameters
         ----------
         tag : str or None, optional
@@ -513,12 +511,12 @@ class RegistryAPI(CoreObject):
             Require that the record kind matches the value.
         dataid : str or None, optional
             Require equality with ``Record.dataid``.
-        
+
         Returns
         -------
         list of Record
             Records satisfying all given predicates.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
@@ -529,22 +527,22 @@ class RegistryAPI(CoreObject):
 
         return self.low.find(tag=tag, kind=kind, dataid=dataid)
 
-    # add helpers 
+    # add helpers
     def add_file(
         self,
         path: Path | str,
         *,
-        kind: Optional[str] = None,
-        fmt: Optional[str] = None,
-        dataid: Optional[str] = None,
-        station_id: Optional[str] = None,
-        tags: Optional[list[str]] = None,
-        meta: Optional[dict[str, Any]] = None,
+        kind: str | None = None,
+        fmt: str | None = None,
+        dataid: str | None = None,
+        station_id: str | None = None,
+        tags: list[str] | None = None,
+        meta: dict[str, Any] | None = None,
         with_hash: bool = True,
     ):
         r"""
         Register a file path as a new record.
-        
+
         Parameters
         ----------
         path : path-like
@@ -565,16 +563,16 @@ class RegistryAPI(CoreObject):
         with_hash : bool, optional
             If ``True`` and the file exists, compute and store a
             SHA-256 checksum. Defaults to ``True``.
-        
+
         Returns
         -------
         Record
             The created and persisted record.
-        
+
         Notes
         -----
         This method saves the manifest on success.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
@@ -600,15 +598,15 @@ class RegistryAPI(CoreObject):
         self,
         obj: Any,
         *,
-        kind: Optional[str] = None,
-        tags: Optional[list[str]] = None,
-        meta: Optional[dict[str, Any]] = None,
+        kind: str | None = None,
+        tags: list[str] | None = None,
+        meta: dict[str, Any] | None = None,
         pack: bool = False,
-        pack_name: Optional[str] = None,
+        pack_name: str | None = None,
     ):
         r"""
         Register an object and, optionally, pack it to an NPZ bundle.
-        
+
         Parameters
         ----------
         obj : Any
@@ -627,19 +625,19 @@ class RegistryAPI(CoreObject):
         pack_name : str or None, optional
             Output NPZ filename when ``pack=True``. Defaults to
             ``"<rid>.npz"``.
-        
+
         Returns
         -------
         Record
             The created record. When ``pack=True``, the record
             ``kind`` becomes ``"bundle"`` and ``path`` points to the
             NPZ file inside ``pack_dir``.
-        
+
         Notes
         -----
         Packing uses :func:`pack_to_file` with ``kind="bundle"``.
         The manifest is saved after packing.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
@@ -648,14 +646,14 @@ class RegistryAPI(CoreObject):
         >>> rec = api.add_object(Obj(), tags=["demo"])
         >>> isinstance(rec.rid, str)
         True
-        
+
         Pack immediately to NPZ::
-        
+
             >>> rec2 = api.add_object(Obj(), pack=True,
             ...                       pack_name="S02.npz")
             >>> rec2.kind
             'bundle'
-        
+
         See Also
         --------
         pycsamt.core.registry.pack_to_file
@@ -677,16 +675,16 @@ class RegistryAPI(CoreObject):
             self.save()
         return r
 
-    # materializers 
+    # materializers
     def materialize(self, rid: str) -> Any:
         r"""
         Load a record into a concrete Python object when possible.
-        
+
         Parameters
         ----------
         rid : str
             Record id to resolve.
-        
+
         Returns
         -------
         Any
@@ -694,20 +692,20 @@ class RegistryAPI(CoreObject):
             returns the unpacked object via
             :func:`unpack_from_file`. For known kinds with readable
             files this returns:
-        
+
             * ``"edi"``  -> :class:`pycsamt.seg.edi.EDIFile`
             * ``"avg"``  -> :class:`pycsamt.zonge.avg.AVG`
             * ``"j"`` or ``"j_col"`` -> :class:`pycsamt.jones.j.JFile`
-        
+
             Otherwise, returns the string path (or ``None``) of the
             record.
-        
+
         Notes
         -----
         Errors during import or read are swallowed and the path is
         returned instead. This keeps the method side-effect free
         with respect to the registry while remaining robust.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
@@ -737,7 +735,7 @@ class RegistryAPI(CoreObject):
     def to_edi(self, rid: str, **kw: Any) -> Any:
         r"""
         Convert a record's materialized object into an EDI-like form.
-        
+
         Parameters
         ----------
         rid : str
@@ -745,26 +743,26 @@ class RegistryAPI(CoreObject):
         **kw : Any
             Forwarded to :func:`to_edi`, which performs the actual
             conversion.
-        
+
         Returns
         -------
         Any
             An object produced by :func:`to_edi`. The concrete type
             depends on the available converters and inputs.
-        
+
         Notes
         -----
         This is a convenience wrapper that first calls
         :meth:`materialize`, then delegates to
         :func:`pycsamt.core.base.to_edi`.
-        
+
         Examples
         --------
         >>> from pycsamt.core.registry import RegistryAPI
         >>> api = RegistryAPI("data")
         >>> # Convert an existing record to an EDI representation
         >>> edi_like = api.to_edi("some-record-id")  # doctest: +SKIP
-        
+
         See Also
         --------
         pycsamt.core.base.to_edi

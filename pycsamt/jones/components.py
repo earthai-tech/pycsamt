@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional
-
+from collections.abc import Iterable
+from typing import Any
 
 __all__ = ["JComponentMixin"]
 
@@ -32,14 +31,14 @@ class JComponentMixin:
     def _norm(key: str) -> str:
         return str(key).strip().lower()
 
-    def _bag(self) -> Dict[str, Any]:
+    def _bag(self) -> dict[str, Any]:
         # Prefer `sections`, fall back to `components`.
         bag = getattr(self, "sections", None)
         if not isinstance(bag, dict):
             bag = getattr(self, "components", None)
         if not isinstance(bag, dict):
             bag = {}
-            setattr(self, "sections", bag)
+            self.sections = bag
         return bag
 
     def cget(self, key: str, default: Any = None) -> Any:
@@ -55,12 +54,12 @@ class JComponentMixin:
         self._bag().pop(self._norm(key), None)
 
     def snapshot(
-        self, keys: Optional[Iterable[str]] = None
-    ) -> Dict[str, Any]:
+        self, keys: Iterable[str] | None = None
+    ) -> dict[str, Any]:
         bag = self._bag()
         if keys is None:
             keys = list(bag.keys())
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for k in keys:
             kk = self._norm(k)
             out[kk] = bag.get(kk, None)
@@ -125,7 +124,7 @@ class JComponentMixin:
 
     def compose_headers(
         self, *, prefer_heads: bool = True, join: bool = False
-    ) -> List[str] | str:
+    ) -> list[str] | str:
         """
         Serialize header lines by querying available components.
         If ``prefer_heads`` is True and a ``heads`` component is
@@ -135,7 +134,7 @@ class JComponentMixin:
         When ``join`` is True, returns a single string joined
         with newlines.  Otherwise returns a list of lines.
         """
-        out: List[str] = []
+        out: list[str] = []
 
         def _extend(obj: Any) -> None:
             if obj is None:

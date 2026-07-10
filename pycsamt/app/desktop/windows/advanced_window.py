@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,7 @@ Right content
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -36,31 +35,31 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QStackedWidget,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from pycsamt.app.desktop.controllers.advanced_controller import (
+    ADVANCED_GROUP_ICONS,
+    ADVANCED_GROUPS,
+    CONV_INDEX,
+    TOPO_INDEX,
     AdvancedController,
-    TopoPreviewController,
     ConversionController,
     ConversionWorker,
     DimModelWorker,
-    ADVANCED_GROUPS,
-    ADVANCED_GROUP_ICONS,
-    TOPO_INDEX,
-    CONV_INDEX,
+    TopoPreviewController,
     describe_advanced_plot,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
-    make_group,
-    icon_button,
     _icon,
+    icon_button,
+    make_group,
 )
 
 
@@ -766,7 +765,9 @@ class AdvancedToolsWindow(PanelWindow):
             self._btn_run.setEnabled(True)
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     def _auto_render_if_ready(self) -> None:

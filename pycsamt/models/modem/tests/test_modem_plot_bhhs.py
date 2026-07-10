@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Real-data integration tests for models/modem/plot.py.
 
 Uses the RERUN-AMT-BHHS-NEW-TEST08 inversion results (153 NLCG iterations,
@@ -14,13 +13,14 @@ Profile EW offsets from model centre (metres):
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.figure
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------
 # Data paths
@@ -160,8 +160,9 @@ class TestPlotSectionAxisAligned:
         plt.close(fig)
 
     def test_no_stations_when_disabled(self, result):
-        from pycsamt.models.modem.plot import PlotSection
         from matplotlib.collections import PathCollection
+
+        from pycsamt.models.modem.plot import PlotSection
         fig = PlotSection(
             result=result,
             profile_offset=353.0,
@@ -326,8 +327,9 @@ class TestPlotDepthMap:
         plt.close(fig)
 
     def test_station_markers_drawn(self, result):
-        from pycsamt.models.modem.plot import PlotDepthMap
         from matplotlib.collections import PathCollection
+
+        from pycsamt.models.modem.plot import PlotDepthMap
         fig = PlotDepthMap(
             result=result, depths=[300.0], n_cols=1, show_stations=True
         ).plot()
@@ -341,8 +343,8 @@ class TestPlotDepthMap:
         plt.close(fig)
 
     def test_custom_rho_limits(self, result):
+
         from pycsamt.models.modem.plot import PlotDepthMap
-        import numpy as np
         fig = PlotDepthMap(
             result=result, depths=[200.0], rho_min=10.0, rho_max=500.0
         ).plot()
@@ -384,8 +386,8 @@ class TestPlotAllProfiles:
         plt.close(fig)
 
     def test_depth_crop(self, result):
+
         from pycsamt.models.modem.plot import PlotAllProfiles
-        import numpy as np
         fig = PlotAllProfiles(
             result=result,
             profile_offsets=[353.0],
@@ -407,8 +409,9 @@ class TestPlotAllProfiles:
         plt.close(fig)
 
     def test_station_markers_on_l18(self, result):
-        from pycsamt.models.modem.plot import PlotAllProfiles
         from matplotlib.collections import PathCollection
+
+        from pycsamt.models.modem.plot import PlotAllProfiles
         fig = PlotAllProfiles(
             result=result,
             profile_offsets=[353.0],
@@ -456,7 +459,6 @@ class TestPlotCovariance:
 
     def test_plan_view_image_shape(self, result):
         """Plan-view imshow data should have shape (nx_earth, ny_earth)."""
-        import numpy as np
         from pycsamt.models.modem.plot import PlotCovariance
         cov = result.covariance
         fig = PlotCovariance(result=result, show_smoothing=False).plot()
@@ -471,7 +473,9 @@ class TestPlotCovariance:
 
     def test_no_covariance_raises(self, tmp_path):
         from pycsamt.models.modem.plot import PlotCovariance
-        from pycsamt.models.modem.results import InversionResult
+        from pycsamt.models.modem.results import (
+            InversionResult,
+        )
         r_empty = InversionResult(tmp_path)
         with pytest.raises(ValueError, match="covariance"):
             PlotCovariance(result=r_empty).plot()

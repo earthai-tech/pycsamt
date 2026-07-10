@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
 Pytest suite for the Tipper component and calculation method.
 """
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
+from pycsamt.exceptions import AvgDataError
 from pycsamt.zonge.avg import AMTAVG
 from pycsamt.zonge.tipper import Tipper
-from pycsamt.exceptions import AvgDataError
 
 # --- Test Data Fixture --------------------------------------------
 
@@ -48,7 +47,7 @@ def tipper_data_fixture():
     # )
     # hx = h_complex.where(avg.info.df["comp"] == "ExHx", 0)
     # hy = h_complex.where(avg.info.df["comp"] == "ExHy", 0)
-    
+
     # # Group Hx and Hy by station and freq
     # h_vectors = pd.DataFrame({'hx': hx, 'hy': hy}).groupby(
     #     [df['station'], df['freq']]).sum()
@@ -61,7 +60,7 @@ def tipper_data_fixture():
     # hz_series = pd.Series(
     #     np.repeat(hz_values, 2), index=df.index, dtype='complex128'
     #     )
-    
+
     # Reconstruct Hx and Hy from the STANDARDIZED dataframe
     h_complex = avg.info.df["hmag"] * np.exp(
         1j * avg.info.df["hphz"] * 1e-3
@@ -69,11 +68,11 @@ def tipper_data_fixture():
     df_h = avg.info.df.copy()
     df_h["hx"] = h_complex.where(df_h["comp"] == "ExHx", 0)
     df_h["hy"] = h_complex.where(df_h["comp"] == "ExHy", 0)
- 
+
     # Calculate Hz row-by-row, not from the sum ---
     hz_series = tx * df_h["hx"] + ty * df_h["hy"]
     hz_series = hz_series.astype('complex128')
-   
+
     return avg, hz_series
 
 # --- Tests for Tipper Class ---------------------------------------
@@ -164,5 +163,5 @@ class TestCalculateTipper:
         with pytest.raises(AvgDataError, match="Horizontal magnetic"):
             avg.calculate_tipper(hz_data)
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

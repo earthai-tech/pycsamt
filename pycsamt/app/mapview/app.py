@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -25,6 +24,7 @@ import os
 # Force a non-interactive Matplotlib backend before anything can claim
 # a display (the static export + contour overlays use it).
 import matplotlib
+
 matplotlib.use("Agg", force=True)
 
 # Shared pyCSAMT icon set (logos + view glyphs), reused from the desktop app.

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from ..api.property import PyCSAMTObject
-
 from ._base import TEMSounding
 from .survey import TEMSurvey, read_temavg_survey
 
@@ -225,7 +224,11 @@ def transform_temavg_survey(
     >>> out.n_soundings > 0
     True
     """
-    from .transform import FourierTransform, LateTimeTransform, TEMtoEDI
+    from .transform import (
+        FourierTransform,
+        LateTimeTransform,
+        TEMtoEDI,
+    )
 
     survey = read_temavg_survey(
         path,

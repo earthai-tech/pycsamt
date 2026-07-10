@@ -1,16 +1,18 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for AgentCoordinator — dry-run, checkpointing, cost tracking."""
 
 import unittest
-from pathlib import Path
 
 
 class TestAgentCoordinatorDryRun(unittest.TestCase):
 
     def _make_simple_chain(self, name="test_wf"):
-        from pycsamt.agents import AgentCoordinator, ContextInputAgent, MTLoaderAgent
+        from pycsamt.agents import (
+            AgentCoordinator,
+            ContextInputAgent,
+            MTLoaderAgent,
+        )
         coord = AgentCoordinator(name)
         coord.add_step("parse", ContextInputAgent(),
                        description="Parse request")
@@ -35,7 +37,10 @@ class TestAgentCoordinatorDryRun(unittest.TestCase):
         self.assertIn("2", r.summary)   # "2/2 steps"
 
     def test_step_count_after_add(self):
-        from pycsamt.agents import AgentCoordinator, ContextInputAgent
+        from pycsamt.agents import (
+            AgentCoordinator,
+            ContextInputAgent,
+        )
         coord = AgentCoordinator("step_count_test")
         for i in range(4):
             coord.add_step(f"step{i}", ContextInputAgent())
@@ -54,9 +59,13 @@ class TestAgentCoordinatorDryRun(unittest.TestCase):
         self.assertEqual(r.cost_estimate_usd, 0.0)
 
     def test_checkpoint_dir_created(self, tmp_path=None):
-        import tempfile, os
+        import os
+        import tempfile
         td = tempfile.mkdtemp()
-        from pycsamt.agents import AgentCoordinator, ContextInputAgent
+        from pycsamt.agents import (
+            AgentCoordinator,
+            ContextInputAgent,
+        )
         coord = AgentCoordinator("chk_test", checkpoint_dir=td)
         coord.add_step("parse", ContextInputAgent())
         coord.execute({"request": "test"}, dry_run=True)

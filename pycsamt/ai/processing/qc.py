@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,7 +20,7 @@ flagged bad.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -35,7 +34,7 @@ __all__ = ["EMQCScorer"]
 # Internal feature extraction
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _extract_qc_features(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     """
     Extract a (n_freqs, 5) feature matrix from a single site's Z data.
 
@@ -100,13 +99,16 @@ def _sites_to_feature_df(sites: Any) -> pd.DataFrame:
     """
     try:
         from pycsamt.emtools._core import (
-            ensure_sites, _iter_items, _get_z_block, _name,
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
         )
     except ImportError as exc:
         raise ImportError("emtools is required for site-based QC scoring") from exc
 
     S = ensure_sites(sites, recursive=True, on_dup="replace")
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
 
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
@@ -122,7 +124,7 @@ def _sites_to_feature_df(sites: Any) -> pd.DataFrame:
 
         F = _extract_qc_features(z, ze)
         for fi, freq in enumerate(fr):
-            row: Dict[str, Any] = dict(station=st, freq=float(freq))
+            row: dict[str, Any] = dict(station=st, freq=float(freq))
             row["snr"] = F[fi, 0]
             row["swift_skew"] = F[fi, 1]
             row["asym"] = F[fi, 2]
@@ -183,7 +185,7 @@ class EMQCScorer(BaseEMProcessor):
         score_threshold: float = 0.5,
         use_ml: bool = True,
         n_estimators: int = 100,
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
     ) -> None:
         self.contamination = float(contamination)
         self.snr_threshold = float(snr_threshold)
@@ -194,12 +196,12 @@ class EMQCScorer(BaseEMProcessor):
         self.random_state = random_state
 
         self._model: Any = None  # IsolationForest
-        self._feat_cols: List[str] = ["snr", "swift_skew", "asym", "phase_xy", "phase_yx"]
+        self._feat_cols: list[str] = ["snr", "swift_skew", "asym", "phase_xy", "phase_yx"]
         self._is_fitted: bool = False
 
     # ─── BaseEMProcessor interface ────────────────────────────────────────
 
-    def fit(self, X: Any, **kwargs) -> "EMQCScorer":
+    def fit(self, X: Any, **kwargs) -> EMQCScorer:
         """
         Fit the QC model on a training set.
 
@@ -322,7 +324,7 @@ class EMQCScorer(BaseEMProcessor):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "contamination": self.contamination,
             "snr_threshold": self.snr_threshold,
@@ -333,21 +335,23 @@ class EMQCScorer(BaseEMProcessor):
             "random_state": self.random_state,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
+    def _get_weights(self) -> dict[str, np.ndarray]:
         if self._model is None:
             return {}
         try:
-            import pickle, io
+            import io
+            import pickle
             buf = io.BytesIO()
             pickle.dump(self._model, buf)
             return {"_iso_model": np.frombuffer(buf.getvalue(), dtype=np.uint8)}
         except Exception:
             return {}
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         if "_iso_model" in weights:
             try:
-                import pickle, io
+                import io
+                import pickle
                 buf = io.BytesIO(bytes(weights["_iso_model"]))
                 self._model = pickle.load(buf)
                 self._is_fitted = True

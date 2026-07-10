@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -61,6 +60,8 @@ from ._package_context import (
     TIER_SITES,
     _collect_agents,
     _collect_core,
+)
+from ._package_context import (
     _first_para as _short_doc,
 )
 
@@ -310,7 +311,6 @@ def inspect_full_doc(obj: Any) -> str:
 
 # keep Any importable at runtime
 from typing import Any  # noqa: E402
-
 
 # ── agent class ────────────────────────────────────────────────────────────────
 

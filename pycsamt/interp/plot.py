@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """plot — visualization for pycsamt.interp results.
@@ -19,7 +18,8 @@ All classes follow the same pattern::
 """
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 
@@ -31,8 +31,8 @@ from ..api.interp import (
     resolve_profile_style,
     resolve_section_style,
 )
-from .lithology import Layer, StratigraphicLog, RockDatabase
 from ._base import ResistivityModel
+from .lithology import StratigraphicLog
 
 # Type alias accepted by the style= parameter of every hydro plot class.
 _StyleArg = Optional[Union[str, InterpStyle, HydroSectionStyle, HydroProfileStyle]]
@@ -134,10 +134,10 @@ class PlotStratigraphicLog:
         self,
         log: StratigraphicLog,
         *,
-        figsize: Tuple[float, float] = (8, 10),
+        figsize: tuple[float, float] = (8, 10),
         depth_unit: str = "m",
-        title: Optional[str] = None,
-        annotation_kws: Optional[dict] = None,
+        title: str | None = None,
+        annotation_kws: dict | None = None,
     ) -> None:
         self.log = log
         self.figsize = figsize
@@ -148,7 +148,6 @@ class PlotStratigraphicLog:
     def plot(self):
         """Render and return the matplotlib Figure."""
         _, plt = _require_mpl()
-        import matplotlib.patches as mpatches
 
         log = self.log
         fig, (ax_log, ax_rho) = plt.subplots(
@@ -233,9 +232,9 @@ class PlotFenceDiagram:
         self,
         logs: Sequence[StratigraphicLog],
         *,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: tuple[float, float] | None = None,
         title: str = "Fence Diagram",
-        max_depth: Optional[float] = None,
+        max_depth: float | None = None,
     ) -> None:
         self.logs = list(logs)
         self.figsize = figsize or (2 * len(logs), 10)
@@ -325,13 +324,13 @@ class PlotCalibratedModel:
         self,
         crm: ResistivityModel,
         nm: ResistivityModel,
-        misfit_map: Optional[np.ndarray] = None,
+        misfit_map: np.ndarray | None = None,
         *,
-        figsize: Tuple[float, float] = (12, 10),
+        figsize: tuple[float, float] = (12, 10),
         cmap_rho: str = "jet",
         vmin_rho: float = 1.0,
         vmax_rho: float = 5.0,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> None:
         self.crm = crm
         self.nm = nm
@@ -350,7 +349,6 @@ class PlotCalibratedModel:
     def plot(self):
         """Render and return the matplotlib Figure."""
         _, plt = _require_mpl()
-        import matplotlib.colors as mcolors
 
         fig, axes = plt.subplots(3, 1, figsize=self.figsize, sharex=True)
         ax_crm, ax_nm, ax_g = axes
@@ -454,14 +452,14 @@ class PlotHydroSection:
         quantity: str = "K",
         *,
         style: _StyleArg = None,
-        cmap: Optional[str] = None,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
+        cmap: str | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
         show_water_table: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
-        depth_min: Optional[float] = None,
-        depth_max: Optional[float] = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
+        depth_min: float | None = None,
+        depth_max: float | None = None,
     ) -> None:
         if quantity not in self._LABELS:
             raise ValueError(
@@ -577,11 +575,11 @@ class PlotWaterTableProfile:
         result,
         *,
         style: _StyleArg = None,
-        color_wt: Optional[str] = None,
-        color_T:  Optional[str] = None,
-        reference_depth: Optional[float] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        color_wt: str | None = None,
+        color_T:  str | None = None,
+        reference_depth: float | None = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         self.result          = result
         self.style           = style
@@ -715,13 +713,13 @@ class PlotTimeLapseSection:
         baseline_idx: int = 0,
         petro=None,
         rho_w: float = 20.0,
-        phi: Union[float, np.ndarray] = 0.25,
-        cmap: Optional[str] = None,
-        vmax: Optional[float] = None,
+        phi: float | np.ndarray = 0.25,
+        cmap: str | None = None,
+        vmax: float | None = None,
         show_water_table: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
-        depth_max: Optional[float] = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
+        depth_max: float | None = None,
     ) -> None:
         if quantity not in ("rho", "saturation"):
             raise ValueError("quantity must be 'rho' or 'saturation'.")
@@ -791,7 +789,8 @@ class PlotTimeLapseSection:
 
         if self.show_water_table:
             comp_survey = tl.surveys[others[self.survey_idx]]
-            from .petrophysics import ArchieModel as _Archie, water_table_from_profile
+            from .petrophysics import ArchieModel as _Archie
+            from .petrophysics import water_table_from_profile
             _archie = self.petro if self.petro is not None else _Archie()
             wt = np.array([
                 (lambda d: d if d is not None else np.nan)(
@@ -881,16 +880,16 @@ class PlotUncertaintySection:
         quantity: str = "K",
         *,
         style: _StyleArg = None,
-        cmap_p50:    Optional[str] = None,
-        cmap_spread: Optional[str] = None,
-        vmin_p50:    Optional[float] = None,
-        vmax_p50:    Optional[float] = None,
-        vmax_spread: Optional[float] = None,
+        cmap_p50:    str | None = None,
+        cmap_spread: str | None = None,
+        vmin_p50:    float | None = None,
+        vmax_p50:    float | None = None,
+        vmax_spread: float | None = None,
         show_water_table: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
-        title:   Optional[str] = None,
-        depth_min: Optional[float] = None,
-        depth_max: Optional[float] = None,
+        figsize: tuple[float, float] | None = None,
+        title:   str | None = None,
+        depth_min: float | None = None,
+        depth_max: float | None = None,
     ) -> None:
         if quantity not in self._META:
             raise ValueError(f"quantity must be one of {list(self._META)}.")
@@ -1020,11 +1019,11 @@ class PlotUncertaintyProfile:
         unc,
         *,
         style: _StyleArg = None,
-        color_wt: Optional[str] = None,
-        color_T:  Optional[str] = None,
-        reference_depth: Optional[float] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        color_wt: str | None = None,
+        color_T:  str | None = None,
+        reference_depth: float | None = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         self.unc             = unc
         self.style           = style
@@ -1139,11 +1138,11 @@ class PlotPetrophysicalCrossPlot:
         color_by: str = "saturation",
         show_hs_bounds: bool = True,
         rho_matrix: float = 5000.0,
-        depth_range: Optional[Tuple[float, float]] = None,
-        Sw_for_curve: Optional[float] = None,
+        depth_range: tuple[float, float] | None = None,
+        Sw_for_curve: float | None = None,
         log_rho: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         self.result         = result
         self.style          = style
@@ -1160,7 +1159,10 @@ class PlotPetrophysicalCrossPlot:
     def plot(self):
         """Render and return the matplotlib Figure."""
         _, plt = _require_mpl()
-        from .petrophysics import ArchieModel, HashinShtrikmanBounds
+        from .petrophysics import (
+            ArchieModel,
+            HashinShtrikmanBounds,
+        )
 
         sty   = resolve_section_style(self.style)
         res   = self.result
@@ -1283,9 +1285,9 @@ class PlotAquiferCharacterization:
         style: _StyleArg = None,
         show_transmissivity: bool = True,
         log_TR: bool = True,
-        reference_depth: Optional[float] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        reference_depth: float | None = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         self.result              = result
         self.style               = style
@@ -1419,16 +1421,16 @@ class PlotMultiTimeLapseGrid:
         quantity: str = "rho",
         *,
         style: _StyleArg = None,
-        surveys: Optional[List[int]] = None,
+        surveys: list[int] | None = None,
         baseline_idx: int = 0,
         petro=None,
         rho_w: float = 20.0,
         phi: float = 0.25,
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-        depth_max: Optional[float] = None,
-        figsize_panel: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        depth_max: float | None = None,
+        figsize_panel: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         if quantity not in ("rho", "delta_rho", "delta_saturation"):
             raise ValueError("quantity must be 'rho', 'delta_rho', or 'delta_saturation'.")
@@ -1469,7 +1471,7 @@ class PlotMultiTimeLapseGrid:
         dz       = self.depth_max or float(z[-1])
         z_mask   = z <= dz
 
-        panels: List[np.ndarray] = []
+        panels: list[np.ndarray] = []
         for si in idx_list:
             surv = tl.surveys[si]
             if self.quantity == "rho":
@@ -1477,7 +1479,9 @@ class PlotMultiTimeLapseGrid:
             elif self.quantity == "delta_rho":
                 data = (surv.rho_2d - ref_m.rho_2d)[z_mask, :]
             else:
-                from .petrophysics import ArchieModel as _Archie
+                from .petrophysics import (
+                    ArchieModel as _Archie,
+                )
                 archie = self.petro if self.petro is not None else _Archie()
                 data   = (archie.saturation(10.0 ** surv.rho_2d, self.phi, self.rho_w) -
                           archie.saturation(10.0 ** ref_m.rho_2d, self.phi, self.rho_w))[z_mask, :]
@@ -1565,15 +1569,15 @@ class PlotResistivityDepthProfile:
     def __init__(
         self,
         source,
-        station: Union[str, int] = 0,
+        station: str | int = 0,
         *,
         style: _StyleArg = None,
-        depth_max: Optional[float] = None,
+        depth_max: float | None = None,
         show_zones: bool = True,
         borehole=None,
         log_rho: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         self.source    = source
         self.station   = station
@@ -1703,15 +1707,15 @@ class PlotUncertaintyHistogram:
         quantity: str = "water_table",
         *,
         style: _StyleArg = None,
-        stations: Optional[List[Union[str, int]]] = None,
-        wt_ensemble: Optional[np.ndarray] = None,
-        T_ensemble:  Optional[np.ndarray] = None,
+        stations: list[str | int] | None = None,
+        wt_ensemble: np.ndarray | None = None,
+        T_ensemble:  np.ndarray | None = None,
         show_kde: bool = True,
         show_percentiles: bool = True,
-        log_x: Optional[bool] = None,
-        ncols: Optional[int] = None,
-        figsize: Optional[Tuple[float, float]] = None,
-        title: Optional[str] = None,
+        log_x: bool | None = None,
+        ncols: int | None = None,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
     ) -> None:
         if quantity not in ("water_table", "transmissivity"):
             raise ValueError("quantity must be 'water_table' or 'transmissivity'.")

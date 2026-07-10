@@ -16,7 +16,11 @@ from ._core import (
     pseudosection_table,
 )
 from .config import VolumeMapOptions
-from .geometry import normalize_offsets, resolve_offset, survey_uv
+from .geometry import (
+    normalize_offsets,
+    resolve_offset,
+    survey_uv,
+)
 from .styles import theme_colors, to_plotly_cmap
 
 

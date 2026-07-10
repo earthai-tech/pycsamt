@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """Phase 6 tests — PlotMisfit, PlotModel2D, PlotModel3D, PlotResponse, PlotPseudo."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
@@ -32,8 +32,9 @@ def result_3d():
 # ---------------------------------------------------------------------------
 
 def test_plot_misfit_returns_figure(result_2d):
-    from pycsamt.models.modem.plot import PlotMisfit
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotMisfit
     fig = PlotMisfit(result=result_2d).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
@@ -46,7 +47,7 @@ def test_plot_misfit_no_result_raises():
 
 
 def test_plot_misfit_no_log_raises(tmp_path):
-    from pycsamt.models.modem.plot   import PlotMisfit
+    from pycsamt.models.modem.plot import PlotMisfit
     from pycsamt.models.modem.results import InversionResult
     r = InversionResult(tmp_path)
     with pytest.raises(ValueError, match="no log"):
@@ -58,16 +59,18 @@ def test_plot_misfit_no_log_raises(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_plot_model2d_returns_figure(result_2d):
-    from pycsamt.models.modem.plot import PlotModel2D
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotModel2D
     fig = PlotModel2D(result=result_2d, which="final").plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
 
 
 def test_plot_model2d_dynamic_section(result_2d):
-    from pycsamt.models.modem.plot import PlotModel2D
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotModel2D
     fig = PlotModel2D(result=result_2d, section="dynamic").plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     assert len(fig.axes) >= 2
@@ -82,7 +85,7 @@ def test_plot_model2d_initial(result_2d):
 
 
 def test_plot_model2d_no_model_raises(tmp_path):
-    from pycsamt.models.modem.plot    import PlotModel2D
+    from pycsamt.models.modem.plot import PlotModel2D
     from pycsamt.models.modem.results import InversionResult
     r = InversionResult(tmp_path)
     with pytest.raises(ValueError, match="No final model"):
@@ -94,8 +97,9 @@ def test_plot_model2d_no_model_raises(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_plot_model3d_returns_figure(result_3d):
-    from pycsamt.models.modem.plot import PlotModel3D
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotModel3D
     fig = PlotModel3D(result=result_3d, n_cols=2).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
@@ -114,15 +118,16 @@ def test_plot_model3d_custom_depths(result_3d):
 # ---------------------------------------------------------------------------
 
 def test_plot_response_returns_figure(result_2d):
-    from pycsamt.models.modem.plot import PlotResponse
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotResponse
     fig = PlotResponse(result=result_2d, max_stations=4).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
 
 
 def test_plot_response_no_data_raises(tmp_path):
-    from pycsamt.models.modem.plot    import PlotResponse
+    from pycsamt.models.modem.plot import PlotResponse
     from pycsamt.models.modem.results import InversionResult
     r = InversionResult(tmp_path)
     with pytest.raises(ValueError, match="no data_obs"):
@@ -134,8 +139,9 @@ def test_plot_response_no_data_raises(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_plot_pseudo_returns_figure(result_2d):
-    from pycsamt.models.modem.plot import PlotPseudo
     import matplotlib.figure
+
+    from pycsamt.models.modem.plot import PlotPseudo
     # discover available component from first block
     comp = result_2d.data_obs.blocks[0]["rows"][0][5] if result_2d.data_obs else "TE"
     fig = PlotPseudo(result=result_2d, component=comp).plot()

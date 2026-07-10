@@ -23,9 +23,9 @@ This example covers the two questions that matter in practice:
 
 import numpy as np
 
-from pycsamt.forward.batch import generate_dataset
-from pycsamt.ai.inversion.inv1d import EMInverter1D
 from pycsamt.ai.inversion import EnsembleInverter
+from pycsamt.ai.inversion.inv1d import EMInverter1D
+from pycsamt.forward.batch import generate_dataset
 
 # Use the depth-profile uncertainty band (1st figure) as the thumbnail.
 # sphinx_gallery_thumbnail_number = 1

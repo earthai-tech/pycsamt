@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Lithology — resistivity-to-geology classification for EM methods.
@@ -27,9 +26,9 @@ RockEntry(name='Sandstone', rho_min=50, rho_max=5000, ...)
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -83,7 +82,7 @@ class RockEntry:
 # Built-in database entries
 # ---------------------------------------------------------------------------
 
-_DEFAULT_ROCKS: List[tuple] = [
+_DEFAULT_ROCKS: list[tuple] = [
     # (name, rho_min, rho_max, color, description, code)
     # --- Highly conductive ---
     ("Sulfide ore body",     0.001,  0.1,    "#2C3E50", "Massive sulfides, pyrite, chalcopyrite",  1),
@@ -137,8 +136,8 @@ class RockDatabase:
     'Fractured zone'
     """
 
-    def __init__(self, entries: List[RockEntry]) -> None:
-        self._entries: List[RockEntry] = list(entries)
+    def __init__(self, entries: list[RockEntry]) -> None:
+        self._entries: list[RockEntry] = list(entries)
         # Pre-compute log-midpoints for fast nearest-match
         self._log_mids = np.array([e.log_rho_mid for e in self._entries])
 
@@ -147,7 +146,7 @@ class RockDatabase:
     # ------------------------------------------------------------------
 
     @classmethod
-    def default(cls) -> "RockDatabase":
+    def default(cls) -> RockDatabase:
         """Return a database pre-loaded with 25 built-in rock entries."""
         entries = [
             RockEntry(name=r[0], rho_min=r[1], rho_max=r[2],
@@ -157,14 +156,14 @@ class RockDatabase:
         return cls(entries)
 
     @classmethod
-    def from_csv(cls, path: PathLike) -> "RockDatabase":
+    def from_csv(cls, path: PathLike) -> RockDatabase:
         """Load from a CSV file.
 
         Required columns: ``name, rho_min, rho_max``
         Optional columns: ``color, description, code``
         """
         p = Path(path)
-        entries: List[RockEntry] = []
+        entries: list[RockEntry] = []
         with p.open(newline="") as fh:
             reader = csv.DictReader(fh)
             for i, row in enumerate(reader):
@@ -213,7 +212,7 @@ class RockDatabase:
     def classify_column(
         self,
         rho_log10: np.ndarray,
-    ) -> List[RockEntry]:
+    ) -> list[RockEntry]:
         """Classify every cell in a log10-rho depth column."""
         return [self.classify(float(10.0 ** v)) for v in rho_log10]
 
@@ -287,7 +286,7 @@ class StratigraphicLog:
         station_x: float,
         z_centers: np.ndarray,
         rho_log10: np.ndarray,
-        layers: List[Layer],
+        layers: list[Layer],
     ) -> None:
         self.station_name = station_name
         self.station_x = float(station_x)
@@ -304,10 +303,10 @@ class StratigraphicLog:
         x: float,
         z_centers: np.ndarray,
         rho_log10: np.ndarray,
-        db: Optional[RockDatabase] = None,
+        db: RockDatabase | None = None,
         *,
         merge_tolerance: float = 0.2,
-    ) -> "StratigraphicLog":
+    ) -> StratigraphicLog:
         """Build a log from a 1-D resistivity column.
 
         Parameters
@@ -334,7 +333,7 @@ class StratigraphicLog:
         dz = np.diff(z)
         half_dz = np.append(dz / 2, dz[-1] / 2) if len(dz) else np.array([1.0])
 
-        layers: List[Layer] = []
+        layers: list[Layer] = []
         i = 0
         while i < len(z):
             e0 = entries[i]

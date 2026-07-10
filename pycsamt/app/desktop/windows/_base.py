@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -22,10 +21,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, Qt, Signal
-from PySide6.QtGui  import QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QGroupBox,
-    QHBoxLayout,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -190,7 +188,9 @@ class PanelWindow(QWidget):
         self._dark = dark
         # Re-style any MplCanvas instances that already hold a rendered figure
         # so the theme applies immediately without requiring a manual redraw.
-        from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+        from pycsamt.app.desktop.widgets.mpl_canvas import (
+            MplCanvas,
+        )
         for canvas in self.findChildren(MplCanvas):
             canvas.apply_theme(dark)
 

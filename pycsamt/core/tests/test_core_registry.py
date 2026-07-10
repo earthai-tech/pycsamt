@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
@@ -88,7 +87,7 @@ def test_registry_api_add_file_and_reload(tmp_path: Path):
     data.write_text("hi\n", encoding="utf-8")
 
     api = reg.RegistryAPI(root)
-    rec = api.add_file(data, kind="meta", tags=["t1"]) 
+    rec = api.add_file(data, kind="meta", tags=["t1"])
     assert rec.rid in api.low.manifest.records
     rid = rec.rid
 

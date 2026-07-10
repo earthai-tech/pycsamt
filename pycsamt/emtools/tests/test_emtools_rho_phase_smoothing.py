@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for rho/phase trend smoothing."""
 from __future__ import annotations
 

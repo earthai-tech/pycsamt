@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,8 +13,8 @@ Structure
 """
 from __future__ import annotations
 
-import unittest
 import importlib.util
+import unittest
 
 import numpy as np
 
@@ -344,15 +343,17 @@ class TestCNN1DNetBuild(unittest.TestCase):
         self.assertGreater(_param_count(self.net), 0)
 
     def test_custom_channels(self):
-        from pycsamt.ai.nets import CNN1DNet
         import torch
+
+        from pycsamt.ai.nets import CNN1DNet
         net = CNN1DNet(n_features=24, n_out=5, channels=(16, 32)).build()
         y = net(torch.randn(3, 24))
         self.assertEqual(y.shape, (3, 5))
 
     def test_single_feature(self):
-        from pycsamt.ai.nets import CNN1DNet
         import torch
+
+        from pycsamt.ai.nets import CNN1DNet
         net = CNN1DNet(n_features=1, n_out=1, channels=(4,)).build()
         y = net(torch.randn(2, 1))
         self.assertEqual(y.shape, (2, 1))
@@ -393,8 +394,9 @@ class TestResNet1DNetBuild(unittest.TestCase):
         self.assertGreater(_param_count(self.net), 0)
 
     def test_different_input_size(self):
-        from pycsamt.ai.nets import ResNet1DNet
         import torch
+
+        from pycsamt.ai.nets import ResNet1DNet
         net = ResNet1DNet(n_features=20, n_out=5).build()
         self.assertEqual(net(torch.randn(3, 20)).shape, (3, 5))
 
@@ -427,8 +429,9 @@ class TestFCN1DNetBuild(unittest.TestCase):
 
     def test_variable_input_size(self):
         """FCN is length-agnostic — should work for different n_features."""
-        from pycsamt.ai.nets import FCN1DNet
         import torch
+
+        from pycsamt.ai.nets import FCN1DNet
         net = FCN1DNet(n_features=50, n_out=9).build()
         self.assertEqual(net(torch.randn(5, 50)).shape, (5, 9))
 
@@ -470,8 +473,9 @@ class TestUNet2DNetBuild(unittest.TestCase):
         self.assertGreater(_param_count(self.net), 0)
 
     def test_multi_output_channels(self):
-        from pycsamt.ai.nets import UNet2DNet
         import torch
+
+        from pycsamt.ai.nets import UNet2DNet
         net = UNet2DNet(n_in=2, n_out=3).build()
         x = torch.randn(1, 2, 8, 8)
         y = net(x)
@@ -509,8 +513,9 @@ class TestDRCNNNetBuild(unittest.TestCase):
             self.net(torch.randn(2, 40))   # expects 2 inputs, got 1
 
     def test_three_modalities(self):
-        from pycsamt.ai.nets import DRCNNNet
         import torch
+
+        from pycsamt.ai.nets import DRCNNNet
         net = DRCNNNet(n_features_list=(30, 20, 10), n_out=5).build()
         y = net(torch.randn(3, 30), torch.randn(3, 20), torch.randn(3, 10))
         self.assertEqual(y.shape, (3, 5))
@@ -536,8 +541,9 @@ class TestGCNNetBuild(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from pycsamt.ai.nets import GCNNet, build_adjacency
         import torch
+
+        from pycsamt.ai.nets import GCNNet, build_adjacency
         cls.net = GCNNet(n_features=cls._N_FEAT, n_out=cls._N_OUT,
                          hidden=(64, 32)).build()
         # Precompute a 3×3 grid adjacency
@@ -582,8 +588,9 @@ class TestGCNNetBuild(unittest.TestCase):
         self.assertTrue(torch.isfinite(y).all())
 
     def test_custom_hidden(self):
-        from pycsamt.ai.nets import GCNNet
         import torch
+
+        from pycsamt.ai.nets import GCNNet
         net = GCNNet(n_features=10, n_out=3, hidden=(32, 16)).build()
         H = torch.randn(5, 10)
         A = torch.eye(5)
@@ -612,9 +619,10 @@ class TestGCNPipelineIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from pycsamt.forward.batch import generate_dataset_3d
-        from pycsamt.ai.nets import GCNNet, build_adjacency
         import torch
+
+        from pycsamt.ai.nets import GCNNet, build_adjacency
+        from pycsamt.forward.batch import generate_dataset_3d
         cls.ds = generate_dataset_3d(
             n_surveys=6,
             n_stations=9,

@@ -38,8 +38,6 @@ in the ``tf`` example).
 # :func:`anisotropy_table` collapses that to one row per station.
 
 import matplotlib.pyplot as plt
-import numpy as np
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

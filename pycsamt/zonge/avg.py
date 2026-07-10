@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
@@ -14,38 +13,30 @@ convenient container.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import (
     Any,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-    Literal, 
-    Dict, 
+    Literal,
 )
-from datetime import datetime
+
 import numpy as np
 import pandas as pd
 
-from ..api.bunch import Bunch 
+from ..api.bunch import Bunch
 from ..constants import MU_0, PI
 from ..decorators import has_fit
 from ..exceptions import AvgDataError
-from ..utils.validation import has_read 
-from ..utils._dependency import import_optional_dependency 
+from ..utils._dependency import import_optional_dependency
+from ..utils.validation import has_read
 from ._transfer import LegacyAVGBase
 from .base import AVGFrame, guess_kind_from_df
-from .config import Zonge 
-from .info import DataInfo
+from .config import Zonge
 from .heads import _emit_hardware_banner
-from .utils import ( 
-    classify_avg_format, 
-    load_avg, 
-    write_avg
-)
-from .survey import Topography 
-
+from .info import DataInfo
+from .survey import Topography
+from .utils import classify_avg_format, load_avg, write_avg
 
 __all__ = ["BaseAVG","AVG", "AMTAVG"]
 
@@ -106,17 +97,17 @@ class BaseAVG(Zonge):
     """
     def __init__(self, verbose: bool = False):
         super().__init__(verbose=verbose)
-        
+
         self.info: DataInfo = DataInfo(verbose=verbose)
-        self._kind: Optional[int] = None
-        self._source_path: Optional[Path] = None
-        self.topo: Optional[Topography] = None 
+        self._kind: int | None = None
+        self._source_path: Path | None = None
+        self.topo: Topography | None = None
 
     def read(
         self,
-        source: Union[str, Path, "AVGFrame", pd.DataFrame],
-        meta: Optional[Mapping[str, Any]] = None,
-    ) -> "BaseAVG":
+        source: str | Path | AVGFrame | pd.DataFrame,
+        meta: Mapping[str, Any] | None = None,
+    ) -> BaseAVG:
         r"""Read, parse, and populate components from a data source.
 
         This is the primary data ingestion method for the class. It
@@ -128,14 +119,14 @@ class BaseAVG(Zonge):
         ----------
         source : str, Path, AVGFrame, or pd.DataFrame
             The data source to load. This can be:
-                
+
             - A string or `pathlib.Path` pointing to a Zonge AVG
               file (both legacy and modern formats are supported).
             - A `pandas.DataFrame` containing AVG data. Note that
               if the DataFrame is not already standardized, it will
               be automatically standardized by `AVGFrame`.
             - An existing :class:`~.base.AVGFrame` object.
-            
+
         meta : mapping, optional
             An optional dictionary of metadata. This is primarily
             used when `source` is a `pd.DataFrame` to provide
@@ -163,7 +154,7 @@ class BaseAVG(Zonge):
         -----
         The `read` method encapsulates a complete data processing
         pipeline:
-            
+
         1.  **File Handling**: If a path is provided, it reads the
             file and uses :func:`~.utils.classify_avg_format` to
             determine the file kind.
@@ -221,15 +212,15 @@ class BaseAVG(Zonge):
             if self.verbose:
                 self._logger.info("Reading from pandas DataFrame.")
             frame = AVGFrame (data=source, meta=meta or {})
-            
+
             # Guess the kind from the now-standardized frame
             # The default 'soft' mode will handle this correctly
             df, final_meta, self._kind = guess_kind_from_df(
                 frame, transform=True,
-                verbose = self.verbose 
+                verbose = self.verbose
             )
             self._source_path = frame.source
-            
+
         elif isinstance(source, AVGFrame):
             if self.verbose:
                 self._logger.info("Reading from AVGFrame object.")
@@ -249,15 +240,15 @@ class BaseAVG(Zonge):
         self.info.read(df, final_meta)
         if self.verbose:
             self._logger.info("AVG data successfully loaded.")
-   
-        return self 
+
+        return self
 
     def add_topography(
         self,
-        stn_file: Union[str, Path, pd.DataFrame], 
-        utm_zone: str= None, 
-        epsg: int =None, 
-    ) -> "BaseAVG":
+        stn_file: str | Path | pd.DataFrame,
+        utm_zone: str= None,
+        epsg: int =None,
+    ) -> BaseAVG:
         r"""Read and attach station topography data.
 
         This method reads a Zonge ``.stn`` file (or a DataFrame
@@ -276,17 +267,17 @@ class BaseAVG(Zonge):
             The method returns the instance, allowing for
             method chaining.
         """
-  
+
         has_read(self)
 
         if self.verbose:
             self._logger.info(f"Reading topography from: {stn_file}")
 
         # Create and read the Topography component
-        self.topo = Topography( 
-            verbose=self.verbose, 
-            utm_zone= utm_zone, 
-            epsg= epsg 
+        self.topo = Topography(
+            verbose=self.verbose,
+            utm_zone= utm_zone,
+            epsg= epsg
             ).read(stn_file)
 
         # XXX TODO: Optional: add logic here to merge elevation
@@ -298,10 +289,10 @@ class BaseAVG(Zonge):
         # let keep safe for this version now.
 
         return self
-    
+
     def to_modern(
         self,
-        path: Optional[Union[str, Path]] = None,
+        path: str | Path | None = None,
         *,
         stamp: bool = True,
         float_fmt: str = "%.6g",
@@ -314,7 +305,7 @@ class BaseAVG(Zonge):
         CSAVGW-style ``.avg`` file. It delegates the core writing
         and formatting logic to the :func:`~.utils.write_avg`
         function.
-    
+
         Parameters
         ----------
         path : str or pathlib.Path, optional
@@ -331,7 +322,7 @@ class BaseAVG(Zonge):
         header_spaces : bool, default False
             If ``True``, adds spaces around the equals sign in header
             keywords (e.g., ``$Key = Value``).
-    
+
         Notes
         -----
         This method intelligently prepares the data for writing by:
@@ -342,15 +333,15 @@ class BaseAVG(Zonge):
         3.  Filtering out any artificial data rows (e.g., those
             with ``NaN`` in the 'rho' column) that may have been
             created during a legacy-to-modern transformation.
-    
+
         See Also
         --------
         to_legacy : Write data to a legacy (kind-1) file.
         pycsamt.zonge.utils.write_avg : The underlying file writing
             function.
         """
-        has_read (self) 
-        
+        has_read (self)
+
         if path is None:
             base = (
                 self._source_path.stem
@@ -361,13 +352,13 @@ class BaseAVG(Zonge):
 
         if self.verbose:
             self._logger.info(f"Writing modern AVG file to: {path}")
-        
+
         # Filter out artificial NaN rows before writing ---
         df_to_write = self.info.df.dropna(subset=['rho']).copy()
 
         meta = self.info.header.to_keywords()
         banner = _emit_hardware_banner(self.info.header.hardware)
-        
+
         write_avg(
             core=df_to_write,
             extra=None,
@@ -379,10 +370,10 @@ class BaseAVG(Zonge):
             header_spaces=header_spaces,
             banner_lines=banner,
         )
-        
+
     def to_legacy(
         self,
-        path: Optional[Union[str, Path]] = None,
+        path: str | Path | None = None,
         *,
         precision: int = 4,
         na_rep: str = "*",
@@ -392,7 +383,7 @@ class BaseAVG(Zonge):
         This method reconstructs the classic, fixed-width format of
         older Zonge AVG files. It uses the populated data components
         to generate the header and formatted data rows.
-    
+
         Parameters
         ----------
         path : str or pathlib.Path, optional
@@ -404,12 +395,12 @@ class BaseAVG(Zonge):
             fields (e.g., 'Emag', 'Resistivity').
         na_rep : str, default "*"
             The string representation for missing (NaN) values.
-    
+
         Notes
         -----
         The conversion from a modern, comprehensive data structure to
         the legacy format involves several key steps:
-    
+
         - **Header Synthesis**: It creates a minimal legacy header
           using ``$ASPACE`` and ``$XMTR`` keywords derived from the
           `header` component.
@@ -419,17 +410,17 @@ class BaseAVG(Zonge):
         - **Data Filtering**: It first filters out any artificial
           data rows (e.g., those with ``NaN`` in the 'rho' column) to
           ensure the output is clean.
-    
+
         Be aware that some information from a modern dataset may be
         lost in this conversion, as the legacy format does not
         support all the fields of the modern format.
-    
+
         See Also
         --------
         to_modern : Write data to a modern (kind-2) file.
         """
-        has_read (self) 
-        
+        has_read (self)
+
         if path is None:
             base = (
                 self._source_path.stem
@@ -465,7 +456,7 @@ class BaseAVG(Zonge):
         )
         lines.append(header_str)
         lines.append(separator_str)
-        
+
         # Map from the canonical lowercase names in self.info.df
         # to the names expected by the row.get() calls below.
         rename_map = {
@@ -486,7 +477,7 @@ class BaseAVG(Zonge):
             if pd.isna(val):
                 return na_char.center(width)
             return fspec % val
-        
+
         for _, row in df.iterrows():
             skp = 2 if row.get("use", True) else 1
 
@@ -512,14 +503,14 @@ class BaseAVG(Zonge):
             lines.append(line)
 
         Path(path).write_text("\n".join(lines))
-        
+
         if self.verbose:
             self._logger.info(f"Writing legacy AVG file to: {path}")
-            
+
 
     def write(
         self,
-        path: Optional[Union[str, Path]] = None,
+        path: str | Path | None = None,
         *,
         fmt: Literal[
             "kind1", "kind2", "legacy", "modern", "auto"
@@ -532,7 +523,7 @@ class BaseAVG(Zonge):
         the :meth:`to_legacy` or :meth:`to_modern` method based on the
         `fmt` parameter. It provides a single, convenient entry point
         for file serialization.
-    
+
         Parameters
         ----------
         path : str or pathlib.Path, optional
@@ -548,14 +539,14 @@ class BaseAVG(Zonge):
             writing method (`to_legacy` or `to_modern`). For example,
             `precision` for `to_legacy` or `float_fmt` for
             `to_modern`.
-    
+
         Raises
         ------
         ValueError
             If an unsupported `fmt` is specified.
         NotReadError
             If this method is called before data has been loaded.
-    
+
         See Also
         --------
         to_legacy : Writes data to a legacy (kind-1) file.
@@ -569,7 +560,7 @@ class BaseAVG(Zonge):
             self.to_modern(path, **kwargs)
         else:
             raise ValueError(f"Unknown format '{fmt}' specified.")
-            
+
     @property
     def summary(self):
         r"""Provide a `Bunch` object with a summary of key attributes.
@@ -578,7 +569,7 @@ class BaseAVG(Zonge):
         metadata and statistics from the loaded dataset into a single,
         easy-to-read object. It is useful for quickly inspecting the
         contents and overall scope of the survey data.
-    
+
         Returns
         -------
         pycsamt.api.bunch.Bunch
@@ -587,17 +578,17 @@ class BaseAVG(Zonge):
             as the source filename, data format kind, project name,
             number of stations and frequencies, and their respective
             ranges.
-    
+
         Notes
         -----
         The `summary` property is read-only and is generated on-demand
         by introspecting the various data components (e.g., `header`,
         `station`, `frequency`). If no data has been loaded, it will
         return a `Bunch` with a 'status' key indicating this.
-    
+
         The `Bunch` object has a user-friendly string representation,
         making it ideal for printing in interactive sessions.
-    
+
         Examples
         --------
         >>> from pycsamt.zonge import AVG
@@ -609,9 +600,9 @@ class BaseAVG(Zonge):
         """
         if self.info.df is None:
             return Bunch(status="Data not loaded")
-        
-        has_read (self) 
-        
+
+        has_read (self)
+
         # Safely get values, providing defaults if not loaded
         hdr = self.info.header
         st = self.info.station
@@ -642,8 +633,8 @@ class BaseAVG(Zonge):
         }
 
         return Bunch(**info_dict)
-    
-    def asdict(self) -> Dict[str, Any]:
+
+    def asdict(self) -> dict[str, Any]:
         r"""Return a shallow, JSON-serializable representation.
 
         This method aggregates the keyword dictionaries from all
@@ -658,7 +649,7 @@ class BaseAVG(Zonge):
         if self.info.df is None:
             return {"status": "Data not loaded"}
 
-        return self.header.to_keywords()   
+        return self.header.to_keywords()
 
     def __has_read__(self) -> bool:
         """
@@ -672,7 +663,7 @@ class BaseAVG(Zonge):
             and self.info.df is not None
             and not self.info.df.empty
         )
-    
+
 
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""
@@ -688,35 +679,35 @@ class BaseAVG(Zonge):
             if self.__has_read__() else
             f"{self.__class__.__name__}(verbose={self.verbose}, loaded=False)"
         )
-    
+
     def _summary_stats(self) -> str:
         """Creates a statistical summary block for the AVG data."""
         if not self.__has_read__():
             return "  (No statistics available: data not loaded)\n"
-    
+
         summary_bunch = self.summary
         n_stations = summary_bunch.get("num_stations", 0)
         n_freqs = summary_bunch.get("num_frequencies", 0)
-    
+
         # Initialize coordinate and elevation data as None
         lats, lons, elevs = None, None, None
-    
+
         # Get location data ONLY if a topography file is loaded
         if self.topo is not None and not self.topo.frame.empty:
             # Ensure lat/lon are available for the summary
             if 'latitude' not in self.topo.frame.columns or (
                     'longitude' not in self.topo.frame.columns):
                 self.topo.convert_coords(to='ll', inplace=True)
-    
+
             lats = self.topo.latitude
             lons = self.topo.longitude
             elevs = self.topo.elevation
-    
+
         freqs = self.info.frequency.unique()
-    
+
         # Helper to safely format data ranges
         def format_range(
-            arr: Optional[np.ndarray], fmt: str
+            arr: np.ndarray | None, fmt: str
         ) -> str:
             """Safely formats the min/max of an array."""
             # Check if array is valid and has finite numbers
@@ -729,13 +720,13 @@ class BaseAVG(Zonge):
                     f"{np.nanmax(arr):{fmt}}"
                 )
             return "N/A"
-    
+
         # Generate range strings for all variables
         lat_range = format_range(lats, ".4f")
         lon_range = format_range(lons, ".4f")
         elev_range = format_range(elevs, ".2f") # Fixed
         freq_range = format_range(freqs, ".2E")
-    
+
         lines = [
             "  " + "-" * 68,
             "  Statistical Summary:",
@@ -749,7 +740,7 @@ class BaseAVG(Zonge):
             f"    Freq Range (Hz): {freq_range}",
             f"    Latitude Range:  {lat_range}",
             f"    Longitude Range: {lon_range}",
-            f"    Elevation Range (m): {elev_range}", 
+            f"    Elevation Range (m): {elev_range}",
             "  " + "-" * 68,
         ]
         return "\n".join(lines)
@@ -763,7 +754,7 @@ class BaseAVG(Zonge):
                 if self._source_path else "Not Loaded"
             )
             return f"{self.__class__.__name__}(source={src}, status=empty)"
-    
+
         # --- Header ---
         title = (
             f" {self.__class__.__name__} Summary"
@@ -775,16 +766,16 @@ class BaseAVG(Zonge):
             title.center(width),
             "=" * width
         ]
-    
+
         # --- Statistical Summary ---
         stats_str = self._summary_stats()
-    
+
         # --- Per-Site Details (from topography component) ---
         details = ["\nStation Details:"]
 
         if self.topo is not None and not self.topo.frame.empty:
             topo = self.topo
-            
+
             # 1. Calculate all the summary statistics from topo data
             n_stations = len(topo.stations)
             steps = topo.get_step()
@@ -792,13 +783,13 @@ class BaseAVG(Zonge):
             total_length = valid_steps.sum()
             mean_azimuth = topo.get_azimuth(mode='mean')
             elevations = topo.elevation
-        
+
             # 2. Format the calculated values for clean display
             length_str = (
                 f"{total_length / 1000:.2f} km" if total_length > 1000
                 else f"{total_length:.1f} m"
             )
-            
+
             def to_cardinal(deg: float) -> str:
                 """Helper to convert azimuth degree to cardinal direction."""
                 if np.isnan(deg): return ""
@@ -807,25 +798,25 @@ class BaseAVG(Zonge):
                     "S", "S-SW", "SW", "W-SW", "W", "W-NW", "NW", "N-NW"
                 ]
                 return dirs[int(round(deg / 22.5)) % 16]
-        
+
             azimuth_str = (
                 f"{mean_azimuth:.1f}° ({to_cardinal(mean_azimuth)})"
             )
-            
+
             spacing_str = (
                 f"Min: {valid_steps.min():.1f}, "
                 f"Mean: {valid_steps.mean():.1f}, "
                 f"Max: {valid_steps.max():.1f}"
             ) if not valid_steps.empty else "N/A"
-        
+
             elev_range_str = (
                 f"{elevations.min():.1f} - {elevations.max():.1f} "
                 f"(Δ: {elevations.max() - elevations.min():.1f})"
             ) if elevations.size > 1 else "N/A"
-        
+
             start_pt_str = f"({topo.easting[0]:.1f}, {topo.northing[0]:.1f})"
             end_pt_str = f"({topo.easting[-1]:.1f}, {topo.northing[-1]:.1f})"
-            
+
             # 3. Structure the data for a formatted key-value table
             table_data = [
                 ("Number of Stations", f"{n_stations}"),
@@ -836,31 +827,31 @@ class BaseAVG(Zonge):
                 ("Start Point (E, N)", start_pt_str),
                 ("End Point (E, N)", end_pt_str),
             ]
-        
+
             # 4. Build the formatted table string for display
             header1, header2 = "Geometry", "Value"
-            
+
             # max_key_len = max(len(key) for key, _ in table_data)
             # for key, val in table_data:
             #     details.append(f"  {key.ljust(max_key_len)}: {val}")
             # 4. Calculate dynamic column widths based on content
             col1_width = max(len(header1), max(len(k) for k, _ in table_data))
             col2_width = max(len(header2), max(len(v) for _, v in table_data))
-            
+
             # 5. Build the formatted table strings
             separator = (f"  {'-' * (col1_width + col2_width + 7)}")
-            
+
             details.append(separator)
             details.append(f"  | {header1.ljust(col1_width)} | "
                            f"{header2.ljust(col2_width)} |")
             details.append(separator)
-        
+
             for key, val in table_data:
                 details.append(f"  | {key.ljust(col1_width)} | "
                                f"{val.ljust(col2_width)} |")
             details.append(separator)
-    
-        
+
+
         else:
             # Message when no topography data is loaded
             details.append(
@@ -870,11 +861,11 @@ class BaseAVG(Zonge):
         dataset_details = ["\nDataset Details (Per-Station Summary):"]
         df = self.info.df.copy()
         agg_cols = ['rho', 'phase', 'pc_rho', 's_phz']
-        
+
         # 1. Aggregate main data to get per-station stats
         summary_df = df.groupby('station')[agg_cols].agg(
             ['min', 'max'])
-        
+
         # 2. FIX: Robustly flatten the MultiIndex columns into strings
         # This is the most important change. It turns ('rho','min') into 'rho_min'
         summary_df.columns = [
@@ -882,7 +873,7 @@ class BaseAVG(Zonge):
             for col in summary_df.columns.values
         ]
         summary_df.reset_index(inplace=True)
-        
+
         # 3. Create the combined string columns (now using simple string keys)
         summary_df['Station'] = summary_df['station'].apply('{:,.1f}'.format)
         summary_df['ρ Range'] = summary_df.apply(
@@ -897,12 +888,12 @@ class BaseAVG(Zonge):
         summary_df['σΦ Range'] = summary_df.apply(
             lambda r: f"{r['s_phz_min']:.2f} - {r['s_phz_max']:.2f}", axis=1
         )
-        
+
         # Select only the formatted string columns for display
         display_df = summary_df[[
             'Station', 'ρ Range', 'Φ Range', '%err Range', 'σΦ Range'
         ]]
-        
+
         # 4. Calculate dynamic column widths (this code now works correctly)
         headers = {
             'Station': 'Station', 'ρ Range': 'ρ Min - ρ Max',
@@ -913,7 +904,7 @@ class BaseAVG(Zonge):
             col: max(len(headers[col]), display_df[col].str.len().max())
             for col in display_df.columns
         }
-    
+
         # 4. Build the table strings
         header_row = " | ".join([
             headers[col].center(col_widths[col])
@@ -921,10 +912,10 @@ class BaseAVG(Zonge):
         ])
         separator_row = "-+-".join(['-' * col_widths[col]
                                     for col in display_df.columns])
-        
+
         dataset_details.append(header_row)
         dataset_details.append(separator_row)
-    
+
         # Function to format a single data row
         def format_row(row):
             return " | ".join([
@@ -934,25 +925,25 @@ class BaseAVG(Zonge):
                 row['%err Range'].center(col_widths['%err Range']),
                 row['σΦ Range'].center(col_widths['σΦ Range'])
             ])
-    
+
         # 5. Handle Truncation and build data rows
         n_stations = len(display_df)
         if n_stations > 30:
             for _, row in display_df.head(5).iterrows():
                 dataset_details.append(format_row(row))
-            
+
             ellipsis_row = " | ".join(['...'.center(col_widths[col])
                                       for col in display_df.columns])
             dataset_details.append(ellipsis_row)
-            
+
             for _, row in display_df.tail(5).iterrows():
                 dataset_details.append(format_row(row))
         else:
             for _, row in display_df.iterrows():
                 dataset_details.append(format_row(row))
-    
+
         dataset_details.append(separator_row)
-    
+
         # --- Combine and Return ---
         return "\n".join(
             header + [stats_str] + details + dataset_details
@@ -1055,10 +1046,10 @@ class AVG(BaseAVG):
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         verbose: bool = False,
-    ) -> "AVG":
+    ) -> AVG:
         r"""Load and parse an AVG file from a path.
 
         This classmethod is the primary factory for creating a
@@ -1100,7 +1091,7 @@ class AVG(BaseAVG):
         read : The underlying method that performs the data
             ingestion.
         """
-        
+
         obj = cls(verbose=verbose)
         obj.read(path)
         return obj
@@ -1118,7 +1109,7 @@ class AVG(BaseAVG):
         the primary data variables (resistivity, phase), the computed
         impedance tensor (Z), and all available quality control (QC)
         metrics into a single object.
-    
+
         Parameters
         ----------
         include_qc : bool, default True
@@ -1129,7 +1120,7 @@ class AVG(BaseAVG):
             If ``True``, the real and imaginary parts of the complex
             impedance tensor (Z) and its propagated error will be
             included as data variables.
-    
+
         Returns
         -------
         xarray.Dataset
@@ -1137,7 +1128,7 @@ class AVG(BaseAVG):
             data variables for all included measurements and QC
             metrics. The dataset's attributes are populated from the
             AVG file's header.
-    
+
         Notes
         -----
         This method provides a high-level, convenient way to get all
@@ -1145,7 +1136,7 @@ class AVG(BaseAVG):
         plotting. It gracefully handles cases where optional
         components (like certain QC metrics) are not available in the
         source data by skipping them.
-    
+
         Examples
         --------
         >>> from pycsamt.zonge import AVG
@@ -1158,7 +1149,7 @@ class AVG(BaseAVG):
             phase      (station, freq, comp) float64 ...
             z_real     (station, freq, comp) float64 ...
             ...
-    
+
         See Also
         --------
         to_tensor : Export a single variable to a NumPy tensor.
@@ -1168,8 +1159,8 @@ class AVG(BaseAVG):
             extra="xarray is required for to_xarray()",
             errors="raise",
         )
-        has_read (self) 
-        
+        has_read (self)
+
         # Start with the primary data variables
         ds_rho = self.resistivity.to_xarray()
         ds_phase = self.phase.to_xarray()
@@ -1217,7 +1208,7 @@ class AVG(BaseAVG):
         # Attach comprehensive header metadata
         ds.attrs.update(self.header.to_keywords())
         ds.attrs["source_file"] = (
-            str(self._source_path) 
+            str(self._source_path)
             if self._source_path else "Unknown"
         )
         return ds
@@ -1226,12 +1217,12 @@ class AVG(BaseAVG):
         self,
         var: str = "z",
         *,
-        station: Optional[Union[int, float]] = None,
+        station: int | float | None = None,
         agg: str | None = "mean",
         fill_value: float = np.nan,
         sort_freq: bool = True,
         align: str = "union",
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         r"""Export a specific variable as a 2x2 tensor.
 
         This is a convenience method that provides direct access to the
@@ -1239,7 +1230,7 @@ class AVG(BaseAVG):
         It delegates the call to the appropriate component (e.g., `Z`,
         `Resistivity`) to reshape the selected variable into a NumPy
         array.
-    
+
         Parameters
         ----------
         var : {'z', 'z_real', 'z_imag', 'z_err', 'rho', 'phase'}, default 'z'
@@ -1259,7 +1250,7 @@ class AVG(BaseAVG):
         align : {'union', 'intersection'}, default 'union'
             For multi-station tensors, determines how to handle
             different frequency sets between stations.
-    
+
         Returns
         -------
         tensor : numpy.ndarray
@@ -1271,14 +1262,14 @@ class AVG(BaseAVG):
         stations : numpy.ndarray
             The station axis for the tensor (empty for a single-
             station request).
-    
+
         See Also
         --------
         to_xarray : Export the entire dataset to a labeled xarray object.
         pycsamt.zonge.tensor.TensorBase.to_tensor : The underlying
             implementation.
         """
-        has_read (self) 
+        has_read (self)
         component_map = {
             "z": self.z,
             "z_real": self.z,
@@ -1302,7 +1293,7 @@ class AVG(BaseAVG):
             sort_freq=sort_freq,
             align=align,
         )
-    
+
     @property
     def header(self):
         """Access the Header component."""
@@ -1332,17 +1323,17 @@ class AVG(BaseAVG):
     def frequency(self):
         """Access the Frequency component."""
         return self.info.frequency
-        
+
     @property
-    def df(self) -> Optional[pd.DataFrame]:
+    def df(self) -> pd.DataFrame | None:
         """
         Access the core tidy DataFrame containing all available
         data columns after parsing and normalization.
         """
-        return self.info.df 
-    
+        return self.info.df
 
-        
+
+
 class AMTAVG(AVG):
     r"""Extends AVG with tensor components and analytical methods.
 
@@ -1353,18 +1344,18 @@ class AMTAVG(AVG):
     directly with specific tensor elements (e.g., z_xy, rho_yx).
 
     The primary features of this class include:
-        
+
     - Direct, property-based access to individual components of
       the impedance, resistivity, and phase tensors as pandas
       Series (e.g., ``z_xy``, ``res_yx_err``).
     - A suite of methods for advanced data processing, such as
       tensor rotation, phase unwrapping, and statistical analysis.
-      
+
     In addition to providing direct access to tensor components,
     this class includes methods for advanced data manipulation,
     such as recalculating resistivity and phase from the impedance
     tensor.
-    
+
     Attributes
     ----------
     z_xx, z_xy, z_yx, z_yy : pd.Series
@@ -1419,7 +1410,7 @@ class AMTAVG(AVG):
 
     def compute_resistivity_phase(
         self, todeg: bool = False
-    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         r"""Compute rho and phi from the complex impedance Z.
 
         This method calculates the apparent resistivity (:math:`\rho_a`)
@@ -1498,13 +1489,13 @@ class AMTAVG(AVG):
             phi_err = phi_err_mrad
 
         return rho, phi, rho_err, phi_err
-    
+
     def set_resistivity_phase(
         self,
         rho: pd.Series,
         phi: pd.Series,
-        rho_err: Optional[pd.Series] = None,
-        phi_err: Optional[pd.Series] = None,
+        rho_err: pd.Series | None = None,
+        phi_err: pd.Series | None = None,
     ):
         r"""Attach new rho/phi data and reconstruct Z.
 
@@ -1536,7 +1527,7 @@ class AMTAVG(AVG):
         `self.info.read` at the end, it ensures that all changes
         are propagated correctly throughout the entire data model.
         """
-        
+
         has_read(self)
         df = self.info.df.copy()
 
@@ -1550,10 +1541,10 @@ class AMTAVG(AVG):
 
         # Re-read components to update their internal state
         self.info.read(df, self.info.meta)
-        
+
     def get_tensor_by_station(
         self,
-        station_id: Union[int, float],
+        station_id: int | float,
         *,
         var: Literal["z", "rho", "phase"] = "z",
     ):
@@ -1637,7 +1628,7 @@ class AMTAVG(AVG):
                     "dataset's coordinates."
                 )
             raise
-            
+
     def calculate_statistics(
         self,
         *,
@@ -1745,7 +1736,7 @@ class AMTAVG(AVG):
                 suffixes=('', '_stat')
             )
             for stat_col, canon_col in update_map.items():
-                # Check if column exists before updating 
+                # Check if column exists before updating
                 # In principle, this is always true.
                 if canon_col in self.info.df.columns:
                     if stat_col in merged_df.columns:
@@ -1759,11 +1750,11 @@ class AMTAVG(AVG):
                         f"Skipping update for '{canon_col}': "
                         "column not found in source DataFrame."
                     )
-                    
+
             # Re-read the info object to update all components
             self.info.read(self.info.df, self.info.meta)
 
-        return stats     
+        return stats
 
     def unwrap_phase(
         self,
@@ -1968,11 +1959,11 @@ class AMTAVG(AVG):
             # Recalculate rho and phi from the new complex Z
             omega = 2 * PI * temp_df["freq"]
             abs_z_sq = np.abs(temp_df["z_complex"])**2
-            
+
             self.info.df["rho"] = abs_z_sq / (omega * MU_0)
-            imag = np.imag(temp_df["z_complex"]) 
-            real = np.real(temp_df["z_complex"]) 
-            
+            imag = np.imag(temp_df["z_complex"])
+            real = np.real(temp_df["z_complex"])
+
             self.info.df["phase"] = np.arctan2(imag, real) * 1000.0  # to mrad
 
             # Re-read the info object to update all components
@@ -2020,7 +2011,7 @@ class AMTAVG(AVG):
         This method requires the horizontal magnetic field data
         (`hmag`, `hphz`) to be present in the dataset.
         """
-        from .tipper import Tipper 
+        from .tipper import Tipper
 
         has_read(self)
         df = self.info.df.copy()
@@ -2077,7 +2068,7 @@ class AMTAVG(AVG):
                     )
 
         if not tipper_results:
-            warnings.warn("Tipper calculation resulted in no data.")
+            warnings.warn("Tipper calculation resulted in no data.", stacklevel=2)
             return pd.DataFrame()
 
         tipper_df = pd.DataFrame(tipper_results)
@@ -2087,32 +2078,32 @@ class AMTAVG(AVG):
             self.info.tipper = Tipper(verbose=self.verbose)
             self.info.tipper.read(tipper_df, self.info.meta)
 
-        return tipper_df   
-    
+        return tipper_df
+
     # --- Z Tensor Components ---
     @property
-    def z_xx(self): 
+    def z_xx(self):
         return self.z.z_xx
     @property
-    def z_xy(self): 
+    def z_xy(self):
         return self.z.z_xy
     @property
     def z_yx(self):
         return self.z.z_yx
     @property
-    def z_yy(self): 
+    def z_yy(self):
         return self.z.z_yy
     @property
     def z_xx_err(self):
         return self.z.z_xx_err
     @property
-    def z_xy_err(self): 
+    def z_xy_err(self):
         return self.z.z_xy_err
     @property
-    def z_yx_err(self): 
+    def z_yx_err(self):
         return self.z.z_yx_err
     @property
-    def z_yy_err(self): 
+    def z_yy_err(self):
         return self.z.z_yy_err
 
     # --- Resistivity Tensor Components ---

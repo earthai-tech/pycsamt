@@ -130,15 +130,14 @@ class StaticShiftAgent(BaseAgent):
 
         # ── import ss functions ───────────────────────────────────────────────
         from ..emtools.ss import (
+            apply_ss_factors,
             correct_ss_ama,
             estimate_ss_loess,
             estimate_ss_refmedian,
-            apply_ss_factors,
-            ss_comparison_psection,
-            plot_ss_summary,
             plot_ss_1d_curves,
+            plot_ss_summary,
+            ss_comparison_psection,
         )
-        from ..emtools._core import _iter_items, _name, _get_z_block
 
         # ── capture log₁₀ ρa before correction ───────────────────────────────
         rho_before, freqs_all, sta_labels = _collect_rho(sites)
@@ -367,7 +366,11 @@ def _collect_rho(
     Returns (rho_mat, freqs, station_labels). Any of these may be None if
     data are unavailable.
     """
-    from ..emtools._core import _iter_items, _name, _get_z_block
+    from ..emtools._core import (
+        _get_z_block,
+        _iter_items,
+        _name,
+    )
 
     cols: list[np.ndarray] = []
     freqs_ref: np.ndarray | None = None

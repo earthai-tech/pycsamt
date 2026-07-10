@@ -39,43 +39,47 @@ survey whose EDI files carry no per-station ``LAT``/``LONG`` in
 # as ``skew``), and ``ellipt`` = (s1-s2)/(s1+s2). Every other function
 # in this module is built on this one table.
 
-from _datasets import load_survey, dataset_path
+import numpy as np
+from _datasets import load_survey
+
+from pycsamt.emtools import (
+    antisymmetrize,
+    balance_offdiag,
+    build_phase_tensor_table,
+    ensure_sites,
+    invert,
+    orient_from_sensors,
+    phase_tensor_legend,
+    plot_dimensionality_grid,
+    plot_dimensionality_psection,
+    plot_ellipticity_psection,
+    plot_phase_tensor_map,
+    plot_phase_tensor_psection,
+    plot_phase_tensor_rose,
+    plot_phase_tensor_skewmap,
+    plot_phase_tensor_strip,
+    plot_phase_tensor_strip_grid,
+    plot_phase_tensor_summary,
+    plot_skew_ellipt_density,
+    plot_strike_director_field,
+    plot_theta_rose_grid,
+    plot_theta_stability_stripe,
+    plot_theta_vs_period,
+    rotate,
+    rotate_by_map,
+    sigma_clip_z,
+)
+from pycsamt.emtools._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
+)
 
 # tensor.rotate_to_strike conflicts with strike.rotate_to_strike; the
 # top level re-exports strike's under its own name and aliases this
 # module's as rotate_z_to_strike -- import the un-aliased name directly
 # from .tensor since this example is specifically about this version.
 from pycsamt.emtools.tensor import rotate_to_strike
-from pycsamt.emtools._core import _iter_items, _name, _get_z_block
-from pycsamt.emtools import (
-    build_phase_tensor_table,
-    plot_theta_vs_period,
-    plot_strike_director_field,
-    plot_ellipticity_psection,
-    plot_phase_tensor_skewmap,
-    plot_dimensionality_psection,
-    plot_dimensionality_grid,
-    plot_phase_tensor_psection,
-    plot_phase_tensor_rose,
-    plot_theta_rose_grid,
-    plot_theta_stability_stripe,
-    plot_skew_ellipt_density,
-    phase_tensor_legend,
-    plot_phase_tensor_summary,
-    plot_phase_tensor_map,
-    plot_phase_tensor_strip,
-    plot_phase_tensor_strip_grid,
-    antisymmetrize,
-    invert,
-    balance_offdiag,
-    orient_from_sensors,
-    sigma_clip_z,
-    rotate,
-    rotate_by_map,
-    ensure_sites,
-)
-
-import numpy as np
 
 survey = load_survey("amt_l18plt")
 S = ensure_sites(survey, recursive=False, on_dup="replace", strict=False, verbose=0)

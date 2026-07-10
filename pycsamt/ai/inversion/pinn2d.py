@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -77,28 +76,23 @@ PINNInverter2D(n_stations=20, fitted)
 """
 from __future__ import annotations
 
-import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
 from .._base import BasePINNInverter
+from ._pinn_ops import fit_2d_joint
 from ._sites_bridge import (
     SiteObs2D,
-    sites_to_obs_2d,
-    _make_common_grid,
     _interp_to_grid,
+    _make_common_grid,
+    sites_to_obs_2d,
 )
-from ._pinn_ops import fit_2d_joint
 
 __all__ = ["PINNInverter2D"]
 
 
 # ── backward-compat re-export (hybrid2d imports this)
-from ._pinn_ops_torch import (
-    _mt1d_torch_batch,
-    _fit_2d_joint_torch as _fit_2d_joint,
-)
 
 
 class PINNInverter2D(BasePINNInverter):
@@ -158,7 +152,7 @@ class PINNInverter2D(BasePINNInverter):
         lr: float = 1e-2,
         comp_te: str = "xy",
         comp_tm: str = "yx",
-        device: Optional[str] = None,
+        device: str | None = None,
         recursive: bool = True,
         on_dup: str = "replace",
         verbose: int = 0,
@@ -185,7 +179,7 @@ class PINNInverter2D(BasePINNInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._obs: List[SiteObs2D] = (
+        self._obs: list[SiteObs2D] = (
             sites_to_obs_2d(
                 sites,
                 comp_te=comp_te,
@@ -199,7 +193,7 @@ class PINNInverter2D(BasePINNInverter):
             [o.freq for o in self._obs],
             n_freqs=n_freqs,
         )
-        self._result: Optional[Dict] = None
+        self._result: dict | None = None
 
     # ── fit ──
 
@@ -208,7 +202,7 @@ class PINNInverter2D(BasePINNInverter):
         *,
         verbose: bool = True,
         log_every: int = 50,
-    ) -> "PINNInverter2D":
+    ) -> PINNInverter2D:
         """
         Run the joint 2-D physics-informed inversion.
 
@@ -376,7 +370,7 @@ class PINNInverter2D(BasePINNInverter):
     # ── read-only properties ──
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         """Station names in profile order."""
         return [o.name for o in self._obs]
 
@@ -389,7 +383,7 @@ class PINNInverter2D(BasePINNInverter):
 
     def _build_obs_arrays(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Build (log_rho_obs, ph_obs) arrays for opt.
 

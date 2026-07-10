@@ -27,8 +27,8 @@ survey and a long-period MT line, and shows the option knobs.
 from _datasets import load_sites
 
 from pycsamt.emtools.tensor import (
-    plot_theta_vs_period,
     plot_strike_director_field,
+    plot_theta_vs_period,
 )
 
 L18 = load_sites("amt_l18plt")          # 28 stations, real error tensors

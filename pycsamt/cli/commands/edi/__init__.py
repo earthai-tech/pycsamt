@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,13 +22,14 @@ rotate      ``pycsamt edi rotate``    — rotate Z / Tipper, write EDIs.
 select      ``pycsamt edi select``    — filter collection, export subset.
 """
 
+from . import (
+    info,  # noqa: F401  (registers @edi.command("info"))
+    profile,  # noqa: F401  (registers @edi.command("profile"))
+    rotate,  # noqa: F401  (registers @edi.command("rotate"))
+    select,  # noqa: F401  (registers @edi.command("select"))
+    stations,  # noqa: F401  (registers @edi.command("stations"))
+    validate,  # noqa: F401  (registers @edi.command("validate"))
+)
 from ._base import edi  # noqa: F401
-
-from . import info      # noqa: F401  (registers @edi.command("info"))
-from . import validate  # noqa: F401  (registers @edi.command("validate"))
-from . import stations  # noqa: F401  (registers @edi.command("stations"))
-from . import profile   # noqa: F401  (registers @edi.command("profile"))
-from . import rotate    # noqa: F401  (registers @edi.command("rotate"))
-from . import select    # noqa: F401  (registers @edi.command("select"))
 
 __all__ = ["edi"]

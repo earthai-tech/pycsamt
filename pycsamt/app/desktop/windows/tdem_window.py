@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -31,11 +30,15 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.controllers.tdem_controller import (
-    TDEMController,
     TDEM_GROUPS,
+    TDEMController,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 
 class TDEMWindow(PanelWindow):
@@ -202,7 +205,9 @@ class TDEMWindow(PanelWindow):
             self._btn_run.setEnabled(True)
 
     def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── Helpers ───────────────────────────────────────────────────────

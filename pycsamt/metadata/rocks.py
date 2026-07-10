@@ -1,6 +1,5 @@
 
 
-from typing import Dict,List, Tuple 
 
 __all__ = [
     'GEO_ROCK_RESISTIVITY',
@@ -9,7 +8,7 @@ __all__ = [
 ]
 
 # Global resistivity ranges for common geological units
-GEO_ROCK_RESISTIVITY: Dict[str, list[float]] = {
+GEO_ROCK_RESISTIVITY: dict[str, list[float]] = {
     "hard rock": [1e99, 1e6],
     "igneous rock": [1e6, 1e3],
     "duricrust": [5.1e3, 5.1e2],
@@ -34,7 +33,7 @@ GEO_ROCK_RESISTIVITY: Dict[str, list[float]] = {
 }
 
 # Hatching patterns and colors for geological units
-ROCK_HATCH_PATTERNS: Dict[str, tuple[str, tuple[float, float, float]]] = {
+ROCK_HATCH_PATTERNS: dict[str, tuple[str, tuple[float, float, float]]] = {
     "hard rock": (".+++++.", (0.25, 0.5, 0.5)),
     "igneous rock": (".o.o.", (1.0, 1.0, 1.0)),
     "duricrust": ("+.+", (1.0, 0.2, 0.36)),
@@ -80,20 +79,20 @@ class RockProperties:
         self._patterns = ROCK_HATCH_PATTERNS
 
     @property
-    def resistivity_ranges(self) -> Dict[str, List[float]]:
+    def resistivity_ranges(self) -> dict[str, list[float]]:
         """
         All resistivity ranges keyed by rock name.
         """
         return self._ranges.copy()
 
     @property
-    def hatch_patterns(self) -> Dict[str, Tuple[str, Tuple[float, float, float]]]:
+    def hatch_patterns(self) -> dict[str, tuple[str, tuple[float, float, float]]]:
         """
         All hatch patterns keyed by rock name.
         """
         return self._patterns.copy()
 
-    def get_resistivity(self, rock: str) -> List[float]:
+    def get_resistivity(self, rock: str) -> list[float]:
         """
         Return [max, min] resistivity for a given rock.
 
@@ -101,7 +100,7 @@ class RockProperties:
         """
         return self._ranges[rock]
 
-    def get_pattern(self, rock: str) -> Tuple[str, Tuple[float, float, float]]:
+    def get_pattern(self, rock: str) -> tuple[str, tuple[float, float, float]]:
         """
         Return (hatch, color) tuple for a given rock.
 
@@ -109,7 +108,7 @@ class RockProperties:
         """
         return self._patterns[rock]
 
-    def find_matching_rocks(self, keyword: str) -> List[str]:
+    def find_matching_rocks(self, keyword: str) -> list[str]:
         """
         Return list of rock names containing keyword (case‑insensitive).
         """

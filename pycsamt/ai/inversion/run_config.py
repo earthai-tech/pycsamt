@@ -49,18 +49,20 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
+from ...forward.config import (
+    _FORWARD_CONFIG_SCHEMA,
+    ForwardConfig,
+)
 from ...models.config_io import (
-    ConfigParameter,
     _comment_lines,
     _groups,
     _py_value,
     _schema_map,
     _yaml_value,
 )
-from ...forward.config import ForwardConfig, _FORWARD_CONFIG_SCHEMA
-from .config import InversionConfig, _INVERSION_CONFIG_SCHEMA
+from .config import _INVERSION_CONFIG_SCHEMA, InversionConfig
 
 __all__ = ["RunConfig"]
 
@@ -73,8 +75,8 @@ __all__ = ["RunConfig"]
 
 def _write_run_py(
     path: Path,
-    fwd_vals: Dict[str, Any],
-    inv_vals: Dict[str, Any],
+    fwd_vals: dict[str, Any],
+    inv_vals: dict[str, Any],
     name: str,
     description: str,
     title: str,
@@ -83,8 +85,8 @@ def _write_run_py(
     by_f = _schema_map(_FORWARD_CONFIG_SCHEMA)
     by_i = _schema_map(_INVERSION_CONFIG_SCHEMA)
 
-    def _block(var: str, values: Dict[str, Any], by_name, section_title: str) -> List[str]:
-        lines: List[str] = [f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
+    def _block(var: str, values: dict[str, Any], by_name, section_title: str) -> list[str]:
+        lines: list[str] = [f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
                             f"{var} = {{"]
         for group, names in _groups(values, list(by_name.values())):
             lines.append(f"    # ---- {group} ----")
@@ -123,10 +125,10 @@ def _write_run_py(
     path.write_text("\n".join(lines) + "\n")
 
 
-def _read_run_py(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _read_run_py(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``FORWARD`` and ``INVERSION`` dicts from a Python run file."""
     tree = ast.parse(path.read_text())
-    results: Dict[str, dict] = {}
+    results: dict[str, dict] = {}
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
@@ -146,8 +148,8 @@ def _read_run_py(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 def _write_run_json(
     path: Path,
-    fwd_vals: Dict[str, Any],
-    inv_vals: Dict[str, Any],
+    fwd_vals: dict[str, Any],
+    inv_vals: dict[str, Any],
     name: str,
     description: str,
     title: str,
@@ -186,7 +188,7 @@ def _write_run_json(
     path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
 
 
-def _read_run_json(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _read_run_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``forward`` and ``inversion`` from a JSON run file."""
     data = json.loads(path.read_text())
     for key in ("forward", "inversion"):
@@ -201,8 +203,8 @@ def _read_run_json(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 def _write_run_yaml(
     path: Path,
-    fwd_vals: Dict[str, Any],
-    inv_vals: Dict[str, Any],
+    fwd_vals: dict[str, Any],
+    inv_vals: dict[str, Any],
     name: str,
     description: str,
     title: str,
@@ -211,7 +213,7 @@ def _write_run_yaml(
     by_f = _schema_map(_FORWARD_CONFIG_SCHEMA)
     by_i = _schema_map(_INVERSION_CONFIG_SCHEMA)
 
-    def _section(section_key: str, vals, by_name, section_title: str) -> List[str]:
+    def _section(section_key: str, vals, by_name, section_title: str) -> list[str]:
         lines = [f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
                  f"{section_key}:"]
         for group, names in _groups(vals, list(by_name.values())):
@@ -247,7 +249,7 @@ def _write_run_yaml(
     path.write_text("\n".join(lines).rstrip() + "\n")
 
 
-def _read_run_yaml(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``forward`` and ``inversion`` from a YAML run file."""
     try:
         import yaml
@@ -266,7 +268,7 @@ def _read_run_yaml(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 # ── Dispatcher ───────────────────────────────────────────────────────────────
 
-def _format_from_path(path: Path, fmt: Optional[str]) -> str:
+def _format_from_path(path: Path, fmt: str | None) -> str:
     if fmt is not None:
         f = fmt.lower().lstrip(".")
         return "yml" if f == "yaml" else f
@@ -284,8 +286,8 @@ def _target_path(path: Path, fmt: str) -> Path:
 
 def _write_run(
     path: Path,
-    fwd_vals: Dict[str, Any],
-    inv_vals: Dict[str, Any],
+    fwd_vals: dict[str, Any],
+    inv_vals: dict[str, Any],
     name: str,
     description: str,
     title: str,
@@ -299,7 +301,7 @@ def _write_run(
         _write_run_yaml(path, fwd_vals, inv_vals, name, description, title)
 
 
-def _read_run(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _read_run(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     suffix = path.suffix.lower()
     if suffix == ".py":
         return _read_run_py(path)
@@ -315,7 +317,7 @@ def _read_run(path: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 # ── Helper — filter unknown keys before constructing sub-configs ──────────────
 
-def _safe_fields(cls, raw: Dict[str, Any], strict: bool) -> Dict[str, Any]:
+def _safe_fields(cls, raw: dict[str, Any], strict: bool) -> dict[str, Any]:
     from dataclasses import fields as dc_fields
     allowed = {f.name for f in dc_fields(cls)}
     unknown = sorted(set(raw) - allowed - {k for k in raw if k.startswith("_")})
@@ -431,7 +433,7 @@ class RunConfig:
     # Convenience pass-throughs
     # ─────────────────────────────────────────────────────────────────────────
 
-    def to_dataset_kwargs(self) -> Dict[str, Any]:
+    def to_dataset_kwargs(self) -> dict[str, Any]:
         """Return kwargs for :func:`~pycsamt.forward.batch.generate_dataset`.
 
         Delegates to :meth:`ForwardConfig.to_dataset_kwargs`.
@@ -445,14 +447,14 @@ class RunConfig:
         """
         return self.inversion.to_inverter()
 
-    def to_fit_kwargs(self) -> Dict[str, Any]:
+    def to_fit_kwargs(self) -> dict[str, Any]:
         """Return kwargs for :meth:`~pycsamt.ai.inversion.inv1d.EMInverter1D.fit`.
 
         Delegates to :meth:`InversionConfig.to_fit_kwargs`.
         """
         return self.inversion.to_fit_kwargs()
 
-    def checkpoint_path(self) -> Optional[Path]:
+    def checkpoint_path(self) -> Path | None:
         """Return the checkpoint file path, or ``None`` if disabled.
 
         Delegates to :meth:`InversionConfig.checkpoint_path`.
@@ -465,9 +467,9 @@ class RunConfig:
 
     def to_template(
         self,
-        path: Union[str, Path] = "run_config.py",
+        path: str | Path = "run_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Write this run configuration to an annotated source-of-truth file.
 
@@ -506,9 +508,9 @@ class RunConfig:
     @classmethod
     def write_template(
         cls,
-        path: Union[str, Path] = "run_config.py",
+        path: str | Path = "run_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
         name: str = "",
         description: str = "",
     ) -> Path:
@@ -545,10 +547,10 @@ class RunConfig:
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         strict: bool = True,
-    ) -> "RunConfig":
+    ) -> RunConfig:
         """Load a run configuration from a source-of-truth file.
 
         Parameters

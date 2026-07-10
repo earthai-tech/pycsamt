@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from pycsamt.tdem import TEMLog, is_tem_log_file, read_temavg_survey
+from pycsamt.tdem import (
+    TEMLog,
+    is_tem_log_file,
+    read_temavg_survey,
+)
 from pycsamt.tdem.io import read_tem_log
 
 DATA_DIR = (

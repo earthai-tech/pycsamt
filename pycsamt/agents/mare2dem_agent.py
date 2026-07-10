@@ -74,7 +74,7 @@ class Mare2DEMAgent(BaseAgent):
         LLM model identifier; defaults to the provider's recommended model.
     llm_provider : str
         ``"claude"`` (default), ``"openai"``,
-        ``"gemini"``, or ``"deepseek"``.
+        ``"gemini"``, ``"deepseek"``, or ``"minimax"``.
     n_procs : int
         Number of MPI processes for MARE2DEM (default 4).
     use_mpi : bool
@@ -279,13 +279,13 @@ class Mare2DEMAgent(BaseAgent):
         # ── import MARE2DEM model layer ────────────────────────────────
         try:
             from ..models.mare2dem import (
-                Mare2DEMConfig,
-                SourceManager,
-                InputBuilder,
-                Mare2DEMRunner,
-                InversionResult,
-                MTSurveyConfig,
                 CSEMSurveyConfig,
+                InputBuilder,
+                InversionResult,
+                Mare2DEMConfig,
+                Mare2DEMRunner,
+                MTSurveyConfig,
+                SourceManager,
                 make_data_file,
                 read_emdata,
             )
@@ -379,7 +379,9 @@ class Mare2DEMAgent(BaseAgent):
                 )
             elif sites_src is not None:
                 # EDI pathway (workflow orchestrator): impedances → .emdata
-                from ..models.mare2dem.edi import make_mt_data_from_edi
+                from ..models.mare2dem.edi import (
+                    make_mt_data_from_edi,
+                )
                 err_floor = float(input_data.get("error_floor", 0.05))
                 out_modes = str(input_data.get("output_modes", "all"))
                 cr_value = input_data.get(

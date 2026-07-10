@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -24,6 +23,7 @@ Usage
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -61,7 +61,9 @@ class _StripGridWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.tensor import plot_phase_tensor_strip_grid
+            from pycsamt.emtools.tensor import (
+                plot_phase_tensor_strip_grid,
+            )
             fig = plot_phase_tensor_strip_grid(
                 self._sites,
                 profiles=self._profiles,
@@ -165,8 +167,13 @@ class PhaseTensorStripGridDialog(QDialog):
         if self._sites is None:
             return
         try:
-            from pycsamt.emtools._core import _iter_items, _unwrap
-            from pycsamt.site.lines import detect_lines_from_station_ids
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _unwrap,
+            )
+            from pycsamt.site.lines import (
+                detect_lines_from_station_ids,
+            )
             names = []
             for ed in _iter_items(self._sites):
                 try:

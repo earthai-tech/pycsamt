@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
 
+from pycsamt.jones.config import (
+    RE_DATATYPE_UNITS,
+    RE_STATION,
+)
 from pycsamt.jones.heads import (
-    Info,
+    Banner,
     Head,
     Heads,
-    Banner,
+    Info,
 )
 from pycsamt.jones.property import JSiteProperty
-from pycsamt.jones.config import (
-    RE_STATION,
-    RE_DATATYPE_UNITS,
-)
 
 
 def _assert_head_valid(h: Head) -> None:

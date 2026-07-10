@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -11,7 +10,6 @@ without a running QApplication.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -33,15 +31,15 @@ class DataController:
     def __init__(self, progress_callback=None) -> None:
         self._progress_cb = progress_callback
         self._sites = None
-        self._df: Optional[pd.DataFrame] = None
+        self._df: pd.DataFrame | None = None
         self._station_to_line: dict[str, str] = {}
 
     # ── Loading ───────────────────────────────────────────────────────
 
     def load(
         self,
-        paths: List[str | Path],
-        path_to_line: Optional[Dict[str, str]] = None,
+        paths: list[str | Path],
+        path_to_line: dict[str, str] | None = None,
     ) -> object:
         """
         Load EDI (or other supported) files and return a ``Sites`` object.
@@ -94,7 +92,7 @@ class DataController:
             except Exception:
                 return pd.DataFrame(columns=self.STATION_COLUMNS)
 
-        rows: List[Dict] = []
+        rows: list[dict] = []
         for edi in self._sites.as_list():
             # sites.as_list() returns EDIFile objects; Sites.get() returns a
             # proper Site whose .summary() yields a dict with lat/lon/name/etc.
@@ -146,7 +144,7 @@ class DataController:
     def sites(self):
         return self._sites
 
-    def filter_by_ids(self, ids: List[str]) -> pd.DataFrame:
+    def filter_by_ids(self, ids: list[str]) -> pd.DataFrame:
         """Return a sub-DataFrame for the given station IDs."""
         df = self.dataframe
         return df[df["ID"].isin(ids)].reset_index(drop=True)

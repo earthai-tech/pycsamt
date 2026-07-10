@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for ``pycsamt invert`` command group."""
@@ -14,13 +13,12 @@ from click.testing import CliRunner
 
 from pycsamt.cli import main
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-from pycsamt.cli.tests.conftest import make_fake_sites as _make_fake_sites  # noqa: E402
-
+from pycsamt.cli.tests.conftest import (
+    make_fake_sites as _make_fake_sites,  # noqa: E402
+)
 
 # ---------------------------------------------------------------------------
 # invert (group help)
@@ -100,7 +98,7 @@ class TestInvertBuild:
 
         # Call with explicit alt_dir — resolve_survey should use alt_dir
         resolved_paths = []
-        original_resolve = __import__(
+        __import__(
             "pycsamt.cli.survey", fromlist=["resolve_survey"]
         ).resolve_survey
 

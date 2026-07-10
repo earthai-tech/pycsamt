@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -56,7 +55,7 @@ class ForwardWorker(QThread):
     # ── 1-D solver ────────────────────────────────────────────────────────────
 
     def _run_1d(self):
-        from pycsamt.forward import MT1DForward, LayeredModel
+        from pycsamt.forward import LayeredModel, MT1DForward
         from pycsamt.forward.noise import add_noise
 
         p       = self._params
@@ -84,7 +83,7 @@ class ForwardWorker(QThread):
     # ── 2-D solver ────────────────────────────────────────────────────────────
 
     def _run_2d(self):
-        from pycsamt.forward import MT2DForward, Grid2D
+        from pycsamt.forward import Grid2D, MT2DForward
 
         p        = self._params
         nx       = int(p.get("nx",    30))
@@ -155,7 +154,7 @@ class ForwardWorker(QThread):
     # ── 3-D solver ────────────────────────────────────────────────────────────
 
     def _run_3d(self):
-        from pycsamt.forward import MT3DForward, Grid3D
+        from pycsamt.forward import Grid3D, MT3DForward
 
         p       = self._params
         nx      = int(p.get("nx",     12))

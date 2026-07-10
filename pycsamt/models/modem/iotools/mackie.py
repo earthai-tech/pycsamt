@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Mackie-format model I/O — Python translation of the MATLAB ioAscii/ scripts.
@@ -47,8 +46,9 @@ Notes
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence, Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -179,7 +179,7 @@ def _parse_mackie2d(path: Path) -> dict:
     }
 
 
-def read_mackie2d(path: PathLike) -> "ModEmModel2D":  # noqa: F821
+def read_mackie2d(path: PathLike) -> ModEmModel2D:  # noqa: F821
     """Read a 2D Mackie resistivity model file.
 
     Equivalent to ``readCond_2D(fname)`` in MATLAB.  Ten synthetic air
@@ -212,9 +212,9 @@ def read_mackie2d(path: PathLike) -> "ModEmModel2D":  # noqa: F821
 
 
 def write_mackie2d(
-    model: "ModEmModel2D",  # noqa: F821
+    model: ModEmModel2D,  # noqa: F821
     path: PathLike,
-    n_air: Optional[int] = None,
+    n_air: int | None = None,
     log_type: str = "LOGE",
 ) -> Path:
     """Write a ``ModEmModel2D`` in Mackie 2D format.
@@ -405,7 +405,7 @@ def _parse_mackie3d(path: Path) -> dict:
     }
 
 
-def read_mackie3d(path: PathLike) -> "ModEmModel3D":  # noqa: F821
+def read_mackie3d(path: PathLike) -> ModEmModel3D:  # noqa: F821
     """Read a 3D Mackie resistivity model file.
 
     Equivalent to ``readCond_3D(fname, format=1)`` in MATLAB.
@@ -440,7 +440,7 @@ def read_mackie3d(path: PathLike) -> "ModEmModel3D":  # noqa: F821
 
 
 def write_mackie3d(
-    model: "ModEmModel3D",  # noqa: F821
+    model: ModEmModel3D,  # noqa: F821
     path: PathLike,
     log_type: str = "LOGE",
     origin: Sequence[float] = (0.0, 0.0, 0.0),

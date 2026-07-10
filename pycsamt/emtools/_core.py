@@ -1,17 +1,20 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional, Tuple 
 import warnings
+from collections.abc import Iterable
+from typing import (
+    Any,
+    Callable,
+)
 
-import numpy as np 
+import numpy as np
 
-from typing import Callable
 from ..seg.collection import EDICollection
 from ..site.base import Sites
 
 
-def _axes_list(axes: Any, n: int, *, label: str = "axes") -> Optional[List[Any]]:
+def _axes_list(axes: Any, n: int, *, label: str = "axes") -> list[Any] | None:
     """Return *n* flattened matplotlib axes, or ``None`` if not supplied."""
     if axes is None:
         return None
@@ -133,7 +136,7 @@ def _name(ed: Any, i: int) -> str:
     return f"site_{i}"
 
 
-def _first_attr(obj: Any, names: Tuple[str, ...]) -> Any:
+def _first_attr(obj: Any, names: tuple[str, ...]) -> Any:
     for n in names:
         try:
             v = getattr(obj, n)
@@ -144,7 +147,7 @@ def _first_attr(obj: Any, names: Tuple[str, ...]) -> Any:
     return None
 
 
-def _as_1d_float(x: Any) -> Optional[np.ndarray]:
+def _as_1d_float(x: Any) -> np.ndarray | None:
     try:
         a = np.asarray(x, dtype=float).ravel()
     except Exception:
@@ -156,7 +159,7 @@ def _as_1d_float(x: Any) -> Optional[np.ndarray]:
     return a
 
 
-def _as_cmplx_nd(x: Any, shape0: Optional[int] = None) -> Optional[np.ndarray]:
+def _as_cmplx_nd(x: Any, shape0: int | None = None) -> np.ndarray | None:
     try:
         a = np.asarray(x, dtype=np.complex128)
     except Exception:
@@ -169,7 +172,7 @@ def _as_cmplx_nd(x: Any, shape0: Optional[int] = None) -> Optional[np.ndarray]:
     return a
 
 
-def _trim_to_min(*arrs: np.ndarray) -> Tuple[np.ndarray, ...]:
+def _trim_to_min(*arrs: np.ndarray) -> tuple[np.ndarray, ...]:
     n = min(a.shape[0] for a in arrs if a is not None)
     out = []
     for a in arrs:
@@ -394,7 +397,8 @@ default="replace"
             "Site/Sites, or an iterable of such."
         )
 
-    from pycsamt.site.base import Sites,  to_sites as _to_sites 
+    from pycsamt.site.base import Sites
+    from pycsamt.site.base import to_sites as _to_sites
 
     # Try rich signature first; fall back for older versions.
     try:

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import numpy as np
 
-from pycsamt.transformers import _base as t
 from pycsamt.core.base import TFBundle
 from pycsamt.core.config import config_context
+from pycsamt.transformers import _base as t
 
 
 def test_public_api_all():

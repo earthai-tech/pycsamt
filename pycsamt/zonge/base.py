@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #       Author: LKouadio <etanoyau@gmail.com>
 #       License: LGPL-3.0-or-later
 """
@@ -31,40 +30,35 @@ Design notes
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
-from dataclasses import field, asdict
+from collections.abc import Mapping, MutableMapping, Sequence
+from dataclasses import asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
-import warnings
 from typing import (
     Any,
-    Dict,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    Literal
+    Literal,
 )
 
 import numpy as np
 import pandas as pd
 
-from ..compat.python import dc 
+from ..compat.python import dc
 from ..exceptions import AvgDataError
 from ..log.logger import get_logger
 from ._transfer import LegacyAVGBase
-from .utils import ( 
-    _standardise_columns, 
-    load_avg, classify_avg_format 
-)
 from .schema import ALL_ALIASES
+from .utils import (
+    _standardise_columns,
+    classify_avg_format,
+    load_avg,
+)
 
 logger = get_logger(__name__)
 
 __all__ = [
-    "FieldAliases", "AvgRow", "AVGFrame" , "AVGComponentBase", 
+    "FieldAliases", "AvgRow", "AVGFrame" , "AVGComponentBase",
     "guess_kind_from_df"
     ]
 
@@ -114,23 +108,23 @@ class AVGFrame:
     """
 
     data: pd.DataFrame
-    meta: Dict[str, Any] = field(default_factory=dict)
-    source: Optional[Path] = None
+    meta: dict[str, Any] = field(default_factory=dict)
+    source: Path | None = None
 
-    def __post_init__(self): 
-        self.data = _standardise_columns (self.data) 
-        
+    def __post_init__(self):
+        self.data = _standardise_columns (self.data)
+
     @property
     def nrows(self) -> int:
         """Row count."""
         return int(len(self.data))
 
     @property
-    def columns(self) -> Tuple[str, ...]:
+    def columns(self) -> tuple[str, ...]:
         """Column labels (tuple for immutability)."""
         return tuple(map(str, self.data.columns))
 
-    def copy(self) -> "AVGFrame":
+    def copy(self) -> AVGFrame:
         """Deep copy the frame (safe for mutation)."""
         return AVGFrame(
             data=self.data.copy(deep=True),
@@ -147,7 +141,7 @@ class AVGFrame:
         """Serialise metadata to JSON."""
         return pd.io.json.dumps(self.meta, indent=indent)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         """Plain dict for diagnostics / logging."""
         return {
             "data": pd.io.json.loads(self.to_json()),
@@ -223,13 +217,13 @@ class FieldAliases:
         locals()[attr_name] = aliases
 
     # Statically define a few key ones for type hinting/clarity
-    station: Tuple[str, ...] = ALL_ALIASES.get("station", ())
-    freq: Tuple[str, ...] = ALL_ALIASES.get("freq", ())
-    comp: Tuple[str, ...] = ALL_ALIASES.get("comp", ())
-    rho: Tuple[str, ...] = ALL_ALIASES.get("rho", ())
-    phase: Tuple[str, ...] = ALL_ALIASES.get("phase", ())
-    
-    
+    station: tuple[str, ...] = ALL_ALIASES.get("station", ())
+    freq: tuple[str, ...] = ALL_ALIASES.get("freq", ())
+    comp: tuple[str, ...] = ALL_ALIASES.get("comp", ())
+    rho: tuple[str, ...] = ALL_ALIASES.get("rho", ())
+    phase: tuple[str, ...] = ALL_ALIASES.get("phase", ())
+
+
 @dc(slots=True)
 class AvgRow:
     r"""A structured, format-agnostic representation of a single row.
@@ -266,29 +260,29 @@ class AvgRow:
         phase, and impedance phase.
     """
 
-    station: Union[int, float]
+    station: int | float
     freq: float
     comp: str
-    amps: Optional[float] = None
-    emag: Optional[float] = None
-    ephz: Optional[float] = None
-    hmag: Optional[float] = None
-    hphz: Optional[float] = None
-    rho: Optional[float] = None
-    phase: Optional[float] = None
+    amps: float | None = None
+    emag: float | None = None
+    ephz: float | None = None
+    hmag: float | None = None
+    hphz: float | None = None
+    rho: float | None = None
+    phase: float | None = None
 
     # Optional quality fields (kept simple)
-    e_err: Optional[float] = None   # relative %
-    e_perr: Optional[float] = None  # mrad
-    h_err: Optional[float] = None
-    h_perr: Optional[float] = None
-    rho_err: Optional[float] = None
-    z_perr: Optional[float] = None
+    e_err: float | None = None   # relative %
+    e_perr: float | None = None  # mrad
+    h_err: float | None = None
+    h_perr: float | None = None
+    rho_err: float | None = None
+    z_perr: float | None = None
 
     def __post_init__(self) -> None:
         self.comp = str(self.comp).strip() or "ExHy"
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         d = asdict(self)
         return d
 
@@ -363,32 +357,29 @@ class AVGComponentBase(ABC):
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[MutableMapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: MutableMapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
-        verbose =0,  
+        name: str | None = None,
+        verbose =0,
     ) -> None:
         self._frame: pd.DataFrame = (
             data.copy(deep=True) if data is not None
             else pd.DataFrame()
         )
-        self._meta: Dict[str, Any] = dict(meta or {})
+        self._meta: dict[str, Any] = dict(meta or {})
         self._name: str = name or self.__class__.__name__
-        self.verbose = verbose 
+        self.verbose = verbose
         self._logger = get_logger(self._name)
 
     @classmethod
     def from_avg(
         cls,
-        avg: Union[
-            str, Path, AVGFrame, pd.DataFrame,
-            Tuple[pd.DataFrame, Mapping[str, Any]]
-        ],
+        avg: str | Path | AVGFrame | pd.DataFrame | tuple[pd.DataFrame, Mapping[str, Any]],
         *,
-        meta: Optional[Mapping[str, Any]] = None,
+        meta: Mapping[str, Any] | None = None,
         **kws
-    ) -> "AVGComponentBase":
+    ) -> AVGComponentBase:
         """
         Build a component from a path / AVGFrame / dataframe.
 
@@ -438,7 +429,7 @@ class AVGComponentBase(ABC):
             obj.read(frame.data)
 
         return obj
-    
+
     @abstractmethod
     def read(
         self,
@@ -470,7 +461,7 @@ class AVGComponentBase(ABC):
         return self._frame
 
     @property
-    def meta(self) -> Dict[str, Any]:
+    def meta(self) -> dict[str, Any]:
         """Free-form metadata."""
         return self._meta
 
@@ -480,13 +471,13 @@ class AVGComponentBase(ABC):
         return self._name
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """Table shape (rows, cols)."""
         return (int(len(self._frame)), int(self._frame.shape[1] or 0))
 
-    def asdict(self, *, include_meta: bool = True) -> Dict[str, Any]:
+    def asdict(self, *, include_meta: bool = True) -> dict[str, Any]:
         """Plain dict with data (+ meta optionally)."""
-        d: Dict[str, Any] = {"data": self._frame.to_dict("list")}
+        d: dict[str, Any] = {"data": self._frame.to_dict("list")}
         if include_meta:
             d["meta"] = dict(self._meta)
         return d
@@ -518,7 +509,7 @@ class AVGComponentBase(ABC):
         self,
         *,
         cols: Sequence[str],
-        title: Optional[str] = None,
+        title: str | None = None,
         float_fmt: str = "%.6g",
         na_rep: str = "",
         include_meta: bool = True,
@@ -580,14 +571,14 @@ class AVGComponentBase(ABC):
 
 
 def guess_kind_from_df(
-    df_or_frame: Union[pd.DataFrame, "AVGFrame"],
-    meta: Optional[Mapping[str, Any]] = None,
+    df_or_frame: pd.DataFrame | AVGFrame,
+    meta: Mapping[str, Any] | None = None,
     *,
     transform: bool = False,
     mode: Literal["strict", "soft"] = "soft",
     error: Literal["raise", "warn", "ignore"] = "raise",
     verbose: bool = False,
-) -> Union[int, Tuple[pd.DataFrame, Mapping[str, Any], int]]:
+) -> int | tuple[pd.DataFrame, Mapping[str, Any], int]:
     r"""Infers the AVG format kind from a DataFrame's columns.
 
     This helper inspects the column names of a DataFrame to make
@@ -684,10 +675,10 @@ def guess_kind_from_df(
             if error == "raise":
                 raise AvgDataError(msg)
             elif error == "warn":
-                warnings.warn(msg + " Defaulting to modern (kind-2).")
+                warnings.warn(msg + " Defaulting to modern (kind-2).", stacklevel=2)
                 kind = 2
             # 'ignore'
-            
+
         kind = 2
 
     if transform and kind == 1:

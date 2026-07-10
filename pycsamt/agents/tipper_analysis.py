@@ -112,7 +112,12 @@ class TipperAnalysisAgent(BaseAgent):
                 f"pycsamt.core.base not available: {exc}", elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -368,7 +373,7 @@ def _plot_induction_arrows(
     fig, ax = plt.subplots(figsize=(8, 6))
 
     xs = [i for i in range(len(arrow_records))]  # use station index as x-position
-    ys = [0.0] * len(arrow_records)
+    [0.0] * len(arrow_records)
 
     for xi, rec in zip(xs, arrow_records):
         ax_val, ay_val = rec["arrow_x"], rec["arrow_y"]
@@ -403,7 +408,6 @@ def _plot_tipper_pseudosection(
 ) -> Any:
     """Colour-coded tipper amplitude pseudosection (station × log-period)."""
     import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize
 
     if not rows or not station_order:
         return None

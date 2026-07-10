@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -22,7 +21,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .config import infer_workflow, priority_for, workflow_for_path
+from .config import (
+    infer_workflow,
+    priority_for,
+    workflow_for_path,
+)
 from .schemas import RAGChunk
 
 __all__ = ["index_doc_file", "split_sections"]

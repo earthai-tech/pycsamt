@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -24,24 +23,18 @@ the gallery.  Tabs can be closed, renamed (double-click), or exported.
 from __future__ import annotations
 
 import io
-from pathlib import Path
-from typing import List
 
-from PySide6.QtCore  import Qt, QSize, QThread, Signal
-from PySide6.QtGui   import QIcon, QPixmap
+from PySide6.QtCore import QSize, Qt, QThread, Signal
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QMenu,
-    QMessageBox,
     QPushButton,
     QSizePolicy,
     QSpinBox,
@@ -54,13 +47,16 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.controllers.interp_controller import (
-    InterpController,
-    WORKFLOW_CATALOGUE,
     CATEGORIES,
+    WORKFLOW_CATALOGUE,
+    InterpController,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base      import PanelWindow, make_group, icon_button
-
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 # ── Background workers ────────────────────────────────────────────────────────
 
@@ -665,7 +661,9 @@ class InterpretationWindow(PanelWindow):
         if not isinstance(canvas, MplCanvas):
             self._run_status.setText("No plot to export.")
             return
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         ExportDialog(figure=canvas.figure, parent=self).exec()
 
     # ── Public API ────────────────────────────────────────────────────────
@@ -688,7 +686,9 @@ class InterpretationWindow(PanelWindow):
             n_st  = ""
             if sites is not None:
                 try:
-                    from pycsamt.emtools._core import _iter_items
+                    from pycsamt.emtools._core import (
+                        _iter_items,
+                    )
                     n_st = f"  {len(list(_iter_items(sites)))} stations loaded\n"
                 except Exception:
                     pass
@@ -704,14 +704,17 @@ class InterpretationWindow(PanelWindow):
         )
         self._status_card.setText(txt)
 
-    def _station_names(self) -> List[str]:
+    def _station_names(self) -> list[str]:
         model = self._ctrl.state.model
         if model and hasattr(model, "station_names") and model.station_names:
             return list(model.station_names)
         sites = self._ctrl.state.sites
         if sites is not None:
             try:
-                from pycsamt.emtools._core import _iter_items, _name
+                from pycsamt.emtools._core import (
+                    _iter_items,
+                    _name,
+                )
                 return [_name(ed, i) for i, ed in enumerate(_iter_items(sites))]
             except Exception:
                 pass

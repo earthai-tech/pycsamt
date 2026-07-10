@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,22 +13,36 @@ dashboard → Dashboard        (DASHBOARD_PLOTS)
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from dash import html, ctx, clientside_callback, Input, Output, State, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 from pycsamt.app.desktop.controllers.tdem_controller import (
-    TDEMController, TDEM_GROUPS,
-    DECAY_PLOTS, SECTION_PLOTS, MAP_PLOTS, DASHBOARD_PLOTS,
+    DASHBOARD_PLOTS,
+    DECAY_PLOTS,
+    MAP_PLOTS,
+    SECTION_PLOTS,
+    TDEM_GROUPS,
+    TDEMController,
 )
 from pycsamt.app.web.layout import IDs
-from pycsamt.app.web.utils import (
-    apply_web_dark_theme, apply_web_light_theme,
-    empty_src, fig_to_src,
-)
 from pycsamt.app.web.pages.tdem import _SAMPLE
+from pycsamt.app.web.utils import (
+    apply_web_dark_theme,
+    apply_web_light_theme,
+    empty_src,
+    fig_to_src,
+)
 
 # ── Singleton controller ──────────────────────────────────────────────────────
 _CTRL = TDEMController()
@@ -92,7 +105,8 @@ def register_tdem(app) -> None:
             raise PreventUpdate
         try:
             import tkinter as tk
-            from tkinter import filedialog, font as tkfont
+            from tkinter import filedialog
+            from tkinter import font as tkfont
 
             root = tk.Tk()
             root.withdraw()

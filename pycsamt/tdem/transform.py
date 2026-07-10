@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -59,13 +58,11 @@ Three loop configurations are fully supported:
 
 from __future__ import annotations
 
-import warnings
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 
 from ..api.property import PyCSAMTObject
-
 from ._base import TEMSounding
 
 __all__ = [
@@ -168,7 +165,7 @@ def _biot_savart_rect_hz_segments(
     ry: float,
     a: float,
     b: float,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     r"""
     Per-segment :math:`H_z / (4\pi)` and perpendicular distances for a
     rectangular transmitter loop of half-sides ``(a, b)``.
@@ -253,7 +250,7 @@ def _biot_savart_circle_hz_segments(
     ry: float,
     radius: float,
     n_seg: int = 360,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     r"""
     Per-element :math:`H_z / (4\pi)` and distances for a circular loop.
 
@@ -809,7 +806,7 @@ except Exception:
 # Waveform deconvolution helpers
 # ---------------------------------------------------------------------------
 
-def _waveform_moments(waveform, n_samples: int = 2000) -> Tuple[float, float]:
+def _waveform_moments(waveform, n_samples: int = 2000) -> tuple[float, float]:
     r"""
     Compute the effective time shift and gate-rejection window for any
     transmitter waveform.
@@ -853,7 +850,7 @@ def _waveform_moments(waveform, n_samples: int = 2000) -> Tuple[float, float]:
     tau_window : float
         Gate-rejection threshold (seconds).
     """
-    from .waveform import SquareWaveform, RampWaveform
+    from .waveform import RampWaveform, SquareWaveform
 
     if waveform is None or isinstance(waveform, SquareWaveform):
         return 0.0, 0.0
@@ -914,8 +911,8 @@ def _apply_waveform_correction(
     dBdt: np.ndarray,
     t: np.ndarray,
     waveform,
-    error: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    error: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     r"""
     First-order waveform deconvolution for any transmitter waveform.
 
@@ -1118,7 +1115,7 @@ class LateTimeTransform(PyCSAMTObject):
 
     # ── public transform ─────────────────────────────────────────────────
 
-    def transform(self, sounding: TEMSounding) -> Dict:
+    def transform(self, sounding: TEMSounding) -> dict:
         r"""
         Transform one :class:`~pycsamt.tdem.TEMSounding` to
         frequency-domain arrays.
@@ -1201,7 +1198,7 @@ class LateTimeTransform(PyCSAMTObject):
     def transform_many(
         self,
         soundings: Sequence[TEMSounding],
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Transform a list of soundings.  Returns a list of result dicts."""
         return [self.transform(s) for s in soundings]
 
@@ -1391,8 +1388,8 @@ class FourierTransform(PyCSAMTObject):
     def __init__(
         self,
         n_freq: int = 50,
-        freq_min: Optional[float] = None,
-        freq_max: Optional[float] = None,
+        freq_min: float | None = None,
+        freq_max: float | None = None,
         n_aux: int = 200,
         n_interp: int = 400,
         waveform_correction: bool = True,
@@ -1432,7 +1429,7 @@ class FourierTransform(PyCSAMTObject):
         moment: float,
         omega_aux: np.ndarray,
         omega_out: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return (re_k, im_k) at omega_out."""
         fc       = _cosine_transform_1d(dBdt / moment, t, omega_aux, self.n_interp)
         im_k_aux = np.where(omega_aux > 0.0, fc / omega_aux, 0.0)
@@ -1446,7 +1443,7 @@ class FourierTransform(PyCSAMTObject):
 
     # ── public API ───────────────────────────────────────────────────────
 
-    def transform(self, sounding: TEMSounding) -> Dict:
+    def transform(self, sounding: TEMSounding) -> dict:
         r"""
         Transform one :class:`~pycsamt.tdem.TEMSounding` to
         frequency-domain arrays.
@@ -1535,7 +1532,7 @@ class FourierTransform(PyCSAMTObject):
     def transform_many(
         self,
         soundings: Sequence[TEMSounding],
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Transform a list of soundings.  Returns a list of result dicts."""
         return [self.transform(s) for s in soundings]
 
@@ -1598,7 +1595,7 @@ class TEMtoEDI(PyCSAMTObject):
         freq_convention: str = "skin_depth",
         phase_mode: str = "homogeneous",
         loop_geometry_correction: bool = True,
-        out_dir: Union[str, "Path"] = "edi_out/tem",
+        out_dir: str | Path = "edi_out/tem",
         verbose: int = 0,
         logger: object | None = None,
     ) -> None:
@@ -1666,7 +1663,7 @@ class TEMtoEDI(PyCSAMTObject):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _result_to_edifile(self, result: Dict):
+    def _result_to_edifile(self, result: dict):
         from ..seg.edi import EDIFile
 
         edi = EDIFile()
@@ -1691,7 +1688,7 @@ class TEMtoEDI(PyCSAMTObject):
         return arr
 
     @staticmethod
-    def _set_head(edi, result: Dict) -> None:
+    def _set_head(edi, result: dict) -> None:
         cfg = result.get("loop_config", "central")
         try:
             from ..seg.heads import Head

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -44,40 +43,45 @@ Quick start
 (30,)
 """
 
+from .batch import (
+    ForwardDataset,
+    SurveyDataset3D,
+    generate_dataset,
+    generate_dataset_3d,
+)
+from .config import ForwardConfig
+from .config2d import ForwardConfig2D
+from .config3d import ForwardConfig3D
 from .em1d import (
-    MT1DForward,
-    TEM1DForward,
     CSAMT1DForward,
     ForwardResponse,
+    MT1DForward,
+    TEM1DForward,
 )
-from .synthetic import LayeredModel, GEOLOGY_PRIORS
+from .em2d import ForwardResponse2D, MT2DForward
+from .em3d import ForwardResponse3D, MT3DForward
+from .grid2d import Grid2D, make_padding
+from .grid3d import Grid3D
 from .noise import (
-    GaussianNoise,
     FieldRealisticNoise,
+    GaussianNoise,
     MultiplicativeNoise,
     add_gaussian_noise,
     add_noise,
 )
-from .batch import generate_dataset, ForwardDataset, generate_dataset_3d, SurveyDataset3D
-from .config import ForwardConfig
-from .grid2d import Grid2D, make_padding
-from .em2d import MT2DForward, ForwardResponse2D
-from .config2d import ForwardConfig2D
-from .grid3d import Grid3D
-from .em3d import MT3DForward, ForwardResponse3D
-from .config3d import ForwardConfig3D
 from .plot import (
-    plot_response_1d,
     plot_model_1d,
-    plot_response_and_model_1d,
     plot_model_2d,
-    plot_pseudosection_2d,
-    plot_response_profiles,
     plot_model_3d,
+    plot_pseudosection_2d,
+    plot_response_1d,
+    plot_response_and_model_1d,
     plot_response_map_3d,
+    plot_response_profiles,
     plot_response_section_3d,
     plot_tensor_components_3d,
 )
+from .synthetic import GEOLOGY_PRIORS, LayeredModel
 
 __all__ = [
     # solvers 1-D

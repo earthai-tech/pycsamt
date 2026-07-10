@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Forward modelling page — 1D (MT/CSAMT/TEM), 2D MT, 3D MT.
@@ -17,11 +16,11 @@ View area (right):
 """
 from __future__ import annotations
 
-from dash import dash_table, dcc, html
 import dash_bootstrap_components as dbc
+from dash import dash_table, dcc, html
 
 from pycsamt.app.desktop.controllers.forward_controller import (
-    ForwardController, GEOLOGY_PRESET_NAMES,
+    GEOLOGY_PRESET_NAMES,
 )
 from pycsamt.app.web.layout import IDs, _command_bar, _icon
 from pycsamt.app.web.utils import empty_src

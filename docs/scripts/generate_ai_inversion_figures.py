@@ -30,7 +30,6 @@ from pycsamt.ai.plot.convergence import plot_convergence
 from pycsamt.ai.plot.diagnostics import plot_uncertainty_bands
 from pycsamt.ai.plot.inversion import plot_inversion_result_2d
 
-
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "source" / "images" / "user_guide" / "ai_inversion"
 

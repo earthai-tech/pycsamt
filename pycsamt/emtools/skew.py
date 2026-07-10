@@ -1,21 +1,23 @@
 # pycsamt/emtools/skew.py
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
 from ._core import (
-    ensure_sites,
     _apply_each,
-    _iter_items,
-    _get_z_block,
     _get_t_block,
+    _get_z_block,
+    _iter_items,
     _name,
+    ensure_sites,
 )
 from .tensor import build_phase_tensor_table
-from ..api.station import PYCSAMT_STATION_RENDERING
-from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
 
 
 # ---------- Bahr skewness ----------
@@ -41,8 +43,8 @@ def bahr_skewness(Z):
     return eta
 
 
-def _skew_track_for(ed: Any, pt: pd.DataFrame) -> Tuple[
-    Optional[np.ndarray], Optional[np.ndarray]
+def _skew_track_for(ed: Any, pt: pd.DataFrame) -> tuple[
+    np.ndarray | None, np.ndarray | None
 ]:
     st = _name(ed, 0)
     Z, z, fr = _get_z_block(ed)
@@ -85,8 +87,8 @@ def _mask_apply(
                 pass
 
 
-def _runs_bool(m: np.ndarray) -> List[Tuple[int, int]]:
-    out: List[Tuple[int, int]] = []
+def _runs_bool(m: np.ndarray) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
     if m.size == 0:
         return out
     s = None

@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Optional
-import numpy as np 
+from typing import Any
 
-from ..core.base import TFBundle, MTBase, ensure_station
+import numpy as np
+
+from ..core.base import MTBase, TFBundle, ensure_station
 from ..core.config import get_config
 from ..seg.heads import Head, Info
 from ..seg.meas import DefineMeas
@@ -48,11 +48,11 @@ class TransformerMixin(MTBase):
     Backends can override
     :meth:`TransformerMixin.compute_res_from_z` and
     :meth:`TransformerMixin.compute_z_from_res`.
-    
+
     Subclasses implement the *data path* while this mixin
     handles standard *finalization* steps on a
     :class:`~pycsamt.core.base.TFBundle`:
-    
+
     1. Validate or synthesize the station name using the
        global policy.
     2. Order frequencies per config (asc/desc).
@@ -60,15 +60,15 @@ class TransformerMixin(MTBase):
        tolerance.
     4. Optionally fill missing parts (``Z`` vs ``rho/phase``)
        via overridable hooks.
-    
+
     Finalization obeys the global configuration from
     :mod:`pycsamt.core.config`. In particular:
-    
+
     * ``freq_order`` controls sorting.
     * ``freq_tol`` controls de-duplication.
     * ``compute_res_from_z`` and ``compute_z_from_res`` toggle
       filling behavior.
-       
+
 
     See Also
     --------
@@ -104,33 +104,33 @@ class TransformerMixin(MTBase):
     ----------
     .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
     .. [2] Egbert, G. D. (1997). Robust MT processing.
- 
+
     """
 
 
     def extract(self, source: Any) -> TFBundle:  # noqa: D401
         r"""
         Extract a :class:`TFBundle` from ``source``.
-        
+
         This is the *ingest* step. Implementors parse the foreign
         object (or file path) and return a neutral bundle. Keep the
         method free of side effects.
-        
+
         Parameters
         ----------
         source : Any
             Backend-specific object or path.
-        
+
         Returns
         -------
         TFBundle
             A bundle containing frequencies and transfer functions.
-        
+
         Raises
         ------
         NotImplementedError
             Must be provided by subclasses.
-        
+
         Notes
         -----
         Prefer leaving station naming and frequency manipulation to
@@ -142,12 +142,12 @@ class TransformerMixin(MTBase):
     def emit_edi(self, bundle: TFBundle) -> Any:  # noqa: D401
         r"""
         Materialize an EDI object from a finalized bundle.
-        
+
         This is the *emit* step. Implementors build and return an
         EDI object (or a compatible stub).
-        
+
         Must be provided by subclasses.
-        
+
         Notes
         -----
         Do not attempt to reorder frequencies here. The bundle has
@@ -156,7 +156,7 @@ class TransformerMixin(MTBase):
 
         raise NotImplementedError
 
- 
+
     def post_emit(
         self,
         edi_obj: Any,
@@ -165,11 +165,11 @@ class TransformerMixin(MTBase):
     ) -> Any:
         r"""
         Optional last-mile adjustments after EDI creation.
-        
+
         Use this hook to enrich the EDI object with auxiliary
         metadata (e.g. site location, elevation) that is awkward
         to thread through earlier steps.
-        
+
         Parameters
         ----------
         edi_obj : Any
@@ -178,12 +178,12 @@ class TransformerMixin(MTBase):
             The original source object used in :meth:`extract`.
         bundle : TFBundle
             The finalized bundle.
-        
+
         Returns
         -------
         Any
             The potentially modified EDI object.
-        
+
         Notes
         -----
         The default implementation returns ``edi_obj`` unmodified.
@@ -194,21 +194,21 @@ class TransformerMixin(MTBase):
     def compute_res_from_z(self, b: TFBundle) -> TFBundle:
         r"""
         Compute apparent resistivity/phase from ``Z``.
-        
+
         This hook is called by :meth:`_fill_missing` when
         ``compute_res_from_z`` is True in the global config, and
         the bundle holds ``Z`` but lacks ``(rho, phase)``.
-        
+
         Parameters
         ----------
         b : TFBundle
             Input bundle.
-        
+
         Returns
         -------
         TFBundle
             The updated bundle (may be the same instance).
-        
+
         Notes
         -----
         The default implementation is a no-op. Subclasses may
@@ -219,21 +219,21 @@ class TransformerMixin(MTBase):
     def compute_z_from_res(self, b: TFBundle) -> TFBundle:
         r"""
         Reconstruct ``Z`` from apparent resistivity/phase.
-        
+
         This hook is called by :meth:`_fill_missing` when
         ``compute_z_from_res`` is True in the global config, and
         the bundle lacks ``Z`` but holds ``(rho, phase)``.
-        
+
         Parameters
         ----------
         b : TFBundle
             Input bundle.
-        
+
         Returns
         -------
         TFBundle
             The updated bundle (may be the same instance).
-        
+
         Notes
         -----
         The default implementation is a no-op. Subclasses may
@@ -246,21 +246,21 @@ class TransformerMixin(MTBase):
     def _order_freq(self, b: TFBundle) -> TFBundle:
         r"""
         Order frequencies and align arrays accordingly.
-        
+
         The order is defined by ``freq_order`` in the global
         config (``'asc'`` or ``'desc'``). All frequency-indexed
         arrays in the bundle are re-indexed to match.
-        
+
         Parameters
         ----------
         b : TFBundle
             Bundle to reorder.
-        
+
         Returns
         -------
         TFBundle
             The same bundle, ordered in place.
-        
+
         Notes
         -----
         If ``freq`` is ``None`` the bundle is returned unchanged.
@@ -309,22 +309,22 @@ class TransformerMixin(MTBase):
     def _dedup_freq(self, b: TFBundle) -> TFBundle:
         r"""
         De-duplicate nearly equal frequencies with a relative tol.
-        
+
         Frequencies are scanned in their current order. A sample is
         kept when its relative difference to the last kept value is
         greater than ``freq_tol`` in the global config. All
         frequency-indexed arrays are subsetted consistently.
-        
+
         Parameters
         ----------
         b : TFBundle
             Bundle to de-duplicate.
-        
+
         Returns
         -------
         TFBundle
             The same bundle, with potential rows removed.
-        
+
         Notes
         -----
         This step expects an already ordered ``freq``. Provide
@@ -387,19 +387,19 @@ class TransformerMixin(MTBase):
     def _fill_missing(self, b: TFBundle) -> TFBundle:
         r"""
         Fill missing TF parts according to global configuration.
-        
+
         If the bundle has ``Z`` but lacks ``(rho, phase)`` and
         ``compute_res_from_z`` is enabled, this calls
         :meth:`compute_res_from_z`. Conversely, if it has
         ``(rho, phase)`` but lacks ``Z`` and
         ``compute_z_from_res`` is enabled, this calls
         :meth:`compute_z_from_res`.
-        
+
         Parameters
         ----------
         b : TFBundle
             Bundle to enrich.
-        
+
         Returns
         -------
         TFBundle
@@ -419,19 +419,19 @@ class TransformerMixin(MTBase):
         self,
         b: TFBundle,
         *,
-        name: Optional[str] = None,
-        station_id: Optional[str | int] = None,
+        name: str | None = None,
+        station_id: str | int | None = None,
     ) -> TFBundle:
         r"""
         Finalize a bundle: name, fill, order, and de-duplicate.
-        
+
         Steps:
-        
+
         1. Ensure a valid station name using the global policy.
         2. Fill missing parts using :meth:`_fill_missing`.
         3. Order frequencies per :meth:`_order_freq`.
         4. De-duplicate frequencies per :meth:`_dedup_freq`.
-        
+
         Parameters
         ----------
         b : TFBundle
@@ -440,12 +440,12 @@ class TransformerMixin(MTBase):
             Preferred station name override.
         station_id : str or int, optional
             Identifier used to synthesize a name if needed.
-        
+
         Returns
         -------
         TFBundle
             The finalized bundle.
-        
+
         See Also
         --------
         pycsamt.core.config.StationNamePolicy
@@ -463,19 +463,19 @@ class TransformerMixin(MTBase):
         self,
         source: Any,
         *,
-        name: Optional[str] = None,
-        station_id: Optional[str | int] = None,
+        name: str | None = None,
+        station_id: str | int | None = None,
     ) -> Any:
         r"""
         One-shot transform: extract → finalize → emit → post.
-        
+
         This orchestrates the whole conversion pipeline:
-        
+
         1. :meth:`extract` to build a :class:`TFBundle`.
         2. :meth:`_finalize` to normalize the bundle.
         3. :meth:`emit_edi` to create the EDI object.
         4. :meth:`post_emit` for optional enrichment.
-        
+
         Parameters
         ----------
         source : Any
@@ -484,12 +484,12 @@ class TransformerMixin(MTBase):
             Preferred station name override.
         station_id : str or int, optional
             Identifier used if a name must be synthesized.
-        
+
         Returns
         -------
         Any
             The resulting EDI object (or compatible subtype).
-        
+
         Examples
         --------
         >>> from pycsamt.core._transformers import TransformerMixin
@@ -525,10 +525,10 @@ class TransformerMixin(MTBase):
             h.long = 0.0
             h.elev = 0.0
             ed.add_section("head", h)
-            
+
         return h
-    
-    
+
+
     def _ensure_info(self, ed, survey_id: str):
         info = ed.get_section("info")
         if info is None:
@@ -540,9 +540,9 @@ class TransformerMixin(MTBase):
                 ]
             )
             ed.add_section("info", info)
-        return info    
+        return info
 
-    
+
     def _ensure_definemeas(
         self,
         ed,
@@ -561,9 +561,9 @@ class TransformerMixin(MTBase):
                 dm.reflong = getattr(h, "long", 0.0)
                 dm.refelev = getattr(h, "elev", 0.0)
             ed.add_section("definemeas", dm)
-            
+
         return dm
-    
+
     def _ensure_mtsect(self, ed, sectid: str, nfreq: int):
         mt = ed.get_section("mtsect")
         if mt is None:

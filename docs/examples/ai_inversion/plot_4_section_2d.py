@@ -91,7 +91,7 @@ print("predicted sections:", pred.shape)
 # and their difference side by side. The network recovers both anomalies and
 # the background gradient; the difference panel localises the residual error.
 
-from pycsamt.ai.plot import plot_section_pair, plot_section
+from pycsamt.ai.plot import plot_section, plot_section_pair
 
 fig = plot_section_pair(Yte[0], pred[0],
                         depth_max=1500.0, station_spacing=1.0)

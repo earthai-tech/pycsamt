@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,9 +11,7 @@ utility functions behave correctly.
 from __future__ import annotations
 
 import base64
-import math
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -31,6 +28,7 @@ class TestUtils:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         from pycsamt.app.web.utils import fig_to_src
 
         fig, ax = plt.subplots()
@@ -43,6 +41,7 @@ class TestUtils:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         from pycsamt.app.web.utils import fig_to_src
 
         fig, ax = plt.subplots()
@@ -82,13 +81,17 @@ class TestUtils:
 
     def test_apply_web_dark_theme_sets_facecolor(self):
         import matplotlib as mpl
+
         from pycsamt.app.web.utils import apply_web_dark_theme
         apply_web_dark_theme()
         assert mpl.rcParams["axes.facecolor"] == "#181825"
 
     def test_apply_web_light_theme_sets_facecolor(self):
         import matplotlib as mpl
-        from pycsamt.app.web.utils import apply_web_light_theme
+
+        from pycsamt.app.web.utils import (
+            apply_web_light_theme,
+        )
         apply_web_light_theme()
         assert mpl.rcParams["axes.facecolor"] == "#eff1f5"
 
@@ -116,8 +119,9 @@ class TestMapBuilder:
         assert isinstance(fig, go.Figure)
 
     def test_map_has_scatter_trace(self, sample_df):
-        from pycsamt.app.web.utils import build_station_map
         import plotly.graph_objects as go
+
+        from pycsamt.app.web.utils import build_station_map
         fig = build_station_map(sample_df)
         assert any(isinstance(t, go.Scattergeo) for t in fig.data)
 
@@ -163,14 +167,15 @@ class TestMapBuilder:
 
 class TestLayout:
     def test_layout_returns_html_div(self):
-        from pycsamt.app.web.layout import layout
         from dash import html
+
+        from pycsamt.app.web.layout import layout
         result = layout()
         assert isinstance(result, html.Div)
 
     def test_layout_contains_stores(self):
-        from pycsamt.app.web.layout import layout, IDs
-        from dash import dcc
+
+        from pycsamt.app.web.layout import IDs, layout
         result = layout()
         # Serialize and check IDs appear in repr
         children_str = str(result)
@@ -179,25 +184,25 @@ class TestLayout:
         assert IDs.STORE_THEME in children_str
 
     def test_layout_contains_map_graph(self):
-        from pycsamt.app.web.layout import layout, IDs
+        from pycsamt.app.web.layout import IDs, layout
         result = layout()
         children_str = str(result)
         assert IDs.MAP_GRAPH in children_str
 
     def test_layout_contains_station_table(self):
-        from pycsamt.app.web.layout import layout, IDs
+        from pycsamt.app.web.layout import IDs, layout
         result = layout()
         children_str = str(result)
         assert IDs.STATION_TABLE in children_str
 
     def test_layout_contains_profile_tabs(self):
-        from pycsamt.app.web.layout import layout, IDs
+        from pycsamt.app.web.layout import IDs, layout
         result = layout()
         children_str = str(result)
         assert IDs.PROFILE_TABS in children_str
 
     def test_layout_contains_agent_panel(self):
-        from pycsamt.app.web.layout import layout, IDs
+        from pycsamt.app.web.layout import IDs, layout
         result = layout()
         children_str = str(result)
         assert IDs.AGENT_SELECT in children_str
@@ -222,6 +227,7 @@ class TestLayout:
 class TestAppFactory:
     def test_create_app_returns_dash_instance(self):
         import dash
+
         from pycsamt.app.web.app import create_app
         app = create_app()
         assert isinstance(app, dash.Dash)
@@ -238,7 +244,6 @@ class TestAppFactory:
 
     def test_app_callbacks_registered(self):
         from pycsamt.app.web.app import create_app
-        from pycsamt.app.web.layout import IDs
         app = create_app()
         # Dash stores callback map internally
         # Check that at least some callbacks are registered
@@ -260,13 +265,11 @@ class TestAppFactory:
 class TestCallbacks:
     def test_load_data_no_path(self):
         """Callback with empty path should return no_update + warning."""
-        from pycsamt.app.web.app import create_app
-        from pycsamt.app.web.layout import IDs
-        from dash import no_update
 
-        app = create_app()
+        from pycsamt.app.web.app import create_app
+
+        create_app()
         # Find the load_data callback
-        key = f"..{IDs.STORE_DATA}.data..{IDs.LOAD_FEEDBACK}.children..{IDs.MODAL_LOAD}.is_open.."
         # We verify by calling the underlying function directly from callbacks module
         from pycsamt.app.web import callbacks
         # Reset state
@@ -281,8 +284,9 @@ class TestCallbacks:
         assert records == []
 
     def test_station_map_with_valid_df(self):
-        from pycsamt.app.web.utils import build_station_map
         import plotly.graph_objects as go
+
+        from pycsamt.app.web.utils import build_station_map
         df = pd.DataFrame({
             "ID": ["A", "B"],
             "Latitude": [10.0, 11.0],

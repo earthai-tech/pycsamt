@@ -1,28 +1,29 @@
-# -*- coding: utf-8 -*- 
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Tuple, Optional
 import math
+from collections.abc import Iterable
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
+from ..api.view import maybe_wrap_frame
 from ..constants import MU_0
 from .utils import (
+    get_freq,
     iter_edifiles,
     station_name,
-    get_freq,
 )
-from ..api.view import maybe_wrap_frame
 
-__all__= [ 
-    
-    "strike_estimate", 
-    "res_at_freq", 
-    "phase_slope", 
-    "tipper_magnitude", 
+__all__= [
+
+    "strike_estimate",
+    "res_at_freq",
+    "phase_slope",
+    "tipper_magnitude",
     ]
 
 def strike_estimate(
@@ -33,12 +34,12 @@ def strike_estimate(
 ) -> Any:
     r"""
     Estimate a strike angle from impedance tensors.
-    
+
     This computes a 2D geoelectric strike angle in degrees.  The
     routine supports either a single site or many sites.  For a
     single site a scalar angle is returned.  For multiple sites a
     ``pandas.DataFrame`` is returned with one row per site.
-    
+
     Parameters
     ----------
     obj : Any
@@ -47,49 +48,49 @@ def strike_estimate(
         of shape ``(n_freq, 2, 2)`` or be convertible to such.
     method : str, optional
         Strike method.  Allowed values are:
-    
+
         - ``"swift"`` (default): grid search over 0..179 degrees that
           minimizes the diagonal power after rotation.
         - ``"groom"``: alias of ``"swift"`` in this lightweight mode.
         - ``"phase_diff"``: heuristic that returns ``0`` or ``90``
           degrees based on the relative magnitude of off-diagonals.
-    
+
     Returns
     -------
     float or pandas.DataFrame
         If ``obj`` is a single site, returns a float angle in
         degrees within ``[0, 180)``.  If ``obj`` is iterable,
         returns a ``DataFrame`` with columns:
-    
+
         ``station``, ``method``, ``theta_deg``.
-    
+
     Notes
     -----
     The Swift-style criterion rotates the impedance tensor
     :math:`Z` by a test angle :math:`\\theta` and minimizes
-    
+
     .. math::
-    
+
        J(\\theta) = \lvert Z'_{xx} \rvert^2 +
                     \lvert Z'_{yy} \rvert^2 ,
-    
+
     where :math:`Z'` is the rotated tensor.  The returned
     angle is the argmin over a 1 degree grid in 0..179.
-    
+
     The ``"phase_diff"`` fallback returns ``0`` if
     median :math:`\\lvert Z_{xy} \rvert \ge
     \lvert Z_{yx} \rvert`, else ``90``.  It is intended for
     degraded or sparse data.
-    
+
     This function does not alter data.  If you need
     deterministic behavior for incomplete arrays, consider
     preparing tensors with
     :func:`pycsamt.site.edit.fill_missing`.
-    
+
     Examples
     --------
     Single site, Swift estimate:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
@@ -98,23 +99,23 @@ def strike_estimate(
     >>> ang = cmp.strike_estimate(edf, method="swift")  # doctest: +SKIP
     >>> 0.0 <= ang < 180.0  # doctest: +SKIP
     True
-    
+
     Many sites, returning a DataFrame:
-    
+
     >>> e1 = EDIFile("S01.edi")  # doctest: +SKIP
     >>> e2 = EDIFile("S02.edi")  # doctest: +SKIP
     >>> df = cmp.strike_estimate([e1, e2], method="phase_diff")
     ... # doctest: +SKIP
     >>> list(df.columns)  # doctest: +SKIP
     ['station', 'method', 'theta_deg']
-    
+
     See Also
     --------
     pycsamt.site.edit.rotate
         Rotate site tensors by a user angle.
     pycsamt.site.compute.phase_slope
         Phase slope diagnostic over a frequency band.
-    
+
     References
     ----------
     .. [1] Swift, C. M., 1967. A magnetotelluric investigation of an
@@ -168,12 +169,12 @@ def res_at_freq(
 ) -> Any:
     r"""
     Evaluate apparent resistivity at a target frequency.
-    
+
     Computes apparent resistivity for the :math:`Z_{xy}` and
     :math:`Z_{yx}` components at a requested frequency.  Works with a
     single site or a collection.  For a single site, a dict is
     returned.  For multiple sites, a ``pandas.DataFrame`` is returned.
-    
+
     Parameters
     ----------
     obj : Any
@@ -184,13 +185,13 @@ def res_at_freq(
         Query frequency in Hz.
     how : str, optional
         Selection mode:
-    
+
         - ``"nearest"`` (default): choose the nearest available
           frequency in the site data and report that value.
         - ``"interp"``: linearly interpolate resistivity versus
           frequency using ``numpy.interp``.  Interpolation occurs on
           linear frequency, not log frequency.
-    
+
     Returns
     -------
     dict or pandas.DataFrame
@@ -198,30 +199,30 @@ def res_at_freq(
         ``"res_xy"``, ``"res_yx"``, ``"f_used"``.  If ``obj`` is
         iterable, returns a ``DataFrame`` with columns
         ``station``, ``res_xy``, ``res_yx``, ``f_used``.
-    
+
     Notes
     -----
     Apparent resistivity :math:`\\rho_a` is computed as
-    
+
     .. math::
-    
+
        \rho_a = \frac{\lvert Z \rvert^2}
                        {\mu_0\,2\pi\\,f} ,
-    
+
     where :math:`Z` is the complex impedance for the selected
     component, :math:`\\mu_0` is the magnetic permeability of free
     space, and :math:`f` is frequency in Hz.
-    
+
     When ``how="interp"``, the function first computes
     :math:`\rho_a` at all native frequencies, then interpolates the
     result to the query frequency using linear interpolation in
     frequency.  If the frequency vector or impedance is missing,
     ``NaN`` values are returned.
-    
+
     Examples
     --------
     Single site, nearest selection:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
@@ -232,30 +233,30 @@ def res_at_freq(
     >>> set(out.keys()) == {"res_xy", "res_yx", "f_used"}
     ... # doctest: +SKIP
     True
-    
+
     Single site, interpolated:
-    
+
     >>> out = cmp.res_at_freq(edf, 150.0, how="interp")
     ... # doctest: +SKIP
     >>> out["f_used"]  # doctest: +SKIP
     150.0
-    
+
     Many sites, DataFrame:
-    
+
     >>> e1 = EDIFile("S01.edi")  # doctest: +SKIP
     >>> e2 = EDIFile("S02.edi")  # doctest: +SKIP
     >>> df = cmp.res_at_freq([e1, e2], 1.0, how="interp")
     ... # doctest: +SKIP
     >>> list(df.columns)  # doctest: +SKIP
     ['station', 'res_xy', 'res_yx', 'f_used']
-    
+
     See Also
     --------
     pycsamt.site.compute.strike_estimate
         Estimate 2D strike angle from Z.
     pycsamt.site.edit.select_freq
         Subset site data by frequency criteria.
-    
+
     References
     ----------
     .. [1] Vozoff, K., 1991. The magnetotelluric method. In
@@ -308,22 +309,22 @@ def res_at_freq(
 
 def phase_slope(
     obj: Any,
-    band: Tuple[float, float],
+    band: tuple[float, float],
     *,
     api: bool | None = None,
 ) -> Any:
     r"""
     Estimate phase slopes within a frequency band.
-    
+
     For each site, this computes the least-squares slope of phase
     (degrees) versus :math:`\log_{10}(f)` over the requested band.
     Two slopes are reported, one for :math:`Z_{xy}` and one for
     :math:`Z_{yx}`.
-    
+
     If a single site is provided, a dictionary is returned.  If an
     iterable of sites is provided, a ``pandas.DataFrame`` is
     returned with one row per station.
-    
+
     Parameters
     ----------
     obj : Any
@@ -333,39 +334,39 @@ def phase_slope(
         Inclusive frequency band as ``(fmin, fmax)`` in Hz.  The
         order does not matter; the function uses the numeric min and
         max.
-    
+
     Returns
     -------
     dict or pandas.DataFrame
         Single site -> ``{"slope_xy": float, "slope_yx": float}``.
         Multi-site  -> DataFrame with columns
         ``["station", "slope_xy", "slope_yx"]``.
-    
+
     Notes
     -----
     The phase series for each off-diagonal component is computed as
-    
+
     .. math::
-    
+
        \phi(f) = \operatorname{angle}(Z(f)) \times 180/\\pi ,
-    
+
     then a straight line is fit
-    
+
     .. math::
-    
+
        \phi(f) \approx a\\,\\log_{10}(f) + b
-    
+
     using ``numpy.polyfit(x, y, 1)`` where
     :math:`x=\\log_{10}(f)`.  The reported slope is :math:`a` in
     units of degrees per decade.
-    
+
     Rows or sites with missing data in the band are reported as
     ``NaN``.  The function does not unwrap phase.
-    
+
     Examples
     --------
     Single site:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
@@ -376,23 +377,23 @@ def phase_slope(
     >>> set(out.keys()) == {"slope_xy", "slope_yx"}
     ... # doctest: +SKIP
     True
-    
+
     Many sites:
-    
+
     >>> e1 = EDIFile("S01.edi")  # doctest: +SKIP
     >>> e2 = EDIFile("S02.edi")  # doctest: +SKIP
     >>> df = cmp.phase_slope([e1, e2], band=(0.1, 10.0))
     ... # doctest: +SKIP
     >>> list(df.columns)  # doctest: +SKIP
     ['station', 'slope_xy', 'slope_yx']
-    
+
     See Also
     --------
     pycsamt.site.compute.strike_estimate
         Strike angle by Swift-style criterion.
     pycsamt.site.compute.res_at_freq
         Apparent resistivity at a target frequency.
-    
+
     References
     ----------
     .. [1] Simpson, F., and K. Bahr, 2005. Practical
@@ -453,21 +454,21 @@ def tipper_magnitude(
 ) -> Any:
     r"""
     Summarize or tabulate tipper magnitudes.
-    
+
     Computes the magnitude of the tipper vector per frequency as
-    
+
     .. math::
-    
+
        \lVert \mathbf{T} \rVert =
        \sqrt{\lvert T_x \rvert^2 + \lvert T_y \rvert^2} ,
-    
+
     where :math:`T_x, T_y` are the complex tipper components.  The
     result can be returned as per-frequency values or summarized
     statistics.
-    
+
     For a single site, returns a dict.  For an iterable of sites,
     returns a ``pandas.DataFrame``.
-    
+
     Parameters
     ----------
     obj : Any
@@ -479,7 +480,7 @@ def tipper_magnitude(
         If ``False`` (default), return summary statistics
         (mean, median, max).  If ``True``, return per-frequency
         values.
-    
+
     Returns
     -------
     dict or pandas.DataFrame
@@ -491,22 +492,22 @@ def tipper_magnitude(
             ``["station", "mean", "median", "max"]``
           * ``per_freq=True``  -> DataFrame with columns
             ``["station", "freq", "mag"]``
-    
+
     Notes
     -----
     If the site has no tipper section, summary statistics are
     ``NaN`` and per-frequency mode yields an empty result for that
     site.  To initialize missing arrays, consider
     :func:`pycsamt.site.edit.fill_missing` with ``components=("Tip",)``.
-    
+
     Frequencies are reported from the site frequency vector.  The
     function assumes the tipper array and frequency vector are
     aligned along their first dimension.
-    
+
     Examples
     --------
     Single site, summary stats:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
@@ -517,30 +518,30 @@ def tipper_magnitude(
     >>> set(s.keys()) == {"mean", "median", "max"}
     ... # doctest: +SKIP
     True
-    
+
     Single site, per-frequency:
-    
+
     >>> out = cmp.tipper_magnitude(edf, per_freq=True)
     ... # doctest: +SKIP
     >>> list(out.keys())  # doctest: +SKIP
     ['freq', 'mag']
-    
+
     Many sites, summary:
-    
+
     >>> e1 = EDIFile("S01.edi")  # doctest: +SKIP
     >>> e2 = EDIFile("S02.edi")  # doctest: +SKIP
     >>> df = cmp.tipper_magnitude([e1, e2], per_freq=False)
     ... # doctest: +SKIP
     >>> list(df.columns)  # doctest: +SKIP
     ['station', 'mean', 'median', 'max']
-    
+
     See Also
     --------
     pycsamt.site.edit.fill_missing
         Initialize or sanitize Z/Tip arrays in a site.
     pycsamt.site.compute.res_at_freq
         Apparent resistivity at a target frequency.
-    
+
     References
     ----------
     .. [1] Simpson, F., and K. Bahr, 2005. Practical
@@ -622,7 +623,7 @@ def tipper_magnitude(
 
 # Local helpers
 
-def _get_z(ed: Any) -> Optional[np.ndarray]:
+def _get_z(ed: Any) -> np.ndarray | None:
     """
     Return Z as ndarray of shape (n, 2, 2) or None.
     Looks under ed.Z.{z, impedance, _z}. Tolerates missing.
@@ -722,7 +723,7 @@ def _phase_diff_theta(Z: np.ndarray) -> float:
     return 0.0 if zxy >= zyx else 90.0
 
 
-def _tip_arr(ed: Any) -> Optional[np.ndarray]:
+def _tip_arr(ed: Any) -> np.ndarray | None:
     """
     Return tipper array with shape (n, 2) or None.
     Checks ed.T, ed.TIP, ed.Tip, and ed.Z.tipper.

@@ -24,7 +24,11 @@ import os
 from pathlib import Path
 
 from pycsamt.api import read_edis
-from pycsamt.emtools._core import ensure_sites, _iter_items, _name
+from pycsamt.emtools._core import (
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 # name -> path segments under <repo_root>/data (union of every section)
 _DATASETS = {

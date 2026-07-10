@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt site info — display a rich report for a survey or single station."""
@@ -19,8 +18,7 @@ from ....api.cli.options import (
     survey_option,
     verbose_option,
 )
-
-from ._base import site, _get_sites
+from ._base import _get_sites, site
 
 
 @site.command("info")
@@ -87,7 +85,10 @@ def info(
 
     sites = _get_sites(edi_source, survey_path, fresh, verbose)
 
-    from pycsamt.site.report import SiteReport, SitesReport  # noqa: PLC0415
+    from pycsamt.site.report import (  # noqa: PLC0415
+        SiteReport,
+        SitesReport,
+    )
 
     # --- single station ---
     if station is not None:

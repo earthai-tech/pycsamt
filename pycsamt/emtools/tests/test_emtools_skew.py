@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.skew"""
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.skew import (
     bahr_skewness,
-    skew_table,
-    mask_by_skew,
-    keep_longest_low_skew,
     close_skew_gaps,
-    select_low_skew_band,
+    keep_longest_low_skew,
+    mask_by_skew,
     plot_skewness,
+    select_low_skew_band,
+    skew_table,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers

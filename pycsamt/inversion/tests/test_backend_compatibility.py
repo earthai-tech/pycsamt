@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Compatibility tests for inversion backends.
@@ -26,7 +25,6 @@ from pycsamt.inversion import (
     available_backends,
     get_backend,
 )
-
 
 _RUN_OPTIONAL = os.environ.get("PYCSAMT_RUN_OPTIONAL_BACKENDS") == "1"
 

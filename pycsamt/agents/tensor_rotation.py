@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import os
 import time
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -103,13 +102,21 @@ class TensorRotationAgent(BaseAgent):
         warnings: list[str] = []
 
         try:
-            from ..seg.ops import rotate_impedance, rotate_tipper
+            from ..seg.ops import (
+                rotate_impedance,
+                rotate_tipper,
+            )
         except ImportError as exc:
             return AgentResult.failed(
                 f"pycsamt.seg.ops not available: {exc}", elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -313,7 +320,12 @@ def _write_rotated_edi(
 def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any:
     """Simple bar chart: mean |Zxx/Zxy| per station before rotation."""
     import matplotlib.pyplot as plt
-    from ..emtools._core import _iter_items, _name, _get_z_block
+
+    from ..emtools._core import (
+        _get_z_block,
+        _iter_items,
+        _name,
+    )
     from ..seg.ops import rotate_impedance
 
     station_names, ratios_before, ratios_after = [], [], []

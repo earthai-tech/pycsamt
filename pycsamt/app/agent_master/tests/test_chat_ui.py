@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -27,7 +26,9 @@ class TestHelpModal(unittest.TestCase):
         )
 
     def test_help_modal_has_examples_and_caps(self):
-        from pycsamt.app.agent_master.layout import _help_modal
+        from pycsamt.app.agent_master.layout import (
+            _help_modal,
+        )
         # builds without error and is a real component tree
         modal = _help_modal()
         self.assertEqual(modal.id, "am-modal-help")
@@ -144,9 +145,11 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
         self.assertEqual(C._drop_workflow(None), {})
 
     def test_request_routes_by_text_not_stale_workflow(self):
-        import io, contextlib
-        import pycsamt.app.agent_master.callbacks.chat as C
+        import contextlib
+        import io
+
         import pycsamt.agents.orchestrator as O
+        import pycsamt.app.agent_master.callbacks.chat as C
         from pycsamt.agents._base import AgentResult
 
         captured = {}
@@ -187,8 +190,13 @@ class TestCodeDispatchRAG(unittest.TestCase):
     def setUp(self):
         import tempfile
         from pathlib import Path
-        from pycsamt.assistant.rag import context_builder as cb
-        from pycsamt.assistant.rag.context_builder import ContextBuilder
+
+        from pycsamt.assistant.rag import (
+            context_builder as cb,
+        )
+        from pycsamt.assistant.rag.context_builder import (
+            ContextBuilder,
+        )
         from pycsamt.assistant.rag.retriever import Retriever
         from pycsamt.assistant.rag.schemas import RAGChunk
 
@@ -230,7 +238,9 @@ class TestCodeDispatchRAG(unittest.TestCase):
         self._edi_dir = str(edi)
 
     def tearDown(self):
-        from pycsamt.assistant.rag import context_builder as cb
+        from pycsamt.assistant.rag import (
+            context_builder as cb,
+        )
         cb.default_context_builder = self._orig
 
     def test_line_resolved_into_generated_code(self):
@@ -291,8 +301,9 @@ class TestCodeBlockCollapsible(unittest.TestCase):
     """The code block is a collapsible <details> with a copy button."""
 
     def test_structure(self):
-        import pycsamt.app.agent_master.callbacks.chat as C
         from dash import html
+
+        import pycsamt.app.agent_master.callbacks.chat as C
         blk = C._code_block("x = 1\ny = 2")
         details = blk.children[0]
         self.assertIsInstance(details, html.Details)
@@ -309,6 +320,7 @@ class TestNamedLineWorkflow(unittest.TestCase):
     def setUp(self):
         import tempfile
         from pathlib import Path
+
         import pycsamt.assistant.tools.project_registry as pr
 
         self.tmp = Path(tempfile.mkdtemp())
@@ -347,8 +359,8 @@ class TestNamedLineWorkflow(unittest.TestCase):
         self.assertFalse(C._names_registry_line("run static shift"))
 
     def test_run_agent_resolves_line_without_edi(self):
-        import pycsamt.app.agent_master.callbacks.chat as C
         import pycsamt.agents.orchestrator as O
+        import pycsamt.app.agent_master.callbacks.chat as C
         from pycsamt.agents._base import AgentResult
 
         captured = {}
@@ -383,8 +395,9 @@ class TestSessionFollowup(unittest.TestCase):
     def setUp(self):
         import tempfile
         from pathlib import Path
-        import pycsamt.assistant.tools.project_registry as pr
+
         import pycsamt.app.agent_master.callbacks.chat as C
+        import pycsamt.assistant.tools.project_registry as pr
 
         self.tmp = Path(tempfile.mkdtemp())
         edi = self.tmp / "L22PLT"
@@ -407,14 +420,14 @@ class TestSessionFollowup(unittest.TestCase):
         C._reset_session()
 
     def tearDown(self):
-        import pycsamt.assistant.tools.project_registry as pr
         import pycsamt.app.agent_master.callbacks.chat as C
+        import pycsamt.assistant.tools.project_registry as pr
         pr.ProjectRegistry.from_default = self._orig
         C._reset_session()
 
     def _run_capturing(self, text):
-        import pycsamt.app.agent_master.callbacks.chat as C
         import pycsamt.agents.orchestrator as O
+        import pycsamt.app.agent_master.callbacks.chat as C
         from pycsamt.agents._base import AgentResult
         captured = {}
 

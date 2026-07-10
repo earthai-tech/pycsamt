@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """export — write EM interpretation results to industry formats.
@@ -23,14 +22,15 @@ Example
 from __future__ import annotations
 
 import csv
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import Union
 
 import numpy as np
 
-from .lithology import StratigraphicLog
 from ._base import ResistivityModel
+from .lithology import StratigraphicLog
 
 __all__ = [
     "to_oasis_montaj_xyz",
@@ -51,9 +51,9 @@ def to_oasis_montaj_xyz(
     path: PathLike,
     *,
     y: float = 0.0,
-    elevation: Optional[np.ndarray] = None,
+    elevation: np.ndarray | None = None,
     log_rho: bool = True,
-    channels: Optional[List[str]] = None,
+    channels: list[str] | None = None,
 ) -> Path:
     """Write pseudo-stratigraphic logs to Oasis Montaj XYZ format.
 
@@ -87,14 +87,14 @@ def to_oasis_montaj_xyz(
     hdr = channels if channels else ["X", "Y", "Z", "RESD", "LITH"]
 
     with out.open("w") as fh:
-        fh.write(f"/ pycsamt.interp — Oasis Montaj XYZ\n")
+        fh.write("/ pycsamt.interp — Oasis Montaj XYZ\n")
         fh.write(f"/ Generated: {datetime.utcnow().isoformat()}\n")
         fh.write("/ " + "  ".join(hdr) + "\n")
 
         for k, log in enumerate(logs):
             elev = float(elevation[k]) if elevation is not None else 0.0
             fh.write(f"/ Line {log.station_name}\n")
-            for iz, (z, rho) in enumerate(
+            for _iz, (z, rho) in enumerate(
                 zip(log.z_centers, log.rho_log10)
             ):
                 if np.isnan(rho):

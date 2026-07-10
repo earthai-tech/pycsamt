@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,8 +17,8 @@ Usage
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -29,7 +28,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
@@ -39,7 +37,6 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
@@ -58,7 +55,9 @@ class _ResponseWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.inspect import plot_station_response
+            from pycsamt.emtools.inspect import (
+                plot_station_response,
+            )
             fig = plot_station_response(
                 self._sites,
                 station=self._station,
@@ -167,7 +166,10 @@ class StationResponseDialog(QDialog):
             self._run_btn.setEnabled(False)
             return
         try:
-            from pycsamt.emtools._core import _iter_items, _unwrap
+            from pycsamt.emtools._core import (
+                _iter_items,
+                _unwrap,
+            )
             for ed in _iter_items(self._sites):
                 try:
                     ed = _unwrap(ed)

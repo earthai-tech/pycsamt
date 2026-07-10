@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt transform avg — convert Zonge AVG files to impedance EDI."""
@@ -17,7 +16,6 @@ from ....api.cli.options import (
     output_dir_option,
     verbose_option,
 )
-
 from ._base import transform
 
 

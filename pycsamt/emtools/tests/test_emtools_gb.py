@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
+from pycsamt.emtools._core import _get_z_block
 from pycsamt.emtools.gb import (
     GroomBaileyResult,
     apply_groom_bailey,
     groom_bailey_decomposition,
     groom_bailey_table,
 )
-from pycsamt.emtools._core import _get_z_block
 
 
 class _FakeZ:

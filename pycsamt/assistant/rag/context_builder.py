@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -494,10 +493,10 @@ def needs_clarification(
 
 
 # ── cached default builder (retriever + registry) ───────────────────────────────
-_BUILDER_CACHE: dict[str, "ContextBuilder | None"] = {}
+_BUILDER_CACHE: dict[str, ContextBuilder | None] = {}
 
 
-def default_context_builder(root=None) -> "ContextBuilder | None":
+def default_context_builder(root=None) -> ContextBuilder | None:
     """Build (and cache) a :class:`ContextBuilder` from the repo + registry.
 
     Returns ``None`` if the corpus can't be built (e.g. running from a
@@ -518,7 +517,9 @@ def default_context_builder(root=None) -> "ContextBuilder | None":
         else:
             registry = None
             try:
-                from ..tools.project_registry import ProjectRegistry
+                from ..tools.project_registry import (
+                    ProjectRegistry,
+                )
                 registry = ProjectRegistry.from_default(root)
             except Exception:  # noqa: BLE001
                 registry = None

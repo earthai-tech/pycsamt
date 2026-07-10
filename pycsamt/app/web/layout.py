@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,12 +13,17 @@ Four-zone layout (v2 redesign):
 
 from __future__ import annotations
 
-from dash import dcc, html
 import dash_bootstrap_components as dbc
-from dash import dash_table
+from dash import dash_table, dcc, html
 
-from pycsamt.app.desktop.agent_registry import agent_names, agents_by_category
-from pycsamt.app.web.utils import empty_src, _empty_map, _empty_plotly_heatmap
+from pycsamt.app.desktop.agent_registry import (
+    agent_names,
+)
+from pycsamt.app.web.utils import (
+    _empty_map,
+    _empty_plotly_heatmap,
+    empty_src,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # IDs — centralised to avoid typos across layout + callbacks
@@ -4074,9 +4078,17 @@ def _session_offcanvas() -> dbc.Offcanvas:
 def layout() -> html.Div:
     """Return the complete Dash application layout."""
     from pycsamt.app.web.pages import (  # noqa: PLC0415
-        qc_page, correction, advanced, tdem,
-        pipeline, forward, inversion, interpretation, agents_page, map3d,
+        advanced,
+        agents_page,
+        correction,
+        forward,
+        interpretation,
         inv_results,
+        inversion,
+        map3d,
+        pipeline,
+        qc_page,
+        tdem,
     )
     _extra_pages = [
         ("qc",             qc_page),

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -7,14 +6,14 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+from pycsamt.seg.mtemap import MTEMAP
+from pycsamt.seg.other import OtherSECT
 from pycsamt.seg.sections import (
     SECT_REGISTRY,
     iter_sections,
 )
-from pycsamt.seg.mtemap import MTEMAP
 from pycsamt.seg.spectra import SpectraSECT
 from pycsamt.seg.time_series import TSect
-from pycsamt.seg.other import OtherSECT
 
 
 def _write(tmp: Path, name: str, text: str) -> Path:
@@ -90,10 +89,10 @@ def test_iter_sections_yields_in_order_and_types(
     assert isinstance(got[3][1], OtherSECT)
 
     # MTEMAP.read() should fill sectid
-    assert getattr(got[0][1], "sectid") == "M1"
+    assert got[0][1].sectid == "M1"
 
     # body_start points to a new block line
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         lines = f.readlines()
     for _, _, start in got:
         assert lines[start].lstrip().startswith(">")

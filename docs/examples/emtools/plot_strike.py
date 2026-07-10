@@ -27,23 +27,22 @@ comparison in section 6.
 # :func:`~pycsamt.emtools.strike.estimate_strike_consensus` blends the
 # two.
 
-from _datasets import load_survey, dataset_path
+import numpy as np
+from _datasets import dataset_path, load_survey
 
 from pycsamt.emtools import (
-    estimate_strike_sweep,
-    estimate_strike_phase_tensor,
     estimate_strike_consensus,
+    estimate_strike_phase_tensor,
+    estimate_strike_sweep,
+    plot_strike_analysis,
+    plot_strike_mapsticks,
+    plot_strike_profile,
+    plot_strike_ribbon,
+    plot_strike_rose,
+    plot_strike_rose_by_line,
     rotate_to_strike,
     strike_curve_sweep,
-    plot_strike_rose_by_line,
-    plot_strike_rose,
-    plot_strike_ribbon,
-    plot_strike_profile,
-    plot_strike_mapsticks,
-    plot_strike_analysis,
 )
-
-import numpy as np
 
 survey = load_survey("amt_l18plt")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,7 +17,9 @@ config     ``pycsamt config`` root group and all sub-commands:
              style / interp / agent.
 """
 
-from ._base import load_all_config  # noqa: F401  (re-exported for cli/_base.py)
-from .config import config           # noqa: F401
+from ._base import (
+    load_all_config,  # noqa: F401  (re-exported for cli/_base.py)
+)
+from .config import config  # noqa: F401
 
 __all__ = ["config", "load_all_config"]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -63,7 +62,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any
 
 from ..seg.collection import EDICollection
 from ..seg.edi import EDIFile
@@ -173,18 +172,18 @@ class TStoEDI(TransformerMixin):
         self,
         *,
         estimator: str = "ls",
-        remote: Optional[TSData] = None,
-        nfft: Optional[int] = None,
+        remote: TSData | None = None,
+        nfft: int | None = None,
         overlap: float = 0.5,
         per_decade: int = 7,
-        fmin: Optional[float] = None,
-        fmax: Optional[float] = None,
-        robust: Optional[str] = "huber",
-        ridge: Optional[float] = None,
+        fmin: float | None = None,
+        fmax: float | None = None,
+        robust: str | None = "huber",
+        ridge: float | None = None,
         estimate_error: bool = False,
         include_spectra: bool = False,
         include_tseries: bool = False,
-        reader_kws: Optional[dict] = None,
+        reader_kws: dict | None = None,
         station_suffix: str = "",
         skip_errors: bool = True,
         verbose: int = 0,
@@ -217,8 +216,8 @@ class TStoEDI(TransformerMixin):
         self,
         source: Any,
         *,
-        output_dir: Optional[Union[str, Path]] = None,
-        station_name: Optional[str] = None,
+        output_dir: str | Path | None = None,
+        station_name: str | None = None,
     ) -> EDICollection:
         """Transform one or multiple time-series records to EDIs.
 
@@ -273,8 +272,8 @@ class TStoEDI(TransformerMixin):
         self,
         source: Any,
         *,
-        output_dir: Optional[Union[str, Path]] = None,
-        station_name: Optional[str] = None,
+        output_dir: str | Path | None = None,
+        station_name: str | None = None,
     ) -> TransformResult:
         """Like :meth:`transform` but always returns a
         :class:`~pycsamt.transformers.TransformResult`.
@@ -303,8 +302,8 @@ class TStoEDI(TransformerMixin):
         if out_dir is not None:
             out_dir.mkdir(parents=True, exist_ok=True)
 
-        edis: List[EDIFile] = []
-        failures: List[_FailRecord] = []
+        edis: list[EDIFile] = []
+        failures: list[_FailRecord] = []
         single = len(records) == 1
 
         for rec in records:
@@ -356,9 +355,9 @@ class TStoEDI(TransformerMixin):
 
     def _transform_one(
         self,
-        record: Union[Path, TSData],
+        record: Path | TSData,
         *,
-        station_name: Optional[str] = None,
+        station_name: str | None = None,
     ) -> EDIFile:
         """Convert a single record to an impedance EDIFile."""
         from ..ts.convert import ts_to_edifile
@@ -400,7 +399,7 @@ class TStoEDI(TransformerMixin):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _label(record: Union[Path, TSData]) -> str:
+    def _label(record: Path | TSData) -> str:
         """Human-readable identifier for logs/failures."""
         if isinstance(record, TSData):
             return str(
@@ -413,7 +412,7 @@ class TStoEDI(TransformerMixin):
 
     def _resolve_sources(
         self, source: Any
-    ) -> List[Union[Path, TSData]]:
+    ) -> list[Path | TSData]:
         """Normalise *source* to records (paths or TSData)."""
         if isinstance(source, TSData):
             return [source]
@@ -423,7 +422,7 @@ class TStoEDI(TransformerMixin):
             if p.is_file():
                 return [p.resolve()]
             if p.is_dir():
-                found: List[Path] = []
+                found: list[Path] = []
                 for pat in _TS_PATTERNS:
                     found.extend(
                         f for f in p.rglob(pat)
@@ -436,7 +435,7 @@ class TStoEDI(TransformerMixin):
             )
 
         if isinstance(source, (list, tuple)):
-            records: List[Union[Path, TSData]] = []
+            records: list[Path | TSData] = []
             for item in source:
                 records.extend(
                     self._resolve_sources(item)
@@ -490,13 +489,13 @@ class TStoEDI(TransformerMixin):
     # ------------------------------------------------------------------
 
     @classmethod
-    def with_errors(cls, **kw: Any) -> "TStoEDI":
+    def with_errors(cls, **kw: Any) -> TStoEDI:
         """Return a transformer with ``estimate_error=True``."""
         return cls(estimate_error=True, **kw)
 
     @classmethod
     def with_remote(
         cls, remote: TSData, **kw: Any
-    ) -> "TStoEDI":
+    ) -> TStoEDI:
         """Return a remote-reference transformer."""
         return cls(estimator="rr", remote=remote, **kw)

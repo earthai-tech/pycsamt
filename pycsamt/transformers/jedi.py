@@ -1,37 +1,39 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Optional
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 
 from ..core.base import TFBundle, ensure_station
 from ..core.config import get_config
-from ..seg.collection import EDICollection
 from ..jones.collection import JCollection
-from ..seg.edi import EDIFile
 from ..jones.j import JFile
-from ..zonge.avg import AVG, BaseAVG
+from ..seg.collection import EDICollection
+from ..seg.edi import EDIFile
 from ..seg.heads import Head, Info
-from ..seg.mtemap import MTEMAP
 from ..seg.meas import (
-    DefineMeas, Hmeasurement, Emeasurement,
+    DefineMeas,
+    Emeasurement,
+    Hmeasurement,
 )
+from ..seg.mtemap import MTEMAP
+from ..zonge.avg import AVG, BaseAVG
 from ._base import TransformerMixin
 
 __all__ = [
     "AVGtoEDI",
-    "JtoEDI", 
+    "JtoEDI",
 ]
 
 
 class AVGtoEDI(TransformerMixin):
     r"""
     Convert a Zonge ``AVG`` source to an ``EDICollection``.
-    
+
     This transformer orchestrates extraction of transfer
     functions from a Zonge :class:`~pycsamt.zonge.avg.AVG`
     object (or file path), finalizes the neutral payload
@@ -39,9 +41,9 @@ class AVGtoEDI(TransformerMixin):
     objects. The result is always an
     :class:`~pycsamt.seg.collection.EDICollection`, even for
     single-site inputs.
-    
+
     The pipeline is:
-    
+
     1. Parse TFs from the AVG using ``to_tensor``. When ``Z`` is
        not present, fall back to ``(rho, phase)``.
     2. Finalize each bundle using
@@ -52,7 +54,7 @@ class AVGtoEDI(TransformerMixin):
     3. Materialize :class:`~pycsamt.seg.edi.EDIFile` objects and
        attach site metadata (e.g., coordinates) if available
        from ``avg.topo.frame``.
-    
+
     Notes
     -----
     * Station naming obeys the global policy from
@@ -64,7 +66,7 @@ class AVGtoEDI(TransformerMixin):
     * If ``avg.topo`` exposes a DataFrame-like ``frame`` with
       columns ``station``, ``latitude``, ``longitude`` and
       optionally ``elevation``, a ``>HEAD`` section is updated.
-    
+
     See Also
     --------
     pycsamt.core._transformers.TransformerMixin
@@ -75,7 +77,7 @@ class AVGtoEDI(TransformerMixin):
         Concrete EDI object.
     pycsamt.seg.collection.EDICollection
         Collection wrapper for multiple EDI files.
-    
+
     Examples
     --------
     >>> from pycsamt.core.transformers import AVGtoEDI
@@ -86,7 +88,7 @@ class AVGtoEDI(TransformerMixin):
     class _HeadStub:
         r"""
         Private header stub used to seed the EDI ``>HEAD`` section.
-        
+
         Parameters
         ----------
         dataid : str
@@ -95,7 +97,7 @@ class AVGtoEDI(TransformerMixin):
             Optional site coordinates and elevation.
         empty : float or None
             Sentinel for empty numeric values.
-        
+
         Notes
         -----
         Small convenience container; semantics are established by
@@ -119,7 +121,7 @@ class AVGtoEDI(TransformerMixin):
                 self.empty = float(empty)
             for key in list(kws.keys()):
                 setattr(self, key, kws[key])
-    
+
     def _as_avg(self, src: Any) -> Any:
 
         # BaseAVG is the documented extension point; AVG is kept
@@ -133,37 +135,37 @@ class AVGtoEDI(TransformerMixin):
 
     def _empty(self) -> float:
         return float(get_config().empty)
-    
+
 
     def compute_z_from_res(self, b: TFBundle) -> TFBundle:
         r"""
         Reconstruct ``Z`` from apparent resistivity and phase.
-        
+
         If a bundle lacks ``Z`` but holds ``(rho, phase)`` and the
         global config enables ``compute_z_from_res``, this method
         builds a complex tensor whose magnitude and angle satisfy
         the standard MT relations:
-        
+
         * ``|Z| = sqrt( μ0 * ω * ρa )``
         * ``phase`` is interpreted as milliradians and converted to
           radians before forming ``Z = |Z|(cos φ + i sin φ)``.
-        
+
         Parameters
         ----------
         b : TFBundle
             Input bundle with ``rho`` and ``phase`` set.
-        
+
         Returns
         -------
         TFBundle
             The same bundle with ``z`` populated.
-        
+
         Notes
         -----
         Ensure phase units are consistent. Zonge workflows often
         store milliradians; the implementation converts by dividing
         by ``1000``. If units differ, override this method.
-        
+
         References
         ----------
         .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
@@ -186,7 +188,7 @@ class AVGtoEDI(TransformerMixin):
     def _iter_bundles(self, avg: Any) -> list[TFBundle]:
         r"""
         Extract per-station :class:`TFBundle` objects from an AVG.
-        
+
         Returns
         -------
         list of TFBundle
@@ -231,12 +233,12 @@ class AVGtoEDI(TransformerMixin):
         r_t = _as4(r_t)
         p_t = _as4(p_t)
         n_site = int(len(st)) if st is not None else 1
-        
+
         attrs = {
-            "has_any_magnetic": self._has_any_magnetic(avg), 
+            "has_any_magnetic": self._has_any_magnetic(avg),
             "comp": self._unique_components_from_avg(avg)
          }
-        
+
         for i in range(n_site):
             z = None if z_t is None else z_t[i]
             ze = None if z_e is None else z_e[i]
@@ -254,7 +256,7 @@ class AVGtoEDI(TransformerMixin):
                 phase=p,
                 tipper=None,
                 tipper_err=None,
-                attrs = attrs 
+                attrs = attrs
             )
             out.append(b)
         return out
@@ -262,22 +264,22 @@ class AVGtoEDI(TransformerMixin):
     def extract(self, source: Any) -> TFBundle:
         r"""
         Pull the first :class:`TFBundle` from an AVG object or path.
-        
+
         Parameters
         ----------
         source : Any
             :class:`AVG` instance or path to an ``.avg`` file.
-        
+
         Returns
         -------
         TFBundle
             The first available bundle (typically first station).
-        
+
         Raises
         ------
         ValueError
             If no transfer functions could be obtained.
-        
+
         Notes
         -----
         Multi-station inputs are handled by :meth:`transform`,
@@ -291,9 +293,9 @@ class AVGtoEDI(TransformerMixin):
 
     def _unique_components_from_avg(self, avg) -> set[str]:
         """
-        Return the distinct component labels present in 
+        Return the distinct component labels present in
         the AVG measurement table.
-        Works with CompMeas exposed via `avg.info.comp.frame` 
+        Works with CompMeas exposed via `avg.info.comp.frame`
         and its 'comp' column.
         """
         try:
@@ -304,7 +306,7 @@ class AVGtoEDI(TransformerMixin):
             return set(map(str, comp_col.unique()))
         except Exception:
             return set()
-    
+
     def _has_any_magnetic(self, avg) -> bool:
         """
         True if the AVG has any magnetic channel (Hx, Hy, Hz)
@@ -317,34 +319,34 @@ class AVGtoEDI(TransformerMixin):
         # Look for 'H' or 'B' tokens anywhere in the component label.
         # This covers 'ExHy', 'EyHx', 'Bz', etc. Case-insensitive.
         return any(("H" in c.upper()) or ("B" in c.upper()) for c in comps)
-    
+
     def emit_edi(self, bundle: TFBundle) -> Any:
         r"""
         Materialize an :class:`EDIFile` from a finalized bundle.
-        
+
         Populates ``Z`` fields (``_freq``, ``_z``, ``_z_err``). If
         ``Z`` is missing but ``(rho, phase)`` are present, uses the
         backend method to set resistivity and phase. If tipper data
         exist, populates tipper arrays and derived attributes.
-        
+
         Parameters
         ----------
         bundle : TFBundle
             Finalized transfer-function payload.
-        
+
         Returns
         -------
         EDIFile
             A concrete EDI object.
-        
+
         Notes
         -----
         Errors during optional computations are silenced to keep
         the transformation robust on imperfect field data.
         """
-    
+
         ed = EDIFile(verbose=0)
- 
+
         # ---------- seed HEAD + INFO (coordinates updated later)
         _head = Head()
         _head.dataid = (bundle.station or "").strip()
@@ -356,7 +358,7 @@ class AVGtoEDI(TransformerMixin):
         _head.long = 0.0
         _head.elev = 0.0
         ed.add_section("head", _head)
-        
+
         _info = Info()
         # seed INFO (no .add; use update/info_text)
         _info.update(
@@ -372,31 +374,31 @@ class AVGtoEDI(TransformerMixin):
         attrs = bundle.attrs or {}
         comps = set(map(str, attrs.get("comp", [])))
         has_mag = bool(attrs.get("has_any_magnetic"))
-        
+
         def _has(tok: str) -> bool:
             t = tok.upper()
             return any(t in c.upper() for c in comps)
-        
+
         want_ex = True if not comps else _has("EX")
         want_ey = True if not comps else _has("EY")
         want_hx = has_mag and (_has("HX") or _has("BX"))
         want_hy = has_mag and (_has("HY") or _has("BY"))
         want_hz = has_mag and (_has("HZ") or _has("BZ"))
-        
+
         dm = DefineMeas()
         dm.units = "M"
         dm.reftype = "CART"
-        
+
         # seed origin from HEAD (updated later in post_emit)
         dm.reflat = _head.lat
         dm.reflong = _head.long
         dm.refelev = _head.elev
-        
+
         _ids: dict[str, str] = {}
-        
+
         def _hid(i: int) -> str:
             return f"{100 + i}.001"
-        
+
         k = 0
         if want_hx:
             _ids["HX"] = _hid(k); k += 1
@@ -438,16 +440,16 @@ class AVGtoEDI(TransformerMixin):
                     x=0, y=0, z=0, x2=0, y2=0, z2=0,
                 )
             )
-        
+
         ed.add_section("definemeas", dm)
 
-        
+
         # ---------- >=MTSECT or >=EMAPSECT
         mt = MTEMAP()
         mt.sectid = _head.dataid or ""
         freq = bundle.freq
         mt.nfreq = int(len(freq) if freq is not None  else [])
-        
+
         if has_mag:
             mt.hx = _ids.get("HX")
             mt.hy = _ids.get("HY")
@@ -455,25 +457,25 @@ class AVGtoEDI(TransformerMixin):
             mt.ex = _ids.get("EX")
             mt.ey = _ids.get("EY")
             ed.add_section("mtsect", mt)
-            setattr(ed, "emap", False)
+            ed.emap = False
         else:
             mt.ex = _ids.get("EX")
             mt.ey = _ids.get("EY")
             ed.add_section("mtsect", mt)
-            setattr(ed, "emap", True)
+            ed.emap = True
 
-        
+
         if bundle.freq is not None:
             ed.Z._freq = np.asarray(bundle.freq, dtype=float)
         if bundle.z is not None:
             ed.Z._z = np.asarray(bundle.z, dtype=complex)
         if bundle.z_err is not None:
             ed.Z._z_err = np.asarray(bundle.z_err, dtype=float)
-        
-        if bundle.phase is not None: 
+
+        if bundle.phase is not None:
             ed.Z._phase =  np.asarray(bundle.phase, dtype=float)
-            
-        if bundle.z is not None: 
+
+        if bundle.z is not None:
             # --- after you set ed.Z._freq and ed.Z._z ---
             z = np.asarray(ed.Z._z, dtype=complex)
             f = np.asarray(ed.Z._freq, dtype=float)
@@ -484,10 +486,10 @@ class AVGtoEDI(TransformerMixin):
             if keep.ndim:  # guard for scalar shapes
                 z = z[keep]
                 f = f[keep]
-  
+
             # 2) replace remaining NaN/Inf with zeros
             z = np.nan_to_num(z, nan=0.0, posinf=0.0, neginf=0.0)
-            
+
             # and keep error array consistent if present
             ze = ed.Z._z_err
             if ze is not None:
@@ -495,11 +497,11 @@ class AVGtoEDI(TransformerMixin):
                 if keep.ndim:
                     ze = ze[keep]
                 ze = np.nan_to_num(ze, nan=0.0, posinf=0.0, neginf=0.0)
-            
+
             ed.Z._z = z
             ed.Z._freq = f
             ed.Z._z_err = ze
- 
+
             # now safe:
             ed.Z.compute_resistivity_phase()
 
@@ -509,11 +511,11 @@ class AVGtoEDI(TransformerMixin):
             rho =np.asarray(ed.Z._resistivity, dtype=float)
             # mrad → degrees
             # mrad -> deg
-            # phase in degrees (AVG metadata shows Unit.Phase: 'mrad'). 
+            # phase in degrees (AVG metadata shows Unit.Phase: 'mrad').
             # Convert mrad → deg before calling the backend setter:
             phi_deg = ed.Z._phase * (
                 180.0 / (1000.0 * np.pi))
-   
+
             ed.Z.set_res_phase(rho, phi_deg, freq)
         else:
             # no Z and no (ρ,φ): Never rich here.
@@ -541,39 +543,39 @@ class AVGtoEDI(TransformerMixin):
     ):
         if topo_frame is None or getattr(topo_frame, "empty", True):
             return
-    
+
         def _pick(names):
             for n in names:
                 if n in topo_frame.columns:
                     return n
             return None
-    
+
         sid_col = _pick(("station", "site", "id", "SITE", "STATION"))
         if sid_col is None:
             return
-     
+
         row = topo_frame[topo_frame[sid_col] == station_id]
 
         if row.empty:
             row = topo_frame[topo_frame[sid_col] == str(station_id)]
             if row.empty:
                 return
-    
+
         def _num(v, d=0.0):
             try:
                 return float(v)
             except Exception:
                 return d
-    
+
         lat_col = _pick(("latitude", "lat", "LAT"))
         lon_col = _pick(("longitude", "lon", "long", "LON", "LONG"))
         elv_col = _pick(("elevation", "elev", "alt", "ALT"))
-    
+
         has_latlon = lat_col is not None and lon_col is not None
         lat = _num(row[lat_col].iloc[0]) if has_latlon else None
         lon = _num(row[lon_col].iloc[0]) if has_latlon else None
         elv = _num(row[elv_col].iloc[0]) if elv_col else 0.0
-    
+
         h = ed.get_section("head")
         if h is None:
             h = self._ensure_head(
@@ -581,19 +583,19 @@ class AVGtoEDI(TransformerMixin):
                 station=str(station_id),
                 empty=self._empty(),
             )
-    
+
         if has_latlon:
             h.lat = lat
             h.long = lon
         h.elev = elv
-    
+
         dm = ed.get_section("definemeas")
         if dm is not None:
             if has_latlon:
                 dm.reflat = lat
                 dm.reflong = lon
             dm.refelev = elv
-        
+
 
         # stub = self._HeadStub(
         #     ed.station or "",
@@ -624,7 +626,7 @@ class AVGtoEDI(TransformerMixin):
         meta = getattr(source, "info", None)
         if meta is None:
             return
-    
+
         def _get(k: str, default: str = ""):
             try:
                 if hasattr(meta, "get"):
@@ -632,7 +634,7 @@ class AVGtoEDI(TransformerMixin):
                 return getattr(meta, k, default)
             except Exception:
                 return default
-            
+
         def _infoln(s: str) -> str:
             return s if s.startswith("  ") else "  " + s
         # HEAD enrich
@@ -643,7 +645,7 @@ class AVGtoEDI(TransformerMixin):
                 station=getattr(ed, "station", "") or "",
                 empty=self._empty(),
             )
-        
+
         val = _get("stdvers", None)
         if val: h.stdvers = str(val)
         val = _get("progvers", None)
@@ -674,7 +676,7 @@ class AVGtoEDI(TransformerMixin):
                 h.empty = float(val)
             except Exception:
                 pass
-    
+
         # INFO enrich
         info = ed.get_section("info")
         if info is None:
@@ -703,18 +705,18 @@ class AVGtoEDI(TransformerMixin):
         if not any("ROTATION=" in s or
                    "ROTATION:" in s for s in txt):
             add.append(_infoln("ROTATION=FIX"))
-            
+
         if add:
             info.update(info_text=txt + add)
-    
+
     def post_emit(self, edi_obj, source, bundle):
         r"""
         Attach station metadata and optional location to the EDI.
-        
+
         This step applies the global station naming policy and, if
         ``avg.topo.frame`` is present, injects coordinates into the
         ``>HEAD`` section.
-        
+
         Parameters
         ----------
         edi_obj : EDIFile
@@ -723,12 +725,12 @@ class AVGtoEDI(TransformerMixin):
             Original AVG used to derive the bundle.
         bundle : TFBundle
             Finalized bundle for this station.
-        
+
         Returns
         -------
         EDIFile
             The updated EDI object.
-        
+
         Notes
         -----
         When a matching row is found in ``topo.frame`` (based on the
@@ -742,7 +744,7 @@ class AVGtoEDI(TransformerMixin):
                 bundle.station_id,
             )
             edi_obj.station = nm
-            
+
             # if nm:
             #     edi_obj.station = nm
         except Exception:
@@ -761,7 +763,7 @@ class AVGtoEDI(TransformerMixin):
             )
         except Exception:
             pass
-        
+
         # coords from topo if available
         try:
             topo = getattr(source, "topo", None)
@@ -773,13 +775,13 @@ class AVGtoEDI(TransformerMixin):
             )
         except Exception:
             pass
-        
+
         # enrich from AVG.info (if any)
         try:
             self._enrich_from_avg_info(edi_obj, source)
         except Exception:
             pass
-        
+
         return edi_obj
 
 
@@ -787,16 +789,16 @@ class AVGtoEDI(TransformerMixin):
         self,
         source: Any,
         *,
-        name: Optional[str] = None,
-        station_id: Optional[str | int] = None,
+        name: str | None = None,
+        station_id: str | int | None = None,
     ) -> Any:
         r"""
         Convert an AVG source to an :class:`EDICollection`.
-        
+
         Handles both objects and file paths. All stations found in
         the source are extracted, finalized, converted to EDI, and
         collected.
-        
+
         Parameters
         ----------
         source : Any
@@ -807,12 +809,12 @@ class AVGtoEDI(TransformerMixin):
         station_id : str or int, optional
             Identifier used by the naming policy if a name must be
             synthesized.
-        
+
         Returns
         -------
         EDICollection
             A collection of :class:`EDIFile` objects, one per site.
-        
+
         Examples
         --------
         >>> from pycsamt.core.transformers import AVGtoEDI
@@ -831,13 +833,13 @@ class AVGtoEDI(TransformerMixin):
             ed = self.emit_edi(b)
             ed = self.post_emit(ed, avg, b)
             edis.append(ed)
-        
+
         return EDICollection(items=edis, verbose=0)
 
 class JtoEDI(TransformerMixin):
     r"""
     Convert a Jones ``J`` source to EDI or an EDI collection.
-    
+
     This transformer ingests a :class:`~pycsamt.jones.j.JFile`
     instance or a path to a ``.j`` file, extracts transfer
     functions (``Z``, tipper, or fallback ``rho/phase``),
@@ -846,9 +848,9 @@ class JtoEDI(TransformerMixin):
     :class:`~pycsamt.seg.edi.EDIFile` objects. When given a
     :class:`~pycsamt.jones.collection.JCollection`, it produces
     an :class:`~pycsamt.seg.collection.EDICollection`.
-    
+
     The pipeline mirrors the AVG workflow:
-    
+
     1. Extract TF arrays and metadata from the J structure,
        tolerating variant attribute names often found in legacy
        files.
@@ -857,7 +859,7 @@ class JtoEDI(TransformerMixin):
        and fill missing TF parts if configured.
     3. Emit EDI and optionally attach site coordinates if a
        header-like structure is present on the J side.
-    
+
     Notes
     -----
     * Naming, frequency sorting, and de-duplication follow the
@@ -868,7 +870,7 @@ class JtoEDI(TransformerMixin):
     * A ``Head`` or ``head`` object on ``JFile`` with attributes
       ``lat``, ``long``, and ``elev`` is used to populate the EDI
       ``>HEAD`` section when available.
-    
+
     See Also
     --------
     pycsamt.core._transformers.TransformerMixin
@@ -877,7 +879,7 @@ class JtoEDI(TransformerMixin):
         Companion converter for Zonge AVG.
     pycsamt.core.base.TFBundle
         Neutral payload used across backends.
-    
+
     Examples
     --------
     >>> from pycsamt.core.transformers import JtoEDI
@@ -885,7 +887,7 @@ class JtoEDI(TransformerMixin):
     >>> # edi = JtoEDI().transform(\"/path/site.j\")  # doctest:+SKIP
     >>> # Collection → EDICollection
     >>> # out = JtoEDI().transform(j_collection)     # doctest:+SKIP
-    
+
     References
     ----------
     .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
@@ -895,7 +897,7 @@ class JtoEDI(TransformerMixin):
     class _HeadStub:
         r"""
         Private header stub for seeding the EDI ``>HEAD`` section.
-        
+
         Parameters
         ----------
         dataid : str
@@ -923,7 +925,7 @@ class JtoEDI(TransformerMixin):
                 self.empty = float(empty)
 
     def _as_jfile(self, src: Any) -> JFile:
-        
+
         if isinstance(src, JFile):
             return src
         if isinstance(src, (str, Path)):
@@ -996,22 +998,22 @@ class JtoEDI(TransformerMixin):
     def extract(self, source: Any) -> TFBundle:
         r"""
         Extract a :class:`TFBundle` from a J file or object.
-        
+
         Parameters
         ----------
         source : Any
             :class:`JFile` instance or a path to a ``.j`` file.
-        
+
         Returns
         -------
         TFBundle
             Bundle with TF arrays and basic site info.
-        
+
         Raises
         ------
         ValueError
             If no usable transfer functions are present.
-        
+
         Notes
         -----
         This method does not reorder or de-duplicate; those steps
@@ -1027,22 +1029,22 @@ class JtoEDI(TransformerMixin):
     def emit_edi(self, bundle: TFBundle) -> Any:
         r"""
         Create an :class:`EDIFile` from a finalized bundle.
-        
+
         Populates impedance arrays when present. If ``Z`` is absent
         but ``(rho, phase)`` are available, the backend call is used
         to set resistivity/phase onto the EDI structure. Tipper data
         are also populated when provided.
-        
+
         Parameters
         ----------
         bundle : TFBundle
             Finalized transfer-function payload.
-        
+
         Returns
         -------
         EDIFile
             Concrete EDI object ready for downstream use.
-        
+
         Notes
         -----
         Optional computations are guarded; failures are ignored to
@@ -1101,11 +1103,11 @@ class JtoEDI(TransformerMixin):
     ) -> Any:
         r"""
         Attach naming and optional coordinates to the EDI.
-        
+
         Applies the global station naming policy and, when the J
         object exposes a ``Head``/``head`` with ``lat``, ``long``,
         and ``elev``, updates the EDI header accordingly.
-        
+
         Parameters
         ----------
         edi_obj : EDIFile
@@ -1114,7 +1116,7 @@ class JtoEDI(TransformerMixin):
             Original J source used for extraction.
         bundle : TFBundle
             Finalized bundle for this site.
-        
+
         Returns
         -------
         EDIFile
@@ -1171,21 +1173,21 @@ class JtoEDI(TransformerMixin):
             pass
 
         return edi_obj
-    
+
     def transform(
         self,
         source: Any,
         *,
-        name: Optional[str] = None,
-        station_id: Optional[str | int] = None,
+        name: str | None = None,
+        station_id: str | int | None = None,
     ) -> Any:
         r"""
         Convert a J source to EDI or an EDI collection.
-        
+
         A :class:`JCollection` yields an
         :class:`EDICollection` with one EDI per member. A single
         ``JFile`` (or path) yields a single :class:`EDIFile`.
-        
+
         Parameters
         ----------
         source : Any
@@ -1195,12 +1197,12 @@ class JtoEDI(TransformerMixin):
             Preferred station name override for finalization.
         station_id : str or int, optional
             Identifier used when a name must be synthesized.
-        
+
         Returns
         -------
         EDIFile or EDICollection
             EDI materialization corresponding to the input form.
-        
+
         Examples
         --------
         >>> from pycsamt.core.transformers import JtoEDI
@@ -1224,7 +1226,7 @@ class JtoEDI(TransformerMixin):
                 edis.append(ed)
 
             return EDICollection(items=edis, verbose=0)
-        
+
         jf = self._as_jfile(source)
         b = self._bundle_from_j(jf)
         b = self._finalize(
@@ -1233,7 +1235,7 @@ class JtoEDI(TransformerMixin):
             station_id=station_id,
         )
         ed = self.emit_edi(b)
-        
+
         return self.post_emit(ed, jf, b)
 
     def _apply_j_coords(self, ed, jf) -> None:
@@ -1253,33 +1255,33 @@ class JtoEDI(TransformerMixin):
             h.long = float(lon)
         if elv is not None:
             h.elev = float(elv)
-    
+
         dm = ed.get_section("definemeas")
         if dm is not None:
             dm.reflat = getattr(h, "lat", 0.0)
             dm.reflong = getattr(h, "long", 0.0)
             dm.refelev = getattr(h, "elev", 0.0)
 
-            
+
     def _seed_meas_and_mtsect(self, ed, jf) -> None:
-    
+
 
         z = getattr(ed.Z, "z", None)
         f = getattr(ed.Z, "freq", None)
         nfreq = int(f.size) if f is not None else 0
-    
+
         tip = getattr(ed, "Tip", None)
         has_tip = bool(
             tip is not None and getattr(tip, "tipper", None) is not None
         )
-    
+
         have_xy = have_yx = False
         if z is not None and np.size(z) > 0:
             z = np.asarray(z)
             if z.ndim == 3 and z.shape[1:] == (2, 2):
                 have_xy = np.any(np.abs(z[:, 0, 1]) > 0)
                 have_yx = np.any(np.abs(z[:, 1, 0]) > 0)
-    
+
         ids = {
             "HX": "100.001",
             "HY": "100.002",
@@ -1287,28 +1289,28 @@ class JtoEDI(TransformerMixin):
             "EX": "101.001",
             "EY": "101.002",
         }
-    
+
         dm = self._ensure_definemeas(ed, units="M", reftype="CART")
-    
+
         # ensure origin mirrors HEAD
         h = ed.get_section("head")
         if h is not None:
             dm.reflat = getattr(h, "lat", 0.0)
             dm.reflong = getattr(h, "long", 0.0)
             dm.refelev = getattr(h, "elev", 0.0)
-    
+
         az = getattr(jf, "azimuth", None)
         azx = float(az) if az is not None else 0.0
         azy = (azx + 90.0) % 360.0
-    
+
         def _has_h(id_):
             return any(getattr(
                 m, "id", None) == id_ for m in dm.hmeas)
-    
+
         def _has_e(id_):
             return any(getattr(
                 m, "id", None) == id_ for m in dm.emeas)
-    
+
         # H channels referenced later
         if have_yx and not _has_h(ids["HX"]):
             dm.hmeas.append(
@@ -1331,7 +1333,7 @@ class JtoEDI(TransformerMixin):
                     x=0.0, y=0.0, z=0.0, azm=0.0,
                 )
             )
-    
+
         # E channels that pair with Z blocks
         if have_xy and not _has_e(ids["EX"]):
             dm.emeas.append(
@@ -1349,7 +1351,7 @@ class JtoEDI(TransformerMixin):
                     x2=0.0, y2=0.0, z2=0.0,
                 )
             )
-    
+
         mt = self._ensure_mtsect(
             ed,
             sectid=(getattr(ed, "station", "") or ""),

@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """Phase 1 tests — ModEmConfig, validation predicates, and _source layout."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 _SOURCE = Path(__file__).parents[1] / "_source"
 _EXAMPLES_2D = Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
@@ -114,84 +114,133 @@ class TestModEmConfig:
 @pytestmark_examples
 class TestValidationWithExamples:
     def test_detect_2d_data_file(self):
-        from pycsamt.models.modem.validation import is_data_file
+        from pycsamt.models.modem.validation import (
+            is_data_file,
+        )
         assert is_data_file(_EXAMPLES_2D / "d0_JT.dat") is True
 
     def test_detect_3d_data_file(self):
-        from pycsamt.models.modem.validation import is_data_file
+        from pycsamt.models.modem.validation import (
+            is_data_file,
+        )
         assert is_data_file(_EXAMPLES_3D / "d0.dat") is True
 
     def test_detect_2d_model_file(self):
-        from pycsamt.models.modem.validation import is_model_2d_file, is_model_3d_file
+        from pycsamt.models.modem.validation import (
+            is_model_2d_file,
+            is_model_3d_file,
+        )
         assert is_model_2d_file(_EXAMPLES_2D / "m0.rho") is True
         assert is_model_3d_file(_EXAMPLES_2D / "m0.rho") is False
 
     def test_detect_3d_model_file(self):
-        from pycsamt.models.modem.validation import is_model_2d_file, is_model_3d_file
+        from pycsamt.models.modem.validation import (
+            is_model_2d_file,
+            is_model_3d_file,
+        )
         assert is_model_3d_file(_EXAMPLES_3D / "m0.ws") is True
         assert is_model_2d_file(_EXAMPLES_3D / "m0.ws") is False
 
     def test_detect_covariance_file(self):
-        from pycsamt.models.modem.validation import is_covariance_file
+        from pycsamt.models.modem.validation import (
+            is_covariance_file,
+        )
         assert is_covariance_file(_EXAMPLES_3D / "example.cov") is True
 
     def test_detect_control_file(self):
-        from pycsamt.models.modem.validation import is_control_file
+        from pycsamt.models.modem.validation import (
+            is_control_file,
+        )
         assert is_control_file(_EXAMPLES_3D / "block2.inv") is True
 
     def test_detect_log_file_2d(self):
-        from pycsamt.models.modem.validation import is_log_file
+        from pycsamt.models.modem.validation import (
+            is_log_file,
+        )
         assert is_log_file(_EXAMPLES_2D / "Modular_NLCG.log") is True
 
     def test_data_is_not_model(self):
-        from pycsamt.models.modem.validation import is_model_file
+        from pycsamt.models.modem.validation import (
+            is_model_file,
+        )
         assert is_model_file(_EXAMPLES_2D / "d0_JT.dat") is False
 
     def test_model_is_not_data(self):
-        from pycsamt.models.modem.validation import is_data_file
+        from pycsamt.models.modem.validation import (
+            is_data_file,
+        )
         assert is_data_file(_EXAMPLES_2D / "m0.rho") is False
 
     def test_detect_file_type_data(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_3D / "d0.dat") == ModEmFileType.DATA
 
     def test_detect_file_type_model_3d(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_3D / "m0.ws") == ModEmFileType.MODEL_3D
 
     def test_detect_file_type_model_2d(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_2D / "m0.rho") == ModEmFileType.MODEL_2D
 
     def test_detect_file_type_covariance(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_3D / "example.cov") == ModEmFileType.COVARIANCE
 
     def test_detect_file_type_control(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_3D / "block2.inv") == ModEmFileType.CONTROL
 
     def test_detect_file_type_log(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         assert detect_file_type(_EXAMPLES_2D / "Modular_NLCG.log") == ModEmFileType.LOG
 
 
 class TestValidationMissingFile:
     def test_missing_file_data(self):
-        from pycsamt.models.modem.validation import is_data_file
+        from pycsamt.models.modem.validation import (
+            is_data_file,
+        )
         assert is_data_file("/no/such/file.dat") is False
 
     def test_missing_file_model(self):
-        from pycsamt.models.modem.validation import is_model_file
+        from pycsamt.models.modem.validation import (
+            is_model_file,
+        )
         assert is_model_file("/no/such/file.rho") is False
 
     def test_missing_file_covariance(self):
-        from pycsamt.models.modem.validation import is_covariance_file
+        from pycsamt.models.modem.validation import (
+            is_covariance_file,
+        )
         assert is_covariance_file("/no/such/file.cov") is False
 
     def test_unknown_type(self):
-        from pycsamt.models.modem.validation import detect_file_type, ModEmFileType
-        import tempfile, os
+        import os
+        import tempfile
+
+        from pycsamt.models.modem.validation import (
+            ModEmFileType,
+            detect_file_type,
+        )
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
             f.write(b"hello world\n")
             name = f.name

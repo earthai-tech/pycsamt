@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import numpy as np
 
 from pycsamt.seg.edi import EDIFile
-from pycsamt.site.base import Sites
-from pycsamt.site import selection as sel
 from pycsamt.site import edit as ed
+from pycsamt.site import selection as sel
+from pycsamt.site.base import Sites
 
 
 def _load_edi(p: Path) -> EDIFile:
@@ -27,8 +25,8 @@ def _mk_edifiles(
     tmp_path: Path,
     simulated_edi: Path,
     *stems: str,
-) -> List[EDIFile]:
-    out: List[EDIFile] = []
+) -> list[EDIFile]:
+    out: list[EDIFile] = []
     for st in stems:
         p = _dup_edi(tmp_path, simulated_edi, st)
         out.append(_load_edi(p))
@@ -90,8 +88,8 @@ def test_by_chainage_head_and_fallback_attr(
     # set HEAD.chainage
     h1 = e1.get_section("head")  # type: ignore
     h2 = e2.get_section("head")  # type: ignore
-    setattr(h1, "chainage", 100.0)
-    setattr(h2, "chainage", 150.0)
+    h1.chainage = 100.0
+    h2.chainage = 150.0
 
     s = Sites([e1, e2])
     out = sel.by_chainage(s, 120.0, 200.0)
@@ -99,7 +97,7 @@ def test_by_chainage_head_and_fallback_attr(
 
     # fallback: remove head.chainage, set edi.chainage
     delattr(h2, "chainage")
-    setattr(e2, "chainage", 180.0)
+    e2.chainage = 180.0
     out = sel.by_chainage(s, 170.0, 190.0)
     assert len(out) == 1 and out.by_index(0).name == "C02"
 
@@ -192,11 +190,11 @@ def test_mask_large_phase_err_threshold_and_no_err(
     z2 = getattr(e2, "Z", None)
     assert z1 is not None and z2 is not None
 
-    f = np.asarray([100.0, 200.0], float)
+    np.asarray([100.0, 200.0], float)
     # small errors -> should be kept under thresh=10
-    setattr(z1, "_phase_err", np.full((2, 2, 2), 5.0, float))
+    z1._phase_err = np.full((2, 2, 2), 5.0, float)
     # large errors -> should be dropped under thresh=10
-    setattr(z2, "_phase_err", np.full((2, 2, 2), 50.0, float))
+    z2._phase_err = np.full((2, 2, 2), 50.0, float)
 
     # E03 has no phase_err -> should be kept
     s = Sites([e1, e2, e3])

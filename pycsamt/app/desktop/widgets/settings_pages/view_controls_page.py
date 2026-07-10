@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -112,7 +111,9 @@ class ViewControlsPage(SettingsPage):
 
     def populate(self) -> None:
         try:
-            from pycsamt.api.control import PYCSAMT_CONTROL as C
+            from pycsamt.api.control import (
+                PYCSAMT_CONTROL as C,
+            )
             self._rho_combo.setCurrentIndex(
                 next((i for i, (_, v) in enumerate(_RHO_VIEWS) if v == C.rho.view), 0)
             )

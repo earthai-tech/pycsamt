@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Export the current view as a standalone interactive HTML file."""
@@ -8,8 +7,8 @@ from __future__ import annotations
 from dash import Input, Output, State, no_update
 
 from .._ids import IDs
-from ..cache import get_view
 from .._render import figure_for
+from ..cache import get_view
 
 
 def register_export(app) -> None:

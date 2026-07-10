@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.tf (transfer-function / tipper)"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.tf import (
-    plot_tipper_hodograms,
     plot_induction_arrows,
     plot_induction_convention,
-    plot_tipper_polar,
     plot_induction_rose,
+    plot_tipper_hodograms,
+    plot_tipper_polar,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers

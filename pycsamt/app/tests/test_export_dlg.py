@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for ExportDialog (Phase 4)."""
@@ -6,15 +5,18 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog, _FORMATS
+from pycsamt.app.desktop.dialogs.export_dlg import (
+    _FORMATS,
+    ExportDialog,
+)
 
 
 @pytest.fixture

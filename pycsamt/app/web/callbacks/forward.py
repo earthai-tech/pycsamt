@@ -1,16 +1,22 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Forward Modelling page (1D, 2D MT, 3D MT)."""
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 
-import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from dash import html, ctx, clientside_callback, Input, Output, State, no_update
+from dash import (
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
+)
 from dash.exceptions import PreventUpdate
 
 _FWD_TAB_IDS  = ["1d", "2d", "3d"]
@@ -23,12 +29,13 @@ _FWD_TAB_ICON = {
 }
 _FWD_TAB_LABEL = {"fwd-tab-1d": "1-D", "fwd-tab-2d": "2-D MT", "fwd-tab-3d": "3-D MT"}
 
-from pycsamt.app.desktop.controllers.forward_controller import ForwardController
+from pycsamt.app.desktop.controllers.forward_controller import (
+    ForwardController,
+)
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import (
     apply_web_dark_theme,
     apply_web_light_theme,
-    empty_src,
     fig_to_src,
 )
 
@@ -167,9 +174,11 @@ def _run_1d(table_data, halfspace_rho, method, f_min, f_max, n_pts,
 def _run_2d(m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
             a2rho, ax2lo, ax2hi, az2lo, az2hi, n2lay, seed2, plot2,
             table_data, halfspace_rho, f_min, f_max, n_pts, dark):
-    from pycsamt.forward import MT2DForward, Grid2D
+    from pycsamt.forward import Grid2D, MT2DForward
     from pycsamt.forward.plot import (
-        plot_model_2d, plot_pseudosection_2d, plot_response_profiles,
+        plot_model_2d,
+        plot_pseudosection_2d,
+        plot_response_profiles,
     )
 
     m2d_type = m2d_type or "halfspace"
@@ -260,10 +269,12 @@ def _run_2d(m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
 def _run_3d(m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
             a3rho, ax3lo, ax3hi, ay3lo, ay3hi, az3lo, az3hi, n3lay, seed3,
             plot3, comp3, freq3idx, f_min, f_max, n_pts, dark):
-    from pycsamt.forward import MT3DForward, Grid3D
+    from pycsamt.forward import Grid3D, MT3DForward
     from pycsamt.forward.plot import (
-        plot_model_3d, plot_response_map_3d,
-        plot_response_section_3d, plot_tensor_components_3d,
+        plot_model_3d,
+        plot_response_map_3d,
+        plot_response_section_3d,
+        plot_tensor_components_3d,
     )
 
     m3d_type = m3d_type or "halfspace"

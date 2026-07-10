@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -368,7 +367,9 @@ class TestEdiHelpers:
             pytest.skip("data/3edis/ not found")
 
     def test_get_collection_returns_nonempty(self) -> None:
-        from pycsamt.cli.commands.edi._base import _get_collection
+        from pycsamt.cli.commands.edi._base import (
+            _get_collection,
+        )
         coll = _get_collection(_EDI_3EDIS)
         assert len(coll) > 0
 
@@ -381,9 +382,10 @@ class TestEdiHelpers:
         assert edi.Z.n_freq > 0
 
     def test_rotate_impedance_changes_z(self) -> None:
+        import numpy as np
+
         from pycsamt.cli.commands.edi._base import _get_edi
         from pycsamt.seg.ops import rotate_impedance
-        import numpy as np
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         edi = _get_edi(edi_path)
         z_orig = edi.Z.z.copy()
@@ -392,9 +394,10 @@ class TestEdiHelpers:
         assert not np.allclose(z_rot, z_orig)
 
     def test_rotate_back_gives_original(self) -> None:
+        import numpy as np
+
         from pycsamt.cli.commands.edi._base import _get_edi
         from pycsamt.seg.ops import rotate_impedance
-        import numpy as np
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         edi = _get_edi(edi_path)
         z_orig = edi.Z.z.copy()

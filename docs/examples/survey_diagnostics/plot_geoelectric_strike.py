@@ -26,13 +26,13 @@ kind of conclusion a single line cannot support.
 # would otherwise accompany it; see :doc:`plot_induction_arrows` for real
 # induction vectors on KAP03.)
 
-from _datasets import load_sites, line_groups
+from _datasets import line_groups, load_sites
 
 from pycsamt.emtools.strike import (
     plot_strike_mapsticks,
-    plot_strike_rose,
-    plot_strike_ribbon,
     plot_strike_profile,
+    plot_strike_ribbon,
+    plot_strike_rose,
 )
 from pycsamt.emtools.tensor import plot_theta_rose_grid
 

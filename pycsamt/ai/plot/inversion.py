@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -35,15 +34,18 @@ Usage
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from ._style import (
-    EMStyle, EM_COLORS, EM_CMAPS, EM_FIGSIZE, StationTickConfig,
+    EM_CMAPS,
+    EM_COLORS,
+    EMStyle,
+    StationTickConfig,
 )
 
 __all__ = ["plot_inversion_result_2d", "plot_inversion_result_3d"]
@@ -74,7 +76,7 @@ def _safe_vlim(
     arr: np.ndarray,
     pct_lo: float = 2.0,
     pct_hi: float = 98.0,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     lo = float(np.nanpercentile(arr, pct_lo))
     hi = float(np.nanpercentile(arr, pct_hi))
     if np.isclose(lo, hi):
@@ -98,7 +100,7 @@ def _draw_section(
     site_color: str,
     site_ms: float,
     stations: np.ndarray,
-    station_labels: Optional[List[str]],
+    station_labels: list[str] | None,
     tick_cfg: StationTickConfig,
 ) -> Any:
     """Render one 2-D section panel; return the pcolormesh mappable."""
@@ -127,7 +129,7 @@ def _draw_section(
 
 def _add_faults(
     ax: Axes,
-    fault_positions: List[float],
+    fault_positions: list[float],
     color: str,
     lw: float,
     ls: str,
@@ -147,7 +149,7 @@ def _add_faults(
         )
 
 
-def _add_annotations(ax: Axes, annotations: List[dict]) -> None:
+def _add_annotations(ax: Axes, annotations: list[dict]) -> None:
     """
     Apply a list of annotation dicts to *ax*.
 
@@ -178,42 +180,42 @@ def plot_inversion_result_2d(
     log_pred: np.ndarray,
     *,
     # ── optional true model ──────────────────────────────────────────────────
-    log_true: Optional[np.ndarray] = None,
+    log_true: np.ndarray | None = None,
     # ── grid geometry ────────────────────────────────────────────────────────
-    depths: Optional[np.ndarray] = None,
-    stations: Optional[np.ndarray] = None,
-    station_labels: Optional[List[str]] = None,
+    depths: np.ndarray | None = None,
+    stations: np.ndarray | None = None,
+    station_labels: list[str] | None = None,
     depth_max: float = 1500.0,
     station_spacing: float = 0.5,
     # ── resistivity colour scale ─────────────────────────────────────────────
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    cmap: Optional[str] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap: str | None = None,
     vmin_percentile: float = 2.0,
     vmax_percentile: float = 98.0,
     # ── misfit panel ─────────────────────────────────────────────────────────
     show_misfit: bool = True,
-    misfit_cmap: Optional[str] = None,
-    misfit_vlim: Optional[float] = None,
+    misfit_cmap: str | None = None,
+    misfit_vlim: float | None = None,
     misfit_percentile: float = 98.0,
     # ── training convergence panel ───────────────────────────────────────────
     show_convergence: bool = True,
-    train_loss: Optional[np.ndarray] = None,
-    val_loss: Optional[np.ndarray] = None,
-    convergence_epochs: Optional[np.ndarray] = None,
+    train_loss: np.ndarray | None = None,
+    val_loss: np.ndarray | None = None,
+    convergence_epochs: np.ndarray | None = None,
     convergence_log_scale: bool = True,
-    convergence_target: Optional[float] = None,
+    convergence_target: float | None = None,
     convergence_target_color: str = "#aaaaaa",
     convergence_target_ls: str = ":",
     convergence_target_lw: float = 0.8,
     convergence_target_label: str = "target",
     # ── per-station RMSE panel ───────────────────────────────────────────────
     show_rmse: bool = True,
-    rmse: Optional[np.ndarray] = None,
+    rmse: np.ndarray | None = None,
     rmse_threshold: float = 0.10,
-    rmse_bar_color: Optional[str] = None,
-    rmse_error_color: Optional[str] = None,
-    rmse_threshold_color: Optional[str] = None,
+    rmse_bar_color: str | None = None,
+    rmse_error_color: str | None = None,
+    rmse_threshold_color: str | None = None,
     rmse_threshold_ls: str = "--",
     rmse_threshold_lw: float = 1.1,
     rmse_threshold_label: str = "target RMSE",
@@ -223,20 +225,20 @@ def plot_inversion_result_2d(
     site_color: str = "#333333",
     site_ms: float = 3.5,
     # ── fault overlays ───────────────────────────────────────────────────────
-    fault_positions: Optional[List[float]] = None,
+    fault_positions: list[float] | None = None,
     fault_color: str = "#eeeeee",
     fault_lw: float = 0.9,
     fault_ls: str = "--",
     fault_alpha: float = 0.75,
     fault_label_fontsize: float = 6.5,
     # ── geology annotations (on leftmost section panel) ──────────────────────
-    annotations: Optional[List[dict]] = None,
+    annotations: list[dict] | None = None,
     # ── colourbar labels ─────────────────────────────────────────────────────
     colorbar_label: str = r"$\log_{10}(\rho)$  (Ω·m)",
     misfit_colorbar_label: str = r"$\Delta\log_{10}(\rho)$",
     # ── panel titles ─────────────────────────────────────────────────────────
     title_true: str = "(a) True model",
-    title_pred: Optional[str] = None,
+    title_pred: str | None = None,
     title_misfit: str = r"(c) Misfit  $\Delta\log_{10}\rho$",
     title_convergence: str = "(d) Training convergence",
     title_rmse: str = "(e) Per-station RMSE",
@@ -244,17 +246,17 @@ def plot_inversion_result_2d(
     ylabel: str = "Depth (m)",
     suptitle: str = "",
     # ── layout ───────────────────────────────────────────────────────────────
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     top_height_ratio: float = 2.5,
     bottom_height_ratio: float = 1.2,
     hspace: float = 0.40,
     wspace: float = 0.36,
-    axes: Optional[Dict[str, Axes]] = None,
+    axes: dict[str, Axes] | None = None,
     # ── station tick spacing ─────────────────────────────────────────────────
-    tick_every: Union[int, str] = "auto",
+    tick_every: int | str = "auto",
     tick_label_rotation: float = 0.0,
     tick_fontsize: int = 7,
-    station_tick_config: Optional[StationTickConfig] = None,
+    station_tick_config: StationTickConfig | None = None,
 ) -> Figure:
     """
     Multi-panel 2-D inversion result figure.
@@ -473,7 +475,7 @@ def plot_inversion_result_2d(
 
     # ── panel list & auto title for pred ────────────────────────────────────
     has_true = log_true is not None
-    panels_top: List[str] = []
+    panels_top: list[str] = []
     if has_true:
         panels_top.append("true")
     panels_top.append("pred")
@@ -482,7 +484,7 @@ def plot_inversion_result_2d(
     n_top = len(panels_top)
 
     has_bottom = _show_conv or _show_rmse
-    panels_bot: List[str] = []
+    panels_bot: list[str] = []
     if _show_conv:
         panels_bot.append("convergence")
     if _show_rmse:
@@ -510,7 +512,7 @@ def plot_inversion_result_2d(
 
     # ── figure / axes creation ───────────────────────────────────────────────
     using_external_axes = axes is not None
-    ax: Dict[str, Axes] = {}
+    ax: dict[str, Axes] = {}
 
     if using_external_axes:
         ax = dict(axes)
@@ -746,7 +748,7 @@ def _draw_rmse_scatter(
     vmax: float,
     marker: str,
     ms: float,
-    threshold: Optional[float],
+    threshold: float | None,
     title: str,
     xlabel: str,
     ylabel: str,
@@ -780,8 +782,8 @@ def _overlay_cut_lines(
     ax: Axes,
     x_coords: np.ndarray,
     y_coords: np.ndarray,
-    inline_idx: Optional[int],
-    crossline_idx: Optional[int],
+    inline_idx: int | None,
+    crossline_idx: int | None,
     color: str = "#ffffff",
     lw: float = 1.0,
     ls: str = "-",
@@ -833,9 +835,9 @@ def _render_convergence(
     ax: Axes,
     epochs: np.ndarray,
     train_loss: np.ndarray,
-    val_loss: Optional[np.ndarray],
+    val_loss: np.ndarray | None,
     log_scale: bool,
-    target: Optional[float],
+    target: float | None,
     target_color: str,
     target_ls: str,
     target_lw: float,
@@ -871,24 +873,24 @@ def plot_inversion_result_3d(
     log_pred: np.ndarray,
     *,
     # ── optional true model ──────────────────────────────────────────────────
-    log_true: Optional[np.ndarray] = None,
+    log_true: np.ndarray | None = None,
     # ── grid geometry ────────────────────────────────────────────────────────
-    depths: Optional[np.ndarray] = None,
-    x_coords: Optional[np.ndarray] = None,
-    y_coords: Optional[np.ndarray] = None,
+    depths: np.ndarray | None = None,
+    x_coords: np.ndarray | None = None,
+    y_coords: np.ndarray | None = None,
     depth_max: float = 1500.0,
     x_spacing: float = 0.5,
     y_spacing: float = 0.5,
     # ── per-station → volume interpolation (when log_pred is 2-D) ────────────
-    station_xy: Optional[np.ndarray] = None,
+    station_xy: np.ndarray | None = None,
     interp_method: str = "linear",
     interp_nx: int = 30,
     interp_ny: int = 30,
     # ── slice planes ─────────────────────────────────────────────────────────
-    depth_slice_idx: Optional[int] = None,
-    depth_slice_m: Optional[float] = None,
-    inline_idx: Optional[int] = None,
-    crossline_idx: Optional[int] = None,
+    depth_slice_idx: int | None = None,
+    depth_slice_m: float | None = None,
+    inline_idx: int | None = None,
+    crossline_idx: int | None = None,
     # ── panel visibility ─────────────────────────────────────────────────────
     show_depth_slice: bool = True,
     show_inline: bool = True,
@@ -898,33 +900,33 @@ def plot_inversion_result_3d(
     show_rmse_map: bool = True,
     show_section_lines: bool = True,
     # ── resistivity colour scale ─────────────────────────────────────────────
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    cmap: Optional[str] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap: str | None = None,
     vmin_percentile: float = 2.0,
     vmax_percentile: float = 98.0,
     map_aspect: str = "auto",
     # ── misfit ───────────────────────────────────────────────────────────────
-    misfit_cmap: Optional[str] = None,
-    misfit_vlim: Optional[float] = None,
+    misfit_cmap: str | None = None,
+    misfit_vlim: float | None = None,
     misfit_percentile: float = 98.0,
     # ── convergence ──────────────────────────────────────────────────────────
-    train_loss: Optional[np.ndarray] = None,
-    val_loss: Optional[np.ndarray] = None,
-    convergence_epochs: Optional[np.ndarray] = None,
+    train_loss: np.ndarray | None = None,
+    val_loss: np.ndarray | None = None,
+    convergence_epochs: np.ndarray | None = None,
     convergence_log_scale: bool = True,
-    convergence_target: Optional[float] = None,
+    convergence_target: float | None = None,
     convergence_target_color: str = "#aaaaaa",
     convergence_target_ls: str = ":",
     convergence_target_lw: float = 0.8,
     convergence_target_label: str = "target",
     # ── per-station RMSE scatter map ─────────────────────────────────────────
-    station_rmse: Optional[np.ndarray] = None,
+    station_rmse: np.ndarray | None = None,
     rmse_cmap: str = "YlOrRd",
-    rmse_vmax: Optional[float] = None,
+    rmse_vmax: float | None = None,
     rmse_marker: str = "o",
     rmse_marker_size: float = 60.0,
-    rmse_threshold: Optional[float] = None,
+    rmse_threshold: float | None = None,
     rmse_colorbar_label: str = r"RMSE  ($\Delta\log_{10}\rho$)",
     # ── station overlays on sections and map ─────────────────────────────────
     show_stations: bool = True,
@@ -932,33 +934,33 @@ def plot_inversion_result_3d(
     station_color: str = "#333333",
     station_ms: float = 4.0,
     # ── GCN graph edges on map ────────────────────────────────────────────────
-    adjacency: Optional[np.ndarray] = None,
+    adjacency: np.ndarray | None = None,
     show_graph_edges: bool = True,
     edge_color: str = "#bbbbbb",
     edge_lw: float = 0.4,
     edge_alpha: float = 0.5,
     # ── fault planes ─────────────────────────────────────────────────────────
-    fault_x_positions: Optional[List[float]] = None,
-    fault_y_positions: Optional[List[float]] = None,
+    fault_x_positions: list[float] | None = None,
+    fault_y_positions: list[float] | None = None,
     fault_color: str = "#eeeeee",
     fault_lw: float = 0.9,
     fault_ls: str = "--",
     fault_alpha: float = 0.75,
     fault_label_fontsize: float = 6.5,
     # ── annotations (per panel type) ─────────────────────────────────────────
-    annotations_map: Optional[List[dict]] = None,
-    annotations_inline: Optional[List[dict]] = None,
-    annotations_crossline: Optional[List[dict]] = None,
+    annotations_map: list[dict] | None = None,
+    annotations_inline: list[dict] | None = None,
+    annotations_crossline: list[dict] | None = None,
     # ── colourbar labels ─────────────────────────────────────────────────────
     colorbar_label: str = r"$\log_{10}(\rho)$  (Ω·m)",
     misfit_colorbar_label: str = r"$\Delta\log_{10}(\rho)$",
     # ── panel titles ─────────────────────────────────────────────────────────
     title_map_true: str = "(a) True — depth slice",
-    title_map_pred: Optional[str] = None,
+    title_map_pred: str | None = None,
     title_map_misfit: str = r"(c) Misfit — depth slice",
     title_inline_true: str = "(d) True — inline section",
-    title_inline_pred: Optional[str] = None,
-    title_crossline_pred: Optional[str] = None,
+    title_inline_pred: str | None = None,
+    title_crossline_pred: str | None = None,
     title_rmse_map: str = "Per-station RMSE",
     title_convergence: str = "Training convergence",
     # ── axis labels ──────────────────────────────────────────────────────────
@@ -969,13 +971,13 @@ def plot_inversion_result_3d(
     ylabel_section: str = "Depth (m)",
     suptitle: str = "",
     # ── layout ───────────────────────────────────────────────────────────────
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     hspace: float = 0.40,
     wspace: float = 0.32,
     map_height_ratio: float = 1.0,
     section_height_ratio: float = 1.4,
     convergence_height_ratio: float = 0.55,
-    axes: Optional[Dict[str, Axes]] = None,
+    axes: dict[str, Axes] | None = None,
 ) -> Figure:
     """
     Multi-panel 3-D inversion result figure for
@@ -1245,7 +1247,7 @@ def plot_inversion_result_3d(
     # ── 5. misfit ─────────────────────────────────────────────────────────────
     has_true = log_true is not None
     _show_mis = show_misfit and has_true
-    misfit_3d: Optional[np.ndarray] = None
+    misfit_3d: np.ndarray | None = None
     if _show_mis:
         misfit_3d = log_pred - log_true
         if misfit_cmap is None:
@@ -1296,7 +1298,7 @@ def plot_inversion_result_3d(
 
     # ── 9. figure / axes creation ─────────────────────────────────────────────
     using_external = axes is not None
-    ax: Dict[str, Axes] = {}
+    ax: dict[str, Axes] = {}
 
     if using_external:
         ax = dict(axes)
@@ -1315,7 +1317,7 @@ def plot_inversion_result_3d(
                 figsize = (14.0, h)
         else:
             # Row 0: up to 3 top sections
-            top_keys: List[str] = []
+            top_keys: list[str] = []
             if show_depth_slice:
                 top_keys.append("map_pred")
             if show_inline:
@@ -1377,7 +1379,7 @@ def plot_inversion_result_3d(
                 color=station_color, zorder=5, clip_on=False,
             )
 
-    im_res: Optional[Any] = None   # last resistivity mappable (for shared cbar)
+    im_res: Any | None = None   # last resistivity mappable (for shared cbar)
 
     # ── depth-slice maps ──────────────────────────────────────────────────────
     for key, data, ttl in [

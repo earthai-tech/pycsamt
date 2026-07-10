@@ -11,14 +11,12 @@ The pipeline collects one per step and bundles them into a
 
 from __future__ import annotations
 
-import time
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from ._registry import StepSpec, lookup_step
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -180,10 +178,10 @@ class StepResult:
     step_label: str
     params: dict
     elapsed_sec: float
-    plots: List[Path] = field(default_factory=list)
+    plots: list[Path] = field(default_factory=list)
     n_sites_in: int = 0
     n_sites_out: int = 0
-    error: Optional[Exception] = None
+    error: Exception | None = None
 
     @property
     def ok(self) -> bool:

@@ -87,6 +87,31 @@ It returns one row per station and frequency.
    print(pt.head())
    print(pt[["station", "freq", "period", "theta", "skew", "ellipt"]])
 
+.. code-block:: text
+
+      station     freq    period  ...       beta       skew    ellipt
+   0  18-001A  10400.0  0.000096  ... -56.700714 -56.700714  0.194909
+   1  18-001A   8707.0  0.000115  ... -54.693184 -54.693184  0.210163
+   2  18-001A   7289.0  0.000137  ... -51.452210 -51.452210  0.213894
+   3  18-001A   6102.0  0.000164  ... -61.983725 -61.983725  0.212655
+   4  18-001A   5108.0  0.000196  ... -60.874439 -60.874439  0.425503
+
+   [5 rows x 10 columns]
+         station       freq    period       theta       skew    ellipt
+   0     18-001A  10400.000  0.000096  120.687698 -56.700714  0.194909
+   1     18-001A   8707.000  0.000115  123.342495 -54.693184  0.210163
+   2     18-001A   7289.000  0.000137  126.743525 -51.452210  0.213894
+   3     18-001A   6102.000  0.000164  116.947420 -61.983725  0.212655
+   4     18-001A   5108.000  0.000196  126.074830 -60.874439  0.425503
+   ...       ...        ...       ...         ...        ...       ...
+   1479  18-025A      2.052  0.487329  -34.147397 -54.498901  0.559680
+   1480  18-025A      1.718  0.582072    4.537986 -41.477337  0.196258
+   1481  18-025A      1.438  0.695410   40.621212 -32.840732  0.216635
+   1482  18-025A      1.204  0.830565 -125.802958 -33.743310  0.527659
+   1483  18-025A      1.008  0.992063 -107.576221 -21.335294  0.931748
+
+   [1484 rows x 6 columns]
+
 The table contains these core columns:
 
 .. list-table::
@@ -131,6 +156,39 @@ plotting:
 
    print(summary.sort_values("median_abs_skew", ascending=False))
 
+.. code-block:: text
+
+             n  median_abs_skew  median_ellipt   theta_iqr
+   station
+   18-023A  53        67.022970       0.776955  332.406202
+   18-022V  53        66.787861       0.734789   33.283984
+   18-018A  53        66.547818       0.747821   19.123004
+   18-022U  53        65.349813       0.765743  330.236042
+   18-024U  53        63.853268       0.696343   69.080189
+   18-019U  53        61.945234       0.610832   44.257571
+   18-023V  53        59.306877       0.568990   39.420996
+   18-025A  53        55.354566       0.666770  174.077409
+   18-021U  53        55.017266       0.975587    5.728713
+   18-021B  53        52.388774       0.917700   65.673584
+   18-001A  53        50.326802       0.423331   15.689190
+   18-020A  53        45.332864       0.890491    7.151592
+   18-008U  53        40.862593       0.459678   30.040274
+   18-005U  53        36.404849       0.598509   16.449050
+   18-002U  53        36.059416       0.535202   16.329767
+   18-014A  53        35.458520       0.735137  273.677122
+   18-007U  53        34.174772       0.492508   29.303937
+   18-012A  53        32.307319       0.710183   37.311060
+   18-003A  53        31.245824       0.674498   23.567376
+   18-004A  53        31.005169       0.683143   18.628263
+   18-006A  53        30.359830       0.574245   24.700266
+   18-013U  53        29.705384       0.591064   41.602228
+   18-011A  53        27.534040       0.692296  261.601465
+   18-010U  53        26.006304       0.676668  257.925336
+   18-009A  53        25.288856       0.477635   19.936171
+   18-016A  53        23.525350       0.732322  302.853539
+   18-017U  53        22.912833       0.660533  269.958366
+   18-015U  53        22.459269       0.721964  316.822496
+
 Large ``median_abs_skew`` means the station is not behaving like a clean
 1-D or 2-D response in that period range.  Large ``theta_iqr`` means
 phase-tensor strike changes strongly with frequency, so one rotation
@@ -154,6 +212,12 @@ band and a deeper band can show different strike, skew, or ellipticity.
    print("rows in band:", len(band_pt))
    print("stations in band:", band_pt["station"].nunique())
    print("median |skew|:", band_pt["skew"].abs().median())
+
+.. code-block:: text
+
+   rows in band: 1092
+   stations in band: 28
+   median |skew|: 39.133827836405146
 
 When you report a tensor result, always report the period band.  A map at
 ``period=1.0`` second and a summary over ``0.001`` to ``10.0`` seconds
@@ -206,6 +270,14 @@ A simple phase-tensor dimensionality rule uses skew and ellipticity:
 
    print(work["dimensionality"].value_counts(normalize=True))
 
+.. code-block:: text
+
+   dimensionality
+   3D    0.975275
+   2D    0.023810
+   1D    0.000916
+   Name: proportion, dtype: float64
+
 The default ``3`` degree skew threshold is strict.  It is useful as a
 textbook 1-D/2-D screen, but it can classify many real field samples as
 3-D.  That is not a failure of the function; it is a warning about the
@@ -220,6 +292,8 @@ to identify which invariant is causing the interpretation.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import (
        plot_dimensionality_grid,
        plot_dimensionality_psection,
@@ -229,20 +303,62 @@ to identify which invariant is causing the interpretation.
    )
 
    plot_theta_vs_period(sites, recursive=False)
+   plt.gcf().savefig("tensor_simple_views_01.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
    plot_phase_tensor_skewmap(sites, recursive=False, axis_y="logperiod")
+   plt.gcf().savefig("tensor_simple_views_02.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
    plot_ellipticity_psection(sites, recursive=False)
+   plt.gcf().savefig("tensor_simple_views_03.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
    plot_dimensionality_psection(
        sites,
        skew_th=3.0,
        ellipt_th=0.2,
        recursive=False,
    )
+   plt.gcf().savefig("tensor_simple_views_04.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
    plot_dimensionality_grid(
        sites,
        skew_th=3.0,
        ellipt_th=0.2,
        recursive=False,
    )
+   plt.gcf().savefig("tensor_simple_views_05.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-06-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-06-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-06-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-06-04.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-06-05.png
+         :width: 100%
 
 ``plot_theta_vs_period`` is a scatter view of strike angle by period.
 It is quick, but it puts an axial angle on a linear y-axis.  Treat jumps
@@ -282,6 +398,8 @@ cell is an ellipse:
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_phase_tensor_psection
 
    plot_phase_tensor_psection(
@@ -296,6 +414,15 @@ cell is an ellipse:
        normalise_by="cell",
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_phase_tensor_psection.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-07.png
+   :width: 100%
 
 Useful ``c_by`` values include ``"skew"``, ``"beta"``, ``"theta"``,
 ``"ellipt"``, ``"s1"``, ``"s2"``, ``"|skew|"``, ``"phi_mean"``,
@@ -317,6 +444,8 @@ respects the 180-degree ambiguity.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_strike_director_field
 
    plot_strike_director_field(
@@ -328,6 +457,15 @@ respects the 180-degree ambiguity.
        period_subsample=40,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_strike_director_field.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-08.png
+   :width: 100%
 
 Interpret long, aligned, low-skew directors as a more coherent 2-D
 strike signal.  Short directors mean the phase tensor is close to
@@ -344,6 +482,8 @@ are useful for seeing whether that summary hides period dependence.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import (
        plot_phase_tensor_rose,
        plot_theta_rose_grid,
@@ -356,6 +496,8 @@ are useful for seeing whether that summary hides period dependence.
        bins=36,
        recursive=False,
    )
+   plt.gcf().savefig("tensor_phase_tensor_rose.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
    plot_theta_rose_grid(
        sites,
@@ -363,12 +505,38 @@ are useful for seeing whether that summary hides period dependence.
        bins=24,
        recursive=False,
    )
+   plt.gcf().savefig("tensor_theta_rose_grid.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
    plot_theta_stability_stripe(
        sites,
        win=5,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_theta_stability_stripe.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-09-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-09-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-09-03.png
+         :width: 100%
 
 ``plot_phase_tensor_rose`` folds all selected ``theta`` values into one
 axial histogram.  ``plot_theta_rose_grid`` splits the period range into
@@ -388,6 +556,8 @@ the data cluster in a 1-D, 2-D, or 3-D region.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_skew_ellipt_density
 
    plot_skew_ellipt_density(
@@ -396,6 +566,15 @@ the data cluster in a 1-D, 2-D, or 3-D region.
        gridsize=40,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_skew_ellipt_density.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-10.png
+   :width: 100%
 
 Use this plot with the dimensionality grid.  The grid tells you where
 problem cells occur; the density plot tells you how the full population
@@ -411,6 +590,8 @@ figure.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_phase_tensor_summary
 
    fig = plot_phase_tensor_summary(
@@ -422,6 +603,11 @@ figure.
        ellipt_threshold=0.2,
        recursive=False,
    )
+   fig.savefig("tensor_phase_tensor_summary.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-11.png
+   :width: 100%
 
 This is a good report figure when the audience needs the whole
 phase-tensor story in one place: what the ellipses look like, how much
@@ -438,6 +624,8 @@ arrows when vertical magnetic transfer functions are present.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_phase_tensor_map
 
    plot_phase_tensor_map(
@@ -449,6 +637,11 @@ arrows when vertical magnetic transfer functions are present.
        station_labels=True,
        recursive=False,
    )
+   plt.gcf().savefig("tensor_phase_tensor_map.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-12.png
+   :width: 100%
 
 Use ``period`` as a target; each station uses its nearest available
 period.  If the EDI headers do not provide usable coordinates, pass an
@@ -457,10 +650,12 @@ explicit ``coords`` dictionary:
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    coords = {
-       "S001": (7.312, -5.218),
-       "S002": (7.318, -5.211),
-       "S003": (7.324, -5.204),
+       "18-001A": (7.312, -5.218),
+       "18-002U": (7.318, -5.211),
+       "18-003A": (7.324, -5.204),
    }
 
    plot_phase_tensor_map(
@@ -470,6 +665,15 @@ explicit ``coords`` dictionary:
        show_tipper=False,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_phase_tensor_map_custom_coords.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-13.png
+   :width: 100%
 
 The coordinate tuple is ``(lat, lon)``.  A map with no coordinates is not
 a tensor failure; it is a metadata problem.  Use pseudosections and
@@ -485,6 +689,8 @@ strips, optionally grouped by profile.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import (
        plot_phase_tensor_strip,
        plot_phase_tensor_strip_grid,
@@ -497,9 +703,11 @@ strips, optionally grouped by profile.
        c_by="skew",
        recursive=False,
    )
+   plt.gcf().savefig("tensor_phase_tensor_strip.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
    groups = {
-       "L18PLT": ["18-001A", "18-002A", "18-003A", "18-004A"],
+       "L18PLT": ["18-001A", "18-002U", "18-003A", "18-004A"],
    }
 
    plot_phase_tensor_strip_grid(
@@ -509,6 +717,25 @@ strips, optionally grouped by profile.
        c_by="skew",
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_phase_tensor_strip_grid.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-14-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-14-02.png
+         :width: 100%
 
 Use strips when a single station deserves close inspection.  Use the
 grid when comparing stations or profile groups without the compression
@@ -523,9 +750,16 @@ into custom figures.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import phase_tensor_legend
 
    phase_tensor_legend(size=1.0)
+   plt.gcf().savefig("tensor_phase_tensor_legend.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-15.png
+   :width: 100%
 
 It is not a diagnostic by itself; it is a small plotting component for
 figures where the phase-tensor ellipse convention needs to be explained.
@@ -744,6 +978,8 @@ A safe editing workflow compares before and after diagnostics.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import (
        build_phase_tensor_table,
        plot_phase_tensor_summary,
@@ -773,11 +1009,33 @@ A safe editing workflow compares before and after diagnostics.
 
    print(audit[["station", "period", "theta_change", "skew_before", "skew_after"]])
 
-   plot_phase_tensor_summary(
+   fig = plot_phase_tensor_summary(
        rotated,
        period_range=(0.001, 10.0),
        recursive=False,
    )
+   fig.savefig("tensor_audit_summary.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. code-block:: text
+
+        station    period  theta_change  skew_before  skew_after
+   0     18-001A  0.000096         -30.0   -56.700714  -86.700714
+   1     18-001A  0.000115         -30.0   -54.693184  -84.693184
+   2     18-001A  0.000137         -30.0   -51.452210  -81.452210
+   3     18-001A  0.000164         -30.0   -61.983725   88.016275
+   4     18-001A  0.000196         -30.0   -60.874439   89.125561
+   ...       ...       ...           ...          ...         ...
+   1479  18-025A  0.487329         -30.0   -54.498901  -84.498901
+   1480  18-025A  0.582072         -30.0   -41.477337  -71.477337
+   1481  18-025A  0.695410         -30.0   -32.840732  -62.840732
+   1482  18-025A  0.830565         -30.0   -33.743310  -63.743310
+   1483  18-025A  0.992063         -30.0   -21.335294  -51.335294
+
+   [1484 rows x 5 columns]
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-23.png
+   :width: 100%
 
 The axial difference formula keeps ``theta`` comparisons honest across
 the 180-degree wrap boundary.
@@ -791,6 +1049,8 @@ For a survey report, keep the phase-tensor interpretation explicit:
    :linenos:
 
    from pathlib import Path
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import (
        build_phase_tensor_table,
@@ -825,26 +1085,69 @@ For a survey report, keep the phase-tensor interpretation explicit:
        mark_3d=True,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_recommended_psection.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
 
    plot_theta_rose_grid(
        sites,
        n_bands=6,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_recommended_rose_grid.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
 
    plot_skew_ellipt_density(
        sites,
        band=period_range,
        recursive=False,
    )
+   plt.gcf().savefig(
+       "tensor_recommended_density.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close()
 
-   plot_phase_tensor_summary(
+   fig = plot_phase_tensor_summary(
        sites,
        period_range=period_range,
        skew_threshold=skew_threshold,
        ellipt_threshold=ellipt_threshold,
        recursive=False,
    )
+   fig.savefig("tensor_recommended_summary.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-24-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-24-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-24-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tensor-24-04.png
+         :width: 100%
 
 This workflow saves the table, plots the core ellipse section, checks
 strike by band, checks skew/ellipticity distribution, and creates a

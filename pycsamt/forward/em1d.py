@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -42,10 +41,9 @@ time-domain EM data with CNNs. *Computers & Geosciences*, 149,
 """
 from __future__ import annotations
 
-import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -91,13 +89,13 @@ class ForwardResponse:
         The input model that produced this response.
     """
     method: str = "MT1D"
-    freqs: Optional[np.ndarray] = None
-    times: Optional[np.ndarray] = None
-    z: Optional[np.ndarray] = None
-    rho_a: Optional[np.ndarray] = None
-    phase: Optional[np.ndarray] = None
-    dBz_dt: Optional[np.ndarray] = None
-    hz_freq: Optional[np.ndarray] = None
+    freqs: np.ndarray | None = None
+    times: np.ndarray | None = None
+    z: np.ndarray | None = None
+    rho_a: np.ndarray | None = None
+    phase: np.ndarray | None = None
+    dBz_dt: np.ndarray | None = None
+    hz_freq: np.ndarray | None = None
     model: object = field(default=None, repr=False)
 
     def to_array(self, *, log_rho: bool = True, include_phase: bool = True) -> np.ndarray:
@@ -300,7 +298,7 @@ class MT1DForward(_Base1DForward):
     (30,)
     """
 
-    def __init__(self, freqs: Union[Sequence[float], np.ndarray]):
+    def __init__(self, freqs: Sequence[float] | np.ndarray):
         self.freqs = np.asarray(freqs, dtype=float)
 
     def run(self, model) -> ForwardResponse:
@@ -376,7 +374,7 @@ class TEM1DForward(_Base1DForward):
 
     def __init__(
         self,
-        times: Union[Sequence[float], np.ndarray],
+        times: Sequence[float] | np.ndarray,
         loop_radius: float = 50.0,
         moment: float = 1.0,
         n_freqs: int = 64,
@@ -483,8 +481,8 @@ class CSAMT1DForward(_Base1DForward):
 
     def __init__(
         self,
-        freqs: Union[Sequence[float], np.ndarray],
-        source_offset: Optional[float] = None,
+        freqs: Sequence[float] | np.ndarray,
+        source_offset: float | None = None,
         dipole_length: float = 1000.0,
     ):
         self.freqs = np.asarray(freqs, dtype=float)

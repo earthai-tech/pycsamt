@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Register all agent_master callbacks."""
@@ -9,9 +8,9 @@ from .chat import register_chat
 from .edi import register_edi
 from .help import register_help
 from .inv_params import register_inv_params
-from .params import register_params
 from .line_sel import register_line_sel
 from .outdir import register_outdir
+from .params import register_params
 from .plus import register_plus
 from .postproc import register_postproc
 from .preview import register_preview

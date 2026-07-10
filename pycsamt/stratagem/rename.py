@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,7 +25,6 @@ classes.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from ..exceptions import FileHandlingError, NotFittedError
@@ -136,9 +134,9 @@ class EDIRenamer(PyCSAMTObject):
     # ------------------------------------------------------------------
     def fit(
         self,
-        source: "Union[str, Path, List[EDIFile], List[Path]]",
-        dst_path: "Union[str, Path]",
-    ) -> "EDIRenamer":
+        source: str | Path | list[EDIFile] | list[Path],
+        dst_path: str | Path,
+    ) -> EDIRenamer:
         """Rename EDI files and write them to *dst_path*.
 
         Parameters
@@ -163,12 +161,12 @@ class EDIRenamer(PyCSAMTObject):
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # resolve inputs to a list of (EDIFile | None, src_path | None)
-        entries: List[Tuple[Optional[EDIFile], Optional[Path]]] = (
+        entries: list[tuple[EDIFile | None, Path | None]] = (
             self._resolve_source(source)
         )
 
-        self.renamed_pairs_: List[Tuple[Path, Path]] = []
-        self.skipped_: List[Path] = []
+        self.renamed_pairs_: list[tuple[Path, Path]] = []
+        self.skipped_: list[Path] = []
 
         for i, (edi_obj, src_path) in enumerate(entries):
             new_fname = _make_new_name(
@@ -226,8 +224,8 @@ class EDIRenamer(PyCSAMTObject):
     # ------------------------------------------------------------------
     def _resolve_source(
         self,
-        source: "Union[str, Path, List[EDIFile], List[Path]]",
-    ) -> "List[Tuple[Optional[EDIFile], Optional[Path]]]":
+        source: str | Path | list[EDIFile] | list[Path],
+    ) -> list[tuple[EDIFile | None, Path | None]]:
         """Normalise *source* to a list of (EDIFile | None, Path | None)."""
         import re as _re  # already imported at module level, but kept explicit
 
@@ -257,7 +255,7 @@ class EDIRenamer(PyCSAMTObject):
         return [(e, getattr(e, "path", None)) for e in source]
 
     # ------------------------------------------------------------------
-    def dst_paths(self) -> "List[Path]":
+    def dst_paths(self) -> list[Path]:
         """Return the list of written destination paths."""
         if not hasattr(self, "renamed_pairs_"):
             raise NotFittedError("Call fit() first.")
@@ -313,7 +311,7 @@ class EDIWriter(PyCSAMTObject, MetadataMixin):
     def __init__(
         self,
         *,
-        dataid_prefix: Optional[str] = None,
+        dataid_prefix: str | None = None,
         zero_pad: int = 3,
         overwrite: bool = False,
         verbose: int = 0,
@@ -326,11 +324,11 @@ class EDIWriter(PyCSAMTObject, MetadataMixin):
     # ------------------------------------------------------------------
     def fit(
         self,
-        edi_objects: "List[EDIFile]",
-        savepath: "Union[str, Path]",
+        edi_objects: list[EDIFile],
+        savepath: str | Path,
         *,
-        head_overrides: "Optional[Dict[str, object]]" = None,
-    ) -> "EDIWriter":
+        head_overrides: dict[str, object] | None = None,
+    ) -> EDIWriter:
         """Write *edi_objects* to *savepath*.
 
         Parameters
@@ -350,8 +348,8 @@ class EDIWriter(PyCSAMTObject, MetadataMixin):
         out_dir = Path(savepath).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        self.written_: List[Path] = []
-        self.failed_: List[Tuple[str, Exception]] = []
+        self.written_: list[Path] = []
+        self.failed_: list[tuple[str, Exception]] = []
 
         for i, edi in enumerate(edi_objects):
             # determine output filename

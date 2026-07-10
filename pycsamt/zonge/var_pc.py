@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -20,38 +19,34 @@ to :class:`xarray.Dataset` for multi-dimensional workflows.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 # from dataclasses import dataclass
-from typing import ( 
-    ClassVar, 
-    Dict, Any, 
-    Mapping, 
-    Optional,
-    Sequence, 
+from typing import (
+    Any,
+    ClassVar,
 )
 
 import numpy as np
 import pandas as pd
 
-from ..log.logger import get_logger 
 from ..exceptions import AvgDataError
+from ..log.logger import get_logger
 from .base import AVGComponentBase
+from .utils import _to_numeric_percent, find_and_rename_column
 from .utils import to_xarray as _to_xr
-from .utils import ( 
-    _to_numeric_percent, 
-    find_and_rename_column
-)
 
 logger = get_logger(__name__)
 
 __all__= [
     'PcEmag',
     'PcRho',
-    'PcHmag', 
     'PcHmag',
-    'EmagPctErr', 
-    'HmagPctErr', 
-    'RhoPctErr',  
- ] 
+    'PcHmag',
+    'EmagPctErr',
+    'HmagPctErr',
+    'RhoPctErr',
+ ]
 
 
 
@@ -67,31 +62,31 @@ class PercentVarBase(AVGComponentBase):
     They inherit a consistent ``read()/write()/to_xarray()``.
     """
     # Class-level constants (not dataclass fields)
-    
+
     # # canonical variable name written in the frame
     VAR_NAME: ClassVar[str] = ""                  # e.g., "pc_emag"
-    
+
     # # # ordered list of candidate column labels in source tables
     # ALIASES: ClassVar[Tuple[str, ...]] = ()   # e.g., ("%Emag", "E.%err", ...)
-    
+
     # # default banner/title used by ``write()``
     TITLE: ClassVar[str] = "Percent Variation"
-    
+
     # # default dataset attribute for units
     UNIT_ATTR: ClassVar[str] = "Unit.Percent"
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        meta: Optional[Mapping[str, Any]] = None,
+        data: pd.DataFrame | None = None,
+        meta: Mapping[str, Any] | None = None,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         verbose: bool = False
     ) -> None:
         super().__init__(
             data=data, meta=meta, name=name, verbose=verbose
         )
-        
+
     def read(
         self,
         source: pd.DataFrame,
@@ -125,14 +120,14 @@ class PercentVarBase(AVGComponentBase):
                 f"{self.__class__.__name__}: VAR_NAME/ALIASES"
                 " must be set on the subclass."
             )
-            
+
         if not isinstance(source, pd.DataFrame):
             raise TypeError("PercentVarBase.read expects a DataFrame.")
 
         df = source.copy()
         self._meta = dict(meta or {})
         self._meta.setdefault(self.UNIT_ATTR, "%")
-        
+
         # var_col = _first_present(df, self.ALIASES)
         # if var_col is None:
         #     raise AvgDataError(
@@ -141,10 +136,10 @@ class PercentVarBase(AVGComponentBase):
         #     )
         # After standardization, we expect the canonical VAR_NAME.
         # If not present, create it with NaNs for consistency.
-        
-        # Use the new helper to standardize the column 
+
+        # Use the new helper to standardize the column
         df = find_and_rename_column(df, self.VAR_NAME)
-        
+
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
@@ -162,7 +157,7 @@ class PercentVarBase(AVGComponentBase):
 
         # normalize percent column → float
         df[self.VAR_NAME] = _to_numeric_percent(df[self.VAR_NAME].copy())
-        
+
         keep = [c for c in (
             "station", "freq", "comp", self.VAR_NAME) if c in df.columns]
         # store a compact, predictable layout
@@ -172,8 +167,8 @@ class PercentVarBase(AVGComponentBase):
 
         # ensure a stable units hint at dataset level
         self._meta.setdefault(self.UNIT_ATTR, "%")
-        
-        return self 
+
+        return self
 
     def write(
         self,
@@ -217,7 +212,7 @@ class PercentVarBase(AVGComponentBase):
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: Optional[Dict[str, Any]] = None,
+        attrs: dict[str, Any] | None = None,
     ):
         """
         Convert to an :class:`xarray.Dataset`.
@@ -271,13 +266,15 @@ class PercentVarBase(AVGComponentBase):
         `comp` exists; other slots are NaN. This is for alignment/
         reshaping convenience, not tensor algebra.
         """
-        from .tensor import TensorBase  # local import to avoid hard coupling
-    
+        from .tensor import (
+            TensorBase,  # local import to avoid hard coupling
+        )
+
         df = self._frame.copy()
         # hand only the 4 required columns to TensorBase
         keep = ["station", "freq", "comp", self.VAR_NAME]
         df = df.loc[:, [c for c in keep if c in df.columns]]
-    
+
         tb = TensorBase.from_avg((df, {}))
         return tb.to_tensor(
             var=self.VAR_NAME,

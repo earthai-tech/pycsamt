@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -29,10 +28,11 @@ tests deterministic.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Final, Mapping, Pattern, Sequence
 import re
-
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from re import Pattern
+from typing import Final
 
 # Basic tokens and syntax markers
 
@@ -142,7 +142,7 @@ RE_BANNER = re.compile(
 )
 
 # Station name line: up to 6 visible ASCII without spaces (case‑insensitive)
-# + azimuth 
+# + azimuth
 RE_STATION = re.compile(
     r"""
     ^\s*

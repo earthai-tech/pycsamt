@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
@@ -97,7 +96,7 @@ def test_frame_to_mapping_requires_crs_for_en() -> None:
 
 
 def test_project_en_to_lonlat_roundtrip_if_pyproj() -> None:
-    pyproj = pytest.importorskip("pyproj")
+    pytest.importorskip("pyproj")
     from pyproj import Transformer
 
     # choose a lon/lat inside UTM zone 31N (EPSG:32631)

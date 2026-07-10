@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, Sequence, Tuple, Union, Any
-
 import copy as _copy
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any, Union
+
 import numpy as np
 
-from ..log.logger import get_logger
 from ..exceptions import ZError
+from ..log.logger import get_logger
 
 _StrSeq = Sequence[str]
 _Idx = Union[int, slice, np.ndarray, Sequence[int]]
@@ -154,7 +154,7 @@ class EMBase:
            *Practical Magnetotellurics*. Cambridge University Press.
     """
 
-    name: Optional[str] = None
+    name: str | None = None
     meta: dict[str, Any] = field(default_factory=dict)
     verbose: int = 0
 
@@ -163,7 +163,7 @@ class EMBase:
         self.log = get_logger(type(self).__name__)
         self.set_verbose(self.verbose)
 
-    def set_verbose(self, level: int = 0) -> "EMBase":
+    def set_verbose(self, level: int = 0) -> EMBase:
         self.verbose = int(level)
         lg = getattr(self, "log", None)
         if lg is None:
@@ -178,12 +178,12 @@ class EMBase:
         return self
 
     @property
-    def freq(self) -> Optional[np.ndarray]:
+    def freq(self) -> np.ndarray | None:
         f = getattr(self, "_freq", None)
         return None if f is None else f
-    
+
     @freq.setter
-    def freq(self, f: Optional[Sequence[float]]) -> None:
+    def freq(self, f: Sequence[float] | None) -> None:
         if f is None:
             self._freq = None
             return
@@ -195,7 +195,7 @@ class EMBase:
         if np.any(ff <= 0.0):
             raise ZError("freq must be > 0")
         self._freq = ff
-    
+
 
     @property
     def n_freq(self) -> int:
@@ -230,10 +230,10 @@ class EMBase:
         return False
 
 
-    def copy(self) -> "EMBase":
+    def copy(self) -> EMBase:
         return _copy.copy(self)
 
-    def deepcopy(self) -> "EMBase":
+    def deepcopy(self) -> EMBase:
         return _copy.deepcopy(self)
 
     def _sliceable_predicate(
@@ -248,7 +248,7 @@ class EMBase:
             return False
         return value.shape[0] == n
 
-    def subset(self, indices: _Idx) -> "EMBase":
+    def subset(self, indices: _Idx) -> EMBase:
         n = self.n_freq
         if n == 0:
             return self.deepcopy()
@@ -273,7 +273,7 @@ class EMBase:
         return new
 
     # small alias that reads nicely in notebooks
-    def select(self, indices: _Idx) -> "EMBase":
+    def select(self, indices: _Idx) -> EMBase:
         return self.subset(indices)
 
     def validate_shapes(self) -> None:
@@ -290,13 +290,13 @@ class EMBase:
                 bad.append(f"{name}:{tuple(value.shape)}")
         if bad:
             raise ZError(
-                (
+
                     "freq-aligned arrays mismatch n_freq. "
                     f"n={n}; bad={', '.join(bad)}"
-                )
+
             )
 
-    def _array_sig(self) -> Tuple[_StrSeq, _StrSeq]:
+    def _array_sig(self) -> tuple[_StrSeq, _StrSeq]:
         names: list[str] = []
         sigs: list[str] = []
         for name, value in vars(self).items():
@@ -310,7 +310,7 @@ class EMBase:
         n = self.n_freq
         parts = [f"{cls}: {self.name or '-'}", f"n_freq: {n}"]
         if self.has_freq:
-            f = getattr(self, "_freq")
+            f = self._freq
             fmin = float(np.min(f)) if f.size else np.nan
             fmax = float(np.max(f)) if f.size else np.nan
             parts.append(f"f[Hz]: min={fmin:.6g}, max={fmax:.6g}")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -62,20 +61,18 @@ HybridInverter1D(n_stations=5, fitted)
 """
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
 from .._base import BaseHybridInverter
+from ._pinn_ops import fit_station
 from ._sites_bridge import (
     SiteObs1D,
-    sites_to_obs_1d,
-    sites_to_features_1d,
     obs_to_features_1d,
+    sites_to_obs_1d,
 )
-from ._pinn_ops import fit_station
 
 __all__ = ["HybridInverter1D"]
 
@@ -119,13 +116,13 @@ class HybridInverter1D(BaseHybridInverter):
     def __init__(
         self,
         sites: Any,
-        ai_inverter: Union[Any, str, Path],
+        ai_inverter: Any | str | Path,
         *,
         solver: str = "mt1d",
         max_iter: int = 200,
         smoothness_weight: float = 0.005,
         lr: float = 5e-3,
-        device: Optional[str] = None,
+        device: str | None = None,
         comp: str = "xy",
         n_freqs: int = 32,
         recursive: bool = True,
@@ -153,7 +150,7 @@ class HybridInverter1D(BaseHybridInverter):
         self._ai_inv = self._load_ai_inverter(
             ai_inverter
         )
-        self._obs: List[SiteObs1D] = sites_to_obs_1d(
+        self._obs: list[SiteObs1D] = sites_to_obs_1d(
             sites,
             comp=comp,
             recursive=recursive,
@@ -161,8 +158,8 @@ class HybridInverter1D(BaseHybridInverter):
             strict=True,
             verbose=verbose,
         )
-        self._stage1: List[Dict] = []
-        self._stage2: List[Dict] = []
+        self._stage1: list[dict] = []
+        self._stage2: list[dict] = []
 
     # ── fit ──
 
@@ -171,7 +168,7 @@ class HybridInverter1D(BaseHybridInverter):
         *,
         verbose: bool = True,
         log_every: int = 50,
-    ) -> "HybridInverter1D":
+    ) -> HybridInverter1D:
         """
         Run both inversion stages.
 
@@ -228,7 +225,7 @@ class HybridInverter1D(BaseHybridInverter):
 
     # ── predict / diagnostics ──
 
-    def predict(self) -> List:
+    def predict(self) -> list:
         """
         Return Stage-2 refined layered models.
 
@@ -239,7 +236,7 @@ class HybridInverter1D(BaseHybridInverter):
         self._check_fitted()
         return self._results_to_models(self._stage2)
 
-    def stage1_models(self) -> List:
+    def stage1_models(self) -> list:
         """
         Return Stage-1 (AI-only) layered models.
 
@@ -301,9 +298,10 @@ class HybridInverter1D(BaseHybridInverter):
         """
         self._check_fitted()
         import pandas as pd
+
         from pycsamt.forward.em1d import (
-            MT1DForward,
             CSAMT1DForward,
+            MT1DForward,
         )
         from pycsamt.forward.synthetic import LayeredModel
 
@@ -352,7 +350,7 @@ class HybridInverter1D(BaseHybridInverter):
     # ── read-only properties ──
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         """Station names in order."""
         return [o.name for o in self._obs]
 
@@ -386,7 +384,7 @@ class HybridInverter1D(BaseHybridInverter):
 
     def _run_stage1(
         self, *, verbose: bool
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """
         Apply EMInverter1D to all stations.
 
@@ -421,7 +419,7 @@ class HybridInverter1D(BaseHybridInverter):
         )
         # Store as stage1 results (compatible format)
         self._stage1 = []
-        for i, row in enumerate(params):
+        for _i, row in enumerate(params):
             # row layout: [log_rho * n_layers,
             #              log_thick * (n_layers-1)]
             log_rho_i = row[:n_layers]
@@ -436,8 +434,8 @@ class HybridInverter1D(BaseHybridInverter):
         return list(params)
 
     def _results_to_models(
-        self, results: List[Dict]
-    ) -> List:
+        self, results: list[dict]
+    ) -> list:
         """Convert result dicts to LayeredModel list."""
         from pycsamt.forward.synthetic import LayeredModel
 

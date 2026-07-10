@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -32,12 +31,18 @@ JointInverter(modalities=2, fitted)
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
-from .._base import BaseEMNet, EMCheckpoint
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
+from .._base import BaseEMNet
 from ..training.dataset import Normalizer
 
 __all__ = ["JointInverter"]
@@ -77,7 +82,7 @@ class JointInverter(BaseEMNet):
         n_dense_layers: int = 6,
         hidden_dim: int = 256,
         dropout: float = 0.2,
-        device: Optional[str] = None,
+        device: str | None = None,
         log_thickness: bool = True,
         **net_kwargs,
     ) -> None:
@@ -92,9 +97,9 @@ class JointInverter(BaseEMNet):
         self._net_kwargs = net_kwargs
 
         self._n_out = 2 * n_layers - 1  # n_layers rho + (n_layers-1) thick
-        self._x_norms: List[Optional[Normalizer]] = [None] * len(n_features_list)
-        self._y_norm: Optional[Normalizer] = None
-        self._backend_name: Optional[str] = None
+        self._x_norms: list[Normalizer | None] = [None] * len(n_features_list)
+        self._y_norm: Normalizer | None = None
+        self._backend_name: str | None = None
 
     # ─── BaseEMNet interface ──────────────────────────────────────────────
 
@@ -122,10 +127,10 @@ class JointInverter(BaseEMNet):
         lr: float = 1e-3,
         patience: int = 20,
         val_frac: float = 0.1,
-        grad_clip: Optional[float] = 1.0,
-        seed: Optional[int] = None,
+        grad_clip: float | None = 1.0,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "JointInverter":
+    ) -> JointInverter:
         """
         Train the joint inverter.
 
@@ -197,7 +202,7 @@ class JointInverter(BaseEMNet):
                    epochs, batch_size, lr, patience, grad_clip, verbose):
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         dev = next(self._network.parameters()).device
         opt = torch.optim.Adam(self._network.parameters(), lr=lr)
@@ -300,7 +305,7 @@ class JointInverter(BaseEMNet):
 
     def predict(
         self,
-        X_list: Union[Sequence[np.ndarray], np.ndarray],
+        X_list: Sequence[np.ndarray] | np.ndarray,
         *,
         as_log_rho: bool = True,
     ) -> np.ndarray:
@@ -358,7 +363,7 @@ class JointInverter(BaseEMNet):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         return {
             "n_features_list": list(self.n_features_list),
             "n_layers": self.n_layers,
@@ -370,8 +375,8 @@ class JointInverter(BaseEMNet):
             "log_thickness": self.log_thickness,
         }
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._network is not None:
             out.update(get_weights(self._network))
         for i, norm in enumerate(self._x_norms):
@@ -387,7 +392,7 @@ class JointInverter(BaseEMNet):
             out["_backend"] = np.array(self._backend_name)
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         backend_name = str(weights.pop("_backend", np.array("torch")))
         self._backend_name = backend_name
 

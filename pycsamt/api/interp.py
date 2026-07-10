@@ -51,7 +51,7 @@ import copy
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 __all__ = [
     # dataclasses
@@ -70,7 +70,7 @@ __all__ = [
 _PRESETS = {"default", "publication", "dark", "accessible"}
 
 # ── quantity → cmap_* attribute name ─────────────────────────────────────────
-_QUANTITY_CMAP_ATTR: Dict[str, str] = {
+_QUANTITY_CMAP_ATTR: dict[str, str] = {
     "K":          "cmap_K",
     "saturation": "cmap_Sw",
     "porosity":   "cmap_phi",
@@ -175,9 +175,9 @@ class HydroSectionStyle:
             )
         return str(getattr(self, attr))
 
-    def wt_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def wt_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for the water-table ``ax.plot`` call."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.wt_color,
             linewidth=self.wt_lw,
             linestyle=self.wt_ls,
@@ -186,9 +186,9 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def station_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def station_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for the station-tick ``ax.axvline`` calls."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.station_color,
             linewidth=self.station_lw,
             alpha=self.station_alpha,
@@ -196,18 +196,18 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def cb_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def cb_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments forwarded to ``fig.colorbar``."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             fraction=self.cb_fraction,
             pad=self.cb_pad,
         )
         d.update(overrides)
         return d
 
-    def crossplot_scatter_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def crossplot_scatter_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for the ``ax.scatter`` call in a petrophysical cross-plot."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             cmap=self.cmap_crossplot,
             alpha=self.scatter_alpha,
             s=self.scatter_size,
@@ -217,15 +217,15 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def hs_fill_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def hs_fill_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for ``ax.fill_between`` of Hashin-Shtrikman bounds."""
-        d: Dict[str, Any] = dict(alpha=self.hs_alpha, color="0.65", zorder=1)
+        d: dict[str, Any] = dict(alpha=self.hs_alpha, color="0.65", zorder=1)
         d.update(overrides)
         return d
 
-    def model_curve_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def model_curve_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for the model-curve ``ax.plot`` call."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.model_curve_color,
             linestyle=self.model_curve_ls,
             linewidth=self.model_curve_lw,
@@ -234,9 +234,9 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def rho_curve_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def rho_curve_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for the ρ(z) depth-profile curve."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.rho_curve_color,
             linewidth=1.4,
             zorder=3,
@@ -244,9 +244,9 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def zone_boundary_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def zone_boundary_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for geological zone boundary ``ax.axhline`` calls."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.zone_boundary_color,
             linestyle=self.zone_boundary_ls,
             linewidth=0.7,
@@ -254,7 +254,7 @@ class HydroSectionStyle:
         d.update(overrides)
         return d
 
-    def copy(self, **kw: Any) -> "HydroSectionStyle":
+    def copy(self, **kw: Any) -> HydroSectionStyle:
         """Return a shallow copy with optional field overrides."""
         new = copy.copy(self)
         for k, v in kw.items():
@@ -329,27 +329,27 @@ class HydroProfileStyle:
 
     # ── convenience methods ───────────────────────────────────────────────
 
-    def envelope_kwargs(self, color: str, **overrides: Any) -> Dict[str, Any]:
+    def envelope_kwargs(self, color: str, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for ``ax.fill_between`` (uncertainty band)."""
-        d: Dict[str, Any] = dict(color=color, alpha=self.envelope_alpha)
+        d: dict[str, Any] = dict(color=color, alpha=self.envelope_alpha)
         d.update(overrides)
         return d
 
-    def line_kwargs(self, color: str, **overrides: Any) -> Dict[str, Any]:
+    def line_kwargs(self, color: str, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for ``ax.plot`` (P50 central line)."""
-        d: Dict[str, Any] = dict(color=color, linewidth=self.p50_lw)
+        d: dict[str, Any] = dict(color=color, linewidth=self.p50_lw)
         d.update(overrides)
         return d
 
-    def scatter_kwargs(self, color: str, **overrides: Any) -> Dict[str, Any]:
+    def scatter_kwargs(self, color: str, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for ``ax.scatter``."""
-        d: Dict[str, Any] = dict(color=color, s=self.scatter_size, zorder=5)
+        d: dict[str, Any] = dict(color=color, s=self.scatter_size, zorder=5)
         d.update(overrides)
         return d
 
-    def ref_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def ref_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for the reference-depth ``ax.axhline`` call."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.ref_color,
             linestyle=self.ref_ls,
             linewidth=self.ref_lw,
@@ -357,9 +357,9 @@ class HydroProfileStyle:
         d.update(overrides)
         return d
 
-    def station_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def station_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for station-tick ``ax.axvline`` calls."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=self.station_color,
             linewidth=self.station_lw,
             alpha=self.station_alpha,
@@ -367,19 +367,19 @@ class HydroProfileStyle:
         d.update(overrides)
         return d
 
-    def grid_kwargs(self) -> Dict[str, Any]:
+    def grid_kwargs(self) -> dict[str, Any]:
         """Keyword arguments for ``ax.grid``."""
         return dict(alpha=self.grid_alpha, axis=self.grid_axis)
 
-    def bar_kwargs(self, color: str, **overrides: Any) -> Dict[str, Any]:
+    def bar_kwargs(self, color: str, **overrides: Any) -> dict[str, Any]:
         """Kwargs for Dar-Zarrouk bar charts."""
-        d: Dict[str, Any] = dict(color=color, alpha=0.80, edgecolor="none")
+        d: dict[str, Any] = dict(color=color, alpha=0.80, edgecolor="none")
         d.update(overrides)
         return d
 
-    def hist_kwargs(self, color: str, **overrides: Any) -> Dict[str, Any]:
+    def hist_kwargs(self, color: str, **overrides: Any) -> dict[str, Any]:
         """Kwargs for ``ax.hist`` in uncertainty histograms."""
-        d: Dict[str, Any] = dict(
+        d: dict[str, Any] = dict(
             color=color,
             alpha=self.hist_alpha,
             edgecolor=self.hist_edgecolor,
@@ -389,13 +389,13 @@ class HydroProfileStyle:
         d.update(overrides)
         return d
 
-    def kde_kwargs(self, **overrides: Any) -> Dict[str, Any]:
+    def kde_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Kwargs for the KDE curve ``ax.plot`` call."""
-        d: Dict[str, Any] = dict(color=self.kde_color, linewidth=self.kde_lw)
+        d: dict[str, Any] = dict(color=self.kde_color, linewidth=self.kde_lw)
         d.update(overrides)
         return d
 
-    def copy(self, **kw: Any) -> "HydroProfileStyle":
+    def copy(self, **kw: Any) -> HydroProfileStyle:
         """Return a shallow copy with optional field overrides."""
         new = copy.copy(self)
         for k, v in kw.items():
@@ -431,15 +431,15 @@ class InterpStyle:
     profile:             HydroProfileStyle = field(
         default_factory=HydroProfileStyle
     )
-    figsize_section:       Tuple[float, float] = (13.0, 5.0)
-    figsize_profile:       Tuple[float, float] = (13.0, 6.0)
-    figsize_uncertainty:   Tuple[float, float] = (13.0, 8.0)
-    figsize_crossplot:     Tuple[float, float] = (7.0,  5.5)
-    figsize_depth_profile: Tuple[float, float] = (4.5,  9.0)
-    figsize_aquifer_char:  Tuple[float, float] = (13.0, 9.0)
-    figsize_tl_panel:      Tuple[float, float] = (3.5,  4.5)
+    figsize_section:       tuple[float, float] = (13.0, 5.0)
+    figsize_profile:       tuple[float, float] = (13.0, 6.0)
+    figsize_uncertainty:   tuple[float, float] = (13.0, 8.0)
+    figsize_crossplot:     tuple[float, float] = (7.0,  5.5)
+    figsize_depth_profile: tuple[float, float] = (4.5,  9.0)
+    figsize_aquifer_char:  tuple[float, float] = (13.0, 9.0)
+    figsize_tl_panel:      tuple[float, float] = (3.5,  4.5)
 
-    def copy(self, **kw: Any) -> "InterpStyle":
+    def copy(self, **kw: Any) -> InterpStyle:
         """Return a deep copy with optional top-level field overrides."""
         new = copy.deepcopy(self)
         for k, v in kw.items():
@@ -673,9 +673,9 @@ class PyCSAMTInterp:
     @contextmanager
     def context(
         self,
-        preset: Optional[str] = None,
+        preset: str | None = None,
         **kw: Any,
-    ) -> Generator["PyCSAMTInterp", None, None]:
+    ) -> Generator[PyCSAMTInterp, None, None]:
         """Temporarily override the *default* style, then restore it.
 
         Parameters
@@ -725,10 +725,10 @@ class PyCSAMTInterp:
 
     # ── snapshot / restore helpers ─────────────────────────────────────────
 
-    def _snapshot(self) -> Dict[str, InterpStyle]:
+    def _snapshot(self) -> dict[str, InterpStyle]:
         return {name: copy.deepcopy(self.style_for(name)) for name in _PRESETS}
 
-    def _restore(self, snapshot: Dict[str, InterpStyle]) -> None:
+    def _restore(self, snapshot: dict[str, InterpStyle]) -> None:
         for name, value in snapshot.items():
             setattr(self, name, value)
 
@@ -770,7 +770,7 @@ def use_interp(preset: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def resolve_section_style(
-    style: "str | InterpStyle | HydroSectionStyle | None",
+    style: str | InterpStyle | HydroSectionStyle | None,
 ) -> HydroSectionStyle:
     """Resolve a *style* argument to a :class:`HydroSectionStyle`.
 
@@ -794,7 +794,7 @@ def resolve_section_style(
 
 
 def resolve_profile_style(
-    style: "str | InterpStyle | HydroProfileStyle | None",
+    style: str | InterpStyle | HydroProfileStyle | None,
 ) -> HydroProfileStyle:
     """Resolve a *style* argument to a :class:`HydroProfileStyle`.
 
@@ -818,10 +818,10 @@ def resolve_profile_style(
 
 
 def resolve_figsize(
-    user_figsize: Optional[Tuple[float, float]],
-    style: "str | InterpStyle | None",
+    user_figsize: tuple[float, float] | None,
+    style: str | InterpStyle | None,
     kind: str,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """Return the effective figure size.
 
     *user_figsize* takes priority; falls back to the active preset's

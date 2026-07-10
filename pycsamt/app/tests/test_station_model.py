@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for StationModel and StationTable (Phase 2)."""
@@ -12,8 +11,10 @@ pytest.importorskip("PySide6", reason="PySide6 required")
 
 from PySide6.QtCore import Qt
 
-from pycsamt.app.desktop.models.station_model import StationModel, _COLUMNS
-
+from pycsamt.app.desktop.models.station_model import (
+    _COLUMNS,
+    StationModel,
+)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -114,14 +115,18 @@ def test_clear_resets_row_count(model):
 # ── StationTable ──────────────────────────────────────────────────────────
 
 def test_station_table_creates(qapp):
-    from pycsamt.app.desktop.widgets.station_table import StationTable
+    from pycsamt.app.desktop.widgets.station_table import (
+        StationTable,
+    )
     t = StationTable()
     assert t is not None
     t.close()
 
 
 def test_station_table_set_dataframe(qapp, sample_df):
-    from pycsamt.app.desktop.widgets.station_table import StationTable
+    from pycsamt.app.desktop.widgets.station_table import (
+        StationTable,
+    )
     t = StationTable()
     t.set_dataframe(sample_df)
     assert t._model.rowCount() == 3
@@ -129,7 +134,9 @@ def test_station_table_set_dataframe(qapp, sample_df):
 
 
 def test_station_table_emits_rows_selected(qapp, sample_df):
-    from pycsamt.app.desktop.widgets.station_table import StationTable
+    from pycsamt.app.desktop.widgets.station_table import (
+        StationTable,
+    )
     t = StationTable()
     t.set_dataframe(sample_df)
 

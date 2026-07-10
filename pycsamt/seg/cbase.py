@@ -1,28 +1,21 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
     Callable,
+    Union,
 )
 
 import numpy as np
 
 from ..log.logger import get_logger
-from .validation import IsEdi
 from .edi import EDIFile
+from .validation import IsEdi
 
 logger = get_logger(__name__)
 
@@ -127,8 +120,8 @@ class ParseMixin:
         """
         store = getattr(self, "_errors", None)
         if store is None:
-            setattr(self, "_errors", [])  # type: ignore[attr-defined]
-            store = getattr(self, "_errors")
+            self._errors = []  # type: ignore[attr-defined]
+            store = self._errors
         err = FileNotFoundError(msg)
         store.append((self._as_path(src), err))
 
@@ -187,7 +180,7 @@ class ParseMixin:
                 src, f"Not found or unsupported: {src}"
             )
 
-    def _fast_station(self, p: Path) -> Optional[str]:
+    def _fast_station(self, p: Path) -> str | None:
         """
         Quick scan for DATAID inside >HEAD.  Best effort.
         """
@@ -216,8 +209,8 @@ class ParseMixin:
 @dataclass
 class _ParseResult:
     path: Path
-    edi: Optional[EDIFile]
-    error: Optional[BaseException]
+    edi: EDIFile | None
+    error: BaseException | None
 
 
 class CoreParser(ParseMixin):
@@ -304,8 +297,8 @@ class CoreParser(ParseMixin):
         if self.on_dup not in {"replace", "keep"}:
             raise ValueError("on_dup must be keep|replace")
 
-        self.results: List[_ParseResult] = []
-        self._errors: List[Tuple[Path, BaseException]] = []
+        self.results: list[_ParseResult] = []
+        self._errors: list[tuple[Path, BaseException]] = []
 
     # parse a single file (with error policy)
     def _read_one(self, p: Path) -> _ParseResult:
@@ -319,10 +312,10 @@ class CoreParser(ParseMixin):
             logger.debug("Skip %s: %s", p, exc)
             return _ParseResult(path=p, edi=None, error=exc)
 
-    def parse(self, sources: SrcType) -> List[EDIFile]:
-        edis: List[EDIFile] = []
+    def parse(self, sources: SrcType) -> list[EDIFile]:
+        edis: list[EDIFile] = []
         self.results.clear()
-   
+
         self._errors.clear()
 
         for p in self._iter_edi_files(
@@ -334,11 +327,11 @@ class CoreParser(ParseMixin):
             if res.edi is None:
                 continue
             edis.append(res.edi)
-            
+
         # handle duplicates by station (if any)
-        by_station: Dict[str, EDIFile] = {}
-        seen: Dict[str, int] = {}
-        out: List[EDIFile] = []
+        by_station: dict[str, EDIFile] = {}
+        seen: dict[str, int] = {}
+        out: list[EDIFile] = []
 
         for ed in edis:
             sid = getattr(ed, "station", None)
@@ -354,7 +347,7 @@ class CoreParser(ParseMixin):
         out.extend(by_station.values())
         return out
 
-    def errors(self) -> List[Tuple[Path, BaseException]]:
+    def errors(self) -> list[tuple[Path, BaseException]]:
         out = [
             (r.path, r.error)  # type: ignore[misc]
             for r in self.results
@@ -363,7 +356,7 @@ class CoreParser(ParseMixin):
         # ---------- NEW ----------
         out.extend(self._errors)
         return out
-    
+
 class CBBase:
     r"""
     Lightweight base for EDI collections.
@@ -449,13 +442,13 @@ class CBBase:
 
     def __init__(
         self,
-        items: Optional[Iterable[EDIFile]] = None,
+        items: Iterable[EDIFile] | None = None,
         *,
         verbose: int = 0,
     ) -> None:
         self.verbose = int(verbose)
-        self._items: List[EDIFile] = []
-        self._index: Dict[str, int] = {}
+        self._items: list[EDIFile] = []
+        self._index: dict[str, int] = {}
 
         if items is not None:
             for ed in items:
@@ -469,7 +462,7 @@ class CBBase:
     def __iter__(self) -> Iterator[EDIFile]:
         return iter(self._items)
 
-    def __getitem__(self, key: Union[int, str]) -> EDIFile:
+    def __getitem__(self, key: int | str) -> EDIFile:
         if isinstance(key, int):
             return self._items[key]
         idx = self._index.get(str(key), None)
@@ -488,7 +481,7 @@ class CBBase:
         self._index[sid] = len(self._items)
         self._items.append(ed)
 
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         return list(self._index.keys())
 
     # --------------- ingest and bulk utilities ---------------
@@ -498,12 +491,12 @@ class CBBase:
         cls,
         sources: SrcType,
         *,
-        parser: Optional[CoreParser] = None,
+        parser: CoreParser | None = None,
         recursive: bool = True,
         strict: bool = False,
         on_dup: str = "replace",
         verbose: int = 0,
-    ) -> "CBBase":
+    ) -> CBBase:
         pr = parser or CoreParser(
             recursive=recursive,
             strict=strict,
@@ -520,21 +513,21 @@ class CBBase:
     def map(
         self,
         fn: Callable[[EDIFile], object],
-    ) -> List[object]:
-        out: List[object] = []
+    ) -> list[object]:
+        out: list[object] = []
         for ed in self._items:
             out.append(fn(ed))
         return out
 
     def interpolate(
         self,
-        new_freq: Union[np.ndarray, List[float]],
+        new_freq: np.ndarray | list[float],
         *,
         kind: str = "slinear",
         bounds_error: bool = True,
-        period_buffer: Optional[float] = None,
-    ) -> "CBBase":
-        out_items: List[EDIFile] = []
+        period_buffer: float | None = None,
+    ) -> CBBase:
+        out_items: list[EDIFile] = []
         for ed in self._items:
             z2 = ed.interpolate(
                 new_freq,
@@ -560,7 +553,7 @@ class CBBase:
                 "other",
                 "otherio",
             ):
-                sec = getattr(ed, "get_section")(k)  # type: ignore[misc]  # noqa: E501
+                sec = ed.get_section(k)  # type: ignore[misc]  # noqa: E501
                 if sec is not None:
                     fresh.add_section(k, sec)
             out_items.append(fresh)
@@ -572,11 +565,11 @@ class CBBase:
         *,
         pattern: str = "{station}.edi",
         **kwargs,
-    ) -> List[str]:
+    ) -> list[str]:
         out_dir = Path(str(savepath)).expanduser().resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        paths: List[str] = []
+        paths: list[str] = []
         for ed in self._items:
             sid = getattr(ed, "station", None) or "site"
             name = pattern.format(station=sid)
@@ -586,8 +579,8 @@ class CBBase:
         return paths
 
 
-    def summary(self) -> List[Dict[str, object]]:
-        rows: List[Dict[str, object]] = []
+    def summary(self) -> list[dict[str, object]]:
+        rows: list[dict[str, object]] = []
         for ed in self._items:
             sid = getattr(ed, "station", None) or "-"
             nf = int(getattr(ed.Z, "n_freq", 0) or 0)
@@ -606,8 +599,8 @@ class CBBase:
                 }
             )
         return rows
-    
-    @property 
+
+    @property
     def items(self):
         """Internal: unified iterator over stored items."""
         return getattr(self, "_items", [])

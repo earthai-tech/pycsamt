@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -81,7 +80,7 @@ from __future__ import annotations
 
 import functools
 import warnings
-from typing import Callable, Optional, Dict
+from typing import Callable
 
 __all__ = [
     "make_compat_alias",
@@ -93,10 +92,10 @@ def make_compat_alias(
     new_func: Callable,
     *,
     old_name: str,
-    new_name: Optional[str] = None,
+    new_name: str | None = None,
     since: str = "2.0.0",
     remove_in: str = "2.7.0",
-    extra: Optional[str] = None,
+    extra: str | None = None,
 ) -> Callable:
     r"""
     Create a callable that acts as a deprecation alias for an
@@ -204,9 +203,9 @@ def make_compat_alias(
         new_name = getattr(new_func, "__name__", "<?>")
 
     base = (
-        "'{}' is deprecated since v{} and will be "
-        "removed in v{}. Use '{}' instead."
-    ).format(old_name, since, remove_in, new_name)
+        f"'{old_name}' is deprecated since v{since} and will be "
+        f"removed in v{remove_in}. Use '{new_name}' instead."
+    )
 
     msg = f"{base} {extra}" if extra else base
 
@@ -221,12 +220,12 @@ def make_compat_alias(
     return _wrapper
 
 def install_compat_aliases(
-    mapping: Dict[str, Callable],
+    mapping: dict[str, Callable],
     *,
-    g: Dict[str, object],
+    g: dict[str, object],
     since: str = "2.0.0",
     remove_in: str = "2.1.0",
-    extras: Optional[Dict[str, str]] = None,
+    extras: dict[str, str] | None = None,
 ) -> None:
     r"""
     Bulk-install deprecation aliases into a target namespace.
@@ -341,7 +340,7 @@ def compat_alias(
     *,
     since: str = "2.0.0",
     remove_in: str = "2.7.0",
-    extra: Optional[str] = None,
+    extra: str | None = None,
     export: bool = True,
 ) -> Callable:
     r"""

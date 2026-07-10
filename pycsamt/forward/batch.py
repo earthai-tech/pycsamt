@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -44,9 +43,11 @@ Dataset layout
 from __future__ import annotations
 
 import warnings
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import (
+    ProcessPoolExecutor,
+    as_completed,
+)
 from dataclasses import dataclass
-from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -84,9 +85,9 @@ class ForwardDataset:
     """
     X: np.ndarray
     y: np.ndarray
-    freqs: Optional[np.ndarray] = None
-    times: Optional[np.ndarray] = None
-    meta: Optional[np.ndarray] = None
+    freqs: np.ndarray | None = None
+    times: np.ndarray | None = None
+    meta: np.ndarray | None = None
     solver: str = "mt1d"
 
     def save(self, path: str) -> None:
@@ -103,7 +104,7 @@ class ForwardDataset:
         np.savez_compressed(path, **arrays)
 
     @classmethod
-    def load(cls, path: str) -> "ForwardDataset":
+    def load(cls, path: str) -> ForwardDataset:
         """Load from a ``.npz`` file produced by :meth:`save`."""
         d = np.load(path, allow_pickle=False)
         freqs = d["freqs"] if "freqs" in d else None
@@ -125,8 +126,8 @@ class ForwardDataset:
         self,
         val_frac: float = 0.1,
         test_frac: float = 0.1,
-        seed: Optional[int] = None,
-    ) -> Tuple["ForwardDataset", "ForwardDataset", "ForwardDataset"]:
+        seed: int | None = None,
+    ) -> tuple[ForwardDataset, ForwardDataset, ForwardDataset]:
         """
         Split into train / validation / test sets.
 
@@ -180,8 +181,8 @@ def _worker(args):
         noise_type, geology, include_phase, seed,
     ) = args
 
-    from pycsamt.forward.synthetic import LayeredModel
     from pycsamt.forward.noise import add_noise
+    from pycsamt.forward.synthetic import LayeredModel
 
     rng = np.random.default_rng(seed)
     n_lay = int(rng.integers(n_layers[0], n_layers[1] + 1)) if isinstance(n_layers, tuple) else n_layers
@@ -230,19 +231,19 @@ def generate_dataset(
     solver: str = "mt1d",
     n_samples: int = 10_000,
     *,
-    freqs: Optional[np.ndarray] = None,
-    times: Optional[np.ndarray] = None,
-    n_layers: Union[int, Tuple[int, int]] = (3, 7),
-    rho_range: Tuple[float, float] = (1.0, 10_000.0),
+    freqs: np.ndarray | None = None,
+    times: np.ndarray | None = None,
+    n_layers: int | tuple[int, int] = (3, 7),
+    rho_range: tuple[float, float] = (1.0, 10_000.0),
     depth_max: float = 2000.0,
     loop_radius: float = 50.0,
     noise_level: float = 0.05,
     noise_type: str = "gaussian",
-    geology: Optional[str] = None,
+    geology: str | None = None,
     include_phase: bool = True,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     n_jobs: int = 1,
-    output: Optional[str] = None,
+    output: str | None = None,
     verbose: bool = True,
 ) -> ForwardDataset:
     """
@@ -416,8 +417,8 @@ class SurveyDataset3D:
     X: np.ndarray
     y: np.ndarray
     coords: np.ndarray
-    freqs: Optional[np.ndarray] = None
-    meta: Optional[np.ndarray] = None
+    freqs: np.ndarray | None = None
+    meta: np.ndarray | None = None
     solver: str = "mt1d"
 
     @property
@@ -452,7 +453,7 @@ class SurveyDataset3D:
         np.savez_compressed(path, **arrays)
 
     @classmethod
-    def load(cls, path: str) -> "SurveyDataset3D":
+    def load(cls, path: str) -> SurveyDataset3D:
         """Load from a ``.npz`` file produced by :meth:`save`."""
         d = np.load(path, allow_pickle=False)
         freqs = d["freqs"] if "freqs" in d else None
@@ -472,8 +473,8 @@ class SurveyDataset3D:
         self,
         val_frac: float = 0.1,
         test_frac: float = 0.1,
-        seed: Optional[int] = None,
-    ) -> Tuple["SurveyDataset3D", "SurveyDataset3D", "SurveyDataset3D"]:
+        seed: int | None = None,
+    ) -> tuple[SurveyDataset3D, SurveyDataset3D, SurveyDataset3D]:
         """
         Split into train / validation / test sets along the survey axis.
 
@@ -572,9 +573,9 @@ def _worker_3d(args):
         include_phase, seed,
     ) = args
 
-    from pycsamt.forward.synthetic import LayeredModel
-    from pycsamt.forward.noise import add_noise
     from pycsamt.forward.em1d import MT1DForward
+    from pycsamt.forward.noise import add_noise
+    from pycsamt.forward.synthetic import LayeredModel
 
     rng = np.random.default_rng(seed)
 
@@ -625,19 +626,19 @@ def generate_dataset_3d(
     *,
     n_stations: int = 25,
     n_layers: int = 4,
-    freqs: Optional[np.ndarray] = None,
+    freqs: np.ndarray | None = None,
     extent: float = 10_000.0,
     corr_length: float = 2_000.0,
     log_rho_mean: float = 2.0,
     log_rho_std: float = 0.5,
-    thickness_range: Tuple[float, float] = (100.0, 2_000.0),
+    thickness_range: tuple[float, float] = (100.0, 2_000.0),
     station_layout: str = "grid",
     noise_level: float = 0.03,
     noise_type: str = "gaussian",
     include_phase: bool = True,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     n_jobs: int = 1,
-    output: Optional[str] = None,
+    output: str | None = None,
     verbose: bool = True,
 ) -> SurveyDataset3D:
     """

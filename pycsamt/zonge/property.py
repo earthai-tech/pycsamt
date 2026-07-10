@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,13 +22,13 @@ Design goals
 
 from __future__ import annotations
 
-from dataclasses import field, asdict
+import json
+from dataclasses import asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
-import json
+from typing import Any
 
-from ..compat.python import dc 
+from ..compat.python import dc
 
 __all__ = [
     "SkipFlag",
@@ -52,7 +51,7 @@ class SkipFlag:
     * → no data (placeholder)
     """
 
-    _flag_map: Dict[str, str] = {
+    _flag_map: dict[str, str] = {
         "2": "good",
         "1": "skip",
         "0": "reject",
@@ -98,17 +97,17 @@ class Hardware:
     """
 
     version: str = "7.76"
-    source_file: Optional[Path] = None
-    dated: Optional[str] = None
-    processed: Optional[str] = None
+    source_file: Path | None = None
+    dated: str | None = None
+    processed: str | None = None
     astatic_ver: str = "v3.60"
-    updated: Optional[str] = None
-    tma_points: Optional[int] = None
-    tma_freq: Optional[float] = None
-    _extra: Dict[str, Any] = field(default_factory=dict, repr=False)
+    updated: str | None = None
+    tma_points: int | None = None
+    tma_freq: float | None = None
+    _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
     # No formal CSAVGW keymap for banner lines; keep empty by design.
-    KEYMAP: Dict[str, str] = field(default_factory=dict, init=False)
+    KEYMAP: dict[str, str] = field(default_factory=dict, init=False)
 
     def set(self, **kwargs) -> None:
         """Set known fields; unknowns land in ``_extra``."""
@@ -133,14 +132,14 @@ class Hardware:
         if base["source_file"] is not None:
             base["source_file"] = str(base["source_file"])
         return json.dumps(base, indent=indent, default=str)
-    
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """
         Accept a plain dict (keys may or may not start with '$') and
         coerce a few well-known banner values to proper types.
         """
         m = { _norm_key(k): v for k, v in meta.items() }
-    
+
         # source_file handling so tests can round-trip it
         if "source_file" in m:
             try:
@@ -148,7 +147,7 @@ class Hardware:
             except Exception:
                 # Fall back to a plain string if Path chokes
                 self.source_file = Path(str(m["source_file"]))
-            
+
         if "version" in m:
             self.version = str(m["version"]).strip()
         if "dated" in m:
@@ -159,7 +158,7 @@ class Hardware:
             self.astatic_ver = str(m["astatic_ver"]).strip()
         if "updated" in m:
             self.updated = str(m["updated"]).strip()
-    
+
         if "tma_points" in m:
             tp = _to_number(m["tma_points"])
             self.tma_points = int(tp) if isinstance(
@@ -168,12 +167,12 @@ class Hardware:
             tf = _to_number(m["tma_freq"])
             self.tma_freq = float(tf) if isinstance(
                 tf, (int, float)) else None
-    
-    def to_keywords(self) -> Dict[str, Any]:
+
+    def to_keywords(self) -> dict[str, Any]:
         """
         Provide a small, stable set for round-trip / tests.
         """
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         if self.version is not None:
             out["version"] = self.version
         if self.dated is not None:
@@ -188,9 +187,9 @@ class Hardware:
             out["tma_points"] = int(self.tma_points)
         if self.tma_freq is not None:
             out["tma_freq"] = float(self.tma_freq)
-            
+
         out["source_file"] = (
-            str(self.source_file) 
+            str(self.source_file)
             if self.source_file is not None else None
         )
 
@@ -213,7 +212,7 @@ class Receiver:
     unit: str | None = "m"               # $Unit.Length
     notes: str | None = None
 
-    KEYMAP: Dict[str, str] = field(
+    KEYMAP: dict[str, str] = field(
         default_factory=lambda: {
             "station": "Rx.Stn",
             "gdp_station": "Rx.GdpStn",
@@ -225,7 +224,7 @@ class Receiver:
         },
         init=False,
     )
-    ALIASES: Dict[str, str] = field(default_factory=dict, init=False)
+    ALIASES: dict[str, str] = field(default_factory=dict, init=False)
 
     def set(self, **kwargs) -> None:
         """Set any attribute; no hard validation here."""
@@ -235,30 +234,30 @@ class Receiver:
     def get(self, key: str, default: Any = None) -> Any:
         """Get attribute by name."""
         return getattr(self, key, default)
-    
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """Update from parsed $Rx.* / $GPS.* keys with typing."""
         # 1) normalize keys once (“$Rx.Stn” → “Rx.Stn”)
         norm = { _norm_key(k): v for k, v in meta.items() }
-    
+
         # 2) apply mapping using normalized keys
         _apply_keywords(self, self.KEYMAP, norm, aliases=self.ALIASES)
-    
+
         # 3) numeric coercions from normalized keys
         stn = _to_number(norm.get("Rx.Stn"))
         if isinstance(stn, (int, float)):
             self.station = int(stn)
-    
+
         gdp = _to_number(norm.get("Rx.GdpStn"))
         if isinstance(gdp, (int, float)):
             self.gdp_station = int(gdp)
-    
+
         length, unit = _parse_length(
             norm.get("Rx.Length"), self.unit or "m")
         if length is not None:
             self.length_m = float(length)
         self.unit = unit or self.unit
-    
+
         hpr_raw = norm.get("Rx.HPR")
         if hpr_raw is not None:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
@@ -271,21 +270,21 @@ class Receiver:
                     self.hpr = (float(_to_number(parts[0]) or 0.0),
                                 float(_to_number(parts[1]) or 0.0),
                                 float(_to_number(parts[2]) or 0.0))
-    
+
         if self.hpr and self.azimuth_deg is None:
             self.azimuth_deg = float(self.hpr[0])
-    
+
         lat = _to_number(norm.get("GPS.Lat"))
         lon = _to_number(norm.get("GPS.Lon"))
         if isinstance(lat, (int, float)): self.latitude  = float(lat)
         if isinstance(lon, (int, float)): self.longitude = float(lon)
-    
+
         if "Rx.Cmp" in norm and norm["Rx.Cmp"] is not None:
             self.comps = str(norm["Rx.Cmp"])
-    
-    def to_keywords(self) -> Dict[str, Any]:
+
+    def to_keywords(self) -> dict[str, Any]:
         """Export standardized $Rx.* keys with units preserved."""
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         if self.gdp_station is not None:
             out["Rx.GdpStn"] = int(self.gdp_station)
         if self.station is not None:
@@ -327,7 +326,7 @@ class Transmitter:
     longitude: float | None = None
     notes: str | None = None
 
-    KEYMAP: Dict[str, str] = field(
+    KEYMAP: dict[str, str] = field(
         default_factory=lambda: {
             "station": "Tx.Stn",
             "gdp_station": "Tx.GdpStn",
@@ -338,7 +337,7 @@ class Transmitter:
         },
         init=False,
     )
-    ALIASES: Dict[str, str] = field(
+    ALIASES: dict[str, str] = field(
         default_factory=lambda: {
             # legacy alias encountered in AMTAVG headers
             "XMTR": "gdp_station",
@@ -354,20 +353,20 @@ class Transmitter:
     def get(self, key: str, default: Any = None) -> Any:
         """Get attribute by name."""
         return getattr(self, key, default)
-    
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """Update from $Tx.* (and legacy XMTR) with typing."""
         # 1) normalize keys once
         norm = { _norm_key(k): v for k, v in meta.items() }
-    
+
         # 2) apply mapping with normalized keys
         _apply_keywords(self, self.KEYMAP, norm)
-    
+
         # 3) numeric coercions from normalized keys
         stn = _to_number(norm.get("Tx.Stn"))
         if isinstance(stn, (int, float)):
             self.station = int(stn)
-    
+
         gdp = _to_number(norm.get("Tx.GdpStn") or norm.get("XMTR"))
         if isinstance(gdp, (int, float)):
             self.gdp_station = int(gdp)
@@ -376,14 +375,14 @@ class Transmitter:
                 self.gdp_station = int(norm["XMTR"])  # type: ignore[arg-type]
             except Exception:
                 self.gdp_station = norm["XMTR"]  # leave as string if truly odd
-    
+
         length, _ = _parse_length(norm.get("Tx.Length"), "m")
         if length is not None:
             self.length_m = float(length)
-    
+
         if "Tx.Type" in norm and norm["Tx.Type"] is not None:
             self.tx_type = str(norm["Tx.Type"])
-    
+
         cen = norm.get("Tx.Center")
         if cen is not None:
             if isinstance(cen, (tuple, list)) and len(cen) == 3:
@@ -396,7 +395,7 @@ class Transmitter:
                     self.center = (float(_to_number(parts[0]) or 0.0),
                                    float(_to_number(parts[1]) or 0.0),
                                    float(_to_number(parts[2]) or 0.0))
-    
+
         hpr_raw = norm.get("Tx.HPR")
         if hpr_raw is not None:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
@@ -408,9 +407,9 @@ class Transmitter:
                                 float(_to_number(parts[1]) or 0.0),
                                 float(_to_number(parts[2]) or 0.0))
 
-    def to_keywords(self) -> Dict[str, Any]:
+    def to_keywords(self) -> dict[str, Any]:
         """Export standardized $Tx.* keys."""
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         if self.gdp_station is not None:
             out["Tx.GdpStn"] = int(self.gdp_station)
         if self.station is not None:
@@ -467,9 +466,9 @@ class SurveyConfiguration:
         default_factory=lambda:
         datetime.now().isoformat(timespec="seconds")
     )
-    _extra: Dict[str, Any] = field(default_factory=dict, repr=False)
+    _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
-    KEYMAP: Dict[str, str] = field(
+    KEYMAP: dict[str, str] = field(
         default_factory=lambda: {
             "survey_type": "Survey.Type",
             "array_type": "Survey.Array",
@@ -489,7 +488,7 @@ class SurveyConfiguration:
         },
         init=False,
     )
-    ALIASES: Dict[str, str] = field(
+    ALIASES: dict[str, str] = field(
         default_factory=lambda: {
             # common synonyms observed in real files
             "Units": "Unit.Length",
@@ -518,21 +517,21 @@ class SurveyConfiguration:
         """Get known field or fallback to ``_extra``."""
         return getattr(self, key, self._extra.get(key, default))
 
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """
         Populate from $... header dict (keys without '$').
         Coerce numeric fields so tests don't see strings.
         """
         # Merge aliases → external canonical keys
-        unified: Dict[str, Any] = {}
+        unified: dict[str, Any] = {}
         for k, v in meta.items():
             key = _norm_key(k)
             key = self.ALIASES.get(key, key)
             unified[key] = v
-    
+
         # Map into attributes
         _apply_keywords(self, self.KEYMAP, unified)
-    
+
         # Coerce numerics
         for attr in (
             "line_number", "line_azim_deg",
@@ -543,8 +542,8 @@ class SurveyConfiguration:
             num = _to_number(val)
             if isinstance(num, (int, float)):
                 setattr(self, attr, float(num))
-    
-    def to_keywords(self) -> Dict[str, Any]:
+
+    def to_keywords(self) -> dict[str, Any]:
         """Export standardized $Survey.*, $Line.*, $Stn.*."""
         base = asdict(self)
         base.update(self._extra)
@@ -577,9 +576,9 @@ class SurveyAnnotation:
         default_factory=lambda:
         datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
     )
-    _extra: Dict[str, Any] = field(default_factory=dict, repr=False)
+    _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
-    KEYMAP: Dict[str, str] = field(
+    KEYMAP: dict[str, str] = field(
         default_factory=lambda: {
             "project_name": "Job.Name",
             "project_area": "Job.Area",
@@ -590,7 +589,7 @@ class SurveyAnnotation:
         },
         init=False,
     )
-    ALIASES: Dict[str, str] = field(
+    ALIASES: dict[str, str] = field(
         default_factory=lambda: {
             "Project": "Job.Name",
             "client": "Job.For",
@@ -613,16 +612,16 @@ class SurveyAnnotation:
         """Get known field or fallback to ``_extra``."""
         return getattr(self, key, self._extra.get(key, default))
 
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """Update from parsed ``$Job.*`` keys (with alias support)."""
-        unified: Dict[str, Any] = {}
+        unified: dict[str, Any] = {}
         for k, v in meta.items():
             key = _norm_key(k)
             key = self.ALIASES.get(key, key)
             unified[key] = v
         _apply_keywords(self, self.KEYMAP, unified)
 
-    def to_keywords(self) -> Dict[str, Any]:
+    def to_keywords(self) -> dict[str, Any]:
         """Export standardized ``$Job.*`` keys."""
         base = asdict(self)
         base.update(self._extra)
@@ -651,11 +650,11 @@ def _norm_key(key: str) -> str:
 
 
 def _kv_roundtrip(
-    data: Dict[str, Any],
-    keymap: Dict[str, str],
+    data: dict[str, Any],
+    keymap: dict[str, str],
     *,
     drop_none: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Map internal attribute names → CSAVGW keys using *keymap*.
 
@@ -674,7 +673,7 @@ def _kv_roundtrip(
         ``{"Section.Key": value}`` dictionary suitable for writing
         back to ``.avg`` headers.
     """
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for attr, ext in keymap.items():
         if attr not in data:
             continue
@@ -686,10 +685,10 @@ def _kv_roundtrip(
 
 def _apply_keywords(
     obj: Any,
-    keymap: Dict[str, str],
-    meta: Dict[str, Any],
+    keymap: dict[str, str],
+    meta: dict[str, Any],
     *,
-    aliases: Dict[str, str] | None = None,
+    aliases: dict[str, str] | None = None,
 ) -> None:
     """
     Update *obj* attributes from a parsed metadata dict.
@@ -709,7 +708,7 @@ def _apply_keywords(
         if attr is None:
             continue
         setattr(obj, attr, v)
-        
+
 def _to_number(x):
     """int if integral, else float, else original."""
     if x is None:

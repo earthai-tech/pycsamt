@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 from ..compat.aliases import install_compat_aliases
-
 from ..utils.em import (
-    check_em_kind,
-    extract_z_list,
-    parse_tensor,
-    compute_qc,
-    full_freq,
-    tensor2d,
     align_tensor,
+    check_em_kind,
+    compute_qc,
     export_edis,
+    extract_z_list,
+    full_freq,
+    parse_tensor,
     plot_confidence,
+    plot_lcurve,
+    plot_station_tensors,
     plot_strike,
     plot_tensors,
-    plot_station_tensors,
+    tensor2d,
     wrap_phase,
-    plot_lcurve,
 )
 
 __all__ = [

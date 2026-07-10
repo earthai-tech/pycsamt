@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
@@ -7,9 +6,10 @@ This module provides foundational base classes and configuration
 objects for the Zonge subpackage.
 """
 from __future__ import annotations
-from typing import Any, Dict, List
+
+import copy
 import inspect
-import copy 
+from typing import Any
 
 from ..log.logger import get_logger
 
@@ -38,7 +38,7 @@ class Zonge:
         self.verbose = verbose
         self._logger = get_logger(self.__class__.__name__)
 
-    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """
         Get parameters for this object.
 
@@ -65,7 +65,7 @@ class Zonge:
             out[key] = value
         return out
 
-    def set_params(self, **params) -> "Zonge":
+    def set_params(self, **params) -> Zonge:
         """
         Set the parameters of this object.
 
@@ -96,7 +96,7 @@ class Zonge:
         return self
 
     @classmethod
-    def _get_param_names(cls) -> List[str]:
+    def _get_param_names(cls) -> list[str]:
         """Get parameter names for the estimator."""
         init_signature = inspect.signature(cls.__init__)
         parameters = [
@@ -105,7 +105,7 @@ class Zonge:
             if p.name != "self" and p.kind != p.VAR_KEYWORD
         ]
         return sorted(parameters)
-    
+
     def __copy__(self):
         """Create a shallow copy of the object."""
         cls = self.__class__
@@ -120,9 +120,9 @@ class Zonge:
         memo[id(self)] = result
         for k, v in self.__dict__.items():
             setattr(result, k, copy.deepcopy(v, memo))
-            
-        return result  
-    
+
+        return result
+
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
         attrs = {

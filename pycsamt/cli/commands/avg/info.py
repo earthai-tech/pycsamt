@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt avg info — metadata summary for a Zonge AVG file."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import avg, _get_avg, _load_raw
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_avg, _load_raw, avg
 
 
 @avg.command("info")

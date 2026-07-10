@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio  <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -6,11 +5,12 @@ Centralized logging configuration for pycsamt.
 Supports loading from a YAML config file (`p.configlog.yml`) or falling back to
 basic default logging configuration.
 """
-import os
 import logging
 import logging.config
+import os
+import warnings
+
 import yaml
-import warnings 
 
 
 def get_data_home(data_home: str = None) -> str:
@@ -29,7 +29,7 @@ def get_data_home(data_home: str = None) -> str:
         os.makedirs(data_home, exist_ok=True)
     except OSError as e:
         warnings.warn(
-            f"Could not create pycsamt data home {data_home}: {e}")
+            f"Could not create pycsamt data home {data_home}: {e}", stacklevel=2)
     return data_home
 
 def configure_logging(
@@ -65,7 +65,7 @@ def configure_logging(
     # 2) load it (or fallback)
     if os.path.exists(config_path):
         try:
-            with open(config_path, "rt", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f)
         except Exception as e:
             logging.basicConfig(level=logging.INFO)
@@ -87,7 +87,7 @@ def configure_logging(
 
     # 4) rewrite any relative filenames in handlers → point into logs_home
     handlers = cfg.get("handlers", {})
-    for name, h in handlers.items():
+    for _name, h in handlers.items():
         fn = h.get("filename")
         if fn:
             # if it’s already absolute, leave it; otherwise we join:

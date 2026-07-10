@@ -30,12 +30,15 @@ coordinates live in ``.coords``), now fixed to use ``.coords`` too.
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from _datasets import load_survey
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-from pycsamt.emtools.ss import _rho_det_from_z
 from pycsamt.emtools import ensure_sites
+from pycsamt.emtools._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
+)
+from pycsamt.emtools.ss import _rho_det_from_z
 
 survey = load_survey("amt_l18plt")
 names4 = ["18-001A", "18-016A", "18-021U", "18-025A"]
@@ -116,7 +119,10 @@ print(ama[["station", "delta_log10_rho", "fac_z", "n_used"]]
 # ``fac_z`` column; :func:`~pycsamt.emtools.ss.correct_ss_ama` does
 # estimation and application in one call.
 
-from pycsamt.emtools import apply_ss_factors, correct_ss_ama  # noqa: E402
+from pycsamt.emtools import (  # noqa: E402
+    apply_ss_factors,
+    correct_ss_ama,
+)
 
 corrected = apply_ss_factors(survey, ama, key="fac_z")
 worst_station = ama.sort_values("delta_log10_rho").iloc[-1]["station"]
@@ -250,7 +256,9 @@ ss_qc_profile(survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0)
 # :func:`~pycsamt.emtools.ss.plot_ss_summary` (lower-level, array-based
 # functions) round out a full reporting set.
 
-from pycsamt.emtools import ss_comparison_psection  # noqa: E402
+from pycsamt.emtools import (
+    ss_comparison_psection,  # noqa: E402
+)
 
 ss_comparison_psection(
     survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0,
@@ -263,7 +271,10 @@ ss_comparison_psection(
 # station-to-station banding in panel (b) relative to (a); panel (c)
 # isolates the correction itself.
 
-from pycsamt.emtools import plot_ss_1d_curves, plot_ss_summary  # noqa: E402
+from pycsamt.emtools import (  # noqa: E402
+    plot_ss_1d_curves,
+    plot_ss_summary,
+)
 
 rho0_list, rho1_list = [], []
 s0 = ensure_sites(survey, recursive=False)
@@ -347,7 +358,10 @@ plot_ss_radar(survey, station="18-016A", rotate="pt")
 # a frequency-*dependent* near-surface effect concentrated at high
 # frequency (which static-shift correction cannot fix)?
 
-from pycsamt.emtools import detect_near_surface, plot_ns_detection  # noqa: E402
+from pycsamt.emtools import (  # noqa: E402
+    detect_near_surface,
+    plot_ns_detection,
+)
 
 ns = detect_near_surface(survey, sort_by="lat", half_window=3, max_skew=45.0)
 print(ns["distortion_type"].value_counts())

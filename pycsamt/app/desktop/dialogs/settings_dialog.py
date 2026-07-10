@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -49,7 +48,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.controllers.settings_controller import SettingsController
+from pycsamt.app.desktop.controllers.settings_controller import (
+    SettingsController,
+)
 from pycsamt.app.desktop.widgets.settings_pages import (
     DisplayPage,
     InterpretationPage,
@@ -152,7 +153,7 @@ class APIConfigDialog(QDialog):
     def _on_apply(self) -> None:
         """Apply all pages and emit settings_changed with the touched keys."""
         touched: list[str] = []
-        for i, (tab_key, _, _) in enumerate(_TABS):
+        for i, (_tab_key, _, _) in enumerate(_TABS):
             page = self._pages[i]
             try:
                 kw_map = page.collect()

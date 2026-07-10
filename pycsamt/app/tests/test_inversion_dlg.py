@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for InversionWizardDialog and InversionWorker (Phase 5)."""
@@ -6,14 +5,16 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.dialogs.inversion_dlg import InversionWizardDialog
-from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
+from pycsamt.app.desktop.dialogs.inversion_dlg import (
+    InversionWizardDialog,
+)
 from pycsamt.app.desktop.models.session import SessionState
-
+from pycsamt.app.desktop.workers.inversion_worker import (
+    InversionWorker,
+)
 
 # ── InversionWizardDialog ─────────────────────────────────────────────────
 

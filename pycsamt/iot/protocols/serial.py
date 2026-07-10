@@ -8,10 +8,14 @@ imports without it.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, IoTProtocol, TelemetryError
+from .base import (
+    BaseTelemetryClient,
+    IoTProtocol,
+    TelemetryError,
+)
 
 __all__ = ["SerialTelemetryClient"]
 
@@ -34,7 +38,7 @@ class SerialTelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         dry_run: bool = False,
         baudrate: int = 115200,
@@ -73,8 +77,8 @@ class SerialTelemetryClient(BaseTelemetryClient):
         return f"wrote {packet.topic} to serial"
 
     def _transport_receive(
-        self, *, timeout: Optional[float] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         if self._handle is None:
             raise TelemetryError("Serial client is not connected.")
         line = self._handle.readline()

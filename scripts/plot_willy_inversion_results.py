@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plot WILLY ModEM inversion results with pyCSAMT."""
 from __future__ import annotations
 
@@ -18,7 +17,6 @@ from pycsamt.models.modem.plot import (
     PlotSection,
 )
 from pycsamt.models.modem.results import InversionResult
-
 
 SOURCE_ROOT = Path(r"C:\Users\Daniel\Downloads\willy-inversion results")
 RUNS = {

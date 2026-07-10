@@ -29,20 +29,13 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from _datasets import load_survey
 
-from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-# snr_table is ambiguous at the top level (pycsamt.emtools.snr_table
-# resolves to spectra.snr_table, not this module's) -- import it from
-# here explicitly.
-from pycsamt.emtools.remove_noise import snr_table
 from pycsamt.emtools import (
     apply_emap_filter,
     confidence_gated_emap_filter,
     correct_static_shift,
     drop_freqs_manual,
-    emap_filter_report,
     enforce_offdiag_consistency,
     ensure_sites,
     hampel_filter_freq,
@@ -61,6 +54,16 @@ from pycsamt.emtools import (
     smooth_rho_phase,
     spatial_median_filter,
 )
+from pycsamt.emtools._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
+)
+
+# snr_table is ambiguous at the top level (pycsamt.emtools.snr_table
+# resolves to spectra.snr_table, not this module's) -- import it from
+# here explicitly.
+from pycsamt.emtools.remove_noise import snr_table
 
 survey = load_survey("amt_l18plt")
 

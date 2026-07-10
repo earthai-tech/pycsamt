@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -49,18 +48,17 @@ Single 1-D sounding::
 """
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from ..api._rose_style import _UNSET
-from ..api.style import PYCSAMT_STYLE
 from ..api.control import PYCSAMT_CONTROL
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.style import PYCSAMT_STYLE
 
 __all__ = [
     "plot_response_1d",
@@ -137,7 +135,7 @@ def _add_colorbar(
 def plot_response_1d(
     response,
     *,
-    modes: Union[str, Sequence[str]] = "both",
+    modes: str | Sequence[str] = "both",
     show_te: bool = _UNSET,
     show_tm: bool = _UNSET,
     color_te=_UNSET,
@@ -149,7 +147,7 @@ def plot_response_1d(
     label_te: str = _UNSET,
     label_tm: str = _UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (7, 5.5),
+    figsize: tuple[float, float] = (7, 5.5),
     axes=None,
 ) -> np.ndarray:
     """Plot 1-D MT/CSAMT apparent resistivity and phase vs period (or frequency).
@@ -265,15 +263,15 @@ def plot_response_1d(
 
 def plot_model_1d(
     models,
-    labels: Optional[Sequence[str]] = None,
+    labels: Sequence[str] | None = None,
     *,
     log_rho: bool = True,
-    depth_max: Optional[float] = None,
+    depth_max: float | None = None,
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (3.8, 5.5),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (3.8, 5.5),
+    ax: Axes | None = None,
 ) -> Axes:
     """Plot one or more 1-D layered earth models as resistivity-depth profiles.
 
@@ -356,8 +354,8 @@ def plot_response_and_model_1d(
     model=None,
     *,
     title: str = "",
-    figsize: Tuple[float, float] = (10, 5),
-    gridspec_kw: Optional[dict] = None,
+    figsize: tuple[float, float] = (10, 5),
+    gridspec_kw: dict | None = None,
 ) -> Figure:
     """3-panel figure combining model depth profile, ρ_a, and phase.
 
@@ -437,13 +435,13 @@ def plot_model_2d(
     cmap: str = "jet_r",
     log_scale: bool = True,
     clip_core: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     show_stations: bool = True,
     station_preset: str = "inversion",
     title: str = "",
-    figsize: Tuple[float, float] = (11, 4),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (11, 4),
+    ax: Axes | None = None,
 ) -> Axes:
     """Plot the 2-D resistivity model on a colour map.
 
@@ -529,14 +527,14 @@ def plot_pseudosection_2d(
     mode: str = "te",
     quantity: str = "rho_a",
     cmap: str = _UNSET,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     n_contours: int = 0,
     show_stations: bool = True,
     station_preset: str = "pseudosection",
     title: str = "",
-    figsize: Tuple[float, float] = (11, 5),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (11, 5),
+    ax: Axes | None = None,
 ) -> Axes:
     """Plot a 2-D MT pseudo-section (period × station distance).
 
@@ -664,13 +662,13 @@ def plot_response_profiles(
     *,
     mode: str = "te",
     quantity: str = "rho_a",
-    freq_indices: Optional[Sequence[int]] = None,
+    freq_indices: Sequence[int] | None = None,
     n_freqs_shown: int = 5,
     lw: float = _UNSET,
     alpha: float = _UNSET,
     title: str = "",
-    figsize: Tuple[float, float] = (9, 4),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (9, 4),
+    ax: Axes | None = None,
 ) -> Axes:
     """Plot ρ_a (or phase) vs station distance at selected frequencies.
 
@@ -755,11 +753,11 @@ def plot_model_3d(
     cmap: str = "jet_r",
     log_scale: bool = True,
     clip_core: bool = True,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     show_stations: bool = True,
     title: str = "",
-    figsize: Tuple[float, float] = (13, 4.5),
+    figsize: tuple[float, float] = (13, 4.5),
 ) -> np.ndarray:
     """Three orthogonal slice panels for a 3-D resistivity model.
 
@@ -852,13 +850,13 @@ def plot_response_map_3d(
     component: str = "xy",
     quantity: str = "rho_a",
     cmap=_UNSET,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     show_labels: bool = True,
     marker_size: float = 120.0,
     title: str = "",
-    figsize: Tuple[float, float] = (7, 6),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (7, 6),
+    ax: Axes | None = None,
 ) -> Axes:
     """Map-view scatter of ρ_a or phase at one frequency.
 
@@ -905,7 +903,7 @@ def plot_response_map_3d(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     else:
-        fig = ax.get_figure()
+        ax.get_figure()
 
     x_st = response3d.stations_xy[:, 0]
     y_st = response3d.stations_xy[:, 1]
@@ -947,16 +945,16 @@ def plot_response_section_3d(
     *,
     component: str = "xy",
     quantity: str = "rho_a",
-    y_row: Optional[int] = None,
+    y_row: int | None = None,
     cmap=_UNSET,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     n_contours: int = 0,
     show_stations: bool = True,
     station_preset: str = "pseudosection",
     title: str = "",
-    figsize: Tuple[float, float] = (11, 5),
-    ax: Optional[Axes] = None,
+    figsize: tuple[float, float] = (11, 5),
+    ax: Axes | None = None,
 ) -> Axes:
     """Period × station pseudo-section for one 3-D response component.
 
@@ -1083,11 +1081,11 @@ def plot_tensor_components_3d(
     freq_idx: int = 0,
     quantity: str = "rho_a",
     cmap=_UNSET,
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
     marker_size: float = 100.0,
     title: str = "",
-    figsize: Tuple[float, float] = (12, 10),
+    figsize: tuple[float, float] = (12, 10),
 ) -> np.ndarray:
     """2 × 2 map panel showing all four impedance tensor components.
 

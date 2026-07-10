@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -26,7 +25,8 @@ from __future__ import annotations
 
 import math
 import re
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Callable
 
 from .config import infer_workflow
 from .expansion import expand_query
@@ -148,10 +148,10 @@ class Retriever:
         self,
         chunks: list[RAGChunk],
         *,
-        vectors: "np.ndarray | None" = None,
-        embed_backend: "EmbeddingBackend | None" = None,
+        vectors: np.ndarray | None = None,
+        embed_backend: EmbeddingBackend | None = None,
         use_expansion: bool = True,
-        feedback_adjust: "Callable[[str], dict[str, float]] | None" = None,
+        feedback_adjust: Callable[[str], dict[str, float]] | None = None,
     ) -> None:
         self.chunks = chunks
         self._bm25 = BM25([tokenize(c.text) for c in chunks])
@@ -366,7 +366,11 @@ def build_retriever(
 
     loaded = None
     if prefer_persisted:
-        from .index_store import default_index_dir, index_is_stale, load_index
+        from .index_store import (
+            default_index_dir,
+            index_is_stale,
+            load_index,
+        )
         loaded = load_index(root=root)
         if loaded is not None and index_is_stale(root=root):
             import logging

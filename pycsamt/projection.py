@@ -1,7 +1,6 @@
 
 import logging
 
-
 # set loging Level
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 

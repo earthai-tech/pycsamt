@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -231,8 +230,8 @@ class SQLUpdateGeoInfoError(SQLError):
     """Error updating geographic information in SQL database."""
     pass
 
-class TopographyError (ProfileError): 
-    pass 
+class TopographyError (ProfileError):
+    pass
 
 class StatsError(Exception):
     """Base exception for stats module."""
@@ -285,5 +284,5 @@ __all__ = [
     'GisError',
     'FileIOError',
     'ValidationError',
-    'TopographyError', 
+    'TopographyError',
 ]

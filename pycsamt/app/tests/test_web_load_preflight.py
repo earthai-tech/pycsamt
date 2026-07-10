@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """Tests for the web load-modal preflight helpers."""
 
 from __future__ import annotations
 
 
 def test_infer_line_counts_from_folder_paths():
-    from pycsamt.app.web.callbacks.data import _infer_line_counts
+    from pycsamt.app.web.callbacks.data import (
+        _infer_line_counts,
+    )
 
     names = [
         "WILLY_DATA/L18PLT/001.edi",
@@ -17,7 +18,9 @@ def test_infer_line_counts_from_folder_paths():
 
 
 def test_infer_line_counts_from_flat_files():
-    from pycsamt.app.web.callbacks.data import _infer_line_counts
+    from pycsamt.app.web.callbacks.data import (
+        _infer_line_counts,
+    )
 
     assert _infer_line_counts(["a.edi", "b.avg"]) == {"flat files": 2}
 

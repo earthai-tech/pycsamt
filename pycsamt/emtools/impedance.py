@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
-import numpy as np
-import matplotlib.pyplot as plt
+from typing import Any
 
-from ._core import (
-    ensure_sites,
-    _iter_items,
-    _get_z_block,
-    _name,
-    _axes_list,
-    hide_polar_radius_labels,
-)
+import matplotlib.pyplot as plt
+import numpy as np
+
 from ..api.labels import LOG10_PERIOD_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ._core import (
+    _axes_list,
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+    hide_polar_radius_labels,
+)
 
 # default colors consistent with plot.py
 _COL = {
@@ -48,22 +49,22 @@ def _logper(fr: np.ndarray) -> np.ndarray:
 def plot_phasor_wheel(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    components: Tuple[str, ...] = ("xy", "yx"),
-    pband: Optional[Tuple[float, float]] = None,
+    station: str | None = None,
+    components: tuple[str, ...] = ("xy", "yx"),
+    pband: tuple[float, float] | None = None,
     radius: str = "abs",        # abs|norm
     cmap: str = "viridis",
-    colors: Optional[Dict[str, str]] = None,
+    colors: dict[str, str] | None = None,
     marker: str = "o",
     ms: float = 3.0,
     lw: float = 1.0,
     connect: bool = True,
-    figsize: Tuple[float, float] = (4.8, 4.8),
+    figsize: tuple[float, float] = (4.8, 4.8),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
@@ -150,22 +151,22 @@ def plot_phasor_wheel(
 def plot_offdiag_antisym_residual(
     sites: Any,
     *,
-    vlim: Optional[float] = None,
+    vlim: float | None = None,
     cmap: str = "magma",
-    figsize: Tuple[float, float] = (9.0, 4.8),
+    figsize: tuple[float, float] = (9.0, 4.8),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
     )
-    labs: List[str] = []
-    Gs: List[np.ndarray] = []
-    Vs: List[np.ndarray] = []
+    labs: list[str] = []
+    Gs: list[np.ndarray] = []
+    Vs: list[np.ndarray] = []
     for i, ed in enumerate(_iter_items(S)):
         Z, z, fr = _zblk_flex(ed)[:3]
         if Z is None:
@@ -244,12 +245,12 @@ def plot_offdiag_antisym_residual(
 def _det_ci(
     z: np.ndarray,
     fr: np.ndarray,
-    ze: Optional[np.ndarray],
+    ze: np.ndarray | None,
     *,
-    pcts: Tuple[float, float, float] = (10.0, 50.0, 90.0),
+    pcts: tuple[float, float, float] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
-    seed: Optional[int] = 0,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    seed: int | None = 0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     a = z[:, 0, 0]; b = z[:, 0, 1]
     c = z[:, 1, 0]; d = z[:, 1, 1]
     det = a * d - b * c
@@ -262,10 +263,11 @@ def _det_ci(
     rng = np.random.default_rng(seed)
     n = int(max(16, n_draws))
     nf = det.size
-    E = lambda s: (
-        (rng.standard_normal((n, nf))
-         + 1j * rng.standard_normal((n, nf))) / np.sqrt(2.0)
-    ) * s[None, :]
+    def E(s):
+        return (
+            (rng.standard_normal((n, nf))
+             + 1j * rng.standard_normal((n, nf))) / np.sqrt(2.0)
+        ) * s[None, :]
     Ad = a[None, :] + E(ea)
     Bd = b[None, :] + E(eb)
     Cd = c[None, :] + E(ec)
@@ -281,13 +283,13 @@ def _det_ci(
 def plot_determinant_track(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    pband: Optional[Tuple[float, float]] = None,
-    pcts: Tuple[float, float, float] = (10.0, 50.0, 90.0),
+    station: str | None = None,
+    pband: tuple[float, float] | None = None,
+    pcts: tuple[float, float, float] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
-    height_ratio: Tuple[int, int] = (2, 1),
+    height_ratio: tuple[int, int] = (2, 1),
     axes=None,
-    figsize: Tuple[float, float] = (6.4, 3.8),
+    figsize: tuple[float, float] = (6.4, 3.8),
     color_mag: str = "C0",
     color_phase: str = "C3",
     fill_alpha: float = 0.20,

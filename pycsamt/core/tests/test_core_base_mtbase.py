@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import numpy as np
 import pytest
@@ -137,7 +136,7 @@ def test_tipper_rotate(mt):
     assert_allclose(Tr, np.array([0.0, -1.0]), rtol=1e-12, atol=1e-12)
     # or
     assert_allclose(Tr.reshape(1,2), np.array([[0.0, -1.0]]), rtol=1e-12, atol=1e-12)
-    
+
 
 def test_induction_arrows(mt):
     # Wiese arrows from T=(1+0j,0) -> (ax,ay) = (0, +1)

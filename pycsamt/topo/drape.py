@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Terrain-following coordinate transform for 2-D section plots.
@@ -28,8 +27,6 @@ Typical usage::
 """
 
 from __future__ import annotations
-
-from typing import Optional
 
 import numpy as np
 

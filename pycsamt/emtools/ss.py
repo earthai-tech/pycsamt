@@ -1,26 +1,27 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
+from ..api._rose_style import _UNSET
+from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
+from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.style import PYCSAMT_STYLE
+from ..api.view import maybe_wrap_frame
 from ._core import (
-    ensure_sites,
-    _axes_list,
-    _iter_items,
     _apply_each,
+    _axes_list,
     _get_z_block,
+    _iter_items,
     _name,
+    ensure_sites,
     hide_polar_radius_labels,
 )
 from .tensor import build_phase_tensor_table
-from ..api._rose_style import _UNSET
-from ..api.style import PYCSAMT_STYLE
-from ..api.station import PYCSAMT_STATION_RENDERING
-from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL
-from ..api.view import maybe_wrap_frame
 
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
@@ -32,7 +33,7 @@ def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     return np.sqrt(rx * ry)
 
 
-def _site_coords(ed: Any) -> Optional[Tuple[float, float]]:
+def _site_coords(ed: Any) -> tuple[float, float] | None:
     """Return (lat, lon) from a Site's ``.coords``, if available.
 
     Real ``Site`` objects expose coordinates only via ``.coords``
@@ -49,7 +50,7 @@ def _site_coords(ed: Any) -> Optional[Tuple[float, float]]:
         return None
 
 
-def _site_order_key(ed: Any, key: str) -> Tuple[int, float, str]:
+def _site_order_key(ed: Any, key: str) -> tuple[int, float, str]:
     # sorting key for along-line order
     st = _name(ed, 0)
     if key == "lon":
@@ -66,7 +67,7 @@ def _site_order_key(ed: Any, key: str) -> Tuple[int, float, str]:
         return (0, float(y)) if y is not None else (1, np.inf, st)
     return (0, 0.0, st)  # by name later
 
-def _order_sites(S, sort_by: str) -> List[Any]:
+def _order_sites(S, sort_by: str) -> list[Any]:
     items = list(_iter_items(S))
     if sort_by in ("lon", "lat"):
         items = sorted(items, key=lambda e: _site_order_key(e, sort_by))
@@ -75,7 +76,7 @@ def _order_sites(S, sort_by: str) -> List[Any]:
     return items
 
 
-def _neighbors(i: int, n: int, k: int) -> List[int]:
+def _neighbors(i: int, n: int, k: int) -> list[int]:
     lo = max(0, i - k)
     hi = min(n - 1, i + k)
     ids = list(range(lo, hi + 1))
@@ -113,8 +114,8 @@ def estimate_ss_ama(
     sort_by: str = "lon",    # lon|lat|name
     half_window: int = 3,     # k neighbors each side
     weights: str = "tri",     # tri|gauss|uniform
-    pband: Optional[Tuple[float, float]] = None,  # (s,s)
-    max_skew: Optional[float] = 6.0,  # ignore |β|>th
+    pband: tuple[float, float] | None = None,  # (s,s)
+    max_skew: float | None = 6.0,  # ignore |β|>th
     robust_freq: str = "median",      # median|mean
     robust_overall: str = "median",   # median|mean
     recursive: bool = True,
@@ -292,7 +293,7 @@ def estimate_ss_ama(
         t = np.full(fr.size, np.nan, dtype=float)
         for kf, f in enumerate(fr):
             vals = []
-            for jj, j in enumerate(nbr_ids):
+            for _jj, j in enumerate(nbr_ids):
                 frj = FR[j]
                 lrj = LR[j]
                 ij = _nearest_idx(frj, np.array([f]))[0]
@@ -376,14 +377,14 @@ def _scale_site_Z(ed: Any, s: float) -> None:
     try:
         ze = getattr(Z, "z_err", None)
         if isinstance(ze, np.ndarray) and ze.shape == z.shape:
-            setattr(Z, "z_err", ze * s)
+            Z.z_err = ze * s
     except Exception:
         pass
 
 
 def apply_ss_factors(
     sites: Any,
-    factors: Dict[str, float] | pd.DataFrame,
+    factors: dict[str, float] | pd.DataFrame,
     *,
     key: str = "fac_z",  # fac_z: multiply Z by this
     inplace: bool = False,
@@ -472,8 +473,8 @@ def correct_ss_ama(
     sort_by: str = "lon",
     half_window: int = 3,
     weights: str = "tri",
-    pband: Optional[Tuple[float, float]] = None,
-    max_skew: Optional[float] = 6.0,
+    pband: tuple[float, float] | None = None,
+    max_skew: float | None = 6.0,
     robust_freq: str = "median",
     robust_overall: str = "median",
     inplace: bool = False,
@@ -583,8 +584,8 @@ def correct_ss_ama(
 def _prep_lr_curves(
     sites: Any,
     *,
-    pband: Optional[Tuple[float, float]],
-    max_skew: Optional[float],
+    pband: tuple[float, float] | None,
+    max_skew: float | None,
     recursive: bool,
     on_dup: str,
     strict: bool,
@@ -653,14 +654,14 @@ def _loess_at_center(
 
 def _loess_trend_for_site(
     i: int,
-    FR: List[np.ndarray],
-    LR: List[np.ndarray],
+    FR: list[np.ndarray],
+    LR: list[np.ndarray],
     *,
     k: int,
     poly: int,
     it: int,
-) -> Tuple[np.ndarray, np.ndarray]:
-    fr = FR[i]; lr = LR[i]
+) -> tuple[np.ndarray, np.ndarray]:
+    fr = FR[i]; LR[i]
     n = len(FR)
     ids = list(range(max(0, i - k), min(n - 1, i + k) + 1))
     if i in ids:
@@ -697,8 +698,8 @@ def estimate_ss_loess(
     half_window: int = 3,
     poly: int = 1,
     it: int = 2,
-    pband: Optional[Tuple[float, float]] = None,
-    max_skew: Optional[float] = 6.0,
+    pband: tuple[float, float] | None = None,
+    max_skew: float | None = 6.0,
     summary: str = "median",  # median|mean
     recursive: bool = True,
     on_dup: str = "replace",
@@ -807,13 +808,13 @@ def estimate_ss_loess(
 
 def _bilateral_trend_for_site(
     i: int,
-    FR: List[np.ndarray],
-    LR: List[np.ndarray],
+    FR: list[np.ndarray],
+    LR: list[np.ndarray],
     *,
     k: int,
-    sig_dist: Optional[float],
-    sig_val: Optional[float],
-) -> Tuple[np.ndarray, np.ndarray]:
+    sig_dist: float | None,
+    sig_val: float | None,
+) -> tuple[np.ndarray, np.ndarray]:
     fr = FR[i]; lr = LR[i]
     n = len(FR)
     ids = list(range(max(0, i - k), min(n - 1, i + k) + 1))
@@ -845,10 +846,10 @@ def estimate_ss_bilateral(
     sites: Any,
     *,
     half_window: int = 4,
-    sig_dist: Optional[float] = None,
-    sig_val: Optional[float] = None,
-    pband: Optional[Tuple[float, float]] = None,
-    max_skew: Optional[float] = 6.0,
+    sig_dist: float | None = None,
+    sig_val: float | None = None,
+    pband: tuple[float, float] | None = None,
+    max_skew: float | None = 6.0,
     summary: str = "median",
     recursive: bool = True,
     on_dup: str = "replace",
@@ -950,8 +951,8 @@ def estimate_ss_bilateral(
 def estimate_ss_refmedian(
     sites: Any,
     *,
-    pband: Optional[Tuple[float, float]] = None,
-    max_skew: Optional[float] = 6.0,
+    pband: tuple[float, float] | None = None,
+    max_skew: float | None = 6.0,
     smooth_sites: int = 0,  # optional along-site median
     summary: str = "median",
     recursive: bool = True,
@@ -1058,7 +1059,7 @@ def estimate_ss_refmedian(
 
 def _pair_sites(
     before: Any, after: Any, *, verbose: int = 0
-) -> Dict[str, Tuple[Any, Any]]:
+) -> dict[str, tuple[Any, Any]]:
     B = ensure_sites(before, recursive=False, strict=False)
     A = ensure_sites(after, recursive=False, strict=False)
     bm = {}
@@ -1080,16 +1081,16 @@ def plot_ss_delta_psection(
     after: Any,
     *,
     axis_y: str = "logperiod",
-    vlim: Optional[float] = None,
-    pband: Optional[Tuple[float, float]] = None,
-    figsize: Tuple[float, float] = (9.0, 4.8),
+    vlim: float | None = None,
+    pband: tuple[float, float] | None = None,
+    figsize: tuple[float, float] = (9.0, 4.8),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Plot pseudosection of static-shift change (corrected minus original).
 
     Displays a heatmap showing the pointwise difference
-    :math:`\Delta\log_{10}\rho = \rho_{after} - 
+    :math:`\Delta\log_{10}\rho = \rho_{after} -
     \rho_{before}` across all stations and frequencies
     on a log-period y-axis.
 
@@ -1196,11 +1197,11 @@ def plot_ss_station_curves(
     before: Any,
     after: Any,
     *,
-    station: Optional[str] = None,
-    pband: Optional[Tuple[float, float]] = None,
-    figsize: Tuple[float, float] = (7.8, 4.2),
+    station: str | None = None,
+    pband: tuple[float, float] | None = None,
+    figsize: tuple[float, float] = (7.8, 4.2),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Plot before-and-after apparent-resistivity curves for a single station.
 
@@ -1283,11 +1284,11 @@ def plot_ss_delta_profile(
     before: Any,
     after: Any,
     *,
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     robust: str = "median",  # median|mean
-    figsize: Tuple[float, float] = (8.6, 3.6),
+    figsize: tuple[float, float] = (8.6, 3.6),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Plot per-station static-shift correction amplitudes as a bar chart.
 
@@ -1375,7 +1376,7 @@ def plot_ss_delta_profile(
 
 def _ss_sort_freqs(
     freqs: np.ndarray, *arrays: np.ndarray
-) -> Tuple[np.ndarray, ...]:
+) -> tuple[np.ndarray, ...]:
     """Return (sorted_freqs, sorted_arr1, …) all ascending in Hz."""
     order = np.argsort(freqs)
     return (freqs[order],) + tuple(a[:, order] for a in arrays)
@@ -1457,7 +1458,7 @@ def _set_lT_yticks(
 def _set_station_xticks(
     ax: plt.Axes,
     n_st: int,
-    labels: List[str],
+    labels: list[str],
     *,
     rotation: float = 45.0,
     fontsize: int = 7,
@@ -1474,10 +1475,10 @@ def _set_station_xticks(
 
 def _joint_clim(
     *arrays: np.ndarray,
-    pct: Tuple[float, float] = (2.0, 98.0),
+    pct: tuple[float, float] = (2.0, 98.0),
     hard_min: float = 0.5,
     hard_max: float = 4.5,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     flat = np.concatenate([a.ravel() for a in arrays])
     fin  = flat[np.isfinite(flat)]
     if not fin.size:
@@ -1495,13 +1496,13 @@ def plot_ss_comparison_psection(
     logRho_after: np.ndarray,
     *,
     freqs: np.ndarray,
-    station_labels: Optional[List[str]] = None,
+    station_labels: list[str] | None = None,
     show_delta: bool = True,
     cmap: str = "RdYlBu_r",
     delta_cmap: str = "RdBu_r",
-    clim: Optional[Tuple[float, float]] = None,
-    clim_pct: Tuple[float, float] = (2.0, 98.0),
-    delta_vlim: Optional[float] = None,
+    clim: tuple[float, float] | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
+    delta_vlim: float | None = None,
     delta_vlim_pct: float = 95.0,
     period_up: bool = True,
     title_before: str = "(a) Before static-shift correction",
@@ -1515,8 +1516,8 @@ def plot_ss_comparison_psection(
     delta_colorbar_label: str = r"$\Delta\log_{10}\rho$",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 7,
-    figsize: Optional[Tuple[float, float]] = None,
-    axes: Optional[Any] = None,
+    figsize: tuple[float, float] | None = None,
+    axes: Any | None = None,
 ) -> plt.Figure:
     """
     Two- or three-panel pseudo-section comparison for static-shift correction.
@@ -1691,8 +1692,8 @@ def plot_ss_1d_curves(
     logRho_after: np.ndarray,
     *,
     freqs: np.ndarray,
-    stations: Optional[Any] = None,
-    station_labels: Optional[List[str]] = None,
+    stations: Any | None = None,
+    station_labels: list[str] | None = None,
     n_cols: int = 4,
     max_stations: int = 16,
     color_before   = _UNSET,   # default: PYCSAMT_STYLE.correction.before.color
@@ -1709,7 +1710,7 @@ def plot_ss_1d_curves(
     ylabel: str = r"$\log_{10}\,\rho_a$ (Ω·m)",
     xlabel: str = "Period (s)",
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     title: str = "",
     legend_loc: str = "best",
     show_grid: bool = True,
@@ -1882,12 +1883,12 @@ def plot_ss_summary(
     logRho_after: np.ndarray,
     *,
     freqs: np.ndarray,
-    station_labels: Optional[List[str]] = None,
+    station_labels: list[str] | None = None,
     cmap: str = "RdYlBu_r",
     delta_cmap: str = "RdBu_r",
-    clim: Optional[Tuple[float, float]] = None,
-    clim_pct: Tuple[float, float] = (2.0, 98.0),
-    delta_vlim: Optional[float] = None,
+    clim: tuple[float, float] | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
+    delta_vlim: float | None = None,
     delta_vlim_pct: float = 95.0,
     period_up: bool = True,
     n_yticks: int = 7,
@@ -1899,7 +1900,7 @@ def plot_ss_summary(
     shift_robust: str = "median",
     suptitle: str = "",
     axes=None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
 ) -> plt.Figure:
     """
     Four-panel summary figure for static-shift correction.
@@ -2080,7 +2081,7 @@ def plot_ss_summary(
 
 # ------------------- one-shot QC wrappers (sites in) -------------------- #
 
-def _select_kwargs(kws: Dict[str, Any], allowed: set) -> Dict[str, Any]:
+def _select_kwargs(kws: dict[str, Any], allowed: set) -> dict[str, Any]:
     return {k: v for k, v in kws.items() if k in allowed}
 
 
@@ -2143,11 +2144,11 @@ def ss_qc_psection(
     return_sites: bool = False,
     # plot opts
     axis_y: str = "logperiod",
-    vlim: Optional[float] = None,
-    pband: Optional[Tuple[float, float]] = None,
-    figsize: Tuple[float, float] = (9.0, 4.8),
+    vlim: float | None = None,
+    pband: tuple[float, float] | None = None,
+    figsize: tuple[float, float] = (9.0, 4.8),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     # correction kwargs (forwarded)
     **corr: Any,
 ):
@@ -2199,13 +2200,13 @@ def ss_qc_station_curves(
     sites: Any,
     *,
     method: str = "ama",
-    station: Optional[str] = None,
+    station: str | None = None,
     return_sites: bool = False,
     # plot opts
-    pband: Optional[Tuple[float, float]] = None,
-    figsize: Tuple[float, float] = (7.8, 4.2),
+    pband: tuple[float, float] | None = None,
+    figsize: tuple[float, float] = (7.8, 4.2),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     # correction kwargs
     **corr: Any,
 ):
@@ -2253,11 +2254,11 @@ def ss_qc_profile(
     method: str = "ama",
     return_sites: bool = False,
     # plot opts
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     robust: str = "median",
-    figsize: Tuple[float, float] = (8.6, 3.6),
+    figsize: tuple[float, float] = (8.6, 3.6),
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     # correction kwargs
     **corr: Any,
 ):
@@ -2303,19 +2304,19 @@ def ss_comparison_psection(
     *,
     method: str = "ama",
     return_sites: bool = False,
-    station_labels: Optional[List[str]] = None,
+    station_labels: list[str] | None = None,
     show_delta: bool = True,
     cmap: str = "RdYlBu_r",
     delta_cmap: str = "RdBu_r",
-    clim: Optional[Tuple[float, float]] = None,
-    clim_pct: Tuple[float, float] = (2.0, 98.0),
-    delta_vlim: Optional[float] = None,
+    clim: tuple[float, float] | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
+    delta_vlim: float | None = None,
     delta_vlim_pct: float = 95.0,
     period_up: bool = True,
     suptitle: str = "",
     tick_label_rotation: float = 45.0,
     tick_fontsize: int = 7,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     verbose: int = 0,
     **corr: Any,
 ) -> Any:
@@ -2358,8 +2359,8 @@ def ss_comparison_psection(
 
     # collect rho_det arrays from each site pair
     all_f: set = set()
-    rho0_map: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
-    rho1_map: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    rho0_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    rho1_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
 
     for k, (e0, e1) in enumerate(zip(items0, items1)):
         _, z0, fr0 = _get_z_block(e0)
@@ -2459,8 +2460,8 @@ def _pt_phi_for_station(
 def plot_ss_radar(
     sites: Any,
     *,
-    station: Optional[str] = None,
-    pband: Optional[Tuple[float, float]] = None,
+    station: str | None = None,
+    pband: tuple[float, float] | None = None,
     rotate: str = "pt",        # pt|none|deg
     rotate_stat: str = "median",
     rotate_deg: float = 0.0,   # used when rotate="deg"
@@ -2472,13 +2473,13 @@ def plot_ss_radar(
     ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
     lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
     ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
-    figsize: Tuple[float, float] = (4.8, 4.8),
+    figsize: tuple[float, float] = (4.8, 4.8),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    eps: float = 1e-24, 
-    ax: Optional[plt.Axes] = None,
+    eps: float = 1e-24,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     r"""Plot apparent resistivity against period on a polar grid.
 
@@ -2540,7 +2541,7 @@ def plot_ss_radar(
     if lw     is _UNSET: lw     = _mt.xy.lw
     if ls     is _UNSET: ls     = _mt.xy.ls
 
-    def _ensure_polar_axis(axis: Optional[plt.Axes]) -> plt.Axes:
+    def _ensure_polar_axis(axis: plt.Axes | None) -> plt.Axes:
         if axis is None:
             _, new_ax = plt.subplots(
                 figsize=figsize, subplot_kw={"polar": True}
@@ -2648,7 +2649,7 @@ def plot_ss_radar(
 
 # ========= Near-surface effect detection (lei2017) ======================== #
 
-_TYPE_COLORS: Dict[str, str] = {
+_TYPE_COLORS: dict[str, str] = {
     "clean":        "#2ca02c",   # green
     "static":       "#1f77b4",   # blue
     "near_surface": "#ff7f0e",   # orange
@@ -2684,12 +2685,12 @@ def _log_slope(log_f: np.ndarray, log_rho: np.ndarray) -> float:
 
 
 def _ama_residuals_ns(
-    FR: List[np.ndarray],
-    LR: List[np.ndarray],
+    FR: list[np.ndarray],
+    LR: list[np.ndarray],
     *,
     half_window: int,
     weights: str,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """Per-frequency log10ρ residuals vs AMA spatial trend for every site."""
     n = len(FR)
     out = []
@@ -2717,13 +2718,13 @@ def detect_near_surface(
     sites: Any,
     *,
     f_split: float = 1.0,
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     ns_threshold: float = 2.0,
     ss_threshold: float = 0.1,
     sort_by: str = "lon",
     half_window: int = 3,
     weights: str = "tri",
-    max_skew: Optional[float] = 6.0,
+    max_skew: float | None = 6.0,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -2816,9 +2817,9 @@ def detect_near_surface(
     )
 
     items = _order_sites(S, sort_by=sort_by)
-    ST: List[str] = []
-    FR: List[np.ndarray] = []
-    LR: List[np.ndarray] = []
+    ST: list[str] = []
+    FR: list[np.ndarray] = []
+    LR: list[np.ndarray] = []
 
     for i, ed in enumerate(items):
         ed = _unwrap_ns(ed)
@@ -2929,20 +2930,20 @@ def plot_ns_detection(
     sites: Any,
     *,
     f_split: float = 1.0,
-    pband: Optional[Tuple[float, float]] = None,
+    pband: tuple[float, float] | None = None,
     ns_threshold: float = 2.0,
     ss_threshold: float = 0.1,
     sort_by: str = "lon",
     half_window: int = 3,
     weights: str = "tri",
-    max_skew: Optional[float] = 6.0,
+    max_skew: float | None = 6.0,
     show_ss: bool = True,
-    figsize: Tuple[float, float] = (9.0, 4.5),
+    figsize: tuple[float, float] = (9.0, 4.5),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Bar chart of the NS index per station, colored by distortion type.

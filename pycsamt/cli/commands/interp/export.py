@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -36,9 +35,13 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, overwrite_option, verbose_option
+from ....api.cli.options import (
+    no_color_option,
+    overwrite_option,
+    verbose_option,
+)
 from ._base import interp
-from .classify import _detect_solver, _OCCAM_SIGNATURES
+from .classify import _detect_solver
 
 
 @interp.command("export")
@@ -154,14 +157,18 @@ def export(
 
     # ── load and classify ─────────────────────────────────────────────────────
     try:
-        from ....models.occam2d.results import InversionResult  # noqa: PLC0415
-        from ....interp import ResistivityModel, ModelCalibrator  # noqa: PLC0415
+        from ....interp import (  # noqa: PLC0415
+            ModelCalibrator,
+            ResistivityModel,
+        )
+        from ....models.occam2d.results import (
+            InversionResult,  # noqa: PLC0415
+        )
 
         result = InversionResult(workdir, iteration=iteration)
         model  = ResistivityModel.from_occam2d(result)
 
         if max_depth is not None:
-            import numpy as np  # noqa: PLC0415
             mask = model.z_centers <= max_depth
             model = ResistivityModel(
                 x_centers=model.x_centers,
@@ -192,7 +199,9 @@ def export(
     fmt = export_format.lower()
 
     try:
-        from ....interp import export as _export  # noqa: PLC0415
+        from ....interp import (
+            export as _export,  # noqa: PLC0415
+        )
 
         if fmt == "xyz":
             out = output_dir / "profile.xyz"

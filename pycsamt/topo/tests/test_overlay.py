@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.topo.overlay — terrain rendering helpers.
@@ -17,12 +16,16 @@ import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.topo.config import TopoConfig, reset_topo
-from pycsamt.topo.overlay import add_station_labels, draw_topo_section, draw_topo_strip
-
+from pycsamt.topo.overlay import (
+    add_station_labels,
+    draw_topo_section,
+    draw_topo_strip,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -163,7 +166,11 @@ class TestDrawTopoSection:
     def test_real_willy_l18(self):
         """Full draw with L18PLT real elevation and chainage."""
         from pycsamt.seg.edi import EDIFile
-        from pycsamt.topo.extract import extract_elevation, extract_chainage, extract_station_names
+        from pycsamt.topo.extract import (
+            extract_chainage,
+            extract_elevation,
+            extract_station_names,
+        )
 
         base = os.path.join(
             os.path.dirname(__file__),
@@ -235,7 +242,7 @@ class TestDrawTopoStrip:
     def test_light_mode(self):
         chain, elev, _ = _simple_inputs()
         fig, ax = _make_ps_axes()
-        ax_strip = draw_topo_strip(fig, ax, chain, elev, dark=False)
+        draw_topo_strip(fig, ax, chain, elev, dark=False)
 
     def test_strip_height_ratio_respected(self):
         chain, elev, _ = _simple_inputs()
@@ -261,7 +268,10 @@ class TestDrawTopoStrip:
     def test_real_willy_l22(self):
         """Full strip draw with L22PLT real data."""
         from pycsamt.seg.edi import EDIFile
-        from pycsamt.topo.extract import extract_elevation, extract_chainage
+        from pycsamt.topo.extract import (
+            extract_chainage,
+            extract_elevation,
+        )
 
         base = os.path.join(
             os.path.dirname(__file__),

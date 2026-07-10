@@ -86,6 +86,7 @@ Keys are resolved in this order:
    ``"gemini"``    ``GEMINI_API_KEY``, ``GOOGLE_API_KEY``,
                    ``GOOGLE_GENERATIVEAI_API_KEY``, ``PYCSAMT_GEMINI_API_KEY``
    ``"deepseek"``  ``DEEPSEEK_API_KEY``, ``PYCSAMT_DEEPSEEK_API_KEY``
+   ``"minimax"``   ``MINIMAX_API_KEY``, ``MINIMAX_M3``, ``PYCSAMT_MINIMAX_API_KEY``
    =============== ===========================================================
 
 Keys are also loaded automatically from ``.env.local`` at the repo root
@@ -98,9 +99,9 @@ from __future__ import annotations
 
 import os
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
 # Thread-local flag: when True, _resolve_key()
 # skips env-var lookup so offline mode is
@@ -151,7 +152,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 _PROVIDERS: frozenset[str] = frozenset(
-    {"claude", "openai", "gemini", "deepseek"}
+    {"claude", "openai", "gemini", "deepseek", "minimax"}
 )
 
 _DEFAULT_MODELS: dict[str, str] = {
@@ -159,6 +160,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     "openai":    "gpt-4o",
     "gemini":    "gemini-2.0-flash",
     "deepseek":  "deepseek-chat",
+    "minimax":   "MiniMax-M3",
 }
 
 _ENV_KEYS: dict[str, list[str]] = {
@@ -179,6 +181,11 @@ _ENV_KEYS: dict[str, list[str]] = {
     "deepseek": [
         "DEEPSEEK_API_KEY",
         "PYCSAMT_DEEPSEEK_API_KEY",
+    ],
+    "minimax": [
+        "MINIMAX_API_KEY",
+        "MINIMAX_M3",
+        "PYCSAMT_MINIMAX_API_KEY",
     ],
 }
 
@@ -215,6 +222,10 @@ _BUILTIN_RATES: dict[str, dict[str, dict[str, float]]] = {
         # DeepSeek-R1 (reasoning model)
         "deepseek-reasoner":            {"input":  0.55, "output":  2.19},
     },
+    "minimax": {
+        # MiniMax-M3 (<=512K input tokens)
+        "MiniMax-M3":                   {"input":  0.30, "output":  1.20},
+    },
 }
 
 # Provider-level defaults when the exact model is not found anywhere
@@ -223,6 +234,7 @@ _PROVIDER_DEFAULTS: dict[str, dict[str, float]] = {
     "openai":   {"input":  2.50, "output": 10.00},
     "gemini":   {"input":  3.50, "output": 10.50},
     "deepseek": {"input":  0.27, "output":  1.10},
+    "minimax":  {"input":  0.30, "output":  1.20},
 }
 
 
@@ -334,7 +346,7 @@ class AgentConfig:
         provider: str,
         api_key:  str,
         model:    str | None = None,
-    ) -> "AgentConfig":
+    ) -> AgentConfig:
         """Set the active provider, key, and optional model in one call.
 
         Parameters
@@ -369,7 +381,7 @@ class AgentConfig:
         self._model = model
         return self
 
-    def set_key(self, provider: str, api_key: str) -> "AgentConfig":
+    def set_key(self, provider: str, api_key: str) -> AgentConfig:
         """Store an API key for *provider* without changing the active provider.
 
         Useful for pre-loading keys for multiple providers so you can
@@ -403,7 +415,7 @@ class AgentConfig:
         provider: str,
         *,
         model: str | None = None,
-    ) -> "AgentConfig":
+    ) -> AgentConfig:
         """Switch the active provider.
 
         The key for *provider* must have been stored via :meth:`configure`
@@ -434,7 +446,7 @@ class AgentConfig:
             self._model = model
         return self
 
-    def reset(self, *, keys: bool = True) -> "AgentConfig":
+    def reset(self, *, keys: bool = True) -> AgentConfig:
         """Clear the active configuration, custom rates, and budget.
 
         Parameters
@@ -474,7 +486,7 @@ class AgentConfig:
         *,
         input: float,   # noqa: A002  — mirrors industry terminology
         output: float,
-    ) -> "AgentConfig":
+    ) -> AgentConfig:
         """Override or add the cost rate for a specific provider + model.
 
         Custom rates take precedence over the built-in table for every cost
@@ -628,7 +640,7 @@ class AgentConfig:
     # Budget API
     # ------------------------------------------------------------------
 
-    def set_budget(self, *, usd: float) -> "AgentConfig":
+    def set_budget(self, *, usd: float) -> AgentConfig:
         """Set a session spend cap.
 
         Once :attr:`spent_usd` reaches *usd*, any subsequent LLM call
@@ -658,7 +670,7 @@ class AgentConfig:
         self._budget_usd = float(usd)
         return self
 
-    def reset_budget(self, *, cap: bool = False) -> "AgentConfig":
+    def reset_budget(self, *, cap: bool = False) -> AgentConfig:
         """Reset the session spend counter.
 
         Parameters
@@ -845,7 +857,7 @@ class AgentConfig:
         provider: str | None = None,
         api_key:  str | None = None,
         model:    str | None = None,
-    ) -> Generator["AgentConfig", None, None]:
+    ) -> Generator[AgentConfig, None, None]:
         """Temporarily override the global config inside a ``with`` block.
 
         All arguments are optional; omitted values are left unchanged.
@@ -924,7 +936,7 @@ class AgentConfig:
         return None
 
     @contextmanager
-    def offline(self) -> Generator["AgentConfig", None, None]:
+    def offline(self) -> Generator[AgentConfig, None, None]:
         """Context manager: force truly offline mode in the current thread.
 
         While active, :meth:`_resolve_key` will not inspect environment

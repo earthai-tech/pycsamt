@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from pycsamt.core import mixins as m
 from pycsamt.core import config as cfg
+from pycsamt.core import mixins as m
 
 
 def test_public_api_all():

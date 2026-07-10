@@ -24,14 +24,25 @@ Example
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import (
+    Any,
+)
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from . import _common as _c
 from .core import DeviceConfig, PacketKind, TelemetryPacket
-from .monitoring import MonitoringConfig, MonitoringStatus, TelemetryMonitor
-from .provenance import AcquisitionManifest, ProvenanceRecord, log_qc_decision
+from .monitoring import (
+    MonitoringConfig,
+    MonitoringStatus,
+    TelemetryMonitor,
+)
+from .provenance import (
+    AcquisitionManifest,
+    ProvenanceRecord,
+    log_qc_decision,
+)
 from .schemas import parse_payload
 from .station import StationConfig, station_table
 from .sync import SyncConfig
@@ -44,21 +55,21 @@ class _StationAggregate:
     """Rolling per-station summary derived from telemetry packets."""
 
     station_id: str
-    channels: List[str] = field(default_factory=list)
-    method: Optional[str] = None
+    channels: list[str] = field(default_factory=list)
+    method: str | None = None
     n_packets: int = 0
     n_accept: int = 0
     n_reject: int = 0
-    accepted_band_hz: Optional[tuple] = None
-    battery_v: Optional[float] = None
-    sample_rate_hz: Optional[float] = None
-    first_ts: Optional[float] = None
-    last_ts: Optional[float] = None
-    last_decision: Optional[str] = None
-    qc_decisions: List[Dict[str, Any]] = field(default_factory=list)
+    accepted_band_hz: tuple | None = None
+    battery_v: float | None = None
+    sample_rate_hz: float | None = None
+    first_ts: float | None = None
+    last_ts: float | None = None
+    last_decision: str | None = None
+    qc_decisions: list[dict[str, Any]] = field(default_factory=list)
 
     @property
-    def acceptance_rate(self) -> Optional[float]:
+    def acceptance_rate(self) -> float | None:
         total = self.n_accept + self.n_reject
         return (self.n_accept / total) if total else None
 
@@ -72,18 +83,18 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         self,
         survey_id: str,
         *,
-        devices: Optional[Iterable[DeviceConfig | Mapping[str, Any]]] = None,
-        stations: Optional[Iterable[StationConfig | Mapping[str, Any]]] = None,
-        monitoring_config: Optional[MonitoringConfig] = None,
-        sync_config: Optional[SyncConfig] = None,
-        operator: Optional[str] = None,
-        method: Optional[str] = None,
-        metadata: Optional[Mapping[str, Any]] = None,
+        devices: Iterable[DeviceConfig | Mapping[str, Any]] | None = None,
+        stations: Iterable[StationConfig | Mapping[str, Any]] | None = None,
+        monitoring_config: MonitoringConfig | None = None,
+        sync_config: SyncConfig | None = None,
+        operator: str | None = None,
+        method: str | None = None,
+        metadata: Mapping[str, Any] | None = None,
     ) -> None:
         self.survey_id = _c.as_nonempty_str(survey_id, "survey_id")
-        self.devices: Dict[str, DeviceConfig] = {}
-        self.stations: Dict[str, StationConfig] = {}
-        self.packets: List[TelemetryPacket] = []
+        self.devices: dict[str, DeviceConfig] = {}
+        self.stations: dict[str, StationConfig] = {}
+        self.packets: list[TelemetryPacket] = []
         self.monitoring_config = monitoring_config or MonitoringConfig()
         self.sync_config = sync_config or SyncConfig()
         self.operator = _c.as_optional_str(operator, "operator")
@@ -199,7 +210,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             self.add_packet(packet)
 
     # -- assessment --------------------------------------------------------
-    def assess(self, *, now: Optional[float] = None) -> MonitoringStatus:
+    def assess(self, *, now: float | None = None) -> MonitoringStatus:
         """Assess telemetry quality with the session monitoring config."""
         return TelemetryMonitor(self.monitoring_config).assess(
             self.packets, now=now
@@ -210,7 +221,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         return station_table(list(self.stations.values()), api=api)
 
     # -- pyCSAMT-facing exports -------------------------------------------
-    def to_sites(self) -> List[StationConfig]:
+    def to_sites(self) -> list[StationConfig]:
         """Return acquisition-level station descriptors.
 
         These are :class:`StationConfig` objects enriched from telemetry
@@ -219,7 +230,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         objects, which require processed impedance data.
         """
         aggregates = self._station_aggregates()
-        sites: List[StationConfig] = []
+        sites: list[StationConfig] = []
         for station_id in self._ordered_station_ids():
             station = self.stations.get(station_id) or StationConfig(
                 station_id=station_id
@@ -232,7 +243,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             sites.append(station)
         return sites
 
-    def to_pipeline_input(self) -> Dict[str, Any]:
+    def to_pipeline_input(self) -> dict[str, Any]:
         """Return a serialisable hand-off for the processing pipeline.
 
         Contains, per station, the location, channels, observed method,
@@ -240,7 +251,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         downstream pyCSAMT processing flow needs to know from acquisition.
         """
         aggregates = self._station_aggregates()
-        stations_out: List[Dict[str, Any]] = []
+        stations_out: list[dict[str, Any]] = []
         for station_id in self._ordered_station_ids():
             station = self.stations.get(station_id)
             agg = aggregates.get(station_id)
@@ -275,8 +286,8 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
     def to_manifest(self) -> AcquisitionManifest:
         """Build a reproducible :class:`AcquisitionManifest`."""
         aggregates = self._station_aggregates()
-        records: List[ProvenanceRecord] = []
-        all_qc: List[Dict[str, Any]] = []
+        records: list[ProvenanceRecord] = []
+        all_qc: list[dict[str, Any]] = []
         method = self.method
         for station_id in self._ordered_station_ids():
             station = self.stations.get(station_id)
@@ -319,7 +330,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         return self.to_manifest().write(path, indent=indent)
 
     # -- serialisation -----------------------------------------------------
-    def to_dict(self) -> Dict[str, Any]:  # type: ignore[override]
+    def to_dict(self) -> dict[str, Any]:  # type: ignore[override]
         """Return a serialisable representation of the whole session."""
         return dict(
             survey_id=self.survey_id,
@@ -336,7 +347,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         return json.dumps(self.to_dict(), indent=indent, default=str)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "FieldSession":
+    def from_dict(cls, data: Mapping[str, Any]) -> FieldSession:
         """Reconstruct a session from :meth:`to_dict` output."""
         data = dict(data)
         session = cls(
@@ -354,7 +365,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         return session
 
     @classmethod
-    def from_json(cls, text: str) -> "FieldSession":
+    def from_json(cls, text: str) -> FieldSession:
         """Reconstruct a session from a JSON string."""
         return cls.from_dict(json.loads(text))
 
@@ -370,13 +381,13 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         return os.path.abspath(path)
 
     @classmethod
-    def read_json(cls, path: str) -> "FieldSession":
+    def read_json(cls, path: str) -> FieldSession:
         """Load a session from a JSON file."""
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             return cls.from_json(handle.read())
 
     # -- internals ---------------------------------------------------------
-    def _resolve_station_id(self, packet: TelemetryPacket) -> Optional[str]:
+    def _resolve_station_id(self, packet: TelemetryPacket) -> str | None:
         payload = packet.payload or {}
         for key in ("station", "site", "station_id", "station_name"):
             value = payload.get(key)
@@ -387,7 +398,7 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             return device.station
         return None
 
-    def _ordered_station_ids(self) -> List[str]:
+    def _ordered_station_ids(self) -> list[str]:
         ids = list(self.stations.keys())
         seen = set(ids)
         for packet in self.packets:
@@ -408,8 +419,8 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
 
         return sorted(ids, key=_key)
 
-    def _station_aggregates(self) -> Dict[str, _StationAggregate]:
-        aggregates: Dict[str, _StationAggregate] = {}
+    def _station_aggregates(self) -> dict[str, _StationAggregate]:
+        aggregates: dict[str, _StationAggregate] = {}
         for packet in self.packets:
             sid = self._resolve_station_id(packet)
             if sid is None:

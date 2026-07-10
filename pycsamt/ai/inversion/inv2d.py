@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -38,13 +37,17 @@ EMInverter2D(arch='unet', fitted)
 from __future__ import annotations
 
 import copy
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
-from .._base import BaseEMNet, EMCheckpoint
-from .._backend_utils import resolve_device, get_weights, set_weights, active_backend
+from .._backend_utils import (
+    active_backend,
+    get_weights,
+    resolve_device,
+    set_weights,
+)
+from .._base import BaseEMNet
 
 __all__ = ["EMInverter2D"]
 
@@ -80,7 +83,7 @@ class EMInverter2D(BaseEMNet):
     """
 
     # Base channel widths for each encoder stage (bridge appended adaptively)
-    _BASE_CHANNELS: Tuple[int, ...] = (32, 64, 128, 256, 512)
+    _BASE_CHANNELS: tuple[int, ...] = (32, 64, 128, 256, 512)
 
     def __init__(
         self,
@@ -90,10 +93,10 @@ class EMInverter2D(BaseEMNet):
         n_freqs: int = 32,
         *,
         arch: str = "unet",
-        unet_depth: Optional[int] = None,
-        channels: Optional[Tuple[int, ...]] = None,
+        unet_depth: int | None = None,
+        channels: tuple[int, ...] | None = None,
         dropout: float = 0.2,
-        device: Optional[str] = None,
+        device: str | None = None,
         log_rho_out: bool = True,
         **net_kwargs,
     ) -> None:
@@ -109,17 +112,17 @@ class EMInverter2D(BaseEMNet):
         # Compute adaptive channel spec if not supplied explicitly
         self._channels = self._resolve_channels(channels, unet_depth)
 
-        self._x_mean: Optional[float] = None
-        self._x_std: Optional[float] = None
-        self._y_mean: Optional[float] = None
-        self._y_std: Optional[float] = None
-        self._backend_name: Optional[str] = None
+        self._x_mean: float | None = None
+        self._x_std: float | None = None
+        self._y_mean: float | None = None
+        self._y_std: float | None = None
+        self._backend_name: str | None = None
 
     def _resolve_channels(
         self,
-        channels: Optional[Tuple[int, ...]],
-        unet_depth: Optional[int],
-    ) -> Tuple[int, ...]:
+        channels: tuple[int, ...] | None,
+        unet_depth: int | None,
+    ) -> tuple[int, ...]:
         """Return channel tuple safe for current (n_freqs, n_stations)."""
         import math
         if channels is not None:
@@ -152,17 +155,17 @@ class EMInverter2D(BaseEMNet):
     def fit(
         self,
         X: np.ndarray,
-        y: Optional[np.ndarray] = None,
+        y: np.ndarray | None = None,
         *,
         epochs: int = 100,
         batch_size: int = 16,
         lr: float = 1e-3,
         patience: int = 15,
         val_frac: float = 0.1,
-        grad_clip: Optional[float] = 1.0,
-        seed: Optional[int] = None,
+        grad_clip: float | None = 1.0,
+        seed: int | None = None,
         verbose: bool = True,
-    ) -> "EMInverter2D":
+    ) -> EMInverter2D:
         """
         Train the 2-D inversion network.
 
@@ -231,7 +234,7 @@ class EMInverter2D(BaseEMNet):
                    epochs, batch_size, lr, patience, grad_clip, verbose):
         import torch
         import torch.nn as nn
-        from torch.utils.data import TensorDataset, DataLoader
+        from torch.utils.data import DataLoader, TensorDataset
 
         # channels-first: (n, n_comp, n_freqs, n_sta) — already correct
         # target: add channel dim → (n, 1, n_depth, n_sta)
@@ -406,7 +409,7 @@ class EMInverter2D(BaseEMNet):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def _get_params(self) -> Dict[str, Any]:
+    def _get_params(self) -> dict[str, Any]:
         p = {
             "n_components": self.n_components,
             "n_depth": self.n_depth,
@@ -421,8 +424,8 @@ class EMInverter2D(BaseEMNet):
         p.update(self._net_kwargs)
         return p
 
-    def _get_weights(self) -> Dict[str, np.ndarray]:
-        out: Dict[str, np.ndarray] = {}
+    def _get_weights(self) -> dict[str, np.ndarray]:
+        out: dict[str, np.ndarray] = {}
         if self._network is not None:
             out.update(get_weights(self._network))
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
@@ -434,7 +437,7 @@ class EMInverter2D(BaseEMNet):
         out["_channels"] = np.array(list(self._channels))
         return out
 
-    def _load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def _load_weights(self, weights: dict[str, np.ndarray]) -> None:
         backend_name = str(weights.pop("_backend", np.array("torch")))
         self._backend_name = backend_name
 

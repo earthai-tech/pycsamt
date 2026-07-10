@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -28,7 +27,6 @@ import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
-
 
 # ---------------------------------------------------------------------------
 # Fake interp objects (avoid real Occam2D I/O in unit tests)
@@ -113,8 +111,8 @@ def _patch_classify_in_module(
 
     Both resolve via their defining modules, so we patch those.
     """
-    import pycsamt.models.occam2d.results as _results
     import pycsamt.interp as _interp
+    import pycsamt.models.occam2d.results as _results
 
     model = _fake_model(n_x=n_stations)
     logs  = [_fake_log(f"S{i:02d}") for i in range(n_stations)]

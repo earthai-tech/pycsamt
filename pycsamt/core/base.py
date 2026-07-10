@@ -1,18 +1,20 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-import numpy as np 
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field, is_dataclass
+from dataclasses import fields as dc_fields
+from typing import (
+    Any,
+    Protocol,
+)
 
-from dataclasses import dataclass, is_dataclass, field, fields as dc_fields
-from typing import Any, Dict, Optional, Protocol
-from typing import Iterable, Mapping
+import numpy as np
 
 from ..api.property import PyCSAMTObject
-
-from .config import StationNamePolicy, get_config, get_adapter
+from .config import StationNamePolicy, get_adapter, get_config
 
 __all__ = [
     "TFBundle",
@@ -279,18 +281,18 @@ class CoreObject(PyCSAMTObject):
         return cls._to_dict(
             v, public_only=public_only, depth=depth - 1
         )
-    
-    
+
+
 @dataclass
 class TFBundle(CoreObject):
     r"""
     Lightweight, neutral payload for transfer functions.
-    
+
     The bundle holds frequency-indexed arrays and optional site
     metadata. It is intentionally permissive about array types
     (e.g., lists or NumPy arrays) so that backends can populate
     and consume it without hard dependencies.
-    
+
     Parameters
     ----------
     freq : array_like or None
@@ -319,13 +321,13 @@ class TFBundle(CoreObject):
         Sensor azimuth or site orientation (degrees).
     attrs : dict
         Free-form attributes that accompany the data.
-    
+
     Notes
     -----
     Only one of ``z`` or ``(rho, phase)`` is required for most
     workflows. Transformers may fill the missing part using
     package settings (see :mod:`pycsamt.core.config`).
-    
+
     Examples
     --------
     >>> from pycsamt.core.base import TFBundle
@@ -348,20 +350,20 @@ class TFBundle(CoreObject):
     lon: float | None = None
     elev: float | None = None
     azimuth: float | None = None
-    attrs: Dict[str, Any] = field(default_factory=dict)
+    attrs: dict[str, Any] = field(default_factory=dict)
 
     def is_empty(self) -> bool:
         r"""
         Return True if there is no usable TF content.
-        
+
         A bundle is considered empty when neither ``z`` nor the pair
         ``(rho, phase)`` is present.
-        
+
         Returns
         -------
         bool
             ``True`` if empty, ``False`` otherwise.
-        
+
         Examples
         --------
         >>> TFBundle().is_empty()
@@ -377,11 +379,11 @@ class TFBundle(CoreObject):
 class SupportsToBundle(Protocol):
     r"""
     Protocol for objects that can export a :class:`TFBundle`.
-    
+
     Any class implementing:
-    
+
     ``to_bundle(self) -> TFBundle``
-    
+
     is considered compatible. This keeps interop light while
     avoiding a hard dependency on specific backends.
     """
@@ -392,11 +394,11 @@ class SupportsFromBundle(Protocol):
     r"""
     Protocol for classes that can be built from a
     :class:`TFBundle`.
-    
+
     Any class implementing the classmethod:
-    
+
     ``from_bundle(cls, bundle: TFBundle) -> Any``
-    
+
     is considered compatible. This is commonly used by test
     doubles or thin wrappers in frontends.
     """
@@ -405,19 +407,19 @@ class SupportsFromBundle(Protocol):
 
 
 def ensure_station(
-    name: Optional[str],
-    station_id: Optional[str | int],
+    name: str | None,
+    station_id: str | int | None,
     *,
-    policy: Optional[StationNamePolicy] = None,
+    policy: StationNamePolicy | None = None,
 ) -> str:
     r"""
     Return a valid station name using policy rules.
-    
+
     Validation is performed by the active
     :class:`~pycsamt.core.config.StationNamePolicy`. If the given
     ``name`` is invalid or missing, a synthetic one is derived
     from ``station_id``.
-    
+
     Parameters
     ----------
     name : str or None
@@ -427,17 +429,17 @@ def ensure_station(
     policy : StationNamePolicy, optional
         Custom policy. Defaults to the global policy from
         :func:`~pycsamt.core.config.get_config`.
-    
+
     Returns
     -------
     str
         Validated or synthesized station name.
-    
+
     See Also
     --------
     pycsamt.core.config.StationNamePolicy
         Normalization, synthesis and limits.
-    
+
     Examples
     --------
     >>> ensure_station(None, 7)
@@ -450,32 +452,32 @@ def ensure_station(
 def pick_adapter_key(
     obj: Any,
     *,
-    hint: Optional[str] = None,
-) -> Optional[str]:
+    hint: str | None = None,
+) -> str | None:
     r"""
     Infer an adapter key (``'avg'``, ``'j'``, ``'edi'``) from an
     object.
-    
+
     Heuristics look at the object's module and class name. If a
     ``hint`` is provided, it is returned verbatim (lower-cased).
-    
+
     Parameters
     ----------
     obj : Any
         Source object whose kind should be inferred.
     hint : str, optional
         Explicit override for the key.
-    
+
     Returns
     -------
     str or None
         Inferred key or ``None`` if it cannot be decided.
-    
+
     Notes
     -----
     This function does not validate that an adapter exists for
     the returned key. Use :func:`to_edi` to dispatch safely.
-    
+
     Examples
     --------
     >>> class X: pass
@@ -505,16 +507,16 @@ def pick_adapter_key(
 def to_edi(
     source: Any,
     *,
-    key: Optional[str] = None,
+    key: str | None = None,
     **kwargs: Any,
 ) -> Any:
     r"""
     Dispatch ``source`` to a registered adapter and return EDI.
-    
+
     This function consults the adapter registry managed by
     :mod:`pycsamt.core.config`. It attempts to infer the adapter
     key when not provided and calls the associated factory.
-    
+
     Parameters
     ----------
     source : Any
@@ -524,30 +526,30 @@ def to_edi(
         omitted, :func:`pick_adapter_key` is used.
     **kwargs : Any
         Extra keyword arguments forwarded to the adapter.
-    
+
     Returns
     -------
     Any
         An EDI object or an EDI collection, depending on the
         adapter.
-    
+
     Raises
     ------
     RuntimeError
         If the key cannot be inferred or no adapter is registered
         for it.
-    
+
     See Also
     --------
     pycsamt.core.config.register_adapter
         Register new adapters at runtime.
     pick_adapter_key
         Lightweight key inference from object metadata.
-    
+
     Examples
     --------
     Register a trivial adapter and convert an object:
-    
+
     >>> from pycsamt.core.config import register_adapter
     >>> class Dummy: pass
     >>> Dummy.__module__ = 'pycsamt.zonge.avg'
@@ -584,10 +586,10 @@ class MTBase(CoreObject):
     **Unit conventions.** Two equivalent formulas are common for
     apparent resistivity from impedance magnitude ``|Z|``:
 
-    * **SI (E in V/m, H in A/m):**  
-      ``ρₐ = |Z|² / (μ₀·ω) = |Z|² · RHO_FACTOR / f``, with  
+    * **SI (E in V/m, H in A/m):**
+      ``ρₐ = |Z|² / (μ₀·ω) = |Z|² · RHO_FACTOR / f``, with
       ``ω = 2π f`` and ``RHO_FACTOR = 1/(μ₀·2π)``.
-    * **Field units (E in mV/km, B in nT):**  
+    * **Field units (E in mV/km, B in nT):**
       ``ρₐ ≈ (0.2 / f) · |E/H|²`` — a legacy Zonge-style form.
       This is reflected by :data:`ZONGE_RHO_FACTOR`, i.e. ``0.2``.
 
@@ -597,10 +599,10 @@ class MTBase(CoreObject):
     Constants
     ---------
     MU0 : float
-        Magnetic permeability of free space (H/m).  
+        Magnetic permeability of free space (H/m).
         ``4π × 10⁻⁷``.
     EPS0 : float
-        Electric permittivity of free space (F/m).  
+        Electric permittivity of free space (F/m).
         ``8.854187817 × 10⁻¹²``.
     C : float
         Speed of light in vacuum (m/s). From CODATA.
@@ -1046,31 +1048,31 @@ class MTBase(CoreObject):
             phi = phi * 1.0e3
         return amp, phi
 
- 
+
     def phase_tensor(self, z: object) -> np.ndarray:
         r"""
         Phase tensor ``Φ = X⁺ Y`` from impedance ``Z = X + iY``.
-        
+
         This computes a real 2×2 phase tensor using a robust
         pseudoinverse ``X⁺`` of the real part of ``Z``. Shapes are
         broadcast over the leading axes.
-        
+
         Parameters
         ----------
         z : array_like, shape (..., 2, 2)
             Impedance tensor(s) ``Z = X + iY``.
-        
+
         Returns
         -------
         Phi : ndarray, shape (..., 2, 2)
             Real phase tensor.
-        
+
         Notes
         -----
         If ``X`` is ill-conditioned, the pseudoinverse stabilizes the
         solution. ``Φ`` is invariant to site gain and captures the
         2-D/3-D character of the response.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1079,7 +1081,7 @@ class MTBase(CoreObject):
         >>> Phi = MTBase().phase_tensor(Z)
         >>> Phi.shape
         (1, 2, 2)
-        
+
         See Also
         --------
         phase_tensor_params
@@ -1101,18 +1103,18 @@ class MTBase(CoreObject):
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         r"""
         Principal phase angles, azimuth, skew, and ellipticity.
-        
+
         Derives quick-look parameters from the phase tensor ``Φ``:
         principal phase angles (``φ_max``, ``φ_min``), phase tensor
         azimuth ``α``, skew angle ``β``, and ellipticity.
-        
+
         Parameters
         ----------
         z : array_like, shape (..., 2, 2)
             Impedance tensor(s).
         angle_unit : {'deg', 'rad', 'mrad'}, optional
             Output unit for angular quantities. Default is degrees.
-        
+
         Returns
         -------
         phi_max : ndarray, shape (...)
@@ -1126,14 +1128,14 @@ class MTBase(CoreObject):
         ellipt : ndarray, shape (...)
             Ellipticity proxy ``(λ_max - λ_min)/(λ_max + λ_min)``,
             where ``λ`` are the eigenvalues used internally.
-        
+
         Notes
         -----
         This implementation obtains parameters from an eigen
         decomposition of ``Φ`` and simple angle formulas (Caldwell-
         style azimuth/skew heuristics). It is suitable for quality
         control and strike reconnaissance.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1143,7 +1145,7 @@ class MTBase(CoreObject):
         >>> pmax, pmin, az, skew, eps = z.phase_tensor_params(Z)
         >>> pmax.shape == pmin.shape == az.shape == skew.shape == eps.shape
         True
-        
+
         See Also
         --------
         phase_tensor
@@ -1163,7 +1165,7 @@ class MTBase(CoreObject):
         # lam_min = np.minimum(vals[..., 0], vals[..., 1])
         # phi_max = np.arctan(lam_max)
         # phi_min = np.arctan(lam_min)
-   
+
         # existing azimuth/skew (alpha, beta) formulas may stay as-is
         # but for principal phases use singular values:
         s = np.linalg.svd(Phi, compute_uv=False)  # shape (..., 2)
@@ -1194,19 +1196,19 @@ class MTBase(CoreObject):
     ) -> np.ndarray:
         r"""
         Azimuth of the phase tensor principal axis.
-        
+
         Parameters
         ----------
         z : array_like, shape (..., 2, 2)
             Impedance tensor(s).
         unit : {'deg', 'rad', 'mrad'}, optional
             Output unit. Default is degrees.
-        
+
         Returns
         -------
         alpha : ndarray, shape (...)
             Phase tensor azimuth.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1214,7 +1216,7 @@ class MTBase(CoreObject):
         >>> Z = np.zeros((3, 2, 2), complex)
         >>> MTBase().phase_tensor_azimuth(Z).shape
         (3,)
-        
+
         See Also
         --------
         phase_tensor
@@ -1227,7 +1229,7 @@ class MTBase(CoreObject):
     def tipper_rotate(t: object, theta_deg: float) -> np.ndarray:
         r"""
         Rotate tipper vectors by ``theta_deg`` in the horizontal plane.
-        
+
         Parameters
         ----------
         t : array_like, shape (..., 2) or (..., 1, 2)
@@ -1237,12 +1239,12 @@ class MTBase(CoreObject):
             Rotation angle in degrees. Positive angles rotate the
             coordinates clockwise (same convention as
             :meth:`rotate_impedance`).
-        
+
         Returns
         -------
         t_rot : ndarray, shape (..., 2)
             Rotated tipper vectors.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1250,7 +1252,7 @@ class MTBase(CoreObject):
         >>> T = np.array([[0.2+0.1j, -0.1+0.3j]])
         >>> MTBase.tipper_rotate(T, 30.0).shape
         (1, 2)
-        
+
         See Also
         --------
         rotate_impedance
@@ -1274,7 +1276,7 @@ class MTBase(CoreObject):
     ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Compute 2-D induction arrows from tipper components.
-        
+
         Parameters
         ----------
         t : array_like, shape (..., 2) or (..., 1, 2)
@@ -1286,20 +1288,20 @@ class MTBase(CoreObject):
         use_imag : bool, optional
             If ``True``, use imaginary parts; else use real parts.
             Default ``False``.
-        
+
         Returns
         -------
         ax : ndarray, shape (...)
             X-component of the arrow.
         ay : ndarray, shape (...)
             Y-component of the arrow.
-        
+
         Notes
         -----
         Wiese arrows often highlight current channeling (2-D/3-D).
         Use imaginary arrows (``use_imag=True``) for deeper structure
         emphasis at higher periods.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1308,7 +1310,7 @@ class MTBase(CoreObject):
         >>> ax, ay = MTBase.induction_arrows(T, convention='wiese')
         >>> ax.shape == ay.shape
         True
-        
+
         See Also
         --------
         tipper_rotate
@@ -1335,32 +1337,32 @@ class MTBase(CoreObject):
     ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Swift skew parameter from the impedance tensor.
-        
+
         Computes the complex Swift skew ratio
-        
+
         ``s = (Z_xx + Z_yy) / (Z_xy - Z_yx)``,
-        
+
         returning its magnitude and angle.
-        
+
         Parameters
         ----------
         z : array_like, shape (..., 2, 2)
             Impedance tensor(s).
         unit : {'deg', 'rad', 'mrad'}, optional
             Unit for the returned angle. Default is degrees.
-        
+
         Returns
         -------
         amp : ndarray, shape (...)
             Magnitude ``|s|`` (dimensionless).
         ang : ndarray, shape (...)
             Argument of ``s`` in the requested unit.
-        
+
         Notes
         -----
         Low ``|s|`` values are consistent with 1-D/2-D structure; an
         elevated skew suggests 3-D effects or distortion.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1390,24 +1392,24 @@ class MTBase(CoreObject):
     ) -> np.ndarray:
         r"""
         Apparent conductivity ``σₐ = μ₀ ω / |Z|²`` (S/m).
-        
+
         Parameters
         ----------
         z : array_like
             Impedance (per component or invariant).
         f : array_like
             Frequency (Hz), broadcastable to ``z``.
-        
+
         Returns
         -------
         sigma_a : ndarray
             Apparent conductivity (S/m).
-        
+
         Notes
         -----
         This is the reciprocal of the common SI resistivity formula
         ``ρₐ = |Z|² / (μ₀ ω)``.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1416,7 +1418,7 @@ class MTBase(CoreObject):
         >>> f = np.array([1.0, 0.1])        # Hz
         >>> MTBase().apparent_conductivity_from_z(Z, f).shape
         (2,)
-        
+
         See Also
         --------
         rho_phase_from_z
@@ -1434,26 +1436,26 @@ class MTBase(CoreObject):
     ) -> np.ndarray:
         r"""
         Plane-wave impedance over a uniform half-space.
-        
+
         For a homogeneous half-space of resistivity ``ρ``, the
         surface impedance is
-        
+
         ``Z = (1 + i) / √2 · √(μ₀ ω ρ)``,
-        
+
         with a constant 45° phase and amplitude ``∝ √(ω ρ)``.
-        
+
         Parameters
         ----------
         f : array_like
             Frequency (Hz).
         rho : array_like
             Resistivity (Ω·m).
-        
+
         Returns
         -------
         Z : ndarray
             Complex half-space impedance.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1471,27 +1473,27 @@ class MTBase(CoreObject):
     def z_mvk_nt_to_ohms(self, z: object) -> np.ndarray:
         r"""
         Convert ``Z`` from ``(mV/km)/nT`` to ohms (Ω).
-        
+
         This helper assumes the denominator is magnetic flux density
         ``B`` in nT (not ``H``). It converts to SI ``(V/m)/T`` and
         then multiplies by ``μ₀`` to obtain ``V/A = Ω``.
-        
+
         Parameters
         ----------
         z : array_like
             Impedance in mixed field units ``(mV/km)/nT``.
-        
+
         Returns
         -------
         Z_ohms : ndarray
             Impedance in ohms (Ω).
-        
+
         Notes
         -----
         If your denominator is already the magnetic field intensity
         ``H`` in A/m, you *should not* multiply by ``μ₀``. Use
         careful unit bookkeeping in mixed-unit workflows.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1513,7 +1515,7 @@ class MTBase(CoreObject):
     ) -> tuple[np.ndarray, np.ndarray]:
         r"""
         Rotate horizontal electric and magnetic field vectors.
-        
+
         Parameters
         ----------
         e : array_like, shape (..., 2)
@@ -1523,14 +1525,14 @@ class MTBase(CoreObject):
         theta_deg : float
             Rotation angle in degrees. Positive rotates the
             coordinate frame clockwise.
-        
+
         Returns
         -------
         e_rot : ndarray, shape (..., 2)
             Rotated electric field components.
         h_rot : ndarray, shape (..., 2)
             Rotated magnetic field components.
-        
+
         Examples
         --------
         >>> from pycsamt.core.base import MTBase
@@ -1540,7 +1542,7 @@ class MTBase(CoreObject):
         >>> e_r, h_r = MTBase.rotate_fields(e, h, 45.0)
         >>> e_r.shape == h_r.shape
         True
-        
+
         See Also
         --------
         rotate_impedance

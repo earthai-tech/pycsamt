@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -27,10 +26,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Optional
 
 from PySide6.QtCore import QByteArray, Qt, Signal, Slot
-from PySide6.QtGui  import QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -43,12 +41,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMainWindow,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
-    QScrollArea,
-    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTabWidget,
@@ -58,11 +53,11 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.controllers.pipeline_controller import (
+    STATUS_ICON,
+    ParamSpec,
     PipelineController,
     PipelineStep,
     StepStatus,
-    STATUS_ICON,
-    ParamSpec,
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
@@ -343,7 +338,9 @@ class PipelineWindow(QWidget):
         self._ctrl.set_input_sites(sites)
         step0 = self._ctrl.steps[0]
         if step0.active_method == "current" and sites is not None:
-            from pycsamt.app.desktop.controllers.pipeline_controller import StepStatus
+            from pycsamt.app.desktop.controllers.pipeline_controller import (
+                StepStatus,
+            )
             step0.status = StepStatus.DONE
             step0.output_sites = sites
             step0.result_info = f"{self._ctrl._n(sites)} stations ready"
@@ -491,7 +488,7 @@ class PipelineWindow(QWidget):
             row = QHBoxLayout(container)
             row.setContentsMargins(0, 0, 0, 0)
             edit = QLineEdit(str(value or ""))
-            edit.setObjectName(f"path_edit")
+            edit.setObjectName("path_edit")
             browse = QPushButton("…")
             browse.setFixedWidth(26)
             browse.clicked.connect(lambda: self._browse_path(edit))
@@ -587,14 +584,16 @@ class PipelineWindow(QWidget):
         self._log("Pipeline reset.")
         self._select_step(0)
 
-    def _start_worker(self, step_ids: List[int]) -> None:
+    def _start_worker(self, step_ids: list[int]) -> None:
         if self._worker and self._worker.isRunning():
             return
         if not self._ctrl.is_ready():
             self._log("No survey data loaded — run step 0 (Load) first.")
             return
 
-        from pycsamt.app.desktop.workers.pipeline_worker import PipelineWorker
+        from pycsamt.app.desktop.workers.pipeline_worker import (
+            PipelineWorker,
+        )
 
         self._worker = PipelineWorker(self._ctrl, step_ids, parent=self)
         self._worker.step_started.connect(self._on_step_started)
@@ -666,8 +665,9 @@ class PipelineWindow(QWidget):
     def _draw_step_preview(self, step: PipelineStep) -> None:
         if step.diag_fn is None or step.output_sites is None:
             return
-        import pycsamt.emtools as et
         import inspect
+
+        import pycsamt.emtools as et
         fn = getattr(et, step.diag_fn, None)
         if fn is None:
             return
@@ -690,7 +690,9 @@ class PipelineWindow(QWidget):
         fig, ax = plt.subplots(figsize=(10, 6))
         step = self._ctrl.steps[self._selected_step]
         if step.diag_fn and step.output_sites:
-            import pycsamt.emtools as et, inspect
+            import inspect
+
+            import pycsamt.emtools as et
             fn = getattr(et, step.diag_fn, None)
             if fn:
                 try:

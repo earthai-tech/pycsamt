@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Field-measurement constraints for petrophysical calibration.
@@ -56,22 +55,26 @@ References
 from __future__ import annotations
 
 import dataclasses
-import warnings
-from dataclasses import dataclass, field
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, Union
 
 import numpy as np
 
 try:
-    from scipy.optimize import minimize, OptimizeResult
+    from scipy.optimize import OptimizeResult, minimize
     _SCIPY_OK = True
 except ImportError:
     _SCIPY_OK = False
 
 from ..api.property import PyCSAMTObject
 from ._base import ResistivityModel
+from .hydromodel import (
+    EMHydroModel,
+    EMHydroResult,
+    PetrophysicalConfig,
+)
 from .petrophysics import ec_mscm_to_rho
-from .hydromodel import EMHydroModel, EMHydroResult, PetrophysicalConfig
 
 __all__ = [
     "WaterLevelConstraint",
@@ -140,7 +143,7 @@ class PumpingTestConstraint(PyCSAMTObject):
 
     x: float
     T_m2s: float
-    S: Optional[float] = None
+    S: float | None = None
     uncertainty_factor: float = 3.0
     station: str = ""
 
@@ -276,9 +279,9 @@ class ConstrainedCalibrator(PyCSAMTObject):
         calibrate_rho_w: bool = True,
         calibrate_m: bool = False,
         calibrate_phi_prior: bool = False,
-        rho_w_bounds: Tuple[float, float] = (0.003, 2.0),
-        m_bounds: Tuple[float, float] = (1.2, 2.8),
-        phi_bounds: Tuple[float, float] = (0.03, 0.60),
+        rho_w_bounds: tuple[float, float] = (0.003, 2.0),
+        m_bounds: tuple[float, float] = (1.2, 2.8),
+        phi_bounds: tuple[float, float] = (0.03, 0.60),
         n_restarts: int = 1,
         verbose: bool = False,
     ) -> None:
@@ -300,8 +303,8 @@ class ConstrainedCalibrator(PyCSAMTObject):
         self.verbose         = verbose
 
         # fitted attributes
-        self.calibrated_config_: Optional[PetrophysicalConfig] = None
-        self.misfit_history_: List[float] = []
+        self.calibrated_config_: PetrophysicalConfig | None = None
+        self.misfit_history_: list[float] = []
         self.opt_result_: Any = None
 
     # ── public ─────────────────────────────────────────────────────────────
@@ -328,7 +331,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
         x0, bounds = self._pack_params(em_hydro_model.config)
         rng = np.random.default_rng(42)
 
-        best_x: Optional[np.ndarray] = None
+        best_x: np.ndarray | None = None
         best_f: float = float("inf")
         best_opt: Any = None
 
@@ -380,7 +383,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
 
     def constraint_residuals(
         self, result: EMHydroResult
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Return per-constraint residuals for the given result (for diagnostics)."""
         rows = []
         for c in self.constraints:
@@ -425,10 +428,10 @@ class ConstrainedCalibrator(PyCSAMTObject):
 
     def _pack_params(
         self, cfg: PetrophysicalConfig
-    ) -> Tuple[np.ndarray, list]:
+    ) -> tuple[np.ndarray, list]:
         """Extract free parameters as a 1-D array with bounds."""
-        x0_list: List[float] = []
-        bounds_list: List[Tuple[float, float]] = []
+        x0_list: list[float] = []
+        bounds_list: list[tuple[float, float]] = []
 
         if self.calibrate_rho_w:
             x0_list.append(cfg.rho_w)

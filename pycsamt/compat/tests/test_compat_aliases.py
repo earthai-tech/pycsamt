@@ -1,14 +1,15 @@
 
 from __future__ import annotations
 
-import warnings
 import types
+import warnings
+
 import pytest
 
 from pycsamt.compat.aliases import (
-    make_compat_alias,
-    install_compat_aliases,
     compat_alias,
+    install_compat_aliases,
+    make_compat_alias,
 )
 
 
@@ -148,12 +149,12 @@ def test_compat_alias_injects_and_exports(monkeypatch):
     with warnings.catch_warnings(record=True) as rec_none:
         warnings.simplefilter("always", FutureWarning)
         out2 = mod.__dict__["new_func"](5, b=2)
-        
+
     assert out2 == 3
     assert len(rec_none) == 0
 
     # export appended to __all__
     assert "old_func" in mod.__dict__["__all__"]
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

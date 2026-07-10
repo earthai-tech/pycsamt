@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -47,15 +46,13 @@ PINNInverter1D(n_stations=5, fitted)
 """
 from __future__ import annotations
 
-import warnings
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
 from .._base import BasePINNInverter
-from ._sites_bridge import SiteObs1D, sites_to_obs_1d
 from ._pinn_ops import fit_station
+from ._sites_bridge import SiteObs1D, sites_to_obs_1d
 
 __all__ = ["PINNInverter1D"]
 
@@ -63,8 +60,10 @@ __all__ = ["PINNInverter1D"]
 # backward-compat re-exports consumed by hybrid1d — torch only
 try:
     from ._pinn_ops_torch import (
-        _mt1d_torch,
         _fit_station_torch as _fit_station,
+    )
+    from ._pinn_ops_torch import (
+        _mt1d_torch,
     )
 except ImportError:  # TF-only environment
     _mt1d_torch = None  # type: ignore[assignment]
@@ -123,7 +122,7 @@ class PINNInverter1D(BasePINNInverter):
         depth_max: float = 2000.0,
         smoothness_weight: float = 0.01,
         lr: float = 1e-2,
-        device: Optional[str] = None,
+        device: str | None = None,
         comp: str = "xy",
         recursive: bool = True,
         on_dup: str = "replace",
@@ -149,7 +148,7 @@ class PINNInverter1D(BasePINNInverter):
         self.on_dup = on_dup
         self.verbose = verbose
 
-        self._obs: List[SiteObs1D] = sites_to_obs_1d(
+        self._obs: list[SiteObs1D] = sites_to_obs_1d(
             sites,
             comp=comp,
             recursive=recursive,
@@ -157,7 +156,7 @@ class PINNInverter1D(BasePINNInverter):
             strict=True,
             verbose=verbose,
         )
-        self._results: List[Dict] = []
+        self._results: list[dict] = []
 
     # ── fit ──
 
@@ -167,7 +166,7 @@ class PINNInverter1D(BasePINNInverter):
         *,
         verbose: bool = True,
         log_every: int = 100,
-    ) -> "PINNInverter1D":
+    ) -> PINNInverter1D:
         """
         Run the physics-informed optimisation.
 
@@ -212,7 +211,7 @@ class PINNInverter1D(BasePINNInverter):
 
     # ── predict ──
 
-    def predict(self) -> List:
+    def predict(self) -> list:
         """
         Return fitted layered models for all stations.
 
@@ -255,9 +254,10 @@ class PINNInverter1D(BasePINNInverter):
         """
         self._check_fitted()
         import pandas as pd
+
         from pycsamt.forward.em1d import (
-            MT1DForward,
             CSAMT1DForward,
+            MT1DForward,
         )
         from pycsamt.forward.synthetic import LayeredModel
 
@@ -331,7 +331,7 @@ class PINNInverter1D(BasePINNInverter):
     # ── read-only properties ──
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         """Station names in order."""
         return [o.name for o in self._obs]
 

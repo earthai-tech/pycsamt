@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt pipe presets — list and expand named pipeline presets."""
@@ -10,8 +9,11 @@ import json
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
 from ._base import pipe
 
 
@@ -130,7 +132,9 @@ def presets(
             click.echo(f"{p.name},{p.description!r},{len(p.steps)},{codes}")
 
     else:
-        from pycsamt.pipeline import preset_catalogue  # noqa: PLC0415
+        from pycsamt.pipeline import (
+            preset_catalogue,  # noqa: PLC0415
+        )
         click.echo(preset_catalogue())
         click.echo(
             "  Tip: pycsamt pipe presets --expand <name>  to see a preset's steps."

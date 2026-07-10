@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,7 +32,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # Stratagem hardware files store values in scientific notation without spaces
 # between adjacent numbers when the second starts with '-' (e.g.
@@ -65,7 +63,7 @@ def _station_number(stem: str) -> int:
     return int(m.group(1)) if m else 0
 
 
-def _edi_sort_key(path: Path) -> Tuple:
+def _edi_sort_key(path: Path) -> tuple:
     """Natural-sort key: splits the stem into (text, int, text, …) tuples."""
     parts = re.split(r"(\d+)", path.stem.lower())
     return tuple(int(p) if p.isdigit() else p for p in parts)
@@ -87,7 +85,7 @@ def _read_19col(path: Path) -> np.ndarray:
     Rows with fewer than 3 extracted numbers are skipped.  Rows with fewer
     than 19 numbers are zero-padded on the right.
     """
-    rows: List[List[float]] = []
+    rows: list[list[float]] = []
     with open(path, "rb") as fh:
         raw = fh.read()
     # Normalise \r\n → \n then lone \r → \n so both hardware files (\r\r\n)
@@ -106,12 +104,12 @@ def _read_19col(path: Path) -> np.ndarray:
     return np.array(rows, dtype=np.float64) if rows else np.zeros((0, 19))
 
 
-def _parse_sensors_tbl(path: Path) -> Dict[str, str]:
+def _parse_sensors_tbl(path: Path) -> dict[str, str]:
     """Parse SENSORS.TBL into a mapping of lower-case name → original name."""
-    sensors: Dict[str, str] = {}
+    sensors: dict[str, str] = {}
     if not path.is_file():
         return sensors
-    with open(path, "r", errors="replace") as fh:
+    with open(path, errors="replace") as fh:
         for raw in fh:
             name = raw.strip()
             if name:
@@ -120,17 +118,17 @@ def _parse_sensors_tbl(path: Path) -> Dict[str, str]:
 
 
 def _build_masks(
-    files: List[Path],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    files: list[Path],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return (freq_grid, snr_mask, stack_counts) from a list of component files.
 
     *freq_grid*   : 1-D float array of length n_freqs
     *snr_mask*    : bool array (n_stations, n_freqs) — True where col-2 > 0
     *stack_counts*: int  array (n_stations, n_freqs) — raw stack count
     """
-    freq_grid: Optional[np.ndarray] = None
-    snr_rows: List[Optional[np.ndarray]] = []
-    stack_rows: List[Optional[np.ndarray]] = []
+    freq_grid: np.ndarray | None = None
+    snr_rows: list[np.ndarray | None] = []
+    stack_rows: list[np.ndarray | None] = []
 
     for fp in files:
         try:
@@ -232,7 +230,7 @@ class StratagemRawReader(PyCSAMTObject):
 
     def __init__(
         self,
-        station_dir: "str | Path | None" = None,
+        station_dir: str | Path | None = None,
         *,
         component: str = "X",
         verbose: int = 0,
@@ -244,8 +242,8 @@ class StratagemRawReader(PyCSAMTObject):
     # ------------------------------------------------------------------
     def fit(
         self,
-        station_dir: "str | Path | None" = None,
-    ) -> "StratagemRawReader":
+        station_dir: str | Path | None = None,
+    ) -> StratagemRawReader:
         """Read raw Stratagem files and build QC arrays.
 
         Parameters
@@ -290,8 +288,8 @@ class StratagemRawReader(PyCSAMTObject):
         # Store file names (e.g. 'X2HX.001') so that station numbers can be
         # extracted from the extension; stems (e.g. 'X2HX') are all identical
         # across stations and therefore useless as identifiers.
-        self._station_files_: List[Path] = x_files
-        self.stations_: List[str] = [p.name for p in x_files]
+        self._station_files_: list[Path] = x_files
+        self.stations_: list[str] = [p.name for p in x_files]
         self.station_numbers_: np.ndarray = np.array(
             [_station_number(p.name) for p in x_files], dtype=np.int32
         )
@@ -304,7 +302,7 @@ class StratagemRawReader(PyCSAMTObject):
         self.n_freqs_ = freq_grid.size
 
         if self.component == "ALL":
-            self.component_masks_: Dict[str, Tuple] = {}
+            self.component_masks_: dict[str, tuple] = {}
             for comp in components:
                 comp_files = sorted(
                     d.glob(f"{comp}*.*"),
@@ -350,7 +348,7 @@ class StratagemRawReader(PyCSAMTObject):
         return float(self.snr_mask_.mean())
 
     # ------------------------------------------------------------------
-    def match_to_edis(self, edi_objects: list) -> Dict[int, int]:
+    def match_to_edis(self, edi_objects: list) -> dict[int, int]:
         """Map EDI batch indices to raw station indices by hardware number.
 
         Stratagem raw files are numbered ``X*.001`` … ``X*.087`` (extension
@@ -382,10 +380,10 @@ class StratagemRawReader(PyCSAMTObject):
         if not hasattr(self, "station_numbers_"):
             raise NotFittedError("Call fit() first.")
 
-        raw_num_to_idx: Dict[int, int] = {
+        raw_num_to_idx: dict[int, int] = {
             int(n): i for i, n in enumerate(self.station_numbers_)
         }
-        result: Dict[int, int] = {}
+        result: dict[int, int] = {}
         for j, edi in enumerate(edi_objects):
             path = getattr(edi, "path", None)
             if path is not None:
@@ -492,9 +490,9 @@ class StratagemRawReader(PyCSAMTObject):
         *,
         kind: str = "snr",
         cmap: str = "RdYlGn",
-        figsize: Optional[tuple] = None,
+        figsize: tuple | None = None,
         log_freq: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ):
         """Plot hardware data coverage as a station × frequency heatmap.
 
@@ -590,7 +588,7 @@ class EDIBatch(PyCSAMTObject):
 
     def __init__(
         self,
-        edi_dir: "str | Path | None" = None,
+        edi_dir: str | Path | None = None,
         *,
         pattern: str = "*.edi",
         verbose: int = 0,
@@ -602,8 +600,8 @@ class EDIBatch(PyCSAMTObject):
     # ------------------------------------------------------------------
     def fit(
         self,
-        edi_dir: "str | Path | None" = None,
-    ) -> "EDIBatch":
+        edi_dir: str | Path | None = None,
+    ) -> EDIBatch:
         """Discover and load EDI files from *edi_dir*.
 
         Parameters
@@ -630,8 +628,8 @@ class EDIBatch(PyCSAMTObject):
                 f"No EDI files matching '{self.pattern}' in {d}"
             )
 
-        self.edi_paths_: List[Path] = paths
-        self.edi_objects_: List[EDIFile] = []
+        self.edi_paths_: list[Path] = paths
+        self.edi_objects_: list[EDIFile] = []
         skipped = 0
 
         for p in paths:
@@ -672,7 +670,7 @@ class EDIBatch(PyCSAMTObject):
         return iter(self.edi_objects_)
 
     # ------------------------------------------------------------------
-    def station_names(self) -> List[str]:
+    def station_names(self) -> list[str]:
         """Return DATAID strings from each loaded EDI's ``>HEAD`` section.
 
         Returns

@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Elevation-source callbacks: upload, fetch, and apply to the view."""
 
 from __future__ import annotations
 
-from dash import dcc, html, no_update, Input, Output, State
+from dash import Input, Output, State, dcc, html, no_update
 
 from .._ids import IDs
-from ..cache import get_view, set_view
 from .._render import store_from_view
+from ..cache import get_view, set_view
 
 
 def register_topo(app) -> None:
@@ -132,7 +131,7 @@ def _register_export(app) -> None:
             view.export_topography(path, fmt=fmt)
             filename = f"topography.{fmt}"
             if fmt == "csv":
-                with open(path, "r", encoding="utf-8") as fh:
+                with open(path, encoding="utf-8") as fh:
                     payload = dcc.send_string(fh.read(), filename)
             else:
                 with open(path, "rb") as fh:

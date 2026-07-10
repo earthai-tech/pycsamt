@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -27,7 +26,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
@@ -39,7 +37,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -50,7 +47,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QRadioButton,
-    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QStackedWidget,
@@ -60,7 +56,11 @@ from PySide6.QtWidgets import (
 )
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import PanelWindow, make_group, icon_button
+from pycsamt.app.desktop.windows._base import (
+    PanelWindow,
+    icon_button,
+    make_group,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -617,7 +617,6 @@ class InversionWindow(PanelWindow):
     # ── Traditional run ─────────────────────────────────────────────────────
 
     def _run_traditional(self, engine: str) -> None:
-        from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:
@@ -636,8 +635,13 @@ class InversionWindow(PanelWindow):
             return
 
     def _launch_occam2d(self, workdir: str) -> bool:
-        from pycsamt.models.occam2d import InputBuilder, OccamConfig
-        from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
+        from pycsamt.app.desktop.workers.inversion_worker import (
+            InversionWorker,
+        )
+        from pycsamt.models.occam2d import (
+            InputBuilder,
+            OccamConfig,
+        )
 
         modes = []
         if self._mode_te.isChecked(): modes.append("te")
@@ -674,8 +678,13 @@ class InversionWindow(PanelWindow):
         return True
 
     def _launch_modem(self, workdir: str) -> bool:
-        from pycsamt.models.modem import ModEmConfig, InputBuilder, ModEmRunner
-        from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
+        from pycsamt.app.desktop.workers.inversion_worker import (
+            InversionWorker,
+        )
+        from pycsamt.models.modem import (
+            InputBuilder,
+            ModEmConfig,
+        )
 
         mode_str = self._mod_mode.currentText().lower()  # "2d" or "3d"
         cfg = ModEmConfig(
@@ -714,8 +723,13 @@ class InversionWindow(PanelWindow):
         return True
 
     def _launch_mare2dem(self, workdir: str) -> bool:
-        from pycsamt.models.mare2dem import Mare2DEMConfig, InputBuilder, Mare2DEMRunner
-        from pycsamt.app.desktop.workers.inversion_worker import InversionWorker
+        from pycsamt.app.desktop.workers.inversion_worker import (
+            InversionWorker,
+        )
+        from pycsamt.models.mare2dem import (
+            InputBuilder,
+            Mare2DEMConfig,
+        )
 
         cfg = Mare2DEMConfig(
             max_iterations=self._m2d_max_iter.value(),
@@ -755,7 +769,9 @@ class InversionWindow(PanelWindow):
     # ── AI run ───────────────────────────────────────────────────────────────
 
     def _run_ai(self, engine: str) -> None:
-        from pycsamt.app.desktop.workers.ai_inversion_worker import AIInversionWorker
+        from pycsamt.app.desktop.workers.ai_inversion_worker import (
+            AIInversionWorker,
+        )
 
         dim    = self._current_dim()
         params = self._build_ai_params(engine, dim)
@@ -979,7 +995,6 @@ class InversionWindow(PanelWindow):
         self._tab_convergence.draw()
 
     def _plot_ai_model(self, ax, y_pred, dim: str, result: dict) -> None:
-        import numpy as np
         if dim == "1D":
             n_layers = result.get("n_layers", 5)
             # y_pred shape: (n_stations, 2*n_layers-1)
@@ -1028,7 +1043,6 @@ class InversionWindow(PanelWindow):
             ax.set_title("AI 3-D predicted resistivity")
 
     def _plot_ai_fit(self, ax, result: dict, freqs) -> None:
-        import numpy as np
         X_obs = result.get("X_obs")
         if X_obs is None or freqs is None:
             ax.set_title("No observed data to compare")
@@ -1038,7 +1052,7 @@ class InversionWindow(PanelWindow):
         # X_obs rows = [log_rho_a (n_freq), phase (n_freq)]
         for i, row in enumerate(X_obs[:min(3, len(X_obs))]):
             rho_a  = 10.0 ** row[:n_freq]
-            phase  = row[n_freq:2*n_freq]
+            row[n_freq:2*n_freq]
             ax.loglog(period, rho_a, "o-", ms=3, label=f"obs {i+1}")
         ax.set_xlabel("Period (s)")
         ax.set_ylabel("ρₐ (Ω·m)")

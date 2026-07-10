@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Physics-based EM inversion API for pyCSAMT.
@@ -21,6 +20,8 @@ Examples
 >>> result = InversionWorkflow(cfg).run()  # doctest: +SKIP
 """
 
+from . import export, plot
+from .backends import available_backends, get_backend
 from .config import InversionConfig
 from .data import EMData
 from .mesh import (
@@ -32,6 +33,12 @@ from .mesh import (
     depth_widths,
 )
 from .model import ReferenceModel, StartingModel
+from .mt import (
+    MT1DInversion,
+    MT2DInversion,
+    MT3DInversion,
+    SimPEGMT3DInversion,
+)
 from .objective import (
     ErrorModel,
     component_errors,
@@ -45,11 +52,12 @@ from .regularization import (
     regularization_residual,
     regularization_weight,
 )
-from .results import InversionHistory, InversionResult, InversionUncertainty
+from .results import (
+    InversionHistory,
+    InversionResult,
+    InversionUncertainty,
+)
 from .workflow import InversionWorkflow, run_inversion
-from .backends import available_backends, get_backend
-from .mt import MT1DInversion, MT2DInversion, MT3DInversion, SimPEGMT3DInversion
-from . import export, plot
 
 __all__ = [
     "EMData",

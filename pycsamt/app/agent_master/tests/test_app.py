@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Smoke tests for agent_master."""
@@ -44,8 +43,9 @@ def test_ids_unique():
 
 
 def test_edi_detect_from_ids():
-    from pycsamt.app.agent_master.callbacks.edi\
-        import _detect_from_ids
+    from pycsamt.app.agent_master.callbacks.edi import (
+        _detect_from_ids,
+    )
     ids = [
         "22-001A",
         "22-002A",
@@ -61,18 +61,19 @@ def test_edi_detect_from_ids():
 def test_edi_folder_to_lines_empty(
     tmp_path,
 ):
-    from pycsamt.app.agent_master.callbacks.edi\
-        import _folder_to_lines
+    from pycsamt.app.agent_master.callbacks.edi import (
+        _folder_to_lines,
+    )
     # empty folder -> empty dict
     groups = _folder_to_lines(str(tmp_path))
     assert isinstance(groups, dict)
 
 
 def test_settings_cfg_roundtrip(tmp_path):
-    import json
     from unittest.mock import patch
+
     from pycsamt.app.agent_master.callbacks\
-        .settings import _save_cfg, _load_cfg
+            .settings import _load_cfg, _save_cfg
 
     fake = tmp_path / "agent_master.json"
     cfg = {

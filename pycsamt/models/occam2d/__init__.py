@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -49,19 +48,27 @@ References
    1990.
 """
 
-from .builder  import InputBuilder
-from .runner   import OccamRunner
-from .results  import InversionResult
-from .data     import OccamData
-from .mesh     import OccamMesh
-from .model    import OccamModel
-from .startup  import OccamStartup, OccamIter
+from .builder import InputBuilder
+from .config import OccamConfig
+from .data import OccamData
+from .log import OccamLog
+from .mesh import OccamMesh
+from .model import OccamModel
+from .plot import (
+                       PlotMisfit,
+                       PlotModel,
+                       PlotPseudo,
+                       PlotResponse,
+                       PlotResponseGrid,
+                       PlotSiteMisfit,
+                       PlotSounding1D,
+                       PlotStation1DFit,
+                       plot_station_1d_fit,
+)
 from .response import OccamResponse
-from .log      import OccamLog
-from .plot     import (PlotModel, PlotResponse, PlotPseudo, PlotMisfit,
-                       PlotSounding1D, PlotSiteMisfit, PlotResponseGrid,
-                       PlotStation1DFit, plot_station_1d_fit)
-from .config   import OccamConfig
+from .results import InversionResult
+from .runner import OccamRunner
+from .startup import OccamIter, OccamStartup
 
 __all__ = [
     "InputBuilder",

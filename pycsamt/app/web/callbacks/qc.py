@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,12 +17,17 @@ Wiring
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 
-from dash import ALL, Input, Output, State, callback_context as ctx, no_update
+from dash import ALL, Input, Output, State, no_update
+from dash import callback_context as ctx
 
-from pycsamt.app.desktop.controllers.qc_controller import ALL_GROUPS, QCController
-from pycsamt.app.web.cache import cache_get, HAS_BG_MANAGER
+from pycsamt.app.desktop.controllers.qc_controller import (
+    ALL_GROUPS,
+    QCController,
+)
+from pycsamt.app.web.cache import HAS_BG_MANAGER, cache_get
 from pycsamt.app.web.layout import IDs
 from pycsamt.app.web.utils import (
     apply_web_dark_theme,

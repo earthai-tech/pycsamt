@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from pycsamt.api import APIFrame, reset_api_view
+from pycsamt.emtools._core import _get_z_block, _iter_items
 from pycsamt.emtools.ss import (
     apply_ss_factors,
     detect_near_surface,
@@ -17,7 +18,6 @@ from pycsamt.emtools.ss import (
     estimate_ss_refmedian,
     plot_ns_detection,
 )
-from pycsamt.emtools._core import _iter_items, _get_z_block
 
 # ----------------------------- fixtures ----------------------------------- #
 
@@ -120,7 +120,7 @@ def test_detect_ns_api_flag_overrides_global():
 
 def _finite_z_count(sites):
     n = 0
-    for i, ed in enumerate(_iter_items(sites)):
+    for _i, ed in enumerate(_iter_items(sites)):
         _, z, _ = _get_z_block(ed)
         if z is not None:
             n += int(np.isfinite(z).sum())

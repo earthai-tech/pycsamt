@@ -1,23 +1,25 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Optional, Tuple
-from pathlib import Path
-
 import math
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Callable
+
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 from .utils import (
+    _ensure_head,
+    get_freq,
     iter_edifiles,
     maybe_copy,
-    station_name,
     set_station_name,
-    get_freq,
-    _ensure_head, 
+    station_name,
+)
+from .utils import (
     set_coords as _set_coords,
 )
 
@@ -27,7 +29,7 @@ __all__ = [
     "rename",
     "set_coords",
     "fill_missing",
-    "recompute_res_phase",  
+    "recompute_res_phase",
     "rotate_all",
     "select_freq_all",
     "rename_all",
@@ -42,14 +44,14 @@ def rotate(site: Any, angle_deg: float, *,
     r"""
     Rotate impedance tensor Z (and tipper T, if present) by an
     azimuthal angle in degrees.
-    
+
     The rotation is applied in the horizontal plane using the
     similarity transform :math:`Z' = R Z R^{-1}`, where :math:`R`
     is the 2x2 rotation matrix built from ``angle_deg``. When a
     tipper is available (either on the EDI object as ``T`` /
     ``TIP`` / ``Tip`` or attached to ``Z``), the 2-component
     vector is rotated consistently.
-    
+
     Parameters
     ----------
     site : Any
@@ -65,13 +67,13 @@ def rotate(site: Any, angle_deg: float, *,
         If ``True``, mutate ``site`` in place. Otherwise, work on
         a shallow copy and return that copy. Default is
         ``False``.
-    
+
     Returns
     -------
     Any
         The rotated object. If ``inplace`` is ``True``, this is
         the same object as ``site``; otherwise a new object.
-    
+
     Notes
     -----
     - Error arrays (``z_error`` or aliases) are rotated with a
@@ -83,7 +85,7 @@ def rotate(site: Any, angle_deg: float, *,
       shapes are ignored silently.
     - The function is no-throw by design. If a section is not
       present or incompatible, it is skipped.
-    
+
     Examples
     --------
     >>> from pycsamt.seg.edi import EDIFile
@@ -91,14 +93,14 @@ def rotate(site: Any, angle_deg: float, *,
     >>> ed = EDIFile("path/to/station.edi")
     >>> ed_rot = rotate(ed, 30.0)       # copy by default
     >>> ed_rot2 = rotate(ed, -45.0, inplace=True)
-    
+
     See Also
     --------
     select_freq : Subset rows by frequency range or indices.
     rename : Rename the station using a policy or explicit name.
     pycsamt.site.edit.rotate_all : Broadcast rotation over a
         collection.
-    
+
     References
     ----------
     .. [1] Simpson, F. and Bahr, K. (2005). Practical
@@ -174,12 +176,12 @@ def select_freq(
     r"""
     Subset the dataset along frequency by range or explicit
     indices, keeping all affected arrays aligned.
-    
+
     This applies the selection to every frequency-indexed array
     found on the object, including Z, Z errors, derived
     resistivity/phase, and any tipper arrays resident on either
     the root EDI object or under its ``Z`` section.
-    
+
     Parameters
     ----------
     site : Any
@@ -197,14 +199,14 @@ def select_freq(
     inplace : bool, optional
         If ``True``, mutate ``site`` in place. Otherwise, operate
         on a shallow copy. Default is ``False``.
-    
+
     Returns
     -------
     Any
         The object after selection. If ``inplace`` is ``True``,
         this is the same object as ``site``; otherwise a new
         object.
-    
+
     Notes
     -----
     - All known aliases are sliced consistently (e.g., frequency,
@@ -214,32 +216,32 @@ def select_freq(
       no-op.
     - The function is no-throw by design; incompatible shapes are
       skipped silently.
-    
+
     Examples
     --------
     Keep only rows with frequency >= 10 Hz:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site.edit import select_freq
     >>> ed = EDIFile("path/to/station.edi")
     >>> ed_hi = select_freq(ed, fmin=10.0)
-    
+
     Keep the first and last rows explicitly:
-    
+
     >>> sel = [0, -1]
     >>> ed_edge = select_freq(ed, keep=sel)
-    
+
     Apply in place:
-    
+
     >>> _ = select_freq(ed, fmin=1.0, fmax=100.0, inplace=True)
-    
+
     See Also
     --------
     rotate : Rotate Z and tipper by an azimuth angle.
     rename : Rename the station identifiers.
     pycsamt.site.edit.select_freq_all : Broadcast selection over
         a collection.
-    
+
     References
     ----------
     .. [1] SEG EDI format usage notes for frequency-indexed MT
@@ -277,18 +279,18 @@ def select_freq(
 
 def rename(
     site: Any,
-    name: Optional[str] = None,
-    policy: Optional[Callable[[str], str]] = None,
+    name: str | None = None,
+    policy: Callable[[str], str] | None = None,
     *,
     inplace: bool = False,
 ) -> Any:
     r"""
     Rename a station using an explicit name or a policy function.
-    
+
     This updates common station identifiers across the EDI header
     and attempts to keep them in sync so that downstream code
     resolves the new name consistently.
-    
+
     Parameters
     ----------
     site : Any
@@ -303,14 +305,14 @@ def rename(
     inplace : bool, optional
         If ``True``, mutate ``site`` in place. Otherwise, operate
         on a shallow copy. Default is ``False``.
-    
+
     Returns
     -------
     Any
         The object with updated identifiers. If ``inplace`` is
         ``True``, this is the same object as ``site``; otherwise a
         new object.
-    
+
     Notes
     -----
     - The function writes multiple header fields when present
@@ -322,20 +324,20 @@ def rename(
       paths remain unchanged unless you later write out using a
       template that depends on the station name.
     - If both ``name`` and ``policy`` are given, ``name`` wins.
-    
+
     Examples
     --------
     Policy-based rename:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site.edit import rename
     >>> ed = EDIFile("path/to/station.edi")
     >>> ed2 = rename(ed, policy=lambda n: f"X_{n}")
-    
+
     Explicit name, in place:
-    
+
     >>> _ = rename(ed, name="ST123A", inplace=True)
-    
+
     See Also
     --------
     rotate : Rotate Z and tipper by an azimuth angle.
@@ -344,7 +346,7 @@ def rename(
         collection.
     pycsamt.site.base.Site : Wrapper that resolves a stable site
         name for indexing.
-    
+
     References
     ----------
     .. [1] SEG EDI format field naming and common aliases for
@@ -380,7 +382,7 @@ def rename(
     except Exception:
         pass
     try:
-        setattr(ed, "name", str(new))
+        ed.name = str(new)
     except Exception:
         pass
     return ed
@@ -395,12 +397,12 @@ def set_coords(
 ) -> Any:
     r"""
     Set geographic coordinates on the EDI header.
-    
+
     Only the values explicitly provided are updated. The call
     delegates to the same coordinate writer used by the Site
     API, so downstream tools see consistent lat, lon, and elev
     fields.
-    
+
     Parameters
     ----------
     site : Any
@@ -419,20 +421,20 @@ def set_coords(
         If ``True``, mutate ``site`` in place. Otherwise, work
         on a shallow copy and return that copy. Default is
         ``False``.
-    
+
     Returns
     -------
     Any
         The updated object. If ``inplace`` is ``True``, this is
         the same object as ``site``; otherwise a new object.
-    
+
     Notes
     -----
     - The function validates numeric types and writes to common
       HEAD attribute names (``lat``, ``lon``, ``elev``).
     - If a field is not present in the header, a best-effort
       attribute is created.
-    
+
     Examples
     --------
     >>> from pycsamt.seg.edi import EDIFile
@@ -440,13 +442,13 @@ def set_coords(
     >>> ed = EDIFile("path/to/station.edi")
     >>> ed2 = set_coords(ed, lat=35.1, lon=12.8, elev=1234.0)
     >>> _ = set_coords(ed, lat=36.0, inplace=True)
-    
+
     See Also
     --------
     pycsamt.site.base.Site.set_coords : Object-oriented wrapper.
     pycsamt.site.edit.set_coords_all : Broadcast over a
         collection.
-    
+
     References
     ----------
     .. [1] SEG EDI format, HEAD section fields for station
@@ -468,11 +470,11 @@ def fill_missing(
     r"""
     Replace missing or non-finite values in Z and/or tipper
     arrays with zeros or NaNs.
-    
+
     The operation preserves shapes and alignment across arrays.
     If an array is absent, a new one is allocated with the
     correct shape inferred from the frequency vector.
-    
+
     Parameters
     ----------
     site : Any
@@ -489,14 +491,14 @@ def fill_missing(
     inplace : bool, optional
         If ``True``, mutate in place. Otherwise, operate on a
         shallow copy and return that copy. Default is ``False``.
-    
+
     Returns
     -------
     Any
         The object after filling. If ``inplace`` is ``True``,
         this is the same object as ``site``; otherwise a new
         object.
-    
+
     Notes
     -----
     - Z arrays are expected as shape ``(n, 2, 2)`` and tipper as
@@ -509,27 +511,27 @@ def fill_missing(
       rows used for any new arrays.
     - This function is no-throw by design. Incompatible or absent
       pieces are skipped silently.
-    
+
     Examples
     --------
     Fill Z and tipper with zeros where values are non-finite:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site.edit import fill_missing
     >>> ed = EDIFile("path/to/station.edi")
     >>> ed2 = fill_missing(ed, how="zero")
-    
+
     Fill only Z with NaNs, in place:
-    
+
     >>> _ = fill_missing(ed, how="nan", components=("Z",),
     ...                  inplace=True)
-    
+
     See Also
     --------
     select_freq : Subset rows by frequency while keeping arrays
         aligned.
     rotate : Rotate Z and tipper by an azimuth angle.
-    
+
     References
     ----------
     .. [1] Simpson, F. and Bahr, K. (2005). Practical
@@ -625,12 +627,12 @@ def rotate_all(sites: Any, angle_deg: float, *,
     r"""
     Rotate every site in a collection by an azimuthal angle in
     degrees.
-    
+
     This is the broadcast variant of :func:`rotate`. It accepts
     either a ``Sites`` wrapper or any iterable of EDI-like
     objects and returns a new ``Sites`` unless ``inplace`` is
     requested.
-    
+
     Parameters
     ----------
     sites : Any
@@ -643,34 +645,34 @@ def rotate_all(sites: Any, angle_deg: float, *,
         If ``True``, attempt to apply the rotation in place on
         the given container. Otherwise, return a new ``Sites``.
         Default is ``False``.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A sites collection holding the rotated items, or the
         original container when mutated in place.
-    
+
     Notes
     -----
     - The function preserves the input order of items.
     - If some items lack compatible arrays, they are skipped
       silently.
-    
+
     Examples
     --------
     Using a list of EDI files:
-    
+
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site.edit import rotate_all
     >>> eds = [EDIFile("A.edi"), EDIFile("B.edi")]
     >>> ro = rotate_all(eds, 15.0)
-    
+
     Using a Sites wrapper:
-    
+
     >>> from pycsamt.site.base import Sites
     >>> sites = Sites(eds)
     >>> ro2 = rotate_all(sites, -30.0)
-    
+
     See Also
     --------
     rotate : Single-site rotation.
@@ -694,12 +696,12 @@ def select_freq_all(
     r"""
     Subset all sites in a collection along frequency, keeping
     arrays aligned.
-    
+
     This is the broadcast variant of :func:`select_freq`. It
     accepts a ``Sites`` wrapper or any iterable of EDI-like
     objects and returns a new ``Sites`` unless ``inplace`` is
     requested.
-    
+
     Parameters
     ----------
     sites : Any
@@ -716,19 +718,19 @@ def select_freq_all(
         If ``True``, attempt to modify the given container in
         place. Otherwise, return a new ``Sites``. Default is
         ``False``.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A sites collection with selection applied, or the
         original container when mutated in place.
-    
+
     Notes
     -----
     - All known frequency-indexed arrays are sliced in sync for
       each site (Z, errors, derived quantities, and tipper).
     - Items missing a frequency vector are left unchanged.
-    
+
     Examples
     --------
     >>> from pycsamt.seg.edi import EDIFile
@@ -737,16 +739,16 @@ def select_freq_all(
     >>> eds = [EDIFile("A.edi"), EDIFile("B.edi")]
     >>> sites = Sites(eds)
     >>> out = select_freq_all(sites, fmin=1.0, fmax=100.0)
-    
+
     Use explicit row indices for all sites:
-    
+
     >>> out2 = select_freq_all(eds, keep=[0, -1])
-    
+
     See Also
     --------
     select_freq : Single-site selection by frequency.
     rotate_all : Broadcast rotation over a collection.
-    
+
     References
     ----------
     .. [1] SEG EDI format usage notes for frequency-indexed MT
@@ -776,11 +778,11 @@ def rename_all(
 ):
     r"""
     Batch rename a collection of sites.
-    
+
     This is the broadcast variant of :func:`rename`. It accepts a
     ``Sites`` wrapper or any iterable of EDI-like objects and
     produces a new ``Sites`` (unless ``inplace`` is ``True``).
-    
+
     Parameters
     ----------
     sites : Any
@@ -798,13 +800,13 @@ def rename_all(
         If ``True``, attempt to modify the given container in
         place. Otherwise, return a new ``Sites``. Default is
         ``False``.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A collection holding the renamed items, or the original
         container when mutated in place.
-    
+
     Notes
     -----
     - The rename updates common header identifiers and mirrors
@@ -815,28 +817,28 @@ def rename_all(
       (e.g., the file stem) to avoid collisions.
     - The function preserves input order and is no-throw; items
       that cannot be renamed are skipped.
-    
+
     Examples
     --------
     Policy-based rename for all items:
-    
+
     >>> from pycsamt.site.edit import rename_all
     >>> out = rename_all(eds, policy=lambda n: f"X_{n}")
-    
+
     Unique names from file stems:
-    
+
     >>> from pathlib import Path
     >>> out = rename_all(
     ...     eds,
     ...     name_fn=lambda e: f"X_{Path(getattr(e,'path','')).stem}",
     ... )
-    
+
     See Also
     --------
     rename : Single-site rename helper.
     set_coords_all : Batch coordinate assignment.
     pycsamt.site.base.Sites : Collection wrapper used here.
-    
+
     References
     ----------
     .. [1] SEG EDI format field naming conventions for station
@@ -860,11 +862,11 @@ def set_coords_all(
 ):
     r"""
     Batch set coordinates for a collection of sites.
-    
+
     Coordinates can be provided by a callable, a mapping keyed by
     station name, or an object exposing a ``.frame`` attribute
     with tabular data.
-    
+
     Parameters
     ----------
     sites : Any
@@ -882,13 +884,13 @@ def set_coords_all(
         If ``True``, attempt to modify the given container in
         place. Otherwise, return a new ``Sites``. Default is
         ``False``.
-    
+
     Returns
     -------
     pycsamt.site.base.Sites
         A collection with updated coordinates, or the original
         container when mutated in place.
-    
+
     Notes
     -----
     - The lookup order is: ``callable`` then ``mapping`` by
@@ -898,37 +900,37 @@ def set_coords_all(
       in meters.
     - The function preserves input order and is no-throw; items
       without a matching entry are left unchanged.
-    
+
     Examples
     --------
     From a mapping keyed by names:
-    
+
     >>> from pycsamt.site.edit import set_coords_all
     >>> coords = {"S01": (35.1, 12.8, 1234.0)}
     >>> out = set_coords_all(eds, coords)
-    
+
     From a callable using file stems:
-    
+
     >>> from pathlib import Path
     >>> def pick(edi):
     ...     stem = Path(getattr(edi, "path", "")).stem
     ...     return (10.0, 20.0, 100.0) if stem == "S01" else \
     ...            (11.0, 21.0, 110.0)
     >>> out = set_coords_all(eds, pick)
-    
+
     From a pandas DataFrame holder:
-    
+
     >>> class Holder:
     ...     def __init__(self, frame):
     ...         self.frame = frame
     >>> out = set_coords_all(eds, Holder(df))
-    
+
     See Also
     --------
     set_coords : Single-site coordinate update.
     rename_all : Batch rename helper.
     pycsamt.site.base.Site.set_coords : OOP variant per site.
-    
+
     References
     ----------
     .. [1] SEG EDI HEAD section fields for station coordinates.
@@ -1086,14 +1088,14 @@ def set_coords_from_table(
 ):
     r"""
     Set site coordinates for many EDI files from a table.
-    
+
     This high-level helper accepts a wide range of table-like
     objects (CSV path, pandas DataFrame, numpy structured array,
     or list of dicts / tuples). It normalizes column names,
     optionally projects easting/northing to lon/lat, builds a
     mapping ``{station: (lat, lon, elev)}``, and delegates to
     :func:`set_coords_all`.
-    
+
     Parameters
     ----------
     sites : Any
@@ -1123,14 +1125,14 @@ def set_coords_from_table(
         If ``True``, mutate the given collection and return it.
         Otherwise return a new :class:`~pycsamt.site.base.Sites`
         with updated EDI objects.
-    
+
     Returns
     -------
     Any
         The same semantics as :func:`set_coords_all`: either the
         mutated input (``inplace=True``) or a new
         :class:`~pycsamt.site.base.Sites` instance.
-    
+
     Raises
     ------
     ValueError
@@ -1140,28 +1142,28 @@ def set_coords_from_table(
     ImportError
         If projection is needed (``easting``/``northing`` present)
         but ``pyproj`` is not installed.
-    
+
     Notes
     -----
     Column detection is case-insensitive and understands common
     aliases:
-    
+
     - ``station``: ``station``, ``name``, ``site``, ``id``.
     - ``lat``: ``lat``, ``latitude``.
     - ``lon``: ``lon``, ``long``, ``longitude``.
     - ``elev``: ``elev``, ``elevation``, ``z``.
     - ``easting``: ``easting``, ``x``.
     - ``northing``: ``northing``, ``y``.
-    
+
     When both geographic and projected fields are present, the
     geographic pair (``lat``, ``lon``) is preferred. If only
     projected fields are present, a valid ``crs_from`` must be
     provided and :mod:`pyproj` will be used for projection.
-    
+
     Examples
     --------
     Load from a CSV path with standard columns::
-    
+
         >>> from pycsamt.site.edit import set_coords_from_table
         >>> from pycsamt.site.base import Sites
         >>> edis = Sites([...])  # your EDI files
@@ -1170,9 +1172,9 @@ def set_coords_from_table(
         ... )
         >>> isinstance(out, Sites)
         True
-    
+
     Pass a DataFrame with aliases and an explicit mapping::
-    
+
         >>> import pandas as pd
         >>> df = pd.DataFrame({
         ...     "name": ["S01", "S02"],
@@ -1189,9 +1191,9 @@ def set_coords_from_table(
         ...              "elev": "elevation"},
         ...     inplace=False,
         ... )
-    
+
     Use easting/northing with a source CRS::
-    
+
         >>> df = pd.DataFrame({
         ...     "station": ["S10"],
         ...     "easting": [400000.0],
@@ -1203,13 +1205,13 @@ def set_coords_from_table(
         ...     crs_from="EPSG:32631",  # UTM 31N
         ...     inplace=False,
         ... )
-    
+
     See Also
     --------
     set_coords_all : Broadcast setting of coordinates using a
         mapping.
     set_coords : Single-site coordinate update helper.
-    
+
     References
     ----------
     .. [1] EPSG Geodetic Parameter Registry,
@@ -1236,12 +1238,12 @@ def set_coords_from_en(
 ) -> Any:
     r"""
     Project (easting, northing) to lon/lat and set a site's coords.
-    
+
     This convenience wraps projection and assignment for a single
     EDI site. It projects the provided easting/northing from
     ``crs_from`` to ``to_crs`` (default WGS84 lon/lat), then calls
     :func:`set_coords`.
-    
+
     Parameters
     ----------
     site : Any
@@ -1263,13 +1265,13 @@ def set_coords_from_en(
     inplace : bool, default False
         If ``True``, mutate the given object and return it.
         Otherwise work on a copy and return the copy.
-    
+
     Returns
     -------
     Any
         The mutated site (``inplace=True``) or a new site object
         with updated coordinates.
-    
+
     Raises
     ------
     ImportError
@@ -1277,21 +1279,21 @@ def set_coords_from_en(
     Exception
         Any errors raised by the underlying projection engine or
         by :func:`set_coords` may propagate.
-    
+
     Notes
     -----
     Projection uses :mod:`pyproj` with ``always_xy=True`` so that
     the axis order is interpreted as (lon, lat). Units are assumed
     to be meters for the easting and northing values.
-    
+
     The returned object follows the same semantics as
     :func:`set_coords`. If you need to update many sites, prefer
     :func:`set_coords_from_table` or :func:`set_coords_all`.
-    
+
     Examples
     --------
     Update a single site from UTM 31N (EPSG:32631) coordinates::
-    
+
         >>> from pycsamt.site.edit import set_coords_from_en
         >>> site = ...  # an EDIFile
         >>> site2 = set_coords_from_en(
@@ -1302,9 +1304,9 @@ def set_coords_from_en(
         ...     elev=250.0,
         ...     inplace=False,
         ... )
-    
+
     Do the update in place and keep the existing elevation::
-    
+
         >>> _ = set_coords_from_en(
         ...     site,
         ...     easting=500000.0,
@@ -1312,13 +1314,13 @@ def set_coords_from_en(
         ...     crs_from="EPSG:32630",
         ...     inplace=True,
         ... )
-    
+
     See Also
     --------
     set_coords : Assign lat, lon, elev on a single site.
     set_coords_from_table : Batch update from tabular input.
     set_coords_all : Broadcast update using a mapping.
-    
+
     References
     ----------
     .. [1] EPSG Geodetic Parameter Registry,
@@ -1345,7 +1347,7 @@ def _to_mutable(ed: Any, *, inplace: bool) -> Any:
     return ed if inplace else maybe_copy(ed)
 
 
-def _rotm(angle_deg: float) -> Tuple[np.ndarray, np.ndarray]:
+def _rotm(angle_deg: float) -> tuple[np.ndarray, np.ndarray]:
     th = float(angle_deg) * (math.pi / 180.0)
     c = math.cos(th)
     s = math.sin(th)
@@ -1571,7 +1573,7 @@ def _wrap_output(
             if isinstance(src, Sites):
                 for (s, _), ne in zip(_each_site(src), items):
                     # preserve Site wrappers, swap underlying EDI
-                    setattr(s, "edi", ne)
+                    s.edi = ne
                 return src
         except Exception:
             pass
@@ -1580,9 +1582,9 @@ def _wrap_output(
         return Sites(items)
     except Exception:
         return items
-    
 
-def _fill_array(a: Any, shape: Tuple[int, ...], how: str) -> np.ndarray:
+
+def _fill_array(a: Any, shape: tuple[int, ...], how: str) -> np.ndarray:
     if a is None:
         if how == "zero":
             return np.zeros(shape, float)

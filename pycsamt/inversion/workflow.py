@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """High-level inversion workflow entry point.
@@ -40,7 +39,6 @@ from __future__ import annotations
 from typing import Any
 
 from ..api.property import PyCSAMTObject
-
 from .config import InversionConfig
 from .doc import _inversion_param_docs
 from .results import InversionResult

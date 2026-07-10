@@ -1,10 +1,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Sequence, Tuple
-import numpy as np
-import matplotlib.pyplot as plt
+from collections.abc import Sequence
+from typing import Any
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -20,7 +21,7 @@ def _prep_curve(
     lam: Any | None,
     *,
     sort: str = "auto",  # auto|x|lambda
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     x = _as_1d(rough)
     y = _as_1d(misfit)
     n = int(min(x.size, y.size))
@@ -90,7 +91,7 @@ def _pick_corner(
     method: str = "curvature",   # curvature|maxdist
     smooth: int = 3,
     skip: int = 1,
-) -> Tuple[int, np.ndarray]:
+) -> tuple[int, np.ndarray]:
     n = int(min(x.size, y.size))
     if n <= 2:
         return 0, np.zeros(n)
@@ -113,7 +114,7 @@ def lcurve_table(
     method: str = "curvature",
     smooth: int = 3,
     skip: int = 1,
-    return_dict: bool=False, 
+    return_dict: bool=False,
 ):
     x, y, l = _prep_curve(misfit, rough, lam, sort=sort)
     if x.size == 0:
@@ -142,8 +143,8 @@ def plot_lcurve(
     rough: Any | Sequence[Any],
     lam: Any | Sequence[Any] | None = None,
     *,
-    labels: Optional[Sequence[str]] = None,
-    colors: Optional[Sequence[str]] = None,
+    labels: Sequence[str] | None = None,
+    colors: Sequence[str] | None = None,
     cmap: str = "viridis",
     marker: str = "o",
     ms: float = 3.0,
@@ -156,13 +157,13 @@ def plot_lcurve(
     smooth: int = 3,
     skip: int = 1,
     show_corner: bool = True,
-    corner_style: Dict[str, Any] | None = None,
+    corner_style: dict[str, Any] | None = None,
     show_inset: bool = True,
-    inset_loc: Tuple[float, float, float, float] = (
+    inset_loc: tuple[float, float, float, float] = (
         0.62, 0.12, 0.32, 0.32
     ),
-    figsize: Tuple[float, float] = (6.0, 4.6),
-    ax: Optional[plt.Axes] = None,
+    figsize: tuple[float, float] = (6.0, 4.6),
+    ax: plt.Axes | None = None,
 ):
     # normalize to list of curves
     if isinstance(misfit, (list, tuple)):

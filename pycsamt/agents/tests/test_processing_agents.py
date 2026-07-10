@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,10 +17,10 @@ Tests skip gracefully when the data directories are absent (CI / minimal env).
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")          # headless backend — must come before pyplot
 
 import matplotlib.pyplot as plt
@@ -114,8 +113,9 @@ class TestDimensionality:
         assert len(result) >= 0
 
     def test_classify_has_dim_column(self, willy_sites):
-        import pycsamt.emtools as et
         import pandas as pd
+
+        import pycsamt.emtools as et
         result = et.classify_dimensionality(willy_sites, verbose=0)
         df = getattr(result, "df", result)
         if isinstance(df, pd.DataFrame):
@@ -225,6 +225,7 @@ class TestInterpolateGridGuard:
 
     def test_all_nan_2d_does_not_raise(self):
         import numpy as np
+
         from pycsamt.utils.arrayops import interpolate_grid
 
         arr = np.full((5, 8), np.nan)
@@ -234,6 +235,7 @@ class TestInterpolateGridGuard:
 
     def test_sparse_array_does_not_raise(self):
         import numpy as np
+
         from pycsamt.utils.arrayops import interpolate_grid
 
         arr = np.full((6, 10), np.nan)
@@ -244,6 +246,7 @@ class TestInterpolateGridGuard:
 
     def test_well_populated_still_interpolates(self):
         import numpy as np
+
         from pycsamt.utils.arrayops import interpolate_grid
 
         rng = np.random.default_rng(0)
@@ -255,6 +258,7 @@ class TestInterpolateGridGuard:
 
     def test_1d_all_nan_does_not_raise(self):
         import numpy as np
+
         from pycsamt.utils.arrayops import interpolate_grid
 
         arr = np.full(8, np.nan)
@@ -285,7 +289,9 @@ def qapp():
 
 def _run_worker(agent_name, sites, params=None):
     """Run AgentWorker synchronously; return (result, errors, log_lines)."""
-    from pycsamt.app.desktop.workers.agent_worker import AgentWorker
+    from pycsamt.app.desktop.workers.agent_worker import (
+        AgentWorker,
+    )
     results, errors, logs = [], [], []
     w = AgentWorker(agent_name=agent_name, sites=sites, params=params or {})
     w.result.connect(results.append)

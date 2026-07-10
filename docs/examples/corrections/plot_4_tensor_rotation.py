@@ -16,12 +16,15 @@ estimates the strike, rotates to it, and prepares the tensor for inversion.
 # along the line (median ± spread), the angle every station will be rotated
 # by. A consistent strike is what makes a 2-D interpretation defensible.
 
-from _corr_data import demo_line, curves, plot_before_after
-from pycsamt.emtools import (
-    plot_strike_profile, rotate_to_strike, antisymmetrize,
-)
-from pycsamt.emtools._core import _iter_items, _name
 import numpy as np
+from _corr_data import curves, demo_line, plot_before_after
+
+from pycsamt.emtools import (
+    antisymmetrize,
+    plot_strike_profile,
+    rotate_to_strike,
+)
+from pycsamt.emtools._core import _iter_items
 
 S = demo_line("L18PLT")
 raw = curves(S, "rho")
@@ -56,7 +59,7 @@ plot_before_after(raw, rot, pick, quantity="rho",
 
 def diag_ratio(sites):
     out = []
-    for i, ed in enumerate(_iter_items(sites)):
+    for _i, ed in enumerate(_iter_items(sites)):
         z = np.asarray(ed.z if hasattr(ed, "z") else ed.Z.z)
         num = np.abs(z[:, 0, 0]) + np.abs(z[:, 1, 1])
         den = np.abs(z[:, 0, 1]) + np.abs(z[:, 1, 0]) + 1e-12
@@ -68,6 +71,7 @@ r_before = diag_ratio(S)
 r_after = diag_ratio(S_rot)
 x = np.arange(len(r_before))
 import matplotlib.pyplot as plt
+
 fig, ax = plt.subplots(figsize=(10, 3.8), constrained_layout=True)
 ax.bar(x - 0.2, r_before, width=0.4, color="#b0b7c3", label="measurement axes")
 ax.bar(x + 0.2, r_after, width=0.4, color="#7c3aed", label="rotated to strike")

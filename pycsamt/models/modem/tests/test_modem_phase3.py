@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Phase 3 tests — ModEmModel3D, ModEmCovariance."""
 
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 _EX3D = Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
 
@@ -102,9 +102,9 @@ def _make_site(name, x_offset, y_offset, n_freq=5):
 
 
 def test_model3d_halfspace_shape():
-    from pycsamt.models.modem.data   import ModEmData
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.model3d import ModEmModel3D
-    from pycsamt.models.modem.config  import ModEmConfig
     sites = [_make_site(f"S{i:02d}", i * 1000.0, j * 1000.0)
              for i in range(3) for j in range(3)]
     cfg   = ModEmConfig(mode="3d")
@@ -115,9 +115,9 @@ def test_model3d_halfspace_shape():
 
 
 def test_model3d_halfspace_air_layers():
-    from pycsamt.models.modem.data    import ModEmData
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.model3d import ModEmModel3D
-    from pycsamt.models.modem.config   import ModEmConfig
     sites = [_make_site(f"S{i:02d}", i * 1000.0, 0.0) for i in range(3)]
     cfg   = ModEmConfig(mode="3d", n_airlayers=3)
     d     = ModEmData.from_edi(sites, config=cfg)
@@ -128,9 +128,9 @@ def test_model3d_halfspace_air_layers():
 
 
 def test_model3d_halfspace_earth_uniform():
-    from pycsamt.models.modem.data    import ModEmData
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.model3d import ModEmModel3D
-    from pycsamt.models.modem.config   import ModEmConfig
     sites = [_make_site(f"S{i:02d}", i * 1000.0, 0.0) for i in range(3)]
     cfg   = ModEmConfig(mode="3d", n_airlayers=3, initial_rho=50.0)
     d     = ModEmData.from_edi(sites, config=cfg)
@@ -144,9 +144,9 @@ def test_model3d_halfspace_earth_uniform():
 
 
 def test_model3d_halfspace_roundtrip(tmp_path):
-    from pycsamt.models.modem.data    import ModEmData
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.model3d import ModEmModel3D
-    from pycsamt.models.modem.config   import ModEmConfig
     sites = [_make_site(f"S{i:02d}", i * 1000.0, j * 1000.0)
              for i in range(2) for j in range(2)]
     cfg = ModEmConfig(mode="3d", nz=10, n_airlayers=2)
@@ -165,7 +165,9 @@ def test_model3d_halfspace_roundtrip(tmp_path):
 
 @pytest.fixture(scope="module")
 def cov():
-    from pycsamt.models.modem.covariance import ModEmCovariance
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
     return ModEmCovariance.read(_EX3D / "example.cov")
 
 
@@ -211,7 +213,9 @@ def test_cov_mask_values(cov):
 def test_cov_roundtrip(cov, tmp_path):
     out = tmp_path / "test.cov"
     cov.write(out)
-    from pycsamt.models.modem.covariance import ModEmCovariance
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
     back = ModEmCovariance.read(out)
     assert back.nx_earth      == cov.nx_earth
     assert back.ny_earth      == cov.ny_earth
@@ -224,7 +228,9 @@ def test_cov_roundtrip(cov, tmp_path):
 
 
 def test_cov_missing_file_raises():
-    from pycsamt.models.modem.covariance import ModEmCovariance
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
     with pytest.raises(FileNotFoundError):
         ModEmCovariance.read("/no/such/file.cov")
 
@@ -234,10 +240,12 @@ def test_cov_missing_file_raises():
 # ---------------------------------------------------------------------------
 
 def test_cov_from_model_dims():
-    from pycsamt.models.modem.data       import ModEmData
-    from pycsamt.models.modem.model3d    import ModEmModel3D
-    from pycsamt.models.modem.covariance import ModEmCovariance
-    from pycsamt.models.modem.config      import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
+    from pycsamt.models.modem.data import ModEmData
+    from pycsamt.models.modem.model3d import ModEmModel3D
     sites = [_make_site(f"S{i:02d}", i * 1000.0, j * 1000.0)
              for i in range(2) for j in range(2)]
     cfg = ModEmConfig(mode="3d", nz=8, n_airlayers=2)
@@ -250,10 +258,12 @@ def test_cov_from_model_dims():
 
 
 def test_cov_from_model_uniform_mask():
-    from pycsamt.models.modem.data       import ModEmData
-    from pycsamt.models.modem.model3d    import ModEmModel3D
-    from pycsamt.models.modem.covariance import ModEmCovariance
-    from pycsamt.models.modem.config      import ModEmConfig
+    from pycsamt.models.modem.config import ModEmConfig
+    from pycsamt.models.modem.covariance import (
+        ModEmCovariance,
+    )
+    from pycsamt.models.modem.data import ModEmData
+    from pycsamt.models.modem.model3d import ModEmModel3D
     sites = [_make_site(f"S{i:02d}", i * 1000.0, 0.0) for i in range(3)]
     cfg = ModEmConfig(mode="3d", nz=6, n_airlayers=2)
     d   = ModEmData.from_edi(sites, config=cfg)

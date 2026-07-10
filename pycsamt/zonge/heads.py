@@ -1,5 +1,4 @@
 # pycsamt/zonge/heads.py
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -12,25 +11,22 @@ Use AVGComponentBase elsewhere for row/column data blocks.
 """
 from __future__ import annotations
 
+import re
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import ( 
-    Any, 
-    Dict, 
-    Mapping, 
-    Sequence, 
-
+from typing import (
+    Any,
 )
-import re
 
 from .property import (
     Hardware,
+    Receiver,
+    SkipFlag,
     SurveyAnnotation,
     SurveyConfiguration,
-    Receiver,
     Transmitter,
-    SkipFlag,
 )
 
 __all__ = ["Header", "Head"]
@@ -61,7 +57,7 @@ _TMA_RX = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
-                                                           
+
 _KV_RX = re.compile(r"^\s*\$(?P<key>[^=\s]+)\s*=\s*(?P<val>.*)\s*$")
 
 
@@ -92,16 +88,16 @@ class HeaderComponentBase:
         return _dict_to_kv_lines(self.to_keywords())
 
     # Subclasses should provide these two:
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:  # noqa: D401
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:  # noqa: D401
         raise NotImplementedError
 
-    def to_keywords(self) -> Dict[str, Any]:  # noqa: D401
+    def to_keywords(self) -> dict[str, Any]:  # noqa: D401
         raise NotImplementedError
 
 
-def _kv_lines_to_dict(lines: Sequence[str]) -> Dict[str, str]:
+def _kv_lines_to_dict(lines: Sequence[str]) -> dict[str, str]:
     """Parse $key=value lines into a dict (last key wins)."""
-    out: Dict[str, str] = {}
+    out: dict[str, str] = {}
     for ln in lines:
         m = _KV_RX.match(ln)
         if not m:
@@ -126,8 +122,8 @@ def _now_utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _parse_hardware_banner(lines: Sequence[str]) -> Dict[str, Any]:
-    """
+def _parse_hardware_banner(lines: Sequence[str]) -> dict[str, Any]:
+    r"""
     Extract a few useful fields from legacy banner lines starting
     with backslash, e.g.:
 
@@ -135,7 +131,7 @@ def _parse_hardware_banner(lines: Sequence[str]) -> Dict[str, Any]:
       \ ASTATIC v3.60d updated data on 22/07/16
       \ 5-point TMA Filter at 1024 hertz
     """
-    hw: Dict[str, Any] = {}
+    hw: dict[str, Any] = {}
     for ln in lines:
         if not ln.strip().startswith("\\"):
             continue
@@ -263,11 +259,11 @@ class Header(HeaderComponentBase):
         # We accept keys with or without leading '$'.
         def norm_key(k: str) -> str:
             return k.lstrip("$").strip()
-        
-        ann: Dict[str, Any] = {}
-        cfg: Dict[str, Any] = {}
-        txm: Dict[str, Any] = {}
-        rxc: Dict[str, Any] = {}
+
+        ann: dict[str, Any] = {}
+        cfg: dict[str, Any] = {}
+        txm: dict[str, Any] = {}
+        rxc: dict[str, Any] = {}
 
         for k, v in meta.items():
             nk = norm_key(k)
@@ -308,7 +304,7 @@ class Header(HeaderComponentBase):
     def from_lines(
         cls,
         lines: Sequence[str],
-    ) -> "Header":
+    ) -> Header:
         """
         Parse raw header lines.  This is primarily for legacy
         files where the banner comes as comment lines plus a
@@ -360,11 +356,11 @@ class Header(HeaderComponentBase):
         if banner:
             lines.extend(banner)
             lines.append("")  # visual gap before $keywords
-        
+
         # 2. Get all keywords and format them
         # keywords = self.to_keywords()
         # lines.extend(_dict_to_kv_lines(keywords))
-        
+
         # $keywords by section
         lines.extend(_dict_to_kv_lines(self.annotation.to_keywords()))
         lines.extend(_dict_to_kv_lines(self.config.to_keywords()))
@@ -374,8 +370,8 @@ class Header(HeaderComponentBase):
         # Stamp at the end for reproducibility.
         lines.append(f"$Written={_now_utc_stamp()}")
         return lines
-    
-    def update_from_keywords(self, meta: Dict[str, Any]) -> None:
+
+    def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """
         Populate all sub-components from a keyword mapping.
         This method dispatches keys to the appropriate component
@@ -385,7 +381,7 @@ class Header(HeaderComponentBase):
         # can simply call it.
         self.read(meta=meta)
 
-    def to_keywords(self) -> Dict[str, Any]:
+    def to_keywords(self) -> dict[str, Any]:
         """
         Aggregate all $keyword=value pairs from sub-components.
 
@@ -394,16 +390,16 @@ class Header(HeaderComponentBase):
         """
         # Consolidate keywords from all child components
         # into a single dictionary.
-        all_keywords: Dict[str, Any] = {}
+        all_keywords: dict[str, Any] = {}
         all_keywords.update(self.annotation.to_keywords())
         all_keywords.update(self.config.to_keywords())
         all_keywords.update(self.tx.to_keywords())
         all_keywords.update(self.rx.to_keywords())
 
         return all_keywords
-    
+
     # ---------------- diagnostics ---------------- #
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         """Plain dict view of all sub-components."""
         return {
             "hardware": asdict(self.hardware),

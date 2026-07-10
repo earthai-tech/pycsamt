@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt jones blocks — inspect data blocks inside a J-file."""
@@ -12,8 +11,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import jones, _get_jfile
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_jfile, jones
 
 
 @jones.command("blocks")
@@ -149,7 +152,7 @@ def blocks(
     click.echo()
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table("Token", "Kind", "Comp", "Rows", "T_min (s)", "T_max (s)")
         if qa:
             tbl.add_column("QA")

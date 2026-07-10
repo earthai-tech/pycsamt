@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt map stations - list or export station coordinates."""
@@ -18,8 +17,12 @@ from ....api.cli.options import (
     survey_option,
     verbose_option,
 )
-
-from ._base import _format_rows, _get_sites, _station_rows, map
+from ._base import (
+    _format_rows,
+    _get_sites,
+    _station_rows,
+    map,
+)
 
 
 @map.command("stations")

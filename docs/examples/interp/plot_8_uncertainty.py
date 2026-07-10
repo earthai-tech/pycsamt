@@ -19,8 +19,11 @@ on the synthetic section's aquifer properties.
 # coefficient-of-variation fields.
 
 from _interp_data import demo_model
+
 from pycsamt.interp import (
-    PetrophysicalConfig, UncertaintyBounds, MonteCarloHydro,
+    MonteCarloHydro,
+    PetrophysicalConfig,
+    UncertaintyBounds,
 )
 
 # Use the uncertainty section (2nd figure) as the card thumbnail.
@@ -32,6 +35,7 @@ bounds = UncertaintyBounds(rho_w_range=(10.0, 60.0), m_range=(1.6, 2.2))
 unc = MonteCarloHydro(rm, cfg, bounds, n_samples=200).run()
 
 import numpy as np
+
 print("worst-case CV of K:", round(float(np.nanmax(unc.cv_K)), 2))
 print("water-table P10-P90 spread (m), first 5:",
       np.round((unc.p90_wt - unc.p10_wt)[:5], 1))
@@ -45,7 +49,9 @@ print("water-table P10-P90 spread (m), first 5:",
 # merely a lucky draw.
 
 from pycsamt.interp.plot import (
-    PlotUncertaintySection, PlotUncertaintyProfile, PlotUncertaintyHistogram,
+    PlotUncertaintyHistogram,
+    PlotUncertaintyProfile,
+    PlotUncertaintySection,
 )
 
 PlotUncertaintySection(unc, quantity="K").plot()

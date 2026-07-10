@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt.interp — geophysical-geological interpretation for EM methods.
@@ -71,10 +70,19 @@ References
    201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647
 """
 
-from ._base      import ResistivityModel
-from .borehole   import Borehole, Interval
-from .calibrate  import ModelCalibrator
-from .hydro      import (
+from . import export, plot
+from ._base import ResistivityModel
+from .borehole import Borehole, Interval
+from .calibrate import ModelCalibrator
+from .constraints import (
+    ConstrainedCalibrator,
+    ECConstraint,
+    PumpingTestConstraint,
+    SlugTestConstraint,
+    WaterLevelConstraint,
+)
+from .fusion import FusionDiagnostics, MultiMethodEMModel
+from .hydro import (
     AquiferZone,
     HydroGeophysicalModel,
     HydroInterpreter,
@@ -85,19 +93,18 @@ from .hydromodel import (
     EMHydroResult,
     PetrophysicalConfig,
 )
-from .constraints import (
-    ConstrainedCalibrator,
-    ECConstraint,
-    PumpingTestConstraint,
-    SlugTestConstraint,
-    WaterLevelConstraint,
+from .lithology import (
+    Layer,
+    RockDatabase,
+    RockEntry,
+    StratigraphicLog,
 )
-from .timelapse  import TimeLapseEM, assert_compatible_grids
-from .fusion       import MultiMethodEMModel, FusionDiagnostics
-from .uncertainty  import UncertaintyBounds, UncertaintyResult, MonteCarloHydro
-from .lithology  import RockDatabase, RockEntry, Layer, StratigraphicLog
-from .           import export
-from .           import plot
+from .timelapse import TimeLapseEM, assert_compatible_grids
+from .uncertainty import (
+    MonteCarloHydro,
+    UncertaintyBounds,
+    UncertaintyResult,
+)
 
 __all__ = [
     # core model

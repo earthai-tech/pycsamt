@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -14,8 +13,14 @@ import unittest
 from pathlib import Path
 
 from pycsamt.assistant.rag import config
-from pycsamt.assistant.rag.ast_indexer import index_python_file, module_name
-from pycsamt.assistant.rag.doc_indexer import index_doc_file, split_sections
+from pycsamt.assistant.rag.ast_indexer import (
+    index_python_file,
+    module_name,
+)
+from pycsamt.assistant.rag.doc_indexer import (
+    index_doc_file,
+    split_sections,
+)
 from pycsamt.assistant.rag.ingest import (
     build_chunks,
     corpus_stats,
@@ -23,7 +28,6 @@ from pycsamt.assistant.rag.ingest import (
     save_chunks,
 )
 from pycsamt.assistant.rag.schemas import RAGChunk
-
 
 _PY_SRC = '''\
 """Static-shift helpers (galvanic distortion)."""
@@ -186,14 +190,16 @@ class TestIngest(unittest.TestCase):
 
     def test_build_chunks_filters_and_indexes(self):
         tmp = self._make_tree()
-        files = [
+        [
             tmp / "pycsamt" / "emtools" / "ss.py",
             tmp / "pycsamt" / "app" / "ui.py",   # excluded by config
             tmp / "README.md",
         ]
         # build_chunks indexes any file passed; the exclusion lives in
         # iter_index_files, so test the walker path too:
-        from pycsamt.assistant.rag.ingest import iter_index_files
+        from pycsamt.assistant.rag.ingest import (
+            iter_index_files,
+        )
         walked = {p.name for p in iter_index_files(tmp)}
         self.assertIn("ss.py", walked)
         self.assertIn("README.md", walked)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -36,13 +35,15 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union
 
-import numpy as np
 import pandas as pd
 
 from ..api.property import MetadataMixin, PyCSAMTObject
-from ..emtools.remove_noise import hampel_filter_freq, notch_powerline, smooth_logfreq
+from ..emtools.remove_noise import (
+    hampel_filter_freq,
+    notch_powerline,
+    smooth_logfreq,
+)
 from ..emtools.ss import apply_ss_factors, estimate_ss_ama
 from ..exceptions import NotFittedError
 
@@ -59,10 +60,10 @@ def _write_edis(
     overwrite: bool,
     verbose: int,
     tag: str,
-) -> List[Path]:
+) -> list[Path]:
     """Write a list of EDIFile objects to *savepath*."""
     savepath.mkdir(parents=True, exist_ok=True)
-    written: List[Path] = []
+    written: list[Path] = []
     for edi in edi_objects:
         fname = (
             edi.path.name
@@ -144,8 +145,8 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
         sort_by: str = "lon",
         half_window: int = 3,
         weights: str = "tri",
-        pband: Optional[tuple] = None,
-        max_skew: Optional[float] = 6.0,
+        pband: tuple | None = None,
+        max_skew: float | None = 6.0,
         verbose: int = 0,
     ) -> None:
         self.sort_by = sort_by
@@ -161,7 +162,7 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
         edi_objects: list,
         *,
         copy: bool = False,
-    ) -> "StaticShiftCorrector":
+    ) -> StaticShiftCorrector:
         """Estimate and apply static-shift corrections.
 
         Parameters
@@ -236,10 +237,10 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
     # ------------------------------------------------------------------
     def out(
         self,
-        savepath: "Union[str, Path, None]" = None,
+        savepath: str | Path | None = None,
         *,
         overwrite: bool = False,
-    ) -> "Union[List, List[Path]]":
+    ) -> list | list[Path]:
         """Return corrected EDI objects or write them to *savepath*.
 
         Parameters
@@ -357,7 +358,7 @@ class NoiseRemover(PyCSAMTObject):
         edi_objects: list,
         *,
         copy: bool = False,
-    ) -> "NoiseRemover":
+    ) -> NoiseRemover:
         """Apply the noise-removal pipeline.
 
         Parameters
@@ -425,10 +426,10 @@ class NoiseRemover(PyCSAMTObject):
     # ------------------------------------------------------------------
     def out(
         self,
-        savepath: "Union[str, Path, None]" = None,
+        savepath: str | Path | None = None,
         *,
         overwrite: bool = False,
-    ) -> "Union[List, List[Path]]":
+    ) -> list | list[Path]:
         """Return denoised EDI objects or write them to *savepath*.
 
         Parameters

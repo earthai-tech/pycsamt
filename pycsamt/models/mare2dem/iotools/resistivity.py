@@ -14,7 +14,6 @@ resistivity table that defines the 2-D FEM model.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path

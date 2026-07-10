@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -13,10 +12,13 @@ removal, and a Clear All action.  Returns accepted file paths via
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
+from PySide6.QtGui import (
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDropEvent,
+)
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -26,7 +28,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QListWidgetItem,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -118,7 +119,7 @@ class LoadDataDialog(QDialog):
         self.setMinimumSize(580, 460)
         self._last_dir = last_dir or str(Path.home())
         self._recomputed_dir = Path(recomputed_dir) if recomputed_dir else None
-        self.selected_paths: List[str] = []
+        self.selected_paths: list[str] = []
         self._build_ui()
 
     # ── UI construction ────────────────────────────────────────────
@@ -226,11 +227,11 @@ class LoadDataDialog(QDialog):
 
     # ── Drag-and-drop handler ──────────────────────────────────────
 
-    def _on_dropped(self, raw_paths: List[str]) -> None:
+    def _on_dropped(self, raw_paths: list[str]) -> None:
         """Expand folders, filter by current format, append to list."""
         exts = _FORMAT_MAP[self._fmt_combo.currentText()]
         suffix_set = {e.lstrip("*.").lower() for e in exts}
-        found: List[str] = []
+        found: list[str] = []
         for p in raw_paths:
             path = Path(p)
             if path.is_dir():
@@ -280,7 +281,7 @@ class LoadDataDialog(QDialog):
             return
         self._last_dir = folder
         exts  = _FORMAT_MAP[self._fmt_combo.currentText()]
-        found: List[str] = []
+        found: list[str] = []
         for ext in exts:
             found.extend(str(p) for p in Path(folder).rglob(ext))
         found.sort()
@@ -288,14 +289,14 @@ class LoadDataDialog(QDialog):
 
     # ── File-list mutations ────────────────────────────────────────
 
-    def _set_paths(self, paths: List[str]) -> None:
+    def _set_paths(self, paths: list[str]) -> None:
         """Replace the entire file list."""
         self._file_list.clear()
         for p in paths:
             self._file_list.addItem(p)
         self._refresh_ui()
 
-    def _add_paths(self, paths: List[str]) -> None:
+    def _add_paths(self, paths: list[str]) -> None:
         """Append paths, skipping duplicates already in the list."""
         existing = {
             self._file_list.item(i).text()

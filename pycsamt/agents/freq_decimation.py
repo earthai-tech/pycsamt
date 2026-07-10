@@ -104,7 +104,12 @@ class FrequencyDecimationAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
@@ -124,15 +129,13 @@ class FrequencyDecimationAgent(BaseAgent):
 
         # extract QC SNR flags from a prior DataQCAgent result (optional)
         qc_result = input_data.get("qc_result")
-        qc_snr: dict[str, np.ndarray] = {}
-        qc_freqs: dict[str, np.ndarray] = {}
         if qc_result is not None:
             try:
                 snr_section = (qc_result.get("snr_section")
                                if hasattr(qc_result, "get") else
                                qc_result.get("data", {}).get("snr_section"))
                 if snr_section is not None and isinstance(snr_section, dict):
-                    qc_snr = snr_section
+                    pass
             except Exception:
                 pass
 
@@ -159,7 +162,7 @@ class FrequencyDecimationAgent(BaseAgent):
             snr_proxy = np.ones(len(fr))
             try:
                 zcomp = np.abs(z[:, ri, ci])
-                mu    = np.nanmean(zcomp[valid]) if valid.any() else 1.0
+                np.nanmean(zcomp[valid]) if valid.any() else 1.0
                 sd    = np.nanstd(zcomp[valid])  + 1e-30
                 snr_proxy = zcomp / sd
             except Exception:
@@ -270,7 +273,12 @@ def _plot_selection_summary(
 ) -> Any:
     """Scatter plot: selected periods (green) and dead-band (red) per station."""
     import matplotlib.pyplot as plt
-    from ..emtools._core import _iter_items, _name, _get_z_block
+
+    from ..emtools._core import (
+        _get_z_block,
+        _iter_items,
+        _name,
+    )
 
     station_names = list(selected_periods.keys())
     if not station_names:
@@ -290,7 +298,7 @@ def _plot_selection_summary(
             if fr is None:
                 break
             per_all = 1.0 / np.where(fr == 0, np.nan, fr)
-            valid = np.isfinite(per_all)
+            np.isfinite(per_all)
 
             if dead_mask is not None and dead_mask.any():
                 ax.scatter(

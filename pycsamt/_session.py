@@ -1,26 +1,24 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
-from __future__ import annotations 
+from __future__ import annotations
 
-from pathlib import Path 
-from typing import Any, Optional  
+from pathlib import Path
+from typing import Any
 
-
+from .core.base import CoreObject, to_edi
 from .core.registry import RegistryAPI
-from .core.base import to_edi, CoreObject 
-from .jones.j import JFile
 from .jones.collection import JCollection
-from .transformers.jedi import AVGtoEDI, JtoEDI 
-from .seg.edi import EDIFile
+from .jones.j import JFile
 from .seg.collection import EDICollection
+from .seg.edi import EDIFile
+from .transformers.jedi import AVGtoEDI, JtoEDI
 from .zonge.avg import AVG
 
 __all__ = [
     "Session",
     "work_session",
-    "Normalize", 
+    "Normalize",
     "normalize_session"
 
 ]
@@ -29,24 +27,24 @@ __all__ = [
 class Session(CoreObject):
     r"""
     Context-managed capture of key transformation outputs.
-    
+
     A :class:`Session` wraps selected conversion utilities and
     transformers so that their **results** are automatically
     registered in a small on-disk registry. This enables light
     provenance tracking of what you produced during a workflow
     (e.g., the output from :func:`to_edi` or from
     :class:`AVGtoEDI` / :class:`JtoEDI`).
-    
+
     When the session starts, it temporarily monkey-patches the
     following call sites to intercept and register outputs:
-    
+
     * :func:`pycsamt.core.base.to_edi`
     * :meth:`pycsamt.core.transformers.AVGtoEDI.transform`
     * :meth:`pycsamt.core.transformers.JtoEDI.transform`
-    
+
     On exit, the original functions are restored and the manifest
     is saved.
-    
+
     Parameters
     ----------
     root : path-like
@@ -68,28 +66,28 @@ class Session(CoreObject):
     max_children : int, optional
         Maximum number of iterable children to capture when
         ``capture_children=True``. Defaults to ``256``.
-    
+
     Attributes
     ----------
     root : pathlib.Path
         Absolute path to the working directory.
     reg : pycsamt.core.registry.RegistryAPI
         High-level registry façade used to record artifacts.
-    
+
     Notes
     -----
     The session captures **results**, not inputs. To store inputs
     explicitly, call :meth:`reg.add_file` or
     :meth:`reg.add_object` on the session's registry.
-    
+
     The capture is process-local and uses monkey-patching. In
     multi-threaded or multi-process settings, consider isolate
     usage or add explicit locking to your code.
-    
+
     Examples
     --------
     Basic usage with explicit object registration::
-    
+
         >>> from pycsamt.session import Session
         >>> from pycsamt.seg.edi import EDIFile
         >>> with Session("work") as ses:
@@ -98,9 +96,9 @@ class Session(CoreObject):
         ...     out = ses.reg.list()
         >>> isinstance(out, list)
         True
-    
+
     Automatic capture from transformers::
-    
+
         >>> from pycsamt.session import Session
         >>> from pycsamt.zonge.avg import AVG
         >>> from pycsamt.core.transformers import AVGtoEDI
@@ -109,9 +107,9 @@ class Session(CoreObject):
         ...     edi = AVGtoEDI().transform(avg)      # doctest: +SKIP
         ...     # The result of transform is recorded automatically.
         ...     got = ses.reg.find(tag="AVGtoEDI.transform")  # doctest: +SKIP
-    
+
     Automatic capture from :func:`to_edi`::
-    
+
         >>> from pycsamt.session import Session
         >>> from pycsamt.core.base import to_edi
         >>> from pycsamt.jones.j import JFile
@@ -119,9 +117,9 @@ class Session(CoreObject):
         ...     j = JFile.from_file("data/site001.j")  # doctest: +SKIP
         ...     edi_like = to_edi(j)                   # doctest: +SKIP
         ...     hits = ses.reg.find(tag="to_edi")      # doctest: +SKIP
-    
+
     Capture children from iterable outputs (e.g., collections)::
-    
+
         >>> from pycsamt import session as pcs  # alias form
         >>> from pycsamt.seg.collection import EDICollection
         >>> with pcs.Session("work",
@@ -132,14 +130,14 @@ class Session(CoreObject):
         ...     coll = EDICollection([])  # example only
         ...     ses.reg.add_object(coll, tags=["batch"])
         ...     # Children of `coll` would be recorded when captured.
-    
+
     Inspect what was recorded and persist::
-    
+
         >>> with Session("work") as ses:
         ...     _ = ses.reg.list()
         ...     # Saving also happens on context exit.
         >>> # The manifest `work/manifest.json` now reflects updates.
-    
+
     See Also
     --------
     pycsamt.core.registry.RegistryAPI
@@ -150,7 +148,7 @@ class Session(CoreObject):
     pycsamt.seg.collection.EDICollection
     pycsamt.zonge.avg.AVG
     pycsamt.jones.j.JFile
-    
+
     References
     ----------
     .. [1] Python Stdlib. *context managers* (`with` statement).
@@ -182,7 +180,7 @@ class Session(CoreObject):
     def _record(self, obj: Any, *, tag: str) -> None:
         r"""
         Register ``obj`` in the session registry with a tag.
-        
+
         Optionally iterates over ``obj`` to capture a
         bounded number of children when ``capture_children=True``.
         """
@@ -207,13 +205,13 @@ class Session(CoreObject):
     def _wrap_to_edi(self) -> None:
         r"""
         Enable capture for :func:`to_edi` within this process.
- 
+
         Monkey-patches the public ``to_edi`` so that
         its **outputs** are recorded with the tag ``"to_edi"``.
         """
 
         from .core import base as b
-        
+
         if not self.auto_capture:
             return
 
@@ -231,12 +229,12 @@ class Session(CoreObject):
         r"""
         Enable capture for AVG→EDI and J→EDI transformer outputs.
 
-        Wraps ``AVGtoEDI.transform`` and ``JtoEDI.transform`` so 
+        Wraps ``AVGtoEDI.transform`` and ``JtoEDI.transform`` so
         their return values are recorded with class-qualified tags.
         """
 
-        from .transformers import jedi as tr 
-        
+        from .transformers import jedi as tr
+
         if not self.auto_capture:
             return
 
@@ -261,20 +259,20 @@ class Session(CoreObject):
     def _restore(self) -> None:
         r"""
         Restore original call sites and stop interception.
-        
+
         Best-effort restoration; failures are
         silently ignored to keep teardown robust.
         """
 
         from .core import base as b
-        from .transformers import jedi as tr 
+        from .transformers import jedi as tr
         try:
             if self._orig_to_edi is not None:
                 b.to_edi = self._orig_to_edi  # type: ignore
         except Exception:
             pass
         try:
-            
+
             if self._orig_t_x is not None:
                 tr.AVGtoEDI.transform = self._orig_t_x  # type: ignore
             if self._orig_t_j is not None:
@@ -282,7 +280,7 @@ class Session(CoreObject):
         except Exception:
             pass
 
-    def __enter__(self) -> "Session":
+    def __enter__(self) -> Session:
         self._wrap_to_edi()
         self._wrap_transformers()
         return self
@@ -292,7 +290,7 @@ class Session(CoreObject):
         exc_type,
         exc,
         tb,
-    ) -> Optional[bool]:
+    ) -> bool | None:
         self._restore()
         try:
             self.reg.save()
@@ -311,11 +309,11 @@ def work_session(
 ) -> Session:
     r"""
     Create and return a :class:`Session` with common defaults.
-    
+
     This is a convenience wrapper around :class:`Session`
     mirroring its constructor. See :class:`Session` for details
     on automatic capture and child registration.
-    
+
     Parameters
     ----------
     root : path-like
@@ -332,27 +330,27 @@ def work_session(
     max_children : int, optional
         Max number of children to register from one iterable
         output. Defaults to ``256``.
-    
+
     Returns
     -------
     Session
         A context-manageable session instance.
-    
+
     Examples
     --------
     Use the helper to run a small workflow::
-    
+
         >>> from pycsamt.session import work_session
         >>> with work_session("work") as ses:
         ...     # Use ses.reg.* to add artifacts
         ...     items = ses.reg.list()
-    
+
     Alias style::
-    
+
         >>> import pycsamt as pcs
         >>> with pcs.work_session("work") as ses:
         ...     _ = ses.reg.list()
-    
+
     See Also
     --------
     Session
@@ -371,19 +369,19 @@ def work_session(
 class Normalize(CoreObject):
     r"""
     Normalize heterogeneous EM sources into a common form.
-    
+
     ``Normalize`` provides a small, file-system-friendly
     facade that tries to convert various inputs (files and
     objects) into a standard, iterable representation, favoring
     :class:`~pycsamt.seg.collection.EDICollection` when possible.
-    
+
     It accepts AVG files or objects, Jones J files, single EDI
     files, and already-built collections. When provided, a
     ``topo_src`` is attached to AVG sources before conversion.
-    
+
     Optionally, normalized outputs are registered in a small
     manifest via :class:`~pycsamt.core.registry.RegistryAPI`.
-    
+
     Parameters
     ----------
     root : path-like
@@ -399,7 +397,7 @@ class Normalize(CoreObject):
     auto_register : bool, optional
         If ``True`` (default), normalized outputs are recorded in
         the registry with the tag ``"normalized"``.
-    
+
     Attributes
     ----------
     root : pathlib.Path
@@ -410,11 +408,11 @@ class Normalize(CoreObject):
         Topography source passed at construction.
     auto_register : bool
         Whether :meth:`load` registers outputs automatically.
-    
+
     Notes
     -----
     The normalization rules are:
-    
+
     1. If the source is an :class:`EDICollection`, return it.
     2. If the source is an :class:`EDIFile`, wrap it into a
        one-item :class:`EDICollection`.
@@ -427,46 +425,46 @@ class Normalize(CoreObject):
        :class:`EDIFile` and wrap into a collection.
     6. Otherwise, delegate to :func:`to_edi` and return an EDI-
        like object or a collection when possible.
-    
+
     Errors while attaching topography or performing transforms
     are handled defensively; the method falls back to the next
     strategy or returns the best-effort result.
-    
+
     Examples
     --------
     Normalize from an AVG file into an EDI collection::
-    
+
         >>> from pycsamt.session import Normalize
         >>> with Normalize("work") as nz:
         ...     coll = nz.load("data/S01.AVG")  # doctest: +SKIP
         ...     # 'coll' is typically an EDICollection
-    
+
     Attach topography before AVG→EDI::
-    
+
         >>> topo = object()  # placeholder for a real topo source
         >>> with Normalize("work", topo_src=topo) as nz:  # doctest: +SKIP
         ...     coll = nz.load("data/S02.AVG")           # doctest: +SKIP
-    
+
     Normalize from a J file path::
-    
+
         >>> with Normalize("work") as nz:               # doctest: +SKIP
         ...     coll = nz.load("data/site001.j")        # doctest: +SKIP
-    
+
     Already-normalized inputs pass through unchanged::
-    
+
         >>> from pycsamt.seg.collection import EDICollection
         >>> with Normalize("work") as nz:
         ...     empty = EDICollection([])               # example
         ...     same = nz.load(empty)
         >>> isinstance(same, EDICollection)
         True
-    
+
     Alias form via the package facade::
-    
+
         >>> import pycsamt as pcs
         >>> with pcs.Normalize("work") as nz:           # doctest: +SKIP
         ...     out = nz.load("data/site001.edi")       # doctest: +SKIP
-    
+
     See Also
     --------
     pycsamt.session.normalize_session
@@ -478,7 +476,7 @@ class Normalize(CoreObject):
     pycsamt.seg.collection.EDICollection
     pycsamt.zonge.avg.AVG
     pycsamt.jones.j.JFile
-    
+
     References
     ----------
     .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
@@ -504,7 +502,7 @@ class Normalize(CoreObject):
     def _as_edi_coll(self, src: Any) -> Any:
         r"""
         Return an :class:`EDICollection` view of ``src`` when possible.
-    
+
         Rules
         -----
         * Pass through existing **non-empty** :class:`EDICollection`.
@@ -522,16 +520,16 @@ class Normalize(CoreObject):
         # # Pass through a non-empty collection
         # if isinstance(src, EDICollection):
         #     return src if len(src) > 0 else None
-    
+
         # # Single EDI file -> one-item collection
         # if isinstance(src, EDIFile):
         #     return EDICollection(items=[src], verbose=0)
-    
+
         # # Path-like input
         # if isinstance(src, (str, Path)):
         #     p = Path(src)
         #     suf = p.suffix.lower()
-    
+
         #     # Single .edi file → read and wrap
         #     if suf == ".edi":
         #         try:
@@ -540,7 +538,7 @@ class Normalize(CoreObject):
         #             return coll if len(coll) > 0 else None
         #         except Exception:
         #             return None
-    
+
         #     # Folder / glob / non-.edi path → let EDICollection load sources
         #     # Try the modern API first: EDICollection(sources=src, ...)
         #     try:
@@ -555,14 +553,14 @@ class Normalize(CoreObject):
         #             return None
         #     except Exception:
         #         return None
-    
+
         # # Raw list/tuple of EDIFile -> normalize to EDICollection
         # if isinstance(src, (list, tuple)) and src:
         #     items = [it for it in src if isinstance(it, EDIFile)]
         #     if not items:
         #         return None
         #     return EDICollection(items=items, verbose=0)
-    
+
         # return None
 
     # @@ class Normalize(CoreObject):
@@ -571,7 +569,7 @@ class Normalize(CoreObject):
     #          r"""
     #          Return an :class:`EDICollection` view of ``src`` when possible."""
     # @
- 
+
         # Helper: recognize an EDI-like item by structure (duck-typing)
         def _is_edi_like(x: Any) -> bool:
             # All our EDIFile impls expose a 'Z' attribute, including stubs.
@@ -580,7 +578,7 @@ class Normalize(CoreObject):
         # Pass through a non-empty EDICollection
         if isinstance(src, EDICollection):
             return src if len(src) > 0 else None
- 
+
         # Single EDI-like object → wrap to one-item collection
         if isinstance(src, EDIFile) or _is_edi_like(src):
             return EDICollection(items=[src], verbose=0)
@@ -590,13 +588,13 @@ class Normalize(CoreObject):
         if isinstance(src, (list, tuple)) and src:
             if all(_is_edi_like(it) or isinstance(it, EDIFile) for it in src):
                 return src
- 
+
         return None
 
     def _try_topo(self, avg: Any) -> None:
         r"""
         Attach :attr:`topo_src` to an AVG object if supported.
-        
+
         Calls ``avg.add_topography`` when available,
         otherwise tries to assign ``avg.topo`` from a ``frame`` attr.
         Silently ignores failures.
@@ -619,21 +617,21 @@ class Normalize(CoreObject):
     def _to_avg(self, src: Any) -> Any:
         r"""
         Return an :class:`AVG` object from ``src`` or ``None``.
-        
+
         Accepts an :class:`AVG` instance or a file
         path, which is read via :meth:`AVG.from_file`.
         """
         # 1) keep the instance check
         if isinstance(src, AVG):
             return src
-        # Duck-typing fallback for environments where multiple 
+        # Duck-typing fallback for environments where multiple
         # copies of the class may exist
         # or for subclasses:
 
         if hasattr(src, "add_topography"):  # AVG has this
             # and this attribute exists
             return src
- 
+
         # 2) only treat paths with AVG-like suffixes as AVG files
         if isinstance(src, (str, Path)):
             suf = Path(src).suffix.lower()
@@ -644,7 +642,7 @@ class Normalize(CoreObject):
     def _to_j(self, src: Any) -> Any:
         r"""
         Return a Jones object from ``src`` if it looks like Jones data.
-    
+
         Rules
         -----
         * Accept a :class:`JFile` instance directly.
@@ -659,35 +657,35 @@ class Normalize(CoreObject):
         * Return ``None`` when nothing valid can be produced (including
           empty collections).
         """
- 
+
         # JFile instance → pass through
         if isinstance(src, JFile):
             return src
-    
+
         # JCollection instance → pass through if non-empty
         if isinstance(src, JCollection):
             return src if len(src) > 0 else None
-    
+
         # Path-like
         if isinstance(src, (str, Path)):
             p = Path(src)
             suf = p.suffix.lower()
-    
+
             # Jones-like single-file suffix → try JFile.from_file
             if suf in {".j", ".jones", ".dat", ".txt"}:
                 try:
                     return JFile.from_file(p)
                 except Exception:
                     return None
-    
+
             # Folder / glob / non-Jones-suffix → try JCollection(sources=...)
             try:
                 coll = JCollection.from_sources(sources=src, verbose=0)  # real API
                 return coll if len(coll) > 0 else None
             except:
-                # Fallback for stubs 
+                # Fallback for stubs
                 return None
-    
+
         # Raw list/tuple of JFile → normalize to JCollection when available
         if isinstance(src, (list, tuple)) and src:
             items = [it for it in src if isinstance(it, JFile)]
@@ -697,14 +695,14 @@ class Normalize(CoreObject):
                 coll = JCollection(items=items, verbose=0)
                 return coll if len(coll) > 0 else None
             except TypeError:
-               pass 
-            
+               pass
+
         return None
 
     def _normalize(self, source: Any) -> Any:
         r"""
         Core normalization strategy used by :meth:`load`.
-    
+
         Resolution order
         ----------------
         1) Try to view ``source`` as an :class:`EDICollection` via
@@ -719,44 +717,44 @@ class Normalize(CoreObject):
            path (folder/glob).
         5) Fallback to :func:`to_edi` and normalize its result to an
            :class:`EDICollection` when possible.
-    
+
         Returns
         -------
         Any
             An :class:`EDICollection` when possible, otherwise the object
             returned by :func:`to_edi`.
         """
-        
+
         # 1) Immediate EDI pass-through (or single-file wrap)
         out = self._as_edi_coll(source)
         # If this is already an EDI object (not a string/Path), return it.
         if out is not None and not isinstance(source, (str, Path)):
             return out
-    
+
         # 2) Path-like routing by suffix
         if isinstance(source, (str, Path)):
             p = Path(source)
             suf = p.suffix.lower()
-    
+
             if suf in {".j", ".jones", ".dat", ".txt"}:
                 j = self._to_j(source)
                 if j is not None:
                     ed = JtoEDI().transform(j)
                     return EDICollection(items=[ed], verbose=0)
-    
+
             if suf == ".avg":
                 a = self._to_avg(source)
                 if a is not None:
                     self._try_topo(a)
                     return AVGtoEDI().transform(a)
-    
+
             if suf == ".edi":
                 try:
                     ed = EDIFile.from_file(p)
                     return EDICollection(items=[ed], verbose=0)
                 except Exception:
                     pass
-    
+
             # No suffix (folder/glob) → try EDICollection(sources=...)
             if suf == "":
                 try:
@@ -767,25 +765,25 @@ class Normalize(CoreObject):
                 except:
                     pass
             # If we got here, path-like wasn’t resolved → fall through
-    
+
         # 3) Non-path objects: Jones/AVG instance routes
         j = self._to_j(source)
         if j is not None:
             ed = JtoEDI().transform(j)
             return ed if isinstance(
                 ed, EDICollection) else EDICollection(items=[ed], verbose=0)
-        
-    
+
+
         a = self._to_avg(source)
         if a is not None:
             self._try_topo(a)
             return AVGtoEDI().transform(a)
-    
+
         # 4) Ultimate fallback: adapter registry
         obj = to_edi(source)
         return self._as_edi_coll(obj) or obj
 
-    def __enter__(self) -> "Normalize":
+    def __enter__(self) -> Normalize:
         return self
 
     def __exit__(
@@ -803,12 +801,12 @@ class Normalize(CoreObject):
     def load(self, source: Any) -> Any:
         r"""
         Normalize ``source`` into a common, iterable EM representation.
-        
+
         This method attempts to coerce the input into an
         :class:`EDICollection` when feasible. If the class was
         constructed with ``auto_register=True``, the resulting object
         is registered in the manifest with the tag ``"normalized"``.
-        
+
         Parameters
         ----------
         source : Any
@@ -816,40 +814,40 @@ class Normalize(CoreObject):
             :class:`EDIFile`, :class:`AVG`, :class:`JFile`, a file
             path to one of those, or another EM object supported by
             :func:`to_edi`.
-        
+
         Returns
         -------
         Any
             Usually an :class:`EDICollection`. In fallback cases, an
             EDI-like object produced by :func:`to_edi`.
-        
+
         Notes
         -----
         Topography is attached to AVG inputs when possible, using
         :attr:`topo_src`. Failures are ignored, and the method moves
         on to the next strategy.
-        
+
         Examples
         --------
         Basic usage returning an EDI collection::
-        
+
             >>> from pycsamt.session import Normalize
             >>> with Normalize("work") as nz:
             ...     coll = nz.load("data/site001.edi")  # doctest: +SKIP
-        
+
         Normalization from AVG with auto-registration::
-        
+
             >>> from pycsamt.session import Normalize
             >>> with Normalize("work", auto_register=True) as nz:  # doctest: +SKIP
             ...     coll = nz.load("data/S03.AVG")                 # doctest: +SKIP
             ...     hits = nz.reg.find(tag="normalized")           # doctest: +SKIP
-        
+
         Alias style via the package facade::
-        
+
             >>> import pycsamt as pcs
             >>> with pcs.Normalize("work") as nz:                  # doctest: +SKIP
             ...     out = nz.load("data/site001.j")                # doctest: +SKIP
-        
+
         See Also
         --------
         pycsamt.core.transformers.AVGtoEDI
@@ -875,10 +873,10 @@ def normalize_session(
 ):
     r"""
     Create and return a :class:`Normalize` with common defaults.
-    
+
     This is a convenience wrapper around :class:`Normalize`,
     mirroring its constructor.
-    
+
     Parameters
     ----------
     root : path-like
@@ -891,26 +889,26 @@ def normalize_session(
     auto_register : bool, optional
         Register outputs from :meth:`Normalize.load`. Defaults to
         ``True``.
-    
+
     Returns
     -------
     Normalize
         A context-manageable normalizer instance.
-    
+
     Examples
     --------
     Use the helper to normalize a file quickly::
-    
+
         >>> from pycsamt.session import normalize_session
         >>> with normalize_session("work") as nz:  # doctest: +SKIP
         ...     coll = nz.load("data/site001.edi") # doctest: +SKIP
-    
+
     Alias form::
-    
+
         >>> import pycsamt as pcs
         >>> with pcs.normalize_session("work") as nz:          # doctest: +SKIP
         ...     coll = nz.load("data/S01.AVG")                 # doctest: +SKIP
-    
+
     See Also
     --------
     Normalize

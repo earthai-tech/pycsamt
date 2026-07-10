@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 import pytest
 
 from pycsamt.seg.edi import EDIFile
-from pycsamt.site.base import Site, Sites
 from pycsamt.site import edit as ed
+from pycsamt.site.base import Site, Sites
 
 
 def _load_edi(p: Path) -> EDIFile:
@@ -30,7 +28,7 @@ def _mk_two_edifiles(
     simulated_edi: Path,
     s1: str = "S01",
     s2: str = "S02",
-) -> Tuple[EDIFile, EDIFile]:
+) -> tuple[EDIFile, EDIFile]:
     p1 = _dup_edi(tmp_path, simulated_edi, s1)
     p2 = _dup_edi(tmp_path, simulated_edi, s2)
     return _load_edi(p1), _load_edi(p2)
@@ -71,7 +69,7 @@ def test_rename_explicit_and_policy(simulated_edi: Path) -> None:
     # explicit new name
     out = ed.rename(edf, name="NEW01", inplace=False)
     h = out.get_section("head")  # type: ignore
-    assert str(getattr(h, "dataid")) == "NEW01"
+    assert str(h.dataid) == "NEW01"
 
     # policy-based rename
     def pol(n: str) -> str:
@@ -79,7 +77,7 @@ def test_rename_explicit_and_policy(simulated_edi: Path) -> None:
 
     out2 = ed.rename(out, policy=pol, inplace=False)
     h2 = out2.get_section("head")  # type: ignore
-    assert str(getattr(h2, "dataid")).startswith("X_")
+    assert str(h2.dataid).startswith("X_")
 
 
 def test_set_coords_single(simulated_edi: Path) -> None:

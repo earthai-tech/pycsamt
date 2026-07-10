@@ -1,30 +1,28 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
-
-from datetime import datetime 
+from typing import Any
 
 from ..exceptions import JParseError
 from .base import JComponentBase
 from .config import (
-    RE_DATATYPE_UNITS,
     ENCODING_DEFAULT,
+    RE_BANNER,
     RE_BLANK,
     RE_COMMENT,
-    RE_BANNER, 
+    RE_DATATYPE_UNITS,
     RE_INFO,
     RE_NPOINTS,
     RE_STATION,
     UNITS_CANONICAL,
 )
-from .utils import DataType, iter_lines, parse_datatype_units
 from .property import JSiteProperty
-
+from .utils import DataType, iter_lines, parse_datatype_units
 
 __all__ = [
     "Head",
@@ -133,42 +131,42 @@ class Banner(JComponentBase):
     """
     def __init__(
         self,
-        top_lines: Optional[Sequence[str]] = None,
+        top_lines: Sequence[str] | None = None,
         *,
-        software: Optional[str] = None,
-        station: Optional[str] = None,
-        date: Optional[str] = None,
-        note: Optional[str] = None,
+        software: str | None = None,
+        station: str | None = None,
+        date: str | None = None,
+        note: str | None = None,
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-       
+
         self.station_hint = station
         self.date = date
         self.note = note
         self._software = software
-        self._raw: Optional[str] = None
+        self._raw: str | None = None
         if top_lines is not None:
             self.read(top_lines)
 
     @classmethod
     def from_file(
-        cls, j_fn: Union[str, Path], *, verbose: int = 0
-    ) -> "Banner":
+        cls, j_fn: str | Path, *, verbose: int = 0
+    ) -> Banner:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         return cls.from_lines(lines, verbose=verbose)
 
     @classmethod
     def from_lines(
         cls, lines: Sequence[str], *, verbose: int = 0
-    ) -> "Banner":
+    ) -> Banner:
         inst = cls(verbose=verbose)
         inst.read(lines)
         return inst
 
     def read(
-        self, top_lines: Optional[Sequence[str]] = None
-    ) -> "Banner":
+        self, top_lines: Sequence[str] | None = None
+    ) -> Banner:
         if top_lines is None:
             raise ValueError("top_lines is required")
         for ln in top_lines:
@@ -191,7 +189,7 @@ class Banner(JComponentBase):
     ) -> list[str]:
         st = self.station_hint or ""
         lines: list[str] = []
-    
+
         if new:
             sw = "PYCSAMT"
             dt = datetime.now().strftime("%d/%m/%y")
@@ -210,23 +208,23 @@ class Banner(JComponentBase):
             lines.append(
                 f"#WRITTEN BY {sw}: {st} {dt} {nt}".rstrip()
             )
-    
+
         if include_origin and self._raw:
             # keep original line verbatim, but mark as provenance
             lines.append(
                 "#FROM "
                 + self._raw.lstrip("#").strip().lstrip("WRITTEN BY")
             )
-    
+
         return lines
 
     @property
     def software(self) -> str | None:
-        return ( 
-            None if self._software is None 
+        return (
+            None if self._software is None
             else self._software.upper()
         )
-    
+
     @property
     def date_parsed(self) -> datetime | None:
         if not self.date:
@@ -323,13 +321,13 @@ class Info(JComponentBase):
     """
     def __init__(
         self,
-        j_info_list: Optional[Sequence[str]] = None,
+        j_info_list: Sequence[str] | None = None,
         *,
         verbose: int = 0,
         **kwargs: Any,
     ) -> None:
         super().__init__(verbose=verbose)
-        self.comments: List[str] = []
+        self.comments: list[str] = []
         self.items: dict[str, str] = {}
         self._site_cache: JSiteProperty | None = None
         if j_info_list is not None:
@@ -338,8 +336,8 @@ class Info(JComponentBase):
 
     @classmethod
     def from_file(
-        cls, j_fn: Union[str, Path], *, verbose: int = 0
-    ) -> "Info":
+        cls, j_fn: str | Path, *, verbose: int = 0
+    ) -> Info:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         info_list = _extract_info_header_list(lines)
         return cls(info_list, verbose=verbose)
@@ -350,17 +348,17 @@ class Info(JComponentBase):
             j_info_list: Sequence[str] | None = None,
             *,
             verbose: int = 0,
-        ) -> "Info":
+        ) -> Info:
         if j_info_list is None:
             raise ValueError("j_info_list is required")
         seq = list(j_info_list)
         info_list = _extract_info_header_list(seq)
-        
+
         return cls(info_list, verbose=verbose)
 
     def write(
-        self, j_info_list: Optional[Sequence[str]] = None
-    ) -> List[str]:
+        self, j_info_list: Sequence[str] | None = None
+    ) -> list[str]:
         if j_info_list is not None:
             self.read(j_info_list)
         # out: List[str] = []
@@ -378,10 +376,10 @@ class Info(JComponentBase):
         for k, v in self.items.items():
             out.append(f">{k:<10} = {v:>13}")
         return out
-    
+
     def read(
-        self, j_info_list: Optional[Sequence[str]] = None
-    ) -> "Info":
+        self, j_info_list: Sequence[str] | None = None
+    ) -> Info:
         if j_info_list is None:
             raise ValueError("j_info_list is required")
         self.comments = []
@@ -428,38 +426,38 @@ class Info(JComponentBase):
     def get(self, key: str, default: str | None = None
             ) -> str | None:
         return self.items.get(key.upper(), default)
-    
+
     def keys(self) -> tuple[str, ...]:
         return tuple(self.items.keys())
-    
+
     def values(self) -> tuple[str, ...]:
         return tuple(self.items.values())
-    
+
     def items_map(self) -> dict[str, str]:
         # explicit copy to avoid accidental mutation
         return dict(self.items)
-    
+
     @property
     def lat(self) -> float | None:
         return self.latitude
-    
+
     @property
     def lon(self) -> float | None:
         return self.longitude
 
-    
+
     def __contains__(self, key: str) -> bool:
         return key.upper() in self.items
-    
+
     def __getitem__(self, key: str) -> str:
         return self.items[key.upper()]
-    
+
     def __str__(self) -> str:
         n = len(self.items)
         return f"Info(items={n})"
 
     def __repr__(self) -> str:
-        return ( 
+        return (
             f"Info(items={len(self.items)},"
             " cmts={len(self.comments)})"
             )
@@ -558,7 +556,7 @@ class Head(JComponentBase):
 
     def __init__(
         self,
-        j_header_list: Optional[Sequence[str]] = None,
+        j_header_list: Sequence[str] | None = None,
         *,
         verbose: int = 0,
         **kwargs: Any,
@@ -572,19 +570,19 @@ class Head(JComponentBase):
 
     @classmethod
     def from_file(
-        cls, j_fn: Union[str, Path], *, verbose: int = 0
-    ) -> "Head":
+        cls, j_fn: str | Path, *, verbose: int = 0
+    ) -> Head:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         head_list = _extract_first_head_list(lines)
         return cls(head_list, verbose=verbose)
-    
+
     @classmethod
     def from_lines(
             cls,
             j_header_list: Sequence[str] | None = None,
             *,
             verbose: int = 0,
-        ) -> "Head":
+        ) -> Head:
         if j_header_list is None:
             raise ValueError("j_header_list is required")
         seq = list(j_header_list)
@@ -599,8 +597,8 @@ class Head(JComponentBase):
 
 
     def read(
-        self, j_header_list: Optional[Sequence[str]] = None
-    ) -> "Head":
+        self, j_header_list: Sequence[str] | None = None
+    ) -> Head:
         if j_header_list is None:
             raise ValueError("j_header_list is required")
         i = 0
@@ -610,11 +608,11 @@ class Head(JComponentBase):
             _is_info(j_header_list[i])
         ):
             i += 1
-        
+
         m = RE_STATION.match(j_header_list[i])
         if not m:
             raise ValueError("expected station line in header list")
-            
+
         token = m.group("station").strip()
         self.station = token.upper()
         try:
@@ -623,7 +621,7 @@ class Head(JComponentBase):
                 self.az_hint = float(parts[1])
         except Exception:
             self.az_hint = None
-            
+
         # if i >= nln or not RE_STATION.match(j_header_list[i]):
         #     raise ValueError("expected station line in header list")
         # station = j_header_list[i].strip().upper()
@@ -649,8 +647,8 @@ class Head(JComponentBase):
         return self
 
     def write(
-        self, head_list_infos: Optional[Sequence[str]] = None
-    ) -> List[str]:
+        self, head_list_infos: Sequence[str] | None = None
+    ) -> list[str]:
         if head_list_infos is not None:
             self.read(head_list_infos)
         if self.station is None or self.dtype is None or self.n is None:
@@ -659,31 +657,31 @@ class Head(JComponentBase):
 
     @property
     def kind(self) -> str | None:
-        return ( None if self.dtype is None 
+        return ( None if self.dtype is None
                 else self.dtype.kind
             )
-    
+
     @property
     def comp(self) -> str | None:
-        return ( 
-            None if self.dtype is None 
+        return (
+            None if self.dtype is None
             else self.dtype.comp
         )
-    
+
     @property
     def units(self) -> str | None:
-        return ( 
-            None if self.dtype is None 
+        return (
+            None if self.dtype is None
             else self.dtype.units
         )
-    
+
     @property
     def tensor_hint(self) -> str | None:
         return (
-            None if self.dtype is None 
+            None if self.dtype is None
             else self.dtype.tensor_hint
         )
-    
+
     @property
     def header(self) -> tuple[str, str, int] | None:
         if self.station is None or self.dtype is None:
@@ -778,13 +776,13 @@ class Heads(JComponentBase):
 
     def __init__(
         self,
-        head: Optional[Head] = None,
-        info: Optional[Info] = None,
+        head: Head | None = None,
+        info: Info | None = None,
         *,
         verbose: int = 0,
     ) -> None:
         super().__init__(verbose=verbose)
-        self.banner = Banner(verbose=verbose) 
+        self.banner = Banner(verbose=verbose)
         self.head: Head = head if head is not None else Head(
             verbose=verbose
         )
@@ -794,8 +792,8 @@ class Heads(JComponentBase):
 
 
     def read(
-        self, text_or_lines: Union[str, Sequence[str]]
-    ) -> "Heads":
+        self, text_or_lines: str | Sequence[str]
+    ) -> Heads:
         if isinstance(text_or_lines, str):
             lines = text_or_lines.splitlines()
         else:
@@ -808,7 +806,7 @@ class Heads(JComponentBase):
         self._mark_read(True)
         return self
 
-    def write(self, include_origin=False) -> List[str]:
+    def write(self, include_origin=False) -> list[str]:
         out: list[str] = []
         out.extend(self.banner.write(
             new=True, include_origin=include_origin))
@@ -819,16 +817,16 @@ class Heads(JComponentBase):
     @classmethod
     def from_lines(
         cls, lines: Sequence[str], *, verbose: int = 0
-        ) -> "Heads":
+        ) -> Heads:
         inst = cls(verbose=verbose)
         inst.read(lines)
         return inst
-    
-    
+
+
     @classmethod
     def from_file(
-        cls, j_fn: Union[str, Path], *, verbose: int = 0
-        ) -> "Heads":
+        cls, j_fn: str | Path, *, verbose: int = 0
+        ) -> Heads:
         lines = list(iter_lines(j_fn, encoding=ENCODING_DEFAULT))
         return cls.from_lines(lines, verbose=verbose)
 
@@ -869,7 +867,7 @@ class Heads(JComponentBase):
 
     def __repr__(self) -> str:
         return self.__str__()
-    
+
 
 class HeadMixin:
     r"""
@@ -901,23 +899,23 @@ class HeadMixin:
     >>> Host.from_file('file.j')  # doctest: +SKIP
     Head(...)
     """
-    
+
     head: Head
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Head:
+    def from_file(cls, edi_fn: str | Path) -> Head:
         return Head.from_file(edi_fn)
 
     def read(
-        self, j_header_list: Optional[Sequence[str]] = None
+        self, j_header_list: Sequence[str] | None = None
     ) -> Head:
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
         return self.head.read(j_header_list)
 
     def write(
-        self, head_list_infos: Optional[Sequence[str]] = None
-    ) -> List[str]:
+        self, head_list_infos: Sequence[str] | None = None
+    ) -> list[str]:
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
         return self.head.write(head_list_infos)
@@ -956,26 +954,26 @@ class InfoMixin:
     info: Info
 
     @classmethod
-    def from_file(cls, edi_fn: Union[str, Path]) -> Info:
+    def from_file(cls, edi_fn: str | Path) -> Info:
         return Info.from_file(edi_fn)
 
     def read(
-        self, j_info_list: Optional[Sequence[str]] = None
+        self, j_info_list: Sequence[str] | None = None
     ) -> Info:
         if not hasattr(self, "info") or self.info is None:
             self.info = Info()
         return self.info.read(j_info_list)
 
     def write(
-        self, j_info_list: Optional[Sequence[str]] = None
-    ) -> List[str]:
+        self, j_info_list: Sequence[str] | None = None
+    ) -> list[str]:
         if not hasattr(self, "info") or self.info is None:
             self.info = Info()
         return self.info.write(j_info_list)
 
 
-def _extract_info_header_list(lines: Sequence[str]) -> List[str]:
-    header: List[str] = []
+def _extract_info_header_list(lines: Sequence[str]) -> list[str]:
+    header: list[str] = []
     for ln in lines:
         if _is_comment(ln) or _is_info(ln) or _is_blank(ln):
             header.append(ln)
@@ -985,7 +983,7 @@ def _extract_info_header_list(lines: Sequence[str]) -> List[str]:
 
 
 
-def _extract_first_head_list(lines: Sequence[str]) -> List[str]:
+def _extract_first_head_list(lines: Sequence[str]) -> list[str]:
     i, n = 0, len(lines)
     while i < n and (
         _is_comment(lines[i]) or _is_info(lines[i]) or _is_blank(lines[i])

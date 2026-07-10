@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import base64
 import tempfile
-from typing import Any, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -42,10 +42,10 @@ _LIGHT_LOSS  = "#d20f39"
 
 def session_to_obs_1d(
     session_id: str,
-    stations: Optional[List[str]] = None,
+    stations: list[str] | None = None,
     *,
     comp: str = "xy",
-) -> List:
+) -> list:
     r"""
     Return a ``List[SiteObs1D]`` from the session
     cache, optionally filtered to *stations*.
@@ -63,10 +63,10 @@ def session_to_obs_1d(
     -------
     list of SiteObs1D
     """
-    from pycsamt.app.web.cache import cache_get
     from pycsamt.ai.inversion._sites_bridge import (
         sites_to_obs_1d,
     )
+    from pycsamt.app.web.cache import cache_get
 
     sites = cache_get(session_id)
     if not sites:
@@ -89,11 +89,11 @@ def session_to_obs_1d(
 
 def session_to_obs_2d(
     session_id: str,
-    stations: Optional[List[str]] = None,
+    stations: list[str] | None = None,
     *,
     comp_te: str = "xy",
     comp_tm: str = "yx",
-) -> List:
+) -> list:
     r"""
     Return a ``List[SiteObs2D]`` from the session
     cache, optionally filtered to *stations*.
@@ -113,10 +113,10 @@ def session_to_obs_2d(
     -------
     list of SiteObs2D
     """
-    from pycsamt.app.web.cache import cache_get
     from pycsamt.ai.inversion._sites_bridge import (
         sites_to_obs_2d,
     )
+    from pycsamt.app.web.cache import cache_get
 
     sites = cache_get(session_id)
     if not sites:
@@ -176,7 +176,7 @@ def decode_npz_checkpoint(
 # ---
 
 def build_pinn_inv(
-    obs: List,
+    obs: list,
     dim: str,
     *,
     n_layers: int = 5,
@@ -194,7 +194,7 @@ def build_pinn_inv(
     comp: str = "xy",
     comp_te: str = "xy",
     comp_tm: str = "yx",
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> Any:
     r"""
     Instantiate a ``PINNInverter{1D,2D,3D}`` from a
@@ -309,11 +309,11 @@ def build_pinn_inv(
 # ---
 
 def build_hybrid_inv(
-    obs: List,
+    obs: list,
     dim: str,
     checkpoint: Any,
     *,
-    n_layers: Optional[int] = None,
+    n_layers: int | None = None,
     n_freqs: int = 32,
     solver: str = "mt1d",
     mode: str = "te",
@@ -327,7 +327,7 @@ def build_hybrid_inv(
     comp: str = "xy",
     comp_te: str = "xy",
     comp_tm: str = "yx",
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> Any:
     r"""
     Instantiate a ``HybridInverter{1D,2D,3D}`` from a
@@ -464,6 +464,7 @@ def plot_pinn_section(
         ``data:image/png;base64,...``
     """
     import matplotlib.pyplot as plt
+
     from pycsamt.app.web.utils import (
         apply_web_dark_theme,
         apply_web_light_theme,
@@ -607,6 +608,7 @@ def plot_pinn_convergence(
         ``data:image/png;base64,...``
     """
     import matplotlib.pyplot as plt
+
     from pycsamt.app.web.utils import (
         apply_web_dark_theme,
         apply_web_light_theme,
@@ -643,7 +645,7 @@ def plot_pinn_convergence(
     return fig_to_src(fig)
 
 
-def _extract_loss_history(inv: Any) -> List[float]:
+def _extract_loss_history(inv: Any) -> list[float]:
     """Pull the mean loss-per-epoch from any inverter."""
     # PINNInverter2D / PINNInverter3D
     fn = getattr(inv, "convergence_curve", None)
@@ -714,6 +716,7 @@ def plot_pinn_data_fit(
         ``data:image/png;base64,...``
     """
     import matplotlib.pyplot as plt
+
     from pycsamt.app.web.utils import (
         apply_web_dark_theme,
         apply_web_light_theme,
@@ -839,7 +842,7 @@ def pinn_stats_div(
     )
     lr        = getattr(inv, "lr", "?")
 
-    rows: List = [
+    rows: list = [
         ("Track",          f"{label} {dim.upper()}"),
         ("Stations",       str(n_sites)),
         ("Layers",         str(n_layers)),

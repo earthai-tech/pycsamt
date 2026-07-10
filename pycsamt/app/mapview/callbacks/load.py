@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Multi-line EDI loading — modeled on ``app/web`` with replace/append,
@@ -15,13 +14,18 @@ import shutil
 from pathlib import Path
 
 from dash import (
-    ctx, html, no_update,
-    clientside_callback, Input, Output, State,
+    Input,
+    Output,
+    State,
+    clientside_callback,
+    ctx,
+    html,
+    no_update,
 )
 
 from .._ids import IDs
-from ..cache import get_view, set_view
 from .._render import merge_views, store_from_view
+from ..cache import get_view, set_view
 
 _MODE_REPLACE = "replace"
 _MODE_APPEND = "append"

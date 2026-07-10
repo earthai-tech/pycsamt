@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,9 +19,8 @@ from __future__ import annotations
 
 import hashlib
 import os
-import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 __all__ = [
     "list_pretrained",
@@ -38,7 +36,7 @@ _GITHUB_RELEASE = (
     "https://github.com/earthai-tech/pycsamt-models/releases/download/v0.1"
 )
 
-_MODEL_ZOO: Dict[str, Dict[str, Any]] = {
+_MODEL_ZOO: dict[str, dict[str, Any]] = {
     "mt1d-resnet-5layer-v1": {
         "url": f"{_GITHUB_RELEASE}/mt1d-resnet-5layer-v1.npz",
         "arch": "resnet",
@@ -117,7 +115,7 @@ _MODEL_ZOO: Dict[str, Dict[str, Any]] = {
 # Public utilities
 # ─────────────────────────────────────────────────────────────────────────────
 
-def list_pretrained() -> Dict[str, str]:
+def list_pretrained() -> dict[str, str]:
     """
     Return a dict of available pre-trained models.
 
@@ -135,7 +133,7 @@ def list_pretrained() -> Dict[str, str]:
     return {k: v["description"] for k, v in _MODEL_ZOO.items()}
 
 
-def get_pretrained_info(name: str) -> Dict[str, Any]:
+def get_pretrained_info(name: str) -> dict[str, Any]:
     """
     Return metadata for a registered pre-trained model.
 
@@ -162,7 +160,7 @@ def get_pretrained_info(name: str) -> Dict[str, Any]:
     return dict(_MODEL_ZOO[name])
 
 
-def _get_cache_dir(cache_dir: Optional[str] = None) -> Path:
+def _get_cache_dir(cache_dir: str | None = None) -> Path:
     """Return (and create) the local model cache directory."""
     if cache_dir is not None:
         return Path(cache_dir)
@@ -183,7 +181,7 @@ def _md5_file(path: Path) -> str:
 def download_checkpoint(
     name: str,
     *,
-    cache_dir: Optional[str] = None,
+    cache_dir: str | None = None,
     force: bool = False,
     verbose: bool = True,
 ) -> Path:

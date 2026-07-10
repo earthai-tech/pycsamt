@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -83,5 +82,5 @@ class ProjectState:
         return self.path
 
     @classmethod
-    def default(cls, root: Path | str | None = None) -> "ProjectState":
+    def default(cls, root: Path | str | None = None) -> ProjectState:
         return cls(_default_path(root))

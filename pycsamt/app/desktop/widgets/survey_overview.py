@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -13,10 +12,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List, Optional
 
 import pandas as pd
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
@@ -124,7 +121,7 @@ class SurveyOverviewWidget(QWidget):
     def update_survey(
         self,
         df: pd.DataFrame,
-        paths: Optional[List[str]] = None,
+        paths: list[str] | None = None,
     ) -> None:
         """
         Populate the panel from the station summary DataFrame.

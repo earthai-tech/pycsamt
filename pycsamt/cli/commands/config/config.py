@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -23,7 +22,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from pathlib import Path
 from typing import Any
 
 import click
@@ -40,6 +38,7 @@ from ._base import (
     section_summary,
     toml_key_to_dotted,
 )
+
 
 # Convenience accessors that always resolve through _b so monkeypatch works:
 def _TOML_PATH():       return _b.TOML_PATH
@@ -436,7 +435,9 @@ def show_cmd(section: str | None, output_format: str) -> None:
         out: dict[str, Any] = {}
         for s in sections_to_show:
             try:
-                from ._base import get_singleton  # noqa: PLC0415
+                from ._base import (
+                    get_singleton,  # noqa: PLC0415
+                )
                 singleton = get_singleton(s)
                 if hasattr(singleton, "to_dict"):
                     out[s] = singleton.to_dict()
@@ -669,7 +670,9 @@ def agent_status(output_format: str) -> None:
       pycsamt config agent status
       pycsamt config agent status --format json
     """
-    from pycsamt.api.agents import AGENT_CONFIG  # noqa: PLC0415
+    from pycsamt.api.agents import (
+        AGENT_CONFIG,  # noqa: PLC0415
+    )
 
     rows = {
         "provider":      AGENT_CONFIG.provider,
@@ -752,8 +755,8 @@ def agent_set_key(provider: str) -> None:
     else:
         click.echo(f"\nSetting up {provider.title()} API key")
         click.echo(f"  1. Obtain your key: {url}")
-        click.echo(f"  2. Add to your shell profile:")
+        click.echo("  2. Add to your shell profile:")
         click.echo(f"       export {env_var}=<your-key>")
-        click.echo(f"  3. Activate the provider:")
+        click.echo("  3. Activate the provider:")
         click.echo(f"       pycsamt config set agent.provider {provider}")
         click.echo()

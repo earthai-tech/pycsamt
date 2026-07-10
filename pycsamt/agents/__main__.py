@@ -35,7 +35,11 @@ import sys
 
 
 def _cmd_preview(request: str) -> None:
-    from . import ContextInputAgent, MTLoaderAgent, AgentCoordinator
+    from . import (
+        AgentCoordinator,
+        ContextInputAgent,
+        MTLoaderAgent,
+    )
 
     ctx    = ContextInputAgent()
     loader = MTLoaderAgent()
@@ -143,7 +147,10 @@ def _cmd_zoo(args: list[str]) -> None:
         python -m pycsamt.agents zoo mt1d-resnet-5layer-v1
         python -m pycsamt.agents zoo mt1d-resnet-5layer-v1 --force
     """
-    from pycsamt.ai._zoo import list_pretrained, download_checkpoint
+    from pycsamt.ai._zoo import (
+        download_checkpoint,
+        list_pretrained,
+    )
 
     if not args or args[0].startswith("-"):
         # list mode

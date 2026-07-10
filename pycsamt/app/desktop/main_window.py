@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -37,7 +36,14 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSize, Qt
-from PySide6.QtGui  import QAction, QActionGroup, QIcon, QKeySequence, QPainter, QPixmap
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QDockWidget,
@@ -46,25 +52,34 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QProgressBar,
-    QSizePolicy,
     QSplitter,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from pycsamt.app.desktop.controllers.app_controller import AppController
-from pycsamt.app.desktop.agent_master_bridge     import launch_agent_master
-from pycsamt.app.desktop.models.session            import SessionState
-from pycsamt.app.desktop.panels.log_panel          import LogPanel
-from pycsamt.app.desktop.panels.station_panel      import StationPanel
-from pycsamt.app.desktop.widgets.mpl_canvas        import (
+from pycsamt.app.desktop.agent_master_bridge import (
+    launch_agent_master,
+)
+from pycsamt.app.desktop.controllers.app_controller import (
+    AppController,
+)
+from pycsamt.app.desktop.models.session import SessionState
+from pycsamt.app.desktop.panels.log_panel import LogPanel
+from pycsamt.app.desktop.panels.station_panel import (
+    StationPanel,
+)
+from pycsamt.app.desktop.widgets.mpl_canvas import (
     apply_mpl_dark_theme,
     apply_mpl_light_theme,
 )
-from pycsamt.app.desktop.widgets.station_detail    import StationDetailCard
-from pycsamt.app.desktop.widgets.survey_overview   import SurveyOverviewWidget
-from pycsamt.app.desktop.windows                   import (
+from pycsamt.app.desktop.widgets.station_detail import (
+    StationDetailCard,
+)
+from pycsamt.app.desktop.widgets.survey_overview import (
+    SurveyOverviewWidget,
+)
+from pycsamt.app.desktop.windows import (
     AdvancedToolsWindow,
     CorrectionWindow,
     ForwardModelWindow,
@@ -75,7 +90,9 @@ from pycsamt.app.desktop.windows                   import (
     QCDashboardWindow,
     TDEMWindow,
 )
-from pycsamt.app.desktop.windows.pipeline_window   import PipelineWindow
+from pycsamt.app.desktop.windows.pipeline_window import (
+    PipelineWindow,
+)
 
 _RESOURCES = Path(__file__).parent / "resources"
 _ICONS     = _RESOURCES / "icons"
@@ -159,7 +176,9 @@ class MainWindow(QMainWindow):
         self._last_recompute_output = None        # Path to last recomputed EDI folder
 
         # Settings controller — load saved profile (silently no-ops if absent)
-        from pycsamt.app.desktop.controllers.settings_controller import SettingsController
+        from pycsamt.app.desktop.controllers.settings_controller import (
+            SettingsController,
+        )
         self._settings_ctrl = SettingsController()
         self._settings_ctrl.load()
 
@@ -788,7 +807,9 @@ class MainWindow(QMainWindow):
     # ── Data loading ──────────────────────────────────────────────────
 
     def _open_files(self) -> None:
-        from pycsamt.app.desktop.dialogs.load_data_dlg import LoadDataDialog
+        from pycsamt.app.desktop.dialogs.load_data_dlg import (
+            LoadDataDialog,
+        )
         dlg = LoadDataDialog(
             self,
             last_dir=self._session.last_data_dir,
@@ -806,7 +827,9 @@ class MainWindow(QMainWindow):
         self._start_loading(paths)
 
     def _start_loading(self, paths: list) -> None:
-        from pycsamt.app.desktop.workers.loader_worker import LoaderWorker
+        from pycsamt.app.desktop.workers.loader_worker import (
+            LoaderWorker,
+        )
         self._loaded_paths = list(paths)
         self._loader = LoaderWorker(paths, parent=self)
         self._loader.progress.connect(self._progress_bar.setValue)
@@ -928,7 +951,9 @@ class MainWindow(QMainWindow):
         """Replace global sites with the corrected dataset from CorrectionWindow."""
         self._controller.set_sites(corrected_sites)
         # Rebuild the dataframe view from the corrected sites
-        from pycsamt.app.desktop.controllers.data_controller import DataController
+        from pycsamt.app.desktop.controllers.data_controller import (
+            DataController,
+        )
         dc = DataController()
         dc._sites = corrected_sites
         dc._df    = dc._build_dataframe()
@@ -961,7 +986,9 @@ class MainWindow(QMainWindow):
             return
 
         self._controller.set_sites(converted_sites)
-        from pycsamt.app.desktop.controllers.data_controller import DataController
+        from pycsamt.app.desktop.controllers.data_controller import (
+            DataController,
+        )
         dc = DataController()
         dc._sites = converted_sites
         dc._df    = dc._build_dataframe()
@@ -1018,7 +1045,9 @@ class MainWindow(QMainWindow):
     # ── Export ────────────────────────────────────────────────────────
 
     def _on_export_figure(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+        from pycsamt.app.desktop.dialogs.export_dlg import (
+            ExportDialog,
+        )
         # Try to grab figure from the most recently active panel window
         fig = None
         for win in reversed(self._panel_windows()):
@@ -1039,7 +1068,9 @@ class MainWindow(QMainWindow):
     # ── Preferences ───────────────────────────────────────────────────
 
     def _open_preferences(self) -> None:
-        from pycsamt.app.desktop.dialogs.preferences_dlg import PreferencesDialog
+        from pycsamt.app.desktop.dialogs.preferences_dlg import (
+            PreferencesDialog,
+        )
         dlg = PreferencesDialog(session=self._session, parent=self)
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_theme(self._session.theme)
@@ -1053,7 +1084,9 @@ class MainWindow(QMainWindow):
 
     def _open_api_config(self, tab: str | None = None) -> None:
         """Open the API Configuration dialog, optionally pre-selecting *tab*."""
-        from pycsamt.app.desktop.dialogs.settings_dialog import APIConfigDialog
+        from pycsamt.app.desktop.dialogs.settings_dialog import (
+            APIConfigDialog,
+        )
         dlg = APIConfigDialog(self._settings_ctrl, parent=self, open_tab=tab)
         dlg.settings_changed.connect(self._on_settings_changed)
         dlg.exec()
@@ -1145,7 +1178,9 @@ class MainWindow(QMainWindow):
         sites = getattr(self._controller, "sites", None)
         if sites is not None:
             return True
-        from pycsamt.app.desktop.dialogs.no_data_dialog import NoDataDialog
+        from pycsamt.app.desktop.dialogs.no_data_dialog import (
+            NoDataDialog,
+        )
         if NoDataDialog.require(self, tool_name):
             self._act_open.trigger()
         return False
@@ -1155,13 +1190,17 @@ class MainWindow(QMainWindow):
     def _open_strike_analyzer(self) -> None:
         if not self._require_sites("Strike Analyzer"):
             return
-        from pycsamt.app.desktop.tools.strike_tool import StrikeAnalyzerDialog
+        from pycsamt.app.desktop.tools.strike_tool import (
+            StrikeAnalyzerDialog,
+        )
         StrikeAnalyzerDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_edi_validator(self) -> None:
         if not self._require_sites("EDI Validator & Station Manager"):
             return
-        from pycsamt.app.desktop.tools.validator_tool import EDIValidatorDialog
+        from pycsamt.app.desktop.tools.validator_tool import (
+            EDIValidatorDialog,
+        )
         dlg = EDIValidatorDialog(getattr(self._controller, "sites", None), parent=self)
         dlg.open_recompute_requested.connect(self._open_recompute)
         if dlg.exec() and dlg.modified_sites is not None:
@@ -1170,16 +1209,22 @@ class MainWindow(QMainWindow):
     def _open_format_converter(self) -> None:
         if not self._require_sites("Format Converter"):
             return
-        from pycsamt.app.desktop.tools.converter_tool import FormatConverterDialog
+        from pycsamt.app.desktop.tools.converter_tool import (
+            FormatConverterDialog,
+        )
         FormatConverterDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_batch_export(self) -> None:
-        from pycsamt.app.desktop.tools.batch_export_tool import BatchExportDialog
+        from pycsamt.app.desktop.tools.batch_export_tool import (
+            BatchExportDialog,
+        )
         figures = self._collect_figures()
         BatchExportDialog(figures, parent=self).exec()
 
     def _open_coord_transformer(self) -> None:
-        from pycsamt.app.desktop.tools.coord_tool import CoordTransformDialog
+        from pycsamt.app.desktop.tools.coord_tool import (
+            CoordTransformDialog,
+        )
         CoordTransformDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _collect_figures(self) -> list:
@@ -1210,19 +1255,25 @@ class MainWindow(QMainWindow):
     def _open_station_response(self) -> None:
         if not self._require_sites("Station Response Inspector"):
             return
-        from pycsamt.app.desktop.tools.station_response_tool import StationResponseDialog
+        from pycsamt.app.desktop.tools.station_response_tool import (
+            StationResponseDialog,
+        )
         StationResponseDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_strike_profile(self) -> None:
         if not self._require_sites("Strike Profile Viewer"):
             return
-        from pycsamt.app.desktop.tools.strike_profile_tool import StrikeProfileDialog
+        from pycsamt.app.desktop.tools.strike_profile_tool import (
+            StrikeProfileDialog,
+        )
         StrikeProfileDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_phase_tensor_map(self) -> None:
         if not self._require_sites("Phase Tensor Map"):
             return
-        from pycsamt.app.desktop.tools.phase_tensor_map_tool import PhaseTensorMapDialog
+        from pycsamt.app.desktop.tools.phase_tensor_map_tool import (
+            PhaseTensorMapDialog,
+        )
         PhaseTensorMapDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_phase_tensor_strip_grid(self) -> None:
@@ -1236,30 +1287,41 @@ class MainWindow(QMainWindow):
     def _open_dimensionality(self) -> None:
         if not self._require_sites("Dimensionality Classifier"):
             return
-        from pycsamt.app.desktop.tools.dimensionality_tool import DimensionalityDialog
+        from pycsamt.app.desktop.tools.dimensionality_tool import (
+            DimensionalityDialog,
+        )
         DimensionalityDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_frequency_editor(self) -> None:
         if not self._require_sites("Frequency Editor"):
             return
-        from pycsamt.app.desktop.tools.frequency_editor_tool import FrequencyEditorDialog
+        from pycsamt.app.desktop.tools.frequency_editor_tool import (
+            FrequencyEditorDialog,
+        )
         dlg = FrequencyEditorDialog(getattr(self._controller, "sites", None), parent=self)
         if dlg.exec() and dlg.edited_sites is not None:
             self._apply_modified_sites(dlg.edited_sites, source="Frequency Editor")
 
     def _open_layered_model(self) -> None:
-        from pycsamt.app.desktop.tools.layered_model_tool import LayeredModelDialog
+        from pycsamt.app.desktop.tools.layered_model_tool import (
+            LayeredModelDialog,
+        )
         LayeredModelDialog(parent=self).exec()
 
     def _open_elevation_enrichment(self) -> None:
         if not self._require_sites("Elevation Enrichment"):
             return
-        from pycsamt.app.desktop.tools.elevation_tool import ElevationEnrichDialog
+        from pycsamt.app.desktop.tools.elevation_tool import (
+            ElevationEnrichDialog,
+        )
         ElevationEnrichDialog(getattr(self._controller, "sites", None), parent=self).exec()
 
     def _open_recompute(self) -> None:
         from PySide6.QtWidgets import QMessageBox
-        from pycsamt.app.desktop.dialogs.recompute_dlg import RecomputeDialog
+
+        from pycsamt.app.desktop.dialogs.recompute_dlg import (
+            RecomputeDialog,
+        )
 
         sites = getattr(self._controller, "sites", None)
 
@@ -1306,7 +1368,9 @@ class MainWindow(QMainWindow):
         """Push a modified site list back into the controller and refresh all panels."""
         self._controller.set_sites(new_sites)
         try:
-            from pycsamt.app.desktop.controllers.data_controller import DataController
+            from pycsamt.app.desktop.controllers.data_controller import (
+                DataController,
+            )
             dc = DataController()
             dc._sites = new_sites
             dc._df    = dc._build_dataframe()
@@ -1344,7 +1408,9 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl("https://github.com/earthai-tech/pycsamt"))
 
     def _open_about(self) -> None:
-        from pycsamt.app.desktop.dialogs.about_dialog import AboutDialog
+        from pycsamt.app.desktop.dialogs.about_dialog import (
+            AboutDialog,
+        )
         AboutDialog(parent=self).exec()
 
     # ── Recent files ──────────────────────────────────────────────────

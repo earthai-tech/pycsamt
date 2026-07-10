@@ -1,17 +1,18 @@
-# -*- coding: utf-8 -*-
 # License: BSD-3-Clause
 
 """
 `util` module provides utility functions and classes to support various
-data manipulation and analysis tasks 
+data manipulation and analysis tasks
 """
 
 import os
 import re
 import shutil
 import warnings
+
 import numpy as np
 import pandas as pd
+
 
 class TerminalSize:
     """
@@ -28,7 +29,7 @@ class TerminalSize:
     Methods
     -------
     get_terminal_size()
-        Get the size of the terminal window as (columns, rows). Attempts multiple 
+        Get the size of the terminal window as (columns, rows). Attempts multiple
         methods to ensure compatibility across different platforms.
     _get_terminal_size_windows()
         Get the terminal size for Windows platforms using ctypes.
@@ -37,10 +38,10 @@ class TerminalSize:
 
     Notes
     -----
-    The `get_terminal_size` method first tries to use `shutil.get_terminal_size` 
-    with a fallback to `DEFAULT_SIZE`. If that fails, it checks the operating 
-    system and attempts to use platform-specific methods. On Windows, it uses 
-    the `ctypes` library to query the terminal size. On Unix-like systems, it 
+    The `get_terminal_size` method first tries to use `shutil.get_terminal_size`
+    with a fallback to `DEFAULT_SIZE`. If that fails, it checks the operating
+    system and attempts to use platform-specific methods. On Windows, it uses
+    the `ctypes` library to query the terminal size. On Unix-like systems, it
     uses the `ioctl` syscall.
 
     Examples
@@ -52,22 +53,22 @@ class TerminalSize:
     See Also
     --------
     shutil.get_terminal_size : Get the size of the terminal window.
-    
+
     References
     ----------
     .. [1] Python Software Foundation. Python Language Reference, version 3.9.
        Available at http://www.python.org
-    .. [2] Python `shutil` module documentation. Available at 
+    .. [2] Python `shutil` module documentation. Available at
        https://docs.python.org/3/library/shutil.html#get_terminal_size
     """
-    
+
     DEFAULT_SIZE = (80, 20)
 
     @staticmethod
     def get_terminal_size():
         """
         Get the size of the terminal window as (columns, rows).
-        Attempts multiple methods to ensure compatibility across different 
+        Attempts multiple methods to ensure compatibility across different
         platforms.
 
         Returns
@@ -99,7 +100,7 @@ class TerminalSize:
             The size of the terminal as (columns, rows).
         """
         import struct
-        from ctypes import windll, create_string_buffer
+        from ctypes import create_string_buffer, windll
         try:
             h = windll.kernel32.GetStdHandle(-12)
             csbi = create_string_buffer(22)
@@ -125,8 +126,8 @@ class TerminalSize:
         tuple
             The size of the terminal as (columns, rows).
         """
-        import struct
         import fcntl
+        import struct
         import termios
         def ioctl_GWINSZ(fd):
             try:
@@ -152,7 +153,7 @@ def format_value(value, precision=4):
     """
     Format a numeric value to a string, rounding floats to four decimal
     places and converting integers directly to strings.
-    
+
     Parameters
     ----------
     value : int, float, np.integer, np.floating
@@ -162,7 +163,7 @@ def format_value(value, precision=4):
     -------
     str
         A formatted string representing the value.
-    
+
     Examples
     --------
     >>> from fusionlab.api.util import format_value
@@ -173,16 +174,16 @@ def format_value(value, precision=4):
     """
     value_str =str(value)
     precision = validate_precision( precision)
-    if isinstance(value, (int, float, np.integer, np.floating)): 
+    if isinstance(value, (int, float, np.integer, np.floating)):
         value = apply_precision(value, precision )
-        value_str = f"{value}" # if isinstance ( 
-        #     value, int) else  f"{float(value):.{precision}f}" 
-    return value_str 
+        value_str = f"{value}" # if isinstance (
+        #     value, int) else  f"{float(value):.{precision}f}"
+    return value_str
 
 def apply_precision(value, precision=4):
     """
-    Applies precision to a numerical value only if the decimal part is 
-    larger than the specified precision. Otherwise, returns the value 
+    Applies precision to a numerical value only if the decimal part is
+    larger than the specified precision. Otherwise, returns the value
     as is.
 
     Parameters
@@ -190,13 +191,13 @@ def apply_precision(value, precision=4):
     value : int, float, np.integer, np.floating
         The numerical value to be formatted.
     precision : int, optional
-        The number of decimal places to format floating-point numbers. 
+        The number of decimal places to format floating-point numbers.
         Default is 4.
 
     Returns
     -------
     int, float
-        The formatted value if the decimal part is larger than the 
+        The formatted value if the decimal part is larger than the
         specified precision; otherwise, the value as is.
 
     Examples
@@ -227,7 +228,7 @@ def apply_precision(value, precision=4):
 
 def validate_precision(precision, /):
     """
-    Validates and converts the precision parameter to ensure it is a 
+    Validates and converts the precision parameter to ensure it is a
     non-negative integer.
 
     Parameters
@@ -243,7 +244,7 @@ def validate_precision(precision, /):
     Raises
     ------
     ValueError
-        If the precision is not a non-negative number or cannot be 
+        If the precision is not a non-negative number or cannot be
         converted to a non-negative integer.
 
     Examples
@@ -282,14 +283,14 @@ def parse_component_kind(pc_list, kind):
     Parameters
     ----------
     pc_list : list of tuples
-        A list where each tuple contains ('pc{i}', feature_names, 
+        A list where each tuple contains ('pc{i}', feature_names,
                                           sorted_component_values),
-        corresponding to each principal component. 'pc{i}' is a string label 
-        like 'pc1', 'feature_names' is an array of feature names sorted by 
-        their importance, and 'sorted_component_values' are the corresponding 
+        corresponding to each principal component. 'pc{i}' is a string label
+        like 'pc1', 'feature_names' is an array of feature names sorted by
+        their importance, and 'sorted_component_values' are the corresponding
         sorted values of component loadings.
     kind : str
-        A string that identifies the principal component number to extract, 
+        A string that identifies the principal component number to extract,
         e.g., 'pc1'. The string should contain a numeric part that corresponds
         to the component index in `pc_list`.
 
@@ -298,7 +299,7 @@ def parse_component_kind(pc_list, kind):
     tuple
         A tuple containing two elements:
         - An array of feature names for the specified principal component.
-        - An array of sorted component values for the specified principal 
+        - An array of sorted component values for the specified principal
           component.
 
     Raises
@@ -323,16 +324,16 @@ def parse_component_kind(pc_list, kind):
 
     Notes
     -----
-    The function requires that the `kind` parameter include a numeric value 
+    The function requires that the `kind` parameter include a numeric value
     that accurately represents a valid index in `pc_list`. The index is derived
-    from the numeric part of the `kind` string and is expected to be 1-based. 
-    If no valid index is found or if the index is out of range, the function 
+    from the numeric part of the `kind` string and is expected to be 1-based.
+    If no valid index is found or if the index is out of range, the function
     raises a `ValueError`.
     """
     match = re.search(r'\d+', str(kind))
     if match:
         # Convert 1-based index from `kind` to 0-based index for list access
-        index = int(match.group()) - 1  
+        index = int(match.group()) - 1
         if index < len(pc_list) and index >= 0:
             return pc_list[index][1], pc_list[index][2]
         else:
@@ -394,7 +395,7 @@ def find_maximum_table_width(summary_contents, header_marker='='):
     """
     # Split the input string into lines
     lines = summary_contents.split('\n')
-    # Filter out lines that consist only of the header 
+    # Filter out lines that consist only of the header
     # marker, and measure their lengths
     header_line_lengths = [len(line) for line in lines if line.strip(
         header_marker) == '']
@@ -402,13 +403,13 @@ def find_maximum_table_width(summary_contents, header_marker='='):
     return max(header_line_lengths, default=0)
 
 def format_text(
-    text, 
-    key=None, 
-    key_length=15, 
-    max_char_text=50, 
-    add_frame_lines =False, 
-    border_line='=' , 
-    buffer_space = 4 
+    text,
+    key=None,
+    key_length=15,
+    max_char_text=50,
+    add_frame_lines =False,
+    border_line='=' ,
+    buffer_space = 4
     ):
     """
     Formats a block of text to fit within a specified maximum character width,
@@ -428,15 +429,15 @@ def format_text(
     max_char_text : int, optional
         The maximum number of characters for the text width, including the key
         if present. Defaults to 50.
-    add_frame_lines: bool, False 
+    add_frame_lines: bool, False
        If True, frame the text with '=' line (top and bottom)
-    border_line: str, optional 
+    border_line: str, optional
       The border line to frame the text.  Default is '='
-    buffer_space: int, default=4 
-       The extra space to force breaken the text. Using a large value will 
-       provide nice reading and force terminating the line sentence with no 
-       preprosition like `a`, 'of' or `the` etc. 
-      
+    buffer_space: int, default=4
+       The extra space to force breaken the text. Using a large value will
+       provide nice reading and force terminating the line sentence with no
+       preprosition like `a`, 'of' or `the` etc.
+
     Returns
     -------
     str
@@ -447,7 +448,7 @@ def format_text(
     Examples
     --------
     >>> from fusionlab.api.util import format_text
-    >>> text_example = ("This is an example text that is supposed to wrap" 
+    >>> text_example = ("This is an example text that is supposed to wrap"
                       "around after a certain number of characters.")
     >>> print(format_text(text_example, key="Note"))
     Note           : This is an example text that is supposed to
@@ -462,7 +463,7 @@ def format_text(
       proper alignment to match the initial line's formatting.
     """
     if key is not None:
-        # If key_length is None, use the length of the key + 1 
+        # If key_length is None, use the length of the key + 1
         # for the space after the key
         if key_length is None:
             key_length = len(key) # + 1
@@ -473,9 +474,9 @@ def format_text(
     else:
         # If both key and key_length are None, there's no key part
         key_str = ""
-    
-    # Adjust max_char_text based on the length of the key part: +3 for " : ". 
-    effective_max_char_text = (max_char_text - len(key_str) + buffer_space 
+
+    # Adjust max_char_text based on the length of the key part: +3 for " : ".
+    effective_max_char_text = (max_char_text - len(key_str) + buffer_space
                                if key_str else max_char_text)
     formatted_text = ""
     text=str(text)
@@ -489,18 +490,18 @@ def format_text(
             # Find the space to break the line, ensuring it doesn't
             # exceed effective_max_char_text
             break_point = text.rfind(' ', 0, effective_max_char_text- buffer_space)
-            
+
             if break_point == -1:  # No spaces found, force break
-                break_point = effective_max_char_text -buffer_space 
+                break_point = effective_max_char_text -buffer_space
             # Add the line to formatted_text
             formatted_text += key_str + text[:break_point].rstrip() + "\n"
             # Remove the added part from text
             text = text[break_point:].lstrip()
-   
+
             # After the first line, the key part is just spaces
             key_str = " " * len(key_str)
 
-    if add_frame_lines: 
+    if add_frame_lines:
         frame_lines = border_line * max_char_text  # (effective_max_char_text + 1 )
         formatted_text = frame_lines +'\n' + formatted_text +'\n' + frame_lines
 
@@ -511,7 +512,7 @@ def format_text(
 def get_frame_chars(frame_char):
     """
     Retrieve framing characters based on the input frame indicator.
-    
+
     Parameters
     ----------
     frame_char : str
@@ -543,7 +544,7 @@ def get_frame_chars(frame_char):
 
 def format_cell(x, max_text_length, max_width =None ):
     """
-    Truncates a string to the maximum specified length and appends '...' 
+    Truncates a string to the maximum specified length and appends '...'
     if needed, and right-aligns it.
 
     Parameters:
@@ -557,21 +558,21 @@ def format_cell(x, max_text_length, max_width =None ):
     x = str(x)
     if len(x) > max_text_length:
         x = x[:max_text_length - 3] + '...'
-    return x.rjust(max_width) if max_width else x 
+    return x.rjust(max_width) if max_width else x
 
 
 
 def get_table_width_from(
     formatted_str, /,
-    border_char="=", 
-    check_first=True, 
-    deep_check=True, 
-    width_strategy='max', 
+    border_char="=",
+    check_first=True,
+    deep_check=True,
+    width_strategy='max',
     error="warn"):
     """
-    Calculate the maximum table width from the given formatted string based on 
+    Calculate the maximum table width from the given formatted string based on
     the border style.
-    
+
     Parameters
     ----------
     formatted_str : str
@@ -579,36 +580,36 @@ def get_table_width_from(
     border_char : str, optional
         The character used for the table border. Default is '='.
     check_first : bool, optional
-        If True, check the width of the first border line found and return it. 
-        If False, check for additional border lines if the first one is found. 
+        If True, check the width of the first border line found and return it.
+        If False, check for additional border lines if the first one is found.
         Default is True.
     deep_check : bool, optional
-        If True, evaluate all lines containing the border character to determine 
-        the table width. If False, follow the `check_first` strategy. Default is 
+        If True, evaluate all lines containing the border character to determine
+        the table width. If False, follow the `check_first` strategy. Default is
         True.
     width_strategy : {'max', 'min', 'average'}, optional
-        Strategy to determine the table width if `deep_check` is True. 'max' 
-        returns the longest border line. 'min' returns the shortest border line. 
+        Strategy to determine the table width if `deep_check` is True. 'max'
+        returns the longest border line. 'min' returns the shortest border line.
         'average' returns the average width of all border lines. Default is 'max'.
     error : {'warn', 'raise', 'ignore'}, optional
-        How to handle cases where no border line is found. 'warn' logs a warning 
-        message. 'raise' raises an exception. 'ignore' does nothing and returns 
+        How to handle cases where no border line is found. 'warn' logs a warning
+        message. 'raise' raises an exception. 'ignore' does nothing and returns
         None. Default is 'warn'.
-    
+
     Returns
     -------
     int or None
-        The calculated table width, or None if no border line is found and error 
+        The calculated table width, or None if no border line is found and error
         handling is set to 'ignore'.
-    
+
     Notes
     -----
-    This function identifies lines in the `formatted_str` containing the 
-    `border_char` and calculates the width of the table based on the specified 
+    This function identifies lines in the `formatted_str` containing the
+    `border_char` and calculates the width of the table based on the specified
     strategies and checks.
-    
+
     The calculation follows these steps:
-    
+
     1. Identify lines in `formatted_str` containing `border_char`.
     2. If no such lines are found, handle the error based on `error` parameter.
     3. If `deep_check` is False:
@@ -616,41 +617,41 @@ def get_table_width_from(
         - Otherwise, return the length of the last border line.
     4. If `deep_check` is True:
         - Compute the lengths of all border lines.
-        - If `width_strategy` is 'average', return the average length of border 
+        - If `width_strategy` is 'average', return the average length of border
           lines:
-          
-          .. math:: 
-              \text{average\_width} = \frac{\sum_{i=1}^{n} \text{length}_i}{n}
-        
+
+          .. math::
+              \text{average\\_width} = \frac{\\sum_{i=1}^{n} \text{length}_i}{n}
+
         - If `width_strategy` is 'min', return the minimum length of border lines.
         - If `width_strategy` is 'max', return the maximum length of border lines.
-    
+
     Examples
     --------
     >>> from fusionlab.api.util import get_table_width_from
     >>> formatted_str = "=======\n| Col |\n=======\n"
     >>> get_table_width_from(formatted_str)
     7
-    
+
     >>> formatted_str = "=====\n| C |\n=====\n"
     >>> get_table_width_from(formatted_str, border_char='=')
     5
-    
+
     See Also
     --------
-    pandas.DataFrame : DataFrame structure used in pandas for data manipulation 
+    pandas.DataFrame : DataFrame structure used in pandas for data manipulation
         and analysis.
-    
+
     References
     ----------
-    .. [1] McKinney, Wes. "Data Structures for Statistical Computing in Python." 
+    .. [1] McKinney, Wes. "Data Structures for Statistical Computing in Python."
            Proceedings of the 9th Python in Science Conference. 2010.
     """
     border_lines = [line for line in formatted_str.splitlines() if border_char in line]
 
     if not border_lines:
         if error== "warn":
-            warnings.warn(" No border line found in the formatted string.")
+            warnings.warn(" No border line found in the formatted string.", stacklevel=2)
         elif error== "raise":
             raise ValueError("Error: No border line found in the formatted string.")
         return None
@@ -668,15 +669,15 @@ def get_table_width_from(
         return max(line_lengths)
 
 def generate_legend(
-    custom_markers=None, 
-    no_corr_placeholder='...', 
+    custom_markers=None,
+    no_corr_placeholder='...',
     hide_diag=True,
-    max_width=50, 
-    add_frame_lines=True, 
+    max_width=50,
+    add_frame_lines=True,
     border_line='.'
     ):
     """
-    Generates a legend for a table (dataframe) matrix visualization, formatted 
+    Generates a legend for a table (dataframe) matrix visualization, formatted
     according to specified parameters.
 
     This function supports both numeric and symbolic representations of table
@@ -688,7 +689,7 @@ def generate_legend(
     - ``'-+'``: Represents a moderate relationship.
     - ``'o'``: Used exclusively for diagonal elements, typically representing
       a perfect relationship in correlation matrices (value of 1.0).
-         
+
     Parameters
     ----------
     custom_markers : dict, optional
@@ -737,7 +738,7 @@ def generate_legend(
     ...                          no_corr_placeholder='N/A', hide_diag=False,
     ...                          border_line ='=')
 
-    >>> print(legend) 
+    >>> print(legend)
 
     ==================================================
     Legend : N/A: Non-correlated, ++: Highly positive,
@@ -753,19 +754,18 @@ def generate_legend(
         "-+": "Moderate",
         "o": "Diagonal"  # only used if hide_diag is False
     }
-    if ( custom_markers is not None 
+    if ( custom_markers is not None
         and not isinstance(custom_markers, dict)
     ):
         raise TypeError("The 'custom_markers' parameter must be a dictionary."
-                        " Received type: {0}. Please provide a dictionary"
+                        f" Received type: {type(custom_markers).__name__}. Please provide a dictionary"
                         " where keys are the legend symbols and values"
-                        " are their descriptions.".format(
-                        type(custom_markers).__name__))
+                        " are their descriptions.")
 
     # Update default markers with any custom markers provided
     markers = {**default_markers, **(custom_markers or {})}
     # If no correlation placeholder, then remove it from the markers.
-    if not no_corr_placeholder: 
+    if not no_corr_placeholder:
         markers.pop (no_corr_placeholder)
     # Create legend entries
     legend_entries = [f"{key}: {value}" for key, value in markers.items() if not (
@@ -774,12 +774,12 @@ def generate_legend(
     # Join entries with commas and format the legend text
     legend_text = ", ".join(legend_entries)
     legend = "\n\n" + format_text(
-        legend_text, 
-        key='Legend', 
-        key_length=len('Legend'), 
-        max_char_text=max_width, # + len('Legend'), 
+        legend_text,
+        key='Legend',
+        key_length=len('Legend'),
+        max_char_text=max_width, # + len('Legend'),
         add_frame_lines=add_frame_lines,
-        border_line=border_line, 
+        border_line=border_line,
         )
     return legend
 
@@ -801,20 +801,20 @@ def to_snake_case(name, mode="standard"):
         The snake_case version of the input string.
     """
     name = str(name)
-    
+
     if mode == "soft":
-        # Convert to lowercase and replace multiple spaces 
+        # Convert to lowercase and replace multiple spaces
         # or non-word characters with a single underscore
         name = re.sub(r'\W+', ' ', name)  # Replace non-word characters with spaces
         name = re.sub(r'\s+', ' ', name).strip()  # Normalize whitespace
         name = name.lower().replace(' ', '_')  # Convert spaces to underscores
-    
+
     else:
         # Standard snake_case conversion without additional processing
         name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()  # Convert CamelCase to snake_case
         name = re.sub(r'\W+', '_', name)  # Replace non-word characters with '_'
         name = re.sub(r'_+', '_', name)  # Replace multiple underscores with a single '_'
-    
+
     return name.strip('_')  # Remove any leading or trailing underscores
 
 
@@ -850,7 +850,7 @@ def series_to_dataframe(series):
     pandas.DataFrame
         A DataFrame where each column represents a value from the Series,
         with column names corresponding to the Series' index values.
-        
+
     Raises
     ------
     TypeError
@@ -865,7 +865,7 @@ def series_to_dataframe(series):
     >>> print(df)
        a  b  c
     0  1  2  3
-    
+
     >>> series_numeric_index = pd.Series(data=[4, 5, 6], index=[10, 20, 30])
     >>> df_numeric = series_to_dataframe(series_numeric_index)
     >>> print(df_numeric)
@@ -883,8 +883,8 @@ def series_to_dataframe(series):
     # Create a DataFrame with a single row populated with the Series' values
     # and columns named after the Series' index.
     df = pd.DataFrame([series.values], columns=index_as_str)
-    
-    return df  
+
+    return df
 
 def get_table_size(width="auto", error="warn", return_height=False):
     """
@@ -895,20 +895,20 @@ def get_table_size(width="auto", error="warn", return_height=False):
     ----------
     width : int or str, optional
         The desired width for the table. If set to 'auto', the terminal width
-        is used. If an integer is provided, it will be used as the width, 
+        is used. If an integer is provided, it will be used as the width,
         default is 'auto'.
     error : str, optional
-        Error handling strategy when specified width exceeds terminal 
+        Error handling strategy when specified width exceeds terminal
         width: 'warn' or 'ignore'.
         Default is 'warn'.
     return_height : bool, optional
-        If True, the function also returns the height of the table. 
+        If True, the function also returns the height of the table.
         Default is False.
 
     Returns
     -------
     int or tuple
-        The width of the table as an integer, or a tuple of (width, height) 
+        The width of the table as an integer, or a tuple of (width, height)
         if return_height is True.
 
     Examples
@@ -928,7 +928,7 @@ def get_table_size(width="auto", error="warn", return_height=False):
                 if error == "warn":
                     warnings.warn(
                         f"Specified width {width} exceeds terminal width {auto_width}. "
-                        "This may cause display issues."
+                        "This may cause display issues.", stacklevel=2
                     )
         except ValueError:
             raise ValueError(
@@ -940,7 +940,7 @@ def get_table_size(width="auto", error="warn", return_height=False):
 
 def get_terminal_size():
     """
-    Retrieves the current terminal size (width and height) to help dynamically 
+    Retrieves the current terminal size (width and height) to help dynamically
     set the maximum width for displaying data columns.
 
     Returns
@@ -984,11 +984,11 @@ def to_camel_case(text, delimiter=None, use_regex=False):
     text : str
         The string to convert to CamelCase.
     delimiter : str, optional
-        A character or string used as a delimiter to split the input string. 
-        Common delimiters include underscores ('_') or spaces (' '). If None 
-        and use_regex is ``False``, the function tries to automatically detect 
-        common delimiters like spaces or underscores. 
-        If `use_regex` is ``True``, it splits the string at any non-alphabetic 
+        A character or string used as a delimiter to split the input string.
+        Common delimiters include underscores ('_') or spaces (' '). If None
+        and use_regex is ``False``, the function tries to automatically detect
+        common delimiters like spaces or underscores.
+        If `use_regex` is ``True``, it splits the string at any non-alphabetic
         character.
     use_regex : bool, optional
         Specifies whether to use regex for splitting the string on non-alphabetic
@@ -1020,7 +1020,7 @@ def to_camel_case(text, delimiter=None, use_regex=False):
 
     >>> to_camel_case('multi@var_analysis', use_regex=True)
     'MultiVarAnalysis'
-    
+
     >>> to_camel_case('OutlierResults')
     'OutlierResults'
 
@@ -1034,7 +1034,7 @@ def to_camel_case(text, delimiter=None, use_regex=False):
     text = str(text).strip()
 
     # Check if text is already in CamelCase and return it as is
-    if text and text[0].isupper() and text[1:].islower() == False:
+    if text and text[0].isupper() and not text[1:].islower():
         return text
 
     if use_regex:
@@ -1058,14 +1058,14 @@ def to_camel_case(text, delimiter=None, use_regex=False):
 
     # Capitalize the first letter of each word and join them without spaces
        # Ensure empty strings from split are ignored
-    return ''.join(word.capitalize() for word in words if word)  
+    return ''.join(word.capitalize() for word in words if word)
 
 
 
 def beautify_dict(d, space=4, key=None, max_char=None):
     """
     Format a dictionary with custom indentation and aligned keys and values.
-    
+
     Parameters:
     ----------
     d : dict
@@ -1076,7 +1076,7 @@ def beautify_dict(d, space=4, key=None, max_char=None):
         An optional key to nest the dictionary under.
     max_char : int, optional
         Maximum characters a value can have before being truncated.
-    
+
     Returns:
     -------
     str
@@ -1094,20 +1094,20 @@ def beautify_dict(d, space=4, key=None, max_char=None):
     ... }
     >>> print(beautify_dict(dictionary, space=4))
     """
-    
+
     if not isinstance(d, dict):
         raise TypeError("Expected input to be a 'dict',"
                         f" received '{type(d).__name__}' instead.")
-    
-    if max_char is None: 
-        # get it automatically 
+
+    if max_char is None:
+        # get it automatically
         max_char, _ =get_terminal_size()
     # Determine the longest key for alignment
-    if len(d)==0: 
-        max_key_length=0 
+    if len(d)==0:
+        max_key_length=0
     else:
         max_key_length = max(len(str(k)) for k in d.keys())
-    
+
     # Create a list of formatted rows
     formatted_rows = []
     for dkey, value in sorted(d.items()):
@@ -1126,7 +1126,7 @@ def beautify_dict(d, space=4, key=None, max_char=None):
     if key:
         # Prepare outer key indentation and format
            # Slightly less than the main indent
-        outer_indent = ' ' * (space - 2 + len(key) + max_key_length)  
+        outer_indent = ' ' * (space - 2 + len(key) + max_key_length)
         # Construct a new header with the key
         formatted_dict = f"{key} : {formatted_dict}"
         # Split lines and indent properly to align with the key
@@ -1135,15 +1135,15 @@ def beautify_dict(d, space=4, key=None, max_char=None):
             lines[i] = outer_indent + lines[i]
             if max_char is not None and len(lines[i]) > max_char:
                 lines[i] = lines[i][:max_char] + "..."
-        # format lins -1 
+        # format lins -1
         #lines [-1] = outer_indent + lines [-1]
         formatted_dict = '\n'.join(lines)
-        
+
     return formatted_dict
 
 def remove_extra_spaces(text):
     """
-    Removes extra spaces from the input text, leaving only one 
+    Removes extra spaces from the input text, leaving only one
     space between words.
 
     Parameters
@@ -1179,10 +1179,10 @@ def format_iterable(attr):
             'mean': round(np.mean(iterable), 4),
             'len': len(iterable)
         }
-    
+
     def _format_numeric_iterable(iterable):
         stats = _numeric_stats(iterable)
-        return ( 
+        return (
             f"{type(iterable).__name__} (min={stats['min']},"
             f" max={stats['max']}, mean={stats['mean']}, len={stats['len']})"
             )
@@ -1191,25 +1191,25 @@ def format_iterable(attr):
         stats = _numeric_stats(array.flat) if np.issubdtype(array.dtype, np.number) else {}
         details = ", ".join([f"{key}={value}" for key, value in stats.items()])
         return f"ndarray ({details}, shape={array.shape}, dtype={array.dtype})"
-    
+
     def _format_pandas_object(obj):
         if isinstance(obj, pd.Series):
             stats = _numeric_stats(obj) if obj.dtype != 'object' else {}
             details = ", ".join([f"{key}={value}" for key, value in stats.items()])
-            if details: 
+            if details:
                 details +=', '
             return f"Series ({details}len={obj.size}, dtype={obj.dtype})"
         elif isinstance(obj, pd.DataFrame):
             numeric_cols = obj.select_dtypes(include=np.number).columns
             stats = _numeric_stats(obj[numeric_cols].values.flat) if not numeric_cols.empty else {}
             details = ", ".join([f"{key}={value}" for key, value in stats.items()])
-            if details: 
+            if details:
                 details +=', '
-            return ( 
+            return (
                 f"DataFrame ({details}n_rows={obj.shape[0]},"
                 f" n_cols={obj.shape[1]}, dtypes={obj.dtypes.unique()})"
                 )
-    
+
     if isinstance(attr, (list, tuple, set)) and all(
             isinstance(item, (int, float)) for item in attr):
         return _format_numeric_iterable(attr)
@@ -1217,12 +1217,12 @@ def format_iterable(attr):
         return _format_ndarray(attr)
     elif isinstance(attr, (pd.Series, pd.DataFrame)):
         return _format_pandas_object(attr)
-    
+
     return str(attr)
 
 def format_dict_result(
-    dictionary, dict_name='Container', 
-    max_char=50, 
+    dictionary, dict_name='Container',
+    max_char=50,
     include_message=False):
     """
     Formats a dictionary into a string with specified formatting rules.
@@ -1234,7 +1234,7 @@ def format_dict_result(
     dict_name : str, optional
         The name of the dictionary, by default 'Container'.
     max_char : int, optional
-        The maximum number of characters for each value before truncating, 
+        The maximum number of characters for each value before truncating,
         by default 50.
     include_message : bool, optional
         Whether to include a remainder message at the end, by default False.
@@ -1262,13 +1262,13 @@ def format_dict_result(
 
     Notes
     -----
-    The function calculates the required indentation based on the length of the 
-    dictionary name and the maximum key length. If a value exceeds the specified 
+    The function calculates the required indentation based on the length of the
+    dictionary name and the maximum key length. If a value exceeds the specified
     maximum length, it truncates the value and appends an ellipsis ("...").
     """
     max_key_length = max(len(str(key)) for key in dictionary.keys())
     formatted_lines = [f"{dict_name}({{"]
-    
+
     for key, value in dictionary.items():
         if (
                 isinstance(value, value.__class__)
@@ -1281,27 +1281,27 @@ def format_dict_result(
                 formatted_value = value.__name__
         else:
             formatted_value = format_iterable(value)
-            
+
         if len(formatted_value) > max_char:
             formatted_value = formatted_value[:max_char - 3] + "..."
         formatted_lines.append(
             f"{' ' * (len(dict_name) + 2)}{key:{max_key_length}}: {formatted_value},")
-    
+
     formatted_lines.append(" " * (len(dict_name) + 1) + "})")
-    
-    remainder = f"[Use <{dict_name}.key> to get the full value ...]"  
-    
-    return ( "\n".join(formatted_lines) + f"\n\n{remainder}" 
+
+    remainder = f"[Use <{dict_name}.key> to get the full value ...]"
+
+    return ( "\n".join(formatted_lines) + f"\n\n{remainder}"
             if include_message else "\n".join(formatted_lines)
             )
 
 
 
 def count_functions(
-    module_name, 
-    include_class=False, 
-    return_counts=True, 
-    include_private=False, 
+    module_name,
+    include_class=False,
+    return_counts=True,
+    include_private=False,
     include_local=False
     ):
     """
@@ -1312,44 +1312,44 @@ def count_functions(
     module_name : str
         The name of the module to inspect, in the format `package.module`.
     include_class : bool, optional
-        Whether to include classes in the count and listing. Default is 
+        Whether to include classes in the count and listing. Default is
         `False`.
     return_counts : bool, optional
-        Whether to return only the count of functions and classes (if 
-        ``include_class`` is `True`). If `False`, returns a list of functions 
+        Whether to return only the count of functions and classes (if
+        ``include_class`` is `True`). If `False`, returns a list of functions
         and classes in alphabetical order. Default is `True`.
     include_private : bool, optional
-        Whether to include private functions and classes (those starting with 
+        Whether to include private functions and classes (those starting with
         `_`). Default is `False`.
     include_local : bool, optional
-        Whether to include local (nested) functions in the count and listing. 
+        Whether to include local (nested) functions in the count and listing.
         Default is `False`.
 
     Returns
     -------
     int or list
-        If ``return_counts`` is `True`, returns the count of functions and 
-        classes (if ``include_class`` is `True`). If ``return_counts`` is 
-        `False`, returns a list of function and class names (if 
+        If ``return_counts`` is `True`, returns the count of functions and
+        classes (if ``include_class`` is `True`). If ``return_counts`` is
+        `False`, returns a list of function and class names (if
         ``include_class`` is `True`) in alphabetical order.
 
     Notes
     -----
-    This function dynamically imports the specified module and analyzes its 
-    Abstract Syntax Tree (AST) to count and list functions and classes. It 
-    provides flexibility to include or exclude private and local functions 
+    This function dynamically imports the specified module and analyzes its
+    Abstract Syntax Tree (AST) to count and list functions and classes. It
+    provides flexibility to include or exclude private and local functions
     based on the parameters provided.
 
     The process can be summarized as:
 
     .. math::
-        \text{total\_count} = 
+        \text{total\\_count} =
         \text{len(functions)} + \text{len(classes)}
 
     where:
 
     - :math:`\text{functions}` is the list of functions found in the module.
-    - :math:`\text{classes}` is the list of classes found in the module 
+    - :math:`\text{classes}` is the list of classes found in the module
       (if ``include_class`` is `True`).
 
     Examples
@@ -1363,11 +1363,11 @@ def count_functions(
                                 return_counts=False)
     ['ClassA', 'ClassB', 'func1', 'func2', 'func3']
 
-    >>> count_functions('fusionlab.api.util', include_class=False, 
+    >>> count_functions('fusionlab.api.util', include_class=False,
                                 return_counts=True, include_private=True)
     15
 
-    >>> count_functions('fusionlab.api.util', include_class=False, 
+    >>> count_functions('fusionlab.api.util', include_class=False,
                                 return_counts=False, include_private=True)
     ['_private_func1', '_private_func2', 'func1', 'func2']
 
@@ -1377,12 +1377,12 @@ def count_functions(
 
     References
     ----------
-    .. [1] Python Software Foundation. Python Language Reference, version 3.9. 
+    .. [1] Python Software Foundation. Python Language Reference, version 3.9.
        Available at http://www.python.org
-    .. [2] Python `ast` module documentation. Available at 
+    .. [2] Python `ast` module documentation. Available at
        https://docs.python.org/3/library/ast.html
     """
- 
+
     try:
         import ast
     except ImportError as e:  # Catch the specific ImportError exception
@@ -1393,8 +1393,8 @@ def count_functions(
             " includes the 'ast' module by default."
         ) from e
 
-    import inspect
     import importlib
+    import inspect
     # Import the module dynamically
     module = importlib.import_module(module_name)
 
@@ -1444,27 +1444,27 @@ def count_functions(
 
 def round_numeric_values(df, precision=4):
     """
-    Rounds numeric floating values in a DataFrame to the specified 
+    Rounds numeric floating values in a DataFrame to the specified
     precision. Integers and non-numeric values are not modified.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The DataFrame whose numeric floating values are to be rounded. 
-        The DataFrame can contain mixed data types, including integers, 
+        The DataFrame whose numeric floating values are to be rounded.
+        The DataFrame can contain mixed data types, including integers,
         floating-point numbers, and non-numeric values.
     precision : int, optional
-        The number of decimal places to round to. Defaults to 4. 
-        - If `precision` is set to a positive integer, it specifies 
+        The number of decimal places to round to. Defaults to 4.
+        - If `precision` is set to a positive integer, it specifies
           the number of decimal places.
-        - If `precision` is set to a negative integer, it specifies 
+        - If `precision` is set to a negative integer, it specifies
           the number of positions to the left of the decimal point.
 
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with numeric floating values rounded to the 
-        specified precision. Integers and non-numeric values remain 
+        A DataFrame with numeric floating values rounded to the
+        specified precision. Integers and non-numeric values remain
         unchanged.
 
     Raises
@@ -1474,19 +1474,19 @@ def round_numeric_values(df, precision=4):
 
     Notes
     -----
-    This function applies rounding only to floating-point numbers. 
-    Integers and non-numeric values remain unchanged. The function 
-    uses pandas' `applymap` to apply the rounding operation element-wise 
+    This function applies rounding only to floating-point numbers.
+    Integers and non-numeric values remain unchanged. The function
+    uses pandas' `applymap` to apply the rounding operation element-wise
     across the DataFrame.
 
     The mathematical formulation for the rounding operation is given by:
 
     .. math::
-        y = 
-        \begin{cases} 
-        \text{round}(x, \text{precision}) & \text{if } x \in \mathbb{R} \\
+        y =
+        \begin{cases}
+        \text{round}(x, \text{precision}) & \text{if } x \\in \\mathbb{R} \\
         x & \text{otherwise} \\
-        \end{cases}
+        \\end{cases}
 
     Where:
     - :math:`x` is the input value
@@ -1525,4 +1525,4 @@ def round_numeric_values(df, precision=4):
     return df.applymap(round_if_float)
 
 
-    
+

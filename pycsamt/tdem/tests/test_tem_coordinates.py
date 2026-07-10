@@ -11,7 +11,9 @@ from pycsamt.tdem import (
     read_tem_coordinates,
     read_temavg_survey,
 )
-from pycsamt.tdem.io import read_tem_coordinates as read_tem_coordinates_io
+from pycsamt.tdem.io import (
+    read_tem_coordinates as read_tem_coordinates_io,
+)
 
 DATA_DIR = (
     Path(__file__).parents[3]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -11,28 +10,30 @@ Zonge ASTATIC program manual.
 """
 from __future__ import annotations
 
-from typing import Union, Optional, Literal, Iterable
-from typing import overload
-import warnings 
+import warnings
+from collections.abc import Iterable
+from typing import (
+    Literal,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
-from scipy.stats import trim_mean
-from scipy.signal.windows import hann
-from scipy.interpolate import interp1d
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, interp1d
 from scipy.signal import hilbert
+from scipy.signal.windows import hann
+from scipy.stats import trim_mean
 
 from ..constants import MU_0, PI
-from ..decorators import isdf 
+from ..decorators import isdf
 from ..exceptions import ProcessingError
 
 __all__ = [
-    "tma", "flma", "ama", 
+    "tma", "flma", "ama",
     "interpolate_to_log_space",
-    "smooth_rho_from_phase", 
-    "get_reference_frequency", 
-    "get_skew", "get_strike", 
+    "smooth_rho_from_phase",
+    "get_reference_frequency",
+    "get_skew", "get_strike",
     "prepare_strike_frame"
 ]
 
@@ -66,12 +67,12 @@ def tma(
 
 
 def tma(
-    rho_profile: Union[pd.Series, np.ndarray, str],
+    rho_profile: pd.Series | np.ndarray | str,
     *,
-    data: Optional[pd.DataFrame] = None,
+    data: pd.DataFrame | None = None,
     window_size: int = 5,
     trim_proportion: float = 0.2,
-) -> Union[pd.Series, np.ndarray, pd.DataFrame]:
+) -> pd.Series | np.ndarray | pd.DataFrame:
     r"""Apply a Trimmed Moving Average (TMA) filter.
 
     This filter is designed to remove single-station static
@@ -180,13 +181,13 @@ def flma(
 ) -> pd.Series: ...
 
 def flma(
-    z_profile: Union[pd.Series, np.ndarray, str],
-    stations: Union[pd.Series, np.ndarray, str],
+    z_profile: pd.Series | np.ndarray | str,
+    stations: pd.Series | np.ndarray | str,
     dipole_length: float,
     *,
-    data: Optional[pd.DataFrame] = None,
+    data: pd.DataFrame | None = None,
     filter_width_dipoles: float = 5.0,
-) -> Union[pd.Series, np.ndarray, pd.DataFrame]:
+) -> pd.Series | np.ndarray | pd.DataFrame:
     r"""Apply a Fixed-Length Moving Average (FLMA) filter.
 
     This filter smooths complex impedance data using a spatial
@@ -313,15 +314,15 @@ def ama(
 ) -> pd.Series: ...
 
 def ama(
-    z_profile: Union[pd.Series, np.ndarray, str],
-    stations: Union[pd.Series, np.ndarray, str],
+    z_profile: pd.Series | np.ndarray | str,
+    stations: pd.Series | np.ndarray | str,
     dipole_length: float,
     frequency: float,
     *,
-    data: Optional[pd.DataFrame] = None,
+    data: pd.DataFrame | None = None,
     skin_depth_factor: float = 2.0,
     iterations: int = 3,
-) -> Union[pd.Series, np.ndarray, pd.DataFrame]:
+) -> pd.Series | np.ndarray | pd.DataFrame:
     r"""Apply an Adaptive Moving Average (AMA) filter.
 
     This filter smooths complex impedance data using a spatial
@@ -422,8 +423,8 @@ def ama(
 def interpolate_to_log_space(
     df: pd.DataFrame,
     *,
-    freq_min: Optional[float] = None,
-    freq_max: Optional[float] = None,
+    freq_min: float | None = None,
+    freq_max: float | None = None,
     num_points: int = 50,
     interp_kind: str = 'cubic',
 ) -> pd.DataFrame:
@@ -555,7 +556,7 @@ def smooth_rho_from_phase(
     df_out['rho_smoothed'] = np.nan
 
     # Group by each unique sounding curve
-    for (station, comp), group in df.groupby(['station', 'comp']):
+    for (_station, _comp), group in df.groupby(['station', 'comp']):
         sounding = group.sort_values('freq').dropna(
             subset=['rho', 'phase']
         )
@@ -593,7 +594,7 @@ def smooth_rho_from_phase(
 @isdf
 def get_reference_frequency(
     df: pd.DataFrame,
-    mode: Union[str, float] = 'auto',
+    mode: str | float = 'auto',
     *,
     qc_column: str = 'pc_rho',
     qc_threshold: float = 20.0,
@@ -659,7 +660,7 @@ def get_reference_frequency(
     if clean_df.empty:
         warnings.warn(
             f"No data found with '{qc_column}' < {qc_threshold}. "
-            "Falling back to the absolute maximum frequency."
+            "Falling back to the absolute maximum frequency.", stacklevel=2
         )
         return df['freq'].max()
 
@@ -669,7 +670,7 @@ def get_reference_frequency(
     # 3. Return the median of these frequencies for robustness
     return max_freq_per_station.median()
 
-@isdf 
+@isdf
 def get_strike(df: pd.DataFrame) -> pd.DataFrame:
     r"""Calculate the geoelectric strike angle.
 
@@ -739,7 +740,7 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
     # tensor_df = df.pivot_table(
     #     index=['station', 'freq'], columns='comp', values='z'
     # ).reset_index()
-    
+
     # Split complex data before pivoting ---
     df_copy = df.copy()
     df_copy['z_real'] = np.real(df_copy['z'])
@@ -753,7 +754,7 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
     )
     # Recombine into a complex tensor after pivoting
     tensor_df = (tensor_df_real + 1j * tensor_df_imag).reset_index()
-    
+
     # Ensure all four components are present
     for comp in ['ExHx', 'ExHy', 'EyHx', 'EyHy']:
         if comp not in tensor_df.columns:
@@ -848,7 +849,7 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
     )
     # Recombine into a complex tensor after pivoting
     tensor_df = (tensor_df_real + 1j * tensor_df_imag).reset_index()
-    
+
     # Ensure all four components are present
     for comp in ['ExHx', 'ExHy', 'EyHx', 'EyHy']:
         if comp not in tensor_df.columns:
@@ -876,8 +877,8 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
 
 def prepare_strike_frame(
     *,
-    z_frame: Optional[pd.DataFrame] = None,
-    df: Optional[pd.DataFrame] = None,
+    z_frame: pd.DataFrame | None = None,
+    df: pd.DataFrame | None = None,
     prefer: Literal["z", "df"] = "z",
     station_col: str = "station",
     freq_col: str = "freq",
@@ -888,7 +889,7 @@ def prepare_strike_frame(
     phase_unit: Literal["auto", "deg", "mrad", "rad"] = "auto",
     drop_na: bool = True,
     na_policy: Literal["any", "all"] = "any",
-    components: Optional[Iterable[str]] = None,
+    components: Iterable[str] | None = None,
     ensure_sorted: bool = True,
     copy: bool = True,
     mu0: float = 4.0 * np.pi * 1e-7,
@@ -952,7 +953,7 @@ def prepare_strike_frame(
         miss = [c for c in cols if c not in fr.columns]
         if miss:
             raise ProcessingError(
-                "Missing columns: {}".format(miss)
+                f"Missing columns: {miss}"
             )
         out = fr.loc[:, cols]
         return out.copy() if copy else out

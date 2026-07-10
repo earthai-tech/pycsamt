@@ -1,18 +1,21 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.models.modem.iotools.export and .utils."""
 
 import math
-import pytest
+
 import numpy as np
+import pytest
 
-from pycsamt.models.modem.iotools.export import write_meshtools3d
-from pycsamt.models.modem.iotools.utils import (
-    skin_depth,
-    imp_units_factor,
-    loge_to_log10, log10_to_loge,
-    loge_to_linear, linear_to_loge,
+from pycsamt.models.modem.iotools.export import (
+    write_meshtools3d,
 )
-
+from pycsamt.models.modem.iotools.utils import (
+    imp_units_factor,
+    linear_to_loge,
+    log10_to_loge,
+    loge_to_linear,
+    loge_to_log10,
+    skin_depth,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

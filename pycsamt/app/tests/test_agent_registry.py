@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for agent_registry (Phase 4) — no Qt required."""
 
 from __future__ import annotations
 
-import pytest
 from pycsamt.app.desktop.agent_registry import (
     AGENT_REGISTRY,
     agent_names,
@@ -14,7 +12,6 @@ from pycsamt.app.desktop.agent_registry import (
     llm_agents,
     processing_agents,
 )
-
 
 # ── AGENT_REGISTRY structure ──────────────────────────────────────────────
 

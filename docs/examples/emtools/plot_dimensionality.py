@@ -59,7 +59,6 @@ CSAMT-band line used in the ``anisotropy``/``csumt``/``diag`` examples.
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (
@@ -341,7 +340,10 @@ finally:
 
 
 def _frac_masked(sites) -> float:
-    from pycsamt.emtools._core import _get_z_block, _iter_items
+    from pycsamt.emtools._core import (
+        _get_z_block,
+        _iter_items,
+    )
 
     n_tot = n_nan = 0
     for ed in _iter_items(sites):

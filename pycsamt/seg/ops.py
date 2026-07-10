@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import Iterable, Tuple, Optional 
+from collections.abc import Iterable
+
 import numpy as np
 
 __all__ = [
@@ -94,7 +94,7 @@ def z_to_rho_phi(
     freq: np.ndarray | Iterable[float],
     *,
     mu0: float = MU0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Component-wise apparent resistivity and phase from Z.
 
     ρ = |Z|^2 / (μ0 ω) ;  φ = atan2(Im(Z), Re(Z)) [deg]
@@ -208,7 +208,7 @@ def amp_or_psd(
     fs: float,
     *,
     mode: str = "amp",
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (f, y) where y is amplitude or PSD.
 
     mode="amp": |X(f)| / N
@@ -241,22 +241,22 @@ def synthesize_spectra_from_z(
     r"""
     Synthesize a full Hermitian cross–spectral tensor from an
     impedance tensor ``Z(f)`` and optional tipper.
-    
+
     Given electric–magnetic relation ``E = Z H``, blocks are:
-    
+
     * ``S_EH = Z S_HH``
     * ``S_EE = Z S_HH Z^H``
-    
+
     If a horizontal tipper ``T`` (TX, TY) is supplied and HZ is
     requested, additional blocks are:
-    
+
     * ``S_ZH = T S_HH``, ``S_ZZ = T S_HH T^H``
     * ``S_EZ = Z S_HH T^H``
-    
+
     If magnetic spectra are not provided, a unit–power model is
     used (``S_HH = I``).  The result is explicitly symmetrized
     to be Hermitian.
-    
+
     Parameters
     ----------
     Z : ndarray
@@ -288,7 +288,7 @@ def synthesize_spectra_from_z(
     h_noise : float or ndarray, optional
         Diagonal noise power added to the magnetic block
         ``S_HH``.  Scalar or length ``n``.
-    
+
     Returns
     -------
     Sfull : ndarray
@@ -296,31 +296,31 @@ def synthesize_spectra_from_z(
         Hermitian.  ``m = len(chan_order)``.
     chan_ids : list of str
         Channel names in the order used for ``Sfull``.
-    
+
     Raises
     ------
     ValueError
         If shapes are incompatible, the tipper is missing
         when HZ is requested, or dimensions do not match.
-    
+
     Notes
     -----
     Absolute scaling of spectra depends on ``S_HH``.  If
     neither ``S_HH`` nor ``H_psd`` is provided, the unit–
     power model is used.  This is convenient for tests and
     structure checks, but does not preserve physical power.
-    
+
     The function enforces Hermitian symmetry by conjugating
     off–diagonal blocks and real–ifying the diagonal.
-    
+
     Examples
     --------
     Minimal, unit–power synthesis:
-    
+
     >>> S, order = synthesize_spectra_from_z(Z_arr)
-    
+
     With magnetic PSDs and tipper, including HZ:
-    
+
     >>> Pxx = np.full(n, 1e-2)
     >>> Pyy = np.full(n, 1e-2)
     >>> S, order = synthesize_spectra_from_z(
@@ -330,7 +330,7 @@ def synthesize_spectra_from_z(
     ...     include_hz=True,
     ...     chan_order=("HX","HY","HZ","EX","EY"),
     ... )
-    
+
     See Also
     --------
     spectra_from_Z
@@ -340,7 +340,7 @@ def synthesize_spectra_from_z(
         Class method wrapper returning a spectra object.
     Spectra.to_Z
         Inverse operation (spectra → transfer functions).
-    
+
     References
     ----------
     .. [1] Chave, A. D., & Jones, A. G. (2012). *The
@@ -467,11 +467,11 @@ def synthesize_spectra_from_z(
 
 def effective_dof_from_meta(
     *,
-    segnum: Optional[int | np.ndarray] = None,
-    avgt: Optional[float | np.ndarray] = None,
-    bw: Optional[float | np.ndarray] = None,
+    segnum: int | np.ndarray | None = None,
+    avgt: float | np.ndarray | None = None,
+    bw: float | np.ndarray | None = None,
     min_dof: int = 1,
-) -> Optional[int | np.ndarray]:
+) -> int | np.ndarray | None:
     r"""
     Estimate effective DoF (independent averages) from
     per-frequency metadata. If ``segnum`` is given, use it.
@@ -495,7 +495,7 @@ def effective_dof_from_meta(
 
 def _safe_inv2(
     a: np.ndarray,
-    ridge: Optional[float] = None,
+    ridge: float | None = None,
 ) -> np.ndarray:
     r"""
     Invert 2x2 complex matrix with optional Tikhonov
@@ -512,8 +512,8 @@ def z_error_from_blocks(
     S_EH: np.ndarray,
     S_HH: np.ndarray,
     *,
-    M: Optional[float],
-    ridge: Optional[float] = None,
+    M: float | None,
+    ridge: float | None = None,
 ) -> np.ndarray:
     r"""
     Diagonal σ estimate for Z components from spectral
@@ -547,8 +547,8 @@ def tipper_error_from_blocks(
     S_ZZ: np.ndarray,
     S_HH: np.ndarray,
     *,
-    M: Optional[float],
-    ridge: Optional[float] = None,
+    M: float | None,
+    ridge: float | None = None,
 ) -> np.ndarray:
     r"""
     Diagonal σ estimate for tipper components. Uses
@@ -581,13 +581,13 @@ def tipper_error_from_blocks(
 
 def compute_errors_from_S(
     S: np.ndarray,
-    e_idx: Tuple[int, int],
-    h_idx: Tuple[int, int],
-    hz_idx: Optional[int] = None,
+    e_idx: tuple[int, int],
+    h_idx: tuple[int, int],
+    hz_idx: int | None = None,
     *,
-    M: Optional[float],
-    ridge: Optional[float] = None,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    M: float | None,
+    ridge: float | None = None,
+) -> tuple[np.ndarray, np.ndarray | None]:
     r"""
     Estimate 1-sigma uncertainties for the impedance tensor
     and, optionally, the tipper at a single frequency.

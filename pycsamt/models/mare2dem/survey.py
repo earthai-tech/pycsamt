@@ -35,7 +35,6 @@ from typing import Any
 import numpy as np
 
 from .geom.topo import parse_topo
-from .iotools.codes import DATA_CODES
 from .iotools.emdata import (
     CSEMConfig,
     EMDataFile,

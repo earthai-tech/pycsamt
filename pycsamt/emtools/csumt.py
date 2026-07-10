@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ._core import (
-    ensure_sites,
-    _iter_items,
-    _get_z_block,
-    _name,
-)
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ._core import (
+    _get_z_block,
+    _iter_items,
+    _name,
+    ensure_sites,
+)
 
 __all__ = [
     # pure survey-planning functions (no sites required)
@@ -63,8 +63,8 @@ def _rho_a_det(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
 # ====================== pure survey-planning API ========================== #
 
 def bostick_depth_from_rho(
-    rho: Union[float, np.ndarray],
-    freq: Union[float, np.ndarray],
+    rho: float | np.ndarray,
+    freq: float | np.ndarray,
 ) -> np.ndarray:
     """
     Bostick depth estimate D(f) from apparent resistivity.
@@ -131,7 +131,7 @@ def vertical_resolution_pair(
 
 
 def frequency_for_depth(
-    depth_m: Union[float, np.ndarray],
+    depth_m: float | np.ndarray,
     rho: float,
 ) -> np.ndarray:
     """
@@ -157,12 +157,12 @@ def frequency_for_depth(
 
 
 def frequency_schedule(
-    target_depths: Union[float, np.ndarray],
+    target_depths: float | np.ndarray,
     rho_estimate: float,
     *,
     f_min: float = F_MIN_CSUMT,
     f_max: float = F_MAX_CSUMT,
-    min_resolution_m: Optional[float] = None,
+    min_resolution_m: float | None = None,
     fill_decades: bool = False,
     per_decade: int = 3,
     as_khz: bool = False,
@@ -220,7 +220,7 @@ def frequency_schedule(
     freqs = np.unique(freqs)
 
     if min_resolution_m is not None and freqs.size >= 2:
-        extra: List[float] = []
+        extra: list[float] = []
         fs = np.sort(freqs)
         for i in range(len(fs) - 1):
             f_lo, f_hi = fs[i], fs[i + 1]
@@ -321,7 +321,7 @@ def bostick_depth(
 def vertical_resolution(
     sites: Any,
     *,
-    rho_override: Optional[float] = None,
+    rho_override: float | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -472,13 +472,13 @@ def plot_depth_section(
     log_color: bool = True,
     sort_by: str = "name",
     cmap: str = "viridis_r",
-    figsize: Tuple[float, float] = (10.0, 5.0),
+    figsize: tuple[float, float] = (10.0, 5.0),
     period_axis: bool = True,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[Any] = None,
+    ax: Any | None = None,
 ) -> Any:
     """
     Pseudosection of Bostick depth across stations and periods/frequencies.
@@ -528,7 +528,7 @@ def plot_depth_section(
             sites, recursive=recursive, on_dup=on_dup,
             strict=strict, verbose=verbose,
         )
-        coords: Dict[str, float] = {}
+        coords: dict[str, float] = {}
         for ii, ed in enumerate(_iter_items(S)):
             ed = _unwrap(ed)
             nm = _name(ed, ii)

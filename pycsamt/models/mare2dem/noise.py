@@ -37,7 +37,11 @@ from pathlib import Path
 
 import numpy as np
 
-from .iotools.emdata import EMDataFile, read_emdata, write_emdata
+from .iotools.emdata import (
+    EMDataFile,
+    read_emdata,
+    write_emdata,
+)
 
 __all__ = ["NoiseConfig", "add_synthetic_noise", "make_synthetic_data"]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -26,19 +25,21 @@ FrequencyEditorDialog     — confidence-based frequency QC workflow
 LayeredModelDialog        — interactive 1-D earth model builder
 ElevationEnrichDialog     — fetch elevation for all stations via open API
 """
-from .strike_tool           import StrikeAnalyzerDialog
-from .validator_tool        import EDIValidatorDialog
-from .converter_tool        import FormatConverterDialog
-from .batch_export_tool     import BatchExportDialog
-from .coord_tool            import CoordTransformDialog
-from .station_response_tool import StationResponseDialog
-from .strike_profile_tool   import StrikeProfileDialog
-from .phase_tensor_map_tool import PhaseTensorMapDialog
-from .phase_tensor_strip_grid_tool import PhaseTensorStripGridDialog
-from .dimensionality_tool   import DimensionalityDialog
+from .batch_export_tool import BatchExportDialog
+from .converter_tool import FormatConverterDialog
+from .coord_tool import CoordTransformDialog
+from .dimensionality_tool import DimensionalityDialog
+from .elevation_tool import ElevationEnrichDialog
 from .frequency_editor_tool import FrequencyEditorDialog
-from .layered_model_tool    import LayeredModelDialog
-from .elevation_tool        import ElevationEnrichDialog
+from .layered_model_tool import LayeredModelDialog
+from .phase_tensor_map_tool import PhaseTensorMapDialog
+from .phase_tensor_strip_grid_tool import (
+    PhaseTensorStripGridDialog,
+)
+from .station_response_tool import StationResponseDialog
+from .strike_profile_tool import StrikeProfileDialog
+from .strike_tool import StrikeAnalyzerDialog
+from .validator_tool import EDIValidatorDialog
 
 __all__ = [
     "StrikeAnalyzerDialog",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -32,7 +31,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QProgressBar,
     QPushButton,
-    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -59,7 +57,9 @@ class _ElevWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.gis.utils import get_elevation_from_api
+            from pycsamt.gis.utils import (
+                get_elevation_from_api,
+            )
         except ImportError as exc:
             self.error.emit(f"Cannot import gis.utils: {exc}")
             return
@@ -74,7 +74,7 @@ class _ElevWorker(QThread):
                                                     api_name=self._api))
                 self.progress.emit(idx + 1, total, str(name), elev)
                 results.append((str(name), lat, lon, elev))
-            except Exception as exc:
+            except Exception:
                 self.progress.emit(idx + 1, total, str(name), float("nan"))
                 results.append((str(name), lat, lon, float("nan")))
 
@@ -244,7 +244,7 @@ class ElevationEnrichDialog(QDialog):
         )
         self._export_btn.setEnabled(bool(self._results))
         # Fill lat/lon columns from station list
-        for r, (name, lat, lon, _) in enumerate(results):
+        for r, (_name, lat, lon, _) in enumerate(results):
             self._table.setItem(
                 r, 1,
                 QTableWidgetItem(f"{lat:.6f}" if lat is not None else "—")

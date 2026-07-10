@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 """
@@ -10,7 +9,7 @@ across different versions or usage patterns.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Union
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -18,7 +17,7 @@ import pandas as pd
 def safe_series_map(
     df: pd.DataFrame,
     col: str,
-    mapper: Union[Callable[[Any], Any], Dict[Any, Any]],
+    mapper: Callable[[Any], Any] | dict[Any, Any],
 ) -> pd.Series:
     """
     Safely apply a mapping function or dict to a DataFrame column.
@@ -52,7 +51,7 @@ def safe_series_map(
     """
     if col not in df.columns:
         raise KeyError(f"Column '{col}' not found in DataFrame.")
-        
+
     series_obj = df[col]
     series: pd.Series
     # Handle the case where a selection might return a

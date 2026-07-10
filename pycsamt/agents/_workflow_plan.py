@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -18,9 +17,9 @@ from __future__ import annotations
 
 import json
 import warnings as _warnings
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 __all__ = ["WorkflowPlan", "validate_workflow_plan"]
 
@@ -90,10 +89,10 @@ class WorkflowPlan:
     workflow_type: str
     data_path: str = ""
     output_dir: str = ""
-    parameters: Dict[str, Any] = field(default_factory=dict)
-    risk_flags: List[str] = field(default_factory=list)
+    parameters: dict[str, Any] = field(default_factory=dict)
+    risk_flags: list[str] = field(default_factory=list)
     requires_human_review: bool = False
-    expected_outputs: List[str] = field(default_factory=list)
+    expected_outputs: list[str] = field(default_factory=list)
     provider: str = "offline"
 
     # ── validation ────────────────────────────────────────────
@@ -105,9 +104,9 @@ class WorkflowPlan:
             and self.workflow_type in VALID_WORKFLOWS
         )
 
-    def validation_errors(self) -> List[str]:
+    def validation_errors(self) -> list[str]:
         """Return a list of validation error messages."""
-        errs: List[str] = []
+        errs: list[str] = []
         if not self.request:
             errs.append("'request' is empty.")
         if self.workflow_type not in VALID_WORKFLOWS:
@@ -127,7 +126,7 @@ class WorkflowPlan:
 
     # ── serialisation ──────────────────────────────────────────
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict."""
         return asdict(self)
 
@@ -142,17 +141,17 @@ class WorkflowPlan:
     @classmethod
     def from_config(
         cls,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         request: str = "",
         provider: str = "offline",
-    ) -> "WorkflowPlan":
+    ) -> WorkflowPlan:
         """
         Build a :class:`WorkflowPlan` from a config dict
         as returned by :class:`ContextInputAgent`.
         """
         wf = config.get("workflow", "qc")
 
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         for k in (
             "period_range", "component", "station",
             "inversion_code", "depth_max_km", "n_periods",
@@ -162,7 +161,7 @@ class WorkflowPlan:
                 params[k] = config[k]
 
         # identify risk flags
-        flags: List[str] = []
+        flags: list[str] = []
         if not config.get("data_path"):
             flags.append(
                 "No data path found — user must supply."
@@ -190,10 +189,10 @@ class WorkflowPlan:
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
-def _expected_outputs(workflow_type: str) -> List[str]:
+def _expected_outputs(workflow_type: str) -> list[str]:
     """Return a list of expected output artefacts for *workflow_type*."""
     base = ["agent_trace.json", "workflow_plan.json"]
-    extras: Dict[str, List[str]] = {
+    extras: dict[str, list[str]] = {
         "qc":                ["qc_confidence.png",
                               "qc_report.md"],
         "phase_analysis":    ["pt_psection.png",
@@ -238,7 +237,7 @@ def validate_workflow_plan(
     plan: WorkflowPlan,
     *,
     raise_on_error: bool = False,
-) -> List[str]:
+) -> list[str]:
     """
     Validate *plan* and optionally raise on errors.
 

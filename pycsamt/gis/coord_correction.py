@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,11 +18,10 @@ correct_interpolate_missing  Fill missing / zero coordinates from neighbours
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
-
 
 # ── Low-level helpers ─────────────────────────────────────────────────────────
 
@@ -50,13 +48,17 @@ def _get_coords_df(sites) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["station", "lat", "lon", "elev"])
 
 
-def _apply_coords_bulk(sites, coords_dict: Dict[str, tuple], inplace: bool = False):
+def _apply_coords_bulk(sites, coords_dict: dict[str, tuple], inplace: bool = False):
     """
     Apply corrected (lat, lon, elev) per station from *coords_dict*.
 
     Uses _apply_each so the correction is non-destructive when inplace=False.
     """
-    from pycsamt.emtools._core import _apply_each, _iter_items, _name
+    from pycsamt.emtools._core import (
+        _apply_each,
+        _iter_items,
+        _name,
+    )
     from pycsamt.site.utils import set_coords
 
     def _one(Si):
@@ -120,7 +122,7 @@ def _pca_azimuth(easting: np.ndarray, northing: np.ndarray) -> float:
 def correct_profile_projection(
     sites: Any,
     *,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     keep_elevation: bool = True,
     inplace: bool = False,
     verbose: int = 0,
@@ -164,7 +166,7 @@ def correct_profile_projection(
     # Convert back to lat/lon
     new_lat, new_lon = _to_ll_arrays(new_east, new_north, zone)
 
-    coords: Dict[str, tuple] = {}
+    coords: dict[str, tuple] = {}
     for i, (_, row) in enumerate(valid.iterrows()):
         coords[row["station"]] = (
             float(new_lat[i]),
@@ -179,7 +181,7 @@ def correct_spacing_regularize(
     sites: Any,
     *,
     spacing_m: float = 200.0,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     preserve_extent: bool = True,
     inplace: bool = False,
     verbose: int = 0,
@@ -235,7 +237,7 @@ def correct_spacing_regularize(
     # Interpolate elevation to new chainages
     new_elev = np.interp(new_chain, chain_sorted, elev_sorted)
 
-    coords: Dict[str, tuple] = {}
+    coords: dict[str, tuple] = {}
     for i, st in enumerate(stations_sorted):
         coords[st] = (float(new_lat[i]), float(new_lon[i]), float(new_elev[i]))
 
@@ -246,7 +248,7 @@ def correct_outlier_snap(
     sites: Any,
     *,
     threshold_m: float = 50.0,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     inplace: bool = False,
     verbose: int = 0,
 ) -> Any:
@@ -281,7 +283,7 @@ def correct_outlier_snap(
     chain      = de * ue + dn * un               # along-profile distance
     cross_dist = np.abs(de * pe + dn * pn)        # perpendicular distance
 
-    coords: Dict[str, tuple] = {}
+    coords: dict[str, tuple] = {}
     for i, (_, row) in enumerate(valid.iterrows()):
         if cross_dist[i] > threshold_m:
             # Snap to profile line
@@ -300,7 +302,7 @@ def correct_elevation_smooth(
     *,
     method: str = "loess",
     window: int = 5,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     inplace: bool = False,
     verbose: int = 0,
 ) -> Any:
@@ -349,7 +351,7 @@ def correct_elevation_smooth(
                 np.mean(elev_s[max(0, i-k):i+k+1]) for i in range(len(elev_s))
             ])
 
-    coords: Dict[str, tuple] = {}
+    coords: dict[str, tuple] = {}
     for i, (st, (_, row)) in enumerate(
         zip(st_s, valid.iloc[order].iterrows())
     ):
@@ -374,7 +376,7 @@ def correct_coordinate_shift(
     local datum offset) or known GPS receiver biases.
     """
     df = _get_coords_df(sites)
-    coords: Dict[str, tuple] = {
+    coords: dict[str, tuple] = {
         row["station"]: (
             float(row["lat"])  + delta_lat,
             float(row["lon"])  + delta_lon,
@@ -415,7 +417,7 @@ def correct_interpolate_missing(
             vals.replace(0.0, np.nan, inplace=True)
         df[col] = vals.interpolate(method="index", limit_direction="both")
 
-    coords: Dict[str, tuple] = {
+    coords: dict[str, tuple] = {
         row["station"]: (float(row["lat"]), float(row["lon"]), float(row["elev"]))
         for _, row in df.iterrows()
     }
@@ -457,7 +459,7 @@ def _loess_smooth(x: np.ndarray, y: np.ndarray, span: int = 5) -> np.ndarray:
 
 def df_profile_projection(
     df: pd.DataFrame,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     keep_elevation: bool = True,
     **_,
 ) -> pd.DataFrame:
@@ -484,7 +486,7 @@ def df_profile_projection(
 def df_spacing_regularize(
     df: pd.DataFrame,
     spacing_m: float = 200.0,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     preserve_extent: bool = True,
     **_,
 ) -> pd.DataFrame:
@@ -524,7 +526,7 @@ def df_spacing_regularize(
 def df_outlier_snap(
     df: pd.DataFrame,
     threshold_m: float = 50.0,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     **_,
 ) -> pd.DataFrame:
     """DataFrame version of correct_outlier_snap."""
@@ -555,7 +557,7 @@ def df_elevation_smooth(
     df: pd.DataFrame,
     method: str = "loess",
     window: int = 5,
-    azimuth: Optional[float] = None,
+    azimuth: float | None = None,
     **_,
 ) -> pd.DataFrame:
     """DataFrame version of correct_elevation_smooth."""
@@ -619,7 +621,7 @@ def df_interpolate_missing(
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
 
-_DF_FUNCS: Dict[str, Any] = {
+_DF_FUNCS: dict[str, Any] = {
     "_coord_profile_projection":  df_profile_projection,
     "_coord_spacing_regularize":  df_spacing_regularize,
     "_coord_outlier_snap":        df_outlier_snap,

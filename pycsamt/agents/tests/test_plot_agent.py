@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for PlotAgent (rho/phi, phase & phase-tensor pseudo-sections)."""
@@ -8,18 +7,19 @@ import os
 import unittest
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from pycsamt.agents.plotting import (  # noqa: E402
-    PlotAgent,
     PLOT_KINDS,
+    PlotAgent,
+    _as_list,
+    _has_tipper,
     _norm_components,
     _norm_parts,
     _period_range,
-    _as_list,
     _truthy,
-    _has_tipper,
 )
 from pycsamt.emtools._core import ensure_sites  # noqa: E402
 

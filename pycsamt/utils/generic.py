@@ -1,24 +1,19 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: GPL-3.0
 from __future__ import annotations
 
-import math
-import subprocess
-import importlib
-import sys
 import ast
-import time
-import re 
-import warnings 
+import importlib
 import inspect
-from typing import ( 
-    Any, 
-    Sequence, 
-    List, 
-    Union, 
-    Optional 
-)
+import math
+import re
+import subprocess
+import sys
+import time
+import warnings
+from collections.abc import Sequence
+from typing import Any, Union
+
 import numpy as np
 
 StrLike = Union[str, np.str_]
@@ -125,7 +120,7 @@ def ensure_package(  # noqa: D401
     package : str
         Distribution name, e.g. ``"tqdm"`` or ``"scipy>=1.11"``.
     install : bool, default *True*
-        *True* → run ``pip install``  
+        *True* → run ``pip install``
         *False* → run ``pip uninstall -y``
     upgrade : bool, default *True*
         Add ``--upgrade`` when *install=True*.
@@ -139,8 +134,8 @@ def ensure_package(  # noqa: D401
         Bail out if the subprocess hangs longer than *timeout*
         seconds.
     verbose : int, default *0*
-        * 0 → quiet  
-        * 1 → minimal prints  
+        * 0 → quiet
+        * 1 → minimal prints
         * ≥2 → log complete ``pip`` command and duration.
 
     Returns
@@ -198,10 +193,10 @@ def ensure_package(  # noqa: D401
 
 
 def strip_item(
-    item_to_clean: Optional[Container],
-    item: Optional[str] = None,
+    item_to_clean: Container | None,
+    item: str | None = None,
     multi_space: int = 12,
-) -> Optional[Container]:
+) -> Container | None:
     """
     Strip a token repeatedly from both ends of strings.
 
@@ -274,7 +269,7 @@ def strip_item(
     input_is_scalar = isinstance(item_to_clean, (str, np.str_))
 
     if input_is_scalar:
-        data_list: List[str] = [str(item_to_clean)]
+        data_list: list[str] = [str(item_to_clean)]
         orig_dtype = None
     elif input_is_array:
         # Ensure 1D iteration over elements (even for object dtype)
@@ -292,7 +287,7 @@ def strip_item(
 
     # Build the stripper
     token = (item or "").strip("\n\r")
-    cleaned: List[str] = []
+    cleaned: list[str] = []
 
     if token == "":
         # Whitespace strip
@@ -338,7 +333,7 @@ def count_functions(
     return_counts: bool = True,
     include_private: bool = False,
     include_local: bool = False,
-) -> Union[int, List[str]]:
+) -> int | list[str]:
     r"""
     Count or list functions (and classes) in a module.
 
@@ -375,14 +370,14 @@ def count_functions(
         mod = importlib.import_module(module_name)
     except Exception as exc:
         raise ImportError(
-            "Cannot import module: {}".format(module_name)
+            f"Cannot import module: {module_name}"
         ) from exc
 
     try:
         src = inspect.getsource(mod)
     except Exception as exc:
         raise ValueError(
-            "Cannot read source for {}".format(module_name)
+            f"Cannot read source for {module_name}"
         ) from exc
 
     tree = ast.parse(src)
@@ -390,7 +385,7 @@ def count_functions(
     # attach parent links (for nested detection)
     for node in ast.walk(tree):
         for child in ast.iter_child_nodes(node):
-            setattr(child, "parent", node)
+            child.parent = node
 
     def _is_nested(node: ast.AST) -> bool:
         p = getattr(node, "parent", None)
@@ -400,8 +395,8 @@ def count_functions(
             p = getattr(p, "parent", None)
         return False
 
-    funcs: List[str] = []
-    clss: List[str] = []
+    funcs: list[str] = []
+    clss: list[str] = []
 
     for n in ast.walk(tree):
         if isinstance(n, ast.FunctionDef):
@@ -513,7 +508,7 @@ def get_valid_kwargs(
     if invalid:
         bad = ", ".join(repr(k) for k in invalid)
         warnings.warn(
-            "Ignoring invalid keyword(s): {}".format(bad),
+            f"Ignoring invalid keyword(s): {bad}",
             stacklevel=2,
         )
 

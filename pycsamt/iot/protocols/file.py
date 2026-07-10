@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, IoTProtocol, TelemetryError
+from .base import (
+    BaseTelemetryClient,
+    IoTProtocol,
+    TelemetryError,
+)
 
 __all__ = ["FileTelemetryClient"]
 
@@ -25,7 +29,7 @@ class FileTelemetryClient(BaseTelemetryClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
         *,
         dry_run: bool = False,
         append: bool = True,
@@ -33,7 +37,7 @@ class FileTelemetryClient(BaseTelemetryClient):
     ) -> None:
         super().__init__(endpoint, dry_run=dry_run, append=append, **options)
         self._read_cursor = 0
-        self._read_buffer: List[Dict[str, Any]] = []
+        self._read_buffer: list[dict[str, Any]] = []
 
     def _connect(self) -> None:
         path = self._require_endpoint()
@@ -60,8 +64,8 @@ class FileTelemetryClient(BaseTelemetryClient):
         if not os.path.exists(path):
             self._read_buffer = []
             return
-        with open(path, "r", encoding="utf-8") as handle:
-            rows: List[Dict[str, Any]] = []
+        with open(path, encoding="utf-8") as handle:
+            rows: list[dict[str, Any]] = []
             for raw in handle:
                 raw = raw.strip()
                 if not raw:
@@ -75,8 +79,8 @@ class FileTelemetryClient(BaseTelemetryClient):
         self._read_buffer = rows
 
     def _transport_receive(
-        self, *, timeout: Optional[float] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         if self._read_cursor == 0 or not self._read_buffer:
             self._load_buffer()
         if self._read_cursor >= len(self._read_buffer):
@@ -85,7 +89,7 @@ class FileTelemetryClient(BaseTelemetryClient):
         self._read_cursor += 1
         return row
 
-    def read_all(self) -> List[Dict[str, Any]]:
+    def read_all(self) -> list[dict[str, Any]]:
         """Return every packet dictionary written to the file."""
         self._load_buffer()
         return list(self._read_buffer)

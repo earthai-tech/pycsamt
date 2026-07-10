@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """MeshTools3D export — Python translation of the MATLAB ioAscii/ scripts.
@@ -34,7 +33,7 @@ Values written in the order: for j=1..ny, for i=1..nx, for k=1..nzEarth
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -45,9 +44,9 @@ _WIDTHS_PER_LINE = 5
 
 
 def write_meshtools3d(
-    model: "ModEmModel3D",  # noqa: F821
+    model: ModEmModel3D,  # noqa: F821
     path: PathLike,
-) -> Tuple[Path, Path]:
+) -> tuple[Path, Path]:
     """Export a ``ModEmModel3D`` to MeshTools3D mesh and conductivity files.
 
     Equivalent to ``write_meshtools3d_model(fname, Cond)`` in MATLAB.

@@ -44,10 +44,9 @@ Alternatively, construct the config entirely in Python::
 """
 from __future__ import annotations
 
-import os
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -355,18 +354,18 @@ class ForwardConfig:
     rho_min:      float          = 1.0
     rho_max:      float          = 10_000.0
     depth_max:    float          = 2_000.0
-    geology:      Optional[str]  = None
+    geology:      str | None  = None
 
     # ── Dataset ──────────────────────────────────────────────────────────────
     n_samples:     int   = 10_000
     noise_level:   float = 0.05
     noise_type:    str   = "gaussian"
     include_phase: bool  = True
-    seed:          Optional[int] = None
+    seed:          int | None = None
     n_jobs:        int   = 1
 
     # ── Output ───────────────────────────────────────────────────────────────
-    output_dir:  Optional[str] = "."
+    output_dir:  str | None = "."
     output_name: str           = "forward_dataset"
     verbose:     bool          = True
 
@@ -467,7 +466,7 @@ class ForwardConfig:
             np.log10(self.time_min), np.log10(self.time_max), self.n_times
         )
 
-    def to_dataset_kwargs(self) -> Dict[str, Any]:
+    def to_dataset_kwargs(self) -> dict[str, Any]:
         """Assemble keyword arguments for :func:`~pycsamt.forward.batch.generate_dataset`.
 
         The returned dict is ready to be unpacked directly::
@@ -481,7 +480,7 @@ class ForwardConfig:
             All keyword arguments for ``generate_dataset``, with numpy
             arrays built from the stored scalar parameters.
         """
-        kw: Dict[str, Any] = dict(
+        kw: dict[str, Any] = dict(
             solver=self.solver,
             n_samples=self.n_samples,
             n_layers=(self.n_layers_min
@@ -521,9 +520,9 @@ class ForwardConfig:
 
     def to_template(
         self,
-        path: Union[str, Path] = "forward_config.py",
+        path: str | Path = "forward_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Write this configuration to an annotated source-of-truth file.
 
@@ -552,9 +551,9 @@ class ForwardConfig:
     @classmethod
     def write_template(
         cls,
-        path: Union[str, Path] = "forward_config.py",
+        path: str | Path = "forward_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Generate a documented source-of-truth configuration file.
 
@@ -587,10 +586,10 @@ class ForwardConfig:
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         strict: bool = True,
-    ) -> "ForwardConfig":
+    ) -> ForwardConfig:
         """Load a configuration from a source-of-truth file.
 
         Parameters

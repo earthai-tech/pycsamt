@@ -1,19 +1,17 @@
-# -*- coding: utf-8 -*-
 """Tests for pycsamt.emtools.impedance"""
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.impedance import (
-    plot_phasor_wheel,
-    plot_offdiag_antisym_residual,
     plot_determinant_track,
+    plot_offdiag_antisym_residual,
+    plot_phasor_wheel,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared helpers
@@ -163,7 +161,7 @@ class TestPlotDeterminantTrack:
 
     def test_empty_no_crash(self):
         try:
-            result = plot_determinant_track([])
+            plot_determinant_track([])
             plt.close("all")
         except Exception:
             plt.close("all")

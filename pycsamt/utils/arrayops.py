@@ -1,35 +1,36 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 """
 Array and list manipulation utilities.
 """
-from __future__ import annotations 
+from __future__ import annotations
+
 import re
-from typing import Iterable, Union, Optional, Sequence, Any
 import warnings
-import matplotlib.pyplot as plt 
+from collections.abc import Iterable, Sequence
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd 
+import pandas as pd
 import scipy.interpolate as spi
 
-from .validation import _assert_all_types, _is_numeric_dtype
-from .text import ( 
-    str2columns, 
-    listing_items_format, 
-)
 from .cleaner import sanitize_frame_cols
-
+from .text import (
+    listing_items_format,
+    str2columns,
+)
+from .validation import _assert_all_types, _is_numeric_dtype
 
 __all__ = [
     'concat_array_from_list',
     'is_iterable',
     'reshape',
-    'assert_xy_in', 
-    'frameify', 
-    'interpolate_grid', 
-    'drop_nan_in', 
+    'assert_xy_in',
+    'frameify',
+    'interpolate_grid',
+    'drop_nan_in',
 ]
 
 def concat_array_from_list(
@@ -136,7 +137,7 @@ def is_iterable(
     exclude_string: bool = False,
     transform: bool = False,
     parse_string: bool = False
-) -> Union[bool, list]:
+) -> bool | list:
     """
     Check if `y` is iterable, with options to transform or parse strings.
 
@@ -187,7 +188,7 @@ def is_iterable(
 
 def reshape(
     arr: Any,
-    axis: Optional[int] = None
+    axis: int | None = None
 ) -> np.ndarray:
     """
     Reshape 1D or singleton 2D arrays to desired orientation.
@@ -255,204 +256,204 @@ def reshape(
 def frameify(
     data: Any,
     *,
-    columns: Optional[Sequence[str]] = None,
+    columns: Sequence[str] | None = None,
     return_feature_types: bool = False,
     missing_values: Any = np.nan,
     drop_nan_columns: bool = True,
     how: str = 'all',
     sanitize_columns: bool = False,
-    regex: Optional[Union[str, re.Pattern]] = None,
+    regex: str | re.Pattern | None = None,
     fill_pattern: str = '_',
     reset_index: bool = False,
     drop_index: bool = True,
     pop_cat_features: bool = False,
     verbose: bool = False
-) -> Union[pd.DataFrame, tuple]:
-    """ Convert array to dataframe and coerce arguments to appropriate dtypes. 
-    
-    Function includes additional tools to manipulate the transformed data 
-    such as: 
-    
-    - `pop_cat_features` to remove the categorical attributes, 
-    - `sanitize_columns` to clean the columns of the dataframe by removing 
-      the undesirable characters, 
-    - `drop_nan_columns` to drop all the columns and/or rows that contains 
+) -> pd.DataFrame | tuple:
+    r""" Convert array to dataframe and coerce arguments to appropriate dtypes.
+
+    Function includes additional tools to manipulate the transformed data
+    such as:
+
+    - `pop_cat_features` to remove the categorical attributes,
+    - `sanitize_columns` to clean the columns of the dataframe by removing
+      the undesirable characters,
+    - `drop_nan_columns` to drop all the columns and/or rows that contains
       full NaN, ...
- 
-    Parameters 
+
+    Parameters
     -----------
     arr: Ndarray or Dataframe, shape (m_samples, n_features)
         Array of dataframe to create, to sanitize or to auto-detect
         feature categories ( numerical or categorical).
-        
-    columns: list of str, optional 
-        Usefull to create a dataframe when array is given. Be aware to fit the 
+
+    columns: list of str, optional
+        Usefull to create a dataframe when array is given. Be aware to fit the
         number of array columns (shape[1])
-        
-    return_feature_types: bool, default=False, 
+
+    return_feature_types: bool, default=False,
         return the list of numerical and categorial features.
-    
-    missing_values: float, default='NaN' 
+
+    missing_values: float, default='NaN'
         Replace the missing or empty string if exist in the dataframe.
-        
-    pop_cat_features:bool, default=False, 
+
+    pop_cat_features:bool, default=False,
         remove the categorial features  from the DataFrame.
-        
-    sanitize_columns: bool, default=False, 
+
+    sanitize_columns: bool, default=False,
        remove undesirable character in the data columns using the default
-       argument of `regex` parameters. 
-       
+       argument of `regex` parameters.
+
        .. versionadded:: 0.1.9
-       
+
     regex: `re` object,
         Regular expresion object used to polish the data columns.
-        the default is:: 
-            
-        >>> import re 
+        the default is::
+
+        >>> import re
         >>> re.compile (r'[_#&.)(*@!_,;\s-]\s*', flags=re.IGNORECASE)
-          
+
        .. versionadded:: 0.1.9
-       
-    fill_pattern: str, default='' 
-        Pattern to replace the non-alphabetic character in each item of 
-        columns.  
-        
-    drop_nan_columns: bool, default=True 
-       Remove all columns filled by NaN values. 
-        
+
+    fill_pattern: str, default=''
+        Pattern to replace the non-alphabetic character in each item of
+        columns.
+
+    drop_nan_columns: bool, default=True
+       Remove all columns filled by NaN values.
+
        .. versionadded: 0.2.4
-          By default, it auto-removes columns with all NaN values. To 
-          deactive this functionality, set it to ``False``. 
-         
+          By default, it auto-removes columns with all NaN values. To
+          deactive this functionality, set it to ``False``.
+
     how: str, default='all'
-       Drop also the NaN row data. The row data which is composed entirely  
+       Drop also the NaN row data. The row data which is composed entirely
        with NaN or Null values.
-       
-    reset_index: bool, default=False 
-       Reset the index of the dataframe. 
-       
+
+    reset_index: bool, default=False
+       Reset the index of the dataframe.
+
        .. versionadded: 0.2.4
-       
-    drop_index: bool, default=True, 
-       Drop index in the dataframe after reseting. 
-       
+
+    drop_index: bool, default=True,
+       Drop index in the dataframe after reseting.
+
        .. versionadded: 0.2.4
-       
-    verbose: bool, default=False, 
-        outputs a message by listing the categorial items dropped from 
-        the dataframe if exists. 
-        
-    Returns 
+
+    verbose: bool, default=False,
+        outputs a message by listing the categorial items dropped from
+        the dataframe if exists.
+
+    Returns
     --------
-    df or (df, nf, cf): Dataframe of values casted to numeric types 
+    df or (df, nf, cf): Dataframe of values casted to numeric types
         also return `nf` and `cf`  if `return_feature_types` is set
         to``True``.
-    
+
     Examples
     ---------
     >>> from watex.datasets.dload import load_bagoue
     >>> from watex.utils.funcutils import to_numeric_dtypes
-    >>> X, y = load_bagoue (as_frame =True ) 
+    >>> X, y = load_bagoue (as_frame =True )
     >>> X0 =X[['shape', 'power', 'magnitude']]
-    >>> X0.dtypes 
+    >>> X0.dtypes
     ... shape        object
         power        object
         magnitude    object
         dtype: object
     >>> df = to_numeric_dtypes(X0)
-    >>> df.dtypes 
+    >>> df.dtypes
     ... shape         object
         power        float64
         magnitude    float64
         dtype: object
-        
+
     """
 
-    # pass ellipsis argument to False 
+    # pass ellipsis argument to False
 
-    if not is_iterable (data, exclude_string=True): 
+    if not is_iterable (data, exclude_string=True):
         raise TypeError(f"Expect array. Got {type (data).__name__!r}")
 
-    if hasattr ( data, '__array__') and hasattr ( data, 'columns'): 
+    if hasattr ( data, '__array__') and hasattr ( data, 'columns'):
         df = data.copy()
-        if columns is not None: 
-            if verbose: 
+        if columns is not None:
+            if verbose:
                 print("Dataframe is passed. Columns should be replaced.")
             df =pd.DataFrame ( np.array ( data), columns =columns )
-            
-    else: 
-        df = pd.DataFrame (data, columns =columns  ) 
-        
-    # sanitize columns 
-    if sanitize_columns: 
-        # Pass in the case columns are all integer values. 
-        if not _is_numeric_dtype(df.columns , to_array=True): 
-           # for consistency reconvert to str 
-           df.columns = df.columns.astype(str) 
-           df = sanitize_frame_cols(
-               df, regex=regex, fill_pattern=fill_pattern ) 
 
-    #replace empty string by Nan if NaN exist in dataframe  
+    else:
+        df = pd.DataFrame (data, columns =columns  )
+
+    # sanitize columns
+    if sanitize_columns:
+        # Pass in the case columns are all integer values.
+        if not _is_numeric_dtype(df.columns , to_array=True):
+           # for consistency reconvert to str
+           df.columns = df.columns.astype(str)
+           df = sanitize_frame_cols(
+               df, regex=regex, fill_pattern=fill_pattern )
+
+    #replace empty string by Nan if NaN exist in dataframe
     df= df.replace(r'^\s*$', missing_values, regex=True)
-    
-    # check the possibililty to cast all 
-    # the numerical data 
-    for serie in df.columns: 
-        try: 
+
+    # check the possibililty to cast all
+    # the numerical data
+    for serie in df.columns:
+        try:
             df= df.astype(
                 {serie:np.float64})
         except:continue
-    
-    # drop nan  columns if exists 
-    if drop_nan_columns: 
-        if verbose: 
-            nan_columns = df.columns [ df.isna().all()].tolist() 
+
+    # drop nan  columns if exists
+    if drop_nan_columns:
+        if verbose:
+            nan_columns = df.columns [ df.isna().all()].tolist()
             print("No NaN column found.") if len(
-                nan_columns)==0 else listing_items_format (nan_columns, 
+                nan_columns)==0 else listing_items_format (nan_columns,
                     "NaN columns found in the data",
-                    " ", inline =True, lstyle='.')                               
-        # drop rows and columns with NaN values everywhere.                                                   
+                    " ", inline =True, lstyle='.')
+        # drop rows and columns with NaN values everywhere.
         df.dropna ( axis=1, how='all', inplace =True)
-        if str(how).lower()=='all': 
+        if str(how).lower()=='all':
             df.dropna ( axis=0, how='all', inplace =True)
-    
+
     # reset_index of the dataframe
     # This is useful after droping rows
-    if reset_index: 
+    if reset_index:
         df.reset_index (inplace =True, drop = drop_index )
-    # collect numeric and non-numeric data 
-    nf, cf =[], []    
-    for serie in df.columns: 
-        if _is_numeric_dtype(df[serie], to_array =True ): 
+    # collect numeric and non-numeric data
+    nf, cf =[], []
+    for serie in df.columns:
+        if _is_numeric_dtype(df[serie], to_array =True ):
             nf.append(serie)
         else: cf.append(serie)
 
-    if pop_cat_features: 
-        [ df.pop(item) for item in cf ] 
-        if verbose: 
+    if pop_cat_features:
+        [ df.pop(item) for item in cf ]
+        if verbose:
             msg ="Dataframe does not contain any categorial features."
             b= f"Feature{'s' if len(cf)>1 else ''}"
             e = (f"{'have' if len(cf) >1 else 'has'} been dropped"
                  " from the dataframe.")
             print(msg) if len(cf)==0 else listing_items_format (
                 cf , b, e ,lstyle ='.', inline=True)
-            
-        return df 
-    
-    return (df, nf, cf) if return_feature_types else df 
+
+        return df
+
+    return (df, nf, cf) if return_feature_types else df
 
 
 def assert_xy_in(
-    x: Union[str, Iterable[Any], Any],
-    y: Union[str, Iterable[Any], Any],
+    x: str | Iterable[Any] | Any,
+    y: str | Iterable[Any] | Any,
     *,
-    data: Optional[pd.DataFrame] = None,
+    data: pd.DataFrame | None = None,
     asarray: bool = True,
     to_frame: bool = False,
-    columns: Optional[Sequence[str]] = None,
+    columns: Sequence[str] | None = None,
     xy_numeric: bool = False,
     dropna: bool = False
-) -> Union[tuple, pd.DataFrame]:
+) -> tuple | pd.DataFrame:
     """
     Validate and extract paired x, y data from arrays or DataFrame.
 
@@ -549,81 +550,81 @@ def assert_xy_in(
     return x_ser, y_ser
 
 def interpolate_grid (
-    arr, 
-    method ='cubic', 
-    fill_value='auto', 
+    arr,
+    method ='cubic',
+    fill_value='auto',
     view = False,
-    ): 
+    ):
     """
-    Interpolate data containing missing values. 
+    Interpolate data containing missing values.
 
-    Parameters 
+    Parameters
     -----------
-    arr: ArrayLike2D 
-       Two dimensional array for interpolation 
+    arr: ArrayLike2D
+       Two dimensional array for interpolation
     method: str, default='cubic'
-      kind of interpolation. It could be ['nearest'|'linear'|'cubic']. 
-     
-    fill_value: float, str, default='auto' 
-       Fill the interpolated grid at the egdes or surrounding NaN with 
-       a filled value. The ``auto`` uses the forward and backward 
-       fill strategy. 
-       
-    view: bool, default=False, 
-       Quick visualize the interpolated grid. 
-       
-     
-    .. versionchanged:: 0.2.8 
-       One-dimensional array is henceforth possible. Error no longer raises. 
-       
-    Returns 
+      kind of interpolation. It could be ['nearest'|'linear'|'cubic'].
+
+    fill_value: float, str, default='auto'
+       Fill the interpolated grid at the egdes or surrounding NaN with
+       a filled value. The ``auto`` uses the forward and backward
+       fill strategy.
+
+    view: bool, default=False,
+       Quick visualize the interpolated grid.
+
+
+    .. versionchanged:: 0.2.8
+       One-dimensional array is henceforth possible. Error no longer raises.
+
+    Returns
     ---------
-    arri: ArrayLike2d 
-       Interpolated 2D grid. 
-       
-    See also 
+    arri: ArrayLike2d
+       Interpolated 2D grid.
+
+    See also
     ---------
-    spi.griddata: 
-        Scipy interpolate Grid data 
-    fillNaN: 
-        Fill missing data strategy. 
-        
+    spi.griddata:
+        Scipy interpolate Grid data
+    fillNaN:
+        Fill missing data strategy.
+
     Examples
     ---------
     >>> import numpy as np
-    >>> from watex.utils.funcutils import interpolate_grid 
+    >>> from watex.utils.funcutils import interpolate_grid
     >>> x = [28, np.nan, 50, 60] ; y = [np.nan, 1000, 2000, 3000]
     >>> xy = np.vstack ((x, y)).T
-    >>> xyi = interpolate_grid (xy, view=True ) 
-    >>> xyi 
+    >>> xyi = interpolate_grid (xy, view=True )
+    >>> xyi
     array([[  28.        ,   28.        ],
            [  22.78880663, 1000.        ],
            [  50.        , 2000.        ],
            [  60.        , 3000.        ]])
 
     """
-    is2d = True 
-    if not hasattr(arr, '__array__'): 
-        arr = np.array (arr) 
-    
-    if arr.ndim==1: 
+    is2d = True
+    if not hasattr(arr, '__array__'):
+        arr = np.array (arr)
+
+    if arr.ndim==1:
         #convert to two dimension array
         arr = np.vstack ((arr, arr ))
-        is2d =False 
+        is2d =False
         # raise TypeError(
         #     "Expect two dimensional array for grid interpolation.")
-        
-    # make x, y array for mapping 
+
+    # make x, y array for mapping
     x = np.arange(0, arr.shape[1])
     y = np.arange(0, arr.shape[0])
     #mask invalid values
-    arr= np.ma.masked_invalid(arr) 
+    arr= np.ma.masked_invalid(arr)
     xx, yy = np.meshgrid(x, y)
     #get only the valid values
     x1 = xx[~arr.mask]
     y1 = yy[~arr.mask]
     newarr = arr[~arr.mask]
-    
+
     # Need at least 4 finite points for any triangulation-based interpolator;
     # fall back to fill-only when data are too sparse or entirely masked.
     if x1.size < 4:
@@ -644,32 +645,32 @@ def interpolate_grid (
         (xx, yy),
         method=method
         )
-    
-    if fill_value =='auto': 
+
+    if fill_value =='auto':
         arri = _fill_nan(arri, method ='both ')
     else:
         arri [np.isnan(arri)] = float( _assert_all_types(
             fill_value, float, int, objname ="'fill_value'" )
-            ) 
+            )
 
-    if view : 
+    if view :
         fig, ax  = plt.subplots (nrows = 1, ncols = 2 , sharey= True, )
         ax[0].imshow(arr ,interpolation='nearest', label ='Raw Grid')
-        ax[1].imshow (arri, interpolation ='nearest', 
+        ax[1].imshow (arri, interpolation ='nearest',
                       label = 'Interpolate Grid')
-        
-        ax[0].set_title ('Raw Grid') 
-        ax[1].set_title ('Interpolate Grid') 
-        
-        plt.show () 
-        
-    if not is2d: 
+
+        ax[0].set_title ('Raw Grid')
+        ax[1].set_title ('Interpolate Grid')
+
+        plt.show ()
+
+    if not is2d:
         arri = arri[0, :]
-        
-    return arri 
+
+    return arri
 
 def _fill_nan(
-    arr: Union[Sequence[Any], np.ndarray],
+    arr: Sequence[Any] | np.ndarray,
     *,
     method: str = 'ff'
 ) -> np.ndarray:
@@ -751,7 +752,7 @@ def _fill_nan(
     return filled[0] if filled.shape[0] == 1 else filled
 
 def fill_nan(
-    arr: Union[Sequence[Any], np.ndarray],
+    arr: Sequence[Any] | np.ndarray,
     *,
     method: str = 'ff',
     axis: int = 1
@@ -851,12 +852,14 @@ def fill_nan(
 
     # Select and apply fill along axis
     if axis == 1:
-        filler = lambda mat, fn: np.vstack(fn(row) for row in mat)
+        def filler(mat, fn):
+            return np.vstack(fn(row) for row in mat)
     else:
         # for axis=0, transpose, fill, then transpose back
-        filler = lambda mat, fn: (
-            np.vstack(fn(col) for col in mat.T).T
-        )
+        def filler(mat, fn):
+            return (
+                    np.vstack(fn(col) for col in mat.T).T
+                )
 
     if m == 'ff':
         out = filler(a, _ffill_row)

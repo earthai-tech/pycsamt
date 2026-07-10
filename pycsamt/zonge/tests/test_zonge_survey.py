@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
@@ -6,8 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pycsamt.zonge.survey import Station
 from pycsamt.exceptions import StationError
+from pycsamt.zonge.survey import Station
 
 
 def make_grid_df(stations, reps=3):
@@ -124,5 +123,5 @@ def test_from_avg_tuple_pathway_works_without_filesystem():
     assert st.increment == 25.0
     assert st.to_keywords()["Stn.Inc"] == 25.0
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

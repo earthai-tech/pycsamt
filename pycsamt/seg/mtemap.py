@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
 
-from typing import List, Optional, Dict, Any
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Any
 
-from ..log.logger import get_logger
 from ..exceptions import EdIDataError
+from ..log.logger import get_logger
 from .base import EDIComponentBase
 from .utils import (
     gather_measurement_key_value_with_str_parser,
 )
-from .validation import ( 
+from .validation import (
+    IsEdi,
+    _split_comment,
     _strip_norm,
     _to_int_or_none,
-    _split_comment,
-    IsEdi 
 )
 
 logger = get_logger(__name__)
@@ -25,7 +24,7 @@ logger = get_logger(__name__)
 __all__ = ["MTEMAP", "EMAPComponents", "EMAPMixin"]
 
 
-def _kv_tokens_from_lines(lines: List[str]) -> List[str]:
+def _kv_tokens_from_lines(lines: list[str]) -> list[str]:
     """
     Try project parser first, then robust regex fallback.
     """
@@ -35,7 +34,7 @@ def _kv_tokens_from_lines(lines: List[str]) -> List[str]:
     if tokens:
         return tokens
 
-    out: List[str] = []
+    out: list[str] = []
     pat = re.compile(
         r"([A-Za-z][A-Za-z0-9_]*)\s*=\s*"
         r"("  # group value (quoted or bare)
@@ -59,12 +58,12 @@ class MTEMAP(EDIComponentBase):
     r"""
     Minimal header container for ``>=MTSECT`` and
     ``>=EMAPSECT`` blocks.
-    
+
     The class stores option key-values from the section
     header. It keeps measurement IDs as strings to avoid
     loss of formatting (e.g. ``"251.025"``). Count fields
     are parsed as integers where possible.
-    
+
     Notes
     -----
     - If ``SECTID`` is missing or looks numeric, the value
@@ -75,7 +74,7 @@ class MTEMAP(EDIComponentBase):
       items in the following ``>FREQ`` block [1]_.
     - The class does *not* validate that the referenced
       measurement IDs exist. That is handled elsewhere.
-    
+
     Attributes
     ----------
     sectid : str or None
@@ -101,33 +100,33 @@ class MTEMAP(EDIComponentBase):
         Index in the source file where data blocks start.
     temp_sectid : str or None
         Internal cache of ``DATAID`` used for fallback.
-    
+
     See Also
     --------
     EMAPComponents
         Small container exposing only component IDs.
     EMAPMixin
         Thin facade to build an ``MTEMAP`` from a file.
-    
+
     References
     ----------
     .. [1] SEG EDI (MT/EMAP) standard. See the spectra
            and MT section rules for frequency lists.
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
-    
+
     Examples
     --------
     Parse a header from an EDI file and write it back::
-    
+
         from pycsamt.seg.mtemap import MTEMAP
-    
+
         m = MTEMAP.from_file("site.edi")
         lines = m.write()
         print("".join(lines))
     """
 
 
-    KEY_ORDER: List[str] = [
+    KEY_ORDER: list[str] = [
         "sectid",
         "nfreq",
         "maxblks",
@@ -143,26 +142,26 @@ class MTEMAP(EDIComponentBase):
         "chksum",
     ]
 
-    sectid: Optional[str]
-    nfreq: Optional[int]
-    maxblks: Optional[int]
-    hx: Optional[str]
-    hy: Optional[str]
-    hz: Optional[str]
-    ex: Optional[str]
-    ey: Optional[str]
-    rx: Optional[str]
-    ry: Optional[str]
-    ndipole: Optional[int]
-    type: Optional[str]
-    chksum: Optional[int]
+    sectid: str | None
+    nfreq: int | None
+    maxblks: int | None
+    hx: str | None
+    hy: str | None
+    hz: str | None
+    ex: str | None
+    ey: str | None
+    rx: str | None
+    ry: str | None
+    ndipole: int | None
+    type: str | None
+    chksum: int | None
 
-    start_data_lines_num: Optional[int] = None
-    temp_sectid: Optional[str] = None
+    start_data_lines_num: int | None = None
+    temp_sectid: str | None = None
 
     def __init__(
         self,
-        mt_or_emap_section_list: Optional[List[str]] = None,
+        mt_or_emap_section_list: list[str] | None = None,
         verbose: int | bool = 0,
         logger=None,
         **kwargs: Any,
@@ -182,7 +181,7 @@ class MTEMAP(EDIComponentBase):
         self.type = None
         self.chksum = None
 
-        self._section_lines: Optional[List[str]] = (
+        self._section_lines: list[str] | None = (
             mt_or_emap_section_list
         )
 
@@ -194,36 +193,36 @@ class MTEMAP(EDIComponentBase):
 
 
     @classmethod
-    def from_file(cls, edi_path: str) -> "MTEMAP":
+    def from_file(cls, edi_path: str) -> MTEMAP:
         r"""
         Build an instance from an EDI path. The file is first
         validated, then the header lines between the section
         tag and the next block are parsed.
-        
+
         Parameters
         ----------
         edi_path : str
             Path to a readable EDI file.
-        
+
         Returns
         -------
         MTEMAP
             Parsed header object.
-        
+
         Raises
         ------
         FileNotFoundError
             If the path does not point to a file.
         EdIDataError
             If no ``>=MTSECT`` or ``>=EMAPSECT`` is found.
-        
+
         Notes
         -----
         The method also caches ``DATAID`` from ``>HEAD`` and
         uses it to replace a numeric or missing ``SECTID``.
         This helps with writers that output numeric section
         labels.
-        
+
         Examples
         --------
         >>> m = MTEMAP.from_file("site.edi")
@@ -290,34 +289,34 @@ class MTEMAP(EDIComponentBase):
         # inst = cls(mt_or_emap_section_list=tokens)
         # inst.start_data_lines_num = stop_idx
         # inst.temp_sectid = dataid
-        
+
         # Create instance *without* lines so __init__ doesn't
         # auto-read. Then set fallback and call read() ourselves.
         inst = cls(verbose=0, logger=None)
         inst.start_data_lines_num = stop_idx
         inst.temp_sectid = dataid
         inst.read(tokens)
-        
+
         return inst
 
     def read(
         self,
-        mt_or_emap_section_list: Optional[List[str]] = None,
-    ) -> "MTEMAP":
+        mt_or_emap_section_list: list[str] | None = None,
+    ) -> MTEMAP:
         r"""
         Parse key-value tokens into attributes.
-        
+
         Parameters
         ----------
         mt_or_emap_section_list : list of str, optional
             Items like ``["NFREQ=60", "HX=251.025"]``. If
             omitted, the list passed at construction is used.
-        
+
         Returns
         -------
         MTEMAP
             The instance itself, for chaining.
-        
+
         Notes
         -----
         Unknown keys are ignored. Values are normalized by
@@ -375,20 +374,20 @@ class MTEMAP(EDIComponentBase):
 
         return self
 
-    def write(self, nfreq: Optional[int] = None) -> List[str]:
+    def write(self, nfreq: int | None = None) -> list[str]:
         r"""
         Serialize the header to text lines.
-        
+
         Parameters
         ----------
         nfreq : int, optional
             Override for ``NFREQ`` in the output.
-        
+
         Returns
         -------
         list of str
             Lines including the opening section tag.
-        
+
         Notes
         -----
         If either ``NDIPOLE`` or ``TYPE`` is present the
@@ -401,9 +400,9 @@ class MTEMAP(EDIComponentBase):
             self.type not in (None, "")
         )
         header = ">=EMAPSECT\n" if is_emap else ">=MTSECT\n"
-        lines: List[str] = [header]
+        lines: list[str] = [header]
 
-        values: Dict[str, Any] = {
+        values: dict[str, Any] = {
             "sectid": self.sectid,
             "nfreq": nfreq if nfreq is not None else self.nfreq,
             "maxblks": self.maxblks,
@@ -460,12 +459,12 @@ class MTEMAP(EDIComponentBase):
 class EMAPComponents(EDIComponentBase):
     r"""
     Lightweight view of EMAP/MT component IDs.
-    
+
     The container exposes only component identifiers and
     does not include section counts or metadata. It is
     useful when you need the mapping from channel type to
     measurement ID without other header details.
-    
+
     Attributes
     ----------
     hx, hy, hz : str or None
@@ -474,27 +473,27 @@ class EMAPComponents(EDIComponentBase):
         Electric component measurement IDs.
     rx, ry : str or None
         Reference component measurement IDs.
-    
+
     Notes
     -----
     The class does not normalize or validate that the IDs
     exist in the ``>=DEFINEMEAS`` block. It simply carries
     the strings.
-    
+
     See Also
     --------
     MTEMAP
         Full section header with counts and flags.
-    
+
     Examples
     --------
     Create from an existing ``MTEMAP``::
-    
+
         m = MTEMAP.from_file("site.edi")
         comp = EMAPComponents.from_mtemap(m)
         comp.as_dict()
     """
-    
+
     def __init__(
         self,
         *args,
@@ -503,24 +502,24 @@ class EMAPComponents(EDIComponentBase):
         **kws: Any,
     ):
         super().__init__(verbose=verbose, logger=logger)
-        self.hx: Optional[str] = kws.get("hx")
-        self.hy: Optional[str] = kws.get("hy")
-        self.hz: Optional[str] = kws.get("hz")
-        self.ex: Optional[str] = kws.get("ex")
-        self.ey: Optional[str] = kws.get("ey")
-        self.rx: Optional[str] = kws.get("rx")
-        self.ry: Optional[str] = kws.get("ry")
+        self.hx: str | None = kws.get("hx")
+        self.hy: str | None = kws.get("hy")
+        self.hz: str | None = kws.get("hz")
+        self.ex: str | None = kws.get("ex")
+        self.ey: str | None = kws.get("ey")
+        self.rx: str | None = kws.get("rx")
+        self.ry: str | None = kws.get("ry")
 
     @classmethod
-    def from_mtemap(cls, m: MTEMAP) -> "EMAPComponents":
+    def from_mtemap(cls, m: MTEMAP) -> EMAPComponents:
         r"""
         Construct a component view from an ``MTEMAP``.
-        
+
         Parameters
         ----------
         m : MTEMAP
             A parsed section header.
-        
+
         Returns
         -------
         EMAPComponents
@@ -536,10 +535,10 @@ class EMAPComponents(EDIComponentBase):
             ry=m.ry,
         )
 
-    def as_dict(self) -> Dict[str, Optional[str]]:
+    def as_dict(self) -> dict[str, str | None]:
         r"""
         Return a plain mapping of component names to IDs.
-        
+
         Returns
         -------
         dict
@@ -563,23 +562,23 @@ class EMAPMixin:
     r"""
     Thin facade that lets a host class load an ``MTEMAP``
     with a consistent API.
-    
+
     Attach this mixin to any class that should expose a
     ``from_file`` constructor returning an ``MTEMAP``. The
     mixin does not keep state; it only forwards the call.
-    
+
     See Also
     --------
     MTEMAP.from_file
         The underlying constructor that performs parsing.
-    
+
     Examples
     --------
     Add the mixin and use it on a host type::
-    
+
         class Host(EMAPMixin):
             pass
-    
+
         hdr = Host.from_file("site.edi")
         assert hdr.nfreq is not None
     """

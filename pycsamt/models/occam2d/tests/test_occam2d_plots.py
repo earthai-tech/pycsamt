@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """Tests for Phase-5 plot classes (PlotMisfit, PlotModel, PlotResponse, PlotPseudo)."""
 
-import pytest
 import matplotlib
+import pytest
+
 matplotlib.use("Agg")   # non-interactive backend — safe for CI
-import matplotlib.pyplot as plt
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 
 DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """API-contract tests for :mod:`pycsamt.ai.processing`.
 
 The existing processing tests cover many estimator workflows.  This module
@@ -8,11 +7,10 @@ for a fast contract suite.
 """
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
-
-import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -28,7 +26,10 @@ from pycsamt.ai.processing import (
     plot_qc_scores,
     prepare_z_features,
 )
-from pycsamt.ai.processing.classify import _df_to_feature_matrix, _rule_labels
+from pycsamt.ai.processing.classify import (
+    _df_to_feature_matrix,
+    _rule_labels,
+)
 from pycsamt.ai.processing.qc import _extract_qc_features
 
 

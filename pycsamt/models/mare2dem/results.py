@@ -12,8 +12,10 @@ from .data import EMData, read_emdata
 from .log import Mare2DEMLog
 from .mesh import ResistivityModel, read_resistivity
 from .validation import (
-    is_emdata_file, is_log_file, is_resistivity_file, is_response_file,
-    Mare2DEMFileType, detect_file_type,
+    is_emdata_file,
+    is_log_file,
+    is_resistivity_file,
+    is_response_file,
 )
 
 __all__ = ["InversionResult"]

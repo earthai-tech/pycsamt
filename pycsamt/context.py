@@ -2,11 +2,12 @@ import os
 import sys
 from contextlib import contextmanager
 
+
 @contextmanager
 def nullify_output(suppress_stdout=True, suppress_stderr=True):
     """
-    suppress stdout and stderr messages using context manager. 
-    https://www.codeforests.com/2020/11/05/python-suppress-stdout-and-stderr/ 
+    suppress stdout and stderr messages using context manager.
+    https://www.codeforests.com/2020/11/05/python-suppress-stdout-and-stderr/
     """
     stdout = sys.stdout
     stderr = sys.stderr

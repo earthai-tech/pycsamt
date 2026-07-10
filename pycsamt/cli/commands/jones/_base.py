@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -33,7 +32,9 @@ def _get_jfile(path: Path, verbose: int = 0):
 
 def _get_collection(path: Path, verbose: int = 0):
     """Load a directory (or list) of J-files and return a :class:`JCollection`."""
-    from pycsamt.jones.collection import JCollection  # noqa: PLC0415
+    from pycsamt.jones.collection import (
+        JCollection,  # noqa: PLC0415
+    )
 
     return JCollection.from_sources(path, verbose=verbose)
 

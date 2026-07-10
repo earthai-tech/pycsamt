@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -46,11 +45,11 @@ for common geological scenarios:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..metadata.geology import CATALOG as _GEO_CATALOG, geology_prior as _geology_prior
+from ..metadata.geology import CATALOG as _GEO_CATALOG
+from ..metadata.geology import geology_prior as _geology_prior
 
 __all__ = [
     "LayeredModel",
@@ -63,7 +62,7 @@ __all__ = [
 
 #: Backwards-compatible view of the geology catalog.
 #: Prefer ``from pycsamt.metadata.geology import CATALOG`` for new code.
-GEOLOGY_PRIORS: Dict[str, dict] = {
+GEOLOGY_PRIORS: dict[str, dict] = {
     name: _geology_prior(name)
     for name in _GEO_CATALOG.names()
 }
@@ -171,7 +170,7 @@ class LayeredModel:
         *,
         log_rho: bool = True,
         name: str = "",
-    ) -> "LayeredModel":
+    ) -> LayeredModel:
         """
         Reconstruct a :class:`LayeredModel` from a flat parameter vector.
 
@@ -197,11 +196,11 @@ class LayeredModel:
         cls,
         n_layers: int = 5,
         *,
-        rho_range: Tuple[float, float] = (1.0, 10_000.0),
+        rho_range: tuple[float, float] = (1.0, 10_000.0),
         depth_max: float = 2000.0,
-        seed: Optional[Union[int, np.random.Generator]] = None,
+        seed: int | np.random.Generator | None = None,
         name: str = "random",
-    ) -> "LayeredModel":
+    ) -> LayeredModel:
         """
         Generate a random layered model with log-uniform resistivities.
 
@@ -246,9 +245,9 @@ class LayeredModel:
         anomaly_layer: int = 1,
         depth_max: float = 1000.0,
         equal_thickness: bool = True,
-        seed: Optional[Union[int, np.random.Generator]] = None,
+        seed: int | np.random.Generator | None = None,
         name: str = "blocky",
-    ) -> "LayeredModel":
+    ) -> LayeredModel:
         """
         Build a model with a single conductive (or resistive) anomaly
         embedded in a resistive (or conductive) background.
@@ -282,9 +281,9 @@ class LayeredModel:
         rho_deep: float = 10.0,
         depth_max: float = 5000.0,
         perturbation: float = 0.2,
-        seed: Optional[Union[int, np.random.Generator]] = None,
+        seed: int | np.random.Generator | None = None,
         name: str = "smooth",
-    ) -> "LayeredModel":
+    ) -> LayeredModel:
         """
         Build a model with a smooth gradient from surface to depth,
         plus small random perturbations.
@@ -316,8 +315,8 @@ class LayeredModel:
         cls,
         name: str,
         *,
-        seed: Optional[Union[int, np.random.Generator]] = None,
-    ) -> "LayeredModel":
+        seed: int | np.random.Generator | None = None,
+    ) -> LayeredModel:
         """
         Generate a random model using a predefined geological prior.
 
@@ -364,8 +363,8 @@ class LayeredModel:
         ax=None,
         *,
         log_scale: bool = True,
-        depth_max: Optional[float] = None,
-        label: Optional[str] = None,
+        depth_max: float | None = None,
+        label: str | None = None,
         **kwargs,
     ):
         """

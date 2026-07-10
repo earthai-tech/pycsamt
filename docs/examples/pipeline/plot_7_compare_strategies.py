@@ -16,14 +16,23 @@ and what it does to the signal-to-noise.
 # preset, and a custom denoise-plus-static-shift chain. Each is just a
 # :class:`~pycsamt.pipeline.Pipeline`.
 
-import numpy as np
 import matplotlib.pyplot as plt
-
-from _pipe_data import demo_sites, scratch_dir, quiet_logs, station_rho
-from pycsamt.pipeline import (
-    Pipeline, Step, get_preset, configure_pipe, reset_pipe,
+import numpy as np
+from _pipe_data import (
+    demo_sites,
+    quiet_logs,
+    scratch_dir,
+    station_rho,
 )
+
 from pycsamt.emtools.qc import build_qc_table
+from pycsamt.pipeline import (
+    Pipeline,
+    Step,
+    configure_pipe,
+    get_preset,
+    reset_pipe,
+)
 
 raw = demo_sites(n=10)
 configure_pipe(show_progress=False, plot_dpi=72)

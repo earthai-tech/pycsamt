@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -31,13 +30,15 @@ def _get_sites(
     survey_path: Path | None,
     fresh: bool,
     verbose: int,
-) -> "Sites":
+) -> Sites:
     """Resolve EDI source to a ``Sites`` object.
 
     Priority: explicit path > --survey flag > active context.
     Raises :class:`click.UsageError` when nothing is set.
     """
-    from pycsamt.cli.survey import resolve_survey  # noqa: PLC0415
+    from pycsamt.cli.survey import (
+        resolve_survey,  # noqa: PLC0415
+    )
     return resolve_survey(explicit or survey_path, fresh=fresh, verbose=verbose)
 
 

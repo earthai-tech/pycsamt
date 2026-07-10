@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Dict, Optional 
 
 import numpy as np
-import pandas as pd 
-
+import pandas as pd
 import xarray as xr
 
 from ..log.logger import get_logger
@@ -24,7 +22,7 @@ def build_dataset(
     edis: Iterable[EDIFile],
     *,
     drop_empty: bool = True,
-) -> "xr.Dataset":
+) -> xr.Dataset:
     r"""
     Build a multi-site xarray Dataset from an iterable of EDIFile.
 
@@ -92,7 +90,7 @@ def build_dataset(
         z_err        (site, freq, output_ch, input_ch) float64 ...
         ...
     """
-    
+
     datasets = []
     metadata_records = []
     for ed in edis:
@@ -106,7 +104,7 @@ def build_dataset(
             metadata_records.append(_meta_from_edi(ed))
         except Exception as exc:
             logger.debug("Skip %s: %s", ed, exc)
-        
+
     if not datasets:
         return xr.Dataset(coords={
             "site": [], "freq": [], "output_ch": [], "input_ch": []
@@ -196,13 +194,13 @@ class XAMixin:
         self,
         *,
         drop_empty: bool = True,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         # host must be iterable over EDIFile
         return build_dataset(self, drop_empty=drop_empty)
 
-    def meta_table(self) -> "xr.Dataset":
+    def meta_table(self) -> xr.Dataset:
         """Extracts site-level metadata into a new Dataset."""
-        rows: List[Dict[str, object]] = []
+        rows: list[dict[str, object]] = []
         for ed in self:
             rows.append(_meta_from_edi(ed))
         if not rows:
@@ -211,7 +209,7 @@ class XAMixin:
         meta_df = pd.DataFrame(rows).set_index("site")
         return xr.Dataset.from_dataframe(meta_df)
 
- 
+
 @xr.register_dataset_accessor("edi")
 class EDIAcc:
     r"""
@@ -271,17 +269,17 @@ class EDIAcc:
     >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
     >>> # fig.show() # Uncomment to display plot
     """
-    def __init__(self, ds: "xr.Dataset") -> None:
+    def __init__(self, ds: xr.Dataset) -> None:
         self._ds = ds
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         s = self._ds.coords.get("site", None)
         return [] if s is None else [str(v) for v in s.data]
 
 
-    
-    def get(self, site: str) -> "xr.Dataset":
+
+    def get(self, site: str) -> xr.Dataset:
         """Selects data for a single site (case-insensitive)."""
         # Find the correctly cased site name from the coordinates
         site_coord = self._ds.coords['site'].values
@@ -294,21 +292,21 @@ class EDIAcc:
     def plot_apparent_resistivity(
         self,
         site: str,
-        components: list[str] = ["xy", "yx"],
-        phase_mod: Optional[int] = None,
+        components: list[str] = None,
+        phase_mod: int | None = None,
         figsize: tuple[int, int] = (8, 8),
         show_grid: bool = True,
-        grid_props: Optional[dict] = None,
-        savefig: Optional[str] = None,
+        grid_props: dict | None = None,
+        savefig: str | None = None,
         **plot_kwargs,
     ):
         r"""
         Generates a standard plot of apparent resistivity and phase.
-    
+
         This method provides a flexible interface for visualizing MT
         (magnetotelluric) data, allowing customization of components,
         phase wrapping, and plot aesthetics.
-    
+
         Parameters
         ----------
         site : str
@@ -332,27 +330,27 @@ class EDIAcc:
         **plot_kwargs :
             Additional keyword arguments passed directly to xarray's
             ``.plot.line()`` method for customizing the lines.
-    
+
         Returns
         -------
         fig : matplotlib.figure.Figure
             The matplotlib Figure object.
         axes : np.ndarray of matplotlib.axes.Axes
             An array containing the two subplot Axes objects.
-    
+
         Examples
         --------
         >>> # Basic plot of off-diagonal components
         >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
         >>> # fig.show()
-    
+
         >>> # Plot all components and save the figure
         >>> fig, axes = ds.edi.plot_apparent_resistivity(
         ...     site='S01',
         ...     components=['xy', 'yx', 'xx', 'yy'],
         ...     savefig='S01_all_components.png'
         ... )
-    
+
         >>> # Plot with phase wrapped to the first quadrant and custom styling
         >>> fig, axes = ds.edi.plot_apparent_resistivity(
         ...     site='S01',
@@ -363,80 +361,82 @@ class EDIAcc:
         """
         import matplotlib.pyplot as plt
         import matplotlib.ticker as mticker
-    
+
+        if components is None:
+            components = ["xy", "yx"]
         ds_site = self.get(site)
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=figsize)
-        
+
         comp_map = {
             "xy": ("Hx", "Hy"), "yx": ("Hy", "Hx"),
             "xx": ("Hx", "Hx"), "yy": ("Hy", "Hy")
         }
-        
+
         default_grid_props = {'which': 'both', 'linestyle': '--', 'linewidth': 0.5}
         if grid_props:
             default_grid_props.update(grid_props)
-            
+
         for comp in components:
             comp_lower = comp.lower()
             if comp_lower not in comp_map:
                 logger.warning(f"Component '{comp}' is not valid. Skipping.")
                 continue
-                
+
             output_ch, input_ch = comp_map[comp_lower]
-            
+
             # --- Resistivity Plot (Log-Log) ---
             rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
             rho_data.plot.line(
                 ax=axes[0], xscale="log", yscale="log",
                 label=f"$\\rho_{{{comp_lower}}}$", **plot_kwargs
             )
-            
+
             # --- Phase Plot (Semi-Log) ---
             phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
-                
+
             phi_data.plot.line(
                 ax=axes[1], xscale="log",
                 label=f"$\\phi_{{{comp_lower}}}$", **plot_kwargs
             )
-    
+
         # --- Aesthetics and Formatting ---
         axes[0].set_ylabel("Apparent Resistivity (Ω·m)")
         axes[0].set_xlabel("") # Remove x-label from top plot
-        
+
         axes[1].set_ylabel("Phase (degrees)")
         axes[1].set_xlabel("Frequency (Hz)")
-        
+
         # Grid formatting
         if show_grid:
             axes[0].grid(**default_grid_props)
             axes[1].grid(**default_grid_props)
-    
+
         # Use scientific notation for log axes
         axes[0].xaxis.set_major_formatter(mticker.LogFormatterSciNotation())
         axes[0].yaxis.set_major_formatter(mticker.LogFormatterSciNotation())
-    
+
         axes[0].legend()
         axes[1].legend()
         fig.suptitle(f"Site: {site}", fontsize=14)
         plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust for suptitle
-    
+
         if savefig:
             plt.savefig(savefig, dpi=300)
-            
+
         return fig, axes
 
 
-    def attrs(self) -> Dict[str, object]:
+    def attrs(self) -> dict[str, object]:
         """Returns the global attributes of the Dataset."""
         return dict(self._ds.attrs)
-    
+
     def band(
         self,
         fmin: float | None = None,
         fmax: float | None = None,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         ds = self._ds
         if "freq" not in ds.coords:
             return ds
@@ -452,7 +452,7 @@ class EDIAcc:
     def has_spectra(self) -> bool:
         return "spec_vals" in self._ds
 
-    def spectra(self) -> "xr.Dataset":
+    def spectra(self) -> xr.Dataset:
         keep = [k for k in self._ds.data_vars
                 if k.startswith("spec_")]
         return self._ds[keep] if keep else self._ds
@@ -461,7 +461,7 @@ class EDIAcc:
     def has_timeseries(self) -> bool:
         return "ts" in self._ds
 
-    def timeseries(self) -> "xr.Dataset":
+    def timeseries(self) -> xr.Dataset:
         keep = [k for k in ("ts", "time", "dt", "npts")]
         keep = [k for k in keep if k in self._ds]
         return self._ds[keep] if keep else self._ds
@@ -470,12 +470,12 @@ def _site_id_from_edi(ed: EDIFile) -> str:
     """Infer site ID with fallbacks."""
     return ed.station or "unknown_site"
 
-def _meta_from_edi(ed: EDIFile) -> Dict[str, object]:
+def _meta_from_edi(ed: EDIFile) -> dict[str, object]:
     """Extract metadata from an EDIFile object for a single site."""
     head = ed.get_section("head")
     p = ed.path
     software = ed.processingsoftware
-            
+
     return {
         "site": _site_id_from_edi(ed),
         "path": str(p) if isinstance(p, Path) else None,
@@ -483,7 +483,7 @@ def _meta_from_edi(ed: EDIFile) -> Dict[str, object]:
         "dataid": ed.station,
         "lat": getattr(head, "lat", None) if head else None,
         "lon": (
-            getattr(head, "long", None) 
+            getattr(head, "long", None)
             or getattr(head, "lon", None)
             ) if head else None,
         "elev": getattr(head, "elev", None) if head else None,
@@ -495,27 +495,27 @@ def _meta_from_edi(ed: EDIFile) -> Dict[str, object]:
     }
 
 def _get_tensor_or_zeros(
-    obj: Optional[object], attr: str, n_freq: int, dtype: np.dtype
+    obj: object | None, attr: str, n_freq: int, dtype: np.dtype
 ) -> np.ndarray:
     """Safely get a (n_freq, 2, 2) tensor array or return zeros."""
     val = getattr(obj, attr, None) if obj else None
     if val is None:
         return np.zeros((n_freq, 2, 2), dtype=dtype)
-    
+
     arr = np.asarray(val)
     if arr.ndim == 3 and arr.shape == (n_freq, 2, 2):
         return arr.astype(dtype, copy=False)
-        
+
     return np.zeros((n_freq, 2, 2), dtype=dtype)
 
 def _get_tipper_or_zeros(
-    obj: Optional[object], attr: str, n_freq: int, dtype: np.dtype
+    obj: object | None, attr: str, n_freq: int, dtype: np.dtype
 ) -> np.ndarray:
     """Safely get a (n_freq, 2) tipper array or return zeros."""
     val = getattr(obj, attr, None) if obj else None
     if val is None:
         return np.zeros((n_freq, 2), dtype=dtype)
-    
+
     arr = np.asarray(val)
     # Handle the standard (n_freq, 1, 2) shape
     if arr.ndim == 3 and arr.shape == (n_freq, 1, 2):
@@ -528,7 +528,7 @@ def _get_tipper_or_zeros(
 
 
 def _site_id(ed: EDIFile) -> str:
-    # preference: station -> HEAD.dataid 
+    # preference: station -> HEAD.dataid
     # -> Spectra.name -> path.stem -> "site"
     head = ed.get_section("head")
     spec = ed.get_section("spectra")
@@ -543,16 +543,16 @@ def _site_id(ed: EDIFile) -> str:
     return p.stem if isinstance(p, Path) else "site"
 
 
-def _meta(ed: EDIFile) -> Dict[str, object]:
+def _meta(ed: EDIFile) -> dict[str, object]:
     head = ed.get_section("head")
     info = ed.get_section("info")
     spec = ed.get_section("spectra")
-    
+
     p = getattr(ed, "path", None)
 
     def _get(obj, name, dv=None):
         return getattr(obj, name, dv) if obj else dv
-    
+
     dataid = getattr(head, "dataid", None) if head else None
     if dataid is None:
         dataid = getattr(
@@ -561,12 +561,12 @@ def _meta(ed: EDIFile) -> Dict[str, object]:
             p = getattr(ed, "path", None)
             dataid = p.stem if isinstance(
                 p, Path) else None
-            
+
     # --- robust software extraction ---
     software = None
     proc = getattr(info, "Processing", None)
     if proc is not None and hasattr(proc, "ProcessingSoftware"):
-        sw = getattr(proc, "ProcessingSoftware")
+        sw = proc.ProcessingSoftware
         # accept either an object with .name or a plain string
         software = getattr(sw, "name", sw)
 
@@ -589,7 +589,7 @@ def _meta(ed: EDIFile) -> Dict[str, object]:
 
 
 def _pad2d(
-    seqs: List[np.ndarray],
+    seqs: list[np.ndarray],
     *,
     pad: float = np.nan,
 ) -> np.ndarray:
@@ -601,7 +601,7 @@ def _pad2d(
             out[i, : a.size] = a
     return out
 
-def _spec_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
+def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
     spec = ed.get_section("spectra")
     if spec is None:
         return {}
@@ -654,7 +654,7 @@ def _spec_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
     spec_len = np.array([v.size for v in vlist], int)
     sidx = np.arange(spec_vals.shape[1], dtype=int)
 
-    out: Dict[str, xr.DataArray] = {
+    out: dict[str, xr.DataArray] = {
         "spec_vals": xr.DataArray(
             spec_vals, dims=("freq", "sidx"),
             coords={"freq": f, "sidx": sidx},
@@ -663,7 +663,7 @@ def _spec_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
             spec_len, dims=("freq",), coords={"freq": f}
         ),
     }
-    
+
     # Optional per-freq metadata (only if lengths match)
     def _ok_1d(a):
         try:
@@ -686,7 +686,7 @@ def _spec_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
     return out
 
 
-def _ts_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
+def _ts_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
     ts = ed.get_section("timeseries")
     if ts is None:
         return {}
@@ -714,7 +714,7 @@ def _ts_pack(ed: EDIFile) -> Dict[str, xr.DataArray]:
         if np.isfinite(d) and a.size:
             T[: a.size, j] = np.arange(a.size, float) * d
 
-    out: Dict[str, xr.DataArray] = {}
+    out: dict[str, xr.DataArray] = {}
     out["ts"] = xr.DataArray(
         mat,
         dims=("sample", "ch"),
@@ -771,11 +771,11 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     phi_err = _get_tensor_or_zeros(
         ed.Z, "phase_err", n_freq, dtype=float
     )
-    
+
 
     zrot_val = getattr(ed.Z, "rotation_angle", np.zeros(n_freq))
     zrot = (
-        np.asarray(zrot_val) if zrot_val.size == n_freq 
+        np.asarray(zrot_val) if zrot_val.size == n_freq
         else np.zeros(n_freq, dtype=np.float64)
         )
 
@@ -793,7 +793,7 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
             "phi": (("freq", "output_ch", "input_ch"), phi),
             "rho_err": (("freq", "output_ch", "input_ch"), rho_err),
             "phi_err": (("freq", "output_ch", "input_ch"), phi_err),
-            
+
             "zrot": (("freq",), zrot),
             "tip": (("freq", "tcomp"), tip),
             "tip_err": (("freq", "tcomp"), tip_err),
@@ -822,7 +822,7 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     except NameError:
         # _ts_pack not defined, skipping.
         pass
-        
+
     return ds
 
 def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
@@ -889,7 +889,7 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
         k = min(n, a.size)
         out[:k] = a[:k]
         return out
-    
+
     # --- helper: try to read Z property without crashing
     def _get1d(name: str, n: int) -> np.ndarray:
         try:
@@ -897,7 +897,7 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
         except Exception:
             v = None
         return _as1d(v, n)
-    
+
     # Optional scalar forms (ρ, φ), safe when Z is absent
     rho = np.stack(
         [
@@ -908,7 +908,7 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
         ],
         axis=1,
     ).reshape(f.size, 2, 2)
-    
+
     phi = np.stack(
         [
             _get1d("phase_xx", f.size),

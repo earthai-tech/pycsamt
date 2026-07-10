@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -54,21 +53,20 @@ HybridInverter2D(n_stations=20, fitted)
 """
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
 from .._base import BaseHybridInverter
+from ._pinn_ops import fit_2d_joint
 from ._sites_bridge import (
     SiteObs2D,
+    _interp_to_grid,
+    _make_common_grid,
     sites_to_obs_2d,
     sites_to_panel_2d,
-    _make_common_grid,
-    _interp_to_grid,
 )
-from ._pinn_ops import fit_2d_joint
 
 __all__ = ["HybridInverter2D"]
 
@@ -119,9 +117,9 @@ class HybridInverter2D(BaseHybridInverter):
     def __init__(
         self,
         sites: Any,
-        ai_inverter: Union[Any, str, Path],
+        ai_inverter: Any | str | Path,
         *,
-        n_layers: Optional[int] = None,
+        n_layers: int | None = None,
         depth_max: float = 2000.0,
         n_freqs: int = 32,
         mode: str = "te",
@@ -131,7 +129,7 @@ class HybridInverter2D(BaseHybridInverter):
         lr: float = 5e-3,
         comp_te: str = "xy",
         comp_tm: str = "yx",
-        device: Optional[str] = None,
+        device: str | None = None,
         recursive: bool = True,
         on_dup: str = "replace",
         verbose: int = 0,
@@ -166,7 +164,7 @@ class HybridInverter2D(BaseHybridInverter):
             else self._ai_inv.n_depth
         )
 
-        self._obs: List[SiteObs2D] = (
+        self._obs: list[SiteObs2D] = (
             sites_to_obs_2d(
                 sites,
                 comp_te=comp_te,
@@ -180,10 +178,10 @@ class HybridInverter2D(BaseHybridInverter):
             [o.freq for o in self._obs],
             n_freqs=n_freqs,
         )
-        self._stage1_log_rho: Optional[np.ndarray] = (
+        self._stage1_log_rho: np.ndarray | None = (
             None
         )
-        self._result: Optional[Dict] = None
+        self._result: dict | None = None
 
     # ── fit ──
 
@@ -192,7 +190,7 @@ class HybridInverter2D(BaseHybridInverter):
         *,
         verbose: bool = True,
         log_every: int = 50,
-    ) -> "HybridInverter2D":
+    ) -> HybridInverter2D:
         """
         Run both inversion stages.
 
@@ -355,6 +353,7 @@ class HybridInverter2D(BaseHybridInverter):
         """
         self._check_fitted()
         import pandas as pd
+
         from pycsamt.forward.em1d import MT1DForward
         from pycsamt.forward.synthetic import LayeredModel
 
@@ -420,7 +419,7 @@ class HybridInverter2D(BaseHybridInverter):
     # ── read-only properties ──
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         """Station names in profile order."""
         return [o.name for o in self._obs]
 
@@ -522,7 +521,7 @@ class HybridInverter2D(BaseHybridInverter):
 
     def _build_obs_arrays(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         S = len(self._obs)
         F = len(self._freqs_grid)
         lr_obs = np.full((S, F), np.nan)

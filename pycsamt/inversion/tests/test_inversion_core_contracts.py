@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
@@ -6,6 +5,7 @@ import zipfile
 from types import SimpleNamespace
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +13,13 @@ import pytest
 
 from pycsamt.inversion.base import BaseInversionBackend
 from pycsamt.inversion.config import InversionConfig
-from pycsamt.inversion.export import to_archive, to_csv, to_geojson, to_npz, to_vtk
+from pycsamt.inversion.export import (
+    to_archive,
+    to_csv,
+    to_geojson,
+    to_npz,
+    to_vtk,
+)
 from pycsamt.inversion.mesh import (
     InversionMesh,
     build_1d_tensor_mesh,
@@ -21,7 +27,11 @@ from pycsamt.inversion.mesh import (
     depth_widths,
 )
 from pycsamt.inversion.model import StartingModel
-from pycsamt.inversion.objective import ErrorModel, component_errors, weighted_rms
+from pycsamt.inversion.objective import (
+    ErrorModel,
+    component_errors,
+    weighted_rms,
+)
 from pycsamt.inversion.plot import plot_model, plot_rms
 from pycsamt.inversion.regularization import (
     Regularization,

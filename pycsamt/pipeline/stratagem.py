@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -101,7 +100,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from ._pipeline import Pipeline, PipelineResult
 from ._steps import Step
@@ -142,15 +141,15 @@ class StratagemPreset:
 
     name: str
     description: str
-    survey_defaults: Dict = field(default_factory=dict)
-    steps: List[Tuple[str, Dict]] = field(default_factory=list)
+    survey_defaults: dict = field(default_factory=dict)
+    steps: list[tuple[str, dict]] = field(default_factory=list)
 
     def __repr__(self) -> str:
         step_names = " → ".join(n for n, _ in self.steps)
         return f"StratagemPreset({self.name!r}  [{step_names}])"
 
 
-STRATAGEM_PRESETS: Dict[str, StratagemPreset] = {
+STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
 
     "basic": StratagemPreset(
         name="basic",
@@ -226,7 +225,7 @@ def get_stratagem_preset(name: str) -> StratagemPreset:
     return STRATAGEM_PRESETS[name]
 
 
-def list_stratagem_presets() -> List[StratagemPreset]:
+def list_stratagem_presets() -> list[StratagemPreset]:
     """Return all :class:`StratagemPreset` objects."""
     return list(STRATAGEM_PRESETS.values())
 
@@ -269,7 +268,7 @@ def _coerce_to_sites(sites: Any) -> Any:
 
 def _inject_coordinates(
     sites: Any,
-    coord_file: "Union[str, Path]",
+    coord_file: str | Path,
     epsg: int,
     utm_zone: str,
     order: str,
@@ -283,9 +282,14 @@ def _inject_coordinates(
     """
     import warnings  # noqa: PLC0415
 
-    from ..emtools._core import _iter_items, ensure_sites  # noqa: PLC0415
-    from ..stratagem.gis_correct import CoordinateInjector  # noqa: PLC0415
+    from ..emtools._core import (  # noqa: PLC0415
+        _iter_items,
+        ensure_sites,
+    )
     from ..exceptions import ValidationError  # noqa: PLC0415
+    from ..stratagem.gis_correct import (
+        CoordinateInjector,  # noqa: PLC0415
+    )
 
     edis = [getattr(ed, "edi", ed) for ed in _iter_items(sites)]
     try:
@@ -305,11 +309,18 @@ def _inject_coordinates(
         return sites
 
 
-def _apply_hardware_mask(sites: Any, raw_dir: "Union[str, Path]") -> Any:
+def _apply_hardware_mask(sites: Any, raw_dir: str | Path) -> Any:
     """Apply hardware SNR mask and return the updated Sites."""
-    from ..emtools._core import _iter_items, ensure_sites  # noqa: PLC0415
-    from ..stratagem.io import StratagemRawReader  # noqa: PLC0415
-    from ..stratagem.qc import FrequencyFilter  # noqa: PLC0415
+    from ..emtools._core import (  # noqa: PLC0415
+        _iter_items,
+        ensure_sites,
+    )
+    from ..stratagem.io import (
+        StratagemRawReader,  # noqa: PLC0415
+    )
+    from ..stratagem.qc import (
+        FrequencyFilter,  # noqa: PLC0415
+    )
 
     rdr = StratagemRawReader(raw_dir).fit()
     edis = [getattr(ed, "edi", ed) for ed in _iter_items(sites)]
@@ -323,7 +334,7 @@ def _rename_processed(
     rename_dir: Path,
     basename: str,
     overwrite: bool = False,
-) -> List[Path]:
+) -> list[Path]:
     """Rename EDI files in *processed_dir* to *rename_dir* with *basename*."""
     from ..stratagem.rename import EDIRenamer  # noqa: PLC0415
 
@@ -426,15 +437,15 @@ class StratagemPipeline(Pipeline):
 
     def __init__(
         self,
-        steps: "Union[List[Tuple[str, Step]], List[Step]]",
+        steps: list[tuple[str, Step]] | list[Step],
         *,
-        coord_file: "Union[str, Path, None]" = None,
-        raw_dir: "Union[str, Path, None]" = None,
+        coord_file: str | Path | None = None,
+        raw_dir: str | Path | None = None,
         epsg: int = 32649,
         utm_zone: str = "49N",
         order: str = "auto",
-        rename_basename: Optional[str] = None,
-        rename_dir: "Union[str, Path, None]" = None,
+        rename_basename: str | None = None,
+        rename_dir: str | Path | None = None,
         name: str = "stratagem_pipeline",
     ) -> None:
         super().__init__(steps, name=name)
@@ -456,8 +467,8 @@ class StratagemPipeline(Pipeline):
         save_edis: bool = True,
         save_report: bool = True,
         api: Any = None,
-        rename_basename: Optional[str] = None,
-        rename_dir: "Union[str, Path, None]" = None,
+        rename_basename: str | None = None,
+        rename_dir: str | Path | None = None,
         overwrite: bool = False,
     ) -> PipelineResult:
         """Run the pipeline on *sites*.
@@ -514,7 +525,9 @@ class StratagemPipeline(Pipeline):
         # ── 5. optional rename ────────────────────────────────────────
         _basename = rename_basename or self.rename_basename
         if _basename and result.outdir is not None:
-            from ..api.pipe import PYCSAMT_PIPE  # noqa: PLC0415
+            from ..api.pipe import (
+                PYCSAMT_PIPE,  # noqa: PLC0415
+            )
             cfg = api or PYCSAMT_PIPE
             processed_sub = getattr(cfg, "processed_subdir", "processed")
             processed_dir = result.outdir / processed_sub
@@ -538,15 +551,15 @@ class StratagemPipeline(Pipeline):
         cls,
         name: str = "stratagem_mt",
         *,
-        coord_file: "Union[str, Path, None]" = None,
-        raw_dir: "Union[str, Path, None]" = None,
+        coord_file: str | Path | None = None,
+        raw_dir: str | Path | None = None,
         epsg: int = 32649,
         utm_zone: str = "49N",
         order: str = "auto",
-        rename_basename: Optional[str] = None,
-        rename_dir: "Union[str, Path, None]" = None,
-        pipeline_name: Optional[str] = None,
-    ) -> "StratagemPipeline":
+        rename_basename: str | None = None,
+        rename_dir: str | Path | None = None,
+        pipeline_name: str | None = None,
+    ) -> StratagemPipeline:
         """Build a :class:`StratagemPipeline` from a named emtools preset.
 
         Parameters
@@ -598,16 +611,16 @@ class StratagemPipeline(Pipeline):
 
 def run_stratagem_preset(
     preset: str,
-    edi_dir: "Union[str, Path]",
-    coord_file: "Union[str, Path]",
-    outdir: "Union[str, Path]",
+    edi_dir: str | Path,
+    coord_file: str | Path,
+    outdir: str | Path,
     *,
-    raw_dir: "Union[str, Path, None]" = None,
+    raw_dir: str | Path | None = None,
     epsg: int = 32649,
     utm_zone: str = "49N",
     rename_basename: str = "S",
-    rename_dir: "Union[str, Path, None]" = None,
-    step_overrides: "Optional[Dict[str, Dict]]" = None,
+    rename_dir: str | Path | None = None,
+    step_overrides: dict[str, dict] | None = None,
     overwrite: bool = False,
     verbose: int = 0,
 ) -> Any:
@@ -663,7 +676,9 @@ def run_stratagem_preset(
             rename_basename="T2.",
         )
     """
-    from ..stratagem.survey import StratagemSurvey  # noqa: PLC0415
+    from ..stratagem.survey import (
+        StratagemSurvey,  # noqa: PLC0415
+    )
 
     preset_cfg = get_stratagem_preset(preset)
     defaults = preset_cfg.survey_defaults.copy()

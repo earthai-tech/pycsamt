@@ -46,9 +46,9 @@ Snapshot a fitted inverter for reproducibility::
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from ...models.config_io import (
     ConfigParameter,
@@ -329,7 +329,7 @@ class InversionConfig:
     arch:           str            = "resnet"
     n_layers:       int            = 5
     solver:         str            = "mt1d"
-    device:         Optional[str]  = None
+    device:         str | None  = None
     include_phase:  bool           = True
     log_thickness:  bool           = True
     augment_noise:  float          = 0.02
@@ -342,11 +342,11 @@ class InversionConfig:
     patience:      int             = 20
     min_delta:     float           = 1e-5
     val_frac:      float           = 0.1
-    grad_clip:     Optional[float] = 1.0
-    seed:          Optional[int]   = None
+    grad_clip:     float | None = 1.0
+    seed:          int | None   = None
 
     # ── Checkpointing ────────────────────────────────────────────────────────
-    checkpoint_dir:  Optional[str] = "checkpoints"
+    checkpoint_dir:  str | None = "checkpoints"
     checkpoint_name: str           = "em_inverter"
     save_best:       bool          = True
 
@@ -412,7 +412,7 @@ class InversionConfig:
     # Assemblers
     # ─────────────────────────────────────────────────────────────────────────
 
-    def to_inverter(self) -> "EMInverter1D":
+    def to_inverter(self) -> EMInverter1D:
         """Instantiate a :class:`~pycsamt.ai.inversion.inv1d.EMInverter1D`.
 
         Returns an untrained inverter configured according to the
@@ -441,7 +441,7 @@ class InversionConfig:
             augment_noise=self.augment_noise,
         )
 
-    def to_fit_kwargs(self) -> Dict[str, Any]:
+    def to_fit_kwargs(self) -> dict[str, Any]:
         """Assemble keyword arguments for :meth:`EMInverter1D.fit`.
 
         The returned dict is ready to be unpacked directly::
@@ -473,7 +473,7 @@ class InversionConfig:
             verbose=self.verbose,
         )
 
-    def checkpoint_path(self) -> Optional[Path]:
+    def checkpoint_path(self) -> Path | None:
         """Return the full checkpoint file path, or ``None`` if disabled.
 
         Returns
@@ -491,7 +491,7 @@ class InversionConfig:
     # ─────────────────────────────────────────────────────────────────────────
 
     @classmethod
-    def from_inverter(cls, inv: "EMInverter1D") -> "InversionConfig":
+    def from_inverter(cls, inv: EMInverter1D) -> InversionConfig:
         """Snapshot a fitted (or unfitted) inverter's architecture settings.
 
         Creates an ``InversionConfig`` whose architecture and feature
@@ -529,9 +529,9 @@ class InversionConfig:
 
     def to_template(
         self,
-        path: Union[str, Path] = "inversion_config.py",
+        path: str | Path = "inversion_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Write this configuration to an annotated source-of-truth file.
 
@@ -558,9 +558,9 @@ class InversionConfig:
     @classmethod
     def write_template(
         cls,
-        path: Union[str, Path] = "inversion_config.py",
+        path: str | Path = "inversion_config.py",
         *,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ) -> Path:
         """Generate a documented source-of-truth configuration file.
 
@@ -591,10 +591,10 @@ class InversionConfig:
     @classmethod
     def from_file(
         cls,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         strict: bool = True,
-    ) -> "InversionConfig":
+    ) -> InversionConfig:
         """Load a configuration from a source-of-truth file.
 
         Parameters

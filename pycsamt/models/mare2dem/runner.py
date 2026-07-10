@@ -78,7 +78,7 @@ class Mare2DEMRunner(Mare2DEMBase):
         extra_args: Sequence[str] | None = None,
         timeout: int | None = None,
         load_result: bool = True,
-    ) -> "InversionResult | None":
+    ) -> InversionResult | None:
         """Run a MARE2DEM inversion subprocess.
 
         MARE2DEM receives one positional argument: the stem of the

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for ProfilePanel (Phase 3)."""
@@ -9,8 +8,12 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from pycsamt.app.desktop.panels.profile_panel import ProfilePanel
-from pycsamt.app.desktop.widgets.freq_selector import FreqSelector
+from pycsamt.app.desktop.panels.profile_panel import (
+    ProfilePanel,
+)
+from pycsamt.app.desktop.widgets.freq_selector import (
+    FreqSelector,
+)
 
 
 @pytest.fixture
@@ -79,7 +82,9 @@ def test_phase_tensor_strip_canvas_exists(panel):
 # ── PlotController linkage ────────────────────────────────────────────────
 
 def test_plot_controller_created(panel):
-    from pycsamt.app.desktop.controllers.plot_controller import PlotController
+    from pycsamt.app.desktop.controllers.plot_controller import (
+        PlotController,
+    )
     assert isinstance(panel._ctrl, PlotController)
 
 

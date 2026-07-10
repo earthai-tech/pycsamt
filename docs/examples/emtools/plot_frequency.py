@@ -63,11 +63,8 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
 from _datasets import load_survey
 
-from pycsamt.emtools._core import _get_z_block, _iter_items
 from pycsamt.emtools import (
     align_grid,
     decimate_step,
@@ -87,6 +84,7 @@ from pycsamt.emtools import (
     select_band,
     smooth_mavg,
 )
+from pycsamt.emtools._core import _get_z_block, _iter_items
 
 logging.disable(logging.ERROR)
 

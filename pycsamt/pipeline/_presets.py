@@ -29,10 +29,8 @@ Available presets
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 from ._steps import Step
-
 
 # ---------------------------------------------------------------------------
 # Preset dataclass
@@ -55,7 +53,7 @@ class Preset:
 
     name: str
     description: str
-    steps: List[Tuple[str, Step]] = field(default_factory=list)
+    steps: list[tuple[str, Step]] = field(default_factory=list)
 
     def __repr__(self) -> str:
         codes = " → ".join(s.spec.code for _, s in self.steps)

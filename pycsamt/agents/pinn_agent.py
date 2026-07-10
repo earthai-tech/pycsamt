@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -579,6 +578,7 @@ def _plot_pinn_section(
     matplotlib.figure.Figure or None
     """
     import matplotlib.pyplot as plt
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import (
         PYCSAMT_STATION_RENDERING,

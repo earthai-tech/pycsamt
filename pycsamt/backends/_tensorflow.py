@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,12 +18,11 @@ needed.  The stored model handles this transparently.
 """
 from __future__ import annotations
 
-import copy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from ._base import NeuralBackend, BackendSpec
+from ._base import BackendSpec, NeuralBackend
 from ._detect import probe_backend
 
 __all__ = ["TensorFlowBackend"]
@@ -41,7 +39,7 @@ class TensorFlowBackend(NeuralBackend):
 
     # ─── device ───────────────────────────────────────────────────────────
 
-    def resolve_device(self, device: Optional[str] = None) -> str:
+    def resolve_device(self, device: str | None = None) -> str:
         if device is not None:
             return device
         try:
@@ -86,7 +84,7 @@ class TensorFlowBackend(NeuralBackend):
         Internally reshaped to ``(n_features, 1)`` for Conv1D.
         """
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
 
         n_features = spec["n_features"]
         n_out = spec["n_out"]
@@ -119,7 +117,7 @@ class TensorFlowBackend(NeuralBackend):
         projection shortcuts.
         """
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
 
         n_features = spec["n_features"]
         n_out = spec["n_out"]
@@ -167,7 +165,7 @@ class TensorFlowBackend(NeuralBackend):
         FCN1D — Moghadas (2020) style — fully convolutional.
         """
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
 
         n_features = spec["n_features"]
         n_out = spec["n_out"]
@@ -197,12 +195,12 @@ class TensorFlowBackend(NeuralBackend):
         Input: ``(n_freqs, n_stations, n_in)`` — channels-last 2D.
         """
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
 
         n_in = spec.get("n_in", 4)
         n_out = spec.get("n_out", 1)
         channels = spec.get("channels", (32, 64, 128, 256, 512))
-        dropout = spec.get("dropout", 0.2)
+        spec.get("dropout", 0.2)
 
         def _conv2_block(x, ch, d):
             x = layers.Conv2D(ch, 3, padding="same", activation="relu")(x)
@@ -247,7 +245,7 @@ class TensorFlowBackend(NeuralBackend):
         Accepts a list of input tensors; one per modality.
         """
         import tensorflow as tf
-        from tensorflow.keras import layers, Model
+        from tensorflow.keras import Model, layers
 
         n_features_list = spec["n_features_list"]
         n_out = spec["n_out"]
@@ -349,12 +347,12 @@ class TensorFlowBackend(NeuralBackend):
 
     # ─── serialisation ────────────────────────────────────────────────────
 
-    def get_weights(self, model) -> Dict[str, np.ndarray]:
+    def get_weights(self, model) -> dict[str, np.ndarray]:
         # Store indexed weights to preserve order for set_weights
         weights = model.get_weights()
         return {f"layer_{i:04d}": w for i, w in enumerate(weights)}
 
-    def set_weights(self, model, weights: Dict[str, np.ndarray]) -> None:
+    def set_weights(self, model, weights: dict[str, np.ndarray]) -> None:
         ordered = [weights[k] for k in sorted(weights)]
         model.set_weights(ordered)
 

@@ -123,6 +123,12 @@ Choose periods and period bands deliberately.
    print("short band:", short_band)
    print("long band:", long_band)
 
+.. code-block:: text
+
+   periods: [25.0, 650.0, 2000.0, 17000.0]
+   short band: (25.0, 200.0)
+   long band: (2000.0, 17000.0)
+
 Use the same period choices across maps, roses, and sections when you
 want the figures to support one interpretation.
 
@@ -135,6 +141,8 @@ band.
 
 .. code-block:: python
    :linenos:
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import plot_tipper_hodograms
 
@@ -149,6 +157,11 @@ band.
        unit_circle=True,
        normalize=False,
    )
+   fig.savefig("tf_tipper_hodograms.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-03.png
+   :width: 100%
 
 Read a hodogram before reading arrows.  It shows whether a station has a
 smooth, coherent complex response or a scattered cloud.  A large loop
@@ -168,13 +181,20 @@ is magnitude, and color is log-period.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_tipper_polar
 
-   plot_tipper_polar(
+   ax = plot_tipper_polar(
        sites,
        station="kap151",
        component="real",
    )
+   ax.figure.savefig("tf_tipper_polar.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-04.png
+   :width: 100%
 
 Valid components are ``"real"``, ``"imag"``, and ``"abs"``.  Use
 ``"real"`` for a Parkinson-style conductor-direction reading, use
@@ -191,9 +211,11 @@ for each station.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_map
 
-   plot_induction_map(
+   ax = plot_induction_map(
        sites,
        period=2000.0,
        convention="park",
@@ -203,6 +225,11 @@ for each station.
        station_labels=True,
        reference_arrow=0.1,
    )
+   ax.figure.savefig("tf_induction_map.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-05.png
+   :width: 100%
 
 The station coordinates come from easting/northing, x/y, or lon/lat when
 available.  If none are present, pyCSAMT falls back to an index along a
@@ -223,9 +250,11 @@ on one profile axis.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_arrows
 
-   plot_induction_arrows(
+   ax = plot_induction_arrows(
        sites,
        periods=[25.0, 650.0, 2000.0, 17000.0],
        convention="park",
@@ -233,6 +262,11 @@ on one profile axis.
        normalize=True,
        strike_ticks=False,
    )
+   ax.figure.savefig("tf_induction_arrows.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-06.png
+   :width: 100%
 
 Use this for a fast period comparison, not as the final publication
 figure.  Many periods on one axis can become visually crowded.  If the
@@ -252,6 +286,8 @@ components in one 2-by-2 figure.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_convention
 
    plot_induction_convention(
@@ -259,6 +295,11 @@ components in one 2-by-2 figure.
        period=650.0,
        station_labels=False,
    )
+   plt.gcf().savefig("tf_induction_convention.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-07.png
+   :width: 100%
 
 Use this plot when communicating with collaborators or comparing to a
 paper.  It makes sign and component choices visible instead of leaving
@@ -273,15 +314,22 @@ over stations and period.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_section
 
-   plot_induction_section(
+   ax = plot_induction_section(
        sites,
        component="abs",
        n_periods=30,
        cmap="RdBu_r",
        section="pseudosection",
    )
+   ax.figure.savefig("tf_induction_section.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-08.png
+   :width: 100%
 
 Use ``component="abs"`` for anomaly strength, ``"real"`` for in-phase
 strength, and ``"imag"`` for quadrature strength.  A section is the best
@@ -297,23 +345,42 @@ selected periods.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_rose
 
-   plot_induction_rose(
+   ax = plot_induction_rose(
        sites,
        component="real",
        pband=(25.0, 200.0),
        nbins=36,
        title="Short-period induction azimuths",
    )
+   ax.figure.savefig("tf_induction_rose_short.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
-   plot_induction_rose(
+   ax = plot_induction_rose(
        sites,
        component="real",
        pband=(2000.0, 17000.0),
        nbins=36,
        title="Long-period induction azimuths",
    )
+   ax.figure.savefig("tf_induction_rose_long.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
+
+.. grid:: 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-09-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-09-02.png
+         :width: 100%
 
 Compare short and long period roses before claiming a regional conductor.
 A short-period rose may be scattered because shallow heterogeneity points
@@ -330,6 +397,8 @@ tipper, or an explicit ``tipper_data`` override.
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import plot_induction_multiperiod_map
 
    fig, axes = plot_induction_multiperiod_map(
@@ -342,6 +411,11 @@ tipper, or an explicit ``tipper_data`` override.
        station_labels=False,
        title="Induction vectors across period",
    )
+   fig.savefig("tf_induction_multiperiod_map.png", dpi=200, bbox_inches="tight")
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-10.png
+   :width: 100%
 
 When ``background`` is not supplied, the function draws a synthetic
 terrain-like background.  That background is a visual placeholder, not a
@@ -355,6 +429,7 @@ pass ``tipper_data`` explicitly as a dictionary keyed by period:
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
    import numpy as np
 
    # Each value is an array with shape (n_stations, 2):
@@ -380,6 +455,15 @@ pass ``tipper_data`` explicitly as a dictionary keyed by period:
        arrow_scale=6.0,
        show_background_cbar=False,
    )
+   fig.savefig(
+       "tf_induction_multiperiod_map_synthetic.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-11.png
+   :width: 100%
 
 The station order in each ``tipper_data`` array must match the station
 order returned by ``ensure_sites`` for the input survey.
@@ -410,16 +494,33 @@ Use these functions when your workflow is still at the spectra stage:
 .. code-block:: python
    :linenos:
 
+   import matplotlib.pyplot as plt
+   import numpy as np
+
    from pycsamt.emtools import (
        plot_induction_map_from_spectra,
        plot_induction_rose_from_spectra,
        plot_tipper_polar_from_spectra,
    )
+   from pycsamt.z.tipper import Tipper
+
+   class SpectraWithTipper:
+       def __init__(self, name, tx_scale, ty_scale):
+           self.name = name
+           self.freq = np.array([0.1, 0.01, 0.001])
+           periods = 1.0 / self.freq
+           tx = tx_scale * (0.08 + 0.02j) * np.sqrt(periods / periods[0])
+           ty = ty_scale * (0.04 + 0.01j) * np.sqrt(periods / periods[0])
+           self._tipper = np.column_stack([tx, ty])
+
+       def to_Z(self, estimate_error=False):
+           tipper = Tipper(tipper_array=self._tipper, freq=self.freq)
+           return None, tipper
 
    spectra_by_station = {
-       "S001": spectra_001,
-       "S002": spectra_002,
-       "S003": spectra_003,
+       "S001": SpectraWithTipper("S001", 1.0, 0.6),
+       "S002": SpectraWithTipper("S002", 1.4, 0.9),
+       "S003": SpectraWithTipper("S003", 0.8, 1.3),
    }
 
    coords = {
@@ -433,17 +534,41 @@ Use these functions when your workflow is still at the spectra stage:
        coords=coords,
        period=100.0,
    )
+   plt.gcf().savefig("tf_spectra_induction_map.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
    plot_tipper_polar_from_spectra(
-       spectra_by_station["S001"],
+       {"S001": spectra_by_station["S001"]},
        component="real",
    )
+   plt.gcf().savefig("tf_spectra_tipper_polar.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
    plot_induction_rose_from_spectra(
        spectra_by_station,
        component="real",
        pband=(10.0, 1000.0),
    )
+   plt.gcf().savefig("tf_spectra_induction_rose.png", dpi=200, bbox_inches="tight")
+   plt.close()
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-12-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-12-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-12-03.png
+         :width: 100%
 
 For spectra maps, ``coords`` are plot coordinates ``(x, y)``.  A bare
 ``Spectra`` object does not carry reliable map geometry.
@@ -458,6 +583,8 @@ period behavior, and the sign convention visible:
    :linenos:
 
    from pathlib import Path
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import (
        ensure_sites,
@@ -482,15 +609,18 @@ period behavior, and the sign convention visible:
        sites,
        station=strongest_station,
        bands=[(25.0, 200.0), (200.0, 2000.0), (2000.0, 17000.0)],
-   )
+   ).savefig("tf_recommended_hodograms.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
-   plot_tipper_polar(
+   ax = plot_tipper_polar(
        sites,
        station=strongest_station,
        component="real",
    )
+   ax.figure.savefig("tf_recommended_polar.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
-   plot_induction_map(
+   ax = plot_induction_map(
        sites,
        period=2000.0,
        convention="park",
@@ -498,34 +628,44 @@ period behavior, and the sign convention visible:
        show_imag=True,
        scale=4.0,
    )
+   ax.figure.savefig("tf_recommended_map.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
    plot_induction_convention(
        sites,
        period=650.0,
        station_labels=False,
    )
+   plt.gcf().savefig("tf_recommended_convention.png", dpi=200, bbox_inches="tight")
+   plt.close()
 
-   plot_induction_rose(
+   ax = plot_induction_rose(
        sites,
        component="real",
        pband=(25.0, 200.0),
        title="Short-period induction azimuths",
    )
+   ax.figure.savefig("tf_recommended_rose_short.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
-   plot_induction_rose(
+   ax = plot_induction_rose(
        sites,
        component="real",
        pband=(2000.0, 17000.0),
        title="Long-period induction azimuths",
    )
+   ax.figure.savefig("tf_recommended_rose_long.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
-   plot_induction_section(
+   ax = plot_induction_section(
        sites,
        component="abs",
        n_periods=30,
    )
+   ax.figure.savefig("tf_recommended_section.png", dpi=200, bbox_inches="tight")
+   plt.close(ax.figure)
 
-   plot_induction_multiperiod_map(
+   fig, axes = plot_induction_multiperiod_map(
        sites,
        periods=periods,
        convention="park",
@@ -533,6 +673,55 @@ period behavior, and the sign convention visible:
        show_background_cbar=False,
        station_labels=False,
    )
+   fig.savefig(
+       "tf_recommended_multiperiod_map.png",
+       dpi=200,
+       bbox_inches="tight",
+   )
+   plt.close(fig)
+
+.. grid:: 3
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-02.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-03.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-04.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-05.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-06.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-07.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-08.png
+         :width: 100%
 
 This sequence answers the practical questions in order: which station is
 strong, whether its response is coherent, where the profile responds,

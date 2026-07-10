@@ -18,7 +18,11 @@ surveys of the synthetic section.
 # repeat surveys over a wetting aquifer.
 
 from _interp_data import demo_model
-from pycsamt.interp import TimeLapseEM, assert_compatible_grids
+
+from pycsamt.interp import (
+    TimeLapseEM,
+    assert_compatible_grids,
+)
 
 # Use the difference section (1st figure) as the card thumbnail.
 # sphinx_gallery_thumbnail_number = 1
@@ -40,7 +44,10 @@ print("surveys:", tl.labels)
 # coherent negative anomaly (resistivity dropping) traces where water has
 # been added since the baseline.
 
-from pycsamt.interp.plot import PlotTimeLapseSection, PlotMultiTimeLapseGrid
+from pycsamt.interp.plot import (
+    PlotMultiTimeLapseGrid,
+    PlotTimeLapseSection,
+)
 
 PlotTimeLapseSection(tl, quantity="rho").plot()
 

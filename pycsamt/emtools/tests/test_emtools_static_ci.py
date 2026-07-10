@@ -5,9 +5,10 @@ Tests for:
 """
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
@@ -18,23 +19,13 @@ from pycsamt.api import (
     configure_api_view,
     reset_api_view,
 )
-from pycsamt.emtools.remove_noise import (
-    apply_emap_filter,
-    confidence_gated_emap_filter,
-    correct_static_shift,
-    drop_freqs_manual,
-    emi_mitigation_report,
-    EMAPFilterResult,
-    emap_filter_report,
-    fixed_length_moving_average,
-    plot_emap_filter_profile,
-    plot_emap_filter_psection,
-    trimmed_moving_average,
+from pycsamt.emtools.dimensionality import (
+    pre2d_inversion_assessment,
 )
 from pycsamt.emtools.frequency import (
+    FrequencyEditResult,
     drop_low_confidence_frequencies,
     edit_frequencies_by_confidence,
-    FrequencyEditResult,
     frequency_edit_decision_table,
     frequency_edit_report,
     mask_low_confidence_frequencies,
@@ -52,7 +43,19 @@ from pycsamt.emtools.qc import (
     plot_station_confidence_spectrum,
     station_confidence_table,
 )
-from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+from pycsamt.emtools.remove_noise import (
+    EMAPFilterResult,
+    apply_emap_filter,
+    confidence_gated_emap_filter,
+    correct_static_shift,
+    drop_freqs_manual,
+    emap_filter_report,
+    emi_mitigation_report,
+    fixed_length_moving_average,
+    plot_emap_filter_profile,
+    plot_emap_filter_psection,
+    trimmed_moving_average,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared fake-site infrastructure
@@ -188,6 +191,7 @@ def test_emi_mitigation_report_records_remote_reference_and_harmonics():
 
 def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
     import pandas as pd
+
     from pycsamt.emtools import dimensionality as dim_mod
 
     site = _site("S0")
@@ -611,7 +615,9 @@ class TestEMAPSpatialFilters:
 class TestHanningWeights:
 
     def _w(self, dx, w_H):
-        from pycsamt.emtools.remove_noise import _hanning_weights
+        from pycsamt.emtools.remove_noise import (
+            _hanning_weights,
+        )
         return _hanning_weights(np.asarray(dx, dtype=float), w_H)
 
     def test_centre_is_max(self):
@@ -804,7 +810,7 @@ class TestPlotConfidenceProfile:
         sites = self._sites_mixed()
         ax = plot_confidence_profile(sites)
         for coll in ax.collections:
-            for x, y in coll.get_offsets():
+            for _x, y in coll.get_offsets():
                 assert 0.0 <= y <= 1.0
         plt.close("all")
 
@@ -952,7 +958,10 @@ class TestConfidenceFrequencyEditing:
         return [_FakeSite("S_edit", z, fr, east=0.0, north=0.0)]
 
     def _first_z_block(self, sites):
-        from pycsamt.emtools._core import _get_z_block, _iter_items
+        from pycsamt.emtools._core import (
+            _get_z_block,
+            _iter_items,
+        )
 
         ed = next(_iter_items(sites))
         return _get_z_block(ed)

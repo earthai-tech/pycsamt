@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """pycsamt.seg.config
 
 A tiny factory that builds the :class:`SEG` facade class by
@@ -17,11 +16,11 @@ them.
 """
 from __future__ import annotations
 
+import inspect
+from collections.abc import Iterable
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Iterable, List, Tuple, Type
-import inspect
 
 __all__ = ["SEG", "SEGConfig", "discover_mixins"]
 
@@ -85,7 +84,7 @@ class _NoOp:  # pragma: no cover
 
 
 
-def _import_first(module: str, names: Iterable[str]) -> Type:
+def _import_first(module: str, names: Iterable[str]) -> type:
     """Try to import the first available class symbol.
 
     Parameters
@@ -112,7 +111,7 @@ def _import_first(module: str, names: Iterable[str]) -> Type:
             return obj  # type: ignore[return-value]
     return _NoOp
 
-def discover_mixins() -> Tuple[Type, ...]:
+def discover_mixins() -> tuple[type, ...]:
     """Discover available component mixins.
 
     The order here defines the MRO precedence. Earlier
@@ -126,12 +125,12 @@ def discover_mixins() -> Tuple[Type, ...]:
         The mixin types to be used when building ``SEG``.
     """
 
-    mixins: List[Type] = []
+    mixins: list[type] = []
     for mod, names in _CANDIDATES.items():
         mixins.append(_import_first(mod, names))
     # Remove duplicates while preserving order.
     seen: set[type] = set()
-    uniq: List[Type] = []
+    uniq: list[type] = []
     for m in mixins:
         if m not in seen:
             uniq.append(m)
@@ -147,7 +146,7 @@ class _Facade:
     """
 
     __config__: SEGConfig = SEGConfig()
-    __mixins__: Tuple[Type, ...] = ()
+    __mixins__: tuple[type, ...] = ()
 
     @classmethod
     def _delegate_cls(cls, name: str):
@@ -193,7 +192,7 @@ class _Facade:
             raise NotImplementedError("No loads available")
         return meth(text, **kw)
 
-    
+
     def _delegate_self(self, name: str):
         """Find the first instance method implementation.
 
@@ -235,7 +234,7 @@ class _Facade:
             raise NotImplementedError("No dumps available")
         return meth(self, **kw)
 
-    
+
     def asdict(self) -> dict:
         """Merge ``asdict`` from mixins if present.
 
@@ -260,7 +259,7 @@ class _Facade:
         return merged or dict(vars(self))
 
     @classmethod
-    def describe_mixins(cls) -> Tuple[str, ...]:
+    def describe_mixins(cls) -> tuple[str, ...]:
         """Tuple of mixin class names in the MRO order."""
 
         return tuple(c.__name__ for c in cls.__mixins__)

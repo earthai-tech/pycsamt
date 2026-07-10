@@ -6,17 +6,16 @@ import pytest
 
 from pycsamt.seg.spectra import (
     Spectra,
-    SpectraSECT,
     SpectraIO,
+    SpectraSECT,
     _SpectraBlock,
 )
 from pycsamt.seg.time_series import (
+    TSIO,
     TimeSeries,
     TSect,
-    TSIO,
     _TSBlock,
 )
-
 
 # ----------------------------- helpers
 

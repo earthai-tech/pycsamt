@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import numpy as np
 
-from pycsamt.seg.cbase import CoreParser, CBBase
+from pycsamt.seg.cbase import CBBase, CoreParser
 from pycsamt.seg.edi import EDIFile
 
 
 def _mk_edi(tmp: Path, station: str, nf: int = 2) -> Path:
     fvals = np.geomspace(1.0, 10.0, nf)
     fstr = "  " + "  ".join(f"{v: .6E}" for v in fvals)
-    lines: List[str] = [
+    lines: list[str] = [
         ">HEAD",
         f"  DATAID={station}",
         "  LAT=26:00:00N",
@@ -45,7 +43,7 @@ def _mk_edi(tmp: Path, station: str, nf: int = 2) -> Path:
 
 def test_coreparser_parse_file_and_dir(tmp_path: Path) -> None:
     f1 = _mk_edi(tmp_path, "A1", nf=3)
-    f2 = _mk_edi(tmp_path, "A2", nf=4)
+    _mk_edi(tmp_path, "A2", nf=4)
 
     pr = CoreParser(recursive=True, strict=False, on_dup="replace")
     items = pr.parse(tmp_path)

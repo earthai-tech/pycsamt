@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -36,7 +35,9 @@ class SettingsController:
 
         # View controls
         try:
-            from pycsamt.api.control import PYCSAMT_CONTROL as C
+            from pycsamt.api.control import (
+                PYCSAMT_CONTROL as C,
+            )
             snap["view_controls"] = {
                 "rho_view":    C.rho.view,
                 "phase_range": list(C.phase.range),
@@ -49,7 +50,9 @@ class SettingsController:
 
         # Station rendering (pseudosection preset)
         try:
-            from pycsamt.api.station import PYCSAMT_STATION_RENDERING as SR
+            from pycsamt.api.station import (
+                PYCSAMT_STATION_RENDERING as SR,
+            )
             ps = SR.pseudosection
             snap["station"] = {
                 "side":          ps.side,
@@ -64,7 +67,9 @@ class SettingsController:
 
         # Section style (pseudosection preset axis)
         try:
-            from pycsamt.api.section import PYCSAMT_SECTION as SEC
+            from pycsamt.api.section import (
+                PYCSAMT_SECTION as SEC,
+            )
             ax = SEC.pseudosection.axis
             snap["section"] = {
                 "y_direction":  ax.y_direction,
@@ -102,7 +107,9 @@ class SettingsController:
     def apply_view_controls(self, **kw: Any) -> None:
         """Write view-control fields to :data:`PYCSAMT_CONTROL`."""
         try:
-            from pycsamt.api.control import PYCSAMT_CONTROL as C
+            from pycsamt.api.control import (
+                PYCSAMT_CONTROL as C,
+            )
             if "rho_view" in kw:
                 C.rho.view = kw["rho_view"]
             if "phase_range" in kw:
@@ -120,7 +127,9 @@ class SettingsController:
         """Write station-marker fields to the pseudosection preset of
         :data:`PYCSAMT_STATION_RENDERING`."""
         try:
-            from pycsamt.api.station import PYCSAMT_STATION_RENDERING as SR
+            from pycsamt.api.station import (
+                PYCSAMT_STATION_RENDERING as SR,
+            )
             ps = SR.pseudosection
             if "side" in kw:
                 ps.side = kw["side"]
@@ -141,7 +150,9 @@ class SettingsController:
         """Write section-axis fields to all pseudosection-family presets of
         :data:`PYCSAMT_SECTION`."""
         try:
-            from pycsamt.api.section import PYCSAMT_SECTION as SEC
+            from pycsamt.api.section import (
+                PYCSAMT_SECTION as SEC,
+            )
             for preset in ("pseudosection", "dashboard", "compact", "publication", "dynamic"):
                 try:
                     ax = SEC.style_for(preset).axis
@@ -173,11 +184,17 @@ class SettingsController:
         """Reset the singleton(s) used by *tab* to package defaults."""
         try:
             if tab == "view_controls":
-                from pycsamt.api.control import PYCSAMT_CONTROL
+                from pycsamt.api.control import (
+                    PYCSAMT_CONTROL,
+                )
                 PYCSAMT_CONTROL.reset()
             elif tab == "pseudosections":
-                from pycsamt.api.station import PYCSAMT_STATION_RENDERING
-                from pycsamt.api.section import PYCSAMT_SECTION
+                from pycsamt.api.section import (
+                    PYCSAMT_SECTION,
+                )
+                from pycsamt.api.station import (
+                    PYCSAMT_STATION_RENDERING,
+                )
                 PYCSAMT_STATION_RENDERING.reset()
                 PYCSAMT_SECTION.reset()
             elif tab == "topography":

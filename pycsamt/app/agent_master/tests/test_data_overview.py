@@ -198,6 +198,89 @@ class TestSmartUnknownReply(unittest.TestCase):
             )
         )
 
+    def test_numeric_line_ref_matches_group(self):
+        # "line 22" resolves to L22PLT via the embedded number —
+        # never a "couldn't find that line" bounce
+        out = C._smart_unknown_reply(
+            "plot only the line 22", self.STORE
+        )
+        self.assertNotIn("couldn't find", out)
+        self.assertIn("for **L22PLT**", out)
+        self.assertIn("phase pseudosection of L22PLT", out)
+
+    def test_picker_selection_wins_over_text_ref(self):
+        # after the line picker ran, an unmatched textual ref must
+        # not be re-litigated into a "couldn't find that line" bounce
+        store = dict(self.STORE)
+        store["selected_lines"] = ["L22PLT"]
+        out = C._smart_unknown_reply(
+            "plot only the line 99", store
+        )
+        self.assertNotIn("couldn't find", out)
+        self.assertIn("for **L22PLT**", out)
+
+    def test_selection_non_plot_returns_none(self):
+        store = dict(self.STORE)
+        store["selected_lines"] = ["L22PLT"]
+        self.assertIsNone(
+            C._smart_unknown_reply("make me a coffee", store)
+        )
+
+
+class TestLineRefMatching(unittest.TestCase):
+    GROUPS = {
+        "L18PLT": ["a"], "L22PLT": ["b"], "L26PLT": ["c"],
+        "L30PLT": ["d"], "L34PLT": ["e"],
+    }
+
+    def test_numeric_ref_unique_match(self):
+        self.assertEqual(
+            C._match_group("22", self.GROUPS), "L22PLT"
+        )
+
+    def test_numeric_ref_leading_zero(self):
+        self.assertEqual(
+            C._match_group("022", self.GROUPS), "L22PLT"
+        )
+
+    def test_numeric_ref_no_match_goes_to_picker(self):
+        # ordinal-ish "line 2": no group carries the number 2
+        self.assertIsNone(C._match_group("2", self.GROUPS))
+
+    def test_numeric_ref_ambiguous_goes_to_picker(self):
+        groups = {"L22PLT": ["a"], "K22": ["b"]}
+        self.assertIsNone(C._match_group("22", groups))
+
+    def test_named_substring_unique_match(self):
+        self.assertEqual(
+            C._match_group("l22", self.GROUPS), "L22PLT"
+        )
+
+    def test_named_substring_ambiguous(self):
+        self.assertIsNone(C._match_group("plt", self.GROUPS))
+
+    def test_extract_ref_strips_punctuation(self):
+        self.assertEqual(
+            C._extract_line_ref(
+                "analyse only the line 22.", self.GROUPS
+            ),
+            "22",
+        )
+
+    def test_generic_analysis_regex(self):
+        for t in (
+            "analyse only the line 22",
+            "Analyze line L22PLT",
+            "re-analyse the data",
+            "run the analysis",
+        ):
+            self.assertTrue(
+                C._GENERIC_ANALYSIS_RE.search(t), t
+            )
+        self.assertIsNone(
+            C._GENERIC_ANALYSIS_RE.search("plot the tipper")
+        )
+
 
 class TestDispatchNoData(unittest.TestCase):
     def test_no_data_guidance(self):

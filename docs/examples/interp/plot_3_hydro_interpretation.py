@@ -18,6 +18,7 @@ zones on the synthetic section.
 # ``clay_max`` is clay. ``fit`` classifies every sounding.
 
 from _interp_data import demo_model
+
 from pycsamt.interp import HydroInterpreter
 
 # Use the unit-map figure (1st) as the card thumbnail.
@@ -42,9 +43,9 @@ for z in zones[:3]:
 # counterpart to the raw resistivity image in
 # :doc:`plot_1_resistivity_model`.
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
+import numpy as np
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
 units = hydro.unit_map
 names = sorted(np.unique(units))

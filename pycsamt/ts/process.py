@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -41,7 +40,7 @@ References
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -135,8 +134,8 @@ def target_frequencies(
     nfft: int,
     *,
     per_decade: int = 7,
-    fmin: Optional[float] = None,
-    fmax: Optional[float] = None,
+    fmin: float | None = None,
+    fmax: float | None = None,
 ) -> np.ndarray:
     """
     Log-spaced target frequencies for band averaging.
@@ -204,20 +203,20 @@ def _band_edges(freqs_desc: np.ndarray) -> np.ndarray:
 def cross_spectra(
     ts: TSData,
     *,
-    nfft: Optional[int] = None,
+    nfft: int | None = None,
     overlap: float = 0.5,
-    freqs: Optional[Sequence[float]] = None,
+    freqs: Sequence[float] | None = None,
     per_decade: int = 7,
-    fmin: Optional[float] = None,
-    fmax: Optional[float] = None,
-    remote: Optional[TSData] = None,
-    robust: Optional[str] = "huber",
+    fmin: float | None = None,
+    fmax: float | None = None,
+    remote: TSData | None = None,
+    robust: str | None = "huber",
     n_iter: int = 2,
     huber_k: float = 1.5,
     min_segments: int = 2,
     fill_gap: int = 5,
     verbose: int = 0,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """
     Band-averaged cross-power spectral matrices of a record.
 
@@ -363,8 +362,8 @@ def cross_spectra(
         )[::-1]
     edges = _band_edges(fgrid)
 
-    band_bins: List[np.ndarray] = []
-    keep: List[int] = []
+    band_bins: list[np.ndarray] = []
+    keep: list[int] = []
     for j in range(fgrid.size):
         hi, lo = edges[j], edges[j + 1]
         sel = np.flatnonzero(
@@ -386,8 +385,8 @@ def cross_spectra(
     scale = 2.0 * dt / np.sum(w * w)
 
     # ---- per-segment band cross-powers
-    seg_S: List[np.ndarray] = []
-    used_starts: List[int] = []
+    seg_S: list[np.ndarray] = []
+    used_starts: list[int] = []
     tc = np.arange(nfft, dtype=float)
     tc -= tc.mean()
     tvar = float(tc @ tc)
@@ -536,12 +535,12 @@ def cross_spectra(
 
 # ------------------------------------------------------------- spectra
 def ts_to_spectra(
-    ts: Union[TSData, str],
+    ts: TSData | str,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     preprocess_first: bool = True,
     fill_gap: int = 5,
-    reader_kws: Optional[dict] = None,
+    reader_kws: dict | None = None,
     verbose: int = 0,
     **kws,
 ):

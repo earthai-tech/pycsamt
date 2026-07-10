@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for deterministic query expansion (RAG Tier 1)."""
@@ -6,7 +5,10 @@ from __future__ import annotations
 
 import unittest
 
-from pycsamt.assistant.rag.expansion import QUERY_EXPANSIONS, expand_query
+from pycsamt.assistant.rag.expansion import (
+    QUERY_EXPANSIONS,
+    expand_query,
+)
 
 
 class TestExpandQuery(unittest.TestCase):

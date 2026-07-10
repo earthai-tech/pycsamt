@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Tests for pycsamt.zonge.tensor.TensorBase
 
 from __future__ import annotations
@@ -8,6 +7,7 @@ import pandas as pd
 import pytest
 
 from pycsamt.zonge.tensor import TensorBase
+
 
 class DummyTensor(TensorBase):
     """
@@ -123,7 +123,6 @@ def test_to_tensor_multi_station_union_and_intersection():
     assert T_i.shape == (2, 1, 2, 2)
     assert np.allclose(f_i, [2.0])
     # Both stations have ExHy at freq=2
-    i_f2 = 0
     i_st100 = int(np.where(st_u == 100.0)[0][0])
     i_st150 = int(np.where(st_u == 150.0)[0][0])
     assert np.isclose(T_u[i_st100, int(np.where(f_u == 2.0)[0][0]), 0, 1], 20.0)
@@ -196,5 +195,5 @@ def test_to_xarray_tensor_dims_and_coords_single_and_multi():
     assert da2.dims == ("station", "freq", "e", "h")
     assert np.all(np.unique(da2.coords["station"]) == np.array([100.0]))
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -25,16 +24,21 @@ Public API:
 from __future__ import annotations
 
 import numpy as np
-
 from PySide6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from pycsamt.app.desktop.controllers.plot_controller import PlotController
-from pycsamt.app.desktop.panels.section_panel import SectionPanel
-from pycsamt.app.desktop.widgets.freq_selector import FreqSelector
+from pycsamt.app.desktop.controllers.plot_controller import (
+    PlotController,
+)
+from pycsamt.app.desktop.panels.section_panel import (
+    SectionPanel,
+)
+from pycsamt.app.desktop.widgets.freq_selector import (
+    FreqSelector,
+)
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 
@@ -185,7 +189,8 @@ class ProfilePanel(QWidget):
 
     def _draw_empty_all(self) -> None:
         from pycsamt.app.desktop.controllers.plot_controller import (
-            style_axes, _annotate_empty,
+            _annotate_empty,
+            style_axes,
         )
         for canvas, msg in (
             (self._canvas_rho_phi,  "Select a station to view ρₐ / φ curves"),

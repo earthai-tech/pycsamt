@@ -150,7 +150,6 @@ class ModEmAgent(BaseAgent):
 
             # apply period range filter if requested
             if per_range is not None:
-                from ..emtools._core import _iter_items
                 self._log.info(
                     "Period range filter (%s – %s s) is applied via config.",
                     per_range[0], per_range[1],

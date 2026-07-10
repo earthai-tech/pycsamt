@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for AppController (Phase 2) — no Qt required."""
 
 from __future__ import annotations
 
-import pytest
-from pycsamt.app.desktop.controllers.app_controller import AppController
+from pycsamt.app.desktop.controllers.app_controller import (
+    AppController,
+)
 from pycsamt.app.desktop.models.session import SessionState
-
 
 # ── Construction ──────────────────────────────────────────────────────────
 

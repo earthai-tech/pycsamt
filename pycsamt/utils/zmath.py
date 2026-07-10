@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: L. Kouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -6,12 +5,14 @@
 helper functions for standard calculations.
 """
 
-from __future__ import annotations 
+from __future__ import annotations
+
+import cmath
+import math
 
 import numpy as np
-from numpy.typing import ArrayLike 
-import math
-import cmath
+from numpy.typing import ArrayLike
+
 
 # Exception classes
 class ZMathError(Exception): pass
@@ -55,7 +56,7 @@ __all__ = [
     'rotatematrix_incl_errors',
     'rotatevector_incl_errors',
     'multiplymatrices_incl_errors',
-    'reorient_data2D', 
+    'reorient_data2D',
     "rhophi_to_z",          # new name (was rhophi2z)
     "z_err_to_rphi_err",    # new name (was z_error2r_phi_error)
 ]
@@ -750,7 +751,7 @@ def _as_array(x: ArrayLike, name: str) -> np.ndarray:
     except ValueError as exc:                                  # pragma: no cover
         raise ZMathError(f"{name}: cannot convert to float") from exc
 
-def rhophi_to_z(                       
+def rhophi_to_z(
         phase:       ArrayLike,
         freq:        ArrayLike,
         *,
@@ -799,7 +800,7 @@ def rhophi_to_z(
     # broadcast to a single shape
     try:
         ph, frq = np.broadcast_arrays(ph, frq)
-    except ValueError:                                       
+    except ValueError:
         raise ImpedanceConversionError("phase / freq not broadcastable")
 
     if z_abs is None:
@@ -819,7 +820,7 @@ def rhophi_to_z(
     return z_abs, z_real, z_imag, z_cplx
 
 
-def z_err_to_rphi_err(                
+def z_err_to_rphi_err(
     z_real:  ArrayLike,
     z_imag:  ArrayLike,
     z_err:   ArrayLike,
@@ -842,7 +843,7 @@ def z_err_to_rphi_err(
     Returns
     -------
     rho_rel_err, phase_err :
-        *rho_rel_err* is the **relative** ρₐ error (unitless).  
+        *rho_rel_err* is the **relative** ρₐ error (unitless).
         *phase_err* is the absolute phase uncertainty (deg or mrad).
 
     Notes

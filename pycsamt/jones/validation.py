@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional, Union
-import os
-
 
 from ..exceptions import (
     FileHandlingError,
@@ -15,14 +12,14 @@ from ..exceptions import (
 )
 from .config import (
     RE_BANNER,
-    RE_INFO,
-    RE_COMMENT,
     RE_BLANK,
-    RE_STATION,
+    RE_COMMENT,
     RE_DATATYPE_UNITS,
+    RE_INFO,
     RE_NPOINTS,
     RE_ROW_R,
     RE_ROW_TF,
+    RE_STATION,
 )
 
 __all__ = ["IsJ", "is_j_file"]
@@ -53,7 +50,7 @@ def _first_nonblank(lines: list[str], i: int) -> int:
     return j
 
 
-def _find_dtype_after(lines: list[str], i: int) -> Optional[int]:
+def _find_dtype_after(lines: list[str], i: int) -> int | None:
     n = len(lines)
     j = _first_nonblank(lines, i + 1)
     if j >= n:
@@ -76,7 +73,7 @@ def _find_dtype_after(lines: list[str], i: int) -> Optional[int]:
     return None
 
 
-def _find_count_after(lines: list[str], i: int) -> Optional[int]:
+def _find_count_after(lines: list[str], i: int) -> int | None:
     n = len(lines)
     j = _first_nonblank(lines, i + 1)
     if j >= n:
@@ -94,7 +91,7 @@ def _find_count_after(lines: list[str], i: int) -> Optional[int]:
     return None
 
 
-def _guess_kind(line: str) -> Optional[str]:
+def _guess_kind(line: str) -> str | None:
     m = RE_DATATYPE_UNITS.match(line)
     if not m:
         return None
@@ -186,7 +183,7 @@ class IsJ(ABC):
 
     @staticmethod
     def _assert_j(
-        file: Union[str, os.PathLike, "IsJ"],
+        file: str | os.PathLike | IsJ,
         *,
         deep: bool = True,
     ) -> bool:
@@ -242,7 +239,7 @@ class IsJ(ABC):
 
 
 def is_j_file(
-    file: Union[str, os.PathLike, IsJ], *, deep: bool = True
+    file: str | os.PathLike | IsJ, *, deep: bool = True
 ) -> bool:
     """
     Convenience wrapper around :meth:`IsJ._assert_j`.

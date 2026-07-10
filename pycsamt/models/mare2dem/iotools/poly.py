@@ -286,7 +286,7 @@ def write_poly(
     nodes = pf.nodes
     n_nodes = len(nodes)
     has_attr = pf.node_attributes is not None and len(pf.node_attributes) > 0
-    n_attr = pf.node_attributes.shape[1] if has_attr and pf.node_attributes.ndim == 2 else 0
+    pf.node_attributes.shape[1] if has_attr and pf.node_attributes.ndim == 2 else 0
     n_bmark = 1 if pf.node_boundary_markers is not None and len(pf.node_boundary_markers) else 0
 
     with dest.open("w") as fh:

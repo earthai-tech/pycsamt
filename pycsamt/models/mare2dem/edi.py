@@ -16,8 +16,9 @@ of the package (see :mod:`pycsamt.emtools`).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -106,7 +107,11 @@ def stations_from_edi(
         When no station yields usable impedance + coordinates.
     """
     from ...emtools._core import (
-        ensure_sites, _iter_items, _name, _get_z_block, _unwrap,
+        _get_z_block,
+        _iter_items,
+        _name,
+        _unwrap,
+        ensure_sites,
     )
 
     sites = ensure_sites(source, verbose=0)
@@ -122,7 +127,7 @@ def stations_from_edi(
     for i, ed in enumerate(_iter_items(sites)):
         name = _name(ed, i)
         got = _get_z_block(ed, with_errors=True)
-        Z_obj, z, fr = got[0], got[1], got[2]
+        _Z_obj, z, fr = got[0], got[1], got[2]
         ze = got[3] if len(got) > 3 else None
         if z is None or fr is None:
             skipped.append(name)

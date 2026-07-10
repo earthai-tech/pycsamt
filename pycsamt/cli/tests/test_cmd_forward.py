@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -20,16 +19,14 @@ Test strategy
 from __future__ import annotations
 
 import json
-import types
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
-
 
 # ---------------------------------------------------------------------------
 # Fake forward objects (avoid real SciPy computation in unit tests)

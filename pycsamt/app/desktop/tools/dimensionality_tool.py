@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -21,12 +20,11 @@ Usage
 """
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 
-import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -40,11 +38,9 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
-    QSizePolicy,
-    QSplitter,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -73,7 +69,9 @@ class _DimWorker(QThread):
 
     def run(self):
         try:
-            from pycsamt.emtools.dimensionality import classify_dimensionality
+            from pycsamt.emtools.dimensionality import (
+                classify_dimensionality,
+            )
             df = classify_dimensionality(
                 self._sites,
                 skew_th=self._skew_th,
@@ -90,7 +88,9 @@ class _DimWorker(QThread):
             map_fig = None
             if self._show_map:
                 try:
-                    from pycsamt.emtools.tensor import plot_dim_confidence_grid
+                    from pycsamt.emtools.tensor import (
+                        plot_dim_confidence_grid,
+                    )
                     before = set(plt.get_fignums())
                     ax = plot_dim_confidence_grid(self._sites, verbose=0)
                     after = set(plt.get_fignums())

@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """Tests for stratagem.io (StratagemRawReader, EDIBatch)."""
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 from textwrap import dedent
 
-import numpy as np
 import pytest
 
 from pycsamt.stratagem.io import (

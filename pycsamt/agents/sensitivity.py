@@ -105,8 +105,10 @@ class SensitivityAgent(BaseAgent):
         warnings: list[str] = []
 
         try:
-            from ..emtools.csumt   import vertical_resolution
-            from ..emtools.advanced import plot_sensitivity_depth_section
+            from ..emtools.advanced import (
+                plot_sensitivity_depth_section,
+            )
+            from ..emtools.csumt import vertical_resolution
         except ImportError as exc:
             return AgentResult.failed(
                 f"emtools.csumt / emtools.advanced not available: {exc}",
@@ -251,7 +253,7 @@ def _plot_doi_bar(doi_per_station: dict[str, float]) -> Any:
     depths   = [doi_per_station[s] / 1000.0 for s in stations]
 
     fig, ax = plt.subplots(figsize=(6, max(3, len(stations) * 0.35)))
-    bars = ax.barh(range(len(stations)), depths, color="#2980b9", alpha=0.8,
+    ax.barh(range(len(stations)), depths, color="#2980b9", alpha=0.8,
                    edgecolor="white", linewidth=0.4)
     ax.set_yticks(range(len(stations)))
     ax.set_yticklabels(stations, fontsize=7)

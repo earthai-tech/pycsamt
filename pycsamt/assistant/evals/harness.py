@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -107,8 +106,8 @@ def evaluate(
 
     *retriever* / *registry* default to the project's built ones.
     """
-    from pycsamt.agents.router import IntentRouter
     from pycsamt.agents._workflows import classify_workflow
+    from pycsamt.agents.router import IntentRouter
     from pycsamt.assistant.rag.config import infer_workflow
 
     # Strip code-request phrasing so the *subject* workflow is scored
@@ -137,7 +136,9 @@ def evaluate(
         return wf
 
     if retriever is None:
-        from pycsamt.assistant.rag.retriever import build_retriever
+        from pycsamt.assistant.rag.retriever import (
+            build_retriever,
+        )
         retriever = build_retriever()
     if registry is None:
         try:

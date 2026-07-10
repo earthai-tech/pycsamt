@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -19,7 +18,7 @@ coordinates and passed as a dense tensor to every forward call.
 """
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -59,7 +58,7 @@ def build_adjacency(
         Adjacency matrix, optionally normalised.
     """
     coords = np.asarray(coords, dtype=np.float64)
-    n = len(coords)
+    len(coords)
     diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]   # (n, n, 2)
     dist = np.sqrt((diff ** 2).sum(axis=-1))                       # (n, n)
 
@@ -115,7 +114,7 @@ class GCNNet:
 
     # ── PyTorch ──────────────────────────────────────────────────────────────
 
-    def build(self) -> "torch.nn.Module":
+    def build(self) -> torch.nn.Module:
         """Return a ``torch.nn.Module`` for this architecture."""
         import torch
         import torch.nn as nn
@@ -133,8 +132,8 @@ class GCNNet:
                 self.bn = nn.BatchNorm1d(out_f)
 
             def forward(
-                self, H: "torch.Tensor", A: "torch.Tensor"
-            ) -> "torch.Tensor":
+                self, H: torch.Tensor, A: torch.Tensor
+            ) -> torch.Tensor:
                 # H : (n_nodes, in_f)   A : (n_nodes, n_nodes)
                 agg = A @ H                        # (n_nodes, in_f)
                 out = self.W(agg)                  # (n_nodes, out_f)
@@ -154,9 +153,9 @@ class GCNNet:
 
             def forward(
                 self,
-                H: "torch.Tensor",
-                A: "torch.Tensor",
-            ) -> "torch.Tensor":
+                H: torch.Tensor,
+                A: torch.Tensor,
+            ) -> torch.Tensor:
                 """
                 Parameters
                 ----------
@@ -175,7 +174,7 @@ class GCNNet:
 
     # ── TensorFlow / Keras ────────────────────────────────────────────────────
 
-    def build_tf(self) -> "tf.keras.Model":
+    def build_tf(self) -> tf.keras.Model:
         """Return a ``tf.keras.Model`` for this architecture."""
         import tensorflow as tf
 
@@ -192,9 +191,9 @@ class GCNNet:
 
             def call(
                 self,
-                inputs: Tuple["tf.Tensor", "tf.Tensor"],
+                inputs: tuple[tf.Tensor, tf.Tensor],
                 training: bool = False,
-            ) -> "tf.Tensor":
+            ) -> tf.Tensor:
                 H, A = inputs          # H: (n, f)  A: (n, n)
                 agg = tf.linalg.matmul(A, H)
                 out = self.dense(agg)

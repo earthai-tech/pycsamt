@@ -16,28 +16,28 @@ The default manuscript classes are CR >= 0.95 (safe), 0.85 <= CR < 0.95
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle as _Rect
 
-from ..api.section import PYCSAMT_SECTION, SectionStyle
 from ..api.labels import LOG10_PERIOD_LABEL
+from ..api.section import PYCSAMT_SECTION, SectionStyle
 from ..api.station import (
     PYCSAMT_STATION_RENDERING,
     StationAxisStyle,
 )
 from ..api.view import maybe_wrap_frame
-
 from ._core import (
-    ensure_sites,
     _axes_list,
-    _iter_items,
-    _get_z_block,
     _get_t_block,
+    _get_z_block,
+    _iter_items,
     _name,
     _station_positions,
+    ensure_sites,
 )
 from .tensor import build_phase_tensor_table
 
@@ -54,7 +54,7 @@ __all__ = [
     "station_confidence_table",
 ]
 
-DEFAULT_CONFIDENCE_WEIGHTS: Dict[str, float] = {
+DEFAULT_CONFIDENCE_WEIGHTS: dict[str, float] = {
     "coverage": 0.35,
     "uncertainty": 0.20,
     "offdiag": 0.15,
@@ -95,7 +95,7 @@ def _row_nanmedian(values: np.ndarray) -> np.ndarray:
     return out
 
 
-def _snr_rows(z: np.ndarray, ze: Optional[np.ndarray]) -> np.ndarray:
+def _snr_rows(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return np.full(z.shape[0], np.nan, dtype=float)
     a = np.sqrt(np.nanmean(np.abs(z) ** 2, axis=(1, 2)))
@@ -121,8 +121,8 @@ def _clip01(x: Any) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
-def _weighted_nanmean(values: Dict[str, float],
-                      weights: Dict[str, float]) -> float:
+def _weighted_nanmean(values: dict[str, float],
+                      weights: dict[str, float]) -> float:
     """Return weighted mean ignoring unavailable metrics."""
     total = 0.0
     weight = 0.0
@@ -135,7 +135,7 @@ def _weighted_nanmean(values: Dict[str, float],
     return float(total / weight) if weight > 0.0 else np.nan
 
 
-def _confidence_error(values: Dict[str, float],
+def _confidence_error(values: dict[str, float],
                       n_freq: int,
                       confidence: float) -> float:
     """Estimate a compact station-level confidence uncertainty."""
@@ -154,12 +154,12 @@ def _confidence_error(values: Dict[str, float],
 
 
 def confidence_ratio(
-    scores: Dict[str, float],
+    scores: dict[str, float],
     *,
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     n_freq: int = 1,
     return_error: bool = False,
-) -> float | Tuple[float, float]:
+) -> float | tuple[float, float]:
     r"""Compute the composite confidence ratio from diagnostic scores.
 
     The confidence ratio is a weighted finite-score mean:
@@ -187,7 +187,7 @@ def confidence_ratio(
     return cr
 
 
-def _relerr_score(z: np.ndarray, ze: Optional[np.ndarray],
+def _relerr_score(z: np.ndarray, ze: np.ndarray | None,
                   threshold: float) -> float:
     """Score tensor uncertainty from median relative error."""
     if ze is None:
@@ -355,7 +355,7 @@ def _frequency_flags(row: pd.Series,
     return ",".join(flags)
 
 
-def _y_ticks(yall: np.ndarray, ny: int) -> Tuple[np.ndarray, List[str]]:
+def _y_ticks(yall: np.ndarray, ny: int) -> tuple[np.ndarray, list[str]]:
     yt = np.linspace(0, yall.size - 1, num=min(ny, yall.size))
     yv = np.linspace(yall.min(), yall.max(), num=yt.size)
     lab = [f"{v:.2g}" for v in yv]
@@ -390,7 +390,7 @@ def build_qc_table(
             strict=False,
             verbose=verbose,
         )
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -494,7 +494,7 @@ def station_confidence_table(
     sites: Any,
     *,
     method: str = "composite",
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     relerr_threshold: float = 0.20,
     offdiag_tolerance_log10: float = 0.35,
     diagonal_leakage_max: float = 0.35,
@@ -529,7 +529,7 @@ def station_confidence_table(
     )
     items = list(_iter_items(S))
     positions = _station_positions(items, spacing_m)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     med_logrho = []
     for i, ed in enumerate(items):
         st = _name(ed, i)
@@ -651,7 +651,7 @@ def frequency_confidence_table(
     sites: Any,
     *,
     method: str = "composite",
-    weights: Optional[Dict[str, float]] = None,
+    weights: dict[str, float] | None = None,
     ci_hi: float = DEFAULT_CI_HI,
     ci_lo: float = DEFAULT_CI_LO,
     relerr_threshold: float = 0.20,
@@ -689,7 +689,7 @@ def frequency_confidence_table(
     )
     items = list(_iter_items(S))
     positions = _station_positions(items, spacing_m)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for station_index, ed in enumerate(items):
         station = _name(ed, station_index)
         Z, z, fr = _get_z_block(ed)
@@ -848,18 +848,18 @@ def plot_confidence_profile(
     shade_mode: str = "score",
     annotate_low: bool = True,
     station_labels: bool = True,
-    station_label_step: Optional[int] = None,
+    station_label_step: int | None = None,
     show_errorbars: bool = True,
     smart_ylim: bool = True,
-    ylim: Optional[Tuple[float, float]] = None,
-    weights: Optional[Dict[str, float]] = None,
+    ylim: tuple[float, float] | None = None,
+    weights: dict[str, float] | None = None,
     spacing_m: float = 200.0,
-    figsize: Tuple[float, float] = (9.0, 4.0),
+    figsize: tuple[float, float] = (9.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """
     Profile confidence-ratio (CR) scatter plot along the survey line.
@@ -1142,16 +1142,16 @@ def plot_frequency_confidence_psection(
     metric: str = "confidence",
     cmap: str = "RdYlGn",
     section: str | SectionStyle = "dynamic",
-    figsize: Optional[Tuple[float, float]] = None,
-    station_label_step: Optional[int] = None,
+    figsize: tuple[float, float] | None = None,
+    station_label_step: int | None = None,
     station_preset: str = "pseudosection",
-    station_style: Optional[StationAxisStyle] = None,
+    station_style: StationAxisStyle | None = None,
     spacing_m: float = 200.0,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Plot frequency confidence as a station-period pseudo-section."""
     section_style = _resolve_section_style(section)
@@ -1242,17 +1242,17 @@ def plot_frequency_confidence_psection(
 def plot_station_confidence_spectrum(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     method: str = "composite",
     ci_hi: float = DEFAULT_CI_HI,
     ci_lo: float = DEFAULT_CI_LO,
-    figsize: Tuple[float, float] = (7.0, 4.0),
+    figsize: tuple[float, float] = (7.0, 4.0),
     spacing_m: float = 200.0,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Plot confidence components versus period for one station."""
     tb = frequency_confidence_table(
@@ -1347,7 +1347,7 @@ def _confidence_panel_line(
     label: str,
     ci_hi: float,
     ci_lo: float,
-    yerr: Optional[np.ndarray] = None,
+    yerr: np.ndarray | None = None,
 ) -> None:
     """Plot one dashboard line with threshold colouring."""
     _confidence_panel_background(ax, ci_hi, ci_lo)
@@ -1382,12 +1382,12 @@ def _confidence_panel_line(
 def plot_station_confidence_dashboard(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     method: str = "composite",
     ci_hi: float = DEFAULT_CI_HI,
     ci_lo: float = DEFAULT_CI_LO,
     axes=None,
-    figsize: Tuple[float, float] = (10.5, 6.0),
+    figsize: tuple[float, float] = (10.5, 6.0),
     spacing_m: float = 200.0,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1517,13 +1517,13 @@ def plot_confidence_band_summary(
     method: str = "composite",
     ci_hi: float = DEFAULT_CI_HI,
     ci_lo: float = DEFAULT_CI_LO,
-    figsize: Tuple[float, float] = (8.0, 4.0),
+    figsize: tuple[float, float] = (8.0, 4.0),
     spacing_m: float = 200.0,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Plot line-wide confidence statistics for each period sample."""
     tb = frequency_confidence_table(
@@ -1614,12 +1614,12 @@ def plot_coverage_psection(
     metric: str = "presence",  # presence|snr|offdiag
     alpha_by: str = "none",    # none|snr
     section: str | SectionStyle = "dynamic",
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: tuple[float, float] | None = None,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     section_style = _resolve_section_style(section)
     # "down" triggers invert_yaxis() so short T (high freq, shallow) is at TOP.
@@ -1631,10 +1631,10 @@ def plot_coverage_psection(
         strict=strict,
         verbose=verbose,
     )
-    sts: List[str] = []
-    Ys: List[np.ndarray] = []
-    Ms: List[np.ndarray] = []
-    As: List[np.ndarray] = []
+    sts: list[str] = []
+    Ys: list[np.ndarray] = []
+    Ms: list[np.ndarray] = []
+    As: list[np.ndarray] = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         Z, z, fr = _get_z_block(ed)
@@ -1743,12 +1743,12 @@ def plot_snr_hist(
     sites: Any,
     *,
     bins: int = 40,
-    figsize: Tuple[float, float] = (7.2, 3.6),
+    figsize: tuple[float, float] = (7.2, 3.6),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
@@ -1757,7 +1757,7 @@ def plot_snr_hist(
         strict=strict,
         verbose=verbose,
     )
-    vals: List[float] = []
+    vals: list[float] = []
     for _, ed in enumerate(_iter_items(S)):
         Z, z, fr = _get_z_block(ed)
         if Z is None:
@@ -1795,7 +1795,7 @@ def plot_qc_quicklook(
     sites: Any,
     *,
     axes=None,
-    figsize: Tuple[float, float] = (10.0, 8.0),
+    figsize: tuple[float, float] = (10.0, 8.0),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -1854,7 +1854,7 @@ def _zblk(ed: Any, need_err: bool = False):
 
 # ----------------------- rho_a + error propagation ---------------------- #
 
-def _rhoa_xy_yx(z: np.ndarray, fr: np.ndarray) -> Tuple[
+def _rhoa_xy_yx(z: np.ndarray, fr: np.ndarray) -> tuple[
     np.ndarray, np.ndarray
 ]:
     c = 0.2 / (fr + 1e-24)
@@ -1865,13 +1865,13 @@ def _rhoa_xy_yx(z: np.ndarray, fr: np.ndarray) -> Tuple[
 
 def _rhoa_ci(
     z: np.ndarray,
-    ze: Optional[np.ndarray],
+    ze: np.ndarray | None,
     fr: np.ndarray,
     *,
     comp: str = "xy",        # xy|yx
-    pcts: Tuple[float, ...] = (10.0, 50.0, 90.0),
+    pcts: tuple[float, ...] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
-    seed: Optional[int] = 0,
+    seed: int | None = 0,
 ) -> np.ndarray:
     a, b = (0, 1) if comp == "xy" else (1, 0)
     zz = z[:, a, b]
@@ -1918,17 +1918,17 @@ def _shade_band(
 def plot_consistency_fan(
     sites: Any,
     *,
-    station: Optional[str] = None,
+    station: str | None = None,
     other: Any | None = None,      # optional comparison Sites
-    comps: Tuple[str, str] = ("xy", "yx"),
-    pcts: Tuple[float, float, float] = (10.0, 50.0, 90.0),
+    comps: tuple[str, str] = ("xy", "yx"),
+    pcts: tuple[float, float, float] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
-    figsize: Tuple[float, float] = (8.6, 4.2),
+    figsize: tuple[float, float] = (8.6, 4.2),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
@@ -2009,12 +2009,12 @@ def plot_consistency_fan(
 def plot_xyyx_crossover_map(
     sites: Any,
     *,
-    figsize: Tuple[float, float] = (9.0, 4.6),
+    figsize: tuple[float, float] = (9.0, 4.6),
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,

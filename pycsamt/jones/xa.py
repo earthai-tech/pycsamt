@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Dict, Optional
 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 import xarray as xr
 
-from ..utils.handlers import columns_manager
 from ..log.logger import get_logger
+from ..utils.handlers import columns_manager
 from .j import JFile
 
 logger = get_logger(__name__)
@@ -24,7 +23,7 @@ def build_jdataset(
     jfiles: Iterable[JFile],
     *,
     drop_empty: bool = True,
-) -> "xr.Dataset":
+) -> xr.Dataset:
     r"""
     Build a multi-site xarray Dataset from JFile objects.
 
@@ -90,7 +89,7 @@ def build_jdataset(
     """
     datasets = []
     metadata_records = []
-    
+
     jfiles = columns_manager(jfiles, empty_as_none=False)
     for jf in jfiles:
         try:
@@ -106,20 +105,20 @@ def build_jdataset(
     if not datasets:
         # Return an empty dataset with expected coordinates
         return xr.Dataset(
-            coords={"site": [], "freq": [], "output_ch": [], 
+            coords={"site": [], "freq": [], "output_ch": [],
                     "input_ch": []}
             )
 
     # Concatenate the data variables
     full_ds = xr.concat(datasets, dim="site", join="outer")
 
-    # Handle Metadata 
+    # Handle Metadata
     # Create a DataFrame from metadata and assign as non-dimensional coords
     meta_df = pd.DataFrame(metadata_records).set_index("site")
     for col in meta_df.columns:
         # Use .assign_coords to add metadata to the 'site' dimension
         full_ds = full_ds.assign_coords({col: ("site", meta_df[col])})
-        
+
     return full_ds
 
 class XAJMixin:
@@ -165,25 +164,25 @@ class XAJMixin:
         self,
         *,
         drop_empty: bool = True,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Converts the entire collection into an xarray Dataset.
-        
+
         This method is a convenient wrapper around the
         :func:`build_jdataset` function.
         """
-        
+
         # Host must be iterable over JFile
         return build_jdataset(self, drop_empty=drop_empty)
 
-    def meta_table(self) -> "xr.Dataset":
+    def meta_table(self) -> xr.Dataset:
         """
         Extracts site-level metadata into a new Dataset.
-        
+
         This method provides a quick way to get a summary of all sites
         in the collection without loading the bulky tensor data.
         """
-        rows: List[Dict[str, object]] = []
+        rows: list[dict[str, object]] = []
         for jf in self:
             m = _meta_from_jfile(jf)
             m["site"] = _site_id_from_jfile(jf)
@@ -204,7 +203,7 @@ class XAJMixin:
 @xr.register_dataset_accessor("jfile")
 class JFileAcc:
     r"""
-    An xarray accessor for convenient interaction 
+    An xarray accessor for convenient interaction
     with J-format datasets.
 
     This accessor is registered under the ``.jfile`` namespace and
@@ -235,9 +234,9 @@ class JFileAcc:
 
     See Also
     --------
-    build_jdataset : 
+    build_jdataset :
         The function that creates compatible datasets.
-    xarray.register_dataset_accessor : 
+    xarray.register_dataset_accessor :
         The decorator used to create accessors.
 
     Examples
@@ -255,25 +254,25 @@ class JFileAcc:
     >>> print(site_nia001.dims)
     Frozen({'freq': 17, 'output_ch': 2, 'input_ch': 2, 'tcomp': 2})
     """
-    def __init__(self, ds: "xr.Dataset") -> None:
+    def __init__(self, ds: xr.Dataset) -> None:
         self._ds = ds
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         s = self._ds.coords.get("site", None)
         return [] if s is None else [str(v) for v in s.data]
 
-    def get(self, site: str) -> "xr.Dataset":
+    def get(self, site: str) -> xr.Dataset:
         """
         Selects data for a single site.
-        
+
         This is a convenience wrapper around ``.sel(site=...)`` which
         also cleans up the resulting dataset by removing the now-singleton
         'site' dimension.
         """
         return self._ds.sel(site=str(site))
 
-    def components(self) -> List[str]:
+    def components(self) -> list[str]:
         """Returns a list of available impedance component names."""
         comps = []
         if "output_ch" in self._ds.coords and "input_ch" in self._ds.coords:
@@ -286,17 +285,17 @@ class JFileAcc:
         self,
         fmin: float | None = None,
         fmax: float | None = None,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Filters the dataset to a specified frequency band.
-        
+
         Parameters
         ----------
         fmin : float, optional
             The minimum frequency to include (inclusive).
         fmax : float, optional
             The maximum frequency to include (inclusive).
-            
+
         Returns
         -------
         xr.Dataset
@@ -317,12 +316,12 @@ class JFileAcc:
     def plot_apparent_resistivity(
         self,
         site: str,
-        components: list[str] = ["xy", "yx"],
-        phase_mod: Optional[int] = None,
+        components: list[str] = None,
+        phase_mod: int | None = None,
         figsize: tuple[int, int] = (8, 8),
         show_grid: bool = True,
-        grid_props: Optional[dict] = None,
-        savefig: Optional[str] = None,
+        grid_props: dict | None = None,
+        savefig: str | None = None,
         **plot_kwargs,
     ):
         r"""
@@ -365,31 +364,33 @@ class JFileAcc:
         """
         import matplotlib.pyplot as plt
         import matplotlib.ticker as mticker
-        
+
+        if components is None:
+            components = ["xy", "yx"]
         ds_site = self.get(site)
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=figsize)
-        
+
         comp_map = {
             "xy": ("Hx", "Hy"), "yx": ("Hy", "Hx"),
             "xx": ("Hx", "Hx"), "yy": ("Hy", "Hy")
         }
-        
+
         default_grid_props = {
             'which': 'both', 'linestyle': '--',
             'linewidth': 0.5
             }
         if grid_props:
             default_grid_props.update(grid_props)
-            
+
         for comp in components:
             comp_lower = comp.lower()
             if comp_lower not in comp_map:
                 logger.warning(
                     f"Component '{comp}' is not valid. Skipping.")
                 continue
-                
+
             output_ch, input_ch = comp_map[comp_lower]
-            
+
             # --- Resistivity Plot (Log-Log) ---
             rho_data = ds_site["rho"].sel(
                 output_ch=output_ch, input_ch=input_ch)
@@ -397,13 +398,13 @@ class JFileAcc:
                 ax=axes[0], xscale="log", yscale="log",
                 label=f"$\\rho_{{{comp_lower}}}$", **plot_kwargs
             )
-            
+
             # --- Phase Plot (Semi-Log) ---
             phi_data = ds_site["phi"].sel(
                 output_ch=output_ch, input_ch=input_ch)
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
-                
+
             phi_data.plot.line(
                 ax=axes[1], xscale="log",
                 label=f"$\\phi_{{{comp_lower}}}$", **plot_kwargs
@@ -412,10 +413,10 @@ class JFileAcc:
         # --- Aesthetics and Formatting ---
         axes[0].set_ylabel("Apparent Resistivity (Ω·m)")
         axes[0].set_xlabel("") # Remove x-label from top plot
-        
+
         axes[1].set_ylabel("Phase (degrees)")
         axes[1].set_xlabel("Frequency (Hz)")
-        
+
         if show_grid:
             axes[0].grid(**default_grid_props)
             axes[1].grid(**default_grid_props)
@@ -430,13 +431,13 @@ class JFileAcc:
 
         if savefig:
             plt.savefig(savefig, dpi=300)
-            
+
         return fig, axes
-    
-    def attrs(self) -> Dict[str, object]:
+
+    def attrs(self) -> dict[str, object]:
         """
         Returns the global attributes of the Dataset.
-        
+
         .. deprecated:: 2.1.0
             Metadata is now primarily stored as non-dimensional
             coordinates. Use direct coordinate access for site-specific
@@ -444,20 +445,20 @@ class JFileAcc:
             maintained for backward compatibility.
         """
         return dict(self._ds.attrs)
-    
+
 
 def _site_id_from_jfile(jf: JFile) -> str:
     """Infer site ID with fallbacks."""
     return jf.site or "unknown_site"
 
 
-def _meta_from_jfile(jf: JFile) -> Dict[str, object]:
+def _meta_from_jfile(jf: JFile) -> dict[str, object]:
     """Extract metadata from a JFile object."""
     p = jf.path
     software = None
     if jf.heads and jf.heads.banner:
         software = jf.heads.banner.software
-        
+
     return {
         "site": _site_id_from_jfile(jf), # Added for indexing
         "path": str(p) if isinstance(p, Path) else None,
@@ -478,54 +479,54 @@ def _meta_from_jfile(jf: JFile) -> Dict[str, object]:
 def _ds_from_jfile(jf: JFile) -> xr.Dataset:
     """
     Creates a single-site xarray Dataset from one JFile object.
-    
+
     This version is refactored for clarity, robustness, and includes
     critical data quality (rejection) flags.
     """
     sid = _site_id_from_jfile(jf)
     f = np.asarray(getattr(jf, "freq", []), float)
     n_freq = f.size
-    
+
     # --- Transfer Function Data (Z) ---
     z = _get_tensor_or_zeros(jf.Z, "z", n_freq, np.complex128)
     z_err = _get_tensor_or_zeros(jf.Z, "z_err", n_freq, np.float64)
     z_rej = _get_rejection_flags(jf, 'Z', n_freq)
-    
+
     zrot_val = getattr(jf.Z, "rotation_angle", np.zeros(n_freq))
     zrot = (
-        np.asarray(zrot_val).astype(np.float64) 
-        if zrot_val.size == n_freq 
+        np.asarray(zrot_val).astype(np.float64)
+        if zrot_val.size == n_freq
         else np.zeros(n_freq, dtype=np.float64)
         )
-    
+
     # --- Resistivity and Phase Data (R/S) ---
     rho = _get_tensor_or_zeros(jf.Res, "resistivity", n_freq, np.float64)
     phi = _get_tensor_or_zeros(jf.Res, "phase", n_freq, np.float64)
     rho_err = _get_tensor_or_zeros(jf.Res, "resistivity_err", n_freq, np.float64)
     phi_err = _get_tensor_or_zeros(jf.Res, "phase_err", n_freq, np.float64)
     rho_rej = _get_rejection_flags(jf, 'R', n_freq)
-    
+
     # --- Tipper Data (T) ---
     tip_val = getattr(jf.Tip, "tipper", None)
     tip = (
-        np.asarray(tip_val) if tip_val is not None 
+        np.asarray(tip_val) if tip_val is not None
         else np.zeros((n_freq, 1, 2), dtype=np.complex128)
     )
     tip_da = (
-        tip[:, 0, :] if tip.ndim == 3 and tip.shape[1] == 1 
+        tip[:, 0, :] if tip.ndim == 3 and tip.shape[1] == 1
         else np.zeros((n_freq, 2), dtype=np.complex128)
     )
 
     tip_err_val = getattr(jf.Tip, "tipper_err", None)
     tip_err = (
-        np.asarray(tip_err_val) if tip_err_val is not None 
+        np.asarray(tip_err_val) if tip_err_val is not None
         else np.zeros_like(tip_da, dtype=np.float64)
     )
     tip_err_da = (
-        tip_err[:, 0, :] if tip_err.ndim == 3 and tip_err.shape[1] == 1 
+        tip_err[:, 0, :] if tip_err.ndim == 3 and tip_err.shape[1] == 1
         else np.zeros((n_freq, 2), dtype=np.float64)
     )
-    
+
     ds = xr.Dataset(
         data_vars={
             "z": (("freq", "output_ch", "input_ch"), z),
@@ -550,22 +551,22 @@ def _ds_from_jfile(jf: JFile) -> xr.Dataset:
         },
     ).expand_dims(site=[sid])
 
-    
+
     return ds
 
-       
+
 def _get_tensor_or_zeros(
-    obj: Optional[object], attr: str, n_freq: int, dtype: np.dtype
+    obj: object | None, attr: str, n_freq: int, dtype: np.dtype
 ) -> np.ndarray:
     """Safely get a (n_freq, 2, 2) tensor array or return zeros."""
     val = getattr(obj, attr, None) if obj else None
     if val is None:
         return np.zeros((n_freq, 2, 2), dtype=dtype)
-    
+
     arr = np.asarray(val)
     if arr.ndim == 3 and arr.shape == (n_freq, 2, 2):
         return arr.astype(dtype, copy=False)
-        
+
     # Fallback for safety
     return np.zeros((n_freq, 2, 2), dtype=dtype)
 
@@ -574,7 +575,7 @@ def _get_rejection_flags(
 ) -> np.ndarray:
     """
     Extracts rejection flags from the original JBlocks for a given kind.
-    
+
     This is necessary because the high-level Z/Res objects do not
     preserve the per-component rejection flags.
     """
@@ -589,18 +590,18 @@ def _get_rejection_flags(
         comp = block.comp
         if comp not in comp_map:
             continue
-            
+
         i, j = comp_map[comp]
         block_data = block.to_numpy()
-        
+
         # Align periods between the block and the final JFile object
         p_common, idx_jfile, idx_block = JFile._align_by_periods(
             jf.freq, block_data["period"]
         )
-        
+
         if p_common.size > 0:
             rej_tensor[idx_jfile, i, j] = block_data["rej"][idx_block]
-            
+
     return rej_tensor
 
 

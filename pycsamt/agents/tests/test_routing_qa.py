@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -22,7 +21,6 @@ from __future__ import annotations
 
 import re
 import unittest
-
 
 # ── Q&A vs workflow classification ────────────────────────────────────────────
 
@@ -226,7 +224,7 @@ class TestContextInputDoesNotAbsorbQA(unittest.TestCase):
             "Explain the Sites class",
         ]:
             with self.subTest(text=text[:60]):
-                wf = self._route(text)
+                self._route(text)
                 # It's fine if the router returns
                 # something — the important thing
                 # is no data_path is set for a

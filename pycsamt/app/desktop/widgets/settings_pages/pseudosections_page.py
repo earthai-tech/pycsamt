@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -116,7 +115,9 @@ class PseudosectionsPage(SettingsPage):
 
     def populate(self) -> None:
         try:
-            from pycsamt.api.station import PYCSAMT_STATION_RENDERING as SR
+            from pycsamt.api.station import (
+                PYCSAMT_STATION_RENDERING as SR,
+            )
             ps = SR.pseudosection
             self._side_combo.setCurrentIndex(
                 next((i for i, (_, v) in enumerate(_SIDE_CHOICES) if v == ps.side), 0)
@@ -132,7 +133,9 @@ class PseudosectionsPage(SettingsPage):
             pass
 
         try:
-            from pycsamt.api.section import PYCSAMT_SECTION as SEC
+            from pycsamt.api.section import (
+                PYCSAMT_SECTION as SEC,
+            )
             y_dir = SEC.pseudosection.axis.y_direction
             self._ydir_combo.setCurrentIndex(
                 next((i for i, (_, v) in enumerate(_Y_DIR_CHOICES) if v == y_dir), 0)
@@ -157,7 +160,9 @@ class PseudosectionsPage(SettingsPage):
 
     def reset(self) -> None:
         try:
-            from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+            from pycsamt.api.station import (
+                PYCSAMT_STATION_RENDERING,
+            )
             PYCSAMT_STATION_RENDERING.reset()
         except Exception:
             pass

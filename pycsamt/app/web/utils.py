@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -12,14 +11,12 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Optional
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Plotly colorscale compatibility
@@ -75,7 +72,11 @@ def filter_sites_by_lines(sites, station_records: list, active_lines: list):
         if not active_ids:
             return None
 
-        from pycsamt.emtools._core import _iter_items, _name, ensure_sites
+        from pycsamt.emtools._core import (
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
         items = list(_iter_items(sites))
         filtered = [
             getattr(ed, "edi", ed)
@@ -285,13 +286,13 @@ def _auto_zoom(lats: np.ndarray, lons: np.ndarray) -> tuple[float, float, float,
 
 def build_station_map(
     df: pd.DataFrame,
-    selected_id: Optional[str] = None,
+    selected_id: str | None = None,
     overlay: str = "Index",
     dark: bool = True,
-    line_filter: Optional[list] = None,
-    muted_lines: Optional[list] = None,
+    line_filter: list | None = None,
+    muted_lines: list | None = None,
     marker_size: int = 10,
-    basemap_style: Optional[str] = None,
+    basemap_style: str | None = None,
     cmap: str = "plasma",
     opacity: float = 0.92,
     show_labels: bool = True,
@@ -380,8 +381,8 @@ def build_station_map(
 
     sel_size = int(marker_size * 1.8)
     sizes    = np.where(ids == selected_id, sel_size, marker_size).tolist() if selected_id else [marker_size] * len(ids)
-    borders  = [sel_col if sid == selected_id else "#ffffff" for sid in ids]
-    bwidths  = [2.5   if sid == selected_id else 0.8    for sid in ids]
+    [sel_col if sid == selected_id else "#ffffff" for sid in ids]
+    [2.5   if sid == selected_id else 0.8    for sid in ids]
 
     hover_label = _colorbar_title(overlay)
 
@@ -569,9 +570,9 @@ def build_station_map(
 
 
 def build_contour_overlay(
-    lats: "np.ndarray",
-    lons: "np.ndarray",
-    values: "np.ndarray",
+    lats: np.ndarray,
+    lons: np.ndarray,
+    values: np.ndarray,
     *,
     cmap: str = "jet",
     n_levels: int = 12,
@@ -584,7 +585,7 @@ def build_contour_overlay(
     smooth_sigma: float = 1.0,
     log_scale: bool = False,
     grid_res: int = 150,
-) -> "dict | None":
+) -> dict | None:
     """
     Render a Surfer-style contour image over the station network.
 
@@ -633,16 +634,19 @@ def build_contour_overlay(
     grid_res : int
         Number of grid cells per axis (e.g. 150 → 150×150 grid).
     """
-    import io, base64
+    import base64
+    import io
 
+    import matplotlib.colors as mcolors
     import numpy as np
+    from matplotlib.backends.backend_agg import (
+        FigureCanvasAgg,
+    )
+    from matplotlib.figure import Figure
+    from PIL import Image as _PILImage
     from scipy.interpolate import griddata
     from scipy.ndimage import gaussian_filter
     from scipy.spatial import cKDTree
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
-    import matplotlib.colors as mcolors
-    from PIL import Image as _PILImage
 
     # ── Validate input ────────────────────────────────────────────────────
     lats   = np.asarray(lats,   dtype=float).ravel()
@@ -850,8 +854,8 @@ def empty_state(
     icon: str = "bi-broadcast",
     title: str = "No data loaded",
     subtitle: str = "Load EDI files to get started",
-    btn_label: Optional[str] = None,
-    btn_id: Optional[str] = None,
+    btn_label: str | None = None,
+    btn_id: str | None = None,
 ):
     """
     Return a structured empty-state placeholder `html.Div`.
@@ -869,8 +873,8 @@ def empty_state(
     btn_id : str, optional
         ``id`` for the optional button.
     """
-    from dash import html
     import dash_bootstrap_components as dbc
+    from dash import html
 
     children = [
         html.I(className=f"bi bi-{icon} empty-state-icon"),
@@ -1140,6 +1144,7 @@ def build_plotly_pseudosection(
     """
     import numpy as np
     import pandas as pd
+
     from pycsamt.emtools._core import ensure_sites
 
     bg_color   = "#1e1e2e" if dark else "#e6e9ef"
@@ -1284,7 +1289,7 @@ def build_multi_pseudosection(
     components: list,
     plot_type: str = "rho",
     dark: bool = True,
-) -> "go.Figure":
+) -> go.Figure:
     """
     Multi-component pseudosection: one stacked heatmap row per component.
 

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for _base.py — AgentResult, BaseAgent, and _pricing."""
 
-import time
 import unittest
 
 

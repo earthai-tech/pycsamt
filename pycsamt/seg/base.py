@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
@@ -16,27 +15,26 @@ Subclasses only need to:
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod 
-
-import numpy as np 
-
-from pathlib import Path
-from dataclasses import is_dataclass, fields as dc_fields
-from typing import ( 
-    Any, 
-    Dict,
-    Iterable, 
-    List, 
-    Optional, 
-    Sequence, 
-    Tuple, 
-    Union, 
-    Mapping, 
-    TypeVar,
+from abc import ABC, abstractmethod
+from collections.abc import (
+    Iterable,
     Iterator,
+    Mapping,
+    Sequence,
 )
+from dataclasses import fields as dc_fields
+from dataclasses import is_dataclass
+from pathlib import Path
+from typing import (
+    Any,
+    TypeVar,
+    Union,
+)
+
+import numpy as np
+
 from ..log.logger import get_logger as _get_logger
-from .validation import IsEdi 
+from .validation import IsEdi
 
 PathLike = Union[str, Path]
 
@@ -107,10 +105,10 @@ class SEGBase(Base):  # pragma: no cover
     pass
 
 class EDIComponentBase(Base):
-    _section: Optional[str] = None
+    _section: str | None = None
     _float_fmt: str = "{: .6E}"
     _indent: int = 2
-    _show_in_str: Optional[Sequence[str]] = None
+    _show_in_str: Sequence[str] | None = None
     _repr_max_items: int = 6
     _repr_max_chars: int = 120
 
@@ -133,7 +131,7 @@ class EDIComponentBase(Base):
     # -------- repr/str ---------
     def __repr__(self) -> str:
         cls = self.__class__.__name__
-        parts: List[str] = []
+        parts: list[str] = []
         chars = 0
         for i, (k, v) in enumerate(self._iter_kv(True)):
             if i >= self._repr_max_items:
@@ -156,9 +154,9 @@ class EDIComponentBase(Base):
         kv = " ".join(self.to_lines(only=self._show_in_str))
         return f"{self.__class__.__name__} {kv}"
 
-    # public 
-    def to_dict(self, *, exclude_none: bool = True) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
+    # public
+    def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
+        out: dict[str, Any] = {}
         for k, v in self._iter_kv(exclude_none):
             out[k] = v
         return out
@@ -166,7 +164,7 @@ class EDIComponentBase(Base):
     @classmethod
     def from_dict(
         cls, data: Mapping[str, Any]
-    ) -> "EDIComponentBase":
+    ) -> EDIComponentBase:
         obj = cls()
         for k, v in (data or {}).items():
             try:
@@ -178,9 +176,9 @@ class EDIComponentBase(Base):
     def to_lines(
         self,
         *,
-        only: Optional[Sequence[str]] = None,
-        indent: Optional[int] = None,
-    ) -> List[str]:
+        only: Sequence[str] | None = None,
+        indent: int | None = None,
+    ) -> list[str]:
         pad = indent if indent is not None else self._indent
         kv = list(self._iter_kv(True))
         if only is not None:
@@ -192,13 +190,13 @@ class EDIComponentBase(Base):
     def to_text(self) -> str:
         return str(self)
 
-    def update(self, /, **kw: Any) -> "EDIComponentBase":
+    def update(self, /, **kw: Any) -> EDIComponentBase:
         for k, v in kw.items():
             setattr(self, k, v)
         self.validate()
         return self
 
-    def clone(self, /, **ov: Any) -> "EDIComponentBase":
+    def clone(self, /, **ov: Any) -> EDIComponentBase:
         new = self.__class__()
         for k, v in self._iter_kv(False):
             setattr(new, k, v)
@@ -207,13 +205,13 @@ class EDIComponentBase(Base):
         new.validate()
         return new
 
-    # subclass hook 
+    # subclass hook
     def validate(self) -> None:
         return None
 
-    #  internals 
+    #  internals
     @classmethod
-    def _field_names(cls) -> List[str]:
+    def _field_names(cls) -> list[str]:
         if is_dataclass(cls):
             return [f.name for f in dc_fields(cls)]
         ann = getattr(cls, "__annotations__", None) or {}
@@ -221,7 +219,7 @@ class EDIComponentBase(Base):
             return list(ann.keys())
         return []
 
-    def _iter_kv(self, exclude_none: bool) -> Iterator[Tuple[str, Any]]:
+    def _iter_kv(self, exclude_none: bool) -> Iterator[tuple[str, Any]]:
         seen = set()
         for name in self._field_names():
             if not hasattr(self, name):
@@ -278,20 +276,20 @@ class EDIComponentBase(Base):
 
 
 class EdiFileBase(EDIComponentBase, ABC):
-    path: Optional[Path] = None
+    path: Path | None = None
     strict_validate: bool = True
     block_size: int = 6
     number_fmt: str = " 15.6e"
     data_header_tpl: str = ">!****{title}****!\n"
 
-    sections: Dict[str, EDIComponentBase] = {}
+    sections: dict[str, EDIComponentBase] = {}
 
     _log = Base._logger_factory(__name__)
 
     def __init__(
         self,
         *,
-        path: Optional[PathLike] = None,
+        path: PathLike | None = None,
         strict_validate: bool = True,
     ) -> None:
         self.path = Path(path) if path is not None else None
@@ -307,14 +305,14 @@ class EdiFileBase(EDIComponentBase, ABC):
     @classmethod
     def from_file(
         cls, file: PathLike, **kw: Any
-    ) -> "EdiFileBase":
+    ) -> EdiFileBase:
         inst = cls(path=Path(file), **kw)
         inst.read()
         return inst
 
     def write_file(
         self,
-        file: Optional[PathLike] = None,
+        file: PathLike | None = None,
         *,
         overwrite: bool = True,
     ) -> Path:
@@ -333,11 +331,11 @@ class EdiFileBase(EDIComponentBase, ABC):
         return target
 
     @abstractmethod
-    def read(self) -> "EdiFileBase":
+    def read(self) -> EdiFileBase:
         ...
 
     @abstractmethod
-    def compose(self) -> Union[str, List[str]]:
+    def compose(self) -> str | list[str]:
         ...
 
     # ------- registry ----------
@@ -345,7 +343,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         key = self._normalize_section_name(name)
         self.sections[key] = s
 
-    def get_section(self, name: str) -> Optional[EDIComponentBase]:
+    def get_section(self, name: str) -> EDIComponentBase | None:
         return self.sections.get(self._normalize_section_name(name))
 
     def remove_section(self, name: str) -> None:
@@ -353,17 +351,17 @@ class EdiFileBase(EDIComponentBase, ABC):
 
     def iter_sections(
         self,
-    ) -> Iterable[Tuple[str, EDIComponentBase]]:
+    ) -> Iterable[tuple[str, EDIComponentBase]]:
         return self.sections.items()
 
     # ------- proxies -----------
     @property
-    def dataid(self) -> Optional[str]:
+    def dataid(self) -> str | None:
         head = self.get_section("head")
         return getattr(head, "dataid", None) if head else None
 
     @property
-    def lat(self) -> Optional[float]:
+    def lat(self) -> float | None:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
         if head and getattr(head, "lat", None) is not None:
@@ -371,7 +369,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         return getattr(dm, "reflat", None) if dm else None
 
     @property
-    def lon(self) -> Optional[float]:
+    def lon(self) -> float | None:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
         if head and getattr(head, "long", None) is not None:
@@ -379,7 +377,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         return getattr(dm, "reflong", None) if dm else None
 
     @property
-    def elev(self) -> Optional[float]:
+    def elev(self) -> float | None:
         head = self.get_section("head")
         dm = self.get_section("definemeasurement")
         if head and getattr(head, "elev", None) is not None:
@@ -419,7 +417,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         value: Any,
         *,
         quote: bool = False,
-        width: Optional[int] = None,
+        width: int | None = None,
     ) -> str:
         k = key.strip().upper()
         if value is None:
@@ -436,17 +434,17 @@ class EdiFileBase(EDIComponentBase, ABC):
     def format_data_block(
         self,
         title: str,
-        data: Iterable[Union[float, int]],
+        data: Iterable[float | int],
         *,
-        per_line: Optional[int] = None,
+        per_line: int | None = None,
         header_comment: bool = True,
         count_comment: bool = True,
-    ) -> List[str]:
+    ) -> list[str]:
         t = self.normalize_section_title(title)
         vals = list(data or [])
         n = len(vals)
         per = per_line or self.block_size
-        out: List[str] = []
+        out: list[str] = []
         if header_comment:
             out.append(self.format_block_header(t))
         if count_comment:
@@ -467,7 +465,7 @@ class EdiFileBase(EDIComponentBase, ABC):
     @staticmethod
     def ensure_descending_frequency(
         freq: Iterable[float],
-    ) -> Tuple[List[float], Optional[List[int]]]:
+    ) -> tuple[list[float], list[int] | None]:
         f = list(freq or [])
         if not f:
             return f, None
@@ -476,7 +474,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         idx = list(range(len(f)))[::-1]
         return f[::-1], idx
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "path": str(self.path) if self.path is not None else None,
             "strict_validate": self.strict_validate,
@@ -490,7 +488,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "EdiFileBase":
+    def from_dict(cls, data: Mapping[str, Any]) -> EdiFileBase:
         inst = cls(
             path=Path(data["path"]) if data.get("path") else None,
             strict_validate=bool(data.get("strict_validate", True)),
@@ -558,13 +556,13 @@ class SurveyBase:
         return a
 
     @staticmethod
-    def _rng(a: np.ndarray) -> Tuple[float, float] | None:
+    def _rng(a: np.ndarray) -> tuple[float, float] | None:
         if a.size == 0 or not np.isfinite(a).any():
             return None
         return (float(np.nanmin(a)), float(np.nanmax(a)))
 
     @staticmethod
-    def _fmt_rng(r: Tuple[float, float] | None) -> str:
+    def _fmt_rng(r: tuple[float, float] | None) -> str:
         if r is None:
             return "-"
         lo, hi = r
@@ -579,11 +577,11 @@ class SurveyBase:
         return f"{head}, +{len(vals) - (maxn - 1)}"
 
 
-    def _stations(self) -> List[str]:
+    def _stations(self) -> list[str]:
         # try dedicated API, else rows, else empty
         if hasattr(self, "stations"):
             try:
-                ss = getattr(self, "stations")
+                ss = self.stations
                 if callable(ss):
                     return [str(s) for s in ss()]
                 return [str(s) for s in ss]  # property
@@ -591,7 +589,7 @@ class SurveyBase:
                 pass
         if hasattr(self, "as_table"):
             try:
-                rows = getattr(self, "as_table")()
+                rows = self.as_table()
                 return [str(r.get("station", "")) for r in rows]
             except Exception:
                 pass
@@ -599,47 +597,47 @@ class SurveyBase:
 
     def _lat(self) -> np.ndarray:
         if hasattr(self, "lat"):
-            return self._as_floats(getattr(self, "lat"))
+            return self._as_floats(self.lat)
         return np.asarray([], float)
 
     def _lon(self) -> np.ndarray:
         if hasattr(self, "lon"):
-            return self._as_floats(getattr(self, "lon"))
+            return self._as_floats(self.lon)
         return np.asarray([], float)
 
     def _elev(self) -> np.ndarray:
         if hasattr(self, "elev"):
-            return self._as_floats(getattr(self, "elev"))
+            return self._as_floats(self.elev)
         if hasattr(self, "elevation"):
-            return self._as_floats(getattr(self, "elevation"))
+            return self._as_floats(self.elevation)
         return np.asarray([], float)
 
     def _distance(self) -> np.ndarray:
         if hasattr(self, "distance"):
-            return self._as_floats(getattr(self, "distance"))
+            return self._as_floats(self.distance)
         return np.asarray([], float)
 
-    def _azimuth(self) -> Optional[float]:
+    def _azimuth(self) -> float | None:
         val = None
         if hasattr(self, "azimuth"):
             try:
-                v = getattr(self, "azimuth")
+                v = self.azimuth
                 val = float(v)  # property or value
             except Exception:
                 pass
         elif hasattr(self, "get_bearing"):
             try:
-                v = getattr(self, "get_bearing")()
+                v = self.get_bearing()
                 val = None if v is None else float(v)
             except Exception:
                 pass
         return val
 
-    def _step(self) -> Optional[float]:
+    def _step(self) -> float | None:
         # prefer explicit method if it returns scalar
         if hasattr(self, "get_step"):
             try:
-                v = getattr(self, "get_step")()
+                v = self.get_step()
                 a = self._as_floats(v)
                 if a.ndim == 0:
                     return float(a)  # scalar
@@ -670,7 +668,7 @@ class SurveyBase:
         except Exception:
             return 0
 
-    def summary_dict(self) -> Dict[str, Any]:
+    def summary_dict(self) -> dict[str, Any]:
         lat = self._lat()
         lon = self._lon()
         el = self._elev()
@@ -702,7 +700,7 @@ class SurveyBase:
 
     def __str__(self) -> str:  # pragma: no cover
         s = self.summary_dict()
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append(self.__class__.__name__)
         lines.append(f"  count   : {s['n']}")
         lines.append(
@@ -728,15 +726,15 @@ class SurveyBase:
 
     def format_table(
         self,
-        rows: List[Dict[str, Any]] | None = None,
+        rows: list[dict[str, Any]] | None = None,
         *,
-        cols: List[str] | None = None,
+        cols: list[str] | None = None,
         max_rows: int | None = 24,
     ) -> str:
         if rows is None:
             if hasattr(self, "as_table"):
                 try:
-                    rows = getattr(self, "as_table")()
+                    rows = self.as_table()
                 except Exception:
                     rows = []
             else:
@@ -748,7 +746,7 @@ class SurveyBase:
         if max_rows is not None and len(rows) > max_rows:
             rows = rows[: max_rows]
         # widths
-        w: Dict[str, int] = {}
+        w: dict[str, int] = {}
         for c in cols:
             w[c] = max(len(c), *(len(str(r.get(c, ""))) for r in rows))
         # header

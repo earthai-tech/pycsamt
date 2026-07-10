@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -25,16 +24,15 @@ reliable than starting from a random initialisation.
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
 from .pinn_agent import (
-    _rms_from_residuals,
-    _plot_pinn_section,
     _plot_loss_curves,
+    _plot_pinn_section,
+    _rms_from_residuals,
 )
 
 _HYBRID_SYSTEM = """\

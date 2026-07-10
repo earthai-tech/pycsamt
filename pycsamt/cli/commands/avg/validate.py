@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt avg validate — data quality assessment for Zonge AVG files."""
@@ -12,8 +11,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import avg, _get_avg, _load_raw
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_avg, _load_raw, avg
 
 # QC column registry: (col_name, label, unit, threshold_warn)
 _QC_COLS = [
@@ -120,8 +123,6 @@ def validate(
         sys.exit(1)
 
     # Per-station aggregation
-    import pandas as pd  # noqa: PLC0415
-    import numpy as np   # noqa: PLC0415
 
     gb  = df.groupby("station") if "station" in df.columns else df.groupby(df.index)
     agg = gb[[c for c, *_ in present]].agg(["mean", "max"]).round(3)
@@ -182,7 +183,7 @@ def validate(
     )
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table(show_header=True)
         tbl.add_column("Station", style="cyan")
         for _, lbl, unit, _ in present:

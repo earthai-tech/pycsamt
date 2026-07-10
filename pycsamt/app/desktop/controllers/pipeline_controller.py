@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -29,8 +28,7 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-
+from typing import Any, Callable
 
 # ── Step status ───────────────────────────────────────────────────────────────
 
@@ -71,7 +69,7 @@ class ParamSpec:
 class MethodSpec:
     name: str
     label: str
-    params: Dict[str, ParamSpec] = field(default_factory=dict)
+    params: dict[str, ParamSpec] = field(default_factory=dict)
 
 
 # ── Pipeline step definition ──────────────────────────────────────────────────
@@ -81,7 +79,7 @@ class PipelineStep:
     id: int
     name: str
     description: str
-    methods: List[MethodSpec]
+    methods: list[MethodSpec]
     default_method: str        # MethodSpec.name
     can_skip: bool = True
     abort_on_error: bool = False
@@ -89,12 +87,12 @@ class PipelineStep:
     # Runtime state
     status: StepStatus = StepStatus.PENDING
     active_method: str = ""    # filled from default_method at init
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
     output_sites: Any = None
     result_info: str = ""
     error_msg: str = ""
     elapsed_s: float = 0.0
-    diag_fn: Optional[str] = None  # emtools fn name for the preview plot
+    diag_fn: str | None = None  # emtools fn name for the preview plot
 
     def __post_init__(self):
         if not self.active_method:
@@ -107,20 +105,20 @@ class PipelineStep:
         if m:
             self.params = {k: p.default for k, p in m.params.items()}
 
-    def get_method(self, name: str) -> Optional[MethodSpec]:
+    def get_method(self, name: str) -> MethodSpec | None:
         for m in self.methods:
             if m.name == name:
                 return m
         return None
 
     @property
-    def active_method_spec(self) -> Optional[MethodSpec]:
+    def active_method_spec(self) -> MethodSpec | None:
         return self.get_method(self.active_method)
 
 
 # ── Step catalogue ────────────────────────────────────────────────────────────
 
-def _build_steps() -> List[PipelineStep]:
+def _build_steps() -> list[PipelineStep]:
     return [
         # ── 0  Load ───────────────────────────────────────────────────────────
         PipelineStep(
@@ -322,9 +320,9 @@ class PipelineController:
     """
 
     def __init__(self) -> None:
-        self.steps: List[PipelineStep] = _build_steps()
+        self.steps: list[PipelineStep] = _build_steps()
         self._sites_input = None     # Sites passed in from main window
-        self._sites_chain: List = [None] * 8   # snapshot after each step
+        self._sites_chain: list = [None] * 8   # snapshot after each step
 
     # ── Data binding ──────────────────────────────────────────────────────────
 
@@ -420,7 +418,9 @@ class PipelineController:
                 if not folder:
                     raise ValueError("No folder selected for Load step.")
                 log(f"Loading EDI files from: {folder}")
-                from pycsamt.app.desktop.controllers.data_controller import DataController
+                from pycsamt.app.desktop.controllers.data_controller import (
+                    DataController,
+                )
                 dc = DataController()
                 import glob
                 paths = glob.glob(str(Path(folder) / "*.edi"), recursive=False)
@@ -503,7 +503,7 @@ class PipelineController:
                 result = et.apply_ss_factors(sites_in, tbl, inplace=False)
             result = self._coerce_sites(result, sites_in)
             step.result_info = f"SS corrected — {self._n(result)} stations"
-            log(f"Static shift correction complete.")
+            log("Static shift correction complete.")
             return result
 
         # ── 4: Noise Removal ──────────────────────────────────────────────────

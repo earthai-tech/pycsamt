@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """SimPEG backend for physics-based EM inversion.
@@ -24,9 +23,17 @@ import numpy as np
 
 from ..base import BaseInversionBackend
 from ..data import EMData
-from ..mesh import InversionMesh, build_1d_tensor_mesh, build_3d_tensor_mesh
+from ..mesh import (
+    InversionMesh,
+    build_1d_tensor_mesh,
+    build_3d_tensor_mesh,
+)
 from ..model import StartingModel
-from ..objective import component_errors, component_mask, weighted_rms
+from ..objective import (
+    component_errors,
+    component_mask,
+    weighted_rms,
+)
 from ..regularization import regularization_from_config
 from ..results import InversionResult
 
@@ -387,7 +394,9 @@ def _load_simpeg() -> _SimPEGModules:
             optimization,
             regularization,
         )
-        from simpeg.electromagnetics import natural_source as nsem
+        from simpeg.electromagnetics import (
+            natural_source as nsem,
+        )
     except ImportError as exc:
         raise ImportError(
             "SimPEG backend selected, but SimPEG/discretize is not installed. "

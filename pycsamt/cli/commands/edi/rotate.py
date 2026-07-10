@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt edi rotate — rotate Z and Tipper tensors and write output EDIs."""
@@ -12,8 +11,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import no_color_option, output_dir_option, verbose_option
-from ._base import edi, _get_collection, _get_edi
+from ....api.cli.options import (
+    no_color_option,
+    output_dir_option,
+    verbose_option,
+)
+from ._base import _get_collection, _get_edi, edi
 
 
 @edi.command("rotate")
@@ -69,7 +72,10 @@ def rotate(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from pycsamt.seg.ops import rotate_impedance, rotate_tipper  # noqa: PLC0415
+    from pycsamt.seg.ops import (  # noqa: PLC0415
+        rotate_impedance,
+        rotate_tipper,
+    )
 
     # Collect EDI files
     if source.is_file():

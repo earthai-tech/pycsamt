@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -111,7 +110,7 @@ class ProjectRegistry:
     @classmethod
     def from_default(
         cls, root: Path | None = None
-    ) -> "ProjectRegistry | None":
+    ) -> ProjectRegistry | None:
         """Build from the auto-discovered registry, or ``None``."""
         reg = find_default_registry(root)
         return cls(reg, root=root) if reg else None

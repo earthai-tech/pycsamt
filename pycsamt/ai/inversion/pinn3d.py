@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -58,27 +57,24 @@ PINNInverter3D(n_stations=25, fitted)
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
 from .._base import BasePINNInverter
+from ._pinn_ops import fit_3d_joint
 from ._sites_bridge import (
     SiteObs2D,
-    sites_to_obs_2d,
-    sites_to_coords_3d,
-    _make_common_grid,
     _interp_to_grid,
+    _make_common_grid,
+    sites_to_coords_3d,
+    sites_to_obs_2d,
 )
-from ._pinn_ops import fit_3d_joint
 
 __all__ = ["PINNInverter3D"]
 
 
 # ── backward-compat re-export (hybrid3d imports this)
-from ._pinn_ops_torch import (
-    _fit_3d_joint_torch as _fit_3d_joint,
-)
 
 
 class PINNInverter3D(BasePINNInverter):
@@ -143,14 +139,14 @@ class PINNInverter3D(BasePINNInverter):
         smoothness_weight: float = 0.01,
         graph_weight: float = 0.005,
         radius: float = 5000.0,
-        adjacency: Optional[np.ndarray] = None,
-        station_coords: Optional[np.ndarray] = None,
+        adjacency: np.ndarray | None = None,
+        station_coords: np.ndarray | None = None,
         station_spacing: float = 500.0,
         epochs: int = 300,
         lr: float = 1e-2,
         comp_te: str = "xy",
         comp_tm: str = "yx",
-        device: Optional[str] = None,
+        device: str | None = None,
         recursive: bool = True,
         on_dup: str = "replace",
         verbose: int = 0,
@@ -178,7 +174,7 @@ class PINNInverter3D(BasePINNInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._obs: List[SiteObs2D] = (
+        self._obs: list[SiteObs2D] = (
             sites_to_obs_2d(
                 sites,
                 comp_te=comp_te,
@@ -221,7 +217,7 @@ class PINNInverter3D(BasePINNInverter):
                 radius=self.radius,
             ).astype(np.float64)
 
-        self._result: Optional[Dict] = None
+        self._result: dict | None = None
 
     # ── fit ──
 
@@ -230,7 +226,7 @@ class PINNInverter3D(BasePINNInverter):
         *,
         verbose: bool = True,
         log_every: int = 50,
-    ) -> "PINNInverter3D":
+    ) -> PINNInverter3D:
         """
         Run the joint 3-D physics-informed inversion.
 
@@ -345,6 +341,7 @@ class PINNInverter3D(BasePINNInverter):
         """
         self._check_fitted()
         import pandas as pd
+
         from pycsamt.forward.em1d import MT1DForward
         from pycsamt.forward.synthetic import LayeredModel
 
@@ -393,7 +390,7 @@ class PINNInverter3D(BasePINNInverter):
     # ── read-only properties ──
 
     @property
-    def stations(self) -> List[str]:
+    def stations(self) -> list[str]:
         """Station names in order."""
         return [o.name for o in self._obs]
 
@@ -406,7 +403,7 @@ class PINNInverter3D(BasePINNInverter):
 
     def _build_obs_arrays(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         S = len(self._obs)
         F = len(self._freqs_grid)
         lr_obs = np.full((S, F), np.nan)

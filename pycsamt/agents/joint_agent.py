@@ -32,7 +32,7 @@ from typing import Any
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
-from .ai_inversion import _z_to_features, _default_thicknesses
+from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
 You are an expert in multi-modal geophysical joint inversion using deep learning.
@@ -140,8 +140,8 @@ class JointInversionAgent(BaseAgent):
         # ── backend check ─────────────────────────────────────────────────────
         try:
             from ..ai.inversion.joint import JointInverter
-            from ..forward.batch      import generate_dataset
-            from ..backends           import get_backend_instance
+            from ..backends import get_backend_instance
+            from ..forward.batch import generate_dataset
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -151,7 +151,12 @@ class JointInversionAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
 
         # ── load primary MT sites ─────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
@@ -205,7 +210,7 @@ class JointInversionAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        n_sta = len(station_names)
+        len(station_names)
         X_mt_obs_arr = np.stack(X_mt_obs, axis=0).astype(np.float32)  # (n_sta, n_feat_mt)
 
         # ── collect or synthesise secondary features ──────────────────────────
@@ -388,7 +393,10 @@ def _collect_secondary_features(
     Otherwise a low-frequency sub-set of the primary impedance is used to
     simulate a complementary modality (TEM-like amplitude + phase).
     """
-    from ..emtools._core import _iter_items, _name, _get_z_block
+    from ..emtools._core import (
+        _get_z_block,
+        _iter_items,
+    )
 
     n_sta = len(station_names)
     X_sec = np.zeros((n_sta, n_feat_sec), dtype=np.float32)
@@ -479,8 +487,12 @@ def _forward_rms_joint(
 ) -> float | None:
     """Compute forward-response RMS for one predicted station."""
     try:
-        from ..forward import MT1DForward, LayeredModel
-        from ..emtools._core import _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+        )
+        from ..forward import LayeredModel, MT1DForward
 
         for i, ed in enumerate(_iter_items(sites)):
             if _name(ed, i) != station_name and i != station_idx:
@@ -525,6 +537,7 @@ def _plot_joint_section(
 ) -> Any:
     """Plot the joint-inversion predicted log₁₀ρ section."""
     import matplotlib.pyplot as plt
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import PYCSAMT_STATION_RENDERING
 

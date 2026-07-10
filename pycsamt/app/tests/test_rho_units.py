@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Regression guard for the apparent-resistivity unit convention.
@@ -17,6 +16,7 @@ import os
 import unittest
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -43,7 +43,9 @@ class TestRhoFieldFormula(unittest.TestCase):
         if not _HAS_DATA:
             self.skipTest("sample EDI data not available")
         from pycsamt.emtools._core import (
-            ensure_sites, _iter_items, _get_z_block,
+            _get_z_block,
+            _iter_items,
+            ensure_sites,
         )
         S = ensure_sites(_DATA, recursive=True, verbose=0)
         ed = next(_iter_items(S))
@@ -111,7 +113,9 @@ class TestStationResponseErrorBars(unittest.TestCase):
 
     def test_rho_error_relative(self):
         from pycsamt.emtools._core import (
-            ensure_sites, _iter_items, _get_z_block,
+            _get_z_block,
+            _iter_items,
+            ensure_sites,
         )
         S = ensure_sites(_DATA, recursive=True, verbose=0)
         ed = next(_iter_items(S))

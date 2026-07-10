@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """Tests for Phase-6 builder methods:
     OccamData.from_edi, OccamMesh.from_data,
     OccamModel.from_mesh, OccamStartup.from_model, InputBuilder.build
 """
 
 import math
+
 import numpy as np
 import pytest
-from pathlib import Path
-
 
 # ---------------------------------------------------------------------------
 # Synthetic site fixture (no pyproj / full EDI stack required)
@@ -142,8 +140,8 @@ def test_from_edi_rho_te_log10():
 
 
 def test_from_edi_error_floor():
-    from pycsamt.models.occam2d.data import OccamData
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.data import OccamData
     sites = _make_sites(2, 4)
     cfg   = OccamConfig(error_floor_rho=0.05, error_floor_phase=0.5)
     d = OccamData.from_edi(sites, config=cfg)
@@ -154,8 +152,8 @@ def test_from_edi_error_floor():
 
 
 def test_from_edi_freq_band():
-    from pycsamt.models.occam2d.data import OccamData
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.data import OccamData
     sites = _make_sites(2, 10)
     cfg   = OccamConfig(freq_min=1.0, freq_max=100.0)
     d = OccamData.from_edi(sites, config=cfg)
@@ -197,8 +195,8 @@ def _simple_data(n=3):
 
 
 def test_mesh_from_data_shape():
-    from pycsamt.models.occam2d.mesh import OccamMesh
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.mesh import OccamMesh
     d = _simple_data(5)
     cfg = OccamConfig(n_layers=10, n_airlayers=3, cell_size_horizontal=100.0)
     m = OccamMesh.from_data(d, config=cfg)
@@ -228,8 +226,8 @@ def test_mesh_from_data_zwidths_positive():
 
 
 def test_mesh_from_data_cell_rows_count():
-    from pycsamt.models.occam2d.mesh import OccamMesh
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.mesh import OccamMesh
     d   = _simple_data(3)
     cfg = OccamConfig(n_layers=5, n_airlayers=2)
     m   = OccamMesh.from_data(d, config=cfg)
@@ -239,8 +237,8 @@ def test_mesh_from_data_cell_rows_count():
 
 def test_mesh_from_data_air_rows_fixed():
     """Air rows should use '0'; active rows use '?'."""
-    from pycsamt.models.occam2d.mesh import OccamMesh
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.mesh import OccamMesh
     d   = _simple_data(3)
     cfg = OccamConfig(n_layers=5, n_airlayers=2)
     m   = OccamMesh.from_data(d, config=cfg)
@@ -271,8 +269,8 @@ def test_mesh_from_data_single_station():
 
 
 def test_mesh_from_data_no_stations_raises():
-    from pycsamt.models.occam2d.mesh import OccamMesh
     from pycsamt.models.occam2d.data import OccamData
+    from pycsamt.models.occam2d.mesh import OccamMesh
     d = OccamData()
     d.offsets = np.array([])
     with pytest.raises(ValueError, match="no station offsets"):
@@ -287,7 +285,7 @@ def _simple_mesh(n_xcells=50, n_zcells=8, n_air=2):
     from pycsamt.models.occam2d.mesh import OccamMesh
     # Build a mesh with exactly n_xcells x-cells (even, >= 14)
     # achieved by n_pad=7 each side + interior
-    interior = n_xcells - 14
+    n_xcells - 14
     m = OccamMesh()
     m.x_widths   = np.ones(n_xcells) * 100.0
     m.z_widths   = np.ones(n_zcells) * 50.0
@@ -395,8 +393,8 @@ def test_startup_from_model_n_params():
 
 
 def test_startup_from_model_param_values():
-    from pycsamt.models.occam2d.startup import OccamStartup
     from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.startup import OccamStartup
     mod = _simple_model()
     cfg = OccamConfig(initial_rho=100.0)
     su  = OccamStartup.from_model(mod, config=cfg)
@@ -431,8 +429,8 @@ def test_startup_from_model_roundtrip(tmp_path):
 
 
 def test_startup_from_model_no_params_raises():
-    from pycsamt.models.occam2d.startup import OccamStartup
     from pycsamt.models.occam2d.model import OccamModel
+    from pycsamt.models.occam2d.startup import OccamStartup
     mod = OccamModel()   # empty model, n_params = 0
     with pytest.raises(ValueError, match="no parameters"):
         OccamStartup.from_model(mod)
@@ -444,14 +442,16 @@ def test_startup_from_model_no_params_raises():
 
 def test_input_builder_integration(tmp_path):
     """Full pipeline: data → mesh → model → startup → files on disk."""
-    from pycsamt.models.occam2d.builder import InputBuilder
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.data import OccamData
     from pycsamt.models.occam2d.mesh import OccamMesh
     from pycsamt.models.occam2d.model import OccamModel
     from pycsamt.models.occam2d.startup import OccamStartup
     from pycsamt.models.occam2d.validation import (
-        is_data_file, is_mesh_file, is_model_file, is_startup_file,
+        is_data_file,
+        is_mesh_file,
+        is_model_file,
+        is_startup_file,
     )
 
     # Build the four objects manually (bypassing from_edi)

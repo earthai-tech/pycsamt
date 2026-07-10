@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 r"""
@@ -461,7 +460,9 @@ CORRECTION_METHODS: dict[str, dict] = {
 
 def _catalogue() -> dict:
     """Return the desktop correction CATALOGUE (imported lazily)."""
-    from ..app.desktop.controllers.correction_controller import CATALOGUE
+    from ..app.desktop.controllers.correction_controller import (
+        CATALOGUE,
+    )
     return CATALOGUE
 
 

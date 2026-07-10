@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -61,9 +60,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple, Union
-
-import numpy as np
+from typing import Any
 
 from ..seg.collection import EDICollection
 from ..seg.edi import EDIFile
@@ -109,7 +106,7 @@ class TransformResult:
             print(f.source, "->", f.error)
     """
     collection: EDICollection
-    failures: List[_FailRecord] = field(default_factory=list)
+    failures: list[_FailRecord] = field(default_factory=list)
 
     @property
     def n_ok(self) -> int:
@@ -215,11 +212,11 @@ class SpectraToEDI(TransformerMixin):
     def __init__(
         self,
         *,
-        e_labels: Tuple[str, str] = ("EX", "EY"),
-        h_labels: Tuple[str, str] = ("HX", "HY"),
-        ridge: Optional[float] = None,
+        e_labels: tuple[str, str] = ("EX", "EY"),
+        h_labels: tuple[str, str] = ("HX", "HY"),
+        ridge: float | None = None,
         estimate_error: bool = False,
-        dof: Optional[Any] = None,
+        dof: Any | None = None,
         use_remote: bool = False,
         station_suffix: str = "",
         skip_errors: bool = True,
@@ -244,8 +241,8 @@ class SpectraToEDI(TransformerMixin):
         self,
         source: Any,
         *,
-        output_dir: Optional[Union[str, Path]] = None,
-        station_name: Optional[str] = None,
+        output_dir: str | Path | None = None,
+        station_name: str | None = None,
     ) -> EDICollection:
         """Transform one or multiple spectra EDIs to impedance EDIs.
 
@@ -296,8 +293,8 @@ class SpectraToEDI(TransformerMixin):
         self,
         source: Any,
         *,
-        output_dir: Optional[Union[str, Path]] = None,
-        station_name: Optional[str] = None,
+        output_dir: str | Path | None = None,
+        station_name: str | None = None,
     ) -> TransformResult:
         """Like :meth:`transform` but always returns a :class:`TransformResult`.
 
@@ -323,8 +320,8 @@ class SpectraToEDI(TransformerMixin):
         if out_dir is not None:
             out_dir.mkdir(parents=True, exist_ok=True)
 
-        edis: List[EDIFile] = []
-        failures: List[_FailRecord] = []
+        edis: list[EDIFile] = []
+        failures: list[_FailRecord] = []
 
         single = len(paths) == 1
 
@@ -365,7 +362,7 @@ class SpectraToEDI(TransformerMixin):
         self,
         path: Path,
         *,
-        station_name: Optional[str] = None,
+        station_name: str | None = None,
     ) -> EDIFile:
         """Convert a single spectra EDI file to an impedance EDIFile.
 
@@ -423,7 +420,7 @@ class SpectraToEDI(TransformerMixin):
     # Source resolution helpers
     # ------------------------------------------------------------------
 
-    def _resolve_sources(self, source: Any) -> List[Path]:
+    def _resolve_sources(self, source: Any) -> list[Path]:
         """Normalise *source* to a sorted list of resolved ``.edi`` paths."""
         from ..seg.spectra import Spectra  # noqa: PLC0415
 
@@ -461,7 +458,7 @@ class SpectraToEDI(TransformerMixin):
             )
 
         if isinstance(source, (list, tuple)):
-            paths: List[Path] = []
+            paths: list[Path] = []
             for item in source:
                 paths.extend(self._resolve_sources(item))
             return sorted(set(paths))
@@ -495,11 +492,11 @@ class SpectraToEDI(TransformerMixin):
     # ------------------------------------------------------------------
 
     @classmethod
-    def with_errors(cls, **kw: Any) -> "SpectraToEDI":
+    def with_errors(cls, **kw: Any) -> SpectraToEDI:
         """Return a transformer with ``estimate_error=True``."""
         return cls(estimate_error=True, **kw)
 
     @classmethod
-    def with_tipper_suffix(cls, **kw: Any) -> "SpectraToEDI":
+    def with_tipper_suffix(cls, **kw: Any) -> SpectraToEDI:
         """Return a transformer that appends ``'_IMP'`` to station names."""
         return cls(station_suffix="_IMP", **kw)

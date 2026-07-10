@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
 from ..exceptions import (
-    ZError,
     PhaseError,
     ResistivityError,
+    ZError,
 )
+from ..log.logger import get_logger
 from ..utils.zmath import (
     propagate_error_polar2rect,
     z_error2r_phi_error,
 )
-from ..log.logger import get_logger
 from .base import BaseEM
 
 logger = get_logger(__name__)
@@ -153,21 +152,21 @@ class ResPhase(BaseEM):
 
     def __init__(
         self,
-        z_array: Optional[np.ndarray] = None,
-        z_err_array: Optional[np.ndarray] = None,
-        freq: Optional[np.ndarray] = None,
+        z_array: np.ndarray | None = None,
+        z_err_array: np.ndarray | None = None,
+        freq: np.ndarray | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        
-        self._z: Optional[np.ndarray] = None
-        self._z_err: Optional[np.ndarray] = None
 
-        self._resistivity: Optional[np.ndarray] = None
-        self._phase: Optional[np.ndarray] = None
+        self._z: np.ndarray | None = None
+        self._z_err: np.ndarray | None = None
 
-        self._resistivity_err: Optional[np.ndarray] = None
-        self._phase_err: Optional[np.ndarray] = None
+        self._resistivity: np.ndarray | None = None
+        self._phase: np.ndarray | None = None
+
+        self._resistivity_err: np.ndarray | None = None
+        self._phase_err: np.ndarray | None = None
 
         if z_array is not None:
             self._z = np.asarray(z_array, dtype=complex)
@@ -189,12 +188,12 @@ class ResPhase(BaseEM):
         self._resistivity = np.asarray(res_array, dtype=float)
 
     @property
-    def resistivity_err(self) -> Optional[np.ndarray]:
+    def resistivity_err(self) -> np.ndarray | None:
         return self._resistivity_err
 
     @resistivity_err.setter
     def resistivity_err(
-        self, res_err_array: Optional[np.ndarray]
+        self, res_err_array: np.ndarray | None
     ) -> None:
         if res_err_array is None:
             self._resistivity_err = None
@@ -214,12 +213,12 @@ class ResPhase(BaseEM):
         self._phase = np.asarray(phase_array, dtype=float)
 
     @property
-    def phase_err(self) -> Optional[np.ndarray]:
+    def phase_err(self) -> np.ndarray | None:
         return self._phase_err
 
     @phase_err.setter
     def phase_err(
-        self, phase_err_array: Optional[np.ndarray]
+        self, phase_err_array: np.ndarray | None
     ) -> None:
         if phase_err_array is None:
             self._phase_err = None
@@ -231,18 +230,18 @@ class ResPhase(BaseEM):
 
     def compute_resistivity_phase(
         self,
-        z_array: Optional[np.ndarray] = None,
-        z_err_array: Optional[np.ndarray] = None,
-        freq: Optional[np.ndarray] = None,
+        z_array: np.ndarray | None = None,
+        z_err_array: np.ndarray | None = None,
+        freq: np.ndarray | None = None,
     ) -> None:
         r"""
-        Compute :math:`rho` and :math:`phi`(and their errors) 
+        Compute :math:`rho` and :math:`phi`(and their errors)
         from complex **Z**.
-    
+
         Any provided inputs override the instance state.  On success,
         :pyattr:`resistivity`, :pyattr:`phase`, and, when applicable,
         :pyattr:`resistivity_err` and :pyattr:`phase_err` are set.
-    
+
         Parameters
         ----------
         z_array : ndarray, shape (n_freq, 2, 2), optional
@@ -253,29 +252,29 @@ class ResPhase(BaseEM):
             set to ``None``.
         freq : ndarray, shape (n_freq,), optional
             Frequency vector in Hz.  Must be 1-D, finite and > 0.
-    
+
         Returns
         -------
         None
             Results are stored on the instance.
-    
+
         Raises
         ------
         ZError
             If **Z** is missing, shapes are inconsistent, values are not
             finite, or frequencies are not strictly positive.
-    
+
         Notes
         -----
         We use :math:`\rho = 0.2\,|Z|^2 / f` and
         :math:`\phi = \angle Z` (in degrees).
-    
+
         If ``z_err_array`` is given, per-entry uncertainties are
         computed via
         :func:`~pycsamt.utils.zmath.z_error2r_phi_error`.  The
         resistivity error is **absolute** (Ω·m).  The phase error is
         **absolute** (deg) and is capped at :math:`90^\circ`.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -364,19 +363,19 @@ class ResPhase(BaseEM):
         res_array: np.ndarray,
         phase_array: np.ndarray,
         freq: np.ndarray,
-        res_err_array: Optional[np.ndarray] = None,
-        phase_err_array: Optional[np.ndarray] = None,
+        res_err_array: np.ndarray | None = None,
+        phase_err_array: np.ndarray | None = None,
     ) -> None:
         r"""
-        Attach :math:`rho` and :math:`phi` (with optional errors) 
+        Attach :math:`rho` and :math:`phi` (with optional errors)
         and reconstruct **Z**.
-    
+
         This inverse path accepts apparent resistivity (ρ) and phase (φ)
         at each frequency, reconstructs |Z| via ``|Z| = sqrt(5 f ρ)``,
         and builds the complex tensor **Z**.  If both ρ and φ errors are
         supplied, a per-entry absolute **Z** uncertainty is propagated in
         polar coordinates and converted to rectangular form.
-    
+
         Parameters
         ----------
         res_array : ndarray, shape (n_freq, 2, 2)
@@ -390,13 +389,13 @@ class ResPhase(BaseEM):
             ``None``.
         phase_err_array : ndarray, shape (n_freq, 2, 2), optional
             Absolute phase error in degrees.
-    
+
         Returns
         -------
         None
             Results are stored on the instance (:pyattr:`_z`,
             :pyattr:`_z_err`, :pyattr:`resistivity`, :pyattr:`phase`).
-    
+
         Raises
         ------
         ResistivityError
@@ -406,20 +405,20 @@ class ResPhase(BaseEM):
         ZError
             If shapes are inconsistent, values are non-finite, or
             frequencies are not strictly positive.
-    
+
         Notes
         -----
         The relationship between :math:`|Z|` and :math:`\rho` implies
-        
-        ..math:: 
-         
+
+        ..math::
+
             \frac{d|Z|}{|Z|} = \tfrac{1}{2}\,\frac{d\rho}{\rho}.
-    
+
         When error arrays are supplied, |Z| error follows the above and
         is combined with phase error by
         :func:`~pycsamt.utils.zmath.propagate_error_polar2rect` to yield
         a single absolute **Z** error per component.
-    
+
         Examples
         --------
         >>> import numpy as np
@@ -561,49 +560,49 @@ class ResPhase(BaseEM):
         return self._phase[:, 1, 1]
 
     @property
-    def res_err_xx(self) -> Optional[np.ndarray]:
+    def res_err_xx(self) -> np.ndarray | None:
         if self._resistivity_err is None:
             return None
         return self._resistivity_err[:, 0, 0]
 
     @property
-    def res_err_xy(self) -> Optional[np.ndarray]:
+    def res_err_xy(self) -> np.ndarray | None:
         if self._resistivity_err is None:
             return None
         return self._resistivity_err[:, 0, 1]
 
     @property
-    def res_err_yx(self) -> Optional[np.ndarray]:
+    def res_err_yx(self) -> np.ndarray | None:
         if self._resistivity_err is None:
             return None
         return self._resistivity_err[:, 1, 0]
 
     @property
-    def res_err_yy(self) -> Optional[np.ndarray]:
+    def res_err_yy(self) -> np.ndarray | None:
         if self._resistivity_err is None:
             return None
         return self._resistivity_err[:, 1, 1]
 
     @property
-    def phase_err_xx(self) -> Optional[np.ndarray]:
+    def phase_err_xx(self) -> np.ndarray | None:
         if self._phase_err is None:
             return None
         return self._phase_err[:, 0, 0]
 
     @property
-    def phase_err_xy(self) -> Optional[np.ndarray]:
+    def phase_err_xy(self) -> np.ndarray | None:
         if self._phase_err is None:
             return None
         return self._phase_err[:, 0, 1]
 
     @property
-    def phase_err_yx(self) -> Optional[np.ndarray]:
+    def phase_err_yx(self) -> np.ndarray | None:
         if self._phase_err is None:
             return None
         return self._phase_err[:, 1, 0]
 
     @property
-    def phase_err_yy(self) -> Optional[np.ndarray]:
+    def phase_err_yy(self) -> np.ndarray | None:
         if self._phase_err is None:
             return None
         return self._phase_err[:, 1, 1]

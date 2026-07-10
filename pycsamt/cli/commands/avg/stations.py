@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """pycsamt avg stations — station positions from AVG and companion .stn file."""
@@ -11,8 +10,12 @@ from pathlib import Path
 import click
 
 from ....api.cli.config import configure_cli
-from ....api.cli.options import format_option, no_color_option, verbose_option
-from ._base import avg, _get_avg, _load_raw
+from ....api.cli.options import (
+    format_option,
+    no_color_option,
+    verbose_option,
+)
+from ._base import _get_avg, _load_raw, avg
 
 
 @avg.command("stations")
@@ -145,7 +148,7 @@ def stations(
     click.echo(f"\nStations — {source.name}  (unit: {unit})\n")
     try:
         from rich.console import Console  # noqa: PLC0415
-        from rich.table import Table     # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
         tbl = Table("Name", f"Position ({unit})")
         if has_topo:
             for c in ["Easting", "Northing", "Elev (m)", "Lat", "Lon"]:

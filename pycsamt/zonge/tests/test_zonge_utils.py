@@ -1,7 +1,9 @@
 
 from pathlib import Path
+
 import pandas as pd
 import pytest
+
 from pycsamt.zonge.utils import (
     classify_avg_format,
     load_avg,
@@ -136,7 +138,7 @@ def test_write_avg_default_path_and_header_case(
     monkeypatch.chdir(tmp_path)
 
     out_path = write_avg(core=core, extra=None,
-                         meta={"Survey.Type": "CSAMT"}, 
+                         meta={"Survey.Type": "CSAMT"},
                          path=None, stamp=False)
     assert out_path.exists()
     assert out_path.name == "exported_kind2.avg"
@@ -163,5 +165,5 @@ def test_kind2_comment_lines_are_ignored(tmp_path):
     assert "Survey.Type" in meta
 
 
-if __name__=='__main__': # pragma: no-cover 
+if __name__=='__main__': # pragma: no-cover
    pytest.main( [__file__])

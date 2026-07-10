@@ -296,6 +296,7 @@ def _plot_comparison(
     rmse: float,
 ) -> Any:
     import matplotlib.pyplot as plt
+
     from ..api.section import PYCSAMT_SECTION
     from ..api.station import PYCSAMT_STATION_RENDERING
 

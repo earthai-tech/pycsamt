@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """ResistivityModel — method-agnostic 2-D EM model container.
@@ -10,7 +9,7 @@ without knowing which code produced the model.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -49,7 +48,7 @@ class ResistivityModel:
     z_centers:     np.ndarray
     rho_2d:        np.ndarray
     station_x:     np.ndarray    = field(default_factory=lambda: np.array([]))
-    station_names: List[str]     = field(default_factory=list)
+    station_names: list[str]     = field(default_factory=list)
     method:        str           = "generic"
     rms:           float         = float("nan")
 
@@ -96,7 +95,7 @@ class ResistivityModel:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_occam2d(cls, result: "InversionResult") -> "ResistivityModel":
+    def from_occam2d(cls, result: InversionResult) -> ResistivityModel:
         """Build from an :class:`~pycsamt.models.occam2d.InversionResult`.
 
         Parameters
@@ -119,7 +118,7 @@ class ResistivityModel:
         z_c = (mesh.z_nodes[:-1] + mesh.z_nodes[1:]) / 2.0
 
         sta_x: np.ndarray = np.array([])
-        sta_names: List[str] = []
+        sta_names: list[str] = []
         if result.data is not None:
             sta_x = np.asarray(result.data.offsets, dtype=float)
             sta_names = list(result.data.sites)
@@ -141,11 +140,11 @@ class ResistivityModel:
         x_centers: np.ndarray,
         z_centers: np.ndarray,
         *,
-        station_x: Optional[np.ndarray] = None,
-        station_names: Optional[List[str]] = None,
+        station_x: np.ndarray | None = None,
+        station_names: list[str] | None = None,
         method: str = "generic",
         rms: float = float("nan"),
-    ) -> "ResistivityModel":
+    ) -> ResistivityModel:
         """Build directly from numpy arrays.
 
         Parameters

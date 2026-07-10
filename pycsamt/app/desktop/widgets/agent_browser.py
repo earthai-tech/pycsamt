@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -27,7 +26,7 @@ agent_activated(str)  — emitted on double-click (Run immediately)
 
 from __future__ import annotations
 
-from PySide6.QtCore  import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -285,7 +284,8 @@ class AgentBrowserWidget(QWidget):
 
     def _populate(self) -> None:
         from pycsamt.app.desktop.agent_registry import (
-            AGENT_REGISTRY, agents_by_category,
+            AGENT_REGISTRY,
+            agents_by_category,
         )
 
         # Build category → [(name, entry)] ordered map

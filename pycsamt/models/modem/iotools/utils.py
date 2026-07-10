@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """MT utility functions — Python translation of MATLAB ioAscii/ helper scripts.
@@ -11,8 +10,6 @@ subpackage.
 """
 
 from __future__ import annotations
-
-from typing import Union
 
 import numpy as np
 
@@ -34,9 +31,9 @@ _MU_0 = 4.0 * np.pi * 1e-7
 # -------------------------------------------------------------------------
 
 def skin_depth(
-    period: Union[float, "np.ndarray"],
-    rho: Union[float, "np.ndarray"] = 100.0,
-) -> Union[float, "np.ndarray"]:
+    period: float | np.ndarray,
+    rho: float | np.ndarray = 100.0,
+) -> float | np.ndarray:
     """Electromagnetic skin depth δ in metres.
 
     Equivalent to the ``skindepth.m`` script::
@@ -123,22 +120,22 @@ def imp_units_factor(from_units: str, to_units: str) -> float:
 # Resistivity encoding conversions
 # -------------------------------------------------------------------------
 
-def loge_to_log10(rho_loge: "np.ndarray") -> "np.ndarray":
+def loge_to_log10(rho_loge: np.ndarray) -> np.ndarray:
     """Convert ``ln(ρ)`` to ``log₁₀(ρ)``."""
     return np.asarray(rho_loge, dtype=float) / np.log(10.0)
 
 
-def log10_to_loge(rho_log10: "np.ndarray") -> "np.ndarray":
+def log10_to_loge(rho_log10: np.ndarray) -> np.ndarray:
     """Convert ``log₁₀(ρ)`` to ``ln(ρ)``."""
     return np.asarray(rho_log10, dtype=float) * np.log(10.0)
 
 
-def loge_to_linear(rho_loge: "np.ndarray") -> "np.ndarray":
+def loge_to_linear(rho_loge: np.ndarray) -> np.ndarray:
     """Convert ``ln(ρ)`` to linear resistivity (Ω·m)."""
     return np.exp(np.asarray(rho_loge, dtype=float))
 
 
-def linear_to_loge(rho: "np.ndarray") -> "np.ndarray":
+def linear_to_loge(rho: np.ndarray) -> np.ndarray:
     """Convert linear resistivity (Ω·m) to ``ln(ρ)``."""
     rho = np.asarray(rho, dtype=float)
     safe = np.where(rho > 0, rho, np.finfo(float).tiny)

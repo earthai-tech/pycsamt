@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -16,7 +15,6 @@ Training loop for EM neural networks.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
@@ -75,7 +73,7 @@ class EMTrainer:
         min_delta: float = 1e-5,
         batch_size: int = 256,
         device: str = "cpu",
-        grad_clip: Optional[float] = None,
+        grad_clip: float | None = None,
         verbose: bool = True,
     ):
         self.model = model
@@ -88,12 +86,12 @@ class EMTrainer:
         self.grad_clip = grad_clip
         self.verbose = verbose
 
-        self.history: Dict[str, list] = {
+        self.history: dict[str, list] = {
             "train_loss": [], "val_loss": [], "lr": [], "epoch_time": []
         }
         self.best_epoch: int = 0
         self.best_val_loss: float = float("inf")
-        self._best_state: Optional[dict] = None
+        self._best_state: dict | None = None
 
     # ─── main fit ──────────────────────────────────────────────────────────
 
@@ -102,7 +100,7 @@ class EMTrainer:
         train_ds,
         val_ds,
         epochs: int = 100,
-    ) -> "EMTrainer":
+    ) -> EMTrainer:
         """
         Train the network.
 
@@ -239,14 +237,14 @@ class EMTrainer:
 
     # ─── weight helpers ────────────────────────────────────────────────────
 
-    def get_weights(self) -> Dict[str, np.ndarray]:
+    def get_weights(self) -> dict[str, np.ndarray]:
         """Return model weights as numpy dict."""
         return {
             k: v.cpu().numpy()
             for k, v in self.model.state_dict().items()
         }
 
-    def load_weights(self, weights: Dict[str, np.ndarray]) -> None:
+    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         """Restore weights from numpy dict."""
         import torch
         state = {k: torch.from_numpy(v) for k, v in weights.items()}

@@ -1,28 +1,27 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
- 
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
 import math
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 
 from ..constants import MU_0
 from ..log.logger import get_logger
-from ..z.z import Z
-from ..z.tipper import Tipper
 from ..z.resphase import ResPhase
-
+from ..z.tipper import Tipper
+from ..z.z import Z
+from .blocks import JBlocks, RBlock, TFBlock
 from .config import TENSOR_INDEX
 from .heads import Heads
-from .blocks import JBlocks, RBlock, TFBlock
 
 logger = get_logger(__name__)
 
-def _as_path(p: Union[str, Path]) -> Path:
+def _as_path(p: str | Path) -> Path:
     return p if isinstance(p, Path) else Path(p)
 
 __all__= ['JMixin', "JIOMixin", "JFile"]
@@ -85,7 +84,7 @@ class JMixin:
     .. [2] MTNet, *J format documentation*.
     """
 
-    _tidx: Dict[str, Tuple[int, int]] = dict(TENSOR_INDEX)
+    _tidx: dict[str, tuple[int, int]] = dict(TENSOR_INDEX)
 
     @staticmethod
     def _deg2rad(a: np.ndarray) -> np.ndarray:
@@ -106,7 +105,7 @@ class JMixin:
         *,
         rtol: float = 1e-8,
         atol: float = 1e-12,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if a_p.size == 0 or b_p.size == 0:
             z = np.array([])
             zi = np.array([], dtype=int)
@@ -115,8 +114,8 @@ class JMixin:
 
         ap = a_p.copy()
         bp = b_p.copy()
-        idx_a: List[int] = []
-        idx_b: List[int] = []
+        idx_a: list[int] = []
+        idx_b: list[int] = []
         for i, pa in enumerate(ap):
             j = int(np.argmin(np.abs(bp - pa)))
             if math.isclose(pa, bp[j], rel_tol=rtol, abs_tol=atol):
@@ -149,7 +148,7 @@ class JIOMixin(JMixin):
 
     Notes
     -----
-    
+
     * Data rows are normalized before assembly.  Period
       sign conventions (negative means Hz) are corrected.
     * Missing sentinels (e.g., ``-999``) are mapped to
@@ -198,18 +197,18 @@ class JIOMixin(JMixin):
            version 2.0, 1994.
     .. [2] MTNet, *J format documentation*.
     """
-    
+
     def _scan_blocks(
         self,
         j_blocks: JBlocks,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         Converts a JBlocks object into a dictionary of component data.
         """
-        comp: Dict[str, Dict[str, Any]] = {}
-        
+        comp: dict[str, dict[str, Any]] = {}
+
         # Operate on the blocks from the passed object
-        for blk in j_blocks.blocks: 
+        for blk in j_blocks.blocks:
             if isinstance(blk, RBlock):
                 a = blk.to_numpy()
                 comp[blk.head.dtype.kind + blk.head.dtype.comp] = {
@@ -244,46 +243,46 @@ class JIOMixin(JMixin):
 
     def _build_from_comp(
         self,
-        comp: Dict[str, Dict[str, Any]],
+        comp: dict[str, dict[str, Any]],
         *,
-        z_obj: Optional[Z] = None,
-        tip_obj: Optional[Tipper] = None,
-    ) -> Tuple[Optional[Z], Optional[Tipper], Optional[ResPhase]]:
+        z_obj: Z | None = None,
+        tip_obj: Tipper | None = None,
+    ) -> tuple[Z | None, Tipper | None, ResPhase | None]:
         """
         Assemble Z, Tipper, and Res/Phase from parsed component dicts.
         Uses zero initialization (no NaNs) for API consistency.
         """
-    
-        z_parts: Dict[str, Dict[str, Any]] = {
+
+        z_parts: dict[str, dict[str, Any]] = {
             k: d for k, d in comp.items() if k[:1] in {"Z", "Q"}
         }
-        r_parts: Dict[str, Dict[str, Any]] = {
+        r_parts: dict[str, dict[str, Any]] = {
             k: d for k, d in comp.items() if k[:1] in {"R", "S"}
         }
-        t_parts: Dict[str, Dict[str, Any]] = {
+        t_parts: dict[str, dict[str, Any]] = {
             k: d for k, d in comp.items() if k[:1] == "T"
         }
-    
-        z_out: Optional[Z] = z_obj
-        rp_out: Optional[ResPhase] = None
-    
-        # Z from TF (preferred) 
+
+        z_out: Z | None = z_obj
+        rp_out: ResPhase | None = None
+
+        # Z from TF (preferred)
         if z_out is None and z_parts:
             k0 = next(iter(z_parts.keys()))
             p0 = np.asarray(z_parts[k0]["period"], dtype=float)
             freq = self._hz_from_period(p0)
             n = int(p0.size)
-    
+
             zxx = np.zeros(n, dtype=complex)
             zxy = np.zeros(n, dtype=complex)
             zyx = np.zeros(n, dtype=complex)
             zyy = np.zeros(n, dtype=complex)
-    
+
             exx = np.zeros(n, dtype=float)
             exy = np.zeros(n, dtype=float)
             eyx = np.zeros(n, dtype=float)
             eyy = np.zeros(n, dtype=float)
-    
+
             for key, d in z_parts.items():
                 comp_code = key[-2:].upper()
                 p = np.asarray(d["period"], dtype=float)
@@ -293,7 +292,7 @@ class JIOMixin(JMixin):
                 zval = self._complex(d["real"][ib], d["imag"][ib])
                 err = np.asarray(d.get("err", 0.0), dtype=float)
                 err = err[ib] if err.size else np.zeros(ib.size, dtype=float)
-    
+
                 if comp_code == "XX":
                     zxx[ia] = zval
                     exx[ia] = err
@@ -306,27 +305,27 @@ class JIOMixin(JMixin):
                 elif comp_code == "YY":
                     zyy[ia] = zval
                     eyy[ia] = err
-    
+
             z_mat = np.zeros((n, 2, 2), dtype=complex)
             z_err = np.zeros((n, 2, 2), dtype=float)
-    
+
             z_mat[:, 0, 0] = zxx
             z_mat[:, 0, 1] = zxy
             z_mat[:, 1, 0] = zyx
             z_mat[:, 1, 1] = zyy
-    
+
             z_err[:, 0, 0] = exx
             z_err[:, 0, 1] = exy
             z_err[:, 1, 0] = eyx
             z_err[:, 1, 1] = eyy
-    
+
             z_out = Z(
                 z_array=z_mat,
                 z_err_array=z_err,
                 freq=freq,
                 name=z_parts[k0]["head"].station,  # type: ignore
             )
-    
+
             # Also provide Res/Phase when Z exists.
             rp_out = ResPhase(
                 freq=freq, name=z_parts[k0]["head"].station
@@ -339,31 +338,31 @@ class JIOMixin(JMixin):
                 )
             except Exception:
                 pass
-    
-        # Z from R/phi (fallback) 
+
+        # Z from R/phi (fallback)
         if z_out is None and r_parts:
             have_keys = [k for k in ("RXX", "RXY", "RYX", "RYY") if k in r_parts]
             if not have_keys:
                 have_keys = list(r_parts.keys())
             k0 = have_keys[0]
-    
+
             p0 = np.asarray(r_parts[k0]["period"], dtype=float)
             freq = self._hz_from_period(p0)
             n = int(p0.size)
             w = 2.0 * math.pi * freq
-    
-            def to_imp(d: Dict[str, Any]) -> np.ndarray:
+
+            def to_imp(d: dict[str, Any]) -> np.ndarray:
                 rho = np.asarray(d["rho"], dtype=float)
                 pha = np.asarray(d["pha"], dtype=float)
                 mag = np.sqrt(np.maximum(rho, 0.0) * MU_0 * w)
                 ang = self._deg2rad(pha)
                 return mag * (np.cos(ang) + 1j * np.sin(ang))
-    
+
             zxx = np.zeros(n, dtype=complex)
             zxy = np.zeros(n, dtype=complex)
             zyx = np.zeros(n, dtype=complex)
             zyy = np.zeros(n, dtype=complex)
-    
+
             for key, d in r_parts.items():
                 comp_code = key[-2:].upper()
                 p = np.asarray(d["period"], dtype=float)
@@ -379,15 +378,15 @@ class JIOMixin(JMixin):
                     zyx[ia] = v
                 elif comp_code == "YY":
                     zyy[ia] = v
-    
+
             z_mat = np.zeros((n, 2, 2), dtype=complex)
             z_mat[:, 0, 0] = zxx
             z_mat[:, 0, 1] = zxy
             z_mat[:, 1, 0] = zyx
             z_mat[:, 1, 1] = zyy
-    
+
             z_out = Z(z_array=z_mat, freq=freq, name=k0)
-    
+
             rp_out = ResPhase(freq=freq, name=k0)  # type: ignore
             try:
                 rp_out.compute_resistivity_phase(
@@ -396,20 +395,20 @@ class JIOMixin(JMixin):
                 )
             except Exception:
                 pass
-    
-        # Tipper if present 
-        tip_out: Optional[Tipper] = tip_obj
+
+        # Tipper if present
+        tip_out: Tipper | None = tip_obj
         if tip_out is None and t_parts:
             k0 = next(iter(t_parts.keys()))
             p0 = np.asarray(t_parts[k0]["period"], dtype=float)
             freq = self._hz_from_period(p0)
             n = int(p0.size)
-    
+
             tzx = np.zeros(n, dtype=complex)
             tzy = np.zeros(n, dtype=complex)
             ezx = np.zeros(n, dtype=float)
             ezy = np.zeros(n, dtype=float)
-    
+
             for key, d in t_parts.items():
                 comp_code = key[-2:].upper()
                 p = np.asarray(d["period"], float)
@@ -425,7 +424,7 @@ class JIOMixin(JMixin):
                 elif comp_code == "ZY":
                     tzy[ia] = v
                     ezy[ia] = e
-    
+
             t_arr = np.column_stack((tzx, tzy))
             e_arr = np.column_stack((ezx, ezy))
             tip_out = Tipper(
@@ -434,7 +433,7 @@ class JIOMixin(JMixin):
                 freq=freq,
                 name=t_parts[k0]["head"].station
             )
-            
+
         return z_out, tip_out, rp_out
 
 
@@ -547,21 +546,21 @@ class JFile(JIOMixin):
         verbose: int = 0,
     ) -> None:
         self.verbose = verbose
-        self.path: Optional[Path] = _as_path(path) if path else None
-        self.heads: Optional[Heads] = None
-        self.blocks: Optional[JBlocks] = None
-        self.Z: Optional[Z] = None
-        self.Tip: Optional[Tipper] = None
-        self.Res: Optional[ResPhase] = None
+        self.path: Path | None = _as_path(path) if path else None
+        self.heads: Heads | None = None
+        self.blocks: JBlocks | None = None
+        self.Z: Z | None = None
+        self.Tip: Tipper | None = None
+        self.Res: ResPhase | None = None
         self._read_ok: bool = False
-        
-        if self.path is not None: 
+
+        if self.path is not None:
             self.read(self.path)
 
     @classmethod
     def from_file(
         cls, path: str | Path, *, verbose: int = 0
-    ) -> "JFile":
+    ) -> JFile:
         r"""
         Construct and read a J file in one call.
 
@@ -621,8 +620,8 @@ class JFile(JIOMixin):
         self,
         path: str | Path | None = None,
         *,
-        start: Optional[int] = None,
-    ) -> "JFile":
+        start: int | None = None,
+    ) -> JFile:
         r"""
         Parse a J file and build objects in memory.
 
@@ -683,18 +682,18 @@ class JFile(JIOMixin):
             self.path = _as_path(path)
         if self.path is None:
             raise ValueError("path is required")
-        
+
         # Parse headers and all blocks ONCE.
         self.heads = Heads.from_file(
             self.path, verbose=self.verbose
         )
         self.blocks = JBlocks.from_file(
             self.path, verbose=self.verbose)
-        
+
         # Scan the already-parsed blocks object
         # (no re-reading from disk).
         comp = self._scan_blocks(self.blocks)
-        
+
         # Build the final Z, Tip, and Res objects.
         z, tip, rp = self._build_from_comp(comp)
         self.Z = z
@@ -781,18 +780,18 @@ class JFile(JIOMixin):
         .. [1] A. G. Jones, *Magnetotelluric data file
                J-format*, version 2.0, 1994.
         """
-        
+
         if not self.__has_read__():
             raise RuntimeError(
                 "Cannot write JFile; call .read() first."
             )
- 
+
         def _ensure_parent(p: Path) -> None:
             p.parent.mkdir(parents=True, exist_ok=True)
-            
-        lines: List[str] = []
+
+        lines: list[str] = []
         vb = self.verbose if verbose is None else int(verbose)
-        
+
         # --- 1. Formatting Helpers for Standard J-Format Output ---
         def _fmt(val: float, width: int, precision: int) -> str:
             """Formats a number with fixed width and precision."""
@@ -837,14 +836,14 @@ class JFile(JIOMixin):
             "R": "R" in key and have["R"],
             "T": "T" in key and have["T"],
         }
-        
+
         # --- 4. Write R-Blocks (Resistivity/Phase) ---
         if flags.get("R") and self.Res and self.periods is not None:
             for code, (i, j) in self._tidx.items():
                 rho = self.Res.resistivity[:, i, j]
                 if np.all(np.abs(rho) < 1e-12):
                     continue
-                
+
                 if not first_block_written:
                     lines.append(station_line)
                     first_block_written = True
@@ -852,7 +851,7 @@ class JFile(JIOMixin):
                 lines.append(f"R{code}")
                 lines.append(str(self.n_freq))
                 pha = self.Res.phase[:, i, j]
-                
+
                 for k in range(self.n_freq):
                     p, r_val, ph_val = (
                         self.periods[k], rho[k], pha[k]
@@ -886,7 +885,7 @@ class JFile(JIOMixin):
                 lines.append(str(self.n_freq))
                 err = self.Tip.tipper_err
                 t_err = err[:, 0, k] if err is not None else np.zeros(self.n_freq)
-                
+
                 for l_idx in range(self.n_freq):
                     p, t, e = (
                         self.periods[l_idx], t_comp[l_idx], t_err[l_idx]
@@ -899,7 +898,7 @@ class JFile(JIOMixin):
                         f"{_fmt(1.0, 9, 2)}"
                     )
                     lines.append(row)
-        
+
         # --- 6. Write Z-Blocks (Impedance) ---
         if (flags.get("Z") and self.Z and
                 self.Z.z is not None and self.periods is not None):
@@ -910,12 +909,12 @@ class JFile(JIOMixin):
                 if not first_block_written:
                     lines.append(station_line)
                     first_block_written = True
-                
+
                 lines.append(f"Z{comp_code} SI")
                 lines.append(str(self.n_freq))
                 err = self.Z.z_err
                 z_err = err[:, i, j] if err is not None else np.zeros(self.n_freq)
-                
+
                 for k in range(self.n_freq):
                     p, z, e = (
                         self.periods[k], z_comp[k], z_err[k]
@@ -928,7 +927,7 @@ class JFile(JIOMixin):
                         f"{_fmt(1.0, 9, 2)}"
                     )
                     lines.append(row)
-        
+
         # --- 7. Finalize and Save File ---
         path = self.path
         base = Path(
@@ -945,17 +944,17 @@ class JFile(JIOMixin):
             while out_path.exists():
                 out_path = out_path.with_name(f"{stem}_{c}{suf}")
                 c += 1
-                
+
         _ensure_parent(out_path)
         out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         if vb:
             logger.info("Wrote J file: %s", out_path)
 
         return str(out_path)
-    
+
 
     @property
-    def freq(self) -> Optional[np.ndarray]:
+    def freq(self) -> np.ndarray | None:
         if self.Z is not None and hasattr(self.Z, "freq"):
             return self.Z.freq  # type: ignore[return-value]
         if self.Tip is not None and hasattr(self.Tip, "freq"):
@@ -965,18 +964,18 @@ class JFile(JIOMixin):
         return None
 
     @property
-    def periods(self) -> Optional[np.ndarray]:
+    def periods(self) -> np.ndarray | None:
         f = self.freq
         return None if f is None else self._hz_from_period(f)
 
     @property
     def n_freq(self) -> int:
         f = self.freq
-        return 0 if f is None else int(f.size) 
+        return 0 if f is None else int(f.size)
 
-    
+
     @property
-    def station(self) -> Optional[str]:
+    def station(self) -> str | None:
         if self.heads is not None and self.heads.head is not None:
             return self.heads.head.station
         if self.Z is not None and getattr(self.Z, "name", None):
@@ -984,10 +983,10 @@ class JFile(JIOMixin):
         if self.path is not None:
             return self.path.stem
         return None
-    
-    
+
+
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         # alias with a slightly different precedence
         if self.Z is not None and getattr(self.Z, "name", None):
             return str(self.Z.name)
@@ -996,24 +995,24 @@ class JFile(JIOMixin):
         if self.path is not None:
             return self.path.stem
         return None
-    
-    
+
+
     @property
-    def lat(self) -> Optional[float]:
+    def lat(self) -> float | None:
         if self.heads is not None:
             return self.heads.latitude
         return None
-    
-    
+
+
     @property
-    def lon(self) -> Optional[float]:
+    def lon(self) -> float | None:
         if self.heads is not None:
             return self.heads.longitude
         return None
-    
-    
+
+
     @property
-    def azimuth(self) -> Optional[float]:
+    def azimuth(self) -> float | None:
         # prefer site AZIMUTH; fall back to header azimuth hint
         if self.heads is not None:
             az = self.heads.azimuth
@@ -1022,10 +1021,10 @@ class JFile(JIOMixin):
             # explicit fallback to the hint
             return self.az_hint
         return None
-    
-    
+
+
     @property
-    def az_hint(self) -> Optional[float]:
+    def az_hint(self) -> float | None:
         if (
             self.heads is not None
             and self.heads.head is not None
@@ -1033,24 +1032,24 @@ class JFile(JIOMixin):
         ):
             return self.heads.head.az_hint  # type: ignore[attr-defined]
         return None
-    
+
     @property
-    def elev(self) -> Optional[float]:
+    def elev(self) -> float | None:
         if self.heads is not None:
             return self.heads.elevation
         return None
 
-    @property 
-    def site (self): 
+    @property
+    def site (self):
         # site / station
         # be in defensive
         return self.station or "UNKNOWN"
-    
+
     def __has_read__(self) -> bool:
         return bool(self._read_ok)
 
-    def compose_headers(self) -> List[str]:
-        out: List[str] = []
+    def compose_headers(self) -> list[str]:
+        out: list[str] = []
         if self.heads is not None:
             out.extend(self.heads.write())
         return out
@@ -1062,21 +1061,21 @@ class JFile(JIOMixin):
         cmap = {"Z": z, "R": r, "T": t}
         cstr = ",".join([k for k, ok in cmap.items() if ok]) or "-"
         return cstr, cmap
-    
+
     def _nfreq(self) -> int:
         f = self.freq
         return 0 if f is None else int(getattr(f, "size", len(f)))
-    
+
     def _pname(self) -> str:
         return self.path.name if self.path else "-"
-    
+
     def _pstr(self) -> str:
         return str(self.path) if self.path else "-"
-    
+
     def _summary_dict(self) -> dict[str, object]:
         def _flt(x: float | None) -> str:
             return f"{x:.5f}" if isinstance(x, (int, float)) else "NA"
-        
+
         cstr, cmap = self._comps()
         return {
             "cls": self.__class__.__name__,
@@ -1098,7 +1097,7 @@ class JFile(JIOMixin):
             f"comps={s['cstr']}, lat={s['lat']}, lon={s['lon']}, "
             f"az={s['az']}, path={s['pname']!r})"
         )
-    
+
     def __repr__(self) -> str:  # noqa: D401
         s = self._summary_dict()
         return (

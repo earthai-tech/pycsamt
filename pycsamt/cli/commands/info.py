@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -84,12 +83,11 @@ def _edi_info(path: Path) -> dict[str, Any]:
     }
 
     try:
-        from pycsamt.jones import JFile  # noqa: PLC0415
 
         # Try the jones fast-path for J files accidentally renamed to .edi;
         # for genuine EDI files use the lightweight header-only parser.
         _parse_edi_header(path, record)
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         try:
             _parse_edi_header(path, record)
         except Exception as exc2:  # noqa: BLE001

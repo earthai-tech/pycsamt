@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import math
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Iterable, Optional
-
-import math
+from typing import Any
 
 import pandas as pd
 
@@ -43,7 +43,7 @@ def _as_probability(value: Any, name: str) -> float:
     return out
 
 
-def _as_optional_positive(value: Any, name: str) -> Optional[float]:
+def _as_optional_positive(value: Any, name: str) -> float | None:
     if value is None:
         return None
     return _as_positive(value, name)
@@ -66,9 +66,9 @@ class EnergyConfig(PyCSAMTObject, MetadataMixin):
     edge_power_w: float = 0.0
     edge_duty_cycle: float = 0.0
     auxiliary_wh_per_day: float = 0.0
-    min_runtime_days: Optional[float] = None
-    device_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    min_runtime_days: float | None = None
+    device_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -169,7 +169,7 @@ class DevicePowerProfile(PyCSAMTObject):
     sleep_power_w: float = 0.05
     telemetry_power_w: float = 0.0
     edge_power_w: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -264,7 +264,7 @@ class EnergyEstimate(PyCSAMTObject):
         """Return whether harvested energy covers daily load."""
         return self.state == PowerState.SUSTAINING
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return a serialisable estimate dictionary."""
         return dict(
             average_power_w=self.average_power_w,
@@ -290,7 +290,7 @@ class EnergyEstimate(PyCSAMTObject):
         device: DeviceConfig,
         *,
         timestamp: float,
-        survey_id: Optional[str] = None,
+        survey_id: str | None = None,
         qos: int = 0,
         retained: bool = False,
     ) -> TelemetryPacket:
@@ -390,7 +390,7 @@ def _estimate_state(
 def power_summary_table(
     estimates: EnergyEstimate | Iterable[EnergyEstimate],
     *,
-    device_ids: Optional[Iterable[str]] = None,
+    device_ids: Iterable[str] | None = None,
     api: bool | None = None,
 ) -> Any:
     """Return energy estimates as a pyCSAMT table."""

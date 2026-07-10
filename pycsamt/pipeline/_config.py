@@ -45,16 +45,15 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Raw-dict → step list helper
 # ---------------------------------------------------------------------------
 
 def _steps_from_list(
-    raw_steps: List[Dict[str, Any]],
-) -> List[Tuple[str, Any]]:
+    raw_steps: list[dict[str, Any]],
+) -> list[tuple[str, Any]]:
     """Convert a list of step dicts to ``[(label, Step), ...]``."""
     from ._steps import Step
 
@@ -72,7 +71,7 @@ def _steps_from_list(
     return result
 
 
-def _pipeline_from_dict(cfg: Dict[str, Any]) -> Any:
+def _pipeline_from_dict(cfg: dict[str, Any]) -> Any:
     """Build a :class:`~pycsamt.emtools.pipe.Pipeline` from a raw config dict.
 
     This function lives here (not in _pipeline.py) to avoid circular imports.
@@ -86,7 +85,7 @@ def _pipeline_from_dict(cfg: Dict[str, Any]) -> Any:
     preset_name = cfg.get("preset", None)
     raw_steps = cfg.get("steps") or []
 
-    steps: List[Tuple[str, Any]] = []
+    steps: list[tuple[str, Any]] = []
 
     if preset_name:
         preset = get_preset(preset_name)
@@ -101,7 +100,7 @@ def _pipeline_from_dict(cfg: Dict[str, Any]) -> Any:
 # Format-specific loaders
 # ---------------------------------------------------------------------------
 
-def load_yaml(path: str | Path) -> Dict[str, Any]:
+def load_yaml(path: str | Path) -> dict[str, Any]:
     """Parse a YAML pipeline config file and return the raw dict."""
     try:
         import yaml
@@ -111,7 +110,7 @@ def load_yaml(path: str | Path) -> Dict[str, Any]:
             "Install it with:  pip install pyyaml"
         ) from exc
 
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         raise ValueError(
@@ -120,9 +119,9 @@ def load_yaml(path: str | Path) -> Dict[str, Any]:
     return data
 
 
-def load_json(path: str | Path) -> Dict[str, Any]:
+def load_json(path: str | Path) -> dict[str, Any]:
     """Parse a JSON pipeline config file and return the raw dict."""
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, dict):
         raise ValueError(
@@ -131,7 +130,7 @@ def load_json(path: str | Path) -> Dict[str, Any]:
     return data
 
 
-def load_py(path: str | Path) -> Dict[str, Any]:
+def load_py(path: str | Path) -> dict[str, Any]:
     """Import a Python config file and return its ``pipeline_config`` dict."""
     path = Path(path)
     spec = importlib.util.spec_from_file_location("_pipe_cfg", path)
@@ -167,9 +166,9 @@ def _coerce_for_yaml(obj: Any) -> Any:
 
 
 def pipeline_to_yaml(
-    steps: List[Tuple[str, Any]],
+    steps: list[tuple[str, Any]],
     name: str = "pipeline",
-    output_dir: Optional[str] = None,
+    output_dir: str | None = None,
 ) -> str:
     """Serialise a list of ``(label, Step)`` tuples to a YAML string.
 
@@ -178,12 +177,12 @@ def pipeline_to_yaml(
     """
     step_list = []
     for label, step in steps:
-        entry: Dict[str, Any] = {"name": label, "code": step.spec.code}
+        entry: dict[str, Any] = {"name": label, "code": step.spec.code}
         if step.params:
             entry["params"] = step.params
         step_list.append(entry)
 
-    data: Dict[str, Any] = {"name": name, "steps": step_list}
+    data: dict[str, Any] = {"name": name, "steps": step_list}
     if output_dir is not None:
         data["output_dir"] = output_dir
 

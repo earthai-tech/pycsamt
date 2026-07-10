@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -45,13 +44,10 @@ Replicate the old ``stratagem_edi_process_script.py`` in four lines:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
-
-import numpy as np
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from ..exceptions import NotFittedError
-from .gis_correct import CoordinateInjector, StationLocator
+from .gis_correct import CoordinateInjector
 from .io import EDIBatch, StratagemRawReader
 from .process import NoiseRemover, StaticShiftCorrector
 from .qc import FrequencyFilter, QualityController
@@ -127,10 +123,10 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
 
     def __init__(
         self,
-        edi_dir: "Union[str, Path]",
-        coord_file: "Union[str, Path]",
+        edi_dir: str | Path,
+        coord_file: str | Path,
         *,
-        raw_dir: "Union[str, Path, None]" = None,
+        raw_dir: str | Path | None = None,
         epsg: int = 32649,
         utm_zone: str = "49N",
         coordinate_system: str = "utm",
@@ -147,17 +143,17 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         self.verbose = verbose
 
         # populated by fit()
-        self.batch_: Optional[EDIBatch] = None
-        self.raw_reader_: Optional[StratagemRawReader] = None
-        self.injector_: Optional[CoordinateInjector] = None
-        self.qc_: Optional[QualityController] = None
-        self.edi_objects_: Optional[List] = None
+        self.batch_: EDIBatch | None = None
+        self.raw_reader_: StratagemRawReader | None = None
+        self.injector_: CoordinateInjector | None = None
+        self.qc_: QualityController | None = None
+        self.edi_objects_: list | None = None
 
     # ------------------------------------------------------------------
     # mandatory step
     # ------------------------------------------------------------------
 
-    def fit(self) -> "StratagemSurvey":
+    def fit(self) -> StratagemSurvey:
         """Load EDIs, optional raw files, and inject GPS coordinates.
 
         This is the only mandatory step.  All processing methods
@@ -227,7 +223,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         min_snr_med: float = 2.0,
         max_skew_med: float = 6.0,
         include_skew: bool = True,
-    ) -> "StratagemSurvey":
+    ) -> StratagemSurvey:
         """Run the station-level QC report.
 
         Results stored in :attr:`qc_`.  Does not modify ``Z`` data.
@@ -259,9 +255,9 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         sort_by: str = "lon",
         half_window: int = 3,
         weights: str = "tri",
-        pband: Optional[tuple] = None,
-        max_skew: Optional[float] = 6.0,
-    ) -> "StratagemSurvey":
+        pband: tuple | None = None,
+        max_skew: float | None = 6.0,
+    ) -> StratagemSurvey:
         """Apply AMA static-shift correction.
 
         .. important::
@@ -294,12 +290,12 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
     def drop_frequencies(
         self,
         *,
-        fmin: Optional[float] = None,
-        fmax: Optional[float] = None,
+        fmin: float | None = None,
+        fmax: float | None = None,
         snr_thresh: float = 2.5,
         min_frac: float = 0.4,
         use_hardware_mask: bool = True,
-    ) -> "StratagemSurvey":
+    ) -> StratagemSurvey:
         """Filter frequency bands and mask incoherent bins.
 
         Parameters
@@ -347,7 +343,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         hampel_nsig: float = 3.0,
         smooth: bool = False,
         smooth_win: int = 3,
-    ) -> "StratagemSurvey":
+    ) -> StratagemSurvey:
         """Apply powerline notch + Hampel outlier + optional smoothing.
 
         Returns
@@ -381,11 +377,11 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
 
     def export(
         self,
-        savepath: "Union[str, Path]",
+        savepath: str | Path,
         *,
-        dataid_prefix: Optional[str] = None,
+        dataid_prefix: str | None = None,
         overwrite: bool = False,
-    ) -> "StratagemSurvey":
+    ) -> StratagemSurvey:
         """Write the current ``edi_objects_`` to *savepath*.
 
         Parameters
@@ -420,13 +416,13 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
     def rename(
         self,
         basename: str,
-        dst_path: "Union[str, Path]",
+        dst_path: str | Path,
         *,
         zero_pad: int = 3,
         trailer: str = "",
         overwrite: bool = False,
-        source: "Optional[Union[str, Path]]" = None,
-    ) -> "StratagemSurvey":
+        source: str | Path | None = None,
+    ) -> StratagemSurvey:
         """Rename EDI files with a standardised basename.
 
         Parameters
@@ -449,7 +445,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         """
         self._require_fit()
 
-        src: "Union[str, Path, List]"
+        src: str | Path | list
         if source is not None:
             src = source
         elif hasattr(self, "_last_export_dir_"):
@@ -482,7 +478,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         self._require_fit()
 
         lines = [
-            f"StratagemSurvey",
+            "StratagemSurvey",
             f"  edi_dir    : {self.edi_dir}",
             f"  coord_file : {self.coord_file}",
             f"  n_stations : {self.n_stations_}",

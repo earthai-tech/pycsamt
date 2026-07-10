@@ -74,7 +74,12 @@ class InversionEvaluationAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        from ..emtools._core import ensure_sites, _iter_items, _name, _get_z_block
+        from ..emtools._core import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            ensure_sites,
+        )
         from ..emtools.tensor import build_phase_tensor_table
 
         obs_raw = input_data.get("sites_obs") or input_data.get("path_obs")
@@ -159,7 +164,9 @@ class InversionEvaluationAgent(BaseAgent):
 
         if sites_mod is not None:
             try:
-                from ..emtools.inspect import plot_station_response
+                from ..emtools.inspect import (
+                    plot_station_response,
+                )
                 fig_resp = plot_station_response(
                     sites_obs, sites_model=sites_mod,
                 )

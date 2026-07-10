@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
@@ -10,8 +9,8 @@ line-detection logic is not duplicated in the UI layer.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
 
 __all__ = [
     "detect_lines_from_station_ids",
@@ -28,7 +27,7 @@ def detect_lines_from_station_ids(
     station_ids: Sequence[str],
     *,
     min_stations_per_line: int = 1,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     """
     Infer survey-line groupings from station ID strings.
 
@@ -69,7 +68,7 @@ def detect_lines_from_station_ids(
     >>> detect_lines_from_station_ids(ids)
     {'WL07A': ['WL07A'], 'WL07B': ['WL07B'], 'WL09A': ['WL09A']}
     """
-    groups: Dict[str, List[str]] = {}
+    groups: dict[str, list[str]] = {}
     for sid in station_ids:
         token = _SEP.split(str(sid), maxsplit=1)[0].strip()
         if not token:
@@ -99,7 +98,7 @@ def detect_lines_from_filenames(
     file_paths: Sequence[str],
     *,
     use_parent: bool = False,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     """
     Infer line groupings from EDI file paths.
 
@@ -124,7 +123,7 @@ def detect_lines_from_filenames(
     >>> detect_lines_from_filenames(paths, use_parent=True)
     {'line18': ['/data/line18/S001.edi'], 'line22': ['/data/line22/S002.edi']}
     """
-    groups: Dict[str, List[str]] = {}
+    groups: dict[str, list[str]] = {}
     for fp in file_paths:
         p = Path(fp)
         if use_parent:
@@ -143,9 +142,9 @@ def detect_lines_from_filenames(
 
 
 def apply_line_renames(
-    station_records: List[dict],
-    renames: Dict[str, str],
-) -> List[dict]:
+    station_records: list[dict],
+    renames: dict[str, str],
+) -> list[dict]:
     """
     Apply a ``{old_name: new_name}`` rename map to a list of station records.
 
@@ -181,7 +180,7 @@ def apply_line_renames(
 
 def resolve_display_name(
     line_name: str,
-    renames: Optional[Dict[str, str]] = None,
+    renames: dict[str, str] | None = None,
 ) -> str:
     """Return the display name for *line_name*, consulting *renames* first."""
     if renames and line_name in renames:
@@ -192,7 +191,7 @@ def resolve_display_name(
 def pick_representative_stations(
     station_ids: Sequence[str],
     k: int,
-) -> List[str]:
+) -> list[str]:
     """Return up to *k* evenly spaced station IDs from a sorted line.
 
     Used to build a compact ``profiles={line: [stations]}`` grouping for

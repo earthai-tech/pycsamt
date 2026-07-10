@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from .ast_indexer import index_python_file
-from .config import should_index
+from .config import INDEX_ROOTS, ROOT_DOCS, should_index
 from .doc_indexer import index_doc_file
 from .schemas import RAGChunk
 
@@ -57,16 +57,30 @@ def repo_root() -> Path:
 
 
 def iter_index_files(root: Path) -> Iterator[Path]:
-    """Yield absolute paths of files that should be indexed under *root*."""
+    """Yield absolute paths of files that should be indexed under *root*.
+
+    Walks only the :data:`~pycsamt.assistant.rag.config.INDEX_ROOTS` (plus
+    the root-level docs) rather than the whole repository — ``data/``,
+    ``results/`` and ``.git/`` hold tens of thousands of files that could
+    never be indexed, and scanning them dominated both ingestion and the
+    freshness check. The yielded set is unchanged.
+    """
     root = Path(root)
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in (".py", ".rst", ".md"):
-            continue
-        rel = path.relative_to(root).as_posix()
-        if should_index(rel):
+    for name in ROOT_DOCS:
+        path = root / name
+        if path.is_file() and should_index(name):
             yield path
+    for index_root in INDEX_ROOTS:
+        base = root / index_root
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in (".py", ".rst", ".md"):
+                continue
+            if should_index(path.relative_to(root).as_posix()):
+                yield path
 
 
 def build_chunks(
@@ -145,11 +159,16 @@ def source_fingerprint(
     *,
     files: Iterable[Path] | None = None,
 ) -> str:
-    """Cheap content-independent fingerprint of the indexable source tree.
+    """Content fingerprint of the indexable source tree.
 
-    Hashes each indexable file's ``(relpath, mtime, size)`` — no parsing —
-    so it changes whenever a file is added, removed, or edited. Callers use
-    it to detect a *stale* persisted index without re-ingesting the repo.
+    Hashes each indexable file's ``(relpath, sha256(content))`` — no
+    parsing — so it changes exactly when indexed content changes. Callers
+    use it to detect a *stale* persisted index without re-ingesting.
+
+    Content, not mtime: merely running the test suite (or any tool that
+    rewrites a file byte-identically) bumps mtimes and would otherwise
+    report a false "stale index". Hashing costs no more than the directory
+    walk it replaces.
     """
     import hashlib
 
@@ -162,9 +181,11 @@ def source_fingerprint(
     h = hashlib.sha256()
     for p in paths:
         try:
-            st = p.stat()
+            data = p.read_bytes()
         except OSError:
             continue
         rel = p.relative_to(root).as_posix()
-        h.update(f"{rel}:{int(st.st_mtime)}:{st.st_size}\n".encode("utf-8"))
+        h.update(rel.encode("utf-8"))
+        h.update(b":")
+        h.update(hashlib.sha256(data).digest())
     return h.hexdigest()

@@ -161,6 +161,82 @@ class TestClarification(unittest.TestCase):
         self.assertIsNone(needs_clarification(ac))
 
 
+class TestApiCardsAndGraph(unittest.TestCase):
+    """Tier 3: signature-aware cards + symbol cross-references in context."""
+
+    def _chunks(self):
+        return [
+            RAGChunk(
+                id="1",
+                text="Symbol: pycsamt.emtools.ss.correct_ss_ama\n\n"
+                "Docstring:\nCorrect static shift by AMA.",
+                source_path="pycsamt/emtools/ss.py",
+                kind="python_symbol", workflow="static_shift", priority=3,
+                symbol="pycsamt.emtools.ss.correct_ss_ama",
+                module="pycsamt.emtools.ss",
+                metadata={
+                    "signature": "correct_ss_ama(sites, half_window=3) -> dict",
+                    "params": [
+                        {"name": "sites", "annotation": None, "default": None},
+                        {"name": "half_window", "annotation": "int",
+                         "default": "3"},
+                    ],
+                    "returns": "dict",
+                    "refs": ["ensure_sites"],
+                },
+            ),
+            RAGChunk(
+                id="2",
+                text="Symbol: pycsamt.emtools.ss.ensure_sites\n\n"
+                "Docstring:\nLoad EDIs into Sites.",
+                source_path="pycsamt/emtools/ss.py",
+                kind="python_symbol", priority=3,
+                symbol="pycsamt.emtools.ss.ensure_sites",
+                module="pycsamt.emtools.ss",
+                metadata={"signature": "ensure_sites(path)", "params": [],
+                          "refs": []},
+            ),
+        ]
+
+    def setUp(self):
+        from pycsamt.assistant.rag.graph import SymbolGraph
+
+        chunks = self._chunks()
+        self.builder = ContextBuilder(
+            Retriever(chunks), None, SymbolGraph(chunks)
+        )
+
+    def test_api_card_rendered_for_lead_symbol(self):
+        ac = self.builder.build("correct static shift ama")
+        self.assertIn("API: correct_ss_ama(sites, half_window=3)", ac.context_text)
+        self.assertIn("half_window: int = 3", ac.context_text)
+
+    def test_related_symbols_from_graph(self):
+        ac = self.builder.build("correct static shift ama")
+        self.assertIn("pycsamt.emtools.ss.ensure_sites", ac.related_symbols)
+        self.assertIn("Related API", ac.context_text)
+
+    def test_api_cards_structured(self):
+        ac = self.builder.build("correct static shift ama")
+        cards = {c["symbol"]: c for c in ac.api_cards()}
+        card = cards["pycsamt.emtools.ss.correct_ss_ama"]
+        self.assertEqual(card["returns"], "dict")
+        self.assertEqual(
+            [p["name"] for p in card["params"]], ["sites", "half_window"]
+        )
+
+    def test_related_symbols_lead_the_see_also(self):
+        ac = self.builder.build("correct static shift ama")
+        ans = ac.compose_offline_answer()
+        self.assertIn("ensure_sites", ans)
+
+    def test_no_graph_means_no_related(self):
+        plain = ContextBuilder(Retriever(self._chunks()), None)
+        ac = plain.build("correct static shift ama")
+        self.assertEqual(ac.related_symbols, [])
+        self.assertNotIn("Related API", ac.context_text)
+
+
 class TestPackageQAWithRAG(unittest.TestCase):
     """PackageQAAgent offline uses the RAG-composed answer when available."""
 

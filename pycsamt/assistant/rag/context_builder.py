@@ -33,6 +33,33 @@ __all__ = [
 
 _SNIPPET_CHARS = 700
 
+_CODE_KINDS = ("python_symbol", "python_method", "module_doc")
+
+
+def _render_api_card(chunk: RAGChunk, max_params: int = 8) -> str:
+    """Compact call surface for a code chunk: signature + parameter table.
+
+    Put in front of the LLM (and the offline answer) so generated code uses
+    real argument names and defaults rather than plausible-looking ones.
+    Returns ``""`` when the chunk carries no signature.
+    """
+    sig = chunk.metadata.get("signature")
+    if not sig:
+        return ""
+    lines = [f"API: {sig}"]
+    params = (chunk.metadata.get("params") or [])[:max_params]
+    for p in params:
+        bits = f"  - {p['name']}"
+        if p.get("annotation"):
+            bits += f": {p['annotation']}"
+        if p.get("default") is not None:
+            bits += f" = {p['default']}"
+        lines.append(bits)
+    ret = chunk.metadata.get("returns")
+    if ret:
+        lines.append(f"  -> {ret}")
+    return "\n".join(lines)
+
 
 # NumPy-doc section headers: everything from the first one on is API
 # reference detail, not answer prose.
@@ -126,6 +153,7 @@ class AssembledContext:
     symbols: list[dict[str, Any]] = field(default_factory=list)
     chunks: list[RAGChunk] = field(default_factory=list)
     top_score: float = 0.0
+    related_symbols: list[str] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         return not self.chunks and not self.project_context
@@ -133,6 +161,28 @@ class AssembledContext:
     def is_confident(self, floor: float = _CLARIFY_SCORE_FLOOR) -> bool:
         """True when a project line resolved or retrieval scored well."""
         return bool(self.project_context) or self.top_score >= floor
+
+    def api_cards(self) -> list[dict[str, Any]]:
+        """Structured call surfaces for the retrieved code symbols.
+
+        One entry per code chunk: ``{symbol, signature, params, returns}``.
+        Code generation uses this to emit calls with real argument names
+        and defaults instead of guessing them from prose.
+        """
+        cards: list[dict[str, Any]] = []
+        for c in self.chunks:
+            if not c.symbol or c.kind not in _CODE_KINDS:
+                continue
+            params = c.metadata.get("params") or []
+            if not params and not c.metadata.get("signature"):
+                continue
+            cards.append({
+                "symbol": c.symbol,
+                "signature": c.metadata.get("signature"),
+                "params": params,
+                "returns": c.metadata.get("returns"),
+            })
+        return cards
 
     def _lead_chunk(self) -> RAGChunk | None:
         """Pick the best 'definition' chunk to open the answer.
@@ -220,8 +270,13 @@ class AssembledContext:
         if bullets:
             parts.append("Also relevant:\n" + "\n".join(bullets))
 
-        # Related API symbols (dedup, skip shown + test fixtures).
+        # Related API symbols (dedup, skip shown + test fixtures). Graph
+        # cross-references come first: what the lead symbol actually calls
+        # beats what merely co-retrieved with it.
         rel: list[str] = []
+        for sym in self.related_symbols:
+            if sym and sym not in rel and sym not in seen:
+                rel.append(sym)
         for s in self.symbols:
             sym = s.get("symbol")
             if not sym or sym in rel or sym in seen:
@@ -249,9 +304,16 @@ class AssembledContext:
 class ContextBuilder:
     """Assemble :class:`AssembledContext` from a retriever + registry."""
 
-    def __init__(self, retriever: Retriever, registry: Any | None = None):
+    def __init__(
+        self,
+        retriever: Retriever,
+        registry: Any | None = None,
+        graph: Any | None = None,
+    ):
         self.retriever = retriever
         self.registry = registry
+        # Optional SymbolGraph: surfaces the API a retrieved symbol calls.
+        self.graph = graph
 
     def build(
         self,
@@ -335,17 +397,42 @@ class ContextBuilder:
                 f"  static_shift_defaults: {pc.get('static_shift')}"
             )
 
+        # Cross-references for the best code symbol: what does it call?
+        related: list[str] = []
+        if self.graph is not None:
+            for c in ctx.chunks:
+                if c.symbol and c.kind in _CODE_KINDS:
+                    try:
+                        related = self.graph.related(c.symbol)
+                    except Exception:  # noqa: BLE001 — graph is best-effort
+                        related = []
+                    break
+        if related:
+            blocks.append(
+                "Related API (called by the top symbol):\n"
+                + "\n".join(f"  - {s}" for s in related)
+            )
+
         used = len("\n\n".join(blocks))
+        card_shown = False
         for i, c in enumerate(ctx.chunks, start=1):
             label = c.symbol or c.title or c.source_path
             sig = c.metadata.get("signature")
             head = f"[{i}] {label}"
             if sig:
                 head += f"  —  {sig}"
+            # Signature-aware card (params + return) for the first *code*
+            # symbol — the lead chunk is often a recipe or doc section — so
+            # generated calls use real argument names and defaults.
+            card = ""
+            if not card_shown and c.kind in _CODE_KINDS:
+                card = _render_api_card(c)
+                card_shown = bool(card)
             block = (
                 f"{head}\n"
                 f"    (source: {c.source_path})\n"
-                f"{_snippet(c)}"
+                + (f"{card}\n" if card else "")
+                + f"{_snippet(c)}"
             )
             if used + len(block) > max_chars and i > 1:
                 break
@@ -369,6 +456,7 @@ class ContextBuilder:
             symbols=ctx.symbols,
             chunks=ctx.chunks,
             top_score=ctx.top_score,
+            related_symbols=related,
         )
 
 
@@ -434,7 +522,13 @@ def default_context_builder(root=None) -> "ContextBuilder | None":
                 registry = ProjectRegistry.from_default(root)
             except Exception:  # noqa: BLE001
                 registry = None
-            builder = ContextBuilder(retriever, registry)
+            graph = None
+            try:
+                from .graph import build_symbol_graph
+                graph = build_symbol_graph(retriever.chunks)
+            except Exception:  # noqa: BLE001 — xrefs are best-effort
+                graph = None
+            builder = ContextBuilder(retriever, registry, graph)
     except Exception:  # noqa: BLE001
         builder = None
 

@@ -14,6 +14,7 @@ from pycsamt.assistant.rag import cli
 from pycsamt.assistant.rag.index_store import (
     build_index,
     index_exists,
+    index_is_stale,
     load_index,
     read_manifest,
 )
@@ -58,8 +59,9 @@ class TestIndexStore(unittest.TestCase):
         build_index(root=self.root)
         mf = read_manifest(root=self.root)
         self.assertIsNotNone(mf)
-        self.assertEqual(mf["version"], 1)
+        self.assertEqual(mf["version"], 2)
         self.assertIn("stats", mf)
+        self.assertIn("source_fingerprint", mf)
 
     def test_load_missing_returns_none(self):
         self.assertFalse(index_exists(root=self.root))
@@ -86,6 +88,49 @@ class TestIndexStore(unittest.TestCase):
             self.root, use_cache=False, prefer_persisted=False
         )
         self.assertGreater(len(r.chunks), 0)
+
+
+class TestFreshness(unittest.TestCase):
+    """The stale-index guard keys on *content*, not mtime (Tier 3 fix)."""
+
+    def setUp(self):
+        self.root = _tree()
+        build_index(root=self.root)
+
+    def test_fresh_right_after_build(self):
+        self.assertFalse(index_is_stale(root=self.root))
+
+    def test_touching_mtime_does_not_invalidate(self):
+        # Running the test suite bumps mtimes without changing content —
+        # that must not report a false "stale index".
+        import os
+        import time
+
+        f = self.root / "pycsamt" / "emtools" / "ss.py"
+        future = time.time() + 120
+        os.utime(f, (future, future))
+        self.assertFalse(index_is_stale(root=self.root))
+
+    def test_content_change_invalidates(self):
+        f = self.root / "pycsamt" / "emtools" / "ss.py"
+        f.write_text(f.read_text(encoding="utf-8") + "\n# edited\n",
+                     encoding="utf-8")
+        self.assertTrue(index_is_stale(root=self.root))
+
+    def test_new_indexed_file_invalidates(self):
+        (self.root / "pycsamt" / "emtools" / "qc.py").write_text(
+            '"""QC."""\n', encoding="utf-8"
+        )
+        self.assertTrue(index_is_stale(root=self.root))
+
+    def test_old_manifest_version_is_stale(self):
+        import json
+
+        mf_path = self.root / ".pycsamt_rag" / "manifest.json"
+        mf = json.loads(mf_path.read_text(encoding="utf-8"))
+        mf["version"] = 1  # pre-content-hash scheme
+        mf_path.write_text(json.dumps(mf), encoding="utf-8")
+        self.assertTrue(index_is_stale(root=self.root))
 
 
 class TestCli(unittest.TestCase):

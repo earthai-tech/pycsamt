@@ -1661,6 +1661,72 @@ body {
   color: var(--ov0);
   margin-bottom: 7px;
 }
+
+/* ── Settings: provider dropdown + contextual credential panel ─────────── */
+.am-prov-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.am-prov-header .am-section-lbl {
+  margin-bottom: 0;
+}
+.am-prov-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+/* The panel reads as one grouped card so the key + model clearly belong
+   to whichever provider the dropdown currently names. */
+.am-prov-panel {
+  background: var(--srf0);
+  border: 1px solid var(--srf1);
+  border-radius: var(--radius-sm, 6px);
+  padding: 12px 12px 8px;
+  margin-bottom: 10px;
+}
+.am-prov-hint {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+.am-prov-hint code {
+  font-size: 9.5px;
+  color: var(--sapphire);
+  background: transparent;
+  padding: 0;
+}
+.am-key-reveal {
+  border-color: var(--srf1) !important;
+  color: var(--fg-muted) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+}
+.am-key-reveal:hover {
+  color: var(--fg) !important;
+  background: var(--srf1) !important;
+}
+.am-offline-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  background: var(--srf0);
+  border: 1px solid var(--srf1);
+  border-radius: var(--radius-sm, 6px);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.am-offline-note .bi {
+  color: var(--green);
+  margin-top: 1px;
+}
 .am-panel .form-control,
 .am-panel .form-select,
 .am-panel .form-control-sm,

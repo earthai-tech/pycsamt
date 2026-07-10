@@ -10,27 +10,10 @@ import dash_bootstrap_components as dbc
 
 from ._ids import IDs
 
-_PROVIDER_MODELS = {
-    "claude": [
-        "claude-sonnet-4-6",
-        "claude-opus-4-8",
-        "claude-haiku-4-5-20251001",
-    ],
-    "openai": [
-        "gpt-4o",
-        "gpt-4o-mini",
-        "gpt-4-turbo",
-    ],
-    "gemini": [
-        "gemini-2.0-flash",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
-    ],
-    "deepseek": [
-        "deepseek-chat",
-        "deepseek-reasoner",
-    ],
-}
+from ._providers import (  # noqa: E402
+    OFFLINE,
+    PROVIDER_OPTIONS as _PROVIDER_OPTIONS,
+)
 
 _PROMPT_CHIPS = [
     "Load EDI data, run quality control and clean the data",
@@ -939,111 +922,95 @@ def _edi_canvas() -> dbc.Offcanvas:
 # ── Settings offcanvas ─────────────────────────────
 
 def _settings_canvas() -> dbc.Offcanvas:
-    def _key_tab(
-        provider, key_id,
-        models=None, model_id=None,
-    ):
-        children = [
+    # One credential panel, populated by the provider dropdown. It carries
+    # no provider-specific ids, so adding a provider is a _PROVIDER_META
+    # entry — not another hidden block + callback output.
+    provider_panel = html.Div(
+        [
             dbc.Label(
-                "API Key",
+                "API key",
                 style={"fontSize": "12px"},
+                className="mb-1",
             ),
             dbc.InputGroup(
                 [
                     dbc.Input(
-                        id=key_id,
+                        id=IDs.KEY_INPUT,
                         type="password",
-                        placeholder=f"key ({provider})",
+                        placeholder="Paste your API key",
                         size="sm",
                         autocomplete="off",
+                        persistence=False,
                     ),
-                    dbc.InputGroupText(
-                        html.I(
-                            className="bi bi-key"
-                        ),
-                        style={"fontSize": "13px"},
+                    dbc.Button(
+                        html.I(className="bi bi-eye"),
+                        id=IDs.BTN_KEY_REVEAL,
+                        color="secondary",
+                        outline=True,
+                        size="sm",
+                        title="Show / hide key",
+                        n_clicks=0,
+                        className="am-key-reveal",
                     ),
                 ],
                 size="sm",
-                className="mb-3",
+                className="mb-1",
             ),
-        ]
-        if models and model_id:
-            children += [
-                dbc.Label(
-                    "Model",
-                    style={"fontSize": "12px"},
-                ),
-                dbc.Select(
-                    id=model_id,
-                    options=[
-                        {"label": m, "value": m}
-                        for m in models
-                    ],
-                    value=models[0],
-                    size="sm",
-                    className="mb-3",
-                ),
-            ]
-        return html.Div(
-            children, className="pt-3"
-        )
-
-    tabs = dbc.Tabs(
-        [
-            dbc.Tab(
-                _key_tab(
-                    "Claude",
-                    IDs.KEY_CLAUDE,
-                    _PROVIDER_MODELS["claude"],
-                    IDs.MODEL_CLAUDE,
-                ),
-                label="Claude",
-                tab_id="claude",
+            html.Div(
+                id=IDs.PROVIDER_HINT,
+                className="am-prov-hint",
             ),
-            dbc.Tab(
-                _key_tab(
-                    "OpenAI",
-                    IDs.KEY_OPENAI,
-                    _PROVIDER_MODELS["openai"],
-                    IDs.MODEL_OPENAI,
-                ),
-                label="OpenAI",
-                tab_id="openai",
+            dbc.Label(
+                "Model",
+                style={"fontSize": "12px"},
+                className="mb-1 mt-3",
             ),
-            dbc.Tab(
-                _key_tab(
-                    "Gemini",
-                    IDs.KEY_GEMINI,
-                    _PROVIDER_MODELS["gemini"],
-                    IDs.MODEL_GEMINI,
-                ),
-                label="Gemini",
-                tab_id="gemini",
-            ),
-            dbc.Tab(
-                _key_tab(
-                    "DeepSeek",
-                    IDs.KEY_DEEPSEEK,
-                    _PROVIDER_MODELS["deepseek"],
-                    IDs.MODEL_DEEPSEEK,
-                ),
-                label="DeepSeek",
-                tab_id="deepseek",
+            dbc.Select(
+                id=IDs.MODEL_SELECT,
+                options=[],
+                size="sm",
+                className="mb-2",
             ),
         ],
-        id=IDs.PROVIDER_TABS,
-        active_tab="claude",
-        className="mb-2",
+        id=IDs.PROVIDER_PANEL,
+        className="am-prov-panel",
+        style={"display": "none"},
+    )
+
+    offline_note = html.Div(
+        [
+            html.I(className="bi bi-shield-check me-2"),
+            html.Span(
+                "Running fully offline — no API key needed. Workflows use"
+                " the deterministic rule-based engine at zero cost."
+            ),
+        ],
+        id=IDs.OFFLINE_NOTE,
+        className="am-offline-note",
+        style={"display": "none"},
     )
 
     return dbc.Offcanvas(
         [
             html.Div(
-                "LLM Providers",
-                className="am-section-lbl",
+                [
+                    html.Span(
+                        "LLM provider",
+                        className="am-section-lbl",
+                    ),
+                    html.Span(id=IDs.PROVIDER_BADGE),
+                ],
+                className="am-prov-header",
             ),
-            tabs,
+            dbc.Select(
+                id=IDs.ACTIVE_PROVIDER,
+                options=_PROVIDER_OPTIONS,
+                value=OFFLINE,
+                size="sm",
+                className="mb-2",
+            ),
+            provider_panel,
+            offline_note,
             html.Div(
                 id=IDs.KEYS_STATUS,
                 style={
@@ -1058,7 +1025,7 @@ def _settings_canvas() -> dbc.Offcanvas:
                             "bi bi-floppy me-2"
                         )
                     ),
-                    "Save API keys",
+                    "Save settings",
                 ],
                 id=IDs.BTN_SAVE_KEYS,
                 color="primary",
@@ -1086,43 +1053,6 @@ def _settings_canvas() -> dbc.Offcanvas:
                 value="png",
                 size="sm",
                 className="mb-4",
-            ),
-            html.Hr(className="my-2"),
-            html.Div(
-                "Active LLM provider",
-                className="am-section-lbl",
-            ),
-            dbc.RadioItems(
-                id=IDs.ACTIVE_PROVIDER,
-                options=[
-                    {
-                        "label": "Claude (Anthropic)",
-                        "value": "claude",
-                    },
-                    {
-                        "label": "OpenAI",
-                        "value": "openai",
-                    },
-                    {
-                        "label": "Gemini",
-                        "value": "gemini",
-                    },
-                    {
-                        "label": "DeepSeek",
-                        "value": "deepseek",
-                    },
-                    {
-                        "label": "Offline (rule-based)",
-                        "value": "offline",
-                    },
-                ],
-                value="offline",
-                labelStyle={
-                    "fontSize": "13px",
-                    "padding": "2px 0",
-                    "cursor": "pointer",
-                },
-                inputStyle={"cursor": "pointer"},
             ),
             html.Hr(className="my-2"),
             html.Div(
@@ -1172,7 +1102,7 @@ def _settings_canvas() -> dbc.Offcanvas:
                 " or create an output folder.",
                 style={
                     "fontSize": "10px",
-                    "color": "var(--am-muted)",
+                    "color": "var(--fg-muted)",
                     "marginBottom": "4px",
                 },
             ),
@@ -1203,7 +1133,7 @@ def _settings_canvas() -> dbc.Offcanvas:
                 " a line in the chat.",
                 style={
                     "fontSize": "10px",
-                    "color": "var(--am-muted)",
+                    "color": "var(--fg-muted)",
                     "marginBottom": "4px",
                 },
             ),
@@ -1493,7 +1423,7 @@ def _output_browse_modal() -> dbc.Modal:
                         style={
                             "fontSize": "11px",
                             "minHeight": "16px",
-                            "color": "var(--am-muted)",
+                            "color": "var(--fg-muted)",
                         },
                     ),
                 ]
@@ -2201,6 +2131,13 @@ def create_layout() -> html.Div:
                     "provider": "offline",
                     "export_fmt": "png",
                 },
+            ),
+            # Unsaved per-provider key/model edits. Memory-only: a typed
+            # key must not outlive the tab, and never reaches localStorage.
+            dcc.Store(
+                id=IDs.STORE_KEY_DRAFTS,
+                storage_type="memory",
+                data={},
             ),
             dcc.Store(
                 id=IDs.STORE_JOB, data={}

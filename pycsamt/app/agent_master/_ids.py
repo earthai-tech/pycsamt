@@ -53,17 +53,20 @@ class IDs:
 
     # ── settings offcanvas ────────────────────
     CANVAS_SETTINGS  = "am-canvas-settings"
-    PROVIDER_TABS    = "am-provider-tabs"
-    KEY_CLAUDE       = "am-key-claude"
-    KEY_OPENAI       = "am-key-openai"
-    KEY_GEMINI       = "am-key-gemini"
-    KEY_DEEPSEEK     = "am-key-deepseek"
-    MODEL_CLAUDE     = "am-model-claude"
-    MODEL_OPENAI     = "am-model-openai"
-    MODEL_GEMINI     = "am-model-gemini"
-    MODEL_DEEPSEEK   = "am-model-deepseek"
-    EXPORT_FORMAT    = "am-export-format"
+    # One provider dropdown drives one contextual credential panel, rather
+    # than a radio list plus a hidden key block per provider.
     ACTIVE_PROVIDER  = "am-active-provider"
+    PROVIDER_PANEL   = "am-provider-panel"
+    PROVIDER_BADGE   = "am-provider-badge"
+    PROVIDER_HINT    = "am-provider-hint"
+    KEY_INPUT        = "am-key-input"
+    BTN_KEY_REVEAL   = "am-btn-key-reveal"
+    MODEL_SELECT     = "am-model-select"
+    # Unsaved keys/models typed per provider, so switching the dropdown
+    # (or reopening the panel) never silently drops what you entered.
+    STORE_KEY_DRAFTS = "am-store-key-drafts"
+    OFFLINE_NOTE     = "am-offline-note"
+    EXPORT_FORMAT    = "am-export-format"
     BTN_SAVE_KEYS    = "am-btn-save-keys"
     KEYS_STATUS      = "am-keys-status"
     OUTPUT_DIR       = "am-output-dir"

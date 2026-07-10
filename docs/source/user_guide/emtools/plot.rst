@@ -707,10 +707,9 @@ The following script writes the core report figures for one line.
 Worked Example
 --------------
 
-The gallery example below demonstrates the same plotting layer on
+The gallery example demonstrates the same plotting layer on
 bundled AMT and MT surveys, including a tipper-capable MT line and
 display-control overrides.
 
-.. literalinclude:: ../../../examples/emtools/plot_plot.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_plot.py`.

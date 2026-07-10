@@ -876,10 +876,9 @@ workflow.
 Worked Example
 --------------
 
-The gallery example below computes the phase-tensor table, builds the
+The gallery example computes the phase-tensor table, builds the
 main pseudosections and rose diagrams, demonstrates the map and strip
 views, and audits impedance-tensor editing operations on real data.
 
-.. literalinclude:: ../../../examples/emtools/plot_tensor.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_tensor.py`.

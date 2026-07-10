@@ -633,9 +633,8 @@ summary for one sweep.
 Worked Example
 --------------
 
-The gallery example below builds a real regularization sweep from
+The gallery example builds a real regularization sweep from
 bundled apparent-resistivity data and compares corner-picking methods.
 
-.. literalinclude:: ../../../examples/emtools/plot_lcurve.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_lcurve.py`.

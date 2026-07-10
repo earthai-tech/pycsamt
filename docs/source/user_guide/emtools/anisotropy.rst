@@ -582,10 +582,3 @@ information.
 
 Open the rendered example here:
 :ref:`sphx_glr_examples_emtools_plot_anisotropy.py`.
-
-The source is included below so the example remains readable from the
-user guide page as well as from the Sphinx-Gallery page.
-
-.. literalinclude:: ../../../examples/emtools/plot_anisotropy.py
-   :language: python
-   :linenos:

@@ -916,10 +916,9 @@ Use QC scores as evidence, not as an automatic delete button.
 Worked Example
 --------------
 
-The gallery example below applies the station, frequency, profile,
+The gallery example applies the station, frequency, profile,
 dashboard, quicklook, fan, crossover, and hole-overlay workflows to the
 bundled L18PLT survey.
 
-.. literalinclude:: ../../../examples/emtools/plot_qc.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_qc.py`.

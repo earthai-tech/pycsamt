@@ -725,11 +725,10 @@ shape.
 Worked Example
 --------------
 
-The example below loads the bundled de-identified spectra EDI files,
+The example loads the bundled de-identified spectra EDI files,
 plots PSD and coherence, builds PSD/coherence/SNR tables, selects a
 cleaner band, displays the full spectral matrix, recovers impedance and
 tipper from spectra, and builds multi-station PSD/coherence sections.
 
-.. literalinclude:: ../../../examples/emtools/plot_spectra.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_spectra.py`.

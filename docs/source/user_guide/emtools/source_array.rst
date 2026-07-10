@@ -608,11 +608,10 @@ angle.
 Worked Example
 --------------
 
-The example below walks through the single-dipole pattern, earth versus
+The example walks through the single-dipole pattern, earth versus
 free-space wavenumber, low- and high-frequency array factors, beam
 steering, grating-lobe detection, combined PAS patterns, directivity,
 SNR gain, and one concrete 8-element design.
 
-.. literalinclude:: ../../../examples/emtools/plot_source_array.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_source_array.py`.

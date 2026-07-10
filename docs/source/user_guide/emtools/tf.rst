@@ -560,11 +560,10 @@ multi-period maps.  Pass a real background raster for publication.
 Worked Example
 --------------
 
-The gallery example below uses the KAP03 MT profile with real tipper
+The gallery example uses the KAP03 MT profile with real tipper
 data.  It moves from station-level hodograms and polar plots to maps,
 convention comparisons, roses, period sections, and a multi-period
 publication-style map.
 
-.. literalinclude:: ../../../examples/emtools/plot_tf.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_tf.py`.

@@ -601,11 +601,10 @@ are available, use profile and rose diagrams instead.
 Worked Example
 --------------
 
-The gallery example below uses L18PLT, adds L22PLT for a multi-line rose
+The gallery example uses L18PLT, adds L22PLT for a multi-line rose
 comparison, demonstrates estimator agreement, rotates data onto strike,
 and builds ribbon, rose, map-stick, profile, and combined strike-analysis
 figures.
 
-.. literalinclude:: ../../../examples/emtools/plot_strike.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_strike.py`.

@@ -780,9 +780,8 @@ one determinant track.
 Worked Example
 --------------
 
-The gallery example below applies the same ideas to bundled WILLY survey
+The gallery example applies the same ideas to bundled WILLY survey
 lines and connects the impedance views with anisotropy rankings.
 
-.. literalinclude:: ../../../examples/emtools/plot_impedance.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_impedance.py`.

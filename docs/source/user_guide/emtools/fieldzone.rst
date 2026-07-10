@@ -542,10 +542,3 @@ near-field correction.
 
 Open the rendered example here:
 :ref:`sphx_glr_examples_emtools_plot_fieldzone.py`.
-
-The source is included below so the page remains useful from the user
-guide as well as from the Sphinx-Gallery page.
-
-.. literalinclude:: ../../../examples/emtools/plot_fieldzone.py
-   :language: python
-   :linenos:

@@ -648,12 +648,11 @@ high-frequency slopes.
 Worked Example
 --------------
 
-The example below uses the L18PLT survey with an explicitly stated
+The example uses the L18PLT survey with an explicitly stated
 representative offset. It demonstrates the pure beta formula, per-row
 overprint detection, station summaries, overprint pseudo-sections,
 normalized response, near-field correction, and comparison between the
 two independent source-effect diagnostics.
 
-.. literalinclude:: ../../../examples/emtools/plot_source_effects.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_source_effects.py`.

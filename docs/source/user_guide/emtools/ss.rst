@@ -918,10 +918,9 @@ resistivity-domain factor and is useful for interpretation, but
 Worked Example
 --------------
 
-The gallery example below uses the L18PLT survey and walks through raw
+The gallery example uses the L18PLT survey and walks through raw
 curve spread, AMA estimation, exact factor application, estimator
 comparison, QC wrappers, radar plots, and near-surface classification.
 
-.. literalinclude:: ../../../examples/emtools/plot_ss.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_ss.py`.

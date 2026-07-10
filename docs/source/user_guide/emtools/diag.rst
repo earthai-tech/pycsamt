@@ -619,10 +619,3 @@ calibration scenario comparison.
 
 Open the rendered example here:
 :ref:`sphx_glr_examples_emtools_plot_diag.py`.
-
-The source is included below so the page remains useful from the user
-guide as well as from the Sphinx-Gallery page.
-
-.. literalinclude:: ../../../examples/emtools/plot_diag.py
-   :language: python
-   :linenos:

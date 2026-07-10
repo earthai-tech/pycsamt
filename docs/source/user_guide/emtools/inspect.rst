@@ -764,9 +764,8 @@ Station response shows diagonal terms comparable to off-diagonals
 Worked Example
 --------------
 
-The gallery example below uses the bundled AMT and MT datasets to show
+The gallery example uses the bundled AMT and MT datasets to show
 the same first-look workflow end to end.
 
-.. literalinclude:: ../../../examples/emtools/plot_inspect.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_inspect.py`.

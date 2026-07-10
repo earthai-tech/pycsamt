@@ -933,7 +933,7 @@ understand both the data quality and the editing decisions.
 Worked Example
 --------------
 
-The example below uses the real L18PLT survey where possible and small
+The example uses the real L18PLT survey where possible and small
 synthetic dense-frequency objects only where the real frequency grid
 does not contain power-line harmonic rows. It demonstrates SNR
 diagnostics, notching, smoothing, Hampel/spatial/RPCA denoising,
@@ -941,6 +941,5 @@ consistency enforcement, masking, group-trend shrinkage, EMAP filtering,
 confidence-gated EMAP filtering, the full pipeline, and the dedicated QC
 plots.
 
-.. literalinclude:: ../../../examples/emtools/plot_remove_noise.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_remove_noise.py`.

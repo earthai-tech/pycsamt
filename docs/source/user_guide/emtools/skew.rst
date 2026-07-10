@@ -624,11 +624,10 @@ masking.
 Worked Example
 --------------
 
-The example below uses the L18PLT survey to compare phase-tensor skew and
+The example uses the L18PLT survey to compare phase-tensor skew and
 Bahr skewness, apply skew-based masks, keep contiguous low-skew bands,
 close small gaps, vote on a shared low-skew band, and generate the
 traffic-light, percentile-ribbon, vote-band, and Bahr-skew figures.
 
-.. literalinclude:: ../../../examples/emtools/plot_skew.py
-   :language: python
-   :linenos:
+Open the rendered gallery page here:
+:ref:`sphx_glr_examples_emtools_plot_skew.py`.

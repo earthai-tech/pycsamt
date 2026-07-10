@@ -663,10 +663,3 @@ coverage, pseudo-sections, and a two-line comparison.
 
 Open the rendered example here:
 :ref:`sphx_glr_examples_emtools_plot_csumt.py`.
-
-The source is included below so the page remains useful from the user
-guide as well as from the Sphinx-Gallery page.
-
-.. literalinclude:: ../../../examples/emtools/plot_csumt.py
-   :language: python
-   :linenos:

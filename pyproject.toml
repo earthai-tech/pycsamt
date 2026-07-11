@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.0.0"
+version     = "2.0.0rc1"
 description = "Python toolkit for audio-frequency magnetotelluric (MT/AMT/CSAMT/CSEM) data processing, inversion, and geological interpretation"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }

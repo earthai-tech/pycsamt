@@ -239,7 +239,7 @@ if TYPE_CHECKING:
     from .tipper_analysis import TipperAnalysisAgent
 
 
-__version__ = "2.0.0"
+__version__ = "2.0.0rc1"
 
 __all__ = [
     # global LLM config

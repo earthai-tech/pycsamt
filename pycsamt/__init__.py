@@ -16,7 +16,7 @@ try:
     from importlib.metadata import version as _pkg_version
     __version__ = _pkg_version(__name__)
 except Exception:
-    __version__ = "2.0.0"
+    __version__ = "2.0.0rc1"
 
 # ── Removed v1 names ──────────────────────────────────────────────────────────
 # Defined BEFORE logging (and before __getattr__) so this dict is always

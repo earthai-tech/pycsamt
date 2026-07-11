@@ -14,7 +14,9 @@ IoT acquisition layer and the geophysical processing engine — on a single
 4. read the classic **MT sounding** back, with the QC-resolvable band
    drawn on it so you can see which periods the data actually support; and
 5. emit a **provenance** trail that ties the raw-file hash to the QC
-   decision, the processing steps, and the written EDI.
+   decision, the processing steps, and the written EDI; and
+6. **sign** the manifest and use the data-model **bridge** to seed a
+   re-occupation session straight from the EDI just written.
 
 It is the "IoT acquisition feeds directly into the processing pipeline"
 claim, made concrete on real data.
@@ -30,6 +32,7 @@ claim, made concrete on real data.
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -44,8 +47,11 @@ from pycsamt.iot import (
     ProvenanceRecord,
     build_acquisition_manifest,
     detect_sensor_dropout,
+    edi_survey_table,
     estimate_frequency_coverage,
     export_reproducibility_bundle,
+    field_session_from_edis,
+    verify_manifest,
 )
 from pycsamt.ts import ts_to_edi, ts_to_z
 
@@ -183,5 +189,28 @@ print(f"provenance steps: {provenance.processing_steps}")
 print(f"manifest content hash: {manifest.as_dict()['content_hash'][:16]}...")
 print(f"bundle: {Path(bundle['manifest']).name} "
       f"+ {len(bundle['audits'])} audit(s)")
+
+# %%
+# 5. Sign the manifest and seed a re-occupation from the EDI
+# ----------------------------------------------------------
+# An HMAC signature makes the audit trail tamper-evident: a reviewer
+# holding the shared key can confirm the manifest was not altered. Then the
+# data-model bridge reads the EDI we just wrote back into an IoT
+# ``FieldSession``, so the station's recorded geometry is ready to be
+# re-occupied in a follow-up campaign — closing the loop from acquisition
+# to data model and back.
+
+key = "survey-key-2026"  # in practice, a per-survey secret
+signed_path = manifest.write_signed(
+    str(out_dir / "provenance" / "manifest.signed.json"), key
+)
+signed = json.loads(Path(signed_path).read_text())
+print(f"signed manifest verifies: {verify_manifest(signed, key)}  "
+      f"(wrong key: {verify_manifest(signed, 'nope')})")
+
+reoccupy = field_session_from_edis(edi_path, survey_id="REOCCUPY", method="mt")
+print(f"re-occupation session: {reoccupy.n_stations} station(s), "
+      f"{reoccupy.n_devices} node(s)")
+print(edi_survey_table(edi_path).to_string(index=False))
 
 plt.show()

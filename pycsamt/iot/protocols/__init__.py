@@ -16,7 +16,7 @@ Every client supports ``dry_run=True`` for offline recording.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from .base import (
     BaseTelemetryClient,
@@ -29,6 +29,7 @@ from .file import FileTelemetryClient
 from .http import HTTPTelemetryClient
 from .mqtt import MQTTTelemetryClient
 from .serial import SerialTelemetryClient
+from .store_forward import StoreAndForwardClient
 from .websocket import WebSocketTelemetryClient
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "HTTPTelemetryClient",
     "MQTTTelemetryClient",
     "SerialTelemetryClient",
+    "StoreAndForwardClient",
     "WebSocketTelemetryClient",
     "CLIENT_REGISTRY",
     "build_telemetry_client",

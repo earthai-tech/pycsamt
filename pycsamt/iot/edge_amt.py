@@ -29,7 +29,9 @@ __all__ = [
     "PowerlineHarmonics",
     "FrequencyCoverage",
     "ImpedanceStability",
+    "StaticShift",
     "detect_powerline_harmonics",
+    "estimate_static_shift",
     "estimate_channel_snr",
     "check_channel_saturation",
     "check_contact_resistance",
@@ -592,6 +594,117 @@ def assess_impedance_stability(
 
 
 # ---------------------------------------------------------------------------
+# static shift
+# ---------------------------------------------------------------------------
+@dataclass
+class StaticShift(PyCSAMTObject):
+    """Result of :func:`estimate_static_shift`."""
+
+    shift_factor: float
+    split_decades: float
+    consistency_std: float
+    phase_diff_deg: float
+    static_shift: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        return dict(
+            shift_factor=self.shift_factor,
+            split_decades=self.split_decades,
+            consistency_std=self.consistency_std,
+            phase_diff_deg=self.phase_diff_deg,
+            static_shift=self.static_shift,
+        )
+
+
+def estimate_static_shift(
+    res_xy: Any,
+    res_yx: Any,
+    *,
+    phase_xy: Any = None,
+    phase_yx: Any = None,
+    min_split_decades: float = 0.15,
+    max_log_std: float = 0.15,
+    max_phase_diff_deg: float = 10.0,
+) -> StaticShift:
+    r"""Flag a static shift between the two apparent-resistivity modes.
+
+    Static shift is a galvanic distortion that multiplies apparent
+    resistivity by a frequency-independent factor while leaving phase
+    unchanged. It therefore shows up as the ``xy`` and ``yx`` resistivity
+    curves running *parallel* on a log scale (a near-constant split) even
+    though their phases coincide -- unlike true anisotropy, which splits
+    the phases too.
+
+    Parameters
+    ----------
+    res_xy, res_yx : array-like
+        Apparent resistivity (:math:`\Omega\cdot m`) for the two
+        off-diagonal modes, one value per frequency.
+    phase_xy, phase_yx : array-like, optional
+        Corresponding phases in degrees. When given, agreeing phases
+        strengthen a static-shift call (and disagreeing phases veto it).
+    min_split_decades : float
+        Minimum ``|log10(shift_factor)|`` for a split to matter.
+    max_log_std : float
+        Maximum standard deviation of the per-frequency log split for it
+        to count as frequency-independent.
+    max_phase_diff_deg : float
+        Maximum mean phase difference (when phases are supplied) for the
+        distortion to read as purely galvanic.
+
+    Returns
+    -------
+    StaticShift
+    """
+    min_split_decades = _c.as_nonnegative(min_split_decades, "min_split_decades")
+    max_log_std = _c.as_nonnegative(max_log_std, "max_log_std")
+    max_phase_diff_deg = _c.as_nonnegative(
+        max_phase_diff_deg, "max_phase_diff_deg"
+    )
+    xy = np.asarray(res_xy, dtype=float).ravel()
+    yx = np.asarray(res_yx, dtype=float).ravel()
+    n = min(xy.size, yx.size)
+    xy, yx = xy[:n], yx[:n]
+    valid = np.isfinite(xy) & np.isfinite(yx) & (xy > 0) & (yx > 0)
+    if not np.any(valid):
+        return StaticShift(
+            shift_factor=float("nan"),
+            split_decades=float("nan"),
+            consistency_std=float("nan"),
+            phase_diff_deg=float("nan"),
+            static_shift=False,
+        )
+    log_ratio = np.log10(xy[valid]) - np.log10(yx[valid])
+    median_split = float(np.median(log_ratio))
+    consistency_std = float(np.std(log_ratio))
+    shift_factor = float(10.0 ** median_split)
+    split_decades = abs(median_split)
+
+    phase_diff = float("nan")
+    phases_ok = True
+    if phase_xy is not None and phase_yx is not None:
+        pxy = np.abs(np.asarray(phase_xy, dtype=float).ravel()[:n])
+        pyx = np.abs(np.asarray(phase_yx, dtype=float).ravel()[:n])
+        pv = np.isfinite(pxy) & np.isfinite(pyx)
+        if np.any(pv):
+            phase_diff = float(np.mean(np.abs(pxy[pv] - pyx[pv])))
+            phases_ok = phase_diff <= max_phase_diff_deg
+
+    static_shift = bool(
+        split_decades >= min_split_decades
+        and consistency_std <= max_log_std
+        and phases_ok
+    )
+    return StaticShift(
+        shift_factor=shift_factor,
+        split_decades=split_decades,
+        consistency_std=consistency_std,
+        phase_diff_deg=phase_diff,
+        static_shift=static_shift,
+    )
+
+
+# ---------------------------------------------------------------------------
 # sensor dropout
 # ---------------------------------------------------------------------------
 def detect_sensor_dropout(
@@ -651,23 +764,62 @@ def detect_sensor_dropout(
 # ---------------------------------------------------------------------------
 # aggregation
 # ---------------------------------------------------------------------------
+def _method_qc_context(
+    method: Any,
+) -> tuple[bool, list[tuple[float, float]] | None]:
+    """Resolve method-driven QC settings.
+
+    Returns ``(powerline_applicable, target_bands)``. An unspecified or
+    unrecognised method (including ``UNKNOWN``) keeps the default
+    behaviour: powerline detection stays on and no target bands are
+    imposed, so callers that pass no method are unaffected.
+    """
+    if method is None:
+        return True, None
+    from .methods import method_profile, target_bands_for_method
+    from .monitoring import EMMethod
+
+    try:
+        profile = method_profile(method)
+    except ValueError:
+        return True, None
+    if profile.method is EMMethod.UNKNOWN:
+        return True, None
+    bands = target_bands_for_method(method)
+    return profile.powerline_sensitive, (bands or None)
+
+
 def amt_edge_report(
     data: Any,
     sample_rate: float,
     *,
+    method: Any = None,
     mains_hz: float = 50.0,
     signal_band_hz: tuple[float, float] | None = None,
 ) -> dict[str, Any]:
-    """Run the core AMT edge diagnostics on one channel and collate them."""
-    harmonics = detect_powerline_harmonics(
-        data, sample_rate, mains_hz=mains_hz
+    """Run the core AMT edge diagnostics on one channel and collate them.
+
+    When *method* is given (``"amt"``, ``"mt"``, ``"csamt"``, ...), the
+    diagnostics become method-aware: powerline-harmonic detection is only
+    run for powerline-sensitive methods (it is skipped for, e.g., TDEM),
+    and frequency coverage is scored against the method's target bands.
+    Passing no method preserves the original behaviour.
+    """
+    powerline_applicable, target_bands = _method_qc_context(method)
+    powerline = (
+        detect_powerline_harmonics(data, sample_rate, mains_hz=mains_hz).as_dict()
+        if powerline_applicable else None
     )
-    coverage = estimate_frequency_coverage(data, sample_rate)
+    coverage = estimate_frequency_coverage(
+        data, sample_rate, target_bands=target_bands
+    )
     return dict(
+        method=(str(method) if method is not None else None),
         snr_db=estimate_channel_snr(
             data, sample_rate, signal_band_hz=signal_band_hz
         ),
-        powerline=harmonics.as_dict(),
+        powerline_applicable=powerline_applicable,
+        powerline=powerline,
         saturation=check_channel_saturation(data),
         dropout=detect_sensor_dropout(data),
         frequency_coverage=coverage.as_dict(),
@@ -690,13 +842,16 @@ def amt_edge_table(
     )
     rows: list[dict[str, Any]] = []
     for channel, report in items:
-        powerline = report.get("powerline", {})
-        saturation = report.get("saturation", {})
-        dropout = report.get("dropout", {})
-        coverage = report.get("frequency_coverage", {})
+        # ``powerline`` is None when the method is not powerline-sensitive.
+        powerline = report.get("powerline") or {}
+        saturation = report.get("saturation") or {}
+        dropout = report.get("dropout") or {}
+        coverage = report.get("frequency_coverage") or {}
         rows.append(dict(
             channel=str(channel).lower(),
+            method=report.get("method"),
             snr_db=report.get("snr_db"),
+            powerline_applicable=report.get("powerline_applicable"),
             powerline_contaminated=powerline.get("contaminated"),
             powerline_total_ratio=powerline.get("total_ratio"),
             saturated=saturation.get("saturated"),
@@ -706,6 +861,7 @@ def amt_edge_table(
             f_low_hz=coverage.get("f_low_hz"),
             f_high_hz=coverage.get("f_high_hz"),
             n_decades=coverage.get("n_decades"),
+            coverage_fraction=coverage.get("coverage_fraction"),
         ))
     df = pd.DataFrame.from_records(rows)
     return maybe_wrap_frame(

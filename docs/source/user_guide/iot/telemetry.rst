@@ -418,6 +418,31 @@ real connection is opened. Keep ``dry_run=True`` in notebooks, CI jobs,
 and documentation examples unless you intentionally want to contact a
 field endpoint.
 
+Surviving an intermittent uplink
+--------------------------------
+
+Remote nodes lose their link. Wrap any client in a
+:class:`~pycsamt.iot.StoreAndForwardClient` so a failed send queues the
+packet instead of dropping it; :meth:`flush` later drains the backlog in
+order, and an optional spool file carries it across a restart:
+
+.. code-block:: python
+
+   from pycsamt.iot import StoreAndForwardClient, build_telemetry_client
+
+   client = build_telemetry_client("http", endpoint="https://hub/ingest",
+                                   dry_run=False)
+   buffered = StoreAndForwardClient(client, spool_path="spool.jsonl",
+                                    max_queue=5000)
+
+   buffered.send(packet)        # delivered, or queued if the link is down
+   # ... later, when connectivity returns ...
+   buffered.flush()             # drains the queue in order (at-least-once)
+
+Delivery is at-least-once and order-preserving, ``max_queue`` bounds the
+buffer with a drop-oldest policy, and ``next_retry_delay_s`` provides an
+exponential-backoff hint for a scheduling loop.
+
 Field Interpretation
 --------------------
 

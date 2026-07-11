@@ -2,7 +2,7 @@ pycsamt.iot
 ===========
 
 IoT field telemetry, edge processing, synchronisation, power budgeting,
-security, provenance, and simulation helpers for AMT, MT, and CSAMT
+security, provenance, and simulation helpers for AMT, MT, CSAMT, and CSEM
 deployments.
 
 The :mod:`pycsamt.iot` package is the public API for IoT-enabled field
@@ -25,13 +25,32 @@ methods section:
   power, synchronisation, event, and acquisition messages;
 * dry-run and real telemetry clients for file, HTTP(S), MQTT, serial, and
   WebSocket transports, with a generic recorder fallback for protocols
-  such as LoRa;
+  such as LoRa, and a store-and-forward wrapper that buffers packets (with
+  an optional on-disk spool) across an intermittent uplink;
 * generic edge QC: decimation, finite coverage, RMS/statistics, robust
   spike fraction, per-channel accept/reject decisions, and QC telemetry
   packet export;
 * AMT/CSAMT edge QC: powerline harmonic detection, channel SNR, saturation,
   contact-resistance proxy checks, frequency coverage, live spectra,
   impedance stability, and sensor dropout checks;
+* CSAMT/CSEM controlled-source edge QC: skin-depth near/transition/far
+  field-zone classification, transmitter frequency-comb detection, source
+  current/voltage stability, and CSEM magnitude/phase-versus-offset
+  (MVO/PVO) analysis, plus a ``transmitter`` device role, a
+  ``SourcePayload`` transmitter telemetry schema, and a transmitter
+  timing-lock extension on the sync payload;
+* a galvanic static-shift indicator that separates a frequency-independent
+  resistivity split (static shift) from anisotropy;
+* a data-model bridge that turns edge impedance estimates into a
+  :class:`pycsamt.z.z.Z`, writes a preliminary ``EDIFile``, promotes a
+  session into EDI-backed sites for the processing pipeline, routes those
+  sites through :mod:`pycsamt.emtools` QC so field and post-processing QC
+  agree, and seeds a re-occupation-ready
+  :class:`~pycsamt.iot.session.FieldSession` or ``DeploymentConfig`` from an
+  existing EDI survey;
+* method-aware QC: per-method acquisition profiles (frequency band,
+  required channels, controlled-source and powerline-sensitivity flags)
+  that drive monitoring thresholds and gate powerline detection;
 * telemetry stream monitoring for AMT, MT, CSAMT, TEM, and TDEM, including
   packet success, edge acceptance, latency, packet gaps, clock offset,
   battery voltage, required channels, and frequency-band checks;
@@ -41,7 +60,8 @@ methods section:
 * clock synchronisation audit: offset, drift, jitter, GPS lock, quality
   grade, batch status tables, and GPS-dropout detection;
 * acquisition provenance: station audit records, QC decision logs, raw-file
-  hashes, manifests, and reproducibility bundles;
+  hashes, manifests, and reproducibility bundles, with optional HMAC
+  manifest signing and a tamper-evident QC-decision hash chain;
 * transport security configuration with TLS options, credential schemes,
   and secret redaction; and
 * reproducible synthetic field-network simulation for documentation,
@@ -109,6 +129,10 @@ the pyCSAMT API view layer when requested. Common reporting helpers include:
 * :func:`pycsamt.iot.station_table`
 * :func:`pycsamt.iot.edge_summary_table`
 * :func:`pycsamt.iot.amt_edge_table`
+* :func:`pycsamt.iot.csamt_edge_table`
+* :func:`pycsamt.iot.csem_edge_table`
+* :func:`pycsamt.iot.edi_survey_table`
+* :func:`pycsamt.iot.emtools_qc`
 * :func:`pycsamt.iot.packet_table`
 * :func:`pycsamt.iot.telemetry_summary`
 * :func:`pycsamt.iot.monitoring_status_table`
@@ -140,9 +164,14 @@ Modules
    pycsamt.iot.protocols.http
    pycsamt.iot.protocols.mqtt
    pycsamt.iot.protocols.serial
+   pycsamt.iot.protocols.store_forward
    pycsamt.iot.protocols.websocket
    pycsamt.iot.edge
    pycsamt.iot.edge_amt
+   pycsamt.iot.edge_csamt
+   pycsamt.iot.edge_csem
+   pycsamt.iot.methods
+   pycsamt.iot.bridge
    pycsamt.iot.sync
    pycsamt.iot.power
    pycsamt.iot.monitoring

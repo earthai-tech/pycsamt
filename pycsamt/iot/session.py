@@ -228,6 +228,10 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         (channels and method observed in packets). They are acquisition
         descriptors, not EDI-backed :class:`pycsamt.site.base.Site`
         objects, which require processed impedance data.
+
+        Once impedance is available, :meth:`to_edifiles` and
+        :meth:`to_sites_collection` promote these descriptors into
+        EDI-backed sites ready for the processing pipeline.
         """
         aggregates = self._station_aggregates()
         sites: list[StationConfig] = []
@@ -282,6 +286,64 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             n_stations=len(stations_out),
             stations=stations_out,
         )
+
+    def to_edifiles(
+        self,
+        impedance: Mapping[str, Any],
+        freq: Any = None,
+        *,
+        method: str | None = None,
+        savepath: str | None = None,
+        write: bool = False,
+        acqby: str = "pycsamt.iot",
+    ) -> dict[str, Any]:
+        """Promote per-station impedance into ``EDIFile`` objects.
+
+        A thin convenience over
+        :func:`pycsamt.iot.bridge.field_session_to_edifiles`: each EDI is
+        enriched with the geometry this session recorded for the station.
+        See that function for the accepted *impedance* mapping forms and
+        the meaning of *write*/*savepath*.
+        """
+        from .bridge import field_session_to_edifiles
+
+        return field_session_to_edifiles(
+            self,
+            impedance,
+            freq,
+            savepath=savepath,
+            method=method or self.method,
+            write=write,
+            acqby=acqby,
+        )
+
+    def to_sites_collection(
+        self,
+        impedance: Mapping[str, Any],
+        freq: Any = None,
+        *,
+        method: str | None = None,
+    ) -> Any:
+        """Return an EDI-backed :class:`pycsamt.site.base.Sites` collection.
+
+        This is the processing hand-off: given per-station impedance, it
+        builds one EDI per station and wraps them into a ``Sites``
+        collection that can be fed straight to
+        :meth:`pycsamt.pipeline.Pipeline.run`. Requires the optional
+        geospatial stack (``pyproj``).
+        """
+        edifiles = self.to_edifiles(
+            impedance, freq, method=method, write=False
+        )
+        try:
+            from ..site.base import Sites
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise ImportError(
+                "to_sites_collection requires the pyCSAMT geospatial stack "
+                "(e.g. pyproj). Use to_edifiles for the raw EDIFile objects, "
+                "which have no geospatial dependency."
+            ) from exc
+        return Sites(list(edifiles.values()))
 
     def to_manifest(self) -> AcquisitionManifest:
         """Build a reproducible :class:`AcquisitionManifest`."""

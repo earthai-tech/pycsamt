@@ -32,6 +32,7 @@ class DeviceRole(str, Enum):
     GATEWAY = "gateway"
     BASE_STATION = "base_station"
     REMOTE_REFERENCE = "remote_reference"
+    TRANSMITTER = "transmitter"
 
 
 class PacketKind(str, Enum):
@@ -43,6 +44,7 @@ class PacketKind(str, Enum):
     SYNC = "sync"
     POWER = "power"
     EVENT = "event"
+    SOURCE = "source"
 
 
 def _as_nonempty_str(value: Any, name: str) -> str:

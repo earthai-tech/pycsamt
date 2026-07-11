@@ -19,6 +19,18 @@ This subpackage supports IoT-enabled AMT/CSAMT field acquisition:
 
 from __future__ import annotations
 
+from .bridge import (
+    build_edifile,
+    deployment_from_edis,
+    edi_survey_table,
+    emtools_qc,
+    field_session_from_edis,
+    field_session_to_edifiles,
+    impedance_to_z,
+    read_edi_survey,
+    z_to_edi,
+    z_to_site,
+)
 from .core import (
     DeploymentConfig,
     DeviceConfig,
@@ -41,6 +53,7 @@ from .edge_amt import (
     HarmonicPeak,
     ImpedanceStability,
     PowerlineHarmonics,
+    StaticShift,
     amt_edge_report,
     amt_edge_table,
     assess_impedance_stability,
@@ -51,6 +64,32 @@ from .edge_amt import (
     detect_sensor_dropout,
     estimate_channel_snr,
     estimate_frequency_coverage,
+    estimate_static_shift,
+)
+from .edge_csamt import (
+    FieldZone,
+    FieldZoneCoverage,
+    SourceLine,
+    SourceStability,
+    TransmitterComb,
+    assess_source_stability,
+    classify_field_zones,
+    csamt_edge_report,
+    csamt_edge_table,
+    detect_transmitter_frequencies,
+    skin_depth_m,
+)
+from .edge_csem import (
+    OffsetResponse,
+    csem_edge_report,
+    csem_edge_table,
+    field_vs_offset,
+)
+from .methods import (
+    METHOD_PROFILES,
+    MethodProfile,
+    method_profile,
+    target_bands_for_method,
 )
 from .monitoring import (
     EMMethod,
@@ -85,6 +124,7 @@ from .protocols import (
     IoTProtocol,
     MQTTTelemetryClient,
     SerialTelemetryClient,
+    StoreAndForwardClient,
     TelemetryAck,
     TelemetryClient,
     TelemetryError,
@@ -99,9 +139,14 @@ from .provenance import (
     export_reproducibility_bundle,
     export_station_audit,
     hash_bytes,
+    hash_chain,
     hash_mapping,
     hash_raw_file,
     log_qc_decision,
+    sign_mapping,
+    verify_hash_chain,
+    verify_manifest,
+    verify_signature,
 )
 from .schemas import (
     PAYLOAD_SCHEMAS,
@@ -111,6 +156,7 @@ from .schemas import (
     HealthPayload,
     PowerPayload,
     QCPayload,
+    SourcePayload,
     SyncPayload,
     TelemetryPayload,
     parse_payload,
@@ -153,6 +199,17 @@ from .sync import (
 )
 
 __all__ = [
+    # bridge (IoT <-> pyCSAMT data model)
+    "build_edifile",
+    "deployment_from_edis",
+    "edi_survey_table",
+    "emtools_qc",
+    "field_session_from_edis",
+    "field_session_to_edifiles",
+    "impedance_to_z",
+    "read_edi_survey",
+    "z_to_edi",
+    "z_to_site",
     # core
     "DeploymentConfig",
     "DeviceConfig",
@@ -174,6 +231,7 @@ __all__ = [
     "HealthPayload",
     "PowerPayload",
     "QCPayload",
+    "SourcePayload",
     "SyncPayload",
     "TelemetryPayload",
     "parse_payload",
@@ -191,6 +249,7 @@ __all__ = [
     "HarmonicPeak",
     "ImpedanceStability",
     "PowerlineHarmonics",
+    "StaticShift",
     "amt_edge_report",
     "amt_edge_table",
     "assess_impedance_stability",
@@ -201,6 +260,29 @@ __all__ = [
     "detect_sensor_dropout",
     "estimate_channel_snr",
     "estimate_frequency_coverage",
+    "estimate_static_shift",
+    # edge_csamt (controlled-source)
+    "FieldZone",
+    "FieldZoneCoverage",
+    "SourceLine",
+    "SourceStability",
+    "TransmitterComb",
+    "assess_source_stability",
+    "classify_field_zones",
+    "csamt_edge_report",
+    "csamt_edge_table",
+    "detect_transmitter_frequencies",
+    "skin_depth_m",
+    # edge_csem (controlled-source EM, offset domain)
+    "OffsetResponse",
+    "csem_edge_report",
+    "csem_edge_table",
+    "field_vs_offset",
+    # methods (method-aware profiles)
+    "METHOD_PROFILES",
+    "MethodProfile",
+    "method_profile",
+    "target_bands_for_method",
     # monitoring
     "EMMethod",
     "MonitoringConfig",
@@ -230,6 +312,7 @@ __all__ = [
     "IoTProtocol",
     "MQTTTelemetryClient",
     "SerialTelemetryClient",
+    "StoreAndForwardClient",
     "TelemetryAck",
     "TelemetryClient",
     "TelemetryError",
@@ -255,9 +338,14 @@ __all__ = [
     "export_reproducibility_bundle",
     "export_station_audit",
     "hash_bytes",
+    "hash_chain",
     "hash_mapping",
     "hash_raw_file",
     "log_qc_decision",
+    "sign_mapping",
+    "verify_hash_chain",
+    "verify_manifest",
+    "verify_signature",
     # security
     "AuthScheme",
     "Credential",

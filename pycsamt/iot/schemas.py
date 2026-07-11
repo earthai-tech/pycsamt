@@ -34,6 +34,7 @@ __all__ = [
     "HealthPayload",
     "QCPayload",
     "PowerPayload",
+    "SourcePayload",
     "SyncPayload",
     "EventPayload",
     "AcquisitionPayload",
@@ -346,6 +347,111 @@ class PowerPayload(TelemetryPayload):
 
 
 @dataclass
+class SourcePayload(TelemetryPayload):
+    """Transmitter telemetry for a controlled-source (CSAMT/TDEM) survey.
+
+    Reported by a transmitter node so the receiver-side QC and provenance
+    know the state of the source that produced each sounding: the injected
+    current and voltage, the frequency currently being transmitted, the
+    grounded-dipole geometry, and the keyed on/off state.
+    """
+
+    kind: PacketKind = PacketKind.SOURCE
+    source_id: str | None = None
+    tx_current_a: float | None = None
+    tx_voltage_v: float | None = None
+    tx_frequency_hz: float | None = None
+    tx_power_w: float | None = None
+    dipole_length_m: float | None = None
+    duty_cycle: float | None = None
+    on: bool | None = None
+    offset_m: float | None = None
+    azimuth_deg: float | None = None
+
+    _SOURCE_ID = ("source_id", "tx_id", "transmitter_id")
+    _CURRENT = ("tx_current_a", "current_a", "tx_current", "current")
+    _VOLTAGE = ("tx_voltage_v", "voltage_v", "tx_voltage")
+    _FREQ = ("tx_frequency_hz", "frequency_hz", "tx_freq_hz", "frequency")
+    _POWER = ("tx_power_w", "power_w", "tx_power")
+    _DIPOLE = ("dipole_length_m", "tx_dipole_length_m", "ab_length_m", "ab_m")
+    _DUTY = ("duty_cycle", "duty")
+    _ON = ("on", "keyed_on", "tx_on", "transmitting")
+    _OFFSET = ("offset_m", "tx_rx_offset_m", "tx_rx_offset", "rx_offset_m")
+    _AZIMUTH = ("azimuth_deg", "tx_azimuth_deg", "bearing_deg")
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        self._base_validate()
+        self.source_id = _c.as_optional_str(self.source_id, "source_id")
+        self.tx_current_a = _c.as_optional_finite_float(
+            self.tx_current_a, "tx_current_a"
+        )
+        self.tx_voltage_v = _c.as_optional_finite_float(
+            self.tx_voltage_v, "tx_voltage_v"
+        )
+        self.tx_frequency_hz = _c.as_optional_positive(
+            self.tx_frequency_hz, "tx_frequency_hz"
+        )
+        self.tx_power_w = _c.as_optional_finite_float(
+            self.tx_power_w, "tx_power_w"
+        )
+        self.dipole_length_m = _c.as_optional_positive(
+            self.dipole_length_m, "dipole_length_m"
+        )
+        if self.duty_cycle is not None:
+            self.duty_cycle = _c.as_probability(self.duty_cycle, "duty_cycle")
+        if self.on is not None:
+            self.on = _c.as_bool(self.on)
+        self.offset_m = _c.as_optional_positive(self.offset_m, "offset_m")
+        self.azimuth_deg = _c.as_optional_finite_float(
+            self.azimuth_deg, "azimuth_deg"
+        )
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> SourcePayload:
+        data = dict(payload or {})
+        known = _known_keys(
+            cls._STATION_ALIASES, cls._SOURCE_ID, cls._CURRENT, cls._VOLTAGE,
+            cls._FREQ, cls._POWER, cls._DIPOLE, cls._DUTY, cls._ON,
+            cls._OFFSET, cls._AZIMUTH,
+        )
+        return cls(
+            station=cls._consume_station(data),
+            source_id=_first(data, cls._SOURCE_ID),
+            tx_current_a=_first(data, cls._CURRENT),
+            tx_voltage_v=_first(data, cls._VOLTAGE),
+            tx_frequency_hz=_first(data, cls._FREQ),
+            tx_power_w=_first(data, cls._POWER),
+            dipole_length_m=_first(data, cls._DIPOLE),
+            duty_cycle=_first(data, cls._DUTY),
+            on=_first(data, cls._ON),
+            offset_m=_first(data, cls._OFFSET),
+            azimuth_deg=_first(data, cls._AZIMUTH),
+            extra={k: v for k, v in data.items() if k not in known},
+        )
+
+    def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
+        return self._finish(
+            dict(
+                station=self.station,
+                source_id=self.source_id,
+                tx_current_a=self.tx_current_a,
+                tx_voltage_v=self.tx_voltage_v,
+                tx_frequency_hz=self.tx_frequency_hz,
+                tx_power_w=self.tx_power_w,
+                dipole_length_m=self.dipole_length_m,
+                duty_cycle=self.duty_cycle,
+                on=self.on,
+                offset_m=self.offset_m,
+                azimuth_deg=self.azimuth_deg,
+            ),
+            drop_none=drop_none,
+        )
+
+
+@dataclass
 class SyncPayload(TelemetryPayload):
     """Clock-synchronisation telemetry for a field node."""
 
@@ -356,6 +462,10 @@ class SyncPayload(TelemetryPayload):
     gps_lock: bool | None = None
     n_reference_points: int | None = None
     reference: str | None = None
+    # Controlled-source (CSAMT/CSEM) transmitter-receiver timing lock.
+    tx_locked: bool | None = None
+    tx_sync_offset_ms: float | None = None
+    tx_id: str | None = None
 
     _OFFSET = ("offset_ms", "clock_offset_ms")
     _DRIFT = ("drift_ppm", "clock_drift_ppm")
@@ -363,6 +473,9 @@ class SyncPayload(TelemetryPayload):
     _GPS = ("gps_lock", "gps_locked", "has_gps")
     _NREF = ("n_reference_points", "n_reference", "n_ref")
     _REFERENCE = ("reference", "clock_reference", "ref")
+    _TX_LOCKED = ("tx_locked", "transmitter_locked", "source_locked")
+    _TX_OFFSET = ("tx_sync_offset_ms", "tx_offset_ms", "source_offset_ms")
+    _TX_ID = ("tx_id", "transmitter_id", "source_id")
 
     def __post_init__(self) -> None:
         self.validate()
@@ -380,13 +493,20 @@ class SyncPayload(TelemetryPayload):
             if self.n_reference_points < 0:
                 raise ValueError("n_reference_points must be >= 0.")
         self.reference = _c.as_optional_str(self.reference, "reference")
+        if self.tx_locked is not None:
+            self.tx_locked = _c.as_bool(self.tx_locked)
+        self.tx_sync_offset_ms = _c.as_optional_finite_float(
+            self.tx_sync_offset_ms, "tx_sync_offset_ms"
+        )
+        self.tx_id = _c.as_optional_str(self.tx_id, "tx_id")
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> SyncPayload:
         data = dict(payload or {})
         known = _known_keys(
             cls._STATION_ALIASES, cls._OFFSET, cls._DRIFT, cls._JITTER,
-            cls._GPS, cls._NREF, cls._REFERENCE,
+            cls._GPS, cls._NREF, cls._REFERENCE, cls._TX_LOCKED,
+            cls._TX_OFFSET, cls._TX_ID,
         )
         return cls(
             station=cls._consume_station(data),
@@ -396,6 +516,9 @@ class SyncPayload(TelemetryPayload):
             gps_lock=_first(data, cls._GPS),
             n_reference_points=_first(data, cls._NREF),
             reference=_first(data, cls._REFERENCE),
+            tx_locked=_first(data, cls._TX_LOCKED),
+            tx_sync_offset_ms=_first(data, cls._TX_OFFSET),
+            tx_id=_first(data, cls._TX_ID),
             extra={k: v for k, v in data.items() if k not in known},
         )
 
@@ -409,6 +532,9 @@ class SyncPayload(TelemetryPayload):
                 gps_lock=self.gps_lock,
                 n_reference_points=self.n_reference_points,
                 reference=self.reference,
+                tx_locked=self.tx_locked,
+                tx_sync_offset_ms=self.tx_sync_offset_ms,
+                tx_id=self.tx_id,
             ),
             drop_none=drop_none,
         )
@@ -594,6 +720,7 @@ PAYLOAD_SCHEMAS: dict[PacketKind, type[TelemetryPayload]] = {
     PacketKind.SYNC: SyncPayload,
     PacketKind.EVENT: EventPayload,
     PacketKind.DATA: AcquisitionPayload,
+    PacketKind.SOURCE: SourcePayload,
 }
 
 

@@ -13,6 +13,7 @@ import :mod:`pycsamt.iot.session`, so they can be reused independently.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import platform
@@ -33,12 +34,20 @@ __all__ = [
     "hash_raw_file",
     "hash_bytes",
     "hash_mapping",
+    "sign_mapping",
+    "verify_signature",
+    "verify_manifest",
+    "hash_chain",
+    "verify_hash_chain",
     "log_qc_decision",
     "build_acquisition_manifest",
     "export_acquisition_manifest",
     "export_station_audit",
     "export_reproducibility_bundle",
 ]
+
+#: JSON separators giving a canonical, whitespace-free encoding.
+_CANONICAL = (",", ":")
 
 
 def _tool_version() -> str:
@@ -76,6 +85,122 @@ def hash_mapping(mapping: Mapping[str, Any], *, algo: str = "sha256") -> str:
         dict(mapping), sort_keys=True, default=str, separators=(",", ":")
     ).encode("utf-8")
     return hash_bytes(encoded, algo=algo)
+
+
+def _key_bytes(key: str | bytes) -> bytes:
+    if isinstance(key, str):
+        return key.encode("utf-8")
+    return bytes(key)
+
+
+def sign_mapping(
+    mapping: Mapping[str, Any],
+    key: str | bytes,
+    *,
+    algo: str = "sha256",
+) -> str:
+    """Return an HMAC signature over the canonical JSON of *mapping*.
+
+    Unlike :func:`hash_mapping`, which anyone can recompute, an HMAC
+    signature also proves the manifest was produced by a party holding the
+    shared *key* -- useful for asserting a field audit trail has not been
+    tampered with in transit.
+    """
+    encoded = json.dumps(
+        dict(mapping), sort_keys=True, default=str, separators=_CANONICAL
+    ).encode("utf-8")
+    return hmac.new(_key_bytes(key), encoded, algo).hexdigest()
+
+
+def verify_signature(
+    mapping: Mapping[str, Any],
+    signature: str,
+    key: str | bytes,
+    *,
+    algo: str = "sha256",
+) -> bool:
+    """Return whether *signature* is a valid HMAC of *mapping* under *key*.
+
+    Uses a constant-time comparison so verification does not leak timing
+    information.
+    """
+    expected = sign_mapping(mapping, key, algo=algo)
+    return hmac.compare_digest(expected, str(signature))
+
+
+def verify_manifest(signed: Mapping[str, Any], key: str | bytes) -> bool:
+    """Verify a signed manifest produced by :meth:`AcquisitionManifest.sign`.
+
+    Checks the HMAC *signature* over the wrapped ``manifest`` payload and,
+    when present, that the payload's own ``content_hash`` still matches.
+    """
+    data = dict(signed)
+    payload = data.get("manifest")
+    signature = data.get("signature")
+    if not isinstance(payload, Mapping) or signature is None:
+        return False
+    algo = str(data.get("signature_algo", "hmac-sha256")).split("-", 1)[-1]
+    if not verify_signature(payload, signature, key, algo=algo):
+        return False
+    content_hash = dict(payload).get("content_hash")
+    if content_hash is not None:
+        recomputed = hash_mapping(
+            {k: v for k, v in dict(payload).items() if k != "content_hash"}
+        )
+        if not hmac.compare_digest(str(content_hash), recomputed):
+            return False
+    return True
+
+
+def hash_chain(
+    entries: Iterable[Mapping[str, Any]],
+    *,
+    algo: str = "sha256",
+    genesis: str = "",
+) -> list[dict[str, Any]]:
+    """Return a tamper-evident hash chain over *entries*.
+
+    Each returned entry is a copy of the input with ``seq``, ``prev_hash``,
+    and ``entry_hash`` added, where ``entry_hash`` folds in the previous
+    entry's hash. Altering, inserting, or reordering any entry breaks the
+    chain from that point on (detected by :func:`verify_hash_chain`). This
+    suits a running log such as per-window QC decisions.
+    """
+    chained: list[dict[str, Any]] = []
+    prev = genesis
+    for i, entry in enumerate(entries):
+        item = dict(entry)
+        item["seq"] = i
+        item["prev_hash"] = prev
+        digest = hash_mapping(
+            {k: v for k, v in item.items() if k != "entry_hash"}, algo=algo
+        )
+        item["entry_hash"] = digest
+        prev = digest
+        chained.append(item)
+    return chained
+
+
+def verify_hash_chain(
+    chained: Iterable[Mapping[str, Any]],
+    *,
+    algo: str = "sha256",
+    genesis: str = "",
+) -> bool:
+    """Return whether a :func:`hash_chain` sequence is intact and in order."""
+    prev = genesis
+    for i, entry in enumerate(chained):
+        item = dict(entry)
+        if item.get("seq") != i or item.get("prev_hash") != prev:
+            return False
+        stored = item.get("entry_hash")
+        recomputed = hash_mapping(
+            {k: v for k, v in item.items() if k != "entry_hash"}, algo=algo
+        )
+        if stored is None or not hmac.compare_digest(str(stored), recomputed):
+            return False
+        prev = str(stored)
+    return True
 
 
 def hash_raw_file(
@@ -299,6 +424,42 @@ class AcquisitionManifest(PyCSAMTObject):
             os.makedirs(parent, exist_ok=True)
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(self.to_json(indent=indent))
+        return os.path.abspath(path)
+
+    def chained_qc_decisions(self) -> list[dict[str, Any]]:
+        """Return the QC decisions as a tamper-evident hash chain."""
+        return hash_chain(self.qc_decisions)
+
+    def sign(self, key: str | bytes, *, algo: str = "sha256") -> dict[str, Any]:
+        """Return an HMAC-signed envelope around the manifest.
+
+        The result wraps the manifest payload under ``manifest`` alongside
+        a ``signature`` and ``signature_algo``, so it can be written out and
+        later checked with :func:`verify_manifest` by a holder of *key*.
+        """
+        payload = self.as_dict()
+        return dict(
+            manifest=payload,
+            signature=sign_mapping(payload, key, algo=algo),
+            signature_algo=f"hmac-{algo}",
+        )
+
+    def write_signed(
+        self,
+        path: str,
+        key: str | bytes,
+        *,
+        algo: str = "sha256",
+        indent: int = 2,
+    ) -> str:
+        """Write an HMAC-signed manifest envelope to *path* (JSON)."""
+        parent = os.path.dirname(os.path.abspath(path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(
+                self.sign(key, algo=algo), handle, indent=indent, default=str
+            )
         return os.path.abspath(path)
 
 

@@ -21,6 +21,7 @@ class EMMethod(str, Enum):
     AMT = "amt"
     MT = "mt"
     CSAMT = "csamt"
+    CSEM = "csem"
     TDEM = "tdem"
     TEM = "tem"
     UNKNOWN = "unknown"
@@ -144,6 +145,35 @@ class MonitoringConfig(PyCSAMTObject, MetadataMixin):
 
     def __post_init__(self) -> None:
         self.validate()
+
+    @classmethod
+    def for_method(
+        cls, method: EMMethod | str, **overrides: Any
+    ) -> MonitoringConfig:
+        """Build a config seeded with a method's canonical defaults.
+
+        The expected frequency band and required channels are taken from
+        the method's :class:`~pycsamt.iot.methods.MethodProfile`, so the
+        method-mismatch, missing-channel, and out-of-band checks in
+        :class:`TelemetryMonitor` become method-aware without any manual
+        threshold tuning. Any keyword *overrides* win over the defaults.
+
+        Example
+        -------
+        >>> cfg = MonitoringConfig.for_method("csamt", min_battery_v=11.5)
+        >>> cfg.required_channels
+        ['ex', 'ey', 'hx', 'hy']
+        """
+        from .methods import method_profile
+
+        profile = method_profile(method)
+        params: dict[str, Any] = dict(
+            method=profile.method,
+            frequency_band_hz=profile.frequency_band_hz,
+            required_channels=list(profile.required_channels),
+        )
+        params.update(overrides)
+        return cls(**params)
 
     def validate(self) -> None:
         """Validate and normalise monitoring thresholds."""

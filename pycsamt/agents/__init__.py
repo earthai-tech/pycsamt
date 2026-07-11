@@ -1,8 +1,4 @@
-"""
-pycsamt.agents
-==============
-
-AI-assisted MT/AMT/CSAMT workflow automation.
+"""AI-assisted MT, AMT, and CSAMT workflow automation.
 
 All agents are **lazy-loaded**: importing this module costs nothing unless
 you actually instantiate an agent.  This keeps the base pycsamt import fast
@@ -64,6 +60,10 @@ Agent catalogue
 :class:`HybridInversionAgent`
     Two-stage AI warm-start + physics refinement for
     1-D, 2-D, and 3-D MT inversion.
+:class:`IoTFieldAgent`
+    Monitor an IoT-enabled AMT/MT/CSAMT/CSEM field acquisition from its edge
+    telemetry: monitoring status, sync/power summaries, provenance manifest,
+    and dashboard figures.
 
 Supporting classes
 ------------------
@@ -184,6 +184,7 @@ _LAZY: dict[str, str] = {
     "Mare2DEMAgent":              ".mare2dem_agent",
     "PINNInversionAgent":         ".pinn_agent",
     "HybridInversionAgent":       ".hybrid_agent",
+    "IoTFieldAgent":              ".iot_agent",
 }
 
 
@@ -209,6 +210,7 @@ if TYPE_CHECKING:
     from .freq_decimation import FrequencyDecimationAgent
     from .hybrid_agent import HybridInversionAgent
     from .interpretation import InterpretationAgent
+    from .iot_agent import IoTFieldAgent
     from .inv2d_agent import Inv2DAgent
     from .inv3d_agent import Inv3DAgent
     from .inversion_backend import InversionBackendAgent
@@ -299,4 +301,5 @@ __all__ = [
     "Mare2DEMAgent",
     "PINNInversionAgent",
     "HybridInversionAgent",
+    "IoTFieldAgent",
 ]

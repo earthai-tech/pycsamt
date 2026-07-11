@@ -136,6 +136,27 @@ print(r["rms_global"])
 |---|---|
 | `ModelZooAgent` | Browse, download, and deploy pre-trained EM inverter checkpoints |
 
+### Phase 6 — IoT field acquisition
+
+| Agent | Description |
+|---|---|
+| `IoTFieldAgent` | Monitor a live IoT AMT/MT/CSAMT/CSEM acquisition from edge telemetry: monitoring status, telemetry/station/pipeline tables, sync & power summaries, provenance manifest, and dashboard/edge/power/sync figures |
+
+```python
+from pycsamt.agents import IoTFieldAgent
+
+# from live telemetry packets (offline, no LLM key needed)
+r = IoTFieldAgent().execute({
+    "packets": packets,          # or "session"=FieldSession, or "path"=EDIs
+    "survey_id": "WILLY_IOT",
+    "manifest": True,            # build + write a signed-capable manifest
+    "output_dir": "/out/iot",
+})
+r["level"]           # 'ok' | 'warn' | 'critical'
+r["status"].issues   # concrete reasons the level tripped
+r["figures"]["dashboard"]
+```
+
 ---
 
 ## Workflow patterns

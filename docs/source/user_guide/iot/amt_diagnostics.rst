@@ -1,0 +1,346 @@
+.. _user_guide_iot_amt_diagnostics:
+
+AMT/CSAMT Edge Diagnostics
+==========================
+
+The :mod:`pycsamt.iot.edge_amt` module adds acquisition diagnostics that
+are specific to AMT, MT, and CSAMT field telemetry. These routines are
+intended for the edge side of a survey: they run on short time windows,
+produce compact metrics, and help decide whether a packet should be
+accepted, warned, or rejected before downstream impedance processing.
+
+The examples below use synthetic data. No EDI or field logger file is
+required. The synthetic window is deliberately built with useful AMT-like
+energy, 50 Hz and 100 Hz powerline contamination, a clipped channel, a
+flat dropout interval, NaNs, and two sets of synthetic impedance windows.
+That makes the failure modes explicit and keeps the example reproducible.
+
+What The Diagnostics Check
+--------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 44 28
+
+   * - Function
+     - Field question
+     - Typical action
+   * - ``detect_powerline_harmonics``
+     - Are 50/60 Hz mains harmonics dominating this window?
+     - Warn or reject the packet, then inspect grounding and nearby power
+       infrastructure.
+   * - ``estimate_channel_snr``
+     - Is useful AMT-band energy above the noise floor?
+     - Prefer higher-SNR windows for transfer-function estimates.
+   * - ``check_channel_saturation``
+     - Is the ADC or logger rail clipping?
+     - Lower gain, check coil/electrode wiring, or discard saturated
+       intervals.
+   * - ``check_contact_resistance``
+     - Do electric channels show high drift or high noise proxies?
+     - Re-seat electrodes, wet contacts, or review dipole wiring.
+   * - ``estimate_frequency_coverage``
+     - Which target frequency bands are actually resolved?
+     - Mark missing bands before inversion or reporting.
+   * - ``assess_impedance_stability``
+     - Are per-window impedance estimates repeatable?
+     - Keep stable windows and down-weight unstable windows.
+   * - ``detect_sensor_dropout``
+     - Did a channel go flat or contain gaps?
+     - Reject the affected interval and inspect sensor/logger health.
+
+Build A Synthetic Edge Window
+-----------------------------
+
+This first block creates a deterministic synthetic window. ``Ex`` contains
+useful low-frequency energy plus 50 Hz and 100 Hz harmonics. ``Ey`` is
+also clipped to mimic an overloaded channel. ``Ex`` then receives a short
+flatline and two NaNs to mimic a sensor dropout.
+
+.. code-block:: python
+   :linenos:
+
+   import numpy as np
+
+   sample_rate = 512.0
+   n_samples = 8192
+   t = np.arange(n_samples) / sample_rate
+   rng = np.random.default_rng(42)
+
+   ex = (
+       0.80 * np.sin(2 * np.pi * 7.5 * t)
+       + 0.35 * np.sin(2 * np.pi * 23.0 * t)
+       + 0.45 * np.sin(2 * np.pi * 50.0 * t)
+       + 0.18 * np.sin(2 * np.pi * 100.0 * t)
+       + 0.08 * rng.standard_normal(n_samples)
+   )
+   ey = (
+       0.65 * np.sin(2 * np.pi * 9.0 * t + 0.35)
+       + 0.22 * np.sin(2 * np.pi * 31.0 * t)
+       + 0.06 * rng.standard_normal(n_samples)
+   )
+   hx = (
+       0.32 * np.sin(2 * np.pi * 7.5 * t + 0.9)
+       + 0.05 * rng.standard_normal(n_samples)
+   )
+
+   ex_bad = ex.copy()
+   ex_bad[2500:2560] = ex_bad[2499]
+   ex_bad[6000] = np.nan
+   ex_bad[6001] = np.nan
+
+   ey_clipped = np.clip(2.6 * ey, -1.0, 1.0)
+
+Run The Edge Diagnostics
+------------------------
+
+The same window can be passed through the AMT-specific checks. The
+``target_bands`` argument says which bands the deployment cares about,
+while ``signal_band_hz`` controls the SNR estimate.
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.iot import (
+       assess_impedance_stability,
+       check_channel_saturation,
+       check_contact_resistance,
+       detect_powerline_harmonics,
+       detect_sensor_dropout,
+       estimate_channel_snr,
+       estimate_frequency_coverage,
+   )
+
+   harmonics = detect_powerline_harmonics(
+       ex_bad,
+       sample_rate,
+       mains_hz=50.0,
+       n_harmonics=5,
+       threshold_ratio=0.02,
+   )
+   snr_ex = estimate_channel_snr(
+       ex_bad,
+       sample_rate,
+       signal_band_hz=(4.0, 40.0),
+   )
+   snr_hx = estimate_channel_snr(
+       hx,
+       sample_rate,
+       signal_band_hz=(4.0, 40.0),
+   )
+   saturation = check_channel_saturation(
+       ey_clipped,
+       limit=1.0,
+       max_clip_fraction=0.01,
+   )
+   contact = check_contact_resistance(
+       ex_bad,
+       ey,
+       sample_rate=sample_rate,
+       noise_rms_threshold=0.45,
+   )
+   coverage = estimate_frequency_coverage(
+       ex_bad,
+       sample_rate,
+       target_bands=[(4.0, 40.0), (40.0, 120.0), (120.0, 240.0)],
+       snr_floor_db=6.0,
+   )
+   dropout = detect_sensor_dropout(ex_bad, min_flat_run=16)
+
+   z_stable = (1.0 + 0.45j) * (
+       1.0 + 0.03 * rng.standard_normal((16, 4))
+   ) * np.exp(1j * np.deg2rad(1.5 * rng.standard_normal((16, 4))))
+
+   z_unstable = (1.0 + 0.45j) * (
+       1.0 + 0.35 * rng.standard_normal((16, 4))
+   ) * np.exp(1j * np.deg2rad(18.0 * rng.standard_normal((16, 4))))
+
+   stable = assess_impedance_stability(z_stable)
+   unstable = assess_impedance_stability(z_unstable)
+
+   dominant = harmonics.dominant
+   print("Synthetic AMT edge-diagnostic output")
+   print(f"Powerline contaminated: {harmonics.contaminated}")
+   print(f"Dominant harmonic: {dominant.frequency_hz:.1f} Hz")
+   print(f"Total harmonic power ratio: {harmonics.total_ratio:.3f}")
+   print(f"Ex SNR in 4-40 Hz band: {snr_ex:.2f} dB")
+   print(f"Hx SNR in 4-40 Hz band: {snr_hx:.2f} dB")
+   print(
+       "Ey clipped samples: "
+       f"{saturation['n_clipped']} of {saturation['n_samples']} "
+       f"({100.0 * saturation['clip_fraction']:.1f}%)"
+   )
+   print(f"Ey saturated: {saturation['saturated']}")
+   print(f"Contact proxy ok: {contact['ok']}")
+   print(f"Contact flags: {', '.join(contact['flags'])}")
+   print(
+       "Frequency coverage: "
+       f"{coverage.f_low_hz:.2f}-{coverage.f_high_hz:.2f} Hz "
+       f"({coverage.n_decades:.2f} decades)"
+   )
+   print(f"Target-band coverage fraction: {coverage.coverage_fraction:.2f}")
+   print(f"Missing target bands: {coverage.missing_bands}")
+   print(
+       "Dropout: "
+       f"{dropout['dropout']}, "
+       f"NaNs={dropout['n_nan']}, "
+       f"longest flat run={dropout['longest_flat_run']} samples"
+   )
+   print(
+       "Stable impedance windows: "
+       f"{stable.stable} "
+       f"(CV={stable.cv_magnitude:.3f}, "
+       f"phase std={stable.phase_std_deg:.2f} deg)"
+   )
+   print(
+       "Unstable impedance windows: "
+       f"{unstable.stable} "
+       f"(CV={unstable.cv_magnitude:.3f}, "
+       f"phase std={unstable.phase_std_deg:.2f} deg)"
+   )
+
+Output:
+
+.. code-block:: text
+
+   Synthetic AMT edge-diagnostic output
+   Powerline contaminated: True
+   Dominant harmonic: 50.0 Hz
+   Total harmonic power ratio: 0.232
+   Ex SNR in 4-40 Hz band: 4.85 dB
+   Hx SNR in 4-40 Hz band: 13.30 dB
+   Ey clipped samples: 4601 of 8192 (56.2%)
+   Ey saturated: True
+   Contact proxy ok: False
+   Contact flags: ex_noise_above_threshold, ey_noise_above_threshold
+   Frequency coverage: 2.00-102.00 Hz (1.71 decades)
+   Target-band coverage fraction: 0.33
+   Missing target bands: [(40.0, 120.0), (120.0, 240.0)]
+   Dropout: True, NaNs=2, longest flat run=61 samples
+   Stable impedance windows: True (CV=0.026, phase std=1.60 deg)
+   Unstable impedance windows: False (CV=0.308, phase std=18.63 deg)
+
+Plot The Diagnostics
+--------------------
+
+The same variables can be plotted for review or embedded into an edge
+report. The first figure shows the synthetic window and the live power
+spectrum. The second figure condenses the key QC fractions and compares
+stable versus unstable impedance windows.
+
+.. code-block:: python
+   :linenos:
+
+   from pathlib import Path
+
+   import matplotlib.pyplot as plt
+
+   from pycsamt.iot import compute_live_spectra
+
+   out_dir = Path("docs/source/images/user_guide/iot")
+   out_dir.mkdir(parents=True, exist_ok=True)
+
+   spectra = compute_live_spectra(ex_bad, sample_rate)
+   freq = spectra["frequency_hz"]
+   psd = spectra["psd"]
+
+   fig, axes = plt.subplots(2, 1, figsize=(8.2, 5.8),
+                            constrained_layout=True)
+   axes[0].plot(t[:1600], ex_bad[:1600], lw=1.0, label="Ex synthetic")
+   axes[0].plot(t[:1600], ey[:1600], lw=0.9, alpha=0.75,
+                label="Ey synthetic")
+   axes[0].set_xlabel("Time (s)")
+   axes[0].set_ylabel("Amplitude")
+   axes[0].set_title("Synthetic AMT edge window")
+   axes[0].legend(loc="upper right")
+   axes[0].grid(alpha=0.25)
+
+   axes[1].semilogy(freq[1:], psd[1:], color="tab:blue")
+   for peak in harmonics.peaks:
+       if peak.flagged:
+           axes[1].axvline(peak.frequency_hz, color="tab:red",
+                           ls="--", lw=1.0, alpha=0.75)
+   axes[1].set_xlim(1, 180)
+   axes[1].set_xlabel("Frequency (Hz)")
+   axes[1].set_ylabel("PSD")
+   axes[1].set_title("Live spectrum with flagged mains harmonics")
+   axes[1].grid(alpha=0.25, which="both")
+   fig.savefig(
+       out_dir / "user-guide-iot-amt-diagnostics-01.png",
+       dpi=180,
+   )
+
+   fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.6),
+                            constrained_layout=True)
+   axes[0].bar(
+       ["Harmonic\nratio", "Ey clip\nfraction", "Missing\nband frac"],
+       [
+           harmonics.total_ratio,
+           saturation["clip_fraction"],
+           1.0 - coverage.coverage_fraction,
+       ],
+       color=["tab:red", "tab:orange", "tab:purple"],
+   )
+   axes[0].set_ylim(0, 1)
+   axes[0].set_ylabel("Fraction")
+   axes[0].set_title("Edge QC fractions")
+   axes[0].grid(axis="y", alpha=0.25)
+
+   axes[1].bar(
+       ["Stable Z", "Unstable Z"],
+       [stable.cv_magnitude, unstable.cv_magnitude],
+       color=["tab:green", "tab:red"],
+   )
+   axes[1].axhline(0.15, color="0.25", ls="--", lw=1.0,
+                   label="max_cv")
+   axes[1].set_ylabel("Coefficient of variation")
+   axes[1].set_title("Impedance-window stability")
+   axes[1].legend(loc="upper left")
+   axes[1].grid(axis="y", alpha=0.25)
+   fig.savefig(
+       out_dir / "user-guide-iot-amt-diagnostics-02.png",
+       dpi=180,
+   )
+
+.. grid:: 1 1 2 2
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/iot/user-guide-iot-amt-diagnostics-01.png
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../../images/user_guide/iot/user-guide-iot-amt-diagnostics-02.png
+         :width: 100%
+
+Interpret The Result
+--------------------
+
+The synthetic packet should not be treated as a clean acquisition window.
+The mains detector flags contamination because the 50 Hz and 100 Hz bands
+carry a large fraction of the spectral power. The clipped ``Ey`` channel
+is also unusable for impedance estimation because more than half of its
+samples are at the ADC limit. The contact proxy is a warning rather than a
+true resistance measurement; passive AMT data cannot measure contact
+resistance directly, but high drift and high channel noise are useful
+field-side symptoms.
+
+The frequency-coverage result says that only one of the requested target
+bands is fully represented by this short window. That does not mean the
+survey failed; it means this packet alone should not be used to support
+the missing bands. The impedance stability check demonstrates the same
+principle at transfer-function level: low coefficient of variation and
+low phase scatter mark stable windows, while high magnitude and phase
+scatter mark windows that should be down-weighted or rejected.
+
+Using These Metrics In Telemetry
+--------------------------------
+
+In an IoT acquisition workflow, these diagnostics are usually attached to
+``qc`` packets or folded into the edge-processing result. A practical
+edge policy might accept packets with finite data and stable impedance,
+warn on mild mains contamination, and reject packets with saturation,
+dropout, or severe missing-band coverage. The exact thresholds should be
+survey-specific and should be recorded in the deployment manifest so that
+field decisions remain reproducible.

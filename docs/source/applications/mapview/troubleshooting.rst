@@ -1,3 +1,5 @@
+.. _applications-mapview-troubleshooting:
+
 Troubleshooting
 ===============
 
@@ -26,23 +28,38 @@ The 3-D scene needs WebGL. If the station map works but the 3-D canvas
 stays empty, enable hardware acceleration in the browser (or try
 another browser) — remote-desktop sessions often disable WebGL.
 
+Stations plot in the wrong place
+--------------------------------
+
+Check **Coordinate system** in the Map inspector.  Standard EDI files are
+geographic latitude/longitude (EPSG:4326); project files may use a UTM zone or
+a custom EPSG code.  A wrong CRS stretches or displaces the station cloud.
+
+The contour overlay looks blocky or misleading
+----------------------------------------------
+
+The contour is an interpolation over station locations.  Lower the **Levels**,
+raise the **Smoothing σ**, or reduce the **Grid resolution**, and compare the
+contour against the station markers before reading structure into it.
+
 Large surveys feel slow
 -----------------------
 
-* Toggle survey lines off in the line picker while you focus on one
-  profile.
-* Turn *Smooth sections* off, or lower the *Section resolution* — the
-  interpolation grid dominates the figure cost.
-* Hide station labels in dense maps.
+* Toggle survey lines off in the line picker while you focus on one line.
+* On the Map, lower the contour **Grid resolution** — the interpolation grid
+  dominates the figure cost — and hide station **Labels** in dense maps.
+* In 3-D, reduce the **Depth slices** and **Iso-surfaces** counts, and use a
+  shorter **Depth window** (500 m / 1 km) instead of Full.
 
 Data does not load
 ------------------
 
-* The EDI tab expects station files with coordinates in their headers;
-  files without any location can be placed only after loading stations
+* The **EDI stations** tab expects station files with coordinates in their
+  headers; files without any location can be placed only after loading stations
   that do have coordinates.
-* Inversion results without coordinates need *match coordinates from
-  already-loaded EDI stations* enabled — load the survey's EDIs first.
+* Inversion results without coordinates need **Match coordinates from
+  already-loaded EDI stations** enabled — load the survey's EDIs first, then the
+  results.
 * Sessions are per browser tab: a second tab starts empty by design.
 
 Where nothing else helps

@@ -1,3 +1,5 @@
+.. _applications-mapview-installation:
+
 Installation And Launch
 =======================
 
@@ -52,9 +54,25 @@ All options:
      - Dash debug mode with hot reload — useful when developing the app
        itself.
 
+Preloading Data
+---------------
+
+``--data`` is the quickest way to open straight onto a survey — point it at a
+folder of EDI files (or a parent folder with one subfolder per line):
+
+.. code-block:: bash
+
+   pycsamt-mapview --data path/to/edi_folder
+
+Behind the scenes this builds a :class:`~pycsamt.map.MapView` from the folder
+and seeds the app with it, so the map is populated the moment the browser
+opens.  You can still load or add more lines from the UI afterwards.
+
 Verify
 ------
 
-After launch, the welcome panel offers to load data; if the page is
-blank, browse to ``http://127.0.0.1:8770`` manually (see
-:doc:`troubleshooting`).
+After launch, the app opens on the :ref:`welcome screen
+<applications-mapview>` with a **Load Survey Lines - Start** button.  If the
+browser does not open (headless or remote hosts), browse to
+``http://127.0.0.1:8770`` manually.  If the page is blank or the port is busy,
+see :doc:`troubleshooting`.

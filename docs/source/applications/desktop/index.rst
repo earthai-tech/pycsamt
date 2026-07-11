@@ -14,6 +14,89 @@ is not a separate science layer; it is an interactive surface over pyCSAMT
 loaders, ``Sites`` objects, processing functions, plotting tools, inversion
 builders, and export helpers.
 
+.. figure:: ../../_static/applications/desktop/desktop-walkthrough.gif
+   :alt: Animated tour of the pyCSAMT desktop GUI
+   :class: pycsamt-screenshot
+
+   An animated tour of the desktop app: launch the main window, load EDI survey
+   lines, inspect the station map and per-station responses, run quality
+   control, correct static shift, and build a forward model.  Each step is
+   documented on the pages below.
+
+Explore the Guide
+-----------------
+
+Pick a page to dive in.  A good first pass, in order, is **Installation →
+Loading & Sessions → Workspace → Maps & Profiles → Processing Workflows →
+Exports → Troubleshooting**.
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: cta-tiles
+
+   .. grid-item-card:: Installation
+      :link: installation
+      :link-type: doc
+      :img-top: ../../_static/icons/launch.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Install dependencies, launch the desktop, and confirm the console
+      commands.
+
+   .. grid-item-card:: Loading & Sessions
+      :link: loading_and_sessions
+      :link-type: doc
+      :img-top: ../../_static/icons/loading.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Load EDI/AVG/J files, understand the active ``Sites`` object, and save
+      session state.
+
+   .. grid-item-card:: Workspace
+      :link: workspace
+      :link-type: doc
+      :img-top: ../../_static/icons/controls.svg
+      :class-card: pycsamt-card sd-text-center
+
+      The main window, station table, toolbar, floating panels, log dock,
+      theme, and preferences.
+
+   .. grid-item-card:: Maps & Profiles
+      :link: maps_and_profiles
+      :link-type: doc
+      :img-top: ../../_static/icons/map-and-profile.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Station geometry, contours, response curves, pseudosections, topography,
+      and phase tensors.
+
+   .. grid-item-card:: Processing Workflows
+      :link: processing_workflows
+      :link-type: doc
+      :img-top: ../../_static/icons/processing.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Evidence-based QC, corrections, advanced diagnostics, forward modelling,
+      inversion prep, and the pipeline.
+
+   .. grid-item-card:: Exports
+      :link: exports
+      :link-type: doc
+      :img-top: ../../_static/icons/export.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Save figures, metadata, EDIs, pipeline JSON, inversion outputs, and
+      reproducibility notes.
+
+   .. grid-item-card:: Troubleshooting
+      :link: troubleshooting
+      :link-type: doc
+      :img-top: ../../_static/icons/troubleshoot.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Diagnose launch, loading, plotting, export, correction, pipeline, and
+      inversion problems.
+
 When To Use The Desktop
 -----------------------
 
@@ -49,28 +132,6 @@ From a source checkout, the module entry point is also available:
 .. code-block:: bash
 
    python -m pycsamt.app.desktop
-
-Start Here
-----------
-
-Read the desktop documentation in this order if you are setting up the app for
-the first time:
-
-1. :doc:`installation` -- install dependencies, launch the desktop, and confirm
-   the console commands.
-2. :doc:`loading_and_sessions` -- load EDI/AVG/J files, understand the active
-   ``Sites`` object, and save session state.
-3. :doc:`workspace` -- learn the main window, station table, toolbar, floating
-   panels, log dock, status bar, theme, and preferences.
-4. :doc:`maps_and_profiles` -- inspect station geometry, contours, response
-   curves, pseudosections, topography, and phase tensors.
-5. :doc:`processing_workflows` -- run evidence-based QC, corrections, advanced
-   diagnostics, forward modelling, inversion preparation, pipeline processing,
-   and agent-assisted review.
-6. :doc:`exports` -- save figures, metadata, EDIs, pipeline JSON, inversion
-   outputs, interpretation products, and reproducibility notes.
-7. :doc:`troubleshooting` -- diagnose launch, loading, plotting, export,
-   correction, pipeline, and inversion problems.
 
 Workflow Map
 ------------
@@ -131,11 +192,9 @@ desktop app.  For example:
 * QC, correction, forward, inversion, pipeline, and agent screenshots are in
   :doc:`processing_workflows`.
 
-Documentation Pages
--------------------
-
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    installation
    loading_and_sessions

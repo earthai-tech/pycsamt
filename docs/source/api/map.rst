@@ -158,3 +158,5 @@ Modules
    pycsamt.map.overlays
    pycsamt.map.styles
    pycsamt.map.export
+   pycsamt.map.inversion
+   pycsamt.map.topo

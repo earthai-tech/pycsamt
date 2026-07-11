@@ -507,10 +507,10 @@ See Also
 :doc:`correct_static_shift`
     Apply a common first correction after QC.
 
-:doc:`../site/recompute`
+:doc:`../user_guide/site/recompute`
     Recompute and rewrite EDI files imported from external software.
 
-:doc:`../site/computed_diagnostics`
+:doc:`../user_guide/site/computed_diagnostics`
     Compute strike, resistivity, phase-slope, and tipper diagnostics.
 
 :doc:`../api/emtools`

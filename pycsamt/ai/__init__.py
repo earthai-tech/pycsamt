@@ -1,11 +1,6 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
-pycsamt.ai
-==========
-
-Artificial intelligence and machine learning for EM data processing
-and inversion.
+"""Artificial intelligence and machine learning for EM processing and inversion.
 
 Phase 2 additions
 -----------------

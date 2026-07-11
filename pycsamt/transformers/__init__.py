@@ -1,3 +1,4 @@
+"""Converters from AVG, Jones, spectra, and time-series data to EDI."""
 
 from ._base import TransformerMixin
 from .jedi import AVGtoEDI, JtoEDI

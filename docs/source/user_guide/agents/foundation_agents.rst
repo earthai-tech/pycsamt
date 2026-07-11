@@ -178,3 +178,4 @@ dry-run previews, and aggregates cost.
    print(result["plan"])
 
 Use the coordinator when the chain is known and should be reproducible.
+:html_theme.sidebar_secondary.remove:

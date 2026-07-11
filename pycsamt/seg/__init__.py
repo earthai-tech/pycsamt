@@ -1,3 +1,4 @@
+"""EDI section models for metadata, spectra, time series, and impedance data."""
 
 from __future__ import annotations
 

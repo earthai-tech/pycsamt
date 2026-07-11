@@ -19,3 +19,8 @@ Metadata Modules
    pycsamt.metadata.quality
    pycsamt.metadata.rocks
    pycsamt.metadata.survey
+
+Frequency Helpers
+-----------------
+
+.. autofunction:: pycsamt.metadata.frequency.doi_estimate

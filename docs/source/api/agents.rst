@@ -41,6 +41,7 @@ Agent Modules
    pycsamt.agents.model_zoo_agent
    pycsamt.agents.anomaly_agent
    pycsamt.agents.interpretation
+   pycsamt.agents.iot_agent
    pycsamt.agents.resistivity_map
    pycsamt.agents.sensitivity
    pycsamt.agents.edi_export
@@ -48,4 +49,19 @@ Agent Modules
    pycsamt.agents.code_gen
    pycsamt.agents.pipeline_agent
    pycsamt.agents.batch_survey
+   pycsamt.agents.hybrid_agent
+   pycsamt.agents.mare2dem_agent
+   pycsamt.agents.master
+   pycsamt.agents.metrics
+   pycsamt.agents.package_qa
+   pycsamt.agents.pinn_agent
+   pycsamt.agents.plotting
+   pycsamt.agents.router
+   pycsamt.agents.tooling
    pycsamt.agents.web
+
+IoT Field Agent
+---------------
+
+.. autoclass:: pycsamt.agents.iot_agent.IoTFieldAgent
+   :members:

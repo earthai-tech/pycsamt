@@ -1,3 +1,5 @@
+"""Session normalization and context management for reproducible workflows."""
+
 from __future__ import annotations
 
 from ._session import (

@@ -1,10 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
-pycsamt.models
-==============
+"""External inversion model formats, runners, and result readers.
 
-Inversion model subpackages.  Each subpackage wraps an external inversion
+Each subpackage wraps an external inversion
 code and provides a Python interface that consumes EDI files (single source
 of truth) and produces ready-to-run inversion inputs, a runner that calls
 the compiled binary, and a post-processing layer for results.

@@ -22,3 +22,5 @@ Pipeline Modules
    pycsamt.pipeline._output
    pycsamt.pipeline._report
    pycsamt.pipeline._base
+   pycsamt.pipeline.stratagem
+   pycsamt.pipeline.plot

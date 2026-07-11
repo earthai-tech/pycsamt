@@ -1,6 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
+"""Reusable mixins for creating and manipulating transfer-function bundles."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator

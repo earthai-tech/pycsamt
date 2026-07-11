@@ -18,3 +18,9 @@ Core Modules
    pycsamt.core.config
    pycsamt.core.mixins
    pycsamt.core.registry
+
+Transformer Base
+----------------
+
+.. autoclass:: pycsamt.core.TransformerMixin
+   :members:

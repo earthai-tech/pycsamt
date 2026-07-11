@@ -23,3 +23,4 @@ Site Modules
    pycsamt.site.report
    pycsamt.site.selection
    pycsamt.site.utils
+   pycsamt.site.recompute

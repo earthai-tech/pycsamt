@@ -125,6 +125,17 @@ no_cache_option = click.option(
     help="Disable intermediate result caching.",
 )
 
+# ``click.option`` returns decorator callables without useful docstrings.
+# Assign concise API descriptions so autosummary can document these public
+# convenience decorators like ordinary functions.
+verbose_option.__doc__ = "Add the repeatable ``--verbose`` logging option to a Click command."
+no_color_option.__doc__ = "Add the ``--no-color`` terminal-output option to a Click command."
+output_dir_option.__doc__ = "Add the writable ``--output-dir`` path option to a Click command."
+format_option.__doc__ = "Add the text, JSON, or CSV output-format option to a Click command."
+overwrite_option.__doc__ = "Add the ``--overwrite`` confirmation-bypass option to a Click command."
+n_jobs_option.__doc__ = "Add the positive ``--jobs`` parallel-worker option to a Click command."
+no_cache_option.__doc__ = "Add the ``--no-cache`` processing option to a Click command."
+
 # ---------------------------------------------------------------------------
 # Convenience bundle: options attached to nearly every command
 # ---------------------------------------------------------------------------

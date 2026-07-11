@@ -74,6 +74,7 @@ extensions = [
     "sphinx_gallery.gen_gallery",  # execute example scripts, embed output
     # Local (docs/source/_ext)
     "gallery_hub",          # compact animated-card landing page for examples/
+    "public_api_catalog",   # grouped public modules/classes/functions tables
 ]
 
 # -- sphinx-copybutton -----------------------------------------------------
@@ -112,6 +113,7 @@ sphinx_gallery_conf = {
             "../examples/interp",
             "../examples/corrections",
             "../examples/pipeline",
+            "../examples/agents",
             "../examples/iot",
             "*",
         ]
@@ -294,6 +296,7 @@ html_js_files         = [
     ("js/mega-menu.js",    {"defer": "defer"}),
     ("js/gallery-hub.js",  {"defer": "defer"}),
     ("js/code-action.js",  {"defer": "defer"}),
+    ("js/api-search.js",   {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).

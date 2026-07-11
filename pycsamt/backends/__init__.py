@@ -1,10 +1,6 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
-pycsamt.backends
-================
-
-Backend abstraction layer for deep-learning frameworks.
+"""Backend abstraction and lazy discovery for deep-learning frameworks.
 
 pycsamt's AI/ML modules support both PyTorch and TensorFlow.  Neither
 framework is a required dependency of the package — they are loaded

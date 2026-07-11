@@ -424,3 +424,4 @@ See :mod:`pycsamt.agents`, :class:`pycsamt.agents.BaseAgent`,
 :class:`pycsamt.agents.AgentCoordinator`,
 :class:`pycsamt.agents.WorkflowOrchestratorAgent`, and
 :data:`pycsamt.agents.AGENT_CONFIG`.
+:html_theme.sidebar_secondary.remove:

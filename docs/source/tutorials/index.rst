@@ -159,9 +159,9 @@ Tutorial Index
 Related Sections
 ----------------
 
-- :doc:`../pipeline/index`
-- :doc:`../site/index`
-- :doc:`../models/index`
-- :doc:`../forward/index`
+- :doc:`../user_guide/pipeline/index`
+- :doc:`../user_guide/site/index`
+- :doc:`../user_guide/models/index`
+- :doc:`../user_guide/forward/index`
 - :doc:`../cli/index`
 - :doc:`../api/api`

@@ -149,3 +149,4 @@ AI Workflow Pattern
 
 Add ``EnsembleAgent`` when uncertainty is part of the objective.  Add
 ``JointInversionAgent`` when a secondary modality is available.
+:html_theme.sidebar_secondary.remove:

@@ -1,11 +1,9 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""
-pycsamt.forward
-===============
+"""Physics-based EM forward solvers and synthetic training-data generation.
 
-Physics-based 1-D electromagnetic forward solvers and synthetic dataset
-generation for AI/ML training.
+The package provides 1-D electromagnetic forward solvers and synthetic
+dataset generation for AI/ML training.
 
 This package has **no machine-learning dependencies** — only NumPy and
 SciPy are required.  It provides the building blocks consumed by

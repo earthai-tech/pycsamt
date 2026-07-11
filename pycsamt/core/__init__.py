@@ -1,3 +1,4 @@
+"""Core survey objects, configuration, registries, and transfer-function data."""
 
 from ._registry import (
     FileManifestStore,

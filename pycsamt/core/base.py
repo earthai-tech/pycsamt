@@ -1,6 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
+"""Foundational objects and transfer-function containers for pyCSAMT."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping

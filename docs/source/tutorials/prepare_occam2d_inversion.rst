@@ -54,7 +54,7 @@ Occam2D is not the best first choice when:
 - the target is a sharp blocky body that must be represented with hard
   boundaries rather than smooth gradients.
 
-For backend choice, see :doc:`../models/choosing_backend`.
+For backend choice, see :doc:`../user_guide/models/choosing_backend`.
 
 Prepare the Survey
 ------------------
@@ -534,10 +534,10 @@ See Also
 :doc:`correct_static_shift`
     Review static-shift correction.
 
-:doc:`../models/occam2d`
+:doc:`../user_guide/models/occam2d`
     Full Occam2D backend documentation.
 
-:doc:`../models/choosing_backend`
+:doc:`../user_guide/models/choosing_backend`
     Decide between Occam2D, ModEM, MARE2DEM, and other engines.
 
 :doc:`../api/inversion`

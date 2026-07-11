@@ -102,8 +102,6 @@ class IntermittentLink(BaseTelemetryClient):
 
 survey_dir = repo_root() / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 if not (survey_dir.is_dir() and any(survey_dir.glob("*.edi"))):  # pragma: no cover
-    import tempfile
-
     print("NOTE: bundled WILLY survey absent - using a synthetic stand-in.")
     tmp = Path(tempfile.mkdtemp())
     freq = np.logspace(4, 0, 24)
@@ -127,7 +125,9 @@ print(f"session: {len(stations)} stations from {survey_dir.name}")
 # link returns, ``flush`` drains the backlog in order. The queue is spooled
 # to disk, so even a logger reboot mid-outage would keep the backlog.
 
-spool = Path(os.environ.get("TMPDIR", "/tmp")) / "willy_l18_spool.jsonl"
+spool_dir = repo_root() / "docs" / "_build" / "iot_spool"
+spool_dir.mkdir(parents=True, exist_ok=True)
+spool = spool_dir / "willy_l18_spool.jsonl"
 if spool.exists():
     spool.unlink()
 link = IntermittentLink()

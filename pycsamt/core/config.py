@@ -1,3 +1,5 @@
+"""Runtime configuration, adapter registration, and configuration contexts."""
+
 from __future__ import annotations
 
 import copy

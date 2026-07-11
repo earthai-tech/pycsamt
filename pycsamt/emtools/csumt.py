@@ -1,3 +1,10 @@
+"""Controlled-source ultra-audio MT depth and survey-planning tools.
+
+The module converts apparent resistivity and transmitter frequency into
+Bostick depth estimates, evaluates vertical resolution and depth coverage,
+designs CSUMT frequency schedules, and plots depth sections for survey sites.
+"""
+
 from __future__ import annotations
 
 from typing import Any

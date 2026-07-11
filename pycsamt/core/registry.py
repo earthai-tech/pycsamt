@@ -1,6 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
+"""Public packer registry and serialization helpers for survey objects."""
+
 from __future__ import annotations
 
 import json

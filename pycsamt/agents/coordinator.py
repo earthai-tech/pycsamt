@@ -204,8 +204,7 @@ class AgentCoordinator:
             })
         lines.append("─" * 60)
         plan = "\n".join(lines)
-        if self.verbose:
-            print(plan)
+        self._print(plan)
         return AgentResult(
             status="success",
             summary=f"Workflow preview: {len(self._steps)} steps.",

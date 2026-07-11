@@ -8,6 +8,12 @@ table/result view objects, and high-level reader functions.
    :members:
    :show-inheritance:
 
+Topography Configuration
+------------------------
+
+.. autofunction:: pycsamt.topo.config.configure_topo
+.. autofunction:: pycsamt.topo.config.reset_topo
+
 API Modules
 -----------
 

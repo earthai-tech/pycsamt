@@ -1,6 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0-or-later
 
+"""Jones-format transfer functions, blocks, headers, spectra, and utilities."""
+
 from __future__ import annotations
 
 from .blocks import (  # noqa: F401

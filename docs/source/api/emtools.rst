@@ -56,3 +56,14 @@ Source and Field-Zone Effects
    pycsamt.emtools.csumt
    pycsamt.emtools.lcurve
    pycsamt.emtools.legacy
+
+Public QC Plot Functions
+------------------------
+
+.. autofunction:: pycsamt.emtools.qc.overlay_noise_cone
+.. autofunction:: pycsamt.emtools.qc.overlay_spectral_holes
+.. autofunction:: pycsamt.emtools.qc.plot_consistency_fan
+.. autofunction:: pycsamt.emtools.qc.plot_coverage_psection
+.. autofunction:: pycsamt.emtools.qc.plot_qc_quicklook
+.. autofunction:: pycsamt.emtools.qc.plot_snr_hist
+.. autofunction:: pycsamt.emtools.qc.plot_xyyx_crossover_map

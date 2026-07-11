@@ -1,3 +1,5 @@
+:html_theme.sidebar_secondary.remove:
+
 .. _user_guide:
 
 User Guide
@@ -84,7 +86,7 @@ Core Workflow Guides
       reasoning into reviewable interpretation workflows.
 
    .. grid-item-card:: IoT workflows
-      :link: iot
+      :link: iot/index
       :link-type: doc
       :img-top: ../_static/icons/iot.svg
       :class-card: pycsamt-card sd-text-center

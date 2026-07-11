@@ -2127,3 +2127,27 @@ def overlay_spectral_holes(
                 zorder=0.0,
             )
             ax.add_patch(r)
+
+
+# Public quick-look helpers retain concise summaries for API autosummary.
+overlay_noise_cone.__doc__ = (
+    "Overlay lower and upper noise envelopes on an existing period axis."
+)
+overlay_spectral_holes.__doc__ = (
+    "Highlight gaps in spectral coverage on an existing QC plot."
+)
+plot_consistency_fan.__doc__ = (
+    "Plot cross-station response consistency as a fan diagram."
+)
+plot_coverage_psection.__doc__ = (
+    "Plot frequency coverage and data availability as a pseudosection."
+)
+plot_qc_quicklook.__doc__ = (
+    "Create a compact multi-panel quality-control summary for a survey."
+)
+plot_snr_hist.__doc__ = (
+    "Plot the distribution of signal-to-noise ratios across survey data."
+)
+plot_xyyx_crossover_map.__doc__ = (
+    "Map XY/YX crossover behaviour across stations and frequencies."
+)

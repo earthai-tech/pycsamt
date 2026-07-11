@@ -670,7 +670,7 @@
 .. toctree::
    :maxdepth: 2
    :hidden:
-   :caption: AI agents
+   :caption: Agents
 
    user_guide/agents/index
 

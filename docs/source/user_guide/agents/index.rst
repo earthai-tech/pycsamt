@@ -1,7 +1,9 @@
+:html_theme.sidebar_secondary.remove:
+
 .. _agents:
 
-AI Agents
-=========
+Agents
+======
 
 pyCSAMT agents provide AI-assisted and rule-based workflow automation for
 survey loading, quality control, static-shift correction, phase analysis,

@@ -600,13 +600,13 @@ Next Steps
 See Also
 --------
 
-:doc:`../pipeline/configuration_files`
+:doc:`../user_guide/pipeline/configuration_files`
     Full configuration-file schema.
 
-:doc:`../pipeline/steps`
+:doc:`../user_guide/pipeline/steps`
     Registered pipeline steps and categories.
 
-:doc:`../pipeline/outputs`
+:doc:`../user_guide/pipeline/outputs`
     Output directory structure and reports.
 
 :doc:`../cli/pipe`

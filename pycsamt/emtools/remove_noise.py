@@ -256,6 +256,7 @@ def notch_powerline(
     strict: bool = False,
     verbose: int = 0,
 ):
+    """Suppress mains-frequency harmonics in impedance and tipper data."""
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
@@ -855,6 +856,7 @@ def hampel_filter_freq(
     strict: bool = False,
     verbose: int = 0,
 ):
+    """Remove frequency-domain outliers with a sliding Hampel filter."""
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
@@ -1166,6 +1168,7 @@ def mask_incoherent_freqs(
     strict: bool = False,
     verbose: int = 0,
 ):
+    """Mask frequencies that fail the requested cross-station SNR vote."""
     S = ensure_sites(
         sites, recursive=recursive, on_dup=on_dup,
         strict=strict, verbose=verbose,
@@ -2498,6 +2501,7 @@ def nr_qc_delta_offdiag_psection(
     ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
+    """Plot denoising changes in off-diagonal impedance as a pseudosection."""
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _denoise_sites(S0, method, inplace=False, **denoise)
     st0, G0, M0 = _union_offdiag_matrix(S0)
@@ -2581,6 +2585,7 @@ def nr_qc_snr_gain_profile(
     ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
+    """Plot the station-by-station SNR gain produced by denoising."""
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _denoise_sites(S0, method, inplace=False, **denoise)
     T0 = snr_table(S0)
@@ -2641,6 +2646,7 @@ def nr_qc_harmonic_waterfall(
     ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
+    """Plot harmonic-noise reduction by station and mains harmonic."""
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _denoise_sites(
         S0, method, inplace=False,
@@ -2717,6 +2723,7 @@ def nr_qc_station_offdiag_curves(
     ax: plt.Axes | None = None,
     **denoise: Any,
 ) -> plt.Axes:
+    """Compare raw and denoised off-diagonal curves for one station."""
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _denoise_sites(S0, method, inplace=False, **denoise)
     # pick station

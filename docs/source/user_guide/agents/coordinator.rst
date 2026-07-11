@@ -631,3 +631,4 @@ Related API
 * :class:`pycsamt.agents.AgentResult`
 * :doc:`llm_configuration`
 * :doc:`agent_catalogue`
+:html_theme.sidebar_secondary.remove:

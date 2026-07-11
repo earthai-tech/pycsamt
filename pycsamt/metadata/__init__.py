@@ -1,3 +1,5 @@
+"""Survey metadata, frequency bands, references, and software provenance."""
+
 from ._property import (
     CopyrightInfo,
     Person,

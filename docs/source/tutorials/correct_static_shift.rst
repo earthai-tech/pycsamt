@@ -551,10 +551,10 @@ See Also
 :doc:`../theory/static_shift`
     Scientific background and interpretation cautions.
 
-:doc:`../pipeline/steps`
+:doc:`../user_guide/pipeline/steps`
     Pipeline static-shift step catalogue.
 
-:doc:`../site/recompute`
+:doc:`../user_guide/site/recompute`
     Recompute and rewrite EDI files before correction when imports are
     inconsistent.
 

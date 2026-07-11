@@ -124,6 +124,7 @@ from __future__ import annotations
 import configparser
 import copy
 import os
+import sys
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
@@ -142,6 +143,24 @@ _CFG_GLOBAL = Path.home() / ".pycsamt" / "plot.cfg"
 # ═══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def _safe_print(msg: str) -> None:
+    """Print *msg* without ever raising on a limited console encoding.
+
+    On some consoles (e.g. a Windows ``cp1252`` terminal) ``print`` raises
+    :class:`UnicodeEncodeError` for non-ASCII characters such as ``✔``.  If
+    that happens while reporting a completed side effect (a figure or config
+    file already written to disk), the exception would propagate and make the
+    successful operation look like a failure.  This helper degrades gracefully
+    by re-encoding with ``errors="replace"`` instead.
+    """
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        stream = sys.stdout
+        enc = getattr(stream, "encoding", None) or "ascii"
+        stream.write(msg.encode(enc, errors="replace").decode(enc) + "\n")
+
 
 def _normalise_token(tok: str) -> str:
     """Strip whitespace and leading dot from a single format token."""
@@ -223,7 +242,7 @@ def _load_config_file() -> dict:
     cp = configparser.ConfigParser()
     for candidate in (_CFG_LOCAL, _CFG_GLOBAL):
         if candidate.exists():
-            cp.read(candidate)
+            cp.read(candidate, encoding="utf-8")
             break
     if "plot" not in cp:
         return {}
@@ -461,7 +480,7 @@ class PlotConfig:
             )
             saved.append(out)
             if self.verbose:
-                print(f"  ✔  {out}")
+                _safe_print(f"  ✔  {out}")
 
         if self.close_after_save:
             plt.close(fig)
@@ -841,7 +860,7 @@ def load_plot_config(path: str | Path | None = None) -> None:
         if not p.exists():
             raise FileNotFoundError(f"Plot config file not found: {p}")
         cp = configparser.ConfigParser()
-        cp.read(p)
+        cp.read(p, encoding="utf-8")
         kw: dict = {}
         if "plot" in cp:
             s = cp["plot"]
@@ -919,8 +938,8 @@ facecolor       = {cfg.facecolor}
 savedir         ={"" if cfg.savedir is None else " " + str(cfg.savedir)}
 close_after_save = {str(cfg.close_after_save).lower()}
 """
-    p.write_text(content)
-    print(f"  ✔  config written → {p}")
+    p.write_text(content, encoding="utf-8")
+    _safe_print(f"  ✔  config written → {p}")
     return p
 
 

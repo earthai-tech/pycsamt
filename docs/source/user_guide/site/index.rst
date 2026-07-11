@@ -23,48 +23,84 @@ Use this section when you need to:
 * export cleaned sites, write manifests, create zip packages, and generate
   human-readable site reports.
 
-Package Map
------------
+Guide Sections
+--------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 24 34 42
+.. grid:: 1 1 2 4
+   :gutter: 3
+   :class-container: cta-tiles
 
-   * - Page
-     - Modules
-     - Main purpose
-   * - :doc:`containers`
-     - ``pycsamt.site.base``
-     - ``SiteMixin``, ``Site``, ``Sites``, ``to_sites``, and ``to_edis``
-       wrappers around EDI files and collections.
-   * - :doc:`location_profile`
-     - ``pycsamt.site.location``, ``pycsamt.site.profile``
-     - Coordinate parsing, topography, projection, distances, bearing,
-       chainage, and survey profile inference.
-   * - :doc:`selection`
-     - ``pycsamt.site.selection``
-     - Station filtering by name, position, chainage, frequency window,
-       bounding box, custom predicates, and quality checks.
-   * - :doc:`editing`
-     - ``pycsamt.site.edit``
-     - Rotation, renaming, coordinate assignment, frequency subsetting,
-       missing-value filling, and resistivity/phase recomputation.
-   * - :doc:`recompute`
-     - ``pycsamt.site.recompute``
-     - Survey-level EDI recomputation, pyCSAMT EDI rewriting, line-folder
-       output, flattening, progress display, and manifests.
-   * - :doc:`computed_diagnostics`
-     - ``pycsamt.site.compute``
-     - Strike estimate, apparent resistivity at a frequency, phase slope, and
-       tipper magnitude diagnostics.
-   * - :doc:`export_reporting`
-     - ``pycsamt.site.export``, ``pycsamt.site.report``
-     - Site writing, batch export, zip packaging, manifest files, and terminal
-       or tabular reports.
-   * - :doc:`utilities`
-     - ``pycsamt.site.utils``
-     - Shared helpers for EDI detection, collection coercion, names,
-       coordinates, frequency matching, and angle conversion.
+   .. grid-item-card:: Containers
+      :link: containers
+      :link-type: doc
+      :img-top: ../../_static/icons/container.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Work with ``SiteMixin``, ``Site``, ``Sites``, ``to_sites``, and
+      ``to_edis`` wrappers around EDI files and survey collections.
+
+   .. grid-item-card:: Location & Profile
+      :link: location_profile
+      :link-type: doc
+      :img-top: ../../_static/icons/location.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Parse coordinates, infer survey profiles, compute distances, bearings,
+      chainage, elevation, and line geometry.
+
+   .. grid-item-card:: Selection
+      :link: selection
+      :link-type: doc
+      :img-top: ../../_static/icons/selection.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Filter stations by name, index, chainage, frequency coverage,
+      coordinates, bounding box, and custom quality predicates.
+
+   .. grid-item-card:: Editing
+      :link: editing
+      :link-type: doc
+      :img-top: ../../_static/icons/edit.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Rotate tensors, rename stations, assign coordinates, subset
+      frequencies, fill missing arrays, and recompute response products.
+
+   .. grid-item-card:: Recompute
+      :link: recompute
+      :link-type: doc
+      :img-top: ../../_static/icons/recompute.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Rewrite EDI files with pyCSAMT, preserve line-folder structure, flatten
+      outputs, show progress, and generate manifests.
+
+   .. grid-item-card:: Diagnostics
+      :link: computed_diagnostics
+      :link-type: doc
+      :img-top: ../../_static/icons/diagnostic.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Compute strike estimates, apparent resistivity at a frequency, phase
+      slope, and tipper magnitude diagnostics.
+
+   .. grid-item-card:: Export & Reporting
+      :link: export_reporting
+      :link-type: doc
+      :img-top: ../../_static/icons/export.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Write cleaned sites, batch exports, zip packages, manifests, and
+      human-readable site reports.
+
+   .. grid-item-card:: Utilities
+      :link: utilities
+      :link-type: doc
+      :img-top: ../../_static/icons/controls.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Use shared helpers for EDI detection, collection coercion, station
+      names, coordinates, frequency matching, and angle conversion.
 
 Typical Workflow
 ----------------
@@ -108,6 +144,7 @@ Documentation Contents
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
    containers
    location_profile
@@ -115,6 +152,5 @@ Documentation Contents
    editing
    recompute
    computed_diagnostics
-   ../map/index
    export_reporting
    utilities

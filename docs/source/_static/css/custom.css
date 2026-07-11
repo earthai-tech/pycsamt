@@ -759,3 +759,55 @@ dl.field-list > dd p:last-child {
     margin-top: 0;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Changelog — badge legend, version-header badges, migration table
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Legend: turn the tagged bullet list into a compact, boxed, wrapping row. */
+ul.changelog-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.6rem;
+  padding: 0.85rem 1.05rem;
+  margin: 1rem 0 0.75rem;
+  border: 1px solid var(--pst-color-border, #dfe2e5);
+  border-radius: 10px;
+  background: var(--pst-color-surface, #f6f8fa);
+}
+
+ul.changelog-legend > li {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--pst-color-text-muted, #6a737d);
+}
+
+ul.changelog-legend .sd-badge {
+  margin-right: 0.2rem;
+}
+
+/* Badges trailing a version heading: align and shrink so they read as tags
+   next to the version number rather than part of the title text. */
+h2 .sd-badge,
+h3 .sd-badge {
+  vertical-align: middle;
+  font-size: 0.6em;
+  font-weight: 600;
+  margin-left: 0.3rem;
+  position: relative;
+  top: -0.12em;
+}
+
+/* Migration table: monospace the v1 column, comfortable row height. */
+table.migration-table td:first-child,
+table.migration-table th:first-child {
+  font-family: var(--pst-font-family-monospace, ui-monospace, monospace);
+  font-size: 0.85em;
+}
+
+table.migration-table td,
+table.migration-table th {
+  padding: 0.5rem 0.7rem;
+  vertical-align: top;
+}

@@ -698,4 +698,4 @@
    release_notes/index
    changelog
    contributing
-   references
+   resources

@@ -66,6 +66,11 @@ class InversionResult(ModEmBase):
         self,
         workdir: PathLike,
         config: ModEmConfig | None = None,
+        load_log: bool = True,
+        load_control: bool = True,
+        load_covariance: bool = True,
+        load_models: bool = True,
+        load_data: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -75,6 +80,11 @@ class InversionResult(ModEmBase):
             raise FileNotFoundError(msg)
 
         self.config: ModEmConfig = config or ModEmConfig()
+        self.load_log = bool(load_log)
+        self.load_control = bool(load_control)
+        self.load_covariance = bool(load_covariance)
+        self.load_models = bool(load_models)
+        self.load_data = bool(load_data)
 
         self.mode: str = "unknown"
         self.log: ModEmLog | None = None
@@ -108,7 +118,7 @@ class InversionResult(ModEmBase):
 
         # -- log -------------------------------------------------------
         log_files = sorted(wd.glob("*.log"))
-        if log_files:
+        if self.load_log and log_files:
             try:
                 self.log = ModEmLog.read(log_files[0])
             except Exception:
@@ -116,7 +126,7 @@ class InversionResult(ModEmBase):
 
         # -- control ---------------------------------------------------
         inv_files = sorted(wd.glob("*.inv"))
-        if inv_files:
+        if self.load_control and inv_files:
             try:
                 self.control = ModEmControl.read(inv_files[0])
             except Exception:
@@ -124,7 +134,7 @@ class InversionResult(ModEmBase):
 
         # -- covariance ------------------------------------------------
         cov_files = sorted(wd.glob("*.cov"))
-        if cov_files:
+        if self.load_covariance and cov_files:
             try:
                 self.covariance = ModEmCovariance.read(cov_files[0])
             except Exception:
@@ -138,23 +148,24 @@ class InversionResult(ModEmBase):
             model_files = sorted(wd.glob("*.rho"))
             model_cls = ModEmModel2D
 
-        for mf in model_files:
-            old_stem = _stem(mf)
-            # Old convention: m0, m1, mi
-            if _MODEL_STEM_RE.match(old_stem):
-                try:
-                    self.models[old_stem] = model_cls.read(mf)
-                except Exception:
-                    pass
-            else:
-                # Real ModEM output: Modular_NLCG_NNN.rho
-                n = _modem_iter_num(mf)
-                if n is not None:
-                    key = f"iter_{n:04d}"
+        if self.load_models:
+            for mf in model_files:
+                old_stem = _stem(mf)
+                # Old convention: m0, m1, mi
+                if _MODEL_STEM_RE.match(old_stem):
                     try:
-                        self.models[key] = model_cls.read(mf)
+                        self.models[old_stem] = model_cls.read(mf)
                     except Exception:
                         pass
+                else:
+                    # Real ModEM output: Modular_NLCG_NNN.rho
+                    n = _modem_iter_num(mf)
+                    if n is not None:
+                        key = f"iter_{n:04d}"
+                        try:
+                            self.models[key] = model_cls.read(mf)
+                        except Exception:
+                            pass
 
         # Resolve initial / final from old convention
         self.model_initial = self.models.get("m0")
@@ -178,6 +189,16 @@ class InversionResult(ModEmBase):
 
         # -- data files ------------------------------------------------
         _ERR_SENTINEL = 1e10   # ModEM uses 2e15 to mark masked/unused data
+
+        if not self.load_data:
+            if self.verbose:
+                self.logger.info(
+                    "InversionResult: mode=%s, %d models, log=%s",
+                    self.mode,
+                    len(self.models),
+                    "yes" if self.log else "no",
+                )
+            return
 
         # Priority 1: non-numbered dat files with genuine measurement errors
         # (e.g. RERUN-*.dat, the actual input data supplied to the inversion).

@@ -30,6 +30,7 @@ Design notes
 
 from __future__ import annotations
 
+import json
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping, Sequence
@@ -139,12 +140,15 @@ class AVGFrame:
 
     def meta_as_json(self, *, indent: int = 0) -> str:
         """Serialise metadata to JSON."""
-        return pd.io.json.dumps(self.meta, indent=indent)
+        # pandas 2.x removed pd.io.json.dumps/loads; use stdlib json
+        # (default=str covers numpy scalars and paths in the metadata)
+        return json.dumps(dict(self.meta), indent=indent or None,
+                          default=str)
 
     def asdict(self) -> dict[str, Any]:
         """Plain dict for diagnostics / logging."""
         return {
-            "data": pd.io.json.loads(self.to_json()),
+            "data": json.loads(self.to_json()),
             "meta": dict(self.meta),
             "source": str(self.source) if self.source else None,
         }

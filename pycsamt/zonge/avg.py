@@ -1922,11 +1922,29 @@ class AMTAVG(AVG):
         s2 = s * s
         cs = c * s
 
-        # Get the original tensor components as Series
-        zxx, zxy = self.z.z_xx, self.z.z_xy
-        zyx, zyy = self.z.z_yx, self.z.z_yy
+        # The component accessors are row-subsets of ``df`` (they keep
+        # the original row index), so the four series carry *disjoint*
+        # indices. Re-key everything on (station, freq) before mixing
+        # components; a component that was not measured for a sounding
+        # contributes zero to the rotation (scalar-CSAMT convention).
+        keys = pd.MultiIndex.from_frame(df[["station", "freq"]])
 
-        # Perform the 2D tensor rotation
+        def _keyed(series: pd.Series) -> pd.Series:
+            sub = df.loc[series.index, ["station", "freq"]]
+            out = pd.Series(
+                series.to_numpy(),
+                index=pd.MultiIndex.from_frame(sub),
+                dtype=complex,
+            )
+            return out[~out.index.duplicated(keep="first")]
+
+        pair_index = keys.unique()
+        zxx = _keyed(self.z.z_xx).reindex(pair_index, fill_value=0j)
+        zxy = _keyed(self.z.z_xy).reindex(pair_index, fill_value=0j)
+        zyx = _keyed(self.z.z_yx).reindex(pair_index, fill_value=0j)
+        zyy = _keyed(self.z.z_yy).reindex(pair_index, fill_value=0j)
+
+        # Perform the 2D tensor rotation (aligned on station/freq)
         zxx_rot = c2 * zxx + cs * (zxy + zyx) + s2 * zyy
         zxy_rot = -cs * zxx + c2 * zxy - s2 * zyx + cs * zyy
         zyx_rot = -cs * zxx - s2 * zxy + c2 * zyx + cs * zyy
@@ -1941,30 +1959,30 @@ class AMTAVG(AVG):
         })
 
         if update_components:
-            # Create a temporary DataFrame with all components
-            # to calculate new rho and phi
-            temp_df = pd.DataFrame(index=df.index)
-            temp_df["freq"] = df["freq"]
-
-            # Map the rotated values back to the correct rows
-            # based on the component label
+            # Pick each row's rotated tensor element by its component
+            # label (labels are stored upper-cased) and its
+            # (station, freq) key.
             comp_map = {
-                "ExHx": zxx_rot, "Zxx": zxx_rot,
-                "ExHy": zxy_rot, "Zxy": zxy_rot,
-                "EyHx": zyx_rot, "Zyx": zyx_rot,
-                "EyHy": zyy_rot, "Zyy": zyy_rot,
+                "EXHX": zxx_rot, "ZXX": zxx_rot,
+                "EXHY": zxy_rot, "ZXY": zxy_rot,
+                "EYHX": zyx_rot, "ZYX": zyx_rot,
+                "EYHY": zyy_rot, "ZYY": zyy_rot,
             }
-            temp_df["z_complex"] = df["comp"].map(comp_map)
+            z_new = np.full(len(df), np.nan + 0j, dtype=complex)
+            comp_norm = df["comp"].astype(str).str.upper().to_numpy()
+            for label, rot in comp_map.items():
+                mask = comp_norm == label
+                if mask.any():
+                    z_new[mask] = rot.reindex(keys[mask]).to_numpy()
 
             # Recalculate rho and phi from the new complex Z
-            omega = 2 * PI * temp_df["freq"]
-            abs_z_sq = np.abs(temp_df["z_complex"])**2
+            omega = 2 * PI * df["freq"].to_numpy(dtype=float)
+            abs_z_sq = np.abs(z_new) ** 2
 
             self.info.df["rho"] = abs_z_sq / (omega * MU_0)
-            imag = np.imag(temp_df["z_complex"])
-            real = np.real(temp_df["z_complex"])
-
-            self.info.df["phase"] = np.arctan2(imag, real) * 1000.0  # to mrad
+            self.info.df["phase"] = (
+                np.arctan2(z_new.imag, z_new.real) * 1000.0  # to mrad
+            )
 
             # Re-read the info object to update all components
             self.info.read(self.info.df, self.info.meta)

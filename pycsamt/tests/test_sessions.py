@@ -37,13 +37,14 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
-    jj.JFile = JFile
+    monkeypatch.setattr(jj, "JFile", JFile, raising=False)
 
     jcoll = sys.modules["pycsamt.jones.collection"]
 
     class JCollection(list):
         pass
-    jcoll.JCollection = JCollection
+    monkeypatch.setattr(jcoll, "JCollection", JCollection,
+                        raising=False)
 
     # SEG: EDIFile + EDICollection stubs
     seg_edi = sys.modules["pycsamt.seg.edi"]
@@ -55,14 +56,15 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
-    seg_edi.EDIFile = EDIFile
+    monkeypatch.setattr(seg_edi, "EDIFile", EDIFile, raising=False)
 
     seg_coll = sys.modules["pycsamt.seg.collection"]
 
     class EDICollection(list):
         def __init__(self, items, verbose: int = 0):
             super().__init__(items)
-    seg_coll.EDICollection = EDICollection
+    monkeypatch.setattr(seg_coll, "EDICollection", EDICollection,
+                        raising=False)
 
     # Zonge: AVG stub
     zavg = sys.modules["pycsamt.zonge.avg"]
@@ -79,7 +81,19 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
-    zavg.AVG = AVG
+    monkeypatch.setattr(zavg, "AVG", AVG, raising=False)
+
+    # pycsamt._session imports all of these names directly at import
+    # time, so patching the provider modules alone has no effect when
+    # the real modules were imported first (always true in a full-suite
+    # run). Rebind the session module's own references to the stubs.
+    smod = importlib.import_module("pycsamt._session")
+    monkeypatch.setattr(smod, "JFile", JFile, raising=False)
+    monkeypatch.setattr(smod, "JCollection", JCollection, raising=False)
+    monkeypatch.setattr(smod, "EDIFile", EDIFile, raising=False)
+    monkeypatch.setattr(smod, "EDICollection", EDICollection,
+                        raising=False)
+    monkeypatch.setattr(smod, "AVG", AVG, raising=False)
 
     return seg_edi, seg_coll, zavg, jj
 

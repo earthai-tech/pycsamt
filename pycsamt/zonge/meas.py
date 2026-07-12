@@ -98,9 +98,13 @@ class CompMeas(AVGComponentBase):
 
         df["comp"] = df["comp"].map(_norm_one)
 
-        # Drop rows with NaN or unrecognized components that may
-        # have been introduced during xarray conversion
-        df = df[df["comp"].isin(self._VALID)].copy()
+        # Drop only rows whose component is missing ("nan" strings can
+        # be introduced during xarray conversion). Filtering *all*
+        # invalid labels here made the validation below unreachable.
+        df = df[
+            df["comp"].notna()
+            & (df["comp"].astype(str).str.lower() != "nan")
+        ].copy()
 
         # validate – bail early with a friendly message
         bad = sorted(set(df["comp"]) - self._VALID)

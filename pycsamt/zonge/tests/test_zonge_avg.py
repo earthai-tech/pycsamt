@@ -116,7 +116,18 @@ class TestBaseAVG:
         base = BaseAVG()
         base.read(df, meta=meta)
         assert base._kind == 2  # Assumes modern
-        pd.testing.assert_frame_equal(base.info.df, df)
+        out = base.info.df
+        # the reader canonicalises QC column names on ingest
+        renames = {
+            "E.%err": "pc_emag", "B.%err": "pc_hmag",
+            "ARes.%err": "pc_rho", "E.perr": "s_ephz",
+            "H.perr": "s_hphz", "Z.perr": "s_phz",
+        }
+        for raw, canonical in renames.items():
+            assert canonical in out.columns
+            assert out[canonical].tolist() == df[raw].tolist()
+        for col in ("station", "freq", "rho", "phase", "comp"):
+            assert out[col].tolist() == df[col].tolist()
         assert base.info.meta["Survey.Type"] == "CSAMT"
 
     def test_write_modern(self, modern_data_file, tmp_path):

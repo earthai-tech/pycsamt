@@ -268,9 +268,14 @@ class TestSourceLayout:
         assert (_SOURCE / "README.txt").exists()
 
     def test_makefile_2d_has_gfortran(self):
-        content = (_SOURCE / "2D" / "Makefile").read_text()
+        # bundled Makefiles contain bytes outside cp1252: decode leniently
+        content = (_SOURCE / "2D" / "Makefile").read_text(
+            encoding="utf-8", errors="replace"
+        )
         assert "gfortran" in content
 
     def test_makefile_3d_has_mpi_target(self):
-        content = (_SOURCE / "3D" / "Makefile").read_text()
+        content = (_SOURCE / "3D" / "Makefile").read_text(
+            encoding="utf-8", errors="replace"
+        )
         assert "mpi" in content and "mpif90" in content

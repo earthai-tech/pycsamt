@@ -193,10 +193,12 @@ def test_tipper_magnitude_presence_and_stats(
     e2 = ed.fill_missing(e2, how="zero",
                          components=("Tip",), inplace=False)
 
+    # (n_freq, 1, 2) zero-filled tippers are accepted since the
+    # tipper-shape widening in site.compute._tip_arr
     s = cmp.tipper_magnitude(e1, per_freq=False)
-    assert math.isnan(s["mean"])
-    assert math.isnan(s["median"])
-    assert math.isnan(s["max"])
+    assert s["mean"] == 0.0
+    assert s["median"] == 0.0
+    assert s["max"] == 0.0
 
     # Create a tipper holder and attach zero arrays
     f = cmp.get_freq(e1)

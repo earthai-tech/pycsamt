@@ -60,11 +60,11 @@ class TestTopography:
         )
         assert isinstance(topo, Topography)
         assert len(topo._frame) == n_stations
-        assert topo.eastings[0] == start_coord[0]
-        assert topo.northings[0] == start_coord[1]
+        assert topo.easting[0] == start_coord[0]
+        assert topo.northing[0] == start_coord[1]
         # Check that the line extends east
-        assert np.all(np.diff(topo.eastings) > 0)
-        assert np.allclose(np.diff(topo.northings), 0)
+        assert np.all(np.diff(topo.easting) > 0)
+        assert np.allclose(np.diff(topo.northing), 0)
 
     def test_generate_ll(self):
         """Test generating a line from Lat/Lon and converting."""
@@ -78,8 +78,8 @@ class TestTopography:
         )
         assert 'easting' in topo._frame.columns
         # Check that the UTM coordinates are reasonable
-        assert topo.eastings[0] > 100000
-        assert topo.northings[0] > 1000000
+        assert topo.easting[0] > 100000
+        assert topo.northing[0] > 1000000
 
     def test_get_step(self, sample_stn_file):
         """Test the calculation of inter-station distances."""
@@ -110,8 +110,8 @@ class TestTopography:
 
         # Check that the new coordinates form a perfect line
         # i.e., the slope between consecutive points is constant
-        dx = np.diff(topo.eastings)
-        dy = np.diff(topo.northings)
+        dx = np.diff(topo.easting)
+        dy = np.diff(topo.northing)
         slopes = dy / dx
         assert np.allclose(slopes, slopes[0])
 

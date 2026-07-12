@@ -243,6 +243,15 @@ data/MT/SPECTRA/*
 !data/MT/SPECTRA/spectra02.edi
 !data/MT/SPECTRA/README.md
 
+# Exception: compact ModEM result subset used by inversion-gallery examples.
+# The complete production result directory is large and remains local-only;
+# this folder keeps only controls, logs, input data, and three representative
+# iteration snapshots for result-loading and convergence examples.
+!data/modem
+data/modem/*
+!data/modem/willy_27freq_watex_line02_sample
+!data/modem/willy_27freq_watex_line02_sample/**
+
 # Inversion-plot runs (rendered PNGs, ~18 MB) are local-only outputs and
 # must never be committed — GitHub repo-size hygiene. ``data/*`` already
 # ignores them; the previous "!" exception that tracked 27-frequ-watex-

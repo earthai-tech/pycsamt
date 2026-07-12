@@ -123,26 +123,55 @@ class TestAMTAVGMethods:
         assert amtavg_for_methods.info.meta["Unit.Phase"] == "deg"
         assert -360 < amtavg_for_methods.df["phase"].iloc[0] < 360
 
-    def test_rotate_tensor(self, amtavg_for_methods):
-        """Test the 90-degree rotation of the impedance tensor."""
-        z_xy_orig = amtavg_for_methods.z.z_xy.copy()
-        z_yx_orig = amtavg_for_methods.z.z_yx.copy()
+    def test_rotate_tensor(self):
+        """90-degree rotation swaps the off-diagonal components.
 
-        amtavg_for_methods.rotate(angle=90, update_components=True)
+        With Zxx = Zyy = 0 (scalar-CSAMT data), a 90-degree rotation
+        gives Zxy' = -Zyx and Zyx' = -Zxy, so the apparent resistivity
+        of each sounding's XY row must take the value of its YX row
+        and vice versa.
+        """
+        data = {
+            "station":   [100, 100, 100, 100, 200, 200, 200, 200],
+            "freq":      [1024, 1024, 512, 512, 1024, 1024, 512, 512],
+            "comp":      ["ExHy", "EyHx"] * 4,
+            "ARes.mag":  [50.0, 150.0, 45.0, 145.0,
+                          60.0, 160.0, 55.0, 155.0],
+            "Z.phz":     [1000, 1200, 3200, 3400,
+                          -500, -300, 1800, 2000],
+            "E.mag":     [20, 80, 18, 78, 30, 82, 28, 84],
+            "B.mag":     [0.1, 0.2, 0.09, 0.19, 0.15, 0.21, 0.14, 0.2],
+            "E.phz":     [1100, 1300, 3300, 3500, -400, -200, 1900, 2100],
+            "B.phz":     [100] * 8,
+            "E.%err":    [3.0, 4.2, 2.8, 4.3, 4.0, 4.4, 4.1, 4.5],
+            "B.%err":    [4.0, 5.2, 3.8, 5.3, 5.0, 5.4, 5.1, 5.5],
+            "ARes.%err": [5.0, 8.0, 4.5, 8.5, 7.0, 9.0, 7.5, 9.5],
+            "Z.perr":    [20, 30, 18, 31, 28, 32, 29, 33],
+        }
+        df = pd.DataFrame(data)
+        avg = AMTAVG(verbose=0)
+        avg.read(df)
 
-        z_yx_rotated = amtavg_for_methods.z.z_yx
-        assert np.allclose(z_yx_rotated, z_xy_orig)
+        before = avg.df[["station", "freq", "comp", "rho"]].copy()
+        rotated = avg.rotate(angle=90, update_components=True)
 
-        z_xy_rotated = amtavg_for_methods.z.z_xy
-        assert np.allclose(z_xy_rotated, -z_yx_orig)
+        # the returned frame holds one row per (station, freq) pair
+        assert rotated.shape[0] == 4
+        assert {"z_xy_rot", "z_yx_rot"} <= set(rotated.columns)
 
-        assert "rho" in amtavg_for_methods.df.columns
-        new_rho_val = amtavg_for_methods.df["rho"].iloc[0]
-        expected_rho = (
-            np.abs(z_xy_rotated.iloc[0])**2
-            / (2 * PI * 1024 * MU_0)
-        )
-        assert np.isclose(new_rho_val, expected_rho)
+        after = avg.df[["station", "freq", "comp", "rho"]].copy()
+        # comp labels keep their file casing; normalise for lookups
+        before["comp"] = before["comp"].str.upper()
+        after["comp"] = after["comp"].str.upper()
+        key = ["station", "freq"]
+        for (st, fr), grp in after.groupby(key):
+            orig = before[
+                (before["station"] == st) & (before["freq"] == fr)
+            ].set_index("comp")["rho"]
+            new = grp.set_index("comp")["rho"]
+            # |Z| is sign-insensitive: rho swaps between XY and YX
+            assert np.isclose(new["EXHY"], orig["EYHX"])
+            assert np.isclose(new["EYHX"], orig["EXHY"])
 
 
 if __name__=='__main__': # pragma: no-cover

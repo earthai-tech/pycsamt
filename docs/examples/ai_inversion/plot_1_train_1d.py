@@ -31,8 +31,14 @@ from pycsamt.forward.batch import generate_dataset
 # Use the predicted-vs-true model grid (4th figure) as the thumbnail.
 # sphinx_gallery_thumbnail_number = 4
 
+import os
+
+# Train lighter while building the docs (PYCSAMT_DOCS_BUILD is set by the Sphinx
+# build); full strength when the example is run directly.
+_DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
+
 FREQS = np.logspace(-1, 3, 24)
-ds = generate_dataset(solver="mt1d", n_samples=1200, freqs=FREQS,
+ds = generate_dataset(solver="mt1d", n_samples=256 if _DOCS else 1200, freqs=FREQS,
                       n_layers=4, noise_level=0.05, seed=0, verbose=False)
 print(ds)
 print("X (responses):", ds.X.shape, " y (model params):", ds.y.shape)
@@ -77,7 +83,7 @@ fig.suptitle("Training-set coverage", fontsize=12)
 from pycsamt.ai.inversion.inv1d import EMInverter1D
 
 inv = EMInverter1D(arch="cnn1d", n_layers=4, solver="mt1d")
-inv.fit(train, epochs=25, batch_size=64, verbose=False)
+inv.fit(train, epochs=6 if _DOCS else 25, batch_size=64, verbose=False)
 print("final train loss:", f"{inv._history['train_loss'][-1]:.4f}",
       " val loss:", f"{inv._history['val_loss'][-1]:.4f}")
 

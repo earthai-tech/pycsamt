@@ -30,15 +30,21 @@ from pycsamt.forward.batch import generate_dataset
 # Use the depth-profile uncertainty band (1st figure) as the thumbnail.
 # sphinx_gallery_thumbnail_number = 1
 
+import os
+
+# Lighter training while building the docs (PYCSAMT_DOCS_BUILD is set by Sphinx);
+# full strength when the example is run directly.
+_DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
+
 N_LAYERS = 4
 FREQS = np.logspace(-1, 3, 24)
-ds = generate_dataset(solver="mt1d", n_samples=1200, freqs=FREQS,
+ds = generate_dataset(solver="mt1d", n_samples=256 if _DOCS else 1200, freqs=FREQS,
                       n_layers=N_LAYERS, noise_level=0.05, seed=2, verbose=False)
 train, cal, test = ds.split()      # reuse the "val" split for calibration
 
 base = EMInverter1D(arch="cnn1d", n_layers=N_LAYERS, solver="mt1d")
-ens = EnsembleInverter(base_estimator=base, n_estimators=4)
-ens.fit(train, epochs=20, verbose=False)
+ens = EnsembleInverter(base_estimator=base, n_estimators=2 if _DOCS else 4)
+ens.fit(train, epochs=5 if _DOCS else 20, verbose=False)
 
 mean, std = ens.predict_with_uncertainty(test.X)
 print("ensemble mean/std shapes:", mean.shape, std.shape)

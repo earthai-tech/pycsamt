@@ -76,11 +76,17 @@ fig = plot_pseudo_section(Xte[0, 0], title="Input pseudo-section (test profile 0
 # The network shapes are declared up front; ``fit`` handles normalisation
 # and the training loop.
 
+import os
+
 from pycsamt.ai.inversion.inv2d import EMInverter2D
+
+# Lighter training while building the docs (PYCSAMT_DOCS_BUILD is set by Sphinx);
+# full strength when the example is run directly.
+_DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
 inv = EMInverter2D(n_components=N_COMP, n_depth=N_DEPTH,
                    n_stations=N_STA, n_freqs=N_FREQ, arch="unet")
-inv.fit(Xtr, Ytr, epochs=30, batch_size=8, verbose=False)
+inv.fit(Xtr, Ytr, epochs=6 if _DOCS else 30, batch_size=8, verbose=False)
 pred = np.asarray(inv.predict(Xte))
 print("predicted sections:", pred.shape)
 

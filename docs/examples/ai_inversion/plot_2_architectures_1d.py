@@ -23,8 +23,14 @@ from pycsamt.forward.batch import generate_dataset
 # Use the residual-error grid (3rd figure) as the thumbnail.
 # sphinx_gallery_thumbnail_number = 3
 
+import os
+
+# Lighter training while building the docs (PYCSAMT_DOCS_BUILD is set by Sphinx);
+# full strength when the example is run directly.
+_DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
+
 FREQS = np.logspace(-1, 3, 24)
-ds = generate_dataset(solver="mt1d", n_samples=1200, freqs=FREQS,
+ds = generate_dataset(solver="mt1d", n_samples=256 if _DOCS else 1200, freqs=FREQS,
                       n_layers=4, noise_level=0.05, seed=1, verbose=False)
 train, val, test = ds.split()
 
@@ -40,7 +46,7 @@ ARCHS = ["cnn1d", "resnet", "fcn"]
 inverters, histories = {}, {}
 for arch in ARCHS:
     inv = EMInverter1D(arch=arch, n_layers=4, solver="mt1d")
-    inv.fit(train, epochs=25, batch_size=64, verbose=False)
+    inv.fit(train, epochs=6 if _DOCS else 25, batch_size=64, verbose=False)
     inverters[arch] = inv
     histories[arch] = inv._history
 

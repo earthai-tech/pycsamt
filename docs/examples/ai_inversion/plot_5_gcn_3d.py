@@ -86,11 +86,17 @@ fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.1,
 # ``fit`` accepts either a prebuilt ``adjacency`` or raw ``coords`` + a
 # ``radius``. Training is fast because the whole survey is one graph.
 
+import os
+
 from pycsamt.ai.inversion.inv3d import GCNInverter3D
+
+# Lighter training while building the docs (PYCSAMT_DOCS_BUILD is set by Sphinx);
+# full strength when the example is run directly.
+_DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
 inv = GCNInverter3D(n_features=ds.n_features, n_layers=N_LAYERS, hidden=(64,))
 inv.fit(train.X, train.y, coords=ds.coords, radius=RADIUS,
-        epochs=60, verbose=False)
+        epochs=12 if _DOCS else 60, verbose=False)
 pred = inv.predict(test.X)                      # (n_test, n_stations, n_out)
 print("predicted survey tensor:", pred.shape)
 

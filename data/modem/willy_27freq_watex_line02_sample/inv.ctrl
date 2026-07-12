@@ -1,0 +1,8 @@
+Model and data output file name    : Modular
+Initial damping factor lambda      : 20.
+To update lambda divide by         : 2.0
+Initial search step in model units : 20.
+Restart when rms diff is less than : 5.0e-4
+Exit search when rms is less than  : 1.05
+Exit when lambda is less than      : 1.0e-3
+Maximum number of iterations       : 600

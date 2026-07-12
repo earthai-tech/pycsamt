@@ -229,5 +229,7 @@ before opening a pull request. Distributed under the
 <p align="center">
   Developed by <a href="https://github.com/earthai-tech">earthai-tech</a>
   &nbsp;&mdash;&nbsp;
-  Lead developer: <a href="mailto:etanoyau@gmail.com">Kouadio K. Laurent</a>
+  Lead developer: Laurent Kouadio
+  <a href="https://lkouadio.com/" title="lkouadio.com">🌐</a>
+  <a href="mailto:etanoyau@gmail.com" title="Email">✉️</a>
 </p>

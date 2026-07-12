@@ -77,10 +77,17 @@ def plot_convergence(
         histories = history if isinstance(history, list) else [history]
         n_runs = len(histories)
 
-        epochs = np.arange(1, len(histories[0]["train_loss"]) + 1)
+        # Runs may have different lengths (e.g. early stopping, or different
+        # architectures trained for different epoch counts). Align every run to
+        # the shortest series so the per-epoch mean/std are well-defined and
+        # np.array() gets a rectangular (non-ragged) input.
+        min_len = min(
+            min(len(h["train_loss"]), len(h["val_loss"])) for h in histories
+        )
+        epochs = np.arange(1, min_len + 1)
 
-        train_mat = np.array([h["train_loss"] for h in histories])
-        val_mat = np.array([h["val_loss"] for h in histories])
+        train_mat = np.array([h["train_loss"][:min_len] for h in histories])
+        val_mat = np.array([h["val_loss"][:min_len] for h in histories])
 
         if smoothing > 0:
             train_mat = np.apply_along_axis(_ema, 1, train_mat, smoothing)

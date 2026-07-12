@@ -9,13 +9,14 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Union
 
 from .base import Mare2DEMBase
 from .config import Mare2DEMConfig
 from .doc import _mare2dem_param_docs as _params
 from .source import SourceManager
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["Mare2DEMRunner"]
 

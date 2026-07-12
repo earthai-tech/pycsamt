@@ -5,14 +5,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
 from ..api.property import PyCSAMTObject
 from ._base import TEMSounding
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "TEMAVG",

@@ -9,7 +9,7 @@ three-dimensional ModEM starting and iteration models.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
@@ -20,7 +20,7 @@ from .doc import _modem_param_docs as _params
 if TYPE_CHECKING:
     from .data import ModEmData
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["ModEmModel3D"]
 

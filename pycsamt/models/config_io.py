@@ -12,9 +12,9 @@ from dataclasses import (
 )
 from pathlib import Path
 from textwrap import wrap
-from typing import Any
+from typing import Any, Union
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "ConfigParameter",

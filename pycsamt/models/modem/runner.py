@@ -9,13 +9,14 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Union
 
 from .base import ModEmBase
 from .config import ModEmConfig
 from .doc import _modem_param_docs as _params
 from .results import InversionResult
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["ModEmRunner"]
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 
@@ -19,8 +20,8 @@ from .log import ModEmLog
 from .model2d import ModEmModel2D
 from .model3d import ModEmModel3D
 
-PathLike = str | Path
-ModelObject = ModEmModel2D | ModEmModel3D
+PathLike = Union[str, Path]
+ModelObject = Union[ModEmModel2D, ModEmModel3D]
 
 __all__ = ["InversionResult"]
 

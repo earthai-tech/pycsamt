@@ -15,7 +15,7 @@ import csv
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from .borehole import Borehole
 from .calibrate import ModelCalibrator
 from .lithology import RockDatabase, StratigraphicLog
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "AquiferZone",

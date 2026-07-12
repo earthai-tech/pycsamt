@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from ..api.property import PyCSAMTObject
 from ._base import TEMSounding
@@ -17,7 +17,7 @@ from .coordinates import (
 from .log import TEMLog
 from .zplot import TEMZPlot
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "TEMSurvey",

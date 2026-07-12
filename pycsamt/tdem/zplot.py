@@ -5,11 +5,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from ..api.property import PyCSAMTObject
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "TEMZPlot",

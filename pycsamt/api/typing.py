@@ -144,13 +144,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Modern v2 aliases
 # ---------------------------------------------------------------------------
 
-PathLike: TypeAlias = str | bytes | Path | OSPathLike[str]
+PathLike: TypeAlias = Union[str, bytes, Path, OSPathLike[str]]
 """Path accepted by PyCSAMT readers and writers."""
 
-Scalar: TypeAlias = str | bytes | int | float | complex | bool
+Scalar: TypeAlias = Union[str, bytes, int, float, complex, bool]
 """Common scalar value accepted by lightweight utilities."""
 
-Numeric: TypeAlias = int | float | complex | np.number
+Numeric: TypeAlias = Union[int, float, complex, np.number]
 """Python or NumPy numeric scalar."""
 
 Array: TypeAlias = NumpyNDArray[Any]
@@ -168,7 +168,7 @@ FloatArray: TypeAlias = NumpyNDArray[np.floating[Any]]
 IntArray: TypeAlias = NumpyNDArray[np.integer[Any]]
 """NumPy array with integer dtype."""
 
-IndexLike: TypeAlias = int | slice | Sequence[int] | NumpyNDArray[Any]
+IndexLike: TypeAlias = Union[int, slice, Sequence[int], NumpyNDArray[Any]]
 """Index selector accepted by array utilities."""
 
 SeriesLike: TypeAlias = Any

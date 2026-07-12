@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 from ..api.property import PyCSAMTObject
 from ._base import TEMSounding
 from .survey import TEMSurvey, read_temavg_survey
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "TEMAVGConversion",

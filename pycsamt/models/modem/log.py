@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 
 from .base import ModEmBase
 from .doc import _modem_param_docs as _params
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["ModEmLog"]
 

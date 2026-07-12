@@ -9,13 +9,13 @@ import json
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
 from .results import InversionResult
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["to_archive", "to_csv", "to_geojson", "to_geotiff", "to_npz", "to_vtk"]
 

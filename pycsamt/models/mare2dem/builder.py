@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import Union
 
 from .base import Mare2DEMBase
 from .config import Mare2DEMConfig
@@ -33,7 +34,7 @@ from .survey import (
     make_data_file,
 )
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["InputBuilder"]
 

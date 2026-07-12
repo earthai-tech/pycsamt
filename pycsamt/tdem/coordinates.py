@@ -9,11 +9,11 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Union
 
 from ..api.property import PyCSAMTObject
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "TEMCoordinate",

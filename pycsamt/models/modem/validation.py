@@ -30,8 +30,9 @@ pycsamt.models.modem.model3d.ModEmModel3D
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Union
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = [
     "is_data_file",

@@ -10,12 +10,13 @@ conjugate-gradient inversions.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Union
 
 from .base import ModEmBase
 from .config import ModEmConfig
 from .doc import _modem_param_docs as _params
 
-PathLike = str | Path
+PathLike = Union[str, Path]
 
 __all__ = ["ModEmControl"]
 

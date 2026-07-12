@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re as _re
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 
@@ -53,7 +54,7 @@ __all__ = [
     "read_walkttem",
 ]
 
-Pathish = str | Path
+Pathish = Union[str, Path]
 
 
 def read_temavg(

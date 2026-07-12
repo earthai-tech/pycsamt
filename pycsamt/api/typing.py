@@ -23,6 +23,7 @@ Examples
 
 from __future__ import annotations
 
+import sys
 from collections.abc import (
     Callable,
     Iterable,
@@ -43,12 +44,18 @@ from typing import (
     SupportsFloat,
     SupportsInt,
     Text,
-    TypeAlias,
-    TypeGuard,
     TypeVar,
     Union,
     overload,
 )
+
+# ``TypeAlias`` and ``TypeGuard`` were only added to ``typing`` in Python 3.10;
+# on 3.9 they live in ``typing_extensions``. Import compatibly so the package
+# (requires-python >= 3.9) imports on every supported version.
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias, TypeGuard
+else:  # pragma: no cover - exercised on Python 3.9 CI
+    from typing_extensions import TypeAlias, TypeGuard
 
 import numpy as np
 from numpy.typing import ArrayLike as NumpyArrayLike

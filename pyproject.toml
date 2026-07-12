@@ -203,10 +203,8 @@ markers    = [
 ]
 
 [tool.ruff]
-line-length = 62
+line-length = 100
 target-version = "py39"
-select = ["E", "F", "W", "I", "UP", "B"]
-ignore = ["B008"]
 exclude = [
     "__pycache__",
     ".git",
@@ -217,7 +215,11 @@ exclude = [
     "docs/build",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 [tool.coverage.run]

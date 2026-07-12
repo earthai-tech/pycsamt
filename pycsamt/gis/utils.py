@@ -578,18 +578,21 @@ def convert_position_str2float(
             raise ValueError(
                 f"Invalid seconds: {parts[2]!r}") from exc2
 
-    minutes = _assert_minutes(minutes)
-    seconds = _assert_seconds(seconds)
-
-    # Rollover SS->MM then MM->DD
-    minutes, seconds = _rollover_dms(minutes, seconds)
-    deg, minutes = _rollover_dms(deg, minutes)
-
-    # Sign: hemisphere (if any) overrides degree sign
+    # Sign: hemisphere (if any) overrides degree sign. Capture it
+    # before rollover so carries apply to the magnitude, not the
+    # signed value ('-118:60:00' must become -119, not -117).
     sign = -1 if deg < 0 else 1
     if hemi_sign is not None:
         sign = hemi_sign
     deg = abs(deg)
+
+    # Rollover SS->MM then MM->DD, then validate the remainders
+    # (validating first would reject '10:60:00', which the rollover
+    # exists to normalize to 11:00:00).
+    minutes, seconds = _rollover_dms(minutes, seconds)
+    deg, minutes = _rollover_dms(deg, minutes)
+    minutes = _assert_minutes(minutes)
+    seconds = _assert_seconds(seconds)
 
     return sign * (deg + minutes / 60.0 + seconds / 3600.0)
 

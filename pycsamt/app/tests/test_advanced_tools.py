@@ -215,8 +215,10 @@ class TestStrikePlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 
@@ -236,8 +238,10 @@ class TestPhaseTensorPlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 
@@ -257,8 +261,10 @@ class TestInductionPlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, tipper_sites):
         adv_ctrl.set_sites(tipper_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 
@@ -278,8 +284,10 @@ class TestImpedancePlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 
@@ -299,8 +307,10 @@ class TestDepthPlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 
@@ -320,8 +330,10 @@ class TestSurveyPlots:
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)
-        assert len(fig.axes) >= 1
+        ret = adv_ctrl.draw(fn_name, has_ax, fig)
+        # has_ax=True draws into fig; has_ax=False returns its own figure
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
         _close()
 
 

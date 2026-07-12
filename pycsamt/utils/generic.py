@@ -623,10 +623,12 @@ def error_policy(
     # Predefined valid policies.
     valid_policies = valid_policies or {"warn", "raise", "ignore"}
 
-    # Default message if none is provided.
+    # Default message if none is provided. The option list is joined
+    # manually: embedding the set literal would leave stray braces
+    # that break the later ``msg.format(error=...)`` call.
     default_msg = (
         "Invalid error policy: '{error}'. Valid options are "
-        f"{valid_policies}."
+        + ", ".join(repr(p) for p in sorted(valid_policies)) + "."
     )
     if exception is None:
         exception = ValueError

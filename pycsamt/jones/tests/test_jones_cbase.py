@@ -78,14 +78,24 @@ def test_jcbbase_container_minimal():
     try:
         class _Mini(JCBBase):  # type: ignore[misc]
             def parse(self, inputs):
-                self.items = list(inputs)
+                # `items` is a read-only property over `_items`
+                self._items = list(inputs)
                 return self.items
     except TypeError:
         # Fallback: try to instantiate directly if not abstract
         _Mini = JCBBase  # type: ignore[assignment]
 
+    class _FakeJF:
+        """Minimal JFile stand-in: summary()/str() touch these attrs."""
+        site = "S1"
+        freq = None
+        Tip = None
+        path = None
+        Res = None
+        Z = None
+
     inst = _Mini(verbose=0)  # type: ignore[call-arg]
-    out = inst.parse(["a", "b"])  # type: ignore[attr-defined]
+    out = inst.parse([_FakeJF(), _FakeJF()])  # type: ignore[attr-defined]
     items = getattr(inst, "items", out)
     assert isinstance(items, (list, tuple))
     # n / __len__ semantics

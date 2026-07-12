@@ -76,8 +76,11 @@ geo = [
 dev = [
     "pytest>=7.2",
     "pytest-cov>=4.0",
+    "pytest-timeout>=2.3",
     "ruff>=0.4",
     "pre-commit>=3.0",
+    # exercises the sklearn fallback paths of the AI processing tools
+    "scikit-learn>=1.1",
 ]
 
 # Documentation build
@@ -201,6 +204,11 @@ addopts    = "-ra -q --tb=short"
 testpaths  = ["pycsamt"]
 markers    = [
     "live: tests that require an LLM API key (deselect with -m 'not live')",
+    "slow: tests that are deterministic but too slow for the tightest local loop",
+    "integration: tests that exercise multiple pycsamt subsystems together",
+    "gui: tests that require Qt, Dash, browser, or other UI runtime support",
+    "optional_dependency: tests that require an optional dependency group",
+    "requires_xarray: tests that require the optional xarray dependency",
 ]
 
 [tool.ruff]
@@ -223,12 +231,5 @@ ignore = ["B008"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
-[tool.coverage.run]
-source = ["pycsamt"]
-omit   = [
-    "*/__pycache__/*",
-]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = false
+# Coverage is configured in .coveragerc (it takes precedence over
+# [tool.coverage.*] here, so keep a single source of truth there).

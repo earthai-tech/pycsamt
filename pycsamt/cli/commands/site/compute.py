@@ -75,8 +75,14 @@ def compute(ctx: click.Context) -> None:
 # ---------------------------------------------------------------------------
 
 def _emit(data: object, output_format: str) -> None:
-    """Print *data* (a dict or DataFrame) in the requested format."""
+    """Print *data* (a dict, DataFrame, or APIFrame) in the requested format."""
     import pandas as pd  # noqa: PLC0415
+
+    # site.compute helpers return an APIFrame wrapper when the API view
+    # is enabled; unwrap it or the fallback constructor below strips the
+    # column names
+    if hasattr(data, "df") and isinstance(getattr(data, "df"), pd.DataFrame):
+        data = data.df
 
     if isinstance(data, dict):
         df = pd.DataFrame([data])

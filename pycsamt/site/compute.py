@@ -474,8 +474,8 @@ def tipper_magnitude(
     obj : Any
         A single EDI-like object (e.g. ``EDIFile``) or an iterable
         of such objects.  The tipper may be attached as ``ed.Tip``,
-        ``ed.T``, or ``ed.TIP`` and must expose a 2-column array
-        shaped ``(n_freq, 2)``.
+        ``ed.T``, or ``ed.TIP`` and must expose a 2-component array
+        shaped ``(n_freq, 2)`` or ``(n_freq, 1, 2)``.
     per_freq : bool, optional
         If ``False`` (default), return summary statistics
         (mean, median, max).  If ``True``, return per-frequency
@@ -646,6 +646,10 @@ def _get_z(ed: Any) -> np.ndarray | None:
 
 
 def _as_sites_iter(obj: Any) -> Iterable[tuple[str, Any]]:
+    if hasattr(obj, "as_list"):
+        for ed in obj.as_list():
+            yield station_name(ed), ed
+        return
     for ed in iter_edifiles(obj):
         yield station_name(ed), ed
 
@@ -744,6 +748,8 @@ def _tip_arr(ed: Any) -> np.ndarray | None:
                 arr = np.asarray(a)
                 if arr.ndim == 2 and arr.shape[1] == 2:
                     return arr
+                if arr.ndim == 3 and arr.shape[1:] == (1, 2):
+                    return arr[:, 0, :]
                 if arr.ndim == 1:
                     return arr[..., None]
         return None
@@ -760,6 +766,8 @@ def _tip_arr(ed: Any) -> np.ndarray | None:
             arr = np.asarray(a)
             if arr.ndim == 2 and arr.shape[1] == 2:
                 return arr
+            if arr.ndim == 3 and arr.shape[1:] == (1, 2):
+                return arr[:, 0, :]
             if arr.ndim == 1:
                 return arr[..., None]
     return None

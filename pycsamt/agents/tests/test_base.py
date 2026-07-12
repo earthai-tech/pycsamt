@@ -106,7 +106,11 @@ class TestBaseAgentInstantiation(unittest.TestCase):
 
     def test_no_llm_repr(self):
         from pycsamt.agents import ContextInputAgent
-        ag = ContextInputAgent()
+        from pycsamt.api.agents import AGENT_CONFIG
+        # offline(): ignore API keys from the developer environment
+        # (.env.local) so the agent really has no LLM configured
+        with AGENT_CONFIG.offline():
+            ag = ContextInputAgent()
         self.assertIn("no-LLM", repr(ag))
 
     def test_name_attribute(self):
@@ -116,8 +120,10 @@ class TestBaseAgentInstantiation(unittest.TestCase):
 
     def test_query_llm_without_key_returns_none(self):
         from pycsamt.agents import ContextInputAgent
-        ag = ContextInputAgent()
-        result = ag.query_llm("any prompt", max_tokens=50)
+        from pycsamt.api.agents import AGENT_CONFIG
+        with AGENT_CONFIG.offline():
+            ag = ContextInputAgent()
+            result = ag.query_llm("any prompt", max_tokens=50)
         self.assertIsNone(result)
 
     def test_extract_json_valid(self):

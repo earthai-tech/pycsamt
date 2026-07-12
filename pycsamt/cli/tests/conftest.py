@@ -220,9 +220,12 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(_survey, "_CONTEXT_FILE", pycsamt_dir / "context.json")
     monkeypatch.setattr(_survey, "_CACHE_ROOT",   cache_root)
 
-    # patch the command module (it imports the same names)
-    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT",   cache_root)
-    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR",  pycsamt_dir)
+    # patch the command module; raising=False because it only imports a
+    # subset of these names (e.g. _PYCSAMT_DIR is no longer re-exported)
+    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root,
+                        raising=False)
+    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR", pycsamt_dir,
+                        raising=False)
 
     return fake_home
 

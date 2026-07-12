@@ -459,8 +459,15 @@ class TestUNet2DNetBuild(unittest.TestCase):
 
     def test_output_dtype(self):
         import torch
+        # batch of 1: run in eval mode, BatchNorm cannot normalise a
+        # single sample per channel in training mode
         x = torch.randn(1, 4, 16, 16)
-        self.assertEqual(self.net(x).dtype, torch.float32)
+        self.net.eval()
+        try:
+            with torch.no_grad():
+                self.assertEqual(self.net(x).dtype, torch.float32)
+        finally:
+            self.net.train()
 
     def test_gradients_flow(self):
         import torch
@@ -477,8 +484,11 @@ class TestUNet2DNetBuild(unittest.TestCase):
 
         from pycsamt.ai.nets import UNet2DNet
         net = UNet2DNet(n_in=2, n_out=3).build()
-        x = torch.randn(1, 2, 8, 8)
-        y = net(x)
+        net.eval()  # single-sample batch: see test_output_dtype
+        # default UNet has 4 stages -> minimum spatial dim is 16
+        x = torch.randn(1, 2, 16, 16)
+        with torch.no_grad():
+            y = net(x)
         self.assertEqual(y.shape[1], 3)
 
 

@@ -37,6 +37,64 @@ def qapp():
     yield app
 
 
+@pytest.fixture(autouse=True)
+def no_global_restyle(monkeypatch):
+    """
+    Make ``QApplication.setStyleSheet`` a no-op.
+
+    Applying an application-wide stylesheet forces Qt to repolish
+    every live widget (including matplotlib canvases), which hangs
+    under the offscreen platform. No test asserts on the stylesheet
+    text; theme tests assert on session state and icons instead.
+    """
+    try:
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        yield
+        return
+
+    monkeypatch.setattr(
+        QApplication, "setStyleSheet", lambda self, *_a, **_k: None
+    )
+    yield
+
+
+@pytest.fixture(autouse=True)
+def no_modal_dialogs(monkeypatch):
+    """
+    Neutralize modal QMessageBox dialogs.
+
+    Modal dialogs block forever under the offscreen platform (e.g.
+    the quit confirmation in ``MainWindow.closeEvent``), hanging the
+    whole suite. Every static box returns its affirmative button.
+    """
+    try:
+        from PySide6.QtWidgets import QMessageBox
+    except ImportError:
+        yield
+        return
+
+    yes = QMessageBox.StandardButton.Yes
+    ok = QMessageBox.StandardButton.Ok
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        staticmethod(lambda *a, **k: yes),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "information",
+        staticmethod(lambda *a, **k: ok),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "warning",
+        staticmethod(lambda *a, **k: ok),
+    )
+    monkeypatch.setattr(
+        QMessageBox, "critical",
+        staticmethod(lambda *a, **k: ok),
+    )
+    yield
+
+
 # ── EDI fixtures ───────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="session")

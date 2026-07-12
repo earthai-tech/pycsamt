@@ -743,26 +743,28 @@ def isin(
             f"Invalid inputs for membership: {exc}"
         ) from exc
 
+    # np.isin has no `equal_nan` support: NaN membership is
+    # patched in manually below (pd.isna also handles object dtype)
+    def _isin_with_nan(elements, test_elements, inv):
+        m = np.isin(
+            elements,
+            test_elements,
+            assume_unique=assume_unique,
+            invert=inv,
+        )
+        if equal_nan and bool(np.any(pd.isna(test_elements))):
+            nan_m = pd.isna(elements)
+            m = (m & ~nan_m) if inv else (m | nan_m)
+        return m
+
     # elementwise mask over arr against subarr
-    mask = np.isin(
-        a,
-        s,
-        assume_unique=assume_unique,
-        invert=invert,
-        equal_nan=equal_nan,
-    )
+    mask = _isin_with_nan(a, s, invert)
     if return_mask:
         return mask
 
     # reduction over subarr membership in arr
     s1 = np.atleast_1d(s).ravel()
-    in_s = np.isin(
-        s1,
-        a,
-        assume_unique=assume_unique,
-        invert=False,
-        equal_nan=equal_nan,
-    )
+    in_s = _isin_with_nan(s1, a, False)
 
     if match not in {"all", "any", "count"}:
         raise ValueError("match must be 'all', 'any', or 'count'.")
@@ -772,7 +774,15 @@ def isin(
     elif match == "any":
         result = bool(np.any(in_s))
     else:
-        result = int(np.count_nonzero(in_s))
+        # count *distinct* values of subarr present in arr, per the
+        # documented example: isin([1, 2, 3], [2, 2, 3], "count") -> 2
+        try:
+            s_uniq = np.unique(s1)
+        except Exception:
+            s_uniq = np.asarray(
+                list(dict.fromkeys(s1.tolist())), dtype=object
+            )
+        result = int(np.count_nonzero(_isin_with_nan(s_uniq, a, False)))
 
     # optional extras
     out = (result,)

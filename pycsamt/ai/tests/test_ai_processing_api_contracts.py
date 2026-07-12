@@ -118,6 +118,8 @@ def test_anomaly_detector_pca_fallback_transform_flags_and_save_load(
     monkeypatch,
     tmp_path,
 ):
+    # torch/tf are patched out below to force the sklearn PCA path
+    pytest.importorskip("sklearn")
     import pycsamt.ai.processing.anomaly as anomaly_mod
 
     monkeypatch.setattr(
@@ -201,6 +203,8 @@ def test_dimensionality_classifier_rule_helpers_and_dataframe_coercion():
 def test_dimensionality_classifier_rf_fallback_and_from_features_table(
     monkeypatch,
 ):
+    # torch/tf are patched out below to force the sklearn RF path
+    pytest.importorskip("sklearn")
     import pycsamt.ai.processing.classify as classify_mod
 
     monkeypatch.setattr(

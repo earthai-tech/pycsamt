@@ -407,29 +407,41 @@ def _write_via_backend(ed: Any, path: Path) -> None:
     """
     # pycsamt EDI backends usually accept `write(new_edifn=...)`
     try:
+        ed.write(new_edifn=path.name, savepath=path.parent)
+        if path.exists():
+            return
+    except Exception:
+        pass
+
+    # Some backends accept a complete destination as `new_edifn`.
+    try:
         ed.write(new_edifn=str(path))
-        return
+        if path.exists():
+            return
     except Exception:
         pass
 
     # or `write(path)`
     try:
         ed.write(str(path))
-        return
+        if path.exists():
+            return
     except Exception:
         pass
 
     # or `to_file(path)`
     try:
         ed.to_file(str(path))
-        return
+        if path.exists():
+            return
     except Exception:
         pass
 
     # or `save(path)`
     try:
         ed.save(str(path))
-        return
+        if path.exists():
+            return
     except Exception:
         pass
 

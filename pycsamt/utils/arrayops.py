@@ -853,12 +853,12 @@ def fill_nan(
     # Select and apply fill along axis
     if axis == 1:
         def filler(mat, fn):
-            return np.vstack(fn(row) for row in mat)
+            return np.vstack([fn(row) for row in mat])
     else:
         # for axis=0, transpose, fill, then transpose back
         def filler(mat, fn):
             return (
-                    np.vstack(fn(col) for col in mat.T).T
+                    np.vstack([fn(col) for col in mat.T]).T
                 )
 
     if m == 'ff':

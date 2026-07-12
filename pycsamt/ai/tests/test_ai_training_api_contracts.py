@@ -233,7 +233,10 @@ def test_masked_mse_loss_uses_only_finite_targets():
     target = torch.tensor([[1.0, float("nan")], [1.0, 6.0]])
 
     loss = masked_mse_loss(pred, target)
-    assert float(loss.detach()) == pytest.approx(((3.0 - 1.0) ** 2 + (4.0 - 6.0) ** 2) / 2)
+    # three finite targets: (1-1)^2, (3-1)^2 and (4-6)^2 -> mean over 3
+    assert float(loss.detach()) == pytest.approx(
+        (0.0 + (3.0 - 1.0) ** 2 + (4.0 - 6.0) ** 2) / 3
+    )
 
     zero = masked_mse_loss(pred, torch.full_like(target, float("nan")))
     assert float(zero.detach()) == 0.0

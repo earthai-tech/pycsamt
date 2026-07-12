@@ -285,7 +285,8 @@ def test_em_inverter_2d_interface_without_backend():
     assert params["n_depth"] == 12
     assert params["n_stations"] == 7
     assert params["n_freqs"] == 9
-    assert params["channels"] == (8, 16)
+    # channels may be normalised to a list (JSON-safe params)
+    assert tuple(params["channels"]) == (8, 16)
 
     with pytest.raises(RuntimeError, match=r"fit\(\) before predict"):
         inv.predict(np.ones((2, 3, 9, 7), dtype=np.float32))

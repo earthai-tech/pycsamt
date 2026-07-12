@@ -4,6 +4,14 @@ branch = True
 omit =
     # exclude everything from ui_asset as they ara either resources or code dynamically generated
     */ui_asset/*
+    # test code itself must not count toward (or against) coverage
+    */tests/*
+    */conftest.py
+    # third-party-derived collections (BSD-3, imported from watex)
+    */pycsamt/utils/funcutils.py
+    */pycsamt/utils/exmath.py
+    # v1-legacy module slated for deprecation
+    */pycsamt/utils/em.py
 
 
 [report]

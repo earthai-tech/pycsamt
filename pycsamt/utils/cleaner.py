@@ -382,12 +382,12 @@ def fill_nan(
         return row[idx]
     # apply along axis=1
     if m == 'ff':
-        out = np.vstack(_ffill(r) for r in a)
+        out = np.vstack([_ffill(r) for r in a])
     elif m == 'bf':
-        out = np.vstack(_bfill(r) for r in a)
+        out = np.vstack([_bfill(r) for r in a])
     else:
-        tmp = np.vstack(_ffill(r) for r in a)
-        out = np.vstack(_bfill(r) for r in tmp)
+        tmp = np.vstack([_ffill(r) for r in a])
+        out = np.vstack([_bfill(r) for r in tmp])
     return out[0] if orig1d else out
 
 

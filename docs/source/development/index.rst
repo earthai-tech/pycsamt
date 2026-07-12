@@ -37,6 +37,15 @@ public API policy, and release practices.
       What runs on every push and pull request: test matrix, linting,
       docs build, and release automation.
 
+   .. grid-item-card:: Coverage improvement TODO
+      :link: coverage_todo
+      :link-type: doc
+      :img-top: ../_static/icons/doc-build.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Prioritized work to expose existing tests, cover scientific contracts,
+      and raise coverage without fragile percentage chasing.
+
    .. grid-item-card:: API policy
       :link: api_policy
       :link-type: doc
@@ -62,6 +71,7 @@ public API policy, and release practices.
    documentation_build
    docstring_style
    ci
+   coverage_todo
    api_policy
    extending
 

@@ -123,21 +123,20 @@ def test_freq_selector_range_changed_signal(sel):
     assert received[0][1] == pytest.approx(500.0)
 
 
-def test_fmt_freq_hz(sel):
-    assert "Hz" in sel._fmt_freq(50.0)
+# The widget displays log10 values with a Hz/period toggle; the old
+# unit-suffix formatters (_fmt_freq/_fmt_period) were removed.
+
+def test_fmt_log10_integer_decade(sel):
+    assert sel._fmt_log10(1000.0) == "3"
+    assert sel._fmt_log10(0.001) == "-3"
 
 
-def test_fmt_freq_khz(sel):
-    assert "kHz" in sel._fmt_freq(5000.0)
+def test_fmt_log10_fractional(sel):
+    import math
+    assert sel._fmt_log10(50.0) == f"{math.log10(50.0):.2f}"
 
 
-def test_fmt_freq_mhz(sel):
-    assert "mHz" in sel._fmt_freq(0.5)
-
-
-def test_fmt_period_seconds(sel):
-    assert "s" in sel._fmt_period(5.0)
-
-
-def test_fmt_period_ms(sel):
-    assert "ms" in sel._fmt_period(0.005)
+def test_fmt_log10_invalid_values(sel):
+    assert sel._fmt_log10(0.0) == "—"
+    assert sel._fmt_log10(-5.0) == "—"
+    assert sel._fmt_log10(float("nan")) == "—"

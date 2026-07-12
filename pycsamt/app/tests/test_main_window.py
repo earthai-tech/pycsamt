@@ -66,11 +66,10 @@ def test_profile_window_exists(window):
     assert isinstance(window._profile_win, ProfileViewerWindow)
 
 
-def test_agent_window_exists(window):
-    from pycsamt.app.desktop.windows.agent_window import (
-        AgentRunnerWindow,
-    )
-    assert isinstance(window._agent_win, AgentRunnerWindow)
+def test_agent_master_launcher_exists(window):
+    # the embedded agent window was replaced by the Agent Master
+    # web app, launched on demand through a bridge handler
+    assert callable(window._open_agent_master)
 
 
 def test_log_dock_exists(window):
@@ -86,8 +85,12 @@ def test_log_panel_is_attached(window):
 # ── All panel windows exist ───────────────────────────────────────────────
 
 def test_all_panel_windows_exist(window):
-    """All five scientific panel windows must be created at startup."""
-    for attr in ("_map_win", "_profile_win", "_agent_win", "_qc_win", "_correction_win"):
+    """All scientific panel windows must be created at startup."""
+    for attr in (
+        "_map_win", "_profile_win", "_qc_win", "_correction_win",
+        "_advanced_win", "_tdem_win", "_pipeline_win",
+        "_forward_win", "_inversion_win", "_interp_win",
+    ):
         assert hasattr(window, attr), f"MainWindow missing {attr}"
         assert getattr(window, attr) is not None
 

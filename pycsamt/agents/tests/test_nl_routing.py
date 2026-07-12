@@ -179,12 +179,19 @@ _CASES: list[tuple[str, str, str | None]] = [
     ),
     # ── tipper ────────────────────────────────────────────────────────────────
     (
-        "Tipper analysis and induction arrows for /data/willy",
+        "Tipper analysis for /data/willy",
         "tipper", "/data/willy",
     ),
     (
         "Compute Parkinson vectors and Wiese arrows /data/L22PLT",
         "tipper", "/data/L22PLT",
+    ),
+    # ── tipper_plot ───────────────────────────────────────────────────────────
+    # "induction arrows" is an exact tipper_plot keyword, so the mixed
+    # phrasing routes to the plotting workflow by design
+    (
+        "Tipper analysis and induction arrows for /data/willy",
+        "tipper_plot", "/data/willy",
     ),
     # ── sensitivity ───────────────────────────────────────────────────────────
     (
@@ -347,6 +354,9 @@ class TestNLRoutingBenchmark(unittest.TestCase):
 
     def test_tipper_classification(self):
         self._check_group("tipper")
+
+    def test_tipper_plot_classification(self):
+        self._check_group("tipper_plot")
 
     def test_sensitivity_classification(self):
         self._check_group("sensitivity")

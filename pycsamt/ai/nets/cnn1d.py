@@ -101,20 +101,29 @@ def _build_cnn1d(n_features, n_out, channels, kernel_size, dropout):
             pad = kernel_size // 2
             blocks = []
             in_ch = 1
+            length = int(n_features)
             for out_ch in channels:
                 blocks += [
                     nn.Conv1d(in_ch, out_ch, kernel_size, padding=pad),
                     nn.BatchNorm1d(out_ch),
                     nn.ReLU(inplace=True),
-                    nn.MaxPool1d(2),
                 ]
+                # pooling a length-1 sequence would produce size 0;
+                # skip it once the sequence cannot be halved
+                if length >= 2:
+                    blocks.append(nn.MaxPool1d(2))
+                    length //= 2
                 in_ch = out_ch
             self.encoder = nn.Sequential(*blocks)
 
-            # Compute flattened size after encoder
+            # Compute flattened size after encoder. The probe must
+            # run in eval mode: BatchNorm cannot normalise a
+            # single-sample batch in training mode.
             with torch.no_grad():
+                self.encoder.eval()
                 dummy = torch.zeros(1, 1, n_features)
                 flat = self.encoder(dummy).view(1, -1).shape[1]
+                self.encoder.train()
 
             self.head = nn.Sequential(
                 nn.Linear(flat, 256),

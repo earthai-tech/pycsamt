@@ -40,8 +40,13 @@ def test_canvas_created(panel):
     assert panel._canvas is not None
 
 
-def test_overlay_combo_created(panel):
-    assert panel._overlay is not None
+def test_panel_public_surface(panel):
+    # the overlay combo moved out of the panel; the panel now exposes
+    # data-binding and redraw entry points instead
+    assert callable(panel.set_dataframe)
+    assert callable(panel.set_sites)
+    assert callable(panel.redraw)
+    assert callable(panel.highlight_station)
 
 
 # ── Data binding ──────────────────────────────────────────────────────────

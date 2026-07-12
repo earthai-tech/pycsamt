@@ -119,11 +119,14 @@ class TestMapBuilder:
         assert isinstance(fig, go.Figure)
 
     def test_map_has_scatter_trace(self, sample_df):
-        import plotly.graph_objects as go
-
         from pycsamt.app.web.utils import build_station_map
         fig = build_station_map(sample_df)
-        assert any(isinstance(t, go.Scattergeo) for t in fig.data)
+        # tile-based map traces (Scattermap on modern plotly,
+        # Scattermapbox on older releases)
+        assert any(
+            type(t).__name__ in ("Scattermap", "Scattermapbox")
+            for t in fig.data
+        )
 
     def test_map_trace_lat_lon(self, sample_df):
         from pycsamt.app.web.utils import build_station_map
@@ -195,10 +198,11 @@ class TestLayout:
         children_str = str(result)
         assert IDs.STATION_TABLE in children_str
 
-    def test_layout_contains_profile_tabs(self):
-        from pycsamt.app.web.layout import IDs, layout
-        result = layout()
-        children_str = str(result)
+    def test_profile_panel_contains_profile_tabs(self):
+        # the root layout now opens on a welcome overlay; the profile
+        # tabs live inside the profile panel component
+        from pycsamt.app.web.layout import IDs, _profile_panel
+        children_str = str(_profile_panel())
         assert IDs.PROFILE_TABS in children_str
 
     def test_layout_contains_agent_panel(self):
@@ -240,7 +244,7 @@ class TestAppFactory:
     def test_app_title(self):
         from pycsamt.app.web.app import create_app
         app = create_app()
-        assert app.title == "pycsamt"
+        assert app.title == "pyCSAMT"
 
     def test_app_callbacks_registered(self):
         from pycsamt.app.web.app import create_app
@@ -263,17 +267,10 @@ class TestAppFactory:
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestCallbacks:
-    def test_load_data_no_path(self):
-        """Callback with empty path should return no_update + warning."""
-
-        from pycsamt.app.web.app import create_app
-
-        create_app()
-        # Find the load_data callback
-        # We verify by calling the underlying function directly from callbacks module
-        from pycsamt.app.web import callbacks
-        # Reset state
-        callbacks._STATE["sites"] = None
+    def test_callbacks_package_entry_point(self):
+        """Callback wiring is exposed via register_callbacks."""
+        from pycsamt.app.web.callbacks import register_callbacks
+        assert callable(register_callbacks)
 
     def test_empty_store_returns_no_stations(self):
         """update_table with None store should return empty records."""
@@ -296,7 +293,9 @@ class TestCallbacks:
         assert isinstance(fig, go.Figure)
         assert len(fig.data) > 0
 
-    def test_state_has_expected_keys(self):
-        from pycsamt.app.web.callbacks import _STATE
-        for key in ("sites", "data_ctrl", "plot_ctrl"):
-            assert key in _STATE
+    def test_session_cache_roundtrip(self):
+        # per-session state moved from a module global to the cache
+        from pycsamt.app.web.cache import cache_get, cache_set
+        cache_set("test-session-xyz", {"sites": ["s1"]})
+        assert cache_get("test-session-xyz") == {"sites": ["s1"]}
+        assert cache_get("missing-session") is None

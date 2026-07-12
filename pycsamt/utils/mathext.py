@@ -306,7 +306,7 @@ def linkage_matrix(
         index = labels)
         row_clusters = linkage (row_dist, method =method, metric =metric
                                 )
-    if kind =='condens':
+    if kind =='condense':
         row_clusters = linkage (pdist(df, metric =metric), method =method
                                 )
     if kind =='design':
@@ -472,7 +472,10 @@ def rhophi2z(rho, phi, freq):
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', category=RuntimeWarning)
             abs_z  = np.sqrt(5 * f * r)
-        return cmath.rect(abs_z , radians(p))
+        # `f` may arrive as a 1-element array: extract the scalar
+        # explicitly (implicit conversion is removed in NumPy >= 2.3)
+        return cmath.rect(np.asarray(abs_z, dtype=float).ravel()[0],
+                          radians(p))
 
     is_array2x2 =False
 
@@ -629,9 +632,9 @@ def savitzky_golay1d (
     """
 
     try:
-        window_size = np.abs(np.int(window_size))
-        order = np.abs(np.int(order))
-    except ValueError:
+        window_size = abs(int(window_size))
+        order = abs(int(order))
+    except (ValueError, TypeError):
         raise ValueError("window_size and order have to be of type int")
     if window_size % 2 != 1 or window_size < 1:
         raise TypeError("window_size size must be a positive odd number")
@@ -642,8 +645,12 @@ def savitzky_golay1d (
     y = np.asarray(y)
     half_window = (window_size -1) // 2
     # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
+    b = np.array(
+        [[k**i for i in order_range]
+         for k in range(-half_window, half_window+1)],
+        dtype=float,
+    )
+    m = np.linalg.pinv(b)[deriv] * rate**deriv * factorial(deriv)
     # pad the signal at the extremes with
     # values taken from the signal itself
     firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )

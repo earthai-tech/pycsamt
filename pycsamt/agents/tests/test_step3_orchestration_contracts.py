@@ -25,8 +25,8 @@ def _success(**data) -> AgentResult:
     return AgentResult(status="success", summary="ok", data=data)
 
 
-def _checkpoint_dir(name: str) -> Path:
-    path = Path("test_tmp_step3") / name
+def _checkpoint_dir(tmp_path: Path, name: str) -> Path:
+    path = tmp_path / name
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -65,12 +65,12 @@ def test_context_and_orchestrator_use_registry_for_specific_workflows():
         assert orch_result["workflow_type"] == expected
 
 
-def test_orchestrator_returns_agent_result_contract_for_dry_run():
+def test_orchestrator_returns_agent_result_contract_for_dry_run(tmp_path: Path):
     result = WorkflowOrchestratorAgent().execute(
         {
             "request": "QC the survey",
             "data_path": "/data/edis",
-            "output_dir": str(_checkpoint_dir("orchestrator")),
+            "output_dir": str(_checkpoint_dir(tmp_path, "orchestrator")),
             "dry_run": True,
         }
     )
@@ -85,7 +85,9 @@ def test_orchestrator_returns_agent_result_contract_for_dry_run():
     assert result.cost_estimate_usd == pytest.approx(0.0)
 
 
-def test_required_step_failure_aborts_and_preserves_partial_results():
+def test_required_step_failure_aborts_and_preserves_partial_results(
+    tmp_path: Path,
+):
     first = _FakeAgent(_success(sites="loaded"), name="load")
     failing = _FakeAgent(
         AgentResult.failed("qc failed", hint="inspect station errors"),
@@ -94,7 +96,7 @@ def test_required_step_failure_aborts_and_preserves_partial_results():
     never = _FakeAgent(_success(report="done"), name="report")
     coordinator = AgentCoordinator(
         "failure_contract",
-        checkpoint_dir=_checkpoint_dir("required_failure"),
+        checkpoint_dir=_checkpoint_dir(tmp_path, "required_failure"),
         verbose=False,
     )
     coordinator.add_step("load", first)
@@ -118,12 +120,14 @@ def test_required_step_failure_aborts_and_preserves_partial_results():
     assert never.calls == []
 
 
-def test_optional_step_failure_yields_needs_review_and_continues():
+def test_optional_step_failure_yields_needs_review_and_continues(
+    tmp_path: Path,
+):
     optional = _FakeAgent(AgentResult.failed("optional plot failed"))
     final = _FakeAgent(_success(report="done"))
     coordinator = AgentCoordinator(
         "optional_contract",
-        checkpoint_dir=_checkpoint_dir("optional_failure"),
+        checkpoint_dir=_checkpoint_dir(tmp_path, "optional_failure"),
         verbose=False,
     )
     coordinator.add_step("optional_plot", optional, required=False)

@@ -764,8 +764,9 @@ class TestPipeRunIntegration:
             ["pipe", "run",
              "--preset", "basic_qc",
              "--survey", str(_DATA_WILLY),
-             "--no-plots", "--no-edi", "--no-report",
-             "--out", ""],   # empty out → no outdir
+             "--no-plots", "--no-edi", "--no-report"],
+            # No --out → outdir=None → no files written.  (--out "" would
+            # resolve to Path(".") and drop pipeline.yaml in the CWD.)
         )
         # Exit 0 means all 5 steps completed without error
         assert r.exit_code == 0, r.output

@@ -22,15 +22,18 @@ class _Head:
 
 
 class EdiWriteKwarg:
-    """Backend exposes write(new_edifn=...)."""
+    """Backend exposes write(new_edifn=..., savepath=...)."""
 
     def __init__(self, station: str):
         self.HEAD = _Head(station)
         self.name = station  # allow station_name fallbacks
 
-    def write(self, *_, new_edifn: str | None = None, **__):
-        p = Path(new_edifn) if new_edifn else None
-        assert p is not None
+    def write(self, *_, new_edifn: str | None = None,
+              savepath: str | Path | None = None, **__):
+        assert new_edifn is not None
+        # Honour savepath like the real backend — ignoring it would write
+        # a bare filename relative to the CWD (i.e. into the repo root).
+        p = Path(savepath) / new_edifn if savepath else Path(new_edifn)
         p.write_text(f"# {self.HEAD.station}\n", encoding="utf-8")
 
 

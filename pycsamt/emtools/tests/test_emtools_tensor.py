@@ -107,6 +107,14 @@ class TestBuildPhaseTensorTable:
         df = build_phase_tensor_table(sites)
         assert (df["period"].dropna() > 0).all()
 
+    def test_skips_non_finite_impedance_rows(self):
+        fr = _freqs(5)
+        z = _iso_z(fr)
+        z[2, 0, 1] = np.nan + 0j
+        df = build_phase_tensor_table([_FakeSite("S00", z, fr)])
+        assert len(df) == 4
+        assert np.isfinite(df["freq"].to_numpy(float)).all()
+
     def test_ellipt_between_0_1(self):
         sites = [_site("S00")]
         df = build_phase_tensor_table(sites)

@@ -247,9 +247,10 @@ class GdalDataCheck:
         except Exception:
             logger.debug("gdal-config lookup failed.")
 
-        logger.warning(
-            "GDAL_DATA is unavailable. Geospatial features will degrade."
-        )
+        if os.environ.get("PYCSAMT_DOCS_BUILD") != "1":
+            logger.warning(
+                "GDAL_DATA is unavailable. Geospatial features will degrade."
+            )
         return False
 
 

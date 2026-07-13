@@ -870,7 +870,7 @@ def plot_atom_psection(
         for j in range(max_lab)
     ]
     ax.legend(
-        handles=h, ncols=min(max_lab, 10), fontsize=7, loc="upper right"
+        handles=h, ncol=min(max_lab, 10), fontsize=7, loc="upper right"
     )
     return ax
 
@@ -972,7 +972,7 @@ def plot_dim_confidence_grid(
         Line2D([0], [0], marker="s", ls="", color=pal[1], label="2D"),
         Line2D([0], [0], marker="s", ls="", color=pal[2], label="3D"),
     ]
-    ax.legend(handles=handles, ncols=3, fontsize=8, loc="upper right")
+    ax.legend(handles=handles, ncol=3, fontsize=8, loc="upper right")
     return ax
 
 
@@ -1117,5 +1117,5 @@ def plot_dim_map(
         Line2D([0], [0], marker="s", ls="", color=pal[1][0], label="2D"),
         Line2D([0], [0], marker="^", ls="", color=pal[2][0], label="3D"),
     ]
-    ax.legend(handles=handles, ncols=3, fontsize=8, loc="best")
+    ax.legend(handles=handles, ncol=3, fontsize=8, loc="best")
     return ax

@@ -430,6 +430,27 @@ def _phi_from_z(z: np.ndarray) -> np.ndarray:
     return phi
 
 
+def _finite_z_period_rows(
+    z: np.ndarray,
+    fr: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return rows with finite impedance tensors and positive frequency."""
+    z = np.asarray(z, dtype=complex)
+    fr = np.asarray(fr, dtype=float)
+    n = min(z.shape[0], fr.size)
+    if n == 0:
+        return z[:0], fr[:0]
+    z = z[:n]
+    fr = fr[:n]
+    finite_z = np.isfinite(z.real) & np.isfinite(z.imag)
+    keep = (
+        np.isfinite(fr)
+        & (fr > 0.0)
+        & np.all(finite_z, axis=(1, 2))
+    )
+    return z[keep], fr[keep]
+
+
 def _svd_axes(phi: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     # returns s (n,2) and angle of major axis (deg), shape (n,)
     n = phi.shape[0]
@@ -500,7 +521,15 @@ def build_phase_tensor_table(
         z, fr = _get_z(ed)
         if z is None or fr is None:
             continue
+        z, fr = _finite_z_period_rows(z, fr)
+        if z.size == 0 or fr.size == 0:
+            continue
         phi = _phi_from_z(z)
+        finite_phi = np.all(np.isfinite(phi), axis=(1, 2))
+        if not np.any(finite_phi):
+            continue
+        phi = phi[finite_phi]
+        fr = fr[finite_phi]
         a = phi[:, 0, 0]
         b = phi[:, 0, 1]
         c = phi[:, 1, 0]
@@ -1153,7 +1182,7 @@ def plot_theta_vs_period(
     ax.set_xscale("log")
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("theta (deg)")
-    ax.legend(ncols=2, fontsize=8)
+    ax.legend(ncol=2, fontsize=8)
     return ax
 
 

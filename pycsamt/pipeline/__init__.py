@@ -82,6 +82,12 @@ from ._registry import (
     step_names,
 )
 from ._steps import Step, StepResult
+from .plot import (
+    plot_pipeline_dashboard,
+    plot_pipeline_status,
+    plot_pipeline_timing,
+    plot_site_count_flow,
+)
 from .stratagem import (
     STRATAGEM_PRESETS,
     StratagemPipeline,
@@ -117,6 +123,11 @@ __all__ = [
     "load_yaml",
     "load_json",
     "load_py",
+    # ── plotting
+    "plot_pipeline_dashboard",
+    "plot_pipeline_status",
+    "plot_pipeline_timing",
+    "plot_site_count_flow",
     # ── stratagem pipeline
     "StratagemPreset",
     "STRATAGEM_PRESETS",

@@ -52,7 +52,7 @@ def test_forward_with_errors_propagates_rho_and_phase():
     assert np.allclose(phi_e, expect_phi, rtol=1e-6, atol=0.0)
 
 
-def test_forward_validates_shapes_and_finiteness():
+def test_forward_validates_shapes_and_frequency():
     z, f = _mk_stack()
     rp = ResPhase()
 
@@ -62,10 +62,40 @@ def test_forward_validates_shapes_and_finiteness():
     with pytest.raises(ZError):
         rp.compute_resistivity_phase(z_array=z, freq=[10.0, -1.0])
 
+
+def test_forward_preserves_nan_z_as_masked_values():
+    z, f = _mk_stack()
+    z[0, 0, 0] = np.nan
+    rp = ResPhase()
+    rp.compute_resistivity_phase(z_array=z, freq=f)
+
+    assert np.isnan(rp.resistivity[0, 0, 0])
+    assert np.isnan(rp.phase[0, 0, 0])
+    assert np.isfinite(rp.resistivity[1, 0, 0])
+
+
+def test_forward_allows_zerr_nan_where_z_is_masked():
+    z, f = _mk_stack()
+    ze = np.full_like(z, 0.1, dtype=float)
+    z[0, 0, 0] = np.nan
+    ze[0, 0, 0] = np.nan
+    rp = ResPhase()
+    rp.compute_resistivity_phase(z_array=z, z_err_array=ze, freq=f)
+
+    assert np.isnan(rp.resistivity_err[0, 0, 0])
+    assert np.isnan(rp.phase_err[0, 0, 0])
+    assert np.isfinite(rp.resistivity_err[1, 0, 0])
+
+
+def test_forward_rejects_zerr_nan_where_z_is_valid():
+    z, f = _mk_stack()
+    ze = np.full_like(z, 0.1, dtype=float)
+    ze[0, 0, 0] = np.nan
+    rp = ResPhase()
+
     bad = z.copy()
-    bad[0, 0, 0] = np.nan
     with pytest.raises(ZError):
-        rp.compute_resistivity_phase(z_array=bad, freq=f)
+        rp.compute_resistivity_phase(z_array=bad, z_err_array=ze, freq=f)
 
 
 def test_inverse_builds_z_and_zerr_when_errors_given():

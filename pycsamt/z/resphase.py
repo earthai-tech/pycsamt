@@ -293,9 +293,6 @@ class ResPhase(BaseEM):
             raise ZError("freq must be 1-D with length equal to Z.shape[0]")
         if np.any(f <= 0.0) or not np.all(np.isfinite(f)):
             raise ZError("freq must be finite and > 0")
-        if not np.all(np.isfinite(z.real + z.imag)):
-            raise ZError("Z must be finite")
-
         abs_z2 = np.abs(z) ** 2
         self._resistivity = 0.2 * abs_z2 / f[:, None, None]
         self._phase = np.degrees(np.angle(z))
@@ -311,15 +308,19 @@ class ResPhase(BaseEM):
                 "Z error must have same shape as Z; got "
                 f"{z_err.shape!r} vs {z.shape!r}"
             )
-        if not np.all(np.isfinite(z_err)) or np.any(z_err < 0):
+        valid_z = np.isfinite(z.real) & np.isfinite(z.imag)
+        valid_zerr = np.isfinite(z_err) & (z_err >= 0)
+        if np.any(~valid_zerr & valid_z):
             raise ZError("z_err must be finite and non-negative")
 
-        rho_e = np.zeros_like(self._resistivity, dtype=float)
-        phi_e = np.zeros_like(self._phase, dtype=float)
+        rho_e = np.full_like(self._resistivity, np.nan, dtype=float)
+        phi_e = np.full_like(self._phase, np.nan, dtype=float)
 
         for k in range(f.size):
             for i in range(2):
                 for j in range(2):
+                    if not (valid_z[k, i, j] and valid_zerr[k, i, j]):
+                        continue
                     re = z[k, i, j].real
                     im = z[k, i, j].imag
                     dz = z_err[k, i, j]

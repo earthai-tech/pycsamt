@@ -972,7 +972,7 @@ class PlotGateProfile(TDEMPlotBase):
             self.title or f"Gate profiles: {_axis_label(self.value)}"
         )
         ax.grid(True, color=self.style.grid)
-        ax.legend(title="Window", fontsize=8, ncols=min(4, len(windows)))
+        ax.legend(title="Window", fontsize=8, ncol=min(4, len(windows)))
         return ax
 
 

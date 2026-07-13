@@ -510,8 +510,8 @@ def plot_rhoa_phi(
     ax_p.set_xscale("log")
     ax_p.set_ylabel("phi (deg)")
     ax_p.set_xlabel(axis)
-    ax_r.legend(ncols=2, fontsize=8)
-    ax_p.legend(ncols=2, fontsize=8)
+    ax_r.legend(ncol=2, fontsize=8)
+    ax_p.legend(ncol=2, fontsize=8)
     return ax_r, ax_p
 
 
@@ -589,7 +589,7 @@ def plot_tipper_components(
     ax.axhline(0, color="k", lw=0.5, ls=":")
     ax.tick_params(labelsize=8)
     if n_plotted:
-        ax.legend(ncols=2, fontsize=7)
+        ax.legend(ncol=2, fontsize=7)
     else:
         ax.text(
             0.5,

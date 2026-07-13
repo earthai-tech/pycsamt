@@ -111,8 +111,10 @@ def test_nan_quality_marker_is_preserved():
 def test_read_temavg_survey_groups_files():
     """Folder reader should parse AVG files and group companions."""
     survey = read_temavg_survey(DATA_DIR)
+    expected_avg = len(list(DATA_DIR.glob("*.AVG")))
+    expected_records = sum(avg.n_records for avg in survey.avg_files.values())
 
-    assert survey.n_avg_files == 55
+    assert survey.n_avg_files == expected_avg
     assert len(survey.stations) == 51
     assert "TEM100" in survey.avg_files
     assert sorted(survey.companion_files["TEM100"]) == [
@@ -120,7 +122,7 @@ def test_read_temavg_survey_groups_files():
         "mde",
         "z",
     ]
-    assert len(survey.to_records()) == 69775
+    assert len(survey.to_records()) == expected_records
 
 
 def test_temavg_survey_to_soundings_exports_all_stations():

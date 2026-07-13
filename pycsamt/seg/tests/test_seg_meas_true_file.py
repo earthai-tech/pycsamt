@@ -18,13 +18,16 @@ from pycsamt.seg.meas import (
 )
 
 
+_EDI_SAMPLES = [
+    Path("MT") / "kap03lmt_edis" / "kap103.edi",
+    Path("MT") / "SPECTRA" / "spectra01.edi",
+    Path("CSAMT") / "csa000.edi",
+]
+
+
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_define_meas_parses_real_files(edi_path: Path, which: str) -> None:
     p = edi_path / which
@@ -45,11 +48,7 @@ def test_define_meas_parses_real_files(edi_path: Path, which: str) -> None:
 
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_mixins_on_real_files(edi_path: Path, which: str) -> None:
     p = edi_path / which

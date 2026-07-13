@@ -1,14 +1,17 @@
 """Real-data integration tests for models/modem/plot.py.
 
-Uses the RERUN-AMT-BHHS-NEW-TEST08 inversion results (153 NLCG iterations,
-168×48×65 grid, 128 stations across 5 NS profiles L18–L34, Jiangsu AMT).
+Uses the bundled BHHS/RERUN AMT ModEM sample when available.  In source
+checkouts where the local BHHS folder has not been populated, the tests fall
+back to the compact Willy 27-frequency WATEX ModEM sample, which contains
+representative model, data, response, covariance, and log artefacts from the
+larger Jiangsu AMT run.
 
-All tests are skipped automatically when the data directory is absent.
+All tests are skipped automatically when the sample directory is absent.
 To run: pytest -v pycsamt/models/modem/tests/test_modem_plot_bhhs.py
 
 The origin of the model (lat/lon of model centre) is (32.129°N, 119.125°E).
 Profile EW offsets from model centre (metres):
-    L18 ≈ +353   L22 ≈ +155   L26 ≈ -41   L30 ≈ -242   L34 ≈ -445
+    L18 ≈ +361   L22 ≈ +170   L26 ≈ -26   L30 ≈ -226   L34 ≈ -424
 """
 
 from __future__ import annotations
@@ -26,11 +29,37 @@ import matplotlib.pyplot as plt
 # Data paths
 # ---------------------------------------------------------------------------
 
-_BHHS = Path.home() / "Downloads" / "RERUN-AMT-BHHS-NEW-TEST08"
+_RERUN_BHS = (
+    Path(__file__).parents[4]
+    / "data"
+    / "modem"
+    / "rerun-amt-bhs"
+)
+_BUNDLED_SAMPLE = (
+    Path(__file__).parents[4]
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+)
+
+
+def _has_modem_result(path: Path) -> bool:
+    return (
+        path.exists()
+        and any(path.glob("*.rho"))
+        and any(path.glob("*.dat"))
+        and any(path.glob("*.cov"))
+    )
+
+
+_BHHS = _RERUN_BHS if _has_modem_result(_RERUN_BHS) else _BUNDLED_SAMPLE
 
 pytestmark = pytest.mark.skipif(
-    not _BHHS.exists(),
-    reason="RERUN-AMT-BHHS-NEW-TEST08 real data not available",
+    not _has_modem_result(_BHHS),
+    reason=(
+        "ModEM BHHS/RERUN sample not available. Populate "
+        "data/modem/rerun-amt-bhs or keep the bundled compact sample."
+    ),
 )
 
 # Geographic origin of the model centre
@@ -38,7 +67,7 @@ _ORIGIN_LAT = 32.129
 _ORIGIN_LON = 119.125
 
 # EW offsets (model-centre metres) for the 5 survey lines
-_LINE_OFFSETS = [353.0, 155.0, -41.0, -242.0, -445.0]
+_LINE_OFFSETS = [361.0, 170.0, -26.0, -226.0, -424.0]
 _LINE_NAMES = ["L18", "L22", "L26", "L30", "L34"]
 
 
@@ -101,7 +130,9 @@ class TestPlotModel3D:
     def test_returns_figure(self, result):
         from pycsamt.models.modem.plot import PlotModel3D
 
-        fig = PlotModel3D(result=result, section_offset=353.0).plot()
+        fig = PlotModel3D(
+            result=result, section_offset=_LINE_OFFSETS[0]
+        ).plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
@@ -168,7 +199,7 @@ class TestPlotSectionAxisAligned:
 
         fig = PlotSection(
             result=result,
-            profile_offset=353.0,  # L18
+            profile_offset=_LINE_OFFSETS[0],  # L18
             direction="NS",
             show_stations=True,
             station_tol=50.0,
@@ -190,7 +221,7 @@ class TestPlotSectionAxisAligned:
 
         fig = PlotSection(
             result=result,
-            profile_offset=353.0,
+            profile_offset=_LINE_OFFSETS[0],
             direction="NS",
             show_stations=False,
         ).plot()
@@ -250,8 +281,8 @@ class TestPlotSectionArbitrary:
         for n in (50, 100, 500):
             fig = PlotSection(
                 result=result,
-                start_point=(-1000.0, 353.0),
-                end_point=(1000.0, 353.0),
+                start_point=(-1000.0, _LINE_OFFSETS[0]),
+                end_point=(1000.0, _LINE_OFFSETS[0]),
                 n_samples=n,
             ).plot()
             assert isinstance(fig, matplotlib.figure.Figure)
@@ -297,11 +328,11 @@ class TestPlotSectionArbitrary:
         """A purely N-S profile via start/end should match axis-aligned result."""
         from pycsamt.models.modem.plot import PlotSection
 
-        # Pure NS profile at L18 easting (y_m = 353)
+        # Pure NS profile at L18 easting.
         fig = PlotSection(
             result=result,
-            start_point=(-1300.0, 353.0),
-            end_point=(1300.0, 353.0),
+            start_point=(-1300.0, _LINE_OFFSETS[0]),
+            end_point=(1300.0, _LINE_OFFSETS[0]),
             station_tol=50.0,
         ).plot()
         ax = fig.axes[0]
@@ -448,7 +479,7 @@ class TestPlotAllProfiles:
 
         fig = PlotAllProfiles(
             result=result,
-            profile_offsets=[353.0],
+            profile_offsets=[_LINE_OFFSETS[0]],
             depth_max=500.0,
         ).plot()
         data_ax = [ax for ax in fig.axes if ax.get_ylabel() == "Depth (km)"]
@@ -476,7 +507,7 @@ class TestPlotAllProfiles:
 
         fig = PlotAllProfiles(
             result=result,
-            profile_offsets=[353.0],
+            profile_offsets=[_LINE_OFFSETS[0]],
             profile_names=["L18"],
             show_stations=True,
             station_tol=50.0,

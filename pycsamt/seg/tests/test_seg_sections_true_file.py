@@ -18,14 +18,20 @@ def _collect(path: Path) -> list[tuple[str, EDIComponentBase, int]]:
     return list(iter_sections(str(path)))
 
 
+_MT_EDI = Path("MT") / "kap03lmt_edis" / "kap103.edi"
+_SPECTRA_EDI = Path("MT") / "SPECTRA" / "spectra01.edi"
+_CSAMT_EDI = Path("CSAMT") / "csa000.edi"
+_EDI_SAMPLES = [_MT_EDI, _SPECTRA_EDI, _CSAMT_EDI]
+
+
 @pytest.mark.parametrize(
     "which, expect_any",
     [
-        ("15125A_spe.edi", {">=SPECTRASECT"}),
-        ("15125A_imp.edi", {">=MTSECT"}),
+        (_SPECTRA_EDI, {">=SPECTRASECT"}),
+        (_MT_EDI, {">=MTSECT"}),
         # CSAMT may vary; accept any recognized section
         (
-            "000CSA_csamt.edi",
+            _CSAMT_EDI,
             {
                 ">=SPECTRASECT",
                 ">=MTSECT",
@@ -52,7 +58,7 @@ def test_iter_sections_finds_expected_minimum(
 
 @pytest.mark.parametrize(
     "which",
-    ["15125A_spe.edi", "15125A_imp.edi", "000CSA_csamt.edi"],
+    _EDI_SAMPLES,
 )
 def test_registry_dispatch_and_body_start_valid(edi_path: Path, which: str):
     p = edi_path / which
@@ -88,8 +94,8 @@ def test_registry_dispatch_and_body_start_valid(edi_path: Path, which: str):
 @pytest.mark.parametrize(
     "which, include, expect_tag",
     [
-        ("15125A_spe.edi", [">=SPECTRASECT"], ">=SPECTRASECT"),
-        ("15125A_imp.edi", [">=MTSECT"], ">=MTSECT"),
+        (_SPECTRA_EDI, [">=SPECTRASECT"], ">=SPECTRASECT"),
+        (_MT_EDI, [">=MTSECT"], ">=MTSECT"),
     ],
 )
 def test_iter_sections_include_filter(
@@ -106,7 +112,7 @@ def test_iter_sections_include_filter(
 
 @pytest.mark.parametrize(
     "which",
-    ["15125A_spe.edi", "15125A_imp.edi", "000CSA_csamt.edi"],
+    _EDI_SAMPLES,
 )
 def test_iter_sections_tags_in_file_order(edi_path: Path, which: str):
     p = edi_path / which

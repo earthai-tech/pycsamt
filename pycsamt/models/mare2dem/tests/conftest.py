@@ -17,7 +17,19 @@ import pytest
 # Root of the example data directory
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).parents[4]  # pycsamt/
+def _find_repo_root() -> Path:
+    """Find the checkout root that owns the bundled Mare2DEM examples."""
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "data" / "mare2dem").is_dir():
+            return parent
+    for parent in here.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    return here.parents[4]
+
+
+_REPO_ROOT = _find_repo_root()
 _DATA_DIR = _REPO_ROOT / "data" / "mare2dem"
 
 # Specific example sub-directories

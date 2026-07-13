@@ -17,13 +17,16 @@ def _in(val, lo, hi):
     return (val is not None) and (lo < val < hi)
 
 
+_EDI_SAMPLES = [
+    Path("MT") / "kap03lmt_edis" / "kap103.edi",
+    Path("MT") / "SPECTRA" / "spectra01.edi",
+    Path("CSAMT") / "csa000.edi",
+]
+
+
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_head_parses_real_files(edi_path: Path, which: str):
     p = edi_path / which
@@ -42,11 +45,7 @@ def test_head_parses_real_files(edi_path: Path, which: str):
 
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_info_parses_real_files(edi_path: Path, which: str):
     p = edi_path / which
@@ -63,11 +62,7 @@ def test_info_parses_real_files(edi_path: Path, which: str):
 
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_heads_aggregator_order_and_write(
     edi_path: Path, which: str, tmp_path: Path
@@ -89,11 +84,7 @@ def test_heads_aggregator_order_and_write(
 
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_head_mixin_from_file(edi_path: Path, which: str):
     p = edi_path / which
@@ -110,11 +101,7 @@ def test_head_mixin_from_file(edi_path: Path, which: str):
 
 @pytest.mark.parametrize(
     "which",
-    [
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
-    ],
+    _EDI_SAMPLES,
 )
 def test_info_mixin_from_file(edi_path: Path, which: str):
     p = edi_path / which

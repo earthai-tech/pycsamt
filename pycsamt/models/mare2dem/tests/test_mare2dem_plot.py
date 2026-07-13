@@ -26,8 +26,6 @@ Run:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 matplotlib = pytest.importorskip("matplotlib")
@@ -35,14 +33,19 @@ matplotlib.use("Agg")
 import matplotlib.figure
 import matplotlib.pyplot as plt
 
+from pycsamt.models.mare2dem.tests.conftest import (
+    CSEM_DIR,
+    HILL_DIR,
+    INVERSION_DIR,
+)
+
 # ---------------------------------------------------------------------------
 # Data paths
 # ---------------------------------------------------------------------------
 
-_DATA_ROOT = Path(__file__).parents[4] / "data" / "mare2dem"
-_MT_DIR = _DATA_ROOT / "demo_mt_inversion"
-_CSEM_DIR = _DATA_ROOT / "demo_csem"
-_HILL_DIR = _DATA_ROOT / "hill"
+_MT_DIR = INVERSION_DIR
+_CSEM_DIR = CSEM_DIR
+_HILL_DIR = HILL_DIR
 
 _SKIP_MT = pytest.mark.skipif(
     not _MT_DIR.exists(), reason=f"MARE2DEM MT data not found: {_MT_DIR}"

@@ -42,6 +42,7 @@ consistent:
 * When the layer count is fixed (``n_layers_min == n_layers_max``),
   ``forward.n_layers_min`` must equal ``inversion.n_layers``.
 """
+
 from __future__ import annotations
 
 import ast
@@ -73,6 +74,7 @@ __all__ = ["RunConfig"]
 
 # ── Python ──────────────────────────────────────────────────────────────────
 
+
 def _write_run_py(
     path: Path,
     fwd_vals: dict[str, Any],
@@ -85,9 +87,13 @@ def _write_run_py(
     by_f = _schema_map(_FORWARD_CONFIG_SCHEMA)
     by_i = _schema_map(_INVERSION_CONFIG_SCHEMA)
 
-    def _block(var: str, values: dict[str, Any], by_name, section_title: str) -> list[str]:
-        lines: list[str] = [f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
-                            f"{var} = {{"]
+    def _block(
+        var: str, values: dict[str, Any], by_name, section_title: str
+    ) -> list[str]:
+        lines: list[str] = [
+            f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
+            f"{var} = {{",
+        ]
         for group, names in _groups(values, list(by_name.values())):
             lines.append(f"    # ---- {group} ----")
             for nm in names:
@@ -121,7 +127,15 @@ def _write_run_py(
     fwd_block = _block("FORWARD", fwd_vals, by_f, "Forward modelling")
     inv_block = _block("INVERSION", inv_vals, by_i, "Inversion")
 
-    lines = header + fwd_block + ["", "", ] + inv_block
+    lines = (
+        header
+        + fwd_block
+        + [
+            "",
+            "",
+        ]
+        + inv_block
+    )
     path.write_text("\n".join(lines) + "\n")
 
 
@@ -132,7 +146,10 @@ def _read_run_py(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id in ("FORWARD", "INVERSION"):
+                if isinstance(target, ast.Name) and target.id in (
+                    "FORWARD",
+                    "INVERSION",
+                ):
                     data = ast.literal_eval(node.value)
                     if isinstance(data, dict):
                         results[target.id] = data
@@ -145,6 +162,7 @@ def _read_run_py(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 # ── JSON ─────────────────────────────────────────────────────────────────────
+
 
 def _write_run_json(
     path: Path,
@@ -162,7 +180,9 @@ def _write_run_json(
         return {
             nm: {
                 "group": by_name[nm].group if nm in by_name else "General",
-                "description": by_name[nm].description if nm in by_name else "",
+                "description": by_name[nm].description
+                if nm in by_name
+                else "",
             }
             for nm in vals
         }
@@ -201,6 +221,7 @@ def _read_run_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 # ── YAML ─────────────────────────────────────────────────────────────────────
 
+
 def _write_run_yaml(
     path: Path,
     fwd_vals: dict[str, Any],
@@ -213,9 +234,13 @@ def _write_run_yaml(
     by_f = _schema_map(_FORWARD_CONFIG_SCHEMA)
     by_i = _schema_map(_INVERSION_CONFIG_SCHEMA)
 
-    def _section(section_key: str, vals, by_name, section_title: str) -> list[str]:
-        lines = [f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
-                 f"{section_key}:"]
+    def _section(
+        section_key: str, vals, by_name, section_title: str
+    ) -> list[str]:
+        lines = [
+            f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
+            f"{section_key}:",
+        ]
         for group, names in _groups(vals, list(by_name.values())):
             lines.append(f"  # ---- {group} ----")
             for nm in names:
@@ -254,7 +279,9 @@ def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     try:
         import yaml
     except ImportError as exc:
-        raise ImportError("Reading YAML run config files requires PyYAML.") from exc
+        raise ImportError(
+            "Reading YAML run config files requires PyYAML."
+        ) from exc
     data = yaml.safe_load(path.read_text())
     if not isinstance(data, dict):
         raise ValueError(f"YAML run config {path} must contain a mapping.")
@@ -267,6 +294,7 @@ def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 # ── Dispatcher ───────────────────────────────────────────────────────────────
+
 
 def _format_from_path(path: Path, fmt: str | None) -> str:
     if fmt is not None:
@@ -317,10 +345,14 @@ def _read_run(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 # ── Helper — filter unknown keys before constructing sub-configs ──────────────
 
+
 def _safe_fields(cls, raw: dict[str, Any], strict: bool) -> dict[str, Any]:
     from dataclasses import fields as dc_fields
+
     allowed = {f.name for f in dc_fields(cls)}
-    unknown = sorted(set(raw) - allowed - {k for k in raw if k.startswith("_")})
+    unknown = sorted(
+        set(raw) - allowed - {k for k in raw if k.startswith("_")}
+    )
     if unknown and strict:
         raise ValueError(
             f"Unknown {cls.__name__} parameter(s): {', '.join(unknown)}"
@@ -331,6 +363,7 @@ def _safe_fields(cls, raw: dict[str, Any], strict: bool) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 # RunConfig
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class RunConfig:
@@ -383,10 +416,10 @@ class RunConfig:
         >>> run = RunConfig.from_file(path)
     """
 
-    forward:     ForwardConfig    = field(default_factory=ForwardConfig)
-    inversion:   InversionConfig  = field(default_factory=InversionConfig)
-    name:        str              = ""
-    description: str              = ""
+    forward: ForwardConfig = field(default_factory=ForwardConfig)
+    inversion: InversionConfig = field(default_factory=InversionConfig)
+    name: str = ""
+    description: str = ""
 
     # ─────────────────────────────────────────────────────────────────────────
     # Validation
@@ -542,7 +575,9 @@ class RunConfig:
         >>> path.suffix
         '.yml'
         """
-        return cls(name=name, description=description).to_template(path, fmt=fmt)
+        return cls(name=name, description=description).to_template(
+            path, fmt=fmt
+        )
 
     @classmethod
     def from_file(
@@ -579,7 +614,9 @@ class RunConfig:
         p = Path(path)
         raw_fwd, raw_inv = _read_run(p)
         fwd = ForwardConfig(**_safe_fields(ForwardConfig, raw_fwd, strict))
-        inv = InversionConfig(**_safe_fields(InversionConfig, raw_inv, strict))
+        inv = InversionConfig(
+            **_safe_fields(InversionConfig, raw_inv, strict)
+        )
         return cls(forward=fwd, inversion=inv)
 
     #: Alias — matches the convention used by ModEmConfig, OccamConfig, ForwardConfig.

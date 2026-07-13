@@ -140,26 +140,22 @@ _OCCAM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "lagrange_start",
-        "Initial Lagrange multiplier written to the startup "
-        "file.",
+        "Initial Lagrange multiplier written to the startup file.",
         "Startup Options",
     ),
     ConfigParameter(
         "data_file",
-        "Data filename written inside the Occam2D run "
-        "directory.",
+        "Data filename written inside the Occam2D run directory.",
         "File Options",
     ),
     ConfigParameter(
         "mesh_file",
-        "Mesh filename written inside the Occam2D run "
-        "directory.",
+        "Mesh filename written inside the Occam2D run directory.",
         "File Options",
     ),
     ConfigParameter(
         "model_file",
-        "Model-definition filename written inside the run "
-        "directory.",
+        "Model-definition filename written inside the run directory.",
         "File Options",
     ),
     ConfigParameter(

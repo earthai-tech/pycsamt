@@ -23,6 +23,7 @@ Relative-error polar histogram (analogous to polar violin, Fig 2b):
     ε_j = (ρ_a,pred,j − ρ_a,obs,j) / ρ_a,obs,j × 100   [%]
     Rose diagram of residuals binned by frequency decade.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -49,12 +50,13 @@ __all__ = [
     "plot_width_drift",
 ]
 
-COVERAGE_THRESH: float = 0.9            # default nominal probability level
+COVERAGE_THRESH: float = 0.9  # default nominal probability level
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _unwrap(ed: Any) -> Any:
     edi = getattr(ed, "edi", None)
@@ -126,6 +128,7 @@ def _rho_dict_from_sites(sites_obj: Any, comp: str) -> dict[str, np.ndarray]:
 # Pure-math helper — no sites dependency
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def coverage_score(
     y_true: np.ndarray | float,
     y_lo: np.ndarray | float,
@@ -146,15 +149,16 @@ def coverage_score(
     cov : float
         Fraction of observations that fall inside [y_lo, y_hi] ∈ [0, 1].
     """
-    y  = np.asarray(y_true, dtype=float).ravel()
-    lo = np.asarray(y_lo,   dtype=float).ravel()
-    hi = np.asarray(y_hi,   dtype=float).ravel()
+    y = np.asarray(y_true, dtype=float).ravel()
+    lo = np.asarray(y_lo, dtype=float).ravel()
+    hi = np.asarray(y_hi, dtype=float).ravel()
     return float(np.mean((y >= lo) & (y <= hi)))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Sites-based: per-frequency DataFrames
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def rho_coverage(
     sites: Any,
@@ -196,11 +200,24 @@ def rho_coverage(
         covered, width_pct.
         ``covered`` is bool; ``width_pct`` = 100 × (q_hi−q_lo) / ρ_obs.
     """
-    _COLS = ["station", "freq_hz", "period_s", "rho_obs",
-             "q_lo", "q_hi", "covered", "width_pct"]
+    _COLS = [
+        "station",
+        "freq_hz",
+        "period_s",
+        "rho_obs",
+        "q_lo",
+        "q_hi",
+        "covered",
+        "width_pct",
+    ]
 
-    sites = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                         strict=strict, verbose=verbose)
+    sites = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     rows: list[dict] = []
 
     for i, ed in enumerate(_iter_items(sites)):
@@ -217,21 +234,23 @@ def rho_coverage(
             continue
 
         for j in range(freqs.size):
-            f   = float(freqs[j])
+            f = float(freqs[j])
             r_o = float(rho_obs[j])
             l_j = float(lo[j])
             h_j = float(hi[j])
-            w   = 100.0 * (h_j - l_j) / r_o if r_o > 0 else np.nan
-            rows.append({
-                "station":   station,
-                "freq_hz":   f,
-                "period_s":  1.0 / f if f > 0 else np.nan,
-                "rho_obs":   r_o,
-                "q_lo":      l_j,
-                "q_hi":      h_j,
-                "covered":   bool(l_j <= r_o <= h_j),
-                "width_pct": w,
-            })
+            w = 100.0 * (h_j - l_j) / r_o if r_o > 0 else np.nan
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": f,
+                    "period_s": 1.0 / f if f > 0 else np.nan,
+                    "rho_obs": r_o,
+                    "q_lo": l_j,
+                    "q_hi": h_j,
+                    "covered": bool(l_j <= r_o <= h_j),
+                    "width_pct": w,
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_COLS)
@@ -275,14 +294,28 @@ def rho_error_stats(
         Columns: station, freq_hz, period_s, rho_obs, rho_pred,
         rel_err_pct, abs_err_pct.
     """
-    _COLS = ["station", "freq_hz", "period_s", "rho_obs",
-             "rho_pred", "rel_err_pct", "abs_err_pct"]
+    _COLS = [
+        "station",
+        "freq_hz",
+        "period_s",
+        "rho_obs",
+        "rho_pred",
+        "rel_err_pct",
+        "abs_err_pct",
+    ]
 
-    sites = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                         strict=strict, verbose=verbose)
+    sites = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     if isinstance(model_rho, dict):
-        pred_dict = {k: np.asarray(v, dtype=float) for k, v in model_rho.items()}
+        pred_dict = {
+            k: np.asarray(v, dtype=float) for k, v in model_rho.items()
+        }
     else:
         pred_dict = _rho_dict_from_sites(model_rho, rho_comp)
 
@@ -294,13 +327,13 @@ def rho_error_stats(
         if z_block is None or freqs is None or freqs.size == 0:
             continue
 
-        rho_obs  = _rho_a_from_z(z_block, freqs, rho_comp)
+        rho_obs = _rho_a_from_z(z_block, freqs, rho_comp)
         rho_pred = pred_dict.get(station)
         if rho_pred is None:
             continue
 
         for j in range(freqs.size):
-            f   = float(freqs[j])
+            f = float(freqs[j])
             r_o = float(rho_obs[j])
             r_p = float(rho_pred[j]) if j < len(rho_pred) else np.nan
             if r_o > 0 and np.isfinite(r_p):
@@ -308,15 +341,17 @@ def rho_error_stats(
                 abs_err = abs(rel_err)
             else:
                 rel_err = abs_err = np.nan
-            rows.append({
-                "station":     station,
-                "freq_hz":     f,
-                "period_s":    1.0 / f if f > 0 else np.nan,
-                "rho_obs":     r_o,
-                "rho_pred":    r_p,
-                "rel_err_pct": rel_err,
-                "abs_err_pct": abs_err,
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": f,
+                    "period_s": 1.0 / f if f > 0 else np.nan,
+                    "rho_obs": r_o,
+                    "rho_pred": r_p,
+                    "rel_err_pct": rel_err,
+                    "abs_err_pct": abs_err,
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_COLS)
@@ -350,33 +385,51 @@ def coverage_table(
         Columns: station, n_freq, empirical_cov, mean_width_pct,
         calibrated_flag.
     """
-    _COLS = ["station", "n_freq", "empirical_cov",
-             "mean_width_pct", "calibrated_flag"]
+    _COLS = [
+        "station",
+        "n_freq",
+        "empirical_cov",
+        "mean_width_pct",
+        "calibrated_flag",
+    ]
 
-    detail = rho_coverage(sites, q_lo, q_hi, rho_comp=rho_comp,
-                          recursive=recursive, on_dup=on_dup,
-                          strict=strict, verbose=verbose)
+    detail = rho_coverage(
+        sites,
+        q_lo,
+        q_hi,
+        rho_comp=rho_comp,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     if detail.empty:
         return pd.DataFrame(columns=_COLS)
 
     rows: list[dict] = []
     for station, grp in detail.groupby("station", sort=False):
         emp = float(grp["covered"].mean())
-        w   = float(grp["width_pct"].dropna().mean()) \
-              if grp["width_pct"].notna().any() else np.nan
-        rows.append({
-            "station":         station,
-            "n_freq":          len(grp),
-            "empirical_cov":   emp,
-            "mean_width_pct":  w,
-            "calibrated_flag": bool(emp >= nominal),
-        })
+        w = (
+            float(grp["width_pct"].dropna().mean())
+            if grp["width_pct"].notna().any()
+            else np.nan
+        )
+        rows.append(
+            {
+                "station": station,
+                "n_freq": len(grp),
+                "empirical_cov": emp,
+                "mean_width_pct": w,
+                "calibrated_flag": bool(emp >= nominal),
+            }
+        )
     return pd.DataFrame(rows, columns=_COLS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Plots
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_polar_coverage(
     sites: Any,
@@ -417,12 +470,21 @@ def plot_polar_coverage(
     """
     import matplotlib.pyplot as plt
 
-    df = rho_coverage(sites, q_lo, q_hi, rho_comp=rho_comp,
-                      recursive=recursive, on_dup=on_dup,
-                      strict=strict, verbose=verbose)
+    df = rho_coverage(
+        sites,
+        q_lo,
+        q_hi,
+        rho_comp=rho_comp,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     if ax is None:
-        _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+        _, ax = plt.subplots(
+            subplot_kw={"projection": "polar"}, figsize=figsize
+        )
     hide_polar_radius_labels(ax)
 
     if df.empty:
@@ -441,20 +503,36 @@ def plot_polar_coverage(
         return np.log10(np.maximum(v, 1e-30)) if log_radius else v
 
     r_obs = _r(df["rho_obs"].values)
-    r_lo  = _r(df["q_lo"].values)
-    r_hi  = _r(df["q_hi"].values)
+    r_lo = _r(df["q_lo"].values)
+    r_hi = _r(df["q_hi"].values)
     covered = df["covered"].values
 
-    ax.scatter(theta[covered],  r_obs[covered],  c="green", s=18, alpha=0.8,
-               zorder=3, label="covered")
-    ax.scatter(theta[~covered], r_obs[~covered], c="red",   s=18, alpha=0.8,
-               zorder=3, label="not covered")
+    ax.scatter(
+        theta[covered],
+        r_obs[covered],
+        c="green",
+        s=18,
+        alpha=0.8,
+        zorder=3,
+        label="covered",
+    )
+    ax.scatter(
+        theta[~covered],
+        r_obs[~covered],
+        c="red",
+        s=18,
+        alpha=0.8,
+        zorder=3,
+        label="not covered",
+    )
 
     for t, lo, hi in zip(theta, r_lo, r_hi):
         ax.plot([t, t], [lo, hi], color="gray", lw=0.5, alpha=0.35, zorder=1)
 
     if n_freq_ticks > 0:
-        tick_theta = np.linspace(0.0, 2.0 * np.pi, n_freq_ticks, endpoint=False)
+        tick_theta = np.linspace(
+            0.0, 2.0 * np.pi, n_freq_ticks, endpoint=False
+        )
         tick_freq = 10.0 ** (
             log_f_min + (tick_theta / (2.0 * np.pi)) * (log_f_max - log_f_min)
         )
@@ -495,12 +573,20 @@ def plot_polar_errors(
     """
     import matplotlib.pyplot as plt
 
-    df = rho_error_stats(sites, model_rho, rho_comp=rho_comp,
-                         recursive=recursive, on_dup=on_dup,
-                         strict=strict, verbose=verbose)
+    df = rho_error_stats(
+        sites,
+        model_rho,
+        rho_comp=rho_comp,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     if ax is None:
-        _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+        _, ax = plt.subplots(
+            subplot_kw={"projection": "polar"}, figsize=figsize
+        )
     hide_polar_radius_labels(ax)
 
     if df.empty or df["rel_err_pct"].isna().all():
@@ -513,22 +599,24 @@ def plot_polar_errors(
         f_max = f_min + 1.0
 
     log_f = np.log10(f_vals)
-    bins  = np.linspace(np.log10(f_min), np.log10(f_max), n_bins + 1)
+    bins = np.linspace(np.log10(f_min), np.log10(f_max), n_bins + 1)
     theta = np.deg2rad(np.linspace(0, 360, n_bins, endpoint=False))
-    bw    = 2.0 * np.pi / n_bins
+    bw = 2.0 * np.pi / n_bins
 
-    errs     = df["rel_err_pct"].values
-    heights  = np.zeros(n_bins)
-    signs    = np.zeros(n_bins)
+    errs = df["rel_err_pct"].values
+    heights = np.zeros(n_bins)
+    signs = np.zeros(n_bins)
 
     for b in range(n_bins):
         mask = (log_f >= bins[b]) & (log_f < bins[b + 1])
         if mask.any():
-            signs[b]   = float(np.sign(np.nanmean(errs[mask])))
+            signs[b] = float(np.sign(np.nanmean(errs[mask])))
             heights[b] = float(np.nanmean(np.abs(errs[mask])))
 
     colors = ["#e74c3c" if s >= 0 else "#2980b9" for s in signs]
-    ax.bar(theta, heights, width=bw * 0.85, color=colors, alpha=0.72, bottom=0)
+    ax.bar(
+        theta, heights, width=bw * 0.85, color=colors, alpha=0.72, bottom=0
+    )
     hide_polar_radius_labels(ax)
     ax.set_title(f"{title}\nred=over-pred, blue=under-pred", pad=15)
     return ax
@@ -570,14 +658,22 @@ def plot_width_drift(
     """
     import matplotlib.pyplot as plt
 
-    df = rho_coverage(sites, q_lo, q_hi, rho_comp=rho_comp,
-                      recursive=recursive, on_dup=on_dup,
-                      strict=strict, verbose=verbose)
+    df = rho_coverage(
+        sites,
+        q_lo,
+        q_hi,
+        rho_comp=rho_comp,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     if ax is None:
         if polar:
-            _, ax = plt.subplots(subplot_kw={"projection": "polar"},
-                                 figsize=figsize)
+            _, ax = plt.subplots(
+                subplot_kw={"projection": "polar"}, figsize=figsize
+            )
         else:
             _, ax = plt.subplots(figsize=figsize)
     if polar:
@@ -587,15 +683,15 @@ def plot_width_drift(
         ax.set_title(title + " (no data)")
         return ax
 
-    log_f  = np.log10(df["freq_hz"].values)
+    log_f = np.log10(df["freq_hz"].values)
     f_min, f_max = log_f.min(), log_f.max()
     if f_max <= f_min:
         f_max = f_min + 1.0
 
-    bins      = np.linspace(f_min, f_max, n_bands + 1)
-    centers   = 10.0 ** (0.5 * (bins[:-1] + bins[1:]))
+    bins = np.linspace(f_min, f_max, n_bands + 1)
+    centers = 10.0 ** (0.5 * (bins[:-1] + bins[1:]))
     widths_pct = df["width_pct"].values
-    mean_w    = np.zeros(n_bands)
+    mean_w = np.zeros(n_bands)
 
     for b in range(n_bands):
         mask = (log_f >= bins[b]) & (log_f < bins[b + 1])
@@ -606,7 +702,7 @@ def plot_width_drift(
 
     if polar:
         theta = np.linspace(0, 2.0 * np.pi, n_bands, endpoint=False)
-        bw    = 2.0 * np.pi / n_bands
+        bw = 2.0 * np.pi / n_bands
         ax.bar(theta, mean_w, width=bw * 0.85, alpha=0.78)
         ax.set_xticks(theta)
         ax.set_xticklabels(labels, fontsize=7)

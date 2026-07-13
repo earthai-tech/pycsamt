@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
-LOG_FILE  = DATA_DIR / "LogFile.logfile"
+LOG_FILE = DATA_DIR / "LogFile.logfile"
 
 pytestmark = pytest.mark.skipif(
     not LOG_FILE.exists(), reason="sample log file not available"
@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def log():
     from pycsamt.models.occam2d.log import OccamLog
+
     return OccamLog.read(LOG_FILE)
 
 
@@ -29,10 +30,10 @@ def test_n_iter(log):
 
 def test_all_arrays_same_length(log):
     n = log.n_iter
-    assert len(log.rms)       == n
+    assert len(log.rms) == n
     assert len(log.roughness) == n
-    assert len(log.stepsize)  == n
-    assert len(log.lagrange)  == n
+    assert len(log.stepsize) == n
+    assert len(log.lagrange) == n
 
 
 # ------------------------------------------------------------------
@@ -126,6 +127,7 @@ def test_summary_string(log):
 # ------------------------------------------------------------------
 def test_missing_file_raises():
     from pycsamt.models.occam2d.log import OccamLog
+
     with pytest.raises(FileNotFoundError):
         OccamLog.read("/nonexistent/path/log.logfile")
 
@@ -133,6 +135,7 @@ def test_missing_file_raises():
 def test_empty_log(tmp_path):
     """An empty file should parse to zero iterations without crashing."""
     from pycsamt.models.occam2d.log import OccamLog
+
     f = tmp_path / "empty.logfile"
     f.write_text("")
     log = OccamLog.read(f)

@@ -48,13 +48,11 @@ if str(ROOT) not in sys.path:
 from pycsamt.emtools import ensure_sites
 from pycsamt.site import (
     SitesReport,
-    by_names,
     keep_finite_z,
     phase_slope,
     res_at_freq,
     strike_estimate,
 )
-
 
 willy_dir = ROOT / "data" / "AMT" / "WILLY_DATA"
 target_frequency_hz = 100.0
@@ -84,22 +82,34 @@ strike = strike_estimate(all_sites, method="phase_diff", api=False)
 
 table = report.merge(rho100, on="station", how="left")
 table = table.merge(slopes, on="station", how="left")
-table = table.merge(strike[["station", "theta_deg"]], on="station", how="left")
+table = table.merge(
+    strike[["station", "theta_deg"]], on="station", how="left"
+)
 
 table["line"] = table["station"].str.split("-", n=1).str[0]
 table["station_number"] = (
-    table["station"]
-    .str.extract(r"-(\d+)", expand=False)
-    .astype(float)
+    table["station"].str.extract(r"-(\d+)", expand=False).astype(float)
 )
 table["rho_gmean"] = np.sqrt(table["res_xy"] * table["res_yx"])
 table["rho_anisotropy"] = np.log10(table["res_xy"] / table["res_yx"]).abs()
 table["phase_slope_abs"] = table[["slope_xy", "slope_yx"]].abs().mean(axis=1)
 
-print(table[[
-    "station", "line", "nfreq", "f_used", "rho_gmean",
-    "rho_anisotropy", "phase_slope_abs", "theta_deg",
-]].head(10).to_string(index=False))
+print(
+    table[
+        [
+            "station",
+            "line",
+            "nfreq",
+            "f_used",
+            "rho_gmean",
+            "rho_anisotropy",
+            "phase_slope_abs",
+            "theta_deg",
+        ]
+    ]
+    .head(10)
+    .to_string(index=False)
+)
 
 # %%
 # ``rho_gmean`` is the geometric mean of ``rho_xy`` and ``rho_yx`` at the
@@ -149,7 +159,9 @@ scatter = ax.scatter(
 )
 for _, row in line_summary.iterrows():
     sub = table[table["line"] == row["line"]]
-    ax.text(sub["lon"].mean(), sub["lat"].mean(), f"L{row['line']}", weight="bold")
+    ax.text(
+        sub["lon"].mean(), sub["lat"].mean(), f"L{row['line']}", weight="bold"
+    )
 
 cb = fig.colorbar(scatter, ax=ax)
 cb.set_label(f"log10 apparent resistivity at {target_frequency_hz:g} Hz")
@@ -181,7 +193,9 @@ for line, sub in table.sort_values("station_number").groupby("line"):
     )
 
 ax.set_xlabel("Station number within line")
-ax.set_ylabel(f"Geometric mean apparent resistivity at {target_frequency_hz:g} Hz")
+ax.set_ylabel(
+    f"Geometric mean apparent resistivity at {target_frequency_hz:g} Hz"
+)
 ax.set_title("Target-frequency line profiles")
 ax.grid(True, which="both", alpha=0.25)
 ax.legend(ncol=5, fontsize=8)
@@ -248,16 +262,25 @@ fig.tight_layout()
 # choose the line with the largest 90th-percentile target-frequency
 # resistivity, then print its highest-contrast stations.
 
-followup_line = line_summary.sort_values("p90_rho", ascending=False).iloc[0]["line"]
+followup_line = line_summary.sort_values("p90_rho", ascending=False).iloc[0][
+    "line"
+]
 followup = table[table["line"] == followup_line].copy()
 followup = followup.sort_values("rho_gmean", ascending=False)
 
 print(f"Suggested follow-up line by p90 rho: L{followup_line}")
 print(
-    followup[[
-        "station", "rho_gmean", "rho_anisotropy",
-        "phase_slope_abs", "theta_deg",
-    ]].head(8).to_string(index=False)
+    followup[
+        [
+            "station",
+            "rho_gmean",
+            "rho_anisotropy",
+            "phase_slope_abs",
+            "theta_deg",
+        ]
+    ]
+    .head(8)
+    .to_string(index=False)
 )
 
 # %%

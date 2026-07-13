@@ -109,12 +109,12 @@ class EnsembleAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="inversion",
         )
-        self.n_estimators    = n_estimators
-        self.arch            = arch
-        self.n_layers        = n_layers
+        self.n_estimators = n_estimators
+        self.arch = arch
+        self.n_layers = n_layers
         self.n_train_samples = n_train_samples
-        self.epochs          = epochs
-        self.calibrate       = calibrate
+        self.epochs = epochs
+        self.calibrate = calibrate
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -129,6 +129,7 @@ class EnsembleAgent(BaseAgent):
             from ..ai.inversion.inv1d import EMInverter1D
             from ..backends import get_backend_instance
             from ..forward.batch import generate_dataset
+
             if get_backend_instance() is None:
                 raise ImportError("No DL backend (torch / tensorflow).")
         except ImportError as exc:
@@ -147,52 +148,69 @@ class EnsembleAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         output_dir = input_data.get("output_dir")
         import os
+
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
         freqs = np.logspace(-4, 3, 40)
 
         # ── generate synthetic dataset ────────────────────────────────────────
-        self._log.info("Generating %d synthetic samples…", self.n_train_samples)
+        self._log.info(
+            "Generating %d synthetic samples…", self.n_train_samples
+        )
         try:
             dataset = generate_dataset(
-                solver="mt1d", n_samples=self.n_train_samples,
-                freqs=freqs, n_layers=self.n_layers,
-                noise_level=0.03, seed=42, n_jobs=1, verbose=False,
+                solver="mt1d",
+                n_samples=self.n_train_samples,
+                freqs=freqs,
+                n_layers=self.n_layers,
+                noise_level=0.03,
+                seed=42,
+                n_jobs=1,
+                verbose=False,
             )
             X_all, y_all = dataset.X, dataset.y
 
             # split: 80 % train, 20 % calibration
             n_cal = max(50, int(len(X_all) * 0.2))
             X_train, y_train = X_all[n_cal:], y_all[n_cal:]
-            X_cal,   y_cal   = X_all[:n_cal], y_all[:n_cal]
+            X_cal, y_cal = X_all[:n_cal], y_all[:n_cal]
         except Exception as exc:
             return AgentResult.failed(
-                f"Dataset generation failed: {exc}", elapsed=time.time() - t0,
+                f"Dataset generation failed: {exc}",
+                elapsed=time.time() - t0,
             )
 
         # ── build base estimator + ensemble ───────────────────────────────────
-        self._log.info("Training ensemble of %d × %s models…",
-                       self.n_estimators, self.arch)
+        self._log.info(
+            "Training ensemble of %d × %s models…",
+            self.n_estimators,
+            self.arch,
+        )
         try:
             base = EMInverter1D(
-                arch=self.arch, n_layers=self.n_layers,
-                solver="mt1d", include_phase=True,
+                arch=self.arch,
+                n_layers=self.n_layers,
+                solver="mt1d",
+                include_phase=True,
             )
             ens = EnsembleInverter(
                 base_estimator=base,
                 n_estimators=self.n_estimators,
             )
             ens.fit(
-                X_train, y_train,
+                X_train,
+                y_train,
                 epochs=self.epochs,
                 batch_size=min(256, len(X_train) // 4),
                 patience=max(5, self.epochs // 5),
@@ -200,7 +218,8 @@ class EnsembleAgent(BaseAgent):
             )
         except Exception as exc:
             return AgentResult.failed(
-                f"Ensemble training failed: {exc}", elapsed=time.time() - t0,
+                f"Ensemble training failed: {exc}",
+                elapsed=time.time() - t0,
             )
 
         # ── calibrate ─────────────────────────────────────────────────────────
@@ -220,10 +239,10 @@ class EnsembleAgent(BaseAgent):
 
         # ── predict on observed stations ──────────────────────────────────────
         pred_mean: dict[str, np.ndarray] = {}
-        pred_std:  dict[str, np.ndarray] = {}
-        pred_lo:   dict[str, np.ndarray] = {}
-        pred_hi:   dict[str, np.ndarray] = {}
-        rms_list:  list[float] = []
+        pred_std: dict[str, np.ndarray] = {}
+        pred_lo: dict[str, np.ndarray] = {}
+        pred_hi: dict[str, np.ndarray] = {}
+        rms_list: list[float] = []
 
         for i, ed in enumerate(_iter_items(sites)):
             nm = _name(ed, i)
@@ -237,9 +256,11 @@ class EnsembleAgent(BaseAgent):
             try:
                 X_in = X_obs[None, :]
                 mu, sigma = ens.predict_with_uncertainty(X_in)
-                lo_hi = ens.predict_intervals(X_in)   # (lo, hi, mean) or (mean, lo, hi)
+                lo_hi = ens.predict_intervals(
+                    X_in
+                )  # (lo, hi, mean) or (mean, lo, hi)
                 pred_mean[nm] = mu[0]
-                pred_std[nm]  = sigma[0]
+                pred_std[nm] = sigma[0]
                 # unpack intervals — order depends on implementation
                 if len(lo_hi) == 3:
                     lo_arr, hi_arr, _ = lo_hi
@@ -269,14 +290,21 @@ class EnsembleAgent(BaseAgent):
         if pred_mean and pred_std:
             try:
                 fig_unc = _plot_uncertainty_section(
-                    pred_mean, pred_std, pred_lo, pred_hi,
-                    self.n_layers, freqs,
+                    pred_mean,
+                    pred_std,
+                    pred_lo,
+                    pred_hi,
+                    self.n_layers,
+                    freqs,
                 )
                 if fig_unc is not None:
                     figures["uncertainty_section"] = fig_unc
-                    p = self._save_figure(fig_unc, output_dir,
-                                          "ensemble_uncertainty_section",
-                                          warnings_list=warnings)
+                    p = self._save_figure(
+                        fig_unc,
+                        output_dir,
+                        "ensemble_uncertainty_section",
+                        warnings_list=warnings,
+                    )
                     if p:
                         fig_paths["uncertainty_section"] = p
             except Exception as exc:
@@ -295,17 +323,27 @@ class EnsembleAgent(BaseAgent):
                         break
                 if X_first is not None:
                     fig_prof = ens.plot_uncertainty_profile(
-                        X_first[None, :], sample_idx=0,
+                        X_first[None, :],
+                        sample_idx=0,
                     )
                     if fig_prof is not None:
-                        f = fig_prof if hasattr(fig_prof,"savefig") else (
-                            fig_prof.get_figure() if hasattr(fig_prof,"get_figure")
-                            else None)
+                        f = (
+                            fig_prof
+                            if hasattr(fig_prof, "savefig")
+                            else (
+                                fig_prof.get_figure()
+                                if hasattr(fig_prof, "get_figure")
+                                else None
+                            )
+                        )
                         if f is not None:
                             figures["uncertainty_profile"] = f
-                            p = self._save_figure(f, output_dir,
-                                                  "ensemble_uncertainty_profile",
-                                                  warnings_list=warnings)
+                            p = self._save_figure(
+                                f,
+                                output_dir,
+                                "ensemble_uncertainty_profile",
+                                warnings_list=warnings,
+                            )
                             if p:
                                 fig_paths["uncertainty_profile"] = p
             except Exception as exc:
@@ -314,8 +352,11 @@ class EnsembleAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and n_pred:
-            mean_std = float(np.nanmean([v.mean() for v in pred_std.values()])) \
-                       if pred_std else np.nan
+            mean_std = (
+                float(np.nanmean([v.mean() for v in pred_std.values()]))
+                if pred_std
+                else np.nan
+            )
             prompt = (
                 f"Ensemble inversion summary:\n"
                 f"  N estimators: {self.n_estimators}, arch: {self.arch}\n"
@@ -340,16 +381,16 @@ class EnsembleAgent(BaseAgent):
                 f"90% coverage={cov_str}. {len(figures)} figures."
             ),
             data={
-                "ensemble":    ens,
-                "pred_mean":   pred_mean,
-                "pred_std":    pred_std,
-                "pred_lo":     pred_lo,
-                "pred_hi":     pred_hi,
-                "coverage":    coverage,
-                "rms_global":  rms_global,
-                "freqs":       freqs,
-                "figures":     figures,
-                "figure_paths":fig_paths,
+                "ensemble": ens,
+                "pred_mean": pred_mean,
+                "pred_std": pred_std,
+                "pred_lo": pred_lo,
+                "pred_hi": pred_hi,
+                "coverage": coverage,
+                "rms_global": rms_global,
+                "freqs": freqs,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -360,29 +401,34 @@ class EnsembleAgent(BaseAgent):
 
 # ── private helpers ───────────────────────────────────────────────────────────
 
-def _forward_rms(ed: Any, log_rho: np.ndarray, freqs: np.ndarray,
-                 n_layers: int) -> float | None:
+
+def _forward_rms(
+    ed: Any, log_rho: np.ndarray, freqs: np.ndarray, n_layers: int
+) -> float | None:
     """Re-run forward on predicted model and compute log-ρa RMS."""
     try:
         from ..emtools._core import _get_z_block
         from ..forward import LayeredModel, MT1DForward
+
         _, z, fr = _get_z_block(ed)
         if z is None:
             return None
-        rhos = 10 ** log_rho
-        ths  = _default_thicknesses(n_layers, freqs)
-        lm   = LayeredModel(
+        rhos = 10**log_rho
+        ths = _default_thicknesses(n_layers, freqs)
+        lm = LayeredModel(
             resistivity=rhos,
-            thickness=ths[:n_layers - 1],
+            thickness=ths[: n_layers - 1],
         )
-        fwd  = MT1DForward(freqs=freqs)
+        fwd = MT1DForward(freqs=freqs)
         resp = fwd.run(lm)
         rho_fwd = np.asarray(resp.rho_a)
-        rho_xy  = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
+        rho_xy = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
         rho_raw = getattr(ed, "rho", None)
         rho_obs = (
-            rho_raw[:, 0, 1] if rho_raw is not None
-            else (0.2 / np.where(fr==0,np.nan,fr)) * np.abs(z[:,0,1])**2
+            rho_raw[:, 0, 1]
+            if rho_raw is not None
+            else (0.2 / np.where(fr == 0, np.nan, fr))
+            * np.abs(z[:, 0, 1]) ** 2
         )
         per = 1.0 / np.where(fr == 0, np.nan, fr)
         per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
@@ -395,18 +441,18 @@ def _forward_rms(ed: Any, log_rho: np.ndarray, freqs: np.ndarray,
             np.log10(np.clip(rho_xy[np.isfinite(per_fwd)], 1e-6, None)),
         )
         obs_log = np.log10(np.clip(rho_obs[mask], 1e-6, None))
-        return float(np.sqrt(np.mean((obs_log - interp)**2)))
+        return float(np.sqrt(np.mean((obs_log - interp) ** 2)))
     except Exception:
         return None
 
 
 def _plot_uncertainty_section(
     pred_mean: dict,
-    pred_std:  dict,
-    pred_lo:   dict,
-    pred_hi:   dict,
-    n_layers:  int,
-    freqs:     np.ndarray,
+    pred_std: dict,
+    pred_lo: dict,
+    pred_hi: dict,
+    n_layers: int,
+    freqs: np.ndarray,
 ) -> Any:
     """Plot mean ± 2σ uncertainty section for all stations."""
     import matplotlib.pyplot as plt
@@ -415,19 +461,19 @@ def _plot_uncertainty_section(
     from ..api.station import PYCSAMT_STATION_RENDERING
 
     station_names = list(pred_mean.keys())
-    n_st  = len(station_names)
+    n_st = len(station_names)
     if n_st == 0:
         return None
 
-    mat_mu  = np.full((n_layers, n_st), np.nan)
+    mat_mu = np.full((n_layers, n_st), np.nan)
     mat_std = np.full((n_layers, n_st), np.nan)
     for si, nm in enumerate(station_names):
         n = min(len(pred_mean[nm]), n_layers)
-        mat_mu[:n, si]  = pred_mean[nm][:n]
+        mat_mu[:n, si] = pred_mean[nm][:n]
         if nm in pred_std:
             mat_std[:n, si] = pred_std[nm][:n]
 
-    ths    = _default_thicknesses(n_layers, freqs)
+    ths = _default_thicknesses(n_layers, freqs)
     depths = np.concatenate([[0], np.cumsum(ths)]) / 1000.0  # km
 
     section = PYCSAMT_SECTION.style_for("inversion")
@@ -436,34 +482,61 @@ def _plot_uncertainty_section(
     ext = (-0.5, n_st - 0.5, depths[-1], depths[0])
 
     vv = mat_mu[np.isfinite(mat_mu)]
-    vmin = float(np.percentile(vv, 5))  if vv.size else 0.0
+    vmin = float(np.percentile(vv, 5)) if vv.size else 0.0
     vmax = float(np.percentile(vv, 95)) if vv.size else 4.0
 
-    im0 = axes[0].imshow(mat_mu, aspect="auto", origin="upper",
-                          extent=ext, cmap="jet_r", vmin=vmin, vmax=vmax,
-                          interpolation="nearest")
-    axes[0].set_title("Ensemble mean  $\\log_{10}\\rho$", fontsize=9, fontweight="bold")
+    im0 = axes[0].imshow(
+        mat_mu,
+        aspect="auto",
+        origin="upper",
+        extent=ext,
+        cmap="jet_r",
+        vmin=vmin,
+        vmax=vmax,
+        interpolation="nearest",
+    )
+    axes[0].set_title(
+        "Ensemble mean  $\\log_{10}\\rho$", fontsize=9, fontweight="bold"
+    )
 
     sv = mat_std[np.isfinite(mat_std)]
     s_vmax = float(np.percentile(sv, 95)) if sv.size else 0.5
-    im1 = axes[1].imshow(mat_std, aspect="auto", origin="upper",
-                          extent=ext, cmap="Oranges", vmin=0.0, vmax=s_vmax,
-                          interpolation="nearest")
-    axes[1].set_title("Uncertainty  $\\sigma(\\log_{10}\\rho)$",
-                      fontsize=9, fontweight="bold")
+    im1 = axes[1].imshow(
+        mat_std,
+        aspect="auto",
+        origin="upper",
+        extent=ext,
+        cmap="Oranges",
+        vmin=0.0,
+        vmax=s_vmax,
+        interpolation="nearest",
+    )
+    axes[1].set_title(
+        "Uncertainty  $\\sigma(\\log_{10}\\rho)$",
+        fontsize=9,
+        fontweight="bold",
+    )
 
-    for ax, im, lbl in [(axes[0], im0, "$\\log_{10}\\rho$ (Ω·m)"),
-                         (axes[1], im1, "$\\sigma$ (Ω·m)")]:
+    for ax, im, lbl in [
+        (axes[0], im0, "$\\log_{10}\\rho$ (Ω·m)"),
+        (axes[1], im1, "$\\sigma$ (Ω·m)"),
+    ]:
         PYCSAMT_STATION_RENDERING.apply(
-            ax, np.arange(n_st, dtype=float), station_names,
-            preset="inversion", xlim=(-0.5, n_st - 0.5),
+            ax,
+            np.arange(n_st, dtype=float),
+            station_names,
+            preset="inversion",
+            xlim=(-0.5, n_st - 0.5),
         )
         ax.set_ylabel("Depth (km)", fontsize=9)
         ax.tick_params(axis="y", labelsize=8)
         section.add_colorbar(im, ax, label=lbl)
 
-    fig.suptitle("Ensemble inversion — mean and uncertainty",
-                 fontsize=11, fontweight="bold")
+    fig.suptitle(
+        "Ensemble inversion — mean and uncertainty",
+        fontsize=11,
+        fontweight="bold",
+    )
     fig.tight_layout()
     return fig
 

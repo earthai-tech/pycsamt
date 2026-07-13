@@ -40,12 +40,17 @@ from pycsamt.forward import (
 # Use the dark-style figure (2nd) as the section thumbnail.
 # sphinx_gallery_thumbnail_number = 2
 
-M_SEDIMENTARY = LayeredModel([1_000., 20., 5., 300.], [200., 600., 1_500.],
-                             name="sedimentary")
-M_CONDUCTIVE = LayeredModel([200., 5., 400., 100.], [150., 500., 2_000.],
-                            name="conductive-layer")
-M_GEOTHERMAL = LayeredModel([500., 8., 250., 3_000.], [100., 400., 2_500.],
-                            name="geothermal")
+M_SEDIMENTARY = LayeredModel(
+    [1_000.0, 20.0, 5.0, 300.0], [200.0, 600.0, 1_500.0], name="sedimentary"
+)
+M_CONDUCTIVE = LayeredModel(
+    [200.0, 5.0, 400.0, 100.0],
+    [150.0, 500.0, 2_000.0],
+    name="conductive-layer",
+)
+M_GEOTHERMAL = LayeredModel(
+    [500.0, 8.0, 250.0, 3_000.0], [100.0, 400.0, 2_500.0], name="geothermal"
+)
 
 FREQS_MT = np.logspace(-3, 4, 35)
 R_SED = MT1DForward(FREQS_MT).run(M_SEDIMENTARY)
@@ -77,14 +82,19 @@ finally:
 
 use_style("dark")
 try:
-    fig, axs = plt.subplots(1, 3, figsize=(13, 4.5), constrained_layout=True,
-                            facecolor="#1a1a2e")
+    fig, axs = plt.subplots(
+        1, 3, figsize=(13, 4.5), constrained_layout=True, facecolor="#1a1a2e"
+    )
     for ax in axs:
         ax.set_facecolor("#1a1a2e")
     plot_model_1d(M_CONDUCTIVE, ax=axs[0], title="Depth profile")
     plot_response_1d(R_COND, axes=axs[1:3])
-    fig.suptitle("Dark style - conductive-layer model", y=1.03,
-                 fontsize=11, color="white")
+    fig.suptitle(
+        "Dark style - conductive-layer model",
+        y=1.03,
+        fontsize=11,
+        color="white",
+    )
 finally:
     reset_style()
 
@@ -99,9 +109,10 @@ finally:
 configure_control(x__view="period")
 try:
     fig = plot_response_and_model_1d(
-        R_GEO, M_GEOTHERMAL,
+        R_GEO,
+        M_GEOTHERMAL,
         title="Period axis (linear scale) - geothermal model",
         figsize=(11, 4.5),
     )
 finally:
-    configure_control(x__view="log10_period")   # restore default
+    configure_control(x__view="log10_period")  # restore default

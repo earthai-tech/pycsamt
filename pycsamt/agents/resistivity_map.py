@@ -86,7 +86,7 @@ class ResistivityMapAgent(BaseAgent):
         )
         self.depth_indices = depth_indices
         self.interp_method = interp_method.lower()
-        self.grid_n        = grid_n
+        self.grid_n = grid_n
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -109,21 +109,23 @@ class ResistivityMapAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        depths_raw   = input_data.get("depths_km")
+        depths_raw = input_data.get("depths_km")
         depth_indices = input_data.get("depth_indices") or self.depth_indices
-        output_dir    = input_data.get("output_dir")
+        output_dir = input_data.get("output_dir")
 
         # ── parse coordinates ─────────────────────────────────────────────
         station_names = list(predictions.keys())
         n_sta = len(station_names)
 
         if isinstance(coords_raw, dict):
-            xy = np.array([coords_raw[nm] for nm in station_names
-                           if nm in coords_raw], dtype=float)
+            xy = np.array(
+                [coords_raw[nm] for nm in station_names if nm in coords_raw],
+                dtype=float,
+            )
             present = [nm for nm in station_names if nm in coords_raw]
         else:
             xy = np.asarray(coords_raw, dtype=float)[:n_sta]
-            present = station_names[:len(xy)]
+            present = station_names[: len(xy)]
 
         if len(xy) < 3:
             return AgentResult.failed(
@@ -150,50 +152,62 @@ class ResistivityMapAgent(BaseAgent):
             depth_indices = list(
                 np.linspace(0, n_layers - 1, min(3, n_layers), dtype=int)
             )
-        depth_indices = [int(d) for d in depth_indices if 0 <= int(d) < n_layers]
+        depth_indices = [
+            int(d) for d in depth_indices if 0 <= int(d) < n_layers
+        ]
 
         if not depth_indices:
             return AgentResult.failed(
-                "No valid depth indices to map.", elapsed=time.time() - t0,
+                "No valid depth indices to map.",
+                elapsed=time.time() - t0,
             )
 
         # ── build grid and interpolate ────────────────────────────────────
-        cx, cy = xy[:len(present), 0], xy[:len(present), 1]
+        cx, cy = xy[: len(present), 0], xy[: len(present), 1]
         xg = np.linspace(cx.min(), cx.max(), self.grid_n)
         yg = np.linspace(cy.min(), cy.max(), self.grid_n)
         Xg, Yg = np.meshgrid(xg, yg)
 
         depth_maps: list[dict] = []
         for li in depth_indices:
-            vals = mat[:len(present), li]
+            vals = mat[: len(present), li]
             mask = np.isfinite(vals)
             if mask.sum() < 3:
-                warnings.append(f"Layer {li}: insufficient valid data for interpolation.")
+                warnings.append(
+                    f"Layer {li}: insufficient valid data for interpolation."
+                )
                 continue
             try:
                 rho_grid = _interpolate_map(
-                    cx[mask], cy[mask], vals[mask],
-                    Xg, Yg, method=self.interp_method,
+                    cx[mask],
+                    cy[mask],
+                    vals[mask],
+                    Xg,
+                    Yg,
+                    method=self.interp_method,
                 )
             except Exception as exc:
                 warnings.append(f"Layer {li} interpolation failed: {exc}")
                 continue
 
             d_km = float(depths_km[min(li, len(depths_km) - 1)])
-            depth_maps.append({
-                "layer_idx":  li,
-                "depth_km":   d_km,
-                "grid_x":     xg,
-                "grid_y":     yg,
-                "grid_rho":   rho_grid,
-                "station_x":  cx,
-                "station_y":  cy,
-                "station_rho": vals,
-            })
+            depth_maps.append(
+                {
+                    "layer_idx": li,
+                    "depth_km": d_km,
+                    "grid_x": xg,
+                    "grid_y": yg,
+                    "grid_rho": rho_grid,
+                    "station_x": cx,
+                    "station_y": cy,
+                    "station_rho": vals,
+                }
+            )
 
         if not depth_maps:
             return AgentResult.failed(
-                "All depth layers failed to interpolate.", elapsed=time.time() - t0,
+                "All depth layers failed to interpolate.",
+                elapsed=time.time() - t0,
             )
 
         # ── figures ───────────────────────────────────────────────────────
@@ -204,8 +218,12 @@ class ResistivityMapAgent(BaseAgent):
             fig = _plot_depth_maps(depth_maps, present)
             if fig is not None:
                 figures["depth_maps"] = fig
-                p = self._save_figure(fig, output_dir, "resistivity_depth_maps",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig,
+                    output_dir,
+                    "resistivity_depth_maps",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["depth_maps"] = p
         except Exception as exc:
@@ -215,7 +233,9 @@ class ResistivityMapAgent(BaseAgent):
         interp: str | None = None
         if self.api_key:
             depth_levels = [dm["depth_km"] for dm in depth_maps]
-            mean_rhos = [float(np.nanmean(dm["grid_rho"])) for dm in depth_maps]
+            mean_rhos = [
+                float(np.nanmean(dm["grid_rho"])) for dm in depth_maps
+            ]
             prompt = (
                 f"Resistivity depth maps:\n"
                 f"  Stations: {len(present)}\n"
@@ -238,12 +258,12 @@ class ResistivityMapAgent(BaseAgent):
                 )
             ),
             data={
-                "depth_maps":       depth_maps,
-                "depth_levels_km":  [dm["depth_km"] for dm in depth_maps],
-                "station_names":    present,
-                "station_coords":   xy,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
+                "depth_maps": depth_maps,
+                "depth_levels_km": [dm["depth_km"] for dm in depth_maps],
+                "station_names": present,
+                "station_coords": xy,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -253,6 +273,7 @@ class ResistivityMapAgent(BaseAgent):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
 
 def _interpolate_map(
     cx: np.ndarray,
@@ -269,17 +290,21 @@ def _interpolate_map(
     )
 
     points = np.column_stack([cx, cy])
-    xi     = np.column_stack([Xg.ravel(), Yg.ravel()])
+    xi = np.column_stack([Xg.ravel(), Yg.ravel()])
 
     if method == "idw":
         # Inverse-distance weighting (power = 2)
         dists = np.sqrt(((xi[:, None, :] - points[None, :, :]) ** 2).sum(-1))
         dists = np.maximum(dists, 1.0)  # avoid division by zero
-        w     = 1.0 / dists ** 2
+        w = 1.0 / dists**2
         rho_flat = (w * vals[None, :]).sum(-1) / w.sum(-1)
     else:
-        rho_flat = griddata(points, vals, xi,
-                            method="linear" if method == "linear" else "nearest")
+        rho_flat = griddata(
+            points,
+            vals,
+            xi,
+            method="linear" if method == "linear" else "nearest",
+        )
         # fill NaN borders with nearest
         nan_mask = ~np.isfinite(rho_flat)
         if nan_mask.any():
@@ -301,38 +326,66 @@ def _plot_depth_maps(depth_maps: list[dict], station_names: list[str]) -> Any:
     if n == 1:
         axes = [axes]
 
-    all_vals = np.concatenate([dm["grid_rho"][np.isfinite(dm["grid_rho"])]
-                                for dm in depth_maps])
-    vmin = float(np.percentile(all_vals, 5))  if all_vals.size else 0.0
+    all_vals = np.concatenate(
+        [dm["grid_rho"][np.isfinite(dm["grid_rho"])] for dm in depth_maps]
+    )
+    vmin = float(np.percentile(all_vals, 5)) if all_vals.size else 0.0
     vmax = float(np.percentile(all_vals, 95)) if all_vals.size else 4.0
 
     for ax, dm in zip(axes, depth_maps):
-        xg  = dm["grid_x"] / 1000.0   # km
-        yg  = dm["grid_y"] / 1000.0
+        xg = dm["grid_x"] / 1000.0  # km
+        yg = dm["grid_y"] / 1000.0
         Xg, Yg = np.meshgrid(xg, yg)
 
         im = ax.pcolormesh(
-            Xg, Yg, dm["grid_rho"],
-            cmap="jet_r", vmin=vmin, vmax=vmax, shading="auto",
+            Xg,
+            Yg,
+            dm["grid_rho"],
+            cmap="jet_r",
+            vmin=vmin,
+            vmax=vmax,
+            shading="auto",
         )
         plt.colorbar(im, ax=ax, label="log₁₀ρ (Ω·m)", shrink=0.85)
 
         # station markers
         st_x = dm["station_x"] / 1000.0
         st_y = dm["station_y"] / 1000.0
-        ax.scatter(st_x, st_y, c=dm["station_rho"], cmap="jet_r",
-                   vmin=vmin, vmax=vmax, edgecolors="k", lw=0.5, s=50, zorder=5)
+        ax.scatter(
+            st_x,
+            st_y,
+            c=dm["station_rho"],
+            cmap="jet_r",
+            vmin=vmin,
+            vmax=vmax,
+            edgecolors="k",
+            lw=0.5,
+            s=50,
+            zorder=5,
+        )
         for xi, yi, nm in zip(st_x, st_y, station_names):
-            ax.text(xi, yi, nm, fontsize=5.5, ha="center", va="bottom", color="w",
-                    fontweight="bold")
+            ax.text(
+                xi,
+                yi,
+                nm,
+                fontsize=5.5,
+                ha="center",
+                va="bottom",
+                color="w",
+                fontweight="bold",
+            )
 
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(f"Depth  {dm['depth_km']:.2f} km", fontsize=8, fontweight="bold")
+        ax.set_title(
+            f"Depth  {dm['depth_km']:.2f} km", fontsize=8, fontweight="bold"
+        )
         ax.set_aspect("equal")
 
-    fig.suptitle("Pseudo-3D resistivity depth maps", fontsize=10, fontweight="bold")
+    fig.suptitle(
+        "Pseudo-3D resistivity depth maps", fontsize=10, fontweight="bold"
+    )
     fig.tight_layout()
     return fig
 

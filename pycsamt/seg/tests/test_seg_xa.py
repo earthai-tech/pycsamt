@@ -17,6 +17,7 @@ from pycsamt.seg.xa import XAMixin, build_dataset
 # Mark all tests in this file as requiring the 'xarray' package
 pytestmark = pytest.mark.requires_xarray
 
+
 class _DummyColl(XAMixin):
     """Minimal iterable collection to test XAMixin."""
 
@@ -100,7 +101,8 @@ def test_edi_accessor_plot(edi_imp_file: Path) -> None:
         assert isinstance(fig, plt.Figure)
         assert isinstance(axes, np.ndarray)
     finally:
-        plt.close('all') # Ensure plots are closed after test
+        plt.close("all")  # Ensure plots are closed after test
+
 
 @pytest.mark.usefixtures("edi_spe_file")
 def test_build_dataset_with_spectra(edi_spe_file: Path) -> None:

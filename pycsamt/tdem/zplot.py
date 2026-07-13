@@ -18,9 +18,7 @@ __all__ = [
 ]
 
 
-_FLOAT_RE = re.compile(
-    r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[Ee][-+]?\d+)?"
-)
+_FLOAT_RE = re.compile(r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[Ee][-+]?\d+)?")
 _TAIL_RE = re.compile(
     r"^(?P<prefix>.*?)\s+"
     r"(?P<frequency>[-+]?\d+(?:\.\d+)?)\s*Hz\s+"
@@ -295,10 +293,7 @@ def _parse_z_record(
         raise ValueError(msg)
     values = _FLOAT_RE.findall(tail.group("prefix"))
     if len(values) < 4:
-        msg = (
-            f"Cannot parse TEMAVG .Z row in {path!s} "
-            f"at line {line_no}."
-        )
+        msg = f"Cannot parse TEMAVG .Z row in {path!s} at line {line_no}."
         raise ValueError(msg)
     return TEMZRecord(
         line=int(float(values[0])),

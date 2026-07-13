@@ -21,6 +21,7 @@ def panel(qapp):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_agent_panel_creates(qapp):
     p = AgentPanel()
     assert p is not None
@@ -72,6 +73,7 @@ def test_has_summary_browser(panel):
 
 # ── append_log ────────────────────────────────────────────────────────────
 
+
 def test_append_log_adds_text(panel):
     panel.append_log("test message")
     assert "test message" in panel._log_text.toPlainText()
@@ -85,10 +87,12 @@ def test_append_log_adds_timestamp(panel):
 
 # ── AppController wiring ──────────────────────────────────────────────────
 
+
 def test_set_app_controller(panel):
     class FakeCtrl:
         sites = None
         session = type("S", (), {"api_key": ""})()
+
     panel.set_app_controller(FakeCtrl())
     assert panel._ctrl is not None
 
@@ -97,12 +101,14 @@ def test_run_without_data_shows_message(panel):
     class FakeCtrl:
         sites = None
         session = type("S", (), {"api_key": ""})()
+
     panel.set_app_controller(FakeCtrl())
-    panel._on_run()   # must not raise — shows status message instead
+    panel._on_run()  # must not raise — shows status message instead
     assert "Load" in panel._status_lbl.text()
 
 
 # ── Worker signal handlers ────────────────────────────────────────────────
+
 
 def test_on_log_line_appends(panel):
     panel._on_log_line("signal line")
@@ -111,7 +117,10 @@ def test_on_log_line_appends(panel):
 
 def test_on_error_updates_status(panel):
     panel._on_error("something went wrong")
-    assert "Failed" in panel._status_lbl.text() or "ERROR" in panel._log_text.toPlainText()
+    assert (
+        "Failed" in panel._status_lbl.text()
+        or "ERROR" in panel._log_text.toPlainText()
+    )
 
 
 def test_on_worker_finished_restores_buttons(panel):

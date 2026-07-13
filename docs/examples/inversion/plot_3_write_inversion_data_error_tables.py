@@ -29,13 +29,20 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -45,9 +52,8 @@ if str(ROOT) not in sys.path:
 from pycsamt.emtools import drop_duplicates, ensure_sites, select_band
 from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 
-
 edi_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
-workspace = Path(__file__).resolve().parent / "workspaces" / "l18_prepared_workspace"
+workspace = EXAMPLE_DIR / "workspaces" / "l18_prepared_workspace"
 table_dir = workspace / "02_tables"
 figure_dir = workspace / "05_figures"
 
@@ -140,8 +146,12 @@ def impedance_error_value(z_value, edi_error):
 
 def derived_errors(z_value, z_error):
     ratio = abs(z_error) / max(abs(z_value), 1e-24)
-    logrho_err = max(2.0 * ratio / np.log(10.0), policy["derived_error"]["logrho_min"])
-    phase_err = max(np.degrees(ratio), policy["derived_error"]["phase_min_deg"])
+    logrho_err = max(
+        2.0 * ratio / np.log(10.0), policy["derived_error"]["logrho_min"]
+    )
+    phase_err = max(
+        np.degrees(ratio), policy["derived_error"]["phase_min_deg"]
+    )
     return float(logrho_err), float(phase_err)
 
 
@@ -191,7 +201,9 @@ for station_index, ed in enumerate(_iter_items(sites)):
                 and np.isfinite(z_err[frequency_index, i, j])
                 else np.nan
             )
-            error_used, error_floor, source = impedance_error_value(value, edi_error)
+            error_used, error_floor, source = impedance_error_value(
+                value, edi_error
+            )
             logrho_error, phase_error = derived_errors(value, error_used)
             rho = apparent_resistivity(value, frequency_hz)
             phase = phase_degrees(value)
@@ -214,7 +226,9 @@ for station_index, ed in enumerate(_iter_items(sites)):
                     "error_floor": float(error_floor),
                     "error_used": float(error_used),
                     "error_source": source,
-                    "relative_error_used": float(error_used / max(abs(value), 1e-24)),
+                    "relative_error_used": float(
+                        error_used / max(abs(value), 1e-24)
+                    ),
                 }
             )
             rho_phase_rows.append(
@@ -328,14 +342,22 @@ print("Error source counts:")
 for key, value in sources.items():
     print(f"  {key}: {value}")
 
-relative_errors = np.array([row["relative_error_used"] for row in impedance_rows], dtype=float)
-logrho_errors = np.array([row["log10_rho_error"] for row in rho_phase_rows], dtype=float)
-phase_errors = np.array([row["phase_error_deg"] for row in rho_phase_rows], dtype=float)
+relative_errors = np.array(
+    [row["relative_error_used"] for row in impedance_rows], dtype=float
+)
+logrho_errors = np.array(
+    [row["log10_rho_error"] for row in rho_phase_rows], dtype=float
+)
+phase_errors = np.array(
+    [row["phase_error_deg"] for row in rho_phase_rows], dtype=float
+)
 
 fig, axs = plt.subplots(1, 3, figsize=(13.0, 4.0))
 
 axs[0].hist(relative_errors, bins=30, color="#2563eb", alpha=0.82)
-axs[0].axvline(policy["impedance_error"]["relative_z"], color="#dc2626", lw=1.6)
+axs[0].axvline(
+    policy["impedance_error"]["relative_z"], color="#dc2626", lw=1.6
+)
 axs[0].set_xlabel("|Z| relative error used")
 axs[0].set_ylabel("Rows")
 axs[0].set_title("Complex impedance errors")
@@ -346,7 +368,9 @@ axs[1].set_xlabel("log10 rho error")
 axs[1].set_title("Derived rho errors")
 
 axs[2].hist(phase_errors, bins=30, color="#7c3aed", alpha=0.82)
-axs[2].axvline(policy["derived_error"]["phase_min_deg"], color="#dc2626", lw=1.6)
+axs[2].axvline(
+    policy["derived_error"]["phase_min_deg"], color="#dc2626", lw=1.6
+)
 axs[2].set_xlabel("phase error (deg)")
 axs[2].set_title("Derived phase errors")
 
@@ -370,7 +394,9 @@ station_index = {station: i for i, station in enumerate(stations)}
 period_index = {period: i for i, period in enumerate(periods)}
 
 for row in impedance_rows:
-    coverage[period_index[row["period_s"]], station_index[row["station"]]] += 1
+    coverage[
+        period_index[row["period_s"]], station_index[row["station"]]
+    ] += 1
 
 fig, ax = plt.subplots(figsize=(11.0, 5.0))
 im = ax.imshow(
@@ -379,7 +405,12 @@ im = ax.imshow(
     origin="lower",
     interpolation="nearest",
     cmap="viridis",
-    extent=(-0.5, len(stations) - 0.5, np.log10(periods.min()), np.log10(periods.max())),
+    extent=(
+        -0.5,
+        len(stations) - 0.5,
+        np.log10(periods.min()),
+        np.log10(periods.max()),
+    ),
 )
 ax.set_xticks(np.arange(len(stations)))
 ax.set_xticklabels(stations, rotation=90, fontsize=7)
@@ -398,7 +429,9 @@ fig.savefig(figure_dir / "inversion_data_coverage.png", dpi=160)
 
 n_floor = sum(row["error_source"] != "edi_error" for row in impedance_rows)
 floor_fraction = n_floor / max(len(impedance_rows), 1)
-phase_bad = np.sum(np.abs([row["phase_deg"] for row in rho_phase_rows]) > 180.0)
+phase_bad = np.sum(
+    np.abs([row["phase_deg"] for row in rho_phase_rows]) > 180.0
+)
 
 print(f"Floor-controlled impedance rows: {floor_fraction:.1%}")
 print(f"Phase rows outside +/-180 deg: {phase_bad}")
@@ -406,9 +439,13 @@ print(f"Unique stations: {len(stations)}")
 print(f"Unique periods: {len(periods)}")
 
 if phase_bad:
-    raise RuntimeError("Phase wrapping failed; phase values exceed +/-180 degrees.")
+    raise RuntimeError(
+        "Phase wrapping failed; phase values exceed +/-180 degrees."
+    )
 if len(stations) < 3:
-    raise RuntimeError("Too few stations for a meaningful 2-D inversion table.")
+    raise RuntimeError(
+        "Too few stations for a meaningful 2-D inversion table."
+    )
 
 # %%
 # 11. What comes next?

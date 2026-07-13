@@ -13,6 +13,7 @@ pycsamt only needs to:
 3. Run inference.
 4. Serialise / deserialise weights to numpy dicts.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

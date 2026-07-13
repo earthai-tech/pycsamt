@@ -58,7 +58,6 @@ from pycsamt.topo import (
     interp_elev,
 )
 
-
 line_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 sites = ensure_sites(line_dir, recursive=False, verbose=0)
 
@@ -77,7 +76,9 @@ report = SitesReport(sites).to_dataframe(api=False)
 if len(names) < 3:
     raise RuntimeError("This case study needs at least three stations.")
 if not has_elevation(sites):
-    raise RuntimeError("The selected profile does not contain usable elevation.")
+    raise RuntimeError(
+        "The selected profile does not contain usable elevation."
+    )
 
 spacing_m = np.diff(chain_km) * 1000.0
 relief_m = np.diff(elev_m)
@@ -89,7 +90,9 @@ print(f"Profile length: {chain_km[-1]:.3f} km")
 print(f"Elevation range: {elev_m.min():.1f}-{elev_m.max():.1f} m")
 print(f"Relief: {np.ptp(elev_m):.1f} m")
 print(f"Median station spacing: {np.median(spacing_m):.1f} m")
-print(f"Frequency rows per station: {report['nfreq'].min()}-{report['nfreq'].max()}")
+print(
+    f"Frequency rows per station: {report['nfreq'].min()}-{report['nfreq'].max()}"
+)
 
 steep = np.argsort(np.abs(slope_deg))[::-1][:6]
 print("Steepest local segments:")
@@ -129,17 +132,23 @@ surface_km = interp_elev(chain_km, elev_m / 1000.0, x_centres)
 X, Z = np.meshgrid(x_centres, z_centres)
 
 basement = 2.1 + 0.85 * (Z / z_centres.max())
-weathered_layer = -0.45 * np.exp(-(Z / 0.16) ** 2)
+weathered_layer = -0.45 * np.exp(-((Z / 0.16) ** 2))
 valley_centre = x_centres[np.argmin(surface_km)]
-conductive_target = -0.85 * np.exp(-((X - valley_centre) / 0.32) ** 2) * np.exp(
-    -((Z - 0.48) / 0.18) ** 2
+conductive_target = (
+    -0.85
+    * np.exp(-(((X - valley_centre) / 0.32) ** 2))
+    * np.exp(-(((Z - 0.48) / 0.18) ** 2))
 )
 left_ridge = x_centres[np.argmax(surface_km[: nx // 2])]
-resistive_shoulder = 0.35 * np.exp(-((X - left_ridge) / 0.24) ** 2) * np.exp(
-    -((Z - 0.28) / 0.16) ** 2
+resistive_shoulder = (
+    0.35
+    * np.exp(-(((X - left_ridge) / 0.24) ** 2))
+    * np.exp(-(((Z - 0.28) / 0.16) ** 2))
 )
 
-log10_rho = basement + weathered_layer + conductive_target + resistive_shoulder
+log10_rho = (
+    basement + weathered_layer + conductive_target + resistive_shoulder
+)
 rho = 10.0**log10_rho
 
 print(f"Synthetic resistivity range: {rho.min():.1f}-{rho.max():.1f} ohm.m")
@@ -154,17 +163,31 @@ print(f"Conductive target centred near chainage {valley_centre:.2f} km")
 fig, axs = plt.subplots(3, 1, figsize=(10.5, 7.5), sharex=True)
 
 axs[0].plot(chain_km, elev_m, marker="o", lw=1.8, color="#854d0e")
-axs[0].fill_between(chain_km, elev_m, elev_m.min() - 8, color="#fed7aa", alpha=0.55)
+axs[0].fill_between(
+    chain_km, elev_m, elev_m.min() - 8, color="#fed7aa", alpha=0.55
+)
 axs[0].set_ylabel("Elevation (m)")
 axs[0].set_title("Topography audit before section interpretation")
 axs[0].grid(alpha=0.25)
 
-axs[1].bar(chain_km[:-1], spacing_m, width=np.diff(chain_km), align="edge", color="#64748b")
+axs[1].bar(
+    chain_km[:-1],
+    spacing_m,
+    width=np.diff(chain_km),
+    align="edge",
+    color="#64748b",
+)
 axs[1].set_ylabel("Spacing (m)")
 axs[1].grid(axis="y", alpha=0.25)
 
 colors = np.where(slope_deg >= 0, "#15803d", "#b91c1c")
-axs[2].bar(chain_km[:-1], slope_deg, width=np.diff(chain_km), align="edge", color=colors)
+axs[2].bar(
+    chain_km[:-1],
+    slope_deg,
+    width=np.diff(chain_km),
+    align="edge",
+    color=colors,
+)
 axs[2].axhline(0.0, color="black", lw=0.8)
 axs[2].set_xlabel("Chainage (km)")
 axs[2].set_ylabel("Slope (deg)")
@@ -191,12 +214,23 @@ fig.tight_layout()
 # feature look laterally continuous when it is actually tied to terrain.
 
 fig, ax = plt.subplots(figsize=(10.5, 4.8))
-mesh = ax.pcolormesh(x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo")
+mesh = ax.pcolormesh(
+    x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo"
+)
 ax.invert_yaxis()
-ax.scatter(chain_km, np.zeros_like(chain_km), marker="v", s=35, color="black", zorder=4)
+ax.scatter(
+    chain_km,
+    np.zeros_like(chain_km),
+    marker="v",
+    s=35,
+    color="black",
+    zorder=4,
+)
 ax.set_xlabel("Chainage (km)")
 ax.set_ylabel("Depth below flat datum (km)")
-ax.set_title("Flat-depth view: good for model texture, weak for terrain context")
+ax.set_title(
+    "Flat-depth view: good for model texture, weak for terrain context"
+)
 cbar = fig.colorbar(mesh, ax=ax, pad=0.02)
 cbar.set_label("log10 apparent resistivity (ohm.m)")
 fig.tight_layout()
@@ -228,10 +262,14 @@ x_draped, z_draped, log10_rho_draped = drape_section(
 )
 
 fig, ax = plt.subplots(figsize=(11.0, 5.6))
-mesh = ax.pcolormesh(x_draped, z_draped, log10_rho_draped, shading="auto", cmap="turbo")
+mesh = ax.pcolormesh(
+    x_draped, z_draped, log10_rho_draped, shading="auto", cmap="turbo"
+)
 draw_topo_section(ax, chain_km, elev_m, names, cfg=cfg, dark=False)
 
-target_elev = interp_elev(chain_km, elev_m / 1000.0, np.array([valley_centre]))[0]
+target_elev = interp_elev(
+    chain_km, elev_m / 1000.0, np.array([valley_centre])
+)[0]
 ax.annotate(
     "conductive target\nbelow valley",
     xy=(valley_centre, target_elev - 0.48 * cfg.exaggeration),
@@ -257,14 +295,20 @@ fig.subplots_adjust(top=0.90, bottom=0.13, left=0.08, right=0.92)
 
 fig, axs = plt.subplots(1, 2, figsize=(12.5, 5.0), sharex=True)
 
-flat = axs[0].pcolormesh(x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo")
+flat = axs[0].pcolormesh(
+    x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo"
+)
 axs[0].invert_yaxis()
-axs[0].scatter(chain_km, np.zeros_like(chain_km), marker="v", s=25, color="black")
+axs[0].scatter(
+    chain_km, np.zeros_like(chain_km), marker="v", s=25, color="black"
+)
 axs[0].set_title("Flat datum")
 axs[0].set_xlabel("Chainage (km)")
 axs[0].set_ylabel("Depth (km)")
 
-topo = axs[1].pcolormesh(x_draped, z_draped, log10_rho_draped, shading="auto", cmap="turbo")
+topo = axs[1].pcolormesh(
+    x_draped, z_draped, log10_rho_draped, shading="auto", cmap="turbo"
+)
 draw_topo_section(axs[1], chain_km, elev_m, names, cfg=cfg, dark=False)
 axs[1].set_title("Terrain-following datum")
 axs[1].set_xlabel("Chainage (km)")

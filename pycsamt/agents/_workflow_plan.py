@@ -13,6 +13,7 @@ before execution.  This gives the orchestrator a single validated
 artefact to act on and gives the provenance trail a canonical
 representation of user intent.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,33 +25,35 @@ from typing import Any
 __all__ = ["WorkflowPlan", "validate_workflow_plan"]
 
 # Canonical set of workflow identifiers recognised by the orchestrator
-VALID_WORKFLOWS = frozenset({
-    "qc",
-    "static_shift",
-    "phase_analysis",
-    "forward",
-    "pre_inversion",
-    "inversion_prep",
-    "inversion_eval",
-    "interpretation",
-    "report",
-    "full",
-    "ai_inversion",
-    "inv1d",
-    "inv2d",
-    "inv3d",
-    "ensemble_inversion",
-    "joint_inversion",
-    "modem",
-    "occam2d",
-    "tipper",
-    "sensitivity",
-    "rotation",
-    "freq_decimation",
-    "batch",
-    "comparison",
-    "full_ai_workflow",
-})
+VALID_WORKFLOWS = frozenset(
+    {
+        "qc",
+        "static_shift",
+        "phase_analysis",
+        "forward",
+        "pre_inversion",
+        "inversion_prep",
+        "inversion_eval",
+        "interpretation",
+        "report",
+        "full",
+        "ai_inversion",
+        "inv1d",
+        "inv2d",
+        "inv3d",
+        "ensemble_inversion",
+        "joint_inversion",
+        "modem",
+        "occam2d",
+        "tipper",
+        "sensitivity",
+        "rotation",
+        "freq_decimation",
+        "batch",
+        "comparison",
+        "full_ai_workflow",
+    }
+)
 
 
 @dataclass
@@ -99,10 +102,7 @@ class WorkflowPlan:
 
     def is_valid(self) -> bool:
         """Return True when the plan passes basic validation."""
-        return (
-            bool(self.request)
-            and self.workflow_type in VALID_WORKFLOWS
-        )
+        return bool(self.request) and self.workflow_type in VALID_WORKFLOWS
 
     def validation_errors(self) -> list[str]:
         """Return a list of validation error messages."""
@@ -115,13 +115,9 @@ class WorkflowPlan:
                 f"Valid: {sorted(VALID_WORKFLOWS)}"
             )
         if not self.data_path:
-            errs.append(
-                "No data_path extracted from the request."
-            )
+            errs.append("No data_path extracted from the request.")
         elif not Path(self.data_path).exists():
-            errs.append(
-                f"data_path does not exist: {self.data_path!r}"
-            )
+            errs.append(f"data_path does not exist: {self.data_path!r}")
         return errs
 
     # ── serialisation ──────────────────────────────────────────
@@ -153,8 +149,12 @@ class WorkflowPlan:
 
         params: dict[str, Any] = {}
         for k in (
-            "period_range", "component", "station",
-            "inversion_code", "depth_max_km", "n_periods",
+            "period_range",
+            "component",
+            "station",
+            "inversion_code",
+            "depth_max_km",
+            "n_periods",
             "verbose",
         ):
             if k in config:
@@ -163,13 +163,9 @@ class WorkflowPlan:
         # identify risk flags
         flags: list[str] = []
         if not config.get("data_path"):
-            flags.append(
-                "No data path found — user must supply."
-            )
+            flags.append("No data path found — user must supply.")
         if wf not in VALID_WORKFLOWS:
-            flags.append(
-                f"Unrecognised workflow {wf!r}."
-            )
+            flags.append(f"Unrecognised workflow {wf!r}.")
 
         expected = _expected_outputs(wf)
         needs_review = bool(flags) or not config.get("data_path")
@@ -189,46 +185,56 @@ class WorkflowPlan:
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
+
 def _expected_outputs(workflow_type: str) -> list[str]:
     """Return a list of expected output artefacts for *workflow_type*."""
     base = ["agent_trace.json", "workflow_plan.json"]
     extras: dict[str, list[str]] = {
-        "qc":                ["qc_confidence.png",
-                              "qc_report.md"],
-        "phase_analysis":    ["pt_psection.png",
-                              "strike_analysis.png",
-                              "phase_tensor_report.md"],
-        "ai_inversion":      ["inv1d_section.png",
-                              "predictions.npz",
-                              "ai_inversion_report.md"],
-        "inv1d":             ["inv1d_section.png",
-                              "predictions.npz",
-                              "ai_inversion_report.md"],
-        "inv2d":             ["inv2d_section.png",
-                              "pred_section.npz",
-                              "inv2d_report.md"],
-        "inv3d":             ["inv3d_volume.png",
-                              "inv3d_report.md"],
-        "ensemble_inversion":["ensemble_section.png",
-                              "uncertainty_bands.npz",
-                              "ensemble_report.md"],
-        "joint_inversion":   ["joint_section.png",
-                              "joint_report.md"],
-        "pre_inversion":     ["occam2d_data.dat",
-                              "occam2d_mesh.txt",
-                              "occam2d_startup.txt"],
-        "modem":             ["ModEM_Data.dat"],
-        "full":              ["qc_confidence.png",
-                              "pt_psection.png",
-                              "inv1d_section.png",
-                              "full_survey_report.md",
-                              "workflow_script.py"],
-        "full_ai_workflow":  ["qc_confidence.png",
-                              "pt_psection.png",
-                              "inv1d_section.png",
-                              "inv2d_section.png",
-                              "workflow_script.py",
-                              "full_ai_report.md"],
+        "qc": ["qc_confidence.png", "qc_report.md"],
+        "phase_analysis": [
+            "pt_psection.png",
+            "strike_analysis.png",
+            "phase_tensor_report.md",
+        ],
+        "ai_inversion": [
+            "inv1d_section.png",
+            "predictions.npz",
+            "ai_inversion_report.md",
+        ],
+        "inv1d": [
+            "inv1d_section.png",
+            "predictions.npz",
+            "ai_inversion_report.md",
+        ],
+        "inv2d": ["inv2d_section.png", "pred_section.npz", "inv2d_report.md"],
+        "inv3d": ["inv3d_volume.png", "inv3d_report.md"],
+        "ensemble_inversion": [
+            "ensemble_section.png",
+            "uncertainty_bands.npz",
+            "ensemble_report.md",
+        ],
+        "joint_inversion": ["joint_section.png", "joint_report.md"],
+        "pre_inversion": [
+            "occam2d_data.dat",
+            "occam2d_mesh.txt",
+            "occam2d_startup.txt",
+        ],
+        "modem": ["ModEM_Data.dat"],
+        "full": [
+            "qc_confidence.png",
+            "pt_psection.png",
+            "inv1d_section.png",
+            "full_survey_report.md",
+            "workflow_script.py",
+        ],
+        "full_ai_workflow": [
+            "qc_confidence.png",
+            "pt_psection.png",
+            "inv1d_section.png",
+            "inv2d_section.png",
+            "workflow_script.py",
+            "full_ai_report.md",
+        ],
     }
     return base + extras.get(workflow_type, ["report.md"])
 

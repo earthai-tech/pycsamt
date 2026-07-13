@@ -15,12 +15,7 @@ from pycsamt.tdem.io import (
     read_tem_coordinates as read_tem_coordinates_io,
 )
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 AVG_FILE = DATA_DIR / "TEM100.AVG"
 
 
@@ -39,8 +34,7 @@ def _write_coordinate_csv(path: Path) -> None:
                 ",,X(m),Y(m),X(m),Y(m),,",
                 "100,100,4291789.7679,19510112.9006,"
                 "100.0034,100.0151,1102.9537,",
-                "100,120,4291809.1,19510120.2,"
-                "120.0,100.5,1103.1,road",
+                "100,120,4291809.1,19510120.2,120.0,100.5,1103.1,road",
             ]
         ),
         encoding="utf-8",

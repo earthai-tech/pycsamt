@@ -22,6 +22,7 @@ pycsamt.seg.spectra.Spectra
 pycsamt.seg.edi.EDIFile
     EDI writer used for the final output.
 """
+
 from __future__ import annotations
 
 from importlib import import_module

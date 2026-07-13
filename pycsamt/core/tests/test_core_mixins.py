@@ -19,8 +19,7 @@ def test_public_api_all():
 class _EDIStub:
     def __init__(self, n: int = 3) -> None:
         self.freq = np.linspace(1, 10, n)
-        self.z = (np.random.rand(n, 2, 2)
-                  + 1j * np.random.rand(n, 2, 2))
+        self.z = np.random.rand(n, 2, 2) + 1j * np.random.rand(n, 2, 2)
         self.z_err = np.full((n, 2, 2), 0.1)
         self.resistivity = np.full((n, 2, 2), 100.0)
         self.phase = np.full((n, 2, 2), 45.0)
@@ -130,4 +129,3 @@ def test_container_iter_bundles_and_to_edi_collection():
     assert len(edis) == 2
     assert calls["n"] == 2
     assert {e.station for e in edis} == {"A", "B"}
-

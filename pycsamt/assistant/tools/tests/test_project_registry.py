@@ -7,6 +7,7 @@ Hermetic: builds a temporary registry + EDI tree so it doesn't depend on
 the bundled data. One test exercises the real bundled registry when
 present.
 """
+
 from __future__ import annotations
 
 import textwrap
@@ -60,7 +61,6 @@ def _make_registry(tmp: Path) -> Path:
 
 
 class TestProjectRegistry(unittest.TestCase):
-
     def setUp(self):
         self.tmp = Path(mkdtemp())
         self.reg_path = _make_registry(self.tmp)
@@ -81,9 +81,7 @@ class TestProjectRegistry(unittest.TestCase):
 
     def test_messy_phrasing_and_case(self):
         for variant in ("line L22PLT", "l22plt", "  L22PLT  ", "line l22plt"):
-            self.assertEqual(
-                self.reg.resolve_line(variant)["line"], "L22PLT"
-            )
+            self.assertEqual(self.reg.resolve_line(variant)["line"], "L22PLT")
 
     def test_alias(self):
         self.assertEqual(self.reg.canonical("myline"), "L22PLT")
@@ -118,14 +116,11 @@ class TestProjectRegistry(unittest.TestCase):
     def test_relative_edi_dir_resolved_against_root(self):
         r = self.reg.resolve_line("L22PLT")
         self.assertTrue(
-            r["edi_dir"].endswith("L22PLT")
-            and "SURVEY" in r["edi_dir"]
+            r["edi_dir"].endswith("L22PLT") and "SURVEY" in r["edi_dir"]
         )
 
     def test_resolve_line_convenience(self):
-        r = resolve_line(
-            "L22PLT", registry_path=self.reg_path, root=self.tmp
-        )
+        r = resolve_line("L22PLT", registry_path=self.reg_path, root=self.tmp)
         self.assertEqual(r["line"], "L22PLT")
 
 

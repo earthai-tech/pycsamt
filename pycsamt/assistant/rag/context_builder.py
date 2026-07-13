@@ -96,7 +96,8 @@ def _snippet(chunk: RAGChunk, max_len: int = _SNIPPET_CHARS) -> str:
     # "Signature: …") — they are chunk headers, not prose, and make the
     # offline answer read like a raw index dump.
     text = "\n".join(
-        ln for ln in text.splitlines()
+        ln
+        for ln in text.splitlines()
         if not re.match(
             r"\s*(Module|File|Class|Function|Method|Signature)\s*:\s",
             ln,
@@ -116,8 +117,10 @@ def _first_sentence(text: str, max_len: int = 180) -> tuple[str, str]:
     first = first_para[: m.start()] if m else first_para
     if len(first) > max_len:
         first = first[: max_len - 1].rstrip() + "…"
-    rest = text[len(first):].lstrip(" .\n") if text.startswith(first) else (
-        text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
+    rest = (
+        text[len(first) :].lstrip(" .\n")
+        if text.startswith(first)
+        else (text.split("\n\n", 1)[1].strip() if "\n\n" in text else "")
     )
     return first, rest
 
@@ -175,12 +178,14 @@ class AssembledContext:
             params = c.metadata.get("params") or []
             if not params and not c.metadata.get("signature"):
                 continue
-            cards.append({
-                "symbol": c.symbol,
-                "signature": c.metadata.get("signature"),
-                "params": params,
-                "returns": c.metadata.get("returns"),
-            })
+            cards.append(
+                {
+                    "symbol": c.symbol,
+                    "signature": c.metadata.get("signature"),
+                    "params": params,
+                    "returns": c.metadata.get("returns"),
+                }
+            )
         return cards
 
     def _lead_chunk(self) -> RAGChunk | None:
@@ -284,10 +289,7 @@ class AssembledContext:
                 continue
             rel.append(sym)
         if rel:
-            parts.append(
-                "See also: "
-                + ", ".join(f"`{s}`" for s in rel[:4])
-            )
+            parts.append("See also: " + ", ".join(f"`{s}`" for s in rel[:4]))
 
         if self.citations:
             paths: list[str] = []
@@ -348,11 +350,15 @@ class ContextBuilder:
             )
 
         if rerank_fn is not None:
-            pool = self.retriever.search(retrieval_query, k=max(k, rerank_top_n))
+            pool = self.retriever.search(
+                retrieval_query, k=max(k, rerank_top_n)
+            )
             from .rerank import llm_rerank
 
             reranked = llm_rerank(
-                retrieval_query, pool.chunks, rank_fn=rerank_fn,
+                retrieval_query,
+                pool.chunks,
+                rank_fn=rerank_fn,
                 top_n=rerank_top_n,
             )
             ctx = RetrievedContext(
@@ -520,12 +526,14 @@ def default_context_builder(root=None) -> ContextBuilder | None:
                 from ..tools.project_registry import (
                     ProjectRegistry,
                 )
+
                 registry = ProjectRegistry.from_default(root)
             except Exception:  # noqa: BLE001
                 registry = None
             graph = None
             try:
                 from .graph import build_symbol_graph
+
                 graph = build_symbol_graph(retriever.chunks)
             except Exception:  # noqa: BLE001 — xrefs are best-effort
                 graph = None

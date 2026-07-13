@@ -68,7 +68,7 @@ class StationDetailCard(QWidget):
     """
 
     open_profile_requested = Signal(str)
-    show_on_map_requested  = Signal(str)
+    show_on_map_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -92,8 +92,12 @@ class StationDetailCard(QWidget):
         scroll = QScrollArea(self)
         scroll.setObjectName("DetailScrollArea")
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         scroll.setFrameShape(QFrame.Shape.NoFrame)
 
         body = QWidget()
@@ -125,17 +129,27 @@ class StationDetailCard(QWidget):
                 Qt.TextInteractionFlag.TextSelectableByMouse
             )
             v.setWordWrap(True)
-            grid.addWidget(k, r, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            grid.addWidget(v, r, 1, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            grid.addWidget(
+                k,
+                r,
+                0,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+            )
+            grid.addWidget(
+                v,
+                r,
+                1,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+            )
             return v
 
-        self._lbl_lat    = row(0, "Latitude")
-        self._lbl_lon    = row(1, "Longitude")
-        self._lbl_elev   = row(2, "Elevation")
-        self._lbl_nfreq  = row(3, "Frequencies")
+        self._lbl_lat = row(0, "Latitude")
+        self._lbl_lon = row(1, "Longitude")
+        self._lbl_elev = row(2, "Elevation")
+        self._lbl_nfreq = row(3, "Frequencies")
         self._lbl_frange = row(4, "Period range")
         self._lbl_tipper = row(5, "Tipper")
-        self._lbl_comps  = row(6, "Components")
+        self._lbl_comps = row(6, "Components")
 
         body_layout.addLayout(grid)
 
@@ -194,32 +208,26 @@ class StationDetailCard(QWidget):
         self._station_id = station_id
         try:
             site = sites.get(station_id)
-            s    = site.summary()
+            s = site.summary()
         except Exception:
             self._lbl_name.setText(station_id)
             return
 
         import numpy as np
 
-        name    = s.get("name", station_id)
-        lat     = s.get("lat",  None)
-        lon     = s.get("lon",  None)
-        elev    = s.get("elev", None)
-        nfreq   = s.get("nfreq", 0)
+        name = s.get("name", station_id)
+        lat = s.get("lat", None)
+        lon = s.get("lon", None)
+        elev = s.get("elev", None)
+        nfreq = s.get("nfreq", 0)
         has_tip = bool(s.get("tipper", False))
-        comps   = s.get("components", [])
+        comps = s.get("components", [])
 
         self._lbl_name.setText(name)
 
-        self._lbl_lat.setText(
-            f"{lat:+.4f} °" if lat is not None else "—"
-        )
-        self._lbl_lon.setText(
-            f"{lon:+.4f} °" if lon is not None else "—"
-        )
-        self._lbl_elev.setText(
-            f"{elev:.0f} m" if elev is not None else "—"
-        )
+        self._lbl_lat.setText(f"{lat:+.4f} °" if lat is not None else "—")
+        self._lbl_lon.setText(f"{lon:+.4f} °" if lon is not None else "—")
+        self._lbl_elev.setText(f"{elev:.0f} m" if elev is not None else "—")
         self._lbl_nfreq.setText(str(nfreq))
 
         # Period range
@@ -229,9 +237,7 @@ class StationDetailCard(QWidget):
                 f_sorted = np.sort(freq)
                 t_min = 1.0 / f_sorted[-1]
                 t_max = 1.0 / f_sorted[0]
-                self._lbl_frange.setText(
-                    f"{t_min:.2e} – {t_max:.2e} s"
-                )
+                self._lbl_frange.setText(f"{t_min:.2e} – {t_max:.2e} s")
             else:
                 self._lbl_frange.setText("—")
         except Exception:
@@ -253,9 +259,13 @@ class StationDetailCard(QWidget):
         self._station_id = ""
         self._lbl_name.setText("No station selected")
         for lbl in (
-            self._lbl_lat, self._lbl_lon, self._lbl_elev,
-            self._lbl_nfreq, self._lbl_frange,
-            self._lbl_tipper, self._lbl_comps,
+            self._lbl_lat,
+            self._lbl_lon,
+            self._lbl_elev,
+            self._lbl_nfreq,
+            self._lbl_frange,
+            self._lbl_tipper,
+            self._lbl_comps,
         ):
             lbl.setText("—")
         self._lbl_quality.setText("○ ○ ○ ○ ○")

@@ -63,25 +63,26 @@ _FORMAT_TAG = "OCCAM2MTMOD_1.0"
 
 # Header keyword → attribute name (upper-cased key for matching)
 _HEADER_MAP: dict[str, str] = {
-    "FORMAT":          "format_str",
-    "MODEL NAME":      "name",
-    "DESCRIPTION":     "description",
-    "MESH FILE":       "mesh_file",
-    "MESH TYPE":       "mesh_type",
-    "STATICS FILE":    "statics_file",
-    "PREJUDICE FILE":  "prejudice_file",
-    "BINDING OFFSET":  "binding_offset",
-    "NUM LAYERS":      "n_layers",
-    "NO. EXCEPTIONS":  "n_exceptions",
+    "FORMAT": "format_str",
+    "MODEL NAME": "name",
+    "DESCRIPTION": "description",
+    "MESH FILE": "mesh_file",
+    "MESH TYPE": "mesh_type",
+    "STATICS FILE": "statics_file",
+    "PREJUDICE FILE": "prejudice_file",
+    "BINDING OFFSET": "binding_offset",
+    "NUM LAYERS": "n_layers",
+    "NO. EXCEPTIONS": "n_exceptions",
 }
 
 _FLOAT_FIELDS = {"binding_offset"}
-_INT_FIELDS   = {"n_layers", "n_exceptions"}
+_INT_FIELDS = {"n_layers", "n_exceptions"}
 
 
 # -----------------------------------------------------------------------
 # Low-level parser
 # -----------------------------------------------------------------------
+
 
 def _parse_model(path: Path) -> dict:
     """Parse an OCCAM2MTMOD_1.0 file.
@@ -108,12 +109,12 @@ def _parse_model(path: Path) -> dict:
     with path.open("r", errors="replace") as fh:
         lines = [line.rstrip("\n") for line in fh]
 
-    i   = 0
-    N   = len(lines)
+    i = 0
+    N = len(lines)
 
     while i < N:
         raw = lines[i].strip()
-        i  += 1
+        i += 1
 
         if not raw:
             continue
@@ -121,8 +122,8 @@ def _parse_model(path: Path) -> dict:
         # Header line?
         if ":" in raw:
             raw_key, _, raw_val = raw.partition(":")
-            key  = raw_key.strip().upper()
-            val  = raw_val.strip()
+            key = raw_key.strip().upper()
+            val = raw_val.strip()
             attr = _HEADER_MAP.get(key)
             if attr is not None:
                 if attr in _INT_FIELDS:
@@ -154,7 +155,7 @@ def _parse_model(path: Path) -> dict:
                         ctrl = lines[i].strip().split()
                         i += 1
                         n_merge = int(ctrl[0])
-                        n_cols  = int(ctrl[1])
+                        n_cols = int(ctrl[1])
                         # Data line: n_cols integers
                         while i < N and not lines[i].strip():
                             i += 1
@@ -164,7 +165,11 @@ def _parse_model(path: Path) -> dict:
                         )
                         i += 1
                         result["layers"].append(
-                            {"n_merge": n_merge, "n_cols": n_cols, "params": params}
+                            {
+                                "n_merge": n_merge,
+                                "n_cols": n_cols,
+                                "params": params,
+                            }
                         )
 
     if result["format_str"] is None:
@@ -178,6 +183,7 @@ def _parse_model(path: Path) -> dict:
 # -----------------------------------------------------------------------
 # OccamModel
 # -----------------------------------------------------------------------
+
 
 class OccamModel(OccamBase):
     r"""Represent the Occam2D model-parameter definition.
@@ -330,18 +336,18 @@ class OccamModel(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.format_str:     str               = _FORMAT_TAG
-        self.name:           str               = name
-        self.description:    str               = description
-        self.config:         OccamConfig       = config or OccamConfig()
-        self.mesh_file:      str               = self.config.mesh_file
-        self.mesh_type:      str               = "PW2D"
-        self.statics_file:   str               = "none"
-        self.prejudice_file: str               = "none"
-        self.binding_offset: float             = 0.0
-        self.n_layers:       int               = 0
-        self.layers:         list[dict]        = []
-        self.n_exceptions:   int               = 0
+        self.format_str: str = _FORMAT_TAG
+        self.name: str = name
+        self.description: str = description
+        self.config: OccamConfig = config or OccamConfig()
+        self.mesh_file: str = self.config.mesh_file
+        self.mesh_type: str = "PW2D"
+        self.statics_file: str = "none"
+        self.prejudice_file: str = "none"
+        self.binding_offset: float = 0.0
+        self.n_layers: int = 0
+        self.layers: list[dict] = []
+        self.n_exceptions: int = 0
 
     # ------------------------------------------------------------------
     # Construction
@@ -444,10 +450,10 @@ class OccamModel(OccamBase):
         ...     description="smooth TE-TM inversion",
         ... )
         """
-        cfg      = config or OccamConfig()
-        obj      = cls(config=cfg, **kwargs)
+        cfg = config or OccamConfig()
+        obj = cls(config=cfg, **kwargs)
         n_xcells = mesh.n_xcells
-        n_air    = mesh.n_airlayers
+        n_air = mesh.n_airlayers
         n_active = mesh.n_zcells - n_air
 
         if n_active <= 0:
@@ -481,21 +487,25 @@ class OccamModel(OccamBase):
 
         layers: list[dict] = []
         for _ in range(n_active):
-            layers.append({
-                "n_merge": 1,
-                "n_cols":  n_cols,
-                "params":  codes.copy(),
-            })
+            layers.append(
+                {
+                    "n_merge": 1,
+                    "n_cols": n_cols,
+                    "params": codes.copy(),
+                }
+            )
 
-        obj.mesh_file    = cfg.mesh_file
-        obj.n_layers     = n_active
-        obj.layers       = layers
+        obj.mesh_file = cfg.mesh_file
+        obj.n_layers = n_active
+        obj.layers = layers
         obj.n_exceptions = 0
 
         if obj.verbose:
             obj.logger.info(
                 "OccamModel.from_mesh: %d layers, %d cols/layer, %d total params",
-                n_active, n_cols, obj.n_params,
+                n_active,
+                n_cols,
+                obj.n_params,
             )
         return obj
 
@@ -552,9 +562,9 @@ class OccamModel(OccamBase):
         >>> model = OccamModel.read("occam_run/Occam2DModel")
         >>> model.n_layers, model.n_params
         """
-        p      = Path(path)
+        p = Path(path)
         parsed = _parse_model(p)
-        obj    = cls(**kwargs)
+        obj = cls(**kwargs)
 
         for attr in _HEADER_MAP.values():
             val = parsed.get(attr)
@@ -566,7 +576,9 @@ class OccamModel(OccamBase):
         if obj.verbose:
             obj.logger.info(
                 "OccamModel.read: %d layers, %d total cells from %s",
-                obj.n_layers, obj.n_params, p,
+                obj.n_layers,
+                obj.n_params,
+                p,
             )
         return obj
 
@@ -607,28 +619,28 @@ class OccamModel(OccamBase):
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        _W = 18   # width for the keyword field including colon
+        _W = 18  # width for the keyword field including colon
 
         def _kv(kw: str, val) -> str:
             key = f"{kw}:"
             return f"{key:<{_W}}{val}\n"
 
         lines: list[str] = [
-            _kv("Format",          self.format_str),
-            _kv("Model Name",      self.name),
-            _kv("Description",     self.description),
-            _kv("Mesh File",       self.mesh_file),
-            _kv("Mesh Type",       self.mesh_type),
-            _kv("Statics File",    self.statics_file),
-            _kv("Prejudice File",  self.prejudice_file),
-            _kv("Binding Offset",  f"{self.binding_offset:.1f}"),
-            _kv("Num Layers",      self.n_layers),
+            _kv("Format", self.format_str),
+            _kv("Model Name", self.name),
+            _kv("Description", self.description),
+            _kv("Mesh File", self.mesh_file),
+            _kv("Mesh Type", self.mesh_type),
+            _kv("Statics File", self.statics_file),
+            _kv("Prejudice File", self.prejudice_file),
+            _kv("Binding Offset", f"{self.binding_offset:.1f}"),
+            _kv("Num Layers", self.n_layers),
         ]
 
         for layer in self.layers:
-            n_merge  = layer["n_merge"]
-            n_cols   = layer["n_cols"]
-            params   = layer["params"]
+            n_merge = layer["n_merge"]
+            n_cols = layer["n_cols"]
+            params = layer["params"]
             lines.append(f"     {n_merge}   {n_cols}\n")
             lines.append("    " + "    ".join(str(v) for v in params) + "\n")
 
@@ -650,6 +662,4 @@ class OccamModel(OccamBase):
     @property
     def n_free_params(self) -> int:
         """Number of free (non-boundary) model cells."""
-        return sum(
-            int((layer["params"] != 7).sum()) for layer in self.layers
-        )
+        return sum(int((layer["params"] != 7).sum()) for layer in self.layers)

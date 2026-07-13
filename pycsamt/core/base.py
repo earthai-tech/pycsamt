@@ -130,9 +130,7 @@ class CoreObject(PyCSAMTObject):
         dict
             A JSON-friendly mapping (best-effort).
         """
-        return self._to_dict(self, public_only=public_only,
-                             depth=max_depth)
-
+        return self._to_dict(self, public_only=public_only, depth=max_depth)
 
     def _repr_fields(self) -> Iterable[str]:
         r"""
@@ -147,24 +145,20 @@ class CoreObject(PyCSAMTObject):
         """
         exclude = set(getattr(self, "__repr_exclude__", set()))
         if is_dataclass(self):
-            return (
-                f.name for f in dc_fields(self)
-                if f.name not in exclude
-            )
+            return (f.name for f in dc_fields(self) if f.name not in exclude)
         if hasattr(self, "__dict__"):
-            return (k for k in self.__dict__.keys()
-                    if not k.startswith("_") and k not in exclude)
+            return (
+                k
+                for k in self.__dict__.keys()
+                if not k.startswith("_") and k not in exclude
+            )
         return ()  # pragma: no cover
-
-
 
     @staticmethod
     def _short(v: object) -> str:
         """Summarize values safely for ``__repr__``."""
         # primitives
-        if v is None or isinstance(
-            v, (bool, int, float, complex)
-        ):
+        if v is None or isinstance(v, (bool, int, float, complex)):
             return repr(v)
         if isinstance(v, str):
             if len(v) > 32:
@@ -173,11 +167,9 @@ class CoreObject(PyCSAMTObject):
         # numpy arrays (optional)
         try:  # pragma: no cover for environments w/o numpy
             import numpy as _np  # local import, no hard dep
+
             if isinstance(v, _np.ndarray):
-                return (
-                    "ndarray(shape="
-                    f"{tuple(v.shape)}, dtype={v.dtype})"
-                )
+                return f"ndarray(shape={tuple(v.shape)}, dtype={v.dtype})"
         except Exception:
             pass
         # mappings
@@ -193,9 +185,7 @@ class CoreObject(PyCSAMTObject):
         if isinstance(v, (list, tuple, set)):
             n = len(v)
             # sample a few items, summarized
-            sample = ", ".join(
-                CoreObject._short(x) for x in list(v)[:3]
-            )
+            sample = ", ".join(CoreObject._short(x) for x in list(v)[:3])
             if n > 3:
                 sample += ", ..."
             typ = type(v).__name__
@@ -249,13 +239,12 @@ class CoreObject(PyCSAMTObject):
     ):
         """Coerce nested values for :meth:`as_dict`."""
         # primitives
-        if v is None or isinstance(
-            v, (bool, int, float, complex, str)
-        ):
+        if v is None or isinstance(v, (bool, int, float, complex, str)):
             return v
         # numpy arrays → summary dict (no heavy stats)
         try:  # pragma: no cover
             import numpy as _np
+
             if isinstance(v, _np.ndarray):
                 return {
                     "type": "ndarray",
@@ -268,21 +257,14 @@ class CoreObject(PyCSAMTObject):
         if isinstance(v, Mapping):
             out = {}
             for k, x in list(v.items())[:32]:
-                out[str(k)] = cls._coerce(
-                    x, public_only, depth - 1
-                )
+                out[str(k)] = cls._coerce(x, public_only, depth - 1)
             return out
         # sequence (not bytes)
         if isinstance(v, (list, tuple, set)):
             head = list(v)[:32]
-            return [
-                cls._coerce(x, public_only, depth - 1)
-                for x in head
-            ]
+            return [cls._coerce(x, public_only, depth - 1) for x in head]
         # object → nested dict (one level)
-        return cls._to_dict(
-            v, public_only=public_only, depth=depth - 1
-        )
+        return cls._to_dict(v, public_only=public_only, depth=depth - 1)
 
 
 @dataclass
@@ -389,6 +371,7 @@ class SupportsToBundle(Protocol):
     is considered compatible. This keeps interop light while
     avoiding a hard dependency on specific backends.
     """
+
     def to_bundle(self) -> TFBundle: ...  # noqa: E701
 
 
@@ -404,6 +387,7 @@ class SupportsFromBundle(Protocol):
     is considered compatible. This is commonly used by test
     doubles or thin wrappers in frontends.
     """
+
     @classmethod
     def from_bundle(cls, bundle: TFBundle): ...  # noqa: E701
 
@@ -695,18 +679,18 @@ class MTBase(CoreObject):
     """
 
     # --- Fundamental EM constants (CODATA) -----------------------------
-    MU0: float   = 4.0e-7 * float(np.pi)          # H/m  (μ0)
-    EPS0: float  = 8.854_187_817e-12              # F/m  (ε0)
-    C: float     = 299_792_458.0                  # m/s  (speed of light)
+    MU0: float = 4.0e-7 * float(np.pi)  # H/m  (μ0)
+    EPS0: float = 8.854_187_817e-12  # F/m  (ε0)
+    C: float = 299_792_458.0  # m/s  (speed of light)
 
     # Derived free-space constants
-    C0: float    = 1.0 / np.sqrt(MU0 * EPS0)      # m/s  (= C by definition)
-    ETA0: float  = np.sqrt(MU0 / EPS0)            # Ω    (wave impedance ~376.73 Ω)
+    C0: float = 1.0 / np.sqrt(MU0 * EPS0)  # m/s  (= C by definition)
+    ETA0: float = np.sqrt(MU0 / EPS0)  # Ω    (wave impedance ~376.73 Ω)
 
     # Handy math constants
-    TWO_PI: float = 2.0 * float(np.pi)            # 2π
-    DEG2RAD: float = float(np.pi) / 180.0         # deg → rad
-    RAD2DEG: float = 180.0 / float(np.pi)         # rad → deg
+    TWO_PI: float = 2.0 * float(np.pi)  # 2π
+    DEG2RAD: float = float(np.pi) / 180.0  # deg → rad
+    RAD2DEG: float = 180.0 / float(np.pi)  # rad → deg
 
     # Apparent resistivity factors
     # ρa = |Z|² / (μ0·ω) = |Z|² * [1/(μ0·2π)] / f   (SI form)
@@ -714,35 +698,34 @@ class MTBase(CoreObject):
 
     # Zonge field-units convention (E in mV/km, B or H in nT):
     # ρa ≈ (0.2 / f) * |E/H|²  → 0.2 = 1/5
-    ZONGE_RHO_FACTOR: float = 0.2                 # legacy factor
+    ZONGE_RHO_FACTOR: float = 0.2  # legacy factor
 
     # --- Unit conversions ------------------------------------------------
     # Voltage
-    MICROVOLTS_TO_VOLTS: float = 1e-6             # μV → V
-    MILLIVOLTS_TO_VOLTS: float = 1e-3             # mV → V
+    MICROVOLTS_TO_VOLTS: float = 1e-6  # μV → V
+    MILLIVOLTS_TO_VOLTS: float = 1e-3  # mV → V
 
     # Electric field
-    MV_PER_KM_TO_V_PER_M: float = 1e-6            # (mV/km) → (V/m)
+    MV_PER_KM_TO_V_PER_M: float = 1e-6  # (mV/km) → (V/m)
 
     # Magnetic field / flux density
-    PICOTESLA_TO_TESLA: float   = 1e-12           # pT → T
-    NANOTESLA_TO_TESLA: float   = 1e-9            # nT → T
-    MICROTESLA_TO_TESLA: float  = 1e-6            # μT → T
-    H_TO_B: float               = MU0             # H (A/m) → B (T): B = μ0·H
-    B_TO_H: float               = 1.0 / MU0       # B (T) → H (A/m): H = B/μ0
+    PICOTESLA_TO_TESLA: float = 1e-12  # pT → T
+    NANOTESLA_TO_TESLA: float = 1e-9  # nT → T
+    MICROTESLA_TO_TESLA: float = 1e-6  # μT → T
+    H_TO_B: float = MU0  # H (A/m) → B (T): B = μ0·H
+    B_TO_H: float = 1.0 / MU0  # B (T) → H (A/m): H = B/μ0
 
     # Length
-    METERS_TO_KILOMETERS: float   = 1e-3          # m → km
-    KILOMETERS_TO_METERS: float   = 1e3           # km → m
+    METERS_TO_KILOMETERS: float = 1e-3  # m → km
+    KILOMETERS_TO_METERS: float = 1e3  # km → m
 
     # Percent scaling
-    PERCENT_FACTOR: float = 100.0                 # ×100 for %
+    PERCENT_FACTOR: float = 100.0  # ×100 for %
 
     # Mixed-unit convenience:
     # Convert Z in (mV/km)/nT → (V/m)/T (SI-consistent)
     # factor = (mV/km→V/m) / (nT→T) = 1e-6 / 1e-9 = 1e3
-    Z_UNIT_MVK_NT_TO_SI: float = 1e3              # (mV/km)/nT → (V/m)/T
-
+    Z_UNIT_MVK_NT_TO_SI: float = 1e3  # (mV/km)/nT → (V/m)/T
 
     @staticmethod
     def _as_c(x: object) -> np.ndarray:
@@ -911,9 +894,7 @@ class MTBase(CoreObject):
             Determinant phase in requested unit.
         """
         zd = self.determinant_z(z)
-        return self.rho_phase_from_z(
-            zd, f, phase_unit=phase_unit
-        )
+        return self.rho_phase_from_z(zd, f, phase_unit=phase_unit)
 
     # rotation
 
@@ -1050,7 +1031,6 @@ class MTBase(CoreObject):
             phi = phi * 1.0e3
         return amp, phi
 
-
     def phase_tensor(self, z: object) -> np.ndarray:
         r"""
         Phase tensor ``Φ = X⁺ Y`` from impedance ``Z = X + iY``.
@@ -1159,7 +1139,7 @@ class MTBase(CoreObject):
         c, d = Phi[..., 1, 0], Phi[..., 1, 1]
         # Caldwell et al. 2004 parameterization
         alpha = 0.5 * np.arctan2(b - c, a + d)  # azimuth
-        beta  = 0.5 * np.arctan2(b + c, a - d)  # skew
+        beta = 0.5 * np.arctan2(b + c, a - d)  # skew
         # Eigenvalues (real for real Phi)
         # vals = np.linalg.eigvals(Phi)
         # vals = np.real_if_close(vals, tol=1e5)
@@ -1180,14 +1160,14 @@ class MTBase(CoreObject):
         if angle_unit == "deg":
             phi_max = np.degrees(phi_max)
             phi_min = np.degrees(phi_min)
-            alpha   = np.degrees(alpha)
-            beta    = np.degrees(beta)
+            alpha = np.degrees(alpha)
+            beta = np.degrees(beta)
         elif angle_unit == "mrad":
             k = 1e3
             phi_max = phi_max * k
             phi_min = phi_min * k
-            alpha   = alpha * k
-            beta    = beta * k
+            alpha = alpha * k
+            beta = beta * k
         return phi_max, phi_min, alpha, beta, ellipt
 
     def phase_tensor_azimuth(

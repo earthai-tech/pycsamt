@@ -35,7 +35,8 @@ import click
 # ---------------------------------------------------------------------------
 
 verbose_option = click.option(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     count=True,
     help=(
         "Increase output verbosity.  "
@@ -55,7 +56,8 @@ no_color_option = click.option(
 # ---------------------------------------------------------------------------
 
 output_dir_option = click.option(
-    "-o", "--output-dir",
+    "-o",
+    "--output-dir",
     type=click.Path(file_okay=False, writable=True, path_type=Path),
     default=Path("."),
     show_default=True,
@@ -63,7 +65,8 @@ output_dir_option = click.option(
 )
 
 format_option = click.option(
-    "-f", "--format",
+    "-f",
+    "--format",
     "output_format",
     type=click.Choice(["text", "json", "csv"], case_sensitive=False),
     default="text",
@@ -83,7 +86,8 @@ overwrite_option = click.option(
 # ---------------------------------------------------------------------------
 
 survey_option = click.option(
-    "-S", "--survey",
+    "-S",
+    "--survey",
     "survey_path",
     type=click.Path(exists=True, path_type=Path),
     default=None,
@@ -110,7 +114,8 @@ fresh_option = click.option(
 # ---------------------------------------------------------------------------
 
 n_jobs_option = click.option(
-    "-j", "--jobs",
+    "-j",
+    "--jobs",
     "n_jobs",
     type=click.IntRange(min=1),
     default=1,
@@ -128,26 +133,43 @@ no_cache_option = click.option(
 # ``click.option`` returns decorator callables without useful docstrings.
 # Assign concise API descriptions so autosummary can document these public
 # convenience decorators like ordinary functions.
-verbose_option.__doc__ = "Add the repeatable ``--verbose`` logging option to a Click command."
-no_color_option.__doc__ = "Add the ``--no-color`` terminal-output option to a Click command."
-output_dir_option.__doc__ = "Add the writable ``--output-dir`` path option to a Click command."
-format_option.__doc__ = "Add the text, JSON, or CSV output-format option to a Click command."
-overwrite_option.__doc__ = "Add the ``--overwrite`` confirmation-bypass option to a Click command."
-n_jobs_option.__doc__ = "Add the positive ``--jobs`` parallel-worker option to a Click command."
-no_cache_option.__doc__ = "Add the ``--no-cache`` processing option to a Click command."
+verbose_option.__doc__ = (
+    "Add the repeatable ``--verbose`` logging option to a Click command."
+)
+no_color_option.__doc__ = (
+    "Add the ``--no-color`` terminal-output option to a Click command."
+)
+output_dir_option.__doc__ = (
+    "Add the writable ``--output-dir`` path option to a Click command."
+)
+format_option.__doc__ = (
+    "Add the text, JSON, or CSV output-format option to a Click command."
+)
+overwrite_option.__doc__ = (
+    "Add the ``--overwrite`` confirmation-bypass option to a Click command."
+)
+n_jobs_option.__doc__ = (
+    "Add the positive ``--jobs`` parallel-worker option to a Click command."
+)
+no_cache_option.__doc__ = (
+    "Add the ``--no-cache`` processing option to a Click command."
+)
 
 # ---------------------------------------------------------------------------
 # Convenience bundle: options attached to nearly every command
 # ---------------------------------------------------------------------------
 
+
 def common_options(f):
     """Attach verbose, no-color, format, and output-dir to a command."""
-    for decorator in reversed([
-        verbose_option,
-        no_color_option,
-        format_option,
-        output_dir_option,
-    ]):
+    for decorator in reversed(
+        [
+            verbose_option,
+            no_color_option,
+            format_option,
+            output_dir_option,
+        ]
+    ):
         f = decorator(f)
     return f
 

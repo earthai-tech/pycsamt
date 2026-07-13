@@ -26,6 +26,7 @@ def panel(qapp):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_section_panel_creates(qapp):
     p = SectionPanel()
     assert p is not None
@@ -38,7 +39,7 @@ def test_has_load_button(panel):
 
 def test_has_compare_button(panel):
     assert panel._btn_compare is not None
-    assert not panel._btn_compare.isEnabled()   # disabled until result loaded
+    assert not panel._btn_compare.isEnabled()  # disabled until result loaded
 
 
 def test_has_export_button(panel):
@@ -59,6 +60,7 @@ def test_has_summary_text(panel):
 
 
 # ── Controls ──────────────────────────────────────────────────────────────
+
 
 def test_rho_min_default(panel):
     assert panel._rho_min.value() == pytest.approx(1.0)
@@ -83,6 +85,7 @@ def test_cmap_combo_has_options(panel):
 
 # ── No-data state ─────────────────────────────────────────────────────────
 
+
 def test_clear_disables_buttons(panel):
     panel.clear()
     assert not panel._btn_compare.isEnabled()
@@ -100,6 +103,7 @@ def test_dark_mode_toggle_does_not_raise(panel):
 
 # ── Mock result ───────────────────────────────────────────────────────────
 
+
 class _MockMesh:
     x_nodes = [0, 500, 1000, 1500, 2000]
     z_nodes = [0, 100, 300, 600]
@@ -107,13 +111,14 @@ class _MockMesh:
 
 
 class _MockResult:
-    workdir      = "/tmp/mock_inversion"
+    workdir = "/tmp/mock_inversion"
     n_iterations = 42
-    final_rms    = 0.987
-    mesh         = _MockMesh()
-    summary      = "MockResult: 42 iterations, RMS=0.987"
+    final_rms = 0.987
+    mesh = _MockMesh()
+    summary = "MockResult: 42 iterations, RMS=0.987"
 
     import numpy as np
+
     rho_2d = np.log10(np.full((3, 4), 100.0))  # 3 z-cells × 4 x-cells
 
 
@@ -130,7 +135,7 @@ def test_set_result_stores_result(panel):
 
 
 def test_set_result_does_not_raise(panel):
-    panel.set_result(_MockResult())   # redraw with mock data
+    panel.set_result(_MockResult())  # redraw with mock data
 
 
 def test_clear_after_result_removes_result(panel):

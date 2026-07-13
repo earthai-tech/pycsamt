@@ -6,6 +6,7 @@ PyTorch backend implementation.
 All torch imports are deferred to method bodies — ``import pycsamt``
 never fails without PyTorch installed.
 """
+
 from __future__ import annotations
 
 import copy
@@ -35,9 +36,13 @@ class TorchBackend(NeuralBackend):
             return device
         try:
             import torch
+
             if torch.cuda.is_available():
                 return "cuda"
-            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            if (
+                hasattr(torch.backends, "mps")
+                and torch.backends.mps.is_available()
+            ):
                 return "mps"
         except ImportError:
             pass
@@ -50,13 +55,13 @@ class TorchBackend(NeuralBackend):
         arch = spec["arch"].lower()
         builders = {
             "cnn1d": self._build_cnn1d,
-            "cnn":   self._build_cnn1d,
+            "cnn": self._build_cnn1d,
             "resnet1d": self._build_resnet1d,
-            "resnet":   self._build_resnet1d,
+            "resnet": self._build_resnet1d,
             "fcn1d": self._build_fcn1d,
-            "fcn":   self._build_fcn1d,
+            "fcn": self._build_fcn1d,
             "unet2d": self._build_unet2d,
-            "unet":   self._build_unet2d,
+            "unet": self._build_unet2d,
             "drcnn": self._build_drcnn,
         }
         if arch not in builders:
@@ -68,8 +73,10 @@ class TorchBackend(NeuralBackend):
 
     def _build_cnn1d(self, spec):
         from ..ai.nets.cnn1d import CNN1DNet
+
         return CNN1DNet(
-            spec["n_features"], spec["n_out"],
+            spec["n_features"],
+            spec["n_out"],
             channels=spec.get("channels", (32, 64, 128)),
             kernel_size=spec.get("kernel_size", 5),
             dropout=spec.get("dropout", 0.3),
@@ -77,8 +84,10 @@ class TorchBackend(NeuralBackend):
 
     def _build_resnet1d(self, spec):
         from ..ai.nets.resnet import ResNet1DNet
+
         return ResNet1DNet(
-            spec["n_features"], spec["n_out"],
+            spec["n_features"],
+            spec["n_out"],
             channels=spec.get("channels", (64, 128, 256)),
             dropout=spec.get("dropout", 0.3),
             n_blocks=spec.get("n_blocks", 2),
@@ -86,14 +95,17 @@ class TorchBackend(NeuralBackend):
 
     def _build_fcn1d(self, spec):
         from ..ai.nets.fcn import FCN1DNet
+
         return FCN1DNet(
-            spec["n_features"], spec["n_out"],
+            spec["n_features"],
+            spec["n_out"],
             channels=spec.get("channels", (32, 64, 128, 64)),
             dropout=spec.get("dropout", 0.2),
         ).build()
 
     def _build_unet2d(self, spec):
         from ..ai.nets.unet import UNet2DNet
+
         return UNet2DNet(
             n_in=spec["n_in"],
             n_out=spec.get("n_out", 1),
@@ -103,6 +115,7 @@ class TorchBackend(NeuralBackend):
 
     def _build_drcnn(self, spec):
         from ..ai.nets.drcnn import DRCNNNet
+
         return DRCNNNet(
             n_features_list=spec["n_features_list"],
             n_out=spec["n_out"],
@@ -117,11 +130,19 @@ class TorchBackend(NeuralBackend):
     def train(
         self,
         model,
-        X_train, y_train,
-        X_val, y_val,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
         *,
-        epochs=100, batch_size=256, lr=1e-3, patience=20,
-        grad_clip=None, device=None, verbose=True, loss="mse",
+        epochs=100,
+        batch_size=256,
+        lr=1e-3,
+        patience=20,
+        grad_clip=None,
+        device=None,
+        verbose=True,
+        loss="mse",
     ):
         self.require()
         import torch
@@ -143,7 +164,9 @@ class TorchBackend(NeuralBackend):
         yva = torch.from_numpy(y_val.astype(np.float32)).to(dev)
 
         loader = DataLoader(
-            TensorDataset(Xtr, ytr), batch_size=batch_size, shuffle=True,
+            TensorDataset(Xtr, ytr),
+            batch_size=batch_size,
+            shuffle=True,
             pin_memory=(dev != "cpu"),
         )
 
@@ -182,8 +205,10 @@ class TorchBackend(NeuralBackend):
                 no_improve += 1
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(f"  [torch]  ep {ep:>4d}/{epochs}  "
-                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
+                print(
+                    f"  [torch]  ep {ep:>4d}/{epochs}  "
+                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
+                )
             if no_improve >= patience:
                 if verbose:
                     print(f"  Early stop at epoch {ep}")
@@ -199,12 +224,13 @@ class TorchBackend(NeuralBackend):
     def predict(self, model, X, *, device=None, batch_size=256):
         self.require()
         import torch
+
         dev = next(model.parameters()).device
         model.eval()
         X = np.asarray(X, dtype=np.float32)
         outs = []
         for i in range(0, len(X), batch_size):
-            xb = torch.from_numpy(X[i:i + batch_size]).to(dev)
+            xb = torch.from_numpy(X[i : i + batch_size]).to(dev)
             with torch.no_grad():
                 outs.append(model(xb).cpu().numpy())
         return np.concatenate(outs, axis=0)
@@ -216,6 +242,7 @@ class TorchBackend(NeuralBackend):
 
     def set_weights(self, model, weights) -> None:
         import torch
+
         state = {k: torch.from_numpy(v) for k, v in weights.items()}
         model.load_state_dict(state)
 
@@ -224,10 +251,12 @@ class TorchBackend(NeuralBackend):
     @staticmethod
     def _get_loss_fn(loss: str):
         import torch.nn as nn
+
         if loss == "mse":
             return nn.MSELoss()
         if loss == "masked_mse":
             from ..ai.training.metrics import masked_mse_loss
+
             return masked_mse_loss
         if loss == "cross_entropy":
             return nn.CrossEntropyLoss()

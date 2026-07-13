@@ -94,10 +94,10 @@ class FrequencyDecimationAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.n_per_decade  = n_per_decade
+        self.n_per_decade = n_per_decade
         self.snr_threshold = snr_threshold
-        self.period_range  = period_range
-        self.component     = component.lower()
+        self.period_range = period_range
+        self.component = component.lower()
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -113,17 +113,21 @@ class FrequencyDecimationAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        n_per_decade  = int(input_data.get("n_per_decade",  self.n_per_decade))
-        snr_threshold = float(input_data.get("snr_threshold", self.snr_threshold))
-        period_range  = input_data.get("period_range") or self.period_range
-        component     = str(input_data.get("component", self.component)).lower()
-        output_dir    = input_data.get("output_dir")
+        n_per_decade = int(input_data.get("n_per_decade", self.n_per_decade))
+        snr_threshold = float(
+            input_data.get("snr_threshold", self.snr_threshold)
+        )
+        period_range = input_data.get("period_range") or self.period_range
+        component = str(input_data.get("component", self.component)).lower()
+        output_dir = input_data.get("output_dir")
 
         ri, ci = (0, 1) if component == "xy" else (1, 0)
 
@@ -131,16 +135,18 @@ class FrequencyDecimationAgent(BaseAgent):
         qc_result = input_data.get("qc_result")
         if qc_result is not None:
             try:
-                snr_section = (qc_result.get("snr_section")
-                               if hasattr(qc_result, "get") else
-                               qc_result.get("data", {}).get("snr_section"))
+                snr_section = (
+                    qc_result.get("snr_section")
+                    if hasattr(qc_result, "get")
+                    else qc_result.get("data", {}).get("snr_section")
+                )
                 if snr_section is not None and isinstance(snr_section, dict):
                     pass
             except Exception:
                 pass
 
-        selected_periods: dict[str, np.ndarray]   = {}
-        dead_band_mask:   dict[str, np.ndarray]   = {}
+        selected_periods: dict[str, np.ndarray] = {}
+        dead_band_mask: dict[str, np.ndarray] = {}
         n_original = 0
         n_selected = 0
 
@@ -163,7 +169,7 @@ class FrequencyDecimationAgent(BaseAgent):
             try:
                 zcomp = np.abs(z[:, ri, ci])
                 np.nanmean(zcomp[valid]) if valid.any() else 1.0
-                sd    = np.nanstd(zcomp[valid])  + 1e-30
+                sd = np.nanstd(zcomp[valid]) + 1e-30
                 snr_proxy = zcomp / sd
             except Exception:
                 pass
@@ -176,7 +182,9 @@ class FrequencyDecimationAgent(BaseAgent):
             n_original += int(valid.sum())
 
             if not good.any():
-                warnings.append(f"{nm}: no frequencies pass SNR threshold — skipped.")
+                warnings.append(
+                    f"{nm}: no frequencies pass SNR threshold — skipped."
+                )
                 selected_periods[nm] = np.array([])
                 continue
 
@@ -185,13 +193,13 @@ class FrequencyDecimationAgent(BaseAgent):
 
             # ── log-spaced decimation ─────────────────────────────────────
             p_min, p_max = float(log_p.min()), float(log_p.max())
-            n_decades    = max(1.0, p_max - p_min)
-            n_target     = max(1, int(np.round(n_decades * n_per_decade)))
+            n_decades = max(1.0, p_max - p_min)
+            n_target = max(1, int(np.round(n_decades * n_per_decade)))
 
             if n_target >= len(good_periods):
                 chosen = good_periods
             else:
-                targets   = np.linspace(p_min, p_max, n_target)
+                targets = np.linspace(p_min, p_max, n_target)
                 chosen_idx = set()
                 for t in targets:
                     idx = int(np.argmin(np.abs(log_p - t)))
@@ -202,7 +210,7 @@ class FrequencyDecimationAgent(BaseAgent):
             n_selected += len(chosen)
 
         # ── summary ───────────────────────────────────────────────────────
-        n_sta_sel      = sum(1 for p in selected_periods.values() if p.size > 0)
+        n_sta_sel = sum(1 for p in selected_periods.values() if p.size > 0)
         selection_ratio = n_selected / max(n_original, 1)
 
         # ── figures ───────────────────────────────────────────────────────
@@ -211,13 +219,20 @@ class FrequencyDecimationAgent(BaseAgent):
 
         try:
             fig = _plot_selection_summary(
-                selected_periods, dead_band_mask, sites,
-                n_per_decade, snr_threshold,
+                selected_periods,
+                dead_band_mask,
+                sites,
+                n_per_decade,
+                snr_threshold,
             )
             if fig is not None:
                 figures["selection_summary"] = fig
-                p = self._save_figure(fig, output_dir, "freq_decimation_summary",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig,
+                    output_dir,
+                    "freq_decimation_summary",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["selection_summary"] = p
         except Exception as exc:
@@ -248,12 +263,12 @@ class FrequencyDecimationAgent(BaseAgent):
             ),
             data={
                 "selected_periods": selected_periods,
-                "n_original":       n_original,
-                "n_selected":       n_selected,
-                "selection_ratio":  selection_ratio,
-                "dead_band_mask":   dead_band_mask,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
+                "n_original": n_original,
+                "n_selected": n_selected,
+                "selection_ratio": selection_ratio,
+                "dead_band_mask": dead_band_mask,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -264,9 +279,10 @@ class FrequencyDecimationAgent(BaseAgent):
 
 # ── private helpers ───────────────────────────────────────────────────────────
 
+
 def _plot_selection_summary(
     selected_periods: dict[str, np.ndarray],
-    dead_band_mask:   dict[str, np.ndarray],
+    dead_band_mask: dict[str, np.ndarray],
     sites: Any,
     n_per_decade: int,
     snr_threshold: float,
@@ -304,12 +320,21 @@ def _plot_selection_summary(
                 ax.scatter(
                     [xi] * int(dead_mask.sum()),
                     per_all[dead_mask],
-                    marker="x", s=18, color="#e74c3c", alpha=0.6, zorder=2,
+                    marker="x",
+                    s=18,
+                    color="#e74c3c",
+                    alpha=0.6,
+                    zorder=2,
                 )
             if sel.size > 0:
                 ax.scatter(
-                    [xi] * len(sel), sel,
-                    marker="o", s=20, color="#27ae60", alpha=0.85, zorder=3,
+                    [xi] * len(sel),
+                    sel,
+                    marker="o",
+                    s=20,
+                    color="#27ae60",
+                    alpha=0.85,
+                    zorder=3,
                 )
             break
 
@@ -321,7 +346,8 @@ def _plot_selection_summary(
         f"Frequency decimation  "
         f"(n/decade={n_per_decade}, SNR≥{snr_threshold})\n"
         "Green = selected  ·  Red × = dead-band / low SNR",
-        fontsize=9, fontweight="bold",
+        fontsize=9,
+        fontweight="bold",
     )
     ax.tick_params(labelsize=8)
     fig.tight_layout()

@@ -99,7 +99,8 @@ from ._base import transform
 )
 # --- output control ---
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -179,16 +180,16 @@ def spectra(
         sys.exit(1)
 
     if dry_run:
-        click.echo(
-            f"Dry run — {len(files)} file(s) would be converted:\n"
-        )
+        click.echo(f"Dry run — {len(files)} file(s) would be converted:\n")
         for f in files:
             name = (station_name if station_name else f.stem) + station_suffix
             click.echo(f"  {f.name}  →  {name}.edi")
         return
 
     if str(output_dir) == ".":
-        raise click.UsageError("--output-dir is required when not using --dry-run")
+        raise click.UsageError(
+            "--output-dir is required when not using --dry-run"
+        )
 
     from pycsamt.transformers import (
         SpectraToEDI,  # noqa: PLC0415
@@ -220,18 +221,20 @@ def spectra(
 
     # --- report ---
     summary = {
-        "n_input":   len(files),
-        "n_ok":      result.n_ok,
-        "n_fail":    result.n_fail,
+        "n_input": len(files),
+        "n_ok": result.n_ok,
+        "n_fail": result.n_fail,
         "output_dir": str(output_dir),
         "converted": [
-            {"station": ed.station, "n_freq": ed.Z.n_freq,
-             "has_tipper": ed.has_tipper}
+            {
+                "station": ed.station,
+                "n_freq": ed.Z.n_freq,
+                "has_tipper": ed.has_tipper,
+            }
             for ed in result.collection
         ],
         "failures": [
-            {"source": r.source, "error": r.error}
-            for r in result.failures
+            {"source": r.source, "error": r.error} for r in result.failures
         ],
     }
 
@@ -246,7 +249,9 @@ def spectra(
         if verbose >= 1:
             for ed in result.collection:
                 tip = "tipper ✓" if ed.has_tipper else "no tipper"
-                click.echo(f"  ✓  {ed.station:30}  {ed.Z.n_freq:3d} freq  {tip}")
+                click.echo(
+                    f"  ✓  {ed.station:30}  {ed.Z.n_freq:3d} freq  {tip}"
+                )
         if result.failures:
             click.echo("\nFailed conversions:", err=True)
             for r in result.failures:

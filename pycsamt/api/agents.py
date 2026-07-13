@@ -109,6 +109,7 @@ from pathlib import Path
 # os.environ (e.g. loaded from .env.local).
 _TLS = threading.local()
 
+
 # ── Auto-load .env.local from repo root ───────────────────────────────────────
 # Populates os.environ before any key resolution so that
 # ANTHROPIC_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY etc.
@@ -121,11 +122,7 @@ def _load_env_local() -> None:
         if env_file.exists():
             for raw in env_file.read_text().splitlines():
                 line = raw.strip()
-                if (
-                    not line
-                    or line.startswith("#")
-                    or "=" not in line
-                ):
+                if not line or line.startswith("#") or "=" not in line:
                     continue
                 k, _, v = line.partition("=")
                 k = k.strip()
@@ -156,11 +153,11 @@ _PROVIDERS: frozenset[str] = frozenset(
 )
 
 _DEFAULT_MODELS: dict[str, str] = {
-    "claude":    "claude-sonnet-4-6",
-    "openai":    "gpt-4o",
-    "gemini":    "gemini-2.0-flash",
-    "deepseek":  "deepseek-chat",
-    "minimax":   "MiniMax-M3",
+    "claude": "claude-sonnet-4-6",
+    "openai": "gpt-4o",
+    "gemini": "gemini-2.0-flash",
+    "deepseek": "deepseek-chat",
+    "minimax": "MiniMax-M3",
 }
 
 _ENV_KEYS: dict[str, list[str]] = {
@@ -193,54 +190,55 @@ _ENV_KEYS: dict[str, list[str]] = {
 # precedence; these are used only as fallback.
 _BUILTIN_RATES: dict[str, dict[str, dict[str, float]]] = {
     "claude": {
-        "claude-opus-4-8":              {"input": 15.00, "output": 75.00},
-        "claude-opus-4-7":              {"input": 15.00, "output": 75.00},
-        "claude-opus-4-6":              {"input": 15.00, "output": 75.00},
-        "claude-sonnet-4-6":            {"input":  3.00, "output": 15.00},
-        "claude-haiku-4-5":             {"input":  0.80, "output":  4.00},
-        "claude-haiku-4-5-20251001":    {"input":  0.80, "output":  4.00},
-        "claude-3-opus-20240229":       {"input": 15.00, "output": 75.00},
-        "claude-3-5-sonnet-20241022":   {"input":  3.00, "output": 15.00},
-        "claude-3-haiku-20240307":      {"input":  0.25, "output":  1.25},
+        "claude-opus-4-8": {"input": 15.00, "output": 75.00},
+        "claude-opus-4-7": {"input": 15.00, "output": 75.00},
+        "claude-opus-4-6": {"input": 15.00, "output": 75.00},
+        "claude-sonnet-4-6": {"input": 3.00, "output": 15.00},
+        "claude-haiku-4-5": {"input": 0.80, "output": 4.00},
+        "claude-haiku-4-5-20251001": {"input": 0.80, "output": 4.00},
+        "claude-3-opus-20240229": {"input": 15.00, "output": 75.00},
+        "claude-3-5-sonnet-20241022": {"input": 3.00, "output": 15.00},
+        "claude-3-haiku-20240307": {"input": 0.25, "output": 1.25},
     },
     "openai": {
-        "gpt-4o":                       {"input":  2.50, "output": 10.00},
-        "gpt-4o-mini":                  {"input":  0.15, "output":  0.60},
-        "gpt-4-turbo":                  {"input": 10.00, "output": 30.00},
-        "gpt-4":                        {"input": 30.00, "output": 60.00},
-        "gpt-3.5-turbo":               {"input":  0.50, "output":  1.50},
+        "gpt-4o": {"input": 2.50, "output": 10.00},
+        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
+        "gpt-4": {"input": 30.00, "output": 60.00},
+        "gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
     },
     "gemini": {
-        "gemini-1.5-pro":               {"input":  3.50, "output": 10.50},
-        "gemini-1.5-flash":             {"input":  0.075,"output":  0.30},
-        "gemini-1.5-flash-8b":          {"input":  0.0375,"output": 0.15},
-        "gemini-2.0-flash":             {"input":  0.10, "output":  0.40},
+        "gemini-1.5-pro": {"input": 3.50, "output": 10.50},
+        "gemini-1.5-flash": {"input": 0.075, "output": 0.30},
+        "gemini-1.5-flash-8b": {"input": 0.0375, "output": 0.15},
+        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
     },
     "deepseek": {
         # DeepSeek-V3 / deepseek-chat
-        "deepseek-chat":                {"input":  0.27, "output":  1.10},
+        "deepseek-chat": {"input": 0.27, "output": 1.10},
         # DeepSeek-R1 (reasoning model)
-        "deepseek-reasoner":            {"input":  0.55, "output":  2.19},
+        "deepseek-reasoner": {"input": 0.55, "output": 2.19},
     },
     "minimax": {
         # MiniMax-M3 (<=512K input tokens)
-        "MiniMax-M3":                   {"input":  0.30, "output":  1.20},
+        "MiniMax-M3": {"input": 0.30, "output": 1.20},
     },
 }
 
 # Provider-level defaults when the exact model is not found anywhere
 _PROVIDER_DEFAULTS: dict[str, dict[str, float]] = {
-    "claude":   {"input":  3.00, "output": 15.00},
-    "openai":   {"input":  2.50, "output": 10.00},
-    "gemini":   {"input":  3.50, "output": 10.50},
-    "deepseek": {"input":  0.27, "output":  1.10},
-    "minimax":  {"input":  0.30, "output":  1.20},
+    "claude": {"input": 3.00, "output": 15.00},
+    "openai": {"input": 2.50, "output": 10.00},
+    "gemini": {"input": 3.50, "output": 10.50},
+    "deepseek": {"input": 0.27, "output": 1.10},
+    "minimax": {"input": 0.30, "output": 1.20},
 }
 
 
 # ---------------------------------------------------------------------------
 # BudgetExceededError
 # ---------------------------------------------------------------------------
+
 
 class BudgetExceededError(RuntimeError):
     """Raised when an LLM call would be made after the session budget is used.
@@ -254,7 +252,7 @@ class BudgetExceededError(RuntimeError):
     """
 
     def __init__(self, spent: float, budget: float) -> None:
-        self.spent_usd  = spent
+        self.spent_usd = spent
         self.budget_usd = budget
         super().__init__(
             f"Session budget of ${budget:.4f} exceeded "
@@ -267,6 +265,7 @@ class BudgetExceededError(RuntimeError):
 # ---------------------------------------------------------------------------
 # AgentConfig
 # ---------------------------------------------------------------------------
+
 
 class AgentConfig:
     """Global LLM configuration singleton for all pycsamt agents.
@@ -324,17 +323,17 @@ class AgentConfig:
 
     def __init__(self) -> None:
         self._provider: str | None = None
-        self._model:    str | None = None
-        self._keys:     dict[str, str] = {}           # provider → explicit key
-        self._stack:    list[dict]     = []            # context-manager save-stack
+        self._model: str | None = None
+        self._keys: dict[str, str] = {}  # provider → explicit key
+        self._stack: list[dict] = []  # context-manager save-stack
 
         # pricing
         # structure: {provider: {model: {"input": float, "output": float}}}
         self._custom_rates: dict[str, dict[str, dict[str, float]]] = {}
 
         # budget
-        self._budget_usd: float | None = None         # None = no cap
-        self._spent_usd:  float        = 0.0
+        self._budget_usd: float | None = None  # None = no cap
+        self._spent_usd: float = 0.0
 
     # ------------------------------------------------------------------
     # Primary configuration API
@@ -344,8 +343,8 @@ class AgentConfig:
         self,
         *,
         provider: str,
-        api_key:  str,
-        model:    str | None = None,
+        api_key: str,
+        model: str | None = None,
     ) -> AgentConfig:
         """Set the active provider, key, and optional model in one call.
 
@@ -466,11 +465,11 @@ class AgentConfig:
         Custom rates and the budget cap/counter are always reset.
         Call :meth:`reset_budget` to zero only the spend counter.
         """
-        self._provider    = None
-        self._model       = None
+        self._provider = None
+        self._model = None
         self._custom_rates.clear()
-        self._budget_usd  = None
-        self._spent_usd   = 0.0
+        self._budget_usd = None
+        self._spent_usd = 0.0
         if keys:
             self._keys.clear()
         return self
@@ -484,7 +483,7 @@ class AgentConfig:
         provider: str,
         model: str,
         *,
-        input: float,   # noqa: A002  — mirrors industry terminology
+        input: float,  # noqa: A002  — mirrors industry terminology
         output: float,
     ) -> AgentConfig:
         """Override or add the cost rate for a specific provider + model.
@@ -604,8 +603,7 @@ class AgentConfig:
         """
         rate = self.get_rate(provider, model)
         return (
-            input_tokens  * rate["input"]
-            + output_tokens * rate["output"]
+            input_tokens * rate["input"] + output_tokens * rate["output"]
         ) / 1_000_000
 
     def list_rates(self, provider: str | None = None) -> dict:
@@ -723,7 +721,10 @@ class AgentConfig:
         Called internally by :meth:`~pycsamt.agents.BaseAgent.query_llm`
         *before* each API call.
         """
-        if self._budget_usd is not None and self._spent_usd >= self._budget_usd:
+        if (
+            self._budget_usd is not None
+            and self._spent_usd >= self._budget_usd
+        ):
             raise BudgetExceededError(self._spent_usd, self._budget_usd)
 
     # ------------------------------------------------------------------
@@ -762,8 +763,8 @@ class AgentConfig:
     def resolve(
         self,
         provider: str,
-        api_key:  str | None,
-        model:    str | None,
+        api_key: str | None,
+        model: str | None,
     ) -> tuple[str, str | None, str | None]:
         """Resolve the effective ``(provider, api_key, model)`` for an agent.
 
@@ -819,27 +820,29 @@ class AgentConfig:
         """
         key = self.api_key
         if key:
-            source = "explicit" if (self._provider and self._provider in self._keys) else "env"
+            source = (
+                "explicit"
+                if (self._provider and self._provider in self._keys)
+                else "env"
+            )
         else:
             source = "none"
 
         custom_models: dict[str, list[str]] = {
-            p: sorted(m.keys())
-            for p, m in self._custom_rates.items()
-            if m
+            p: sorted(m.keys()) for p, m in self._custom_rates.items() if m
         }
 
         return {
-            "provider":          self._provider,
-            "model":             self.model,
-            "has_key":           key is not None,
-            "api_key_masked":    f"…{key[-4:]}" if key else None,
-            "key_source":        source,
-            "stored_providers":  sorted(self._keys.keys()),
+            "provider": self._provider,
+            "model": self.model,
+            "has_key": key is not None,
+            "api_key_masked": f"…{key[-4:]}" if key else None,
+            "key_source": source,
+            "stored_providers": sorted(self._keys.keys()),
             "custom_rate_models": custom_models,
-            "budget_usd":        self._budget_usd,
-            "spent_usd":         round(self._spent_usd, 6),
-            "remaining_usd":     (
+            "budget_usd": self._budget_usd,
+            "spent_usd": round(self._spent_usd, 6),
+            "remaining_usd": (
                 round(self.remaining_usd, 6)
                 if self.remaining_usd is not None
                 else None
@@ -855,8 +858,8 @@ class AgentConfig:
         self,
         *,
         provider: str | None = None,
-        api_key:  str | None = None,
-        model:    str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
     ) -> Generator[AgentConfig, None, None]:
         """Temporarily override the global config inside a ``with`` block.
 
@@ -884,12 +887,14 @@ class AgentConfig:
             # original provider / key / model restored here
         """
         saved = {
-            "_provider":     self._provider,
-            "_model":        self._model,
-            "_keys":         dict(self._keys),
-            "_custom_rates": {p: dict(m) for p, m in self._custom_rates.items()},
-            "_budget_usd":   self._budget_usd,
-            "_spent_usd":    self._spent_usd,
+            "_provider": self._provider,
+            "_model": self._model,
+            "_keys": dict(self._keys),
+            "_custom_rates": {
+                p: dict(m) for p, m in self._custom_rates.items()
+            },
+            "_budget_usd": self._budget_usd,
+            "_spent_usd": self._spent_usd,
         }
         self._stack.append(saved)
         try:
@@ -903,12 +908,12 @@ class AgentConfig:
             yield self
         finally:
             restored = self._stack.pop()
-            self._provider    = restored["_provider"]
-            self._model       = restored["_model"]
-            self._keys        = restored["_keys"]
+            self._provider = restored["_provider"]
+            self._model = restored["_model"]
+            self._keys = restored["_keys"]
             self._custom_rates = restored["_custom_rates"]
-            self._budget_usd  = restored["_budget_usd"]
-            self._spent_usd   = restored["_spent_usd"]
+            self._budget_usd = restored["_budget_usd"]
+            self._spent_usd = restored["_spent_usd"]
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -1002,11 +1007,12 @@ AGENT_CONFIG: AgentConfig = AgentConfig()
 # Convenience wrappers  (mirrors configure_section(), configure_style(), …)
 # ---------------------------------------------------------------------------
 
+
 def configure_agents(
     *,
     provider: str,
-    api_key:  str,
-    model:    str | None = None,
+    api_key: str,
+    model: str | None = None,
 ) -> AgentConfig:
     """Configure :data:`AGENT_CONFIG` in one call and return it.
 
@@ -1029,7 +1035,9 @@ def configure_agents(
         from pycsamt.agents import configure_agents
         configure_agents(provider="claude", api_key="sk-ant-…")
     """
-    return AGENT_CONFIG.configure(provider=provider, api_key=api_key, model=model)
+    return AGENT_CONFIG.configure(
+        provider=provider, api_key=api_key, model=model
+    )
 
 
 def reset_agents(*, keys: bool = True) -> AgentConfig:

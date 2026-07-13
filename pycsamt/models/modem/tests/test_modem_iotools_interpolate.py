@@ -18,14 +18,17 @@ from pycsamt.models.modem.iotools.interpolate import (
 # Synthetic model / data builders
 # ---------------------------------------------------------------------------
 
+
 def _uniform_model(nx=6, ny=5, nz=4, n_air=1, rho=100.0):
     """Small uniform-resistivity model."""
     from pycsamt.models.modem.model3d import ModEmModel3D
+
     m = ModEmModel3D()
     m.x_widths = np.full(nx, 2000.0)
     m.y_widths = np.full(ny, 2000.0)
-    m.z_widths = np.concatenate([np.full(n_air, 50.0),
-                                  np.geomspace(100.0, 1000.0, nz - n_air)])
+    m.z_widths = np.concatenate(
+        [np.full(n_air, 50.0), np.geomspace(100.0, 1000.0, nz - n_air)]
+    )
     m.n_air = n_air
     m.rho_loge = np.full((nz, ny, nx), np.log(rho))
     return m
@@ -34,11 +37,13 @@ def _uniform_model(nx=6, ny=5, nz=4, n_air=1, rho=100.0):
 def _gradient_model(nx=8, ny=6, nz=5, n_air=1):
     """Model with a smooth resistivity gradient (easy to verify interpolation)."""
     from pycsamt.models.modem.model3d import ModEmModel3D
+
     m = ModEmModel3D()
     m.x_widths = np.full(nx, 1000.0)
     m.y_widths = np.full(ny, 1000.0)
-    m.z_widths = np.concatenate([np.full(n_air, 50.0),
-                                  np.full(nz - n_air, 500.0)])
+    m.z_widths = np.concatenate(
+        [np.full(n_air, 50.0), np.full(nz - n_air, 500.0)]
+    )
     m.n_air = n_air
     # Linear rho gradient 100 → 1000 Ω·m along z-axis
     rho_vals = np.linspace(100.0, 1000.0, nz)
@@ -52,17 +57,27 @@ def _z3d_imp_on_grid(n_pts_per_dim=4, periods=(10.0, 100.0)):
     xs = np.linspace(-5000, 5000, n_pts_per_dim)
     ys = np.linspace(-5000, 5000, n_pts_per_dim)
     xx, yy = np.meshgrid(xs, ys)
-    site_loc = np.column_stack([xx.ravel(), yy.ravel(), np.zeros(n_pts_per_dim**2)])
+    site_loc = np.column_stack(
+        [xx.ravel(), yy.ravel(), np.zeros(n_pts_per_dim**2)]
+    )
     n_sites = len(site_loc)
     comps = ["ZXX", "ZXY", "ZYX", "ZYY"]
     blocks = []
     for T in periods:
-        Z    = rng.standard_normal((n_sites, 4)) + 1j * rng.standard_normal((n_sites, 4))
+        Z = rng.standard_normal((n_sites, 4)) + 1j * rng.standard_normal(
+            (n_sites, 4)
+        )
         Zerr = np.abs(rng.standard_normal((n_sites, 4))) * 0.1 + 1e-3
-        blocks.append(ZBlock(
-            period=T, site_names=[f"S{k:03d}" for k in range(n_sites)],
-            site_loc=site_loc, comp_names=comps, Z=Z, Zerr=Zerr,
-        ))
+        blocks.append(
+            ZBlock(
+                period=T,
+                site_names=[f"S{k:03d}" for k in range(n_sites)],
+                site_loc=site_loc,
+                comp_names=comps,
+                Z=Z,
+                Zerr=Zerr,
+            )
+        )
     return ImpedanceFile(blocks=blocks)
 
 
@@ -70,9 +85,11 @@ def _z3d_imp_on_grid(n_pts_per_dim=4, periods=(10.0, 100.0)):
 # interp_model3d
 # ===========================================================================
 
+
 class TestInterpModel3D:
     def test_returns_model3d(self):
         from pycsamt.models.modem.model3d import ModEmModel3D
+
         src = _uniform_model()
         tgt = _uniform_model(nx=4, ny=3, nz=3, n_air=1)
         result = interp_model3d(src, tgt, bg_rho=100.0)
@@ -87,12 +104,12 @@ class TestInterpModel3D:
     def test_uniform_model_roundtrip(self):
         """Interpolating a uniform model preserves the value."""
         src = _uniform_model(rho=200.0)
-        tgt = _uniform_model(nx=4, ny=4, nz=4, rho=1.0)  # different initial rho
+        tgt = _uniform_model(
+            nx=4, ny=4, nz=4, rho=1.0
+        )  # different initial rho
         result = interp_model3d(src, tgt, bg_rho=200.0)
         # Interior points should be ≈ ln(200)
-        np.testing.assert_allclose(
-            result.rho_loge, np.log(200.0), atol=0.05
-        )
+        np.testing.assert_allclose(result.rho_loge, np.log(200.0), atol=0.05)
 
     def test_no_nans_in_result(self):
         src = _uniform_model()
@@ -103,10 +120,11 @@ class TestInterpModel3D:
     def test_background_fills_outside_domain(self):
         """Target grid extends beyond source → outside cells get bg_rho."""
         from pycsamt.models.modem.model3d import ModEmModel3D
+
         src = _uniform_model(nx=4, ny=4, nz=4, rho=100.0)
         # Target is 10× wider → outer cells get background
         tgt = ModEmModel3D()
-        tgt.x_widths = np.full(6, 5000.0)   # much wider than source
+        tgt.x_widths = np.full(6, 5000.0)  # much wider than source
         tgt.y_widths = np.full(6, 5000.0)
         tgt.z_widths = np.full(4, 500.0)
         tgt.n_air = 1
@@ -149,31 +167,37 @@ class TestInterpModel3D:
 # interp_z3d
 # ===========================================================================
 
+
 class TestInterpZ3D:
     def test_returns_impedancefile(self):
         imp = _z3d_imp_on_grid()
-        new_loc = np.column_stack([
-            np.linspace(-3000, 3000, 5),
-            np.linspace(-3000, 3000, 5),
-            np.zeros(5),
-        ])
+        new_loc = np.column_stack(
+            [
+                np.linspace(-3000, 3000, 5),
+                np.linspace(-3000, 3000, 5),
+                np.zeros(5),
+            ]
+        )
         result = interp_z3d(imp, new_loc)
         assert isinstance(result, ImpedanceFile)
 
     def test_n_sites_updated(self):
         imp = _z3d_imp_on_grid(n_pts_per_dim=4)
-        new_loc = np.column_stack([
-            np.linspace(-2000, 2000, 7),
-            np.linspace(-2000, 2000, 7),
-            np.zeros(7),
-        ])
+        new_loc = np.column_stack(
+            [
+                np.linspace(-2000, 2000, 7),
+                np.linspace(-2000, 2000, 7),
+                np.zeros(7),
+            ]
+        )
         result = interp_z3d(imp, new_loc)
         assert result.blocks[0].n_sites == 7
 
     def test_site_loc_updated(self):
         imp = _z3d_imp_on_grid()
-        new_loc = np.column_stack([np.arange(5, dtype=float) * 500,
-                                   np.zeros(5), np.zeros(5)])
+        new_loc = np.column_stack(
+            [np.arange(5, dtype=float) * 500, np.zeros(5), np.zeros(5)]
+        )
         result = interp_z3d(imp, new_loc)
         np.testing.assert_array_equal(result.blocks[0].site_loc, new_loc)
 
@@ -203,11 +227,13 @@ class TestInterpZ3D:
 
     def test_pct_error_applied(self):
         imp = _z3d_imp_on_grid(n_pts_per_dim=4)
-        new_loc = np.column_stack([
-            np.linspace(-3000, 3000, 5),
-            np.linspace(-3000, 3000, 5),
-            np.zeros(5),
-        ])
+        new_loc = np.column_stack(
+            [
+                np.linspace(-3000, 3000, 5),
+                np.linspace(-3000, 3000, 5),
+                np.zeros(5),
+            ]
+        )
         result = interp_z3d(imp, new_loc, pct_error=5.0)
         # Zerr should equal 5% of |Z|
         for blk in result.blocks:
@@ -219,7 +245,7 @@ class TestInterpZ3D:
         imp = _z3d_imp_on_grid(n_pts_per_dim=5, periods=(10.0,))
         blk = imp.blocks[0]
         # Query at the first site's location
-        target_loc = blk.site_loc[:1, :]   # just one site
+        target_loc = blk.site_loc[:1, :]  # just one site
         result = interp_z3d(imp, target_loc)
         # Interpolated value should be close to original for point exactly on the grid
         np.testing.assert_allclose(
@@ -228,10 +254,12 @@ class TestInterpZ3D:
 
     def test_z_shape_correct(self):
         imp = _z3d_imp_on_grid(n_pts_per_dim=4)
-        new_loc = np.column_stack([
-            np.linspace(-2000, 2000, 6),
-            np.linspace(-2000, 2000, 6),
-            np.zeros(6),
-        ])
+        new_loc = np.column_stack(
+            [
+                np.linspace(-2000, 2000, 6),
+                np.linspace(-2000, 2000, 6),
+                np.zeros(6),
+            ]
+        )
         result = interp_z3d(imp, new_loc)
-        assert result.blocks[0].Z.shape == (6, 4)   # 6 sites, 4 components
+        assert result.blocks[0].Z.shape == (6, 4)  # 6 sites, 4 components

@@ -9,6 +9,7 @@ Each MT component (XY, YX, XX, YY, TE, TM) exposes:
 
 Correction before/after and raw-data alpha are also exposed.
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -60,10 +61,10 @@ def _lw_spin(value: float) -> QDoubleSpinBox:
 _COMPONENTS = [
     ("XY  (TE mode / off-diag)", "xy"),
     ("YX  (TM mode / off-diag)", "yx"),
-    ("XX  (diagonal)",           "xx"),
-    ("YY  (diagonal)",           "yy"),
-    ("TE  (apparent)",           "te"),
-    ("TM  (apparent)",           "tm"),
+    ("XX  (diagonal)", "xx"),
+    ("YY  (diagonal)", "yy"),
+    ("TE  (apparent)", "te"),
+    ("TM  (apparent)", "tm"),
 ]
 
 
@@ -91,7 +92,7 @@ class DisplayPage(SettingsPage):
             row = QHBoxLayout()
             row.setAlignment(Qt.AlignmentFlag.AlignLeft)
             cbtn = _color_btn("#1e66f5", self)
-            lw   = _lw_spin(1.5)
+            lw = _lw_spin(1.5)
             row.addWidget(cbtn)
             row.addWidget(lw)
             form_mt.addRow(label + ":", row)
@@ -107,7 +108,7 @@ class DisplayPage(SettingsPage):
         self._corr_before_btn = _color_btn("#005a9e", self)
         form_corr.addRow("Before correction:", self._corr_before_btn)
         self._corr_after_btn = _color_btn("#9e0a00", self)
-        form_corr.addRow("After correction:",  self._corr_after_btn)
+        form_corr.addRow("After correction:", self._corr_after_btn)
         root.addWidget(grp_corr)
 
         root.addStretch()
@@ -117,12 +118,15 @@ class DisplayPage(SettingsPage):
     def populate(self) -> None:
         try:
             from pycsamt.api.style import PYCSAMT_STYLE as S
+
             for key, (cbtn, lw_spin) in self._comp_widgets.items():
                 comp = getattr(S.mt, key, None)
                 if comp is None:
                     continue
                 color = getattr(comp, "color", "#1e66f5") or "#1e66f5"
-                cbtn.setStyleSheet(f"background-color:{color}; border:1px solid #666;")
+                cbtn.setStyleSheet(
+                    f"background-color:{color}; border:1px solid #666;"
+                )
                 cbtn._color = color
                 lw_spin.setValue(getattr(comp, "lw", 1.5) or 1.5)
         except Exception:
@@ -130,11 +134,16 @@ class DisplayPage(SettingsPage):
 
         try:
             from pycsamt.api.style import PYCSAMT_STYLE as S
+
             bc = getattr(S.correction.before, "color", "#005a9e") or "#005a9e"
-            ac = getattr(S.correction.after,  "color", "#9e0a00") or "#9e0a00"
-            self._corr_before_btn.setStyleSheet(f"background-color:{bc}; border:1px solid #666;")
+            ac = getattr(S.correction.after, "color", "#9e0a00") or "#9e0a00"
+            self._corr_before_btn.setStyleSheet(
+                f"background-color:{bc}; border:1px solid #666;"
+            )
             self._corr_before_btn._color = bc
-            self._corr_after_btn.setStyleSheet(f"background-color:{ac}; border:1px solid #666;")
+            self._corr_after_btn.setStyleSheet(
+                f"background-color:{ac}; border:1px solid #666;"
+            )
             self._corr_after_btn._color = ac
         except Exception:
             pass
@@ -143,6 +152,7 @@ class DisplayPage(SettingsPage):
         changes: dict = {}
         try:
             from pycsamt.api.style import PYCSAMT_STYLE as S
+
             for key, (cbtn, lw_spin) in self._comp_widgets.items():
                 comp = getattr(S.mt, key, None)
                 if comp is None:
@@ -173,6 +183,7 @@ class DisplayPage(SettingsPage):
     def reset(self) -> None:
         try:
             from pycsamt.api.style import PYCSAMT_STYLE
+
             PYCSAMT_STYLE.reset()
         except Exception:
             pass

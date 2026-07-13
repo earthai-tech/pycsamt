@@ -20,8 +20,7 @@ _SPLASH_CARDS = [
 def register_splash(app) -> None:
     # Any card click also opens the EDI canvas
     @app.callback(
-        Output(IDs.CANVAS_EDI, "is_open",
-               allow_duplicate=True),
+        Output(IDs.CANVAS_EDI, "is_open", allow_duplicate=True),
         Input(IDs.SPLASH_CARD_LOAD, "n_clicks"),
         prevent_initial_call=True,
     )
@@ -51,8 +50,6 @@ def register_splash(app) -> None:
         Input(IDs.SPLASH_CARD_LOAD, "n_clicks"),
         Input(IDs.SPLASH_CARD_CHAT, "n_clicks"),
         Input(IDs.SPLASH_CARD_AI, "n_clicks"),
-        Input(
-            IDs.SPLASH_CARD_REPORT, "n_clicks"
-        ),
+        Input(IDs.SPLASH_CARD_REPORT, "n_clicks"),
         prevent_initial_call=True,
     )

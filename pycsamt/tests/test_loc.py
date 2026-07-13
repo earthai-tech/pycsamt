@@ -15,6 +15,7 @@ def stub_ll_utm(monkeypatch):
     Stub deterministic converters so tests don't depend on
     real geodesy. Inverse is exact.
     """
+
     def ll_to_utm_stub(
         *,
         reference_ellipsoid: int,
@@ -172,6 +173,7 @@ def test_norm_zone_helper_variants():
 
 # ------------------------------ Bounds --------------------------------
 
+
 def test_bounds_from_points_and_ops():
     la = [0.0, 1.0, -2.0]
     lo = [10.0, 12.0, 9.5]
@@ -187,7 +189,6 @@ def test_bounds_from_points_and_ops():
     i = b.intersection(locmod.Bounds(-1.0, 8.0, 2.0, 10.0))
     assert i is not None
     assert i.to_tuple() == (-1.0, 9.5, 1.0, 10.0)
-
 
 
 def test_bounds_to_utm_rect_uses_zone_center_and_warns(caplog):

@@ -17,8 +17,16 @@ from dash import (
 from .._ids import IDs
 
 _PALETTE = [
-    "#1e66f5", "#40a02b", "#fe640b", "#8839ef", "#179299",
-    "#ea76cb", "#df8e1d", "#d20f39", "#04a5e5", "#7287fd",
+    "#1e66f5",
+    "#40a02b",
+    "#fe640b",
+    "#8839ef",
+    "#179299",
+    "#ea76cb",
+    "#df8e1d",
+    "#d20f39",
+    "#04a5e5",
+    "#7287fd",
 ]
 
 
@@ -86,13 +94,16 @@ def _register_render_panel(app) -> None:
         for ln in all_lines:
             col = colors.get(ln, _PALETTE[0])
             is_active = ln in active
-            pills.append(html.Span(
-                ["● ", ln],
-                id={"type": "mv-pill", "index": ln},
-                className="mv-pill" + ("" if is_active else " mv-pill-off"),
-                n_clicks=0,
-                style={"color": col, "borderColor": col},
-            ))
+            pills.append(
+                html.Span(
+                    ["● ", ln],
+                    id={"type": "mv-pill", "index": ln},
+                    className="mv-pill"
+                    + ("" if is_active else " mv-pill-off"),
+                    n_clicks=0,
+                    style={"color": col, "borderColor": col},
+                )
+            )
 
         rows = []
         for rec in store.get("station_records", []):
@@ -109,34 +120,45 @@ def _register_render_panel(app) -> None:
                 cls += " mv-sta-sel"
             if is_masked:
                 cls += " mv-sta-masked"
-            rows.append(html.Div(
-                [
-                    html.Div(
-                        [
-                            html.Span(line, className="mv-sta-badge",
-                                      style={"color": col}),
-                            html.Span(sid, className="mv-sta-id"),
-                            html.Button(
-                                html.I(className=(
-                                    "bi bi-eye-slash" if is_masked
-                                    else "bi bi-eye"
-                                )),
-                                id={"type": "mv-mask", "index": sid},
-                                className="mv-mask-btn",
-                                n_clicks=0,
-                                title=("Unmask station" if is_masked
-                                       else "Mask (exclude) station"),
-                            ),
-                        ],
-                        className="mv-sta-top",
-                    ),
-                    html.Div(meta, className="mv-sta-meta"),
-                ],
-                id={"type": "mv-sta-row", "index": sid},
-                className=cls,
-                n_clicks=0,
-                style={"borderLeftColor": col},
-            ))
+            rows.append(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Span(
+                                    line,
+                                    className="mv-sta-badge",
+                                    style={"color": col},
+                                ),
+                                html.Span(sid, className="mv-sta-id"),
+                                html.Button(
+                                    html.I(
+                                        className=(
+                                            "bi bi-eye-slash"
+                                            if is_masked
+                                            else "bi bi-eye"
+                                        )
+                                    ),
+                                    id={"type": "mv-mask", "index": sid},
+                                    className="mv-mask-btn",
+                                    n_clicks=0,
+                                    title=(
+                                        "Unmask station"
+                                        if is_masked
+                                        else "Mask (exclude) station"
+                                    ),
+                                ),
+                            ],
+                            className="mv-sta-top",
+                        ),
+                        html.Div(meta, className="mv-sta-meta"),
+                    ],
+                    id={"type": "mv-sta-row", "index": sid},
+                    className=cls,
+                    n_clicks=0,
+                    style={"borderLeftColor": col},
+                )
+            )
         if not rows:
             rows = [html.Div("No active lines.", className="mv-empty")]
         return pills, rows
@@ -220,11 +242,15 @@ def _register_inspector(app) -> None:
     def inspect(selection, controls, store):
         sid = (selection or {}).get("station_id")
         if not sid or not store:
-            return html.Div("Click a station on the map.",
-                            className="mv-empty")
+            return html.Div(
+                "Click a station on the map.", className="mv-empty"
+            )
         rec = next(
-            (r for r in store.get("station_records", [])
-             if str(r.get("ID")) == str(sid)),
+            (
+                r
+                for r in store.get("station_records", [])
+                if str(r.get("ID")) == str(sid)
+            ),
             None,
         )
         if rec is None:
@@ -232,8 +258,10 @@ def _register_inspector(app) -> None:
 
         def field(label, value):
             return html.Div(
-                [html.Span(label, className="mv-insp-k"),
-                 html.Span(str(value), className="mv-insp-v")],
+                [
+                    html.Span(label, className="mv-insp-k"),
+                    html.Span(str(value), className="mv-insp-v"),
+                ],
                 className="mv-insp-row",
             )
 
@@ -260,7 +288,9 @@ def _coordinate_fields(rec, controls, field) -> list:
         from pycsamt.app.mapview._render import project_to_crs
 
         east, north, code = project_to_crs(
-            [float(lon)], [float(lat)], mode,
+            [float(lon)],
+            [float(lat)],
+            mode,
             (controls or {}).get("utm_zone"),
             (controls or {}).get("utm_hem"),
             (controls or {}).get("epsg"),
@@ -305,7 +335,8 @@ def _register_table(app) -> None:
         active = set((lines or {}).get("active", []))
         masked_set = {str(m) for m in (masked or [])}
         records = [
-            dict(r) for r in store.get("station_records", [])
+            dict(r)
+            for r in store.get("station_records", [])
             if (not active or (r.get("Line") or "line") in active)
             and str(r.get("ID")) not in masked_set
         ]
@@ -325,9 +356,12 @@ def _add_projected_columns(records, controls, cols):
         safe_lon = [float(v) if v is not None else float("nan") for v in lons]
         safe_lat = [float(v) if v is not None else float("nan") for v in lats]
         east, north, code = project_to_crs(
-            safe_lon, safe_lat,
-            controls.get("crs_mode"), controls.get("utm_zone"),
-            controls.get("utm_hem"), controls.get("epsg"),
+            safe_lon,
+            safe_lat,
+            controls.get("crs_mode"),
+            controls.get("utm_zone"),
+            controls.get("utm_hem"),
+            controls.get("epsg"),
         )
     except (TypeError, ValueError):
         return records, cols

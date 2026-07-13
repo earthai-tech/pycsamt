@@ -95,7 +95,7 @@ class RecomputeDialog(QDialog):
         successfully and the user elects to load the result back.
     """
 
-    recompute_committed = Signal(object)   # EDIRecomputeResult
+    recompute_committed = Signal(object)  # EDIRecomputeResult
 
     # ── Construction ──────────────────────────────────────────────────
 
@@ -105,18 +105,20 @@ class RecomputeDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._sites   = sites
-        self._worker  = None
-        self._result  = None
-        self._done    = 0
-        self._total   = 0
-        self._ok      = 0
-        self._failed  = 0
+        self._sites = sites
+        self._worker = None
+        self._result = None
+        self._done = 0
+        self._total = 0
+        self._ok = 0
+        self._failed = 0
 
         self.setWindowTitle("Recompute EDI Files")
         self.setWindowIcon(_icon("recompute"))
         self.setMinimumSize(640, 680)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
         self._build_ui()
         self._refresh_source_ui()
 
@@ -133,7 +135,9 @@ class RecomputeDialog(QDialog):
         root.addWidget(self._make_progress_group())
 
         root.addSpacerItem(
-            QSpacerItem(0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+            QSpacerItem(
+                0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
+            )
         )
         root.addLayout(self._make_buttons())
 
@@ -141,7 +145,7 @@ class RecomputeDialog(QDialog):
 
     def _make_source_group(self) -> QGroupBox:
         box = QGroupBox("Source")
-        v   = QVBoxLayout(box)
+        v = QVBoxLayout(box)
         v.setSpacing(6)
 
         self._rb_loaded = QRadioButton("Use loaded stations")
@@ -172,7 +176,7 @@ class RecomputeDialog(QDialog):
 
     def _make_options_group(self) -> QGroupBox:
         box = QGroupBox("Processing Options")
-        v   = QVBoxLayout(box)
+        v = QVBoxLayout(box)
         v.setSpacing(8)
 
         # Rotation
@@ -233,14 +237,16 @@ class RecomputeDialog(QDialog):
 
     def _make_output_group(self) -> QGroupBox:
         box = QGroupBox("Output")
-        v   = QVBoxLayout(box)
+        v = QVBoxLayout(box)
         v.setSpacing(8)
 
         # Output folder
         out_row = QHBoxLayout()
         out_row.addWidget(QLabel("Output folder:"))
         self._out_edit = QLineEdit()
-        self._out_edit.setPlaceholderText("recomputed_edis  (auto next to source)")
+        self._out_edit.setPlaceholderText(
+            "recomputed_edis  (auto next to source)"
+        )
         out_row.addWidget(self._out_edit)
         btn_out = QPushButton("Browse…")
         btn_out.setObjectName("BrowseButton")
@@ -280,7 +286,7 @@ class RecomputeDialog(QDialog):
 
     def _make_progress_group(self) -> QGroupBox:
         box = QGroupBox("Progress")
-        v   = QVBoxLayout(box)
+        v = QVBoxLayout(box)
         v.setSpacing(6)
 
         # Main progress bar
@@ -293,7 +299,9 @@ class RecomputeDialog(QDialog):
         bar_row.addWidget(self._pbar)
         self._pbar_lbl = QLabel("—")
         self._pbar_lbl.setFixedWidth(80)
-        self._pbar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._pbar_lbl.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         bar_row.addWidget(self._pbar_lbl)
         v.addLayout(bar_row)
 
@@ -304,8 +312,8 @@ class RecomputeDialog(QDialog):
 
         # Stats row
         stats_row = QHBoxLayout()
-        self._ok_lbl      = QLabel("✔  0 ok")
-        self._failed_lbl  = QLabel("✕  0 failed")
+        self._ok_lbl = QLabel("✔  0 ok")
+        self._failed_lbl = QLabel("✕  0 failed")
         self._pending_lbl = QLabel("○  — pending")
         self._ok_lbl.setObjectName("RecomputeOkLabel")
         self._failed_lbl.setObjectName("RecomputeFailedLabel")
@@ -412,6 +420,7 @@ class RecomputeDialog(QDialog):
         from pycsamt.app.desktop.workers.recompute_worker import (
             RecomputeWorker,
         )
+
         self._worker = RecomputeWorker(source, parent=self, **kw)
         self._worker.station_done.connect(self._on_station_done)
         self._worker.finished.connect(self._on_finished)
@@ -432,15 +441,20 @@ class RecomputeDialog(QDialog):
         folder = self._folder_edit.text().strip()
         if not folder:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(
-                self, "No source",
-                "Please select a folder/file or use loaded stations."
+                self,
+                "No source",
+                "Please select a folder/file or use loaded stations.",
             )
             return None
         p = Path(folder)
         if not p.exists():
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Path not found", f"Path does not exist:\n{folder}")
+
+            QMessageBox.warning(
+                self, "Path not found", f"Path does not exist:\n{folder}"
+            )
             return None
         return p
 
@@ -449,7 +463,9 @@ class RecomputeDialog(QDialog):
     def _collect_kwargs(self) -> dict:
         # Rotation
         rot_val = self._rot_spin.value()
-        rotate_angle = None if rot_val == self._rot_spin.minimum() else rot_val
+        rotate_angle = (
+            None if rot_val == self._rot_spin.minimum() else rot_val
+        )
         comp_idx = self._comp_combo.currentIndex()
         rotate_components = {
             0: ("Z", "Tip"),
@@ -496,20 +512,20 @@ class RecomputeDialog(QDialog):
         status: str,
         message: str = "",
     ) -> None:
-        self._done  = done
+        self._done = done
         self._total = total
 
         if status == "ok":
             self._ok += 1
-            icon  = "✔"
-            color = "#a6e3a1"   # green
+            icon = "✔"
+            color = "#a6e3a1"  # green
         elif status == "failed":
             self._failed += 1
-            icon  = "✕"
-            color = "#f38ba8"   # red
+            icon = "✕"
+            color = "#f38ba8"  # red
         else:
-            icon  = "–"
-            color = "#a6adc8"   # muted
+            icon = "–"
+            color = "#a6adc8"  # muted
 
         pct = int(done / total * 100) if total > 0 else 0
         self._pbar.setValue(pct)
@@ -541,23 +557,24 @@ class RecomputeDialog(QDialog):
         self._result = result
         self._set_running(False)
         self._pbar.setValue(100)
-        n_ok     = len([r for r in result.records if r.status == "ok"])
+        n_ok = len([r for r in result.records if r.status == "ok"])
         n_failed = len(result.failed)
-        self._cur_lbl.setText(
-            f"Done — {n_ok} recomputed, {n_failed} failed."
-        )
+        self._cur_lbl.setText(f"Done — {n_ok} recomputed, {n_failed} failed.")
 
         # Diagnose common all-fail patterns and surface a helpful hint
         if n_failed > 0 and n_ok == 0:
             failed_msgs = [r.message or "" for r in result.failed]
-            if all("FileExistsError" in m or "already exists" in m.lower()
-                   for m in failed_msgs if m):
+            if all(
+                "FileExistsError" in m or "already exists" in m.lower()
+                for m in failed_msgs
+                if m
+            ):
                 out = result.output_root or "the selected output folder"
                 hint = QListWidgetItem(
                     f"  ℹ  Output files already exist in {out} — enable Overwrite "
                     "or choose a new output folder."
                 )
-                hint.setForeground(QColor("#fab387"))   # peach / warning
+                hint.setForeground(QColor("#fab387"))  # peach / warning
                 hint.setFont(QFont("Courier New", 10))
                 self._log_list.addItem(hint)
                 self._log_list.scrollToBottom()
@@ -590,9 +607,9 @@ class RecomputeDialog(QDialog):
     # ── Helpers ───────────────────────────────────────────────────────
 
     def _reset_progress(self) -> None:
-        self._done   = 0
-        self._total  = 0
-        self._ok     = 0
+        self._done = 0
+        self._total = 0
+        self._ok = 0
         self._failed = 0
         self._pbar.setValue(0)
         self._pbar_lbl.setText("—")

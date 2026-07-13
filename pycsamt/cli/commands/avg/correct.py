@@ -26,7 +26,8 @@ from ._base import _get_avg, avg
     metavar="AVG_FILE",
 )
 @click.option(
-    "--method", "-m",
+    "--method",
+    "-m",
     type=click.Choice(
         ["static-shift", "capacitive", "both"], case_sensitive=False
     ),
@@ -73,7 +74,8 @@ from ._base import _get_avg, avg
 )
 @output_dir_option
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -150,7 +152,10 @@ def correct(
     if ref_freq not in freqs:
         # pick nearest
         import numpy as np  # noqa: PLC0415
-        ref_freq = float(freqs[int(np.argmin(np.abs(np.array(freqs) - ref_freq)))])
+
+        ref_freq = float(
+            freqs[int(np.argmin(np.abs(np.array(freqs) - ref_freq)))]
+        )
         click.echo(
             f"Note: adjusted ref-freq to nearest available: {ref_freq} Hz",
             err=True,
@@ -178,15 +183,17 @@ def correct(
             update_components=True,
             **kwargs,
         )
-        results.append({
-            "correction": "static_shift",
-            "filter":     filter_method,
-            "ref_freq":   ref_freq,
-            "n_stations": len(ss_df),
-            "shift_min":  float(ss_df["shift_factor"].min()),
-            "shift_max":  float(ss_df["shift_factor"].max()),
-            "shift_mean": float(ss_df["shift_factor"].mean()),
-        })
+        results.append(
+            {
+                "correction": "static_shift",
+                "filter": filter_method,
+                "ref_freq": ref_freq,
+                "n_stations": len(ss_df),
+                "shift_min": float(ss_df["shift_factor"].min()),
+                "shift_max": float(ss_df["shift_factor"].max()),
+                "shift_mean": float(ss_df["shift_factor"].mean()),
+            }
+        )
 
     # --- Capacitive coupling ---
     if method in ("capacitive", "both"):
@@ -194,7 +201,9 @@ def correct(
             proc.correct_capacitive_coupling(update_components=True)
             results.append({"correction": "capacitive_coupling"})
         except Exception as exc:  # noqa: BLE001
-            click.echo(f"Warning: capacitive correction failed: {exc}", err=True)
+            click.echo(
+                f"Warning: capacitive correction failed: {exc}", err=True
+            )
 
     # Write output
     out_name = source.stem + "_corrected.avg"
@@ -203,8 +212,8 @@ def correct(
     proc.avg.write(out_path, fmt="modern")
 
     summary = {
-        "source":     str(source),
-        "output":     str(out_path),
+        "source": str(source),
+        "output": str(out_path),
         "corrections": results,
     }
 

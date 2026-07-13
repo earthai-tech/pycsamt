@@ -59,7 +59,7 @@ class TestConvertCommand:
             ["convert", str(edi_dir), "--output-dir", str(out)],
         )
         assert result.exit_code == 0
-        n_in  = len(list(edi_dir.glob("*.edi")))
+        n_in = len(list(edi_dir.glob("*.edi")))
         n_out = len(list(out.glob("*.edi")))
         assert n_out == n_in
 
@@ -92,7 +92,13 @@ class TestConvertCommand:
 
         runner.invoke(
             main,
-            ["convert", str(single_edi), "--output-dir", str(out), "--overwrite"],
+            [
+                "convert",
+                str(single_edi),
+                "--output-dir",
+                str(out),
+                "--overwrite",
+            ],
         )
         assert existing.read_text() != "OLD"
 
@@ -134,8 +140,14 @@ class TestConvertCommand:
         out = tmp_path / "out"
         result = runner.invoke(
             main,
-            ["convert", str(edi_dir), "--output-dir", str(out),
-             "--format", "json"],
+            [
+                "convert",
+                str(edi_dir),
+                "--output-dir",
+                str(out),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -148,8 +160,14 @@ class TestConvertCommand:
         out = tmp_path / "out"
         result = runner.invoke(
             main,
-            ["convert", str(edi_dir), "--output-dir", str(out),
-             "--format", "csv"],
+            [
+                "convert",
+                str(edi_dir),
+                "--output-dir",
+                str(out),
+                "--format",
+                "csv",
+            ],
         )
         assert result.exit_code == 0
         lines = [l for l in result.output.splitlines() if l.strip()]
@@ -159,9 +177,7 @@ class TestConvertCommand:
     # No supported files
     # ------------------------------------------------------------------
 
-    def test_empty_dir_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_empty_dir_fails(self, runner: CliRunner, tmp_path: Path) -> None:
         src = tmp_path / "empty"
         src.mkdir()
         out = tmp_path / "out"

@@ -11,6 +11,7 @@ from pycsamt.zonge.resphase import Phase, Resistivity
 def _has_line(lines, pred):
     return any(pred(ln) for ln in lines)
 
+
 def test_resistivity_read_legacy_and_to_xarray():
     # Legacy-style column name ('Resistivity'); no comp in input.
     df = pd.DataFrame(
@@ -37,6 +38,7 @@ def test_resistivity_read_legacy_and_to_xarray():
     assert "rho" in ds.variables
     assert str(ds.attrs.get("Unit.Rho", "")).lower() in {"ohm·m", "ohm*m"}
 
+
 def test_resistivity_to_tensor_union_and_intersection():
     # Two stations, ragged freqs; only ExHy present (others → NaN)
     rows = [
@@ -47,7 +49,9 @@ def test_resistivity_to_tensor_union_and_intersection():
         dict(station=150.0, freq=2.0, comp="ExHy", ARes_mag=7.0),
         dict(station=150.0, freq=4.0, comp="ExHy", ARes_mag=8.0),
     ]
-    df = pd.DataFrame.from_records(rows).rename(columns={"ARes_mag": "ARes.mag"})
+    df = pd.DataFrame.from_records(rows).rename(
+        columns={"ARes_mag": "ARes.mag"}
+    )
     r = Resistivity.from_avg((df, {}))
 
     # UNION → freqs {1,2,4}
@@ -80,7 +84,9 @@ def test_resistivity_write_block_has_banner_and_unit_meta():
     )
     r = Resistivity.from_avg((df, {"Unit.Rho": "ohm·m"}))
     lines = r.write()
-    assert _has_line(lines, lambda s: s.strip().startswith(r"\ $Resistivity Block"))
+    assert _has_line(
+        lines, lambda s: s.strip().startswith(r"\ $Resistivity Block")
+    )
     assert _has_line(lines, lambda s: s.strip().startswith("$Unit.Rho="))
 
 
@@ -113,8 +119,9 @@ def test_phase_read_modern_and_unit_convert_roundtrip():
     assert p.meta["Unit.Phase"].lower() == "mrad"
 
 
-@pytest.mark.skipif(pytest.importorskip("xarray") is None,
-                    reason="xarray required")
+@pytest.mark.skipif(
+    pytest.importorskip("xarray") is None, reason="xarray required"
+)
 def test_phase_to_xarray_dims_and_var_attrs():
     df = pd.DataFrame(
         {
@@ -137,6 +144,7 @@ def test_phase_to_xarray_dims_and_var_attrs():
     assert np.isclose(vals[0], 10.0, equal_nan=False)
     assert np.isclose(vals[1], 20.0, equal_nan=False)
 
+
 def test_phase_to_tensor_single_station_shape_and_slot():
     # Single station; ensure we get (n_freq, 2, 2) and slot mapping
     df = pd.DataFrame(
@@ -151,8 +159,8 @@ def test_phase_to_tensor_single_station_shape_and_slot():
 
     # request single-station explicitly
     T, f, st = p.to_tensor(var="phase", station=200.0)
-    assert T.shape == (2, 2, 2)        # (n_freq, 2, 2)
-    assert st.size == 0                # single-station path
+    assert T.shape == (2, 2, 2)  # (n_freq, 2, 2)
+    assert st.size == 0  # single-station path
     assert np.allclose(f, [1.0, 2.0])
     # ExHy → (0,1)
     assert np.isclose(T[0, 0, 1], 5.0)
@@ -173,5 +181,6 @@ def test_phase_write_block_has_banner_and_unit_meta():
     assert _has_line(lines, lambda s: s.strip().startswith(r"\ $Phase Block"))
     assert _has_line(lines, lambda s: s.strip().startswith("$Unit.Phase="))
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

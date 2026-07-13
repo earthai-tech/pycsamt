@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import warnings
@@ -25,7 +24,9 @@ def _axes_list(axes: Any, n: int, *, label: str = "axes") -> list[Any] | None:
     else:
         out = [axes]
     if len(out) < n:
-        raise ValueError(f"{label} must provide at least {n} axes; got {len(out)}.")
+        raise ValueError(
+            f"{label} must provide at least {n} axes; got {len(out)}."
+        )
     return out[:n]
 
 
@@ -48,7 +49,11 @@ def _wrap_one(ed):
     # For Sites-wrapped Site objects, unwrap to the underlying EDI item so
     # that ensure_sites can build a proper single-item Sites around it.
     edi = getattr(ed, "edi", None)
-    item = edi if (edi is not None and getattr(edi, "Z", None) is not None) else ed
+    item = (
+        edi
+        if (edi is not None and getattr(edi, "Z", None) is not None)
+        else ed
+    )
     return ensure_sites([item], recursive=False, strict=False)
 
 
@@ -81,6 +86,7 @@ def _apply_each(
         # the unwrapped-EDI level (deep-copying the Site wrapper breaks the
         # EDICollection rebuild, dropping every station).
         import copy
+
         raw = [copy.deepcopy(_unwrap(ed)) for ed in items_in]
         for r in raw:
             fn(_wrap_one(r))
@@ -90,7 +96,6 @@ def _apply_each(
         Si = _wrap_one(ed)
         fn(Si)  # fn modifies Z.z in-place on the underlying EDI item
     return sites
-
 
 
 def _iter_items(sites: Any) -> Iterable[Any]:
@@ -193,10 +198,12 @@ def _get_z_block(
         if edi is not None:
             Z = _first_attr(edi, ("Z",))
     if Z is None:
-        Z = _first_attr(ed, ("z",))   # last resort: raw array
+        Z = _first_attr(ed, ("z",))  # last resort: raw array
     if Z is None:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     z = _first_attr(Z, ("z", "Z"))
     fr = _first_attr(Z, ("freq",))
@@ -206,8 +213,10 @@ def _get_z_block(
     z = _as_cmplx_nd(z)
     fr = _as_1d_float(fr)
     if z is None or fr is None:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     # enforce (n,2,2) when possible
     if z.ndim == 3 and z.shape[1:3] == (2, 2):
@@ -215,8 +224,10 @@ def _get_z_block(
     elif z.ndim == 2 and z.shape == (2, 2):
         z = z[None, ...]
     else:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     # trim all to min length
     if isinstance(ze, np.ndarray):
@@ -241,8 +252,10 @@ def _get_t_block(
         if edi is not None:
             T = _first_attr(edi, ("Tipper", "tipper", "Tip"))
     if T is None:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     t = _first_attr(T, ("tipper", "T", "tx_ty"))
     fr = _first_attr(T, ("freq",))
@@ -255,8 +268,10 @@ def _get_t_block(
     t = _as_cmplx_nd(t)
     fr = _as_1d_float(fr)
     if t is None or fr is None:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     # enforce (n,2).  v2 EDI tipper objects commonly store the array as
     # (n_freq, 1, 2), mirroring impedance tensor dimensions.
@@ -267,8 +282,10 @@ def _get_t_block(
     elif t.ndim == 1 and t.size == 2:
         t = t[None, ...]
     else:
-        return (None, None, None) if not with_errors else (
-            None, None, None, None
+        return (
+            (None, None, None)
+            if not with_errors
+            else (None, None, None, None)
         )
     if isinstance(te, np.ndarray):
         te = np.asarray(te)
@@ -299,7 +316,8 @@ def _station_positions(eds, spacing_m: float = 200.0) -> np.ndarray:
             v = getattr(ed, attr, None)
             if v is not None:
                 try:
-                    e = float(v); break
+                    e = float(v)
+                    break
                 except (TypeError, ValueError):
                     pass
         n = None
@@ -307,7 +325,8 @@ def _station_positions(eds, spacing_m: float = 200.0) -> np.ndarray:
             v = getattr(ed, attr, None)
             if v is not None:
                 try:
-                    n = float(v); break
+                    n = float(v)
+                    break
                 except (TypeError, ValueError):
                     pass
         coords.append((e, n) if e is not None and n is not None else None)

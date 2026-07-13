@@ -101,6 +101,7 @@ def _load_edis(tmp_path: Path, n: int = 5):
 # QualityController
 # ---------------------------------------------------------------------------
 
+
 class TestQualityController:
     def test_fit_returns_self(self, tmp_path):
         from pycsamt.stratagem.qc import QualityController
@@ -163,9 +164,14 @@ class TestQualityController:
             snr_mask_ = np.ones((2, 8), dtype=bool)
 
             def match_to_edis(self, edi_objects):
-                return {i: i for i in range(min(len(edi_objects), self.n_stations_))}
+                return {
+                    i: i
+                    for i in range(min(len(edi_objects), self.n_stations_))
+                }
 
-        qc = QualityController(include_skew=False).fit(edis, raw_reader=_FakeRaw())
+        qc = QualityController(include_skew=False).fit(
+            edis, raw_reader=_FakeRaw()
+        )
         assert "hw_coverage" in qc.report_.columns
         assert "hw_freqs" in qc.report_.columns
 
@@ -173,6 +179,7 @@ class TestQualityController:
 # ---------------------------------------------------------------------------
 # FrequencyFilter
 # ---------------------------------------------------------------------------
+
 
 class TestFrequencyFilter:
     def test_fit_returns_self(self, tmp_path):
@@ -211,11 +218,16 @@ class TestFrequencyFilter:
             snr_mask_ = np.ones((3, 8), dtype=bool)
 
             def match_to_edis(self, edi_objects):
-                return {i: i for i in range(min(len(edi_objects), self.n_stations_))}
+                return {
+                    i: i
+                    for i in range(min(len(edi_objects), self.n_stations_))
+                }
 
         _FakeRaw.snr_mask_[0, :] = False
 
-        ff = FrequencyFilter(use_hardware_mask=True).fit(edis, raw_reader=_FakeRaw())
+        ff = FrequencyFilter(use_hardware_mask=True).fit(
+            edis, raw_reader=_FakeRaw()
+        )
         # station 0 should have more NaN entries after masking
         z0 = ff.edi_objects_[0].Z.z
         if z0 is not None:
@@ -249,6 +261,7 @@ class TestFrequencyFilter:
 # ---------------------------------------------------------------------------
 # StaticShiftCorrector
 # ---------------------------------------------------------------------------
+
 
 class TestStaticShiftCorrector:
     def test_fit_returns_self(self, tmp_path):
@@ -329,6 +342,7 @@ class TestStaticShiftCorrector:
 # ---------------------------------------------------------------------------
 # NoiseRemover
 # ---------------------------------------------------------------------------
+
 
 class TestNoiseRemover:
     def test_fit_returns_self(self, tmp_path):

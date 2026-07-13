@@ -37,7 +37,10 @@ __all__ = ["EDIRenamer", "EDIWriter"]
 # helpers
 # ---------------------------------------------------------------------------
 
-def _make_new_name(basename: str, idx: int, zero_pad: int, trailer: str) -> str:
+
+def _make_new_name(
+    basename: str, idx: int, zero_pad: int, trailer: str
+) -> str:
     """Build a new EDI filename from parts.
 
     Parameters
@@ -67,6 +70,7 @@ def _new_dataid(basename: str, idx: int, zero_pad: int, trailer: str) -> str:
 # ---------------------------------------------------------------------------
 # EDIRenamer
 # ---------------------------------------------------------------------------
+
 
 class EDIRenamer(PyCSAMTObject):
     """Rename Stratagem EDI files with a standardised naming convention.
@@ -186,7 +190,9 @@ class EDIRenamer(PyCSAMTObject):
                     edi_obj = EDIFile(src_path, verbose=0)
                 except Exception as exc:
                     if self.verbose:
-                        print(f"[EDIRenamer] load failed {src_path.name}: {exc}")
+                        print(
+                            f"[EDIRenamer] load failed {src_path.name}: {exc}"
+                        )
                     continue
 
             if edi_obj is None:
@@ -194,7 +200,9 @@ class EDIRenamer(PyCSAMTObject):
 
             # update DATAID / SECTID
             if self.update_dataid:
-                new_id = _new_dataid(self.basename, i, self.zero_pad, self.trailer)
+                new_id = _new_dataid(
+                    self.basename, i, self.zero_pad, self.trailer
+                )
                 try:
                     edi_obj.station = new_id
                 except Exception:
@@ -203,10 +211,12 @@ class EDIRenamer(PyCSAMTObject):
             # write
             try:
                 edi_obj.write(new_edifn=new_fname, savepath=str(out_dir))
-                self.renamed_pairs_.append((
-                    src_path or Path(new_fname),
-                    dst_file,
-                ))
+                self.renamed_pairs_.append(
+                    (
+                        src_path or Path(new_fname),
+                        dst_file,
+                    )
+                )
             except Exception as exc:
                 if self.verbose:
                     print(f"[EDIRenamer] write failed {new_fname}: {exc}")
@@ -265,6 +275,7 @@ class EDIRenamer(PyCSAMTObject):
 # ---------------------------------------------------------------------------
 # EDIWriter
 # ---------------------------------------------------------------------------
+
 
 class EDIWriter(PyCSAMTObject, MetadataMixin):
     """Write in-memory EDIFile objects to disk with optional HEAD overrides.

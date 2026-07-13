@@ -32,27 +32,30 @@ from pycsamt.cli import main
 # Fake interp objects (avoid real Occam2D I/O in unit tests)
 # ---------------------------------------------------------------------------
 
+
 def _fake_model(n_x: int = 5, n_z: int = 10) -> MagicMock:
     """Return a ResistivityModel-like mock."""
     rng = np.random.default_rng(0)
     m = MagicMock()
-    m.x_centers    = np.linspace(0, 1000, n_x)
-    m.z_centers    = np.linspace(5, 500, n_z)
-    m.rho_2d       = rng.uniform(1.5, 3.5, (n_z, n_x))
-    m.station_x    = np.linspace(0, 1000, n_x)
+    m.x_centers = np.linspace(0, 1000, n_x)
+    m.z_centers = np.linspace(5, 500, n_z)
+    m.rho_2d = rng.uniform(1.5, 3.5, (n_z, n_x))
+    m.station_x = np.linspace(0, 1000, n_x)
     m.station_names = [f"S{i:02d}" for i in range(n_x)]
-    m.method       = "occam2d"
-    m.rms          = 1.234
-    m.n_x          = n_x
-    m.n_z          = n_z
+    m.method = "occam2d"
+    m.rms = 1.234
+    m.n_x = n_x
+    m.n_z = n_z
     return m
 
 
-def _fake_layer(depth_top: float, depth_bot: float, rock_name: str) -> MagicMock:
+def _fake_layer(
+    depth_top: float, depth_bot: float, rock_name: str
+) -> MagicMock:
     layer = MagicMock()
     layer.depth_top = depth_top
     layer.depth_bot = depth_bot
-    layer.rock      = MagicMock()
+    layer.rock = MagicMock()
     layer.rock.name = rock_name
     layer.rock.rho_min = 50.0
     layer.rock.rho_max = 500.0
@@ -63,7 +66,7 @@ def _fake_layer(depth_top: float, depth_bot: float, rock_name: str) -> MagicMock
 def _fake_log(station_name: str, n_layers: int = 3) -> MagicMock:
     log = MagicMock()
     log.station_name = station_name
-    log.station_x    = 0.0
+    log.station_x = 0.0
     log.layers = [
         _fake_layer(i * 50, (i + 1) * 50, f"Rock_{i}")
         for i in range(n_layers)
@@ -71,10 +74,12 @@ def _fake_log(station_name: str, n_layers: int = 3) -> MagicMock:
     return log
 
 
-def _patch_classify(monkeypatch: pytest.MonkeyPatch, n_stations: int = 3) -> None:
+def _patch_classify(
+    monkeypatch: pytest.MonkeyPatch, n_stations: int = 3
+) -> None:
     """Monkeypatch InversionResult + ResistivityModel + ModelCalibrator."""
     model = _fake_model(n_x=n_stations)
-    logs  = [_fake_log(f"S{i:02d}") for i in range(n_stations)]
+    logs = [_fake_log(f"S{i:02d}") for i in range(n_stations)]
 
     # Patch InversionResult constructor
     monkeypatch.setattr(
@@ -115,14 +120,15 @@ def _patch_classify_in_module(
     import pycsamt.models.occam2d.results as _results
 
     model = _fake_model(n_x=n_stations)
-    logs  = [_fake_log(f"S{i:02d}") for i in range(n_stations)]
+    logs = [_fake_log(f"S{i:02d}") for i in range(n_stations)]
 
-    ir_mock  = MagicMock()
+    ir_mock = MagicMock()
     cal_mock = MagicMock()
     cal_mock.stratigraphic_logs.return_value = logs
 
     monkeypatch.setattr(
-        _results, "InversionResult",
+        _results,
+        "InversionResult",
         lambda workdir, iteration=None: ir_mock,
     )
 
@@ -130,7 +136,8 @@ def _patch_classify_in_module(
     rm_mock.from_occam2d = staticmethod(lambda result: model)
     monkeypatch.setattr(_interp, "ResistivityModel", rm_mock)
     monkeypatch.setattr(
-        _interp, "ModelCalibrator",
+        _interp,
+        "ModelCalibrator",
         lambda **kw: MagicMock(fit=lambda m, **kw2: cal_mock),
     )
     return logs
@@ -139,6 +146,7 @@ def _patch_classify_in_module(
 # ---------------------------------------------------------------------------
 # pycsamt interp  (group help)
 # ---------------------------------------------------------------------------
+
 
 class TestInterpGroup:
     def test_help(self, runner: CliRunner) -> None:
@@ -156,21 +164,33 @@ class TestInterpGroup:
     def test_classify_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["interp", "classify", "--help"])
         assert result.exit_code == 0
-        for opt in ("WORKDIR", "--solver", "--ptol", "--merge-tol",
-                    "--iteration", "--output"):
+        for opt in (
+            "WORKDIR",
+            "--solver",
+            "--ptol",
+            "--merge-tol",
+            "--iteration",
+            "--output",
+        ):
             assert opt in result.output
 
     def test_export_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["interp", "export", "--help"])
         assert result.exit_code == 0
-        for opt in ("WORKDIR", "--format", "--output-dir",
-                    "--solver", "--ptol"):
+        for opt in (
+            "WORKDIR",
+            "--format",
+            "--output-dir",
+            "--solver",
+            "--ptol",
+        ):
             assert opt in result.output
 
 
 # ---------------------------------------------------------------------------
 # pycsamt interp rocks
 # ---------------------------------------------------------------------------
+
 
 class TestInterpRocks:
     def test_list_all_text(self, runner: CliRunner) -> None:
@@ -181,9 +201,7 @@ class TestInterpRocks:
             assert name in result.output
 
     def test_list_all_json(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["interp", "rocks", "--format", "json"]
-        )
+        result = runner.invoke(main, ["interp", "rocks", "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert isinstance(data, list)
@@ -191,9 +209,7 @@ class TestInterpRocks:
         assert all("name" in row and "rho_min" in row for row in data)
 
     def test_list_all_csv(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["interp", "rocks", "--format", "csv"]
-        )
+        result = runner.invoke(main, ["interp", "rocks", "--format", "csv"])
         assert result.exit_code == 0
         first_line = result.output.strip().splitlines()[0]
         assert "name" in first_line
@@ -248,12 +264,15 @@ class TestInterpRocks:
         result = runner.invoke(main, ["interp", "rocks", "--rho", "-10"])
         assert result.exit_code != 0
 
-    @pytest.mark.parametrize("rho,expected_fragment", [
-        (0.01,    "Sulfide"),    # very conductive
-        (10.0,    None),         # any clay-range rock
-        (500.0,   None),         # sandstone / limestone range
-        (50000.0, None),         # crystalline basement range
-    ])
+    @pytest.mark.parametrize(
+        "rho,expected_fragment",
+        [
+            (0.01, "Sulfide"),  # very conductive
+            (10.0, None),  # any clay-range rock
+            (500.0, None),  # sandstone / limestone range
+            (50000.0, None),  # crystalline basement range
+        ],
+    )
     def test_parametrized_classify(
         self,
         rho: float,
@@ -270,6 +289,7 @@ class TestInterpRocks:
 # pycsamt interp classify
 # ---------------------------------------------------------------------------
 
+
 class TestInterpClassify:
     def test_nonexistent_workdir_fails(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -281,9 +301,7 @@ class TestInterpClassify:
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         """A directory without Occam2D files and --solver auto should error."""
-        result = runner.invoke(
-            main, ["interp", "classify", str(tmp_path)]
-        )
+        result = runner.invoke(main, ["interp", "classify", str(tmp_path)])
         assert result.exit_code != 0
         assert "Could not detect" in result.output or result.exception
 
@@ -296,8 +314,7 @@ class TestInterpClassify:
         # We indirectly test by forcing an auto-detection on a clean dir.
         result = runner.invoke(
             main,
-            ["interp", "classify", str(occam_workdir),
-             "--solver", "occam2d"],
+            ["interp", "classify", str(occam_workdir), "--solver", "occam2d"],
         )
         # Without mocked InversionResult this will error, but NOT with exit 0
         # The important check: it didn't crash with an unhandled exception
@@ -328,8 +345,13 @@ class TestInterpClassify:
         _patch_classify_in_module(monkeypatch, "classify")
         result = runner.invoke(
             main,
-            ["interp", "classify", str(occam_workdir_with_iters),
-             "--format", "json"],
+            [
+                "interp",
+                "classify",
+                str(occam_workdir_with_iters),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -346,8 +368,13 @@ class TestInterpClassify:
         _patch_classify_in_module(monkeypatch, "classify")
         result = runner.invoke(
             main,
-            ["interp", "classify", str(occam_workdir_with_iters),
-             "--format", "csv"],
+            [
+                "interp",
+                "classify",
+                str(occam_workdir_with_iters),
+                "--format",
+                "csv",
+            ],
         )
         assert result.exit_code == 0
         first_line = result.output.strip().splitlines()[0]
@@ -364,8 +391,13 @@ class TestInterpClassify:
         out = tmp_path / "logs.csv"
         result = runner.invoke(
             main,
-            ["interp", "classify", str(occam_workdir_with_iters),
-             "--output", str(out)],
+            [
+                "interp",
+                "classify",
+                str(occam_workdir_with_iters),
+                "--output",
+                str(out),
+            ],
         )
         assert result.exit_code == 0
         assert out.exists()
@@ -381,8 +413,13 @@ class TestInterpClassify:
         _patch_classify_in_module(monkeypatch, "classify")
         result = runner.invoke(
             main,
-            ["interp", "classify", str(occam_workdir_with_iters),
-             "--solver", "auto"],
+            [
+                "interp",
+                "classify",
+                str(occam_workdir_with_iters),
+                "--solver",
+                "auto",
+            ],
         )
         assert result.exit_code == 0
 
@@ -404,6 +441,7 @@ class TestInterpClassify:
 # pycsamt interp export
 # ---------------------------------------------------------------------------
 
+
 class TestInterpExport:
     def test_nonexistent_workdir_fails(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -416,9 +454,7 @@ class TestInterpExport:
         self, runner: CliRunner, occam_workdir: Path
     ) -> None:
         """--format is required; omitting it must fail."""
-        result = runner.invoke(
-            main, ["interp", "export", str(occam_workdir)]
-        )
+        result = runner.invoke(main, ["interp", "export", str(occam_workdir)])
         assert result.exit_code != 0
 
     def test_unknown_solver_fails(
@@ -447,15 +483,22 @@ class TestInterpExport:
         # Patch the export writers on the source module so the lazy
         # `from ....interp import export as _export` picks them up.
         import pycsamt.interp.export as _exp
-        monkeypatch.setattr(_exp, "to_oasis_montaj_xyz", lambda logs, path: None)
-        monkeypatch.setattr(_exp, "to_las",              lambda log,  path: None)
-        monkeypatch.setattr(_exp, "to_csv",              lambda logs, path: None)
-        monkeypatch.setattr(_exp, "to_vtk",              lambda model, path: None)
+
+        monkeypatch.setattr(
+            _exp, "to_oasis_montaj_xyz", lambda logs, path: None
+        )
+        monkeypatch.setattr(_exp, "to_las", lambda log, path: None)
+        monkeypatch.setattr(_exp, "to_csv", lambda logs, path: None)
+        monkeypatch.setattr(_exp, "to_vtk", lambda model, path: None)
 
         args = [
-            "interp", "export", str(workdir),
-            "--format", fmt,
-            "--output-dir", str(output_dir),
+            "interp",
+            "export",
+            str(workdir),
+            "--format",
+            fmt,
+            "--output-dir",
+            str(output_dir),
         ] + (extra_args or [])
         return runner.invoke(main, args)
 
@@ -469,8 +512,11 @@ class TestInterpExport:
         tmp_path: Path,
     ) -> None:
         result = self._invoke_export(
-            runner, monkeypatch, occam_workdir_with_iters,
-            fmt, tmp_path / fmt,
+            runner,
+            monkeypatch,
+            occam_workdir_with_iters,
+            fmt,
+            tmp_path / fmt,
         )
         assert result.exit_code == 0
         assert "Written" in result.output
@@ -485,11 +531,17 @@ class TestInterpExport:
         """Second run with --overwrite must succeed even if file exists."""
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        (out_dir / "layers.csv").touch()  # pre-create to trigger overwrite logic
+        (
+            out_dir / "layers.csv"
+        ).touch()  # pre-create to trigger overwrite logic
 
         result = self._invoke_export(
-            runner, monkeypatch, occam_workdir_with_iters,
-            "csv", out_dir, extra_args=["--overwrite"],
+            runner,
+            monkeypatch,
+            occam_workdir_with_iters,
+            "csv",
+            out_dir,
+            extra_args=["--overwrite"],
         )
         assert result.exit_code == 0
 
@@ -506,12 +558,20 @@ class TestInterpExport:
 
         _patch_classify_in_module(monkeypatch, "export")
         import pycsamt.interp.export as _exp
+
         monkeypatch.setattr(_exp, "to_csv", lambda logs, path: None)
 
         result = runner.invoke(
             main,
-            ["interp", "export", str(occam_workdir_with_iters),
-             "--format", "csv", "--output-dir", str(out_dir)],
+            [
+                "interp",
+                "export",
+                str(occam_workdir_with_iters),
+                "--format",
+                "csv",
+                "--output-dir",
+                str(out_dir),
+            ],
         )
         assert result.exit_code != 0
         assert "overwrite" in result.output.lower() or result.exception

@@ -41,6 +41,7 @@ Quick start
 >>> resp = MT1DForward(np.logspace(-3, 4, 30)).run(m_new)
 >>> y_pred = inv.predict_response(resp)  # → LayeredModel
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,12 +56,14 @@ __all__ = ["EMInverter1D"]
 # from_pretrained helper (module-level to avoid class-level redefinition)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _load_pretrained(name: str, cache_dir: str | None = None) -> EMInverter1D:
     """Download (if needed) and load a pre-trained checkpoint."""
     from .._zoo import (
         download_checkpoint,
         get_pretrained_info,
     )
+
     get_pretrained_info(name)  # validates name early
     fpath = download_checkpoint(name, cache_dir=cache_dir)
     return EMInverter1D.load(fpath)
@@ -69,6 +72,7 @@ def _load_pretrained(name: str, cache_dir: str | None = None) -> EMInverter1D:
 # ─────────────────────────────────────────────────────────────────────────────
 # EMInverter1D
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class EMInverter1D(BaseEMNet):
     """
@@ -115,14 +119,16 @@ class EMInverter1D(BaseEMNet):
         augment_noise: float = 0.02,
         **net_kwargs,
     ):
-        super().__init__(arch=arch, n_layers=n_layers, solver=solver, device=device)
+        super().__init__(
+            arch=arch, n_layers=n_layers, solver=solver, device=device
+        )
         self.log_thickness = log_thickness
         self.include_phase = include_phase
         self.augment_noise = augment_noise
         self._net_kwargs = net_kwargs
 
         # Set after fit
-        self._em_dataset = None    # EMDataset (holds normalizers)
+        self._em_dataset = None  # EMDataset (holds normalizers)
         self._n_features: int | None = None
         self._n_out: int = 2 * n_layers - 1
 
@@ -203,6 +209,7 @@ class EMInverter1D(BaseEMNet):
         # ── Train ────────────────────────────────────────────────────────
         if backend_name == "torch":
             from ..training.trainer import EMTrainer
+
             device = self._resolve_device()
             trainer = EMTrainer(
                 self._network,
@@ -221,10 +228,16 @@ class EMInverter1D(BaseEMNet):
             be = get_backend_instance()
             self._history = be.train(
                 self._network,
-                train_ds.X, train_ds.y,
-                val_ds.X, val_ds.y,
-                epochs=epochs, batch_size=batch_size, lr=lr,
-                patience=patience, grad_clip=grad_clip, verbose=verbose,
+                train_ds.X,
+                train_ds.y,
+                val_ds.X,
+                val_ds.y,
+                epochs=epochs,
+                batch_size=batch_size,
+                lr=lr,
+                patience=patience,
+                grad_clip=grad_clip,
+                verbose=verbose,
             )
 
         self._meta["n_features"] = self._n_features
@@ -268,6 +281,7 @@ class EMInverter1D(BaseEMNet):
 
         if backend_name == "torch":
             import torch
+
             device = self._resolve_device()
             net = self._network.to(device).eval()
             with torch.no_grad():
@@ -275,6 +289,7 @@ class EMInverter1D(BaseEMNet):
                 y_norm = net(t).cpu().numpy()
         else:
             from pycsamt.backends import get_backend_instance
+
             y_norm = get_backend_instance().predict(self._network, X_norm)
 
         # Inverse-normalise → [log10(ρ), log10(h)] or [log10(ρ), h]
@@ -328,6 +343,7 @@ class EMInverter1D(BaseEMNet):
     def save(self, path: str | Path) -> None:
         """Save weights + normaliser + hyperparameters to *path*."""
         from pycsamt.backends import get_backend_instance
+
         weights = get_backend_instance().get_weights(self._network)
         meta = dict(self._meta)
         if self._em_dataset is not None:
@@ -373,7 +389,9 @@ class EMInverter1D(BaseEMNet):
             obj._em_dataset.x_norm = Normalizer.from_dict(ckpt.meta["x_norm"])
             obj._em_dataset.y_norm = Normalizer.from_dict(ckpt.meta["y_norm"])
             obj._em_dataset._n_layers = ckpt.meta.get("n_layers_ds")
-            obj._em_dataset._log_thickness = ckpt.meta.get("log_thickness", True)
+            obj._em_dataset._log_thickness = ckpt.meta.get(
+                "log_thickness", True
+            )
 
         # Restore backend, rebuild network, and load weights
         backend_name = ckpt.meta.get("backend", "torch")
@@ -438,6 +456,7 @@ class EMInverter1D(BaseEMNet):
                 "Call fit() first (n_features is inferred from training data)."
             )
         from pycsamt.backends import get_backend_instance
+
         spec = {
             "arch": self.arch,
             "n_features": self._n_features,
@@ -458,6 +477,7 @@ class EMInverter1D(BaseEMNet):
     def _load_dataset(self, X, y):
         """Return a ForwardDataset from X (which may be a path, a ds, or arrays)."""
         from pycsamt.forward.batch import ForwardDataset
+
         if isinstance(X, ForwardDataset):
             return X
         if isinstance(X, (str, Path)):
@@ -468,7 +488,9 @@ class EMInverter1D(BaseEMNet):
                     "When X is a numpy array, y must also be provided."
                 )
             n = len(X)
-            meta = np.zeros(n, dtype=[("n_layers", "i4"), ("noise_level", "f4")])
+            meta = np.zeros(
+                n, dtype=[("n_layers", "i4"), ("noise_level", "f4")]
+            )
             meta["n_layers"] = self.n_layers
             return ForwardDataset(
                 X=X.astype(np.float32),
@@ -482,6 +504,4 @@ class EMInverter1D(BaseEMNet):
 
     def _check_fitted(self):
         if not self._is_fitted or self._network is None:
-            raise RuntimeError(
-                "Inverter not fitted.  Call fit() first."
-            )
+            raise RuntimeError("Inverter not fitted.  Call fit() first.")

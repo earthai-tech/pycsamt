@@ -22,6 +22,7 @@ Right (tabs)
   • Fit         : observed vs. predicted response canvas
   • Convergence : RMS / loss vs. iteration canvas
 """
+
 from __future__ import annotations
 
 import logging
@@ -67,7 +68,7 @@ logger = logging.getLogger(__name__)
 # ── Dimension availability maps ───────────────────────────────────────────────
 # Which solvers are valid for each dimension
 _TRAD_FOR_DIM = {
-    "1D": [],                           # no traditional 1-D solver
+    "1D": [],  # no traditional 1-D solver
     "2D": ["occam2d", "modem", "mare2dem"],
     "3D": ["modem"],
 }
@@ -100,6 +101,7 @@ def _ispin(value, lo, hi) -> QSpinBox:
 # InversionWindow
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class InversionWindow(PanelWindow):
     """
     Full 1-D / 2-D / 3-D MT inversion panel window.
@@ -112,8 +114,8 @@ class InversionWindow(PanelWindow):
     result_ready = Signal(dict)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        self._sites          = None
-        self._worker         = None
+        self._sites = None
+        self._worker = None
         self._starting_model: dict | None = None
 
         super().__init__(
@@ -146,14 +148,14 @@ class InversionWindow(PanelWindow):
         self._tabs = QTabWidget()
         self._tabs.setObjectName("InversionTabWidget")
 
-        self._tab_log  = self._build_log_tab()
-        self._tab_model       = MplCanvas(toolbar=True)
-        self._tab_fit         = MplCanvas(toolbar=True)
+        self._tab_log = self._build_log_tab()
+        self._tab_model = MplCanvas(toolbar=True)
+        self._tab_fit = MplCanvas(toolbar=True)
         self._tab_convergence = MplCanvas(toolbar=True)
 
-        self._tabs.addTab(self._tab_log,         "Log")
-        self._tabs.addTab(self._tab_model,       "Model")
-        self._tabs.addTab(self._tab_fit,         "Fit")
+        self._tabs.addTab(self._tab_log, "Log")
+        self._tabs.addTab(self._tab_model, "Model")
+        self._tabs.addTab(self._tab_fit, "Fit")
         self._tabs.addTab(self._tab_convergence, "Convergence")
 
         layout.addWidget(self._tabs)
@@ -181,17 +183,19 @@ class InversionWindow(PanelWindow):
     # ── Engine selectors (Traditional + AI) ────────────────────────────────
 
     def _build_engine_selector(self, layout: QVBoxLayout) -> None:
-        self._engine_group = QButtonGroup(self)    # global: only one engine active
+        self._engine_group = QButtonGroup(
+            self
+        )  # global: only one engine active
 
         # ── Block A: Traditional ──────────────────────────────────────
         grp_a, lay_a = make_group("Traditional Solvers")
 
-        self._rb_occam2d  = QRadioButton("Occam2D  (2D)")
-        self._rb_modem    = QRadioButton("ModEM    (2D / 3D)")
+        self._rb_occam2d = QRadioButton("Occam2D  (2D)")
+        self._rb_modem = QRadioButton("ModEM    (2D / 3D)")
         self._rb_mare2dem = QRadioButton("MARE2DEM (2D)")
         self._rb_occam2d.setProperty("engine", "occam2d")
-        self._rb_modem.setProperty("engine",   "modem")
-        self._rb_mare2dem.setProperty("engine","mare2dem")
+        self._rb_modem.setProperty("engine", "modem")
+        self._rb_mare2dem.setProperty("engine", "mare2dem")
         self._rb_modem.setChecked(True)
 
         for rb in (self._rb_occam2d, self._rb_modem, self._rb_mare2dem):
@@ -200,9 +204,9 @@ class InversionWindow(PanelWindow):
 
         # Stacked config per traditional solver
         self._trad_stack = QStackedWidget()
-        self._trad_stack.addWidget(self._build_cfg_occam2d())    # 0
-        self._trad_stack.addWidget(self._build_cfg_modem())      # 1
-        self._trad_stack.addWidget(self._build_cfg_mare2dem())   # 2
+        self._trad_stack.addWidget(self._build_cfg_occam2d())  # 0
+        self._trad_stack.addWidget(self._build_cfg_modem())  # 1
+        self._trad_stack.addWidget(self._build_cfg_mare2dem())  # 2
         lay_a.addWidget(self._trad_stack)
         layout.addWidget(grp_a)
 
@@ -221,179 +225,227 @@ class InversionWindow(PanelWindow):
             lay_b.addWidget(rb)
 
         self._ai_stack = QStackedWidget()
-        self._ai_stack.addWidget(self._build_cfg_inv1d())   # 0
-        self._ai_stack.addWidget(self._build_cfg_inv2d())   # 1
-        self._ai_stack.addWidget(self._build_cfg_inv3d())   # 2
+        self._ai_stack.addWidget(self._build_cfg_inv1d())  # 0
+        self._ai_stack.addWidget(self._build_cfg_inv2d())  # 1
+        self._ai_stack.addWidget(self._build_cfg_inv3d())  # 2
         lay_b.addWidget(self._ai_stack)
         layout.addWidget(grp_b)
 
         # Wire engine → stacked pages
-        self._rb_occam2d.toggled.connect( lambda c: self._trad_stack.setCurrentIndex(0) if c else None)
-        self._rb_modem.toggled.connect(   lambda c: self._trad_stack.setCurrentIndex(1) if c else None)
-        self._rb_mare2dem.toggled.connect(lambda c: self._trad_stack.setCurrentIndex(2) if c else None)
-        self._rb_inv1d.toggled.connect(   lambda c: self._ai_stack.setCurrentIndex(0)   if c else None)
-        self._rb_inv2d.toggled.connect(   lambda c: self._ai_stack.setCurrentIndex(1)   if c else None)
-        self._rb_inv3d.toggled.connect(   lambda c: self._ai_stack.setCurrentIndex(2)   if c else None)
+        self._rb_occam2d.toggled.connect(
+            lambda c: self._trad_stack.setCurrentIndex(0) if c else None
+        )
+        self._rb_modem.toggled.connect(
+            lambda c: self._trad_stack.setCurrentIndex(1) if c else None
+        )
+        self._rb_mare2dem.toggled.connect(
+            lambda c: self._trad_stack.setCurrentIndex(2) if c else None
+        )
+        self._rb_inv1d.toggled.connect(
+            lambda c: self._ai_stack.setCurrentIndex(0) if c else None
+        )
+        self._rb_inv2d.toggled.connect(
+            lambda c: self._ai_stack.setCurrentIndex(1) if c else None
+        )
+        self._rb_inv3d.toggled.connect(
+            lambda c: self._ai_stack.setCurrentIndex(2) if c else None
+        )
 
     # ── Traditional config panels ───────────────────────────────────────────
 
     def _build_cfg_occam2d(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._occ_n_layers    = _ispin(30, 5, 100)
-        self._occ_n_air       = _ispin(5,  1, 20)
-        self._occ_cell_h      = _spin(100.0, 10.0, 10000.0, 0, 10.0)
-        self._occ_depth_scale = _spin(1.2,   1.01, 2.0,     2, 0.01)
-        self._occ_max_iter    = _ispin(100, 1, 500)
-        self._occ_target_rms  = _spin(1.0,   0.1, 50.0, 2, 0.1)
-        self._occ_init_rho    = _spin(100.0, 1.0, 1e5,  1, 10.0)
-        self._occ_err_rho     = _spin(0.05,  0.001, 1.0, 3, 0.01)
-        self._occ_err_phase   = _spin(0.5,   0.001, 10.0, 2, 0.1)
-        self._occ_binary      = QLineEdit()
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._occ_n_layers = _ispin(30, 5, 100)
+        self._occ_n_air = _ispin(5, 1, 20)
+        self._occ_cell_h = _spin(100.0, 10.0, 10000.0, 0, 10.0)
+        self._occ_depth_scale = _spin(1.2, 1.01, 2.0, 2, 0.01)
+        self._occ_max_iter = _ispin(100, 1, 500)
+        self._occ_target_rms = _spin(1.0, 0.1, 50.0, 2, 0.1)
+        self._occ_init_rho = _spin(100.0, 1.0, 1e5, 1, 10.0)
+        self._occ_err_rho = _spin(0.05, 0.001, 1.0, 3, 0.01)
+        self._occ_err_phase = _spin(0.5, 0.001, 10.0, 2, 0.1)
+        self._occ_binary = QLineEdit()
         self._occ_binary.setPlaceholderText("occam2d binary path (optional)")
-        btn_bin = QPushButton("…"); btn_bin.setFixedWidth(26)
+        btn_bin = QPushButton("…")
+        btn_bin.setFixedWidth(26)
         btn_bin.clicked.connect(lambda: self._browse_binary(self._occ_binary))
-        bin_row = QHBoxLayout(); bin_row.addWidget(self._occ_binary); bin_row.addWidget(btn_bin)
-        bin_w = QWidget(); bin_w.setLayout(bin_row)
-        f.addRow("Layers:",         self._occ_n_layers)
-        f.addRow("Air layers:",     self._occ_n_air)
-        f.addRow("Cell size h (m):",self._occ_cell_h)
-        f.addRow("Depth scale:",    self._occ_depth_scale)
-        f.addRow("Max iter:",       self._occ_max_iter)
-        f.addRow("Target RMS:",     self._occ_target_rms)
-        f.addRow("Init ρ (Ω·m):",  self._occ_init_rho)
-        f.addRow("Err floor ρ:",    self._occ_err_rho)
-        f.addRow("Err floor φ (°):",self._occ_err_phase)
-        f.addRow("Binary:",         bin_w)
+        bin_row = QHBoxLayout()
+        bin_row.addWidget(self._occ_binary)
+        bin_row.addWidget(btn_bin)
+        bin_w = QWidget()
+        bin_w.setLayout(bin_row)
+        f.addRow("Layers:", self._occ_n_layers)
+        f.addRow("Air layers:", self._occ_n_air)
+        f.addRow("Cell size h (m):", self._occ_cell_h)
+        f.addRow("Depth scale:", self._occ_depth_scale)
+        f.addRow("Max iter:", self._occ_max_iter)
+        f.addRow("Target RMS:", self._occ_target_rms)
+        f.addRow("Init ρ (Ω·m):", self._occ_init_rho)
+        f.addRow("Err floor ρ:", self._occ_err_rho)
+        f.addRow("Err floor φ (°):", self._occ_err_phase)
+        f.addRow("Binary:", bin_w)
         return w
 
     def _build_cfg_modem(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._mod_mode      = QComboBox()
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._mod_mode = QComboBox()
         self._mod_mode.addItems(["2D", "3D"])
-        self._mod_nx        = _ispin(30, 5, 200)
-        self._mod_nz        = _ispin(30, 5, 200)
-        self._mod_n_air     = _ispin(5,  1, 20)
-        self._mod_cell_h    = _spin(500.0, 10.0, 50000.0, 0, 50.0)
-        self._mod_max_iter  = _ispin(100, 1, 500)
-        self._mod_target    = _spin(1.0, 0.1, 50.0, 2, 0.1)
-        self._mod_init_rho  = _spin(100.0, 1.0, 1e5, 1, 10.0)
-        self._mod_smooth_x  = _spin(0.3, 0.01, 1.0, 2, 0.05)
-        self._mod_smooth_z  = _spin(0.3, 0.01, 1.0, 2, 0.05)
-        self._mod_binary    = QLineEdit()
+        self._mod_nx = _ispin(30, 5, 200)
+        self._mod_nz = _ispin(30, 5, 200)
+        self._mod_n_air = _ispin(5, 1, 20)
+        self._mod_cell_h = _spin(500.0, 10.0, 50000.0, 0, 50.0)
+        self._mod_max_iter = _ispin(100, 1, 500)
+        self._mod_target = _spin(1.0, 0.1, 50.0, 2, 0.1)
+        self._mod_init_rho = _spin(100.0, 1.0, 1e5, 1, 10.0)
+        self._mod_smooth_x = _spin(0.3, 0.01, 1.0, 2, 0.05)
+        self._mod_smooth_z = _spin(0.3, 0.01, 1.0, 2, 0.05)
+        self._mod_binary = QLineEdit()
         self._mod_binary.setPlaceholderText("ModEM binary path (optional)")
-        btn_bin = QPushButton("…"); btn_bin.setFixedWidth(26)
+        btn_bin = QPushButton("…")
+        btn_bin.setFixedWidth(26)
         btn_bin.clicked.connect(lambda: self._browse_binary(self._mod_binary))
-        bin_row = QHBoxLayout(); bin_row.addWidget(self._mod_binary); bin_row.addWidget(btn_bin)
-        bin_w = QWidget(); bin_w.setLayout(bin_row)
-        f.addRow("Mode:",           self._mod_mode)
-        f.addRow("nx (x cells):",   self._mod_nx)
-        f.addRow("nz (z cells):",   self._mod_nz)
-        f.addRow("Air layers:",     self._mod_n_air)
-        f.addRow("Cell size h (m):",self._mod_cell_h)
-        f.addRow("Max iter:",       self._mod_max_iter)
-        f.addRow("Target RMS:",     self._mod_target)
-        f.addRow("Init ρ (Ω·m):",  self._mod_init_rho)
-        f.addRow("Smooth X:",       self._mod_smooth_x)
-        f.addRow("Smooth Z:",       self._mod_smooth_z)
-        f.addRow("Binary:",         bin_w)
+        bin_row = QHBoxLayout()
+        bin_row.addWidget(self._mod_binary)
+        bin_row.addWidget(btn_bin)
+        bin_w = QWidget()
+        bin_w.setLayout(bin_row)
+        f.addRow("Mode:", self._mod_mode)
+        f.addRow("nx (x cells):", self._mod_nx)
+        f.addRow("nz (z cells):", self._mod_nz)
+        f.addRow("Air layers:", self._mod_n_air)
+        f.addRow("Cell size h (m):", self._mod_cell_h)
+        f.addRow("Max iter:", self._mod_max_iter)
+        f.addRow("Target RMS:", self._mod_target)
+        f.addRow("Init ρ (Ω·m):", self._mod_init_rho)
+        f.addRow("Smooth X:", self._mod_smooth_x)
+        f.addRow("Smooth Z:", self._mod_smooth_z)
+        f.addRow("Binary:", bin_w)
         return w
 
     def _build_cfg_mare2dem(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._m2d_max_iter  = _ispin(30, 1, 200)
-        self._m2d_target    = _spin(1.0, 0.1, 50.0, 2, 0.1)
-        self._m2d_init_rho  = _spin(100.0, 1.0, 1e5, 1, 10.0)
-        self._m2d_use_mpi   = QCheckBox("Use MPI")
-        self._m2d_n_procs   = _ispin(4, 1, 128)
-        self._m2d_binary    = QLineEdit()
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._m2d_max_iter = _ispin(30, 1, 200)
+        self._m2d_target = _spin(1.0, 0.1, 50.0, 2, 0.1)
+        self._m2d_init_rho = _spin(100.0, 1.0, 1e5, 1, 10.0)
+        self._m2d_use_mpi = QCheckBox("Use MPI")
+        self._m2d_n_procs = _ispin(4, 1, 128)
+        self._m2d_binary = QLineEdit()
         self._m2d_binary.setPlaceholderText("MARE2DEM binary path (optional)")
-        btn_bin = QPushButton("…"); btn_bin.setFixedWidth(26)
+        btn_bin = QPushButton("…")
+        btn_bin.setFixedWidth(26)
         btn_bin.clicked.connect(lambda: self._browse_binary(self._m2d_binary))
-        bin_row = QHBoxLayout(); bin_row.addWidget(self._m2d_binary); bin_row.addWidget(btn_bin)
-        bin_w = QWidget(); bin_w.setLayout(bin_row)
-        f.addRow("Max iter:",       self._m2d_max_iter)
-        f.addRow("Target RMS:",     self._m2d_target)
-        f.addRow("Init ρ (Ω·m):",  self._m2d_init_rho)
-        f.addRow("",                self._m2d_use_mpi)
-        f.addRow("MPI procs:",      self._m2d_n_procs)
-        f.addRow("Binary:",         bin_w)
+        bin_row = QHBoxLayout()
+        bin_row.addWidget(self._m2d_binary)
+        bin_row.addWidget(btn_bin)
+        bin_w = QWidget()
+        bin_w.setLayout(bin_row)
+        f.addRow("Max iter:", self._m2d_max_iter)
+        f.addRow("Target RMS:", self._m2d_target)
+        f.addRow("Init ρ (Ω·m):", self._m2d_init_rho)
+        f.addRow("", self._m2d_use_mpi)
+        f.addRow("MPI procs:", self._m2d_n_procs)
+        f.addRow("Binary:", bin_w)
         return w
 
     # ── AI config panels ────────────────────────────────────────────────────
 
     def _build_cfg_inv1d(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._ai1_arch      = QComboBox()
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._ai1_arch = QComboBox()
         self._ai1_arch.addItems(["resnet", "cnn1d", "fcn"])
-        self._ai1_solver    = QComboBox()
+        self._ai1_solver = QComboBox()
         self._ai1_solver.addItems(["mt1d", "csamt1d"])
-        self._ai1_n_layers  = _ispin(5, 2, 20)
+        self._ai1_n_layers = _ispin(5, 2, 20)
         self._ai1_n_samples = _ispin(2000, 100, 50000)
-        self._ai1_epochs    = _ispin(60, 5, 500)
-        self._ai1_batch     = _ispin(256, 8, 2048)
-        self._ai1_lr        = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
-        self._ai1_noise     = _spin(0.05, 0.0, 0.5, 3, 0.01)
-        self._ai1_geology   = QComboBox()
+        self._ai1_epochs = _ispin(60, 5, 500)
+        self._ai1_batch = _ispin(256, 8, 2048)
+        self._ai1_lr = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
+        self._ai1_noise = _spin(0.05, 0.0, 0.5, 3, 0.01)
+        self._ai1_geology = QComboBox()
         self._ai1_geology.addItems(
-            ["(none)", "sedimentary", "crystalline", "geothermal",
-             "marine", "permafrost", "basement", "coastal",
-             "evaporite", "hydrothermal", "laterite",
-             "mineralized", "porphyry", "volcanic"]
+            [
+                "(none)",
+                "sedimentary",
+                "crystalline",
+                "geothermal",
+                "marine",
+                "permafrost",
+                "basement",
+                "coastal",
+                "evaporite",
+                "hydrothermal",
+                "laterite",
+                "mineralized",
+                "porphyry",
+                "volcanic",
+            ]
         )
-        f.addRow("Architecture:",   self._ai1_arch)
-        f.addRow("Solver:",         self._ai1_solver)
-        f.addRow("n_layers:",       self._ai1_n_layers)
-        f.addRow("Train samples:",  self._ai1_n_samples)
-        f.addRow("Epochs:",         self._ai1_epochs)
-        f.addRow("Batch size:",     self._ai1_batch)
-        f.addRow("Learning rate:",  self._ai1_lr)
-        f.addRow("Noise level:",    self._ai1_noise)
-        f.addRow("Geology prior:",  self._ai1_geology)
+        f.addRow("Architecture:", self._ai1_arch)
+        f.addRow("Solver:", self._ai1_solver)
+        f.addRow("n_layers:", self._ai1_n_layers)
+        f.addRow("Train samples:", self._ai1_n_samples)
+        f.addRow("Epochs:", self._ai1_epochs)
+        f.addRow("Batch size:", self._ai1_batch)
+        f.addRow("Learning rate:", self._ai1_lr)
+        f.addRow("Noise level:", self._ai1_noise)
+        f.addRow("Geology prior:", self._ai1_geology)
         return w
 
     def _build_cfg_inv2d(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._ai2_n_comp    = _ispin(4, 1, 8)
-        self._ai2_n_depth   = _ispin(40, 10, 200)
-        self._ai2_n_sta     = _ispin(20, 2, 100)
-        self._ai2_n_freq    = _ispin(32, 8, 128)
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._ai2_n_comp = _ispin(4, 1, 8)
+        self._ai2_n_depth = _ispin(40, 10, 200)
+        self._ai2_n_sta = _ispin(20, 2, 100)
+        self._ai2_n_freq = _ispin(32, 8, 128)
         self._ai2_n_samples = _ispin(500, 50, 10000)
-        self._ai2_epochs    = _ispin(40, 5, 300)
-        self._ai2_batch     = _ispin(16, 2, 128)
-        self._ai2_lr        = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
-        f.addRow("n_components:",   self._ai2_n_comp)
-        f.addRow("n_depth:",        self._ai2_n_depth)
-        f.addRow("n_stations:",     self._ai2_n_sta)
-        f.addRow("n_freqs:",        self._ai2_n_freq)
-        f.addRow("Train samples:",  self._ai2_n_samples)
-        f.addRow("Epochs:",         self._ai2_epochs)
-        f.addRow("Batch size:",     self._ai2_batch)
-        f.addRow("Learning rate:",  self._ai2_lr)
+        self._ai2_epochs = _ispin(40, 5, 300)
+        self._ai2_batch = _ispin(16, 2, 128)
+        self._ai2_lr = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
+        f.addRow("n_components:", self._ai2_n_comp)
+        f.addRow("n_depth:", self._ai2_n_depth)
+        f.addRow("n_stations:", self._ai2_n_sta)
+        f.addRow("n_freqs:", self._ai2_n_freq)
+        f.addRow("Train samples:", self._ai2_n_samples)
+        f.addRow("Epochs:", self._ai2_epochs)
+        f.addRow("Batch size:", self._ai2_batch)
+        f.addRow("Learning rate:", self._ai2_lr)
         return w
 
     def _build_cfg_inv3d(self) -> QWidget:
-        w = QWidget(); f = QFormLayout(w); f.setSpacing(3)
-        self._ai3_n_feat    = _ispin(40, 10, 200)
-        self._ai3_n_layers  = _ispin(5,  2, 20)
-        self._ai3_hidden    = QLineEdit("256,128,64")
+        w = QWidget()
+        f = QFormLayout(w)
+        f.setSpacing(3)
+        self._ai3_n_feat = _ispin(40, 10, 200)
+        self._ai3_n_layers = _ispin(5, 2, 20)
+        self._ai3_hidden = QLineEdit("256,128,64")
         self._ai3_hidden.setToolTip("Hidden layer sizes, comma-separated")
-        self._ai3_dropout   = _spin(0.1, 0.0, 0.9, 2, 0.05)
-        self._ai3_n_sta     = _ispin(16, 4, 100)
+        self._ai3_dropout = _spin(0.1, 0.0, 0.9, 2, 0.05)
+        self._ai3_n_sta = _ispin(16, 4, 100)
         self._ai3_n_samples = _ispin(300, 50, 5000)
-        self._ai3_epochs    = _ispin(40, 5, 300)
-        self._ai3_batch     = _ispin(16, 2, 128)
-        self._ai3_lr        = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
-        self._ai3_radius    = _spin(5000.0, 100.0, 1e6, 0, 500.0)
-        f.addRow("n_features:",     self._ai3_n_feat)
-        f.addRow("n_layers:",       self._ai3_n_layers)
-        f.addRow("Hidden layers:",  self._ai3_hidden)
-        f.addRow("Dropout:",        self._ai3_dropout)
-        f.addRow("Stations:",       self._ai3_n_sta)
-        f.addRow("Train samples:",  self._ai3_n_samples)
-        f.addRow("Epochs:",         self._ai3_epochs)
-        f.addRow("Batch size:",     self._ai3_batch)
-        f.addRow("Learning rate:",  self._ai3_lr)
-        f.addRow("Graph radius (m):",self._ai3_radius)
+        self._ai3_epochs = _ispin(40, 5, 300)
+        self._ai3_batch = _ispin(16, 2, 128)
+        self._ai3_lr = _spin(1e-3, 1e-5, 1e-1, 5, 1e-4)
+        self._ai3_radius = _spin(5000.0, 100.0, 1e6, 0, 500.0)
+        f.addRow("n_features:", self._ai3_n_feat)
+        f.addRow("n_layers:", self._ai3_n_layers)
+        f.addRow("Hidden layers:", self._ai3_hidden)
+        f.addRow("Dropout:", self._ai3_dropout)
+        f.addRow("Stations:", self._ai3_n_sta)
+        f.addRow("Train samples:", self._ai3_n_samples)
+        f.addRow("Epochs:", self._ai3_epochs)
+        f.addRow("Batch size:", self._ai3_batch)
+        f.addRow("Learning rate:", self._ai3_lr)
+        f.addRow("Graph radius (m):", self._ai3_radius)
         return w
 
     # ── Starting model ──────────────────────────────────────────────────────
@@ -441,9 +493,10 @@ class InversionWindow(PanelWindow):
         lay.addLayout(mode_row)
 
         # Frequency range
-        f = QFormLayout(); f.setSpacing(3)
+        f = QFormLayout()
+        f.setSpacing(3)
         self._f_min = _spin(1e-3, 1e-4, 1e3, 4, 1e-4)
-        self._f_max = _spin(1e3,  1e-3, 1e6, 1, 10.0)
+        self._f_max = _spin(1e3, 1e-3, 1e6, 1, 10.0)
         f.addRow("f_min (Hz):", self._f_min)
         f.addRow("f_max (Hz):", self._f_max)
         lay.addLayout(f)
@@ -468,8 +521,8 @@ class InversionWindow(PanelWindow):
 
     def _build_run_buttons(self, layout: QVBoxLayout) -> None:
         row = QHBoxLayout()
-        self._btn_run  = icon_button("▶  Run",  "results", "Start inversion")
-        self._btn_stop = icon_button("■  Stop", "export",  "Stop inversion")
+        self._btn_run = icon_button("▶  Run", "results", "Start inversion")
+        self._btn_stop = icon_button("■  Stop", "export", "Stop inversion")
         self._btn_run.setObjectName("RunButton")
         self._btn_stop.setEnabled(False)
         self._btn_run.clicked.connect(self._on_run)
@@ -516,11 +569,11 @@ class InversionWindow(PanelWindow):
     def _on_dim_changed(self, *_) -> None:
         dim = self._current_dim()
         trad_ok = _TRAD_FOR_DIM[dim]
-        ai_ok   = _AI_FOR_DIM[dim]
+        ai_ok = _AI_FOR_DIM[dim]
 
         for rb, key in [
-            (self._rb_occam2d,  "occam2d"),
-            (self._rb_modem,    "modem"),
+            (self._rb_occam2d, "occam2d"),
+            (self._rb_modem, "modem"),
             (self._rb_mare2dem, "mare2dem"),
         ]:
             rb.setEnabled(key in trad_ok)
@@ -620,7 +673,9 @@ class InversionWindow(PanelWindow):
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:
-            QMessageBox.warning(self, "No workdir", "Please set an output directory.")
+            QMessageBox.warning(
+                self, "No workdir", "Please set an output directory."
+            )
             return
         Path(workdir).mkdir(parents=True, exist_ok=True)
 
@@ -644,8 +699,10 @@ class InversionWindow(PanelWindow):
         )
 
         modes = []
-        if self._mode_te.isChecked(): modes.append("te")
-        if self._mode_tm.isChecked(): modes.append("tm")
+        if self._mode_te.isChecked():
+            modes.append("te")
+        if self._mode_tm.isChecked():
+            modes.append("tm")
         cfg = OccamConfig(
             modes=modes,
             n_layers=self._occ_n_layers.value(),
@@ -669,7 +726,8 @@ class InversionWindow(PanelWindow):
 
         binary = self._occ_binary.text().strip() or None
         worker = InversionWorker(
-            workdir=workdir, binary_path=binary,
+            workdir=workdir,
+            binary_path=binary,
             max_iter=self._occ_max_iter.value(),
             target_misfit=self._occ_target_rms.value(),
             parent=self,
@@ -709,12 +767,14 @@ class InversionWindow(PanelWindow):
             self._log(f"InputBuilder error: {exc}")
             return False
 
-        binary = (
-            self._mod_binary.text().strip() or
-            (cfg.binary_2d if mode_str == "2d" else getattr(cfg, "binary_3d", None))
+        binary = self._mod_binary.text().strip() or (
+            cfg.binary_2d
+            if mode_str == "2d"
+            else getattr(cfg, "binary_3d", None)
         )
         worker = InversionWorker(
-            workdir=workdir, binary_path=binary,
+            workdir=workdir,
+            binary_path=binary,
             max_iter=self._mod_max_iter.value(),
             target_misfit=self._mod_target.value(),
             parent=self,
@@ -750,7 +810,8 @@ class InversionWindow(PanelWindow):
 
         binary = self._m2d_binary.text().strip() or None
         worker = InversionWorker(
-            workdir=workdir, binary_path=binary,
+            workdir=workdir,
+            binary_path=binary,
             max_iter=self._m2d_max_iter.value(),
             target_misfit=self._m2d_target.value(),
             parent=self,
@@ -773,7 +834,7 @@ class InversionWindow(PanelWindow):
             AIInversionWorker,
         )
 
-        dim    = self._current_dim()
+        dim = self._current_dim()
         params = self._build_ai_params(engine, dim)
         self._worker = AIInversionWorker(params, parent=self)
         self._worker.log_line.connect(self._log)
@@ -784,54 +845,62 @@ class InversionWindow(PanelWindow):
 
     def _build_ai_params(self, engine: str, dim: str) -> dict:
         p: dict = {
-            "dim":   dim,
+            "dim": dim,
             "f_min": self._f_min.value(),
             "f_max": self._f_max.value(),
         }
         if engine == "inv1d":
             geo = self._ai1_geology.currentText()
-            p.update({
-                "arch":        self._ai1_arch.currentText(),
-                "solver":      self._ai1_solver.currentText(),
-                "n_layers":    self._ai1_n_layers.value(),
-                "n_samples":   self._ai1_n_samples.value(),
-                "epochs":      self._ai1_epochs.value(),
-                "batch_size":  self._ai1_batch.value(),
-                "lr":          self._ai1_lr.value(),
-                "noise_level": self._ai1_noise.value(),
-                "geology":     None if geo == "(none)" else geo,
-                "n_freq":      30,
-            })
+            p.update(
+                {
+                    "arch": self._ai1_arch.currentText(),
+                    "solver": self._ai1_solver.currentText(),
+                    "n_layers": self._ai1_n_layers.value(),
+                    "n_samples": self._ai1_n_samples.value(),
+                    "epochs": self._ai1_epochs.value(),
+                    "batch_size": self._ai1_batch.value(),
+                    "lr": self._ai1_lr.value(),
+                    "noise_level": self._ai1_noise.value(),
+                    "geology": None if geo == "(none)" else geo,
+                    "n_freq": 30,
+                }
+            )
         elif engine == "inv2d":
-            p.update({
-                "n_components": self._ai2_n_comp.value(),
-                "n_depth":      self._ai2_n_depth.value(),
-                "n_stations":   self._ai2_n_sta.value(),
-                "n_freq":       self._ai2_n_freq.value(),
-                "n_samples":    self._ai2_n_samples.value(),
-                "epochs":       self._ai2_epochs.value(),
-                "batch_size":   self._ai2_batch.value(),
-                "lr":           self._ai2_lr.value(),
-            })
+            p.update(
+                {
+                    "n_components": self._ai2_n_comp.value(),
+                    "n_depth": self._ai2_n_depth.value(),
+                    "n_stations": self._ai2_n_sta.value(),
+                    "n_freq": self._ai2_n_freq.value(),
+                    "n_samples": self._ai2_n_samples.value(),
+                    "epochs": self._ai2_epochs.value(),
+                    "batch_size": self._ai2_batch.value(),
+                    "lr": self._ai2_lr.value(),
+                }
+            )
         else:
             hidden_txt = self._ai3_hidden.text().strip()
             try:
-                hidden = [int(x.strip()) for x in hidden_txt.split(",") if x.strip()]
+                hidden = [
+                    int(x.strip()) for x in hidden_txt.split(",") if x.strip()
+                ]
             except ValueError:
                 hidden = [256, 128, 64]
-            p.update({
-                "n_features":  self._ai3_n_feat.value(),
-                "n_layers":    self._ai3_n_layers.value(),
-                "hidden":      hidden,
-                "dropout":     self._ai3_dropout.value(),
-                "n_sta":       self._ai3_n_sta.value(),
-                "n_samples":   self._ai3_n_samples.value(),
-                "epochs":      self._ai3_epochs.value(),
-                "batch_size":  self._ai3_batch.value(),
-                "lr":          self._ai3_lr.value(),
-                "radius":      self._ai3_radius.value(),
-                "n_freq":      20,
-            })
+            p.update(
+                {
+                    "n_features": self._ai3_n_feat.value(),
+                    "n_layers": self._ai3_n_layers.value(),
+                    "hidden": hidden,
+                    "dropout": self._ai3_dropout.value(),
+                    "n_sta": self._ai3_n_sta.value(),
+                    "n_samples": self._ai3_n_samples.value(),
+                    "epochs": self._ai3_epochs.value(),
+                    "batch_size": self._ai3_batch.value(),
+                    "lr": self._ai3_lr.value(),
+                    "radius": self._ai3_radius.value(),
+                    "n_freq": 20,
+                }
+            )
         # Attach observed data if sites are loaded
         p["X_obs"] = self._build_X_obs(engine, dim, p)
         return p
@@ -842,21 +911,26 @@ class InversionWindow(PanelWindow):
             return None
         try:
             import numpy as np
+
             sites_list = self._selected_sites()
             if sites_list is None:
                 return None
-            f_min  = max(float(params.get("f_min", 1e-3)), 1e-6)
-            f_max  = max(float(params.get("f_max", 1e3)),  f_min * 10)
+            f_min = max(float(params.get("f_min", 1e-3)), 1e-6)
+            f_max = max(float(params.get("f_max", 1e3)), f_min * 10)
             n_freq = int(params.get("n_freq", 30))
-            freqs  = np.logspace(np.log10(f_min), np.log10(f_max), n_freq)
-            rows   = []
+            freqs = np.logspace(np.log10(f_min), np.log10(f_max), n_freq)
+            rows = []
             for site in sites_list.as_list():
                 rho_a = site.interpolate_rho_a(freqs)
                 phase = site.interpolate_phase(freqs)
-                rows.append(np.concatenate([
-                    np.log10(np.maximum(rho_a, 1e-12)),
-                    phase,
-                ]))
+                rows.append(
+                    np.concatenate(
+                        [
+                            np.log10(np.maximum(rho_a, 1e-12)),
+                            phase,
+                        ]
+                    )
+                )
             return np.array(rows, dtype=float) if rows else None
         except Exception:
             return None
@@ -869,7 +943,7 @@ class InversionWindow(PanelWindow):
         self._progress_bar.setValue(0)
         self._progress_bar.setVisible(True)
         self._run_status.setText("Running…")
-        self._tabs.setCurrentIndex(0)   # switch to Log tab
+        self._tabs.setCurrentIndex(0)  # switch to Log tab
         self._worker.start()
 
     # =========================================================================
@@ -884,7 +958,9 @@ class InversionWindow(PanelWindow):
             self._plot_trad_result(result)
         except Exception as exc:
             self._log(f"Plot error: {exc}")
-        self.result_ready.emit({"engine": self._current_engine(), "result": result})
+        self.result_ready.emit(
+            {"engine": self._current_engine(), "result": result}
+        )
 
     def _on_ai_finished(self, result: dict) -> None:
         self._finish_run()
@@ -894,7 +970,9 @@ class InversionWindow(PanelWindow):
             self._plot_ai_result(result)
         except Exception as exc:
             self._log(f"Plot error: {exc}")
-        self.result_ready.emit({"engine": self._current_engine(), "result": result})
+        self.result_ready.emit(
+            {"engine": self._current_engine(), "result": result}
+        )
 
     def _on_error(self, msg: str) -> None:
         self._finish_run()
@@ -921,6 +999,7 @@ class InversionWindow(PanelWindow):
         except AttributeError:
             try:
                 from pycsamt.models.occam2d import PlotModel
+
                 PlotModel(result).plot(ax=ax)
             except Exception as exc:
                 ax.set_title(f"Model plot unavailable: {exc}")
@@ -949,9 +1028,9 @@ class InversionWindow(PanelWindow):
         self._tab_convergence.draw()
 
     def _plot_ai_result(self, result: dict) -> None:
-        dim    = result.get("dim", "1D")
+        dim = result.get("dim", "1D")
         y_pred = result.get("y_pred")
-        freqs  = result.get("freqs")
+        freqs = result.get("freqs")
 
         # ── Model tab: predicted resistivity profile(s) ─────────────
         self._tab_model.figure.clear()
@@ -999,12 +1078,19 @@ class InversionWindow(PanelWindow):
             n_layers = result.get("n_layers", 5)
             # y_pred shape: (n_stations, 2*n_layers-1)
             # first n_layers cols = log10(rho), rest = thickness
-            for i, row in enumerate(y_pred[:min(5, len(y_pred))]):
-                rho   = 10.0 ** row[:n_layers]
+            for i, row in enumerate(y_pred[: min(5, len(y_pred))]):
+                rho = 10.0 ** row[:n_layers]
                 thick = row[n_layers:]
-                depths = np.concatenate([[0], np.cumsum(thick), [np.sum(thick) * 1.5]])
-                ax.step(np.append(rho, rho[-1]), depths, where="post",
-                        label=f"sta {i+1}", alpha=0.8)
+                depths = np.concatenate(
+                    [[0], np.cumsum(thick), [np.sum(thick) * 1.5]]
+                )
+                ax.step(
+                    np.append(rho, rho[-1]),
+                    depths,
+                    where="post",
+                    label=f"sta {i + 1}",
+                    alpha=0.8,
+                )
             ax.set_xscale("log")
             ax.invert_yaxis()
             ax.set_xlabel("Resistivity (Ω·m)")
@@ -1015,11 +1101,16 @@ class InversionWindow(PanelWindow):
         elif dim == "2D":
             # y_pred shape: (n_profiles, n_stations, n_params)
             n_stations = result.get("n_stations", 20)
-            n_depth    = result.get("n_depth",    40)
-            rho_2d     = y_pred[0, :, :n_depth] if y_pred.ndim == 3 else y_pred[:n_stations, :n_depth]
+            n_depth = result.get("n_depth", 40)
+            rho_2d = (
+                y_pred[0, :, :n_depth]
+                if y_pred.ndim == 3
+                else y_pred[:n_stations, :n_depth]
+            )
             im = ax.imshow(
                 rho_2d.T,
-                aspect="auto", cmap="jet_r",
+                aspect="auto",
+                cmap="jet_r",
                 extent=[0, n_stations, n_depth, 0],
             )
             self._tab_model.figure.colorbar(im, ax=ax, label="log₁₀ ρ (Ω·m)")
@@ -1032,8 +1123,12 @@ class InversionWindow(PanelWindow):
             mid_col = n_params // 2
             vals = y_pred[:, mid_col] if y_pred.ndim > 1 else y_pred
             if coords is not None and len(coords) == len(vals):
-                sc = ax.scatter(coords[:, 0], coords[:, 1], c=vals, cmap="jet_r", s=60)
-                self._tab_model.figure.colorbar(sc, ax=ax, label="log₁₀ ρ mid-depth")
+                sc = ax.scatter(
+                    coords[:, 0], coords[:, 1], c=vals, cmap="jet_r", s=60
+                )
+                self._tab_model.figure.colorbar(
+                    sc, ax=ax, label="log₁₀ ρ mid-depth"
+                )
                 ax.set_xlabel("X (m)")
                 ax.set_ylabel("Y (m)")
             else:
@@ -1050,10 +1145,10 @@ class InversionWindow(PanelWindow):
         n_freq = len(freqs)
         period = 1.0 / freqs
         # X_obs rows = [log_rho_a (n_freq), phase (n_freq)]
-        for i, row in enumerate(X_obs[:min(3, len(X_obs))]):
-            rho_a  = 10.0 ** row[:n_freq]
-            row[n_freq:2*n_freq]
-            ax.loglog(period, rho_a, "o-", ms=3, label=f"obs {i+1}")
+        for i, row in enumerate(X_obs[: min(3, len(X_obs))]):
+            rho_a = 10.0 ** row[:n_freq]
+            row[n_freq : 2 * n_freq]
+            ax.loglog(period, rho_a, "o-", ms=3, label=f"obs {i + 1}")
         ax.set_xlabel("Period (s)")
         ax.set_ylabel("ρₐ (Ω·m)")
         ax.set_title("Observed apparent resistivity")
@@ -1089,14 +1184,17 @@ class InversionWindow(PanelWindow):
 
     def _browse_workdir(self) -> None:
         d = QFileDialog.getExistingDirectory(
-            self, "Select output directory",
+            self,
+            "Select output directory",
             self._workdir_edit.text() or str(Path.home()),
         )
         if d:
             self._workdir_edit.setText(d)
 
     def _browse_binary(self, line_edit: QLineEdit) -> None:
-        p, _ = QFileDialog.getOpenFileName(self, "Select binary", str(Path.home()))
+        p, _ = QFileDialog.getOpenFileName(
+            self, "Select binary", str(Path.home())
+        )
         if p:
             line_edit.setText(p)
 

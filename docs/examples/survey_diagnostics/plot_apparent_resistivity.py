@@ -38,12 +38,17 @@ L22 = load_sites("amt_l22plt")
 panel_stations = ["22-1BF", "22-14BF", "22-24BF"]
 
 with PYCSAMT_CONTROL.context(
-    phase__range=(-180.0, 180.0), rho__view="log10", x__view="log10_period",
+    phase__range=(-180.0, 180.0),
+    rho__view="log10",
+    x__view="log10_period",
 ):
     plot_raw_sites_1d(
-        L22, stations=panel_stations,
+        L22,
+        stations=panel_stations,
         components=("xx", "xy", "yx", "yy"),
-        raw=True, ncols_groups=3, figsize_scale=(4.2, 3.2),
+        raw=True,
+        ncols_groups=3,
+        figsize_scale=(4.2, 3.2),
         show_component_legend=True,
     )
 
@@ -56,11 +61,17 @@ with PYCSAMT_CONTROL.context(
 # stations.
 
 with PYCSAMT_CONTROL.context(
-    phase__range=(-90.0, 90.0), rho__view="log10", x__view="period",
+    phase__range=(-90.0, 90.0),
+    rho__view="log10",
+    x__view="period",
 ):
     plot_raw_sites_1d(
-        L22, stations=panel_stations, components=("xy", "yx"),
-        raw=False, ncols_groups=3, figsize_scale=(3.2, 3.0),
+        L22,
+        stations=panel_stations,
+        components=("xy", "yx"),
+        raw=False,
+        ncols_groups=3,
+        figsize_scale=(3.2, 3.0),
         show_component_legend=True,
     )
 
@@ -81,14 +92,20 @@ fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
 for k, ed in enumerate(sites):
     per = 1.0 / ed.freq
     col = cmap(k)
-    ax_r.loglog(per, ed.rho[:, 0, 1], ".", ms=2.5, color=col, label=_name(ed, k))
+    ax_r.loglog(
+        per, ed.rho[:, 0, 1], ".", ms=2.5, color=col, label=_name(ed, k)
+    )
     ax_p.semilogx(per, ed.phase[:, 0, 1], ".", ms=2.5, color=col)
 
 ax_r.set_ylabel(r"$\rho_a^{XY}$  ($\Omega\cdot$m)")
-ax_r.set_title("Apparent resistivity & phase (XY component, all stations)",
-               fontsize=9, pad=6)
-ax_r.legend(ncol=5, fontsize=5.5, loc="upper right",
-            markerscale=3, framealpha=0.7)
+ax_r.set_title(
+    "Apparent resistivity & phase (XY component, all stations)",
+    fontsize=9,
+    pad=6,
+)
+ax_r.legend(
+    ncol=5, fontsize=5.5, loc="upper right", markerscale=3, framealpha=0.7
+)
 ax_p.set_ylabel("Phase XY  (°)")
 ax_p.set_xlabel("Period  (s)")
 ax_p.set_ylim(0, 90)

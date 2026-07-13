@@ -4,6 +4,7 @@
 the stored survey: detection gate, no-data guidance, payload shaping, and
 the overview card component.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -26,9 +27,7 @@ class TestDataReadGate(unittest.TestCase):
             "survey data overview",
             "what data is loaded?",
         ):
-            self.assertTrue(
-                C._looks_like_data_read(text), text
-            )
+            self.assertTrue(C._looks_like_data_read(text), text)
 
     def test_negative_phrasings(self):
         for text in (
@@ -41,25 +40,31 @@ class TestDataReadGate(unittest.TestCase):
             "hello there",
             "export the sites to csv",
         ):
-            self.assertFalse(
-                C._looks_like_data_read(text), text
-            )
+            self.assertFalse(C._looks_like_data_read(text), text)
 
 
 class TestOverviewPayloadAndCard(unittest.TestCase):
     LINES = [
         {
-            "label": "L22", "n_stations": 24,
+            "label": "L22",
+            "n_stations": 24,
             "stations": [f"S{i:02d}" for i in range(24)],
-            "freq": (0.125, 8192.0), "max_nfreq": 40,
-            "qc": 82.0, "flagged": 2, "length_km": 3.2,
+            "freq": (0.125, 8192.0),
+            "max_nfreq": 40,
+            "qc": 82.0,
+            "flagged": 2,
+            "length_km": 3.2,
             "tipper": True,
         },
         {
-            "label": "K1", "n_stations": 18,
+            "label": "K1",
+            "n_stations": 18,
             "stations": [f"K{i:02d}" for i in range(18)],
-            "freq": (1.0, 1024.0), "max_nfreq": 30,
-            "qc": 71.0, "flagged": 0, "length_km": 2.1,
+            "freq": (1.0, 1024.0),
+            "max_nfreq": 30,
+            "qc": 71.0,
+            "flagged": 0,
+            "length_km": 2.1,
             "tipper": False,
         },
     ]
@@ -80,9 +85,7 @@ class TestOverviewPayloadAndCard(unittest.TestCase):
     def test_payload_single_line_has_chips(self):
         card = C._overview_payload([self.LINES[0]], [])
         self.assertEqual(len(card["stations"]), 24)
-        self.assertEqual(
-            card["tiles"][2]["label"], "profile length"
-        )
+        self.assertEqual(card["tiles"][2]["label"], "profile length")
 
     def test_card_component_builds(self):
         card = C._overview_payload(
@@ -99,7 +102,9 @@ class TestOverviewPayloadAndCard(unittest.TestCase):
     def test_bubble_embeds_card(self):
         card = C._overview_payload([self.LINES[0]], [])
         bub = C._agent_bubble(
-            "Read **L22**.", kind=C.KIND_ANSWER, card=card,
+            "Read **L22**.",
+            kind=C.KIND_ANSWER,
+            card=card,
         )
         self.assertIn("am-ov-card", str(bub))
 
@@ -117,21 +122,17 @@ class TestLinesQuery(unittest.TestCase):
             "list the lines",
             "how many lines do we have",
         ):
-            self.assertTrue(
-                C._looks_like_lines_query(text), text
-            )
-            self.assertTrue(
-                C._looks_like_data_read(text), text
-            )
-        self.assertFalse(
-            C._looks_like_lines_query("read the data")
-        )
+            self.assertTrue(C._looks_like_lines_query(text), text)
+            self.assertTrue(C._looks_like_data_read(text), text)
+        self.assertFalse(C._looks_like_lines_query("read the data"))
 
     def test_lines_reply_from_store(self):
         jid = C._new_job()
         C._dispatch_data_overview(
-            jid, "what are the lines?",
-            {"groups": self.GROUPS, "path": "x"}, {},
+            jid,
+            "what are the lines?",
+            {"groups": self.GROUPS, "path": "x"},
+            {},
             step=lambda *a, **k: None,
         )
         job = C._get_job(jid)
@@ -143,7 +144,10 @@ class TestLinesQuery(unittest.TestCase):
     def test_lines_reply_no_data(self):
         jid = C._new_job()
         C._dispatch_data_overview(
-            jid, "what are the lines?", {}, {},
+            jid,
+            "what are the lines?",
+            {},
+            {},
             step=lambda *a, **k: None,
         )
         job = C._get_job(jid)
@@ -161,49 +165,37 @@ class TestSmartUnknownReply(unittest.TestCase):
     }
 
     def test_unknown_line_proposes_loaded_lines(self):
-        out = C._smart_unknown_reply(
-            "plot only the line B9", self.STORE
-        )
+        out = C._smart_unknown_reply("plot only the line B9", self.STORE)
         self.assertIn("couldn't find a line", out)
         self.assertIn("**L22PLT**", out)
         self.assertIn("**K1**", out)
 
     def test_ordinal_line_gets_plot_menu(self):
         # "line 2" → the 2nd loaded line (sorted: K1, L22PLT)
-        out = C._smart_unknown_reply(
-            "plot only the line 2", self.STORE
-        )
+        out = C._smart_unknown_reply("plot only the line 2", self.STORE)
         self.assertIn("**L22PLT**", out)
         self.assertIn("phase pseudosection of L22PLT", out)
         self.assertIn("“line 2”", out)
 
     def test_valid_line_gets_plot_menu(self):
-        out = C._smart_unknown_reply(
-            "draw something for K1", self.STORE
-        )
+        out = C._smart_unknown_reply("draw something for K1", self.STORE)
         self.assertIn("for **K1**", out)
         self.assertIn("plot the sounding curves of K1", out)
 
     def test_plotish_without_line(self):
-        out = C._smart_unknown_reply(
-            "plot the data nicely", {"path": "x"}
-        )
+        out = C._smart_unknown_reply("plot the data nicely", {"path": "x"})
         self.assertIn("which figure", out)
         self.assertIn("plot the phase pseudosection", out)
 
     def test_non_plot_request_returns_none(self):
         self.assertIsNone(
-            C._smart_unknown_reply(
-                "make me a coffee", self.STORE
-            )
+            C._smart_unknown_reply("make me a coffee", self.STORE)
         )
 
     def test_numeric_line_ref_matches_group(self):
         # "line 22" resolves to L22PLT via the embedded number —
         # never a "couldn't find that line" bounce
-        out = C._smart_unknown_reply(
-            "plot only the line 22", self.STORE
-        )
+        out = C._smart_unknown_reply("plot only the line 22", self.STORE)
         self.assertNotIn("couldn't find", out)
         self.assertIn("for **L22PLT**", out)
         self.assertIn("phase pseudosection of L22PLT", out)
@@ -213,35 +205,30 @@ class TestSmartUnknownReply(unittest.TestCase):
         # not be re-litigated into a "couldn't find that line" bounce
         store = dict(self.STORE)
         store["selected_lines"] = ["L22PLT"]
-        out = C._smart_unknown_reply(
-            "plot only the line 99", store
-        )
+        out = C._smart_unknown_reply("plot only the line 99", store)
         self.assertNotIn("couldn't find", out)
         self.assertIn("for **L22PLT**", out)
 
     def test_selection_non_plot_returns_none(self):
         store = dict(self.STORE)
         store["selected_lines"] = ["L22PLT"]
-        self.assertIsNone(
-            C._smart_unknown_reply("make me a coffee", store)
-        )
+        self.assertIsNone(C._smart_unknown_reply("make me a coffee", store))
 
 
 class TestLineRefMatching(unittest.TestCase):
     GROUPS = {
-        "L18PLT": ["a"], "L22PLT": ["b"], "L26PLT": ["c"],
-        "L30PLT": ["d"], "L34PLT": ["e"],
+        "L18PLT": ["a"],
+        "L22PLT": ["b"],
+        "L26PLT": ["c"],
+        "L30PLT": ["d"],
+        "L34PLT": ["e"],
     }
 
     def test_numeric_ref_unique_match(self):
-        self.assertEqual(
-            C._match_group("22", self.GROUPS), "L22PLT"
-        )
+        self.assertEqual(C._match_group("22", self.GROUPS), "L22PLT")
 
     def test_numeric_ref_leading_zero(self):
-        self.assertEqual(
-            C._match_group("022", self.GROUPS), "L22PLT"
-        )
+        self.assertEqual(C._match_group("022", self.GROUPS), "L22PLT")
 
     def test_numeric_ref_no_match_goes_to_picker(self):
         # ordinal-ish "line 2": no group carries the number 2
@@ -252,18 +239,14 @@ class TestLineRefMatching(unittest.TestCase):
         self.assertIsNone(C._match_group("22", groups))
 
     def test_named_substring_unique_match(self):
-        self.assertEqual(
-            C._match_group("l22", self.GROUPS), "L22PLT"
-        )
+        self.assertEqual(C._match_group("l22", self.GROUPS), "L22PLT")
 
     def test_named_substring_ambiguous(self):
         self.assertIsNone(C._match_group("plt", self.GROUPS))
 
     def test_extract_ref_strips_punctuation(self):
         self.assertEqual(
-            C._extract_line_ref(
-                "analyse only the line 22.", self.GROUPS
-            ),
+            C._extract_line_ref("analyse only the line 22.", self.GROUPS),
             "22",
         )
 
@@ -274,12 +257,8 @@ class TestLineRefMatching(unittest.TestCase):
             "re-analyse the data",
             "run the analysis",
         ):
-            self.assertTrue(
-                C._GENERIC_ANALYSIS_RE.search(t), t
-            )
-        self.assertIsNone(
-            C._GENERIC_ANALYSIS_RE.search("plot the tipper")
-        )
+            self.assertTrue(C._GENERIC_ANALYSIS_RE.search(t), t)
+        self.assertIsNone(C._GENERIC_ANALYSIS_RE.search("plot the tipper"))
 
 
 class TestDispatchNoData(unittest.TestCase):
@@ -291,7 +270,11 @@ class TestDispatchNoData(unittest.TestCase):
             steps.append((label, status))
 
         C._dispatch_data_overview(
-            jid, "read the edi data", {}, {}, step=step,
+            jid,
+            "read the edi data",
+            {},
+            {},
+            step=step,
         )
         job = C._get_job(jid)
         self.assertEqual(job["status"], "done")

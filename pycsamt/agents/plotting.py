@@ -34,8 +34,15 @@ from ._base import AgentResult
 __all__ = ["PlotAgent", "PLOT_KINDS"]
 
 PLOT_KINDS = (
-    "rhophi", "phase_psection", "pt_psection", "tipper", "pt_map",
-    "station_response", "strike_profile", "pt_strip", "pt_strip_grid",
+    "rhophi",
+    "phase_psection",
+    "pt_psection",
+    "tipper",
+    "pt_map",
+    "station_response",
+    "strike_profile",
+    "pt_strip",
+    "pt_strip_grid",
 )
 
 # Publication-quality rcParams — applied in a context so global state is
@@ -105,6 +112,7 @@ def _truthy(v: Any) -> bool:
 def _has_tipper(sites: Any) -> bool:
     """True when at least one station carries a vertical-field tipper (T)."""
     from ..emtools._core import _get_t_block, _iter_items
+
     for ed in _iter_items(sites):
         try:
             _, t, fr = _get_t_block(ed)
@@ -135,6 +143,7 @@ def _filter_sites(sites: Any, station_names: list[str]):
         _sites_from_items,
         _unwrap,
     )
+
     wanted = {s.lower() for s in station_names}
     keep = []
     for i, ed in enumerate(_iter_items(sites)):
@@ -177,6 +186,7 @@ class PlotAgent:
             )
 
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
@@ -198,7 +208,7 @@ class PlotAgent:
             return AgentResult(
                 status="failed",
                 summary="No tipper (vertical magnetic transfer function) "
-                        "data is available in this dataset.",
+                "data is available in this dataset.",
                 data={"reason": "no_tipper"},
                 elapsed_seconds=time.time() - t0,
             )
@@ -272,9 +282,7 @@ class PlotAgent:
                 "Requested stations not found; plotting all stations."
             )
         figsize = (8.0, 6.5) if _truthy(d.get("publication")) else (7.5, 6.0)
-        fig, (ax_r, ax_p) = plt.subplots(
-            2, 1, figsize=figsize, sharex=True
-        )
+        fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=figsize, sharex=True)
         plot_rhoa_phi(
             sub,
             components=comps,
@@ -284,7 +292,9 @@ class PlotAgent:
             ax_p=ax_p,
             verbose=0,
         )
-        ax_r.set_title("Apparent resistivity & phase  (" + ", ".join(comps) + ")")
+        ax_r.set_title(
+            "Apparent resistivity & phase  (" + ", ".join(comps) + ")"
+        )
         return fig, "Rho/Phi sounding curves"
 
     def _phase_psection(self, plt, sites, stations, d, warnings):
@@ -295,7 +305,8 @@ class PlotAgent:
         sub = _filter_sites(sites, stations)
         n = len(comps)
         figsize = (
-            (9.0, 3.4 * n) if _truthy(d.get("publication"))
+            (9.0, 3.4 * n)
+            if _truthy(d.get("publication"))
             else (8.0, 3.0 * n)
         )
         fig, axes = plt.subplots(n, 1, figsize=figsize, squeeze=False)
@@ -323,6 +334,7 @@ class PlotAgent:
 
         if view in ("arrows", "arrow", "induction", "map", "profile"):
             from ..emtools.tf import plot_induction_arrows
+
             conv = str(d.get("convention", "park") or "park").lower()
             per = d.get("period")
             if per in (None, ""):
@@ -337,17 +349,19 @@ class PlotAgent:
                 sub, periods=periods, convention=conv, ax=ax, verbose=0
             )
             ax.set_title(
-                "Tipper induction arrows  "
-                f"(T≈{periods[0]:g}s, {conv})"
+                f"Tipper induction arrows  (T≈{periods[0]:g}s, {conv})"
             )
             return fig, "Tipper induction arrows"
 
         # default: component curves (Tx/Ty, real/imag)
         from ..emtools.inspect import plot_tipper_components
+
         parts = _norm_parts(d.get("parts"))
         figsize = (8.0, 4.8) if pub else (7.5, 4.5)
         fig, ax = plt.subplots(figsize=figsize)
-        plot_tipper_components(sub, kind=parts, axis="period", ax=ax, verbose=0)
+        plot_tipper_components(
+            sub, kind=parts, axis="period", ax=ax, verbose=0
+        )
         ax.set_title("Tipper components  (" + ", ".join(parts) + ")")
         return fig, "Tipper components"
 
@@ -357,8 +371,11 @@ class PlotAgent:
         from ..emtools._core import _iter_items, _name
         from ..emtools.advanced import plot_rho_phase_bode
 
-        comps = [c for c in _norm_components(d.get("components"))
-                 if c in ("xy", "yx")] or ["xy"]
+        comps = [
+            c
+            for c in _norm_components(d.get("components"))
+            if c in ("xy", "yx")
+        ] or ["xy"]
         station = stations[0] if stations else None
         if station is None:
             # default to the first station so the inspector always shows one
@@ -372,8 +389,11 @@ class PlotAgent:
         figures: dict = {}
         for comp in comps:
             fig = plot_rho_phase_bode(
-                sites, station=station, component=comp,
-                period_range=pr, verbose=0,
+                sites,
+                station=station,
+                component=comp,
+                period_range=pr,
+                verbose=0,
             )
             figures[f"Response {comp} — {station}"] = fig
         return figures
@@ -391,7 +411,11 @@ class PlotAgent:
         fig, ax = plt.subplots(figsize=figsize)
         plot_strike_profile(
             _filter_sites(sites, stations),
-            method=method, band=pr, sort_by=sort_by, ax=ax, verbose=0,
+            method=method,
+            band=pr,
+            sort_by=sort_by,
+            ax=ax,
+            verbose=0,
         )
         ax.set_title(f"Strike profile  ({method})")
         return fig, "Strike profile"
@@ -478,7 +502,11 @@ class PlotAgent:
         figsize = (7.5, 1.8) if pub else (7.0, 1.6)
         fig, ax = plt.subplots(figsize=figsize)
         plot_phase_tensor_strip(
-            sites, station=station, period_range=pr, ax=ax, verbose=0,
+            sites,
+            station=station,
+            period_range=pr,
+            ax=ax,
+            verbose=0,
         )
         return fig, f"Phase-tensor ellipse strip — {station}"
 
@@ -506,5 +534,7 @@ class PlotAgent:
             ln: pick_representative_stations(sts, per_line)
             for ln, sts in lines.items()
         }
-        fig = plot_phase_tensor_strip_grid(sites, profiles=profiles, verbose=0)
+        fig = plot_phase_tensor_strip_grid(
+            sites, profiles=profiles, verbose=0
+        )
         return fig, "Phase-tensor ellipse strip grid (by line)"

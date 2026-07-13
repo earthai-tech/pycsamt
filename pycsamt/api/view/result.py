@@ -44,9 +44,7 @@ class APIResult(PyCSAMTObject):
 
     def __getattribute__(self, name: str) -> Any:
         if not name.startswith("_"):
-            items = object.__getattribute__(
-                self, "__dict__"
-            ).get("_items")
+            items = object.__getattribute__(self, "__dict__").get("_items")
             if isinstance(items, dict) and name in items:
                 return items[name]
         return object.__getattribute__(self, name)
@@ -67,10 +65,7 @@ class APIResult(PyCSAMTObject):
     def tables(self) -> dict[str, APIFrame]:
         """Return only table-like result parts."""
         items = object.__getattribute__(self, "_items")
-        return {
-            k: v for k, v in items.items()
-            if isinstance(v, APIFrame)
-        }
+        return {k: v for k, v in items.items() if isinstance(v, APIFrame)}
 
     def update_meta(self, /, **kwargs: Any) -> APIResult:
         """Update metadata in-place and return ``self``."""

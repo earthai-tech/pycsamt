@@ -35,7 +35,8 @@ from ._base import edi
     ),
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -86,18 +87,25 @@ def validate(
             IsEdi._assert_edi(f, deep=deep)
             results.append({"path": str(f), "valid": True, "error": None})
         except Exception as exc:  # noqa: BLE001
-            results.append({"path": str(f), "valid": False, "error": str(exc)})
+            results.append(
+                {"path": str(f), "valid": False, "error": str(exc)}
+            )
 
-    n_ok   = sum(1 for r in results if r["valid"])
+    n_ok = sum(1 for r in results if r["valid"])
     n_fail = len(results) - n_ok
 
     if output_format == "json":
-        click.echo(json.dumps({
-            "n_files": len(results),
-            "n_ok":    n_ok,
-            "n_fail":  n_fail,
-            "results": results,
-        }, indent=2))
+        click.echo(
+            json.dumps(
+                {
+                    "n_files": len(results),
+                    "n_ok": n_ok,
+                    "n_fail": n_fail,
+                    "results": results,
+                },
+                indent=2,
+            )
+        )
     else:
         _print_text(results, n_ok, n_fail, deep)
 
@@ -105,7 +113,9 @@ def validate(
         sys.exit(1)
 
 
-def _print_text(results: list[dict], n_ok: int, n_fail: int, deep: bool) -> None:
+def _print_text(
+    results: list[dict], n_ok: int, n_fail: int, deep: bool
+) -> None:
     mode = "deep" if deep else "extension-only"
     click.echo(
         f"Validated {len(results)} file(s)  [{mode}]  "

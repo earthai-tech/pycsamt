@@ -8,27 +8,37 @@ Unit conversion utilities.
 import re
 from typing import Optional, Union
 
-__all__ = [
-    'convert_value',
-    'convert_temperature',
-    'convert_time',
-    'convert'
-]
+__all__ = ["convert_value", "convert_temperature", "convert_time", "convert"]
 
 # Metric prefixes and their factors
 _PREFIXES = {
-    'y': 1e-24, 'z': 1e-21, 'a': 1e-18, 'f': 1e-15,
-    'p': 1e-12, 'n': 1e-9,  'u': 1e-6, 'µ': 1e-6,
-    'm': 1e-3, 'c': 1e-2,  'd': 1e-1, '': 1.0,
-    'da':1e1, 'h': 1e2,  'k': 1e3,  'M': 1e6,
-    'G': 1e9, 'T': 1e12, 'P': 1e15, 'E': 1e18,
-    'Z': 1e21, 'Y': 1e24
+    "y": 1e-24,
+    "z": 1e-21,
+    "a": 1e-18,
+    "f": 1e-15,
+    "p": 1e-12,
+    "n": 1e-9,
+    "u": 1e-6,
+    "µ": 1e-6,
+    "m": 1e-3,
+    "c": 1e-2,
+    "d": 1e-1,
+    "": 1.0,
+    "da": 1e1,
+    "h": 1e2,
+    "k": 1e3,
+    "M": 1e6,
+    "G": 1e9,
+    "T": 1e12,
+    "P": 1e15,
+    "E": 1e18,
+    "Z": 1e21,
+    "Y": 1e24,
 }
 
+
 def convert_value(
-    value: Union[str, float, int],
-    /,
-    target_unit: str = 'm'
+    value: Union[str, float, int], /, target_unit: str = "m"
 ) -> float:
     """
     Convert a numeric value with unit suffix to specified unit.
@@ -80,7 +90,8 @@ def convert_value(
     # Regex: capture number and optional unit suffix
     m = re.fullmatch(
         r"([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
-        r"\s*([a-zA-Zµ]+)?", s
+        r"\s*([a-zA-Zµ]+)?",
+        s,
     )
     if not m:
         raise ValueError(f"Cannot parse value {value!r}")
@@ -92,7 +103,7 @@ def convert_value(
     # Split input unit into prefix and base
     for pre in sorted(_PREFIXES, key=len, reverse=True):
         if unit_in.startswith(pre) and len(pre) < len(unit_in):
-            base_in = unit_in[len(pre):]
+            base_in = unit_in[len(pre) :]
             factor_in = _PREFIXES[pre]
             break
     else:
@@ -103,7 +114,7 @@ def convert_value(
     tu = target_unit.strip()
     for pre_t in sorted(_PREFIXES, key=len, reverse=True):
         if tu.startswith(pre_t) and len(pre_t) < len(tu):
-            base_t = tu[len(pre_t):]
+            base_t = tu[len(pre_t) :]
             factor_t = _PREFIXES[pre_t]
             break
     else:
@@ -111,18 +122,13 @@ def convert_value(
         factor_t = 1.0
     # Check base units match
     if base_in != base_t:
-        raise ValueError(
-            f"Incompatible units '{unit_in}' and '{tu}'"
-        )
+        raise ValueError(f"Incompatible units '{unit_in}' and '{tu}'")
     # Convert: numeric * (in_factor / out_factor)
     return num * factor_in / factor_t
 
 
 def convert_temperature(
-    value: Union[str, float, int],
-    /,
-    unit_from: str = 'C',
-    unit_to: str = 'K'
+    value: Union[str, float, int], /, unit_from: str = "C", unit_to: str = "K"
 ) -> float:
     """
     Convert temperature between Celsius, Fahrenheit, Kelvin.
@@ -154,9 +160,7 @@ def convert_temperature(
     212.0
     """
     s = str(value).strip()
-    m = re.fullmatch(
-        r"([+-]?\d+(?:\.\d+)?)(?:\s*([cCfFkK]))?", s
-    )
+    m = re.fullmatch(r"([+-]?\d+(?:\.\d+)?)(?:\s*([cCfFkK]))?", s)
     if not m:
         raise ValueError(f"Cannot parse temperature {value!r}")
     num, suf = m.groups()
@@ -165,29 +169,26 @@ def convert_temperature(
     u_from = (suf or unit_from)[0].upper()
     u_to = unit_to[0].upper()
     # to Celsius
-    if u_from == 'C':
+    if u_from == "C":
         c = t
-    elif u_from == 'K':
+    elif u_from == "K":
         c = t - 273.15
-    elif u_from == 'F':
-        c = (t - 32) * 5/9
+    elif u_from == "F":
+        c = (t - 32) * 5 / 9
     else:
         raise ValueError(f"Unsupported unit_from '{unit_from}'")
     # from Celsius to target
-    if u_to == 'C':
+    if u_to == "C":
         return c
-    if u_to == 'K':
+    if u_to == "K":
         return c + 273.15
-    if u_to == 'F':
-        return c * 9/5 + 32
+    if u_to == "F":
+        return c * 9 / 5 + 32
     raise ValueError(f"Unsupported unit_to '{unit_to}'")
 
 
 def convert_time(
-    value: Union[str, float, int],
-    /,
-    unit_from: str = 's',
-    unit_to: str = 'h'
+    value: Union[str, float, int], /, unit_from: str = "s", unit_to: str = "h"
 ) -> float:
     """
     Convert time between seconds, minutes, hours, days.
@@ -220,8 +221,7 @@ def convert_time(
     """
     s = str(value).strip()
     m = re.fullmatch(
-        r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s,
-        flags=re.IGNORECASE
+        r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s, flags=re.IGNORECASE
     )
     if not m:
         raise ValueError(f"Cannot parse time {value!r}")
@@ -231,24 +231,24 @@ def convert_time(
     u_from = (suf or unit_from).lower()
     u_to = unit_to.lower()
     # to seconds
-    if u_from == 's':
+    if u_from == "s":
         sec = t
-    elif u_from == 'min':
+    elif u_from == "min":
         sec = t * 60
-    elif u_from == 'h':
+    elif u_from == "h":
         sec = t * 3600
-    elif u_from == 'd':
+    elif u_from == "d":
         sec = t * 86400
     else:
         raise ValueError(f"Unsupported unit_from '{unit_from}'")
     # seconds to target
-    if u_to == 's':
+    if u_to == "s":
         return sec
-    if u_to == 'min':
+    if u_to == "min":
         return sec / 60
-    if u_to == 'h':
+    if u_to == "h":
         return sec / 3600
-    if u_to == 'd':
+    if u_to == "d":
         return sec / 86400
     raise ValueError(f"Unsupported unit_to '{unit_to}'")
 
@@ -261,7 +261,7 @@ def convert(
     *,
     category: Optional[str] = None,
     round_result: Optional[int] = None,
-    **kwargs
+    **kwargs,
 ) -> float:
     """
     Universal conversion dispatch for length, mass, time, temp.
@@ -306,15 +306,15 @@ def convert(
     ut = unit_to.strip()
     cat = category.lower() if category else None
     # temperature
-    if cat == 'temperature' or (
-        uf[:1].upper() in ('C','F','K') and
-        ut[:1].upper() in ('C','F','K')
+    if cat == "temperature" or (
+        uf[:1].upper() in ("C", "F", "K")
+        and ut[:1].upper() in ("C", "F", "K")
     ):
         res = convert_temperature(value, uf, ut)
     # time
-    elif cat == 'time' or (
-        uf.lower() in ('s','min','h','d') and
-        ut.lower() in ('s','min','h','d')
+    elif cat == "time" or (
+        uf.lower() in ("s", "min", "h", "d")
+        and ut.lower() in ("s", "min", "h", "d")
     ):
         res = convert_time(value, uf, ut)
     # metric

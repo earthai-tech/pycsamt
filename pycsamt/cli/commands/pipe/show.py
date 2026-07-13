@@ -137,9 +137,7 @@ def show(
     elif output_format == "csv":
         click.echo("idx,label,code,name,category,params")
         for i, (lbl, step) in enumerate(pipeline._steps, start=1):
-            params_str = ";".join(
-                f"{k}={v}" for k, v in step.params.items()
-            )
+            params_str = ";".join(f"{k}={v}" for k, v in step.params.items())
             click.echo(
                 f"{i},{lbl},{step.spec.code},"
                 f"{step.spec.name},{step.spec.category},{params_str}"

@@ -10,7 +10,8 @@ class TestContextInputAgentRegex(unittest.TestCase):
 
     def setUp(self):
         from pycsamt.agents import ContextInputAgent
-        self.agent = ContextInputAgent()   # no api_key
+
+        self.agent = ContextInputAgent()  # no api_key
 
     def test_execute_returns_success(self):
         r = self.agent.execute({"request": "Load EDIs from /data/L22PLT"})
@@ -26,9 +27,9 @@ class TestContextInputAgentRegex(unittest.TestCase):
         self.assertIn("/data/WILLY_EDIs", str(cfg.get("data_path", "")))
 
     def test_period_range_extracted(self):
-        r = self.agent.execute({
-            "request": "Load /data/EDIs, period range 0.001 to 100 s"
-        })
+        r = self.agent.execute(
+            {"request": "Load /data/EDIs, period range 0.001 to 100 s"}
+        )
         cfg = r.get("config") or {}
         t_min = cfg.get("T_min") or cfg.get("period_range", [None])[0]
         self.assertIsNotNone(t_min)
@@ -40,9 +41,9 @@ class TestContextInputAgentRegex(unittest.TestCase):
         self.assertIn("qc", wf)
 
     def test_workflow_type_detected_phase_analysis(self):
-        r = self.agent.execute({
-            "request": "Run phase tensor analysis on /data/WILLY"
-        })
+        r = self.agent.execute(
+            {"request": "Run phase tensor analysis on /data/WILLY"}
+        )
         cfg = r.get("config") or {}
         wf = str(cfg.get("workflow", "")).lower()
         self.assertTrue(
@@ -69,22 +70,24 @@ class TestContextInputAgentRegex(unittest.TestCase):
 
 
 class TestContextInputAgentComponents(unittest.TestCase):
-
     def test_extract_json_object(self):
         from pycsamt.agents import ContextInputAgent
+
         ag = ContextInputAgent()
-        d  = ag.extract_json('{"workflow": "qc", "value": 3.14}')
+        d = ag.extract_json('{"workflow": "qc", "value": 3.14}')
         self.assertEqual(d["workflow"], "qc")
         self.assertAlmostEqual(d["value"], 3.14)
 
     def test_extract_json_embedded_in_prose(self):
         from pycsamt.agents import ContextInputAgent
-        ag  = ContextInputAgent()
+
+        ag = ContextInputAgent()
         obj = ag.extract_json('Here is the answer: {"x": 1} — done.')
         self.assertEqual(obj["x"], 1)
 
     def test_regex_extract_helper(self):
         from pycsamt.agents.context import _regex_extract
+
         cfg = _regex_extract("Load /data/L22 EDIs, period 0.01 to 10 s, QC")
         self.assertIn("data_path", cfg)
 

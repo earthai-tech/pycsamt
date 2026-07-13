@@ -20,6 +20,7 @@ from typing import Any
 
 try:
     import diskcache
+
     _BASE_DIR = os.environ.get(
         "PYCSAMT_DATA",
         os.path.join(os.path.expanduser("~"), ".pycsamt"),
@@ -45,6 +46,7 @@ bg_manager = None  # type: ignore[assignment]
 if cache is not None:
     try:
         from dash import DiskcacheManager as _DM  # noqa: F401
+
         bg_manager = _DM(cache)
         HAS_BG_MANAGER = True
     except Exception:
@@ -55,11 +57,12 @@ if cache is not None:
 # Convenience wrappers used by every callbacks submodule
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def cache_set(session_id: str, sites: Any) -> None:
     """Store *sites* keyed by *session_id* (disk cache when available, else RAM)."""
     if not session_id:
         return
-    _MEM[session_id] = sites          # always keep in-memory copy
+    _MEM[session_id] = sites  # always keep in-memory copy
     if cache is not None:
         try:
             cache.set(session_id, sites, expire=SESSION_TTL)
@@ -95,6 +98,7 @@ def cache_merge_sites(session_id: str, new_sites: Any) -> Any:
         return new_sites
     try:
         from pycsamt.site.base import Sites
+
         # Build a name→edi dict for deduplication (new overwrites old on clash)
         merged: dict = {}
         for edi in existing.edic:
@@ -119,6 +123,7 @@ def has_diskcache() -> bool:
 
 
 # ── Forward-response cache (keyed by session + dimension) ────────────────────
+
 
 def cache_set_fwd(session_id: str, dim: str, response: Any) -> None:
     """Store a ForwardResponse object for the given session and dimension ('2d' or '3d')."""
@@ -150,6 +155,7 @@ def cache_get_fwd(session_id: str, dim: str) -> Any:
 
 # ── Inversion-result cache (consumed by 3D map / interpretation pages) ───────
 
+
 def cache_set_inversion_result(session_id: str, result: Any) -> None:
     """Store the latest inversion result for *session_id*."""
     if not session_id:
@@ -179,6 +185,7 @@ def cache_get_inversion_result(session_id: str) -> Any:
 
 
 # ── Frequency-editor cache (edited Sites after confidence/band/regrid edits) ──
+
 
 def cache_set_freq_edit(session_id: str, sites: Any) -> None:
     """Store edited Sites from the frequency editor for *session_id*."""

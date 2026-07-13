@@ -30,9 +30,10 @@ def calculate_rho(mag_e, mag_h, asp, freq):
     # Convert E from µV/m to V/m and H from pT to T
     e_v_per_m = (mag_e / asp) * 1e-6
     h_t = mag_h * 1e-12
-    term2 = (e_v_per_m / h_t)**2
+    term2 = (e_v_per_m / h_t) ** 2
     rho = term1 * term2
     return rho
+
 
 def calculate_ip(phz_e, phz_h):
     """
@@ -46,6 +47,7 @@ def calculate_ip(phz_e, phz_h):
         float: The Impedance Phase (IP) in mRad.
     """
     return phz_e - phz_h
+
 
 def calculate_std_dev(values):
     """
@@ -73,6 +75,7 @@ def calculate_std_dev(values):
 
     return np.sqrt(variance)
 
+
 def calculate_e_field_std_dev(e_vals, asp, current):
     """
     Calculates the standard deviation for the E-field.
@@ -89,6 +92,7 @@ def calculate_e_field_std_dev(e_vals, asp, current):
     e_conv = [(v / asp) / current for v in e_vals]
     return calculate_std_dev(e_conv)
 
+
 def calculate_h_field_std_dev(h_vals, current):
     """
     Calculates the standard deviation for the H-field.
@@ -102,6 +106,7 @@ def calculate_h_field_std_dev(h_vals, current):
     """
     h_conv = [val / current for val in h_vals]
     return calculate_std_dev(h_conv)
+
 
 def calculate_c_var(sigma, average):
     """
@@ -118,6 +123,7 @@ def calculate_c_var(sigma, average):
         return 0.0
     return 100 * (sigma / average)
 
+
 def calculate_std_dev_rho_p(rho_values):
     """
     Calculates the Standard Deviation for Parameter RHO.
@@ -130,8 +136,8 @@ def calculate_std_dev_rho_p(rho_values):
     """
     return calculate_std_dev(rho_values)
 
-def calculate_std_dev_rho_c(rho_c, e_avg, h_avg,
-                              sigma_e, sigma_h):
+
+def calculate_std_dev_rho_c(rho_c, e_avg, h_avg, sigma_e, sigma_h):
     """
     Calculates the Standard Deviation for Component RHO.
 
@@ -148,10 +154,11 @@ def calculate_std_dev_rho_c(rho_c, e_avg, h_avg,
     if e_avg == 0 or h_avg == 0:
         return 0.0
 
-    b_e = (sigma_e / e_avg)**2
-    b_h = (sigma_h / h_avg)**2
+    b_e = (sigma_e / e_avg) ** 2
+    b_h = (sigma_h / h_avg) ** 2
 
     return rho_c * 2 * np.sqrt(b_e + b_h)
+
 
 def calculate_avg_magnitude(mag_values):
     """
@@ -165,6 +172,7 @@ def calculate_avg_magnitude(mag_values):
     """
     return np.mean(mag_values)
 
+
 def calculate_avg_phase(phase_values):
     """
     Calculates the average for phase values.
@@ -177,6 +185,7 @@ def calculate_avg_phase(phase_values):
     """
     return np.mean(phase_values)
 
+
 def calculate_parameter_avg_rho(rho_values):
     """
     Calculates the Parameter Average RHO.
@@ -188,6 +197,7 @@ def calculate_parameter_avg_rho(rho_values):
         float: The parameter average RHO.
     """
     return np.mean(rho_values)
+
 
 def calculate_component_avg_rho(e_mag_avg, h_mag_avg, freq):
     """
@@ -230,6 +240,7 @@ def calculate_magnetic_induction(h_mag, rho):
     """
     return h_mag / rho
 
+
 def calculate_apparent_resistivity(e_mag, h_mag, geometric_factor=1.0):
     r"""
     Calculates the apparent resistivity (Rho Apparent) from the E-field
@@ -249,6 +260,7 @@ def calculate_apparent_resistivity(e_mag, h_mag, geometric_factor=1.0):
         \text{Where E is in V/m and H is in T.}
     """
     return (5 * e_mag / h_mag) * geometric_factor
+
 
 def calculate_snr(signal_values, noise_values):
     r"""
@@ -273,6 +285,7 @@ def calculate_snr(signal_values, noise_values):
         return np.inf  # Avoid division by zero
     return signal_mean / noise_std_dev
 
+
 def calculate_phase_error(phz_e, phz_h):
     r"""
     Calculates the phase error based on the difference between the E-field
@@ -291,6 +304,7 @@ def calculate_phase_error(phz_e, phz_h):
             \phi_H\text{ is the H-field phase.}
     """
     return np.abs(phz_e - phz_h)
+
 
 def propagate_resistivity_error(rho, e_avg, h_avg, sigma_e, sigma_h):
     r"""
@@ -314,10 +328,12 @@ def propagate_resistivity_error(rho, e_avg, h_avg, sigma_e, sigma_h):
         \text{Where }\sigma_E\text{ and }\sigma_H\\\
             text{ are the standard deviations of E-field and H-field.}
     """
-    e_h_ratio = (e_avg / h_avg) * 1e6 #noqa
+    e_h_ratio = (e_avg / h_avg) * 1e6  # noqa
     error_in_rho = rho * np.sqrt(
-        (sigma_e / e_avg)**2 + (sigma_h / h_avg)**2)
+        (sigma_e / e_avg) ** 2 + (sigma_h / h_avg) ** 2
+    )
     return error_in_rho
+
 
 def calculate_avg_amplitude(field_values):
     r"""
@@ -334,6 +350,7 @@ def calculate_avg_amplitude(field_values):
         \text{Where } x_i\text{ represents the individual field values.}
     """
     return np.mean(np.abs(field_values))
+
 
 def calculate_relative_error(rho, sigma_rho):
     """
@@ -356,7 +373,6 @@ def calculate_relative_error(rho, sigma_rho):
     return (sigma_rho / rho) * 100
 
 
-
 def calculate_magnitude_ratio(e_mag, h_mag):
     """
     Calculates the magnitude ratio between the E-field and H-field.
@@ -374,6 +390,7 @@ def calculate_magnitude_ratio(e_mag, h_mag):
         H_{\text{mag}} \text{ is the magnetic field magnitude.}
     """
     return e_mag / h_mag
+
 
 def calculate_resistivity_phase(rho, phase_e, phase_h):
     """
@@ -395,6 +412,7 @@ def calculate_resistivity_phase(rho, phase_e, phase_h):
     """
     return np.arctan2(phase_e - phase_h, rho)
 
+
 def calculate_frequency_dependent_resistivity(e_mag, h_mag, freq):
     """
     Calculates frequency-dependent resistivity (Rho) based on the E-field
@@ -414,6 +432,7 @@ def calculate_frequency_dependent_resistivity(e_mag, h_mag, freq):
         \text{Where } f \text{ is the frequency in Hz.}
     """
     return (e_mag / h_mag) / freq
+
 
 def calculate_rho_correction(rho, e_std, h_std, e_avg, h_avg):
     """
@@ -439,6 +458,7 @@ def calculate_rho_correction(rho, e_std, h_std, e_avg, h_avg):
     """
     return rho * (1 + (e_std / e_avg) + (h_std / h_avg))
 
+
 def calculate_averaged_magnitude(values):
     """
     Calculates the average of magnitudes, useful for processing both
@@ -456,6 +476,7 @@ def calculate_averaged_magnitude(values):
     """
     return np.mean(np.abs(values))
 
+
 def calculate_conductivity(rho):
     """
     Calculates the conductivity (Sigma) from the resistivity.
@@ -472,8 +493,10 @@ def calculate_conductivity(rho):
     """
     return 1 / rho
 
+
 def calculate_error_propagation_amplitude(
-        e_std, h_std, rho_std, e_avg, h_avg, rho):
+    e_std, h_std, rho_std, e_avg, h_avg, rho
+):
     """
     Propagates error for the amplitude based on the standard deviations
     of the E-field, H-field, and resistivity.
@@ -499,8 +522,8 @@ def calculate_error_propagation_amplitude(
                            for E-field, H-field, and resistivity.}
     """
     return np.sqrt(
-        (e_std / e_avg)**2 + (h_std / h_avg)**2 +
-        (rho_std / rho)**2)
+        (e_std / e_avg) ** 2 + (h_std / h_avg) ** 2 + (rho_std / rho) ** 2
+    )
 
 
 def calculate_e_field_error(e_vals, asp, current):
@@ -525,4 +548,3 @@ def calculate_e_field_error(e_vals, asp, current):
     e_conv = [(v / asp) / current for v in e_vals]
     e_avg = np.mean(e_conv)
     return np.mean(np.abs(np.array(e_vals) - e_avg))
-

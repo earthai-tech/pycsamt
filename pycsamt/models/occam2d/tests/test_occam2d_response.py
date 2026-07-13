@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
+DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 RESP_FILE = DATA_DIR / "RESP17.resp"
 
 pytestmark = pytest.mark.skipif(
@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def resp():
     from pycsamt.models.occam2d.response import OccamResponse
+
     return OccamResponse.read(RESP_FILE)
 
 
@@ -74,7 +75,7 @@ def test_resp_rms_positive(resp):
 
 def test_resp_rms_value(resp):
     # RMS from residuals column
-    expected = float(np.sqrt(np.mean(resp.residuals ** 2)))
+    expected = float(np.sqrt(np.mean(resp.residuals**2)))
     assert math.isclose(resp.rms, expected, rel_tol=1e-6)
 
 
@@ -94,8 +95,10 @@ def test_resp_misfit_per_frequency(resp):
 # Defaults
 # -----------------------------------------------------------------------
 
+
 def test_resp_defaults():
     from pycsamt.models.occam2d.response import OccamResponse
+
     r = OccamResponse()
     assert r.n_data == 0
     assert r.rms == 0.0
@@ -106,14 +109,17 @@ def test_resp_defaults():
 # Error handling
 # -----------------------------------------------------------------------
 
+
 def test_missing_file_raises():
     from pycsamt.models.occam2d.response import OccamResponse
+
     with pytest.raises(FileNotFoundError):
         OccamResponse.read("/nonexistent/RESP17.resp")
 
 
 def test_empty_file_raises(tmp_path):
     from pycsamt.models.occam2d.response import OccamResponse
+
     empty = tmp_path / "empty.resp"
     empty.write_text("")
     with pytest.raises(ValueError, match="No valid data rows"):

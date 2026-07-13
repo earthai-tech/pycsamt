@@ -12,6 +12,7 @@ Six public functions cover the main inspection use-cases:
 * :func:`plot_qc_score_spread`        — violin / box / strip per profile
 * :func:`plot_qc_summary`             — 3-panel summary figure
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,18 +38,24 @@ __all__ = [
 
 # ── default profile colour cycle ──────────────────────────────────────────── #
 _PROFILE_COLORS = [
-    "#1f77b4", "#ff7f0e", "#2ca02c",
-    "#d62728", "#9467bd", "#8c564b",
-    "#e377c2", "#7f7f7f", "#bcbd22",
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
 ]
 
 _FEATURE_LABELS: dict[str, str] = {
-    "snr":        "SNR",
+    "snr": "SNR",
     "swift_skew": "Swift skew |β|",
-    "asym":       r"Asymmetry  log$_{10}$(|Z$_{xy}$|/|Z$_{yx}$|)",
-    "phase_xy":   "Phase XY (°)",
-    "phase_yx":   "Phase YX (°)",
-    "score":      "QC score",
+    "asym": r"Asymmetry  log$_{10}$(|Z$_{xy}$|/|Z$_{yx}$|)",
+    "phase_xy": "Phase XY (°)",
+    "phase_yx": "Phase YX (°)",
+    "score": "QC score",
 }
 
 
@@ -56,18 +63,25 @@ _FEATURE_LABELS: dict[str, str] = {
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _resolve_profile_colors(
     profile_names: list[str],
     user_colors: Any | None,
 ) -> dict[str, str]:
     if isinstance(user_colors, dict):
-        return {p: user_colors.get(p, _PROFILE_COLORS[i % len(_PROFILE_COLORS)])
-                for i, p in enumerate(profile_names)}
+        return {
+            p: user_colors.get(p, _PROFILE_COLORS[i % len(_PROFILE_COLORS)])
+            for i, p in enumerate(profile_names)
+        }
     if isinstance(user_colors, (list, tuple)):
-        return {p: user_colors[i % len(user_colors)]
-                for i, p in enumerate(profile_names)}
-    return {p: _PROFILE_COLORS[i % len(_PROFILE_COLORS)]
-            for i, p in enumerate(profile_names)}
+        return {
+            p: user_colors[i % len(user_colors)]
+            for i, p in enumerate(profile_names)
+        }
+    return {
+        p: _PROFILE_COLORS[i % len(_PROFILE_COLORS)]
+        for i, p in enumerate(profile_names)
+    }
 
 
 def _normalise_qc_input(
@@ -88,8 +102,9 @@ def _normalise_qc_input(
         return {"_": scores.ravel().astype(float)}, {"_": station_labels}
 
     if isinstance(scores, dict):
-        pscores = {k: np.asarray(v, dtype=float).ravel()
-                   for k, v in scores.items()}
+        pscores = {
+            k: np.asarray(v, dtype=float).ravel() for k, v in scores.items()
+        }
         return pscores, {k: None for k in pscores}
 
     if isinstance(scores, pd.DataFrame):
@@ -99,7 +114,7 @@ def _normalise_qc_input(
                 "(use EMQCScorer.score_table())."
             )
         has_prof = "profile" in scores.columns
-        has_st   = "station" in scores.columns
+        has_st = "station" in scores.columns
 
         if has_prof:
             pscores, plabels = {}, {}
@@ -137,7 +152,9 @@ def _make_tick_config(
     """Build a StationTickConfig from individual params or use *override*."""
     if override is not None:
         return override
-    return StationTickConfig(every=every, rotation=rotation, fontsize=fontsize)
+    return StationTickConfig(
+        every=every, rotation=rotation, fontsize=fontsize
+    )
 
 
 def _logT_grid_from_df(
@@ -160,6 +177,7 @@ def _logT_grid_from_df(
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal bar-chart renderer (reused by plot_qc_scores and plot_qc_summary)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _render_bar_chart(
     ax: plt.Axes,
@@ -190,27 +208,38 @@ def _render_bar_chart(
     show_grid: bool = True,
 ) -> None:
     """Render bar chart onto *ax* (no figure creation, no return value)."""
-    ax.axhspan(0, score_threshold, color=bad_zone_color,
-               alpha=bad_zone_alpha, zorder=0)
+    ax.axhspan(
+        0,
+        score_threshold,
+        color=bad_zone_color,
+        alpha=bad_zone_alpha,
+        zorder=0,
+    )
 
     profiles = list(pscores.keys())
     x_offset = 0
     all_positions: list[float] = []
-    all_labels:    list[str]   = []
+    all_labels: list[str] = []
 
     for i, prof in enumerate(profiles):
-        sc   = pscores[prof]
-        n    = len(sc)
-        col  = pcolors[prof]
+        sc = pscores[prof]
+        n = len(sc)
+        col = pcolors[prof]
         labs = plabels[prof]
         xpos = np.arange(x_offset, x_offset + n, dtype=float)
 
         # ── optional per-frequency scatter ────────────────────────────────
-        if show_scatter and scatter_src is not None \
-                and "freq" in scatter_src.columns \
-                and "station" in scatter_src.columns:
-            sub = (scatter_src[scatter_src["profile"] == prof]
-                   if "profile" in scatter_src.columns else scatter_src)
+        if (
+            show_scatter
+            and scatter_src is not None
+            and "freq" in scatter_src.columns
+            and "station" in scatter_src.columns
+        ):
+            sub = (
+                scatter_src[scatter_src["profile"] == prof]
+                if "profile" in scatter_src.columns
+                else scatter_src
+            )
             if labs:
                 rng = np.random.default_rng(i)
                 for si, st in enumerate(labs):
@@ -219,33 +248,60 @@ def _render_bar_chart(
                         jit = rng.uniform(-0.18, 0.18, rows.size)
                         ax.scatter(
                             np.full(rows.size, x_offset + si) + jit,
-                            rows, color=col, alpha=0.22, s=5, zorder=1,
+                            rows,
+                            color=col,
+                            alpha=0.22,
+                            s=5,
+                            zorder=1,
                         )
 
         # ── bars ──────────────────────────────────────────────────────────
         sc_plot = np.where(np.isfinite(sc), sc, 0.0)
-        ax.bar(xpos, sc_plot, color=col, width=bar_width,
-               edgecolor="none", alpha=bar_alpha, zorder=2)
+        ax.bar(
+            xpos,
+            sc_plot,
+            color=col,
+            width=bar_width,
+            edgecolor="none",
+            alpha=bar_alpha,
+            zorder=2,
+        )
 
         # thin top-edge line at score value
         for xi, yi in zip(xpos, sc_plot):
-            ax.hlines(yi, xi - bar_width * 0.44, xi + bar_width * 0.44,
-                      colors=col, lw=0.9, zorder=3, alpha=0.65)
+            ax.hlines(
+                yi,
+                xi - bar_width * 0.44,
+                xi + bar_width * 0.44,
+                colors=col,
+                lw=0.9,
+                zorder=3,
+                alpha=0.65,
+            )
 
         # ── profile separator ─────────────────────────────────────────────
         if i < len(profiles) - 1:
-            ax.axvline(x_offset + n - 0.5,
-                       color=separator_color, lw=separator_lw,
-                       ls=separator_ls, alpha=0.6, zorder=1)
+            ax.axvline(
+                x_offset + n - 0.5,
+                color=separator_color,
+                lw=separator_lw,
+                ls=separator_ls,
+                alpha=0.6,
+                zorder=1,
+            )
 
         # ── profile label above bars ──────────────────────────────────────
         if show_profile_labels and prof != "_":
             ax.text(
-                x_offset + (n - 1) / 2.0, profile_label_y, prof,
+                x_offset + (n - 1) / 2.0,
+                profile_label_y,
+                prof,
                 transform=ax.get_xaxis_transform(),
-                ha="center", va="bottom",
+                ha="center",
+                va="bottom",
                 fontsize=profile_label_fontsize,
-                fontweight="bold", color=col,
+                fontweight="bold",
+                color=col,
             )
 
         # ── accumulate tick info ──────────────────────────────────────────
@@ -258,24 +314,40 @@ def _render_bar_chart(
         x_offset += n
 
     # ── threshold line ─────────────────────────────────────────────────────
-    ax.axhline(score_threshold, color=threshold_color,
-               lw=threshold_lw, ls=threshold_ls, zorder=4)
+    ax.axhline(
+        score_threshold,
+        color=threshold_color,
+        lw=threshold_lw,
+        ls=threshold_ls,
+        zorder=4,
+    )
 
     # ── zone labels on right margin ────────────────────────────────────────
     if show_zone_labels:
-        y_good   = (1.0 + score_threshold) / 2.0
+        y_good = (1.0 + score_threshold) / 2.0
         y_review = score_threshold / 2.0
-        kw = dict(transform=ax.transAxes, va="center",
-                  fontsize=zone_label_fontsize, fontweight="bold")
-        ax.text(1.002, y_good,   "Good ▶",   ha="left",
-                color="#2ca02c", **kw)
-        ax.text(1.002, y_review, "◀ Review", ha="left",
-                color=threshold_color, **kw)
+        kw = dict(
+            transform=ax.transAxes,
+            va="center",
+            fontsize=zone_label_fontsize,
+            fontweight="bold",
+        )
+        ax.text(1.002, y_good, "Good ▶", ha="left", color="#2ca02c", **kw)
+        ax.text(
+            1.002,
+            y_review,
+            "◀ Review",
+            ha="left",
+            color=threshold_color,
+            **kw,
+        )
 
     # ── x-axis via StationTickConfig ───────────────────────────────────────
     pos_arr = np.asarray(all_positions)
     tick_cfg.apply(
-        ax, pos_arr, all_labels,
+        ax,
+        pos_arr,
+        all_labels,
         xlabel=xlabel,
         xlim=(-0.8, x_offset - 0.2),
     )
@@ -283,14 +355,16 @@ def _render_bar_chart(
     ax.set_ylim(0, 1.15)
     ax.set_ylabel("QC score", fontsize=9)
     if show_grid:
-        ax.grid(True, axis="y", ls=":", lw=0.4, color="gray",
-                alpha=0.5, zorder=0)
+        ax.grid(
+            True, axis="y", ls=":", lw=0.4, color="gray", alpha=0.5, zorder=0
+        )
     ax.set_axisbelow(True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_scores
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_scores(
@@ -405,16 +479,20 @@ def plot_qc_scores(
     >>> plot_qc_scores(scores_dict, station_tick_config=cfg)
     """
     pscores, plabels = _normalise_qc_input(scores, station_labels)
-    profiles         = list(pscores.keys())
-    pcolors          = _resolve_profile_colors(profiles, profile_colors)
-    tick_cfg         = _make_tick_config(tick_every, tick_label_rotation,
-                                         tick_fontsize, station_tick_config)
+    profiles = list(pscores.keys())
+    pcolors = _resolve_profile_colors(profiles, profile_colors)
+    tick_cfg = _make_tick_config(
+        tick_every, tick_label_rotation, tick_fontsize, station_tick_config
+    )
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     _render_bar_chart(
-        ax, pscores, plabels, pcolors,
+        ax,
+        pscores,
+        plabels,
+        pcolors,
         score_threshold=score_threshold,
         show_scatter=show_scatter,
         scatter_src=(scores if isinstance(scores, pd.DataFrame) else None),
@@ -447,15 +525,22 @@ def plot_qc_scores(
     if len(profiles) > 1 or profiles[0] != "_":
         handles = [
             mpatches.Patch(fc=pcolors[p], label=p, alpha=bar_alpha)
-            for p in profiles if p != "_"
+            for p in profiles
+            if p != "_"
         ]
         handles.append(
-            plt.Line2D([], [], color=threshold_color, ls=threshold_ls,
-                       lw=threshold_lw,
-                       label=f"Review threshold ({score_threshold:.2f})")
+            plt.Line2D(
+                [],
+                [],
+                color=threshold_color,
+                ls=threshold_ls,
+                lw=threshold_lw,
+                label=f"Review threshold ({score_threshold:.2f})",
+            )
         )
-        ax.legend(handles=handles, loc="lower right",
-                  fontsize=7.5, framealpha=0.9)
+        ax.legend(
+            handles=handles, loc="lower right", fontsize=7.5, framealpha=0.9
+        )
 
     return ax
 
@@ -463,6 +548,7 @@ def plot_qc_scores(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_heatmap
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_heatmap(
@@ -523,39 +609,59 @@ def plot_qc_heatmap(
             "'station', 'freq', 'score' (from EMQCScorer.score_table())."
         )
     if not {"station", "freq", "score"}.issubset(scores.columns):
-        raise ValueError("DataFrame must have columns 'station', 'freq', 'score'.")
+        raise ValueError(
+            "DataFrame must have columns 'station', 'freq', 'score'."
+        )
 
-    tick_cfg = _make_tick_config(tick_every, tick_label_rotation,
-                                  tick_fontsize, station_tick_config)
+    tick_cfg = _make_tick_config(
+        tick_every, tick_label_rotation, tick_fontsize, station_tick_config
+    )
 
     if station_labels is not None:
         st_order = station_labels
     else:
-        st_order = sorted(scores["station"].unique(),
-                          key=lambda x: (str(x).isdigit(), x))
+        st_order = sorted(
+            scores["station"].unique(), key=lambda x: (str(x).isdigit(), x)
+        )
 
     mat, freqs, x_cents = _logT_grid_from_df(scores, st_order)
     n_f, n_st = mat.shape
 
-    log_T  = np.log10(1.0 / freqs)
-    d_lT   = np.diff(log_T)
+    log_T = np.log10(1.0 / freqs)
+    d_lT = np.diff(log_T)
     y_edge = np.empty(n_f + 1)
-    y_edge[0]    = log_T[0]   - 0.5 * abs(d_lT[0])  if n_f > 1 else log_T[0] - 0.5
+    y_edge[0] = log_T[0] - 0.5 * abs(d_lT[0]) if n_f > 1 else log_T[0] - 0.5
     y_edge[1:-1] = log_T[:-1] + 0.5 * d_lT if n_f > 1 else np.array([])
-    y_edge[-1]   = log_T[-1]  + 0.5 * abs(d_lT[-1]) if n_f > 1 else log_T[-1] + 0.5
-    x_edge = np.concatenate([
-        [x_cents[0] - 0.5],
-        0.5 * (x_cents[:-1] + x_cents[1:]),
-        [x_cents[-1] + 0.5],
-    ]) if n_st > 1 else np.array([-0.5, 0.5])
+    y_edge[-1] = (
+        log_T[-1] + 0.5 * abs(d_lT[-1]) if n_f > 1 else log_T[-1] + 0.5
+    )
+    x_edge = (
+        np.concatenate(
+            [
+                [x_cents[0] - 0.5],
+                0.5 * (x_cents[:-1] + x_cents[1:]),
+                [x_cents[-1] + 0.5],
+            ]
+        )
+        if n_st > 1
+        else np.array([-0.5, 0.5])
+    )
 
     X, Y = np.meshgrid(x_edge, y_edge)
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
-    qm = ax.pcolormesh(X, Y, mat, cmap=cmap, vmin=vmin, vmax=vmax,
-                       shading="flat", rasterized=True)
+    qm = ax.pcolormesh(
+        X,
+        Y,
+        mat,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        shading="flat",
+        rasterized=True,
+    )
     if period_up:
         ax.invert_yaxis()
 
@@ -564,8 +670,14 @@ def plot_qc_heatmap(
             x_c = 0.5 * (x_edge[:-1] + x_edge[1:])
             y_c = 0.5 * (y_edge[:-1] + y_edge[1:])
             Xc, Yc = np.meshgrid(x_c, y_c)
-            ax.contour(Xc, Yc, mat, levels=[score_threshold],
-                       colors=[contour_color], linewidths=[contour_lw])
+            ax.contour(
+                Xc,
+                Yc,
+                mat,
+                levels=[score_threshold],
+                colors=[contour_color],
+                linewidths=[contour_lw],
+            )
         except Exception:
             pass
 
@@ -574,19 +686,21 @@ def plot_qc_heatmap(
     cb.ax.tick_params(labelsize=7)
 
     # y-axis (log-period)
-    pos  = np.linspace(log_T.min(), log_T.max(), n_yticks)
+    pos = np.linspace(log_T.min(), log_T.max(), n_yticks)
     labs = []
     for v in pos:
         r = round(v)
-        labs.append(f"$10^{{{r}}}$" if abs(r - v) < 0.04
-                    else f"$10^{{{v:.1f}}}$")
+        labs.append(
+            f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
+        )
     ax.set_yticks(pos)
     ax.set_yticklabels(labs, fontsize=tick_fontsize)
     ax.set_ylabel(ylabel, fontsize=8)
 
     # x-axis via StationTickConfig
-    tick_cfg.apply(ax, x_cents, st_order, xlabel=xlabel,
-                   xlim=(x_edge[0], x_edge[-1]))
+    tick_cfg.apply(
+        ax, x_cents, st_order, xlabel=xlabel, xlim=(x_edge[0], x_edge[-1])
+    )
 
     if title:
         ax.set_title(title, fontsize=9, fontweight="bold")
@@ -597,6 +711,7 @@ def plot_qc_heatmap(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_feature_heatmap
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_feature_heatmap(
@@ -648,16 +763,17 @@ def plot_qc_feature_heatmap(
     if not features:
         raise ValueError("No valid feature columns found in DataFrame.")
 
-    tick_cfg = _make_tick_config(tick_every, tick_label_rotation,
-                                  tick_fontsize, station_tick_config)
+    tick_cfg = _make_tick_config(
+        tick_every, tick_label_rotation, tick_fontsize, station_tick_config
+    )
 
     _cmap_defaults = {
-        "snr":        "YlGn",
+        "snr": "YlGn",
         "swift_skew": "YlOrRd_r",
-        "asym":       "RdBu_r",
-        "phase_xy":   "RdBu_r",
-        "phase_yx":   "RdBu_r",
-        "score":      "RdYlGn",
+        "asym": "RdBu_r",
+        "phase_xy": "RdBu_r",
+        "phase_yx": "RdBu_r",
+        "score": "RdYlGn",
     }
     cmap_map = dict(_cmap_defaults)
     if cmaps:
@@ -666,19 +782,21 @@ def plot_qc_feature_heatmap(
     if station_labels is not None:
         st_order = station_labels
     else:
-        st_order = sorted(df["station"].unique(),
-                          key=lambda x: (str(x).isdigit(), x))
+        st_order = sorted(
+            df["station"].unique(), key=lambda x: (str(x).isdigit(), x)
+        )
 
     n_feat = len(features)
-    n_st   = len(st_order)
-    freqs  = np.sort(df["freq"].unique())[::-1]
-    n_f    = freqs.size
+    n_st = len(st_order)
+    freqs = np.sort(df["freq"].unique())[::-1]
+    n_f = freqs.size
 
     if figsize is None:
         figsize = (max(8.0, n_st * 0.35), 2.8 * n_feat)
 
-    fig, axes = plt.subplots(n_feat, 1, figsize=figsize, sharex=True,
-                              gridspec_kw={"hspace": 0.45})
+    fig, axes = plt.subplots(
+        n_feat, 1, figsize=figsize, sharex=True, gridspec_kw={"hspace": 0.45}
+    )
     if n_feat == 1:
         axes = [axes]
 
@@ -693,11 +811,17 @@ def plot_qc_feature_heatmap(
         ye = np.array([log_T[0] - 0.5, log_T[0] + 0.5])
 
     x_cents = np.arange(n_st, dtype=float)
-    xe = np.concatenate([
-        [x_cents[0] - 0.5],
-        0.5 * (x_cents[:-1] + x_cents[1:]),
-        [x_cents[-1] + 0.5],
-    ]) if n_st > 1 else np.array([-0.5, 0.5])
+    xe = (
+        np.concatenate(
+            [
+                [x_cents[0] - 0.5],
+                0.5 * (x_cents[:-1] + x_cents[1:]),
+                [x_cents[-1] + 0.5],
+            ]
+        )
+        if n_st > 1
+        else np.array([-0.5, 0.5])
+    )
     X, Y = np.meshgrid(xe, ye)
 
     st_idx = {s: i for i, s in enumerate(st_order)}
@@ -725,8 +849,16 @@ def plot_qc_feature_heatmap(
             v = max(abs(vmin), abs(vmax))
             vmin, vmax = -v, v
 
-        qm = ax.pcolormesh(X, Y, mat, cmap=cmap_map.get(feat, "RdBu_r"),
-                           vmin=vmin, vmax=vmax, shading="flat", rasterized=True)
+        qm = ax.pcolormesh(
+            X,
+            Y,
+            mat,
+            cmap=cmap_map.get(feat, "RdBu_r"),
+            vmin=vmin,
+            vmax=vmax,
+            shading="flat",
+            rasterized=True,
+        )
         if period_up:
             ax.invert_yaxis()
 
@@ -734,20 +866,21 @@ def plot_qc_feature_heatmap(
         cb.set_label(_FEATURE_LABELS.get(feat, feat), fontsize=7)
         cb.ax.tick_params(labelsize=6)
 
-        pos  = np.linspace(log_T.min(), log_T.max(), n_yticks)
+        pos = np.linspace(log_T.min(), log_T.max(), n_yticks)
         ylab = []
         for v in pos:
             r = round(v)
-            ylab.append(f"$10^{{{r}}}$" if abs(r - v) < 0.04
-                        else f"$10^{{{v:.1f}}}$")
+            ylab.append(
+                f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
+            )
         ax.set_yticks(pos)
         ax.set_yticklabels(ylab, fontsize=tick_fontsize)
         ax.set_ylabel("Period (s)", fontsize=7)
 
     # bottom x-axis via StationTickConfig
-    tick_cfg.apply(axes[-1], x_cents, st_order,
-                   xlabel="Station",
-                   xlim=(xe[0], xe[-1]))
+    tick_cfg.apply(
+        axes[-1], x_cents, st_order, xlabel="Station", xlim=(xe[0], xe[-1])
+    )
 
     if title:
         fig.suptitle(title, fontsize=10, fontweight="bold", y=1.01)
@@ -758,6 +891,7 @@ def plot_qc_feature_heatmap(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_score_distribution   (standalone)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_score_distribution(
@@ -814,36 +948,48 @@ def plot_qc_score_distribution(
     ax : :class:`matplotlib.axes.Axes`
     """
     pscores, _ = _normalise_qc_input(scores, station_labels)
-    profiles   = list(pscores.keys())
-    pcolors    = _resolve_profile_colors(profiles, profile_colors)
+    profiles = list(pscores.keys())
+    pcolors = _resolve_profile_colors(profiles, profile_colors)
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     for prof in profiles:
-        sc  = pscores[prof]
+        sc = pscores[prof]
         col = pcolors[prof]
         fin = sc[np.isfinite(sc)]
         if not fin.size:
             continue
         label = prof if prof != "_" else "all"
 
-        ax.hist(fin, bins=n_bins, range=(0, 1),
-                color=col, alpha=fill_alpha, edgecolor="none",
-                density=True, label=label)
+        ax.hist(
+            fin,
+            bins=n_bins,
+            range=(0, 1),
+            color=col,
+            alpha=fill_alpha,
+            edgecolor="none",
+            density=True,
+            label=label,
+        )
 
         if show_kde and fin.size > 3:
             try:
                 from scipy.stats import gaussian_kde
-                bw  = kde_bw if kde_bw is not None else "scott"
+
+                bw = kde_bw if kde_bw is not None else "scott"
                 kde = gaussian_kde(fin, bw_method=bw)
-                xs  = np.linspace(0, 1, 300)
+                xs = np.linspace(0, 1, 300)
                 ax.plot(xs, kde(xs), color=col, lw=line_lw)
             except ImportError:
                 pass
 
-    ax.axvline(score_threshold, color=threshold_color,
-               lw=threshold_lw, ls=threshold_ls)
+    ax.axvline(
+        score_threshold,
+        color=threshold_color,
+        lw=threshold_lw,
+        ls=threshold_ls,
+    )
 
     # threshold band annotation
     ax.axvspan(0, score_threshold, color="#fde8e8", alpha=0.25, zorder=0)
@@ -862,6 +1008,7 @@ def plot_qc_score_distribution(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_score_spread   (standalone)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_score_spread(
@@ -915,15 +1062,15 @@ def plot_qc_score_spread(
     ax : :class:`matplotlib.axes.Axes`
     """
     pscores, _ = _normalise_qc_input(scores, station_labels)
-    profiles   = list(pscores.keys())
-    pcolors    = _resolve_profile_colors(profiles, profile_colors)
+    profiles = list(pscores.keys())
+    pcolors = _resolve_profile_colors(profiles, profile_colors)
 
-    vio_data:   list[np.ndarray] = []
-    vio_labels: list[str]        = []
-    vio_colors: list[str]        = []
+    vio_data: list[np.ndarray] = []
+    vio_labels: list[str] = []
+    vio_colors: list[str] = []
 
     for prof in profiles:
-        sc  = pscores[prof]
+        sc = pscores[prof]
         fin = sc[np.isfinite(sc)]
         if not fin.size:
             continue
@@ -935,11 +1082,12 @@ def plot_qc_score_spread(
         _, ax = plt.subplots(figsize=figsize)
 
     positions = np.arange(1, len(vio_data) + 1, dtype=float)
-    rng       = np.random.default_rng(0)
+    rng = np.random.default_rng(0)
 
     if kind == "violin" and vio_data:
-        parts = ax.violinplot(vio_data, positions=positions,
-                               showmedians=True, showextrema=True)
+        parts = ax.violinplot(
+            vio_data, positions=positions, showmedians=True, showextrema=True
+        )
         for body, col in zip(parts["bodies"], vio_colors):
             body.set_facecolor(col)
             body.set_alpha(violin_alpha)
@@ -949,12 +1097,17 @@ def plot_qc_score_spread(
                 parts[part_key].set_linewidth(0.9)
 
     elif kind == "box" and vio_data:
-        bp = ax.boxplot(vio_data, positions=positions, patch_artist=True,
-                        widths=0.5, notch=False,
-                        medianprops=dict(color="0.2", lw=1.5),
-                        whiskerprops=dict(lw=0.8),
-                        capprops=dict(lw=0.8),
-                        flierprops=dict(marker=".", ms=3, alpha=0.4))
+        bp = ax.boxplot(
+            vio_data,
+            positions=positions,
+            patch_artist=True,
+            widths=0.5,
+            notch=False,
+            medianprops=dict(color="0.2", lw=1.5),
+            whiskerprops=dict(lw=0.8),
+            capprops=dict(lw=0.8),
+            flierprops=dict(marker=".", ms=3, alpha=0.4),
+        )
         for patch, col in zip(bp["boxes"], vio_colors):
             patch.set_facecolor(col)
             patch.set_alpha(violin_alpha)
@@ -963,11 +1116,22 @@ def plot_qc_score_spread(
     if kind == "strip" or show_scatter:
         for i, (sc, col) in enumerate(zip(vio_data, vio_colors)):
             jit = rng.uniform(-jitter, jitter, sc.size)
-            ax.scatter(positions[i] + jit, sc,
-                       color=col, alpha=scatter_alpha, s=scatter_size, zorder=3)
+            ax.scatter(
+                positions[i] + jit,
+                sc,
+                color=col,
+                alpha=scatter_alpha,
+                s=scatter_size,
+                zorder=3,
+            )
 
-    ax.axhline(score_threshold, color=threshold_color,
-               lw=threshold_lw, ls=threshold_ls, zorder=4)
+    ax.axhline(
+        score_threshold,
+        color=threshold_color,
+        lw=threshold_lw,
+        ls=threshold_ls,
+        zorder=4,
+    )
     ax.axhspan(0, score_threshold, color="#fde8e8", alpha=0.20, zorder=0)
 
     ax.set_xticks(positions)
@@ -983,6 +1147,7 @@ def plot_qc_score_spread(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_qc_summary
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_qc_summary(
@@ -1043,33 +1208,39 @@ def plot_qc_summary(
     fig : :class:`matplotlib.figure.Figure`
     """
     pscores, plabels = _normalise_qc_input(scores, station_labels)
-    profiles  = list(pscores.keys())
-    pcolors   = _resolve_profile_colors(profiles, profile_colors)
-    tick_cfg  = _make_tick_config(tick_every, tick_label_rotation,
-                                   tick_fontsize, station_tick_config)
+    profiles = list(pscores.keys())
+    pcolors = _resolve_profile_colors(profiles, profile_colors)
+    tick_cfg = _make_tick_config(
+        tick_every, tick_label_rotation, tick_fontsize, station_tick_config
+    )
 
     fig = plt.figure(figsize=figsize, layout="constrained")
-    gs  = fig.add_gridspec(
-        2, 2,
+    gs = fig.add_gridspec(
+        2,
+        2,
         height_ratios=[1, 0.75],
         hspace=0.45,
         wspace=0.30,
     )
-    ax_bar  = fig.add_subplot(gs[0, :])
+    ax_bar = fig.add_subplot(gs[0, :])
     ax_hist = fig.add_subplot(gs[1, 0])
-    ax_vio  = fig.add_subplot(gs[1, 1])
+    ax_vio = fig.add_subplot(gs[1, 1])
 
     # ── (a) bar chart ──────────────────────────────────────────────────────
     _render_bar_chart(
-        ax_bar, pscores, plabels, pcolors,
+        ax_bar,
+        pscores,
+        plabels,
+        pcolors,
         score_threshold=score_threshold,
         show_scatter=show_scatter,
         scatter_src=(scores if isinstance(scores, pd.DataFrame) else None),
         tick_cfg=tick_cfg,
         show_zone_labels=True,
     )
-    ax_bar.set_title("(a) Per-station QC scores",
-                     fontsize=9, fontweight="bold")
+    ax_bar.set_title(
+        "(a) Per-station QC scores", fontsize=9, fontweight="bold"
+    )
 
     # ── (b) score distribution ─────────────────────────────────────────────
     plot_qc_score_distribution.__wrapped__(

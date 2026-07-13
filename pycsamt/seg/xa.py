@@ -15,7 +15,7 @@ from .edi import EDIFile
 
 logger = get_logger(__name__)
 
-__all__ = ["XAMixin",  "EDIAcc", "build_dataset"]
+__all__ = ["XAMixin", "EDIAcc", "build_dataset"]
 
 
 def build_dataset(
@@ -106,9 +106,9 @@ def build_dataset(
             logger.debug("Skip %s: %s", ed, exc)
 
     if not datasets:
-        return xr.Dataset(coords={
-            "site": [], "freq": [], "output_ch": [], "input_ch": []
-        })
+        return xr.Dataset(
+            coords={"site": [], "freq": [], "output_ch": [], "input_ch": []}
+        )
 
     full_ds = xr.concat(datasets, dim="site", join="outer")
 
@@ -118,6 +118,7 @@ def build_dataset(
             full_ds = full_ds.assign_coords({col: ("site", meta_df[col])})
 
     return full_ds
+
 
 class XAMixin:
     r"""
@@ -190,6 +191,7 @@ class XAMixin:
         lat      (site) float64 26.05 26.05
         lon      (site) float64 -10.33 -10.33
     """
+
     def to_xarray(
         self,
         *,
@@ -269,6 +271,7 @@ class EDIAcc:
     >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
     >>> # fig.show() # Uncomment to display plot
     """
+
     def __init__(self, ds: xr.Dataset) -> None:
         self._ds = ds
 
@@ -277,12 +280,10 @@ class EDIAcc:
         s = self._ds.coords.get("site", None)
         return [] if s is None else [str(v) for v in s.data]
 
-
-
     def get(self, site: str) -> xr.Dataset:
         """Selects data for a single site (case-insensitive)."""
         # Find the correctly cased site name from the coordinates
-        site_coord = self._ds.coords['site'].values
+        site_coord = self._ds.coords["site"].values
         try:
             match = next(s for s in site_coord if s.upper() == site.upper())
             return self._ds.sel(site=match)
@@ -368,11 +369,17 @@ class EDIAcc:
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=figsize)
 
         comp_map = {
-            "xy": ("Hx", "Hy"), "yx": ("Hy", "Hx"),
-            "xx": ("Hx", "Hx"), "yy": ("Hy", "Hy")
+            "xy": ("Hx", "Hy"),
+            "yx": ("Hy", "Hx"),
+            "xx": ("Hx", "Hx"),
+            "yy": ("Hy", "Hy"),
         }
 
-        default_grid_props = {'which': 'both', 'linestyle': '--', 'linewidth': 0.5}
+        default_grid_props = {
+            "which": "both",
+            "linestyle": "--",
+            "linewidth": 0.5,
+        }
         if grid_props:
             default_grid_props.update(grid_props)
 
@@ -385,25 +392,34 @@ class EDIAcc:
             output_ch, input_ch = comp_map[comp_lower]
 
             # --- Resistivity Plot (Log-Log) ---
-            rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
+            rho_data = ds_site["rho"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             rho_data.plot.line(
-                ax=axes[0], xscale="log", yscale="log",
-                label=f"$\\rho_{{{comp_lower}}}$", **plot_kwargs
+                ax=axes[0],
+                xscale="log",
+                yscale="log",
+                label=f"$\\rho_{{{comp_lower}}}$",
+                **plot_kwargs,
             )
 
             # --- Phase Plot (Semi-Log) ---
-            phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
+            phi_data = ds_site["phi"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
 
             phi_data.plot.line(
-                ax=axes[1], xscale="log",
-                label=f"$\\phi_{{{comp_lower}}}$", **plot_kwargs
+                ax=axes[1],
+                xscale="log",
+                label=f"$\\phi_{{{comp_lower}}}$",
+                **plot_kwargs,
             )
 
         # --- Aesthetics and Formatting ---
         axes[0].set_ylabel("Apparent Resistivity (Ω·m)")
-        axes[0].set_xlabel("") # Remove x-label from top plot
+        axes[0].set_xlabel("")  # Remove x-label from top plot
 
         axes[1].set_ylabel("Phase (degrees)")
         axes[1].set_xlabel("Frequency (Hz)")
@@ -420,13 +436,12 @@ class EDIAcc:
         axes[0].legend()
         axes[1].legend()
         fig.suptitle(f"Site: {site}", fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust for suptitle
+        plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
 
         if savefig:
             plt.savefig(savefig, dpi=300)
 
         return fig, axes
-
 
     def attrs(self) -> dict[str, object]:
         """Returns the global attributes of the Dataset."""
@@ -453,8 +468,7 @@ class EDIAcc:
         return "spec_vals" in self._ds
 
     def spectra(self) -> xr.Dataset:
-        keep = [k for k in self._ds.data_vars
-                if k.startswith("spec_")]
+        keep = [k for k in self._ds.data_vars if k.startswith("spec_")]
         return self._ds[keep] if keep else self._ds
 
     # --- time-series helpers ---
@@ -466,9 +480,11 @@ class EDIAcc:
         keep = [k for k in keep if k in self._ds]
         return self._ds[keep] if keep else self._ds
 
+
 def _site_id_from_edi(ed: EDIFile) -> str:
     """Infer site ID with fallbacks."""
     return ed.station or "unknown_site"
+
 
 def _meta_from_edi(ed: EDIFile) -> dict[str, object]:
     """Extract metadata from an EDIFile object for a single site."""
@@ -482,10 +498,9 @@ def _meta_from_edi(ed: EDIFile) -> dict[str, object]:
         "filename": p.name if isinstance(p, Path) else None,
         "dataid": ed.station,
         "lat": getattr(head, "lat", None) if head else None,
-        "lon": (
-            getattr(head, "long", None)
-            or getattr(head, "lon", None)
-            ) if head else None,
+        "lon": (getattr(head, "long", None) or getattr(head, "lon", None))
+        if head
+        else None,
         "elev": getattr(head, "elev", None) if head else None,
         "has_tip": ed.has_tipper,
         "nfreq": ed.n_freq,
@@ -493,6 +508,7 @@ def _meta_from_edi(ed: EDIFile) -> dict[str, object]:
         "has_ts": ed.get_section("timeseries") is not None,
         "software": software,
     }
+
 
 def _get_tensor_or_zeros(
     obj: object | None, attr: str, n_freq: int, dtype: np.dtype
@@ -507,6 +523,7 @@ def _get_tensor_or_zeros(
         return arr.astype(dtype, copy=False)
 
     return np.zeros((n_freq, 2, 2), dtype=dtype)
+
 
 def _get_tipper_or_zeros(
     obj: object | None, attr: str, n_freq: int, dtype: np.dtype
@@ -555,12 +572,10 @@ def _meta(ed: EDIFile) -> dict[str, object]:
 
     dataid = getattr(head, "dataid", None) if head else None
     if dataid is None:
-        dataid = getattr(
-            spec, "name", None) or getattr(ed, "station", None)
+        dataid = getattr(spec, "name", None) or getattr(ed, "station", None)
         if dataid is None:
             p = getattr(ed, "path", None)
-            dataid = p.stem if isinstance(
-                p, Path) else None
+            dataid = p.stem if isinstance(p, Path) else None
 
     # --- robust software extraction ---
     software = None
@@ -601,6 +616,7 @@ def _pad2d(
             out[i, : a.size] = a
     return out
 
+
 def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
     spec = ed.get_section("spectra")
     if spec is None:
@@ -619,15 +635,14 @@ def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
             blks = getattr(io, "blocks", [])
             # prefer block.options['freq'] if present
             freq = [
-                (getattr(b, "freq", None)
-                 if getattr(b, "freq", None) is not None
-                 else b.options.get("freq", None))
+                (
+                    getattr(b, "freq", None)
+                    if getattr(b, "freq", None) is not None
+                    else b.options.get("freq", None)
+                )
                 for b in blks
             ]
-            vals = [
-                np.asarray(getattr(b, "values", []), float)
-                for b in blks
-            ]
+            vals = [np.asarray(getattr(b, "values", []), float) for b in blks]
             bw = [getattr(b, "bw", None) for b in blks]
             avgt = [getattr(b, "avgt", None) for b in blks]
             rs = [getattr(b, "rotspec", None) for b in blks]
@@ -656,7 +671,8 @@ def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
 
     out: dict[str, xr.DataArray] = {
         "spec_vals": xr.DataArray(
-            spec_vals, dims=("freq", "sidx"),
+            spec_vals,
+            dims=("freq", "sidx"),
             coords={"freq": f, "sidx": sidx},
         ),
         "spec_len": xr.DataArray(
@@ -679,9 +695,7 @@ def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
     ):
         ok, arrv = _ok_1d(arr)
         if ok:
-            out[name] = xr.DataArray(
-                arrv, dims=("freq",), coords={"freq": f}
-            )
+            out[name] = xr.DataArray(arrv, dims=("freq",), coords={"freq": f})
 
     return out
 
@@ -725,13 +739,12 @@ def _ts_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
         dims=("sample", "ch"),
         coords={"sample": np.arange(nmax), "ch": ch},
     )
-    out["dt"] = xr.DataArray(
-        dt, dims=("ch",), coords={"ch": ch}
-    )
+    out["dt"] = xr.DataArray(dt, dims=("ch",), coords={"ch": ch})
     out["npts"] = xr.DataArray(
         np.array(npts, int), dims=("ch",), coords={"ch": ch}
     )
     return out
+
 
 def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     """
@@ -753,36 +766,24 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     n_freq = f.size
 
     # --- Extract Transfer Function Data using helpers ---
-    z = _get_tensor_or_zeros(
-        ed.Z, "z", n_freq, dtype=complex
-        )
-    z_err = _get_tensor_or_zeros(
-        ed.Z, "z_err", n_freq, dtype=float
-        )
-    rho = _get_tensor_or_zeros(
-        ed.Z, "resistivity", n_freq, dtype=float
-        )
-    phi = _get_tensor_or_zeros(
-        ed.Z, "phase", n_freq, dtype=float
-        )
+    z = _get_tensor_or_zeros(ed.Z, "z", n_freq, dtype=complex)
+    z_err = _get_tensor_or_zeros(ed.Z, "z_err", n_freq, dtype=float)
+    rho = _get_tensor_or_zeros(ed.Z, "resistivity", n_freq, dtype=float)
+    phi = _get_tensor_or_zeros(ed.Z, "phase", n_freq, dtype=float)
     rho_err = _get_tensor_or_zeros(
         ed.Z, "resistivity_err", n_freq, dtype=float
-        )
-    phi_err = _get_tensor_or_zeros(
-        ed.Z, "phase_err", n_freq, dtype=float
     )
-
+    phi_err = _get_tensor_or_zeros(ed.Z, "phase_err", n_freq, dtype=float)
 
     zrot_val = getattr(ed.Z, "rotation_angle", np.zeros(n_freq))
     zrot = (
-        np.asarray(zrot_val) if zrot_val.size == n_freq
+        np.asarray(zrot_val)
+        if zrot_val.size == n_freq
         else np.zeros(n_freq, dtype=np.float64)
-        )
+    )
 
-    tip = _get_tipper_or_zeros(
-        ed.Tip, "tipper", n_freq, np.complex128)
-    tip_err = _get_tipper_or_zeros(
-        ed.Tip, "tipper_err", n_freq, np.float64)
+    tip = _get_tipper_or_zeros(ed.Tip, "tipper", n_freq, np.complex128)
+    tip_err = _get_tipper_or_zeros(ed.Tip, "tipper_err", n_freq, np.float64)
 
     # --- Create the base Dataset ---
     ds = xr.Dataset(
@@ -793,7 +794,6 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
             "phi": (("freq", "output_ch", "input_ch"), phi),
             "rho_err": (("freq", "output_ch", "input_ch"), rho_err),
             "phi_err": (("freq", "output_ch", "input_ch"), phi_err),
-
             "zrot": (("freq",), zrot),
             "tip": (("freq", "tcomp"), tip),
             "tip_err": (("freq", "tcomp"), tip_err),
@@ -812,7 +812,7 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
         if sp_data:
             ds = ds.merge(xr.Dataset(sp_data))
     except NameError:
-         # _spec_pack not defined, skipping.
+        # _spec_pack not defined, skipping.
         pass
 
     try:
@@ -825,6 +825,7 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
 
     return ds
 
+
 def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     sid = _site_id(ed)
 
@@ -832,9 +833,11 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     f = np.asarray(getattr(ed.Z, "freq", []), float)
     if f.ndim != 1 or f.size == 0:
         sp = ed.get_section("spectra")
-        sf = np.asarray(
-            getattr(sp, "freq", []), float
-            ) if sp is not None else np.asarray([], float)
+        sf = (
+            np.asarray(getattr(sp, "freq", []), float)
+            if sp is not None
+            else np.asarray([], float)
+        )
         f = sf if (sf.ndim == 1 and sf.size > 0) else np.asarray([], float)
 
     def _block_or_zeros(a, n: int, dtype) -> np.ndarray:
@@ -850,11 +853,8 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
         return arr.astype(dtype, copy=False)
 
     # Z as complex (freq, i, j)
-    z  = _block_or_zeros(
-        getattr(ed.Z, "z", None), f.size, complex)
-    ze = _block_or_zeros(
-        getattr(ed.Z, "z_err", None), f.size, float)
-
+    z = _block_or_zeros(getattr(ed.Z, "z", None), f.size, complex)
+    ze = _block_or_zeros(getattr(ed.Z, "z_err", None), f.size, float)
 
     zrot = np.asarray(
         getattr(ed.Z, "rotation_angle", np.zeros(f.size))
@@ -867,15 +867,15 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     if tip is None or getattr(tip, "size", 0) == 0:
         tip = np.zeros((f.size, 1, 2), complex)
     tip = np.asarray(tip)
-    tip_da = tip[:, 0, :] if tip.ndim == 3 else \
-        np.zeros((f.size, 2), complex)
+    tip_da = tip[:, 0, :] if tip.ndim == 3 else np.zeros((f.size, 2), complex)
 
     terr = getattr(ed.Tip, "_tipper_err", None)
     if terr is None:
         terr = np.zeros_like(tip, float)
     terr = np.asarray(terr)
-    terr_da = terr[:, 0, :] if terr.ndim == 3 else \
-        np.zeros((f.size, 2), float)
+    terr_da = (
+        terr[:, 0, :] if terr.ndim == 3 else np.zeros((f.size, 2), float)
+    )
 
     # --- helper: coerce to 1D length-n safely
     def _as1d(v, n: int) -> np.ndarray:
@@ -918,7 +918,6 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
         ],
         axis=1,
     ).reshape(f.size, 2, 2)
-
 
     # base TF dataset
     ds = xr.Dataset(

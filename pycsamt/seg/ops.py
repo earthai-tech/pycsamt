@@ -19,7 +19,7 @@ __all__ = [
     "unpack_hermitian",
     "rotate_spectra",
     "amp_or_psd",
-    "synthesize_spectra_from_z"
+    "synthesize_spectra_from_z",
 ]
 
 # magnetic permeability of free space [H/m]
@@ -106,7 +106,7 @@ def z_to_rho_phi(
     if f.size != Z.shape[0]:
         raise ValueError("freq and Z length mismatch")
     w = 2.0 * np.pi * f
-    mag2 = (Z.real ** 2 + Z.imag ** 2)
+    mag2 = Z.real**2 + Z.imag**2
     rho = mag2 / (mu0 * w)[:, None, None]
     phi = np.degrees(np.arctan2(Z.imag, Z.real))
     return rho.squeeze(), phi.squeeze()
@@ -140,6 +140,7 @@ def time_vector(npts: int, dt: float) -> np.ndarray:
     n = int(max(0, npts))
     return np.arange(n, dtype=float) * float(dt)
 
+
 def coherence_ms(
     Sxy: np.ndarray,
     Sxx: np.ndarray,
@@ -150,7 +151,7 @@ def coherence_ms(
     Sxx = np.asarray(Sxx)
     Syy = np.asarray(Syy)
     num = np.abs(Sxy) ** 2
-    den = (np.abs(Sxx) * np.abs(Syy))
+    den = np.abs(Sxx) * np.abs(Syy)
     with np.errstate(divide="ignore", invalid="ignore"):
         out = np.where(den > 0.0, num / den, 0.0)
     return np.clip(out, 0.0, 1.0)
@@ -232,7 +233,7 @@ def synthesize_spectra_from_z(
     *,
     S_HH: np.ndarray | None = None,
     H_psd: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None = None,
-    tipper: np.ndarray | None = None,   # shape (nf,1,2) or (nf,2) accepted
+    tipper: np.ndarray | None = None,  # shape (nf,1,2) or (nf,2) accepted
     include_hz: bool = False,
     chan_order: tuple[str, ...] = ("HX", "HY", "EX", "EY"),
     e_noise: float | np.ndarray | None = None,
@@ -395,8 +396,10 @@ def synthesize_spectra_from_z(
             Sblk[:, 1, 1] += v
 
     # E/H and E/E
-    S_EH = np.einsum("fij,fjk->fik", Zm, S_HH)             # Z S_HH
-    S_EE = np.einsum("fij,fjk,flk->fil", Zm, S_HH, np.conjugate(Zm))  # Z S_HH Z^H
+    S_EH = np.einsum("fij,fjk->fik", Zm, S_HH)  # Z S_HH
+    S_EE = np.einsum(
+        "fij,fjk,flk->fil", Zm, S_HH, np.conjugate(Zm)
+    )  # Z S_HH Z^H
     _add_diag_noise(S_EE, e_noise)
     _add_diag_noise(S_HH, h_noise)
 
@@ -410,9 +413,11 @@ def synthesize_spectra_from_z(
             T = T[:, np.newaxis, :]  # (nf,1,2)
         if T.shape != (nf, 1, 2):
             raise ValueError("tipper must have shape (nf,1,2) or (nf,2)")
-        S_ZH = np.einsum("fik,fkj->fij", T, S_HH)          # (nf,1,2)
-        S_ZZ = np.einsum("fik,fkj,flk->fil", T, S_HH, np.conjugate(T))  # (nf,1,1)
-        S_EZ = np.einsum("fij,fkj->fik", Zm, np.conjugate(S_ZH))        # (nf,2,1)
+        S_ZH = np.einsum("fik,fkj->fij", T, S_HH)  # (nf,1,2)
+        S_ZZ = np.einsum(
+            "fik,fkj,flk->fil", T, S_HH, np.conjugate(T)
+        )  # (nf,1,1)
+        S_EZ = np.einsum("fij,fkj->fik", Zm, np.conjugate(S_ZH))  # (nf,2,1)
 
     order = [s.upper() for s in chan_order]
     nchan = len(order)
@@ -420,7 +425,8 @@ def synthesize_spectra_from_z(
     idx = {lbl: i for i, lbl in enumerate(order)}
 
     def _put(lbl_i, lbl_j, arr):
-        i = idx[lbl_i]; j = idx[lbl_j]
+        i = idx[lbl_i]
+        j = idx[lbl_j]
         Sfull[:, i, j] = arr
 
     # H/H
@@ -448,7 +454,8 @@ def synthesize_spectra_from_z(
     if "HZ" in order:
         if T is None:
             raise ValueError(
-                "HZ requested in chan_order but no tipper provided.")
+                "HZ requested in chan_order but no tipper provided."
+            )
         _put("HZ", "HX", S_ZH[:, 0, 0])
         _put("HZ", "HY", S_ZH[:, 0, 1])
         _put("HX", "HZ", np.conjugate(S_ZH[:, 0, 0]))

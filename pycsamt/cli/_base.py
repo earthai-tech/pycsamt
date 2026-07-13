@@ -33,6 +33,7 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
+
     _RICH = True
 except ImportError:
     _RICH = False
@@ -82,11 +83,16 @@ def _load_toml_config(path: Path) -> dict[str, Any]:
 # Root group
 # ---------------------------------------------------------------------------
 
+
 class _RichGroup(click.Group):
     """Click Group that shows a rich help panel when called without args."""
 
     def invoke(self, ctx: click.Context) -> Any:
-        if not ctx.protected_args and not ctx.args and not ctx.invoked_subcommand:
+        if (
+            not ctx.protected_args
+            and not ctx.args
+            and not ctx.invoked_subcommand
+        ):
             if _RICH:
                 _print_rich_help(ctx)
             else:
@@ -98,7 +104,8 @@ class _RichGroup(click.Group):
 @click.group(cls=_RichGroup, invoke_without_command=True)
 @click.version_option(__version__, "--version", "-V", prog_name="pycsamt")
 @click.option(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     count=True,
     help="Increase verbosity (-v info, -vv debug).",
 )
@@ -124,6 +131,7 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
             from pycsamt.cli.commands.config import (
                 load_all_config,  # noqa: PLC0415
             )
+
             load_all_config(toml_cfg)
         except Exception:  # noqa: BLE001
             pass
@@ -140,6 +148,7 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
 # ---------------------------------------------------------------------------
 # Register sub-commands
 # ---------------------------------------------------------------------------
+
 
 def _register_commands() -> None:
     from pycsamt.cli.commands.avg import avg  # noqa: PLC0415

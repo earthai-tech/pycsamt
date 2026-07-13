@@ -73,9 +73,11 @@ from typing import Any
 
 # ── lazy gradio import ────────────────────────────────────────────────────────
 
+
 def _require_gradio():
     try:
         import gradio as gr
+
         return gr
     except ImportError:
         raise ImportError(
@@ -108,49 +110,64 @@ def _get_agent(name: str, api_key: str = "", llm_provider: str = "claude"):
             StaticShiftAgent,
         )
         from .orchestrator import WorkflowOrchestratorAgent
+
         kw = dict(
-            api_key      = api_key or None,
-            llm_provider = llm_provider,
+            api_key=api_key or None,
+            llm_provider=llm_provider,
         )
         registry = {
-            "orchestrator":    WorkflowOrchestratorAgent(**kw),
-            "loader":          MTLoaderAgent(**kw),
-            "qc":              DataQCAgent(**kw),
-            "static_shift":    StaticShiftAgent(**kw),
-            "phase_analysis":  PhaseAnalysisAgent(**kw),
-            "forward":         ForwardModelAgent(**kw),
-            "ai_inversion":    AIInversionAgent(**kw),
-            "inv2d":           Inv2DAgent(**kw),
-            "inv3d":           Inv3DAgent(**kw),
-            "ensemble":        EnsembleAgent(**kw),
-            "joint":           JointInversionAgent(**kw),
-            "zoo":             ModelZooAgent(**kw),
-            "report":          ReportAgent(**kw),
+            "orchestrator": WorkflowOrchestratorAgent(**kw),
+            "loader": MTLoaderAgent(**kw),
+            "qc": DataQCAgent(**kw),
+            "static_shift": StaticShiftAgent(**kw),
+            "phase_analysis": PhaseAnalysisAgent(**kw),
+            "forward": ForwardModelAgent(**kw),
+            "ai_inversion": AIInversionAgent(**kw),
+            "inv2d": Inv2DAgent(**kw),
+            "inv3d": Inv3DAgent(**kw),
+            "ensemble": EnsembleAgent(**kw),
+            "joint": JointInversionAgent(**kw),
+            "zoo": ModelZooAgent(**kw),
+            "report": ReportAgent(**kw),
         }
-        _SESSION.update({f"{n}_{llm_provider}": v for n, v in registry.items()})
+        _SESSION.update(
+            {f"{n}_{llm_provider}": v for n, v in registry.items()}
+        )
         _SESSION[f"{key}_key"] = api_key
     return _SESSION.get(key)
 
 
 # ── tab handlers ──────────────────────────────────────────────────────────────
 
-def _chat_run(request: str, data_path: str, output_dir: str,
-              api_key: str, llm_provider: str):
+
+def _chat_run(
+    request: str,
+    data_path: str,
+    output_dir: str,
+    api_key: str,
+    llm_provider: str,
+):
     """Chat tab: route request through WorkflowOrchestratorAgent."""
     orch = _get_agent("orchestrator", api_key, llm_provider)
-    r = orch.execute({
-        "request":    request,
-        "data_path":  data_path,
-        "output_dir": output_dir or tempfile.mkdtemp(prefix="pycsamt_"),
-        "dry_run":    False,
-    })
+    r = orch.execute(
+        {
+            "request": request,
+            "data_path": data_path,
+            "output_dir": output_dir or tempfile.mkdtemp(prefix="pycsamt_"),
+            "dry_run": False,
+        }
+    )
     log = (
         f"**Status:** {r.status}\n\n"
         f"**Workflow:** {r.get('workflow_type', '?')}\n\n"
         f"**Summary:** {r.summary}\n\n"
     )
     if r.warnings:
-        log += "**Warnings:**\n" + "\n".join(f"- {w}" for w in r.warnings[:5]) + "\n\n"
+        log += (
+            "**Warnings:**\n"
+            + "\n".join(f"- {w}" for w in r.warnings[:5])
+            + "\n\n"
+        )
     if r.llm_interpretation:
         log += f"**LLM Interpretation:**\n{r.llm_interpretation}\n"
     return log
@@ -159,6 +176,7 @@ def _chat_run(request: str, data_path: str, output_dir: str,
 def _load_qc_run(data_path: str, api_key: str, llm_provider: str):
     """Load & QC tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -168,7 +186,7 @@ def _load_qc_run(data_path: str, api_key: str, llm_provider: str):
     out_dir = tempfile.mkdtemp(prefix="pycsamt_qc_")
 
     loader = _get_agent("loader", api_key, llm_provider)
-    qc_ag  = _get_agent("qc",     api_key, llm_provider)
+    qc_ag = _get_agent("qc", api_key, llm_provider)
 
     lr = loader.execute({"path": data_path, "output_dir": out_dir})
     if lr.status == "failed":
@@ -203,14 +221,15 @@ def _load_qc_run(data_path: str, api_key: str, llm_provider: str):
         fig2 = p2
 
     _SESSION["_last_sites"] = lr["sites"]
-    _SESSION["_last_load"]  = lr
-    _SESSION["_last_qc"]    = qr
+    _SESSION["_last_load"] = lr
+    _SESSION["_last_qc"] = qr
     return txt, fig1, fig2
 
 
 def _ss_run(method: str, api_key: str, llm_provider: str):
     """Static-shift tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -220,12 +239,12 @@ def _ss_run(method: str, api_key: str, llm_provider: str):
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_ss_")
     ag = _get_agent("static_shift", api_key, llm_provider)
-    r  = ag.execute({"sites": sites, "method": method, "output_dir": out_dir})
+    r = ag.execute({"sites": sites, "method": method, "output_dir": out_dir})
 
     _SESSION["_last_ss"] = r
 
     txt = f"**{r.summary}**\n\n"
-    ds  = r.get("delta_stats") or {}
+    ds = r.get("delta_stats") or {}
     if ds:
         txt += (
             f"Mean correction: {ds.get('mean', 0):.3f} log₁₀.  "
@@ -249,18 +268,20 @@ def _ss_run(method: str, api_key: str, llm_provider: str):
 def _pt_run(api_key: str, llm_provider: str):
     """Phase analysis tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    ss_r   = _SESSION.get("_last_ss")
-    sites  = (ss_r.get("corrected_sites") if ss_r else None) \
-             or _SESSION.get("_last_sites")
+    ss_r = _SESSION.get("_last_ss")
+    sites = (ss_r.get("corrected_sites") if ss_r else None) or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first.", None, None, None
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_pt_")
     ag = _get_agent("phase_analysis", api_key, llm_provider)
-    r  = ag.execute({"sites": sites, "output_dir": out_dir})
+    r = ag.execute({"sites": sites, "output_dir": out_dir})
 
     _SESSION["_last_pt"] = r
 
@@ -268,7 +289,7 @@ def _pt_run(api_key: str, llm_provider: str):
         f"**{r.summary}**\n\n"
         f"Strike: {r.get('strike_consensus', float('nan')):.1f}° "
         f"± {r.get('strike_iqr', float('nan')):.1f}°\n"
-        f"1-D/2-D/3-D: {r.get('n_1d',0)}/{r.get('n_2d',0)}/{r.get('n_3d',0)}"
+        f"1-D/2-D/3-D: {r.get('n_1d', 0)}/{r.get('n_2d', 0)}/{r.get('n_3d', 0)}"
     )
     if r.llm_interpretation:
         txt += f"\n\n**LLM:** {r.llm_interpretation}"
@@ -289,21 +310,27 @@ def _pt_run(api_key: str, llm_provider: str):
 def _fwd_run(rhos_str: str, ths_str: str, api_key: str, llm_provider: str):
     """Forward modelling tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_fwd_")
     try:
         rhos = [float(x.strip()) for x in rhos_str.split(",")]
-        ths  = [float(x.strip()) for x in ths_str.split(",")]
+        ths = [float(x.strip()) for x in ths_str.split(",")]
     except Exception:
-        return "⚠ Invalid resistivity or thickness format. Use comma-separated numbers.", None
+        return (
+            "⚠ Invalid resistivity or thickness format. Use comma-separated numbers.",
+            None,
+        )
 
     ag = _get_agent("forward", api_key, llm_provider)
-    r  = ag.execute({
-        "model":      {"resistivity": rhos, "thickness": ths},
-        "output_dir": out_dir,
-    })
+    r = ag.execute(
+        {
+            "model": {"resistivity": rhos, "thickness": ths},
+            "output_dir": out_dir,
+        }
+    )
 
     txt = f"**{r.summary}**"
     if r.warnings:
@@ -325,18 +352,23 @@ def _fwd_run(rhos_str: str, ths_str: str, api_key: str, llm_provider: str):
 def _ai_inv_run(arch: str, epochs: int, api_key: str, llm_provider: str):
     """AI inversion tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first.", None
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_ai_")
-    ag = AIInversionAgent_lazy(arch=arch, epochs=int(epochs),
-                                api_key=api_key or None,
-                                llm_provider=llm_provider)
+    ag = AIInversionAgent_lazy(
+        arch=arch,
+        epochs=int(epochs),
+        api_key=api_key or None,
+        llm_provider=llm_provider,
+    )
     r = ag.execute({"sites": sites, "output_dir": out_dir})
 
     txt = f"**{r.summary}**"
@@ -358,17 +390,20 @@ def _ai_inv_run(arch: str, epochs: int, api_key: str, llm_provider: str):
 
 def AIInversionAgent_lazy(**kwargs):
     from .ai_inversion import AIInversionAgent
+
     return AIInversionAgent(**kwargs)
 
 
 def _inv2d_run(epochs: int, api_key: str, llm_provider: str):
     """2-D AI inversion tab (U-Net)."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None
 
@@ -396,38 +431,44 @@ def _inv2d_run(epochs: int, api_key: str, llm_provider: str):
     return txt, fig_path
 
 
-def _ensemble_run(n_estimators: int, epochs: int, api_key: str, llm_provider: str):
+def _ensemble_run(
+    n_estimators: int, epochs: int, api_key: str, llm_provider: str
+):
     """Ensemble inversion tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first.", None, None
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_ens_")
     ag = _get_agent("ensemble", api_key, llm_provider)
     ag.n_estimators = int(n_estimators)
-    ag.epochs       = int(epochs)
+    ag.epochs = int(epochs)
     r = ag.execute({"sites": sites, "output_dir": out_dir})
 
     _SESSION["_last_ensemble"] = r
     rms = r.get("rms_global", float("nan"))
-    cov = r.get("coverage",   float("nan"))
+    cov = r.get("coverage", float("nan"))
     txt = (
-        f"**{r.summary}**\n\n"
-        f"RMS: {rms:.3f}   90% coverage: {cov:.1%}"
-        if not (rms != rms) else f"**{r.summary}**"
+        f"**{r.summary}**\n\nRMS: {rms:.3f}   90% coverage: {cov:.1%}"
+        if not (rms != rms)
+        else f"**{r.summary}**"
     )
     if r.llm_interpretation:
         txt += f"\n\n**LLM:** {r.llm_interpretation}"
 
     f1 = f2 = None
     figs = r.get("figures", {})
-    for key, pname in [("uncertainty_section", "ens_section"),
-                        ("uncertainty_profile", "ens_profile")]:
+    for key, pname in [
+        ("uncertainty_section", "ens_section"),
+        ("uncertainty_profile", "ens_profile"),
+    ]:
         if key in figs:
             p = os.path.join(out_dir, f"{pname}.png")
             figs[key].savefig(p, dpi=100, bbox_inches="tight")
@@ -443,18 +484,20 @@ def _ensemble_run(n_estimators: int, epochs: int, api_key: str, llm_provider: st
 def _joint_run(modality: str, epochs: int, api_key: str, llm_provider: str):
     """Joint inversion tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first.", None
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_joint_")
     ag = _get_agent("joint", api_key, llm_provider)
     ag.modalities = ["mt", modality]
-    ag.epochs     = int(epochs)
+    ag.epochs = int(epochs)
     r = ag.execute({"sites": sites, "output_dir": out_dir})
 
     _SESSION["_last_joint"] = r
@@ -473,15 +516,18 @@ def _joint_run(modality: str, epochs: int, api_key: str, llm_provider: str):
     return txt, fig_path
 
 
-def _inv3d_run(epochs: int, radius_km: float, n_mc: int,
-               api_key: str, llm_provider: str):
+def _inv3d_run(
+    epochs: int, radius_km: float, n_mc: int, api_key: str, llm_provider: str
+):
     """3-D GCN inversion tab."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None, None
 
@@ -489,16 +535,13 @@ def _inv3d_run(epochs: int, radius_km: float, n_mc: int,
     ag = _get_agent("inv3d", api_key, llm_provider)
     ag.epochs = int(epochs)
     ag.radius = float(radius_km) * 1000.0
-    ag.n_mc   = int(n_mc)
+    ag.n_mc = int(n_mc)
     r = ag.execute({"sites": sites, "output_dir": out_dir})
 
     _SESSION["_last_inv3d"] = r
     rms_str = f"{r.get('rms_global', float('nan')):.3f}"
     n_edges = r.get("n_edges", "?")
-    txt = (
-        f"**{r.summary}**\n\n"
-        f"Graph edges: {n_edges}   RMS: {rms_str}"
-    )
+    txt = f"**{r.summary}**\n\nGraph edges: {n_edges}   RMS: {rms_str}"
     if r.llm_interpretation:
         txt += f"\n\n**LLM:** {r.llm_interpretation}"
     if r.warnings:
@@ -506,9 +549,11 @@ def _inv3d_run(epochs: int, radius_km: float, n_mc: int,
 
     f1 = f2 = None
     figs = r.get("figures", {})
-    for key, pname in [("depth_slices", "inv3d_slices"),
-                        ("resistivity_section", "inv3d_section"),
-                        ("uncertainty_map", "inv3d_uncertainty")]:
+    for key, pname in [
+        ("depth_slices", "inv3d_slices"),
+        ("resistivity_section", "inv3d_section"),
+        ("uncertainty_map", "inv3d_uncertainty"),
+    ]:
         if key in figs:
             p = os.path.join(out_dir, f"{pname}.png")
             figs[key].savefig(p, dpi=100, bbox_inches="tight")
@@ -524,7 +569,7 @@ def _inv3d_run(epochs: int, radius_km: float, n_mc: int,
 def _zoo_list_run(api_key: str, llm_provider: str):
     """Model zoo — list available models."""
     ag = _get_agent("zoo", api_key, llm_provider)
-    r  = ag.execute({"action": "list"})
+    r = ag.execute({"action": "list"})
     rows = r.get("details", [])
     table = "| Model | Arch | Layers | Solver | Description |\n|---|---|---|---|---|\n"
     for row in rows:
@@ -538,25 +583,29 @@ def _zoo_list_run(api_key: str, llm_provider: str):
 def _zoo_predict_run(model_name: str, api_key: str, llm_provider: str):
     """Model zoo — predict with a named pre-trained model."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     if not model_name.strip():
         return "⚠ Enter a model name (from the table above).", None
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") \
-            or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get(
+        "corrected_sites"
+    ) or _SESSION.get("_last_sites")
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None
 
     out_dir = tempfile.mkdtemp(prefix="pycsamt_zoo_")
     ag = _get_agent("zoo", api_key, llm_provider)
-    r  = ag.execute({
-        "action":     "predict",
-        "model_name": model_name.strip(),
-        "sites":      sites,
-        "output_dir": out_dir,
-    })
+    r = ag.execute(
+        {
+            "action": "predict",
+            "model_name": model_name.strip(),
+            "sites": sites,
+            "output_dir": out_dir,
+        }
+    )
 
     txt = f"**{r.summary}**"
     if r.llm_interpretation:
@@ -583,10 +632,10 @@ def _report_run(title: str, api_key: str, llm_provider: str):
 
     results = {}
     for key, sess_key in [
-        ("load",          "_last_load"),
-        ("qc",            "_last_qc"),
-        ("static_shift",  "_last_ss"),
-        ("phase_analysis","_last_pt"),
+        ("load", "_last_load"),
+        ("qc", "_last_qc"),
+        ("static_shift", "_last_ss"),
+        ("phase_analysis", "_last_pt"),
     ]:
         v = _SESSION.get(sess_key)
         if v is not None:
@@ -596,16 +645,19 @@ def _report_run(title: str, api_key: str, llm_provider: str):
         return "⚠ Run at least Load & QC first.", None
 
     ag = _get_agent("report", api_key, llm_provider)
-    r  = ag.execute({
-        "results":    results,
-        "output_dir": out_dir,
-        "title":      title or "pycsamt MT Survey Report",
-    })
+    r = ag.execute(
+        {
+            "results": results,
+            "output_dir": out_dir,
+            "title": title or "pycsamt MT Survey Report",
+        }
+    )
 
     return f"**{r.summary}**", r.get("report_path_md")
 
 
 # ── main build function ───────────────────────────────────────────────────────
+
 
 def build_app():
     """Build and return the Gradio Blocks app."""
@@ -614,14 +666,19 @@ def build_app():
     _LOGO = "# 🌐 pycsamt — AI-assisted MT/AMT Processing"
     _LLM_HINT = "Leave blank to run without LLM (regex-only mode)."
 
-    with gr.Blocks(title="pycsamt Agent System", theme=gr.themes.Soft()) as app:
-
+    with gr.Blocks(
+        title="pycsamt Agent System", theme=gr.themes.Soft()
+    ) as app:
         gr.Markdown(_LOGO)
 
         # ── shared LLM config (sidebar-style row) ─────────────────────────────
         with gr.Row():
-            api_key_box   = gr.Textbox(label="LLM API key", type="password",
-                                       placeholder=_LLM_HINT, scale=3)
+            api_key_box = gr.Textbox(
+                label="LLM API key",
+                type="password",
+                placeholder=_LLM_HINT,
+                scale=3,
+            )
             llm_prov_box = gr.Dropdown(
                 [
                     "claude",
@@ -636,25 +693,34 @@ def build_app():
             )
 
         with gr.Tabs():
-
             # ── Tab 1: Chat / Orchestrator ─────────────────────────────────────
             with gr.TabItem("💬 Chat (Orchestrator)"):
                 gr.Markdown(
                     "Describe your MT workflow in plain English. "
                     "The orchestrator selects and chains the right agents."
                 )
-                req_box  = gr.Textbox(label="Request", lines=3,
-                                      placeholder="Load EDIs from /data/L22PLT, "
-                                      "run QC and phase tensor analysis…")
-                dp_box   = gr.Textbox(label="Data path (optional override)")
-                out_box  = gr.Textbox(label="Output directory",
-                                      value="pycsamt_output")
+                req_box = gr.Textbox(
+                    label="Request",
+                    lines=3,
+                    placeholder="Load EDIs from /data/L22PLT, "
+                    "run QC and phase tensor analysis…",
+                )
+                dp_box = gr.Textbox(label="Data path (optional override)")
+                out_box = gr.Textbox(
+                    label="Output directory", value="pycsamt_output"
+                )
                 chat_btn = gr.Button("Run workflow", variant="primary")
                 chat_out = gr.Markdown()
 
                 chat_btn.click(
                     fn=_chat_run,
-                    inputs=[req_box, dp_box, out_box, api_key_box, llm_prov_box],
+                    inputs=[
+                        req_box,
+                        dp_box,
+                        out_box,
+                        api_key_box,
+                        llm_prov_box,
+                    ],
                     outputs=chat_out,
                 )
 
@@ -662,10 +728,10 @@ def build_app():
             with gr.TabItem("📂 Load & QC"):
                 gr.Markdown("Load EDI / AVG / J files and run frequency QC.")
                 lqc_path = gr.Textbox(label="EDI directory or file path")
-                lqc_btn  = gr.Button("Load + QC", variant="primary")
-                lqc_txt  = gr.Markdown()
-                lqc_f1   = gr.Image(label="Confidence section",  type="filepath")
-                lqc_f2   = gr.Image(label="Confidence profile",  type="filepath")
+                lqc_btn = gr.Button("Load + QC", variant="primary")
+                lqc_txt = gr.Markdown()
+                lqc_f1 = gr.Image(label="Confidence section", type="filepath")
+                lqc_f2 = gr.Image(label="Confidence profile", type="filepath")
 
                 lqc_btn.click(
                     fn=_load_qc_run,
@@ -679,13 +745,16 @@ def build_app():
                     "Detect and correct galvanic static shift.  "
                     "Load data first in the **Load & QC** tab."
                 )
-                ss_meth  = gr.Dropdown(
-                    ["ama","loess","refmedian","bilateral"],
-                    value="ama", label="Correction method",
+                ss_meth = gr.Dropdown(
+                    ["ama", "loess", "refmedian", "bilateral"],
+                    value="ama",
+                    label="Correction method",
                 )
-                ss_btn   = gr.Button("Correct", variant="primary")
-                ss_txt   = gr.Markdown()
-                ss_fig   = gr.Image(label="Before / after comparison", type="filepath")
+                ss_btn = gr.Button("Correct", variant="primary")
+                ss_txt = gr.Markdown()
+                ss_fig = gr.Image(
+                    label="Before / after comparison", type="filepath"
+                )
 
                 ss_btn.click(
                     fn=_ss_run,
@@ -699,11 +768,11 @@ def build_app():
                     "Phase tensor, strike, and dimensionality analysis.  "
                     "Uses corrected sites from Static Shift if available."
                 )
-                pt_btn  = gr.Button("Run analysis", variant="primary")
-                pt_txt  = gr.Markdown()
-                pt_f1   = gr.Image(label="PT pseudosection",  type="filepath")
-                pt_f2   = gr.Image(label="Strike analysis",   type="filepath")
-                pt_f3   = gr.Image(label="Survey fingerprint",type="filepath")
+                pt_btn = gr.Button("Run analysis", variant="primary")
+                pt_txt = gr.Markdown()
+                pt_f1 = gr.Image(label="PT pseudosection", type="filepath")
+                pt_f2 = gr.Image(label="Strike analysis", type="filepath")
+                pt_f3 = gr.Image(label="Survey fingerprint", type="filepath")
 
                 pt_btn.click(
                     fn=_pt_run,
@@ -721,13 +790,13 @@ def build_app():
                     label="Resistivities (Ω·m)",
                     value="200, 20, 5000, 150",
                 )
-                fwd_ths  = gr.Textbox(
+                fwd_ths = gr.Textbox(
                     label="Thicknesses (m)",
                     value="300, 800, 3000",
                 )
-                fwd_btn  = gr.Button("Run forward", variant="primary")
-                fwd_txt  = gr.Markdown()
-                fwd_fig  = gr.Image(label="Response + model", type="filepath")
+                fwd_btn = gr.Button("Run forward", variant="primary")
+                fwd_txt = gr.Markdown()
+                fwd_fig = gr.Image(label="Response + model", type="filepath")
 
                 fwd_btn.click(
                     fn=_fwd_run,
@@ -741,14 +810,19 @@ def build_app():
                     "Train a 1-D MT neural inverter on synthetic data "
                     "then predict for each loaded station."
                 )
-                ai_arch   = gr.Dropdown(
-                    ["resnet","cnn1d","fcn"], value="resnet", label="Architecture",
+                ai_arch = gr.Dropdown(
+                    ["resnet", "cnn1d", "fcn"],
+                    value="resnet",
+                    label="Architecture",
                 )
-                ai_epochs = gr.Slider(10, 200, value=30, step=10,
-                                      label="Training epochs")
-                ai_btn    = gr.Button("Train + Predict", variant="primary")
-                ai_txt    = gr.Markdown()
-                ai_fig    = gr.Image(label="Predicted model section", type="filepath")
+                ai_epochs = gr.Slider(
+                    10, 200, value=30, step=10, label="Training epochs"
+                )
+                ai_btn = gr.Button("Train + Predict", variant="primary")
+                ai_txt = gr.Markdown()
+                ai_fig = gr.Image(
+                    label="Predicted model section", type="filepath"
+                )
 
                 ai_btn.click(
                     fn=_ai_inv_run,
@@ -762,12 +836,16 @@ def build_app():
                     "U-Net profile inversion — captures lateral continuity.  "
                     "Uses corrected sites from Static Shift if available."
                 )
-                inv2d_epochs = gr.Slider(10, 100, value=30, step=5,
-                                         label="Training epochs")
-                inv2d_btn    = gr.Button("Run U-Net inversion", variant="primary")
-                inv2d_txt    = gr.Markdown()
-                inv2d_fig    = gr.Image(label="2-D resistivity section",
-                                        type="filepath")
+                inv2d_epochs = gr.Slider(
+                    10, 100, value=30, step=5, label="Training epochs"
+                )
+                inv2d_btn = gr.Button(
+                    "Run U-Net inversion", variant="primary"
+                )
+                inv2d_txt = gr.Markdown()
+                inv2d_fig = gr.Image(
+                    label="2-D resistivity section", type="filepath"
+                )
 
                 inv2d_btn.click(
                     fn=_inv2d_run,
@@ -782,22 +860,39 @@ def build_app():
                     "Station proximity is encoded as a graph; GCN message-passing "
                     "enforces spatial coherence across the survey."
                 )
-                inv3d_epochs = gr.Slider(10, 100, value=30, step=5,
-                                          label="Training epochs")
-                inv3d_radius = gr.Slider(1.0, 50.0, value=5.0, step=1.0,
-                                          label="Adjacency radius (km)")
-                inv3d_nmc    = gr.Slider(0, 50, value=20, step=5,
-                                          label="MC dropout samples (0 = skip)")
-                inv3d_btn    = gr.Button("Run GCN inversion", variant="primary")
-                inv3d_txt    = gr.Markdown()
-                inv3d_f1     = gr.Image(label="Depth slices", type="filepath")
-                inv3d_f2     = gr.Image(label="Resistivity section / uncertainty",
-                                         type="filepath")
+                inv3d_epochs = gr.Slider(
+                    10, 100, value=30, step=5, label="Training epochs"
+                )
+                inv3d_radius = gr.Slider(
+                    1.0,
+                    50.0,
+                    value=5.0,
+                    step=1.0,
+                    label="Adjacency radius (km)",
+                )
+                inv3d_nmc = gr.Slider(
+                    0,
+                    50,
+                    value=20,
+                    step=5,
+                    label="MC dropout samples (0 = skip)",
+                )
+                inv3d_btn = gr.Button("Run GCN inversion", variant="primary")
+                inv3d_txt = gr.Markdown()
+                inv3d_f1 = gr.Image(label="Depth slices", type="filepath")
+                inv3d_f2 = gr.Image(
+                    label="Resistivity section / uncertainty", type="filepath"
+                )
 
                 inv3d_btn.click(
                     fn=_inv3d_run,
-                    inputs=[inv3d_epochs, inv3d_radius, inv3d_nmc,
-                            api_key_box, llm_prov_box],
+                    inputs=[
+                        inv3d_epochs,
+                        inv3d_radius,
+                        inv3d_nmc,
+                        api_key_box,
+                        llm_prov_box,
+                    ],
                     outputs=[inv3d_txt, inv3d_f1, inv3d_f2],
                 )
 
@@ -807,16 +902,21 @@ def build_app():
                     "Train *N* independent 1-D inverters and report mean ± σ "
                     "uncertainty bands with conformal calibration."
                 )
-                ens_n     = gr.Slider(2, 10, value=3, step=1,
-                                      label="Number of estimators")
-                ens_ep    = gr.Slider(10, 100, value=20, step=5,
-                                      label="Epochs per estimator")
-                ens_btn   = gr.Button("Train ensemble", variant="primary")
-                ens_txt   = gr.Markdown()
-                ens_f1    = gr.Image(label="Mean + uncertainty section",
-                                     type="filepath")
-                ens_f2    = gr.Image(label="Uncertainty profile (first station)",
-                                     type="filepath")
+                ens_n = gr.Slider(
+                    2, 10, value=3, step=1, label="Number of estimators"
+                )
+                ens_ep = gr.Slider(
+                    10, 100, value=20, step=5, label="Epochs per estimator"
+                )
+                ens_btn = gr.Button("Train ensemble", variant="primary")
+                ens_txt = gr.Markdown()
+                ens_f1 = gr.Image(
+                    label="Mean + uncertainty section", type="filepath"
+                )
+                ens_f2 = gr.Image(
+                    label="Uncertainty profile (first station)",
+                    type="filepath",
+                )
 
                 ens_btn.click(
                     fn=_ensemble_run,
@@ -832,14 +932,19 @@ def build_app():
                 )
                 joint_mod = gr.Dropdown(
                     ["tem", "csamt", "gravity", "seismic"],
-                    value="tem", label="Secondary modality",
+                    value="tem",
+                    label="Secondary modality",
                 )
-                joint_ep  = gr.Slider(10, 100, value=20, step=5,
-                                      label="Training epochs")
-                joint_btn = gr.Button("Run joint inversion", variant="primary")
+                joint_ep = gr.Slider(
+                    10, 100, value=20, step=5, label="Training epochs"
+                )
+                joint_btn = gr.Button(
+                    "Run joint inversion", variant="primary"
+                )
                 joint_txt = gr.Markdown()
-                joint_fig = gr.Image(label="Joint resistivity section",
-                                     type="filepath")
+                joint_fig = gr.Image(
+                    label="Joint resistivity section", type="filepath"
+                )
 
                 joint_btn.click(
                     fn=_joint_run,
@@ -854,20 +959,27 @@ def build_app():
                     "**earthai-tech** model zoo.  "
                     "Weights are cached in `~/.pycsamt/model_zoo/`."
                 )
-                zoo_list_btn = gr.Button("Refresh model list", variant="secondary")
-                zoo_table    = gr.Markdown()
+                zoo_list_btn = gr.Button(
+                    "Refresh model list", variant="secondary"
+                )
+                zoo_table = gr.Markdown()
 
                 gr.Markdown("---")
-                gr.Markdown("**Zero-shot prediction** — load a named model and "
-                            "predict on the currently loaded sites.")
+                gr.Markdown(
+                    "**Zero-shot prediction** — load a named model and "
+                    "predict on the currently loaded sites."
+                )
                 zoo_name_box = gr.Textbox(
                     label="Model name",
                     placeholder="mt1d-resnet-5layer-v1",
                 )
-                zoo_pred_btn = gr.Button("Download + Predict", variant="primary")
-                zoo_txt      = gr.Markdown()
-                zoo_fig      = gr.Image(label="Predicted model section",
-                                        type="filepath")
+                zoo_pred_btn = gr.Button(
+                    "Download + Predict", variant="primary"
+                )
+                zoo_txt = gr.Markdown()
+                zoo_fig = gr.Image(
+                    label="Predicted model section", type="filepath"
+                )
 
                 zoo_list_btn.click(
                     fn=_zoo_list_run,
@@ -885,11 +997,12 @@ def build_app():
                 gr.Markdown(
                     "Assemble all results into a markdown / HTML report."
                 )
-                rep_title = gr.Textbox(label="Report title",
-                                       value="MT Survey Report")
-                rep_btn   = gr.Button("Generate report", variant="primary")
-                rep_txt   = gr.Markdown()
-                rep_file  = gr.File(label="Download report (.md)")
+                rep_title = gr.Textbox(
+                    label="Report title", value="MT Survey Report"
+                )
+                rep_btn = gr.Button("Generate report", variant="primary")
+                rep_txt = gr.Markdown()
+                rep_file = gr.File(label="Download report (.md)")
 
                 rep_btn.click(
                     fn=_report_run,
@@ -901,6 +1014,7 @@ def build_app():
 
 
 # ── public entry points ───────────────────────────────────────────────────────
+
 
 def launch(
     *,

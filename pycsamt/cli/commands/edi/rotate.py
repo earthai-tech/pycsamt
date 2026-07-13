@@ -26,7 +26,8 @@ from ._base import _get_collection, _get_edi, edi
     metavar="EDI_OR_DIR",
 )
 @click.option(
-    "--angle", "-a",
+    "--angle",
+    "-a",
     "angle_deg",
     type=float,
     required=True,
@@ -34,7 +35,8 @@ from ._base import _get_collection, _get_edi, edi
 )
 @output_dir_option
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -82,10 +84,12 @@ def rotate(
         edis = [_get_edi(source, verbose=verbose)]
         paths = [source]
     else:
-        coll  = _get_collection(source, verbose=verbose)
-        edis  = list(coll)
-        paths = [Path(e.path_str) if e.path_str else source / f"{e.station}.edi"
-                 for e in edis]
+        coll = _get_collection(source, verbose=verbose)
+        edis = list(coll)
+        paths = [
+            Path(e.path_str) if e.path_str else source / f"{e.station}.edi"
+            for e in edis
+        ]
 
     if not edis:
         click.echo(f"No EDI files found in {source}.", err=True)
@@ -134,13 +138,13 @@ def rotate(
                 click.echo(f"  ✗  {src_path.name}: {exc}", err=True)
 
     summary = {
-        "angle_deg":   angle_deg,
-        "output_dir":  str(output_dir),
-        "n_input":     len(edis),
-        "n_written":   len(written),
-        "n_failed":    len(failures),
-        "written":     written,
-        "failures":    failures,
+        "angle_deg": angle_deg,
+        "output_dir": str(output_dir),
+        "n_input": len(edis),
+        "n_written": len(written),
+        "n_failed": len(failures),
+        "written": written,
+        "failures": failures,
     }
 
     if output_format == "json":

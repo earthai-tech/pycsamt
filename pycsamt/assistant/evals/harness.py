@@ -29,7 +29,11 @@ from pathlib import Path
 from typing import Any
 
 __all__ = [
-    "EvalReport", "load_suite", "load_all_suites", "evaluate", "suites_dir",
+    "EvalReport",
+    "load_suite",
+    "load_all_suites",
+    "evaluate",
+    "suites_dir",
 ]
 
 
@@ -49,7 +53,9 @@ def load_suite(path: str | Path) -> list[dict[str, Any]]:
     return out
 
 
-def load_all_suites(directory: str | Path | None = None) -> list[dict[str, Any]]:
+def load_all_suites(
+    directory: str | Path | None = None,
+) -> list[dict[str, Any]]:
     """Load and concatenate every ``*.jsonl`` suite in *directory*."""
     d = Path(directory) if directory is not None else suites_dir()
     out: list[dict[str, Any]] = []
@@ -73,7 +79,9 @@ class EvalReport:
         for k in sorted(self.metrics):
             lines.append(f"  {k}: {self.metrics[k]:.1%}")
         if self.violations:
-            lines.append(f"  hallucination violations: {len(self.violations)}")
+            lines.append(
+                f"  hallucination violations: {len(self.violations)}"
+            )
         if self.test_pollution:
             lines.append(
                 f"  test-file pollution: {len(self.test_pollution)} record(s)"
@@ -113,10 +121,18 @@ def evaluate(
     # Strip code-request phrasing so the *subject* workflow is scored
     # (matches what the assistant's code path does).
     _CODE_PHRASES = (
-        "generate code for", "write code for", "code for", "script for",
-        "generate code", "write code", "python script",
-        "write a script", "create notebook", "notebook for",
-        "give me code", "show me code",
+        "generate code for",
+        "write code for",
+        "code for",
+        "script for",
+        "generate code",
+        "write code",
+        "python script",
+        "write a script",
+        "create notebook",
+        "notebook for",
+        "give me code",
+        "show me code",
     )
 
     def _subject_workflow(q: str) -> str | None:
@@ -139,12 +155,14 @@ def evaluate(
         from pycsamt.assistant.rag.retriever import (
             build_retriever,
         )
+
         retriever = build_retriever()
     if registry is None:
         try:
             from pycsamt.assistant.tools.project_registry import (
                 ProjectRegistry,
             )
+
             registry = ProjectRegistry.from_default()
         except Exception:  # noqa: BLE001
             registry = None
@@ -158,16 +176,14 @@ def evaluate(
     per_records: list[dict[str, Any]] = []
     violations: list[dict[str, Any]] = []
     test_pollution: list[dict[str, Any]] = []
-    wf_in_topk: list[bool] = []       # retrieval surfaced the right area
-    nonempty: list[bool] = []         # retrieval returned anything
+    wf_in_topk: list[bool] = []  # retrieval surfaced the right area
+    nonempty: list[bool] = []  # retrieval returned anything
 
     for rec in records:
         q = rec["query"]
         got_intent = router.route(q).intent
         got_wf = _subject_workflow(q)
-        got_line = (
-            registry.find_line_in_text(q) if registry else None
-        )
+        got_line = registry.find_line_in_text(q) if registry else None
 
         intent_pairs.append((got_intent, rec.get("expected_intent")))
         wf_pairs.append((got_wf, rec.get("expected_workflow")))
@@ -177,8 +193,7 @@ def evaluate(
         got_syms = {c.symbol for c in ctx.chunks if c.symbol}
         exp_syms = set(rec.get("expected_symbols", []))
         recall = (
-            len(exp_syms & got_syms) / len(exp_syms)
-            if exp_syms else None
+            len(exp_syms & got_syms) / len(exp_syms) if exp_syms else None
         )
         if recall is not None:
             recalls.append(recall)
@@ -193,18 +208,15 @@ def evaluate(
         # Retrieval target: an explicit retrieval expectation (adversarial
         # paraphrases the keyword classifier can't label) or, failing that,
         # the classifier's expected_workflow.
-        exp_wf = (
-            rec.get("expected_retrieval_workflow")
-            or rec.get("expected_workflow")
+        exp_wf = rec.get("expected_retrieval_workflow") or rec.get(
+            "expected_workflow"
         )
         retrieved_wfs = {c.workflow for c in ctx.chunks if c.workflow}
         if exp_wf:
             wf_in_topk.append(exp_wf in retrieved_wfs)
 
         blob = "\n".join(c.text for c in ctx.chunks)
-        bad = [
-            s for s in rec.get("must_not_contain", []) if s in blob
-        ]
+        bad = [s for s in rec.get("must_not_contain", []) if s in blob]
         if bad:
             violations.append({"query": q, "found": bad})
 
@@ -239,7 +251,9 @@ def evaluate(
         metrics["workflow_in_topk"] = sum(wf_in_topk) / len(wf_in_topk)
 
     report = EvalReport(
-        n=len(records), metrics=metrics, violations=violations,
+        n=len(records),
+        metrics=metrics,
+        violations=violations,
         test_pollution=test_pollution,
     )
     report.records = per_records

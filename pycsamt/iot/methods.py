@@ -56,7 +56,8 @@ class MethodProfile:
             method=self.method.value,
             frequency_band_hz=(
                 list(self.frequency_band_hz)
-                if self.frequency_band_hz else None
+                if self.frequency_band_hz
+                else None
             ),
             required_channels=list(self.required_channels),
             default_sample_rate_hz=self.default_sample_rate_hz,
@@ -110,7 +111,7 @@ METHOD_PROFILES: dict[EMMethod, MethodProfile] = {
     ),
     EMMethod.TDEM: MethodProfile(
         method=EMMethod.TDEM,
-        frequency_band_hz=None,          # time-domain: gated transients
+        frequency_band_hz=None,  # time-domain: gated transients
         required_channels=("hz",),
         default_sample_rate_hz=100_000.0,
         controlled_source=True,
@@ -173,7 +174,7 @@ def target_bands_for_method(
     lo, hi = band
     lo_exp = math.floor(math.log10(lo))
     hi_exp = math.ceil(math.log10(hi))
-    edges = [10.0 ** e for e in range(lo_exp, hi_exp + 1)]
+    edges = [10.0**e for e in range(lo_exp, hi_exp + 1)]
     # Clamp the outer edges to the actual band limits.
     edges[0] = lo
     edges[-1] = hi

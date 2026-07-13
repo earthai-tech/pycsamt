@@ -86,7 +86,7 @@ class EDIExportAgent(BaseAgent):
             llm_provider=llm_provider,
         )
         self.file_pattern = file_pattern
-        self.overwrite    = overwrite
+        self.overwrite = overwrite
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -99,7 +99,9 @@ class EDIExportAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
 
         output_dir = input_data.get("output_dir")
         if output_dir is None:
@@ -116,7 +118,7 @@ class EDIExportAgent(BaseAgent):
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        pattern   = str(input_data.get("file_pattern", self.file_pattern))
+        pattern = str(input_data.get("file_pattern", self.file_pattern))
         overwrite = bool(input_data.get("overwrite", self.overwrite))
 
         written_paths: list[str] = []
@@ -147,7 +149,7 @@ class EDIExportAgent(BaseAgent):
             )
 
         n_written = len(written_paths)
-        n_failed  = len(failed)
+        n_failed = len(failed)
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
@@ -173,12 +175,12 @@ class EDIExportAgent(BaseAgent):
             ),
             data={
                 "written_paths": written_paths,
-                "failed":        failed,
-                "n_written":     n_written,
-                "n_failed":      n_failed,
-                "output_dir":    output_dir,
-                "figures":       {},
-                "figure_paths":  {},
+                "failed": failed,
+                "n_written": n_written,
+                "n_failed": n_failed,
+                "output_dir": output_dir,
+                "figures": {},
+                "figure_paths": {},
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -188,6 +190,7 @@ class EDIExportAgent(BaseAgent):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
 
 def _per_item_export(
     sites: Any,
@@ -200,7 +203,7 @@ def _per_item_export(
     from ..emtools._core import _iter_items, _name
 
     written: list[str] = []
-    failed:  list[tuple[str, str]] = []
+    failed: list[tuple[str, str]] = []
 
     for i, ed in enumerate(_iter_items(sites)):
         nm = _name(ed, i)

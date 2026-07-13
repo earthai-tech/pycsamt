@@ -62,7 +62,6 @@ from pycsamt.site import (
     keep_finite_z,
 )
 
-
 edi_root = ROOT / "data" / "AMT" / "WILLY_DATA"
 
 # %%
@@ -76,14 +75,24 @@ all_sites = ensure_sites(edi_root, recursive=True, verbose=0)
 all_table = SitesReport(all_sites).to_dataframe()
 
 print(f"Loaded WILLY survey: {len(all_sites)} station(s)")
-print(all_table[["station", "nfreq", "freq_min", "freq_max"]].head(10).to_string(index=False))
+print(
+    all_table[["station", "nfreq", "freq_min", "freq_max"]]
+    .head(10)
+    .to_string(index=False)
+)
 
 # %%
 # The bundled station names encode the line number.  For example, stations on
 # line 18 start with ``18-`` and stations on line 22 start with ``22-``.  A
 # quick grouped count makes that convention visible.
 
-line_counts = all_table["station"].str.split("-", n=1).str[0].value_counts().sort_index()
+line_counts = (
+    all_table["station"]
+    .str.split("-", n=1)
+    .str[0]
+    .value_counts()
+    .sort_index()
+)
 print("Stations by line prefix:")
 print(line_counts.to_string())
 
@@ -121,7 +130,11 @@ line18_sites = by_names(finite_sites, "18-*")
 line18_table = SitesReport(line18_sites).to_dataframe()
 
 print(f"Line 18 station count: {len(line18_sites)}")
-print(line18_table[["station", "nfreq", "freq_min", "freq_max"]].head().to_string(index=False))
+print(
+    line18_table[["station", "nfreq", "freq_min", "freq_max"]]
+    .head()
+    .to_string(index=False)
+)
 
 # %%
 # Multiple patterns are interpreted as an OR condition.  This is useful when a
@@ -156,8 +169,14 @@ band_max_hz = 1_000.0
 line18_band_sites = by_freq(line18_sites, band_min_hz, band_max_hz)
 line18_band_table = SitesReport(line18_band_sites).to_dataframe()
 
-print(f"Line 18 stations overlapping {band_min_hz:g}-{band_max_hz:g} Hz: {len(line18_band_sites)}")
-print(line18_band_table[["station", "nfreq", "freq_min", "freq_max"]].head().to_string(index=False))
+print(
+    f"Line 18 stations overlapping {band_min_hz:g}-{band_max_hz:g} Hz: {len(line18_band_sites)}"
+)
+print(
+    line18_band_table[["station", "nfreq", "freq_min", "freq_max"]]
+    .head()
+    .to_string(index=False)
+)
 
 # %%
 # For a quick sanity check, compare how many stations remain after each step.
@@ -194,7 +213,11 @@ demo_sites = by_index(line18_band_sites, [0, 1, 2, -1])
 demo_table = SitesReport(demo_sites).to_dataframe()
 
 print("Small deterministic subset:")
-print(demo_table[["station", "nfreq", "freq_min", "freq_max"]].to_string(index=False))
+print(
+    demo_table[["station", "nfreq", "freq_min", "freq_max"]].to_string(
+        index=False
+    )
+)
 
 # %%
 # Use index-based selection carefully in production pipelines.  It is best for
@@ -223,7 +246,9 @@ def has_station_name_with_even_suffix(edi):
     return int(match.group(1)) % 2 == 0
 
 
-even_suffix_sites = by_predicate(line18_band_sites, has_station_name_with_even_suffix)
+even_suffix_sites = by_predicate(
+    line18_band_sites, has_station_name_with_even_suffix
+)
 even_suffix_table = SitesReport(even_suffix_sites).to_dataframe()
 
 print(f"Line 18 stations with even numeric suffix: {len(even_suffix_sites)}")
@@ -241,7 +266,11 @@ clean_demo_table = SitesReport(clean_demo_sites).to_dataframe()
 
 print(f"Demo subset before drop_empty: {len(demo_sites)}")
 print(f"Demo subset after drop_empty:  {len(clean_demo_sites)}")
-print(clean_demo_table[["station", "has_Zxy", "has_Zyx", "has_tipper"]].to_string(index=False))
+print(
+    clean_demo_table[
+        ["station", "has_Zxy", "has_Zyx", "has_tipper"]
+    ].to_string(index=False)
+)
 
 # %%
 # 9. Recommended selection pattern

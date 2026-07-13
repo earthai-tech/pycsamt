@@ -37,8 +37,10 @@ unc = MonteCarloHydro(rm, cfg, bounds, n_samples=200).run()
 import numpy as np
 
 print("worst-case CV of K:", round(float(np.nanmax(unc.cv_K)), 2))
-print("water-table P10-P90 spread (m), first 5:",
-      np.round((unc.p90_wt - unc.p10_wt)[:5], 1))
+print(
+    "water-table P10-P90 spread (m), first 5:",
+    np.round((unc.p90_wt - unc.p10_wt)[:5], 1),
+)
 
 # %%
 # Uncertainty section

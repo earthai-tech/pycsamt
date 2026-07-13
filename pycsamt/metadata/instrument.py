@@ -51,6 +51,7 @@ API Reference
    known_system
    list_presets
 """
+
 from __future__ import annotations
 
 import json
@@ -59,6 +60,7 @@ from typing import Any, Literal
 
 try:
     import yaml as _yaml
+
     _HAS_YAML = True
 except ModuleNotFoundError:
     _HAS_YAML = False
@@ -224,7 +226,9 @@ class InstrumentMeta:
         return "\n".join(lines)
 
     def __repr__(self) -> str:
-        return f"<InstrumentMeta system={self.system!r} serial={self.serial!r}>"
+        return (
+            f"<InstrumentMeta system={self.system!r} serial={self.serial!r}>"
+        )
 
     # ------------------------------------------------------------------
     # EDI HEAD integration
@@ -313,9 +317,7 @@ class InstrumentMeta:
         key = name.lower().replace("-", "_").replace(" ", "_")
         if key not in KNOWN_SYSTEMS:
             available = ", ".join(sorted(KNOWN_SYSTEMS))
-            raise KeyError(
-                f"Unknown preset {name!r}. Available: {available}"
-            )
+            raise KeyError(f"Unknown preset {name!r}. Available: {available}")
         d = KNOWN_SYSTEMS[key]
         return cls._from_dict(d)
 
@@ -392,7 +394,9 @@ class InstrumentMeta:
         elif fmt in ("yaml", "yml"):
             p.write_text(self.to_yaml(), encoding="utf-8")
         else:
-            raise ValueError(f"Unknown format {fmt!r}; choose 'json' or 'yaml'.")
+            raise ValueError(
+                f"Unknown format {fmt!r}; choose 'json' or 'yaml'."
+            )
 
     @classmethod
     def load(cls, path: str) -> InstrumentMeta:

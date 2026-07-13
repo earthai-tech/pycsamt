@@ -39,6 +39,7 @@ __all__ = [
     "SurveyAnnotation",
 ]
 
+
 class SkipFlag:
     """
     Encapsulate Zonge *skip-flag* quality codes.
@@ -122,8 +123,7 @@ class Hardware:
         return getattr(self, key, self._extra.get(key, default))
 
     def __str__(self) -> str:
-        src = f", file='{self.source_file.name}'" \
-              if self.source_file else ""
+        src = f", file='{self.source_file.name}'" if self.source_file else ""
         return f"Hardware(ver={self.version}{src})"
 
     def to_json(self, *, indent: int = 0) -> str:
@@ -138,7 +138,7 @@ class Hardware:
         Accept a plain dict (keys may or may not start with '$') and
         coerce a few well-known banner values to proper types.
         """
-        m = { _norm_key(k): v for k, v in meta.items() }
+        m = {_norm_key(k): v for k, v in meta.items()}
 
         # source_file handling so tests can round-trip it
         if "source_file" in m:
@@ -161,12 +161,14 @@ class Hardware:
 
         if "tma_points" in m:
             tp = _to_number(m["tma_points"])
-            self.tma_points = int(tp) if isinstance(
-                tp, (int, float)) else None
+            self.tma_points = (
+                int(tp) if isinstance(tp, (int, float)) else None
+            )
         if "tma_freq" in m:
             tf = _to_number(m["tma_freq"])
-            self.tma_freq = float(tf) if isinstance(
-                tf, (int, float)) else None
+            self.tma_freq = (
+                float(tf) if isinstance(tf, (int, float)) else None
+            )
 
     def to_keywords(self) -> dict[str, Any]:
         """
@@ -189,8 +191,7 @@ class Hardware:
             out["tma_freq"] = float(self.tma_freq)
 
         out["source_file"] = (
-            str(self.source_file)
-            if self.source_file is not None else None
+            str(self.source_file) if self.source_file is not None else None
         )
 
         return out
@@ -200,16 +201,16 @@ class Hardware:
 class Receiver:
     """Receiver electrode / coil metadata (``$Rx.*``)."""
 
-    station: int | None = None           # $Rx.Stn  (client)
-    length_m: float | None = None        # $Rx.Length (units)
-    gdp_station: int | None = None       # $Rx.GdpStn
+    station: int | None = None  # $Rx.Stn  (client)
+    length_m: float | None = None  # $Rx.Length (units)
+    gdp_station: int | None = None  # $Rx.GdpStn
     hpr: tuple[float, float, float] | None = None  # $Rx.HPR
-    comps: str | None = "ExHy"           # $Rx.Cmp
-    azimuth_deg: float | None = None     # convenience (alias of HPR[0])
-    latitude: float | None = None        # $GPS.Lat
-    longitude: float | None = None       # $GPS.Lon
-    elevation: float | None = None       # (rare; when present)
-    unit: str | None = "m"               # $Unit.Length
+    comps: str | None = "ExHy"  # $Rx.Cmp
+    azimuth_deg: float | None = None  # convenience (alias of HPR[0])
+    latitude: float | None = None  # $GPS.Lat
+    longitude: float | None = None  # $GPS.Lon
+    elevation: float | None = None  # (rare; when present)
+    unit: str | None = "m"  # $Unit.Length
     notes: str | None = None
 
     KEYMAP: dict[str, str] = field(
@@ -238,7 +239,7 @@ class Receiver:
     def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """Update from parsed $Rx.* / $GPS.* keys with typing."""
         # 1) normalize keys once (“$Rx.Stn” → “Rx.Stn”)
-        norm = { _norm_key(k): v for k, v in meta.items() }
+        norm = {_norm_key(k): v for k, v in meta.items()}
 
         # 2) apply mapping using normalized keys
         _apply_keywords(self, self.KEYMAP, norm, aliases=self.ALIASES)
@@ -252,8 +253,7 @@ class Receiver:
         if isinstance(gdp, (int, float)):
             self.gdp_station = int(gdp)
 
-        length, unit = _parse_length(
-            norm.get("Rx.Length"), self.unit or "m")
+        length, unit = _parse_length(norm.get("Rx.Length"), self.unit or "m")
         if length is not None:
             self.length_m = float(length)
         self.unit = unit or self.unit
@@ -261,23 +261,28 @@ class Receiver:
         hpr_raw = norm.get("Rx.HPR")
         if hpr_raw is not None:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
-                self.hpr = tuple(float(
-                    _to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
+                self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [p.strip() for p in str(
-                    hpr_raw).replace(";", ",").split(",")]
+                parts = [
+                    p.strip()
+                    for p in str(hpr_raw).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
-                    self.hpr = (float(_to_number(parts[0]) or 0.0),
-                                float(_to_number(parts[1]) or 0.0),
-                                float(_to_number(parts[2]) or 0.0))
+                    self.hpr = (
+                        float(_to_number(parts[0]) or 0.0),
+                        float(_to_number(parts[1]) or 0.0),
+                        float(_to_number(parts[2]) or 0.0),
+                    )
 
         if self.hpr and self.azimuth_deg is None:
             self.azimuth_deg = float(self.hpr[0])
 
         lat = _to_number(norm.get("GPS.Lat"))
         lon = _to_number(norm.get("GPS.Lon"))
-        if isinstance(lat, (int, float)): self.latitude  = float(lat)
-        if isinstance(lon, (int, float)): self.longitude = float(lon)
+        if isinstance(lat, (int, float)):
+            self.latitude = float(lat)
+        if isinstance(lon, (int, float)):
+            self.longitude = float(lon)
 
         if "Rx.Cmp" in norm and norm["Rx.Cmp"] is not None:
             self.comps = str(norm["Rx.Cmp"])
@@ -314,15 +319,15 @@ class Receiver:
 class Transmitter:
     """Transmitter loop / bipole metadata (``$Tx.*``)."""
 
-    station: int | None = None           # $Tx.Stn  (client)
-    length_m: float | None = None        # $Tx.Length
-    gdp_station: int | None = None       # $Tx.GdpStn  (alias XMTR)
-    tx_type: str | None = None           # $Tx.Type
+    station: int | None = None  # $Tx.Stn  (client)
+    length_m: float | None = None  # $Tx.Length
+    gdp_station: int | None = None  # $Tx.GdpStn  (alias XMTR)
+    tx_type: str | None = None  # $Tx.Type
     center: tuple[float, float, float] | None = None  # $Tx.Center
-    hpr: tuple[float, float, float] | None = None     # $Tx.HPR
+    hpr: tuple[float, float, float] | None = None  # $Tx.HPR
     current_a: float | None = None
     frequency_hz: float | None = None
-    latitude: float | None = None        # seldom in headers
+    latitude: float | None = None  # seldom in headers
     longitude: float | None = None
     notes: str | None = None
 
@@ -357,7 +362,7 @@ class Transmitter:
     def update_from_keywords(self, meta: dict[str, Any]) -> None:
         """Update from $Tx.* (and legacy XMTR) with typing."""
         # 1) normalize keys once
-        norm = { _norm_key(k): v for k, v in meta.items() }
+        norm = {_norm_key(k): v for k, v in meta.items()}
 
         # 2) apply mapping with normalized keys
         _apply_keywords(self, self.KEYMAP, norm)
@@ -374,7 +379,9 @@ class Transmitter:
             try:
                 self.gdp_station = int(norm["XMTR"])  # type: ignore[arg-type]
             except Exception:
-                self.gdp_station = norm["XMTR"]  # leave as string if truly odd
+                self.gdp_station = norm[
+                    "XMTR"
+                ]  # leave as string if truly odd
 
         length, _ = _parse_length(norm.get("Tx.Length"), "m")
         if length is not None:
@@ -386,26 +393,37 @@ class Transmitter:
         cen = norm.get("Tx.Center")
         if cen is not None:
             if isinstance(cen, (tuple, list)) and len(cen) == 3:
-                self.center = (float(_to_number(cen[0]) or 0.0),
-                               float(_to_number(cen[1]) or 0.0),
-                               float(_to_number(cen[2]) or 0.0))
+                self.center = (
+                    float(_to_number(cen[0]) or 0.0),
+                    float(_to_number(cen[1]) or 0.0),
+                    float(_to_number(cen[2]) or 0.0),
+                )
             else:
-                parts = [p.strip() for p in str(cen).replace(";", ",").split(",")]
+                parts = [
+                    p.strip() for p in str(cen).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
-                    self.center = (float(_to_number(parts[0]) or 0.0),
-                                   float(_to_number(parts[1]) or 0.0),
-                                   float(_to_number(parts[2]) or 0.0))
+                    self.center = (
+                        float(_to_number(parts[0]) or 0.0),
+                        float(_to_number(parts[1]) or 0.0),
+                        float(_to_number(parts[2]) or 0.0),
+                    )
 
         hpr_raw = norm.get("Tx.HPR")
         if hpr_raw is not None:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
                 self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [p.strip() for p in str(hpr_raw).replace(";", ",").split(",")]
+                parts = [
+                    p.strip()
+                    for p in str(hpr_raw).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
-                    self.hpr = (float(_to_number(parts[0]) or 0.0),
-                                float(_to_number(parts[1]) or 0.0),
-                                float(_to_number(parts[2]) or 0.0))
+                    self.hpr = (
+                        float(_to_number(parts[0]) or 0.0),
+                        float(_to_number(parts[1]) or 0.0),
+                        float(_to_number(parts[2]) or 0.0),
+                    )
 
     def to_keywords(self) -> dict[str, Any]:
         """Export standardized $Tx.* keys."""
@@ -438,33 +456,32 @@ class SurveyConfiguration:
     """Survey-level configuration taken from AVG headers."""
 
     # core identifiers
-    survey_type: str = "CSAMT"           # $Survey.Type
-    array_type: str | None = None        # $Survey.Array
+    survey_type: str = "CSAMT"  # $Survey.Type
+    array_type: str | None = None  # $Survey.Array
 
     # line information
-    line_name: str | None = None         # $Line.Name
-    line_number: float | None = None     # $Line.Number
-    line_azim_deg: float | None = None   # $Line.Azimuth
+    line_name: str | None = None  # $Line.Name
+    line_number: float | None = None  # $Line.Number
+    line_azim_deg: float | None = None  # $Line.Azimuth
 
     # GDP / client station numbering
-    stn_gdp_beg: float | None = None     # $Stn.GdpBeg
-    stn_gdp_inc: float | None = None     # $Stn.GdpInc
-    stn_beg: float | None = None         # $Stn.Beg
-    stn_inc: float | None = None         # $Stn.Inc
-    stn_left: float | None = None        # $Stn.Left
-    stn_right: float | None = None       # $Stn.Right
+    stn_gdp_beg: float | None = None  # $Stn.GdpBeg
+    stn_gdp_inc: float | None = None  # $Stn.GdpInc
+    stn_beg: float | None = None  # $Stn.Beg
+    stn_inc: float | None = None  # $Stn.Inc
+    stn_left: float | None = None  # $Stn.Left
+    stn_right: float | None = None  # $Stn.Right
 
     # units
-    unit_length: str = "m"               # $Unit.Length
-    unit_emag: str = "nV/Am"             # $Unit.E
-    unit_hfield: str = "pT/A"            # $Unit.B
-    unit_phase: str = "mrad"             # $Unit.Phase
+    unit_length: str = "m"  # $Unit.Length
+    unit_emag: str = "nV/Am"  # $Unit.E
+    unit_hfield: str = "pT/A"  # $Unit.B
+    unit_phase: str = "mrad"  # $Unit.Phase
 
     # misc
     utm_zone: int | None = None
     created: str = field(
-        default_factory=lambda:
-        datetime.now().isoformat(timespec="seconds")
+        default_factory=lambda: datetime.now().isoformat(timespec="seconds")
     )
     _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
@@ -534,9 +551,14 @@ class SurveyConfiguration:
 
         # Coerce numerics
         for attr in (
-            "line_number", "line_azim_deg",
-            "stn_gdp_beg", "stn_gdp_inc",
-            "stn_beg", "stn_inc", "stn_left", "stn_right",
+            "line_number",
+            "line_azim_deg",
+            "stn_gdp_beg",
+            "stn_gdp_inc",
+            "stn_beg",
+            "stn_inc",
+            "stn_left",
+            "stn_right",
         ):
             val = getattr(self, attr)
             num = _to_number(val)
@@ -563,18 +585,20 @@ class SurveyConfiguration:
         data.update(self._extra)
         return json.dumps(data, indent=indent)
 
+
 @dc(slots=True)
 class SurveyAnnotation:
     """Project-level annotation block (``$Job.*``)."""
 
-    project_name: str = "CSAMTSurvey"         # $Job.Name
-    project_area: str | None = None            # $Job.Area
-    customer_name: str = "Zonge Engineering"   # $Job.For
-    contractor_name: str = "Zonge"             # $Job.By
-    project_label: str = "pyCSAMT"             # $Job.Number
-    acq_date: str = field(                      # $Job.Date
-        default_factory=lambda:
-        datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
+    project_name: str = "CSAMTSurvey"  # $Job.Name
+    project_area: str | None = None  # $Job.Area
+    customer_name: str = "Zonge Engineering"  # $Job.For
+    contractor_name: str = "Zonge"  # $Job.By
+    project_label: str = "pyCSAMT"  # $Job.Number
+    acq_date: str = field(  # $Job.Date
+        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat(
+            timespec="seconds"
+        )
     )
     _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
@@ -637,6 +661,7 @@ class SurveyAnnotation:
         data.update(self._extra)
         return json.dumps(data, indent=indent)
 
+
 def _norm_key(key: str) -> str:
     """
     Normalize header keys:
@@ -683,6 +708,7 @@ def _kv_roundtrip(
         out[ext] = val
     return out
 
+
 def _apply_keywords(
     obj: Any,
     keymap: dict[str, str],
@@ -709,6 +735,7 @@ def _apply_keywords(
             continue
         setattr(obj, attr, v)
 
+
 def _to_number(x):
     """int if integral, else float, else original."""
     if x is None:
@@ -722,6 +749,7 @@ def _to_number(x):
         return int(f) if f.is_integer() else f
     except Exception:
         return x  # leave as string if not numeric
+
 
 def _parse_length(s, default_unit="m"):
     """

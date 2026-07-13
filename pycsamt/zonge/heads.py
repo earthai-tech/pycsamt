@@ -9,6 +9,7 @@ a uniform read/write API based on $keyword=value lines.
 This module is intentionally *key/value* oriented, not tabular.
 Use AVGComponentBase elsewhere for row/column data blocks.
 """
+
 from __future__ import annotations
 
 import re
@@ -154,6 +155,7 @@ def _parse_hardware_banner(lines: Sequence[str]) -> dict[str, Any]:
             continue
     return hw
 
+
 def _emit_hardware_banner(hw: Hardware) -> list[str]:
     """
     Emit a human-friendly banner (comment lines) at the top of
@@ -161,7 +163,7 @@ def _emit_hardware_banner(hw: Hardware) -> list[str]:
     """
     out: list[str] = []
     # AMTAVG line
-    parts: list[str] = [] # noqa
+    parts: list[str] = []  # noqa
     ver = hw.get("version")
     src = hw.get("source_file")
     dat = hw.get("dated")
@@ -172,7 +174,7 @@ def _emit_hardware_banner(hw: Hardware) -> list[str]:
             p.append(f"AMTAVG {ver}:")
         if src:
             name = Path(src).name if isinstance(src, str) else src.name
-            p.append(f"\"{name}\",")
+            p.append(f'"{name}",')
         if dat:
             p.append(f"Dated {dat},")
         if pro:
@@ -182,7 +184,7 @@ def _emit_hardware_banner(hw: Hardware) -> list[str]:
 
     # ASTATIC line
     aver = hw.get("astatic_ver")
-    upd  = hw.get("updated")
+    upd = hw.get("updated")
     if aver or upd:
         p = ["ASTATIC"]
         if aver:
@@ -192,8 +194,8 @@ def _emit_hardware_banner(hw: Hardware) -> list[str]:
         out.append("\\ " + " ".join(p))
 
     # TMA filter line
-    pts  = hw.get("tma_points")
-    frq  = hw.get("tma_freq")
+    pts = hw.get("tma_points")
+    frq = hw.get("tma_freq")
     if pts or frq:
         segs = []
         if pts:
@@ -204,6 +206,7 @@ def _emit_hardware_banner(hw: Hardware) -> list[str]:
         out.append("\\ " + " ".join(segs))
 
     return out
+
 
 class Header(HeaderComponentBase):
     """
@@ -228,12 +231,12 @@ class Header(HeaderComponentBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self.hardware   = Hardware()
+        self.hardware = Hardware()
         self.annotation = SurveyAnnotation()
-        self.config     = SurveyConfiguration()
-        self.tx         = Transmitter()
-        self.rx         = Receiver()
-        self.skip       = SkipFlag()
+        self.config = SurveyConfiguration()
+        self.tx = Transmitter()
+        self.rx = Receiver()
+        self.skip = SkipFlag()
 
         # Keep a copy of raw header lines if provided via
         # from_lines; useful for diagnostics or provenance.
@@ -271,10 +274,10 @@ class Header(HeaderComponentBase):
             if lk.startswith("job."):
                 ann[nk] = v
             elif (
-                lk.startswith("survey.") or
-                lk.startswith("stn.") or
-                lk.startswith("unit.") or
-                lk.startswith("gps.")
+                lk.startswith("survey.")
+                or lk.startswith("stn.")
+                or lk.startswith("unit.")
+                or lk.startswith("gps.")
             ):
                 cfg[nk] = v
             elif lk.startswith("tx.") or lk == "xmtr":

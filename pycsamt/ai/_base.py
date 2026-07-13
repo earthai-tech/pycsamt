@@ -24,6 +24,7 @@ Design principles
 * **Serialisable** — ``save`` / ``load`` handle both model weights and
   hyperparameters in a single checkpoint file.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,6 +48,7 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Checkpoint container
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class EMCheckpoint:
     """
@@ -98,16 +100,14 @@ class EMCheckpoint:
         params = json.loads(str(d["_params_json"]))
         history = json.loads(str(d["_history_json"]))
         meta = json.loads(str(d["_meta_json"]))
-        weights = {
-            k[2:]: d[k] for k in d.files
-            if k.startswith("w_")
-        }
+        weights = {k[2:]: d[k] for k in d.files if k.startswith("w_")}
         return cls(params=params, weights=weights, history=history, meta=meta)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BaseEMNet — neural-network–based inversion / processing
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BaseEMNet(ABC):
     """
@@ -340,20 +340,30 @@ class BaseEMNet(ABC):
         # Single or list of Z objects
         try:
             from pycsamt.z.z import Z as ZClass
+
             if isinstance(X, ZClass):
                 X = [X]
-            if isinstance(X, (list, tuple)) and len(X) > 0 and isinstance(X[0], ZClass):
-                return _z_list_to_array(X, include_phase=include_phase, log_rho=log_rho)
+            if (
+                isinstance(X, (list, tuple))
+                and len(X) > 0
+                and isinstance(X[0], ZClass)
+            ):
+                return _z_list_to_array(
+                    X, include_phase=include_phase, log_rho=log_rho
+                )
         except ImportError:
             pass
 
         # ForwardResponse
         try:
             from pycsamt.forward.em1d import ForwardResponse
+
             if isinstance(X, ForwardResponse):
-                return X.to_array(
-                    log_rho=log_rho, include_phase=include_phase
-                ).reshape(1, -1).astype(np.float32)
+                return (
+                    X.to_array(log_rho=log_rho, include_phase=include_phase)
+                    .reshape(1, -1)
+                    .astype(np.float32)
+                )
         except ImportError:
             pass
 
@@ -384,6 +394,7 @@ class BaseEMNet(ABC):
     def _resolve_device(self) -> str:
         """Pick compute device via the active backend."""
         from ._backend_utils import resolve_device
+
         return resolve_device(self.device)
 
     # ─── dunder ───────────────────────────────────────────────────────────
@@ -400,6 +411,7 @@ class BaseEMNet(ABC):
 # ─────────────────────────────────────────────────────────────────────────────
 # BaseEMProcessor — ML-based data processing (denoising, QC, …)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class BaseEMProcessor(ABC):
     """
@@ -546,6 +558,7 @@ class BasePINNInverter(PyCSAMTObject, ABC):
     def _resolve_device(self) -> str:
         """Pick compute device via active backend."""
         from ._backend_utils import resolve_device
+
         return resolve_device(self.device)
 
     def _require_backend(self) -> str:
@@ -563,6 +576,7 @@ class BasePINNInverter(PyCSAMTObject, ABC):
             When no DL framework is installed.
         """
         from ._backend_utils import active_backend
+
         name = active_backend()
         if name == "none":
             raise ImportError(
@@ -577,9 +591,7 @@ class BasePINNInverter(PyCSAMTObject, ABC):
     def _check_fitted(self) -> None:
         """Raise RuntimeError if not fitted."""
         if not self._is_fitted:
-            raise RuntimeError(
-                "Call fit() before accessing results."
-            )
+            raise RuntimeError("Call fit() before accessing results.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -625,9 +637,7 @@ class BaseHybridInverter(BasePINNInverter):
         self._stage1_fitted: bool = False
 
     @abstractmethod
-    def _load_ai_inverter(
-        self, ai_inverter: Any
-    ) -> Any:
+    def _load_ai_inverter(self, ai_inverter: Any) -> Any:
         """
         Validate and load the AI inverter.
 
@@ -644,6 +654,7 @@ class BaseHybridInverter(BasePINNInverter):
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _compute_metric(
     y_true: np.ndarray,
@@ -667,7 +678,7 @@ def _compute_metric(
         return float(1.0 - ss_res / (ss_tot + 1e-12))
     if m == "relative_rmse":
         rel = (yt - yp) / (np.abs(yt) + 1e-12)
-        return float(np.sqrt(np.mean(rel ** 2)))
+        return float(np.sqrt(np.mean(rel**2)))
     raise ValueError(
         f"Unknown metric {metric!r}. "
         "Use 'rmse', 'mae', 'r2', or 'relative_rmse'."

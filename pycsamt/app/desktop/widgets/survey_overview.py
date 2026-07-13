@@ -100,18 +100,28 @@ class SurveyOverviewWidget(QWidget):
                 Qt.TextInteractionFlag.TextSelectableByMouse
             )
             v.setWordWrap(True)
-            grid.addWidget(k, r, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            grid.addWidget(v, r, 1, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            grid.addWidget(
+                k,
+                r,
+                0,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+            )
+            grid.addWidget(
+                v,
+                r,
+                1,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+            )
             return v
 
         self._v_stations = _row(0, "Stations")
-        self._v_lat      = _row(1, "Latitude")
-        self._v_lon      = _row(2, "Longitude")
-        self._v_elev     = _row(3, "Elevation")
-        self._v_nfreq    = _row(4, "Freq. count")
-        self._v_tipper   = _row(5, "With tipper")
-        self._v_format   = _row(6, "Format")
-        self._v_source   = _row(7, "Source")
+        self._v_lat = _row(1, "Latitude")
+        self._v_lon = _row(2, "Longitude")
+        self._v_elev = _row(3, "Elevation")
+        self._v_nfreq = _row(4, "Freq. count")
+        self._v_tipper = _row(5, "With tipper")
+        self._v_format = _row(6, "Format")
+        self._v_source = _row(7, "Source")
 
         root.addWidget(self._stats_frame)
         root.addStretch(1)
@@ -165,9 +175,7 @@ class SurveyOverviewWidget(QWidget):
         # Elevation range
         elev = df["Elevation"].dropna()
         if len(elev) >= 2:
-            self._v_elev.setText(
-                f"{elev.min():.0f} – {elev.max():.0f} m"
-            )
+            self._v_elev.setText(f"{elev.min():.0f} – {elev.max():.0f} m")
         elif len(elev) == 1:
             self._v_elev.setText(f"{elev.iloc[0]:.0f} m")
         else:

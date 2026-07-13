@@ -136,10 +136,7 @@ def figure_to_dict(fig: Any) -> dict[str, Any]:
         data = fig.to_plotly_json()
         if isinstance(data, dict):
             return data
-    msg = (
-        "Figure dictionary export requires to_dict or "
-        "to_plotly_json."
-    )
+    msg = "Figure dictionary export requires to_dict or to_plotly_json."
     raise TypeError(msg)
 
 

@@ -23,6 +23,7 @@ Phase 3 modules
     MLP classifier that labels MT observations as 1-D, 2-D, or 3-D and
     predicts the geoelectric strike direction for 2-D sites.
 """
+
 from .anomaly import AnomalyDetector
 from .classify import DimensionalityClassifier
 from .denoise import EMDenoiser, prepare_z_features

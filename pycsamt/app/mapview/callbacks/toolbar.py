@@ -166,6 +166,7 @@ def _register_mode3d_quick(app) -> None:
     """3-D toolbar mode buttons write CTL_MODE3D (same select the Inspector's
     'Mode & quantity' accordion section uses) and reflect the active mode
     via className."""
+
     @app.callback(
         Output(IDs.CTL_MODE3D, "value"),
         Input(IDs.TB3D_MODE_FENCE, "n_clicks"),
@@ -266,7 +267,9 @@ def _register_crs(app) -> None:
         note = (
             " — station coordinates are shown in this system "
             "in the inspector and table (the basemap stays lon/lat)."
-            if mode != "geo" else ""
+            if mode != "geo"
+            else ""
         )
-        return html.Span([html.I(className="bi bi-info-circle me-1"),
-                          text + note])
+        return html.Span(
+            [html.I(className="bi bi-info-circle me-1"), text + note]
+        )

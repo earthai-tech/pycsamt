@@ -46,7 +46,6 @@ from pycsamt.emtools import (
     plot_emap_filter_psection,
 )
 
-
 baseline = demo_line("L18PLT")
 raw_for_full = demo_line("L18PLT")
 raw_for_gated = demo_line("L18PLT")

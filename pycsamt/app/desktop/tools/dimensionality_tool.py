@@ -18,6 +18,7 @@ Usage
     dlg = DimensionalityDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -47,23 +48,26 @@ from PySide6.QtWidgets import (
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
-_C_1D = QColor("#c8e6c9")   # green
-_C_2D = QColor("#fff9c4")   # yellow
-_C_3D = QColor("#ffcdd2")   # red
+_C_1D = QColor("#c8e6c9")  # green
+_C_2D = QColor("#fff9c4")  # yellow
+_C_3D = QColor("#ffcdd2")  # red
 _DIM_LABEL = {0: "1D", 1: "2D", 2: "3D"}
 _DIM_COLOR = {0: _C_1D, 1: _C_2D, 2: _C_3D}
 
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _DimWorker(QThread):
-    done  = Signal(object, object)   # (DataFrame, Figure|None)
+    done = Signal(object, object)  # (DataFrame, Figure|None)
     error = Signal(str)
 
-    def __init__(self, sites, skew_th: float, ellipt_th: float, show_map: bool):
+    def __init__(
+        self, sites, skew_th: float, ellipt_th: float, show_map: bool
+    ):
         super().__init__()
-        self._sites    = sites
-        self._skew_th  = skew_th
+        self._sites = sites
+        self._skew_th = skew_th
         self._ellipt_th = ellipt_th
         self._show_map = show_map
 
@@ -72,6 +76,7 @@ class _DimWorker(QThread):
             from pycsamt.emtools.dimensionality import (
                 classify_dimensionality,
             )
+
             df = classify_dimensionality(
                 self._sites,
                 skew_th=self._skew_th,
@@ -91,12 +96,15 @@ class _DimWorker(QThread):
                     from pycsamt.emtools.tensor import (
                         plot_dim_confidence_grid,
                     )
+
                     before = set(plt.get_fignums())
                     ax = plot_dim_confidence_grid(self._sites, verbose=0)
                     after = set(plt.get_fignums())
                     new = after - before
-                    map_fig = ax.figure if hasattr(ax, "figure") else (
-                        plt.figure(max(new)) if new else None
+                    map_fig = (
+                        ax.figure
+                        if hasattr(ax, "figure")
+                        else (plt.figure(max(new)) if new else None)
                     )
                 except Exception:
                     pass
@@ -107,6 +115,7 @@ class _DimWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class DimensionalityDialog(QDialog):
     """
@@ -123,9 +132,9 @@ class DimensionalityDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Dimensionality Classifier")
         self.setMinimumSize(980, 640)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
-        self._df     = None
+        self._df = None
         self._build_ui()
 
     # ── Build ─────────────────────────────────────────────────────────────────
@@ -245,10 +254,12 @@ class DimensionalityDialog(QDialog):
         if map_fig is not None:
             self._map_canvas.show_figure(map_fig)
         total = len(df)
-        counts = df["dim"].value_counts().to_dict() if "dim" in df.columns else {}
+        counts = (
+            df["dim"].value_counts().to_dict() if "dim" in df.columns else {}
+        )
         self._status_lbl.setText(
             f"{total} rows — "
-            f"1D: {counts.get(0,0)}  2D: {counts.get(1,0)}  3D: {counts.get(2,0)}"
+            f"1D: {counts.get(0, 0)}  2D: {counts.get(1, 0)}  3D: {counts.get(2, 0)}"
         )
 
     def _on_error(self, msg: str) -> None:
@@ -282,13 +293,15 @@ class DimensionalityDialog(QDialog):
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 return it
 
-            self._table.setItem(r, 0, _item(row[station_col] if station_col else "—"))
-            self._table.setItem(r, 1, _item(
-                f"{row[period_col]:.4g}" if period_col else "—"
-            ))
-            self._table.setItem(r, 2, _item(
-                f"{row[skew_col]:.2f}" if skew_col else "—"
-            ))
+            self._table.setItem(
+                r, 0, _item(row[station_col] if station_col else "—")
+            )
+            self._table.setItem(
+                r, 1, _item(f"{row[period_col]:.4g}" if period_col else "—")
+            )
+            self._table.setItem(
+                r, 2, _item(f"{row[skew_col]:.2f}" if skew_col else "—")
+            )
             self._table.setItem(r, 3, _item(_DIM_LABEL.get(dim, "3D")))
 
     # ── Bar chart ─────────────────────────────────────────────────────────────
@@ -314,11 +327,12 @@ class DimensionalityDialog(QDialog):
         x = np.arange(len(stations))
         w = 0.26
         ax.bar(x - w, counts_1d, width=w, label="1D", color="#66bb6a")
-        ax.bar(x,     counts_2d, width=w, label="2D", color="#ffd54f")
+        ax.bar(x, counts_2d, width=w, label="2D", color="#ffd54f")
         ax.bar(x + w, counts_3d, width=w, label="3D", color="#ef9a9a")
         ax.set_xticks(x)
-        ax.set_xticklabels([str(s) for s in stations],
-                           rotation=45, ha="right", fontsize=7)
+        ax.set_xticklabels(
+            [str(s) for s in stations], rotation=45, ha="right", fontsize=7
+        )
         ax.set_ylabel("# frequency rows")
         ax.set_title("1D / 2D / 3D counts per station")
         ax.legend(fontsize=8)

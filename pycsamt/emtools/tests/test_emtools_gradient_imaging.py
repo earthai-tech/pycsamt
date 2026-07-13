@@ -5,6 +5,7 @@ Tests for pycsamt.emtools.gradient_imaging
   - rho_joint_gradient
   - plot_gradient_section
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -24,15 +25,16 @@ from pycsamt.emtools.gradient_imaging import (
 
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     """Minimal EDI-like object accepted by ensure_sites."""
+
     def __init__(self, station, z, freq, east=None, north=None):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
         if east is not None:
             self.east = float(east)
@@ -47,7 +49,7 @@ def _make_z(freqs: np.ndarray, rho: float) -> np.ndarray:
     """Synthetic Z: constant ρ_a = rho, phase = 45°."""
     z_abs = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -96,13 +98,20 @@ def _heterogeneous_sites(n: int = 5, n_freq: int = 6) -> list:
 # rho_spatial_gradient — DataFrame shape and columns
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_spatial_columns():
     sites = _uniform_sites()
     df = rho_spatial_gradient(sites)
     expected = {
-        "station_a", "station_b", "x_m", "dx_m",
-        "freq_hz", "period_s", "depth_m",
-        "rho_a_ohmm", "delta_rho_x",
+        "station_a",
+        "station_b",
+        "x_m",
+        "dx_m",
+        "freq_hz",
+        "period_s",
+        "depth_m",
+        "rho_a_ohmm",
+        "delta_rho_x",
     }
     assert expected.issubset(df.columns)
 
@@ -117,7 +126,7 @@ def test_spatial_row_count():
 def test_spatial_two_sites():
     sites = _uniform_sites(n=2, n_freq=4)
     df = rho_spatial_gradient(sites)
-    assert len(df) == 4                 # 1 pair × 4 freqs
+    assert len(df) == 4  # 1 pair × 4 freqs
 
 
 def test_spatial_one_site_empty():
@@ -142,6 +151,7 @@ def test_spatial_invalid_comp():
 # rho_spatial_gradient — values
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_spatial_uniform_rho_zero_gradient():
     """Uniform ρ_a → Δρ_a^x = 0 everywhere."""
     sites = _uniform_sites(rho=100.0)
@@ -163,8 +173,13 @@ def test_spatial_gradient_magnitude():
     rho_vals = [50.0, 200.0, 80.0]
     freqs = np.logspace(0, 2, n_freq)
     sites = [
-        _FakeSite(f"S{i:02d}", _make_z(freqs, rho_vals[i]), freqs,
-                  east=float(i) * 200.0, north=0.0)
+        _FakeSite(
+            f"S{i:02d}",
+            _make_z(freqs, rho_vals[i]),
+            freqs,
+            east=float(i) * 200.0,
+            north=0.0,
+        )
         for i in range(n)
     ]
     df = rho_spatial_gradient(sites)
@@ -215,13 +230,18 @@ def test_spatial_comp_yx():
 # rho_frequency_gradient — DataFrame shape and columns
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_frequency_columns():
     sites = _uniform_sites()
     df = rho_frequency_gradient(sites)
     expected = {
-        "station", "x_m",
-        "freq_hz", "period_s", "depth_m",
-        "rho_a_ohmm", "delta_rho_z",
+        "station",
+        "x_m",
+        "freq_hz",
+        "period_s",
+        "depth_m",
+        "rho_a_ohmm",
+        "delta_rho_z",
     }
     assert expected.issubset(df.columns)
 
@@ -256,6 +276,7 @@ def test_frequency_invalid_comp():
 # rho_frequency_gradient — values
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_frequency_uniform_rho_zero_gradient():
     """Constant ρ_a → Δρ_a^z = 0 everywhere."""
     sites = _uniform_sites(rho=100.0)
@@ -266,13 +287,13 @@ def test_frequency_uniform_rho_zero_gradient():
 def test_frequency_gradient_sign_with_slope():
     """ρ_a increasing with frequency → positive Δρ_a^z."""
     n_freq = 6
-    freqs  = np.logspace(0, 3, n_freq)
+    freqs = np.logspace(0, 3, n_freq)
     # Make rho_a increase with frequency: rho_a = 0.2*|Z|²/f = rho → rho = f*constant
     # Use artificial Z where |Z|² ∝ f²  i.e. rho_a = 0.2*f
     rho_a_vals = 0.2 * freqs  # increases with f
     z_abs = np.sqrt(5.0 * freqs * rho_a_vals)
     z = np.zeros((n_freq, 2, 2), dtype=complex)
-    z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
     s = _FakeSite("S00", z, freqs)
     df = rho_frequency_gradient([s])
@@ -282,7 +303,7 @@ def test_frequency_gradient_sign_with_slope():
 def test_frequency_gradient_magnitude():
     """Δρ_a^z = ρ_a(f_k) - ρ_a(f_{k-1}) for each adjacent pair."""
     n_freq = 4
-    freqs  = np.logspace(0, 2, n_freq)
+    freqs = np.logspace(0, 2, n_freq)
     rho_base = 100.0
     s = _FakeSite("S00", _make_z(freqs, rho_base), freqs)
     df = rho_frequency_gradient([s])
@@ -307,12 +328,18 @@ def test_frequency_station_count():
 # rho_joint_gradient — DataFrame shape and columns
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_joint_columns():
     sites = _uniform_sites()
     df = rho_joint_gradient(sites)
     expected = {
-        "station_a", "station_b", "x_m", "dx_m",
-        "freq_hz", "period_s", "depth_m",
+        "station_a",
+        "station_b",
+        "x_m",
+        "dx_m",
+        "freq_hz",
+        "period_s",
+        "depth_m",
         "delta_rho_zx",
     }
     assert expected.issubset(df.columns)
@@ -333,8 +360,16 @@ def test_joint_one_site_empty():
 
 def test_joint_one_freq_empty():
     freqs = np.array([1.0])
-    sites = [_FakeSite(f"S{i:02d}", _make_z(freqs, 100.0), freqs,
-                       east=float(i) * 200.0, north=0.0) for i in range(3)]
+    sites = [
+        _FakeSite(
+            f"S{i:02d}",
+            _make_z(freqs, 100.0),
+            freqs,
+            east=float(i) * 200.0,
+            north=0.0,
+        )
+        for i in range(3)
+    ]
     df = rho_joint_gradient(sites)
     assert df.empty
 
@@ -354,6 +389,7 @@ def test_joint_invalid_comp():
 # rho_joint_gradient — values
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_joint_uniform_rho_zero():
     """Uniform ρ_a over all stations and frequencies → Δρ_a^{zx} = 0."""
     sites = _uniform_sites(rho=100.0, n=5, n_freq=6)
@@ -368,10 +404,20 @@ def test_joint_linear_rho_only_spatial_zero():
     """
     n, n_freq = 4, 5
     freqs = np.logspace(0, 2, n_freq)
-    rho_vals = [50.0, 100.0, 200.0, 400.0]  # constant in freq, varies in space
+    rho_vals = [
+        50.0,
+        100.0,
+        200.0,
+        400.0,
+    ]  # constant in freq, varies in space
     sites = [
-        _FakeSite(f"S{i:02d}", _make_z(freqs, rho_vals[i]), freqs,
-                  east=float(i) * 200.0, north=0.0)
+        _FakeSite(
+            f"S{i:02d}",
+            _make_z(freqs, rho_vals[i]),
+            freqs,
+            east=float(i) * 200.0,
+            north=0.0,
+        )
         for i in range(n)
     ]
     df = rho_joint_gradient(sites)
@@ -387,20 +433,24 @@ def test_joint_nonzero_when_both_vary():
       Δρ_a^{zx}(j, f_k) = (rho_{j+1} - rho_j) * (f_k - f_{k-1}) ≠ 0
     """
     n_freq = 4
-    freqs  = np.linspace(1.0, 4.0, n_freq)
-    rho_j  = [10.0, 30.0]   # rho values for 2 stations
+    freqs = np.linspace(1.0, 4.0, n_freq)
+    rho_j = [10.0, 30.0]  # rho values for 2 stations
 
     def _z_for_rho_f(rho_base, freqs):
-        rho_a_arr = rho_base * freqs   # rho varies with frequency
+        rho_a_arr = rho_base * freqs  # rho varies with frequency
         z_abs = np.sqrt(5.0 * freqs * rho_a_arr)
         z = np.zeros((len(freqs), 2, 2), dtype=complex)
-        z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+        z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
         z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
         return z
 
     sites = [
-        _FakeSite("A", _z_for_rho_f(rho_j[0], freqs), freqs, east=0.0,   north=0.0),
-        _FakeSite("B", _z_for_rho_f(rho_j[1], freqs), freqs, east=200.0, north=0.0),
+        _FakeSite(
+            "A", _z_for_rho_f(rho_j[0], freqs), freqs, east=0.0, north=0.0
+        ),
+        _FakeSite(
+            "B", _z_for_rho_f(rho_j[1], freqs), freqs, east=200.0, north=0.0
+        ),
     ]
     df = rho_joint_gradient(sites)
     assert not np.allclose(df["delta_rho_zx"].values, 0.0, atol=1e-3)
@@ -411,7 +461,7 @@ def test_joint_antisymmetric_gradient():
     Δρ_a^{zx}(j,f_k) = [ρ(j+1,f_k)-ρ(j,f_k)] - [ρ(j+1,f_{k-1})-ρ(j,f_{k-1})].
     Verify against a manual calculation.
     """
-    freqs = np.array([1.0, 10.0])   # 2 frequencies
+    freqs = np.array([1.0, 10.0])  # 2 frequencies
     rho = {
         "A": np.array([100.0, 200.0]),  # ρ_a at f=1, f=10
         "B": np.array([150.0, 400.0]),
@@ -421,16 +471,16 @@ def test_joint_antisymmetric_gradient():
         z = np.zeros((len(freqs), 2, 2), dtype=complex)
         for k, (f, r) in enumerate(zip(freqs, rho_arr)):
             z_abs = np.sqrt(5.0 * f * r)
-            z[k, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+            z[k, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
             z[k, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
         return z
 
     sites = [
-        _FakeSite("A", _z_arr(rho["A"], freqs), freqs, east=0.0,   north=0.0),
+        _FakeSite("A", _z_arr(rho["A"], freqs), freqs, east=0.0, north=0.0),
         _FakeSite("B", _z_arr(rho["B"], freqs), freqs, east=200.0, north=0.0),
     ]
     df = rho_joint_gradient(sites)
-    assert len(df) == 1   # (N-1=1 pairs) × (F-1=1 freq pairs)
+    assert len(df) == 1  # (N-1=1 pairs) × (F-1=1 freq pairs)
 
     # Manual: Δρ_a^x(f=10) - Δρ_a^x(f=1)
     # Δρ_a^x(f=1)  = ρ(B,1)  - ρ(A,1)  = 150 - 100 = 50
@@ -458,11 +508,14 @@ def test_joint_period_inverse_freq():
 # plot_gradient_section
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_joint_returns_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=4, n_freq=5)
     ax = plot_gradient_section(sites, quantity="joint")
     assert ax is not None
@@ -472,8 +525,10 @@ def test_plot_joint_returns_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_spatial_returns_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=4, n_freq=5)
     ax = plot_gradient_section(sites, quantity="spatial")
     assert ax is not None
@@ -483,8 +538,10 @@ def test_plot_spatial_returns_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_frequency_returns_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=4, n_freq=5)
     ax = plot_gradient_section(sites, quantity="frequency")
     assert ax is not None
@@ -494,8 +551,10 @@ def test_plot_frequency_returns_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_empty_input():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     ax = plot_gradient_section([])
     assert ax is not None
     plt.close("all")
@@ -504,8 +563,10 @@ def test_plot_empty_input():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_existing_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     _, ax_in = plt.subplots()
     sites = _heterogeneous_sites()
     ax_out = plot_gradient_section(sites, ax=ax_in)
@@ -516,8 +577,10 @@ def test_plot_existing_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_freq_axis():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=3, n_freq=4)
     ax = plot_gradient_section(sites, period_axis=False)
     assert ax is not None
@@ -527,8 +590,10 @@ def test_plot_freq_axis():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_custom_vlim():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _heterogeneous_sites()
     ax = plot_gradient_section(sites, vlim=(-50.0, 50.0))
     assert ax is not None
@@ -538,8 +603,10 @@ def test_plot_custom_vlim():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_invalid_quantity():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites()
     with pytest.raises(ValueError):
         plot_gradient_section(sites, quantity="diagonal")
@@ -550,8 +617,10 @@ def test_plot_invalid_quantity():
 def test_plot_alias_x():
     """quantity='x' is an alias for 'spatial'."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=3, n_freq=4)
     ax = plot_gradient_section(sites, quantity="x")
     assert ax is not None
@@ -562,8 +631,10 @@ def test_plot_alias_x():
 def test_plot_alias_z():
     """quantity='z' is an alias for 'frequency'."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = _uniform_sites(n=3, n_freq=4)
     ax = plot_gradient_section(sites, quantity="z")
     assert ax is not None

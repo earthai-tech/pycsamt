@@ -1,8 +1,8 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
-"""Minimal bases for the Jones (J-format) subsystem.
-"""
+"""Minimal bases for the Jones (J-format) subsystem."""
+
 from __future__ import annotations
 
 import io
@@ -15,6 +15,7 @@ from .config import ENCODING_DEFAULT
 from .utils import iter_lines
 
 __all__ = ["BaseJones", "JComponentBase"]
+
 
 class BaseJones:
     """Root base for all Jones objects.
@@ -30,7 +31,6 @@ class BaseJones:
         self.path: Path | None = None
         self.encoding: str = ENCODING_DEFAULT
         self._has_read: bool = False
-
 
     @classmethod
     def from_file(
@@ -60,7 +60,6 @@ class BaseJones:
             f"{cls.__name__}.from_lines() not implemented"
         )
 
-
     def read(self, *args: Any, **kws: Any) -> BaseJones:
         raise NotImplementedError(
             f"{self.__class__.__name__}.read() not implemented"
@@ -77,7 +76,6 @@ class BaseJones:
             f"{self.__class__.__name__}.write() not implemented"
         )
 
-
     def __has_read__(self) -> bool:
         return bool(self._has_read)
 
@@ -91,7 +89,6 @@ class BaseJones:
         msg: str | None = None,
     ) -> None:
         has_read(self, attributes=attributes, msg=msg)
-
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
@@ -139,4 +136,3 @@ class JComponentBase(BaseJones):
         "n",
         "shape",
     ]
-

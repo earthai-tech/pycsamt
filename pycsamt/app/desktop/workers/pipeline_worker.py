@@ -4,6 +4,7 @@
 PipelineWorker — QThread that executes pipeline steps sequentially,
 emitting granular signals so the UI can update in real-time.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -26,13 +27,13 @@ class PipelineWorker(QThread):
     all_done()                  All steps finished (or interrupted).
     """
 
-    step_started  = Signal(int)
-    step_done     = Signal(int, object)
-    step_error    = Signal(int, str)
-    step_skipped  = Signal(int)
-    log_line      = Signal(str)
-    progress      = Signal(int)
-    all_done      = Signal()
+    step_started = Signal(int)
+    step_done = Signal(int, object)
+    step_error = Signal(int, str)
+    step_skipped = Signal(int)
+    log_line = Signal(str)
+    progress = Signal(int)
+    all_done = Signal()
 
     def __init__(
         self,
@@ -41,7 +42,7 @@ class PipelineWorker(QThread):
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self._ctrl     = controller
+        self._ctrl = controller
         self._step_ids = step_ids  # list of step indices to run
 
     # ── QThread entry-point ───────────────────────────────────────────────────

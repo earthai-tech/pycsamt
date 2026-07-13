@@ -60,6 +60,7 @@ def _scan_one(wd: Path, predicate, glob_pat: str) -> Path | None:
 # rho_2d builder
 # -----------------------------------------------------------------------
 
+
 def _build_rho_2d(
     param_values: np.ndarray,
     model: OccamModel,
@@ -71,24 +72,24 @@ def _build_rho_2d(
     mesh x-cells spanned. ``n_merge`` gives the number of
     mesh z-rows covered by a model layer.
     """
-    n_z = mesh.n_zcells   # 31
-    n_x = mesh.n_xcells   # 576
+    n_z = mesh.n_zcells  # 31
+    n_x = mesh.n_xcells  # 576
     grid = np.full((n_z, n_x), np.nan)
 
     z_row = 0
-    occm  = 0
+    occm = 0
     for layer in model.layers:
         n_merge = layer["n_merge"]
-        codes   = layer["params"]
-        fp_sta  = z_row
-        fp_end  = min(z_row + n_merge, n_z)
-        z_row   = fp_end
+        codes = layer["params"]
+        fp_sta = z_row
+        fp_end = min(z_row + n_merge, n_z)
+        z_row = fp_end
 
         x_col = 0
         for code in codes:
             cp_sta = x_col
             cp_end = min(x_col + code, n_x)
-            x_col  = cp_end
+            x_col = cp_end
             if occm < len(param_values):
                 grid[fp_sta:fp_end, cp_sta:cp_end] = param_values[occm]
             occm += 1
@@ -99,6 +100,7 @@ def _build_rho_2d(
 # -----------------------------------------------------------------------
 # InversionResult
 # -----------------------------------------------------------------------
+
 
 class InversionResult(OccamBase):
     r"""Load and summarize a completed Occam2D inversion run.
@@ -230,19 +232,19 @@ class InversionResult(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.workdir    = Path(workdir)
+        self.workdir = Path(workdir)
         self._iteration = iteration
 
-        self.log:       OccamLog | None      = None
-        self.mesh:      OccamMesh | None     = None
-        self.model:     OccamModel | None    = None
-        self.best_iter: OccamIter | None     = None
-        self.response:  OccamResponse | None = None
-        self.data:      OccamData | None     = None
+        self.log: OccamLog | None = None
+        self.mesh: OccamMesh | None = None
+        self.model: OccamModel | None = None
+        self.best_iter: OccamIter | None = None
+        self.response: OccamResponse | None = None
+        self.data: OccamData | None = None
 
         self.iter_files: list[Path] = []
         self.resp_files: list[Path] = []
-        self.rho_2d:     np.ndarray | None = None
+        self.rho_2d: np.ndarray | None = None
 
         self._load()
 
@@ -297,8 +299,10 @@ class InversionResult(OccamBase):
             iter_p = self.iter_files[-1]
         else:
             wanted = self._iteration
-            matches = [p for p in self.iter_files if _iter_number(p) == wanted]
-            iter_p  = matches[0] if matches else self.iter_files[-1]
+            matches = [
+                p for p in self.iter_files if _iter_number(p) == wanted
+            ]
+            iter_p = matches[0] if matches else self.iter_files[-1]
 
         try:
             self.best_iter = OccamIter.read(iter_p)
@@ -307,9 +311,13 @@ class InversionResult(OccamBase):
 
         # --- matching response file ---
         iter_n = _iter_number(iter_p)
-        resp_matches = [p for p in self.resp_files if _iter_number(p) == iter_n]
-        resp_p = resp_matches[0] if resp_matches else (
-            self.resp_files[-1] if self.resp_files else None
+        resp_matches = [
+            p for p in self.resp_files if _iter_number(p) == iter_n
+        ]
+        resp_p = (
+            resp_matches[0]
+            if resp_matches
+            else (self.resp_files[-1] if self.resp_files else None)
         )
         if resp_p:
             try:
@@ -319,7 +327,9 @@ class InversionResult(OccamBase):
 
         # --- data file ---
         data_p = None
-        if self.best_iter is not None and getattr(self.best_iter, "data_file", None):
+        if self.best_iter is not None and getattr(
+            self.best_iter, "data_file", None
+        ):
             candidate = wd / self.best_iter.data_file
             if candidate.exists():
                 data_p = candidate
@@ -332,7 +342,11 @@ class InversionResult(OccamBase):
                 pass
 
         # --- build rho_2d ---
-        if self.best_iter is not None and self.model is not None and self.mesh is not None:
+        if (
+            self.best_iter is not None
+            and self.model is not None
+            and self.mesh is not None
+        ):
             try:
                 self.rho_2d = _build_rho_2d(
                     self.best_iter.param_values, self.model, self.mesh
@@ -343,7 +357,9 @@ class InversionResult(OccamBase):
         if self.verbose:
             self.logger.info(
                 "InversionResult: %d iter files, loaded iter %d from %s",
-                len(self.iter_files), iter_n, wd,
+                len(self.iter_files),
+                iter_n,
+                wd,
             )
 
     # ------------------------------------------------------------------
@@ -429,7 +445,9 @@ class InversionResult(OccamBase):
             fh.writelines(lines)
 
         if self.verbose:
-            self.logger.info("iter2dat: %d cells written to %s", len(lines), out)
+            self.logger.info(
+                "iter2dat: %d cells written to %s", len(lines), out
+            )
         return out
 
     # ------------------------------------------------------------------
@@ -438,21 +456,25 @@ class InversionResult(OccamBase):
     def plot_model(self, **kwargs):
         """Plot the reconstructed 2-D resistivity model."""
         from .plot import PlotModel
+
         return PlotModel(result=self, **kwargs).plot()
 
     def plot_response(self, **kwargs):
         """Plot observed and modeled response curves."""
         from .plot import PlotResponse
+
         return PlotResponse(result=self, **kwargs).plot()
 
     def plot_misfit(self, **kwargs):
         """Plot RMS misfit as a function of iteration."""
         from .plot import PlotMisfit
+
         return PlotMisfit(result=self, **kwargs).plot()
 
     def plot_pseudo(self, **kwargs):
         """Plot an observed-data pseudosection."""
         from .plot import PlotPseudo
+
         return PlotPseudo(result=self, **kwargs).plot()
 
     # ------------------------------------------------------------------

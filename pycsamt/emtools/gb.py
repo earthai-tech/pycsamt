@@ -206,17 +206,21 @@ def _gb_parameters(D: np.ndarray) -> dict[str, float]:
     else:
         shear = float((M[0, 1] + M[1, 0]) / denom)
         anisotropy = float((M[0, 0] - M[1, 1]) / denom)
-    shear = float(np.clip(shear, -0.99, 0.99)) if np.isfinite(shear) else shear
+    shear = (
+        float(np.clip(shear, -0.99, 0.99)) if np.isfinite(shear) else shear
+    )
     anisotropy = (
         float(np.clip(anisotropy, -0.99, 0.99))
-        if np.isfinite(anisotropy) else anisotropy
+        if np.isfinite(anisotropy)
+        else anisotropy
     )
     return dict(
         gain=gain,
         twist_deg=twist_deg,
         shear=shear,
         shear_angle_deg=float(np.degrees(np.arctan(shear)))
-        if np.isfinite(shear) else np.nan,
+        if np.isfinite(shear)
+        else np.nan,
         anisotropy=anisotropy,
     )
 
@@ -254,8 +258,11 @@ def groom_bailey_table(
     decomposed into gain, twist, shear, and anisotropy-style parameters.
     """
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     rows: list[dict[str, Any]] = []
     for i, ed in enumerate(_gb_items(sites, S)):
@@ -268,11 +275,13 @@ def groom_bailey_table(
             z_work = _rotate_tensor(z_work, float(rotate_deg))
         z_fit, fr_fit, _ = _select_band(z_work, fr, band)
         if z_fit.shape[0] < int(min_freq):
-            rows.append(dict(
-                station=station,
-                status="insufficient_frequencies",
-                n_freq=int(z_fit.shape[0]),
-            ))
+            rows.append(
+                dict(
+                    station=station,
+                    status="insufficient_frequencies",
+                    n_freq=int(z_fit.shape[0]),
+                )
+            )
             continue
         fit = _fit_gb_distortion(
             z_fit,
@@ -283,30 +292,32 @@ def groom_bailey_table(
         D = fit["D"]
         params = _gb_parameters(D)
         corrected = fit["corrected"]
-        rows.append(dict(
-            station=station,
-            status="ok",
-            n_freq=int(z_fit.shape[0]),
-            period_min_s=float(np.nanmin(1.0 / fr_fit)),
-            period_max_s=float(np.nanmax(1.0 / fr_fit)),
-            rotate_deg=(
-                float(rotate_deg) if rotate_deg is not None else np.nan
-            ),
-            distortion_xx=float(D[0, 0]),
-            distortion_xy=float(D[0, 1]),
-            distortion_yx=float(D[1, 0]),
-            distortion_yy=float(D[1, 1]),
-            gain=params["gain"],
-            twist_deg=params["twist_deg"],
-            shear=params["shear"],
-            shear_angle_deg=params["shear_angle_deg"],
-            anisotropy=params["anisotropy"],
-            rms_fit=float(fit["rms_fit"]),
-            diagonal_ratio_before=_diag_ratio(z_fit),
-            diagonal_ratio_after=_diag_ratio(corrected),
-            robust=bool(robust),
-            method="gb_real_distortion_2d",
-        ))
+        rows.append(
+            dict(
+                station=station,
+                status="ok",
+                n_freq=int(z_fit.shape[0]),
+                period_min_s=float(np.nanmin(1.0 / fr_fit)),
+                period_max_s=float(np.nanmax(1.0 / fr_fit)),
+                rotate_deg=(
+                    float(rotate_deg) if rotate_deg is not None else np.nan
+                ),
+                distortion_xx=float(D[0, 0]),
+                distortion_xy=float(D[0, 1]),
+                distortion_yx=float(D[1, 0]),
+                distortion_yy=float(D[1, 1]),
+                gain=params["gain"],
+                twist_deg=params["twist_deg"],
+                shear=params["shear"],
+                shear_angle_deg=params["shear_angle_deg"],
+                anisotropy=params["anisotropy"],
+                rms_fit=float(fit["rms_fit"]),
+                diagonal_ratio_before=_diag_ratio(z_fit),
+                diagonal_ratio_after=_diag_ratio(corrected),
+                robust=bool(robust),
+                method="gb_real_distortion_2d",
+            )
+        )
     df = pd.DataFrame.from_records(rows)
 
     return maybe_wrap_frame(
@@ -328,10 +339,14 @@ def _distortion_map(table: pd.DataFrame) -> dict[str, np.ndarray]:
             continue
         D = np.array(
             [
-                [row.get("distortion_xx", np.nan),
-                 row.get("distortion_xy", np.nan)],
-                [row.get("distortion_yx", np.nan),
-                 row.get("distortion_yy", np.nan)],
+                [
+                    row.get("distortion_xx", np.nan),
+                    row.get("distortion_xy", np.nan),
+                ],
+                [
+                    row.get("distortion_yx", np.nan),
+                    row.get("distortion_yy", np.nan),
+                ],
             ],
             dtype=float,
         )
@@ -358,8 +373,11 @@ def apply_groom_bailey(
 ) -> Any:
     """Remove fitted Groom-Bailey galvanic distortion from impedance tensors."""
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if table is None:
         table = groom_bailey_table(
@@ -419,8 +437,11 @@ def groom_bailey_decomposition(
 ) -> GroomBaileyResult:
     """Estimate, and optionally apply, Groom-Bailey distortion correction."""
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     table = groom_bailey_table(
         S,

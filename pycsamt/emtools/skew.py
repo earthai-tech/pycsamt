@@ -29,23 +29,24 @@ def _z_to_2x2(z):
         return z.reshape(-1, 2, 2)
     raise ValueError("Z must be (n,2,2) or (n,4) with Zxx,Zxy,Zyx,Zyy.")
 
+
 def bahr_skewness(Z):
     Z = _z_to_2x2(Z)
     Zxx, Zxy = Z[:, 0, 0], Z[:, 0, 1]
     Zyx, Zyy = Z[:, 1, 0], Z[:, 1, 1]
     s1, s2 = Zxx + Zyy, Zxy - Zyx
     d1, d2 = Zxx - Zyy, Zxy + Zyx
-    num = np.abs(s1)**2 + np.abs(s2)**2
-    den = np.abs(d1)**2 + np.abs(d2)**2
+    num = np.abs(s1) ** 2 + np.abs(s2) ** 2
+    den = np.abs(d1) ** 2 + np.abs(d2) ** 2
     with np.errstate(divide="ignore", invalid="ignore"):
         eta = np.sqrt(num / den)
     eta[~np.isfinite(eta)] = np.nan
     return eta
 
 
-def _skew_track_for(ed: Any, pt: pd.DataFrame) -> tuple[
-    np.ndarray | None, np.ndarray | None
-]:
+def _skew_track_for(
+    ed: Any, pt: pd.DataFrame
+) -> tuple[np.ndarray | None, np.ndarray | None]:
     st = _name(ed, 0)
     Z, z, fr = _get_z_block(ed)
     if Z is None:
@@ -191,8 +192,10 @@ def mask_by_skew(
         elif mode == "abs_lt":
             keep = a <= thresh
         else:
-            keep = a <= thresh if np.isfinite(thresh) else np.ones(
-                sk.size, dtype=bool
+            keep = (
+                a <= thresh
+                if np.isfinite(thresh)
+                else np.ones(sk.size, dtype=bool)
             )
         _mask_apply(ed, keep, also=also)
         return Si
@@ -369,6 +372,7 @@ def select_low_skew_band(
         idx = np.clip(idx, 0, G.size - 1)
         vote[idx] += m.astype(float)
     keep_union = vote >= (frac * len(masks))
+
     # apply per site by nearest
     def _one(Si):
         ed = next(_iter_items(Si))
@@ -383,9 +387,11 @@ def select_low_skew_band(
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
+
 # --- BEAUTIFUL SKEW VIEWS ------------------------------------------------ #
 
 # 1) Traffic-light pseudosection (green/amber/red + alpha=confidence)
+
 
 def plot_skew_traffic_psection(
     sites: Any,
@@ -401,18 +407,23 @@ def plot_skew_traffic_psection(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     df = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup,
-        strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor", ha="center",
-                va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     df = df.copy()
     b = np.abs(df["beta"].to_numpy(dtype=float))
@@ -461,7 +472,9 @@ def plot_skew_traffic_psection(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     ax.imshow(
-        H, aspect="auto", origin="lower",
+        H,
+        aspect="auto",
+        origin="lower",
         interpolation="nearest",
     )
     ax.set_ylabel(ylab)
@@ -483,6 +496,7 @@ def plot_skew_traffic_psection(
 
 # 2) Percentile ribbon (line-level summary of |beta| vs period)
 
+
 def plot_skew_percentile_ribbon(
     sites: Any,
     *,
@@ -498,14 +512,16 @@ def plot_skew_percentile_ribbon(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor", ha="center",
-                va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     p = df["period"].to_numpy(dtype=float)
     b = np.abs(df["beta"].to_numpy(dtype=float))
@@ -530,7 +546,7 @@ def plot_skew_percentile_ribbon(
             E2[i] = np.nanpercentile(b[m], extra[1])
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    x = 10 ** cen
+    x = 10**cen
     ax.set_xscale("log")
     if extra is not None:
         ax.fill_between(x, E1, E2, alpha=0.15)
@@ -543,6 +559,7 @@ def plot_skew_percentile_ribbon(
 
 
 # 3) Vote-band curve (fraction of sites with |beta| <= t)
+
 
 def plot_skew_vote_band(
     sites: Any,
@@ -557,14 +574,16 @@ def plot_skew_vote_band(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor", ha="center",
-                va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     # bin in log-period; vote per station in each bin
     p = df["period"].to_numpy(dtype=float)
@@ -582,12 +601,12 @@ def plot_skew_vote_band(
             continue
         # count per-station pass/fail inside bin
         S = df.loc[m, ["station"]].copy()
-        S["ok"] = (b[m] <= thresh)
+        S["ok"] = b[m] <= thresh
         g = S.groupby("station")["ok"].mean() > 0.5
         frac[i] = g.sum() / max(1, len(sts))
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    x = 10 ** cen
+    x = 10**cen
     ax.set_xscale("log")
     ax.plot(x, frac, "-", lw=2.0)
     ax.fill_between(x, 0.0, frac, alpha=0.25)
@@ -596,6 +615,7 @@ def plot_skew_vote_band(
     ax.set_ylabel("fraction |beta| ≤ thresh")
     ax.grid(True, alpha=0.25, which="both")
     return ax
+
 
 def plot_skewness(f_hz, Z, *, threshold=0.4, ax=None, title=None):
     if ax is None:
@@ -609,18 +629,23 @@ def plot_skewness(f_hz, Z, *, threshold=0.4, ax=None, title=None):
     x = np.log10(T)
     eta = bahr_skewness(Z)
 
-    ax.plot(x, eta, "+", ms=3, mew=0.9, color="0.35",
-            label=None)
-    ax.axhline(threshold, color="red", lw=1.5,
-               label=f"Threshold: η = {threshold:g}")
+    ax.plot(x, eta, "+", ms=3, mew=0.9, color="0.35", label=None)
+    ax.axhline(
+        threshold, color="red", lw=1.5, label=f"Threshold: η = {threshold:g}"
+    )
 
     # Average skewness annotation
     avg_eta = float(np.nanmean(eta))
     txt = f"Aver. skewness: Bahr = {avg_eta:.3f}"
-    ax.text(0.02, 0.95, txt, transform=ax.transAxes,
-            ha="left", va="top",
-            bbox=dict(boxstyle="round,pad=0.2",
-                      fc="white", ec="black"))
+    ax.text(
+        0.02,
+        0.95,
+        txt,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black"),
+    )
 
     ax.set_ylabel("Skewness (η)")
     ax.set_xlabel(r"$\log_{10}$ Period (s)")
@@ -633,10 +658,10 @@ def plot_skewness(f_hz, Z, *, threshold=0.4, ax=None, title=None):
     xr = xmax + 0.02 * (xmax - xmin)
     ax.plot([xmax, xmax], [0, threshold], color="tab:blue")
     ax.plot([xmax, xmax], [threshold, ymax], color="tab:orange")
-    ax.text(xr, 0.5 * threshold, "2D", va="center",
-            color="tab:blue")
-    ax.text(xr, 0.5 * (threshold + ymax), "3D", va="center",
-            color="tab:orange")
+    ax.text(xr, 0.5 * threshold, "2D", va="center", color="tab:blue")
+    ax.text(
+        xr, 0.5 * (threshold + ymax), "3D", va="center", color="tab:orange"
+    )
     ax.legend(loc="upper right", frameon=True)
     ax.grid(True, alpha=0.25)
     return ax

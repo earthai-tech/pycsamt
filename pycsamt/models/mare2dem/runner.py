@@ -176,6 +176,7 @@ class Mare2DEMRunner(Mare2DEMBase):
 
         if load_result:
             from .results import InversionResult
+
             return InversionResult(self.workdir, config=cfg)
         return None
 

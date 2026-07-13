@@ -42,6 +42,7 @@ for common geological scenarios:
     Very resistive frozen layer (> 1000 Ω·m) over conductive unfrozen
     sediments.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -63,14 +64,14 @@ __all__ = [
 #: Backwards-compatible view of the geology catalog.
 #: Prefer ``from pycsamt.metadata.geology import CATALOG`` for new code.
 GEOLOGY_PRIORS: dict[str, dict] = {
-    name: _geology_prior(name)
-    for name in _GEO_CATALOG.names()
+    name: _geology_prior(name) for name in _GEO_CATALOG.names()
 }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LayeredModel
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class LayeredModel:
@@ -121,11 +122,11 @@ class LayeredModel:
         if np.any(self.resistivity <= 0.0):
             raise ValueError("All resistivities must be strictly positive.")
         if np.any(self.thickness <= 0.0):
-            raise ValueError("All layer thicknesses must be strictly positive.")
-        if self.depth is None:
-            self.depth = np.concatenate(
-                [[0.0], np.cumsum(self.thickness)]
+            raise ValueError(
+                "All layer thicknesses must be strictly positive."
             )
+        if self.depth is None:
+            self.depth = np.concatenate([[0.0], np.cumsum(self.thickness)])
 
     # ─── read-only helpers ────────────────────────────────────────────────
 
@@ -159,7 +160,9 @@ class LayeredModel:
         -------
         v : ndarray, shape (2 * n_layers - 1,)
         """
-        rho = np.log10(self.resistivity) if log_rho else self.resistivity.copy()
+        rho = (
+            np.log10(self.resistivity) if log_rho else self.resistivity.copy()
+        )
         return np.concatenate([rho, self.thickness])
 
     @classmethod
@@ -186,7 +189,7 @@ class LayeredModel:
         rho = v[:n_layers]
         thick = v[n_layers:]
         if log_rho:
-            rho = 10.0 ** rho
+            rho = 10.0**rho
         return cls(resistivity=rho, thickness=thick, name=name)
 
     # ─── constructors ─────────────────────────────────────────────────────
@@ -223,7 +226,7 @@ class LayeredModel:
 
         log_lo, log_hi = np.log10(rho_range[0]), np.log10(rho_range[1])
         log_rho = rng.uniform(log_lo, log_hi, n_layers)
-        rho = 10.0 ** log_rho
+        rho = 10.0**log_rho
 
         # Dirichlet-like split: n_layers-1 thicknesses summing to depth_max
         # n_layers-2 breaks → n_layers-1 fractions
@@ -268,7 +271,9 @@ class LayeredModel:
         if equal_thickness:
             thick = np.full(n_layers - 1, depth_max / (n_layers - 1))
         else:
-            thick = cls.random(n_layers, depth_max=depth_max, seed=rng).thickness
+            thick = cls.random(
+                n_layers, depth_max=depth_max, seed=rng
+            ).thickness
 
         return cls(resistivity=rho, thickness=thick, name=name)
 
@@ -303,7 +308,7 @@ class LayeredModel:
             np.log10(rho_surface), np.log10(rho_deep), n_layers
         )
         log_rho += rng.normal(0.0, perturbation, n_layers)
-        rho = 10.0 ** log_rho
+        rho = 10.0**log_rho
         rho = np.maximum(rho, 0.01)
 
         thick = np.full(n_layers - 1, depth_max / (n_layers - 1))
@@ -335,8 +340,7 @@ class LayeredModel:
             p = _geology_prior(name)
         except KeyError:
             raise KeyError(
-                f"Unknown geology {name!r}. "
-                f"Available: {_GEO_CATALOG.names()}"
+                f"Unknown geology {name!r}. Available: {_GEO_CATALOG.names()}"
             )
         rng = _ensure_rng(seed)
 
@@ -346,7 +350,7 @@ class LayeredModel:
         depth_max = rng.uniform(d_lo, d_hi)
         lr_lo, lr_hi = p["log_rho_range"]
         log_rho = rng.uniform(lr_lo, lr_hi, n)
-        rho = 10.0 ** log_rho
+        rho = 10.0**log_rho
 
         breaks = np.sort(rng.uniform(0.0, 1.0, max(1, n - 2)))
         fracs = np.diff(np.concatenate([[0.0], breaks, [1.0]]))
@@ -394,8 +398,14 @@ class LayeredModel:
         # Build a staircase profile
         depths_top = self.depth
         depths_bot = np.concatenate(
-            [depths_top[1:], [depths_top[-1] + self.thickness[-1]
-                               if len(self.thickness) else depths_top[-1] * 2]]
+            [
+                depths_top[1:],
+                [
+                    depths_top[-1] + self.thickness[-1]
+                    if len(self.thickness)
+                    else depths_top[-1] * 2
+                ],
+            ]
         )
         rho_steps = np.repeat(rho, 2)
         depth_steps = np.zeros(2 * len(rho))
@@ -423,8 +433,12 @@ class LayeredModel:
     # ─── repr ─────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        rho_str = np.array2string(self.resistivity, precision=1, max_line_width=60)
-        thick_str = np.array2string(self.thickness, precision=1, max_line_width=60)
+        rho_str = np.array2string(
+            self.resistivity, precision=1, max_line_width=60
+        )
+        thick_str = np.array2string(
+            self.thickness, precision=1, max_line_width=60
+        )
         return (
             f"LayeredModel(n_layers={self.n_layers}, "
             f"rho={rho_str}, thick={thick_str})"
@@ -434,6 +448,7 @@ class LayeredModel:
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _ensure_rng(seed) -> np.random.Generator:
     """Return a ``numpy.random.Generator`` from any seed-like input."""

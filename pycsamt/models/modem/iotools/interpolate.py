@@ -39,6 +39,7 @@ __all__ = [
 # Internal helpers
 # -------------------------------------------------------------------------
 
+
 def _cell_centers(
     widths: np.ndarray,
     origin_offset: float = 0.0,
@@ -64,6 +65,7 @@ def _bg_loge(bg_rho: float | np.ndarray, nz: int) -> np.ndarray:
 # -------------------------------------------------------------------------
 # Model interpolation
 # -------------------------------------------------------------------------
+
 
 def interp_model3d(
     source: ModEmModel3D,  # noqa: F821
@@ -108,13 +110,17 @@ def interp_model3d(
         ) from exc
 
     # Source cell centres (include optional origin offset)
-    origin_s = np.asarray(getattr(source, "origin", [0.0, 0.0, 0.0]), dtype=float)
+    origin_s = np.asarray(
+        getattr(source, "origin", [0.0, 0.0, 0.0]), dtype=float
+    )
     zc_s = _cell_centers(source.z_widths, origin_s[2])
     yc_s = _cell_centers(source.y_widths, origin_s[1])
     xc_s = _cell_centers(source.x_widths, origin_s[0])
 
     # Target cell centres
-    origin_t = np.asarray(getattr(target, "origin", [0.0, 0.0, 0.0]), dtype=float)
+    origin_t = np.asarray(
+        getattr(target, "origin", [0.0, 0.0, 0.0]), dtype=float
+    )
     zc_t = _cell_centers(target.z_widths, origin_t[2])
     yc_t = _cell_centers(target.y_widths, origin_t[1])
     xc_t = _cell_centers(target.x_widths, origin_t[0])
@@ -150,6 +156,7 @@ def interp_model3d(
 # -------------------------------------------------------------------------
 # Data interpolation
 # -------------------------------------------------------------------------
+
 
 def interp_z3d(
     imp: ImpedanceFile,
@@ -199,8 +206,8 @@ def interp_z3d(
         new_site_loc = new_site_loc.reshape(1, -1)
 
     n_new = len(new_site_loc)
-    newx  = new_site_loc[:, 0]
-    newy  = new_site_loc[:, 1]
+    newx = new_site_loc[:, 0]
+    newy = new_site_loc[:, 1]
 
     if new_site_names is None:
         new_site_names = [f"S{k:03d}" for k in range(n_new)]
@@ -213,13 +220,14 @@ def interp_z3d(
         old_pts = np.column_stack([oldx, oldy])
         new_pts = np.column_stack([newx, newy])
 
-        new_Z    = np.zeros((n_new, blk.n_comp), dtype=complex)
+        new_Z = np.zeros((n_new, blk.n_comp), dtype=complex)
         new_Zerr = np.zeros((n_new, blk.n_comp), dtype=float)
 
         for j in range(blk.n_comp):
-            new_Z[:, j] = (
-                griddata(old_pts, blk.Z[:, j].real, new_pts, method="cubic")
-                + 1j * griddata(old_pts, blk.Z[:, j].imag, new_pts, method="cubic")
+            new_Z[:, j] = griddata(
+                old_pts, blk.Z[:, j].real, new_pts, method="cubic"
+            ) + 1j * griddata(
+                old_pts, blk.Z[:, j].imag, new_pts, method="cubic"
             )
             new_Zerr[:, j] = griddata(
                 old_pts, blk.Zerr[:, j], new_pts, method="cubic"

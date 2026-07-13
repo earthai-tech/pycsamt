@@ -29,7 +29,8 @@ from .resphase import ResPhase
 logger = get_logger(__name__)
 
 
-__all__= ["Z"]
+__all__ = ["Z"]
+
 
 class Z(ResPhase):
     r"""
@@ -170,7 +171,6 @@ class Z(ResPhase):
     def __len__(self) -> int:
         """Return number of frequency samples (``n_freq``)."""
         return self.n_freq
-
 
     @classmethod
     def from_res_phase(
@@ -316,8 +316,7 @@ class Z(ResPhase):
     def _check_tensor_shape(arr: np.ndarray, *, name: str) -> None:
         if arr.ndim != 3 or arr.shape[1:] != (2, 2):
             raise ZError(
-                f"'{name}' must have shape (n_freq, 2, 2); "
-                f"got {arr.shape!r}."
+                f"'{name}' must have shape (n_freq, 2, 2); got {arr.shape!r}."
             )
 
     @property
@@ -370,8 +369,7 @@ class Z(ResPhase):
                     inv[k] = np.linalg.inv(self._z[k])
                 except np.linalg.LinAlgError:
                     raise ZError(
-                        "Impedance tensor at index "
-                        f"{k} is singular."
+                        f"Impedance tensor at index {k} is singular."
                     )
         else:
             for k in range(self._z.shape[0]):
@@ -383,8 +381,7 @@ class Z(ResPhase):
                     inv[k] = inv_k
                 except Exception as exc:
                     raise ZError(
-                        "Failed to invert tensor at index "
-                        f"{k}: {exc}"
+                        f"Failed to invert tensor at index {k}: {exc}"
                     ) from exc
         return inv
 
@@ -447,28 +444,15 @@ class Z(ResPhase):
         else:
             a = np.asarray(alpha, dtype=float).ravel()
             if a.size not in (1, n):
-                raise ZError(
-                    f"Expected 1 angle or {n} angles; got "
-                    f"{a.size}."
-                )
-            alphas = (
-                (a % 360.0)
-                if a.size == n
-                else np.full(n, a[0] % 360.0)
-            )
+                raise ZError(f"Expected 1 angle or {n} angles; got {a.size}.")
+            alphas = (a % 360.0) if a.size == n else np.full(n, a[0] % 360.0)
 
         if isinstance(self.rotation_angle, float):
             self.rotation_angle = np.zeros(n, dtype=float)
-        self.rotation_angle = (
-            self.rotation_angle + alphas
-        ) % 360.0
+        self.rotation_angle = (self.rotation_angle + alphas) % 360.0
 
         z_rot = np.empty_like(self._z, dtype=complex)
-        zerr_rot = (
-            None
-            if self._z_err is None
-            else np.empty_like(self._z_err)
-        )
+        zerr_rot = None if self._z_err is None else np.empty_like(self._z_err)
 
         for k in range(n):
             ang = 0.0 if np.isnan(alphas[k]) else float(alphas[k])
@@ -487,7 +471,6 @@ class Z(ResPhase):
         self.z = z_rot
         if zerr_rot is not None:
             self.z_err = zerr_rot
-
 
     def remove_static_shift(
         self,
@@ -546,7 +529,8 @@ class Z(ResPhase):
 
         # Normalize factors to vectors of length n.
         def _normalize_factor(
-                v: float | Sequence[float], name: str) -> np.ndarray:
+            v: float | Sequence[float], name: str
+        ) -> np.ndarray:
             vv = np.asarray(v, dtype=float).ravel()
             if vv.size == 1:
                 out = np.full(n, vv[0], dtype=float)
@@ -676,9 +660,13 @@ class Z(ResPhase):
         try:
             DI, DI_err = invertmatrix_incl_errors(D, D_err)
         except np.linalg.LinAlgError as exc:
-            raise ZError("Distortion tensor is singular; cannot invert.") from exc
+            raise ZError(
+                "Distortion tensor is singular; cannot invert."
+            ) from exc
         except Exception as exc:  # pragma: no cover
-            raise ZError(f"Failed to invert distortion tensor: {exc}") from exc
+            raise ZError(
+                f"Failed to invert distortion tensor: {exc}"
+            ) from exc
 
         # --- Build corrected Z0 = DI @ Z, with propagated errors ------------
         n = self._z.shape[0]
@@ -722,7 +710,6 @@ class Z(ResPhase):
                     Z0_err[k, i, j] = term
 
         return D, Z0, Z0_err
-
 
     def _compute_det_variance(self) -> np.ndarray | None:
         r"""
@@ -812,7 +799,6 @@ class Z(ResPhase):
         z2d[:, 0, 0] = 0.0
         z2d[:, 1, 1] = 0.0
         return z2d
-
 
     # Basic algebraic invariants
     @property
@@ -965,7 +951,7 @@ class Z(ResPhase):
                 for j in range(2):
                     rad += (ek[i, j] * np.real(zk[i, j])) ** 2
                     rad += (ek[i, j] * np.imag(zk[i, j])) ** 2
-            out[k] = (0.0 if nrm[k] == 0.0 else np.sqrt(rad) / nrm[k])
+            out[k] = 0.0 if nrm[k] == 0.0 else np.sqrt(rad) / nrm[k]
 
         return out
 
@@ -1058,32 +1044,19 @@ class Z(ResPhase):
 
     @property
     def z_err_xx(self) -> np.ndarray | None:
-        return (
-            None if self._z_err is None
-            else self._z_err[:, 0, 0]
-        )
+        return None if self._z_err is None else self._z_err[:, 0, 0]
 
     @property
     def z_err_xy(self) -> np.ndarray | None:
-        return (
-            None if self._z_err is None
-            else self._z_err[:, 0, 1]
-        )
+        return None if self._z_err is None else self._z_err[:, 0, 1]
 
     @property
     def z_err_yx(self) -> np.ndarray | None:
-        return (
-            None if self._z_err is None
-            else self._z_err[:, 1, 0]
-        )
+        return None if self._z_err is None else self._z_err[:, 1, 0]
 
     @property
     def z_err_yy(self) -> np.ndarray | None:
-        return (
-            None if self._z_err is None
-            else self._z_err[:, 1, 1]
-        )
-
+        return None if self._z_err is None else self._z_err[:, 1, 1]
 
     # Backward-compat alias
     remove_ss = remove_static_shift

@@ -33,7 +33,8 @@ from ._base import transform
     help="Override the station name (single-file input only).",
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -96,8 +97,9 @@ def avg(
                 except Exception as we:  # noqa: BLE001
                     failures.append({"source": str(f), "error": str(we)})
                     continue
-                edis.append({"station": getattr(ed, "station", "?"),
-                             "source": f.name})
+                edis.append(
+                    {"station": getattr(ed, "station", "?"), "source": f.name}
+                )
         except Exception as exc:  # noqa: BLE001
             failures.append({"source": str(f), "error": str(exc)})
 

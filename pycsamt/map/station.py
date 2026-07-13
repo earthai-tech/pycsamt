@@ -171,10 +171,7 @@ def _station_values(
 def _has_geo(df) -> bool:
     lat = np.asarray(df["Latitude"], dtype=float)
     lon = np.asarray(df["Longitude"], dtype=float)
-    return bool(
-        np.isfinite(lat).any()
-        and np.isfinite(lon).any()
-    )
+    return bool(np.isfinite(lat).any() and np.isfinite(lon).any())
 
 
 def _geo_station_map(df, opts, colors, dark: bool):
@@ -183,10 +180,7 @@ def _geo_station_map(df, opts, colors, dark: bool):
     fig = go.Figure()
     for line, group in df.groupby("Line", dropna=False):
         line_name = str(line or "line")
-        if (
-            opts.line_filter
-            and line_name not in opts.line_filter
-        ):
+        if opts.line_filter and line_name not in opts.line_filter:
             continue
         lat = group["Latitude"].astype(float)
         lon = group["Longitude"].astype(float)
@@ -310,10 +304,7 @@ def _density_map_trace(go, **kwargs):
 
 def _map_layout_key(fig) -> str:
     modern = {"scattermap", "densitymap"}
-    if any(
-        getattr(trace, "type", "") in modern
-        for trace in fig.data
-    ):
+    if any(getattr(trace, "type", "") in modern for trace in fig.data):
         return "map"
     return "mapbox"
 
@@ -337,10 +328,13 @@ def _matplotlib_station_map(df, opts, colors):
         return fig
     x_col = "Longitude" if _has_geo(df) else "Index"
     y_col = "Latitude" if _has_geo(df) else "_value"
-    sizes = np.asarray(
-        _marker_sizes(df["ID"], opts),
-        dtype=float,
-    ) ** 2
+    sizes = (
+        np.asarray(
+            _marker_sizes(df["ID"], opts),
+            dtype=float,
+        )
+        ** 2
+    )
     sc = ax.scatter(
         df[x_col],
         df[y_col],
@@ -397,8 +391,9 @@ def _profile_station_map(df, opts, colors):
                 showscale=True,
                 cmin=_cmin(opts),
                 cmax=_cmax(opts),
-                colorbar=dict(title=dict(text=_color_title(df, opts),
-                                         side="right")),
+                colorbar=dict(
+                    title=dict(text=_color_title(df, opts), side="right")
+                ),
             ),
         )
     )
@@ -449,11 +444,7 @@ def _add_density_layer(fig, group, opts) -> None:
     values = np.asarray(group["_plot_value"], dtype=float)
     lat = np.asarray(group["Latitude"], dtype=float)
     lon = np.asarray(group["Longitude"], dtype=float)
-    good = (
-        np.isfinite(values)
-        & np.isfinite(lat)
-        & np.isfinite(lon)
-    )
+    good = np.isfinite(values) & np.isfinite(lat) & np.isfinite(lon)
     if good.sum() < 3:
         return
     fig.add_trace(
@@ -473,13 +464,10 @@ def _add_density_layer(fig, group, opts) -> None:
 
 
 def _marker_sizes(ids, opts) -> list[int]:
-    selected = (
-        str(opts.selected_id)
-        if opts.selected_id
-        else None
-    )
+    selected = str(opts.selected_id) if opts.selected_id else None
     return [
-        int(opts.marker_size * 1.8) if selected == str(sid)
+        int(opts.marker_size * 1.8)
+        if selected == str(sid)
         else int(opts.marker_size)
         for sid in ids
     ]

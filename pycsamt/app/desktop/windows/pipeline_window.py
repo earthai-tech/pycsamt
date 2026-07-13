@@ -72,8 +72,9 @@ def _icon(name: str) -> QIcon:
     return QIcon()
 
 
-def _btn(text: str, icon_name: str = "", tip: str = "",
-         fixed_w: int = 0) -> QPushButton:
+def _btn(
+    text: str, icon_name: str = "", tip: str = "", fixed_w: int = 0
+) -> QPushButton:
     b = QPushButton(text)
     if icon_name:
         ic = _icon(icon_name)
@@ -87,6 +88,7 @@ def _btn(text: str, icon_name: str = "", tip: str = "",
 
 
 # ── PipelineWindow ────────────────────────────────────────────────────────────
+
 
 class PipelineWindow(QWidget):
     """
@@ -114,7 +116,7 @@ class PipelineWindow(QWidget):
             self.setWindowIcon(ic)
         self.resize(1300, 800)
 
-        self._ctrl   = PipelineController()
+        self._ctrl = PipelineController()
         self._worker = None
         self._selected_step: int = 0
         self._param_widgets: dict = {}
@@ -189,22 +191,34 @@ class PipelineWindow(QWidget):
         v.addWidget(sep2)
 
         # Control buttons
-        self._btn_quick = _btn("⚡ Quick Pipeline", "pipeline",
-                               "Run all 8 steps with default parameters")
-        self._btn_run   = _btn("▶  Run All",   "processing",
-                               "Run all pending steps sequentially")
-        self._btn_stop  = _btn("⏹  Stop",     "",
-                               "Interrupt after the current step")
-        self._btn_reset = _btn("↺  Reset",    "",
-                               "Reset all steps to Pending")
-        self._btn_save  = _btn("💾  Save config", "save",
-                               "Save pipeline configuration to JSON")
-        self._btn_load  = _btn("📂  Load config", "open",
-                               "Load pipeline configuration from JSON")
+        self._btn_quick = _btn(
+            "⚡ Quick Pipeline",
+            "pipeline",
+            "Run all 8 steps with default parameters",
+        )
+        self._btn_run = _btn(
+            "▶  Run All", "processing", "Run all pending steps sequentially"
+        )
+        self._btn_stop = _btn(
+            "⏹  Stop", "", "Interrupt after the current step"
+        )
+        self._btn_reset = _btn("↺  Reset", "", "Reset all steps to Pending")
+        self._btn_save = _btn(
+            "💾  Save config", "save", "Save pipeline configuration to JSON"
+        )
+        self._btn_load = _btn(
+            "📂  Load config", "open", "Load pipeline configuration from JSON"
+        )
 
         self._btn_stop.setEnabled(False)
-        for b in (self._btn_quick, self._btn_run, self._btn_stop,
-                  self._btn_reset, self._btn_save, self._btn_load):
+        for b in (
+            self._btn_quick,
+            self._btn_run,
+            self._btn_stop,
+            self._btn_reset,
+            self._btn_save,
+            self._btn_load,
+        ):
             v.addWidget(b)
 
         self._btn_quick.clicked.connect(self._on_quick_pipeline)
@@ -271,10 +285,10 @@ class PipelineWindow(QWidget):
 
         # Run / Skip buttons
         btn_row = QHBoxLayout()
-        self._btn_run_step = _btn("▶  Run step",  "processing",
-                                  "Execute only this step")
-        self._btn_skip     = _btn("⏭  Skip",     "",
-                                  "Mark this step as skipped")
+        self._btn_run_step = _btn(
+            "▶  Run step", "processing", "Execute only this step"
+        )
+        self._btn_skip = _btn("⏭  Skip", "", "Mark this step as skipped")
         btn_row.addWidget(self._btn_run_step)
         btn_row.addWidget(self._btn_skip)
         v.addLayout(btn_row)
@@ -284,7 +298,7 @@ class PipelineWindow(QWidget):
 
         # Step progress bar (per-step)
         self._step_progress = QProgressBar()
-        self._step_progress.setRange(0, 0)   # indeterminate
+        self._step_progress.setRange(0, 0)  # indeterminate
         self._step_progress.setMaximumHeight(10)
         self._step_progress.setTextVisible(False)
         self._step_progress.setVisible(False)
@@ -318,15 +332,20 @@ class PipelineWindow(QWidget):
         self._preview_canvas = MplCanvas(preview_w, toolbar=False)
         self._preview_canvas.setMinimumHeight(200)
         pv.addWidget(self._preview_canvas)
-        self._btn_full_view = _btn("📊  View full plot", "profile-view",
-                                   "Open this plot in a larger window")
+        self._btn_full_view = _btn(
+            "📊  View full plot",
+            "profile-view",
+            "Open this plot in a larger window",
+        )
         self._btn_full_view.clicked.connect(self._on_full_view)
         pv.addWidget(self._btn_full_view)
         tabs.addTab(preview_w, "Preview")
 
         # Summary tab (HTML)
         self._summary_browser = QTextBrowser()
-        self._summary_browser.setPlaceholderText("Pipeline summary will appear here…")
+        self._summary_browser.setPlaceholderText(
+            "Pipeline summary will appear here…"
+        )
         tabs.addTab(self._summary_browser, "Summary")
 
         v.addWidget(tabs)
@@ -341,6 +360,7 @@ class PipelineWindow(QWidget):
             from pycsamt.app.desktop.controllers.pipeline_controller import (
                 StepStatus,
             )
+
             step0.status = StepStatus.DONE
             step0.output_sites = sites
             step0.result_info = f"{self._ctrl._n(sites)} stations ready"
@@ -381,7 +401,9 @@ class PipelineWindow(QWidget):
 
         pct = int(done / len(self._ctrl.steps) * 100)
         self._overall_progress.setValue(pct)
-        self._progress_lbl.setText(f"{done} / {len(self._ctrl.steps)} steps done")
+        self._progress_lbl.setText(
+            f"{done} / {len(self._ctrl.steps)} steps done"
+        )
 
     # ── Step selection ────────────────────────────────────────────────────────
 
@@ -412,7 +434,9 @@ class PipelineWindow(QWidget):
         # Result info
         if step.status in (StepStatus.DONE, StepStatus.ERROR):
             self._grp_result.setVisible(True)
-            self._result_lbl.setText(step.result_info or step.error_msg or "—")
+            self._result_lbl.setText(
+                step.result_info or step.error_msg or "—"
+            )
             if step.elapsed_s > 0:
                 self._elapsed_lbl.setText(f"Time: {step.elapsed_s:.2f}s")
             # Show preview if available
@@ -453,7 +477,9 @@ class PipelineWindow(QWidget):
 
         self._grp_params.setVisible(True)
         for param_name, ps in spec.params.items():
-            w = self._make_param_widget(ps, step.params.get(param_name, ps.default))
+            w = self._make_param_widget(
+                ps, step.params.get(param_name, ps.default)
+            )
             # Wire change → save to step.params
             self._connect_param_widget(w, ps, param_name, step)
             self._form_params.addRow(f"{ps.label}:", w)
@@ -498,8 +524,9 @@ class PipelineWindow(QWidget):
         w = QLineEdit(str(value or ""))
         return w
 
-    def _connect_param_widget(self, w, ps: ParamSpec,
-                               param_name: str, step: PipelineStep) -> None:
+    def _connect_param_widget(
+        self, w, ps: ParamSpec, param_name: str, step: PipelineStep
+    ) -> None:
         def _save(val):
             step.params[param_name] = val
 
@@ -541,13 +568,16 @@ class PipelineWindow(QWidget):
             )
             self._ctrl._sites_chain[0] = self._ctrl._sites_input
         self._refresh_stepper()
-        self._log("⚡ Quick Pipeline — running all steps with default parameters.")
+        self._log(
+            "⚡ Quick Pipeline — running all steps with default parameters."
+        )
         self._start_worker(list(range(len(self._ctrl.steps))))
 
     def _on_run_all(self) -> None:
         """Run all steps that are not yet DONE or SKIPPED."""
         pending = [
-            s.id for s in self._ctrl.steps
+            s.id
+            for s in self._ctrl.steps
             if s.status not in (StepStatus.DONE, StepStatus.SKIPPED)
         ]
         if not pending:
@@ -565,7 +595,9 @@ class PipelineWindow(QWidget):
         step.result_info = "Skipped by user."
         self._refresh_stepper()
         self._select_step(self._selected_step)
-        self._log(f"Step {self._selected_step + 1} ({step.name}) marked as skipped.")
+        self._log(
+            f"Step {self._selected_step + 1} ({step.name}) marked as skipped."
+        )
 
     def _on_stop(self) -> None:
         if self._worker and self._worker.isRunning():
@@ -668,6 +700,7 @@ class PipelineWindow(QWidget):
         import inspect
 
         import pycsamt.emtools as et
+
         fn = getattr(et, step.diag_fn, None)
         if fn is None:
             return
@@ -675,7 +708,7 @@ class PipelineWindow(QWidget):
         fig.clear()
         try:
             sig = inspect.signature(fn)
-            ax  = fig.add_subplot(111)
+            ax = fig.add_subplot(111)
             if "ax" in sig.parameters:
                 fn(step.output_sites, ax=ax, verbose=0)
             else:
@@ -687,12 +720,14 @@ class PipelineWindow(QWidget):
     def _on_full_view(self) -> None:
         """Open the preview plot in a larger standalone window."""
         import matplotlib.pyplot as plt
+
         fig, ax = plt.subplots(figsize=(10, 6))
         step = self._ctrl.steps[self._selected_step]
         if step.diag_fn and step.output_sites:
             import inspect
 
             import pycsamt.emtools as et
+
             fn = getattr(et, step.diag_fn, None)
             if fn:
                 try:
@@ -711,8 +746,7 @@ class PipelineWindow(QWidget):
 
     def _on_save_config(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save pipeline config", "",
-            "JSON files (*.json)"
+            self, "Save pipeline config", "", "JSON files (*.json)"
         )
         if not path:
             return
@@ -723,8 +757,7 @@ class PipelineWindow(QWidget):
 
     def _on_load_config(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load pipeline config", "",
-            "JSON files (*.json)"
+            self, "Load pipeline config", "", "JSON files (*.json)"
         )
         if not path:
             return
@@ -742,7 +775,7 @@ class PipelineWindow(QWidget):
         for step in self._ctrl.steps:
             icon = STATUS_ICON[step.status]
             info = step.result_info or step.error_msg or "—"
-            t    = f"{step.elapsed_s:.2f}s" if step.elapsed_s > 0 else "—"
+            t = f"{step.elapsed_s:.2f}s" if step.elapsed_s > 0 else "—"
             rows.append(
                 f"<tr><td>{icon}</td><td><b>{step.name}</b></td>"
                 f"<td>{info}</td><td>{t}</td></tr>"
@@ -760,6 +793,7 @@ class PipelineWindow(QWidget):
 
     def _log(self, msg: str) -> None:
         import datetime
+
         ts = datetime.datetime.now().strftime("%H:%M:%S")
         self._log_text.appendPlainText(f"[{ts}]  {msg}")
 
@@ -768,7 +802,7 @@ class PipelineWindow(QWidget):
     def save_geometry_to(self, store: dict) -> None:
         store["pipeline_window"] = {
             "geometry": self.saveGeometry().toBase64().data().decode(),
-            "visible":  self.isVisible(),
+            "visible": self.isVisible(),
         }
 
     def restore_geometry_from(self, store: dict) -> None:

@@ -32,6 +32,7 @@ WGS84 = 23  # ELLIPSOIDS id used across the code base
 
 # ----------------------- DMS <-> decimal conversion -------------------
 
+
 @pytest.mark.parametrize(
     "text, expected",
     [
@@ -40,9 +41,9 @@ WGS84 = 23  # ELLIPSOIDS id used across the code base
         ("-118.34", -118.34),
         ("26:00:00N", 26.0),
         ("010:00:00 W", -10.0),
-        ("10:60:00", 11.0),        # minute rollover
-        ("-118:60:00", -119.0),    # rollover applies to magnitude
-        ("10:00:90", 10.025),      # second rollover
+        ("10:60:00", 11.0),  # minute rollover
+        ("-118:60:00", -119.0),  # rollover applies to magnitude
+        ("10:00:90", 10.025),  # second rollover
     ],
 )
 def test_convert_position_str2float(text, expected):
@@ -73,6 +74,7 @@ def test_float_to_dms_roundtrip():
 
 # --------------------------- validators --------------------------------
 
+
 def test_assert_lat_value_paths():
     assert assert_lat_value("34:03:00") == pytest.approx(34.05)
     assert assert_lat_value(45.0) == 45.0
@@ -96,6 +98,7 @@ def test_assert_elevation_value_fallback():
 
 # ------------------------------ UTM zones ------------------------------
 
+
 def test_get_utm_zone_los_angeles_and_sydney():
     zn, north, zstr = get_utm_zone(34.05, -118.34)
     assert (zn, north, zstr) == (11, True, "11S")
@@ -115,6 +118,7 @@ def test_utm_zone_to_epsg_wgs84_codes():
 
 # ----------------------- UTM projection roundtrip ----------------------
 
+
 def test_ll_to_utm_reference_point():
     zone, easting, northing = ll_to_utm(WGS84, 34.05, -118.34)
     assert zone == "11S"
@@ -125,10 +129,10 @@ def test_ll_to_utm_reference_point():
 
 def test_utm_ll_roundtrip_north_and_south():
     for lat, lon in [
-        (34.05, -118.34),      # northern hemisphere
-        (-33.86, 151.21),      # southern hemisphere
-        (0.5, 6.6),            # near equator
-        (63.0, 10.4),          # high latitude
+        (34.05, -118.34),  # northern hemisphere
+        (-33.86, 151.21),  # southern hemisphere
+        (0.5, 6.6),  # near equator
+        (63.0, 10.4),  # high latitude
     ]:
         zone, easting, northing = ll_to_utm(WGS84, lat, lon)
         lat2, lon2 = utm_to_ll(WGS84, northing, easting, zone)

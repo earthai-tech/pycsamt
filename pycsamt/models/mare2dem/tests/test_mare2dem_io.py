@@ -51,6 +51,7 @@ from pycsamt.models.mare2dem import (
 # EMData / EMResp I/O — Wannamaker hill example (MT)
 # ==========================================================================
 
+
 class TestEMDataMT:
     """Tests on the Wannamaker 1986 hill MT example."""
 
@@ -81,7 +82,9 @@ class TestEMDataMT:
         # First receiver is always MT001
         assert em.mt.receiver_name[0] == "MT001"
         # Last sequential receiver before any extra H-field (_B) duplicates
-        assert "MT228" in em.mt.receiver_name or "MT001" in em.mt.receiver_name
+        assert (
+            "MT228" in em.mt.receiver_name or "MT001" in em.mt.receiver_name
+        )
 
     def test_read_response_file(self, hill_dir):
         resp = read_emdata(hill_dir / "hill.0.resp")
@@ -111,13 +114,20 @@ class TestEMDataMT:
         assert is_emdata_file(hill_dir / "hill.emdata")
         assert is_response_file(hill_dir / "hill.0.resp")
         assert not is_emdata_file(hill_dir / "hill.0.resp")
-        assert detect_file_type(hill_dir / "hill.0.resp") == Mare2DEMFileType.RESPONSE
-        assert detect_file_type(hill_dir / "hill.emdata") == Mare2DEMFileType.EMDATA
+        assert (
+            detect_file_type(hill_dir / "hill.0.resp")
+            == Mare2DEMFileType.RESPONSE
+        )
+        assert (
+            detect_file_type(hill_dir / "hill.emdata")
+            == Mare2DEMFileType.EMDATA
+        )
 
 
 # ==========================================================================
 # EMData I/O — demo CSEM example
 # ==========================================================================
+
 
 class TestEMDataCSEM:
     """Tests on the demo CSEM forward example."""
@@ -169,6 +179,7 @@ class TestEMDataCSEM:
 # Resistivity I/O
 # ==========================================================================
 
+
 class TestResistivityIO:
     """Tests on the .resistivity file reader/writer."""
 
@@ -208,9 +219,7 @@ class TestResistivityIO:
         rf2 = read_resistivity(out)
         assert rf2.num_regions == rf.num_regions
         assert rf2.anisotropy == rf.anisotropy
-        np.testing.assert_allclose(
-            rf2.resistivity, rf.resistivity, rtol=1e-5
-        )
+        np.testing.assert_allclose(rf2.resistivity, rf.resistivity, rtol=1e-5)
 
     def test_resistivity_no_data_flag(self, hill_dir):
         rf = read_resistivity(hill_dir / "hill.0.resistivity", no_data=True)
@@ -219,7 +228,7 @@ class TestResistivityIO:
 
     def test_demo_resistivity(self, inversion_dir):
         rf = read_resistivity(inversion_dir / "demo.0.resistivity")
-        assert rf.num_regions > 1000   # large mesh
+        assert rf.num_regions > 1000  # large mesh
         assert rf.poly_file.endswith(".poly")
 
     def test_final_vs_initial_resistivity(self, inversion_dir):
@@ -231,12 +240,16 @@ class TestResistivityIO:
 
     def test_resistivity_file_type(self, hill_dir):
         assert is_resistivity_file(hill_dir / "hill.0.resistivity")
-        assert detect_file_type(hill_dir / "hill.0.resistivity") == Mare2DEMFileType.RESISTIVITY
+        assert (
+            detect_file_type(hill_dir / "hill.0.resistivity")
+            == Mare2DEMFileType.RESISTIVITY
+        )
 
 
 # ==========================================================================
 # Poly I/O
 # ==========================================================================
+
 
 class TestPolyIO:
     """Tests on the Triangle .poly PSLG file reader/writer."""
@@ -274,15 +287,18 @@ class TestPolyIO:
 
     def test_demo_poly_larger(self, csem_dir):
         pf = read_poly(csem_dir / "demo.poly")
-        assert pf.n_nodes > 100   # larger mesh
+        assert pf.n_nodes > 100  # larger mesh
 
     def test_poly_file_type(self, hill_dir):
-        assert detect_file_type(hill_dir / "hill.poly") == Mare2DEMFileType.POLY
+        assert (
+            detect_file_type(hill_dir / "hill.poly") == Mare2DEMFileType.POLY
+        )
 
 
 # ==========================================================================
 # Settings I/O
 # ==========================================================================
+
 
 class TestSettingsIO:
     """Tests on the .settings file format."""
@@ -292,7 +308,9 @@ class TestSettingsIO:
         assert "Transmitters per group" in text or "tolerance" in text.lower()
 
     def test_write_settings_roundtrip(self, tmp_path):
-        sf = SettingsFile(tolerance=2.0, csem_rx_per_group=30, mt_rx_per_group=25)
+        sf = SettingsFile(
+            tolerance=2.0, csem_rx_per_group=30, mt_rx_per_group=25
+        )
         p = write_settings(sf, tmp_path / "test.settings")
         assert p.exists()
         text = p.read_text()
@@ -301,12 +319,16 @@ class TestSettingsIO:
 
     def test_settings_file_type(self, hill_dir):
         assert is_settings_file(hill_dir / "mare2dem.settings")
-        assert detect_file_type(hill_dir / "mare2dem.settings") == Mare2DEMFileType.SETTINGS
+        assert (
+            detect_file_type(hill_dir / "mare2dem.settings")
+            == Mare2DEMFileType.SETTINGS
+        )
 
 
 # ==========================================================================
 # Group RMS log
 # ==========================================================================
+
 
 class TestGroupRMSLog:
     """Tests on the demo_csem_mt group-RMS log reader."""
@@ -315,7 +337,9 @@ class TestGroupRMSLog:
         log = read_group_rms_log(csem_mt_dir / "demo.group_rms.log")
         assert log.n_groups >= 2
         assert log.n_iterations > 0
-        assert "CSEM" in " ".join(log.headers) or "MT" in " ".join(log.headers)
+        assert "CSEM" in " ".join(log.headers) or "MT" in " ".join(
+            log.headers
+        )
 
     def test_group_rms_values_decreasing(self, csem_mt_dir):
         log = read_group_rms_log(csem_mt_dir / "demo.group_rms.log")
@@ -333,6 +357,7 @@ class TestGroupRMSLog:
 # ==========================================================================
 # DataGroupFile
 # ==========================================================================
+
 
 class TestDataGroupFile:
     """Tests on the DataGroupFile reader/writer (no example file needed)."""
@@ -362,6 +387,7 @@ class TestDataGroupFile:
 # get_most_recent
 # ==========================================================================
 
+
 class TestGetMostRecent:
     """Tests on the most-recently-modified file finder."""
 
@@ -370,7 +396,9 @@ class TestGetMostRecent:
         assert str(p) == "some_file.resistivity"
 
     def test_keyword_newest(self, inversion_dir):
-        p = get_most_recent("newest", "*.resistivity", search_dir=inversion_dir)
+        p = get_most_recent(
+            "newest", "*.resistivity", search_dir=inversion_dir
+        )
         assert p is not None
         assert p.suffix == ".resistivity"
 

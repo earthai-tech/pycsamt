@@ -33,18 +33,35 @@ from pycsamt.forward import (
 # Use the full-tensor apparent-resistivity panel (9th figure) as thumbnail.
 # sphinx_gallery_thumbnail_number = 9
 
-FREQS_3D = np.logspace(0, 3, 12)   # 1 Hz - 1 kHz
+FREQS_3D = np.logspace(0, 3, 12)  # 1 Hz - 1 kHz
 
 G3_HALF = Grid3D.halfspace(
-    rho=100.0, nx=8, ny=8, nz=6,
-    x_max=4_000.0, y_max=4_000.0, z_max=2_000.0,
-    n_pad=3, nx_stations=4, ny_stations=4, name="halfspace-3D",
+    rho=100.0,
+    nx=8,
+    ny=8,
+    nz=6,
+    x_max=4_000.0,
+    y_max=4_000.0,
+    z_max=2_000.0,
+    n_pad=3,
+    nx_stations=4,
+    ny_stations=4,
+    name="halfspace-3D",
 )
 G3_BLOCK = Grid3D.block_anomaly(
-    bg_rho=500.0, anomaly_rho=5.0,
+    bg_rho=500.0,
+    anomaly_rho=5.0,
     bounds=(1_200.0, 2_800.0, 1_200.0, 2_800.0, 300.0, 1_200.0),
-    nx=8, ny=8, nz=6, x_max=4_000.0, y_max=4_000.0, z_max=2_000.0,
-    n_pad=3, nx_stations=4, ny_stations=4, name="block-anomaly-3D",
+    nx=8,
+    ny=8,
+    nz=6,
+    x_max=4_000.0,
+    y_max=4_000.0,
+    z_max=2_000.0,
+    n_pad=3,
+    nx_stations=4,
+    ny_stations=4,
+    name="block-anomaly-3D",
 )
 
 # %%
@@ -75,21 +92,34 @@ R3_BLOCK = MT3DForward(FREQS_3D, G3_BLOCK, verbose=False).run()
 # the station grid at a single frequency. The half-space returns a flat,
 # uniform apparent-resistivity map (the expected baseline):
 
-ax = plot_response_map_3d(R3_HALF, freq_idx=0, component="xy",
-                          title=r"Halfspace - map $\rho_a$ [Z_XY] (T = 1 s)")
+ax = plot_response_map_3d(
+    R3_HALF,
+    freq_idx=0,
+    component="xy",
+    title=r"Halfspace - map $\rho_a$ [Z_XY] (T = 1 s)",
+)
 
 # %%
 # Over the block anomaly, the same map shows the conductor's footprint
 # pulling apparent resistivity down near the model centre:
 
-ax = plot_response_map_3d(R3_BLOCK, freq_idx=4, component="xy",
-                          title=r"Block anomaly - map $\rho_a$ [Z_XY]")
+ax = plot_response_map_3d(
+    R3_BLOCK,
+    freq_idx=4,
+    component="xy",
+    title=r"Block anomaly - map $\rho_a$ [Z_XY]",
+)
 
 # %%
 # Phase responds to the same structure with opposite polarity:
 
-ax = plot_response_map_3d(R3_BLOCK, freq_idx=4, component="xy", quantity="phase",
-                          title=r"Block anomaly - map phase [Z_XY]")
+ax = plot_response_map_3d(
+    R3_BLOCK,
+    freq_idx=4,
+    component="xy",
+    quantity="phase",
+    title=r"Block anomaly - map phase [Z_XY]",
+)
 
 # %%
 # 3. Pseudo-sections
@@ -98,22 +128,33 @@ ax = plot_response_map_3d(R3_BLOCK, freq_idx=4, component="xy", quantity="phase"
 # station-vs-period section through the 3-D response — the 3-D analogue of
 # the 2-D pseudo-sections. Half-space first (flat baseline):
 
-ax = plot_response_section_3d(R3_HALF, component="xy",
-                              title=r"Halfspace - 3-D pseudo-section $\rho_a$ [Z_XY]")
+ax = plot_response_section_3d(
+    R3_HALF,
+    component="xy",
+    title=r"Halfspace - 3-D pseudo-section $\rho_a$ [Z_XY]",
+)
 
 # %%
 # The block anomaly imprints a closed low-resistivity zone; ``n_contours``
 # overlays isolines:
 
-ax = plot_response_section_3d(R3_BLOCK, component="xy", n_contours=4,
-                              title=r"Block anomaly - 3-D pseudo-section $\rho_a$ [Z_XY]")
+ax = plot_response_section_3d(
+    R3_BLOCK,
+    component="xy",
+    n_contours=4,
+    title=r"Block anomaly - 3-D pseudo-section $\rho_a$ [Z_XY]",
+)
 
 # %%
 # The cross-component ``yx`` phase section highlights the same target from
 # the orthogonal polarisation:
 
-ax = plot_response_section_3d(R3_BLOCK, component="yx", quantity="phase",
-                              title=r"Block anomaly - pseudo-section phase [Z_YX]")
+ax = plot_response_section_3d(
+    R3_BLOCK,
+    component="yx",
+    quantity="phase",
+    title=r"Block anomaly - pseudo-section phase [Z_YX]",
+)
 
 # %%
 # 4. Full impedance-tensor panels
@@ -124,11 +165,18 @@ ax = plot_response_section_3d(R3_BLOCK, component="yx", quantity="phase",
 # (XY, YX) maps carry the main anomaly signal; the diagonal (XX, YY) maps
 # reveal the 3-D coupling a 1-D or 2-D model cannot produce.
 
-ax = plot_tensor_components_3d(R3_BLOCK, freq_idx=4,
-                               title=r"Block anomaly - full impedance tensor $\rho_a$")
+ax = plot_tensor_components_3d(
+    R3_BLOCK,
+    freq_idx=4,
+    title=r"Block anomaly - full impedance tensor $\rho_a$",
+)
 
 # %%
 # The same panel as phase:
 
-ax = plot_tensor_components_3d(R3_BLOCK, freq_idx=4, quantity="phase",
-                               title="Block anomaly - full impedance tensor phase")
+ax = plot_tensor_components_3d(
+    R3_BLOCK,
+    freq_idx=4,
+    quantity="phase",
+    title="Block anomaly - full impedance tensor phase",
+)

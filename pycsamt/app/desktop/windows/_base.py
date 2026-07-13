@@ -45,9 +45,10 @@ def _icon(name: str) -> QIcon:
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
+
 def make_group(title: str) -> tuple[QGroupBox, QVBoxLayout]:
     """Return (QGroupBox, inner_layout) ready to populate."""
-    gb  = QGroupBox(title)
+    gb = QGroupBox(title)
     gb.setObjectName("ParamsGroup")
     lay = QVBoxLayout(gb)
     lay.setContentsMargins(6, 10, 6, 6)
@@ -55,7 +56,9 @@ def make_group(title: str) -> tuple[QGroupBox, QVBoxLayout]:
     return gb, lay
 
 
-def icon_button(text: str, icon_name: str = "", tooltip: str = "") -> QPushButton:
+def icon_button(
+    text: str, icon_name: str = "", tooltip: str = ""
+) -> QPushButton:
     btn = QPushButton(text)
     if icon_name:
         ic = _icon(icon_name)
@@ -68,6 +71,7 @@ def icon_button(text: str, icon_name: str = "", tooltip: str = "") -> QPushButto
 
 
 # ── Base window ───────────────────────────────────────────────────────────────
+
 
 class PanelWindow(QWidget):
     """
@@ -110,10 +114,10 @@ class PanelWindow(QWidget):
             if not ic.isNull():
                 self.setWindowIcon(ic)
 
-        self._session_key   = session_key
-        self._params_width  = params_width
-        self._sites         = None
-        self._dark: bool    = True
+        self._session_key = session_key
+        self._params_width = params_width
+        self._sites = None
+        self._dark: bool = True
 
         self._build_shell()
 
@@ -140,7 +144,9 @@ class PanelWindow(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
 
         inner = QWidget()
@@ -191,6 +197,7 @@ class PanelWindow(QWidget):
         from pycsamt.app.desktop.widgets.mpl_canvas import (
             MplCanvas,
         )
+
         for canvas in self.findChildren(MplCanvas):
             canvas.apply_theme(dark)
 
@@ -199,7 +206,7 @@ class PanelWindow(QWidget):
     def save_geometry_to(self, store: dict) -> None:
         store[self._session_key] = {
             "geometry": self.saveGeometry().toBase64().data().decode(),
-            "visible":  self.isVisible(),
+            "visible": self.isVisible(),
         }
 
     def restore_geometry_from(self, store: dict) -> None:
@@ -209,9 +216,7 @@ class PanelWindow(QWidget):
         geo = entry.get("geometry")
         if geo:
             try:
-                self.restoreGeometry(
-                    QByteArray.fromBase64(geo.encode())
-                )
+                self.restoreGeometry(QByteArray.fromBase64(geo.encode()))
             except Exception:
                 pass
 

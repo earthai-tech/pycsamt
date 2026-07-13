@@ -52,7 +52,12 @@ from pycsamt.topo.overlay import (
 
 _WILLY_ROOT = os.path.join(
     os.path.dirname(__file__),
-    "..", "..", "..", "data", "AMT", "WILLY_DATA",
+    "..",
+    "..",
+    "..",
+    "data",
+    "AMT",
+    "WILLY_DATA",
 )
 
 _PROFILES = ["L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"]
@@ -73,10 +78,10 @@ def _build_mock_inversion_grid(chain_km, n_depth=20):
     This gives nx = n_stations - 1 cells, and elev_at_centres should be
     the elevation interpolated to the midpoints between adjacent stations.
     """
-    nx      = len(chain_km) - 1     # number of cells
-    x_nodes = np.array(chain_km, dtype=float)               # (nx+1,) ✓
-    z_nodes = np.linspace(0.0, 2.0, n_depth + 1)            # (nz+1,)
-    rho_2d  = np.random.default_rng(7).random((n_depth, nx)) * 3.0  # (nz, nx)
+    nx = len(chain_km) - 1  # number of cells
+    x_nodes = np.array(chain_km, dtype=float)  # (nx+1,) ✓
+    z_nodes = np.linspace(0.0, 2.0, n_depth + 1)  # (nz+1,)
+    rho_2d = np.random.default_rng(7).random((n_depth, nx)) * 3.0  # (nz, nx)
     return x_nodes, z_nodes, rho_2d
 
 
@@ -91,16 +96,19 @@ def _reset_after():
 # Pipeline: extract → drape
 # ---------------------------------------------------------------------------
 
+
 class TestExtractToDrape:
     @pytest.mark.parametrize("profile", _PROFILES)
     def test_extract_then_drape(self, profile):
-        edis  = _load(profile)
+        edis = _load(profile)
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis) / 1000.0   # m → km
+        elev = extract_elevation(edis) / 1000.0  # m → km
 
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain)
         nx = len(chain) - 1
-        elev_centres = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
+        elev_centres = interp_elev(
+            chain, elev, (chain[:-1] + chain[1:]) / 2.0
+        )
 
         xo, zd, do = drape_section(x_nodes, z_nodes, rho, elev_centres)
 
@@ -110,9 +118,9 @@ class TestExtractToDrape:
         assert np.all(np.isfinite(zd))
 
     def test_l18_chainage_and_drape_shape(self):
-        edis  = _load("L18PLT")
+        edis = _load("L18PLT")
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis) / 1000.0
+        elev = extract_elevation(edis) / 1000.0
         assert chain[0] == pytest.approx(0.0)
         assert chain[-1] > 1.0
 
@@ -126,10 +134,10 @@ class TestExtractToDrape:
 
     def test_station_pins_z_at_surface(self):
         """Station markers must lie exactly on the terrain surface."""
-        edis  = _load("L18PLT")
+        edis = _load("L18PLT")
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis) / 1000.0
-        sz    = station_surface_z(chain, elev, chain, exaggeration=1.0)
+        elev = extract_elevation(edis) / 1000.0
+        sz = station_surface_z(chain, elev, chain, exaggeration=1.0)
         np.testing.assert_allclose(sz, elev, rtol=1e-9)
 
     def test_exaggeration_doubles_relief(self):
@@ -141,13 +149,17 @@ class TestExtractToDrape:
         """
         edis = _load("L18PLT")
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis) / 1000.0
+        elev = extract_elevation(edis) / 1000.0
 
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=5)
         el_c = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
 
-        _, zd1, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=1.0)
-        _, zd2, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=2.0)
+        _, zd1, _ = drape_section(
+            x_nodes, z_nodes, rho, el_c, exaggeration=1.0
+        )
+        _, zd2, _ = drape_section(
+            x_nodes, z_nodes, rho, el_c, exaggeration=2.0
+        )
 
         # Surface row (k=0) is identical — exaggeration doesn't move the surface
         np.testing.assert_allclose(zd1[0], zd2[0], rtol=1e-9)
@@ -162,25 +174,26 @@ class TestExtractToDrape:
 # Pipeline: extract → overlay → figure
 # ---------------------------------------------------------------------------
 
+
 class TestExtractToOverlay:
     @pytest.mark.parametrize("profile", _PROFILES)
     def test_draw_section_all_profiles(self, profile):
-        edis  = _load(profile)
+        edis = _load(profile)
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
         names = extract_station_names(edis)
 
         fig, ax = plt.subplots()
         ax.set_xlim(chain[0], chain[-1])
-        ax.set_ylim(0.02, 0.25)   # km scale
+        ax.set_ylim(0.02, 0.25)  # km scale
         draw_topo_section(ax, chain, elev, names)
         fig.canvas.draw()
 
     @pytest.mark.parametrize("profile", _PROFILES)
     def test_draw_strip_all_profiles(self, profile):
-        edis  = _load(profile)
+        edis = _load(profile)
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
         names = extract_station_names(edis)
 
         fig, ax = plt.subplots()
@@ -190,30 +203,31 @@ class TestExtractToOverlay:
         fig.canvas.draw()
 
     def test_full_pipeline_l18_section_plot(self):
-        edis  = _load("L18PLT")
+        edis = _load("L18PLT")
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
         names = extract_station_names(edis)
         elev_km = elev / 1000.0
 
         # Build a synthetic drape-ready section
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=20)
-        el_c = interp_elev(chain, elev_km,
-                           (chain[:-1] + chain[1:]) / 2.0)
+        el_c = interp_elev(chain, elev_km, (chain[:-1] + chain[1:]) / 2.0)
         _, zd, rho_out = drape_section(x_nodes, z_nodes, rho, el_c)
 
         fig, ax = plt.subplots()
-        ax.pcolormesh(x_nodes, zd, rho_out, shading="flat",
-                            cmap="jet", vmin=0, vmax=3)
+        ax.pcolormesh(
+            x_nodes, zd, rho_out, shading="flat", cmap="jet", vmin=0, vmax=3
+        )
         draw_topo_section(ax, chain, elev, names)
         ax.set_xlabel("Chainage (km)")
         ax.set_ylabel("Elevation (km)")
-        fig.canvas.draw()   # must not raise
+        fig.canvas.draw()  # must not raise
 
 
 # ---------------------------------------------------------------------------
 # configure_topo global singleton integration
 # ---------------------------------------------------------------------------
+
 
 class TestConfigureTopo:
     def test_configure_topo_affects_enabled_check(self):
@@ -226,7 +240,7 @@ class TestConfigureTopo:
         with PYCSAMT_TOPO.context(exaggeration=5.0):
             assert PYCSAMT_TOPO.exaggeration == pytest.approx(5.0)
         assert PYCSAMT_TOPO.exaggeration == pytest.approx(1.0)
-        assert PYCSAMT_TOPO.enabled is True   # unchanged by the context
+        assert PYCSAMT_TOPO.enabled is True  # unchanged by the context
 
     def test_reset_restores_disabled(self):
         configure_topo(enabled=True, exaggeration=3.0)
@@ -242,9 +256,9 @@ class TestConfigureTopo:
         assert PYCSAMT_TOPO.exaggeration == pytest.approx(2.0)
 
     def test_cfg_passed_to_draw_section(self):
-        edis  = _load("L18PLT")
+        edis = _load("L18PLT")
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
 
         cfg = TopoConfig()
         cfg.configure(exaggeration=3.0, fill_color="#0000ff", fill_alpha=0.5)
@@ -260,25 +274,35 @@ class TestConfigureTopo:
 # All-profiles combined: consistency checks
 # ---------------------------------------------------------------------------
 
+
 class TestAllProfilesConsistency:
     def test_chainage_starts_at_zero_all_profiles(self):
         for p in _PROFILES:
             chain = extract_chainage(_load(p))
-            assert chain[0] == pytest.approx(0.0), f"{p} chain does not start at 0"
+            assert chain[0] == pytest.approx(0.0), (
+                f"{p} chain does not start at 0"
+            )
 
     def test_elevation_in_expected_range_all_profiles(self):
         """WILLY elevations are between 20 m and 300 m."""
         for p in _PROFILES:
             elev = extract_elevation(_load(p))
-            assert elev.min() > 20.0,  f"{p}: min elev {elev.min()} < 20 m"
+            assert elev.min() > 20.0, f"{p}: min elev {elev.min()} < 20 m"
             assert elev.max() < 300.0, f"{p}: max elev {elev.max()} > 300 m"
 
     def test_station_count_all_profiles(self):
-        expected = {"L18PLT": 28, "L22PLT": 25, "L26PLT": 25,
-                    "L30PLT": 25, "L34PLT": 25}
+        expected = {
+            "L18PLT": 28,
+            "L22PLT": 25,
+            "L26PLT": 25,
+            "L30PLT": 25,
+            "L34PLT": 25,
+        }
         for p, n in expected.items():
             edis = _load(p)
-            assert len(edis) == n, f"{p}: expected {n} stations, got {len(edis)}"
+            assert len(edis) == n, (
+                f"{p}: expected {n} stations, got {len(edis)}"
+            )
 
     def test_l34_has_highest_terrain(self):
         """L34PLT is documented as having the highest terrain (59–224 m)."""
@@ -306,24 +330,30 @@ class TestAllProfilesConsistency:
     def test_interp_elev_between_profiles(self):
         """Elevation should be positive and finite when interpolated to a fine grid."""
         for p in _PROFILES:
-            edis  = _load(p)
+            edis = _load(p)
             chain = extract_chainage(edis)
-            elev  = extract_elevation(edis) / 1000.0
-            fine  = np.linspace(chain[0], chain[-1], 200)
-            out   = interp_elev(chain, elev, fine)
-            assert np.all(np.isfinite(out)), f"{p}: NaN in interpolated elevation"
-            assert out.min() > 0.0, f"{p}: zero/negative interpolated elevation"
+            elev = extract_elevation(edis) / 1000.0
+            fine = np.linspace(chain[0], chain[-1], 200)
+            out = interp_elev(chain, elev, fine)
+            assert np.all(np.isfinite(out)), (
+                f"{p}: NaN in interpolated elevation"
+            )
+            assert out.min() > 0.0, (
+                f"{p}: zero/negative interpolated elevation"
+            )
 
     @pytest.mark.parametrize("profile", _PROFILES)
     def test_drape_zd_top_row_within_elev_bounds(self, profile):
         """Top row of z_draped grid must match the terrain elevation."""
-        edis  = _load(profile)
+        edis = _load(profile)
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis) / 1000.0
+        elev = extract_elevation(edis) / 1000.0
 
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=10)
         el_c = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
-        _, zd, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=1.0)
+        _, zd, _ = drape_section(
+            x_nodes, z_nodes, rho, el_c, exaggeration=1.0
+        )
 
         # Inner columns (not boundary extrapolation) stay within elev bounds
         inner = zd[0, 1:-1]
@@ -335,12 +365,13 @@ class TestAllProfilesConsistency:
 # Robustness: topo pipeline never raises for degenerate inputs
 # ---------------------------------------------------------------------------
 
+
 class TestRobustness:
     def test_pipeline_with_two_stations(self):
         """Degenerate 2-station profile must not crash."""
         edis = _load("L18PLT")[:2]
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
         names = extract_station_names(edis)
 
         fig, ax = plt.subplots()
@@ -354,7 +385,7 @@ class TestRobustness:
         chain = np.linspace(0.0, 3.0, 10)
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=8)
         nx = len(chain) - 1
-        el_c = np.full(nx, 0.15)   # flat terrain, one value per cell
+        el_c = np.full(nx, 0.15)  # flat terrain, one value per cell
         _, zd, _ = drape_section(x_nodes, z_nodes, rho, el_c)
         assert np.all(np.isfinite(zd))
 

@@ -26,6 +26,7 @@ Quick start
     from pycsamt.forward.em2d import MT2DForward
     resp = MT2DForward(cfg.freq_grid(), grid).run()
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -223,27 +224,27 @@ class ForwardConfig2D:
     # ── Solver ───────────────────────────────────────────────────────────────
     freq_min: float = 1e-3
     freq_max: float = 1e3
-    n_freqs:  int   = 20
+    n_freqs: int = 20
 
     # ── Grid ─────────────────────────────────────────────────────────────────
-    nx:         int   = 40
-    nz:         int   = 30
-    x_max:      float = 10_000.0
-    z_max:      float =  6_000.0
-    n_pad:      int   = 8
+    nx: int = 40
+    nz: int = 30
+    x_max: float = 10_000.0
+    z_max: float = 6_000.0
+    n_pad: int = 8
     pad_factor: float = 1.3
 
     # ── Earth model ──────────────────────────────────────────────────────────
-    bg_rho:        float          = 100.0
-    model_type:    str            = "halfspace"
-    anomaly_rho:   float          = 5.0
-    anomaly_x_lo:  float          = 2_000.0
-    anomaly_x_hi:  float          = 6_000.0
-    anomaly_z_lo:  float          =   300.0
-    anomaly_z_hi:  float          = 1_500.0
+    bg_rho: float = 100.0
+    model_type: str = "halfspace"
+    anomaly_rho: float = 5.0
+    anomaly_x_lo: float = 2_000.0
+    anomaly_x_hi: float = 6_000.0
+    anomaly_z_lo: float = 300.0
+    anomaly_z_hi: float = 1_500.0
 
     # ── Stations ─────────────────────────────────────────────────────────────
-    n_stations:    int             = 10
+    n_stations: int = 10
     station_x_max: float | None = None
 
     # ── Output ───────────────────────────────────────────────────────────────
@@ -305,10 +306,14 @@ class ForwardConfig2D:
         Grid2D
         """
         from .grid2d import Grid2D
+
         kw = dict(
-            nx=self.nx, nz=self.nz,
-            x_max=self.x_max, z_max=self.z_max,
-            n_pad=self.n_pad, pad_factor=self.pad_factor,
+            nx=self.nx,
+            nz=self.nz,
+            x_max=self.x_max,
+            z_max=self.z_max,
+            n_pad=self.n_pad,
+            pad_factor=self.pad_factor,
             n_stations=self.n_stations,
             station_x_max=self.station_x_max,
         )
@@ -319,8 +324,10 @@ class ForwardConfig2D:
                 bg_rho=self.bg_rho,
                 anomaly_rho=self.anomaly_rho,
                 anomaly_bounds=(
-                    self.anomaly_x_lo, self.anomaly_x_hi,
-                    self.anomaly_z_lo, self.anomaly_z_hi,
+                    self.anomaly_x_lo,
+                    self.anomaly_x_hi,
+                    self.anomaly_z_lo,
+                    self.anomaly_z_hi,
                 ),
                 **kw,
             )
@@ -343,7 +350,10 @@ class ForwardConfig2D:
     ) -> Path:
         """Write to an annotated source-of-truth file."""
         return write_config_template(
-            path, self, _FWD2D_SCHEMA, fmt=fmt,
+            path,
+            self,
+            _FWD2D_SCHEMA,
+            fmt=fmt,
             title="PyCSAMT 2-D MT forward configuration",
         )
 

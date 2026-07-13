@@ -46,6 +46,7 @@ Example
 >>> nm = cal.calibrated_model()
 >>> logs = cal.stratigraphic_logs()
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -130,7 +131,10 @@ class ModelCalibrator:
         for ix, x_sta in enumerate(model.x_centers):
             bh = self._nearest_borehole(x_sta)
             col_crm = crm[:, ix]
-            if bh is not None and abs(bh.x - x_sta) <= self.max_borehole_distance:
+            if (
+                bh is not None
+                and abs(bh.x - x_sta) <= self.max_borehole_distance
+            ):
                 nm[:, ix] = self._calibrate_column(
                     col_crm, model.z_centers, bh
                 )
@@ -262,9 +266,9 @@ class ModelCalibrator:
         bh: Borehole,
     ) -> np.ndarray:
         """Apply the two-step NM construction to a single column."""
-        tres_col = bh.tres_column(z_centers)   # TRES at each depth, Ω·m
-        rho_crm = 10.0 ** col_crm              # linear Ω·m
-        nm = col_crm.copy()                     # initialise NM = CRM
+        tres_col = bh.tres_column(z_centers)  # TRES at each depth, Ω·m
+        rho_crm = 10.0**col_crm  # linear Ω·m
+        nm = col_crm.copy()  # initialise NM = CRM
 
         for i in range(len(z_centers)):
             if np.isnan(col_crm[i]):
@@ -294,19 +298,18 @@ class ModelCalibrator:
         nm = col_crm.copy()
         for i, v in enumerate(col_crm):
             if not np.isnan(v):
-                nm[i] = self._autolayer_single(float(10.0 ** v))
+                nm[i] = self._autolayer_single(float(10.0**v))
         return nm
 
     @staticmethod
-    def _compute_misfit(
-        crm: np.ndarray, nm: np.ndarray
-    ) -> np.ndarray:
+    def _compute_misfit(crm: np.ndarray, nm: np.ndarray) -> np.ndarray:
         """Per-column G (%) misfit, broadcast to (n_z, n_x)."""
         diff_sq = (nm - crm) ** 2
-        crm_sq = crm ** 2
+        crm_sq = crm**2
         with np.errstate(divide="ignore", invalid="ignore"):
             g_col = 100.0 * np.sqrt(
-                np.nansum(diff_sq, axis=0) / np.maximum(np.nansum(crm_sq, axis=0), 1e-12)
+                np.nansum(diff_sq, axis=0)
+                / np.maximum(np.nansum(crm_sq, axis=0), 1e-12)
             )
         # Broadcast scalar per-column misfit back to a 2-D map
         g_map = np.tile(g_col, (crm.shape[0], 1))

@@ -62,26 +62,31 @@ def info(
     coord_info: dict = {}
     if coord is not None:
         coord_info = {
-            "n_points": len(coord.records) if hasattr(coord, "records") else 0,
+            "n_points": len(coord.records)
+            if hasattr(coord, "records")
+            else 0,
             "has_elevation": (
-                any(getattr(r, "elevation", None) is not None
-                    for r in coord.records)
-                if hasattr(coord, "records") else False
+                any(
+                    getattr(r, "elevation", None) is not None
+                    for r in coord.records
+                )
+                if hasattr(coord, "records")
+                else False
             ),
         }
 
     avg_stems = sorted(survey.avg_files)
-    z_stems   = sorted(survey.z_files)
+    z_stems = sorted(survey.z_files)
     log_stems = sorted(survey.log_files)
 
     summary = {
         "root": str(survey.root),
-        "n_avg_files":  len(avg_stems),
-        "n_z_files":    len(z_stems),
-        "n_log_files":  len(log_stems),
-        "avg_stems":    avg_stems,
-        "z_stems":      z_stems,
-        "log_stems":    log_stems,
+        "n_avg_files": len(avg_stems),
+        "n_z_files": len(z_stems),
+        "n_log_files": len(log_stems),
+        "avg_stems": avg_stems,
+        "z_stems": z_stems,
+        "log_stems": log_stems,
         "has_coordinates": coord is not None,
         "coordinates": coord_info,
     }

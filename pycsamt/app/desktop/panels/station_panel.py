@@ -25,7 +25,7 @@ from pycsamt.app.desktop.widgets.station_table import (
 class StationPanel(QWidget):
     """Station list panel — contains the sortable station table."""
 
-    station_selected = Signal(str)   # single station ID from click/keyboard
+    station_selected = Signal(str)  # single station ID from click/keyboard
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

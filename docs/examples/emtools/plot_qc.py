@@ -52,7 +52,7 @@ print(qt[["station", "n_freq", "frac_ok", "snr_med", "skew_med"]].head())
 
 flagged = qc_flags(survey)
 print(f"stations flagged: {(flagged['flags'] != '').sum()}/{len(flagged)}")
-print("unique flags:", sorted(set(flagged['flags'])))
+print("unique flags:", sorted(set(flagged["flags"])))
 
 # %%
 # **Reading this output.** Every one of the 28 stations comes back
@@ -78,11 +78,14 @@ sc_presence = station_confidence_table(survey, method="presence")
 sc_composite = station_confidence_table(survey, method="composite")
 print(
     "presence range:",
-    sc_presence["confidence"].min(), "-", sc_presence["confidence"].max(),
+    sc_presence["confidence"].min(),
+    "-",
+    sc_presence["confidence"].max(),
 )
 print(
     "composite range:",
-    round(sc_composite["confidence"].min(), 3), "-",
+    round(sc_composite["confidence"].min(), 3),
+    "-",
     round(sc_composite["confidence"].max(), 3),
 )
 worst = sc_composite.sort_values("confidence").iloc[0]
@@ -238,8 +241,12 @@ plot_qc_quicklook(survey)
 ax_fan = plot_consistency_fan(survey, station="18-016A")
 ax_fan.set_yscale("log")
 overlay_noise_cone(
-    ax_fan, np.logspace(-4, 0, 20), np.full(20, 10.0), np.full(20, 100.0),
-    color="0.4", alpha=0.25,
+    ax_fan,
+    np.logspace(-4, 0, 20),
+    np.full(20, 10.0),
+    np.full(20, 100.0),
+    color="0.4",
+    alpha=0.25,
 )
 
 # %%

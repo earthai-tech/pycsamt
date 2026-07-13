@@ -96,8 +96,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "cell_size_h_2d",
-        "Nominal horizontal cell width in metres near the 2-D "
-        "station zone.",
+        "Nominal horizontal cell width in metres near the 2-D station zone.",
         "2-D Grid",
     ),
     ConfigParameter(
@@ -107,8 +106,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "depth_scale_2d",
-        "Geometric growth factor for 2-D layer thicknesses with "
-        "depth.",
+        "Geometric growth factor for 2-D layer thicknesses with depth.",
         "2-D Grid",
     ),
     ConfigParameter(
@@ -119,14 +117,12 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "nx",
-        "Number of core cells along the 3-D x direction before "
-        "padding.",
+        "Number of core cells along the 3-D x direction before padding.",
         "3-D Grid",
     ),
     ConfigParameter(
         "ny",
-        "Number of core cells along the 3-D y direction before "
-        "padding.",
+        "Number of core cells along the 3-D y direction before padding.",
         "3-D Grid",
     ),
     ConfigParameter(
@@ -136,8 +132,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_airlayers",
-        "Number of high-resistivity air layers above the 3-D "
-        "earth model.",
+        "Number of high-resistivity air layers above the 3-D earth model.",
         "3-D Grid",
     ),
     ConfigParameter(
@@ -152,8 +147,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "depth_scale",
-        "Geometric growth factor for 3-D layer thicknesses with "
-        "depth.",
+        "Geometric growth factor for 3-D layer thicknesses with depth.",
         "3-D Grid",
     ),
     ConfigParameter(
@@ -182,8 +176,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_smooth_iter",
-        "Number of smoothing passes written to the 3-D "
-        "covariance file.",
+        "Number of smoothing passes written to the 3-D covariance file.",
         "Covariance",
     ),
     ConfigParameter(
@@ -206,8 +199,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "lambda_divisor",
-        "Factor used by ModEM to reduce lambda during trade-off "
-        "searches.",
+        "Factor used by ModEM to reduce lambda during trade-off searches.",
         "Inversion Control",
     ),
     ConfigParameter(
@@ -235,14 +227,12 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "data_file",
-        "Default ModEM data filename used by configured "
-        "workflows.",
+        "Default ModEM data filename used by configured workflows.",
         "File Names",
     ),
     ConfigParameter(
         "model_file",
-        "Default ModEM model filename used by configured "
-        "workflows.",
+        "Default ModEM model filename used by configured workflows.",
         "File Names",
     ),
     ConfigParameter(
@@ -278,14 +268,12 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "use_mpi",
-        "Whether the runner should launch ModEM through an MPI "
-        "command.",
+        "Whether the runner should launch ModEM through an MPI command.",
         "Binary And MPI",
     ),
     ConfigParameter(
         "n_procs",
-        "Number of MPI processes requested when MPI execution is "
-        "enabled.",
+        "Number of MPI processes requested when MPI execution is enabled.",
         "Binary And MPI",
     ),
     ConfigParameter(

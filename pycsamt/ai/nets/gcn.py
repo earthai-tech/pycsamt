@@ -16,6 +16,7 @@ No external graph library (PyTorch Geometric, DGL) is required; the
 normalised adjacency matrix is pre-computed once from station
 coordinates and passed as a dense tensor to every forward call.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -28,6 +29,7 @@ __all__ = ["GCNNet", "build_adjacency"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Adjacency utilities (framework-free)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def build_adjacency(
     coords: np.ndarray,
@@ -59,8 +61,8 @@ def build_adjacency(
     """
     coords = np.asarray(coords, dtype=np.float64)
     len(coords)
-    diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]   # (n, n, 2)
-    dist = np.sqrt((diff ** 2).sum(axis=-1))                       # (n, n)
+    diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]  # (n, n, 2)
+    dist = np.sqrt((diff**2).sum(axis=-1))  # (n, n)
 
     A = (dist <= radius).astype(np.float32)
     if not self_loops:
@@ -69,8 +71,8 @@ def build_adjacency(
         np.fill_diagonal(A, 1.0)
 
     if normalise:
-        deg = A.sum(axis=1)                          # (n,)
-        deg_inv_sqrt = np.where(deg > 0, deg ** -0.5, 0.0)
+        deg = A.sum(axis=1)  # (n,)
+        deg_inv_sqrt = np.where(deg > 0, deg**-0.5, 0.0)
         D = np.diag(deg_inv_sqrt)
         A = D @ A @ D
 
@@ -80,6 +82,7 @@ def build_adjacency(
 # ─────────────────────────────────────────────────────────────────────────────
 # PyTorch GCN
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class GCNNet:
     """
@@ -108,9 +111,9 @@ class GCNNet:
         dropout: float = 0.1,
     ) -> None:
         self.n_features = int(n_features)
-        self.n_out      = int(n_out)
-        self.hidden     = tuple(int(h) for h in hidden)
-        self.dropout    = float(dropout)
+        self.n_out = int(n_out)
+        self.hidden = tuple(int(h) for h in hidden)
+        self.dropout = float(dropout)
 
     # ── PyTorch ──────────────────────────────────────────────────────────────
 
@@ -120,9 +123,9 @@ class GCNNet:
         import torch.nn as nn
         import torch.nn.functional as F
 
-        hidden  = self.hidden
-        n_in    = self.n_features
-        n_out   = self.n_out
+        hidden = self.hidden
+        n_in = self.n_features
+        n_out = self.n_out
         dropout = self.dropout
 
         class _GCNLayer(nn.Module):
@@ -135,8 +138,8 @@ class GCNNet:
                 self, H: torch.Tensor, A: torch.Tensor
             ) -> torch.Tensor:
                 # H : (n_nodes, in_f)   A : (n_nodes, n_nodes)
-                agg = A @ H                        # (n_nodes, in_f)
-                out = self.W(agg)                  # (n_nodes, out_f)
+                agg = A @ H  # (n_nodes, in_f)
+                out = self.W(agg)  # (n_nodes, out_f)
                 out = self.bn(out)
                 return F.relu(out)
 
@@ -145,8 +148,10 @@ class GCNNet:
                 super().__init__()
                 dims = [n_in] + list(hidden)
                 self.layers = nn.ModuleList(
-                    [_GCNLayer(dims[i], dims[i + 1])
-                     for i in range(len(dims) - 1)]
+                    [
+                        _GCNLayer(dims[i], dims[i + 1])
+                        for i in range(len(dims) - 1)
+                    ]
                 )
                 self.drop = nn.Dropout(dropout)
                 self.head = nn.Linear(dims[-1], n_out)
@@ -178,30 +183,30 @@ class GCNNet:
         """Return a ``tf.keras.Model`` for this architecture."""
         import tensorflow as tf
 
-        n_in    = self.n_features
-        n_out   = self.n_out
-        hidden  = self.hidden
+        n_in = self.n_features
+        n_out = self.n_out
+        hidden = self.hidden
         dropout = self.dropout
 
         class GCNLayer(tf.keras.layers.Layer):
             def __init__(self, units: int, **kw) -> None:
                 super().__init__(**kw)
                 self.dense = tf.keras.layers.Dense(units, activation=None)
-                self.bn    = tf.keras.layers.BatchNormalization()
+                self.bn = tf.keras.layers.BatchNormalization()
 
             def call(
                 self,
                 inputs: tuple[tf.Tensor, tf.Tensor],
                 training: bool = False,
             ) -> tf.Tensor:
-                H, A = inputs          # H: (n, f)  A: (n, n)
+                H, A = inputs  # H: (n, f)  A: (n, n)
                 agg = tf.linalg.matmul(A, H)
                 out = self.dense(agg)
                 out = self.bn(out, training=training)
                 return tf.nn.relu(out)
 
-        H_in = tf.keras.Input(shape=(n_in,),    name="node_features")
-        A_in = tf.keras.Input(shape=(None,),    name="adj_row")
+        H_in = tf.keras.Input(shape=(n_in,), name="node_features")
+        A_in = tf.keras.Input(shape=(None,), name="adj_row")
 
         # We build the Keras model as a pure function (adjacency is data input)
         # H_in : (n_nodes, n_in)  A_in : (n_nodes, n_nodes) — passed as batches

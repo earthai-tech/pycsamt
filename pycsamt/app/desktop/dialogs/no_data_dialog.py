@@ -18,6 +18,7 @@ Or instantiate directly if you need finer control:
     if dlg.exec() == QDialog.DialogCode.Accepted:
         ...
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -69,9 +70,11 @@ class NoDataDialog(QDialog):
 
         icon_lbl = QLabel()
         icon_lbl.setFixedSize(48, 48)
-        pix = self.style().standardIcon(
-            QStyle.StandardPixmap.SP_MessageBoxWarning
-        ).pixmap(48, 48)
+        pix = (
+            self.style()
+            .standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+            .pixmap(48, 48)
+        )
         icon_lbl.setPixmap(pix)
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignTop)
         row.addWidget(icon_lbl)

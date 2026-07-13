@@ -39,8 +39,8 @@ from pycsamt.models.mare2dem.iotools.emdata import (
 # parse_topo
 # ==========================================================================
 
-class TestParseTopo:
 
+class TestParseTopo:
     def test_flat_topo_constant_depth(self):
         y = np.linspace(-3000, 3000, 20)
         z, slope, on_node = parse_topo(-1500.0, y)
@@ -56,16 +56,18 @@ class TestParseTopo:
 
     def test_linear_topo_slope(self):
         # 45-degree slope: dz/dy = 1 → slope_angle = 45°
-        topo = np.column_stack([np.array([0., 1000.]), np.array([0., 1000.])])
+        topo = np.column_stack(
+            [np.array([0.0, 1000.0]), np.array([0.0, 1000.0])]
+        )
         y = np.array([500.0])
         z, slope, on_node = parse_topo(topo, y)
         assert abs(z[0] - 500.0) < 1.0
         assert abs(slope[0] - 45.0) < 1.0
 
     def test_topo_interpolation_at_nodes(self):
-        topo = np.array([[0., 0.], [1000., 100.], [2000., 50.]])
-        z, _, on_node = parse_topo(topo, np.array([0., 1000., 2000.]))
-        np.testing.assert_allclose(z, [0., 100., 50.], atol=1.0)
+        topo = np.array([[0.0, 0.0], [1000.0, 100.0], [2000.0, 50.0]])
+        z, _, on_node = parse_topo(topo, np.array([0.0, 1000.0, 2000.0]))
+        np.testing.assert_allclose(z, [0.0, 100.0, 50.0], atol=1.0)
         assert on_node.sum() == 3
 
     def test_topo_depth_convenience(self):
@@ -78,8 +80,8 @@ class TestParseTopo:
         np.testing.assert_allclose(s, 0.0)
 
     def test_topo_extrapolation(self):
-        topo = np.array([[0., 0.], [1000., 0.]])
-        y = np.array([-500., 1500.])
+        topo = np.array([[0.0, 0.0], [1000.0, 0.0]])
+        y = np.array([-500.0, 1500.0])
         z, _, _ = parse_topo(topo, y)
         # Should extrapolate (nearest neighbour padding)
         assert np.isfinite(z).all()
@@ -89,11 +91,11 @@ class TestParseTopo:
 # get_intersections / do_rects_overlap
 # ==========================================================================
 
-class TestIntersections:
 
+class TestIntersections:
     def test_crossing_segments(self):
         segs_a = np.array([[0.0, 2.0, 1.0, 1.0]])  # horizontal y=1
-        seg_b  = np.array([1.0, 1.0, 0.0, 2.0])    # vertical x=1
+        seg_b = np.array([1.0, 1.0, 0.0, 2.0])  # vertical x=1
         inter, xi, yi, pa, pb = get_intersections(segs_a, seg_b)
         assert len(xi) == 1
         assert abs(xi[0] - 1.0) < 1e-9
@@ -101,22 +103,24 @@ class TestIntersections:
 
     def test_parallel_no_intersection(self):
         segs_a = np.array([[0.0, 2.0, 0.0, 0.0]])  # y=0
-        seg_b  = np.array([0.0, 2.0, 1.0, 1.0])    # y=1
+        seg_b = np.array([0.0, 2.0, 1.0, 1.0])  # y=1
         inter, xi, yi, _, _ = get_intersections(segs_a, seg_b)
         assert len(xi) == 0
 
     def test_touching_endpoints_excluded(self):
         # Segments touch at their endpoints → not classified as interior intersection
         segs_a = np.array([[0.0, 1.0, 0.0, 0.0]])
-        seg_b  = np.array([1.0, 1.0, 0.0, 1.0])
+        seg_b = np.array([1.0, 1.0, 0.0, 1.0])
         inter, xi, yi, _, _ = get_intersections(segs_a, seg_b)
         assert len(xi) == 0
 
     def test_multiple_segments(self):
-        segs_a = np.array([
-            [0.0, 2.0, 0.5, 0.5],   # intersects seg_b
-            [0.0, 2.0, 2.5, 2.5],   # does not intersect
-        ])
+        segs_a = np.array(
+            [
+                [0.0, 2.0, 0.5, 0.5],  # intersects seg_b
+                [0.0, 2.0, 2.5, 2.5],  # does not intersect
+            ]
+        )
         seg_b = np.array([1.0, 1.0, 0.0, 2.0])
         inter, xi, yi, _, _ = get_intersections(segs_a, seg_b)
         assert len(xi) == 1
@@ -138,8 +142,8 @@ class TestIntersections:
 # dp_simplify
 # ==========================================================================
 
-class TestDPSimplify:
 
+class TestDPSimplify:
     def test_straight_line_simplified(self):
         # Perfectly collinear points → only endpoints retained
         pts = np.column_stack([np.linspace(0, 10, 50), np.zeros(50)])
@@ -154,13 +158,17 @@ class TestDPSimplify:
         assert len(s) > 2
 
     def test_preserve_endpoints(self):
-        pts = np.column_stack([np.linspace(0, 10, 30), np.random.default_rng(0).random(30)])
+        pts = np.column_stack(
+            [np.linspace(0, 10, 30), np.random.default_rng(0).random(30)]
+        )
         s = dp_simplify(pts, tolerance=0.01)
         np.testing.assert_allclose(s[0], pts[0])
         np.testing.assert_allclose(s[-1], pts[-1])
 
     def test_zero_tolerance_keeps_all(self):
-        pts = np.column_stack([np.linspace(0, 5, 10), np.random.default_rng(1).random(10)])
+        pts = np.column_stack(
+            [np.linspace(0, 5, 10), np.random.default_rng(1).random(10)]
+        )
         s = dp_simplify(pts, tolerance=0.0)
         assert len(s) == len(pts)
 
@@ -169,24 +177,24 @@ class TestDPSimplify:
 # Triangle centroids
 # ==========================================================================
 
-class TestCentroids:
 
+class TestCentroids:
     def test_single_triangle_centroid(self):
-        nodes = np.array([[0., 0.], [3., 0.], [0., 3.]])
+        nodes = np.array([[0.0, 0.0], [3.0, 0.0], [0.0, 3.0]])
         elems = np.array([[1, 2, 3]])
         c = triangle_centroids(nodes, elems)
         assert c.shape == (1, 2)
         np.testing.assert_allclose(c[0], [1.0, 1.0])
 
     def test_triangle_area(self):
-        nodes = np.array([[0., 0.], [1., 0.], [0., 1.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
         elems = np.array([[1, 2, 3]])
         a = triangle_areas(nodes, elems)
         assert a.shape == (1,)
         np.testing.assert_allclose(a[0], 0.5)
 
     def test_get_centroids_one_region(self):
-        nodes = np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
         elems = np.array([[1, 2, 3], [2, 4, 3]])
         tri_idx = np.array([1, 1])
         c = get_centroids(nodes, elems, tri_idx)
@@ -194,14 +202,16 @@ class TestCentroids:
         np.testing.assert_allclose(c[0, 2], 1.0)  # total area = 0.5 + 0.5
 
     def test_get_centroids_two_regions(self):
-        nodes = np.array([[0., 0.], [1., 0.], [2., 0.], [0., 1.], [2., 1.]])
+        nodes = np.array(
+            [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [0.0, 1.0], [2.0, 1.0]]
+        )
         elems = np.array([[1, 2, 4], [2, 3, 5]])
         tri_idx = np.array([1, 2])
         c = get_centroids(nodes, elems, tri_idx)
         assert c.shape == (2, 3)
 
     def test_0based_vs_1based_consistent(self):
-        nodes = np.array([[0., 0.], [1., 0.], [0., 1.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
         e0 = np.array([[0, 1, 2]])
         e1 = np.array([[1, 2, 3]])
         c0 = triangle_centroids(nodes, e0)
@@ -213,8 +223,8 @@ class TestCentroids:
 # UTM conversion
 # ==========================================================================
 
-class TestUTM:
 
+class TestUTM:
     def test_lonlat_to_utm_zone(self):
         _, _, zone, sh = lonlat_to_utm(np.array([-70.0]), np.array([42.0]))
         assert zone == 19
@@ -235,7 +245,9 @@ class TestUTM:
         assert sh
 
     def test_forced_zone(self):
-        _, _, zone, _ = lonlat_to_utm(np.array([10.0]), np.array([50.0]), zone=32)
+        _, _, zone, _ = lonlat_to_utm(
+            np.array([10.0]), np.array([50.0]), zone=32
+        )
         assert zone == 32
 
 
@@ -243,8 +255,8 @@ class TestUTM:
 # estimate_area_of_interest
 # ==========================================================================
 
-class TestAreaOfInterest:
 
+class TestAreaOfInterest:
     def _make_mt_em(self, y_positions: np.ndarray) -> EMDataFile:
         em = EMDataFile()
         n = len(y_positions)
@@ -296,13 +308,13 @@ class TestAreaOfInterest:
 # get_line_orientation / project_onto_line
 # ==========================================================================
 
-class TestLineOrientation:
 
+class TestLineOrientation:
     def test_north_south_profile(self):
         n = np.array([0.0, 1000.0, 2000.0])
         e = np.zeros(3)
         ori = get_line_orientation(n, e)
-        assert abs(ori) < 1.0   # 0° → N-S
+        assert abs(ori) < 1.0  # 0° → N-S
 
     def test_east_west_profile(self):
         n = np.zeros(3)
@@ -319,8 +331,9 @@ class TestLineOrientation:
     def test_project_onto_ns_line(self):
         n = np.array([0.0, 1000.0, 2000.0])
         e = np.zeros(3)
-        x, y = project_onto_line(n, e, utm0_north=0.0, utm0_east=0.0,
-                                  line_orientation=0.0)
+        x, y = project_onto_line(
+            n, e, utm0_north=0.0, utm0_east=0.0, line_orientation=0.0
+        )
         # Along N-S profile, y should be northing
         np.testing.assert_allclose(y, n, atol=1.0)
 
@@ -336,10 +349,10 @@ class TestLineOrientation:
 # simplify_poly
 # ==========================================================================
 
-class TestSimplifyPoly:
 
+class TestSimplifyPoly:
     def test_collinear_chain_reduced(self):
-        nodes = np.array([[0., 0.], [1., 0.], [2., 0.], [3., 0.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0]])
         adj = np.zeros((4, 4))
         adj[0, 1] = adj[1, 0] = 1
         adj[1, 2] = adj[2, 1] = 1
@@ -351,7 +364,7 @@ class TestSimplifyPoly:
         np.testing.assert_allclose(n_out[1], [3.0, 0.0])
 
     def test_non_collinear_preserved(self):
-        nodes = np.array([[0., 0.], [1., 0.], [1., 1.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]])
         adj = np.zeros((3, 3))
         adj[0, 1] = adj[1, 0] = 1
         adj[1, 2] = adj[2, 1] = 1
@@ -359,7 +372,7 @@ class TestSimplifyPoly:
         assert len(n_out) == 3  # none removed: corner at node 1
 
     def test_self_loops_removed(self):
-        nodes = np.array([[0., 0.], [1., 0.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0]])
         adj = np.diag([1.0, 1.0])  # self-connected
         adj[0, 1] = adj[1, 0] = 1
         n_out, a_out = simplify_poly(nodes, adj)
@@ -367,7 +380,7 @@ class TestSimplifyPoly:
         assert np.count_nonzero(a_out) > 0
 
     def test_isolated_nodes_preserved(self):
-        nodes = np.array([[0., 0.], [1., 0.], [5., 5.]])
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [5.0, 5.0]])
         adj = np.zeros((3, 3))
         adj[0, 1] = adj[1, 0] = 1
         # Node 2 is isolated

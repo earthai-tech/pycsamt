@@ -24,22 +24,28 @@ predicted layer models against the truth.
 # + phase at each frequency) and the target parameters ``y``
 # (log10 resistivity and thickness per layer).
 
+# Use the predicted-vs-true model grid (4th figure) as the thumbnail.
+# sphinx_gallery_thumbnail_number = 4
+import os
+
 import numpy as np
 
 from pycsamt.forward.batch import generate_dataset
-
-# Use the predicted-vs-true model grid (4th figure) as the thumbnail.
-# sphinx_gallery_thumbnail_number = 4
-
-import os
 
 # Train lighter while building the docs (PYCSAMT_DOCS_BUILD is set by the Sphinx
 # build); full strength when the example is run directly.
 _DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
 FREQS = np.logspace(-1, 3, 24)
-ds = generate_dataset(solver="mt1d", n_samples=256 if _DOCS else 1200, freqs=FREQS,
-                      n_layers=4, noise_level=0.05, seed=0, verbose=False)
+ds = generate_dataset(
+    solver="mt1d",
+    n_samples=256 if _DOCS else 1200,
+    freqs=FREQS,
+    n_layers=4,
+    noise_level=0.05,
+    seed=0,
+    verbose=False,
+)
 print(ds)
 print("X (responses):", ds.X.shape, " y (model params):", ds.y.shape)
 
@@ -56,8 +62,10 @@ print("train/val/test:", train.X.shape[0], val.X.shape[0], test.X.shape[0])
 import matplotlib.pyplot as plt
 
 n_layers = 4
-rho = ds.y[:, :n_layers]              # log10 resistivity per layer
-fig, (axm, axr) = plt.subplots(1, 2, figsize=(11, 4.0), constrained_layout=True)
+rho = ds.y[:, :n_layers]  # log10 resistivity per layer
+fig, (axm, axr) = plt.subplots(
+    1, 2, figsize=(11, 4.0), constrained_layout=True
+)
 axm.hist(rho.ravel(), bins=40, color="#2563eb", alpha=0.8)
 axm.set_xlabel(r"$\log_{10}\rho$  ($\Omega\cdot$m)")
 axm.set_ylabel("count")
@@ -84,8 +92,12 @@ from pycsamt.ai.inversion.inv1d import EMInverter1D
 
 inv = EMInverter1D(arch="cnn1d", n_layers=4, solver="mt1d")
 inv.fit(train, epochs=6 if _DOCS else 25, batch_size=64, verbose=False)
-print("final train loss:", f"{inv._history['train_loss'][-1]:.4f}",
-      " val loss:", f"{inv._history['val_loss'][-1]:.4f}")
+print(
+    "final train loss:",
+    f"{inv._history['train_loss'][-1]:.4f}",
+    " val loss:",
+    f"{inv._history['val_loss'][-1]:.4f}",
+)
 
 # %%
 # Convergence
@@ -96,8 +108,9 @@ print("final train loss:", f"{inv._history['train_loss'][-1]:.4f}",
 
 from pycsamt.ai.plot import plot_convergence
 
-fig = plot_convergence(inv._history, smoothing=0.2,
-                       title="1-D CNN inverter — convergence")
+fig = plot_convergence(
+    inv._history, smoothing=0.2, title="1-D CNN inverter — convergence"
+)
 
 # %%
 # Validate predicted models
@@ -111,8 +124,12 @@ fig = plot_convergence(inv._history, smoothing=0.2,
 from pycsamt.ai.plot import plot_compare, plot_profile_pair
 
 y_pred = inv.predict(test.X)
-fig = plot_compare(test.y[:12], y_pred[:12], n_cols=4,
-                   title="Predicted vs true layer models (held-out test set)")
+fig = plot_compare(
+    test.y[:12],
+    y_pred[:12],
+    n_cols=4,
+    title="Predicted vs true layer models (held-out test set)",
+)
 
 # %%
 # A single sounding, larger

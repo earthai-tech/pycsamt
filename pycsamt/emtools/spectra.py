@@ -58,6 +58,7 @@ Quick start
     # apparent resistivity + phase recovered from spectra
     plot_z_from_spectra(sp)
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -102,14 +103,18 @@ __all__ = [
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _x_vals(fr: np.ndarray) -> np.ndarray:
     return PYCSAMT_CONTROL.x.transform(fr)
+
 
 def _x_label() -> str:
     return PYCSAMT_CONTROL.x.label()
 
+
 def _x_log() -> bool:
     return PYCSAMT_CONTROL.x.use_log_scale()
+
 
 def _spine_style(ax: Axes) -> None:
     ax.grid(True, which="both", ls=":", lw=0.4, color="0.75", zorder=0)
@@ -181,6 +186,7 @@ def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
 # Analysis — returns arrays / DataFrames
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def coherence_matrix(sp: Any) -> np.ndarray:
     r"""Compute the inter-channel coherence matrix.
 
@@ -201,11 +207,11 @@ def coherence_matrix(sp: Any) -> np.ndarray:
         Real-valued coherence matrix per frequency, values in [0, 1].
     """
     _check_spectra(sp)
-    S = sp.S                                            # (nf, nc, nc)
-    S_diag = np.real(np.diagonal(S, axis1=1, axis2=2)) # (nf, nc)
+    S = sp.S  # (nf, nc, nc)
+    S_diag = np.real(np.diagonal(S, axis1=1, axis2=2))  # (nf, nc)
     denom = (
         S_diag[:, :, np.newaxis] * S_diag[:, np.newaxis, :]
-    )                                                   # (nf, nc, nc)
+    )  # (nf, nc, nc)
     with np.errstate(divide="ignore", invalid="ignore"):
         coh = np.abs(S) ** 2 / np.maximum(denom, 1e-40)
     coh = np.clip(np.real(coh), 0.0, 1.0)
@@ -244,15 +250,18 @@ def psd_table(
                     psd = psd / mx
             lab = _chan_label(sp, ch)
             for fi, f in enumerate(sp.freq):
-                rows.append({
-                    "station": name,
-                    "freq":    float(f),
-                    "period":  float(1.0 / f) if f > 0 else np.nan,
-                    "channel": lab,
-                    "psd":     float(psd[fi]),
-                })
-    df = pd.DataFrame(rows, columns=["station", "freq", "period",
-                                      "channel", "psd"])
+                rows.append(
+                    {
+                        "station": name,
+                        "freq": float(f),
+                        "period": float(1.0 / f) if f > 0 else np.nan,
+                        "channel": lab,
+                        "psd": float(psd[fi]),
+                    }
+                )
+    df = pd.DataFrame(
+        rows, columns=["station", "freq", "period", "channel", "psd"]
+    )
 
     return maybe_wrap_frame(
         df,
@@ -287,25 +296,36 @@ def coherence_table(
     rows = []
     for name, sp in _sp_to_dict(sp_input).items():
         _check_spectra(sp)
-        coh = coherence_matrix(sp)             # (nf, nc, nc)
+        coh = coherence_matrix(sp)  # (nf, nc, nc)
         prs = _resolve_pairs(sp, pairs)
         for i, j in prs:
             li = _chan_label(sp, i)
             lj = _chan_label(sp, j)
             label = f"{li}-{lj}"
             for fi, f in enumerate(sp.freq):
-                rows.append({
-                    "station":   name,
-                    "freq":      float(f),
-                    "period":    float(1.0 / f) if f > 0 else np.nan,
-                    "ch_i":      li,
-                    "ch_j":      lj,
-                    "pair":      label,
-                    "coherence": float(coh[fi, i, j]),
-                })
-    df = pd.DataFrame(rows, columns=[
-        "station", "freq", "period", "ch_i", "ch_j", "pair", "coherence"
-    ])
+                rows.append(
+                    {
+                        "station": name,
+                        "freq": float(f),
+                        "period": float(1.0 / f) if f > 0 else np.nan,
+                        "ch_i": li,
+                        "ch_j": lj,
+                        "pair": label,
+                        "coherence": float(coh[fi, i, j]),
+                    }
+                )
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "station",
+            "freq",
+            "period",
+            "ch_i",
+            "ch_j",
+            "pair",
+            "coherence",
+        ],
+    )
 
     return maybe_wrap_frame(
         df,
@@ -347,10 +367,10 @@ def snr_table(
     df = coherence_table(sp_input, pairs=pairs)
     g2 = df["coherence"].to_numpy(dtype=float)
     with np.errstate(divide="ignore", invalid="ignore"):
-        snr    = g2 / np.maximum(1.0 - g2, 1e-12)
+        snr = g2 / np.maximum(1.0 - g2, 1e-12)
         snr_db = 10.0 * np.log10(np.maximum(snr, 1e-12))
     df = df.copy()
-    df["snr"]    = snr
+    df["snr"] = snr
     df["snr_db"] = snr_db
 
     return maybe_wrap_frame(
@@ -395,14 +415,14 @@ def band_select(
         )
     idx = np.where(mask)[0]
     out = _Spectra(name=sp.name)
-    out._freq    = sp.freq[idx].copy()
-    out._S       = sp.S[idx].copy()
-    out.bw       = sp.bw[idx].copy()
-    out.avgt     = sp.avgt[idx].copy()
-    out.avgf     = sp.avgf[idx].copy()
-    out.rotspec  = sp.rotspec[idx].copy()
-    out.segnum   = sp.segnum[idx].copy()
-    out.band     = [sp.band[k] for k in idx.tolist()]
+    out._freq = sp.freq[idx].copy()
+    out._S = sp.S[idx].copy()
+    out.bw = sp.bw[idx].copy()
+    out.avgt = sp.avgt[idx].copy()
+    out.avgf = sp.avgf[idx].copy()
+    out.rotspec = sp.rotspec[idx].copy()
+    out.segnum = sp.segnum[idx].copy()
+    out.band = [sp.band[k] for k in idx.tolist()]
     out.chan_ids = list(sp.chan_ids)
     out.id_to_chtype = dict(sp.id_to_chtype)
     return out
@@ -434,7 +454,7 @@ def mask_low_coherence(
         ``True`` where coherence is acceptable.
     """
     _check_spectra(sp)
-    coh = coherence_matrix(sp)          # (nf, nc, nc)
+    coh = coherence_matrix(sp)  # (nf, nc, nc)
     prs = _resolve_pairs(sp, pairs)
     flags = np.zeros((sp.n_freq, len(prs)), dtype=bool)
     for k, (i, j) in enumerate(prs):
@@ -456,16 +476,16 @@ def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
     pd.DataFrame
     """
     _check_spectra(sp)
-    coh  = coherence_matrix(sp)                          # (nf, nc, nc)
-    psd  = np.real(np.diagonal(sp.S, axis1=1, axis2=2)) # (nf, nc)
+    coh = coherence_matrix(sp)  # (nf, nc, nc)
+    psd = np.real(np.diagonal(sp.S, axis1=1, axis2=2))  # (nf, nc)
 
     rows = []
     for fi, f in enumerate(sp.freq):
         row: dict = {
-            "freq":    float(f),
-            "period":  float(1.0 / f) if f > 0 else np.nan,
-            "bw":      float(sp.bw[fi]),
-            "avgt":    float(sp.avgt[fi]),
+            "freq": float(f),
+            "period": float(1.0 / f) if f > 0 else np.nan,
+            "bw": float(sp.bw[fi]),
+            "avgt": float(sp.avgt[fi]),
             "rotspec": float(sp.rotspec[fi]),
         }
         for ch in range(sp.n_chan):
@@ -474,8 +494,9 @@ def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
         # mean coherence over all pairs at this frequency
         nc = sp.n_chan
         if nc > 1:
-            pairs_val = [coh[fi, i, j]
-                         for i in range(nc) for j in range(i + 1, nc)]
+            pairs_val = [
+                coh[fi, i, j] for i in range(nc) for j in range(i + 1, nc)
+            ]
             row["mean_coherence"] = float(np.nanmean(pairs_val))
         rows.append(row)
 
@@ -494,6 +515,7 @@ def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualisation — plot functions
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_psd(
     sp: Any,
@@ -533,14 +555,16 @@ def plot_psd(
     """
     _check_spectra(sp)
     _ml = PYCSAMT_STYLE.multiline
-    if lw    is _UNSET: lw    = _ml.lw
-    if alpha is _UNSET: alpha = _ml.alpha
+    if lw is _UNSET:
+        lw = _ml.lw
+    if alpha is _UNSET:
+        alpha = _ml.alpha
 
-    nc   = sp.n_chan
-    chs  = list(channels) if channels is not None else list(range(nc))
+    nc = sp.n_chan
+    chs = list(channels) if channels is not None else list(range(nc))
     cols = _ml.colors(len(chs))
-    psd  = np.real(np.diagonal(sp.S, axis1=1, axis2=2))  # (nf, nc)
-    x    = _x_vals(sp.freq)
+    psd = np.real(np.diagonal(sp.S, axis1=1, axis2=2))  # (nf, nc)
+    x = _x_vals(sp.freq)
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize, constrained_layout=True)
@@ -558,8 +582,11 @@ def plot_psd(
     ylabel = r"$\log_{10}$PSD" if log_psd else "PSD"
     ax.set_ylabel(ylabel, fontsize=9)
     ax.legend(fontsize=8, framealpha=0.8)
-    ax.set_title(title or f"Power spectral density  —  {sp.name or 'site'}",
-                 fontsize=10, pad=6)
+    ax.set_title(
+        title or f"Power spectral density  —  {sp.name or 'site'}",
+        fontsize=10,
+        pad=6,
+    )
     _spine_style(ax)
     return ax
 
@@ -601,12 +628,14 @@ def plot_coherence(
     """
     _check_spectra(sp)
     _ml = PYCSAMT_STYLE.multiline
-    if lw    is _UNSET: lw    = _ml.lw
-    if alpha is _UNSET: alpha = _ml.alpha
+    if lw is _UNSET:
+        lw = _ml.lw
+    if alpha is _UNSET:
+        alpha = _ml.alpha
 
-    coh  = coherence_matrix(sp)
-    prs  = _resolve_pairs(sp, pairs)
-    n    = len(prs)
+    coh = coherence_matrix(sp)
+    prs = _resolve_pairs(sp, pairs)
+    n = len(prs)
     if n == 0:
         raise ValueError("No channel pairs available.")
 
@@ -625,18 +654,22 @@ def plot_coherence(
         axs = np.asarray(axes_given, dtype=object)
         fig = axs[0].figure
     cols = _ml.colors(n)
-    x    = _x_vals(sp.freq)
+    x = _x_vals(sp.freq)
 
     for ki, (i, j) in enumerate(prs):
-        ax  = axs[ki]
-        li  = _chan_label(sp, i)
-        lj  = _chan_label(sp, j)
-        y   = coh[:, i, j]
-        ax.plot(x, y, color=cols[ki], lw=lw, alpha=alpha,
-                label=f"{li}-{lj}")
+        ax = axs[ki]
+        li = _chan_label(sp, i)
+        lj = _chan_label(sp, j)
+        y = coh[:, i, j]
+        ax.plot(x, y, color=cols[ki], lw=lw, alpha=alpha, label=f"{li}-{lj}")
         if show_threshold:
-            ax.axhline(threshold, ls="--", lw=0.8, color="0.5",
-                       label=f"thr={threshold}")
+            ax.axhline(
+                threshold,
+                ls="--",
+                lw=0.8,
+                color="0.5",
+                label=f"thr={threshold}",
+            )
         ax.set_ylim(-0.05, 1.05)
         if _x_log():
             ax.set_xscale("log")
@@ -652,7 +685,8 @@ def plot_coherence(
 
     fig.suptitle(
         title or f"Coherence  —  {sp.name or 'site'}",
-        fontsize=10, y=1.01,
+        fontsize=10,
+        y=1.01,
     )
     return axs[:n]
 
@@ -694,8 +728,8 @@ def plot_spectra_matrix(
     fig : Figure
     """
     _check_spectra(sp)
-    nc   = sp.n_chan
-    M    = sp.S[freq_idx]      # (nc, nc) complex
+    nc = sp.n_chan
+    M = sp.S[freq_idx]  # (nc, nc) complex
     freq = sp.freq[freq_idx]
 
     if quantity == "abs":
@@ -736,19 +770,32 @@ def plot_spectra_matrix(
     im = ax.imshow(data, cmap=cmap, aspect="equal", origin="upper")
     add_colorbar(im, ax, label=cb_label, size="4%", pad=0.04)
 
-    ax.set_xticks(range(nc)); ax.set_xticklabels(labels, fontsize=8)
-    ax.set_yticks(range(nc)); ax.set_yticklabels(labels, fontsize=8)
+    ax.set_xticks(range(nc))
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_yticks(range(nc))
+    ax.set_yticklabels(labels, fontsize=8)
 
     # annotate cells
     for r in range(nc):
         for c in range(nc):
-            ax.text(c, r, f"{data[r, c]:.2g}",
-                    ha="center", va="center", fontsize=6.5, color="0.2")
+            ax.text(
+                c,
+                r,
+                f"{data[r, c]:.2g}",
+                ha="center",
+                va="center",
+                fontsize=6.5,
+                color="0.2",
+            )
 
     ax.set_title(
-        title or (f"Spectral matrix  —  {sp.name or 'site'}  "
-                  f"f = {freq:.4g} Hz  [{quantity}]"),
-        fontsize=10, pad=6,
+        title
+        or (
+            f"Spectral matrix  —  {sp.name or 'site'}  "
+            f"f = {freq:.4g} Hz  [{quantity}]"
+        ),
+        fontsize=10,
+        pad=6,
     )
     return fig
 
@@ -801,10 +848,10 @@ def plot_z_from_spectra(
 
     _st = PYCSAMT_STYLE.mt
     freqs = z_obj.freq
-    x     = _x_vals(freqs)
-    rho   = z_obj.resistivity   # (nf, 2, 2)
-    phi   = z_obj.phase         # (nf, 2, 2)
-    z_err = z_obj.z_err         # None or (nf, 2, 2)
+    x = _x_vals(freqs)
+    rho = z_obj.resistivity  # (nf, 2, 2)
+    phi = z_obj.phase  # (nf, 2, 2)
+    z_err = z_obj.z_err  # None or (nf, 2, 2)
 
     axes_given = _axes_list(axes, 2)
     if axes_given is None:
@@ -828,13 +875,17 @@ def plot_z_from_spectra(
 
         if show_error and z_err is not None:
             # propagate |Z| error to log-rho error ≈ 2Δ|Z|/|Z| / ln10
-            z_c      = z_obj.z[:, r, c]
-            z_err_c  = z_err[:, r, c]
-            rel      = np.abs(z_err_c) / (np.abs(z_c) + 1e-24)
-            drho     = 2.0 * rel / np.log(10.0)
+            z_c = z_obj.z[:, r, c]
+            z_err_c = z_err[:, r, c]
+            rel = np.abs(z_err_c) / (np.abs(z_c) + 1e-24)
+            drho = 2.0 * rel / np.log(10.0)
             ax_r.fill_between(
-                x, rho_c - drho, rho_c + drho,
-                color=sty.color, alpha=0.15, linewidth=0,
+                x,
+                rho_c - drho,
+                rho_c + drho,
+                color=sty.color,
+                alpha=0.15,
+                linewidth=0,
             )
 
     for ax in (ax_r, ax_p):
@@ -853,7 +904,8 @@ def plot_z_from_spectra(
 
     fig.suptitle(
         title or f"Z from spectra  —  {sp.name or 'site'}",
-        fontsize=11, y=1.02,
+        fontsize=11,
+        y=1.02,
     )
     return fig
 
@@ -899,20 +951,28 @@ def plot_tipper_from_spectra(
     if tip is None:
         axes_given = _axes_list(axes, 2) if axes is not None else None
         if axes_given is None:
-            _, axs = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+            _, axs = plt.subplots(
+                1, 2, figsize=figsize, constrained_layout=True
+            )
         else:
             axs = axes_given
         for ax in axs:
-            ax.text(0.5, 0.5, "No tipper (HZ not found)",
-                    ha="center", va="center", transform=ax.transAxes,
-                    fontsize=10, color="0.5")
+            ax.text(
+                0.5,
+                0.5,
+                "No tipper (HZ not found)",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=10,
+                color="0.5",
+            )
             _spine_style(ax)
         return np.array(axs)
 
-    x      = _x_vals(tip.freq)
-    T      = tip.tipper[:, 0, :]   # (nf, 2)  — Tx, Ty
-    T_err  = (tip.tipper_err[:, 0, :] if tip.tipper_err is not None
-              else None)
+    x = _x_vals(tip.freq)
+    T = tip.tipper[:, 0, :]  # (nf, 2)  — Tx, Ty
+    T_err = tip.tipper_err[:, 0, :] if tip.tipper_err is not None else None
 
     axes_given = _axes_list(axes, 2)
     if axes_given is None:
@@ -929,17 +989,23 @@ def plot_tipper_from_spectra(
         ("T_y", T[:, 1], _st.yx),
     ]
     for lab, Tc, sty in specs:
-        amp   = np.abs(Tc)
+        amp = np.abs(Tc)
         phase = np.angle(Tc, deg=True)
-        kw    = sty.plot_kwargs(label=lab)
-        ax_a.plot(x, amp,   **kw)
+        kw = sty.plot_kwargs(label=lab)
+        ax_a.plot(x, amp, **kw)
         ax_p.plot(x, phase, **kw)
 
         if show_error and T_err is not None:
             idx = 0 if lab == "T_x" else 1
             err = np.abs(T_err[:, idx])
-            ax_a.fill_between(x, amp - err, amp + err,
-                              color=sty.color, alpha=0.15, linewidth=0)
+            ax_a.fill_between(
+                x,
+                amp - err,
+                amp + err,
+                color=sty.color,
+                alpha=0.15,
+                linewidth=0,
+            )
 
     for ax in (ax_a, ax_p):
         _spine_style(ax)
@@ -955,7 +1021,8 @@ def plot_tipper_from_spectra(
 
     fig.suptitle(
         title or f"Tipper from spectra  —  {sp.name or 'site'}",
-        fontsize=11, y=1.02,
+        fontsize=11,
+        y=1.02,
     )
     return np.array([ax_a, ax_p])
 
@@ -998,14 +1065,14 @@ def plot_psd_section(
     ax : Axes
     """
     sp_dict = _sp_to_dict(sp_input)
-    names   = list(sp_dict.keys())
-    sps     = list(sp_dict.values())
+    names = list(sp_dict.keys())
+    sps = list(sp_dict.values())
 
     # common log-frequency grid (intersection)
     all_freqs = [s.freq for s in sps]
     f_min = max(float(f.min()) for f in all_freqs)
     f_max = min(float(f.max()) for f in all_freqs)
-    n_f   = max(len(f) for f in all_freqs)
+    n_f = max(len(f) for f in all_freqs)
     f_grid = np.logspace(np.log10(f_min), np.log10(f_max), n_f)
 
     # build PSD matrix (n_stations, n_freqs)
@@ -1019,9 +1086,9 @@ def plot_psd_section(
         )
 
     data = np.log10(np.maximum(matrix, 1e-40)) if log_psd else matrix
-    y    = np.log10(1.0 / f_grid)              # log10(period)
+    y = np.log10(1.0 / f_grid)  # log10(period)
 
-    sty  = _resolve_section_style(section)
+    sty = _resolve_section_style(section)
     if figsize is None:
         figsize = sty.figsize_for(n_stations=len(sps), n_y=n_f)
 
@@ -1031,21 +1098,28 @@ def plot_psd_section(
         ax.get_figure()
 
     # pixel edges
-    st_x    = np.arange(len(sps), dtype=float)
+    st_x = np.arange(len(sps), dtype=float)
     dx_half = 0.5
     x_edges = np.r_[st_x[0] - dx_half, st_x + dx_half]
     if len(y) > 1:
         dy = np.abs(np.diff(y)) / 2.0
         sgn = np.sign(np.diff(y))
-        y_edges = np.r_[y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]]
+        y_edges = np.r_[
+            y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]
+        ]
     else:
         y_edges = np.r_[y[0] - 0.2, y[0] + 0.2]
 
     pc = ax.pcolormesh(
-        x_edges, y_edges, data.T,
-        cmap=cmap, shading="flat", vmin=vmin, vmax=vmax,
+        x_edges,
+        y_edges,
+        data.T,
+        cmap=cmap,
+        shading="flat",
+        vmin=vmin,
+        vmax=vmax,
     )
-    cb_label = (r"$\log_{10}$PSD" if log_psd else "PSD")
+    cb_label = r"$\log_{10}$PSD" if log_psd else "PSD"
     sty.add_colorbar(pc, ax, label=cb_label)
 
     sty.apply_axis(ax, xlabel="Station", ylabel=r"$\log_{10}T$ (s)")
@@ -1057,7 +1131,8 @@ def plot_psd_section(
     chan_lab = _chan_label(sps[0], channel)
     ax.set_title(
         title or f"PSD pseudo-section  —  channel {chan_lab}",
-        fontsize=10, pad=6,
+        fontsize=10,
+        pad=6,
     )
     _spine_style(ax)
     return ax
@@ -1099,25 +1174,25 @@ def plot_coherence_section(
     ax : Axes
     """
     sp_dict = _sp_to_dict(sp_input)
-    names   = list(sp_dict.keys())
-    sps     = list(sp_dict.values())
+    names = list(sp_dict.keys())
+    sps = list(sp_dict.values())
 
     # common grid
     all_freqs = [s.freq for s in sps]
     f_min = max(float(f.min()) for f in all_freqs)
     f_max = min(float(f.max()) for f in all_freqs)
-    n_f   = max(len(f) for f in all_freqs)
+    n_f = max(len(f) for f in all_freqs)
     f_grid = np.logspace(np.log10(f_min), np.log10(f_max), n_f)
 
     matrix = np.full((len(sps), n_f), np.nan)
     for si, sp in enumerate(sps):
         coh_m = coherence_matrix(sp)  # (nf, nc, nc)
-        nc    = sp.n_chan
+        nc = sp.n_chan
         if pair is not None:
             i, j = pair
             coh_1d = coh_m[:, i, j]
         else:
-            prs   = [(i, j) for i in range(nc) for j in range(i + 1, nc)]
+            prs = [(i, j) for i in range(nc) for j in range(i + 1, nc)]
             coh_1d = np.nanmean([coh_m[:, i, j] for i, j in prs], axis=0)
 
         matrix[si] = np.interp(
@@ -1137,27 +1212,37 @@ def plot_coherence_section(
     else:
         ax.get_figure()
 
-    st_x    = np.arange(len(sps), dtype=float)
+    st_x = np.arange(len(sps), dtype=float)
     dx_half = 0.5
     x_edges = np.r_[st_x[0] - dx_half, st_x + dx_half]
     if len(y) > 1:
-        dy  = np.abs(np.diff(y)) / 2.0
+        dy = np.abs(np.diff(y)) / 2.0
         sgn = np.sign(np.diff(y))
-        y_edges = np.r_[y[0] - dy[0], y[:-1] + sgn * dy,
-                        y[-1] + sgn[-1] * dy[-1]]
+        y_edges = np.r_[
+            y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]
+        ]
     else:
         y_edges = np.r_[y[0] - 0.2, y[0] + 0.2]
 
     pc = ax.pcolormesh(
-        x_edges, y_edges, matrix.T,
-        cmap=cmap, shading="flat", vmin=0.0, vmax=1.0,
+        x_edges,
+        y_edges,
+        matrix.T,
+        cmap=cmap,
+        shading="flat",
+        vmin=0.0,
+        vmax=1.0,
     )
     sty.add_colorbar(pc, ax, label=r"$\gamma^2$")
 
     if show_threshold and matrix.shape[1] > 1:
         ax.contour(
-            st_x, y, matrix.T,
-            levels=[threshold], colors=["k"], linewidths=0.8,
+            st_x,
+            y,
+            matrix.T,
+            levels=[threshold],
+            colors=["k"],
+            linewidths=0.8,
             linestyles=["--"],
         )
 
@@ -1167,11 +1252,13 @@ def plot_coherence_section(
 
     sty.apply_stations(ax, st_x, names)
 
-    pair_str = (f"ch{pair[0]}-ch{pair[1]}" if pair is not None
-                else "mean all pairs")
+    pair_str = (
+        f"ch{pair[0]}-ch{pair[1]}" if pair is not None else "mean all pairs"
+    )
     ax.set_title(
         title or f"Coherence pseudo-section  —  {pair_str}",
-        fontsize=10, pad=6,
+        fontsize=10,
+        pad=6,
     )
     _spine_style(ax)
     return ax

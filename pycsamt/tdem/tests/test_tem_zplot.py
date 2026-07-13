@@ -14,12 +14,7 @@ from pycsamt.tdem import (
 )
 from pycsamt.tdem.io import read_tem_z
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 Z_FILE = DATA_DIR / "TEM100.Z"
 
 pytestmark = pytest.mark.skipif(

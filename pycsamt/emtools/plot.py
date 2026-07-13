@@ -22,6 +22,7 @@ from ._core import (
 
 # ------------------------------- helpers -------------------------------- #
 
+
 def _style_col() -> dict:
     """Return component → color dict from the current PYCSAMT_STYLE.mt."""
     mt = PYCSAMT_STYLE.mt
@@ -43,18 +44,23 @@ _COL = {
 
 _IDX = {"x": 0, "y": 1}
 
+
 def _comp_slice(z: np.ndarray, comp: str) -> np.ndarray:
     a, b = _IDX[comp[0]], _IDX[comp[1]]
     return z[:, a, b]
 
+
 def _phase_deg(z: np.ndarray) -> np.ndarray:
     return np.degrees(np.angle(z))
+
 
 def _wrap_phase(ph: np.ndarray, rng: tuple[float, float]) -> np.ndarray:
     return wrap_phase(ph, rng)
 
+
 def _rhoa_from(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     return (0.2 * (np.abs(z) ** 2)) / (fr + 1e-24)
+
 
 def _err_log10_rhoa(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
@@ -64,6 +70,7 @@ def _err_log10_rhoa(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     m = np.abs(z) + 1e-24
     return (2.0 / np.log(10.0)) * (s / m)
 
+
 def _err_log10_mag(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
         return None
@@ -71,6 +78,7 @@ def _err_log10_mag(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     s = np.abs(ze)
     m = np.abs(z) + 1e-24
     return s / (m * np.log(10.0))
+
 
 def _err_phase_deg(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     if ze is None:
@@ -81,8 +89,9 @@ def _err_phase_deg(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     return np.degrees(s / m)
 
 
-def _err_rhoa(z: np.ndarray, ze: np.ndarray | None,
-              fr: np.ndarray) -> np.ndarray | None:
+def _err_rhoa(
+    z: np.ndarray, ze: np.ndarray | None, fr: np.ndarray
+) -> np.ndarray | None:
     """Return approximate apparent-resistivity uncertainty."""
     if ze is None:
         return None
@@ -90,6 +99,7 @@ def _err_rhoa(z: np.ndarray, ze: np.ndarray | None,
     s = np.abs(ze)
     m = np.abs(z) + 1e-24
     return rho * 2.0 * s / m
+
 
 def _pick(axs, i, j):
     return axs[i * 2 + j]
@@ -195,7 +205,9 @@ def _errorbar_from_style(
     show_error_bars: bool = True,
 ):
     """Draw a styled errorbar curve."""
-    kwargs = style.errorbar_kwargs() if hasattr(style, "errorbar_kwargs") else {}
+    kwargs = (
+        style.errorbar_kwargs() if hasattr(style, "errorbar_kwargs") else {}
+    )
     if color is not None:
         kwargs["color"] = color
         kwargs["ecolor"] = color
@@ -232,7 +244,9 @@ def _errorbar_from_style(
     )
 
 
-def _axes_group_bounds(axes: list[plt.Axes]) -> tuple[float, float, float, float]:
+def _axes_group_bounds(
+    axes: list[plt.Axes],
+) -> tuple[float, float, float, float]:
     """Return figure-coordinate bounds for a group of axes."""
     boxes = [ax.get_position() for ax in axes]
     left = min(box.x0 for box in boxes)
@@ -334,12 +348,13 @@ def _raw_label_mode(
 
 # ------------------------------ main plot -------------------------------- #
 
+
 def plot_sites_panels(
     sites: Any,
     *,
     components: tuple[str, ...] = ("xy", "yx"),
-    quantity: str = "rhoa",          # rhoa|impedance
-    x_axis: str = "period",          # period|frequency
+    quantity: str = "rhoa",  # rhoa|impedance
+    x_axis: str = "period",  # period|frequency
     phase_range: tuple[float, float] | None = (-90.0, 90.0),
     stations: list[str] | None = None,
     ncols: int = 6,
@@ -349,10 +364,10 @@ def plot_sites_panels(
     axes=None,
     figsize_scale: tuple[float, float] = (2.6, 2.6),
     colors: dict[str, str] | None = None,  # None → from PYCSAMT_STYLE.mt
-    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
-    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
-    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
-    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
+    marker=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.marker
+    ms=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ms
+    lw=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.lw
+    ls=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ls
     show_error_bars: bool = True,
     show_legend: bool = False,
     title_fmt: str = "{station}",
@@ -367,10 +382,14 @@ def plot_sites_panels(
 ):
     # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
     _mt = PYCSAMT_STYLE.mt
-    if marker is _UNSET: marker = _mt.xy.marker
-    if ms     is _UNSET: ms     = _mt.xy.ms
-    if lw     is _UNSET: lw     = _mt.xy.lw
-    if ls     is _UNSET: ls     = _mt.xy.ls
+    if marker is _UNSET:
+        marker = _mt.xy.marker
+    if ms is _UNSET:
+        ms = _mt.xy.ms
+    if lw is _UNSET:
+        lw = _mt.xy.lw
+    if ls is _UNSET:
+        ls = _mt.xy.ls
 
     S = ensure_sites(
         sites,
@@ -408,9 +427,7 @@ def plot_sites_panels(
             figsize=(W * ncols, H * nrows),
             constrained_layout=False,
         )
-        outer = fig.add_gridspec(
-            nrows, ncols, wspace=wspace, hspace=hspace
-        )
+        outer = fig.add_gridspec(nrows, ncols, wspace=wspace, hspace=hspace)
         axs: list[plt.Axes] = []
         for k in range(nrows * ncols):
             r, c = divmod(k, ncols)
@@ -419,8 +436,10 @@ def plot_sites_panels(
                 gs = outer[r, c].subgridspec(
                     2, 1, hspace=0.02, height_ratios=height_ratio
                 )
-                ax1 = fig.add_subplot(gs[0]); ax1.axis("off")
-                ax2 = fig.add_subplot(gs[1]); ax2.axis("off")
+                ax1 = fig.add_subplot(gs[0])
+                ax1.axis("off")
+                ax2 = fig.add_subplot(gs[1])
+                ax2.axis("off")
                 axs += [ax1, ax2]
                 continue
             gs = outer[r, c].subgridspec(
@@ -441,7 +460,8 @@ def plot_sites_panels(
         x = (1.0 / fr) if x_axis == "period" else fr
         axR = _pick(axs, idx, 0)
         axP = _pick(axs, idx, 1)
-        axR.set_xscale("log"); axP.set_xscale("log")
+        axR.set_xscale("log")
+        axP.set_xscale("log")
         if grid:
             axR.grid(True, alpha=0.25, which="both")
             axP.grid(True, alpha=0.25, which="both")
@@ -463,8 +483,15 @@ def plot_sites_panels(
                 yerr = _err_log10_rhoa(zz, ee)
                 ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
             plot_errorbar(
-                axR, x, y, y_err=yerr, color=col,
-                marker=marker, ms=ms, ls=ls, lw=lw,
+                axR,
+                x,
+                y,
+                y_err=yerr,
+                color=col,
+                marker=marker,
+                ms=ms,
+                ls=ls,
+                lw=lw,
                 show_error_bars=show_error_bars,
             )
             # bottom: phase
@@ -472,8 +499,15 @@ def plot_sites_panels(
             if phase_range is not None:
                 ph = _wrap_phase(ph, phase_range)
             plot_errorbar(
-                axP, x, ph, y_err=_err_phase_deg(zz, ee),
-                color=col, marker=marker, ms=ms, ls=ls, lw=lw,
+                axP,
+                x,
+                ph,
+                y_err=_err_phase_deg(zz, ee),
+                color=col,
+                marker=marker,
+                ms=ms,
+                ls=ls,
+                lw=lw,
                 show_error_bars=False,  # phase bars optional; off
             )
         # cosmetics per panel
@@ -495,8 +529,7 @@ def plot_sites_panels(
             labs = [c.upper() for c in comps]
             handles = []
             for c in comps:
-                h = axR.plot([], [], color=cmap.get(c, "k"),
-                             ls=ls, lw=lw)[0]
+                h = axR.plot([], [], color=cmap.get(c, "k"), ls=ls, lw=lw)[0]
                 handles.append(h)
             axR.legend(handles, labs, ncol=len(labs), fontsize=8)
         axR.set_title(title_fmt.format(station=st), pad=4)
@@ -591,7 +624,9 @@ def plot_raw_sites_1d(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    )
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups, H * nrows),
@@ -626,10 +661,12 @@ def plot_raw_sites_1d(
         width = len(comps)
         for g in range(n):
             base = g * width * 2
-            panel_axes.append((
-                axes_given[base:base + width],
-                axes_given[base + width:base + 2 * width],
-            ))
+            panel_axes.append(
+                (
+                    axes_given[base : base + width],
+                    axes_given[base + width : base + 2 * width],
+                )
+            )
 
     for g, (station, ed) in enumerate(items):
         ax_rho, ax_phase = panel_axes[g]
@@ -762,7 +799,9 @@ def plot_raw_sites_1d(
         for comp in comps:
             style = _component_style(comp, raw, force_style)
             color = colors.get(comp) if colors else None
-            kwargs = style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
+            kwargs = (
+                style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
+            )
             if color is not None:
                 kwargs["color"] = color
             handles.append(plt.Line2D([], [], **kwargs))
@@ -1074,7 +1113,9 @@ def plot_response_tipper(
     axes_per_group = 2 * len(comps) + (
         len(tips) if tipper_span_group else len(tips) * len(comps)
     )
-    axes_given = _axes_list(axes, n * axes_per_group) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n * axes_per_group) if axes is not None else None
+    )
     groups: list[dict[str, Any]] = []
     if axes_given is None:
         fig = plt.figure(
@@ -1104,22 +1145,22 @@ def plot_response_tipper(
             tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
             for row, tip in enumerate(tips, start=2):
                 if tipper_span_group:
-                    tip_axes[tip] = fig.add_subplot(gs[row, :], sharex=ax_rho[0])
+                    tip_axes[tip] = fig.add_subplot(
+                        gs[row, :], sharex=ax_rho[0]
+                    )
                 else:
                     tip_axes[tip] = [
                         fig.add_subplot(gs[row, j], sharex=ax_rho[j])
                         for j in range(len(comps))
                     ]
-            groups.append(
-                {"rho": ax_rho, "phase": ax_phase, "tip": tip_axes}
-            )
+            groups.append({"rho": ax_rho, "phase": ax_phase, "tip": tip_axes})
     else:
         fig = axes_given[0].figure
         width = len(comps)
         for g in range(n):
             base = g * axes_per_group
-            ax_rho = axes_given[base:base + width]
-            ax_phase = axes_given[base + width:base + 2 * width]
+            ax_rho = axes_given[base : base + width]
+            ax_phase = axes_given[base + width : base + 2 * width]
             cursor = base + 2 * width
             tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
             for tip in tips:
@@ -1127,7 +1168,7 @@ def plot_response_tipper(
                     tip_axes[tip] = axes_given[cursor]
                     cursor += 1
                 else:
-                    tip_axes[tip] = axes_given[cursor:cursor + width]
+                    tip_axes[tip] = axes_given[cursor : cursor + width]
                     cursor += width
             groups.append({"rho": ax_rho, "phase": ax_phase, "tip": tip_axes})
 
@@ -1147,7 +1188,9 @@ def plot_response_tipper(
         if z is None or fr is None:
             flat_tip_axes = []
             for value in tip_axes.values():
-                flat_tip_axes.extend(value if isinstance(value, list) else [value])
+                flat_tip_axes.extend(
+                    value if isinstance(value, list) else [value]
+                )
             for ax in ax_rho + ax_phase + flat_tip_axes:
                 ax.axis("off")
             continue
@@ -1251,7 +1294,9 @@ def plot_response_tipper(
             terr = None
         if tipper is None or tfr is None:
             for tip, axes_obj in tip_axes.items():
-                axes_list = axes_obj if isinstance(axes_obj, list) else [axes_obj]
+                axes_list = (
+                    axes_obj if isinstance(axes_obj, list) else [axes_obj]
+                )
                 for ax in axes_list:
                     ax.text(
                         0.5,
@@ -1271,7 +1316,9 @@ def plot_response_tipper(
             terr_arr = terr if isinstance(terr, np.ndarray) else None
             for tip in tips:
                 axes_obj = tip_axes[tip]
-                axes_list = axes_obj if isinstance(axes_obj, list) else [axes_obj]
+                axes_list = (
+                    axes_obj if isinstance(axes_obj, list) else [axes_obj]
+                )
                 col = 0 if tip == "tx" else 1
                 err = None
                 if terr_arr is not None and terr_arr.shape == tipper.shape:
@@ -1319,9 +1366,12 @@ def plot_response_tipper(
                     fontsize=tick_fontsize,
                 )
                 ax.set_xlabel(x_label, labelpad=2)
-        bottom_axes_obj = list(tip_axes.values())[-1] if tip_axes else ax_phase
+        bottom_axes_obj = (
+            list(tip_axes.values())[-1] if tip_axes else ax_phase
+        )
         bottom_axes = (
-            bottom_axes_obj if isinstance(bottom_axes_obj, list)
+            bottom_axes_obj
+            if isinstance(bottom_axes_obj, list)
             else [bottom_axes_obj]
         )
         for bottom_ax in bottom_axes:
@@ -1339,10 +1389,14 @@ def plot_response_tipper(
             }
             if "tx" in tip_axes:
                 tx_axes = tip_axes["tx"]
-                row_axes["tx"] = tx_axes[0] if isinstance(tx_axes, list) else tx_axes
+                row_axes["tx"] = (
+                    tx_axes[0] if isinstance(tx_axes, list) else tx_axes
+                )
             if "ty" in tip_axes:
                 ty_axes = tip_axes["ty"]
-                row_axes["ty"] = ty_axes[0] if isinstance(ty_axes, list) else ty_axes
+                row_axes["ty"] = (
+                    ty_axes[0] if isinstance(ty_axes, list) else ty_axes
+                )
             _add_response_tipper_group_labels(
                 fig,
                 all_axes,
@@ -1364,7 +1418,9 @@ def plot_response_tipper(
         for comp in comps:
             style = _component_style(comp, raw, force_style)
             color = colors.get(comp) if colors else None
-            kwargs = style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
+            kwargs = (
+                style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
+            )
             if color is not None:
                 kwargs["color"] = color
             handles.append(plt.Line2D([], [], **kwargs))
@@ -1425,22 +1481,22 @@ def plot_sites_compare(
     new_sites: Any | None = None,
     *,
     components: tuple[str, ...] = ("xy", "yx"),
-    quantity: str = "rhoa",      # rhoa|impedance
-    x_axis: str = "period",      # period|frequency
+    quantity: str = "rhoa",  # rhoa|impedance
+    x_axis: str = "period",  # period|frequency
     phase_range: tuple[float, float] | None = (-90.0, 90.0),
     stations: list[str] | None = None,
-    ncols_groups: int = 3,       # station groups per row
-    group_gap: float = 0.35,     # space between station groups
-    pair_wspace: float = 0.06,   # space between raw/after
+    ncols_groups: int = 3,  # station groups per row
+    group_gap: float = 0.35,  # space between station groups
+    pair_wspace: float = 0.06,  # space between raw/after
     hspace: float = 0.06,
     height_ratio: tuple[int, int] = (2, 1),
     axes=None,
     figsize_scale: tuple[float, float] = (3.0, 3.0),
     colors: dict[str, str] | None = None,  # None → from PYCSAMT_STYLE.mt
-    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
-    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
-    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
-    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
+    marker=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.marker
+    ms=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ms
+    lw=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.lw
+    ls=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ls
     show_error_bars: bool = True,
     labels: tuple[str, str] = ("raw", "after"),
     title_group_fmt: str = "{station}",
@@ -1456,10 +1512,14 @@ def plot_sites_compare(
 ):
     # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
     _mt = PYCSAMT_STYLE.mt
-    if marker is _UNSET: marker = _mt.xy.marker
-    if ms     is _UNSET: ms     = _mt.xy.ms
-    if lw     is _UNSET: lw     = _mt.xy.lw
-    if ls     is _UNSET: ls     = _mt.xy.ls
+    if marker is _UNSET:
+        marker = _mt.xy.marker
+    if ms is _UNSET:
+        ms = _mt.xy.ms
+    if lw is _UNSET:
+        lw = _mt.xy.lw
+    if ls is _UNSET:
+        ls = _mt.xy.ls
 
     comps = tuple(c.lower() for c in components)
     cmap = {**_style_col(), **(colors or {})}
@@ -1475,8 +1535,7 @@ def plot_sites_compare(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no stations",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no stations", ha="center", va="center")
         return fig
     dual = any(p[2] is not None for p in pairs)
     cols_per_grp = 2 if dual else 1
@@ -1487,7 +1546,9 @@ def plot_sites_compare(
     # prebuild inner axes
     AxR: list[list[plt.Axes]] = []
     AxP: list[list[plt.Axes]] = []
-    axes_given = _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
+    )
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups * cols_per_grp, H * nrows),
@@ -1499,27 +1560,32 @@ def plot_sites_compare(
         for g in range(n):
             r, c = divmod(g, ncols_groups)
             gs = outer[r, c].subgridspec(
-                2, cols_per_grp,
-                hspace=0.02, wspace=pair_wspace,
+                2,
+                cols_per_grp,
+                hspace=0.02,
+                wspace=pair_wspace,
                 height_ratios=height_ratio,
             )
             axR = [fig.add_subplot(gs[0, j]) for j in range(cols_per_grp)]
-            axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
-                   for j in range(cols_per_grp)]
-            AxR.append(axR); AxP.append(axP)
+            axP = [
+                fig.add_subplot(gs[1, j], sharex=axR[0])
+                for j in range(cols_per_grp)
+            ]
+            AxR.append(axR)
+            AxP.append(axP)
     else:
         fig = axes_given[0].figure
         for g in range(n):
             base = g * cols_per_grp * 2
-            AxR.append(axes_given[base:base + cols_per_grp])
-            AxP.append(axes_given[base + cols_per_grp:base + 2 * cols_per_grp])
+            AxR.append(axes_given[base : base + cols_per_grp])
+            AxP.append(
+                axes_given[base + cols_per_grp : base + 2 * cols_per_grp]
+            )
 
     # draw each group
     for g, (st, ed0, ed1) in enumerate(pairs):
         # group title
-        AxR[g][0].set_title(
-            title_group_fmt.format(station=st), pad=4
-        )
+        AxR[g][0].set_title(title_group_fmt.format(station=st), pad=4)
         cols = [(labels[0], ed0)]
         if dual:
             cols.append((labels[1], ed1))
@@ -1527,16 +1593,22 @@ def plot_sites_compare(
             axR = AxR[g][j]
             axP = AxP[g][j]
             if ed is None:
-                axR.axis("off"); axP.axis("off"); continue
+                axR.axis("off")
+                axP.axis("off")
+                continue
             out = _zblk_flex(ed)
             if len(out) == 4:
                 _, z, fr, ze = out
             else:
-                _, z, fr = out[:3]; ze = None
+                _, z, fr = out[:3]
+                ze = None
             if z is None or fr is None:
-                axR.axis("off"); axP.axis("off"); continue
+                axR.axis("off")
+                axP.axis("off")
+                continue
             x = (1.0 / fr) if x_axis == "period" else fr
-            axR.set_xscale("log"); axP.set_xscale("log")
+            axR.set_xscale("log")
+            axP.set_xscale("log")
             if grid:
                 axR.grid(True, alpha=0.25, which="both")
                 axP.grid(True, alpha=0.25, which="both")
@@ -1556,23 +1628,40 @@ def plot_sites_compare(
                     yerr = _err_log10_rhoa(zz, ee)
                     ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
                 plot_errorbar(
-                    axR, x, y, y_err=yerr, color=col,
-                    marker=marker, ms=ms, ls=ls, lw=lw,
+                    axR,
+                    x,
+                    y,
+                    y_err=yerr,
+                    color=col,
+                    marker=marker,
+                    ms=ms,
+                    ls=ls,
+                    lw=lw,
                     show_error_bars=show_error_bars,
                 )
                 ph = _phase_deg(zz)
                 if phase_range is not None:
                     ph = _wrap_phase(ph, phase_range)
                 plot_errorbar(
-                    axP, x, ph,
+                    axP,
+                    x,
+                    ph,
                     y_err=_err_phase_deg(zz, ee),
-                    color=col, marker=marker, ms=ms,
-                    ls=ls, lw=lw, show_error_bars=False,
+                    color=col,
+                    marker=marker,
+                    ms=ms,
+                    ls=ls,
+                    lw=lw,
+                    show_error_bars=False,
                 )
             # per-column cosmetics
             axR.text(
-                0.02, 0.96, title_col_fmt.format(tag=tag),
-                ha="left", va="top", transform=axR.transAxes,
+                0.02,
+                0.96,
+                title_col_fmt.format(tag=tag),
+                ha="left",
+                va="top",
+                transform=axR.transAxes,
                 fontsize=9,
             )
             if ylim_rhoa:
@@ -1593,37 +1682,57 @@ def plot_sites_compare(
             # text had nothing to visually separate it from the
             # adjacent axis, so it rendered on top of the plotted data.
             if j == 0:
-                axR.set_ylabel(ylab); axP.set_ylabel("Phase (°)")
+                axR.set_ylabel(ylab)
+                axP.set_ylabel("Phase (°)")
 
     # shared ticks/legend
     for g in range(n):
         for j in range(cols_per_grp):
-            axR = AxR[g][j]; axP = AxP[g][j]
+            axR = AxR[g][j]
+            axP = AxP[g][j]
             # hide y labels on inner columns except leftmost
             if not (j == 0):
-                axR.set_yticklabels([]); axP.set_yticklabels([])
+                axR.set_yticklabels([])
+                axP.set_yticklabels([])
             # hide x labels except bottom row (done above)
             if (g // ncols_groups) != (nrows - 1):
                 axP.set_xticklabels([])
     if show_legend:
         labs = [c.upper() for c in comps]
-        hs = [plt.Line2D([], [], color=cmap.get(c, "k"),
-              lw=lw, ls=ls, marker=marker, ms=ms) for c in comps]
+        hs = [
+            plt.Line2D(
+                [],
+                [],
+                color=cmap.get(c, "k"),
+                lw=lw,
+                ls=ls,
+                marker=marker,
+                ms=ms,
+            )
+            for c in comps
+        ]
         fig.legend(
-            hs, labs, loc="upper center", ncol=len(labs),
-            frameon=False, bbox_to_anchor=(0.5, 1.02), fontsize=9,
+            hs,
+            labs,
+            loc="upper center",
+            ncol=len(labs),
+            frameon=False,
+            bbox_to_anchor=(0.5, 1.02),
+            fontsize=9,
         )
     return fig
 
+
 # -------------------- measured vs predicted panels --------------------- #
+
 
 def _pairs_meas_pred(
     sites: Any, pred_sites: Any
 ) -> list[tuple[str, Any, Any]]:
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = ensure_sites(pred_sites, recursive=False, strict=False)
-    m0 = { _name(ed, i): ed for i, ed in enumerate(_iter_items(S0)) }
-    m1 = { _name(ed, i): ed for i, ed in enumerate(_iter_items(S1)) }
+    m0 = {_name(ed, i): ed for i, ed in enumerate(_iter_items(S0))}
+    m1 = {_name(ed, i): ed for i, ed in enumerate(_iter_items(S1))}
     out = []
     for st, ed in m0.items():
         if st in m1:
@@ -1641,8 +1750,9 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return ix
 
 
-def _align_pred(fr_m: np.ndarray, fr_p: np.ndarray,
-                z_p: np.ndarray) -> np.ndarray:
+def _align_pred(
+    fr_m: np.ndarray, fr_p: np.ndarray, z_p: np.ndarray
+) -> np.ndarray:
     # _nearest_idx requires its reference array ascending; EDI frequency
     # arrays are typically stored descending (high frequency first), so
     # sort fr_p (and z_p with it) before searching.
@@ -1682,30 +1792,31 @@ def _rms_from(
     w = 1.0 / (np.square(ye) + 1e-12)
     return float(np.sqrt(np.nanmean(w * dy * dy)))
 
+
 def plot_sites_fit_grid(
     sites: Any,
     pred_sites: Any,
     *,
     components: tuple[str, ...] = ("xx", "xy", "yx", "yy"),
-    quantity: str = "rhoa",      # rhoa|impedance
-    x_axis: str = "period",      # period|frequency
+    quantity: str = "rhoa",  # rhoa|impedance
+    x_axis: str = "period",  # period|frequency
     phase_range: tuple[float, float] | None = (-180.0, 180.0),
     stations: list[str] | None = None,
-    ncols_groups: int = 2,       # station groups per row
-    comp_wspace: float = 0.10,   # space between components
+    ncols_groups: int = 2,  # station groups per row
+    comp_wspace: float = 0.10,  # space between components
     group_hspace: float = 0.18,
     height_ratio: tuple[int, int] = (2, 1),
     axes=None,
     figsize_scale: tuple[float, float] = (4.0, 3.0),
     colors_meas: dict[str, str] | None = None,  # None → PYCSAMT_STYLE.mt
-    color_fit_te   = _UNSET,   # default: PYCSAMT_STYLE.mt.te.color
-    color_fit_tm   = _UNSET,   # default: PYCSAMT_STYLE.mt.tm.color
-    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
-    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
-    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
-    ls_meas        = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
-    lw_fit: float  = 2.0,
-    ls_fit: str    = "-",
+    color_fit_te=_UNSET,  # default: PYCSAMT_STYLE.mt.te.color
+    color_fit_tm=_UNSET,  # default: PYCSAMT_STYLE.mt.tm.color
+    marker=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.marker
+    ms=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ms
+    lw=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.lw
+    ls_meas=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ls
+    lw_fit: float = 2.0,
+    ls_fit: str = "-",
     show_error_bars: bool = True,
     show_mode_legend: bool = True,
     title_group_fmt: str = "{station}",
@@ -1719,12 +1830,18 @@ def plot_sites_fit_grid(
 ):
     # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
     _mt = PYCSAMT_STYLE.mt
-    if color_fit_te is _UNSET: color_fit_te = _mt.te.color
-    if color_fit_tm is _UNSET: color_fit_tm = _mt.tm.color
-    if marker       is _UNSET: marker       = _mt.xy.marker
-    if ms           is _UNSET: ms           = _mt.xy.ms
-    if lw           is _UNSET: lw           = _mt.xy.lw
-    if ls_meas      is _UNSET: ls_meas      = _mt.xy.ls
+    if color_fit_te is _UNSET:
+        color_fit_te = _mt.te.color
+    if color_fit_tm is _UNSET:
+        color_fit_tm = _mt.tm.color
+    if marker is _UNSET:
+        marker = _mt.xy.marker
+    if ms is _UNSET:
+        ms = _mt.xy.ms
+    if lw is _UNSET:
+        lw = _mt.xy.lw
+    if ls_meas is _UNSET:
+        ls_meas = _mt.xy.ls
 
     comps = tuple(c.lower() for c in components)
     cmap = {**_style_col(), **(colors_meas or {})}
@@ -1740,8 +1857,7 @@ def plot_sites_fit_grid(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no matching stations",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no matching stations", ha="center", va="center")
         return fig
     n = len(pairs)
     ncols_groups = max(1, int(ncols_groups))
@@ -1749,7 +1865,9 @@ def plot_sites_fit_grid(
     W, H = figsize_scale
     # build axes per group: 2 x ncomp
     AX = []
-    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n * len(comps) * 2) if axes is not None else None
+    )
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups, H * nrows),
@@ -1761,23 +1879,29 @@ def plot_sites_fit_grid(
         for g in range(n):
             r, c = divmod(g, ncols_groups)
             gs = outer[r, c].subgridspec(
-                2, len(comps),
-                hspace=0.02, wspace=comp_wspace,
+                2,
+                len(comps),
+                hspace=0.02,
+                wspace=comp_wspace,
                 height_ratios=height_ratio,
             )
             axR = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
-            axP = [fig.add_subplot(gs[1, j], sharex=axR[0])
-                   for j in range(len(comps))]
+            axP = [
+                fig.add_subplot(gs[1, j], sharex=axR[0])
+                for j in range(len(comps))
+            ]
             AX.append((axR, axP))
     else:
         fig = axes_given[0].figure
         width = len(comps)
         for g in range(n):
             base = g * width * 2
-            AX.append((
-                axes_given[base:base + width],
-                axes_given[base + width:base + 2 * width],
-            ))
+            AX.append(
+                (
+                    axes_given[base : base + width],
+                    axes_given[base + width : base + 2 * width],
+                )
+            )
 
     # draw each station group
     for g, (st, edm, edp) in enumerate(pairs):
@@ -1788,20 +1912,25 @@ def plot_sites_fit_grid(
         if len(Zm) == 4:
             _, zm, frm, zem = Zm
         else:
-            _, zm, frm = Zm[:3]; zem = None
+            _, zm, frm = Zm[:3]
+            zem = None
         Zp = _zblk_flex(edp)
         if len(Zp) == 4:
             _, zp, frp, _ = Zp
         else:
-            _, zp, frp = Zp[:3]; _ = None
+            _, zp, frp = Zp[:3]
+            _ = None
         if zm is None or zp is None:
             for j in range(len(comps)):
-                axR[j].axis("off"); axP[j].axis("off")
+                axR[j].axis("off")
+                axP[j].axis("off")
             continue
         x = (1.0 / frm) if x_axis == "period" else frm
         for j, comp in enumerate(comps):
-            aR = axR[j]; aP = axP[j]
-            aR.set_xscale("log"); aP.set_xscale("log")
+            aR = axR[j]
+            aP = axP[j]
+            aR.set_xscale("log")
+            aP.set_xscale("log")
             if grid:
                 aR.grid(True, alpha=0.25, which="both")
                 aP.grid(True, alpha=0.25, which="both")
@@ -1821,23 +1950,36 @@ def plot_sites_fit_grid(
                 yerr = _err_log10_rhoa(zm_c, ze_c)
                 ylab = r"$\log_{10}\rho_a$ ($\Omega\,\mathrm{m}$)"
             plot_errorbar(
-                aR, x, ym, y_err=yerr, color=colm,
-                marker=marker, ms=ms, ls=ls_meas, lw=lw,
+                aR,
+                x,
+                ym,
+                y_err=yerr,
+                color=colm,
+                marker=marker,
+                ms=ms,
+                ls=ls_meas,
+                lw=lw,
                 show_error_bars=show_error_bars,
             )
             phm = _phase_deg(zm_c)
             if phase_range is not None:
                 phm = _wrap_phase(phm, phase_range)
             plot_errorbar(
-                aP, x, phm, y_err=_err_phase_deg(zm_c, ze_c),
-                color=colm, marker=marker, ms=ms,
-                ls=ls_meas, lw=lw, show_error_bars=False,
+                aP,
+                x,
+                phm,
+                y_err=_err_phase_deg(zm_c, ze_c),
+                color=colm,
+                marker=marker,
+                ms=ms,
+                ls=ls_meas,
+                lw=lw,
+                show_error_bars=False,
             )
             # predicted (aligned to measured freq)
             zp_c = _comp_slice(zp, comp)
             zp_c = _align_pred(frm, frp, zp_c)
-            colf = color_fit_te if comp in ("xx", "xy") \
-                   else color_fit_tm
+            colf = color_fit_te if comp in ("xx", "xy") else color_fit_tm
             if quantity == "impedance":
                 yp = np.log10(np.abs(zp_c))
             else:
@@ -1853,8 +1995,12 @@ def plot_sites_fit_grid(
             # narrow panels)
             rmsc = _rms_from(zm_c, zp_c, ze_c, frm, quantity=quantity)
             aR.text(
-                0.50, 1.02, f"Z{comp.upper()}  rms={rmsc:.2f}",
-                ha="center", va="bottom", transform=aR.transAxes,
+                0.50,
+                1.02,
+                f"Z{comp.upper()}  rms={rmsc:.2f}",
+                ha="center",
+                va="bottom",
+                transform=aR.transAxes,
                 fontsize=8,
             )
             # axes cosmetics
@@ -1868,11 +2014,11 @@ def plot_sites_fit_grid(
                 aR.set_ylabel(ylab)
                 aP.set_ylabel("Phase (°)")
             else:
-                aR.set_yticklabels([]); aP.set_yticklabels([])
+                aR.set_yticklabels([])
+                aP.set_yticklabels([])
             if (g // ncols_groups) == (nrows - 1):
                 aP.set_xlabel(
-                    "Period (s)" if x_axis == "period"
-                    else "Freq (Hz)"
+                    "Period (s)" if x_axis == "period" else "Freq (Hz)"
                 )
             else:
                 aP.set_xlabel("")
@@ -1883,7 +2029,10 @@ def plot_sites_fit_grid(
         fig.legend(
             [h_te, h_tm],
             ["TE fit: xx/xy", "TM fit: yx/yy"],
-            loc="upper center", ncol=2, frameon=False,
-            bbox_to_anchor=(0.5, 1.02), fontsize=9,
+            loc="upper center",
+            ncol=2,
+            frameon=False,
+            bbox_to_anchor=(0.5, 1.02),
+            fontsize=9,
         )
     return fig

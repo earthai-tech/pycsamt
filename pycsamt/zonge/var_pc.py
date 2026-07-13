@@ -38,16 +38,15 @@ from .utils import to_xarray as _to_xr
 
 logger = get_logger(__name__)
 
-__all__= [
-    'PcEmag',
-    'PcRho',
-    'PcHmag',
-    'PcHmag',
-    'EmagPctErr',
-    'HmagPctErr',
-    'RhoPctErr',
- ]
-
+__all__ = [
+    "PcEmag",
+    "PcRho",
+    "PcHmag",
+    "PcHmag",
+    "EmagPctErr",
+    "HmagPctErr",
+    "RhoPctErr",
+]
 
 
 class PercentVarBase(AVGComponentBase):
@@ -61,10 +60,11 @@ class PercentVarBase(AVGComponentBase):
 
     They inherit a consistent ``read()/write()/to_xarray()``.
     """
+
     # Class-level constants (not dataclass fields)
 
     # # canonical variable name written in the frame
-    VAR_NAME: ClassVar[str] = ""                  # e.g., "pc_emag"
+    VAR_NAME: ClassVar[str] = ""  # e.g., "pc_emag"
 
     # # # ordered list of candidate column labels in source tables
     # ALIASES: ClassVar[Tuple[str, ...]] = ()   # e.g., ("%Emag", "E.%err", ...)
@@ -81,11 +81,9 @@ class PercentVarBase(AVGComponentBase):
         meta: Mapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
-        super().__init__(
-            data=data, meta=meta, name=name, verbose=verbose
-        )
+        super().__init__(data=data, meta=meta, name=name, verbose=verbose)
 
     def read(
         self,
@@ -158,10 +156,13 @@ class PercentVarBase(AVGComponentBase):
         # normalize percent column → float
         df[self.VAR_NAME] = _to_numeric_percent(df[self.VAR_NAME].copy())
 
-        keep = [c for c in (
-            "station", "freq", "comp", self.VAR_NAME) if c in df.columns]
+        keep = [
+            c
+            for c in ("station", "freq", "comp", self.VAR_NAME)
+            if c in df.columns
+        ]
         # store a compact, predictable layout
-        #self._frame = df.loc[:, ["station", "freq", "comp", self.VAR_NAME]]
+        # self._frame = df.loc[:, ["station", "freq", "comp", self.VAR_NAME]]
         self._frame = df.loc[:, keep].copy()
         self._meta = dict(meta or {})
 
@@ -288,10 +289,8 @@ class PercentVarBase(AVGComponentBase):
     # friendly diagnostics
     def __str__(self) -> str:
         r, c = self.shape
-        return (
-            f"{self.__class__.__name__}[{r}×{c}] "
-            f"var={self.VAR_NAME}"
-        )
+        return f"{self.__class__.__name__}[{r}×{c}] var={self.VAR_NAME}"
+
 
 class PcEmag(PercentVarBase):
     r"""
@@ -310,10 +309,12 @@ class PcEmag(PercentVarBase):
     ``Unit.Percent`` is set to ``'%'`` when exporting to
     :class:`xarray.Dataset`.
     """
+
     VAR_NAME = "pc_emag"
     # ALIASES = get_aliases(VAR_NAME, kind ='qc') # ("%Emag", "E.%err")
     TITLE = "Percent |E| Variation"
     UNIT_ATTR = "Unit.Percent"
+
 
 class PcHmag(PercentVarBase):
     r"""
@@ -332,6 +333,7 @@ class PcHmag(PercentVarBase):
     ``Unit.Percent`` is set to ``'%'`` when exporting to
     :class:`xarray.Dataset`.
     """
+
     VAR_NAME = "pc_hmag"
     # 'H' vs 'B' modern label differences covered; legacy %Hmag too
     # ALIASES = get_aliases(VAR_NAME, kind ='qc')#("%Hmag", "B.%err", "H.%err")
@@ -356,11 +358,13 @@ class PcRho(PercentVarBase):
     ``Unit.Percent`` is set to ``'%'`` when exporting to
     :class:`xarray.Dataset`.
     """
+
     VAR_NAME = "pc_rho"
     # ALIASES = get_aliases(VAR_NAME, kind ='qc')# ("%Rho", "ARes.%err", "rho.%err")
     TITLE = "Percent ρa Variation"
     UNIT_ATTR = "Unit.Percent"
 
+
 EmagPctErr = PcEmag
 HmagPctErr = PcHmag
-RhoPctErr  = PcRho
+RhoPctErr = PcRho

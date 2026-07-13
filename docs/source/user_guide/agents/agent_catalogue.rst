@@ -516,4 +516,3 @@ Related API
 * :doc:`ai_model_zoo_agents`
 * :doc:`orchestration_output_agents`
 * :doc:`../api/agents`
-:html_theme.sidebar_secondary.remove:

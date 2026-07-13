@@ -3,6 +3,7 @@
 """
 Backend-aware utility helpers shared by AI processing and inversion modules.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -25,6 +26,7 @@ def resolve_device(device: str | None = None) -> str:
     """
     try:
         from pycsamt.backends import get_backend_instance
+
         inst = get_backend_instance()
         if inst is None:
             return device or "cpu"
@@ -36,18 +38,24 @@ def resolve_device(device: str | None = None) -> str:
 def get_weights(model: Any) -> dict[str, np.ndarray]:
     """Return model weights via the active backend."""
     from pycsamt.backends import get_backend_instance
+
     inst = get_backend_instance()
     if inst is None:
-        raise RuntimeError("No DL backend available — cannot extract weights.")
+        raise RuntimeError(
+            "No DL backend available — cannot extract weights."
+        )
     return inst.get_weights(model)
 
 
 def set_weights(model: Any, weights: dict[str, np.ndarray]) -> None:
     """Restore model weights via the active backend."""
     from pycsamt.backends import get_backend_instance
+
     inst = get_backend_instance()
     if inst is None:
-        raise RuntimeError("No DL backend available — cannot restore weights.")
+        raise RuntimeError(
+            "No DL backend available — cannot restore weights."
+        )
     inst.set_weights(model, weights)
 
 
@@ -59,4 +67,5 @@ def active_backend() -> str:
     is installed (never raises).
     """
     from pycsamt.backends import get_backend
+
     return get_backend()

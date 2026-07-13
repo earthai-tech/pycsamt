@@ -39,6 +39,7 @@ class RegistryError(RuntimeError):
 
     pass
 
+
 def _now() -> float:
     r"""
     Return the current POSIX time as ``float`` seconds.
@@ -376,6 +377,7 @@ class Manifest(CoreObject):
     ManifestStore
     json
     """
+
     root: str
     version: int = 1
     records: dict[str, Record] = field(default_factory=dict)
@@ -411,12 +413,13 @@ class Manifest(CoreObject):
         """
 
         recs = {
-            k: Record.from_dict(v)
-            for k, v in d.get("records", {}).items()
+            k: Record.from_dict(v) for k, v in d.get("records", {}).items()
         }
         return cls(
-            root=d.get("root", "."), version=int(
-                d.get("version", 1)), records=recs)
+            root=d.get("root", "."),
+            version=int(d.get("version", 1)),
+            records=recs,
+        )
 
 
 class ManifestStore(CoreObject):
@@ -450,6 +453,7 @@ class ManifestStore(CoreObject):
     json
     tomllib
     """
+
     def load(self, path: Path) -> Manifest:  # noqa: D401
         raise NotImplementedError
 

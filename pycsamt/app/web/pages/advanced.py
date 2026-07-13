@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Advanced emtools plots page — fixed tab bar + per-group persistent figures."""
+
 from __future__ import annotations
 
 import dash_bootstrap_components as dbc
@@ -22,47 +23,57 @@ PAGE_ID = "advanced"
 
 # ── Tab definitions (one per non-empty plot group) ────────────────────────────
 _ADV_TABS = [
-    ("strike",    "Strike",        "bi-compass",           STRIKE_PLOTS),
-    ("pt",        "Phase Tensor",  "bi-hexagon",           PHASE_TENSOR_PLOTS),
-    ("induction", "Induction",     "bi-arrows-expand",     INDUCTION_PLOTS),
-    ("impedance", "Impedance/Z",   "bi-lightning-charge",  IMPEDANCE_PLOTS),
-    ("depth",     "Depth",         "bi-layers",            DEPTH_PLOTS),
-    ("survey",    "Survey Tools",  "bi-clipboard-data",    SURVEY_PLOTS),
+    ("strike", "Strike", "bi-compass", STRIKE_PLOTS),
+    ("pt", "Phase Tensor", "bi-hexagon", PHASE_TENSOR_PLOTS),
+    ("induction", "Induction", "bi-arrows-expand", INDUCTION_PLOTS),
+    ("impedance", "Impedance/Z", "bi-lightning-charge", IMPEDANCE_PLOTS),
+    ("depth", "Depth", "bi-layers", DEPTH_PLOTS),
+    ("survey", "Survey Tools", "bi-clipboard-data", SURVEY_PLOTS),
 ]
 _ADV_DEFAULT_TAB = "strike"
 
 # Map tab-id → group label (for info bar)
 _ADV_TAB_TO_GROUP = {
-    "strike":    "Strike Analysis",
-    "pt":        "Phase Tensor",
+    "strike": "Strike Analysis",
+    "pt": "Phase Tensor",
     "induction": "Induction / Tipper",
     "impedance": "Impedance / Z",
-    "depth":     "Depth Imaging",
-    "survey":    "Survey Tools",
+    "depth": "Depth Imaging",
+    "survey": "Survey Tools",
 }
 
 # Map tab-id → per-group image component ID
 _ADV_TAB_IMG = {
-    "strike":    IDs.IMG_ADV_STRIKE,
-    "pt":        IDs.IMG_ADV_PT,
+    "strike": IDs.IMG_ADV_STRIKE,
+    "pt": IDs.IMG_ADV_PT,
     "induction": IDs.IMG_ADV_INDUCTION,
     "impedance": IDs.IMG_ADV_IMPEDANCE,
-    "depth":     IDs.IMG_ADV_DEPTH,
-    "survey":    IDs.IMG_ADV_SURVEY,
+    "depth": IDs.IMG_ADV_DEPTH,
+    "survey": IDs.IMG_ADV_SURVEY,
 }
 
 # Plots that expose a period-index parameter (ip=)
 _PERIOD_FNS = {
-    "plot_phase_tensor_map", "plot_induction_arrows", "plot_induction_map",
-    "plot_xyyx_crossover_map", "plot_dim_map", "plot_dim_occupancy_area",
-    "plot_anisotropy", "plot_ellipticity_psection", "plot_depth_section",
-    "plot_apparent_depth_psection", "plot_gradient_section",
-    "plot_induction_section", "plot_theta_vs_period",
-    "plot_theta_stability_stripe", "plot_strike_ribbon", "plot_strike_mapsticks",
+    "plot_phase_tensor_map",
+    "plot_induction_arrows",
+    "plot_induction_map",
+    "plot_xyyx_crossover_map",
+    "plot_dim_map",
+    "plot_dim_occupancy_area",
+    "plot_anisotropy",
+    "plot_ellipticity_psection",
+    "plot_depth_section",
+    "plot_apparent_depth_psection",
+    "plot_gradient_section",
+    "plot_induction_section",
+    "plot_theta_vs_period",
+    "plot_theta_stability_stripe",
+    "plot_strike_ribbon",
+    "plot_strike_mapsticks",
 }
 
 _FIGSIZE_OPTIONS = [
-    {"label": "Compact  8×4",  "value": "8x4"},
+    {"label": "Compact  8×4", "value": "8x4"},
     {"label": "Standard 10×6", "value": "10x6"},
     {"label": "Wide     14×6", "value": "14x6"},
     {"label": "Tall     10×8", "value": "10x8"},
@@ -70,7 +81,7 @@ _FIGSIZE_OPTIONS = [
 
 # First plot of the default group
 _FIRST_PLOTS = [{"label": l, "value": f} for l, f, _ in STRIKE_PLOTS]
-_FIRST_FN    = _FIRST_PLOTS[0]["value"]
+_FIRST_FN = _FIRST_PLOTS[0]["value"]
 
 
 def _ctrl_label(text: str) -> html.Div:
@@ -87,20 +98,27 @@ def layout() -> html.Div:
             html.Div(
                 [
                     dbc.Button(
-                        [html.I(className="bi bi-play-fill me-1"), "Generate"],
+                        [
+                            html.I(className="bi bi-play-fill me-1"),
+                            "Generate",
+                        ],
                         id=IDs.BTN_ADV_RUN,
-                        color="primary", size="sm",
+                        color="primary",
+                        size="sm",
                         className="w-100 mb-1",
                         n_clicks=0,
                     ),
                     dbc.Spinner(
-                        html.Div(id=IDs.ADV_SPINNER), size="sm", color="primary",
+                        html.Div(id=IDs.ADV_SPINNER),
+                        size="sm",
+                        color="primary",
                     ),
-                    html.Div(id=IDs.ADV_DATA_BAR, className="adv-data-bar mt-1"),
+                    html.Div(
+                        id=IDs.ADV_DATA_BAR, className="adv-data-bar mt-1"
+                    ),
                 ],
                 className="fwd-run-bar",
             ),
-
             # ── Scrollable controls ────────────────────────────────────────
             html.Div(
                 [
@@ -117,7 +135,6 @@ def layout() -> html.Div:
                         ],
                         className="ctrl-card",
                     ),
-
                     # Active Lines filter
                     html.Div(
                         [
@@ -134,7 +151,6 @@ def layout() -> html.Div:
                         ],
                         className="ctrl-card",
                     ),
-
                     # Station filter
                     html.Div(
                         [
@@ -144,12 +160,16 @@ def layout() -> html.Div:
                                     html.Div(
                                         [
                                             html.Button(
-                                                "All", id=IDs.ADV_STN_ALL,
-                                                className="agents-mini-btn", n_clicks=0,
+                                                "All",
+                                                id=IDs.ADV_STN_ALL,
+                                                className="agents-mini-btn",
+                                                n_clicks=0,
                                             ),
                                             html.Button(
-                                                "None", id=IDs.ADV_STN_NONE,
-                                                className="agents-mini-btn", n_clicks=0,
+                                                "None",
+                                                id=IDs.ADV_STN_NONE,
+                                                className="agents-mini-btn",
+                                                n_clicks=0,
                                             ),
                                         ],
                                         className="agents-filter-btn-row",
@@ -169,31 +189,42 @@ def layout() -> html.Div:
                         ],
                         className="ctrl-card",
                     ),
-
                     # Parameters
                     html.Div(
                         [
                             _ctrl_label("Parameters"),
                             html.Div(
                                 [
-                                    html.Div("Period index (ip)", className="adv-param-label"),
+                                    html.Div(
+                                        "Period index (ip)",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Input(
                                         id="adv-period-idx",
-                                        type="number", value=0, min=0, step=1,
-                                        size="sm", className="adv-param-input",
+                                        type="number",
+                                        value=0,
+                                        min=0,
+                                        step=1,
+                                        size="sm",
+                                        className="adv-param-input",
                                     ),
-                                    html.Div("0 = highest frequency",
-                                             className="adv-param-hint"),
+                                    html.Div(
+                                        "0 = highest frequency",
+                                        className="adv-param-hint",
+                                    ),
                                 ],
                                 id="adv-period-section",
                                 style={"display": "none"},
                             ),
                             html.Div(
                                 [
-                                    html.Div("Station", className="adv-param-label"),
+                                    html.Div(
+                                        "Station", className="adv-param-label"
+                                    ),
                                     dcc.Dropdown(
                                         id=IDs.ADV_PT_STATION,
-                                        options=[], value=None,
+                                        options=[],
+                                        value=None,
                                         placeholder="Pick station...",
                                         className="adv-filter-drop",
                                         optionHeight=26,
@@ -208,11 +239,19 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
-                                    html.Div("Stations / line", className="adv-param-label"),
+                                    html.Div(
+                                        "Stations / line",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Input(
                                         id=IDs.ADV_PT_PER_LINE,
-                                        type="number", value=4, min=1, max=20, step=1,
-                                        size="sm", className="adv-param-input",
+                                        type="number",
+                                        value=4,
+                                        min=1,
+                                        max=20,
+                                        step=1,
+                                        size="sm",
+                                        className="adv-param-input",
                                     ),
                                     html.Div(
                                         "Evenly spaced stations drawn per active line",
@@ -224,7 +263,10 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
-                                    html.Div("Figure size", className="adv-param-label"),
+                                    html.Div(
+                                        "Figure size",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Select(
                                         id="adv-figsize",
                                         options=_FIGSIZE_OPTIONS,
@@ -237,30 +279,46 @@ def layout() -> html.Div:
                             html.Div(
                                 [
                                     html.Hr(className="adv-divider"),
-                                    html.Div("Dictionary model (ATOM)",
-                                             className="adv-param-label"),
+                                    html.Div(
+                                        "Dictionary model (ATOM)",
+                                        className="adv-param-label",
+                                    ),
                                     html.Div(
                                         [
                                             html.Div(
                                                 [
-                                                    html.Div("n_atoms", className="adv-atom-label"),
+                                                    html.Div(
+                                                        "n_atoms",
+                                                        className="adv-atom-label",
+                                                    ),
                                                     dbc.Input(
                                                         id="adv-atom-atoms",
                                                         type="number",
-                                                        value=6, min=2, max=64, step=1,
-                                                        size="sm", className="adv-param-input",
+                                                        value=6,
+                                                        min=2,
+                                                        max=64,
+                                                        step=1,
+                                                        size="sm",
+                                                        className="adv-param-input",
                                                     ),
                                                 ],
                                                 className="adv-atom-row",
                                             ),
                                             html.Div(
                                                 [
-                                                    html.Div("n_iter", className="adv-atom-label"),
+                                                    html.Div(
+                                                        "n_iter",
+                                                        className="adv-atom-label",
+                                                    ),
                                                     dbc.Input(
                                                         id="adv-atom-iter",
                                                         type="number",
-                                                        value=40, min=5, max=500, step=5,
-                                                        size="sm", className="adv-param-input",
+                                                        value=40,
+                                                        min=5,
+                                                        max=500,
+                                                        step=5,
+                                                        size="sm",
+                                                        className="adv-param-input",
                                                     ),
                                                 ],
                                                 className="adv-atom-row",
@@ -269,18 +327,28 @@ def layout() -> html.Div:
                                         className="mb-2",
                                     ),
                                     dbc.Button(
-                                        [html.I(className="bi bi-cpu me-1"), "Train Model"],
+                                        [
+                                            html.I(
+                                                className="bi bi-cpu me-1"
+                                            ),
+                                            "Train Model",
+                                        ],
                                         id=IDs.ADV_BTN_TRAIN,
-                                        color="info", size="sm", outline=True,
+                                        color="info",
+                                        size="sm",
+                                        outline=True,
                                         className="w-100 mb-1",
                                         n_clicks=0,
                                     ),
                                     dbc.Spinner(
-                                        html.Div(id=IDs.ADV_TRAIN_SPINNER), size="sm",
+                                        html.Div(id=IDs.ADV_TRAIN_SPINNER),
+                                        size="sm",
                                         color="info",
                                     ),
-                                    html.Div(id=IDs.ADV_TRAIN_STATUS,
-                                             className="adv-train-status"),
+                                    html.Div(
+                                        id=IDs.ADV_TRAIN_STATUS,
+                                        className="adv-train-status",
+                                    ),
                                 ],
                                 id="adv-atom-section",
                                 style={"display": "none"},
@@ -288,7 +356,6 @@ def layout() -> html.Div:
                         ],
                         className="ctrl-card",
                     ),
-
                     # Description
                     html.Div(
                         [
@@ -334,15 +401,19 @@ def layout() -> html.Div:
                 className="adv-info-group",
             ),
             html.Span("·", className="adv-info-sep"),
-            html.Span("Select a plot and click Generate",
-                      style={"color": "var(--sub0)", "fontSize": "10.5px"}),
+            html.Span(
+                "Select a plot and click Generate",
+                style={"color": "var(--sub0)", "fontSize": "10.5px"},
+            ),
         ],
         id=IDs.ADV_INFO_BAR,
         className="adv-info-bar",
     )
 
     # ── Per-group figure panels ───────────────────────────────────────────────
-    def _fig_panel(tab_id: str, img_id: str, visible: bool = False) -> html.Div:
+    def _fig_panel(
+        tab_id: str, img_id: str, visible: bool = False
+    ) -> html.Div:
         return html.Div(
             html.Div(
                 html.Img(
@@ -359,12 +430,12 @@ def layout() -> html.Div:
 
     panels = html.Div(
         [
-            _fig_panel("strike",    IDs.IMG_ADV_STRIKE,    visible=True),
-            _fig_panel("pt",        IDs.IMG_ADV_PT),
+            _fig_panel("strike", IDs.IMG_ADV_STRIKE, visible=True),
+            _fig_panel("pt", IDs.IMG_ADV_PT),
             _fig_panel("induction", IDs.IMG_ADV_INDUCTION),
             _fig_panel("impedance", IDs.IMG_ADV_IMPEDANCE),
-            _fig_panel("depth",     IDs.IMG_ADV_DEPTH),
-            _fig_panel("survey",    IDs.IMG_ADV_SURVEY),
+            _fig_panel("depth", IDs.IMG_ADV_DEPTH),
+            _fig_panel("survey", IDs.IMG_ADV_SURVEY),
         ],
         className="prof-view-panel",
     )
@@ -381,6 +452,7 @@ def layout() -> html.Div:
     )
 
     from pycsamt.app.web.layout import _command_bar
+
     return html.Div(
         [
             _command_bar(
@@ -394,7 +466,11 @@ def layout() -> html.Div:
                 style={"flex": "1"},
             ),
         ],
-        style={"display": "flex", "flexDirection": "column", "height": "100%"},
+        style={
+            "display": "flex",
+            "flexDirection": "column",
+            "height": "100%",
+        },
     )
 
 

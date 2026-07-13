@@ -1,4 +1,5 @@
 """Plot WILLY ModEM inversion results with pyCSAMT."""
+
 from __future__ import annotations
 
 import json
@@ -43,16 +44,24 @@ def _save(fig, path: Path) -> None:
 def _component_names(result: InversionResult) -> list[str]:
     if result.data_obs is None:
         return []
-    names = {row[5] for block in result.data_obs.blocks for row in block["rows"]}
+    names = {
+        row[5] for block in result.data_obs.blocks for row in block["rows"]
+    }
     preferred = ["TE", "TM", "ZXX", "ZXY", "ZYX", "ZYY"]
-    return [name for name in preferred if name in names] + sorted(names - set(preferred))
+    return [name for name in preferred if name in names] + sorted(
+        names - set(preferred)
+    )
 
 
-def _response_batches(result: InversionResult, batch_size: int = 4) -> list[list[str]]:
+def _response_batches(
+    result: InversionResult, batch_size: int = 4
+) -> list[list[str]]:
     if result.data_obs is None:
         return []
     names = list(result.data_obs.site_names)
-    return [names[i : i + batch_size] for i in range(0, len(names), batch_size)]
+    return [
+        names[i : i + batch_size] for i in range(0, len(names), batch_size)
+    ]
 
 
 def plot_run(name: str, workdir: Path) -> dict:
@@ -65,7 +74,9 @@ def plot_run(name: str, workdir: Path) -> dict:
         "n_log_records": int(result.n_iter),
         "final_rms": float(result.final_rms),
         "best_rms": float(result.best_rms),
-        "best_iteration": int(result.iteration_numbers[result.rms_history.argmin()])
+        "best_iteration": int(
+            result.iteration_numbers[result.rms_history.argmin()]
+        )
         if result.rms_history.size
         else None,
         "n_sites": len(result.data_obs.site_names) if result.data_obs else 0,
@@ -88,7 +99,11 @@ def plot_run(name: str, workdir: Path) -> dict:
             print(f"skipped {name}/{msg}")
             plt.close("all")
 
-    record("convergence", "rms_misfit.png", lambda: PlotMisfit(result=result).plot())
+    record(
+        "convergence",
+        "rms_misfit.png",
+        lambda: PlotMisfit(result=result).plot(),
+    )
 
     for which in ("initial", "final"):
         record(
@@ -149,7 +164,9 @@ def plot_run(name: str, workdir: Path) -> dict:
         )
 
     out.mkdir(parents=True, exist_ok=True)
-    (out / "summary.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    (out / "summary.json").write_text(
+        json.dumps(meta, indent=2), encoding="utf-8"
+    )
     return meta
 
 
@@ -158,10 +175,15 @@ def main() -> None:
     summary = {}
     for name, workdir in RUNS.items():
         if not workdir.is_dir():
-            summary[name] = {"source": str(workdir), "errors": ["missing source folder"]}
+            summary[name] = {
+                "source": str(workdir),
+                "errors": ["missing source folder"],
+            }
             continue
         summary[name] = plot_run(name, workdir)
-    (OUT_ROOT / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    (OUT_ROOT / "summary.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8"
+    )
     print(f"wrote {OUT_ROOT.resolve()}")
 
 

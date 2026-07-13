@@ -35,8 +35,10 @@ with AGENT_CONFIG.offline():
 print("status :", res2.status)
 print("summary:", res2.summary)
 print("n freqs:", len(res2.get("freqs")))
-print("rho_a range (ohm.m):",
-      f"{np.min(res2.get('rho_a')):.1f} - {np.max(res2.get('rho_a')):.1f}")
+print(
+    "rho_a range (ohm.m):",
+    f"{np.min(res2.get('rho_a')):.1f} - {np.max(res2.get('rho_a')):.1f}",
+)
 
 # %%
 # A three-layer model
@@ -75,7 +77,7 @@ def depth_profile(model, floor_km=10.0):
     rho = np.asarray(model["resistivity"], dtype=float)
     thick = np.asarray(model["thickness"], dtype=float)
     tops = np.concatenate([[0.0], np.cumsum(thick)])
-    bottom = tops[-1] + floor_km * 1000.0        # extend the half-space
+    bottom = tops[-1] + floor_km * 1000.0  # extend the half-space
     rho_steps, depth_steps = [], []
     for i, r in enumerate(rho):
         top = tops[i]
@@ -91,7 +93,9 @@ models = [
 ]
 
 fig, (ax_m, ax_r, ax_p) = plt.subplots(
-    1, 3, figsize=(12, 5),
+    1,
+    3,
+    figsize=(12, 5),
     gridspec_kw={"width_ratios": [1, 1.4, 1.4]},
 )
 
@@ -110,7 +114,9 @@ ax_m.grid(True, which="both", ls=":", alpha=0.5)
 # ── sounding curves ──
 for label, _model, res, color in models:
     period = 1.0 / np.asarray(res.get("freqs"))
-    ax_r.loglog(period, res.get("rho_a"), "-o", ms=3, color=color, label=label)
+    ax_r.loglog(
+        period, res.get("rho_a"), "-o", ms=3, color=color, label=label
+    )
     ax_p.semilogx(period, res.get("phase"), "-o", ms=3, color=color)
 
 ax_r.set_ylabel(r"$\rho_a$  ($\Omega\cdot$m)")
@@ -123,6 +129,7 @@ ax_p.set_xlabel("Period  (s)")
 ax_p.set_ylim(0, 90)
 ax_p.grid(True, which="both", ls=":", alpha=0.5)
 
-fig.suptitle("ForwardModelAgent — layered models and their MT soundings",
-             fontsize=12)
+fig.suptitle(
+    "ForwardModelAgent — layered models and their MT soundings", fontsize=12
+)
 fig.tight_layout()

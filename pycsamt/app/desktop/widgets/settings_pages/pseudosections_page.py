@@ -17,6 +17,7 @@ Section group
   • Y-direction  (down = shallow at top / up = shallow at bottom)
   • Station side inherited from station group (synced automatically)
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -33,16 +34,16 @@ from .base_page import SettingsPage
 
 _MARKER_CHOICES = [
     ("▽  (down-triangle)", "v"),
-    ("△  (up-triangle)",   "^"),
-    ("●  (circle)",        "o"),
-    ("■  (square)",        "s"),
-    ("◆  (diamond)",       "D"),
+    ("△  (up-triangle)", "^"),
+    ("●  (circle)", "o"),
+    ("■  (square)", "s"),
+    ("◆  (diamond)", "D"),
 ]
 
 _Y_DIR_CHOICES = [
-    ("Down  (shallow → top, standard)",  "down"),
-    ("Up    (shallow → bottom)",          "up"),
-    ("None  (no inversion applied)",      "none"),
+    ("Down  (shallow → top, standard)", "down"),
+    ("Up    (shallow → bottom)", "up"),
+    ("None  (no inversion applied)", "none"),
 ]
 
 _SIDE_CHOICES = [("Top", "top"), ("Bottom", "bottom")]
@@ -118,13 +119,28 @@ class PseudosectionsPage(SettingsPage):
             from pycsamt.api.station import (
                 PYCSAMT_STATION_RENDERING as SR,
             )
+
             ps = SR.pseudosection
             self._side_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_SIDE_CHOICES) if v == ps.side), 0)
+                next(
+                    (
+                        i
+                        for i, (_, v) in enumerate(_SIDE_CHOICES)
+                        if v == ps.side
+                    ),
+                    0,
+                )
             )
             self._show_cb.setChecked(ps.show_markers)
             self._marker_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_MARKER_CHOICES) if v == ps.marker.marker), 0)
+                next(
+                    (
+                        i
+                        for i, (_, v) in enumerate(_MARKER_CHOICES)
+                        if v == ps.marker.marker
+                    ),
+                    0,
+                )
             )
             self._size_spin.setValue(ps.marker.size)
             self._offset_spin.setValue(ps.marker.offset)
@@ -136,24 +152,34 @@ class PseudosectionsPage(SettingsPage):
             from pycsamt.api.section import (
                 PYCSAMT_SECTION as SEC,
             )
+
             y_dir = SEC.pseudosection.axis.y_direction
             self._ydir_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_Y_DIR_CHOICES) if v == y_dir), 0)
+                next(
+                    (
+                        i
+                        for i, (_, v) in enumerate(_Y_DIR_CHOICES)
+                        if v == y_dir
+                    ),
+                    0,
+                )
             )
         except Exception:
             pass
 
     def collect(self) -> dict:
         station = {
-            "side":          _SIDE_CHOICES[self._side_combo.currentIndex()][1],
-            "show_markers":  self._show_cb.isChecked(),
-            "marker_symbol": _MARKER_CHOICES[self._marker_combo.currentIndex()][1],
-            "marker_size":   self._size_spin.value(),
+            "side": _SIDE_CHOICES[self._side_combo.currentIndex()][1],
+            "show_markers": self._show_cb.isChecked(),
+            "marker_symbol": _MARKER_CHOICES[
+                self._marker_combo.currentIndex()
+            ][1],
+            "marker_size": self._size_spin.value(),
             "marker_offset": self._offset_spin.value(),
-            "max_labels":    self._maxlbl_spin.value(),
+            "max_labels": self._maxlbl_spin.value(),
         }
         section = {
-            "y_direction":  _Y_DIR_CHOICES[self._ydir_combo.currentIndex()][1],
+            "y_direction": _Y_DIR_CHOICES[self._ydir_combo.currentIndex()][1],
             "station_side": _SIDE_CHOICES[self._side_combo.currentIndex()][1],
         }
         return {"station": station, "section": section}
@@ -163,11 +189,13 @@ class PseudosectionsPage(SettingsPage):
             from pycsamt.api.station import (
                 PYCSAMT_STATION_RENDERING,
             )
+
             PYCSAMT_STATION_RENDERING.reset()
         except Exception:
             pass
         try:
             from pycsamt.api.section import PYCSAMT_SECTION
+
             PYCSAMT_SECTION.reset()
         except Exception:
             pass

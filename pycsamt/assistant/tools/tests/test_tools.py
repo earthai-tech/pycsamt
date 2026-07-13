@@ -4,6 +4,7 @@
 Tests for the executable assistant tools (RAG Step 7):
 validate_generated_code + workflow runners.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -19,7 +20,6 @@ from pycsamt.assistant.tools.workflow_tools import (
 
 
 class TestValidateGeneratedCode(unittest.TestCase):
-
     def test_good_code(self):
         code = (
             "from pycsamt.emtools._core import ensure_sites\n"
@@ -71,14 +71,15 @@ class _FakeReg:
 
     def resolve_line(self, name):
         return {
-            "line": "L22PLT", "edi_dir": "/data/L22PLT",
-            "exists": True, "n_edi_files": 25,
+            "line": "L22PLT",
+            "edi_dir": "/data/L22PLT",
+            "exists": True,
+            "n_edi_files": 25,
             "output_root": "results/willy/L22PLT",
         }
 
 
 class TestWorkflowTools(unittest.TestCase):
-
     def test_resolve_line(self):
         t = resolve_target("L22PLT", registry=_FakeReg())
         self.assertEqual(t["kind"], "line")
@@ -95,20 +96,19 @@ class TestWorkflowTools(unittest.TestCase):
 
     def test_missing_dir_raises(self):
         with self.assertRaises(FileNotFoundError):
-            run_workflow(
-                "static_shift", "/no/such/dir", registry=_FakeReg()
-            )
+            run_workflow("static_shift", "/no/such/dir", registry=_FakeReg())
 
 
 @unittest.skipUnless(
     Path("data/3edis").is_dir(), "bundled 3edis data not present"
 )
 class TestRunStaticShiftBundled(unittest.TestCase):
-
     def test_run_on_bundled_data(self):
         import tempfile
+
         res = run_workflow(
-            "static_shift", "data/3edis",
+            "static_shift",
+            "data/3edis",
             output_dir=tempfile.mkdtemp(),
         )
         self.assertEqual(res["workflow"], "static_shift")

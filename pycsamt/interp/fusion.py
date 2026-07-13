@@ -62,6 +62,7 @@ _BLEND_MODES = ("linear", "sigmoid", "rms_weighted")
 # Diagnostics dataclass
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class FusionDiagnostics(PyCSAMTObject):
     """Metadata about a completed fusion operation.
@@ -85,6 +86,7 @@ class FusionDiagnostics(PyCSAMTObject):
         Primary-model weight at each depth cell (1 = all primary,
         0 = all secondary).
     """
+
     z_overlap_start: float
     z_overlap_end: float
     has_overlap: bool
@@ -100,6 +102,7 @@ class FusionDiagnostics(PyCSAMTObject):
 # ─────────────────────────────────────────────────────────────────────────────
 # MultiMethodEMModel
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class MultiMethodEMModel(PyCSAMTObject):
     """Fuse two EM resistivity models onto a single depth grid.
@@ -172,14 +175,14 @@ class MultiMethodEMModel(PyCSAMTObject):
             raise ValueError(
                 f"blend must be one of {_BLEND_MODES}, got {blend!r}."
             )
-        self.primary   = primary
+        self.primary = primary
         self.secondary = secondary
-        self.primary_max_depth   = primary_max_depth
+        self.primary_max_depth = primary_max_depth
         self.secondary_min_depth = secondary_min_depth
-        self.blend         = blend
+        self.blend = blend
         self.blend_overlap = blend_overlap
-        self.z_grid        = z_grid
-        self.sigmoid_k     = float(sigmoid_k)
+        self.z_grid = z_grid
+        self.sigmoid_k = float(sigmoid_k)
         self.diagnostics_: FusionDiagnostics | None = None
 
     # ── public ─────────────────────────────────────────────────────────────
@@ -199,13 +202,13 @@ class MultiMethodEMModel(PyCSAMTObject):
         z_out = self._build_z_grid()
 
         # ── interpolate both models to unified z and primary x ─────────────
-        x_out    = p.x_centers.copy()
-        rho_p    = _interp_model_to_grid(p, x_out, z_out)
-        rho_s    = _interp_model_to_grid(s, x_out, z_out)
+        x_out = p.x_centers.copy()
+        rho_p = _interp_model_to_grid(p, x_out, z_out)
+        rho_s = _interp_model_to_grid(s, x_out, z_out)
 
         # ── effective contributing depth ranges ─────────────────────────────
-        z_p_max  = float(self.primary_max_depth   or p.z_centers[-1])
-        z_s_min  = float(self.secondary_min_depth or s.z_centers[0])
+        z_p_max = float(self.primary_max_depth or p.z_centers[-1])
+        z_s_min = float(self.secondary_min_depth or s.z_centers[0])
 
         float(p.z_centers[0])
         float(s.z_centers[-1])
@@ -214,12 +217,12 @@ class MultiMethodEMModel(PyCSAMTObject):
 
         # overlap window (may be narrowed by blend_overlap)
         z_ov_start = z_s_min
-        z_ov_end   = z_p_max
+        z_ov_end = z_p_max
         if self.blend_overlap is not None and has_overlap:
-            z_mid      = 0.5 * (z_ov_start + z_ov_end)
-            half       = 0.5 * float(self.blend_overlap)
+            z_mid = 0.5 * (z_ov_start + z_ov_end)
+            half = 0.5 * float(self.blend_overlap)
             z_ov_start = z_mid - half
-            z_ov_end   = z_mid + half
+            z_ov_end = z_mid + half
 
         # ── compute blend weights per depth cell ───────────────────────────
         w = self._blend_weights(z_out, z_ov_start, z_ov_end, has_overlap)
@@ -229,7 +232,7 @@ class MultiMethodEMModel(PyCSAMTObject):
         p_has_data = (z_out >= p.z_centers[0]) & (z_out <= p.z_centers[-1])
 
         # ── fuse ────────────────────────────────────────────────────────────
-        w3d      = w[:, np.newaxis]        # broadcast over x
+        w3d = w[:, np.newaxis]  # broadcast over x
         rho_fuse = np.where(
             p_has_data[:, np.newaxis] & s_has_data[:, np.newaxis],
             w3d * rho_p + (1.0 - w3d) * rho_s,
@@ -237,22 +240,22 @@ class MultiMethodEMModel(PyCSAMTObject):
         )
 
         # ── station metadata from primary ────────────────────────────────────
-        sta_x     = p.station_x if len(p.station_x) else x_out
+        sta_x = p.station_x if len(p.station_x) else x_out
         sta_names = p.station_names
 
         method_tag = f"{p.method}+{s.method}"
 
         self.diagnostics_ = FusionDiagnostics(
-            z_overlap_start  = float(z_ov_start),
-            z_overlap_end    = float(z_ov_end),
-            has_overlap      = bool(has_overlap),
-            blend_mode       = self.blend,
-            primary_method   = p.method,
-            secondary_method = s.method,
-            primary_rms      = float(p.rms),
-            secondary_rms    = float(s.rms),
-            n_z_fused        = len(z_out),
-            blend_weights    = w.copy(),
+            z_overlap_start=float(z_ov_start),
+            z_overlap_end=float(z_ov_end),
+            has_overlap=bool(has_overlap),
+            blend_mode=self.blend,
+            primary_method=p.method,
+            secondary_method=s.method,
+            primary_rms=float(p.rms),
+            secondary_rms=float(s.rms),
+            n_z_fused=len(z_out),
+            blend_weights=w.copy(),
         )
 
         return ResistivityModel.from_array(
@@ -306,7 +309,11 @@ class MultiMethodEMModel(PyCSAMTObject):
         if self.blend == "rms_weighted":
             rms_p = float(self.primary.rms)
             rms_s = float(self.secondary.rms)
-            if np.isfinite(rms_p) and np.isfinite(rms_s) and (rms_p + rms_s) > 0:
+            if (
+                np.isfinite(rms_p)
+                and np.isfinite(rms_s)
+                and (rms_p + rms_s) > 0
+            ):
                 # lower RMS → higher weight (better fit)
                 w_const = rms_s / (rms_p + rms_s)
                 w[:] = 1.0
@@ -343,6 +350,7 @@ class MultiMethodEMModel(PyCSAMTObject):
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _interp_model_to_grid(
     model: ResistivityModel,

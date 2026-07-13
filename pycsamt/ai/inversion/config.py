@@ -44,6 +44,7 @@ Snapshot a fitted inverter for reproducibility::
     cfg = InversionConfig.from_inverter(inv)
     cfg.write_template("snapshot.yml")
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -231,6 +232,7 @@ _INVERSION_CONFIG_SCHEMA: list[ConfigParameter] = [
 
 # ── dataclass ────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class InversionConfig:
     """Collect settings that define a 1-D AI-based EM inversion run.
@@ -326,29 +328,29 @@ class InversionConfig:
     """
 
     # ── Architecture ─────────────────────────────────────────────────────────
-    arch:           str            = "resnet"
-    n_layers:       int            = 5
-    solver:         str            = "mt1d"
-    device:         str | None  = None
-    include_phase:  bool           = True
-    log_thickness:  bool           = True
-    augment_noise:  float          = 0.02
+    arch: str = "resnet"
+    n_layers: int = 5
+    solver: str = "mt1d"
+    device: str | None = None
+    include_phase: bool = True
+    log_thickness: bool = True
+    augment_noise: float = 0.02
 
     # ── Training ─────────────────────────────────────────────────────────────
-    epochs:        int             = 100
-    batch_size:    int             = 256
-    lr:            float           = 1e-3
-    weight_decay:  float           = 1e-5
-    patience:      int             = 20
-    min_delta:     float           = 1e-5
-    val_frac:      float           = 0.1
-    grad_clip:     float | None = 1.0
-    seed:          int | None   = None
+    epochs: int = 100
+    batch_size: int = 256
+    lr: float = 1e-3
+    weight_decay: float = 1e-5
+    patience: int = 20
+    min_delta: float = 1e-5
+    val_frac: float = 0.1
+    grad_clip: float | None = 1.0
+    seed: int | None = None
 
     # ── Checkpointing ────────────────────────────────────────────────────────
-    checkpoint_dir:  str | None = "checkpoints"
-    checkpoint_name: str           = "em_inverter"
-    save_best:       bool          = True
+    checkpoint_dir: str | None = "checkpoints"
+    checkpoint_name: str = "em_inverter"
+    save_best: bool = True
 
     # ── Output ───────────────────────────────────────────────────────────────
     verbose: bool = True
@@ -379,11 +381,16 @@ class InversionConfig:
             )
 
         if self.n_layers < 2:
-            raise ValueError("n_layers must be at least 2 (1 layer + halfspace).")
+            raise ValueError(
+                "n_layers must be at least 2 (1 layer + halfspace)."
+            )
 
         if self.device is not None:
             _VALID_DEVICES = {"cpu", "cuda", "mps"}
-            if self.device not in _VALID_DEVICES and not self.device.startswith("cuda:"):
+            if (
+                self.device not in _VALID_DEVICES
+                and not self.device.startswith("cuda:")
+            ):
                 raise ValueError(
                     f"device must be one of {_VALID_DEVICES!r} or 'cuda:N', "
                     f"got {self.device!r}."
@@ -431,6 +438,7 @@ class InversionConfig:
         'EMInverter1D'
         """
         from .inv1d import EMInverter1D
+
         return EMInverter1D(
             arch=self.arch,
             n_layers=self.n_layers,
@@ -633,7 +641,11 @@ class InversionConfig:
         phase_s = "yes" if self.include_phase else "no"
         log_th_s = "yes" if self.log_thickness else "no"
         clip_s = str(self.grad_clip) if self.grad_clip is not None else "off"
-        ckpt = str(self.checkpoint_path()) if self.checkpoint_path() else "disabled"
+        ckpt = (
+            str(self.checkpoint_path())
+            if self.checkpoint_path()
+            else "disabled"
+        )
         lines = [
             "InversionConfig",
             "  ── Architecture ──",

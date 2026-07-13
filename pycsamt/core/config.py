@@ -82,9 +82,8 @@ class StationNamePolicy:
     prefix: str = "S"
     pad: int = 3
     strip: bool = True
-    custom_normalize: Callable[[str], str] = staticmethod(
-        lambda s: s
-    )
+    custom_normalize: Callable[[str], str] = staticmethod(lambda s: s)
+
     def _try_float(self, v) -> float | None:
         try:
             x = float(v)
@@ -118,7 +117,7 @@ class StationNamePolicy:
             return None
         s = name.strip() if self.strip else name
         s = self.custom_normalize(s)
-        s = re.sub(fr"[^ {self.allow_pattern}]", "", s)
+        s = re.sub(rf"[^ {self.allow_pattern}]", "", s)
         s = s[: self.maxlen]
         return s or None
 
@@ -200,6 +199,7 @@ class StationNamePolicy:
 
         # last resort
         return s or self.synthesize(station_id)
+
 
 @dataclass
 class CoreConfig:
@@ -315,13 +315,12 @@ def configure(**kwargs: Any) -> CoreConfig:
     global _CFG
     for key, value in kwargs.items():
         if not hasattr(_CFG, key):
-            raise AttributeError(
-                f"Unknown config field: {key!r}"
-            )
-        if (
-            key == "on_duplicate_station"
-            and value not in {"replace", "keep", "error"}
-        ):
+            raise AttributeError(f"Unknown config field: {key!r}")
+        if key == "on_duplicate_station" and value not in {
+            "replace",
+            "keep",
+            "error",
+        }:
             raise ValueError(
                 "on_duplicate_station must be one of "
                 "'replace', 'keep', 'error'"
@@ -512,13 +511,9 @@ def _load_user_config() -> None:
         if p.exists() and p.is_file():
             try:
                 if p.suffix.lower() == ".toml" and tomllib is not None:
-                    data = tomllib.loads(
-                        p.read_text(encoding="utf-8")
-                    )
+                    data = tomllib.loads(p.read_text(encoding="utf-8"))
                 else:
-                    data = json.loads(
-                        p.read_text(encoding="utf-8")
-                    )
+                    data = json.loads(p.read_text(encoding="utf-8"))
                 if isinstance(data, Mapping):
                     payload = data.get("core", data)
                     if isinstance(payload, Mapping):
@@ -530,9 +525,10 @@ def _load_user_config() -> None:
                 )
                 return
 
+
 _load_user_config()
 
-CoreConfig.__doc__=r"""
+CoreConfig.__doc__ = r"""
 Global configuration container for :mod:`pycsamt`.
 
 The object stores defaults for parsing, conversion, and

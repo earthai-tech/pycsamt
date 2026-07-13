@@ -15,6 +15,7 @@ from pycsamt.app.desktop.agent_registry import (
 
 # ── AGENT_REGISTRY structure ──────────────────────────────────────────────
 
+
 def test_registry_is_non_empty():
     assert len(AGENT_REGISTRY) > 0
 
@@ -28,13 +29,17 @@ def test_all_entries_have_type():
 def test_llm_entries_have_class_name():
     for name, entry in AGENT_REGISTRY.items():
         if entry["type"] == "llm":
-            assert "class_name" in entry, f"LLM agent '{name}' missing 'class_name'"
+            assert "class_name" in entry, (
+                f"LLM agent '{name}' missing 'class_name'"
+            )
 
 
 def test_processing_entries_have_fn_name():
     for name, entry in AGENT_REGISTRY.items():
         if entry["type"] == "processing":
-            assert "fn_name" in entry, f"Processing agent '{name}' missing 'fn_name'"
+            assert "fn_name" in entry, (
+                f"Processing agent '{name}' missing 'fn_name'"
+            )
 
 
 def test_all_entries_have_description():
@@ -69,6 +74,7 @@ def test_combo_params_have_options():
 
 # ── Helper functions ──────────────────────────────────────────────────────
 
+
 def test_agent_names_returns_list():
     names = agent_names()
     assert isinstance(names, list)
@@ -87,7 +93,7 @@ def test_processing_agents_all_have_processing_type():
 
 def test_llm_and_processing_cover_all():
     all_names = set(agent_names())
-    covered   = set(llm_agents()) | set(processing_agents())
+    covered = set(llm_agents()) | set(processing_agents())
     assert all_names == covered
 
 
@@ -107,7 +113,7 @@ def test_default_params_returns_dict():
 def test_default_params_values_match_spec():
     for agent_name in agent_names():
         defaults = default_params(agent_name)
-        entry    = get_entry(agent_name)
+        entry = get_entry(agent_name)
         for p_name, spec in entry.get("params", {}).items():
             assert p_name in defaults
             assert defaults[p_name] == spec["default"]

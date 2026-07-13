@@ -49,10 +49,9 @@ _LAZY_TRANSFORMERS = {"AVGtoEDI", "JtoEDI", "TransformerMixin"}
 def __getattr__(name):
     if name in _LAZY_TRANSFORMERS:
         from .. import transformers as _t
+
         return getattr(_t, name)
-    raise AttributeError(
-        f"module {__name__!r} has no attribute {name!r}"
-    )
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [
@@ -60,13 +59,11 @@ __all__ = [
     "TransformerMixin",
     "AVGtoEDI",
     "JtoEDI",
-
     # Base exports
     "CoreObject",
     "MTBase",
     "TFBundle",
     "to_edi",
-
     # Registry (low-level)
     "RegistryError",
     "Record",
@@ -75,7 +72,6 @@ __all__ = [
     "FileManifestStore",
     "Registry",
     "guess_kind",
-
     # Registry (high-level) + packers
     "Packer",
     "register_packer",
@@ -84,12 +80,10 @@ __all__ = [
     "pack_to_file",
     "unpack_from_file",
     "RegistryAPI",
-
     # Bundle helpers / mixins
     "bundle_from_edi",
     "BundleMixin",
     "BundleContainerMixin",
-
     # Config & adapter registry
     "StationNamePolicy",
     "CoreConfig",

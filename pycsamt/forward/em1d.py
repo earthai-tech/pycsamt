@@ -39,6 +39,7 @@ Puzyrev, V. et al. (2021). Inversion of 1D frequency- and
 time-domain EM data with CNNs. *Computers & Geosciences*, 149,
 104681.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -55,12 +56,13 @@ __all__ = [
 ]
 
 # Physical constants
-MU0: float = 4.0e-7 * np.pi   # H/m — magnetic permeability of free space
+MU0: float = 4.0e-7 * np.pi  # H/m — magnetic permeability of free space
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Output container
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class ForwardResponse:
@@ -88,6 +90,7 @@ class ForwardResponse:
     model : LayeredModel or None
         The input model that produced this response.
     """
+
     method: str = "MT1D"
     freqs: np.ndarray | None = None
     times: np.ndarray | None = None
@@ -98,7 +101,9 @@ class ForwardResponse:
     hz_freq: np.ndarray | None = None
     model: object = field(default=None, repr=False)
 
-    def to_array(self, *, log_rho: bool = True, include_phase: bool = True) -> np.ndarray:
+    def to_array(
+        self, *, log_rho: bool = True, include_phase: bool = True
+    ) -> np.ndarray:
         """
         Flatten to a 1-D feature vector for ML input.
 
@@ -114,7 +119,11 @@ class ForwardResponse:
             Include phase alongside ρ_a (MT only).
         """
         if self.method in ("MT1D", "CSAMT1D"):
-            ra = np.log10(np.maximum(self.rho_a, 1e-12)) if log_rho else self.rho_a
+            ra = (
+                np.log10(np.maximum(self.rho_a, 1e-12))
+                if log_rho
+                else self.rho_a
+            )
             if include_phase:
                 return np.concatenate([ra, self.phase])
             return ra
@@ -126,6 +135,7 @@ class ForwardResponse:
     def plot(self, ax=None, **kwargs):
         """Quick diagnostic plot.  Returns the Axes used."""
         import matplotlib.pyplot as plt
+
         if ax is None:
             _, ax = plt.subplots(figsize=(5, 4))
         if self.method in ("MT1D", "CSAMT1D"):
@@ -146,7 +156,10 @@ class ForwardResponse:
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _z_surface_mt(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
+
+def _z_surface_mt(
+    omega: float, rho: np.ndarray, thick: np.ndarray
+) -> complex:
     """
     Compute the MT surface impedance for a single angular frequency.
 
@@ -169,20 +182,21 @@ def _z_surface_mt(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
     """
     # Halfspace intrinsic impedance
     k_n = np.sqrt(1j * omega * MU0 / rho[-1])
-    Z = 1j * omega * MU0 / k_n            # = sqrt(iωμρ_N)
+    Z = 1j * omega * MU0 / k_n  # = sqrt(iωμρ_N)
 
     # Propagate upward
     for j in range(len(rho) - 2, -1, -1):
         k_j = np.sqrt(1j * omega * MU0 / rho[j])
-        Z0_j = 1j * omega * MU0 / k_j     # intrinsic impedance of layer j
+        Z0_j = 1j * omega * MU0 / k_j  # intrinsic impedance of layer j
         th = np.tanh(k_j * thick[j])
         Z = Z0_j * (Z + Z0_j * th) / (Z0_j + Z * th)
 
     return Z
 
 
-def _te_admittance(lam: np.ndarray, omega: float,
-                   rho: np.ndarray, thick: np.ndarray) -> np.ndarray:
+def _te_admittance(
+    lam: np.ndarray, omega: float, rho: np.ndarray, thick: np.ndarray
+) -> np.ndarray:
     """
     Vectorised TE-mode surface admittance Y_TE(λ, ω) for all λ at once.
 
@@ -198,19 +212,17 @@ def _te_admittance(lam: np.ndarray, omega: float,
     -------
     Y_TE : ndarray (n_lam,), complex
     """
-    sigma = 1.0 / rho                                  # conductivities
+    sigma = 1.0 / rho  # conductivities
 
     # Vertical wavenumber  ν_j² = λ² + iωμ₀σ_j
     # Shape broadcast: (n_lam, n_layers)
-    nu = np.sqrt(
-        lam[:, None] ** 2 + 1j * omega * MU0 * sigma[None, :]
-    )
+    nu = np.sqrt(lam[:, None] ** 2 + 1j * omega * MU0 * sigma[None, :])
 
     # Intrinsic TE admittance Y0_j = ν_j / (iωμ₀)
-    Y0 = nu / (1j * omega * MU0)          # (n_lam, n_layers)
+    Y0 = nu / (1j * omega * MU0)  # (n_lam, n_layers)
 
     # Start from halfspace
-    Y = Y0[:, -1].copy()                  # (n_lam,)
+    Y = Y0[:, -1].copy()  # (n_lam,)
 
     for j in range(len(rho) - 2, -1, -1):
         Y0j = Y0[:, j]
@@ -221,8 +233,13 @@ def _te_admittance(lam: np.ndarray, omega: float,
     return Y
 
 
-def _hankel_hz_fd(omega: float, rho: np.ndarray, thick: np.ndarray,
-                  loop_radius: float, n_lam: int = 150) -> complex:
+def _hankel_hz_fd(
+    omega: float,
+    rho: np.ndarray,
+    thick: np.ndarray,
+    loop_radius: float,
+    n_lam: int = 150,
+) -> complex:
     """
     Frequency-domain H_z at the centre of a horizontal circular loop of
     radius *loop_radius* over a 1-D earth.
@@ -245,7 +262,7 @@ def _hankel_hz_fd(omega: float, rho: np.ndarray, thick: np.ndarray,
     jac = 0.5 * (lam_hi - lam_lo)
 
     Y_TE = _te_admittance(lam, omega, rho, thick)
-    Y0_air = lam / (1j * omega * MU0)    # air admittance ν₀/iωμ₀ ≈ λ/iωμ₀
+    Y0_air = lam / (1j * omega * MU0)  # air admittance ν₀/iωμ₀ ≈ λ/iωμ₀
 
     r_TE = (Y0_air - Y_TE) / (Y0_air + Y_TE)
 
@@ -259,15 +276,17 @@ def _hankel_hz_fd(omega: float, rho: np.ndarray, thick: np.ndarray,
 # Abstract base solver
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _Base1DForward(ABC):
     @abstractmethod
-    def run(self, model) -> ForwardResponse:   # model: LayeredModel
+    def run(self, model) -> ForwardResponse:  # model: LayeredModel
         ...
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MT 1-D forward
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class MT1DForward(_Base1DForward):
     """
@@ -338,6 +357,7 @@ class MT1DForward(_Base1DForward):
 # ─────────────────────────────────────────────────────────────────────────────
 # TEM 1-D forward
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TEM1DForward(_Base1DForward):
     """
@@ -413,11 +433,16 @@ class TEM1DForward(_Base1DForward):
         thick = model.thickness
 
         # Frequency-domain H_z at each ω
-        hz_fd = np.array(
-            [_hankel_hz_fd(w, rho, thick, self.loop_radius, self.n_lam)
-             for w in self._omega],
-            dtype=complex,
-        ) * self.moment
+        hz_fd = (
+            np.array(
+                [
+                    _hankel_hz_fd(w, rho, thick, self.loop_radius, self.n_lam)
+                    for w in self._omega
+                ],
+                dtype=complex,
+            )
+            * self.moment
+        )
 
         # Time-domain dBz/dt via cosine transform
         # dBz/dt(t) ≈ (2/π) × ∫₀^∞ ω · Im[H_z(ω)] · cos(ωt) dω
@@ -434,17 +459,16 @@ class TEM1DForward(_Base1DForward):
     def _cosine_transform(self, hz_fd: np.ndarray) -> np.ndarray:
         """Numerical cosine transform → dBz/dt at self.times."""
         omega = self._omega
-        dlog_omega = np.diff(np.log(omega))                 # spacings
+        dlog_omega = np.diff(np.log(omega))  # spacings
         # Trapezoidal integration in log(ω) space
         # ∫ f(ω) dω  ≈  Σ  f(ω_k) · ω_k · Δlog(ω)
         result = np.empty(len(self.times))
         for i, t in enumerate(self.times):
             integrand = omega * np.imag(hz_fd) * np.cos(omega * t)
             # Trapezoidal in log-space: integrate f(ω)*ω d(log ω)
-            pts = integrand * omega                          # f·ω for log spacing
-            result[i] = (
-                (2.0 / np.pi)
-                * np.sum(0.5 * (pts[:-1] + pts[1:]) * dlog_omega)
+            pts = integrand * omega  # f·ω for log spacing
+            result[i] = (2.0 / np.pi) * np.sum(
+                0.5 * (pts[:-1] + pts[1:]) * dlog_omega
             )
         return result
 
@@ -452,6 +476,7 @@ class TEM1DForward(_Base1DForward):
 # ─────────────────────────────────────────────────────────────────────────────
 # CSAMT 1-D forward
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class CSAMT1DForward(_Base1DForward):
     """

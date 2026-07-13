@@ -145,9 +145,7 @@ def test_edge_processor_sample_axis_and_channel_override():
             [5.0, 6.0, 7.0, 8.0],
         ]
     )
-    proc = EdgeProcessor(
-        EdgeProcessingConfig(decimation=2, sample_axis=1)
-    )
+    proc = EdgeProcessor(EdgeProcessingConfig(decimation=2, sample_axis=1))
 
     result = proc.process(data, channel_names=["ex", "hy"])
 

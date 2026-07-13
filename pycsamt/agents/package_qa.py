@@ -88,9 +88,7 @@ _SYSTEM_TMPL = (
 
 # Full-dump system prompt (used as class attribute
 # so tests can inspect it without instantiating)
-_FULL_SYSTEM_PROMPT = _SYSTEM_TMPL.format(
-    context=PACKAGE_CONTEXT
-)
+_FULL_SYSTEM_PROMPT = _SYSTEM_TMPL.format(context=PACKAGE_CONTEXT)
 
 
 # ── query → tier selection ─────────────────────────────────────────────────────
@@ -159,9 +157,7 @@ _STOPWORDS = frozenset(
 
 def _keywords(text: str) -> list[str]:
     """Extract meaningful lowercase tokens."""
-    words = re.findall(
-        r"[a-z][a-z_0-9]{2,}", text.lower()
-    )
+    words = re.findall(r"[a-z][a-z_0-9]{2,}", text.lower())
     return [w for w in words if w not in _STOPWORDS]
 
 
@@ -176,18 +172,16 @@ def _select_tiers(question: str) -> str:
     """
     kw = set(_keywords(question))
 
-    need_sites    = bool(kw & _SITES_KW)
-    need_agents   = bool(kw & _AGENT_KW)
+    need_sites = bool(kw & _SITES_KW)
+    need_agents = bool(kw & _AGENT_KW)
     need_workflow = bool(kw & _WORKFLOW_KW)
     need_examples = bool(kw & _EXAMPLE_KW)
-    need_emtools  = bool(kw & _EMTOOLS_KW)
+    need_emtools = bool(kw & _EMTOOLS_KW)
 
     # If nothing matched, include everything
     # (better to over-inform than under-inform)
     nothing_matched = not any(
-        [need_sites, need_agents,
-         need_workflow, need_examples,
-         need_emtools]
+        [need_sites, need_agents, need_workflow, need_examples, need_emtools]
     )
 
     parts = [TIER_CORE]
@@ -206,17 +200,24 @@ def _select_tiers(question: str) -> str:
 # ── offline lookup ─────────────────────────────────────────────────────────────
 
 _WORKFLOW_PREFIXES = (
-    "qc", "static_shift",
-    "phase_analysis", "forward",
-    "inversion", "ai_inv",
-    "pinn", "hybrid", "full",
-    "report", "interp", "modem",
-    "occam", "tipper",
+    "qc",
+    "static_shift",
+    "phase_analysis",
+    "forward",
+    "inversion",
+    "ai_inv",
+    "pinn",
+    "hybrid",
+    "full",
+    "report",
+    "interp",
+    "modem",
+    "occam",
+    "tipper",
 )
 
 _WORKFLOW_TRIGGERS = frozenset(
-    "workflow workflows support supports"
-    " available list".split()
+    "workflow workflows support supports available list".split()
 )
 
 
@@ -224,10 +225,8 @@ def _workflow_lines() -> list[str]:
     return [
         ln
         for ln in PACKAGE_CONTEXT.split("\n")
-        if ln.strip() and any(
-            ln.strip().startswith(k)
-            for k in _WORKFLOW_PREFIXES
-        )
+        if ln.strip()
+        and any(ln.strip().startswith(k) for k in _WORKFLOW_PREFIXES)
     ]
 
 
@@ -247,8 +246,7 @@ def _offline_answer(question: str) -> dict:
         lines = _workflow_lines()
         answer = (
             "pycsamt v2 supports the following"
-            " workflows:\n\n"
-            + "\n".join("  " + ln for ln in lines)
+            " workflows:\n\n" + "\n".join("  " + ln for ln in lines)
         )
         return {
             "answer": answer,
@@ -258,14 +256,12 @@ def _offline_answer(question: str) -> dict:
 
     # class-level scoring
     agents = _collect_agents()
-    core   = _collect_core()
+    core = _collect_core()
     all_cls = {**agents, **core}
 
     scored: list[tuple[int, str, str]] = []
     for name, cls in all_cls.items():
-        doc  = _short_doc(
-            inspect_full_doc(cls), max_chars=600
-        )
+        doc = _short_doc(inspect_full_doc(cls), max_chars=600)
         hits = kw & set(_keywords(name + " " + doc))
         scored.append((len(hits), name, doc))
 
@@ -277,8 +273,7 @@ def _offline_answer(question: str) -> dict:
         answer = (
             "I could not find a specific match"
             " in the pycsamt API reference."
-            " Supported workflows:\n\n"
-            + "\n".join("  " + ln for ln in lines)
+            " Supported workflows:\n\n" + "\n".join("  " + ln for ln in lines)
         )
         return {
             "answer": answer,
@@ -286,15 +281,9 @@ def _offline_answer(question: str) -> dict:
             "excerpts": [],
         }
 
-    excerpts = [
-        {"class": t[1], "excerpt": t[2]}
-        for t in top
-    ]
-    answer = (
-        "Based on the pycsamt v2 API reference:\n\n"
-        + "\n\n".join(
-            f"**{t[1]}**: {t[2]}" for t in top
-        )
+    excerpts = [{"class": t[1], "excerpt": t[2]} for t in top]
+    answer = "Based on the pycsamt v2 API reference:\n\n" + "\n\n".join(
+        f"**{t[1]}**: {t[2]}" for t in top
     )
     return {
         "answer": answer,
@@ -306,6 +295,7 @@ def _offline_answer(question: str) -> dict:
 def inspect_full_doc(obj: Any) -> str:
     """Re-export: return full docstring."""
     import inspect as _i
+
     return _i.getdoc(obj) or ""
 
 
@@ -313,6 +303,7 @@ def inspect_full_doc(obj: Any) -> str:
 from typing import Any  # noqa: E402
 
 # ── agent class ────────────────────────────────────────────────────────────────
+
 
 class PackageQAAgent(BaseAgent):
     r"""Answer free-form questions about pycsamt v2.
@@ -397,6 +388,7 @@ class PackageQAAgent(BaseAgent):
             from pycsamt.assistant.rag.context_builder import (
                 default_context_builder,
             )
+
             builder = default_context_builder()
             if builder is None:
                 return None
@@ -405,22 +397,16 @@ class PackageQAAgent(BaseAgent):
         except Exception:  # noqa: BLE001 — RAG is best-effort
             return None
 
-    def execute(
-        self, input_data: dict
-    ) -> AgentResult:
+    def execute(self, input_data: dict) -> AgentResult:
         question = (
-            input_data.get("question")
-            or input_data.get("request")
-            or ""
+            input_data.get("question") or input_data.get("request") or ""
         ).strip()
 
         if not question:
             return AgentResult(
                 status="failed",
                 summary="No question provided.",
-                error=(
-                    "No 'question' in input_data."
-                ),
+                error=("No 'question' in input_data."),
                 data={},
             )
 
@@ -435,6 +421,7 @@ class PackageQAAgent(BaseAgent):
             from pycsamt.assistant.rag.context_builder import (
                 needs_clarification,
             )
+
             clar = needs_clarification(rag)
             if clar:
                 return AgentResult(
@@ -472,9 +459,7 @@ class PackageQAAgent(BaseAgent):
 
         # online path — select relevant tiers
         selected_ctx = _select_tiers(question)
-        system_prompt = _SYSTEM_TMPL.format(
-            context=selected_ctx
-        )
+        system_prompt = _SYSTEM_TMPL.format(context=selected_ctx)
 
         # Ground the LLM in retrieved, citable package facts.
         msg_parts: list[str] = []
@@ -531,7 +516,10 @@ def _tiers_used(question: str) -> list[str]:
         out.append("emtools")
     if len(out) == 1:
         out = [
-            "core", "agents", "sites",
-            "examples", "emtools",
+            "core",
+            "agents",
+            "sites",
+            "examples",
+            "emtools",
         ]
     return out

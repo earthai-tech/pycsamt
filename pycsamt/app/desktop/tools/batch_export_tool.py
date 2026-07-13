@@ -16,6 +16,7 @@ Usage in MainWindow
     dlg = BatchExportDialog(figures, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,10 +46,11 @@ _FORMATS = ["PNG", "PDF", "SVG", "EPS", "TIFF"]
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
+
 class _ExportWorker(QThread):
     progress = Signal(int, int, str)
-    done     = Signal(int, str)
-    error    = Signal(str)
+    done = Signal(int, str)
+    error = Signal(str)
 
     def __init__(
         self,
@@ -59,18 +61,20 @@ class _ExportWorker(QThread):
         transparent: bool,
     ):
         super().__init__()
-        self._figures     = figures
-        self._out_dir     = out_dir
-        self._fmt         = fmt.lower()
-        self._dpi         = dpi
+        self._figures = figures
+        self._out_dir = out_dir
+        self._fmt = fmt.lower()
+        self._dpi = dpi
         self._transparent = transparent
 
     def run(self):
         self._out_dir.mkdir(parents=True, exist_ok=True)
-        total   = len(self._figures)
-        saved   = 0
+        total = len(self._figures)
+        saved = 0
         for idx, (label, fig) in enumerate(self._figures):
-            safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in label)
+            safe = "".join(
+                c if c.isalnum() or c in "-_ " else "_" for c in label
+            )
             safe = safe.strip().replace(" ", "_")
             out_path = self._out_dir / f"{safe}.{self._fmt}"
             try:
@@ -88,6 +92,7 @@ class _ExportWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class BatchExportDialog(QDialog):
     """
@@ -109,7 +114,7 @@ class BatchExportDialog(QDialog):
         self.setWindowTitle("Batch Plot Export")
         self.setMinimumSize(500, 420)
         self._figures = figures
-        self._worker  = None
+        self._worker = None
         self._build_ui()
 
     # ── Build ─────────────────────────────────────────────────────────────────
@@ -122,7 +127,9 @@ class BatchExportDialog(QDialog):
         grp_src = QGroupBox("Source")
         form_src = QFormLayout(grp_src)
         n = len(self._figures)
-        self._src_lbl = QLabel(f"{n} canvas figure{'s' if n != 1 else ''} found")
+        self._src_lbl = QLabel(
+            f"{n} canvas figure{'s' if n != 1 else ''} found"
+        )
         form_src.addRow("Figures:", self._src_lbl)
         if self._figures:
             names = ", ".join(lbl for lbl, _ in self._figures[:5])
@@ -194,9 +201,9 @@ class BatchExportDialog(QDialog):
 
     def _on_run(self) -> None:
         out_dir = Path(self._dir_edit.text().strip())
-        fmt     = self._fmt_combo.currentText()
-        dpi     = self._dpi_spin.value()
-        transp  = self._transp_cb.isChecked()
+        fmt = self._fmt_combo.currentText()
+        dpi = self._dpi_spin.value()
+        transp = self._transp_cb.isChecked()
 
         self._run_btn.setEnabled(False)
         self._progress.setValue(0)

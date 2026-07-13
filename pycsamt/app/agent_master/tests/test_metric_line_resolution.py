@@ -8,6 +8,7 @@ groups — not collapsed to the upload folder.
 Guards the bug where "strike of line 2" → pick L22 still reported
 "strike for am_edi_folder_… from 128 stations" (whole folder).
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -36,9 +37,12 @@ class TestMetricLineResolution(unittest.TestCase):
         from pycsamt.app.agent_master.callbacks.chat import (
             _resolve_metric_targets,
         )
+
         t = _resolve_metric_targets(
             "give me the strike direction of line 2",
-            self._store(selected_lines=["L22"]), {}, False,
+            self._store(selected_lines=["L22"]),
+            {},
+            False,
         )
         self.assertEqual([(l, len(s)) for l, s in t], [("L22", 3)])
 
@@ -46,18 +50,20 @@ class TestMetricLineResolution(unittest.TestCase):
         from pycsamt.app.agent_master.callbacks.chat import (
             _resolve_metric_targets,
         )
+
         t = _resolve_metric_targets(
             "strike for all lines",
-            self._store(selected_lines=["L22"]), {}, True,
+            self._store(selected_lines=["L22"]),
+            {},
+            True,
         )
-        self.assertEqual(
-            sorted(l for l, _ in t), ["L18", "L22", "L34"]
-        )
+        self.assertEqual(sorted(l for l, _ in t), ["L18", "L22", "L34"])
 
     def test_named_line_resolves_without_picker(self):
         from pycsamt.app.agent_master.callbacks.chat import (
             _resolve_metric_targets,
         )
+
         t = _resolve_metric_targets("strike of L34", self._store(), {}, False)
         self.assertEqual([(l, len(s)) for l, s in t], [("L34", 1)])
 
@@ -68,13 +74,15 @@ class TestDetectLinesToFiles(unittest.TestCase):
         from pycsamt.app.agent_master.callbacks.edi import (
             _detect_lines_to_files,
         )
+
         d = tempfile.mkdtemp()
         for fn in ["22-001A.edi", "22-002A.edi", "18-001.edi", "34-009.edi"]:
             with open(os.path.join(d, fn), "w") as fh:
                 fh.write("x")
         g = _detect_lines_to_files(d)
-        self.assertEqual({k: len(v) for k, v in g.items()},
-                         {"L22": 2, "L18": 1, "L34": 1})
+        self.assertEqual(
+            {k: len(v) for k, v in g.items()}, {"L22": 2, "L18": 1, "L34": 1}
+        )
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ Features
     - Built-with credits
 * Clean Close button
 """
+
 from __future__ import annotations
 
 import math
@@ -49,24 +50,25 @@ from PySide6.QtWidgets import (
 )
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-_ICONS   = Path(__file__).parent.parent / "resources" / "icons"
+_ICONS = Path(__file__).parent.parent / "resources" / "icons"
 _LOGO_SVG = _ICONS / "pycsamt_logo.svg"
 
 # ── External links ────────────────────────────────────────────────────────────
 _URL_DOCS = "http://pycsamt.readthedocs.io/"
-_URL_GH   = "https://github.com/earthai-tech/pycsamt"
+_URL_GH = "https://github.com/earthai-tech/pycsamt"
 
 # ── Brand palette ─────────────────────────────────────────────────────────────
-_C_BG_DARK  = QColor("#0c1f4a")
-_C_BG_MID   = QColor("#1a3a7c")
-_C_BG_EDGE  = QColor("#0a1830")
-_C_AMBER    = QColor("#fbb040")
-_C_STEEL    = QColor("#8cb4de")
-_C_WHITE    = QColor("#ffffff")
-_C_LINK     = "#1a5cb8"
+_C_BG_DARK = QColor("#0c1f4a")
+_C_BG_MID = QColor("#1a3a7c")
+_C_BG_EDGE = QColor("#0a1830")
+_C_AMBER = QColor("#fbb040")
+_C_STEEL = QColor("#8cb4de")
+_C_WHITE = QColor("#ffffff")
+_C_LINK = "#1a5cb8"
 
 
 # ── Hero banner ───────────────────────────────────────────────────────────────
+
 
 class _HeroBanner(QWidget):
     """
@@ -79,17 +81,20 @@ class _HeroBanner(QWidget):
       • Two overlapping EM sinusoidal waves (decorative, bottom strip)
     """
 
-    _LOGO_ASPECT = 400.29 / 66.91   # from SVG viewBox
+    _LOGO_ASPECT = 400.29 / 66.91  # from SVG viewBox
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedHeight(175)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
 
         self._renderer = None
         if _LOGO_SVG.exists():
             try:
                 from PySide6.QtSvg import QSvgRenderer
+
                 r = QSvgRenderer(str(_LOGO_SVG))
                 if r.isValid():
                     self._renderer = r
@@ -100,7 +105,7 @@ class _HeroBanner(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-        rect  = self.rect()
+        rect = self.rect()
 
         # ── Background gradient ────────────────────────────────────────
         bg = QLinearGradient(0, 0, w, h)
@@ -112,14 +117,14 @@ class _HeroBanner(QWidget):
         # ── Radial glow (top-left corner, brand blue-cyan) ─────────────
         glow = QRadialGradient(w * 0.12, h * 0.2, w * 0.45)
         glow.setColorAt(0.0, QColor(45, 120, 210, 55))
-        glow.setColorAt(1.0, QColor(45, 120, 210,  0))
+        glow.setColorAt(1.0, QColor(45, 120, 210, 0))
         p.fillRect(rect, glow)
 
         # ── EM-wave decoration (bottom strip) ─────────────────────────
-        wave_y  = h - 32
-        amp1    = 9.0
-        amp2    = 5.5
-        freq    = 5.5 * math.pi / max(w, 1)
+        wave_y = h - 32
+        amp1 = 9.0
+        amp2 = 5.5
+        freq = 5.5 * math.pi / max(w, 1)
 
         path1 = QPainterPath()
         path2 = QPainterPath()
@@ -127,12 +132,16 @@ class _HeroBanner(QWidget):
         path2.moveTo(0, wave_y + 4)
         for x in range(1, w + 1):
             path1.lineTo(x, wave_y - amp1 * math.sin(freq * x))
-            path2.lineTo(x, wave_y + 4 - amp2 * math.sin(freq * x + math.pi * 0.65))
+            path2.lineTo(
+                x, wave_y + 4 - amp2 * math.sin(freq * x + math.pi * 0.65)
+            )
 
         pen1 = QPen(QColor(255, 255, 255, 38), 1.6)
-        pen2 = QPen(QColor(251, 176,  64, 48), 1.2)
-        p.setPen(pen1); p.drawPath(path1)
-        p.setPen(pen2); p.drawPath(path2)
+        pen2 = QPen(QColor(251, 176, 64, 48), 1.2)
+        p.setPen(pen1)
+        p.drawPath(path1)
+        p.setPen(pen2)
+        p.drawPath(path2)
 
         # ── Logo SVG ───────────────────────────────────────────────────
         if self._renderer:
@@ -145,6 +154,7 @@ class _HeroBanner(QWidget):
         # ── Version badge ──────────────────────────────────────────────
         try:
             import pycsamt
+
             ver = getattr(pycsamt, "__version__", "2.0.0")
         except Exception:
             ver = "2.0.0"
@@ -178,9 +188,15 @@ class _HeroBanner(QWidget):
 
 # ── Link button (styled QPushButton that opens a URL) ─────────────────────────
 
+
 class _LinkButton(QPushButton):
-    def __init__(self, icon_char: str, label: str, url: str,
-                 parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        icon_char: str,
+        label: str,
+        url: str,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(f"  {icon_char}  {label}", parent)
         self._url = url
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -207,6 +223,7 @@ class _LinkButton(QPushButton):
 
 # ── About dialog ──────────────────────────────────────────────────────────────
 
+
 class AboutDialog(QDialog):
     """
     Branded "About pycsamt v2" window.
@@ -220,7 +237,9 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("About pycsamt")
         self.setFixedWidth(530)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum
+        )
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -233,7 +252,7 @@ class AboutDialog(QDialog):
 
         # ── Content ───────────────────────────────────────────────────
         body = QWidget()
-        lay  = QVBoxLayout(body)
+        lay = QVBoxLayout(body)
         lay.setSpacing(10)
         lay.setContentsMargins(24, 16, 24, 8)
 
@@ -270,12 +289,13 @@ class AboutDialog(QDialog):
         # Metadata
         try:
             import pycsamt
+
             ver = getattr(pycsamt, "__version__", "2.0.0")
         except Exception:
             ver = "2.0.0"
 
-        py_ver  = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        plat    = platform.system()
+        py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        plat = platform.system()
 
         meta = QLabel(
             "<table cellspacing='5' style='font-size:12px;'>"
@@ -322,7 +342,7 @@ class AboutDialog(QDialog):
 
         # ── Close button ──────────────────────────────────────────────
         btn_area = QWidget()
-        btn_lay  = QHBoxLayout(btn_area)
+        btn_lay = QHBoxLayout(btn_area)
         btn_lay.setContentsMargins(24, 4, 24, 14)
         btn_lay.addStretch()
         close_btn = QPushButton("Close")

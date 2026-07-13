@@ -99,18 +99,14 @@ class ProjectRegistry:
         )
         self._lines: dict[str, Any] = self.data.get("lines", {}) or {}
         # normalised key → canonical line name (+ aliases)
-        self._index: dict[str, str] = {
-            _norm(k): k for k in self._lines
-        }
+        self._index: dict[str, str] = {_norm(k): k for k in self._lines}
         for alias, target in (self.data.get("aliases", {}) or {}).items():
             if target in self._lines:
                 self._index[_norm(alias)] = target
 
     # ── lookup ──────────────────────────────────────────────────────────────
     @classmethod
-    def from_default(
-        cls, root: Path | None = None
-    ) -> ProjectRegistry | None:
+    def from_default(cls, root: Path | None = None) -> ProjectRegistry | None:
         """Build from the auto-discovered registry, or ``None``."""
         reg = find_default_registry(root)
         return cls(reg, root=root) if reg else None
@@ -154,8 +150,7 @@ class ProjectRegistry:
         if canon is None:
             known = ", ".join(self.lines()) or "(none)"
             raise KeyError(
-                f"Unknown survey line {line_name!r}. "
-                f"Known lines: {known}"
+                f"Unknown survey line {line_name!r}. Known lines: {known}"
             )
 
         line = dict(self._lines[canon])
@@ -167,13 +162,9 @@ class ProjectRegistry:
         if not edi_path.is_absolute():
             edi_path = (self.root / edi_dir_raw).resolve()
         exists = edi_path.is_dir()
-        n_edi = (
-            len(list(edi_path.glob("*.edi"))) if exists else 0
-        )
+        n_edi = len(list(edi_path.glob("*.edi"))) if exists else 0
 
-        output_root = line.get(
-            "output_root", f"{out_root}/{canon}"
-        )
+        output_root = line.get("output_root", f"{out_root}/{canon}")
 
         return {
             "project": project.get("name"),

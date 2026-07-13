@@ -52,6 +52,7 @@ HybridInverter3D(n_stations=25, fitted)
 >>> vol = inv.resistivity_volume()      # doctest: +SKIP
 >>> s1 = inv.stage1_volume()            # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -149,8 +150,7 @@ class HybridInverter3D(BaseHybridInverter):
     ) -> None:
         if mode not in ("te", "tm", "both"):
             raise ValueError(
-                "mode must be 'te', 'tm', or 'both'; "
-                f"got {mode!r}."
+                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
             )
         super().__init__(
             depth_max=depth_max,
@@ -158,9 +158,7 @@ class HybridInverter3D(BaseHybridInverter):
         )
         self.n_freqs = int(n_freqs)
         self.mode = mode
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.graph_weight = float(graph_weight)
         self.radius = float(radius)
         self.epochs = int(epochs)
@@ -169,24 +167,18 @@ class HybridInverter3D(BaseHybridInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._ai_inv = self._load_ai_inverter(
-            ai_inverter
-        )
+        self._ai_inv = self._load_ai_inverter(ai_inverter)
         self.n_layers = int(
-            n_layers
-            if n_layers is not None
-            else self._ai_inv.n_layers
+            n_layers if n_layers is not None else self._ai_inv.n_layers
         )
 
-        self._obs: list[SiteObs2D] = (
-            sites_to_obs_2d(
-                sites,
-                comp_te=comp_te,
-                comp_tm=comp_tm,
-                recursive=recursive,
-                on_dup=on_dup,
-                verbose=verbose,
-            )
+        self._obs: list[SiteObs2D] = sites_to_obs_2d(
+            sites,
+            comp_te=comp_te,
+            comp_tm=comp_tm,
+            recursive=recursive,
+            on_dup=on_dup,
+            verbose=verbose,
         )
         self._freqs_grid = _make_common_grid(
             [o.freq for o in self._obs],
@@ -195,9 +187,7 @@ class HybridInverter3D(BaseHybridInverter):
 
         # Station coordinates and adjacency
         if station_coords is not None:
-            self._coords = np.asarray(
-                station_coords, dtype=float
-            )
+            self._coords = np.asarray(station_coords, dtype=float)
         else:
             self._coords = sites_to_coords_3d(
                 sites,
@@ -208,13 +198,12 @@ class HybridInverter3D(BaseHybridInverter):
             )
 
         if adjacency is not None:
-            self._adjacency = np.asarray(
-                adjacency, dtype=np.float64
-            )
+            self._adjacency = np.asarray(adjacency, dtype=np.float64)
         else:
             from pycsamt.ai.nets.gcn import (
                 build_adjacency,
             )
+
             self._adjacency = build_adjacency(
                 self._coords,
                 radius=self.radius,
@@ -243,10 +232,7 @@ class HybridInverter3D(BaseHybridInverter):
 
         # Stage 1: GCN prediction
         if verbose:
-            print(
-                "Stage 1: GCNInverter3D forward "
-                "pass ..."
-            )
+            print("Stage 1: GCNInverter3D forward pass ...")
         init_params = self._run_stage1()
 
         # init_params: (S, 2*n_layers-1)
@@ -258,9 +244,7 @@ class HybridInverter3D(BaseHybridInverter):
         # Uniform thickness fallback if shape mismatch
         if init_log_thick.shape[1] != n_l - 1:
             dz = max(self.depth_max / n_l, 1.0)
-            init_log_thick = np.full(
-                (S, n_l - 1), np.log10(dz)
-            )
+            init_log_thick = np.full((S, n_l - 1), np.log10(dz))
 
         # Build observed arrays for Stage 2
         lr_obs, ph_obs = self._build_obs_arrays()
@@ -295,9 +279,7 @@ class HybridInverter3D(BaseHybridInverter):
 
     # ── outputs ──
 
-    def resistivity_volume(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def resistivity_volume(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the Stage-2 quasi-3D volume.
 
@@ -306,9 +288,9 @@ class HybridInverter3D(BaseHybridInverter):
         ndarray (n_layers, n_stations)
         """
         self._check_fitted()
-        lr = self._result["log_rho"]   # (S, L)
-        s = lr.T                       # (L, S)
-        return s if as_log10 else 10.0 ** s
+        lr = self._result["log_rho"]  # (S, L)
+        s = lr.T  # (L, S)
+        return s if as_log10 else 10.0**s
 
     def thickness_volume(self) -> np.ndarray:
         """
@@ -320,11 +302,9 @@ class HybridInverter3D(BaseHybridInverter):
         """
         self._check_fitted()
         lt = self._result["log_thick"]
-        return (10.0 ** lt).T
+        return (10.0**lt).T
 
-    def stage1_volume(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def stage1_volume(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the Stage-1 GCN quasi-3D volume.
 
@@ -333,13 +313,10 @@ class HybridInverter3D(BaseHybridInverter):
         ndarray (n_layers, n_stations)
         """
         if self._stage1_params is None:
-            raise RuntimeError(
-                "Call fit() to populate Stage-1 "
-                "results."
-            )
+            raise RuntimeError("Call fit() to populate Stage-1 results.")
         n_l = self.n_layers
         lr = self._stage1_params[:, :n_l].T  # (L,S)
-        return lr if as_log10 else 10.0 ** lr
+        return lr if as_log10 else 10.0**lr
 
     def convergence_curve(self):
         """
@@ -402,12 +379,8 @@ class HybridInverter3D(BaseHybridInverter):
         for i, obs in enumerate(self._obs):
             try:
                 m = LayeredModel(
-                    resistivity=np.maximum(
-                        10.0 ** lr_2d[i], 1e-3
-                    ),
-                    thickness=np.maximum(
-                        10.0 ** lt_2d[i], 1.0
-                    ),
+                    resistivity=np.maximum(10.0 ** lr_2d[i], 1e-3),
+                    thickness=np.maximum(10.0 ** lt_2d[i], 1.0),
                 )
                 resp = MT1DForward(obs.freq).run(m)
                 rp, pp = resp.rho_a, resp.phase
@@ -416,14 +389,10 @@ class HybridInverter3D(BaseHybridInverter):
                 pp = np.full_like(obs.freq, np.nan)
 
             rho_obs = (
-                obs.rho_te
-                if self.mode in ("te", "both")
-                else obs.rho_tm
+                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
             )
             ph_obs = (
-                obs.phase_te
-                if self.mode in ("te", "both")
-                else obs.phase_tm
+                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             )
             for k in range(len(obs.freq)):
                 rows.append(
@@ -467,14 +436,11 @@ class HybridInverter3D(BaseHybridInverter):
         if isinstance(ai_inverter, GCNInverter3D):
             if not ai_inverter._is_fitted:
                 raise ValueError(
-                    "ai_inverter must be a fitted "
-                    "GCNInverter3D instance."
+                    "ai_inverter must be a fitted GCNInverter3D instance."
                 )
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
-            return GCNInverter3D.load(
-                Path(ai_inverter)
-            )
+            return GCNInverter3D.load(Path(ai_inverter))
         raise TypeError(
             "ai_inverter must be a fitted "
             "GCNInverter3D or a path to a checkpoint;"
@@ -497,9 +463,7 @@ class HybridInverter3D(BaseHybridInverter):
 
         # Use obs_to_features_1d — safe with
         # SiteObs2D lists (avoids ensure_sites).
-        X, _, _ = obs_to_features_1d(
-            self._obs, n_freqs=gcn_nfreqs
-        )
+        X, _, _ = obs_to_features_1d(self._obs, n_freqs=gcn_nfreqs)
         # X: (S, n_features)
 
         # Build adjacency for the GCN call
@@ -531,12 +495,8 @@ class HybridInverter3D(BaseHybridInverter):
                 rho_src = o.rho_tm
                 ph_src = o.phase_tm
             else:
-                rho_src = 0.5 * (
-                    o.rho_te + o.rho_tm
-                )
-                ph_src = 0.5 * (
-                    o.phase_te + o.phase_tm
-                )
+                rho_src = 0.5 * (o.rho_te + o.rho_tm)
+                ph_src = 0.5 * (o.phase_te + o.phase_tm)
 
             lg, pg = _interp_to_grid(
                 o.freq,
@@ -550,9 +510,7 @@ class HybridInverter3D(BaseHybridInverter):
         return lr_obs, ph_obs
 
     def __repr__(self) -> str:
-        status = (
-            "fitted" if self._is_fitted else "unfitted"
-        )
+        status = "fitted" if self._is_fitted else "unfitted"
         return (
             f"HybridInverter3D("
             f"n_stations={self.n_sites}, "

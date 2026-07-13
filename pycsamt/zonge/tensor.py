@@ -40,12 +40,15 @@ __all__ = ["TensorBase"]
 
 _COMP_POS: dict[str, tuple[int, int]] = {
     # MT naming
-    "ZXX": (0, 0), "ZXY": (0, 1),
-    "ZYX": (1, 0), "ZYY": (1, 1),
-
+    "ZXX": (0, 0),
+    "ZXY": (0, 1),
+    "ZYX": (1, 0),
+    "ZYY": (1, 1),
     # CSAMT naming
-    "EXHX": (0, 0), "EXHY": (0, 1),
-    "EYHX": (1, 0), "EYHY": (1, 1),
+    "EXHX": (0, 0),
+    "EXHY": (0, 1),
+    "EYHX": (1, 0),
+    "EYHY": (1, 1),
 }
 
 _E_AXIS = np.array(["Ex", "Ey"])
@@ -126,8 +129,7 @@ class TensorBase(AVGComponentBase):
         # Best-effort numeric coercion for freq/station
         work["freq"] = pd.to_numeric(work["freq"], errors="coerce")
         if "station" in work.columns:
-            work["station"] = pd.to_numeric(
-                work["station"], errors="coerce")
+            work["station"] = pd.to_numeric(work["station"], errors="coerce")
         # groupby keys present in table
         keys = ["freq", "__comp_norm__"]
         if "station" in work.columns:
@@ -175,10 +177,17 @@ class TensorBase(AVGComponentBase):
             # Single-station path
             if station is not None:
                 # tolerant numeric compare
-                st_mask = np.isclose(
-                    pd.to_numeric(work.get("station", np.nan), errors="coerce"),
-                    float(station), equal_nan=False,
-                ) if "station" in work.columns else np.ones(len(work), bool)
+                st_mask = (
+                    np.isclose(
+                        pd.to_numeric(
+                            work.get("station", np.nan), errors="coerce"
+                        ),
+                        float(station),
+                        equal_nan=False,
+                    )
+                    if "station" in work.columns
+                    else np.ones(len(work), bool)
+                )
                 ws = work.loc[st_mask]
             else:
                 ws = work
@@ -208,8 +217,7 @@ class TensorBase(AVGComponentBase):
         stations = _station_array(work["station"].unique())
         # union vs intersection of frequencies across stations
         if align not in {"union", "intersection"}:
-            raise ValueError(
-                "align must be 'union' or 'intersection'")
+            raise ValueError("align must be 'union' or 'intersection'")
 
         if align == "union":
             freqs = np.unique(work["freq"].to_numpy())
@@ -230,14 +238,15 @@ class TensorBase(AVGComponentBase):
         if sort_freq:
             freqs = np.sort(freqs)
 
-        T = np.full((stations.size, freqs.size, 2, 2),
-                    fill_value, dtype=float)
+        T = np.full(
+            (stations.size, freqs.size, 2, 2), fill_value, dtype=float
+        )
 
         for si, st in enumerate(stations):
             mask = np.isclose(
                 pd.to_numeric(work["station"], errors="coerce"),
                 float(st),
-                equal_nan=False
+                equal_nan=False,
             )
             ws = work.loc[mask]
 
@@ -291,7 +300,7 @@ class TensorBase(AVGComponentBase):
             s_axis = None
             f_axis = 0
         elif arr.ndim == 4:
-            s_axis, f_axis = 0, 1 # noqa
+            s_axis, f_axis = 0, 1  # noqa
         else:
             raise TensorError("tensor must be 3D or 4D")
 
@@ -312,8 +321,12 @@ class TensorBase(AVGComponentBase):
                 vals = [block[0, 0], block[0, 1], block[1, 0], block[1, 1]]
                 for comp, val in zip(comps, vals):
                     rows.append(
-                        {"station": np.nan, "freq": float(f),
-                         "comp": comp, var: float(val)}
+                        {
+                            "station": np.nan,
+                            "freq": float(f),
+                            "comp": comp,
+                            var: float(val),
+                        }
                     )
         else:
             if stations is None:
@@ -321,11 +334,20 @@ class TensorBase(AVGComponentBase):
             for si, st in enumerate(stations):
                 for fi, f in enumerate(freqs):
                     block = arr[si, fi]
-                    vals = [block[0, 0], block[0, 1], block[1, 0], block[1, 1]]
+                    vals = [
+                        block[0, 0],
+                        block[0, 1],
+                        block[1, 0],
+                        block[1, 1],
+                    ]
                     for comp, val in zip(comps, vals):
                         rows.append(
-                            {"station": st, "freq": float(f),
-                             "comp": comp, var: float(val)}
+                            {
+                                "station": st,
+                                "freq": float(f),
+                                "comp": comp,
+                                var: float(val),
+                            }
                         )
 
         return pd.DataFrame.from_records(rows)
@@ -360,16 +382,17 @@ class TensorBase(AVGComponentBase):
         h = _H_AXIS
         if stations.size == 0:
             da = xr.DataArray(
-                T, dims=("freq", "e", "h"),
+                T,
+                dims=("freq", "e", "h"),
                 coords={"freq": freqs, "e": e, "h": h},
                 attrs=dict(attrs or {}),
                 name=var,
             )
         else:
             da = xr.DataArray(
-                T, dims=("station", "freq", "e", "h"),
-                coords={"station": stations, "freq": freqs,
-                        "e": e, "h": h},
+                T,
+                dims=("station", "freq", "e", "h"),
+                coords={"station": stations, "freq": freqs, "e": e, "h": h},
                 attrs=dict(attrs or {}),
                 name=var,
             )
@@ -426,6 +449,7 @@ def _norm_comp(label: Any) -> str | None:
     # Try to strip non-alnum characters just in case
     s2 = "".join(ch for ch in s if ch.isalnum())
     return s2 if s2 in _COMP_POS else None
+
 
 def _station_array(values: Iterable[Any]) -> np.ndarray:
     """

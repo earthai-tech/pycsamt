@@ -21,14 +21,17 @@ from pycsamt.models.modem.iotools.utils import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _model(nx=5, ny=4, nz=6, n_air=2, rho=100.0):
     from pycsamt.models.modem.model3d import ModEmModel3D
+
     m = ModEmModel3D()
     m.x_widths = np.full(nx, 2000.0)
     m.y_widths = np.full(ny, 2000.0)
-    m.z_widths = np.concatenate([np.full(n_air, 50.0),
-                                  np.full(nz - n_air, 500.0)])
-    m.n_air    = n_air
+    m.z_widths = np.concatenate(
+        [np.full(n_air, 50.0), np.full(nz - n_air, 500.0)]
+    )
+    m.n_air = n_air
     m.rho_loge = np.full((nz, ny, nx), math.log(rho))
     return m
 
@@ -36,6 +39,7 @@ def _model(nx=5, ny=4, nz=6, n_air=2, rho=100.0):
 # ===========================================================================
 # export.write_meshtools3d
 # ===========================================================================
+
 
 class TestWriteMeshtools3D:
     def test_returns_two_paths(self, tmp_path):
@@ -58,7 +62,7 @@ class TestWriteMeshtools3D:
         msh, _ = write_meshtools3d(m, tmp_path / "model")
         first = msh.read_text().splitlines()[0].split()
         nx, ny, nz_earth = int(first[0]), int(first[1]), int(first[2])
-        assert nx == 5 and ny == 4 and nz_earth == 4   # 6 - 2 air
+        assert nx == 5 and ny == 4 and nz_earth == 4  # 6 - 2 air
 
     def test_msh_origin_line(self, tmp_path):
         m = _model()
@@ -78,22 +82,28 @@ class TestWriteMeshtools3D:
     def test_con_values_positive(self, tmp_path):
         m = _model(rho=100.0)
         _, con = write_meshtools3d(m, tmp_path / "model")
-        vals = [float(ln) for ln in con.read_text().splitlines() if ln.strip()]
+        vals = [
+            float(ln) for ln in con.read_text().splitlines() if ln.strip()
+        ]
         assert all(v > 0 for v in vals)
 
     def test_con_uniform_rho(self, tmp_path):
         """Uniform 100 Ω·m model → σ = 0.01 S/m in every cell."""
         m = _model(rho=100.0)
         _, con = write_meshtools3d(m, tmp_path / "model")
-        vals = np.array([float(ln) for ln in con.read_text().splitlines() if ln.strip()])
+        vals = np.array(
+            [float(ln) for ln in con.read_text().splitlines() if ln.strip()]
+        )
         np.testing.assert_allclose(vals, 0.01, rtol=1e-5)
 
     def test_air_layers_excluded(self, tmp_path):
         """Air cells (very high rho) should not appear in the .con file."""
         m = _model(nz=6, n_air=2, rho=100.0)
-        m.rho_loge[:2] = math.log(1e12)   # set air cells explicitly
+        m.rho_loge[:2] = math.log(1e12)  # set air cells explicitly
         _, con = write_meshtools3d(m, tmp_path / "model")
-        vals = np.array([float(ln) for ln in con.read_text().splitlines() if ln.strip()])
+        vals = np.array(
+            [float(ln) for ln in con.read_text().splitlines() if ln.strip()]
+        )
         # All values should correspond to ρ=100, not 1e12
         np.testing.assert_allclose(vals, 0.01, rtol=1e-5)
 
@@ -101,12 +111,13 @@ class TestWriteMeshtools3D:
         m = _model(nx=3)
         msh, _ = write_meshtools3d(m, tmp_path / "model")
         text = msh.read_text()
-        assert "2000" in text   # x-widths should appear
+        assert "2000" in text  # x-widths should appear
 
 
 # ===========================================================================
 # utils.skin_depth
 # ===========================================================================
+
 
 class TestSkinDepth:
     def test_scalar(self):
@@ -126,8 +137,8 @@ class TestSkinDepth:
         np.testing.assert_allclose(d4 / d1, 2.0, rtol=1e-10)
 
     def test_scales_with_sqrt_period(self):
-        d1 = skin_depth(1.0,  rho=100.0)
-        d4 = skin_depth(4.0,  rho=100.0)
+        d1 = skin_depth(1.0, rho=100.0)
+        d4 = skin_depth(4.0, rho=100.0)
         np.testing.assert_allclose(d4 / d1, 2.0, rtol=1e-10)
 
     def test_known_value(self):
@@ -140,6 +151,7 @@ class TestSkinDepth:
 # ===========================================================================
 # utils.imp_units_factor
 # ===========================================================================
+
 
 class TestImpUnitsFactor:
     def test_same_units(self):
@@ -157,6 +169,7 @@ class TestImpUnitsFactor:
 # utils encoding conversions
 # ===========================================================================
 
+
 class TestEncodingConversions:
     def test_loge_to_log10(self):
         loge = np.array([np.log(100.0)])
@@ -165,7 +178,7 @@ class TestEncodingConversions:
 
     def test_log10_to_loge(self):
         log10 = np.array([2.0])
-        loge  = log10_to_loge(log10)
+        loge = log10_to_loge(log10)
         np.testing.assert_allclose(loge, [np.log(100.0)], rtol=1e-10)
 
     def test_loge_to_linear(self):
@@ -174,7 +187,9 @@ class TestEncodingConversions:
 
     def test_linear_to_loge(self):
         rho = np.array([100.0])
-        np.testing.assert_allclose(linear_to_loge(rho), [np.log(100.0)], rtol=1e-10)
+        np.testing.assert_allclose(
+            linear_to_loge(rho), [np.log(100.0)], rtol=1e-10
+        )
 
     def test_roundtrip_loge_log10(self):
         rho = np.array([1.0, 10.0, 100.0, 1000.0])

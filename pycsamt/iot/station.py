@@ -170,8 +170,7 @@ def station_table(
 ) -> Any:
     """Return one row per station describing its acquisition metadata."""
     items = (
-        [stations] if isinstance(stations, StationConfig)
-        else list(stations)
+        [stations] if isinstance(stations, StationConfig) else list(stations)
     )
     rows: list[dict[str, Any]] = []
     for station in items:

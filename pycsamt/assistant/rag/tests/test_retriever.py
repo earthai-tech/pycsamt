@@ -5,6 +5,7 @@ Tests for the hybrid BM25 retriever and recipe ingestion (RAG Step 3).
 
 Hermetic: builds a small in-memory chunk set; no repo scan, no deps.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -21,7 +22,6 @@ from pycsamt.assistant.rag.schemas import RAGChunk
 
 
 class TestTokenize(unittest.TestCase):
-
     def test_identifier_splitting(self):
         toks = set(tokenize("StaticShiftAgent estimate_ss_ama"))
         # camelCase + snake_case split into sub-words
@@ -38,7 +38,6 @@ class TestTokenize(unittest.TestCase):
 
 
 class TestBM25(unittest.TestCase):
-
     def test_ranks_matching_doc_first(self):
         corpus = [
             tokenize("static shift galvanic correction ama"),
@@ -58,37 +57,48 @@ class TestBM25(unittest.TestCase):
 def _chunks() -> list[RAGChunk]:
     return [
         RAGChunk(
-            id="1", text="Static shift correction with AMA. "
+            id="1",
+            text="Static shift correction with AMA. "
             "estimate_ss_ama, correct_ss_ama, galvanic distortion.",
             source_path="assistant_recipes/static_shift.md",
-            kind="recipe", workflow="static_shift", priority=3,
+            kind="recipe",
+            workflow="static_shift",
+            priority=3,
             title="Static-shift recipe",
         ),
         RAGChunk(
-            id="2", text="StaticShiftAgent detects and corrects galvanic "
+            id="2",
+            text="StaticShiftAgent detects and corrects galvanic "
             "static shift in MT data.",
             source_path="pycsamt/agents/static_shift.py",
-            kind="python_symbol", workflow="static_shift", priority=3,
+            kind="python_symbol",
+            workflow="static_shift",
+            priority=3,
             symbol="pycsamt.agents.static_shift.StaticShiftAgent",
             metadata={"signature": "class StaticShiftAgent"},
         ),
         RAGChunk(
-            id="3", text="Phase tensor, strike and dimensionality analysis.",
+            id="3",
+            text="Phase tensor, strike and dimensionality analysis.",
             source_path="pycsamt/agents/phase_analysis.py",
-            kind="python_symbol", workflow="phase_analysis", priority=3,
+            kind="python_symbol",
+            workflow="phase_analysis",
+            priority=3,
             symbol="pycsamt.agents.phase_analysis.PhaseAnalysisAgent",
         ),
         RAGChunk(
-            id="4", text="Load EDI files into a Sites collection.",
+            id="4",
+            text="Load EDI files into a Sites collection.",
             source_path="pycsamt/emtools/_core.py",
-            kind="python_symbol", workflow=None, priority=3,
+            kind="python_symbol",
+            workflow=None,
+            priority=3,
             symbol="pycsamt.emtools._core.ensure_sites",
         ),
     ]
 
 
 class TestRetriever(unittest.TestCase):
-
     def setUp(self):
         self.r = Retriever(_chunks())
 
@@ -104,18 +114,14 @@ class TestRetriever(unittest.TestCase):
         )
 
     def test_kinds_filter(self):
-        ctx = self.r.search(
-            "static shift", k=5, kinds={"recipe"}
-        )
+        ctx = self.r.search("static shift", k=5, kinds={"recipe"})
         self.assertTrue(ctx.chunks)
         self.assertTrue(all(c.kind == "recipe" for c in ctx.chunks))
 
     def test_symbols_extracted(self):
         ctx = self.r.search("StaticShiftAgent", k=3)
         syms = [s["symbol"] for s in ctx.symbols]
-        self.assertIn(
-            "pycsamt.agents.static_shift.StaticShiftAgent", syms
-        )
+        self.assertIn("pycsamt.agents.static_shift.StaticShiftAgent", syms)
 
     def test_no_results_for_irrelevant(self):
         ctx = self.r.search("completely unrelated xyzzy query", k=3)
@@ -123,7 +129,6 @@ class TestRetriever(unittest.TestCase):
 
 
 class TestRecipeIngestion(unittest.TestCase):
-
     def test_recipes_tagged_recipe_kind(self):
         tmp = Path(tempfile.mkdtemp())
         rec = tmp / "assistant_recipes"
@@ -135,9 +140,7 @@ class TestRecipeIngestion(unittest.TestCase):
         chunks = build_chunks(tmp)
         self.assertTrue(chunks)
         self.assertTrue(all(c.kind == "recipe" for c in chunks))
-        self.assertTrue(
-            any(c.workflow == "static_shift" for c in chunks)
-        )
+        self.assertTrue(any(c.workflow == "static_shift" for c in chunks))
 
 
 if __name__ == "__main__":

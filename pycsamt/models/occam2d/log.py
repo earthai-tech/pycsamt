@@ -60,10 +60,10 @@ class OccamLog(OccamBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.iterations: np.ndarray = np.array([], dtype=int)
-        self.rms:        np.ndarray = np.array([])
-        self.roughness:  np.ndarray = np.array([])
-        self.lagrange:   np.ndarray = np.array([])
-        self.stepsize:   np.ndarray = np.array([])
+        self.rms: np.ndarray = np.array([])
+        self.roughness: np.ndarray = np.array([])
+        self.lagrange: np.ndarray = np.array([])
+        self.stepsize: np.ndarray = np.array([])
 
     # ------------------------------------------------------------------
     # I/O
@@ -77,20 +77,20 @@ class OccamLog(OccamBase):
         obj = cls(**kwargs)
 
         # Per-iteration accumulators
-        iter_nums:   list[int]   = []
-        rms_vals:    list[float] = []
-        rough_vals:  list[float] = []
-        step_vals:   list[float] = []
-        lagr_vals:   list[float] = []
+        iter_nums: list[int] = []
+        rms_vals: list[float] = []
+        rough_vals: list[float] = []
+        step_vals: list[float] = []
+        lagr_vals: list[float] = []
 
         # Mutable state for the iteration currently being parsed.
         # Using a one-element list so the inner helper can mutate them.
         cur = {
-            "iter":      None,
-            "rms":       _NAN,
+            "iter": None,
+            "rms": _NAN,
             "roughness": _NAN,
-            "stepsize":  _NAN,
-            "lagrange":  _NAN,
+            "stepsize": _NAN,
+            "lagrange": _NAN,
         }
 
         def _save() -> None:
@@ -104,11 +104,11 @@ class OccamLog(OccamBase):
             lagr_vals.append(cur["lagrange"])
 
         def _reset() -> None:
-            cur["iter"]      = None
-            cur["rms"]       = _NAN
+            cur["iter"] = None
+            cur["rms"] = _NAN
             cur["roughness"] = _NAN
-            cur["stepsize"]  = _NAN
-            cur["lagrange"]  = _NAN
+            cur["stepsize"] = _NAN
+            cur["lagrange"] = _NAN
 
         with p.open("r", errors="replace") as fh:
             for raw in fh:
@@ -160,10 +160,10 @@ class OccamLog(OccamBase):
         _save()
 
         obj.iterations = np.array(iter_nums, dtype=int)
-        obj.rms        = np.array(rms_vals)
-        obj.roughness  = np.array(rough_vals)
-        obj.stepsize   = np.array(step_vals)
-        obj.lagrange   = np.array(lagr_vals)
+        obj.rms = np.array(rms_vals)
+        obj.roughness = np.array(rough_vals)
+        obj.stepsize = np.array(step_vals)
+        obj.lagrange = np.array(lagr_vals)
 
         if obj.verbose:
             obj.logger.info(

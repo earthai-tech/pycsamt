@@ -5,6 +5,7 @@ adds focused public-API checks that stay deterministic when deep-learning
 backends are not installed, or when they are installed but should not be used
 for a fast contract suite.
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -125,12 +126,16 @@ def test_anomaly_detector_pca_fallback_transform_flags_and_save_load(
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_torch",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
+            ImportError("no torch")
+        ),
     )
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_tensorflow",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no tf")),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
+            ImportError("no tf")
+        ),
     )
     X = np.vstack(
         [
@@ -171,7 +176,9 @@ def test_anomaly_detector_rejects_feature_mismatch(monkeypatch):
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_torch",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
+            ImportError("no torch")
+        ),
     )
     det = AnomalyDetector(n_features=4)
 
@@ -225,7 +232,13 @@ def test_dimensionality_classifier_rf_fallback_and_from_features_table(
     y = _rule_labels(X[:, 0], X[:, 1])
     df = pd.DataFrame(
         X,
-        columns=["beta_abs", "ellipt_abs", "logrho_det", "phi_det", "tip_amp"],
+        columns=[
+            "beta_abs",
+            "ellipt_abs",
+            "logrho_det",
+            "phi_det",
+            "tip_amp",
+        ],
     )
     df["dim"] = y
 

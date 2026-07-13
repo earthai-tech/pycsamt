@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.dimensionality"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -27,16 +28,17 @@ def _no_api_view():
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     def __init__(self, station, z, freq):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
 
     def get_section(self, *_, **__):
@@ -51,7 +53,7 @@ def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """Pure 1-D/2-D isotropic Z (zero diagonal)."""
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -60,7 +62,7 @@ def _3d_z(freqs: np.ndarray, skew_frac: float = 0.5) -> np.ndarray:
     """Z with non-zero diagonal (3-D character)."""
     z = _iso_z(freqs)
     amp = np.abs(z[:, 0, 1])
-    z[:, 0, 0] =  skew_frac * amp * (0.6 + 0.8j)
+    z[:, 0, 0] = skew_frac * amp * (0.6 + 0.8j)
     z[:, 1, 1] = -skew_frac * amp * (0.5 + 0.7j)
     return z
 
@@ -79,10 +81,11 @@ def _3d_site(name: str, n: int = 10) -> _FakeSite:
 # phase_features_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPhaseFeatureTable:
 
+class TestPhaseFeatureTable:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sites = [_iso_site("S00")]
         df = phase_features_table(sites, api=False)
         assert isinstance(df, pd.DataFrame)
@@ -108,6 +111,7 @@ class TestPhaseFeatureTable:
         import pandas as pd
 
         from pycsamt.api.view.frame import APIFrame
+
         df = phase_features_table([])
         assert isinstance(df, (pd.DataFrame, APIFrame))
 
@@ -126,10 +130,11 @@ class TestPhaseFeatureTable:
 # classify_dimensionality
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestClassifyDimensionality:
 
+class TestClassifyDimensionality:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sites = [_iso_site("S00")]
         df = classify_dimensionality(sites, api=False)
         assert isinstance(df, pd.DataFrame)
@@ -143,6 +148,7 @@ class TestClassifyDimensionality:
         import pandas as pd
 
         from pycsamt.api.view.frame import APIFrame
+
         df = classify_dimensionality([])
         assert isinstance(df, (pd.DataFrame, APIFrame))
 
@@ -168,10 +174,11 @@ class TestClassifyDimensionality:
 # mask_by_dimensionality
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestMaskByDimensionality:
 
+class TestMaskByDimensionality:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_iso_site("S00"), _iso_site("S01")]
         result = mask_by_dimensionality(sites)
         assert isinstance(result, Sites)
@@ -184,12 +191,14 @@ class TestMaskByDimensionality:
     def test_keep_all_classes(self):
         """keep=(0, 1) is the default — all dimensionality classes pass."""
         from pycsamt.site.base import Sites
+
         sites = [_3d_site("S00")]
         result = mask_by_dimensionality(sites, keep=(0, 1))
         assert isinstance(result, Sites)
 
     def test_empty_input(self):
         from pycsamt.site.base import Sites
+
         result = mask_by_dimensionality([])
         assert isinstance(result, Sites)
 
@@ -198,12 +207,13 @@ class TestMaskByDimensionality:
 # encode_dimensionality
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestEncodeDimensionality:
 
+class TestEncodeDimensionality:
     def test_empty_model_returns_dataframe(self):
         import pandas as pd
 
         from pycsamt.api.view.frame import APIFrame
+
         sites = [_iso_site("S00")]
         df = encode_dimensionality(sites, {})
         assert isinstance(df, (pd.DataFrame, APIFrame))

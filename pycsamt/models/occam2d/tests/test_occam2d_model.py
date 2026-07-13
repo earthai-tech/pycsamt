@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-DATA_DIR   = Path(__file__).parents[4] / "data" / "occam2D"
+DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 MODEL_FILE = DATA_DIR / "Occam2DModel"
 
 pytestmark = pytest.mark.skipif(
@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def model():
     from pycsamt.models.occam2d.model import OccamModel
+
     return OccamModel.read(MODEL_FILE)
 
 
@@ -62,7 +63,7 @@ def test_model_layer0_params_length(model):
 def test_model_layer0_boundary_edges(model):
     # First and last column of every layer should be a boundary cell (code 7)
     params = model.layers[0]["params"]
-    assert params[0]  == 7
+    assert params[0] == 7
     assert params[-1] == 7
 
 
@@ -100,8 +101,10 @@ def test_model_prejudice_file(model):
 # Defaults
 # -----------------------------------------------------------------------
 
+
 def test_model_defaults():
     from pycsamt.models.occam2d.model import OccamModel
+
     m = OccamModel()
     assert m.n_layers == 0
     assert m.n_params == 0
@@ -112,14 +115,17 @@ def test_model_defaults():
 # Error handling
 # -----------------------------------------------------------------------
 
+
 def test_missing_file_raises():
     from pycsamt.models.occam2d.model import OccamModel
+
     with pytest.raises(FileNotFoundError):
         OccamModel.read("/nonexistent/Occam2DModel")
 
 
 def test_wrong_format_raises(tmp_path):
     from pycsamt.models.occam2d.model import OccamModel
+
     bad = tmp_path / "BadModel"
     bad.write_text("Format: WRONG_FORMAT\nModel Name: test\n")
     with pytest.raises(ValueError, match="OCCAM2MTMOD"):

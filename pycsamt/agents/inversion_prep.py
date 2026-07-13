@@ -70,7 +70,7 @@ class InversionPrepAgent(BaseAgent):
             model=model,
             llm_provider=llm_provider,
         )
-        self.code        = code
+        self.code = code
         self.error_floor = error_floor
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
@@ -86,22 +86,26 @@ class InversionPrepAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        code       = str(input_data.get("code", self.code)).lower()
+        code = str(input_data.get("code", self.code)).lower()
         output_dir = input_data.get("output_dir", "pycsamt_inversion_prep")
-        per_range  = input_data.get("period_range")
-        component  = str(input_data.get("component", "both")).lower()
-        err_floor  = float(input_data.get("error_floor", self.error_floor))
+        per_range = input_data.get("period_range")
+        component = str(input_data.get("component", "both")).lower()
+        err_floor = float(input_data.get("error_floor", self.error_floor))
         os.makedirs(output_dir, exist_ok=True)
 
         # count stations + periods
-        n_st = 0; per_all = []
+        n_st = 0
+        per_all = []
         import numpy as np
+
         for _i, ed in enumerate(_iter_items(sites)):
             n_st += 1
             Z_obj, z, fr = _get_z_block(ed)
@@ -120,9 +124,11 @@ class InversionPrepAgent(BaseAgent):
                 from ..models.occam2d import (
                     write_occam2d_data,
                 )
+
                 out_path = os.path.join(output_dir, "OccamDataFile.dat")
                 write_occam2d_data(
-                    sites, out_path,
+                    sites,
+                    out_path,
                     period_range=per_range,
                     component=component,
                     error_floor=err_floor,
@@ -158,15 +164,18 @@ class InversionPrepAgent(BaseAgent):
             status="success" if data_file_path else "needs_review",
             summary=(
                 f"Inversion prep ({code}): {n_st} stations, ~{n_per} periods. "
-                + (f"Data file: {data_file_path}" if data_file_path
-                   else "No data file written.")
+                + (
+                    f"Data file: {data_file_path}"
+                    if data_file_path
+                    else "No data file written."
+                )
             ),
             data={
                 "data_file_path": data_file_path,
-                "n_periods":      n_per,
-                "n_stations":     n_st,
-                "code":           code,
-                "sites":          sites,
+                "n_periods": n_per,
+                "n_stations": n_st,
+                "code": code,
+                "sites": sites,
             },
             warnings=warnings,
             llm_interpretation=interp,

@@ -63,6 +63,7 @@ _PetroModel = Union[ArchieModel, WaxmanSmitsModel]
 # Grid compatibility check
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def assert_compatible_grids(
     surveys: Sequence[ResistivityModel],
     *,
@@ -98,6 +99,7 @@ def assert_compatible_grids(
 # TimeLapseEM
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TimeLapseEM(PyCSAMTObject):
     """Time-lapse EM analysis for hydrogeological change detection.
 
@@ -129,10 +131,14 @@ class TimeLapseEM(PyCSAMTObject):
             raise ValueError("At least two surveys are required.")
         assert_compatible_grids(surveys)
         self.surveys = list(surveys)
-        self.times   = list(times) if times is not None else list(range(len(surveys)))
-        self.labels  = list(labels) if labels is not None else [
-            f"T{i:02d}" for i in range(len(surveys))
-        ]
+        self.times = (
+            list(times) if times is not None else list(range(len(surveys)))
+        )
+        self.labels = (
+            list(labels)
+            if labels is not None
+            else [f"T{i:02d}" for i in range(len(surveys))]
+        )
         if len(self.times) != len(surveys):
             raise ValueError("len(times) must equal len(surveys).")
         if len(self.labels) != len(surveys):
@@ -219,11 +225,12 @@ class TimeLapseEM(PyCSAMTObject):
             Negative = drying (saturation decrease).
         """
         archie = _to_archie(petro)
-        phi_arr = np.broadcast_to(np.asarray(phi, dtype=float),
-                                   self.surveys[0].rho_2d.shape).copy()
+        phi_arr = np.broadcast_to(
+            np.asarray(phi, dtype=float), self.surveys[0].rho_2d.shape
+        ).copy()
 
         def _sw_map(survey: ResistivityModel) -> np.ndarray:
-            rho = 10.0 ** survey.rho_2d
+            rho = 10.0**survey.rho_2d
             return np.clip(archie.saturation(rho, phi_arr, rho_w), 0.0, 1.0)
 
         sw_base = _sw_map(self.surveys[baseline_idx])
@@ -310,7 +317,9 @@ class TimeLapseEM(PyCSAMTObject):
         others = [s for i, s in enumerate(self.surveys) if i != baseline_idx]
         rows = []
         for s in others:
-            wt_i = self._water_table_map(s, archie, rho_w, Sw_threshold, min_depth)
+            wt_i = self._water_table_map(
+                s, archie, rho_w, Sw_threshold, min_depth
+            )
             rows.append(wt_i - base_wt)
 
         return np.vstack(rows) if len(rows) > 1 else rows[0]
@@ -354,12 +363,12 @@ class TimeLapseEM(PyCSAMTObject):
             — each an ndarray (n_z, n_x).
         """
         deltas = self.resistivity_change(baseline_idx=baseline_idx)
-        stack  = np.stack(deltas, axis=0)   # (n_surveys-1, n_z, n_x)
+        stack = np.stack(deltas, axis=0)  # (n_surveys-1, n_z, n_x)
         return {
-            "mean_delta":    np.nanmean(stack, axis=0),
-            "std_delta":     np.nanstd(stack,  axis=0),
-            "max_increase":  np.nanmax(stack,  axis=0),
-            "max_decrease":  np.nanmin(stack,  axis=0),
+            "mean_delta": np.nanmean(stack, axis=0),
+            "std_delta": np.nanstd(stack, axis=0),
+            "max_increase": np.nanmax(stack, axis=0),
+            "max_decrease": np.nanmin(stack, axis=0),
         }
 
     # ── private ────────────────────────────────────────────────────────────
@@ -399,10 +408,13 @@ class TimeLapseEM(PyCSAMTObject):
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _to_archie(petro: _PetroModel) -> ArchieModel:
     """Return an ArchieModel; if WaxmanSmitsModel, approximate as Archie."""
     if isinstance(petro, ArchieModel):
         return petro
     if isinstance(petro, WaxmanSmitsModel):
         return ArchieModel(m=petro.m, n=petro.n, a=petro.a)
-    raise TypeError(f"petro must be ArchieModel or WaxmanSmitsModel, got {type(petro)}")
+    raise TypeError(
+        f"petro must be ArchieModel or WaxmanSmitsModel, got {type(petro)}"
+    )

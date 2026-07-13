@@ -60,14 +60,28 @@ plot_phase_tensor_summary(L22, figsize=(13, 10))
 # spokes) are all optional polish on top of the default rose.
 
 plot_phase_tensor_rose(
-    L22, bins=36, bar_style="gradient", cmap="plasma",
-    outer_ring_lw=2.5, outer_ring_color="0.12", n_rings=4,
-    ring_label_angle=22.5, ring_label_fontsize=7.5, ring_label_fmt="{:.0f}",
-    spoke_every=45.0, compass_labels="NESW",
-    compass_fontsize=9.0, compass_fontweight="bold",
-    show_mean=True, mean_color="crimson", mean_lw=2.2,
-    show_secondary=True, secondary_ls="--",
-    show_annotation=True, show_n=True, annotation_fontsize=8.5,
+    L22,
+    bins=36,
+    bar_style="gradient",
+    cmap="plasma",
+    outer_ring_lw=2.5,
+    outer_ring_color="0.12",
+    n_rings=4,
+    ring_label_angle=22.5,
+    ring_label_fontsize=7.5,
+    ring_label_fmt="{:.0f}",
+    spoke_every=45.0,
+    compass_labels="NESW",
+    compass_fontsize=9.0,
+    compass_fontweight="bold",
+    show_mean=True,
+    mean_color="crimson",
+    mean_lw=2.2,
+    show_secondary=True,
+    secondary_ls="--",
+    show_annotation=True,
+    show_n=True,
+    annotation_fontsize=8.5,
     figsize=(6, 6),
 )
 
@@ -156,7 +170,10 @@ strip_profiles = {
     f"Profile {ln}": _representative(names) for ln, names in groups.items()
 }
 plot_phase_tensor_strip_grid(
-    S_all, profiles=strip_profiles, c_by="skew", cmap="RdBu_r",
+    S_all,
+    profiles=strip_profiles,
+    c_by="skew",
+    cmap="RdBu_r",
     panel_size=(3.4, 1.05),
     suptitle="Phase-tensor ellipse strips by profile  (WILLY_DATA)",
 )

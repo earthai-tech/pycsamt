@@ -10,6 +10,7 @@ from pycsamt.site import export as xp
 
 # ---------------------------- test doubles --------------------------------- #
 
+
 class _Head:
     def __init__(self, station: str, lat=1.0, lon=2.0, elev=3.0):
         self.station = station
@@ -28,8 +29,13 @@ class EdiWriteKwarg:
         self.HEAD = _Head(station)
         self.name = station  # allow station_name fallbacks
 
-    def write(self, *_, new_edifn: str | None = None,
-              savepath: str | Path | None = None, **__):
+    def write(
+        self,
+        *_,
+        new_edifn: str | None = None,
+        savepath: str | Path | None = None,
+        **__,
+    ):
         assert new_edifn is not None
         # Honour savepath like the real backend — ignoring it would write
         # a bare filename relative to the CWD (i.e. into the repo root).
@@ -45,9 +51,7 @@ class EdiWritePos:
         self.name = station
 
     def write(self, path: str):
-        Path(path).write_text(
-            f"# {self.HEAD.station}\n", encoding="utf-8"
-        )
+        Path(path).write_text(f"# {self.HEAD.station}\n", encoding="utf-8")
 
 
 class EdiToFile:
@@ -58,9 +62,7 @@ class EdiToFile:
         self.name = station
 
     def to_file(self, path: str):
-        Path(path).write_text(
-            f"# {self.HEAD.station}\n", encoding="utf-8"
-        )
+        Path(path).write_text(f"# {self.HEAD.station}\n", encoding="utf-8")
 
 
 class EdiSave:
@@ -71,12 +73,11 @@ class EdiSave:
         self.name = station
 
     def save(self, path: str):
-        Path(path).write_text(
-            f"# {self.HEAD.station}\n", encoding="utf-8"
-        )
+        Path(path).write_text(f"# {self.HEAD.station}\n", encoding="utf-8")
 
 
 # ------------------------------- tests ------------------------------------- #
+
 
 def test_write_site_supports_all_backends(tmp_path: Path) -> None:
     eds = [
@@ -216,6 +217,6 @@ def test_write_sites_empty_station_name_is_not_stem_less(
     paths = xp.write_sites(eds, outdir, exist_ok=True)
     assert len(paths) == 2
     names = sorted(p.name for p in paths)
-    assert ".edi" not in names          # no stem-less file
+    assert ".edi" not in names  # no stem-less file
     assert all(len(n) > len(".edi") for n in names)
     assert len(sorted(outdir.glob("*.edi"))) == 2

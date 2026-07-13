@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.ai.processing — EMDenoiser, AnomalyDetector, DimensionalityClassifier."""
+
 import unittest
 
 import numpy as np
@@ -9,19 +10,21 @@ import numpy as np
 # EMDenoiser
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestEMDenoiser(unittest.TestCase):
 
+class TestEMDenoiser(unittest.TestCase):
     def _make_X(self, n=60, n_comp=4, n_freqs=24):
         rng = np.random.default_rng(7)
         return rng.standard_normal((n, n_comp, n_freqs)).astype(np.float32)
 
     def test_no_args_init(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         den = EMDenoiser()
         self.assertIsNone(den.n_freqs)
 
     def test_infers_n_freqs(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X(n_freqs=32)
         den = EMDenoiser()
         den.fit(X, epochs=2, verbose=False)
@@ -29,6 +32,7 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_explicit_n_freqs(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X(n_freqs=16)
         den = EMDenoiser(n_freqs=16)
         den.fit(X, epochs=2, verbose=False)
@@ -36,6 +40,7 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_n_freqs_mismatch_raises(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X(n_freqs=24)
         den = EMDenoiser(n_freqs=32)
         with self.assertRaises(ValueError):
@@ -43,6 +48,7 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_transform_shape(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X()
         den = EMDenoiser()
         den.fit(X, epochs=2, verbose=False)
@@ -51,6 +57,7 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_transform_before_fit_raises(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X()
         den = EMDenoiser()
         with self.assertRaises(RuntimeError):
@@ -58,12 +65,14 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_input_must_be_3d(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         den = EMDenoiser()
         with self.assertRaises(ValueError):
             den.fit(np.ones((10, 4)), epochs=1, verbose=False)
 
     def test_fit_transform_dtype(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X()
         den = EMDenoiser()
         den.fit(X, epochs=2, verbose=False)
@@ -72,6 +81,7 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_output_finite(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X()
         den = EMDenoiser()
         den.fit(X, epochs=2, verbose=False)
@@ -80,11 +90,13 @@ class TestEMDenoiser(unittest.TestCase):
 
     def test_repr_before_fit(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         den = EMDenoiser()
         self.assertIn("unfitted", repr(den))
 
     def test_repr_after_fit(self):
         from pycsamt.ai.processing.denoise import EMDenoiser
+
         X = self._make_X()
         den = EMDenoiser()
         den.fit(X, epochs=1, verbose=False)
@@ -95,8 +107,8 @@ class TestEMDenoiser(unittest.TestCase):
 # AnomalyDetector
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestAnomalyDetector(unittest.TestCase):
 
+class TestAnomalyDetector(unittest.TestCase):
     def _make_X(self, n=120, n_feat=40):
         rng = np.random.default_rng(3)
         return rng.standard_normal((n, n_feat)).astype(np.float32)
@@ -105,6 +117,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         det = AnomalyDetector()
         self.assertIsNone(det.n_features)
 
@@ -112,6 +125,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X(n_feat=48)
         det = AnomalyDetector()
         det.fit(X, epochs=3, verbose=False)
@@ -121,6 +135,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X(n_feat=40)
         det = AnomalyDetector(n_features=40)
         det.fit(X, epochs=3, verbose=False)
@@ -130,6 +145,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X(n_feat=40)
         det = AnomalyDetector(n_features=50)
         with self.assertRaises(ValueError):
@@ -139,6 +155,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X()
         det = AnomalyDetector()
         det.fit(X, epochs=3, verbose=False)
@@ -149,6 +166,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X()
         det = AnomalyDetector()
         det.fit(X, epochs=3, verbose=False)
@@ -159,6 +177,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X()
         det = AnomalyDetector()
         det.fit(X, epochs=3, verbose=False)
@@ -171,6 +190,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X(n=200)
         det = AnomalyDetector(threshold_percentile=95.0)
         det.fit(X, epochs=5, verbose=False)
@@ -183,6 +203,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X()
         det = AnomalyDetector()
         with self.assertRaises(RuntimeError):
@@ -192,6 +213,7 @@ class TestAnomalyDetector(unittest.TestCase):
         from pycsamt.ai.processing.anomaly import (
             AnomalyDetector,
         )
+
         X = self._make_X()
         X[0, 0] = np.nan
         det = AnomalyDetector()
@@ -204,20 +226,21 @@ class TestAnomalyDetector(unittest.TestCase):
 # DimensionalityClassifier
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestDimensionalityClassifier(unittest.TestCase):
 
+class TestDimensionalityClassifier(unittest.TestCase):
     def _make_X(self, n=300):
         rng = np.random.default_rng(11)
         # Feature vector: [beta_abs, ellipt_abs, logrho_det, phi_det, tip_amp]
         X = rng.standard_normal((n, 5)).astype(np.float32)
-        X[:, 0] = np.abs(X[:, 0]) * 4      # beta_abs ≥ 0
-        X[:, 1] = np.abs(X[:, 1]) * 0.3    # ellipt_abs ≥ 0
+        X[:, 0] = np.abs(X[:, 0]) * 4  # beta_abs ≥ 0
+        X[:, 1] = np.abs(X[:, 1]) * 0.3  # ellipt_abs ≥ 0
         return X
 
     def test_fit_no_y(self):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -227,6 +250,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         y = np.random.randint(0, 3, len(X))
         clf = DimensionalityClassifier()
@@ -237,6 +261,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -247,6 +272,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -257,6 +283,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -267,6 +294,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -277,6 +305,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         clf.fit(X, verbose=False)
@@ -287,6 +316,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X()
         clf = DimensionalityClassifier()
         with self.assertRaises(RuntimeError):
@@ -297,6 +327,7 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             _rule_labels,
         )
+
         beta = np.array([1.0, 5.0, 2.0, 8.0])
         ellipt = np.array([0.1, 0.1, 0.5, 0.5])
         labels = _rule_labels(beta, ellipt, skew_th=3.0, ellipt_th=0.2)
@@ -308,9 +339,18 @@ class TestDimensionalityClassifier(unittest.TestCase):
         from pycsamt.ai.processing.classify import (
             DimensionalityClassifier,
         )
+
         X = self._make_X(n=100)
-        df = pd.DataFrame(X, columns=["beta_abs", "ellipt_abs",
-                                       "logrho_det", "phi_det", "tip_amp"])
+        df = pd.DataFrame(
+            X,
+            columns=[
+                "beta_abs",
+                "ellipt_abs",
+                "logrho_det",
+                "phi_det",
+                "tip_amp",
+            ],
+        )
         clf = DimensionalityClassifier()
         clf.fit(df, verbose=False)
         preds = clf.predict(df)
@@ -321,15 +361,17 @@ class TestDimensionalityClassifier(unittest.TestCase):
 # EMQCScorer  (interface smoke test — no emtools dependency)
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestEMQCScorerImport(unittest.TestCase):
 
+class TestEMQCScorerImport(unittest.TestCase):
     def test_importable(self):
         from pycsamt.ai.processing.qc import EMQCScorer
+
         obj = EMQCScorer()
         self.assertIsNotNone(obj)
 
     def test_has_fit_and_transform(self):
         from pycsamt.ai.processing.qc import EMQCScorer
+
         obj = EMQCScorer()
         self.assertTrue(hasattr(obj, "fit"))
         self.assertTrue(hasattr(obj, "transform"))

@@ -74,6 +74,7 @@ PINNInverter2D(n_stations=20, fitted)
 >>> section = inv.resistivity_section()   # doctest: +SKIP
 >>> df = inv.residuals()           # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -159,8 +160,7 @@ class PINNInverter2D(BasePINNInverter):
     ) -> None:
         if mode not in ("te", "tm", "both"):
             raise ValueError(
-                "mode must be 'te', 'tm', or 'both';"
-                f" got {mode!r}."
+                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
             )
         super().__init__(
             n_layers=n_layers,
@@ -169,9 +169,7 @@ class PINNInverter2D(BasePINNInverter):
         )
         self.n_freqs = int(n_freqs)
         self.mode = mode
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.lateral_weight = float(lateral_weight)
         self.epochs = int(epochs)
         self.lr = float(lr)
@@ -179,15 +177,13 @@ class PINNInverter2D(BasePINNInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._obs: list[SiteObs2D] = (
-            sites_to_obs_2d(
-                sites,
-                comp_te=comp_te,
-                comp_tm=comp_tm,
-                recursive=recursive,
-                on_dup=on_dup,
-                verbose=verbose,
-            )
+        self._obs: list[SiteObs2D] = sites_to_obs_2d(
+            sites,
+            comp_te=comp_te,
+            comp_tm=comp_tm,
+            recursive=recursive,
+            on_dup=on_dup,
+            verbose=verbose,
         )
         self._freqs_grid = _make_common_grid(
             [o.freq for o in self._obs],
@@ -247,9 +243,7 @@ class PINNInverter2D(BasePINNInverter):
 
     # ── outputs ──
 
-    def resistivity_section(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def resistivity_section(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the 2-D resistivity section.
 
@@ -263,11 +257,11 @@ class PINNInverter2D(BasePINNInverter):
         ndarray (n_layers, n_stations)
         """
         self._check_fitted()
-        lr = self._result["log_rho"]   # (S, L)
-        section = lr.T                 # (L, S)
+        lr = self._result["log_rho"]  # (S, L)
+        section = lr.T  # (L, S)
         if as_log10:
             return section
-        return 10.0 ** section
+        return 10.0**section
 
     def thickness_section(self) -> np.ndarray:
         """
@@ -279,7 +273,7 @@ class PINNInverter2D(BasePINNInverter):
         """
         self._check_fitted()
         lt = self._result["log_thick"]  # (S, L-1)
-        return (10.0 ** lt).T           # (L-1, S)
+        return (10.0**lt).T  # (L-1, S)
 
     def convergence_curve(self):
         """
@@ -295,9 +289,7 @@ class PINNInverter2D(BasePINNInverter):
 
         return pd.DataFrame(
             {
-                "epoch": range(
-                    1, len(self._result["history"]) + 1
-                ),
+                "epoch": range(1, len(self._result["history"]) + 1),
                 "loss": self._result["history"],
             }
         )
@@ -315,8 +307,8 @@ class PINNInverter2D(BasePINNInverter):
         self._check_fitted()
         import pandas as pd
 
-        lr_2d = self._result["log_rho"]   # (S, L)
-        lt_2d = self._result["log_thick"] # (S, L-1)
+        lr_2d = self._result["log_rho"]  # (S, L)
+        lt_2d = self._result["log_thick"]  # (S, L-1)
         rows = []
         for i, obs in enumerate(self._obs):
             rho_i = lr_2d[i]
@@ -330,12 +322,8 @@ class PINNInverter2D(BasePINNInverter):
                 )
 
                 m = LayeredModel(
-                    resistivity=np.maximum(
-                        10.0 ** rho_i, 1e-3
-                    ),
-                    thickness=np.maximum(
-                        10.0 ** th_i, 1.0
-                    ),
+                    resistivity=np.maximum(10.0**rho_i, 1e-3),
+                    thickness=np.maximum(10.0**th_i, 1.0),
                 )
                 resp = MT1DForward(obs.freq).run(m)
                 rp = resp.rho_a
@@ -345,14 +333,10 @@ class PINNInverter2D(BasePINNInverter):
                 pp = np.full_like(obs.freq, np.nan)
 
             rho_obs = (
-                obs.rho_te
-                if self.mode in ("te", "both")
-                else obs.rho_tm
+                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
             )
             ph_obs = (
-                obs.phase_te
-                if self.mode in ("te", "both")
-                else obs.phase_tm
+                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             )
             for k in range(len(obs.freq)):
                 rows.append(
@@ -408,9 +392,7 @@ class PINNInverter2D(BasePINNInverter):
             else:
                 # mode='both': average TE and TM
                 rho_src = 0.5 * (o.rho_te + o.rho_tm)
-                ph_src = 0.5 * (
-                    o.phase_te + o.phase_tm
-                )
+                ph_src = 0.5 * (o.phase_te + o.phase_tm)
 
             lr_g, ph_g = _interp_to_grid(
                 o.freq,
@@ -424,9 +406,7 @@ class PINNInverter2D(BasePINNInverter):
         return lr_obs, ph_obs
 
     def __repr__(self) -> str:
-        status = (
-            "fitted" if self._is_fitted else "unfitted"
-        )
+        status = "fitted" if self._is_fitted else "unfitted"
         return (
             f"PINNInverter2D("
             f"n_stations={self.n_sites}, "

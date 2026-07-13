@@ -18,8 +18,7 @@ def _load_edi(p: Path) -> EDIFile:
 
 def _dup_edi(tmp_path: Path, src: Path, stem: str) -> Path:
     dst = tmp_path / f"{stem}.edi"
-    dst.write_text(src.read_text(encoding="utf-8"),
-                   encoding="utf-8")
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dst
 
 
@@ -39,10 +38,10 @@ def _mk_two_sites(
     return s1, s2
 
 
-def test_sites_container_index_get(tmp_path: Path,
-                                   simulated_edi: Path) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "A01",
-                           "A02")
+def test_sites_container_index_get(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "A01", "A02")
     sites = Sites([s1.edi, s2.edi])
     assert len(sites) == 2
     # int index
@@ -63,8 +62,7 @@ def test_to_edis_unwraps_site_and_sites(
     tmp_path: Path,
     simulated_edi: Path,
 ) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "U01",
-                           "U02")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "U01", "U02")
     sites = Sites([s1.edi, s2.edi])
 
     assert s1.to_edi() is s1.edi
@@ -82,8 +80,7 @@ def test_to_edis_collection_and_copy(
     tmp_path: Path,
     simulated_edi: Path,
 ) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "UC1",
-                           "UC2")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "UC1", "UC2")
     sites = Sites([s1.edi, s2.edi])
 
     coll = to_edis(sites, as_collection=True, verbose=0)
@@ -102,8 +99,7 @@ def test_to_edis_mixed_inputs_and_strict(
     tmp_path: Path,
     simulated_edi: Path,
 ) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "UM1",
-                           "UM2")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "UM1", "UM2")
     p3 = _dup_edi(tmp_path, simulated_edi, "UM3")
 
     got = to_edis([s1, object(), s2.edi], strict=False)
@@ -125,10 +121,10 @@ def test_to_edis_mixed_inputs_and_strict(
         to_edis([s1, object()], strict=True)
 
 
-def test_site_coords_set_and_summary(tmp_path: Path,
-                                     simulated_edi: Path) -> None:
-    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "C01",
-                          "C02")
+def test_site_coords_set_and_summary(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "C01", "C02")
     # in-place update
     s1.set_coords(10.0, 20.0, 100.0, inplace=True)
     la, lo, ev = s1.coords
@@ -138,10 +134,8 @@ def test_site_coords_set_and_summary(tmp_path: Path,
     assert np.isfinite(summ["nfreq"])
 
 
-def test_sites_closest(tmp_path: Path,
-                       simulated_edi: Path) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "D01",
-                           "D02")
+def test_sites_closest(tmp_path: Path, simulated_edi: Path) -> None:
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "D01", "D02")
     s1.set_coords(0.0, 0.0, 0.0, inplace=True)
     s2.set_coords(0.0, 2.0, 0.0, inplace=True)
     sites = Sites([s1.edi, s2.edi])
@@ -156,10 +150,10 @@ def test_sites_closest(tmp_path: Path,
     assert near is None
 
 
-def test_sites_edit_all_rename_and_slice(tmp_path: Path,
-                                         simulated_edi: Path) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "E01",
-                           "E02")
+def test_sites_edit_all_rename_and_slice(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "E01", "E02")
     sites = Sites([s1.edi, s2.edi])
 
     def rnm(n: str) -> str:
@@ -180,10 +174,8 @@ def test_sites_edit_all_rename_and_slice(tmp_path: Path,
     assert len(post) == len(pre) - 1
 
 
-def test_sites_edit_all_mask(tmp_path: Path,
-                             simulated_edi: Path) -> None:
-    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "F01",
-                          "F02")
+def test_sites_edit_all_mask(tmp_path: Path, simulated_edi: Path) -> None:
+    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "F01", "F02")
     sites = Sites([s1.edi])
 
     df = Site(sites["F01"].edi).to_dataframe("z")
@@ -206,12 +198,12 @@ def test_sites_edit_all_mask(tmp_path: Path,
     assert np.all(np.isnan(first_row.values))
 
 
-def test_site_to_dataframe_api_flag(tmp_path: Path,
-                                    simulated_edi: Path) -> None:
+def test_site_to_dataframe_api_flag(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     import pandas as pd
 
-    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "V01",
-                          "V02")
+    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "V01", "V02")
 
     plain = Site(s1.edi).to_dataframe("z", api=False)
     view = Site(s1.edi).to_dataframe("z", api=True)
@@ -225,8 +217,7 @@ def test_site_reports_to_dataframe_api_flag(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
     reset_api_view()
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "R21",
-                           "R22")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "R21", "R22")
 
     site_plain = SiteReport(s1).to_dataframe("z", api=False)
     site_view = SiteReport(s1).to_dataframe("z", api=True)
@@ -240,11 +231,9 @@ def test_site_reports_to_dataframe_api_flag(
     assert sites_view.df.equals(sites_plain)
 
 
-def test_sites_with_topography(tmp_path: Path,
-                               simulated_edi: Path) -> None:
+def test_sites_with_topography(tmp_path: Path, simulated_edi: Path) -> None:
     pd = pytest.importorskip("pandas")
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "T01",
-                           "T02")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "T01", "T02")
     sites = Sites([s1.edi, s2.edi])
 
     # grab station ids from HEAD.dataid
@@ -274,10 +263,8 @@ def test_sites_with_topography(tmp_path: Path,
     assert (float(h1o.lat), float(h1o.lon)) != (35.125, 12.75)
 
 
-def test_sites_to_profile_order(tmp_path: Path,
-                                simulated_edi: Path) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "P01",
-                           "P02")
+def test_sites_to_profile_order(tmp_path: Path, simulated_edi: Path) -> None:
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "P01", "P02")
     s1.set_coords(0.0, 0.0, 0.0, inplace=True)
     s2.set_coords(0.0, 1.0, 0.0, inplace=True)
     sites = Sites([s1.edi, s2.edi])
@@ -295,12 +282,10 @@ def test_sites_to_profile_order(tmp_path: Path,
 
 
 def test_sites_write(tmp_path: Path, simulated_edi: Path) -> None:
-    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "W01",
-                           "W02")
+    s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "W01", "W02")
     sites = Sites([s1.edi, s2.edi])
 
-    out = sites.write(tmp_path, template="{station}.edi",
-                      exist_ok=True)
+    out = sites.write(tmp_path, template="{station}.edi", exist_ok=True)
     assert len(out) == 2
     for p in out:
         assert p.exists()

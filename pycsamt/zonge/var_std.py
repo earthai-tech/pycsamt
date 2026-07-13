@@ -69,6 +69,7 @@ class PhaseStdBase(AVGComponentBase):
     LABEL : str
         Short label used for banners and debug prints.
     """
+
     # Class-level constants; NOT instance fields
     VAR_NAME: ClassVar[str] = ""
     # KEY_CANDIDATES: ClassVar[Tuple[str, ...]] = ()
@@ -80,19 +81,14 @@ class PhaseStdBase(AVGComponentBase):
         meta: Mapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         # Explicitly call the parent's initializer
-        super().__init__(
-            data=data, meta=meta, name=name, verbose=verbose
-        )
+        super().__init__(data=data, meta=meta, name=name, verbose=verbose)
 
-    def read(                                   # noqa: D401 (docstring above)
+    def read(  # noqa: D401 (docstring above)
         self,
-        source: pd.DataFrame
-        | Sequence[float]
-        | np.ndarray
-        | pd.Series,
+        source: pd.DataFrame | Sequence[float] | np.ndarray | pd.Series,
         meta: Mapping[str, Any] | None = None,
         **kws: Any,
     ) -> None:
@@ -168,7 +164,6 @@ class PhaseStdBase(AVGComponentBase):
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
         self._meta = dict(meta or {})
         self._meta.setdefault("Unit.Phase", "mrad")
-
 
     def write(self) -> list[str]:
         """
@@ -249,8 +244,7 @@ class PhaseStdBase(AVGComponentBase):
         idx_cols = [c for c in coords if c in df.columns]
         if not idx_cols:
             raise AvgDataError(
-                "no coordinate columns found; expected any of "
-                f"{coords!r}"
+                f"no coordinate columns found; expected any of {coords!r}"
             )
 
         # Light type normalization:
@@ -266,13 +260,20 @@ class PhaseStdBase(AVGComponentBase):
         # canonical list first and append any unexpected labels.
         if "comp" in idx_cols:
             canon = [
-                "ExHy", "ExHx", "EyHx", "EyHy",
-                "Zxx", "Zxy", "Zyx", "Zyy",
-                "Zvec", "Zdet",
+                "ExHy",
+                "ExHx",
+                "EyHx",
+                "EyHy",
+                "Zxx",
+                "Zxy",
+                "Zyx",
+                "Zyy",
+                "Zvec",
+                "Zdet",
             ]
             present = pd.Series(df["comp"].astype(str).unique()).tolist()
             extras = [c for c in present if c not in canon]
-            cats   = canon + extras
+            cats = canon + extras
             df["comp"] = pd.Categorical(
                 df["comp"].astype(str), categories=cats, ordered=True
             )
@@ -354,7 +355,6 @@ class PhaseStdBase(AVGComponentBase):
             align=align,
         )
 
-
     def convert_unit(self, target: str = "mrad") -> None:
         r"""
         Convert the phase-stdev column **in place** between
@@ -419,12 +419,11 @@ class PhaseStdBase(AVGComponentBase):
         self._frame[col] = x * factor
         self._meta["Unit.Phase"] = tgt
 
-
     def __str__(self) -> str:  # noqa: D401
-       """Human-readable summary string."""
-       r, c = self.shape
-       return (f"{self.__class__.__name__}"
-               f"[{r}×{c}] var={self.VAR_NAME!s}")
+        """Human-readable summary string."""
+        r, c = self.shape
+        return f"{self.__class__.__name__}[{r}×{c}] var={self.VAR_NAME!s}"
+
 
 class SPhz(PhaseStdBase):
     """
@@ -437,6 +436,7 @@ class SPhz(PhaseStdBase):
 
     Internal canonical column: ``'sphz'``.
     """
+
     VAR_NAME = "s_phz"
     # KEY_CANDIDATES = ("sPhz", "SPhz", "Z.perr", "z.perr", "sphz")
     LABEL = "Z phase σ (sPhz)"
@@ -453,6 +453,7 @@ class SEphz(PhaseStdBase):
 
     Internal canonical column: ``'sephz'``.
     """
+
     VAR_NAME = "s_ephz"
     # KEY_CANDIDATES = ("sEphz", "SEphz", "E.perr", "e.perr", "sephz")
     LABEL = "E phase σ (sEphz)"
@@ -469,9 +470,11 @@ class SHphz(PhaseStdBase):
 
     Internal canonical column: ``'shphz'``.
     """
+
     VAR_NAME = "s_hphz"
     # KEY_CANDIDATES = ("sHphz", "SHphz", "H.perr", "h.perr", "shphz")
     LABEL = "H phase σ (sHphz)"
+
 
 def _find_col(
     df: pd.DataFrame,

@@ -64,6 +64,7 @@ _UNSET = object()
 # PipelineResult
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PipelineResult:
     """Return value of :meth:`Pipeline.run`.
@@ -145,6 +146,7 @@ class PipelineResult:
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
+
 
 class Pipeline(PipelineBase):
     """An ordered, configurable MT processing pipeline.
@@ -283,6 +285,7 @@ class Pipeline(PipelineBase):
         out = None
         if root is not None:
             from ._output import OutputDir
+
             out = OutputDir(root, api=cfg)
             out.setup()
 
@@ -306,8 +309,9 @@ class Pipeline(PipelineBase):
 
             # Progress output
             if cfg.show_progress and cfg.progress_style != "silent":
-                _print_step_start(step_idx, len(self._steps), label,
-                                   step.spec.code)
+                _print_step_start(
+                    step_idx, len(self._steps), label, step.spec.code
+                )
 
             # --- Transform -------------------------------------------
             try:
@@ -337,6 +341,7 @@ class Pipeline(PipelineBase):
                         plot_paths.append(p)
                     try:
                         import matplotlib.pyplot as plt
+
                         plt.close(fig)
                     except Exception:
                         pass
@@ -349,6 +354,7 @@ class Pipeline(PipelineBase):
                     from pycsamt.site.export import (
                         write_sites,
                     )
+
                     write_sites(sites_after, snap_dir, exist_ok=True)
                 except Exception:
                     pass
@@ -388,15 +394,25 @@ class Pipeline(PipelineBase):
                 make_html_report,
                 make_text_report,
             )
+
             n_in_total = _count_sites(sites)
             n_out_total = _count_sites(current_sites)
             txt = make_text_report(
-                self.name, step_results, total_elapsed, out.root,
-                n_in_total, n_out_total,
+                self.name,
+                step_results,
+                total_elapsed,
+                out.root,
+                n_in_total,
+                n_out_total,
             )
             html = make_html_report(
-                self.name, step_results, total_elapsed, out.root,
-                n_in_total, n_out_total, pipeline_yaml=yaml_str,
+                self.name,
+                step_results,
+                total_elapsed,
+                out.root,
+                n_in_total,
+                n_out_total,
+                pipeline_yaml=yaml_str,
             )
             fmts = cfg.report_formats or ("html", "txt")
             if "txt" in fmts:
@@ -429,6 +445,7 @@ class Pipeline(PipelineBase):
     def from_yaml(cls, path: str | Path) -> Pipeline:
         """Load a pipeline from a YAML config file."""
         from ._config import _pipeline_from_dict, load_yaml
+
         raw = load_yaml(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
@@ -437,6 +454,7 @@ class Pipeline(PipelineBase):
     def from_json(cls, path: str | Path) -> Pipeline:
         """Load a pipeline from a JSON config file."""
         from ._config import _pipeline_from_dict, load_json
+
         raw = load_json(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
@@ -448,6 +466,7 @@ class Pipeline(PipelineBase):
         The file must expose a ``pipeline_config`` dict.
         """
         from ._config import _pipeline_from_dict, load_py
+
         raw = load_py(path)
         steps, name, output_dir = _pipeline_from_dict(raw)
         return cls(steps, name=name, _output_dir=output_dir)
@@ -472,6 +491,7 @@ class Pipeline(PipelineBase):
         pycsamt.emtools.pipe.preset_catalogue
         """
         from ._presets import get_preset
+
         preset = get_preset(name)
         return cls(
             list(preset.steps),
@@ -481,6 +501,7 @@ class Pipeline(PipelineBase):
     def to_yaml_string(self) -> str:
         """Serialise this pipeline to a YAML string."""
         from ._config import pipeline_to_yaml
+
         return pipeline_to_yaml(
             self._steps,
             name=self.name,
@@ -508,7 +529,10 @@ class Pipeline(PipelineBase):
         try:
             data = yaml.safe_load(data_str)
         except Exception:
-            data = {"name": self.name, "steps": [s.to_dict() for _, s in self._steps]}
+            data = {
+                "name": self.name,
+                "steps": [s.to_dict() for _, s in self._steps],
+            }
         Path(path).write_text(
             _json.dumps(data, indent=2, default=str),
             encoding="utf-8",
@@ -526,22 +550,25 @@ class Pipeline(PipelineBase):
             return self.__repr__()
         rows = []
         for idx, (label, step) in enumerate(self._steps, start=1):
-            rows.append({
-                "#": idx,
-                "label": label,
-                "code": step.spec.code,
-                "name": step.spec.name,
-                "category": step.spec.category,
-                "label_long": step.spec.label,
-                "params": step.params,
-                "returns_sites": step.spec.returns_sites,
-            })
+            rows.append(
+                {
+                    "#": idx,
+                    "label": label,
+                    "code": step.spec.code,
+                    "name": step.spec.name,
+                    "category": step.spec.category,
+                    "label_long": step.spec.label,
+                    "params": step.params,
+                    "returns_sites": step.spec.returns_sites,
+                }
+            )
         return pd.DataFrame(rows).set_index("#")
 
     def steps_in_category(self, category: str) -> list[tuple[str, Step]]:
         """Return steps belonging to *category*."""
-        return [(lbl, s) for lbl, s in self._steps
-                if s.spec.category == category]
+        return [
+            (lbl, s) for lbl, s in self._steps if s.spec.category == category
+        ]
 
     # ------------------------------------------------------------------
     # Display
@@ -603,6 +630,7 @@ class Pipeline(PipelineBase):
 # Formatting helpers
 # ---------------------------------------------------------------------------
 
+
 def _count_sites(sites: Any) -> int:
     try:
         return len(sites)
@@ -612,6 +640,7 @@ def _count_sites(sites: Any) -> int:
 
 def _get_cfg() -> Any:
     from pycsamt.api.pipe import PYCSAMT_PIPE
+
     return PYCSAMT_PIPE
 
 
@@ -641,6 +670,7 @@ def _format_repr(
     """scikit-learn-style multi-line repr."""
     try:
         from pycsamt.api.pipe import PYCSAMT_PIPE
+
         width = PYCSAMT_PIPE.repr_width
     except Exception:
         width = 80
@@ -659,7 +689,7 @@ def _format_repr(
     max_label = max(len(s.spec.label) for _, s in steps)
 
     lbl_w = max(max_lbl, 8)
-    code_w = max(max_code + 2, 8)   # +2 for brackets
+    code_w = max(max_code + 2, 8)  # +2 for brackets
     label_w = max(max_label, 20)
 
     lines = [header]
@@ -675,7 +705,7 @@ def _format_repr(
             f"{step.spec.label:<{label_w}}"
             f"{params_str}"
         )
-        lines.append(line[:width + 20])  # allow slight overflow for params
+        lines.append(line[: width + 20])  # allow slight overflow for params
 
     lines.append("─" * width)
     return "\n".join(lines)
@@ -687,21 +717,22 @@ def _format_html(
 ) -> str:
     """Jupyter-friendly HTML repr."""
     category_colors = {
-        "frequency":      "#d4e6f1",
-        "noise_removal":  "#d5f5e3",
-        "static_shift":   "#fdebd0",
-        "tensor":         "#e8daef",
+        "frequency": "#d4e6f1",
+        "noise_removal": "#d5f5e3",
+        "static_shift": "#fdebd0",
+        "tensor": "#e8daef",
         "dimensionality": "#fdfefe",
-        "skew":           "#f9ebea",
+        "skew": "#f9ebea",
         "source_effects": "#eafaf1",
-        "qc":             "#f2f3f4",
+        "qc": "#f2f3f4",
     }
     rows = ""
     for idx, (lbl, step) in enumerate(steps, start=1):
         bg = category_colors.get(step.spec.category, "#ffffff")
         params_str = (
             ", ".join(f"{k}={v!r}" for k, v in step.params.items())
-            if step.params else "—"
+            if step.params
+            else "—"
         )
         rows += (
             f"<tr style='background:{bg}'>"
@@ -719,9 +750,7 @@ def _format_html(
         "<tr style='background:#4a6fa5;color:white'>"
         "<th>#</th><th>Label</th><th>Code</th>"
         "<th>Description</th><th>Category</th><th>Params</th>"
-        "</tr>"
-        + rows
-        + "</table>"
+        "</tr>" + rows + "</table>"
     )
 
 

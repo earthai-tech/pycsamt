@@ -10,6 +10,7 @@ ContextInputAgent classifies it correctly, and that classification must win.
 
 Requires Dash (the chat callbacks module imports it); skipped otherwise.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -20,7 +21,6 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestWorkflowTypeAuthority(unittest.TestCase):
-
     def test_router_workflow_slot_does_not_override(self):
         import pycsamt.agents.orchestrator as O
         import pycsamt.agents.router as R
@@ -35,8 +35,10 @@ class TestWorkflowTypeAuthority(unittest.TestCase):
         orig_route = R.IntentRouter.route
         R.IntentRouter.route = lambda self, text, history=None: (
             RouterDecision(
-                intent=WORKFLOW, workflow="ai_inversion",
-                confidence=0.9, source="llm",
+                intent=WORKFLOW,
+                workflow="ai_inversion",
+                confidence=0.9,
+                source="llm",
             )
         )
 
@@ -45,8 +47,8 @@ class TestWorkflowTypeAuthority(unittest.TestCase):
         captured = {}
 
         def fake_execute(self, input_data):
-            captured["workflow"] = (
-                input_data.get("config", {}).get("workflow")
+            captured["workflow"] = input_data.get("config", {}).get(
+                "workflow"
             )
             return AgentResult(
                 status="success",

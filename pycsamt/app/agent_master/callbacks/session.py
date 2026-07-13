@@ -13,20 +13,13 @@ from dash.exceptions import PreventUpdate
 
 from .._ids import IDs
 
-_SESSION_DIR = (
-    Path.home() / ".local" / "share"
-    / "pycsamt" / "sessions"
-)
+_SESSION_DIR = Path.home() / ".local" / "share" / "pycsamt" / "sessions"
 
 
 def _session_path(name: str = "") -> Path:
-    _SESSION_DIR.mkdir(
-        parents=True, exist_ok=True
-    )
+    _SESSION_DIR.mkdir(parents=True, exist_ok=True)
     if not name:
-        ts = datetime.now().strftime(
-            "%Y%m%d_%H%M%S"
-        )
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         name = f"session_{ts}.json"
     return _SESSION_DIR / name
 
@@ -41,9 +34,7 @@ def register_session(app) -> None:
         State(IDs.STORE_SETTINGS, "data"),
         prevent_initial_call=True,
     )
-    def save_session(
-        n, messages, edi_store, settings
-    ):
+    def save_session(n, messages, edi_store, settings):
         if not n:
             raise PreventUpdate
         payload = {
@@ -51,27 +42,16 @@ def register_session(app) -> None:
             "edi": edi_store or {},
             "settings": {
                 k: v
-                for k, v in (
-                    settings or {}
-                ).items()
+                for k, v in (settings or {}).items()
                 if not k.startswith("key_")
             },
-            "message_count": len(
-                messages or []
-            ),
+            "message_count": len(messages or []),
         }
         path = _session_path()
-        path.write_text(
-            json.dumps(payload, indent=2)
-        )
+        path.write_text(json.dumps(payload, indent=2))
         return html.Span(
             [
-                html.I(
-                    className=(
-                        "bi bi-check-circle-fill"
-                        " me-1"
-                    )
-                ),
+                html.I(className=("bi bi-check-circle-fill me-1")),
                 f"Saved to {path.name}",
             ],
             style={

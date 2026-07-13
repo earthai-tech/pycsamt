@@ -92,7 +92,8 @@ from ._base import tdem
     help="Disable the in-loop Biot-Savart geometry correction.",
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -149,8 +150,7 @@ def convert(
     configure_cli(log__level=verbose, log__color=not no_color)
 
     stems_list = (
-        [s.strip() for s in stems.split(",") if s.strip()]
-        if stems else None
+        [s.strip() for s in stems.split(",") if s.strip()] if stems else None
     )
 
     if dry_run:
@@ -204,16 +204,16 @@ def convert(
         sys.exit(1)
 
     n_soundings = result.n_soundings
-    written     = result.written_paths
-    n_written   = len(written)
+    written = result.written_paths
+    n_written = len(written)
 
     summary = {
-        "survey_dir":   str(survey_dir),
-        "output_dir":   str(output_dir),
-        "method":       method,
-        "n_soundings":  n_soundings,
-        "n_written":    n_written,
-        "written":      written,
+        "survey_dir": str(survey_dir),
+        "output_dir": str(output_dir),
+        "method": method,
+        "n_soundings": n_soundings,
+        "n_written": n_written,
+        "written": written,
     }
 
     if output_format == "json":

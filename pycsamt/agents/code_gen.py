@@ -402,19 +402,19 @@ class CodeGenerationAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        cfg        = input_data.get("workflow_config") or {}
-        results    = input_data.get("results") or {}
+        cfg = input_data.get("workflow_config") or {}
+        results = input_data.get("results") or {}
         output_dir = input_data.get("output_dir", ".")
-        title      = input_data.get("title", self.script_title)
+        title = input_data.get("title", self.script_title)
         # Optional RAG context (real symbols / recipe) to ground the LLM
         # refinement pass; ignored offline.
         rag_context = input_data.get("rag_context") or ""
 
         os.makedirs(output_dir, exist_ok=True)
 
-        data_path  = cfg.get("data_path", "/path/to/EDIs")
-        workflow   = cfg.get("workflow",  "qc")
-        out_dir    = cfg.get("output_dir", output_dir)
+        data_path = cfg.get("data_path", "/path/to/EDIs")
+        workflow = cfg.get("workflow", "qc")
+        out_dir = cfg.get("output_dir", output_dir)
 
         # ── build script from templates ───────────────────────────────────────
         code = _HEADER.format(
@@ -431,57 +431,64 @@ class CodeGenerationAgent(BaseAgent):
         if workflow in ("static_shift", "full") or "static_shift" in results:
             hw = 3
             results.get("static_shift")
-            code += _SS_BLOCK.format(
-                hw=hw, out=out_dir
-            )
+            code += _SS_BLOCK.format(hw=hw, out=out_dir)
         else:
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
-        if workflow in ("phase_analysis", "full") or "phase_analysis" in results:
+        if (
+            workflow in ("phase_analysis", "full")
+            or "phase_analysis" in results
+        ):
             results.get("phase_analysis")
-            skew_th   = 5.0
+            skew_th = 5.0
             ellipt_th = 0.1
             code += _PT_BLOCK.format(
-                skew_th=skew_th, ellipt_th=ellipt_th, out=out_dir,
+                skew_th=skew_th,
+                ellipt_th=ellipt_th,
+                out=out_dir,
             )
 
         if "forward" in results or workflow == "forward":
             fwd_r = results.get("forward")
             rhos = [100, 10, 1000, 100]
-            ths  = [500, 1000, 2000]
+            ths = [500, 1000, 2000]
             if fwd_r is not None:
                 lm = fwd_r.get("layered_model")
                 if lm is not None:
-                    rhos = list(getattr(
-                        lm, "resistivity",
-                        getattr(lm, "resistivities", rhos),
-                    ))
-                    ths = list(getattr(
-                        lm, "thickness",
-                        getattr(lm, "thicknesses", ths),
-                    ))
+                    rhos = list(
+                        getattr(
+                            lm,
+                            "resistivity",
+                            getattr(lm, "resistivities", rhos),
+                        )
+                    )
+                    ths = list(
+                        getattr(
+                            lm,
+                            "thickness",
+                            getattr(lm, "thicknesses", ths),
+                        )
+                    )
             code += _FWD_BLOCK.format(rhos=rhos, ths=ths, out=out_dir)
 
         # ── AI inversion blocks ───────────────────────────────────
         ai_wf = {
-            "ai_inversion", "inv1d",
+            "ai_inversion",
+            "inv1d",
             "ensemble_inversion",
             "inv2d",
-            "full_ai_workflow", "full",
+            "full_ai_workflow",
+            "full",
         }
         if workflow in ai_wf or "ai_inv" in results:
-            inv_r     = results.get("ai_inv") or {}
-            n_layers  = int(
-                inv_r.get("n_layers",
-                cfg.get("n_layers", 5))
-            )
+            inv_r = results.get("ai_inv") or {}
+            n_layers = int(inv_r.get("n_layers", cfg.get("n_layers", 5)))
             n_samples = int(cfg.get("n_train_samples", 2000))
-            epochs    = int(cfg.get("epochs", 50))
-            arch      = str(cfg.get("arch", "cnn1d"))
+            epochs = int(cfg.get("epochs", 50))
+            arch = str(cfg.get("arch", "cnn1d"))
             import numpy as np
-            freqs_ai  = list(
-                np.logspace(-4, 3, 32).round(6).tolist()
-            )
+
+            freqs_ai = list(np.logspace(-4, 3, 32).round(6).tolist())
             code += _AI_INV_BLOCK.format(
                 freqs=freqs_ai,
                 n_layers=n_layers,
@@ -490,11 +497,10 @@ class CodeGenerationAgent(BaseAgent):
                 arch=arch,
             )
 
-        if (workflow in ("ensemble_inversion",)
-                or "ensemble" in results):
+        if workflow in ("ensemble_inversion",) or "ensemble" in results:
             results.get("ensemble") or {}
             n_layers = int(cfg.get("n_layers", 5))
-            arch     = str(cfg.get("arch", "cnn1d"))
+            arch = str(cfg.get("arch", "cnn1d"))
             code += _ENSEMBLE_BLOCK.format(
                 n_members=int(cfg.get("n_members", 5)),
                 arch=arch,

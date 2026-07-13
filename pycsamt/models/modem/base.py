@@ -40,9 +40,7 @@ class ModEmBase:
         module = self.__class__.__module__
         qualname = self.__class__.__qualname__
         name = f"{module}.{qualname}"
-        self.logger = (
-            logger if logger is not None else _get_logger(name)
-        )
+        self.logger = logger if logger is not None else _get_logger(name)
 
     def __repr__(self) -> str:
         """Return a compact representation of public state."""
@@ -52,9 +50,7 @@ class ModEmBase:
             for k, v in self.__dict__.items()
             if not k.startswith("_") and k not in ("logger", "verbose")
         }
-        pairs = ", ".join(
-            f"{k}={v!r}" for k, v in list(attrs.items())[:4]
-        )
+        pairs = ", ".join(f"{k}={v!r}" for k, v in list(attrs.items())[:4])
         return f"{cls}({pairs})"
 
     def __str__(self) -> str:

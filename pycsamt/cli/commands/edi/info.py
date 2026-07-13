@@ -25,13 +25,15 @@ from ._base import _get_collection, _get_edi, edi
     metavar="EDI_OR_DIR",
 )
 @click.option(
-    "--station", "-s",
+    "--station",
+    "-s",
     default=None,
     metavar="NAME",
     help="Show detail for a single named station (directory mode only).",
 )
 @click.option(
-    "--top", "-n",
+    "--top",
+    "-n",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
@@ -75,37 +77,51 @@ def info(
 # Single-file display
 # ---------------------------------------------------------------------------
 
+
 def _info_single(path: Path, fmt: str, verbose: int) -> None:
     edi = _get_edi(path, verbose=verbose)
     freq = getattr(edi.Z, "freq", None)
     n_freq = int(getattr(edi.Z, "n_freq", 0) or 0)
-    freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
-    freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
+    freq_min = (
+        float(freq.min()) if freq is not None and freq.size else float("nan")
+    )
+    freq_max = (
+        float(freq.max()) if freq is not None and freq.size else float("nan")
+    )
 
     head = getattr(edi, "Head", None) or {}
-    lat  = float(getattr(head, "lat",  None) or float("nan"))
-    lon  = float(getattr(head, "lon",  None) or float("nan"))
+    lat = float(getattr(head, "lat", None) or float("nan"))
+    lon = float(getattr(head, "lon", None) or float("nan"))
     elev = float(getattr(head, "elev", None) or float("nan"))
 
     row = {
-        "station":    edi.station or path.stem,
-        "path":       str(path),
-        "n_freq":     n_freq,
-        "freq_min":   freq_min,
-        "freq_max":   freq_max,
+        "station": edi.station or path.stem,
+        "path": str(path),
+        "n_freq": n_freq,
+        "freq_min": freq_min,
+        "freq_max": freq_max,
         "has_tipper": edi.has_tipper,
-        "dtype":      edi.dtype,
-        "channels":   edi.channels,
-        "lat":        lat,
-        "lon":        lon,
-        "elev":       elev,
+        "dtype": edi.dtype,
+        "channels": edi.channels,
+        "lat": lat,
+        "lon": lon,
+        "elev": elev,
     }
 
     if fmt == "json":
         click.echo(json.dumps(row, indent=2, default=str))
     elif fmt == "csv":
-        keys = ["station", "n_freq", "freq_min", "freq_max",
-                "has_tipper", "lat", "lon", "elev", "path"]
+        keys = [
+            "station",
+            "n_freq",
+            "freq_min",
+            "freq_max",
+            "has_tipper",
+            "lat",
+            "lon",
+            "elev",
+            "path",
+        ]
         click.echo(",".join(keys))
         click.echo(",".join(str(row[k]) for k in keys))
     else:
@@ -127,6 +143,7 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
 # Collection display
 # ---------------------------------------------------------------------------
 
+
 def _info_collection(
     path: Path,
     station: str | None,
@@ -142,27 +159,49 @@ def _info_collection(
 
     rows = []
     for edi in coll:
-        freq  = getattr(edi.Z, "freq", None)
+        freq = getattr(edi.Z, "freq", None)
         n_freq = int(getattr(edi.Z, "n_freq", 0) or 0)
-        freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
-        freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
+        freq_min = (
+            float(freq.min())
+            if freq is not None and freq.size
+            else float("nan")
+        )
+        freq_max = (
+            float(freq.max())
+            if freq is not None and freq.size
+            else float("nan")
+        )
 
         head = getattr(edi, "Head", None)
-        lat  = float(getattr(head, "lat",  None) or float("nan")) if head else float("nan")
-        lon  = float(getattr(head, "lon",  None) or float("nan")) if head else float("nan")
-        elev = float(getattr(head, "elev", None) or float("nan")) if head else float("nan")
+        lat = (
+            float(getattr(head, "lat", None) or float("nan"))
+            if head
+            else float("nan")
+        )
+        lon = (
+            float(getattr(head, "lon", None) or float("nan"))
+            if head
+            else float("nan")
+        )
+        elev = (
+            float(getattr(head, "elev", None) or float("nan"))
+            if head
+            else float("nan")
+        )
 
-        rows.append({
-            "station":    edi.station or "?",
-            "n_freq":     n_freq,
-            "freq_min":   round(freq_min, 4),
-            "freq_max":   round(freq_max, 4),
-            "has_tipper": edi.has_tipper,
-            "lat":        lat,
-            "lon":        lon,
-            "elev":       elev,
-            "path":       edi.path_str,
-        })
+        rows.append(
+            {
+                "station": edi.station or "?",
+                "n_freq": n_freq,
+                "freq_min": round(freq_min, 4),
+                "freq_max": round(freq_max, 4),
+                "has_tipper": edi.has_tipper,
+                "lat": lat,
+                "lon": lon,
+                "elev": elev,
+                "path": edi.path_str,
+            }
+        )
 
     if station is not None:
         rows = [r for r in rows if r["station"].upper() == station.upper()]
@@ -181,8 +220,16 @@ def _info_collection(
         click.echo(json.dumps(rows, indent=2, default=str))
         return
 
-    keys = ["station", "n_freq", "freq_min", "freq_max",
-            "has_tipper", "lat", "lon", "elev"]
+    keys = [
+        "station",
+        "n_freq",
+        "freq_min",
+        "freq_max",
+        "has_tipper",
+        "lat",
+        "lon",
+        "elev",
+    ]
 
     if fmt == "csv":
         click.echo(",".join(keys + ["path"]))
@@ -194,9 +241,16 @@ def _info_collection(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table(
-            "Station", "n_freq", "Freq min", "Freq max",
-            "Tipper", "Lat", "Lon", "Elev",
+            "Station",
+            "n_freq",
+            "Freq min",
+            "Freq max",
+            "Tipper",
+            "Lat",
+            "Lon",
+            "Elev",
             title=f"EDI collection — {path}  ({len(rows)} stations)",
             show_header=True,
         )
@@ -213,8 +267,10 @@ def _info_collection(
             )
         Console().print(tbl)
     except ImportError:
-        hdr = f"{'Station':<20} {'n_freq':>6} {'freq_min':>10} {'freq_max':>10} " \
-              f"{'Tipper':<7} {'Lat':>12} {'Lon':>12} {'Elev':>8}"
+        hdr = (
+            f"{'Station':<20} {'n_freq':>6} {'freq_min':>10} {'freq_max':>10} "
+            f"{'Tipper':<7} {'Lat':>12} {'Lon':>12} {'Elev':>8}"
+        )
         click.echo(hdr)
         click.echo("-" * len(hdr))
         for r in rows:

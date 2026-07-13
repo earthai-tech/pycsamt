@@ -32,13 +32,13 @@ from pycsamt.emtools._core import (
 
 # name -> path segments under <repo_root>/data (union of every section)
 _DATASETS = {
-    "amt_willy": ("AMT", "WILLY_DATA"),           # all 5 lines, 128 stations
+    "amt_willy": ("AMT", "WILLY_DATA"),  # all 5 lines, 128 stations
     "amt_l18plt": ("AMT", "WILLY_DATA", "L18PLT"),
     "amt_l22plt": ("AMT", "WILLY_DATA", "L22PLT"),
     "amt_l26plt": ("AMT", "WILLY_DATA", "L26PLT"),
     "amt_l30plt": ("AMT", "WILLY_DATA", "L30PLT"),
     "amt_l34plt": ("AMT", "WILLY_DATA", "L34PLT"),
-    "mt_kap03": ("MT", "kap03lmt_edis"),           # SAMTEX line, real tipper
+    "mt_kap03": ("MT", "kap03lmt_edis"),  # SAMTEX line, real tipper
     "mt_spectra": ("MT", "SPECTRA"),
 }
 
@@ -70,7 +70,9 @@ def load_survey(name: str, **kwargs):
 
 def load_sites(name: str, recursive: bool = False, **kwargs):
     """Read a bundled dataset into a ready-to-plot ``Sites`` object."""
-    return ensure_sites(str(dataset_path(name)), recursive=recursive, **kwargs)
+    return ensure_sites(
+        str(dataset_path(name)), recursive=recursive, **kwargs
+    )
 
 
 def line_groups(sites):

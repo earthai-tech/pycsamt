@@ -96,7 +96,7 @@ class ModEmAgent(BaseAgent):
             section_preset="inversion",
         )
         self.component_types = component_types
-        self.error_floor     = error_floor
+        self.error_floor = error_floor
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -105,18 +105,21 @@ class ModEmAgent(BaseAgent):
 
         # ── resolve sites ─────────────────────────────────────────────────────
         from ..emtools._core import ensure_sites
+
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        output_dir      = input_data.get("output_dir", "pycsamt_modem")
-        per_range       = input_data.get("period_range")
-        comp_types      = input_data.get("component_types", self.component_types)
-        error_floor     = float(input_data.get("error_floor", self.error_floor))
+        output_dir = input_data.get("output_dir", "pycsamt_modem")
+        per_range = input_data.get("period_range")
+        comp_types = input_data.get("component_types", self.component_types)
+        error_floor = float(input_data.get("error_floor", self.error_floor))
         os.makedirs(output_dir, exist_ok=True)
 
         # ── import ModEM layer ────────────────────────────────────────────────
@@ -139,20 +142,25 @@ class ModEmAgent(BaseAgent):
             }
             if comp_types:
                 # accept list or single string; ModEmConfig takes a single string
-                ct = comp_types[0] if isinstance(comp_types, list) else str(comp_types)
+                ct = (
+                    comp_types[0]
+                    if isinstance(comp_types, list)
+                    else str(comp_types)
+                )
                 cfg_kwargs["component_type"] = ct
 
-            cfg      = ModEmConfig(**cfg_kwargs)
-            modem_d  = ModEmData.from_edi(sites, config=cfg)
+            cfg = ModEmConfig(**cfg_kwargs)
+            modem_d = ModEmData.from_edi(sites, config=cfg)
 
             n_stations = int(modem_d.n_sites)
-            n_periods  = int(modem_d.n_periods)
+            n_periods = int(modem_d.n_periods)
 
             # apply period range filter if requested
             if per_range is not None:
                 self._log.info(
                     "Period range filter (%s – %s s) is applied via config.",
-                    per_range[0], per_range[1],
+                    per_range[0],
+                    per_range[1],
                 )
                 warnings.append(
                     "Period-range filtering should be applied to the Sites "
@@ -163,7 +171,8 @@ class ModEmAgent(BaseAgent):
             modem_d.write(data_path)
             self._log.info(
                 "ModEM_Data.dat written: %d stations × %d periods",
-                n_stations, n_periods,
+                n_stations,
+                n_periods,
             )
         except Exception as exc:
             return AgentResult.failed(
@@ -179,16 +188,19 @@ class ModEmAgent(BaseAgent):
         model_path = cov_path = ctrl_path = None
         try:
             from ..models.modem.builder import InputBuilder
+
             extra = InputBuilder(config=cfg).build_from_data(
-                modem_d, output_dir,
+                modem_d,
+                output_dir,
                 cov_filename="ModEM.cov",
                 ctrl_filename="ModEM.inv",
             )
             model_path = extra.get("model")
-            cov_path   = extra.get("covariance")
-            ctrl_path  = extra.get("control")
+            cov_path = extra.get("covariance")
+            ctrl_path = extra.get("control")
             self._log.info(
-                "ModEM model/covariance/control written to %s", output_dir,
+                "ModEM model/covariance/control written to %s",
+                output_dir,
             )
         except Exception as exc:  # noqa: BLE001
             warnings.append(
@@ -198,9 +210,13 @@ class ModEmAgent(BaseAgent):
         # ── validate ──────────────────────────────────────────────────────────
         if data_path.exists():
             size_kb = data_path.stat().st_size // 1024
-            self._log.info("ModEM data file: %s (%d KB)", data_path.name, size_kb)
+            self._log.info(
+                "ModEM data file: %s (%d KB)", data_path.name, size_kb
+            )
         else:
-            warnings.append(f"ModEM data file not found after write: {data_path}")
+            warnings.append(
+                f"ModEM data file not found after write: {data_path}"
+            )
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
@@ -217,22 +233,25 @@ class ModEmAgent(BaseAgent):
 
         elapsed = time.time() - t0
         n_files = sum(
-            1 for p in (data_path, model_path, cov_path, ctrl_path)
+            1
+            for p in (data_path, model_path, cov_path, ctrl_path)
             if p is not None and Path(p).exists()
         )
         return AgentResult(
-            status="success" if data_path and data_path.exists() else "needs_review",
+            status="success"
+            if data_path and data_path.exists()
+            else "needs_review",
             summary=(
                 f"ModEM3D prep: {n_stations} stations × {n_periods} periods. "
                 f"{n_files} file(s) written to {output_dir}."
             ),
             data={
-                "data_path":  data_path,
+                "data_path": data_path,
                 "model_path": model_path,
-                "cov_path":   cov_path,
-                "ctrl_path":  ctrl_path,
+                "cov_path": cov_path,
+                "ctrl_path": ctrl_path,
                 "n_stations": n_stations,
-                "n_periods":  n_periods,
+                "n_periods": n_periods,
                 "output_dir": output_dir,
             },
             warnings=warnings,

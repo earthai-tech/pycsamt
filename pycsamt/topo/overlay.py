@@ -45,15 +45,16 @@ __all__ = [
 ]
 
 # Catppuccin-compatible neutral palette (overridden by TopoConfig)
-_DEFAULT_FILL   = "#a89070"
-_DEFAULT_LINE   = "#6b4e2a"
-_DEFAULT_PIN    = "#f5c542"    # station marker colour
-_DEFAULT_LABEL  = "#cdd6f4"    # station label colour (light on dark)
+_DEFAULT_FILL = "#a89070"
+_DEFAULT_LINE = "#6b4e2a"
+_DEFAULT_PIN = "#f5c542"  # station marker colour
+_DEFAULT_LABEL = "#cdd6f4"  # station label colour (light on dark)
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def draw_topo_section(
     ax,
@@ -98,9 +99,10 @@ def draw_topo_section(
     """
     cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
-    elev  = np.asarray(elev_m,      dtype=float) / 1000.0  # → km
-    sx    = np.asarray(station_x_km if station_x_km is not None else chain,
-                       dtype=float)
+    elev = np.asarray(elev_m, dtype=float) / 1000.0  # → km
+    sx = np.asarray(
+        station_x_km if station_x_km is not None else chain, dtype=float
+    )
 
     if len(chain) == 0:
         return
@@ -110,14 +112,15 @@ def draw_topo_section(
     # ── 1. Terrain fill polygon ────────────────────────────────────────────
     # Determine which direction is "above surface" from current y-limits
     ylim = ax.get_ylim()
-    y_top = max(ylim)   # the upper edge of the current view
+    y_top = max(ylim)  # the upper edge of the current view
 
     if cfg.clip_below_surface:
         # Build a closed polygon: surface line → top-right → top-left
         x_fill = np.concatenate([[chain[0]], chain, [chain[-1]]])
         y_fill = np.concatenate([[y_top], elev_ex, [y_top]])
         ax.fill(
-            x_fill, y_fill,
+            x_fill,
+            y_fill,
             color=cfg.fill_color,
             alpha=cfg.fill_alpha,
             zorder=4,
@@ -127,7 +130,8 @@ def draw_topo_section(
     # ── 2. Surface polyline ────────────────────────────────────────────────
     if cfg.show_surface_line:
         ax.plot(
-            chain, elev_ex,
+            chain,
+            elev_ex,
             color=cfg.line_color,
             linewidth=cfg.line_width,
             solid_capstyle="round",
@@ -137,6 +141,7 @@ def draw_topo_section(
     # ── 3. Station pins ────────────────────────────────────────────────────
     if cfg.station_pins_at_surface:
         from pycsamt.topo.drape import interp_elev
+
         pin_elev = interp_elev(chain, elev, sx) * cfg.exaggeration
     else:
         pin_elev = np.zeros_like(sx)
@@ -149,9 +154,11 @@ def draw_topo_section(
 
     # Use station marker style from the global rendering config.
     from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+
     _mstyle = PYCSAMT_STATION_RENDERING.inversion.marker
     ax.scatter(
-        sx, marker_y,
+        sx,
+        marker_y,
         marker=_mstyle.marker,
         s=_mstyle.size,
         facecolors=_mstyle.facecolor,
@@ -167,13 +174,15 @@ def draw_topo_section(
         label_color = _DEFAULT_LABEL if dark else "#4c4f69"
         # Thin labels when crowded; markers always stay visible.
         from pycsamt.api.station import StationAxisStyle
+
         _dummy_style = StationAxisStyle()
         figwidth = ax.figure.get_figwidth() if ax.figure is not None else 10.0
         visible_idx = _dummy_style.label_indices(station_names, figwidth)
         label_offset = toward_top * cfg.marker_pad_fraction * 3.5 * y_range
         for i in visible_idx:
             ax.text(
-                sx[i], marker_y[i] + label_offset,
+                sx[i],
+                marker_y[i] + label_offset,
                 station_names[i],
                 fontsize=7,
                 rotation=90,
@@ -223,25 +232,23 @@ def draw_topo_strip(
     ax_strip : matplotlib.axes.Axes
         The newly created elevation-strip axes.
     """
-    cfg   = _get_cfg(cfg)
+    cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
-    elev  = np.asarray(elev_m,      dtype=float)
-    n     = len(chain)
+    elev = np.asarray(elev_m, dtype=float)
+    n = len(chain)
     if n == 0:
         return None
 
     h_ratio = cfg.strip_height_ratio
 
     # Shrink the main axes to make room at the top
-    pos = main_ax.get_position()          # Bbox in figure fraction
+    pos = main_ax.get_position()  # Bbox in figure fraction
     new_bottom = pos.y0
     new_height = pos.height * (1.0 - h_ratio)
     strip_bottom = pos.y0 + new_height
     strip_height = pos.height * h_ratio
 
-    main_ax.set_position(
-        [pos.x0, new_bottom, pos.width, new_height]
-    )
+    main_ax.set_position([pos.x0, new_bottom, pos.width, new_height])
 
     ax_s = fig.add_axes(
         [pos.x0, strip_bottom, pos.width, strip_height],
@@ -249,12 +256,14 @@ def draw_topo_strip(
     )
 
     # ── Draw elevation profile in the strip ───────────────────────────────
-    x_idx = np.arange(n)                  # station index = x in pseudosection
+    x_idx = np.arange(n)  # station index = x in pseudosection
     elev_ex = elev * cfg.exaggeration
 
     # Filled area
     ax_s.fill_between(
-        x_idx, elev_ex, elev_ex.min() - 1,
+        x_idx,
+        elev_ex,
+        elev_ex.min() - 1,
         color=cfg.fill_color,
         alpha=cfg.fill_alpha + 0.1,
         linewidth=0,
@@ -263,7 +272,8 @@ def draw_topo_strip(
     # Surface line
     if cfg.show_surface_line:
         ax_s.plot(
-            x_idx, elev_ex,
+            x_idx,
+            elev_ex,
             color=cfg.line_color,
             linewidth=cfg.line_width,
             zorder=3,
@@ -273,9 +283,11 @@ def draw_topo_strip(
         PYCSAMT_STATION_RENDERING,
         StationAxisStyle,
     )
+
     _mstyle = PYCSAMT_STATION_RENDERING.pseudosection.marker
     ax_s.scatter(
-        x_idx, elev_ex,
+        x_idx,
+        elev_ex,
         marker=_mstyle.marker,
         s=_mstyle.size * 0.75,
         facecolors=_mstyle.facecolor,
@@ -291,12 +303,18 @@ def draw_topo_strip(
     bg = "#181825" if dark else "#eff1f5"
 
     ax_s.set_facecolor(bg)
-    ax_s.set_xlim(main_ax.get_xlim() if hasattr(main_ax, "get_xlim") else (-0.5, n - 0.5))
+    ax_s.set_xlim(
+        main_ax.get_xlim()
+        if hasattr(main_ax, "get_xlim")
+        else (-0.5, n - 0.5)
+    )
     ax_s.margins(x=0)
     ax_s.tick_params(
-        bottom=False, top=False,
+        bottom=False,
+        top=False,
         labelbottom=False,
-        left=True, labelsize=7,
+        left=True,
+        labelsize=7,
         colors=fg,
     )
     ax_s.set_ylabel("Elev (m)", fontsize=7, color=fg)
@@ -307,11 +325,14 @@ def draw_topo_strip(
     # Station name labels — smart thinning: markers always visible, labels subset
     if station_names and len(station_names) == n:
         _dummy = StationAxisStyle()
-        figwidth = ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
+        figwidth = (
+            ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
+        )
         visible_idx = _dummy.label_indices(station_names, figwidth)
         for i in visible_idx:
             ax_s.text(
-                x_idx[i], elev_ex[i],
+                x_idx[i],
+                elev_ex[i],
                 f"  {station_names[i]}",
                 fontsize=6,
                 rotation=90,
@@ -349,7 +370,8 @@ def add_station_labels(
     """
     for xi, yi, name in zip(x_km, y_km, names):
         ax.text(
-            xi, yi + offset_km,
+            xi,
+            yi + offset_km,
             name,
             fontsize=fontsize,
             rotation=rotation,
@@ -365,9 +387,11 @@ def add_station_labels(
 # Private helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_cfg(cfg):
     """Return cfg if given, else fall back to global singleton."""
     if cfg is not None:
         return cfg
     from pycsamt.topo.config import PYCSAMT_TOPO
+
     return PYCSAMT_TOPO

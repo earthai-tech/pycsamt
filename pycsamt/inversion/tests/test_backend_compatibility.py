@@ -34,7 +34,9 @@ def test_backend_registry_instantiates_all_adapters():
     assert expected.issubset(set(available_backends()))
     for name in expected:
         backend_cls = get_backend(name)
-        cfg = InversionConfig(backend=name, dimension="3d" if name == "modem" else "1d")
+        cfg = InversionConfig(
+            backend=name, dimension="3d" if name == "modem" else "1d"
+        )
         if name == "occam2d":
             cfg = InversionConfig(backend=name, dimension="2d")
         assert backend_cls(cfg).name == name
@@ -71,7 +73,11 @@ def test_backend_result_conversion_contracts_for_2d_sections():
             dimension="2d",
             backend=backend,
             model=model,
-            mesh=InversionMesh(dimension="2d", x_centers=[0.0, 500.0], z_centers=[25.0, 125.0]),
+            mesh=InversionMesh(
+                dimension="2d",
+                x_centers=[0.0, 500.0],
+                z_centers=[25.0, 125.0],
+            ),
             rms=1.0,
         )
         converted = result.to_resistivity_model()
@@ -115,7 +121,11 @@ def test_installed_simpeg_backend_smoke(tmp_path):
         n_layers=2,
         max_iter=1,
         starting_model=StartingModel([100.0, 200.0], [100.0]),
-        backend_options={"n_cells": 4, "depth_max": 500.0, "estimate_beta": False},
+        backend_options={
+            "n_cells": 4,
+            "depth_max": 500.0,
+            "estimate_beta": False,
+        },
         workdir=str(tmp_path / "simpeg"),
     )
     result = InversionWorkflow(cfg).run()

@@ -40,16 +40,21 @@ configure_pipe(show_progress=False, plot_dpi=72)
 strategies = {
     "light_denoise": Pipeline([("denoise", Step("NR002"))]),
     "noise_reduction": Pipeline(get_preset("noise_reduction").steps),
-    "denoise+shift": Pipeline([
-        ("notch",        Step("NR001", mains_hz=50)),
-        ("denoise",      Step("NR002")),
-        ("static_shift", Step("SS001")),
-    ]),
+    "denoise+shift": Pipeline(
+        [
+            ("notch", Step("NR001", mains_hz=50)),
+            ("denoise", Step("NR002")),
+            ("static_shift", Step("SS001")),
+        ]
+    ),
 }
 
 raw_rho = station_rho(raw)
-colors = {"light_denoise": "#3e65b0", "noise_reduction": "#fbb040",
-          "denoise+shift": "#c44536"}
+colors = {
+    "light_denoise": "#3e65b0",
+    "noise_reduction": "#fbb040",
+    "denoise+shift": "#c44536",
+}
 
 
 def mean_change(proc_rho):
@@ -68,15 +73,22 @@ def mean_change(proc_rho):
 results, proc_rhos, changes = {}, {}, {}
 with quiet_logs():
     for name, pipe in strategies.items():
-        res = pipe.run(raw, outdir=scratch_dir(), save_plots=False,
-                       save_edis=False, save_report=False)
+        res = pipe.run(
+            raw,
+            outdir=scratch_dir(),
+            save_plots=False,
+            save_edis=False,
+            save_report=False,
+        )
         results[name] = res
         proc_rhos[name] = station_rho(res.sites_out)
         changes[name] = mean_change(proc_rhos[name])
         snr = build_qc_table(res.sites_out)["snr_med"].mean()
-        print(f"{name:<16} steps={len(res.step_results)} "
-              f"elapsed={res.elapsed_sec:5.2f}s  meanSNR={snr:5.1f}  "
-              f"meanChange={np.mean(list(changes[name].values())):.3f}")
+        print(
+            f"{name:<16} steps={len(res.step_results)} "
+            f"elapsed={res.elapsed_sec:5.2f}s  meanSNR={snr:5.1f}  "
+            f"meanChange={np.mean(list(changes[name].values())):.3f}"
+        )
 
 # %%
 # One sounding, three ways
@@ -134,8 +146,15 @@ fig.suptitle("Processing-strategy scorecard", fontsize=12)
 fig, ax = plt.subplots(figsize=(10, 4.0), constrained_layout=True)
 for name in strategies:
     sts = list(changes[name])
-    ax.plot(range(len(sts)), [changes[name][s] for s in sts], "o-",
-            ms=4, lw=1.5, color=colors[name], label=name)
+    ax.plot(
+        range(len(sts)),
+        [changes[name][s] for s in sts],
+        "o-",
+        ms=4,
+        lw=1.5,
+        color=colors[name],
+        label=name,
+    )
 ax.set_xticks(range(len(sts)))
 ax.set_xticklabels(sts, rotation=90, fontsize=6)
 ax.set_ylabel(r"mean $|\Delta\log_{10}\rho_a|$ vs raw")

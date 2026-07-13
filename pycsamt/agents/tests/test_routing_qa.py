@@ -39,13 +39,8 @@ _WORKFLOW_PATTERNS = [
 def _is_qa(text: str) -> bool:
     """Heuristic: is this a Q&A request?"""
     t = text.lower()
-    is_q = any(
-        re.search(p, t)
-        for p in _QA_PATTERNS
-    )
-    has_path = bool(
-        re.search(r"/[\w/]+", t)
-    )
+    is_q = any(re.search(p, t) for p in _QA_PATTERNS)
+    has_path = bool(re.search(r"/[\w/]+", t))
     # If it has a file path, it's likely a
     # workflow request even if it has a question
     # word.
@@ -57,8 +52,7 @@ _QA_CASES = [
     "How do I load EDI files in pycsamt?",
     "Explain the Sites class",
     "What workflows does pycsamt support?",
-    "What is the difference between PINN and"
-    " hybrid inversion?",
+    "What is the difference between PINN and hybrid inversion?",
     "How does phase tensor analysis work?",
     "List all supported pycsamt agents",
     "Tell me about the DataQCAgent",
@@ -90,8 +84,7 @@ class TestQAvsWorkflowHeuristic(unittest.TestCase):
             with self.subTest(text=text[:60]):
                 self.assertTrue(
                     _is_qa(text),
-                    f"Expected Q&A classification"
-                    f" for: {text!r}",
+                    f"Expected Q&A classification for: {text!r}",
                 )
 
     def test_workflow_cases_not_classified_as_qa(self):
@@ -99,8 +92,7 @@ class TestQAvsWorkflowHeuristic(unittest.TestCase):
             with self.subTest(text=text[:60]):
                 self.assertFalse(
                     _is_qa(text),
-                    f"Expected workflow"
-                    f" classification for: {text!r}",
+                    f"Expected workflow classification for: {text!r}",
                 )
 
 
@@ -114,12 +106,14 @@ class TestPackageQAAnswersPackageQuestions(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         self.agent = PackageQAAgent()
 
     def _ask(self, q: str) -> str:
         r = self.agent.execute({"question": q})
         self.assertEqual(
-            r.status, "success",
+            r.status,
+            "success",
             f"Agent failed for: {q!r}",
         )
         return r.data.get("answer", "")
@@ -127,69 +121,67 @@ class TestPackageQAAnswersPackageQuestions(unittest.TestCase):
     def test_all_qa_cases_return_success(self):
         for text in _QA_CASES:
             with self.subTest(text=text[:60]):
-                r = self.agent.execute(
-                    {"question": text}
-                )
+                r = self.agent.execute({"question": text})
                 self.assertEqual(
-                    r.status, "success",
+                    r.status,
+                    "success",
                     f"Failed: {text!r}",
                 )
 
     def test_static_shift_question(self):
-        ans = self._ask(
-            "What does StaticShiftAgent do?"
-        )
+        ans = self._ask("What does StaticShiftAgent do?")
         self.assertGreater(len(ans), 20)
         self.assertTrue(
             any(
                 k in ans.lower()
                 for k in (
-                    "static", "shift",
-                    "galvanic", "correct",
+                    "static",
+                    "shift",
+                    "galvanic",
+                    "correct",
                 )
             )
         )
 
     def test_workflow_list_question(self):
-        ans = self._ask(
-            "What workflows does pycsamt support?"
-        )
+        ans = self._ask("What workflows does pycsamt support?")
         # Should contain workflow names
         self.assertTrue(
             any(
                 k in ans.lower()
                 for k in (
-                    "qc", "inversion",
-                    "static", "report",
+                    "qc",
+                    "inversion",
+                    "static",
+                    "report",
                 )
             )
         )
 
     def test_agent_list_question(self):
-        ans = self._ask(
-            "List all supported pycsamt agents"
-        )
+        ans = self._ask("List all supported pycsamt agents")
         self.assertTrue(
             any(
                 k in ans
                 for k in (
-                    "Agent", "agent",
-                    "MTLoader", "DataQC",
+                    "Agent",
+                    "agent",
+                    "MTLoader",
+                    "DataQC",
                 )
             )
         )
 
     def test_sites_question(self):
-        ans = self._ask(
-            "How do I access impedance tensor"
-            " values?"
-        )
+        ans = self._ask("How do I access impedance tensor values?")
         self.assertTrue(
             any(
                 k in ans.lower()
                 for k in (
-                    "sites", "impedance",
-                    "tensor", "edi",
+                    "sites",
+                    "impedance",
+                    "tensor",
+                    "edi",
                 )
             )
         )
@@ -209,12 +201,11 @@ class TestContextInputDoesNotAbsorbQA(unittest.TestCase):
 
     def setUp(self):
         from pycsamt.agents import ContextInputAgent
+
         self.ctx_agent = ContextInputAgent()
 
     def _route(self, text: str) -> str:
-        r = self.ctx_agent.execute(
-            {"request": text}
-        )
+        r = self.ctx_agent.execute({"request": text})
         cfg = r.get("config") or {}
         return str(cfg.get("workflow", "")).lower()
 
@@ -229,14 +220,10 @@ class TestContextInputDoesNotAbsorbQA(unittest.TestCase):
                 # something — the important thing
                 # is no data_path is set for a
                 # question that provides none.
-                r = self.ctx_agent.execute(
-                    {"request": text}
-                )
+                r = self.ctx_agent.execute({"request": text})
                 cfg = r.get("config") or {}
                 # No real data path should appear
-                data_path = str(
-                    cfg.get("data_path", "")
-                )
+                data_path = str(cfg.get("data_path", ""))
                 self.assertFalse(
                     data_path.startswith("/data"),
                     f"Router hallucinated a data"

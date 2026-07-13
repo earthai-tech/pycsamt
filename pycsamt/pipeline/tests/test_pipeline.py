@@ -73,6 +73,7 @@ from pycsamt.pipeline._report import (
 # Test doubles
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _IdentityStep(Step):
     """Step whose transform returns sites unchanged, with no QC plots.
 
@@ -142,6 +143,7 @@ def _raising(code: str) -> _RaisingStep:
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(autouse=True)
 def _reset_pipe_cfg():
     """Guarantee PYCSAMT_PIPE is at defaults for every test."""
@@ -155,7 +157,7 @@ def simple_pipe() -> Pipeline:
     return Pipeline(
         [
             ("notch", _identity("NR001")),
-            ("band",  _identity("FREQ001")),
+            ("band", _identity("FREQ001")),
             ("align", _identity("FREQ004")),
         ],
         name="test_pipe",
@@ -171,8 +173,8 @@ def sites() -> _CountingSites:
 # 1 · Step registry
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestStepRegistry:
 
+class TestStepRegistry:
     def test_registry_has_46_entries(self):
         assert len(STEP_REGISTRY) == 47
 
@@ -234,7 +236,9 @@ class TestStepRegistry:
     def test_special_case_override_fns_callable(self):
         for code in ("NR007", "SS002", "SS003"):
             spec = STEP_REGISTRY[code]
-            assert callable(spec.override_fn), f"{code} override_fn not callable"
+            assert callable(spec.override_fn), (
+                f"{code} override_fn not callable"
+            )
 
     def test_all_specs_resolvable(self):
         for code, spec in STEP_REGISTRY.items():
@@ -245,16 +249,17 @@ class TestStepRegistry:
         for code, spec in STEP_REGISTRY.items():
             for entry in spec.qc_defs:
                 assert len(entry) == 2, f"{code}: qc_def not a 2-tuple"
-                assert all(isinstance(s, str) for s in entry), \
+                assert all(isinstance(s, str) for s in entry), (
                     f"{code}: qc_def contains non-strings"
+                )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2 · Step class
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestStepClass:
 
+class TestStepClass:
     def test_init_by_code(self):
         step = Step("NR001")
         assert step.spec.code == "NR001"
@@ -307,8 +312,8 @@ class TestStepClass:
 # 3 · Presets
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPresets:
 
+class TestPresets:
     _PRESET_NAMES = [
         "basic_qc",
         "noise_reduction",
@@ -364,8 +369,8 @@ class TestPresets:
 # 4 · PipelineAPIConfig
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPipelineAPIConfig:
 
+class TestPipelineAPIConfig:
     def test_default_output_root(self):
         cfg = PipelineAPIConfig()
         assert cfg.output_root == "pipe_results"
@@ -421,8 +426,8 @@ class TestPipelineAPIConfig:
 # 5 · OutputDir
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestOutputDir:
 
+class TestOutputDir:
     def test_setup_creates_root(self, tmp_path):
         root = tmp_path / "pipe_out"
         od = OutputDir(root)
@@ -475,8 +480,8 @@ class TestOutputDir:
 # 6 · Pipeline construction
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPipelineConstruction:
 
+class TestPipelineConstruction:
     def test_from_step_list(self):
         pipe = Pipeline([_identity("NR001")])
         assert len(pipe) == 1
@@ -506,7 +511,9 @@ class TestPipelineConstruction:
         assert result is pipe
 
     def test_remove_found(self):
-        pipe = Pipeline([("notch", _identity("NR001")), ("band", _identity("FREQ001"))])
+        pipe = Pipeline(
+            [("notch", _identity("NR001")), ("band", _identity("FREQ001"))]
+        )
         pipe.remove("notch")
         assert len(pipe) == 1
         assert pipe._steps[0][0] == "band"
@@ -517,7 +524,9 @@ class TestPipelineConstruction:
             pipe.remove("notch_missing")
 
     def test_insert_at_position(self):
-        pipe = Pipeline([("a", _identity("NR001")), ("c", _identity("FREQ001"))])
+        pipe = Pipeline(
+            [("a", _identity("NR001")), ("c", _identity("FREQ001"))]
+        )
         pipe.insert(1, "b", _identity("FREQ004"))
         assert pipe._steps[1][0] == "b"
         assert len(pipe) == 3
@@ -588,8 +597,8 @@ class TestPipelineConstruction:
 # 7 · Pipeline repr and describe
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPipelineRepr:
 
+class TestPipelineRepr:
     def test_repr_contains_step_count(self, simple_pipe):
         r = repr(simple_pipe)
         assert "3 steps" in r
@@ -638,13 +647,15 @@ steps:
   - code: FREQ004
 """
 
-_JSON_CFG = json.dumps({
-    "name": "json_wf",
-    "steps": [
-        {"name": "align", "code": "FREQ004"},
-        {"name": "ss",    "code": "SS001"},
-    ],
-})
+_JSON_CFG = json.dumps(
+    {
+        "name": "json_wf",
+        "steps": [
+            {"name": "align", "code": "FREQ004"},
+            {"name": "ss", "code": "SS001"},
+        ],
+    }
+)
 
 _PY_CFG = """\
 pipeline_config = {
@@ -666,9 +677,10 @@ steps:
 
 
 class TestPipelineConfigFiles:
-
     def test_yaml_roundtrip_name(self, tmp_path):
-        pipe = Pipeline([("notch", _identity("NR001"))], name="roundtrip_pipe")
+        pipe = Pipeline(
+            [("notch", _identity("NR001"))], name="roundtrip_pipe"
+        )
         yaml_path = tmp_path / "pipe.yaml"
         pipe.to_yaml(yaml_path)
         loaded = Pipeline.from_yaml(yaml_path)
@@ -763,8 +775,8 @@ class TestPipelineConfigFiles:
 # 9 · Pipeline.run — mechanics
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPipelineRun:
 
+class TestPipelineRun:
     def test_run_returns_pipeline_result(self, simple_pipe, sites):
         result = simple_pipe.run(sites, save_edis=False, save_report=False)
         assert isinstance(result, PipelineResult)
@@ -802,16 +814,18 @@ class TestPipelineRun:
     def test_run_step_results_codes_match(self, simple_pipe, sites):
         result = simple_pipe.run(sites, save_edis=False, save_report=False)
         expected = ["NR001", "FREQ001", "FREQ004"]
-        actual   = [sr.step_code for sr in result.step_results]
+        actual = [sr.step_code for sr in result.step_results]
         assert actual == expected
 
     def test_run_chaining_increments_count(self):
         """Each _MutatingStep increases sites.count by 1 — proves chaining."""
-        pipe = Pipeline([
-            ("a", _mutating("NR001")),
-            ("b", _mutating("FREQ001")),
-            ("c", _mutating("FREQ004")),
-        ])
+        pipe = Pipeline(
+            [
+                ("a", _mutating("NR001")),
+                ("b", _mutating("FREQ001")),
+                ("c", _mutating("FREQ004")),
+            ]
+        )
         start = _CountingSites(n=2, count=0)
         result = pipe.run(start, save_edis=False, save_report=False)
         assert result.sites_out.count == 3
@@ -821,8 +835,9 @@ class TestPipelineRun:
         assert result.pipeline_name == "test_pipe"
 
     def test_run_no_outdir_does_not_write_files(self, simple_pipe, sites):
-        result = simple_pipe.run(sites, outdir=None, save_edis=False,
-                                  save_report=False)
+        result = simple_pipe.run(
+            sites, outdir=None, save_edis=False, save_report=False
+        )
         assert result.outdir is None
         assert len(result.processed_paths) == 0
 
@@ -831,11 +846,13 @@ class TestPipelineRun:
     def test_run_error_warn_continues(self, sites):
         """on_step_error='warn': error recorded, pipeline continues."""
         configure_pipe(on_step_error="warn")
-        pipe = Pipeline([
-            ("good_before",  _identity("NR001")),
-            ("bad_step",     _raising("FREQ001")),
-            ("good_after",   _identity("FREQ004")),
-        ])
+        pipe = Pipeline(
+            [
+                ("good_before", _identity("NR001")),
+                ("bad_step", _raising("FREQ001")),
+                ("good_after", _identity("FREQ004")),
+            ]
+        )
         with warnings.catch_warnings(record=True) as ws:
             warnings.simplefilter("always")
             result = pipe.run(sites, save_edis=False, save_report=False)
@@ -850,47 +867,61 @@ class TestPipelineRun:
 
     def test_run_error_skip_silent(self, sites):
         configure_pipe(on_step_error="skip")
-        pipe = Pipeline([
-            ("bad", _raising("NR001")),
-            ("ok",  _identity("FREQ001")),
-        ])
+        pipe = Pipeline(
+            [
+                ("bad", _raising("NR001")),
+                ("ok", _identity("FREQ001")),
+            ]
+        )
         with warnings.catch_warnings(record=True) as ws:
             warnings.simplefilter("always")
             result = pipe.run(sites, save_edis=False, save_report=False)
 
         assert result.step_results[0].error is not None
         # no user-visible warning with "skip"
-        user_warns = [w for w in ws if "deliberate step failure" in str(w.message)]
+        user_warns = [
+            w for w in ws if "deliberate step failure" in str(w.message)
+        ]
         assert len(user_warns) == 0
 
     def test_run_error_raise_propagates(self, sites):
         configure_pipe(on_step_error="raise")
-        pipe = Pipeline([
-            ("bad", _raising("NR001")),
-            ("ok",  _identity("FREQ001")),
-        ])
+        pipe = Pipeline(
+            [
+                ("bad", _raising("NR001")),
+                ("ok", _identity("FREQ001")),
+            ]
+        )
         with pytest.raises(RuntimeError, match="deliberate step failure"):
             pipe.run(sites, save_edis=False, save_report=False)
 
     def test_run_with_outdir_creates_tree(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
-        simple_pipe.run(sites, outdir=root, save_edis=False, save_report=False)
+        simple_pipe.run(
+            sites, outdir=root, save_edis=False, save_report=False
+        )
         assert root.exists()
         assert (root / "processed").exists()
         assert (root / "plots").exists()
 
     def test_run_with_outdir_saves_yaml(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
-        simple_pipe.run(sites, outdir=root, save_edis=False, save_report=False)
+        simple_pipe.run(
+            sites, outdir=root, save_edis=False, save_report=False
+        )
         assert (root / "pipeline.yaml").exists()
 
-    def test_run_with_outdir_saves_reports(self, simple_pipe, sites, tmp_path):
+    def test_run_with_outdir_saves_reports(
+        self, simple_pipe, sites, tmp_path
+    ):
         root = tmp_path / "out"
         simple_pipe.run(sites, outdir=root, save_edis=False, save_report=True)
         assert (root / "summary.txt").exists()
         assert (root / "report.html").exists()
 
-    def test_run_plots_dir_has_step_subdirs(self, simple_pipe, sites, tmp_path):
+    def test_run_plots_dir_has_step_subdirs(
+        self, simple_pipe, sites, tmp_path
+    ):
         root = tmp_path / "out"
         simple_pipe.run(
             sites,
@@ -914,8 +945,8 @@ class TestPipelineRun:
 # 10 · PipelineResult
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPipelineResult:
 
+class TestPipelineResult:
     @pytest.fixture()
     def clean_result(self, simple_pipe, sites):
         return simple_pipe.run(
@@ -953,6 +984,7 @@ class TestPipelineResult:
 # 11 · Report generators
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _make_step_result(idx: int, *, ok: bool = True) -> StepResult:
     return StepResult(
         step_idx=idx,
@@ -969,7 +1001,6 @@ def _make_step_result(idx: int, *, ok: bool = True) -> StepResult:
 
 
 class TestReportGenerators:
-
     def test_text_report_is_string(self):
         sr = [_make_step_result(i) for i in range(1, 4)]
         txt = make_text_report("my_pipe", sr, 1.23, None, 5, 5)

@@ -22,6 +22,7 @@ _MPL_VERSION = parse(matplotlib.__version__)
 
 __all__ = ["get_cmap", "is_valid_cmap"]
 
+
 def is_valid_cmap(cmap, allow_none=False, **kw):
     r"""Check if a colormap identifier is valid.
 
@@ -70,8 +71,13 @@ def is_valid_cmap(cmap, allow_none=False, **kw):
 
 
 def get_cmap(
-    name, default="viridis", allow_none=False, error=None,
-    failsafe="continuous", lut=None, **kw
+    name,
+    default="viridis",
+    allow_none=False,
+    error=None,
+    failsafe="continuous",
+    lut=None,
+    **kw,
 ):
     r"""Robustly retrieve a Matplotlib colormap with fallbacks.
 
@@ -118,6 +124,7 @@ def get_cmap(
         )
 
         # but does nothing
+
     # Private helper to prevent repeating the retrieval code
     def _retrieve(cmap_name):
         """Retrieve the colormap object using the correct API, resampled

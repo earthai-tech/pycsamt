@@ -30,7 +30,9 @@ class TestInfoCommand:
     ) -> None:
         result = runner.invoke(main, ["info"])
         assert result.exit_code != 0
-        assert "No active survey" in result.output or "No active survey" in (result.exception or "")
+        assert "No active survey" in result.output or "No active survey" in (
+            result.exception or ""
+        )
 
     # ------------------------------------------------------------------
     # Explicit path — live EDI files
@@ -50,13 +52,19 @@ class TestInfoCommand:
         assert result.exit_code == 0
         len(list(edi_dir.glob("*.edi")))
         # At least one station block in the output
-        assert result.output.count("Station") >= 1 or result.output.count("File") >= 1
+        assert (
+            result.output.count("Station") >= 1
+            or result.output.count("File") >= 1
+        )
 
     def test_explicit_edi_dir_json(
         self, runner: CliRunner, edi_dir: Path
     ) -> None:
         import json
-        result = runner.invoke(main, ["info", str(edi_dir), "--format", "json"])
+
+        result = runner.invoke(
+            main, ["info", str(edi_dir), "--format", "json"]
+        )
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert isinstance(data, list)
@@ -65,7 +73,9 @@ class TestInfoCommand:
     def test_explicit_edi_dir_csv(
         self, runner: CliRunner, edi_dir: Path
     ) -> None:
-        result = runner.invoke(main, ["info", str(edi_dir), "--format", "csv"])
+        result = runner.invoke(
+            main, ["info", str(edi_dir), "--format", "csv"]
+        )
         assert result.exit_code == 0
         lines = [l for l in result.output.splitlines() if l.strip()]
         assert len(lines) >= 2  # header + at least one data row
@@ -109,12 +119,13 @@ class TestInfoCommand:
         self, runner: CliRunner, edi_dir: Path, isolated_home: Path
     ) -> None:
         from unittest.mock import MagicMock
+
         fake_sites = MagicMock()
         fake_sites.__len__ = lambda _: 0
         fake_sites.__iter__ = lambda _: iter([])
         # With an explicit --survey, info should at least not crash on path resolution
-        result = runner.invoke(
-            main, ["info", "--survey", str(edi_dir)]
-        )
+        result = runner.invoke(main, ["info", "--survey", str(edi_dir)])
         # May exit 1 if no paths resolved, but should not raise Python exception
-        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )

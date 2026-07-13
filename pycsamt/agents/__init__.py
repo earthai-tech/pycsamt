@@ -145,46 +145,46 @@ from .coordinator import AgentCoordinator, WorkflowStep
 
 # ── lazy agent map ────────────────────────────────────────────────────────────
 _LAZY: dict[str, str] = {
-    "AgentMaster":                ".master",
-    "ContextInputAgent":          ".context",
-    "IntentRouter":               ".router",
-    "PackageQAAgent":             ".package_qa",
-    "MTLoaderAgent":              ".loader",
-    "DataQCAgent":                ".qc",
-    "StaticShiftAgent":           ".static_shift",
-    "PhaseAnalysisAgent":         ".phase_analysis",
-    "ForwardModelAgent":          ".forward",
-    "InversionPrepAgent":         ".inversion_prep",
-    "InversionEvaluationAgent":   ".inversion_eval",
-    "InterpretationAgent":        ".interpretation",
-    "ReportAgent":                ".report",
-    "CodeGenerationAgent":        ".code_gen",
-    "WorkflowOrchestratorAgent":  ".orchestrator",
-    "DenoisingAgent":             ".denoising",
-    "AIInversionAgent":           ".ai_inversion",
-    "Occam2DAgent":               ".occam2d_agent",
-    "ModEmAgent":                 ".modem_agent",
-    "AnomalyDetectionAgent":      ".anomaly_agent",
-    "Inv2DAgent":                 ".inv2d_agent",
-    "Inv3DAgent":                 ".inv3d_agent",
-    "EnsembleAgent":              ".ensemble_agent",
-    "JointInversionAgent":        ".joint_agent",
-    "ModelZooAgent":              ".model_zoo_agent",
+    "AgentMaster": ".master",
+    "ContextInputAgent": ".context",
+    "IntentRouter": ".router",
+    "PackageQAAgent": ".package_qa",
+    "MTLoaderAgent": ".loader",
+    "DataQCAgent": ".qc",
+    "StaticShiftAgent": ".static_shift",
+    "PhaseAnalysisAgent": ".phase_analysis",
+    "ForwardModelAgent": ".forward",
+    "InversionPrepAgent": ".inversion_prep",
+    "InversionEvaluationAgent": ".inversion_eval",
+    "InterpretationAgent": ".interpretation",
+    "ReportAgent": ".report",
+    "CodeGenerationAgent": ".code_gen",
+    "WorkflowOrchestratorAgent": ".orchestrator",
+    "DenoisingAgent": ".denoising",
+    "AIInversionAgent": ".ai_inversion",
+    "Occam2DAgent": ".occam2d_agent",
+    "ModEmAgent": ".modem_agent",
+    "AnomalyDetectionAgent": ".anomaly_agent",
+    "Inv2DAgent": ".inv2d_agent",
+    "Inv3DAgent": ".inv3d_agent",
+    "EnsembleAgent": ".ensemble_agent",
+    "JointInversionAgent": ".joint_agent",
+    "ModelZooAgent": ".model_zoo_agent",
     # new agents
-    "TensorRotationAgent":        ".tensor_rotation",
-    "EDIExportAgent":             ".edi_export",
-    "TipperAnalysisAgent":        ".tipper_analysis",
-    "SensitivityAgent":           ".sensitivity",
-    "FrequencyDecimationAgent":   ".freq_decimation",
-    "InversionComparisonAgent":   ".inversion_comparison",
-    "ResistivityMapAgent":        ".resistivity_map",
-    "BatchSurveyAgent":           ".batch_survey",
-    "InversionBackendAgent":      ".inversion_backend",
-    "PipelineAgent":              ".pipeline_agent",
-    "Mare2DEMAgent":              ".mare2dem_agent",
-    "PINNInversionAgent":         ".pinn_agent",
-    "HybridInversionAgent":       ".hybrid_agent",
-    "IoTFieldAgent":              ".iot_agent",
+    "TensorRotationAgent": ".tensor_rotation",
+    "EDIExportAgent": ".edi_export",
+    "TipperAnalysisAgent": ".tipper_analysis",
+    "SensitivityAgent": ".sensitivity",
+    "FrequencyDecimationAgent": ".freq_decimation",
+    "InversionComparisonAgent": ".inversion_comparison",
+    "ResistivityMapAgent": ".resistivity_map",
+    "BatchSurveyAgent": ".batch_survey",
+    "InversionBackendAgent": ".inversion_backend",
+    "PipelineAgent": ".pipeline_agent",
+    "Mare2DEMAgent": ".mare2dem_agent",
+    "PINNInversionAgent": ".pinn_agent",
+    "HybridInversionAgent": ".hybrid_agent",
+    "IoTFieldAgent": ".iot_agent",
 }
 
 
@@ -192,7 +192,7 @@ def __getattr__(name: str):
     if name in _LAZY:
         module = importlib.import_module(_LAZY[name], package=__name__)
         obj = getattr(module, name)
-        globals()[name] = obj   # cache — skip import machinery on next access
+        globals()[name] = obj  # cache — skip import machinery on next access
         return obj
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
@@ -210,13 +210,13 @@ if TYPE_CHECKING:
     from .freq_decimation import FrequencyDecimationAgent
     from .hybrid_agent import HybridInversionAgent
     from .interpretation import InterpretationAgent
-    from .iot_agent import IoTFieldAgent
     from .inv2d_agent import Inv2DAgent
     from .inv3d_agent import Inv3DAgent
     from .inversion_backend import InversionBackendAgent
     from .inversion_comparison import InversionComparisonAgent
     from .inversion_eval import InversionEvaluationAgent
     from .inversion_prep import InversionPrepAgent
+    from .iot_agent import IoTFieldAgent
     from .joint_agent import JointInversionAgent
     from .loader import MTLoaderAgent
     from .mare2dem_agent import Mare2DEMAgent

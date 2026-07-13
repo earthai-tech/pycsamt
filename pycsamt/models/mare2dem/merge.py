@@ -44,6 +44,7 @@ PathLike = Union[str, Path]
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _merge_arrays(
     a: np.ndarray,
     b: np.ndarray,
@@ -95,9 +96,7 @@ def _merge_lists(
 
 def _check_utm(em1: EMDataFile, em2: EMDataFile) -> None:
     u1, u2 = em1.utm, em2.utm
-    if (u1.north0 != u2.north0
-            or u1.east0 != u2.east0
-            or u1.theta != u2.theta):
+    if u1.north0 != u2.north0 or u1.east0 != u2.east0 or u1.theta != u2.theta:
         raise ValueError(
             "Cannot merge: UTM origins or 2-D strike angles differ between "
             "the input files.  All files must share the same UTM reference."
@@ -117,7 +116,9 @@ def _merge_mt(
         out.mt = src.mt
         # remap DATA rows: trivial since indices already 1-based from source
         out.data[:, 0].astype(int)
-        out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
+        out.data = (
+            np.vstack([out.data, mt_data]) if len(out.data) else mt_data
+        )
         return out
 
     # merge frequencies
@@ -133,10 +134,14 @@ def _merge_mt(
     rx_combined, irx_map = _merge_arrays(out.mt.receivers, src.mt.receivers)
     out.mt.receivers = rx_combined
     mt_data[:, 3] = irx_map[mt_data[:, 3].astype(int) - 1]
-    mt_data[:, 2] = irx_map[mt_data[:, 2].astype(int) - 1]  # Tx#==H-rx# for MT
+    mt_data[:, 2] = irx_map[
+        mt_data[:, 2].astype(int) - 1
+    ]  # Tx#==H-rx# for MT
 
     # merge receiver names
-    names_combined, _ = _merge_lists(out.mt.receiver_name, src.mt.receiver_name)
+    names_combined, _ = _merge_lists(
+        out.mt.receiver_name, src.mt.receiver_name
+    )
     out.mt.receiver_name = names_combined
 
     out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
@@ -155,7 +160,9 @@ def _merge_csem(
 
     if out.csem is None:
         out.csem = src.csem
-        out.data = np.vstack([out.data, csem_data]) if len(out.data) else csem_data
+        out.data = (
+            np.vstack([out.data, csem_data]) if len(out.data) else csem_data
+        )
         return out
 
     if out.csem.phase_convention.lower() != src.csem.phase_convention.lower():
@@ -176,8 +183,10 @@ def _merge_csem(
     def _tx_with_type(csem_cfg: CSEMConfig) -> np.ndarray:
         txs = csem_cfg.transmitters.copy()
         e_flags = np.array(
-            [1 if t.lower() == "edipole" else 0
-             for t in csem_cfg.transmitter_type],
+            [
+                1 if t.lower() == "edipole" else 0
+                for t in csem_cfg.transmitter_type
+            ],
             dtype=float,
         ).reshape(-1, 1)
         return np.hstack([txs, e_flags])
@@ -189,8 +198,7 @@ def _merge_csem(
     # restore type list from flag column
     out.csem.transmitters = tx_combined[:, :-1]
     out.csem.transmitter_type = [
-        "edipole" if f > 0.5 else "bdipole"
-        for f in tx_combined[:, -1]
+        "edipole" if f > 0.5 else "bdipole" for f in tx_combined[:, -1]
     ]
     names_combined_tx, _ = _merge_lists(
         out.csem.transmitter_name, src.csem.transmitter_name
@@ -201,16 +209,22 @@ def _merge_csem(
     # receivers
     if keep_duplicate_rx:
         n_existing = len(out.csem.receivers)
-        out.csem.receivers = np.vstack([out.csem.receivers, src.csem.receivers])
+        out.csem.receivers = np.vstack(
+            [out.csem.receivers, src.csem.receivers]
+        )
         irx_map = np.arange(
             n_existing + 1,
             n_existing + 1 + len(src.csem.receivers),
             dtype=int,
         )
-        out.csem.receiver_name = out.csem.receiver_name + src.csem.receiver_name
+        out.csem.receiver_name = (
+            out.csem.receiver_name + src.csem.receiver_name
+        )
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
     else:
-        rx_combined, irx_map = _merge_arrays(out.csem.receivers, src.csem.receivers)
+        rx_combined, irx_map = _merge_arrays(
+            out.csem.receivers, src.csem.receivers
+        )
         out.csem.receivers = rx_combined
         names_combined_rx, _ = _merge_lists(
             out.csem.receiver_name, src.csem.receiver_name
@@ -218,13 +232,16 @@ def _merge_csem(
         out.csem.receiver_name = names_combined_rx
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
 
-    out.data = np.vstack([out.data, csem_data]) if len(out.data) else csem_data
+    out.data = (
+        np.vstack([out.data, csem_data]) if len(out.data) else csem_data
+    )
     return out
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def merge_emdata(
     files: list[EMDataFile],
@@ -258,6 +275,7 @@ def merge_emdata(
         raise ValueError("Need at least two files to merge.")
 
     import copy
+
     out = copy.deepcopy(files[0])
     if not comment:
         comment = (
@@ -286,7 +304,9 @@ def merge_emdata(
             out = _merge_mt(out, src, src.data[mt_mask])
 
         if csem_mask.any():
-            out = _merge_csem(out, src, src.data[csem_mask], keep_duplicate_rx)
+            out = _merge_csem(
+                out, src, src.data[csem_mask], keep_duplicate_rx
+            )
 
     return out
 

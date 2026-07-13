@@ -68,30 +68,37 @@ def status(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _status_dict(workdir: Path, solver: str, verbose: int) -> dict[str, Any]:
     files = {p.name for p in workdir.iterdir() if p.is_file()}
 
     info: dict[str, Any] = {
-        "workdir":       str(workdir),
-        "solver":        solver,
+        "workdir": str(workdir),
+        "solver": solver,
         "files_present": sorted(files),
-        "n_files":       len(files),
+        "n_files": len(files),
     }
 
     if solver == "occam2d":
         iter_files = sorted(workdir.glob("*.iter"))
         resp_files = sorted(workdir.glob("*.resp"))
         info["n_iterations_done"] = len(iter_files)
-        info["last_iter_file"]    = iter_files[-1].name if iter_files else None
-        info["n_resp_files"]      = len(resp_files)
-        info["has_data"]    = bool(any(f.endswith(".dat") or "data" in f.lower() for f in files))
-        info["has_mesh"]    = "Occam2DMesh"  in files
-        info["has_model"]   = "Occam2DModel" in files
+        info["last_iter_file"] = iter_files[-1].name if iter_files else None
+        info["n_resp_files"] = len(resp_files)
+        info["has_data"] = bool(
+            any(f.endswith(".dat") or "data" in f.lower() for f in files)
+        )
+        info["has_mesh"] = "Occam2DMesh" in files
+        info["has_model"] = "Occam2DModel" in files
         info["has_startup"] = bool(any("startup" in f.lower() for f in files))
-        info["ready_to_run"] = all([
-            info["has_data"], info["has_mesh"],
-            info["has_model"], info["has_startup"],
-        ])
+        info["ready_to_run"] = all(
+            [
+                info["has_data"],
+                info["has_mesh"],
+                info["has_model"],
+                info["has_startup"],
+            ]
+        )
         log_path = workdir / "logFile.logFile"
         if not log_path.exists():
             logs = list(workdir.glob("*.log"))
@@ -100,13 +107,15 @@ def _status_dict(workdir: Path, solver: str, verbose: int) -> dict[str, Any]:
 
     else:
         model_files = sorted(workdir.glob("*.rho"))
-        info["n_model_files"]  = len(model_files)
-        info["last_model_file"]= model_files[-1].name if model_files else None
-        info["has_data"]    = bool(any(".dat" in f for f in files))
+        info["n_model_files"] = len(model_files)
+        info["last_model_file"] = (
+            model_files[-1].name if model_files else None
+        )
+        info["has_data"] = bool(any(".dat" in f for f in files))
         info["has_control"] = bool(any(".inv" in f for f in files))
-        info["has_cov"]     = bool(any(".cov" in f for f in files))
-        info["ready_to_run"]= info["has_data"] and info["has_control"]
-        info["rms_last"]    = None
+        info["has_cov"] = bool(any(".cov" in f for f in files))
+        info["ready_to_run"] = info["has_data"] and info["has_control"]
+        info["rms_last"] = None
 
     return info
 
@@ -115,7 +124,9 @@ def _last_rms_occam(log_path: Path | None) -> float | None:
     if log_path is None or not log_path.exists():
         return None
     try:
-        for line in reversed(log_path.read_text(errors="replace").splitlines()):
+        for line in reversed(
+            log_path.read_text(errors="replace").splitlines()
+        ):
             low = line.lower()
             if "rms" in low or "misfit" in low:
                 for token in line.split():
@@ -132,28 +143,28 @@ def _last_rms_occam(log_path: Path | None) -> float | None:
 
 def _print_status(info: dict[str, Any], solver: str) -> None:
     rows: list[tuple[str, str]] = [
-        ("Workdir",       info["workdir"]),
-        ("Solver",        solver.upper()),
+        ("Workdir", info["workdir"]),
+        ("Solver", solver.upper()),
         ("Files present", str(info["n_files"])),
     ]
     if solver == "occam2d":
         rows += [
-            ("Has data file",    "✓" if info["has_data"]     else "✗"),
-            ("Has mesh file",    "✓" if info["has_mesh"]     else "✗"),
-            ("Has model file",   "✓" if info["has_model"]    else "✗"),
-            ("Has startup file", "✓" if info["has_startup"]  else "✗"),
-            ("Ready to run",     "✓" if info["ready_to_run"] else "✗"),
-            ("Iterations done",  str(info["n_iterations_done"])),
-            ("Last .iter file",  info["last_iter_file"] or "—"),
-            ("Last RMS",         str(info["rms_last"]) if info["rms_last"] else "—"),
+            ("Has data file", "✓" if info["has_data"] else "✗"),
+            ("Has mesh file", "✓" if info["has_mesh"] else "✗"),
+            ("Has model file", "✓" if info["has_model"] else "✗"),
+            ("Has startup file", "✓" if info["has_startup"] else "✗"),
+            ("Ready to run", "✓" if info["ready_to_run"] else "✗"),
+            ("Iterations done", str(info["n_iterations_done"])),
+            ("Last .iter file", info["last_iter_file"] or "—"),
+            ("Last RMS", str(info["rms_last"]) if info["rms_last"] else "—"),
         ]
     else:
         rows += [
-            ("Has data file",    "✓" if info["has_data"]     else "✗"),
-            ("Has control file", "✓" if info["has_control"]  else "✗"),
-            ("Has cov file",     "✓" if info["has_cov"]      else "✗"),
-            ("Ready to run",     "✓" if info["ready_to_run"] else "✗"),
-            ("Model files",      str(info["n_model_files"])),
-            ("Last model file",  info["last_model_file"] or "—"),
+            ("Has data file", "✓" if info["has_data"] else "✗"),
+            ("Has control file", "✓" if info["has_control"] else "✗"),
+            ("Has cov file", "✓" if info["has_cov"] else "✗"),
+            ("Ready to run", "✓" if info["ready_to_run"] else "✗"),
+            ("Model files", str(info["n_model_files"])),
+            ("Last model file", info["last_model_file"] or "—"),
         ]
     _rich_table("Inversion Status", rows, style="blue")

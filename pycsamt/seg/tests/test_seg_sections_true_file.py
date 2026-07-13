@@ -47,18 +47,14 @@ def test_iter_sections_finds_expected_minimum(
 
     tags = {t for (t, _, _) in items}
     # For CSAMT we only require overlap
-    assert tags & expect_any, (
-        f"No expected tags in {tags} for {which}"
-    )
+    assert tags & expect_any, f"No expected tags in {tags} for {which}"
 
 
 @pytest.mark.parametrize(
     "which",
     ["15125A_spe.edi", "15125A_imp.edi", "000CSA_csamt.edi"],
 )
-def test_registry_dispatch_and_body_start_valid(
-    edi_path: Path, which: str
-):
+def test_registry_dispatch_and_body_start_valid(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
@@ -112,9 +108,7 @@ def test_iter_sections_include_filter(
     "which",
     ["15125A_spe.edi", "15125A_imp.edi", "000CSA_csamt.edi"],
 )
-def test_iter_sections_tags_in_file_order(
-    edi_path: Path, which: str
-):
+def test_iter_sections_tags_in_file_order(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")

@@ -30,6 +30,7 @@ A site is flagged when :math:`s_i` exceeds the
 When neither PyTorch nor TensorFlow is available the detector falls back
 to PCA-based reconstruction using :class:`sklearn.decomposition.PCA`.
 """
+
 from __future__ import annotations
 
 import copy
@@ -52,6 +53,7 @@ __all__ = ["AnomalyDetector"]
 # Network builders
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _build_fc_ae_torch(
     n_features: int,
     latent_dim: int,
@@ -61,7 +63,9 @@ def _build_fc_ae_torch(
     try:
         import torch.nn as nn
     except ImportError as exc:
-        raise ImportError("PyTorch is required to build the FC autoencoder") from exc
+        raise ImportError(
+            "PyTorch is required to build the FC autoencoder"
+        ) from exc
 
     def _block(in_d: int, out_d: int, activation: bool = True):
         layers: list = [nn.Linear(in_d, out_d), nn.BatchNorm1d(out_d)]
@@ -80,16 +84,22 @@ def _build_fc_ae_torch(
             enc_layers: list = []
             for i in range(len(enc_dims) - 1):
                 enc_layers.append(
-                    _block(enc_dims[i], enc_dims[i + 1],
-                           activation=(i < len(enc_dims) - 2))
+                    _block(
+                        enc_dims[i],
+                        enc_dims[i + 1],
+                        activation=(i < len(enc_dims) - 2),
+                    )
                 )
             self.encoder = nn.Sequential(*enc_layers)
 
             dec_layers: list = []
             for i in range(len(dec_dims) - 1):
                 dec_layers.append(
-                    _block(dec_dims[i], dec_dims[i + 1],
-                           activation=(i < len(dec_dims) - 2))
+                    _block(
+                        dec_dims[i],
+                        dec_dims[i + 1],
+                        activation=(i < len(dec_dims) - 2),
+                    )
                 )
             self.decoder = nn.Sequential(*dec_layers)
 
@@ -109,7 +119,9 @@ def _build_fc_ae_tf(
         import tensorflow as tf
         from tensorflow.keras import Model, layers
     except ImportError as exc:
-        raise ImportError("TensorFlow is required for AnomalyDetector (TF backend)") from exc
+        raise ImportError(
+            "TensorFlow is required for AnomalyDetector (TF backend)"
+        ) from exc
 
     ch = list(channels)
     inp = tf.keras.Input(shape=(n_features,), name="input")
@@ -136,6 +148,7 @@ def _build_fc_ae_tf(
 # ─────────────────────────────────────────────────────────────────────────────
 # AnomalyDetector
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class AnomalyDetector(BaseEMProcessor):
     """
@@ -249,13 +262,23 @@ class AnomalyDetector(BaseEMProcessor):
             self._backend_name = active_backend()
             if self._backend_name == "tensorflow":
                 self._fit_tensorflow(
-                    Xn, epochs=epochs, batch_size=batch_size,
-                    lr=lr, val_frac=val_frac, seed=seed, verbose=verbose,
+                    Xn,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    lr=lr,
+                    val_frac=val_frac,
+                    seed=seed,
+                    verbose=verbose,
                 )
             else:
                 self._fit_torch(
-                    Xn, epochs=epochs, batch_size=batch_size,
-                    lr=lr, val_frac=val_frac, seed=seed, verbose=verbose,
+                    Xn,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    lr=lr,
+                    val_frac=val_frac,
+                    seed=seed,
+                    verbose=verbose,
                 )
             self._use_pca = False
         except (RuntimeError, ImportError):
@@ -264,7 +287,9 @@ class AnomalyDetector(BaseEMProcessor):
             self._use_pca = True
 
         train_scores = self._reconstruction_error(Xn)
-        self._threshold = float(np.nanpercentile(train_scores, self.threshold_percentile))
+        self._threshold = float(
+            np.nanpercentile(train_scores, self.threshold_percentile)
+        )
         self._is_fitted = True
         return self
 
@@ -305,8 +330,15 @@ class AnomalyDetector(BaseEMProcessor):
     # ─── internal training paths ──────────────────────────────────────────
 
     def _fit_torch(
-        self, Xn: np.ndarray, *, epochs: int, batch_size: int,
-        lr: float, val_frac: float, seed: int | None, verbose: bool,
+        self,
+        Xn: np.ndarray,
+        *,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        val_frac: float,
+        seed: int | None,
+        verbose: bool,
     ) -> None:
         import torch
         import torch.nn as nn
@@ -338,7 +370,9 @@ class AnomalyDetector(BaseEMProcessor):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for (xb,) in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
+            for (xb,) in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
                 xb = xb.to(dev)
                 loss = mse(self._network(xb), xb)
                 opt.zero_grad()
@@ -361,16 +395,25 @@ class AnomalyDetector(BaseEMProcessor):
                 best_state = copy.deepcopy(self._network.state_dict())
 
             if verbose and (ep % max(1, epochs // 5) == 0 or ep == 1):
-                print(f"  AnomalyDetector  ep {ep:>4d}/{epochs}  "
-                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
+                print(
+                    f"  AnomalyDetector  ep {ep:>4d}/{epochs}  "
+                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
+                )
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
         self._history = {"train_loss": train_losses, "val_loss": val_losses}
 
     def _fit_tensorflow(
-        self, Xn: np.ndarray, *, epochs: int, batch_size: int,
-        lr: float, val_frac: float, seed: int | None, verbose: bool,
+        self,
+        Xn: np.ndarray,
+        *,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        val_frac: float,
+        seed: int | None,
+        verbose: bool,
     ) -> None:
         import tensorflow as tf
 
@@ -391,17 +434,23 @@ class AnomalyDetector(BaseEMProcessor):
                 loss="mse",
             )
             hist = self._network.fit(
-                Xtr, Xtr,
+                Xtr,
+                Xtr,
                 validation_data=(Xva, Xva),
                 epochs=epochs,
                 batch_size=batch_size,
                 callbacks=[
                     tf.keras.callbacks.EarlyStopping(
-                        monitor="val_loss", patience=12,
-                        restore_best_weights=True, min_delta=1e-6,
+                        monitor="val_loss",
+                        patience=12,
+                        restore_best_weights=True,
+                        min_delta=1e-6,
                     ),
                     tf.keras.callbacks.ReduceLROnPlateau(
-                        monitor="val_loss", factor=0.5, patience=8, min_lr=1e-6,
+                        monitor="val_loss",
+                        factor=0.5,
+                        patience=8,
+                        min_lr=1e-6,
                     ),
                 ],
                 verbose=1 if verbose else 0,
@@ -424,8 +473,10 @@ class AnomalyDetector(BaseEMProcessor):
         self._pca.fit(Xn)
         if verbose:
             ev = self._pca.explained_variance_ratio_.sum()
-            print(f"  AnomalyDetector (PCA fallback)  "
-                  f"k={n_comp}  explained_var={ev:.3f}")
+            print(
+                f"  AnomalyDetector (PCA fallback)  "
+                f"k={n_comp}  explained_var={ev:.3f}"
+            )
 
     def _reconstruction_error(self, Xn: np.ndarray) -> np.ndarray:
         if self._use_pca or self._network is None:
@@ -436,6 +487,7 @@ class AnomalyDetector(BaseEMProcessor):
             Xr = self._network.predict(Xn.astype(np.float32), verbose=0)
         else:
             import torch
+
             dev = next(self._network.parameters()).device
             self._network.eval()
             with torch.no_grad():
@@ -470,9 +522,12 @@ class AnomalyDetector(BaseEMProcessor):
             try:
                 import io
                 import pickle
+
                 buf = io.BytesIO()
                 pickle.dump(self._pca, buf)
-                out["_pca_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+                out["_pca_pickle"] = np.frombuffer(
+                    buf.getvalue(), dtype=np.uint8
+                )
             except Exception:
                 pass
         return out
@@ -483,13 +538,16 @@ class AnomalyDetector(BaseEMProcessor):
         thr = weights.pop("_threshold", None)
         self._threshold = float(thr[0]) if thr is not None else None
         backend_blob = weights.pop("_backend", None)
-        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
+        self._backend_name = (
+            str(backend_blob) if backend_blob is not None else "torch"
+        )
 
         pca_blob = weights.pop("_pca_pickle", None)
         if pca_blob is not None:
             try:
                 import io
                 import pickle
+
                 self._pca = pickle.load(io.BytesIO(bytes(pca_blob)))
                 self._use_pca = True
                 self._is_fitted = True

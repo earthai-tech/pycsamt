@@ -53,17 +53,21 @@ from ._dependency import import_optional_dependency
 
 _logger = watexlog.get_watex_logger(__name__)
 
-_msg= ''.join([
-    'Note: need scipy version 0.14.0 or higher or interpolation,',
-    ' might not work.']
+_msg = "".join(
+    [
+        "Note: need scipy version 0.14.0 or higher or interpolation,",
+        " might not work.",
+    ]
 )
-_msg0 = ''.join([
-    'Could not find scipy.interpolate, cannot use method interpolate'
-     'check installation you can get scipy from scipy.org.']
+_msg0 = "".join(
+    [
+        "Could not find scipy.interpolate, cannot use method interpolate"
+        "check installation you can get scipy from scipy.org."
+    ]
 )
 
 try:
-    scipy_version = [int(ss) for ss in scipy.__version__.split('.')]
+    scipy_version = [int(ss) for ss in scipy.__version__.split(".")]
     if scipy_version[0] == 0:
         if scipy_version[1] < 14:
             warnings.warn(_msg, ImportWarning, stacklevel=2)
@@ -72,31 +76,31 @@ try:
     import scipy.interpolate as spi
 
     interp_import = True
- # pragma: no cover
+# pragma: no cover
 except ImportError:
-
     warnings.warn(_msg0, stacklevel=2)
     _logger.warning(_msg0)
 
     interp_import = False
 
 
-def to_numeric_dtypes (
-    arr: NDArray|DataFrame, *,
-    columns: List[str, ...]=None,
-    return_feature_types: bool=... ,
-    missing_values: float=np.nan,
-    pop_cat_features: bool=...,
-    sanitize_columns: bool=...,
-    regex: re|str=None,
-    fill_pattern: str='_',
-    drop_nan_columns: bool=True,
-    how: str='all',
-    reset_index: bool=...,
-    drop_index: bool=True,
-    verbose: bool=...,
-    )-> DataFrame :
-    r""" Convert array to dataframe and coerce arguments to appropriate dtypes.
+def to_numeric_dtypes(
+    arr: NDArray | DataFrame,
+    *,
+    columns: List[str, ...] = None,
+    return_feature_types: bool = ...,
+    missing_values: float = np.nan,
+    pop_cat_features: bool = ...,
+    sanitize_columns: bool = ...,
+    regex: re | str = None,
+    fill_pattern: str = "_",
+    drop_nan_columns: bool = True,
+    how: str = "all",
+    reset_index: bool = ...,
+    drop_index: bool = True,
+    verbose: bool = ...,
+) -> DataFrame:
+    r"""Convert array to dataframe and coerce arguments to appropriate dtypes.
 
     Function includes additional tools to manipulate the transformed data
     such as:
@@ -198,88 +202,115 @@ def to_numeric_dtypes (
     from .validator import _is_numeric_dtype
 
     # pass ellipsis argument to False
-    ( sanitize_columns, reset_index, verbose, return_feature_types,
-     pop_cat_features ) = ellipsis2false(
-        sanitize_columns, reset_index, verbose, return_feature_types,
-        pop_cat_features
-        )
+    (
+        sanitize_columns,
+        reset_index,
+        verbose,
+        return_feature_types,
+        pop_cat_features,
+    ) = ellipsis2false(
+        sanitize_columns,
+        reset_index,
+        verbose,
+        return_feature_types,
+        pop_cat_features,
+    )
 
-    if not is_iterable (arr, exclude_string=True):
-        raise TypeError(f"Expect array. Got {type (arr).__name__!r}")
+    if not is_iterable(arr, exclude_string=True):
+        raise TypeError(f"Expect array. Got {type(arr).__name__!r}")
 
-    if hasattr ( arr, '__array__') and hasattr ( arr, 'columns'):
+    if hasattr(arr, "__array__") and hasattr(arr, "columns"):
         df = arr.copy()
         if columns is not None:
             if verbose:
                 print("Dataframe is passed. Columns should be replaced.")
-            df =pd.DataFrame ( np.array ( arr), columns =columns )
+            df = pd.DataFrame(np.array(arr), columns=columns)
 
-    else: df = pd.DataFrame (arr, columns =columns  )
+    else:
+        df = pd.DataFrame(arr, columns=columns)
 
     # sanitize columns
     if sanitize_columns:
         # Pass in the case columns are all integer values.
-        if not _is_numeric_dtype(df.columns , to_array=True):
-           # for consistency reconvert to str
-           df.columns = df.columns.astype(str)
-           df = sanitize_frame_cols(
-               df, regex=regex, fill_pattern=fill_pattern )
+        if not _is_numeric_dtype(df.columns, to_array=True):
+            # for consistency reconvert to str
+            df.columns = df.columns.astype(str)
+            df = sanitize_frame_cols(
+                df, regex=regex, fill_pattern=fill_pattern
+            )
 
-    #replace empty string by Nan if NaN exist in dataframe
-    df= df.replace(r'^\s*$', missing_values, regex=True)
+    # replace empty string by Nan if NaN exist in dataframe
+    df = df.replace(r"^\s*$", missing_values, regex=True)
 
     # check the possibililty to cast all
     # the numerical data
     for serie in df.columns:
         try:
-            df= df.astype(
-                {serie:np.float64})
-        except:continue
+            df = df.astype({serie: np.float64})
+        except:
+            continue
 
     # drop nan  columns if exists
     if drop_nan_columns:
         if verbose:
-            nan_columns = df.columns [ df.isna().all()].tolist()
+            nan_columns = df.columns[df.isna().all()].tolist()
             print("No NaN column found.") if len(
-                nan_columns)==0 else listing_items_format (nan_columns,
-                    "NaN columns found in the data",
-                    " ", inline =True, lstyle='.')
+                nan_columns
+            ) == 0 else listing_items_format(
+                nan_columns,
+                "NaN columns found in the data",
+                " ",
+                inline=True,
+                lstyle=".",
+            )
         # drop rows and columns with NaN values everywhere.
-        df.dropna ( axis=1, how='all', inplace =True)
-        if str(how).lower()=='all':
-            df.dropna ( axis=0, how='all', inplace =True)
+        df.dropna(axis=1, how="all", inplace=True)
+        if str(how).lower() == "all":
+            df.dropna(axis=0, how="all", inplace=True)
 
     # reset_index of the dataframe
     # This is useful after droping rows
     if reset_index:
-        df.reset_index (inplace =True, drop = drop_index )
+        df.reset_index(inplace=True, drop=drop_index)
     # collect numeric and non-numeric data
-    nf, cf =[], []
+    nf, cf = [], []
     for serie in df.columns:
-        if _is_numeric_dtype(df[serie], to_array =True ):
+        if _is_numeric_dtype(df[serie], to_array=True):
             nf.append(serie)
-        else: cf.append(serie)
+        else:
+            cf.append(serie)
 
     if pop_cat_features:
-        [ df.pop(item) for item in cf ]
+        [df.pop(item) for item in cf]
         if verbose:
-            msg ="Dataframe does not contain any categorial features."
-            b= f"Feature{'s' if len(cf)>1 else ''}"
-            e = (f"{'have' if len(cf) >1 else 'has'} been dropped"
-                 " from the dataframe.")
-            print(msg) if len(cf)==0 else listing_items_format (
-                cf , b, e ,lstyle ='.', inline=True)
+            msg = "Dataframe does not contain any categorial features."
+            b = f"Feature{'s' if len(cf) > 1 else ''}"
+            e = (
+                f"{'have' if len(cf) > 1 else 'has'} been dropped"
+                " from the dataframe."
+            )
+            print(msg) if len(cf) == 0 else listing_items_format(
+                cf, b, e, lstyle=".", inline=True
+            )
 
         return df
 
     return (df, nf, cf) if return_feature_types else df
 
 
-def listing_items_format (
-        lst, /, begintext ='', endtext='' , bullet='-',
-        enum =True , lstyle=None , space =3 , inline =False, verbose=True
-        ):
-    """ Format list by enumerate them successively with carriage return
+def listing_items_format(
+    lst,
+    /,
+    begintext="",
+    endtext="",
+    bullet="-",
+    enum=True,
+    lstyle=None,
+    space=3,
+    inline=False,
+    verbose=True,
+):
+    """Format list by enumerate them successively with carriage return
 
     :param lst: list,
         object for listening
@@ -312,40 +343,46 @@ def listing_items_format (
                                'have been successfully drop.' ,
                               lstyle ='.', space=3)
     """
-    out =''
+    out = ""
     if not is_iterable(lst):
-        lst=[lst]
+        lst = [lst]
 
-    if hasattr (lst, '__array__'):
-        if lst.ndim !=1:
-            raise ValueError (" Can not print multidimensional array."
-                              " Expect one dimensional array.")
+    if hasattr(lst, "__array__"):
+        if lst.ndim != 1:
+            raise ValueError(
+                " Can not print multidimensional array."
+                " Expect one dimensional array."
+            )
     lst = list(lst)
-    begintext = str(begintext); endtext=str(endtext)
-    lstyle=  lstyle or bullet
+    begintext = str(begintext)
+    endtext = str(endtext)
+    lstyle = lstyle or bullet
     lstyle = str(lstyle)
-    b= f"{begintext +':' } "
-    if verbose :
-        print(b, end=' ') if inline else (
-            print(b)  if  begintext!='' else None)
-    out += b +  ('\n' if not inline else ' ')
-    for k, item in enumerate (lst):
-        sp = ' ' * space
-        if ( not enum and inline ): lstyle =''
-        o = f"{sp}{str(k+1) if enum else bullet+ ' ' }{lstyle} {item}"
-        if verbose:
-            print (o , end=' ') if inline else print(o)
-        out += o + ('\n' if not inline else ' ')
-
-    en= ' ' + endtext if inline else endtext
+    b = f"{begintext + ':'} "
     if verbose:
-        print(en) if endtext !='' else None
-    out +=en
+        print(b, end=" ") if inline else (
+            print(b) if begintext != "" else None
+        )
+    out += b + ("\n" if not inline else " ")
+    for k, item in enumerate(lst):
+        sp = " " * space
+        if not enum and inline:
+            lstyle = ""
+        o = f"{sp}{str(k + 1) if enum else bullet + ' '}{lstyle} {item}"
+        if verbose:
+            print(o, end=" ") if inline else print(o)
+        out += o + ("\n" if not inline else " ")
+
+    en = " " + endtext if inline else endtext
+    if verbose:
+        print(en) if endtext != "" else None
+    out += en
 
     return None if verbose else out
 
-def parse_attrs (attr, /, regex=None ):
-    r""" Parse attributes using the regular expression.
+
+def parse_attrs(attr, /, regex=None):
+    r"""Parse attributes using the regular expression.
 
     Remove all string non-alphanumeric and some operator indicators,  and
     fetch attributes names.
@@ -374,13 +411,16 @@ def parse_attrs (attr, /, regex=None ):
 
 
     """
-    regex = regex or re.compile (r'per|mod|times|add|sub|[_#&*@!_,;\s-]\s*',
-                        flags=re.IGNORECASE)
-    attr= list(filter (None, regex.split(attr)))
+    regex = regex or re.compile(
+        r"per|mod|times|add|sub|[_#&*@!_,;\s-]\s*", flags=re.IGNORECASE
+    )
+    attr = list(filter(None, regex.split(attr)))
     return attr
 
-def url_checker (url: str , install:bool = False,
-                 raises:str ='ignore')-> bool :
+
+def url_checker(
+    url: str, install: bool = False, raises: str = "ignore"
+) -> bool:
     """
     check whether the URL is reachable or not.
 
@@ -412,48 +452,55 @@ def url_checker (url: str , install:bool = False,
     ... 1
 
     """
-    isr =0 ; success = False
+    isr = 0
+    success = False
 
     regex = re.compile(
-        r'^(?:http|ftp)s?://' # http:// or https://
-        #domain...
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
-        r'localhost|' #localhost...
-        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
-        r'(?::\d+)?' # optional port
-        r'(?:/?|[/?]\S+)$', re.IGNORECASE
-        )
+        r"^(?:http|ftp)s?://"  # http:// or https://
+        # domain...
+        r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"
+        r"localhost|"  # localhost...
+        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
+        r"(?::\d+)?"  # optional port
+        r"(?:/?|[/?]\S+)$",
+        re.IGNORECASE,
+    )
 
-    try :
+    try:
         import requests
     except ImportError:
         if install:
-            success  = is_installing('requests', DEVNULL=True)
+            success = is_installing("requests", DEVNULL=True)
         if not success:
-            if raises=='raises':
+            if raises == "raises":
                 raise ModuleNotFoundError(
                     "auto-installation of 'requests' failed."
-                    " Install it mannually.")
+                    " Install it mannually."
+                )
 
-    else : success=True
+    else:
+        success = True
 
     if success:
         try:
-            get = requests.get(url) #Get Url
-            if get.status_code == 200: # if the request succeeds
-                isr =1 # (f"{url}: is reachable")
+            get = requests.get(url)  # Get Url
+            if get.status_code == 200:  # if the request succeeds
+                isr = 1  # (f"{url}: is reachable")
 
             else:
                 warnings.warn(
-                    f"{url}: is not reachable, status_code: {get.status_code}", stacklevel=2)
-                isr =0
+                    f"{url}: is not reachable, status_code: {get.status_code}",
+                    stacklevel=2,
+                )
+                isr = 0
 
         except requests.exceptions.RequestException as e:
-            if raises=='raises':
+            if raises == "raises":
                 raise SystemExit(f"{url}: is not reachable \nErr: {e}")
-            else: isr =0
+            else:
+                isr = 0
 
-    if not success :
+    if not success:
         # use django url validation regex
         # https://github.com/django/django/blob/stable/1.3.x/django/core/validators.py#L45
         isr = 1 if re.match(regex, url) is not None else 0
@@ -461,11 +508,13 @@ def url_checker (url: str , install:bool = False,
     return isr
 
 
-def shrunkformat (text: str | Iterable[Any] ,
-                  chunksize: int =7 , insert_at: str = None,
-                  sep =None,
-                 ) :
-    """ format class and add ellipsis when classes are greater than maxview
+def shrunkformat(
+    text: str | Iterable[Any],
+    chunksize: int = 7,
+    insert_at: str = None,
+    sep=None,
+):
+    """format class and add ellipsis when classes are greater than maxview
 
     :param text: str - a text to shrunk and format. Can also be an iterable
         object.
@@ -496,63 +545,66 @@ def shrunkformat (text: str | Iterable[Any] ,
 
     """
     is_str = False
-    chunksize = int (_assert_all_types(chunksize, float, int))
+    chunksize = int(_assert_all_types(chunksize, float, int))
 
-    regex = re.compile (r"(begin|start|beg)|(end|close|last)")
+    regex = re.compile(r"(begin|start|beg)|(end|close|last)")
     insert_at = str(insert_at).lower().strip()
-    gp = regex.search (insert_at)
+    gp = regex.search(insert_at)
     if gp is not None:
-        if gp.group (1) is not None:
-            insert_at ='begin'
+        if gp.group(1) is not None:
+            insert_at = "begin"
         elif gp.group(2) is not None:
-            insert_at ='end'
+            insert_at = "end"
         if insert_at is None:
-            warnings.warn(f"Expect ['begining'|'end'], got {insert_at!r}"
-                          " Default value is used instead.", stacklevel=2)
-    if isinstance(text , str):
-        textsplt = text.strip().split(sep) # put text on list
-        is_str =True
+            warnings.warn(
+                f"Expect ['begining'|'end'], got {insert_at!r}"
+                " Default value is used instead.",
+                stacklevel=2,
+            )
+    if isinstance(text, str):
+        textsplt = text.strip().split(sep)  # put text on list
+        is_str = True
 
-    elif hasattr (text , '__iter__'):
-        textsplt = list(text )
+    elif hasattr(text, "__iter__"):
+        textsplt = list(text)
 
-    if len(textsplt) < chunksize :
-        return  text
+    if len(textsplt) < chunksize:
+        return text
 
-    if is_str :
-        rl = textsplt [:len(textsplt)//2][: chunksize//2]
-        ll= textsplt [len(textsplt)//2:][-chunksize//2:]
+    if is_str:
+        rl = textsplt[: len(textsplt) // 2][: chunksize // 2]
+        ll = textsplt[len(textsplt) // 2 :][-chunksize // 2 :]
 
-        if sep is None: sep =' '
-        spllst = [f'{sep}'.join ( rl), f'{sep}'.join ( ll)]
+        if sep is None:
+            sep = " "
+        spllst = [f"{sep}".join(rl), f"{sep}".join(ll)]
 
-    else : spllst = [
-        textsplt[: chunksize//2 ] ,textsplt[-chunksize//2:]
-        ]
-    if insert_at =='begin':
-        spllst.insert(0, ' ... ') ; spllst.pop(1)
-    elif insert_at =='end':
-        spllst.pop(-1) ; spllst.extend ([' ... '])
+    else:
+        spllst = [textsplt[: chunksize // 2], textsplt[-chunksize // 2 :]]
+    if insert_at == "begin":
+        spllst.insert(0, " ... ")
+        spllst.pop(1)
+    elif insert_at == "end":
+        spllst.pop(-1)
+        spllst.extend([" ... "])
 
-    else :
-        spllst.insert (1, ' ... ')
+    else:
+        spllst.insert(1, " ... ")
 
     spllst = spllst if is_str else str(spllst)
 
-    return re.sub(r"[\[,'\]]", '', ''.join(spllst),
-                  flags=re.IGNORECASE
-                  )
+    return re.sub(r"[\[,'\]]", "", "".join(spllst), flags=re.IGNORECASE)
 
 
-def is_installing (
-        module: str ,
-        upgrade: bool=True ,
-        action: bool=True,
-        DEVNULL: bool=False,
-        verbose: int=0,
-        **subpkws
-    )-> bool:
-    """ Install or uninstall a module/package using the subprocess
+def is_installing(
+    module: str,
+    upgrade: bool = True,
+    action: bool = True,
+    DEVNULL: bool = False,
+    verbose: int = 0,
+    **subpkws,
+) -> bool:
+    """Install or uninstall a module/package using the subprocess
     under the hood.
 
     Parameters
@@ -589,70 +641,85 @@ def is_installing (
     >>> is_installing(
         'tqdm', action ='uninstall', verbose =1)
     """
-    #implement pip as subprocess
+    # implement pip as subprocess
     # refer to https://pythongeeks.org/subprocess-in-python/
     if not action:
-        if verbose > 0 :
-            print("---> No action `install`or `uninstall`"
-                  f" of the module {module!r} performed.")
+        if verbose > 0:
+            print(
+                "---> No action `install`or `uninstall`"
+                f" of the module {module!r} performed."
+            )
         return action  # DO NOTHING
 
-    success=False
+    success = False
 
-    action_msg ='uninstallation' if action =='uninstall' else 'installation'
+    action_msg = "uninstallation" if action == "uninstall" else "installation"
 
-    if action in ('install', 'uninstall', True) and verbose > 0:
-        print(f'---> Module {module!r} {action_msg} will take a while,'
-              ' please be patient...')
+    if action in ("install", "uninstall", True) and verbose > 0:
+        print(
+            f"---> Module {module!r} {action_msg} will take a while,"
+            " please be patient..."
+        )
 
-    cmdg =f'<pip install {module}> | <python -m pip install {module}>'\
-        if action in (True, 'install') else ''.join([
-            f'<pip uninstall {module} -y> or <pip3 uninstall {module} -y ',
-            f'or <python -m pip uninstall {module} -y>.'])
+    cmdg = (
+        f"<pip install {module}> | <python -m pip install {module}>"
+        if action in (True, "install")
+        else "".join(
+            [
+                f"<pip uninstall {module} -y> or <pip3 uninstall {module} -y ",
+                f"or <python -m pip uninstall {module} -y>.",
+            ]
+        )
+    )
 
-    upgrade ='--upgrade' if upgrade else ''
+    upgrade = "--upgrade" if upgrade else ""
 
-    if action == 'uninstall':
-        upgrade= '-y' # Don't ask for confirmation of uninstall deletions.
-    elif action in ('install', True):
-        action = 'install'
+    if action == "uninstall":
+        upgrade = "-y"  # Don't ask for confirmation of uninstall deletions.
+    elif action in ("install", True):
+        action = "install"
 
-    cmd = ['-m', 'pip', f'{action}', f'{module}', f'{upgrade}']
+    cmd = ["-m", "pip", f"{action}", f"{module}", f"{upgrade}"]
 
     try:
         STDOUT = subprocess.DEVNULL if DEVNULL else None
-        STDERR= subprocess.STDOUT if DEVNULL else None
+        STDERR = subprocess.STDOUT if DEVNULL else None
 
         subprocess.check_call(
-            [sys.executable] + cmd, stdout= STDOUT, stderr=STDERR,
-                              **subpkws)
-        if action in (True, 'install'):
+            [sys.executable] + cmd, stdout=STDOUT, stderr=STDERR, **subpkws
+        )
+        if action in (True, "install"):
             # freeze the dependancies
             reqs = subprocess.check_output(
-                [sys.executable,'-m', 'pip','freeze'])
-            [r.decode().split('==')[0] for r in reqs.split()]
+                [sys.executable, "-m", "pip", "freeze"]
+            )
+            [r.decode().split("==")[0] for r in reqs.split()]
 
-        success=True
+        success = True
 
     except:
-
-        if verbose > 0 :
-            print(f'---> Module {module!r} {action_msg} failed. Please use'
-                f' the following command: {cmdg} to manually do it.')
-    else :
         if verbose > 0:
-            print(f"{action_msg.capitalize()} of `{module}` "
-                      "and dependancies was successfully done!")
+            print(
+                f"---> Module {module!r} {action_msg} failed. Please use"
+                f" the following command: {cmdg} to manually do it."
+            )
+    else:
+        if verbose > 0:
+            print(
+                f"{action_msg.capitalize()} of `{module}` "
+                "and dependancies was successfully done!"
+            )
 
     return success
 
+
 def smart_strobj_recognition(
-        name: str  ,
-        container: List | Tuple | Dict[Any, Any ],
-        stripitems: str | List | Tuple = '_',
-        deep: bool = False,
-) -> str :
-    """ Find the likelihood word in the whole containers and
+    name: str,
+    container: List | Tuple | Dict[Any, Any],
+    stripitems: str | List | Tuple = "_",
+    deep: bool = False,
+) -> str:
+    """Find the likelihood word in the whole containers and
     returns the value.
 
     :param name: str - Value of to search. I can not match the exact word in
@@ -692,51 +759,55 @@ def smart_strobj_recognition(
 
     """
 
-    stripitems =_assert_all_types(stripitems , str, list, tuple)
+    stripitems = _assert_all_types(stripitems, str, list, tuple)
     container = _assert_all_types(container, list, tuple, dict)
-    ix , rv = None , None
+    ix, rv = None, None
 
-    if isinstance (stripitems , str):
-        for sep in (':', ",", ";"): # when strip ='a,b,c' seperated object
+    if isinstance(stripitems, str):
+        for sep in (":", ",", ";"):  # when strip ='a,b,c' seperated object
             if sep in stripitems:
-                stripitems = stripitems.strip().split(sep) ; break
+                stripitems = stripitems.strip().split(sep)
+                break
         if isinstance(stripitems, str):
-            stripitems =[stripitems]
+            stripitems = [stripitems]
 
     # sanitize the name.
-    for s in stripitems :
+    for s in stripitems:
         name = name.strip(s)
 
-    if isinstance(container, dict) :
-        #get only the key values and lower them
-        container_ = list(map (lambda x :x.lower(), container.keys()))
-    else :
+    if isinstance(container, dict):
+        # get only the key values and lower them
+        container_ = list(map(lambda x: x.lower(), container.keys()))
+    else:
         # for consistency put on list if values are in tuple.
         container_ = list(container)
 
     # sanitize our dummny container item ...
-    #container_ = [it.strip(s) for it in container_ for s in stripitems ]
+    # container_ = [it.strip(s) for it in container_ for s in stripitems ]
     if name.lower() in container_:
         try:
-            ix = container_.index (name)
+            ix = container_.index(name)
         except ValueError:
             raise AttributeError(f"{name!r} attribute is not defined")
 
     if deep and ix is None:
         # go deeper in the search...
-        for ii, n in enumerate (container_) :
-            if n.find(name.lower())>=0 :
-                ix =ii ; break
+        for ii, n in enumerate(container_):
+            if n.find(name.lower()) >= 0:
+                ix = ii
+                break
 
     if ix is not None:
         if isinstance(container, dict):
-            rv= list(container.keys())[ix]
-        else : rv= container[ix]
+            rv = list(container.keys())[ix]
+        else:
+            rv = container[ix]
 
-    return  rv
+    return rv
 
-def repr_callable_obj(obj: F  , skip = None ):
-    """ Represent callable objects.
+
+def repr_callable_obj(obj: F, skip=None):
+    """Represent callable objects.
 
     Format class, function and instances objects.
 
@@ -763,58 +834,67 @@ def repr_callable_obj(obj: F  , skip = None ):
     ... 'fit(data= None, kws= None)'
 
     """
-    regex = re.compile (r"[{'}]")
+    regex = re.compile(r"[{'}]")
 
     # inspect.formatargspec(*inspect.getfullargspec(cls_or_func))
-    if not callable(obj) and not hasattr(obj, '__dict__'):
-        raise TypeError (
-            f'Format only callabe objects: Got {type (obj).__name__!r}')
+    if not callable(obj) and not hasattr(obj, "__dict__"):
+        raise TypeError(
+            f"Format only callabe objects: Got {type(obj).__name__!r}"
+        )
 
     if callable(obj):
         cls_or_func_signature = inspect.signature(obj)
         objname = obj.__name__
-        PARAMS_VALUES = {k: None if v.default is (inspect.Parameter.empty
-                         or ...) else v.default
-                    for k, v in cls_or_func_signature.parameters.items()
-                    # if v.default is not inspect.Parameter.empty
-                    }
-    elif hasattr(obj, '__dict__'):
-        objname=obj.__class__.__name__
-        PARAMS_VALUES = {k:v  for k, v in obj.__dict__.items()
-                         if not (k.endswith('_') or k.startswith('_')
-                                  # remove the dict objects
-                                  or k.endswith('_kws') or k.endswith('_props')
-                                 )
-                         }
-    if skip is not None :
+        PARAMS_VALUES = {
+            k: None
+            if v.default is (inspect.Parameter.empty or ...)
+            else v.default
+            for k, v in cls_or_func_signature.parameters.items()
+            # if v.default is not inspect.Parameter.empty
+        }
+    elif hasattr(obj, "__dict__"):
+        objname = obj.__class__.__name__
+        PARAMS_VALUES = {
+            k: v
+            for k, v in obj.__dict__.items()
+            if not (
+                k.endswith("_")
+                or k.startswith("_")
+                # remove the dict objects
+                or k.endswith("_kws")
+                or k.endswith("_props")
+            )
+        }
+    if skip is not None:
         # skip some inner params
         # remove them as the main function or class params
         if isinstance(skip, (tuple, list, np.ndarray)):
-            skip = list(map(str, skip ))
+            skip = list(map(str, skip))
             exs = [key for key in PARAMS_VALUES.keys() if key in skip]
         else:
-            skip =str(skip).strip()
-            exs = [key for key in PARAMS_VALUES.keys() if key.find(skip)>=0]
+            skip = str(skip).strip()
+            exs = [key for key in PARAMS_VALUES.keys() if key.find(skip) >= 0]
 
         for d in exs:
             PARAMS_VALUES.pop(d, None)
 
     # use ellipsis as internal to stdout more than seven params items
-    if len(PARAMS_VALUES) >= 7 :
-        f = {k:PARAMS_VALUES.get(k) for k in list(PARAMS_VALUES.keys())[:3]}
-        e = {k:PARAMS_VALUES.get(k) for k in list(PARAMS_VALUES.keys())[-3:]}
+    if len(PARAMS_VALUES) >= 7:
+        f = {k: PARAMS_VALUES.get(k) for k in list(PARAMS_VALUES.keys())[:3]}
+        e = {k: PARAMS_VALUES.get(k) for k in list(PARAMS_VALUES.keys())[-3:]}
 
-        PARAMS_VALUES= str(f) + ', ... , ' + str(e )
+        PARAMS_VALUES = str(f) + ", ... , " + str(e)
 
-    return str(objname) + '(' + regex.sub('', str (PARAMS_VALUES)
-                                          ).replace(':', '=') +')'
+    return (
+        str(objname)
+        + "("
+        + regex.sub("", str(PARAMS_VALUES)).replace(":", "=")
+        + ")"
+    )
 
 
-def accept_types (
-        *objtypes: list ,
-        format: bool = False
-        ) -> List[str] | str :
-    """ List the type format that can be accepted by a function.
+def accept_types(*objtypes: list, format: bool = False) -> List[str] | str:
+    """List the type format that can be accepted by a function.
 
     :param objtypes: List of object types.
     :param format: bool - format the list of the name of objects.
@@ -829,13 +909,15 @@ def accept_types (
             pd.Series, pd.DataFrame,np.ndarray, format=True )
         ..."'Series','DataFrame' and 'ndarray'"
     """
-    return smart_format(
-        [f'{o.__name__}' for o in objtypes]
-        ) if format else [f'{o.__name__}' for o in objtypes]
+    return (
+        smart_format([f"{o.__name__}" for o in objtypes])
+        if format
+        else [f"{o.__name__}" for o in objtypes]
+    )
 
-def read_from_excelsheets(erp_file: str = None ) -> List[DataFrame]:
 
-    """ Read all Excelsheets and build a list of dataframe of all sheets.
+def read_from_excelsheets(erp_file: str = None) -> List[DataFrame]:
+    """Read all Excelsheets and build a list of dataframe of all sheets.
 
     :param erp_file:
         Excell workbooks containing `erp` profile data.
@@ -845,17 +927,19 @@ def read_from_excelsheets(erp_file: str = None ) -> List[DataFrame]:
 
     """
 
-    allfls:Dict [str, Dict [T, List[T]] ] = pd.read_excel(
-        erp_file, sheet_name=None)
+    allfls: Dict[str, Dict[T, List[T]]] = pd.read_excel(
+        erp_file, sheet_name=None
+    )
 
-    list_of_df =[os.path.basename(os.path.splitext(erp_file)[0])]
-    for _sheets , values in allfls.items():
+    list_of_df = [os.path.basename(os.path.splitext(erp_file)[0])]
+    for _sheets, values in allfls.items():
         list_of_df.append(pd.DataFrame(values))
 
     return list_of_df
 
+
 def check_dimensionality(obj, data, z, x):
-    """ Check dimensionality of data and fix it.
+    """Check dimensionality of data and fix it.
 
     :param obj: Object, can be a class logged or else.
     :param data: 2D grid data of ndarray (z, x) dimensions.
@@ -863,35 +947,44 @@ def check_dimensionality(obj, data, z, x):
     :param x: arraylike should be reduced along the columns axis.
 
     """
+
     def reduce_shape(Xshape, x, axis_name=None):
-        """ Reduce shape to keep the same shape"""
-        mess ="`{0}` shape({1}) {2} than the data shape `{0}` = ({3})."
+        """Reduce shape to keep the same shape"""
+        mess = "`{0}` shape({1}) {2} than the data shape `{0}` = ({3})."
         ox = len(x)
         dsh = Xshape
-        if len(x) > Xshape :
-            x = x[: int (Xshape)]
-            obj._logging.debug(''.join([
-                f"Resize {axis_name!r}={ox!r} to {Xshape!r}.",
-                mess.format(axis_name, len(x),'more',Xshape)]))
+        if len(x) > Xshape:
+            x = x[: int(Xshape)]
+            obj._logging.debug(
+                "".join(
+                    [
+                        f"Resize {axis_name!r}={ox!r} to {Xshape!r}.",
+                        mess.format(axis_name, len(x), "more", Xshape),
+                    ]
+                )
+            )
 
         elif len(x) < Xshape:
             Xshape = len(x)
-            obj._logging.debug(''.join([
-                f"Resize {axis_name!r}={dsh!r} to {Xshape!r}.",
-                mess.format(axis_name, len(x),'less', Xshape)]))
+            obj._logging.debug(
+                "".join(
+                    [
+                        f"Resize {axis_name!r}={dsh!r} to {Xshape!r}.",
+                        mess.format(axis_name, len(x), "less", Xshape),
+                    ]
+                )
+            )
         return int(Xshape), x
 
-    sz0, z = reduce_shape(data.shape[0],
-                          x=z, axis_name ='Z')
-    sx0, x =reduce_shape (data.shape[1],
-                          x=x, axis_name ='X')
-    data = data [:sz0, :sx0]
+    sz0, z = reduce_shape(data.shape[0], x=z, axis_name="Z")
+    sx0, x = reduce_shape(data.shape[1], x=x, axis_name="X")
+    data = data[:sz0, :sx0]
 
-    return data , z, x
+    return data, z, x
 
 
-def smart_format(iter_obj, choice ='and'):
-    """ Smart format iterable object.
+def smart_format(iter_obj, choice="and"):
+    """Smart format iterable object.
 
     :param iter_obj: iterable obj
     :param choice: can be 'and' or 'or' for optional.
@@ -901,21 +994,23 @@ def smart_format(iter_obj, choice ='and'):
         >>> smart_format(['model', 'iter', 'mesh', 'data'])
         ... 'model','iter','mesh' and 'data'
     """
-    str_litteral =''
+    str_litteral = ""
     try:
         iter(iter_obj)
-    except:  return f"{iter_obj}"
+    except:
+        return f"{iter_obj}"
 
     iter_obj = [str(obj) for obj in iter_obj]
-    if len(iter_obj) ==1:
-        str_litteral= ','.join([f"{i!r}" for i in iter_obj ])
-    elif len(iter_obj)>1:
-        str_litteral = ','.join([f"{i!r}" for i in iter_obj[:-1]])
+    if len(iter_obj) == 1:
+        str_litteral = ",".join([f"{i!r}" for i in iter_obj])
+    elif len(iter_obj) > 1:
+        str_litteral = ",".join([f"{i!r}" for i in iter_obj[:-1]])
         str_litteral += f" {choice} {iter_obj[-1]!r}"
     return str_litteral
 
-def make_introspection(Obj: object , subObj: Sub[object])->None:
-    """ Make introspection by using the attributes of instance created to
+
+def make_introspection(Obj: object, subObj: Sub[object]) -> None:
+    """Make introspection by using the attributes of instance created to
     populate the new classes created.
 
     :param Obj: callable
@@ -927,12 +1022,13 @@ def make_introspection(Obj: object , subObj: Sub[object])->None:
     # make introspection and set the all  attributes to self object.
     # if Obj attribute has the same name with subObj attribute, then
     # Obj attributes get the priority.
-    for key, value in  subObj.__dict__.items():
-        if not hasattr(Obj, key) and key  != ''.join(['__', str(key), '__']):
+    for key, value in subObj.__dict__.items():
+        if not hasattr(Obj, key) and key != "".join(["__", str(key), "__"]):
             setattr(Obj, key, value)
 
-def cpath (savepath: str=None , dpath: str='_default_path_'):
-    """ Control the existing path and create one of it does not exist.
+
+def cpath(savepath: str = None, dpath: str = "_default_path_"):
+    """Control the existing path and create one of it does not exist.
 
     :param savepath: Pathlike obj, str
     :param dpath: str, default pathlike obj
@@ -941,36 +1037,39 @@ def cpath (savepath: str=None , dpath: str='_default_path_'):
     #     #file, _= os.path.splitext(os.path.basename(__file__))
     #     #dpath = ''.join(['_', file,'_']) #.replace('.py', '')
     #     dpath ='_dpath_'
-    if savepath is None :
-        savepath  = os.path.join(os.getcwd(), dpath)
-        try:os.mkdir(savepath)
-        except: pass
+    if savepath is None:
+        savepath = os.path.join(os.getcwd(), dpath)
+        try:
+            os.mkdir(savepath)
+        except:
+            pass
     if savepath is not None:
-        try :
+        try:
             if not os.path.isdir(savepath):
-                os.mkdir(savepath)#  mode =0o666)
-        except : pass
+                os.mkdir(savepath)  #  mode =0o666)
+        except:
+            pass
     return savepath
 
 
-def sPath (name_of_path:str):
-    """ Savepath func. Create a path  with `name_of_path` if path not exists.
+def sPath(name_of_path: str):
+    """Savepath func. Create a path  with `name_of_path` if path not exists.
 
     :param name_of_path: str, Path-like object. If path does not exist,
         `name_of_path` should be created.
     """
 
-    try :
+    try:
         savepath = os.path.join(os.getcwd(), name_of_path)
         if not os.path.isdir(savepath):
-            os.mkdir(name_of_path)#  mode =0o666)
-    except :
+            os.mkdir(name_of_path)  #  mode =0o666)
+    except:
         warnings.warn("The path seems to be existed!", stacklevel=2)
         return
     return savepath
 
 
-def format_notes(text:str , cover_str: str ='~', inline=70, **kws):
+def format_notes(text: str, cover_str: str = "~", inline=70, **kws):
     """ Format note
     :param text: Text to be formated.
 
@@ -990,44 +1089,50 @@ def format_notes(text:str , cover_str: str ='~', inline=70, **kws):
 
     """
 
-    headnotes =kws.pop('headernotes', 'notes')
-    margin_ratio = kws.pop('margin_space', 0.2 )
+    headnotes = kws.pop("headernotes", "notes")
+    margin_ratio = kws.pop("margin_space", 0.2)
     margin = int(margin_ratio * inline)
-    init_=0
-    new_textList= []
+    init_ = 0
+    new_textList = []
     if len(text) <= (inline - margin):
         new_textList = text
-    else :
-        for kk, _char in enumerate (text):
-            if kk % (inline - margin)==0 and kk !=0:
+    else:
+        for kk, _char in enumerate(text):
+            if kk % (inline - margin) == 0 and kk != 0:
                 new_textList.append(text[init_:kk])
-                init_ =kk
-            if kk ==  len(text)-1:
+                init_ = kk
+            if kk == len(text) - 1:
                 new_textList.append(text[init_:])
 
-    print('!', headnotes.upper(), ':')
-    print(f'{cover_str * inline}')
+    print("!", headnotes.upper(), ":")
+    print(f"{cover_str * inline}")
     for _k in new_textList:
-        fmtin_str ='{'+ f'0:>{margin}' +'}'
-        print('{}{1:>2}{:<51}'.format(fmtin_str.format(cover_str), '', ))
+        fmtin_str = "{" + f"0:>{margin}" + "}"
+        print(
+            "{}{1:>2}{:<51}".format(
+                fmtin_str.format(cover_str),
+                "",
+            )
+        )
 
-    print('{}{1:>51}'.format(' '* (margin -1), cover_str * (inline -margin+1 )))
+    print(
+        "{}{1:>51}".format(
+            " " * (margin - 1), cover_str * (inline - margin + 1)
+        )
+    )
 
 
-def sanitize_fdataset(
-    _df: DataFrame
-) ->Tuple[DataFrame, int]:
-    """ Sanitize the feature dataset.
+def sanitize_fdataset(_df: DataFrame) -> Tuple[DataFrame, int]:
+    """Sanitize the feature dataset.
 
     Recognize the columns provided  by the users and resset according
     to the features labels disposals :attr:`~Features.featureLabels`."""
 
-    utm_flag =0
+    utm_flag = 0
 
     def getandReplace(
-            optionsList:List[str],
-            params:List[str], df:DataFrame
-            ) -> List[str]:
+        optionsList: List[str], params: List[str], df: DataFrame
+    ) -> List[str]:
         """
         Function to  get parames and replace to the main features params.
 
@@ -1047,37 +1152,29 @@ def sanitize_fdataset(
         columns = [c.lower() for c in df.columns]
         for ii, celemnt in enumerate(columns):
             for listOption, param in zip(optionsList, params):
-                 for option in listOption:
-                     if param =='lwi':
-                        if celemnt.find('eau')>=0 :
-                            columns[ii]=param
+                for option in listOption:
+                    if param == "lwi":
+                        if celemnt.find("eau") >= 0:
+                            columns[ii] = param
                             break
-                     if re.match(rf'^{option}+', celemnt):
-                         columns[ii]=param
-                         if columns[ii] =='east':
-                             utm_flag =1
-                         break
+                    if re.match(rf"^{option}+", celemnt):
+                        columns[ii] = param
+                        if columns[ii] == "east":
+                            utm_flag = 1
+                        break
 
         return columns, utm_flag
 
     new_df_columns, utm_flag = getandReplace(
-        optionsList=P.param_options,
-            params=P.param_ids,
-            df= _df
-                                  )
-    df = pd.DataFrame(data=_df.to_numpy(), columns= new_df_columns)
-    return df , utm_flag
+        optionsList=P.param_options, params=P.param_ids, df=_df
+    )
+    df = pd.DataFrame(data=_df.to_numpy(), columns=new_df_columns)
+    return df, utm_flag
 
 
-def interpol_scipy (
-        x_value,
-        y_value,
-        x_new,
-        kind="linear",
-        plot=False,
-        fill="extrapolate"
-        ):
-
+def interpol_scipy(
+    x_value, y_value, x_new, kind="linear", plot=False, fill="extrapolate"
+):
     """
     function to interpolate data
 
@@ -1118,29 +1215,17 @@ def interpol_scipy (
         >>>  ss
     """
 
-    func_=spi.interp1d(
-        x_value,
-        y_value,
-        kind=kind,
-        fill_value=fill
-        )
-    y_new=func_(x_new)
-    if plot :
-        plt.plot(
-        x_value,
-        y_value,
-        "o",
-        x_new,
-        y_new,
-        "--"
-        )
-        plt.legend(["data", "linear","cubic"],loc="best")
+    func_ = spi.interp1d(x_value, y_value, kind=kind, fill_value=fill)
+    y_new = func_(x_new)
+    if plot:
+        plt.plot(x_value, y_value, "o", x_new, y_new, "--")
+        plt.legend(["data", "linear", "cubic"], loc="best")
         plt.show()
 
     return y_new
 
 
-def _remove_str_word (char, word_to_remove, deep_remove=False):
+def _remove_str_word(char, word_to_remove, deep_remove=False):
     """
     Small funnction to remove a word present on  astring character
     whatever the number of times it will repeated.
@@ -1169,23 +1254,26 @@ def _remove_str_word (char, word_to_remove, deep_remove=False):
     >>> print(ss)
 
     """
-    if type(char) is not str : char =str(char)
-    if type(word_to_remove) is not str : word_to_remove=str(word_to_remove)
+    if type(char) is not str:
+        char = str(char)
+    if type(word_to_remove) is not str:
+        word_to_remove = str(word_to_remove)
 
-    if deep_remove :
-        word_to_remove, char =word_to_remove.lower(),char.lower()
+    if deep_remove:
+        word_to_remove, char = word_to_remove.lower(), char.lower()
 
-    if word_to_remove not in char :
+    if word_to_remove not in char:
         return char
 
-    while word_to_remove in char :
-        if word_to_remove not in char :
+    while word_to_remove in char:
+        if word_to_remove not in char:
             break
         index_wr = char.find(word_to_remove)
-        remain_len=index_wr+len(word_to_remove)
-        char=char[:index_wr]+char[remain_len:]
+        remain_len = index_wr + len(word_to_remove)
+        char = char[:index_wr] + char[remain_len:]
 
     return char
+
 
 def stn_check_split_type(data_lines):
     """
@@ -1208,29 +1296,33 @@ def stn_check_split_type(data_lines):
 
     """
 
-    split_type =[',', ':',' ',';' ]
-    data_to_read =[]
+    split_type = [",", ":", " ", ";"]
+    data_to_read = []
     # change the data if data is not dtype string elements.
     if isinstance(data_lines, np.ndarray):
-        if data_lines.dtype in ['float', 'int', 'complex']:
-            data_lines=data_lines.astype('<U12')
-        data_lines= data_lines.tolist()
+        if data_lines.dtype in ["float", "int", "complex"]:
+            data_lines = data_lines.astype("<U12")
+        data_lines = data_lines.tolist()
 
     if isinstance(data_lines, list):
-        for _ii, item in enumerate(data_lines[:int(len(data_lines)/3)]):
-             data_to_read.append(item)
-             # be sure the list is str item .
-             data_to_read=[''.join([str(item) for item in data_to_read])]
+        for _ii, item in enumerate(data_lines[: int(len(data_lines) / 3)]):
+            data_to_read.append(item)
+            # be sure the list is str item .
+            data_to_read = ["".join([str(item) for item in data_to_read])]
 
-    elif isinstance(data_lines, str): data_to_read=[str(data_lines)]
+    elif isinstance(data_lines, str):
+        data_to_read = [str(data_lines)]
 
-    for _jj, sep  in enumerate(split_type) :
-        if data_to_read[0].find(sep) > 0 :
-            if data_to_read[0].count(sep) >= 2 * len(data_lines)/3:
-                if sep == ' ': return  None  # use None more conventional
-                else : return sep
+    for _jj, sep in enumerate(split_type):
+        if data_to_read[0].find(sep) > 0:
+            if data_to_read[0].count(sep) >= 2 * len(data_lines) / 3:
+                if sep == " ":
+                    return None  # use None more conventional
+                else:
+                    return sep
 
-def minimum_parser_to_write_edi (edilines, parser = '='):
+
+def minimum_parser_to_write_edi(edilines, parser="="):
     """
     This fonction validates edifile for writing , string with egal.
     we assume that dictionnary in list will be for definemeasurment
@@ -1244,22 +1336,25 @@ def minimum_parser_to_write_edi (edilines, parser = '='):
     :type parser: str
 
     """
-    if isinstance(edilines,list):
-        if isinstance(edilines , tuple) : edilines =list(edilines)
-        else :raise TypeError('<Edilines> Must be on list')
-    for ii, lines in enumerate(edilines) :
-        if isinstance(lines, dict):continue
-        elif lines.find('=') <0 :
-            raise EDIError (
-             f'None <"="> found on this item<{edilines[ii]}> of '
-            ' the edilines list. list can not be parsed. Please'
-            ' put egal sign "=" between key and value '
+    if isinstance(edilines, list):
+        if isinstance(edilines, tuple):
+            edilines = list(edilines)
+        else:
+            raise TypeError("<Edilines> Must be on list")
+    for ii, lines in enumerate(edilines):
+        if isinstance(lines, dict):
+            continue
+        elif lines.find("=") < 0:
+            raise EDIError(
+                f'None <"="> found on this item<{edilines[ii]}> of '
+                " the edilines list. list can not be parsed. Please"
+                ' put egal sign "=" between key and value '
             )
 
     return edilines
 
 
-def round_dipole_length(value, round_value =5.):
+def round_dipole_length(value, round_value=5.0):
     """
     small function to graduate dipole length 5 to 5. Goes to be reality and
     simple computation .
@@ -1271,12 +1366,16 @@ def round_dipole_length(value, round_value =5.):
     :rtype: float
     """
     mm = value % round_value
-    if mm < 3 :return np.around(value - mm)
-    elif mm >= 3 and mm < 7 :return np.around(value -mm +round_value)
-    else:return np.around(value - mm +10.)
+    if mm < 3:
+        return np.around(value - mm)
+    elif mm >= 3 and mm < 7:
+        return np.around(value - mm + round_value)
+    else:
+        return np.around(value - mm + 10.0)
+
 
 def display_infos(infos, **kws):
-    """ Display unique element on list of array infos
+    """Display unique element on list of array infos
 
     :param infos: Iterable object to display.
     :param header: Change the `header` to other names.
@@ -1290,33 +1389,34 @@ def display_infos(infos, **kws):
                       size =77, inline='~')
     """
 
-    inline =kws.pop('inline', '-')
-    size =kws.pop('size', 70)
-    header =kws.pop('header', 'Automatic rocks')
+    inline = kws.pop("inline", "-")
+    size = kws.pop("size", 70)
+    header = kws.pop("header", "Automatic rocks")
 
-    if isinstance(infos, str ):
-        infos =[infos]
+    if isinstance(infos, str):
+        infos = [infos]
 
     infos = list(set(infos))
-    print(inline * size )
-    mes= f'{header.capitalize()}({len(infos):02})'
-    mes = f'{mes:^70}'
+    print(inline * size)
+    mes = f"{header.capitalize()}({len(infos):02})"
+    mes = f"{mes:^70}"
     print(mes)
-    print(inline * size )
-    am=''
+    print(inline * size)
+    am = ""
     for ii in range(len(infos)):
-        if (ii+1) %2 ==0:
-            am = am + f'{ii+1:>4}.{infos[ii].capitalize():<30}'
+        if (ii + 1) % 2 == 0:
+            am = am + f"{ii + 1:>4}.{infos[ii].capitalize():<30}"
             print(am)
-            am=''
+            am = ""
         else:
-            am =f'{ii+1:>4}.{infos[ii].capitalize():<30}'
-            if ii ==len(infos)-1:
+            am = f"{ii + 1:>4}.{infos[ii].capitalize():<30}"
+            if ii == len(infos) - 1:
                 print(am)
-    print(inline * size )
+    print(inline * size)
 
-def fr_en_parser (f, delimiter =':'):
-    r""" Parse the translated data file.
+
+def fr_en_parser(f, delimiter=":"):
+    r"""Parse the translated data file.
 
     :param f: translation file to parse.
 
@@ -1332,21 +1432,23 @@ def fr_en_parser (f, delimiter =':'):
             os.path.join(path_pme_data, file_to_parse)))
     """
 
-    is_file = os.path.isfile (f)
+    is_file = os.path.isfile(f)
     if not is_file:
-        raise OSError(f'Input {f} is not a file. Please check your file.')
+        raise OSError(f"Input {f} is not a file. Please check your file.")
 
-    with open(f, encoding ='utf8') as ft:
+    with open(f, encoding="utf8") as ft:
         data = ft.readlines()
-        for row in data :
-            if row in ( '\n', ' '):
+        for row in data:
+            if row in ("\n", " "):
                 continue
             fr, en = row.strip().split(delimiter)
-            yield([fr, en])
+            yield ([fr, en])
 
-def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
-                                  savepath =None, delimiter =':'):
-    r""" Translate variable data from french csv data  to english with
+
+def convert_csvdata_from_fr_to_en(
+    csv_fn, pf, destfile="pme.en.csv", savepath=None, delimiter=":"
+):
+    r"""Translate variable data from french csv data  to english with
     parser file.
 
     :param csv_fn: data collected in csv format.
@@ -1369,70 +1471,81 @@ def convert_csvdata_from_fr_to_en(csv_fn, pf, destfile = 'pme.en.csv',
                          savefile = 'pme.en.cv')
     """
     # read the parser file and separed english from french
-    parser_data = list(fr_en_parser (pf,delimiter) )
+    parser_data = list(fr_en_parser(pf, delimiter))
 
-    with open (csv_fn, encoding ='utf8') as csv_f :
+    with open(csv_fn, encoding="utf8") as csv_f:
         csv_reader = csv.reader(csv_f)
-        csv_data =[ row for row in csv_reader]
+        csv_data = [row for row in csv_reader]
     # get the index of the last substring row
-    ix = csv_data [0].index ('Industry_type')
+    ix = csv_data[0].index("Industry_type")
     # separateblock from two
-    csv_1b = [row [:ix +1] for row in csv_data]
-    csv_2b =[row [ix+1:] for row in csv_data ]
+    csv_1b = [row[: ix + 1] for row in csv_data]
+    csv_2b = [row[ix + 1 :] for row in csv_data]
     # make a copy of csv_1b
-    csv_1bb= copy.deepcopy(csv_1b)
+    csv_1bb = copy.deepcopy(csv_1b)
 
-    for ii, rowline in enumerate( csv_1bb[3:]) : # skip the first two rows
-        for jj , row in enumerate(rowline):
-            for (fr_v, en_v) in  parser_data:
+    for ii, rowline in enumerate(csv_1bb[3:]):  # skip the first two rows
+        for jj, row in enumerate(rowline):
+            for fr_v, en_v in parser_data:
                 # remove the space from french parser part
                 # this could reduce the mistyping error
-                fr_v= fr_v.replace(
-                    ' ', '').replace('(', '').replace(
-                        ')', '').replace('\\', '').lower()
-                 # go  for reading the half of the sentence
-                row = row.lower().replace(
-                    ' ', '').replace('(', '').replace(
-                        ')', '').replace('\\', '')
-                if row.find(fr_v[: int(len(fr_v)/2)]) >=0:
+                fr_v = (
+                    fr_v.replace(" ", "")
+                    .replace("(", "")
+                    .replace(")", "")
+                    .replace("\\", "")
+                    .lower()
+                )
+                # go  for reading the half of the sentence
+                row = (
+                    row.lower()
+                    .replace(" ", "")
+                    .replace("(", "")
+                    .replace(")", "")
+                    .replace("\\", "")
+                )
+                if row.find(fr_v[: int(len(fr_v) / 2)]) >= 0:
                     csv_1bb[3:][ii][jj] = en_v
 
     # once translation is done, concatenate list
-    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb,csv_2b )]
+    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb, csv_2b)]
     # now write the new scv file
     if destfile is None:
-        destfile = f'{os.path.basename(csv_fn)}_to.en'
+        destfile = f"{os.path.basename(csv_fn)}_to.en"
 
-    destfile.replace('.csv', '')
+    destfile.replace(".csv", "")
 
-    with open(f'{destfile}.csv', 'w', newline ='',encoding ='utf8') as csvf:
-        csv_writer = csv.writer(csvf, delimiter=',')
+    with open(f"{destfile}.csv", "w", newline="", encoding="utf8") as csvf:
+        csv_writer = csv.writer(csvf, delimiter=",")
         csv_writer.writerows(new_csv_list)
         # for row in  new_csv_list:
         #     csv_writer.writerow(row)
-    savepath = cpath(savepath , '__pme')
-    try :
-        shutil.move (f'{destfile}.csv', savepath)
-    except:pass
+    savepath = cpath(savepath, "__pme")
+    try:
+        shutil.move(f"{destfile}.csv", savepath)
+    except:
+        pass
 
     return new_csv_list
 
-def parse_md_data (pf , delimiter =':'):
 
-    if not os.path.isfile (pf):
-        raise OSError( " Unable to detect the parser file. "
-                      "Need a Path-like object ")
+def parse_md_data(pf, delimiter=":"):
 
-    with open(pf, encoding ='utf8') as f:
-        pdata = f.readlines ()
-    for row in pdata :
-        if row in ('\n', ' '):
+    if not os.path.isfile(pf):
+        raise OSError(
+            " Unable to detect the parser file. Need a Path-like object "
+        )
+
+    with open(pf, encoding="utf8") as f:
+        pdata = f.readlines()
+    for row in pdata:
+        if row in ("\n", " "):
             continue
         fr, en = row.strip().split(delimiter)
         fr = sanitize_unicode_string(fr)
         en = en.strip()
         # if capilize, the "I" inside the
-        #text should be in lowercase
+        # text should be in lowercase
         # it is better to upper the first
         # character after striping the whole
         # string
@@ -1442,8 +1555,9 @@ def parse_md_data (pf , delimiter =':'):
 
         yield fr, en
 
-def sanitize_unicode_string (str_) :
-    """ Replace all spaces and remove all french accents characters.
+
+def sanitize_unicode_string(str_):
+    """Replace all spaces and remove all french accents characters.
 
     :Example:
     >>> from watex.utils.funcutils import sanitize_unicode_string
@@ -1454,73 +1568,69 @@ def sanitize_unicode_string (str_) :
     ... 'nosclientssontextrmementsatisfaitsdelaqualitduservice'
         'fournienoutrenosclientsrachtentfrequemmentnosservices'
     """
-    sp_re = re.compile (r"[.'()-\\/’]")
-    e_re = re.compile(r'[éèê]')
-    a_re= re.compile(r'[àâ]')
+    sp_re = re.compile(r"[.'()-\\/’]")
+    e_re = re.compile(r"[éèê]")
+    a_re = re.compile(r"[àâ]")
 
-    str_= re.sub(r'\s+', '', str_.strip().lower())
+    str_ = re.sub(r"\s+", "", str_.strip().lower())
 
-    for cobj , repl  in zip ( (sp_re, e_re, a_re),
-                             ("", 'e', 'a')):
+    for cobj, repl in zip((sp_re, e_re, a_re), ("", "e", "a")):
         str_ = cobj.sub(repl, str_)
 
     return str_
 
-def read_main (csv_fn , pf , delimiter =':',
-               destfile ='pme.en.csv') :
 
-    parser_data = list(parse_md_data(pf, delimiter) )
-    parser_dict =dict(parser_data)
+def read_main(csv_fn, pf, delimiter=":", destfile="pme.en.csv"):
 
-    with open (csv_fn, encoding ='utf8') as csv_f :
+    parser_data = list(parse_md_data(pf, delimiter))
+    parser_dict = dict(parser_data)
+
+    with open(csv_fn, encoding="utf8") as csv_f:
         csv_reader = csv.reader(csv_f)
-        csv_data =[ row for row in csv_reader]
+        csv_data = [row for row in csv_reader]
 
     # get the index of the last substring row
     # and separate block into two from "Industry_type"
-    ix = csv_data [0].index ('Industry_type')
+    ix = csv_data[0].index("Industry_type")
 
-    csv_1b = [row [:ix +1] for row in csv_data]
-    csv_2b =[row [ix+1:] for row in csv_data ]
+    csv_1b = [row[: ix + 1] for row in csv_data]
+    csv_2b = [row[ix + 1 :] for row in csv_data]
     # make a copy of csv_1b
-    csv_1bb= copy.deepcopy(csv_1b)
-    copyd = copy.deepcopy(csv_1bb); is_missing =list()
+    csv_1bb = copy.deepcopy(csv_1b)
+    copyd = copy.deepcopy(csv_1bb)
+    is_missing = list()
 
     # skip the first two rows
-    for ii, rowline in enumerate( csv_1bb[3:]) :
-        for jj , row in enumerate(rowline):
+    for ii, rowline in enumerate(csv_1bb[3:]):
+        for jj, row in enumerate(rowline):
             row = row.strip()
-            row = sanitize_unicode_string(row )
+            row = sanitize_unicode_string(row)
             csv_1bb[3:][ii][jj] = row
 
-    #collect the missing values
-    for ii, rowline in enumerate( csv_1bb[3:]) :
-        for jj , row in enumerate(rowline):
+    # collect the missing values
+    for ii, rowline in enumerate(csv_1bb[3:]):
+        for jj, row in enumerate(rowline):
             if row not in parser_dict.keys():
                 is_missing.append(copyd[3:][ii][jj])
     is_missing = list(set(is_missing))
 
     # merge the prior two blocks and build the dataframe
-    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb, csv_2b )]
-    df = pd.DataFrame (
-        np.array(new_csv_list [1:]),
-        columns =new_csv_list [0]
-                       )
+    new_csv_list = [r1 + r2 for r1, r2 in zip(csv_1bb, csv_2b)]
+    df = pd.DataFrame(np.array(new_csv_list[1:]), columns=new_csv_list[0])
     for key, value in parser_dict.items():
         # perform operation in place and return None
-        df.replace (key, value, inplace =True )
+        df.replace(key, value, inplace=True)
+
+    df.to_csv(destfile)
+    return df, is_missing
 
 
-    df.to_csv (destfile)
-    return  df , is_missing
-
-
-def _isin (
-        arr: ArrayLike | List [float] ,
-        subarr: Sub [ArrayLike] |Sub[List[float]] | float,
-        return_mask:bool=False,
-) -> bool :
-    """ Check whether the subset array `subcz` is in  `cz` array.
+def _isin(
+    arr: ArrayLike | List[float],
+    subarr: Sub[ArrayLike] | Sub[List[float]] | float,
+    return_mask: bool = False,
+) -> bool:
+    """Check whether the subset array `subcz` is in  `cz` array.
 
     :param arr: Array-like - Array of item elements
     :param subarr: Array-like, float - Subset array containing a subset items.
@@ -1529,32 +1639,38 @@ def _isin (
     :return: True if items in  test array `subarr` are in array `arr`.
 
     """
-    arr = np.array (arr );  subarr = np.array(subarr )
+    arr = np.array(arr)
+    subarr = np.array(subarr)
 
-    return (True if True in np.isin (arr, subarr) else False
-            ) if not return_mask else np.isin (arr, subarr)
+    return (
+        (True if True in np.isin(arr, subarr) else False)
+        if not return_mask
+        else np.isin(arr, subarr)
+    )
 
-def _assert_all_types (
-    obj: object ,
+
+def _assert_all_types(
+    obj: object,
     *expected_objtype: type,
-    objname:str=None,
- ) -> object:
-    """ Quick assertion of object type. Raises a `TypeError` if wrong type
+    objname: str = None,
+) -> object:
+    """Quick assertion of object type. Raises a `TypeError` if wrong type
     is passed as an argument. For polishing the error message, one can add
     the object name `objname` for specifying the object that raises errors
     for letting the users to be aware of the reason of failure."""
     # if np.issubdtype(a1.dtype, np.integer):
-    if not isinstance( obj, expected_objtype):
-        n=str(objname) + ' expects' if objname is not None else 'Expects'
-        raise TypeError (
-            f"{n} type{'s' if len(expected_objtype)>1 else ''} "
-            f"{smart_format(tuple (o.__name__ for o in expected_objtype))}"
-            f" but {type(obj).__name__!r} is given.")
+    if not isinstance(obj, expected_objtype):
+        n = str(objname) + " expects" if objname is not None else "Expects"
+        raise TypeError(
+            f"{n} type{'s' if len(expected_objtype) > 1 else ''} "
+            f"{smart_format(tuple(o.__name__ for o in expected_objtype))}"
+            f" but {type(obj).__name__!r} is given."
+        )
 
     return obj
 
 
-def savepath_ (nameOfPath):
+def savepath_(nameOfPath):
     """
     Shortcut to create a folder
     :param nameOfPath: Path name to save file
@@ -1566,11 +1682,11 @@ def savepath_ (nameOfPath):
 
     """
 
-    try :
+    try:
         savepath = os.path.join(os.getcwd(), nameOfPath)
         if not os.path.isdir(savepath):
-            os.mkdir(nameOfPath)#  mode =0o666)
-    except :
+            os.mkdir(nameOfPath)  #  mode =0o666)
+    except:
         warnings.warn("The path seems to be existed !", stacklevel=2)
         return
     return savepath
@@ -1594,11 +1710,11 @@ def drawn_boundaries(erp_data, appRes, index):
     :rtype: list of array_like
 
     """
-    f = 0 # flag to mention which part must be calculated
-    if index ==0 :
-        f = 1 # compute only right part
-    elif appRes ==erp_data[-1]:
-        f=2 # compute left part
+    f = 0  # flag to mention which part must be calculated
+    if index == 0:
+        f = 1  # compute only right part
+    elif appRes == erp_data[-1]:
+        f = 2  # compute left part
 
     def loop_sideBound(term):
         """
@@ -1610,48 +1726,45 @@ def drawn_boundaries(erp_data, appRes, index):
         :return: side bar
         :type: array_like
         """
-        tem_drawn =[]
-        maxT=0
+        tem_drawn = []
+        maxT = 0
 
-        for _ii, tem_rho in enumerate(term) :
-
-            diffRes_betw_2pts= tem_rho - appRes
-            if diffRes_betw_2pts > maxT :
+        for _ii, tem_rho in enumerate(term):
+            diffRes_betw_2pts = tem_rho - appRes
+            if diffRes_betw_2pts > maxT:
                 maxT = diffRes_betw_2pts
                 tem_drawn.append(tem_rho)
-            elif diffRes_betw_2pts < maxT :
+            elif diffRes_betw_2pts < maxT:
                 # rho_limit = tem_rho
                 break
         return np.array(tem_drawn)
+
     # first broke erp profile from the anomalies
-    if f ==0 or f==2 :
-        left_term = erp_data[:index][::-1] # flip left term  for looping
+    if f == 0 or f == 2:
+        left_term = erp_data[:index][::-1]  # flip left term  for looping
         # flip again to keep the order
         left_limit = loop_sideBound(term=left_term)[::-1]
 
-    if f==0 or f ==1 :
-        right_term= erp_data[index :]
-        right_limit=loop_sideBound(right_term)
+    if f == 0 or f == 1:
+        right_term = erp_data[index:]
+        right_limit = loop_sideBound(right_term)
     # concat right and left to get the complete anomaly
-    if f==2:
-        anomalyBounds = np.append(left_limit,appRes)
+    if f == 2:
+        anomalyBounds = np.append(left_limit, appRes)
 
-    elif f ==1 :
-        anomalyBounds = np.array([appRes]+ right_limit.tolist())
+    elif f == 1:
+        anomalyBounds = np.array([appRes] + right_limit.tolist())
     else:
         left_limit = np.append(left_limit, appRes)
         anomalyBounds = np.concatenate((left_limit, right_limit))
 
     return appRes, index, anomalyBounds
 
+
 def serialize_data(
-        data,
-        filename=None,
-        force=True,
-        savepath=None,
-        verbose:int =0
-     ):
-    """ Store a data into a binary file
+    data, filename=None, force=True, savepath=None, verbose: int = 0
+):
+    """Store a data into a binary file
 
     :param data: Object
         Object to store into a binary file.
@@ -1676,74 +1789,85 @@ def serialize_data(
     """
 
     def _cif(filename, force):
-        """ Control the file. If `force` is ``True`` then remove the old file,
+        """Control the file. If `force` is ``True`` then remove the old file,
         Otherwise create a new file with datetime infos."""
         f = copy.deepcopy(filename)
-        if force :
+        if force:
             os.remove(filename)
-            if verbose >2: print(f" File {os.path.basename(filename)!r} "
-                      "has been removed. ")
+            if verbose > 2:
+                print(
+                    f" File {os.path.basename(filename)!r} has been removed. "
+                )
             return None
-        else :
+        else:
             # that change the name in the realpath
-            f= os.path.basename(f).replace('.pkl','') + \
-                f'{datetime.datetime.now()}'.replace(':', '_')+'.pkl'
+            f = (
+                os.path.basename(f).replace(".pkl", "")
+                + f"{datetime.datetime.now()}".replace(":", "_")
+                + ".pkl"
+            )
             return f
 
     if filename is not None:
-        file_exist =  os.path.isfile(filename)
+        file_exist = os.path.isfile(filename)
         if file_exist:
-            filename = _cif (filename, force)
+            filename = _cif(filename, force)
     if filename is None:
-        filename =f'__mymemoryfile.{datetime.datetime.now()}__'
-        filename =filename.replace(' ', '_').replace(':', '-')
+        filename = f"__mymemoryfile.{datetime.datetime.now()}__"
+        filename = filename.replace(" ", "_").replace(":", "-")
     if not isinstance(filename, str):
         raise TypeError(f"Filename needs to be a string not {type(filename)}")
-    if filename.endswith('.pkl'):
-        filename = filename.replace('.pkl', '')
+    if filename.endswith(".pkl"):
+        filename = filename.replace(".pkl", "")
 
-    _logger.info (
-        f"Save data to {'memory' if filename.find('memo')>=0 else filename}.")
-    try :
-        joblib.dump(data, f'{filename}.pkl')
-        filename +='.pkl'
+    _logger.info(
+        f"Save data to {'memory' if filename.find('memo') >= 0 else filename}."
+    )
+    try:
+        joblib.dump(data, f"{filename}.pkl")
+        filename += ".pkl"
         if verbose > 2:
-            print(f'Data dumped in `{filename} using to `~.externals.joblib`!')
-    except :
+            print(
+                f"Data dumped in `{filename} using to `~.externals.joblib`!"
+            )
+    except:
         # Now try to pickle data Serializing data
-        with open(filename, 'wb') as wfile:
-            pickle.dump( data, wfile)
-        if verbose >2:
-            print( 'Data are well serialized using Python pickle module.`')
+        with open(filename, "wb") as wfile:
+            pickle.dump(data, wfile)
+        if verbose > 2:
+            print("Data are well serialized using Python pickle module.`")
     # take the real path of the filename
     filename = os.path.realpath(filename)
 
-    if savepath is  None:
-        dirname ='_memory_'
-        try : savepath = sPath(dirname)
-        except :
+    if savepath is None:
+        dirname = "_memory_"
+        try:
+            savepath = sPath(dirname)
+        except:
             # for consistency
             savepath = os.getcwd()
     if savepath is not None:
         try:
             shutil.move(filename, savepath)
-        except :
-            file = _cif (os.path.join(savepath,
-                                      os.path.basename(filename)), force)
+        except:
+            file = _cif(
+                os.path.join(savepath, os.path.basename(filename)), force
+            )
             if not force:
-                os.rename(filename, os.path.join(savepath, file) )
+                os.rename(filename, os.path.join(savepath, file))
             if file is None:
-                #take the file  in current word
+                # take the file  in current word
                 file = os.path.join(os.getcwd(), filename)
                 shutil.move(filename, savepath)
             filename = os.path.join(savepath, file)
 
     if verbose > 0:
-            print(f"Data are well stored in {savepath!r} directory.")
+        print(f"Data are well stored in {savepath!r} directory.")
 
     return os.path.join(savepath, filename)
 
-def load_serialized_data (filename, verbose=0):
+
+def load_serialized_data(filename, verbose=0):
     """
     Load data from dumped file.
 
@@ -1760,51 +1884,62 @@ def load_serialized_data (filename, verbose=0):
 
     """
     if not isinstance(filename, str):
-        raise TypeError(f'filename should be a <str> not <{type(filename)}>')
+        raise TypeError(f"filename should be a <str> not <{type(filename)}>")
 
     if not os.path.isfile(filename):
         raise FileExistsError(f"File {filename!r} does not exist.")
 
     _filename = os.path.basename(filename)
     _logger.info(
-        f"Loading data from {'memory' if _filename.find('memo')>=0 else _filename}.")
+        f"Loading data from {'memory' if _filename.find('memo') >= 0 else _filename}."
+    )
 
-    data =None
-    try :
-        data= joblib.load(filename)
-        if verbose >2:
-            (f"Data from {_filename !r} are sucessfully"
-             " reloaded using ~.externals.joblib`!")
-    except :
-        if verbose >2:
-            print(f"Nothing to reload. It's seems data from {_filename!r}"
-                      " are not dumped using ~external.joblib module!")
+    data = None
+    try:
+        data = joblib.load(filename)
+        if verbose > 2:
+            (
+                f"Data from {_filename!r} are sucessfully"
+                " reloaded using ~.externals.joblib`!"
+            )
+    except:
+        if verbose > 2:
+            print(
+                f"Nothing to reload. It's seems data from {_filename!r}"
+                " are not dumped using ~external.joblib module!"
+            )
 
-        with open(filename, 'rb') as tod:
-            data= pickle.load (tod)
+        with open(filename, "rb") as tod:
+            data = pickle.load(tod)
 
-        if verbose >2: print(f"Data from `{_filename!r} are well"
-                      " deserialized using Python pickle module.`!")
+        if verbose > 2:
+            print(
+                f"Data from `{_filename!r} are well"
+                " deserialized using Python pickle module.`!"
+            )
 
     is_none = data is None
     if verbose > 0:
-        if is_none :
+        if is_none:
             print("Unable to deserialize data. Please check your file.")
-        else : print(f"Data from {_filename} have been sucessfully reloaded.")
+        else:
+            print(f"Data from {_filename} have been sucessfully reloaded.")
 
     return data
 
+
 def savejob(
-    job ,
-    savefile ,* ,
-    protocol =None,
+    job,
+    savefile,
+    *,
+    protocol=None,
     append_versions=True,
     append_date=True,
-    fix_imports= True,
-    buffer_callback = None,
-    **job_kws
-    ):
-    """ Quick save your job using 'joblib' or persistent Python pickle module
+    fix_imports=True,
+    buffer_callback=None,
+    **job_kws,
+):
+    """Quick save your job using 'joblib' or persistent Python pickle module
 
     Parameters
     -----------
@@ -1868,48 +2003,49 @@ def savejob(
     savefile: str,
         returns the filename
     """
+
     def remove_extension(fn, ex):
-        """Remove extension either joblib or pickle """
-        return fn.replace (ex, '')
+        """Remove extension either joblib or pickle"""
+        return fn.replace(ex, "")
 
     import sklearn
 
-    versions = f'sklearn_v{sklearn.__version__}.numpy_v{np.__version__}.pandas_v{pd.__version__}'
+    versions = f"sklearn_v{sklearn.__version__}.numpy_v{np.__version__}.pandas_v{pd.__version__}"
     date = datetime.datetime.now()
 
-    savefile =str(savefile)
-    if (
-            '.joblib' in savefile or '.pkl' in savefile
-            ):
-        ex = '.joblib' if savefile.find('.joblib')>=0 else '.pkl'
-        savefile = remove_extension(savefile ,  ex )
+    savefile = str(savefile)
+    if ".joblib" in savefile or ".pkl" in savefile:
+        ex = ".joblib" if savefile.find(".joblib") >= 0 else ".pkl"
+        savefile = remove_extension(savefile, ex)
 
     if append_date:
-        savefile +=f".{date}"
+        savefile += f".{date}"
 
-    if append_versions :
-        savefile += ".{}"+ versions
-    try :
+    if append_versions:
+        savefile += ".{}" + versions
+    try:
         if append_versions:
             savefile += f".joblib_v{joblib.__version__}."
 
-        joblib.dump(job, f'{savefile}.joblib', **job_kws)
+        joblib.dump(job, f"{savefile}.joblib", **job_kws)
 
-    except :
+    except:
         if append_versions:
-            savefile +=f".pickle_v{pickle.__version__}.pkl"
+            savefile += f".pickle_v{pickle.__version__}.pkl"
 
-        with open(savefile, 'wb') as wfile:
-            pickle.dump( job, wfile, protocol= protocol,
-                        fix_imports=fix_imports ,
-                        buffer_callback=buffer_callback )
+        with open(savefile, "wb") as wfile:
+            pickle.dump(
+                job,
+                wfile,
+                protocol=protocol,
+                fix_imports=fix_imports,
+                buffer_callback=buffer_callback,
+            )
 
     return savefile
 
-def find_position_from_sa(
-        an_res_range,
-        pos=None,
-        selectedPk=None):
+
+def find_position_from_sa(an_res_range, pos=None, selectedPk=None):
     """
     Function to select the main `pk` from both :func:`get_boundaries`.
 
@@ -1942,72 +2078,73 @@ def find_position_from_sa(
     .. |ERP| replace:: Electrical Resistivity Profiling
 
     """
-    #compute dipole length from pos
-    if pos is not None :
+    # compute dipole length from pos
+    if pos is not None:
         if isinstance(pos, list):
-            pos =np.array(pos)
-    if pos is None and selectedPk is None :
+            pos = np.array(pos)
+    if pos is None and selectedPk is None:
         raise ParameterNumberError(
-            'Give at least the anomaly boundaries'
-            ' before computing the selected anomaly position.')
+            "Give at least the anomaly boundaries"
+            " before computing the selected anomaly position."
+        )
 
-    if selectedPk is not None :  # mean is given
+    if selectedPk is not None:  # mean is given
         if isinstance(selectedPk, str):
-            if selectedPk.isdigit() :
-                sPk= int(selectedPk)
+            if selectedPk.isdigit():
+                sPk = int(selectedPk)
             elif selectedPk.isalnum():
-                oss = ''.join([s for s in selectedPk
-                    if s.isdigit()])
-                sPk =int(oss)
-        else :
-            try :
+                oss = "".join([s for s in selectedPk if s.isdigit()])
+                sPk = int(oss)
+        else:
+            try:
                 sPk = int(selectedPk)
 
-            except : pass
+            except:
+                pass
 
-        if pos is not None : # then compare the sPk and ps value
-            try :
-                if not pos.min()<= sPk<=pos.max():
-                    warnings.warn(f'Wrong position given <{selectedPk}>.'
-                                  ' Should compute new positions.', stacklevel=2)
-                    _logger.debug(f'Wrong position given <{selectedPk}>.'
-                                  'Should compute new positions.')
+        if pos is not None:  # then compare the sPk and ps value
+            try:
+                if not pos.min() <= sPk <= pos.max():
+                    warnings.warn(
+                        f"Wrong position given <{selectedPk}>."
+                        " Should compute new positions.",
+                        stacklevel=2,
+                    )
+                    _logger.debug(
+                        f"Wrong position given <{selectedPk}>."
+                        "Should compute new positions."
+                    )
 
             except UnboundLocalError:
                 print("local variable 'sPk' referenced before assignment")
-            else :
+            else:
+                return f"pk{sPk}", an_res_range
 
-                return f'pk{sPk}', an_res_range
+        else:
+            selectedPk = f"pk{sPk}"
 
-
-        else :
-            selectedPk=f'pk{sPk}'
-
-            return selectedPk , an_res_range
-
+            return selectedPk, an_res_range
 
     if isinstance(pos, list):
-        pos =np.array(pos)
+        pos = np.array(pos)
     if isinstance(an_res_range, list):
-        an_res_range =np.array(an_res_range)
-    dipole_length = (pos.max()-pos.min())/(len(an_res_range)-1)
+        an_res_range = np.array(an_res_range)
+    dipole_length = (pos.max() - pos.min()) / (len(an_res_range) - 1)
 
-    tem_loc = np.arange(
-        pos.min(), pos.max()+dipole_length, dipole_length)
+    tem_loc = np.arange(pos.min(), pos.max() + dipole_length, dipole_length)
 
     # find min value of  collected anomalies values
-    locmin = np.where (an_res_range==an_res_range.min())[0]
-    if len(locmin) >1 : locmin =locmin[0]
-    pk_= int(tem_loc[int(locmin)]) # find the min pk
+    locmin = np.where(an_res_range == an_res_range.min())[0]
+    if len(locmin) > 1:
+        locmin = locmin[0]
+    pk_ = int(tem_loc[int(locmin)])  # find the min pk
 
-    selectedPk=f'pk{pk_}'
+    selectedPk = f"pk{pk_}"
 
-    return selectedPk , an_res_range
+    return selectedPk, an_res_range
 
-def fmt_text(
-        anFeatures=None,
-        title = None,
-        **kwargs) :
+
+def fmt_text(anFeatures=None, title=None, **kwargs):
     """
     Function format text from anomaly features
 
@@ -2024,50 +2161,45 @@ def fmt_text(
 
     """
     if title is None:
-        title = ['Ranking', 'rho(Ω.m)', 'position pk(m)', 'rho range(Ω.m)']
-    inline =kwargs.pop('inline', '-')
-    mlabel =kwargs.pop('mlabels', 100)
+        title = ["Ranking", "rho(Ω.m)", "position pk(m)", "rho range(Ω.m)"]
+    inline = kwargs.pop("inline", "-")
+    mlabel = kwargs.pop("mlabels", 100)
     line = inline * int(mlabel)
 
-    #--------------------header ----------------------------------------
+    # --------------------header ----------------------------------------
     print(line)
-    tem_head ='|'.join([f'{i:^15}' for i in title[:-1]])
-    tem_head +=f'|{title[-1]:^45}'
+    tem_head = "|".join([f"{i:^15}" for i in title[:-1]])
+    tem_head += f"|{title[-1]:^45}"
     print(tem_head)
     print(line)
-    #-----------------------end header----------------------------------
-    newF =[]
+    # -----------------------end header----------------------------------
+    newF = []
     if isinstance(anFeatures, dict):
         for keys, items in anFeatures.items():
-            rrpos=keys.replace('_pk', '')
-            rank=rrpos[0]
-            pos =rrpos[1:]
+            rrpos = keys.replace("_pk", "")
+            rank = rrpos[0]
+            pos = rrpos[1:]
             newF.append([rank, min(items), pos, items])
 
     elif isinstance(anFeatures, list):
-        newF =[anFeatures]
-
+        newF = [anFeatures]
 
     for anFeatures in newF:
-        strfeatures ='|'.join([f'{str(i):^15}' \
-                               for i in anFeatures[:-1]])
-        try :
+        strfeatures = "|".join([f"{str(i):^15}" for i in anFeatures[:-1]])
+        try:
             iter(anFeatures[-1])
-        except :
-            strfeatures +=f'|{str(anFeatures[-1]):^45}'
-        else :
-            strfeatures += '|{:^45}'.format(
-                ''.join([f'{str(i)} ' for i in anFeatures[-1]]))
+        except:
+            strfeatures += f"|{str(anFeatures[-1]):^45}"
+        else:
+            strfeatures += "|{:^45}".format(
+                "".join([f"{str(i)} " for i in anFeatures[-1]])
+            )
 
         print(strfeatures)
         print(line)
 
 
-def find_feature_positions (
-        anom_infos,
-        anom_rank,
-        pks_rhoa_index,
-        dl):
+def find_feature_positions(anom_infos, anom_rank, pks_rhoa_index, dl):
     """
     Get the pk bound from ranking of computed best points
 
@@ -2101,22 +2233,23 @@ def find_feature_positions (
     .. |ERP| replace:: Electrical Resistivity Profiling
 
     """
-    rank_code = f'{anom_rank}_pk'
+    rank_code = f"{anom_rank}_pk"
     for key in anom_infos.keys():
         if rank_code in key:
-            pk = float(key.replace(rank_code, ''))
+            pk = float(key.replace(rank_code, ""))
 
-            rhoa = list(pks_rhoa_index[anom_rank-1])[0]
+            rhoa = list(pks_rhoa_index[anom_rank - 1])[0]
             codec = key
             break
 
-    ind_rhoa =np.where(anom_infos[codec] ==rhoa)[0]
-    if len(ind_rhoa) ==0 : ind_rhoa =0
+    ind_rhoa = np.where(anom_infos[codec] == rhoa)[0]
+    if len(ind_rhoa) == 0:
+        ind_rhoa = 0
     leninf = len(anom_infos[codec][: int(ind_rhoa)])
 
     pk_min = pk - leninf * dl
-    lensup =len(anom_infos[codec][ int(ind_rhoa):])
-    pk_max =  pk + (lensup -1) * dl
+    lensup = len(anom_infos[codec][int(ind_rhoa) :])
+    pk_max = pk + (lensup - 1) * dl
 
     pos_bounds = (pk_min, pk_max)
     rhoa_bounds = (anom_infos[codec][0], anom_infos[codec][-1])
@@ -2124,12 +2257,7 @@ def find_feature_positions (
     return pk, rhoa, pos_bounds, rhoa_bounds, anom_infos[codec]
 
 
-def find_position_bounds(
-        pk,
-        rhoa,
-        rhoa_range,
-        dl=10.
-        ):
+def find_position_bounds(pk, rhoa, rhoa_range, dl=10.0):
     """
     Find station position boundary indexed in |ERP| line.
 
@@ -2159,46 +2287,44 @@ def find_position_bounds(
     """
 
     if isinstance(pk, str):
-        pk = float(pk.replace(pk[0], '').replace('_pk', ''))
+        pk = float(pk.replace(pk[0], "").replace("_pk", ""))
 
-    index_rhoa = np.where(rhoa_range ==rhoa)[0]
-    if len(index_rhoa) ==0 : index_rhoa =0
+    index_rhoa = np.where(rhoa_range == rhoa)[0]
+    if len(index_rhoa) == 0:
+        index_rhoa = 0
 
     leftlen = len(rhoa_range[: int(index_rhoa)])
-    rightlen = len(rhoa_range[int(index_rhoa):])
+    rightlen = len(rhoa_range[int(index_rhoa) :])
 
     pk_min = pk - leftlen * dl
-    pk_max =  pk + (rightlen  -1) * dl
+    pk_max = pk + (rightlen - 1) * dl
 
     return pk_min, pk_max
 
 
-def wrap_infos (
-        phrase ,
-        value ='',
-        underline ='-',
-        unit ='',
-        site_number= '',
-        **kws) :
+def wrap_infos(
+    phrase, value="", underline="-", unit="", site_number="", **kws
+):
     """Display info from anomaly details."""
 
-    repeat =kws.pop('repeat', 77)
-    intermediate =kws.pop('inter+', '')
-    begin_phrase_mark= kws.pop('begin_phrase', '--|>')
-    on = kws.pop('on', False)
-    if not on: return ''
-    else :
+    repeat = kws.pop("repeat", 77)
+    intermediate = kws.pop("inter+", "")
+    begin_phrase_mark = kws.pop("begin_phrase", "--|>")
+    on = kws.pop("on", False)
+    if not on:
+        return ""
+    else:
         print(underline * repeat)
-        print(f'{begin_phrase_mark} {phrase:<50}',
-              f'{value:<10} {unit}',
-              f'{intermediate}', f"{site_number}")
-        print(underline * repeat )
+        print(
+            f"{begin_phrase_mark} {phrase:<50}",
+            f"{value:<10} {unit}",
+            f"{intermediate}",
+            f"{site_number}",
+        )
+        print(underline * repeat)
 
-def drawn_anomaly_boundaries2(
-        erp_data,
-        appRes,
-        index
-        ):
+
+def drawn_anomaly_boundaries2(erp_data, appRes, index):
     """
     Function to drawn anomaly boundary
     and return the anomaly with its boundaries
@@ -2216,11 +2342,11 @@ def drawn_anomaly_boundaries2(
     :rtype: list of array_like
 
     """
-    f = 0 # flag to mention which part must be calculated
-    if index ==0 :
-        f = 1 # compute only right part
-    elif appRes ==erp_data[-1]:
-        f=2 # compute left part
+    f = 0  # flag to mention which part must be calculated
+    if index == 0:
+        f = 1  # compute only right part
+    elif appRes == erp_data[-1]:
+        f = 2  # compute left part
 
     def loop_sideBound(term):
         """
@@ -2232,25 +2358,25 @@ def drawn_anomaly_boundaries2(
         :return: side bar
         :type: array_like
         """
-        tem_drawn =[]
-        maxT=0
+        tem_drawn = []
+        maxT = 0
 
-        for _ii, tem_rho in enumerate(term) :
-
-            diffRes_betw_2pts= tem_rho - appRes
-            if diffRes_betw_2pts > maxT :
+        for _ii, tem_rho in enumerate(term):
+            diffRes_betw_2pts = tem_rho - appRes
+            if diffRes_betw_2pts > maxT:
                 maxT = diffRes_betw_2pts
                 tem_drawn.append(tem_rho)
-            elif diffRes_betw_2pts < maxT :
+            elif diffRes_betw_2pts < maxT:
                 # rho_limit = tem_rho
                 break
         # print(tem_drawn)
         return np.array(tem_drawn)
+
     # first broke erp profile from the anomalies
-    if f==2 : # compute the left part
+    if f == 2:  # compute the left part
         # flip array and start backward counting
-        temp_erp_data = erp_data [::-1]
-        sbeg = appRes   # initialize value
+        temp_erp_data = erp_data[::-1]
+        sbeg = appRes  # initialize value
         for ii, valan in enumerate(temp_erp_data):
             if valan >= sbeg:
                 sbeg = valan
@@ -2258,24 +2384,25 @@ def drawn_anomaly_boundaries2(
                 left_term = erp_data[ii:]
                 break
 
-        left_term = erp_data[:index][::-1] # flip left term  for looping
+        left_term = erp_data[:index][::-1]  # flip left term  for looping
         # flip again to keep the order
         left_limit = loop_sideBound(term=left_term)[::-1]
 
-    if f==0 or f ==1 :
-        right_term= erp_data[index :]
-        right_limit=loop_sideBound(right_term)
+    if f == 0 or f == 1:
+        right_term = erp_data[index:]
+        right_limit = loop_sideBound(right_term)
     # concat right and left to get the complete anomaly
-    if f==2:
-        anomalyBounds = np.append(left_limit,appRes)
+    if f == 2:
+        anomalyBounds = np.append(left_limit, appRes)
 
-    elif f ==1 :
-        anomalyBounds = np.array([[appRes]+ right_limit.tolist()])
+    elif f == 1:
+        anomalyBounds = np.array([[appRes] + right_limit.tolist()])
     else:
         left_limit = np.append(left_limit, appRes)
         anomalyBounds = np.concatenate((left_limit, right_limit))
 
     return appRes, index, anomalyBounds
+
 
 def get_boundaries(df):
     """
@@ -2299,19 +2426,17 @@ def get_boundaries(df):
             `ves`:'ves', 'se', 'sond','vs', 'loc', '0' or 'dl'
 
     """
-    shape_=[ 'V','W', 'U', 'H', 'M', 'C', 'K' ]
-    type__= ['EC', 'NC', 'CP', 'CB2P']
-        # - ``EC`` for Extensive conductive.
-        # - ``NC`` for narrow conductive.
-        # - ``CP`` for conductive PLANE
-        # - ``CB2P`` for contact between two planes.
-    shape =None
-    type_ =None
+    shape_ = ["V", "W", "U", "H", "M", "C", "K"]
+    type__ = ["EC", "NC", "CP", "CB2P"]
+    # - ``EC`` for Extensive conductive.
+    # - ``NC`` for narrow conductive.
+    # - ``CP`` for conductive PLANE
+    # - ``CB2P`` for contact between two planes.
+    shape = None
+    type_ = None
 
-    def recoverShapeOrTypefromSheet(
-            listOfAddedArray,
-            param):
-        """ Loop the array and get whether an anomaly shape name is provided.
+    def recoverShapeOrTypefromSheet(listOfAddedArray, param):
+        """Loop the array and get whether an anomaly shape name is provided.
 
         :param listOfAddedArray: all Added array values except
          'pk', 'x', 'y', 'rho' are composed of list of addedArray.
@@ -2322,51 +2447,48 @@ def get_boundaries(df):
              `type` : 'EC', 'NC', 'CP', 'CB2P'
             - listOfAddedArray : list of added array
         """
-        param_ =None
+        param_ = None
         for jj, colarray in enumerate(listOfAddedArray[::-1]):
-            tem_=[str(ss).upper().strip() for ss in list(colarray)]
-            for ix , elem in enumerate(tem_):
+            tem_ = [str(ss).upper().strip() for ss in list(colarray)]
+            for ix, elem in enumerate(tem_):
                 for param_elm in param:
-                    if elem ==param_elm :
+                    if elem == param_elm:
                         # retrieves the shape and replace by np.nan value
-                        listOfAddedArray[::-1][jj][ix]=np.nan
-                        return param_elm , listOfAddedArray
+                        listOfAddedArray[::-1][jj][ix] = np.nan
+                        return param_elm, listOfAddedArray
 
         return param_, listOfAddedArray
 
-    def mergeToOne(
-            listOfColumns,
-            _df
-            ):
-        """ Get data from other columns annd merge into one array.
+    def mergeToOne(listOfColumns, _df):
+        """Get data from other columns annd merge into one array.
 
         :param listOfColumns: Columns names
         :param _df: dataframe to retrieve data to one
         """
         new_array = np.full((_df.shape[0],), np.nan)
-        listOfColumnData = [ _df[name].to_numpy() for name in listOfColumns ]
+        listOfColumnData = [_df[name].to_numpy() for name in listOfColumns]
         # loop from backward so we keep the most important to the first row
         # close the main df that composed `pk`,`x`, `y`, and `rho`.
         # find the shape
-        shape, listOfColumnData = recoverShapeOrTypefromSheet(listOfColumnData,
-                                                        param =shape_)
-        type_, listOfColumnData = recoverShapeOrTypefromSheet(listOfColumnData,
-                                                        param =type__)
+        shape, listOfColumnData = recoverShapeOrTypefromSheet(
+            listOfColumnData, param=shape_
+        )
+        type_, listOfColumnData = recoverShapeOrTypefromSheet(
+            listOfColumnData, param=type__
+        )
 
         for colarray in listOfColumnData[::-1]:
-           for ix , val  in enumerate(colarray):
-               try:
-                   if not np.isnan(val) :
-                       new_array[ix]=val
-               except :pass
+            for ix, val in enumerate(colarray):
+                try:
+                    if not np.isnan(val):
+                        new_array[ix] = val
+                except:
+                    pass
 
-        return shape , type_,  new_array
+        return shape, type_, new_array
 
-
-    def retrieve_ix_val(
-            array
-            ):
-        """ Retrieve value and index  and build `posMinMax boundaries
+    def retrieve_ix_val(array):
+        """Retrieve value and index  and build `posMinMax boundaries
 
         :param array: array of main colum contains the anomaly definitions or
                 a souding curve location like ::
@@ -2381,37 +2503,37 @@ def get_boundaries(df):
             `posMinMax` =(10, 80)
         """
 
-        lower_ix =None
-        upper_ix =None
+        lower_ix = None
+        upper_ix = None
         ves_ix = None
 
-        array= array.reshape((array.shape[0],) )
+        array = array.reshape((array.shape[0],))
         for ix, val in enumerate(array):
             for low, up, vloc in zip(
-                    ['lower', 'inf', 'min', 'min', '1', 'low'],
-                    ['upper', 'sup', 'maj', 'max', '2', 'up'],
-                    ['ves', 'se', 'sond','vs', 'loc', '0', 'dl']
-                    ):
-                try :
-                    floatNaNor123= np.float(val)
+                ["lower", "inf", "min", "min", "1", "low"],
+                ["upper", "sup", "maj", "max", "2", "up"],
+                ["ves", "se", "sond", "vs", "loc", "0", "dl"],
+            ):
+                try:
+                    floatNaNor123 = np.float(val)
                 except:
-                    if val.lower().find(low)>=0:
+                    if val.lower().find(low) >= 0:
                         lower_ix = ix
                         break
-                    elif val.lower().find(up) >=0:
+                    elif val.lower().find(up) >= 0:
                         upper_ix = ix
                         break
-                    elif val.lower().find(vloc)>=0:
+                    elif val.lower().find(vloc) >= 0:
                         ves_ix = ix
                         break
-                else :
-                    if floatNaNor123 ==1:
+                else:
+                    if floatNaNor123 == 1:
                         lower_ix = ix
                         break
-                    elif floatNaNor123 ==2:
+                    elif floatNaNor123 == 2:
                         upper_ix = ix
                         break
-                    elif floatNaNor123 ==0:
+                    elif floatNaNor123 == 0:
                         ves_ix = ix
                         break
 
@@ -2424,60 +2546,62 @@ def get_boundaries(df):
     # unecesseray to specify the colum of sounding location.
     # dl =['drill', 'dl', 'loc', 'dh', 'choi']
 
-    _autoOption=False  # set automatic to False one posMinMax
+    _autoOption = False  # set automatic to False one posMinMax
     # not found as well asthe anomaly location `ves`.
-    posMinMax =None
-    #get df columns from the 4-iem index
-    for sl in ['pk', 'sta', 'loc']:
+    posMinMax = None
+    # get df columns from the 4-iem index
+    for sl in ["pk", "sta", "loc"]:
         for val in df.columns:
-            if val.lower()==sl:
+            if val.lower() == sl:
                 pk_series = df[val].to_numpy()
                 break
 
-    listOfAddedColumns= df.iloc[:, 4:].columns
+    listOfAddedColumns = df.iloc[:, 4:].columns
 
-    if len(listOfAddedColumns) ==0:
-        return True,  shape, type_, None, posMinMax,  df
+    if len(listOfAddedColumns) == 0:
+        return True, shape, type_, None, posMinMax, df
 
-    df_= df.iloc[:, 4:]
+    df_ = df.iloc[:, 4:]
     # check whether all remains dataframe values are `NaN` values
     if len(list(df_.columns[df_.isna().all()])) == len(listOfAddedColumns):
-         # If yes , trigger the auto option
-        return True,  shape, type_, None, posMinMax,  df.iloc[:, :4]
+        # If yes , trigger the auto option
+        return True, shape, type_, None, posMinMax, df.iloc[:, :4]
 
     # get the colum name with any nan values
-    sloc_column=list(df_.columns[df_.isna().any()])
+    sloc_column = list(df_.columns[df_.isna().any()])
     # if column contains  one np.nan, the sloc colum is found
     sloc_values = df_[sloc_column].to_numpy()
 
-    if len(sloc_column)>1 : #
-    # get the value from single array
-        shape , type_,  sloc_values =  mergeToOne(sloc_column, df_)
+    if len(sloc_column) > 1:  #
+        # get the value from single array
+        shape, type_, sloc_values = mergeToOne(sloc_column, df_)
 
-
-    lower_ix, ves_ix ,upper_ix   = retrieve_ix_val(sloc_values)
+    lower_ix, ves_ix, upper_ix = retrieve_ix_val(sloc_values)
 
     # if `lower` and `upper` bounds are not found then start or end limits of
     # selected anomaly  from the position(pk) of the sounding curve.
-    if lower_ix is None :
-        lower_ix =ves_ix
+    if lower_ix is None:
+        lower_ix = ves_ix
     if upper_ix is None:
         upper_ix = ves_ix
 
-    if (lower_ix  and upper_ix ) is None:
-        posMinMax =None
-    if posMinMax is None and ves_ix is None: _autoOption =True
-    else :
-        posMinMax =(pk_series[lower_ix], pk_series[upper_ix] )
+    if (lower_ix and upper_ix) is None:
+        posMinMax = None
+    if posMinMax is None and ves_ix is None:
+        _autoOption = True
+    else:
+        posMinMax = (pk_series[lower_ix], pk_series[upper_ix])
 
-    if ves_ix is None: ves_loc=None
-    else : ves_loc = pk_series[ves_ix]
+    if ves_ix is None:
+        ves_loc = None
+    else:
+        ves_loc = pk_series[ves_ix]
 
-    return _autoOption, shape, type_, ves_loc , posMinMax,  df.iloc[:, :4]
+    return _autoOption, shape, type_, ves_loc, posMinMax, df.iloc[:, :4]
 
 
-def reshape(arr , axis = None) :
-    """ Detect the array shape and reshape it accordingly, back to the given axis.
+def reshape(arr, axis=None):
+    """Detect the array shape and reshape it accordingly, back to the given axis.
 
     :param array: array_like with number of dimension equals to 1 or 2
     :param axis: axis to reshape back array. If 'axis' is None and
@@ -2505,27 +2629,34 @@ def reshape(arr , axis = None) :
 
     """
     arr = np.array(arr)
-    if arr.ndim > 2 :
-        raise ValueError('Expect an array with max dimension equals to 2'
-                         f' but {str(arr.ndim)!r} were given.')
+    if arr.ndim > 2:
+        raise ValueError(
+            "Expect an array with max dimension equals to 2"
+            f" but {str(arr.ndim)!r} were given."
+        )
 
-    if axis  not in (0 , 1, -1, None):
-        raise ValueError(f'Wrong axis value: {str(axis)!r}')
+    if axis not in (0, 1, -1, None):
+        raise ValueError(f"Wrong axis value: {str(axis)!r}")
 
-    if axis ==-1:
-        axis =None
-    if arr.ndim ==1 :
+    if axis == -1:
+        axis = None
+    if arr.ndim == 1:
         # ie , axis is None , array is an array-like object
-        s0, s1= arr.shape [0], None
-    else :
+        s0, s1 = arr.shape[0], None
+    else:
         s0, s1 = arr.shape
     if s1 is None:
-        return  arr.reshape ((1, s0)) if axis == 1 else (arr.reshape (
-            (s0, 1)) if axis ==0 else arr )
-    try :
-        arr = arr.reshape ((s0 if s1==1 else s1, )) if axis is None else (
-            arr.reshape ((1, s0)) if axis==1  else arr.reshape ((s1, 1 ))
-            )
+        return (
+            arr.reshape((1, s0))
+            if axis == 1
+            else (arr.reshape((s0, 1)) if axis == 0 else arr)
+        )
+    try:
+        arr = (
+            arr.reshape((s0 if s1 == 1 else s1,))
+            if axis is None
+            else (arr.reshape((1, s0)) if axis == 1 else arr.reshape((s1, 1)))
+        )
     except ValueError:
         # error raises when user mistakes to input the right axis.
         # (ValueError: cannot reshape array of size 54 into shape (1,1))
@@ -2535,8 +2666,8 @@ def reshape(arr , axis = None) :
     return arr
 
 
-def ismissing(refarr, arr, fill_value = np.nan, return_index =False):
-    """ Get the missing values in array-like and fill it  to match the length
+def ismissing(refarr, arr, fill_value=np.nan, return_index=False):
+    """Get the missing values in array-like and fill it  to match the length
     of the reference array.
 
     The function makes sense especially for frequency interpollation in the
@@ -2582,28 +2713,33 @@ def ismissing(refarr, arr, fill_value = np.nan, return_index =False):
     """
     return_index = str(return_index).lower()
     fill_value = _assert_all_types(fill_value, float, int)
-    if return_index in ('false', 'value', 'val') :
-        return_index ='values'
-    elif return_index  in ('true', 'index', 'ix') :
-        return_index = 'index'
-    else :
-        return_index = 'mask'
+    if return_index in ("false", "value", "val"):
+        return_index = "values"
+    elif return_index in ("true", "index", "ix"):
+        return_index = "index"
+    else:
+        return_index = "mask"
 
-    ref = refarr.copy() ; mask = np.isin(ref, arr)
-    miss_values = ref [~np.isin(ref, arr)]
-    miss_val_or_ix  = (ref [:, None] == miss_values).argmax(axis=0
-                         ) if return_index =='index' else ref [~np.isin(ref, arr)]
+    ref = refarr.copy()
+    mask = np.isin(ref, arr)
+    miss_values = ref[~np.isin(ref, arr)]
+    miss_val_or_ix = (
+        (ref[:, None] == miss_values).argmax(axis=0)
+        if return_index == "index"
+        else ref[~np.isin(ref, arr)]
+    )
 
-    miss_val_or_ix = mask if return_index =='mask' else miss_val_or_ix
+    miss_val_or_ix = mask if return_index == "mask" else miss_val_or_ix
     # if return_missing_values:
-    ref [~np.isin(ref, arr)] = fill_value
-    #arr= np.hstack ((arr , np.repeat(fill_value, 0 if m <=0 else m  )))
-    #refarr[refarr ==arr] if return_index else arr
-    return  ref , miss_val_or_ix
+    ref[~np.isin(ref, arr)] = fill_value
+    # arr= np.hstack ((arr , np.repeat(fill_value, 0 if m <=0 else m  )))
+    # refarr[refarr ==arr] if return_index else arr
+    return ref, miss_val_or_ix
 
-def make_arr_consistent (
-        refarr, arr, fill_value = np.nan, return_index = False,
-        method='naive'):
+
+def make_arr_consistent(
+    refarr, arr, fill_value=np.nan, return_index=False, method="naive"
+):
     """
     Make `arr` to be consistent with the reference array `refarr`. Fill the
     missing value with param `fill_value`.
@@ -2668,34 +2804,40 @@ def make_arr_consistent (
     >>> make_arr_consistent (a, b ,method='strict')
     Out[114]: array([nan, nan, nan, nan, nan, nan, nan,  7.,  8.,  9., 10., nan])
     """
-    try :
-        refarr = reshape( refarr).shape[1]
-        arr= reshape( arr).shape[1]
-    except :pass
-    else: raise TypeError ("Expects one-dimensional arrays for both arrays.")
+    try:
+        refarr = reshape(refarr).shape[1]
+        arr = reshape(arr).shape[1]
+    except:
+        pass
+    else:
+        raise TypeError("Expects one-dimensional arrays for both arrays.")
 
-    t = np.full_like( refarr, fill_value = np.nan, dtype =float )
-    temp_arr = np.digitize( refarr, arr)
-    non_zero_index = reshape (np.argwhere (temp_arr!=0 ) )
-    t[non_zero_index] = refarr [non_zero_index]
+    t = np.full_like(refarr, fill_value=np.nan, dtype=float)
+    temp_arr = np.digitize(refarr, arr)
+    non_zero_index = reshape(np.argwhere(temp_arr != 0))
+    t[non_zero_index] = refarr[non_zero_index]
     # force value to keep only
     # value in array
-    if method=='strict':
-        index = reshape ( np.argwhere (  (max( arr)  - t) < 0 ) )
-        t [index ]= np.nan
+    if method == "strict":
+        index = reshape(np.argwhere((max(arr) - t) < 0))
+        t[index] = np.nan
     else:
-        if len (t[~np.isnan (t)]) > len(arr):
-            t [ - (len(t[~np.isnan (t)])-len(arr)):]= np.nan
+        if len(t[~np.isnan(t)]) > len(arr):
+            t[-(len(t[~np.isnan(t)]) - len(arr)) :] = np.nan
     # update the non_zeros index
-    non_zero_index= reshape ( np.argwhere (~np.isnan (t)))
+    non_zero_index = reshape(np.argwhere(~np.isnan(t)))
     # now replace all NaN value by filled value
-    t [np.isnan(t)] = fill_value
+    t[np.isnan(t)] = fill_value
 
-    return  refarr == t  if return_index =='mask' else (
-        non_zero_index if return_index else t )
+    return (
+        refarr == t
+        if return_index == "mask"
+        else (non_zero_index if return_index else t)
+    )
 
-def find_close_position (refarr, arr):
-    """ Get the close item from `arr` in the reference array `refarr`.
+
+def find_close_position(refarr, arr):
+    """Get the close item from `arr` in the reference array `refarr`.
 
     :param arr: array-like 1d,
         Array to extended with fill value. It should be  shorter than the
@@ -2706,13 +2848,13 @@ def find_close_position (refarr, arr):
         array `arr`.
     :return: generator of index of the closest position in  `refarr`.
     """
-    for item in arr :
-        ix = np.argmin (np.abs (refarr - item))
+    for item in arr:
+        ix = np.argmin(np.abs(refarr - item))
         yield ix
 
 
-def fillNaN(arr, method ='ff'):
-    """ Most efficient way to back/forward-fill NaN values in numpy array.
+def fillNaN(arr, method="ff"):
+    """Most efficient way to back/forward-fill NaN values in numpy array.
 
     Parameters
     ----------
@@ -2776,47 +2918,51 @@ def fillNaN(arr, method ='ff'):
 
     """
 
-    if not hasattr(arr, '__array__'):
+    if not hasattr(arr, "__array__"):
         arr = np.array(arr)
 
-    def ffill (arr):
-        """ Forward fill."""
-        idx = np.where (~mask, np.arange(mask.shape[1]), 0)
-        np.maximum.accumulate (idx, axis =1 , out =idx )
-        return arr[np.arange(idx.shape[0])[:, None], idx ]
+    def ffill(arr):
+        """Forward fill."""
+        idx = np.where(~mask, np.arange(mask.shape[1]), 0)
+        np.maximum.accumulate(idx, axis=1, out=idx)
+        return arr[np.arange(idx.shape[0])[:, None], idx]
 
-    def bfill (arr):
-        """ Backward fill """
-        idx = np.where (~mask, np.arange(mask.shape[1]) , mask.shape[1]-1)
-        idx = np.minimum.accumulate(idx[:, ::-1], axis =1)[:, ::-1]
-        return arr [np.arange(idx.shape [0])[:, None], idx ]
+    def bfill(arr):
+        """Backward fill"""
+        idx = np.where(~mask, np.arange(mask.shape[1]), mask.shape[1] - 1)
+        idx = np.minimum.accumulate(idx[:, ::-1], axis=1)[:, ::-1]
+        return arr[np.arange(idx.shape[0])[:, None], idx]
 
-    method= str(method).lower().strip()
+    method = str(method).lower().strip()
 
-    if arr.ndim ==1:
+    if arr.ndim == 1:
         arr = reshape(arr, axis=1)
 
-    if method  in ('backward', 'bf',  'bwd'):
-        method = 'bf'
-    elif method in ('forward', 'ff', 'fwd'):
-        method= 'ff'
-    elif method in ('both', 'ffbf', 'fbwf', 'bff', 'full'):
-        method ='both'
-    if method not in ('bf', 'ff', 'both'):
-        raise ValueError ("Expect a backward <'bf'>, forward <'ff'> fill "
-                          f" or both <'bff'> not {method!r}")
-    mask = np.isnan (arr )
-    if method =='both':
+    if method in ("backward", "bf", "bwd"):
+        method = "bf"
+    elif method in ("forward", "ff", "fwd"):
+        method = "ff"
+    elif method in ("both", "ffbf", "fbwf", "bff", "full"):
+        method = "both"
+    if method not in ("bf", "ff", "both"):
+        raise ValueError(
+            "Expect a backward <'bf'>, forward <'ff'> fill "
+            f" or both <'bff'> not {method!r}"
+        )
+    mask = np.isnan(arr)
+    if method == "both":
         arr = ffill(arr)
-        #mask = np.isnan (arr)
+        # mask = np.isnan (arr)
         arr = bfill(arr)
 
-    return (ffill(arr) if method =='ff' else bfill(arr)
-            ) if method in ('bf', 'ff') else arr
+    return (
+        (ffill(arr) if method == "ff" else bfill(arr))
+        if method in ("bf", "ff")
+        else arr
+    )
 
 
-def get_params (obj: object
-               ) -> Dict:
+def get_params(obj: object) -> Dict:
     """
     Get object parameters.
 
@@ -2861,20 +3007,25 @@ def get_params (obj: object
     """
     if callable(obj):
         cls_or_func_signature = inspect.signature(obj)
-        PARAMS_VALUES = {k: None if v.default is (inspect.Parameter.empty
-                         or ...) else v.default
-                    for k, v in cls_or_func_signature.parameters.items()
-                    # if v.default is not inspect.Parameter.empty
-                    }
-    elif hasattr(obj, '__dict__'):
-        PARAMS_VALUES = {k:v  for k, v in obj.__dict__.items()
-                         if not (k.endswith('_') or k.startswith('_'))}
+        PARAMS_VALUES = {
+            k: None
+            if v.default is (inspect.Parameter.empty or ...)
+            else v.default
+            for k, v in cls_or_func_signature.parameters.items()
+            # if v.default is not inspect.Parameter.empty
+        }
+    elif hasattr(obj, "__dict__"):
+        PARAMS_VALUES = {
+            k: v
+            for k, v in obj.__dict__.items()
+            if not (k.endswith("_") or k.startswith("_"))
+        }
 
     return PARAMS_VALUES
 
 
-def fit_ll(ediObjs, by ='index', method ='strict', distance='cartesian' ):
-    """ Fit EDI by location and reorganize EDI according to the site
+def fit_ll(ediObjs, by="index", method="strict", distance="cartesian"):
+    """Fit EDI by location and reorganize EDI according to the site
     longitude and latitude coordinates.
 
     EDIs data are mostly reading in an alphabetically order, so the reoganization
@@ -2914,94 +3065,109 @@ def fit_ll(ediObjs, by ='index', method ='strict', distance='cartesian' ):
         ...
 
     """
-    method= 'strict' if str(method).lower() =='strict' else "naive"
-    if method=='strict':
-        return _fit_ll(ediObjs, by = by, distance = distance )
+    method = "strict" if str(method).lower() == "strict" else "naive"
+    if method == "strict":
+        return _fit_ll(ediObjs, by=by, distance=distance)
 
-    #get the ediObjs+ names in ndarray(len(ediObjs), 2)
-    objnames = np.c_[ediObjs, np.array(
-        list(map(lambda obj: os.path.basename(obj.edifile), ediObjs)))]
-    lataddlon = np.array (list(map(lambda obj: obj.lat + obj.lon , ediObjs)))
-    if len(np.unique ( lataddlon)) < len(ediObjs)//2:
+    # get the ediObjs+ names in ndarray(len(ediObjs), 2)
+    objnames = np.c_[
+        ediObjs,
+        np.array(
+            list(map(lambda obj: os.path.basename(obj.edifile), ediObjs))
+        ),
+    ]
+    lataddlon = np.array(list(map(lambda obj: obj.lat + obj.lon, ediObjs)))
+    if len(np.unique(lataddlon)) < len(ediObjs) // 2:
         # then ignore reorganization and used the
         # station names.
         pass
     else:
         sort_ix = np.argsort(lataddlon)
-        objnames = objnames[sort_ix ]
+        objnames = objnames[sort_ix]
 
-    #ediObjs , objbnames = np.hsplit(objnames, 2)
+    # ediObjs , objbnames = np.hsplit(objnames, 2)
     return objnames[:, 0], objnames[:, -1]
 
-def _fit_ll(ediObjs, distance='cartes', by = 'index'):
-    """ Fit ediObjs using the `strict method`.
+
+def _fit_ll(ediObjs, distance="cartes", by="index"):
+    """Fit ediObjs using the `strict method`.
 
     An isolated part of :func:`watex.utils.funcutils.fit_by_ll`.
     """
     # get one obj randomnly and compute distance
     obj_init = ediObjs[0]
     ref_lat = 34.0522  # Latitude of Los Angeles
-    ref_lon = -118.2437 # Longitude of Los Angeles
+    ref_lon = -118.2437  # Longitude of Los Angeles
 
-    if str(distance).find ('harves')>=0:
-        distance='harves'
-    else: distance='cartes'
+    if str(distance).find("harves") >= 0:
+        distance = "harves"
+    else:
+        distance = "cartes"
 
     # create stations list.
     stations = [
-        {"name": os.path.basename(obj.edifile),
-         "longitude": obj.lon,
-         "latitude": obj.lat,
-         "obj": obj,
-         "dataid": obj.dataid,
-         # compute distance using cartesian or harversine
-         "distance": _compute_haversine_d (
-            ref_lat, ref_lon, obj.lat, obj.lon
-            ) if distance =='harves' else np.sqrt (
-                ( obj_init.lon -obj.lon)**2 + (obj_init.lat -obj.lat)**2),
-         # check wether there is a position number in the data.
-         "index": re.search (r'\d+', str(os.path.basename(obj.edifile)),
-                            flags=re.IGNORECASE).group() if bool(
-                                re.search(r'\d', os.path.basename(obj.edifile)))
-                                else float(ii) ,
+        {
+            "name": os.path.basename(obj.edifile),
+            "longitude": obj.lon,
+            "latitude": obj.lat,
+            "obj": obj,
+            "dataid": obj.dataid,
+            # compute distance using cartesian or harversine
+            "distance": _compute_haversine_d(
+                ref_lat, ref_lon, obj.lat, obj.lon
+            )
+            if distance == "harves"
+            else np.sqrt(
+                (obj_init.lon - obj.lon) ** 2 + (obj_init.lat - obj.lat) ** 2
+            ),
+            # check wether there is a position number in the data.
+            "index": re.search(
+                r"\d+",
+                str(os.path.basename(obj.edifile)),
+                flags=re.IGNORECASE,
+            ).group()
+            if bool(re.search(r"\d", os.path.basename(obj.edifile)))
+            else float(ii),
         }
-        for ii, obj in enumerate (ediObjs)
-        ]
+        for ii, obj in enumerate(ediObjs)
+    ]
 
-    ll=( 'longitude', 'latitude')
+    ll = ("longitude", "latitude")
 
-    by = 'index' or str(by ).lower()
-    if ( by.find ('ll')>=0 or by.find ('lonlat')>=0):
-        by ='ll'
-    elif  by.find ('latlon')>=0:
-        ll =ll[::-1] # reverse
+    by = "index" or str(by).lower()
+    if by.find("ll") >= 0 or by.find("lonlat") >= 0:
+        by = "ll"
+    elif by.find("latlon") >= 0:
+        ll = ll[::-1]  # reverse
 
     # sorted from key
-    sorted_stations = sorted (
-        stations , key = lambda o: (o[ll[0]], [ll[-1]])
-        if (by =='ll' or by=='latlon')
-        else o[by]
-             )
+    sorted_stations = sorted(
+        stations,
+        key=lambda o: (
+            (o[ll[0]], [ll[-1]]) if (by == "ll" or by == "latlon") else o[by]
+        ),
+    )
 
-    objnames = np.array( list(
-        map ( lambda o : o['name'], sorted_stations)))
-    ediObjs = np.array ( list(
-        map ( lambda o: o['obj'], sorted_stations)),
-                        dtype =object )
+    objnames = np.array(list(map(lambda o: o["name"], sorted_stations)))
+    ediObjs = np.array(
+        list(map(lambda o: o["obj"], sorted_stations)), dtype=object
+    )
 
     return ediObjs, objnames
 
+
 def _compute_haversine_d(lat1, lon1, lat2, lon2):
-    """ Sort coordinates using Haversine distance calculus.
+    """Sort coordinates using Haversine distance calculus.
     An isolated part of :func:`watex.utils.funcutils._fit_by_ll"""
     # get reference_lat and reference lon
     # get one obj randomnly and compute distance
     # obj_init = np.random.choice (ediObjs)
     import math
+
     # Define a function to calculate the distance
     # between two points in kilometers
     # def distance(lat1, lon1, lat2, lon2):
-        # Convert degrees to radians
+    # Convert degrees to radians
     lat1 = math.radians(lat1)
     lon1 = math.radians(lon1)
     lat2 = math.radians(lat2)
@@ -3010,16 +3176,18 @@ def _compute_haversine_d(lat1, lon1, lat2, lon2):
     # Apply the haversine formula
     dlon = lon2 - lon1
     dlat = lat2 - lat1
-    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(
-        lat2) * math.sin(dlon / 2)**2
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
     c = 2 * math.asin(math.sqrt(a))
-    r = 6371 # Earth's radius in kilometers
+    r = 6371  # Earth's radius in kilometers
 
     return c * r
 
 
-def make_ids(arr, prefix =None, how ='py', skip=False):
-    """ Generate auto Id according to the number of given sites.
+def make_ids(arr, prefix=None, how="py", skip=False):
+    """Generate auto Id according to the number of given sites.
 
     :param arr: Iterable object to generate an id site . For instance it can be
         the array-like or list of EDI object that composed a collection of
@@ -3053,41 +3221,64 @@ def make_ids(arr, prefix =None, how ='py', skip=False):
         ... ['line1','line2','line3',..., line20]
 
     """
-    fm='{:0' + ('1' if skip else f'{int(np.log10(len(arr))) + 1}') +'}'
-    id_ =[str(prefix) + fm.format(i if how=='py'else i+ 1 ) if prefix is not
-          None else fm.format(i if how=='py'else i+ 1)
-          for i in range(len(arr))]
+    fm = "{:0" + ("1" if skip else f"{int(np.log10(len(arr))) + 1}") + "}"
+    id_ = [
+        str(prefix) + fm.format(i if how == "py" else i + 1)
+        if prefix is not None
+        else fm.format(i if how == "py" else i + 1)
+        for i in range(len(arr))
+    ]
     return id_
 
-def show_stats(nedic , nedir, fmtl='~', lenl=77, obj='EDI'):
-    """ Estimate the file successfully read reading over the unread files
+
+def show_stats(nedic, nedir, fmtl="~", lenl=77, obj="EDI"):
+    """Estimate the file successfully read reading over the unread files
 
     :param nedic: number of input or collected files
     :param nedir: number of files read sucessfully
     :param fmt: str to format the stats line
     :param lenl: length of line denileation."""
 
-    def get_obj_len (value):
-        """ Control if obj is iterable then take its length """
-        try :
+    def get_obj_len(value):
+        """Control if obj is iterable then take its length"""
+        try:
             iter(value)
-        except :pass
-        else : value =len(value)
+        except:
+            pass
+        else:
+            value = len(value)
         return value
+
     nedic = get_obj_len(nedic)
     nedir = get_obj_len(nedir)
 
-    print(fmtl * lenl )
-    mesg ='|'.join( ['|{0:<15}{1:^2} {2:<7}',
-                     '{3:<15}{4:^2} {5:<7}',
-                     '{6:<9}{7:^2} {8:<7}%|'])
-    print(mesg.format('Data collected','=',  nedic, f'{obj} success. read',
-                      '=', nedir, 'Rate','=', round ((nedir/nedic) *100, 2),
-                      2))
-    print(fmtl * lenl )
+    print(fmtl * lenl)
+    mesg = "|".join(
+        [
+            "|{0:<15}{1:^2} {2:<7}",
+            "{3:<15}{4:^2} {5:<7}",
+            "{6:<9}{7:^2} {8:<7}%|",
+        ]
+    )
+    print(
+        mesg.format(
+            "Data collected",
+            "=",
+            nedic,
+            f"{obj} success. read",
+            "=",
+            nedir,
+            "Rate",
+            "=",
+            round((nedir / nedic) * 100, 2),
+            2,
+        )
+    )
+    print(fmtl * lenl)
 
-def concat_array_from_list (list_of_array , concat_axis = 0) :
-    """ Concat array from list and set the None value in the list as NaN.
+
+def concat_array_from_list(list_of_array, concat_axis=0):
+    """Concat array from list and set the None value in the list as NaN.
 
     :param list_of_array: List of array elements
     :type list of array: list
@@ -3109,34 +3300,52 @@ def concat_array_from_list (list_of_array , concat_axis = 0) :
     >>> concat_array_from_list ([ass, ass])
 
     """
-    concat_axis =int(_assert_all_types(concat_axis, int, float))
-    if concat_axis not in (0 , 1):
-        raise ValueError(f'Unable to understand axis: {str(concat_axis)!r}')
+    concat_axis = int(_assert_all_types(concat_axis, int, float))
+    if concat_axis not in (0, 1):
+        raise ValueError(f"Unable to understand axis: {str(concat_axis)!r}")
 
-    list_of_array = list(map(lambda e: np.array([np.nan])
-                             if e is None else np.array(e), list_of_array))
+    list_of_array = list(
+        map(
+            lambda e: np.array([np.nan]) if e is None else np.array(e),
+            list_of_array,
+        )
+    )
     # if the list is composed of one element of array, keep it outside
     # reshape accordingly
-    if len(list_of_array)==1:
-        ar = (list_of_array[0].reshape ((1,len(list_of_array[0]))
-                 ) if concat_axis==0 else list_of_array[0].reshape(
-                        (len(list_of_array[0]), 1)
-                 )
-             ) if list_of_array[0].ndim ==1 else list_of_array[0]
+    if len(list_of_array) == 1:
+        ar = (
+            (
+                list_of_array[0].reshape((1, len(list_of_array[0])))
+                if concat_axis == 0
+                else list_of_array[0].reshape((len(list_of_array[0]), 1))
+            )
+            if list_of_array[0].ndim == 1
+            else list_of_array[0]
+        )
 
         return ar
 
-    #if concat_axis ==1:
-    list_of_array = list(map(
-            lambda e:e.reshape(e.shape[0], 1) if e.ndim ==1 else e ,
-            list_of_array)
-        ) if concat_axis ==1 else list(map(
-            lambda e:e.reshape(1, e.shape[0]) if e.ndim ==1 else e ,
-            list_of_array))
+    # if concat_axis ==1:
+    list_of_array = (
+        list(
+            map(
+                lambda e: e.reshape(e.shape[0], 1) if e.ndim == 1 else e,
+                list_of_array,
+            )
+        )
+        if concat_axis == 1
+        else list(
+            map(
+                lambda e: e.reshape(1, e.shape[0]) if e.ndim == 1 else e,
+                list_of_array,
+            )
+        )
+    )
 
-    return np.concatenate(list_of_array, axis = concat_axis)
+    return np.concatenate(list_of_array, axis=concat_axis)
 
-def station_id (id_, is_index= 'index', how=None, **kws):
+
+def station_id(id_, is_index="index", how=None, **kws):
     """
     From id get the station  name as input  and return index `id`.
     Index starts at 0.
@@ -3174,41 +3383,55 @@ def station_id (id_, is_index= 'index', how=None, **kws):
     ... 0
 
     """
-    is_iterable =False
+    is_iterable = False
     is_index = str(is_index).lower().strip()
-    isix=True if  is_index in ('true', 'index', 'yes', 'ix') else False
+    isix = True if is_index in ("true", "index", "yes", "ix") else False
 
-    regex = re.compile(r'\d+', flags=re.IGNORECASE)
-    try :
-        iter (id_)
-    except :
-        id_= [id_]
-    else : is_iterable=True
+    regex = re.compile(r"\d+", flags=re.IGNORECASE)
+    try:
+        iter(id_)
+    except:
+        id_ = [id_]
+    else:
+        is_iterable = True
 
-    #remove all the letter
-    id_= list(map( lambda o: regex.findall(o), list(map(str, id_))))
+    # remove all the letter
+    id_ = list(map(lambda o: regex.findall(o), list(map(str, id_))))
     # merge the sequences list and for consistency remove emty list or str
-    id_=tuple(filter (None, list(itertools.chain(*id_))))
+    id_ = tuple(filter(None, list(itertools.chain(*id_))))
 
     # if considering as Python index return value -1 other wise return index
 
-    id_ = tuple (map(int, np.array(id_, dtype = np.int32)-1)
-                 ) if how =='py' else tuple ( map(int, id_))
+    id_ = (
+        tuple(map(int, np.array(id_, dtype=np.int32) - 1))
+        if how == "py"
+        else tuple(map(int, id_))
+    )
 
     if (np.array(id_) < 0).any():
-        warnings.warn('Index contains negative values. Be aware that you are'
-                      " using a Python indexing. Otherwise turn 'how' argumennt"
-                      " to 'None'.", stacklevel=2)
-    if not isix :
-        id_= tuple(make_ids(id_, how= how,  **kws))
+        warnings.warn(
+            "Index contains negative values. Be aware that you are"
+            " using a Python indexing. Otherwise turn 'how' argumennt"
+            " to 'None'.",
+            stacklevel=2,
+        )
+    if not isix:
+        id_ = tuple(make_ids(id_, how=how, **kws))
 
-    if not is_iterable :
-        try: id_ = id_[0]
-        except : warnings.warn("The station id is given as a non iterable "
-                          "object, but can keep the same format in return.", stacklevel=2)
-        if id_==-1: id_= 0 if how=='py' else id_ + 2
+    if not is_iterable:
+        try:
+            id_ = id_[0]
+        except:
+            warnings.warn(
+                "The station id is given as a non iterable "
+                "object, but can keep the same format in return.",
+                stacklevel=2,
+            )
+        if id_ == -1:
+            id_ = 0 if how == "py" else id_ + 2
 
     return id_
+
 
 def assert_doi(doi):
     """
@@ -3223,15 +3446,24 @@ def assert_doi(doi):
     :rtype: float
 
     """
-    if isinstance (doi, str):
-        if doi.find('km')>=0 :
-            try: doi= float(doi.replace('km', '000'))
-            except :TypeError (" Unrecognized value. Expect value in 'km' "
-                           f"or 'm' not: {doi!r}")
-    try: doi = float(doi)
-    except: TypeError ("Depth of investigation must be a float number "
-                       "not: {str(type(doi).__name__!r)}")
+    if isinstance(doi, str):
+        if doi.find("km") >= 0:
+            try:
+                doi = float(doi.replace("km", "000"))
+            except:
+                TypeError(
+                    " Unrecognized value. Expect value in 'km' "
+                    f"or 'm' not: {doi!r}"
+                )
+    try:
+        doi = float(doi)
+    except:
+        TypeError(
+            "Depth of investigation must be a float number "
+            "not: {str(type(doi).__name__!r)}"
+        )
     return doi
+
 
 def strip_item(item_to_clean, item=None, multi_space=12):
     """
@@ -3259,41 +3491,45 @@ def strip_item(item_to_clean, item=None, multi_space=12):
      ... print(new_data)
 
     """
-    if item is None :
-        item = ' '
+    if item is None:
+        item = " "
 
-    cleaner =[(''+ ii*f'{item}') for ii in range(multi_space)]
+    cleaner = [("" + ii * f"{item}") for ii in range(multi_space)]
 
-    if isinstance (item_to_clean, str) :
-        item_to_clean=[item_to_clean]
+    if isinstance(item_to_clean, str):
+        item_to_clean = [item_to_clean]
 
     # if type(item_to_clean ) != list :#or type(item_to_clean ) !=np.ndarray:
     #     if type(item_to_clean ) !=np.ndarray:
     #         item_to_clean=[item_to_clean]
-    if item_to_clean in cleaner or item_to_clean ==['']:
-        #warnings.warn ('No data found for sanitization; returns None.')
+    if item_to_clean in cleaner or item_to_clean == [""]:
+        # warnings.warn ('No data found for sanitization; returns None.')
         return None
-    try :
-        multi_space=int(multi_space)
-    except :
-        raise TypeError('argument <multplier> must be an integer'
-                        f'not {type(multi_space)}')
+    try:
+        multi_space = int(multi_space)
+    except:
+        raise TypeError(
+            f"argument <multplier> must be an integernot {type(multi_space)}"
+        )
 
-    for jj, ss in enumerate(item_to_clean) :
+    for jj, ss in enumerate(item_to_clean):
         for space in cleaner:
-            if space in ss :
-                new_ss=ss.strip(space)
-                item_to_clean[jj]=new_ss
+            if space in ss:
+                new_ss = ss.strip(space)
+                item_to_clean[jj] = new_ss
 
     return item_to_clean
 
-def parse_json(json_fn =None,
-               data=None,
-               todo='load',
-               savepath=None,
-               verbose:int =0,
-               **jsonkws):
-    """ Parse Java Script Object Notation file and collect data from JSON
+
+def parse_json(
+    json_fn=None,
+    data=None,
+    todo="load",
+    savepath=None,
+    verbose: int = 0,
+    **jsonkws,
+):
+    """Parse Java Script Object Notation file and collect data from JSON
     config file.
 
     :param json_fn: Json filename, URL or output JSON name if `data` is
@@ -3339,81 +3575,99 @@ def parse_json(json_fn =None,
         >>> FU.parse_json(json_fn='data/saveJSON/jsontest.json', todo ='load')
 
     """
-    todo, domsg =return_ctask(todo)
+    todo, domsg = return_ctask(todo)
     # read urls by default json_fn can hold a url
-    try :
-        if json_fn.find('http') >=0 :
+    try:
+        if json_fn.find("http") >= 0:
             todo, json_fn, data = fetch_json_data_from_url(json_fn, todo)
     except:
         #'NoneType' object has no attribute 'find' if data is not given
         pass
 
-    if todo.find('dump')>=0:
+    if todo.find("dump") >= 0:
         json_fn = get_config_fname_from_varname(
-            data, config_fname= json_fn, config='.json')
+            data, config_fname=json_fn, config=".json"
+        )
 
-    JSON = dict(load=json.load,# use loads rather than load
-                loads=json.loads,
-                dump= json.dump,
-                dumps= json.dumps)
-    try :
-        if todo=='load': # read JSON files
+    JSON = dict(
+        load=json.load,  # use loads rather than load
+        loads=json.loads,
+        dump=json.dump,
+        dumps=json.dumps,
+    )
+    try:
+        if todo == "load":  # read JSON files
             with open(json_fn) as fj:
-                data =  JSON[todo](fj)
-        elif todo=='loads': # can be JSON string format
+                data = JSON[todo](fj)
+        elif todo == "loads":  # can be JSON string format
             data = JSON[todo](json_fn)
-        elif todo =='dump': # store data in JSON file.
-            with open(f'{json_fn}.json', 'w') as fw:
+        elif todo == "dump":  # store data in JSON file.
+            with open(f"{json_fn}.json", "w") as fw:
                 data = JSON[todo](data, fw, **jsonkws)
-        elif todo=='dumps': # store data in JSON format not output file.
+        elif todo == "dumps":  # store data in JSON format not output file.
             data = JSON[todo](data, **jsonkws)
 
     except json.JSONDecodeError:
-        raise json.JSONDecodeError(f"Unable {domsg} JSON {json_fn!r} file. "
-                              "Please check your file.", f'{json_fn!r}', 1)
+        raise json.JSONDecodeError(
+            f"Unable {domsg} JSON {json_fn!r} file. Please check your file.",
+            f"{json_fn!r}",
+            1,
+        )
     except:
-        msg =''.join([
-        f"{'Unrecognizable file' if todo.find('load')>=0 else'Unable to serialize'}"
-        ])
+        msg = "".join(
+            [
+                f"{'Unrecognizable file' if todo.find('load') >= 0 else 'Unable to serialize'}"
+            ]
+        )
 
-        raise TypeError(f'{msg} {json_fn!r}. Please check your'
-                        f" {'file' if todo.find('load')>=0 else 'data'}.")
+        raise TypeError(
+            f"{msg} {json_fn!r}. Please check your"
+            f" {'file' if todo.find('load') >= 0 else 'data'}."
+        )
 
-    cparser_manager(f'{json_fn}.json',savepath, todo=todo, dpath='_savejson_',
-                    verbose=verbose , config='JSON' )
+    cparser_manager(
+        f"{json_fn}.json",
+        savepath,
+        todo=todo,
+        dpath="_savejson_",
+        verbose=verbose,
+        config="JSON",
+    )
 
     return data
 
-def fetch_json_data_from_url (url:str , todo:str ='load'):
-    """ Retrieve JSON data from url
+
+def fetch_json_data_from_url(url: str, todo: str = "load"):
+    """Retrieve JSON data from url
     :param url: Universal Resource Locator .
     :param todo:  Action to perform with JSON:
         - load: Load data from the JSON file
         - dump: serialize data from the Python object and create a JSON file
     """
-    with urllib.request.urlopen(url) as jresponse :
+    with urllib.request.urlopen(url) as jresponse:
         source = jresponse.read()
     data = json.loads(source)
-    if todo .find('load')>=0:
-        todo , json_fn  ='loads', source
+    if todo.find("load") >= 0:
+        todo, json_fn = "loads", source
 
-    if todo.find('dump')>=0:  # then collect the data and dump it
+    if todo.find("dump") >= 0:  # then collect the data and dump it
         # set json default filename
-        todo, json_fn = 'dumps',  '_urlsourcejsonf.json'
+        todo, json_fn = "dumps", "_urlsourcejsonf.json"
 
     return todo, json_fn, data
 
+
 def parse_csv(
-        csv_fn:str =None,
-        data=None,
-        todo='reader',
-        fieldnames=None,
-        savepath=None,
-        header: bool=False,
-        verbose:int=0,
-        **csvkws
-   ) :
-    """ Parse comma separated file or collect data from CSV.
+    csv_fn: str = None,
+    data=None,
+    todo="reader",
+    fieldnames=None,
+    savepath=None,
+    header: bool = False,
+    verbose: int = 0,
+    **csvkws,
+):
+    """Parse comma separated file or collect data from CSV.
 
     :param csv_fn: csv filename,or output CSV name if `data` is
         given and `todo` is set to ``write|dictwriter``.Otherwise the CSV
@@ -3469,69 +3723,84 @@ def parse_csv(
                          )
 
     """
-    todo, domsg =return_ctask(todo)
+    todo, domsg = return_ctask(todo)
 
-    if todo.find('write')>=0:
+    if todo.find("write") >= 0:
         csv_fn = get_config_fname_from_varname(
-            data, config_fname= csv_fn, config='.csv')
-    try :
-        if todo =='reader':
-            with open (csv_fn) as csv_f :
-                csv_reader = csv.reader(csv_f) # iterator
-                data =[ row for row in csv_reader]
+            data, config_fname=csv_fn, config=".csv"
+        )
+    try:
+        if todo == "reader":
+            with open(csv_fn) as csv_f:
+                csv_reader = csv.reader(csv_f)  # iterator
+                data = [row for row in csv_reader]
 
-        elif todo=='writer':
+        elif todo == "writer":
             # write without a blank line, --> new_line =''
-            with open(f'{csv_fn}.csv', 'w', newline ='',
-                      encoding ='utf8') as new_csvf:
+            with open(
+                f"{csv_fn}.csv", "w", newline="", encoding="utf8"
+            ) as new_csvf:
                 csv_writer = csv.writer(new_csvf, **csvkws)
                 csv_writer.writerows(data) if len(
-                    data ) > 1 else csv_writer.writerow(data)
+                    data
+                ) > 1 else csv_writer.writerow(data)
                 # for row in data:
                 #     csv_writer.writerow(row)
-        elif todo=='dictreader':
-            with open (csv_fn, encoding ='utf8') as csv_f :
+        elif todo == "dictreader":
+            with open(csv_fn, encoding="utf8") as csv_f:
                 # generate an iterator obj
-                csv_reader= csv.DictReader (csv_f, fieldnames= fieldnames)
+                csv_reader = csv.DictReader(csv_f, fieldnames=fieldnames)
                 # return csvobj as a list of dicts
                 data = list(csv_reader)
 
-        elif todo=='dictwriter':
-            with open(f'{csv_fn}.csv', 'w') as new_csvf:
+        elif todo == "dictwriter":
+            with open(f"{csv_fn}.csv", "w") as new_csvf:
                 csv_writer = csv.DictWriter(new_csvf, **csvkws)
                 if header:
                     csv_writer.writeheader()
                 # DictWriter.writerows()expect a list of dicts,
                 # while DictWriter.writerow() expect a single row of dict.
                 csv_writer.writerow(data) if isinstance(
-                    data , dict) else csv_writer.writerows(data)
+                    data, dict
+                ) else csv_writer.writerows(data)
 
     except csv.Error:
-        raise csv.Error(f"Unable {domsg} CSV {csv_fn!r} file. "
-                      "Please check your file.")
+        raise csv.Error(
+            f"Unable {domsg} CSV {csv_fn!r} file. Please check your file."
+        )
     except:
+        msg = "".join(
+            [
+                f"{'Unrecognizable file' if todo.find('read') >= 0 else 'Unable to write'}"
+            ]
+        )
 
-        msg =''.join([
-        f"{'Unrecognizable file' if todo.find('read')>=0 else'Unable to write'}"
-        ])
-
-        raise TypeError(f'{msg} {csv_fn!r}. Please check your'
-                        f" {'file' if todo.find('read')>=0 else 'data'}.")
-    cparser_manager(f'{csv_fn}.csv',savepath, todo=todo, dpath='_savecsv_',
-                    verbose=verbose , config='CSV' )
+        raise TypeError(
+            f"{msg} {csv_fn!r}. Please check your"
+            f" {'file' if todo.find('read') >= 0 else 'data'}."
+        )
+    cparser_manager(
+        f"{csv_fn}.csv",
+        savepath,
+        todo=todo,
+        dpath="_savecsv_",
+        verbose=verbose,
+        config="CSV",
+    )
 
     return data
 
-def return_ctask (todo:Optional[str]=None) -> Tuple [str, str]:
-    """ Get the convenient task to do if users misinput the `todo` action.
+
+def return_ctask(todo: Optional[str] = None) -> Tuple[str, str]:
+    """Get the convenient task to do if users misinput the `todo` action.
 
     :param todo: Action to perform:
         - load: Load data from the config [YAML|CSV|JSON] file
         - dump: serialize data from the Python object and
             create a config [YAML|CSV|JSON] file."""
 
-    def p_csv(v, cond='dict', base='reader'):
-        """ Read csv instead.
+    def p_csv(v, cond="dict", base="reader"):
+        """Read csv instead.
         :param v: str, value to do
         :param cond: str, condition if  found in the value `v`.
         :param base: str, base task to do if condition `cond` is not met.
@@ -3541,42 +3810,52 @@ def return_ctask (todo:Optional[str]=None) -> Tuple [str, str]:
         >>> todo = 'readingbook'
         >>> p_csv(todo) <=> 'dictreader' if todo.find('dict')>=0 else 'reader'
         """
-        return  f'{cond}{base}' if v.find(cond) >=0 else base
+        return f"{cond}{base}" if v.find(cond) >= 0 else base
 
-    ltags = ('load', 'recover', True, 'fetch')
-    dtags = ('serialized', 'dump', 'save', 'write','serialize')
+    ltags = ("load", "recover", True, "fetch")
+    dtags = ("serialized", "dump", "save", "write", "serialize")
     if todo is None:
-        raise ValueError('NoneType action can not be perform. Please '
-                         'specify your action: `load` or `dump`?' )
+        raise ValueError(
+            "NoneType action can not be perform. Please "
+            "specify your action: `load` or `dump`?"
+        )
 
-    todo =str(todo).lower()
-    ltags = list(ltags) + [todo] if  todo=='loads' else ltags
-    dtags= list(dtags) +[todo] if  todo=='dumps' else dtags
+    todo = str(todo).lower()
+    ltags = list(ltags) + [todo] if todo == "loads" else ltags
+    dtags = list(dtags) + [todo] if todo == "dumps" else dtags
 
     if todo in ltags:
-        todo = 'loads' if todo=='loads' else 'load'
-        domsg= 'to parse'
+        todo = "loads" if todo == "loads" else "load"
+        domsg = "to parse"
     elif todo in dtags:
-        todo = 'dumps' if todo=='dumps' else 'dump'
-        domsg  ='to serialize'
-    elif todo.find('read')>=0:
+        todo = "dumps" if todo == "dumps" else "dump"
+        domsg = "to serialize"
+    elif todo.find("read") >= 0:
         todo = p_csv(todo)
-        domsg= 'to read'
-    elif todo.find('write')>=0:
-        todo = p_csv(todo, base ='writer')
-        domsg =' to write'
+        domsg = "to read"
+    elif todo.find("write") >= 0:
+        todo = p_csv(todo, base="writer")
+        domsg = " to write"
 
-    else :
-        raise ValueError(f'Wrong action {todo!r}. Please select'
-                         f' the right action to perform: `load` or `dump`?'
-                        ' for [JSON|YAML] and `read` or `write`? '
-                        'for [CSV].')
+    else:
+        raise ValueError(
+            f"Wrong action {todo!r}. Please select"
+            f" the right action to perform: `load` or `dump`?"
+            " for [JSON|YAML] and `read` or `write`? "
+            "for [CSV]."
+        )
     return todo, domsg
 
-def parse_yaml (yml_fn:str =None, data=None,
-                todo='load', savepath=None,
-                verbose:int =0, **ymlkws) :
-    """ Parse yml file and collect data from YAML config file.
+
+def parse_yaml(
+    yml_fn: str = None,
+    data=None,
+    todo="load",
+    savepath=None,
+    verbose: int = 0,
+    **ymlkws,
+):
+    """Parse yml file and collect data from YAML config file.
 
     :param yml_fn: yaml filename and can be the output YAML name if `data` is
         given and `todo` is set to ``dump``.Otherwise the YAML output filename
@@ -3597,47 +3876,54 @@ def parse_yaml (yml_fn:str =None, data=None,
 
     """
 
-    todo, domsg =return_ctask(todo)
-    #in the case user use dumps or loads with 's'at the end
-    if todo.find('dump')>= 0:
-        todo='dump'
-    if todo.find('load')>=0:
-        todo='load'
-    if todo=='dump':
+    todo, domsg = return_ctask(todo)
+    # in the case user use dumps or loads with 's'at the end
+    if todo.find("dump") >= 0:
+        todo = "dump"
+    if todo.find("load") >= 0:
+        todo = "load"
+    if todo == "dump":
         yml_fn = get_config_fname_from_varname(data, yml_fn)
-    try :
-        if todo=='load':
+    try:
+        if todo == "load":
             with open(yml_fn) as fy:
-                data =  yaml.load(fy, Loader=yaml.SafeLoader)
+                data = yaml.load(fy, Loader=yaml.SafeLoader)
                 # args =yaml.safe_load(fy)
-        elif todo =='dump':
-
-            with open(f'{yml_fn}.yml', 'w') as fw:
+        elif todo == "dump":
+            with open(f"{yml_fn}.yml", "w") as fw:
                 data = yaml.dump(data, fw, **ymlkws)
     except yaml.YAMLError:
-        raise yaml.YAMLError(f"Unable {domsg} YAML {yml_fn!r} file. "
-                             'Please check your file.')
+        raise yaml.YAMLError(
+            f"Unable {domsg} YAML {yml_fn!r} file. Please check your file."
+        )
     except:
-        msg =''.join([
-        f"{'Unrecognizable file' if todo=='load'else'Unable to serialize'}"
-        ])
+        msg = "".join(
+            [
+                f"{'Unrecognizable file' if todo == 'load' else 'Unable to serialize'}"
+            ]
+        )
 
-        raise TypeError(f'{msg} {yml_fn!r}. Please check your'
-                        f" {'file' if todo=='load' else 'data'}.")
+        raise TypeError(
+            f"{msg} {yml_fn!r}. Please check your"
+            f" {'file' if todo == 'load' else 'data'}."
+        )
 
-    cparser_manager(f'{yml_fn}.yml',savepath, todo=todo, dpath='_saveyaml_',
-                    verbose=verbose , config='YAML' )
+    cparser_manager(
+        f"{yml_fn}.yml",
+        savepath,
+        todo=todo,
+        dpath="_saveyaml_",
+        verbose=verbose,
+        config="YAML",
+    )
 
     return data
 
-def cparser_manager (
-    cfile,
-    savepath =None,
-    todo:str ='load',
-    dpath=None,
-    verbose =0,
-    **pkws):
-    """ Save and output message according to the action.
+
+def cparser_manager(
+    cfile, savepath=None, todo: str = "load", dpath=None, verbose=0, **pkws
+):
+    """Save and output message according to the action.
 
     :param cfile: name of the configuration file
     :param savepath: Path-like object
@@ -3649,17 +3935,17 @@ def cparser_manager (
 
     """
     if savepath is not None:
-        if savepath =='default':
+        if savepath == "default":
             savepath = None
-        yml_fn,_= move_cfile(cfile, savepath, dpath=dpath)
+        yml_fn, _ = move_cfile(cfile, savepath, dpath=dpath)
     if verbose > 0:
         print_cmsg(yml_fn, todo, **pkws)
 
 
-def get_config_fname_from_varname(data,
-                                  config_fname=None,
-                                  config='.yml') -> str:
-    """ use the variable name given to data as the config file name.
+def get_config_fname_from_varname(
+    data, config_fname=None, config=".yml"
+) -> str:
+    """use the variable name given to data as the config file name.
 
     :param data: Given data to retrieve the variable name
     :param config_fname: Configurate variable filename. If ``None`` , use
@@ -3670,11 +3956,12 @@ def get_config_fname_from_varname(data,
 
     """
     try:
-        if '.' in config:
-            config =config.replace('.','')
-    except:pass # in the case None is given
+        if "." in config:
+            config = config.replace(".", "")
+    except:
+        pass  # in the case None is given
 
-    if config_fname is None: # get the varname
+    if config_fname is None:  # get the varname
         # try :
         #     from varname.helpers import Wrapper
         # except ImportError:
@@ -3683,32 +3970,37 @@ def get_config_fname_from_varname(data,
         #     if import_varname:
         #         from varname.helpers import Wrapper
         # else : import_varname=True
-        try :
-            for c, n in zip(['yml', 'yaml', 'json', 'csv'],
-                            ['cy.data', 'cy.data', 'cj.data',
-                             'c.data']):
-                if config ==c:
-                    config_fname= n
+        try:
+            for c, n in zip(
+                ["yml", "yaml", "json", "csv"],
+                ["cy.data", "cy.data", "cj.data", "c.data"],
+            ):
+                if config == c:
+                    config_fname = n
                     break
             if config_fname is None:
-                raise # and go to except
+                raise  # and go to except
         except:
-            #using fstring
-            config_fname= f'{data}'.split('=')[0]
+            # using fstring
+            config_fname = f"{data}".split("=")[0]
 
     elif config_fname is not None:
-        config_fname= config_fname.replace(
-            f'.{config}', '').replace(f'.{config}', '').replace('.yaml', '')
+        config_fname = (
+            config_fname.replace(f".{config}", "")
+            .replace(f".{config}", "")
+            .replace(".yaml", "")
+        )
 
     return config_fname
 
+
 def pretty_printer(
-        clfs: List[F],
-        clf_score:List[float]=None,
-        scoring: Optional[str] =None,
-        **kws
- )->None:
-    """ Format and pretty print messages after gridSearch using multiples
+    clfs: List[F],
+    clf_score: List[float] = None,
+    scoring: Optional[str] = None,
+    **kws,
+) -> None:
+    """Format and pretty print messages after gridSearch using multiples
     estimators.
 
     Display for each estimator, its name, it best params with higher score
@@ -3726,41 +4018,54 @@ def pretty_printer(
     scoring: str
         Scoring used for grid search.
     """
-    empty =kws.pop('empty', ' ')
-    e_pad =kws.pop('e_pad', 2)
-    p=list()
+    empty = kws.pop("empty", " ")
+    e_pad = kws.pop("e_pad", 2)
+    p = list()
 
-    if not isinstance(clfs, (list,tuple)):
-        clfs =(clfs, clf_score)
+    if not isinstance(clfs, (list, tuple)):
+        clfs = (clfs, clf_score)
 
     for ii, (clf, clf_be, clf_bp, clf_sc) in enumerate(clfs):
-        s_=[e_pad* empty + f'{clf.__class__.__name__:<20}:' + '{:<20}:'.format(
-                f'Best-estimator <{ii+1}>') +f'{clf_be}',
-         e_pad* empty +'{:<20}:'.format(' ')+ '{:<20}:'.format(
-            'Best paramaters') + f'{clf_bp}',
-         e_pad* empty  +'{:<20}:'.format(' ') + '{:<20}:'.format(
-            f'scores<`{scoring}`>') +f'{clf_sc}']
-        try :
-            s0= [e_pad* empty +'{:<20}:'.format(' ')+ '{:<20}:'.format(
-            'scores mean')+ f'{clf_sc.mean()}']
+        s_ = [
+            e_pad * empty
+            + f"{clf.__class__.__name__:<20}:"
+            + "{:<20}:".format(f"Best-estimator <{ii + 1}>")
+            + f"{clf_be}",
+            e_pad * empty
+            + "{:<20}:".format(" ")
+            + "{:<20}:".format("Best paramaters")
+            + f"{clf_bp}",
+            e_pad * empty
+            + "{:<20}:".format(" ")
+            + "{:<20}:".format(f"scores<`{scoring}`>")
+            + f"{clf_sc}",
+        ]
+        try:
+            s0 = [
+                e_pad * empty
+                + "{:<20}:".format(" ")
+                + "{:<20}:".format("scores mean")
+                + f"{clf_sc.mean()}"
+            ]
         except AttributeError:
-            s0= [e_pad* empty +'{:<20}:'.format(' ')+ '{:<20}:'.format(
-            'scores mean')+ 'None']
-            s_ +=s0
-        else :
-            s_ +=s0
+            s0 = [
+                e_pad * empty
+                + "{:<20}:".format(" ")
+                + "{:<20}:".format("scores mean")
+                + "None"
+            ]
+            s_ += s0
+        else:
+            s_ += s0
 
         p.extend(s_)
 
     for i in p:
         print(i)
 
-def move_cfile (
-    cfile:str ,
-    savepath:Optional[str]=None,
-    **ckws
-    ) :
-    """ Move file to its savepath and output message.
+
+def move_cfile(cfile: str, savepath: Optional[str] = None, **ckws):
+    """Move file to its savepath and output message.
 
     If path does not exist, should create one to save data.
     :param cfile: name of the configuration file
@@ -3772,35 +4077,45 @@ def move_cfile (
         - out message
     """
     savepath = cpath(savepath, **ckws)
-    try :shutil.move(cfile, savepath)
+    try:
+        shutil.move(cfile, savepath)
     except:
-        shutil.copy2 (cfile, savepath )
-        os.remove (cfile)
+        shutil.copy2(cfile, savepath)
+        os.remove(cfile)
         # delete file
         # warnings.warn("It seems the path already exists!")
     cfile = os.path.join(savepath, cfile)
 
-    msg = (f'--> {os.path.basename(cfile)!r} data was successfully'
-          f' saved to {os.path.realpath(cfile)!r}.')
+    msg = (
+        f"--> {os.path.basename(cfile)!r} data was successfully"
+        f" saved to {os.path.realpath(cfile)!r}."
+    )
 
     return cfile, msg
 
-def print_cmsg(cfile:str, todo:str='load', config:str='YAML') -> str:
-    """ Output configuration message.
+
+def print_cmsg(cfile: str, todo: str = "load", config: str = "YAML") -> str:
+    """Output configuration message.
 
     :param cfile: name of the configuration file
     :param todo: Action to perform with config file. Can be
         ``load`` or ``dump``
     :param config: Type of configuration file. Can be [YAML|CSV|JSON]
     """
-    if todo=='load':
-        msg = ''.join([
-        f'--> Data was successfully stored to {os.path.basename(cfile)!r}',
-            f' and saved to {os.path.realpath(cfile)!r}.']
-            )
-    elif todo=='dump':
-        msg =''.join([ f"--> {config.upper()} {os.path.basename(cfile)!r}",
-                      " data was sucessfully loaded."])
+    if todo == "load":
+        msg = "".join(
+            [
+                f"--> Data was successfully stored to {os.path.basename(cfile)!r}",
+                f" and saved to {os.path.realpath(cfile)!r}.",
+            ]
+        )
+    elif todo == "dump":
+        msg = "".join(
+            [
+                f"--> {config.upper()} {os.path.basename(cfile)!r}",
+                " data was sucessfully loaded.",
+            ]
+        )
     return msg
 
 
@@ -3830,10 +4145,15 @@ def random_state_validator(seed):
         f"{seed!r} cannot be used to seed a numpy.random.RandomState instance"
     )
 
-def is_iterable (
-        y, /, exclude_string= False, transform = False , parse_string =False,
-)->bool | list:
-    r""" Asserts iterable object and returns boolean or transform object into
+
+def is_iterable(
+    y,
+    /,
+    exclude_string=False,
+    transform=False,
+    parse_string=False,
+) -> bool | list:
+    r"""Asserts iterable object and returns boolean or transform object into
      an iterable.
 
     Function can also transform a non-iterable object to an iterable if
@@ -3875,19 +4195,24 @@ def is_iterable (
                      transform =True)
     Out[40]: ['parse', 'iterable', 'object']
     """
-    if (parse_string and not transform) and isinstance (y, str):
-        raise ValueError ("Cannot parse the given string. Set 'transform' to"
-                          " ``True`` otherwise use the 'str2columns' utils"
-                          " from 'watex.utils.funcutils' instead.")
+    if (parse_string and not transform) and isinstance(y, str):
+        raise ValueError(
+            "Cannot parse the given string. Set 'transform' to"
+            " ``True`` otherwise use the 'str2columns' utils"
+            " from 'watex.utils.funcutils' instead."
+        )
     y = str2columns(y) if isinstance(y, str) and parse_string else y
 
-    isiter = False  if exclude_string and isinstance (
-        y, str) else hasattr (y, '__iter__')
+    isiter = (
+        False
+        if exclude_string and isinstance(y, str)
+        else hasattr(y, "__iter__")
+    )
 
-    return ( y if isiter else [ y ] )  if transform else isiter
+    return (y if isiter else [y]) if transform else isiter
 
 
-def str2columns (text, /, regex=None , pattern = None):
+def str2columns(text, /, regex=None, pattern=None):
     r"""Split text from the non-alphanumeric markers using regular expression.
 
     Remove all string non-alphanumeric and some operator indicators,  and
@@ -3932,16 +4257,22 @@ def str2columns (text, /, regex=None , pattern = None):
          'text']
 
     """
-    pattern = pattern or  r'[#&.*@!_,;\s-]\s*'
-    regex = regex or re.compile (pattern, flags=re.IGNORECASE)
-    text= list(filter (None, regex.split(str(text))))
+    pattern = pattern or r"[#&.*@!_,;\s-]\s*"
+    regex = regex or re.compile(pattern, flags=re.IGNORECASE)
+    text = list(filter(None, regex.split(str(text))))
     return text
 
+
 def sanitize_frame_cols(
-        d, /, func:F = None , regex=None, pattern:str = None,
-        fill_pattern:str =None, inplace:bool =False
-        ):
-    r""" Remove an indesirable characters and returns new columns
+    d,
+    /,
+    func: F = None,
+    regex=None,
+    pattern: str = None,
+    fill_pattern: str = None,
+    inplace: bool = False,
+):
+    r"""Remove an indesirable characters and returns new columns
 
     Use regular expression for columns sanitizing
 
@@ -3991,43 +4322,51 @@ def sanitize_frame_cols(
     ... Index(['depth's top', 'depth's bottom', 'strata's name'], dtype='object')
 
     """
-    isf , iss= False , False
-    pattern = pattern or r'[_#&.)(*@!_,;\s-]\s*'
-    fill_pattern = fill_pattern or ''
+    isf, iss = False, False
+    pattern = pattern or r"[_#&.)(*@!_,;\s-]\s*"
+    fill_pattern = fill_pattern or ""
     fill_pattern = str(fill_pattern)
 
-    regex = regex or re.compile (pattern, flags=re.IGNORECASE)
+    regex = regex or re.compile(pattern, flags=re.IGNORECASE)
 
     if isinstance(d, pd.Series):
         c = [d.name]
-        iss =True
-    elif isinstance (d, pd.DataFrame ) :
+        iss = True
+    elif isinstance(d, pd.DataFrame):
         c = list(d.columns)
         isf = True
 
-    else :
-        if not is_iterable(d) : c = [d]
-        else : c = d
+    else:
+        if not is_iterable(d):
+            c = [d]
+        else:
+            c = d
 
     if inspect.isfunction(func):
-        c = list( map (func , c ) )
+        c = list(map(func, c))
 
-    else : c =list(map (
-        lambda r : regex.sub(fill_pattern, r.strip() ), c ))
+    else:
+        c = list(map(lambda r: regex.sub(fill_pattern, r.strip()), c))
 
-    if isf :
-        if inplace : d.columns = c
-        else : d =pd.DataFrame(d.values, columns =c )
+    if isf:
+        if inplace:
+            d.columns = c
+        else:
+            d = pd.DataFrame(d.values, columns=c)
 
     elif iss:
-        if inplace: d.name = c[0]
-        else : d= pd.Series (data =d.values, name =c[0] )
+        if inplace:
+            d.name = c[0]
+        else:
+            d = pd.Series(data=d.values, name=c[0])
 
-    else : d = c
+    else:
+        d = c
 
     return d
 
-def to_hdf5(d, /, fn, objname =None, close =True,  **hdf5_kws):
+
+def to_hdf5(d, /, fn, objname=None, close=True, **hdf5_kws):
     """
     Store a frame data in hierachical data format 5 (HDF5)
 
@@ -4094,41 +4433,38 @@ def to_hdf5(d, /, fn, objname =None, close =True,  **hdf5_kws):
     ... Index(['hole_number', 'depth_top', 'depth_bottom'], dtype='object')
 
     """
-    store =None
-    if (
-        not hasattr (d, '__array__')
-        or not hasattr (d, 'columns')
-            ) :
-        raise TypeError ("Expect an array or dataframe,"
-                         f" not {type (d).__name__!r}")
+    store = None
+    if not hasattr(d, "__array__") or not hasattr(d, "columns"):
+        raise TypeError(
+            f"Expect an array or dataframe, not {type(d).__name__!r}"
+        )
 
-    if hasattr (d, '__array__') and hasattr (d, "columns"):
+    if hasattr(d, "__array__") and hasattr(d, "columns"):
         # assert whether pytables is installed
-        import_optional_dependency ('tables')
+        import_optional_dependency("tables")
         # remove extension if exist.
-        fn = str(fn).replace ('.h5', "").replace(".hdf5", "")
+        fn = str(fn).replace(".h5", "").replace(".hdf5", "")
         # then store.
-        store = pd.HDFStore(fn +'.h5' ,  **hdf5_kws)
-        objname = objname or 'data'
-        store[ str(objname) ] = d
+        store = pd.HDFStore(fn + ".h5", **hdf5_kws)
+        objname = objname or "data"
+        store[str(objname)] = d
 
-
-    elif not hasattr(d, '__array__'):
+    elif not hasattr(d, "__array__"):
         d = np.asarray(d)
 
-        store= h5py.File(f"{fn}.hdf5", "w")
-        store.create_dataset("dataset_01", store.shape,
-                             dtype=store.dtype,
-                             data=store
-                             )
+        store = h5py.File(f"{fn}.hdf5", "w")
+        store.create_dataset(
+            "dataset_01", store.shape, dtype=store.dtype, data=store
+        )
 
-    if close : store.close ()
+    if close:
+        store.close()
 
     return store
 
 
-def find_by_regex (o , /, pattern,  func = re.match, **kws ):
-    r""" Find pattern in object whatever an "iterable" or not.
+def find_by_regex(o, /, pattern, func=re.match, **kws):
+    r"""Find pattern in object whatever an "iterable" or not.
 
     when we talk about iterable, a string value is not included.
 
@@ -4184,29 +4520,36 @@ def find_by_regex (o , /, pattern,  func = re.match, **kws ):
 
     """
     om = []
-    if isinstance (o, str):
-        om = func ( pattern=pattern , string = o, **kws)
+    if isinstance(o, str):
+        om = func(pattern=pattern, string=o, **kws)
         if om:
-            om= om.group()
-        om =[om]
+            om = om.group()
+        om = [om]
     elif is_iterable(o):
         o = list(o)
-        for s in o :
-            z = func (pattern =pattern , string = s, **kws)
-            if z :
-                om.append (s)
+        for s in o:
+            z = func(pattern=pattern, string=s, **kws)
+            if z:
+                om.append(s)
 
-    if func.__name__=='findall':
-        om = list(itertools.chain (*om ))
+    if func.__name__ == "findall":
+        om = list(itertools.chain(*om))
     # keep None is nothing
     # fit the corresponding pattern
-    if len(om) ==0 or om[0] is None:
+    if len(om) == 0 or om[0] is None:
         om = None
-    return  om
+    return om
 
-def is_in_if (o: iter, /, items: str | iter, error = 'raise',
-               return_diff =False, return_intersect = False):
-    """ Raise error if item is not  found in the iterable object 'o'
+
+def is_in_if(
+    o: iter,
+    /,
+    items: str | iter,
+    error="raise",
+    return_diff=False,
+    return_intersect=False,
+):
+    """Raise error if item is not  found in the iterable object 'o'
 
     :param o: unhashable type, iterable object,
         object for checkin. It assumes to be an iterable from which 'items'
@@ -4252,49 +4595,61 @@ def is_in_if (o: iter, /, items: str | iter, error = 'raise',
          'hole_id']
     """
 
-    if isinstance (items, str):
-        items =[items]
+    if isinstance(items, str):
+        items = [items]
     elif not is_iterable(o):
-        raise TypeError (f"Expect an iterable object, not {type(o).__name__!r}")
+        raise TypeError(
+            f"Expect an iterable object, not {type(o).__name__!r}"
+        )
     # find intersect object
-    s= set (o).intersection (items)
+    s = set(o).intersection(items)
 
-    miss_items = list(s.difference (o)) if len(s) > len(
-        items) else list(set(items).difference (s))
+    miss_items = (
+        list(s.difference(o))
+        if len(s) > len(items)
+        else list(set(items).difference(s))
+    )
 
     if return_diff or return_intersect:
-        error ='ignore'
+        error = "ignore"
 
-    if len(miss_items)!=0 :
-        if error =='raise':
-            v= smart_format(miss_items)
-            verb = f"{ ' '+ v +' is' if len(miss_items)<2 else  's '+ v + 'are'}"
-            raise ValueError (
-                f"Item{verb} missing in the {type(o).__name__.lower()} {o}.")
+    if len(miss_items) != 0:
+        if error == "raise":
+            v = smart_format(miss_items)
+            verb = f"{' ' + v + ' is' if len(miss_items) < 2 else 's ' + v + 'are'}"
+            raise ValueError(
+                f"Item{verb} missing in the {type(o).__name__.lower()} {o}."
+            )
 
-
-    if return_diff :
+    if return_diff:
         # get difference
-        s = list(set(o).difference (s))  if len(o) > len(
-            s) else list(set(items).difference (s))
+        s = (
+            list(set(o).difference(s))
+            if len(o) > len(s)
+            else list(set(items).difference(s))
+        )
         # s = set(o).difference (s)
     elif return_intersect:
-        s = list(set(o).intersection(s))  if len(o) > len(
-            items) else list(set(items).intersection (s))
+        s = (
+            list(set(o).intersection(s))
+            if len(o) > len(items)
+            else list(set(items).intersection(s))
+        )
 
-    s = None if len(s)==0 else list (s)
+    s = None if len(s) == 0 else list(s)
 
     return s
 
-def map_specific_columns (
-        X: DataFrame,
-        ufunc:F ,
-        columns_to_skip:List[str]=None,
-        pattern:str=None,
-        inplace:bool= False,
-        **kws
-        ):
-    r""" Apply function to a specific columns is the dataframe.
+
+def map_specific_columns(
+    X: DataFrame,
+    ufunc: F,
+    columns_to_skip: List[str] = None,
+    pattern: str = None,
+    inplace: bool = False,
+    **kws,
+):
+    r"""Apply function to a specific columns is the dataframe.
 
     It is possible to skip some columns that we want operation to not be
     performed.
@@ -4365,39 +4720,43 @@ def map_specific_columns (
     """
     X = _assert_all_types(X, pd.DataFrame)
     if not callable(ufunc):
-        raise TypeError ("Expect a function for `ufunc`; "
-                         f"got {type(ufunc).__name__!r}")
+        raise TypeError(
+            f"Expect a function for `ufunc`; got {type(ufunc).__name__!r}"
+        )
 
-    pattern = pattern or r'[#&*@!,;\s]\s*'
-    if not is_iterable( columns_to_skip):
-        raise TypeError ("Columns  to skip expect an iterable object;"
-                         f" got {type(columns_to_skip).__name__!r}")
+    pattern = pattern or r"[#&*@!,;\s]\s*"
+    if not is_iterable(columns_to_skip):
+        raise TypeError(
+            "Columns  to skip expect an iterable object;"
+            f" got {type(columns_to_skip).__name__!r}"
+        )
 
     if isinstance(columns_to_skip, str):
-        columns_to_skip = str2columns (columns_to_skip, pattern=pattern  )
-    #assert whether column to skip is in
+        columns_to_skip = str2columns(columns_to_skip, pattern=pattern)
+    # assert whether column to skip is in
     if columns_to_skip:
         cskip = copy.deepcopy(columns_to_skip)
-        columns_to_skip = is_in_if(X.columns, columns_to_skip, return_diff= True)
-        if len(columns_to_skip) ==len (X.columns):
+        columns_to_skip = is_in_if(
+            X.columns, columns_to_skip, return_diff=True
+        )
+        if len(columns_to_skip) == len(X.columns):
             warnings.warn("Value(s) to skip are not detected.", stacklevel=2)
     elif columns_to_skip is None:
         columns_to_skip = list(X.columns)
 
-    if inplace :
-        X[columns_to_skip] = X[columns_to_skip].apply (
-            ufunc , **kws)
-        X.drop (columns = cskip , inplace =True )
+    if inplace:
+        X[columns_to_skip] = X[columns_to_skip].apply(ufunc, **kws)
+        X.drop(columns=cskip, inplace=True)
         return
     if not inplace:
         X0 = X.copy()
-        X0[columns_to_skip] = X0[columns_to_skip].apply (
-            ufunc , **kws)
+        X0[columns_to_skip] = X0[columns_to_skip].apply(ufunc, **kws)
 
-        return  X0
+        return X0
 
-def is_depth_in (X, name, columns = None, error= 'ignore'):
-    """ Assert wether depth exists in the data from column attributes.
+
+def is_depth_in(X, name, columns=None, error="ignore"):
+    """Assert wether depth exists in the data from column attributes.
 
     If name is an integer value, it assumes to be the index in the columns
     of the dataframe if not exist , a warming will be show to user.
@@ -4421,75 +4780,81 @@ def is_depth_in (X, name, columns = None, error= 'ignore'):
         Dataframe without the depth columns and depth values.
     """
 
-    X= _assert_all_types( X, pd.DataFrame )
+    X = _assert_all_types(X, pd.DataFrame)
     if columns is not None:
         columns = list(columns)
         if not is_iterable(columns):
-            raise TypeError("columns expects an iterable object."
-                            f" got {type (columns).__name__!r}")
-        if len(columns ) != len(X.columns):
-            warnings.warn("Cannot rename columns with new labels. Expect "
-                          "a size to be consistent with the columns X."
-                          f" {len(columns)} and {len(X.columns)} are given.", stacklevel=2
-                          )
-        else :
-            X.columns = columns # rename columns
+            raise TypeError(
+                "columns expects an iterable object."
+                f" got {type(columns).__name__!r}"
+            )
+        if len(columns) != len(X.columns):
+            warnings.warn(
+                "Cannot rename columns with new labels. Expect "
+                "a size to be consistent with the columns X."
+                f" {len(columns)} and {len(X.columns)} are given.",
+                stacklevel=2,
+            )
+        else:
+            X.columns = columns  # rename columns
 
-    else:  columns = list(X.columns)
+    else:
+        columns = list(X.columns)
 
-    _assert_all_types(name,str, int, float )
+    _assert_all_types(name, str, int, float)
 
     # if name is given as indices
     # collect the name at that index
-    if isinstance (name, (int, float) )  :
-        name = int (name )
+    if isinstance(name, (int, float)):
+        name = int(name)
         if name > len(columns):
-            warnings.warn ("Name index {name} is out of the columns range."
-                           f" Max index of columns is {len(columns)}", stacklevel=2)
+            warnings.warn(
+                "Name index {name} is out of the columns range."
+                f" Max index of columns is {len(columns)}",
+                stacklevel=2,
+            )
             name = None
-        else :
-            name = columns.pop (name)
+        else:
+            name = columns.pop(name)
 
-    elif isinstance (name, str):
+    elif isinstance(name, str):
         # find in columns whether a name can be
         # found. Note that all name does not need
         # to be written completely
         # for instance name =depth can retrieved
         # ['depth_top, 'depth_bottom'] , in that case
         # the first occurence is selected i.e. 'depth_top'
-        n = find_by_regex(
-            columns, pattern=fr'{name}', func=re.search)
+        n = find_by_regex(columns, pattern=rf"{name}", func=re.search)
 
         if n is not None:
             name = n[0]
 
         # for consistency , recheck all and let
         # a warning to user
-        if name not in columns :
+        if name not in columns:
             msg = f"Name {name!r} does not match any column names."
-            if error =='raise':
-                raise ValueError (msg)
+            if error == "raise":
+                raise ValueError(msg)
 
             warnings.warn(msg, stacklevel=2)
-            name =None
+            name = None
 
     # now create a pseudo-depth
     # as a range of len X
     if name is None:
-        if error =='raise':
-            raise ValueError ("Depth column not found in dataframe."
-                              )
-        depth = pd.Series ( np.arange ( len(X)), name ='depth (m)')
-    else :
+        if error == "raise":
+            raise ValueError("Depth column not found in dataframe.")
+        depth = pd.Series(np.arange(len(X)), name="depth (m)")
+    else:
         # if depth name exists,
         # remove it from X
-        depth = X.pop (name )
+        depth = X.pop(name)
 
-    return  X , depth
+    return X, depth
 
 
-def count_func (path , verbose = 0 ):
-    """ Count function and method using 'ast' modules
+def count_func(path, verbose=0):
+    """Count function and method using 'ast' modules
 
     Parameters
     -----------
@@ -4505,54 +4870,68 @@ def count_func (path , verbose = 0 ):
 
     """
 
-    cobj ={}
-    import_optional_dependency('ast')
+    cobj = {}
+    import_optional_dependency("ast")
     import ast
-    class CountFunc (ast.NodeVisitor):
-        func_count=0
+
+    class CountFunc(ast.NodeVisitor):
+        func_count = 0
+
         # def visit_FunctionDef(self, node):
         #     self.func_count +=1
         # def visit_Lambda(self, node):
         #     self.func_count +=1
         def visit_ClassDef(self, node):
-            self.func_count +=1
+            self.func_count += 1
+
         # def visit_Module(self, node):
         #     self.func_count +=1
         # def visit_Call(self, node):
         #     self.func_count +=1
 
-    if os.path.isdir (path):
-        pyfiles = [ os.path.join (path , f)
-                   for f in os.listdir (path) if f.endswith ('.py') ]
-    elif os.path.isfile (path) :
-        pyfiles = [ path ]
-    else :
-        raise TypeError (f"Expects a path-like object, got {path!r}")
+    if os.path.isdir(path):
+        pyfiles = [
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if f.endswith(".py")
+        ]
+    elif os.path.isfile(path):
+        pyfiles = [path]
+    else:
+        raise TypeError(f"Expects a path-like object, got {path!r}")
 
-    val=0
+    val = 0
 
-    if verbose :
-        print(f"module = {os.path.dirname (pyfiles[0]):^12}")
-    for mod in pyfiles :
-
-        p=ast.parse (open(mod, encoding='utf-8').read())
-        f= CountFunc()
+    if verbose:
+        print(f"module = {os.path.dirname(pyfiles[0]):^12}")
+    for mod in pyfiles:
+        p = ast.parse(open(mod, encoding="utf-8").read())
+        f = CountFunc()
         f.visit(p)
-        cobj[os.path.basename (mod)]= f.func_count
+        cobj[os.path.basename(mod)] = f.func_count
         val += f.func_count
         if verbose:
-            print("### {:^7}{:<17} ={:>7}".format (' ', os.path.basename (mod),
-                                              f.func_count ))
+            print(
+                "### {:^7}{:<17} ={:>7}".format(
+                    " ", os.path.basename(mod), f.func_count
+                )
+            )
 
     print(f">>>Total = {val:>24}") if verbose else print()
 
     return cobj if not verbose else None
 
 
-def smart_label_classifier (
-        arr: ArrayLike, /, values: float | List[float]= None , labels =None,
-        order ='soft', func: F=None, raise_warn=True):
-    """ map smartly the numeric array into a class labels from a map function
+def smart_label_classifier(
+    arr: ArrayLike,
+    /,
+    values: float | List[float] = None,
+    labels=None,
+    order="soft",
+    func: F = None,
+    raise_warn=True,
+):
+    """map smartly the numeric array into a class labels from a map function
     or a given fixed values.
 
     New classes created from the fixed values can be renamed if `labels`
@@ -4614,125 +4993,152 @@ def smart_label_classifier (
     array(['l1', 'l1', 'l1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=object)
 
     """
-    name =None
+    name = None
     from .validator import _is_arraylike_1d
-    if hasattr(arr, "name") and isinstance (arr, pd.Series):
+
+    if hasattr(arr, "name") and isinstance(arr, pd.Series):
         name = arr.name
 
-    arr= np.array (arr)
+    arr = np.array(arr)
 
     if not _is_arraylike_1d(arr):
-        raise TypeError ("Expects a one-dimensional array, got array with"
-                         f" shape {arr.shape }")
+        raise TypeError(
+            "Expects a one-dimensional array, got array with"
+            f" shape {arr.shape}"
+        )
 
-    if isinstance (values, str):
-        values = str2columns(values )
+    if isinstance(values, str):
+        values = str2columns(values)
     if values is not None:
-        values = is_iterable(values, parse_string =True, transform = True )
+        values = is_iterable(values, parse_string=True, transform=True)
     # if (values is not None
     #     and not is_iterable( values)):
     #     values =[values ]
 
     if values is not None:
-        approx_vs=list()
-        values_ =np.zeros ((len(values), ), dtype =float )
-        for i, v in enumerate (values ) :
-            try : v= float (v)
-            except TypeError as type_error :
-                raise TypeError (
-                    f"Value {v} must be a valid number." + str(type_error))
-            diff_v = np.abs (arr[~np.isnan(arr)] - v )
+        approx_vs = list()
+        values_ = np.zeros((len(values),), dtype=float)
+        for i, v in enumerate(values):
+            try:
+                v = float(v)
+            except TypeError as type_error:
+                raise TypeError(
+                    f"Value {v} must be a valid number." + str(type_error)
+                )
+            diff_v = np.abs(arr[~np.isnan(arr)] - v)
 
-            ix_v = np.argmin (diff_v)
-            if order =='strict' and diff_v [ix_v]!=0. :
-                raise ValueError (
+            ix_v = np.argmin(diff_v)
+            if order == "strict" and diff_v[ix_v] != 0.0:
+                raise ValueError(
                     f" Value {v} is missing the array. {v} must be an item"
                     " existing in the array or turn order to 'soft' for"
-                    " approximate values selectors. ")
+                    " approximate values selectors. "
+                )
 
             # skip NaN in the case array contains NaN values
             values_[i] = arr[~np.isnan(arr)][ix_v]
 
-            if diff_v [ix_v]!=0.:
-                approx_vs.append ((v, arr[~np.isnan(arr)][ix_v]))
+            if diff_v[ix_v] != 0.0:
+                approx_vs.append((v, arr[~np.isnan(arr)][ix_v]))
 
-        if len(approx_vs) !=0 and raise_warn:
-            vv, aa = zip (*approx_vs)
-            verb ="are" if len(vv)>1 else "is"
-            warnings.warn(f"Values {vv} are missing in the array. {aa} {verb}"
-                          f" approximatively used for substituting the {vv}.", stacklevel=2)
-    arr_ = arr.copy ()
+        if len(approx_vs) != 0 and raise_warn:
+            vv, aa = zip(*approx_vs)
+            verb = "are" if len(vv) > 1 else "is"
+            warnings.warn(
+                f"Values {vv} are missing in the array. {aa} {verb}"
+                f" approximatively used for substituting the {vv}.",
+                stacklevel=2,
+            )
+    arr_ = arr.copy()
 
     ####
-    if (func is None and values is None ):
-        raise TypeError ("'ufunc' cannot be None when the values are not given")
+    if func is None and values is None:
+        raise TypeError(
+            "'ufunc' cannot be None when the values are not given"
+        )
 
-    dfunc =None
+    dfunc = None
 
     if values is not None:
+
         def dfunc(k):
-            return _smart_mapper (k, kr = values_ )
-    func = func or  dfunc
+            return _smart_mapper(k, kr=values_)
+
+    func = func or dfunc
 
     # func_vectorized  =np.vectorize(func )
     # arr_ = func_vectorized( arr )
-    arr_ = pd.Series (arr_, name ='temp').map (func).values
+    arr_ = pd.Series(arr_, name="temp").map(func).values
 
-    d={}
+    d = {}
     if labels is not None:
-        labels = is_iterable(labels, parse_string=True, transform =True )
+        labels = is_iterable(labels, parse_string=True, transform=True)
         # if isinstance (labels, str):
         #     labels = str2columns(labels )
-        labels, d = _assert_labels_from_values (
-            arr_, values_ , labels , d, raise_warn= raise_warn , order =order
-            )
+        labels, d = _assert_labels_from_values(
+            arr_, values_, labels, d, raise_warn=raise_warn, order=order
+        )
 
-    arr_ = arr_ if labels is None else (
-        pd.Series (arr_, name = name or 'tname').map(d))
+    arr_ = (
+        arr_
+        if labels is None
+        else (pd.Series(arr_, name=name or "tname").map(d))
+    )
 
     # if name is None: # for consisteny if labels is None
-    arr_= (arr_.values if labels is not None else arr_
-           ) if name is None else pd.Series (arr_, name = name )
+    arr_ = (
+        (arr_.values if labels is not None else arr_)
+        if name is None
+        else pd.Series(arr_, name=name)
+    )
 
     return arr_
 
-def _assert_labels_from_values (ar, values , labels , d=None,
-                                raise_warn= True , order ='soft'):
-    """ Isolated part of the :func:`~.smart_label_classifier`"""
+
+def _assert_labels_from_values(
+    ar, values, labels, d=None, raise_warn=True, order="soft"
+):
+    """Isolated part of the :func:`~.smart_label_classifier`"""
     from .validator import _check_consistency_size
 
     if d is None:
         d = {}
-    nlabels = list(np.unique (ar))
+    nlabels = list(np.unique(ar))
     if not is_iterable(labels):
-        labels =[labels]
-    if not _check_consistency_size(nlabels, labels, error ='ignore'):
-        if order=='strict':
-            verb= "were" if len (labels) > 1 else "was"
-            raise TypeError (
+        labels = [labels]
+    if not _check_consistency_size(nlabels, labels, error="ignore"):
+        if order == "strict":
+            verb = "were" if len(labels) > 1 else "was"
+            raise TypeError(
                 "Expect {len(nlabels)} labels for the {len(values)} values"
-                f" renaming. {len(labels)} {verb} given.")
+                f" renaming. {len(labels)} {verb} given."
+            )
 
-        verb ="s are" if len(values)>1 else " is"
-        msg = (f"{len(values)} value{verb} passed. Labels for"
-                " renaming values expect to be composed of"
-                f" {len(values)+1} items i.e. 'number of values"
-                " + 1' for pure categorization.")
-        ur_classes = nlabels [len(labels):]
-        labels = list(labels ) + ur_classes
-        labels = labels [:len(nlabels)]
-        msg += (f" Class{'es' if len(ur_classes)>1 else ''}"
-                f" {smart_format(ur_classes)} cannot be renamed." )
+        verb = "s are" if len(values) > 1 else " is"
+        msg = (
+            f"{len(values)} value{verb} passed. Labels for"
+            " renaming values expect to be composed of"
+            f" {len(values) + 1} items i.e. 'number of values"
+            " + 1' for pure categorization."
+        )
+        ur_classes = nlabels[len(labels) :]
+        labels = list(labels) + ur_classes
+        labels = labels[: len(nlabels)]
+        msg += (
+            f" Class{'es' if len(ur_classes) > 1 else ''}"
+            f" {smart_format(ur_classes)} cannot be renamed."
+        )
 
         if raise_warn:
-            warnings.warn (msg, stacklevel=2 )
+            warnings.warn(msg, stacklevel=2)
 
-    d = dict (zip (nlabels , labels ))
+    d = dict(zip(nlabels, labels))
 
     return labels, d
 
-def _smart_mapper (k, /,  kr , return_dict_map =False ) :
-    """ Default  mapping using dict to validate the continue  value 'k'
+
+def _smart_mapper(k, /, kr, return_dict_map=False):
+    """Default  mapping using dict to validate the continue  value 'k'
     :param k: float,
         continue value to be framed between `kr`
     :param kr: Tuple,
@@ -4748,137 +5154,152 @@ def _smart_mapper (k, /,  kr , return_dict_map =False ) :
 
     """
     import math
-    if len(kr )==1 :
-        d = {0:  k <=kr[0], 1: k > kr[0]}
-    elif len(kr)==2:
-        d = {0: k <=kr[0], 1: kr[0] < k <= kr[1],  2: k > kr[1]}
-    else :
-        d= dict()
-        for ii  in range (len(kr) + 1  ):
-            if ii ==0:
-                d[ii]= k <= kr[ii]
+
+    if len(kr) == 1:
+        d = {0: k <= kr[0], 1: k > kr[0]}
+    elif len(kr) == 2:
+        d = {0: k <= kr[0], 1: kr[0] < k <= kr[1], 2: k > kr[1]}
+    else:
+        d = dict()
+        for ii in range(len(kr) + 1):
+            if ii == 0:
+                d[ii] = k <= kr[ii]
             elif ii == len(kr):
-                d[ii] = k > kr [-1]
-            else :
-                d[ii] = kr[ii-1] < k <= kr[ii]
+                d[ii] = k > kr[-1]
+            else:
+                d[ii] = kr[ii - 1] < k <= kr[ii]
 
     if return_dict_map:
         return d
 
-    for v, value in d.items () :
-        if value: return v if not math.isnan (v) else np.nan
+    for v, value in d.items():
+        if value:
+            return v if not math.isnan(v) else np.nan
 
-def hex_to_rgb (c, /):
-    """ Convert colors Hexadecimal to RGB """
-    c=c.lstrip('#')
-    return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+
+def hex_to_rgb(c, /):
+    """Convert colors Hexadecimal to RGB"""
+    c = c.lstrip("#")
+    return tuple(int(c[i : i + 2], 16) for i in (0, 2, 4))
+
 
 def zip_extractor(
-    zip_file ,
-    samples ='*',
+    zip_file,
+    samples="*",
     ftype=None,
-    savepath = None,
+    savepath=None,
     pwd=None,
 ):
-    """ Extract  ZIP archive objects.
+    """Extract  ZIP archive objects.
 
-    Can extract all or a sample objects when the number of object is passed
-    to the parameter ``samples``.
+        Can extract all or a sample objects when the number of object is passed
+        to the parameter ``samples``.
 
-    .. versionadded:: 0.1.5
+        .. versionadded:: 0.1.5
 
-    Parameters
-    -----------
-    zip_file: str
-        Full Path to archive Zip file.
-    samples: int, str, default ='*'
-       Number of data to retrieve from archive files. This is useful when
-       the archive file contains many data. ``*`` means extract all.
-    savepath: str, optional
-       Path to store the decompressed archived files.
-    ftype: str,
-<<<<<<< HEAD
-       Is the extension of a specific file to decompress. Indeed, if the
-=======
-       Is the extension of a the specific file to decompress. Indeed, if the
->>>>>>> 10707dcecd7d0da55b83bcf73ae48c1e6659f2f8
-       archived files contains many different data formats, specifying the
-       data type would retrieve this specific files from the whole
-       files archieved.
-    pwd: int, optional
-      Password to pass if the zip file is encrypted.
+        Parameters
+        -----------
+        zip_file: str
+            Full Path to archive Zip file.
+        samples: int, str, default ='*'
+           Number of data to retrieve from archive files. This is useful when
+           the archive file contains many data. ``*`` means extract all.
+        savepath: str, optional
+           Path to store the decompressed archived files.
+        ftype: str,
+    <<<<<<< HEAD
+           Is the extension of a specific file to decompress. Indeed, if the
+    =======
+           Is the extension of a the specific file to decompress. Indeed, if the
+    >>>>>>> 10707dcecd7d0da55b83bcf73ae48c1e6659f2f8
+           archived files contains many different data formats, specifying the
+           data type would retrieve this specific files from the whole
+           files archieved.
+        pwd: int, optional
+          Password to pass if the zip file is encrypted.
 
-    Return
-    --------
-    objnames: list,
-     List of decompressed objects.
+        Return
+        --------
+        objnames: list,
+         List of decompressed objects.
 
-    Examples
-    ----------
-    >>> from watex.utils.funcutils import zip_extractor
-    >>> zip_extractor ('watex/datasets/data/edis/e.E.zip')
+        Examples
+        ----------
+        >>> from watex.utils.funcutils import zip_extractor
+        >>> zip_extractor ('watex/datasets/data/edis/e.E.zip')
 
     """
-    def raise_msg_when ( objn, ft):
-        """ Raise message when None file is detected when the type of
+
+    def raise_msg_when(objn, ft):
+        """Raise message when None file is detected when the type of
         of file is supplied. Otherwise return the object collected
         from this kind of data-types
         """
-        objn = [ o for o  in objn if o.endswith (ft)]
-        if len(objn)  ==0:
-            get_extension = [s.split('.')[-1] for s in objn if '.'  in s ]
-            if len(get_extension)==0 : get_extension=['']
-            msg = ( "The available file types are {smart_format(get_extension)}"
-                   if len(get_extension)!=0 else ''
-                   )
-            raise ValueError (f"None objects in the zip collection of matches"
-                              f"the {ft!r}. Available file types are {msg}")
+        objn = [o for o in objn if o.endswith(ft)]
+        if len(objn) == 0:
+            get_extension = [s.split(".")[-1] for s in objn if "." in s]
+            if len(get_extension) == 0:
+                get_extension = [""]
+            msg = (
+                "The available file types are {smart_format(get_extension)}"
+                if len(get_extension) != 0
+                else ""
+            )
+            raise ValueError(
+                f"None objects in the zip collection of matches"
+                f"the {ft!r}. Available file types are {msg}"
+            )
         return objn
 
-    if not os.path.isfile (zip_file ):
-        raise FileExistsError( f"File {os.path.basename(zip_file)!r} does"
-                              " not exist. Expect a Path-like object,"
-                              f" got {type(zip_file).__name__!r}")
+    if not os.path.isfile(zip_file):
+        raise FileExistsError(
+            f"File {os.path.basename(zip_file)!r} does"
+            " not exist. Expect a Path-like object,"
+            f" got {type(zip_file).__name__!r}"
+        )
 
-    if not os.path.basename(zip_file ).lower().endswith ('.zip'):
+    if not os.path.basename(zip_file).lower().endswith(".zip"):
         raise FileNotFoundError("Unrecognized zip-file.")
 
     samples = str(samples)
-    if samples !='*':
-        try :samples = int (samples )
+    if samples != "*":
+        try:
+            samples = int(samples)
         except:
-            raise ValueError ("samples must be an integer value"
-                              f" or '*' not {samples}")
+            raise ValueError(
+                f"samples must be an integer value or '*' not {samples}"
+            )
 
-    with ZipFile (zip_file, 'r', ) as zip_obj :
+    with ZipFile(
+        zip_file,
+        "r",
+    ) as zip_obj:
         objnames = zip_obj.namelist()
-        if samples =='*':
-                samples = len(objnames )
+        if samples == "*":
+            samples = len(objnames)
 
         if ftype is not None:
-            objnames = raise_msg_when(objn=objnames, ft= ftype)
+            objnames = raise_msg_when(objn=objnames, ft=ftype)
 
-        if ( samples >= len(objnames)
-            and ftype is None
-            ) :
-            zip_obj.extractall( path = savepath , pwd=pwd)
+        if samples >= len(objnames) and ftype is None:
+            zip_obj.extractall(path=savepath, pwd=pwd)
         else:
-            for zf in objnames [:samples ]:
-                zip_obj.extract ( zf, path = savepath, pwd = pwd)
+            for zf in objnames[:samples]:
+                zip_obj.extract(zf, path=savepath, pwd=pwd)
 
     return objnames
 
 
-def remove_outliers (
+def remove_outliers(
     ar,
-    method ='IQR',
-    threshold = 3.,
-    fill_value = None,
-    axis = 1,
+    method="IQR",
+    threshold=3.0,
+    fill_value=None,
+    axis=1,
     interpolate=False,
-    kind='linear'
-    ):
-    """ Efficient strategy to remove outliers in the data.
+    kind="linear",
+):
+    """Efficient strategy to remove outliers in the data.
 
     Indeed, an outlier is the data point of the given sample,
     observation, or distribution that shall lie outside the overall pattern.
@@ -5003,68 +5424,75 @@ def remove_outliers (
     >>> plt.plot (np.arange (len(data ), data, ))
     """
     method = str(method).lower()
-    if (
-            hasattr ( ar, "__array__")
-            and hasattr (ar, 'columns')
-            ):
-        return _remove_outliers( ar, n_std= threshold )
+    if hasattr(ar, "__array__") and hasattr(ar, "columns"):
+        return _remove_outliers(ar, n_std=threshold)
 
-    arr =np.array (ar, dtype = float)
+    arr = np.array(ar, dtype=float)
 
-    if method =='iqr':
-        Q1 = np.percentile(arr[~np.isnan(arr)], 25,)
+    if method == "iqr":
+        Q1 = np.percentile(
+            arr[~np.isnan(arr)],
+            25,
+        )
         Q3 = np.percentile(arr[~np.isnan(arr)], 75)
         IQR = Q3 - Q1
 
         upper = Q3 + 1.5 * IQR
 
-        upper_arr = np.array (arr >= upper)
+        upper_arr = np.array(arr >= upper)
         lower = Q3 - 1.5 * IQR
-        lower_arr =  np.array ( arr <= lower )
+        lower_arr = np.array(arr <= lower)
         # replace the oulier by nan
-        arr [upper_arr]= fill_value if fill_value else np.nan
-        arr[ lower_arr]= fill_value if fill_value else np.nan
+        arr[upper_arr] = fill_value if fill_value else np.nan
+        arr[lower_arr] = fill_value if fill_value else np.nan
 
-    if method =='z-score':
+    if method == "z-score":
         from scipy import stats
+
         z = np.abs(stats.zscore(arr[~np.isnan(arr)]))
-        zmask  = np.array ( z > threshold )
-        arr [zmask]= fill_value if fill_value else np.nan
+        zmask = np.array(z > threshold)
+        arr[zmask] = fill_value if fill_value else np.nan
 
     if fill_value is None:
         # delete nan if fill value is not provided
-        arr = arr[ ~np.isnan (arr ).any(axis =1)
-                  ]  if np.ndim (arr) > 1 else arr [~np.isnan(arr)]
+        arr = (
+            arr[~np.isnan(arr).any(axis=1)]
+            if np.ndim(arr) > 1
+            else arr[~np.isnan(arr)]
+        )
 
     if interpolate:
-        arr = interpolate_grid (arr, method = kind )
+        arr = interpolate_grid(arr, method=kind)
 
     return arr
+
 
 def _remove_outliers(data, n_std=3):
     """Remove outliers from a dataframe."""
     # separate cat feature and numeric features
     # if exists
     df, numf, catf = to_numeric_dtypes(
-        data , return_feature_types= True,  drop_nan_columns =True )
+        data, return_feature_types=True, drop_nan_columns=True
+    )
     # get on;y the numeric
     df = df[numf]
     for col in df.columns:
         # print('Working on column: {}'.format(col))
         mean = df[col].mean()
         sd = df[col].std()
-        df = df[(df[col] <= mean+(n_std*sd))]
+        df = df[(df[col] <= mean + (n_std * sd))]
     # get the index and select only the index
     index = df.index
     # get the data by index then
     # concatename
-    df_cat = data [catf].iloc [ index ]
-    df = pd.concat ( [df_cat, df ], axis = 1 )
+    df_cat = data[catf].iloc[index]
+    df = pd.concat([df_cat, df], axis=1)
 
     return df
 
-def normalizer ( arr, /, method ='naive'):
-    """ Normalize values to be between 0 and 1.
+
+def normalizer(arr, /, method="naive"):
+    """Normalize values to be between 0 and 1.
 
     This normlizer handles NaN values translates data individually such
     that it is in the given range on the training set, e.g. between
@@ -5122,20 +5550,23 @@ def normalizer ( arr, /, method ='naive'):
 
     """
     method = str(method).lower()
-    arr = np.array(arr )
+    arr = np.array(arr)
 
-    if method in ( 'sklearn', 'scikit-learn', 'minmax', 'min-max'):
+    if method in ("sklearn", "scikit-learn", "minmax", "min-max"):
         from ..exlib import MinMaxScaler
-        arr = arr.reshape(-1, 1) if arr.ndim ==1 else arr
-        return  MinMaxScaler().fit_transform(arr )
 
-    arr_norm  = (arr - np.nanmin(arr))/ (np.nanmax (arr) - np.nanmin(arr))
+        arr = arr.reshape(-1, 1) if arr.ndim == 1 else arr
+        return MinMaxScaler().fit_transform(arr)
+
+    arr_norm = (arr - np.nanmin(arr)) / (np.nanmax(arr) - np.nanmin(arr))
 
     return arr_norm
 
-def _validate_name_in (name, /, defaults = '', expect_name= None,
-                         exception = None , deep=False ):
-    """ Assert name in multiples given default names.
+
+def _validate_name_in(
+    name, /, defaults="", expect_name=None, exception=None, deep=False
+):
+    """Assert name in multiples given default names.
 
     Parameters
     -----------
@@ -5173,30 +5604,35 @@ def _validate_name_in (name, /, defaults = '', expect_name= None,
     """
 
     name = str(name).lower().strip()
-    defaults = is_iterable(defaults,
-            exclude_string= True, parse_string= True, transform=True )
-    if deep :
-        defaults = ''.join([ str(i) for i in defaults] )
+    defaults = is_iterable(
+        defaults, exclude_string=True, parse_string=True, transform=True
+    )
+    if deep:
+        defaults = "".join([str(i) for i in defaults])
 
     # if name in defaults:
-    name = ( True if expect_name is None  else expect_name
-            ) if name in defaults else False
+    name = (
+        (True if expect_name is None else expect_name)
+        if name in defaults
+        else False
+    )
 
-    #name = True if name in defaults else ( expect_name if expect_name else False )
+    # name = True if name in defaults else ( expect_name if expect_name else False )
 
     if not name and exception:
         raise exception
 
     return name
 
-def get_confidence_ratio (
-        ar, /,
-        axis = 0,
-        invalid = 'NaN',
-        mean=False,
-        ):
 
-    """ Get ratio of confidence in array by counting the number of
+def get_confidence_ratio(
+    ar,
+    /,
+    axis=0,
+    invalid="NaN",
+    mean=False,
+):
+    """Get ratio of confidence in array by counting the number of
     invalid values.
 
     Parameters
@@ -5244,42 +5680,54 @@ def get_confidence_ratio (
     array([0.5, 0.5, 0.5, 0.5, 1. ])
 
     """
-    def gfc ( ar, inv):
-        """ Get ratio in each column or row in the array. """
-        inv = is_iterable(inv, exclude_string=True , transform =True,
-                              )
+
+    def gfc(ar, inv):
+        """Get ratio in each column or row in the array."""
+        inv = is_iterable(
+            inv,
+            exclude_string=True,
+            transform=True,
+        )
         # if inv!='NaN':
         for iv in inv:
-            if iv in ('NAN', np.nan, 'NaN', 'nan', None):
-                iv=np.nan
-            ar [ar ==iv] = np.nan
+            if iv in ("NAN", np.nan, "NaN", "nan", None):
+                iv = np.nan
+            ar[ar == iv] = np.nan
 
-        return len( ar [ ~np.isnan (ar)])  / len(ar )
+        return len(ar[~np.isnan(ar)]) / len(ar)
 
     # validate input axis name
-    axis = _validate_name_in (axis , ('1', 'rows', 'sites', 'stations') ,
-                              expect_name=1 )
+    axis = _validate_name_in(
+        axis, ("1", "rows", "sites", "stations"), expect_name=1
+    )
     if not axis:
-        axis =0
+        axis = 0
 
-    ar = np.array(ar).astype ( np.float64) # for consistency
-    ratio = np.zeros(( (ar.shape[0] if axis ==1 else ar.shape [1] )
-                      if ar.ndim ==2 else 1, ), dtype= np.float64)
+    ar = np.array(ar).astype(np.float64)  # for consistency
+    ratio = np.zeros(
+        ((ar.shape[0] if axis == 1 else ar.shape[1]) if ar.ndim == 2 else 1,),
+        dtype=np.float64,
+    )
 
-    for i in range (len(ratio)):
-        ratio[i] = gfc ( (ar [:, i] if axis ==0 else ar [i, :])
-                        if ar.ndim !=1 else ar , inv= invalid
-                        )
+    for i in range(len(ratio)):
+        ratio[i] = gfc(
+            (ar[:, i] if axis == 0 else ar[i, :]) if ar.ndim != 1 else ar,
+            inv=invalid,
+        )
     if mean:
-        ratio = np.array (ratio).mean()
+        ratio = np.array(ratio).mean()
     return ratio
 
+
 def assert_ratio(
-        v, /, bounds: List[float] = None ,
-        exclude_value:float= None,
-        in_percent:bool =False , name:str ='rate'
-        ):
-    """ Assert rate value between a specific range.
+    v,
+    /,
+    bounds: List[float] = None,
+    exclude_value: float = None,
+    in_percent: bool = False,
+    name: str = "rate",
+):
+    """Assert rate value between a specific range.
 
     Parameters
     -----------
@@ -5327,56 +5775,62 @@ def assert_ratio(
                          name ='tolerance', in_percent =True )
     0.02
     """
-    msg =("greater than {} and less than {}" )
+    msg = "greater than {} and less than {}"
 
-
-    if isinstance (v, str):
-        if "%" in v: in_percent=True
-        v = v.replace('%', '')
-    try :
-        v = float (v)
-    except TypeError :
-        raise TypeError (f"Unable to convert {type(v).__name__!r} "
-                         f"to float: {v}")
+    if isinstance(v, str):
+        if "%" in v:
+            in_percent = True
+        v = v.replace("%", "")
+    try:
+        v = float(v)
+    except TypeError:
+        raise TypeError(
+            f"Unable to convert {type(v).__name__!r} to float: {v}"
+        )
     except ValueError:
-        raise ValueError(f"Expects 'float' not {type(v).__name__!r}: "
-                         f"{(v)!r}")
+        raise ValueError(f"Expects 'float' not {type(v).__name__!r}: {(v)!r}")
     # put value in percentage
     # if greater than 1.
     if in_percent:
-        if 1 < v <=100:
-            v /= 100.
+        if 1 < v <= 100:
+            v /= 100.0
 
     bounds = bounds or []
-    low, up, *_ = list(bounds) + [ None, None]
-    e=(f"Expects a {name} value {msg.format(low, up)}, got: {v}")
-    err = ValueError (e)
+    low, up, *_ = list(bounds) + [None, None]
+    e = f"Expects a {name} value {msg.format(low, up)}, got: {v}"
+    err = ValueError(e)
 
-    if len(bounds)!=0:
+    if len(bounds) != 0:
         if (
-                low is not None  # use is not None since 0. is
-                and up is not None # consider as False value
-            and  (v < low or v > up)
-            ) :
-                raise err
+            low is not None  # use is not None since 0. is
+            and up is not None  # consider as False value
+            and (v < low or v > up)
+        ):
+            raise err
 
     if exclude_value is not None:
-        try :
-            low = float (str(exclude_value))
-        except : # use bounds
+        try:
+            low = float(str(exclude_value))
+        except:  # use bounds
             pass
         if low is None:
-            warnings.warn("Cannot exclude the lower value in the interval"
-                          " while `bounds` argument is not given.", stacklevel=2)
+            warnings.warn(
+                "Cannot exclude the lower value in the interval"
+                " while `bounds` argument is not given.",
+                stacklevel=2,
+            )
         else:
-            if v ==low:
-                raise ValueError (e.replace (", got:", ' excluding') + ".")
+            if v == low:
+                raise ValueError(e.replace(", got:", " excluding") + ".")
 
     if in_percent and v > 100:
-         raise ValueError (f"{name.title()} value should be {msg.format(low, up)}, got: {v}")
+        raise ValueError(
+            f"{name.title()} value should be {msg.format(low, up)}, got: {v}"
+        )
     return v
 
-def exist_features (df, features, error='raise'):
+
+def exist_features(df, features, error="raise"):
     """Control whether the features exist or not
 
     :param df: a dataframe for features selections
@@ -5390,40 +5844,49 @@ def exist_features (df, features, error='raise'):
     """
     isf = False
 
-    error= 'raise' if error.lower().strip().find('raise')>= 0  else 'ignore'
+    error = "raise" if error.lower().strip().find("raise") >= 0 else "ignore"
 
     if isinstance(features, str):
-        features =[features]
+        features = [features]
 
     features = _assert_all_types(features, list, tuple, np.ndarray)
-    set_f =  set (features).intersection (set(df.columns))
-    if len(set_f)!= len(features):
-        nfeat= len(features)
-        msg = f"Feature{'s' if nfeat >1 else ''}"
-        if len(set_f)==0:
-            if error =='raise':
-                raise ValueError (f"{msg} {smart_format(features)} "
-                                  f"{'does not' if nfeat <2 else 'dont'}"
-                                  " exist in the dataframe")
+    set_f = set(features).intersection(set(df.columns))
+    if len(set_f) != len(features):
+        nfeat = len(features)
+        msg = f"Feature{'s' if nfeat > 1 else ''}"
+        if len(set_f) == 0:
+            if error == "raise":
+                raise ValueError(
+                    f"{msg} {smart_format(features)} "
+                    f"{'does not' if nfeat < 2 else 'dont'}"
+                    " exist in the dataframe"
+                )
             isf = False
         # get the difference
-        diff = set (features).difference(set_f) if len(
-            features)> len(set_f) else set_f.difference (set(features))
-        nfeat= len(diff)
-        if error =='raise':
-            raise ValueError(f"{msg} {smart_format(diff)} not found in"
-                             " the dataframe.")
+        diff = (
+            set(features).difference(set_f)
+            if len(features) > len(set_f)
+            else set_f.difference(set(features))
+        )
+        nfeat = len(diff)
+        if error == "raise":
+            raise ValueError(
+                f"{msg} {smart_format(diff)} not found in the dataframe."
+            )
         isf = False
-    else : isf = True
+    else:
+        isf = True
 
     return isf
 
-def interpolate_grid (
-    arr, / ,
-    method ='cubic',
-    fill_value='auto',
-    view = False,
-    ):
+
+def interpolate_grid(
+    arr,
+    /,
+    method="cubic",
+    fill_value="auto",
+    view=False,
+):
     """
     Interpolate data containing missing values.
 
@@ -5473,51 +5936,49 @@ def interpolate_grid (
 
     """
     is2d = True
-    if not hasattr(arr, '__array__'):
-        arr = np.array (arr)
+    if not hasattr(arr, "__array__"):
+        arr = np.array(arr)
 
-    if arr.ndim==1:
-        #convert to two dimension array
-        arr = np.vstack ((arr, arr ))
-        is2d =False
+    if arr.ndim == 1:
+        # convert to two dimension array
+        arr = np.vstack((arr, arr))
+        is2d = False
         # raise TypeError(
         #     "Expect two dimensional array for grid interpolation.")
 
     # make x, y array for mapping
     x = np.arange(0, arr.shape[1])
     y = np.arange(0, arr.shape[0])
-    #mask invalid values
-    arr= np.ma.masked_invalid(arr)
+    # mask invalid values
+    arr = np.ma.masked_invalid(arr)
     xx, yy = np.meshgrid(x, y)
-    #get only the valid values
+    # get only the valid values
     x1 = xx[~arr.mask]
     y1 = yy[~arr.mask]
     newarr = arr[~arr.mask]
 
-    arri = spi.griddata(
-        (x1, y1),
-        newarr.ravel(),
-        (xx, yy),
-        method=method
+    arri = spi.griddata((x1, y1), newarr.ravel(), (xx, yy), method=method)
+
+    if fill_value == "auto":
+        arri = fillNaN(arri, method="both ")
+    else:
+        arri[np.isnan(arri)] = float(
+            _assert_all_types(fill_value, float, int, objname="'fill_value'")
         )
 
-    if fill_value =='auto':
-        arri = fillNaN(arri, method ='both ')
-    else:
-        arri [np.isnan(arri)] = float( _assert_all_types(
-            fill_value, float, int, objname ="'fill_value'" )
-            )
+    if view:
+        fig, ax = plt.subplots(
+            nrows=1,
+            ncols=2,
+            sharey=True,
+        )
+        ax[0].imshow(arr, interpolation="nearest", label="Raw Grid")
+        ax[1].imshow(arri, interpolation="nearest", label="Interpolate Grid")
 
-    if view :
-        fig, ax  = plt.subplots (nrows = 1, ncols = 2 , sharey= True, )
-        ax[0].imshow(arr ,interpolation='nearest', label ='Raw Grid')
-        ax[1].imshow (arri, interpolation ='nearest',
-                      label = 'Interpolate Grid')
+        ax[0].set_title("Raw Grid")
+        ax[1].set_title("Interpolate Grid")
 
-        ax[0].set_title ('Raw Grid')
-        ax[1].set_title ('Interpolate Grid')
-
-        plt.show ()
+        plt.show()
 
     if not is2d:
         arri = arri[0, :]
@@ -5525,9 +5986,13 @@ def interpolate_grid (
     return arri
 
 
-def random_selector (
-        arr:ArrayLike, / , value: float | ArrayLike,
-        seed: int = None, shuffle =False ):
+def random_selector(
+    arr: ArrayLike,
+    /,
+    value: float | ArrayLike,
+    seed: int = None,
+    shuffle=False,
+):
     """Randomly select the number of values in array.
 
     Parameters
@@ -5570,59 +6035,60 @@ def random_selector (
     msg = "Non-numerical is not allowed. Got {!r}."
 
     if seed:
-        seed = _assert_all_types(seed , int, float, objname ='Seed')
-        np.random.seed (seed )
+        seed = _assert_all_types(seed, int, float, objname="Seed")
+        np.random.seed(seed)
 
-    v = copy.deepcopy(value )
+    v = copy.deepcopy(value)
 
-    if not is_iterable( value, exclude_string= True ):
+    if not is_iterable(value, exclude_string=True):
+        value = str(value)
 
-        value = str(value )
-
-        if '%' in  value:
+        if "%" in value:
             try:
-               value = float( value.replace ('%', '')) /100
-            except :
+                value = float(value.replace("%", "")) / 100
+            except:
                 raise TypeError(msg.format(v))
             # get the number
-            value *= len(arr )
+            value *= len(arr)
 
+        try:
+            value = int(value)
 
-        try :
-            value = int(value )
-
-        except :
-            raise TypeError (msg.format(v))
+        except:
+            raise TypeError(msg.format(v))
 
         if value > len(arr):
-            raise ValueError(f"Number {value} is out of the range."
-                             f" Expect value less than {len(arr)}.")
+            raise ValueError(
+                f"Number {value} is out of the range."
+                f" Expect value less than {len(arr)}."
+            )
 
-        value = np.random.permutation(value )
+        value = np.random.permutation(value)
 
-    arr = np.array (
-        is_iterable( arr, exclude_string=True, transform =True ))
+    arr = np.array(is_iterable(arr, exclude_string=True, transform=True))
 
-    arr = arr.ravel() if arr.ndim !=1 else arr
+    arr = arr.ravel() if arr.ndim != 1 else arr
 
-    mask = _isin (arr, value , return_mask= True )
-    arr = arr [mask ]
+    mask = _isin(arr, value, return_mask=True)
+    arr = arr[mask]
 
-    if shuffle : np.random.shuffle (arr )
+    if shuffle:
+        np.random.shuffle(arr)
 
     return arr
 
-def cleaner (
-    data: DataFrame|NDArray,
-    / ,
-    columns:List[str]= None,
-    inplace:bool = False,
-    labels: List[int|str] =None,
-    func : F= None,
-    mode:str ='clean',
-    **kws
-    )->DataFrame | NDArray | None :
-    """ Sanitize data or columns by dropping specified labels
+
+def cleaner(
+    data: DataFrame | NDArray,
+    /,
+    columns: List[str] = None,
+    inplace: bool = False,
+    labels: List[int | str] = None,
+    func: F = None,
+    mode: str = "clean",
+    **kws,
+) -> DataFrame | NDArray | None:
+    """Sanitize data or columns by dropping specified labels
     from rows or columns.
 
     If data is not a pandas dataframe, should be converted to
@@ -5663,24 +6129,21 @@ def cleaner (
             or None if inplace=True or array is data is passed as an array.
 
     """
-    mode = _validate_name_in(mode , defaults =("drop", 'remove' ),
-                      expect_name ='drop')
+    mode = _validate_name_in(
+        mode, defaults=("drop", "remove"), expect_name="drop"
+    )
     if not mode:
-        return sanitize_frame_cols(
-            data,
-            inplace = inplace,
-            func = func
-            )
+        return sanitize_frame_cols(data, inplace=inplace, func=func)
 
-    objtype ='ar'
-    if not hasattr (data , '__array__'):
-        data = np.array (data )
+    objtype = "ar"
+    if not hasattr(data, "__array__"):
+        data = np.array(data)
 
-    if hasattr(data , "columns"):
+    if hasattr(data, "columns"):
         objtype = "pd"
 
-    if objtype =='ar':
-        data = pd.DataFrame(data )
+    if objtype == "ar":
+        data = pd.DataFrame(data)
         # block inplace to False and
         # return numpy ar
         inplace = False
@@ -5688,30 +6151,27 @@ def cleaner (
     #     columns = str2columns(columns )
     if columns is not None:
         columns = is_iterable(
-            columns, exclude_string=True ,
-            parse_string= True,
-            transform =True )
+            columns, exclude_string=True, parse_string=True, transform=True
+        )
 
-    data = data.drop (labels = labels,
-                      columns = columns,
-                      inplace =inplace,
-                       **kws
-                       )
+    data = data.drop(labels=labels, columns=columns, inplace=inplace, **kws)
 
-    return np.array ( data ) if objtype =='ar' else data
+    return np.array(data) if objtype == "ar" else data
 
-def rename_files (
-    src_files:str | List[str], /,
-    dst_files:str | List[str],
-    basename:Optional[str]=None,
-    extension:Optional[str] =None ,
-    how:str ='py',
-    prefix:bool =True,
-    keep_copy:bool=True,
-    trailer:str='_',
-    sortby: re |F=None,
-    **kws
-    ):
+
+def rename_files(
+    src_files: str | List[str],
+    /,
+    dst_files: str | List[str],
+    basename: Optional[str] = None,
+    extension: Optional[str] = None,
+    how: str = "py",
+    prefix: bool = True,
+    keep_copy: bool = True,
+    trailer: str = "_",
+    sortby: re | F = None,
+    **kws,
+):
     """Rename files in directory.
 
     Parameters
@@ -5760,75 +6220,98 @@ def rename_files (
        keyword arguments passed to `os.rename`.
 
     """
-    dest_dir =None ; trailer = str(trailer)
+    dest_dir = None
+    trailer = str(trailer)
     extension = str(extension).lower()
 
-    if os.path.isfile (src_files ):
-        src_files = [src_files ]
+    if os.path.isfile(src_files):
+        src_files = [src_files]
 
-    elif os.path.isdir (src_files):
+    elif os.path.isdir(src_files):
         src_path = src_files
         ldir = os.listdir(src_path)
 
-        src_files = ldir if extension =='none' else [
-             f for f in ldir  if  f.endswith (extension) ]
+        src_files = (
+            ldir
+            if extension == "none"
+            else [f for f in ldir if f.endswith(extension)]
+        )
 
         if sortby:
-            if sortby in ( int, float, 'num', 'number', 'digit'):
-                src_files = sorted(ldir, key=lambda s:int( re.search(
-                    r'\d+', s).group()) if re.search(r'\d+', s) else 0 )
+            if sortby in (int, float, "num", "number", "digit"):
+                src_files = sorted(
+                    ldir,
+                    key=lambda s: (
+                        int(re.search(r"\d+", s).group())
+                        if re.search(r"\d+", s)
+                        else 0
+                    ),
+                )
             else:
                 src_files = sorted(ldir, key=sortby)
 
-        src_files = [  os.path.join(src_path, f )   for f in src_files  ]
+        src_files = [os.path.join(src_path, f) for f in src_files]
         # get only the files
-        src_files = [ f for f in src_files if os.path.isfile (f ) ]
+        src_files = [f for f in src_files if os.path.isfile(f)]
 
-    else : raise FileNotFoundError(f"{src_files!r} not found.")
+    else:
+        raise FileNotFoundError(f"{src_files!r} not found.")
 
     # Create the directory if it doesn't exist
-    if ( dst_files is not None
-        and not os.path.exists (dst_files)
-        ):
+    if dst_files is not None and not os.path.exists(dst_files):
         os.makedirs(dst_files)
 
     if os.path.isdir(dst_files):
         dest_dir = dst_files
 
-    dst_files = is_iterable(dst_files , exclude_string= True, transform =True )
+    dst_files = is_iterable(dst_files, exclude_string=True, transform=True)
     # get_extension of the source_files
-    _, ex = os.path.splitext (src_files[0])
+    _, ex = os.path.splitext(src_files[0])
 
     if dest_dir:
         if basename is None:
             warnings.warn(
-                "Missing basename for renaming file. Should use `None` instead.", stacklevel=2)
-            basename =''; trailer =''
+                "Missing basename for renaming file. Should use `None` instead.",
+                stacklevel=2,
+            )
+            basename = ""
+            trailer = ""
 
-        basename= str(basename)
+        basename = str(basename)
         if prefix:
-            dst_files =[ f"{str(basename)}{trailer}" + (
-                f"{i:03}" if how=='py' else f"{i+1:03}") + f"{ex}"
-                        for i in range (len(src_files))]
+            dst_files = [
+                f"{str(basename)}{trailer}"
+                + (f"{i:03}" if how == "py" else f"{i + 1:03}")
+                + f"{ex}"
+                for i in range(len(src_files))
+            ]
         elif not prefix:
-            dst_files =[ (f"{i:03}" if how=='py' else f"{i+1:03}"
-                        ) +f"{trailer}{str(basename)}" +f"{ex}"
-                        for i in range (len(src_files))]
+            dst_files = [
+                (f"{i:03}" if how == "py" else f"{i + 1:03}")
+                + f"{trailer}{str(basename)}"
+                + f"{ex}"
+                for i in range(len(src_files))
+            ]
 
-        dst_files = [os.path.join(dest_dir , f) for f in dst_files ]
+        dst_files = [os.path.join(dest_dir, f) for f in dst_files]
 
-    for f, nf in zip (src_files , dst_files):
+    for f, nf in zip(src_files, dst_files):
         try:
-           if keep_copy : shutil.copy (f, nf , **kws )
-           else : os.rename (f, nf , **kws )
+            if keep_copy:
+                shutil.copy(f, nf, **kws)
+            else:
+                os.rename(f, nf, **kws)
         except FileExistsError:
             os.remove(nf)
-            if keep_copy : shutil.copy (f, nf , **kws )
-            else : os.rename (f, nf , **kws )
+            if keep_copy:
+                shutil.copy(f, nf, **kws)
+            else:
+                os.rename(f, nf, **kws)
 
 
-def get_xy_coordinates (d, / , as_frame = False, drop_xy = False,
-                        raise_exception = True, verbose=0 ):
+def get_xy_coordinates(
+    d, /, as_frame=False, drop_xy=False, raise_exception=True, verbose=0
+):
     """Check whether the coordinate values exist in the data
 
     Parameters
@@ -5902,77 +6385,79 @@ def get_xy_coordinates (d, / , as_frame = False, drop_xy = False,
 
     """
 
-    def get_value_in ( val, /, col , default):
-        """ Get the value in the frame columns if `val` exists in """
-        x = list( filter ( lambda x: x.find (val)>=0 , col)
-                   )
-        if len(x) !=0:
+    def get_value_in(val, /, col, default):
+        """Get the value in the frame columns if `val` exists in"""
+        x = list(filter(lambda x: x.find(val) >= 0, col))
+        if len(x) != 0:
             # now rename col
-            d.rename (columns = {x[0]: str(default) }, inplace = True )
+            d.rename(columns={x[0]: str(default)}, inplace=True)
 
         return d
 
-    if not (
-            hasattr ( d, 'columns') and hasattr ( d, '__array__')
-            ) :
-        emsg = ("Expect dataframe containing coordinates longitude/latitude"
-                f" or easting/northing. Got {type (d).__name__!r}")
+    if not (hasattr(d, "columns") and hasattr(d, "__array__")):
+        emsg = (
+            "Expect dataframe containing coordinates longitude/latitude"
+            f" or easting/northing. Got {type(d).__name__!r}"
+        )
 
         raise_exception = str(raise_exception).lower().strip()
-        if raise_exception=='true':
-            raise TypeError ( emsg )
+        if raise_exception == "true":
+            raise TypeError(emsg)
 
-        if raise_exception  not in ('mute', 'silence'):
-            warnings.warn( emsg, stacklevel=2 )
+        if raise_exception not in ("mute", "silence"):
+            warnings.warn(emsg, stacklevel=2)
 
         return d
 
     # check whether coordinates exists in the data columns
-    for name, tname in zip ( ('lat', 'lon', 'east', 'north'),
-                     ( 'latitude', 'longitude', 'easting', 'northing')
-                     ) :
-        d = get_value_in(name, col = d.columns , default = tname )
+    for name, tname in zip(
+        ("lat", "lon", "east", "north"),
+        ("latitude", "longitude", "easting", "northing"),
+    ):
+        d = get_value_in(name, col=d.columns, default=tname)
 
     # get the exist coodinates
-    coord_columns  = []
-    for x, y in zip ( ( 'longitude', 'easting' ), ( 'latitude', 'northing')):
-        if ( x  in d.columns and y in d.columns ):
-            coord_columns.extend  ( [x, y] )
+    coord_columns = []
+    for x, y in zip(("longitude", "easting"), ("latitude", "northing")):
+        if x in d.columns and y in d.columns:
+            coord_columns.extend([x, y])
 
-    xy  = d[ coord_columns] if len(coord_columns)!=0 else None
+    xy = d[coord_columns] if len(coord_columns) != 0 else None
 
-    if ( not as_frame
-        and xy is not None ) :
+    if not as_frame and xy is not None:
         # take the middle of the line and if both types of
         # coordinates are supplied , take longitude and latitude
         # and drop easting and northing
-        xy = tuple ( np.nanmean ( np.array ( xy ) , axis =0 )) [:2]
+        xy = tuple(np.nanmean(np.array(xy), axis=0))[:2]
 
-    xynames = tuple ( coord_columns)[:2]
-    if (
-            drop_xy  and len( coord_columns) !=0
-            ):
+    xynames = tuple(coord_columns)[:2]
+    if drop_xy and len(coord_columns) != 0:
         # modifie the data inplace
-        d.drop ( columns=coord_columns, inplace = True  )
+        d.drop(columns=coord_columns, inplace=True)
 
     if verbose:
-        print("###", "No" if len(xynames)==0 else (
-            tuple (xy.columns) if as_frame else xy), "coordinates found.")
+        print(
+            "###",
+            "No"
+            if len(xynames) == 0
+            else (tuple(xy.columns) if as_frame else xy),
+            "coordinates found.",
+        )
 
-    return  xy , d , xynames
+    return xy, d, xynames
 
 
 def twinning(
     *d: DataFrame,
-    on:str | List[str] = None,
-    parse_on:bool=False,
-    mode: str='strict',
-    coerce:bool = False,
-    force:bool =False,
+    on: str | List[str] = None,
+    parse_on: bool = False,
+    mode: str = "strict",
+    coerce: bool = False,
+    force: bool = False,
     decimals: int = 7,
-    raise_warn:bool =True
-)-> DataFrame :
-    """ Find indentical object in all data and concatenate them using merge
+    raise_warn: bool = True,
+) -> DataFrame:
+    """Find indentical object in all data and concatenate them using merge
      intersection (`cross`) strategy.
 
     Parameters
@@ -6060,78 +6545,86 @@ def twinning(
     """
     from .validator import _is_numeric_dtype
 
-    if str(mode).lower()=='soft':
-        d = [ o for  o in d if hasattr (o, '__array__') and hasattr (o, 'columns') ]
+    if str(mode).lower() == "soft":
+        d = [
+            o for o in d if hasattr(o, "__array__") and hasattr(o, "columns")
+        ]
 
-    is_same = set ( [ hasattr (o, '__array__')
-                     and hasattr (o, 'columns') for o in d ] )
+    is_same = set(
+        [hasattr(o, "__array__") and hasattr(o, "columns") for o in d]
+    )
 
-    if len(is_same)!=1 or not list (is_same) [0]:
-        types = [ type(o).__name__ for o in d ]
-        raise TypeError (
-            f"Expect DataFrame. Got {smart_format(types)}")
+    if len(is_same) != 1 or not list(is_same)[0]:
+        types = [type(o).__name__ for o in d]
+        raise TypeError(f"Expect DataFrame. Got {smart_format(types)}")
 
     same_len = [len(o) for o in d]
 
-    if len( set(same_len)) !=1 or not list(set(same_len))[0]:
+    if len(set(same_len)) != 1 or not list(set(same_len))[0]:
         if not coerce:
             raise ValueError(
                 f"Data must be a consistent size. Got {smart_format(same_len)}"
                 " respectively. Set ``coerce=True`` to truncate the data"
-                " to match the shorter data length.")
+                " to match the shorter data length."
+            )
         # get the shorthest len
-        min_index = min (same_len)
-        d = [ o.iloc [:min_index, :  ]  for o in d ]
+        min_index = min(same_len)
+        d = [o.iloc[:min_index, :] for o in d]
 
     if on is None:
         if raise_warn:
-            warnings.warn("'twin_items' are missing in the data. A simple merge"
-                          " along the columns axis should be performed.", stacklevel=2)
+            warnings.warn(
+                "'twin_items' are missing in the data. A simple merge"
+                " along the columns axis should be performed.",
+                stacklevel=2,
+            )
 
-        return pd.concat ( d, axis = 1 )
+        return pd.concat(d, axis=1)
 
     # parse string
-    on= is_iterable(on, exclude_string= True ,
-                    transform =True, parse_string= parse_on
-                    )
+    on = is_iterable(
+        on, exclude_string=True, transform=True, parse_string=parse_on
+    )
 
-    feature_exist = [
-        exist_features(o, on, error = 'ignore'
-                       ) for o in d ]
+    feature_exist = [exist_features(o, on, error="ignore") for o in d]
 
-    if ( len( set (feature_exist) )!=1
-        or not list(set(feature_exist)) [0]
-            ):
+    if len(set(feature_exist)) != 1 or not list(set(feature_exist))[0]:
         if not force:
             raise ValueError(
                 f"Unable to fit the data. Items {smart_format(on)} are"
                 f" missing in the data columns. {smart_format(on)} must"
-                 " include in the data columns. Please check your data.")
+                " include in the data columns. Please check your data."
+            )
 
         # seek the value twin_items in the data and use if for all
-        dtems =[] ;  repl_twd= None
+        dtems = []
+        repl_twd = None
         for o in d:
             # select one valid data that contain the
             # twin items
-            try :
-                exist_features ( o, on )
-            except :
+            try:
+                exist_features(o, on)
+            except:
                 pass
             else:
-                repl_twd = o [ on ]
+                repl_twd = o[on]
                 break
 
         if repl_twd is None:
-            raise ValueError("To force data that have not consistent items,"
-                             f" at least {smart_format(on)} items must"
-                             " be included in one DataFrame.")
+            raise ValueError(
+                "To force data that have not consistent items,"
+                f" at least {smart_format(on)} items must"
+                " be included in one DataFrame."
+            )
         # make add twin_data if
-        for o in d :
-            try : exist_features(o, on)
-            except :
+        for o in d:
+            try:
+                exist_features(o, on)
+            except:
                 a = o.copy()
-                a [ on ] = repl_twd
-            else : a = o.copy ()
+                a[on] = repl_twd
+            else:
+                a = o.copy()
 
             dtems.append(a)
         # reinitialize d
@@ -6142,30 +6635,33 @@ def twinning(
     # that identic
     # round value if value before performed merges
     # test single data with on
-    is_num = _is_numeric_dtype (d[0][on] )
+    is_num = _is_numeric_dtype(d[0][on])
     if is_num:
-        decimals = int (_assert_all_types(
-            decimals, int, float, objname ='Decimals'))
+        decimals = int(
+            _assert_all_types(decimals, int, float, objname="Decimals")
+        )
         d_ = []
-        for o in d :
+        for o in d:
             a = o.copy()
-            a[on ] = np.around (o[ on ].values, decimals )
-            d_.append (a )
+            a[on] = np.around(o[on].values, decimals)
+            d_.append(a)
         # not a numerick values so stop
-        d =d_
+        d = d_
 
     # select both two
-    data = pd.merge (* d[:2], on= on )
+    data = pd.merge(*d[:2], on=on)
 
-    if len(d[2:]) !=0:
-        for ii, o in enumerate ( d[2:]) :
-            data = pd.merge ( *[data, o] , on = on, suffixes= (
-                f"_x{ii+1}", f"_y{ii+1}"))
+    if len(d[2:]) != 0:
+        for ii, o in enumerate(d[2:]):
+            data = pd.merge(
+                *[data, o], on=on, suffixes=(f"_x{ii + 1}", f"_y{ii + 1}")
+            )
 
     return data
 
+
 def read_worksheets(*data):
-    """ Read sheets and returns a list of DataFrames and sheet names.
+    """Read sheets and returns a list of DataFrames and sheet names.
 
     Parameters
     -----------
@@ -6192,51 +6688,53 @@ def read_worksheets(*data):
 
     """
     dtem = []
-    data = [o for o in data if isinstance ( o, str )]
+    data = [o for o in data if isinstance(o, str)]
 
     for o in data:
-        if os.path.isdir (o):
-            dlist = os.listdir (o)
+        if os.path.isdir(o):
+            dlist = os.listdir(o)
             # collect only the excell sheets
-            p = [ os.path.join(o, f) for f in dlist if f.endswith ('.xlsx') ]
-            dtem .extend(p)
-        elif os.path.isfile (o):
-            _, ex = os.path.splitext( o)
-            if ex == '.xlsx':
+            p = [os.path.join(o, f) for f in dlist if f.endswith(".xlsx")]
+            dtem.extend(p)
+        elif os.path.isfile(o):
+            _, ex = os.path.splitext(o)
+            if ex == ".xlsx":
                 dtem.append(o)
 
     data = copy.deepcopy(dtem)
     # if no excel sheets is found return None
-    if len(data) ==0:
+    if len(data) == 0:
         return None, None
 
     # make d dict to collect data
     ddict = dict()
-    regex = re.compile (r'[$& #@%^!]', flags=re.IGNORECASE)
+    regex = re.compile(r"[$& #@%^!]", flags=re.IGNORECASE)
 
-    for d in data :
+    for d in data:
         try:
-            ddict.update ( **pd.read_excel (d , sheet_name =None))
-        except : pass
+            ddict.update(**pd.read_excel(d, sheet_name=None))
+        except:
+            pass
 
-    #collect stations names
-    if len(ddict)==0 :
+    # collect stations names
+    if len(ddict) == 0:
         raise TypeError("Can'find the data to read.")
 
-    sheet_names = list(map(
-        lambda o: regex.sub('_', o).lower(), ddict.keys()))
+    sheet_names = list(map(lambda o: regex.sub("_", o).lower(), ddict.keys()))
 
-    data = list(ddict.values ())
+    data = list(ddict.values())
 
     return data, sheet_names
 
-def key_checker (
-    keys: str , /,
-    valid_keys:List[str, ...],
-    regex:re = None,
-    pattern:str = None ,
-    deep_search:bool =...
-    ):
+
+def key_checker(
+    keys: str,
+    /,
+    valid_keys: List[str, ...],
+    regex: re = None,
+    pattern: str = None,
+    deep_search: bool = ...,
+):
     r"""check whether a give key exists in valid_keys and return a list if
     many keys are found.
 
@@ -6288,53 +6786,64 @@ def key_checker (
     Out[57]: ['h502', 'h2601']
 
     """
-    deep_search, =ellipsis2false(deep_search)
+    (deep_search,) = ellipsis2false(deep_search)
 
     _keys = copy.deepcopy(keys)
-    valid_keys = is_iterable(valid_keys , exclude_string =True, transform =True )
-    if isinstance ( keys, str):
-        pattern = pattern or r'[_#&@!_+,;\s-]\s*'
-        keys = str2columns (keys, regex = regex , pattern=pattern )
+    valid_keys = is_iterable(valid_keys, exclude_string=True, transform=True)
+    if isinstance(keys, str):
+        pattern = pattern or r"[_#&@!_+,;\s-]\s*"
+        keys = str2columns(keys, regex=regex, pattern=pattern)
     # If iterbale object , save obj
     # to improve error
     kkeys = copy.deepcopy(keys)
     if deep_search:
         keys = key_search(
             keys,
-            default_keys= valid_keys,
+            default_keys=valid_keys,
             deep=True,
-            raise_exception= True,
-            regex =regex,
-            pattern=pattern
-            )
-        return keys[0] if len(keys)==1 else keys
+            raise_exception=True,
+            regex=regex,
+            pattern=pattern,
+        )
+        return keys[0] if len(keys) == 1 else keys
     # for consistency
-    keys = [ k for k in keys if ''.join(
-        [ str(i) for i in valid_keys] ).find(k)>=0 ]
+    keys = [
+        k for k in keys if "".join([str(i) for i in valid_keys]).find(k) >= 0
+    ]
     # assertion error if key does not exist.
-    if len(keys)==0:
-        verb1, verb2 = ('', 'es') if len(kkeys)==1 else ('s', '')
-        msg = (f"key{verb1} {_keys!r} do{verb2} not exist."
-               f" Expect {smart_format(valid_keys, 'or')}")
-        raise KeyError ( msg )
+    if len(keys) == 0:
+        verb1, verb2 = ("", "es") if len(kkeys) == 1 else ("s", "")
+        msg = (
+            f"key{verb1} {_keys!r} do{verb2} not exist."
+            f" Expect {smart_format(valid_keys, 'or')}"
+        )
+        raise KeyError(msg)
 
     if len(keys) != len(kkeys):
-        miss_keys = is_in_if ( kkeys, keys , return_diff= True , error ='ignore')
-        miss_keys, verb = (miss_keys[0], 'is') if len( miss_keys) ==1 else (
-            miss_keys, 'are')
-        warnings.warn(f"key{'' if verb=='is' else 's'} {miss_keys!r} {verb}"
-                      f" missing in {_keys}", stacklevel=2)
-    keys = keys[0] if len(keys)==1 else keys
+        miss_keys = is_in_if(kkeys, keys, return_diff=True, error="ignore")
+        miss_keys, verb = (
+            (miss_keys[0], "is")
+            if len(miss_keys) == 1
+            else (miss_keys, "are")
+        )
+        warnings.warn(
+            f"key{'' if verb == 'is' else 's'} {miss_keys!r} {verb}"
+            f" missing in {_keys}",
+            stacklevel=2,
+        )
+    keys = keys[0] if len(keys) == 1 else keys
 
     return keys
 
-def random_sampling (
-    d, / ,
-    samples:int = None  ,
-    replace:bool = False ,
-    random_state:int = None,
+
+def random_sampling(
+    d,
+    /,
+    samples: int = None,
+    replace: bool = False,
+    random_state: int = None,
     shuffle=True,
-    ):
+):
     """ Sampling data.
 
     Parameters
@@ -6371,79 +6880,99 @@ def random_sampling (
     (7, 27)
     """
 
-    n= None ; is_percent = False
-    orig= copy.deepcopy(samples )
+    n = None
+    is_percent = False
+    orig = copy.deepcopy(samples)
     if not hasattr(d, "__iter__"):
-        d = is_iterable(d, exclude_string= True, transform =True )
+        d = is_iterable(d, exclude_string=True, transform=True)
 
-    if (
-            samples is None
-            or str(samples) in ('1', '*')
-            ):
-        samples =1.
+    if samples is None or str(samples) in ("1", "*"):
+        samples = 1.0
 
     if "%" in str(samples):
-        samples = samples.replace ("%", '')
-        is_percent=True
+        samples = samples.replace("%", "")
+        is_percent = True
     # assert value for consistency.
     try:
-        samples = float( samples)
+        samples = float(samples)
     except:
-        raise TypeError("Wrong value for 'samples'. Expect an integer."
-                        f" Got {type (orig).__name__!r}")
+        raise TypeError(
+            "Wrong value for 'samples'. Expect an integer."
+            f" Got {type(orig).__name__!r}"
+        )
 
-    if samples <=1 or is_percent:
-        samples  = assert_ratio(
-            samples , bounds = (0, 1), exclude_value= 'use lower bound',
-            in_percent= True )
+    if samples <= 1 or is_percent:
+        samples = assert_ratio(
+            samples,
+            bounds=(0, 1),
+            exclude_value="use lower bound",
+            in_percent=True,
+        )
 
-        n = int ( samples * ( d.shape[0] if scipy.sparse.issparse(d)
-                 else len(d)))
+        n = int(
+            samples * (d.shape[0] if scipy.sparse.issparse(d) else len(d))
+        )
     else:
         # data frame
-        n= int(samples)
+        n = int(samples)
 
     # reset samples and use number of samples instead
-    samples =None
+    samples = None
     # get the total length of d
-    dlen = ( d.shape[0] if scipy.sparse.issparse(d) else len(d))
+    dlen = d.shape[0] if scipy.sparse.issparse(d) else len(d)
     # if number is greater than the length
     # block to the length so to retrieve all
     # value no matter the arrangement.
     if n > dlen:
         n = dlen
-    if hasattr (d, 'columns') or hasattr (d, 'name'):
+    if hasattr(d, "columns") or hasattr(d, "name"):
         # data frame
-        return d.sample ( n= n , frac=samples , replace = replace ,
-                         random_state = random_state
-                     ) if shuffle else d.iloc [ :n , ::]
+        return (
+            d.sample(
+                n=n, frac=samples, replace=replace, random_state=random_state
+            )
+            if shuffle
+            else d.iloc[:n, ::]
+        )
 
-    np.random.seed ( random_state)
-    if scipy.sparse.issparse(d) :
+    np.random.seed(random_state)
+    if scipy.sparse.issparse(d):
         if scipy.sparse.isspmatrix_coo(d):
-            warnings.warn("coo_matrix does not support indexing. Conversion"
-                          " should be performed in CSR matrix", stacklevel=2)
+            warnings.warn(
+                "coo_matrix does not support indexing. Conversion"
+                " should be performed in CSR matrix",
+                stacklevel=2,
+            )
             d = d.tocsr()
 
-        return d [ np.random.choice(
-            np.arange(d.shape[0]), n, replace=replace )] if shuffle else d [
-                [ i for i in range (n)]]
+        return (
+            d[np.random.choice(np.arange(d.shape[0]), n, replace=replace)]
+            if shuffle
+            else d[[i for i in range(n)]]
+        )
 
-        #d = d[idx ]
+        # d = d[idx ]
 
     # manage the data
-    if not hasattr(d, '__array__'):
-        d = np.array (d )
+    if not hasattr(d, "__array__"):
+        d = np.array(d)
 
-    idx = np.random.randint( len(d), size = n ) if shuffle else [ i for i in range(n)]
-    if len(d.shape )==1: d =d[idx ]
-    else: d = d[idx , :]
+    idx = (
+        np.random.randint(len(d), size=n)
+        if shuffle
+        else [i for i in range(n)]
+    )
+    if len(d.shape) == 1:
+        d = d[idx]
+    else:
+        d = d[idx, :]
 
     return d
 
 
-def make_obj_consistent_if (
-        item= ... , default = ..., size =None, from_index: bool =True ):
+def make_obj_consistent_if(
+    item=..., default=..., size=None, from_index: bool = True
+):
     """Combine default values to item to create default consistent iterable
     objects.
 
@@ -6484,33 +7013,29 @@ def make_obj_consistent_if (
     ['SVC', 'LR', 'SVC']
 
     """
-    if default==... or None : default =[]
+    if default == ... or None:
+        default = []
     # for consistency
-    default = list( is_iterable (default, exclude_string =True,
-                                 transform =True ) )
+    default = list(is_iterable(default, exclude_string=True, transform=True))
 
-    if item not in ( ...,  None) :
-         item = list( is_iterable( item , exclude_string =True ,
-                                  transform = True ) )
-    else: item = []
+    if item not in (..., None):
+        item = list(is_iterable(item, exclude_string=True, transform=True))
+    else:
+        item = []
 
-    item += default[len(item):] if from_index else default
+    item += default[len(item) :] if from_index else default
 
     if size is not None:
-        size = int (_assert_all_types(size, int, float,
-                                      objname = "Item 'size'") )
-        item = item [:size]
+        size = int(_assert_all_types(size, int, float, objname="Item 'size'"))
+        item = item[:size]
 
     return item
 
 
 def replace_data(
-    X, y =None,
-    n_times: int  = 1,
-    axis = 0,
-    reset_index :bool =...
-    ):
-    """ Replace items in data :math:`n` times
+    X, y=None, n_times: int = 1, axis=0, reset_index: bool = ...
+):
+    """Replace items in data :math:`n` times
 
     Parameters
     ----------
@@ -6544,32 +7069,35 @@ def replace_data(
     """
 
     n = n_times or 1
-    n= int (_assert_all_types(n, int, float, objname ='n_times'))
+    n = int(_assert_all_types(n, int, float, objname="n_times"))
 
-    def concat_data ( ar ,):
-        if hasattr ( ar, 'columns') or hasattr ( ar, 'series'):
-            d = pd.concat (  [ ar for i in range(n)], axis = axis )
+    def concat_data(
+        ar,
+    ):
+        if hasattr(ar, "columns") or hasattr(ar, "series"):
+            d = pd.concat([ar for i in range(n)], axis=axis)
             if reset_index:
-                d.reset_index (drop =True, inplace =True  )
+                d.reset_index(drop=True, inplace=True)
 
-        else: d = np.concatenate ([ ar for i in range(n)], axis = axis  )
+        else:
+            d = np.concatenate([ar for i in range(n)], axis=axis)
         return d
 
-    X = is_iterable(X, exclude_string =True, transform = True )
+    X = is_iterable(X, exclude_string=True, transform=True)
 
     if y is not None:
-        y = is_iterable( y, exclude_string= True, transform= True)
+        y = is_iterable(y, exclude_string=True, transform=True)
 
-    if not hasattr (X, '__array__'):
+    if not hasattr(X, "__array__"):
         X = np.array(X)
 
-    if not hasattr (y, '__array__') and y is not None :
+    if not hasattr(y, "__array__") and y is not None:
         y = np.array(y)
 
-    return concat_data ( X) if y is None else (
-            concat_data( X) , concat_data(y))
+    return concat_data(X) if y is None else (concat_data(X), concat_data(y))
 
-def convert_value_in (v, /, unit ='m'):
+
+def convert_value_in(v, /, unit="m"):
     """Convert value based on the reference unit.
 
     Parameters
@@ -6599,32 +7127,35 @@ def convert_value_in (v, /, unit ='m'):
     >>> convert_value_in ('20m', unit='g')
     ValueError: Unknwon unit 'm'...
     """
-    c= { 'k':1e3 ,
-        'h':1e2 ,
-        'dc':1e1 ,
-        '':1e0 ,
-        'd':1e-1,
-        'c':1e-2 ,
-        'm':1e-3
-        }
-    c = {k +str(unit).lower(): v for k, v in c.items() }
+    c = {
+        "k": 1e3,
+        "h": 1e2,
+        "dc": 1e1,
+        "": 1e0,
+        "d": 1e-1,
+        "c": 1e-2,
+        "m": 1e-3,
+    }
+    c = {k + str(unit).lower(): v for k, v in c.items()}
 
     v = str(v).lower()
 
-    regex = re.findall(r'[a-zA-Z]', v)
+    regex = re.findall(r"[a-zA-Z]", v)
 
-    if len(regex) !=0:
-        unit = ''.join( regex )
-        v = v.replace (unit, '')
+    if len(regex) != 0:
+        unit = "".join(regex)
+        v = v.replace(unit, "")
 
     if unit not in c.keys():
-        raise ValueError (
-            f"Unknwon unit {unit!r}. Expect {smart_format(c.keys(), 'or' )}."
-            f" Or rename the `unit` parameter maybe to {unit[-1]!r}.")
+        raise ValueError(
+            f"Unknwon unit {unit!r}. Expect {smart_format(c.keys(), 'or')}."
+            f" Or rename the `unit` parameter maybe to {unit[-1]!r}."
+        )
 
-    return float ( v) * (c.get(unit) or 1e0)
+    return float(v) * (c.get(unit) or 1e0)
 
-def split_list(lst:List[Any, ...],/,  val:int, fill_value:Any=None ):
+
+def split_list(lst: List[Any, ...], /, val: int, fill_value: Any = None):
     """Module to extract a slice of elements from the list
 
     Parameters
@@ -6648,26 +7179,31 @@ def split_list(lst:List[Any, ...],/,  val:int, fill_value:Any=None ):
 
     """
 
-    lst = is_iterable(lst , exclude_string =True , transform =True )
-    val = int ( _assert_all_types(val, int, float ))
+    lst = is_iterable(lst, exclude_string=True, transform=True)
+    val = int(_assert_all_types(val, int, float))
     try:
-        sl= [list(group) for key, group in itertools.groupby(
-                lst, lambda x: (x-1)//val)]
+        sl = [
+            list(group)
+            for key, group in itertools.groupby(lst, lambda x: (x - 1) // val)
+        ]
     except:
         # when string is given
-        sl= list(itertools.zip_longest(
-            *(iter(lst),)*val,fillvalue =fill_value),)
+        sl = list(
+            itertools.zip_longest(*(iter(lst),) * val, fillvalue=fill_value),
+        )
     return sl
 
-def key_search (
-    keys: str, /,
+
+def key_search(
+    keys: str,
+    /,
     default_keys: Text | List[str],
-    parse_keys: bool=True,
-    regex :re=None,
-    pattern :str=None,
-    deep: bool =...,
-    raise_exception:bool=...,
-    ):
+    parse_keys: bool = True,
+    regex: re = None,
+    pattern: str = None,
+    deep: bool = ...,
+    raise_exception: bool = ...,
+):
     r"""Find key in a list of default keys and select the best match.
 
     Parameters
@@ -6729,54 +7265,57 @@ def key_search (
     Out[39]: ['DH_East']
     """
     deep, raise_exception, parse_keys = ellipsis2false(
-        deep, raise_exception, parse_keys)
+        deep, raise_exception, parse_keys
+    )
     # make a copy of original keys
 
     kinit = copy.deepcopy(keys)
     if parse_keys:
-        if is_iterable(keys , exclude_string= True ):
-            keys = ' '.join ( [str(k) for k in keys ])
-             # for consisteny checker
-        pattern = pattern or r'[#&@!_+,;\s-]\s*'
-        keys = str2columns ( keys , regex = regex , pattern = pattern )
+        if is_iterable(keys, exclude_string=True):
+            keys = " ".join([str(k) for k in keys])
+            # for consisteny checker
+        pattern = pattern or r"[#&@!_+,;\s-]\s*"
+        keys = str2columns(keys, regex=regex, pattern=pattern)
 
-        if is_iterable ( default_keys , exclude_string=True ):
-            default_keys = ' '. join ( [ str(k) for k in default_keys ])
+        if is_iterable(default_keys, exclude_string=True):
+            default_keys = " ".join([str(k) for k in default_keys])
             # make a copy
-        default_keys =  str2columns(
-            default_keys, regex =regex , pattern = pattern )
-    else :
-        keys = is_iterable(
-        keys, exclude_string = True, transform =True )
-        default_keys = is_iterable (
-            default_keys, exclude_string=True, transform =True )
+        default_keys = str2columns(default_keys, regex=regex, pattern=pattern)
+    else:
+        keys = is_iterable(keys, exclude_string=True, transform=True)
+        default_keys = is_iterable(
+            default_keys, exclude_string=True, transform=True
+        )
 
-    dk_init = copy.deepcopy(default_keys )
+    dk_init = copy.deepcopy(default_keys)
     # if deep convert all keys to lower
     if deep:
-        keys= [str(it).lower() for it in keys  ]
-        default_keys = [str(it).lower() for it in default_keys  ]
+        keys = [str(it).lower() for it in keys]
+        default_keys = [str(it).lower() for it in default_keys]
 
-    valid_keys =[]
-    for key in keys :
-        for ii, dkey in enumerate (default_keys) :
-            vk = re.findall(rf'\w*{key}\w*', dkey)
+    valid_keys = []
+    for key in keys:
+        for ii, dkey in enumerate(default_keys):
+            vk = re.findall(rf"\w*{key}\w*", dkey)
             # rather than rf'\b\w*{key}\w*\b'
             # if deep take the real values in defaults keys.
-            if len(vk) !=0:
-                if deep: valid_keys.append( dk_init[ii] )
-                else:valid_keys.extend( vk)
+            if len(vk) != 0:
+                if deep:
+                    valid_keys.append(dk_init[ii])
+                else:
+                    valid_keys.extend(vk)
                 break
-    if ( raise_exception
-        and len(valid_keys)==0
-        ):
-        kverb ='s' if len(kinit)> 1 else ''
-        raise KeyError (f"key{kverb} {kinit!r} not found."
-                       f" Expect {smart_format(dk_init, 'or')}")
-    return None if len(valid_keys)==0 else valid_keys
+    if raise_exception and len(valid_keys) == 0:
+        kverb = "s" if len(kinit) > 1 else ""
+        raise KeyError(
+            f"key{kverb} {kinit!r} not found."
+            f" Expect {smart_format(dk_init, 'or')}"
+        )
+    return None if len(valid_keys) == 0 else valid_keys
 
-def repeat_item_insertion(text, /, pos, item ='', fill_value=''):
-    """ Insert character in  text according from it position.
+
+def repeat_item_insertion(text, /, pos, item="", fill_value=""):
+    """Insert character in  text according from it position.
 
     Parameters
     -----------
@@ -6801,37 +7340,40 @@ def repeat_item_insertion(text, /, pos, item ='', fill_value=''):
     >>> repeat_item_insertion ( 'Function inserts car in text.', pos=10, item='TK' )
     Out[69]: 'Function iTKnserts carTK in text.'
     """
-    pos= _assert_all_types(pos, int, float,
-                           objname=f'Position for {item} insertion')
+    pos = _assert_all_types(
+        pos, int, float, objname=f"Position for {item} insertion"
+    )
     # for consistency
-    lst = list( str(text))
+    lst = list(str(text))
     # checher whether there is a decimal then remove it
-    dec_part=[]
-    ent_part= lst
-    for i, it in enumerate ( lst)  :
-        if it =='.':
-            ent_part, dec_part  = lst [:i],  lst[i:]
+    dec_part = []
+    ent_part = lst
+    for i, it in enumerate(lst):
+        if it == ".":
+            ent_part, dec_part = lst[:i], lst[i:]
             break
     # now split list
-    value = split_list(ent_part, val= pos , fill_value=fill_value)
-    #value = split_list ( ent_part, 2)
-    #[[1, 2, 3], [4, 5, 6], [7, 8]]
-    join_lst= list (map ( lambda s : ''.join( s), value))
-    #[123, 456, 78]
-    #join with mark
-    return f'{str(item)}'.join(join_lst) +''.join(dec_part)
+    value = split_list(ent_part, val=pos, fill_value=fill_value)
+    # value = split_list ( ent_part, 2)
+    # [[1, 2, 3], [4, 5, 6], [7, 8]]
+    join_lst = list(map(lambda s: "".join(s), value))
+    # [123, 456, 78]
+    # join with mark
+    return f"{str(item)}".join(join_lst) + "".join(dec_part)
 
-def numstr2dms (
-    sdigit: str, /,
-    sanitize: bool=True,
-    func: F=None,
-    args: tuple=(),
-    regex: re=None,
-    pattern: str=None,
-    return_values: bool=...,
-    **kws
-    ):
-    """ Convert numerical digit string to DD:MM:SS
+
+def numstr2dms(
+    sdigit: str,
+    /,
+    sanitize: bool = True,
+    func: F = None,
+    args: tuple = (),
+    regex: re = None,
+    pattern: str = None,
+    return_values: bool = ...,
+    **kws,
+):
+    """Convert numerical digit string to DD:MM:SS
 
     Note that the any string digit for Minutes and seconds must be composed
     of two values i.e the function accepts at least six digits, otherwise an
@@ -6888,57 +7430,66 @@ def numstr2dms (
 
     """
     # remove any character from the string digit
-    if return_values is ...:return_values=False
-    sdigit= str(sdigit)
+    if return_values is ...:
+        return_values = False
+    sdigit = str(sdigit)
 
     if sanitize:
-        pattern = pattern or '[_#&@!+,;:"\'\\s-]\\s*'
-        sdigit = re.sub(pattern , "", str(sdigit), flags=re.IGNORECASE)
+        pattern = pattern or "[_#&@!+,;:\"'\\s-]\\s*"
+        sdigit = re.sub(pattern, "", str(sdigit), flags=re.IGNORECASE)
 
-    try : float (sdigit)
-    except: raise ValueError ("Wrong value. Expects a string-digit or digit."
-                              f" Got {sdigit!r}")
-    if callable (func):
-        sdigit= func (sdigit, *args, **kws )
+    try:
+        float(sdigit)
+    except:
+        raise ValueError(
+            f"Wrong value. Expects a string-digit or digit. Got {sdigit!r}"
+        )
+    if callable(func):
+        sdigit = func(sdigit, *args, **kws)
 
     # In the case there is'
-    decimal ='0'
+    decimal = "0"
     # remove decimal
-    sdigit_list  = str(sdigit).split(".")
+    sdigit_list = str(sdigit).split(".")
 
-    if len(sdigit_list)==2:
-        sdigit, decimal =sdigit_list
+    if len(sdigit_list) == 2:
+        sdigit, decimal = sdigit_list
 
     if len(sdigit) < 6:
-        raise ValueError(f"DMS expects at list six digits(DD:MM:SS)."
-                         f" Got {sdigit!r}")
+        raise ValueError(
+            f"DMS expects at list six digits(DD:MM:SS). Got {sdigit!r}"
+        )
 
-    sec , sdigit = sdigit[-2:] , sdigit [:-2]
-    mm , sdigit = sdigit[-2:], sdigit [:-2]
-    deg = sdigit # the remain part
+    sec, sdigit = sdigit[-2:], sdigit[:-2]
+    mm, sdigit = sdigit[-2:], sdigit[:-2]
+    deg = sdigit  # the remain part
     # conca second ecimal
-    sec +=f".{decimal}"
+    sec += f".{decimal}"
 
-    return tuple (map ( float, [deg, mm, sec]) ) if return_values \
-        else ':'.join([deg, mm, sec])
+    return (
+        tuple(map(float, [deg, mm, sec]))
+        if return_values
+        else ":".join([deg, mm, sec])
+    )
 
 
-def storeOrwritehdf5 (
-    d, /,
-    key:str= None,
-    mode:str='a',
-    kind: str=None,
-    path_or_buf:str= None,
-    encoding:str="utf8",
-    csv_sep: str=",",
-    index: bool=...,
-    columns: str |List[Any, ...]=None,
-    sanitize_columns:bool=...,
-    func: F= None,
-    args: tuple=(),
-    applyto: str|List[Any, ...]=None,
+def storeOrwritehdf5(
+    d,
+    /,
+    key: str = None,
+    mode: str = "a",
+    kind: str = None,
+    path_or_buf: str = None,
+    encoding: str = "utf8",
+    csv_sep: str = ",",
+    index: bool = ...,
+    columns: str | List[Any, ...] = None,
+    sanitize_columns: bool = ...,
+    func: F = None,
+    args: tuple = (),
+    applyto: str | List[Any, ...] = None,
     **func_kwds,
-    )->None|DataFrame:
+) -> None | DataFrame:
     """ Store data to hdf5 or write data to csv file.
 
     Note that by default, the data is not store nor write and
@@ -7069,63 +7620,81 @@ def storeOrwritehdf5 (
     >>> storeOrwritehdf5 ( d, key='test0', path_or_buf= 'test_data',
                           kind ='export')
     """
-    kind= key_search (str(kind), default_keys=(
-        "none", "store", "write", "export", "tocsv"),
-        raise_exception=True , deep=True)[0]
+    kind = key_search(
+        str(kind),
+        default_keys=("none", "store", "write", "export", "tocsv"),
+        raise_exception=True,
+        deep=True,
+    )[0]
 
-    kind = "export" if kind in ('write', 'tocsv') else kind
+    kind = "export" if kind in ("write", "tocsv") else kind
 
     if sanitize_columns is ...:
-        sanitize_columns=False
-    d = to_numeric_dtypes(d, columns=columns,sanitize_columns=sanitize_columns,
-                          fill_pattern='_')
+        sanitize_columns = False
+    d = to_numeric_dtypes(
+        d,
+        columns=columns,
+        sanitize_columns=sanitize_columns,
+        fill_pattern="_",
+    )
 
     # get categorical variables
-    if ( sanitize_columns
-        or func is not None
-        ):
-        d, _, cf = to_numeric_dtypes(d, return_feature_types= True )
-        #( strip then pass to lower case all non-numerical data)
+    if sanitize_columns or func is not None:
+        d, _, cf = to_numeric_dtypes(d, return_feature_types=True)
+        # ( strip then pass to lower case all non-numerical data)
         # for minimum sanitization
-        for cat in cf :
-            d[cat]= d[cat].str.lower()
-            d[cat]= d[cat].str.strip()
+        for cat in cf:
+            d[cat] = d[cat].str.lower()
+            d[cat] = d[cat].str.strip()
 
     if func is not None:
         if not callable(func):
             raise TypeError(
-                f"Expect a callable for `func`. Got {type(func).__name__!r}")
+                f"Expect a callable for `func`. Got {type(func).__name__!r}"
+            )
 
         if applyto is None:
-            raise ValueError("Need to specify the data column to apply"
-                             f"{func.__name__!r} to.")
+            raise ValueError(
+                "Need to specify the data column to apply"
+                f"{func.__name__!r} to."
+            )
 
-        applyto = is_iterable( applyto, exclude_string=True,
-                               transform =True ) if applyto !="*" else d.columns
+        applyto = (
+            is_iterable(applyto, exclude_string=True, transform=True)
+            if applyto != "*"
+            else d.columns
+        )
         # check whether the applyto columns are in data columns
         exist_features(d, applyto)
 
         # map each colum
         for col in applyto:
-            d [col]=d[col].apply( func, args=args, **func_kwds )
+            d[col] = d[col].apply(func, args=args, **func_kwds)
 
     # store in h5 file.
-    if kind=='store':
+    if kind == "store":
         if path_or_buf is None:
-            print("Destination file is missing. Use 'data.h5' instead outputs"
-                  f" in the current directory {os.getcwd()}")
-            path_or_buf= 'data.h5'
+            print(
+                "Destination file is missing. Use 'data.h5' instead outputs"
+                f" in the current directory {os.getcwd()}"
+            )
+            path_or_buf = "data.h5"
 
-        d.to_hdf ( path_or_buf , key =key, mode =mode )
+        d.to_hdf(path_or_buf, key=key, mode=mode)
     # export to csv file
-    if kind=="export":
-        d.to_csv(path_or_buf, encoding = encoding  , sep=csv_sep ,
-                 index =False if index is ... else index   )
+    if kind == "export":
+        d.to_csv(
+            path_or_buf,
+            encoding=encoding,
+            sep=csv_sep,
+            index=False if index is ... else index,
+        )
 
     return d if kind not in ("store", "export") else None
 
-def ellipsis2false( *parameters , default_value: Any=False ):
-    """ Turn all parameter arguments to False if ellipsis.
+
+def ellipsis2false(*parameters, default_value: Any = False):
+    """Turn all parameter arguments to False if ellipsis.
 
     Note that the output arguments must be in the same order like the
     positional arguments.
@@ -7147,50 +7716,6 @@ def ellipsis2false( *parameters , default_value: Any=False ):
         >>> verbose
         False
     """
-    return tuple (  default_value  if param is  ... else param
-                    for param in parameters )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return tuple(
+        default_value if param is ... else param for param in parameters
+    )

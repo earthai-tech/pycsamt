@@ -88,10 +88,10 @@ class Mare2DEMLog:
     # Iteration header: "** Iteration     N **"
     _ITER_HDR = re.compile(r"\*\*\s+Iteration\s+(\d+)\s+\*\*")
     # Summary value lines
-    _MISFIT   = re.compile(r"Model Misfit\s*:\s*([\d.eE+\-]+)")
-    _ROUGH    = re.compile(r"Roughness\s*:\s*([\d.eE+\-]+)")
-    _MU       = re.compile(r"Optimal Mu\s*:\s*([\d.eE+\-]+)")
-    _CONV     = re.compile(r"Convergence Status\s*:\s*(\d+)")
+    _MISFIT = re.compile(r"Model Misfit\s*:\s*([\d.eE+\-]+)")
+    _ROUGH = re.compile(r"Roughness\s*:\s*([\d.eE+\-]+)")
+    _MU = re.compile(r"Optimal Mu\s*:\s*([\d.eE+\-]+)")
+    _CONV = re.compile(r"Convergence Status\s*:\s*(\d+)")
 
     def __init__(self, path: str | Path):
         self.path = Path(path).resolve()

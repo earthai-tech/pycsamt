@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 # Plain-text report
 # ---------------------------------------------------------------------------
 
+
 def make_text_report(
     pipeline_name: str,
     step_results: list[StepResult],
@@ -118,7 +119,9 @@ def _plot_thumbs(plots: list[Path], outdir: Path | None) -> str:
             rel = p.relative_to(outdir)
         except ValueError:
             rel = p
-        tags.append(f'<a href="{rel}" target="_blank"><img src="{rel}" /></a>')
+        tags.append(
+            f'<a href="{rel}" target="_blank"><img src="{rel}" /></a>'
+        )
     return f'<div class="plots">{"".join(tags)}</div>'
 
 

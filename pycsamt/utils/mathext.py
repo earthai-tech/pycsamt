@@ -4,6 +4,7 @@
 """
 Extended math utilities.
 """
+
 import cmath
 import warnings
 from math import factorial, radians
@@ -39,10 +40,9 @@ from .validation import (
 mu0 = 4 * np.pi * 1e-7
 
 __all__ = [
-    'round_dipole_length',
-    'compute_azimuth',
+    "round_dipole_length",
+    "compute_azimuth",
 ]
-
 
 
 def round_dipole_length(value: float) -> float:
@@ -55,11 +55,12 @@ def round_dipole_length(value: float) -> float:
     # Compute nearest multiple of 5
     return float(5 * np.round(value / 5))
 
+
 def compute_azimuth(
     easting: np.ndarray,
     northing: np.ndarray,
-    utm_zone: str = '49N',
-    extrapolate: bool = False
+    utm_zone: str = "49N",
+    extrapolate: bool = False,
 ) -> np.ndarray:
     """
     Compute azimuth between successive points in UTM coords.
@@ -96,7 +97,7 @@ def compute_azimuth(
         reference_ellipsoid=23,
         northing=northing,
         easting=easting,
-        zone=utm_zone
+        zone=utm_zone,
     )
     lat = np.deg2rad(lat_deg)
     lon = np.deg2rad(lon_deg)
@@ -109,15 +110,15 @@ def compute_azimuth(
     # Use haversine-based bearing formula
     numerator = sin_dlon * np.cos(lat[1:])
     denominator = (
-        np.cos(lat[:-1]) * np.sin(lat[1:]) -
-        np.sin(lat[:-1]) * np.cos(lat[1:]) * cos_dlon
+        np.cos(lat[:-1]) * np.sin(lat[1:])
+        - np.sin(lat[:-1]) * np.cos(lat[1:]) * cos_dlon
     )
     az = np.arctan2(numerator, denominator)
     az_deg = np.rad2deg(az) % 360
 
     if extrapolate:
         # extrapolate first value
-        f = interp1d(np.arange(1, n), az_deg, fill_value='extrapolate')
+        f = interp1d(np.arange(1, n), az_deg, fill_value="extrapolate")
         first = f(0)
         az_out = np.concatenate(([first], az_deg))
     else:
@@ -127,14 +128,14 @@ def compute_azimuth(
 
 
 def linkage_matrix(
-    df: DataFrame ,
-    columns:List[str] =None,
-    kind:str ='design',
-    metric:str ='euclidean',
-    method:str ='complete',
-    as_frame =False,
+    df: DataFrame,
+    columns: List[str] = None,
+    kind: str = "design",
+    metric: str = "euclidean",
+    method: str = "complete",
+    as_frame=False,
     optimal_ordering=False,
- )->NDArray:
+) -> NDArray:
     r""" Compute the distance matrix from the hierachical clustering algorithm
 
     Parameters
@@ -285,54 +286,57 @@ def linkage_matrix(
     df = _assert_all_types(df, pd.DataFrame, np.ndarray)
 
     if columns is not None:
-        if isinstance (columns , str):
+        if isinstance(columns, str):
             columns = [columns]
-        if len(columns)!= df.shape [1]:
-            raise TypeError("Number of columns must fit the shape of X."
-                            f" got {len(columns)} instead of {df.shape [1]}"
-                            )
-        df = pd.DataFrame(data = df.values if hasattr(df, 'columns') else df ,
-                          columns = columns )
+        if len(columns) != df.shape[1]:
+            raise TypeError(
+                "Number of columns must fit the shape of X."
+                f" got {len(columns)} instead of {df.shape[1]}"
+            )
+        df = pd.DataFrame(
+            data=df.values if hasattr(df, "columns") else df, columns=columns
+        )
 
-    kind= str(kind).lower().strip()
-    if kind not in ('squareform', 'condense', 'design'):
-        raise ValueError(f"Unknown method {method!r}. Expect 'squareform',"
-                         " 'condense' or 'design'.")
+    kind = str(kind).lower().strip()
+    if kind not in ("squareform", "condense", "design"):
+        raise ValueError(
+            f"Unknown method {method!r}. Expect 'squareform',"
+            " 'condense' or 'design'."
+        )
 
-    labels = [f'ID_{i}' for i in range(len(df))]
-    if kind =='squareform':
-        row_dist = pd.DataFrame (squareform (
-        pdist(df, metric= metric )), columns = labels  ,
-        index = labels)
-        row_clusters = linkage (row_dist, method =method, metric =metric
-                                )
-    if kind =='condense':
-        row_clusters = linkage (pdist(df, metric =metric), method =method
-                                )
-    if kind =='design':
-        row_clusters = linkage(df.values if hasattr (df, 'columns') else df,
-                               method = method,
-                               optimal_ordering=optimal_ordering )
+    labels = [f"ID_{i}" for i in range(len(df))]
+    if kind == "squareform":
+        row_dist = pd.DataFrame(
+            squareform(pdist(df, metric=metric)), columns=labels, index=labels
+        )
+        row_clusters = linkage(row_dist, method=method, metric=metric)
+    if kind == "condense":
+        row_clusters = linkage(pdist(df, metric=metric), method=method)
+    if kind == "design":
+        row_clusters = linkage(
+            df.values if hasattr(df, "columns") else df,
+            method=method,
+            optimal_ordering=optimal_ordering,
+        )
 
     if as_frame:
-        row_clusters = pd.DataFrame ( row_clusters,
-                                     columns = [ 'row label 1',
-                                                'row lable 2',
-                                                'distance',
-                                                'no. of items in clust.'
-                                                ],
-                                     index = ['cluster %d' % (i +1) for i in
-                                              range(row_clusters.shape[0])
-                                              ]
-                                     )
+        row_clusters = pd.DataFrame(
+            row_clusters,
+            columns=[
+                "row label 1",
+                "row lable 2",
+                "distance",
+                "no. of items in clust.",
+            ],
+            index=[
+                "cluster %d" % (i + 1) for i in range(row_clusters.shape[0])
+            ],
+        )
     return row_clusters
 
-def d_hanning_window(
-        x: ArrayLike[DType[float]],
-        xk: float ,
-        W: int
-        )-> F:
-    """ Discrete hanning function.
+
+def d_hanning_window(x: ArrayLike[DType[float]], xk: float, W: int) -> F:
+    """Discrete hanning function.
 
     For futher details, please refer to https://doi.org/10.1190/1.2400625
 
@@ -343,16 +347,15 @@ def d_hanning_window(
     :return: Anonymous function (x,xk, W) value
     """
     # x =check_y (x, input_name ='x')
-    return  1/W * (1 + np.cos (
-        2 * np.pi * (x-xk) /W)) if np.abs(x-xk) <= W/2 else  0.
+    return (
+        1 / W * (1 + np.cos(2 * np.pi * (x - xk) / W))
+        if np.abs(x - xk) <= W / 2
+        else 0.0
+    )
 
-def betaj (
-        xj: int ,
-        L: int ,
-        W: int ,
-        **kws
- )-> float :
-    """ Weight factor function for convoluting at station/site j.
+
+def betaj(xj: int, L: int, W: int, **kws) -> float:
+    """Weight factor function for convoluting at station/site j.
 
     The function deals with the discrete hanning window based on ideas presented
     in Torres-Verdin and Bostick, 1992, https://doi.org/10.1190/1.2400625.
@@ -372,20 +375,22 @@ def betaj (
         >>> betaj (xj = 2 , L=L, W=W )
         ... 0.35136534572813144
     """
-    if W < L :
-        raise ValueError("Window-size must be greater than the dipole length.")
+    if W < L:
+        raise ValueError(
+            "Window-size must be greater than the dipole length."
+        )
 
-    xk = W/2
+    xk = W / 2
     # vec_betaj = np.vectorize( betaj ) ; vec_betaj(0, 1, 5)
-    return  quad (d_hanning_window, xj - L/2 , xj +L/2, args=( xk, W),
-                  **kws)[0]
+    return quad(
+        d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws
+    )[0]
 
-def rhoa2z (
-        rhoa: NDArray[DType[T]],
-        phs:ArrayLike,
-        freq: ArrayLike
-)-> NDArray[DType[T]]:
-    r""" Convert apparent resistivity to impendance tensor z
+
+def rhoa2z(
+    rhoa: NDArray[DType[T]], phs: ArrayLike, freq: ArrayLike
+) -> NDArray[DType[T]]:
+    r"""Convert apparent resistivity to impendance tensor z
 
     :param rhoa: Apparent resistivity in :math:`\Omega.m`
     :type rhoa: ndarray, shape (N, M)
@@ -408,21 +413,29 @@ def rhoa2z (
 
     """
 
-    rhoa = np.array(rhoa); freq = np.array(freq) ; phs = np.array(phs)
+    rhoa = np.array(rhoa)
+    freq = np.array(freq)
+    phs = np.array(phs)
 
     if len(phs) != len(rhoa):
-        raise ValueError ("Phase and rhoa must have the same length."
-                          f" {len(phs)} & {len(rhoa)} are given.")
+        raise ValueError(
+            "Phase and rhoa must have the same length."
+            f" {len(phs)} & {len(rhoa)} are given."
+        )
 
     if len(freq) != len(rhoa):
-        raise ValueError("frequency and rhoa must have the same length."
-                         "{len(freq} & {len(rhoa)} are given.")
+        raise ValueError(
+            "frequency and rhoa must have the same length."
+            "{len(freq} & {len(rhoa)} are given."
+        )
 
     omega0 = 2 * np.pi * freq[:, None]
-    z= np.sqrt(rhoa * omega0 * mu0 ) * (np.cos (
-        np.deg2rad(phs)) + 1j * np.sin(np.deg2rad(phs)))
+    z = np.sqrt(rhoa * omega0 * mu0) * (
+        np.cos(np.deg2rad(phs)) + 1j * np.sin(np.deg2rad(phs))
+    )
 
     return z
+
 
 def rhophi2z(rho, phi, freq):
     r"""
@@ -467,77 +480,76 @@ def rhophi2z(rho, phi, freq):
     >>> rhophi2z (rho   , phi  , freq )
 
     """
-    def _rhophi2z (r, p, f ):
-        """ An isolated part of `rhophi2z """
+
+    def _rhophi2z(r, p, f):
+        """An isolated part of `rhophi2z"""
         with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-            abs_z  = np.sqrt(5 * f * r)
+            warnings.filterwarnings(action="ignore", category=RuntimeWarning)
+            abs_z = np.sqrt(5 * f * r)
         # `f` may arrive as a 1-element array: extract the scalar
         # explicitly (implicit conversion is removed in NumPy >= 2.3)
-        return cmath.rect(np.asarray(abs_z, dtype=float).ravel()[0],
-                          radians(p))
+        return cmath.rect(
+            np.asarray(abs_z, dtype=float).ravel()[0], radians(p)
+        )
 
-    is_array2x2 =False
+    is_array2x2 = False
 
-    rho = np.array (
-        is_iterable(rho, exclude_string= True ,
-                    transform =True ))
-    phi = np.array (
-        is_iterable(phi, exclude_string= True ,
-                    transform =True ))
-    freq = np.array (
-        is_iterable(freq, exclude_string= True ,
-                    transform =True ))
+    rho = np.array(is_iterable(rho, exclude_string=True, transform=True))
+    phi = np.array(is_iterable(phi, exclude_string=True, transform=True))
+    freq = np.array(is_iterable(freq, exclude_string=True, transform=True))
 
-    if ( rho.shape == (2,2) or  phi.shape == (2,2)):
-        n=None
-        if rho.shape != (2,2):
-            n, t  ='Resistivity', rho
-        elif phi.shape != (2,2):
-            n , t ='Phase', phi
+    if rho.shape == (2, 2) or phi.shape == (2, 2):
+        n = None
+        if rho.shape != (2, 2):
+            n, t = "Resistivity", rho
+        elif phi.shape != (2, 2):
+            n, t = "Phase", phi
         if n is not None:
-            raise ResistivityError ("Resistivity and Phase must be consistent."
-                           f" Expect 2 x2 array for {n}. Got {t.shape}")
+            raise ResistivityError(
+                "Resistivity and Phase must be consistent."
+                f" Expect 2 x2 array for {n}. Got {t.shape}"
+            )
 
         is_array2x2 = True
-    if not ( _is_numeric_dtype(rho) and _is_numeric_dtype(phi)):
-        raise ResistivityError ('Resistivity and Phase arguments must be one (1D) or'
-                       ' two dimensional (2x2) arrays (real)')
+    if not (_is_numeric_dtype(rho) and _is_numeric_dtype(phi)):
+        raise ResistivityError(
+            "Resistivity and Phase arguments must be one (1D) or"
+            " two dimensional (2x2) arrays (real)"
+        )
 
-    if is_array2x2 :
-        z = np.zeros((2,2),'complex')
+    if is_array2x2:
+        z = np.zeros((2, 2), "complex")
         for i in range(2):
             for j in range(2):
-                z[i, j ] = _rhophi2z(r = rho[i,j], p = phi[i,j], f = freq )
+                z[i, j] = _rhophi2z(r=rho[i, j], p=phi[i, j], f=freq)
                 # abs_z  = np.sqrt(5 * freq * rho[i,j])
                 # z[i,j] = cmath.rect(abs_z , radians(phi[i,j]))
         return z
 
-    check_consistency_size(rho, phi, freq )
+    check_consistency_size(rho, phi, freq)
 
-    if _is_arraylike_1d (phi ):
-
-        z = np.zeros_like ( phi , dtype ='complex')
+    if _is_arraylike_1d(phi):
+        z = np.zeros_like(phi, dtype="complex")
         # when scalar is passed or 1d array is
         # given
-        for ii in range ( len(phi)): #
-            z [ii] = _rhophi2z ( rho[ii], phi[ii], freq[:, None ][ii] )
+        for ii in range(len(phi)):  #
+            z[ii] = _rhophi2z(rho[ii], phi[ii], freq[:, None][ii])
     else:
         # when non square matrix is given
         # range like freq and n_stations
 
-        z = np.zeros(( len( freq), phi.shape [1]), dtype = 'complex')
-        for i in range (len(freq)):
-            for j in range(phi.shape[1]) :
-                z[i, j ] =  _rhophi2z(rho[i, j], phi[i,j], freq[i] )
+        z = np.zeros((len(freq), phi.shape[1]), dtype="complex")
+        for i in range(len(freq)):
+            for j in range(phi.shape[1]):
+                z[i, j] = _rhophi2z(rho[i, j], phi[i, j], freq[i])
 
     return z
 
-def z2rhoa (
-        z:NDArray [DType[complex]],
-        freq: ArrayLike[DType[float]]
-)-> NDArray[DType[float]]:
-    r""" Convert impendance tensor z  to apparent resistivity
+
+def z2rhoa(
+    z: NDArray[DType[complex]], freq: ArrayLike[DType[float]]
+) -> NDArray[DType[float]]:
+    r"""Convert impendance tensor z  to apparent resistivity
 
     :param z: Impedance tensor  in :math:`\Omega`
     :type z: ndarray, shape (N, M)
@@ -557,22 +569,26 @@ def z2rhoa (
 
     """
 
-    z = np.array(z, dtype = 'complex' ) ;  freq = np.array(freq)
+    z = np.array(z, dtype="complex")
+    freq = np.array(freq)
 
     if len(freq) != len(z):
-        raise ValueError("frequency and tensor z must have the same length."
-                         f"{len(freq)} & {len(z)} are given.")
+        raise ValueError(
+            "frequency and tensor z must have the same length."
+            f"{len(freq)} & {len(z)} are given."
+        )
 
-    return np.abs(z)**2 / (2 * np.pi * freq[:, None] * mu0 )
+    return np.abs(z) ** 2 / (2 * np.pi * freq[:, None] * mu0)
 
-def savitzky_golay1d (
-        y: ArrayLike[DType[T]],
-        window_size:int ,
-        order: int,
-        deriv: int =0,
-        rate: int =1,
-        mode: str ='same'
-        )-> ArrayLike[DType[T]]:
+
+def savitzky_golay1d(
+    y: ArrayLike[DType[T]],
+    window_size: int,
+    order: int,
+    deriv: int = 0,
+    rate: int = 1,
+    mode: str = "same",
+) -> ArrayLike[DType[T]]:
     r"""Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
 
     The Savitzky-Golay filter removes high frequency noise from data. It has the
@@ -640,20 +656,22 @@ def savitzky_golay1d (
         raise TypeError("window_size size must be a positive odd number")
     if window_size < order + 2:
         raise TypeError("window_size is too small for the polynomials order")
-    order_range = range(order+1)
+    order_range = range(order + 1)
 
     y = np.asarray(y)
-    half_window = (window_size -1) // 2
+    half_window = (window_size - 1) // 2
     # precompute coefficients
     b = np.array(
-        [[k**i for i in order_range]
-         for k in range(-half_window, half_window+1)],
+        [
+            [k**i for i in order_range]
+            for k in range(-half_window, half_window + 1)
+        ],
         dtype=float,
     )
     m = np.linalg.pinv(b)[deriv] * rate**deriv * factorial(deriv)
     # pad the signal at the extremes with
     # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
+    firstvals = y[0] - np.abs(y[1 : half_window + 1][::-1] - y[0])
+    lastvals = y[-1] + np.abs(y[-half_window - 1 : -1][::-1] - y[-1])
     y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m[::-1], y, mode=mode)
+    return np.convolve(m[::-1], y, mode=mode)

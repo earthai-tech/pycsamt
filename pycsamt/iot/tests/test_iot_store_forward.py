@@ -34,8 +34,12 @@ class FlakyClient(BaseTelemetryClient):
 
 
 def _pkt(i):
-    return {"device_id": f"n{i}", "timestamp": float(i), "topic": "t",
-            "payload": {"i": i}}
+    return {
+        "device_id": f"n{i}",
+        "timestamp": float(i),
+        "topic": "t",
+        "payload": {"i": i},
+    }
 
 
 def _order(client):
@@ -59,7 +63,7 @@ def test_offline_send_queues_without_raising():
     inner.online = False
     saf = StoreAndForwardClient(inner)
     ack = saf.send(_pkt(1))
-    assert not ack.ok                     # queued, not delivered
+    assert not ack.ok  # queued, not delivered
     assert "queued" in ack.detail
     assert saf.pending == 1
     assert _order(inner) == []
@@ -91,12 +95,12 @@ def test_new_packets_queue_behind_backlog():
     inner = FlakyClient()
     saf = StoreAndForwardClient(inner)
     inner.online = False
-    saf.send(_pkt(1))                     # queued (offline)
+    saf.send(_pkt(1))  # queued (offline)
     inner.online = True
-    saf.send(_pkt(2))                     # queue non-empty -> also queued
+    saf.send(_pkt(2))  # queue non-empty -> also queued
     assert saf.pending == 2
     saf.flush()
-    assert _order(inner) == [1, 2]        # order preserved, nothing overtakes
+    assert _order(inner) == [1, 2]  # order preserved, nothing overtakes
 
 
 # ---------------------------------------------------------------------------
@@ -122,11 +126,11 @@ def test_backoff_zero_when_empty_and_resets_on_success():
     assert saf.next_retry_delay_s == 0.0
     inner.online = False
     saf.send(_pkt(1))
-    saf.flush()                            # a failure
+    saf.flush()  # a failure
     inner.online = True
-    saf.flush()                            # drains
+    saf.flush()  # drains
     assert saf.pending == 0
-    assert saf.next_retry_delay_s == 0.0   # reset
+    assert saf.next_retry_delay_s == 0.0  # reset
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +161,7 @@ def test_spool_shrinks_after_flush(tmp_path):
     inner.online = True
     saf.flush()
     reloaded = StoreAndForwardClient(FlakyClient(), spool_path=spool)
-    assert reloaded.pending == 0          # spool rewritten empty
+    assert reloaded.pending == 0  # spool rewritten empty
 
 
 # ---------------------------------------------------------------------------

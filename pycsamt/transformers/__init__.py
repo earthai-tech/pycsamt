@@ -6,10 +6,10 @@ from .spectra import SpectraToEDI, TransformResult
 from .ts import TStoEDI
 
 __all__ = [
-    'TransformerMixin',
-    'AVGtoEDI',
-    'JtoEDI',
-    'SpectraToEDI',
-    'TransformResult',
-    'TStoEDI',
+    "TransformerMixin",
+    "AVGtoEDI",
+    "JtoEDI",
+    "SpectraToEDI",
+    "TransformResult",
+    "TStoEDI",
 ]

@@ -23,15 +23,15 @@ Reading Paths
 Different users usually arrive here with different goals:
 
 - **New survey users** should begin with :doc:`data_loading`, then continue
-  through :doc:`processing`, :doc:`mapping`, and :doc:`interpretation`.
-- **Processing and QC users** should pair :doc:`processing` with
+  through :doc:`processing/index`, :doc:`map/index`, and
+  :doc:`interpretation/index`.
+- **Processing and QC users** should pair :doc:`processing/index` with
   :doc:`emtools/index` and :doc:`site/index`.
-- **Inversion users** should read :doc:`inversion`, then move into the
-  :doc:`modeling` guides and :doc:`pipeline/index`.
-- **AI and agent users** should combine :doc:`ai_inversion` with
+- **Inversion users** should read :doc:`inversion/index`, then move into the
+  :doc:`models/index` and :doc:`pipeline/index` guides.
+- **AI and agent users** should combine :doc:`ai_inversion/index` with
   :doc:`agents/index`.
-- **Mapping users** can start with :doc:`mapping` for workflow guidance and
-  then use :doc:`map/index` for the Python mapping layer.
+- **Mapping users** should start with :doc:`map/index`.
 
 Core Workflow Guides
 --------------------
@@ -50,7 +50,7 @@ Core Workflow Guides
       existing EDI-like objects into the canonical ``Sites`` container.
 
    .. grid-item-card:: Processing
-      :link: processing
+      :link: processing/index
       :link-type: doc
       :img-top: ../_static/icons/user-guide-processing.svg
       :class-card: pycsamt-card sd-text-center
@@ -59,7 +59,7 @@ Core Workflow Guides
       tensor checks, and reproducible processing outputs.
 
    .. grid-item-card:: Mapping
-      :link: mapping
+      :link: map/index
       :link-type: doc
       :img-top: ../_static/icons/user-guide-mapping.svg
       :class-card: pycsamt-card sd-text-center
@@ -68,7 +68,7 @@ Core Workflow Guides
       that make field data easier to inspect.
 
    .. grid-item-card:: Inversion
-      :link: inversion
+      :link: inversion/index
       :link-type: doc
       :img-top: ../_static/icons/user-guide-inversion.svg
       :class-card: pycsamt-card sd-text-center
@@ -77,7 +77,7 @@ Core Workflow Guides
       and external-engine inversion workflows.
 
    .. grid-item-card:: Interpretation
-      :link: interpretation
+      :link: interpretation/index
       :link-type: doc
       :img-top: ../_static/icons/user-guide-interpretation.svg
       :class-card: pycsamt-card sd-text-center
@@ -119,14 +119,14 @@ Domain And Package Guides
       Understand station wrappers, ``Sites`` containers, selection, editing,
       coordinates, exports, reports, and recomputation helpers.
 
-   .. grid-item-card:: Modeling
-      :link: modeling
+   .. grid-item-card:: Forward modeling
+      :link: forward/index
       :link-type: doc
       :img-top: ../_static/icons/user-guide-models.svg
       :class-card: pycsamt-card sd-text-center
 
-      Forward modelling, external engine integrations (Occam2D, ModEM,
-      MARE2DEM), and AI inversion — the whole model side in one section.
+      Predict synthetic responses, configure solvers and grids, and connect
+      forward experiments to inversion design.
 
    .. grid-item-card:: Pipeline system
       :link: pipeline/index
@@ -179,11 +179,10 @@ Section Contents
    :hidden:
 
    data_loading
-   processing
-   mapping
-   inversion
-   interpretation
-   iot
+   processing/index
+   inversion/index
+   interpretation/index
+   iot/index
 
 .. toctree::
    :maxdepth: 1
@@ -191,7 +190,9 @@ Section Contents
 
    emtools/index
    site/index
-   modeling
+   models/index
+   forward/index
+   ai_inversion/index
    pipeline/index
    map/index
 

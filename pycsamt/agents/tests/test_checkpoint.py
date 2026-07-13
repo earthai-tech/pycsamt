@@ -8,6 +8,7 @@ unpicklable closures (SecondaryAxis lambdas), so pickling the whole
 result failed with "Could not save checkpoint … Can't pickle local
 object". Figures are display-only; the checkpoint drops them.
 """
+
 from __future__ import annotations
 
 import pickle
@@ -23,7 +24,6 @@ from pycsamt.agents.coordinator import AgentCoordinator
 
 
 class TestCheckpointSafe(unittest.TestCase):
-
     def _fig_with_lambda(self):
         fig, ax = plt.subplots()
         # secondary axis uses lambdas → unpicklable
@@ -34,7 +34,8 @@ class TestCheckpointSafe(unittest.TestCase):
 
     def test_figures_stripped_result_is_picklable(self):
         res = AgentResult(
-            "success", "with fig",
+            "success",
+            "with fig",
             {
                 "sites": [1, 2, 3],
                 "figures": {"f": self._fig_with_lambda()},

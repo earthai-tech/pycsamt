@@ -101,10 +101,10 @@ class StaticShiftAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.method      = method
+        self.method = method
         self.half_window = half_window
-        self.pband       = pband
-        self.inplace     = inplace
+        self.pband = pband
+        self.inplace = inplace
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -113,13 +113,16 @@ class StaticShiftAgent(BaseAgent):
 
         # ── resolve sites ─────────────────────────────────────────────────────
         from ..emtools._core import ensure_sites
+
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         method = str(
             input_data.get("method")
@@ -151,8 +154,7 @@ class StaticShiftAgent(BaseAgent):
                 # User explicitly chose no correction.
                 corrected_sites = sites
                 warnings.append(
-                    "Static-shift correction skipped"
-                    " (method='none')."
+                    "Static-shift correction skipped (method='none')."
                 )
             elif method == "ama":
                 corrected_sites = correct_ss_ama(
@@ -170,24 +172,25 @@ class StaticShiftAgent(BaseAgent):
                     verbose=0,
                 )
                 corrected_sites = apply_ss_factors(
-                    sites, result_loess,
+                    sites,
+                    result_loess,
                     inplace=self.inplace,
                     verbose=0,
                 )
             elif method == "refmedian":
                 result_ss = estimate_ss_refmedian(
-                    sites, pband=self.pband, verbose=0,
+                    sites,
+                    pband=self.pband,
+                    verbose=0,
                 )
                 if hasattr(result_ss, "iterrows"):
                     for _, row in result_ss.iterrows():
                         st = str(row.get("station", ""))
-                        fac = float(
-                            row.get("fac_z",
-                                    row.get("factor", 1.0))
-                        )
+                        fac = float(row.get("fac_z", row.get("factor", 1.0)))
                         shift_factors[st] = fac
                     corrected_sites = apply_ss_factors(
-                        sites, result_ss,
+                        sites,
+                        result_ss,
                         inplace=self.inplace,
                         verbose=0,
                     )
@@ -204,8 +207,7 @@ class StaticShiftAgent(BaseAgent):
                     )
             else:
                 warnings.append(
-                    f"Unknown method {method!r};"
-                    " falling back to AMA."
+                    f"Unknown method {method!r}; falling back to AMA."
                 )
                 corrected_sites = correct_ss_ama(
                     sites,
@@ -215,8 +217,7 @@ class StaticShiftAgent(BaseAgent):
                 )
         except Exception as exc:
             logger.warning(
-                "Static-shift correction"
-                f" ({method}) failed: {exc}",
+                f"Static-shift correction ({method}) failed: {exc}",
                 exc_info=True,
             )
             warnings.append(
@@ -227,7 +228,11 @@ class StaticShiftAgent(BaseAgent):
             corrected_sites = sites
 
         # ── capture log₁₀ ρa after correction ────────────────────────────────
-        rho_after = _collect_rho(corrected_sites)[0] if corrected_sites is not None else rho_before
+        rho_after = (
+            _collect_rho(corrected_sites)[0]
+            if corrected_sites is not None
+            else rho_before
+        )
 
         # ── delta statistics ──────────────────────────────────────────────────
         delta_stats: dict[str, float] = {}
@@ -236,9 +241,9 @@ class StaticShiftAgent(BaseAgent):
                 delta = rho_after - rho_before
                 col_delta = np.nanmedian(np.abs(delta), axis=0)
                 delta_stats = {
-                    "mean":      float(np.nanmean(col_delta)),
-                    "max":       float(np.nanmax(col_delta)),
-                    "min":       float(np.nanmin(col_delta)),
+                    "mean": float(np.nanmean(col_delta)),
+                    "max": float(np.nanmax(col_delta)),
+                    "min": float(np.nanmin(col_delta)),
                     "n_shifted": int(np.sum(col_delta > 0.05)),
                 }
             except Exception:
@@ -248,18 +253,24 @@ class StaticShiftAgent(BaseAgent):
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
 
-        if rho_before is not None and rho_after is not None and freqs_all is not None:
+        if (
+            rho_before is not None
+            and rho_after is not None
+            and freqs_all is not None
+        ):
             # summary dashboard: before / after / delta
             try:
                 # _collect_rho is (n_freq, n_sta); plotters want (n_st, n_f)
                 fig_sum = plot_ss_summary(
-                    rho_before.T, rho_after.T,
+                    rho_before.T,
+                    rho_after.T,
                     freqs=freqs_all,
                     station_labels=sta_labels,
                 )
                 figures["ss_summary"] = fig_sum
-                p = self._save_figure(fig_sum, output_dir, "ss_summary",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_sum, output_dir, "ss_summary", warnings_list=warnings
+                )
                 if p:
                     fig_paths["ss_summary"] = p
             except Exception as exc:
@@ -268,13 +279,15 @@ class StaticShiftAgent(BaseAgent):
             # per-station 1-D ρa curves
             try:
                 fig_1d = plot_ss_1d_curves(
-                    rho_before.T, rho_after.T,
+                    rho_before.T,
+                    rho_after.T,
                     freqs=freqs_all,
                     station_labels=sta_labels,
                 )
                 figures["ss_curves"] = fig_1d
-                p = self._save_figure(fig_1d, output_dir, "ss_1d_curves",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_1d, output_dir, "ss_1d_curves", warnings_list=warnings
+                )
                 if p:
                     fig_paths["ss_curves"] = p
             except Exception as exc:
@@ -283,16 +296,28 @@ class StaticShiftAgent(BaseAgent):
         # comparison pseudosection (before / after side-by-side)
         try:
             fig_cmp = ss_comparison_psection(
-                sites, method=method, verbose=0,
+                sites,
+                method=method,
+                verbose=0,
             )
             if fig_cmp is not None:
-                fig_c = fig_cmp if hasattr(fig_cmp, "savefig") else (
-                    fig_cmp.get_figure() if hasattr(fig_cmp, "get_figure") else None
+                fig_c = (
+                    fig_cmp
+                    if hasattr(fig_cmp, "savefig")
+                    else (
+                        fig_cmp.get_figure()
+                        if hasattr(fig_cmp, "get_figure")
+                        else None
+                    )
                 )
                 if fig_c is not None:
                     figures["ss_comparison"] = fig_c
-                    p = self._save_figure(fig_c, output_dir, "ss_comparison",
-                                          warnings_list=warnings)
+                    p = self._save_figure(
+                        fig_c,
+                        output_dir,
+                        "ss_comparison",
+                        warnings_list=warnings,
+                    )
                     if p:
                         fig_paths["ss_comparison"] = p
         except Exception as exc:
@@ -342,12 +367,12 @@ class StaticShiftAgent(BaseAgent):
             summary=summary,
             data={
                 "corrected_sites": corrected_sites,
-                "shift_factors":   shift_factors,
-                "rho_before":      rho_before,
-                "rho_after":       rho_after,
-                "delta_stats":     delta_stats,
-                "figures":         figures,
-                "figure_paths":    fig_paths,
+                "shift_factors": shift_factors,
+                "rho_before": rho_before,
+                "rho_after": rho_after,
+                "delta_stats": delta_stats,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -357,6 +382,7 @@ class StaticShiftAgent(BaseAgent):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _collect_rho(
     sites: Any,
@@ -384,10 +410,9 @@ def _collect_rho(
         # Always compute from Z — ed.rho is a
         # cached attribute that is stale after
         # impedance-tensor correction modifies Z.
-        rho_xy = (
-            (0.2 / np.where(fr == 0, np.nan, fr))
-            * np.abs(z[:, 0, 1]) ** 2
-        )
+        rho_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(
+            z[:, 0, 1]
+        ) ** 2
 
         log_rho = np.log10(np.clip(rho_xy, 1e-6, None))
 
@@ -402,8 +427,11 @@ def _collect_rho(
                 labels.append(nm)
             else:
                 # skip stations with different freq counts for now
-                cols.append(log_rho[:len(freqs_ref)] if len(log_rho) >= len(freqs_ref)
-                            else np.full(len(freqs_ref), np.nan))
+                cols.append(
+                    log_rho[: len(freqs_ref)]
+                    if len(log_rho) >= len(freqs_ref)
+                    else np.full(len(freqs_ref), np.nan)
+                )
                 labels.append(nm)
 
     if not cols or freqs_ref is None:

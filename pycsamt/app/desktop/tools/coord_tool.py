@@ -18,6 +18,7 @@ Features
 • Copy button on output
 • Survey-mode: load station list from loaded survey and show all coordinates
 """
+
 from __future__ import annotations
 
 import re
@@ -49,32 +50,55 @@ _DATUMS = ["WGS84", "NAD83", "GRS80"]
 
 # ── Coordinate math ───────────────────────────────────────────────────────────
 
-def _ll_to_utm(lat: float, lon: float, zone: int | None, hem: str, datum: str):
+
+def _ll_to_utm(
+    lat: float, lon: float, zone: int | None, hem: str, datum: str
+):
     """Return (easting, northing, zone) via pyproj or fallback."""
     try:
         from pyproj import Proj
+
         if zone is None:
             zone = int((lon + 180) / 6) + 1
-        proj = Proj(proj="utm", zone=zone, datum=datum,
-                    south=(hem == "S"), ellps=datum)
+        proj = Proj(
+            proj="utm",
+            zone=zone,
+            datum=datum,
+            south=(hem == "S"),
+            ellps=datum,
+        )
         e, n = proj(lon, lat)
         return e, n, zone
     except Exception:
         from pycsamt.gis.utils import ll_to_utm
+
         res = ll_to_utm(lat, lon)
-        return res["easting"], res["northing"], res.get("zone_number", zone or 0)
+        return (
+            res["easting"],
+            res["northing"],
+            res.get("zone_number", zone or 0),
+        )
 
 
-def _utm_to_ll(easting: float, northing: float, zone: int, hem: str, datum: str):
+def _utm_to_ll(
+    easting: float, northing: float, zone: int, hem: str, datum: str
+):
     """Return (lat, lon) via pyproj or fallback."""
     try:
         from pyproj import Proj
-        proj = Proj(proj="utm", zone=zone, datum=datum,
-                    south=(hem == "S"), ellps=datum)
+
+        proj = Proj(
+            proj="utm",
+            zone=zone,
+            datum=datum,
+            south=(hem == "S"),
+            ellps=datum,
+        )
         lon, lat = proj(easting, northing, inverse=True)
         return lat, lon
     except Exception:
         from pycsamt.gis.utils import utm_to_ll
+
         res = utm_to_ll(easting, northing, zone, hem)
         return res["lat"], res["lon"]
 
@@ -96,6 +120,7 @@ def _parse_pairs(text: str) -> list[tuple[float, float]]:
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class CoordTransformDialog(QDialog):
     """
@@ -218,7 +243,9 @@ class CoordTransformDialog(QDialog):
         self._surv_table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
         )
-        self._surv_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._surv_table.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers
+        )
         self._surv_table.setMaximumHeight(140)
         vlay.addWidget(self._surv_table)
         root.addWidget(grp)
@@ -230,12 +257,13 @@ class CoordTransformDialog(QDialog):
                 _iter_items,
                 _unwrap,
             )
+
             items = list(_iter_items(self._sites))
         except Exception:
             return
         self._zone_spin.value()
-        hem    = "N" if self._hem_n.isChecked() else "S"
-        datum  = self._datum_combo.currentText()
+        hem = "N" if self._hem_n.isChecked() else "S"
+        datum = self._datum_combo.currentText()
         self._surv_table.setRowCount(0)
         for ed in items:
             try:
@@ -243,8 +271,8 @@ class CoordTransformDialog(QDialog):
             except Exception:
                 pass
             name = getattr(ed, "station", None) or getattr(ed, "id", "?")
-            lat  = getattr(ed, "lat", None) or getattr(ed, "latitude",  None)
-            lon  = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+            lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
+            lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
             r = self._surv_table.rowCount()
             self._surv_table.insertRow(r)
             self._surv_table.setItem(r, 0, QTableWidgetItem(str(name)))
@@ -252,10 +280,18 @@ class CoordTransformDialog(QDialog):
                 try:
                     la, lo = float(lat), float(lon)
                     e, n, z = _ll_to_utm(la, lo, None, hem, datum)
-                    self._surv_table.setItem(r, 1, QTableWidgetItem(f"{la:.6f}"))
-                    self._surv_table.setItem(r, 2, QTableWidgetItem(f"{lo:.6f}"))
-                    self._surv_table.setItem(r, 3, QTableWidgetItem(f"{e:.1f}"))
-                    self._surv_table.setItem(r, 4, QTableWidgetItem(f"{n:.1f}"))
+                    self._surv_table.setItem(
+                        r, 1, QTableWidgetItem(f"{la:.6f}")
+                    )
+                    self._surv_table.setItem(
+                        r, 2, QTableWidgetItem(f"{lo:.6f}")
+                    )
+                    self._surv_table.setItem(
+                        r, 3, QTableWidgetItem(f"{e:.1f}")
+                    )
+                    self._surv_table.setItem(
+                        r, 4, QTableWidgetItem(f"{n:.1f}")
+                    )
                 except Exception:
                     pass
             else:
@@ -265,15 +301,15 @@ class CoordTransformDialog(QDialog):
     # ── Transform ─────────────────────────────────────────────────────────────
 
     def _on_transform(self) -> None:
-        text   = self._in_edit.toPlainText()
-        pairs  = _parse_pairs(text)
+        text = self._in_edit.toPlainText()
+        pairs = _parse_pairs(text)
         if not pairs:
             self._out_edit.setPlainText("No valid input pairs found.")
             return
 
-        zone   = self._zone_spin.value()
-        hem    = "N" if self._hem_n.isChecked() else "S"
-        datum  = self._datum_combo.currentText()
+        zone = self._zone_spin.value()
+        hem = "N" if self._hem_n.isChecked() else "S"
+        datum = self._datum_combo.currentText()
         ll2utm = self._ll_to_utm_rb.isChecked()
 
         lines = []
@@ -292,4 +328,5 @@ class CoordTransformDialog(QDialog):
 
     def _copy_output(self) -> None:
         from PySide6.QtWidgets import QApplication
+
         QApplication.clipboard().setText(self._out_edit.toPlainText())

@@ -63,7 +63,9 @@ class SyncConfig(PyCSAMTObject):
     def validate(self) -> None:
         """Validate and normalise sync tolerances."""
         self.tolerance_ms = _c.as_positive(self.tolerance_ms, "tolerance_ms")
-        self.reference = _c.as_nonempty_str(self.reference, "reference").lower()
+        self.reference = _c.as_nonempty_str(
+            self.reference, "reference"
+        ).lower()
         self.max_drift_ppm = _c.as_optional_positive(
             self.max_drift_ppm, "max_drift_ppm"
         )
@@ -118,7 +120,8 @@ class SyncStatus(PyCSAMTObject):
             jitter_ms=self.jitter_ms,
             gps_lock=self.gps_lock,
             n_reference_points=self.n_reference_points,
-            quality=self.quality.value if isinstance(self.quality, SyncQuality)
+            quality=self.quality.value
+            if isinstance(self.quality, SyncQuality)
             else str(self.quality),
         )
 
@@ -232,12 +235,16 @@ class ClockSynchronizer:
         within = bool(
             np.isfinite(offset)
             and abs(offset) <= self.config.tolerance_ms
-            and (self.config.max_drift_ppm is None
-                 or not np.isfinite(drift)
-                 or abs(drift) <= self.config.max_drift_ppm)
-            and (self.config.max_jitter_ms is None
-                 or not np.isfinite(jitter)
-                 or jitter <= self.config.max_jitter_ms)
+            and (
+                self.config.max_drift_ppm is None
+                or not np.isfinite(drift)
+                or abs(drift) <= self.config.max_drift_ppm
+            )
+            and (
+                self.config.max_jitter_ms is None
+                or not np.isfinite(jitter)
+                or jitter <= self.config.max_jitter_ms
+            )
         )
         quality = assess_sync_quality(
             offset_ms=offset,
@@ -344,12 +351,18 @@ def detect_gps_dropout(
         except ValueError:
             flags.append(False)
     n = len(flags)
-    min_lock_fraction = _c.as_probability(min_lock_fraction, "min_lock_fraction")
+    min_lock_fraction = _c.as_probability(
+        min_lock_fraction, "min_lock_fraction"
+    )
     if n == 0:
         return dict(
-            n_samples=0, n_locked=0, lock_fraction=float("nan"),
-            n_dropout_events=0, longest_dropout_samples=0,
-            longest_dropout_s=float("nan"), ok=False,
+            n_samples=0,
+            n_locked=0,
+            lock_fraction=float("nan"),
+            n_dropout_events=0,
+            longest_dropout_samples=0,
+            longest_dropout_s=float("nan"),
+            ok=False,
         )
     times = None
     if timestamps is not None:

@@ -14,6 +14,7 @@ A tidy :class:`pandas.DataFrame` plus a *metadata* dict is returned
 regardless of flavour.  Column names are normalised to a concise lower‑
 case schema (``station, freq, emag, rho, phase, …``).
 """
+
 from __future__ import annotations
 
 import io
@@ -65,24 +66,22 @@ __all__ = [
     "chunk_by_frequency",
     "write_avg",
     "to_xarray",
-
 ]
 
 logger = get_logger(__name__)
 
 
-_RX_WS             = re.compile(r"\s+")
+_RX_WS = re.compile(r"\s+")
 
 _RX_K2_HEADER = re.compile(r"^\s*Z\.mwgt\s*,", re.I)
 _RX_K1_HEADER = re.compile(r"^\s*skp\s+Station", re.I)
 
-_NUMERIC_REPLACE   = {"*": np.nan, "nan": np.nan, "NaN": np.nan,
-                      "": np.nan}
-_COMMENT_PREFIXES = ('\\', '/', '!', '"')
+_NUMERIC_REPLACE = {"*": np.nan, "nan": np.nan, "NaN": np.nan, "": np.nan}
+_COMMENT_PREFIXES = ("\\", "/", "!", '"')
+
 
 def find_and_rename_column(
-    df: pd.DataFrame,
-    canonical_name: str
+    df: pd.DataFrame, canonical_name: str
 ) -> pd.DataFrame:
     """
     Find a column by any of its aliases and rename it to the
@@ -110,14 +109,15 @@ def _to_float(val: str | float | int) -> float | np.floating:
     txt = val.strip()
     if txt in _NUMERIC_REPLACE:
         return np.nan
-    if txt.startswith('.'):
-        txt = '0' + txt
-    if txt.endswith('.'):
-        txt = txt + '0'
+    if txt.startswith("."):
+        txt = "0" + txt
+    if txt.endswith("."):
+        txt = txt + "0"
     try:
         return float(txt)
     except ValueError:
         return np.nan
+
 
 def classify_avg_format(lines: Sequence[str]) -> int:
     """
@@ -143,14 +143,10 @@ def classify_avg_format(lines: Sequence[str]) -> int:
     # This is the fastest and most reliable method.
     for ln in lines:
         if _RX_K2_HEADER.search(ln):
-            logger.debug(
-                "Kind-2 AVG detected (found modern header)."
-            )
+            logger.debug("Kind-2 AVG detected (found modern header).")
             return 2
         if _RX_K1_HEADER.search(ln):
-            logger.debug(
-                "Kind-1 AVG detected (found legacy header)."
-            )
+            logger.debug("Kind-1 AVG detected (found legacy header).")
             return 1
 
     # Second pass: If no header found, analyze file structure.
@@ -163,7 +159,7 @@ def classify_avg_format(lines: Sequence[str]) -> int:
             continue
 
         # Check for modern keyword style, e.g., '$Survey.Type='
-        if s.startswith('$'):
+        if s.startswith("$"):
             # This is a very strong indicator of a modern file.
             match = re.match(r"\$\s*(\w+\.\w+)\s*=", s)
             if match:
@@ -172,49 +168,50 @@ def classify_avg_format(lines: Sequence[str]) -> int:
 
         # Heuristic: check for comma-separated data.
         # Avoids matching headers with only one or two commas.
-        if not s.startswith(('$', '\\', '/')) and s.count(',') > 2:
+        if not s.startswith(("$", "\\", "/")) and s.count(",") > 2:
             has_commas = True
 
     if has_dot_in_keyword:
-        logger.debug(
-            "Kind-2 AVG detected (found dot-notation keywords)."
-        )
+        logger.debug("Kind-2 AVG detected (found dot-notation keywords).")
         return 2
 
     if has_commas:
-        logger.debug(
-            "Kind-2 AVG detected (found comma-separated data)."
-        )
+        logger.debug("Kind-2 AVG detected (found comma-separated data).")
         return 2
 
     # If no strong indicators are found, parsing cannot proceed.
-    raise AvgFileError(
-        "Unrecognised AVG header – cannot classify file"
-    )
+    raise AvgFileError("Unrecognised AVG header – cannot classify file")
+
 
 def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
     """Parse legacy fixed‑width (kind‑1) AVG table."""
-    idx = next((i for i, ln in enumerate(lines)
-                if _RX_K1_HEADER.search(ln)), None)
+    idx = next(
+        (i for i, ln in enumerate(lines) if _RX_K1_HEADER.search(ln)), None
+    )
     if idx is None:
         raise AvgFileError("Header row not found in kind‑1 file")
 
-    hdr_tokens = _RX_WS.sub(' ', lines[idx].strip()).split()
+    hdr_tokens = _RX_WS.sub(" ", lines[idx].strip()).split()
     data_rows: list[list[Any]] = []
-    for ln in lines[idx + 1:]:
+    for ln in lines[idx + 1 :]:
         if not ln.strip() or _RX_K1_HEADER.search(ln):
             break
-        if ln.startswith(('\\', '$')):
+        if ln.startswith(("\\", "$")):
             continue
-        tokens = _RX_WS.sub(' ', ln.strip()).split()
-        data_rows.append([
-            _to_float(tk) if j >= 4 else tk  # First 4 cols are non-numeric
-            for j, tk in enumerate(tokens)
-        ])
+        tokens = _RX_WS.sub(" ", ln.strip()).split()
+        data_rows.append(
+            [
+                _to_float(tk)
+                if j >= 4
+                else tk  # First 4 cols are non-numeric
+                for j, tk in enumerate(tokens)
+            ]
+        )
     if not data_rows:
         raise AvgDataError("No data rows in kind‑1 file")
     df = pd.DataFrame(data_rows, columns=hdr_tokens)
     return _standardise_columns(df)
+
 
 def _is_comment(ln: str) -> bool:
     return bool(ln) and ln[0] in _COMMENT_PREFIXES
@@ -235,14 +232,13 @@ def _next_block(lines, i):
             i += 1
             break
         # DO NOT break on comments — they'll be skipped later
-        if _RX_K2_HEADER.match(s) or s.startswith('$'):
+        if _RX_K2_HEADER.match(s) or s.startswith("$"):
             break
         i += 1
     return (start, i)
 
-def _parse_kind2(
-    lines: Sequence[str]
-) -> tuple[pd.DataFrame, dict[str, str]]:
+
+def _parse_kind2(lines: Sequence[str]) -> tuple[pd.DataFrame, dict[str, str]]:
     """
     Parse a modern CSAVGW (kind-2) AVG file that contains
     repeated CSV blocks, typically one per station/component.
@@ -293,8 +289,8 @@ def _parse_kind2(
 
         # Collect $key=value lines.  Before the first table, the
         # keys are also considered "global" survey/job config.
-        if ln.startswith('$') and '=' in ln:
-            key, val = ln[1:].split('=', 1)
+        if ln.startswith("$") and "=" in ln:
+            key, val = ln[1:].split("=", 1)
             key = key.strip()
             val = val.strip()
 
@@ -318,19 +314,14 @@ def _parse_kind2(
 
             # Assemble header + rows for this block while skipping
             # inline comment lines that may appear among rows.
-            table_txt = '\n'.join(
-                [lines[start]] + [
-                    s for s in lines[start + 1:j]
-                    if not _is_comment(s)
-                ]
+            table_txt = "\n".join(
+                [lines[start]]
+                + [s for s in lines[start + 1 : j] if not _is_comment(s)]
             )
 
             # Parse CSV with forgiving whitespace.  Convert numeric
             # strings (including '*', '.5', '1.') with _to_float.
-            dfb = pd.read_csv(
-                io.StringIO(table_txt),
-                skipinitialspace=True
-            )
+            dfb = pd.read_csv(io.StringIO(table_txt), skipinitialspace=True)
             # applymap was renamed to map in pandas ≥2.1
             _dfb_map = getattr(dfb, "map", None) or dfb.applymap
             dfb = _dfb_map(
@@ -340,23 +331,23 @@ def _parse_kind2(
             # Stamp station and a few helpful block-level fields as
             # columns.  Prefer client station number ($Rx.Stn).
             stn = (
-                block_meta.get('Rx.Stn')
-                or block_meta.get('Rx.GdpStn')
-                or block_meta.get('Stn.Beg')
+                block_meta.get("Rx.Stn")
+                or block_meta.get("Rx.GdpStn")
+                or block_meta.get("Stn.Beg")
             )
             if stn is not None:
                 try:
-                    dfb['station'] = _to_float(stn)
+                    dfb["station"] = _to_float(stn)
                 except Exception:
-                    dfb['station'] = stn  # keep as text if odd
+                    dfb["station"] = stn  # keep as text if odd
 
             # Component label and a couple of helpers can be handy for
             # QC.  They are optional and harmless if missing.
-            if 'Rx.Cmp' in block_meta:
-                dfb['comp'] = block_meta['Rx.Cmp']
-            for k in ('Rx.Length', 'Rx.GdpStn'):
+            if "Rx.Cmp" in block_meta:
+                dfb["comp"] = block_meta["Rx.Cmp"]
+            for k in ("Rx.Length", "Rx.GdpStn"):
                 if k in block_meta:
-                    dfb[k.replace('.', '_').lower()] = block_meta[k]
+                    dfb[k.replace(".", "_").lower()] = block_meta[k]
 
             # Standardise to canonical lowercase names (e.g., ARes.mag
             # → 'rho', Z.phz → 'phase', etc.).
@@ -389,22 +380,23 @@ def _parse_kind2(
     # Derive a convenient boolean selection flag from CSAVGW
     # weights (1 = keep, 0 = skip).  If weights are absent, the
     # column is simply not added.
-    if 'z_mwgt' in df.columns or 'z_pwgt' in df.columns:
-        mw = _get_weight_bool (df, 'z_mwgt')
-        pw = _get_weight_bool (df, 'z_pwgt')
+    if "z_mwgt" in df.columns or "z_pwgt" in df.columns:
+        mw = _get_weight_bool(df, "z_mwgt")
+        pw = _get_weight_bool(df, "z_pwgt")
         # mw = df.get('z.mwgt', 1).fillna(1).astype(float) > 0
         # pw = df.get('z.pwgt', 1).fillna(1).astype(float) > 0
-        df['use'] = mw & pw
+        df["use"] = mw & pw
 
     # Merge top-level meta with collected per-block meta.
-    meta: dict[str, Any] = {**global_meta, 'blocks': blocks_meta}
+    meta: dict[str, Any] = {**global_meta, "blocks": blocks_meta}
     return df, meta
 
-def _get_weight_bool (df, comp ='z.mwgt'):
-    """ Get the bool weight for construction use. """
-    val =df.get(comp, 1)
-    if isinstance (val, (float, int)):
-        return val  > 0
+
+def _get_weight_bool(df, comp="z.mwgt"):
+    """Get the bool weight for construction use."""
+    val = df.get(comp, 1)
+    if isinstance(val, (float, int)):
+        return val > 0
     return df.get(comp, 1).fillna(1).astype(float) > 0
 
 
@@ -413,14 +405,12 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     Rename columns to a canonical schema using a two-pass strategy.
     """
     # Create a simple case-insensitive map for strict matching
-    strict_lower_map = {
-        k.lower(): v for k, v in _CANONICAL_MAP.items()
-    }
+    strict_lower_map = {k.lower(): v for k, v in _CANONICAL_MAP.items()}
     rename_dict = {}
     for col in df.columns:
         # Normalize the column name for flexible lookup
-        norm_col = str(col).lower().strip()# .replace(
-            # '.', '').replace('_', '').replace('%', '')
+        norm_col = str(col).lower().strip()  # .replace(
+        # '.', '').replace('_', '').replace('%', '')
 
         # 1. Try flexible lookup first for QC/weight columns
         if norm_col in _FLEXIBLE_LOOKUP:
@@ -434,9 +424,8 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     return df.rename(columns=rename_dict)
 
-def split_by_station(
-    df: pd.DataFrame
-) -> dict[Any, pd.DataFrame]:
+
+def split_by_station(df: pd.DataFrame) -> dict[Any, pd.DataFrame]:
     """
     Split a tidy AVG DataFrame into per-station sub-frames.
 
@@ -459,26 +448,20 @@ def split_by_station(
     AvgDataError
         If 'station' column is not present.
     """
-    if 'station' not in df.columns:
-        raise AvgDataError(
-            "'station' column missing – cannot split"
-        )
+    if "station" not in df.columns:
+        raise AvgDataError("'station' column missing – cannot split")
 
     # Coerce 'station' to numeric if needed to avoid object
     # mixes and to keep group keys consistent.
-    if not np.issubdtype(df['station'].dtype, np.number):
+    if not np.issubdtype(df["station"].dtype, np.number):
         df = df.copy()
-        df['station'] = pd.to_numeric(
-            df['station'], errors='coerce'
-        )
+        df["station"] = pd.to_numeric(df["station"], errors="coerce")
 
     out: dict[Any, pd.DataFrame] = {}
 
     # Use dropna=False so NaN stations (if any) are still grouped
     # and visible to the caller.
-    for stn, sub in df.groupby(
-        'station', sort=True, dropna=False
-    ):
+    for stn, sub in df.groupby("station", sort=True, dropna=False):
         # Normalise potential NumPy scalar to a plain Python
         # number for stable dict keys and friendly equality.
         try:
@@ -488,17 +471,12 @@ def split_by_station(
 
         # If the key is a clean integral float (e.g., 25.0),
         # store it as an int for ergonomic lookups.
-        if (
-            isinstance(key, float)
-            and pd.notna(key)
-            and key.is_integer()
-        ):
+        if isinstance(key, float) and pd.notna(key) and key.is_integer():
             key = int(key)
 
         out[key] = sub.reset_index(drop=True)
 
     return out
-
 
 
 @isdf
@@ -573,16 +551,13 @@ def to_xarray(
     idx_cols = [c for c in coords if c in df.columns]
     if not idx_cols:
         raise AvgDataError(
-            "No coordinate columns found. Expected any of: "
-            f"{coords!r}"
+            f"No coordinate columns found. Expected any of: {coords!r}"
         )
 
     # Light type normalisation: make station/freq numeric when
     # possible; keep comp as string/categorical.
     if "station" in idx_cols:
-        df["station"] = pd.to_numeric(
-            df["station"], errors="ignore"
-        )
+        df["station"] = pd.to_numeric(df["station"], errors="ignore")
     if "freq" in idx_cols:
         df["freq"] = pd.to_numeric(df["freq"], errors="ignore")
 
@@ -590,13 +565,18 @@ def to_xarray(
     # canonical order first, then append any unexpected labels.
     if "comp" in idx_cols:
         canon = [
-            "ExHy", "ExHx", "EyHx", "EyHy",
-            "Zxx", "Zxy", "Zyx", "Zyy", "Zvec", "Zdet",
+            "ExHy",
+            "ExHx",
+            "EyHx",
+            "EyHy",
+            "Zxx",
+            "Zxy",
+            "Zyx",
+            "Zyy",
+            "Zvec",
+            "Zdet",
         ]
-        present = (
-            pd.Series(df["comp"].astype(str).unique())
-            .tolist()
-        )
+        present = pd.Series(df["comp"].astype(str).unique()).tolist()
         extras = [c for c in present if c not in canon]
         cats = canon + extras
         df["comp"] = pd.Categorical(
@@ -652,16 +632,17 @@ def to_xarray(
 
     return ds
 
+
 def write_avg(
-    core:  pd.DataFrame,
+    core: pd.DataFrame,
     extra: pd.DataFrame | None,
-    meta:  dict[str, str] | None,
-    path:  str | Path | None = None,
+    meta: dict[str, str] | None,
+    path: str | Path | None = None,
     *,
     stamp: bool = True,
     float_fmt: str = "%.6g",
     na_rep: str = "*",
-    header_spaces: bool = False,   # use $k=v by default
+    header_spaces: bool = False,  # use $k=v by default
     banner_lines: Sequence[str] | None = None,
 ) -> Path:
     r"""Serialize a DataFrame to a Zonge kind-2 AVG file.
@@ -766,14 +747,11 @@ def write_avg(
     out_chunks: list[str] = ["\n".join(header_lines)]
 
     # --- 2) assemble data block(s)
-    block = pd.concat(
-        [core, extra], axis=1) if extra is not None else core
+    block = pd.concat([core, extra], axis=1) if extra is not None else core
     block = block.copy()
 
     # Drop any "extra" columns that are completely empty
-    extra_cols_to_check = [
-        'coh', 'gdp_blk', 'gdp_chn', 'gdp_time', 'zabs'
-    ]
+    extra_cols_to_check = ["coh", "gdp_blk", "gdp_chn", "gdp_time", "zabs"]
     for col in extra_cols_to_check:
         if col in block.columns and block[col].isnull().all():
             block = block.drop(columns=[col])
@@ -788,25 +766,22 @@ def write_avg(
         # Expected CSAVGW order; extras will be appended after these.
 
         present = [c for c in _CSAVGW_ORDERED if c in df.columns]
-        extras  = [c for c in df.columns if c not in present]
+        extras = [c for c in df.columns if c not in present]
         # Exclude all columns that are part of the block's metadata
         extras = [
-            c for c in extras if c.lower() not in (
-                "station", "comp", "rx_length", "rx_gdpstn"
-                )
-            ]
+            c
+            for c in extras
+            if c.lower() not in ("station", "comp", "rx_length", "rx_gdpstn")
+        ]
         return present + extras
 
     # Identify the actual column name (case may vary)
-    stn_col = next(
-        (c for c in block.columns if c.lower() == "station"), None
-    )
+    stn_col = next((c for c in block.columns if c.lower() == "station"), None)
     # Multi-station writer (group and stamp $Rx.*)
     # if "station" in (c.lower() for c in block.columns):
     #     # Identify the actual column name (case may vary)
     #     stn_col = next(c for c in block.columns if c.lower() == "station")
     if stn_col:
-
         for stn, sub in block.groupby(stn_col, sort=True, dropna=False):
             # Defensive: skip NaN station group
             if pd.isna(stn):
@@ -824,7 +799,8 @@ def write_avg(
                 rx_lines.append(f"$Rx.Length{eq}{block['rx_length'].iloc[0]}")
             # If comp is uniform within the group, stamp it
             comp_col = next(
-                (c for c in block.columns if c.lower()=="comp"), None)
+                (c for c in block.columns if c.lower() == "comp"), None
+            )
             if comp_col is not None:
                 vals = sub[comp_col].dropna().unique()
                 if len(vals) == 1:
@@ -834,26 +810,21 @@ def write_avg(
 
             cols_to_write = _order_cols(sub)
             dfw = sub[cols_to_write]
-            out_chunks.append(
-                _format_aligned_csv(dfw, float_fmt, na_rep)
-            )
+            out_chunks.append(_format_aligned_csv(dfw, float_fmt, na_rep))
 
             out_chunks.append("")  # blank line after the block
     else:
         # Single-block writer
         cols = _order_cols(block)
         dfw = block[cols]
-        out_chunks.append(
-            _format_aligned_csv(dfw, float_fmt, na_rep)
-        )
+        out_chunks.append(_format_aligned_csv(dfw, float_fmt, na_rep))
     # --- 3) write to disk
     path.write_text("\n".join(out_chunks), encoding="utf8")
     logger.info("AVG written → %s", path)
     return path
 
-def _format_aligned_csv(
-    df: pd.DataFrame, float_fmt: str, na_rep: str
-) -> str:
+
+def _format_aligned_csv(df: pd.DataFrame, float_fmt: str, na_rep: str) -> str:
     """Formats a DataFrame to a perfectly aligned CSV string."""
     # Convert all data to string representation first
     df_str = pd.DataFrame(index=df.index)
@@ -874,23 +845,21 @@ def _format_aligned_csv(
     }
 
     # Format header and rows
-    header = ",".join(
-        f"{col:<{widths[col]}}" for col in df.columns
-    )
+    header = ",".join(f"{col:<{widths[col]}}" for col in df.columns)
     rows = [header]
     for _, row in df_str.iterrows():
-        rows.append(",".join(
-            f"{val:<{widths[col]}}" for col, val in row.items()
-        ))
+        rows.append(
+            ",".join(f"{val:<{widths[col]}}" for col, val in row.items())
+        )
     return "\n".join(rows)
 
 
 def load_avg(
     path: str | Path,
     *,
-    ll_columns: tuple[str, str] = ('latitude', 'longitude'),
+    ll_columns: tuple[str, str] = ("latitude", "longitude"),
     utm_zone: int | None = None,
-    inplace: bool = False
+    inplace: bool = False,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
     r"""Read a Zonge AVG file and return a tidy DataFrame and metadata.
 
@@ -967,7 +936,7 @@ def load_avg(
         raise FileNotFoundError(path)
 
     # Read text and classify by header patterns.
-    lines = path.read_text(errors='replace').splitlines()
+    lines = path.read_text(errors="replace").splitlines()
     kind = classify_avg_format(lines)
 
     # Dispatch to the appropriate parser.
@@ -985,19 +954,15 @@ def load_avg(
     if lat_col in df.columns and lon_col in df.columns:
         try:
             east, north, _ = to_utm(
-                df[lat_col].values,
-                df[lon_col].values,
-                zone=utm_zone
+                df[lat_col].values, df[lon_col].values, zone=utm_zone
             )
-            df['easting'] = east
-            df['northing'] = north
+            df["easting"] = east
+            df["northing"] = north
         except Exception as exc:  # pragma: no cover
-            logger.warning(
-                "Lat/Lon → UTM failed: %s",
-                exc
-            )
+            logger.warning("Lat/Lon → UTM failed: %s", exc)
 
     return df, meta
+
 
 def read_stn(path: str | Path) -> pd.DataFrame:
     r"""
@@ -1023,9 +988,7 @@ def read_stn(path: str | Path) -> pd.DataFrame:
         with open(Path(path), encoding="utf-8") as f:
             raw = f.read().splitlines()
     except Exception as exc:
-        raise StationError(
-            f"Cannot read STN file: {exc}"
-        ) from exc
+        raise StationError(f"Cannot read STN file: {exc}") from exc
 
     # keep non-empty, non-comment lines; do not drop lines
     # beginning with quotes because quoted headers are valid
@@ -1052,8 +1015,9 @@ def read_stn(path: str | Path) -> pd.DataFrame:
             r"^(?P<head>.*[A-Za-z].*?)\s+(?P<data>[-+0-9].*)$",
             lines[header_idx],
         )
-        if m and ("," in m.group("data") or
-                  re.search(r"\s", m.group("data"))):
+        if m and (
+            "," in m.group("data") or re.search(r"\s", m.group("data"))
+        ):
             lines[header_idx] = m.group("head")
             lines.insert(header_idx + 1, m.group("data"))
 
@@ -1105,9 +1069,7 @@ def read_stn(path: str | Path) -> pd.DataFrame:
             engine="python",
         )
     except Exception as exc:
-        raise StationError(
-            f"Failed to parse STN data: {exc}"
-        ) from exc
+        raise StationError(f"Failed to parse STN data: {exc}") from exc
 
     # drop fully-empty rows
     df = df.dropna(how="all")
@@ -1116,6 +1078,7 @@ def read_stn(path: str | Path) -> pd.DataFrame:
         raise StationError("STN parse produced empty DataFrame.")
 
     return df
+
 
 @compat_alias(
     "validate_stn_profile",
@@ -1154,6 +1117,7 @@ def detect_stn_header(
     matches : list of (str, int)
         Pairs of canonical label name and column index.
     """
+
     # comments and empties
     def _is_comment(s: str) -> bool:
         s = s.lstrip()
@@ -1189,19 +1153,10 @@ def detect_stn_header(
 
     def _split_line(ln: str) -> list[str]:
         # remove common quote chars
-        s = (
-            ln.replace('"', "")
-            .replace("“", "")
-            .replace("”", "")
-            .strip()
-        )
+        s = ln.replace('"', "").replace("“", "").replace("”", "").strip()
         # strip label=value to label
         s = re.sub(r"\s*=\s*[^, \t]+", "", s)
-        sep = (
-            ","
-            if (splitter is None and "," in s)
-            else (splitter or r"\s+")
-        )
+        sep = "," if (splitter is None and "," in s) else (splitter or r"\s+")
         toks = re.split(sep, s)
         out: list[str] = []
         for t in toks:
@@ -1238,9 +1193,7 @@ def detect_stn_header(
                 matches.append((canon, idx))
 
         score = len(matches)
-        if score > best_score or (
-            score == best_score and score > 0
-        ):
+        if score > best_score or (score == best_score and score > 0):
             best_score = score
             best_matches = matches
 
@@ -1250,10 +1203,11 @@ def detect_stn_header(
 # Back-compat alias
 validate_stn_profile = detect_stn_header
 
+
 def round_dipole_length(length: float | int) -> float:
     """Round *length* to the nearest 5‑m increment."""
     length = float(length)
-    mod    = length % 5
+    mod = length % 5
     if mod < 3:
         return length - mod
     if mod < 7:
@@ -1262,10 +1216,8 @@ def round_dipole_length(length: float | int) -> float:
 
 
 def extract_core_columns(
-     df: pd.DataFrame,
-     *,
-    keep: Iterable[str] | None = None
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    df: pd.DataFrame, *, keep: Iterable[str] | None = None
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Split a kind‑2 frame into **core** and **extra** columns.
 
     Parameters
@@ -1284,18 +1236,29 @@ def extract_core_columns(
         All remaining columns.
     """
     default_keep = {
-        'station', 'freq', 'amps', 'emag', 'ephz',
-        'hmag', 'hphz', 'rho', 'phase',
-        'e.%err', 'e.perr', 'h.%err', 'h.perr',
-        'rho.%err', 'phase.%err',
+        "station",
+        "freq",
+        "amps",
+        "emag",
+        "ephz",
+        "hmag",
+        "hphz",
+        "rho",
+        "phase",
+        "e.%err",
+        "e.perr",
+        "h.%err",
+        "h.perr",
+        "rho.%err",
+        "phase.%err",
     }
-    keep_set      = set(k.lower() for k in (keep or default_keep))
-    cols_lower    = {c.lower(): c for c in df.columns}
-    have_keep     = [cols_lower[c] for c in keep_set if c in cols_lower]
-    if 'station' not in [c.lower() for c in have_keep]:
-        have_keep.insert(0, cols_lower.get('station', df.columns[0]))
-    core          = df[have_keep].copy()
-    extra         = df.drop(columns=have_keep).copy()
+    keep_set = set(k.lower() for k in (keep or default_keep))
+    cols_lower = {c.lower(): c for c in df.columns}
+    have_keep = [cols_lower[c] for c in keep_set if c in cols_lower]
+    if "station" not in [c.lower() for c in have_keep]:
+        have_keep.insert(0, cols_lower.get("station", df.columns[0]))
+    core = df[have_keep].copy()
+    extra = df.drop(columns=have_keep).copy()
     return core.reset_index(drop=True), extra.reset_index(drop=True)
 
 
@@ -1303,9 +1266,9 @@ def _block_to_dict(block: Sequence[str]) -> dict[str, Any]:
     """Convert ``key=value`` lines to a dict (case‑insensitive keys)."""
     out: dict[str, Any] = {}
     for ln in block:
-        if '=' not in ln:
+        if "=" not in ln:
             continue
-        k, v = ln.split('=', 1)
+        k, v = ln.split("=", 1)
         out[k.strip().lower()] = v.strip()
     return out
 
@@ -1314,6 +1277,7 @@ def _dict_to_lines(data: Any) -> list[str]:
     """Serialise dict‑like *data* to ``key=value`` text lines."""
     if isinstance(data, str):
         import json
+
         data = json.loads(data)
     if not isinstance(data, dict):
         data = dict(data)
@@ -1321,10 +1285,7 @@ def _dict_to_lines(data: Any) -> list[str]:
 
 
 def number_stations(
-    n_stations: int | Integral,
-    n_freq:     int | Integral,
-    *,
-    prefix: str = "S"
+    n_stations: int | Integral, n_freq: int | Integral, *, prefix: str = "S"
 ) -> tuple[list[str], list[str]]:
     """
     Generate station IDs and a frequency-expanded copy.
@@ -1347,15 +1308,16 @@ def number_stations(
     """
     if n_stations < 1 or n_freq < 1:
         raise ValueError("n_stations and n_freq must be ≥ 1")
-    ids       = [f"{prefix}{i:02d}" for i in range(int(n_stations))]
-    expanded  = list(np.repeat(ids, int(n_freq)))
+    ids = [f"{prefix}{i:02d}" for i in range(int(n_stations))]
+    expanded = list(np.repeat(ids, int(n_freq)))
     return ids, expanded
+
 
 def chunk_by_frequency(
     data: Sequence[Any] | np.ndarray,
     n_per_chunk: int | Integral,
     *,
-    drop_remainder: bool = False
+    drop_remainder: bool = False,
 ) -> list[np.ndarray]:
     """
     Split *data* into equally sized chunks (one per frequency).
@@ -1384,19 +1346,16 @@ def chunk_by_frequency(
     """
     if n_per_chunk < 1:
         raise ValueError("n_per_chunk must be ≥ 1")
-    arr   = np.asarray(data)
+    arr = np.asarray(data)
     total = arr.size
-    idx   = np.arange(0, total, int(n_per_chunk))
-    chunks: list[np.ndarray] = [
-        arr[i : i + n_per_chunk] for i in idx
-    ]
+    idx = np.arange(0, total, int(n_per_chunk))
+    chunks: list[np.ndarray] = [arr[i : i + n_per_chunk] for i in idx]
     if drop_remainder and chunks and chunks[-1].size < n_per_chunk:
         chunks.pop()
     return chunks
 
-def _find_col(
-    df: pd.DataFrame, candidates: Sequence[str]
-) -> str | None:
+
+def _find_col(df: pd.DataFrame, candidates: Sequence[str]) -> str | None:
     """
     Return the first column name present in *df* among
     *candidates*.  Matching is case-insensitive and ignores
@@ -1461,6 +1420,7 @@ def _norm_comp(x: object) -> str:
     # fallback: capitalize first, keep inner case
     return s[0:1].upper() + s[1:]
 
+
 def _first_present(
     df: pd.DataFrame,
     candidates: Sequence[str],
@@ -1489,6 +1449,7 @@ def _first_present(
             return cols_lc[a_lc]
     return None
 
+
 def _to_numeric_percent(series: pd.Series) -> pd.Series:
     """
     Convert a percent-like column to float while tolerating blanks.
@@ -1496,9 +1457,9 @@ def _to_numeric_percent(series: pd.Series) -> pd.Series:
     Empty/asterisk tokens are mapped to NaN; strings like ``"5"`` or
     ``"5.0"`` become ``5.0``.
     """
-    s = series.astype(str).str.strip().replace(
-        {"": np.nan, "*": np.nan})
+    s = series.astype(str).str.strip().replace({"": np.nan, "*": np.nan})
     return pd.to_numeric(s, errors="coerce")
+
 
 def _to_complex(x: Any) -> complex | float:
     """

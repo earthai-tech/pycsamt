@@ -32,6 +32,7 @@ def project_root() -> Path:
 
 # --------------------- AVG / legacy data ----------------------
 
+
 @pytest.fixture(scope="session")
 def data_path(project_root: Path) -> Path:
     """Base path to bundled AVG data."""
@@ -76,6 +77,7 @@ def stn_file_k2(data_path: Path) -> Path:
 
 # --------------------------- EDI data -------------------------
 
+
 @pytest.fixture(scope="session")
 def edi_path(project_root: Path) -> Path:
     """Base path to bundled EDI data."""
@@ -117,8 +119,7 @@ def edi_csamt_file(edi_path: Path) -> Path:
         "000CSA_csamt.edi",
     ],
 )
-def any_edi_file(request: pytest.FixtureRequest,
-                 edi_path: Path) -> Path:
+def any_edi_file(request: pytest.FixtureRequest, edi_path: Path) -> Path:
     """
     Parametrized EDI path. Skips the case if a file is absent.
     """
@@ -129,6 +130,7 @@ def any_edi_file(request: pytest.FixtureRequest,
 
 
 # --------------- Synthetic/minimal EDI for tests --------------
+
 
 @pytest.fixture()
 def simulated_edi(tmp_path: Path) -> Path:
@@ -145,8 +147,8 @@ def simulated_edi(tmp_path: Path) -> Path:
         "",
         ">INFO",
         "  PROJECT=SIM",
-        '  PROCESSEDBY=pyCSAMT',
-        '  PROCESSINGSOFTWARE=pyCSAMT',
+        "  PROCESSEDBY=pyCSAMT",
+        "  PROCESSINGSOFTWARE=pyCSAMT",
         "",
         ">=MTSECT",
         "  SECTID=SIM01",
@@ -165,7 +167,9 @@ def simulated_edi(tmp_path: Path) -> Path:
     p.write_text("\n".join(lines), encoding="utf-8")
     return p
 
+
 # ----------------------- EDIS collection -----------------------
+
 
 @pytest.fixture(scope="session")
 def edis_path(project_root: Path) -> Path:
@@ -254,4 +258,3 @@ def jc_files(jc_path: Path) -> list[Path]:
 def any_jc_file(jc_files: list[Path]) -> Path:
     """A single J file from the collection (first sorted)."""
     return jc_files[0]
-

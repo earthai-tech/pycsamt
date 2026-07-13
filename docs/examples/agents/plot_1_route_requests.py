@@ -84,25 +84,35 @@ y = range(len(requests))
 colors = [palette.get(d.intent, "0.6") for d in decisions]
 
 fig, ax = plt.subplots(figsize=(9, 4.5))
-ax.barh(list(y), [d.confidence for d in decisions], color=colors,
-        edgecolor="black", linewidth=0.6)
+ax.barh(
+    list(y),
+    [d.confidence for d in decisions],
+    color=colors,
+    edgecolor="black",
+    linewidth=0.6,
+)
 
 for yi, dec in zip(y, decisions):
     if dec.needs_data:
         ax.plot(dec.confidence + 0.015, yi, "o", color="black", ms=4)
 
 ax.set_yticks(list(y))
-ax.set_yticklabels([t if len(t) <= 34 else t[:31] + "…" for t in requests],
-                   fontsize=8)
-ax.invert_yaxis()                       # first request on top
+ax.set_yticklabels(
+    [t if len(t) <= 34 else t[:31] + "…" for t in requests], fontsize=8
+)
+ax.invert_yaxis()  # first request on top
 ax.set_xlim(0, 1.05)
 ax.set_xlabel("Router confidence")
 ax.set_title("Offline intent routing — one bar per request", fontsize=11)
 
 present = [i for i in intent_order if any(d.intent == i for d in decisions)]
-handles = [Patch(facecolor=palette[i], edgecolor="black", label=i)
-           for i in present]
-handles.append(plt.Line2D([], [], marker="o", color="black", linestyle="",
-                          label="needs data"))
+handles = [
+    Patch(facecolor=palette[i], edgecolor="black", label=i) for i in present
+]
+handles.append(
+    plt.Line2D(
+        [], [], marker="o", color="black", linestyle="", label="needs data"
+    )
+)
 ax.legend(handles=handles, fontsize=8, loc="lower right", framealpha=0.9)
 fig.tight_layout()

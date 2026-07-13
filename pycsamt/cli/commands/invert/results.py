@@ -88,20 +88,21 @@ def results(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _results_dict(
     workdir: Path, solver: str, iteration: int | None, verbose: int
 ) -> dict[str, Any]:
     result = _load_inversion_result(workdir, solver, iteration, verbose)
 
     info: dict[str, Any] = {
-        "workdir":      str(workdir),
-        "solver":       solver,
-        "iteration":    None,
-        "rms":          None,
-        "model_shape":  None,
-        "rho_min":      None,
-        "rho_max":      None,
-        "rho_mean":     None,
+        "workdir": str(workdir),
+        "solver": solver,
+        "iteration": None,
+        "rms": None,
+        "model_shape": None,
+        "rho_min": None,
+        "rho_max": None,
+        "rho_mean": None,
         "n_iter_files": None,
     }
 
@@ -114,21 +115,22 @@ def _results_dict(
         best = result.best_iter
         if best is not None:
             info["iteration"] = getattr(best, "iteration", None)
-            info["rms"] = (
-                getattr(best, "misfit", None) or getattr(best, "rms", None)
+            info["rms"] = getattr(best, "misfit", None) or getattr(
+                best, "rms", None
             )
     except AttributeError:
         pass
 
     try:
         import numpy as np  # noqa: PLC0415
+
         rho = result.rho_2d
         if rho is not None:
             finite = rho[np.isfinite(rho)]
             if finite.size:
                 info["model_shape"] = list(rho.shape)
-                info["rho_min"]  = round(float(finite.min()), 4)
-                info["rho_max"]  = round(float(finite.max()), 4)
+                info["rho_min"] = round(float(finite.min()), 4)
+                info["rho_max"] = round(float(finite.max()), 4)
                 info["rho_mean"] = round(float(finite.mean()), 4)
     except AttributeError:
         pass
@@ -138,14 +140,26 @@ def _results_dict(
 
 def _print_results(info: dict[str, Any], solver: str) -> None:
     rows: list[tuple[str, str]] = [
-        ("Workdir",     info["workdir"]),
-        ("Solver",      solver.upper()),
-        ("Iter files",  str(info["n_iter_files"] or "—")),
-        ("Loaded iter", str(info["iteration"]    or "—")),
-        ("Final RMS",   str(info["rms"])          if info["rms"]          is not None else "—"),
-        ("Model shape", str(info["model_shape"])  if info["model_shape"]  else "—"),
-        ("log10ρ min",  str(info["rho_min"])      if info["rho_min"]      is not None else "—"),
-        ("log10ρ max",  str(info["rho_max"])      if info["rho_max"]      is not None else "—"),
-        ("log10ρ mean", str(info["rho_mean"])     if info["rho_mean"]     is not None else "—"),
+        ("Workdir", info["workdir"]),
+        ("Solver", solver.upper()),
+        ("Iter files", str(info["n_iter_files"] or "—")),
+        ("Loaded iter", str(info["iteration"] or "—")),
+        ("Final RMS", str(info["rms"]) if info["rms"] is not None else "—"),
+        (
+            "Model shape",
+            str(info["model_shape"]) if info["model_shape"] else "—",
+        ),
+        (
+            "log10ρ min",
+            str(info["rho_min"]) if info["rho_min"] is not None else "—",
+        ),
+        (
+            "log10ρ max",
+            str(info["rho_max"]) if info["rho_max"] is not None else "—",
+        ),
+        (
+            "log10ρ mean",
+            str(info["rho_mean"]) if info["rho_mean"] is not None else "—",
+        ),
     ]
     _rich_table("Inversion Results", rows, style="green")

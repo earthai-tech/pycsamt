@@ -76,8 +76,7 @@ def test_software_validation_fields_and_url():
     s.validate()  # ok
 
     with pytest.raises(ValueError):
-        Software(name="pkg", version="1.0",
-                 url="ftp://x").validate()
+        Software(name="pkg", version="1.0", url="ftp://x").validate()
 
     with pytest.raises(ValueError):
         Software(name="", version="1.0").validate()
@@ -122,8 +121,7 @@ def test_processing_signconv_and_runlist_validation():
 
 def test_copyright_release_status_validation():
     c = Copyright()
-    for st in ("open", "public", "proprietary",
-               "OPEN", "Public"):
+    for st in ("open", "public", "proprietary", "OPEN", "Public"):
         c.update(release_status=st)
         c.validate()
 
@@ -136,6 +134,7 @@ def test_copyright_release_status_validation():
 # ------------------------
 class Host(PropertiesMixin):
     """Minimal host that mixes properties in."""
+
     pass
 
 
@@ -165,8 +164,7 @@ def test_properties_mixin_attach_and_update_properties():
     h.update_properties(
         source={"survey": "S1", "sitename": "SiteA"},
         processedby="Bob",  # flat routed to Processing
-        processingsoftware={"name": "Tool",
-                            "version": "2.0"},
+        processingsoftware={"name": "Tool", "version": "2.0"},
         release_status="open",
     )
     assert h.Source.survey == "S1"

@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for the optional LLM re-ranker (RAG Tier 1). No network."""
+
 from __future__ import annotations
 
 import unittest
@@ -15,16 +16,23 @@ from pycsamt.assistant.rag.schemas import RAGChunk
 
 def _chunks() -> list[RAGChunk]:
     return [
-        RAGChunk(id="a", text="alpha", source_path="a.py", kind="python_symbol"),
-        RAGChunk(id="b", text="bravo", source_path="b.py", kind="python_symbol"),
-        RAGChunk(id="c", text="charlie", source_path="c.py", kind="python_symbol"),
+        RAGChunk(
+            id="a", text="alpha", source_path="a.py", kind="python_symbol"
+        ),
+        RAGChunk(
+            id="b", text="bravo", source_path="b.py", kind="python_symbol"
+        ),
+        RAGChunk(
+            id="c", text="charlie", source_path="c.py", kind="python_symbol"
+        ),
     ]
 
 
 class TestParseRanking(unittest.TestCase):
-
     def test_parses_and_bounds(self):
-        self.assertEqual(parse_ranking("3, 1, 5", 3), [2, 0])  # 5 out of range
+        self.assertEqual(
+            parse_ranking("3, 1, 5", 3), [2, 0]
+        )  # 5 out of range
 
     def test_dedupes(self):
         self.assertEqual(parse_ranking("2 2 1", 3), [1, 0])
@@ -34,13 +42,10 @@ class TestParseRanking(unittest.TestCase):
 
 
 class TestLLMRerank(unittest.TestCase):
-
     def test_reorders_by_model_reply(self):
         # Model says candidate 3 then 1 → chunk c, then a; b appended.
         reply = "3, 1"
-        out = llm_rerank(
-            "q", _chunks(), rank_fn=lambda p, s: reply
-        )
+        out = llm_rerank("q", _chunks(), rank_fn=lambda p, s: reply)
         self.assertEqual([c.id for c in out], ["c", "a", "b"])
 
     def test_prompt_lists_candidates(self):

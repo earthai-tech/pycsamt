@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -18,11 +17,14 @@ def _in(val, lo, hi):
     return (val is not None) and (lo < val < hi)
 
 
-@pytest.mark.parametrize("which", [
-    "15125A_imp.edi",
-    "15125A_spe.edi",
-    "000CSA_csamt.edi",
-])
+@pytest.mark.parametrize(
+    "which",
+    [
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
 def test_head_parses_real_files(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():
@@ -38,11 +40,14 @@ def test_head_parses_real_files(edi_path: Path, which: str):
     assert out and out[0].strip() == ">HEAD"
 
 
-@pytest.mark.parametrize("which", [
-    "15125A_imp.edi",
-    "15125A_spe.edi",
-    "000CSA_csamt.edi",
-])
+@pytest.mark.parametrize(
+    "which",
+    [
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
 def test_info_parses_real_files(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():
@@ -56,11 +61,14 @@ def test_info_parses_real_files(edi_path: Path, which: str):
     assert out and out[0].strip() == ">INFO"
 
 
-@pytest.mark.parametrize("which", [
-    "15125A_imp.edi",
-    "15125A_spe.edi",
-    "000CSA_csamt.edi",
-])
+@pytest.mark.parametrize(
+    "which",
+    [
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
 def test_heads_aggregator_order_and_write(
     edi_path: Path, which: str, tmp_path: Path
 ):
@@ -79,11 +87,14 @@ def test_heads_aggregator_order_and_write(
     assert outp.exists() and outp.stat().st_size > 0
 
 
-@pytest.mark.parametrize("which", [
-    "15125A_imp.edi",
-    "15125A_spe.edi",
-    "000CSA_csamt.edi",
-])
+@pytest.mark.parametrize(
+    "which",
+    [
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
 def test_head_mixin_from_file(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():
@@ -97,11 +108,14 @@ def test_head_mixin_from_file(edi_path: Path, which: str):
     assert h.dataid is None or str(h.dataid).strip() != ""
 
 
-@pytest.mark.parametrize("which", [
-    "15125A_imp.edi",
-    "15125A_spe.edi",
-    "000CSA_csamt.edi",
-])
+@pytest.mark.parametrize(
+    "which",
+    [
+        "15125A_imp.edi",
+        "15125A_spe.edi",
+        "000CSA_csamt.edi",
+    ],
+)
 def test_info_mixin_from_file(edi_path: Path, which: str):
     p = edi_path / which
     if not p.exists():

@@ -46,10 +46,14 @@ from pycsamt.inversion.workflow import InversionWorkflow
 
 
 def _section_result() -> InversionResult:
-    rho = np.log10(np.array([
-        [100.0, 150.0, 200.0],
-        [80.0, 120.0, 180.0],
-    ]))
+    rho = np.log10(
+        np.array(
+            [
+                [100.0, 150.0, 200.0],
+                [80.0, 120.0, 180.0],
+            ]
+        )
+    )
     return InversionResult(
         method="mt",
         dimension="2d",
@@ -164,7 +168,9 @@ def test_objective_errors_masks_and_weighted_rms_edges():
         [[True, True], [False, False]],
     )
     np.testing.assert_allclose(
-        component_errors(rho, SimpleNamespace(error_floor=0.2), component="rho"),
+        component_errors(
+            rho, SimpleNamespace(error_floor=0.2), component="rho"
+        ),
         np.maximum(np.abs(rho) * 0.2, 1e-12),
     )
     assert weighted_rms(
@@ -179,7 +185,9 @@ def test_regularization_residual_shapes_and_kinds():
     values = np.array([[1.0, 2.0, 4.0], [1.5, 2.5, 5.0]])
     smooth = regularization_residual(
         values,
-        regularization=Regularization(kind="smooth", alpha_x=4.0, alpha_z=9.0),
+        regularization=Regularization(
+            kind="smooth", alpha_x=4.0, alpha_z=9.0
+        ),
     )
     assert smooth.size == 7
     damped = regularization_residual(
@@ -190,10 +198,14 @@ def test_regularization_residual_shapes_and_kinds():
     assert damped.size > smooth.size
     blocky = regularization_residual(
         values,
-        regularization=Regularization(kind="blocky", alpha_x=1.0, alpha_z=1.0),
+        regularization=Regularization(
+            kind="blocky", alpha_x=1.0, alpha_z=1.0
+        ),
     )
     assert blocky.size == smooth.size
-    none = regularization_residual(values, regularization=Regularization(kind="none"))
+    none = regularization_residual(
+        values, regularization=Regularization(kind="none")
+    )
     assert none.size == 0
 
 
@@ -217,7 +229,9 @@ def test_result_containers_convert_dicts_and_arrays():
     )
     converted = layered.to_resistivity_model()
     assert converted.rho_2d.shape == (3, 1)
-    np.testing.assert_allclose(converted.rho_2d[:, 0], np.log10([100.0, 250.0, 500.0]))
+    np.testing.assert_allclose(
+        converted.rho_2d[:, 0], np.log10([100.0, 250.0, 500.0])
+    )
 
     with pytest.raises(ValueError):
         InversionResult("mt", "1d", "builtin").to_resistivity_model()
@@ -230,7 +244,11 @@ def test_exports_write_expected_payloads(tmp_path):
     result.files["mesh"] = str(native)
 
     csv_path = to_csv(result, tmp_path / "model.csv", log_rho=False)
-    assert csv_path.read_text(encoding="utf-8").splitlines()[0].startswith("x_m,z_m,rho_ohm_m")
+    assert (
+        csv_path.read_text(encoding="utf-8")
+        .splitlines()[0]
+        .startswith("x_m,z_m,rho_ohm_m")
+    )
 
     npz_path = to_npz(result, tmp_path / "model.npz")
     with np.load(npz_path) as data:
@@ -302,7 +320,9 @@ def test_backend_support_checks_and_workflow_merges_config(monkeypatch):
     backend = DummyBackend(cfg)
     assert backend.run().status == "prepared"
 
-    backend.config = InversionConfig(method="tdem", dimension="1d", backend="builtin")
+    backend.config = InversionConfig(
+        method="tdem", dimension="1d", backend="builtin"
+    )
     with pytest.raises(NotImplementedError):
         backend.check_supported()
 
@@ -311,7 +331,9 @@ def test_backend_support_checks_and_workflow_merges_config(monkeypatch):
         "to_backend",
         lambda self: DummyBackend(self),
     )
-    wf = InversionWorkflow({"method": "mt"}, dimension="1d", backend="builtin")
+    wf = InversionWorkflow(
+        {"method": "mt"}, dimension="1d", backend="builtin"
+    )
     assert wf.config.method == "mt"
     assert wf.config.dimension == "1d"
     assert wf.run().backend == "dummy"

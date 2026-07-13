@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Any
@@ -37,6 +36,7 @@ from ._core import (
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
+
 
 #
 def rotate_to_strike(
@@ -94,6 +94,7 @@ def rotate_to_strike(
 
 
 # --- 2) rotate by angle or map ------------------------------------------- #
+
 
 def rotate(
     sites,
@@ -155,6 +156,7 @@ def rotate_by_map(
 
 # --- 3) enforce off-diagonal antisymmetry -------------------------------- #
 
+
 def antisymmetrize(
     sites,
     *,
@@ -194,6 +196,7 @@ def antisymmetrize(
 
 # --- 4) invert impedance -------------------------------------------------- #
 
+
 def invert(
     sites,
     *,
@@ -231,6 +234,7 @@ def invert(
 
 
 # --- 5) sensor-orientation correction ------------------------------------ #
+
 
 def orient_from_sensors(
     sites,
@@ -273,7 +277,10 @@ def orient_from_sensors(
         ze = getattr(Z, "z_err", None)
         z2, ze2 = zutils.correct_for_sensor_orientation(
             z,
-            ex=ex_, ey=ey_, bx=bx_, by=by_,
+            ex=ex_,
+            ey=ey_,
+            bx=bx_,
+            by=by_,
             z_prime_err=ze,
         )
         try:
@@ -288,6 +295,7 @@ def orient_from_sensors(
 
 
 # --- 6) sigma-clip outliers in Z ----------------------------------------- #
+
 
 def sigma_clip_z(
     sites,
@@ -326,6 +334,7 @@ def sigma_clip_z(
 
 
 # --- 7) balance off-diagonal magnitudes ---------------------------------- #
+
 
 def balance_offdiag(
     sites,
@@ -371,8 +380,6 @@ def balance_offdiag(
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
-
-
 def _get_z(ed: Any) -> tuple[np.ndarray | None, np.ndarray | None]:
     Zobj = getattr(ed, "Z", None) or getattr(ed, "z", None)
     if Zobj is None:
@@ -394,9 +401,9 @@ def _period(fr: np.ndarray) -> np.ndarray:
     return p
 
 
-def _angles_deg(a: np.ndarray, b: np.ndarray,
-                c: np.ndarray, d: np.ndarray) -> tuple[
-                    np.ndarray, np.ndarray]:
+def _angles_deg(
+    a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     num_b = b + c
     den_b = a - d
     beta = 0.5 * np.degrees(np.arctan2(num_b, den_b))
@@ -471,6 +478,7 @@ def _df_phase_tensor_single(
 
 # ------------------------ public computation ----------------------------- #
 
+
 def build_phase_tensor_table(
     sites: Any,
     *,
@@ -499,15 +507,21 @@ def build_phase_tensor_table(
         d = phi[:, 1, 1]
         alpha, beta = _angles_deg(a, b, c, d)
         s, theta = _svd_axes(phi)
-        df = _df_phase_tensor_single(
-            nm, fr, phi, s, theta, alpha, beta
-        )
+        df = _df_phase_tensor_single(nm, fr, phi, s, theta, alpha, beta)
         dfs.append(df)
     if not dfs:
         return pd.DataFrame(
             columns=[
-                "station", "freq", "period", "s1", "s2",
-                "theta", "alpha", "beta", "skew", "ellipt",
+                "station",
+                "freq",
+                "period",
+                "s1",
+                "s2",
+                "theta",
+                "alpha",
+                "beta",
+                "skew",
+                "ellipt",
             ]
         )
     return pd.concat(dfs, ignore_index=True)
@@ -517,35 +531,41 @@ def build_phase_tensor_table(
 
 # Human-readable labels for each c_by specifier
 _C_LABEL: dict[str, str] = {
-    "skew":     "Skew β (°)",
-    "beta":     "Skew β (°)",
-    "alpha":    "α (°)",
-    "theta":    "Strike θ (°)",
-    "ellipt":   "Ellipticity",
-    "s1":       "φ_max (s.v.)",
-    "s2":       "φ_min (s.v.)",
-    "|skew|":   "|β| (°)",
-    "|beta|":   "|β| (°)",
-    "|theta|":  "|θ| (°)",
-    "|alpha|":  "|α| (°)",
+    "skew": "Skew β (°)",
+    "beta": "Skew β (°)",
+    "alpha": "α (°)",
+    "theta": "Strike θ (°)",
+    "ellipt": "Ellipticity",
+    "s1": "φ_max (s.v.)",
+    "s2": "φ_min (s.v.)",
+    "|skew|": "|β| (°)",
+    "|beta|": "|β| (°)",
+    "|theta|": "|θ| (°)",
+    "|alpha|": "|α| (°)",
     "phi_mean": "Φ̄ = (φ_max+φ_min)/2",
-    "phi_max":  "φ_max (tan units)",
-    "phi_min":  "φ_min (tan units)",
+    "phi_max": "φ_max (tan units)",
+    "phi_min": "φ_min (tan units)",
 }
 
 # Symmetric c_by quantities (vmin = -vmax enforced by default)
-_SYMMETRIC_C: frozenset = frozenset(("skew", "beta", "alpha", "|skew|", "|beta|"))
+_SYMMETRIC_C: frozenset = frozenset(
+    ("skew", "beta", "alpha", "|skew|", "|beta|")
+)
 
 
 def _resolve_cvals(df: pd.DataFrame, c_by: str) -> tuple[np.ndarray, str]:
     """Return ``(colour_array, colorbar_label)`` for a *c_by* specifier."""
     if c_by.startswith("|") and c_by.endswith("|"):
         inner = c_by[1:-1]
-        col = (df[inner] if inner in df.columns else df["skew"]).to_numpy(float)
+        col = (df[inner] if inner in df.columns else df["skew"]).to_numpy(
+            float
+        )
         return np.abs(col), _C_LABEL.get(c_by, f"|{inner}|")
     if c_by == "phi_mean":
-        return (0.5 * (df["s1"].to_numpy(float) + df["s2"].to_numpy(float)),
-                _C_LABEL["phi_mean"])
+        return (
+            0.5 * (df["s1"].to_numpy(float) + df["s2"].to_numpy(float)),
+            _C_LABEL["phi_mean"],
+        )
     if c_by == "phi_max":
         return df["s1"].to_numpy(float), _C_LABEL["phi_max"]
     if c_by == "phi_min":
@@ -574,6 +594,7 @@ def _attach_cbar(
 
 # ------------------------------ plotting --------------------------------- #
 
+
 def plot_phase_tensor_psection(
     sites: Any,
     *,
@@ -584,24 +605,24 @@ def plot_phase_tensor_psection(
     axis_y: str = "logperiod",
     period_up: bool = True,
     # ── ellipse sizing ────────────────────────────────────────────────────
-    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
-    normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
+    scale=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.scale
+    normalise_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
     s1_ref: float | None = None,
-    min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
+    min_aspect=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
     # ── colour ────────────────────────────────────────────────────────────
-    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
-    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
+    c_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap=_UNSET,  # default: auto from c_by via resolve_cmap()
     clim: tuple[float, float] | None = None,
-    clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
-    symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
+    clim_pct=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
+    symmetric_clim=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
     # ── aesthetics ────────────────────────────────────────────────────────
-    edgecolor      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
-    linewidth      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.linewidth
-    alpha          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.alpha
+    edgecolor=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
+    linewidth=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.linewidth
+    alpha=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.alpha
     # ── overlays ─────────────────────────────────────────────────────────
-    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
-    mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
-    ref_ellipse    = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.show_ref
+    skew_threshold=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
+    mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
+    ref_ellipse=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.show_ref
     legend_fontsize: float = 8.0,
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
@@ -731,19 +752,32 @@ def plot_phase_tensor_psection(
 
     # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
     _es = PYCSAMT_STYLE.pt_ellipse
-    if scale          is _UNSET: scale          = _es.scale
-    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
-    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
-    if c_by           is _UNSET: c_by           = _es.c_by
-    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
-    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
-    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
-    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
-    if linewidth      is _UNSET: linewidth      = _es.linewidth
-    if alpha          is _UNSET: alpha          = _es.alpha
-    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
-    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
-    if ref_ellipse    is _UNSET: ref_ellipse    = _es.show_ref
+    if scale is _UNSET:
+        scale = _es.scale
+    if normalise_by is _UNSET:
+        normalise_by = _es.normalise_by
+    if min_aspect is _UNSET:
+        min_aspect = _es.min_aspect
+    if c_by is _UNSET:
+        c_by = _es.c_by
+    if cmap is _UNSET:
+        cmap = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct is _UNSET:
+        clim_pct = _es.clim_pct
+    if symmetric_clim is _UNSET:
+        symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor is _UNSET:
+        edgecolor = _es.edgecolor
+    if linewidth is _UNSET:
+        linewidth = _es.linewidth
+    if alpha is _UNSET:
+        alpha = _es.alpha
+    if skew_threshold is _UNSET:
+        skew_threshold = _es.skew_threshold
+    if mark_3d is _UNSET:
+        mark_3d = _es.mark_3d
+    if ref_ellipse is _UNSET:
+        ref_ellipse = _es.show_ref
 
     # ── data selection ────────────────────────────────────────────────────
     if not df.empty and stations is not None:
@@ -756,12 +790,18 @@ def plot_phase_tensor_psection(
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no phase tensor data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     # ── station ordering & y-axis ─────────────────────────────────────────
-    st_list = list(dict.fromkeys(df["station"].tolist()))   # preserve order
+    st_list = list(dict.fromkeys(df["station"].tolist()))  # preserve order
     st_map: dict[str, int] = {s: i for i, s in enumerate(st_list)}
     n_st = len(st_list)
 
@@ -776,7 +816,11 @@ def plot_phase_tensor_psection(
 
     # ── cell dimensions in data coordinates ───────────────────────────────
     y_unique = np.unique(df["_y"].to_numpy(float))
-    cell_y = float(np.nanmedian(np.abs(np.diff(y_unique)))) if len(y_unique) > 1 else 1.0
+    cell_y = (
+        float(np.nanmedian(np.abs(np.diff(y_unique))))
+        if len(y_unique) > 1
+        else 1.0
+    )
     cell_x = 1.0  # one station spacing
 
     # ── ellipse-size normalisation reference ──────────────────────────────
@@ -786,7 +830,11 @@ def plot_phase_tensor_psection(
             ref = float(s1_ref)
         else:
             finite_s1 = s1_vals[np.isfinite(s1_vals)]
-            ref = float(np.nanpercentile(finite_s1, 90)) if len(finite_s1) else 1.0
+            ref = (
+                float(np.nanpercentile(finite_s1, 90))
+                if len(finite_s1)
+                else 1.0
+            )
         ref = max(ref, 1e-9)
     elif normalise_by == "unity":
         ref = float(s1_ref) if s1_ref is not None else 1.0
@@ -804,27 +852,40 @@ def plot_phase_tensor_psection(
         vmin, vmax = -float(skew_threshold), float(skew_threshold)
     else:
         lo_pct, hi_pct = clim_pct
-        vmin = float(np.nanpercentile(finite_c, lo_pct)) if len(finite_c) else -1.0
-        vmax = float(np.nanpercentile(finite_c, hi_pct)) if len(finite_c) else  1.0
+        vmin = (
+            float(np.nanpercentile(finite_c, lo_pct))
+            if len(finite_c)
+            else -1.0
+        )
+        vmax = (
+            float(np.nanpercentile(finite_c, hi_pct))
+            if len(finite_c)
+            else 1.0
+        )
         if symmetric_clim and c_by in _SYMMETRIC_C:
             vlim = max(abs(vmin), abs(vmax))
             vmin, vmax = -vlim, vlim
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    cm   = plt.get_cmap(cmap)
+    cm = plt.get_cmap(cmap)
 
     # ── extract arrays for the drawing loop ───────────────────────────────
-    x_arr  = df["station"].map(st_map).to_numpy(float)
-    y_arr  = df["_y"].to_numpy(float)
+    x_arr = df["station"].map(st_map).to_numpy(float)
+    y_arr = df["_y"].to_numpy(float)
     s1_arr = df["s1"].to_numpy(float)
     s2_arr = df["s2"].to_numpy(float)
     th_arr = df["theta"].to_numpy(float)
     # skew values for mark_3d (always needed even if c_by != "skew")
-    skew_arr = df["skew"].to_numpy(float) if "skew" in df.columns else np.zeros(len(df))
+    skew_arr = (
+        df["skew"].to_numpy(float)
+        if "skew" in df.columns
+        else np.zeros(len(df))
+    )
 
     # ── draw ellipses ─────────────────────────────────────────────────────
     for xi, yi, s1i, s2i, thi, ci, beti in zip(
-            x_arr, y_arr, s1_arr, s2_arr, th_arr, cvals, skew_arr):
+        x_arr, y_arr, s1_arr, s2_arr, th_arr, cvals, skew_arr
+    ):
         if not np.all(np.isfinite([xi, yi, s1i, s2i, thi, ci])):
             continue
 
@@ -837,26 +898,34 @@ def plot_phase_tensor_psection(
         if min_aspect > 0:
             h = max(h, min_aspect * w)
 
-        is_3d = (skew_threshold is not None and mark_3d
-                 and np.isfinite(beti) and abs(beti) > skew_threshold)
+        is_3d = (
+            skew_threshold is not None
+            and mark_3d
+            and np.isfinite(beti)
+            and abs(beti) > skew_threshold
+        )
         lw_i = linewidth * 3.0 if is_3d else linewidth
 
-        ax.add_patch(Ellipse(
-            (xi, yi),
-            width=w, height=h, angle=thi,
-            facecolor=cm(norm(ci)),
-            edgecolor=edgecolor,
-            linewidth=lw_i,
-            alpha=alpha,
-            zorder=3,
-        ))
+        ax.add_patch(
+            Ellipse(
+                (xi, yi),
+                width=w,
+                height=h,
+                angle=thi,
+                facecolor=cm(norm(ci)),
+                edgecolor=edgecolor,
+                linewidth=lw_i,
+                alpha=alpha,
+                zorder=3,
+            )
+        )
 
     # ── axes limits and ticks ─────────────────────────────────────────────
     ax.set_xlim(-0.6, n_st - 0.4)
 
-    y_all  = y_arr[np.isfinite(y_arr)]
-    y_lo   = float(np.nanmin(y_all)) if len(y_all) else 0.0
-    y_hi   = float(np.nanmax(y_all)) if len(y_all) else 1.0
+    y_all = y_arr[np.isfinite(y_arr)]
+    y_lo = float(np.nanmin(y_all)) if len(y_all) else 0.0
+    y_hi = float(np.nanmax(y_all)) if len(y_all) else 1.0
     margin = max(0.5 * cell_y, 0.02 * (y_hi - y_lo + 1e-9))
 
     # Reserve a dedicated legend strip beyond the data so the reference
@@ -900,24 +969,35 @@ def plot_phase_tensor_psection(
     if want_legend:
         # boundary rule separating data from the legend strip
         bound = top_edge + top_sign * margin
-        ax.plot([-0.6, n_st - 0.4], [bound, bound],
-                color="0.82", lw=0.7, zorder=1)
+        ax.plot(
+            [-0.6, n_st - 0.4], [bound, bound], color="0.82", lw=0.7, zorder=1
+        )
 
         va_out = "bottom" if top_sign > 0 else "top"
 
         if skew_threshold is not None and c_by in ("skew", "beta"):
             y_near = bound + top_sign * 0.32 * legend_depth
-            y_far  = bound + top_sign * 0.75 * legend_depth
-            ax.text(-0.45, y_far, f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
-                    fontsize=legend_fontsize, va="center", ha="left",
-                    color="#2166ac",
-                    bbox=dict(fc="white", ec="0.75", lw=0.5,
-                              alpha=0.9, pad=2.0))
-            ax.text(-0.45, y_near, f"|β| ≥ {skew_threshold:.0f}° → 3-D",
-                    fontsize=legend_fontsize, va="center", ha="left",
-                    color="#b2182b",
-                    bbox=dict(fc="white", ec="0.75", lw=0.5,
-                              alpha=0.9, pad=2.0))
+            y_far = bound + top_sign * 0.75 * legend_depth
+            ax.text(
+                -0.45,
+                y_far,
+                f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
+                fontsize=legend_fontsize,
+                va="center",
+                ha="left",
+                color="#2166ac",
+                bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
+            )
+            ax.text(
+                -0.45,
+                y_near,
+                f"|β| ≥ {skew_threshold:.0f}° → 3-D",
+                fontsize=legend_fontsize,
+                va="center",
+                ha="left",
+                color="#b2182b",
+                bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
+            )
 
         # Reference ellipse: the "1-D" size/shape used to normalise every
         # data ellipse (φ_max = φ_min = ref), drawn at full data size so
@@ -927,19 +1007,32 @@ def plot_phase_tensor_psection(
             ry = bound + top_sign * 0.38 * legend_depth
             rw = min(scale * cell_x, 0.99 * cell_x)
             rh = max(min(scale * cell_y, 0.99 * cell_y), min_aspect * rw)
-            ax.add_patch(Ellipse(
-                (rx, ry), width=rw, height=rh, angle=0.0,
-                facecolor="0.9", edgecolor="k", linewidth=0.9, zorder=5,
-            ))
+            ax.add_patch(
+                Ellipse(
+                    (rx, ry),
+                    width=rw,
+                    height=rh,
+                    angle=0.0,
+                    facecolor="0.9",
+                    edgecolor="k",
+                    linewidth=0.9,
+                    zorder=5,
+                )
+            )
             ref_label = {
                 "unity": "1-D reference\n(Φ=45°)",
                 "cell": "size reference\n(90th-pct Φ_max)",
             }.get(normalise_by, "size reference")
-            ax.text(rx, ry + top_sign * (0.5 * rh + 0.10 * legend_depth),
-                    ref_label, ha="center", va=va_out,
-                    fontsize=legend_fontsize, linespacing=1.3,
-                    bbox=dict(fc="white", ec="0.75", lw=0.5,
-                              alpha=0.9, pad=2.0))
+            ax.text(
+                rx,
+                ry + top_sign * (0.5 * rh + 0.10 * legend_depth),
+                ref_label,
+                ha="center",
+                va=va_out,
+                fontsize=legend_fontsize,
+                linespacing=1.3,
+                bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
+            )
 
     return ax
 
@@ -966,8 +1059,7 @@ def plot_phase_tensor_skewmap(
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     if axis_y == "logperiod":
         df = df.copy()
@@ -984,7 +1076,7 @@ def plot_phase_tensor_skewmap(
         aggfunc=agg,
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
+    Z = piv.to_numpy(dtype=float)  # (n_logp, n_st) — no transpose
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
@@ -1002,8 +1094,9 @@ def plot_phase_tensor_skewmap(
         xlim=(-0.5, len(piv.columns) - 0.5),
     )
     yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))
-    yvals = np.linspace(piv.index.min(), piv.index.max(),
-                        num=min(8, len(piv.index)))
+    yvals = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.3g}" for v in yvals])
     if not ax.yaxis_inverted():
@@ -1012,7 +1105,9 @@ def plot_phase_tensor_skewmap(
     cb.set_label("skew")
     return ax
 
+
 # --- more plots ----------------------------------------------------------- #
+
 
 def _coords_of_sites(sites) -> dict:
     m = {}
@@ -1049,8 +1144,7 @@ def plot_theta_vs_period(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     for st, sdf in df.groupby("station"):
         x = sdf["period"].to_numpy()
@@ -1102,8 +1196,14 @@ def _strike_streamlines(ax, x, y, th, w, n_stations):
     thg = 0.5 * np.arctan2(s2, c2)
     try:
         ax.streamplot(
-            GX, GY, np.sin(thg), np.cos(thg),
-            density=1.1, color="0.2", linewidth=0.7, arrowstyle="-",
+            GX,
+            GY,
+            np.sin(thg),
+            np.cos(thg),
+            density=1.1,
+            color="0.2",
+            linewidth=0.7,
+            arrowstyle="-",
         )
     except Exception:
         pass
@@ -1196,7 +1296,10 @@ def plot_strike_director_field(
     plot_phase_tensor_psection : per-cell ellipses (magnitudes as well).
     """
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup, strict=strict,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
         verbose=verbose,
     )
     if ax is None:
@@ -1234,7 +1337,9 @@ def plot_strike_director_field(
         cval = np.abs(df["skew"].to_numpy(float))
         vmin, vmax = 0.0, float(skew_max)
         cmap_name = cmap or "RdYlGn_r"
-        clabel = "|skew| (deg)  -  green: 2-D / reliable, red: 3-D / distorted"
+        clabel = (
+            "|skew| (deg)  -  green: 2-D / reliable, red: 3-D / distorted"
+        )
     elif color_by in df.columns:
         cval = np.abs(df[color_by].to_numpy(float))
         vmin = float(np.nanmin(cval))
@@ -1245,8 +1350,12 @@ def plot_strike_director_field(
         cval = np.zeros(len(df))
         vmin, vmax, cmap_name, clabel = 0.0, 1.0, cmap or "viridis", ""
 
-    ok = (np.isfinite(x) & np.isfinite(y) & np.isfinite(th)
-          & np.isfinite(length))
+    ok = (
+        np.isfinite(x)
+        & np.isfinite(y)
+        & np.isfinite(th)
+        & np.isfinite(length)
+    )
     x, y, th, length, cval = x[ok], y[ok], th[ok], length[ok], cval[ok]
     if x.size == 0:
         ax.text(0.5, 0.5, "no finite strike", ha="center", va="center")
@@ -1257,10 +1366,21 @@ def plot_strike_director_field(
     U = np.sin(th) * length
     V = np.cos(th) * length
     q = ax.quiver(
-        x, y, U, V, np.clip(cval, vmin, vmax),
-        cmap=cmap_name, angles="uv", pivot="mid",
-        headlength=0, headaxislength=0, headwidth=1,
-        scale=bar_scale, width=0.0032, alpha=0.9, clim=(vmin, vmax),
+        x,
+        y,
+        U,
+        V,
+        np.clip(cval, vmin, vmax),
+        cmap=cmap_name,
+        angles="uv",
+        pivot="mid",
+        headlength=0,
+        headaxislength=0,
+        headwidth=1,
+        scale=bar_scale,
+        width=0.0032,
+        alpha=0.9,
+        clim=(vmin, vmax),
     )
     if clabel:
         cb = fig.colorbar(q, ax=ax, pad=0.01, shrink=0.9)
@@ -1280,24 +1400,35 @@ def plot_strike_director_field(
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
     ax.set_title(
-        title if title is not None
-        else "Geoelectric strike director field",
+        title if title is not None else "Geoelectric strike director field",
         fontsize=10,
     )
 
     if show_legend:
         from matplotlib.lines import Line2D
+
         handles = [
-            Line2D([0], [0], color="#4a7a1f", lw=3,
-                   label="strike director (length = 2-D strength)"),
+            Line2D(
+                [0],
+                [0],
+                color="#4a7a1f",
+                lw=3,
+                label="strike director (length = 2-D strength)",
+            ),
         ]
         if streamlines:
             handles.append(
-                Line2D([0], [0], color="0.2", lw=1.2,
-                       label="smoothed strike flow"),
+                Line2D(
+                    [0],
+                    [0],
+                    color="0.2",
+                    lw=1.2,
+                    label="smoothed strike flow",
+                ),
             )
-        ax.legend(handles=handles, loc="upper right", fontsize=7,
-                  framealpha=0.85)
+        ax.legend(
+            handles=handles, loc="upper right", fontsize=7, framealpha=0.85
+        )
     return ax
 
 
@@ -1322,8 +1453,7 @@ def plot_ellipticity_psection(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     df = df.copy()
     df["logp"] = np.log10(df["period"].to_numpy())
@@ -1334,7 +1464,7 @@ def plot_ellipticity_psection(
         aggfunc=agg,
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
+    Z = piv.to_numpy(dtype=float)  # (n_logp, n_st) — no transpose
     im = ax.imshow(
         Z,
         aspect="auto",
@@ -1349,9 +1479,12 @@ def plot_ellipticity_psection(
         preset="pseudosection",
         xlim=(-0.5, Z.shape[1] - 0.5),
     )
-    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
-    yvals = np.linspace(piv.index.min(), piv.index.max(),
-                        num=min(8, len(piv.index)))
+    yt = np.linspace(
+        0, Z.shape[0] - 1, num=min(8, Z.shape[0])
+    )  # shape[0] = n_logp
+    yvals = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yvals])
     if not ax.yaxis_inverted():
@@ -1383,17 +1516,18 @@ def plot_dimensionality_psection(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     df = df.copy()
     df["logp"] = np.log10(df["period"].to_numpy())
     # 0=1D, 1=2D, 2=3D (simple rule)
     lab = np.zeros(len(df), dtype=int)
-    lab[(np.abs(df["skew"]) <= skew_th) &
-        (df["ellipt"].abs() <= ellipt_th)] = 0
-    lab[(np.abs(df["skew"]) <= skew_th) &
-        (df["ellipt"].abs() > ellipt_th)] = 1
+    lab[
+        (np.abs(df["skew"]) <= skew_th) & (df["ellipt"].abs() <= ellipt_th)
+    ] = 0
+    lab[
+        (np.abs(df["skew"]) <= skew_th) & (df["ellipt"].abs() > ellipt_th)
+    ] = 1
     lab[(np.abs(df["skew"]) > skew_th)] = 2
     df["dim"] = lab
     piv = df.pivot_table(
@@ -1403,7 +1537,7 @@ def plot_dimensionality_psection(
         aggfunc="median",
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
+    Z = piv.to_numpy(dtype=float)  # (n_logp, n_st) — no transpose
     im = ax.imshow(
         Z,
         aspect="auto",
@@ -1420,9 +1554,12 @@ def plot_dimensionality_psection(
     )
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
-    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
-    yvals = np.linspace(piv.index.min(), piv.index.max(),
-                        num=min(8, len(piv.index)))
+    yt = np.linspace(
+        0, Z.shape[0] - 1, num=min(8, Z.shape[0])
+    )  # shape[0] = n_logp
+    yvals = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yvals])
     cb = plt.colorbar(im, ax=ax)
@@ -1642,53 +1779,60 @@ def plot_phase_tensor_rose(
     """
     # ── resolve style → fill _UNSET visual params ─────────────────────────
     rs = resolve_rose_style(style)
-    def _v(val, attr): return getattr(rs, attr) if val is _UNSET else val
-    bar_style        = _v(bar_style,        "bar_style")
-    bar_color        = _v(bar_color,        "bar_color")
-    bar_alpha        = _v(bar_alpha,        "bar_alpha")
-    bar_edgecolor    = _v(bar_edgecolor,    "bar_edgecolor")
-    bar_edgelw       = _v(bar_edgelw,       "bar_edgelw")
-    cmap             = _v(cmap,             "cmap")
-    outer_ring_lw    = _v(outer_ring_lw,    "outer_ring_lw")
+
+    def _v(val, attr):
+        return getattr(rs, attr) if val is _UNSET else val
+
+    bar_style = _v(bar_style, "bar_style")
+    bar_color = _v(bar_color, "bar_color")
+    bar_alpha = _v(bar_alpha, "bar_alpha")
+    bar_edgecolor = _v(bar_edgecolor, "bar_edgecolor")
+    bar_edgelw = _v(bar_edgelw, "bar_edgelw")
+    cmap = _v(cmap, "cmap")
+    outer_ring_lw = _v(outer_ring_lw, "outer_ring_lw")
     outer_ring_color = _v(outer_ring_color, "outer_ring_color")
-    n_rings          = _v(n_rings,          "n_rings")
-    ring_color       = _v(ring_color,       "ring_color")
-    ring_ls          = _v(ring_ls,          "ring_ls")
-    ring_lw          = _v(ring_lw,          "ring_lw")
-    ring_labels      = _v(ring_labels,      "ring_labels")
+    n_rings = _v(n_rings, "n_rings")
+    ring_color = _v(ring_color, "ring_color")
+    ring_ls = _v(ring_ls, "ring_ls")
+    ring_lw = _v(ring_lw, "ring_lw")
+    ring_labels = _v(ring_labels, "ring_labels")
     ring_label_angle = _v(ring_label_angle, "ring_label_angle")
     ring_label_fontsize = _v(ring_label_fontsize, "ring_label_fontsize")
     ring_label_color = _v(ring_label_color, "ring_label_color")
-    ring_label_fmt   = _v(ring_label_fmt,   "ring_label_fmt")
-    spoke_every      = _v(spoke_every,      "spoke_every")
-    spoke_color      = _v(spoke_color,      "spoke_color")
-    spoke_ls         = _v(spoke_ls,         "spoke_ls")
-    spoke_lw         = _v(spoke_lw,         "spoke_lw")
-    compass_labels   = _v(compass_labels,   "compass_labels")
+    ring_label_fmt = _v(ring_label_fmt, "ring_label_fmt")
+    spoke_every = _v(spoke_every, "spoke_every")
+    spoke_color = _v(spoke_color, "spoke_color")
+    spoke_ls = _v(spoke_ls, "spoke_ls")
+    spoke_lw = _v(spoke_lw, "spoke_lw")
+    compass_labels = _v(compass_labels, "compass_labels")
     compass_fontsize = _v(compass_fontsize, "compass_fontsize")
-    compass_color    = _v(compass_color,    "compass_color")
+    compass_color = _v(compass_color, "compass_color")
     compass_fontweight = _v(compass_fontweight, "compass_fontweight")
-    show_mean        = _v(show_mean,        "show_mean")
-    mean_color       = _v(mean_color,       "mean_color")
-    mean_lw          = _v(mean_lw,          "mean_lw")
-    mean_ls          = _v(mean_ls,          "mean_ls")
-    show_secondary   = _v(show_secondary,   "show_secondary")
-    secondary_color  = _v(secondary_color,  "secondary_color")
-    secondary_ls     = _v(secondary_ls,     "secondary_ls")
-    secondary_lw     = _v(secondary_lw,     "secondary_lw")
-    show_annotation  = _v(show_annotation,  "show_annotation")
-    annotation_pos   = _v(annotation_pos,   "annotation_pos")
+    show_mean = _v(show_mean, "show_mean")
+    mean_color = _v(mean_color, "mean_color")
+    mean_lw = _v(mean_lw, "mean_lw")
+    mean_ls = _v(mean_ls, "mean_ls")
+    show_secondary = _v(show_secondary, "show_secondary")
+    secondary_color = _v(secondary_color, "secondary_color")
+    secondary_ls = _v(secondary_ls, "secondary_ls")
+    secondary_lw = _v(secondary_lw, "secondary_lw")
+    show_annotation = _v(show_annotation, "show_annotation")
+    annotation_pos = _v(annotation_pos, "annotation_pos")
     annotation_fontsize = _v(annotation_fontsize, "annotation_fontsize")
-    annotation_bg    = _v(annotation_bg,    "annotation_bg")
-    annotation_ec    = _v(annotation_ec,    "annotation_ec")
-    show_n           = _v(show_n,           "show_n")
+    annotation_bg = _v(annotation_bg, "annotation_bg")
+    annotation_ec = _v(annotation_ec, "annotation_ec")
+    show_n = _v(show_n, "show_n")
 
     # ── axial mean helper (local, avoids import cycle with strike.py) ──────
     def _axial_mean(a_deg: np.ndarray) -> float:
         """Circular mean for axial (0–180°) data, returned in [0,180°)."""
         rad = np.radians(2.0 * a_deg)
-        mu = np.degrees(np.arctan2(np.nanmean(np.sin(rad)),
-                                   np.nanmean(np.cos(rad)))) / 2.0
+        mu = (
+            np.degrees(
+                np.arctan2(np.nanmean(np.sin(rad)), np.nanmean(np.cos(rad)))
+            )
+            / 2.0
+        )
         return float(mu % 180.0)
 
     # ── build phase-tensor table ───────────────────────────────────────────
@@ -1704,8 +1848,14 @@ def plot_phase_tensor_rose(
         _, ax = plt.subplots(subplot_kw=dict(polar=True), figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor data",
-                ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no phase tensor data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     # ── period filtering ───────────────────────────────────────────────────
@@ -1727,11 +1877,16 @@ def plot_phase_tensor_rose(
 
     if use_bands:
         n_fb = len(freq_bands)  # type: ignore[arg-type]
-        _bc: list = (list(band_colors) if band_colors is not None
-                     else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb))))
-        _bl: list[str] = (list(band_labels) if band_labels is not None
-                          else [f"{lo_:.4g}–{hi_:.4g} s"
-                                for lo_, hi_ in freq_bands])  # type: ignore
+        _bc: list = (
+            list(band_colors)
+            if band_colors is not None
+            else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb)))
+        )
+        _bl: list[str] = (
+            list(band_labels)
+            if band_labels is not None
+            else [f"{lo_:.4g}–{hi_:.4g} s" for lo_, hi_ in freq_bands]
+        )  # type: ignore
         hists: list[np.ndarray] = []
         for fb in freq_bands:  # type: ignore[union-attr]
             lo_, hi_ = float(fb[0]), float(fb[1])
@@ -1760,12 +1915,15 @@ def plot_phase_tensor_rose(
     ax.set_frame_on(False)
 
     # ── draw bars (0–180° and mirror 180–360°) ────────────────────────────
-    def _draw_bars(ang_c: np.ndarray, heights: np.ndarray, color,
-                   bottom: float = 0.0) -> None:
+    def _draw_bars(
+        ang_c: np.ndarray, heights: np.ndarray, color, bottom: float = 0.0
+    ) -> None:
         for a, h in zip(ang_c, heights):
-            for a_plot in (a, a + np.pi):      # axial symmetry
+            for a_plot in (a, a + np.pi):  # axial symmetry
                 ax.bar(
-                    a_plot, h, width=dw,
+                    a_plot,
+                    h,
+                    width=dw,
                     bottom=bottom,
                     color=color,
                     edgecolor=bar_edgecolor,
@@ -1781,9 +1939,12 @@ def plot_phase_tensor_rose(
             bottoms += h
         # legend
         from matplotlib.patches import Patch as _Patch
+
         ax.legend(
-            handles=[_Patch(fc=c, label=l, alpha=bar_alpha)
-                     for c, l in zip(_bc, _bl)],
+            handles=[
+                _Patch(fc=c, label=l, alpha=bar_alpha)
+                for c, l in zip(_bc, _bl)
+            ],
             loc="lower left",
             bbox_to_anchor=(1.05, 0.0),
             fontsize=max(6, annotation_fontsize - 1),
@@ -1795,7 +1956,9 @@ def plot_phase_tensor_rose(
             col = cm_(h / rmax) if rmax > 0 else cm_(0.5)
             for a_plot in (a, a + np.pi):
                 ax.bar(
-                    a_plot, h, width=dw,
+                    a_plot,
+                    h,
+                    width=dw,
                     color=col,
                     edgecolor=bar_edgecolor,
                     linewidth=bar_edgelw,
@@ -1813,15 +1976,27 @@ def plot_phase_tensor_rose(
 
     theta_full = np.linspace(0, 2 * np.pi, 360)
     for rv in r_levels:
-        ax.plot(theta_full, np.full_like(theta_full, rv),
-                color=ring_color, ls=ring_ls, lw=ring_lw, zorder=0)
+        ax.plot(
+            theta_full,
+            np.full_like(theta_full, rv),
+            color=ring_color,
+            ls=ring_ls,
+            lw=ring_lw,
+            zorder=0,
+        )
 
     # ── radial spokes ─────────────────────────────────────────────────────
     n_spokes = int(round(360.0 / spoke_every))
     spoke_angles = np.radians(np.arange(n_spokes) * spoke_every)
     for sa in spoke_angles:
-        ax.plot([sa, sa], [0, rmax],
-                color=spoke_color, ls=spoke_ls, lw=spoke_lw, zorder=0)
+        ax.plot(
+            [sa, sa],
+            [0, rmax],
+            color=spoke_color,
+            ls=spoke_ls,
+            lw=spoke_lw,
+            zorder=0,
+        )
 
     # ── outer ring ────────────────────────────────────────────────────────
     ax.spines["polar"].set_linewidth(outer_ring_lw)
@@ -1840,7 +2015,8 @@ def plot_phase_tensor_rose(
         lbl_list = [""] * n_spk
 
     ax.set_thetagrids(
-        spoke_degs, labels=lbl_list,
+        spoke_degs,
+        labels=lbl_list,
         fontsize=compass_fontsize,
     )
     for lbl in ax.get_xticklabels():
@@ -1850,23 +2026,35 @@ def plot_phase_tensor_rose(
     # ── mean direction ────────────────────────────────────────────────────
     th_all = df.loc[sel, "theta"].to_numpy(float) % 180.0
     mu = _axial_mean(th_all) if len(th_all) > 0 else 0.0
-    sec_lw  = secondary_lw  if secondary_lw  is not None else mean_lw
+    sec_lw = secondary_lw if secondary_lw is not None else mean_lw
     sec_col = secondary_color if secondary_color is not None else mean_color
 
     if show_mean and len(th_all) > 0:
         mu_r = np.radians(mu)
         # draw full diameter: two radii (center→rim) in opposite directions
         for ang_pt in (mu_r, mu_r + np.pi):
-            ax.plot([ang_pt, ang_pt], [0, rmax],
-                    color=mean_color, lw=mean_lw, ls=mean_ls,
-                    solid_capstyle="round", zorder=10)
+            ax.plot(
+                [ang_pt, ang_pt],
+                [0, rmax],
+                color=mean_color,
+                lw=mean_lw,
+                ls=mean_ls,
+                solid_capstyle="round",
+                zorder=10,
+            )
 
         if show_secondary:
             mu90 = np.radians(mu + 90.0)
             for ang_pt in (mu90, mu90 + np.pi):
-                ax.plot([ang_pt, ang_pt], [0, rmax],
-                        color=sec_col, lw=sec_lw, ls=secondary_ls,
-                        solid_capstyle="round", zorder=9)
+                ax.plot(
+                    [ang_pt, ang_pt],
+                    [0, rmax],
+                    color=sec_col,
+                    lw=sec_lw,
+                    ls=secondary_ls,
+                    solid_capstyle="round",
+                    zorder=9,
+                )
 
     # ── annotation box ────────────────────────────────────────────────────
     if show_annotation and len(th_all) > 0:
@@ -1874,10 +2062,13 @@ def plot_phase_tensor_rose(
         if show_n:
             txt += f"\nn = {len(th_all)}"
         ax.text(
-            annotation_pos[0], annotation_pos[1], txt,
+            annotation_pos[0],
+            annotation_pos[1],
+            txt,
             transform=ax.transAxes,
             fontsize=annotation_fontsize,
-            va="top", ha="left",
+            va="top",
+            ha="left",
             bbox=dict(
                 boxstyle="round,pad=0.3",
                 fc=annotation_bg,
@@ -1891,32 +2082,36 @@ def plot_phase_tensor_rose(
     if title:
         ax.set_title(title, fontsize=title_fontsize, pad=14)
     else:
-        ax.set_title(f"Phase-tensor θ rose  ({band_label})",
-                     fontsize=title_fontsize, pad=14)
+        ax.set_title(
+            f"Phase-tensor θ rose  ({band_label})",
+            fontsize=title_fontsize,
+            pad=14,
+        )
 
     return ax
+
 
 def plot_phase_tensor_map(
     sites: Any,
     *,
     period: float = 10.0,
     # ── ellipse style (honours PhaseTensorEllipseStyle) ───────────────
-    scale          = _UNSET,
-    normalise_by   = _UNSET,
-    s1_ref         = _UNSET,
-    min_aspect     = _UNSET,
-    c_by           = _UNSET,
-    cmap           = _UNSET,
-    clim: tuple[float, float] | None            = None,
-    clim_pct       = _UNSET,
-    symmetric_clim = _UNSET,
-    alpha          = _UNSET,
-    edgecolor      = _UNSET,
-    linewidth      = _UNSET,
-    skew_threshold = _UNSET,
-    mark_3d        = _UNSET,
-    lw_3d_factor   = _UNSET,
-    ref_ellipse    = _UNSET,
+    scale=_UNSET,
+    normalise_by=_UNSET,
+    s1_ref=_UNSET,
+    min_aspect=_UNSET,
+    c_by=_UNSET,
+    cmap=_UNSET,
+    clim: tuple[float, float] | None = None,
+    clim_pct=_UNSET,
+    symmetric_clim=_UNSET,
+    alpha=_UNSET,
+    edgecolor=_UNSET,
+    linewidth=_UNSET,
+    skew_threshold=_UNSET,
+    mark_3d=_UNSET,
+    lw_3d_factor=_UNSET,
+    ref_ellipse=_UNSET,
     # ── tipper arrows ─────────────────────────────────────────────────
     show_tipper: bool = True,
     tipper_convention: str = "parkinson",
@@ -2088,21 +2283,24 @@ def plot_phase_tensor_map(
 
     # ── 1. resolve style ──────────────────────────────────────────────────
     _es = PYCSAMT_STYLE.pt_ellipse
-    def _sv(v, attr): return getattr(_es, attr) if v is _UNSET else v
-    normalise_by   = _sv(normalise_by,   "normalise_by")
-    s1_ref_        = _sv(s1_ref,         "s1_ref")
-    min_aspect_    = _sv(min_aspect,     "min_aspect")
-    c_by           = _sv(c_by,           "c_by")
-    cmap_          = _sv(cmap,           "cmap")
-    clim_pct       = _sv(clim_pct,       "clim_pct")
+
+    def _sv(v, attr):
+        return getattr(_es, attr) if v is _UNSET else v
+
+    normalise_by = _sv(normalise_by, "normalise_by")
+    s1_ref_ = _sv(s1_ref, "s1_ref")
+    min_aspect_ = _sv(min_aspect, "min_aspect")
+    c_by = _sv(c_by, "c_by")
+    cmap_ = _sv(cmap, "cmap")
+    clim_pct = _sv(clim_pct, "clim_pct")
     symmetric_clim = _sv(symmetric_clim, "symmetric_clim")
-    alpha_         = _sv(alpha,          "alpha")
-    edgecolor_     = _sv(edgecolor,      "edgecolor")
-    linewidth_     = _sv(linewidth,      "linewidth")
-    skew_threshold_= _sv(skew_threshold, "skew_threshold")
-    mark_3d_       = _sv(mark_3d,        "mark_3d")
-    lw_3d_factor_  = _sv(lw_3d_factor,   "lw_3d_factor")
-    ref_ellipse_   = _sv(ref_ellipse,     "show_ref")
+    alpha_ = _sv(alpha, "alpha")
+    edgecolor_ = _sv(edgecolor, "edgecolor")
+    linewidth_ = _sv(linewidth, "linewidth")
+    skew_threshold_ = _sv(skew_threshold, "skew_threshold")
+    mark_3d_ = _sv(mark_3d, "mark_3d")
+    lw_3d_factor_ = _sv(lw_3d_factor, "lw_3d_factor")
+    ref_ellipse_ = _sv(ref_ellipse, "show_ref")
 
     # auto-resolve cmap from c_by when None
     if cmap_ is None:
@@ -2111,17 +2309,32 @@ def plot_phase_tensor_map(
     sym = symmetric_clim and _es.copy(c_by=c_by).resolve_symmetric_clim()
 
     # ── 2. load data ──────────────────────────────────────────────────────
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     df = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup, strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor data",
-                ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no phase tensor data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     # ── 3. station coordinates ────────────────────────────────────────────
@@ -2137,24 +2350,41 @@ def plot_phase_tensor_map(
             # crashes ax.set_xlim() below instead of reaching the
             # intended "no geographic coordinates" message.
             c = getattr(ed, "coords", None)
-            if (c is not None and len(c) >= 2
-                    and c[0] is not None and c[1] is not None
-                    and np.isfinite(c[0]) and np.isfinite(c[1])):
+            if (
+                c is not None
+                and len(c) >= 2
+                and c[0] is not None
+                and c[1] is not None
+                and np.isfinite(c[0])
+                and np.isfinite(c[1])
+            ):
                 coords[st] = (float(c[0]), float(c[1]))
                 continue
             # fallback: ed.meta
             meta = getattr(ed, "meta", {}) or {}
             lat = meta.get("lat") or meta.get("latitude")
             lon = meta.get("lon") or meta.get("longitude") or meta.get("long")
-            if (lat is not None and lon is not None
-                    and np.isfinite(float(lat)) and np.isfinite(float(lon))):
+            if (
+                lat is not None
+                and lon is not None
+                and np.isfinite(float(lat))
+                and np.isfinite(float(lon))
+            ):
                 coords[st] = (float(lat), float(lon))
 
     if not coords:
-        ax.text(0.5, 0.5, "no geographic coordinates in EDI data\n"
-                "pass coords={station: (lat, lon)} to override",
-                ha="center", va="center", transform=ax.transAxes,
-                fontsize=9, style="italic", color="0.45")
+        ax.text(
+            0.5,
+            0.5,
+            "no geographic coordinates in EDI data\n"
+            "pass coords={station: (lat, lon)} to override",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=9,
+            style="italic",
+            color="0.45",
+        )
         return ax
 
     # ── 4. select nearest period per station ─────────────────────────────
@@ -2167,17 +2397,25 @@ def plot_phase_tensor_map(
         rows.append(sdf.iloc[idx])
 
     if not rows:
-        ax.text(0.5, 0.5, f"no data near T = {period:g} s",
-                ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            f"no data near T = {period:g} s",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     st_names = [r["station"] for r in rows]
     lats = np.array([coords[s][0] for s in st_names], float)
     lons = np.array([coords[s][1] for s in st_names], float)
-    s1s  = np.array([float(r["s1"]) for r in rows], float)
-    s2s  = np.array([float(r["s2"]) for r in rows], float)
-    ths  = np.array([float(r["theta"]) for r in rows], float)
-    np.array([float(r.get("skew", r.get("beta", np.nan))) for r in rows], float)
+    s1s = np.array([float(r["s1"]) for r in rows], float)
+    s2s = np.array([float(r["s2"]) for r in rows], float)
+    ths = np.array([float(r["theta"]) for r in rows], float)
+    np.array(
+        [float(r.get("skew", r.get("beta", np.nan))) for r in rows], float
+    )
 
     # ── 5. auto scale from grid spacing ──────────────────────────────────
     if scale is _UNSET:
@@ -2185,10 +2423,16 @@ def plot_phase_tensor_map(
             # Use unique grid spacings (cross-profile > within-profile)
             u_lons = np.unique(np.round(lons, 3))
             u_lats = np.unique(np.round(lats, 3))
-            d_lon = (float(np.median(np.diff(u_lons)))
-                     if len(u_lons) > 1 else float(np.ptp(lons) or 0.01))
-            d_lat = (float(np.median(np.diff(u_lats)))
-                     if len(u_lats) > 1 else float(np.ptp(lats) or 0.01))
+            d_lon = (
+                float(np.median(np.diff(u_lons)))
+                if len(u_lons) > 1
+                else float(np.ptp(lons) or 0.01)
+            )
+            d_lat = (
+                float(np.median(np.diff(u_lats)))
+                if len(u_lats) > 1
+                else float(np.ptp(lats) or 0.01)
+            )
             scale_ = 0.55 * max(abs(d_lon) + 1e-9, abs(d_lat) + 1e-9)
         else:
             scale_ = 0.01
@@ -2199,10 +2443,17 @@ def plot_phase_tensor_map(
     # Clip extreme s1 outliers (robust 95th pct) before normalising
     s1s_clip = np.clip(s1s, 0.0, float(np.nanpercentile(s1s, 95)))
     if normalise_by == "unity":
-        _s1ref = s1_ref_ if s1_ref_ is not None else float(np.tan(np.radians(45.0)))
+        _s1ref = (
+            s1_ref_
+            if s1_ref_ is not None
+            else float(np.tan(np.radians(45.0)))
+        )
     elif normalise_by == "cell":
-        _s1ref = (s1_ref_ if s1_ref_ is not None
-                  else float(np.nanpercentile(s1s_clip, 90)))
+        _s1ref = (
+            s1_ref_
+            if s1_ref_ is not None
+            else float(np.nanpercentile(s1s_clip, 90))
+        )
     else:  # "abs"
         _s1ref = s1_ref_ if s1_ref_ is not None else 1.0
     _s1ref = max(_s1ref, 1e-9)
@@ -2228,26 +2479,48 @@ def plot_phase_tensor_map(
         g_lon = np.asarray(bg_grid.get("lons", []), float)
         g_lat = np.asarray(bg_grid.get("lats", []), float)
         g_val = np.asarray(bg_grid.get("values", []), float)
-        g_cm  = bg_grid.get("cmap", "RdYlGn")
-        g_cl  = bg_grid.get("clim", None)
-        g_al  = float(bg_grid.get("alpha", 0.5))
+        g_cm = bg_grid.get("cmap", "RdYlGn")
+        g_cl = bg_grid.get("clim", None)
+        g_al = float(bg_grid.get("alpha", 0.5))
         g_lbl = bg_grid.get("label", "")
         if g_val.size > 0:
             if g_val.ndim == 1:
                 g_val = g_val.reshape(len(g_lat), len(g_lon))
-            gv0 = float(np.nanpercentile(g_val, 5)) if g_cl is None else float(g_cl[0])
-            gv1 = float(np.nanpercentile(g_val, 95)) if g_cl is None else float(g_cl[1])
+            gv0 = (
+                float(np.nanpercentile(g_val, 5))
+                if g_cl is None
+                else float(g_cl[0])
+            )
+            gv1 = (
+                float(np.nanpercentile(g_val, 95))
+                if g_cl is None
+                else float(g_cl[1])
+            )
             bg_mappable = ax.pcolormesh(
-                g_lon, g_lat, g_val,
-                cmap=g_cm, vmin=gv0, vmax=gv1,
-                alpha=g_al, shading="auto", zorder=0,
+                g_lon,
+                g_lat,
+                g_val,
+                cmap=g_cm,
+                vmin=gv0,
+                vmax=gv1,
+                alpha=g_al,
+                shading="auto",
+                zorder=0,
             )
             if g_lbl:
-                add_colorbar(bg_mappable, ax, label=g_lbl,
-                             side="left", size="3.5%", pad=0.08)
+                add_colorbar(
+                    bg_mappable,
+                    ax,
+                    label=g_lbl,
+                    side="left",
+                    size="3.5%",
+                    pad=0.08,
+                )
 
     # ── 9. draw ellipses ──────────────────────────────────────────────────
-    for row, lat, lon, s1, s2, th in zip(rows, lats, lons, s1s_clip, s2s, ths):
+    for row, lat, lon, s1, s2, th in zip(
+        rows, lats, lons, s1s_clip, s2s, ths
+    ):
         # clamp to 2×scale_ so outlier sites don't swamp the map
         w = min(2.0 * scale_ * (s1 / _s1ref), 2.0 * scale_)
         h = min(2.0 * scale_ * (s2 / _s1ref), 2.0 * scale_)
@@ -2257,17 +2530,22 @@ def plot_phase_tensor_map(
         fc = cm_obj(norm_c(cv)) if np.isfinite(cv) else (0.8, 0.8, 0.8, 0.8)
         # 3-D flagging
         beta = float(row.get("skew", row.get("beta", 0.0)))
-        is_3d = (skew_threshold_ is not None and
-                 mark_3d_ and
-                 abs(beta) > skew_threshold_)
+        is_3d = (
+            skew_threshold_ is not None
+            and mark_3d_
+            and abs(beta) > skew_threshold_
+        )
         lw = linewidth_ * lw_3d_factor_ if is_3d else linewidth_
         ec = edgecolor_
         e = Ellipse(
             xy=(lon, lat),
-            width=w, height=h,
+            width=w,
+            height=h,
             angle=th,
-            facecolor=fc, edgecolor=ec,
-            linewidth=lw, alpha=alpha_,
+            facecolor=fc,
+            edgecolor=ec,
+            linewidth=lw,
+            alpha=alpha_,
             zorder=2,
         )
         ax.add_patch(e)
@@ -2297,10 +2575,13 @@ def plot_phase_tensor_map(
 
         if _tip_data:
             # normalise arrow lengths
-            magnitudes = np.array([np.hypot(u, v) for u, v in _tip_data.values()], float)
+            magnitudes = np.array(
+                [np.hypot(u, v) for u, v in _tip_data.values()], float
+            )
             mag_max = float(np.nanpercentile(magnitudes, 95)) + 1e-12
-            t_scale = (tipper_scale if tipper_scale is not None
-                       else scale_ * 1.6)
+            t_scale = (
+                tipper_scale if tipper_scale is not None else scale_ * 1.6
+            )
 
             t_lons, t_lats, t_u, t_v = [], [], [], []
             for st_t, (u, v) in _tip_data.items():
@@ -2311,11 +2592,17 @@ def plot_phase_tensor_map(
                 t_v.append(v / mag_max * t_scale)
 
             ax.quiver(
-                np.array(t_lons), np.array(t_lats),
-                np.array(t_u), np.array(t_v),
+                np.array(t_lons),
+                np.array(t_lats),
+                np.array(t_u),
+                np.array(t_v),
                 color=tipper_color,
-                scale=1.0, scale_units="xy", angles="xy",
-                width=0.003, headwidth=4, headlength=5,
+                scale=1.0,
+                scale_units="xy",
+                angles="xy",
+                width=0.003,
+                headwidth=4,
+                headlength=5,
                 linewidth=tipper_lw,
                 zorder=4,
             )
@@ -2346,27 +2633,44 @@ def plot_phase_tensor_map(
                         im_u.append(u / mag_max * t_scale)
                         im_v.append(v / mag_max * t_scale)
                     ax.quiver(
-                        np.array(im_lons), np.array(im_lats),
-                        np.array(im_u), np.array(im_v),
+                        np.array(im_lons),
+                        np.array(im_lats),
+                        np.array(im_u),
+                        np.array(im_v),
                         color=_mc.to_rgba(tipper_color, 0.55),
-                        scale=1.0, scale_units="xy", angles="xy",
-                        width=0.002, headwidth=3, headlength=4,
+                        scale=1.0,
+                        scale_units="xy",
+                        angles="xy",
+                        width=0.002,
+                        headwidth=3,
+                        headlength=4,
                         linestyle="dashed",
                         zorder=3,
                     )
 
     # ── 11. station markers + labels ──────────────────────────────────────
-    ax.scatter(lons, lats, marker=station_marker, c=station_color,
-               s=station_ms**2, zorder=5, linewidths=0)
+    ax.scatter(
+        lons,
+        lats,
+        marker=station_marker,
+        c=station_color,
+        s=station_ms**2,
+        zorder=5,
+        linewidths=0,
+    )
     if station_labels:
         offset_y = scale_ * 0.8
         for st, lat, lon in zip(st_names, lats, lons):
             ax.annotate(
-                st, (lon, lat),
+                st,
+                (lon, lat),
                 xytext=(0, offset_y * 111000 * 0.00001),
                 textcoords="offset points",
-                fontsize=label_fontsize, color=station_color,
-                ha="center", va="bottom", zorder=6,
+                fontsize=label_fontsize,
+                color=station_color,
+                ha="center",
+                va="bottom",
+                zorder=6,
             )
 
     # ── 12. reference ellipse ─────────────────────────────────────────────
@@ -2377,14 +2681,24 @@ def plot_phase_tensor_map(
         ref_w = 2.0 * scale_
         ref_h = 2.0 * scale_
         ref_e = Ellipse(
-            (ref_lon, ref_lat), width=ref_w, height=ref_h,
-            facecolor="none", edgecolor=_es.ref_edgecolor,
-            linewidth=_es.ref_lw, zorder=5,
+            (ref_lon, ref_lat),
+            width=ref_w,
+            height=ref_h,
+            facecolor="none",
+            edgecolor=_es.ref_edgecolor,
+            linewidth=_es.ref_lw,
+            zorder=5,
         )
         ax.add_patch(ref_e)
-        ax.text(ref_lon, ref_lat - scale_ * 1.3,
-                "ref", ha="center", va="top",
-                fontsize=_es.ref_fontsize, color=_es.ref_edgecolor)
+        ax.text(
+            ref_lon,
+            ref_lat - scale_ * 1.3,
+            "ref",
+            ha="center",
+            va="top",
+            fontsize=_es.ref_fontsize,
+            color=_es.ref_edgecolor,
+        )
 
     # ── 13. colorbar ──────────────────────────────────────────────────────
     sm = plt.cm.ScalarMappable(cmap=cm_obj, norm=norm_c)
@@ -2394,6 +2708,7 @@ def plot_phase_tensor_map(
 
     # ── 14. axes decoration ───────────────────────────────────────────────
     from matplotlib.ticker import ScalarFormatter
+
     pad_xy = scale_ * 2.2
     ax.set_xlim(lons.min() - pad_xy, lons.max() + pad_xy)
     ax.set_ylim(lats.min() - pad_xy, lats.max() + pad_xy)
@@ -2401,7 +2716,7 @@ def plot_phase_tensor_map(
     lat_mid = float(np.mean(lats))
     ax.set_aspect(1.0 / max(np.cos(np.radians(lat_mid)), 1e-6))
     ax.set_xlabel("Longitude", fontsize=9)
-    ax.set_ylabel("Latitude",  fontsize=9)
+    ax.set_ylabel("Latitude", fontsize=9)
     ax.tick_params(labelsize=8)
     # suppress matplotlib offset notation (e.g. "+1.1912e2")
     for _axis in (ax.xaxis, ax.yaxis):
@@ -2409,14 +2724,16 @@ def plot_phase_tensor_map(
         _fmt.set_scientific(False)
         _axis.set_major_formatter(_fmt)
     ax.grid(True, alpha=0.18, linewidth=0.5)
-    period_txt = (f"{period*1e3:.4g} ms" if period < 1.0
-                  else f"{period:.4g} s")
+    period_txt = (
+        f"{period * 1e3:.4g} ms" if period < 1.0 else f"{period:.4g} s"
+    )
     ax.set_title(
         title or f"Phase Tensor Map for {period_txt}",
-        fontsize=10, pad=8, fontweight="bold",
+        fontsize=10,
+        pad=8,
+        fontweight="bold",
     )
     return ax
-
 
 
 def plot_phase_tensor_summary(
@@ -2424,11 +2741,11 @@ def plot_phase_tensor_summary(
     *,
     stations: list[str] | None = None,
     period_range: tuple[float, float] | None = None,
-    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
-    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
-    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
+    scale=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.scale
+    c_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap=_UNSET,  # default: auto from c_by via resolve_cmap()
     clim: tuple[float, float] | None = None,
-    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
+    skew_threshold=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     ellipt_threshold: float = 0.2,
     axes=None,
     figsize: tuple[float, float] = (12.0, 9.0),
@@ -2479,10 +2796,14 @@ def plot_phase_tensor_summary(
     """
     # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
     _es = PYCSAMT_STYLE.pt_ellipse
-    if scale          is _UNSET: scale          = _es.scale
-    if c_by           is _UNSET: c_by           = _es.c_by
-    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
-    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
+    if scale is _UNSET:
+        scale = _es.scale
+    if c_by is _UNSET:
+        c_by = _es.c_by
+    if cmap is _UNSET:
+        cmap = _es.copy(c_by=c_by).resolve_cmap()
+    if skew_threshold is _UNSET:
+        skew_threshold = _es.skew_threshold
 
     df = build_phase_tensor_table(
         sites,
@@ -2503,27 +2824,36 @@ def plot_phase_tensor_summary(
     axes_given = _axes_list(axes, 3) if axes is not None else None
     if axes_given is None:
         import matplotlib.gridspec as gridspec
+
         fig = plt.figure(figsize=figsize)
-        gs  = gridspec.GridSpec(
-            2, 2,
+        gs = gridspec.GridSpec(
+            2,
+            2,
             figure=fig,
             height_ratios=[1.5, 1.0],
-            hspace=0.38, wspace=0.35,
+            hspace=0.38,
+            wspace=0.35,
         )
-        ax_ell  = fig.add_subplot(gs[0, :])   # (a) full-width ellipse section
-        ax_dim  = fig.add_subplot(gs[1, 0])   # (b) dimensionality grid
-        ax_den  = fig.add_subplot(gs[1, 1])   # (c) skew-ellipticity density
+        ax_ell = fig.add_subplot(gs[0, :])  # (a) full-width ellipse section
+        ax_dim = fig.add_subplot(gs[1, 0])  # (b) dimensionality grid
+        ax_den = fig.add_subplot(gs[1, 1])  # (c) skew-ellipticity density
     else:
         ax_ell, ax_dim, ax_den = axes_given
         fig = ax_ell.figure
 
     # ── panel (a): ellipse pseudo-section ────────────────────────────────
     if df.empty:
-        ax_ell.text(0.5, 0.5, "no phase tensor data",
-                    ha="center", va="center", transform=ax_ell.transAxes)
+        ax_ell.text(
+            0.5,
+            0.5,
+            "no phase tensor data",
+            ha="center",
+            va="center",
+            transform=ax_ell.transAxes,
+        )
     else:
         plot_phase_tensor_psection(
-            df,                     # pass pre-filtered DataFrame directly
+            df,  # pass pre-filtered DataFrame directly
             scale=scale,
             c_by=c_by,
             cmap=cmap,
@@ -2538,20 +2868,40 @@ def plot_phase_tensor_summary(
 
     # ── panel (b): dimensionality grid ────────────────────────────────────
     if df.empty:
-        ax_dim.text(0.5, 0.5, "no data", ha="center", va="center",
-                    transform=ax_dim.transAxes)
+        ax_dim.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax_dim.transAxes,
+        )
     else:
-        _draw_dim_grid(df, ax_dim, skew_threshold=skew_threshold,
-                       ellipt_threshold=ellipt_threshold)
+        _draw_dim_grid(
+            df,
+            ax_dim,
+            skew_threshold=skew_threshold,
+            ellipt_threshold=ellipt_threshold,
+        )
         ax_dim.set_title("(b) Dimensionality (1-D/2-D/3-D)", fontsize=9)
 
     # ── panel (c): skew–ellipticity density ───────────────────────────────
     if df.empty:
-        ax_den.text(0.5, 0.5, "no data", ha="center", va="center",
-                    transform=ax_den.transAxes)
+        ax_den.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax_den.transAxes,
+        )
     else:
-        _draw_skew_ellipt_density(df, ax_den, skew_threshold=skew_threshold,
-                                   ellipt_threshold=ellipt_threshold)
+        _draw_skew_ellipt_density(
+            df,
+            ax_den,
+            skew_threshold=skew_threshold,
+            ellipt_threshold=ellipt_threshold,
+        )
         ax_den.set_title("(c) Skew–ellipticity distribution", fontsize=9)
 
     return fig
@@ -2569,28 +2919,37 @@ def _draw_dim_grid(
     df["_logp"] = np.log10(df["period"].to_numpy(float))
     a = np.abs(df["skew"].to_numpy(float))
     e = np.abs(df["ellipt"].to_numpy(float))
-    lab = np.full(len(df), 2, dtype=int)          # default: 3-D
-    lab[(a <= skew_threshold) & (e <= ellipt_threshold)] = 0   # 1-D
-    lab[(a <= skew_threshold) & (e  > ellipt_threshold)] = 1   # 2-D
+    lab = np.full(len(df), 2, dtype=int)  # default: 3-D
+    lab[(a <= skew_threshold) & (e <= ellipt_threshold)] = 0  # 1-D
+    lab[(a <= skew_threshold) & (e > ellipt_threshold)] = 1  # 2-D
     df["_dim"] = lab
 
     st_list = list(dict.fromkeys(df["station"].tolist()))
     {s: i for i, s in enumerate(st_list)}
 
     piv = df.pivot_table(
-        index="_logp", columns="station", values="_dim", aggfunc="median",
+        index="_logp",
+        columns="station",
+        values="_dim",
+        aggfunc="median",
     )
     piv = piv.reindex(columns=st_list).sort_index()
     # piv has shape (n_logp, n_stations); do NOT transpose so that
     # imshow maps x → stations and y → log-periods.
-    Z = piv.to_numpy(dtype=float)            # (n_logp, n_st)
+    Z = piv.to_numpy(dtype=float)  # (n_logp, n_st)
 
     cmap_d = mcolors.ListedColormap(["#f7f7f7", "#969696", "#d6604d"])
     bounds = [-0.5, 0.5, 1.5, 2.5]
     norm_d = mcolors.BoundaryNorm(bounds, cmap_d.N)
 
-    ax.imshow(Z, aspect="auto", origin="lower", interpolation="nearest",
-              cmap=cmap_d, norm=norm_d)
+    ax.imshow(
+        Z,
+        aspect="auto",
+        origin="lower",
+        interpolation="nearest",
+        cmap=cmap_d,
+        norm=norm_d,
+    )
     ax.set_ylabel(LOG10_PERIOD_LABEL, fontsize=8)
     n_st = len(st_list)
     PYCSAMT_STATION_RENDERING.apply(
@@ -2600,23 +2959,27 @@ def _draw_dim_grid(
         preset="pseudosection",
         xlim=(-0.5, n_st - 0.5),
     )
-    n_logp = Z.shape[0]   # shape[0] = n_logp now that .T is removed
+    n_logp = Z.shape[0]  # shape[0] = n_logp now that .T is removed
     y_ticks = np.linspace(0, n_logp - 1, num=min(6, n_logp))
-    y_vals  = np.linspace(piv.index.min(), piv.index.max(), num=min(6, n_logp))
+    y_vals = np.linspace(piv.index.min(), piv.index.max(), num=min(6, n_logp))
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([f"{v:.1f}" for v in y_vals], fontsize=7)
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
 
     from matplotlib.patches import Patch
+
     ax.legend(
         handles=[
             Patch(fc="#f7f7f7", ec="k", lw=0.5, label="1-D"),
             Patch(fc="#969696", ec="k", lw=0.5, label="2-D"),
             Patch(fc="#d6604d", ec="k", lw=0.5, label="3-D"),
         ],
-        fontsize=7, framealpha=0.9, loc="lower right",
-        title=f"|β|≤{skew_threshold:.0f}°,ε≤{ellipt_threshold:.2f}", title_fontsize=6,
+        fontsize=7,
+        framealpha=0.9,
+        loc="lower right",
+        title=f"|β|≤{skew_threshold:.0f}°,ε≤{ellipt_threshold:.2f}",
+        title_fontsize=6,
     )
 
 
@@ -2633,12 +2996,24 @@ def _draw_skew_ellipt_density(
     e = np.abs(df["ellipt"].to_numpy(float))
     fin = np.isfinite(a) & np.isfinite(e)
     if not fin.any():
-        ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return
 
-    ax.hexbin(a[fin], e[fin], gridsize=gridsize, mincnt=1,
-              cmap="YlOrRd", linewidths=0.0)
+    ax.hexbin(
+        a[fin],
+        e[fin],
+        gridsize=gridsize,
+        mincnt=1,
+        cmap="YlOrRd",
+        linewidths=0.0,
+    )
     # contour at 20 / 50 / 80 % of peak density
     nx = ny = gridsize
     H, xe, ye = np.histogram2d(a[fin], e[fin], bins=[nx, ny])
@@ -2649,10 +3024,20 @@ def _draw_skew_ellipt_density(
         ax.contour(Xc, Yc, H.T, levels=levs, colors="k", linewidths=0.6)
 
     # threshold lines
-    ax.axvline(skew_threshold, color="#b2182b", lw=1.0, ls="--",
-               label=f"|β|={skew_threshold:.0f}°")
-    ax.axhline(ellipt_threshold, color="#2166ac", lw=1.0, ls="--",
-               label=f"ε={ellipt_threshold:.2f}")
+    ax.axvline(
+        skew_threshold,
+        color="#b2182b",
+        lw=1.0,
+        ls="--",
+        label=f"|β|={skew_threshold:.0f}°",
+    )
+    ax.axhline(
+        ellipt_threshold,
+        color="#2166ac",
+        lw=1.0,
+        ls="--",
+        label=f"ε={ellipt_threshold:.2f}",
+    )
     ax.set_xlabel("|β| (°)", fontsize=8)
     ax.set_ylabel("Ellipticity", fontsize=8)
     ax.legend(fontsize=7, framealpha=0.9)
@@ -2666,8 +3051,9 @@ def phase_tensor_legend(
 ) -> plt.Axes:
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    e = Ellipse((0.0, 0.0), width=size, height=size,
-                angle=0.0, fill=False, lw=1.0)
+    e = Ellipse(
+        (0.0, 0.0), width=size, height=size, angle=0.0, fill=False, lw=1.0
+    )
     ax.add_patch(e)
     ax.plot([0, 0], [0, size * 0.6], "-", lw=1.0)
     ax.set_xlim(-size, size)
@@ -2677,8 +3063,8 @@ def phase_tensor_legend(
     return ax
 
 
-
 # -------------------- small utilities (local) --------------------------- #
+
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     zx = z[:, 0, 1]
@@ -2722,11 +3108,13 @@ def _attach_det_metrics(
     return df
 
 
-def _color_from_hsv(h: np.ndarray, s: np.ndarray,
-                    v: np.ndarray) -> np.ndarray:
+def _color_from_hsv(
+    h: np.ndarray, s: np.ndarray, v: np.ndarray
+) -> np.ndarray:
     hsv = np.stack([h, s, v], axis=-1)
     rgb = mcolors.hsv_to_rgb(hsv)
     return rgb
+
 
 # ---------------- 2) dimensionality grid (1D/2D/3D) --------------------- #
 def plot_dimensionality_grid(
@@ -2751,8 +3139,7 @@ def plot_dimensionality_grid(
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     df = df.copy()
     df["logp"] = np.log10(df["period"].to_numpy())
@@ -2770,7 +3157,7 @@ def plot_dimensionality_grid(
         aggfunc="median",
     )
     piv = piv.sort_index()
-    Z = piv.to_numpy(dtype=float)        # (n_logp, n_st) — no transpose
+    Z = piv.to_numpy(dtype=float)  # (n_logp, n_st) — no transpose
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     im = ax.imshow(
@@ -2787,9 +3174,12 @@ def plot_dimensionality_grid(
         preset="pseudosection",
         xlim=(-0.5, len(piv.columns) - 0.5),
     )
-    yt = np.linspace(0, Z.shape[0] - 1, num=min(8, Z.shape[0]))  # shape[0] = n_logp
-    yv = np.linspace(piv.index.min(), piv.index.max(),
-                     num=min(8, len(piv.index)))
+    yt = np.linspace(
+        0, Z.shape[0] - 1, num=min(8, Z.shape[0])
+    )  # shape[0] = n_logp
+    yv = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
     if not ax.yaxis_inverted():
@@ -2800,6 +3190,7 @@ def plot_dimensionality_grid(
 
 
 # ---------------- 3) theta stability stripe (HSV image) ----------------- #
+
 
 def plot_theta_stability_stripe(
     sites: Any,
@@ -2822,8 +3213,7 @@ def plot_theta_stability_stripe(
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     df = df.copy()
     df["logp"] = np.log10(df["period"].to_numpy())
@@ -2835,7 +3225,7 @@ def plot_theta_stability_stripe(
         th = s["theta"].to_numpy()
         lp = s["logp"].to_numpy()
         # hue from theta in [0,180) → [0,1)
-        h = ((th % 180.0) / 180.0)
+        h = (th % 180.0) / 180.0
         # variance in sliding window
         k = max(3, int(win))
         if len(h) < k:
@@ -2847,12 +3237,16 @@ def plot_theta_stability_stripe(
                 mode="same",
             )
         # saturation from 1 - norm(var)
-        v0 = np.nanpercentile(v[np.isfinite(v)], 5) if np.isfinite(
-            v
-        ).any() else 0.0
-        v1 = np.nanpercentile(v[np.isfinite(v)], 95) if np.isfinite(
-            v
-        ).any() else 1.0
+        v0 = (
+            np.nanpercentile(v[np.isfinite(v)], 5)
+            if np.isfinite(v).any()
+            else 0.0
+        )
+        v1 = (
+            np.nanpercentile(v[np.isfinite(v)], 95)
+            if np.isfinite(v).any()
+            else 1.0
+        )
         s_sat = 1.0 - np.clip((v - v0) / (v1 - v0 + 1e-12), 0, 1)
         H.append(np.vstack([h, s_sat, np.ones_like(h)]))
         X.append(lp)
@@ -2885,14 +3279,14 @@ def plot_theta_stability_stripe(
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
     yt = np.linspace(0, len(yall) - 1, num=min(8, len(yall)))
-    yv = np.linspace(yall.min(), yall.max(),
-                     num=min(8, len(yall)))
+    yv = np.linspace(yall.min(), yall.max(), num=min(8, len(yall)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
     return ax
 
 
 # ---------------- 4) skew–ellipticity density (hexbin + contours) ------- #
+
 
 def plot_skew_ellipt_density(
     sites: Any,
@@ -2916,8 +3310,7 @@ def plot_skew_ellipt_density(
     if df.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no phase tensor",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no phase tensor", ha="center", va="center")
         return ax
     a = np.abs(df["beta"].to_numpy())
     e = np.abs(df["ellipt"].to_numpy())
@@ -2928,9 +3321,7 @@ def plot_skew_ellipt_density(
         e = e[m]
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    ax.hexbin(
-        a, e, gridsize=gridsize, mincnt=1, linewidths=0.0
-    )
+    ax.hexbin(a, e, gridsize=gridsize, mincnt=1, linewidths=0.0)
     ax.set_xlabel("|beta| (deg)")
     ax.set_ylabel("|ellipticity|")
     # contours from 2D hist
@@ -2994,8 +3385,12 @@ def plot_theta_rose_grid(
     # ── axial mean helper ─────────────────────────────────────────────────
     def _axial_mean(a_deg: np.ndarray) -> float:
         rad = np.radians(2.0 * a_deg)
-        mu = np.degrees(np.arctan2(np.nanmean(np.sin(rad)),
-                                   np.nanmean(np.cos(rad)))) / 2.0
+        mu = (
+            np.degrees(
+                np.arctan2(np.nanmean(np.sin(rad)), np.nanmean(np.cos(rad)))
+            )
+            / 2.0
+        )
         return float(mu % 180.0)
 
     df = build_phase_tensor_table(
@@ -3028,10 +3423,18 @@ def plot_theta_rose_grid(
 
     # ── constrained_layout avoids blank space when suptitle is added ─────
     axes_given = _axes_list(axes, n_bands) if axes is not None else None
-    fig = plt.figure(figsize=figsize, constrained_layout=True) if axes_given is None else axes_given[0].figure
+    fig = (
+        plt.figure(figsize=figsize, constrained_layout=True)
+        if axes_given is None
+        else axes_given[0].figure
+    )
 
     for i in range(n_bands):
-        ax = axes_given[i] if axes_given is not None else fig.add_subplot(1, n_bands, i + 1, polar=True)
+        ax = (
+            axes_given[i]
+            if axes_given is not None
+            else fig.add_subplot(1, n_bands, i + 1, polar=True)
+        )
         m = (p >= edges[i]) & (p < edges[i + 1])
         th_deg = df.loc[m, "theta"].to_numpy(float) % 180.0
         n_obs = int(np.sum(m))
@@ -3056,36 +3459,54 @@ def plot_theta_rose_grid(
             for a, h in zip(ang_mid, hist):
                 col = cm_(h / rmax) if rmax > 0 else cm_(0.5)
                 for a_plot in (a, a + np.pi):
-                    ax.bar(a_plot, h, width=dw,
-                           color=col,
-                           edgecolor=rs.bar_edgecolor,
-                           linewidth=rs.bar_edgelw,
-                           alpha=rs.bar_alpha)
+                    ax.bar(
+                        a_plot,
+                        h,
+                        width=dw,
+                        color=col,
+                        edgecolor=rs.bar_edgecolor,
+                        linewidth=rs.bar_edgelw,
+                        alpha=rs.bar_alpha,
+                    )
         else:  # solid
             for a, h in zip(ang_mid, hist):
                 for a_plot in (a, a + np.pi):
-                    ax.bar(a_plot, h, width=dw,
-                           color=rs.bar_color,
-                           edgecolor=rs.bar_edgecolor,
-                           linewidth=rs.bar_edgelw,
-                           alpha=rs.bar_alpha)
+                    ax.bar(
+                        a_plot,
+                        h,
+                        width=dw,
+                        color=rs.bar_color,
+                        edgecolor=rs.bar_edgecolor,
+                        linewidth=rs.bar_edgelw,
+                        alpha=rs.bar_alpha,
+                    )
 
         # ── concentric rings ──────────────────────────────────────────────
         step = rmax / rs.n_rings
         r_levels = [step * k for k in range(1, rs.n_rings + 1)]
         theta_full = np.linspace(0, 2 * np.pi, 360)
         for rv in r_levels:
-            ax.plot(theta_full, np.full_like(theta_full, rv),
-                    color=rs.ring_color, ls=rs.ring_ls,
-                    lw=rs.ring_lw, zorder=0)
+            ax.plot(
+                theta_full,
+                np.full_like(theta_full, rv),
+                color=rs.ring_color,
+                ls=rs.ring_ls,
+                lw=rs.ring_lw,
+                zorder=0,
+            )
 
         # ── radial spokes ─────────────────────────────────────────────────
         n_spokes = int(round(360.0 / rs.spoke_every))
         spoke_angles = np.radians(np.arange(n_spokes) * rs.spoke_every)
         for sa in spoke_angles:
-            ax.plot([sa, sa], [0, rmax],
-                    color=rs.spoke_color, ls=rs.spoke_ls,
-                    lw=rs.spoke_lw, zorder=0)
+            ax.plot(
+                [sa, sa],
+                [0, rmax],
+                color=rs.spoke_color,
+                ls=rs.spoke_ls,
+                lw=rs.spoke_lw,
+                zorder=0,
+            )
 
         # ── outer bold ring ────────────────────────────────────────────────
         ax.spines["polar"].set_linewidth(rs.outer_ring_lw)
@@ -3101,8 +3522,9 @@ def plot_theta_rose_grid(
             lbl_list = [f"{int(d)}°" for d in spoke_degs]
         else:
             lbl_list = [""] * n_spokes
-        ax.set_thetagrids(spoke_degs, labels=lbl_list,
-                          fontsize=rs.compass_fontsize)
+        ax.set_thetagrids(
+            spoke_degs, labels=lbl_list, fontsize=rs.compass_fontsize
+        )
         for lbl in ax.get_xticklabels():
             lbl.set_color(rs.compass_color)
             lbl.set_fontweight(rs.compass_fontweight)
@@ -3111,17 +3533,33 @@ def plot_theta_rose_grid(
         if rs.show_mean and n_obs > 0:
             mu = _axial_mean(th_deg)
             mu_r = np.radians(mu)
-            sec_lw = rs.mean_lw if rs.secondary_lw is None else rs.secondary_lw
-            sec_col = rs.mean_color if rs.secondary_color is None else rs.secondary_color
+            sec_lw = (
+                rs.mean_lw if rs.secondary_lw is None else rs.secondary_lw
+            )
+            sec_col = (
+                rs.mean_color
+                if rs.secondary_color is None
+                else rs.secondary_color
+            )
             for ang_pt in (mu_r, mu_r + np.pi):
-                ax.plot([ang_pt, ang_pt], [0, rmax],
-                        color=rs.mean_color, lw=rs.mean_lw,
-                        ls=rs.mean_ls, zorder=6)
+                ax.plot(
+                    [ang_pt, ang_pt],
+                    [0, rmax],
+                    color=rs.mean_color,
+                    lw=rs.mean_lw,
+                    ls=rs.mean_ls,
+                    zorder=6,
+                )
             if rs.show_secondary:
                 for ang_pt in (mu_r + np.pi / 2, mu_r - np.pi / 2):
-                    ax.plot([ang_pt, ang_pt], [0, rmax],
-                            color=sec_col, lw=sec_lw,
-                            ls=rs.secondary_ls, zorder=6)
+                    ax.plot(
+                        [ang_pt, ang_pt],
+                        [0, rmax],
+                        color=sec_col,
+                        lw=sec_lw,
+                        ls=rs.secondary_ls,
+                        zorder=6,
+                    )
 
         # ── panel annotation: period range + n ────────────────────────────
         if rs.show_annotation and n_obs > 0:
@@ -3135,17 +3573,21 @@ def plot_theta_rose_grid(
                 mu_str + n_str,
                 transform=ax.transAxes,
                 fontsize=rs.annotation_fontsize,
-                ha="left", va="top",
-                bbox=dict(fc=rs.annotation_bg,
-                          ec=rs.annotation_ec,
-                          alpha=0.80, pad=1.5,
-                          boxstyle="round,pad=0.3"),
+                ha="left",
+                va="top",
+                bbox=dict(
+                    fc=rs.annotation_bg,
+                    ec=rs.annotation_ec,
+                    alpha=0.80,
+                    pad=1.5,
+                    boxstyle="round,pad=0.3",
+                ),
                 zorder=10,
             )
 
         # ── panel title: period band ───────────────────────────────────────
         ax.set_title(
-            f"[{edges[i]:.2g}, {edges[i+1]:.2g}]s",
+            f"[{edges[i]:.2g}, {edges[i + 1]:.2g}]s",
             fontsize=panel_title_fontsize,
             pad=8,
         )
@@ -3156,6 +3598,7 @@ def plot_theta_rose_grid(
 # ─────────────────────────────────────────────────────────────────────────────
 # Per-station ellipse strip + multi-profile small-multiples grid
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _pt_size_reference(
     s1_vals: np.ndarray,
@@ -3172,7 +3615,9 @@ def _pt_size_reference(
         if s1_ref is not None:
             return max(float(s1_ref), 1e-9)
         finite_s1 = s1_vals[np.isfinite(s1_vals)]
-        ref = float(np.nanpercentile(finite_s1, 90)) if len(finite_s1) else 1.0
+        ref = (
+            float(np.nanpercentile(finite_s1, 90)) if len(finite_s1) else 1.0
+        )
         return max(ref, 1e-9)
     if normalise_by == "unity":
         return max(float(s1_ref) if s1_ref is not None else 1.0, 1e-9)
@@ -3186,24 +3631,24 @@ def plot_phase_tensor_strip(
     station: str | None = None,
     period_range: tuple[float, float] | None = None,
     # ── ellipse sizing ────────────────────────────────────────────────────
-    scale          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.scale
-    normalise_by   = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
+    scale=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.scale
+    normalise_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
     s1_ref: float | None = None,
-    min_aspect     = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
+    min_aspect=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.min_aspect
     cells_per_decade: float = 7.0,
     # ── colour ────────────────────────────────────────────────────────────
-    c_by           = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.c_by
-    cmap           = _UNSET,   # default: auto from c_by via resolve_cmap()
+    c_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.c_by
+    cmap=_UNSET,  # default: auto from c_by via resolve_cmap()
     clim: tuple[float, float] | None = None,
-    clim_pct       = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
-    symmetric_clim = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
+    clim_pct=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
+    symmetric_clim=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
     # ── aesthetics ────────────────────────────────────────────────────────
-    edgecolor      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
-    linewidth      = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.linewidth
-    alpha          = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.alpha
+    edgecolor=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
+    linewidth=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.linewidth
+    alpha=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.alpha
     # ── overlays ─────────────────────────────────────────────────────────
-    skew_threshold = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
-    mark_3d        = _UNSET,   # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
+    skew_threshold=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
+    mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
     # ── decorative phase scale (y-axis) ───────────────────────────────────
     phase_ticks: tuple[float, float, float] | None = (0.0, 45.0, 90.0),
     ylabel: str = "",
@@ -3328,18 +3773,30 @@ def plot_phase_tensor_strip(
 
     # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
     _es = PYCSAMT_STYLE.pt_ellipse
-    if scale          is _UNSET: scale          = _es.scale
-    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
-    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
-    if c_by           is _UNSET: c_by           = _es.c_by
-    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
-    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
-    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
-    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
-    if linewidth      is _UNSET: linewidth      = _es.linewidth
-    if alpha          is _UNSET: alpha          = _es.alpha
-    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
-    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
+    if scale is _UNSET:
+        scale = _es.scale
+    if normalise_by is _UNSET:
+        normalise_by = _es.normalise_by
+    if min_aspect is _UNSET:
+        min_aspect = _es.min_aspect
+    if c_by is _UNSET:
+        c_by = _es.c_by
+    if cmap is _UNSET:
+        cmap = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct is _UNSET:
+        clim_pct = _es.clim_pct
+    if symmetric_clim is _UNSET:
+        symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor is _UNSET:
+        edgecolor = _es.edgecolor
+    if linewidth is _UNSET:
+        linewidth = _es.linewidth
+    if alpha is _UNSET:
+        alpha = _es.alpha
+    if skew_threshold is _UNSET:
+        skew_threshold = _es.skew_threshold
+    if mark_3d is _UNSET:
+        mark_3d = _es.mark_3d
 
     # ── data selection ────────────────────────────────────────────────────
     if not df.empty and period_range is not None:
@@ -3363,8 +3820,14 @@ def plot_phase_tensor_strip(
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no phase tensor data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no phase tensor data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     df = df.sort_values("period")
@@ -3390,22 +3853,35 @@ def plot_phase_tensor_strip(
         vmin, vmax = -float(skew_threshold), float(skew_threshold)
     else:
         lo_pct, hi_pct = clim_pct
-        vmin = float(np.nanpercentile(finite_c, lo_pct)) if len(finite_c) else -1.0
-        vmax = float(np.nanpercentile(finite_c, hi_pct)) if len(finite_c) else  1.0
+        vmin = (
+            float(np.nanpercentile(finite_c, lo_pct))
+            if len(finite_c)
+            else -1.0
+        )
+        vmax = (
+            float(np.nanpercentile(finite_c, hi_pct))
+            if len(finite_c)
+            else 1.0
+        )
         if symmetric_clim and c_by in _SYMMETRIC_C:
             vlim = max(abs(vmin), abs(vmax))
             vmin, vmax = -vlim, vlim
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    cm   = plt.get_cmap(cmap)
+    cm = plt.get_cmap(cmap)
 
     s1_arr = df["s1"].to_numpy(float)
     s2_arr = df["s2"].to_numpy(float)
     th_arr = df["theta"].to_numpy(float)
-    skew_arr = df["skew"].to_numpy(float) if "skew" in df.columns else np.zeros(len(df))
+    skew_arr = (
+        df["skew"].to_numpy(float)
+        if "skew" in df.columns
+        else np.zeros(len(df))
+    )
 
     for xi, s1i, s2i, thi, ci, beti in zip(
-            x_all, s1_arr, s2_arr, th_arr, cvals, skew_arr):
+        x_all, s1_arr, s2_arr, th_arr, cvals, skew_arr
+    ):
         if not np.all(np.isfinite([xi, s1i, s2i, thi, ci])):
             continue
 
@@ -3418,19 +3894,27 @@ def plot_phase_tensor_strip(
         if min_aspect > 0:
             h = max(h, min_aspect * w)
 
-        is_3d = (skew_threshold is not None and mark_3d
-                 and np.isfinite(beti) and abs(beti) > skew_threshold)
+        is_3d = (
+            skew_threshold is not None
+            and mark_3d
+            and np.isfinite(beti)
+            and abs(beti) > skew_threshold
+        )
         lw_i = linewidth * 3.0 if is_3d else linewidth
 
-        ax.add_patch(Ellipse(
-            (xi, 0.0),
-            width=w, height=h, angle=thi,
-            facecolor=cm(norm(ci)),
-            edgecolor=edgecolor,
-            linewidth=lw_i,
-            alpha=alpha,
-            zorder=3,
-        ))
+        ax.add_patch(
+            Ellipse(
+                (xi, 0.0),
+                width=w,
+                height=h,
+                angle=thi,
+                facecolor=cm(norm(ci)),
+                edgecolor=edgecolor,
+                linewidth=lw_i,
+                alpha=alpha,
+                zorder=3,
+            )
+        )
 
     # ── x-axis limits & ticks (log10 period, "10^n" labels) ───────────────
     x_lo = float(np.nanmin(x_all)) if len(x_all) else 0.0
@@ -3447,7 +3931,9 @@ def plot_phase_tensor_strip(
     if phase_ticks is not None:
         lo_t, mid_t, hi_t = phase_ticks
         ax.set_yticks([-0.5, 0.0, 0.5])
-        ax.set_yticklabels([f"{lo_t:g}", f"{mid_t:g}", f"{hi_t:g}"], fontsize=8)
+        ax.set_yticklabels(
+            [f"{lo_t:g}", f"{mid_t:g}", f"{hi_t:g}"], fontsize=8
+        )
         ax.set_ylabel(ylabel or "Phase (°)", fontsize=9)
     else:
         ax.set_yticks([])
@@ -3456,10 +3942,17 @@ def plot_phase_tensor_strip(
     if title:
         ax.set_title(title, fontsize=9)
     if station_label and station:
-        ax.text(0.015, 0.92, str(station), transform=ax.transAxes,
-                fontsize=station_label_fontsize, fontweight="bold",
-                ha="left", va="top",
-                bbox=dict(fc="white", ec="none", alpha=0.65, pad=1.0))
+        ax.text(
+            0.015,
+            0.92,
+            str(station),
+            transform=ax.transAxes,
+            fontsize=station_label_fontsize,
+            fontweight="bold",
+            ha="left",
+            va="top",
+            bbox=dict(fc="white", ec="none", alpha=0.65, pad=1.0),
+        )
     ax.grid(True, ls=":", lw=0.4, color="#cccccc", alpha=0.7, zorder=0)
 
     if show_colorbar:
@@ -3475,21 +3968,21 @@ def plot_phase_tensor_strip_grid(
     profiles: dict[str, list[str]],
     *,
     period_range: tuple[float, float] | None = None,
-    scale          = _UNSET,
-    normalise_by   = _UNSET,
+    scale=_UNSET,
+    normalise_by=_UNSET,
     s1_ref: float | None = None,
-    min_aspect     = _UNSET,
+    min_aspect=_UNSET,
     cells_per_decade: float = 7.0,
-    c_by           = _UNSET,
-    cmap           = _UNSET,
+    c_by=_UNSET,
+    cmap=_UNSET,
     clim: tuple[float, float] | None = None,
-    clim_pct       = _UNSET,
-    symmetric_clim = _UNSET,
-    edgecolor      = _UNSET,
-    linewidth      = _UNSET,
-    alpha          = _UNSET,
-    skew_threshold = _UNSET,
-    mark_3d        = _UNSET,
+    clim_pct=_UNSET,
+    symmetric_clim=_UNSET,
+    edgecolor=_UNSET,
+    linewidth=_UNSET,
+    alpha=_UNSET,
+    skew_threshold=_UNSET,
+    mark_3d=_UNSET,
     phase_ticks: tuple[float, float, float] | None = (0.0, 45.0, 90.0),
     col_titles: dict[str, str] | None = None,
     xlabel: str = "Period (s)",
@@ -3577,30 +4070,48 @@ def plot_phase_tensor_strip_grid(
     """
     # ── resolve visual style from PYCSAMT_STYLE.pt_ellipse ──────────────
     _es = PYCSAMT_STYLE.pt_ellipse
-    if scale          is _UNSET: scale          = _es.scale
-    if normalise_by   is _UNSET: normalise_by   = _es.normalise_by
-    if min_aspect     is _UNSET: min_aspect     = _es.min_aspect
-    if c_by           is _UNSET: c_by           = _es.c_by
-    if cmap           is _UNSET: cmap           = _es.copy(c_by=c_by).resolve_cmap()
-    if clim_pct       is _UNSET: clim_pct       = _es.clim_pct
-    if symmetric_clim is _UNSET: symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
-    if edgecolor      is _UNSET: edgecolor      = _es.edgecolor
-    if linewidth      is _UNSET: linewidth      = _es.linewidth
-    if alpha          is _UNSET: alpha          = _es.alpha
-    if skew_threshold is _UNSET: skew_threshold = _es.skew_threshold
-    if mark_3d        is _UNSET: mark_3d        = _es.mark_3d
+    if scale is _UNSET:
+        scale = _es.scale
+    if normalise_by is _UNSET:
+        normalise_by = _es.normalise_by
+    if min_aspect is _UNSET:
+        min_aspect = _es.min_aspect
+    if c_by is _UNSET:
+        c_by = _es.c_by
+    if cmap is _UNSET:
+        cmap = _es.copy(c_by=c_by).resolve_cmap()
+    if clim_pct is _UNSET:
+        clim_pct = _es.clim_pct
+    if symmetric_clim is _UNSET:
+        symmetric_clim = _es.copy(c_by=c_by).resolve_symmetric_clim()
+    if edgecolor is _UNSET:
+        edgecolor = _es.edgecolor
+    if linewidth is _UNSET:
+        linewidth = _es.linewidth
+    if alpha is _UNSET:
+        alpha = _es.alpha
+    if skew_threshold is _UNSET:
+        skew_threshold = _es.skew_threshold
+    if mark_3d is _UNSET:
+        mark_3d = _es.mark_3d
 
-    all_stations = list(dict.fromkeys(
-        st for st_list in profiles.values() for st in st_list
-    ))
+    all_stations = list(
+        dict.fromkeys(st for st_list in profiles.values() for st in st_list)
+    )
     df_all = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if not df_all.empty:
         df_all = df_all[df_all["station"].isin(all_stations)]
         if period_range is not None:
             lo, hi = float(period_range[0]), float(period_range[1])
-            df_all = df_all[(df_all["period"] >= lo) & (df_all["period"] <= hi)]
+            df_all = df_all[
+                (df_all["period"] >= lo) & (df_all["period"] <= hi)
+            ]
 
     # ── shared colour scale across every panel ────────────────────────────
     if clim is not None:
@@ -3612,8 +4123,16 @@ def plot_phase_tensor_strip_grid(
             clim_shared = (-float(skew_threshold), float(skew_threshold))
         else:
             lo_pct, hi_pct = clim_pct
-            vmin = float(np.nanpercentile(finite_all, lo_pct)) if len(finite_all) else -1.0
-            vmax = float(np.nanpercentile(finite_all, hi_pct)) if len(finite_all) else  1.0
+            vmin = (
+                float(np.nanpercentile(finite_all, lo_pct))
+                if len(finite_all)
+                else -1.0
+            )
+            vmax = (
+                float(np.nanpercentile(finite_all, hi_pct))
+                if len(finite_all)
+                else 1.0
+            )
             if symmetric_clim and c_by in _SYMMETRIC_C:
                 vlim = max(abs(vmin), abs(vmax))
                 vmin, vmax = -vlim, vlim
@@ -3626,7 +4145,10 @@ def plot_phase_tensor_strip_grid(
 
     if axes is None:
         fig, axes = plt.subplots(
-            n_rows, n_cols, squeeze=False, sharex="col",
+            n_rows,
+            n_cols,
+            squeeze=False,
+            sharex="col",
             figsize=(panel_size[0] * n_cols, panel_size[1] * n_rows),
             constrained_layout=True,
         )
@@ -3635,7 +4157,9 @@ def plot_phase_tensor_strip_grid(
         fig = axes[0, 0].figure
 
     col_titles = col_titles or {}
-    _, cbar_label = _resolve_cvals(df_all, c_by) if not df_all.empty else (None, c_by)
+    _, cbar_label = (
+        _resolve_cvals(df_all, c_by) if not df_all.empty else (None, c_by)
+    )
     if colorbar_label:
         cbar_label = colorbar_label
 
@@ -3649,12 +4173,21 @@ def plot_phase_tensor_strip_grid(
             plot_phase_tensor_strip(
                 df_all,
                 station=st,
-                scale=scale, normalise_by=normalise_by, s1_ref=s1_ref,
-                min_aspect=min_aspect, cells_per_decade=cells_per_decade,
-                c_by=c_by, cmap=cmap, clim=clim_shared,
-                clim_pct=clim_pct, symmetric_clim=symmetric_clim,
-                edgecolor=edgecolor, linewidth=linewidth, alpha=alpha,
-                skew_threshold=skew_threshold, mark_3d=mark_3d,
+                scale=scale,
+                normalise_by=normalise_by,
+                s1_ref=s1_ref,
+                min_aspect=min_aspect,
+                cells_per_decade=cells_per_decade,
+                c_by=c_by,
+                cmap=cmap,
+                clim=clim_shared,
+                clim_pct=clim_pct,
+                symmetric_clim=symmetric_clim,
+                edgecolor=edgecolor,
+                linewidth=linewidth,
+                alpha=alpha,
+                skew_threshold=skew_threshold,
+                mark_3d=mark_3d,
                 phase_ticks=phase_ticks,
                 show_colorbar=False,
                 xlabel=xlabel if i == len(st_list) - 1 else "",
@@ -3663,7 +4196,9 @@ def plot_phase_tensor_strip_grid(
             if i != len(st_list) - 1:
                 ax.tick_params(labelbottom=False)
                 ax.set_xlabel("")
-        axes[0, j].set_title(col_titles.get(prof_name, prof_name), fontsize=10)
+        axes[0, j].set_title(
+            col_titles.get(prof_name, prof_name), fontsize=10
+        )
 
     cm = plt.get_cmap(cmap)
     norm = Normalize(vmin=clim_shared[0], vmax=clim_shared[1])

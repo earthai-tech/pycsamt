@@ -377,5 +377,6 @@ class MapView:
             f"geo={self.has_geo})"
         )
 
+
 # Imported at module end to avoid a circular import with ._app.
 from ._app import launch_app, launch_mapview, open_app  # noqa: E402

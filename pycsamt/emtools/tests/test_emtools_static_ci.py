@@ -3,6 +3,7 @@ Tests for:
   - correct_static_shift (remove_noise.py) — Torres-Verdín & Bostick (1992) AMA
   - plot_confidence_profile (qc.py) — Kouadio et al. (2024) Fig. 3 style
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -61,9 +62,10 @@ from pycsamt.emtools.remove_noise import (
 # Shared fake-site infrastructure
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.array(z, dtype=complex)
+        self.z = np.array(z, dtype=complex)
         self.freq = np.array(freq, dtype=float)
 
     def compute_resistivity_phase(self):
@@ -76,10 +78,10 @@ class _FakeZ:
 class _FakeSite:
     def __init__(self, station, z, freq, east=None, north=None):
         self.station = station
-        self.Z       = _FakeZ(z, freq)
-        self.freq    = np.array(freq, dtype=float)
+        self.Z = _FakeZ(z, freq)
+        self.freq = np.array(freq, dtype=float)
         if east is not None:
-            self.east  = float(east)
+            self.east = float(east)
             self.north = float(north)
 
     def get_section(self, *_, **__):
@@ -94,7 +96,7 @@ def _make_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """1-D isotropic Z: Z_xy = -Z_yx, |Z| = sqrt(5 f ρ), diag = 0."""
     z_abs = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -105,27 +107,34 @@ def _rho_from_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     return 0.2 * z_abs_sq / freqs
 
 
-def _site(station: str, rho: float = 100.0, n: int = 10,
-          east=None, north=None) -> _FakeSite:
+def _site(
+    station: str, rho: float = 100.0, n: int = 10, east=None, north=None
+) -> _FakeSite:
     fr = _freqs(n)
     return _FakeSite(station, _make_z(fr, rho), fr, east=east, north=north)
 
 
-def _shifted_site(station: str, rho: float = 100.0, ss: float = 4.0,
-                  n: int = 10, east=None, north=None) -> _FakeSite:
+def _shifted_site(
+    station: str,
+    rho: float = 100.0,
+    ss: float = 4.0,
+    n: int = 10,
+    east=None,
+    north=None,
+) -> _FakeSite:
     """Z with static shift C in ρ_a: Z_shifted = Z × sqrt(C)."""
-    fr  = _freqs(n)
-    z   = _make_z(fr, rho)
-    z_s = z * np.sqrt(ss)   # ρ_a_shifted = ss × ρ_a_true
+    fr = _freqs(n)
+    z = _make_z(fr, rho)
+    z_s = z * np.sqrt(ss)  # ρ_a_shifted = ss × ρ_a_true
     return _FakeSite(station, z_s, fr, east=east, north=north)
 
 
-def _line_sites(n: int = 5, rho: float = 100.0,
-                spacing: float = 200.0) -> list:
+def _line_sites(
+    n: int = 5, rho: float = 100.0, spacing: float = 200.0
+) -> list:
     """n stations along a line with identical ρ_a (no static shift)."""
     return [
-        _site(f"S{i:02d}", rho, east=i * spacing, north=0.0)
-        for i in range(n)
+        _site(f"S{i:02d}", rho, east=i * spacing, north=0.0) for i in range(n)
     ]
 
 
@@ -169,6 +178,7 @@ def test_confidence_ratio_single_score_binomial_error():
 # correct_static_shift — basic contract
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_emi_mitigation_report_records_remote_reference_and_harmonics():
     fr = np.array([10.0, 50.0, 100.0, 250.0])
     site = _FakeSite("S0", _make_z(fr), fr)
@@ -195,26 +205,32 @@ def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
     from pycsamt.emtools import dimensionality as dim_mod
 
     site = _site("S0")
-    dim = pd.DataFrame({
-        "station": ["S0", "S0", "S0", "S0"],
-        "period": [0.1, 1.0, 10.0, 100.0],
-        "dim": [0, 1, 2, 2],
-        "beta_abs": [1.0, 2.0, 8.0, 10.0],
-        "ellipt_abs": [0.05, 0.3, 0.4, 0.5],
-    })
-    strike = pd.DataFrame({
-        "station": ["S0"],
-        "ang": [35.0],
-        "iqr": [12.0],
-        "lo": [0.1],
-        "hi": [100.0],
-        "n": [4],
-    })
-    curve = pd.DataFrame({
-        "station": ["S0", "S0", "S0", "S0"],
-        "period": [0.1, 1.0, 10.0, 100.0],
-        "ang": [30.0, 33.0, 40.0, 42.0],
-    })
+    dim = pd.DataFrame(
+        {
+            "station": ["S0", "S0", "S0", "S0"],
+            "period": [0.1, 1.0, 10.0, 100.0],
+            "dim": [0, 1, 2, 2],
+            "beta_abs": [1.0, 2.0, 8.0, 10.0],
+            "ellipt_abs": [0.05, 0.3, 0.4, 0.5],
+        }
+    )
+    strike = pd.DataFrame(
+        {
+            "station": ["S0"],
+            "ang": [35.0],
+            "iqr": [12.0],
+            "lo": [0.1],
+            "hi": [100.0],
+            "n": [4],
+        }
+    )
+    curve = pd.DataFrame(
+        {
+            "station": ["S0", "S0", "S0", "S0"],
+            "period": [0.1, 1.0, 10.0, 100.0],
+            "ang": [30.0, 33.0, 40.0, 42.0],
+        }
+    )
 
     monkeypatch.setattr(dim_mod, "ensure_sites", lambda sites, **_: sites)
     monkeypatch.setattr(
@@ -229,9 +245,7 @@ def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
     monkeypatch.setattr(
         dim_mod, "estimate_strike_consensus", lambda *_, **__: strike
     )
-    monkeypatch.setattr(
-        dim_mod, "strike_curve_sweep", lambda *_, **__: curve
-    )
+    monkeypatch.setattr(dim_mod, "strike_curve_sweep", lambda *_, **__: curve)
 
     report = pre2d_inversion_assessment(
         [site],
@@ -250,9 +264,9 @@ def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
 
 
 class TestCorrectStaticShiftContract:
-
     def test_returns_sites_object(self):
         from pycsamt.site.base import Sites
+
         sites = _line_sites(5)
         result = correct_static_shift(sites)
         assert isinstance(result, Sites)
@@ -270,7 +284,8 @@ class TestCorrectStaticShiftContract:
 
     def test_z_shape_preserved(self):
         from pycsamt.emtools._core import _iter_items
-        sites  = _line_sites(3)
+
+        sites = _line_sites(3)
         result = correct_static_shift(sites)
         for ed in _iter_items(result):
             z, fr = _z_freq(ed)
@@ -280,7 +295,8 @@ class TestCorrectStaticShiftContract:
 
     def test_freq_count_preserved(self):
         from pycsamt.emtools._core import _iter_items
-        sites  = _line_sites(3, rho=100.0)
+
+        sites = _line_sites(3, rho=100.0)
         result = correct_static_shift(sites)
         for ed in _iter_items(result):
             z, fr = _z_freq(ed)
@@ -290,66 +306,73 @@ class TestCorrectStaticShiftContract:
     def test_single_site_no_change(self):
         """With only one station, Hanning window covers it alone → C=1 → no change."""
         from pycsamt.emtools._core import _iter_items
-        site   = _site("S0", rho=100.0)
+
+        site = _site("S0", rho=100.0)
         result = correct_static_shift([site], window_m=1500.0)
         for ed in _iter_items(result):
             z, _ = _z_freq(ed)
             assert z is not None
-            np.testing.assert_allclose(np.abs(z), np.abs(_make_z(_freqs())), rtol=1e-10)
+            np.testing.assert_allclose(
+                np.abs(z), np.abs(_make_z(_freqs())), rtol=1e-10
+            )
 
     def test_uniform_profile_no_change(self):
         """Uniform ρ_a across all stations → spatial mean = individual → C=1."""
         from pycsamt.emtools._core import _iter_items
-        sites  = _line_sites(5, rho=200.0, spacing=300.0)
+
+        sites = _line_sites(5, rho=200.0, spacing=300.0)
         z_before = [
             _z_freq(ed)[0].copy()
             for ed in _iter_items(ensure_sites_local(sites))
         ]
-        result   = correct_static_shift(sites, window_m=2000.0)
-        z_after  = [
-            _z_freq(ed)[0]
-            for ed in _iter_items(result)
-        ]
+        result = correct_static_shift(sites, window_m=2000.0)
+        z_after = [_z_freq(ed)[0] for ed in _iter_items(result)]
         for zb, za in zip(z_before, z_after):
             np.testing.assert_allclose(np.abs(za), np.abs(zb), rtol=1e-6)
 
     def test_comp_det_default(self):
-        sites  = _line_sites(3)
+        sites = _line_sites(3)
         result = correct_static_shift(sites, comp="det")
         assert result is not None
 
     def test_comp_xy(self):
-        sites  = _line_sites(3)
+        sites = _line_sites(3)
         result = correct_static_shift(sites, comp="xy")
         assert result is not None
 
     def test_comp_yx(self):
-        sites  = _line_sites(3)
+        sites = _line_sites(3)
         result = correct_static_shift(sites, comp="yx")
         assert result is not None
 
     def test_empty_list_returns_sites(self):
         """Empty input doesn't crash (returns empty Sites)."""
         from pycsamt.site.base import Sites
+
         result = correct_static_shift([])
         assert isinstance(result, Sites)
 
 
 def ensure_sites_local(sites):
     from pycsamt.emtools._core import ensure_sites
+
     return ensure_sites(sites, recursive=True, strict=False)
 
 
 def _z_freq(ed):
     """Return (z, freq) from either a _FakeSite or a Sites-wrapped Site."""
-    z  = getattr(ed, 'z', None)
-    fr = getattr(ed, 'freq', None)
-    if isinstance(z, np.ndarray) and z.ndim == 3 and isinstance(fr, np.ndarray):
+    z = getattr(ed, "z", None)
+    fr = getattr(ed, "freq", None)
+    if (
+        isinstance(z, np.ndarray)
+        and z.ndim == 3
+        and isinstance(fr, np.ndarray)
+    ):
         return z, fr
-    Z_obj = getattr(ed, 'Z', None)
+    Z_obj = getattr(ed, "Z", None)
     if Z_obj is not None:
-        z2  = getattr(Z_obj, 'z', None)
-        fr2 = getattr(Z_obj, 'freq', None)
+        z2 = getattr(Z_obj, "z", None)
+        fr2 = getattr(Z_obj, "freq", None)
         if isinstance(z2, np.ndarray) and isinstance(fr2, np.ndarray):
             return z2, fr2
     return None, None
@@ -359,25 +382,32 @@ def _z_freq(ed):
 # correct_static_shift — correction direction
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestCorrectStaticShiftDirection:
 
+class TestCorrectStaticShiftDirection:
     def _build_shifted_line(self, n=5, shift_idx=2, ss=4.0):
         """n stations; one outlier with static shift ss, rest at rho=100."""
         sites = []
         for i in range(n):
             rho_local = 100.0
             if i == shift_idx:
-                site = _shifted_site(f"S{i:02d}", rho=rho_local, ss=ss,
-                                     east=i * 300.0, north=0.0)
+                site = _shifted_site(
+                    f"S{i:02d}",
+                    rho=rho_local,
+                    ss=ss,
+                    east=i * 300.0,
+                    north=0.0,
+                )
             else:
-                site = _site(f"S{i:02d}", rho=rho_local,
-                             east=i * 300.0, north=0.0)
+                site = _site(
+                    f"S{i:02d}", rho=rho_local, east=i * 300.0, north=0.0
+                )
             sites.append(site)
         return sites
 
     def test_shifted_station_z_magnitude_reduced(self):
         """Shifted station has larger |Z|; after correction |Z| should decrease."""
         from pycsamt.emtools._core import _iter_items
+
         sites = self._build_shifted_line(n=5, shift_idx=2, ss=4.0)
         # Capture before-snapshots (copy!) before correction modifies in-place
         S0 = ensure_sites_local(sites)
@@ -385,27 +415,28 @@ class TestCorrectStaticShiftDirection:
             float(np.mean(np.abs(_z_freq(ed)[0][:, 0, 1])))
             for ed in _iter_items(S0)
         ]
-        result  = correct_static_shift(sites, window_m=3000.0)
+        result = correct_static_shift(sites, window_m=3000.0)
         mag_after = [
             float(np.mean(np.abs(_z_freq(ed)[0][:, 0, 1])))
             for ed in _iter_items(result)
         ]
-        assert mag_after[2] < mag_before[2], "shifted station: |Z| should decrease"
+        assert mag_after[2] < mag_before[2], (
+            "shifted station: |Z| should decrease"
+        )
 
     def test_phase_unchanged(self):
         """Static shift is a real scalar — it should NOT change the impedance phase."""
         from pycsamt.emtools._core import _iter_items
+
         sites = self._build_shifted_line(n=5, shift_idx=2, ss=4.0)
-        S0    = ensure_sites_local(sites)
+        S0 = ensure_sites_local(sites)
         # Capture phase before (static shift doesn't touch phase)
         ph_before = [
-            np.angle(_z_freq(ed)[0][:, 0, 1]).copy()
-            for ed in _iter_items(S0)
+            np.angle(_z_freq(ed)[0][:, 0, 1]).copy() for ed in _iter_items(S0)
         ]
         result = correct_static_shift(sites, window_m=3000.0)
         ph_after = [
-            np.angle(_z_freq(ed)[0][:, 0, 1])
-            for ed in _iter_items(result)
+            np.angle(_z_freq(ed)[0][:, 0, 1]) for ed in _iter_items(result)
         ]
         for pb, pa in zip(ph_before, ph_after):
             np.testing.assert_allclose(pa, pb, atol=1e-10)
@@ -413,12 +444,13 @@ class TestCorrectStaticShiftDirection:
     def test_correction_factor_positive(self):
         """C = sqrt(ρ_smooth / ρ_obs) must always be > 0 for off-diagonal Z."""
         from pycsamt.emtools._core import _iter_items
-        sites  = self._build_shifted_line(n=5, shift_idx=1, ss=9.0)
+
+        sites = self._build_shifted_line(n=5, shift_idx=1, ss=9.0)
         result = correct_static_shift(sites, window_m=2400.0)
         for ed in _iter_items(result):
             z, _ = _z_freq(ed)
             assert np.all(np.isfinite(z))
-            assert np.all(np.abs(z[:, 0, 1]) > 0)   # off-diagonal > 0
+            assert np.all(np.abs(z[:, 0, 1]) > 0)  # off-diagonal > 0
             assert np.all(np.abs(z[:, 1, 0]) > 0)
 
 
@@ -426,8 +458,8 @@ class TestCorrectStaticShiftDirection:
 # EMAP-style FLMA/TMA spatial filters
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestEMAPSpatialFilters:
 
+class TestEMAPSpatialFilters:
     def _outlier_line(self, n=5, outlier_idx=2, outlier_rho=1600.0):
         sites = []
         for i in range(n):
@@ -518,7 +550,9 @@ class TestEMAPSpatialFilters:
         assert not result.decisions.empty
         assert result.n_blended >= 1
 
-    def test_confidence_gated_emap_filter_preserves_high_confidence_rows(self):
+    def test_confidence_gated_emap_filter_preserves_high_confidence_rows(
+        self,
+    ):
         before = self._outlier_line()
         source = self._outlier_line()
 
@@ -612,12 +646,13 @@ class TestEMAPSpatialFilters:
 # correct_static_shift — Hanning weight helper
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestHanningWeights:
 
+class TestHanningWeights:
     def _w(self, dx, w_H):
         from pycsamt.emtools.remove_noise import (
             _hanning_weights,
         )
+
         return _hanning_weights(np.asarray(dx, dtype=float), w_H)
 
     def test_centre_is_max(self):
@@ -634,18 +669,18 @@ class TestHanningWeights:
 
     def test_nonnegative(self):
         dx = np.linspace(-800, 800, 200)
-        w  = self._w(dx, 1000.0)
+        w = self._w(dx, 1000.0)
         assert np.all(w >= 0.0)
 
     def test_integral_approx_one(self):
-        dx  = np.linspace(-499.9, 499.9, 10000)
-        w   = self._w(dx, 1000.0)
+        dx = np.linspace(-499.9, 499.9, 10000)
+        w = self._w(dx, 1000.0)
         val = float(np.trapezoid(w, dx))
         assert val == pytest.approx(1.0, abs=0.01)
 
     def test_symmetry(self):
         dx = np.linspace(-400, 400, 201)
-        w  = self._w(dx, 1000.0)
+        w = self._w(dx, 1000.0)
         np.testing.assert_allclose(w, w[::-1], atol=1e-12)
 
 
@@ -653,43 +688,47 @@ class TestHanningWeights:
 # correct_static_shift — _station_positions helper
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestStationPositions:
 
+class TestStationPositions:
     def test_fallback_spacing(self):
         from pycsamt.emtools._core import _station_positions
+
         eds = [_site(f"S{i}") for i in range(4)]
         pos = _station_positions(eds, spacing_m=300.0)
         np.testing.assert_allclose(pos, [0, 300, 600, 900])
 
     def test_with_east_north(self):
         from pycsamt.emtools._core import _station_positions
+
         eds = [
-            _site("S0", east=0.0,    north=0.0),
-            _site("S1", east=500.0,  north=0.0),
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=500.0, north=0.0),
             _site("S2", east=1000.0, north=0.0),
         ]
         pos = _station_positions(eds, spacing_m=200.0)
-        assert pos[0] == pytest.approx(0.0,    abs=1.0)
-        assert pos[1] == pytest.approx(500.0,  abs=1.0)
+        assert pos[0] == pytest.approx(0.0, abs=1.0)
+        assert pos[1] == pytest.approx(500.0, abs=1.0)
         assert pos[2] == pytest.approx(1000.0, abs=1.0)
 
     def test_monotone_on_line(self):
         from pycsamt.emtools._core import _station_positions
+
         eds = [
-            _site(f"S{i}", east=float(i * 400), north=0.0)
-            for i in range(5)
+            _site(f"S{i}", east=float(i * 400), north=0.0) for i in range(5)
         ]
         pos = _station_positions(eds, spacing_m=200.0)
         assert np.all(np.diff(pos) > 0)
 
     def test_length_matches_input(self):
         from pycsamt.emtools._core import _station_positions
+
         eds = [_site(f"S{i}") for i in range(7)]
         pos = _station_positions(eds)
         assert len(pos) == 7
 
     def test_single_site_fallback(self):
         from pycsamt.emtools._core import _station_positions
+
         eds = [_site("S0")]
         pos = _station_positions(eds, spacing_m=250.0)
         assert pos[0] == pytest.approx(0.0)
@@ -699,11 +738,13 @@ class TestStationPositions:
 # plot_confidence_profile — return type and axes labels
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotConfidenceProfile:
 
+class TestPlotConfidenceProfile:
     def _sites_all_good(self, n=5):
         """All stations with 100 % valid Z → CI = 1.0."""
-        return [_site(f"S{i:02d}", east=i * 300.0, north=0.0) for i in range(n)]
+        return [
+            _site(f"S{i:02d}", east=i * 300.0, north=0.0) for i in range(n)
+        ]
 
     def _sites_mixed(self):
         """Three stations: good, some NaN, mostly NaN."""
@@ -712,15 +753,15 @@ class TestPlotConfidenceProfile:
         z_good = _make_z(fr, 100.0)
 
         z_partial = _make_z(fr, 100.0).copy()
-        z_partial[:4] = np.nan           # 4 of 10 bad → CI = 0.6
+        z_partial[:4] = np.nan  # 4 of 10 bad → CI = 0.6
 
         z_bad = _make_z(fr, 100.0).copy()
-        z_bad[:8] = np.nan               # 8 of 10 bad → CI = 0.2
+        z_bad[:8] = np.nan  # 8 of 10 bad → CI = 0.2
 
         return [
-            _FakeSite("S_good",    z_good,    fr, east=0.0,    north=0.0),
-            _FakeSite("S_partial", z_partial, fr, east=300.0,  north=0.0),
-            _FakeSite("S_bad",     z_bad,     fr, east=600.0,  north=0.0),
+            _FakeSite("S_good", z_good, fr, east=0.0, north=0.0),
+            _FakeSite("S_partial", z_partial, fr, east=300.0, north=0.0),
+            _FakeSite("S_bad", z_bad, fr, east=600.0, north=0.0),
         ]
 
     def test_returns_axes(self):
@@ -747,25 +788,27 @@ class TestPlotConfidenceProfile:
     def test_has_two_threshold_lines(self):
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites)
-        hlines = [
-            l for l in ax.get_lines()
-            if l.get_linestyle() == "--"
-        ]
+        hlines = [l for l in ax.get_lines() if l.get_linestyle() == "--"]
         assert len(hlines) >= 2
         plt.close("all")
 
     def test_xlabel_contains_distance(self):
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites)
-        assert "distance" in ax.get_xlabel().lower() or \
-               "dist" in ax.get_xlabel().lower()
+        assert (
+            "distance" in ax.get_xlabel().lower()
+            or "dist" in ax.get_xlabel().lower()
+        )
         plt.close("all")
 
     def test_scatter_points_count(self):
         sites = self._sites_all_good(n=4)
         ax = plot_confidence_profile(sites)
-        colls = [coll for coll in ax.collections
-                 if isinstance(coll, PathCollection)]
+        colls = [
+            coll
+            for coll in ax.collections
+            if isinstance(coll, PathCollection)
+        ]
         n_pts = sum(len(c.get_offsets()) for c in colls)
         assert n_pts == 4
         plt.close("all")
@@ -781,7 +824,9 @@ class TestPlotConfidenceProfile:
     def test_custom_thresholds(self):
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites, ci_hi=0.80, ci_lo=0.40)
-        legend_text = " ".join(t.get_text() for t in ax.get_legend().get_texts())
+        legend_text = " ".join(
+            t.get_text() for t in ax.get_legend().get_texts()
+        )
         assert "0.80" in legend_text or "0.8" in legend_text
         assert "0.40" in legend_text or "0.4" in legend_text
         plt.close("all")
@@ -819,8 +864,14 @@ class TestPlotConfidenceProfile:
         tb = station_confidence_table(sites, method="composite")
 
         expected = {
-            "station", "distance_m", "confidence", "coverage",
-            "confidence_err", "offdiag", "diagonal", "phase",
+            "station",
+            "distance_m",
+            "confidence",
+            "coverage",
+            "confidence_err",
+            "offdiag",
+            "diagonal",
+            "phase",
             "spatial",
         }
         assert expected.issubset(tb.columns)
@@ -846,7 +897,9 @@ class TestPlotConfidenceProfile:
             assert not isinstance(out_default, APIFrame)
             assert "confidence" in out_default.columns
 
-            out_forced = station_confidence_table(sites, method="composite", api=True)
+            out_forced = station_confidence_table(
+                sites, method="composite", api=True
+            )
             assert isinstance(out_forced, APIFrame)
         finally:
             reset_api_view()
@@ -884,16 +937,26 @@ class TestPlotConfidenceProfile:
         tb = frequency_confidence_table(sites, method="composite")
 
         expected = {
-            "station", "frequency_hz", "log10_period", "confidence",
-            "confidence_err", "coverage", "offdiag", "diagonal",
-            "phase", "spatial", "flags",
+            "station",
+            "frequency_hz",
+            "log10_period",
+            "confidence",
+            "confidence_err",
+            "coverage",
+            "offdiag",
+            "diagonal",
+            "phase",
+            "spatial",
+            "flags",
         }
         assert expected.issubset(tb.columns)
         assert tb["confidence"].between(0.0, 1.0).all()
 
     def test_frequency_confidence_table_api_flag(self):
         sites = self._sites_mixed()
-        plain = frequency_confidence_table(sites, method="presence", api=False)
+        plain = frequency_confidence_table(
+            sites, method="presence", api=False
+        )
         view = frequency_confidence_table(sites, method="presence", api=True)
 
         assert isinstance(view, APIFrame)
@@ -949,7 +1012,6 @@ class TestPlotConfidenceProfile:
 
 
 class TestConfidenceFrequencyEditing:
-
     def _site_with_recoverable_rows(self):
         fr = _freqs(6)
         z = _make_z(fr, 100.0)
@@ -1047,7 +1109,9 @@ class TestConfidenceFrequencyEditing:
             ci_lo=0.50,
             reject="drop",
         )
-        plain = frequency_edit_report(before, out, method="presence", api=False)
+        plain = frequency_edit_report(
+            before, out, method="presence", api=False
+        )
         view = frequency_edit_report(before, out, method="presence", api=True)
 
         assert isinstance(view, APIFrame)
@@ -1084,7 +1148,9 @@ class TestConfidenceFrequencyEditing:
             ci_lo=0.50,
             reject="drop",
         )
-        plain = frequency_edit_decision_table(before, out, method="presence", api=False)
+        plain = frequency_edit_decision_table(
+            before, out, method="presence", api=False
+        )
         view = frequency_edit_decision_table(
             before,
             out,
@@ -1246,11 +1312,19 @@ class TestApplyEachInplaceSemantics:
         sites = []
         for i in range(n):
             if i == shift_idx:
-                sites.append(_shifted_site(f"S{i:02d}", rho=100.0, ss=ss,
-                                           east=i * 300.0, north=0.0))
+                sites.append(
+                    _shifted_site(
+                        f"S{i:02d}",
+                        rho=100.0,
+                        ss=ss,
+                        east=i * 300.0,
+                        north=0.0,
+                    )
+                )
             else:
-                sites.append(_site(f"S{i:02d}", rho=100.0,
-                                   east=i * 300.0, north=0.0))
+                sites.append(
+                    _site(f"S{i:02d}", rho=100.0, east=i * 300.0, north=0.0)
+                )
         return sites
 
     def test_inplace_false_preserves_original_and_changes_copy(self):

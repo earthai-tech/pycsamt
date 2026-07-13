@@ -70,9 +70,7 @@ def _install_stubs(monkeypatch):
     # NOTE: always inject via monkeypatch so the *real*
     # modules are restored after each test — plain
     # assignment here leaks fakes into every later test.
-    monkeypatch.setattr(
-        seg_edi, "EDIFile", EDIFile, raising=False
-    )
+    monkeypatch.setattr(seg_edi, "EDIFile", EDIFile, raising=False)
 
     seg_coll = sys.modules["pycsamt.seg.collection"]
 
@@ -87,7 +85,9 @@ def _install_stubs(monkeypatch):
             return len(self.items)
 
     monkeypatch.setattr(
-        seg_coll, "EDICollection", EDICollection,
+        seg_coll,
+        "EDICollection",
+        EDICollection,
         raising=False,
     )
 
@@ -116,9 +116,7 @@ def _install_stubs(monkeypatch):
                 return None, None, None
             raise KeyError(var)
 
-    monkeypatch.setattr(
-        zonge_avg, "AVG", AVG, raising=False
-    )
+    monkeypatch.setattr(zonge_avg, "AVG", AVG, raising=False)
 
     # ---- Jones stubs -----------------------------------------------------
     j_mod = sys.modules["pycsamt.jones.j"]
@@ -147,18 +145,14 @@ def _install_stubs(monkeypatch):
         def from_file(cls, path):
             return cls()
 
-    monkeypatch.setattr(
-        j_mod, "JFile", JFile, raising=False
-    )
+    monkeypatch.setattr(j_mod, "JFile", JFile, raising=False)
 
     jc_mod = sys.modules["pycsamt.jones.collection"]
 
     class JCollection(list):
         pass
 
-    monkeypatch.setattr(
-        jc_mod, "JCollection", JCollection, raising=False
-    )
+    monkeypatch.setattr(jc_mod, "JCollection", JCollection, raising=False)
 
     importlib.reload(tr)
     return tr, seg_coll, seg_edi, zonge_avg, j_mod, jc_mod
@@ -215,10 +209,12 @@ def test_j_to_edi_single_and_collection(tr_env):
     assert ed.Z._freq is not None and ed.Z._z is not None
 
     # collection
-    coll = jc_mod.JCollection([
-        j_mod.JFile(z=z, f=f),
-        j_mod.JFile(z=z, f=f),
-    ])
+    coll = jc_mod.JCollection(
+        [
+            j_mod.JFile(z=z, f=f),
+            j_mod.JFile(z=z, f=f),
+        ]
+    )
     out = tr.JtoEDI().transform(coll)
     assert isinstance(out, seg_coll.EDICollection)
     assert len(out) == 2

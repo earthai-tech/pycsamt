@@ -12,6 +12,7 @@ Training loop for EM neural networks.
 * Per-epoch progress display (``tqdm`` if available)
 * History dict for :func:`~pycsamt.ai.plot.convergence.plot_convergence`
 """
+
 from __future__ import annotations
 
 import time
@@ -23,6 +24,7 @@ __all__ = ["EMTrainer"]
 _TQDM_AVAILABLE = False
 try:
     from tqdm.auto import tqdm as _tqdm
+
     _TQDM_AVAILABLE = True
 except ImportError:
     pass
@@ -87,7 +89,10 @@ class EMTrainer:
         self.verbose = verbose
 
         self.history: dict[str, list] = {
-            "train_loss": [], "val_loss": [], "lr": [], "epoch_time": []
+            "train_loss": [],
+            "val_loss": [],
+            "lr": [],
+            "epoch_time": [],
         }
         self.best_epoch: int = 0
         self.best_val_loss: float = float("inf")
@@ -139,11 +144,16 @@ class EMTrainer:
         )
 
         train_loader = DataLoader(
-            train_ds, batch_size=self.batch_size, shuffle=True,
-            drop_last=False, pin_memory=(self.device != "cpu"),
+            train_ds,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=False,
+            pin_memory=(self.device != "cpu"),
         )
         val_loader = DataLoader(
-            val_ds, batch_size=self.batch_size * 2, shuffle=False,
+            val_ds,
+            batch_size=self.batch_size * 2,
+            shuffle=False,
         )
 
         patience_ctr = 0
@@ -176,7 +186,9 @@ class EMTrainer:
             else:
                 patience_ctr += 1
 
-            if self.verbose and (epoch % max(1, epochs // 20) == 0 or epoch == 1):
+            if self.verbose and (
+                epoch % max(1, epochs // 20) == 0 or epoch == 1
+            ):
                 print(
                     f"  Epoch {epoch:4d}/{epochs} | "
                     f"train={train_loss:.5f}  val={val_loss:.5f}  "
@@ -202,6 +214,7 @@ class EMTrainer:
 
     def _train_epoch(self, loader, optimiser, device, loss_fn) -> float:
         import torch
+
         self.model.train()
         total = 0.0
         n_batch = 0
@@ -223,6 +236,7 @@ class EMTrainer:
 
     def _eval_epoch(self, loader, device, loss_fn) -> float:
         import torch
+
         self.model.eval()
         total = 0.0
         n_batch = 0
@@ -240,13 +254,13 @@ class EMTrainer:
     def get_weights(self) -> dict[str, np.ndarray]:
         """Return model weights as numpy dict."""
         return {
-            k: v.cpu().numpy()
-            for k, v in self.model.state_dict().items()
+            k: v.cpu().numpy() for k, v in self.model.state_dict().items()
         }
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         """Restore weights from numpy dict."""
         import torch
+
         state = {k: torch.from_numpy(v) for k, v in weights.items()}
         self.model.load_state_dict(state)
 

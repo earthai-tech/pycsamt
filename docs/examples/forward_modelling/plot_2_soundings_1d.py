@@ -36,19 +36,25 @@ from pycsamt.forward import (
 # Use the multi-model comparison (5th figure) as the gallery thumbnail.
 # sphinx_gallery_thumbnail_number = 5
 
-M_SEDIMENTARY = LayeredModel([1_000., 20., 5., 300.], [200., 600., 1_500.],
-                             name="sedimentary")
-M_CRYSTALLINE = LayeredModel([800., 8_000., 600.], [2_000., 15_000.],
-                             name="crystalline")
-M_GEOTHERMAL = LayeredModel([500., 8., 250., 3_000.], [100., 400., 2_500.],
-                            name="geothermal")
-M_CONDUCTIVE = LayeredModel([200., 5., 400., 100.], [150., 500., 2_000.],
-                            name="conductive-layer")
-M_HALFSPACE = LayeredModel([100.], [], name="halfspace")
+M_SEDIMENTARY = LayeredModel(
+    [1_000.0, 20.0, 5.0, 300.0], [200.0, 600.0, 1_500.0], name="sedimentary"
+)
+M_CRYSTALLINE = LayeredModel(
+    [800.0, 8_000.0, 600.0], [2_000.0, 15_000.0], name="crystalline"
+)
+M_GEOTHERMAL = LayeredModel(
+    [500.0, 8.0, 250.0, 3_000.0], [100.0, 400.0, 2_500.0], name="geothermal"
+)
+M_CONDUCTIVE = LayeredModel(
+    [200.0, 5.0, 400.0, 100.0],
+    [150.0, 500.0, 2_000.0],
+    name="conductive-layer",
+)
+M_HALFSPACE = LayeredModel([100.0], [], name="halfspace")
 
-FREQS_MT = np.logspace(-3, 4, 35)     # broad MT/AMT band
-FREQS_CSAMT = np.logspace(1, 4, 25)   # CSAMT: 10 Hz - 10 kHz
-TIMES_TEM = np.logspace(-6, -2, 30)   # TEM gate times
+FREQS_MT = np.logspace(-3, 4, 35)  # broad MT/AMT band
+FREQS_CSAMT = np.logspace(1, 4, 25)  # CSAMT: 10 Hz - 10 kHz
+TIMES_TEM = np.logspace(-6, -2, 30)  # TEM gate times
 
 # Run the MT forward on every model once; reuse the responses below.
 R_SED = MT1DForward(FREQS_MT).run(M_SEDIMENTARY)
@@ -85,8 +91,10 @@ axs = plot_response_1d(R_GEO, title="Geothermal MT sounding")
 # run behaves as expected before trusting it downstream.
 
 fig = plot_response_and_model_1d(
-    R_COND, M_CONDUCTIVE,
-    title="Conductive-layer model - validate & save", figsize=(11, 4.5),
+    R_COND,
+    M_CONDUCTIVE,
+    title="Conductive-layer model - validate & save",
+    figsize=(11, 4.5),
 )
 
 # %%
@@ -94,8 +102,10 @@ fig = plot_response_and_model_1d(
 # shallow conductor and the response minimum explicit:
 
 fig = plot_response_and_model_1d(
-    R_GEO, M_GEOTHERMAL,
-    title="Geothermal model - validate & save", figsize=(11, 4.5),
+    R_GEO,
+    M_GEOTHERMAL,
+    title="Geothermal model - validate & save",
+    figsize=(11, 4.5),
 )
 
 # %%
@@ -108,9 +118,17 @@ fig = plot_response_and_model_1d(
 # (:obj:`~pycsamt.api.control.PYCSAMT_CONTROL`) so the styling matches
 # every other figure.
 
-fig, axs = plt.subplots(2, 1, figsize=(9, 6), sharex=True, constrained_layout=True)
+fig, axs = plt.subplots(
+    2, 1, figsize=(9, 6), sharex=True, constrained_layout=True
+)
 responses = [R_SED, R_CRYS, R_GEO, R_COND, R_HS]
-labels = ["sedimentary", "crystalline", "geothermal", "conductive-layer", "halfspace"]
+labels = [
+    "sedimentary",
+    "crystalline",
+    "geothermal",
+    "conductive-layer",
+    "halfspace",
+]
 colors = PYCSAMT_STYLE.multiline.colors(5)
 x = PYCSAMT_CONTROL.x.transform(FREQS_MT)
 for k, (resp, lab) in enumerate(zip(responses, labels)):
@@ -124,7 +142,9 @@ axs[0].set_ylabel(r"$\log_{10}\rho_a$  ($\Omega\cdot$m)", fontsize=9)
 axs[1].set_ylabel(r"Phase ($^\circ$)", fontsize=9)
 axs[1].set_xlabel(PYCSAMT_CONTROL.x.label(), fontsize=9)
 axs[0].legend(fontsize=8, ncol=2, framealpha=0.8)
-axs[0].set_title("MT1D sounding comparison - 5 geological scenarios", fontsize=9)
+axs[0].set_title(
+    "MT1D sounding comparison - 5 geological scenarios", fontsize=9
+)
 
 # %%
 # 5. The CSAMT sounding
@@ -136,8 +156,10 @@ axs[0].set_title("MT1D sounding comparison - 5 geological scenarios", fontsize=9
 
 R_SED_CSAMT = CSAMT1DForward(FREQS_CSAMT).run(M_SEDIMENTARY)
 fig = plot_response_and_model_1d(
-    R_SED_CSAMT, M_SEDIMENTARY,
-    title="CSAMT sounding - sedimentary model", figsize=(11, 4.5),
+    R_SED_CSAMT,
+    M_SEDIMENTARY,
+    title="CSAMT sounding - sedimentary model",
+    figsize=(11, 4.5),
 )
 
 # %%
@@ -150,9 +172,18 @@ fig = plot_response_and_model_1d(
 
 R_TEM = TEM1DForward(TIMES_TEM, loop_radius=50.0).run(M_CONDUCTIVE)
 fig, ax = plt.subplots(figsize=(7, 4), constrained_layout=True)
-ax.loglog(R_TEM.times, np.abs(R_TEM.dBz_dt), color=PYCSAMT_STYLE.mt.te.color,
-          lw=1.6, marker="o", ms=3.5, mfc="white", mew=1.0, alpha=0.9,
-          label="TEM step-off")
+ax.loglog(
+    R_TEM.times,
+    np.abs(R_TEM.dBz_dt),
+    color=PYCSAMT_STYLE.mt.te.color,
+    lw=1.6,
+    marker="o",
+    ms=3.5,
+    mfc="white",
+    mew=1.0,
+    alpha=0.9,
+    label="TEM step-off",
+)
 ax.set_xlabel("Time  (s)", fontsize=9)
 ax.set_ylabel(r"$|d\mathbf{B}_z/dt|$  (T/s)", fontsize=9)
 ax.set_title("TEM1D step-off dBz/dt response (50 m loop)", fontsize=9, pad=6)

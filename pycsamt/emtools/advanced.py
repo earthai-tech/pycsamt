@@ -27,6 +27,7 @@ plot_sensitivity_depth_section
     drawn as a coloured bar centred on its Bostick depth, width ∝ sensitivity
     window, colour ∝ ρa.  Shows *where* in depth the data are sensitive.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -70,7 +71,7 @@ __all__ = [
     "plot_z_invariants_section",
 ]
 
-_MU0 = 4.0 * np.pi * 1e-7   # magnetic permeability [H/m]
+_MU0 = 4.0 * np.pi * 1e-7  # magnetic permeability [H/m]
 _COMP_IDX = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}
 
 
@@ -96,13 +97,16 @@ def _axes_list(axes: Any, n: int, *, label: str = "axes") -> list[Any] | None:
     else:
         out = [axes]
     if len(out) < n:
-        raise ValueError(f"{label} must provide at least {n} axes; got {len(out)}.")
+        raise ValueError(
+            f"{label} must provide at least {n} axes; got {len(out)}."
+        )
     return out[:n]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Impedance Mohr Circles
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_impedance_mohr_circles(
     sites: Any,
@@ -176,8 +180,13 @@ def plot_impedance_mohr_circles(
     >>> from pycsamt.emtools.advanced import plot_impedance_mohr_circles
     >>> fig = plot_impedance_mohr_circles(sites, station="S12")
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     st_name = None
     ed_pick = None
     for ii, ed in enumerate(_iter_items(S)):
@@ -232,26 +241,40 @@ def plot_impedance_mohr_circles(
             traj_im_x.append(Zr[ri0, ci0].imag)
             traj_im_y.append(Zr[ri1, ci1].imag)
         # close the loop
-        traj_re_x.append(traj_re_x[0]); traj_re_y.append(traj_re_y[0])
-        traj_im_x.append(traj_im_x[0]); traj_im_y.append(traj_im_y[0])
+        traj_re_x.append(traj_re_x[0])
+        traj_re_y.append(traj_re_y[0])
+        traj_im_x.append(traj_im_x[0])
+        traj_im_y.append(traj_im_y[0])
 
         ax_re.plot(traj_re_x, traj_re_y, color=col, lw=1.2, alpha=alpha)
         ax_im.plot(traj_im_x, traj_im_y, color=col, lw=1.2, alpha=alpha)
         if mark_zero:
-            ax_re.plot(traj_re_x[0], traj_re_y[0], "o", ms=4, color=col, zorder=5)
-            ax_im.plot(traj_im_x[0], traj_im_y[0], "o", ms=4, color=col, zorder=5)
+            ax_re.plot(
+                traj_re_x[0], traj_re_y[0], "o", ms=4, color=col, zorder=5
+            )
+            ax_im.plot(
+                traj_im_x[0], traj_im_y[0], "o", ms=4, color=col, zorder=5
+            )
 
     for ax, half in ((ax_re, "Re"), (ax_im, "Im")):
         ax.axhline(0, color="0.55", lw=0.7, ls=":")
         ax.axvline(0, color="0.55", lw=0.7, ls=":")
         ax.set_aspect("equal", adjustable="datalim")
-        ax.set_xlabel(f"$\\{half}\\,(Z_{{\\rm {components[0].upper()}}})$  (Ω)", fontsize=9)
-        ax.set_ylabel(f"$\\{half}\\,(Z_{{\\rm {components[1].upper()}}})$  (Ω)", fontsize=9)
+        ax.set_xlabel(
+            f"$\\{half}\\,(Z_{{\\rm {components[0].upper()}}})$  (Ω)",
+            fontsize=9,
+        )
+        ax.set_ylabel(
+            f"$\\{half}\\,(Z_{{\\rm {components[1].upper()}}})$  (Ω)",
+            fontsize=9,
+        )
         ax.set_title(f"{half}(Z) Mohr circles", fontsize=9, fontweight="bold")
         ax.grid(True, alpha=0.2, lw=0.5)
         ax.tick_params(labelsize=8)
 
-    fig.subplots_adjust(left=0.08, right=0.87, top=0.90, bottom=0.10, wspace=0.35)
+    fig.subplots_adjust(
+        left=0.08, right=0.87, top=0.90, bottom=0.10, wspace=0.35
+    )
     cax = fig.add_axes([0.895, 0.15, 0.018, 0.68])
     sm = ScalarMappable(cmap=cmap_obj, norm=norm_p)
     sm.set_array([])
@@ -261,7 +284,8 @@ def plot_impedance_mohr_circles(
 
     fig.suptitle(
         title or f"Impedance Mohr circles — {st_name}",
-        fontsize=10, fontweight="bold",
+        fontsize=10,
+        fontweight="bold",
     )
     return fig
 
@@ -269,6 +293,7 @@ def plot_impedance_mohr_circles(
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Z-T Argand Trajectory
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_zt_argand(
     sites: Any,
@@ -338,13 +363,20 @@ def plot_zt_argand(
     >>> fig = plot_zt_argand(sites, station="S12",
     ...                      components=("xy","yx"), normalize=False)
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
-    st_name = None; ed_pick = None
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    st_name = None
+    ed_pick = None
     for ii, ed in enumerate(_iter_items(S)):
         nm = _name(ed, ii)
         if station is None or nm == station:
-            st_name, ed_pick = nm, ed; break
+            st_name, ed_pick = nm, ed
+            break
     if ed_pick is None:
         raise RuntimeError(f"Station {station!r} not found.")
 
@@ -358,9 +390,11 @@ def plot_zt_argand(
     if period_range is not None:
         lo, hi = float(period_range[0]), float(period_range[1])
         mask &= (per >= lo) & (per <= hi)
-    per = per[mask]; z = z[mask]
+    per = per[mask]
+    z = z[mask]
     order = np.argsort(per)
-    per = per[order]; z = z[order]
+    per = per[order]
+    z = z[order]
 
     n_comp = len(components)
     axes_given = _axes_list(axes, n_comp)
@@ -387,32 +421,55 @@ def plot_zt_argand(
         if normalize:
             scale = np.abs(vals).max() + 1e-30
             vals = vals / scale
-        re_v = vals.real; im_v = vals.imag
+        re_v = vals.real
+        im_v = vals.imag
         cmap_obj(lper_norm)
 
         # gradient coloured line segments
         for k in range(len(per) - 1):
-            ax.plot(re_v[k:k+2], im_v[k:k+2],
-                    color=cmap_obj((lper_norm[k]+lper_norm[k+1])/2),
-                    lw=lw, solid_capstyle="round")
+            ax.plot(
+                re_v[k : k + 2],
+                im_v[k : k + 2],
+                color=cmap_obj((lper_norm[k] + lper_norm[k + 1]) / 2),
+                lw=lw,
+                solid_capstyle="round",
+            )
         ax.scatter(re_v, im_v, c=lper_norm, cmap=cmap, s=ms**2, zorder=4)
 
         # direction arrows
-        for k in range(0, len(per)-1, arrow_every):
-            dx = re_v[k+1] - re_v[k]
-            dy = im_v[k+1] - im_v[k]
-            ax.annotate("",
-                xy=(re_v[k]+0.6*dx, im_v[k]+0.6*dy),
+        for k in range(0, len(per) - 1, arrow_every):
+            dx = re_v[k + 1] - re_v[k]
+            dy = im_v[k + 1] - im_v[k]
+            ax.annotate(
+                "",
+                xy=(re_v[k] + 0.6 * dx, im_v[k] + 0.6 * dy),
                 xytext=(re_v[k], im_v[k]),
-                arrowprops=dict(arrowstyle="-|>", color="0.3",
-                                lw=0.6, mutation_scale=8),
+                arrowprops=dict(
+                    arrowstyle="-|>", color="0.3", lw=0.6, mutation_scale=8
+                ),
             )
 
         # mark start (short T) and end (long T)
-        ax.plot(re_v[0], im_v[0], "*", ms=9, color="gold", zorder=6,
-                markeredgecolor="0.3", markeredgewidth=0.5)
-        ax.plot(re_v[-1], im_v[-1], "^", ms=7, color="red", zorder=6,
-                markeredgecolor="0.3", markeredgewidth=0.5)
+        ax.plot(
+            re_v[0],
+            im_v[0],
+            "*",
+            ms=9,
+            color="gold",
+            zorder=6,
+            markeredgecolor="0.3",
+            markeredgewidth=0.5,
+        )
+        ax.plot(
+            re_v[-1],
+            im_v[-1],
+            "^",
+            ms=7,
+            color="red",
+            zorder=6,
+            markeredgecolor="0.3",
+            markeredgewidth=0.5,
+        )
 
         ax.axhline(0, color="0.55", lw=0.7, ls=":")
         ax.axvline(0, color="0.55", lw=0.7, ls=":")
@@ -420,19 +477,30 @@ def plot_zt_argand(
         unit = "" if normalize else "  (Ω)"
         ax.set_xlabel(f"Re($Z_{{\\rm {comp.upper()}}}$){unit}", fontsize=9)
         ax.set_ylabel(f"Im($Z_{{\\rm {comp.upper()}}}$){unit}", fontsize=9)
-        ax.set_title(f"$Z_{{\\rm {comp.upper()}}}$ trajectory", fontsize=9, fontweight="bold")
+        ax.set_title(
+            f"$Z_{{\\rm {comp.upper()}}}$ trajectory",
+            fontsize=9,
+            fontweight="bold",
+        )
         ax.grid(True, alpha=0.2, lw=0.5)
         ax.tick_params(labelsize=8)
 
-    fig.subplots_adjust(left=0.08, right=0.87, top=0.90, bottom=0.10, wspace=0.35)
+    fig.subplots_adjust(
+        left=0.08, right=0.87, top=0.90, bottom=0.10, wspace=0.35
+    )
     cax = fig.add_axes([0.895, 0.15, 0.018, 0.68])
-    sm = ScalarMappable(cmap=cmap_obj, norm=Normalize(vmin=lper.min(), vmax=lper.max()))
+    sm = ScalarMappable(
+        cmap=cmap_obj, norm=Normalize(vmin=lper.min(), vmax=lper.max())
+    )
     sm.set_array([])
     cb = fig.colorbar(sm, cax=cax)
     cb.set_label("$\\log_{10}$(Period / s)", fontsize=8)
     cb.ax.tick_params(labelsize=7)
-    fig.suptitle(title or f"Impedance Argand trajectory — {st_name}",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(
+        title or f"Impedance Argand trajectory — {st_name}",
+        fontsize=10,
+        fontweight="bold",
+    )
     return fig
 
 
@@ -441,12 +509,14 @@ def plot_zt_argand(
 # ─────────────────────────────────────────────────────────────────────────────
 
 _FINGERPRINT_QUANTITIES = {
-    "skew":   dict(label="Skew β (°)",          cmap="RdBu_r",   sym=True,  pct=(5,95)),
-    "ellipt": dict(label="Ellipticity λ",        cmap="viridis",  sym=False, pct=(2,98)),
-    "theta":  dict(label="Strike θ (°)",         cmap="hsv",      sym=False, pct=(2,98)),
-    "s1":     dict(label="φ_max",                cmap="plasma",   sym=False, pct=(5,95)),
-    "s2":     dict(label="φ_min",                cmap="plasma",   sym=False, pct=(5,95)),
-    "beta":   dict(label="|β| (°)",              cmap="Reds",     sym=False, pct=(5,95)),
+    "skew": dict(label="Skew β (°)", cmap="RdBu_r", sym=True, pct=(5, 95)),
+    "ellipt": dict(
+        label="Ellipticity λ", cmap="viridis", sym=False, pct=(2, 98)
+    ),
+    "theta": dict(label="Strike θ (°)", cmap="hsv", sym=False, pct=(2, 98)),
+    "s1": dict(label="φ_max", cmap="plasma", sym=False, pct=(5, 95)),
+    "s2": dict(label="φ_min", cmap="plasma", sym=False, pct=(5, 95)),
+    "beta": dict(label="|β| (°)", cmap="Reds", sym=False, pct=(5, 95)),
 }
 
 
@@ -510,13 +580,15 @@ def plot_survey_fingerprint(
     >>> fig = plot_survey_fingerprint(all_sites, period_range=(1e-4, 1.0))
     """
 
-
     if quantities is None:
         quantities = ["skew", "ellipt", "theta", "s1"]
 
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     axes_given = _axes_list(axes, 1) if axes is not None else None
     if df.empty:
@@ -533,16 +605,19 @@ def plot_survey_fingerprint(
         df = df[(df["period"] >= lo) & (df["period"] <= hi)]
 
     # station order
-    all_stations = (list(df["station"].unique())
-                    if station_order is None else station_order)
+    all_stations = (
+        list(df["station"].unique())
+        if station_order is None
+        else station_order
+    )
     n_sta = len(all_stations)
 
     # common log-period grid
     all_per = df["period"].to_numpy(float)
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     n_grid = 40
-    per_grid = np.logspace(np.log10(max(p_lo, 1e-6)),
-                           np.log10(p_hi), n_grid)
+    per_grid = np.logspace(np.log10(max(p_lo, 1e-6)), np.log10(p_hi), n_grid)
 
     n_q = len(quantities)
     if figsize is None:
@@ -552,9 +627,14 @@ def plot_survey_fingerprint(
     if axes_given is None:
         fig = plt.figure(figsize=figsize, constrained_layout=False)
         gs = gridspec.GridSpec(
-            n_q, 1, figure=fig,
-            hspace=0.35, left=0.12, right=0.88,
-            top=0.92, bottom=0.06,
+            n_q,
+            1,
+            figure=fig,
+            hspace=0.35,
+            left=0.12,
+            right=0.88,
+            top=0.92,
+            bottom=0.06,
         )
     else:
         fig = axes_given[0].figure
@@ -564,11 +644,19 @@ def plot_survey_fingerprint(
         if qty not in _FINGERPRINT_QUANTITIES:
             continue
         qmeta = _FINGERPRINT_QUANTITIES[qty]
-        col = qty if qty in df.columns else ("beta" if qty == "|beta|" else None)
+        col = (
+            qty
+            if qty in df.columns
+            else ("beta" if qty == "|beta|" else None)
+        )
         if col is None or col not in df.columns:
             continue
 
-        ax = axes_given[qi] if axes_given is not None else fig.add_subplot(gs[qi])
+        ax = (
+            axes_given[qi]
+            if axes_given is not None
+            else fig.add_subplot(gs[qi])
+        )
 
         # build station × period image
         img = np.full((n_grid, n_sta), np.nan)
@@ -580,15 +668,20 @@ def plot_survey_fingerprint(
             v_s = sdf[col].to_numpy(float)
             for gi, pg in enumerate(per_grid):
                 j = int(np.argmin(np.abs(p_s - pg)))
-                if np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30)) < 0.25:
+                if (
+                    np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30))
+                    < 0.25
+                ):
                     img[gi, si] = v_s[j]
 
         # colour limits
         vv = img[np.isfinite(img)]
         if vv.size == 0:
             continue
-        lo_p, hi_p = float(np.percentile(vv, qmeta["pct"][0])), \
-                     float(np.percentile(vv, qmeta["pct"][1]))
+        lo_p, hi_p = (
+            float(np.percentile(vv, qmeta["pct"][0])),
+            float(np.percentile(vv, qmeta["pct"][1])),
+        )
         if qmeta["sym"] and lo_p != hi_p:
             vmax = max(abs(lo_p), abs(hi_p))
             vmin, vmax = -vmax, vmax
@@ -604,45 +697,60 @@ def plot_survey_fingerprint(
             origin="upper",
             extent=[0, n_sta, np.log10(per_grid[-1]), np.log10(per_grid[0])],
             cmap=cmap_obj,
-            vmin=vmin, vmax=vmax,
+            vmin=vmin,
+            vmax=vmax,
             interpolation="nearest",
         )
 
         # axes decoration
         ax.set_ylabel(qmeta["label"], fontsize=8)
         ax.tick_params(axis="y", labelsize=7)
-        ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+        ax.tick_params(
+            axis="x", which="both", bottom=False, labelbottom=False
+        )
         if qi == 0:
             PYCSAMT_STATION_RENDERING.apply(
-                ax, np.arange(n_sta, dtype=float) + 0.5, all_stations,
+                ax,
+                np.arange(n_sta, dtype=float) + 0.5,
+                all_stations,
                 preset="pseudosection",
                 xlim=(0, n_sta),
             )
 
         # y axis: log period labels
-        y_ticks = [t for t in np.arange(
-            int(np.log10(per_grid[0])) - 1,
-            int(np.log10(per_grid[-1])) + 2,
-        ) if np.log10(per_grid[0]) <= t <= np.log10(per_grid[-1])]
+        y_ticks = [
+            t
+            for t in np.arange(
+                int(np.log10(per_grid[0])) - 1,
+                int(np.log10(per_grid[-1])) + 2,
+            )
+            if np.log10(per_grid[0]) <= t <= np.log10(per_grid[-1])
+        ]
         ax.set_yticks(y_ticks)
-        ax.set_yticklabels([f"$10^{{{int(t)}}}$" for t in y_ticks], fontsize=7)
+        ax.set_yticklabels(
+            [f"$10^{{{int(t)}}}$" for t in y_ticks], fontsize=7
+        )
 
         # colorbar
         cax = ax.inset_axes([1.01, 0.05, 0.015, 0.9])
-        cb  = fig.colorbar(im, cax=cax)
+        cb = fig.colorbar(im, cax=cax)
         cb.ax.tick_params(labelsize=6)
 
     if title:
         fig.suptitle(title, fontsize=10, fontweight="bold")
     else:
-        fig.suptitle("Survey fingerprint  (phase-tensor metrics)", fontsize=10,
-                     fontweight="bold")
+        fig.suptitle(
+            "Survey fingerprint  (phase-tensor metrics)",
+            fontsize=10,
+            fontweight="bold",
+        )
     return fig
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Sensitivity Depth Section
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_sensitivity_depth_section(
     sites: Any,
@@ -717,13 +825,18 @@ def plot_sensitivity_depth_section(
     >>> fig = plot_sensitivity_depth_section(sites, component="xy",
     ...                                     depth_max=5.0)
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     ri, ci = _COMP_IDX[component.lower()]
 
     rows = []
     for i, ed in enumerate(_iter_items(S)):
-        st  = _name(ed, i)
+        st = _name(ed, i)
         Z_o, z, fr = _get_z_block(ed)
         if z is None:
             continue
@@ -742,36 +855,51 @@ def plot_sensitivity_depth_section(
             d_b = float(np.sqrt(rho_c[k] / (_MU0 * 2 * np.pi * fr[k])))
             # sensitivity half-width via finite-difference d(log rho)/d(log T)
             if k > 0 and k < len(fr) - 1:
-                dlr = (np.log10(max(rho_c[k+1], 1e-6)) -
-                       np.log10(max(rho_c[k-1], 1e-6)))
-                dlt = np.log10(max(per[k+1], 1e-30)) - np.log10(max(per[k-1], 1e-30))
+                dlr = np.log10(max(rho_c[k + 1], 1e-6)) - np.log10(
+                    max(rho_c[k - 1], 1e-6)
+                )
+                dlt = np.log10(max(per[k + 1], 1e-30)) - np.log10(
+                    max(per[k - 1], 1e-30)
+                )
                 slope = (dlr / dlt) if dlt != 0 else 0.0
             else:
                 slope = 0.0
             sens_half = d_b * abs(slope + 1.0) / 2.0 * 0.7
-            rows.append(dict(station=st, period=per[k], rho=rho_c[k],
-                             depth=d_b, sens_half=sens_half))
+            rows.append(
+                dict(
+                    station=st,
+                    period=per[k],
+                    rho=rho_c[k],
+                    depth=d_b,
+                    sens_half=sens_half,
+                )
+            )
 
     if not rows:
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize or (10, 5))
         else:
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
     import pandas as _pd
+
     df = _pd.DataFrame(rows)
 
     # station order
-    all_st = (station_order if station_order is not None
-              else list(df["station"].unique()))
+    all_st = (
+        station_order
+        if station_order is not None
+        else list(df["station"].unique())
+    )
     n_st = len(all_st)
     st_pos = {st: i for i, st in enumerate(all_st)}
     bar_w = bar_width_fraction
 
     d_scale = 1.0 if depth_unit == "m" else 1e-3
-    df["depth_plot"]      = df["depth"]      * d_scale
-    df["sens_half_plot"]  = df["sens_half"]  * d_scale
+    df["depth_plot"] = df["depth"] * d_scale
+    df["sens_half_plot"] = df["sens_half"] * d_scale
 
     rho_all = df["rho"].to_numpy(float)
     if rho_lim is not None:
@@ -797,27 +925,41 @@ def plot_sensitivity_depth_section(
         fig = ax.figure
 
     for _, row in df.iterrows():
-        st   = row["station"]
+        st = row["station"]
         if st not in st_pos:
             continue
-        xi   = float(st_pos[st])
-        d    = float(row["depth_plot"])
-        dh   = max(float(row["sens_half_plot"]), d * 0.05)
-        rho  = float(row["rho"])
-        col  = cmap_obj(log_norm(np.clip(rho, vmin, vmax)))
+        xi = float(st_pos[st])
+        d = float(row["depth_plot"])
+        dh = max(float(row["sens_half_plot"]), d * 0.05)
+        rho = float(row["rho"])
+        col = cmap_obj(log_norm(np.clip(rho, vmin, vmax)))
         d_lo = max(0.0, d - dh)
         d_hi = min(d_max_plot, d + dh)
-        ax.add_patch(plt.Rectangle(
-            (xi - bar_w/2, d_lo), bar_w, d_hi - d_lo,
-            facecolor=col, edgecolor="none", alpha=alpha_bar,
-        ))
+        ax.add_patch(
+            plt.Rectangle(
+                (xi - bar_w / 2, d_lo),
+                bar_w,
+                d_hi - d_lo,
+                facecolor=col,
+                edgecolor="none",
+                alpha=alpha_bar,
+            )
+        )
         if show_bostick_depth:
-            ax.plot([xi - bar_w/2, xi + bar_w/2], [d, d],
-                    color="k", lw=0.5, alpha=0.4, zorder=3)
+            ax.plot(
+                [xi - bar_w / 2, xi + bar_w / 2],
+                [d, d],
+                color="k",
+                lw=0.5,
+                alpha=0.4,
+                zorder=3,
+            )
 
     ax.set_ylim(d_max_plot, 0)
     PYCSAMT_STATION_RENDERING.apply(
-        ax, np.arange(n_st, dtype=float), all_st,
+        ax,
+        np.arange(n_st, dtype=float),
+        all_st,
         preset="pseudosection",
         xlim=(-0.5, n_st - 0.5),
     )
@@ -832,9 +974,11 @@ def plot_sensitivity_depth_section(
     cb.ax.tick_params(labelsize=7)
 
     ax.set_title(
-        title or
-        f"Bostick sensitivity-kernel section  (Z$_{{\\rm {component.upper()}}}$)",
-        fontsize=10, fontweight="bold", pad=8,
+        title
+        or f"Bostick sensitivity-kernel section  (Z$_{{\\rm {component.upper()}}}$)",
+        fontsize=10,
+        fontweight="bold",
+        pad=8,
     )
     fig.tight_layout()
     return fig
@@ -844,6 +988,7 @@ def plot_sensitivity_depth_section(
 # 5. Dimensionality Ternary Diagram
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _ternary_coords(u1, u2, u3):
     """Map (1D, 2D, 3D) soft memberships to 2-D Cartesian ternary coords."""
     # vertices: 1D=(0,0), 2D=(1,0), 3D=(0.5, sqrt(3)/2)
@@ -852,36 +997,60 @@ def _ternary_coords(u1, u2, u3):
     return x, y
 
 
-def _draw_ternary_frame(ax, labels=("1-D", "2-D", "3-D"),
-                        gridlines=(0.25, 0.50, 0.75)):
+def _draw_ternary_frame(
+    ax, labels=("1-D", "2-D", "3-D"), gridlines=(0.25, 0.50, 0.75)
+):
     """Draw the ternary triangle, axis labels, and grid lines."""
     tri_x = [0.0, 1.0, 0.5, 0.0]
-    tri_y = [0.0, 0.0, np.sqrt(3)/2, 0.0]
+    tri_y = [0.0, 0.0, np.sqrt(3) / 2, 0.0]
     ax.plot(tri_x, tri_y, "k-", lw=1.5, zorder=5)
 
     # grid lines parallel to each axis
     for frac in gridlines:
         # parallel to 1D–2D edge (constant 3D fraction)
-        x0, y0 = _ternary_coords(frac, 1-frac, 0)
-        x1, y1 = _ternary_coords(0, 1-frac, frac)
+        x0, y0 = _ternary_coords(frac, 1 - frac, 0)
+        x1, y1 = _ternary_coords(0, 1 - frac, frac)
         ax.plot([x0, x1], [y0, y1], ":", color="0.72", lw=0.6, zorder=2)
         # parallel to 2D–3D edge (constant 1D fraction)
-        x0, y0 = _ternary_coords(0, frac, 1-frac)
-        x1, y1 = _ternary_coords(1-frac, 0, frac)
+        x0, y0 = _ternary_coords(0, frac, 1 - frac)
+        x1, y1 = _ternary_coords(1 - frac, 0, frac)
         ax.plot([x0, x1], [y0, y1], ":", color="0.72", lw=0.6, zorder=2)
         # parallel to 1D–3D edge (constant 2D fraction)
-        x0, y0 = _ternary_coords(frac, 0, 1-frac)
-        x1, y1 = _ternary_coords(0, frac, 1-frac)
+        x0, y0 = _ternary_coords(frac, 0, 1 - frac)
+        x1, y1 = _ternary_coords(0, frac, 1 - frac)
         ax.plot([x0, x1], [y0, y1], ":", color="0.72", lw=0.6, zorder=2)
 
     # corner labels
-    ax.text(-0.06,  -0.04, labels[0], ha="center", va="top",  fontsize=10, fontweight="bold")
-    ax.text( 1.06,  -0.04, labels[1], ha="center", va="top",  fontsize=10, fontweight="bold")
-    ax.text( 0.50,   np.sqrt(3)/2 + 0.04, labels[2],
-             ha="center", va="bottom", fontsize=10, fontweight="bold")
+    ax.text(
+        -0.06,
+        -0.04,
+        labels[0],
+        ha="center",
+        va="top",
+        fontsize=10,
+        fontweight="bold",
+    )
+    ax.text(
+        1.06,
+        -0.04,
+        labels[1],
+        ha="center",
+        va="top",
+        fontsize=10,
+        fontweight="bold",
+    )
+    ax.text(
+        0.50,
+        np.sqrt(3) / 2 + 0.04,
+        labels[2],
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold",
+    )
 
     ax.set_xlim(-0.12, 1.12)
-    ax.set_ylim(-0.10, np.sqrt(3)/2 + 0.12)
+    ax.set_ylim(-0.10, np.sqrt(3) / 2 + 0.12)
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -957,8 +1126,11 @@ def plot_dimensionality_ternary(
     ...                                   ellipt_thresh=0.1)
     """
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if df.empty:
         if ax is None:
@@ -973,11 +1145,11 @@ def plot_dimensionality_ternary(
         df = df[(df["period"] >= lo) & (df["period"] <= hi)]
 
     ellipt = df["ellipt"].to_numpy(float)
-    beta   = np.abs(df["beta"].to_numpy(float))
-    per    = df["period"].to_numpy(float)
+    beta = np.abs(df["beta"].to_numpy(float))
+    per = df["period"].to_numpy(float)
 
     # soft memberships (sum = 1)
-    u3d = np.clip(beta   / float(beta_thresh),   0.0, 1.0)
+    u3d = np.clip(beta / float(beta_thresh), 0.0, 1.0)
     u1d = (1 - u3d) * np.clip(1.0 - ellipt / float(ellipt_thresh), 0.0, 1.0)
     u2d = 1.0 - u1d - u3d
 
@@ -1012,11 +1184,19 @@ def plot_dimensionality_ternary(
     _draw_ternary_frame(ax)
 
     if add_density:
-        ax.hexbin(x, y, gridsize=20, cmap="Greys", alpha=0.25, zorder=1,
-                  extent=[0, 1, 0, np.sqrt(3)/2])
+        ax.hexbin(
+            x,
+            y,
+            gridsize=20,
+            cmap="Greys",
+            alpha=0.25,
+            zorder=1,
+            extent=[0, 1, 0, np.sqrt(3) / 2],
+        )
 
-    sc = ax.scatter(x, y, c=c_vals, cmap=cm, s=ms**2, alpha=alpha,
-                    linewidths=0, zorder=4)
+    sc = ax.scatter(
+        x, y, c=c_vals, cmap=cm, s=ms**2, alpha=alpha, linewidths=0, zorder=4
+    )
     cb = fig.colorbar(sc, ax=ax, fraction=0.03, pad=0.02, shrink=0.7)
     cb.set_label(cb_label, fontsize=8)
     cb.ax.tick_params(labelsize=7)
@@ -1028,28 +1208,49 @@ def plot_dimensionality_ternary(
     x_line = np.linspace(0, 1 - u3_half, 50)
     u1_line = np.clip(1 - u3_half - x_line, 0, 1)
     x_l, y_l = _ternary_coords(u1_line, x_line, np.full_like(x_line, u3_half))
-    ax.plot(x_l, y_l, "--", color="tomato", lw=1.2, alpha=0.7,
-            label=f"|β| = {beta_thresh/2:.1f}°")
+    ax.plot(
+        x_l,
+        y_l,
+        "--",
+        color="tomato",
+        lw=1.2,
+        alpha=0.7,
+        label=f"|β| = {beta_thresh / 2:.1f}°",
+    )
     # line where ellipt = ellipt_thresh (given u3d = 0)
     u2_line = np.linspace(0, 1, 50)
     u1_line = 1 - u2_line
     x_l, y_l = _ternary_coords(u1_line, u2_line, np.zeros_like(u2_line))
     # mark the point where u2=ellipt_thresh
     xi, yi = _ternary_coords(
-        np.array([1 - ellipt_thresh/1.0]),
-        np.array([min(ellipt_thresh/1.0, 1.0)]),
+        np.array([1 - ellipt_thresh / 1.0]),
+        np.array([min(ellipt_thresh / 1.0, 1.0)]),
         np.array([0.0]),
     )
-    ax.plot(xi, yi, "^", ms=9, color="steelblue", zorder=6,
-            label=f"λ = {ellipt_thresh:.2f}")
+    ax.plot(
+        xi,
+        yi,
+        "^",
+        ms=9,
+        color="steelblue",
+        zorder=6,
+        label=f"λ = {ellipt_thresh:.2f}",
+    )
 
-    ax.legend(fontsize=8, loc="lower center", framealpha=0.85,
-              bbox_to_anchor=(0.5, -0.05), ncol=2)
+    ax.legend(
+        fontsize=8,
+        loc="lower center",
+        framealpha=0.85,
+        bbox_to_anchor=(0.5, -0.05),
+        ncol=2,
+    )
     ax.set_title(
-        title or
-        f"Dimensionality ternary  (β$_{{thresh}}$={beta_thresh}°, "
+        title
+        or f"Dimensionality ternary  (β$_{{thresh}}$={beta_thresh}°, "
         f"λ$_{{thresh}}$={ellipt_thresh})",
-        fontsize=10, fontweight="bold", pad=12,
+        fontsize=10,
+        fontweight="bold",
+        pad=12,
     )
     fig.tight_layout()
     return fig
@@ -1069,8 +1270,9 @@ _RADAR_LABELS = [
 ]
 
 
-def _distortion_params(z: np.ndarray, rho: np.ndarray, phase: np.ndarray,
-                       fr: np.ndarray) -> np.ndarray:
+def _distortion_params(
+    z: np.ndarray, rho: np.ndarray, phase: np.ndarray, fr: np.ndarray
+) -> np.ndarray:
     """Return 6 distortion proxies in [0,1] for a single station."""
     a, b = z[:, 0, 0], z[:, 0, 1]
     c, d = z[:, 1, 0], z[:, 1, 1]
@@ -1082,44 +1284,57 @@ def _distortion_params(z: np.ndarray, rho: np.ndarray, phase: np.ndarray,
     p_swift = float(np.nanmedian(swift / (1 + swift)))
 
     # 2. Bahr η = |(Zxy + Zyx)| / |(Zxy − Zyx)|  → normalise
-    bahr_num  = np.abs(b + c)
-    bahr_den  = np.abs(b - c) + 1e-30
-    bahr_eta  = bahr_num / bahr_den
-    p_bahr    = float(np.nanmedian(bahr_eta / (1 + bahr_eta)))
+    bahr_num = np.abs(b + c)
+    bahr_den = np.abs(b - c) + 1e-30
+    bahr_eta = bahr_num / bahr_den
+    p_bahr = float(np.nanmedian(bahr_eta / (1 + bahr_eta)))
 
     # 3. Phase asymmetry = |φ_xy + φ_yx − 180°| / 90°
-    phi_xy = phase[:, 0, 1]; phi_yx = phase[:, 1, 0]
+    phi_xy = phase[:, 0, 1]
+    phi_yx = phase[:, 1, 0]
     p_asym = float(np.nanmedian(np.abs(phi_xy + phi_yx - 180.0) / 90.0))
     p_asym = np.clip(p_asym, 0.0, 1.0)
 
     # 4. |β| (skewness) from PT — approximate as arctan(|Zxx+Zyy|/|Zxy-Zyx|)/90
-    p_beta = float(np.nanmedian(np.degrees(np.arctan(swift_num / (swift_den + 1e-30))))) / 45.0
+    p_beta = (
+        float(
+            np.nanmedian(
+                np.degrees(np.arctan(swift_num / (swift_den + 1e-30)))
+            )
+        )
+        / 45.0
+    )
     p_beta = np.clip(p_beta, 0.0, 1.0)
 
     # 5. 1 − λ (ellipticity complement) from ρa components
-    rho_xy = rho[:, 0, 1]; rho_yx = rho[:, 1, 0]
+    rho_xy = rho[:, 0, 1]
+    rho_yx = rho[:, 1, 0]
     rho_xy + rho_yx + 1e-30
-    ellipt  = np.minimum(rho_xy, rho_yx) / np.maximum(rho_xy, rho_yx)
+    ellipt = np.minimum(rho_xy, rho_yx) / np.maximum(rho_xy, rho_yx)
     p_ellipt = float(1.0 - np.nanmedian(ellipt))
     p_ellipt = np.clip(p_ellipt, 0.0, 1.0)
 
     # 6. Strike stability: IQR of optimal rotation angle normalised by 90°
     scores = []
-    th_arr = np.linspace(-np.pi/2, np.pi/2, 91)
+    th_arr = np.linspace(-np.pi / 2, np.pi / 2, 91)
     for zi in z:
-        best_val = np.inf; best_ang = 0.0
+        best_val = np.inf
+        best_ang = 0.0
         for th in th_arr:
             c_, s_ = np.cos(th), np.sin(th)
             R = np.array([[c_, s_], [-s_, c_]])
             Zr = R @ zi @ R.T
             score = float(np.abs(Zr[0, 0]) + np.abs(Zr[1, 1]))
             if score < best_val:
-                best_val = score; best_ang = float(np.degrees(th))
+                best_val = score
+                best_ang = float(np.degrees(th))
         scores.append(best_ang)
     iqr = float(np.percentile(scores, 75) - np.percentile(scores, 25))
     p_iqr = np.clip(iqr / 90.0, 0.0, 1.0)
 
-    return np.array([p_swift, p_bahr, p_asym, p_beta, p_ellipt, p_iqr], dtype=float)
+    return np.array(
+        [p_swift, p_bahr, p_asym, p_beta, p_ellipt, p_iqr], dtype=float
+    )
 
 
 def plot_distortion_radar(
@@ -1182,8 +1397,13 @@ def plot_distortion_radar(
     >>> from pycsamt.emtools.advanced import plot_distortion_radar
     >>> fig = plot_distortion_radar(sites, stations=["S05","S12","S20"])
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     eds_all = [(i, _name(ed, i), ed) for i, ed in enumerate(_iter_items(S))]
     if stations is not None:
@@ -1197,7 +1417,8 @@ def plot_distortion_radar(
             fig, ax = plt.subplots(figsize=figsize or (6, 6))
         else:
             fig = ax.figure
-        ax.text(0.5, 0.5, "no stations", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no stations", ha="center", va="center")
+        return fig
 
     n_axes = len(_RADAR_LABELS)
     angles = np.linspace(0, 2 * np.pi, n_axes, endpoint=False).tolist()
@@ -1223,7 +1444,7 @@ def plot_distortion_radar(
         Z_o, z, fr = _get_z_block(ed)
         if z is None:
             continue
-        rho   = getattr(ed, "rho",   None)
+        rho = getattr(ed, "rho", None)
         phase = getattr(ed, "phase", None)
         if rho is None or phase is None:
             continue
@@ -1240,15 +1461,25 @@ def plot_distortion_radar(
         vals = params.tolist() + [params[0]]
         col = cmap_obj(k / max(len(eds_all) - 1, 1))
 
-        ax.plot(angles_plot, vals, lw=lw, color=col, alpha=line_alpha, label=nm)
+        ax.plot(
+            angles_plot, vals, lw=lw, color=col, alpha=line_alpha, label=nm
+        )
         ax.fill(angles_plot, vals, color=col, alpha=fill_alpha)
         # mark each vertex
         ax.scatter(angles, params, s=25, color=col, zorder=5, alpha=0.9)
 
-    ax.legend(loc="upper right", bbox_to_anchor=(1.35, 1.15),
-              fontsize=8, framealpha=0.85)
-    ax.set_title(title or "Galvanic distortion radar",
-                 fontsize=10, fontweight="bold", pad=20)
+    ax.legend(
+        loc="upper right",
+        bbox_to_anchor=(1.35, 1.15),
+        fontsize=8,
+        framealpha=0.85,
+    )
+    ax.set_title(
+        title or "Galvanic distortion radar",
+        fontsize=10,
+        fontweight="bold",
+        pad=20,
+    )
     fig.tight_layout()
     return fig
 
@@ -1256,6 +1487,7 @@ def plot_distortion_radar(
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. Transfer-Function Coherence Network
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_tf_coherence_network(
     sites: Any,
@@ -1321,20 +1553,30 @@ def plot_tf_coherence_network(
     """
     from scipy.stats import pearsonr as _pearsonr
 
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     ri, ci = _COMP_IDX[component.lower()]
 
     # 1. collect per-station rho curves + coords
     sta_data = {}
     for i, ed in enumerate(_iter_items(S)):
-        nm   = _name(ed, i)
-        c    = getattr(ed, "coords", None)
+        nm = _name(ed, i)
+        c = getattr(ed, "coords", None)
         # A missing EDI >HEAD LAT/LONG (e.g. KAP03) surfaces as NaN, not
         # None; "is None" alone lets NaN through and eventually crashes
         # ax.set_aspect() below.
-        if (c is None or c[0] is None or c[1] is None
-                or not np.isfinite(c[0]) or not np.isfinite(c[1])):
+        if (
+            c is None
+            or c[0] is None
+            or c[1] is None
+            or not np.isfinite(c[0])
+            or not np.isfinite(c[1])
+        ):
             continue
         lat, lon = float(c[0]), float(c[1])
         Z_o, z, fr = _get_z_block(ed)
@@ -1362,16 +1604,18 @@ def plot_tf_coherence_network(
 
     # 2. common period grid for interpolation
     all_per = np.concatenate([v["per"] for v in sta_data.values()])
-    lo_g = float(np.nanmin(all_per)); hi_g = float(np.nanmax(all_per))
+    lo_g = float(np.nanmin(all_per))
+    hi_g = float(np.nanmax(all_per))
     per_grid = np.logspace(np.log10(max(lo_g, 1e-6)), np.log10(hi_g), 40)
 
     names = list(sta_data.keys())
-    n_st  = len(names)
+    n_st = len(names)
     rho_mat = np.full((n_st, len(per_grid)), np.nan)
     for k, nm in enumerate(names):
         v = sta_data[nm]
         idx = np.argsort(v["per"])
-        p_s = v["per"][idx]; r_s = v["rho"][idx]
+        p_s = v["per"][idx]
+        r_s = v["rho"][idx]
         finite = np.isfinite(p_s) & np.isfinite(r_s)
         if finite.sum() >= 2:
             rho_mat[k] = np.interp(per_grid, p_s[finite], r_s[finite])
@@ -1380,7 +1624,8 @@ def plot_tf_coherence_network(
     edges = []
     for i in range(n_st):
         for j in range(i + 1, n_st):
-            row_i = rho_mat[i]; row_j = rho_mat[j]
+            row_i = rho_mat[i]
+            row_j = rho_mat[j]
             ok = np.isfinite(row_i) & np.isfinite(row_j)
             if ok.sum() < 4:
                 continue
@@ -1396,8 +1641,9 @@ def plot_tf_coherence_network(
     edges = edges[:max_edges]
 
     # 4. node colour quantity
-    df_pt = build_phase_tensor_table(S, recursive=False, on_dup=on_dup,
-                                     strict=False, verbose=0)
+    df_pt = build_phase_tensor_table(
+        S, recursive=False, on_dup=on_dup, strict=False, verbose=0
+    )
     node_vals = {}
     for nm in names:
         sdf = df_pt[df_pt["station"] == nm] if not df_pt.empty else None
@@ -1405,9 +1651,11 @@ def plot_tf_coherence_network(
             if node_c_by == "skew":
                 node_vals[nm] = float(np.nanmedian(np.abs(sdf["skew"])))
             elif node_c_by == "rho":
-                node_vals[nm] = float(np.nanmedian(
-                    [sta_data[nm]["rho"]] if nm in sta_data else [np.nan]
-                ))
+                node_vals[nm] = float(
+                    np.nanmedian(
+                        [sta_data[nm]["rho"]] if nm in sta_data else [np.nan]
+                    )
+                )
             else:
                 node_vals[nm] = float(np.nanmedian(sdf["ellipt"]))
         else:
@@ -1415,7 +1663,7 @@ def plot_tf_coherence_network(
 
     nv_arr = np.array([node_vals.get(nm, np.nan) for nm in names], float)
     nv_fin = nv_arr[np.isfinite(nv_arr)]
-    nv0 = float(np.nanpercentile(nv_fin, 5))  if nv_fin.size else 0.0
+    nv0 = float(np.nanpercentile(nv_fin, 5)) if nv_fin.size else 0.0
     nv1 = float(np.nanpercentile(nv_fin, 95)) if nv_fin.size else 1.0
 
     lats = np.array([sta_data[nm]["lat"] for nm in names], float)
@@ -1432,7 +1680,9 @@ def plot_tf_coherence_network(
     # kilometres apart.
     raw_ratio = lat_r / lon_r if lon_r > 1e-12 else np.inf
     is_profile = not (0.25 <= raw_ratio <= 4.0)
-    geo_ratio = min(max(raw_ratio, 0.25), 4.0) if np.isfinite(raw_ratio) else 4.0
+    geo_ratio = (
+        min(max(raw_ratio, 0.25), 4.0) if np.isfinite(raw_ratio) else 4.0
+    )
 
     if figsize is None:
         base = 8.0
@@ -1447,8 +1697,8 @@ def plot_tf_coherence_network(
 
     # draw edges
     r_vals = [e[2] for e in edges]
-    r_min  = min(r_vals) if r_vals else float(threshold)
-    r_max  = max(r_vals) if r_vals else 1.0
+    r_min = min(r_vals) if r_vals else float(threshold)
+    r_max = max(r_vals) if r_vals else 1.0
     ec_obj = plt.get_cmap(edge_cmap)
     er_norm = Normalize(vmin=r_min, vmax=r_max)
 
@@ -1457,28 +1707,45 @@ def plot_tf_coherence_network(
         xj, yj = lons[j_idx], lats[j_idx]
         lw = lw_max * (r - r_min) / (r_max - r_min + 1e-12)
         col = ec_obj(er_norm(r))
-        ax.plot([xi, xj], [yi, yj], color=col, lw=lw,
-                alpha=alpha_edge, zorder=2, solid_capstyle="round")
+        ax.plot(
+            [xi, xj],
+            [yi, yj],
+            color=col,
+            lw=lw,
+            alpha=alpha_edge,
+            zorder=2,
+            solid_capstyle="round",
+        )
 
     # draw nodes
     plt.get_cmap(node_cmap)
     Normalize(vmin=nv0, vmax=nv1)
-    sc = ax.scatter(lons, lats, c=nv_arr, cmap=node_cmap,
-                    vmin=nv0, vmax=nv1, s=node_ms**2,
-                    zorder=4, linewidths=0.5, edgecolors="0.3")
+    sc = ax.scatter(
+        lons,
+        lats,
+        c=nv_arr,
+        cmap=node_cmap,
+        vmin=nv0,
+        vmax=nv1,
+        s=node_ms**2,
+        zorder=4,
+        linewidths=0.5,
+        edgecolors="0.3",
+    )
 
     add_colorbar(sc, ax, label=node_c_by, side="right", size="3%", pad=0.06)
 
     # edge colorbar
     sm_e = ScalarMappable(cmap=ec_obj, norm=er_norm)
     sm_e.set_array([])
-    cb_e = fig.colorbar(sm_e, ax=ax, fraction=0.02, pad=0.12,
-                        orientation="vertical")
+    cb_e = fig.colorbar(
+        sm_e, ax=ax, fraction=0.02, pad=0.12, orientation="vertical"
+    )
     cb_e.set_label("Pearson r", fontsize=8)
     cb_e.ax.tick_params(labelsize=7)
 
     ax.set_xlabel("Longitude", fontsize=9)
-    ax.set_ylabel("Latitude",  fontsize=9)
+    ax.set_ylabel("Latitude", fontsize=9)
     lat_mid = float(lats.mean())
     # A true geographic aspect ratio is right for a 2-D-spread survey,
     # but forcing it on a near-linear profile (one of lat_r/lon_r tiny
@@ -1493,14 +1760,17 @@ def plot_tf_coherence_network(
     ax.tick_params(labelsize=8)
     ax.grid(True, alpha=0.15, lw=0.5)
     ax.set_title(
-        title or
-        f"ρa coherence network  (Z$_{{\\rm {component.upper()}}}$, "
+        title
+        or f"ρa coherence network  (Z$_{{\\rm {component.upper()}}}$, "
         f"r ≥ {threshold:.2f})",
-        fontsize=10, fontweight="bold",
+        fontsize=10,
+        fontweight="bold",
     )
     from matplotlib.ticker import ScalarFormatter
+
     for _axis in (ax.xaxis, ax.yaxis):
-        _fmt = ScalarFormatter(useOffset=False); _fmt.set_scientific(False)
+        _fmt = ScalarFormatter(useOffset=False)
+        _fmt.set_scientific(False)
         _axis.set_major_formatter(_fmt)
     fig.tight_layout()
     return fig
@@ -1509,6 +1779,7 @@ def plot_tf_coherence_network(
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. Strike Stability Bands
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_strike_stability_bands(
     sites: Any,
@@ -1581,19 +1852,30 @@ def plot_strike_stability_bands(
     if method_colors:
         _colors.update(method_colors)
 
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     # ── collect raw per-(station, period) strike angles ───────────────────
-    data = {}   # method → list of (period, angle_deg) pairs
+    data = {}  # method → list of (period, angle_deg) pairs
 
     if "sweep" in methods:
         try:
-            df_sw = _sweep(S, recursive=False, on_dup=on_dup,
-                           strict=False, verbose=verbose)
+            df_sw = _sweep(
+                S,
+                recursive=False,
+                on_dup=on_dup,
+                strict=False,
+                verbose=verbose,
+            )
             if not df_sw.empty:
-                per_sw = 1.0 / np.where(df_sw["freq"] == 0, np.nan,
-                                         df_sw["freq"].to_numpy(float))
+                per_sw = 1.0 / np.where(
+                    df_sw["freq"] == 0, np.nan, df_sw["freq"].to_numpy(float)
+                )
                 ang_sw = df_sw["ang"].to_numpy(float) % 180.0
                 data["sweep"] = np.column_stack([per_sw, ang_sw])
         except Exception:
@@ -1601,7 +1883,11 @@ def plot_strike_stability_bands(
 
     if "pt" in methods:
         df_pt = build_phase_tensor_table(
-            S, recursive=False, on_dup=on_dup, strict=False, verbose=0,
+            S,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=0,
         )
         if not df_pt.empty:
             per_pt = df_pt["period"].to_numpy(float)
@@ -1628,16 +1914,20 @@ def plot_strike_stability_bands(
             fig, ax = plt.subplots(figsize=figsize or (10, 4))
         else:
             fig = ax.figure
-        ax.text(0.5, 0.5, "no strike data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no strike data", ha="center", va="center")
+        return fig
 
     # ── period grid ───────────────────────────────────────────────────────
     all_per = np.concatenate([v[:, 0] for v in data.values()])
     all_per = all_per[np.isfinite(all_per)]
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     if period_range is not None:
         p_lo = max(p_lo, float(period_range[0]))
         p_hi = min(p_hi, float(period_range[1]))
-    per_grid = np.logspace(np.log10(max(p_lo, 1e-8)), np.log10(p_hi), n_period_bins)
+    per_grid = np.logspace(
+        np.log10(max(p_lo, 1e-8)), np.log10(p_hi), n_period_bins
+    )
 
     def _smooth(arr, k):
         if k <= 1 or arr.size < k:
@@ -1648,10 +1938,11 @@ def plot_strike_stability_bands(
     # ── compute median + IQR ribbons ──────────────────────────────────────
     stats = {}
     for meth, arr in data.items():
-        per_m = arr[:, 0]; ang_m = arr[:, 1]
+        per_m = arr[:, 0]
+        ang_m = arr[:, 1]
         med_arr = np.full(len(per_grid), np.nan)
-        lo_arr  = np.full(len(per_grid), np.nan)
-        hi_arr  = np.full(len(per_grid), np.nan)
+        lo_arr = np.full(len(per_grid), np.nan)
+        hi_arr = np.full(len(per_grid), np.nan)
         for gi, pg in enumerate(per_grid):
             # pick points within 0.3 decade of grid node
             dist = np.abs(np.log10(per_m + 1e-30) - np.log10(pg + 1e-30))
@@ -1665,12 +1956,12 @@ def plot_strike_stability_bands(
                 np.arctan2(np.sin(rad2).mean(), np.cos(rad2).mean())
             )
             med_arr[gi] = med2 % 180.0
-            lo_arr[gi]  = float(np.percentile(a, 25))
-            hi_arr[gi]  = float(np.percentile(a, 75))
+            lo_arr[gi] = float(np.percentile(a, 25))
+            hi_arr[gi] = float(np.percentile(a, 75))
         stats[meth] = dict(
-            med = _smooth(med_arr, smooth_window),
-            lo  = _smooth(lo_arr,  smooth_window),
-            hi  = _smooth(hi_arr,  smooth_window),
+            med=_smooth(med_arr, smooth_window),
+            lo=_smooth(lo_arr, smooth_window),
+            hi=_smooth(hi_arr, smooth_window),
         )
 
     # ── figure ────────────────────────────────────────────────────────────
@@ -1684,10 +1975,23 @@ def plot_strike_stability_bands(
     for meth, st in stats.items():
         col = _colors.get(meth, "C0")
         valid = np.isfinite(st["med"])
-        ax.fill_between(per_grid[valid], st["lo"][valid], st["hi"][valid],
-                        color=col, alpha=fill_alpha, zorder=2)
-        ax.plot(per_grid[valid], st["med"][valid],
-                color=col, lw=2.0, alpha=line_alpha, label=meth, zorder=3)
+        ax.fill_between(
+            per_grid[valid],
+            st["lo"][valid],
+            st["hi"][valid],
+            color=col,
+            alpha=fill_alpha,
+            zorder=2,
+        )
+        ax.plot(
+            per_grid[valid],
+            st["med"][valid],
+            color=col,
+            lw=2.0,
+            alpha=line_alpha,
+            label=meth,
+            zorder=3,
+        )
 
     # ── consensus zone ────────────────────────────────────────────────────
     if len(stats) >= 2:
@@ -1697,8 +2001,13 @@ def plot_strike_stability_bands(
         # shade periods of agreement
         for gi in range(len(per_grid) - 1):
             if agree[gi]:
-                ax.axvspan(per_grid[gi], per_grid[gi+1],
-                           color="0.55", alpha=consensus_alpha, zorder=1)
+                ax.axvspan(
+                    per_grid[gi],
+                    per_grid[gi + 1],
+                    color="0.55",
+                    alpha=consensus_alpha,
+                    zorder=1,
+                )
 
     ax.set_xscale("log")
     ax.set_ylim(0, 180)
@@ -1711,18 +2020,30 @@ def plot_strike_stability_bands(
     ax.legend(fontsize=8, framealpha=0.85, loc="best")
 
     from matplotlib.patches import Patch
+
     ax.legend(
         handles=(
-            [plt.Line2D([0],[0], color=_colors.get(m,"C0"), lw=2, label=m)
-             for m in stats]
-            + [Patch(color="0.55", alpha=0.5,
-                     label=f"consensus (±{agreement_tol:.0f}°)")]
+            [
+                plt.Line2D(
+                    [0], [0], color=_colors.get(m, "C0"), lw=2, label=m
+                )
+                for m in stats
+            ]
+            + [
+                Patch(
+                    color="0.55",
+                    alpha=0.5,
+                    label=f"consensus (±{agreement_tol:.0f}°)",
+                )
+            ]
         ),
-        fontsize=8, framealpha=0.85,
+        fontsize=8,
+        framealpha=0.85,
     )
     ax.set_title(
         title or f"Strike stability bands  ({', '.join(stats.keys())})",
-        fontsize=10, fontweight="bold",
+        fontsize=10,
+        fontweight="bold",
     )
     fig.tight_layout()
     return fig
@@ -1731,6 +2052,7 @@ def plot_strike_stability_bands(
 # ─────────────────────────────────────────────────────────────────────────────
 # 9. Rho-Phase Bode Consistency Check
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_rho_phase_bode(
     sites: Any,
@@ -1779,13 +2101,20 @@ def plot_rho_phase_bode(
     >>> from pycsamt.emtools.advanced import plot_rho_phase_bode
     >>> fig = plot_rho_phase_bode(sites, component="xy")
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
-    st_name = None; ed_pick = None
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    st_name = None
+    ed_pick = None
     for ii, ed in enumerate(_iter_items(S)):
         nm = _name(ed, ii)
         if station is None or nm == station:
-            st_name, ed_pick = nm, ed; break
+            st_name, ed_pick = nm, ed
+            break
     if ed_pick is None:
         raise RuntimeError(f"Station {station!r} not found.")
 
@@ -1797,10 +2126,16 @@ def plot_rho_phase_bode(
 
     rho_raw = getattr(ed_pick, "rho", None)
     pha_raw = getattr(ed_pick, "phase", None)
-    rho = rho_raw[:, ri, ci] if rho_raw is not None \
-        else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, ri, ci])**2
-    phi = pha_raw[:, ri, ci] if pha_raw is not None \
+    rho = (
+        rho_raw[:, ri, ci]
+        if rho_raw is not None
+        else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, ri, ci]) ** 2
+    )
+    phi = (
+        pha_raw[:, ri, ci]
+        if pha_raw is not None
         else np.degrees(np.angle(z[:, ri, ci]))
+    )
 
     mask = np.isfinite(per) & (rho > 0) & np.isfinite(phi)
     if period_range is not None:
@@ -1830,29 +2165,52 @@ def plot_rho_phase_bode(
     if axes_given is None:
         if figsize is None:
             figsize = (9, 6)
-        fig, (ax_rho, ax_phi) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+        fig, (ax_rho, ax_phi) = plt.subplots(
+            2, 1, figsize=figsize, sharex=True
+        )
     else:
         ax_rho, ax_phi = axes_given
         fig = ax_rho.figure
 
-    ax_rho.loglog(per, rho, color=mt.xy.color, lw=1.8, marker="o",
-                  ms=3.5, label=f"$\\rho_{{a,{comp_upper}}}$")
+    ax_rho.loglog(
+        per,
+        rho,
+        color=mt.xy.color,
+        lw=1.8,
+        marker="o",
+        ms=3.5,
+        label=f"$\\rho_{{a,{comp_upper}}}$",
+    )
     ax_rho.set_ylabel(r"$\rho_a$  (Ω·m)", fontsize=9)
     ax_rho.grid(True, which="both", alpha=0.25, lw=0.5)
     ax_rho.legend(fontsize=8, framealpha=0.85, loc="best")
     ax_rho.tick_params(labelsize=8)
     ax_rho.set_title(
-        title or
-        f"Bode consistency — {st_name}  (Z$_{{\\rm {comp_upper}}}$)",
-        fontsize=10, fontweight="bold",
+        title or f"Bode consistency — {st_name}  (Z$_{{\\rm {comp_upper}}}$)",
+        fontsize=10,
+        fontweight="bold",
     )
 
-    ax_phi.semilogx(per, phi, color=mt.xy.color, lw=1.8, marker="o",
-                    ms=3.5, label="$\\phi_{obs}$")
-    ax_phi.semilogx(per, phi_bode, color="tomato", lw=1.5, ls="--",
-                    label="$\\phi_{Bode}$ (predicted)")
-    ax_phi.fill_between(per, phi, phi_bode, color="tomato", alpha=0.15,
-                        label="discrepancy")
+    ax_phi.semilogx(
+        per,
+        phi,
+        color=mt.xy.color,
+        lw=1.8,
+        marker="o",
+        ms=3.5,
+        label="$\\phi_{obs}$",
+    )
+    ax_phi.semilogx(
+        per,
+        phi_bode,
+        color="tomato",
+        lw=1.5,
+        ls="--",
+        label="$\\phi_{Bode}$ (predicted)",
+    )
+    ax_phi.fill_between(
+        per, phi, phi_bode, color="tomato", alpha=0.15, label="discrepancy"
+    )
     ax_phi.axhline(45, color="0.55", lw=0.8, ls=":")
     ax_phi.set_ylim(0, 90)
     ax_phi.set_ylabel("Phase  (°)", fontsize=9)
@@ -1868,6 +2226,7 @@ def plot_rho_phase_bode(
 # ─────────────────────────────────────────────────────────────────────────────
 # 10. Phase-Tensor Period Clock
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_pt_period_clock(
     sites: Any,
@@ -1913,8 +2272,11 @@ def plot_pt_period_clock(
     from matplotlib.patches import Ellipse as _Ell
 
     df = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if df.empty:
         if ax is None:
@@ -1931,16 +2293,25 @@ def plot_pt_period_clock(
         df = df[df["station"] == station]
 
     all_per = df["period"].to_numpy(float)
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
-    per_rings = np.logspace(np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_rings)
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
+    per_rings = np.logspace(
+        np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_rings
+    )
 
     thetas, lambdas = [], []
     for pg in per_rings:
-        dist = np.abs(np.log10(df["period"].to_numpy(float) + 1e-30) -
-                      np.log10(pg + 1e-30))
+        dist = np.abs(
+            np.log10(df["period"].to_numpy(float) + 1e-30)
+            - np.log10(pg + 1e-30)
+        )
         sub = df[dist < 0.3]
-        thetas.append(float(np.nanmedian(sub["theta"])) if not sub.empty else np.nan)
-        lambdas.append(float(np.nanmedian(sub["ellipt"])) if not sub.empty else np.nan)
+        thetas.append(
+            float(np.nanmedian(sub["theta"])) if not sub.empty else np.nan
+        )
+        lambdas.append(
+            float(np.nanmedian(sub["ellipt"])) if not sub.empty else np.nan
+        )
 
     cmap_obj = plt.get_cmap(cmap)
     lp_min = np.log10(per_rings[0] + 1e-30)
@@ -1953,37 +2324,61 @@ def plot_pt_period_clock(
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.figure
-    ax.set_xlim(-1.25, 1.25); ax.set_ylim(-1.25, 1.25)
-    ax.set_aspect("equal"); ax.axis("off")
+    ax.set_xlim(-1.25, 1.25)
+    ax.set_ylim(-1.25, 1.25)
+    ax.set_aspect("equal")
+    ax.axis("off")
 
     R_min, R_max = 0.15, 1.0
     r_arr = np.linspace(R_min, R_max, n_rings)
     dr = (R_max - R_min) / max(n_rings - 1, 1)
-    a_size = dr * 0.42   # ellipse semi-major half-width in data units
+    a_size = dr * 0.42  # ellipse semi-major half-width in data units
 
     for r, pg, th, lam in zip(r_arr, per_rings, thetas, lambdas):
-        ax.add_patch(plt.Circle((0, 0), r, fill=False, color="0.78",
-                                lw=0.7, zorder=1))
+        ax.add_patch(
+            plt.Circle((0, 0), r, fill=False, color="0.78", lw=0.7, zorder=1)
+        )
         if not (np.isfinite(th) and np.isfinite(lam)):
             continue
         col = cmap_obj(per_norm(np.log10(pg + 1e-30)))
         a = a_size
         b = a * max(1.0 - float(lam), 0.06)
-        mpl_ang = 90.0 - float(th)   # geoelectric N-CW → mpl CCW-from-E
-        ell = _Ell((0.0, r), width=2 * b, height=2 * a,
-                   angle=mpl_ang, facecolor=col, edgecolor="k",
-                   linewidth=0.6, alpha=0.80, zorder=4)
+        mpl_ang = 90.0 - float(th)  # geoelectric N-CW → mpl CCW-from-E
+        ell = _Ell(
+            (0.0, r),
+            width=2 * b,
+            height=2 * a,
+            angle=mpl_ang,
+            facecolor=col,
+            edgecolor="k",
+            linewidth=0.6,
+            alpha=0.80,
+            zorder=4,
+        )
         ax.add_patch(ell)
-        ax.text(r + 0.04, 0.0,
-                f"$10^{{{np.log10(pg + 1e-30):.1f}}}$ s",
-                ha="left", va="center", fontsize=6.5, color=col)
+        ax.text(
+            r + 0.04,
+            0.0,
+            f"$10^{{{np.log10(pg + 1e-30):.1f}}}$ s",
+            ha="left",
+            va="center",
+            fontsize=6.5,
+            color=col,
+        )
 
     for ang_d, lbl in ((90, "N"), (0, "E"), (270, "S"), (180, "W")):
         ang_r = np.radians(ang_d)
         rx = (R_max + 0.14) * np.cos(ang_r)
         ry = (R_max + 0.14) * np.sin(ang_r)
-        ax.text(rx, ry, lbl, ha="center", va="center",
-                fontsize=9, fontweight="bold")
+        ax.text(
+            rx,
+            ry,
+            lbl,
+            ha="center",
+            va="center",
+            fontsize=9,
+            fontweight="bold",
+        )
 
     sm = ScalarMappable(cmap=cmap_obj, norm=per_norm)
     sm.set_array([])
@@ -1992,8 +2387,11 @@ def plot_pt_period_clock(
     cb.ax.tick_params(labelsize=7)
 
     lbl_sta = station or "survey median"
-    ax.set_title(title or f"Phase-tensor period clock — {lbl_sta}",
-                 fontsize=10, fontweight="bold")
+    ax.set_title(
+        title or f"Phase-tensor period clock — {lbl_sta}",
+        fontsize=10,
+        fontweight="bold",
+    )
     fig.tight_layout()
     return fig
 
@@ -2001,6 +2399,7 @@ def plot_pt_period_clock(
 # ─────────────────────────────────────────────────────────────────────────────
 # 11. Apparent Resistivity Polar Diagram
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_apparent_resistivity_polar(
     sites: Any,
@@ -2045,13 +2444,20 @@ def plot_apparent_resistivity_polar(
     >>> from pycsamt.emtools.advanced import plot_apparent_resistivity_polar
     >>> fig = plot_apparent_resistivity_polar(sites, n_periods=8, normalize=True)
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
-    st_name = None; ed_pick = None
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    st_name = None
+    ed_pick = None
     for ii, ed in enumerate(_iter_items(S)):
         nm = _name(ed, ii)
         if station is None or nm == station:
-            st_name, ed_pick = nm, ed; break
+            st_name, ed_pick = nm, ed
+            break
     if ed_pick is None:
         raise RuntimeError(f"Station {station!r} not found.")
 
@@ -2081,7 +2487,9 @@ def plot_apparent_resistivity_polar(
     if ax is None:
         if figsize is None:
             figsize = (7, 7)
-        fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
+        fig, ax = plt.subplots(
+            figsize=figsize, subplot_kw={"projection": "polar"}
+        )
     else:
         fig = ax.figure
     ax.set_theta_zero_location("N")
@@ -2089,13 +2497,14 @@ def plot_apparent_resistivity_polar(
     hide_polar_radius_labels(ax)
 
     for pi in pidx:
-        z0 = z[pi]; fi = float(fr[pi])
+        z0 = z[pi]
+        fi = float(fr[pi])
         if fi <= 0:
             continue
         rho_th = np.zeros(n_th)
         for k, th in enumerate(theta_arr):
             Zr = _z_at_theta(z0, th)
-            rho_th[k] = (0.2 / fi) * float(np.abs(Zr[0, 1])**2)
+            rho_th[k] = (0.2 / fi) * float(np.abs(Zr[0, 1]) ** 2)
         if normalize:
             mx = rho_th.max()
             if mx > 0:
@@ -2110,8 +2519,12 @@ def plot_apparent_resistivity_polar(
     cb.set_label("Period (s)", fontsize=8)
     cb.ax.tick_params(labelsize=7)
 
-    ax.set_title(title or f"ρa polar diagram — {st_name}", fontsize=10,
-                 fontweight="bold", pad=16)
+    ax.set_title(
+        title or f"ρa polar diagram — {st_name}",
+        fontsize=10,
+        fontweight="bold",
+        pad=16,
+    )
     ax.tick_params(labelsize=8)
     hide_polar_radius_labels(ax)
     fig.tight_layout()
@@ -2121,6 +2534,7 @@ def plot_apparent_resistivity_polar(
 # ─────────────────────────────────────────────────────────────────────────────
 # 12. Apparent Anisotropy Pseudosection
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _build_psection_image(
     S: Any,
@@ -2162,7 +2576,8 @@ def _build_psection_image(
         return np.full((n_grid, 1), np.nan), np.zeros(n_grid), ["—"]
 
     all_per = np.concatenate([rows[s][0] for s in all_st if s in rows])
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     per_grid = np.logspace(np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_grid)
 
     img = np.full((n_grid, n_st), np.nan)
@@ -2226,19 +2641,26 @@ def plot_apparent_anisotropy_section(
     >>> from pycsamt.emtools.advanced import plot_apparent_anisotropy_section
     >>> fig = plot_apparent_anisotropy_section(sites, period_range=(1e-4, 1.0))
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     def _extract(ed, z, fr, per):
         rho = getattr(ed, "rho", None)
         if rho is None:
             return None
-        r_xy = rho[:, 0, 1]; r_yx = rho[:, 1, 0]
-        return np.log10(np.clip(r_xy, 1e-6, None) /
-                        np.clip(r_yx, 1e-6, None))
+        r_xy = rho[:, 0, 1]
+        r_yx = rho[:, 1, 0]
+        return np.log10(np.clip(r_xy, 1e-6, None) / np.clip(r_yx, 1e-6, None))
 
     img, per_grid, all_st = _build_psection_image(
-        S, _extract, period_range=period_range,
+        S,
+        _extract,
+        period_range=period_range,
         station_order=station_order,
     )
     n_st = len(all_st)
@@ -2253,33 +2675,44 @@ def plot_apparent_anisotropy_section(
 
     lp = np.log10(per_grid + 1e-30)
     ax.imshow(
-        img, aspect="auto", origin="upper",
+        img,
+        aspect="auto",
+        origin="upper",
         extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),
-        cmap=cmap, vmin=-float(vmax), vmax=float(vmax),
+        cmap=cmap,
+        vmin=-float(vmax),
+        vmax=float(vmax),
         interpolation="nearest",
     )
 
     PYCSAMT_STATION_RENDERING.apply(
-        ax, np.arange(n_st, dtype=float), all_st,
+        ax,
+        np.arange(n_st, dtype=float),
+        all_st,
         preset="pseudosection",
         xlim=(-0.5, n_st - 0.5),
     )
     ax.set_ylabel("$\\log_{10}T$ (s)", fontsize=9)
     ax.tick_params(axis="y", labelsize=8)
 
-    sm = ScalarMappable(cmap=cmap,
-                        norm=Normalize(vmin=-float(vmax), vmax=float(vmax)))
+    sm = ScalarMappable(
+        cmap=cmap, norm=Normalize(vmin=-float(vmax), vmax=float(vmax))
+    )
     sm.set_array([])
     cb = fig.colorbar(sm, ax=ax, fraction=0.025, pad=0.02)
     cb.set_label("$\\log_{10}(\\rho_{XY}/\\rho_{YX})$", fontsize=8)
     cb.ax.tick_params(labelsize=7)
 
     if show_pt_arrows:
-        df_pt = build_phase_tensor_table(S, recursive=False, on_dup=on_dup,
-                                         strict=False, verbose=0)
+        df_pt = build_phase_tensor_table(
+            S, recursive=False, on_dup=on_dup, strict=False, verbose=0
+        )
         if not df_pt.empty:
-            arrow_len = 0.55 * (lp[0] - lp[-1]) / max(n_grid - 1, 1) \
-                if n_grid > 1 else 0.3
+            arrow_len = (
+                0.55 * (lp[0] - lp[-1]) / max(n_grid - 1, 1)
+                if n_grid > 1
+                else 0.3
+            )
             for si in range(0, n_st, max(1, int(arrow_every))):
                 sub = df_pt[df_pt["station"] == all_st[si]]
                 if sub.empty:
@@ -2287,25 +2720,42 @@ def plot_apparent_anisotropy_section(
                 p_pt = sub["period"].to_numpy(float)
                 th_pt = sub["theta"].to_numpy(float)
                 for gi, pg in enumerate(per_grid):
-                    j = int(np.nanargmin(np.abs(np.log10(p_pt + 1e-30) -
-                                                np.log10(pg + 1e-30))))
-                    if abs(np.log10(p_pt[j] + 1e-30) -
-                           np.log10(pg + 1e-30)) >= 0.3:
+                    j = int(
+                        np.nanargmin(
+                            np.abs(
+                                np.log10(p_pt + 1e-30) - np.log10(pg + 1e-30)
+                            )
+                        )
+                    )
+                    if (
+                        abs(np.log10(p_pt[j] + 1e-30) - np.log10(pg + 1e-30))
+                        >= 0.3
+                    ):
                         continue
                     th = th_pt[j]
                     if not np.isfinite(th):
                         continue
-                    rad = np.radians(90.0 - th)  # geoelectric N-CW -> plot CCW-from-E
+                    rad = np.radians(
+                        90.0 - th
+                    )  # geoelectric N-CW -> plot CCW-from-E
                     dx = arrow_len * np.cos(rad) * 0.6
                     dy = arrow_len * np.sin(rad)
                     ax.plot(
-                        [si - dx, si + dx], [lp[gi] - dy, lp[gi] + dy],
-                        color="k", lw=0.9, alpha=0.75, solid_capstyle="round",
+                        [si - dx, si + dx],
+                        [lp[gi] - dy, lp[gi] + dy],
+                        color="k",
+                        lw=0.9,
+                        alpha=0.75,
+                        solid_capstyle="round",
                         zorder=5,
                     )
 
-    ax.set_title(title or "Apparent anisotropy pseudosection",
-                 fontsize=10, fontweight="bold", pad=8)
+    ax.set_title(
+        title or "Apparent anisotropy pseudosection",
+        fontsize=10,
+        fontweight="bold",
+        pad=8,
+    )
     fig.tight_layout()
     return fig
 
@@ -2313,6 +2763,7 @@ def plot_apparent_anisotropy_section(
 # ─────────────────────────────────────────────────────────────────────────────
 # 13. Dimensionality Depth Profile
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_dimensionality_depth_profile(
     sites: Any,
@@ -2363,11 +2814,15 @@ def plot_dimensionality_depth_profile(
     >>> fig = plot_dimensionality_depth_profile(sites, depth_max=5.0)
     """
     df_pt = build_phase_tensor_table(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
-    S = ensure_sites(sites, recursive=False, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites, recursive=False, on_dup=on_dup, strict=strict, verbose=verbose
+    )
 
     ri, ci = _COMP_IDX[component.lower()]
     d_scale = 1e-3 if depth_unit == "km" else 1.0
@@ -2390,14 +2845,18 @@ def plot_dimensionality_depth_profile(
                 lo_, hi_ = float(period_range[0]), float(period_range[1])
                 if per[k] < lo_ or per[k] > hi_:
                     continue
-            d_b = float(np.sqrt(rho_c[k] / (_MU0 * 2 * np.pi * fr[k]))) * d_scale
+            d_b = (
+                float(np.sqrt(rho_c[k] / (_MU0 * 2 * np.pi * fr[k])))
+                * d_scale
+            )
             # PT membership for this station + period
-            sub = (df_pt[(df_pt["station"] == nm)]
-                   if not df_pt.empty else None)
+            sub = df_pt[(df_pt["station"] == nm)] if not df_pt.empty else None
             u3d = np.nan
             if sub is not None and not sub.empty:
-                dist = np.abs(np.log10(sub["period"].to_numpy(float) + 1e-30) -
-                              np.log10(per[k] + 1e-30))
+                dist = np.abs(
+                    np.log10(sub["period"].to_numpy(float) + 1e-30)
+                    - np.log10(per[k] + 1e-30)
+                )
                 j = int(np.argmin(dist))
                 if dist[j] < 0.3:
                     beta_v = float(abs(sub["beta"].iloc[j]))
@@ -2410,12 +2869,17 @@ def plot_dimensionality_depth_profile(
             fig, ax = plt.subplots(figsize=figsize or (10, 5))
         else:
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
     import pandas as _pd
+
     df = _pd.DataFrame(rows)
-    all_st = (station_order if station_order is not None
-              else list(df["station"].unique()))
+    all_st = (
+        station_order
+        if station_order is not None
+        else list(df["station"].unique())
+    )
     n_st = len(all_st)
     st_pos = {s: i for i, s in enumerate(all_st)}
 
@@ -2448,7 +2912,9 @@ def plot_dimensionality_depth_profile(
 
     ax.set_ylim(d_max_plot, 0)
     PYCSAMT_STATION_RENDERING.apply(
-        ax, np.arange(n_st, dtype=float), all_st,
+        ax,
+        np.arange(n_st, dtype=float),
+        all_st,
         preset="pseudosection",
         xlim=(-0.5, n_st - 0.5),
     )
@@ -2462,9 +2928,11 @@ def plot_dimensionality_depth_profile(
     cb.set_label("3-D membership $u_{3D}$", fontsize=8)
     cb.ax.tick_params(labelsize=7)
     ax.set_title(
-        title or
-        f"Dimensionality depth profile  (β$_{{thresh}}$={beta_thresh}°)",
-        fontsize=10, fontweight="bold", pad=8,
+        title
+        or f"Dimensionality depth profile  (β$_{{thresh}}$={beta_thresh}°)",
+        fontsize=10,
+        fontweight="bold",
+        pad=8,
     )
     fig.tight_layout()
     return fig
@@ -2475,11 +2943,25 @@ def plot_dimensionality_depth_profile(
 # ─────────────────────────────────────────────────────────────────────────────
 
 _COMPOSITE_META: dict = {
-    "rho":   dict(label=r"$\log_{10}\rho_a$  (Ω·m)", cmap="jet_r",  sym=False, log=True,  pct=(5, 95)),
-    "phase": dict(label="Phase  (°)",                 cmap="plasma", sym=False, log=False, pct=(5, 95)),
-    "skew":  dict(label="|β| skew  (°)",              cmap="Reds",   sym=False, log=False, pct=(5, 95)),
-    "theta": dict(label="Strike θ  (°)",              cmap="hsv",    sym=False, log=False, pct=(2, 98)),
-    "snr":   dict(label="SNR",                        cmap="RdYlGn", sym=False, log=False, pct=(5, 95)),
+    "rho": dict(
+        label=r"$\log_{10}\rho_a$  (Ω·m)",
+        cmap="jet_r",
+        sym=False,
+        log=True,
+        pct=(5, 95),
+    ),
+    "phase": dict(
+        label="Phase  (°)", cmap="plasma", sym=False, log=False, pct=(5, 95)
+    ),
+    "skew": dict(
+        label="|β| skew  (°)", cmap="Reds", sym=False, log=False, pct=(5, 95)
+    ),
+    "theta": dict(
+        label="Strike θ  (°)", cmap="hsv", sym=False, log=False, pct=(2, 98)
+    ),
+    "snr": dict(
+        label="SNR", cmap="RdYlGn", sym=False, log=False, pct=(5, 95)
+    ),
 }
 
 
@@ -2528,12 +3010,19 @@ def plot_mt_composite_section(
     if quantities is None:
         quantities = list(_COMPOSITE_META.keys())
 
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     ri, ci = _COMP_IDX[component.lower()]
 
     # collect raw data per station
-    rho_d: dict = {}; phi_d: dict = {}; snr_d: dict = {}
+    rho_d: dict = {}
+    phi_d: dict = {}
+    snr_d: dict = {}
     for i, ed in enumerate(_iter_items(S)):
         nm = _name(ed, i)
         Z_obj, z, fr, ze = _get_z_block(ed, with_errors=True)
@@ -2542,10 +3031,17 @@ def plot_mt_composite_section(
         per = 1.0 / np.where(fr == 0, np.nan, fr)
         rho_raw = getattr(ed, "rho", None)
         pha_raw = getattr(ed, "phase", None)
-        rho_v = rho_raw[:, ri, ci] if rho_raw is not None \
-            else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, ri, ci])**2
-        phi_v = pha_raw[:, ri, ci] if pha_raw is not None \
+        rho_v = (
+            rho_raw[:, ri, ci]
+            if rho_raw is not None
+            else (0.2 / np.where(fr == 0, np.nan, fr))
+            * np.abs(z[:, ri, ci]) ** 2
+        )
+        phi_v = (
+            pha_raw[:, ri, ci]
+            if pha_raw is not None
             else np.degrees(np.angle(z[:, ri, ci]))
+        )
         if ze is not None and ze.shape == z.shape:
             snr_v = np.abs(z[:, ri, ci]) / (np.abs(ze[:, ri, ci]) + 1e-30)
         else:
@@ -2558,11 +3054,13 @@ def plot_mt_composite_section(
         phi_d[nm] = (per[mask], phi_v[mask])
         snr_d[nm] = (per[mask], snr_v[mask])
 
-    df_pt = build_phase_tensor_table(S, recursive=False, on_dup=on_dup,
-                                     strict=False, verbose=0)
+    df_pt = build_phase_tensor_table(
+        S, recursive=False, on_dup=on_dup, strict=False, verbose=0
+    )
 
-    all_st = station_order if station_order is not None \
-        else list(rho_d.keys())
+    all_st = (
+        station_order if station_order is not None else list(rho_d.keys())
+    )
     n_st = len(all_st)
     axes_given = _axes_list(axes, 1) if axes is not None else None
     if n_st == 0:
@@ -2571,10 +3069,12 @@ def plot_mt_composite_section(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
     all_per = np.concatenate([rho_d[s][0] for s in all_st if s in rho_d])
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     n_grid = 50
     per_grid = np.logspace(np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_grid)
 
@@ -2588,7 +3088,10 @@ def plot_mt_composite_section(
             p_s, v_s = p_s[idx_o], v_s[idx_o]
             for gi, pg in enumerate(per_grid):
                 j = int(np.argmin(np.abs(p_s - pg)))
-                if np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30)) < 0.3:
+                if (
+                    np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30))
+                    < 0.3
+                ):
                     img[gi, si] = v_s[j]
         return img
 
@@ -2624,15 +3127,24 @@ def plot_mt_composite_section(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
     axes_given = _axes_list(axes, n_q) if axes is not None else None
     if axes_given is None:
         if figsize is None:
             figsize = (max(9, n_st * 0.35 + 2), 2.5 * n_q + 0.6)
         fig = plt.figure(figsize=figsize, constrained_layout=False)
-        gs = gridspec.GridSpec(n_q, 1, figure=fig, hspace=0.30,
-                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+        gs = gridspec.GridSpec(
+            n_q,
+            1,
+            figure=fig,
+            hspace=0.30,
+            left=0.10,
+            right=0.88,
+            top=0.92,
+            bottom=0.04,
+        )
     else:
         fig = axes_given[0].figure
         gs = None
@@ -2650,19 +3162,31 @@ def plot_mt_composite_section(
         if vmin == vmax_:
             vmax_ = vmin + 1.0
 
-        ax = axes_given[qi] if axes_given is not None else fig.add_subplot(gs[qi])
+        ax = (
+            axes_given[qi]
+            if axes_given is not None
+            else fig.add_subplot(gs[qi])
+        )
         im = ax.imshow(
-            img, aspect="auto", origin="upper",
+            img,
+            aspect="auto",
+            origin="upper",
             extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),
-            cmap=meta["cmap"], vmin=vmin, vmax=vmax_,
+            cmap=meta["cmap"],
+            vmin=vmin,
+            vmax=vmax_,
             interpolation="nearest",
         )
         ax.set_ylabel(meta["label"], fontsize=7.5)
         ax.tick_params(axis="y", labelsize=7)
-        ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+        ax.tick_params(
+            axis="x", which="both", bottom=False, labelbottom=False
+        )
         if qi == 0:
             PYCSAMT_STATION_RENDERING.apply(
-                ax, np.arange(n_st, dtype=float), all_st,
+                ax,
+                np.arange(n_st, dtype=float),
+                all_st,
                 preset="pseudosection",
                 xlim=(-0.5, n_st - 0.5),
             )
@@ -2672,9 +3196,9 @@ def plot_mt_composite_section(
 
     comp_upper = component.upper()
     fig.suptitle(
-        title or
-        f"MT composite section  (Z$_{{\\rm {comp_upper}}}$)",
-        fontsize=10, fontweight="bold",
+        title or f"MT composite section  (Z$_{{\\rm {comp_upper}}}$)",
+        fontsize=10,
+        fontweight="bold",
     )
     return fig
 
@@ -2682,6 +3206,7 @@ def plot_mt_composite_section(
 # ─────────────────────────────────────────────────────────────────────────────
 # 15. SNR Pseudosection
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_snr_section(
     sites: Any,
@@ -2727,8 +3252,13 @@ def plot_snr_section(
     >>> from pycsamt.emtools.advanced import plot_snr_section
     >>> fig = plot_snr_section(sites, components=("xy","yx"), snr_thresh=3.0)
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     n_comp = len(components)
     # collect SNR per component
@@ -2764,12 +3294,14 @@ def plot_snr_section(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
-    all_per = np.concatenate([
-        snr_dicts[0][s][0] for s in all_st if s in snr_dicts[0]
-    ])
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    all_per = np.concatenate(
+        [snr_dicts[0][s][0] for s in all_st if s in snr_dicts[0]]
+    )
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     n_grid = 50
     per_grid = np.logspace(np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_grid)
 
@@ -2783,8 +3315,10 @@ def plot_snr_section(
             p_s, v_s = p_s[idx_o], v_s[idx_o]
             for gi, pg in enumerate(per_grid):
                 j = int(np.argmin(np.abs(p_s - pg)))
-                if np.abs(np.log10(p_s[j] + 1e-30) -
-                           np.log10(pg + 1e-30)) < 0.3:
+                if (
+                    np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30))
+                    < 0.3
+                ):
                     img[gi, si] = v_s[j]
         return img
 
@@ -2793,8 +3327,16 @@ def plot_snr_section(
         if figsize is None:
             figsize = (max(9, n_st * 0.35 + 2), 4.5 * n_comp)
         fig = plt.figure(figsize=figsize, constrained_layout=False)
-        gs = gridspec.GridSpec(n_comp, 1, figure=fig, hspace=0.30,
-                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+        gs = gridspec.GridSpec(
+            n_comp,
+            1,
+            figure=fig,
+            hspace=0.30,
+            left=0.10,
+            right=0.88,
+            top=0.92,
+            bottom=0.04,
+        )
     else:
         fig = axes_given[0].figure
         gs = None
@@ -2802,12 +3344,19 @@ def plot_snr_section(
     lp = np.log10(per_grid + 1e-30)
     for pi, comp in enumerate(components):
         img = _img(snr_dicts[pi])
-        ax = axes_given[pi] if axes_given is not None else fig.add_subplot(gs[pi])
+        ax = (
+            axes_given[pi]
+            if axes_given is not None
+            else fig.add_subplot(gs[pi])
+        )
         im = ax.imshow(
             np.clip(img, 0, float(vmax)),
-            aspect="auto", origin="upper",
+            aspect="auto",
+            origin="upper",
             extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),
-            cmap=cmap, vmin=0.0, vmax=float(vmax),
+            cmap=cmap,
+            vmin=0.0,
+            vmax=float(vmax),
             interpolation="nearest",
         )
         # threshold contour
@@ -2815,20 +3364,27 @@ def plot_snr_section(
         if finite_mask.any():
             try:
                 ax.contour(
-                    np.arange(n_st), lp[::-1],
+                    np.arange(n_st),
+                    lp[::-1],
                     np.where(finite_mask, img, 0.0)[::-1, :],
                     levels=[float(snr_thresh)],
-                    colors="k", linewidths=0.8, linestyles="--",
+                    colors="k",
+                    linewidths=0.8,
+                    linestyles="--",
                 )
             except Exception:
                 pass
 
         ax.set_ylabel(f"SNR  Z$_{{\\rm {comp.upper()}}}$", fontsize=8.5)
         ax.tick_params(axis="y", labelsize=7)
-        ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+        ax.tick_params(
+            axis="x", which="both", bottom=False, labelbottom=False
+        )
         if pi == 0:
             PYCSAMT_STATION_RENDERING.apply(
-                ax, np.arange(n_st, dtype=float), all_st,
+                ax,
+                np.arange(n_st, dtype=float),
+                all_st,
                 preset="pseudosection",
                 xlim=(-0.5, n_st - 0.5),
             )
@@ -2837,14 +3393,18 @@ def plot_snr_section(
         cb.set_label("SNR", fontsize=7)
         cb.ax.tick_params(labelsize=6)
 
-    fig.suptitle(title or "SNR pseudosection  (|Z| / |Z$_{err}$|)",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(
+        title or "SNR pseudosection  (|Z| / |Z$_{err}$|)",
+        fontsize=10,
+        fontweight="bold",
+    )
     return fig
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 16. Z Rotation-Invariants Section
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_z_invariants_section(
     sites: Any,
@@ -2886,15 +3446,26 @@ def plot_z_invariants_section(
     >>> from pycsamt.emtools.advanced import plot_z_invariants_section
     >>> fig = plot_z_invariants_section(sites, period_range=(1e-4, 1.0))
     """
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     _INV_META = [
-        dict(label="Swift ν",         cmap="Reds",     pct=(5, 95), sym=False),
-        dict(label="Bahr μ",           cmap="Oranges",  pct=(5, 95), sym=False),
-        dict(label=r"$|\det Z|^{1/2}$", cmap="viridis", pct=(5, 95), sym=False),
-        dict(label=r"$|\mathrm{tr}\,Z| / |{|Z_{xy}|-|Z_{yx}|}|$",
-             cmap="plasma", pct=(5, 95), sym=False),
+        dict(label="Swift ν", cmap="Reds", pct=(5, 95), sym=False),
+        dict(label="Bahr μ", cmap="Oranges", pct=(5, 95), sym=False),
+        dict(
+            label=r"$|\det Z|^{1/2}$", cmap="viridis", pct=(5, 95), sym=False
+        ),
+        dict(
+            label=r"$|\mathrm{tr}\,Z| / |{|Z_{xy}|-|Z_{yx}|}|$",
+            cmap="plasma",
+            pct=(5, 95),
+            sym=False,
+        ),
     ]
 
     def _extract_all(ed, fr, per):
@@ -2905,7 +3476,7 @@ def plot_z_invariants_section(
         c, d = z[:, 1, 0], z[:, 1, 1]
         dz = np.abs(b - c) + 1e-30
         swift = np.abs(a + d) / dz
-        bahr  = np.abs(b + c) / dz
+        bahr = np.abs(b + c) / dz
         det_z = np.sqrt(np.abs(a * d - b * c))
         tr_dz = np.abs(a + d) / dz
         return np.column_stack([swift, bahr, det_z, tr_dz])
@@ -2931,12 +3502,14 @@ def plot_z_invariants_section(
         # anisotropy proxy: it is small when |Zxy| and |Zyx| are close
         # (near-isotropic response) and grows as they diverge.
         dmag = np.abs(np.abs(b) - np.abs(c)) + 1e-30
-        inv4 = np.column_stack([
-            np.abs(a + d_t) / dz,
-            np.abs(b + c) / dz,
-            np.sqrt(np.abs(a * d_t - b * c)),
-            np.abs(a + d_t) / dmag,
-        ])
+        inv4 = np.column_stack(
+            [
+                np.abs(a + d_t) / dz,
+                np.abs(b + c) / dz,
+                np.sqrt(np.abs(a * d_t - b * c)),
+                np.abs(a + d_t) / dmag,
+            ]
+        )
         mask = np.isfinite(per)
         if period_range is not None:
             lo_, hi_ = float(period_range[0]), float(period_range[1])
@@ -2953,10 +3526,12 @@ def plot_z_invariants_section(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no data", ha="center", va="center"); return fig
+        ax.text(0.5, 0.5, "no data", ha="center", va="center")
+        return fig
 
     all_per = np.concatenate([rows[s][0] for s in all_st if s in rows])
-    p_lo = float(np.nanmin(all_per)); p_hi = float(np.nanmax(all_per))
+    p_lo = float(np.nanmin(all_per))
+    p_hi = float(np.nanmax(all_per))
     n_grid = 50
     per_grid = np.logspace(np.log10(max(p_lo, 1e-10)), np.log10(p_hi), n_grid)
 
@@ -2972,8 +3547,10 @@ def plot_z_invariants_section(
             p_s, v_s = p_s[idx_o], v_s[idx_o]
             for gi, pg in enumerate(per_grid):
                 j = int(np.argmin(np.abs(p_s - pg)))
-                if np.abs(np.log10(p_s[j] + 1e-30) -
-                           np.log10(pg + 1e-30)) < 0.3:
+                if (
+                    np.abs(np.log10(p_s[j] + 1e-30) - np.log10(pg + 1e-30))
+                    < 0.3
+                ):
                     img[gi, si] = v_s[j]
         imgs.append(img)
 
@@ -2982,8 +3559,16 @@ def plot_z_invariants_section(
         if figsize is None:
             figsize = (max(9, n_st * 0.35 + 2), 2.8 * 4 + 0.6)
         fig = plt.figure(figsize=figsize, constrained_layout=False)
-        gs = gridspec.GridSpec(4, 1, figure=fig, hspace=0.30,
-                               left=0.10, right=0.88, top=0.92, bottom=0.04)
+        gs = gridspec.GridSpec(
+            4,
+            1,
+            figure=fig,
+            hspace=0.30,
+            left=0.10,
+            right=0.88,
+            top=0.92,
+            bottom=0.04,
+        )
     else:
         fig = axes_given[0].figure
         gs = None
@@ -2998,19 +3583,31 @@ def plot_z_invariants_section(
         if vmin == vmax_:
             vmax_ = vmin + 1.0
 
-        ax = axes_given[inv_idx] if axes_given is not None else fig.add_subplot(gs[inv_idx])
+        ax = (
+            axes_given[inv_idx]
+            if axes_given is not None
+            else fig.add_subplot(gs[inv_idx])
+        )
         im = ax.imshow(
-            img, aspect="auto", origin="upper",
+            img,
+            aspect="auto",
+            origin="upper",
             extent=(-0.5, n_st - 0.5, lp[-1], lp[0]),
-            cmap=meta["cmap"], vmin=vmin, vmax=vmax_,
+            cmap=meta["cmap"],
+            vmin=vmin,
+            vmax=vmax_,
             interpolation="nearest",
         )
         ax.set_ylabel(meta["label"], fontsize=8)
         ax.tick_params(axis="y", labelsize=7)
-        ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+        ax.tick_params(
+            axis="x", which="both", bottom=False, labelbottom=False
+        )
         if inv_idx == 0:
             PYCSAMT_STATION_RENDERING.apply(
-                ax, np.arange(n_st, dtype=float), all_st,
+                ax,
+                np.arange(n_st, dtype=float),
+                all_st,
                 preset="pseudosection",
                 xlim=(-0.5, n_st - 0.5),
             )
@@ -3018,6 +3615,9 @@ def plot_z_invariants_section(
         cb = fig.colorbar(im, cax=cax)
         cb.ax.tick_params(labelsize=6)
 
-    fig.suptitle(title or "Z rotation-invariants section",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(
+        title or "Z rotation-invariants section",
+        fontsize=10,
+        fontweight="bold",
+    )
     return fig

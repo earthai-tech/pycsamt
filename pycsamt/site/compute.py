@@ -18,13 +18,13 @@ from .utils import (
     station_name,
 )
 
-__all__= [
-
+__all__ = [
     "strike_estimate",
     "res_at_freq",
     "phase_slope",
     "tipper_magnitude",
-    ]
+]
+
 
 def strike_estimate(
     obj: Any,
@@ -130,8 +130,7 @@ def strike_estimate(
     for st, ed in _as_sites_iter(obj):
         Z = _get_z(ed)
         f = get_freq(ed)
-        if Z is None or f is None or Z.ndim != 3 or \
-           Z.shape[1:] != (2, 2):
+        if Z is None or f is None or Z.ndim != 3 or Z.shape[1:] != (2, 2):
             ang = float("nan")
         else:
             m = (method or "swift").lower()
@@ -146,9 +145,7 @@ def strike_estimate(
     if len(rows) == 1 and not isinstance(obj, Iterable):
         return rows[0][2]
 
-    df = pd.DataFrame(
-        rows, columns=["station", "method", "theta_deg"]
-    )
+    df = pd.DataFrame(rows, columns=["station", "method", "theta_deg"])
 
     return maybe_wrap_frame(
         df,
@@ -292,9 +289,7 @@ def res_at_freq(
         _, rxy, ryx, fx = rows[0]
         return {"res_xy": rxy, "res_yx": ryx, "f_used": fx}
 
-    df = pd.DataFrame(
-        rows, columns=["station", "res_xy", "res_yx", "f_used"]
-    )
+    df = pd.DataFrame(rows, columns=["station", "res_xy", "res_yx", "f_used"])
 
     return maybe_wrap_frame(
         df,
@@ -431,9 +426,7 @@ def phase_slope(
         _, sx, sy = rows[0]
         return {"slope_xy": sx, "slope_yx": sy}
 
-    df = pd.DataFrame(
-        rows, columns=["station", "slope_xy", "slope_yx"]
-    )
+    df = pd.DataFrame(rows, columns=["station", "slope_xy", "slope_yx"])
 
     return maybe_wrap_frame(
         df,
@@ -566,10 +559,12 @@ def tipper_magnitude(
                 long_rows.append((st, float(ff), float(mm)))
         else:
             rows.append(
-                (st,
-                 float(np.nanmean(mag)),
-                 float(np.nanmedian(mag)),
-                 float(np.nanmax(mag)))
+                (
+                    st,
+                    float(np.nanmean(mag)),
+                    float(np.nanmedian(mag)),
+                    float(np.nanmax(mag)),
+                )
             )
 
     if not isinstance(obj, Iterable):
@@ -592,9 +587,7 @@ def tipper_magnitude(
         return {"mean": m, "median": md, "max": mx}
 
     if per_freq:
-        df = pd.DataFrame(
-            long_rows, columns=["station", "freq", "mag"]
-        )
+        df = pd.DataFrame(long_rows, columns=["station", "freq", "mag"])
 
         return maybe_wrap_frame(
             df,
@@ -605,9 +598,7 @@ def tipper_magnitude(
             meta={"per_freq": True},
             description="Per-frequency tipper magnitude by station.",
         )
-    df = pd.DataFrame(
-        rows, columns=["station", "mean", "median", "max"]
-    )
+    df = pd.DataFrame(rows, columns=["station", "mean", "median", "max"])
 
     return maybe_wrap_frame(
         df,
@@ -620,8 +611,8 @@ def tipper_magnitude(
     )
 
 
-
 # Local helpers
+
 
 def _get_z(ed: Any) -> np.ndarray | None:
     """
@@ -711,8 +702,7 @@ def _swift_cost(Z: np.ndarray, theta: float) -> float:
 
 def _swift_theta(Z: np.ndarray) -> float:
     thetas = np.arange(0.0, 180.0, 1.0, float)
-    costs = np.array([_swift_cost(Z, th) for th in thetas],
-                     float)
+    costs = np.array([_swift_cost(Z, th) for th in thetas], float)
     if not np.isfinite(costs).any():
         return float("nan")
     k = int(np.nanargmin(costs))

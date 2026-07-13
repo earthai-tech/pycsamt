@@ -192,10 +192,7 @@ def _single_pseudosection(
             ),
         )
     )
-    title = (
-        f"{quantity.upper()} {component.upper()}"
-        " pseudosection"
-    )
+    title = f"{quantity.upper()} {component.upper()} pseudosection"
     _style_profile(fig, colors, title)
     if options.x_axis == "distance":
         fig.update_xaxes(title_text="Distance (km)")
@@ -303,10 +300,7 @@ def _multi_component_pseudosection(
         shared_xaxes=True,
         vertical_spacing=0.08,
         subplot_titles=[
-            (
-                f"{_quantity_name(options.quantity).upper()} "
-                f"{c.upper()}"
-            )
+            (f"{_quantity_name(options.quantity).upper()} {c.upper()}")
             for c in components
         ],
     )

@@ -39,9 +39,9 @@ def _log10_range(sites):
 
         arr = np.asarray(freqs)
         T_vals = 1.0 / arr[arr > 0]
-        log_T  = np.log10(T_vals)
-        lo = math.floor(log_T.min() * 4) / 4   # round to nearest 0.25
-        hi = math.ceil(log_T.max() * 4)  / 4
+        log_T = np.log10(T_vals)
+        lo = math.floor(log_T.min() * 4) / 4  # round to nearest 0.25
+        hi = math.ceil(log_T.max() * 4) / 4
         return lo, hi
 
     except Exception:
@@ -54,8 +54,8 @@ def register_freq(app) -> None:
         Output(IDs.FREQ_SLIDER, "max"),
         Output(IDs.FREQ_SLIDER, "value"),
         Output(IDs.FREQ_SLIDER, "disabled"),
-        Input(IDs.STORE_DATA,  "data"),
-        State(IDs.SESSION_ID,  "data"),
+        Input(IDs.STORE_DATA, "data"),
+        State(IDs.SESSION_ID, "data"),
         prevent_initial_call=True,
     )
     def init_slider(store_data, session_id):

@@ -104,7 +104,8 @@ class EDIRecomputeResult:
         """Return successfully written output paths."""
 
         return [
-            rec.output for rec in self.records
+            rec.output
+            for rec in self.records
             if rec.output is not None and rec.status == "ok"
         ]
 
@@ -225,9 +226,11 @@ class EDIRecomputer:
     copy: bool = True
     progress: bool | str = False
     verbose: int = 0
-    progress_callback: Callable[[int, int, str, str, str], None] | None = field(
-        default=None,
-        repr=False,
+    progress_callback: Callable[[int, int, str, str, str], None] | None = (
+        field(
+            default=None,
+            repr=False,
+        )
     )
 
     def run(self, source: Any) -> EDIRecomputeResult:
@@ -699,9 +702,7 @@ def _discover_many_path_groups(
 ) -> list[_LineGroup]:
     groups: list[_LineGroup] = []
     for src in sources:
-        groups.extend(
-            _discover_path_groups(Path(src), recursive=recursive)
-        )
+        groups.extend(_discover_path_groups(Path(src), recursive=recursive))
     return groups
 
 
@@ -734,11 +735,7 @@ def _iter_progress_groups(
     enabled: bool | str,
     total: int,
 ) -> Iterator[tuple[_LineGroup, Any]]:
-    items = [
-        (group, item)
-        for group in groups
-        for item in group.sources
-    ]
+    items = [(group, item) for group in groups for item in group.sources]
     if not progress_enabled(enabled):
         yield from items
         return

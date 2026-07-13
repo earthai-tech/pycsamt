@@ -10,6 +10,7 @@ Contains:
  - FieldAliases: standardized lists of common column/field name variants
  - FileRecognizer: logic to infer file type based on path or content
 """
+
 # import warnings
 from __future__ import annotations
 
@@ -23,31 +24,31 @@ from .log.logger import get_logger
 
 logger = get_logger(__name__)
 
-__all__ = ['TermDefinitions', 'FieldAliases', 'FileRecognizer']
+__all__ = ["TermDefinitions", "FieldAliases", "FileRecognizer"]
 
 # UTM zone designator ranges: letter -> [min_lon, max_lon]
 UTM_ZONE_DESIGNATOR = {
-    'X': [72, 84],
-    'W': [64, 72],
-    'V': [56, 64],
-    'U': [48, 56],
-    'T': [40, 48],
-    'S': [32, 40],
-    'R': [24, 32],
-    'Q': [16, 24],
-    'P': [8, 16],
-    'N': [0, 8],
-    'M': [-8, 0],
-    'L': [-16, -8],
-    'K': [-24, -16],
-    'J': [-32, -24],
-    'H': [-40, -32],
-    'G': [-48, -40],
-    'F': [-56, -48],
-    'E': [-64, -56],
-    'D': [-72, -64],
-    'C': [-80, -72],
-    'Z': [-80, 84],
+    "X": [72, 84],
+    "W": [64, 72],
+    "V": [56, 64],
+    "U": [48, 56],
+    "T": [40, 48],
+    "S": [32, 40],
+    "R": [24, 32],
+    "Q": [16, 24],
+    "P": [8, 16],
+    "N": [0, 8],
+    "M": [-8, 0],
+    "L": [-16, -8],
+    "K": [-24, -16],
+    "J": [-32, -24],
+    "H": [-40, -32],
+    "G": [-48, -40],
+    "F": [-56, -48],
+    "E": [-64, -56],
+    "D": [-72, -64],
+    "C": [-80, -72],
+    "Z": [-80, 84],
 }
 
 
@@ -57,6 +58,7 @@ class TermDefinitions(PyCSAMTObject):
     processing. Access attributes to retrieve a description
     string.
     """
+
     reference_frequency = (
         "Reference frequency is the highest frequency with clean "
         "data. See Weik (2001) Computer Science and Communications "
@@ -102,15 +104,16 @@ class FieldAliases(PyCSAMTObject):
     """
     Common field/column name variants for ease of lookup.
     """
-    missing_values: list = [' ', 'nan', np.nan, '*', 'NaN', 'none', None]
 
-    longitude: list[str] = ['lon', 'longitude', 'LONG', 'LON']
-    latitude:  list[str] = ['lat', 'latitude', 'LAT', 'LATITUDE']
-    easting:   list[str] = ['e', 'east', 'easting', 'EASTING']
-    northing:  list[str] = ['n', 'north', 'northing', 'NORTHING']
-    station:   list[str] = ['sta', 'station', 'stn']
-    elevation: list[str] = ['elev', 'elevation', 'ELEV', 'ELEVATION']
-    azimuth:   list[str] = ['azim', 'azimuth']
+    missing_values: list = [" ", "nan", np.nan, "*", "NaN", "none", None]
+
+    longitude: list[str] = ["lon", "longitude", "LONG", "LON"]
+    latitude: list[str] = ["lat", "latitude", "LAT", "LATITUDE"]
+    easting: list[str] = ["e", "east", "easting", "EASTING"]
+    northing: list[str] = ["n", "north", "northing", "NORTHING"]
+    station: list[str] = ["sta", "station", "stn"]
+    elevation: list[str] = ["elev", "elevation", "ELEV", "ELEVATION"]
+    azimuth: list[str] = ["azim", "azimuth"]
 
 
 class FileRecognizer(PyCSAMTObject):
@@ -120,17 +123,18 @@ class FileRecognizer(PyCSAMTObject):
     Supported types: 'avg', 'j', 'edi', 'stn', 'resp', 'mesh', 'model',
     'startup', 'iter', 'logfile'.
     """
+
     _type_signatures = {
-        'edi': ['>HEAD', '>END'],
-        'j':   ['>AZIMUTH', 'RXX', 'RXY'],
-        'avg': ['AMTAVG', 'skp', '%Rho'],
-        'stn': ['Station', 'Freq'],
-        'resp': None,  # numeric-only rows
-        'mesh': ['ZZZZZZZZZZZZ', '????????????'],
-        'model': ['MODEL NAME', 'NUM LAYERS'],
-        'startup': ['STARTUP', 'ITERATION'],
-        'iter': ['Iteration', 'Misfit'],
-        'logfile': ['MISFIT', 'ROUGHNESS'],
+        "edi": [">HEAD", ">END"],
+        "j": [">AZIMUTH", "RXX", "RXY"],
+        "avg": ["AMTAVG", "skp", "%Rho"],
+        "stn": ["Station", "Freq"],
+        "resp": None,  # numeric-only rows
+        "mesh": ["ZZZZZZZZZZZZ", "????????????"],
+        "model": ["MODEL NAME", "NUM LAYERS"],
+        "startup": ["STARTUP", "ITERATION"],
+        "iter": ["Iteration", "Misfit"],
+        "logfile": ["MISFIT", "ROUGHNESS"],
     }
 
     @classmethod
@@ -158,13 +162,13 @@ class FileRecognizer(PyCSAMTObject):
         if not filepath or not os.path.isfile(filepath):
             raise FileHandlingError(f"Invalid file path: {filepath}")
 
-        ext = os.path.splitext(filepath)[1].lstrip('.').lower()
+        ext = os.path.splitext(filepath)[1].lstrip(".").lower()
         if not deep and ext in cls._type_signatures:
             return ext
 
         # Read lines
         try:
-            with open(filepath, encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 lines = f.read().splitlines()
         except Exception as e:
             raise FileHandlingError(f"Cannot read file: {e}")
@@ -192,6 +196,3 @@ class FileRecognizer(PyCSAMTObject):
             except ValueError:
                 return False
         return True
-
-
-

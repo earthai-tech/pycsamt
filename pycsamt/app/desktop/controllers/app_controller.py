@@ -35,9 +35,9 @@ class AppController:
         self.selected_station: str | None = self.session.selected_station
 
         # ── Callback lists (listeners register here) ──────────────────
-        self._on_data_loaded:        list[Callable] = []
-        self._on_station_selected:   list[Callable] = []
-        self._on_status_message:     list[Callable] = []
+        self._on_data_loaded: list[Callable] = []
+        self._on_station_selected: list[Callable] = []
+        self._on_status_message: list[Callable] = []
 
     # ── Registration ──────────────────────────────────────────────────
 

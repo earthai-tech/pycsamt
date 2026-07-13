@@ -105,9 +105,7 @@ def load_lines(
             verbose=verbose,
         )
         for station in line_data.stations:
-            stations.append(
-                replace(station, line=line, index=index)
-            )
+            stations.append(replace(station, line=line, index=index))
             index += 1
         edis.extend(line_data.iter_edis())
 
@@ -145,9 +143,7 @@ def resolve_line_groups(
         if path.is_file():
             return {path.stem: [str(path)]}
         if not path.exists():
-            raise FileNotFoundError(
-                f"EDI source path not found: {path}"
-            )
+            raise FileNotFoundError(f"EDI source path not found: {path}")
         return _detect_dir_groups(
             path,
             detect=detect,
@@ -164,8 +160,7 @@ def resolve_line_groups(
         return {"line": items}
 
     raise TypeError(
-        "Unsupported EDI source for load_lines: "
-        f"{type(source)!r}."
+        f"Unsupported EDI source for load_lines: {type(source)!r}."
     )
 
 
@@ -221,11 +216,7 @@ def _group_by_id_prefix(
 def _discover_edis(path: Path, recursive: bool) -> list[str]:
     found: list[str] = []
     for pattern in _EDI_GLOBS:
-        matches = (
-            path.rglob(pattern)
-            if recursive
-            else path.glob(pattern)
-        )
+        matches = path.rglob(pattern) if recursive else path.glob(pattern)
         found.extend(str(p) for p in matches)
     # de-duplicate (case-insensitive globs can overlap) and sort
     return sorted(dict.fromkeys(found))

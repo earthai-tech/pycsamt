@@ -1,0 +1,6 @@
+index,station,lat,lon,elev,chainage,filename,path
+0,18-001A,32.1203,119.12883333333333,99.0,nan,000_18-001A.edi,site_gallery_exports\line18_first5\000_18-001A.edi
+1,18-002U,32.12113333333333,119.12889999999999,110.0,nan,001_18-002U.edi,site_gallery_exports\line18_first5\001_18-002U.edi
+2,18-003A,32.122083333333336,119.12885,81.0,nan,002_18-003A.edi,site_gallery_exports\line18_first5\002_18-003A.edi
+3,18-004A,32.123333333333335,119.12883333333333,99.0,nan,003_18-004A.edi,site_gallery_exports\line18_first5\003_18-004A.edi
+4,18-005U,32.1239,119.12883333333333,115.0,nan,004_18-005U.edi,site_gallery_exports\line18_first5\004_18-005U.edi

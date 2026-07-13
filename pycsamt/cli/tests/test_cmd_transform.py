@@ -29,9 +29,9 @@ from pycsamt.cli import main
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_SPECTRA_DIR  = _PROJECT_ROOT / "data" / "AMT" / "SPECTRA"
-_AVG_DIR      = _PROJECT_ROOT / "data" / "avg"
-_J_DIR        = _PROJECT_ROOT / "edi_out"   # has test_j_kb0-s001.edi
+_SPECTRA_DIR = _PROJECT_ROOT / "data" / "AMT" / "SPECTRA"
+_AVG_DIR = _PROJECT_ROOT / "data" / "avg"
+_J_DIR = _PROJECT_ROOT / "edi_out"  # has test_j_kb0-s001.edi
 
 
 def _has_spectra() -> bool:
@@ -50,6 +50,7 @@ def _has_j() -> bool:
 # pycsamt transform  (group help)
 # ---------------------------------------------------------------------------
 
+
 class TestTransformGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["transform", "--help"])
@@ -58,9 +59,7 @@ class TestTransformGroup:
             assert sub in result.output
 
     @pytest.mark.parametrize("sub", ["spectra", "avg", "j"])
-    def test_each_subcommand_help(
-        self, runner: CliRunner, sub: str
-    ) -> None:
+    def test_each_subcommand_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["transform", sub, "--help"])
         assert result.exit_code == 0
         assert "FILE_OR_DIR" in result.output
@@ -71,23 +70,26 @@ class TestTransformGroup:
 # SpectraToEDI unit tests (no CLI, no CliRunner needed)
 # ---------------------------------------------------------------------------
 
+
 class TestSpectraToEDIUnit:
     """Unit tests that exercise the transformer class directly."""
 
     @pytest.fixture(autouse=True)
     def require_spectra(self) -> None:
         if not _has_spectra():
-            pytest.skip("data/AMT/SPECTRA/ not found — skipping spectra unit tests")
+            pytest.skip(
+                "data/AMT/SPECTRA/ not found — skipping spectra unit tests"
+            )
 
     def test_single_file_returns_collection(self) -> None:
         from pycsamt.transformers import SpectraToEDI
-        col = SpectraToEDI().transform(
-            _SPECTRA_DIR / "HBH03.edi"
-        )
+
+        col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
         assert len(col) == 1
 
     def test_single_file_has_z(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
         ed = col[0]
         assert ed.Z is not None
@@ -95,18 +97,21 @@ class TestSpectraToEDIUnit:
 
     def test_single_file_has_tipper(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
         ed = col[0]
         assert ed.has_tipper
 
     def test_directory_processes_all_files(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI().transform(_SPECTRA_DIR)
         n_edi = len(list(_SPECTRA_DIR.glob("*.edi")))
         assert len(col) == n_edi
 
     def test_station_suffix_applied(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI(station_suffix="_IMP").transform(
             _SPECTRA_DIR / "HBH03.edi"
         )
@@ -114,6 +119,7 @@ class TestSpectraToEDIUnit:
 
     def test_station_name_override(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI().transform(
             _SPECTRA_DIR / "HBH03.edi",
             station_name="CUSTOM_01",
@@ -122,6 +128,7 @@ class TestSpectraToEDIUnit:
 
     def test_estimate_error(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI(estimate_error=True).transform(
             _SPECTRA_DIR / "HBH03.edi"
         )
@@ -129,6 +136,7 @@ class TestSpectraToEDIUnit:
 
     def test_write_to_output_dir(self, tmp_path: Path) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         SpectraToEDI().transform(
             _SPECTRA_DIR / "HBH03.edi",
             output_dir=tmp_path,
@@ -138,6 +146,7 @@ class TestSpectraToEDIUnit:
 
     def test_batch_result_contains_failures(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         t = SpectraToEDI(skip_errors=True)
         # Provide a corrupt file that will fail
         with tempfile.NamedTemporaryFile(suffix=".edi", delete=False) as fp:
@@ -153,40 +162,48 @@ class TestSpectraToEDIUnit:
 
     def test_skip_errors_false_raises(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         t = SpectraToEDI(skip_errors=False)
         with tempfile.NamedTemporaryFile(suffix=".edi", delete=False) as fp:
             fp.write(b">HEAD\n>END\n")
             bad = Path(fp.name)
         try:
-            with pytest.raises(RuntimeError, match="[Cc]onversion failed|failed to convert"):
+            with pytest.raises(
+                RuntimeError, match="[Cc]onversion failed|failed to convert"
+            ):
                 t.transform(bad)
         finally:
             bad.unlink(missing_ok=True)
 
     def test_transform_result_repr(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         result = SpectraToEDI().transform_batch(_SPECTRA_DIR)
         assert "TransformResult" in repr(result)
         assert str(result.n_ok) in repr(result)
 
     def test_resolve_list_input(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         files = list(_SPECTRA_DIR.glob("*.edi"))
         col = SpectraToEDI().transform(files)
         assert len(col) == len(files)
 
     def test_with_errors_classmethod(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         t = SpectraToEDI.with_errors()
         assert t.estimate_error is True
 
     def test_with_tipper_suffix_classmethod(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         t = SpectraToEDI.with_tipper_suffix()
         assert t.station_suffix == "_IMP"
 
     def test_invalid_source_type_raises(self) -> None:
         from pycsamt.transformers import SpectraToEDI
+
         with pytest.raises(TypeError):
             SpectraToEDI()._resolve_sources(12345)
 
@@ -194,6 +211,7 @@ class TestSpectraToEDIUnit:
         import numpy as np
 
         from pycsamt.transformers import SpectraToEDI
+
         col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
         z = col[0].Z.z
         assert z.ndim == 3
@@ -204,6 +222,7 @@ class TestSpectraToEDIUnit:
 # ---------------------------------------------------------------------------
 # CLI integration tests — pycsamt transform spectra
 # ---------------------------------------------------------------------------
+
 
 class TestTransformSpectraCLI:
     @pytest.fixture(autouse=True)
@@ -237,8 +256,7 @@ class TestTransformSpectraCLI:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(src),
-             "--output-dir", str(tmp_path)],
+            ["transform", "spectra", str(src), "--output-dir", str(tmp_path)],
         )
         assert result.exit_code == 0
         assert "Converted: 1/1" in result.output
@@ -249,8 +267,15 @@ class TestTransformSpectraCLI:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(src),
-             "--output-dir", str(tmp_path), "--format", "json"],
+            [
+                "transform",
+                "spectra",
+                str(src),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -264,8 +289,13 @@ class TestTransformSpectraCLI:
         n = len(list(_SPECTRA_DIR.glob("*.edi")))
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(_SPECTRA_DIR),
-             "--output-dir", str(tmp_path)],
+            [
+                "transform",
+                "spectra",
+                str(_SPECTRA_DIR),
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         assert f"Converted: {n}/{n}" in result.output
@@ -276,9 +306,17 @@ class TestTransformSpectraCLI:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(src),
-             "--station-suffix", "_IMP",
-             "--output-dir", str(tmp_path), "--format", "json"],
+            [
+                "transform",
+                "spectra",
+                str(src),
+                "--station-suffix",
+                "_IMP",
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -289,28 +327,35 @@ class TestTransformSpectraCLI:
     ) -> None:
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(_SPECTRA_DIR),
-             "--estimate-error",
-             "--output-dir", str(tmp_path)],
+            [
+                "transform",
+                "spectra",
+                str(_SPECTRA_DIR),
+                "--estimate-error",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
 
-    def test_verbose_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_verbose_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
-            ["transform", "spectra", str(_SPECTRA_DIR),
-             "--output-dir", str(tmp_path), "-v"],
+            [
+                "transform",
+                "spectra",
+                str(_SPECTRA_DIR),
+                "--output-dir",
+                str(tmp_path),
+                "-v",
+            ],
         )
         assert result.exit_code == 0
         assert "freq" in result.output  # verbose line shows freq count
 
     def test_missing_output_dir_fails(self, runner: CliRunner) -> None:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
-        result = runner.invoke(
-            main, ["transform", "spectra", str(src)]
-        )
+        result = runner.invoke(main, ["transform", "spectra", str(src)])
         assert result.exit_code != 0
         assert "--output-dir" in result.output
 
@@ -319,8 +364,13 @@ class TestTransformSpectraCLI:
     ) -> None:
         result = runner.invoke(
             main,
-            ["transform", "spectra", "/no/such/path.edi",
-             "--output-dir", str(tmp_path)],
+            [
+                "transform",
+                "spectra",
+                "/no/such/path.edi",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code != 0
 
@@ -330,8 +380,13 @@ class TestTransformSpectraCLI:
         n = len(list(_SPECTRA_DIR.glob("*.edi")))
         runner.invoke(
             main,
-            ["transform", "spectra", str(_SPECTRA_DIR),
-             "--output-dir", str(tmp_path)],
+            [
+                "transform",
+                "spectra",
+                str(_SPECTRA_DIR),
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         written = list(tmp_path.glob("*.edi"))
         assert len(written) == n
@@ -340,6 +395,7 @@ class TestTransformSpectraCLI:
 # ---------------------------------------------------------------------------
 # CLI integration tests — pycsamt transform avg
 # ---------------------------------------------------------------------------
+
 
 class TestTransformAvgCLI:
     @pytest.fixture(autouse=True)
@@ -354,28 +410,26 @@ class TestTransformAvgCLI:
         )
         assert result.exit_code == 0
 
-    def test_single_file(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_single_file(self, runner: CliRunner, tmp_path: Path) -> None:
         avgs = sorted(_AVG_DIR.glob("*.avg"))
         result = runner.invoke(
             main,
-            ["transform", "avg", str(avgs[0]),
-             "--output-dir", str(tmp_path)],
+            ["transform", "avg", str(avgs[0]), "--output-dir", str(tmp_path)],
         )
-        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
 
     def test_no_output_dir_fails(self, runner: CliRunner) -> None:
         avgs = sorted(_AVG_DIR.glob("*.avg"))
-        result = runner.invoke(
-            main, ["transform", "avg", str(avgs[0])]
-        )
+        result = runner.invoke(main, ["transform", "avg", str(avgs[0])])
         assert result.exit_code != 0
 
 
 # ---------------------------------------------------------------------------
 # CLI integration tests — pycsamt transform j
 # ---------------------------------------------------------------------------
+
 
 class TestTransformJCLI:
     @pytest.fixture(autouse=True)

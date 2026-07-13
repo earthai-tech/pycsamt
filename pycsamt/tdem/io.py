@@ -119,9 +119,11 @@ def read_tem_log(
     """
     return TEMLog.read(path, verbose=verbose, logger=logger)
 
+
 # ---------------------------------------------------------------------
 # Generic XYZ / CSV reader  (fully implemented)
 # ---------------------------------------------------------------------
+
 
 def read_xyz(
     path: Pathish,
@@ -258,8 +260,7 @@ def read_xyz(
     _time_scale = {"s": 1.0, "ms": 1e-3, "us": 1e-6, "\u00b5s": 1e-6}
     if time_unit not in _time_scale:
         msg = (
-            f"time_unit must be one of {list(_time_scale)}, "
-            f"got {time_unit!r}"
+            f"time_unit must be one of {list(_time_scale)}, got {time_unit!r}"
         )
         raise ValueError(msg)
     t = t * _time_scale[time_unit]
@@ -273,8 +274,7 @@ def read_xyz(
     }
     if data_unit not in _data_scale:
         msg = (
-            f"data_unit must be one of {list(_data_scale)}, "
-            f"got {data_unit!r}"
+            f"data_unit must be one of {list(_data_scale)}, got {data_unit!r}"
         )
         raise ValueError(msg)
     scale = _data_scale[data_unit]
@@ -283,7 +283,8 @@ def read_xyz(
         err = err * scale
 
     return TEMSounding.from_arrays(
-        t, d,
+        t,
+        d,
         current=current,
         tx_area=tx_area,
         loop_side=loop_side,
@@ -343,7 +344,8 @@ def read_xyz_multisite(
         if error_col is not None:
             err = np.array([float(r[error_col]) for r in rows])
         snd = TEMSounding.from_arrays(
-            t, d,
+            t,
+            d,
             station_name=site,
             error=err,
             **kwargs,
@@ -356,6 +358,7 @@ def read_xyz_multisite(
 # ---------------------------------------------------------------------
 # Internal helpers shared by the four format readers
 # ---------------------------------------------------------------------
+
 
 def _to_float(s: str) -> float:
     """Parse a float tolerant of Fortran-style exponents (1.2D+04 → 1.2e+04)."""
@@ -375,11 +378,18 @@ def _gate_times_to_seconds(times: list[float], unit: str) -> np.ndarray:
 def _data_to_si(data: np.ndarray, unit: str) -> np.ndarray:
     """Convert TEM decay data to SI units (T/s for dBdt, V/(Am²) for Hz)."""
     scale = {
-        "T/s": 1.0,        "nT/s": 1e-9,      "pT/s": 1e-12,
-        "V/Am2": 1.0,      "V/(Am2)": 1.0,
-        "nV/Am2": 1e-9,    "nV/(Am2)": 1e-9,
-        "uV/Am2": 1e-6,    "µV/Am2": 1e-6,    "uV/(Am2)": 1e-6,
-        "mV/Am2": 1e-3,    "mV/(Am2)": 1e-3,
+        "T/s": 1.0,
+        "nT/s": 1e-9,
+        "pT/s": 1e-12,
+        "V/Am2": 1.0,
+        "V/(Am2)": 1.0,
+        "nV/Am2": 1e-9,
+        "nV/(Am2)": 1e-9,
+        "uV/Am2": 1e-6,
+        "µV/Am2": 1e-6,
+        "uV/(Am2)": 1e-6,
+        "mV/Am2": 1e-3,
+        "mV/(Am2)": 1e-3,
         "SI": 1.0,
     }
     if unit not in scale:
@@ -392,6 +402,7 @@ def _data_to_si(data: np.ndarray, unit: str) -> np.ndarray:
 # ---------------------------------------------------------------------
 # Geosoft DAT reader
 # ---------------------------------------------------------------------
+
 
 def read_geosoft_dat(
     path: Pathish,
@@ -511,9 +522,9 @@ def read_geosoft_dat(
     lines = path.read_text(errors="replace").splitlines()
 
     # ── Parse metadata from comment lines ─────────────────────────────────────
-    _meta_float   = {}   # keyword → float
+    _meta_float = {}  # keyword → float
     _gate_times_f = None
-    _data_unit_f  = None
+    _data_unit_f = None
 
     _KW = {
         "current": "current",
@@ -531,16 +542,18 @@ def read_geosoft_dat(
 
         # GateTimes(ms): 0.021 0.037 ...
         import re as _re
+
         m_gt = _re.match(
             r"GateTimes?\s*(?:\((\w+)\))?\s*[:=]\s*(.+)",
-            body, _re.IGNORECASE,
+            body,
+            _re.IGNORECASE,
         )
         if m_gt:
             unit_tag = m_gt.group(1) or gate_times_unit
             gate_times_unit = unit_tag.lower()
-            _gate_times_f = [_to_float(v)
-                              for v in m_gt.group(2).split()
-                              if v.strip()]
+            _gate_times_f = [
+                _to_float(v) for v in m_gt.group(2).split() if v.strip()
+            ]
             continue
 
         # DataUnit: nV/Am2
@@ -557,10 +570,14 @@ def read_geosoft_dat(
                 _meta_float[_KW[key]] = _to_float(m_kv.group(2))
 
     # Merge file metadata with caller arguments (caller wins)
-    if current     is None: current     = _meta_float.get("current")
-    if tx_area     is None: tx_area     = _meta_float.get("tx_area")
-    if loop_side   is None: loop_side   = _meta_float.get("loop_side")
-    if loop_radius is None: loop_radius = _meta_float.get("loop_radius")
+    if current is None:
+        current = _meta_float.get("current")
+    if tx_area is None:
+        tx_area = _meta_float.get("tx_area")
+    if loop_side is None:
+        loop_side = _meta_float.get("loop_side")
+    if loop_radius is None:
+        loop_radius = _meta_float.get("loop_radius")
     if _data_unit_f is not None and data_unit == "nV/Am2":
         data_unit = _data_unit_f
     if _gate_times_f is not None and gate_times is None:
@@ -613,8 +630,9 @@ def read_geosoft_dat(
     if not header and data_rows:
         # No explicit header — generate G1, G2, … for all columns after 3
         n_cols = len(data_rows[0])
-        header = [x_col.upper(), y_col.upper(), elev_col.upper()] + \
-                 [f"{gate_prefix.upper()}{i+1}" for i in range(n_cols - 3)]
+        header = [x_col.upper(), y_col.upper(), elev_col.upper()] + [
+            f"{gate_prefix.upper()}{i + 1}" for i in range(n_cols - 3)
+        ]
 
     if not data_rows:
         raise ValueError(f"No numeric data rows found in {path}")
@@ -625,10 +643,10 @@ def read_geosoft_dat(
     def _idx(name: str, fallback: int | None = None) -> int | None:
         return h.get(name.upper(), fallback)
 
-    xi   = _idx(x_col,    0)
-    yi   = _idx(y_col,    1)
-    eli  = _idx(elev_col, 2)
-    sti  = _idx(station_col) if station_col else None
+    xi = _idx(x_col, 0)
+    yi = _idx(y_col, 1)
+    eli = _idx(elev_col, 2)
+    sti = _idx(station_col) if station_col else None
 
     # Gate columns: all columns whose name starts with gate_prefix (case-insensitive)
     pfx = gate_prefix.upper()
@@ -651,17 +669,32 @@ def read_geosoft_dat(
     if len(t_s) != len(gate_cols):
         # Trim to the shorter length
         n = min(len(t_s), len(gate_cols))
-        t_s      = t_s[:n]
+        t_s = t_s[:n]
         gate_cols = gate_cols[:n]
 
     soundings: list[TEMSounding] = []
     for row_i, row in enumerate(data_rows):
         try:
-            x_val   = _to_float(row[xi])   if xi   is not None and xi < len(row)  else 0.0
-            y_val   = _to_float(row[yi])   if yi   is not None and yi < len(row)  else 0.0
-            el_val  = _to_float(row[eli])  if eli  is not None and eli < len(row) else 0.0
-            st_name = (str(row[sti]) if sti is not None and sti < len(row)
-                       else f"S{row_i + 1:04d}")
+            x_val = (
+                _to_float(row[xi])
+                if xi is not None and xi < len(row)
+                else 0.0
+            )
+            y_val = (
+                _to_float(row[yi])
+                if yi is not None and yi < len(row)
+                else 0.0
+            )
+            el_val = (
+                _to_float(row[eli])
+                if eli is not None and eli < len(row)
+                else 0.0
+            )
+            st_name = (
+                str(row[sti])
+                if sti is not None and sti < len(row)
+                else f"S{row_i + 1:04d}"
+            )
             d_raw = np.array(
                 [_to_float(row[c]) for c in gate_cols if c < len(row)],
                 dtype=float,
@@ -673,7 +706,8 @@ def read_geosoft_dat(
 
         d_si = _data_to_si(d_raw, data_unit)
         snd = TEMSounding.from_arrays(
-            t_s[:len(d_si)], d_si,
+            t_s[: len(d_si)],
+            d_si,
             current=current,
             tx_area=tx_area,
             loop_side=loop_side,
@@ -694,6 +728,7 @@ def read_geosoft_dat(
 # ---------------------------------------------------------------------
 # AMIRA / EMIT .tem reader
 # ---------------------------------------------------------------------
+
 
 def read_amira(
     path: Pathish,
@@ -784,8 +819,9 @@ def read_amira(
     in_data = False
 
     _DATA_START = _re.compile(r"^\s*(DATA|DATASETS|\[DATA\])", _re.IGNORECASE)
-    _DATA_END   = _re.compile(r"^\s*(END\s*DATA|END\s*DATASETS|\[END\])",
-                               _re.IGNORECASE)
+    _DATA_END = _re.compile(
+        r"^\s*(END\s*DATA|END\s*DATASETS|\[END\])", _re.IGNORECASE
+    )
 
     for ln in lines:
         stripped = ln.strip()
@@ -821,13 +857,17 @@ def read_amira(
         return int(_to_float(v)) if v else fallback
 
     if current is None:
-        current = (_kv_float("TRANSMITTER_CURRENT")
-                   or _kv_float("CURRENT")
-                   or _kv_float("TX_CURRENT"))
+        current = (
+            _kv_float("TRANSMITTER_CURRENT")
+            or _kv_float("CURRENT")
+            or _kv_float("TX_CURRENT")
+        )
     if tx_area is None:
-        tx_area = (_kv_float("TRANSMITTER_AREA")
-                   or _kv_float("TXAREA")
-                   or _kv_float("TX_AREA"))
+        tx_area = (
+            _kv_float("TRANSMITTER_AREA")
+            or _kv_float("TXAREA")
+            or _kv_float("TX_AREA")
+        )
     if loop_side is None:
         loop_side = _kv_float("LOOP_SIDE") or _kv_float("LOOPSIDE")
     if loop_radius is None:
@@ -838,8 +878,9 @@ def read_amira(
         rx_turns = _kv_int("RECEIVER_TURNS", 1) or _kv_int("RX_TURNS", 1)
 
     # Gate times
-    _file_gt_unit = (_kv.get("GATE_TIMES_UNIT") or
-                     _kv.get("TIME_UNIT") or gate_times_unit).lower()
+    _file_gt_unit = (
+        _kv.get("GATE_TIMES_UNIT") or _kv.get("TIME_UNIT") or gate_times_unit
+    ).lower()
     if gate_times is None:
         raw_gt = _kv.get("GATE_TIMES") or _kv.get("GATETIMES") or ""
         if raw_gt:
@@ -889,16 +930,18 @@ def read_amira(
         if len(cols) < 1:
             continue
 
-        x_val  = _to_float(cols[0]) if len(cols) > 0 else 0.0
-        y_val  = _to_float(cols[1]) if len(cols) > 1 else 0.0
+        x_val = _to_float(cols[0]) if len(cols) > 0 else 0.0
+        y_val = _to_float(cols[1]) if len(cols) > 1 else 0.0
         el_val = _to_float(cols[2]) if len(cols) > 2 else 0.0
         data_start = 3
 
         n_gates = len(t_s)
         d_raw = np.array(
-            [_to_float(cols[data_start + k])
-             for k in range(n_gates)
-             if data_start + k < len(cols)],
+            [
+                _to_float(cols[data_start + k])
+                for k in range(n_gates)
+                if data_start + k < len(cols)
+            ],
             dtype=float,
         )
         if d_raw.size == 0:
@@ -907,7 +950,8 @@ def read_amira(
         n = min(len(t_s), len(d_raw))
         d_si = _data_to_si(d_raw[:n], data_unit)
         snd = TEMSounding.from_arrays(
-            t_s[:n], d_si,
+            t_s[:n],
+            d_si,
             current=current,
             tx_area=tx_area,
             loop_side=loop_side,
@@ -928,6 +972,7 @@ def read_amira(
 # ---------------------------------------------------------------------
 # Zonge GDP reader
 # ---------------------------------------------------------------------
+
 
 def read_zonge(
     path: Pathish,
@@ -1010,24 +1055,33 @@ def read_zonge(
         """Extract key-value pairs from a `* Key: value` comment line."""
         m_gt = _re.match(
             r"GateTimes?\s*(?:\((\w+)\))?\s*[:=]\s*(.+)",
-            body, _re.IGNORECASE,
+            body,
+            _re.IGNORECASE,
         )
         if m_gt:
-            unit_tag = (m_gt.group(1) or state.get("gt_unit", gate_times_unit)).lower()
-            state["gt_unit"]  = unit_tag
-            state["gt_raw"]   = [_to_float(v)
-                                  for v in m_gt.group(2).split() if v.strip()]
+            unit_tag = (
+                m_gt.group(1) or state.get("gt_unit", gate_times_unit)
+            ).lower()
+            state["gt_unit"] = unit_tag
+            state["gt_raw"] = [
+                _to_float(v) for v in m_gt.group(2).split() if v.strip()
+            ]
             return
 
         for kw, key in (
-            ("current", "current"), ("amp", "current"),
-            ("txarea", "tx_area"), ("looparea", "tx_area"),
-            ("loopside", "loop_side"), ("loopradius", "loop_radius"),
-            ("rxarea", "rx_area"), ("rxturns", "rx_turns"),
+            ("current", "current"),
+            ("amp", "current"),
+            ("txarea", "tx_area"),
+            ("looparea", "tx_area"),
+            ("loopside", "loop_side"),
+            ("loopradius", "loop_radius"),
+            ("rxarea", "rx_area"),
+            ("rxturns", "rx_turns"),
             ("dataunit", "data_unit"),
         ):
-            m = _re.match(rf"{kw}\s*[:=\s]\s*([^\s,;]+)",
-                          body, _re.IGNORECASE)
+            m = _re.match(
+                rf"{kw}\s*[:=\s]\s*([^\s,;]+)", body, _re.IGNORECASE
+            )
             if m:
                 state[key] = m.group(1).strip()
                 return
@@ -1038,8 +1092,9 @@ def read_zonge(
             state["station_name"] = m_st.group(1)
             return
         for coord, key in (("X", "x"), ("Y", "y"), ("Elev", "elevation")):
-            m_c = _re.match(rf"{coord}\s*[:=]\s*([0-9.eEdD+\-]+)",
-                            body, _re.IGNORECASE)
+            m_c = _re.match(
+                rf"{coord}\s*[:=]\s*([0-9.eEdD+\-]+)", body, _re.IGNORECASE
+            )
             if m_c:
                 state[key] = float(_to_float(m_c.group(1)))
 
@@ -1056,7 +1111,7 @@ def read_zonge(
 
     blocks: list[tuple[dict, list[list[str]]]] = []
     cur_state: dict = dict(global_state)
-    cur_rows:  list[list[str]] = []
+    cur_rows: list[list[str]] = []
 
     for ln in lines:
         stripped = ln.strip()
@@ -1070,7 +1125,7 @@ def read_zonge(
                 if cur_rows:
                     blocks.append((cur_state, cur_rows))
                 cur_state = dict(global_state)
-                cur_rows  = []
+                cur_rows = []
             _parse_meta_line(body, cur_state)
             continue
 
@@ -1081,7 +1136,7 @@ def read_zonge(
         try:
             _to_float(parts[0])
         except ValueError:
-            continue   # skip header or label lines
+            continue  # skip header or label lines
 
         cur_rows.append(parts)
 
@@ -1098,23 +1153,27 @@ def read_zonge(
     soundings: list[TEMSounding] = []
 
     for blk_i, (state, rows) in enumerate(blocks):
-        blk_current     = _resolve(state, "current",     current)
-        blk_tx_area     = _resolve(state, "tx_area",     tx_area)
-        blk_loop_side   = _resolve(state, "loop_side",   loop_side)
+        blk_current = _resolve(state, "current", current)
+        blk_tx_area = _resolve(state, "tx_area", tx_area)
+        blk_loop_side = _resolve(state, "loop_side", loop_side)
         blk_loop_radius = _resolve(state, "loop_radius", loop_radius)
-        blk_rx_area     = _resolve(state, "rx_area",     rx_area)
-        blk_rx_turns    = _resolve(state, "rx_turns",    rx_turns, int)
-        blk_du          = state.get("data_unit", data_unit)
-        blk_st          = state.get("station_name", f"S{blk_i + 1:04d}")
-        blk_x           = state.get("x", 0.0)
-        blk_y           = state.get("y", 0.0)
-        blk_el          = state.get("elevation", 0.0)
+        blk_rx_area = _resolve(state, "rx_area", rx_area)
+        blk_rx_turns = _resolve(state, "rx_turns", rx_turns, int)
+        blk_du = state.get("data_unit", data_unit)
+        blk_st = state.get("station_name", f"S{blk_i + 1:04d}")
+        blk_x = state.get("x", 0.0)
+        blk_y = state.get("y", 0.0)
+        blk_el = state.get("elevation", 0.0)
 
         if blk_current is None:
             raise ValueError(
                 f"Transmitter current not found for block {blk_i + 1}."
             )
-        if blk_tx_area is None and blk_loop_side is None and blk_loop_radius is None:
+        if (
+            blk_tx_area is None
+            and blk_loop_side is None
+            and blk_loop_radius is None
+        ):
             raise ValueError(
                 f"Transmitter geometry not found for block {blk_i + 1}."
             )
@@ -1126,7 +1185,7 @@ def read_zonge(
         d_list: list[float] = []
         e_list: list[float] = []
 
-        gt_raw  = state.get("gt_raw") or (gate_times or [])
+        gt_raw = state.get("gt_raw") or (gate_times or [])
         gt_unit = state.get("gt_unit", gate_times_unit).lower()
 
         for row in rows:
@@ -1137,10 +1196,12 @@ def read_zonge(
             if gt_raw:
                 # Gate times from header → rows are data only (may have Win prefix)
                 try:
-                    gate_i = int(_to_float(row[0])) - 1   # window index 1-based
+                    gate_i = (
+                        int(_to_float(row[0])) - 1
+                    )  # window index 1-based
                     if 0 <= gate_i < len(gt_raw):
-                        d_val  = _to_float(row[-2] if n >= 3 else row[-1])
-                        e_val  = _to_float(row[-1]) if n >= 3 else None
+                        d_val = _to_float(row[-2] if n >= 3 else row[-1])
+                        e_val = _to_float(row[-1]) if n >= 3 else None
                         t_list.append(gt_raw[gate_i])
                         d_list.append(d_val)
                         if e_val is not None:
@@ -1152,7 +1213,7 @@ def read_zonge(
             # No header gate times → columns: [Win]  Time  Data  [Error]
             if n >= 3:
                 try:
-                    int(_to_float(row[0]))   # first col is window number
+                    int(_to_float(row[0]))  # first col is window number
                     t_list.append(_to_float(row[1]))
                     d_list.append(_to_float(row[2]))
                     if n >= 4:
@@ -1169,14 +1230,17 @@ def read_zonge(
         if not t_list:
             continue
 
-        t_arr = _gate_times_to_seconds(t_list, gt_unit if gt_raw else gate_times_unit)
+        t_arr = _gate_times_to_seconds(
+            t_list, gt_unit if gt_raw else gate_times_unit
+        )
         d_arr = _data_to_si(np.array(d_list, dtype=float), blk_du)
-        err   = np.array(e_list, dtype=float) if e_list else None
+        err = np.array(e_list, dtype=float) if e_list else None
         if err is not None:
             err = _data_to_si(err, blk_du)
 
         snd = TEMSounding.from_arrays(
-            t_arr, d_arr,
+            t_arr,
+            d_arr,
             current=blk_current,
             tx_area=blk_tx_area,
             loop_side=blk_loop_side,
@@ -1198,6 +1262,7 @@ def read_zonge(
 # ---------------------------------------------------------------------
 # WalkTEM / Aarhus Workbench reader
 # ---------------------------------------------------------------------
+
 
 def read_walkttem(
     path: Pathish,
@@ -1303,9 +1368,9 @@ def read_walkttem(
         r"^(TXOPERATION|RXOPERATION|GATESET|GENERALHEADER|DATASTATUS)",
         _re.IGNORECASE,
     )
-    _SECT_END   = _re.compile(r"^END_(\w+)", _re.IGNORECASE)
+    _SECT_END = _re.compile(r"^END_(\w+)", _re.IGNORECASE)
     _DATA_START = _re.compile(r"^DATA\s*$", _re.IGNORECASE)
-    _DATA_END   = _re.compile(r"^END_DATA", _re.IGNORECASE)
+    _DATA_END = _re.compile(r"^END_DATA", _re.IGNORECASE)
 
     for ln in lines:
         stripped = ln.strip()
@@ -1327,13 +1392,13 @@ def read_walkttem(
             if current_section:
                 _sections[current_section.upper()] = section_lines
             current_section = None
-            section_lines   = []
+            section_lines = []
             continue
 
         m_start = _SECT_START.match(stripped)
         if m_start:
             current_section = m_start.group(1)
-            section_lines   = []
+            section_lines = []
             continue
 
         if current_section:
@@ -1343,7 +1408,9 @@ def read_walkttem(
     def _sect_float(section: str, *keys) -> float | None:
         for ln in _sections.get(section.upper(), []):
             parts = ln.split()
-            if len(parts) >= 2 and parts[0].lower() in [k.lower() for k in keys]:
+            if len(parts) >= 2 and parts[0].lower() in [
+                k.lower() for k in keys
+            ]:
                 try:
                     return _to_float(parts[1])
                 except ValueError:
@@ -1359,9 +1426,15 @@ def read_walkttem(
         val = parts[1] if len(parts) >= 2 else None
         if val is None:
             continue
-        if kl in ("loopsize", "loopside") and loop_side is None and tx_area is None:
+        if (
+            kl in ("loopsize", "loopside")
+            and loop_side is None
+            and tx_area is None
+        ):
             loop_side = _to_float(val)
-        elif kl in ("loopradius",) and loop_radius is None and tx_area is None:
+        elif (
+            kl in ("loopradius",) and loop_radius is None and tx_area is None
+        ):
             loop_radius = _to_float(val)
         elif kl in ("looparea", "txarea") and tx_area is None:
             tx_area = _to_float(val)
@@ -1373,7 +1446,11 @@ def read_walkttem(
     _rx = _sections.get("RXOPERATION", [])
     for ln in _rx:
         parts = ln.split()
-        if len(parts) >= 2 and parts[0].lower() in ("coilmoment", "rxarea", "coilarea"):
+        if len(parts) >= 2 and parts[0].lower() in (
+            "coilmoment",
+            "rxarea",
+            "coilarea",
+        ):
             if rx_area == 1.0:
                 rx_area = _to_float(parts[1])
 
@@ -1393,7 +1470,7 @@ def read_walkttem(
             _file_gt_unit = parts[1].lower() if len(parts) > 1 else "ms"
 
     if gate_times is None and _file_gt:
-        gate_times      = _file_gt
+        gate_times = _file_gt
         gate_times_unit = _file_gt_unit
 
     if current is None:
@@ -1433,11 +1510,11 @@ def read_walkttem(
         if len(parts) < 5:
             continue
         try:
-            line_id   = parts[0]
-            fid_id    = parts[1]
-            x_val     = _to_float(parts[2])
-            y_val     = _to_float(parts[3])
-            el_val    = _to_float(parts[4])
+            line_id = parts[0]
+            fid_id = parts[1]
+            x_val = _to_float(parts[2])
+            y_val = _to_float(parts[3])
+            el_val = _to_float(parts[4])
         except (ValueError, IndexError):
             continue
 
@@ -1448,9 +1525,9 @@ def read_walkttem(
         # Heuristic: if n_rest == 2*n_gates, first half = data, second = errors
         if n_rest >= 2 * n_gates:
             d_cols = rest[:n_gates]
-            e_cols = rest[n_gates: 2 * n_gates]
+            e_cols = rest[n_gates : 2 * n_gates]
         else:
-            d_cols = rest[:min(n_gates, n_rest)]
+            d_cols = rest[: min(n_gates, n_rest)]
             e_cols = []
 
         if not d_cols:
@@ -1458,18 +1535,24 @@ def read_walkttem(
 
         try:
             d_raw = np.array([_to_float(v) for v in d_cols], dtype=float)
-            e_raw = (np.array([_to_float(v) for v in e_cols], dtype=float)
-                     if e_cols else None)
+            e_raw = (
+                np.array([_to_float(v) for v in e_cols], dtype=float)
+                if e_cols
+                else None
+            )
         except ValueError:
             continue
 
         n = min(len(t_s), len(d_raw))
         d_si = _data_to_si(d_raw[:n], data_unit)
-        e_si = _data_to_si(e_raw[:n], data_unit) if e_raw is not None else None
+        e_si = (
+            _data_to_si(e_raw[:n], data_unit) if e_raw is not None else None
+        )
 
         st_name = f"L{line_id}_F{fid_id}"
         snd = TEMSounding.from_arrays(
-            t_s[:n], d_si,
+            t_s[:n],
+            d_si,
             current=current,
             tx_area=tx_area,
             loop_side=loop_side,

@@ -54,6 +54,7 @@ _VALID_METHODS = frozenset(
 # BBox
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BBox:
     """Geographic bounding box in decimal degrees (WGS-84 default).
@@ -141,8 +142,10 @@ class BBox:
         if not lats or not lons:
             raise ValueError("lats and lons must be non-empty")
         return cls(
-            lat_min=min(lats), lat_max=max(lats),
-            lon_min=min(lons), lon_max=max(lons),
+            lat_min=min(lats),
+            lat_max=max(lats),
+            lon_min=min(lons),
+            lon_max=max(lons),
         )
 
     def __repr__(self) -> str:
@@ -155,6 +158,7 @@ class BBox:
 # ---------------------------------------------------------------------------
 # SurveyMeta
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SurveyMeta:
@@ -246,12 +250,14 @@ class SurveyMeta:
     @property
     def is_complete(self) -> bool:
         """Return True when all key descriptors are populated."""
-        return all([
-            self.name,
-            self.method,
-            self.bbox is not None,
-            self.n_stations is not None,
-        ])
+        return all(
+            [
+                self.name,
+                self.method,
+                self.bbox is not None,
+                self.n_stations is not None,
+            ]
+        )
 
     # ------------------------------------------------------------------
     # Integration helpers
@@ -329,16 +335,18 @@ class SurveyMeta:
     def to_dict(self) -> dict[str, Any]:
         """Return all fields as a plain JSON-serialisable dict."""
         d: dict[str, Any] = {
-            "name":       self.name,
-            "project":    self.project,
-            "operator":   self.operator,
-            "method":     self.method,
-            "bbox":       self.bbox.to_dict() if self.bbox else None,
-            "date_start": self.date_start.isoformat() if self.date_start else None,
-            "date_end":   self.date_end.isoformat()   if self.date_end   else None,
-            "crs":        self.crs,
+            "name": self.name,
+            "project": self.project,
+            "operator": self.operator,
+            "method": self.method,
+            "bbox": self.bbox.to_dict() if self.bbox else None,
+            "date_start": self.date_start.isoformat()
+            if self.date_start
+            else None,
+            "date_end": self.date_end.isoformat() if self.date_end else None,
+            "crs": self.crs,
             "n_stations": self.n_stations,
-            "notes":      self.notes,
+            "notes": self.notes,
         }
         d.update(self.extra)
         return d
@@ -358,8 +366,15 @@ class SurveyMeta:
             return date.fromisoformat(str(v))
 
         known = {
-            "name", "project", "operator", "method",
-            "date_start", "date_end", "crs", "n_stations", "notes",
+            "name",
+            "project",
+            "operator",
+            "method",
+            "date_start",
+            "date_end",
+            "crs",
+            "n_stations",
+            "notes",
         }
         extra = {k: v for k, v in d.items() if k not in known}
         return cls(
@@ -394,9 +409,12 @@ class SurveyMeta:
         try:
             import yaml  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError("PyYAML is required for YAML serialisation.") from exc
-        text = yaml.safe_dump(self.to_dict(), default_flow_style=False,
-                              allow_unicode=True)
+            raise ImportError(
+                "PyYAML is required for YAML serialisation."
+            ) from exc
+        text = yaml.safe_dump(
+            self.to_dict(), default_flow_style=False, allow_unicode=True
+        )
         if path is not None:
             Path(path).write_text(text, encoding="utf-8")
         return text
@@ -407,7 +425,9 @@ class SurveyMeta:
         try:
             import yaml  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError("PyYAML is required for YAML deserialisation.") from exc
+            raise ImportError(
+                "PyYAML is required for YAML deserialisation."
+            ) from exc
         data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         return cls.from_dict(data)
 
@@ -430,7 +450,11 @@ class SurveyMeta:
         if self.date_start:
             parts.append(
                 f"  Dates   : {self.date_start} → {self.date_end or '?'}"
-                + (f"  ({self.duration_days} days)" if self.duration_days else "")
+                + (
+                    f"  ({self.duration_days} days)"
+                    if self.duration_days
+                    else ""
+                )
             )
         if self.notes:
             parts.append(f"  Notes   : {self.notes}")

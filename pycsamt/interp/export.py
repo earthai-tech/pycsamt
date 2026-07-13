@@ -19,6 +19,7 @@ Example
 >>> export.to_las(logs[0], "S17.las")
 >>> export.to_csv(logs, "all_stations.csv")
 """
+
 from __future__ import annotations
 
 import csv
@@ -45,6 +46,7 @@ PathLike = Union[str, Path]
 # ---------------------------------------------------------------------------
 # Oasis Montaj XYZ
 # ---------------------------------------------------------------------------
+
 
 def to_oasis_montaj_xyz(
     logs: Sequence[StratigraphicLog],
@@ -94,14 +96,12 @@ def to_oasis_montaj_xyz(
         for k, log in enumerate(logs):
             elev = float(elevation[k]) if elevation is not None else 0.0
             fh.write(f"/ Line {log.station_name}\n")
-            for _iz, (z, rho) in enumerate(
-                zip(log.z_centers, log.rho_log10)
-            ):
+            for _iz, (z, rho) in enumerate(zip(log.z_centers, log.rho_log10)):
                 if np.isnan(rho):
                     continue
                 x_val = log.station_x
                 z_val = elev - float(z)
-                rho_val = float(rho) if log_rho else float(10.0 ** rho)
+                rho_val = float(rho) if log_rho else float(10.0**rho)
                 # find lithology for this depth cell
                 lith = ""
                 for layer in log.layers:
@@ -121,6 +121,7 @@ def to_oasis_montaj_xyz(
 # ---------------------------------------------------------------------------
 # LAS 2.0
 # ---------------------------------------------------------------------------
+
 
 def to_las(
     log: StratigraphicLog,
@@ -157,7 +158,7 @@ def to_las(
     z = log.z_centers
     rho = log.rho_log10.copy()
     if not log_rho:
-        rho = 10.0 ** rho
+        rho = 10.0**rho
 
     # build lithology-code column
     lith_codes = np.full(len(z), 0, dtype=int)
@@ -202,6 +203,7 @@ def to_las(
 # CSV
 # ---------------------------------------------------------------------------
 
+
 def to_csv(
     logs: Sequence[StratigraphicLog],
     path: PathLike,
@@ -227,7 +229,14 @@ def to_csv(
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    fieldnames = ["station", "x_m", "depth_m", "rho_log10", "rho_ohm_m", "lithology"]
+    fieldnames = [
+        "station",
+        "x_m",
+        "depth_m",
+        "rho_log10",
+        "rho_ohm_m",
+        "lithology",
+    ]
 
     with out.open("w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -241,14 +250,16 @@ def to_csv(
                     if layer.top <= float(zi) < layer.bottom:
                         lith = layer.lithology
                         break
-                writer.writerow({
-                    "station":   log.station_name,
-                    "x_m":       f"{log.station_x:.3f}",
-                    "depth_m":   f"{float(zi):.3f}",
-                    "rho_log10": f"{float(rho_l):.5f}",
-                    "rho_ohm_m": f"{10.0 ** float(rho_l):.3f}",
-                    "lithology": lith,
-                })
+                writer.writerow(
+                    {
+                        "station": log.station_name,
+                        "x_m": f"{log.station_x:.3f}",
+                        "depth_m": f"{float(zi):.3f}",
+                        "rho_log10": f"{float(rho_l):.5f}",
+                        "rho_ohm_m": f"{10.0 ** float(rho_l):.3f}",
+                        "lithology": lith,
+                    }
+                )
 
     return out
 
@@ -256,6 +267,7 @@ def to_csv(
 # ---------------------------------------------------------------------------
 # VTK rectilinear grid
 # ---------------------------------------------------------------------------
+
 
 def to_vtk(
     model: ResistivityModel,
@@ -288,7 +300,7 @@ def to_vtk(
 
     x = model.x_centers
     z = model.z_centers
-    rho = model.rho_2d if log_rho else 10.0 ** model.rho_2d
+    rho = model.rho_2d if log_rho else 10.0**model.rho_2d
 
     nx, nz = len(x), len(z)
 

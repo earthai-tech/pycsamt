@@ -127,8 +127,7 @@ class SectionAxisStyle:
         y_direction = self.y_direction.lower()
         if y_direction not in _Y_DIRECTIONS:
             msg = (
-                "section y_direction must be one of "
-                f"{sorted(_Y_DIRECTIONS)}."
+                f"section y_direction must be one of {sorted(_Y_DIRECTIONS)}."
             )
             raise ValueError(msg)
         if isinstance(self.aspect, str) and self.aspect not in _ASPECTS:
@@ -211,6 +210,7 @@ class SectionStyle:
         elevation information.
         """
         from pycsamt.topo.config import PYCSAMT_TOPO
+
         return PYCSAMT_TOPO.is_active_for(self.axis.y_type)
 
     def copy(self, **kw: Any) -> SectionStyle:
@@ -231,7 +231,9 @@ class SectionStyle:
         """Return a concrete figure size for this section."""
         max_label_len = None
         if labels is not None:
-            max_label_len = max((len(str(label)) for label in labels), default=4)
+            max_label_len = max(
+                (len(str(label)) for label in labels), default=4
+            )
         return self.figure.resolve(
             n_stations=n_stations,
             n_y=n_y,
@@ -469,8 +471,7 @@ class PyCSAMTSection:
 
     def _snapshot(self) -> dict[str, SectionStyle]:
         return {
-            name: copy.deepcopy(self.style_for(name))
-            for name in _PRESETS
+            name: copy.deepcopy(self.style_for(name)) for name in _PRESETS
         }
 
     def _restore(self, snapshot: dict[str, SectionStyle]) -> None:

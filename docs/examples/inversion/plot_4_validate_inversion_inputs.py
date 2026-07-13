@@ -28,6 +28,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -35,7 +42,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -45,8 +52,7 @@ if str(ROOT) not in sys.path:
 from pycsamt.emtools import ensure_sites
 from pycsamt.site import SitesReport
 
-
-workspace = Path(__file__).resolve().parent / "workspaces" / "l18_prepared_workspace"
+workspace = EXAMPLE_DIR / "workspaces" / "l18_prepared_workspace"
 edi_dir = workspace / "01_corrected_edis"
 table_dir = workspace / "02_tables"
 model_dir = workspace / "03_model_placeholder"
@@ -197,7 +203,14 @@ for table_name, frame, numeric_columns in [
     (
         "rho_phase",
         rho_phase_df,
-        ["frequency_hz", "period_s", "log10_rho_a", "log10_rho_error", "phase_deg", "phase_error_deg"],
+        [
+            "frequency_hz",
+            "period_s",
+            "log10_rho_a",
+            "log10_rho_error",
+            "phase_deg",
+            "phase_error_deg",
+        ],
     ),
 ]:
     finite = np.isfinite(frame[numeric_columns].to_numpy(dtype=float)).all()
@@ -241,7 +254,13 @@ results.extend(
 )
 
 floor_fraction = float((complex_df["error_source"] != "edi_error").mean())
-floor_status = "PASS" if floor_fraction < 0.35 else "WARN" if floor_fraction < 0.75 else "FAIL"
+floor_status = (
+    "PASS"
+    if floor_fraction < 0.35
+    else "WARN"
+    if floor_fraction < 0.75
+    else "FAIL"
+)
 results.append(
     check(
         "error:floor_fraction",
@@ -253,8 +272,12 @@ results.append(
 
 phase_min = float(policy["derived_error"]["phase_min_deg"])
 logrho_min = float(policy["derived_error"]["logrho_min"])
-phase_at_floor = float((rho_phase_df["phase_error_deg"] <= phase_min + 1e-12).mean())
-logrho_at_floor = float((rho_phase_df["log10_rho_error"] <= logrho_min + 1e-12).mean())
+phase_at_floor = float(
+    (rho_phase_df["phase_error_deg"] <= phase_min + 1e-12).mean()
+)
+logrho_at_floor = float(
+    (rho_phase_df["log10_rho_error"] <= logrho_min + 1e-12).mean()
+)
 
 results.append(
     check(
@@ -273,7 +296,9 @@ results.append(
 # Missing components are usually a hard failure for a planned TE/TM inversion.
 
 lo, hi = policy["phase_wrap_degrees"]
-phase_ok = ((rho_phase_df["phase_deg"] >= lo) & (rho_phase_df["phase_deg"] <= hi)).all()
+phase_ok = (
+    (rho_phase_df["phase_deg"] >= lo) & (rho_phase_df["phase_deg"] <= hi)
+).all()
 results.append(
     check(
         "phase:range",
@@ -306,8 +331,16 @@ coverage = (
     .reset_index(name="n_component")
 )
 expected_n_component = len(expected_components)
-coverage_fraction = float((coverage["n_component"] == expected_n_component).mean())
-coverage_status = "PASS" if coverage_fraction > 0.95 else "WARN" if coverage_fraction > 0.80 else "FAIL"
+coverage_fraction = float(
+    (coverage["n_component"] == expected_n_component).mean()
+)
+coverage_status = (
+    "PASS"
+    if coverage_fraction > 0.95
+    else "WARN"
+    if coverage_fraction > 0.80
+    else "FAIL"
+)
 
 results.append(
     check(
@@ -375,8 +408,12 @@ except Exception as exc:
 # * number of rows = len(z_edges) - 1;
 # * x and z edges must be strictly increasing.
 
-x_edges = pd.read_csv(required_files["x_edges"])["x_edge_m"].to_numpy(dtype=float)
-z_edges = pd.read_csv(required_files["z_edges"])["z_edge_m"].to_numpy(dtype=float)
+x_edges = pd.read_csv(required_files["x_edges"])["x_edge_m"].to_numpy(
+    dtype=float
+)
+z_edges = pd.read_csv(required_files["z_edges"])["z_edge_m"].to_numpy(
+    dtype=float
+)
 model = np.loadtxt(required_files["starting_model"], delimiter=",")
 model = np.atleast_2d(model)
 
@@ -440,7 +477,10 @@ results.append(
 # A compact dashboard makes the validation report easier to review.
 
 status_order = {"PASS": 0, "WARN": 1, "FAIL": 2}
-status_counts = {status: sum(row["status"] == status for row in results) for status in ["PASS", "WARN", "FAIL"]}
+status_counts = {
+    status: sum(row["status"] == status for row in results)
+    for status in ["PASS", "WARN", "FAIL"]
+}
 
 stations = list(dict.fromkeys(complex_df["station"].astype(str)))
 periods = np.sort(complex_df["period_s"].unique())
@@ -452,12 +492,18 @@ for _, row in coverage.iterrows():
 
 fig, axs = plt.subplots(2, 2, figsize=(13.0, 8.0))
 
-axs[0, 0].bar(status_counts.keys(), status_counts.values(), color=["#16a34a", "#f59e0b", "#dc2626"])
+axs[0, 0].bar(
+    status_counts.keys(),
+    status_counts.values(),
+    color=["#16a34a", "#f59e0b", "#dc2626"],
+)
 axs[0, 0].set_title("Validation statuses")
 axs[0, 0].set_ylabel("Number of checks")
 axs[0, 0].grid(axis="y", alpha=0.25)
 
-axs[0, 1].hist(complex_df["relative_error_used"], bins=30, color="#2563eb", alpha=0.82)
+axs[0, 1].hist(
+    complex_df["relative_error_used"], bins=30, color="#2563eb", alpha=0.82
+)
 axs[0, 1].set_title("Relative impedance errors")
 axs[0, 1].set_xlabel("error / |Z|")
 axs[0, 1].grid(axis="y", alpha=0.25)
@@ -470,7 +516,12 @@ im = axs[1, 0].imshow(
     cmap="viridis",
     vmin=0,
     vmax=expected_n_component,
-    extent=(-0.5, len(stations) - 0.5, np.log10(periods.min()), np.log10(periods.max())),
+    extent=(
+        -0.5,
+        len(stations) - 0.5,
+        np.log10(periods.min()),
+        np.log10(periods.max()),
+    ),
 )
 axs[1, 0].set_xticks(np.arange(len(stations)))
 axs[1, 0].set_xticklabels(stations, rotation=90, fontsize=6)
@@ -478,7 +529,11 @@ axs[1, 0].set_ylabel(r"$\log_{10}T$ (s)")
 axs[1, 0].set_title("Component coverage")
 fig.colorbar(im, ax=axs[1, 0], pad=0.02, label="components")
 
-axs[1, 1].plot(0.5 * (z_edges[:-1] + z_edges[1:]) / 1000.0, np.nanmedian(model, axis=1), "o-")
+axs[1, 1].plot(
+    0.5 * (z_edges[:-1] + z_edges[1:]) / 1000.0,
+    np.nanmedian(model, axis=1),
+    "o-",
+)
 axs[1, 1].set_xlabel("Depth (km)")
 axs[1, 1].set_ylabel(r"median $\log_{10}\rho$")
 axs[1, 1].set_title("Starting model depth trend")
@@ -511,9 +566,13 @@ print("Validation report CSV:", report_csv)
 if status_counts["FAIL"]:
     print("Validation failed.  Fix FAIL rows before running inversion.")
 elif status_counts["WARN"]:
-    print("Validation passed with warnings.  Review WARN rows before running inversion.")
+    print(
+        "Validation passed with warnings.  Review WARN rows before running inversion."
+    )
 else:
-    print("Validation passed.  Inputs are ready for backend-specific conversion.")
+    print(
+        "Validation passed.  Inputs are ready for backend-specific conversion."
+    )
 
 # %%
 # 13. How to use this in a real project

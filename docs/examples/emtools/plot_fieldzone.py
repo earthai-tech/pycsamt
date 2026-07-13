@@ -53,7 +53,9 @@ freq = np.logspace(0, 4, 300)  # 1 Hz-10 kHz, matches L18PLT's band
 delta_b = BOSTICK_C * np.sqrt(RHO_DEMO / freq)
 
 fig, ax = plt.subplots(figsize=(7, 5))
-for offset, color in zip([500.0, 2000.0, 8000.0], ["#d62728", "#ff7f0e", "#2ca02c"]):
+for offset, color in zip(
+    [500.0, 2000.0, 8000.0], ["#d62728", "#ff7f0e", "#2ca02c"]
+):
     ax.loglog(freq, offset / delta_b, color=color, label=f"r={offset:g} m")
 ax.axhspan(3.0, 1e6, color="#2ca02c", alpha=0.08)
 ax.axhspan(0.3, 3.0, color="#ff7f0e", alpha=0.10)
@@ -62,7 +64,9 @@ ax.axhline(3.0, color="0.3", ls="--", lw=0.8)
 ax.axhline(0.3, color="0.3", ls="--", lw=0.8)
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel(r"$|k \cdot r|$")
-ax.set_title(fr"$|k \cdot r|$ vs. frequency  ($\rho_a$={RHO_DEMO:g} $\Omega\cdot$m)")
+ax.set_title(
+    rf"$|k \cdot r|$ vs. frequency  ($\rho_a$={RHO_DEMO:g} $\Omega\cdot$m)"
+)
 ax.legend(fontsize=8)
 ax.grid(True, which="both", alpha=0.3)
 
@@ -117,14 +121,22 @@ ax.set_title(f"{station} — measured |k.r|  (r={OFFSET_DEMO:g} m)")
 # and depart sharply as the near zone is entered.
 
 nff = near_field_factor(survey, OFFSET_DEMO)
-merged = zones.merge(nff[["station", "freq_hz", "nf_factor"]], on=["station", "freq_hz"])
+merged = zones.merge(
+    nff[["station", "freq_hz", "nf_factor"]], on=["station", "freq_hz"]
+)
 colors = {"far": "#2ca02c", "transition": "#ff7f0e", "near": "#d62728"}
 
 fig, ax = plt.subplots(figsize=(6.5, 5))
 for zone in ("far", "transition", "near"):
     m = merged["zone"] == zone
-    ax.scatter(merged.loc[m, "kr"], merged.loc[m, "nf_factor"],
-               s=10, alpha=0.5, color=colors[zone], label=zone)
+    ax.scatter(
+        merged.loc[m, "kr"],
+        merged.loc[m, "nf_factor"],
+        s=10,
+        alpha=0.5,
+        color=colors[zone],
+        label=zone,
+    )
 ax.axhline(1.0, color="0.3", ls=":", lw=1)
 ax.set_xscale("log")
 ax.set_yscale("log")
@@ -170,7 +182,12 @@ fracs = []
 for off in offsets:
     z = classify_field_zones(survey, off)
     vc = z["zone"].value_counts(normalize=True)
-    fracs.append({"offset": off, **{k: vc.get(k, 0.0) for k in ("far", "transition", "near")}})
+    fracs.append(
+        {
+            "offset": off,
+            **{k: vc.get(k, 0.0) for k in ("far", "transition", "near")},
+        }
+    )
 frac_df = pd.DataFrame(fracs).set_index("offset")
 print(frac_df.round(3))
 
@@ -231,10 +248,22 @@ st_merged = merged[merged["station"] == station].sort_values("period_s")
 corrected = st_merged["rho_a_ohmm"] / st_merged["nf_factor"] ** 2
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.loglog(st_merged["period_s"], st_merged["rho_a_ohmm"], "o-", ms=3,
-          color="0.3", label="measured (uncorrected)")
-ax.loglog(st_merged["period_s"], corrected, "s--", ms=3,
-          color="#d62728", label=r"/ $|F|^2$ (illustrative)")
+ax.loglog(
+    st_merged["period_s"],
+    st_merged["rho_a_ohmm"],
+    "o-",
+    ms=3,
+    color="0.3",
+    label="measured (uncorrected)",
+)
+ax.loglog(
+    st_merged["period_s"],
+    corrected,
+    "s--",
+    ms=3,
+    color="#d62728",
+    label=r"/ $|F|^2$ (illustrative)",
+)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\rho_a$ ($\Omega\cdot$m)")
 ax.legend(fontsize=8)

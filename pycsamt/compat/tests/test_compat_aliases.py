@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import types
@@ -20,6 +19,7 @@ def _target_a(x, y=1, *, z=0):
 
 def _target_b(v):
     return v * 2
+
 
 def test_make_compat_alias_warn_and_forward():
     alias = make_compat_alias(
@@ -48,6 +48,7 @@ def test_make_compat_alias_warn_and_forward():
     assert getattr(alias, "__is_compat_alias__", False)
     assert getattr(alias, "__compat_target__", None) is _target_a
     assert alias.__name__ == "old_a"
+
 
 def test_install_compat_aliases_basic_and_skip():
     ns: dict[str, object] = {}
@@ -78,12 +79,10 @@ def test_install_compat_aliases_basic_and_skip():
     # Be extra-robust against env filters on FutureWarning.
     with warnings.catch_warnings(record=True) as rec_b:
         warnings.simplefilter("always", FutureWarning)
-        out_b = ns['old_b'](7)
+        out_b = ns["old_b"](7)
 
     assert out_b == _target_b(7)
-    assert any(
-        issubclass(w.category, FutureWarning) for w in rec_b
-    )
+    assert any(issubclass(w.category, FutureWarning) for w in rec_b)
     assert any("style" in str(w.message) for w in rec_b)
 
     # prepare an existing alias; second install must skip it
@@ -106,6 +105,7 @@ def test_install_compat_aliases_basic_and_skip():
 
     # still the same object (skipped)
     assert ns["old_a"] is existing
+
 
 def test_compat_alias_injects_and_exports(monkeypatch):
     # create a clean module-like namespace
@@ -156,5 +156,6 @@ def test_compat_alias_injects_and_exports(monkeypatch):
     # export appended to __all__
     assert "old_func" in mod.__dict__["__all__"]
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

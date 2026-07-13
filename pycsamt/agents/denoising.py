@@ -94,8 +94,8 @@ class DenoisingAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.method      = method
-        self.rank        = rank
+        self.method = method
+        self.rank = rank
         self.half_window = half_window
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
@@ -109,13 +109,15 @@ class DenoisingAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        method     = str(input_data.get("method", self.method)).lower()
+        method = str(input_data.get("method", self.method)).lower()
         output_dir = input_data.get("output_dir")
         input_data.get("period_range")
 
@@ -143,15 +145,20 @@ class DenoisingAgent(BaseAgent):
                 from ..emtools.remove_noise import (
                     apply_emap_filter,
                 )
+
                 denoised_sites = apply_emap_filter(sites, verbose=0)
             except Exception as exc:
-                warnings.append(f"EMAP filter failed: {exc}. No denoising applied.")
+                warnings.append(
+                    f"EMAP filter failed: {exc}. No denoising applied."
+                )
 
         elif method == "pipeline":
             try:
                 denoised_sites = remove_noise_pipeline(sites, verbose=0)
             except Exception as exc:
-                warnings.append(f"Noise pipeline failed: {exc}. No denoising applied.")
+                warnings.append(
+                    f"Noise pipeline failed: {exc}. No denoising applied."
+                )
 
         elif method in ("ai", "ai_cae"):
             denoised_sites = _apply_ai_denoiser(sites, warnings)
@@ -160,14 +167,16 @@ class DenoisingAgent(BaseAgent):
         snr_after = _compute_snr_proxy(denoised_sites)
 
         # ── metrics ───────────────────────────────────────────────────────────
-        snr_gain   = 0.0
+        snr_gain = 0.0
         n_recovered = 0
         if snr_before is not None and snr_after is not None:
             try:
                 valid_b = snr_before[np.isfinite(snr_before)]
                 valid_a = snr_after[np.isfinite(snr_after)]
                 if valid_b.size and valid_a.size:
-                    snr_gain = float(np.nanmean(valid_a) - np.nanmean(valid_b))
+                    snr_gain = float(
+                        np.nanmean(valid_a) - np.nanmean(valid_b)
+                    )
                     # count cells where SNR crossed the threshold of 3
                     n_recovered = int(
                         np.sum((snr_after >= 3.0) & (snr_before < 3.0))
@@ -183,19 +192,27 @@ class DenoisingAgent(BaseAgent):
             import matplotlib.pyplot as plt
 
             from ..emtools.inspect import pseudosection
+
             fig, axes = plt.subplots(1, 2, figsize=(14, 5))
             # before
-            pseudosection(sites,            quantity="rho_xy", ax=axes[0])
+            pseudosection(sites, quantity="rho_xy", ax=axes[0])
             axes[0].set_title("ρa before denoising", fontsize=9)
             # after
-            pseudosection(denoised_sites,   quantity="rho_xy", ax=axes[1])
-            axes[1].set_title("ρa after denoising",  fontsize=9)
-            fig.suptitle(f"Denoising comparison ({method})",
-                         fontsize=10, fontweight="bold")
+            pseudosection(denoised_sites, quantity="rho_xy", ax=axes[1])
+            axes[1].set_title("ρa after denoising", fontsize=9)
+            fig.suptitle(
+                f"Denoising comparison ({method})",
+                fontsize=10,
+                fontweight="bold",
+            )
             fig.tight_layout()
             figures["denoising_comparison"] = fig
-            p = self._save_figure(fig, output_dir, "denoising_comparison",
-                                  warnings_list=warnings)
+            p = self._save_figure(
+                fig,
+                output_dir,
+                "denoising_comparison",
+                warnings_list=warnings,
+            )
             if p:
                 fig_paths["denoising_comparison"] = p
         except Exception as exc:
@@ -224,13 +241,13 @@ class DenoisingAgent(BaseAgent):
             ),
             data={
                 "denoised_sites": denoised_sites,
-                "snr_before":     snr_before,
-                "snr_after":      snr_after,
-                "snr_gain":       snr_gain,
-                "n_recovered":    n_recovered,
-                "method":         method,
-                "figures":        figures,
-                "figure_paths":   fig_paths,
+                "snr_before": snr_before,
+                "snr_after": snr_after,
+                "snr_gain": snr_gain,
+                "n_recovered": n_recovered,
+                "method": method,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -241,9 +258,11 @@ class DenoisingAgent(BaseAgent):
 
 # ── private helpers ───────────────────────────────────────────────────────────
 
+
 def _compute_snr_proxy(sites: Any) -> np.ndarray | None:
     """Return a flat array of |Zxy| / std(|Zxy|) per (station, freq) cell."""
     from ..emtools._core import _get_z_block, _iter_items
+
     vals = []
     for _i, ed in enumerate(_iter_items(sites)):
         _, z, fr = _get_z_block(ed)
@@ -266,18 +285,23 @@ def _apply_rpca(sites: Any, rank: int, warnings: list) -> Any:
         result = rpca_offdiag_denoise(sites, rank=rank, verbose=0)
         return result if result is not None else sites
     except Exception as exc:
-        warnings.append(f"RPCA denoising failed: {exc}. Original sites returned.")
+        warnings.append(
+            f"RPCA denoising failed: {exc}. Original sites returned."
+        )
         return sites
 
 
 def _apply_hampel(sites: Any, half_window: int, warnings: list) -> Any:
     """Apply Hampel frequency filter to each station."""
     from ..emtools.remove_noise import hampel_filter_freq
+
     try:
         result = hampel_filter_freq(sites, k=half_window, verbose=0)
         return result if result is not None else sites
     except Exception as exc:
-        warnings.append(f"Hampel filter failed: {exc}. Original sites returned.")
+        warnings.append(
+            f"Hampel filter failed: {exc}. Original sites returned."
+        )
         return sites
 
 

@@ -43,13 +43,13 @@ from ._base import AgentResult, BaseAgent
 
 # ── intent constants ───────────────────────────────────────────────────────────
 
-QUESTION = "question"   # answer about pycsamt → PackageQAAgent
-CODE     = "code"       # emit a script        → CodeGenerationAgent
-PLOT     = "plot"       # produce a figure     → workflow / web app
-WORKFLOW = "workflow"   # run a pipeline       → Context → Orchestrator
-META     = "meta"       # capabilities / chitchat (no agent, static reply)
-CLARIFY  = "clarify"    # too ambiguous → ask the user one question
-METRICS  = "metrics"    # computed VALUE of a line → MetricsAgent (inline)
+QUESTION = "question"  # answer about pycsamt → PackageQAAgent
+CODE = "code"  # emit a script        → CodeGenerationAgent
+PLOT = "plot"  # produce a figure     → workflow / web app
+WORKFLOW = "workflow"  # run a pipeline       → Context → Orchestrator
+META = "meta"  # capabilities / chitchat (no agent, static reply)
+CLARIFY = "clarify"  # too ambiguous → ask the user one question
+METRICS = "metrics"  # computed VALUE of a line → MetricsAgent (inline)
 
 INTENTS = frozenset({QUESTION, CODE, PLOT, WORKFLOW, META, CLARIFY, METRICS})
 
@@ -62,6 +62,7 @@ _CLARIFY_THRESHOLD = 0.45
 
 
 # ── decision record ────────────────────────────────────────────────────────────
+
 
 @dataclass
 class RouterDecision:
@@ -101,13 +102,26 @@ class RouterDecision:
 
 # Greetings / capability probes → META.
 _META_PHRASES = (
-    "what can you do", "what can i ask", "who are you",
-    "what are you", "your capabilities", "what do you do",
-    "how do you work", "what is pycsamt agent", "help me get started",
-    "getting started", "what can you help",
-    "what you can do", "things you can do", "what you can perform",
-    "introduce yourself", "introduce yourself.", "tell me about yourself",
-    "about yourself", "who is this", "what is this assistant",
+    "what can you do",
+    "what can i ask",
+    "who are you",
+    "what are you",
+    "your capabilities",
+    "what do you do",
+    "how do you work",
+    "what is pycsamt agent",
+    "help me get started",
+    "getting started",
+    "what can you help",
+    "what you can do",
+    "things you can do",
+    "what you can perform",
+    "introduce yourself",
+    "introduce yourself.",
+    "tell me about yourself",
+    "about yourself",
+    "who is this",
+    "what is this assistant",
 )
 
 # Capability / catalogue listing → META ("list the agents/tasks/workflows you
@@ -123,49 +137,121 @@ _CAP_NOUN = (
     r"commands|features|functions)\b"
 )
 _CAPABILITY_RE = re.compile(
-    r"\b(list|show|give|get|enumerate|provide|display|see)\b.{0,30}" + _CAP_NOUN
-    + r"|\b(available|supported|all the|all your)\b.{0,20}" + _CAP_NOUN
-    + r"|\bwhich\b.{0,20}" + _CAP_NOUN
-    + r"|\bwhat\b.{0,20}" + _CAP_NOUN
+    r"\b(list|show|give|get|enumerate|provide|display|see)\b.{0,30}"
+    + _CAP_NOUN
+    + r"|\b(available|supported|all the|all your)\b.{0,20}"
+    + _CAP_NOUN
+    + r"|\bwhich\b.{0,20}"
+    + _CAP_NOUN
+    + r"|\bwhat\b.{0,20}"
+    + _CAP_NOUN
     + r".{0,20}\b(can|do|are|available|support|perform|run|have|there)\b"
-    + r"|\b" + _CAP_NOUN + r" (you|i) can\b"
+    + r"|\b"
+    + _CAP_NOUN
+    + r" (you|i) can\b"
     + r"|\bwhat (can|do) you (do|perform|run|offer|help)\b",
     re.IGNORECASE,
 )
-_GREETINGS = frozenset({
-    "hi", "hello", "hey", "yo", "hiya", "thanks", "thank you",
-    "good morning", "good afternoon", "good evening",
-})
+_GREETINGS = frozenset(
+    {
+        "hi",
+        "hello",
+        "hey",
+        "yo",
+        "hiya",
+        "thanks",
+        "thank you",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    }
+)
 
 # Explicit code-generation phrases → CODE.
 _CODE_PHRASES = (
-    "write code", "generate code", "python script", "code for",
-    "script for", "write a script", "write function", "write a function",
-    "write class", "create notebook", "notebook for", "give me code",
-    "show me code", "code example", "code snippet", "sample code",
-    "example code", "snippet", "how to code", "produce code",
+    "write code",
+    "generate code",
+    "python script",
+    "code for",
+    "script for",
+    "write a script",
+    "write function",
+    "write a function",
+    "write class",
+    "create notebook",
+    "notebook for",
+    "give me code",
+    "show me code",
+    "code example",
+    "code snippet",
+    "sample code",
+    "example code",
+    "snippet",
+    "how to code",
+    "produce code",
 )
 
 # Plot / visualise verbs → PLOT.
 _PLOT_PHRASES = (
-    "plot", "visualise", "visualize", "draw", "chart", "graph the",
-    "show me a", "display the", "render the",
+    "plot",
+    "visualise",
+    "visualize",
+    "draw",
+    "chart",
+    "graph the",
+    "show me a",
+    "display the",
+    "render the",
 )
 
 # Imperative verbs that signal "run this on my data" → WORKFLOW.
 _WORKFLOW_VERBS = (
-    "run", "perform", "execute", "compute", "invert", "inversion",
-    "process", "correct", "denoise", "rotate", "decimate", "prepare",
-    "analyse", "analyze", "evaluate", "load", "apply", "do ",
-    "generate report", "static shift", "phase tensor", "quality control",
+    "run",
+    "perform",
+    "execute",
+    "compute",
+    "invert",
+    "inversion",
+    "process",
+    "correct",
+    "denoise",
+    "rotate",
+    "decimate",
+    "prepare",
+    "analyse",
+    "analyze",
+    "evaluate",
+    "load",
+    "apply",
+    "do ",
+    "generate report",
+    "static shift",
+    "phase tensor",
+    "quality control",
 )
 
 # Leading tokens / phrases that mark a genuine question → QUESTION.
 _QUESTION_STARTS = (
-    "what", "how", "why", "which", "who", "where", "when",
-    "explain", "describe", "define", "tell me", "list the",
-    "difference between", "can you explain", "what's", "whats",
-    "is there", "are there", "does pycsamt", "do i need",
+    "what",
+    "how",
+    "why",
+    "which",
+    "who",
+    "where",
+    "when",
+    "explain",
+    "describe",
+    "define",
+    "tell me",
+    "list the",
+    "difference between",
+    "can you explain",
+    "what's",
+    "whats",
+    "is there",
+    "are there",
+    "does pycsamt",
+    "do i need",
 )
 
 _PATH_RE = re.compile(r"[/~][\w/\\.\-]{3,}")
@@ -210,6 +296,7 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     # QUESTION so value questions compute the number rather than fall through
     # to the package-concept Q&A path.
     from .metrics import looks_like_metric_query
+
     if looks_like_metric_query(text):
         return METRICS, 0.82
 
@@ -217,10 +304,7 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     has_wf_verb = any(v in t for v in _WORKFLOW_VERBS)
 
     # ── QUESTION: genuine "what/how/why…" or trailing "?" ──────────────────
-    is_question = (
-        t.endswith("?")
-        or t.startswith(_QUESTION_STARTS)
-    )
+    is_question = t.endswith("?") or t.startswith(_QUESTION_STARTS)
     if is_question:
         # An imperative *with* a data path is a workflow phrased politely
         # ("can you run QC on /data/x?") — keep it a workflow.
@@ -263,6 +347,7 @@ try:  # pragma: no cover - registry is the single source of truth
     from ._corrections import (
         CORRECTION_METHODS as _CORR_METHODS,
     )
+
     if _CORR_METHODS:
         _KNOWN_WF = _KNOWN_WF + ", " + ", ".join(_CORR_METHODS)
 except Exception:  # noqa: BLE001
@@ -313,6 +398,7 @@ Rules:
 
 
 # ── agent ───────────────────────────────────────────────────────────────────────
+
 
 class IntentRouter(BaseAgent):
     r"""Classify a chat message into a :class:`RouterDecision`.
@@ -373,8 +459,11 @@ class IntentRouter(BaseAgent):
             status="success",
             summary=(
                 f"intent={decision.intent}"
-                + (f", workflow={decision.workflow}"
-                   if decision.workflow else "")
+                + (
+                    f", workflow={decision.workflow}"
+                    if decision.workflow
+                    else ""
+                )
             ),
             data={"decision": decision},
             elapsed_seconds=time.time() - t0,
@@ -395,8 +484,10 @@ class IntentRouter(BaseAgent):
         text = (text or "").strip()
         if not text:
             return RouterDecision(
-                intent=META, confidence=0.5,
-                reasoning="empty message", source="offline",
+                intent=META,
+                confidence=0.5,
+                reasoning="empty message",
+                source="offline",
             )
 
         # offline path
@@ -413,8 +504,7 @@ class IntentRouter(BaseAgent):
                 for m in recent
             )
             user_msg = (
-                f"Recent conversation:\n{convo}\n\n"
-                f"Current message: {text}"
+                f"Recent conversation:\n{convo}\n\nCurrent message: {text}"
             )
         try:
             raw = self.query_llm(
@@ -471,6 +561,13 @@ __all__ = [
     "IntentRouter",
     "RouterDecision",
     "classify_intent_offline",
-    "QUESTION", "CODE", "PLOT", "WORKFLOW", "META", "CLARIFY", "METRICS",
-    "INTENTS", "NO_DATA_INTENTS",
+    "QUESTION",
+    "CODE",
+    "PLOT",
+    "WORKFLOW",
+    "META",
+    "CLARIFY",
+    "METRICS",
+    "INTENTS",
+    "NO_DATA_INTENTS",
 ]

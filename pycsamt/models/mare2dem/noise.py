@@ -49,6 +49,7 @@ __all__ = ["NoiseConfig", "add_synthetic_noise", "make_synthetic_data"]
 # Noise-level configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class NoiseConfig:
     """Per-data-type noise specifications.
@@ -84,6 +85,7 @@ class NoiseConfig:
 # ---------------------------------------------------------------------------
 # Low-level noise primitives (matching MATLAB sub-functions exactly)
 # ---------------------------------------------------------------------------
+
 
 def _apply_noise(
     data: np.ndarray,
@@ -137,7 +139,7 @@ def _tipper_real_imag_noise(
     rng: np.random.Generator,
     clip: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    amp = np.sqrt(real ** 2 + imag ** 2)
+    amp = np.sqrt(real**2 + imag**2)
     std = rel_error * amp
     std[amp < abs_error] = np.nan
     r_noisy, r_std = _apply_noise(real, std, rng=rng, clip=clip)
@@ -148,6 +150,7 @@ def _tipper_real_imag_noise(
 # ---------------------------------------------------------------------------
 # Main API
 # ---------------------------------------------------------------------------
+
 
 def add_synthetic_noise(
     em: EMDataFile,
@@ -217,68 +220,82 @@ def add_synthetic_noise(
     mask = np.isin(codes, [123, 125, 129])
     if mask.any():
         d, s = _logamp_noise(resp[mask], noise.mt_rel_noise, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # linear ApRes
     mask = np.isin(codes, [103, 105, 109])
     if mask.any():
         d, s = _amp_noise(resp[mask], noise.mt_rel_noise, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # Phase (MT)
     mask = np.isin(codes, [104, 106, 110])
     if mask.any():
         d, s = _phase_noise(resp[mask], noise.mt_rel_noise / 2, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # Tipper Real/Imag
     mask_re = codes == 133
     mask_im = codes == 134
     if mask_re.any() and mask_im.any():
         r, rs, i, is_ = _tipper_real_imag_noise(
-            resp[mask_re], resp[mask_im],
-            noise.mt_rel_noise_tipper, noise.mt_abs_noise_tipper,
-            rng, clip,
+            resp[mask_re],
+            resp[mask_im],
+            noise.mt_rel_noise_tipper,
+            noise.mt_abs_noise_tipper,
+            rng,
+            clip,
         )
-        data[mask_re, 4] = r;  data[mask_re, 5] = rs
-        data[mask_im, 4] = i;  data[mask_im, 5] = is_
+        data[mask_re, 4] = r
+        data[mask_re, 5] = rs
+        data[mask_im, 4] = i
+        data[mask_im, 5] = is_
 
     # ---- CSEM ----
     # log10 amplitude E
     mask = np.isin(codes, [27, 28, 29])
     if mask.any():
         d, s = _logamp_noise(resp[mask], noise.csem_rel_noise_e, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # log10 amplitude B
     mask = np.isin(codes, [37, 38, 39])
     if mask.any():
         d, s = _logamp_noise(resp[mask], noise.csem_rel_noise_b, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # linear amplitude E
     mask = np.isin(codes, [21, 23, 25])
     if mask.any():
         d, s = _amp_noise(resp[mask], noise.csem_rel_noise_e, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # linear amplitude B
     mask = np.isin(codes, [31, 33, 35])
     if mask.any():
         d, s = _amp_noise(resp[mask], noise.csem_rel_noise_b, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # phase E
     mask = np.isin(codes, [22, 24, 26])
     if mask.any():
         d, s = _phase_noise(resp[mask], noise.csem_rel_noise_e, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # phase B
     mask = np.isin(codes, [32, 34, 36])
     if mask.any():
         d, s = _phase_noise(resp[mask], noise.csem_rel_noise_b, rng, clip)
-        data[mask, 4] = d;  data[mask, 5] = s
+        data[mask, 4] = d
+        data[mask, 5] = s
 
     # drop NaN rows (below tipper noise floor)
     valid = ~np.isnan(data[:, 4])

@@ -53,13 +53,16 @@ ax.grid(alpha=0.3, which="both")
 # Archie curve should sit inside them.
 
 phi = np.linspace(0.05, 0.45, 60)
-rho_archie = np.array([archie.forward(phi=p, Sw=1.0, rho_w=rho_w) for p in phi])
+rho_archie = np.array(
+    [archie.forward(phi=p, Sw=1.0, rho_w=rho_w) for p in phi]
+)
 hs = HashinShtrikmanBounds(rho_matrix=2000.0, rho_fluid=rho_w)
 lo, hi = np.array([hs.bounds(phi=p) for p in phi]).T
 
 fig, ax = plt.subplots(figsize=(6.5, 4.2), constrained_layout=True)
-ax.fill_between(phi, lo, hi, color="#c9d6ea", alpha=0.6,
-                label="Hashin-Shtrikman bounds")
+ax.fill_between(
+    phi, lo, hi, color="#c9d6ea", alpha=0.6, label="Hashin-Shtrikman bounds"
+)
 ax.plot(phi, rho_archie, color="#c44536", lw=2.0, label="Archie (Sw = 1)")
 ax.set_yscale("log")
 ax.set_xlabel("porosity  phi")
@@ -76,7 +79,11 @@ ax.grid(alpha=0.3, which="both")
 # petrophysical estimate to an aquifer property.
 
 fig, ax = plt.subplots(figsize=(6.5, 4.0), constrained_layout=True)
-for d50, lbl in [(2e-4, "fine sand"), (5e-4, "medium sand"), (1e-3, "coarse sand")]:
+for d50, lbl in [
+    (2e-4, "fine sand"),
+    (5e-4, "medium sand"),
+    (1e-3, "coarse sand"),
+]:
     K = np.array([kozeny_carman_K(p, d50_m=d50) for p in phi])
     ax.plot(phi, K, lw=1.8, label=lbl)
 ax.set_yscale("log")
@@ -99,8 +106,9 @@ from _interp_data import demo_model
 from pycsamt.interp import EMHydroModel, PetrophysicalConfig
 from pycsamt.interp.plot import PlotPetrophysicalCrossPlot
 
-result = EMHydroModel(demo_model(), PetrophysicalConfig(rho_w=20.0),
-                      method_tag="AMT").fit()
+result = EMHydroModel(
+    demo_model(), PetrophysicalConfig(rho_w=20.0), method_tag="AMT"
+).fit()
 PlotPetrophysicalCrossPlot(result).plot()
 
 # %%

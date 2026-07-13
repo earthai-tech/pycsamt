@@ -39,7 +39,7 @@ def test_impedance_to_z_scalar_offdiag():
     assert isinstance(z, Z)
     assert z.z.shape == (FREQ.size, 2, 2)
     assert np.allclose(z.z[:, 0, 1], zxy)
-    assert np.allclose(z.z[:, 1, 0], -zxy)          # antisymmetric placement
+    assert np.allclose(z.z[:, 1, 0], -zxy)  # antisymmetric placement
     assert np.allclose(z.z[:, 0, 0], 0)
     assert z.name == "S01"
     assert z.resistivity.shape == (FREQ.size, 2, 2)
@@ -86,7 +86,7 @@ def test_impedance_to_z_window_tensor_4d():
     windows = np.stack([base, base, base], axis=0)
     z = impedance_to_z(windows, FREQ)
     assert np.allclose(z.z, base)
-    assert z.z_err is not None                       # error grid allocated
+    assert z.z_err is not None  # error grid allocated
 
 
 def test_impedance_to_z_single_tensor_one_freq():
@@ -108,7 +108,7 @@ def test_impedance_to_z_median_aggregate():
     zxy = _scalar_zxy()
     windows = np.stack([zxy, zxy * 2, zxy * 3], axis=0)
     z = impedance_to_z(windows, FREQ, aggregate="median")
-    assert np.allclose(z.z[:, 0, 1], zxy * 2)        # median of {1,2,3}x
+    assert np.allclose(z.z[:, 0, 1], zxy * 2)  # median of {1,2,3}x
 
 
 def test_impedance_to_z_rejects_bad_freq():
@@ -120,7 +120,7 @@ def test_impedance_to_z_rejects_bad_freq():
 
 def test_impedance_to_z_rejects_shape_mismatch():
     with pytest.raises(ValueError):
-        impedance_to_z(np.ones(5), FREQ)             # 1-D length mismatch
+        impedance_to_z(np.ones(5), FREQ)  # 1-D length mismatch
     with pytest.raises(ValueError):
         impedance_to_z(np.ones((FREQ.size, 3)), FREQ)  # not windows/tensor
 
@@ -153,8 +153,13 @@ def test_z_to_edi_roundtrip(tmp_path):
 
     z = impedance_to_z(_scalar_zxy(), FREQ, station="S01")
     path = z_to_edi(
-        z, station="S01", lat=6.5, lon=3.4, elevation=120.0,
-        savepath=str(tmp_path), method="amt",
+        z,
+        station="S01",
+        lat=6.5,
+        lon=3.4,
+        elevation=120.0,
+        savepath=str(tmp_path),
+        method="amt",
     )
     assert path.endswith(".edi")
     back = EDIFile(path)
@@ -192,7 +197,7 @@ def test_field_session_to_edifiles_returns_objects():
     session.add_station(StationConfig("S01", lat=6.5, lon=3.4))
     # value given as an (impedance_array, freq) pair rather than a Z
     out = field_session_to_edifiles(session, {"S01": (_scalar_zxy(), FREQ)})
-    assert out["S01"].station == "S01"          # in-memory EDIFile, not path
+    assert out["S01"].station == "S01"  # in-memory EDIFile, not path
 
 
 # ---------------------------------------------------------------------------
@@ -203,8 +208,14 @@ def survey_dir(tmp_path):
     """Write a small two-station EDI survey and return its directory."""
     for sid, lat, lon in (("A01", 6.5, 3.4), ("A02", 6.6, 3.5)):
         z = impedance_to_z(_scalar_zxy(), FREQ, station=sid)
-        z_to_edi(z, station=sid, lat=lat, lon=lon, elevation=100.0,
-                 savepath=str(tmp_path))
+        z_to_edi(
+            z,
+            station=sid,
+            lat=lat,
+            lon=lon,
+            elevation=100.0,
+            savepath=str(tmp_path),
+        )
     return str(tmp_path)
 
 
@@ -223,7 +234,14 @@ def test_read_edi_survey(survey_dir):
 def test_edi_survey_table(survey_dir):
     tbl = edi_survey_table(survey_dir)
     assert tbl.shape[0] == 2
-    for col in ("station", "lat", "lon", "f_min_hz", "f_max_hz", "n_channels"):
+    for col in (
+        "station",
+        "lat",
+        "lon",
+        "f_min_hz",
+        "f_max_hz",
+        "n_channels",
+    ):
         assert col in tbl.columns
 
 
@@ -235,8 +253,11 @@ def test_field_session_from_edis(survey_dir):
     assert session.n_stations == 2
     assert session.n_devices == 2
     site = next(s for s in session.to_sites() if s.station_id == "A01")
-    assert site.coords == (pytest.approx(6.5), pytest.approx(3.4),
-                           pytest.approx(100.0))
+    assert site.coords == (
+        pytest.approx(6.5),
+        pytest.approx(3.4),
+        pytest.approx(100.0),
+    )
     # a sample-rate hint is derived from the highest recovered frequency
     device = session.devices["A01-node"]
     assert device.sample_rate_hz is not None
@@ -245,7 +266,9 @@ def test_field_session_from_edis(survey_dir):
 
 def test_deployment_from_edis(survey_dir):
     dep = deployment_from_edis(
-        survey_dir, survey_id="WILLY", capabilities=["telemetry"],
+        survey_dir,
+        survey_id="WILLY",
+        capabilities=["telemetry"],
     )
     assert isinstance(dep, DeploymentConfig)
     assert dep.n_devices == 2
@@ -257,7 +280,8 @@ def test_reverse_accepts_single_file(survey_dir):
 
     one = sorted(
         os.path.join(survey_dir, f)
-        for f in os.listdir(survey_dir) if f.endswith(".edi")
+        for f in os.listdir(survey_dir)
+        if f.endswith(".edi")
     )[0]
     records = read_edi_survey(one)
     assert len(records) == 1

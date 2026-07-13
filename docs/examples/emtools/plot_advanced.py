@@ -62,7 +62,9 @@ from pycsamt.emtools import (
 from pycsamt.emtools._core import _iter_items, _name
 
 survey = load_survey("amt_l18plt")
-S = ensure_sites(survey, recursive=False, on_dup="replace", strict=False, verbose=0)
+S = ensure_sites(
+    survey, recursive=False, on_dup="replace", strict=False, verbose=0
+)
 station_names = [_name(ed, i) for i, ed in enumerate(_iter_items(S))]
 st0 = station_names[0]
 print(f"stations: {len(station_names)}, first: {st0}")
@@ -99,7 +101,9 @@ fig = plot_rho_phase_bode(S, station=st0, component="xy", recursive=False)
 # as a petal per period. A circular petal means an isotropic response
 # at that period; an elongated, off-centre petal means anisotropic/2-D.
 
-fig = plot_apparent_resistivity_polar(S, station=st0, n_periods=8, recursive=False)
+fig = plot_apparent_resistivity_polar(
+    S, station=st0, n_periods=8, recursive=False
+)
 
 # %%
 # 5. Phase-tensor period clock
@@ -122,7 +126,9 @@ fig = plot_pt_period_clock(S, n_rings=6, recursive=False)
 # ellipticity — richer than a hard traffic-light classification because
 # it shows exactly where the whole cloud sits.
 
-fig = plot_dimensionality_ternary(S, beta_thresh=5.0, ellipt_thresh=0.1, recursive=False)
+fig = plot_dimensionality_ternary(
+    S, beta_thresh=5.0, ellipt_thresh=0.1, recursive=False
+)
 
 df = build_phase_tensor_table(S, recursive=False)
 beta_thresh, ellipt_thresh = 5.0, 0.1
@@ -130,8 +136,10 @@ ellipt = df["ellipt"].to_numpy(float)
 beta = np.abs(df["beta"].to_numpy(float))
 u3d = np.clip(beta / beta_thresh, 0.0, 1.0)
 u1d = (1 - u3d) * np.clip(1.0 - ellipt / ellipt_thresh, 0.0, 1.0)
-print(f"mean 3-D membership: {u3d.mean():.3f}  "
-      f"({100 * (u3d > 0.9).mean():.1f}% of cells above 0.9)")
+print(
+    f"mean 3-D membership: {u3d.mean():.3f}  "
+    f"({100 * (u3d > 0.9).mean():.1f}% of cells above 0.9)"
+)
 print(f"mean 1-D membership: {u1d.mean():.5f}")
 
 # %%
@@ -163,7 +171,9 @@ fig = plot_distortion_radar(S, max_stations=8, recursive=False)
 # not just *what* depth a datum nominally corresponds to but *how
 # broadly* it actually constrains that depth.
 
-fig = plot_sensitivity_depth_section(S, component="xy", depth_max=5.0, recursive=False)
+fig = plot_sensitivity_depth_section(
+    S, component="xy", depth_max=5.0, recursive=False
+)
 
 # %%
 # 9. Apparent-anisotropy section, with a real bug fixed
@@ -177,7 +187,10 @@ fig = plot_sensitivity_depth_section(S, component="xy", depth_max=5.0, recursive
 
 fig = plot_apparent_anisotropy_section(S, recursive=False)
 fig2 = plot_apparent_anisotropy_section(
-    S, recursive=False, show_pt_arrows=True, arrow_every=4,
+    S,
+    recursive=False,
+    show_pt_arrows=True,
+    arrow_every=4,
 )
 ax2 = fig2.get_axes()[0]
 print(f"strike-arrow segments drawn: {len(ax2.lines)}")
@@ -215,8 +228,10 @@ fig = plot_z_invariants_section(S, recursive=False)
 axs = fig.get_axes()
 im1 = axs[0].images[0].get_array()
 im4 = axs[3].images[0].get_array()
-print("panel 1 (Swift) identical to panel 4 (anisotropy)?",
-      bool(np.allclose(im1, im4, equal_nan=True)))
+print(
+    "panel 1 (Swift) identical to panel 4 (anisotropy)?",
+    bool(np.allclose(im1, im4, equal_nan=True)),
+)
 
 # %%
 # 12. Survey fingerprint: six metrics, one page
@@ -227,7 +242,9 @@ print("panel 1 (Swift) identical to panel 4 (anisotropy)?",
 # page.
 
 fig = plot_survey_fingerprint(
-    S, quantities=["skew", "ellipt", "theta", "s1"], recursive=False,
+    S,
+    quantities=["skew", "ellipt", "theta", "s1"],
+    recursive=False,
 )
 
 # %%
@@ -246,7 +263,9 @@ fig = plot_mt_composite_section(S, component="xy", recursive=False)
 # ``|Z| / |Z_err|`` per component, with a dashed contour at
 # ``snr_thresh`` separating acceptable from poor-quality cells.
 
-fig = plot_snr_section(S, components=("xy", "yx"), snr_thresh=3.0, recursive=False)
+fig = plot_snr_section(
+    S, components=("xy", "yx"), snr_thresh=3.0, recursive=False
+)
 
 # %%
 # 15. Strike stability bands across three independent methods
@@ -276,7 +295,10 @@ print("methods actually plotted:", ax.get_title())
 # view of which stations behave alike.
 
 fig = plot_tf_coherence_network(
-    S, recursive=False, figsize=(9, 5), threshold=0.85,
+    S,
+    recursive=False,
+    figsize=(9, 5),
+    threshold=0.85,
 )
 ax = fig.get_axes()[0]
 print(f"edges drawn (capped at max_edges): {len(ax.lines)}")
@@ -305,10 +327,14 @@ print(f"edges drawn (capped at max_edges): {len(ax.lines)}")
 # "insufficient coord data" message. Confirmed fixed:
 
 kap = load_survey("mt_kap03")
-S_kap = ensure_sites(kap, recursive=False, on_dup="replace", strict=False, verbose=0)
+S_kap = ensure_sites(
+    kap, recursive=False, on_dup="replace", strict=False, verbose=0
+)
 fig_kap = plot_tf_coherence_network(S_kap, recursive=False)
-print("KAP03 (no usable coords):",
-      [t.get_text() for t in fig_kap.get_axes()[0].texts])
+print(
+    "KAP03 (no usable coords):",
+    [t.get_text() for t in fig_kap.get_axes()[0].texts],
+)
 
 # %%
 # KAP03 does carry real coordinates, just as ``REFLAT``/``REFLONG`` in
@@ -327,8 +353,10 @@ for _i, ed in enumerate(_iter_items(S_kap)):
 
 fig_kap2 = plot_tf_coherence_network(S_kap, recursive=False, threshold=0.85)
 ax_kap2 = fig_kap2.get_axes()[0]
-print(f"KAP03 with coordinates: {len(ax_kap2.lines)} edges drawn, "
-      f"figure size {fig_kap2.get_size_inches()}")
+print(
+    f"KAP03 with coordinates: {len(ax_kap2.lines)} edges drawn, "
+    f"figure size {fig_kap2.get_size_inches()}"
+)
 
 # %%
 # **Reading this output.** 107 of the 325 possible pairs (26 stations)

@@ -46,6 +46,7 @@ Kuleshov V., Fenner N. & Ermon S. (2018) Accurate uncertainties for deep
 learning using calibrated regression. *Proceedings of ICML*, PMLR 80,
 2796–2804.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -61,6 +62,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Internal: Pool Adjacent Violators (isotonic regression, non-decreasing)
 # ---------------------------------------------------------------------------
+
 
 def _pava(y: np.ndarray) -> np.ndarray:
     """
@@ -93,7 +95,7 @@ def _pava(y: np.ndarray) -> np.ndarray:
     out = np.empty(n, dtype=float)
     idx = 0
     for mean, count in blocks:
-        out[idx: idx + count] = mean
+        out[idx : idx + count] = mean
         idx += count
     return out
 
@@ -101,6 +103,7 @@ def _pava(y: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # ConformalPredictor
 # ---------------------------------------------------------------------------
+
 
 class ConformalPredictor:
     r"""
@@ -202,7 +205,7 @@ class ConformalPredictor:
         y_cal = np.asarray(y_cal, dtype=float)
 
         mean, sigma = self.base_predictor.predict_with_uncertainty(X_cal)
-        mean  = np.asarray(mean,  dtype=float)
+        mean = np.asarray(mean, dtype=float)
         sigma = np.asarray(sigma, dtype=float)
 
         # normalised residuals: max over output dimensions
@@ -253,7 +256,7 @@ class ConformalPredictor:
         q = self._q_hat(alpha)
 
         mean, sigma = self.base_predictor.predict_with_uncertainty(X)
-        mean  = np.asarray(mean,  dtype=float)
+        mean = np.asarray(mean, dtype=float)
         sigma = np.asarray(sigma, dtype=float)
 
         half = q * sigma
@@ -316,7 +319,9 @@ class ConformalPredictor:
         self._check_calibrated()
         if alphas is None:
             alphas = np.linspace(0.02, 0.50, 25)
-        return {float(a): self.coverage(X_test, y_test, alpha=a) for a in alphas}
+        return {
+            float(a): self.coverage(X_test, y_test, alpha=a) for a in alphas
+        }
 
     # ── misc ─────────────────────────────────────────────────────────────────
 
@@ -329,15 +334,13 @@ class ConformalPredictor:
     def __repr__(self) -> str:
         status = "calibrated" if self._is_calibrated else "uncalibrated"
         n = len(self._scores) if self._scores is not None else 0
-        return (
-            f"ConformalPredictor(alpha={self.alpha}, {status}, "
-            f"n_cal={n})"
-        )
+        return f"ConformalPredictor(alpha={self.alpha}, {status}, n_cal={n})"
 
 
 # ---------------------------------------------------------------------------
 # PosteriorCalibrator
 # ---------------------------------------------------------------------------
+
 
 class PosteriorCalibrator:
     r"""
@@ -400,9 +403,9 @@ class PosteriorCalibrator:
         self.n_bins = int(n_bins)
 
         # fitted quantities
-        self._p_knots: np.ndarray | None = None     # sorted predicted CDF
-        self._q_targets: np.ndarray | None = None   # empirical CDF targets
-        self._sigma_scale: float | None = None      # global variance scale
+        self._p_knots: np.ndarray | None = None  # sorted predicted CDF
+        self._q_targets: np.ndarray | None = None  # empirical CDF targets
+        self._sigma_scale: float | None = None  # global variance scale
         self._is_fitted: bool = False
 
     # ── fitting ──────────────────────────────────────────────────────────────
@@ -433,45 +436,47 @@ class PosteriorCalibrator:
             ndtr,
         )
 
-        y_cal      = np.asarray(y_cal,      dtype=float)
+        y_cal = np.asarray(y_cal, dtype=float)
         y_pred_cal = np.asarray(y_pred_cal, dtype=float)
-        sigma_cal  = np.asarray(sigma_cal,  dtype=float)
+        sigma_cal = np.asarray(sigma_cal, dtype=float)
 
         eps = 1e-10
         # Standardised residuals: one scalar per (sample, param)
-        z_cal = (y_cal - y_pred_cal) / (sigma_cal + eps)   # (n_cal, n_params)
+        z_cal = (y_cal - y_pred_cal) / (sigma_cal + eps)  # (n_cal, n_params)
 
         # Predicted CDF values — treat each (sample, param) as one observation
-        p_pred = ndtr(z_cal).ravel()                        # U[0,1] if calibrated
+        p_pred = ndtr(z_cal).ravel()  # U[0,1] if calibrated
 
         # Sort and assign empirical CDF targets
-        order     = np.argsort(p_pred)
-        p_sorted  = p_pred[order]
-        n_obs     = len(p_sorted)
-        p_target  = (np.arange(1, n_obs + 1)) / n_obs      # empirical CDF
+        order = np.argsort(p_pred)
+        p_sorted = p_pred[order]
+        n_obs = len(p_sorted)
+        p_target = (np.arange(1, n_obs + 1)) / n_obs  # empirical CDF
 
         # Isotonic regression: fit g such that g(p_sorted) ≈ p_target (monotone)
         g_vals = _pava(p_target)
 
         # Build interpolation knots at n_bins uniform p values
-        p_knots  = np.linspace(0.0, 1.0, self.n_bins + 2)
-        g_knots  = np.interp(p_knots, p_sorted, g_vals, left=0.0, right=1.0)
-        g_knots  = np.clip(g_knots, 1e-12, 1.0 - 1e-12)
+        p_knots = np.linspace(0.0, 1.0, self.n_bins + 2)
+        g_knots = np.interp(p_knots, p_sorted, g_vals, left=0.0, right=1.0)
+        g_knots = np.clip(g_knots, 1e-12, 1.0 - 1e-12)
 
-        self._p_knots   = p_knots
-        self._g_knots   = g_knots
+        self._p_knots = p_knots
+        self._g_knots = g_knots
 
         # Inverse map: from empirical CDF value to predicted CDF value
         # g^{-1}(u): linear interpolation on (g_knots, p_knots)
         # Sort by g_knots for invertibility (should already be monotone)
-        sort_g          = np.argsort(g_knots)
-        self._g_inv_x   = g_knots[sort_g]
-        self._g_inv_y   = p_knots[sort_g]
+        sort_g = np.argsort(g_knots)
+        self._g_inv_x = g_knots[sort_g]
+        self._g_inv_y = p_knots[sort_g]
 
         # Global sigma scaling factor: ratio std(z_cal * sigma_scale) → 1
         # Equivalent to learning a global variance correction
         z_cal_flat = z_cal.ravel()
-        self._sigma_scale = float(np.std(z_cal_flat)) if np.std(z_cal_flat) > 0 else 1.0
+        self._sigma_scale = (
+            float(np.std(z_cal_flat)) if np.std(z_cal_flat) > 0 else 1.0
+        )
 
         self._is_fitted = True
         return self
@@ -511,22 +516,23 @@ class PosteriorCalibrator:
         if rng is None:
             rng = np.random.default_rng()
 
-        y_pred     = np.asarray(y_pred,     dtype=float)
+        y_pred = np.asarray(y_pred, dtype=float)
         sigma_pred = np.asarray(sigma_pred, dtype=float)
         n_pts, n_p = y_pred.shape
 
         # Sample u ~ U(0,1) then invert the calibration map g^{-1}
         u = rng.uniform(0.0, 1.0, size=(n_samples, n_pts, n_p))
         u_clipped = np.clip(u, 1e-12, 1.0 - 1e-12)
-        p_star = np.interp(u_clipped.ravel(),
-                           self._g_inv_x, self._g_inv_y).reshape(u.shape)
+        p_star = np.interp(
+            u_clipped.ravel(), self._g_inv_x, self._g_inv_y
+        ).reshape(u.shape)
         p_star = np.clip(p_star, 1e-12, 1.0 - 1e-12)
 
         # Transform to standardised residual via inverse-normal
-        z_star = ndtri(p_star)                             # (n_samp, n_pts, n_p)
+        z_star = ndtri(p_star)  # (n_samp, n_pts, n_p)
 
         # Calibrated sigma (apply global scale)
-        sigma_cal = sigma_pred / self._sigma_scale         # (n_pts, n_p)
+        sigma_cal = sigma_pred / self._sigma_scale  # (n_pts, n_p)
 
         # Posterior draws
         draws = y_pred[None, :, :] + sigma_cal[None, :, :] * z_star
@@ -583,9 +589,9 @@ class PosteriorCalibrator:
         from scipy.special import ndtr
 
         self._check_fitted()
-        y_test      = np.asarray(y_test,      dtype=float)
+        y_test = np.asarray(y_test, dtype=float)
         y_pred_test = np.asarray(y_pred_test, dtype=float)
-        sigma_test  = np.asarray(sigma_test,  dtype=float)
+        sigma_test = np.asarray(sigma_test, dtype=float)
 
         sigma_cal = self.calibrated_std(sigma_test)
         z = (y_test - y_pred_test) / (sigma_cal + 1e-10)

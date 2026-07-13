@@ -74,13 +74,9 @@ class Base:  # picked by seg.config (mixin discovery)
             pass
 
         self.verbose: int = int(verbose)
-        name = (
-            f"{self.__class__.__module__}."
-            f"{self.__class__.__name__}"
-        )
+        name = f"{self.__class__.__module__}.{self.__class__.__name__}"
         self._logger = (
-            logger if logger is not None
-            else self._logger_factory(name)
+            logger if logger is not None else self._logger_factory(name)
         )
 
     @staticmethod
@@ -103,6 +99,7 @@ class BaseMixin(Base):  # pragma: no cover
 
 class SEGBase(Base):  # pragma: no cover
     pass
+
 
 class EDIComponentBase(Base):
     _section: str | None = None
@@ -128,6 +125,7 @@ class EDIComponentBase(Base):
             logger=logger,
             **kwargs,
         )
+
     # -------- repr/str ---------
     def __repr__(self) -> str:
         cls = self.__class__.__name__
@@ -162,9 +160,7 @@ class EDIComponentBase(Base):
         return out
 
     @classmethod
-    def from_dict(
-        cls, data: Mapping[str, Any]
-    ) -> EDIComponentBase:
+    def from_dict(cls, data: Mapping[str, Any]) -> EDIComponentBase:
         obj = cls()
         for k, v in (data or {}).items():
             try:
@@ -303,9 +299,7 @@ class EdiFileBase(EDIComponentBase, ABC):
 
     # ---------- I/O ------------
     @classmethod
-    def from_file(
-        cls, file: PathLike, **kw: Any
-    ) -> EdiFileBase:
+    def from_file(cls, file: PathLike, **kw: Any) -> EdiFileBase:
         inst = cls(path=Path(file), **kw)
         inst.read()
         return inst
@@ -318,9 +312,7 @@ class EdiFileBase(EDIComponentBase, ABC):
     ) -> Path:
         target = Path(file) if file is not None else self._default_out()
         if target.exists() and not overwrite:
-            raise FileExistsError(
-                f"{target} exists and overwrite=False."
-            )
+            raise FileExistsError(f"{target} exists and overwrite=False.")
         text = self.compose()
         if isinstance(text, (list, tuple)):
             text = "".join(text)
@@ -331,12 +323,10 @@ class EdiFileBase(EDIComponentBase, ABC):
         return target
 
     @abstractmethod
-    def read(self) -> EdiFileBase:
-        ...
+    def read(self) -> EdiFileBase: ...
 
     @abstractmethod
-    def compose(self) -> str | list[str]:
-        ...
+    def compose(self) -> str | list[str]: ...
 
     # ------- registry ----------
     def add_section(self, name: str, s: EDIComponentBase) -> None:
@@ -390,7 +380,7 @@ class EdiFileBase(EDIComponentBase, ABC):
 
     # ------- defaults ----------
     def _default_out(self) -> Path:
-        stem = (self.dataid or "output")
+        stem = self.dataid or "output"
         return Path(f"{stem}.edi")
 
     # ------- fmt helpers -------
@@ -456,9 +446,7 @@ class EdiFileBase(EDIComponentBase, ABC):
         # lazy import to avoid cycles
         from .utils import _format_block_numbers as fmtnums
 
-        out.append(
-            fmtnums(vals, per_line=per, indent=2) + "\n"
-        )
+        out.append(fmtnums(vals, per_line=per, indent=2) + "\n")
         return out
 
     # ------- misc --------------
@@ -482,7 +470,9 @@ class EdiFileBase(EDIComponentBase, ABC):
             "number_fmt": self.number_fmt,
             "data_header_tpl": self.data_header_tpl,
             "sections": {
-                k: (v.to_dict() if hasattr(v, "to_dict") else dict(v.__dict__))
+                k: (
+                    v.to_dict() if hasattr(v, "to_dict") else dict(v.__dict__)
+                )
                 for k, v in self.sections.items()
             },
         }
@@ -575,7 +565,6 @@ class SurveyBase:
             return ", ".join(vals) if vals else "-"
         head = ", ".join(vals[: maxn - 1])
         return f"{head}, +{len(vals) - (maxn - 1)}"
-
 
     def _stations(self) -> list[str]:
         # try dedicated API, else rows, else empty
@@ -703,21 +692,11 @@ class SurveyBase:
         lines: list[str] = []
         lines.append(self.__class__.__name__)
         lines.append(f"  count   : {s['n']}")
-        lines.append(
-            f"  stations: {self._fmt_list(s['stations'])}"
-        )
-        lines.append(
-            f"  lat     : {self._fmt_rng(s['lat_rng'])}"
-        )
-        lines.append(
-            f"  lon     : {self._fmt_rng(s['lon_rng'])}"
-        )
-        lines.append(
-            f"  elev    : {self._fmt_rng(s['elev_rng'])}"
-        )
-        lines.append(
-            f"  dist    : {self._fmt_rng(s['dist_rng'])}"
-        )
+        lines.append(f"  stations: {self._fmt_list(s['stations'])}")
+        lines.append(f"  lat     : {self._fmt_rng(s['lat_rng'])}")
+        lines.append(f"  lon     : {self._fmt_rng(s['lon_rng'])}")
+        lines.append(f"  elev    : {self._fmt_rng(s['elev_rng'])}")
+        lines.append(f"  dist    : {self._fmt_rng(s['dist_rng'])}")
         az = "-" if s["azimuth"] is None else f"{s['azimuth']:.2f}"
         st = "-" if s["step"] is None else f"{s['step']:.2f}"
         lines.append(f"  azimuth : {az} deg")
@@ -744,7 +723,7 @@ class SurveyBase:
         if cols is None:
             cols = list(rows[0].keys())
         if max_rows is not None and len(rows) > max_rows:
-            rows = rows[: max_rows]
+            rows = rows[:max_rows]
         # widths
         w: dict[str, int] = {}
         for c in cols:

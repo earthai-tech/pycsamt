@@ -20,15 +20,15 @@ __all__ = [
 
 # ----------------------------- constants ---------------------------------- #
 
-_MU0 = 4.0 * np.pi * 1e-7        # H/m
+_MU0 = 4.0 * np.pi * 1e-7  # H/m
 _FAR = "far"
 _TRANS = "transition"
 _NEAR = "near"
 
 _ZONE_COLORS = {
-    _FAR:   "#2ca02c",   # green
-    _TRANS: "#ff7f0e",   # orange
-    _NEAR:  "#d62728",   # red
+    _FAR: "#2ca02c",  # green
+    _TRANS: "#ff7f0e",  # orange
+    _NEAR: "#d62728",  # red
 }
 
 _ZONE_INT = {_FAR: 0, _TRANS: 1, _NEAR: 2}
@@ -36,6 +36,7 @@ _INT_ZONE = {0: _FAR, 1: _TRANS, 2: _NEAR}
 
 
 # ------------------------------ helpers ----------------------------------- #
+
 
 def _rho_a_det(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     """Geometric-mean apparent resistivity from off-diagonal Z (Ω·m)."""
@@ -46,9 +47,7 @@ def _rho_a_det(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
 
 def _bostick_depth(rho: np.ndarray, freq: np.ndarray) -> np.ndarray:
     """δ_B = 356 √(ρ_a / f)  (metres, Bostick approximation)."""
-    return 356.0 * np.sqrt(
-        np.maximum(rho, 1e-6) / np.maximum(freq, 1e-12)
-    )
+    return 356.0 * np.sqrt(np.maximum(rho, 1e-6) / np.maximum(freq, 1e-12))
 
 
 def _kr_abs(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
@@ -68,7 +67,8 @@ def _zone_labels(
     near_threshold: float,
 ) -> np.ndarray:
     labels = np.where(
-        kr >= far_threshold, _FAR,
+        kr >= far_threshold,
+        _FAR,
         np.where(kr >= near_threshold, _TRANS, _NEAR),
     )
     return labels
@@ -100,7 +100,7 @@ def _nf_correction(
     # complex wave number: k = |k| * exp(i*pi/4)
     p = k_abs * offset * (1.0 + 1j) / np.sqrt(2.0)
     p = np.where(np.abs(p) < 1e-12, 1e-12 * (1.0 + 1j), p)
-    F = 1.0 - 3.0 / p ** 2 + 3.0 / p ** 3
+    F = 1.0 - 3.0 / p**2 + 3.0 / p**3
     return np.abs(F)
 
 
@@ -149,6 +149,7 @@ def _sorted_stations(stations: list[str], S: Any, sort_by: str) -> list[str]:
 
 
 # ----------------------------- public API --------------------------------- #
+
 
 def classify_field_zones(
     sites: Any,
@@ -226,6 +227,7 @@ def classify_field_zones(
         if offset is None:
             if verbose > 0:
                 import warnings
+
                 warnings.warn(
                     f"classify_field_zones: no source_offset for "
                     f"'{station}' — station skipped.",
@@ -234,24 +236,32 @@ def classify_field_zones(
                 )
             continue
         rho_a = _rho_a_det(z, fr)
-        kr    = _kr_abs(rho_a, fr, offset)
-        db    = _bostick_depth(rho_a, fr)
+        kr = _kr_abs(rho_a, fr, offset)
+        db = _bostick_depth(rho_a, fr)
         zones = _zone_labels(kr, far_threshold, near_threshold)
         for j in range(fr.size):
-            rows.append({
-                "station":        station,
-                "freq_hz":        float(fr[j]),
-                "period_s":       1.0 / max(float(fr[j]), 1e-12),
-                "offset_m":       offset,
-                "rho_a_ohmm":     float(rho_a[j]),
-                "delta_bostick_m": float(db[j]),
-                "kr":             float(kr[j]),
-                "zone":           str(zones[j]),
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": float(fr[j]),
+                    "period_s": 1.0 / max(float(fr[j]), 1e-12),
+                    "offset_m": offset,
+                    "rho_a_ohmm": float(rho_a[j]),
+                    "delta_bostick_m": float(db[j]),
+                    "kr": float(kr[j]),
+                    "zone": str(zones[j]),
+                }
+            )
 
     _COLS = [
-        "station", "freq_hz", "period_s", "offset_m",
-        "rho_a_ohmm", "delta_bostick_m", "kr", "zone",
+        "station",
+        "freq_hz",
+        "period_s",
+        "offset_m",
+        "rho_a_ohmm",
+        "delta_bostick_m",
+        "kr",
+        "zone",
     ]
     if not rows:
         return pd.DataFrame(columns=_COLS)
@@ -319,22 +329,29 @@ def near_field_factor(
         if offset is None:
             continue
         rho_a = _rho_a_det(z, fr)
-        kr    = _kr_abs(rho_a, fr, offset)
-        nff   = _nf_correction(rho_a, fr, offset)
+        kr = _kr_abs(rho_a, fr, offset)
+        nff = _nf_correction(rho_a, fr, offset)
         for j in range(fr.size):
-            rows.append({
-                "station":    station,
-                "freq_hz":    float(fr[j]),
-                "period_s":   1.0 / max(float(fr[j]), 1e-12),
-                "offset_m":   offset,
-                "rho_a_ohmm": float(rho_a[j]),
-                "kr":         float(kr[j]),
-                "nf_factor":  float(nff[j]),
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": float(fr[j]),
+                    "period_s": 1.0 / max(float(fr[j]), 1e-12),
+                    "offset_m": offset,
+                    "rho_a_ohmm": float(rho_a[j]),
+                    "kr": float(kr[j]),
+                    "nf_factor": float(nff[j]),
+                }
+            )
 
     _COLS = [
-        "station", "freq_hz", "period_s", "offset_m",
-        "rho_a_ohmm", "kr", "nf_factor",
+        "station",
+        "freq_hz",
+        "period_s",
+        "offset_m",
+        "rho_a_ohmm",
+        "kr",
+        "nf_factor",
     ]
     if not rows:
         return pd.DataFrame(columns=_COLS)
@@ -415,16 +432,25 @@ def plot_field_zones(
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     # station order
     stations = df["station"].unique().tolist()
     if sort_by in ("lon", "lat"):
         S = ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         stations = _sorted_stations(stations, S, sort_by)
     else:
@@ -435,7 +461,7 @@ def plot_field_zones(
 
     # fill grid
     grid_zone = np.full((len(all_y), len(stations)), np.nan)
-    grid_kr   = np.full((len(all_y), len(stations)), np.nan)
+    grid_kr = np.full((len(all_y), len(stations)), np.nan)
     y_idx = {v: k for k, v in enumerate(all_y)}
     x_idx = {s: k for k, s in enumerate(stations)}
 
@@ -444,26 +470,39 @@ def plot_field_zones(
         xi = x_idx.get(row.station)
         if yi is not None and xi is not None:
             grid_zone[yi, xi] = _ZONE_INT[row.zone]
-            grid_kr[yi, xi]   = row.kr
+            grid_kr[yi, xi] = row.kr
 
     cmap = mcolors.ListedColormap(
         [_ZONE_COLORS[_FAR], _ZONE_COLORS[_TRANS], _ZONE_COLORS[_NEAR]]
     )
     xs = np.arange(len(stations) + 1) - 0.5
     ys = np.arange(len(all_y) + 1) - 0.5
-    ax.pcolormesh(xs, ys, grid_zone, cmap=cmap, vmin=-0.5, vmax=2.5,
-                  shading="auto")
+    ax.pcolormesh(
+        xs, ys, grid_zone, cmap=cmap, vmin=-0.5, vmax=2.5, shading="auto"
+    )
 
-    if (contour_kr
-            and not np.all(np.isnan(grid_kr))
-            and grid_kr.shape[0] >= 2
-            and grid_kr.shape[1] >= 2):
+    if (
+        contour_kr
+        and not np.all(np.isnan(grid_kr))
+        and grid_kr.shape[0] >= 2
+        and grid_kr.shape[1] >= 2
+    ):
         XX, YY = np.meshgrid(np.arange(len(stations)), np.arange(len(all_y)))
-        valid_levels = [lv for lv in sorted(kr_levels)
-                        if np.nanmin(grid_kr) < lv < np.nanmax(grid_kr)]
+        valid_levels = [
+            lv
+            for lv in sorted(kr_levels)
+            if np.nanmin(grid_kr) < lv < np.nanmax(grid_kr)
+        ]
         if valid_levels:
-            cs = ax.contour(XX, YY, grid_kr, levels=valid_levels,
-                            colors="white", linewidths=0.8, linestyles="--")
+            cs = ax.contour(
+                XX,
+                YY,
+                grid_kr,
+                levels=valid_levels,
+                colors="white",
+                linewidths=0.8,
+                linestyles="--",
+            )
             ax.clabel(cs, fmt="|kr|=%.2g", fontsize=7, inline=True)
 
     ax.set_xticks(range(len(stations)))
@@ -471,7 +510,7 @@ def plot_field_zones(
 
     # y-axis ticks
     n_ytick = min(8, len(all_y))
-    step    = max(1, len(all_y) // n_ytick)
+    step = max(1, len(all_y) // n_ytick)
     tick_idx = np.arange(0, len(all_y), step)
     ax.set_yticks(tick_idx)
     ax.set_yticklabels([f"{all_y[k]:.3g}" for k in tick_idx], fontsize=8)

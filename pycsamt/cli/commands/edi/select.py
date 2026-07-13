@@ -28,14 +28,16 @@ from ._base import _get_collection, edi
 )
 @output_dir_option
 @click.option(
-    "--stations", "-s",
+    "--stations",
+    "-s",
     "station_ids",
     default=None,
     metavar="ID[,ID…]",
     help="Comma-separated station IDs to keep.",
 )
 @click.option(
-    "--pattern", "-p",
+    "--pattern",
+    "-p",
     default=None,
     metavar="GLOB",
     help="Glob pattern for station names (e.g. 'S0*', '18-02*').",
@@ -68,7 +70,8 @@ from ._base import _get_collection, edi
     help="Keep only stations with at least N frequency points.",
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -153,19 +156,35 @@ def select(
         keep = [e for e in keep if e.has_tipper]
 
     if min_freq is not None:
+
         def _fmin(e) -> float:
             freq = getattr(e.Z, "freq", None)
-            return float(freq.min()) if freq is not None and freq.size else float("inf")
+            return (
+                float(freq.min())
+                if freq is not None and freq.size
+                else float("inf")
+            )
+
         keep = [e for e in keep if _fmin(e) <= min_freq]
 
     if max_freq is not None:
+
         def _fmax(e) -> float:
             freq = getattr(e.Z, "freq", None)
-            return float(freq.max()) if freq is not None and freq.size else float("-inf")
+            return (
+                float(freq.max())
+                if freq is not None and freq.size
+                else float("-inf")
+            )
+
         keep = [e for e in keep if _fmax(e) >= max_freq]
 
     if min_nfreq is not None:
-        keep = [e for e in keep if int(getattr(e.Z, "n_freq", 0) or 0) >= min_nfreq]
+        keep = [
+            e
+            for e in keep
+            if int(getattr(e.Z, "n_freq", 0) or 0) >= min_nfreq
+        ]
 
     n_selected = len(keep)
     selected_names = [e.station or "?" for e in keep]
@@ -175,11 +194,16 @@ def select(
             f"Dry run — {n_selected}/{len(coll)} station(s) match the filter:"
         )
         if output_format == "json":
-            click.echo(json.dumps({
-                "n_total": len(coll),
-                "n_selected": n_selected,
-                "selected": selected_names,
-            }, indent=2))
+            click.echo(
+                json.dumps(
+                    {
+                        "n_total": len(coll),
+                        "n_selected": n_selected,
+                        "selected": selected_names,
+                    },
+                    indent=2,
+                )
+            )
         else:
             click.echo(msg)
             for name in selected_names:
@@ -192,7 +216,9 @@ def select(
         )
 
     if n_selected == 0:
-        click.echo("No stations match the filter — nothing to export.", err=True)
+        click.echo(
+            "No stations match the filter — nothing to export.", err=True
+        )
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -207,29 +233,34 @@ def select(
         import sys as _sys
 
         import tqdm as _tqdm  # noqa: PLC0415
+
         _orig = _tqdm.tqdm.__init__
+
         def _patched_init(self, *a, file=None, **kw):
             _orig(self, *a, file=_sys.stderr, **kw)
+
         _tqdm.tqdm.__init__ = _patched_init
         result = sub.export(output_dir)
         _tqdm.tqdm.__init__ = _orig
     except (ImportError, Exception):
         result = sub.export(output_dir)
 
-    n_ok   = len(result.get("successful", []))
+    n_ok = len(result.get("successful", []))
     n_fail = len(result.get("failed", []))
 
     summary = {
-        "source":     str(source),
+        "source": str(source),
         "output_dir": str(output_dir),
-        "n_total":    len(coll),
+        "n_total": len(coll),
         "n_selected": n_selected,
-        "n_written":  n_ok,
-        "n_failed":   n_fail,
-        "selected":   selected_names,
-        "written":    result.get("successful", []),
-        "failed":     [{"station": s, "error": str(e)}
-                       for s, e in result.get("failed", [])],
+        "n_written": n_ok,
+        "n_failed": n_fail,
+        "selected": selected_names,
+        "written": result.get("successful", []),
+        "failed": [
+            {"station": s, "error": str(e)}
+            for s, e in result.get("failed", [])
+        ],
     }
 
     if output_format == "json":

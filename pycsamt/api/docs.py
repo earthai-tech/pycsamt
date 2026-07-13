@@ -23,9 +23,7 @@ class DocstringComponents:
             entries = {}
             for key, value in comp_dict.items():
                 match = re.match(self.regexp, value)
-                entries[key] = (
-                    value if match is None else match.group(1)
-                )
+                entries[key] = value if match is None else match.group(1)
         else:
             entries = comp_dict.copy()
 

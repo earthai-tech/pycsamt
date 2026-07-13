@@ -273,7 +273,11 @@ def build_geo_contour_image(
     lat_min, lat_max = lat_min - dlat, lat_max + dlat
 
     xi, yi, zz = interpolate_overlay_grid(
-        lon, lat, val, grid_size=int(grid_res), method=interp,
+        lon,
+        lat,
+        val,
+        grid_size=int(grid_res),
+        method=interp,
     )
     if not np.isfinite(zz).any():
         return None
@@ -299,13 +303,22 @@ def build_geo_contour_image(
     levels = max(2, int(n_levels))
     if mode in ("filled", "filled+lines"):
         ax.contourf(
-            xi, yi, zz,
-            levels=levels, cmap=cmap, alpha=float(opacity),
+            xi,
+            yi,
+            zz,
+            levels=levels,
+            cmap=cmap,
+            alpha=float(opacity),
         )
     if mode in ("lines", "filled+lines"):
         ax.contour(
-            xi, yi, zz,
-            levels=levels, colors="k", linewidths=0.5, alpha=0.5,
+            xi,
+            yi,
+            zz,
+            levels=levels,
+            colors="k",
+            linewidths=0.5,
+            alpha=0.5,
         )
     buf = io.BytesIO()
     canvas.print_png(buf)
@@ -336,15 +349,9 @@ def interpolate_overlay_grid(
     x_arr = np.asarray(x, dtype=float)
     y_arr = np.asarray(y, dtype=float)
     val_arr = np.asarray(values, dtype=float)
-    good = (
-        np.isfinite(x_arr)
-        & np.isfinite(y_arr)
-        & np.isfinite(val_arr)
-    )
+    good = np.isfinite(x_arr) & np.isfinite(y_arr) & np.isfinite(val_arr)
     if good.sum() < 3:
-        raise ValueError(
-            "At least three finite points are required."
-        )
+        raise ValueError("At least three finite points are required.")
     xi = np.linspace(
         float(np.nanmin(x_arr[good])),
         float(np.nanmax(x_arr[good])),

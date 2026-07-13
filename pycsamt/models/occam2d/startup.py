@@ -69,29 +69,34 @@ _FORMAT_TAG = "OCCAMITER_FLEX"
 
 # Canonical key map: upper-cased header keyword → attribute name
 _KEY_MAP: dict[str, str] = {
-    "FORMAT":             "format_str",
-    "DESCRIPTION":        "description",
-    "MODEL FILE":         "model_file",
-    "DATA FILE":          "data_file",
-    "DATE/TIME":          "datetime_str",
-    "ITERATIONS TO RUN":  "max_iterations",
-    "TARGET MISFIT":      "target_misfit",
-    "ROUGHNESS TYPE":     "roughness_type",
+    "FORMAT": "format_str",
+    "DESCRIPTION": "description",
+    "MODEL FILE": "model_file",
+    "DATA FILE": "data_file",
+    "DATE/TIME": "datetime_str",
+    "ITERATIONS TO RUN": "max_iterations",
+    "TARGET MISFIT": "target_misfit",
+    "ROUGHNESS TYPE": "roughness_type",
     "DIAGONAL PENALTIES": "diagonal_penalties",
     "STEPSIZE CUT COUNT": "stepsize_cut_count",
-    "DEBUG LEVEL":        "debug_level",
-    "ITERATION":          "iteration",
-    "LAGRANGE VALUE":     "lagrange_value",
-    "ROUGHNESS VALUE":    "roughness_value",
-    "MISFIT VALUE":       "misfit_value",
-    "MISFIT REACHED":     "misfit_reached",
-    "PARAM COUNT":        "n_params",
+    "DEBUG LEVEL": "debug_level",
+    "ITERATION": "iteration",
+    "LAGRANGE VALUE": "lagrange_value",
+    "ROUGHNESS VALUE": "roughness_value",
+    "MISFIT VALUE": "misfit_value",
+    "MISFIT REACHED": "misfit_reached",
+    "PARAM COUNT": "n_params",
 }
 
 # Fields that need integer coercion
 _INT_FIELDS = {
-    "max_iterations", "roughness_type", "diagonal_penalties",
-    "stepsize_cut_count", "debug_level", "iteration", "n_params",
+    "max_iterations",
+    "roughness_type",
+    "diagonal_penalties",
+    "stepsize_cut_count",
+    "debug_level",
+    "iteration",
+    "n_params",
 }
 
 
@@ -139,7 +144,7 @@ def _parse_iter_flex(path: Path) -> dict:
                 continue
             raw_key, _, raw_val = line.partition(":")
             key_up = raw_key.strip().upper()
-            val    = raw_val.strip()
+            val = raw_val.strip()
 
             attr = _KEY_MAP.get(key_up)
             if attr is None:
@@ -166,18 +171,24 @@ def _parse_iter_flex(path: Path) -> dict:
                 try:
                     result[attr] = float(val)
                 except ValueError:
-                    result[attr] = val  # store as string (description, filenames…)
+                    result[attr] = (
+                        val  # store as string (description, filenames…)
+                    )
 
             if attr == "n_params":
                 n_params = result["n_params"] or 0
                 reading_params = True
 
     if result["format_str"] is None:
-        raise ValueError(f"File does not contain a valid OCCAMITER_FLEX header: {path}")
+        raise ValueError(
+            f"File does not contain a valid OCCAMITER_FLEX header: {path}"
+        )
 
     # Parse parameter vector
     try:
-        arr = np.array([float(t) for t in param_tokens[:n_params]], dtype=float)
+        arr = np.array(
+            [float(t) for t in param_tokens[:n_params]], dtype=float
+        )
     except ValueError:
         arr = np.array([], dtype=float)
 
@@ -193,6 +204,7 @@ def _parse_iter_flex(path: Path) -> dict:
 # -----------------------------------------------------------------------
 # OccamStartup
 # -----------------------------------------------------------------------
+
 
 class OccamStartup(OccamBase):
     r"""Represent an Occam2D startup control file.
@@ -331,24 +343,24 @@ class OccamStartup(OccamBase):
     ):
         super().__init__(**kwargs)
         cfg = config or OccamConfig()
-        self.config             = cfg
-        self.format_str         = _FORMAT_TAG
-        self.description        = description
-        self.model_file         = cfg.model_file
-        self.data_file          = cfg.data_file
-        self.datetime_str       = str(datetime.datetime.now())
-        self.max_iterations     = cfg.max_iterations
-        self.target_misfit      = cfg.target_misfit
-        self.roughness_type     = cfg.roughness_type
+        self.config = cfg
+        self.format_str = _FORMAT_TAG
+        self.description = description
+        self.model_file = cfg.model_file
+        self.data_file = cfg.data_file
+        self.datetime_str = str(datetime.datetime.now())
+        self.max_iterations = cfg.max_iterations
+        self.target_misfit = cfg.target_misfit
+        self.roughness_type = cfg.roughness_type
         self.diagonal_penalties = cfg.diagonal_penalties
         self.stepsize_cut_count = cfg.stepsize_cut_count
-        self.debug_level        = cfg.debug_level
-        self.iteration          = 0
-        self.lagrange_value     = cfg.lagrange_start
-        self.roughness_value    = 1e10
-        self.misfit_value       = 1000.0
-        self.misfit_reached     = False
-        self.n_params           = 0
+        self.debug_level = cfg.debug_level
+        self.iteration = 0
+        self.lagrange_value = cfg.lagrange_start
+        self.roughness_value = 1e10
+        self.misfit_value = 1000.0
+        self.misfit_reached = False
+        self.n_params = 0
         self.param_values: np.ndarray = np.array([])
 
     # ------------------------------------------------------------------
@@ -427,15 +439,16 @@ class OccamStartup(OccamBase):
                 "OccamStartup.from_model: model has no parameters"
             )
 
-        obj.n_params     = n
+        obj.n_params = n
         obj.param_values = np.full(n, np.log10(cfg.initial_rho), dtype=float)
-        obj.model_file   = cfg.model_file
-        obj.data_file    = cfg.data_file
+        obj.model_file = cfg.model_file
+        obj.data_file = cfg.data_file
 
         if obj.verbose:
             obj.logger.info(
                 "OccamStartup.from_model: %d params, rho0=%.1f Ω·m",
-                n, cfg.initial_rho,
+                n,
+                cfg.initial_rho,
             )
         return obj
 
@@ -527,6 +540,7 @@ class OccamStartup(OccamBase):
 # -----------------------------------------------------------------------
 # OccamIter
 # -----------------------------------------------------------------------
+
 
 class OccamIter(OccamBase):
     r"""Represent an Occam2D iteration file.
@@ -632,24 +646,24 @@ class OccamIter(OccamBase):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.format_str:      str        = _FORMAT_TAG
-        self.description:     str        = ""
-        self.model_file:      str        = ""
-        self.data_file:       str        = ""
-        self.datetime_str:    str        = ""
-        self.max_iterations:  int        = 0
-        self.target_misfit:   float      = 1.0
-        self.roughness_type:  int        = 1
-        self.diagonal_penalties: int     = 0
-        self.stepsize_cut_count: int     = 8
-        self.debug_level:     int        = 1
-        self.iteration:       int        = 0
-        self.lagrange_value:  float      = 0.0
-        self.roughness_value: float      = 0.0
-        self.misfit_value:    float      = 0.0
-        self.misfit_reached:  bool       = False
-        self.n_params:        int        = 0
-        self.param_values:    np.ndarray = np.array([])
+        self.format_str: str = _FORMAT_TAG
+        self.description: str = ""
+        self.model_file: str = ""
+        self.data_file: str = ""
+        self.datetime_str: str = ""
+        self.max_iterations: int = 0
+        self.target_misfit: float = 1.0
+        self.roughness_type: int = 1
+        self.diagonal_penalties: int = 0
+        self.stepsize_cut_count: int = 8
+        self.debug_level: int = 1
+        self.iteration: int = 0
+        self.lagrange_value: float = 0.0
+        self.roughness_value: float = 0.0
+        self.misfit_value: float = 0.0
+        self.misfit_reached: bool = False
+        self.n_params: int = 0
+        self.param_values: np.ndarray = np.array([])
 
     # ------------------------------------------------------------------
     # I/O
@@ -709,7 +723,10 @@ class OccamIter(OccamBase):
         if obj.verbose:
             obj.logger.info(
                 "OccamIter.read: iter %d, misfit=%.4f, %d params from %s",
-                obj.iteration, obj.misfit_value, obj.n_params, p,
+                obj.iteration,
+                obj.misfit_value,
+                obj.n_params,
+                p,
             )
         return obj
 
@@ -744,7 +761,7 @@ class OccamIter(OccamBase):
         """
         if not self.param_values.size:
             return np.array([])
-        return 10.0 ** self.param_values
+        return 10.0**self.param_values
 
     @property
     def log10_rho_stats(self) -> dict:
@@ -753,9 +770,9 @@ class OccamIter(OccamBase):
             return {}
         v = self.param_values
         return {
-            "min":    float(np.nanmin(v)),
-            "max":    float(np.nanmax(v)),
-            "mean":   float(np.nanmean(v)),
+            "min": float(np.nanmin(v)),
+            "max": float(np.nanmax(v)),
+            "mean": float(np.nanmean(v)),
             "median": float(np.nanmedian(v)),
         }
 
@@ -766,26 +783,26 @@ class OccamIter(OccamBase):
 
 # Ordered write sequence: (file keyword, attribute name, value type)
 _WRITE_ORDER = [
-    ("Format",             "format_str",         "str"),
-    ("Description",        "description",        "str"),
-    ("Model File",         "model_file",         "str"),
-    ("Data File",          "data_file",          "str"),
-    ("Date/Time",          "datetime_str",       "str"),
-    ("Iterations to run",  "max_iterations",     "int"),
-    ("Target Misfit",      "target_misfit",      "float"),
-    ("Roughness Type",     "roughness_type",     "int"),
+    ("Format", "format_str", "str"),
+    ("Description", "description", "str"),
+    ("Model File", "model_file", "str"),
+    ("Data File", "data_file", "str"),
+    ("Date/Time", "datetime_str", "str"),
+    ("Iterations to run", "max_iterations", "int"),
+    ("Target Misfit", "target_misfit", "float"),
+    ("Roughness Type", "roughness_type", "int"),
     ("Diagonal Penalties", "diagonal_penalties", "int"),
     ("Stepsize Cut Count", "stepsize_cut_count", "int"),
-    ("Debug Level",        "debug_level",        "int"),
-    ("Iteration",          "iteration",          "int"),
-    ("Lagrange Value",     "lagrange_value",     "float"),
-    ("Roughness Value",    "roughness_value",    "float"),
-    ("Misfit Value",       "misfit_value",       "float"),
-    ("Misfit Reached",     "misfit_reached",     "int"),
-    ("Param Count",        "n_params",           "int"),
+    ("Debug Level", "debug_level", "int"),
+    ("Iteration", "iteration", "int"),
+    ("Lagrange Value", "lagrange_value", "float"),
+    ("Roughness Value", "roughness_value", "float"),
+    ("Misfit Value", "misfit_value", "float"),
+    ("Misfit Reached", "misfit_reached", "int"),
+    ("Param Count", "n_params", "int"),
 ]
 
-_KEY_WIDTH = 20   # columns reserved for "Key:" + padding
+_KEY_WIDTH = 20  # columns reserved for "Key:" + padding
 
 
 def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
@@ -798,7 +815,7 @@ def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
         if val is None:
             val = 0
         key_str = f"{kw}:"
-        pad      = max(1, _KEY_WIDTH - len(key_str))
+        pad = max(1, _KEY_WIDTH - len(key_str))
         if vtype == "int":
             val_str = str(int(val))
         elif vtype == "float":
@@ -815,7 +832,7 @@ def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
     # Param block: 4 values per line
     pv = getattr(obj, "param_values", np.array([]))
     for i in range(0, len(pv), 4):
-        chunk = pv[i: i + 4]
+        chunk = pv[i : i + 4]
         lines.append("  " + "    ".join(f"{v:.4f}" for v in chunk) + "\n")
 
     with path.open("w") as fh:
@@ -828,6 +845,7 @@ def _write_iter_flex(obj: OccamBase, path: Path) -> Path:
 # -----------------------------------------------------------------------
 # Helper: apply parsed dict to any object that has the right attributes
 # -----------------------------------------------------------------------
+
 
 def _apply_parsed(obj: OccamBase, parsed: dict) -> None:
     """Copy all non-None values from *parsed* onto *obj*."""

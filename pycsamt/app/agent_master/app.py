@@ -25,9 +25,7 @@ import matplotlib
 
 matplotlib.use("Agg", force=True)
 
-_ICONS_DIR = (
-    Path(__file__).parent / "assets" / "icons"
-)
+_ICONS_DIR = Path(__file__).parent / "assets" / "icons"
 
 
 def create_app(
@@ -55,10 +53,7 @@ def create_app(
     # Bootstrap + Bootstrap Icons
     # + Highlight.js (atom-one-dark theme)
     _HJS = "11.9.0"
-    _HJS_CDN = (
-        "https://cdnjs.cloudflare.com/"
-        f"ajax/libs/highlight.js/{_HJS}"
-    )
+    _HJS_CDN = f"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{_HJS}"
     _EXT = [
         dbc.themes.BOOTSTRAP,
         dbc.icons.BOOTSTRAP,
@@ -66,9 +61,7 @@ def create_app(
     ]
     _EXT_JS = [
         {
-            "src": (
-                f"{_HJS_CDN}/highlight.min.js"
-            ),
+            "src": (f"{_HJS_CDN}/highlight.min.js"),
         },
     ]
 
@@ -76,29 +69,25 @@ def create_app(
         __name__,
         external_stylesheets=_EXT,
         external_scripts=_EXT_JS,
-        suppress_callback_exceptions=(
-            suppress_exceptions
-        ),
+        suppress_callback_exceptions=(suppress_exceptions),
         title="pyCSAMT — Agent",
         update_title=None,
     )
 
     from .layout import create_layout
+
     app.layout = create_layout()
 
     from .callbacks import register_all
+
     register_all(app)
 
     # serve icons from assets/icons/
     from flask import send_from_directory
 
-    @app.server.route(
-        "/am-icons/<path:filename>"
-    )
+    @app.server.route("/am-icons/<path:filename>")
     def _serve_icon(filename):
-        return send_from_directory(
-            _ICONS_DIR, filename
-        )
+        return send_from_directory(_ICONS_DIR, filename)
 
     # clientside: apply data-theme to <html>
     # and className for CSS scoping
@@ -189,7 +178,8 @@ def create_app(
         }
         """,
         dash.Output(
-            "am-root", "data-init",
+            "am-root",
+            "data-init",
         ),
         dash.Input("am-root", "id"),
         prevent_initial_call=False,
@@ -226,14 +216,11 @@ def launch(
 
         def _open():
             import time
-            time.sleep(1.2)
-            webbrowser.open(
-                f"http://{host}:{port}"
-            )
 
-        threading.Thread(
-            target=_open, daemon=True
-        ).start()
+            time.sleep(1.2)
+            webbrowser.open(f"http://{host}:{port}")
+
+        threading.Thread(target=_open, daemon=True).start()
 
     app.run(
         host=host,

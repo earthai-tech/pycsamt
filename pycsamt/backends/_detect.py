@@ -7,6 +7,7 @@ All probing is done via :mod:`importlib.util` so neither PyTorch nor
 TensorFlow is actually imported (and not required as a package-level
 dependency) when this module is loaded.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -89,12 +90,14 @@ def get_backend_versions() -> dict[str, str | None]:
     if probe_backend("torch"):
         try:
             import torch
+
             result["torch"] = torch.__version__
         except Exception:
             pass
     if probe_backend("tensorflow"):
         try:
             import tensorflow as tf
+
             result["tensorflow"] = tf.__version__
         except Exception:
             pass

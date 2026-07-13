@@ -21,6 +21,7 @@ Gradient clamping is done with
 ``tf.clip_by_norm`` after ``tape.gradient``.
 Parameter clamping uses ``var.assign``.
 """
+
 from __future__ import annotations
 
 import math
@@ -37,7 +38,7 @@ __all__ = [
 
 _MU0 = 4e-7 * math.pi
 _PI = math.pi
-_LOG10E = math.log10(math.e)   # 1 / ln(10)
+_LOG10E = math.log10(math.e)  # 1 / ln(10)
 
 
 # ── single-station Wait recursion ──────────────────
@@ -64,19 +65,17 @@ def _mt1d_tf(freqs_t, log_rho, log_thick):
     import tensorflow as tf
 
     rho = tf.pow(10.0, tf.cast(log_rho, tf.float64))
-    thick = tf.pow(
-        10.0, tf.cast(log_thick, tf.float64)
-    )
-    omega = 2.0 * _PI * freqs_t            # (F,)
+    thick = tf.pow(10.0, tf.cast(log_thick, tf.float64))
+    omega = 2.0 * _PI * freqs_t  # (F,)
 
     j_mu_w = tf.complex(
         tf.zeros_like(omega),
         tf.cast(_MU0 * omega, tf.float64),
-    )                                       # (F,)
+    )  # (F,)
 
-    rho_c = tf.cast(rho, tf.complex128)    # (L,)
+    rho_c = tf.cast(rho, tf.complex128)  # (L,)
     k_n = tf.sqrt(j_mu_w / rho_c[-1])
-    Z = j_mu_w / k_n                       # (F,)
+    Z = j_mu_w / k_n  # (F,)
 
     L = log_rho.shape[0]
     j_unit = tf.constant(1j, dtype=tf.complex128)
@@ -84,9 +83,7 @@ def _mt1d_tf(freqs_t, log_rho, log_thick):
     for idx in range(L - 2, -1, -1):
         k_j = tf.sqrt(j_mu_w / rho_c[idx])
         Z0_j = j_mu_w / k_j
-        h = tf.cast(
-            thick[idx], tf.complex128
-        )
+        h = tf.cast(thick[idx], tf.complex128)
         kh = k_j * h
         tanh_v = tf.math.tanh(j_unit * kh)
         denom = Z0_j + Z * tanh_v
@@ -94,16 +91,10 @@ def _mt1d_tf(freqs_t, log_rho, log_thick):
 
     mu0_omega = tf.cast(_MU0 * omega, tf.float64)
     abs_Z2 = tf.cast(tf.abs(Z) ** 2, tf.float64)
-    rho_a = abs_Z2 / mu0_omega             # (F,)
-    phase = tf.cast(
-        tf.math.angle(Z), tf.float64
-    ) * (180.0 / _PI)
+    rho_a = abs_Z2 / mu0_omega  # (F,)
+    phase = tf.cast(tf.math.angle(Z), tf.float64) * (180.0 / _PI)
 
-    log10_rho_a = (
-        tf.math.log(
-            tf.maximum(rho_a, 1e-30)
-        ) * _LOG10E
-    )
+    log10_rho_a = tf.math.log(tf.maximum(rho_a, 1e-30)) * _LOG10E
     return log10_rho_a, phase
 
 
@@ -131,58 +122,38 @@ def _mt1d_tf_batch(freqs_t, log_rho, log_thick):
         log_rho.shape[0],
         log_rho.shape[1],
     )
-    rho = tf.pow(
-        10.0, tf.cast(log_rho, tf.float64)
-    )                                       # (S, L)
-    thick = tf.pow(
-        10.0, tf.cast(log_thick, tf.float64)
-    )                                       # (S, L-1)
-    omega = 2.0 * _PI * freqs_t            # (F,)
+    rho = tf.pow(10.0, tf.cast(log_rho, tf.float64))  # (S, L)
+    thick = tf.pow(10.0, tf.cast(log_thick, tf.float64))  # (S, L-1)
+    omega = 2.0 * _PI * freqs_t  # (F,)
 
     # j_mu_w shape (1, F) — broadcasts over stations
     j_mu_w = tf.complex(
         tf.zeros_like(omega),
         tf.cast(_MU0 * omega, tf.float64),
-    )[tf.newaxis, :]                        # (1, F)
+    )[tf.newaxis, :]  # (1, F)
 
-    rho_c = tf.cast(rho, tf.complex128)    # (S, L)
+    rho_c = tf.cast(rho, tf.complex128)  # (S, L)
 
-    k_n = tf.sqrt(
-        j_mu_w / rho_c[:, -1:]
-    )                                       # (S, F)
-    Z = j_mu_w / k_n                       # (S, F)
+    k_n = tf.sqrt(j_mu_w / rho_c[:, -1:])  # (S, F)
+    Z = j_mu_w / k_n  # (S, F)
 
     j_unit = tf.constant(1j, dtype=tf.complex128)
 
     for idx in range(L - 2, -1, -1):
-        k_j = tf.sqrt(
-            j_mu_w / rho_c[:, idx: idx + 1]
-        )
+        k_j = tf.sqrt(j_mu_w / rho_c[:, idx : idx + 1])
         Z0_j = j_mu_w / k_j
-        h = tf.cast(
-            thick[:, idx: idx + 1], tf.complex128
-        )
+        h = tf.cast(thick[:, idx : idx + 1], tf.complex128)
         kh = k_j * h
         tanh_v = tf.math.tanh(j_unit * kh)
         denom = Z0_j + Z * tanh_v
         Z = Z0_j * (Z + Z0_j * tanh_v) / denom
 
-    mu0_omega = tf.cast(
-        _MU0 * omega[tf.newaxis, :], tf.float64
-    )
-    abs_Z2 = tf.cast(
-        tf.abs(Z) ** 2, tf.float64
-    )                                       # (S, F)
-    rho_a = abs_Z2 / mu0_omega             # (S, F)
-    phase = tf.cast(
-        tf.math.angle(Z), tf.float64
-    ) * (180.0 / _PI)
+    mu0_omega = tf.cast(_MU0 * omega[tf.newaxis, :], tf.float64)
+    abs_Z2 = tf.cast(tf.abs(Z) ** 2, tf.float64)  # (S, F)
+    rho_a = abs_Z2 / mu0_omega  # (S, F)
+    phase = tf.cast(tf.math.angle(Z), tf.float64) * (180.0 / _PI)
 
-    log10_rho_a = (
-        tf.math.log(
-            tf.maximum(rho_a, 1e-30)
-        ) * _LOG10E
-    )
+    log10_rho_a = tf.math.log(tf.maximum(rho_a, 1e-30)) * _LOG10E
     return log10_rho_a, phase
 
 
@@ -194,10 +165,7 @@ def _clip_grads_tf(grads, max_norm: float = 5.0):
     import tensorflow as tf
 
     return [
-        tf.clip_by_norm(g, max_norm)
-        if g is not None
-        else g
-        for g in grads
+        tf.clip_by_norm(g, max_norm) if g is not None else g for g in grads
     ]
 
 
@@ -236,27 +204,14 @@ def _fit_station_tf(
         np.log10(np.maximum(rho_obs, 1e-12)),
         dtype=tf.float64,
     )
-    ph_obs_t = tf.constant(
-        ph_obs, dtype=tf.float64
-    )
-    valid = (
-        tf.math.is_finite(lr_obs_t)
-        & tf.math.is_finite(ph_obs_t)
-    )
+    ph_obs_t = tf.constant(ph_obs, dtype=tf.float64)
+    valid = tf.math.is_finite(lr_obs_t) & tf.math.is_finite(ph_obs_t)
 
     if init_log_rho is None:
-        init_lr = float(
-            np.mean(
-                np.log10(np.maximum(rho_obs, 1e-3))
-            )
-        )
-        init_lr_v = np.full(
-            n_layers, init_lr, dtype=np.float64
-        )
+        init_lr = float(np.mean(np.log10(np.maximum(rho_obs, 1e-3))))
+        init_lr_v = np.full(n_layers, init_lr, dtype=np.float64)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=np.float64
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=np.float64)
 
     if init_log_thick is None:
         dz = depth_max / n_layers
@@ -266,26 +221,16 @@ def _fit_station_tf(
             dtype=np.float64,
         )
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=np.float64
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=np.float64)
 
-    log_rho_var = tf.Variable(
-        init_lr_v, dtype=tf.float64
-    )
-    log_thick_var = tf.Variable(
-        init_lt_v, dtype=tf.float64
-    )
-    opt = tf.keras.optimizers.Adam(
-        learning_rate=lr
-    )
+    log_rho_var = tf.Variable(init_lr_v, dtype=tf.float64)
+    log_thick_var = tf.Variable(init_lt_v, dtype=tf.float64)
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)
     history: list[float] = []
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:
-            lr_pred, ph_pred = _mt1d_tf(
-                freqs_t, log_rho_var, log_thick_var
-            )
+            lr_pred, ph_pred = _mt1d_tf(freqs_t, log_rho_var, log_thick_var)
             lr_safe = tf.where(
                 valid,
                 lr_obs_t,
@@ -297,46 +242,28 @@ def _fit_station_tf(
                 tf.stop_gradient(ph_pred),
             )
             n_v = tf.maximum(
-                tf.reduce_sum(
-                    tf.cast(valid, tf.float64)
-                ),
+                tf.reduce_sum(tf.cast(valid, tf.float64)),
                 1.0,
             )
-            data_loss = tf.reduce_sum(
-                (lr_pred - lr_safe) ** 2
-                + ((ph_pred - ph_safe) / 90.0) ** 2
-            ) / n_v
-            smooth = tf.reduce_mean(
-                (
-                    log_rho_var[1:]
-                    - log_rho_var[:-1]
-                ) ** 2
+            data_loss = (
+                tf.reduce_sum(
+                    (lr_pred - lr_safe) ** 2
+                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                )
+                / n_v
             )
+            smooth = tf.reduce_mean((log_rho_var[1:] - log_rho_var[:-1]) ** 2)
             loss = data_loss + lam * smooth
 
-        grads = tape.gradient(
-            loss, [log_rho_var, log_thick_var]
-        )
+        grads = tape.gradient(loss, [log_rho_var, log_thick_var])
         clipped = _clip_grads_tf(grads)
-        opt.apply_gradients(
-            zip(clipped, [log_rho_var, log_thick_var])
-        )
-        log_thick_var.assign(
-            tf.clip_by_value(
-                log_thick_var, 0.0, 5.0
-            )
-        )
+        opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
+        log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
         val = float(loss.numpy())
         history.append(val)
 
-        if log_every > 0 and (
-            ep == 1 or ep % log_every == 0
-        ):
-            print(
-                f"  {obs.name}"
-                f"  ep {ep:>5d}/{epochs}"
-                f"  loss={val:.5f}"
-            )
+        if log_every > 0 and (ep == 1 or ep % log_every == 0):
+            print(f"  {obs.name}  ep {ep:>5d}/{epochs}  loss={val:.5f}")
 
     return {
         "log_rho": log_rho_var.numpy(),
@@ -377,16 +304,9 @@ def _fit_2d_joint_tf(
     S, F = log_rho_obs.shape
     L = n_layers
 
-    lr_obs_t = tf.constant(
-        log_rho_obs, dtype=tf.float64
-    )
-    ph_obs_t = tf.constant(
-        ph_obs, dtype=tf.float64
-    )
-    valid = (
-        tf.math.is_finite(lr_obs_t)
-        & tf.math.is_finite(ph_obs_t)
-    )
+    lr_obs_t = tf.constant(log_rho_obs, dtype=tf.float64)
+    ph_obs_t = tf.constant(ph_obs, dtype=tf.float64)
+    valid = tf.math.is_finite(lr_obs_t) & tf.math.is_finite(ph_obs_t)
 
     if init_log_rho is None:
         mean_lr = float(np.nanmean(log_rho_obs))
@@ -394,30 +314,18 @@ def _fit_2d_joint_tf(
             mean_lr = 2.0
         init_lr_v = np.full((S, L), mean_lr)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=float
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=float)
 
     if init_log_thick is None:
         dz = max(depth_max / L, 1.0)
-        init_lt_v = np.full(
-            (S, L - 1), np.log10(dz)
-        )
+        init_lt_v = np.full((S, L - 1), np.log10(dz))
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=float
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=float)
 
     freqs_c = tf.constant(freqs_t, dtype=tf.float64)
-    log_rho_var = tf.Variable(
-        init_lr_v, dtype=tf.float64
-    )
-    log_thick_var = tf.Variable(
-        init_lt_v, dtype=tf.float64
-    )
-    opt = tf.keras.optimizers.Adam(
-        learning_rate=lr
-    )
+    log_rho_var = tf.Variable(init_lr_v, dtype=tf.float64)
+    log_thick_var = tf.Variable(init_lt_v, dtype=tf.float64)
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)
     history: list[float] = []
 
     for ep in range(1, epochs + 1):
@@ -436,61 +344,39 @@ def _fit_2d_joint_tf(
                 tf.stop_gradient(ph_pred),
             )
             n_v = tf.maximum(
-                tf.reduce_sum(
-                    tf.cast(valid, tf.float64)
-                ),
+                tf.reduce_sum(tf.cast(valid, tf.float64)),
                 1.0,
             )
-            data_loss = tf.reduce_sum(
-                (lr_pred - lr_safe) ** 2
-                + ((ph_pred - ph_safe) / 90.0) ** 2
-            ) / n_v
+            data_loss = (
+                tf.reduce_sum(
+                    (lr_pred - lr_safe) ** 2
+                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                )
+                / n_v
+            )
 
             vert = tf.reduce_mean(
-                (
-                    log_rho_var[:, 1:]
-                    - log_rho_var[:, :-1]
-                ) ** 2
+                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
             )
 
             if S > 1:
                 lat = tf.reduce_mean(
-                    (
-                        log_rho_var[1:, :]
-                        - log_rho_var[:-1, :]
-                    ) ** 2
+                    (log_rho_var[1:, :] - log_rho_var[:-1, :]) ** 2
                 )
             else:
-                lat = tf.constant(
-                    0.0, dtype=tf.float64
-                )
+                lat = tf.constant(0.0, dtype=tf.float64)
 
-            loss = (
-                data_loss
-                + lam_z * vert
-                + lam_x * lat
-            )
+            loss = data_loss + lam_z * vert + lam_x * lat
 
-        grads = tape.gradient(
-            loss, [log_rho_var, log_thick_var]
-        )
+        grads = tape.gradient(loss, [log_rho_var, log_thick_var])
         clipped = _clip_grads_tf(grads)
-        opt.apply_gradients(
-            zip(clipped, [log_rho_var, log_thick_var])
-        )
-        log_thick_var.assign(
-            tf.clip_by_value(
-                log_thick_var, 0.0, 5.0
-            )
-        )
+        opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
+        log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
         val = float(loss.numpy())
         history.append(val)
 
         if log_every > 0 and ep % log_every == 0:
-            print(
-                f"  epoch {ep:>5d}/{epochs}"
-                f"  loss={val:.5f}"
-            )
+            print(f"  epoch {ep:>5d}/{epochs}  loss={val:.5f}")
 
     return {
         "log_rho": log_rho_var.numpy(),
@@ -532,20 +418,11 @@ def _fit_3d_joint_tf(
     S, F = log_rho_obs.shape
     L = n_layers
 
-    lr_obs_t = tf.constant(
-        log_rho_obs, dtype=tf.float64
-    )
-    ph_obs_t = tf.constant(
-        ph_obs, dtype=tf.float64
-    )
-    valid = (
-        tf.math.is_finite(lr_obs_t)
-        & tf.math.is_finite(ph_obs_t)
-    )
-    A_t = tf.constant(
-        adjacency, dtype=tf.float64
-    )
-    d_vec = tf.reduce_sum(A_t, axis=1)     # (S,)
+    lr_obs_t = tf.constant(log_rho_obs, dtype=tf.float64)
+    ph_obs_t = tf.constant(ph_obs, dtype=tf.float64)
+    valid = tf.math.is_finite(lr_obs_t) & tf.math.is_finite(ph_obs_t)
+    A_t = tf.constant(adjacency, dtype=tf.float64)
+    d_vec = tf.reduce_sum(A_t, axis=1)  # (S,)
 
     if init_log_rho is None:
         mean_lr = float(np.nanmean(log_rho_obs))
@@ -553,30 +430,18 @@ def _fit_3d_joint_tf(
             mean_lr = 2.0
         init_lr_v = np.full((S, L), mean_lr)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=float
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=float)
 
     if init_log_thick is None:
         dz = max(depth_max / L, 1.0)
-        init_lt_v = np.full(
-            (S, L - 1), np.log10(dz)
-        )
+        init_lt_v = np.full((S, L - 1), np.log10(dz))
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=float
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=float)
 
     freqs_c = tf.constant(freqs_t, dtype=tf.float64)
-    log_rho_var = tf.Variable(
-        init_lr_v, dtype=tf.float64
-    )
-    log_thick_var = tf.Variable(
-        init_lt_v, dtype=tf.float64
-    )
-    opt = tf.keras.optimizers.Adam(
-        learning_rate=lr
-    )
+    log_rho_var = tf.Variable(init_lr_v, dtype=tf.float64)
+    log_thick_var = tf.Variable(init_lt_v, dtype=tf.float64)
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)
     history: list[float] = []
 
     for ep in range(1, epochs + 1):
@@ -595,68 +460,41 @@ def _fit_3d_joint_tf(
                 tf.stop_gradient(ph_pred),
             )
             n_v = tf.maximum(
-                tf.reduce_sum(
-                    tf.cast(valid, tf.float64)
-                ),
+                tf.reduce_sum(tf.cast(valid, tf.float64)),
                 1.0,
             )
-            data_loss = tf.reduce_sum(
-                (lr_pred - lr_safe) ** 2
-                + ((ph_pred - ph_safe) / 90.0) ** 2
-            ) / n_v
+            data_loss = (
+                tf.reduce_sum(
+                    (lr_pred - lr_safe) ** 2
+                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                )
+                / n_v
+            )
 
             vert = tf.reduce_mean(
-                (
-                    log_rho_var[:, 1:]
-                    - log_rho_var[:, :-1]
-                ) ** 2
+                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
             )
 
             # Graph Laplacian: L = D - A
             # d_vec: (S,); log_rho_var: (S,L)
-            d_col = tf.expand_dims(
-                d_vec, 1
-            )                               # (S, 1)
-            Lm = (
-                d_col * log_rho_var
-                - tf.linalg.matmul(
-                    A_t, log_rho_var
-                )
-            )
-            spatial = (
-                tf.reduce_sum(Lm * log_rho_var)
-                / tf.cast(
-                    tf.size(log_rho_var),
-                    tf.float64,
-                )
+            d_col = tf.expand_dims(d_vec, 1)  # (S, 1)
+            Lm = d_col * log_rho_var - tf.linalg.matmul(A_t, log_rho_var)
+            spatial = tf.reduce_sum(Lm * log_rho_var) / tf.cast(
+                tf.size(log_rho_var),
+                tf.float64,
             )
 
-            loss = (
-                data_loss
-                + lam_z * vert
-                + lam_g * spatial
-            )
+            loss = data_loss + lam_z * vert + lam_g * spatial
 
-        grads = tape.gradient(
-            loss, [log_rho_var, log_thick_var]
-        )
+        grads = tape.gradient(loss, [log_rho_var, log_thick_var])
         clipped = _clip_grads_tf(grads)
-        opt.apply_gradients(
-            zip(clipped, [log_rho_var, log_thick_var])
-        )
-        log_thick_var.assign(
-            tf.clip_by_value(
-                log_thick_var, 0.0, 5.0
-            )
-        )
+        opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
+        log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
         val = float(loss.numpy())
         history.append(val)
 
         if log_every > 0 and ep % log_every == 0:
-            print(
-                f"  epoch {ep:>5d}/{epochs}"
-                f"  loss={val:.5f}"
-            )
+            print(f"  epoch {ep:>5d}/{epochs}  loss={val:.5f}")
 
     return {
         "log_rho": log_rho_var.numpy(),

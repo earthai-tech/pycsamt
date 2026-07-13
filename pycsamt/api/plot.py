@@ -119,6 +119,7 @@ PlotConfig attributes
    PlotConfig.close_after_save
    PlotConfig.verbose
 """
+
 from __future__ import annotations
 
 import configparser
@@ -136,13 +137,14 @@ from typing import (
 _VALID_FMTS = frozenset({"png", "svg", "pdf", "eps", "tiff", "jpg", "jpeg"})
 
 # ── where to look for the config file ─────────────────────────────────────────
-_CFG_LOCAL  = Path("pycsamt_plot.cfg")
+_CFG_LOCAL = Path("pycsamt_plot.cfg")
 _CFG_GLOBAL = Path.home() / ".pycsamt" / "plot.cfg"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def _safe_print(msg: str) -> None:
     """Print *msg* without ever raising on a limited console encoding.
@@ -230,6 +232,7 @@ def _validate_fmt(fmts: list[str]) -> None:
     for f in fmts:
         if f.lower() not in _VALID_FMTS:
             import warnings
+
             warnings.warn(
                 f"pycsamt PlotConfig: format {f!r} is not in the known list "
                 f"{sorted(_VALID_FMTS)}.  matplotlib may still accept it.",
@@ -291,6 +294,7 @@ def _load_env() -> dict:
 # PlotConfig
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class PlotConfig:
     """Global plot-export configuration singleton for pyCSAMT.
 
@@ -348,15 +352,15 @@ class PlotConfig:
         close_after_save: bool = False,
         verbose: bool = True,
     ) -> None:
-        self.fmt             = fmt
-        self.base_fmt        = base_fmt
-        self.dpi             = dpi
-        self.bbox_inches     = bbox_inches
-        self.transparent     = transparent
-        self.facecolor       = facecolor
-        self.savedir         = savedir
+        self.fmt = fmt
+        self.base_fmt = base_fmt
+        self.dpi = dpi
+        self.bbox_inches = bbox_inches
+        self.transparent = transparent
+        self.facecolor = facecolor
+        self.savedir = savedir
         self.close_after_save = close_after_save
-        self.verbose         = verbose
+        self.verbose = verbose
 
     # ── format resolution ─────────────────────────────────────────────────────
 
@@ -446,8 +450,12 @@ class PlotConfig:
         # resolve figure
         try:
             import matplotlib.figure as _mfig
-            fig = (fig_or_ax if isinstance(fig_or_ax, _mfig.Figure)
-                   else fig_or_ax.get_figure())
+
+            fig = (
+                fig_or_ax
+                if isinstance(fig_or_ax, _mfig.Figure)
+                else fig_or_ax.get_figure()
+            )
         except AttributeError:
             raise TypeError(
                 f"Expected a matplotlib Figure or Axes, got {type(fig_or_ax)!r}."
@@ -460,10 +468,12 @@ class PlotConfig:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         # resolve per-call overrides
-        _dpi         = dpi         if dpi         is not None else self.dpi
-        _bbox        = bbox_inches if bbox_inches is not None else self.bbox_inches
-        _transparent = transparent if transparent is not None else self.transparent
-        _facecolor   = facecolor   if facecolor  is not None else self.facecolor
+        _dpi = dpi if dpi is not None else self.dpi
+        _bbox = bbox_inches if bbox_inches is not None else self.bbox_inches
+        _transparent = (
+            transparent if transparent is not None else self.transparent
+        )
+        _facecolor = facecolor if facecolor is not None else self.facecolor
 
         fmts = self.resolve_formats(fmt)
         saved: list[Path] = []
@@ -513,15 +523,15 @@ class PlotConfig:
 
     def reset(self) -> None:
         """Reset to package defaults (ignores config file and env vars)."""
-        self.fmt              = "png"
-        self.base_fmt         = "png"
-        self.dpi              = 150
-        self.bbox_inches      = "tight"
-        self.transparent      = False
-        self.facecolor        = "white"
-        self.savedir          = None
+        self.fmt = "png"
+        self.base_fmt = "png"
+        self.dpi = 150
+        self.bbox_inches = "tight"
+        self.transparent = False
+        self.facecolor = "white"
+        self.savedir = None
         self.close_after_save = False
-        self.verbose          = True
+        self.verbose = True
 
     # ── context manager ───────────────────────────────────────────────────────
 
@@ -583,9 +593,15 @@ class PlotConfig:
 
     def _fields(self) -> list[str]:
         return [
-            "fmt", "base_fmt", "dpi", "bbox_inches",
-            "transparent", "facecolor", "savedir",
-            "close_after_save", "verbose",
+            "fmt",
+            "base_fmt",
+            "dpi",
+            "bbox_inches",
+            "transparent",
+            "facecolor",
+            "savedir",
+            "close_after_save",
+            "verbose",
         ]
 
     def _snapshot(self) -> dict:
@@ -599,6 +615,7 @@ class PlotConfig:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Build the module-level singleton
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def _build_singleton() -> PlotConfig:
     """Construct PLOT_CONFIG from defaults → config file → env vars."""
@@ -625,6 +642,7 @@ PLOT_CONFIG: PlotConfig = _build_singleton()
 # ═══════════════════════════════════════════════════════════════════════════════
 # Convenience functions
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def save_fig(
     fig_or_ax: Any,
@@ -701,9 +719,7 @@ def add_colorbar(
         raise ValueError(msg)
 
     divider = make_axes_locatable(ax)
-    orientation = (
-        "vertical" if side in {"right", "left"} else "horizontal"
-    )
+    orientation = "vertical" if side in {"right", "left"} else "horizontal"
     cax = divider.append_axes(side, size=size, pad=pad)
     cbar = ax.figure.colorbar(
         mappable,

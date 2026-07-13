@@ -48,12 +48,15 @@ class FeedbackStore:
     """Append-only thumbs up/down log with a query-similarity adjuster."""
 
     FILENAME = "feedback.jsonl"
-    _BOOST = 0.5          # max upward nudge for a helpful symbol
-    _PENALTY = 0.6        # max downward nudge for a rejected symbol
-    _MIN_OVERLAP = 0.34   # ignore history less similar than this (Jaccard)
+    _BOOST = 0.5  # max upward nudge for a helpful symbol
+    _PENALTY = 0.6  # max downward nudge for a rejected symbol
+    _MIN_OVERLAP = 0.34  # ignore history less similar than this (Jaccard)
 
     def __init__(
-        self, path: Path | str | None = None, *, root: Path | str | None = None
+        self,
+        path: Path | str | None = None,
+        *,
+        root: Path | str | None = None,
     ) -> None:
         if path is None:
             from .index_store import default_index_dir

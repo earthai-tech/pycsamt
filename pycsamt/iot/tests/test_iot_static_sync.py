@@ -58,7 +58,7 @@ def test_phase_disagreement_vetoes_static_shift():
 
 def test_static_shift_without_phases():
     res = estimate_static_shift(BASE * 2.0, BASE)
-    assert res.static_shift              # phases optional; split is enough
+    assert res.static_shift  # phases optional; split is enough
     assert np.isnan(res.phase_diff_deg)
 
 
@@ -71,8 +71,11 @@ def test_static_shift_all_invalid():
 def test_static_shift_as_dict():
     d = estimate_static_shift(BASE * 3.0, BASE).as_dict()
     assert set(d) == {
-        "shift_factor", "split_decades", "consistency_std",
-        "phase_diff_deg", "static_shift",
+        "shift_factor",
+        "split_decades",
+        "consistency_std",
+        "phase_diff_deg",
+        "static_shift",
     }
 
 
@@ -80,10 +83,15 @@ def test_static_shift_as_dict():
 # transmitter timing lock on SyncPayload
 # ---------------------------------------------------------------------------
 def test_sync_payload_tx_lock_fields():
-    p = parse_payload("sync", {
-        "offset_ms": 1.2, "transmitter_locked": "yes",
-        "tx_offset_ms": 0.3, "source_id": "TX1",
-    })
+    p = parse_payload(
+        "sync",
+        {
+            "offset_ms": 1.2,
+            "transmitter_locked": "yes",
+            "tx_offset_ms": 0.3,
+            "source_id": "TX1",
+        },
+    )
     assert p.tx_locked is True
     assert p.tx_sync_offset_ms == pytest.approx(0.3)
     assert p.tx_id == "TX1"

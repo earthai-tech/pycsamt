@@ -17,6 +17,7 @@ Moghadas, D. (2020). One-dimensional deep learning inversion of EM
 induction data using CNN. *Geophysical Journal International*,
 223(1), 627-641.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -28,6 +29,7 @@ def _require_torch():
     try:
         import torch
         import torch.nn as nn
+
         return torch, nn
     except ImportError:
         raise ImportError(
@@ -44,9 +46,7 @@ try:
     import torch.nn as nn
 
     class _FCN1DModule(nn.Module):
-        def __init__(
-            self, channels, dropout, n_out
-        ):
+        def __init__(self, channels, dropout, n_out):
             super().__init__()
             encoder = []
             in_ch = 1
@@ -66,9 +66,7 @@ try:
                 nn.Dropout(dropout),
             )
             self.gap = nn.AdaptiveAvgPool1d(1)
-            self.out_proj = nn.Conv1d(
-                channels[-1], n_out, 1
-            )
+            self.out_proj = nn.Conv1d(channels[-1], n_out, 1)
 
         def forward(self, x):
             x = x.unsqueeze(1)
@@ -83,6 +81,7 @@ except ImportError:
 
 
 # ── Factory class ─────────────────────────────────
+
 
 class FCN1DNet:
     r"""
@@ -120,7 +119,8 @@ class FCN1DNet:
     def build(self):
         """Return the ``nn.Module``."""
         return _build_fcn1d(
-            self.n_features, self.n_out,
+            self.n_features,
+            self.n_out,
             channels=self.channels,
             dropout=self.dropout,
         )
@@ -136,10 +136,7 @@ class FCN1DNet:
 
 # ── Internal build ────────────────────────────────
 
-def _build_fcn1d(
-    n_features, n_out, channels, dropout
-):
+
+def _build_fcn1d(n_features, n_out, channels, dropout):
     _require_torch()
-    return _FCN1DModule(
-        tuple(channels), dropout, n_out
-    )
+    return _FCN1DModule(tuple(channels), dropout, n_out)

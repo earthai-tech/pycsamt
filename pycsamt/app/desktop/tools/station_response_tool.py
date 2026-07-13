@@ -14,6 +14,7 @@ Usage
     dlg = StationResponseDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -40,24 +41,32 @@ from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
+
 class _ResponseWorker(QThread):
-    done  = Signal(object)   # Figure
+    done = Signal(object)  # Figure
     error = Signal(str)
 
-    def __init__(self, sites, station: str, components: tuple,
-                 show_tipper: bool, show_errors: bool):
+    def __init__(
+        self,
+        sites,
+        station: str,
+        components: tuple,
+        show_tipper: bool,
+        show_errors: bool,
+    ):
         super().__init__()
-        self._sites      = sites
-        self._station    = station
+        self._sites = sites
+        self._station = station
         self._components = components
-        self._tipper     = show_tipper
-        self._errors     = show_errors
+        self._tipper = show_tipper
+        self._errors = show_errors
 
     def run(self):
         try:
             from pycsamt.emtools.inspect import (
                 plot_station_response,
             )
+
             fig = plot_station_response(
                 self._sites,
                 station=self._station,
@@ -72,6 +81,7 @@ class _ResponseWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class StationResponseDialog(QDialog):
     """
@@ -88,8 +98,8 @@ class StationResponseDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Station Response Inspector")
         self.setMinimumSize(900, 620)
-        self._sites   = sites
-        self._worker  = None
+        self._sites = sites
+        self._worker = None
         self._station_names: list[str] = []
         self._build_ui()
         self._populate_stations()
@@ -121,8 +131,10 @@ class StationResponseDialog(QDialog):
         grp_comp = QGroupBox("Components")
         form_c = QFormLayout(grp_comp)
         self._cb_xx = QCheckBox("Zxx")
-        self._cb_xy = QCheckBox("Zxy"); self._cb_xy.setChecked(True)
-        self._cb_yx = QCheckBox("Zyx"); self._cb_yx.setChecked(True)
+        self._cb_xy = QCheckBox("Zxy")
+        self._cb_xy.setChecked(True)
+        self._cb_yx = QCheckBox("Zyx")
+        self._cb_yx.setChecked(True)
         self._cb_yy = QCheckBox("Zyy")
         for cb in (self._cb_xx, self._cb_xy, self._cb_yx, self._cb_yy):
             form_c.addRow(cb)
@@ -130,8 +142,10 @@ class StationResponseDialog(QDialog):
 
         grp_opt = QGroupBox("Options")
         form_o = QFormLayout(grp_opt)
-        self._cb_tipper = QCheckBox("Show tipper"); self._cb_tipper.setChecked(True)
-        self._cb_errors = QCheckBox("Show error bars"); self._cb_errors.setChecked(True)
+        self._cb_tipper = QCheckBox("Show tipper")
+        self._cb_tipper.setChecked(True)
+        self._cb_errors = QCheckBox("Show error bars")
+        self._cb_errors.setChecked(True)
         form_o.addRow(self._cb_tipper)
         form_o.addRow(self._cb_errors)
         ctrl_lay.addWidget(grp_opt)
@@ -170,6 +184,7 @@ class StationResponseDialog(QDialog):
                 _iter_items,
                 _unwrap,
             )
+
             for ed in _iter_items(self._sites):
                 try:
                     ed = _unwrap(ed)
@@ -201,9 +216,12 @@ class StationResponseDialog(QDialog):
             return
 
         components = tuple(
-            c for c, cb in (
-                ("xx", self._cb_xx), ("xy", self._cb_xy),
-                ("yx", self._cb_yx), ("yy", self._cb_yy),
+            c
+            for c, cb in (
+                ("xx", self._cb_xx),
+                ("xy", self._cb_xy),
+                ("yx", self._cb_yx),
+                ("yy", self._cb_yy),
             )
             if cb.isChecked()
         )
@@ -215,7 +233,9 @@ class StationResponseDialog(QDialog):
         self._status_lbl.setText(f"Computing {station}…")
 
         self._worker = _ResponseWorker(
-            self._sites, station, components,
+            self._sites,
+            station,
+            components,
             self._cb_tipper.isChecked(),
             self._cb_errors.isChecked(),
         )

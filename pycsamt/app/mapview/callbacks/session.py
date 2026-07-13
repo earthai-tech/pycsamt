@@ -22,6 +22,7 @@ Responsibilities
 - Restore from the browser's localStorage snapshot (BTN_SESSION_RESTORE).
 - Clear the localStorage snapshot (BTN_SESSION_CLEAR).
 """
+
 from __future__ import annotations
 
 import base64
@@ -41,32 +42,43 @@ def _now_iso() -> str:
 
 def _ok_icon(msg: str) -> html.Span:
     return html.Span(
-        [html.I(className="bi bi-check-circle-fill me-1",
-                style={"color": "var(--mv-accent)"}), msg],
+        [
+            html.I(
+                className="bi bi-check-circle-fill me-1",
+                style={"color": "var(--mv-accent)"},
+            ),
+            msg,
+        ],
     )
 
 
 def _err_icon(msg: str) -> html.Span:
     return html.Span(
-        [html.I(className="bi bi-x-circle-fill me-1",
-                style={"color": "#e05252"}), msg],
+        [
+            html.I(
+                className="bi bi-x-circle-fill me-1",
+                style={"color": "#e05252"},
+            ),
+            msg,
+        ],
     )
 
 
-def _build_snapshot(view, controls, lines, line_filter, masked, theme,
-                    store_data, note) -> dict:
+def _build_snapshot(
+    view, controls, lines, line_filter, masked, theme, store_data, note
+) -> dict:
     return {
-        "version":     _VERSION,
-        "app":         "mapview",
-        "saved_at":    _now_iso(),
-        "note":        note or "",
-        "view":        view,
-        "controls":    controls,
-        "lines":       lines,
+        "version": _VERSION,
+        "app": "mapview",
+        "saved_at": _now_iso(),
+        "note": note or "",
+        "view": view,
+        "controls": controls,
+        "lines": lines,
         "line_filter": line_filter,
-        "masked":      masked,
-        "theme":       theme,
-        "store_data":  store_data,
+        "masked": masked,
+        "theme": theme,
+        "store_data": store_data,
     }
 
 
@@ -97,28 +109,38 @@ def register_session(app) -> None:
     @app.callback(
         Output(IDs.SESSION_SNAPSHOT, "data"),
         Output(IDs.SESSION_AUTOSAVE, "children"),
-        Input(IDs.STORE_VIEW,        "data"),
-        Input(IDs.STORE_CONTROLS,    "data"),
-        Input(IDs.STORE_LINES,       "data"),
+        Input(IDs.STORE_VIEW, "data"),
+        Input(IDs.STORE_CONTROLS, "data"),
+        Input(IDs.STORE_LINES, "data"),
         Input(IDs.STORE_LINE_FILTER, "data"),
-        Input(IDs.STORE_MASKED,      "data"),
-        Input(IDs.STORE_THEME,       "data"),
-        Input(IDs.STORE_DATA,        "data"),
-        State(IDs.SESSION_NOTE,      "value"),
+        Input(IDs.STORE_MASKED, "data"),
+        Input(IDs.STORE_THEME, "data"),
+        Input(IDs.STORE_DATA, "data"),
+        State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _auto_snapshot(view, controls, lines, line_filter, masked, theme,
-                       store_data, note):
+    def _auto_snapshot(
+        view, controls, lines, line_filter, masked, theme, store_data, note
+    ):
         if not store_data or not store_data.get("n_stations"):
             return no_update, no_update
-        snap = _build_snapshot(view, controls, lines, line_filter, masked,
-                               theme, store_data, note)
+        snap = _build_snapshot(
+            view,
+            controls,
+            lines,
+            line_filter,
+            masked,
+            theme,
+            store_data,
+            note,
+        )
         n_sta = store_data.get("n_stations", 0)
         chip = html.Span(
             [
-                html.I(className="bi bi-check-circle-fill me-1",
-                       style={"color": "var(--mv-accent)",
-                              "fontSize": "10px"}),
+                html.I(
+                    className="bi bi-check-circle-fill me-1",
+                    style={"color": "var(--mv-accent)", "fontSize": "10px"},
+                ),
                 f"Auto-saved · {n_sta} stations",
             ],
         )
@@ -126,29 +148,40 @@ def register_session(app) -> None:
 
     # ── 3. Download session JSON ────────────────────────────────────────────
     @app.callback(
-        Output(IDs.SESSION_DL,       "data"),
+        Output(IDs.SESSION_DL, "data"),
         Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
-        Input(IDs.BTN_SESSION_SAVE,  "n_clicks"),
-        State(IDs.STORE_VIEW,        "data"),
-        State(IDs.STORE_CONTROLS,    "data"),
-        State(IDs.STORE_LINES,       "data"),
+        Input(IDs.BTN_SESSION_SAVE, "n_clicks"),
+        State(IDs.STORE_VIEW, "data"),
+        State(IDs.STORE_CONTROLS, "data"),
+        State(IDs.STORE_LINES, "data"),
         State(IDs.STORE_LINE_FILTER, "data"),
-        State(IDs.STORE_MASKED,      "data"),
-        State(IDs.STORE_THEME,       "data"),
-        State(IDs.STORE_DATA,        "data"),
-        State(IDs.SESSION_NOTE,      "value"),
+        State(IDs.STORE_MASKED, "data"),
+        State(IDs.STORE_THEME, "data"),
+        State(IDs.STORE_DATA, "data"),
+        State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _download(n, view, controls, lines, line_filter, masked, theme,
-                  store_data, note):
+    def _download(
+        n, view, controls, lines, line_filter, masked, theme, store_data, note
+    ):
         if not n:
             return no_update, no_update
         if not store_data or not store_data.get("n_stations"):
             return no_update, _err_icon("No survey loaded — nothing to save.")
-        snap = _build_snapshot(view, controls, lines, line_filter, masked,
-                               theme, store_data, note)
+        snap = _build_snapshot(
+            view,
+            controls,
+            lines,
+            line_filter,
+            masked,
+            theme,
+            store_data,
+            note,
+        )
         n_sta = store_data.get("n_stations", 0)
-        fname = f"mapview_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        fname = (
+            f"mapview_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
         return (
             dcc.send_string(json.dumps(snap, indent=2), fname),
             _ok_icon(f"Session downloaded  ({n_sta} stations)."),
@@ -156,15 +189,15 @@ def register_session(app) -> None:
 
     # ── 4. Restore from an uploaded JSON file ──────────────────────────────
     @app.callback(
-        Output(IDs.STORE_VIEW,        "data", allow_duplicate=True),
-        Output(IDs.STORE_CONTROLS,    "data", allow_duplicate=True),
-        Output(IDs.STORE_LINES,       "data", allow_duplicate=True),
+        Output(IDs.STORE_VIEW, "data", allow_duplicate=True),
+        Output(IDs.STORE_CONTROLS, "data", allow_duplicate=True),
+        Output(IDs.STORE_LINES, "data", allow_duplicate=True),
         Output(IDs.STORE_LINE_FILTER, "data", allow_duplicate=True),
-        Output(IDs.STORE_MASKED,      "data", allow_duplicate=True),
-        Output(IDs.STORE_THEME,       "data", allow_duplicate=True),
-        Output(IDs.SESSION_FEEDBACK,  "children", allow_duplicate=True),
-        Input(IDs.SESSION_UL,         "contents"),
-        State(IDs.SESSION_UL,         "filename"),
+        Output(IDs.STORE_MASKED, "data", allow_duplicate=True),
+        Output(IDs.STORE_THEME, "data", allow_duplicate=True),
+        Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.SESSION_UL, "contents"),
+        State(IDs.SESSION_UL, "filename"),
         prevent_initial_call=True,
     )
     def _upload_restore(contents, filename):
@@ -195,15 +228,15 @@ def register_session(app) -> None:
 
     # ── 5. Restore from the browser's localStorage snapshot ───────────────
     @app.callback(
-        Output(IDs.STORE_VIEW,        "data", allow_duplicate=True),
-        Output(IDs.STORE_CONTROLS,    "data", allow_duplicate=True),
-        Output(IDs.STORE_LINES,       "data", allow_duplicate=True),
+        Output(IDs.STORE_VIEW, "data", allow_duplicate=True),
+        Output(IDs.STORE_CONTROLS, "data", allow_duplicate=True),
+        Output(IDs.STORE_LINES, "data", allow_duplicate=True),
         Output(IDs.STORE_LINE_FILTER, "data", allow_duplicate=True),
-        Output(IDs.STORE_MASKED,      "data", allow_duplicate=True),
-        Output(IDs.STORE_THEME,       "data", allow_duplicate=True),
-        Output(IDs.SESSION_FEEDBACK,  "children", allow_duplicate=True),
+        Output(IDs.STORE_MASKED, "data", allow_duplicate=True),
+        Output(IDs.STORE_THEME, "data", allow_duplicate=True),
+        Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
         Input(IDs.BTN_SESSION_RESTORE, "n_clicks"),
-        State(IDs.SESSION_SNAPSHOT,   "data"),
+        State(IDs.SESSION_SNAPSHOT, "data"),
         prevent_initial_call=True,
     )
     def _browser_restore(n, snap):
@@ -211,7 +244,9 @@ def register_session(app) -> None:
             return (no_update,) * 7
         if not snap:
             return (no_update,) * 6 + (
-                _err_icon("No browser snapshot found — save a session first."),
+                _err_icon(
+                    "No browser snapshot found — save a session first."
+                ),
             )
         try:
             _validate_snapshot(snap)
@@ -238,7 +273,7 @@ def register_session(app) -> None:
 
     # ── 6. Clear the localStorage snapshot ─────────────────────────────────
     @app.callback(
-        Output(IDs.SESSION_SNAPSHOT, "data",     allow_duplicate=True),
+        Output(IDs.SESSION_SNAPSHOT, "data", allow_duplicate=True),
         Output(IDs.SESSION_AUTOSAVE, "children", allow_duplicate=True),
         Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
         Input(IDs.BTN_SESSION_CLEAR, "n_clicks"),

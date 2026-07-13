@@ -49,13 +49,13 @@ class InputBuilder(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.source  = source
+        self.source = source
         self.workdir = Path(workdir)
-        self.config  = config or OccamConfig()
+        self.config = config or OccamConfig()
 
-        self.data:    OccamData | None    = None
-        self.mesh:    OccamMesh | None    = None
-        self.model:   OccamModel | None   = None
+        self.data: OccamData | None = None
+        self.mesh: OccamMesh | None = None
+        self.model: OccamModel | None = None
         self.startup: OccamStartup | None = None
 
     # ------------------------------------------------------------------
@@ -64,9 +64,9 @@ class InputBuilder(OccamBase):
     def build(
         self,
         modes: list[str] | None = None,
-        n_layers: int | None    = None,
+        n_layers: int | None = None,
         cell_size: float | None = None,
-        error_floor_rho: float | None   = None,
+        error_floor_rho: float | None = None,
         error_floor_phase: float | None = None,
         freq_min: float | None = None,
         freq_max: float | None = None,

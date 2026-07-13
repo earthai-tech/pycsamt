@@ -18,6 +18,7 @@ from pycsamt.app.desktop.workers.inversion_worker import (
 
 # ── InversionWizardDialog ─────────────────────────────────────────────────
 
+
 @pytest.fixture
 def dlg(qapp):
     d = InversionWizardDialog(sites=None, session=SessionState())
@@ -71,8 +72,8 @@ def test_navigation_to_page_1_with_workdir(dlg, tmp_path):
 
 def test_go_prev_decrements_page(dlg, tmp_path):
     dlg._workdir_edit.setText(str(tmp_path))
-    dlg._go_next()   # page 0 → 1
-    dlg._go_prev()   # page 1 → 0
+    dlg._go_next()  # page 0 → 1
+    dlg._go_prev()  # page 1 → 0
     assert dlg._stack.currentIndex() == 0
 
 
@@ -101,6 +102,7 @@ def test_get_result_is_none_initially(dlg):
 
 
 # ── InversionWorker ───────────────────────────────────────────────────────
+
 
 def test_inversion_worker_creates(qapp, tmp_path):
     w = InversionWorker(workdir=str(tmp_path))
@@ -143,6 +145,7 @@ def test_inversion_worker_has_signals(qapp, tmp_path):
 
 
 # ── SessionState new fields ───────────────────────────────────────────────
+
 
 def test_session_new_fields_default():
     s = SessionState()

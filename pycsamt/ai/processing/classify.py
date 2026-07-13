@@ -36,6 +36,7 @@ Use :meth:`from_features_table` to construct a ready-to-classify
 instance from the DataFrame returned by
 :func:`~pycsamt.emtools.dimensionality.phase_features_table`.
 """
+
 from __future__ import annotations
 
 import copy
@@ -62,6 +63,7 @@ _N_FEATURES = len(_FEATURE_COLS)
 # Network builders
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _build_dim_mlp_torch(
     n_features: int,
     n_classes: int,
@@ -72,7 +74,9 @@ def _build_dim_mlp_torch(
     try:
         import torch.nn as nn
     except ImportError as exc:
-        raise ImportError("PyTorch is required for DimensionalityClassifier") from exc
+        raise ImportError(
+            "PyTorch is required for DimensionalityClassifier"
+        ) from exc
 
     dims = [n_features] + list(hidden)
 
@@ -117,7 +121,9 @@ def _build_dim_mlp_tf(
         import tensorflow as tf
         from tensorflow.keras import Model, layers
     except ImportError as exc:
-        raise ImportError("TensorFlow is required for DimensionalityClassifier (TF backend)") from exc
+        raise ImportError(
+            "TensorFlow is required for DimensionalityClassifier (TF backend)"
+        ) from exc
 
     inp = tf.keras.Input(shape=(n_features,), name="input")
     x = inp
@@ -139,6 +145,7 @@ def _build_dim_mlp_tf(
 # Label generation from rule-based classifier (for self-training)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _rule_labels(
     beta_abs: np.ndarray,
     ellipt_abs: np.ndarray,
@@ -155,6 +162,7 @@ def _rule_labels(
 # ─────────────────────────────────────────────────────────────────────────────
 # DimensionalityClassifier
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class DimensionalityClassifier(BaseEMProcessor):
     """
@@ -246,7 +254,9 @@ class DimensionalityClassifier(BaseEMProcessor):
         -------
         DimensionalityClassifier
         """
-        X, y, strike = _df_to_Xy(df, label_col, strike_col, skew_th, ellipt_th)
+        X, y, strike = _df_to_Xy(
+            df, label_col, strike_col, skew_th, ellipt_th
+        )
         obj = cls()
         obj.fit(X, y, strike=strike, **fit_kwargs)
         return obj
@@ -292,15 +302,27 @@ class DimensionalityClassifier(BaseEMProcessor):
             self._backend_name = active_backend()
             if self._backend_name == "tensorflow":
                 self._fit_tensorflow(
-                    Xn, y_arr, strike_arr,
-                    epochs=epochs, batch_size=batch_size,
-                    lr=_lr, val_frac=val_frac, seed=seed, verbose=verbose,
+                    Xn,
+                    y_arr,
+                    strike_arr,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    lr=_lr,
+                    val_frac=val_frac,
+                    seed=seed,
+                    verbose=verbose,
                 )
             else:
                 self._fit_torch(
-                    Xn, y_arr, strike_arr,
-                    epochs=epochs, batch_size=batch_size,
-                    lr=_lr, val_frac=val_frac, seed=seed, verbose=verbose,
+                    Xn,
+                    y_arr,
+                    strike_arr,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    lr=_lr,
+                    val_frac=val_frac,
+                    seed=seed,
+                    verbose=verbose,
                 )
             self._use_rf = False
         except (RuntimeError, ImportError):
@@ -328,9 +350,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         """Predict dimensionality class (0=1D, 1=2D, 2=3D)."""
         return self.transform(X).argmax(axis=1)
 
-    def predict_strike(
-        self, X: np.ndarray | pd.DataFrame
-    ) -> np.ndarray:
+    def predict_strike(self, X: np.ndarray | pd.DataFrame) -> np.ndarray:
         """
         Predict geoelectric strike direction (degrees).
 
@@ -380,7 +400,9 @@ class DimensionalityClassifier(BaseEMProcessor):
                 phase_features_table,
             )
         except ImportError as exc:
-            raise ImportError("emtools is required for predict_table") from exc
+            raise ImportError(
+                "emtools is required for predict_table"
+            ) from exc
 
         df = phase_features_table(sites)
         if df.empty:
@@ -402,7 +424,17 @@ class DimensionalityClassifier(BaseEMProcessor):
     # ─── internal training paths ──────────────────────────────────────────
 
     def _fit_torch(
-        self, Xn, y, strike, *, epochs, batch_size, lr, val_frac, seed, verbose
+        self,
+        Xn,
+        y,
+        strike,
+        *,
+        epochs,
+        batch_size,
+        lr,
+        val_frac,
+        seed,
+        verbose,
     ) -> None:
         import torch
         import torch.nn as nn
@@ -420,8 +452,11 @@ class DimensionalityClassifier(BaseEMProcessor):
         def _mk_tensors(idx_):
             t_x = torch.from_numpy(Xn[idx_].astype(np.float32))
             t_y = torch.from_numpy(y[idx_].astype(np.int64))
-            t_s = (torch.from_numpy(strike[idx_].astype(np.float32))
-                   if has_strike else torch.zeros(len(idx_)))
+            t_s = (
+                torch.from_numpy(strike[idx_].astype(np.float32))
+                if has_strike
+                else torch.zeros(len(idx_))
+            )
             return TensorDataset(t_x, t_y, t_s)
 
         tr_ds = _mk_tensors(ti)
@@ -445,12 +480,14 @@ class DimensionalityClassifier(BaseEMProcessor):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for xb, yb, sb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
+            for xb, yb, sb in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
                 xb, yb, sb = xb.to(dev), yb.to(dev), sb.to(dev)
                 cls_out, str_out = self._network(xb)
                 loss = ce(cls_out, yb)
                 if has_strike:
-                    is2d = (yb == 1)
+                    is2d = yb == 1
                     if is2d.any():
                         s_mask = sb[is2d]
                         valid_s = torch.isfinite(s_mask)
@@ -479,16 +516,28 @@ class DimensionalityClassifier(BaseEMProcessor):
 
             if verbose and (ep % max(1, epochs // 5) == 0 or ep == 1):
                 acc = (cls_v.argmax(dim=1) == yva).float().mean().item()
-                print(f"  DimClassifier  ep {ep:>4d}/{epochs}  "
-                      f"loss={ep_loss:.4f}  val_loss={v_loss:.4f}  "
-                      f"val_acc={acc:.3f}")
+                print(
+                    f"  DimClassifier  ep {ep:>4d}/{epochs}  "
+                    f"loss={ep_loss:.4f}  val_loss={v_loss:.4f}  "
+                    f"val_acc={acc:.3f}"
+                )
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
         self._history = {"train_loss": train_losses, "val_loss": val_losses}
 
     def _fit_tensorflow(
-        self, Xn, y, strike, *, epochs, batch_size, lr, val_frac, seed, verbose
+        self,
+        Xn,
+        y,
+        strike,
+        *,
+        epochs,
+        batch_size,
+        lr,
+        val_frac,
+        seed,
+        verbose,
     ) -> None:
         import tensorflow as tf
 
@@ -504,8 +553,16 @@ class DimensionalityClassifier(BaseEMProcessor):
         yva = y[vi].astype(np.int64)
 
         has_strike = strike is not None and np.any(np.isfinite(strike))
-        s_tr = strike[ti].astype(np.float32) if has_strike else np.zeros(len(ti), np.float32)
-        s_va = strike[vi].astype(np.float32) if has_strike else np.zeros(len(vi), np.float32)
+        s_tr = (
+            strike[ti].astype(np.float32)
+            if has_strike
+            else np.zeros(len(ti), np.float32)
+        )
+        s_va = (
+            strike[vi].astype(np.float32)
+            if has_strike
+            else np.zeros(len(vi), np.float32)
+        )
 
         dev = resolve_device(self.device)
         with tf.device(dev):
@@ -517,7 +574,9 @@ class DimensionalityClassifier(BaseEMProcessor):
             self._network.compile(
                 optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
                 loss={
-                    "cls": tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                    "cls": tf.keras.losses.SparseCategoricalCrossentropy(
+                        from_logits=True
+                    ),
                     "strike": "mse",
                 },
                 loss_weights={"cls": 1.0, "strike": strike_weight},
@@ -530,11 +589,16 @@ class DimensionalityClassifier(BaseEMProcessor):
                 batch_size=batch_size,
                 callbacks=[
                     tf.keras.callbacks.EarlyStopping(
-                        monitor="val_loss", patience=12,
-                        restore_best_weights=True, min_delta=1e-6,
+                        monitor="val_loss",
+                        patience=12,
+                        restore_best_weights=True,
+                        min_delta=1e-6,
                     ),
                     tf.keras.callbacks.ReduceLROnPlateau(
-                        monitor="val_loss", factor=0.5, patience=8, min_lr=1e-6,
+                        monitor="val_loss",
+                        factor=0.5,
+                        patience=8,
+                        min_lr=1e-6,
                     ),
                 ],
                 verbose=1 if verbose else 0,
@@ -544,7 +608,9 @@ class DimensionalityClassifier(BaseEMProcessor):
             "val_loss": hist.history.get("val_loss", []),
         }
 
-    def _fit_rf(self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool) -> None:
+    def _fit_rf(
+        self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool
+    ) -> None:
         try:
             from sklearn.ensemble import (
                 RandomForestClassifier,
@@ -578,6 +644,7 @@ class DimensionalityClassifier(BaseEMProcessor):
             return e / e.sum(axis=1, keepdims=True)
 
         import torch
+
         dev = next(self._network.parameters()).device
         self._network.eval()
         with torch.no_grad():
@@ -611,7 +678,9 @@ class DimensionalityClassifier(BaseEMProcessor):
             else:
                 y_arr = np.asarray(y, dtype=int)
             strike_arr = (
-                np.asarray(strike, dtype=float) if strike is not None else None
+                np.asarray(strike, dtype=float)
+                if strike is not None
+                else None
             )
         return X_arr, y_arr, strike_arr
 
@@ -640,9 +709,12 @@ class DimensionalityClassifier(BaseEMProcessor):
             try:
                 import io
                 import pickle
+
                 buf = io.BytesIO()
                 pickle.dump(self._rf, buf)
-                out["_rf_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+                out["_rf_pickle"] = np.frombuffer(
+                    buf.getvalue(), dtype=np.uint8
+                )
             except Exception:
                 pass
         return out
@@ -651,13 +723,16 @@ class DimensionalityClassifier(BaseEMProcessor):
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         backend_blob = weights.pop("_backend", None)
-        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
+        self._backend_name = (
+            str(backend_blob) if backend_blob is not None else "torch"
+        )
 
         rf_blob = weights.pop("_rf_pickle", None)
         if rf_blob is not None:
             try:
                 import io
                 import pickle
+
                 self._rf = pickle.load(io.BytesIO(bytes(rf_blob)))
                 self._use_rf = True
                 self._is_fitted = True
@@ -690,6 +765,7 @@ class DimensionalityClassifier(BaseEMProcessor):
 # DataFrame helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _df_to_feature_matrix(df: pd.DataFrame) -> np.ndarray:
     mat = np.full((len(df), _N_FEATURES), 0.0, dtype=np.float32)
     for ci, col in enumerate(_FEATURE_COLS):
@@ -711,8 +787,16 @@ def _df_to_Xy(
     if label_col is not None and label_col in df.columns:
         y = df[label_col].to_numpy(dtype=int)
     else:
-        beta = df["beta_abs"].to_numpy(dtype=float) if "beta_abs" in df.columns else np.zeros(len(df))
-        ellipt = df["ellipt_abs"].to_numpy(dtype=float) if "ellipt_abs" in df.columns else np.zeros(len(df))
+        beta = (
+            df["beta_abs"].to_numpy(dtype=float)
+            if "beta_abs" in df.columns
+            else np.zeros(len(df))
+        )
+        ellipt = (
+            df["ellipt_abs"].to_numpy(dtype=float)
+            if "ellipt_abs" in df.columns
+            else np.zeros(len(df))
+        )
         y = _rule_labels(beta, ellipt, skew_th, ellipt_th)
 
     strike: np.ndarray | None = None

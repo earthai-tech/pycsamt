@@ -27,7 +27,8 @@ from ._base import _get_avg, avg
     metavar="AVG_FILE",
 )
 @click.option(
-    "--format", "export_format",
+    "--format",
+    "export_format",
     type=click.Choice(["modern", "legacy", "xarray"], case_sensitive=False),
     default="modern",
     show_default=True,
@@ -50,7 +51,8 @@ from ._base import _get_avg, avg
 @output_dir_option
 @overwrite_option
 @click.option(
-    "--format-out", "output_format",
+    "--format-out",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -93,8 +95,8 @@ def export(
     obj = _get_avg(source, verbose=verbose)
 
     out_stem = stem or (source.stem + "_exported")
-    ext_map  = {"modern": ".avg", "legacy": ".avg", "xarray": ".nc"}
-    ext      = ext_map[export_format]
+    ext_map = {"modern": ".avg", "legacy": ".avg", "xarray": ".nc"}
+    ext = ext_map[export_format]
     out_path = output_dir / (out_stem + ext)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -124,10 +126,12 @@ def export(
         sys.exit(1)
 
     summary = {
-        "source":  str(source),
-        "output":  str(out_path),
-        "format":  export_format,
-        "size_kb": round(out_path.stat().st_size / 1024, 1) if out_path.exists() else None,
+        "source": str(source),
+        "output": str(out_path),
+        "format": export_format,
+        "size_kb": round(out_path.stat().st_size / 1024, 1)
+        if out_path.exists()
+        else None,
     }
 
     if output_format == "json":

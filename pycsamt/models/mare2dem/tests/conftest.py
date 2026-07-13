@@ -17,14 +17,14 @@ import pytest
 # Root of the example data directory
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).parents[4]   # pycsamt/
-_DATA_DIR  = _REPO_ROOT / "data" / "mare2dem"
+_REPO_ROOT = Path(__file__).parents[4]  # pycsamt/
+_DATA_DIR = _REPO_ROOT / "data" / "mare2dem"
 
 # Specific example sub-directories
-HILL_DIR      = _DATA_DIR / "hill"
-CSEM_DIR      = _DATA_DIR / "demo_csem"
+HILL_DIR = _DATA_DIR / "hill"
+CSEM_DIR = _DATA_DIR / "demo_csem"
 INVERSION_DIR = _DATA_DIR / "demo_mt_inversion"
-CSEQ_MT_DIR   = _DATA_DIR / "demo_csem_mt"
+CSEQ_MT_DIR = _DATA_DIR / "demo_csem_mt"
 
 
 def _skip_if_missing(path: Path) -> pytest.MarkDecorator:
@@ -37,6 +37,7 @@ def _skip_if_missing(path: Path) -> pytest.MarkDecorator:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def hill_dir() -> Path:

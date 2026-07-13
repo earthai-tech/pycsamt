@@ -8,6 +8,7 @@ Each module exposes:
   layout() -> html.Div     — page content (pre-rendered at app startup)
   register_callbacks(app)  — registers this page's Dash callbacks
 """
+
 from pycsamt.app.web.pages import (
     advanced,
     agents_page,
@@ -24,7 +25,16 @@ from pycsamt.app.web.pages import (
 )
 
 ALL_PAGES = [
-    home, qc_page, correction, advanced, tdem,
-    pipeline, forward, inversion, interpretation, map3d, agents_page,
+    home,
+    qc_page,
+    correction,
+    advanced,
+    tdem,
+    pipeline,
+    forward,
+    inversion,
+    interpretation,
+    map3d,
+    agents_page,
     inv_results,
 ]

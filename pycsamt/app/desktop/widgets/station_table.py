@@ -37,15 +37,21 @@ class StationTable(QTableView):
         self._proxy.setSortCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.setModel(self._proxy)
         self._setup_view()
-        self.selectionModel().selectionChanged.connect(self._on_selection_changed)
+        self.selectionModel().selectionChanged.connect(
+            self._on_selection_changed
+        )
 
     # ── View configuration ────────────────────────────────────────────
 
     def _setup_view(self) -> None:
         self.setSortingEnabled(True)
         self.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
         self.setAlternatingRowColors(True)
         self.setShowGrid(False)
         self.verticalHeader().setVisible(False)
@@ -74,16 +80,16 @@ class StationTable(QTableView):
         src_row = self._model.row_for_station_id(station_id)
         if src_row < 0:
             return
-        proxy_idx = self._proxy.mapFromSource(
-            self._model.index(src_row, 0)
-        )
+        proxy_idx = self._proxy.mapFromSource(self._model.index(src_row, 0))
         self.selectionModel().clearSelection()
         self.selectionModel().select(
             proxy_idx,
             self.selectionModel().SelectionFlag.Select
             | self.selectionModel().SelectionFlag.Rows,
         )
-        self.scrollTo(proxy_idx, QAbstractItemView.ScrollHint.PositionAtCenter)
+        self.scrollTo(
+            proxy_idx, QAbstractItemView.ScrollHint.PositionAtCenter
+        )
 
     # ── Selection signal ──────────────────────────────────────────────
 

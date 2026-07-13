@@ -16,22 +16,28 @@ residuals, and per-layer error bars.
 # One dataset, identical split for every architecture, so differences come
 # only from the networks.
 
+# Use the residual-error grid (3rd figure) as the thumbnail.
+# sphinx_gallery_thumbnail_number = 3
+import os
+
 import numpy as np
 
 from pycsamt.forward.batch import generate_dataset
-
-# Use the residual-error grid (3rd figure) as the thumbnail.
-# sphinx_gallery_thumbnail_number = 3
-
-import os
 
 # Lighter training while building the docs (PYCSAMT_DOCS_BUILD is set by Sphinx);
 # full strength when the example is run directly.
 _DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
 FREQS = np.logspace(-1, 3, 24)
-ds = generate_dataset(solver="mt1d", n_samples=256 if _DOCS else 1200, freqs=FREQS,
-                      n_layers=4, noise_level=0.05, seed=1, verbose=False)
+ds = generate_dataset(
+    solver="mt1d",
+    n_samples=256 if _DOCS else 1200,
+    freqs=FREQS,
+    n_layers=4,
+    noise_level=0.05,
+    seed=1,
+    verbose=False,
+)
 train, val, test = ds.split()
 
 # %%
@@ -59,8 +65,11 @@ for arch in ARCHS:
 
 from pycsamt.ai.plot import plot_convergence
 
-fig = plot_convergence([histories[a] for a in ARCHS], smoothing=0.2,
-                       title="Architecture convergence: CNN vs ResNet vs FCN")
+fig = plot_convergence(
+    [histories[a] for a in ARCHS],
+    smoothing=0.2,
+    title="Architecture convergence: CNN vs ResNet vs FCN",
+)
 fig.axes[0].legend(ARCHS, fontsize=8, frameon=False)
 
 # %%
@@ -74,14 +83,18 @@ fig.axes[0].legend(ARCHS, fontsize=8, frameon=False)
 from pycsamt.ai import mae, r2, rmse
 
 N_LAYERS = 4
-rho = slice(0, N_LAYERS)                     # log10-resistivity columns
+rho = slice(0, N_LAYERS)  # log10-resistivity columns
 rows = []
 for arch in ARCHS:
     yp = inverters[arch].predict(test.X)
-    rows.append((arch,
-                 rmse(test.y[:, rho], yp[:, rho]),
-                 mae(test.y[:, rho], yp[:, rho]),
-                 r2(test.y[:, rho], yp[:, rho])))
+    rows.append(
+        (
+            arch,
+            rmse(test.y[:, rho], yp[:, rho]),
+            mae(test.y[:, rho], yp[:, rho]),
+            r2(test.y[:, rho], yp[:, rho]),
+        )
+    )
 
 print(f"{'arch':>8} {'RMSE':>8} {'MAE':>8} {'R^2':>8}   (log10 resistivity)")
 for arch, rm, ma, rr in rows:

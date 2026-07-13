@@ -3,6 +3,7 @@
 """
 Tests for the line-aware plot tools (RAG Step 14).
 """
+
 from __future__ import annotations
 
 import os
@@ -14,7 +15,6 @@ from pycsamt.assistant.tools import plot_tools
 
 
 class TestPlotToolsUnit(unittest.TestCase):
-
     def test_list_plots(self):
         kinds = plot_tools.list_plots()
         self.assertIn("snr", kinds)
@@ -30,13 +30,14 @@ class TestPlotToolsUnit(unittest.TestCase):
 
     def test_to_figure_coercion(self):
         import matplotlib
+
         matplotlib.use("Agg", force=True)
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots()
         self.assertIs(plot_tools._to_figure(fig), fig)
-        self.assertIs(plot_tools._to_figure(ax), fig)       # Axes
-        self.assertIs(plot_tools._to_figure([ax]), fig)     # in a list
+        self.assertIs(plot_tools._to_figure(ax), fig)  # Axes
+        self.assertIs(plot_tools._to_figure([ax]), fig)  # in a list
         self.assertIsNone(plot_tools._to_figure(None))
         self.assertIsNone(plot_tools._to_figure("nope"))
         plt.close(fig)
@@ -46,12 +47,9 @@ class TestPlotToolsUnit(unittest.TestCase):
     Path("data/3edis").is_dir(), "bundled 3edis data not present"
 )
 class TestPlotToolsBundled(unittest.TestCase):
-
     def test_make_plot_saves_figure(self):
         out = tempfile.mkdtemp()
-        r = plot_tools.make_plot(
-            "confidence", "data/3edis", output_dir=out
-        )
+        r = plot_tools.make_plot("confidence", "data/3edis", output_dir=out)
         self.assertEqual(r["status"], "success")
         self.assertTrue(r["figure_path"])
         self.assertTrue(os.path.exists(r["figure_path"]))

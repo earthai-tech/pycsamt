@@ -26,8 +26,10 @@ from pycsamt.interp import HydroInterpreter
 
 rm = demo_model()
 hydro = HydroInterpreter(
-    water_table_depth=20.0, aquifer_range=(30.0, 300.0),
-    clay_max=20.0, min_zone_thickness=8.0,
+    water_table_depth=20.0,
+    aquifer_range=(30.0, 300.0),
+    clay_max=20.0,
+    min_zone_thickness=8.0,
 ).fit(rm)
 
 zones = hydro.aquifer_zones()
@@ -51,13 +53,20 @@ units = hydro.unit_map
 names = sorted(np.unique(units))
 code = {n: i for i, n in enumerate(names)}
 coded = np.vectorize(code.get)(units)
-palette = ["#f4a259", "#4c8bf5", "#7d5a3c", "#c44536", "#9aa0a6"][:len(names)]
+palette = ["#f4a259", "#4c8bf5", "#7d5a3c", "#c44536", "#9aa0a6"][
+    : len(names)
+]
 cmap = ListedColormap(palette)
 
 fig, ax = plt.subplots(figsize=(10, 4.2), constrained_layout=True)
-im = ax.pcolormesh(rm.x_centers, rm.z_centers, coded, cmap=cmap,
-                   norm=BoundaryNorm(np.arange(len(names) + 1) - 0.5, cmap.N),
-                   shading="auto")
+im = ax.pcolormesh(
+    rm.x_centers,
+    rm.z_centers,
+    coded,
+    cmap=cmap,
+    norm=BoundaryNorm(np.arange(len(names) + 1) - 0.5, cmap.N),
+    shading="auto",
+)
 ax.invert_yaxis()
 ax.set_xlabel("distance (m)")
 ax.set_ylabel("depth (m)")
@@ -74,11 +83,15 @@ cb.ax.set_yticklabels(names)
 # would tabulate in a report.
 
 summary = hydro.station_summary()
-print(f"{'station':>8} {'x_m':>7} {'aquifer_cells':>14} {'n_zones':>8} "
-      f"{'confidence':>11}")
+print(
+    f"{'station':>8} {'x_m':>7} {'aquifer_cells':>14} {'n_zones':>8} "
+    f"{'confidence':>11}"
+)
 for row in summary[:6]:
-    print(f"{row['station']:>8} {row['x_m']:7.0f} {row['aquifer_cells']:14d} "
-          f"{row['n_zones']:8d} {row['mean_confidence']:11.2f}")
+    print(
+        f"{row['station']:>8} {row['x_m']:7.0f} {row['aquifer_cells']:14d} "
+        f"{row['n_zones']:8d} {row['mean_confidence']:11.2f}"
+    )
 
 # %%
 # **Reading it.** The unit map recovers a continuous aquifer beneath the

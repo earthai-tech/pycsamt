@@ -50,7 +50,6 @@ from pycsamt.emtools import (
 )
 from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 
-
 raw_for_permissive = demo_line("L18PLT")
 raw_for_conservative = demo_line("L18PLT")
 baseline = demo_line("L18PLT")
@@ -95,7 +94,12 @@ for label, count in zip(unique, counts):
     print(f"{label}: {count}")
 
 fig, ax = plt.subplots(figsize=(8.8, 4.2))
-ax.hist(confidence["confidence"].to_numpy(dtype=float), bins=24, color="#2563eb", alpha=0.80)
+ax.hist(
+    confidence["confidence"].to_numpy(dtype=float),
+    bins=24,
+    color="#2563eb",
+    alpha=0.80,
+)
 ax.axvline(ci_hi, color="#16a34a", lw=1.8, label=f"ci_hi={ci_hi}")
 ax.axvline(ci_lo, color="#dc2626", lw=1.8, label=f"ci_lo={ci_lo}")
 ax.set_xlabel("Composite confidence")
@@ -145,7 +149,9 @@ plot_frequency_edit_decisions(
     ci_lo=ci_lo,
     ax=axs[1],
 )
-fig.suptitle("Policy A: permissive drop of clearly rejected rows", fontsize=12)
+fig.suptitle(
+    "Policy A: permissive drop of clearly rejected rows", fontsize=12
+)
 fig.tight_layout()
 
 # %%
@@ -197,6 +203,7 @@ fig.tight_layout()
 # The plotted curves make the difference concrete.  The permissive version
 # keeps more samples; the conservative version removes more weak rows.
 
+
 def impedance_magnitude_curves(sites, component="xy"):
     ij = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}[component]
     out = {}
@@ -234,8 +241,12 @@ def plot_impedance_compare(before, after, selected, *, label, color, title):
 
 
 raw_curves = impedance_magnitude_curves(baseline, component="xy")
-permissive_curves = impedance_magnitude_curves(permissive.sites, component="xy")
-conservative_curves = impedance_magnitude_curves(conservative.sites, component="xy")
+permissive_curves = impedance_magnitude_curves(
+    permissive.sites, component="xy"
+)
+conservative_curves = impedance_magnitude_curves(
+    conservative.sites, component="xy"
+)
 stations = list(raw_curves)
 pick = [stations[2], stations[len(stations) // 2], stations[-4]]
 

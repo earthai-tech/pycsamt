@@ -85,14 +85,20 @@ def test_classify_field_zones_per_frequency_resistivity():
 
 def test_classify_field_zones_bad_resistivity_shape():
     with pytest.raises(ValueError):
-        classify_field_zones(np.array([1.0, 2.0, 3.0]),
-                             np.array([1.0, 2.0]), offset_m=1000.0)
+        classify_field_zones(
+            np.array([1.0, 2.0, 3.0]), np.array([1.0, 2.0]), offset_m=1000.0
+        )
 
 
 def test_classify_field_zones_bad_ratios():
     with pytest.raises(ValueError):
-        classify_field_zones(np.array([1.0]), 100.0, offset_m=1000.0,
-                             near_ratio=5.0, far_ratio=1.0)
+        classify_field_zones(
+            np.array([1.0]),
+            100.0,
+            offset_m=1000.0,
+            near_ratio=5.0,
+            far_ratio=1.0,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +129,7 @@ def test_detect_transmitter_frequencies_above_nyquist_undetected():
         _comb_signal(fs, [16.0]), fs, [16.0, 200.0]
     )
     line = next(ln for ln in comb.lines if ln.frequency_hz == 200.0)
-    assert not line.detected              # above Nyquist (128 Hz)
+    assert not line.detected  # above Nyquist (128 Hz)
 
 
 def test_detect_transmitter_frequencies_empty_signal():
@@ -155,11 +161,12 @@ def test_assess_source_stability_flags_unstable():
 
 def test_assess_source_stability_on_off_keying():
     # on/off-keyed source: on-state statistics ignore the off samples
-    current = np.concatenate([np.full(100, 10.0), np.zeros(40),
-                              np.full(100, 10.0)])
+    current = np.concatenate(
+        [np.full(100, 10.0), np.zeros(40), np.full(100, 10.0)]
+    )
     st = assess_source_stability(current)
     assert st.on_fraction == pytest.approx(200 / 240, abs=1e-6)
-    assert st.stable                      # on-state current is steady
+    assert st.stable  # on-state current is steady
 
 
 def test_assess_source_stability_insufficient_samples():
@@ -177,8 +184,12 @@ def test_csamt_edge_report_and_table():
     sig = _comb_signal(fs, [8.0, 32.0, 128.0])
     current = np.full(200, 10.0)
     report = csamt_edge_report(
-        sig, fs, tx_frequencies=tx, offset_m=5000.0,
-        resistivity=100.0, tx_current=current,
+        sig,
+        fs,
+        tx_frequencies=tx,
+        offset_m=5000.0,
+        resistivity=100.0,
+        tx_current=current,
     )
     assert "transmitter" in report
     assert "field_zones" in report
@@ -186,15 +197,22 @@ def test_csamt_edge_report_and_table():
 
     table = csamt_edge_table({"ex": report})
     assert table.shape[0] == 1
-    for col in ("n_tx_detected", "far_fraction", "correction_recommended",
-                "source_stable"):
+    for col in (
+        "n_tx_detected",
+        "far_fraction",
+        "correction_recommended",
+        "source_stable",
+    ):
         assert col in table.columns
 
 
 def test_csamt_edge_report_without_source():
     report = csamt_edge_report(
-        _comb_signal(2048.0, [32.0]), 2048.0,
-        tx_frequencies=[32.0], offset_m=5000.0, resistivity=100.0,
+        _comb_signal(2048.0, [32.0]),
+        2048.0,
+        tx_frequencies=[32.0],
+        offset_m=5000.0,
+        resistivity=100.0,
     )
     assert "source_stability" not in report
 

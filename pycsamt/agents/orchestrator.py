@@ -145,6 +145,7 @@ from ._workflows import (  # noqa: E402
 # Each function receives the running results dict and returns the
 # input dict for the next agent step.  Keyed by (workflow, step_name).
 
+
 def _require(r: dict, step: str, key: str) -> Any:
     """Return r[step][key], raising a clear RuntimeError
     if the step result is absent (agent was skipped)."""
@@ -160,29 +161,22 @@ def _require(r: dict, step: str, key: str) -> Any:
 def _ifn_load_sites(r):
     return {"sites": _require(r, "load", "sites")}
 
+
 def _ifn_qc_sites(r):
     return {"sites": _require(r, "qc", "sites")}
 
+
 def _ifn_ss_corrected(r):
-    return {
-        "sites": _require(
-            r, "static_shift", "corrected_sites"
-        )
-    }
+    return {"sites": _require(r, "static_shift", "corrected_sites")}
+
 
 def _ifn_denoise_sites(r):
-    return {
-        "sites": _require(
-            r, "denoise", "denoised_sites"
-        )
-    }
+    return {"sites": _require(r, "denoise", "denoised_sites")}
+
 
 def _ifn_pa_corrected(r):
-    return {
-        "sites": _require(
-            r, "static_shift", "corrected_sites"
-        )
-    }
+    return {"sites": _require(r, "static_shift", "corrected_sites")}
+
 
 def _ifn_ai_inv_model(r):
     ai_r = r["ai_inv"]
@@ -193,418 +187,612 @@ def _ifn_ai_inv_model(r):
         if preds:
             nm, log_r = next(iter(preds.items()))
             n = len(log_r)
-            ths = [
-                10.0 * (1.5 ** i)
-                for i in range(n - 1)
-            ]
+            ths = [10.0 * (1.5**i) for i in range(n - 1)]
             bm = {
-                "station":     nm,
-                "resistivity": [
-                    float(10.0 ** v)
-                    for v in log_r
-                ],
+                "station": nm,
+                "resistivity": [float(10.0**v) for v in log_r],
                 "thickness": ths,
             }
     return {"model": bm or None}
 
+
 def _ifn_ensemble_model(r):
-    return {
-        "model": r["ensemble"].get("best_model", {})
-    }
+    return {"model": r["ensemble"].get("best_model", {})}
+
 
 def _ifn_empty_model(r):
     return {"model": {}}
+
 
 def _ifn_inv2d_model(r):
     sec = r["inv2d"].get("pred_section", [])
     return {
         "model": {
-            "resistivity": (
-                sec.tolist()
-                if hasattr(sec, "tolist")
-                else sec
-            )
+            "resistivity": (sec.tolist() if hasattr(sec, "tolist") else sec)
         }
     }
+
 
 def _ifn_results(r):
     return {"results": r}
 
+
 def _ifn_codegen(r):
     return {"workflow_config": {}, "results": r}
 
+
 def _ifn_rotate(r):
     return {
-        "sites":      _require(r, "qc", "sites"),
-        "strike_deg": r["phase_analysis"].get(
-            "strike_consensus", 0.0
-        ),
+        "sites": _require(r, "qc", "sites"),
+        "strike_deg": r["phase_analysis"].get("strike_consensus", 0.0),
     }
+
 
 def _ifn_pinn_from_qc(r):
     return {"sites": _require(r, "qc", "sites")}
 
+
 def _ifn_pinn_model(r):
-    return {
-        "model": r["pinn_inv"].get("section", {})
-    }
+    return {"model": r["pinn_inv"].get("section", {})}
+
 
 def _ifn_hybrid_model(r):
-    return {
-        "model": r["hybrid_inv"].get("section", {})
-    }
+    return {"model": r["hybrid_inv"].get("section", {})}
 
 
 _WORKFLOW_STEPS = {
     "qc": [
-        ("load",         "MTLoaderAgent",     None,
-         "Load EDI files and scan per-station quality"),
-        ("qc",           "DataQCAgent",       _ifn_load_sites,
-         "Frequency confidence assessment and QC flags"),
-        ("static_shift", "StaticShiftAgent",  _ifn_qc_sites,
-         "Static-shift detection and AMA correction"),
-        ("report",       "ReportAgent",       _ifn_results,
-         "Generate QC report"),
+        (
+            "load",
+            "MTLoaderAgent",
+            None,
+            "Load EDI files and scan per-station quality",
+        ),
+        (
+            "qc",
+            "DataQCAgent",
+            _ifn_load_sites,
+            "Frequency confidence assessment and QC flags",
+        ),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift detection and AMA correction",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate QC report"),
     ],
     "phase_analysis": [
-        ("load",          "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",            "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift",  "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("phase_analysis","PhaseAnalysisAgent",_ifn_ss_corrected,
-         "Phase tensor, strike, and dimensionality analysis"),
-        ("report",        "ReportAgent",      _ifn_results,
-         "Generate survey report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "phase_analysis",
+            "PhaseAnalysisAgent",
+            _ifn_ss_corrected,
+            "Phase tensor, strike, and dimensionality analysis",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate survey report"),
     ],
     "pre_inversion": [
-        ("load",          "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",            "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift",  "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("phase_analysis","PhaseAnalysisAgent",_ifn_ss_corrected,
-         "Phase tensor and strike analysis"),
-        ("occam2d",       "Occam2DAgent",     _ifn_ss_corrected,
-         "Write Occam2D data + mesh + startup files"),
-        ("code_gen",      "CodeGenerationAgent",_ifn_codegen,
-         "Generate reproducible Python script"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "phase_analysis",
+            "PhaseAnalysisAgent",
+            _ifn_ss_corrected,
+            "Phase tensor and strike analysis",
+        ),
+        (
+            "occam2d",
+            "Occam2DAgent",
+            _ifn_ss_corrected,
+            "Write Occam2D data + mesh + startup files",
+        ),
+        (
+            "code_gen",
+            "CodeGenerationAgent",
+            _ifn_codegen,
+            "Generate reproducible Python script",
+        ),
     ],
     "ai_inversion": [
-        ("load",      "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",        "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("denoise",   "DenoisingAgent",   _ifn_qc_sites,
-         "RPCA denoising + optional AI denoising"),
-        ("ai_inv",    "AIInversionAgent", _ifn_denoise_sites,
-         "AI 1-D inversion (EMInverter1D)"),
-        ("interpret", "InterpretationAgent",
-         _ifn_ai_inv_model,
-         "Geological interpretation of predicted models",
-         False),  # optional: model may be empty
-        ("report",    "ReportAgent",      _ifn_results,
-         "Generate AI inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "denoise",
+            "DenoisingAgent",
+            _ifn_qc_sites,
+            "RPCA denoising + optional AI denoising",
+        ),
+        (
+            "ai_inv",
+            "AIInversionAgent",
+            _ifn_denoise_sites,
+            "AI 1-D inversion (EMInverter1D)",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_ai_inv_model,
+            "Geological interpretation of predicted models",
+            False,
+        ),  # optional: model may be empty
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate AI inversion report",
+        ),
     ],
     "inv1d": [  # alias for ai_inversion
-        ("load",      "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",        "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("denoise",   "DenoisingAgent",   _ifn_qc_sites,
-         "RPCA denoising"),
-        ("ai_inv",    "AIInversionAgent", _ifn_denoise_sites,
-         "AI 1-D inversion (EMInverter1D)"),
-        ("interpret", "InterpretationAgent",
-         _ifn_ai_inv_model,
-         "Geological interpretation",
-         False),
-        ("report",    "ReportAgent",      _ifn_results,
-         "Generate AI inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        ("denoise", "DenoisingAgent", _ifn_qc_sites, "RPCA denoising"),
+        (
+            "ai_inv",
+            "AIInversionAgent",
+            _ifn_denoise_sites,
+            "AI 1-D inversion (EMInverter1D)",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_ai_inv_model,
+            "Geological interpretation",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate AI inversion report",
+        ),
     ],
     "modem": [
-        ("load",         "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("modem",        "ModEmAgent",       _ifn_ss_corrected,
-         "Write ModEM data + model + covariance + control files"),
-        ("report",       "ReportAgent",      _ifn_results,
-         "Generate report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "modem",
+            "ModEmAgent",
+            _ifn_ss_corrected,
+            "Write ModEM data + model + covariance + control files",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate report"),
     ],
     "mare2dem": [
-        ("load",         "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("mare2dem",     "Mare2DEMAgent",    _ifn_ss_corrected,
-         "Write MARE2DEM emdata + resistivity + settings files"),
-        ("report",       "ReportAgent",      _ifn_results,
-         "Generate report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "mare2dem",
+            "Mare2DEMAgent",
+            _ifn_ss_corrected,
+            "Write MARE2DEM emdata + resistivity + settings files",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate report"),
     ],
     "inv3d": [
-        ("load",         "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("inv3d",        "Inv3DAgent",       _ifn_ss_corrected,
-         "GCN 3-D spatial AI inversion"),
-        ("interpret",    "InterpretationAgent",
-         _ifn_empty_model,
-         "Geological interpretation of 3-D volume",
-         False),
-        ("report",       "ReportAgent",      _ifn_results,
-         "Generate 3-D inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "inv3d",
+            "Inv3DAgent",
+            _ifn_ss_corrected,
+            "GCN 3-D spatial AI inversion",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_empty_model,
+            "Geological interpretation of 3-D volume",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate 3-D inversion report",
+        ),
     ],
     "inv2d": [
-        ("load",      "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",        "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("denoise",   "DenoisingAgent",   _ifn_qc_sites,
-         "RPCA denoising"),
-        ("inv2d",     "Inv2DAgent",       _ifn_denoise_sites,
-         "U-Net 2-D profile AI inversion"),
-        ("interpret", "InterpretationAgent",
-         _ifn_inv2d_model,
-         "Geological interpretation of 2-D section",
-         False),
-        ("report",    "ReportAgent",      _ifn_results,
-         "Generate 2-D inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        ("denoise", "DenoisingAgent", _ifn_qc_sites, "RPCA denoising"),
+        (
+            "inv2d",
+            "Inv2DAgent",
+            _ifn_denoise_sites,
+            "U-Net 2-D profile AI inversion",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_inv2d_model,
+            "Geological interpretation of 2-D section",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate 2-D inversion report",
+        ),
     ],
     "ensemble_inversion": [
-        ("load",      "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",        "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("denoise",   "DenoisingAgent",   _ifn_qc_sites,
-         "RPCA denoising"),
-        ("ensemble",  "EnsembleAgent",    _ifn_denoise_sites,
-         "Ensemble 1-D inversion with uncertainty bands"),
-        ("interpret", "InterpretationAgent",
-         _ifn_ensemble_model,
-         "Geological interpretation with uncertainty",
-         False),
-        ("report",    "ReportAgent",      _ifn_results,
-         "Generate ensemble inversion + uncertainty report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        ("denoise", "DenoisingAgent", _ifn_qc_sites, "RPCA denoising"),
+        (
+            "ensemble",
+            "EnsembleAgent",
+            _ifn_denoise_sites,
+            "Ensemble 1-D inversion with uncertainty bands",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_ensemble_model,
+            "Geological interpretation with uncertainty",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate ensemble inversion + uncertainty report",
+        ),
     ],
     "joint_inversion": [
-        ("load",         "MTLoaderAgent",    None,
-         "Load primary MT EDI files"),
-        ("qc",           "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("joint",        "JointInversionAgent",
-         _ifn_ss_corrected,
-         "DRCNN multi-modal joint inversion"),
-        ("interpret",    "InterpretationAgent",
-         _ifn_empty_model,
-         "Geological interpretation of joint section",
-         False),
-        ("report",       "ReportAgent",      _ifn_results,
-         "Generate joint inversion report"),
+        ("load", "MTLoaderAgent", None, "Load primary MT EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "joint",
+            "JointInversionAgent",
+            _ifn_ss_corrected,
+            "DRCNN multi-modal joint inversion",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_empty_model,
+            "Geological interpretation of joint section",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate joint inversion report",
+        ),
     ],
     "tipper": [
-        ("load",   "MTLoaderAgent",      None,
-         "Load EDI files"),
-        ("tipper", "TipperAnalysisAgent",_ifn_load_sites,
-         "Tipper analysis — induction arrows and amplitude maps"),
-        ("report", "ReportAgent",        _ifn_results,
-         "Generate tipper report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        (
+            "tipper",
+            "TipperAnalysisAgent",
+            _ifn_load_sites,
+            "Tipper analysis — induction arrows and amplitude maps",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate tipper report"),
     ],
     "sensitivity": [
-        ("load",        "MTLoaderAgent",   None,
-         "Load EDI files"),
-        ("qc",          "DataQCAgent",     _ifn_load_sites,
-         "Data quality control"),
-        ("sensitivity", "SensitivityAgent",_ifn_qc_sites,
-         "Bostick sensitivity kernels and DOI analysis"),
-        ("report",      "ReportAgent",     _ifn_results,
-         "Generate sensitivity report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "sensitivity",
+            "SensitivityAgent",
+            _ifn_qc_sites,
+            "Bostick sensitivity kernels and DOI analysis",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate sensitivity report",
+        ),
     ],
     "rotation": [
-        ("load",          "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",            "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("phase_analysis","PhaseAnalysisAgent",_ifn_qc_sites,
-         "Strike estimation from phase tensor"),
-        ("rotate",        "TensorRotationAgent", _ifn_rotate,
-         "Rotate tensors and write corrected EDIs"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "phase_analysis",
+            "PhaseAnalysisAgent",
+            _ifn_qc_sites,
+            "Strike estimation from phase tensor",
+        ),
+        (
+            "rotate",
+            "TensorRotationAgent",
+            _ifn_rotate,
+            "Rotate tensors and write corrected EDIs",
+        ),
     ],
     "freq_decimation": [
-        ("load",       "MTLoaderAgent",          None,
-         "Load EDI files"),
-        ("qc",         "DataQCAgent",            _ifn_load_sites,
-         "Data quality control"),
-        ("decimate",   "FrequencyDecimationAgent",_ifn_qc_sites,
-         "Frequency decimation / period selection"),
-        ("report",     "ReportAgent",            _ifn_results,
-         "Generate decimation report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "decimate",
+            "FrequencyDecimationAgent",
+            _ifn_qc_sites,
+            "Frequency decimation / period selection",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate decimation report"),
     ],
     "batch": [
-        ("load",   "MTLoaderAgent",  None,
-         "Load all survey EDIs in batch"),
-        ("batch",  "BatchSurveyAgent",_ifn_load_sites,
-         "Batch processing across profiles"),
-        ("report", "ReportAgent",    _ifn_results,
-         "Generate batch report"),
+        ("load", "MTLoaderAgent", None, "Load all survey EDIs in batch"),
+        (
+            "batch",
+            "BatchSurveyAgent",
+            _ifn_load_sites,
+            "Batch processing across profiles",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate batch report"),
     ],
     "comparison": [
-        ("load",     "MTLoaderAgent",           None,
-         "Load EDI files"),
-        ("qc",       "DataQCAgent",             _ifn_load_sites,
-         "Data quality control"),
-        ("compare",  "InversionComparisonAgent",_ifn_qc_sites,
-         "Compare inversion results"),
-        ("report",   "ReportAgent",             _ifn_results,
-         "Generate comparison report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "compare",
+            "InversionComparisonAgent",
+            _ifn_qc_sites,
+            "Compare inversion results",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate comparison report"),
     ],
     # ── standalone single-agent workflows ────────────
     "denoise": [
-        ("load",   "MTLoaderAgent",  None,
-         "Load EDI files"),
-        ("qc",     "DataQCAgent",    _ifn_load_sites,
-         "Data quality control"),
-        ("denoise","DenoisingAgent", _ifn_qc_sites,
-         "RPCA denoising and noise filtering"),
-        ("report", "ReportAgent",    _ifn_results,
-         "Generate denoising report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "denoise",
+            "DenoisingAgent",
+            _ifn_qc_sites,
+            "RPCA denoising and noise filtering",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate denoising report"),
     ],
     "static_shift": [
-        ("load",         "MTLoaderAgent",   None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",     _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent",_ifn_qc_sites,
-         "Static-shift detection and AMA correction"),
-        ("report",       "ReportAgent",     _ifn_results,
-         "Generate static-shift report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift detection and AMA correction",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate static-shift report",
+        ),
     ],
     "inversion_eval": [
-        ("load",         "MTLoaderAgent",          None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",            _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent",       _ifn_qc_sites,
-         "Static-shift correction"),
-        ("inversion_eval","InversionEvaluationAgent",
-         _ifn_ss_corrected,
-         "Evaluate inversion: RMS, misfit, residuals"),
-        ("report",       "ReportAgent",            _ifn_results,
-         "Generate evaluation report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "inversion_eval",
+            "InversionEvaluationAgent",
+            _ifn_ss_corrected,
+            "Evaluate inversion: RMS, misfit, residuals",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate evaluation report"),
     ],
     "code_gen": [
-        ("load",    "MTLoaderAgent",       None,
-         "Load EDI files"),
-        ("qc",      "DataQCAgent",         _ifn_load_sites,
-         "Data quality control"),
-        ("code_gen","CodeGenerationAgent", _ifn_codegen,
-         "Generate reproducible Python script"),
-        ("report",  "ReportAgent",         _ifn_results,
-         "Generate report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "code_gen",
+            "CodeGenerationAgent",
+            _ifn_codegen,
+            "Generate reproducible Python script",
+        ),
+        ("report", "ReportAgent", _ifn_results, "Generate report"),
     ],
     "report": [
-        ("load",   "MTLoaderAgent", None,
-         "Load EDI files"),
-        ("qc",     "DataQCAgent",   _ifn_load_sites,
-         "Data quality control"),
-        ("report", "ReportAgent",   _ifn_results,
-         "Generate survey report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        ("report", "ReportAgent", _ifn_results, "Generate survey report"),
     ],
     "forward": [
-        ("load",    "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",      "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("forward", "ForwardModelAgent",_ifn_qc_sites,
-         "MT forward modelling and synthetic response"),
-        ("report",  "ReportAgent",      _ifn_results,
-         "Generate forward model report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "forward",
+            "ForwardModelAgent",
+            _ifn_qc_sites,
+            "MT forward modelling and synthetic response",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate forward model report",
+        ),
     ],
     "interpretation": [
-        ("load",         "MTLoaderAgent",       None,
-         "Load EDI files"),
-        ("qc",           "DataQCAgent",         _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift", "StaticShiftAgent",    _ifn_qc_sites,
-         "Static-shift correction"),
-        ("interpret",    "InterpretationAgent", _ifn_empty_model,
-         "Geological and lithological interpretation",
-         False),
-        ("report",       "ReportAgent",         _ifn_results,
-         "Generate interpretation report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_empty_model,
+            "Geological and lithological interpretation",
+            False,
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate interpretation report",
+        ),
     ],
     "full": [
-        ("load",          "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",            "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift",  "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("phase_analysis","PhaseAnalysisAgent",_ifn_ss_corrected,
-         "Phase tensor and strike analysis"),
-        ("denoise",       "DenoisingAgent",   _ifn_ss_corrected,
-         "RPCA denoising"),
-        ("ai_inv",        "AIInversionAgent", _ifn_denoise_sites,
-         "AI 1-D inversion"),
-        ("occam2d",       "Occam2DAgent",     _ifn_ss_corrected,
-         "Write Occam2D input files"),
-        ("report",        "ReportAgent",      _ifn_results,
-         "Generate full survey report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "phase_analysis",
+            "PhaseAnalysisAgent",
+            _ifn_ss_corrected,
+            "Phase tensor and strike analysis",
+        ),
+        ("denoise", "DenoisingAgent", _ifn_ss_corrected, "RPCA denoising"),
+        (
+            "ai_inv",
+            "AIInversionAgent",
+            _ifn_denoise_sites,
+            "AI 1-D inversion",
+        ),
+        (
+            "occam2d",
+            "Occam2DAgent",
+            _ifn_ss_corrected,
+            "Write Occam2D input files",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate full survey report",
+        ),
     ],
     "full_ai_workflow": [
-        ("load",          "MTLoaderAgent",    None,
-         "Load EDI files"),
-        ("qc",            "DataQCAgent",      _ifn_load_sites,
-         "Data quality control"),
-        ("static_shift",  "StaticShiftAgent", _ifn_qc_sites,
-         "Static-shift correction"),
-        ("phase_analysis","PhaseAnalysisAgent",_ifn_ss_corrected,
-         "Phase tensor and dimensionality"),
-        ("denoise",       "DenoisingAgent",   _ifn_ss_corrected,
-         "RPCA denoising"),
-        ("ai_inv",        "AIInversionAgent", _ifn_denoise_sites,
-         "AI 1-D inversion (EMInverter1D)"),
-        ("inv2d",         "Inv2DAgent",       _ifn_denoise_sites,
-         "U-Net 2-D profile inversion"),
-        ("code_gen",      "CodeGenerationAgent", _ifn_codegen,
-         "Generate reproducible Python script"),
-        ("report",        "ReportAgent",      _ifn_results,
-         "Generate full AI workflow report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "static_shift",
+            "StaticShiftAgent",
+            _ifn_qc_sites,
+            "Static-shift correction",
+        ),
+        (
+            "phase_analysis",
+            "PhaseAnalysisAgent",
+            _ifn_ss_corrected,
+            "Phase tensor and dimensionality",
+        ),
+        ("denoise", "DenoisingAgent", _ifn_ss_corrected, "RPCA denoising"),
+        (
+            "ai_inv",
+            "AIInversionAgent",
+            _ifn_denoise_sites,
+            "AI 1-D inversion (EMInverter1D)",
+        ),
+        (
+            "inv2d",
+            "Inv2DAgent",
+            _ifn_denoise_sites,
+            "U-Net 2-D profile inversion",
+        ),
+        (
+            "code_gen",
+            "CodeGenerationAgent",
+            _ifn_codegen,
+            "Generate reproducible Python script",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate full AI workflow report",
+        ),
     ],
     "pinn_inversion": [
-        ("load",     "MTLoaderAgent",        None,
-         "Load EDI files"),
-        ("qc",       "DataQCAgent",          _ifn_load_sites,
-         "Data quality control"),
-        ("pinn_inv", "PINNInversionAgent",   _ifn_pinn_from_qc,
-         "Physics-informed MT inversion"),
-        ("interpret","InterpretationAgent",  _ifn_pinn_model,
-         "Geological interpretation"),
-        ("report",   "ReportAgent",          _ifn_results,
-         "Generate PINN inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "pinn_inv",
+            "PINNInversionAgent",
+            _ifn_pinn_from_qc,
+            "Physics-informed MT inversion",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_pinn_model,
+            "Geological interpretation",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate PINN inversion report",
+        ),
     ],
     "hybrid_inversion": [
-        ("load",       "MTLoaderAgent",          None,
-         "Load EDI files"),
-        ("qc",         "DataQCAgent",            _ifn_load_sites,
-         "Data quality control"),
-        ("hybrid_inv", "HybridInversionAgent",   _ifn_pinn_from_qc,
-         "Two-stage AI + physics inversion"),
-        ("interpret",  "InterpretationAgent",    _ifn_hybrid_model,
-         "Geological interpretation"),
-        ("report",     "ReportAgent",            _ifn_results,
-         "Generate hybrid inversion report"),
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality control"),
+        (
+            "hybrid_inv",
+            "HybridInversionAgent",
+            _ifn_pinn_from_qc,
+            "Two-stage AI + physics inversion",
+        ),
+        (
+            "interpret",
+            "InterpretationAgent",
+            _ifn_hybrid_model,
+            "Geological interpretation",
+        ),
+        (
+            "report",
+            "ReportAgent",
+            _ifn_results,
+            "Generate hybrid inversion report",
+        ),
     ],
 }
 
@@ -682,11 +870,11 @@ class WorkflowOrchestratorAgent(BaseAgent):
         t0 = time.time()
         warnings: list[str] = []
 
-        request    = str(input_data.get("request", ""))
-        config     = input_data.get("config") or {}
-        dry_run    = bool(input_data.get("dry_run", False))
+        request = str(input_data.get("request", ""))
+        config = input_data.get("config") or {}
+        dry_run = bool(input_data.get("dry_run", False))
         output_dir = input_data.get("output_dir", "pycsamt_workflow_output")
-        data_path  = input_data.get("data_path") or config.get("data_path", "")
+        data_path = input_data.get("data_path") or config.get("data_path", "")
 
         # ── classify workflow ─────────────────────────────────────────────────
         workflow_type = config.get("workflow", "")
@@ -698,7 +886,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 parsed = self.extract_json(raw or "")
                 if parsed and isinstance(parsed, dict):
                     workflow_type = str(parsed.get("workflow_type", ""))
-                    reasoning     = str(parsed.get("reasoning", ""))
+                    reasoning = str(parsed.get("reasoning", ""))
 
             if not workflow_type:
                 workflow_type, reasoning = _keyword_classify(request)
@@ -724,11 +912,13 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # ── if no data_path yet, try to extract from request ─────────────────
         if not data_path and request:
             from .context import _regex_extract
+
             extracted = _regex_extract(request)
             data_path = extracted.get("data_path", "")
 
         # ── build coordinator ─────────────────────────────────────────────────
         from .coordinator import AgentCoordinator
+
         coord = AgentCoordinator(
             f"orchestrated_{workflow_type}",
             checkpoint_dir=f"{output_dir}/.checkpoints",
@@ -738,31 +928,43 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # Extract per-workflow constructor params
         pinn_init = _extract_inv_init(
             config.get("pinn_params", {}),
-            ["dim", "n_layers", "depth_max",
-             "smoothness_weight",
-             "lateral_weight", "graph_weight",
-             "radius", "epochs", "lr",
-             "solver", "comp"],
+            [
+                "dim",
+                "n_layers",
+                "depth_max",
+                "smoothness_weight",
+                "lateral_weight",
+                "graph_weight",
+                "radius",
+                "epochs",
+                "lr",
+                "solver",
+                "comp",
+            ],
         )
         hybrid_init = _extract_inv_init(
             config.get(
                 "hybrid_params",
                 config.get("pinn_params", {}),
             ),
-            ["dim", "max_iter",
-             "smoothness_weight",
-             "lateral_weight", "graph_weight",
-             "radius", "lr", "solver",
-             "comp", "n_freqs"],
+            [
+                "dim",
+                "max_iter",
+                "smoothness_weight",
+                "lateral_weight",
+                "graph_weight",
+                "radius",
+                "lr",
+                "solver",
+                "comp",
+                "n_freqs",
+            ],
         )
         ai_inv_init = _extract_inv_init(
             config.get("ai_inv_params", {}),
-            ["n_layers", "depth_max",
-             "epochs", "lr"],
+            ["n_layers", "depth_max", "epochs", "lr"],
         )
-        checkpoint = config.get(
-            "checkpoint", ""
-        )
+        checkpoint = config.get("checkpoint", "")
 
         # Push resolved LLM config into AGENT_CONFIG so every
         # sub-agent in the registry inherits it automatically.
@@ -778,19 +980,15 @@ class WorkflowOrchestratorAgent(BaseAgent):
             )
 
         # Per-step params from the smart modal
-        _step_params_cfg = config.get(
-            "step_params", {}
-        )
+        _step_params_cfg = config.get("step_params", {})
 
         step_meta = []
         for _item in steps_spec:
-            step_name      = _item[0]
+            step_name = _item[0]
             agent_class_name = _item[1]
-            input_fn       = _item[2]
-            desc           = _item[3]
-            step_required  = (
-                _item[4] if len(_item) > 4 else True
-            )
+            input_fn = _item[2]
+            desc = _item[3]
+            step_required = _item[4] if len(_item) > 4 else True
             agent_obj = agent_registry.get(agent_class_name)
             if agent_obj is None:
                 # Root steps (input_fn=None) have no
@@ -829,38 +1027,33 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 "Inv3DAgent",
             }
             step_fn = input_fn
-            if (
-                agent_class_name in _CKPT_AGENTS
-                and checkpoint
-            ):
+            if agent_class_name in _CKPT_AGENTS and checkpoint:
+
                 def _make_ckpt_fn(fn, ckpt):
                     def _wrapped(r):
                         base = fn(r) if fn else {}
-                        base.setdefault(
-                            "checkpoint", ckpt
-                        )
+                        base.setdefault("checkpoint", ckpt)
                         return base
+
                     return _wrapped
-                step_fn = _make_ckpt_fn(
-                    input_fn, checkpoint
-                )
+
+                step_fn = _make_ckpt_fn(input_fn, checkpoint)
 
             # Inject per-step params from modal
             # for non-root steps only (root steps
             # receive exec_config directly below).
-            _s_extra = _step_params_cfg.get(
-                step_name
-            )
+            _s_extra = _step_params_cfg.get(step_name)
             if _s_extra and step_fn is not None:
+
                 def _make_step_injector(fn, ex):
                     def _injected(r):
                         base = fn(r)
                         base.update(ex)
                         return base
+
                     return _injected
-                step_fn = _make_step_injector(
-                    step_fn, _s_extra
-                )
+
+                step_fn = _make_step_injector(step_fn, _s_extra)
 
             # Inversion-prep steps write a file set
             # to disk — give them the run's
@@ -868,18 +1061,16 @@ class WorkflowOrchestratorAgent(BaseAgent):
             # the upstream sites), in a per-code
             # subfolder so provenance JSONs and
             # solver inputs don't mix.
-            if (
-                step_name in _PREP_FILE_STEPS
-                and step_fn is not None
-            ):
+            if step_name in _PREP_FILE_STEPS and step_fn is not None:
+
                 def _make_outdir_injector(fn, od):
                     def _injected(r):
                         base = fn(r)
-                        base.setdefault(
-                            "output_dir", od
-                        )
+                        base.setdefault("output_dir", od)
                         return base
+
                     return _injected
+
                 step_fn = _make_outdir_injector(
                     step_fn,
                     os.path.join(
@@ -889,19 +1080,23 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 )
 
             coord.add_step(
-                step_name, agent_obj,
+                step_name,
+                agent_obj,
                 input_fn=step_fn,
                 description=desc,
                 required=step_required,
             )
-            step_meta.append({
-                "name": step_name,
-                "agent": agent_class_name,
-                "description": desc,
-            })
+            step_meta.append(
+                {
+                    "name": step_name,
+                    "agent": agent_class_name,
+                    "description": desc,
+                }
+            )
 
         # ── build and validate WorkflowPlan ──────────────────────
         from ._workflow_plan import WorkflowPlan
+
         plan_config = dict(config)
         plan_config.setdefault("workflow", workflow_type)
         plan_config.setdefault("data_path", data_path)
@@ -909,17 +1104,15 @@ class WorkflowOrchestratorAgent(BaseAgent):
         plan = WorkflowPlan.from_config(
             plan_config,
             request=request,
-            provider=(
-                self.llm_provider if self.api_key else "offline"
-            ),
+            provider=(self.llm_provider if self.api_key else "offline"),
         )
         warnings.extend(plan.risk_flags)
 
         # ── run (or preview) ──────────────────────────────────────
         exec_config = {
-            "path":       data_path,
+            "path": data_path,
             "output_dir": output_dir,
-            "request":    request,
+            "request": request,
         }
         # Merge "load" step params into exec_config
         # so the root load agent sees period range,
@@ -927,9 +1120,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         _load_p = _step_params_cfg.get("load", {})
         if _load_p:
             exec_config.update(_load_p)
-        exec_result = coord.execute(
-            exec_config, dry_run=dry_run
-        )
+        exec_result = coord.execute(exec_config, dry_run=dry_run)
 
         elapsed = time.time() - t0
 
@@ -952,12 +1143,12 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 f"{exec_result.summary}"
             ),
             data={
-                "workflow_type":  workflow_type,
-                "reasoning":      reasoning,
-                "workflow_plan":  plan,
-                "coordinator":    coord,
-                "result":         exec_result,
-                "steps":          step_meta,
+                "workflow_type": workflow_type,
+                "reasoning": reasoning,
+                "workflow_plan": plan,
+                "coordinator": coord,
+                "result": exec_result,
+                "steps": step_meta,
             },
             warnings=warnings + exec_result.warnings,
             elapsed_seconds=elapsed,
@@ -968,6 +1159,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _write_provenance(
     output_dir: str,
@@ -998,8 +1190,14 @@ def _write_provenance(
             "platform": platform.platform(),
             "packages": {},
         }
-        for pkg in ("pycsamt", "numpy", "scipy",
-                    "matplotlib", "torch", "tensorflow"):
+        for pkg in (
+            "pycsamt",
+            "numpy",
+            "scipy",
+            "matplotlib",
+            "torch",
+            "tensorflow",
+        ):
             try:
                 env["packages"][pkg] = _pkg_version(pkg)
             except Exception:
@@ -1010,20 +1208,18 @@ def _write_provenance(
 
         # agent_trace.json
         trace: dict[str, Any] = {
-            "user_request":     plan.request,
-            "parsed_workflow":  plan.workflow_type,
-            "provider":         plan.provider,
-            "validation_status": (
-                "passed" if plan.is_valid() else "failed"
-            ),
-            "executed_agents":  [s["agent"] for s in step_meta],
-            "steps":            step_meta,
-            "parameters":       plan.parameters,
-            "warnings":         all_warnings,
+            "user_request": plan.request,
+            "parsed_workflow": plan.workflow_type,
+            "provider": plan.provider,
+            "validation_status": ("passed" if plan.is_valid() else "failed"),
+            "executed_agents": [s["agent"] for s in step_meta],
+            "steps": step_meta,
+            "parameters": plan.parameters,
+            "warnings": all_warnings,
             "human_review_required": plan.requires_human_review,
             "expected_outputs": plan.expected_outputs,
-            "elapsed_seconds":  round(elapsed, 3),
-            "exec_status":      exec_result.status,
+            "elapsed_seconds": round(elapsed, 3),
+            "exec_status": exec_result.status,
         }
         trace_path = os.path.join(output_dir, "agent_trace.json")
         with open(trace_path, "w", encoding="utf-8") as fh:
@@ -1031,8 +1227,10 @@ def _write_provenance(
 
     except Exception as exc:
         import logging
+
         logging.getLogger("pycsamt.agents.orchestrator").warning(
-            "Could not write provenance: %s", exc,
+            "Could not write provenance: %s",
+            exc,
         )
 
 
@@ -1087,73 +1285,130 @@ def _build_registry(
             registry[name] = factory()
         except Exception as exc:
             import logging
+
             failures[name] = str(exc)
-            logging.getLogger(
-                "pycsamt.agents.orchestrator"
-            ).warning(
+            logging.getLogger("pycsamt.agents.orchestrator").warning(
                 "Could not instantiate %s: %s",
-                name, exc,
+                name,
+                exc,
             )
 
-    _try("ContextInputAgent",         lambda: _import("context",          "ContextInputAgent")())
-    _try("MTLoaderAgent",             lambda: _import("loader",            "MTLoaderAgent")())
-    _try("DataQCAgent",               lambda: _import("qc",                "DataQCAgent")())
-    _try("StaticShiftAgent",          lambda: _import("static_shift",      "StaticShiftAgent")())
-    _try("PhaseAnalysisAgent",        lambda: _import("phase_analysis",    "PhaseAnalysisAgent")())
-    _try("ForwardModelAgent",         lambda: _import("forward",           "ForwardModelAgent")())
-    _try("InversionPrepAgent",        lambda: _import("inversion_prep",    "InversionPrepAgent")())
-    _try("InversionEvaluationAgent",  lambda: _import("inversion_eval",    "InversionEvaluationAgent")())
-    _try("InterpretationAgent",       lambda: _import("interpretation",    "InterpretationAgent")())
-    _try("ReportAgent",               lambda: _import("report",            "ReportAgent")())
-    _try("CodeGenerationAgent",       lambda: _import("code_gen",          "CodeGenerationAgent")())
-    _try("DenoisingAgent",            lambda: _import("denoising",         "DenoisingAgent")())
-    _try("AIInversionAgent",
-         lambda: _import(
-             "ai_inversion", "AIInversionAgent"
-         )(
-             n_layers=int(_ai.get("n_layers", 5)),
-             epochs=int(_ai.get("epochs", 30)),
-         ))
-    _try("Occam2DAgent",              lambda: _import("occam2d_agent",     "Occam2DAgent")())
-    _try("ModEmAgent",                lambda: _import("modem_agent",       "ModEmAgent")())
-    _try("Mare2DEMAgent",             lambda: _import("mare2dem_agent",    "Mare2DEMAgent")())
-    _try("AnomalyDetectionAgent",     lambda: _import("anomaly_agent",     "AnomalyDetectionAgent")())
-    _try("Inv3DAgent",                lambda: _import("inv3d_agent",       "Inv3DAgent")())
-    _try("Inv2DAgent",                lambda: _import("inv2d_agent",       "Inv2DAgent")())
-    _try("EnsembleAgent",             lambda: _import("ensemble_agent",    "EnsembleAgent")())
-    _try("JointInversionAgent",       lambda: _import("joint_agent",       "JointInversionAgent")())
-    _try("ModelZooAgent",             lambda: _import("model_zoo_agent",   "ModelZooAgent")())
-    _try("TensorRotationAgent",       lambda: _import("tensor_rotation",   "TensorRotationAgent")())
-    _try("EDIExportAgent",            lambda: _import("edi_export",        "EDIExportAgent")())
-    _try("TipperAnalysisAgent",       lambda: _import("tipper_analysis",   "TipperAnalysisAgent")())
-    _try("SensitivityAgent",          lambda: _import("sensitivity",       "SensitivityAgent")())
-    _try("FrequencyDecimationAgent",  lambda: _import("freq_decimation",   "FrequencyDecimationAgent")())
-    _try("InversionComparisonAgent",  lambda: _import("inversion_comparison", "InversionComparisonAgent")())
-    _try("ResistivityMapAgent",       lambda: _import("resistivity_map",   "ResistivityMapAgent")())
-    _try("BatchSurveyAgent",
-         lambda: _import("batch_survey",      "BatchSurveyAgent")())
-    _try("InversionBackendAgent",
-         lambda: _import("inversion_backend", "InversionBackendAgent")())
-    _try("PINNInversionAgent",
-         lambda: _import("pinn_agent",   "PINNInversionAgent")(**_pi))
-    _try("HybridInversionAgent",
-         lambda: _import("hybrid_agent", "HybridInversionAgent")(**_hi))
+    _try(
+        "ContextInputAgent", lambda: _import("context", "ContextInputAgent")()
+    )
+    _try("MTLoaderAgent", lambda: _import("loader", "MTLoaderAgent")())
+    _try("DataQCAgent", lambda: _import("qc", "DataQCAgent")())
+    _try(
+        "StaticShiftAgent",
+        lambda: _import("static_shift", "StaticShiftAgent")(),
+    )
+    _try(
+        "PhaseAnalysisAgent",
+        lambda: _import("phase_analysis", "PhaseAnalysisAgent")(),
+    )
+    _try(
+        "ForwardModelAgent", lambda: _import("forward", "ForwardModelAgent")()
+    )
+    _try(
+        "InversionPrepAgent",
+        lambda: _import("inversion_prep", "InversionPrepAgent")(),
+    )
+    _try(
+        "InversionEvaluationAgent",
+        lambda: _import("inversion_eval", "InversionEvaluationAgent")(),
+    )
+    _try(
+        "InterpretationAgent",
+        lambda: _import("interpretation", "InterpretationAgent")(),
+    )
+    _try("ReportAgent", lambda: _import("report", "ReportAgent")())
+    _try(
+        "CodeGenerationAgent",
+        lambda: _import("code_gen", "CodeGenerationAgent")(),
+    )
+    _try("DenoisingAgent", lambda: _import("denoising", "DenoisingAgent")())
+    _try(
+        "AIInversionAgent",
+        lambda: _import("ai_inversion", "AIInversionAgent")(
+            n_layers=int(_ai.get("n_layers", 5)),
+            epochs=int(_ai.get("epochs", 30)),
+        ),
+    )
+    _try("Occam2DAgent", lambda: _import("occam2d_agent", "Occam2DAgent")())
+    _try("ModEmAgent", lambda: _import("modem_agent", "ModEmAgent")())
+    _try(
+        "Mare2DEMAgent", lambda: _import("mare2dem_agent", "Mare2DEMAgent")()
+    )
+    _try(
+        "AnomalyDetectionAgent",
+        lambda: _import("anomaly_agent", "AnomalyDetectionAgent")(),
+    )
+    _try("Inv3DAgent", lambda: _import("inv3d_agent", "Inv3DAgent")())
+    _try("Inv2DAgent", lambda: _import("inv2d_agent", "Inv2DAgent")())
+    _try(
+        "EnsembleAgent", lambda: _import("ensemble_agent", "EnsembleAgent")()
+    )
+    _try(
+        "JointInversionAgent",
+        lambda: _import("joint_agent", "JointInversionAgent")(),
+    )
+    _try(
+        "ModelZooAgent", lambda: _import("model_zoo_agent", "ModelZooAgent")()
+    )
+    _try(
+        "TensorRotationAgent",
+        lambda: _import("tensor_rotation", "TensorRotationAgent")(),
+    )
+    _try("EDIExportAgent", lambda: _import("edi_export", "EDIExportAgent")())
+    _try(
+        "TipperAnalysisAgent",
+        lambda: _import("tipper_analysis", "TipperAnalysisAgent")(),
+    )
+    _try(
+        "SensitivityAgent",
+        lambda: _import("sensitivity", "SensitivityAgent")(),
+    )
+    _try(
+        "FrequencyDecimationAgent",
+        lambda: _import("freq_decimation", "FrequencyDecimationAgent")(),
+    )
+    _try(
+        "InversionComparisonAgent",
+        lambda: _import("inversion_comparison", "InversionComparisonAgent")(),
+    )
+    _try(
+        "ResistivityMapAgent",
+        lambda: _import("resistivity_map", "ResistivityMapAgent")(),
+    )
+    _try(
+        "BatchSurveyAgent",
+        lambda: _import("batch_survey", "BatchSurveyAgent")(),
+    )
+    _try(
+        "InversionBackendAgent",
+        lambda: _import("inversion_backend", "InversionBackendAgent")(),
+    )
+    _try(
+        "PINNInversionAgent",
+        lambda: _import("pinn_agent", "PINNInversionAgent")(**_pi),
+    )
+    _try(
+        "HybridInversionAgent",
+        lambda: _import("hybrid_agent", "HybridInversionAgent")(**_hi),
+    )
 
     return registry, failures
 
 
-def _extract_inv_init(
-    params: dict, allowed: list
-) -> dict:
+def _extract_inv_init(params: dict, allowed: list) -> dict:
     """Return only the *allowed* keys from *params*."""
     return {k: v for k, v in params.items() if k in allowed}
 
 
 def _import(module: str, cls: str) -> type:
     import importlib
-    mod = importlib.import_module(
-        f".{module}", package="pycsamt.agents"
-    )
+
+    mod = importlib.import_module(f".{module}", package="pycsamt.agents")
     return getattr(mod, cls)
 
 

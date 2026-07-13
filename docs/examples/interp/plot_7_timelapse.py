@@ -32,7 +32,7 @@ surveys = [
     demo_model(wet=1.6, seed=2),
     demo_model(wet=2.4, seed=3),
 ]
-assert_compatible_grids(surveys)          # same grid is required to difference
+assert_compatible_grids(surveys)  # same grid is required to difference
 tl = TimeLapseEM(surveys, labels=["baseline", "month 1", "month 2"])
 print("surveys:", tl.labels)
 

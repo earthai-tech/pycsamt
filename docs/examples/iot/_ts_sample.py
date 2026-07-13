@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Shared time-series sample for the IoT gallery examples.
@@ -10,6 +9,7 @@ examples that need raw magnetotelluric time series fall back to a small
 station metadata. The pipeline being demonstrated is identical — only the
 numbers differ — and each example notes when the fallback is in use.
 """
+
 from __future__ import annotations
 
 import os
@@ -20,7 +20,7 @@ import numpy as np
 from pycsamt.ts import TSData, read_ts
 
 STATION = "kap103"
-DT = 5.0                       # seconds (0.2 Hz), matching the real record
+DT = 5.0  # seconds (0.2 Hz), matching the real record
 CHANNELS = ["HX", "HY", "HZ", "EX", "EY"]
 LAT, LON = -32.1388893, 20.4675007
 
@@ -55,12 +55,15 @@ def _synthetic(n: int = 65536, seed: int = 103) -> TSData:
 
     hx, hy = red(2.0), red(2.0)
     hz = 0.15 * hx + red(0.3)
-    ex = 40.0 * hy + red(1.5)        # Zxy-like
-    ey = -40.0 * hx + red(1.5)       # Zyx-like
+    ex = 40.0 * hy + red(1.5)  # Zxy-like
+    ey = -40.0 * hx + red(1.5)  # Zyx-like
     data = {"HX": hx, "HY": hy, "HZ": hz, "EX": ex, "EY": ey}
     return TSData(
-        data=data, dt=DT, station=f"{STATION}-synthetic",
-        lat=LAT, lon=LON,
+        data=data,
+        dt=DT,
+        station=f"{STATION}-synthetic",
+        lat=LAT,
+        lon=LON,
     )
 
 

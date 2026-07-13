@@ -79,8 +79,8 @@ def test_verify_manifest_detects_tampering():
 
 
 def test_verify_manifest_malformed_envelope():
-    assert not verify_manifest({"signature": "x"}, KEY)      # no manifest
-    assert not verify_manifest({"manifest": {}}, KEY)        # no signature
+    assert not verify_manifest({"signature": "x"}, KEY)  # no manifest
+    assert not verify_manifest({"manifest": {}}, KEY)  # no signature
 
 
 def test_write_signed_roundtrip(tmp_path):
@@ -93,8 +93,11 @@ def test_write_signed_roundtrip(tmp_path):
 # hash chain
 # ---------------------------------------------------------------------------
 def test_hash_chain_links_and_verifies():
-    entries = [{"decision": "accept"}, {"decision": "reject"},
-               {"decision": "accept"}]
+    entries = [
+        {"decision": "accept"},
+        {"decision": "reject"},
+        {"decision": "accept"},
+    ]
     chain = hash_chain(entries)
     assert [c["seq"] for c in chain] == [0, 1, 2]
     assert chain[0]["prev_hash"] == ""
@@ -105,7 +108,7 @@ def test_hash_chain_links_and_verifies():
 def test_hash_chain_detects_entry_tampering():
     chain = hash_chain([{"decision": "accept"}, {"decision": "reject"}])
     bad = copy.deepcopy(chain)
-    bad[0]["decision"] = "reject"          # flip a verdict
+    bad[0]["decision"] = "reject"  # flip a verdict
     assert not verify_hash_chain(bad)
 
 

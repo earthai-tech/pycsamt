@@ -29,7 +29,8 @@ def register_help(app) -> None:
     @app.callback(
         Output(IDs.INPUT, "value", allow_duplicate=True),
         Output(
-            IDs.MODAL_HELP, "is_open",
+            IDs.MODAL_HELP,
+            "is_open",
             allow_duplicate=True,
         ),
         Input(
@@ -39,14 +40,13 @@ def register_help(app) -> None:
         prevent_initial_call=True,
     )
     def use_example(_clicks):
-        if not ctx.triggered or not ctx.triggered[0].get(
-            "value"
-        ):
+        if not ctx.triggered or not ctx.triggered[0].get("value"):
             raise PreventUpdate
         trig = ctx.triggered_id
         if not isinstance(trig, dict):
             raise PreventUpdate
         from ..layout import _HELP_EXAMPLES
+
         try:
             text = _HELP_EXAMPLES[trig["index"]]
         except (IndexError, KeyError, TypeError):

@@ -113,7 +113,9 @@ print(
 # misleading figures.
 
 if not any(has_real_tipper(edi) for edi in kap_sites.as_list()):
-    raise RuntimeError("KAP03 was expected to contain tipper data, but none was found.")
+    raise RuntimeError(
+        "KAP03 was expected to contain tipper data, but none was found."
+    )
 
 # %%
 # 3. Clean the site collection before analysis
@@ -131,22 +133,26 @@ print(f"KAP03 stations after structural checks: {len(kap_clean)}")
 print(
     kap_clean_report[
         ["station", "nfreq", "freq_min", "freq_max", "has_tipper"]
-    ].head(10).to_string(index=False)
+    ]
+    .head(10)
+    .to_string(index=False)
 )
 
 # %%
 # KAP03 is a long-period MT line.  The frequency span is easier to interpret
 # as period, so we add period limits to the report table.
 
-coverage = kap_clean_report[["station", "nfreq", "freq_min", "freq_max"]].copy()
+coverage = kap_clean_report[
+    ["station", "nfreq", "freq_min", "freq_max"]
+].copy()
 coverage["period_min_s"] = 1.0 / coverage["freq_max"]
 coverage["period_max_s"] = 1.0 / coverage["freq_min"]
 
 print("KAP03 period coverage preview:")
 print(
-    coverage[
-        ["station", "nfreq", "period_min_s", "period_max_s"]
-    ].head(8).to_string(index=False)
+    coverage[["station", "nfreq", "period_min_s", "period_max_s"]]
+    .head(8)
+    .to_string(index=False)
 )
 
 # %%
@@ -225,7 +231,9 @@ kap_subset = by_index(kap_clean, subset_indices)
 subset_report = SitesReport(kap_subset).to_dataframe()
 
 print("Compact plotting subset:")
-print(subset_report[["station", "nfreq", "has_tipper"]].to_string(index=False))
+print(
+    subset_report[["station", "nfreq", "has_tipper"]].to_string(index=False)
+)
 
 # %%
 # 7. Raw tipper geometry: hodograms and polar view

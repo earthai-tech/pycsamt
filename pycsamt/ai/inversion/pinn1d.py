@@ -44,6 +44,7 @@ Example
 PINNInverter1D(n_stations=5, fitted)
 >>> models = inv.predict()              # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -68,8 +69,6 @@ try:
 except ImportError:  # TF-only environment
     _mt1d_torch = None  # type: ignore[assignment]
     _fit_station = None  # type: ignore[assignment]
-
-
 
 
 # ── PINNInverter1D ──
@@ -130,8 +129,7 @@ class PINNInverter1D(BasePINNInverter):
     ) -> None:
         if solver not in ("mt1d", "csamt1d"):
             raise ValueError(
-                "solver must be 'mt1d' or 'csamt1d';"
-                f" got {solver!r}."
+                f"solver must be 'mt1d' or 'csamt1d'; got {solver!r}."
             )
         super().__init__(
             n_layers=n_layers,
@@ -139,9 +137,7 @@ class PINNInverter1D(BasePINNInverter):
             device=device,
         )
         self.solver = solver
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.lr = float(lr)
         self.comp = comp
         self.recursive = recursive
@@ -190,10 +186,7 @@ class PINNInverter1D(BasePINNInverter):
         self._results = []
         for i, obs in enumerate(self._obs):
             if verbose:
-                print(
-                    f"[{i + 1}/{len(self._obs)}] "
-                    f"Inverting {obs.name} ..."
-                )
+                print(f"[{i + 1}/{len(self._obs)}] Inverting {obs.name} ...")
             res = fit_station(
                 obs,
                 n_layers=self.n_layers,
@@ -228,8 +221,8 @@ class PINNInverter1D(BasePINNInverter):
         for res in self._results:
             log_rho = res["log_rho"]
             log_thick = res["log_thick"]
-            rho = 10.0 ** log_rho
-            thick = 10.0 ** log_thick
+            rho = 10.0**log_rho
+            thick = 10.0**log_thick
             try:
                 m = LayeredModel(
                     resistivity=np.maximum(rho, 1e-3),
@@ -261,15 +254,9 @@ class PINNInverter1D(BasePINNInverter):
         )
         from pycsamt.forward.synthetic import LayeredModel
 
-        Fwd = (
-            MT1DForward
-            if self.solver == "mt1d"
-            else CSAMT1DForward
-        )
+        Fwd = MT1DForward if self.solver == "mt1d" else CSAMT1DForward
         rows = []
-        for obs, res in zip(
-            self._obs, self._results
-        ):
+        for obs, res in zip(self._obs, self._results):
             rho = 10.0 ** res["log_rho"]
             thick = 10.0 ** res["log_thick"]
             try:
@@ -281,12 +268,8 @@ class PINNInverter1D(BasePINNInverter):
                 rho_pred = resp.rho_a
                 ph_pred = resp.phase
             except Exception:
-                rho_pred = np.full_like(
-                    obs.rho_obs, np.nan
-                )
-                ph_pred = np.full_like(
-                    obs.phase_obs, np.nan
-                )
+                rho_pred = np.full_like(obs.rho_obs, np.nan)
+                ph_pred = np.full_like(obs.phase_obs, np.nan)
             for k in range(len(obs.freq)):
                 rows.append(
                     {
@@ -313,12 +296,8 @@ class PINNInverter1D(BasePINNInverter):
         import pandas as pd
 
         rows = []
-        for obs, res in zip(
-            self._obs, self._results
-        ):
-            for ep, val in enumerate(
-                res["history"], start=1
-            ):
+        for obs, res in zip(self._obs, self._results):
+            for ep, val in enumerate(res["history"], start=1):
                 rows.append(
                     {
                         "station": obs.name,
@@ -343,9 +322,7 @@ class PINNInverter1D(BasePINNInverter):
     # ── internals ──
 
     def __repr__(self) -> str:
-        status = "fitted" if self._is_fitted else (
-            "unfitted"
-        )
+        status = "fitted" if self._is_fitted else ("unfitted")
         return (
             f"PINNInverter1D("
             f"n_stations={self.n_sites}, "

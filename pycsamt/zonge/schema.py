@@ -8,6 +8,7 @@ AVG files. This module serves as the single source of truth for
 translating between legacy (kind-1), modern (kind-2), and the
 internal canonical column names used throughout the package.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -23,73 +24,68 @@ __all__ = [
     "QC_ALIASES",
     "UNIT_MAP",
     "get_unit",
-    "get_aliases"
+    "get_aliases",
 ]
 
 
 _CANONICAL_MAP: dict[str, str] = {
     # Coords $ Identifiers ---
-    'Station': 'station',
-    'Stn': 'station',
-    'Freq': 'freq',
-    'Freq.': 'freq',
-    'Comp': 'comp',
-    'skp': 'skp',
-
+    "Station": "station",
+    "Stn": "station",
+    "Freq": "freq",
+    "Freq.": "freq",
+    "Comp": "comp",
+    "skp": "skp",
     # tipper,
-    'tx': 'tx',
-    'ty': 'ty',
-
+    "tx": "tx",
+    "ty": "ty",
     # --- Measurements
-    'Amps': 'amps',
-    'Tx.Amp': 'amps',
-    'Emag': 'emag',
-    'E.mag': 'emag',
-    'Ephz': 'ephz',
-    'E.phz': 'ephz',
-    'Hmag': 'hmag',
-    'B.mag': 'hmag',
-    'H.mag': 'hmag',
-    'Hphz': 'hphz',
-    'B.phz': 'hphz',
-    'Resistivity': 'rho',
-    'ARes.mag': 'rho',
-    'Phase': 'phase',
-    'Z.phz': 'phase',
-    'Z.mag': 'zmag',
-    'SRes': 'rho_sc',
-    'TMARES': 'rho_sc',
-    'TMARES/SRES': 'rho_sc',
-
+    "Amps": "amps",
+    "Tx.Amp": "amps",
+    "Emag": "emag",
+    "E.mag": "emag",
+    "Ephz": "ephz",
+    "E.phz": "ephz",
+    "Hmag": "hmag",
+    "B.mag": "hmag",
+    "H.mag": "hmag",
+    "Hphz": "hphz",
+    "B.phz": "hphz",
+    "Resistivity": "rho",
+    "ARes.mag": "rho",
+    "Phase": "phase",
+    "Z.phz": "phase",
+    "Z.mag": "zmag",
+    "SRes": "rho_sc",
+    "TMARES": "rho_sc",
+    "TMARES/SRES": "rho_sc",
     # Quality Control (QC)
-    '%Emag': 'pc_emag',
-    'E.%err': 'pc_emag',
-    'sEphz': 's_ephz',
-    'E.perr': 's_ephz',
-    '%Hmag': 'pc_hmag',
-    'B.%err': 'pc_hmag',
-    'H.%err': 'pc_hmag',
-    'sHphz': 's_hphz',
-    'B.perr': 's_hphz',
-    'H.perr': 's_hphz',
-    '%Rho': 'pc_rho',
-    'ARes.%err': 'pc_rho',
-    'sPhz': 's_phz',
-    'Z.perr': 's_phz',
-
+    "%Emag": "pc_emag",
+    "E.%err": "pc_emag",
+    "sEphz": "s_ephz",
+    "E.perr": "s_ephz",
+    "%Hmag": "pc_hmag",
+    "B.%err": "pc_hmag",
+    "H.%err": "pc_hmag",
+    "sHphz": "s_hphz",
+    "B.perr": "s_hphz",
+    "H.perr": "s_hphz",
+    "%Rho": "pc_rho",
+    "ARes.%err": "pc_rho",
+    "sPhz": "s_phz",
+    "Z.perr": "s_phz",
     # Weights & Other Modern Fields
-    'Z.mwgt': 'z_mwgt',
-    'Z.pwgt': 'z_pwgt',
-    'E.wgt': 'e_wgt',
-    'H.wgt': 'h_wgt',
-    'B.wgt': 'h_wgt',
-    'Choer': 'coh',
-    'Gdp.Blk': 'gdp_blk',
-    'Gdp.Chn': 'gdp_chn',
-    'Gdp.Time': 'gdp_time',
-    '|Z|': 'zabs',
-    'Z.%err': 'z.%err',
-
+    "Z.mwgt": "z_mwgt",
+    "Z.pwgt": "z_pwgt",
+    "E.wgt": "e_wgt",
+    "H.wgt": "h_wgt",
+    "B.wgt": "h_wgt",
+    "Choer": "coh",
+    "Gdp.Blk": "gdp_blk",
+    "Gdp.Chn": "gdp_chn",
+    "Gdp.Time": "gdp_time",
+    "|Z|": "zabs",
+    "Z.%err": "z.%err",
 }
 
 _CANON_TO_MODERN: dict[str, str] = {
@@ -97,7 +93,6 @@ _CANON_TO_MODERN: dict[str, str] = {
     "station": "Station",
     "freq": "Freq",
     "comp": "Comp",
-
     # transmitter / field data
     "amps": "Tx.Amp",
     "emag": "E.mag",
@@ -107,7 +102,6 @@ _CANON_TO_MODERN: dict[str, str] = {
     "zmag": "Z.mag",
     "phase": "Z.phz",
     "rho": "ARes.mag",
-
     # quality metrics
     "rho_sc": "SRes",
     "pc_emag": "E.%err",
@@ -125,22 +119,20 @@ _CANON_TO_MODERN: dict[str, str] = {
     "gdp_chn": "Gdp.Chn",
     "gdp_time": "Gdp.Time",
     "zabs": "|Z|",
-
     # alternatives_config,
-    "e.%err":   "E.%err",
-    "e.perr":   "E.perr",
-    "h.%err":   "B.%err",
-    "h.perr":   "B.perr",
+    "e.%err": "E.%err",
+    "e.perr": "E.perr",
+    "h.%err": "B.%err",
+    "h.perr": "B.perr",
     "rho.%err": "ARes.%err",
     "phase.%err": "Z.perr",
-    "z.%err":   "Z.%err",
-    "z.perr":   "Z.perr",
+    "z.%err": "Z.%err",
+    "z.perr": "Z.perr",
     "z.mwgt": "Z.mwgt",
     "z.pwgt": "Z.pwgt",
-    "e.wgt":  "E.wgt",
-    "b.wgt":  "B.wgt",
-
-     # e.g Tipper,
+    "e.wgt": "E.wgt",
+    "b.wgt": "B.wgt",
+    # e.g Tipper,
     "tx": "Tx",
     "ty": "Ty",
 }
@@ -187,7 +179,6 @@ _CSAVGW_ORDERED = [
     "Z.%err",
     "Z.perr",
     "ARes.%err",
-
     # Expected CSAVGW order;
     # extras will be appended after these.
     "Choer",
@@ -195,7 +186,7 @@ _CSAVGW_ORDERED = [
     "Gdp.Chn",
     "Gdp.Time",
     "|Z|",
-    "use"
+    "use",
 ]
 # 3. Dynamically Built Alias Lookups
 _canon_to_aliases: dict[str, list[str]] = defaultdict(list)
@@ -209,31 +200,38 @@ ALL_ALIASES: dict[str, tuple[str, ...]] = {
 
 QC_ALIASES: dict[str, tuple[str, ...]] = {
     "pc_emag": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 'pc_emag'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_emag"])
     ),
     "s_ephz": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 's_ephz'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_ephz"])
     ),
     "pc_hmag": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 'pc_hmag'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_hmag"])
     ),
     "s_hphz": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 's_hphz'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_hphz"])
     ),
     "pc_rho": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 'pc_rho'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_rho"])
     ),
     "s_phz": tuple(
-        sorted([k for k, v in _CANONICAL_MAP.items() if v == 's_phz'])
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_phz"])
     ),
 }
 
 _FLEX_CANON_NAMES = {
-    'pc_emag', 's_ephz', 'pc_hmag',
-    's_hphz', 'pc_rho', 's_phz',
-    'z_mwgt', 'z_pwgt', 'e_wgt',
-    'h_wgt'
+    "pc_emag",
+    "s_ephz",
+    "pc_hmag",
+    "s_hphz",
+    "pc_rho",
+    "s_phz",
+    "z_mwgt",
+    "z_pwgt",
+    "e_wgt",
+    "h_wgt",
 }
+
 
 def _create_flexible_lookup() -> dict[str, str]:
     """
@@ -246,9 +244,9 @@ def _create_flexible_lookup() -> dict[str, str]:
             # Normalize the raw alias for broader matching
             norm_key = raw_alias.lower()
             variations = {
-                norm_key.replace('.', ''),
-                norm_key.replace('_', ''),
-                norm_key.replace('%', ''),
+                norm_key.replace(".", ""),
+                norm_key.replace("_", ""),
+                norm_key.replace("%", ""),
             }
             for var in variations:
                 lookup[var] = canon_value
@@ -256,12 +254,20 @@ def _create_flexible_lookup() -> dict[str, str]:
     # Remove any keys that are also core data names
     # to prevent collisions (e.g., 'rho' should not map to 'pc_rho').
     core_data_keys = {
-        'emag', 'hmag', 'rho', 'phase', 'ephz', 'hphz',
-        'zmag', 'rho_sc'}
+        "emag",
+        "hmag",
+        "rho",
+        "phase",
+        "ephz",
+        "hphz",
+        "zmag",
+        "rho_sc",
+    }
     for key in core_data_keys:
         lookup.pop(key, None)
 
     return lookup
+
 
 # Create the flexible map once at module level
 _FLEXIBLE_LOOKUP = _create_flexible_lookup()
@@ -296,9 +302,9 @@ UNIT_MAP: dict[str, tuple[str, str]] = {
     "freq": ("Hz", "Frequency (Hz)"),
     "station": ("m", "Station Distance (m)"),
 }
-def get_unit(
-    canonical_name: str, formatted: bool = True
-) -> str | None:
+
+
+def get_unit(canonical_name: str, formatted: bool = True) -> str | None:
     """
     Fetch the unit string for a canonical variable name.
     """
@@ -306,6 +312,7 @@ def get_unit(
     if unit_tuple:
         return unit_tuple[1] if formatted else unit_tuple[0]
     return None
+
 
 def get_aliases(
     canonical_name: str,
@@ -357,9 +364,11 @@ def get_aliases(
 
     if custom_aliases:
         # Normalize keys of custom dict if requested
-        norm_custom = {
-            _normalize_key(k): v for k, v in custom_aliases.items()
-        } if normalize else custom_aliases
+        norm_custom = (
+            {_normalize_key(k): v for k, v in custom_aliases.items()}
+            if normalize
+            else custom_aliases
+        )
 
         for canon, aliases in norm_custom.items():
             # Normalize canonical name for lookup
@@ -373,9 +382,7 @@ def get_aliases(
             if kind == "qc" and lookup_canon in active_qc:
                 existing_qc = list(active_qc.get(lookup_canon, ()))
                 existing_qc.extend(aliases)
-                active_qc[lookup_canon] = tuple(
-                    sorted(set(existing_qc))
-                )
+                active_qc[lookup_canon] = tuple(sorted(set(existing_qc)))
 
     # Select the correct map to use
     target_map = active_qc if kind == "qc" else active_all

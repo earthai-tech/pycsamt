@@ -31,22 +31,23 @@ def demo_model(wet: float = 1.0, seed: int = 0) -> ResistivityModel:
         Seed for the small cell-to-cell resistivity scatter.
     """
     rng = np.random.default_rng(seed)
-    x = np.linspace(0.0, 2000.0, 44)          # profile distance, m
-    z = np.linspace(5.0, 300.0, 34)           # depth, m
+    x = np.linspace(0.0, 2000.0, 44)  # profile distance, m
+    z = np.linspace(5.0, 300.0, 34)  # depth, m
     ZZ, XX = np.meshgrid(z, x, indexing="ij")
 
-    rho = np.full_like(ZZ, 200.0)             # dry overburden
+    rho = np.full_like(ZZ, 200.0)  # dry overburden
     aquifer_top = 20.0 + 8.0 * np.sin(XX / 600.0)
     aquifer_bot = 80.0 + 15.0 * np.sin(XX / 500.0 + 1.0)
     clay_bot = 120.0 + 10.0 * np.cos(XX / 700.0)
-    rho[(ZZ >= aquifer_top) & (ZZ < aquifer_bot)] = 40.0 / wet   # sand aquifer
-    rho[(ZZ >= aquifer_bot) & (ZZ < clay_bot)] = 12.0            # clay aquitard
-    rho[ZZ >= clay_bot] = 1500.0                                 # basement
+    rho[(ZZ >= aquifer_top) & (ZZ < aquifer_bot)] = 40.0 / wet  # sand aquifer
+    rho[(ZZ >= aquifer_bot) & (ZZ < clay_bot)] = 12.0  # clay aquitard
+    rho[ZZ >= clay_bot] = 1500.0  # basement
     rho *= 1.0 + 0.05 * rng.standard_normal(rho.shape)
 
     return ResistivityModel.from_array(
         np.log10(np.clip(rho, 1.0, 1e5)),
-        x_centers=x, z_centers=z,
+        x_centers=x,
+        z_centers=z,
         station_x=x[::4],
         station_names=[f"S{i:02d}" for i in range(len(x[::4]))],
         method="synthetic",

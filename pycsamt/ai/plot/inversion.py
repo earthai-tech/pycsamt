@@ -32,6 +32,7 @@ Usage
 ...     suptitle="EMInverter2D — profile L22PLT",
 ... )
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -51,14 +52,15 @@ from ._style import (
 __all__ = ["plot_inversion_result_2d", "plot_inversion_result_3d"]
 
 # ── default figsize table (n_top columns → width, fixed height per row) ─────
-_TOP_WIDTHS  = {1: 6.0,  2: 10.0, 3: 14.0}
-_TOP_HEIGHT  = 4.5
-_BOT_HEIGHT  = 2.5
+_TOP_WIDTHS = {1: 6.0, 2: 10.0, 3: 14.0}
+_TOP_HEIGHT = 4.5
+_BOT_HEIGHT = 2.5
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _cell_edges(centres: np.ndarray) -> np.ndarray:
     """Return (n+1,) cell-boundary array from (n,) cell-centre array."""
@@ -67,8 +69,8 @@ def _cell_edges(centres: np.ndarray) -> np.ndarray:
         return np.array([centres[0] - half, centres[0] + half])
     d = np.diff(centres)
     mids = centres[:-1] + d / 2.0
-    lo   = centres[0]  - d[0]  / 2.0
-    hi   = centres[-1] + d[-1] / 2.0
+    lo = centres[0] - d[0] / 2.0
+    hi = centres[-1] + d[-1] / 2.0
     return np.concatenate([[lo], mids, [hi]])
 
 
@@ -86,7 +88,7 @@ def _safe_vlim(
 
 def _draw_section(
     ax: Axes,
-    data: np.ndarray,               # (n_depth, n_stations)
+    data: np.ndarray,  # (n_depth, n_stations)
     s_edges: np.ndarray,
     d_edges: np.ndarray,
     vmin: float,
@@ -105,8 +107,13 @@ def _draw_section(
 ) -> Any:
     """Render one 2-D section panel; return the pcolormesh mappable."""
     im = ax.pcolormesh(
-        s_edges, d_edges, data,
-        cmap=cmap, vmin=vmin, vmax=vmax, shading="flat",
+        s_edges,
+        d_edges,
+        data,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        shading="flat",
     )
     ax.invert_yaxis()
     if title:
@@ -119,7 +126,11 @@ def _draw_section(
         ax.plot(
             stations,
             np.full(len(stations), float(d_edges[0])),
-            site_marker, ms=site_ms, color=site_color, zorder=5, clip_on=False,
+            site_marker,
+            ms=site_ms,
+            color=site_color,
+            zorder=5,
+            clip_on=False,
         )
 
     if station_labels is not None:
@@ -143,9 +154,13 @@ def _add_faults(
         ax.axvline(x, color=color, lw=lw, ls=ls, alpha=alpha, zorder=3)
         ax.text(
             x + (ax.get_xlim()[1] - ax.get_xlim()[0]) * 0.008,
-            y_label, "Fault",
-            fontsize=label_fontsize, color=color,
-            rotation=90, va="bottom", alpha=alpha,
+            y_label,
+            "Fault",
+            fontsize=label_fontsize,
+            color=color,
+            rotation=90,
+            va="bottom",
+            alpha=alpha,
         )
 
 
@@ -158,13 +173,13 @@ def _add_annotations(ax: Axes, annotations: list[dict]) -> None:
     ``color``, ``arrowprops``, ``bbox``.
     """
     _default_arrow = dict(arrowstyle="->", color="white", lw=0.8)
-    _default_bbox  = dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2)
+    _default_bbox = dict(fc="#1a1a1a", ec="none", alpha=0.55, pad=2)
     for ann in annotations:
         kw = dict(
-            fontsize  = ann.get("fontsize", 7),
-            color     = ann.get("color", "white"),
-            arrowprops= ann.get("arrowprops", _default_arrow),
-            bbox      = ann.get("bbox", _default_bbox),
+            fontsize=ann.get("fontsize", 7),
+            color=ann.get("color", "white"),
+            arrowprops=ann.get("arrowprops", _default_arrow),
+            bbox=ann.get("bbox", _default_bbox),
         )
         if "xytext" in ann:
             kw["xytext"] = ann["xytext"]
@@ -174,6 +189,7 @@ def _add_annotations(ax: Axes, annotations: list[dict]) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_inversion_result_2d(
@@ -444,11 +460,14 @@ def plot_inversion_result_2d(
         misfit_cmap = EM_CMAPS["misfit"]
     if _show_misfit:
         if misfit_vlim is None:
-            misfit_vlim = float(np.nanpercentile(np.abs(misfit), misfit_percentile))
+            misfit_vlim = float(
+                np.nanpercentile(np.abs(misfit), misfit_percentile)
+            )
 
     # ── RMSE ─────────────────────────────────────────────────────────────────
-    _show_rmse = show_rmse and (train_loss is not None or rmse is not None
-                                or log_true is not None)
+    _show_rmse = show_rmse and (
+        train_loss is not None or rmse is not None or log_true is not None
+    )
     if rmse is None:
         if log_true is not None:
             rmse = np.sqrt(np.nanmean((log_pred - log_true) ** 2, axis=0))
@@ -495,11 +514,11 @@ def plot_inversion_result_2d(
         title_pred = f"({letter}) Predicted model"
     # override title letters to match position
     _titles = {
-        "true":        title_true,
-        "pred":        title_pred,
-        "misfit":      title_misfit,
+        "true": title_true,
+        "pred": title_pred,
+        "misfit": title_misfit,
         "convergence": title_convergence,
-        "rmse":        title_rmse,
+        "rmse": title_rmse,
     }
 
     # ── station tick config ──────────────────────────────────────────────────
@@ -527,7 +546,8 @@ def plot_inversion_result_2d(
 
         if has_bottom:
             gs_outer = fig.add_gridspec(
-                2, 1,
+                2,
+                1,
                 height_ratios=[top_height_ratio, bottom_height_ratio],
                 hspace=hspace,
             )
@@ -551,7 +571,7 @@ def plot_inversion_result_2d(
                 ax[panels_bot[0]] = fig.add_subplot(gs_bot[0, :])
 
     # ── draw section panels ──────────────────────────────────────────────────
-    leftmost_sec_key = panels_top[0]   # where annotations + faults go
+    leftmost_sec_key = panels_top[0]  # where annotations + faults go
     im_res = None
 
     for key in ("true", "pred"):
@@ -559,11 +579,23 @@ def plot_inversion_result_2d(
             continue
         data = log_true if key == "true" else log_pred
         im = _draw_section(
-            ax[key], data, s_edges, d_edges,
-            vmin, vmax, cmap,
-            _titles[key], xlabel, ylabel,
-            show_sites, site_marker, site_color, site_ms,
-            stations, station_labels, station_tick_config,
+            ax[key],
+            data,
+            s_edges,
+            d_edges,
+            vmin,
+            vmax,
+            cmap,
+            _titles[key],
+            xlabel,
+            ylabel,
+            show_sites,
+            site_marker,
+            site_color,
+            site_ms,
+            stations,
+            station_labels,
+            station_tick_config,
         )
         im_res = im
 
@@ -571,27 +603,45 @@ def plot_inversion_result_2d(
     im_mis = None
     if "misfit" in ax:
         im_mis = _draw_section(
-            ax["misfit"], misfit, s_edges, d_edges,
-            -misfit_vlim, misfit_vlim, misfit_cmap,
-            _titles["misfit"], xlabel, ylabel,
-            show_sites, site_marker, site_color, site_ms,
-            stations, station_labels, station_tick_config,
+            ax["misfit"],
+            misfit,
+            s_edges,
+            d_edges,
+            -misfit_vlim,
+            misfit_vlim,
+            misfit_cmap,
+            _titles["misfit"],
+            xlabel,
+            ylabel,
+            show_sites,
+            site_marker,
+            site_color,
+            site_ms,
+            stations,
+            station_labels,
+            station_tick_config,
         )
 
     # ── shared resistivity colorbar ──────────────────────────────────────────
     if im_res is not None and not using_external_axes:
         res_axes = [ax[k] for k in ("true", "pred") if k in ax]
         cb_r = fig.colorbar(
-            im_res, ax=res_axes,
-            shrink=0.88, pad=0.02, fraction=0.022,
+            im_res,
+            ax=res_axes,
+            shrink=0.88,
+            pad=0.02,
+            fraction=0.022,
         )
         cb_r.set_label(colorbar_label, fontsize=8)
         cb_r.ax.tick_params(labelsize=7)
 
     if im_mis is not None and not using_external_axes:
         cb_m = fig.colorbar(
-            im_mis, ax=ax["misfit"],
-            shrink=0.88, pad=0.02, fraction=0.044,
+            im_mis,
+            ax=ax["misfit"],
+            shrink=0.88,
+            pad=0.02,
+            fraction=0.044,
         )
         cb_m.set_label(misfit_colorbar_label, fontsize=8)
         cb_m.ax.tick_params(labelsize=7)
@@ -601,9 +651,13 @@ def plot_inversion_result_2d(
         for key in ("true", "pred", "misfit"):
             if key in ax:
                 _add_faults(
-                    ax[key], fault_positions,
-                    fault_color, fault_lw, fault_ls,
-                    fault_alpha, fault_label_fontsize,
+                    ax[key],
+                    fault_positions,
+                    fault_color,
+                    fault_lw,
+                    fault_ls,
+                    fault_alpha,
+                    fault_label_fontsize,
                 )
 
     # ── geology annotations ──────────────────────────────────────────────────
@@ -615,13 +669,20 @@ def plot_inversion_result_2d(
         ax_c = ax["convergence"]
         plot_fn = ax_c.semilogy if convergence_log_scale else ax_c.plot
         plot_fn(
-            convergence_epochs, train_loss,
-            color=EM_COLORS["primary"], lw=1.6, label="Train loss",
+            convergence_epochs,
+            train_loss,
+            color=EM_COLORS["primary"],
+            lw=1.6,
+            label="Train loss",
         )
         if val_loss is not None:
             plot_fn(
-                convergence_epochs, val_loss,
-                color=EM_COLORS["secondary"], lw=1.6, ls="--", label="Val loss",
+                convergence_epochs,
+                val_loss,
+                color=EM_COLORS["secondary"],
+                lw=1.6,
+                ls="--",
+                label="Val loss",
             )
         if convergence_target is not None:
             ax_c.axhline(
@@ -633,13 +694,18 @@ def plot_inversion_result_2d(
             )
             xlim = ax_c.get_xlim()
             ax_c.text(
-                xlim[1] * 0.96, convergence_target * 1.08,
+                xlim[1] * 0.96,
+                convergence_target * 1.08,
                 convergence_target_label,
-                fontsize=6.5, color=convergence_target_color,
-                ha="right", va="bottom",
+                fontsize=6.5,
+                color=convergence_target_color,
+                ha="right",
+                va="bottom",
             )
         ax_c.set_xlabel("Epoch", fontsize=8)
-        ax_c.set_ylabel("MSE (log scale)" if convergence_log_scale else "MSE", fontsize=8)
+        ax_c.set_ylabel(
+            "MSE (log scale)" if convergence_log_scale else "MSE", fontsize=8
+        )
         ax_c.set_title(_titles["convergence"], fontsize=9)
         ax_c.legend(fontsize=7, framealpha=0.7)
         ax_c.tick_params(labelsize=7)
@@ -655,8 +721,12 @@ def plot_inversion_result_2d(
         ]
         dx = float(np.diff(s_edges).mean())
         ax_r.bar(
-            stations, rmse, width=dx * 0.65,
-            color=bar_c, edgecolor="none", alpha=0.85,
+            stations,
+            rmse,
+            width=dx * 0.65,
+            color=bar_c,
+            edgecolor="none",
+            alpha=0.85,
         )
         ax_r.axhline(
             rmse_threshold,
@@ -683,13 +753,14 @@ def plot_inversion_result_2d(
 # Helpers – 3-D panels
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 def _per_station_to_volume(
-    station_models: np.ndarray,   # (n_stations, n_depth)
-    station_xy: np.ndarray,       # (n_stations, 2)
-    x_coords: np.ndarray,         # (n_x,)
-    y_coords: np.ndarray,         # (n_y,)
+    station_models: np.ndarray,  # (n_stations, n_depth)
+    station_xy: np.ndarray,  # (n_stations, 2)
+    x_coords: np.ndarray,  # (n_x,)
+    y_coords: np.ndarray,  # (n_y,)
     method: str = "linear",
-) -> np.ndarray:                  # (n_depth, n_y, n_x)
+) -> np.ndarray:  # (n_depth, n_y, n_x)
     """
     Interpolate scattered per-station 1-D models onto a regular (y, x) grid.
 
@@ -697,16 +768,18 @@ def _per_station_to_volume(
     requested *method* raises an error (e.g. too few points for cubic).
     """
     from scipy.interpolate import griddata
+
     _, n_depth = station_models.shape
-    n_y, n_x   = len(y_coords), len(x_coords)
-    XX, YY = np.meshgrid(x_coords, y_coords)   # (n_y, n_x)
-    pts    = station_xy.astype(float)
+    n_y, n_x = len(y_coords), len(x_coords)
+    XX, YY = np.meshgrid(x_coords, y_coords)  # (n_y, n_x)
+    pts = station_xy.astype(float)
     volume = np.empty((n_depth, n_y, n_x), dtype=float)
     for d in range(n_depth):
         vals = station_models[:, d]
         try:
-            layer = griddata(pts, vals, (XX, YY),
-                             method=method, fill_value=np.nan)
+            layer = griddata(
+                pts, vals, (XX, YY), method=method, fill_value=np.nan
+            )
         except Exception:
             layer = griddata(pts, vals, (XX, YY), method="nearest")
         volume[d] = layer
@@ -715,9 +788,9 @@ def _per_station_to_volume(
 
 def _draw_map_panel(
     ax: Axes,
-    data: np.ndarray,         # (n_y, n_x)
-    x_edges: np.ndarray,      # (n_x+1,)
-    y_edges: np.ndarray,      # (n_y+1,)
+    data: np.ndarray,  # (n_y, n_x)
+    x_edges: np.ndarray,  # (n_x+1,)
+    y_edges: np.ndarray,  # (n_y+1,)
     vmin: float,
     vmax: float,
     cmap: str,
@@ -728,8 +801,13 @@ def _draw_map_panel(
 ) -> Any:
     """Render a horizontal depth-slice map; return the pcolormesh mappable."""
     im = ax.pcolormesh(
-        x_edges, y_edges, data,
-        cmap=cmap, vmin=vmin, vmax=vmax, shading="flat",
+        x_edges,
+        y_edges,
+        data,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        shading="flat",
     )
     ax.set_aspect(aspect)
     if title:
@@ -742,8 +820,8 @@ def _draw_map_panel(
 
 def _draw_rmse_scatter(
     ax: Axes,
-    station_xy: np.ndarray,   # (n_stations, 2)
-    rmse: np.ndarray,          # (n_stations,)
+    station_xy: np.ndarray,  # (n_stations, 2)
+    rmse: np.ndarray,  # (n_stations,)
     cmap: str,
     vmax: float,
     marker: str,
@@ -756,17 +834,28 @@ def _draw_rmse_scatter(
 ) -> Any:
     """Scatter map of per-station RMSE; return scatter mappable."""
     sc = ax.scatter(
-        station_xy[:, 0], station_xy[:, 1],
-        c=rmse, cmap=cmap, vmin=0.0, vmax=vmax,
-        s=ms, marker=marker, edgecolors="none", zorder=4,
+        station_xy[:, 0],
+        station_xy[:, 1],
+        c=rmse,
+        cmap=cmap,
+        vmin=0.0,
+        vmax=vmax,
+        s=ms,
+        marker=marker,
+        edgecolors="none",
+        zorder=4,
     )
     if threshold is not None:
         hi = rmse > threshold
         if hi.any():
             ax.scatter(
-                station_xy[hi, 0], station_xy[hi, 1],
-                facecolors="none", edgecolors="#cc0000",
-                s=ms * 1.6, lw=0.9, zorder=5,
+                station_xy[hi, 0],
+                station_xy[hi, 1],
+                facecolors="none",
+                edgecolors="#cc0000",
+                s=ms * 1.6,
+                lw=0.9,
+                zorder=5,
                 label=f"RMSE > {threshold:.2f}",
             )
     ax.set_aspect(aspect)
@@ -793,27 +882,42 @@ def _overlay_cut_lines(
     """Draw inline / crossline position indicators on a map-view axes."""
     x0, x1 = float(x_coords[0]), float(x_coords[-1])
     y0, y1 = float(y_coords[0]), float(y_coords[-1])
-    dx, dy  = x1 - x0, y1 - y0
+    dx, dy = x1 - x0, y1 - y0
 
     if inline_idx is not None and 0 <= inline_idx < len(y_coords):
         yc = float(y_coords[inline_idx])
         ax.axhline(yc, color=color, lw=lw, ls=ls, alpha=alpha, zorder=3)
-        ax.text(x0 + dx * 0.01, yc + dy * 0.015, "Inline",
-                fontsize=fontsize, color=color, alpha=alpha,
-                ha="left", va="bottom")
+        ax.text(
+            x0 + dx * 0.01,
+            yc + dy * 0.015,
+            "Inline",
+            fontsize=fontsize,
+            color=color,
+            alpha=alpha,
+            ha="left",
+            va="bottom",
+        )
 
     if crossline_idx is not None and 0 <= crossline_idx < len(x_coords):
         xc = float(x_coords[crossline_idx])
         ax.axvline(xc, color=color, lw=lw, ls=ls, alpha=alpha, zorder=3)
-        ax.text(xc + dx * 0.012, y0 + dy * 0.03, "X-line",
-                fontsize=fontsize, color=color, alpha=alpha,
-                ha="left", va="bottom", rotation=90)
+        ax.text(
+            xc + dx * 0.012,
+            y0 + dy * 0.03,
+            "X-line",
+            fontsize=fontsize,
+            color=color,
+            alpha=alpha,
+            ha="left",
+            va="bottom",
+            rotation=90,
+        )
 
 
 def _draw_graph_edges(
     ax: Axes,
-    station_xy: np.ndarray,    # (n_stations, 2)
-    adjacency: np.ndarray,     # (n_stations, n_stations)
+    station_xy: np.ndarray,  # (n_stations, 2)
+    adjacency: np.ndarray,  # (n_stations, n_stations)
     color: str,
     lw: float,
     alpha: float,
@@ -827,7 +931,10 @@ def _draw_graph_edges(
                 ax.plot(
                     [station_xy[i, 0], station_xy[j, 0]],
                     [station_xy[i, 1], station_xy[j, 1]],
-                    color=color, lw=lw, alpha=alpha, zorder=2,
+                    color=color,
+                    lw=lw,
+                    alpha=alpha,
+                    zorder=2,
                 )
 
 
@@ -846,16 +953,40 @@ def _render_convergence(
 ) -> None:
     """Draw training convergence curves on *ax*."""
     plot_fn = ax.semilogy if log_scale else ax.plot
-    plot_fn(epochs, train_loss, color=EM_COLORS["primary"], lw=1.6, label="Train loss")
+    plot_fn(
+        epochs,
+        train_loss,
+        color=EM_COLORS["primary"],
+        lw=1.6,
+        label="Train loss",
+    )
     if val_loss is not None:
-        plot_fn(epochs, val_loss, color=EM_COLORS["secondary"],
-                lw=1.6, ls="--", label="Val loss")
+        plot_fn(
+            epochs,
+            val_loss,
+            color=EM_COLORS["secondary"],
+            lw=1.6,
+            ls="--",
+            label="Val loss",
+        )
     if target is not None:
-        ax.axhline(target, color=target_color, lw=target_lw, ls=target_ls,
-                   label=target_label)
+        ax.axhline(
+            target,
+            color=target_color,
+            lw=target_lw,
+            ls=target_ls,
+            label=target_label,
+        )
         xl = ax.get_xlim()
-        ax.text(xl[1] * 0.96, target * 1.10, target_label,
-                fontsize=6.5, color=target_color, ha="right", va="bottom")
+        ax.text(
+            xl[1] * 0.96,
+            target * 1.10,
+            target_label,
+            fontsize=6.5,
+            color=target_color,
+            ha="right",
+            va="bottom",
+        )
     ax.set_xlabel("Epoch", fontsize=8)
     ax.set_ylabel("MSE (log scale)" if log_scale else "MSE", fontsize=8)
     ax.set_title(title, fontsize=9)
@@ -867,6 +998,7 @@ def _render_convergence(
 # ═════════════════════════════════════════════════════════════════════════════
 # plot_inversion_result_3d
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 @EMStyle()
 def plot_inversion_result_3d(
@@ -1188,14 +1320,15 @@ def plot_inversion_result_3d(
             x_coords = xi
         if y_coords is None:
             y_coords = yi
-        log_pred = _per_station_to_volume(log_pred, sxy, x_coords, y_coords,
-                                          interp_method)
+        log_pred = _per_station_to_volume(
+            log_pred, sxy, x_coords, y_coords, interp_method
+        )
         if log_true is not None:
             log_true = np.asarray(log_true, dtype=float)
             if log_true.ndim == 2:
-                log_true = _per_station_to_volume(log_true, sxy,
-                                                  x_coords, y_coords,
-                                                  interp_method)
+                log_true = _per_station_to_volume(
+                    log_true, sxy, x_coords, y_coords, interp_method
+                )
     elif log_pred.ndim != 3:
         raise ValueError(
             f"log_pred must be 3-D (n_depth, n_y, n_x) or 2-D "
@@ -1262,8 +1395,9 @@ def plot_inversion_result_3d(
     # ── 6. RMSE scatter ───────────────────────────────────────────────────────
     if station_xy is not None:
         station_xy = np.asarray(station_xy, dtype=float)
-    _show_rmse = (show_rmse_map and station_xy is not None
-                  and station_rmse is not None)
+    _show_rmse = (
+        show_rmse_map and station_xy is not None and station_rmse is not None
+    )
     if station_rmse is not None:
         station_rmse = np.asarray(station_rmse, dtype=float)
         if rmse_vmax is None:
@@ -1292,7 +1426,11 @@ def plot_inversion_result_3d(
         if title_map_pred is None:
             title_map_pred = f"({letter}) Depth slice — predicted"
         if title_inline_pred is None:
-            title_inline_pred = "(b) Inline section — predicted" if show_depth_slice else "(a) Inline section"
+            title_inline_pred = (
+                "(b) Inline section — predicted"
+                if show_depth_slice
+                else "(a) Inline section"
+            )
         if title_crossline_pred is None:
             title_crossline_pred = "(c) Crossline section — predicted"
 
@@ -1309,8 +1447,9 @@ def plot_inversion_result_3d(
             # Row 1: inline_true | inline_pred | rmse_map
             # Row 2 (opt): convergence
             n_rows = 2 + (1 if _show_conv else 0)
-            hr = ([map_height_ratio, section_height_ratio]
-                  + ([convergence_height_ratio] if _show_conv else []))
+            hr = [map_height_ratio, section_height_ratio] + (
+                [convergence_height_ratio] if _show_conv else []
+            )
             if figsize is None:
                 h = 4.5 * map_height_ratio + 5.0 * section_height_ratio
                 h += 2.5 * convergence_height_ratio if _show_conv else 0.0
@@ -1330,7 +1469,9 @@ def plot_inversion_result_3d(
 
             has_bot = _show_conv or _show_rmse
             n_rows = 1 + (1 if has_bot else 0)
-            hr = [section_height_ratio] + ([convergence_height_ratio] if has_bot else [])
+            hr = [section_height_ratio] + (
+                [convergence_height_ratio] if has_bot else []
+            )
             if figsize is None:
                 w = _TOP_WIDTHS.get(n_top, n_top * 5.0)
                 h = 5.0 + (2.5 if has_bot else 0.0)
@@ -1339,20 +1480,24 @@ def plot_inversion_result_3d(
         fig = plt.figure(figsize=figsize)
 
         if comparison_mode:
-            gs_outer = fig.add_gridspec(n_rows, 1, height_ratios=hr, hspace=hspace)
-            gs_top  = gs_outer[0].subgridspec(1, 3, wspace=wspace)
-            gs_mid  = gs_outer[1].subgridspec(1, 3, wspace=wspace)
-            ax["map_true"]    = fig.add_subplot(gs_top[0, 0])
-            ax["map_pred"]    = fig.add_subplot(gs_top[0, 1])
-            ax["map_misfit"]  = fig.add_subplot(gs_top[0, 2])
+            gs_outer = fig.add_gridspec(
+                n_rows, 1, height_ratios=hr, hspace=hspace
+            )
+            gs_top = gs_outer[0].subgridspec(1, 3, wspace=wspace)
+            gs_mid = gs_outer[1].subgridspec(1, 3, wspace=wspace)
+            ax["map_true"] = fig.add_subplot(gs_top[0, 0])
+            ax["map_pred"] = fig.add_subplot(gs_top[0, 1])
+            ax["map_misfit"] = fig.add_subplot(gs_top[0, 2])
             ax["inline_true"] = fig.add_subplot(gs_mid[0, 0])
             ax["inline_pred"] = fig.add_subplot(gs_mid[0, 1])
-            ax["rmse_map"]    = fig.add_subplot(gs_mid[0, 2])
+            ax["rmse_map"] = fig.add_subplot(gs_mid[0, 2])
             if _show_conv:
                 ax["convergence"] = fig.add_subplot(gs_outer[2])
         else:
-            gs_outer = fig.add_gridspec(n_rows, 1, height_ratios=hr, hspace=hspace)
-            gs_top   = gs_outer[0].subgridspec(1, n_top, wspace=wspace)
+            gs_outer = fig.add_gridspec(
+                n_rows, 1, height_ratios=hr, hspace=hspace
+            )
+            gs_top = gs_outer[0].subgridspec(1, n_top, wspace=wspace)
             for i, key in enumerate(top_keys):
                 ax[key] = fig.add_subplot(gs_top[0, i])
             if has_bot:
@@ -1374,61 +1519,107 @@ def plot_inversion_result_3d(
         """Draw site markers at the surface of a section panel."""
         if show_stations and station_xy is not None:
             sec_ax.plot(
-                along_coords, np.zeros(len(along_coords)),
-                station_marker, ms=station_ms,
-                color=station_color, zorder=5, clip_on=False,
+                along_coords,
+                np.zeros(len(along_coords)),
+                station_marker,
+                ms=station_ms,
+                color=station_color,
+                zorder=5,
+                clip_on=False,
             )
 
-    im_res: Any | None = None   # last resistivity mappable (for shared cbar)
+    im_res: Any | None = None  # last resistivity mappable (for shared cbar)
 
     # ── depth-slice maps ──────────────────────────────────────────────────────
     for key, data, ttl in [
-        ("map_true",   log_true,   title_map_true  if log_true is not None else None),
-        ("map_pred",   log_pred,   title_map_pred),
-        ("map_misfit", misfit_3d,  title_map_misfit),
+        (
+            "map_true",
+            log_true,
+            title_map_true if log_true is not None else None,
+        ),
+        ("map_pred", log_pred, title_map_pred),
+        ("map_misfit", misfit_3d, title_map_misfit),
     ]:
         if key not in ax or data is None:
             continue
         slc = data[depth_slice_idx, :, :]
         _v0 = -misfit_vlim if key == "map_misfit" else vmin
-        _v1 =  misfit_vlim if key == "map_misfit" else vmax
-        _cm = misfit_cmap  if key == "map_misfit" else cmap
+        _v1 = misfit_vlim if key == "map_misfit" else vmax
+        _cm = misfit_cmap if key == "map_misfit" else cmap
         _ttl = (ttl or "").replace(
             "depth slice", f"depth slice  ({depth_label_str})"
         )
         im = _draw_map_panel(
-            ax[key], slc, x_edges, y_edges,
-            _v0, _v1, _cm, _ttl,
-            xlabel_ew, ylabel_ns, aspect=map_aspect,
+            ax[key],
+            slc,
+            x_edges,
+            y_edges,
+            _v0,
+            _v1,
+            _cm,
+            _ttl,
+            xlabel_ew,
+            ylabel_ns,
+            aspect=map_aspect,
         )
         if key != "map_misfit":
             im_res = im
 
         if show_stations and station_xy is not None:
             ax[key].scatter(
-                station_xy[:, 0], station_xy[:, 1],
-                s=station_ms ** 2 * 0.8, marker=station_marker,
-                c=station_color, zorder=5, edgecolors="none",
+                station_xy[:, 0],
+                station_xy[:, 1],
+                s=station_ms**2 * 0.8,
+                marker=station_marker,
+                c=station_color,
+                zorder=5,
+                edgecolors="none",
             )
 
-        if (show_graph_edges and adjacency is not None
-                and station_xy is not None and key != "map_misfit"):
-            _draw_graph_edges(ax[key], station_xy, adjacency,
-                              edge_color, edge_lw, edge_alpha)
+        if (
+            show_graph_edges
+            and adjacency is not None
+            and station_xy is not None
+            and key != "map_misfit"
+        ):
+            _draw_graph_edges(
+                ax[key],
+                station_xy,
+                adjacency,
+                edge_color,
+                edge_lw,
+                edge_alpha,
+            )
 
         if show_section_lines and key != "map_misfit":
             _overlay_cut_lines(
-                ax[key], x_coords, y_coords, inline_idx, crossline_idx,
+                ax[key],
+                x_coords,
+                y_coords,
+                inline_idx,
+                crossline_idx,
             )
 
         if fault_x_positions and key != "map_misfit":
             for xf in fault_x_positions:
-                ax[key].axvline(xf, color=fault_color, lw=fault_lw,
-                                ls=fault_ls, alpha=fault_alpha, zorder=3)
+                ax[key].axvline(
+                    xf,
+                    color=fault_color,
+                    lw=fault_lw,
+                    ls=fault_ls,
+                    alpha=fault_alpha,
+                    zorder=3,
+                )
         if fault_y_positions and key != "map_misfit":
             for yf in fault_y_positions:
-                ax[key].axhline(yf, color=fault_color, lw=fault_lw,
-                                ls=fault_ls, alpha=fault_alpha, zorder=3)
+                ax[key].axhline(
+                    yf,
+                    color=fault_color,
+                    lw=fault_lw,
+                    ls=fault_ls,
+                    alpha=fault_alpha,
+                    zorder=3,
+                )
 
     if annotations_map:
         leftmost_map = next(
@@ -1444,15 +1635,24 @@ def plot_inversion_result_3d(
     ]:
         if key not in ax or data is None:
             continue
-        slc = data[:, inline_idx, :]   # (n_depth, n_x)
+        slc = data[:, inline_idx, :]  # (n_depth, n_x)
         im = _draw_section(
-            ax[key], slc, x_edges, d_edges,
-            vmin, vmax, cmap,
+            ax[key],
+            slc,
+            x_edges,
+            d_edges,
+            vmin,
+            vmax,
+            cmap,
             ttl + f"  (y = {y_coords[inline_idx]:.1f} km)",
-            xlabel_inline, ylabel_section,
-            show_sites=False, site_marker=station_marker,
-            site_color=station_color, site_ms=station_ms,
-            stations=x_coords, station_labels=None,
+            xlabel_inline,
+            ylabel_section,
+            show_sites=False,
+            site_marker=station_marker,
+            site_color=station_color,
+            site_ms=station_ms,
+            stations=x_coords,
+            station_labels=None,
             tick_cfg=StationTickConfig(),
         )
         im_res = im
@@ -1462,14 +1662,23 @@ def plot_inversion_result_3d(
             ax[key].plot(
                 station_xy[:, 0],
                 np.zeros(len(station_xy)),
-                station_marker, ms=station_ms,
-                color=station_color, zorder=5, clip_on=False,
+                station_marker,
+                ms=station_ms,
+                color=station_color,
+                zorder=5,
+                clip_on=False,
             )
 
         if fault_x_positions:
-            _add_faults(ax[key], fault_x_positions,
-                        fault_color, fault_lw, fault_ls,
-                        fault_alpha, fault_label_fontsize)
+            _add_faults(
+                ax[key],
+                fault_x_positions,
+                fault_color,
+                fault_lw,
+                fault_ls,
+                fault_alpha,
+                fault_label_fontsize,
+            )
 
         if annotations_inline:
             _add_annotations(ax[key], annotations_inline)
@@ -1480,23 +1689,38 @@ def plot_inversion_result_3d(
     ]:
         if key not in ax or data is None:
             continue
-        slc = data[:, :, crossline_idx]   # (n_depth, n_y)
+        slc = data[:, :, crossline_idx]  # (n_depth, n_y)
         im = _draw_section(
-            ax[key], slc, y_edges, d_edges,
-            vmin, vmax, cmap,
+            ax[key],
+            slc,
+            y_edges,
+            d_edges,
+            vmin,
+            vmax,
+            cmap,
             ttl + f"  (x = {x_coords[crossline_idx]:.1f} km)",
-            xlabel_crossline, ylabel_section,
-            show_sites=False, site_marker=station_marker,
-            site_color=station_color, site_ms=station_ms,
-            stations=y_coords, station_labels=None,
+            xlabel_crossline,
+            ylabel_section,
+            show_sites=False,
+            site_marker=station_marker,
+            site_color=station_color,
+            site_ms=station_ms,
+            stations=y_coords,
+            station_labels=None,
             tick_cfg=StationTickConfig(),
         )
         im_res = im
 
         if fault_y_positions:
-            _add_faults(ax[key], fault_y_positions,
-                        fault_color, fault_lw, fault_ls,
-                        fault_alpha, fault_label_fontsize)
+            _add_faults(
+                ax[key],
+                fault_y_positions,
+                fault_color,
+                fault_lw,
+                fault_ls,
+                fault_alpha,
+                fault_label_fontsize,
+            )
 
         if annotations_crossline:
             _add_annotations(ax[key], annotations_crossline)
@@ -1505,23 +1729,36 @@ def plot_inversion_result_3d(
     im_rmse = None
     if "rmse_map" in ax and _show_rmse and station_rmse is not None:
         im_rmse = _draw_rmse_scatter(
-            ax["rmse_map"], station_xy, station_rmse,
-            rmse_cmap, rmse_vmax, rmse_marker, rmse_marker_size,
-            rmse_threshold, title_rmse_map,
-            xlabel_ew, ylabel_ns, aspect=map_aspect,
+            ax["rmse_map"],
+            station_xy,
+            station_rmse,
+            rmse_cmap,
+            rmse_vmax,
+            rmse_marker,
+            rmse_marker_size,
+            rmse_threshold,
+            title_rmse_map,
+            xlabel_ew,
+            ylabel_ns,
+            aspect=map_aspect,
         )
         if show_section_lines:
             _overlay_cut_lines(
-                ax["rmse_map"], x_coords, y_coords,
-                inline_idx, crossline_idx,
+                ax["rmse_map"],
+                x_coords,
+                y_coords,
+                inline_idx,
+                crossline_idx,
                 color="#444444",
             )
 
     # ── convergence panel ─────────────────────────────────────────────────────
     if "convergence" in ax and _show_conv:
         _render_convergence(
-            ax["convergence"], convergence_epochs,
-            train_loss, val_loss,
+            ax["convergence"],
+            convergence_epochs,
+            train_loss,
+            val_loss,
             convergence_log_scale,
             convergence_target,
             convergence_target_color,
@@ -1535,29 +1772,55 @@ def plot_inversion_result_3d(
     if not using_external:
         # resistivity: shared across all non-misfit panels
         if im_res is not None:
-            res_ax_list = [ax[k] for k in
-                           ("map_true", "map_pred", "inline_true",
-                            "inline_pred", "crossline_pred")
-                           if k in ax]
+            res_ax_list = [
+                ax[k]
+                for k in (
+                    "map_true",
+                    "map_pred",
+                    "inline_true",
+                    "inline_pred",
+                    "crossline_pred",
+                )
+                if k in ax
+            ]
             if res_ax_list:
-                cb_r = fig.colorbar(im_res, ax=res_ax_list,
-                                    shrink=0.80, pad=0.02, fraction=0.015)
+                cb_r = fig.colorbar(
+                    im_res,
+                    ax=res_ax_list,
+                    shrink=0.80,
+                    pad=0.02,
+                    fraction=0.015,
+                )
                 cb_r.set_label(colorbar_label, fontsize=8)
                 cb_r.ax.tick_params(labelsize=7)
 
         # misfit colorbar
         if "map_misfit" in ax and misfit_3d is not None:
-            im_mf = ax["map_misfit"].collections[0] if ax["map_misfit"].collections else None
+            im_mf = (
+                ax["map_misfit"].collections[0]
+                if ax["map_misfit"].collections
+                else None
+            )
             if im_mf is not None:
-                cb_m = fig.colorbar(im_mf, ax=ax["map_misfit"],
-                                    shrink=0.88, pad=0.02, fraction=0.044)
+                cb_m = fig.colorbar(
+                    im_mf,
+                    ax=ax["map_misfit"],
+                    shrink=0.88,
+                    pad=0.02,
+                    fraction=0.044,
+                )
                 cb_m.set_label(misfit_colorbar_label, fontsize=8)
                 cb_m.ax.tick_params(labelsize=7)
 
         # RMSE colourbar
         if im_rmse is not None and "rmse_map" in ax:
-            cb_rr = fig.colorbar(im_rmse, ax=ax["rmse_map"],
-                                 shrink=0.88, pad=0.02, fraction=0.044)
+            cb_rr = fig.colorbar(
+                im_rmse,
+                ax=ax["rmse_map"],
+                shrink=0.88,
+                pad=0.02,
+                fraction=0.044,
+            )
             cb_rr.set_label(rmse_colorbar_label, fontsize=8)
             cb_rr.ax.tick_params(labelsize=7)
 

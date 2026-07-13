@@ -73,8 +73,9 @@ class OffsetResponse(PyCSAMTObject):
             dynamic_range_db=self.dynamic_range_db,
             offsets_m=list(self.offsets_m),
             amplitudes=list(self.amplitudes),
-            phases_deg=(list(self.phases_deg)
-                        if self.phases_deg is not None else None),
+            phases_deg=(
+                list(self.phases_deg) if self.phases_deg is not None else None
+            ),
             above_noise=list(self.above_noise),
         )
 
@@ -188,7 +189,8 @@ def csem_edge_report(
 ) -> dict[str, Any]:
     """Run the CSEM offset-domain diagnostics for one frequency."""
     response = field_vs_offset(
-        offsets_m, amplitudes,
+        offsets_m,
+        amplitudes,
         phases_deg=phases_deg,
         noise_floor=noise_floor,
         frequency_hz=frequency_hz,
@@ -207,21 +209,22 @@ def csem_edge_table(
     the label is typically a frequency or receiver-line identifier.
     """
     items = (
-        list(reports.items()) if isinstance(reports, dict)
-        else list(reports)
+        list(reports.items()) if isinstance(reports, dict) else list(reports)
     )
     rows: list[dict[str, Any]] = []
     for label, report in items:
         resp = report.get("offset_response", {})
-        rows.append(dict(
-            label=str(label),
-            frequency_hz=resp.get("frequency_hz"),
-            n_offsets=resp.get("n_offsets"),
-            n_detectable=resp.get("n_detectable"),
-            max_detectable_offset_m=resp.get("max_detectable_offset_m"),
-            monotonic_decay=resp.get("monotonic_decay"),
-            dynamic_range_db=resp.get("dynamic_range_db"),
-        ))
+        rows.append(
+            dict(
+                label=str(label),
+                frequency_hz=resp.get("frequency_hz"),
+                n_offsets=resp.get("n_offsets"),
+                n_detectable=resp.get("n_detectable"),
+                max_detectable_offset_m=resp.get("max_detectable_offset_m"),
+                monotonic_decay=resp.get("monotonic_decay"),
+                dynamic_range_db=resp.get("dynamic_range_db"),
+            )
+        )
     df = pd.DataFrame.from_records(rows)
     return maybe_wrap_frame(
         df,

@@ -42,22 +42,22 @@ from PySide6.QtWidgets import (
 
 # ── colour constants ──────────────────────────────────────────────────────────
 
-_LLM_COLOR  = "#f0a500"   # amber  — LLM agents
-_PROC_COLOR = "#00c896"   # teal   — fast processing agents
+_LLM_COLOR = "#f0a500"  # amber  — LLM agents
+_PROC_COLOR = "#00c896"  # teal   — fast processing agents
 
 # Short label displayed inside each category tab
 _CAT_ABBREV: dict[str, str] = {
-    "Data Loading":               "Load",
-    "Quality Control":            "QC",
-    "Pre-processing":             "Pre-proc",
-    "Phase & Dimensionality":     "Dimension",
-    "Forward Modelling":          "Forward",
-    "Inversion":                  "Inversion",
-    "AI Inversion":               "AI Inv",
-    "Post-processing":            "Post",
+    "Data Loading": "Load",
+    "Quality Control": "QC",
+    "Pre-processing": "Pre-proc",
+    "Phase & Dimensionality": "Dimension",
+    "Forward Modelling": "Forward",
+    "Inversion": "Inversion",
+    "AI Inversion": "AI Inv",
+    "Post-processing": "Post",
     "Interpretation & Reporting": "Interp",
-    "Workflow":                   "Workflow",
-    "⚡ Processing":               "⚡ Fast",
+    "Workflow": "Workflow",
+    "⚡ Processing": "⚡ Fast",
 }
 
 # ── Card stylesheet (light + dark safe, uses relative colours) ────────────────
@@ -136,6 +136,7 @@ QLabel#ProcBadge {
 # _AgentCard
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class _AgentCard(QFrame):
     """
     Single-row agent card.
@@ -154,7 +155,7 @@ class _AgentCard(QFrame):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._name   = name
+        self._name = name
         self._is_llm = is_llm
         self.setObjectName("AgentCard")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -175,7 +176,9 @@ class _AgentCard(QFrame):
         bar = QFrame()
         bar.setFixedWidth(4)
         color = _LLM_COLOR if is_llm else _PROC_COLOR
-        bar.setStyleSheet(f"background: {color}; border: none; border-radius: 0px;")
+        bar.setStyleSheet(
+            f"background: {color}; border: none; border-radius: 0px;"
+        )
         row.addWidget(bar)
 
         # Content area
@@ -200,7 +203,7 @@ class _AgentCard(QFrame):
         desc_lbl = QLabel()
         desc_lbl.setObjectName("CardDesc")
         # Elide eagerly — 220 px is safe for a 300-px panel
-        fm     = desc_lbl.fontMetrics()
+        fm = desc_lbl.fontMetrics()
         elided = fm.elidedText(desc, Qt.TextElideMode.ElideRight, 220)
         desc_lbl.setText(elided)
         desc_lbl.setToolTip(desc)
@@ -219,6 +222,7 @@ class _AgentCard(QFrame):
 # AgentBrowserWidget
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class AgentBrowserWidget(QWidget):
     """
     Search bar + category tab bar + scrollable agent card list.
@@ -229,14 +233,14 @@ class AgentBrowserWidget(QWidget):
     agent_activated(str)  — fired on double-click (caller may auto-run)
     """
 
-    agent_selected  = Signal(str)
+    agent_selected = Signal(str)
     agent_activated = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._cat_names:  list[str]              = []
+        self._cat_names: list[str] = []
         self._all_agents: dict[str, list[tuple]] = {}
-        self._current_agent: str                 = ""
+        self._current_agent: str = ""
         self._build_ui()
         self._populate()
         self.setStyleSheet(_BROWSER_QSS)
@@ -293,11 +297,12 @@ class AgentBrowserWidget(QWidget):
 
         for cat, names in agents_by_category().items():
             entries = [(n, AGENT_REGISTRY[n]) for n in names]
-            cat_map[cat]    = entries
+            cat_map[cat] = entries
             cat_map["All"].extend(entries)
 
         proc = [
-            (n, e) for n, e in AGENT_REGISTRY.items()
+            (n, e)
+            for n, e in AGENT_REGISTRY.items()
             if e.get("type") == "processing"
         ]
         if proc:
@@ -305,7 +310,7 @@ class AgentBrowserWidget(QWidget):
             cat_map["All"].extend(proc)
 
         self._all_agents = cat_map
-        self._cat_names  = list(cat_map.keys())
+        self._cat_names = list(cat_map.keys())
 
         # Add tabs
         for cat in self._cat_names:
@@ -327,7 +332,7 @@ class AgentBrowserWidget(QWidget):
         self._card_list.clear()
 
         entries = self._all_agents.get(cat, [])
-        search  = search.strip().lower()
+        search = search.strip().lower()
 
         for name, entry in entries:
             if search and (
@@ -337,11 +342,11 @@ class AgentBrowserWidget(QWidget):
                 continue
 
             is_llm = entry.get("type") == "llm"
-            desc   = entry.get("description", "")
-            card   = _AgentCard(name, desc, is_llm)
+            desc = entry.get("description", "")
+            card = _AgentCard(name, desc, is_llm)
 
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 56))   # height enforced; width flexible
+            item.setSizeHint(QSize(0, 56))  # height enforced; width flexible
             item.setData(Qt.ItemDataRole.UserRole, name)
             item.setToolTip(desc)
 
@@ -365,8 +370,11 @@ class AgentBrowserWidget(QWidget):
             self._cat_bar.blockSignals(True)
             self._cat_bar.setCurrentIndex(0)
             self._cat_bar.blockSignals(False)
-        cat = self._cat_names[self._cat_bar.currentIndex()] \
-              if self._cat_names else "All"
+        cat = (
+            self._cat_names[self._cat_bar.currentIndex()]
+            if self._cat_names
+            else "All"
+        )
         self._refresh_cards(cat, text)
 
     def _on_row_changed(self, row: int) -> None:
@@ -400,7 +408,7 @@ class AgentBrowserWidget(QWidget):
 
         # Agent not visible in current tab — switch to All and retry
         if self._cat_bar.currentIndex() != 0:
-            self._cat_bar.setCurrentIndex(0)   # triggers _refresh_cards
+            self._cat_bar.setCurrentIndex(0)  # triggers _refresh_cards
             self.select_agent(name)
 
     def apply_theme(self, dark: bool) -> None:

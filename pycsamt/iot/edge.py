@@ -55,7 +55,7 @@ def _finite_rms(values: np.ndarray) -> float:
     finite = finite[np.isfinite(finite)]
     if finite.size == 0:
         return float("nan")
-    return float(np.sqrt(np.mean(finite ** 2)))
+    return float(np.sqrt(np.mean(finite**2)))
 
 
 def _finite_stat(values: np.ndarray, fn: str) -> float:
@@ -143,8 +143,7 @@ class EdgeProcessingConfig(PyCSAMTObject):
         self.sample_axis = int(self.sample_axis)
         if self.channel_names is not None:
             self.channel_names = [
-                str(name).strip().lower()
-                for name in self.channel_names
+                str(name).strip().lower() for name in self.channel_names
             ]
             if any(not name for name in self.channel_names):
                 raise ValueError("channel_names cannot contain empty labels.")
@@ -263,7 +262,8 @@ class EdgeProcessingResult(PyCSAMTObject):
         self.accepted = bool(self.accepted)
         self.reasons = [str(reason) for reason in list(self.reasons or [])]
         self.channels = [
-            ch if isinstance(ch, EdgeChannelSummary)
+            ch
+            if isinstance(ch, EdgeChannelSummary)
             else EdgeChannelSummary(**dict(ch))
             for ch in list(self.channels or [])
         ]
@@ -367,10 +367,14 @@ class EdgeProcessor(PyCSAMTObject):
         if self.config.compute_rms:
             metrics["rms"] = _finite_rms(reduced)
         accepted = len(reasons) == 0
-        warnings = self._warning_reasons(
-            finite_coverage=coverage,
-            max_spike_fraction=max_spike,
-        ) if accepted else []
+        warnings = (
+            self._warning_reasons(
+                finite_coverage=coverage,
+                max_spike_fraction=max_spike,
+            )
+            if accepted
+            else []
+        )
         if accepted and warnings:
             decision = EdgeDecision.WARNING
         elif accepted:
@@ -424,7 +428,9 @@ class EdgeProcessor(PyCSAMTObject):
         sample_axis: int,
         channel_names: Iterable[str] | None,
     ) -> list[EdgeChannelSummary]:
-        sample_first = np.moveaxis(np.asarray(data, dtype=float), sample_axis, 0)
+        sample_first = np.moveaxis(
+            np.asarray(data, dtype=float), sample_axis, 0
+        )
         if sample_first.ndim == 1:
             matrix = sample_first.reshape(sample_first.shape[0], 1)
         else:
@@ -443,7 +449,8 @@ class EdgeProcessor(PyCSAMTObject):
                     values,
                     threshold=self.config.spike_threshold,
                 )
-                if self.config.compute_spikes else 0.0
+                if self.config.compute_spikes
+                else 0.0
             )
             reasons: list[str] = []
             if self.config.compute_coverage and (
@@ -499,8 +506,7 @@ def edge_summary_table(
 ) -> Any:
     """Return one row per channel from edge-processing results."""
     results = (
-        [result] if isinstance(result, EdgeProcessingResult)
-        else list(result)
+        [result] if isinstance(result, EdgeProcessingResult) else list(result)
     )
     rows: list[Mapping[str, Any]] = []
     for idx, item in enumerate(results):

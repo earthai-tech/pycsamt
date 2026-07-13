@@ -57,6 +57,7 @@ __all__ = ["StratagemRawReader", "EDIBatch"]
 # helpers
 # ---------------------------------------------------------------------------
 
+
 def _station_number(stem: str) -> int:
     """Extract the trailing numeric suffix from a file stem (e.g. 'X2HX.001' → 1)."""
     m = re.search(r"(\d+)$", stem)
@@ -170,6 +171,7 @@ def _build_masks(
 # ---------------------------------------------------------------------------
 # StratagemRawReader
 # ---------------------------------------------------------------------------
+
 
 class StratagemRawReader(PyCSAMTObject):
     """Parse raw Stratagem hardware files (19-column ASCII) for QC diagnostics.
@@ -308,7 +310,9 @@ class StratagemRawReader(PyCSAMTObject):
                     d.glob(f"{comp}*.*"),
                     key=lambda p: _station_number(p.name),
                 )
-                comp_files = [f for f in comp_files if _station_number(f.name) > 0]
+                comp_files = [
+                    f for f in comp_files if _station_number(f.name) > 0
+                ]
                 if comp_files:
                     _, cm, cs = _build_masks(comp_files)
                     self.component_masks_[comp] = (cm, cs)
@@ -415,19 +419,23 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         usable = self.snr_mask_.sum(axis=1)
-        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
+        valid_stacks = np.where(
+            self.stack_counts_ > 0, self.stack_counts_, np.nan
+        )
         with np.errstate(all="ignore"):
             med_stacks = np.nanmedian(valid_stacks, axis=1)
 
-        return pd.DataFrame({
-            "station":        self.stations_,
-            "station_number": self.station_numbers_.tolist(),
-            "total_freqs":    self.n_freqs_,
-            "usable_freqs":   usable.tolist(),
-            "coverage":       (usable / max(1, self.n_freqs_)).tolist(),
-            "max_stacks":     self.stack_counts_.max(axis=1).tolist(),
-            "med_stacks":     med_stacks.tolist(),
-        })
+        return pd.DataFrame(
+            {
+                "station": self.stations_,
+                "station_number": self.station_numbers_.tolist(),
+                "total_freqs": self.n_freqs_,
+                "usable_freqs": usable.tolist(),
+                "coverage": (usable / max(1, self.n_freqs_)).tolist(),
+                "max_stacks": self.stack_counts_.max(axis=1).tolist(),
+                "med_stacks": med_stacks.tolist(),
+            }
+        )
 
     # ------------------------------------------------------------------
     def freq_frame(self) -> pd.DataFrame:
@@ -447,16 +455,20 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         stations_ok = self.snr_mask_.sum(axis=0)
-        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
+        valid_stacks = np.where(
+            self.stack_counts_ > 0, self.stack_counts_, np.nan
+        )
         with np.errstate(all="ignore"):
             med_stacks = np.nanmedian(valid_stacks, axis=0)
 
-        return pd.DataFrame({
-            "freq_hz":     self.freqs_.tolist(),
-            "stations_ok": stations_ok.tolist(),
-            "frac_ok":     (stations_ok / max(1, self.n_stations_)).tolist(),
-            "med_stacks":  med_stacks.tolist(),
-        })
+        return pd.DataFrame(
+            {
+                "freq_hz": self.freqs_.tolist(),
+                "stations_ok": stations_ok.tolist(),
+                "frac_ok": (stations_ok / max(1, self.n_stations_)).tolist(),
+                "med_stacks": med_stacks.tolist(),
+            }
+        )
 
     # ------------------------------------------------------------------
     def stack_audit(self) -> pd.DataFrame:
@@ -517,7 +529,11 @@ class StratagemRawReader(PyCSAMTObject):
 
         import matplotlib.pyplot as plt  # noqa: PLC0415 – optional dep
 
-        data = self.snr_mask_.astype(float) if kind == "snr" else self.stack_counts_
+        data = (
+            self.snr_mask_.astype(float)
+            if kind == "snr"
+            else self.stack_counts_
+        )
 
         fig, ax = plt.subplots(figsize=figsize or (12, 5))
 
@@ -536,9 +552,14 @@ class StratagemRawReader(PyCSAMTObject):
         )
         fig.colorbar(im, ax=ax, label="Valid" if kind == "snr" else "Stacks")
 
-        ax.set_xlabel("log₁₀ Frequency (Hz)" if log_freq else "Frequency (Hz)")
+        ax.set_xlabel(
+            "log₁₀ Frequency (Hz)" if log_freq else "Frequency (Hz)"
+        )
         ax.set_ylabel("Station index")
-        ax.set_title(title or f"Hardware coverage ({self.n_stations_} stations, {self.n_freqs_} freqs)")
+        ax.set_title(
+            title
+            or f"Hardware coverage ({self.n_stations_} stations, {self.n_freqs_} freqs)"
+        )
 
         fig.tight_layout()
         return fig
@@ -547,6 +568,7 @@ class StratagemRawReader(PyCSAMTObject):
 # ---------------------------------------------------------------------------
 # EDIBatch
 # ---------------------------------------------------------------------------
+
 
 class EDIBatch(PyCSAMTObject):
     """Load a directory of WinGLink-exported EDI files as :class:`EDIFile` objects.
@@ -643,9 +665,7 @@ class EDIBatch(PyCSAMTObject):
         self.n_stations_ = len(self.edi_objects_)
 
         if self.verbose:
-            msg = (
-                f"[EDIBatch] loaded {self.n_stations_} EDI files from {d.name}"
-            )
+            msg = f"[EDIBatch] loaded {self.n_stations_} EDI files from {d.name}"
             if skipped:
                 msg += f" ({skipped} skipped)"
             print(msg)

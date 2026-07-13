@@ -419,4 +419,3 @@ Related API
 See :class:`pycsamt.agents.WorkflowOrchestratorAgent`,
 :class:`pycsamt.agents.AgentCoordinator`, :class:`pycsamt.agents.AgentResult`,
 and :mod:`pycsamt.agents.orchestrator`.
-:html_theme.sidebar_secondary.remove:

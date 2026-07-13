@@ -22,12 +22,12 @@ __all__ = [
 class Mare2DEMFileType(Enum):
     """Enumeration of recognized MARE2DEM file types."""
 
-    EMDATA = auto()       # .emdata              — observed data
+    EMDATA = auto()  # .emdata              — observed data
     RESISTIVITY = auto()  # .resistivity          — mesh + model
-    POLY = auto()         # .poly                 — Triangle polygon mesh
-    SETTINGS = auto()     # .settings             — inversion settings
-    LOG = auto()          # .log / .logfile       — run log
-    RESPONSE = auto()     # *.resp / *_MARE2DEM.emdata — predicted data
+    POLY = auto()  # .poly                 — Triangle polygon mesh
+    SETTINGS = auto()  # .settings             — inversion settings
+    LOG = auto()  # .log / .logfile       — run log
+    RESPONSE = auto()  # *.resp / *_MARE2DEM.emdata — predicted data
     SENSITIVITY = auto()  # .sensitivity          — sensitivity file
     UNKNOWN = auto()
 

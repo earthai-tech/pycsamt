@@ -48,11 +48,15 @@ from pycsamt.iot import (
     estimate_frequency_coverage,
     export_reproducibility_bundle,
 )
+
 # Okabe-Ito, a colour-blind-safe categorical palette. Magnetic channels get
 # cool hues, electric channels warm ones, assigned in a fixed order.
 CH_COLORS = {
-    "hx": "#0072B2", "hy": "#56B4E9", "hz": "#009E73",
-    "ex": "#D55E00", "ey": "#E69F00",
+    "hx": "#0072B2",
+    "hy": "#56B4E9",
+    "hz": "#009E73",
+    "ex": "#D55E00",
+    "ey": "#E69F00",
 }
 STATUS = {"ok": "#009E73", "warn": "#E69F00", "bad": "#D55E00"}
 
@@ -95,22 +99,26 @@ for channel in channels:
     dropout = detect_sensor_dropout(signal, min_flat_run=20)
     coverage = 1.0 - dropout["nan_fraction"]
     band = estimate_frequency_coverage(signal, sample_rate)
-    rows.append({
-        "channel": channel,
-        "coverage_%": 100.0 * coverage,
-        "n_nan": dropout["n_nan"],
-        "longest_flat_run": dropout["longest_flat_run"],
-        "snr_db": estimate_channel_snr(signal, sample_rate),
-        "f_low_mHz": 1e3 * band.f_low_hz,
-        "f_high_mHz": 1e3 * band.f_high_hz,
-    })
+    rows.append(
+        {
+            "channel": channel,
+            "coverage_%": 100.0 * coverage,
+            "n_nan": dropout["n_nan"],
+            "longest_flat_run": dropout["longest_flat_run"],
+            "snr_db": estimate_channel_snr(signal, sample_rate),
+            "f_low_mHz": 1e3 * band.f_low_hz,
+            "f_high_mHz": 1e3 * band.f_high_hz,
+        }
+    )
 
 try:
     import pandas as pd
 
-    print(pd.DataFrame(rows).to_string(
-        index=False, float_format=lambda v: f"{v:.3f}"
-    ))
+    print(
+        pd.DataFrame(rows).to_string(
+            index=False, float_format=lambda v: f"{v:.3f}"
+        )
+    )
 except Exception:  # pragma: no cover - pandas always present in docs
     for row in rows:
         print(row)
@@ -145,10 +153,18 @@ for channel in channels:
     spec = compute_live_spectra(data[channel], sample_rate)
     freqs, psd = spec["frequency_hz"], spec["psd"]
     keep = freqs > 0
-    ax.loglog(freqs[keep], psd[keep] + 1e-30, lw=1.4,
-              color=CH_COLORS[channel], label=channel.upper())
-ax.set(xlabel="frequency (Hz)", ylabel="PSD",
-       title=f"Field-channel power spectra - {record.station}")
+    ax.loglog(
+        freqs[keep],
+        psd[keep] + 1e-30,
+        lw=1.4,
+        color=CH_COLORS[channel],
+        label=channel.upper(),
+    )
+ax.set(
+    xlabel="frequency (Hz)",
+    ylabel="PSD",
+    title=f"Field-channel power spectra - {record.station}",
+)
 ax.legend(title="channel", ncol=5, frameon=False, loc="upper right")
 style_axis(ax)
 ax.grid(True, which="both", color="#000000", alpha=0.06, lw=0.6)
@@ -166,22 +182,26 @@ processor = EdgeProcessor(
     EdgeProcessingConfig(finite_threshold=0.9, warn_finite_threshold=0.999)
 )
 result = processor.process(block, channel_names=channels)
-print(f"edge decision: {result.decision.value}  "
-      f"(coverage={result.metrics['finite_coverage']:.4f}, "
-      f"warnings={result.metrics.get('warnings', 'none')})")
+print(
+    f"edge decision: {result.decision.value}  "
+    f"(coverage={result.metrics['finite_coverage']:.4f}, "
+    f"warnings={result.metrics.get('warnings', 'none')})"
+)
 
 device = DeviceConfig(
-    "kap103-recorder", station=record.station,
-    channels=channels, sample_rate_hz=sample_rate,
+    "kap103-recorder",
+    station=record.station,
+    channels=channels,
+    sample_rate_hz=sample_rate,
 )
-session = FieldSession(
-    "KAP103-LP-MT", devices=[device], method="mt"
-)
+session = FieldSession("KAP103-LP-MT", devices=[device], method="mt")
 session.add_packet(result.to_packet(device, timestamp=1_720_000_000.0))
 status = session.assess()
-print(f"session assess: level={status.level.value}  "
-      f"packets={status.n_packet}  "
-      f"edge_acceptance_rate={status.edge_acceptance_rate:.2f}")
+print(
+    f"session assess: level={status.level.value}  "
+    f"packets={status.n_packet}  "
+    f"edge_acceptance_rate={status.edge_acceptance_rate:.2f}"
+)
 
 # %%
 # Coverage is shared across channels (whole-sample gaps), but SNR is not:
@@ -206,14 +226,28 @@ def snr_color(value: float) -> str:
 
 ax.bar(labels, snr, color=[snr_color(v) for v in snr], width=0.62)
 for i, value in enumerate(snr):
-    ax.text(i, value + 0.8, f"{value:.0f} dB", ha="center", va="bottom",
-            fontsize=9, color="#444444")
-ax.set(ylabel="SNR (dB)", ylim=(0, snr.max() * 1.18),
-       title=f"Edge SNR by channel - {record.station}")
-ax.legend(handles=[
-    Patch(color=STATUS["ok"], label="good (>=30 dB)"),
-    Patch(color=STATUS["warn"], label="marginal (15-30 dB)"),
-], frameon=False, loc="upper right")
+    ax.text(
+        i,
+        value + 0.8,
+        f"{value:.0f} dB",
+        ha="center",
+        va="bottom",
+        fontsize=9,
+        color="#444444",
+    )
+ax.set(
+    ylabel="SNR (dB)",
+    ylim=(0, snr.max() * 1.18),
+    title=f"Edge SNR by channel - {record.station}",
+)
+ax.legend(
+    handles=[
+        Patch(color=STATUS["ok"], label="good (>=30 dB)"),
+        Patch(color=STATUS["warn"], label="marginal (15-30 dB)"),
+    ],
+    frameon=False,
+    loc="upper right",
+)
 style_axis(ax)
 
 # %%
@@ -230,9 +264,7 @@ provenance = ProvenanceRecord(
     lon=record.lon,
     field_notes="Bundled SAMTEX/LiMS long-period MT test series.",
 )
-file_record = (
-    provenance.add_raw_file(str(ts_path)) if ts_is_real else None
-)
+file_record = provenance.add_raw_file(str(ts_path)) if ts_is_real else None
 manifest = build_acquisition_manifest(
     "KAP103-LP-MT", records=[provenance], method="mt"
 )
@@ -240,12 +272,18 @@ bundle = export_reproducibility_bundle(
     manifest, str(Path(tempfile.gettempdir()) / "kap103_repro")
 )
 if file_record is not None:
-    print(f"hashed {file_record['name']} "
-          f"({file_record['bytes']:,} bytes) -> {file_record['digest'][:16]}...")
+    print(
+        f"hashed {file_record['name']} "
+        f"({file_record['bytes']:,} bytes) -> {file_record['digest'][:16]}..."
+    )
 else:
-    print("raw TS file not bundled — provenance hash skipped (synthetic sample).")
+    print(
+        "raw TS file not bundled — provenance hash skipped (synthetic sample)."
+    )
 print(f"manifest content hash: {manifest.as_dict()['content_hash'][:16]}...")
-print(f"bundle: {Path(bundle['manifest']).name} "
-      f"+ {len(bundle['audits'])} station audit(s)")
+print(
+    f"bundle: {Path(bundle['manifest']).name} "
+    f"+ {len(bundle['audits'])} station audit(s)"
+)
 
 plt.show()

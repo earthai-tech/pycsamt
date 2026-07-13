@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.skew"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -22,16 +23,17 @@ from pycsamt.emtools.skew import (
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     def __init__(self, station, z, freq):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
 
     def get_section(self, *_, **__):
@@ -46,7 +48,7 @@ def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """Purely 2-D isotropic Z (zero diagonal → low skew)."""
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -55,7 +57,7 @@ def _3d_z(freqs: np.ndarray, skew_frac: float = 0.6) -> np.ndarray:
     """Z with non-zero diagonal → high Bahr skew."""
     z = _iso_z(freqs)
     amp = np.abs(z[:, 0, 1])
-    z[:, 0, 0] =  skew_frac * amp * (0.6 + 0.8j)
+    z[:, 0, 0] = skew_frac * amp * (0.6 + 0.8j)
     z[:, 1, 1] = -skew_frac * amp * (0.5 + 0.7j)
     return z
 
@@ -68,8 +70,8 @@ def _site(station: str, z: np.ndarray, freqs: np.ndarray) -> _FakeSite:
 # bahr_skewness
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestBahrSkewness:
 
+class TestBahrSkewness:
     def test_shape(self):
         fr = _freqs(10)
         z = _iso_z(fr)
@@ -107,13 +109,17 @@ class TestBahrSkewness:
 # skew_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSkewTable:
 
+class TestSkewTable:
     def _sites(self, n_sites=3):
-        return [_site(f"S{i:02d}", _iso_z(_freqs()), _freqs()) for i in range(n_sites)]
+        return [
+            _site(f"S{i:02d}", _iso_z(_freqs()), _freqs())
+            for i in range(n_sites)
+        ]
 
     def test_returns_dataframe(self):
         import pandas as pd
+
         df = skew_table(self._sites())
         assert isinstance(df, pd.DataFrame)
 
@@ -124,13 +130,16 @@ class TestSkewTable:
 
     def test_row_count(self):
         n_sites, n_freq = 3, 12
-        sites = [_site(f"S{i:02d}", _iso_z(_freqs(n_freq)), _freqs(n_freq))
-                 for i in range(n_sites)]
+        sites = [
+            _site(f"S{i:02d}", _iso_z(_freqs(n_freq)), _freqs(n_freq))
+            for i in range(n_sites)
+        ]
         df = skew_table(sites)
         assert len(df) == n_sites * n_freq
 
     def test_empty_input_returns_empty(self):
         import pandas as pd
+
         df = skew_table([])
         assert isinstance(df, pd.DataFrame)
         assert df.empty
@@ -144,14 +153,15 @@ class TestSkewTable:
 # mask_by_skew
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestMaskBySkew:
 
+class TestMaskBySkew:
     def _iso_sites(self, n=3):
         fr = _freqs()
         return [_site(f"S{i:02d}", _iso_z(fr), fr) for i in range(n)]
 
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         result = mask_by_skew(self._iso_sites())
         assert isinstance(result, Sites)
 
@@ -172,17 +182,18 @@ class TestMaskBySkew:
         fr = _freqs(6)
         sites = [_site("S00", _3d_z(fr, skew_frac=0.5), fr)]
         result = mask_by_skew(sites, thresh=0.0)
-        assert isinstance(result, object)   # just doesn't raise
+        assert isinstance(result, object)  # just doesn't raise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # keep_longest_low_skew
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestKeepLongestLowSkew:
 
+class TestKeepLongestLowSkew:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         fr = _freqs(14)
         sites = [_site("S00", _iso_z(fr), fr)]
         result = keep_longest_low_skew(sites, thresh=0.3)
@@ -199,10 +210,11 @@ class TestKeepLongestLowSkew:
 # close_skew_gaps
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestCloseSkewGaps:
 
+class TestCloseSkewGaps:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         fr = _freqs()
         sites = [_site("S00", _iso_z(fr), fr)]
         result = close_skew_gaps(sites)
@@ -213,10 +225,11 @@ class TestCloseSkewGaps:
 # select_low_skew_band
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSelectLowSkewBand:
 
+class TestSelectLowSkewBand:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         fr = _freqs(14)
         sites = [_site(f"S{i}", _iso_z(fr), fr) for i in range(4)]
         result = select_low_skew_band(sites, thresh=6.0)
@@ -233,8 +246,8 @@ class TestSelectLowSkewBand:
 # plot_skewness
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotSkewness:
 
+class TestPlotSkewness:
     def test_returns_axes(self):
         fr = _freqs(10)
         z = _3d_z(fr)

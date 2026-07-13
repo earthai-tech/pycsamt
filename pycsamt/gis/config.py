@@ -55,8 +55,7 @@ if not _HAS_GDAL:
         import pyproj  # noqa: F401
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
-            "Either GDAL or pyproj must be installed for GIS "
-            "features."
+            "Either GDAL or pyproj must be installed for GIS features."
         ) from exc
 
 
@@ -68,9 +67,7 @@ try:
 
     # pyproj 3+ uses proj.db; older releases may ship 'epsg'
     data_dir = getattr(pyproj, "pyproj_datadir", None)
-    epsg_path = (
-        os.path.join(data_dir, "epsg") if data_dir else None
-    )
+    epsg_path = os.path.join(data_dir, "epsg") if data_dir else None
 
     if epsg_path and os.path.isfile(epsg_path):
         with open(epsg_path, encoding="utf-8") as f:
@@ -127,33 +124,34 @@ class GisError(Exception):
     Base exception for GIS utilities.
     """
 
+
 # Create a configuration class for elevation APIs
 class ElevationAPIConfig:
     """Configuration for elevation API services."""
 
     # Available elevation API endpoints
     APIS = {
-        'open_meteo': {
-            'url': 'https://api.open-meteo.com/v1/elevation',
-            'params_format': 'comma_separated',
-            'response_key': 'elevation'
+        "open_meteo": {
+            "url": "https://api.open-meteo.com/v1/elevation",
+            "params_format": "comma_separated",
+            "response_key": "elevation",
         },
-        'open_topo_data': {
-            'url': 'https://api.opentopodata.org/v1/elevation',
-            'params_format': 'pipe_separated',
-            'response_key': 'results.elevation'
+        "open_topo_data": {
+            "url": "https://api.opentopodata.org/v1/elevation",
+            "params_format": "pipe_separated",
+            "response_key": "results.elevation",
         },
-        'usgs_ned': {
-            'url': 'https://nationalmap.gov/epqs/pqs.php',
-            'params_format': 'individual',
-            'response_key': (
-                'USGS_Elevation_Point_Query_Service.Elevation_Query'
-            )
-        }
+        "usgs_ned": {
+            "url": "https://nationalmap.gov/epqs/pqs.php",
+            "params_format": "individual",
+            "response_key": (
+                "USGS_Elevation_Point_Query_Service.Elevation_Query"
+            ),
+        },
     }
 
     # Default API to use
-    DEFAULT_API = 'open_meteo'
+    DEFAULT_API = "open_meteo"
 
     @classmethod
     def get_api_config(cls, api_name=None):

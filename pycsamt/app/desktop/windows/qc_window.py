@@ -70,7 +70,9 @@ class QCDashboardWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_cat.addWidget(self._combo_category)
         layout.addWidget(grp_cat)
 
@@ -93,10 +95,12 @@ class QCDashboardWindow(PanelWindow):
 
         # ── Actions ───────────────────────────────────────────────────
         grp_act, lay_act = make_group("Actions")
-        self._btn_run    = icon_button("↻  Run / Refresh", "qc",
-                                       "Render the selected QC plot")
-        self._btn_export = icon_button("⬆  Export…", "export",
-                                       "Save figure to file")
+        self._btn_run = icon_button(
+            "↻  Run / Refresh", "qc", "Render the selected QC plot"
+        )
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Save figure to file"
+        )
         self._btn_run.clicked.connect(self._on_run)
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_run)
@@ -148,7 +152,7 @@ class QCDashboardWindow(PanelWindow):
         self._update_desc(self._combo_category.currentIndex(), row)
 
     def _on_run(self) -> None:
-        cat_row  = self._combo_category.currentIndex()
+        cat_row = self._combo_category.currentIndex()
         plot_row = self._combo_plot.currentIndex()
         if cat_row < 0 or plot_row < 0:
             return
@@ -177,6 +181,7 @@ class QCDashboardWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── Helpers ───────────────────────────────────────────────────────

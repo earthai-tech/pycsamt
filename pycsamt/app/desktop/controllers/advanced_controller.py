@@ -9,6 +9,7 @@ Handles two special cases transparently:
   * Figure-creating functions (no ax= parameter) — captures the returned
     figure and transplants its axes into the target canvas figure.
 """
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
@@ -48,8 +49,7 @@ _EXTRA_ARGS_FUNS: dict[str, str] = {
         "Needs a station= pick — use the Profile Viewer's 'PT Strip' tab."
     ),
     "plot_phase_tensor_strip_grid": (
-        "Needs a profiles= grouping — use "
-        "Tools → Phase Tensor Strip Grid…"
+        "Needs a profiles= grouping — use Tools → Phase Tensor Strip Grid…"
     ),
 }
 
@@ -57,82 +57,86 @@ _EXTRA_ARGS_FUNS: dict[str, str] = {
 # Each entry: (display_label, fn_name, has_ax_param)
 
 STRIKE_PLOTS: list = [
-    ("Strike rose diagram",        "plot_strike_rose",             False),
-    ("Strike rose by profile line","plot_strike_rose_by_line",     False),
-    ("Strike analysis (full)",     "plot_strike_analysis",         False),
-    ("θ rose grid",                "plot_theta_rose_grid",         False),
-    ("θ vs period",                "plot_theta_vs_period",         True),
-    ("θ stability stripe",         "plot_theta_stability_stripe",  True),
-    ("Strike ribbon",              "plot_strike_ribbon",           True),
-    ("Strike mapsticks",           "plot_strike_mapsticks",        True),
-    ("Strike stability bands",     "plot_strike_stability_bands",  False),
+    ("Strike rose diagram", "plot_strike_rose", False),
+    ("Strike rose by profile line", "plot_strike_rose_by_line", False),
+    ("Strike analysis (full)", "plot_strike_analysis", False),
+    ("θ rose grid", "plot_theta_rose_grid", False),
+    ("θ vs period", "plot_theta_vs_period", True),
+    ("θ stability stripe", "plot_theta_stability_stripe", True),
+    ("Strike ribbon", "plot_strike_ribbon", True),
+    ("Strike mapsticks", "plot_strike_mapsticks", True),
+    ("Strike stability bands", "plot_strike_stability_bands", False),
 ]
 
 PHASE_TENSOR_PLOTS: list = [
-    ("Phase tensor pseudosection", "plot_phase_tensor_psection",   True),
-    ("Phase tensor map",           "plot_phase_tensor_map",        True),
-    ("Phase tensor ellipse strip", "plot_phase_tensor_strip",      True),
-    ("Phase tensor strip grid (by line)", "plot_phase_tensor_strip_grid", False),
-    ("Phase tensor rose",          "plot_phase_tensor_rose",       True),
-    ("Phase tensor summary",       "plot_phase_tensor_summary",    False),
-    ("Phasor wheel",               "plot_phasor_wheel",            True),
-    ("PT period clock",            "plot_pt_period_clock",         False),
-    ("PT skew density",            "plot_skew_ellipt_density",     True),
-    ("Dimensionality ternary",     "plot_dimensionality_ternary",  False),
+    ("Phase tensor pseudosection", "plot_phase_tensor_psection", True),
+    ("Phase tensor map", "plot_phase_tensor_map", True),
+    ("Phase tensor ellipse strip", "plot_phase_tensor_strip", True),
+    (
+        "Phase tensor strip grid (by line)",
+        "plot_phase_tensor_strip_grid",
+        False,
+    ),
+    ("Phase tensor rose", "plot_phase_tensor_rose", True),
+    ("Phase tensor summary", "plot_phase_tensor_summary", False),
+    ("Phasor wheel", "plot_phasor_wheel", True),
+    ("PT period clock", "plot_pt_period_clock", False),
+    ("PT skew density", "plot_skew_ellipt_density", True),
+    ("Dimensionality ternary", "plot_dimensionality_ternary", False),
 ]
 
 INDUCTION_PLOTS: list = [
-    ("Induction arrows",           "plot_induction_arrows",        True),
-    ("Induction map",              "plot_induction_map",           True),
-    ("Induction section",          "plot_induction_section",       True),
-    ("Induction rose",             "plot_induction_rose",          True),
-    ("Tipper polar",               "plot_tipper_polar",            True),
-    ("Tipper hodograms",           "plot_tipper_hodograms",        False),
-    ("Induction multiperiod map",  "plot_induction_multiperiod_map", False),
-    ("Induction convention",       "plot_induction_convention",    False),
+    ("Induction arrows", "plot_induction_arrows", True),
+    ("Induction map", "plot_induction_map", True),
+    ("Induction section", "plot_induction_section", True),
+    ("Induction rose", "plot_induction_rose", True),
+    ("Tipper polar", "plot_tipper_polar", True),
+    ("Tipper hodograms", "plot_tipper_hodograms", False),
+    ("Induction multiperiod map", "plot_induction_multiperiod_map", False),
+    ("Induction convention", "plot_induction_convention", False),
 ]
 
 IMPEDANCE_PLOTS: list = [
-    ("Mohr circles",               "plot_impedance_mohr_circles",  False),
-    ("Argand diagram",             "plot_zt_argand",               False),
-    ("Z invariants section",       "plot_z_invariants_section",    False),
-    ("ρₐ/φ Bode plot",            "plot_rho_phase_bode",          False),
-    ("ρₐ polar",                  "plot_apparent_resistivity_polar", False),
-    ("XY/YX crossover map",        "plot_xyyx_crossover_map",      True),
-    ("Off-diagonal antisym",       "plot_offdiag_antisym_residual", True),
-    ("Anisotropy section",         "plot_anisotropy",              True),
-    ("Ellipticity psection",       "plot_ellipticity_psection",    True),
+    ("Mohr circles", "plot_impedance_mohr_circles", False),
+    ("Argand diagram", "plot_zt_argand", False),
+    ("Z invariants section", "plot_z_invariants_section", False),
+    ("ρₐ/φ Bode plot", "plot_rho_phase_bode", False),
+    ("ρₐ polar", "plot_apparent_resistivity_polar", False),
+    ("XY/YX crossover map", "plot_xyyx_crossover_map", True),
+    ("Off-diagonal antisym", "plot_offdiag_antisym_residual", True),
+    ("Anisotropy section", "plot_anisotropy", True),
+    ("Ellipticity psection", "plot_ellipticity_psection", True),
 ]
 
 DEPTH_PLOTS: list = [
-    ("Depth section",              "plot_depth_section",           True),
-    ("Apparent depth psection",    "plot_apparent_depth_psection", True),
-    ("Gradient section",           "plot_gradient_section",        True),
-    ("Sensitivity depth section",  "plot_sensitivity_depth_section", False),
-    ("MT composite section",       "plot_mt_composite_section",    False),
-    ("ATOM psection",              "plot_atom_psection",           True),
+    ("Depth section", "plot_depth_section", True),
+    ("Apparent depth psection", "plot_apparent_depth_psection", True),
+    ("Gradient section", "plot_gradient_section", True),
+    ("Sensitivity depth section", "plot_sensitivity_depth_section", False),
+    ("MT composite section", "plot_mt_composite_section", False),
+    ("ATOM psection", "plot_atom_psection", True),
 ]
 
 SURVEY_PLOTS: list = [
-    ("Survey fingerprint",         "plot_survey_fingerprint",      False),
-    ("Distortion radar",           "plot_distortion_radar",        False),
-    ("Sites comparison",           "plot_sites_compare",           False),
-    ("Station response panels",    "plot_sites_panels",            False),
-    ("Normalised response",        "plot_normalized_response",     False),
-    ("TF coherence network",       "plot_tf_coherence_network",    False),
-    ("Dimensionality map",         "plot_dim_map",                 True),
-    ("Occupancy area",             "plot_dim_occupancy_area",      True),
+    ("Survey fingerprint", "plot_survey_fingerprint", False),
+    ("Distortion radar", "plot_distortion_radar", False),
+    ("Sites comparison", "plot_sites_compare", False),
+    ("Station response panels", "plot_sites_panels", False),
+    ("Normalised response", "plot_normalized_response", False),
+    ("TF coherence network", "plot_tf_coherence_network", False),
+    ("Dimensionality map", "plot_dim_map", True),
+    ("Occupancy area", "plot_dim_occupancy_area", True),
 ]
 
 ADVANCED_GROUPS: list = [
-    ("Strike Analysis",    STRIKE_PLOTS),
-    ("Phase Tensor",       PHASE_TENSOR_PLOTS),
+    ("Strike Analysis", STRIKE_PLOTS),
+    ("Phase Tensor", PHASE_TENSOR_PLOTS),
     ("Induction / Tipper", INDUCTION_PLOTS),
-    ("Impedance / Z",      IMPEDANCE_PLOTS),
-    ("Depth Imaging",      DEPTH_PLOTS),
-    ("Survey Tools",       SURVEY_PLOTS),
-    ("Topography",         []),   # empty — specialized UI
-    ("Conversion",         []),   # empty — specialized UI
+    ("Impedance / Z", IMPEDANCE_PLOTS),
+    ("Depth Imaging", DEPTH_PLOTS),
+    ("Survey Tools", SURVEY_PLOTS),
+    ("Topography", []),  # empty — specialized UI
+    ("Conversion", []),  # empty — specialized UI
 ]
 
 ADVANCED_GROUP_ICONS: dict[str, str] = {
@@ -203,9 +207,7 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
         "Multi-panel phase-tensor summary combining ellipses, dimensionality, "
         "and skew diagnostics."
     ),
-    "plot_phasor_wheel": (
-        "Polar phasor view of impedance phase behavior."
-    ),
+    "plot_phasor_wheel": ("Polar phasor view of impedance phase behavior."),
     "plot_pt_period_clock": (
         "Period-clock summary of phase-tensor behavior across sounding bands."
     ),
@@ -225,9 +227,7 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     "plot_induction_section": (
         "Station-period pseudosection of tipper magnitude or components."
     ),
-    "plot_induction_rose": (
-        "Rose diagram of induction-arrow azimuths."
-    ),
+    "plot_induction_rose": ("Rose diagram of induction-arrow azimuths."),
     "plot_tipper_polar": (
         "Polar view of tipper direction and magnitude through period."
     ),
@@ -327,12 +327,14 @@ def describe_advanced_plot(fn_name: str) -> str:
         "Render this Advanced Tools diagnostic plot.",
     )
 
+
 # Indices for the specialized panels
 TOPO_INDEX = 6
 CONV_INDEX = 7
 
 
 # ── Controller ────────────────────────────────────────────────────────────────
+
 
 class AdvancedController:
     """
@@ -365,6 +367,7 @@ class AdvancedController:
         Raises ValueError if no sites are loaded.
         """
         import pycsamt.emtools as et
+
         if self._sites is None:
             raise ValueError("No survey data loaded — load EDIs first.")
         model = et.learn_dim_dictionary(
@@ -378,7 +381,9 @@ class AdvancedController:
 
     # ── Main entry-point ──────────────────────────────────────────────────────
 
-    def draw(self, fn_name: str, has_ax: bool, fig, **kwargs) -> object | None:
+    def draw(
+        self, fn_name: str, has_ax: bool, fig, **kwargs
+    ) -> object | None:
         """
         Render *fn_name*.
 
@@ -419,7 +424,10 @@ class AdvancedController:
 
         if fn_name in _EXTRA_ARGS_FUNS:
             ax = fig.add_subplot(111)
-            _annotate_empty(ax, f"Cannot render from catalogue:\n{_EXTRA_ARGS_FUNS[fn_name]}")
+            _annotate_empty(
+                ax,
+                f"Cannot render from catalogue:\n{_EXTRA_ARGS_FUNS[fn_name]}",
+            )
             _style_all_axes(fig, self.dark)
             return None
 
@@ -500,7 +508,7 @@ class AdvancedController:
             result = fn(self._sites, verbose=0, **kwargs)
         except TypeError:
             result = fn(self._sites, verbose=0)
-        after  = set(plt.get_fignums())
+        after = set(plt.get_fignums())
         if hasattr(result, "get_axes"):
             return result
         new_nums = after - before
@@ -510,6 +518,7 @@ class AdvancedController:
 
 
 # ── Topography preview controller ─────────────────────────────────────────────
+
 
 class TopoPreviewController:
     """
@@ -564,24 +573,32 @@ class TopoPreviewController:
 
             if self._sites is None:
                 ax.text(
-                    0.5, 0.5, "Load survey data first",
-                    ha="center", va="center",
+                    0.5,
+                    0.5,
+                    "Load survey data first",
+                    ha="center",
+                    va="center",
                     transform=ax.transAxes,
-                    color=s["fg"], fontsize=11,
+                    color=s["fg"],
+                    fontsize=11,
                 )
                 self._style_ax(ax, s)
                 return
 
-            chain = extract_chainage(self._sites)   # km
-            elev  = extract_elevation(self._sites)  # m
+            chain = extract_chainage(self._sites)  # km
+            elev = extract_elevation(self._sites)  # m
             extract_station_names(self._sites)
 
             if chain.size == 0 or elev.size == 0:
                 ax.text(
-                    0.5, 0.5, "No elevation data available",
-                    ha="center", va="center",
+                    0.5,
+                    0.5,
+                    "No elevation data available",
+                    ha="center",
+                    va="center",
                     transform=ax.transAxes,
-                    color=s["fg"], fontsize=11,
+                    color=s["fg"],
+                    fontsize=11,
                 )
                 self._style_ax(ax, s)
                 return
@@ -594,35 +611,52 @@ class TopoPreviewController:
             # Filled area from min elevation
             elev_min = float(np.nanmin(elev))
             ax.fill_between(
-                chain, elev_min, elev,
-                color=fill_color, alpha=fill_alpha,
+                chain,
+                elev_min,
+                elev,
+                color=fill_color,
+                alpha=fill_alpha,
                 label="Terrain",
             )
             if getattr(PYCSAMT_TOPO, "show_surface_line", True):
                 ax.plot(chain, elev, color=line_color, lw=line_width)
 
             # Station markers as ▼ at the top of the profile
-            elev_top = (float(np.nanmax(elev))
-                        + 0.02 * (float(np.nanmax(elev)) - elev_min + 1))
+            elev_top = float(np.nanmax(elev)) + 0.02 * (
+                float(np.nanmax(elev)) - elev_min + 1
+            )
             ax.scatter(
-                chain, np.full_like(chain, elev_top),
-                marker="v", color=line_color, s=30, zorder=5,
+                chain,
+                np.full_like(chain, elev_top),
+                marker="v",
+                color=line_color,
+                s=30,
+                zorder=5,
                 label="Stations",
             )
 
             ax.set_xlabel("Chainage (km)", fontsize=8, color=s["fg"])
             ax.set_ylabel("Elevation (m a.s.l.)", fontsize=8, color=s["fg"])
-            ax.set_title("Elevation Profile", fontsize=9,
-                         color=s["title"], pad=5)
-            ax.legend(fontsize=7, facecolor=s["bg"], labelcolor=s["fg"],
-                      edgecolor=s["spine"])
+            ax.set_title(
+                "Elevation Profile", fontsize=9, color=s["title"], pad=5
+            )
+            ax.legend(
+                fontsize=7,
+                facecolor=s["bg"],
+                labelcolor=s["fg"],
+                edgecolor=s["spine"],
+            )
 
         except Exception as exc:
             ax.text(
-                0.5, 0.5, f"Error: {exc}",
-                ha="center", va="center",
+                0.5,
+                0.5,
+                f"Error: {exc}",
+                ha="center",
+                va="center",
                 transform=ax.transAxes,
-                color=s["fg"], fontsize=9,
+                color=s["fg"],
+                fontsize=9,
             )
 
         self._style_ax(ax, s)
@@ -648,6 +682,7 @@ class TopoPreviewController:
                     from pycsamt.topo.extract import (
                         extract_chainage,
                     )
+
                     chain = extract_chainage(self._sites)
                     n_st = max(int(chain.size), 4)
                 except Exception:
@@ -664,21 +699,25 @@ class TopoPreviewController:
 
             # Synthetic chainage and terrain
             chain_km = np.linspace(0, max(n_st * 0.5, 1), n_st)
-            elev_m   = 200.0 + 50.0 * np.sin(np.linspace(0, 2 * np.pi, n_st))
+            elev_m = 200.0 + 50.0 * np.sin(np.linspace(0, 2 * np.pi, n_st))
 
             # x and z node grids for pcolormesh
-            x_edges  = np.linspace(chain_km[0], chain_km[-1], n_st + 1)
+            x_edges = np.linspace(chain_km[0], chain_km[-1], n_st + 1)
             depth_km = np.linspace(0, 2.0, n_depth + 1)
             X, Z = np.meshgrid(x_edges, depth_km)
 
             pcm = ax.pcolormesh(
-                X, -Z,
+                X,
+                -Z,
                 np.log10(np.vstack([rho, rho[-1:]])),
-                cmap="jet_r", shading="flat",
-                vmin=np.log10(1), vmax=np.log10(1000),
+                cmap="jet_r",
+                shading="flat",
+                vmin=np.log10(1),
+                vmax=np.log10(1000),
             )
-            fig.colorbar(pcm, ax=ax, label="log₁₀(ρ) [Ω·m]",
-                         fraction=0.03, pad=0.02)
+            fig.colorbar(
+                pcm, ax=ax, label="log₁₀(ρ) [Ω·m]", fraction=0.03, pad=0.02
+            )
 
             fill_color = getattr(PYCSAMT_TOPO, "fill_color", "#a89070")
             fill_alpha = getattr(PYCSAMT_TOPO, "fill_alpha", 0.4)
@@ -688,27 +727,42 @@ class TopoPreviewController:
             # Overlay terrain
             elev_km = elev_m / 1000.0
             ax.fill_between(
-                chain_km, 0, elev_km,
-                color=fill_color, alpha=fill_alpha, zorder=3,
+                chain_km,
+                0,
+                elev_km,
+                color=fill_color,
+                alpha=fill_alpha,
+                zorder=3,
             )
             if getattr(PYCSAMT_TOPO, "show_surface_line", True):
-                ax.plot(chain_km, elev_km, color=line_color,
-                        lw=line_width, zorder=4)
+                ax.plot(
+                    chain_km,
+                    elev_km,
+                    color=line_color,
+                    lw=line_width,
+                    zorder=4,
+                )
 
             ax.set_xlabel("Chainage (km)", fontsize=8, color=s["fg"])
             ax.set_ylabel("Depth (km)", fontsize=8, color=s["fg"])
             ax.set_title(
                 f"Terrain Fill Preview  (synthetic data, "
                 f"config: {PYCSAMT_TOPO.summary()})",
-                fontsize=8, color=s["title"], pad=5,
+                fontsize=8,
+                color=s["title"],
+                pad=5,
             )
 
         except Exception as exc:
             ax.text(
-                0.5, 0.5, f"Error: {exc}",
-                ha="center", va="center",
+                0.5,
+                0.5,
+                f"Error: {exc}",
+                ha="center",
+                va="center",
                 transform=ax.transAxes,
-                color=s["fg"], fontsize=9,
+                color=s["fg"],
+                fontsize=9,
             )
 
         self._style_ax(ax, s)
@@ -731,10 +785,14 @@ class TopoPreviewController:
 
             if self._sites is None:
                 ax.text(
-                    0.5, 0.5, "Load survey data first",
-                    ha="center", va="center",
+                    0.5,
+                    0.5,
+                    "Load survey data first",
+                    ha="center",
+                    va="center",
                     transform=ax.transAxes,
-                    color=s["fg"], fontsize=11,
+                    color=s["fg"],
+                    fontsize=11,
                 )
                 self._style_ax(ax, s)
                 return
@@ -742,10 +800,14 @@ class TopoPreviewController:
             elev = extract_elevation(self._sites)
             if elev.size == 0:
                 ax.text(
-                    0.5, 0.5, "No elevation data available",
-                    ha="center", va="center",
+                    0.5,
+                    0.5,
+                    "No elevation data available",
+                    ha="center",
+                    va="center",
                     transform=ax.transAxes,
-                    color=s["fg"], fontsize=11,
+                    color=s["fg"],
+                    fontsize=11,
                 )
                 self._style_ax(ax, s)
                 return
@@ -754,20 +816,31 @@ class TopoPreviewController:
             line_color = getattr(PYCSAMT_TOPO, "line_color", "#6b4e2a")
 
             ax.bar(
-                np.arange(len(elev)), elev,
-                color=fill_color, edgecolor=line_color, linewidth=0.7,
+                np.arange(len(elev)),
+                elev,
+                color=fill_color,
+                edgecolor=line_color,
+                linewidth=0.7,
             )
             ax.set_xlabel("Station index", fontsize=8, color=s["fg"])
             ax.set_ylabel("Elevation (m a.s.l.)", fontsize=8, color=s["fg"])
-            ax.set_title("Station Elevation Histogram", fontsize=9,
-                         color=s["title"], pad=5)
+            ax.set_title(
+                "Station Elevation Histogram",
+                fontsize=9,
+                color=s["title"],
+                pad=5,
+            )
 
         except Exception as exc:
             ax.text(
-                0.5, 0.5, f"Error: {exc}",
-                ha="center", va="center",
+                0.5,
+                0.5,
+                f"Error: {exc}",
+                ha="center",
+                va="center",
                 transform=ax.transAxes,
-                color=s["fg"], fontsize=9,
+                color=s["fg"],
+                fontsize=9,
             )
 
         self._style_ax(ax, s)
@@ -781,13 +854,13 @@ class TopoPreviewController:
         from pycsamt.topo.config import PYCSAMT_TOPO
 
         result = {
-            "n_stations":    0,
-            "has_elev":      False,
-            "elev_min":      float("nan"),
-            "elev_max":      float("nan"),
-            "elev_mean":     float("nan"),
-            "elev_std":      float("nan"),
-            "chainage_km":   float("nan"),
+            "n_stations": 0,
+            "has_elev": False,
+            "elev_min": float("nan"),
+            "elev_max": float("nan"),
+            "elev_mean": float("nan"),
+            "elev_std": float("nan"),
+            "chainage_km": float("nan"),
             "config_summary": PYCSAMT_TOPO.summary(),
         }
         if self._sites is None:
@@ -799,15 +872,16 @@ class TopoPreviewController:
                 extract_elevation,
                 has_elevation,
             )
-            elev  = extract_elevation(self._sites)
+
+            elev = extract_elevation(self._sites)
             chain = extract_chainage(self._sites)
             result["n_stations"] = int(elev.size)
-            result["has_elev"]   = bool(has_elevation(self._sites))
+            result["has_elev"] = bool(has_elevation(self._sites))
             if elev.size > 0:
-                result["elev_min"]  = float(np.nanmin(elev))
-                result["elev_max"]  = float(np.nanmax(elev))
+                result["elev_min"] = float(np.nanmin(elev))
+                result["elev_max"] = float(np.nanmax(elev))
                 result["elev_mean"] = float(np.nanmean(elev))
-                result["elev_std"]  = float(np.nanstd(elev))
+                result["elev_std"] = float(np.nanstd(elev))
             if chain.size > 0:
                 result["chainage_km"] = float(chain[-1] - chain[0])
         except Exception:
@@ -831,34 +905,37 @@ class TopoPreviewController:
 try:
     from PySide6.QtCore import QThread
     from PySide6.QtCore import Signal as QtSignal
+
     _HAS_QT = True
 except ImportError:
     QThread = object  # type: ignore[misc,assignment]
+
     def QtSignal(*args):  # type: ignore[misc]
         return None
+
     _HAS_QT = False
 
 
 # ── Dictionary-model training worker ─────────────────────────────────────────
+
 
 class DimModelWorker(QThread):  # type: ignore[misc]
     """QThread worker that trains the ATOM dictionary model off the GUI thread."""
 
     if _HAS_QT:
         finished = QtSignal(dict)
-        error    = QtSignal(str)
+        error = QtSignal(str)
     else:
         finished = None  # type: ignore[assignment]
-        error    = None  # type: ignore[assignment]
+        error = None  # type: ignore[assignment]
 
-    def __init__(self,
-                 ctrl: AdvancedController,
-                 n_atoms: int,
-                 n_iter: int) -> None:
+    def __init__(
+        self, ctrl: AdvancedController, n_atoms: int, n_iter: int
+    ) -> None:
         super().__init__()
-        self._ctrl    = ctrl
+        self._ctrl = ctrl
         self._n_atoms = n_atoms
-        self._n_iter  = n_iter
+        self._n_iter = n_iter
 
     def run(self) -> None:
         try:
@@ -872,6 +949,7 @@ class DimModelWorker(QThread):  # type: ignore[misc]
 
 # ── Conversion controller ─────────────────────────────────────────────────────
 
+
 class ConversionController:
     """
     Controller for running file-format conversions (AVG/J/Spectra -> EDI).
@@ -882,7 +960,7 @@ class ConversionController:
     def __init__(self) -> None:
         self._source_type: str = "AVG -> EDI"
         self._source_path: str = ""
-        self._result = None          # EDICollection after successful transform
+        self._result = None  # EDICollection after successful transform
         self._stats: dict = {}
         self._failures: list = []
         self.dark: bool = True
@@ -909,7 +987,9 @@ class ConversionController:
         return "desc"
 
     @staticmethod
-    def _split_labels(value: object, default: tuple[str, str]) -> tuple[str, str]:
+    def _split_labels(
+        value: object, default: tuple[str, str]
+    ) -> tuple[str, str]:
         if isinstance(value, (tuple, list)):
             labels = [str(v).strip() for v in value if str(v).strip()]
         else:
@@ -993,9 +1073,8 @@ class ConversionController:
         Path(out_dir).mkdir(parents=True, exist_ok=True)
         written = 0
         for ed in _iter_items(collection):
-            write_fn = (
-                getattr(ed, "write_edifile", None)
-                or getattr(ed, "write", None)
+            write_fn = getattr(ed, "write_edifile", None) or getattr(
+                ed, "write", None
             )
             if write_fn is None:
                 continue
@@ -1006,13 +1085,21 @@ class ConversionController:
     @classmethod
     def _spectra_kwargs(cls, options: dict) -> tuple[dict, dict]:
         init_kw: dict = {
-            "e_labels": cls._split_labels(options.get("e_labels"), ("EX", "EY")),
-            "h_labels": cls._split_labels(options.get("h_labels"), ("HX", "HY")),
+            "e_labels": cls._split_labels(
+                options.get("e_labels"), ("EX", "EY")
+            ),
+            "h_labels": cls._split_labels(
+                options.get("h_labels"), ("HX", "HY")
+            ),
             "estimate_error": bool(
-                options.get("estimate_error", options.get("estimate_errors", False))
+                options.get(
+                    "estimate_error", options.get("estimate_errors", False)
+                )
             ),
             "use_remote": bool(
-                options.get("use_remote", options.get("use_remote_ref", False))
+                options.get(
+                    "use_remote", options.get("use_remote_ref", False)
+                )
             ),
             "skip_errors": bool(options.get("skip_errors", True)),
         }
@@ -1037,13 +1124,14 @@ class ConversionController:
         (collection, failures) : tuple
         """
         path = self._source_path
-        src  = self._source_type
+        src = self._source_type
         failures: list = []
         collection = None
 
         if src in ("AVG -> EDI", "AVG → EDI"):
             from pycsamt.core.config import config_context
             from pycsamt.transformers import AVGtoEDI
+
             with config_context(**self._core_config_kwargs(options)):
                 collection = AVGtoEDI().transform(
                     self._avg_source(path, options),
@@ -1054,6 +1142,7 @@ class ConversionController:
         elif src in ("J -> EDI", "J → EDI"):
             from pycsamt.core.config import config_context
             from pycsamt.transformers import JtoEDI
+
             with config_context(**self._core_config_kwargs(options)):
                 collection = JtoEDI().transform(
                     path,
@@ -1063,26 +1152,27 @@ class ConversionController:
 
         elif src in ("Spectra -> EDI", "Spectra → EDI"):
             from pycsamt.transformers import SpectraToEDI
+
             init_kw, transform_kw = self._spectra_kwargs(options)
-            result     = SpectraToEDI(**init_kw).transform_batch(
+            result = SpectraToEDI(**init_kw).transform_batch(
                 path,
                 **transform_kw,
             )
             collection = result.collection
-            failures   = getattr(result, "failures", [])
+            failures = getattr(result, "failures", [])
 
         else:
             raise ValueError(f"Unknown source type: {src!r}")
 
-        self._result   = collection
+        self._result = collection
         self._failures = failures
         return collection, failures
 
     def build_stats(self, collection, failures: list) -> dict:
         """Build per-station stats dict from collection."""
         stats: dict = {
-            "rows":       [],
-            "n_total":    0,
+            "rows": [],
+            "n_total": 0,
             "n_failures": len(failures) if failures else 0,
         }
         if collection is None:
@@ -1100,25 +1190,35 @@ class ConversionController:
                 station = _name(ed, i)
                 try:
                     _, z, freqs = _get_z_block(ed)
-                    has_z   = z is not None and z.size > 0
+                    has_z = z is not None and z.size > 0
                     n_freqs = int(freqs.size) if freqs is not None else 0
-                    f_min   = float(np.nanmin(freqs)) if n_freqs > 0 else float("nan")
-                    f_max   = float(np.nanmax(freqs)) if n_freqs > 0 else float("nan")
+                    f_min = (
+                        float(np.nanmin(freqs))
+                        if n_freqs > 0
+                        else float("nan")
+                    )
+                    f_max = (
+                        float(np.nanmax(freqs))
+                        if n_freqs > 0
+                        else float("nan")
+                    )
                 except Exception:
-                    has_z   = False
+                    has_z = False
                     n_freqs = 0
-                    f_min   = float("nan")
-                    f_max   = float("nan")
+                    f_min = float("nan")
+                    f_max = float("nan")
 
                 # Check for tipper
                 has_tipper = False
                 try:
-                    t = (getattr(ed, "Tipper", None)
-                         or getattr(ed, "tipper", None))
+                    t = getattr(ed, "Tipper", None) or getattr(
+                        ed, "tipper", None
+                    )
                     if t is not None:
                         tm = getattr(t, "tipper", None)
-                        has_tipper = (tm is not None
-                                      and np.any(np.isfinite(tm)))
+                        has_tipper = tm is not None and np.any(
+                            np.isfinite(tm)
+                        )
                 except Exception:
                     pass
 
@@ -1135,18 +1235,20 @@ class ConversionController:
                 except Exception:
                     pass
 
-                rows.append({
-                    "station":    station,
-                    "n_freqs":    n_freqs,
-                    "f_min":      f_min,
-                    "f_max":      f_max,
-                    "lat":        lat,
-                    "lon":        lon,
-                    "elev":       elev,
-                    "has_Z":      has_z,
-                    "has_tipper": has_tipper,
-                })
-            stats["rows"]    = rows
+                rows.append(
+                    {
+                        "station": station,
+                        "n_freqs": n_freqs,
+                        "f_min": f_min,
+                        "f_max": f_max,
+                        "lat": lat,
+                        "lon": lon,
+                        "elev": elev,
+                        "has_Z": has_z,
+                        "has_tipper": has_tipper,
+                    }
+                )
+            stats["rows"] = rows
             stats["n_total"] = len(rows)
         except Exception:
             pass
@@ -1156,14 +1258,22 @@ class ConversionController:
     def _get_style(self) -> dict:
         if self.dark:
             return {
-                "bg": "#181825", "fig_bg": "#1e1e2e",
-                "fg": "#cdd6f4", "title": "#cdd6f4",
-                "tick": "#a6adc8", "spine": "#45475a", "grid": "#313244",
+                "bg": "#181825",
+                "fig_bg": "#1e1e2e",
+                "fg": "#cdd6f4",
+                "title": "#cdd6f4",
+                "tick": "#a6adc8",
+                "spine": "#45475a",
+                "grid": "#313244",
             }
         return {
-            "bg": "#eff1f5", "fig_bg": "#e6e9ef",
-            "fg": "#4c4f69", "title": "#4c4f69",
-            "tick": "#6c6f85", "spine": "#bcc0cc", "grid": "#ccd0da",
+            "bg": "#eff1f5",
+            "fig_bg": "#e6e9ef",
+            "fg": "#4c4f69",
+            "title": "#4c4f69",
+            "tick": "#6c6f85",
+            "spine": "#bcc0cc",
+            "grid": "#ccd0da",
         }
 
     def plot_impedance_curves(self, fig) -> None:
@@ -1176,10 +1286,14 @@ class ConversionController:
 
         if not self.has_result:
             ax.text(
-                0.5, 0.5, "No conversion result available",
-                ha="center", va="center",
+                0.5,
+                0.5,
+                "No conversion result available",
+                ha="center",
+                va="center",
                 transform=ax.transAxes,
-                color=s["fg"], fontsize=11,
+                color=s["fg"],
+                fontsize=11,
             )
             self._style_ax(ax, s)
             return
@@ -1189,13 +1303,20 @@ class ConversionController:
                 _get_z_block,
                 _iter_items,
             )
+
             items = list(_iter_items(self._result))
             n = len(items)
             if n == 0:
-                ax.text(0.5, 0.5, "Empty collection",
-                        ha="center", va="center",
-                        transform=ax.transAxes,
-                        color=s["fg"], fontsize=11)
+                ax.text(
+                    0.5,
+                    0.5,
+                    "Empty collection",
+                    ha="center",
+                    va="center",
+                    transform=ax.transAxes,
+                    color=s["fg"],
+                    fontsize=11,
+                )
                 self._style_ax(ax, s)
                 return
 
@@ -1205,39 +1326,56 @@ class ConversionController:
                 _, z, freqs = _get_z_block(ed)
                 if z is None or freqs is None or freqs.size == 0:
                     continue
-                Z_xy  = z[:, 0, 1]
+                Z_xy = z[:, 0, 1]
                 # ρ_a = 0.2·|Z|²/f — field-unit form (Z is mV/km/nT); the SI
                 # form |Z|²/(ω·μ₀) over-estimates ρ_a by ~6.3·10⁵ here.
-                rho   = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
-                T     = 1.0 / np.maximum(freqs, 1e-30)
-                ok    = np.isfinite(rho) & (rho > 0) & np.isfinite(T)
+                rho = 0.2 * np.abs(Z_xy) ** 2 / np.maximum(freqs, 1e-30)
+                T = 1.0 / np.maximum(freqs, 1e-30)
+                ok = np.isfinite(rho) & (rho > 0) & np.isfinite(T)
                 if ok.sum() < 2:
                     continue
-                ax.loglog(T[ok], rho[ok],
-                          color=cmap(idx / max(n - 1, 1)),
-                          alpha=0.55, lw=0.9)
+                ax.loglog(
+                    T[ok],
+                    rho[ok],
+                    color=cmap(idx / max(n - 1, 1)),
+                    alpha=0.55,
+                    lw=0.9,
+                )
                 plotted += 1
 
             if plotted == 0:
-                ax.text(0.5, 0.5, "No valid Z data",
-                        ha="center", va="center",
-                        transform=ax.transAxes,
-                        color=s["fg"], fontsize=11)
+                ax.text(
+                    0.5,
+                    0.5,
+                    "No valid Z data",
+                    ha="center",
+                    va="center",
+                    transform=ax.transAxes,
+                    color=s["fg"],
+                    fontsize=11,
+                )
                 self._style_ax(ax, s)
                 return
 
         except Exception as exc:
-            ax.text(0.5, 0.5, f"Error: {exc}",
-                    ha="center", va="center",
-                    transform=ax.transAxes,
-                    color=s["fg"], fontsize=9)
+            ax.text(
+                0.5,
+                0.5,
+                f"Error: {exc}",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                color=s["fg"],
+                fontsize=9,
+            )
             self._style_ax(ax, s)
             return
 
         ax.set_xlabel("Period (s)", fontsize=8, color=s["fg"])
         ax.set_ylabel("ρ_a  [Ω·m]", fontsize=8, color=s["fg"])
-        ax.set_title("Apparent Resistivity XY", fontsize=9,
-                     color=s["title"], pad=5)
+        ax.set_title(
+            "Apparent Resistivity XY", fontsize=9, color=s["title"], pad=5
+        )
         self._style_ax(ax, s)
         try:
             fig.tight_layout(pad=1.2)
@@ -1254,10 +1392,14 @@ class ConversionController:
 
         if not self.has_result:
             ax.text(
-                0.5, 0.5, "No conversion result available",
-                ha="center", va="center",
+                0.5,
+                0.5,
+                "No conversion result available",
+                ha="center",
+                va="center",
                 transform=ax.transAxes,
-                color=s["fg"], fontsize=11,
+                color=s["fg"],
+                fontsize=11,
             )
             self._style_ax(ax, s)
             return
@@ -1271,8 +1413,9 @@ class ConversionController:
             lats, lons, names_list = [], [], []
             for i, ed in enumerate(_iter_items(self._result)):
                 try:
-                    head = (getattr(ed, "Head", None)
-                            or getattr(ed, "head", None))
+                    head = getattr(ed, "Head", None) or getattr(
+                        ed, "head", None
+                    )
                     if head is None:
                         head = ed
                     lat = float(
@@ -1292,33 +1435,55 @@ class ConversionController:
                     pass
 
             if not lats:
-                ax.text(0.5, 0.5, "No coordinate data",
-                        ha="center", va="center",
-                        transform=ax.transAxes,
-                        color=s["fg"], fontsize=11)
+                ax.text(
+                    0.5,
+                    0.5,
+                    "No coordinate data",
+                    ha="center",
+                    va="center",
+                    transform=ax.transAxes,
+                    color=s["fg"],
+                    fontsize=11,
+                )
                 self._style_ax(ax, s)
                 return
 
             lats_arr = np.array(lats)
             lons_arr = np.array(lons)
             sc = ax.scatter(
-                lons_arr, lats_arr,
-                c=np.arange(len(lats)), cmap="turbo",
-                s=40, zorder=5,
-                edgecolors=s["spine"], linewidths=0.5,
+                lons_arr,
+                lats_arr,
+                c=np.arange(len(lats)),
+                cmap="turbo",
+                s=40,
+                zorder=5,
+                edgecolors=s["spine"],
+                linewidths=0.5,
             )
-            fig.colorbar(sc, ax=ax, label="Station index",
-                         fraction=0.03, pad=0.02)
+            fig.colorbar(
+                sc, ax=ax, label="Station index", fraction=0.03, pad=0.02
+            )
             for i, nm in enumerate(names_list):
-                ax.annotate(nm, (lons_arr[i], lats_arr[i]),
-                            fontsize=5, color=s["fg"],
-                            xytext=(3, 3), textcoords="offset points")
+                ax.annotate(
+                    nm,
+                    (lons_arr[i], lats_arr[i]),
+                    fontsize=5,
+                    color=s["fg"],
+                    xytext=(3, 3),
+                    textcoords="offset points",
+                )
 
         except Exception as exc:
-            ax.text(0.5, 0.5, f"Error: {exc}",
-                    ha="center", va="center",
-                    transform=ax.transAxes,
-                    color=s["fg"], fontsize=9)
+            ax.text(
+                0.5,
+                0.5,
+                f"Error: {exc}",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                color=s["fg"],
+                fontsize=9,
+            )
             self._style_ax(ax, s)
             return
 
@@ -1342,19 +1507,20 @@ class ConversionController:
 
 # ── ConversionWorker ──────────────────────────────────────────────────────────
 
+
 class ConversionWorker(QThread):  # type: ignore[misc]
     """QThread worker that runs ConversionController.run() off the GUI thread."""
 
     if _HAS_QT:
-        finished = QtSignal(object, list)   # (collection, failures)
-        error    = QtSignal(str)
+        finished = QtSignal(object, list)  # (collection, failures)
+        error = QtSignal(str)
     else:
         finished = None  # type: ignore[assignment]
-        error    = None  # type: ignore[assignment]
+        error = None  # type: ignore[assignment]
 
     def __init__(self, ctrl: ConversionController, options: dict) -> None:
         super().__init__()
-        self._ctrl    = ctrl
+        self._ctrl = ctrl
         self._options = options
 
     def run(self) -> None:

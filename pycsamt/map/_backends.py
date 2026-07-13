@@ -55,8 +55,7 @@ def require_pyproj_transformer() -> Any:
         from pyproj import Transformer
     except ImportError as exc:
         raise ImportError(
-            "pyproj is required for CRS reprojection in "
-            "pycsamt.map."
+            "pyproj is required for CRS reprojection in pycsamt.map."
         ) from exc
     return Transformer
 

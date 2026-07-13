@@ -10,8 +10,7 @@ PY310_PLUS: bool = _sys.version_info >= (3, 10)
 
 # Convenience dict for the SO-style decorator usage:
 #   @dataclasses.dataclass(**DATACLASS_SLOTS)
-DATACLASS_SLOTS: dict[str, Any] = {"slots": True} if \
-    PY310_PLUS else {}
+DATACLASS_SLOTS: dict[str, Any] = {"slots": True} if PY310_PLUS else {}
 
 
 def _filter_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:

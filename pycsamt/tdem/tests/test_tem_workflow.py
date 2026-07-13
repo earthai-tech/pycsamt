@@ -15,12 +15,7 @@ from pycsamt.tdem.io import (
     read_temavg_soundings as read_soundings_io,
 )
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 AVG_FILE = DATA_DIR / "TEM100.AVG"
 
 pytestmark = pytest.mark.skipif(
@@ -70,4 +65,3 @@ def test_transform_temavg_survey_can_return_edi_collection():
 
     assert bundle.collection is not None
     assert len(bundle.collection) == bundle.n_soundings
-

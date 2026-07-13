@@ -41,9 +41,17 @@ from ._base import (
 
 
 # Convenience accessors that always resolve through _b so monkeypatch works:
-def _TOML_PATH():       return _b.TOML_PATH
-def _read_toml():       return _b._read_toml()
-def _write_toml(data):  return _b._write_toml(data)
+def _TOML_PATH():
+    return _b.TOML_PATH
+
+
+def _read_toml():
+    return _b._read_toml()
+
+
+def _write_toml(data):
+    return _b._write_toml(data)
+
 
 # ---------------------------------------------------------------------------
 # Optional rich formatting
@@ -53,6 +61,7 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
+
     _RICH = True
 except ImportError:
     _RICH = False
@@ -61,6 +70,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Root group
 # ---------------------------------------------------------------------------
+
 
 @click.group("config")
 @click.pass_context
@@ -100,6 +110,7 @@ def config(ctx: click.Context) -> None:
 # config list
 # ---------------------------------------------------------------------------
 
+
 @config.command("list")
 @click.argument(
     "section",
@@ -108,13 +119,16 @@ def config(ctx: click.Context) -> None:
     metavar="[SECTION]",
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
 )
 @click.pass_context
-def list_cmd(ctx: click.Context, section: str | None, output_format: str) -> None:
+def list_cmd(
+    ctx: click.Context, section: str | None, output_format: str
+) -> None:
     """Show all persisted keys in ``~/.pycsamt.toml``.
 
     With no SECTION argument all sections are shown.  Pass a section name
@@ -165,12 +179,14 @@ def list_cmd(ctx: click.Context, section: str | None, output_format: str) -> Non
             for k, v in sorted(kv.items()):
                 dotted = toml_key_to_dotted(s, k)
                 tbl.add_row(dotted, str(v))
-            console.print(Panel(
-                tbl,
-                title=f"[bold]{s}[/bold]  [dim]{_SECTION_LABELS.get(s, '')}[/dim]",
-                border_style="blue",
-                expand=False,
-            ))
+            console.print(
+                Panel(
+                    tbl,
+                    title=f"[bold]{s}[/bold]  [dim]{_SECTION_LABELS.get(s, '')}[/dim]",
+                    border_style="blue",
+                    expand=False,
+                )
+            )
     else:
         for s in sections_to_show:
             kv = data.get(s, {})
@@ -185,10 +201,12 @@ def list_cmd(ctx: click.Context, section: str | None, output_format: str) -> Non
 # config get
 # ---------------------------------------------------------------------------
 
+
 @config.command("get")
 @click.argument("key")
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
 )
@@ -231,6 +249,7 @@ def get_cmd(key: str, output_format: str) -> None:
 # ---------------------------------------------------------------------------
 # config set
 # ---------------------------------------------------------------------------
+
 
 @config.command("set")
 @click.argument("key")
@@ -297,6 +316,7 @@ def set_cmd(key: str, value: str, dry_run: bool) -> None:
 # config unset
 # ---------------------------------------------------------------------------
 
+
 @config.command("unset")
 @click.argument("key")
 def unset_cmd(key: str) -> None:
@@ -338,10 +358,12 @@ def unset_cmd(key: str) -> None:
 # config reset
 # ---------------------------------------------------------------------------
 
+
 @config.command("reset")
 @click.argument("section", required=False, default=None, metavar="[SECTION]")
 @click.option(
-    "--yes", "-y",
+    "--yes",
+    "-y",
     is_flag=True,
     default=False,
     help="Skip the confirmation prompt.",
@@ -391,17 +413,21 @@ def reset_cmd(section: str | None, yes: bool) -> None:
     else:
         if _TOML_PATH().exists():
             _TOML_PATH().unlink()
-        click.echo(f"Removed {_TOML_PATH()}  (all settings reset to defaults)")
+        click.echo(
+            f"Removed {_TOML_PATH()}  (all settings reset to defaults)"
+        )
 
 
 # ---------------------------------------------------------------------------
 # config show
 # ---------------------------------------------------------------------------
 
+
 @config.command("show")
 @click.argument("section", required=False, default=None, metavar="[SECTION]")
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -438,12 +464,16 @@ def show_cmd(section: str | None, output_format: str) -> None:
                 from ._base import (
                     get_singleton,  # noqa: PLC0415
                 )
+
                 singleton = get_singleton(s)
                 if hasattr(singleton, "to_dict"):
                     out[s] = singleton.to_dict()
                 elif hasattr(singleton, "__dict__"):
-                    out[s] = {k: str(v) for k, v in vars(singleton).items()
-                              if not k.startswith("_")}
+                    out[s] = {
+                        k: str(v)
+                        for k, v in vars(singleton).items()
+                        if not k.startswith("_")
+                    }
                 else:
                     out[s] = str(singleton)
             except Exception:  # noqa: BLE001
@@ -456,15 +486,17 @@ def show_cmd(section: str | None, output_format: str) -> None:
         console.print()
         for s in sections_to_show:
             summary = _rich_section_summary(s)
-            console.print(Panel(
-                summary or "[dim](no detail available)[/dim]",
-                title=(
-                    f"[bold cyan]{s}[/bold cyan]  "
-                    f"[dim]{_SECTION_LABELS.get(s, '')}[/dim]"
-                ),
-                border_style="bright_blue",
-                expand=False,
-            ))
+            console.print(
+                Panel(
+                    summary or "[dim](no detail available)[/dim]",
+                    title=(
+                        f"[bold cyan]{s}[/bold cyan]  "
+                        f"[dim]{_SECTION_LABELS.get(s, '')}[/dim]"
+                    ),
+                    border_style="bright_blue",
+                    expand=False,
+                )
+            )
         console.print()
     else:
         for s in sections_to_show:
@@ -482,6 +514,7 @@ def _rich_section_summary(section: str) -> str:
 # ---------------------------------------------------------------------------
 # config env
 # ---------------------------------------------------------------------------
+
 
 @config.command("env")
 @click.option("--section", "-s", default=None, help="Filter by section name.")
@@ -523,7 +556,9 @@ def env_cmd(section: str | None) -> None:
                 f"[yellow]{var}[/yellow]",
                 f"[dim]{sec}[/dim]",
                 desc,
-                f"[green]{masked}[/green]" if value else "[dim](not set)[/dim]",
+                f"[green]{masked}[/green]"
+                if value
+                else "[dim](not set)[/dim]",
             )
         console.print()
         console.print(tbl)
@@ -534,7 +569,9 @@ def env_cmd(section: str | None) -> None:
         )
         console.print()
     else:
-        click.echo(f"\n{'Variable':<40}  {'Section':<12}  {'Set?':<6}  Description")
+        click.echo(
+            f"\n{'Variable':<40}  {'Section':<12}  {'Set?':<6}  Description"
+        )
         click.echo("-" * 100)
         for var, sec, desc in rows:
             value = os.environ.get(var, "")
@@ -553,6 +590,7 @@ def _mask(var: str, value: str) -> str:
 # ---------------------------------------------------------------------------
 # config style  (preset shortcut)
 # ---------------------------------------------------------------------------
+
 
 @config.command("style")
 @click.argument(
@@ -585,13 +623,16 @@ def style_cmd(preset: str, no_persist: bool) -> None:
       pycsamt config style dark --no-persist
     """
     from pycsamt.api.style import use_style  # noqa: PLC0415
+
     use_style(preset)
 
     if not no_persist:
         data = _read_toml()
         data.setdefault("style", {})["preset"] = preset
         _write_toml(data)
-        click.echo(f"Style preset set to {preset!r}  (saved to {_TOML_PATH()})")
+        click.echo(
+            f"Style preset set to {preset!r}  (saved to {_TOML_PATH()})"
+        )
     else:
         click.echo(f"Style preset set to {preset!r}  (session only)")
 
@@ -599,6 +640,7 @@ def style_cmd(preset: str, no_persist: bool) -> None:
 # ---------------------------------------------------------------------------
 # config interp  (preset shortcut)
 # ---------------------------------------------------------------------------
+
 
 @config.command("interp")
 @click.argument(
@@ -631,13 +673,16 @@ def interp_cmd(preset: str, no_persist: bool) -> None:
       pycsamt config interp publication --no-persist
     """
     from pycsamt.api.interp import use_interp  # noqa: PLC0415
+
     use_interp(preset)
 
     if not no_persist:
         data = _read_toml()
         data.setdefault("interp", {})["preset"] = preset
         _write_toml(data)
-        click.echo(f"Interp preset set to {preset!r}  (saved to {_TOML_PATH()})")
+        click.echo(
+            f"Interp preset set to {preset!r}  (saved to {_TOML_PATH()})"
+        )
     else:
         click.echo(f"Interp preset set to {preset!r}  (session only)")
 
@@ -645,6 +690,7 @@ def interp_cmd(preset: str, no_persist: bool) -> None:
 # ---------------------------------------------------------------------------
 # config agent  (sub-group)
 # ---------------------------------------------------------------------------
+
 
 @config.group("agent")
 def agent_group() -> None:
@@ -658,7 +704,8 @@ def agent_group() -> None:
 
 @agent_group.command("status")
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
 )
@@ -675,10 +722,10 @@ def agent_status(output_format: str) -> None:
     )
 
     rows = {
-        "provider":      AGENT_CONFIG.provider,
-        "model":         AGENT_CONFIG.model,
+        "provider": AGENT_CONFIG.provider,
+        "model": AGENT_CONFIG.model,
         "is_configured": AGENT_CONFIG.is_configured,
-        "spent_usd":     AGENT_CONFIG.spent_usd,
+        "spent_usd": AGENT_CONFIG.spent_usd,
         "remaining_usd": AGENT_CONFIG.remaining_usd,
     }
 
@@ -692,13 +739,17 @@ def agent_status(output_format: str) -> None:
         tbl.add_column(style="cyan", no_wrap=True)
         tbl.add_column(style="green")
         for k, v in rows.items():
-            tbl.add_row(k, str(v) if v is not None else "[dim](not set)[/dim]")
-        console.print(Panel(
-            tbl,
-            title="[bold]LLM agent status[/bold]",
-            border_style="bright_blue",
-            expand=False,
-        ))
+            tbl.add_row(
+                k, str(v) if v is not None else "[dim](not set)[/dim]"
+            )
+        console.print(
+            Panel(
+                tbl,
+                title="[bold]LLM agent status[/bold]",
+                border_style="bright_blue",
+                expand=False,
+            )
+        )
     else:
         for k, v in rows.items():
             click.echo(f"  {k:<20} {v}")
@@ -740,17 +791,19 @@ def agent_set_key(provider: str) -> None:
     if _RICH:
         console = Console()
         console.print()
-        console.print(Panel(
-            f"[bold]Step 1[/bold]  Obtain your key from:\n"
-            f"  [link]{url}[/link]\n\n"
-            f"[bold]Step 2[/bold]  Export the key in your shell profile:\n"
-            f"  [yellow]export {env_var}=<your-key>[/yellow]\n\n"
-            f"[bold]Step 3[/bold]  Activate the provider:\n"
-            f"  [cyan]pycsamt config set agent.provider {provider}[/cyan]",
-            title=f"[bold]Setting up {provider.title()} API key[/bold]",
-            border_style="green",
-            expand=False,
-        ))
+        console.print(
+            Panel(
+                f"[bold]Step 1[/bold]  Obtain your key from:\n"
+                f"  [link]{url}[/link]\n\n"
+                f"[bold]Step 2[/bold]  Export the key in your shell profile:\n"
+                f"  [yellow]export {env_var}=<your-key>[/yellow]\n\n"
+                f"[bold]Step 3[/bold]  Activate the provider:\n"
+                f"  [cyan]pycsamt config set agent.provider {provider}[/cyan]",
+                title=f"[bold]Setting up {provider.title()} API key[/bold]",
+                border_style="green",
+                expand=False,
+            )
+        )
         console.print()
     else:
         click.echo(f"\nSetting up {provider.title()} API key")

@@ -9,6 +9,7 @@ button becomes a Stop button, and clicking it cancels the active job
 
 Requires Dash (the chat callbacks module imports it); skipped otherwise.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -19,9 +20,9 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestStripThinking(unittest.TestCase):
-
     def test_removes_thinking_bubble(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         msgs = [
             {"props": {"id": "msg-1"}},
             {"props": {"id": "am-thinking-bubble"}},
@@ -32,12 +33,12 @@ class TestStripThinking(unittest.TestCase):
 
     def test_handles_none(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertEqual(C._strip_thinking(None), [])
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestStopJobResponse(unittest.TestCase):
-
     def test_stop_cancels_job_and_halts_polling(self):
         import pycsamt.app.agent_master.callbacks.chat as C
 
@@ -46,9 +47,16 @@ class TestStopJobResponse(unittest.TestCase):
             {"props": {"id": "user-1"}},
             {"props": {"id": "am-thinking-bubble"}},
         ]
-        (out_msgs, store_job, interval_disabled, input_val,
-         new_stored, pending) = C._stop_job_response(
-            msgs, [{"role": "user", "content": "go"}],
+        (
+            out_msgs,
+            store_job,
+            interval_disabled,
+            input_val,
+            new_stored,
+            pending,
+        ) = C._stop_job_response(
+            msgs,
+            [{"role": "user", "content": "go"}],
             {"jid": jid},
         )
 
@@ -59,7 +67,8 @@ class TestStopJobResponse(unittest.TestCase):
         self.assertEqual(store_job, {})
         # thinking bubble gone (replaced by the stop notice)
         thinking = [
-            m for m in out_msgs
+            m
+            for m in out_msgs
             if isinstance(m, dict)
             and m.get("props", {}).get("id") == "am-thinking-bubble"
         ]
@@ -69,10 +78,12 @@ class TestStopJobResponse(unittest.TestCase):
         self.assertIn("stopped", new_stored[-1]["content"].lower())
         # input preserved (no_update sentinel, not a real value)
         from dash import no_update
+
         self.assertIs(input_val, no_update)
 
     def test_stop_without_job_is_safe(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         out = C._stop_job_response([], [], {})
         # no job id → no crash, still returns a 6-tuple
         self.assertEqual(len(out), 6)
@@ -81,9 +92,9 @@ class TestStopJobResponse(unittest.TestCase):
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestToggleCallbackRegistered(unittest.TestCase):
-
     def test_button_toggle_callback_present(self):
         from pycsamt.app.agent_master import create_app
+
         app = create_app()
         keys = [k for k in app.callback_map if "am-btn-send" in k]
         # children/className/title are driven by one callback

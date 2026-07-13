@@ -50,7 +50,9 @@ class FrameProfile:
             column_names=tuple(str(c) for c in df.columns),
             numeric_columns=numeric,
             missing_cells=missing,
-            missing_fraction=(float(missing) / float(total)) if total else 0.0,
+            missing_fraction=(float(missing) / float(total))
+            if total
+            else 0.0,
             memory_bytes=memory,
         )
 
@@ -227,7 +229,9 @@ class APIFrame(PyCSAMTObject):
         lines = [f"APIFrame: {self.name}"]
         if self.kind:
             lines.append(f"kind: {self.kind}")
-        lines.append(f"shape: {profile.rows} rows x {profile.columns} columns")
+        lines.append(
+            f"shape: {profile.rows} rows x {profile.columns} columns"
+        )
         lines.append(f"columns: {', '.join(cols) if cols else '-'}")
         lines.append(f"numeric: {len(profile.numeric_columns)} columns")
         lines.append(f"missing: {profile.missing_fraction:.1%}")
@@ -305,10 +309,13 @@ def _default_wrap_frame(
 ) -> APIFrame:
     """Wrap dataframe-like data as an :class:`APIFrame`."""
     if isinstance(data, APIFrame):
-        if any(
-            v is not None
-            for v in (name, kind, source, units, meta, description)
-        ) or copy:
+        if (
+            any(
+                v is not None
+                for v in (name, kind, source, units, meta, description)
+            )
+            or copy
+        ):
             return APIFrame(
                 data.df,
                 name=name or data.name,
@@ -317,7 +324,8 @@ def _default_wrap_frame(
                 units=units or data.units,
                 meta=meta or data.meta,
                 description=(
-                    description if description is not None
+                    description
+                    if description is not None
                     else data.description
                 ),
                 copy=copy,

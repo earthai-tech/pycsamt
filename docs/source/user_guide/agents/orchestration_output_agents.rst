@@ -193,4 +193,3 @@ Output Workflow Pattern
 Use ``EDIExportAgent`` when corrected survey data must leave pyCSAMT as EDI
 files.  Use ``BatchSurveyAgent`` when the same workflow should be applied to
 several profiles.
-:html_theme.sidebar_secondary.remove:

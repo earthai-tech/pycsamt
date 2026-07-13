@@ -4,6 +4,7 @@
 Tests for the assistant memory layer (RAG Step 9):
 SessionState, ProjectState, WorkflowHistory (+ run_workflow tracing).
 """
+
 from __future__ import annotations
 
 import unittest
@@ -19,7 +20,6 @@ from pycsamt.assistant.memory import (
 
 
 class TestSessionState(unittest.TestCase):
-
     def test_record_and_roundtrip(self):
         s = SessionState()
         s.record_turn("user", "hi")
@@ -48,7 +48,6 @@ class TestSessionState(unittest.TestCase):
 
 
 class TestProjectState(unittest.TestCase):
-
     def setUp(self):
         self.path = Path(mkdtemp()) / "project_state.json"
 
@@ -80,18 +79,24 @@ class TestProjectState(unittest.TestCase):
 
 
 class TestWorkflowHistory(unittest.TestCase):
-
     def setUp(self):
         self.path = Path(mkdtemp()) / "wh.jsonl"
 
     def test_record_and_read(self):
         h = WorkflowHistory(self.path)
-        h.record(WorkflowRun(workflow="static_shift", status="success",
-                             line="L22PLT", summary="ok"))
+        h.record(
+            WorkflowRun(
+                workflow="static_shift",
+                status="success",
+                line="L22PLT",
+                summary="ok",
+            )
+        )
         h.record({"workflow": "qc", "status": "success"})
         runs = h.all()
-        self.assertEqual([r["workflow"] for r in runs],
-                         ["static_shift", "qc"])
+        self.assertEqual(
+            [r["workflow"] for r in runs], ["static_shift", "qc"]
+        )
         self.assertEqual(runs[0]["line"], "L22PLT")
         self.assertIn("timestamp", runs[0])
 
@@ -99,9 +104,7 @@ class TestWorkflowHistory(unittest.TestCase):
         h = WorkflowHistory(self.path)
         for i in range(5):
             h.record({"workflow": f"w{i}"})
-        self.assertEqual(
-            [r["workflow"] for r in h.recent(2)], ["w3", "w4"]
-        )
+        self.assertEqual([r["workflow"] for r in h.recent(2)], ["w3", "w4"])
 
     def test_clear_and_empty(self):
         h = WorkflowHistory(self.path)
@@ -112,7 +115,6 @@ class TestWorkflowHistory(unittest.TestCase):
 
 
 class TestRunWorkflowTracing(unittest.TestCase):
-
     def test_history_records_run(self):
         # run_workflow records to history when one is supplied
         from pycsamt.assistant.tools import (
@@ -133,21 +135,27 @@ class TestRunWorkflowTracing(unittest.TestCase):
                 return _FakeResult()
 
         import pycsamt.agents as A
+
         orig = A.DataQCAgent
         A.DataQCAgent = _FakeAgent
         try:
             reg = type(
-                "R", (),
-                {"__contains__": lambda self, n: False,
-                 "resolve_line": lambda self, n: {}},
+                "R",
+                (),
+                {
+                    "__contains__": lambda self, n: False,
+                    "resolve_line": lambda self, n: {},
+                },
             )()
             tmp = Path(mkdtemp())
             (tmp / "edi").mkdir()
             hist = WorkflowHistory(tmp / "wh.jsonl")
             res = wt.run_workflow(
-                "qc", str(tmp / "edi"),
+                "qc",
+                str(tmp / "edi"),
                 output_dir=str(tmp / "out"),
-                registry=reg, history=hist,
+                registry=reg,
+                history=hist,
             )
             self.assertEqual(res["status"], "success")
             recorded = hist.all()

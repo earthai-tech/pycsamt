@@ -134,7 +134,7 @@ class ModelZooAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="inversion",
         )
-        self.cache_dir      = cache_dir
+        self.cache_dir = cache_dir
         self.force_download = force_download
 
     # ── public ────────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ class ModelZooAgent(BaseAgent):
         self._last_cost = 0.0
         t0 = time.time()
 
-        action     = str(input_data.get("action", "list")).lower()
+        action = str(input_data.get("action", "list")).lower()
         model_name = str(input_data.get("model_name", ""))
         output_dir = input_data.get("output_dir")
 
@@ -161,7 +161,9 @@ class ModelZooAgent(BaseAgent):
             return self._action_download(model_name, t0)
 
         if action == "predict":
-            return self._action_predict(input_data, model_name, output_dir, t0)
+            return self._action_predict(
+                input_data, model_name, output_dir, t0
+            )
 
         return AgentResult.failed(
             f"Unknown action {action!r}. Use 'list', 'download', or 'predict'.",
@@ -177,15 +179,19 @@ class ModelZooAgent(BaseAgent):
         rows = []
         for name, desc in models.items():
             info = _MODEL_ZOO[name]
-            rows.append({
-                "name":        name,
-                "arch":        info.get("arch", "?"),
-                "n_layers":    info.get("n_layers", "?"),
-                "solver":      info.get("solver", "?"),
-                "description": desc,
-            })
+            rows.append(
+                {
+                    "name": name,
+                    "arch": info.get("arch", "?"),
+                    "n_layers": info.get("n_layers", "?"),
+                    "solver": info.get("solver", "?"),
+                    "description": desc,
+                }
+            )
 
-        summary_lines = [f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows]
+        summary_lines = [
+            f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows
+        ]
         (
             f"Model zoo — {len(models)} pre-trained models available:\n"
             + "\n".join(summary_lines)
@@ -195,8 +201,8 @@ class ModelZooAgent(BaseAgent):
             status="success",
             summary=f"{len(models)} pre-trained models in zoo.",
             data={
-                "action":  "list",
-                "models":  models,
+                "action": "list",
+                "models": models,
                 "details": rows,
                 "figures": {},
                 "figure_paths": {},
@@ -242,12 +248,12 @@ class ModelZooAgent(BaseAgent):
                 else f"Model '{model_name}' not yet available for download."
             ),
             data={
-                "action":          "download",
-                "model_name":      model_name,
-                "model_info":      info,
+                "action": "download",
+                "model_name": model_name,
+                "model_info": info,
                 "checkpoint_path": str(ckpt_path) if ckpt_path else None,
-                "figures":         {},
-                "figure_paths":    {},
+                "figures": {},
+                "figure_paths": {},
             },
             warnings=warnings,
             elapsed_seconds=time.time() - t0,
@@ -271,6 +277,7 @@ class ModelZooAgent(BaseAgent):
         fig_paths: dict[str, str] = {}
 
         import os
+
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
@@ -280,9 +287,9 @@ class ModelZooAgent(BaseAgent):
         except KeyError as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        arch     = info.get("arch", "resnet")
+        arch = info.get("arch", "resnet")
         n_layers = int(info.get("n_layers", 5))
-        n_freqs  = int(info.get("n_freqs") or 40)
+        n_freqs = int(info.get("n_freqs") or 40)
 
         # ── try to download checkpoint ────────────────────────────────────────
         ckpt_path: str | None = None
@@ -302,6 +309,7 @@ class ModelZooAgent(BaseAgent):
 
         # ── build AIInversionAgent and run ────────────────────────────────────
         from .ai_inversion import AIInversionAgent
+
         freqs = np.logspace(-4, 3, n_freqs)
 
         agent = AIInversionAgent(
@@ -315,16 +323,18 @@ class ModelZooAgent(BaseAgent):
             freqs=freqs,
             pretrained=ckpt_path,
         )
-        result = agent.execute({
-            "sites":      input_data.get("sites") or input_data.get("path"),
-            "output_dir": output_dir,
-        })
+        result = agent.execute(
+            {
+                "sites": input_data.get("sites") or input_data.get("path"),
+                "output_dir": output_dir,
+            }
+        )
 
         # relay figures from inner agent
-        figures    = result.get("figures", {})
-        fig_paths  = result.get("figure_paths", {})
+        figures = result.get("figures", {})
+        fig_paths = result.get("figure_paths", {})
         predictions = result.get("predictions", {})
-        rms_global  = result.get("rms_global", float("nan"))
+        rms_global = result.get("rms_global", float("nan"))
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
@@ -348,15 +358,15 @@ class ModelZooAgent(BaseAgent):
                 f"RMS {rms_global:.3f}. {len(figures)} figures."
             ),
             data={
-                "action":          "predict",
-                "model_name":      model_name,
-                "model_info":      info,
+                "action": "predict",
+                "model_name": model_name,
+                "model_info": info,
                 "checkpoint_path": ckpt_path,
-                "predictions":     predictions,
-                "rms_global":      rms_global,
-                "inverter":        result.get("inverter"),
-                "figures":         figures,
-                "figure_paths":    fig_paths,
+                "predictions": predictions,
+                "rms_global": rms_global,
+                "inverter": result.get("inverter"),
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings + result.warnings,
             llm_interpretation=interp,

@@ -30,6 +30,7 @@ References
 Oh S. et al. (2019) *Geophysics* — 2D CSEM inversion with U-Net.
 Oh S. et al. (2020) *JGR Solid Earth* — generalisation to salt.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -46,19 +47,23 @@ try:
     import torch.nn as nn
     import torch.nn.functional as F
 
-    def _conv_block(
-        in_ch: int, out_ch: int, dropout: float
-    ) -> nn.Sequential:
+    def _conv_block(in_ch: int, out_ch: int, dropout: float) -> nn.Sequential:
         return nn.Sequential(
             nn.Conv2d(
-                in_ch, out_ch, 3,
-                padding=1, bias=False,
+                in_ch,
+                out_ch,
+                3,
+                padding=1,
+                bias=False,
             ),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
             nn.Conv2d(
-                out_ch, out_ch, 3,
-                padding=1, bias=False,
+                out_ch,
+                out_ch,
+                3,
+                padding=1,
+                bias=False,
             ),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
@@ -79,36 +84,21 @@ try:
             in_chs = [n_in] + ch[:-1]
             self.encoders = nn.ModuleList(
                 [
-                    _conv_block(
-                        in_chs[i], ch[i], dropout
-                    )
+                    _conv_block(in_chs[i], ch[i], dropout)
                     for i in range(n_stages)
                 ]
             )
             self.pools = nn.ModuleList(
-                [
-                    nn.MaxPool2d(2)
-                    for _ in range(n_stages)
-                ]
+                [nn.MaxPool2d(2) for _ in range(n_stages)]
             )
-            self.bridge = _conv_block(
-                ch[n_stages - 1], ch[-1], dropout
-            )
-            dec_out = [
-                ch[i]
-                for i in range(n_stages - 1, -1, -1)
-            ]
+            self.bridge = _conv_block(ch[n_stages - 1], ch[-1], dropout)
+            dec_out = [ch[i] for i in range(n_stages - 1, -1, -1)]
             prev_ch = [ch[-1]] + dec_out[:-1]
             skip_ch = dec_out
-            dec_in = [
-                prev_ch[j] + skip_ch[j]
-                for j in range(n_stages)
-            ]
+            dec_in = [prev_ch[j] + skip_ch[j] for j in range(n_stages)]
             self.decoders = nn.ModuleList(
                 [
-                    _conv_block(
-                        dec_in[i], dec_out[i], dropout
-                    )
+                    _conv_block(dec_in[i], dec_out[i], dropout)
                     for i in range(n_stages)
                 ]
             )
@@ -116,16 +106,12 @@ try:
 
         def forward(self, x):
             skips = []
-            for enc, pool in zip(
-                self.encoders, self.pools
-            ):
+            for enc, pool in zip(self.encoders, self.pools):
                 x = enc(x)
                 skips.append(x)
                 x = pool(x)
             x = self.bridge(x)
-            for dec, skip in zip(
-                self.decoders, reversed(skips)
-            ):
+            for dec, skip in zip(self.decoders, reversed(skips)):
                 x = F.interpolate(
                     x,
                     size=skip.shape[-2:],
@@ -141,6 +127,7 @@ except ImportError:
 
 
 # ── Factory class ─────────────────────────────────
+
 
 class UNet2DNet:
     r"""
@@ -178,9 +165,7 @@ class UNet2DNet:
         n_in: int,
         n_out: int = 1,
         *,
-        channels: tuple[int, ...] = (
-            32, 64, 128, 256, 512
-        ),
+        channels: tuple[int, ...] = (32, 64, 128, 256, 512),
         dropout: float = 0.2,
     ) -> None:
         self.n_in = int(n_in)
@@ -207,6 +192,7 @@ class UNet2DNet:
 
 
 # ── Internal build ────────────────────────────────
+
 
 def _build_unet2d(
     n_in: int,

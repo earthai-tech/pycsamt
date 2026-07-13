@@ -50,7 +50,9 @@ def _signature(node: ast.AST) -> str:
                 bases.append(ast.unparse(b))
             except Exception:
                 pass
-        return f"class {name}({', '.join(bases)})" if bases else f"class {name}"
+        return (
+            f"class {name}({', '.join(bases)})" if bases else f"class {name}"
+        )
     try:
         args = ast.unparse(node.args)  # type: ignore[attr-defined]
     except Exception:
@@ -68,7 +70,7 @@ def _signature(node: ast.AST) -> str:
 def _source_segment(source_lines: list[str], node: ast.AST) -> str:
     start = getattr(node, "lineno", 1)
     end = getattr(node, "end_lineno", start)
-    code = "\n".join(source_lines[start - 1:end])
+    code = "\n".join(source_lines[start - 1 : end])
     if len(code) > _MAX_CODE_CHARS:
         code = code[:_MAX_CODE_CHARS] + "\n# … (truncated)"
     return code
@@ -103,25 +105,32 @@ def _extract_params(node: ast.AST) -> list[dict[str, str | None]]:
             continue
         default = (
             _unparse(defaults[i - first_default])
-            if i - first_default >= 0 else None
+            if i - first_default >= 0
+            else None
         )
-        out.append({
-            "name": arg.arg,
-            "annotation": _unparse(arg.annotation),
-            "default": default,
-        })
+        out.append(
+            {
+                "name": arg.arg,
+                "annotation": _unparse(arg.annotation),
+                "default": default,
+            }
+        )
     if a.vararg:
-        out.append({"name": f"*{a.vararg.arg}", "annotation": None,
-                    "default": None})
+        out.append(
+            {"name": f"*{a.vararg.arg}", "annotation": None, "default": None}
+        )
     for arg, dflt in zip(a.kwonlyargs, a.kw_defaults):
-        out.append({
-            "name": arg.arg,
-            "annotation": _unparse(arg.annotation),
-            "default": _unparse(dflt),
-        })
+        out.append(
+            {
+                "name": arg.arg,
+                "annotation": _unparse(arg.annotation),
+                "default": _unparse(dflt),
+            }
+        )
     if a.kwarg:
-        out.append({"name": f"**{a.kwarg.arg}", "annotation": None,
-                    "default": None})
+        out.append(
+            {"name": f"**{a.kwarg.arg}", "annotation": None, "default": None}
+        )
     return out
 
 
@@ -138,7 +147,9 @@ def _resolve_from_import(
     base = base[: len(base) - (node.level - 1)]
     if not base:
         return None
-    return f"{'.'.join(base)}.{node.module}" if node.module else ".".join(base)
+    return (
+        f"{'.'.join(base)}.{node.module}" if node.module else ".".join(base)
+    )
 
 
 def _collect_imports(
@@ -311,8 +322,11 @@ def index_python_file(path: Path, root: Path) -> list[RAGChunk]:
         tree, module, is_package=is_package
     )
     local_defs = {
-        n.name for n in tree.body
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        n.name
+        for n in tree.body
+        if isinstance(
+            n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        )
     }
     refs_ctx = (name_map, alias_map, local_defs)
 
@@ -341,35 +355,44 @@ def index_python_file(path: Path, root: Path) -> list[RAGChunk]:
                 continue
             chunks.append(
                 _make_chunk(
-                    rel_path=rel_path, module=module, name=node.name,
-                    qualifier=node.name, node=node,
-                    source_lines=source_lines, kind="python_symbol",
+                    rel_path=rel_path,
+                    module=module,
+                    name=node.name,
+                    qualifier=node.name,
+                    node=node,
+                    source_lines=source_lines,
+                    kind="python_symbol",
                     refs_ctx=refs_ctx,
                 )
             )
         elif isinstance(node, ast.ClassDef):
             chunks.append(
                 _make_chunk(
-                    rel_path=rel_path, module=module, name=node.name,
-                    qualifier=node.name, node=node,
-                    source_lines=source_lines, kind="python_symbol",
+                    rel_path=rel_path,
+                    module=module,
+                    name=node.name,
+                    qualifier=node.name,
+                    node=node,
+                    source_lines=source_lines,
+                    kind="python_symbol",
                     refs_ctx=refs_ctx,
                 )
             )
             # public methods of the class
             for sub in node.body:
-                if isinstance(
-                    sub, (ast.FunctionDef, ast.AsyncFunctionDef)
-                ):
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if sub.name.startswith("_") and sub.name != "__init__":
                         continue
                     chunks.append(
                         _make_chunk(
-                            rel_path=rel_path, module=module,
+                            rel_path=rel_path,
+                            module=module,
                             name=sub.name,
                             qualifier=f"{node.name}.{sub.name}",
-                            node=sub, source_lines=source_lines,
-                            kind="python_method", refs_ctx=refs_ctx,
+                            node=sub,
+                            source_lines=source_lines,
+                            kind="python_method",
+                            refs_ctx=refs_ctx,
                         )
                     )
 

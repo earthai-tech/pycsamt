@@ -26,7 +26,8 @@ from ._base import _get_jfile, jones
     metavar="J_FILE",
 )
 @click.option(
-    "--kind", "-k",
+    "--kind",
+    "-k",
     default=None,
     metavar="KIND",
     help=(
@@ -36,7 +37,8 @@ from ._base import _get_jfile, jones
     ),
 )
 @click.option(
-    "--comp", "-c",
+    "--comp",
+    "-c",
     default=None,
     metavar="COMP",
     help=(
@@ -89,32 +91,44 @@ def blocks(
     # Filter
     selected = blks.blocks
     if kind is not None:
-        selected = [b for b in selected
-                    if (getattr(b, "kind", "") or "").upper() == kind.upper()]
+        selected = [
+            b
+            for b in selected
+            if (getattr(b, "kind", "") or "").upper() == kind.upper()
+        ]
     if comp is not None:
-        selected = [b for b in selected
-                    if (getattr(b, "comp", "") or "").upper() == comp.upper()]
+        selected = [
+            b
+            for b in selected
+            if (getattr(b, "comp", "") or "").upper() == comp.upper()
+        ]
 
     if not selected:
-        click.echo(
-            f"No blocks match kind={kind!r} comp={comp!r}.", err=True
-        )
+        click.echo(f"No blocks match kind={kind!r} comp={comp!r}.", err=True)
         sys.exit(1)
 
     rows: list[dict] = []
     for b in selected:
-        bkind   = getattr(b, "kind",  "?") or "?"
-        bcomp   = getattr(b, "comp",  "?") or "?"
-        nrows   = int(getattr(b, "nrows", 0) or 0)
+        bkind = getattr(b, "kind", "?") or "?"
+        bcomp = getattr(b, "comp", "?") or "?"
+        nrows = int(getattr(b, "nrows", 0) or 0)
         periods = getattr(b, "periods", None)
-        p_min   = float(periods.min()) if periods is not None and periods.size else float("nan")
-        p_max   = float(periods.max()) if periods is not None and periods.size else float("nan")
+        p_min = (
+            float(periods.min())
+            if periods is not None and periods.size
+            else float("nan")
+        )
+        p_max = (
+            float(periods.max())
+            if periods is not None and periods.size
+            else float("nan")
+        )
 
         row: dict = {
-            "kind":       bkind,
-            "comp":       bcomp,
-            "token":      f"{bkind}{bcomp}",
-            "nrows":      nrows,
+            "kind": bkind,
+            "comp": bcomp,
+            "token": f"{bkind}{bcomp}",
+            "nrows": nrows,
             "period_min": round(p_min, 6),
             "period_max": round(p_max, 6),
         }
@@ -131,16 +145,29 @@ def blocks(
     station = jf.station or source.stem
 
     if output_format == "json":
-        click.echo(json.dumps({
-            "station": station,
-            "source":  str(source),
-            "n_blocks": len(rows),
-            "blocks":  rows,
-        }, indent=2, default=str))
+        click.echo(
+            json.dumps(
+                {
+                    "station": station,
+                    "source": str(source),
+                    "n_blocks": len(rows),
+                    "blocks": rows,
+                },
+                indent=2,
+                default=str,
+            )
+        )
         return
 
     if output_format == "csv":
-        csv_cols = ["token", "kind", "comp", "nrows", "period_min", "period_max"]
+        csv_cols = [
+            "token",
+            "kind",
+            "comp",
+            "nrows",
+            "period_min",
+            "period_max",
+        ]
         click.echo(",".join(csv_cols))
         for r in rows:
             click.echo(",".join(str(r.get(c, "")) for c in csv_cols))
@@ -153,18 +180,23 @@ def blocks(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table("Token", "Kind", "Comp", "Rows", "T_min (s)", "T_max (s)")
         if qa:
             tbl.add_column("QA")
         for r in rows:
             row_vals = [
-                r["token"], r["kind"], r["comp"], str(r["nrows"]),
-                f"{r['period_min']:.4g}", f"{r['period_max']:.4g}",
+                r["token"],
+                r["kind"],
+                r["comp"],
+                str(r["nrows"]),
+                f"{r['period_min']:.4g}",
+                f"{r['period_max']:.4g}",
             ]
             if qa:
                 qa_info = r.get("qa", {})
                 rej = qa_info.get("rejected", 0)
-                n   = qa_info.get("n", r["nrows"])
+                n = qa_info.get("n", r["nrows"])
                 row_vals.append(f"{rej}/{n} rej")
             tbl.add_row(*row_vals)
         Console().print(tbl)
@@ -185,6 +217,6 @@ def blocks(
             if qa:
                 qa_info = r.get("qa", {})
                 rej = qa_info.get("rejected", 0)
-                n   = qa_info.get("n", r["nrows"])
+                n = qa_info.get("n", r["nrows"])
                 line += f"  {rej}/{n} rej"
             click.echo(line)

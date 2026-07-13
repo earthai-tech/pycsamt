@@ -35,13 +35,17 @@ from pycsamt.api.agents import AGENT_CONFIG
 with AGENT_CONFIG.offline():
     coordinator = AgentCoordinator("offline_preview", verbose=False)
     coordinator.add_step(
-        "context", ContextInputAgent(),
+        "context",
+        ContextInputAgent(),
         description="Parse request into a config",
     )
     coordinator.add_step(
-        "load", MTLoaderAgent(),
+        "load",
+        MTLoaderAgent(),
         input_fn=lambda results: {
-            "path": (results["context"].get("config") or {}).get("data_path", "")
+            "path": (results["context"].get("config") or {}).get(
+                "data_path", ""
+            )
         },
         description="Load the EDI survey it names",
     )
@@ -55,8 +59,10 @@ steps = preview.get("steps") or []
 print("status :", preview.status)
 print("summary:", preview.summary)
 for step in steps:
-    print(f"  {step['step']}. {step['name']:<9} "
-          f"{step['agent']:<20} LLM={step['llm']}")
+    print(
+        f"  {step['step']}. {step['name']:<9} "
+        f"{step['agent']:<20} LLM={step['llm']}"
+    )
 
 # %%
 # Draw the plan as a flow diagram
@@ -81,23 +87,63 @@ def draw_chain(steps, title, ax=None):
         offline = step["llm"] == "no-LLM"
         face = "#eaf2f8" if offline else "#fdf2e9"
         edge = "#2874a6" if offline else "#ca6f1e"
-        ax.add_patch(plt.Rectangle((x0, y0), box_w, box_h,
-                                   facecolor=face, edgecolor=edge, linewidth=1.6,
-                                   zorder=2))
+        ax.add_patch(
+            plt.Rectangle(
+                (x0, y0),
+                box_w,
+                box_h,
+                facecolor=face,
+                edgecolor=edge,
+                linewidth=1.6,
+                zorder=2,
+            )
+        )
         cx = x0 + box_w / 2
-        ax.text(cx, y0 + box_h - 0.09, f"{step['step']}. {step['name']}",
-                ha="center", va="top", fontsize=10, fontweight="bold",
-                color=edge)
-        ax.text(cx, y0 + box_h / 2 - 0.02, step["agent"],
-                ha="center", va="center", fontsize=8.5, color="0.2")
-        ax.text(cx, y0 + 0.07, f"LLM: {step['llm']}",
-                ha="center", va="bottom", fontsize=7.5, color="0.45")
-        ax.text(cx, y0 - 0.06, step["description"], ha="center", va="top",
-                fontsize=7.5, color="0.4", wrap=True)
+        ax.text(
+            cx,
+            y0 + box_h - 0.09,
+            f"{step['step']}. {step['name']}",
+            ha="center",
+            va="top",
+            fontsize=10,
+            fontweight="bold",
+            color=edge,
+        )
+        ax.text(
+            cx,
+            y0 + box_h / 2 - 0.02,
+            step["agent"],
+            ha="center",
+            va="center",
+            fontsize=8.5,
+            color="0.2",
+        )
+        ax.text(
+            cx,
+            y0 + 0.07,
+            f"LLM: {step['llm']}",
+            ha="center",
+            va="bottom",
+            fontsize=7.5,
+            color="0.45",
+        )
+        ax.text(
+            cx,
+            y0 - 0.06,
+            step["description"],
+            ha="center",
+            va="top",
+            fontsize=7.5,
+            color="0.4",
+            wrap=True,
+        )
         if i < len(steps) - 1:
-            ax.annotate("", xy=(i + 1 + (1 - box_w) / 2, y0 + box_h / 2),
-                        xytext=(x0 + box_w, y0 + box_h / 2),
-                        arrowprops=dict(arrowstyle="-|>", color="0.4", lw=1.6))
+            ax.annotate(
+                "",
+                xy=(i + 1 + (1 - box_w) / 2, y0 + box_h / 2),
+                xytext=(x0 + box_w, y0 + box_h / 2),
+                arrowprops=dict(arrowstyle="-|>", color="0.4", lw=1.6),
+            )
     ax.set_title(title, fontsize=12, pad=10)
     return ax
 

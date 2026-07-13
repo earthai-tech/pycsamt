@@ -63,7 +63,11 @@ def group_modem_stations(
     groups: dict[str, list[str]] = {}
     for name in station_names:
         match = _lookup(known_by_id, name)
-        line = str(match.line) if match is not None and match.line else _line_token(name)
+        line = (
+            str(match.line)
+            if match is not None and match.line
+            else _line_token(name)
+        )
         groups.setdefault(line, []).append(str(name))
     return groups
 
@@ -155,7 +159,9 @@ def load_modem_lines(
         raise ValueError(msg)
 
     known_by_id = _index_known_stations(known_stations)
-    groups = group_modem_stations(data.site_names, known_stations=known_stations)
+    groups = group_modem_stations(
+        data.site_names, known_stations=known_stations
+    )
 
     stations: list[StationRecord] = []
     sections: dict[str, dict[str, Any]] = {}

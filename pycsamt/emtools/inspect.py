@@ -20,6 +20,7 @@ from ._core import (
 
 # ------------------------- small helpers --------------------------------- #
 
+
 def _is_df(x: Any) -> bool:
     return isinstance(x, pd.DataFrame)
 
@@ -155,6 +156,7 @@ def _df_from_kv(
 
 
 # --------------------------- public API ---------------------------------- #
+
 
 def sites_summary(
     sites: Any,
@@ -342,14 +344,19 @@ def plot_coverage(
     cb.set_label("presence")
     return ax
 
+
 # ------------------------ impedance curves -------------------------------- #
 
 _RESPHASE_RENAME = {
     # Site.to_dataframe() uses z-prefix (rho_zxy); plot functions expect rho_xy
-    "rho_zxx": "rho_xx", "phi_zxx": "phi_xx",
-    "rho_zxy": "rho_xy", "phi_zxy": "phi_xy",
-    "rho_zyx": "rho_yx", "phi_zyx": "phi_yx",
-    "rho_zyy": "rho_yy", "phi_zyy": "phi_yy",
+    "rho_zxx": "rho_xx",
+    "phi_zxx": "phi_xx",
+    "rho_zxy": "rho_xy",
+    "phi_zxy": "phi_xy",
+    "rho_zyx": "rho_yx",
+    "phi_zyx": "phi_yx",
+    "rho_zyy": "rho_yy",
+    "phi_zyy": "phi_yy",
 }
 
 
@@ -462,9 +469,7 @@ def plot_rhoa_phi(
         ax_p.text(0.5, 0.5, "no data", ha="center", va="center")
         return ax_r, ax_p
     if ax_r is None or ax_p is None:
-        fig, (ax_r, ax_p) = plt.subplots(
-            2, 1, figsize=figsize, sharex=True
-        )
+        fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=figsize, sharex=True)
     # Expected columns are package-defined; be defensive
     # We accept generic patterns: station, freq, period,
     # rho_xy, rho_yx, phi_xy, phi_yx, and maybe errors.
@@ -512,6 +517,7 @@ def plot_rhoa_phi(
 
 # ----------------------------- tipper ------------------------------------- #
 
+
 def plot_tipper_components(
     sites: Any,
     *,
@@ -537,51 +543,68 @@ def plot_tipper_components(
         _, ax = plt.subplots(figsize=figsize)
 
     _STYLES = {
-        ("tx", "real"): dict(color="#1f77b4", ls="-",  marker="o", ms=3, lw=0.9),
-        ("tx", "imag"): dict(color="#1f77b4", ls="--", marker="o", ms=3, lw=0.9),
-        ("ty", "real"): dict(color="#d62728", ls="-",  marker="s", ms=3, lw=0.9),
-        ("ty", "imag"): dict(color="#d62728", ls="--", marker="s", ms=3, lw=0.9),
+        ("tx", "real"): dict(
+            color="#1f77b4", ls="-", marker="o", ms=3, lw=0.9
+        ),
+        ("tx", "imag"): dict(
+            color="#1f77b4", ls="--", marker="o", ms=3, lw=0.9
+        ),
+        ("ty", "real"): dict(
+            color="#d62728", ls="-", marker="s", ms=3, lw=0.9
+        ),
+        ("ty", "imag"): dict(
+            color="#d62728", ls="--", marker="s", ms=3, lw=0.9
+        ),
     }
 
     n_plotted = 0
     for i, ed in enumerate(_iter_items(S)):
-        nm  = _name(ed, i)
+        nm = _name(ed, i)
         out = _get_t_block(ed)
         _, t, fr = out[0], out[1], out[2]
         if t is None or fr is None:
             continue
-        t  = np.asarray(t, complex)   # (n_freq, 2) — Tx, Ty
+        t = np.asarray(t, complex)  # (n_freq, 2) — Tx, Ty
         fr = np.asarray(fr, float)
         if t.ndim == 3 and t.shape[1] == 1 and t.shape[2] == 2:
             t = t[:, 0, :]
         if t.ndim != 2 or t.shape[1] < 2:
             continue
 
-        x  = (1.0 / np.where(fr == 0, np.nan, fr)
-               if axis == "period" else fr)
+        x = 1.0 / np.where(fr == 0, np.nan, fr) if axis == "period" else fr
 
         for ci, comp in enumerate(("tx", "ty")):
             col_t = t[:, ci]
             for k in kind:
                 vals = col_t.real if k == "real" else col_t.imag
-                sty  = _STYLES.get((comp, k), {})
+                sty = _STYLES.get((comp, k), {})
                 ax.plot(x, vals, label=f"{nm}:{comp}_{k}", **sty)
                 n_plotted += 1
 
     ax.set_xscale("log")
-    ax.set_xlabel("Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9)
+    ax.set_xlabel(
+        "Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9
+    )
     ax.set_ylabel("Tipper", fontsize=9)
     ax.axhline(0, color="k", lw=0.5, ls=":")
     ax.tick_params(labelsize=8)
     if n_plotted:
         ax.legend(ncols=2, fontsize=7)
     else:
-        ax.text(0.5, 0.5, "no tipper data", ha="center", va="center",
-                transform=ax.transAxes, color="0.5")
+        ax.text(
+            0.5,
+            0.5,
+            "no tipper data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            color="0.5",
+        )
     return ax
 
 
 # --------------------------- pseudosection -------------------------------- #
+
 
 def pseudosection(
     sites: Any,
@@ -644,8 +667,14 @@ def pseudosection(
         if df.empty:
             if ax is None:
                 _, ax = plt.subplots(figsize=figsize)
-            ax.text(0.5, 0.5, "No data in selected period range",
-                    ha="center", va="center", fontsize=9)
+            ax.text(
+                0.5,
+                0.5,
+                "No data in selected period range",
+                ha="center",
+                va="center",
+                fontsize=9,
+            )
             return ax
     # pivot
     piv = df.pivot_table(
@@ -656,8 +685,8 @@ def pseudosection(
     )
     # Sort periods ascending; shallow (short period) will go to the top.
     piv = piv.sort_index()
-    Y = piv.index.to_numpy()          # period values, ascending
-    Z = piv.to_numpy(dtype=float)     # shape (n_period, n_station)
+    Y = piv.index.to_numpy()  # period values, ascending
+    Z = piv.to_numpy(dtype=float)  # shape (n_period, n_station)
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
@@ -705,23 +734,29 @@ def pseudosection(
                 extract_station_names,
             )
             from pycsamt.topo.overlay import draw_topo_strip
+
             chain_km = extract_chainage(S)
-            elev_m   = extract_elevation(S)
-            names    = extract_station_names(S)
+            elev_m = extract_elevation(S)
+            names = extract_station_names(S)
             # Reorder to match pivot column order (station labels)
             name_to_idx = {n: i for i, n in enumerate(names)}
-            ordered_idx = [name_to_idx.get(str(s), i)
-                           for i, s in enumerate(station_labels)]
+            ordered_idx = [
+                name_to_idx.get(str(s), i)
+                for i, s in enumerate(station_labels)
+            ]
             chain_ord = chain_km[ordered_idx] if len(chain_km) else chain_km
-            elev_ord  = elev_m[ordered_idx]   if len(elev_m)   else elev_m
+            elev_ord = elev_m[ordered_idx] if len(elev_m) else elev_m
             strip_names = [str(s) for s in station_labels]
             draw_topo_strip(
-                ax.get_figure(), ax,
-                chain_ord, elev_ord, strip_names,
+                ax.get_figure(),
+                ax,
+                chain_ord,
+                elev_ord,
+                strip_names,
                 dark=dark,
             )
         except Exception:
-            pass   # topo strip is optional; never break the main plot
+            pass  # topo strip is optional; never break the main plot
 
     return ax
 
@@ -729,6 +764,7 @@ def pseudosection(
 def _topo_cfg():
     """Return global TopoConfig singleton (lazy import to avoid circular deps)."""
     from pycsamt.topo.config import PYCSAMT_TOPO
+
     return PYCSAMT_TOPO
 
 
@@ -738,10 +774,10 @@ def _topo_cfg():
 
 _COMP_IDX: dict = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}
 _TIP_PANELS: list = [
-    ("Re($T_x$)",  "tx", "real"),
-    ("Im($T_x$)",  "tx", "imag"),
-    ("Re($T_y$)",  "ty", "real"),
-    ("Im($T_y$)",  "ty", "imag"),
+    ("Re($T_x$)", "tx", "real"),
+    ("Im($T_x$)", "tx", "imag"),
+    ("Re($T_y$)", "ty", "real"),
+    ("Im($T_y$)", "ty", "imag"),
 ]
 
 
@@ -750,8 +786,8 @@ def _rho_phase_err(rho, z, z_err):
     z_abs = np.abs(z)
     with np.errstate(divide="ignore", invalid="ignore"):
         rel = np.where(z_abs > 0, np.abs(z_err) / z_abs, 0.0)
-    rho_err    = 2.0 * rho * rel
-    phase_err  = np.degrees(rel)
+    rho_err = 2.0 * rho * rel
+    phase_err = np.degrees(rel)
     return rho_err, phase_err
 
 
@@ -760,7 +796,7 @@ def _rms_log(obs, mod):
     with np.errstate(divide="ignore", invalid="ignore"):
         r = np.log10(obs / np.where(mod > 0, mod, np.nan))
     r = r[np.isfinite(r)]
-    return float(np.sqrt(np.mean(r ** 2))) if r.size else np.nan
+    return float(np.sqrt(np.mean(r**2))) if r.size else np.nan
 
 
 def _pick_station(S, station):
@@ -770,7 +806,8 @@ def _pick_station(S, station):
         if station is None or st == station:
             return st, ed
     raise RuntimeError(
-        f"Station {station!r} not found." if station
+        f"Station {station!r} not found."
+        if station
         else "No sites in collection."
     )
 
@@ -872,14 +909,19 @@ def plot_station_response(
     mt = PYCSAMT_STYLE.mt
 
     # ── 1. load observed site ─────────────────────────────────────────────
-    S_obs = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                         strict=strict, verbose=verbose)
+    S_obs = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
     st_name, ed_obs = _pick_station(S_obs, station)
 
     Z_obs, z_obs, fr_obs = _get_z_block(ed_obs)
-    rho_obs   = getattr(ed_obs, "rho",   None)
+    rho_obs = getattr(ed_obs, "rho", None)
     phase_obs = getattr(ed_obs, "phase", None)
-    z_err_obs = getattr(Z_obs,  "z_err", None) if Z_obs else None
+    z_err_obs = getattr(Z_obs, "z_err", None) if Z_obs else None
     T_obs, t_obs, _ = _get_t_block(ed_obs)
     tip_err_obs = getattr(T_obs, "tipper_err", None) if T_obs else None
     if (
@@ -899,8 +941,14 @@ def plot_station_response(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no impedance data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no impedance data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return fig
 
     per_obs = 1.0 / np.where(fr_obs == 0, np.nan, fr_obs)
@@ -913,35 +961,41 @@ def plot_station_response(
         mask = np.isfinite(per_obs)
 
     per = per_obs[mask]
-    rho   = rho_obs[mask]
+    rho = rho_obs[mask]
     phase = phase_obs[mask]
-    z_m   = z_obs[mask]
-    z_e   = z_err_obs[mask] if z_err_obs is not None else None
-    tip   = t_obs[mask] if t_obs is not None else None
+    z_m = z_obs[mask]
+    z_e = z_err_obs[mask] if z_err_obs is not None else None
+    tip = t_obs[mask] if t_obs is not None else None
     tip_e = tip_err_obs[mask] if tip_err_obs is not None else None
 
     rho_err, phase_err = (
-        _rho_phase_err(rho, z_m, z_e) if z_e is not None
+        _rho_phase_err(rho, z_m, z_e)
+        if z_e is not None
         else (np.zeros_like(rho), np.zeros_like(phase))
     )
 
     # ── 3. optional model site ────────────────────────────────────────────
     rho_mod = phase_mod = per_mod = tip_mod = None
     if sites_model is not None:
-        S_mod = ensure_sites(sites_model, recursive=recursive, on_dup=on_dup,
-                             strict=False, verbose=0)
+        S_mod = ensure_sites(
+            sites_model,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=False,
+            verbose=0,
+        )
         try:
             _, ed_mod = _pick_station(S_mod, st_name)
             Z_mod, z_mod_arr, fr_mod = _get_z_block(ed_mod)
-            rho_mod_raw   = getattr(ed_mod, "rho",   None)
+            rho_mod_raw = getattr(ed_mod, "rho", None)
             phase_mod_raw = getattr(ed_mod, "phase", None)
             if rho_mod_raw is not None and fr_mod is not None:
                 per_m = 1.0 / np.where(fr_mod == 0, np.nan, fr_mod)
                 msk_m = np.isfinite(per_m)
                 if period_range is not None:
                     msk_m &= (per_m >= lo) & (per_m <= hi)
-                per_mod   = per_m[msk_m]
-                rho_mod   = rho_mod_raw[msk_m]
+                per_mod = per_m[msk_m]
+                rho_mod = rho_mod_raw[msk_m]
                 phase_mod = phase_mod_raw[msk_m]
             T_mod, t_mod_arr, _ = _get_t_block(ed_mod)
             if t_mod_arr is not None:
@@ -954,17 +1008,23 @@ def plot_station_response(
     has_tipper = show_tipper and tip is not None
 
     n_rows = 3 if has_tipper else 2
-    h_ratios = ([2.2, 1.6, 1.0] if has_tipper else [2.2, 1.6])
+    h_ratios = [2.2, 1.6, 1.0] if has_tipper else [2.2, 1.6]
 
     if figsize is None:
-        figsize = (3.4 * max(n_comp, 4) + 0.6, 4.5 + (1.8 if has_tipper else 0))
+        figsize = (
+            3.4 * max(n_comp, 4) + 0.6,
+            4.5 + (1.8 if has_tipper else 0),
+        )
 
     n_required_axes = (2 * n_comp) + (4 if has_tipper else 0)
-    axes_given = _axes_list(axes, n_required_axes) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n_required_axes) if axes is not None else None
+    )
     if axes_given is None:
         fig = plt.figure(figsize=figsize, constrained_layout=True)
         gs = gridspec.GridSpec(
-            n_rows, max(n_comp, 4) if has_tipper else n_comp,
+            n_rows,
+            max(n_comp, 4) if has_tipper else n_comp,
             figure=fig,
             height_ratios=h_ratios,
             hspace=0.08,
@@ -972,8 +1032,10 @@ def plot_station_response(
         )
 
         # Build axes: [rho row, phase row] share x across columns
-        ax_rho   = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
-        ax_phase = [fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)]
+        ax_rho = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
+        ax_phase = [
+            fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)
+        ]
         if has_tipper:
             ax_tip = [fig.add_subplot(gs[2, c]) for c in range(4)]
         else:
@@ -981,8 +1043,8 @@ def plot_station_response(
     else:
         fig = axes_given[0].figure
         ax_rho = axes_given[:n_comp]
-        ax_phase = axes_given[n_comp:2 * n_comp]
-        ax_tip = axes_given[2 * n_comp:2 * n_comp + 4] if has_tipper else []
+        ax_phase = axes_given[n_comp : 2 * n_comp]
+        ax_tip = axes_given[2 * n_comp : 2 * n_comp + 4] if has_tipper else []
 
     # ── 5. per-component RMS store ────────────────────────────────────────
     rms_dict: dict = {}
@@ -999,14 +1061,16 @@ def plot_station_response(
         ax_p = ax_phase[ci]
 
         # ── observed ────────────────────────────────────────────────
-        rho_c   = rho[:, ri, ci_mat]
-        phi_c   = phase[:, ri, ci_mat]
-        rerr_c  = rho_err[:, ri, ci_mat]   if show_error_bars else None
-        perr_c  = phase_err[:, ri, ci_mat] if show_error_bars else None
+        rho_c = rho[:, ri, ci_mat]
+        phi_c = phase[:, ri, ci_mat]
+        rerr_c = rho_err[:, ri, ci_mat] if show_error_bars else None
+        perr_c = phase_err[:, ri, ci_mat] if show_error_bars else None
 
         # mask non-positive ρa
         valid = rho_c > 0
-        xp = per[valid]; rr = rho_c[valid]; pp = phi_c[valid]
+        xp = per[valid]
+        rr = rho_c[valid]
+        pp = phi_c[valid]
         if rerr_c is not None:
             re = rerr_c[valid]
             yerr_r = re if np.any(re > 0) else None
@@ -1024,19 +1088,28 @@ def plot_station_response(
 
         # ── model overlay ────────────────────────────────────────────
         if rho_mod is not None and per_mod is not None:
-            rho_mc  = rho_mod[:, ri, ci_mat]
-            phi_mc  = phase_mod[:, ri, ci_mat]
+            rho_mc = rho_mod[:, ri, ci_mat]
+            phi_mc = phase_mod[:, ri, ci_mat]
             valid_m = rho_mc > 0
             # compute RMS
-            rms_val = _rms_log(rr, np.interp(xp, per_mod[valid_m], rho_mc[valid_m],
-                                               left=np.nan, right=np.nan))
+            rms_val = _rms_log(
+                rr,
+                np.interp(
+                    xp,
+                    per_mod[valid_m],
+                    rho_mc[valid_m],
+                    left=np.nan,
+                    right=np.nan,
+                ),
+            )
             if np.isfinite(rms_val):
                 rms_dict[comp] = rms_val
             mod_lbl = f"$Z^m_{{\\rm {comp.upper()}}}$"
             if show_rms and np.isfinite(rms_val):
                 mod_lbl += f"  rms={rms_val:.2f}"
-            mk = cs.plot_kwargs(ls="--", lw=1.6, alpha=0.85, marker="",
-                                label=mod_lbl)
+            mk = cs.plot_kwargs(
+                ls="--", lw=1.6, alpha=0.85, marker="", label=mod_lbl
+            )
             ax_r.plot(per_mod[valid_m], rho_mc[valid_m], **mk)
             ax_p.plot(per_mod, phi_mc, **{**mk, "label": ""})
 
@@ -1049,8 +1122,13 @@ def plot_station_response(
             ax_r.set_ylim(*rho_lim)
         plt.setp(ax_r.get_xticklabels(), visible=False)
         ax_r.tick_params(labelsize=7)
-        ax_r.legend(fontsize=7, framealpha=0.85, loc="best",
-                    handlelength=1.5, borderpad=0.4)
+        ax_r.legend(
+            fontsize=7,
+            framealpha=0.85,
+            loc="best",
+            handlelength=1.5,
+            borderpad=0.4,
+        )
 
         ax_p.set_xscale("log")
         ax_p.grid(True, which="both", alpha=0.2, lw=0.5)
@@ -1061,11 +1139,16 @@ def plot_station_response(
         ax_p.set_xlabel("Period (s)", fontsize=8)
 
         # column header
-        rms_str = (f"  rms={rms_dict[comp]:.2f}"
-                   if (show_rms and rms_dict.get(comp) is not None) else "")
+        rms_str = (
+            f"  rms={rms_dict[comp]:.2f}"
+            if (show_rms and rms_dict.get(comp) is not None)
+            else ""
+        )
         ax_r.set_title(
             f"$Z_{{\\rm {comp.upper()}}}${rms_str}",
-            fontsize=9, pad=6, fontweight="bold",
+            fontsize=9,
+            pad=6,
+            fontweight="bold",
         )
 
         # shared y labels on leftmost column only
@@ -1081,10 +1164,16 @@ def plot_station_response(
             "ty": tip[:, 1] if tip is not None else None,
         }
         tip_err_series = {
-            "tx": (tip_e[:, 0]
-                   if (tip_e is not None and tip_e.shape[1] > 0) else None),
-            "ty": (tip_e[:, 1]
-                   if (tip_e is not None and tip_e.shape[1] > 1) else None),
+            "tx": (
+                tip_e[:, 0]
+                if (tip_e is not None and tip_e.shape[1] > 0)
+                else None
+            ),
+            "ty": (
+                tip_e[:, 1]
+                if (tip_e is not None and tip_e.shape[1] > 1)
+                else None
+            ),
         }
         tip_mod_series = {
             "tx": tip_mod[:, 0] if tip_mod is not None else None,
@@ -1096,8 +1185,15 @@ def plot_station_response(
             ax_t = ax_tip[ti]
             tv = tip_series.get(tc_key)
             if tv is None:
-                ax_t.text(0.5, 0.5, "—", ha="center", va="center",
-                          transform=ax_t.transAxes, color="0.55")
+                ax_t.text(
+                    0.5,
+                    0.5,
+                    "—",
+                    ha="center",
+                    va="center",
+                    transform=ax_t.transAxes,
+                    color="0.55",
+                )
                 continue
             col = tip_colors[tc_key]
             vals = np.real(tv) if part == "real" else np.imag(tv)
@@ -1107,14 +1203,31 @@ def plot_station_response(
                 err_v = err_v if np.any(err_v > 0) else None
             else:
                 err_v = None
-            ax_t.errorbar(per, vals, yerr=err_v, fmt="o", ms=3.5, color=col,
-                          elinewidth=0.8, capsize=2, alpha=0.9, zorder=3)
+            ax_t.errorbar(
+                per,
+                vals,
+                yerr=err_v,
+                fmt="o",
+                ms=3.5,
+                color=col,
+                elinewidth=0.8,
+                capsize=2,
+                alpha=0.9,
+                zorder=3,
+            )
             # model overlay
             tm_v = tip_mod_series.get(tc_key)
             if tm_v is not None and per_mod is not None:
                 mod_vals = np.real(tm_v) if part == "real" else np.imag(tm_v)
-                ax_t.plot(per_mod, mod_vals, "--", color=col,
-                          lw=1.5, alpha=0.85, zorder=2)
+                ax_t.plot(
+                    per_mod,
+                    mod_vals,
+                    "--",
+                    color=col,
+                    lw=1.5,
+                    alpha=0.85,
+                    zorder=2,
+                )
             ax_t.axhline(0.0, color="0.65", lw=0.7, ls=":", zorder=1)
             ax_t.set_xscale("log")
             ax_t.set_ylim(*tipper_lim)
@@ -1132,6 +1245,8 @@ def plot_station_response(
     # ── 8. figure title ───────────────────────────────────────────────────
     fig.suptitle(
         title or st_name,
-        fontsize=11, fontweight="bold", y=1.01,
+        fontsize=11,
+        fontweight="bold",
+        y=1.01,
     )
     return fig

@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-DATA_DIR    = Path(__file__).parents[4] / "data" / "occam2D"
+DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 STARTUP_FILE = DATA_DIR / "Startup"
-ITER_FILE    = DATA_DIR / "ITER17.iter"
+ITER_FILE = DATA_DIR / "ITER17.iter"
 
 pytestmark = pytest.mark.skipif(
     not DATA_DIR.exists(), reason="sample occam2D data not available"
@@ -21,6 +21,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def startup():
     from pycsamt.models.occam2d.startup import OccamStartup
+
     return OccamStartup.read(STARTUP_FILE)
 
 
@@ -87,6 +88,7 @@ def test_startup_debug_level(startup):
 @pytest.fixture(scope="module")
 def iter17():
     from pycsamt.models.occam2d.startup import OccamIter
+
     return OccamIter.read(ITER_FILE)
 
 
@@ -140,7 +142,7 @@ def test_iter_to_resistivity_shape(iter17):
 def test_iter_to_resistivity_values(iter17):
     rho = iter17.to_resistivity()
     # log10(rho[0]) = 0.9180370 → rho ≈ 8.28 Ω·m
-    assert math.isclose(rho[0], 10 ** 0.9180370, rel_tol=1e-4)
+    assert math.isclose(rho[0], 10**0.9180370, rel_tol=1e-4)
     # All resistivities should be positive
     assert np.all(rho > 0)
 
@@ -167,6 +169,7 @@ def test_iter_data_file(iter17):
 def test_startup_read_raises_on_iter_file():
     """OccamStartup.read() should reject a non-zero iteration file."""
     from pycsamt.models.occam2d.startup import OccamStartup
+
     with pytest.raises(ValueError, match="Iteration: 0"):
         OccamStartup.read(ITER_FILE)
 
@@ -174,6 +177,7 @@ def test_startup_read_raises_on_iter_file():
 def test_iter_read_raises_on_startup_file():
     """OccamIter.read() should reject a Startup (iteration == 0) file."""
     from pycsamt.models.occam2d.startup import OccamIter
+
     with pytest.raises(ValueError, match="Startup"):
         OccamIter.read(STARTUP_FILE)
 
@@ -183,18 +187,21 @@ def test_iter_read_raises_on_startup_file():
 # -----------------------------------------------------------------------
 def test_missing_file_raises_startup():
     from pycsamt.models.occam2d.startup import OccamStartup
+
     with pytest.raises(FileNotFoundError):
         OccamStartup.read("/nonexistent/Startup")
 
 
 def test_missing_file_raises_iter():
     from pycsamt.models.occam2d.startup import OccamIter
+
     with pytest.raises(FileNotFoundError):
         OccamIter.read("/nonexistent/ITER1.iter")
 
 
 def test_invalid_format_raises(tmp_path):
     from pycsamt.models.occam2d.startup import OccamIter
+
     bad = tmp_path / "bad.iter"
     bad.write_text("Format: SOMETHING_ELSE\nIteration: 1\n")
     with pytest.raises(ValueError, match="Expected format"):

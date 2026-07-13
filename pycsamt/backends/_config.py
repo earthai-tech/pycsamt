@@ -14,6 +14,7 @@ The active backend is resolved with this priority chain:
 No ML framework is imported here.  Actual framework objects are loaded
 lazily by the backend implementations.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,7 +37,9 @@ class BackendConfig:
         with _LOCK:
             if cls._instance is None:
                 obj = object.__new__(cls)
-                obj._backend_name: str | None = None  # None = not yet resolved
+                obj._backend_name: str | None = (
+                    None  # None = not yet resolved
+                )
                 cls._instance = obj
         return cls._instance
 
@@ -116,6 +119,7 @@ class BackendConfig:
     def _auto_detect() -> str:
         """Return the first available framework, or ``'none'`` if none found."""
         from ._detect import detect_available_backends
+
         available = detect_available_backends()
         if not available:
             return "none"

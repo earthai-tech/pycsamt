@@ -42,11 +42,15 @@ spatial = rho_spatial_gradient(survey)
 pair = spatial[spatial["station_a"] == "18-001A"].sort_values("period_s")
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.semilogx(pair["period_s"], pair["delta_rho_x"], "o-", ms=3, color="#1f77b4")
+ax.semilogx(
+    pair["period_s"], pair["delta_rho_x"], "o-", ms=3, color="#1f77b4"
+)
 ax.axhline(0.0, color="0.3", lw=0.8)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\Delta\rho_a^x$ ($\Omega\cdot$m)")
-ax.set_title(f"{pair['station_a'].iloc[0]}-{pair['station_b'].iloc[0]} — spatial gradient")
+ax.set_title(
+    f"{pair['station_a'].iloc[0]}-{pair['station_b'].iloc[0]} — spatial gradient"
+)
 
 # %%
 # **Reading this figure.** The gradient stays close to zero through the
@@ -68,7 +72,9 @@ freq_grad = rho_frequency_gradient(survey)
 station = freq_grad[freq_grad["station"] == "18-001A"].sort_values("period_s")
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.semilogx(station["period_s"], station["delta_rho_z"], "o-", ms=3, color="#2ca02c")
+ax.semilogx(
+    station["period_s"], station["delta_rho_z"], "o-", ms=3, color="#2ca02c"
+)
 ax.axhline(0.0, color="0.3", lw=0.8)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\Delta\rho_a^z$ ($\Omega\cdot$m)")
@@ -91,11 +97,15 @@ joint = rho_joint_gradient(survey)
 jpair = joint[joint["station_a"] == "18-001A"].sort_values("period_s")
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.semilogx(jpair["period_s"], jpair["delta_rho_zx"], "o-", ms=3, color="#d62728")
+ax.semilogx(
+    jpair["period_s"], jpair["delta_rho_zx"], "o-", ms=3, color="#d62728"
+)
 ax.axhline(0.0, color="0.3", lw=0.8)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\Delta\rho_a^{zx}$ ($\Omega\cdot$m)")
-ax.set_title(f"{jpair['station_a'].iloc[0]}-{jpair['station_b'].iloc[0]} — joint gradient")
+ax.set_title(
+    f"{jpair['station_a'].iloc[0]}-{jpair['station_b'].iloc[0]} — joint gradient"
+)
 
 # %%
 # **Reading this figure.** The joint curve is not simply a smaller
@@ -143,14 +153,28 @@ plot_gradient_section(survey, quantity="joint")
 spatial_std = spatial["delta_rho_x"].std()
 joint_std = joint["delta_rho_zx"].std()
 print(f"spatial gradient std: {spatial_std:.0f} Ohm.m")
-print(f"joint gradient std:   {joint_std:.0f} Ohm.m  "
-      f"({100 * joint_std / spatial_std:.0f}% of spatial)")
+print(
+    f"joint gradient std:   {joint_std:.0f} Ohm.m  "
+    f"({100 * joint_std / spatial_std:.0f}% of spatial)"
+)
 
 fig, ax = plt.subplots(figsize=(6, 4.5))
-ax.hist(spatial["delta_rho_x"], bins=60, range=(-3000, 3000), alpha=0.6,
-        color="#1f77b4", label=r"spatial $\Delta\rho_a^x$")
-ax.hist(joint["delta_rho_zx"], bins=60, range=(-3000, 3000), alpha=0.6,
-        color="#d62728", label=r"joint $\Delta\rho_a^{zx}$")
+ax.hist(
+    spatial["delta_rho_x"],
+    bins=60,
+    range=(-3000, 3000),
+    alpha=0.6,
+    color="#1f77b4",
+    label=r"spatial $\Delta\rho_a^x$",
+)
+ax.hist(
+    joint["delta_rho_zx"],
+    bins=60,
+    range=(-3000, 3000),
+    alpha=0.6,
+    color="#d62728",
+    label=r"joint $\Delta\rho_a^{zx}$",
+)
 ax.set_xlabel(r"$\Omega\cdot$m")
 ax.set_ylabel("count")
 ax.legend(fontsize=8)
@@ -173,8 +197,10 @@ ax.set_title("Distribution: spatial vs. joint gradient (whole survey)")
 
 for comp in ("det", "xy", "yx"):
     jg = rho_joint_gradient(survey, comp=comp)
-    print(f"comp={comp}: std={jg['delta_rho_zx'].std():.0f}  "
-          f"max|.|={jg['delta_rho_zx'].abs().max():.0f} Ohm.m")
+    print(
+        f"comp={comp}: std={jg['delta_rho_zx'].std():.0f}  "
+        f"max|.|={jg['delta_rho_zx'].abs().max():.0f} Ohm.m"
+    )
 
 # %%
 # **Reading this output.** Standard deviation grows roughly 2x from

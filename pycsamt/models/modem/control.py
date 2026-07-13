@@ -21,14 +21,14 @@ PathLike = Union[str, Path]
 __all__ = ["ModEmControl"]
 
 _KEYS = [
-    ("output_stem",       "Model and data output file name"),
-    ("initial_lambda",    "Initial damping factor lambda"),
-    ("lambda_divisor",    "To update lambda divide by"),
-    ("initial_alpha",     "Initial search step in model units"),
-    ("rms_diff_tol",      "Restart when rms diff is less than"),
-    ("target_rms",        "Exit search when rms is less than"),
-    ("lambda_exit",       "Exit when lambda is less than"),
-    ("max_iterations",    "Maximum number of iterations"),
+    ("output_stem", "Model and data output file name"),
+    ("initial_lambda", "Initial damping factor lambda"),
+    ("lambda_divisor", "To update lambda divide by"),
+    ("initial_alpha", "Initial search step in model units"),
+    ("rms_diff_tol", "Restart when rms diff is less than"),
+    ("target_rms", "Exit search when rms is less than"),
+    ("lambda_exit", "Exit when lambda is less than"),
+    ("max_iterations", "Maximum number of iterations"),
 ]
 _FLOAT_ATTRS = {
     "initial_lambda",
@@ -203,7 +203,7 @@ class ModEmControl(ModEmBase):
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        _W = 44   # key field width
+        _W = 44  # key field width
         lines: list[str] = []
         for attr, label in _KEYS:
             val = getattr(self, attr)

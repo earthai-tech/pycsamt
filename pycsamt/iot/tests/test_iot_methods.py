@@ -77,8 +77,8 @@ def test_profile_as_dict_roundtrips_fields():
 # ---------------------------------------------------------------------------
 def test_target_bands_span_and_clamp_to_method_band():
     bands = target_bands_for_method("amt")
-    assert bands[0][0] == pytest.approx(1.0)          # clamped low edge
-    assert bands[-1][1] == pytest.approx(10_000.0)    # clamped high edge
+    assert bands[0][0] == pytest.approx(1.0)  # clamped low edge
+    assert bands[-1][1] == pytest.approx(10_000.0)  # clamped high edge
     # contiguous decade sub-bands
     for lo, hi in bands:
         assert lo < hi
@@ -112,17 +112,25 @@ def test_for_method_overrides_win():
         "amt", min_battery_v=11.5, required_channels=["ex", "ey"]
     )
     assert cfg.min_battery_v == pytest.approx(11.5)
-    assert cfg.required_channels == ["ex", "ey"]      # override, not profile
+    assert cfg.required_channels == ["ex", "ey"]  # override, not profile
 
 
 def test_for_method_makes_assessment_method_aware():
     cfg = MonitoringConfig.for_method("csamt")
     # an MT packet with only two channels violates the CSAMT expectations
-    packets = [{
-        "device_id": "n1", "timestamp": 100.0, "topic": "t", "kind": "data",
-        "payload": {"method": "mt", "channels": ["ex", "hy"],
-                    "frequency_band_hz": [1.0, 500.0]},
-    }]
+    packets = [
+        {
+            "device_id": "n1",
+            "timestamp": 100.0,
+            "topic": "t",
+            "kind": "data",
+            "payload": {
+                "method": "mt",
+                "channels": ["ex", "hy"],
+                "frequency_band_hz": [1.0, 500.0],
+            },
+        }
+    ]
     status = assess_telemetry(packets, config=cfg)
     assert "method_mismatch" in status.issues
     assert "required_channels_missing" in status.issues
@@ -130,11 +138,19 @@ def test_for_method_makes_assessment_method_aware():
 
 def test_for_method_matching_stream_has_no_method_issues():
     cfg = MonitoringConfig.for_method("csamt")
-    packets = [{
-        "device_id": "n1", "timestamp": 100.0, "topic": "t", "kind": "data",
-        "payload": {"method": "csamt", "channels": ["ex", "ey", "hx", "hy"],
-                    "frequency_band_hz": [1.0, 5000.0]},
-    }]
+    packets = [
+        {
+            "device_id": "n1",
+            "timestamp": 100.0,
+            "topic": "t",
+            "kind": "data",
+            "payload": {
+                "method": "csamt",
+                "channels": ["ex", "ey", "hx", "hy"],
+                "frequency_band_hz": [1.0, 5000.0],
+            },
+        }
+    ]
     status = assess_telemetry(packets, config=cfg)
     assert "method_mismatch" not in status.issues
     assert "required_channels_missing" not in status.issues

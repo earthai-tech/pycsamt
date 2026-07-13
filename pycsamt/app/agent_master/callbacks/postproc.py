@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 def _export(sites, dest: Path) -> list:
     """Write corrected sites as EDI files."""
     from pycsamt.site.export import write_sites
-    return write_sites(
-        sites, dest, exist_ok=True
-    )
+
+    return write_sites(sites, dest, exist_ok=True)
 
 
 def _count_valid_impedance(sites) -> int:
     """Count stations in a Sites object that carry parseable Z."""
     from pycsamt.agents.loader import _quality_scan
+
     rows, _ = _quality_scan(sites)
     return sum(1 for r in rows if r.get("has_z"))
 
@@ -49,15 +49,18 @@ def _validate_export(dest: Path) -> tuple[int, int, str]:
     """
     try:
         from pycsamt.emtools._core import ensure_sites
+
         n_files = len(list(Path(dest).rglob("*.edi")))
         s = ensure_sites(str(dest), recursive=True, verbose=0)
         from pycsamt.agents.loader import _quality_scan
+
         rows, _ = _quality_scan(s)
         n_valid = sum(1 for r in rows if r.get("has_z"))
         detail = (
-            "" if n_valid
+            ""
+            if n_valid
             else f"{n_files} .edi file(s) on disk, {len(rows)} loaded, "
-                 f"0 with a parseable Z block"
+            f"0 with a parseable Z block"
         )
         return n_valid, len(rows), detail
     except Exception as exc:  # noqa: BLE001
@@ -69,23 +72,15 @@ def register_postproc(app) -> None:
 
     # 1. Open modal when STORE_POSTPROC is set
     @app.callback(
-        Output(
-            IDs.MODAL_POSTPROC, "is_open"
-        ),
-        Output(
-            IDs.POSTPROC_MSG, "children"
-        ),
-        Input(
-            IDs.STORE_POSTPROC, "data"
-        ),
+        Output(IDs.MODAL_POSTPROC, "is_open"),
+        Output(IDs.POSTPROC_MSG, "children"),
+        Input(IDs.STORE_POSTPROC, "data"),
         prevent_initial_call=True,
     )
     def open_modal(data):
         if not (data or {}).get("jid"):
             raise PreventUpdate
-        wtype = data.get(
-            "workflow", "processing"
-        )
+        wtype = data.get("workflow", "processing")
         return True, (
             f"The {wtype} correction finished."
             " What would you like to do"
@@ -100,43 +95,28 @@ def register_postproc(app) -> None:
             "data",
             allow_duplicate=True,
         ),
-        Output(
-            IDs.POSTPROC_STATUS, "children"
-        ),
+        Output(IDs.POSTPROC_STATUS, "children"),
         Output(
             IDs.MODAL_POSTPROC,
             "is_open",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_POSTPROC_APPLY, "n_clicks"
-        ),
-        State(
-            IDs.STORE_POSTPROC, "data"
-        ),
-        State(
-            IDs.STORE_SETTINGS, "data"
-        ),
+        Input(IDs.BTN_POSTPROC_APPLY, "n_clicks"),
+        State(IDs.STORE_POSTPROC, "data"),
+        State(IDs.STORE_SETTINGS, "data"),
         State(IDs.STORE_EDI, "data"),
         prevent_initial_call=True,
     )
-    def apply_to_session(
-        n, postproc, settings, edi_store
-    ):
+    def apply_to_session(n, postproc, settings, edi_store):
         if not n:
             raise PreventUpdate
         from .chat import _CORR_CACHE
+
         jid = (postproc or {}).get("jid")
-        wtype = (postproc or {}).get(
-            "workflow", "corrected"
-        )
+        wtype = (postproc or {}).get("workflow", "corrected")
         base = (
-            (postproc or {}).get(
-                "output_dir", ""
-            )
-            or (settings or {}).get(
-                "output_dir", ""
-            )
+            (postproc or {}).get("output_dir", "")
+            or (settings or {}).get("output_dir", "")
             or "pycsamt_workflow_output"
         ).strip()
         # Peek (don't pop): if the export turns out invalid we keep the
@@ -146,9 +126,7 @@ def register_postproc(app) -> None:
             return (
                 no_update,
                 html.Span(
-                    "Corrected data not in "
-                    "memory — re-run the "
-                    "workflow.",
+                    "Corrected data not in memory — re-run the workflow.",
                     style={"color": "red"},
                 ),
                 True,
@@ -156,8 +134,7 @@ def register_postproc(app) -> None:
         # Absolute path so the re-load validation and the later workflow
         # loader never depend on the process CWD.
         dest = (
-            Path(base).expanduser().resolve()
-            / f"{wtype}_{int(time.time())}"
+            Path(base).expanduser().resolve() / f"{wtype}_{int(time.time())}"
         )
         # Sanity-check the in-memory corrected data first (source of truth).
         try:
@@ -211,12 +188,8 @@ def register_postproc(app) -> None:
 
     # 3. "Export to folder" — toggle collapse
     @app.callback(
-        Output(
-            IDs.POSTPROC_COLLAPSE, "is_open"
-        ),
-        Input(
-            IDs.BTN_POSTPROC_EXPORT, "n_clicks"
-        ),
+        Output(IDs.POSTPROC_COLLAPSE, "is_open"),
+        Input(IDs.BTN_POSTPROC_EXPORT, "n_clicks"),
         prevent_initial_call=True,
     )
     def show_export_path(n):
@@ -239,13 +212,9 @@ def register_postproc(app) -> None:
             "is_open",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_POSTPROC_OK, "n_clicks"
-        ),
+        Input(IDs.BTN_POSTPROC_OK, "n_clicks"),
         State(IDs.POSTPROC_PATH, "value"),
-        State(
-            IDs.STORE_POSTPROC, "data"
-        ),
+        State(IDs.STORE_POSTPROC, "data"),
         prevent_initial_call=True,
     )
     def confirm_export(n, path_val, postproc):
@@ -254,21 +223,20 @@ def register_postproc(app) -> None:
         if not (path_val or "").strip():
             return (
                 html.Span(
-                    "Enter a folder path "
-                    "first.",
+                    "Enter a folder path first.",
                     style={"color": "orange"},
                 ),
                 True,
                 True,
             )
         from .chat import _CORR_CACHE
+
         jid = (postproc or {}).get("jid")
         sites = _CORR_CACHE.get(jid)
         if sites is None:
             return (
                 html.Span(
-                    "Corrected data not in "
-                    "memory — re-run workflow.",
+                    "Corrected data not in memory — re-run workflow.",
                     style={"color": "red"},
                 ),
                 True,
@@ -307,8 +275,7 @@ def register_postproc(app) -> None:
         _CORR_CACHE.pop(jid, None)
         return (
             html.Span(
-                f"Exported {n_valid}/{n_total} corrected "
-                f"EDI(s) to {dest}",
+                f"Exported {n_valid}/{n_total} corrected EDI(s) to {dest}",
                 style={"color": "var(--tag-ok)"},
             ),
             False,

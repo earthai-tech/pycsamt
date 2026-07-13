@@ -38,6 +38,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -45,7 +52,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -55,14 +62,13 @@ if str(ROOT) not in sys.path:
 from pycsamt.models.modem import InversionResult
 from pycsamt.models.occam2d import OccamLog
 
-
 data_root = ROOT / "data"
 edi_line = data_root / "AMT" / "WILLY_DATA" / "L18PLT"
 occam_input = data_root / "oc2_input_files"
 occam_result = data_root / "occam2D"
 modem_result = data_root / "modem" / "willy_27freq_watex_line02_sample"
 
-case_root = Path(__file__).resolve().parent / "workspaces" / "case_study_l18"
+case_root = EXAMPLE_DIR / "workspaces" / "case_study_l18"
 figure_dir = case_root / "figures"
 table_dir = case_root / "tables"
 report_dir = case_root / "report"
@@ -122,7 +128,10 @@ inventory.to_csv(inventory_file, index=False)
 print("Inventory summary:")
 print(
     inventory.groupby("group")
-    .agg(n_files=("file", "count"), total_mb=("size_bytes", lambda s: s.sum() / 1e6))
+    .agg(
+        n_files=("file", "count"),
+        total_mb=("size_bytes", lambda s: s.sum() / 1e6),
+    )
     .round(3)
     .to_string()
 )
@@ -150,9 +159,13 @@ if occam_log_file.exists():
     occam_summary.update(
         {
             "n_iter": int(occam_log.n_iter),
-            "final_rms": float(occam_log.rms[-1]) if occam_log.rms.size else np.nan,
+            "final_rms": float(occam_log.rms[-1])
+            if occam_log.rms.size
+            else np.nan,
             "best_iteration": int(occam_log.best_iteration),
-            "best_rms": float(np.nanmin(finite_rms)) if finite_rms.size else np.nan,
+            "best_rms": float(np.nanmin(finite_rms))
+            if finite_rms.size
+            else np.nan,
             "converged": bool(occam_log.converged),
         }
     )
@@ -227,7 +240,9 @@ if modem is not None and modem.rms_history.size:
         linewidth=2,
     )
 
-ax_conv.axhline(1.0, color="black", linestyle="--", linewidth=1.0, label="RMS=1")
+ax_conv.axhline(
+    1.0, color="black", linestyle="--", linewidth=1.0, label="RMS=1"
+)
 ax_conv.set_xlabel("Iteration")
 ax_conv.set_ylabel("Reported normalized RMS")
 ax_conv.set_title("Case-study convergence comparison")
@@ -271,7 +286,11 @@ def modem_data_frame(data, source):
 
 
 response_summary = pd.DataFrame()
-if modem is not None and modem.data_obs is not None and modem.data_pred is not None:
+if (
+    modem is not None
+    and modem.data_obs is not None
+    and modem.data_pred is not None
+):
     obs = modem_data_frame(modem.data_obs, "observed")
     pred = modem_data_frame(modem.data_pred, "predicted")
     matched = obs.merge(
@@ -305,13 +324,19 @@ if modem is not None and modem.data_obs is not None and modem.data_pred is not N
         .reset_index()
         .sort_values("rms_residual")
     )
-    matched.to_csv(table_dir / "case_study_modem_matched_response_rows.csv", index=False)
+    matched.to_csv(
+        table_dir / "case_study_modem_matched_response_rows.csv", index=False
+    )
 
 response_file = table_dir / "case_study_response_component_summary.csv"
 response_summary.to_csv(response_file, index=False)
 
 print("Response component summary:")
-print(response_summary.to_string(index=False) if not response_summary.empty else "No matched ModEM responses.")
+print(
+    response_summary.to_string(index=False)
+    if not response_summary.empty
+    else "No matched ModEM responses."
+)
 
 # %%
 # 6. Compare solver evidence as a decision table
@@ -332,12 +357,14 @@ decision_rows = [
         "Occam2D": (
             f"{occam_summary['n_iter']} iterations, final RMS "
             f"{occam_summary['final_rms']:.3g}"
-            if occam_summary["available"] else "No log available"
+            if occam_summary["available"]
+            else "No log available"
         ),
         "ModEM": (
             f"{modem_summary['n_iter']} records, final RMS "
             f"{modem_summary['final_rms']:.3g}"
-            if modem_summary["available"] else "No log available"
+            if modem_summary["available"]
+            else "No log available"
         ),
         "interpretation_value": "Shows whether each inversion is stable enough to interpret.",
     },
@@ -352,7 +379,8 @@ decision_rows = [
         "Occam2D": "RESP17.resp available for Occam response checks",
         "ModEM": (
             "Observed/predicted rows matched by station, period, component"
-            if not response_summary.empty else "No matched response table"
+            if not response_summary.empty
+            else "No matched response table"
         ),
         "interpretation_value": "Identifies stations/periods that still control misfit.",
     },
@@ -394,7 +422,9 @@ ax_inv.grid(axis="y", alpha=0.25)
 if occam_log is not None and occam_log.rms.size:
     ax_rms.plot(occam_log.iterations, occam_log.rms, "o-", label="Occam2D")
 if modem is not None and modem.rms_history.size:
-    ax_rms.plot(modem.iteration_numbers, modem.rms_history, "s-", label="ModEM")
+    ax_rms.plot(
+        modem.iteration_numbers, modem.rms_history, "s-", label="ModEM"
+    )
 ax_rms.axhline(1.0, color="black", linestyle="--", linewidth=1.0)
 ax_rms.set_title("Convergence")
 ax_rms.set_xlabel("Iteration")
@@ -499,7 +529,9 @@ case_manifest = {
     "memo": str(memo_file),
 }
 manifest_file = report_dir / "case_study_outputs.json"
-manifest_file.write_text(json.dumps(case_manifest, indent=2), encoding="utf-8")
+manifest_file.write_text(
+    json.dumps(case_manifest, indent=2), encoding="utf-8"
+)
 
 print(f"Inventory: {inventory_file}")
 print(f"Convergence summary: {convergence_file}")

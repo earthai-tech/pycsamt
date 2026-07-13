@@ -146,6 +146,7 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/_generated/
 docs/man/*.gz
 docs/source/api/generated
 docs/gh-pages

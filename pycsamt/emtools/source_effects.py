@@ -15,6 +15,7 @@ significant (yan2004 threshold).  Companion spectral slope analysis
 (da2016) flags low-frequency ρ_a anomalies that are characteristic of
 a resistivity contrast beneath the source dipole.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -48,24 +49,37 @@ __all__ = [
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-_MU0: float = 4.0 * np.pi * 1e-7   # H/m
-BETA_THRESH_PCT: float = 3.0        # yan2004: β > 3 % = significant effect
+_MU0: float = 4.0 * np.pi * 1e-7  # H/m
+BETA_THRESH_PCT: float = 3.0  # yan2004: β > 3 % = significant effect
 
 _DETAIL_COLS = [
-    "station", "freq_hz", "period_s", "offset_m",
-    "rho_a_ohmm", "kr", "beta_pct", "overprint_flag",
+    "station",
+    "freq_hz",
+    "period_s",
+    "offset_m",
+    "rho_a_ohmm",
+    "kr",
+    "beta_pct",
+    "overprint_flag",
 ]
 _TABLE_COLS = [
-    "station", "n_freq", "offset_m",
-    "beta_max_pct", "beta_mean_pct",
-    "n_overprint", "overprint_frac",
-    "lf_slope", "hf_slope", "slope_delta",
+    "station",
+    "n_freq",
+    "offset_m",
+    "beta_max_pct",
+    "beta_mean_pct",
+    "n_overprint",
+    "overprint_frac",
+    "lf_slope",
+    "hf_slope",
+    "slope_delta",
     "overprint_flag",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _unwrap(ed: Any) -> Any:
     edi = getattr(ed, "edi", None)
@@ -93,7 +107,9 @@ def _kr(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
     return k1_abs * abs(offset)
 
 
-def _resolve_offset(ed: Any, source_offset: Any, station: str) -> float | None:
+def _resolve_offset(
+    ed: Any, source_offset: Any, station: str
+) -> float | None:
     if isinstance(source_offset, dict):
         return source_offset.get(station, None)
     if source_offset is not None:
@@ -114,6 +130,7 @@ def _bessel_I0K0(p: complex, q: complex) -> complex:
         iv,
         kv,
     )
+
     return complex(iv(0, p)) * complex(kv(0, q))
 
 
@@ -152,7 +169,7 @@ def _beta_Ey_scalar(
 
     k1 = _k1_scalar(rho, freq)
     x0, y0, z0 = float(offset), 0.0, 0.0
-    h = max(abs(offset) * dh_frac, 0.5)   # step ≥ 0.5 m
+    h = max(abs(offset) * dh_frac, 0.5)  # step ≥ 0.5 m
 
     # ∂²P/∂z² at (x0, y0, z0) — central difference
     d2P_dz2 = (
@@ -190,6 +207,7 @@ def _log_slope(log_f: np.ndarray, log_rho: np.ndarray) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: pure-math interface
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def overprint_beta(
     rho: float | np.ndarray,
@@ -229,20 +247,23 @@ def overprint_beta(
     term N = I₀(p) K₀(q), where k₁ = √(iωμ₀/ρ) is the complex
     wavenumber and p, q are related to the 3-D distance and depth.
     """
-    rho    = np.asarray(rho,    dtype=float)
-    freq   = np.asarray(freq,   dtype=float)
+    rho = np.asarray(rho, dtype=float)
+    freq = np.asarray(freq, dtype=float)
     offset = np.asarray(offset, dtype=float)
 
-    shape  = np.broadcast_shapes(rho.shape, freq.shape, offset.shape)
-    rho_b  = np.broadcast_to(rho,    shape).ravel()
-    freq_b = np.broadcast_to(freq,   shape).ravel()
-    off_b  = np.broadcast_to(offset, shape).ravel()
+    shape = np.broadcast_shapes(rho.shape, freq.shape, offset.shape)
+    rho_b = np.broadcast_to(rho, shape).ravel()
+    freq_b = np.broadcast_to(freq, shape).ravel()
+    off_b = np.broadcast_to(offset, shape).ravel()
 
     result = np.empty(rho_b.size, dtype=float)
     for i in range(rho_b.size):
-        result[i] = _beta_Ey_scalar(
-            float(rho_b[i]), float(freq_b[i]), float(off_b[i]), dh_frac
-        ) * 100.0
+        result[i] = (
+            _beta_Ey_scalar(
+                float(rho_b[i]), float(freq_b[i]), float(off_b[i]), dh_frac
+            )
+            * 100.0
+        )
 
     return result.reshape(shape) if shape else result.ravel()[0]
 
@@ -250,6 +271,7 @@ def overprint_beta(
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: sites-based interface
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def detect_source_overprint(
     sites: Any,
@@ -316,28 +338,30 @@ def detect_source_overprint(
         rho = _rho_a_det(z_block, freqs)
 
         for j in range(freqs.size):
-            f  = float(freqs[j])
+            f = float(freqs[j])
             ra = float(rho[j])
 
             if off is not None and off > 0.0 and ra > 0.0 and f > 0.0:
-                kr_val   = float(_kr(np.array([ra]), np.array([f]), off)[0])
+                kr_val = float(_kr(np.array([ra]), np.array([f]), off)[0])
                 beta_val = _beta_Ey_scalar(ra, f, off) * 100.0
             else:
-                kr_val   = np.nan
+                kr_val = np.nan
                 beta_val = np.nan
 
-            rows.append({
-                "station":       station,
-                "freq_hz":       f,
-                "period_s":      1.0 / f if f > 0 else np.nan,
-                "offset_m":      float(off) if off is not None else np.nan,
-                "rho_a_ohmm":    ra,
-                "kr":            kr_val,
-                "beta_pct":      beta_val,
-                "overprint_flag": bool(
-                    np.isfinite(beta_val) and beta_val > beta_threshold
-                ),
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": f,
+                    "period_s": 1.0 / f if f > 0 else np.nan,
+                    "offset_m": float(off) if off is not None else np.nan,
+                    "rho_a_ohmm": ra,
+                    "kr": kr_val,
+                    "beta_pct": beta_val,
+                    "overprint_flag": bool(
+                        np.isfinite(beta_val) and beta_val > beta_threshold
+                    ),
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_DETAIL_COLS)
@@ -399,10 +423,10 @@ def source_overprint_table(
     for station, grp in detail.groupby("station", sort=False):
         grp = grp.sort_values("freq_hz")
         valid_beta = grp["beta_pct"].dropna()
-        n_ov   = int(grp["overprint_flag"].sum())
+        n_ov = int(grp["overprint_flag"].sum())
         n_freq = len(grp)
 
-        log_f   = np.log10(np.maximum(grp["freq_hz"].values, 1e-12))
+        log_f = np.log10(np.maximum(grp["freq_hz"].values, 1e-12))
         log_rho = np.log10(np.maximum(grp["rho_a_ohmm"].values, 1e-12))
 
         mask_lf = grp["freq_hz"].values < f_split
@@ -416,19 +440,25 @@ def source_overprint_table(
             else np.nan
         )
 
-        rows.append({
-            "station":       station,
-            "n_freq":        n_freq,
-            "offset_m":      grp["offset_m"].iloc[0],
-            "beta_max_pct":  float(valid_beta.max())  if len(valid_beta) else np.nan,
-            "beta_mean_pct": float(valid_beta.mean()) if len(valid_beta) else np.nan,
-            "n_overprint":   n_ov,
-            "overprint_frac":n_ov / n_freq if n_freq else np.nan,
-            "lf_slope":      lf_slope,
-            "hf_slope":      hf_slope,
-            "slope_delta":   slope_delta,
-            "overprint_flag":n_ov > 0,
-        })
+        rows.append(
+            {
+                "station": station,
+                "n_freq": n_freq,
+                "offset_m": grp["offset_m"].iloc[0],
+                "beta_max_pct": float(valid_beta.max())
+                if len(valid_beta)
+                else np.nan,
+                "beta_mean_pct": float(valid_beta.mean())
+                if len(valid_beta)
+                else np.nan,
+                "n_overprint": n_ov,
+                "overprint_frac": n_ov / n_freq if n_freq else np.nan,
+                "lf_slope": lf_slope,
+                "hf_slope": hf_slope,
+                "slope_delta": slope_delta,
+                "overprint_flag": n_ov > 0,
+            }
+        )
 
     return pd.DataFrame(rows, columns=_TABLE_COLS)
 
@@ -506,13 +536,13 @@ def plot_overprint_section(
         return ax
 
     stations = list(dict.fromkeys(df["station"]))
-    s_idx    = {s: k for k, s in enumerate(stations)}
+    s_idx = {s: k for k, s in enumerate(stations)}
     df = df.copy()
     df["_sx"] = df["station"].map(s_idx)
 
     freqs_all = np.sort(df["freq_hz"].unique())
     grid_beta = np.full((len(freqs_all), len(stations)), np.nan)
-    f_idx     = {f: k for k, f in enumerate(freqs_all)}
+    f_idx = {f: k for k, f in enumerate(freqs_all)}
     for _, row in df.iterrows():
         fi = f_idx.get(row["freq_hz"])
         si = s_idx.get(row["station"])
@@ -526,32 +556,57 @@ def plot_overprint_section(
         grid_beta = grid_beta[order]
     x_vals = np.arange(len(stations))
 
-    vmin = max(grid_beta[np.isfinite(grid_beta)].min(), 1e-3) \
-        if np.isfinite(grid_beta).any() else 1e-3
-    vmax = grid_beta[np.isfinite(grid_beta)].max() \
-        if np.isfinite(grid_beta).any() else 100.0
+    vmin = (
+        max(grid_beta[np.isfinite(grid_beta)].min(), 1e-3)
+        if np.isfinite(grid_beta).any()
+        else 1e-3
+    )
+    vmax = (
+        grid_beta[np.isfinite(grid_beta)].max()
+        if np.isfinite(grid_beta).any()
+        else 100.0
+    )
 
-    norm  = LogNorm(vmin=max(vmin, 1e-3), vmax=max(vmax, vmin * 10)) \
-        if log_color else Normalize(vmin=vmin, vmax=vmax)
-    X, Y  = np.meshgrid(x_vals, y_vals)
+    norm = (
+        LogNorm(vmin=max(vmin, 1e-3), vmax=max(vmax, vmin * 10))
+        if log_color
+        else Normalize(vmin=vmin, vmax=vmax)
+    )
+    X, Y = np.meshgrid(x_vals, y_vals)
 
-    pcm = ax.pcolormesh(X, Y, grid_beta, cmap=cmap, norm=norm, shading="nearest")
+    pcm = ax.pcolormesh(
+        X, Y, grid_beta, cmap=cmap, norm=norm, shading="nearest"
+    )
     plt.colorbar(pcm, ax=ax, label="β_Ey (%)")
 
-    if (contour_beta
-            and np.isfinite(grid_beta).any()
-            and grid_beta.shape[0] >= 2
-            and grid_beta.shape[1] >= 2):
-        valid_levels = [lvl for lvl in beta_levels
-                        if vmin < lvl < vmax]
+    if (
+        contour_beta
+        and np.isfinite(grid_beta).any()
+        and grid_beta.shape[0] >= 2
+        and grid_beta.shape[1] >= 2
+    ):
+        valid_levels = [lvl for lvl in beta_levels if vmin < lvl < vmax]
         thr_label = [beta_threshold] if vmin < beta_threshold < vmax else []
         for lvl in valid_levels:
-            ax.contour(X, Y, grid_beta, levels=[lvl],
-                       colors="grey", linewidths=0.7, alpha=0.6)
+            ax.contour(
+                X,
+                Y,
+                grid_beta,
+                levels=[lvl],
+                colors="grey",
+                linewidths=0.7,
+                alpha=0.6,
+            )
         for lvl in thr_label:
-            ax.contour(X, Y, grid_beta, levels=[lvl],
-                       colors="white", linewidths=1.4,
-                       linestyles="--")
+            ax.contour(
+                X,
+                Y,
+                grid_beta,
+                levels=[lvl],
+                colors="white",
+                linewidths=1.4,
+                linestyles="--",
+            )
 
     PYCSAMT_STATION_RENDERING.apply(
         ax,
@@ -570,8 +625,7 @@ def plot_overprint_section(
         ax.set_ylabel("Frequency (Hz)")
 
     ax.set_title(
-        f"Source overprint β_Ey — threshold {beta_threshold:.1f} %"
-        " (yan2004)"
+        f"Source overprint β_Ey — threshold {beta_threshold:.1f} % (yan2004)"
     )
     return ax
 
@@ -581,14 +635,23 @@ def plot_overprint_section(
 # =============================================================================
 
 _NORM_COLS = [
-    "station", "freq_hz", "period_s", "offset_m",
-    "rho_a_ohmm", "rho_n", "phi_obs_deg", "phi_ref_deg", "phi_diff_deg",
-    "zone", "kr",
+    "station",
+    "freq_hz",
+    "period_s",
+    "offset_m",
+    "rho_a_ohmm",
+    "rho_n",
+    "phi_obs_deg",
+    "phi_ref_deg",
+    "phi_diff_deg",
+    "zone",
+    "kr",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _rho_a_comp(z: np.ndarray, fr: np.ndarray, comp: str) -> np.ndarray:
     """Apparent resistivity for a named Z component."""
@@ -614,9 +677,7 @@ def _phase_comp_deg(z: np.ndarray, comp: str) -> np.ndarray:
 
 def _skin_depth_wang(rho: np.ndarray, freq: np.ndarray) -> np.ndarray:
     """δ = 503 √(ρ / f)  [m]  (Wang & Lin 2023, eq. 1)."""
-    return 503.0 * np.sqrt(
-        np.maximum(rho, 1e-6) / np.maximum(freq, 1e-12)
-    )
+    return 503.0 * np.sqrt(np.maximum(rho, 1e-6) / np.maximum(freq, 1e-12))
 
 
 def _kr_wang(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
@@ -627,12 +688,15 @@ def _kr_wang(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
 def _zone_wang(kr: np.ndarray) -> np.ndarray:
     """Field-zone labels from Wang & Lin (2023) thresholds (0.5δ, 4δ)."""
     return np.where(
-        kr >= 4.0, "far",
+        kr >= 4.0,
+        "far",
         np.where(kr >= 0.5, "transition", "near"),
     )
 
 
-def _F_complex(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
+def _F_complex(
+    rho: np.ndarray, freq: np.ndarray, offset: float
+) -> np.ndarray:
     """
     Complex near-field factor F(p) = 1 − 3/p² + 3/p³  (equatorial HED).
 
@@ -640,13 +704,15 @@ def _F_complex(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
     F → 1 in the far field; diverges in the geometric near field.
     """
     omega = 2.0 * np.pi * np.maximum(np.asarray(freq, dtype=float), 1e-12)
-    k_abs = np.sqrt(omega * _MU0 / np.maximum(np.asarray(rho, dtype=float), 1e-6))
+    k_abs = np.sqrt(
+        omega * _MU0 / np.maximum(np.asarray(rho, dtype=float), 1e-6)
+    )
     p = k_abs * abs(offset) * (1.0 + 1j) / np.sqrt(2.0)
     tiny = np.abs(p) < 1e-10
     if np.any(tiny):
         p = p.copy()
         p[tiny] = 1e-10 * (1.0 + 1j)
-    return 1.0 - 3.0 / p ** 2 + 3.0 / p ** 3
+    return 1.0 - 3.0 / p**2 + 3.0 / p**3
 
 
 def _label_pseudo_ax(
@@ -660,8 +726,8 @@ def _label_pseudo_ax(
     ax.set_xticks(range(len(stations)))
     ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
     ax.set_xlabel("Station")
-    n_ytick  = min(8, len(all_y))
-    step     = max(1, len(all_y) // n_ytick)
+    n_ytick = min(8, len(all_y))
+    step = max(1, len(all_y) // n_ytick)
     tick_idx = np.arange(0, len(all_y), step)
     ax.set_yticks(tick_idx)
     ax.set_yticklabels([f"{all_y[k]:.3g}" for k in tick_idx], fontsize=8)
@@ -672,6 +738,7 @@ def _label_pseudo_ax(
 # ─────────────────────────────────────────────────────────────────────────────
 # normalize_response
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def normalize_response(
     sites: Any,
@@ -748,29 +815,37 @@ def normalize_response(
         if z is None or fr is None or fr.size == 0:
             continue
 
-        rho_a    = _rho_a_comp(z, fr, comp)
-        phi      = _phase_comp_deg(z, comp)
-        rho_n    = rho_a / max(float(rho_ref), 1e-12)
+        rho_a = _rho_a_comp(z, fr, comp)
+        phi = _phase_comp_deg(z, comp)
+        rho_n = rho_a / max(float(rho_ref), 1e-12)
         phi_diff = phi - float(phi_ref_deg)
 
         has_off = off is not None and off > 0.0
-        kr_arr   = _kr_wang(rho_a, fr, off) if has_off else np.full(fr.size, np.nan)
-        zone_arr = _zone_wang(kr_arr) if has_off else np.full(fr.size, None, dtype=object)
+        kr_arr = (
+            _kr_wang(rho_a, fr, off) if has_off else np.full(fr.size, np.nan)
+        )
+        zone_arr = (
+            _zone_wang(kr_arr)
+            if has_off
+            else np.full(fr.size, None, dtype=object)
+        )
 
         for j in range(fr.size):
-            rows.append({
-                "station":      station,
-                "freq_hz":      float(fr[j]),
-                "period_s":     1.0 / max(float(fr[j]), 1e-12),
-                "offset_m":     float(off) if has_off else np.nan,
-                "rho_a_ohmm":   float(rho_a[j]),
-                "rho_n":        float(rho_n[j]),
-                "phi_obs_deg":  float(phi[j]),
-                "phi_ref_deg":  float(phi_ref_deg),
-                "phi_diff_deg": float(phi_diff[j]),
-                "zone":         zone_arr[j],
-                "kr":           float(kr_arr[j]) if has_off else np.nan,
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": float(fr[j]),
+                    "period_s": 1.0 / max(float(fr[j]), 1e-12),
+                    "offset_m": float(off) if has_off else np.nan,
+                    "rho_a_ohmm": float(rho_a[j]),
+                    "rho_n": float(rho_n[j]),
+                    "phi_obs_deg": float(phi[j]),
+                    "phi_ref_deg": float(phi_ref_deg),
+                    "phi_diff_deg": float(phi_diff[j]),
+                    "zone": zone_arr[j],
+                    "kr": float(kr_arr[j]) if has_off else np.nan,
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_NORM_COLS)
@@ -780,6 +855,7 @@ def normalize_response(
 # ─────────────────────────────────────────────────────────────────────────────
 # correct_near_field
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def correct_near_field(
     sites: Any,
@@ -837,7 +913,7 @@ def correct_near_field(
     def _one(Si: Any) -> None:
         for ii, edd in enumerate(_iter_items(Si)):
             edd_raw = _unwrap(edd)
-            stn     = _name(edd_raw, ii)
+            stn = _name(edd_raw, ii)
             Z_wrap, z, fr = _get_z_block(edd_raw)
             if Z_wrap is None or z is None or fr is None:
                 return
@@ -852,10 +928,12 @@ def correct_near_field(
                     )
                 return
             rho_a = _rho_a_det(z, fr)
-            F     = _F_complex(rho_a, fr, off)
+            F = _F_complex(rho_a, fr, off)
             F_mag = np.abs(F)
             # guard: don't amplify Z by more than 1000× (|F| floor at 1e-3)
-            F_eff = np.where(F_mag >= 1e-3, F, F * (1e-3 / np.maximum(F_mag, 1e-30)))
+            F_eff = np.where(
+                F_mag >= 1e-3, F, F * (1e-3 / np.maximum(F_mag, 1e-30))
+            )
             Z_wrap.z = z / F_eff[:, None, None]
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
@@ -864,6 +942,7 @@ def correct_near_field(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_normalized_response
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_normalized_response(
     sites: Any,
@@ -943,33 +1022,43 @@ def plot_normalized_response(
 
     if df.empty:
         for ax in (ax1, ax2):
-            ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                    transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                "no data",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
         return ax1, ax2
 
-    stations  = list(dict.fromkeys(df["station"]))
-    y_col     = "period_s" if period_axis else "freq_hz"
-    all_y     = np.sort(df[y_col].unique())
-    s_idx     = {s: k for k, s in enumerate(stations)}
+    stations = list(dict.fromkeys(df["station"]))
+    y_col = "period_s" if period_axis else "freq_hz"
+    all_y = np.sort(df[y_col].unique())
+    s_idx = {s: k for k, s in enumerate(stations)}
     y_idx_map = {float(v): k for k, v in enumerate(all_y)}
 
     grid_rho_n = np.full((len(all_y), len(stations)), np.nan)
-    grid_phi   = np.full((len(all_y), len(stations)), np.nan)
+    grid_phi = np.full((len(all_y), len(stations)), np.nan)
 
     for _, row in df.iterrows():
         si = s_idx.get(row["station"])
         yi = y_idx_map.get(float(row[y_col]))
         if si is not None and yi is not None:
             grid_rho_n[yi, si] = row["rho_n"]
-            grid_phi[yi, si]   = row["phi_diff_deg"]
+            grid_phi[yi, si] = row["phi_diff_deg"]
 
     X, Y = np.meshgrid(np.arange(len(stations)), np.arange(len(all_y)))
 
     # ── ρ_n panel ─────────────────────────────────────────────────────────
     valid_rn = grid_rho_n[np.isfinite(grid_rho_n)]
     if rho_n_lim is None:
-        vdev = max(float(np.nanmax(np.abs(valid_rn - 1.0))) if len(valid_rn) else 1.0,
-                   0.01)
+        vdev = max(
+            float(np.nanmax(np.abs(valid_rn - 1.0)))
+            if len(valid_rn)
+            else 1.0,
+            0.01,
+        )
         rn_min, rn_max = 1.0 - vdev, 1.0 + vdev
     else:
         rn_min, rn_max = rho_n_lim
@@ -979,17 +1068,24 @@ def plot_normalized_response(
         )
     except Exception:
         norm_rn = Normalize(vmin=rn_min, vmax=rn_max)
-    pcm1 = ax1.pcolormesh(X, Y, grid_rho_n, cmap=cmap_rho,
-                           norm=norm_rn, shading="nearest")
+    pcm1 = ax1.pcolormesh(
+        X, Y, grid_rho_n, cmap=cmap_rho, norm=norm_rn, shading="nearest"
+    )
     plt.colorbar(pcm1, ax=ax1, label="ρ_n = ρ_obs / ρ_ref")
-    _label_pseudo_ax(ax1, stations, all_y, period_axis,
-                     f"Normalized ρ_a  (ρ_ref = {rho_ref:.0f} Ω·m)")
+    _label_pseudo_ax(
+        ax1,
+        stations,
+        all_y,
+        period_axis,
+        f"Normalized ρ_a  (ρ_ref = {rho_ref:.0f} Ω·m)",
+    )
 
     # ── φ_diff panel ──────────────────────────────────────────────────────
     valid_pd = grid_phi[np.isfinite(grid_phi)]
     if phi_diff_lim is None:
-        vdev_p = max(float(np.nanmax(np.abs(valid_pd))) if len(valid_pd) else 10.0,
-                     1.0)
+        vdev_p = max(
+            float(np.nanmax(np.abs(valid_pd))) if len(valid_pd) else 10.0, 1.0
+        )
         pd_min, pd_max = -vdev_p, vdev_p
     else:
         pd_min, pd_max = phi_diff_lim
@@ -999,10 +1095,16 @@ def plot_normalized_response(
         )
     except Exception:
         norm_pd = Normalize(vmin=pd_min, vmax=pd_max)
-    pcm2 = ax2.pcolormesh(X, Y, grid_phi, cmap=cmap_phi,
-                           norm=norm_pd, shading="nearest")
+    pcm2 = ax2.pcolormesh(
+        X, Y, grid_phi, cmap=cmap_phi, norm=norm_pd, shading="nearest"
+    )
     plt.colorbar(pcm2, ax=ax2, label="φ_diff = φ_obs − φ_ref  (°)")
-    _label_pseudo_ax(ax2, stations, all_y, period_axis,
-                     f"Subtracted phase  (φ_ref = {phi_ref_deg:.0f}°)")
+    _label_pseudo_ax(
+        ax2,
+        stations,
+        all_y,
+        period_axis,
+        f"Subtracted phase  (φ_ref = {phi_ref_deg:.0f}°)",
+    )
 
     return ax1, ax2

@@ -55,15 +55,15 @@ from .log import OccamLog
 from .mesh import OccamMesh
 from .model import OccamModel
 from .plot import (
-                       PlotMisfit,
-                       PlotModel,
-                       PlotPseudo,
-                       PlotResponse,
-                       PlotResponseGrid,
-                       PlotSiteMisfit,
-                       PlotSounding1D,
-                       PlotStation1DFit,
-                       plot_station_1d_fit,
+    PlotMisfit,
+    PlotModel,
+    PlotPseudo,
+    PlotResponse,
+    PlotResponseGrid,
+    PlotSiteMisfit,
+    PlotSounding1D,
+    PlotStation1DFit,
+    plot_station_1d_fit,
 )
 from .response import OccamResponse
 from .results import InversionResult

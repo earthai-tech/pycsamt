@@ -30,11 +30,11 @@ print(f"loaded {len(sites)} stations from WILLY_DATA L22")
 
 pipe = Pipeline(
     [
-        ("drop_dup",    Step("FREQ002")),
+        ("drop_dup", Step("FREQ002")),
         ("select_band", Step("FREQ001", band_hz=(0.01, 10_000))),
-        ("align",       Step("FREQ004")),
-        ("notch",       Step("NR001", mains_hz=50)),
-        ("qc_snap",     Step("QC001")),
+        ("align", Step("FREQ004")),
+        ("notch", Step("NR001", mains_hz=50)),
+        ("qc_snap", Step("QC001")),
     ],
     name="willy_l22_demo",
 )
@@ -51,8 +51,13 @@ configure_pipe(show_progress=False, plot_dpi=72, plot_fmt="png")
 outdir = scratch_dir()
 
 with quiet_logs():
-    result = pipe.run(sites, outdir=outdir,
-                      save_plots=True, save_edis=True, save_report=True)
+    result = pipe.run(
+        sites,
+        outdir=outdir,
+        save_plots=True,
+        save_edis=True,
+        save_report=True,
+    )
 
 print(result.summary())
 
@@ -63,12 +68,16 @@ print(result.summary())
 # overall status, and a :class:`~pycsamt.pipeline.StepResult` per step with
 # its timing and in/out station counts — the audit trail of what happened.
 
-print(f"ok = {result.ok}   errors = {result.n_errors}   "
-      f"elapsed = {result.elapsed_sec:.2f} s\n")
+print(
+    f"ok = {result.ok}   errors = {result.n_errors}   "
+    f"elapsed = {result.elapsed_sec:.2f} s\n"
+)
 print(f"{'step':<12}{'code':<9}{'ok':<5}{'seconds':>8}{'sites':>10}")
 for sr in result.step_results:
-    print(f"{sr.step_name:<12}{sr.step_code:<9}{str(sr.ok):<5}"
-          f"{sr.elapsed_sec:>8.3f}{f'{sr.n_sites_in}->{sr.n_sites_out}':>10}")
+    print(
+        f"{sr.step_name:<12}{sr.step_code:<9}{str(sr.ok):<5}"
+        f"{sr.elapsed_sec:>8.3f}{f'{sr.n_sites_in}->{sr.n_sites_out}':>10}"
+    )
 
 # %%
 # The output package
@@ -78,7 +87,9 @@ for sr in result.step_results:
 # reproduce the run (see :doc:`plot_4_config_reproducibility`).
 
 
-files = sorted(p.relative_to(outdir).as_posix() for p in outdir.rglob("*") if p.is_file())
+files = sorted(
+    p.relative_to(outdir).as_posix() for p in outdir.rglob("*") if p.is_file()
+)
 print(f"{len(files)} files written to the output directory:")
 for f in files:
     print("  ", f)

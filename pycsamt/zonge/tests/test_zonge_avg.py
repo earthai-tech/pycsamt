@@ -4,6 +4,7 @@
 """
 Pytest suite for the BaseAVG and AVG classes.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -15,6 +16,7 @@ from pycsamt.zonge.info import DataInfo
 # Note: The fixtures `modern_data_file` and `legacy_data_file`
 # are now defined in `tests/conftest.py` and are automatically
 # available to all tests.
+
 
 @pytest.fixture
 def _modern_avg_content():
@@ -52,7 +54,7 @@ def _modern_avg_content():
 def _legacy_avg_content():
     """Provides content for a legacy (kind-1) AVG file."""
     return (
-        "\\ AMTAVG 7.20: \"SAMCSAM.FLD\", Processed 29 Jul 93\n"
+        '\\ AMTAVG 7.20: "SAMCSAM.FLD", Processed 29 Jul 93\n'
         "$ ASPACE= 183.0m\n"
         "$ XMTR  =    1.\n"
         " skp Station Freq  Comp Amps     Emag     Ephz      "
@@ -105,13 +107,21 @@ class TestBaseAVG:
     def test_read_from_dataframe(self):
         """Test reading directly from a pandas DataFrame."""
         # This test remains important for in-memory data handling
-        df = pd.DataFrame({
-                    "station": [100, 100], "freq": [1024, 512],
-                    "rho": [50, 60], "phase": [45, 55],
-                    "comp": ["ExHy", "ExHy"], "E.%err": [1, 2],
-                    "B.%err": [3, 4], "ARes.%err": [5, 6],
-                    "E.perr": [7, 8], "H.perr": [9, 10], "Z.perr": [11, 12]
-        })
+        df = pd.DataFrame(
+            {
+                "station": [100, 100],
+                "freq": [1024, 512],
+                "rho": [50, 60],
+                "phase": [45, 55],
+                "comp": ["ExHy", "ExHy"],
+                "E.%err": [1, 2],
+                "B.%err": [3, 4],
+                "ARes.%err": [5, 6],
+                "E.perr": [7, 8],
+                "H.perr": [9, 10],
+                "Z.perr": [11, 12],
+            }
+        )
         meta = {"Survey.Type": "CSAMT"}
         base = BaseAVG()
         base.read(df, meta=meta)
@@ -119,9 +129,12 @@ class TestBaseAVG:
         out = base.info.df
         # the reader canonicalises QC column names on ingest
         renames = {
-            "E.%err": "pc_emag", "B.%err": "pc_hmag",
-            "ARes.%err": "pc_rho", "E.perr": "s_ephz",
-            "H.perr": "s_hphz", "Z.perr": "s_phz",
+            "E.%err": "pc_emag",
+            "B.%err": "pc_hmag",
+            "ARes.%err": "pc_rho",
+            "E.perr": "s_ephz",
+            "H.perr": "s_hphz",
+            "Z.perr": "s_phz",
         }
         for raw, canonical in renames.items():
             assert canonical in out.columns
@@ -156,7 +169,9 @@ class TestBaseAVG:
         reloaded_base = BaseAVG()
         reloaded_base.read(out_path)
         assert reloaded_base._kind == 1
-        assert np.isclose (len(reloaded_base.info.df), original_rows * 9.62962962962963 )
+        assert np.isclose(
+            len(reloaded_base.info.df), original_rows * 9.62962962962963
+        )
         # assert len(reloaded_base.info.df) == original_rows
 
     def test_write_dispatcher(self, modern_data_file, tmp_path):
@@ -180,7 +195,9 @@ class TestBaseAVG:
         reloaded_base.read(path_auto)
         assert reloaded_base._kind == 2
 
+
 # --- Tests for AVG ------------------------------------------------
+
 
 class TestAVG:
     def test_inheritance(self):
@@ -234,5 +251,6 @@ class TestAVG:
         assert freqs.shape == (avg.frequency.n_unique,)
         assert stations.shape == (avg.station.n_unique,)
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

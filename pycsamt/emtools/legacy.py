@@ -40,14 +40,14 @@ _ALIAS_MAP = {
     "qc": compute_qc,
     "plot_tensors2": plot_station_tensors,
     "plot_l_curve": plot_lcurve,
-    "get2dtensor": tensor2d
+    "get2dtensor": tensor2d,
 }
 
 _EXTRAS = {
     "plot_tensors2": "Use 'plot_station_tensors'.",
     "get_full_frequency": "Use 'full_freq'.",
     "plot_l_curve": "Use 'plot_lcurve'.",
-    "get2dtensor": "Use 'tensor2d'."
+    "get2dtensor": "Use 'tensor2d'.",
 }
 
 install_compat_aliases(

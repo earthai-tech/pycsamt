@@ -56,7 +56,6 @@ from pycsamt.site import (
     strike_estimate,
 )
 
-
 willy_dir = ROOT / "data" / "AMT" / "WILLY_DATA"
 line_pattern = "22-*"
 line_label = "L22"
@@ -83,7 +82,11 @@ line_report["station_number"] = (
 line_report = line_report.sort_values("station_number")
 
 print(f"{line_label} station count: {len(line_sites)}")
-print(line_report[["station", "nfreq", "freq_min", "freq_max", "lat", "lon"]].head().to_string(index=False))
+print(
+    line_report[["station", "nfreq", "freq_min", "freq_max", "lat", "lon"]]
+    .head()
+    .to_string(index=False)
+)
 
 # %%
 # 3. Build a multi-frequency screening table
@@ -92,7 +95,9 @@ print(line_report[["station", "nfreq", "freq_min", "freq_max", "lat", "lon"]].he
 # We evaluate several frequencies to see whether a contrast persists across
 # the band or only appears locally.
 
-screen = line_report[["station", "station_number", "lat", "lon", "nfreq"]].copy()
+screen = line_report[
+    ["station", "station_number", "lat", "lon", "nfreq"]
+].copy()
 
 for freq in target_frequencies:
     rho = res_at_freq(line_sites, freq, how="nearest", api=False)
@@ -114,14 +119,26 @@ for freq in target_frequencies:
 slopes = phase_slope(line_sites, phase_band, api=False)
 strike = strike_estimate(line_sites, method="phase_diff", api=False)
 screen = screen.merge(slopes, on="station", how="left")
-screen = screen.merge(strike[["station", "theta_deg"]], on="station", how="left")
-screen["phase_slope_abs"] = screen[["slope_xy", "slope_yx"]].abs().mean(axis=1)
+screen = screen.merge(
+    strike[["station", "theta_deg"]], on="station", how="left"
+)
+screen["phase_slope_abs"] = (
+    screen[["slope_xy", "slope_yx"]].abs().mean(axis=1)
+)
 
 print("Screening table preview:")
 print(
     screen[
-        ["station", "rho_0100hz", "anis_0100hz", "phase_slope_abs", "theta_deg"]
-    ].head(10).to_string(index=False)
+        [
+            "station",
+            "rho_0100hz",
+            "anis_0100hz",
+            "phase_slope_abs",
+            "theta_deg",
+        ]
+    ]
+    .head(10)
+    .to_string(index=False)
 )
 
 # %%
@@ -142,14 +159,18 @@ sc = axs[0].scatter(
     linewidth=0.4,
 )
 for _, row in screen.iterrows():
-    axs[0].text(row["lon"], row["lat"], str(int(row["station_number"])), fontsize=7)
+    axs[0].text(
+        row["lon"], row["lat"], str(int(row["station_number"])), fontsize=7
+    )
 axs[0].set_title(f"{line_label}: map view at 100 Hz")
 axs[0].set_xlabel("Longitude")
 axs[0].set_ylabel("Latitude")
 axs[0].grid(alpha=0.25)
 fig.colorbar(sc, ax=axs[0], label="log10 rho geometric mean")
 
-axs[1].semilogy(screen["station_number"], screen["rho_0100hz"], marker="o", lw=1.6)
+axs[1].semilogy(
+    screen["station_number"], screen["rho_0100hz"], marker="o", lw=1.6
+)
 axs[1].set_title(f"{line_label}: profile at 100 Hz")
 axs[1].set_xlabel("Station number")
 axs[1].set_ylabel("rho geometric mean")
@@ -187,10 +208,12 @@ fig.tight_layout()
 # ----------------------------------------
 # A heatmap gives a compact view of all selected frequencies and stations.
 
-rho_matrix = np.vstack([
-    screen[f"rho_{int(freq):04d}hz"].to_numpy(dtype=float)
-    for freq in target_frequencies
-])
+rho_matrix = np.vstack(
+    [
+        screen[f"rho_{int(freq):04d}hz"].to_numpy(dtype=float)
+        for freq in target_frequencies
+    ]
+)
 
 fig, ax = plt.subplots(figsize=(10, 4.2))
 im = ax.imshow(np.log10(rho_matrix), aspect="auto", cmap="magma")
@@ -224,10 +247,16 @@ selected_station = selected["station"]
 
 print(f"Selected diagnostic station: {selected_station}")
 print(
-    selected[[
-        "station", "rho_0100hz", "anis_0100hz",
-        "phase_slope_abs", "theta_deg", "followup_score",
-    ]].to_string()
+    selected[
+        [
+            "station",
+            "rho_0100hz",
+            "anis_0100hz",
+            "phase_slope_abs",
+            "theta_deg",
+            "followup_score",
+        ]
+    ].to_string()
 )
 
 # %%
@@ -235,7 +264,13 @@ print(
 
 fig, ax = plt.subplots(figsize=(8.5, 3.8))
 ax.bar(screen["station"], screen["followup_score"], color="#2563eb")
-ax.axhline(screen["followup_score"].median(), color="black", ls="--", lw=1, label="median")
+ax.axhline(
+    screen["followup_score"].median(),
+    color="black",
+    ls="--",
+    lw=1,
+    label="median",
+)
 ax.set_title(f"{line_label}: follow-up score by station")
 ax.set_ylabel("Screening score")
 ax.tick_params(axis="x", rotation=70)
@@ -253,7 +288,9 @@ fig.tight_layout()
 
 def find_station(sites, name):
     for edi in sites.as_list():
-        station = getattr(edi, "station", "") or getattr(getattr(edi, "Head", None), "dataid", "")
+        station = getattr(edi, "station", "") or getattr(
+            getattr(edi, "Head", None), "dataid", ""
+        )
         if station == name:
             return edi
     raise KeyError(name)
@@ -261,8 +298,12 @@ def find_station(sites, name):
 
 def z_and_freq(edi):
     z_obj = getattr(edi, "Z", None)
-    freq = np.asarray(getattr(z_obj, "freq", getattr(z_obj, "_freq", [])), dtype=float)
-    z = np.asarray(getattr(z_obj, "z", getattr(z_obj, "_z", [])), dtype=complex)
+    freq = np.asarray(
+        getattr(z_obj, "freq", getattr(z_obj, "_freq", [])), dtype=float
+    )
+    z = np.asarray(
+        getattr(z_obj, "z", getattr(z_obj, "_z", [])), dtype=complex
+    )
     order = np.argsort(freq)
     return freq[order], z[order]
 

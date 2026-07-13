@@ -40,7 +40,9 @@ def _save(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
-def _layer_model(depths: np.ndarray, rho_layers: list[float], breaks: list[float]) -> np.ndarray:
+def _layer_model(
+    depths: np.ndarray, rho_layers: list[float], breaks: list[float]
+) -> np.ndarray:
     log_rho = np.empty_like(depths, dtype=float)
     edges = [0.0, *breaks, float(depths[-1]) + 1.0]
     for lo, hi, rho in zip(edges[:-1], edges[1:], rho_layers):
@@ -65,7 +67,9 @@ def make_workflow() -> None:
     colors = ["#eff6ff", "#f0fdf4", "#fff7ed", "#f5f3ff", "#fef2f2"]
     borders = ["#2563eb", "#16a34a", "#ea580c", "#7c3aed", "#dc2626"]
 
-    for i, ((title, body), x, face, edge) in enumerate(zip(labels, xs, colors, borders)):
+    for i, ((title, body), x, face, edge) in enumerate(
+        zip(labels, xs, colors, borders)
+    ):
         box = FancyBboxPatch(
             (x - 0.078, 0.35),
             0.156,
@@ -76,8 +80,26 @@ def make_workflow() -> None:
             facecolor=face,
         )
         ax.add_patch(box)
-        ax.text(x, 0.61, title, ha="center", va="center", fontsize=10.5, weight="bold", color="#111827")
-        ax.text(x, 0.47, body, ha="center", va="center", fontsize=8.4, color="#374151", linespacing=1.25)
+        ax.text(
+            x,
+            0.61,
+            title,
+            ha="center",
+            va="center",
+            fontsize=10.5,
+            weight="bold",
+            color="#111827",
+        )
+        ax.text(
+            x,
+            0.47,
+            body,
+            ha="center",
+            va="center",
+            fontsize=8.4,
+            color="#374151",
+            linespacing=1.25,
+        )
         if i < len(labels) - 1:
             ax.add_patch(
                 FancyArrowPatch(
@@ -107,7 +129,9 @@ def make_training_distribution() -> None:
     depths = np.linspace(0, 1500, 180)
     periods = np.logspace(-2, 2, 80)
 
-    fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.1), gridspec_kw={"width_ratios": [0.95, 1.25]})
+    fig, axes = plt.subplots(
+        1, 2, figsize=(11.0, 4.1), gridspec_kw={"width_ratios": [0.95, 1.25]}
+    )
     ax_m, ax_r = axes
 
     response_stack = []
@@ -117,9 +141,17 @@ def make_training_distribution() -> None:
         model = _layer_model(depths, list(rho_layers), breaks)
         if _ < 16:
             ax_m.plot(model, depths, lw=0.9, alpha=0.45, color="#2563eb")
-        conductance = np.interp(np.log10(periods), [-2, 2], [model[:30].mean(), model[-40:].mean()])
-        bowl = 0.22 * np.sin(np.log(periods) * rng.uniform(0.7, 1.2) + rng.uniform(-1.2, 1.2))
-        response_stack.append(conductance + bowl + rng.normal(0, 0.035, size=periods.size))
+        conductance = np.interp(
+            np.log10(periods),
+            [-2, 2],
+            [model[:30].mean(), model[-40:].mean()],
+        )
+        bowl = 0.22 * np.sin(
+            np.log(periods) * rng.uniform(0.7, 1.2) + rng.uniform(-1.2, 1.2)
+        )
+        response_stack.append(
+            conductance + bowl + rng.normal(0, 0.035, size=periods.size)
+        )
 
     response_stack = np.vstack(response_stack)
     p10, p50, p90 = np.percentile(response_stack, [10, 50, 90], axis=0)
@@ -131,13 +163,29 @@ def make_training_distribution() -> None:
     ax_m.set_title("Sampled earth models", fontsize=10)
     ax_m.grid(alpha=0.25)
 
-    ax_r.fill_between(periods, p10, p90, color="#93c5fd", alpha=0.35, label="training envelope")
+    ax_r.fill_between(
+        periods,
+        p10,
+        p90,
+        color="#93c5fd",
+        alpha=0.35,
+        label="training envelope",
+    )
     ax_r.plot(periods, p50, color="#2563eb", lw=1.8, label="synthetic median")
-    ax_r.plot(periods, observed, color="#dc2626", lw=1.6, ls="--", label="observed survey")
+    ax_r.plot(
+        periods,
+        observed,
+        color="#dc2626",
+        lw=1.6,
+        ls="--",
+        label="observed survey",
+    )
     ax_r.set_xscale("log")
     ax_r.set_xlabel("Period (s)")
     ax_r.set_ylabel(r"Response feature, $\log_{10}(\rho_a)$")
-    ax_r.set_title("Observed data should sit inside the synthetic envelope", fontsize=10)
+    ax_r.set_title(
+        "Observed data should sit inside the synthetic envelope", fontsize=10
+    )
     ax_r.legend(frameon=False, fontsize=8)
     ax_r.grid(alpha=0.25, which="both")
 
@@ -151,11 +199,26 @@ def make_convergence() -> None:
     rng = np.random.default_rng(7)
     histories = []
     for offset in [0.0, 0.08, -0.05]:
-        train = 0.42 * np.exp(-epochs / 19.5) + 0.018 + rng.normal(0, 0.003, epochs.size) + offset * 0.002
-        val = 0.48 * np.exp(-epochs / 16.0) + 0.028 + 0.000025 * (epochs - 48).clip(min=0) ** 2
+        train = (
+            0.42 * np.exp(-epochs / 19.5)
+            + 0.018
+            + rng.normal(0, 0.003, epochs.size)
+            + offset * 0.002
+        )
+        val = (
+            0.48 * np.exp(-epochs / 16.0)
+            + 0.028
+            + 0.000025 * (epochs - 48).clip(min=0) ** 2
+        )
         val += rng.normal(0, 0.004, epochs.size) + offset * 0.003
         lr = np.where(epochs < 45, 1e-3, 3e-4)
-        histories.append({"train_loss": train.clip(1e-4), "val_loss": val.clip(1e-4), "lr": lr})
+        histories.append(
+            {
+                "train_loss": train.clip(1e-4),
+                "val_loss": val.clip(1e-4),
+                "lr": lr,
+            }
+        )
 
     fig = plot_convergence(
         histories,
@@ -172,10 +235,18 @@ def make_predicted_section() -> None:
     xx, zz = np.meshgrid(stations, depths)
 
     background = 2.35 + 0.45 * np.tanh((zz - 500) / 350)
-    conductor = -0.95 * np.exp(-((xx - 7.2) ** 2 / 10.0 + (zz - 420) ** 2 / 90000))
-    basement = 0.48 * np.exp(-((xx - 14.5) ** 2 / 18.0 + (zz - 1000) ** 2 / 180000))
+    conductor = -0.95 * np.exp(
+        -((xx - 7.2) ** 2 / 10.0 + (zz - 420) ** 2 / 90000)
+    )
+    basement = 0.48 * np.exp(
+        -((xx - 14.5) ** 2 / 18.0 + (zz - 1000) ** 2 / 180000)
+    )
     log_true = background + conductor + basement
-    log_pred = log_true + 0.08 * np.sin(xx / 2.4) * np.exp(-zz / 1200) - 0.05 * np.exp(-((xx - 4) ** 2) / 4)
+    log_pred = (
+        log_true
+        + 0.08 * np.sin(xx / 2.4) * np.exp(-zz / 1200)
+        - 0.05 * np.exp(-((xx - 4) ** 2) / 4)
+    )
 
     train_loss = 0.38 * np.exp(-np.arange(1, 55) / 14) + 0.018
     val_loss = 0.42 * np.exp(-np.arange(1, 55) / 12) + 0.024
@@ -193,8 +264,17 @@ def make_predicted_section() -> None:
                 "text": "conductive zone",
                 "xy": (7.1, 420),
                 "xytext": (2.5, 250),
-                "arrowprops": {"arrowstyle": "->", "color": "#111827", "lw": 0.8},
-                "bbox": {"boxstyle": "round,pad=0.25", "fc": "white", "ec": "#cbd5e1", "alpha": 0.85},
+                "arrowprops": {
+                    "arrowstyle": "->",
+                    "color": "#111827",
+                    "lw": 0.8,
+                },
+                "bbox": {
+                    "boxstyle": "round,pad=0.25",
+                    "fc": "white",
+                    "ec": "#cbd5e1",
+                    "alpha": 0.85,
+                },
             }
         ],
         suptitle="AI inversion result - synthetic profile L22PLT",
@@ -207,9 +287,21 @@ def make_predicted_section() -> None:
 
 def make_uncertainty() -> None:
     depths = np.linspace(0, 1500, 120)
-    mean = 2.05 + 0.35 * np.tanh((depths - 600) / 360) - 0.55 * np.exp(-((depths - 360) ** 2) / 70000)
-    spread = 0.07 + 0.00012 * depths + 0.08 * np.exp(-((depths - 850) ** 2) / 150000)
-    truth = mean - 0.10 * np.exp(-((depths - 430) ** 2) / 55000) + 0.05 * np.sin(depths / 260)
+    mean = (
+        2.05
+        + 0.35 * np.tanh((depths - 600) / 360)
+        - 0.55 * np.exp(-((depths - 360) ** 2) / 70000)
+    )
+    spread = (
+        0.07
+        + 0.00012 * depths
+        + 0.08 * np.exp(-((depths - 850) ** 2) / 150000)
+    )
+    truth = (
+        mean
+        - 0.10 * np.exp(-((depths - 430) ** 2) / 55000)
+        + 0.05 * np.sin(depths / 260)
+    )
 
     fig = plot_uncertainty_bands(
         depths,
@@ -227,7 +319,12 @@ def make_uncertainty() -> None:
         transform=ax.transAxes,
         fontsize=8.5,
         color="#475569",
-        bbox={"boxstyle": "round,pad=0.3", "fc": "white", "ec": "#cbd5e1", "alpha": 0.9},
+        bbox={
+            "boxstyle": "round,pad=0.3",
+            "fc": "white",
+            "ec": "#cbd5e1",
+            "alpha": 0.9,
+        },
     )
     _save(fig, "uncertainty_profile.png")
 
@@ -246,7 +343,8 @@ def make_gcn_3d_context() -> None:
     y = np.concatenate(ys)
     feature_strength = (
         0.45
-        + 0.45 * np.exp(-((x - 6200) ** 2 / 9_000_000 + (y - 2600) ** 2 / 3_000_000))
+        + 0.45
+        * np.exp(-((x - 6200) ** 2 / 9_000_000 + (y - 2600) ** 2 / 3_000_000))
         + 0.10 * rng.random(x.size)
     )
 
@@ -280,7 +378,9 @@ def make_gcn_3d_context() -> None:
     ax.set_xlabel("Easting offset (m)")
     ax.set_ylabel("Northing offset (m)")
     ax.set_zlabel("Feature response")
-    ax.set_title("3-D AI inversion uses station geometry as graph context", pad=12)
+    ax.set_title(
+        "3-D AI inversion uses station geometry as graph context", pad=12
+    )
     ax.view_init(elev=24, azim=-62)
     cb = fig.colorbar(sc, ax=ax, shrink=0.74, pad=0.08)
     cb.set_label("Normalised response feature")

@@ -16,12 +16,14 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def result():
     from pycsamt.models.occam2d.results import InversionResult
+
     return InversionResult(workdir=DATA_DIR)
 
 
 # -----------------------------------------------------------------------
 # _load() — file discovery
 # -----------------------------------------------------------------------
+
 
 def test_result_has_iter_files(result):
     assert len(result.iter_files) > 0
@@ -59,6 +61,7 @@ def test_result_response_loaded(result):
 # rho_2d
 # -----------------------------------------------------------------------
 
+
 def test_result_rho_2d_shape(result):
     assert result.rho_2d is not None
     assert result.rho_2d.shape == (31, 576)
@@ -73,12 +76,13 @@ def test_result_rho_2d_range(result):
     finite = result.rho_2d[~np.isnan(result.rho_2d)]
     # log10(rho) values should be in a plausible range for crustal resistivity
     assert float(finite.min()) > -5.0
-    assert float(finite.max()) <  6.0
+    assert float(finite.max()) < 6.0
 
 
 # -----------------------------------------------------------------------
 # Convenience properties
 # -----------------------------------------------------------------------
+
 
 def test_result_final_rms(result):
     assert math.isclose(result.final_rms, 0.9977012, rel_tol=1e-4)
@@ -98,6 +102,7 @@ def test_result_summary(result):
 # iter2dat
 # -----------------------------------------------------------------------
 
+
 def test_iter2dat_creates_file(result, tmp_path):
     out = tmp_path / "model.dat"
     result.iter2dat(out)
@@ -116,7 +121,7 @@ def test_iter2dat_column_count(result, tmp_path):
     out = tmp_path / "model.dat"
     result.iter2dat(out)
     first = out.read_text().splitlines()[0].split()
-    assert len(first) == 3   # x  z  log10_rho
+    assert len(first) == 3  # x  z  log10_rho
 
 
 def test_iter2dat_x_centered(result, tmp_path):
@@ -139,7 +144,9 @@ def test_iter2dat_z_positive(result, tmp_path):
 # Error paths
 # -----------------------------------------------------------------------
 
+
 def test_bad_workdir_raises():
     from pycsamt.models.occam2d.results import InversionResult
+
     with pytest.raises(NotADirectoryError):
         InversionResult(workdir="/nonexistent/path")

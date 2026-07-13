@@ -85,4 +85,3 @@ def test_map_stations_csv(runner: CliRunner, monkeypatch) -> None:
     assert rows[1]["station"] == "S02"
     assert rows[1]["lat"] == "1.0"
     assert rows[1]["lon"] == "101.0"
-

@@ -23,10 +23,15 @@ from .utils import _ensure_head, _get_head
 
 __all__ = [
     "Coord",
-    "parse_lat", "parse_lon", "parse_elev",
-    "ensure_head_coords", "apply_topography",
+    "parse_lat",
+    "parse_lon",
+    "parse_elev",
+    "ensure_head_coords",
+    "apply_topography",
     "project",
-    "distance", "bearing", "chainage_along",
+    "distance",
+    "bearing",
+    "chainage_along",
 ]
 
 _HEMI_LAT = {"N": 1.0, "S": -1.0}
@@ -43,6 +48,7 @@ _DMS_RX = re.compile(
     """,
     re.VERBOSE | re.IGNORECASE,
 )
+
 
 @dataclass
 class Coord:
@@ -258,12 +264,21 @@ def ensure_head_coords(
     ev0 = getattr(h, "elev", getattr(h, "elevation", None))
 
     # parse inputs; if None, keep existing; if still None → emp
-    la = (parse_lat(lat) if lat is not None else
-          (parse_lat(la0) if la0 is not None else emp))
-    lo = (parse_lon(lon) if lon is not None else
-          (parse_lon(lo0) if lo0 is not None else emp))
-    ev = (parse_elev(elev) if elev is not None else
-          (parse_elev(ev0) if ev0 is not None else emp))
+    la = (
+        parse_lat(lat)
+        if lat is not None
+        else (parse_lat(la0) if la0 is not None else emp)
+    )
+    lo = (
+        parse_lon(lon)
+        if lon is not None
+        else (parse_lon(lo0) if lo0 is not None else emp)
+    )
+    ev = (
+        parse_elev(elev)
+        if elev is not None
+        else (parse_elev(ev0) if ev0 is not None else emp)
+    )
 
     la = assert_lat_value(la) if math.isfinite(la) else emp
     lo = assert_lon_value(lo) if math.isfinite(lo) else emp
@@ -295,8 +310,15 @@ def ensure_head_coords(
     if not wrote_lon:
         try:
             nh = type("Head", (), {})()
-            for k in ("lat", "long", "elev", "dataid",
-                      "station", "name", "sitename"):
+            for k in (
+                "lat",
+                "long",
+                "elev",
+                "dataid",
+                "station",
+                "name",
+                "sitename",
+            ):
                 if hasattr(h, k):
                     setattr(nh, k, getattr(h, k))
             nh.lon = float(lo)
@@ -401,8 +423,11 @@ def apply_topography(
     # list/tuple of EDIFile
     try:
         if isinstance(ed_or_sites, (list, tuple)):
-            vec = ([copy.deepcopy(x) for x in ed_or_sites]
-                   if not inplace else list(ed_or_sites))
+            vec = (
+                [copy.deepcopy(x) for x in ed_or_sites]
+                if not inplace
+                else list(ed_or_sites)
+            )
             for ed in vec:
                 _apply_one(ed)
             return vec
@@ -466,6 +491,7 @@ def project(
 
     try:
         from pyproj import Transformer  # type: ignore
+
         use_pyproj = True
     except Exception:
         use_pyproj = False
@@ -481,8 +507,7 @@ def project(
     ys_a = np.asarray(ys, float)
 
     if use_pyproj:
-        tr = Transformer.from_crs(crs_from, crs_to,
-                                  always_xy=True)
+        tr = Transformer.from_crs(crs_from, crs_to, always_xy=True)
         X, Y = tr.transform(xs_a, ys_a)
         return np.asarray(X, float), np.asarray(Y, float)
 
@@ -512,12 +537,8 @@ def project(
     s_from = _to_srs(crs_from)
     s_to = _to_srs(crs_to)
     try:
-        s_from.SetAxisMappingStrategy(
-            osr.OAMS_TRADITIONAL_GIS_ORDER
-        )
-        s_to.SetAxisMappingStrategy(
-            osr.OAMS_TRADITIONAL_GIS_ORDER
-        )
+        s_from.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        s_to.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
     except Exception:
         pass
     ct = osr.CoordinateTransformation(s_from, s_to)
@@ -605,21 +626,26 @@ def distance(
     if m == "geodetic":
         dlat = _rad(la2 - la1)
         dlon = _rad(lo2 - lo1)
-        A = (math.sin(dlat / 2) ** 2
-             + math.cos(_rad(la1)) * math.cos(_rad(la2))
-             * math.sin(dlon / 2) ** 2)
+        A = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(_rad(la1))
+            * math.cos(_rad(la2))
+            * math.sin(dlon / 2) ** 2
+        )
         return 2.0 * _EARTH_R * math.asin(min(1.0, math.sqrt(A)))
     if m == "flat":
         dx, dy = _flat_offsets_m(la1, lo1, la2, lo2)
         return math.hypot(dx, dy)
     if m == "utm":
-        epsg = (_infer_utm_epsg((la1 + la2) * 0.5,
-                                (lo1 + lo2) * 0.5)
-                if crs_to is None else crs_to)
-        X, Y = project([(lo1, la1), (lo2, la2)],
-                       crs_from="EPSG:4326", crs_to=epsg)
-        return float(math.hypot(float(X[1] - X[0]),
-                                float(Y[1] - Y[0])))
+        epsg = (
+            _infer_utm_epsg((la1 + la2) * 0.5, (lo1 + lo2) * 0.5)
+            if crs_to is None
+            else crs_to
+        )
+        X, Y = project(
+            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
+        )
+        return float(math.hypot(float(X[1] - X[0]), float(Y[1] - Y[0])))
     raise ValueError("mode must be 'geodetic','flat','utm'")
 
 
@@ -692,12 +718,13 @@ def bearing(
 
     m = mode.lower()
     if m == "geodetic":
-        phi1= _rad(la1)
+        phi1 = _rad(la1)
         phi2 = _rad(la2)
         dlambda = _rad(lo2 - lo1)
         y = math.sin(dlambda) * math.cos(phi2)
-        x = (math.cos(phi1) * math.sin(phi2)
-             - math.sin(phi1) * math.cos(phi2) * math.cos(dlambda))
+        x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(
+            phi2
+        ) * math.cos(dlambda)
         theta = math.degrees(math.atan2(y, x))
         return (theta + 360.0) % 360.0
     if m == "flat":
@@ -705,11 +732,14 @@ def bearing(
         θ = math.degrees(math.atan2(dx, dy))
         return (θ + 360.0) % 360.0
     if m == "utm":
-        epsg = (_infer_utm_epsg((la1 + la2) * 0.5,
-                                (lo1 + lo2) * 0.5)
-                if crs_to is None else crs_to)
-        X, Y = project([(lo1, la1), (lo2, la2)],
-                       crs_from="EPSG:4326", crs_to=epsg)
+        epsg = (
+            _infer_utm_epsg((la1 + la2) * 0.5, (lo1 + lo2) * 0.5)
+            if crs_to is None
+            else crs_to
+        )
+        X, Y = project(
+            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
+        )
         dx = float(X[1] - X[0])
         dy = float(Y[1] - Y[0])
         theta = math.degrees(math.atan2(dx, dy))
@@ -720,8 +750,7 @@ def bearing(
 def chainage_along(
     origin: Coord | tuple[float, float],
     azimuth: float,
-    pts: Sequence[Coord | tuple[float, float]]
-    | Coord | tuple[float, float],
+    pts: Sequence[Coord | tuple[float, float]] | Coord | tuple[float, float],
 ) -> np.ndarray | float:
     r"""
     Project points onto a profile axis and return chainages.
@@ -829,8 +858,7 @@ def _match_row(df: Any, sid: Any) -> Any:
     except:
         return None
 
-    idc = _pick_col(df, ("station", "site", "dataid",
-                         "id", "name"))
+    idc = _pick_col(df, ("station", "site", "dataid", "id", "name"))
     if not idc:
         return None
 
@@ -857,8 +885,7 @@ def _set_coords_from_row(
         return
     idx = row.index if hasattr(row, "index") else row
     latc = _pick_col(idx, ("latitude", "lat", "LAT"))
-    lonc = _pick_col(idx, ("longitude", "lon", "long",
-                           "LON", "LONG"))
+    lonc = _pick_col(idx, ("longitude", "lon", "long", "LON", "LONG"))
     elvc = _pick_col(idx, ("elevation", "elev", "alt", "ALT"))
     la = parse_lat(row[latc]) if latc else math.nan  # type: ignore
     lo = parse_lon(row[lonc]) if lonc else math.nan  # type: ignore
@@ -876,7 +903,10 @@ def _infer_utm_epsg(lat: float, lon: float) -> int:
 
 
 def _flat_offsets_m(
-    la1: float, lo1: float, la2: float, lo2: float,
+    la1: float,
+    lo1: float,
+    la2: float,
+    lo2: float,
 ) -> tuple[float, float]:
     la_mid = math.radians((la1 + la2) * 0.5)
     m_lat = 111_000.0
@@ -884,6 +914,7 @@ def _flat_offsets_m(
     dy = (la2 - la1) * m_lat
     dx = (lo2 - lo1) * m_lon
     return dx, dy
+
 
 def _get_station(ed: Any) -> str:
     keys = ("station", "dataid", "sitename", "name")

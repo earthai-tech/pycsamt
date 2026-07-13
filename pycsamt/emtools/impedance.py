@@ -27,6 +27,7 @@ _COL = {
 
 # --------------------------- local helpers ------------------------------ #
 
+
 def _zblk_flex(ed: Any, need_err: bool = False):
     try:
         return _get_z_block(ed, with_errors=need_err)
@@ -46,13 +47,14 @@ def _logper(fr: np.ndarray) -> np.ndarray:
 
 # ---------------------- 7) Impedance phasor wheel ----------------------- #
 
+
 def plot_phasor_wheel(
     sites: Any,
     *,
     station: str | None = None,
     components: tuple[str, ...] = ("xy", "yx"),
     pband: tuple[float, float] | None = None,
-    radius: str = "abs",        # abs|norm
+    radius: str = "abs",  # abs|norm
     cmap: str = "viridis",
     colors: dict[str, str] | None = None,
     marker: str = "o",
@@ -67,8 +69,11 @@ def plot_phasor_wheel(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     cmap_cols = {**_COL, **(colors or {})}
     sel = {}
@@ -87,8 +92,7 @@ def plot_phasor_wheel(
         if ax is None:
             _, ax = plt.subplots(subplot_kw={"polar": True})
         hide_polar_radius_labels(ax)
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return ax
     Z, z, fr = _zblk_flex(ed)[:3]
     if Z is None:
@@ -101,52 +105,67 @@ def plot_phasor_wheel(
     per = 1.0 / fr
     m = np.ones(fr.size, dtype=bool)
     if pband is not None:
-        lo, hi = pband; m &= (per >= lo) & (per <= hi)
+        lo, hi = pband
+        m &= (per >= lo) & (per <= hi)
 
     angN = {}
     radN = {}
     for c in components:
         zz = _comp(z, c)
-        ang = np.angle(zz)               # radians
+        ang = np.angle(zz)  # radians
         rad = np.abs(zz)
         if radius == "norm":
             s = np.nanpercentile(rad[m], 95) + 1e-24
             rad = rad / s
-        angN[c] = ang[m]; radN[c] = rad[m]
+        angN[c] = ang[m]
+        radN[c] = rad[m]
 
     th = _logper(fr[m])
     th = (th - th.min()) / (th.max() - th.min() + 1e-12)
     th = 2.0 * np.pi * th  # angle ~ log-period
 
     if ax is None:
-        _, ax = plt.subplots(
-            figsize=figsize, subplot_kw={"polar": True}
-        )
+        _, ax = plt.subplots(figsize=figsize, subplot_kw={"polar": True})
     ax.set_theta_zero_location("E")
     ax.set_theta_direction(-1)
     hide_polar_radius_labels(ax)
     for c in components:
         col = cmap_cols.get(c, "k")
         ax.scatter(
-            angN[c], radN[c], c=th, cmap=cmap, s=10 * ms,
-            alpha=0.9, edgecolors="none", label=f"Z{c.upper()}",
+            angN[c],
+            radN[c],
+            c=th,
+            cmap=cmap,
+            s=10 * ms,
+            alpha=0.9,
+            edgecolors="none",
+            label=f"Z{c.upper()}",
         )
         if connect:
             # sort by theta for a gentle path
             k = np.argsort(th)
             ax.plot(
-                angN[c][k], radN[c][k],
-                "-", lw=lw, color=col, alpha=0.6,
+                angN[c][k],
+                radN[c][k],
+                "-",
+                lw=lw,
+                color=col,
+                alpha=0.6,
             )
     ax.grid(True, alpha=0.25)
     hide_polar_radius_labels(ax)
     ax.set_title(str(station), pad=8)
-    ax.legend(loc="lower left", bbox_to_anchor=(0.02, 0.02),
-              frameon=False, fontsize=8)
+    ax.legend(
+        loc="lower left",
+        bbox_to_anchor=(0.02, 0.02),
+        frameon=False,
+        fontsize=8,
+    )
     return ax
 
 
 # --- 8) Off-diagonal antisymmetry residual pseudosection --------------- #
+
 
 def plot_offdiag_antisym_residual(
     sites: Any,
@@ -161,8 +180,11 @@ def plot_offdiag_antisym_residual(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     labs: list[str] = []
     Gs: list[np.ndarray] = []
@@ -191,7 +213,8 @@ def plot_offdiag_antisym_residual(
         idx = np.clip(idx, 0, G.size - 1)
         M[i, idx] = v
         # fill small gaps
-        r = M[i]; g = np.isfinite(r)
+        r = M[i]
+        g = np.isfinite(r)
         if g.sum() >= 2:
             xi = np.where(g)[0]
             for j in np.where(~g)[0]:
@@ -242,6 +265,7 @@ def plot_offdiag_antisym_residual(
 
 # ----------------------- 9) Determinant track (per site) ---------------- #
 
+
 def _det_ci(
     z: np.ndarray,
     fr: np.ndarray,
@@ -251,23 +275,29 @@ def _det_ci(
     n_draws: int = 200,
     seed: int | None = 0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    a = z[:, 0, 0]; b = z[:, 0, 1]
-    c = z[:, 1, 0]; d = z[:, 1, 1]
+    a = z[:, 0, 0]
+    b = z[:, 0, 1]
+    c = z[:, 1, 0]
+    d = z[:, 1, 1]
     det = a * d - b * c
     if ze is None:
         mag = np.abs(det)
         ph = np.degrees(np.angle(det))
         return mag, ph, np.vstack([mag, mag, mag]).T
-    ea = ze[:, 0, 0]; eb = ze[:, 0, 1]
-    ec = ze[:, 1, 0]; ed = ze[:, 1, 1]
+    ea = ze[:, 0, 0]
+    eb = ze[:, 0, 1]
+    ec = ze[:, 1, 0]
+    ed = ze[:, 1, 1]
     rng = np.random.default_rng(seed)
     n = int(max(16, n_draws))
     nf = det.size
+
     def E(s):
         return (
-            (rng.standard_normal((n, nf))
-             + 1j * rng.standard_normal((n, nf))) / np.sqrt(2.0)
+            (rng.standard_normal((n, nf)) + 1j * rng.standard_normal((n, nf)))
+            / np.sqrt(2.0)
         ) * s[None, :]
+
     Ad = a[None, :] + E(ea)
     Bd = b[None, :] + E(eb)
     Cd = c[None, :] + E(ec)
@@ -299,8 +329,11 @@ def plot_determinant_track(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     sel = {}
     for i, ed in enumerate(_iter_items(S)):
@@ -325,14 +358,14 @@ def plot_determinant_track(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return fig
     out = _zblk_flex(ed, need_err=True)
     if len(out) == 4:
         _, z, fr, ze = out
     else:
-        _, z, fr = out[:3]; ze = None
+        _, z, fr = out[:3]
+        ze = None
     if z is None or fr is None:
         if axes_given is None:
             fig = plt.figure(figsize=figsize)
@@ -346,25 +379,28 @@ def plot_determinant_track(
     per = 1.0 / fr
     m = np.ones(fr.size, dtype=bool)
     if pband is not None:
-        lo, hi = pband; m &= (per >= lo) & (per <= hi)
+        lo, hi = pband
+        m &= (per >= lo) & (per <= hi)
 
     mag, ph, band = _det_ci(
-        z[m], fr[m], ze[m] if isinstance(ze, np.ndarray) else None,
-        pcts=pcts, n_draws=n_draws,
+        z[m],
+        fr[m],
+        ze[m] if isinstance(ze, np.ndarray) else None,
+        pcts=pcts,
+        n_draws=n_draws,
     )
     x = per[m]
     axes_given = _axes_list(axes, 2) if axes is not None else None
     if axes_given is None:
         fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(
-            2, 1, height_ratios=height_ratio, hspace=0.06
-        )
-        ax1 = fig.add_subplot(gs[0]); ax2 = fig.add_subplot(gs[1],
-                                                           sharex=ax1)
+        gs = fig.add_gridspec(2, 1, height_ratios=height_ratio, hspace=0.06)
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1], sharex=ax1)
     else:
         ax1, ax2 = axes_given
         fig = ax1.figure
-    ax1.set_xscale("log"); ax2.set_xscale("log")
+    ax1.set_xscale("log")
+    ax2.set_xscale("log")
     ax1.fill_between(
         x, band[:, 0], band[:, 1], color=color_mag, alpha=fill_alpha
     )

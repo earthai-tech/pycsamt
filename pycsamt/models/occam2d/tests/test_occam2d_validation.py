@@ -14,6 +14,7 @@ def test_detect_data_file():
         detect_file_type,
         is_data_file,
     )
+
     p = DATA_DIR / "OccamDataFile.dat"
     assert is_data_file(p)
     assert detect_file_type(p) == OccamFileType.DATA
@@ -26,6 +27,7 @@ def test_detect_iter_file():
         detect_file_type,
         is_iter_file,
     )
+
     p = DATA_DIR / "ITER17.iter"
     assert is_iter_file(p)
     assert detect_file_type(p) == OccamFileType.ITER
@@ -38,6 +40,7 @@ def test_detect_model_file():
         detect_file_type,
         is_model_file,
     )
+
     p = DATA_DIR / "Occam2DModel"
     assert is_model_file(p)
     assert detect_file_type(p) == OccamFileType.MODEL
@@ -46,4 +49,5 @@ def test_detect_model_file():
 def test_missing_file_returns_false():
     # Predicate functions return False for non-existent paths (no raise)
     from pycsamt.models.occam2d.validation import is_data_file
+
     assert is_data_file("/nonexistent/path/file.dat") is False

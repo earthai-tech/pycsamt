@@ -113,9 +113,7 @@ def build_chunks(
                     if rel.startswith("assistant_recipes/")
                     else "doc_section"
                 )
-                chunks.extend(
-                    index_doc_file(path, root, kind=kind)
-                )
+                chunks.extend(index_doc_file(path, root, kind=kind))
         except Exception:  # noqa: BLE001 — ingestion is best-effort
             continue
     return chunks
@@ -173,9 +171,7 @@ def source_fingerprint(
 
     root = Path(root) if root is not None else repo_root()
     paths = (
-        sorted(files)
-        if files is not None
-        else sorted(iter_index_files(root))
+        sorted(files) if files is not None else sorted(iter_index_files(root))
     )
     h = hashlib.sha256()
     for p in paths:

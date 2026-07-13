@@ -15,6 +15,7 @@ from ..log.logger import get_logger
 try:
     from ..gis.utils import decimal_to_dms, dms_to_decimal
 except (ImportError, RuntimeError):
+
     def dms_to_decimal(s, hem=None):  # type: ignore[misc]
         try:
             return float(str(s).strip())
@@ -23,6 +24,8 @@ except (ImportError, RuntimeError):
 
     def decimal_to_dms(v, hem="N"):  # type: ignore[misc]
         return f"{float(v):.6f}"
+
+
 from ..exceptions import (
     EdIDataError,
     FileHandlingError,
@@ -32,11 +35,13 @@ from ..exceptions import (
 try:
     from ..loc import Location
 except (ImportError, RuntimeError):
+
     class Location:  # type: ignore[no-redef]
         def __init__(self):
             self.latitude = None
             self.longitude = None
             self.elevation = None
+
 
 from .base import EDIComponentBase
 from .property import Copyright, Processing, Software, Source
@@ -93,9 +98,8 @@ def _is_tag(line: str, tag: str) -> bool:
 
 
 def _slice_section(
-    lines: Sequence[str], start_tag: str,
-    after_tags: Iterable[str]
-    ) -> tuple[list[str], int, int]:
+    lines: Sequence[str], start_tag: str, after_tags: Iterable[str]
+) -> tuple[list[str], int, int]:
     """
     Slice section content between start_tag and
     the next tag in after_tags.
@@ -114,15 +118,17 @@ def _slice_section(
         raise EdIDataError(f"{start_tag} block not found in EDI file.")
 
     for j in range(i_start + 1, len(lines)):
-        if any(_is_tag(lines[j], tag) for tag in after_tags
-               ) or lines[j].lstrip().startswith(">"):
+        if any(_is_tag(lines[j], tag) for tag in after_tags) or lines[
+            j
+        ].lstrip().startswith(">"):
             i_stop = j
             break
 
     if i_stop is None:
         i_stop = i_start + 1
-        while i_stop < len(lines) and not lines[i_stop].lstrip(
-                ).startswith(">"):
+        while i_stop < len(lines) and not lines[i_stop].lstrip().startswith(
+            ">"
+        ):
             i_stop += 1
 
     payload = [ln.strip() for ln in lines[i_start + 1 : i_stop]]
@@ -234,6 +240,7 @@ class Head(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
+
     # prog details
     _PROGVERS = f"pyCSAMT {_PKG_VERSION}"
     _PROGDATE = _dt.datetime.utcnow().strftime("%Y/%m/%d")
@@ -274,10 +281,13 @@ class Head(EDIComponentBase):
     _quoted_keys = {"dataid", "stdvers", "progvers"}
 
     def __init__(
-        self, edi_header_list: Sequence[str] | None = None,
-        verbose =0, logger =None, **kwargs
-        ):
-        super().__init__(verbose = verbose, logger=logger)
+        self,
+        edi_header_list: Sequence[str] | None = None,
+        verbose=0,
+        logger=None,
+        **kwargs,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
         # Location container
         self.Location = Location()
 
@@ -310,8 +320,9 @@ class Head(EDIComponentBase):
 
         self.chainage: float | None = None
 
-        self.edi_header: list[str] | None = list(
-            edi_header_list) if edi_header_list else None
+        self.edi_header: list[str] | None = (
+            list(edi_header_list) if edi_header_list else None
+        )
 
         # User overrides (unknown keys allowed)
         for k, v in kwargs.items():
@@ -336,9 +347,7 @@ class Head(EDIComponentBase):
         except (TypeError, ValueError):
             self.Location.latitude = float(dms_to_decimal(str(value)))
             if self.verbose:
-                logger.info(
-                    "Converted DMS latitude to decimal degrees."
-                )
+                logger.info("Converted DMS latitude to decimal degrees.")
 
     @property
     def long(self) -> float | None:
@@ -354,9 +363,7 @@ class Head(EDIComponentBase):
         except (TypeError, ValueError):
             self.Location.longitude = float(dms_to_decimal(str(value)))
             if self.verbose:
-                logger.info(
-                    "Converted DMS longitude to decimal degrees."
-                    )
+                logger.info("Converted DMS longitude to decimal degrees.")
 
     @property
     def lon(self) -> float | None:
@@ -377,7 +384,6 @@ class Head(EDIComponentBase):
         else:
             self.Location.elevation = float(value)
 
-
     # --------- API ----------
     @classmethod
     def from_file(cls, edi_fn: str | Path) -> Head:
@@ -392,9 +398,11 @@ class Head(EDIComponentBase):
         IsEdi._assert_edi(edi_path, deep=True)
 
         lines = edi_path.read_text(
-            encoding="utf-8-sig", errors="replace").splitlines()
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
         payload, _, _ = _slice_section(
-            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"]
+        )
         # drop quotes in payload for tolerant parsing
         payload = [ln.replace('"', "") for ln in payload]
         return cls(edi_header_list=payload)
@@ -440,9 +448,10 @@ class Head(EDIComponentBase):
         return self
 
     def write(
-        self, head_list_infos: Sequence[str] | None = None,
-        stamp: bool=True,
-        ) -> list[str]:
+        self,
+        head_list_infos: Sequence[str] | None = None,
+        stamp: bool = True,
+    ) -> list[str]:
         """
         Build formatted >HEAD lines (including trailing blank line).
         """
@@ -463,7 +472,9 @@ class Head(EDIComponentBase):
                 if key in self._quoted_keys:
                     out_val = f'"{val}"'
                 else:
-                    out_val = val.upper() if key not in {"lat", "long"} else val
+                    out_val = (
+                        val.upper() if key not in {"lat", "long"} else val
+                    )
                 cleaned.append(f"  {key.upper()}={out_val}\n")
             lines.extend(cleaned)
             lines.append("\n")
@@ -475,8 +486,8 @@ class Head(EDIComponentBase):
                 val = self._PROGVERS  # This gets the current default value
             elif stamp and key == "progdate":
                 val = self._PROGDATE  # This gets the current default value
-            elif stamp and key=="filedate":
-                val= self._FILEDATE
+            elif stamp and key == "filedate":
+                val = self._FILEDATE
             else:
                 val = getattr(self, key, None)
 
@@ -564,8 +575,11 @@ class Head(EDIComponentBase):
 
         # local flat approximation
         dy = (float(self.lat) - float(la0)) * 111_000.0
-        dx = ((float(self.long) - float(lo0)) * 111_000.0
-              * math.cos(math.radians(float(la0))))
+        dx = (
+            (float(self.long) - float(lo0))
+            * 111_000.0
+            * math.cos(math.radians(float(la0)))
+        )
 
         az = math.radians(float(azimuth))
         # north=0 => dx*sin + dy*cos
@@ -579,7 +593,9 @@ class Head(EDIComponentBase):
         return float(ch)
 
     def __repr__(self) -> str:  # compact identity for debugging
-        return f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"
+        return (
+            f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"
+        )
 
 
 class Info(EDIComponentBase):
@@ -668,8 +684,9 @@ class Info(EDIComponentBase):
     .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
+
     _PROCESSEDBY = f"pyCSAMT v{_PKG_VERSION}"
-    _PROCESSINGSOFTWARE =Software(name= "PYCSAMT")
+    _PROCESSINGSOFTWARE = Software(name="PYCSAMT")
 
     # canonical key serialization order
     infokeys = [
@@ -702,20 +719,22 @@ class Info(EDIComponentBase):
         super().__init__(verbose=verbose, logger=logger)
 
         # Raw KV lines we could parse (normalized later)
-        self.ediinfo: list[str] | None = list(
-            edi_info_list
-        ) if edi_info_list else None
+        self.ediinfo: list[str] | None = (
+            list(edi_info_list) if edi_info_list else None
+        )
         # Free-text payload (lines that are *not* KEY=VALUE)
         self.info_text: list[str] = list(info_text) if info_text else []
 
-        self.filter: str | None = None  # used in some EMAP/processing contexts
+        self.filter: str | None = (
+            None  # used in some EMAP/processing contexts
+        )
         self.maxinfo: int = 999
 
         # nested containers
         self.Source = Source()
         self.Processing = Processing(
             processedby=self._PROCESSEDBY,
-            ProcessingSoftware = self._PROCESSINGSOFTWARE,
+            ProcessingSoftware=self._PROCESSINGSOFTWARE,
         )
         self.Copyright = Copyright()
 
@@ -725,7 +744,6 @@ class Info(EDIComponentBase):
         # If KV lines were passed, parse immediately
         if self.ediinfo is not None:
             self.read(self.ediinfo)
-
 
     @classmethod
     def from_file(cls, edi_fn: str | Path) -> Info:
@@ -740,7 +758,9 @@ class Info(EDIComponentBase):
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
 
         # Slice INFO payload until next section (>=DEFINEMEAS, >=MTSECT, or any '>' tag)
         start, stop = None, None
@@ -752,7 +772,9 @@ class Info(EDIComponentBase):
             raise EdIDataError("INFO block not found in EDI file.")
 
         for j in range(start + 1, len(lines)):
-            if _is_tag(lines[j], ">=DEFINEMEAS") or _is_tag(lines[j], ">=MTSECT"):
+            if _is_tag(lines[j], ">=DEFINEMEAS") or _is_tag(
+                lines[j], ">=MTSECT"
+            ):
                 stop = j
                 break
             if lines[j].lstrip().startswith(">"):
@@ -760,7 +782,9 @@ class Info(EDIComponentBase):
                 break
         if stop is None:
             stop = start + 1
-            while stop < len(lines) and not lines[stop].lstrip().startswith(">"):
+            while stop < len(lines) and not lines[stop].lstrip().startswith(
+                ">"
+            ):
                 stop += 1
 
         payload = lines[start + 1 : stop]
@@ -787,8 +811,9 @@ class Info(EDIComponentBase):
         return obj
 
     def read(
-            self, edi_info_list: Sequence[str] | None = None,
-        ) -> Info:
+        self,
+        edi_info_list: Sequence[str] | None = None,
+    ) -> Info:
         """
         Parse an INFO key-value list and set attributes.
 
@@ -850,7 +875,6 @@ class Info(EDIComponentBase):
         logger.debug("Parsed INFO: %s", self.ediinfo)
         return self
 
-
     def write(self, edi_info_list: Sequence[str] | None = None) -> list[str]:
         """
         Build formatted ``>INFO`` lines ready to write to an EDI file.
@@ -894,7 +918,9 @@ class Info(EDIComponentBase):
             if key in {"project", "survey", "creationdate", "sitename"}:
                 val = getattr(self.Source, key, None)
             elif key == "processingsoftware":
-                val = getattr(self.Processing.ProcessingSoftware, "name", None)
+                val = getattr(
+                    self.Processing.ProcessingSoftware, "name", None
+                )
             elif key in {
                 "processedby",
                 "processingtag",
@@ -974,7 +1000,6 @@ class Info(EDIComponentBase):
         )
 
 
-
 class Heads(EDIComponentBase):
     r"""
     Convenience aggregator for ``>HEAD`` and ``>INFO``.
@@ -1036,11 +1061,14 @@ class Heads(EDIComponentBase):
            https://www.mtnet.info/
     """
 
-
     def __init__(
-            self, head: Head | None = None, info: Info | None = None,
-            verbose: int = 0, logger=None ):
-        super().__init__(verbose=verbose, logger=logger )
+        self,
+        head: Head | None = None,
+        info: Info | None = None,
+        verbose: int = 0,
+        logger=None,
+    ):
+        super().__init__(verbose=verbose, logger=logger)
         self.head: Head = head if head is not None else Head()
         self.info: Info = info if info is not None else Info()
 
@@ -1054,24 +1082,29 @@ class Heads(EDIComponentBase):
             raise FileHandlingError("No EDI path provided.")
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
 
         # HEAD
         head_payload, _, stop_h = _slice_section(
-            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"]
+        )
         head_payload = [ln.replace('"', "") for ln in head_payload]
         head = Head(edi_header_list=head_payload).read()
 
         # INFO (optional in theory, but standard requires it right after HEAD)
         try:
             info_payload, _, _ = _slice_section(
-                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"])
+                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"]
+            )
             info_payload = [ln.replace('"', "") for ln in info_payload]
             info = Info(edi_info_list=info_payload).read()
         except EdIDataError:
             # Keep an empty info; callers may enrich later
             logger.warning(
-                "INFO block not found immediately after HEAD; created empty Info()")
+                "INFO block not found immediately after HEAD; created empty Info()"
+            )
             info = Info()
 
         return cls(head=head, info=info)
@@ -1087,16 +1120,20 @@ class Heads(EDIComponentBase):
 
         # HEAD
         head_payload, _, _ = _slice_section(
-            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"])
-        self.head = Head(edi_header_list=[ln.replace(
-            '"', "") for ln in head_payload]).read()
+            lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"]
+        )
+        self.head = Head(
+            edi_header_list=[ln.replace('"', "") for ln in head_payload]
+        ).read()
 
         # INFO
         try:
             info_payload, _, _ = _slice_section(
-                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"])
-            self.info = Info(edi_info_list=[
-                ln.replace('"', "") for ln in info_payload]).read()
+                lines, ">INFO", after_tags=[">=DEFINEMEAS", ">=MTSECT"]
+            )
+            self.info = Info(
+                edi_info_list=[ln.replace('"', "") for ln in info_payload]
+            ).read()
         except EdIDataError:
             self.info = Info()  # leave empty
         return self
@@ -1119,7 +1156,8 @@ class Heads(EDIComponentBase):
         return (
             f"<Heads dataid={self.head.dataid!r}"
             f" project={self.info.Source.project!r}>"
-            )
+        )
+
 
 class HeadMixin:
     r"""
@@ -1160,7 +1198,6 @@ class HeadMixin:
     Head, InfoMixin
     """
 
-
     head: Head
 
     # -- class-level convenience --
@@ -1176,7 +1213,9 @@ class HeadMixin:
             self.head = Head()
         return self.head.read(edi_header_list)
 
-    def write(self, head_list_infos: Sequence[str] | None = None) -> list[str]:
+    def write(
+        self, head_list_infos: Sequence[str] | None = None
+    ) -> list[str]:
         """Serialize the host's `head` as >HEAD lines."""
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
@@ -1222,7 +1261,6 @@ class InfoMixin:
     Info, HeadMixin
     """
 
-
     info: Info
 
     # -- class-level convenience --
@@ -1243,5 +1281,3 @@ class InfoMixin:
         if not hasattr(self, "info") or self.info is None:
             self.info = Info()
         return self.info.write(edi_info_list)
-
-

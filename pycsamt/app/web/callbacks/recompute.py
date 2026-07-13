@@ -42,17 +42,18 @@ from pycsamt.app.web.layout import IDs
 _JOBS: dict[str, dict[str, Any]] = {}
 _LOCK = threading.Lock()
 
-_MAX_LOG  = 50
+_MAX_LOG = 50
 _LOG_SHOWN = 14
 
 # Icon classNames for the spin indicator
-_ICON_SPIN  = "bi bi-arrow-repeat recompute-spin me-1"
-_ICON_OK    = "bi bi-check-circle-fill me-1 rcp-icon-ok"
-_ICON_ERR   = "bi bi-x-circle-fill me-1 rcp-icon-err"
-_ICON_WAIT  = "bi bi-arrow-repeat me-1"
+_ICON_SPIN = "bi bi-arrow-repeat recompute-spin me-1"
+_ICON_OK = "bi bi-check-circle-fill me-1 rcp-icon-ok"
+_ICON_ERR = "bi bi-x-circle-fill me-1 rcp-icon-err"
+_ICON_WAIT = "bi bi-arrow-repeat me-1"
 
 
 # ── Background worker ─────────────────────────────────────────────────────────
+
 
 def _worker(session_id: str, sites_or_path, opts: dict) -> None:
     """
@@ -75,7 +76,7 @@ def _worker(session_id: str, sites_or_path, opts: dict) -> None:
 
             if not edi_paths:
                 with _LOCK:
-                    _JOBS[session_id]["status"]  = "error"
+                    _JOBS[session_id]["status"] = "error"
                     _JOBS[session_id]["err_msg"] = (
                         f"No EDI files found in: {sites_or_path}"
                     )
@@ -86,35 +87,37 @@ def _worker(session_id: str, sites_or_path, opts: dict) -> None:
             sites = sites_or_path
 
         # ── Phase 2: recompute ────────────────────────────────────────────
-        edis  = sites.as_list()
+        edis = sites.as_list()
         total = len(edis)
 
         with _LOCK:
-            _JOBS[session_id].update({
-                "phase":   "recomputing",
-                "total":   total,
-                "status":  "running",
-                "t_start": time.time(),
-            })
+            _JOBS[session_id].update(
+                {
+                    "phase": "recomputing",
+                    "total": total,
+                    "status": "running",
+                    "t_start": time.time(),
+                }
+            )
 
         rotate_angle = opts.get("rotate_angle") or None
-        comps    = opts.get("comps") or ["Z", "Tip"]
-        fmin     = opts.get("fmin") or None
-        fmax     = opts.get("fmax") or None
-        fill     = opts.get("fill") or None
+        comps = opts.get("comps") or ["Z", "Tip"]
+        fmin = opts.get("fmin") or None
+        fmax = opts.get("fmax") or None
+        fill = opts.get("fill") or None
         resphase = "on" in (opts.get("resphase") or [])
 
         recomputer = EDIRecomputer(
-            rotate_angle        = rotate_angle,
-            rotate_components   = tuple(comps),
-            fmin                = fmin,
-            fmax                = fmax,
-            fill_missing_values = fill,
-            recompute_resphase  = resphase,
-            write               = False,
-            copy                = True,
-            strict              = False,
-            progress            = False,
+            rotate_angle=rotate_angle,
+            rotate_components=tuple(comps),
+            fmin=fmin,
+            fmax=fmax,
+            fill_missing_values=fill,
+            recompute_resphase=resphase,
+            write=False,
+            copy=True,
+            strict=False,
+            progress=False,
         )
 
         result_edis = []
@@ -133,21 +136,21 @@ def _worker(session_id: str, sites_or_path, opts: dict) -> None:
 
             with _LOCK:
                 job = _JOBS[session_id]
-                job["done"]    = i + 1
+                job["done"] = i + 1
                 job["current"] = sname
-                job["failed"]  = failed
+                job["failed"] = failed
                 job["log"].append(entry)
                 if len(job["log"]) > _MAX_LOG:
                     job["log"] = job["log"][-_MAX_LOG:]
 
         result_sites = Sites(result_edis)
         with _LOCK:
-            _JOBS[session_id]["sites"]  = result_sites
+            _JOBS[session_id]["sites"] = result_sites
             _JOBS[session_id]["status"] = "done"
 
     except Exception as exc:
         with _LOCK:
-            _JOBS[session_id]["status"]  = "error"
+            _JOBS[session_id]["status"] = "error"
             _JOBS[session_id]["err_msg"] = str(exc)
 
 
@@ -163,12 +166,14 @@ def _collect_edis(folder: str) -> list[str]:
 def _safe_name(edi, idx: int) -> str:
     try:
         from pycsamt.site.utils import station_name as _sn
-        return _sn(edi) or f"site_{idx+1:04d}"
+
+        return _sn(edi) or f"site_{idx + 1:04d}"
     except Exception:
-        return f"site_{idx+1:04d}"
+        return f"site_{idx + 1:04d}"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _sites_to_store(sites, old_store: dict | None = None) -> dict:
     from pycsamt.app.desktop.controllers.data_controller import (
@@ -183,16 +188,18 @@ def _sites_to_store(sites, old_store: dict | None = None) -> dict:
     ctrl._df = ctrl._build_dataframe()
     df = ctrl.dataframe
 
-    n_lines     = df["Line"].nunique() if "Line" in df.columns else 1
-    line_counts = df.groupby("Line").size().to_dict() if "Line" in df.columns else {}
+    n_lines = df["Line"].nunique() if "Line" in df.columns else 1
+    line_counts = (
+        df.groupby("Line").size().to_dict() if "Line" in df.columns else {}
+    )
 
     return {
         "station_records": df.to_dict("records"),
-        "data_dir":        "[recomputed]",
-        "n_stations":      len(df),
-        "n_lines":         n_lines,
-        "line_counts":     line_counts,
-        "recomputed":      True,   # flag consumed by nav badge + confirm gate
+        "data_dir": "[recomputed]",
+        "n_stations": len(df),
+        "n_lines": n_lines,
+        "line_counts": line_counts,
+        "recomputed": True,  # flag consumed by nav badge + confirm gate
     }
 
 
@@ -201,15 +208,18 @@ def _log_chips(entries: list[str]) -> list:
     chips = []
     for e in reversed(shown):
         ok = e.startswith("✓")
-        chips.append(html.Span(
-            e,
-            className="recompute-log-chip "
-                      + ("recompute-log-ok" if ok else "recompute-log-err"),
-        ))
+        chips.append(
+            html.Span(
+                e,
+                className="recompute-log-chip "
+                + ("recompute-log-ok" if ok else "recompute-log-err"),
+            )
+        )
     return chips
 
 
 # ── Callback registration ─────────────────────────────────────────────────────
+
 
 def register_recompute(app) -> None:
     _register_open_canvas(app)
@@ -224,7 +234,7 @@ def _register_open_canvas(app) -> None:
     @app.callback(
         Output(IDs.RECOMPUTE_CANVAS, "is_open"),
         Input(IDs.BTN_RECOMPUTE_OPEN, "n_clicks"),
-        State(IDs.RECOMPUTE_CANVAS,   "is_open"),
+        State(IDs.RECOMPUTE_CANVAS, "is_open"),
         prevent_initial_call=True,
     )
     def toggle_canvas(n_clicks, is_open):
@@ -243,7 +253,7 @@ def _register_path_section(app) -> None:
         }
         """,
         Output(IDs.RECOMPUTE_PATH_SEC, "style"),
-        Input(IDs.RECOMPUTE_SOURCE,    "value"),
+        Input(IDs.RECOMPUTE_SOURCE, "value"),
     )
 
 
@@ -267,7 +277,7 @@ def _register_nav_badge(app) -> None:
 def _register_cancel_confirm(app) -> None:
     @app.callback(
         Output(IDs.RECOMPUTE_CONFIRM_SEC, "style"),
-        Input(IDs.BTN_RECOMPUTE_CANCEL,   "n_clicks"),
+        Input(IDs.BTN_RECOMPUTE_CANCEL, "n_clicks"),
         prevent_initial_call=True,
     )
     def cancel_confirm(n_clicks):
@@ -279,37 +289,49 @@ def _register_cancel_confirm(app) -> None:
 def _register_run(app) -> None:
     # 12 outputs ──────────────────────────────────────────────────────────────
     @app.callback(
-        Output(IDs.RECOMPUTE_PROG_SEC,    "style"),
-        Output(IDs.RECOMPUTE_BADGE,       "children"),
-        Output(IDs.RECOMPUTE_BADGE,       "color"),
-        Output(IDs.RECOMPUTE_TICKER,      "children"),
-        Output(IDs.RECOMPUTE_PROGRESS,    "value"),
-        Output(IDs.RECOMPUTE_PROGRESS,    "animated"),
-        Output(IDs.RECOMPUTE_PROGRESS,    "striped"),
-        Output(IDs.RECOMPUTE_LOG,         "children"),
-        Output(IDs.RECOMPUTE_INTERVAL,    "disabled"),
-        Output(IDs.RECOMPUTE_FEEDBACK,    "children"),
-        Output(IDs.RECOMPUTE_CONFIRM_SEC, "style",     allow_duplicate=True),
-        Output(IDs.RECOMPUTE_SPIN_ICON,   "className"),
-        Input(IDs.BTN_RECOMPUTE,          "n_clicks"),
-        Input(IDs.BTN_RECOMPUTE_YES,      "n_clicks"),
-        State(IDs.RECOMPUTE_SOURCE,       "value"),
-        State(IDs.RECOMPUTE_PATH,         "value"),
-        State(IDs.RECOMPUTE_RESPHASE,     "value"),
-        State(IDs.RECOMPUTE_ROTATE_ANG,   "value"),
-        State(IDs.RECOMPUTE_COMPS,        "value"),
-        State(IDs.RECOMPUTE_FMIN,         "value"),
-        State(IDs.RECOMPUTE_FMAX,         "value"),
-        State(IDs.RECOMPUTE_FILL,         "value"),
-        State(IDs.SESSION_ID,             "data"),
-        State(IDs.STORE_DATA,             "data"),
+        Output(IDs.RECOMPUTE_PROG_SEC, "style"),
+        Output(IDs.RECOMPUTE_BADGE, "children"),
+        Output(IDs.RECOMPUTE_BADGE, "color"),
+        Output(IDs.RECOMPUTE_TICKER, "children"),
+        Output(IDs.RECOMPUTE_PROGRESS, "value"),
+        Output(IDs.RECOMPUTE_PROGRESS, "animated"),
+        Output(IDs.RECOMPUTE_PROGRESS, "striped"),
+        Output(IDs.RECOMPUTE_LOG, "children"),
+        Output(IDs.RECOMPUTE_INTERVAL, "disabled"),
+        Output(IDs.RECOMPUTE_FEEDBACK, "children"),
+        Output(IDs.RECOMPUTE_CONFIRM_SEC, "style", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_SPIN_ICON, "className"),
+        Input(IDs.BTN_RECOMPUTE, "n_clicks"),
+        Input(IDs.BTN_RECOMPUTE_YES, "n_clicks"),
+        State(IDs.RECOMPUTE_SOURCE, "value"),
+        State(IDs.RECOMPUTE_PATH, "value"),
+        State(IDs.RECOMPUTE_RESPHASE, "value"),
+        State(IDs.RECOMPUTE_ROTATE_ANG, "value"),
+        State(IDs.RECOMPUTE_COMPS, "value"),
+        State(IDs.RECOMPUTE_FMIN, "value"),
+        State(IDs.RECOMPUTE_FMAX, "value"),
+        State(IDs.RECOMPUTE_FILL, "value"),
+        State(IDs.SESSION_ID, "data"),
+        State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
-    def start_recompute(n_main, n_yes, source, path, resphase, rotate_ang,
-                        comps, fmin, fmax, fill, session_id, store_data):
-        _SHOW     = {"display": "block"}
-        _HIDE     = {"display": "none"}
-        _SKIP     = (no_update,) * 12
+    def start_recompute(
+        n_main,
+        n_yes,
+        source,
+        path,
+        resphase,
+        rotate_ang,
+        comps,
+        fmin,
+        fmax,
+        fill,
+        session_id,
+        store_data,
+    ):
+        _SHOW = {"display": "block"}
+        _HIDE = {"display": "none"}
+        _SKIP = (no_update,) * 12
 
         triggered = ctx.triggered_id
 
@@ -317,110 +339,177 @@ def _register_run(app) -> None:
             return _SKIP
 
         if not session_id:
-            return (_HIDE, "No session", "danger", "", 0, False, False, [],
-                    True, "⚠ Session not initialised — refresh the page.",
-                    _HIDE, _ICON_WAIT)
+            return (
+                _HIDE,
+                "No session",
+                "danger",
+                "",
+                0,
+                False,
+                False,
+                [],
+                True,
+                "⚠ Session not initialised — refresh the page.",
+                _HIDE,
+                _ICON_WAIT,
+            )
 
         source = source or "current"
 
         # ── Confirm gate — only on the main button, not on "Yes" ─────────
         already_done = bool(store_data and store_data.get("recomputed"))
         if triggered == IDs.BTN_RECOMPUTE and already_done:
-            return (_HIDE, no_update, no_update, no_update, no_update,
-                    no_update, no_update, no_update, True, "",
-                    _SHOW, _ICON_WAIT)
+            return (
+                _HIDE,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                True,
+                "",
+                _SHOW,
+                _ICON_WAIT,
+            )
 
         # ── Validate data source ──────────────────────────────────────────
         if source == "current":
             sites = cache_get(session_id)
             if sites is None:
                 if not store_data:
-                    msg = ("⚠ No data loaded — use Load Data first, "
-                           "or switch source to 'Load from folder path'.")
+                    msg = (
+                        "⚠ No data loaded — use Load Data first, "
+                        "or switch source to 'Load from folder path'."
+                    )
                 else:
-                    msg = ("⚠ Site cache expired — reload your EDI files "
-                           "or switch to 'Load from folder path'.")
-                return (_HIDE, "No data", "warning", "", 0, False, False,
-                        [], True, msg, _HIDE, _ICON_WAIT)
+                    msg = (
+                        "⚠ Site cache expired — reload your EDI files "
+                        "or switch to 'Load from folder path'."
+                    )
+                return (
+                    _HIDE,
+                    "No data",
+                    "warning",
+                    "",
+                    0,
+                    False,
+                    False,
+                    [],
+                    True,
+                    msg,
+                    _HIDE,
+                    _ICON_WAIT,
+                )
             sites_or_path = sites
 
         else:  # "path"
             folder = (path or "").strip()
             if not folder:
-                return (_HIDE, "No path", "warning", "", 0, False, False, [],
-                        True, "⚠ Enter a folder path.", _HIDE, _ICON_WAIT)
+                return (
+                    _HIDE,
+                    "No path",
+                    "warning",
+                    "",
+                    0,
+                    False,
+                    False,
+                    [],
+                    True,
+                    "⚠ Enter a folder path.",
+                    _HIDE,
+                    _ICON_WAIT,
+                )
             if not os.path.isdir(folder):
-                return (_HIDE, "Not found", "danger", "", 0, False, False, [],
-                        True, f"⚠ Folder not found: {folder}", _HIDE, _ICON_WAIT)
+                return (
+                    _HIDE,
+                    "Not found",
+                    "danger",
+                    "",
+                    0,
+                    False,
+                    False,
+                    [],
+                    True,
+                    f"⚠ Folder not found: {folder}",
+                    _HIDE,
+                    _ICON_WAIT,
+                )
             sites_or_path = folder
 
         # ── Start job ─────────────────────────────────────────────────────
         with _LOCK:
             _JOBS[session_id] = {
-                "status":  "starting",
-                "phase":   "loading" if source == "path" else "recomputing",
-                "total":   0,
-                "done":    0,
-                "failed":  0,
-                "found":   0,
+                "status": "starting",
+                "phase": "loading" if source == "path" else "recomputing",
+                "total": 0,
+                "done": 0,
+                "failed": 0,
+                "found": 0,
                 "current": "",
-                "log":     [],
-                "sites":   None,
+                "log": [],
+                "sites": None,
                 "err_msg": "",
                 "t_start": time.time(),
             }
 
         opts = {
-            "resphase":     resphase,
-            "rotate_angle": float(rotate_ang) if rotate_ang is not None else None,
-            "comps":        comps or ["Z", "Tip"],
-            "fmin":         float(fmin) if fmin is not None else None,
-            "fmax":         float(fmax) if fmax is not None else None,
-            "fill":         fill or None,
+            "resphase": resphase,
+            "rotate_angle": float(rotate_ang)
+            if rotate_ang is not None
+            else None,
+            "comps": comps or ["Z", "Tip"],
+            "fmin": float(fmin) if fmin is not None else None,
+            "fmax": float(fmax) if fmax is not None else None,
+            "fill": fill or None,
         }
 
         t = threading.Thread(
-            target=_worker, args=(session_id, sites_or_path, opts), daemon=True
+            target=_worker,
+            args=(session_id, sites_or_path, opts),
+            daemon=True,
         )
         t.start()
 
         init_ticker = (
             "Scanning folder for EDI files…"
-            if source == "path" else "Initialising recompute…"
+            if source == "path"
+            else "Initialising recompute…"
         )
 
         return (
-            _SHOW,            # show progress section
-            "Starting…",      # badge text
-            "warning",        # badge colour
-            init_ticker,      # ticker
-            0,                # progress value
-            True,             # animated
-            True,             # striped
-            [],               # log (empty)
-            False,            # enable interval
-            "",               # clear feedback
-            _HIDE,            # hide confirm card
-            _ICON_SPIN,       # start spinning icon
+            _SHOW,  # show progress section
+            "Starting…",  # badge text
+            "warning",  # badge colour
+            init_ticker,  # ticker
+            0,  # progress value
+            True,  # animated
+            True,  # striped
+            [],  # log (empty)
+            False,  # enable interval
+            "",  # clear feedback
+            _HIDE,  # hide confirm card
+            _ICON_SPIN,  # start spinning icon
         )
 
 
 def _register_poll(app) -> None:
     @app.callback(
-        Output(IDs.RECOMPUTE_TICKER,    "children",   allow_duplicate=True),
-        Output(IDs.RECOMPUTE_PROGRESS,  "value",      allow_duplicate=True),
-        Output(IDs.RECOMPUTE_PROGRESS,  "animated",   allow_duplicate=True),
-        Output(IDs.RECOMPUTE_PROGRESS,  "striped",    allow_duplicate=True),
-        Output(IDs.RECOMPUTE_LOG,       "children",   allow_duplicate=True),
-        Output(IDs.RECOMPUTE_BADGE,     "children",   allow_duplicate=True),
-        Output(IDs.RECOMPUTE_BADGE,     "color",      allow_duplicate=True),
-        Output(IDs.RECOMPUTE_INTERVAL,  "disabled",   allow_duplicate=True),
-        Output(IDs.STORE_DATA,          "data",       allow_duplicate=True),
-        Output(IDs.RECOMPUTE_FEEDBACK,  "children",   allow_duplicate=True),
-        Output(IDs.RECOMPUTE_SPIN_ICON, "className",  allow_duplicate=True),
-        Input(IDs.RECOMPUTE_INTERVAL,   "n_intervals"),
-        State(IDs.SESSION_ID,           "data"),
-        State(IDs.STORE_DATA,           "data"),
+        Output(IDs.RECOMPUTE_TICKER, "children", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_PROGRESS, "value", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_PROGRESS, "animated", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_PROGRESS, "striped", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_LOG, "children", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_BADGE, "children", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_BADGE, "color", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_INTERVAL, "disabled", allow_duplicate=True),
+        Output(IDs.STORE_DATA, "data", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_FEEDBACK, "children", allow_duplicate=True),
+        Output(IDs.RECOMPUTE_SPIN_ICON, "className", allow_duplicate=True),
+        Input(IDs.RECOMPUTE_INTERVAL, "n_intervals"),
+        State(IDs.SESSION_ID, "data"),
+        State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
     def poll_recompute(n_intervals, session_id, store_data):
@@ -433,32 +522,37 @@ def _register_poll(app) -> None:
             job = _JOBS.get(session_id)
             if job is None:
                 return _skip
-            status  = job["status"]
-            phase   = job.get("phase", "recomputing")
-            total   = job["total"]
-            done    = job["done"]
-            failed  = job["failed"]
-            found   = job.get("found", 0)
+            status = job["status"]
+            phase = job.get("phase", "recomputing")
+            total = job["total"]
+            done = job["done"]
+            failed = job["failed"]
+            found = job.get("found", 0)
             current = job["current"]
-            log     = list(job["log"])
+            log = list(job["log"])
             err_msg = job["err_msg"]
             t_start = job["t_start"]
-            sites   = job.get("sites")
+            sites = job.get("sites")
 
-        pct     = int(done / total * 100) if total > 0 else 0
+        pct = int(done / total * 100) if total > 0 else 0
         elapsed = time.time() - t_start
 
         # ── Running ───────────────────────────────────────────────────────
         if status in ("starting", "running"):
             if phase == "loading":
-                ticker    = (f"Scanning folder…  {found} EDI files found"
-                             if found else "Scanning folder for EDI files…")
+                ticker = (
+                    f"Scanning folder…  {found} EDI files found"
+                    if found
+                    else "Scanning folder for EDI files…"
+                )
                 badge_txt = "Loading"
-                pct       = 0
+                pct = 0
             else:
                 if total > 0:
-                    eta_s  = (elapsed / done * (total - done)) if done > 0 else 0
-                    eta    = f"  ·  ETA {eta_s:.0f} s" if eta_s > 0 else ""
+                    eta_s = (
+                        (elapsed / done * (total - done)) if done > 0 else 0
+                    )
+                    eta = f"  ·  ETA {eta_s:.0f} s" if eta_s > 0 else ""
                     ticker = (
                         f"⟳  {current}  ·  {done} / {total}"
                         + (f"  ({failed} ✗)" if failed else "")
@@ -469,13 +563,17 @@ def _register_poll(app) -> None:
                 badge_txt = "Running" if status == "running" else "Starting"
 
             return (
-                ticker, pct, True, True,
+                ticker,
+                pct,
+                True,
+                True,
                 _log_chips(log),
-                badge_txt, "warning",
-                False,        # keep interval alive
-                no_update,    # don't touch store yet
+                badge_txt,
+                "warning",
+                False,  # keep interval alive
+                no_update,  # don't touch store yet
                 no_update,
-                _ICON_SPIN,   # keep spinning
+                _ICON_SPIN,  # keep spinning
             )
 
         # ── Done ──────────────────────────────────────────────────────────
@@ -487,9 +585,8 @@ def _register_poll(app) -> None:
             except Exception:
                 new_store = store_data
 
-            badge_txt = (
-                f"✓ {total} stations"
-                + (f"  ·  {failed} failed" if failed else "")
+            badge_txt = f"✓ {total} stations" + (
+                f"  ·  {failed} failed" if failed else ""
             )
             ticker = (
                 f"✓ {total} station{'s' if total != 1 else ''} recomputed"
@@ -506,26 +603,34 @@ def _register_poll(app) -> None:
                 _JOBS[session_id]["sites"] = None
 
             return (
-                ticker, 100, False, False,
+                ticker,
+                100,
+                False,
+                False,
                 _log_chips(log),
-                badge_txt, "success",
-                True,         # disable interval
+                badge_txt,
+                "success",
+                True,  # disable interval
                 new_store,
                 feedback,
-                _ICON_OK,     # swap to check-circle, no spin
+                _ICON_OK,  # swap to check-circle, no spin
             )
 
         # ── Error ─────────────────────────────────────────────────────────
         if status == "error":
             ticker = f"✗ {err_msg[:80]}"
             return (
-                ticker, pct, False, False,
+                ticker,
+                pct,
+                False,
+                False,
                 _log_chips(log),
-                "✗ Error", "danger",
-                True,         # disable interval
+                "✗ Error",
+                "danger",
+                True,  # disable interval
                 no_update,
                 f"✗ Error: {err_msg}",
-                _ICON_ERR,    # swap to x-circle, no spin
+                _ICON_ERR,  # swap to x-circle, no spin
             )
 
         return _skip

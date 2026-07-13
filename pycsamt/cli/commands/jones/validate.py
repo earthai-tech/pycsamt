@@ -35,7 +35,8 @@ from ._base import jones
     ),
 )
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"], case_sensitive=False),
     default="text",
     show_default=True,
@@ -80,7 +81,8 @@ def validate(
         files = [source]
     else:
         files = sorted(
-            f for f in source.rglob("*")
+            f
+            for f in source.rglob("*")
             if f.suffix.lower() in _J_EXTS and f.is_file()
         )
 
@@ -96,20 +98,27 @@ def validate(
             is_j_file(f, deep=deep)
             results.append({"path": str(f), "valid": True, "error": None})
         except Exception as exc:  # noqa: BLE001
-            results.append({"path": str(f), "valid": False, "error": str(exc)})
+            results.append(
+                {"path": str(f), "valid": False, "error": str(exc)}
+            )
 
-    n_ok   = sum(1 for r in results if r["valid"])
+    n_ok = sum(1 for r in results if r["valid"])
     n_fail = len(results) - n_ok
-    mode   = "deep" if deep else "extension-only"
+    mode = "deep" if deep else "extension-only"
 
     if output_format == "json":
-        click.echo(json.dumps({
-            "n_files": len(results),
-            "n_ok":    n_ok,
-            "n_fail":  n_fail,
-            "mode":    mode,
-            "results": results,
-        }, indent=2))
+        click.echo(
+            json.dumps(
+                {
+                    "n_files": len(results),
+                    "n_ok": n_ok,
+                    "n_fail": n_fail,
+                    "mode": mode,
+                    "results": results,
+                },
+                indent=2,
+            )
+        )
     else:
         click.echo(
             f"Validated {len(results)} file(s)  [{mode}]  "

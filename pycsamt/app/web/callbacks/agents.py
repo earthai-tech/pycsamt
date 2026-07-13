@@ -37,16 +37,18 @@ def _exec_agent(
         msg = "Load survey data before running an agent."
         return f"⚠ {msg}", empty_src(dark=True), "", msg
 
-    entry      = get_entry(agent_name)
+    entry = get_entry(agent_name)
     log_lines: list[str] = [f"Running: {agent_name}…"]
-    result_src  = empty_src(dark=True)
+    result_src = empty_src(dark=True)
     summary_txt = ""
 
     # Merge station filter into params so processing-function kwarg filtering
     # picks it up automatically when the function signature accepts it.
     if stations:
         params = {**params, "station_names": stations}
-        log_lines.append(f"Station filter: {len(stations)} station(s) selected.")
+        log_lines.append(
+            f"Station filter: {len(stations)} station(s) selected."
+        )
 
     try:
         import inspect
@@ -58,10 +60,14 @@ def _exec_agent(
         matplotlib.use("Agg")
 
         if entry["type"] == "processing":
-            fn_name  = entry["fn_name"]
-            fn       = getattr(et, fn_name)
+            fn_name = entry["fn_name"]
+            fn = getattr(et, fn_name)
             accepted = set(inspect.signature(fn).parameters.keys())
-            kwargs   = {k: v for k, v in params.items() if k in accepted and v is not None}
+            kwargs = {
+                k: v
+                for k, v in params.items()
+                if k in accepted and v is not None
+            }
             log_lines.append(f"et.{fn_name}(sites, **params)…")
             result = fn(sites, **kwargs, verbose=0)
 
@@ -83,11 +89,16 @@ def _exec_agent(
 
         else:
             import pycsamt.agents as ag
-            cls            = getattr(ag, entry["class_name"])
-            agent_instance = cls(**{
-                k: v for k, v in params.items()
-                if k in cls.__init__.__code__.co_varnames and v is not None
-            })
+
+            cls = getattr(ag, entry["class_name"])
+            agent_instance = cls(
+                **{
+                    k: v
+                    for k, v in params.items()
+                    if k in cls.__init__.__code__.co_varnames
+                    and v is not None
+                }
+            )
             log_lines.append("Executing LLM agent…")
             exec_input: dict = {"sites": sites}
             if stations:
@@ -116,18 +127,18 @@ def register_agents(app) -> None:
         _cb_kwargs["background"] = True
         _cb_kwargs["running"] = [
             (Output(IDs.BTN_RUN_AGENT, "disabled"), True, False),
-            (Output(IDs.AGENT_SPINNER, "children"), " ",  ""),
+            (Output(IDs.AGENT_SPINNER, "children"), " ", ""),
         ]
 
     @app.callback(
-        Output(IDs.AGENT_LOG,     "children"),
-        Output(IDs.AGENT_RESULT,  "src"),
+        Output(IDs.AGENT_LOG, "children"),
+        Output(IDs.AGENT_RESULT, "src"),
         Output(IDs.AGENT_SUMMARY, "children"),
-        Output(IDs.TOAST_ERROR,   "is_open",  allow_duplicate=True),
-        Output(IDs.TOAST_BODY,    "children", allow_duplicate=True),
-        Input(IDs.BTN_RUN_AGENT,  "n_clicks"),
-        State(IDs.AGENT_SELECT,   "value"),
-        State(IDs.SESSION_ID,     "data"),
+        Output(IDs.TOAST_ERROR, "is_open", allow_duplicate=True),
+        Output(IDs.TOAST_BODY, "children", allow_duplicate=True),
+        Input(IDs.BTN_RUN_AGENT, "n_clicks"),
+        State(IDs.AGENT_SELECT, "value"),
+        State(IDs.SESSION_ID, "data"),
         **_cb_kwargs,
     )
     def run_agent(_n_clicks, agent_name, session_id):

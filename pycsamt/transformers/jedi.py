@@ -103,6 +103,7 @@ class AVGtoEDI(TransformerMixin):
         Small convenience container; semantics are established by
         the :mod:`pycsamt.seg.edi` implementation.
         """
+
         def __init__(
             self,
             dataid: str,
@@ -135,7 +136,6 @@ class AVGtoEDI(TransformerMixin):
 
     def _empty(self) -> float:
         return float(get_config().empty)
-
 
     def compute_z_from_res(self, b: TFBundle) -> TFBundle:
         r"""
@@ -236,8 +236,8 @@ class AVGtoEDI(TransformerMixin):
 
         attrs = {
             "has_any_magnetic": self._has_any_magnetic(avg),
-            "comp": self._unique_components_from_avg(avg)
-         }
+            "comp": self._unique_components_from_avg(avg),
+        }
 
         for i in range(n_site):
             z = None if z_t is None else z_t[i]
@@ -256,7 +256,7 @@ class AVGtoEDI(TransformerMixin):
                 phase=p,
                 tipper=None,
                 tipper_err=None,
-                attrs = attrs
+                attrs=attrs,
             )
             out.append(b)
         return out
@@ -369,7 +369,6 @@ class AVGtoEDI(TransformerMixin):
         )
         ed.add_section("info", _info)
 
-
         # ---------- >=DEFINEMEAS: build ids for channels present
         attrs = bundle.attrs or {}
         comps = set(map(str, attrs.get("comp", [])))
@@ -401,54 +400,82 @@ class AVGtoEDI(TransformerMixin):
 
         k = 0
         if want_hx:
-            _ids["HX"] = _hid(k); k += 1
+            _ids["HX"] = _hid(k)
+            k += 1
             dm.hmeas.append(
                 Hmeasurement(
-                    id=_ids["HX"], chtype="HX",
-                    x=0, y=0, z=0, azm=0,
+                    id=_ids["HX"],
+                    chtype="HX",
+                    x=0,
+                    y=0,
+                    z=0,
+                    azm=0,
                 )
             )
         if want_hy:
-            _ids["HY"] = _hid(k); k += 1
+            _ids["HY"] = _hid(k)
+            k += 1
             dm.hmeas.append(
                 Hmeasurement(
-                    id=_ids["HY"], chtype="HY",
-                    x=0, y=0, z=0, azm=90,
+                    id=_ids["HY"],
+                    chtype="HY",
+                    x=0,
+                    y=0,
+                    z=0,
+                    azm=90,
                 )
             )
         if want_hz:
-            _ids["HZ"] = _hid(k); k += 1
+            _ids["HZ"] = _hid(k)
+            k += 1
             dm.hmeas.append(
                 Hmeasurement(
-                    id=_ids["HZ"], chtype="HZ",
-                    x=0, y=0, z=0, azm=0,
+                    id=_ids["HZ"],
+                    chtype="HZ",
+                    x=0,
+                    y=0,
+                    z=0,
+                    azm=0,
                 )
             )
         if want_ex:
-            _ids["EX"] = _hid(k); k += 1
+            _ids["EX"] = _hid(k)
+            k += 1
             dm.emeas.append(
                 Emeasurement(
-                    id=_ids["EX"], chtype="EX",
-                    x=0, y=0, z=0, x2=0, y2=0, z2=0,
+                    id=_ids["EX"],
+                    chtype="EX",
+                    x=0,
+                    y=0,
+                    z=0,
+                    x2=0,
+                    y2=0,
+                    z2=0,
                 )
             )
         if want_ey:
-            _ids["EY"] = _hid(k); k += 1
+            _ids["EY"] = _hid(k)
+            k += 1
             dm.emeas.append(
                 Emeasurement(
-                    id=_ids["EY"], chtype="EY",
-                    x=0, y=0, z=0, x2=0, y2=0, z2=0,
+                    id=_ids["EY"],
+                    chtype="EY",
+                    x=0,
+                    y=0,
+                    z=0,
+                    x2=0,
+                    y2=0,
+                    z2=0,
                 )
             )
 
         ed.add_section("definemeas", dm)
 
-
         # ---------- >=MTSECT or >=EMAPSECT
         mt = MTEMAP()
         mt.sectid = _head.dataid or ""
         freq = bundle.freq
-        mt.nfreq = int(len(freq) if freq is not None  else [])
+        mt.nfreq = int(len(freq) if freq is not None else [])
 
         if has_mag:
             mt.hx = _ids.get("HX")
@@ -464,7 +491,6 @@ class AVGtoEDI(TransformerMixin):
             ed.add_section("mtsect", mt)
             ed.emap = True
 
-
         if bundle.freq is not None:
             ed.Z._freq = np.asarray(bundle.freq, dtype=float)
         if bundle.z is not None:
@@ -473,7 +499,7 @@ class AVGtoEDI(TransformerMixin):
             ed.Z._z_err = np.asarray(bundle.z_err, dtype=float)
 
         if bundle.phase is not None:
-            ed.Z._phase =  np.asarray(bundle.phase, dtype=float)
+            ed.Z._phase = np.asarray(bundle.phase, dtype=float)
 
         if bundle.z is not None:
             # --- after you set ed.Z._freq and ed.Z._z ---
@@ -481,8 +507,9 @@ class AVGtoEDI(TransformerMixin):
             f = np.asarray(ed.Z._freq, dtype=float)
 
             # 1) keep only rows that have at least one finite component
-            keep = np.isfinite(z.real).any(
-                axis=(1, 2)) | np.isfinite(z.imag).any(axis=(1, 2))
+            keep = np.isfinite(z.real).any(axis=(1, 2)) | np.isfinite(
+                z.imag
+            ).any(axis=(1, 2))
             if keep.ndim:  # guard for scalar shapes
                 z = z[keep]
                 f = f[keep]
@@ -506,15 +533,14 @@ class AVGtoEDI(TransformerMixin):
             ed.Z.compute_resistivity_phase()
 
         elif (bundle.rho is not None) and (bundle.phase is not None):
-            ed.Z._resistivity = np.asarray(bundle.rho,   dtype=float)
+            ed.Z._resistivity = np.asarray(bundle.rho, dtype=float)
             freq = np.asarray(ed.Z._freq, dtype=float)
-            rho =np.asarray(ed.Z._resistivity, dtype=float)
+            rho = np.asarray(ed.Z._resistivity, dtype=float)
             # mrad → degrees
             # mrad -> deg
             # phase in degrees (AVG metadata shows Unit.Phase: 'mrad').
             # Convert mrad → deg before calling the backend setter:
-            phi_deg = ed.Z._phase * (
-                180.0 / (1000.0 * np.pi))
+            phi_deg = ed.Z._phase * (180.0 / (1000.0 * np.pi))
 
             ed.Z.set_res_phase(rho, phi_deg, freq)
         else:
@@ -596,7 +622,6 @@ class AVGtoEDI(TransformerMixin):
                 dm.reflong = lon
             dm.refelev = elv
 
-
         # stub = self._HeadStub(
         #     ed.station or "",
         #     lat=lat,
@@ -637,6 +662,7 @@ class AVGtoEDI(TransformerMixin):
 
         def _infoln(s: str) -> str:
             return s if s.startswith("  ") else "  " + s
+
         # HEAD enrich
         h = ed.get_section("head")
         if h is None:
@@ -647,23 +673,32 @@ class AVGtoEDI(TransformerMixin):
             )
 
         val = _get("stdvers", None)
-        if val: h.stdvers = str(val)
+        if val:
+            h.stdvers = str(val)
         val = _get("progvers", None)
-        if val: h.progvers = str(val)
+        if val:
+            h.progvers = str(val)
         val = _get("progdate", None)
-        if val: h.progdate = str(val)
+        if val:
+            h.progdate = str(val)
         val = _get("acqdate", None)
-        if val: h.acqdate = str(val)
+        if val:
+            h.acqdate = str(val)
         val = _get("filedate", None)
-        if val: h.filedate = str(val)
+        if val:
+            h.filedate = str(val)
         val = _get("acqby", None)
-        if val: h.acqby = str(val)
+        if val:
+            h.acqby = str(val)
         val = _get("fileby", None)
-        if val: h.fileby = str(val)
+        if val:
+            h.fileby = str(val)
         val = _get("prospect", None)
-        if val: h.prospect = str(val)
+        if val:
+            h.prospect = str(val)
         val = _get("loc", None)
-        if val: h.loc = str(val)
+        if val:
+            h.loc = str(val)
         val = _get("maxsect", None)
         if val is not None:
             try:
@@ -689,21 +724,22 @@ class AVGtoEDI(TransformerMixin):
         txt = list(getattr(info, "info_text", []))
         add = []
         v = _get("survey_co", None)
-        if v: add.append(f"SURVEY CO:{v}")
+        if v:
+            add.append(f"SURVEY CO:{v}")
         v = _get("client_co", None)
-        if v: add.append(f"CLIENT CO:{v}")
+        if v:
+            add.append(f"CLIENT CO:{v}")
         v = _get("area", None)
-        if v: add.append(f"AREA:{v}")
+        if v:
+            add.append(f"AREA:{v}")
         # keep ROTATION and SURVEY ID if already present
         have_sid = any(
-            s.strip().upper().startswith("SURVEY ID:")
-            for s in txt
+            s.strip().upper().startswith("SURVEY ID:") for s in txt
         )
         if not have_sid:
             sid = getattr(ed, "station", "") or ""
             add.insert(0, _infoln(f"SURVEY ID:{sid}"))
-        if not any("ROTATION=" in s or
-                   "ROTATION:" in s for s in txt):
+        if not any("ROTATION=" in s or "ROTATION:" in s for s in txt):
             add.append(_infoln("ROTATION=FIX"))
 
         if add:
@@ -784,7 +820,6 @@ class AVGtoEDI(TransformerMixin):
 
         return edi_obj
 
-
     def transform(
         self,
         source: Any,
@@ -835,6 +870,7 @@ class AVGtoEDI(TransformerMixin):
             edis.append(ed)
 
         return EDICollection(items=edis, verbose=0)
+
 
 class JtoEDI(TransformerMixin):
     r"""
@@ -1085,9 +1121,7 @@ class JtoEDI(TransformerMixin):
             ed.Tip._freq = ed.Z._freq
             ed.Tip._tipper = np.asarray(bundle.tipper, complex)
             if bundle.tipper_err is not None:
-                ed.Tip._tipper_err = np.asarray(
-                    bundle.tipper_err, float
-                )
+                ed.Tip._tipper_err = np.asarray(bundle.tipper_err, float)
             try:
                 ed.Tip.compute_amp_phase()
                 ed.Tip.compute_mag_direction()
@@ -1262,9 +1296,7 @@ class JtoEDI(TransformerMixin):
             dm.reflong = getattr(h, "long", 0.0)
             dm.refelev = getattr(h, "elev", 0.0)
 
-
     def _seed_meas_and_mtsect(self, ed, jf) -> None:
-
 
         z = getattr(ed.Z, "z", None)
         f = getattr(ed.Z, "freq", None)
@@ -1304,33 +1336,43 @@ class JtoEDI(TransformerMixin):
         azy = (azx + 90.0) % 360.0
 
         def _has_h(id_):
-            return any(getattr(
-                m, "id", None) == id_ for m in dm.hmeas)
+            return any(getattr(m, "id", None) == id_ for m in dm.hmeas)
 
         def _has_e(id_):
-            return any(getattr(
-                m, "id", None) == id_ for m in dm.emeas)
+            return any(getattr(m, "id", None) == id_ for m in dm.emeas)
 
         # H channels referenced later
         if have_yx and not _has_h(ids["HX"]):
             dm.hmeas.append(
                 Hmeasurement(
-                    id=ids["HX"], chtype="HX",
-                    x=0.0, y=0.0, z=0.0, azm=azx,
+                    id=ids["HX"],
+                    chtype="HX",
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    azm=azx,
                 )
             )
         if have_xy and not _has_h(ids["HY"]):
             dm.hmeas.append(
                 Hmeasurement(
-                    id=ids["HY"], chtype="HY",
-                    x=0.0, y=0.0, z=0.0, azm=azy,
+                    id=ids["HY"],
+                    chtype="HY",
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    azm=azy,
                 )
             )
         if has_tip and not _has_h(ids["HZ"]):
             dm.hmeas.append(
                 Hmeasurement(
-                    id=ids["HZ"], chtype="HZ",
-                    x=0.0, y=0.0, z=0.0, azm=0.0,
+                    id=ids["HZ"],
+                    chtype="HZ",
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    azm=0.0,
                 )
             )
 
@@ -1338,17 +1380,27 @@ class JtoEDI(TransformerMixin):
         if have_xy and not _has_e(ids["EX"]):
             dm.emeas.append(
                 Emeasurement(
-                    id=ids["EX"], chtype="EX",
-                    x=0.0, y=0.0, z=0.0,
-                    x2=0.0, y2=0.0, z2=0.0,
+                    id=ids["EX"],
+                    chtype="EX",
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    x2=0.0,
+                    y2=0.0,
+                    z2=0.0,
                 )
             )
         if have_yx and not _has_e(ids["EY"]):
             dm.emeas.append(
                 Emeasurement(
-                    id=ids["EY"], chtype="EY",
-                    x=0.0, y=0.0, z=0.0,
-                    x2=0.0, y2=0.0, z2=0.0,
+                    id=ids["EY"],
+                    chtype="EY",
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    x2=0.0,
+                    y2=0.0,
+                    z2=0.0,
                 )
             )
 
@@ -1365,4 +1417,3 @@ class JtoEDI(TransformerMixin):
             mt.ey = ids["EY"]
         if has_tip:
             mt.hz = ids["HZ"]
-

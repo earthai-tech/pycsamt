@@ -89,7 +89,9 @@ def _welch_psd(
         seg = int(nperseg or min(n, 256))
         seg = max(8, min(seg, n))
         freqs, psd = _scipy_welch(
-            x, fs=fs, nperseg=seg,
+            x,
+            fs=fs,
+            nperseg=seg,
             detrend="linear" if detrend else False,
         )
         return np.asarray(freqs), np.asarray(psd)
@@ -100,13 +102,13 @@ def _welch_psd(
     seg = max(8, min(seg, n))
     step = max(1, seg // 2)
     window = np.hanning(seg)
-    win_power = np.sum(window ** 2)
+    win_power = np.sum(window**2)
     starts = range(0, n - seg + 1, step)
     segments = list(starts) or [0]
     psd_acc = np.zeros(seg // 2 + 1)
     count = 0
     for start in segments:
-        block = x[start:start + seg]
+        block = x[start : start + seg]
         if block.size < seg:
             block = np.pad(block, (0, seg - block.size))
         if detrend:
@@ -202,7 +204,9 @@ class PowerlineHarmonics(PyCSAMTObject):
             total_ratio=self.total_ratio,
             contaminated=self.contaminated,
             n_flagged=sum(1 for p in self.peaks if p.flagged),
-            dominant_hz=(self.dominant.frequency_hz if self.dominant else None),
+            dominant_hz=(
+                self.dominant.frequency_hz if self.dominant else None
+            ),
             peaks=[p.as_dict() for p in self.peaks],
         )
 
@@ -341,10 +345,15 @@ def check_channel_saturation(
     n = finite.size
     if n == 0:
         return dict(
-            n_samples=0, n_clipped=0, clip_fraction=float("nan"),
-            saturated=False, limit=limit,
+            n_samples=0,
+            n_clipped=0,
+            clip_fraction=float("nan"),
+            saturated=False,
+            limit=limit,
         )
-    max_clip_fraction = _c.as_probability(max_clip_fraction, "max_clip_fraction")
+    max_clip_fraction = _c.as_probability(
+        max_clip_fraction, "max_clip_fraction"
+    )
     if limit is not None:
         limit = _c.as_positive(limit, "limit")
         clipped = np.abs(finite) >= limit
@@ -382,6 +391,7 @@ def check_contact_resistance(
     channel when its high-pass noise RMS exceeds ``noise_rms_threshold``
     (when provided) or when Ex/Ey noise is strongly imbalanced.
     """
+
     def _stats(sig: Any) -> dict[str, float] | None:
         x = _prep_signal(sig)
         if x.size < 3:
@@ -392,7 +402,7 @@ def check_contact_resistance(
         slope = float(np.polyfit(t, x, 1)[0]) if np.ptp(t) > 0 else 0.0
         drift = abs(slope) * x.size
         detrended = x - (slope * t + float(np.mean(x)))
-        noise_rms = float(np.sqrt(np.mean(detrended ** 2)))
+        noise_rms = float(np.sqrt(np.mean(detrended**2)))
         return dict(dc_offset=dc, drift=drift, noise_rms=noise_rms)
 
     ex_stats = _stats(ex)
@@ -491,7 +501,9 @@ def estimate_frequency_coverage(
     coverage.f_low_hz = f_lo
     coverage.f_high_hz = f_hi
     coverage.n_decades = (
-        float(np.log10(f_hi / f_lo)) if f_lo > 0 and f_hi > 0 else float("nan")
+        float(np.log10(f_hi / f_lo))
+        if f_lo > 0 and f_hi > 0
+        else float("nan")
     )
     if target_bands is not None:
         bands = [
@@ -576,8 +588,8 @@ def assess_impedance_stability(
     with np.errstate(divide="ignore", invalid="ignore"):
         mean_mag = np.mean(mag, axis=0)
         cv = np.where(mean_mag > 0, np.std(mag, axis=0) / mean_mag, np.nan)
-    cv_magnitude = float(np.nanmean(cv)) if np.any(np.isfinite(cv)) else float(
-        "nan"
+    cv_magnitude = (
+        float(np.nanmean(cv)) if np.any(np.isfinite(cv)) else float("nan")
     )
     phase_std = float(np.nanmean(np.std(phase, axis=0)))
     stable = bool(
@@ -656,7 +668,9 @@ def estimate_static_shift(
     -------
     StaticShift
     """
-    min_split_decades = _c.as_nonnegative(min_split_decades, "min_split_decades")
+    min_split_decades = _c.as_nonnegative(
+        min_split_decades, "min_split_decades"
+    )
     max_log_std = _c.as_nonnegative(max_log_std, "max_log_std")
     max_phase_diff_deg = _c.as_nonnegative(
         max_phase_diff_deg, "max_phase_diff_deg"
@@ -677,7 +691,7 @@ def estimate_static_shift(
     log_ratio = np.log10(xy[valid]) - np.log10(yx[valid])
     median_split = float(np.median(log_ratio))
     consistency_std = float(np.std(log_ratio))
-    shift_factor = float(10.0 ** median_split)
+    shift_factor = float(10.0**median_split)
     split_decades = abs(median_split)
 
     phase_diff = float("nan")
@@ -724,8 +738,12 @@ def detect_sensor_dropout(
     min_flat_run = max(2, int(min_flat_run))
     if n == 0:
         return dict(
-            n_samples=0, n_nan=0, nan_fraction=float("nan"),
-            longest_flat_run=0, n_flat_runs=0, dropout=False,
+            n_samples=0,
+            n_nan=0,
+            nan_fraction=float("nan"),
+            longest_flat_run=0,
+            n_flat_runs=0,
+            dropout=False,
         )
     nan_mask = ~np.isfinite(x)
     n_nan = int(np.sum(nan_mask))
@@ -736,7 +754,8 @@ def detect_sensor_dropout(
     flagged_run = False
     for i in range(1, n):
         same = (
-            np.isfinite(x[i]) and np.isfinite(x[i - 1])
+            np.isfinite(x[i])
+            and np.isfinite(x[i - 1])
             and abs(x[i] - x[i - 1]) <= flat_tol
         )
         if same:
@@ -807,8 +826,11 @@ def amt_edge_report(
     """
     powerline_applicable, target_bands = _method_qc_context(method)
     powerline = (
-        detect_powerline_harmonics(data, sample_rate, mains_hz=mains_hz).as_dict()
-        if powerline_applicable else None
+        detect_powerline_harmonics(
+            data, sample_rate, mains_hz=mains_hz
+        ).as_dict()
+        if powerline_applicable
+        else None
     )
     coverage = estimate_frequency_coverage(
         data, sample_rate, target_bands=target_bands
@@ -837,8 +859,7 @@ def amt_edge_table(
     pairs) and returns one row per channel with the headline metrics.
     """
     items = (
-        list(reports.items()) if isinstance(reports, dict)
-        else list(reports)
+        list(reports.items()) if isinstance(reports, dict) else list(reports)
     )
     rows: list[dict[str, Any]] = []
     for channel, report in items:
@@ -847,22 +868,24 @@ def amt_edge_table(
         saturation = report.get("saturation") or {}
         dropout = report.get("dropout") or {}
         coverage = report.get("frequency_coverage") or {}
-        rows.append(dict(
-            channel=str(channel).lower(),
-            method=report.get("method"),
-            snr_db=report.get("snr_db"),
-            powerline_applicable=report.get("powerline_applicable"),
-            powerline_contaminated=powerline.get("contaminated"),
-            powerline_total_ratio=powerline.get("total_ratio"),
-            saturated=saturation.get("saturated"),
-            clip_fraction=saturation.get("clip_fraction"),
-            dropout=dropout.get("dropout"),
-            nan_fraction=dropout.get("nan_fraction"),
-            f_low_hz=coverage.get("f_low_hz"),
-            f_high_hz=coverage.get("f_high_hz"),
-            n_decades=coverage.get("n_decades"),
-            coverage_fraction=coverage.get("coverage_fraction"),
-        ))
+        rows.append(
+            dict(
+                channel=str(channel).lower(),
+                method=report.get("method"),
+                snr_db=report.get("snr_db"),
+                powerline_applicable=report.get("powerline_applicable"),
+                powerline_contaminated=powerline.get("contaminated"),
+                powerline_total_ratio=powerline.get("total_ratio"),
+                saturated=saturation.get("saturated"),
+                clip_fraction=saturation.get("clip_fraction"),
+                dropout=dropout.get("dropout"),
+                nan_fraction=dropout.get("nan_fraction"),
+                f_low_hz=coverage.get("f_low_hz"),
+                f_high_hz=coverage.get("f_high_hz"),
+                n_decades=coverage.get("n_decades"),
+                coverage_fraction=coverage.get("coverage_fraction"),
+            )
+        )
     df = pd.DataFrame.from_records(rows)
     return maybe_wrap_frame(
         df,

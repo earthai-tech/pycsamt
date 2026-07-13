@@ -7,6 +7,7 @@ pycsamt.compat.pandas
 Compatibility helpers for pandas operations to ensure robustness
 across different versions or usage patterns.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable

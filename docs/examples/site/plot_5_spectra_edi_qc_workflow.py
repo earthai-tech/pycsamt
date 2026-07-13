@@ -68,13 +68,14 @@ from pycsamt.emtools import (
 from pycsamt.emtools.spectra import snr_table
 from pycsamt.seg.spectra import Spectra
 
-
 spectra_dir = ROOT / "data" / "MT" / "SPECTRA"
 spectra_files = {
     "spectra01": spectra_dir / "spectra01.edi",
     "spectra02": spectra_dir / "spectra02.edi",
 }
-spectra = {name: Spectra.from_file(path) for name, path in spectra_files.items()}
+spectra = {
+    name: Spectra.from_file(path) for name, path in spectra_files.items()
+}
 
 # %%
 # 2. Coverage audit: frequency and period ranges
@@ -201,7 +202,9 @@ for label, sp in spectra.items():
     snr_tables[label] = snr
 
     print(f"\n{sp.name} MT-pair coherence:")
-    print(coh.groupby("pair")["coherence"].agg(["min", "median", "mean", "max"]))
+    print(
+        coh.groupby("pair")["coherence"].agg(["min", "median", "mean", "max"])
+    )
     print(f"{sp.name} coherence-based SNR dB:")
     print(snr.groupby("pair")["snr_db"].agg(["median", "mean", "max"]))
 
@@ -214,8 +217,16 @@ fig, axs = plt.subplots(1, 2, figsize=(11, 3.8), sharey=True)
 for ax, (label, sp) in zip(axs, spectra.items()):
     coh = coh_tables[label]
     for pair, group in coh.groupby("pair"):
-        ax.semilogx(group["period"], group["coherence"], marker=".", lw=1.2, label=pair)
-    ax.axhline(threshold, color="k", ls="--", lw=1, label=f"threshold {threshold:g}")
+        ax.semilogx(
+            group["period"],
+            group["coherence"],
+            marker=".",
+            lw=1.2,
+            label=pair,
+        )
+    ax.axhline(
+        threshold, color="k", ls="--", lw=1, label=f"threshold {threshold:g}"
+    )
     ax.set_title(f"{sp.name}: MT-pair coherence")
     ax.set_xlabel("Period (s)")
     ax.set_ylim(-0.02, 1.05)
@@ -248,8 +259,12 @@ for label, sp in spectra.items():
             "n_freq": int(sp.n_freq),
             "n_pass": int(mask.sum()),
             "pass_fraction": float(mask.mean()),
-            "passed_period_min_s": float(np.nanmin(passed_periods)) if mask.any() else np.nan,
-            "passed_period_max_s": float(np.nanmax(passed_periods)) if mask.any() else np.nan,
+            "passed_period_min_s": float(np.nanmin(passed_periods))
+            if mask.any()
+            else np.nan,
+            "passed_period_max_s": float(np.nanmax(passed_periods))
+            if mask.any()
+            else np.nan,
         }
     )
 
@@ -304,8 +319,22 @@ for label, sp in spectra.items():
     z, _tip = sp.to_Z(estimate_error=False)
     period = 1.0 / sp.freq
     rho = z.resistivity
-    ax.loglog(period, rho[:, 0, 1], marker="o", ms=3, lw=1.2, label=f"{sp.name} rho_xy")
-    ax.loglog(period, rho[:, 1, 0], marker="s", ms=3, lw=1.2, label=f"{sp.name} rho_yx")
+    ax.loglog(
+        period,
+        rho[:, 0, 1],
+        marker="o",
+        ms=3,
+        lw=1.2,
+        label=f"{sp.name} rho_xy",
+    )
+    ax.loglog(
+        period,
+        rho[:, 1, 0],
+        marker="s",
+        ms=3,
+        lw=1.2,
+        label=f"{sp.name} rho_yx",
+    )
 
 ax.set_xlabel("Period (s)")
 ax.set_ylabel("Apparent resistivity (ohm.m)")

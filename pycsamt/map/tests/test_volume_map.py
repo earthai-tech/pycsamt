@@ -178,9 +178,7 @@ def test_block_mode_ignores_azimuth() -> None:
         ),
     )
     base = build_3d_map(data, VolumeMapOptions(mode="block"))
-    rotated = build_3d_map(
-        data, VolumeMapOptions(mode="block", azimuth=90.0)
-    )
+    rotated = build_3d_map(data, VolumeMapOptions(mode="block", azimuth=90.0))
     assert base.data and rotated.data
     np.testing.assert_allclose(
         np.asarray(base.data[0].x), np.asarray(rotated.data[0].x)
@@ -203,13 +201,15 @@ def _var_data() -> MapData:
 def test_log_vs_linear_colorbar_range() -> None:
     log = build_3d_map(
         _var_data(),
-        VolumeMapOptions(mode="fence", log_color=True,
-                         value_range=(10.0, 1000.0)),
+        VolumeMapOptions(
+            mode="fence", log_color=True, value_range=(10.0, 1000.0)
+        ),
     )
     lin = build_3d_map(
         _var_data(),
-        VolumeMapOptions(mode="fence", log_color=False,
-                         value_range=(10.0, 1000.0)),
+        VolumeMapOptions(
+            mode="fence", log_color=False, value_range=(10.0, 1000.0)
+        ),
     )
     assert np.isclose(log.data[0].cmin, 1.0)
     assert np.isclose(log.data[0].cmax, 3.0)
@@ -220,8 +220,12 @@ def test_log_vs_linear_colorbar_range() -> None:
 def test_show_stations_adds_marker_trace() -> None:
     fig = build_3d_map(
         _var_data(),
-        VolumeMapOptions(mode="fence", show_stations=True,
-                         station_symbol="circle", station_size=6),
+        VolumeMapOptions(
+            mode="fence",
+            show_stations=True,
+            station_symbol="circle",
+            station_size=6,
+        ),
     )
     markers = [t for t in fig.data if getattr(t, "name", "") == "stations"]
     assert len(markers) == 1
@@ -233,21 +237,31 @@ def test_axis_units_scale_independently() -> None:
     import numpy as np
 
     def xspan(fig):
-        xs = [v for t in fig.data if type(t).__name__ == "Surface"
-              for v in (np.nanmin(t.x), np.nanmax(t.x))]
+        xs = [
+            v
+            for t in fig.data
+            if type(t).__name__ == "Surface"
+            for v in (np.nanmin(t.x), np.nanmax(t.x))
+        ]
         return max(xs) - min(xs)
 
     def zspan(fig):
-        zs = [v for t in fig.data if type(t).__name__ == "Surface"
-              for v in (np.nanmin(t.z), np.nanmax(t.z))]
+        zs = [
+            v
+            for t in fig.data
+            if type(t).__name__ == "Surface"
+            for v in (np.nanmin(t.z), np.nanmax(t.z))
+        ]
         return max(zs) - min(zs)
 
-    m = build_3d_map(_var_data(),
-                     VolumeMapOptions(mode="fence", x_unit="m",
-                                      depth_unit="m"))
-    km = build_3d_map(_var_data(),
-                      VolumeMapOptions(mode="fence", x_unit="km",
-                                       depth_unit="km"))
+    m = build_3d_map(
+        _var_data(),
+        VolumeMapOptions(mode="fence", x_unit="m", depth_unit="m"),
+    )
+    km = build_3d_map(
+        _var_data(),
+        VolumeMapOptions(mode="fence", x_unit="km", depth_unit="km"),
+    )
     # km view is 1000x smaller numerically than the metre view
     assert np.isclose(xspan(m), xspan(km) * 1000.0, rtol=1e-3)
     assert np.isclose(zspan(m), zspan(km) * 1000.0, rtol=1e-3)
@@ -258,21 +272,21 @@ def test_axis_units_scale_independently() -> None:
 def test_topography_shifts_surface_and_adds_terrain() -> None:
     flat = build_3d_map(
         _var_data(),
-        VolumeMapOptions(mode="fence", topography=False,
-                         show_terrain=False, depth_unit="m"),
+        VolumeMapOptions(
+            mode="fence", topography=False, show_terrain=False, depth_unit="m"
+        ),
     )
     topo = build_3d_map(
         _var_data(),
-        VolumeMapOptions(mode="fence", topography=True,
-                         show_terrain=True, depth_unit="m"),
+        VolumeMapOptions(
+            mode="fence", topography=True, show_terrain=True, depth_unit="m"
+        ),
     )
     flat_mean = float(np.nanmean(np.asarray(flat.data[0].z)))
     topo_mean = float(np.nanmean(np.asarray(topo.data[0].z)))
     # mean elevation is 150 m -> the draped surface sits ~150 m higher
     assert topo_mean - flat_mean > 100.0
-    assert any(
-        "terrain" in str(getattr(t, "name", "")) for t in topo.data
-    )
+    assert any("terrain" in str(getattr(t, "name", "")) for t in topo.data)
     assert "Elevation" in topo.layout.scene.zaxis.title.text
 
 
@@ -281,9 +295,7 @@ class _WideZ:
 
     def __init__(self, base: float) -> None:
         rng = np.random.RandomState(int(base))
-        self.resistivity = np.abs(
-            rng.rand(4, 2, 2)
-        ) * 400.0 + base
+        self.resistivity = np.abs(rng.rand(4, 2, 2)) * 400.0 + base
         self.phase = np.ones((4, 2, 2)) * 45.0
 
 
@@ -311,8 +323,7 @@ def test_smooth_sections_upsamples_and_stays_in_range() -> None:
     )
     smooth = build_3d_map(
         _wide_data(),
-        VolumeMapOptions(mode="fence", smooth_sections=True,
-                         section_res=40),
+        VolumeMapOptions(mode="fence", smooth_sections=True, section_res=40),
     )
     raw_x = np.asarray(raw.data[0].x)
     smooth_x = np.asarray(smooth.data[0].x)

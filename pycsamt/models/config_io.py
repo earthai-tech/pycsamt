@@ -277,8 +277,7 @@ def _read_python(path: Path) -> dict[str, Any]:
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 is_config = (
-                    isinstance(target, ast.Name)
-                    and target.id == "CONFIG"
+                    isinstance(target, ast.Name) and target.id == "CONFIG"
                 )
                 if is_config:
                     data = ast.literal_eval(node.value)
@@ -286,10 +285,7 @@ def _read_python(path: Path) -> dict[str, Any]:
                         return data
         if isinstance(node, ast.AnnAssign):
             target = node.target
-            is_config = (
-                isinstance(target, ast.Name)
-                and target.id == "CONFIG"
-            )
+            is_config = isinstance(target, ast.Name) and target.id == "CONFIG"
             if is_config:
                 data = ast.literal_eval(node.value)
                 if isinstance(data, dict):
@@ -359,10 +355,7 @@ def read_config_file(
     elif suffix in {".yml", ".yaml"}:
         data = _read_yaml(p)
     else:
-        msg = (
-            "Unsupported config suffix. Use .py, .json, "
-            ".yml, or .yaml."
-        )
+        msg = "Unsupported config suffix. Use .py, .json, .yml, or .yaml."
         raise ValueError(msg)
 
     allowed = _field_names(config_cls)

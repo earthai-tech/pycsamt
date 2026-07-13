@@ -4,6 +4,7 @@
 """
 Validation utilities for pycsamt.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -21,21 +22,21 @@ import pandas as pd
 from ..exceptions import NotFittedError, NotReadError
 
 __all__ = [
-    'check_is_fitted',
-    '_assert_all_types',
-    '_isin',
-    'assert_ratio',
-    '_validate_name_in',
-    '_is_numeric_dtype',
-    'check_consistency_size',
-    '_is_arraylike_1d',
-    'isinstance_relaxed',
+    "check_is_fitted",
+    "_assert_all_types",
+    "_isin",
+    "assert_ratio",
+    "_validate_name_in",
+    "_is_numeric_dtype",
+    "check_consistency_size",
+    "_is_arraylike_1d",
+    "isinstance_relaxed",
     "has_read",
     "check_has_read",
-    "isin", "isin_if",
-    "ensure_n_items"
+    "isin",
+    "isin_if",
+    "ensure_n_items",
 ]
-
 
 
 def ensure_n_items(
@@ -109,7 +110,6 @@ def ensure_n_items(
     """
     label = name or "values"
 
-
     # Collect inputs into a flat list of length n
     if values:
         seq = list(values)
@@ -120,9 +120,7 @@ def ensure_n_items(
             seq = [items]
 
     if len(seq) != n:
-        msg = (
-            f"Expected {n} {label}; got {len(seq)}."
-        )
+        msg = f"Expected {n} {label}; got {len(seq)}."
         if error == "raise":
             raise ValueError(msg)
         if error == "warn":
@@ -130,9 +128,7 @@ def ensure_n_items(
 
     # If extra values are supplied, trim but warn.
     if len(seq) > n:
-        msg = (
-            f"Got {len(seq)} {label}; truncating to {n}."
-        )
+        msg = f"Got {len(seq)} {label}; truncating to {n}."
         if error == "raise":
             raise ValueError(msg)
         if error == "warn":
@@ -144,16 +140,13 @@ def ensure_n_items(
         pad = [None] * (n - len(seq))
         seq = list(seq) + pad
 
-
     # Element-wise normalization
     out: list[Any] = []
     for i, x in enumerate(seq):
         # None handling
         if x is None:
             if not allow_none:
-                msg = (
-                    f"{label}[{i}] is None; not allowed."
-                )
+                msg = f"{label}[{i}] is None; not allowed."
                 if error == "raise":
                     raise TypeError(msg)
                 if error == "warn":
@@ -172,8 +165,7 @@ def ensure_n_items(
                 out.append(str(x))
             else:
                 msg = (
-                    f"{label}[{i}] must be string; "
-                    f"got {type(x).__name__!r}."
+                    f"{label}[{i}] must be string; got {type(x).__name__!r}."
                 )
                 if error == "raise":
                     raise TypeError(msg)
@@ -186,14 +178,10 @@ def ensure_n_items(
         if expect == "numeric":
             try:
                 v = (
-                    _to_float(x)
-                    if coerce
-                    else float(x)  # may raise
+                    _to_float(x) if coerce else float(x)  # may raise
                 )
             except Exception as exc:
-                msg = (
-                    f"{label}[{i}] not numeric: {x!r}."
-                )
+                msg = f"{label}[{i}] not numeric: {x!r}."
                 if error == "raise":
                     raise TypeError(msg) from exc
                 if error == "warn":
@@ -201,9 +189,7 @@ def ensure_n_items(
                 v = np.nan
 
             if not allow_nan and np.isnan(v):
-                msg = (
-                    f"{label}[{i}] is NaN; not allowed."
-                )
+                msg = f"{label}[{i}] is NaN; not allowed."
                 if error == "raise":
                     raise ValueError(msg)
                 if error == "warn":
@@ -212,10 +198,7 @@ def ensure_n_items(
             if bounds is not None and np.isfinite(v):
                 lo, hi = bounds
                 if v < lo or v > hi:
-                    msg = (
-                        f"{label}[{i}]={v} outside "
-                        f"[{lo}, {hi}]."
-                    )
+                    msg = f"{label}[{i}]={v} outside [{lo}, {hi}]."
                     if error == "raise":
                         raise ValueError(msg)
                     if error == "warn":
@@ -238,7 +221,6 @@ def ensure_n_items(
             if error == "warn":
                 warnings.warn(msg, stacklevel=2)
 
-
     # Materialize in requested container
     if return_as == "list":
         return list(out)
@@ -246,6 +228,7 @@ def ensure_n_items(
         return np.array(out, dtype=dtype)
     # default: tuple
     return tuple(out)
+
 
 def _iter_not_str(x: Any) -> bool:
     """True if iterable but not a (byte)string."""
@@ -269,9 +252,7 @@ def _to_float(x: Any) -> float:
         v = float(x)
         return v
     except Exception as exc:
-        raise TypeError(
-            f"Cannot coerce {x!r} to float."
-        ) from exc
+        raise TypeError(f"Cannot coerce {x!r} to float.") from exc
 
 
 def has_read(
@@ -359,16 +340,14 @@ def has_read(
         # Introspect the caller's frame to find 'self'
         frame = inspect.currentframe()
         if frame and frame.f_back:
-            obj = frame.f_back.f_locals.get('self')
+            obj = frame.f_back.f_locals.get("self")
         if obj is None:
             raise ValueError(
                 "No object provided or found as 'self' to check."
             )
 
     # 1) Custom __has_read__ method
-    if hasattr(obj, '__has_read__') and callable(
-        obj.__has_read__
-    ):
+    if hasattr(obj, "__has_read__") and callable(obj.__has_read__):
         if not obj.__has_read__():
             custom_msg = msg or (
                 f"'{obj.__class__.__name__}' reports not read via "
@@ -378,7 +357,7 @@ def has_read(
         return True
 
     # 2) Boolean flag
-    if hasattr(obj, '_has_read'):
+    if hasattr(obj, "_has_read"):
         flag = obj._has_read
         if flag is False:
             custom_msg = msg or (
@@ -421,6 +400,7 @@ def has_read(
             raise NotReadError(custom_msg)
 
     return True
+
 
 def check_has_read(
     attributes: str | list[str] | None = None,
@@ -474,18 +454,22 @@ def check_has_read(
     --------
     has_read : The underlying validation function.
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             # 'self' is the instance the decorated method is called on
             has_read(self, attributes=attributes, msg=msg)
             return func(self, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
+
 def check_is_fitted(
-        obj: Any = None, attributes: list[str] | None = None
-    ) -> bool:
+    obj: Any = None, attributes: list[str] | None = None
+) -> bool:
     r"""
     Validate that an object is "fitted" before use.
 
@@ -512,23 +496,26 @@ def check_is_fitted(
     # Retrieve obj from caller if not explicitly provided
     if obj is None:
         frame = inspect.currentframe().f_back
-        obj = frame.f_locals.get('self')  # type: ignore
+        obj = frame.f_locals.get("self")  # type: ignore
     if obj is None:
         raise ValueError(
-            "No object provided or found as 'self' to check fitting.")
+            "No object provided or found as 'self' to check fitting."
+        )
 
     # 1) Custom __is_fitted__ method
-    if hasattr(obj, '__is_fitted__') and callable(obj.__is_fitted__):
+    if hasattr(obj, "__is_fitted__") and callable(obj.__is_fitted__):
         if not obj.__is_fitted__():
             raise NotFittedError(
                 f"{obj.__class__.__name__} reports"
-                f" not fitted via __is_fitted__().")
+                f" not fitted via __is_fitted__()."
+            )
         return True
 
     # 2) Explicit attribute presence
     if attributes:
-        missing = [attr for attr in attributes
-                   if getattr(obj, attr, None) is None]
+        missing = [
+            attr for attr in attributes if getattr(obj, attr, None) is None
+        ]
         if missing:
             raise NotFittedError(
                 f"{obj.__class__.__name__} missing required"
@@ -538,15 +525,16 @@ def check_is_fitted(
 
     # 3) Boolean flag
     flag = None
-    if hasattr(obj, '_is_fitted'):
+    if hasattr(obj, "_is_fitted"):
         flag = obj._is_fitted  # type: ignore
-    elif hasattr(obj, '_fitted'):
+    elif hasattr(obj, "_fitted"):
         flag = obj._fitted  # type: ignore
 
     if isinstance(flag, bool):
         if not flag:
             raise NotFittedError(
-                f"{obj.__class__.__name__}._fitted flag is False.")
+                f"{obj.__class__.__name__}._fitted flag is False."
+            )
         return True
 
     # No fitting indicator found
@@ -554,10 +542,9 @@ def check_is_fitted(
         f"Could not determine fitting state for {obj.__class__.__name__}."
     )
 
+
 def _assert_all_types(
-    obj: Any,
-    *expected_types: type,
-    objname: str = None
+    obj: Any, *expected_types: type, objname: str = None
 ) -> Any:
     """
     Assert that an object is an instance of the given types.
@@ -582,9 +569,7 @@ def _assert_all_types(
         If `obj` is not an instance of any of `expected_types`.
     """
     if not expected_types:
-        raise TypeError(
-            "No expected types provided for type assertion."
-        )
+        raise TypeError("No expected types provided for type assertion.")
     # flatten nested tuples in expected_types
     types_tuple: tuple = ()
     for t in expected_types:
@@ -594,8 +579,8 @@ def _assert_all_types(
             types_tuple += (t,)
     if not isinstance(obj, types_tuple):
         type_names = ", ".join(t.__name__ for t in types_tuple)
-        prefix = f"'{objname}' " if objname else ''
-        plural = 's' if len(types_tuple) > 1 else ''
+        prefix = f"'{objname}' " if objname else ""
+        plural = "s" if len(types_tuple) > 1 else ""
         raise TypeError(
             f"{prefix}expected type{plural} {type_names}, "
             f"got {type(obj).__name__}"
@@ -640,9 +625,7 @@ def _isin(
         a = np.asarray(arr, dtype=object)
         s = np.asarray(subarr, dtype=object)
     except Exception as exc:
-        raise ValueError(
-            f"Invalid inputs for membership: {exc}"
-        ) from exc
+        raise ValueError(f"Invalid inputs for membership: {exc}") from exc
 
     mask = np.isin(a, s)
     if return_mask:
@@ -739,9 +722,7 @@ def isin(
         a = np.asarray(arr, dtype=object)
         s = np.asarray(subarr, dtype=object)
     except Exception as exc:
-        raise ValueError(
-            f"Invalid inputs for membership: {exc}"
-        ) from exc
+        raise ValueError(f"Invalid inputs for membership: {exc}") from exc
 
     # np.isin has no `equal_nan` support: NaN membership is
     # patched in manually below (pd.isna also handles object dtype)
@@ -794,6 +775,7 @@ def isin(
         out = out + (present,)
 
     return out[0] if len(out) == 1 else out
+
 
 def isin_if(
     o: Iterable,
@@ -865,13 +847,8 @@ def isin_if(
 
     if missing:
         if error not in {"raise", "warn", "ignore"}:
-            raise ValueError(
-                "error must be {'raise','warn','ignore'}."
-            )
-        msg = (
-            "Missing item(s): "
-            + ", ".join(repr(x) for x in missing)
-        )
+            raise ValueError("error must be {'raise','warn','ignore'}.")
+        msg = "Missing item(s): " + ", ".join(repr(x) for x in missing)
         if error == "raise":
             raise ValueError(msg)
         if error == "warn":
@@ -883,12 +860,13 @@ def isin_if(
         return inter
     return None
 
+
 def assert_ratio(
     v: Any,
     bounds: Sequence[float] | None = None,
     exclude_value: float | None = None,
     in_percent: bool = False,
-    name: str = 'rate'
+    name: str = "rate",
 ) -> float:
     """
     Assert that a ratio value falls within given bounds and
@@ -922,9 +900,9 @@ def assert_ratio(
     """
     # parse string with percent
     if isinstance(v, str):
-        if '%' in v:
+        if "%" in v:
             in_percent = True
-        v = v.replace('%', '')
+        v = v.replace("%", "")
     # convert to float
     try:
         val = float(v)
@@ -960,21 +938,20 @@ def assert_ratio(
                     "Cannot exclude value without valid bounds", stacklevel=2
                 )
         if val == excl:
-            raise ValueError(
-                f"{name} excluding {excl}, got {val}"
-            )
+            raise ValueError(f"{name} excluding {excl}, got {val}")
     # post-check for percent
     if in_percent and val > 1.0:
         msg = f"{name} as percent must be <= 1.0, got {val}"
         raise ValueError(msg)
     return val
 
+
 def _validate_name_in(
     name: str,
-    defaults: Sequence[str] | str = '',
+    defaults: Sequence[str] | str = "",
     expect_name: str | None = None,
     exception: Exception | None = None,
-    deep: bool = False
+    deep: bool = False,
 ) -> bool | str:
     """
     Assert that `name` exists within `defaults`.
@@ -1011,12 +988,10 @@ def _validate_name_in(
         try:
             defs_seq = [str(d).lower().strip() for d in defaults]
         except Exception:
-            raise TypeError(
-                "`defaults` must be str or sequence of str"
-            )
+            raise TypeError("`defaults` must be str or sequence of str")
     # check membership
     if deep:
-        merged = ''.join(defs_seq)
+        merged = "".join(defs_seq)
         valid = sname in merged
     else:
         valid = sname in defs_seq
@@ -1025,6 +1000,7 @@ def _validate_name_in(
     if not valid and exception is not None:
         raise exception
     return result
+
 
 def isinstance_relaxed(
     instance: Any,
@@ -1121,17 +1097,13 @@ def _is_numeric_dtype(o, /, to_array: bool = False) -> bool:
     _NUMERIC_KINDS = set("buifc")
 
     if not hasattr(o, "__iter__"):
-        raise TypeError(
-            f"'o' must be iterable. Got: {type(o).__name__!r}"
-        )
+        raise TypeError(f"'o' must be iterable. Got: {type(o).__name__!r}")
 
     if to_array:
         o = np.array(o)
 
     if not hasattr(o, "__array__"):
-        raise ValueError(
-            f"Expect array-like. Got: {type(o).__name__!r}"
-        )
+        raise ValueError(f"Expect array-like. Got: {type(o).__name__!r}")
 
     # prefer dtype.kind on ndarray/Series/DataFrame
     kind = (
@@ -1160,9 +1132,7 @@ def _check_consistency_size(ar1, ar2, /, error: str = "raise") -> bool:
     """
     same = len(ar1) == len(ar2)
     if not same and error == "raise":
-        msg = (
-            f"Array sizes must match: '{len(ar1)}' vs '{len(ar2)}'."
-        )
+        msg = f"Array sizes must match: '{len(ar1)}' vs '{len(ar2)}'."
         raise AssertionError(msg)
     return same
 
@@ -1199,9 +1169,7 @@ def _is_arraylike_1d(x) -> bool:
         If input is not array-like.
     """
     if not hasattr(x, "__array__"):
-        raise TypeError(
-            f"Expect a 1-D array. Got: {type(x).__name__!r}"
-        )
+        raise TypeError(f"Expect a 1-D array. Got: {type(x).__name__!r}")
     if not _is_arraylike_not_scalar(x):
         return False
     nd = getattr(x, "ndim", None)
@@ -1232,5 +1200,3 @@ def _is_arraylike_not_scalar(array) -> bool:
     Return ``True`` if array-like and not a scalar.
     """
     return _is_arraylike(array) and not np.isscalar(array)
-
-

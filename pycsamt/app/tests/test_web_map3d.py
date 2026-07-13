@@ -158,10 +158,12 @@ def test_block_fig_uses_finite_profile_neighbour_when_other_line_is_missing():
     x = np.array([0.0, 100.0])
     y = np.array([0.0, 1000.0])
     z = np.array([0.0, 250.0])
-    rho = np.array([
-        [[100.0, 120.0], [200.0, 240.0]],
-        [[np.nan, np.nan], [300.0, 360.0]],
-    ])
+    rho = np.array(
+        [
+            [[100.0, 120.0], [200.0, 240.0]],
+            [[np.nan, np.nan], [300.0, 360.0]],
+        ]
+    )
 
     fig = _build_block_fig(
         x_arr=x,

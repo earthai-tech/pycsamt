@@ -27,6 +27,7 @@ class JComponentMixin:
     takes precedence over separate ``banner``/``head``/``info``
     parts to avoid duplication.
     """
+
     @staticmethod
     def _norm(key: str) -> str:
         return str(key).strip().lower()
@@ -53,9 +54,7 @@ class JComponentMixin:
     def cdrop(self, key: str) -> None:
         self._bag().pop(self._norm(key), None)
 
-    def snapshot(
-        self, keys: Iterable[str] | None = None
-    ) -> dict[str, Any]:
+    def snapshot(self, keys: Iterable[str] | None = None) -> dict[str, Any]:
         bag = self._bag()
         if keys is None:
             keys = list(bag.keys())

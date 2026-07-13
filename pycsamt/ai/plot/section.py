@@ -7,6 +7,7 @@ All functions respect the :class:`~pycsamt.ai.plot._style.EMStyle`
 publication conventions and return :class:`~matplotlib.figure.Figure`
 or :class:`~matplotlib.axes.Axes` objects for downstream composition.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,6 +34,7 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _default_depths(n_depth: int, depth_max: float = 2000.0) -> np.ndarray:
     return np.linspace(0.0, depth_max, n_depth + 1)
@@ -68,11 +70,18 @@ def _section_im(
         vmax = np.nanpercentile(data, 98)
 
     # pcolormesh: (n_depth+1, n_sta+1) edges, (n_depth, n_sta) values
-    X, Y = np.meshgrid(stations, depths[:-1] if len(depths) == rho_2d.shape[0] + 1
-                       else depths)
+    X, Y = np.meshgrid(
+        stations,
+        depths[:-1] if len(depths) == rho_2d.shape[0] + 1 else depths,
+    )
     im = ax.pcolormesh(
-        X, Y, data,
-        cmap=cmap, vmin=vmin, vmax=vmax, shading="auto",
+        X,
+        Y,
+        data,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        shading="auto",
     )
     ax.set_aspect(aspect)
     return im, cbar_label
@@ -81,6 +90,7 @@ def _section_im(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_section
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_section(
@@ -154,15 +164,24 @@ def plot_section(
         fig = ax.get_figure()
 
     im, cbar_label = _section_im(
-        ax, rho_2d, depths, stations,
-        log_scale=log_scale, vmin=vmin, vmax=vmax, cmap=cmap,
+        ax,
+        rho_2d,
+        depths,
+        stations,
+        log_scale=log_scale,
+        vmin=vmin,
+        vmax=vmax,
+        cmap=cmap,
     )
 
     if show_sites:
         ax.plot(
             stations,
             np.full_like(stations, depths.min()),
-            "v", ms=4, color=EM_COLORS["text"], zorder=5,
+            "v",
+            ms=4,
+            color=EM_COLORS["text"],
+            zorder=5,
         )
 
     ax.invert_yaxis()
@@ -179,6 +198,7 @@ def plot_section(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_section_pair
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_section_pair(
@@ -231,7 +251,7 @@ def plot_section_pair(
     # Compute in log space for consistent comparison
     true_log = np.log10(np.maximum(true_2d, 1e-6)) if log_scale else true_2d
     pred_log = np.log10(np.maximum(pred_2d, 1e-6)) if log_scale else pred_2d
-    cbar_label = (r"$\log_{10}(\rho)$ (Ω·m)" if log_scale else r"$\rho$ (Ω·m)")
+    cbar_label = r"$\log_{10}(\rho)$ (Ω·m)" if log_scale else r"$\rho$ (Ω·m)"
 
     if vmin is None:
         vmin = np.nanpercentile(true_log, 2)
@@ -265,8 +285,13 @@ def plot_section_pair(
         dmax = np.nanpercentile(np.abs(diff), 95)
         X, Y = np.meshgrid(stations, depths[:n_depth])
         im_d = axes[2].pcolormesh(
-            X, Y, diff, cmap=EM_CMAPS["misfit"],
-            vmin=-dmax, vmax=dmax, shading="auto",
+            X,
+            Y,
+            diff,
+            cmap=EM_CMAPS["misfit"],
+            vmin=-dmax,
+            vmax=dmax,
+            shading="auto",
         )
         axes[2].invert_yaxis()
         axes[2].set_title("Difference", fontsize=9)
@@ -280,6 +305,7 @@ def plot_section_pair(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_pseudo_section
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_pseudo_section(
@@ -364,9 +390,7 @@ def plot_pseudo_section(
     )
 
     ax.set_xlabel("Station")
-    ax.set_ylabel(
-        r"$\log_{10}(T)$ (s)" if log_freq else "Frequency (Hz)"
-    )
+    ax.set_ylabel(r"$\log_{10}(T)$ (s)" if log_freq else "Frequency (Hz)")
     if title:
         ax.set_title(title, fontsize=10)
 

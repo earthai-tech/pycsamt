@@ -20,8 +20,8 @@ from pycsamt.utils.generic import (
     strip_item,
 )
 
-
 # ------------------------------- make_ids ------------------------------
+
 
 def test_make_ids_from_sequence_and_count():
     assert make_ids(range(3), prefix="ix") == ["ix0", "ix1", "ix2"]
@@ -36,7 +36,11 @@ def test_make_ids_zfill_and_skip_leading_zero():
     assert ids[0] == "line0001"
     assert ids[-1] == "line0012"
     assert make_ids(5, prefix="S", skip_leading_zero=True) == [
-        "S0", "S1", "S2", "S3", "S4"
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
     ]
 
 
@@ -47,6 +51,7 @@ def test_make_ids_numpy_count_and_negative():
 
 
 # ------------------------------ strip_item -----------------------------
+
 
 def test_strip_item_whitespace_paths():
     assert strip_item("    ss_data   ") == "ss_data"
@@ -75,10 +80,9 @@ def test_strip_item_invalid_inputs():
 
 # ---------------------------- count_functions --------------------------
 
+
 def test_count_functions_on_own_module():
-    names = count_functions(
-        "pycsamt.utils.generic", return_counts=False
-    )
+    names = count_functions("pycsamt.utils.generic", return_counts=False)
     assert "make_ids" in names
     assert "strip_item" in names
     # private and nested helpers excluded by default
@@ -98,6 +102,7 @@ def test_count_functions_import_error():
 
 
 # ---------------------------- get_valid_kwargs -------------------------
+
 
 def test_get_valid_kwargs_filters_and_warns():
     def f(a, b=0, *, c=1):
@@ -120,11 +125,13 @@ def test_get_valid_kwargs_instance_and_class():
         def __init__(self, alpha=1, beta=2):
             pass
 
-    assert get_valid_kwargs(C, {"alpha": 5, "nope": 0}.copy()) \
-        .keys() == {"alpha"}
+    assert get_valid_kwargs(C, {"alpha": 5, "nope": 0}.copy()).keys() == {
+        "alpha"
+    }
 
 
 # ------------------------------ error_policy ---------------------------
+
 
 def test_error_policy_passthrough_and_auto():
     assert error_policy("warn") == "warn"

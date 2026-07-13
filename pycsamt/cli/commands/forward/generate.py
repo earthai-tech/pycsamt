@@ -52,6 +52,7 @@ from ._base import forward
 # generate command
 # ---------------------------------------------------------------------------
 
+
 @forward.command("generate")
 @click.option(
     "--solver",
@@ -61,7 +62,8 @@ from ._base import forward
     help="1-D EM solver used to compute responses.",
 )
 @click.option(
-    "--n-samples", "-n",
+    "--n-samples",
+    "-n",
     type=click.IntRange(min=1),
     default=1_000,
     show_default=True,
@@ -79,7 +81,8 @@ from ._base import forward
     ),
 )
 @click.option(
-    "--freqs", "freq_range",
+    "--freqs",
+    "freq_range",
     type=FreqRange(),
     default="0.001:10000",
     show_default=True,
@@ -120,7 +123,8 @@ from ._base import forward
     help="Global random seed for fully reproducible datasets.",
 )
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     default="forward_dataset.npz",
     show_default=True,
     metavar="FILE",
@@ -201,7 +205,9 @@ def generate(
         n_freqs,
     )
 
-    noise_type_arg = None if noise_type.lower() == "none" else noise_type.lower()
+    noise_type_arg = (
+        None if noise_type.lower() == "none" else noise_type.lower()
+    )
     save_path = output if output.endswith(".npz") else None
 
     if verbose >= 1:
@@ -245,6 +251,5 @@ def generate(
         df.to_csv(output, index=False)
 
     click.echo(
-        f"Dataset saved → {output}  "
-        f"(X: {ds.X.shape}, y: {ds.y.shape})"
+        f"Dataset saved → {output}  (X: {ds.X.shape}, y: {ds.y.shape})"
     )

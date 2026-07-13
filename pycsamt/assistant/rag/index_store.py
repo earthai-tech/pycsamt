@@ -55,15 +55,17 @@ def default_index_dir(root: Path | str | None = None) -> Path:
     return base / DEFAULT_INDEX_DIRNAME
 
 
-def index_exists(out_dir: Path | str | None = None,
-                 root: Path | str | None = None) -> bool:
+def index_exists(
+    out_dir: Path | str | None = None, root: Path | str | None = None
+) -> bool:
     """True when a persisted ``chunks.jsonl`` is present."""
     d = Path(out_dir) if out_dir is not None else default_index_dir(root)
     return (d / "chunks.jsonl").is_file()
 
 
-def read_manifest(out_dir: Path | str | None = None,
-                  root: Path | str | None = None) -> dict | None:
+def read_manifest(
+    out_dir: Path | str | None = None, root: Path | str | None = None
+) -> dict | None:
     """Return the manifest dict, or ``None`` if absent/unreadable."""
     d = Path(out_dir) if out_dir is not None else default_index_dir(root)
     mf = d / "manifest.json"
@@ -75,8 +77,9 @@ def read_manifest(out_dir: Path | str | None = None,
         return None
 
 
-def index_is_stale(out_dir: Path | str | None = None,
-                   root: Path | str | None = None) -> bool:
+def index_is_stale(
+    out_dir: Path | str | None = None, root: Path | str | None = None
+) -> bool:
     """True when the persisted index no longer matches the source tree.
 
     Compares the manifest's stored :func:`~pycsamt.assistant.rag.ingest.
@@ -113,7 +116,9 @@ def build_index(
     embedded, ``embedded``/``embed_model``/``embed_dim``).
     """
     root = Path(root) if root is not None else repo_root()
-    out_dir = Path(out_dir) if out_dir is not None else default_index_dir(root)
+    out_dir = (
+        Path(out_dir) if out_dir is not None else default_index_dir(root)
+    )
 
     chunks = build_chunks(root)
     stats = corpus_stats(chunks)

@@ -44,7 +44,8 @@ from ._base import _resolve_solver, invert
     help="Override target RMS misfit.",
 )
 @click.option(
-    "--async", "run_async",
+    "--async",
+    "run_async",
     is_flag=True,
     default=False,
     help="Launch non-blocking (returns immediately after starting).",
@@ -93,6 +94,7 @@ def run(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _run_occam2d(
     workdir: Path,
     max_iter: int | None,
@@ -107,7 +109,9 @@ def _run_occam2d(
     runner = OccamRunner(workdir=workdir, verbose=verbose)
     if run_async:
         pid = runner.run_async(max_iter=max_iter, target_misfit=target_misfit)
-        click.echo(f"Occam2D started (PID {pid}).  Logs: {workdir}/occam_stdout.log")
+        click.echo(
+            f"Occam2D started (PID {pid}).  Logs: {workdir}/occam_stdout.log"
+        )
     else:
         code = runner.run(max_iter=max_iter, target_misfit=target_misfit)
         if code != 0:
@@ -133,9 +137,12 @@ def _run_modem(
 
     runner = ModEmRunner(workdir=workdir, verbose=verbose)
     if run_async:
-        pid = runner.run(run_async=True, max_iterations=max_iter,
-                         target_rms=target_misfit)
-        click.echo(f"ModEM started (PID {pid}).  Logs: {workdir}/modem_stdout.log")
+        pid = runner.run(
+            run_async=True, max_iterations=max_iter, target_rms=target_misfit
+        )
+        click.echo(
+            f"ModEM started (PID {pid}).  Logs: {workdir}/modem_stdout.log"
+        )
     else:
         code = runner.run(max_iterations=max_iter, target_rms=target_misfit)
         if code != 0:

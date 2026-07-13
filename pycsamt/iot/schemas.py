@@ -119,8 +119,13 @@ class HealthPayload(TelemetryPayload):
     rssi_dbm: float | None = None
     firmware: str | None = None
 
-    _BATTERY = ("battery_v", "battery_voltage", "battery_voltage_v",
-                "voltage", "batt_v")
+    _BATTERY = (
+        "battery_v",
+        "battery_voltage",
+        "battery_voltage_v",
+        "voltage",
+        "batt_v",
+    )
     _TEMPERATURE = ("temperature_c", "temperature", "temp_c", "temp")
     _UPTIME = ("uptime_s", "uptime", "uptime_seconds")
     _STORAGE = ("free_storage_mb", "storage_mb", "free_mb")
@@ -132,7 +137,9 @@ class HealthPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.battery_v = _c.as_optional_finite_float(self.battery_v, "battery_v")
+        self.battery_v = _c.as_optional_finite_float(
+            self.battery_v, "battery_v"
+        )
         self.temperature_c = _c.as_optional_finite_float(
             self.temperature_c, "temperature_c"
         )
@@ -148,8 +155,13 @@ class HealthPayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> HealthPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._BATTERY, cls._TEMPERATURE,
-            cls._UPTIME, cls._STORAGE, cls._RSSI, cls._FIRMWARE,
+            cls._STATION_ALIASES,
+            cls._BATTERY,
+            cls._TEMPERATURE,
+            cls._UPTIME,
+            cls._STORAGE,
+            cls._RSSI,
+            cls._FIRMWARE,
         )
         return cls(
             station=cls._consume_station(data),
@@ -235,9 +247,17 @@ class QCPayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> QCPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._ACCEPTED, cls._DECISION, cls._SNR,
-            cls._COVERAGE, cls._SPIKE, cls._RMS, cls._METHOD, cls._CHANNELS,
-            cls._BAND, cls._REASONS,
+            cls._STATION_ALIASES,
+            cls._ACCEPTED,
+            cls._DECISION,
+            cls._SNR,
+            cls._COVERAGE,
+            cls._SPIKE,
+            cls._RMS,
+            cls._METHOD,
+            cls._CHANNELS,
+            cls._BAND,
+            cls._REASONS,
         )
         return cls(
             station=cls._consume_station(data),
@@ -268,7 +288,8 @@ class QCPayload(TelemetryPayload):
                 channels=list(self.channels),
                 frequency_band_hz=(
                     list(self.frequency_band_hz)
-                    if self.frequency_band_hz is not None else None
+                    if self.frequency_band_hz is not None
+                    else None
                 ),
                 reasons=list(self.reasons),
             ),
@@ -300,7 +321,9 @@ class PowerPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.battery_v = _c.as_optional_finite_float(self.battery_v, "battery_v")
+        self.battery_v = _c.as_optional_finite_float(
+            self.battery_v, "battery_v"
+        )
         self.state = _c.as_optional_str(self.state, "state")
         if self.state is not None:
             self.state = self.state.lower()
@@ -317,8 +340,13 @@ class PowerPayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> PowerPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._BATTERY, cls._STATE, cls._RUNTIME,
-            cls._NET, cls._SOLAR, cls._LOAD,
+            cls._STATION_ALIASES,
+            cls._BATTERY,
+            cls._STATE,
+            cls._RUNTIME,
+            cls._NET,
+            cls._SOLAR,
+            cls._LOAD,
         )
         return cls(
             station=cls._consume_station(data),
@@ -413,9 +441,17 @@ class SourcePayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> SourcePayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._SOURCE_ID, cls._CURRENT, cls._VOLTAGE,
-            cls._FREQ, cls._POWER, cls._DIPOLE, cls._DUTY, cls._ON,
-            cls._OFFSET, cls._AZIMUTH,
+            cls._STATION_ALIASES,
+            cls._SOURCE_ID,
+            cls._CURRENT,
+            cls._VOLTAGE,
+            cls._FREQ,
+            cls._POWER,
+            cls._DIPOLE,
+            cls._DUTY,
+            cls._ON,
+            cls._OFFSET,
+            cls._AZIMUTH,
         )
         return cls(
             station=cls._consume_station(data),
@@ -482,8 +518,12 @@ class SyncPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.offset_ms = _c.as_optional_finite_float(self.offset_ms, "offset_ms")
-        self.drift_ppm = _c.as_optional_finite_float(self.drift_ppm, "drift_ppm")
+        self.offset_ms = _c.as_optional_finite_float(
+            self.offset_ms, "offset_ms"
+        )
+        self.drift_ppm = _c.as_optional_finite_float(
+            self.drift_ppm, "drift_ppm"
+        )
         if self.jitter_ms is not None:
             self.jitter_ms = _c.as_nonnegative(self.jitter_ms, "jitter_ms")
         if self.gps_lock is not None:
@@ -504,9 +544,16 @@ class SyncPayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> SyncPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._OFFSET, cls._DRIFT, cls._JITTER,
-            cls._GPS, cls._NREF, cls._REFERENCE, cls._TX_LOCKED,
-            cls._TX_OFFSET, cls._TX_ID,
+            cls._STATION_ALIASES,
+            cls._OFFSET,
+            cls._DRIFT,
+            cls._JITTER,
+            cls._GPS,
+            cls._NREF,
+            cls._REFERENCE,
+            cls._TX_LOCKED,
+            cls._TX_OFFSET,
+            cls._TX_ID,
         )
         return cls(
             station=cls._consume_station(data),
@@ -571,7 +618,10 @@ class EventPayload(TelemetryPayload):
     def from_mapping(cls, payload: Mapping[str, Any]) -> EventPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._EVENT, cls._SEVERITY, cls._MESSAGE,
+            cls._STATION_ALIASES,
+            cls._EVENT,
+            cls._SEVERITY,
+            cls._MESSAGE,
             cls._CODE,
         )
         return cls(
@@ -585,7 +635,8 @@ class EventPayload(TelemetryPayload):
 
     def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         severity = (
-            self.severity.value if isinstance(self.severity, EventSeverity)
+            self.severity.value
+            if isinstance(self.severity, EventSeverity)
             else str(self.severity)
         )
         return self._finish(
@@ -644,14 +695,23 @@ class AcquisitionPayload(TelemetryPayload):
             if self.n_samples < 0:
                 raise ValueError("n_samples must be >= 0.")
         self.gain = _c.as_optional_finite_float(self.gain, "gain")
-        self.duration_s = _c.as_optional_positive(self.duration_s, "duration_s")
+        self.duration_s = _c.as_optional_positive(
+            self.duration_s, "duration_s"
+        )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> AcquisitionPayload:
         data = dict(payload or {})
         known = _known_keys(
-            cls._STATION_ALIASES, cls._METHOD, cls._CHANNELS, cls._RATE,
-            cls._FREQ, cls._BAND, cls._NSAMPLES, cls._GAIN, cls._DURATION,
+            cls._STATION_ALIASES,
+            cls._METHOD,
+            cls._CHANNELS,
+            cls._RATE,
+            cls._FREQ,
+            cls._BAND,
+            cls._NSAMPLES,
+            cls._GAIN,
+            cls._DURATION,
         )
         return cls(
             station=cls._consume_station(data),
@@ -676,7 +736,8 @@ class AcquisitionPayload(TelemetryPayload):
                 frequency_hz=self.frequency_hz,
                 frequency_band_hz=(
                     list(self.frequency_band_hz)
-                    if self.frequency_band_hz is not None else None
+                    if self.frequency_band_hz is not None
+                    else None
                 ),
                 n_samples=self.n_samples,
                 gain=self.gain,

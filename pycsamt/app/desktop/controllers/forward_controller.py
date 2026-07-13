@@ -7,6 +7,7 @@ The library is stored as JSON at ``~/.pycsamt/forward_models.json`` and
 contains a flat list of serialised 1-D LayeredModel records (resistivity +
 thickness + name + dim).  2-D / 3-D parameter sets are stored as raw dicts.
 """
+
 from __future__ import annotations
 
 import json
@@ -53,7 +54,9 @@ class ForwardController:
                 data = json.loads(_LIBRARY_PATH.read_text(encoding="utf-8"))
                 self._library = data.get("models", [])
             except Exception:
-                logger.warning("Could not load forward model library; starting empty.")
+                logger.warning(
+                    "Could not load forward model library; starting empty."
+                )
                 self._library = []
 
     def save_library(self) -> None:
@@ -77,7 +80,8 @@ class ForwardController:
         record = dict(record)
         record["name"] = name
         existing = next(
-            (i for i, m in enumerate(self._library) if m["name"] == name), None
+            (i for i, m in enumerate(self._library) if m["name"] == name),
+            None,
         )
         if existing is not None:
             self._library[existing] = record
@@ -126,7 +130,7 @@ class ForwardController:
         """Return (resistivity, thickness) arrays from a library record."""
         return (
             np.asarray(record["resistivity"], dtype=float),
-            np.asarray(record["thickness"],   dtype=float),
+            np.asarray(record["thickness"], dtype=float),
         )
 
     # ── Geological presets ────────────────────────────────────────────────────
@@ -139,8 +143,9 @@ class ForwardController:
         Returns a dict with keys ``resistivity``, ``thickness``.
         """
         from pycsamt.forward import LayeredModel
+
         model = LayeredModel.from_geology(name, seed=seed)
         return {
             "resistivity": model.resistivity.tolist(),
-            "thickness":   model.thickness.tolist(),
+            "thickness": model.thickness.tolist(),
         }

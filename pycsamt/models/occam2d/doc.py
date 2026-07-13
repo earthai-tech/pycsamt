@@ -201,12 +201,10 @@ output_file : path-like
 """,
 )
 
-_occam_param_docs = (
-    DocstringComponents.from_nested_components(
-        common=DocstringComponents(_occam_common_params),
-        data=DocstringComponents(_occam_data_params),
-        mesh=DocstringComponents(_occam_mesh_params),
-        runner=DocstringComponents(_occam_runner_params),
-        result=DocstringComponents(_occam_result_params),
-    )
+_occam_param_docs = DocstringComponents.from_nested_components(
+    common=DocstringComponents(_occam_common_params),
+    data=DocstringComponents(_occam_data_params),
+    mesh=DocstringComponents(_occam_mesh_params),
+    runner=DocstringComponents(_occam_runner_params),
+    result=DocstringComponents(_occam_result_params),
 )

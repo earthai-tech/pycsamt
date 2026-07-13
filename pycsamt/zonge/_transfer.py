@@ -26,7 +26,8 @@ except ImportError:  # pragma: no cover
     )
 logger = get_logger(__name__)
 
-__all__= ['LegacyAVGBase']
+__all__ = ["LegacyAVGBase"]
+
 
 @dataclass
 class LegacyAVGBase:
@@ -164,9 +165,7 @@ class LegacyAVGBase:
             raise AvgDataError("Empty legacy table.")
 
         # Use a case-insensitive match against the global map
-        lower_to_canon = {
-            k.lower(): v for k, v in _CANONICAL_MAP.items()
-        }
+        lower_to_canon = {k.lower(): v for k, v in _CANONICAL_MAP.items()}
         rename_dict = {
             c: lower_to_canon.get(str(c).lower(), str(c).lower())
             for c in df.columns
@@ -236,13 +235,18 @@ class LegacyAVGBase:
 
         # Error columns expected by modern tools.
         for c in (
-            "pc_emag", "s_ephz", "pc_hmag", "s_hphz",
-            "z_err", "s_phz", "pc_rho",
+            "pc_emag",
+            "s_ephz",
+            "pc_hmag",
+            "s_hphz",
+            "z_err",
+            "s_phz",
+            "pc_rho",
         ):
-        # for c in (
-        #     "e.%err", "e.perr", "h.%err", "h.perr",
-        #     "z.%err", "z.perr", "rho.%err",
-        # ):
+            # for c in (
+            #     "e.%err", "e.perr", "h.%err", "h.perr",
+            #     "z.%err", "z.perr", "rho.%err",
+            # ):
             if c not in out.columns:
                 out[c] = np.nan
 
@@ -353,17 +357,13 @@ class LegacyAVGBase:
                 if st.size > 1:
                     diffs = np.diff(st)
                     inc = np.median(diffs)
-                    close = np.allclose(
-                        diffs, inc, rtol=0.0, atol=1e-6
-                    )
+                    close = np.allclose(diffs, inc, rtol=0.0, atol=1e-6)
                     if close:
                         attrs.setdefault("Stn.Inc", float(inc))
                         attrs.setdefault("Stn.GdpInc", float(inc))
 
         # 4) Minimal provenance tag.
-        now = datetime.now(timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         hist = attrs.get("history", "")
         tag = f"legacy→xarray:{now}"
         attrs["history"] = f"{hist} | {tag}" if hist else tag

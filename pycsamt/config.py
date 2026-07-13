@@ -3,6 +3,7 @@ pycsamt/config.py
 
 Utilities for managing the pycsamt data directory.
 """
+
 import os
 import shutil
 import warnings
@@ -44,15 +45,15 @@ def get_data_home(data_home: str = None) -> str:
     """
     if data_home is None:
         data_home = os.environ.get(
-            "PYCSAMT_DATA",
-            os.path.join("~", "pycsamt_data")
+            "PYCSAMT_DATA", os.path.join("~", "pycsamt_data")
         )
     data_home = os.path.expanduser(data_home)
     try:
         os.makedirs(data_home, exist_ok=True)
     except OSError as e:
         warnings.warn(
-            f"Could not create pycsamt data home {data_home}: {e}", stacklevel=2
+            f"Could not create pycsamt data home {data_home}: {e}",
+            stacklevel=2,
         )
     return data_home
 
@@ -123,8 +124,7 @@ def get_config_home(config_home: str = None) -> str:
     if config_home is None:
         base = get_data_home()
         config_home = os.environ.get(
-            "PYCSAMT_CONFIG",
-            os.path.join(base, "config")
+            "PYCSAMT_CONFIG", os.path.join(base, "config")
         )
     config_home = os.path.expanduser(config_home)
     try:
@@ -136,10 +136,7 @@ def get_config_home(config_home: str = None) -> str:
     return config_home
 
 
-def load_config(
-    filename: str,
-    config_dir: str = None
-) -> dict:
+def load_config(filename: str, config_dir: str = None) -> dict:
     """
     Load a YAML configuration file from the config directory.
 
@@ -172,8 +169,6 @@ def load_config(
     directory = config_dir or get_config_home()
     path = os.path.join(directory, filename)
     if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"Config file not found: {path}"
-        )
+        raise FileNotFoundError(f"Config file not found: {path}")
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)

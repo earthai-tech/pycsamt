@@ -10,6 +10,7 @@ which over-estimates ρ_a — and the propagated error bars — by ``1/(0.2·2π
 
 These tests pin the magnitude so the regression cannot silently return.
 """
+
 from __future__ import annotations
 
 import os
@@ -47,6 +48,7 @@ class TestRhoFieldFormula(unittest.TestCase):
             _iter_items,
             ensure_sites,
         )
+
         S = ensure_sites(_DATA, recursive=True, verbose=0)
         ed = next(_iter_items(S))
         _, z, fr = _get_z_block(ed)
@@ -55,7 +57,9 @@ class TestRhoFieldFormula(unittest.TestCase):
         self.assertIsNotNone(rho_attr)
         m = np.isfinite(rho_field) & np.isfinite(rho_attr[:, 0, 1])
         np.testing.assert_allclose(
-            rho_field[m], rho_attr[:, 0, 1][m], rtol=1e-6,
+            rho_field[m],
+            rho_attr[:, 0, 1][m],
+            rtol=1e-6,
         )
         self.assertLess(np.nanmax(rho_field), _RHO_CEILING)
 
@@ -70,6 +74,7 @@ class TestControllerRhoMagnitude(unittest.TestCase):
             CorrectionController,
         )
         from pycsamt.emtools._core import ensure_sites
+
         S = ensure_sites(_DATA, recursive=True, verbose=0)
         ctrl = CorrectionController()
         ctrl.dark = False
@@ -82,8 +87,11 @@ class TestControllerRhoMagnitude(unittest.TestCase):
         ctrl.plot_rho_curves(S, ax)
         rho = _plotted_rho(ax)
         self.assertTrue(np.isfinite(rho).any())
-        self.assertLess(np.nanmax(rho), _RHO_CEILING,
-                        msg="ρ_a inflated — SI formula on field-unit Z?")
+        self.assertLess(
+            np.nanmax(rho),
+            _RHO_CEILING,
+            msg="ρ_a inflated — SI formula on field-unit Z?",
+        )
 
     def test_pseudosection_in_range(self):
         ctrl, S = self._ctrl()
@@ -102,8 +110,11 @@ class TestControllerRhoMagnitude(unittest.TestCase):
                 a = a[np.isfinite(a)]
                 if a.size:
                     # pseudosections plot log10(ρ); ceil in linear or log space
-                    cap = np.log10(_RHO_CEILING) if np.nanmax(a) < 20 \
+                    cap = (
+                        np.log10(_RHO_CEILING)
+                        if np.nanmax(a) < 20
                         else _RHO_CEILING
+                    )
                     self.assertLess(np.nanmax(a), cap)
 
 
@@ -117,6 +128,7 @@ class TestStationResponseErrorBars(unittest.TestCase):
             _iter_items,
             ensure_sites,
         )
+
         S = ensure_sites(_DATA, recursive=True, verbose=0)
         ed = next(_iter_items(S))
         Z, z, fr = _get_z_block(ed)

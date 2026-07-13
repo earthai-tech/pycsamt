@@ -36,23 +36,27 @@ def make_section(seed):
     r = np.random.default_rng(seed)
     z = np.linspace(0, 1, N_DEPTH)[:, None]
     s = np.linspace(0, 1, N_STA)[None, :]
-    section = 1.8 + 0.9 * z + 0.0 * s                        # background (D, S)
+    section = 1.8 + 0.9 * z + 0.0 * s  # background (D, S)
     # conductive blob (low rho)
     cx, cz = r.uniform(0.2, 0.55), r.uniform(0.25, 0.6)
-    section += -0.9 * np.exp(-(((s - cx) ** 2) / 0.02 + ((z - cz) ** 2) / 0.03))
+    section += -0.9 * np.exp(
+        -(((s - cx) ** 2) / 0.02 + ((z - cz) ** 2) / 0.03)
+    )
     # resistive blob (high rho)
     rx, rz = r.uniform(0.55, 0.85), r.uniform(0.35, 0.75)
-    section += 0.7 * np.exp(-(((s - rx) ** 2) / 0.02 + ((z - rz) ** 2) / 0.04))
+    section += 0.7 * np.exp(
+        -(((s - rx) ** 2) / 0.02 + ((z - rz) ** 2) / 0.04)
+    )
     return section.astype(np.float32)
 
 
 rng = np.random.default_rng(0)
-Y = np.stack([make_section(i) for i in range(N_PROF)])        # (P, D, S)
+Y = np.stack([make_section(i) for i in range(N_PROF)])  # (P, D, S)
 X = np.zeros((N_PROF, N_COMP, N_FREQ, N_STA), np.float32)
 for f in range(N_FREQ):
     d0 = int(f / N_FREQ * N_DEPTH)
     d1 = min(N_DEPTH, d0 + N_DEPTH // N_FREQ + 2)
-    band = Y[:, d0:d1, :].mean(axis=1)                        # (P, S)
+    band = Y[:, d0:d1, :].mean(axis=1)  # (P, S)
     for c in range(N_COMP):
         X[:, c, f, :] = band + rng.normal(0, 0.03, size=band.shape)
 
@@ -68,7 +72,9 @@ print("train:", Xtr.shape, Ytr.shape, " test:", Xte.shape, Yte.shape)
 
 from pycsamt.ai.plot import plot_pseudo_section
 
-fig = plot_pseudo_section(Xte[0, 0], title="Input pseudo-section (test profile 0)")
+fig = plot_pseudo_section(
+    Xte[0, 0], title="Input pseudo-section (test profile 0)"
+)
 
 # %%
 # Train the U-Net and predict
@@ -84,8 +90,13 @@ from pycsamt.ai.inversion.inv2d import EMInverter2D
 # full strength when the example is run directly.
 _DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
-inv = EMInverter2D(n_components=N_COMP, n_depth=N_DEPTH,
-                   n_stations=N_STA, n_freqs=N_FREQ, arch="unet")
+inv = EMInverter2D(
+    n_components=N_COMP,
+    n_depth=N_DEPTH,
+    n_stations=N_STA,
+    n_freqs=N_FREQ,
+    arch="unet",
+)
 inv.fit(Xtr, Ytr, epochs=6 if _DOCS else 30, batch_size=8, verbose=False)
 pred = np.asarray(inv.predict(Xte))
 print("predicted sections:", pred.shape)
@@ -99,8 +110,9 @@ print("predicted sections:", pred.shape)
 
 from pycsamt.ai.plot import plot_section, plot_section_pair
 
-fig = plot_section_pair(Yte[0], pred[0],
-                        depth_max=1500.0, station_spacing=1.0)
+fig = plot_section_pair(
+    Yte[0], pred[0], depth_max=1500.0, station_spacing=1.0
+)
 
 # %%
 # The prediction on its own
@@ -108,7 +120,9 @@ fig = plot_section_pair(Yte[0], pred[0],
 # :func:`~pycsamt.ai.plot.plot_section` draws a single section with the
 # EM resistivity colour map — the figure you would export per profile.
 
-fig = plot_section(pred[1], depth_max=1500.0, title="Predicted section (test profile 1)")
+fig = plot_section(
+    pred[1], depth_max=1500.0, title="Predicted section (test profile 1)"
+)
 
 # %%
 # A grid of held-out profiles
@@ -119,19 +133,26 @@ fig = plot_section(pred[1], depth_max=1500.0, title="Predicted section (test pro
 import matplotlib.pyplot as plt
 
 n_show = 4
-fig, axes = plt.subplots(2, n_show, figsize=(3.0 * n_show, 5.4),
-                         constrained_layout=True)
+fig, axes = plt.subplots(
+    2, n_show, figsize=(3.0 * n_show, 5.4), constrained_layout=True
+)
 vmin, vmax = float(Yte.min()), float(Yte.max())
 for k in range(n_show):
-    axes[0, k].imshow(Yte[k], aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
-    axes[1, k].imshow(pred[k], aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax)
+    axes[0, k].imshow(
+        Yte[k], aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax
+    )
+    axes[1, k].imshow(
+        pred[k], aspect="auto", cmap="viridis", vmin=vmin, vmax=vmax
+    )
     axes[0, k].set_title(f"profile {k}", fontsize=9)
     for row in (0, 1):
-        axes[row, k].set_xticks([]); axes[row, k].set_yticks([])
+        axes[row, k].set_xticks([])
+        axes[row, k].set_yticks([])
 axes[0, 0].set_ylabel("true", fontsize=10)
 axes[1, 0].set_ylabel("predicted", fontsize=10)
-fig.suptitle(r"U-Net section inversion — true (top) vs predicted (bottom)",
-             fontsize=12)
+fig.suptitle(
+    r"U-Net section inversion — true (top) vs predicted (bottom)", fontsize=12
+)
 
 # %%
 # **Takeaway.** A U-Net inverts a whole 2-D section in a single forward

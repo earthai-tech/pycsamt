@@ -10,12 +10,16 @@ from pycsamt.inversion.results import InversionResult
 
 
 def _model():
-    rho = np.log10(np.array([
-        [100.0, 12.0, 1500.0],
-        [80.0, 25.0, 1200.0],
-        [250.0, 70.0, 900.0],
-        [1500.0, 1800.0, 2500.0],
-    ]))
+    rho = np.log10(
+        np.array(
+            [
+                [100.0, 12.0, 1500.0],
+                [80.0, 25.0, 1200.0],
+                [250.0, 70.0, 900.0],
+                [1500.0, 1800.0, 2500.0],
+            ]
+        )
+    )
     return ResistivityModel.from_array(
         rho,
         x_centers=np.array([0.0, 500.0, 1000.0]),

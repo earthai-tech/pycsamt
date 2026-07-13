@@ -324,13 +324,10 @@ class PlotTransformedRho(TDEMPlotBase):
         self.phase_mode = phase_mode
         self.use_control = bool(use_control)
         self.panel_height_ratios = panel_height_ratios
-        self.figsize = (
-            figsize
-            or (
-                self.style.figsize_double
-                if self.show_phase
-                else self.style.figsize_single
-            )
+        self.figsize = figsize or (
+            self.style.figsize_double
+            if self.show_phase
+            else self.style.figsize_single
         )
         self.results = _as_transform_results(
             data,
@@ -498,7 +495,8 @@ class PlotTEMAVGSection(TDEMPlotBase):
         )
         if ax is None:
             _fig, ax = plt.subplots(
-                figsize=self.figsize or self.section_style.figsize_for(
+                figsize=self.figsize
+                or self.section_style.figsize_for(
                     n_stations=section["x"].size,
                     n_y=section["y"].size,
                     colorbar=colorbar,
@@ -576,7 +574,8 @@ class PlotTEMZSection(TDEMPlotBase):
         )
         if ax is None:
             _fig, ax = plt.subplots(
-                figsize=self.figsize or self.section_style.figsize_for(
+                figsize=self.figsize
+                or self.section_style.figsize_for(
                     n_stations=section["x"].size,
                     n_y=section["y"].size,
                     colorbar=colorbar,
@@ -670,7 +669,8 @@ class PlotSurveyMap(TDEMPlotBase):
             "s": self.marker_size or marker.size,
             "edgecolors": marker.edgecolor,
             "linewidths": marker.linewidth,
-            "alpha": marker.alpha if self.marker_alpha is None
+            "alpha": marker.alpha
+            if self.marker_alpha is None
             else self.marker_alpha,
             "zorder": marker.zorder,
         }
@@ -846,7 +846,9 @@ class PlotSurveyOverview(TDEMPlotBase):
 
         profile = self.profile
         if profile is None:
-            profiles = _coordinate_profiles(_coordinate_records(self.data), None)
+            profiles = _coordinate_profiles(
+                _coordinate_records(self.data), None
+            )
             if profiles:
                 profile = next(iter(profiles))
 
@@ -927,9 +929,8 @@ class PlotGateProfile(TDEMPlotBase):
         import matplotlib.pyplot as plt
 
         rows = _avg_records(self.data)
-        windows = (
-            self.windows
-            or _representative_windows(row["window"] for row in rows)
+        windows = self.windows or _representative_windows(
+            row["window"] for row in rows
         )
         if ax is None:
             _fig, ax = plt.subplots(figsize=self.figsize)
@@ -967,7 +968,9 @@ class PlotGateProfile(TDEMPlotBase):
             ax.set_yscale("log")
         self.station_ticks.apply(ax, all_stations, xlabel="Station")
         ax.set_ylabel(_value_label(self.value, False))
-        ax.set_title(self.title or f"Gate profiles: {_axis_label(self.value)}")
+        ax.set_title(
+            self.title or f"Gate profiles: {_axis_label(self.value)}"
+        )
         ax.grid(True, color=self.style.grid)
         ax.legend(title="Window", fontsize=8, ncols=min(4, len(windows)))
         return ax
@@ -1204,7 +1207,8 @@ def _coordinate_records(data) -> list[dict[str, Any]]:
             return data.coordinates.to_records()
         rows = data.to_records()
         return [
-            row for row in rows
+            row
+            for row in rows
             if {"x", "y"}.issubset(row) and row.get("x") is not None
         ]
     if isinstance(data, list):
@@ -1213,7 +1217,9 @@ def _coordinate_records(data) -> list[dict[str, Any]]:
     raise TypeError(msg)
 
 
-def _as_profile_list(profiles: float | list[float] | None) -> list[float] | None:
+def _as_profile_list(
+    profiles: float | list[float] | None,
+) -> list[float] | None:
     """Return profile selectors as floats."""
     if profiles is None:
         return None
@@ -1260,8 +1266,10 @@ def _profile_x_values(
     if mode in {"point", "station"}:
         return (
             np.asarray(
-                [float(row.get("point", row.get("station", idx))) for
-                 idx, row in enumerate(rows)],
+                [
+                    float(row.get("point", row.get("station", idx)))
+                    for idx, row in enumerate(rows)
+                ],
                 dtype=float,
             ),
             labels,

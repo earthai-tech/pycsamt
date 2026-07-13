@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for MetricsAgent — inline computed-value answers about a line."""
+
 from __future__ import annotations
 
 import os
@@ -19,7 +20,9 @@ _HAS_DATA = os.path.isdir(_DATA)
 
 class TestMetricParsing(unittest.TestCase):
     def test_parse_single(self):
-        kinds, all_lines = parse_metric_request("what is the strike of L22PLT?")
+        kinds, all_lines = parse_metric_request(
+            "what is the strike of L22PLT?"
+        )
         self.assertEqual(kinds, ["strike"])
         self.assertFalse(all_lines)
 
@@ -38,8 +41,12 @@ class TestMetricParsing(unittest.TestCase):
         self.assertEqual(kinds, ["strike"])
 
     def test_metric_query_detection(self):
-        self.assertTrue(looks_like_metric_query("what's the strike of L22PLT?"))
-        self.assertTrue(looks_like_metric_query("how many stations in the survey"))
+        self.assertTrue(
+            looks_like_metric_query("what's the strike of L22PLT?")
+        )
+        self.assertTrue(
+            looks_like_metric_query("how many stations in the survey")
+        )
         self.assertTrue(looks_like_metric_query("azimuth of all lines"))
 
     def test_not_metric_query(self):
@@ -76,8 +83,9 @@ class TestMetricsAgent(unittest.TestCase):
         self.assertTrue(len(r.summary) > 20)
 
     def test_no_data(self):
-        self.assertEqual(MetricsAgent().execute({"kinds": ["strike"]}).status,
-                         "failed")
+        self.assertEqual(
+            MetricsAgent().execute({"kinds": ["strike"]}).status, "failed"
+        )
 
     def test_station_filter(self):
         r = self._run(kinds=["stations"], stations="new_E1_1")

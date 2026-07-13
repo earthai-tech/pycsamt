@@ -38,22 +38,23 @@ logger = logging.getLogger(__name__)
 
 # ── constants ─────────────────────────────────────────────────────────────────
 _PROVIDERS = {"claude", "openai", "gemini", "deepseek", "minimax"}
-_STATUS    = {"success", "failed", "needs_review"}
+_STATUS = {"success", "failed", "needs_review"}
 
 _DEFAULT_MODELS = {
-    "claude":   "claude-sonnet-4-6",
-    "openai":   "gpt-4o",
-    "gemini":   "gemini-2.0-flash",
+    "claude": "claude-sonnet-4-6",
+    "openai": "gpt-4o",
+    "gemini": "gemini-2.0-flash",
     "deepseek": "deepseek-chat",
-    "minimax":  "MiniMax-M3",
+    "minimax": "MiniMax-M3",
 }
 
-_RETRY_DELAYS = (1.0, 2.0, 4.0)   # seconds between LLM retries
+_RETRY_DELAYS = (1.0, 2.0, 4.0)  # seconds between LLM retries
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # AgentResult
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class AgentResult:
@@ -92,13 +93,13 @@ class AgentResult:
 
     status: str
     summary: str
-    data: dict[str, Any]          = field(default_factory=dict)
-    warnings: list[str]           = field(default_factory=list)
+    data: dict[str, Any] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
     llm_interpretation: str | None = None
-    elapsed_seconds: float        = 0.0
-    cost_estimate_usd: float      = 0.0
-    error: str | None             = None
-    error_fix_hint: str | None    = None
+    elapsed_seconds: float = 0.0
+    cost_estimate_usd: float = 0.0
+    error: str | None = None
+    error_fix_hint: str | None = None
 
     # dict-like helpers so callers can do result["key"] or result.get("key")
     def __getitem__(self, key: str) -> Any:
@@ -115,7 +116,11 @@ class AgentResult:
 
     def __repr__(self) -> str:
         warn_str = f", {len(self.warnings)} warnings" if self.warnings else ""
-        cost_str = f", ${self.cost_estimate_usd:.4f}" if self.cost_estimate_usd else ""
+        cost_str = (
+            f", ${self.cost_estimate_usd:.4f}"
+            if self.cost_estimate_usd
+            else ""
+        )
         return (
             f"AgentResult(status={self.status!r}, "
             f"elapsed={self.elapsed_seconds:.1f}s{cost_str}{warn_str})"
@@ -142,6 +147,7 @@ class AgentResult:
 # ═══════════════════════════════════════════════════════════════════════════════
 # BaseAgent
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class BaseAgent(ABC):
     """Abstract base class for all pycsamt agents.
@@ -210,18 +216,20 @@ class BaseAgent(ABC):
             llm_provider, api_key, model
         )
 
-        self.name         = name
-        self.api_key      = api_key
+        self.name = name
+        self.api_key = api_key
         self.llm_provider = llm_provider
-        self.model        = model or _DEFAULT_MODELS[llm_provider]
+        self.model = model or _DEFAULT_MODELS[llm_provider]
 
         # ── pycsamt API injection ──────────────────────────────────────────
-        self._section : SectionStyle = PYCSAMT_SECTION.style_for(section_preset)
-        self._style                  = PYCSAMT_STYLE
-        self._station                = PYCSAMT_STATION_RENDERING
-        self._control                = PYCSAMT_CONTROL
-        self._plot_cfg               = PLOT_CONFIG
-        self._add_colorbar           = add_colorbar
+        self._section: SectionStyle = PYCSAMT_SECTION.style_for(
+            section_preset
+        )
+        self._style = PYCSAMT_STYLE
+        self._station = PYCSAMT_STATION_RENDERING
+        self._control = PYCSAMT_CONTROL
+        self._plot_cfg = PLOT_CONFIG
+        self._add_colorbar = add_colorbar
 
         # cost accumulator reset each execute() call
         self._last_cost: float = 0.0
@@ -278,11 +286,11 @@ class BaseAgent(ABC):
 
         sys_msg = system_message or self.SYSTEM_PROMPT
         dispatch = {
-            "claude":   self._query_claude,
-            "openai":   self._query_openai,
-            "gemini":   self._query_gemini,
+            "claude": self._query_claude,
+            "openai": self._query_openai,
+            "gemini": self._query_gemini,
             "deepseek": self._query_deepseek,
-            "minimax":  self._query_minimax,
+            "minimax": self._query_minimax,
         }
         fn = dispatch[self.llm_provider]
 
@@ -291,7 +299,7 @@ class BaseAgent(ABC):
             try:
                 text, cost = fn(prompt, sys_msg, temperature, max_tokens)
                 self._last_cost += cost
-                AGENT_CONFIG._add_spend(cost)   # update session counter
+                AGENT_CONFIG._add_spend(cost)  # update session counter
                 return text
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
@@ -326,8 +334,10 @@ class BaseAgent(ABC):
         )
         text = msg.content[0].text
         cost = AGENT_CONFIG.estimate_cost(
-            self.llm_provider, self.model,
-            msg.usage.input_tokens, msg.usage.output_tokens,
+            self.llm_provider,
+            self.model,
+            msg.usage.input_tokens,
+            msg.usage.output_tokens,
         )
         return text, cost
 
@@ -348,13 +358,15 @@ class BaseAgent(ABC):
             temperature=temperature,
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user",   "content": prompt},
+                {"role": "user", "content": prompt},
             ],
         )
         text = resp.choices[0].message.content
         cost = AGENT_CONFIG.estimate_cost(
-            self.llm_provider, self.model,
-            resp.usage.prompt_tokens, resp.usage.completion_tokens,
+            self.llm_provider,
+            self.model,
+            resp.usage.prompt_tokens,
+            resp.usage.completion_tokens,
         )
         return text, cost
 
@@ -381,9 +393,11 @@ class BaseAgent(ABC):
         resp = gemini_model.generate_content(prompt)
         text = resp.text
         # Gemini doesn't expose exact token counts via the basic API; estimate
-        n_in  = len(prompt.split()) * 4 // 3
-        n_out = len(text.split())   * 4 // 3
-        cost  = AGENT_CONFIG.estimate_cost(self.llm_provider, self.model, n_in, n_out)
+        n_in = len(prompt.split()) * 4 // 3
+        n_out = len(text.split()) * 4 // 3
+        cost = AGENT_CONFIG.estimate_cost(
+            self.llm_provider, self.model, n_in, n_out
+        )
         return text, cost
 
     def _query_deepseek(
@@ -451,7 +465,7 @@ class BaseAgent(ABC):
             temperature=temperature,
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user",   "content": prompt},
+                {"role": "user", "content": prompt},
             ],
         )
         text = resp.choices[0].message.content
@@ -491,7 +505,7 @@ class BaseAgent(ABC):
                     depth -= 1
                     if depth == 0:
                         try:
-                            return json.loads(text[start:i + 1])
+                            return json.loads(text[start : i + 1])
                         except json.JSONDecodeError:
                             break
         return None
@@ -529,6 +543,7 @@ class BaseAgent(ABC):
         if not output_dir:
             return None
         import os
+
         os.makedirs(output_dir, exist_ok=True)
         try:
             paths = self._plot_cfg.save(fig, os.path.join(output_dir, name))
@@ -543,7 +558,9 @@ class BaseAgent(ABC):
     # ── repr ──────────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        llm = f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
+        llm = (
+            f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
+        )
         return f"{type(self).__name__}(name={self.name!r}, llm={llm!r})"
 
 

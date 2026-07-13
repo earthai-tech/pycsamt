@@ -30,6 +30,7 @@ __all__ = [
     "drop_empty",
 ]
 
+
 def by_names(
     sites: Any,
     patterns: Iterable[Any] | Any,
@@ -118,11 +119,7 @@ def by_names(
     """
 
     s = _to_sites(sites)
-    pats = (
-        patterns
-        if isinstance(patterns, (list, tuple))
-        else [patterns]
-    )
+    pats = patterns if isinstance(patterns, (list, tuple)) else [patterns]
     keep = []
     for ed in iter_edifiles(s.edic):
         nm = station_name(ed)
@@ -195,8 +192,7 @@ def by_index(sites: Any, indices: Iterable[int] | int):
     """
 
     s = _to_sites(sites)
-    idxs = (indices if isinstance(indices, (list, tuple))
-            else [indices])
+    idxs = indices if isinstance(indices, (list, tuple)) else [indices]
     # coerce to valid indices with Python-like negative support
     all_items = list(iter_edifiles(s.edic))
     n = len(all_items)
@@ -209,9 +205,9 @@ def by_index(sites: Any, indices: Iterable[int] | int):
             norm.append(j)
     if not norm:
         return _new_sites(s, [])
-    keep = [e for k, e in enumerate(all_items)
-            if k in set(norm)]
+    keep = [e for k, e in enumerate(all_items) if k in set(norm)]
     return _new_sites(s, keep)
+
 
 def by_chainage(sites: Any, smin: float, smax: float):
     r"""
@@ -572,9 +568,7 @@ def keep_finite_z(sites: Any):
     """
 
     s = _to_sites(sites)
-    keep = [
-        ed for ed in iter_edifiles(s.edic) if _any_finite_z(ed)
-    ]
+    keep = [ed for ed in iter_edifiles(s.edic) if _any_finite_z(ed)]
     return _new_sites(s, keep)
 
 
@@ -697,21 +691,24 @@ def drop_empty(sites: Any):
     """
 
     s = _to_sites(sites)
-    keep = [
-        ed for ed in iter_edifiles(s.edic) if not _is_empty_site(ed)
-    ]
+    keep = [ed for ed in iter_edifiles(s.edic) if not _is_empty_site(ed)]
     return _new_sites(s, keep)
+
 
 # ------------- Internal helpers --------------------------
 
-def _to_sites (x: Any):
+
+def _to_sites(x: Any):
     """Coerce any edi-like into a Sites wrapper."""
     from .base import _to_sites as __to_sites
-    return __to_sites (x )
+
+    return __to_sites(x)
+
 
 def _new_sites(src: Any, items: list[Any]):
     """Build a new Sites preserving wrapper semantics."""
     from .base import Sites  # lazy import
+
     try:
         return Sites(items)
     except TypeError:
@@ -756,6 +753,7 @@ def _get_attr_any(obj: Any, *names: str):
             return v
     return None
 
+
 def _any_finite_z(ed: Any) -> bool:
     z = getattr(ed, "Z", None)
     if z is None:
@@ -768,8 +766,8 @@ def _any_finite_z(ed: Any) -> bool:
         a = np.asarray(r, float)
         return np.isfinite(a).any()
     a = np.asarray(arr, complex)
-    return (np.isfinite(a.real).any() or
-            np.isfinite(a.imag).any())
+    return np.isfinite(a.real).any() or np.isfinite(a.imag).any()
+
 
 def _max_phase_err(ed: Any) -> float:
     z = getattr(ed, "Z", None)
@@ -784,6 +782,7 @@ def _max_phase_err(ed: Any) -> float:
     with np.errstate(all="ignore"):
         return float(np.nanmax(a))
 
+
 def _is_empty_site(ed: Any) -> bool:
     f = get_freq(ed)
     if f.size == 0:
@@ -794,7 +793,7 @@ def _is_empty_site(ed: Any) -> bool:
 
     # If Z present, consider "empty" when there is no usable
     # impedance nor valid resistivity (sentinel-aware).
-    arr =  _get_attr_any(z, "_z", "z")
+    arr = _get_attr_any(z, "_z", "z")
     if arr is not None:
         a = np.asarray(arr)
         with np.errstate(all="ignore"):
@@ -819,4 +818,3 @@ def _is_empty_site(ed: Any) -> bool:
             return True
         # only huge sentinels -> empty
         return (np.abs(a[fin]) >= 1.0e30).all()
-

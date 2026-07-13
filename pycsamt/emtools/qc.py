@@ -1,4 +1,3 @@
-
 """Quality-control confidence ratios for EM transfer functions.
 
 The composite confidence ratio (CR) used by this module is a bounded,
@@ -69,6 +68,7 @@ DEFAULT_CI_LO = 0.85
 
 # ------------------------------ helpers --------------------------------- #
 
+
 def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
     """Return a copied section style for EMTools pseudo-sections."""
     if isinstance(section, SectionStyle):
@@ -121,8 +121,9 @@ def _clip01(x: Any) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
-def _weighted_nanmean(values: dict[str, float],
-                      weights: dict[str, float]) -> float:
+def _weighted_nanmean(
+    values: dict[str, float], weights: dict[str, float]
+) -> float:
     """Return weighted mean ignoring unavailable metrics."""
     total = 0.0
     weight = 0.0
@@ -135,9 +136,9 @@ def _weighted_nanmean(values: dict[str, float],
     return float(total / weight) if weight > 0.0 else np.nan
 
 
-def _confidence_error(values: dict[str, float],
-                      n_freq: int,
-                      confidence: float) -> float:
+def _confidence_error(
+    values: dict[str, float], n_freq: int, confidence: float
+) -> float:
     """Estimate a compact station-level confidence uncertainty."""
     vals = np.asarray(
         [_clip01(value) for value in values.values()],
@@ -187,8 +188,9 @@ def confidence_ratio(
     return cr
 
 
-def _relerr_score(z: np.ndarray, ze: np.ndarray | None,
-                  threshold: float) -> float:
+def _relerr_score(
+    z: np.ndarray, ze: np.ndarray | None, threshold: float
+) -> float:
     """Score tensor uncertainty from median relative error."""
     if ze is None:
         return np.nan
@@ -199,8 +201,9 @@ def _relerr_score(z: np.ndarray, ze: np.ndarray | None,
     return _clip01(1.0 - med / max(float(threshold), 1e-12))
 
 
-def _offdiag_consistency_score(z: np.ndarray,
-                               tolerance_log10: float) -> float:
+def _offdiag_consistency_score(
+    z: np.ndarray, tolerance_log10: float
+) -> float:
     """Score similarity of ``Zxy`` and ``Zyx`` amplitudes."""
     zxy = np.abs(z[:, 0, 1])
     zyx = np.abs(z[:, 1, 0])
@@ -211,8 +214,7 @@ def _offdiag_consistency_score(z: np.ndarray,
     return _clip01(1.0 - med / max(float(tolerance_log10), 1e-12))
 
 
-def _diagonal_leakage_score(z: np.ndarray,
-                            max_fraction: float) -> float:
+def _diagonal_leakage_score(z: np.ndarray, max_fraction: float) -> float:
     """Score how much diagonal impedance leaks into off-diagonal terms."""
     diag = _row_nanmedian(
         np.stack([np.abs(z[:, 0, 0]), np.abs(z[:, 1, 1])], axis=1),
@@ -227,8 +229,9 @@ def _diagonal_leakage_score(z: np.ndarray,
     return _clip01(1.0 - med / max(float(max_fraction), 1e-12))
 
 
-def _phase_smoothness_score(z: np.ndarray,
-                            jump_tolerance_deg: float) -> float:
+def _phase_smoothness_score(
+    z: np.ndarray, jump_tolerance_deg: float
+) -> float:
     """Score abrupt phase jumps in the off-diagonal components."""
     phases = []
     for comp in (z[:, 0, 1], z[:, 1, 0]):
@@ -331,9 +334,7 @@ def _frequency_phase_jump_score(
     return scores
 
 
-def _frequency_flags(row: pd.Series,
-                     ci_hi: float,
-                     ci_lo: float) -> str:
+def _frequency_flags(row: pd.Series, ci_hi: float, ci_lo: float) -> str:
     """Return readable quality flags for one frequency-confidence row."""
     flags = []
     if row["confidence"] < ci_lo:
@@ -363,6 +364,7 @@ def _y_ticks(yall: np.ndarray, ny: int) -> tuple[np.ndarray, list[str]]:
 
 
 # ------------------------------ tables ---------------------------------- #
+
 
 def build_qc_table(
     sites: Any,
@@ -428,16 +430,22 @@ def build_qc_table(
                 sb = np.abs(sdf["beta"].to_numpy(dtype=float))
                 rec["skew_med"] = float(np.nanmedian(sb))
                 rec["skew_iqr"] = float(
-                    np.nanpercentile(sb, 75)
-                    - np.nanpercentile(sb, 25)
+                    np.nanpercentile(sb, 75) - np.nanpercentile(sb, 25)
                 )
             else:
                 rec["skew_med"] = np.nan
                 rec["skew_iqr"] = np.nan
         rows.append(rec)
     cols = [
-        "station", "n_freq", "n_ok", "frac_ok", "n_tip",
-        "n_tip_ok", "snr_med", "pmin", "pmax",
+        "station",
+        "n_freq",
+        "n_ok",
+        "frac_ok",
+        "n_tip",
+        "n_tip_ok",
+        "snr_med",
+        "pmin",
+        "pmax",
     ]
     if include_skew:
         cols += ["skew_med", "skew_iqr"]
@@ -481,8 +489,10 @@ def qc_flags(
             f.append("low_coverage")
         if np.isfinite(r["snr_med"]) and r["snr_med"] < min_snr_med:
             f.append("low_snr")
-        if np.isfinite(r.get("skew_med", np.nan)) and \
-           r["skew_med"] > max_skew_med:
+        if (
+            np.isfinite(r.get("skew_med", np.nan))
+            and r["skew_med"] > max_skew_med
+        ):
             f.append("high_skew")
         flags.append(",".join(f))
     out = tb.copy()
@@ -573,7 +583,9 @@ def station_confidence_table(
         rows.append(
             dict(
                 station=st,
-                distance_m=float(positions[i]) if i < positions.size else np.nan,
+                distance_m=float(positions[i])
+                if i < positions.size
+                else np.nan,
                 confidence=float(confidence),
                 confidence_err=float(confidence_err),
                 method=method,
@@ -590,9 +602,18 @@ def station_confidence_table(
     if not rows:
         df = pd.DataFrame(
             columns=[
-                "station", "distance_m", "confidence", "method",
-                "confidence_err", "n_freq", "n_ok", "coverage",
-                "uncertainty", "offdiag", "diagonal", "phase",
+                "station",
+                "distance_m",
+                "confidence",
+                "method",
+                "confidence_err",
+                "n_freq",
+                "n_ok",
+                "coverage",
+                "uncertainty",
+                "offdiag",
+                "diagonal",
+                "phase",
                 "spatial",
             ]
         )
@@ -618,8 +639,12 @@ def station_confidence_table(
             parts = {
                 key: row[key]
                 for key in (
-                    "coverage", "uncertainty", "offdiag",
-                    "diagonal", "phase", "spatial",
+                    "coverage",
+                    "uncertainty",
+                    "offdiag",
+                    "diagonal",
+                    "phase",
+                    "spatial",
                 )
             }
             row["confidence"] = confidence_ratio(parts, weights=weights)
@@ -719,8 +744,8 @@ def frequency_confidence_table(
         offdiag = np.asarray(
             [
                 _clip01(
-                    1.0 - abs(value)
-                    / max(float(offdiag_tolerance_log10), 1e-12),
+                    1.0
+                    - abs(value) / max(float(offdiag_tolerance_log10), 1e-12),
                 )
                 for value in ratio
             ],
@@ -754,9 +779,13 @@ def frequency_confidence_table(
             confidence = parts["coverage"]
             if method == "composite":
                 confidence = confidence_ratio(parts, weights=weights)
-            error_parts = parts if method == "composite" else {
-                "coverage": parts["coverage"],
-            }
+            error_parts = (
+                parts
+                if method == "composite"
+                else {
+                    "coverage": parts["coverage"],
+                }
+            )
             row = dict(
                 station=station,
                 station_index=int(station_index),
@@ -768,9 +797,7 @@ def frequency_confidence_table(
                 frequency_hz=float(freq),
                 period_s=float(1.0 / freq) if freq else np.nan,
                 log10_period=(
-                    float(np.log10(1.0 / freq))
-                    if freq > 0
-                    else np.nan
+                    float(np.log10(1.0 / freq)) if freq > 0 else np.nan
                 ),
                 confidence=float(confidence),
                 confidence_err=_confidence_error(error_parts, 1, confidence),
@@ -787,10 +814,24 @@ def frequency_confidence_table(
             )
             rows.append(row)
     columns = [
-        "station", "station_index", "distance_m", "frequency_hz",
-        "period_s", "log10_period", "confidence", "confidence_err",
-        "method", "n_components", "coverage", "uncertainty", "offdiag",
-        "diagonal", "phase", "spatial", "logrho_proxy", "flags",
+        "station",
+        "station_index",
+        "distance_m",
+        "frequency_hz",
+        "period_s",
+        "log10_period",
+        "confidence",
+        "confidence_err",
+        "method",
+        "n_components",
+        "coverage",
+        "uncertainty",
+        "offdiag",
+        "diagonal",
+        "phase",
+        "spatial",
+        "logrho_proxy",
+        "flags",
     ]
     if not rows:
         df = pd.DataFrame(columns=columns)
@@ -810,8 +851,12 @@ def frequency_confidence_table(
             parts = {
                 key: row[key]
                 for key in (
-                    "coverage", "uncertainty", "offdiag",
-                    "diagonal", "phase", "spatial",
+                    "coverage",
+                    "uncertainty",
+                    "offdiag",
+                    "diagonal",
+                    "phase",
+                    "spatial",
                 )
             }
             confidence = confidence_ratio(parts, weights=weights)
@@ -822,8 +867,7 @@ def frequency_confidence_table(
                 confidence,
             )
     table["flags"] = [
-        _frequency_flags(row, ci_hi, ci_lo)
-        for _, row in table.iterrows()
+        _frequency_flags(row, ci_hi, ci_lo) for _, row in table.iterrows()
     ]
 
     return maybe_wrap_frame(
@@ -837,6 +881,7 @@ def frequency_confidence_table(
 
 
 # -------------------- confidence profile (Kouadio et al. 2024 Fig. 3) --- #
+
 
 def plot_confidence_profile(
     sites: Any,
@@ -1076,15 +1121,30 @@ def plot_confidence_profile(
     )
     handles = [
         plt.Line2D(
-            [], [], marker="o", ls="", mfc="#20b455", mec="black",
+            [],
+            [],
+            marker="o",
+            ls="",
+            mfc="#20b455",
+            mec="black",
             label=f"Conf. >= {ci_hi:.2f}",
         ),
         plt.Line2D(
-            [], [], marker="o", ls="", mfc="#ff99c8", mec="black",
+            [],
+            [],
+            marker="o",
+            ls="",
+            mfc="#ff99c8",
+            mec="black",
             label=f"{ci_lo:.2f} <= Conf. < {ci_hi:.2f}",
         ),
         plt.Line2D(
-            [], [], marker="o", ls="", mfc="#8b0026", mec="black",
+            [],
+            [],
+            marker="o",
+            ls="",
+            mfc="#8b0026",
+            mec="black",
             label=f"Conf. < {ci_lo:.2f}",
         ),
     ]
@@ -1119,7 +1179,9 @@ def plot_confidence_profile(
         low = min(0.0, np.nanmin(ys) - 0.05)
         ax.set_ylim(max(-0.03, low), 1.08)
     ticks = sorted({0.0, ci_lo, ci_hi, 1.0})
-    ticks = [tick for tick in ticks if ax.get_ylim()[0] <= tick <= ax.get_ylim()[1]]
+    ticks = [
+        tick for tick in ticks if ax.get_ylim()[0] <= tick <= ax.get_ylim()[1]
+    ]
     if ticks:
         ax.set_yticks(ticks)
     ax.set_xlabel("Distance along profile (m)")
@@ -1184,7 +1246,8 @@ def plot_frequency_confidence_psection(
     yvals = np.sort(tb["log10_period"].dropna().unique())
     if ax is None:
         _, ax = plt.subplots(
-            figsize=figsize or section_style.figsize_for(
+            figsize=figsize
+            or section_style.figsize_for(
                 n_stations=len(station_names),
                 n_y=yvals.size,
                 labels=station_names,
@@ -1327,9 +1390,9 @@ def plot_station_confidence_spectrum(
     return ax
 
 
-def _confidence_panel_background(ax: plt.Axes,
-                                 ci_hi: float,
-                                 ci_lo: float) -> None:
+def _confidence_panel_background(
+    ax: plt.Axes, ci_hi: float, ci_lo: float
+) -> None:
     """Draw confidence threshold bands for one dashboard axis."""
     ax.axhspan(0.0, ci_lo, color="#d62728", alpha=0.06, lw=0)
     ax.axhspan(ci_lo, ci_hi, color="#f3a6c9", alpha=0.10, lw=0)
@@ -1608,11 +1671,12 @@ def plot_confidence_band_summary(
 
 # ----------------------------- coverage plot ----------------------------- #
 
+
 def plot_coverage_psection(
     sites: Any,
     *,
     metric: str = "presence",  # presence|snr|offdiag
-    alpha_by: str = "none",    # none|snr
+    alpha_by: str = "none",  # none|snr
     section: str | SectionStyle = "dynamic",
     figsize: tuple[float, float] | None = None,
     recursive: bool = True,
@@ -1649,7 +1713,8 @@ def plot_coverage_psection(
             ze = Z[3] if isinstance(Z, tuple) else None
             if ze is None:
                 _Zobj = getattr(ed, "Z", None) or getattr(
-                    getattr(ed, "edi", None), "Z", None)
+                    getattr(ed, "edi", None), "Z", None
+                )
                 ze = getattr(_Zobj, "z_err", None)
             M = _snr_rows(z, ze)
         else:
@@ -1657,7 +1722,8 @@ def plot_coverage_psection(
         Ms.append(M.astype(float))
         if alpha_by == "snr":
             _Zobj = getattr(ed, "Z", None) or getattr(
-                getattr(ed, "edi", None), "Z", None)
+                getattr(ed, "edi", None), "Z", None
+            )
             ze = getattr(_Zobj, "z_err", None)
             A = _snr_rows(z, ze)
         else:
@@ -1683,7 +1749,8 @@ def plot_coverage_psection(
         # ratios (routinely > 1), so clip rather than pass them straight
         # through (imshow silently clips anyway, with a warning).
         aa = np.clip(np.nan_to_num(al, nan=0.0), 0.0, 1.0)
-        v.append(vv); a.append(aa)
+        v.append(vv)
+        a.append(aa)
         # map metric to color
         if metric == "presence":
             col = (0.20, 0.60, 0.20)
@@ -1707,7 +1774,8 @@ def plot_coverage_psection(
             Zm[i, j, 3] = np.clip(np.nan_to_num(al, nan=0.0), 0.0, 1.0)
     if ax is None:
         _, ax = plt.subplots(
-            figsize=figsize or section_style.figsize_for(
+            figsize=figsize
+            or section_style.figsize_for(
                 n_stations=len(sts),
                 n_y=yall.size,
                 labels=sts,
@@ -1739,6 +1807,7 @@ def plot_coverage_psection(
 
 # ----------------------------- SNR histogram ----------------------------- #
 
+
 def plot_snr_hist(
     sites: Any,
     *,
@@ -1766,7 +1835,8 @@ def plot_snr_hist(
             _, z, fr, ze = Z
         else:
             _Zobj = getattr(ed, "Z", None) or getattr(
-                getattr(ed, "edi", None), "Z", None)
+                getattr(ed, "edi", None), "Z", None
+            )
             ze = getattr(_Zobj, "z_err", None)
         snr = _snr_rows(z, ze)
         vals.extend(list(snr))
@@ -1776,9 +1846,13 @@ def plot_snr_hist(
         _, ax = plt.subplots(figsize=figsize)
     if v.size == 0:
         ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             "SNR histogram requires impedance\nerror data (z_err not available)",
-            ha="center", va="center", fontsize=9, color="#888888",
+            ha="center",
+            va="center",
+            fontsize=9,
+            color="#888888",
             transform=ax.transAxes,
         )
     else:
@@ -1790,6 +1864,7 @@ def plot_snr_hist(
 
 
 # ----------------------------- quicklook -------------------------------- #
+
 
 def plot_qc_quicklook(
     sites: Any,
@@ -1840,7 +1915,9 @@ def plot_qc_quicklook(
     )
     return fig
 
+
 # ---------------------- z-block helper (errors) ------------------------- #
+
 
 def _zblk(ed: Any, need_err: bool = False):
     try:
@@ -1854,9 +1931,10 @@ def _zblk(ed: Any, need_err: bool = False):
 
 # ----------------------- rho_a + error propagation ---------------------- #
 
-def _rhoa_xy_yx(z: np.ndarray, fr: np.ndarray) -> tuple[
-    np.ndarray, np.ndarray
-]:
+
+def _rhoa_xy_yx(
+    z: np.ndarray, fr: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     c = 0.2 / (fr + 1e-24)
     rxy = c * (np.abs(z[:, 0, 1]) ** 2)
     ryx = c * (np.abs(z[:, 1, 0]) ** 2)
@@ -1868,7 +1946,7 @@ def _rhoa_ci(
     ze: np.ndarray | None,
     fr: np.ndarray,
     *,
-    comp: str = "xy",        # xy|yx
+    comp: str = "xy",  # xy|yx
     pcts: tuple[float, ...] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
     seed: int | None = 0,
@@ -1890,8 +1968,9 @@ def _rhoa_ci(
     nf = zz.size
     n = int(max(16, n_draws))
     # complex Gaussian, σ equals |ze|
-    E = (rng.standard_normal((n, nf))
-         + 1j * rng.standard_normal((n, nf))) / np.sqrt(2.0)
+    E = (
+        rng.standard_normal((n, nf)) + 1j * rng.standard_normal((n, nf))
+    ) / np.sqrt(2.0)
     E = E * ee[None, :]
     Zs = zz[None, :] + E
     c = 0.2 / (fr + 1e-24)
@@ -1915,11 +1994,12 @@ def _shade_band(
 
 # ----------------------- 19) Consistency fan chart ---------------------- #
 
+
 def plot_consistency_fan(
     sites: Any,
     *,
     station: str | None = None,
-    other: Any | None = None,      # optional comparison Sites
+    other: Any | None = None,  # optional comparison Sites
     comps: tuple[str, str] = ("xy", "yx"),
     pcts: tuple[float, float, float] = (10.0, 50.0, 90.0),
     n_draws: int = 200,
@@ -1931,8 +2011,11 @@ def plot_consistency_fan(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     ed_map = {}
     for i, ed in enumerate(_iter_items(S)):
@@ -1948,8 +2031,7 @@ def plot_consistency_fan(
     if ed is None:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return ax
     out = _zblk(ed, need_err=True)
     if len(out) == 4:
@@ -1969,15 +2051,12 @@ def plot_consistency_fan(
     ax.set_xscale("log")
     cols = {"xy": "C0", "yx": "C2"}
     for c in comps:
-        CI = _rhoa_ci(
-            z, ze, fr, comp=c, pcts=pcts, n_draws=n_draws
-        )
+        CI = _rhoa_ci(z, ze, fr, comp=c, pcts=pcts, n_draws=n_draws)
         med = CI[:, 0]
         lo = np.minimum(CI[:, 1], CI[:, 2])
         hi = np.maximum(CI[:, 1], CI[:, 2])
         _shade_band(ax, x, lo, hi, color=cols[c], alpha=0.20)
-        ax.plot(x, med, "-", lw=2.0, color=cols[c],
-                label=f"ρa_{c}")
+        ax.plot(x, med, "-", lw=2.0, color=cols[c], label=f"ρa_{c}")
     if other is not None:
         So = ensure_sites(other, recursive=False, strict=False)
         # overlay only medians (dashed)
@@ -1990,11 +2069,13 @@ def plot_consistency_fan(
             x2 = 1.0 / fr2
             rxy2, ryx2 = _rhoa_xy_yx(z2, fr2)
             if "xy" in comps:
-                ax.plot(x2, rxy2, "--", lw=1.2, color=cols["xy"],
-                        label="after xy")
+                ax.plot(
+                    x2, rxy2, "--", lw=1.2, color=cols["xy"], label="after xy"
+                )
             if "yx" in comps:
-                ax.plot(x2, ryx2, "--", lw=1.2, color=cols["yx"],
-                        label="after yx")
+                ax.plot(
+                    x2, ryx2, "--", lw=1.2, color=cols["yx"], label="after yx"
+                )
             break
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("ρa (Ω·m)")
@@ -2005,6 +2086,7 @@ def plot_consistency_fan(
 
 
 # ---------------------- 20) XY–YX crossover map ------------------------- #
+
 
 def plot_xyyx_crossover_map(
     sites: Any,
@@ -2017,13 +2099,17 @@ def plot_xyyx_crossover_map(
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     Xs, Ys, labels = [], [], []
     sts = []
     for i, ed in enumerate(_iter_items(S)):
-        st = _name(ed, i); sts.append(st)
+        st = _name(ed, i)
+        sts.append(st)
         Z, z, fr = _zblk(ed)[:3]
         if Z is None:
             continue
@@ -2039,7 +2125,8 @@ def plot_xyyx_crossover_map(
             continue
         lp = np.log10(np.maximum(p, 1e-9))
         for k in idx:
-            w1 = np.abs(d[k]); w2 = np.abs(d[k + 1])
+            w1 = np.abs(d[k])
+            w2 = np.abs(d[k + 1])
             t = w1 / (w1 + w2 + 1e-24)
             y = (1.0 - t) * lp[k] + t * lp[k + 1]
             Xs.append(i)
@@ -2048,8 +2135,7 @@ def plot_xyyx_crossover_map(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     if not Xs:
-        ax.text(0.5, 0.5, "no crossovers",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no crossovers", ha="center", va="center")
         return ax
     ax.scatter(Xs, Ys, s=16, c="crimson", alpha=0.8)
     ax.set_ylabel(LOG10_PERIOD_LABEL)
@@ -2073,6 +2159,7 @@ def plot_xyyx_crossover_map(
 
 # ---------------------- 21) Noise cone overlay -------------------------- #
 
+
 def overlay_noise_cone(
     ax: plt.Axes,
     period: np.ndarray,
@@ -2088,6 +2175,7 @@ def overlay_noise_cone(
 
 # ---------------------- 22) Spectral hole finder ------------------------ #
 
+
 def overlay_spectral_holes(
     ax: plt.Axes,
     sites: Any,
@@ -2099,8 +2187,11 @@ def overlay_spectral_holes(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     # assumes x = station index, y = log10(period)
     xmap = {}

@@ -94,7 +94,8 @@ class BaseTelemetryClient:
     ) -> None:
         if protocol is not None:
             self.protocol = (
-                protocol if isinstance(protocol, IoTProtocol)
+                protocol
+                if isinstance(protocol, IoTProtocol)
                 else IoTProtocol(str(protocol))
             )
         self.endpoint = endpoint
@@ -173,7 +174,9 @@ class BaseTelemetryClient:
             detail=detail or "sent",
         )
 
-    def receive(self, *, timeout: float | None = None) -> dict[str, Any] | None:
+    def receive(
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         """Receive one payload, or ``None`` in dry-run/unsupported mode."""
         if self.dry_run:
             return None

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
+DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 MESH_FILE = DATA_DIR / "Occam2DMesh"
 
 pytestmark = pytest.mark.skipif(
@@ -15,6 +15,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def mesh():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     return OccamMesh.read(MESH_FILE)
 
 
@@ -64,11 +65,13 @@ def test_mesh_z_nodes_starts_at_zero(mesh):
 
 def test_mesh_x_nodes_monotone(mesh):
     import numpy as np
+
     assert bool((np.diff(mesh.x_nodes) > 0).all())
 
 
 def test_mesh_z_nodes_monotone(mesh):
     import numpy as np
+
     assert bool((np.diff(mesh.z_nodes) > 0).all())
 
 
@@ -102,8 +105,10 @@ def test_mesh_n_params_positive(mesh):
 # Defaults (no file)
 # -----------------------------------------------------------------------
 
+
 def test_mesh_properties_defaults():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     mesh = OccamMesh()
     assert mesh.n_xcells == 0
     assert mesh.n_zcells == 0
@@ -114,7 +119,9 @@ def test_mesh_properties_defaults():
 # Error handling
 # -----------------------------------------------------------------------
 
+
 def test_missing_file_raises():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     with pytest.raises(FileNotFoundError):
         OccamMesh.read("/nonexistent/Occam2DMesh")

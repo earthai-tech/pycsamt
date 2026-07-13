@@ -45,6 +45,7 @@ def _comp_z_only() -> dict[str, dict[str, Any]]:
     p = np.array([1.0, 2.0], float)  # periods (s)
     f = 1.0 / p
     w = 2.0 * math.pi * f
+
     # build a consistent Z tensor magnitude/phase
     # use |Z| from rho via |Z| = sqrt(mu0 * w * rho)
     def make_z(rho: float, phi_deg: float) -> complex:
@@ -124,7 +125,8 @@ def test_utils_align_and_units():
     # common = {1, 3} in a0 order -> indices [0, 2] vs [1, 0]
     assert np.allclose(a0[i0], np.array([1.0, 3.0]))
     assert np.allclose(a1[i1], np.array([1.0, 3.0]))
-    assert np.allclose(pc,    np.array([1.0, 3.0]))
+    assert np.allclose(pc, np.array([1.0, 3.0]))
+
 
 def test_build_from_comp_R_only():
     jf = JFile(verbose=0)

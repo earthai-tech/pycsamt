@@ -34,13 +34,13 @@ __all__ = [
 
 # Magic strings that identify each file type (first non-blank line prefix)
 _SIGNATURES: dict[str, str] = {
-    "data":    "FORMAT:",       # OCCAM2MTDATA_1.0
-    "model":   "FORMAT:",       # OCCAM2MTMOD_1.0  (checked with second token)
-    "startup": "FORMAT:",       # OCCAMITER_FLEX
-    "iter":    "FORMAT:",       # OCCAMITER_FLEX  + Iteration: > 0
-    "mesh":    "MESH FILE",     # first line of Occam2DMesh
-    "response":"FORMAT:",       # similar to data
-    "log":     "OCCAM ITERATION",
+    "data": "FORMAT:",  # OCCAM2MTDATA_1.0
+    "model": "FORMAT:",  # OCCAM2MTMOD_1.0  (checked with second token)
+    "startup": "FORMAT:",  # OCCAMITER_FLEX
+    "iter": "FORMAT:",  # OCCAMITER_FLEX  + Iteration: > 0
+    "mesh": "MESH FILE",  # first line of Occam2DMesh
+    "response": "FORMAT:",  # similar to data
+    "log": "OCCAM ITERATION",
 }
 
 
@@ -55,14 +55,14 @@ class OccamFileType:
         Returned when no validator recognizes a file.
     """
 
-    DATA     = "data"
-    MESH     = "mesh"
-    MODEL    = "model"
-    STARTUP  = "startup"
-    ITER     = "iter"
+    DATA = "data"
+    MESH = "mesh"
+    MODEL = "model"
+    STARTUP = "startup"
+    ITER = "iter"
     RESPONSE = "response"
-    LOG      = "log"
-    UNKNOWN  = "unknown"
+    LOG = "log"
+    UNKNOWN = "unknown"
 
 
 def _first_lines(path: PathLike, n: int = 5) -> list[str]:
@@ -126,7 +126,9 @@ def is_mesh_file(path: PathLike) -> bool:
             return True
         # Control line: first two tokens are integers (could be line 1 or 2)
         tokens = ln.split()
-        if len(tokens) >= 2 and all(t.lstrip("-").isdigit() for t in tokens[:2]):
+        if len(tokens) >= 2 and all(
+            t.lstrip("-").isdigit() for t in tokens[:2]
+        ):
             return True
     return False
 
@@ -297,13 +299,13 @@ def detect_file_type(path: PathLike) -> str:
     'mesh'
     """
     for fn, typ in [
-        (is_data_file,     OccamFileType.DATA),
-        (is_model_file,    OccamFileType.MODEL),
-        (is_startup_file,  OccamFileType.STARTUP),
-        (is_iter_file,     OccamFileType.ITER),
-        (is_mesh_file,     OccamFileType.MESH),
+        (is_data_file, OccamFileType.DATA),
+        (is_model_file, OccamFileType.MODEL),
+        (is_startup_file, OccamFileType.STARTUP),
+        (is_iter_file, OccamFileType.ITER),
+        (is_mesh_file, OccamFileType.MESH),
         (is_response_file, OccamFileType.RESPONSE),
-        (is_log_file,      OccamFileType.LOG),
+        (is_log_file, OccamFileType.LOG),
     ]:
         if fn(path):
             return typ

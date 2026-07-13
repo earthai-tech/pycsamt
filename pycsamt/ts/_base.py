@@ -15,6 +15,7 @@ It intentionally mirrors the spirit of
 container) but is designed for *field* recordings: fixed dt for
 all channels, missing-data awareness, and rich site metadata.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -32,15 +33,19 @@ __all__ = ["TSData", "CHANNEL_ORDER"]
 #: (matches the SEG EDI recommendation Hx, Hy, Hz, Ex, Ey and
 #: the LiMS/EMSLAB multiplex order).  Remote channels follow.
 CHANNEL_ORDER: tuple[str, ...] = (
-    "HX", "HY", "HZ", "EX", "EY", "RHX", "RHY",
+    "HX",
+    "HY",
+    "HZ",
+    "EX",
+    "EY",
+    "RHX",
+    "RHY",
 )
 
 
 def _norm_cid(cid: str) -> str:
     """Normalize a channel id to upper-case letters/digits."""
-    return "".join(
-        c for c in str(cid).upper() if c.isalnum()
-    )
+    return "".join(c for c in str(cid).upper() if c.isalnum())
 
 
 class TSData(BaseEM):
@@ -131,58 +136,34 @@ class TSData(BaseEM):
         **meta,
     ) -> None:
         station = meta.pop("station", None)
-        super().__init__(
-            name=name or station, verbose=verbose
-        )
+        super().__init__(name=name or station, verbose=verbose)
         self.ids: list[str] = []
         self.data: dict[str, np.ndarray] = {}
-        self.dt: float | None = (
-            float(dt) if dt is not None else None
-        )
+        self.dt: float | None = float(dt) if dt is not None else None
 
         self.station: str | None = station
         self.lat: float | None = meta.pop("lat", None)
         self.lon: float | None = meta.pop("lon", None)
         self.elev: float | None = meta.pop("elev", None)
-        self.declination: float | None = meta.pop(
-            "declination", None
-        )
-        self.coordsys: str | None = meta.pop(
-            "coordsys", None
-        )
+        self.declination: float | None = meta.pop("declination", None)
+        self.coordsys: str | None = meta.pop("coordsys", None)
         self.start: str | None = meta.pop("start", None)
         self.stop: str | None = meta.pop("stop", None)
 
-        self.azim: dict[str, float] = dict(
-            meta.pop("azim", {}) or {}
-        )
-        self.units: dict[str, str] = dict(
-            meta.pop("units", {}) or {}
-        )
-        self.gain: dict[str, float] = dict(
-            meta.pop("gain", {}) or {}
-        )
-        self.baseline: dict[str, float] = dict(
-            meta.pop("baseline", {}) or {}
-        )
-        self.dipole: dict[str, float] = dict(
-            meta.pop("dipole", {}) or {}
-        )
-        self.sensor: dict[str, str] = dict(
-            meta.pop("sensor", {}) or {}
-        )
-        self.missing: float | None = meta.pop(
-            "missing", None
-        )
+        self.azim: dict[str, float] = dict(meta.pop("azim", {}) or {})
+        self.units: dict[str, str] = dict(meta.pop("units", {}) or {})
+        self.gain: dict[str, float] = dict(meta.pop("gain", {}) or {})
+        self.baseline: dict[str, float] = dict(meta.pop("baseline", {}) or {})
+        self.dipole: dict[str, float] = dict(meta.pop("dipole", {}) or {})
+        self.sensor: dict[str, str] = dict(meta.pop("sensor", {}) or {})
+        self.missing: float | None = meta.pop("missing", None)
         self.meta: dict[str, object] = dict(meta)
 
         for cid, arr in (data or {}).items():
             self.add_channel(cid, arr)
 
     # ------------------------------------------------ basic API
-    def add_channel(
-        self, cid: str, samples: Sequence[float]
-    ) -> TSData:
+    def add_channel(self, cid: str, samples: Sequence[float]) -> TSData:
         """Register (or replace) a channel array."""
         key = _norm_cid(cid)
         arr = np.asarray(samples, dtype=float).ravel()
@@ -219,10 +200,7 @@ class TSData(BaseEM):
 
     def time(self, cid: str | None = None) -> np.ndarray:
         """Relative time vector (s) for ``cid`` (or longest)."""
-        n = (
-            self.get(cid).size if cid is not None
-            else self.n_samples
-        )
+        n = self.get(cid).size if cid is not None else self.n_samples
         dt = 1.0 if self.dt is None else float(self.dt)
         return np.arange(n, dtype=float) * dt
 
@@ -237,8 +215,7 @@ class TSData(BaseEM):
         with ``NaN``.  Returns ``(M, order)``.
         """
         order = (
-            [_norm_cid(c) for c in ids]
-            if ids is not None else list(self.ids)
+            [_norm_cid(c) for c in ids] if ids is not None else list(self.ids)
         )
         n = max(self.data[c].size for c in order)
         M = np.full((n, len(order)), np.nan, dtype=float)
@@ -270,13 +247,24 @@ class TSData(BaseEM):
             station=self.station,
         )
         for attr in (
-            "lat", "lon", "elev", "declination", "coordsys",
-            "start", "stop", "missing",
+            "lat",
+            "lon",
+            "elev",
+            "declination",
+            "coordsys",
+            "start",
+            "stop",
+            "missing",
         ):
             setattr(out, attr, getattr(self, attr))
         for attr in (
-            "azim", "units", "gain", "baseline", "dipole",
-            "sensor", "meta",
+            "azim",
+            "units",
+            "gain",
+            "baseline",
+            "dipole",
+            "sensor",
+            "meta",
         ):
             setattr(out, attr, dict(getattr(self, attr)))
         return out
@@ -306,9 +294,7 @@ class TSData(BaseEM):
         from ..seg.time_series import TimeSeries
 
         ts = TimeSeries(name=self.name, verbose=self.verbose)
-        dt = (
-            1.0 if self.dt is None else float(self.dt) * step
-        )
+        dt = 1.0 if self.dt is None else float(self.dt) * step
         ts._sect_dt = dt
         ts.sectid = self.station or self.name or "TS"
         for cid in self.ids:

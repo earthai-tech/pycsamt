@@ -15,14 +15,15 @@ from pycsamt.zonge.base import (
 )
 
 
-def _norm_field (field_value):
-    return (str(v).lower() for v in field_value )
+def _norm_field(field_value):
+    return (str(v).lower() for v in field_value)
+
 
 def test_field_aliases_have_expected_members():
     # A few representative spot checks (not exhaustive)
-    assert "station" in _norm_field (FieldAliases.station)
-    assert "stn" in _norm_field (FieldAliases.station)
-    assert "hmag" in _norm_field (FieldAliases.hmag)
+    assert "station" in _norm_field(FieldAliases.station)
+    assert "stn" in _norm_field(FieldAliases.station)
+    assert "hmag" in _norm_field(FieldAliases.hmag)
     assert "b.mag" in _norm_field(FieldAliases.hmag)
     assert "ares.mag" in _norm_field(FieldAliases.rho)
     assert "phase" in _norm_field(FieldAliases.phase)
@@ -77,6 +78,7 @@ def test_avgframe_core_helpers_and_reprs(tmp_path: Path):
 
 class DummyComp(AVGComponentBase):
     """Minimal concrete component for testing the base API."""
+
     required = {"station", "freq"}
     provides = {"station", "freq"}
 
@@ -142,9 +144,9 @@ def test_legacyavgbase_minimal_contract():
     # And if it advertises to_xarray/transform, calling them should
     # either return something xarray-like or raise NotImplementedError.
     if hasattr(obj, "to_xarray"):
-        with pytest.raises (
-                AvgDataError, match=re.escape ("Empty legacy table.")
-            ):
+        with pytest.raises(
+            AvgDataError, match=re.escape("Empty legacy table.")
+        ):
             # try:
             out = obj.to_xarray(pd.DataFrame())
             # duck-type check for xarray.Dataset (no hard import)
@@ -153,15 +155,15 @@ def test_legacyavgbase_minimal_contract():
             #     pass
 
     if hasattr(obj, "transform"):
-        with pytest.raises (
-                AvgDataError, match=re.escape ("Empty legacy table.")
-            ):
-        # try:
+        with pytest.raises(
+            AvgDataError, match=re.escape("Empty legacy table.")
+        ):
+            # try:
             out = obj.transform(pd.DataFrame(), meta={})
             assert isinstance(out, (pd.DataFrame, dict))
         # except NotImplementedError:
         #     pass
 
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

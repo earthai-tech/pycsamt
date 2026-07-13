@@ -122,8 +122,10 @@ def validate_script_file(path: str | Path) -> dict[str, Any]:
         code = p.read_text(encoding="utf-8")
     except OSError as exc:
         return {
-            "ok": False, "syntax_ok": False,
+            "ok": False,
+            "syntax_ok": False,
             "errors": [f"cannot read {path!r}: {exc}"],
-            "warnings": [], "checked": [],
+            "warnings": [],
+            "checked": [],
         }
     return validate_generated_code(code)

@@ -11,6 +11,7 @@ Run::
 
     pytest pycsamt/app/agent_master/tests/test_markdown.py -v
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -18,9 +19,7 @@ import pathlib
 import unittest
 
 # Load _markdown.py in isolation (no Dash, no package __init__ chain).
-_MOD_PATH = (
-    pathlib.Path(__file__).resolve().parents[1] / "_markdown.py"
-)
+_MOD_PATH = pathlib.Path(__file__).resolve().parents[1] / "_markdown.py"
 _spec = importlib.util.spec_from_file_location(
     "am_markdown_under_test", _MOD_PATH
 )
@@ -29,7 +28,6 @@ _spec.loader.exec_module(md)  # type: ignore[union-attr]
 
 
 class TestSplitInlineBold(unittest.TestCase):
-
     def test_basic(self):
         self.assertEqual(
             md.split_inline_bold("a **b** c"),
@@ -50,7 +48,6 @@ class TestSplitInlineBold(unittest.TestCase):
 
 
 class TestParseMarkdown(unittest.TestCase):
-
     def test_heading_bullet_code(self):
         toks = md.parse_markdown("# Title\n- a\n```py\nx=1\n```")
         self.assertEqual(

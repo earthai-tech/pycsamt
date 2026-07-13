@@ -8,6 +8,7 @@ Subclasses must implement:
     collect()   — read widgets → return {"tab_key": {field: value, …}, …}
     reset()     — reset singletons then re-populate
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget

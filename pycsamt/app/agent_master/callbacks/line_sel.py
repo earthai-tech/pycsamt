@@ -39,33 +39,18 @@ def register_line_sel(app) -> None:
     # 1. Open modal when STORE_PENDING has
     #    "disambiguation": "lines"
     @app.callback(
-        Output(
-            IDs.MODAL_LINE_SEL, "is_open"
-        ),
-        Output(
-            IDs.LINE_SEL_LIST, "options"
-        ),
-        Output(
-            IDs.LINE_SEL_LIST, "value"
-        ),
-        Input(
-            IDs.STORE_PENDING, "data"
-        ),
+        Output(IDs.MODAL_LINE_SEL, "is_open"),
+        Output(IDs.LINE_SEL_LIST, "options"),
+        Output(IDs.LINE_SEL_LIST, "value"),
+        Input(IDs.STORE_PENDING, "data"),
         prevent_initial_call=True,
     )
     def open_line_modal(pending):
-        if (
-            not pending
-            or pending.get("disambiguation")
-            != "lines"
-        ):
+        if not pending or pending.get("disambiguation") != "lines":
             raise PreventUpdate
         groups = pending.get("groups", {})
         names = list(groups.keys())
-        opts = [
-            {"label": nm, "value": nm}
-            for nm in names
-        ]
+        opts = [{"label": nm, "value": nm} for nm in names]
         return True, opts, []
 
     # 2. Run selected / Run all — start job
@@ -100,30 +85,21 @@ def register_line_sel(app) -> None:
             "is_open",
             allow_duplicate=True,
         ),
-        Output(
-            IDs.LINE_SEL_STATUS, "children"
-        ),
-        Input(
-            IDs.BTN_LINE_RUN_SEL, "n_clicks"
-        ),
-        Input(
-            IDs.BTN_LINE_RUN_ALL, "n_clicks"
-        ),
+        Output(IDs.LINE_SEL_STATUS, "children"),
+        Input(IDs.BTN_LINE_RUN_SEL, "n_clicks"),
+        Input(IDs.BTN_LINE_RUN_ALL, "n_clicks"),
         State(IDs.LINE_SEL_LIST, "value"),
         State(IDs.STORE_PENDING, "data"),
         State(IDs.STORE_EDI, "data"),
         State(IDs.STORE_SETTINGS, "data"),
-        State(
-            IDs.STORE_INV_CONFIG, "data"
-        ),
-        State(
-            IDs.STORE_MESSAGES, "data"
-        ),
+        State(IDs.STORE_INV_CONFIG, "data"),
+        State(IDs.STORE_MESSAGES, "data"),
         State(IDs.CHAT_WINDOW, "children"),
         prevent_initial_call=True,
     )
     def run_with_lines(
-        n_sel, n_all,
+        n_sel,
+        n_all,
         sel_lines,
         pending,
         edi_store,
@@ -137,9 +113,7 @@ def register_line_sel(app) -> None:
             raise PreventUpdate
 
         text = (pending or {}).get("text", "")
-        groups = (pending or {}).get(
-            "groups", {}
-        )
+        groups = (pending or {}).get("groups", {})
 
         if triggered == IDs.BTN_LINE_RUN_ALL:
             sel = list(groups.keys())
@@ -147,15 +121,15 @@ def register_line_sel(app) -> None:
             sel = sel_lines or []
             if not sel:
                 return (
-                    no_update, no_update,
-                    no_update, no_update,
-                    no_update, True,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                    True,
                     html.Span(
-                        "Select at least one"
-                        " line first.",
-                        style={
-                            "color": "orange"
-                        },
+                        "Select at least one line first.",
+                        style={"color": "orange"},
                     ),
                 )
 
@@ -182,50 +156,51 @@ def register_line_sel(app) -> None:
                         "selected_lines": sel,
                     }
                     return (
-                        msgs, no_update,
-                        no_update, no_update,
-                        new_pend, False,
+                        msgs,
+                        no_update,
+                        no_update,
+                        no_update,
+                        new_pend,
+                        False,
                         no_update,
                     )
                 else:
                     msgs[i] = _thinking_bubble(
-                        [{
-                            "label": (
-                                f"Loading"
-                                f" {len(sel)}"
-                                " line(s)..."
-                            ),
-                            "status": "running",
-                        }]
+                        [
+                            {
+                                "label": (f"Loading {len(sel)} line(s)..."),
+                                "status": "running",
+                            }
+                        ]
                     )
                 break
 
         if not _replaced:
             wf = _quick_workflow(text)
             if wf:
-                msgs.append(
-                    _waiting_bubble(wf)
-                )
+                msgs.append(_waiting_bubble(wf))
                 new_pend = {
                     "workflow": wf,
                     "text": text,
                     "selected_lines": sel,
                 }
                 return (
-                    msgs, no_update,
-                    no_update, no_update,
-                    new_pend, False,
+                    msgs,
+                    no_update,
+                    no_update,
+                    no_update,
+                    new_pend,
+                    False,
                     no_update,
                 )
             msgs.append(
                 _thinking_bubble(
-                    [{
-                        "label": (
-                            f"Loading {len(sel)}"
-                            " line(s)..."
-                        ),
-                        "status": "running",
-                    }]
+                    [
+                        {
+                            "label": (f"Loading {len(sel)} line(s)..."),
+                            "status": "running",
+                        }
+                    ]
                 )
             )
 
@@ -238,7 +213,9 @@ def register_line_sel(app) -> None:
         threading.Thread(
             target=_run_agent,
             args=(
-                jid, text, _edi_use,
+                jid,
+                text,
+                _edi_use,
                 settings or {},
                 _inv_clean,
             ),

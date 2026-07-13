@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Any
@@ -67,6 +66,7 @@ def _site_order_key(ed: Any, key: str) -> tuple[int, float, str]:
         return (0, float(y)) if y is not None else (1, np.inf, st)
     return (0, 0.0, st)  # by name later
 
+
 def _order_sites(S, sort_by: str) -> list[Any]:
     items = list(_iter_items(S))
     if sort_by in ("lon", "lat"):
@@ -108,16 +108,17 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     idx[pick_left] -= 1
     return idx
 
+
 def estimate_ss_ama(
     sites: Any,
     *,
-    sort_by: str = "lon",    # lon|lat|name
-    half_window: int = 3,     # k neighbors each side
-    weights: str = "tri",     # tri|gauss|uniform
+    sort_by: str = "lon",  # lon|lat|name
+    half_window: int = 3,  # k neighbors each side
+    weights: str = "tri",  # tri|gauss|uniform
     pband: tuple[float, float] | None = None,  # (s,s)
     max_skew: float | None = 6.0,  # ignore |β|>th
-    robust_freq: str = "median",      # median|mean
-    robust_overall: str = "median",   # median|mean
+    robust_freq: str = "median",  # median|mean
+    robust_overall: str = "median",  # median|mean
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -216,26 +217,39 @@ def estimate_ss_ama(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     items = _order_sites(S, sort_by=sort_by)
     n = len(items)
     if n == 0:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho", "fac_rho",
-                     "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
 
         return maybe_wrap_frame(
-            df, api=api, name="estimate_ss_ama",
-            kind="emtools.ss.ama", source=sites,
+            df,
+            api=api,
+            name="estimate_ss_ama",
+            kind="emtools.ss.ama",
+            source=sites,
         )
 
     # optional skew mask via phase-tensor table
     pt = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup,
-        strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
 
     # precompute per site arrays
@@ -258,7 +272,7 @@ def estimate_ss_ama(
                 p_ref = sdf["period"].to_numpy()
                 sk = np.abs(sdf["skew"].to_numpy())
                 idx = _nearest_idx(1.0 / fr, p_ref)
-                m &= (sk[idx] <= float(max_skew))
+                m &= sk[idx] <= float(max_skew)
         fr1 = fr[m]
         lr1 = np.log10(np.maximum(rho[m], 1e-24))
         if fr1.size == 0:
@@ -269,13 +283,21 @@ def estimate_ss_ama(
 
     if not ST:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho", "fac_rho",
-                     "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
 
         return maybe_wrap_frame(
-            df, api=api, name="estimate_ss_ama",
-            kind="emtools.ss.ama", source=sites,
+            df,
+            api=api,
+            name="estimate_ss_ama",
+            kind="emtools.ss.ama",
+            source=sites,
         )
 
     # compute AMA trend and deltas
@@ -338,8 +360,13 @@ def estimate_ss_ama(
     # correction degrades to a no-op instead of crashing.
     if tbl.empty or "station" not in tbl.columns:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho", "fac_rho",
-                     "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
     else:
         df = tbl.sort_values("station").reset_index(drop=True)
@@ -440,8 +467,10 @@ def apply_ss_factors(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     # Unwrap APIFrame so the isinstance check below works
     _inner = getattr(factors, "df", None)
@@ -450,8 +479,7 @@ def apply_ss_factors(
 
     if isinstance(factors, pd.DataFrame):
         if "station" in factors.columns and key in factors.columns:
-            fmap = {r.station: float(r[key]) for _, r in
-                    factors.iterrows()}
+            fmap = {r.station: float(r[key]) for _, r in factors.iterrows()}
         else:
             raise ValueError("bad factors table")
     else:
@@ -552,8 +580,10 @@ def correct_ss_ama(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     tbl = estimate_ss_ama(
         S,
@@ -592,12 +622,18 @@ def _prep_lr_curves(
     verbose: int,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     pt = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup,
-        strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
     ST, FR, LR = [], [], []
     for i, ed in enumerate(_iter_items(S)):
@@ -617,18 +653,20 @@ def _prep_lr_curves(
                 p_ref = sdf["period"].to_numpy()
                 sk = np.abs(sdf["skew"].to_numpy())
                 idx = _nearest_idx(1.0 / fr, p_ref)
-                m &= (sk[idx] <= float(max_skew))
+                m &= sk[idx] <= float(max_skew)
         fr1 = fr[m]
         lr1 = np.log10(np.maximum(rho[m], 1e-24))
         if fr1.size == 0:
             continue
-        ST.append(st); FR.append(fr1); LR.append(lr1)
+        ST.append(st)
+        FR.append(fr1)
+        LR.append(lr1)
     return ST, FR, LR
 
 
 def _tricube(u: np.ndarray) -> np.ndarray:
     v = np.clip(1.0 - np.abs(u) ** 3, 0.0, 1.0)
-    return v ** 3
+    return v**3
 
 
 def _loess_at_center(
@@ -661,7 +699,8 @@ def _loess_trend_for_site(
     poly: int,
     it: int,
 ) -> tuple[np.ndarray, np.ndarray]:
-    fr = FR[i]; LR[i]
+    fr = FR[i]
+    LR[i]
     n = len(FR)
     ids = list(range(max(0, i - k), min(n - 1, i + k) + 1))
     if i in ids:
@@ -757,25 +796,41 @@ def estimate_ss_loess(
     estimate_ss_bilateral : Bilateral filtering method.
     """
     ST, FR, LR = _prep_lr_curves(
-        sites, pband=pband, max_skew=max_skew,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        pband=pband,
+        max_skew=max_skew,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if not ST:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho",
-                     "fac_rho", "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
 
         return maybe_wrap_frame(
-            df, api=api, name="estimate_ss_loess",
-            kind="emtools.ss.loess", source=sites,
+            df,
+            api=api,
+            name="estimate_ss_loess",
+            kind="emtools.ss.loess",
+            source=sites,
         )
     rows = []
     for i, st in enumerate(ST):
         fr, tr = _loess_trend_for_site(
-            i, FR, LR, k=int(half_window),
-            poly=int(poly), it=int(it),
+            i,
+            FR,
+            LR,
+            k=int(half_window),
+            poly=int(poly),
+            it=int(it),
         )
         lr = LR[i]
         d = lr - tr
@@ -792,9 +847,11 @@ def estimate_ss_loess(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values(
-        "station"
-    ).reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -815,7 +872,8 @@ def _bilateral_trend_for_site(
     sig_dist: float | None,
     sig_val: float | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    fr = FR[i]; lr = LR[i]
+    fr = FR[i]
+    lr = LR[i]
     n = len(FR)
     ids = list(range(max(0, i - k), min(n - 1, i + k) + 1))
     if i in ids:
@@ -834,8 +892,11 @@ def _bilateral_trend_for_site(
         # spatial kernel
         ws = np.exp(-0.5 * (xi / sd) ** 2)
         # range kernel (value similarity)
-        sv = (np.nanmedian(np.abs(ys - np.nanmedian(ys)))
-              + 1e-12) if sig_val is None else float(sig_val)
+        sv = (
+            (np.nanmedian(np.abs(ys - np.nanmedian(ys))) + 1e-12)
+            if sig_val is None
+            else float(sig_val)
+        )
         wr = np.exp(-0.5 * ((ys - lr[m]) / sv) ** 2)
         w = ws * wr
         t[m] = float(np.sum(w * ys) / (np.sum(w) + 1e-12))
@@ -902,29 +963,49 @@ def estimate_ss_bilateral(
     estimate_ss_loess : Local polynomial method.
     """
     ST, FR, LR = _prep_lr_curves(
-        sites, pband=pband, max_skew=max_skew,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        pband=pband,
+        max_skew=max_skew,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if not ST:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho",
-                     "fac_rho", "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
 
         return maybe_wrap_frame(
-            df, api=api, name="estimate_ss_bilateral",
-            kind="emtools.ss.bilateral", source=sites,
+            df,
+            api=api,
+            name="estimate_ss_bilateral",
+            kind="emtools.ss.bilateral",
+            source=sites,
         )
     rows = []
     for i, st in enumerate(ST):
         fr, tr = _bilateral_trend_for_site(
-            i, FR, LR, k=int(half_window),
-            sig_dist=sig_dist, sig_val=sig_val,
+            i,
+            FR,
+            LR,
+            k=int(half_window),
+            sig_dist=sig_dist,
+            sig_val=sig_val,
         )
-        lr = LR[i]; d = lr - tr
-        delta = float(np.nanmedian(d)) if summary == "median" \
+        lr = LR[i]
+        d = lr - tr
+        delta = (
+            float(np.nanmedian(d))
+            if summary == "median"
             else float(np.nanmean(d))
+        )
         rows.append(
             dict(
                 station=st,
@@ -934,9 +1015,11 @@ def estimate_ss_bilateral(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values(
-        "station"
-    ).reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -997,19 +1080,31 @@ def estimate_ss_refmedian(
     estimate_ss_loess : Local polynomial method.
     """
     ST, FR, LR = _prep_lr_curves(
-        sites, pband=pband, max_skew=max_skew,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        pband=pband,
+        max_skew=max_skew,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if not ST:
         df = pd.DataFrame(
-            columns=["station", "delta_log10_rho",
-                     "fac_rho", "fac_z", "n_used"]
+            columns=[
+                "station",
+                "delta_log10_rho",
+                "fac_rho",
+                "fac_z",
+                "n_used",
+            ]
         )
 
         return maybe_wrap_frame(
-            df, api=api, name="estimate_ss_refmedian",
-            kind="emtools.ss.refmedian", source=sites,
+            df,
+            api=api,
+            name="estimate_ss_refmedian",
+            kind="emtools.ss.refmedian",
+            source=sites,
         )
     # build a global ref via frequency-wise median
     # grid = union of all frequencies
@@ -1030,8 +1125,11 @@ def estimate_ss_refmedian(
     for st, fr, lr in zip(ST, FR, LR):
         idx = _nearest_idx(G, fr)
         d = lr - Ref[idx]
-        delta = float(np.nanmedian(d)) if summary == "median" \
+        delta = (
+            float(np.nanmedian(d))
+            if summary == "median"
             else float(np.nanmean(d))
+        )
         rows.append(
             dict(
                 station=st,
@@ -1041,9 +1139,11 @@ def estimate_ss_refmedian(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values(
-        "station"
-    ).reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -1053,6 +1153,7 @@ def estimate_ss_refmedian(
         source=sites,
         description="Reference-median static-shift factors by station.",
     )
+
 
 # ----------------------- SS visualization (QC) --------------------------- #
 
@@ -1142,8 +1243,7 @@ def plot_ss_delta_psection(
             np.maximum(rb[m], 1e-24)
         )
         rows.append(dlog)
-        yvals.append(np.log10(perb[m]) if axis_y == "logperiod"
-                     else perb[m])
+        yvals.append(np.log10(perb[m]) if axis_y == "logperiod" else perb[m])
         labs.append(list(pairs.keys())[k])
     if not rows:
         if ax is None:
@@ -1173,8 +1273,9 @@ def plot_ss_delta_psection(
         vmin=-(vlim or 0.5),
         vmax=(vlim or 0.5),
     )
-    ax.set_ylabel(LOG10_PERIOD_LABEL if axis_y == "logperiod"
-                  else PERIOD_LABEL)
+    ax.set_ylabel(
+        LOG10_PERIOD_LABEL if axis_y == "logperiod" else PERIOD_LABEL
+    )
     PYCSAMT_STATION_RENDERING.apply(
         ax,
         np.arange(len(labs), dtype=float),
@@ -1236,8 +1337,7 @@ def plot_ss_station_curves(
     if not pairs:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "no common stations",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no common stations", ha="center", va="center")
         return ax
     if station is None:
         station = list(pairs.keys())[0]
@@ -1245,8 +1345,7 @@ def plot_ss_station_curves(
     if edb is None or eda is None:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return ax
     Zb, zb, frb = _get_z_block(edb)
     Za, za, fra = _get_z_block(eda)
@@ -1340,8 +1439,11 @@ def plot_ss_delta_profile(
         d = np.log10(np.maximum(ra[j], 1e-24)) - np.log10(
             np.maximum(rb[m], 1e-24)
         )
-        val = float(np.nanmedian(d)) if robust == "median" \
+        val = (
+            float(np.nanmedian(d))
+            if robust == "median"
             else float(np.nanmean(d))
+        )
         labs.append(st)
         deltas.append(val)
     if not labs:
@@ -1374,6 +1476,7 @@ def plot_ss_delta_profile(
 
 # ── internal rendering helpers ─────────────────────────────────────────────── #
 
+
 def _ss_sort_freqs(
     freqs: np.ndarray, *arrays: np.ndarray
 ) -> tuple[np.ndarray, ...]:
@@ -1385,13 +1488,13 @@ def _ss_sort_freqs(
 def _logT_edges(freqs: np.ndarray) -> np.ndarray:
     """Cell boundary positions in log10-period space (sorted ascending Hz)."""
     lT = np.log10(1.0 / np.asarray(freqs, float))
-    n  = lT.size
+    n = lT.size
     if n > 1:
-        d      = np.diff(lT)
-        e      = np.empty(n + 1)
-        e[0]   = lT[0]   - 0.5 * abs(d[0])
+        d = np.diff(lT)
+        e = np.empty(n + 1)
+        e[0] = lT[0] - 0.5 * abs(d[0])
         e[1:-1] = lT[:-1] + 0.5 * d
-        e[-1]  = lT[-1]  + 0.5 * abs(d[-1])
+        e[-1] = lT[-1] + 0.5 * abs(d[-1])
     else:
         e = np.array([lT[0] - 0.5, lT[0] + 0.5])
     return e
@@ -1402,15 +1505,15 @@ def _x_edges(x_centres: np.ndarray) -> np.ndarray:
     if n == 1:
         return np.array([x_centres[0] - 0.5, x_centres[0] + 0.5])
     e = np.empty(n + 1)
-    e[0]    = x_centres[0]  - 0.5 * (x_centres[1]    - x_centres[0])
+    e[0] = x_centres[0] - 0.5 * (x_centres[1] - x_centres[0])
     e[1:-1] = 0.5 * (x_centres[:-1] + x_centres[1:])
-    e[-1]   = x_centres[-1] + 0.5 * (x_centres[-1]   - x_centres[-2])
+    e[-1] = x_centres[-1] + 0.5 * (x_centres[-1] - x_centres[-2])
     return e
 
 
 def _pcolor_lT(
     ax: plt.Axes,
-    data: np.ndarray,       # (n_f, n_st)
+    data: np.ndarray,  # (n_f, n_st)
     freqs: np.ndarray,
     x_centres: np.ndarray,
     vmin: float,
@@ -1424,9 +1527,14 @@ def _pcolor_lT(
     xe = _x_edges(x_centres)
     X, Y = np.meshgrid(xe, ye)
     qm = ax.pcolormesh(
-        X, Y, data,
-        cmap=cmap, vmin=vmin, vmax=vmax,
-        shading="flat", rasterized=True,
+        X,
+        Y,
+        data,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        shading="flat",
+        rasterized=True,
     )
     if period_up:
         ax.invert_yaxis()
@@ -1441,8 +1549,8 @@ def _set_lT_yticks(
     fontsize: int = 7,
     ylabel: str = "Period (s)",
 ) -> None:
-    lT   = np.log10(1.0 / freqs)
-    pos  = np.linspace(lT.min(), lT.max(), n)
+    lT = np.log10(1.0 / freqs)
+    pos = np.linspace(lT.min(), lT.max(), n)
     labs = []
     for v in pos:
         r = round(v)
@@ -1464,7 +1572,7 @@ def _set_station_xticks(
     fontsize: int = 7,
     xlabel: str = "",
 ) -> None:
-    x  = np.arange(n_st, dtype=float)
+    x = np.arange(n_st, dtype=float)
     ha = "right" if rotation > 20 else "center"
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=rotation, ha=ha, fontsize=fontsize)
@@ -1480,7 +1588,7 @@ def _joint_clim(
     hard_max: float = 4.5,
 ) -> tuple[float, float]:
     flat = np.concatenate([a.ravel() for a in arrays])
-    fin  = flat[np.isfinite(flat)]
+    fin = flat[np.isfinite(flat)]
     if not fin.size:
         return hard_min, hard_max
     return (
@@ -1490,6 +1598,7 @@ def _joint_clim(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_ss_comparison_psection(
     logRho_before: np.ndarray,
@@ -1576,8 +1685,8 @@ def plot_ss_comparison_psection(
     fig : :class:`matplotlib.figure.Figure`
     """
     logRho_before = np.asarray(logRho_before, dtype=float)
-    logRho_after  = np.asarray(logRho_after,  dtype=float)
-    freqs         = np.asarray(freqs, dtype=float).ravel()
+    logRho_after = np.asarray(logRho_after, dtype=float)
+    freqs = np.asarray(freqs, dtype=float).ravel()
 
     n_st = logRho_before.shape[0]
     freqs, logRho_before, logRho_after = _ss_sort_freqs(
@@ -1593,14 +1702,15 @@ def plot_ss_comparison_psection(
         if figsize is None:
             figsize = (11.0, 3.8 * n_panels)
         fig, axes = plt.subplots(
-            n_panels, 1,
+            n_panels,
+            1,
             figsize=figsize,
             sharex=True,
             gridspec_kw={"hspace": 0.42},
         )
     else:
         axes = list(axes)
-        fig  = axes[0].get_figure()
+        fig = axes[0].get_figure()
 
     # ── shared colour limits ───────────────────────────────────────────────
     if clim is None:
@@ -1610,29 +1720,45 @@ def plot_ss_comparison_psection(
 
     # ── before panel ──────────────────────────────────────────────────────
     qm_b = _pcolor_lT(
-        axes[0], logRho_before.T, freqs, x_centres, vmin, vmax,
-        cmap=cmap, period_up=period_up,
+        axes[0],
+        logRho_before.T,
+        freqs,
+        x_centres,
+        vmin,
+        vmax,
+        cmap=cmap,
+        period_up=period_up,
     )
     if title_before:
         axes[0].set_title(title_before, fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(axes[0], freqs, n=n_yticks,
-                   fontsize=tick_fontsize, ylabel=ylabel)
+    _set_lT_yticks(
+        axes[0], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
+    )
 
     # ── after panel ───────────────────────────────────────────────────────
     _pcolor_lT(
-        axes[1], logRho_after.T, freqs, x_centres, vmin, vmax,
-        cmap=cmap, period_up=period_up,
+        axes[1],
+        logRho_after.T,
+        freqs,
+        x_centres,
+        vmin,
+        vmax,
+        cmap=cmap,
+        period_up=period_up,
     )
     if title_after:
         axes[1].set_title(title_after, fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(axes[1], freqs, n=n_yticks,
-                   fontsize=tick_fontsize, ylabel=ylabel)
+    _set_lT_yticks(
+        axes[1], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
+    )
 
     # shared colorbar spanning the two main panels
     cb_main = fig.colorbar(
         qm_b,
         ax=[axes[0], axes[1]],
-        fraction=0.018, pad=0.01, aspect=35,
+        fraction=0.018,
+        pad=0.01,
+        aspect=35,
     )
     cb_main.set_label(colorbar_label, fontsize=8)
     cb_main.ax.tick_params(labelsize=7)
@@ -1644,19 +1770,32 @@ def plot_ss_comparison_psection(
         if delta_vlim is None:
             delta_vlim = (
                 float(np.percentile(fin_d, delta_vlim_pct))
-                if fin_d.size else 0.5
+                if fin_d.size
+                else 0.5
             )
         qm_d = _pcolor_lT(
-            axes[2], delta.T, freqs, x_centres,
-            -delta_vlim, delta_vlim,
-            cmap=delta_cmap, period_up=period_up,
+            axes[2],
+            delta.T,
+            freqs,
+            x_centres,
+            -delta_vlim,
+            delta_vlim,
+            cmap=delta_cmap,
+            period_up=period_up,
         )
         if title_delta:
-            axes[2].set_title(title_delta, fontsize=9, fontweight="bold", pad=3)
-        _set_lT_yticks(axes[2], freqs, n=n_yticks,
-                       fontsize=tick_fontsize, ylabel=ylabel)
+            axes[2].set_title(
+                title_delta, fontsize=9, fontweight="bold", pad=3
+            )
+        _set_lT_yticks(
+            axes[2], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
+        )
         cb_d = fig.colorbar(
-            qm_d, ax=axes[2], fraction=0.018, pad=0.01, aspect=30,
+            qm_d,
+            ax=axes[2],
+            fraction=0.018,
+            pad=0.01,
+            aspect=30,
         )
         cb_d.set_label(delta_colorbar_label, fontsize=8)
         cb_d.ax.tick_params(labelsize=7)
@@ -1687,6 +1826,7 @@ def plot_ss_comparison_psection(
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def plot_ss_1d_curves(
     logRho_before: np.ndarray,
     logRho_after: np.ndarray,
@@ -1696,14 +1836,14 @@ def plot_ss_1d_curves(
     station_labels: list[str] | None = None,
     n_cols: int = 4,
     max_stations: int = 16,
-    color_before   = _UNSET,   # default: PYCSAMT_STYLE.correction.before.color
-    color_after    = _UNSET,   # default: PYCSAMT_STYLE.correction.after.color
-    ls_before      = _UNSET,   # default: PYCSAMT_STYLE.correction.before.ls
-    ls_after       = _UNSET,   # default: PYCSAMT_STYLE.correction.after.ls
-    marker_before  = _UNSET,   # default: PYCSAMT_STYLE.correction.before.marker
-    marker_after   = _UNSET,   # default: PYCSAMT_STYLE.correction.after.marker
-    marker_size    = _UNSET,   # default: PYCSAMT_STYLE.correction.before.ms
-    lw             = _UNSET,   # default: PYCSAMT_STYLE.correction.before.lw
+    color_before=_UNSET,  # default: PYCSAMT_STYLE.correction.before.color
+    color_after=_UNSET,  # default: PYCSAMT_STYLE.correction.after.color
+    ls_before=_UNSET,  # default: PYCSAMT_STYLE.correction.before.ls
+    ls_after=_UNSET,  # default: PYCSAMT_STYLE.correction.after.ls
+    marker_before=_UNSET,  # default: PYCSAMT_STYLE.correction.before.marker
+    marker_after=_UNSET,  # default: PYCSAMT_STYLE.correction.after.marker
+    marker_size=_UNSET,  # default: PYCSAMT_STYLE.correction.before.ms
+    lw=_UNSET,  # default: PYCSAMT_STYLE.correction.before.lw
     log_period: bool = True,
     show_shift_annotation: bool = True,
     annotation_fontsize: int = 7,
@@ -1764,19 +1904,27 @@ def plot_ss_1d_curves(
     """
     # ── resolve visual style from PYCSAMT_STYLE.correction ───────────────
     _cs = PYCSAMT_STYLE.correction
-    if color_before  is _UNSET: color_before  = _cs.before.color
-    if color_after   is _UNSET: color_after   = _cs.after.color
-    if ls_before     is _UNSET: ls_before     = _cs.before.ls
-    if ls_after      is _UNSET: ls_after      = _cs.after.ls
-    if marker_before is _UNSET: marker_before = _cs.before.marker
-    if marker_after  is _UNSET: marker_after  = _cs.after.marker
-    if marker_size   is _UNSET: marker_size   = _cs.before.ms
-    if lw            is _UNSET: lw            = _cs.before.lw
+    if color_before is _UNSET:
+        color_before = _cs.before.color
+    if color_after is _UNSET:
+        color_after = _cs.after.color
+    if ls_before is _UNSET:
+        ls_before = _cs.before.ls
+    if ls_after is _UNSET:
+        ls_after = _cs.after.ls
+    if marker_before is _UNSET:
+        marker_before = _cs.before.marker
+    if marker_after is _UNSET:
+        marker_after = _cs.after.marker
+    if marker_size is _UNSET:
+        marker_size = _cs.before.ms
+    if lw is _UNSET:
+        lw = _cs.before.lw
 
     logRho_before = np.asarray(logRho_before, dtype=float)
-    logRho_after  = np.asarray(logRho_after,  dtype=float)
-    freqs         = np.asarray(freqs, dtype=float).ravel()
-    n_st_total    = logRho_before.shape[0]
+    logRho_after = np.asarray(logRho_after, dtype=float)
+    freqs = np.asarray(freqs, dtype=float).ravel()
+    n_st_total = logRho_before.shape[0]
 
     if station_labels is None:
         station_labels = [str(i) for i in range(n_st_total)]
@@ -1799,14 +1947,15 @@ def plot_ss_1d_curves(
             idx = list(range(min(n_st_total, max_stations)))
 
     n_shown = len(idx)
-    n_rows  = max(1, int(np.ceil(n_shown / n_cols)))
+    n_rows = max(1, int(np.ceil(n_shown / n_cols)))
     if figsize is None:
         figsize = (n_cols * 3.2, n_rows * 2.8)
 
     axes_given = _axes_list(axes, n_shown) if axes is not None else None
     if axes_given is None:
         fig, axes_grid = plt.subplots(
-            n_rows, n_cols,
+            n_rows,
+            n_cols,
             figsize=figsize,
             squeeze=False,
         )
@@ -1816,8 +1965,8 @@ def plot_ss_1d_curves(
         fig = axes_flat[0].figure
 
     # sort periods ascending for clean curves
-    order  = np.argsort(1.0 / freqs)
-    per_s  = (1.0 / freqs)[order]
+    order = np.argsort(1.0 / freqs)
+    per_s = (1.0 / freqs)[order]
 
     for k, si in enumerate(idx):
         ax = axes_flat[k]
@@ -1826,15 +1975,23 @@ def plot_ss_1d_curves(
         fin = np.isfinite(rb) & np.isfinite(ra)
 
         ax.plot(
-            per_s[fin], rb[fin],
-            color=color_before, ls=ls_before, lw=lw,
-            marker=marker_before, ms=marker_size,
+            per_s[fin],
+            rb[fin],
+            color=color_before,
+            ls=ls_before,
+            lw=lw,
+            marker=marker_before,
+            ms=marker_size,
             label="before",
         )
         ax.plot(
-            per_s[fin], ra[fin],
-            color=color_after, ls=ls_after, lw=lw,
-            marker=marker_after, ms=marker_size,
+            per_s[fin],
+            ra[fin],
+            color=color_after,
+            ls=ls_after,
+            lw=lw,
+            marker=marker_after,
+            ms=marker_size,
             label="after",
         )
 
@@ -1847,10 +2004,12 @@ def plot_ss_1d_curves(
             delta_mean = float(np.nanmean(ra[fin] - rb[fin]))
             sign = "+" if delta_mean >= 0 else ""
             ax.text(
-                0.97, 0.04,
+                0.97,
+                0.04,
                 f"Δ={sign}{delta_mean:.2f}",
                 transform=ax.transAxes,
-                ha="right", va="bottom",
+                ha="right",
+                va="bottom",
                 fontsize=annotation_fontsize,
                 color="#555555",
                 bbox=dict(fc="white", ec="none", alpha=0.7, pad=1.5),
@@ -1877,6 +2036,7 @@ def plot_ss_1d_curves(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_ss_summary(
     logRho_before: np.ndarray,
@@ -1947,8 +2107,8 @@ def plot_ss_summary(
     fig : :class:`matplotlib.figure.Figure`
     """
     logRho_before = np.asarray(logRho_before, dtype=float)
-    logRho_after  = np.asarray(logRho_after,  dtype=float)
-    freqs         = np.asarray(freqs, dtype=float).ravel()
+    logRho_after = np.asarray(logRho_after, dtype=float)
+    freqs = np.asarray(freqs, dtype=float).ravel()
 
     n_st = logRho_before.shape[0]
     freqs, logRho_before, logRho_after = _ss_sort_freqs(
@@ -1965,16 +2125,17 @@ def plot_ss_summary(
             figsize = (13.0, 14.0)
 
         fig = plt.figure(figsize=figsize)
-        gs  = fig.add_gridspec(
-            3, 2,
+        gs = fig.add_gridspec(
+            3,
+            2,
             height_ratios=[1, 1, 0.55],
             hspace=0.46,
             wspace=0.20,
         )
         ax_before = fig.add_subplot(gs[0, 0])
-        ax_after  = fig.add_subplot(gs[0, 1], sharey=ax_before)
-        ax_delta  = fig.add_subplot(gs[1, :])
-        ax_bar    = fig.add_subplot(gs[2, :])
+        ax_after = fig.add_subplot(gs[0, 1], sharey=ax_before)
+        ax_delta = fig.add_subplot(gs[1, :])
+        ax_bar = fig.add_subplot(gs[2, :])
     else:
         ax_before, ax_after, ax_delta, ax_bar = axes_given
         fig = ax_before.figure
@@ -1987,37 +2148,68 @@ def plot_ss_summary(
 
     # ── (a) before ────────────────────────────────────────────────────────
     qm_b = _pcolor_lT(
-        ax_before, logRho_before.T, freqs, x_centres, vmin, vmax,
-        cmap=cmap, period_up=period_up,
+        ax_before,
+        logRho_before.T,
+        freqs,
+        x_centres,
+        vmin,
+        vmax,
+        cmap=cmap,
+        period_up=period_up,
     )
-    ax_before.set_title("(a) Before correction",
-                        fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(ax_before, freqs, n=n_yticks,
-                   fontsize=tick_fontsize, ylabel="Period (s)")
+    ax_before.set_title(
+        "(a) Before correction", fontsize=9, fontweight="bold", pad=3
+    )
+    _set_lT_yticks(
+        ax_before,
+        freqs,
+        n=n_yticks,
+        fontsize=tick_fontsize,
+        ylabel="Period (s)",
+    )
     _set_station_xticks(
-        ax_before, n_st, station_labels,
-        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        ax_before,
+        n_st,
+        station_labels,
+        rotation=tick_label_rotation,
+        fontsize=tick_fontsize,
         xlabel="Station",
     )
 
     # ── (b) after ─────────────────────────────────────────────────────────
     _pcolor_lT(
-        ax_after, logRho_after.T, freqs, x_centres, vmin, vmax,
-        cmap=cmap, period_up=period_up,
+        ax_after,
+        logRho_after.T,
+        freqs,
+        x_centres,
+        vmin,
+        vmax,
+        cmap=cmap,
+        period_up=period_up,
     )
-    ax_after.set_title("(b) After correction",
-                       fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(ax_after, freqs, n=n_yticks, fontsize=tick_fontsize, ylabel="")
+    ax_after.set_title(
+        "(b) After correction", fontsize=9, fontweight="bold", pad=3
+    )
+    _set_lT_yticks(
+        ax_after, freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=""
+    )
     ax_after.tick_params(axis="y", labelleft=False)
     _set_station_xticks(
-        ax_after, n_st, station_labels,
-        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        ax_after,
+        n_st,
+        station_labels,
+        rotation=tick_label_rotation,
+        fontsize=tick_fontsize,
         xlabel="Station",
     )
 
     # shared colorbar for (a)+(b)
     cb_main = fig.colorbar(
-        qm_b, ax=[ax_before, ax_after], fraction=0.015, pad=0.01, aspect=35,
+        qm_b,
+        ax=[ax_before, ax_after],
+        fraction=0.015,
+        pad=0.01,
+        aspect=35,
     )
     cb_main.set_label(colorbar_label, fontsize=8)
     cb_main.ax.tick_params(labelsize=7)
@@ -2026,24 +2218,43 @@ def plot_ss_summary(
     delta = logRho_after - logRho_before
     fin_d = np.abs(delta)[np.isfinite(delta)]
     if delta_vlim is None:
-        delta_vlim = float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+        delta_vlim = (
+            float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+        )
     qm_d = _pcolor_lT(
-        ax_delta, delta.T, freqs, x_centres,
-        -delta_vlim, delta_vlim,
-        cmap=delta_cmap, period_up=period_up,
+        ax_delta,
+        delta.T,
+        freqs,
+        x_centres,
+        -delta_vlim,
+        delta_vlim,
+        cmap=delta_cmap,
+        period_up=period_up,
     )
     ax_delta.set_title(
         r"(c) Correction amplitude  $\Delta\log_{10}\rho$ (after − before)",
-        fontsize=9, fontweight="bold", pad=3,
+        fontsize=9,
+        fontweight="bold",
+        pad=3,
     )
-    _set_lT_yticks(ax_delta, freqs, n=n_yticks,
-                   fontsize=tick_fontsize, ylabel="Period (s)")
+    _set_lT_yticks(
+        ax_delta,
+        freqs,
+        n=n_yticks,
+        fontsize=tick_fontsize,
+        ylabel="Period (s)",
+    )
     _set_station_xticks(
-        ax_delta, n_st, station_labels,
-        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        ax_delta,
+        n_st,
+        station_labels,
+        rotation=tick_label_rotation,
+        fontsize=tick_fontsize,
         xlabel="Station",
     )
-    cb_d = fig.colorbar(qm_d, ax=ax_delta, fraction=0.015, pad=0.01, aspect=30)
+    cb_d = fig.colorbar(
+        qm_d, ax=ax_delta, fraction=0.015, pad=0.01, aspect=30
+    )
     cb_d.set_label(r"$\Delta\log_{10}\rho$", fontsize=8)
     cb_d.ax.tick_params(labelsize=7)
 
@@ -2055,21 +2266,27 @@ def plot_ss_summary(
         shift_vals = np.nanmean(delta_per_st, axis=1)
 
     bar_colors = [
-        shift_bar_color if v >= 0 else shift_bar_neg_color
-        for v in shift_vals
+        shift_bar_color if v >= 0 else shift_bar_neg_color for v in shift_vals
     ]
-    ax_bar.bar(x_centres, shift_vals, color=bar_colors, width=0.75, alpha=0.85)
+    ax_bar.bar(
+        x_centres, shift_vals, color=bar_colors, width=0.75, alpha=0.85
+    )
     ax_bar.axhline(0.0, color="0.4", lw=0.8, ls="--")
     ax_bar.set_title(
         r"(d) Per-station shift  $\langle\Delta\log_{10}\rho\rangle$",
-        fontsize=9, fontweight="bold", pad=3,
+        fontsize=9,
+        fontweight="bold",
+        pad=3,
     )
     ax_bar.set_ylabel(r"$\Delta\log_{10}\rho$ (dex)", fontsize=8)
     ax_bar.grid(True, axis="y", alpha=0.25, lw=0.5)
     ax_bar.tick_params(labelsize=tick_fontsize)
     _set_station_xticks(
-        ax_bar, n_st, station_labels,
-        rotation=tick_label_rotation, fontsize=tick_fontsize,
+        ax_bar,
+        n_st,
+        station_labels,
+        rotation=tick_label_rotation,
+        fontsize=tick_fontsize,
         xlabel="Station",
     )
 
@@ -2081,28 +2298,58 @@ def plot_ss_summary(
 
 # ------------------- one-shot QC wrappers (sites in) -------------------- #
 
+
 def _select_kwargs(kws: dict[str, Any], allowed: set) -> dict[str, Any]:
     return {k: v for k, v in kws.items() if k in allowed}
 
 
 _ALLOWED = {
     "ama": {
-        "sort_by", "half_window", "weights", "pband",
-        "max_skew", "robust_freq", "robust_overall",
-        "recursive", "on_dup", "strict", "verbose",
+        "sort_by",
+        "half_window",
+        "weights",
+        "pband",
+        "max_skew",
+        "robust_freq",
+        "robust_overall",
+        "recursive",
+        "on_dup",
+        "strict",
+        "verbose",
     },
     "loess": {
-        "half_window", "poly", "it", "pband", "max_skew",
-        "summary", "recursive", "on_dup", "strict", "verbose",
+        "half_window",
+        "poly",
+        "it",
+        "pband",
+        "max_skew",
+        "summary",
+        "recursive",
+        "on_dup",
+        "strict",
+        "verbose",
     },
     "bilateral": {
-        "half_window", "sig_dist", "sig_val", "pband",
-        "max_skew", "summary", "recursive", "on_dup",
-        "strict", "verbose",
+        "half_window",
+        "sig_dist",
+        "sig_val",
+        "pband",
+        "max_skew",
+        "summary",
+        "recursive",
+        "on_dup",
+        "strict",
+        "verbose",
     },
     "refmedian": {
-        "pband", "max_skew", "smooth_sites", "summary",
-        "recursive", "on_dup", "strict", "verbose",
+        "pband",
+        "max_skew",
+        "smooth_sites",
+        "summary",
+        "recursive",
+        "on_dup",
+        "strict",
+        "verbose",
     },
 }
 
@@ -2113,7 +2360,8 @@ def _correct_sites(
     **corr: Any,
 ):
     S = ensure_sites(
-        sites, recursive=corr.get("recursive", True),
+        sites,
+        recursive=corr.get("recursive", True),
         on_dup=corr.get("on_dup", "replace"),
         strict=corr.get("strict", False),
         verbose=corr.get("verbose", 0),
@@ -2355,7 +2603,7 @@ def ss_comparison_psection(
     items1 = list(_iter_items(S1))
 
     labels = [_name(e, k) for k, e in enumerate(items0)]
-    n_st   = len(labels)
+    n_st = len(labels)
 
     # collect rho_det arrays from each site pair
     all_f: set = set()
@@ -2374,14 +2622,19 @@ def ss_comparison_psection(
 
     if not all_f:
         fig, ax = plt.subplots(figsize=(8, 3))
-        ax.text(0.5, 0.5, "No Z-tensor data found in sites",
-                ha="center", va="center")
+        ax.text(
+            0.5,
+            0.5,
+            "No Z-tensor data found in sites",
+            ha="center",
+            va="center",
+        )
         return (fig, S1) if return_sites else fig
 
     freqs_union = np.array(sorted(all_f))
-    n_f         = freqs_union.size
-    logRho_b    = np.full((n_st, n_f), np.nan)
-    logRho_a    = np.full((n_st, n_f), np.nan)
+    n_f = freqs_union.size
+    logRho_b = np.full((n_st, n_f), np.nan)
+    logRho_a = np.full((n_st, n_f), np.nan)
 
     for k, st in enumerate(labels):
         if st not in rho0_map:
@@ -2394,9 +2647,12 @@ def ss_comparison_psection(
         logRho_a[k, j1] = np.log10(np.maximum(rho1, 1e-24))
 
     fig = plot_ss_comparison_psection(
-        logRho_b, logRho_a,
+        logRho_b,
+        logRho_a,
         freqs=freqs_union,
-        station_labels=station_labels if station_labels is not None else labels,
+        station_labels=station_labels
+        if station_labels is not None
+        else labels,
         show_delta=show_delta,
         cmap=cmap,
         delta_cmap=delta_cmap,
@@ -2415,11 +2671,15 @@ def ss_comparison_psection(
 
 # ---------------------- Static-shift radar (polar) ---------------------- #
 
+
 def _rot_mat(th: np.ndarray) -> np.ndarray:
-    c = np.cos(th); s = np.sin(th)
+    c = np.cos(th)
+    s = np.sin(th)
     R = np.zeros((th.size, 2, 2), dtype=float)
-    R[:, 0, 0] = c; R[:, 0, 1] = s
-    R[:, 1, 0] = -s; R[:, 1, 1] = c
+    R[:, 0, 0] = c
+    R[:, 0, 1] = s
+    R[:, 1, 0] = -s
+    R[:, 1, 1] = c
     return R
 
 
@@ -2434,8 +2694,11 @@ def _pt_phi_for_station(
     S, station: str, fr: np.ndarray, stat: str
 ) -> np.ndarray:
     tb = build_phase_tensor_table(
-        S, recursive=False, on_dup="replace",
-        strict=False, verbose=0,
+        S,
+        recursive=False,
+        on_dup="replace",
+        strict=False,
+        verbose=0,
     )
     if tb is None or getattr(tb, "empty", False):
         return np.zeros(fr.size, dtype=float)
@@ -2462,17 +2725,17 @@ def plot_ss_radar(
     *,
     station: str | None = None,
     pband: tuple[float, float] | None = None,
-    rotate: str = "pt",        # pt|none|deg
+    rotate: str = "pt",  # pt|none|deg
     rotate_stat: str = "median",
-    rotate_deg: float = 0.0,   # used when rotate="deg"
+    rotate_deg: float = 0.0,  # used when rotate="deg"
     radial: str = "log10rho",  # log10rho|rho
     theta_axis: str = "logperiod",  # logperiod|period|freq
     fill_between: bool = False,
-    colors         = _UNSET,   # default: (mt.xy.color, mt.yx.color)
-    marker         = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.marker
-    ms             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ms
-    lw             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.lw
-    ls             = _UNSET,   # default: PYCSAMT_STYLE.mt.xy.ls
+    colors=_UNSET,  # default: (mt.xy.color, mt.yx.color)
+    marker=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.marker
+    ms=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ms
+    lw=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.lw
+    ls=_UNSET,  # default: PYCSAMT_STYLE.mt.xy.ls
     figsize: tuple[float, float] = (4.8, 4.8),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -2535,11 +2798,16 @@ def plot_ss_radar(
     """
     # ── resolve visual style from PYCSAMT_STYLE.mt ───────────────────────
     _mt = PYCSAMT_STYLE.mt
-    if colors is _UNSET: colors = (_mt.xy.color, _mt.yx.color)
-    if marker is _UNSET: marker = _mt.xy.marker
-    if ms     is _UNSET: ms     = _mt.xy.ms
-    if lw     is _UNSET: lw     = _mt.xy.lw
-    if ls     is _UNSET: ls     = _mt.xy.ls
+    if colors is _UNSET:
+        colors = (_mt.xy.color, _mt.yx.color)
+    if marker is _UNSET:
+        marker = _mt.xy.marker
+    if ms is _UNSET:
+        ms = _mt.xy.ms
+    if lw is _UNSET:
+        lw = _mt.xy.lw
+    if ls is _UNSET:
+        ls = _mt.xy.ls
 
     def _ensure_polar_axis(axis: plt.Axes | None) -> plt.Axes:
         if axis is None:
@@ -2555,8 +2823,11 @@ def plot_ss_radar(
         return fig.add_axes(pos, projection="polar")
 
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     # pick station
     sel = {}
@@ -2571,8 +2842,7 @@ def plot_ss_radar(
     ed = sel.get(station, None)
     if ed is None:
         ax = _ensure_polar_axis(ax)
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return ax
     Z, z, fr = _get_z_block(ed)
     if Z is None:
@@ -2594,8 +2864,10 @@ def plot_ss_radar(
     per = 1.0 / fr
     m = np.ones(fr.size, dtype=bool)
     if pband is not None:
-        lo, hi = pband; m &= (per >= lo) & (per <= hi)
-    xy = zr[:, 0, 1]; yx = zr[:, 1, 0]
+        lo, hi = pband
+        m &= (per >= lo) & (per <= hi)
+    xy = zr[:, 0, 1]
+    yx = zr[:, 1, 0]
     if radial == "rho":
         r_xy = 0.2 * (np.abs(xy) ** 2) / (fr + eps)
         r_yx = 0.2 * (np.abs(yx) ** 2) / (fr + eps)
@@ -2613,11 +2885,15 @@ def plot_ss_radar(
         # normalize to [0, 2π)
         x = (x - x.min()) / (x.max() - x.min() + eps)
         x = 2.0 * np.pi * x
-    th = x if theta_axis == "logperiod" else \
-         (2.0 * np.pi * (x - x.min()) /
-          (x.max() - x.min() + 1e-24))
+    th = (
+        x
+        if theta_axis == "logperiod"
+        else (2.0 * np.pi * (x - x.min()) / (x.max() - x.min() + 1e-24))
+    )
 
-    th = th[m]; r1 = r_xy[m]; r2 = r_yx[m]
+    th = th[m]
+    r1 = r_xy[m]
+    r2 = r_yx[m]
 
     ax = _ensure_polar_axis(ax)
     # set polar style: 0 at north, CW
@@ -2627,12 +2903,29 @@ def plot_ss_radar(
 
     # plot
     suffix = " (rot)" if rotate != "none" else ""
-    ax.plot(th, r1, ls=ls, lw=lw, marker=marker,
-            ms=ms, color=colors[0], label=f"ρa_xy{suffix}")
-    ax.plot(th, r2, ls=ls, lw=lw, marker=marker,
-            ms=ms, color=colors[1], label=f"ρa_yx{suffix}")
+    ax.plot(
+        th,
+        r1,
+        ls=ls,
+        lw=lw,
+        marker=marker,
+        ms=ms,
+        color=colors[0],
+        label=f"ρa_xy{suffix}",
+    )
+    ax.plot(
+        th,
+        r2,
+        ls=ls,
+        lw=lw,
+        marker=marker,
+        ms=ms,
+        color=colors[1],
+        label=f"ρa_yx{suffix}",
+    )
     if fill_between:
-        lo = np.minimum(r1, r2); hi = np.maximum(r1, r2)
+        lo = np.minimum(r1, r2)
+        hi = np.maximum(r1, r2)
         ax.fill_between(th, lo, hi, color="0.5", alpha=0.10)
 
     ax.grid(True, alpha=0.25)
@@ -2642,25 +2935,38 @@ def plot_ss_radar(
     # Outside the polar axes entirely: bbox_to_anchor=(0.02, 0.02) used
     # to sit right on top of the 225-degree angular tick label, which
     # always lands near that same lower-left corner of the bounding box.
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.05),
-              frameon=False, fontsize=8)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.05),
+        frameon=False,
+        fontsize=8,
+    )
     return ax
 
 
 # ========= Near-surface effect detection (lei2017) ======================== #
 
 _TYPE_COLORS: dict[str, str] = {
-    "clean":        "#2ca02c",   # green
-    "static":       "#1f77b4",   # blue
-    "near_surface": "#ff7f0e",   # orange
-    "mixed":        "#d62728",   # red
+    "clean": "#2ca02c",  # green
+    "static": "#1f77b4",  # blue
+    "near_surface": "#ff7f0e",  # orange
+    "mixed": "#d62728",  # red
 }
 
 _NS_COLS = [
-    "station", "n_hf", "n_lf",
-    "sigma_hf", "sigma_lf", "ns_index",
-    "slope_hf", "slope_lf", "gradient_delta",
-    "ss_delta_log10", "ns_flag", "ss_flag", "distortion_type",
+    "station",
+    "n_hf",
+    "n_lf",
+    "sigma_hf",
+    "sigma_lf",
+    "ns_index",
+    "slope_hf",
+    "slope_lf",
+    "gradient_delta",
+    "ss_delta_log10",
+    "ns_flag",
+    "ss_flag",
+    "distortion_type",
 ]
 
 
@@ -2704,8 +3010,10 @@ def _ama_residuals_ns(
             w = _w_of_dist(dist, weights, half_window)
             for kf, f in enumerate(fr):
                 vals = np.array(
-                    [LR[j][_nearest_idx(FR[j], np.array([f]))[0]]
-                     for j in nbr_ids],
+                    [
+                        LR[j][_nearest_idx(FR[j], np.array([f]))[0]]
+                        for j in nbr_ids
+                    ],
                     dtype=float,
                 )
                 rr = np.repeat(vals, np.maximum(1, (w * 100).astype(int)))
@@ -2808,12 +3116,17 @@ def detect_near_surface(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     pt = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup,
-        strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
 
     items = _order_sites(S, sort_by=sort_by)
@@ -2859,8 +3172,9 @@ def detect_near_surface(
             source=sites,
         )
 
-    residuals = _ama_residuals_ns(FR, LR,
-                                  half_window=half_window, weights=weights)
+    residuals = _ama_residuals_ns(
+        FR, LR, half_window=half_window, weights=weights
+    )
     rows = []
     for i, (st, fr, lr, delta) in enumerate(zip(ST, FR, LR, residuals)):
         hf = fr >= f_split
@@ -2871,19 +3185,19 @@ def detect_near_surface(
 
         σ_hf = float(np.nanstd(d_hf)) if d_hf.size >= 2 else float("nan")
         σ_lf = float(np.nanstd(d_lf)) if d_lf.size >= 2 else float("nan")
-        η = (σ_hf / (σ_lf + 1e-12)
-             if np.isfinite(σ_hf) and np.isfinite(σ_lf)
-             else float("nan"))
+        η = (
+            σ_hf / (σ_lf + 1e-12)
+            if np.isfinite(σ_hf) and np.isfinite(σ_lf)
+            else float("nan")
+        )
 
-        slope_hf = _log_slope(
-            np.log10(np.maximum(fr[hf], 1e-24)), lr[hf]
+        slope_hf = _log_slope(np.log10(np.maximum(fr[hf], 1e-24)), lr[hf])
+        slope_lf = _log_slope(np.log10(np.maximum(fr[lf], 1e-24)), lr[lf])
+        grad_delta = (
+            abs(slope_hf - slope_lf)
+            if np.isfinite(slope_hf) and np.isfinite(slope_lf)
+            else float("nan")
         )
-        slope_lf = _log_slope(
-            np.log10(np.maximum(fr[lf], 1e-24)), lr[lf]
-        )
-        grad_delta = (abs(slope_hf - slope_lf)
-                      if np.isfinite(slope_hf) and np.isfinite(slope_lf)
-                      else float("nan"))
 
         fin = delta[np.isfinite(delta)]
         ss_delta = float(np.nanmedian(fin)) if fin.size else float("nan")
@@ -2892,27 +3206,38 @@ def detect_near_surface(
         ss_flag = bool(np.isfinite(ss_delta) and abs(ss_delta) > ss_threshold)
 
         dtype = (
-            "mixed"        if ns_flag and ss_flag else
-            "near_surface" if ns_flag else
-            "static"       if ss_flag else
-            "clean"
+            "mixed"
+            if ns_flag and ss_flag
+            else "near_surface"
+            if ns_flag
+            else "static"
+            if ss_flag
+            else "clean"
         )
 
-        rows.append({
-            "station":        st,
-            "n_hf":           int(hf.sum()),
-            "n_lf":           int(lf.sum()),
-            "sigma_hf":       σ_hf,
-            "sigma_lf":       σ_lf,
-            "ns_index":       float(η)          if np.isfinite(η)          else float("nan"),
-            "slope_hf":       float(slope_hf)   if np.isfinite(slope_hf)   else float("nan"),
-            "slope_lf":       float(slope_lf)   if np.isfinite(slope_lf)   else float("nan"),
-            "gradient_delta": float(grad_delta) if np.isfinite(grad_delta) else float("nan"),
-            "ss_delta_log10": ss_delta,
-            "ns_flag":        ns_flag,
-            "ss_flag":        ss_flag,
-            "distortion_type": dtype,
-        })
+        rows.append(
+            {
+                "station": st,
+                "n_hf": int(hf.sum()),
+                "n_lf": int(lf.sum()),
+                "sigma_hf": σ_hf,
+                "sigma_lf": σ_lf,
+                "ns_index": float(η) if np.isfinite(η) else float("nan"),
+                "slope_hf": float(slope_hf)
+                if np.isfinite(slope_hf)
+                else float("nan"),
+                "slope_lf": float(slope_lf)
+                if np.isfinite(slope_lf)
+                else float("nan"),
+                "gradient_delta": float(grad_delta)
+                if np.isfinite(grad_delta)
+                else float("nan"),
+                "ss_delta_log10": ss_delta,
+                "ns_flag": ns_flag,
+                "ss_flag": ss_flag,
+                "distortion_type": dtype,
+            }
+        )
 
     df = pd.DataFrame(rows, columns=_NS_COLS)
 
@@ -2997,14 +3322,26 @@ def plot_ns_detection(
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     x = np.arange(len(df))
     colors = [_TYPE_COLORS[t] for t in df["distortion_type"]]
-    ax.bar(x, df["ns_index"].fillna(0).values,
-           color=colors, width=0.7, edgecolor="0.3", linewidth=0.5)
+    ax.bar(
+        x,
+        df["ns_index"].fillna(0).values,
+        color=colors,
+        width=0.7,
+        edgecolor="0.3",
+        linewidth=0.5,
+    )
     ax.axhline(ns_threshold, color="k", lw=1.2, ls="--")
 
     # secondary axis for static-shift δ
@@ -3041,8 +3378,14 @@ def plot_ns_detection(
         if k in present
     ]
     patches.append(
-        plt.Line2D([0], [0], color="k", ls="--", lw=1.2,
-                   label=f"η threshold ({ns_threshold})")
+        plt.Line2D(
+            [0],
+            [0],
+            color="k",
+            ls="--",
+            lw=1.2,
+            label=f"η threshold ({ns_threshold})",
+        )
     )
     ax.legend(handles=patches, fontsize=8, loc="upper right", framealpha=0.85)
     return ax

@@ -215,8 +215,7 @@ def recompute(
         )
     else:
         click.echo(
-            f"Recomputed {n_ok}/{n_total} EDI file(s) -> "
-            f"{result.output_root}"
+            f"Recomputed {n_ok}/{n_total} EDI file(s) -> {result.output_root}"
         )
         if not no_manifest and result.output_root is not None:
             click.echo(f"Manifest: {result.output_root / 'manifest.csv'}")
@@ -263,9 +262,7 @@ def _resolve_source(
 
 def _parse_components(value: str) -> tuple[str, ...]:
     comps = tuple(
-        part.strip()
-        for part in str(value).split(",")
-        if part.strip()
+        part.strip() for part in str(value).split(",") if part.strip()
     )
     allowed = {"z", "imp", "impedance", "t", "tip", "tipper"}
     bad = [c for c in comps if c.lower() not in allowed]

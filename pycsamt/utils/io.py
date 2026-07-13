@@ -6,6 +6,7 @@ pycsamt.utils.io
 
 I/O utility functions for PyCSAMT v2.0.
 """
+
 import os
 import re
 from typing import Optional, Union
@@ -16,14 +17,15 @@ from scipy.interpolate import interp1d
 from ..exceptions import PycsamtError, ValidationError
 
 __all__ = [
-    'stn_separation',
-     'parse_stn_profile',
+    "stn_separation",
+    "parse_stn_profile",
 ]
+
 
 def stn_separation(
     easting: Union[np.ndarray, list, tuple],
     northing: Union[np.ndarray, list, tuple],
-    interpolate: bool = False
+    interpolate: bool = False,
 ) -> tuple[np.ndarray, float]:
     """
     Compute station separations (distance between successive points).
@@ -63,12 +65,12 @@ def stn_separation(
         return np.array([], dtype=float), 0.0
 
     # Calculate pairwise distances
-    deltas = np.sqrt((np.diff(e))**2 + (np.diff(n))**2)
+    deltas = np.sqrt((np.diff(e)) ** 2 + (np.diff(n)) ** 2)
 
     if interpolate:
         # Extrapolate separations to length = count
         indices = np.arange(1, count)
-        f = interp1d(indices, deltas, fill_value='extrapolate')
+        f = interp1d(indices, deltas, fill_value="extrapolate")
         separations = f(np.arange(count))
     else:
         separations = deltas
@@ -77,10 +79,8 @@ def stn_separation(
     return separations, mean_sep
 
 
-
 def parse_stn_profile(
-    file_path: str,
-    delimiter: Optional[str] = None
+    file_path: str, delimiter: Optional[str] = None
 ) -> dict[str, np.ndarray]:
     """
     Parse a station profile file (.stn) containing columns such as
@@ -110,7 +110,7 @@ def parse_stn_profile(
     if not os.path.isfile(file_path):
         raise PycsamtError(f"File not found: {file_path}")
 
-    with open(file_path, encoding='utf8') as f:
+    with open(file_path, encoding="utf8") as f:
         lines = [ln.strip() for ln in f if ln.strip()]
 
     # Skip comment lines starting with '>' or '!'
@@ -142,24 +142,23 @@ def parse_stn_profile(
     result = {}
     for idx, name in enumerate(cols):
         key = name.lower()
-        if key in ('dot', 'station', 'stn'):
-            result['position'] = arr[:, idx]
-        elif 'east' in key or key == 'e':
-            result['easting'] = arr[:, idx]
-        elif 'north' in key or key == 'n':
-            result['northing'] = arr[:, idx]
-        elif 'elev' in key or 'h' == key:
-            result['elevation'] = arr[:, idx]
+        if key in ("dot", "station", "stn"):
+            result["position"] = arr[:, idx]
+        elif "east" in key or key == "e":
+            result["easting"] = arr[:, idx]
+        elif "north" in key or key == "n":
+            result["northing"] = arr[:, idx]
+        elif "elev" in key or "h" == key:
+            result["elevation"] = arr[:, idx]
         else:
             # preserve any other columns under raw names
             result[key] = arr[:, idx]
 
     # Ensure required keys
-    for req in ('position', 'easting', 'northing', 'elevation'):
+    for req in ("position", "easting", "northing", "elevation"):
         if req not in result:
             raise PycsamtError(
                 f"Missing required column '{req}' in {file_path}"
             )
 
     return result
-

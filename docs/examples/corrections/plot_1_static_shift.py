@@ -22,9 +22,9 @@ import numpy as np
 from _corr_data import curves, demo_line, plot_before_after
 
 from pycsamt.emtools import (
-                  correct_ss_ama,
-                  correct_static_shift,
-                  estimate_ss_ama,
+    correct_ss_ama,
+    correct_static_shift,
+    estimate_ss_ama,
 )
 
 S = demo_line("L18PLT")
@@ -48,9 +48,14 @@ ama = curves(S_ama, "rho")
 
 stations = list(raw)
 pick = [stations[3], stations[len(stations) // 2], stations[-4]]
-plot_before_after(raw, ama, pick, quantity="rho",
-                  labels=("raw", "AMA-corrected"),
-                  title="Static-shift correction — AMA spatial average")
+plot_before_after(
+    raw,
+    ama,
+    pick,
+    quantity="rho",
+    labels=("raw", "AMA-corrected"),
+    title="Static-shift correction — AMA spatial average",
+)
 
 # %%
 # How big was the shift, per station?
@@ -83,16 +88,23 @@ ax.set_title("Per-station static-shift correction (red = strongly shifted)")
 # station spacing. Comparing the two corrected curves is the standard check
 # that the correction is robust to method choice.
 
-S_emap = correct_static_shift(S, window_m=1500.0, spacing_m=200.0,
-                              recursive=False)
+S_emap = correct_static_shift(
+    S, window_m=1500.0, spacing_m=200.0, recursive=False
+)
 emap = curves(S_emap, "rho")
 
 st = pick[1]
 fig, ax = plt.subplots(figsize=(6.5, 5.0), constrained_layout=True)
 ax.loglog(raw[st][0], raw[st][1], ".", ms=5, color="0.6", label="raw")
 ax.loglog(ama[st][0], ama[st][1], "-", lw=1.8, color="#3e65b0", label="AMA")
-ax.loglog(emap[st][0], emap[st][1], "--", lw=1.8, color="#16a34a",
-          label="Hanning EMAP")
+ax.loglog(
+    emap[st][0],
+    emap[st][1],
+    "--",
+    lw=1.8,
+    color="#16a34a",
+    label="Hanning EMAP",
+)
 ax.set_xlabel("period (s)")
 ax.set_ylabel(r"$\rho_a$  ($\Omega\cdot$m)")
 ax.set_title(f"AMA vs Hanning-EMAP at {st}")

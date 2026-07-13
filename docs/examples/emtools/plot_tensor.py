@@ -82,13 +82,19 @@ from pycsamt.emtools._core import (
 from pycsamt.emtools.tensor import rotate_to_strike
 
 survey = load_survey("amt_l18plt")
-S = ensure_sites(survey, recursive=False, on_dup="replace", strict=False, verbose=0)
+S = ensure_sites(
+    survey, recursive=False, on_dup="replace", strict=False, verbose=0
+)
 
 df = build_phase_tensor_table(S, recursive=False)
 print(df.shape, list(df.columns))
 print(f"theta range: {df['theta'].min():.1f} to {df['theta'].max():.1f} deg")
-print(f"skew (beta) range: {df['skew'].min():.1f} to {df['skew'].max():.1f} deg")
-print(f"ellipticity range: {df['ellipt'].min():.3f} to {df['ellipt'].max():.3f}")
+print(
+    f"skew (beta) range: {df['skew'].min():.1f} to {df['skew'].max():.1f} deg"
+)
+print(
+    f"ellipticity range: {df['ellipt'].min():.3f} to {df['ellipt'].max():.3f}"
+)
 
 # %%
 # **Reading this output.** 1484 rows = 28 stations x 53 frequencies.
@@ -131,16 +137,23 @@ ax = plot_strike_director_field(S, recursive=False)
 
 ax = plot_ellipticity_psection(S, recursive=False)
 ax = plot_phase_tensor_skewmap(S, recursive=False)
-ax = plot_dimensionality_psection(S, recursive=False, skew_th=3.0, ellipt_th=0.2)
+ax = plot_dimensionality_psection(
+    S, recursive=False, skew_th=3.0, ellipt_th=0.2
+)
 
 skew_th, ellipt_th = 3.0, 0.2
 a = np.abs(df["skew"].to_numpy())
 e = np.abs(df["ellipt"].to_numpy())
-dim = np.where((a <= skew_th) & (e <= ellipt_th), 0,
-               np.where((a <= skew_th) & (e > ellipt_th), 1, 2))
+dim = np.where(
+    (a <= skew_th) & (e <= ellipt_th),
+    0,
+    np.where((a <= skew_th) & (e > ellipt_th), 1, 2),
+)
 n1d, n2d, n3d = (dim == 0).sum(), (dim == 1).sum(), (dim == 2).sum()
-print(f"1-D: {n1d}, 2-D: {n2d}, 3-D: {n3d}  (of {len(dim)} cells, "
-      f"{100 * n3d / len(dim):.1f}% classified 3-D)")
+print(
+    f"1-D: {n1d}, 2-D: {n2d}, 3-D: {n3d}  (of {len(dim)} cells, "
+    f"{100 * n3d / len(dim):.1f}% classified 3-D)"
+)
 
 # %%
 # **Reading this output.** With the module's own default thresholds
@@ -169,7 +182,9 @@ ax = plot_dimensionality_grid(S, recursive=False, skew_th=3.0, ellipt_th=0.2)
 # fill colour from skew by default, with 3-D cells (|skew| above
 # threshold) marked with a thicker border.
 
-ax = plot_phase_tensor_psection(S, recursive=False, mark_3d=True, skew_threshold=3.0)
+ax = plot_phase_tensor_psection(
+    S, recursive=False, mark_3d=True, skew_threshold=3.0
+)
 
 # %%
 # 5. Rose diagrams: one survey, then one per period band
@@ -250,10 +265,13 @@ print(f"L18PLT map: {len(ax.patches)} ellipse patches")
 # requiring the coordinates to be finite:
 
 kap = load_survey("mt_kap03")
-S_kap = ensure_sites(kap, recursive=False, on_dup="replace", strict=False, verbose=0)
-ax_kap = plot_phase_tensor_map(S_kap, period=100.0, recursive=False, show_tipper=True)
-print("KAP03 with no coords override:",
-      [t.get_text() for t in ax_kap.texts])
+S_kap = ensure_sites(
+    kap, recursive=False, on_dup="replace", strict=False, verbose=0
+)
+ax_kap = plot_phase_tensor_map(
+    S_kap, period=100.0, recursive=False, show_tipper=True
+)
+print("KAP03 with no coords override:", [t.get_text() for t in ax_kap.texts])
 
 # %%
 # KAP03 does carry real coordinates, just under ``REFLAT``/``REFLONG``
@@ -268,11 +286,17 @@ for i, ed in enumerate(_iter_items(S_kap)):
     coords[st] = (float(dm.reflat), float(dm.reflong))
 
 ax_kap2 = plot_phase_tensor_map(
-    S_kap, period=100.0, recursive=False, show_tipper=True, coords=coords,
+    S_kap,
+    period=100.0,
+    recursive=False,
+    show_tipper=True,
+    coords=coords,
 )
-print(f"KAP03 with explicit coords: {len(ax_kap2.patches)} ellipse patches, "
-      f"lat {min(c[0] for c in coords.values()):.2f} to "
-      f"{max(c[0] for c in coords.values()):.2f}")
+print(
+    f"KAP03 with explicit coords: {len(ax_kap2.patches)} ellipse patches, "
+    f"lat {min(c[0] for c in coords.values()):.2f} to "
+    f"{max(c[0] for c in coords.values()):.2f}"
+)
 
 # %%
 # 10. Per-station ellipse strips
@@ -288,7 +312,9 @@ station_names = [_name(ed, i) for i, ed in enumerate(_iter_items(S))]
 ax = plot_phase_tensor_strip(S, station=station_names[0], recursive=False)
 
 fig = plot_phase_tensor_strip_grid(
-    S, {"L18PLT": station_names[:6]}, recursive=False,
+    S,
+    {"L18PLT": station_names[:6]},
+    recursive=False,
 )
 
 # %%
@@ -302,8 +328,10 @@ print("Z before:\n", z0[0])
 
 r = antisymmetrize(S, recursive=False)
 z_anti = _get_z_block(next(_iter_items(r)))[1]
-print(f"Zxy + Zyx before: {z0[0, 0, 1] + z0[0, 1, 0]:.1f}  "
-      f"after antisymmetrize: {z_anti[0, 0, 1] + z_anti[0, 1, 0]:.1f}")
+print(
+    f"Zxy + Zyx before: {z0[0, 0, 1] + z0[0, 1, 0]:.1f}  "
+    f"after antisymmetrize: {z_anti[0, 0, 1] + z_anti[0, 1, 0]:.1f}"
+)
 
 r = invert(S, recursive=False)
 z_inv = _get_z_block(next(_iter_items(r)))[1]
@@ -312,8 +340,10 @@ print(f"|Z| after invert: {np.abs(z_inv[0])}")
 
 r = balance_offdiag(S, recursive=False)
 z_bal = _get_z_block(next(_iter_items(r)))[1]
-print(f"|Zxy|,|Zyx| before: {abs(z0[0, 0, 1]):.1f}, {abs(z0[0, 1, 0]):.1f}  "
-      f"after balance: {abs(z_bal[0, 0, 1]):.1f}, {abs(z_bal[0, 1, 0]):.1f}")
+print(
+    f"|Zxy|,|Zyx| before: {abs(z0[0, 0, 1]):.1f}, {abs(z0[0, 1, 0]):.1f}  "
+    f"after balance: {abs(z_bal[0, 0, 1]):.1f}, {abs(z_bal[0, 1, 0]):.1f}"
+)
 
 r = orient_from_sensors(S, ex=5.0, ey=95.0, bx=5.0, by=95.0, recursive=False)
 z_or = _get_z_block(next(_iter_items(r)))[1]
@@ -341,10 +371,11 @@ print(f"Z after a 5-degree sensor-orientation correction:\n{z_or[0]}")
 
 r = sigma_clip_z(S, sigma=3.0, recursive=False)
 n_flagged = sum(
-    int(np.isnan(_get_z_block(ed)[1]).sum())
-    for ed in _iter_items(r)
+    int(np.isnan(_get_z_block(ed)[1]).sum()) for ed in _iter_items(r)
 )
-print(f"entries flagged as outliers (sigma=3) across all 28 stations: {n_flagged}")
+print(
+    f"entries flagged as outliers (sigma=3) across all 28 stations: {n_flagged}"
+)
 
 # %%
 # **Reading this output.** 79 of the 28 x 53 x 4 = 5936 Z entries (about
@@ -376,8 +407,10 @@ print("tensor.rotate(30 deg) changed Z?", not np.allclose(z0, z_r1))
 
 r2 = rotate_by_map(S, {station_names[0]: 30.0}, recursive=False)
 z_r2 = _get_z_block(next(_iter_items(r2)))[1]
-print("rotate() and rotate_by_map() agree on the same angle?",
-      np.allclose(z_r1, z_r2))
+print(
+    "rotate() and rotate_by_map() agree on the same angle?",
+    np.allclose(z_r1, z_r2),
+)
 
 r3 = rotate_to_strike(S, recursive=False)
 z_r3 = _get_z_block(next(_iter_items(r3)))[1]

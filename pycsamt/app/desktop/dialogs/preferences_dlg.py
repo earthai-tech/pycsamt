@@ -35,8 +35,8 @@ from PySide6.QtWidgets import (
 
 from pycsamt.app.desktop.models.session import SessionState
 
-_THEMES        = ["dark", "light"]
-_LOG_LEVELS    = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+_THEMES = ["dark", "light"]
+_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 _LLM_PROVIDERS = ["claude", "openai"]
 _CLAUDE_MODELS = [
     "claude-opus-4-8",
@@ -57,19 +57,26 @@ _TILE_PROVIDERS = [
 # Helper: labelled path-browse row
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _path_row(label: str, default: str, parent) -> tuple[QHBoxLayout, QLineEdit]:
+
+def _path_row(
+    label: str, default: str, parent
+) -> tuple[QHBoxLayout, QLineEdit]:
     """Return (layout, line_edit) for a path + Browse button."""
-    row   = QHBoxLayout()
-    edit  = QLineEdit(default)
+    row = QHBoxLayout()
+    edit = QLineEdit(default)
     edit.setPlaceholderText(label)
-    btn   = QPushButton("Browse…")
+    btn = QPushButton("Browse…")
     btn.setFixedWidth(70)
 
     def _browse() -> None:
         if "directory" in label.lower() or "workdir" in label.lower():
-            p = QFileDialog.getExistingDirectory(parent, f"Select {label}", default)
+            p = QFileDialog.getExistingDirectory(
+                parent, f"Select {label}", default
+            )
         else:
-            p, _ = QFileDialog.getOpenFileName(parent, f"Select {label}", default)
+            p, _ = QFileDialog.getOpenFileName(
+                parent, f"Select {label}", default
+            )
         if p:
             edit.setText(p)
 
@@ -82,6 +89,7 @@ def _path_row(label: str, default: str, parent) -> tuple[QHBoxLayout, QLineEdit]
 # ──────────────────────────────────────────────────────────────────────────────
 # PreferencesDialog
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class PreferencesDialog(QDialog):
     """
@@ -170,7 +178,9 @@ class PreferencesDialog(QDialog):
         form.addRow("MARE2DEM binary:", mr_row)
 
         wd_row, self._workdir_edit = _path_row(
-            "Inversion working directory", self._session.inversion_workdir, self
+            "Inversion working directory",
+            self._session.inversion_workdir,
+            self,
         )
         form.addRow("Default workdir:", wd_row)
 
@@ -192,7 +202,9 @@ class PreferencesDialog(QDialog):
 
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(_LLM_PROVIDERS)
-        self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
+        self._provider_combo.currentTextChanged.connect(
+            self._on_provider_changed
+        )
         form.addRow("Provider:", self._provider_combo)
 
         self._model_combo = QComboBox()
@@ -247,25 +259,28 @@ class PreferencesDialog(QDialog):
         s = self._session
 
         # General
-        s.theme            = self._theme_combo.currentText()
-        s.last_data_dir    = self._data_dir_edit.text().strip()
+        s.theme = self._theme_combo.currentText()
+        s.last_data_dir = self._data_dir_edit.text().strip()
         s.max_recent_files = self._max_recent_spin.value()
 
         # Solvers
-        s.occam2d_binary    = self._occam2d_edit.text().strip()
-        s.modem_binary      = self._modem_edit.text().strip()
-        s.mare2dem_binary   = self._mare2dem_edit.text().strip()
+        s.occam2d_binary = self._occam2d_edit.text().strip()
+        s.modem_binary = self._modem_edit.text().strip()
+        s.mare2dem_binary = self._mare2dem_edit.text().strip()
         s.inversion_workdir = self._workdir_edit.text().strip()
 
         # AI / LLM
         s.api_key = self._api_key_edit.text().strip()
 
         # Advanced
-        s.log_level     = self._log_level_combo.currentText()
+        s.log_level = self._log_level_combo.currentText()
         s.tile_provider = self._tile_combo.currentText()
 
         # Apply log level immediately
         import logging
-        logging.getLogger().setLevel(getattr(logging, s.log_level, logging.WARNING))
+
+        logging.getLogger().setLevel(
+            getattr(logging, s.log_level, logging.WARNING)
+        )
 
         self.accept()

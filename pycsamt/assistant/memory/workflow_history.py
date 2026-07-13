@@ -43,6 +43,7 @@ class WorkflowRun:
 
 def _default_path(root: Path | str | None = None) -> Path:
     from ..rag.ingest import repo_root
+
     base = Path(root) if root is not None else repo_root()
     return base / ".pycsamt_rag" / "workflow_history.jsonl"
 
@@ -56,9 +57,7 @@ class WorkflowHistory:
     def record(self, run: WorkflowRun | dict[str, Any]) -> None:
         """Append a run to the history file (creates it if needed)."""
         entry = run.to_dict() if isinstance(run, WorkflowRun) else dict(run)
-        entry.setdefault(
-            "timestamp", time.strftime("%Y-%m-%dT%H:%M:%S")
-        )
+        entry.setdefault("timestamp", time.strftime("%Y-%m-%dT%H:%M:%S"))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")

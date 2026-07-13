@@ -33,6 +33,7 @@ from .tensor import build_phase_tensor_table
 
 # -------------------------- small helpers ------------------------------- #
 
+
 def _rotmat(deg: float) -> np.ndarray:
     th = np.radians(float(deg))
     c, s = np.cos(th), np.sin(th)
@@ -109,8 +110,13 @@ def _site_lonlat(ed: Any) -> tuple[float | None, float | None]:
         _head = getattr(getattr(ed, "edi", None), "sections", {}).get("head")
         if _head is not None:
             y = y if y is not None else getattr(_head, "lat", None)
-            x = x if x is not None else (
-                getattr(_head, "long", None) or getattr(_head, "lon", None)
+            x = (
+                x
+                if x is not None
+                else (
+                    getattr(_head, "long", None)
+                    or getattr(_head, "lon", None)
+                )
             )
     x = float(x) if x is not None else None
     y = float(y) if y is not None else None
@@ -118,6 +124,7 @@ def _site_lonlat(ed: Any) -> tuple[float | None, float | None]:
 
 
 # ----------------------- strike by sweep (Z) ----------------------------- #
+
 
 def estimate_strike_sweep(
     sites: Any,
@@ -132,8 +139,10 @@ def estimate_strike_sweep(
 ) -> pd.DataFrame:
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     rows: list[dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
@@ -157,13 +166,15 @@ def estimate_strike_sweep(
             best[upd] = a
         best_u = _unwrap_deg_180(best)
         ang = _wrap90(np.nanmedian(best_u))
-        iqr = np.nanpercentile(best_u, 75) - np.nanpercentile(
-            best_u, 25
-        )
+        iqr = np.nanpercentile(best_u, 75) - np.nanpercentile(best_u, 25)
         rows.append(
             dict(
-                station=st, ang=ang, iqr=iqr,
-                lo=lo, hi=hi, n=int(zB.shape[0]),
+                station=st,
+                ang=ang,
+                iqr=iqr,
+                lo=lo,
+                hi=hi,
+                n=int(zB.shape[0]),
             )
         )
     cols = ["station", "ang", "iqr", "lo", "hi", "n"]
@@ -171,6 +182,7 @@ def estimate_strike_sweep(
 
 
 # ------------------ strike from phase tensor (theta) --------------------- #
+
 
 def estimate_strike_phase_tensor(
     sites: Any,
@@ -184,12 +196,17 @@ def estimate_strike_phase_tensor(
 ) -> pd.DataFrame:
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     df = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup,
-        strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
     if df.empty:
         return pd.DataFrame(
@@ -206,15 +223,12 @@ def estimate_strike_phase_tensor(
         th = _unwrap_deg_180(th)
         if robust:
             ang = _wrap90(np.nanmedian(th))
-            iqr = np.nanpercentile(th, 75) - np.nanpercentile(
-                th, 25
-            )
+            iqr = np.nanpercentile(th, 75) - np.nanpercentile(th, 25)
         else:
             ang = _wrap90(float(np.nanmean(th)))
             iqr = float(np.nanstd(th))
         rows.append(
-            dict(station=st, ang=ang, iqr=iqr, lo=lo, hi=hi,
-                 n=int(np.sum(m)))
+            dict(station=st, ang=ang, iqr=iqr, lo=lo, hi=hi, n=int(np.sum(m)))
         )
     return pd.DataFrame.from_records(
         rows, columns=["station", "ang", "iqr", "lo", "hi", "n"]
@@ -222,6 +236,7 @@ def estimate_strike_phase_tensor(
 
 
 # ---------------------- consensus strike (blend) ------------------------- #
+
 
 def estimate_strike_consensus(
     sites: Any,
@@ -238,24 +253,35 @@ def estimate_strike_consensus(
 ) -> pd.DataFrame:
     t1 = estimate_strike_sweep(
         sites,
-        angles=angles, metric=metric,
-        band=band, recursive=recursive,
-        on_dup=on_dup, strict=strict, verbose=verbose,
+        angles=angles,
+        metric=metric,
+        band=band,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     t2 = estimate_strike_phase_tensor(
         sites,
-        band=band, robust=True,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        band=band,
+        robust=True,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if t1.empty and t2.empty:
         return pd.DataFrame(
             columns=["station", "ang", "iqr", "lo", "hi", "n"]
         )
     df = pd.merge(
-        t1, t2, on="station", how="outer",
+        t1,
+        t2,
+        on="station",
+        how="outer",
         suffixes=("_sweep", "_pt"),
     )
+
     def pick(a, b, ws, wp):
         if np.isnan(a) and np.isnan(b):
             return np.nan
@@ -264,6 +290,7 @@ def estimate_strike_consensus(
         u = _unwrap_deg_180(np.array([a, b]))
         u = _wrap90(u)
         return float(ws * u[0] + wp * u[1])
+
     ang = []
     iqr = []
     lo = []
@@ -271,34 +298,35 @@ def estimate_strike_consensus(
     n = []
     for _, r in df.iterrows():
         ang.append(
-            pick(r.get("ang_sweep", np.nan),
-                 r.get("ang_pt", np.nan),
-                 w_sweep, w_pt)
+            pick(
+                r.get("ang_sweep", np.nan),
+                r.get("ang_pt", np.nan),
+                w_sweep,
+                w_pt,
+            )
         )
         i1 = r.get("iqr_sweep", np.nan)
         i2 = r.get("iqr_pt", np.nan)
-        iqr.append(
-            float(np.nanmedian([i1, i2]))
-        )
+        iqr.append(float(np.nanmedian([i1, i2])))
         lo.append(
-            float(np.nanmin([
-                r.get("lo_sweep", np.nan), r.get("lo_pt", np.nan)
-            ]))
+            float(
+                np.nanmin([r.get("lo_sweep", np.nan), r.get("lo_pt", np.nan)])
+            )
         )
         hi.append(
-            float(np.nanmax([
-                r.get("hi_sweep", np.nan), r.get("hi_pt", np.nan)
-            ]))
+            float(
+                np.nanmax([r.get("hi_sweep", np.nan), r.get("hi_pt", np.nan)])
+            )
         )
         n.append(int(np.nansum([r.get("n_sweep", 0), r.get("n_pt", 0)])))
     out = pd.DataFrame(
-        dict(station=df["station"], ang=ang, iqr=iqr,
-             lo=lo, hi=hi, n=n)
+        dict(station=df["station"], ang=ang, iqr=iqr, lo=lo, hi=hi, n=n)
     )
     return out
 
 
 # ----------------------- rotation applicators ---------------------------- #
+
 
 def rotate_to_strike(
     sites: Any,
@@ -315,26 +343,42 @@ def rotate_to_strike(
 ):
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if method == "sweep":
         TB = estimate_strike_sweep(
-            S, angles=angles, metric=metric,
-            band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            angles=angles,
+            metric=metric,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     elif method == "pt":
         TB = estimate_strike_phase_tensor(
-            S, band=band, robust=True,
-            recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            robust=True,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     else:
         TB = estimate_strike_consensus(
-            S, band=band, angles=angles, metric=metric,
-            recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            angles=angles,
+            metric=metric,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     amap = {r.station: float(r.ang) for _, r in TB.iterrows()}
 
@@ -362,6 +406,7 @@ def rotate_to_strike(
 
 # --------------------- per-frequency strike curve ------------------------ #
 
+
 def strike_curve_sweep(
     sites: Any,
     *,
@@ -375,8 +420,10 @@ def strike_curve_sweep(
 ) -> pd.DataFrame:
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     rows: list[dict[str, float]] = []
     for i, ed in enumerate(_iter_items(S)):
@@ -399,9 +446,16 @@ def strike_curve_sweep(
             u = np.convolve(best, w, mode="same")
             best = u
         for f, ang in zip(fr, _wrap90(best)):
-            period = np.nan if not np.isfinite(f) or f == 0 else 1.0 / float(f)
+            period = (
+                np.nan if not np.isfinite(f) or f == 0 else 1.0 / float(f)
+            )
             rows.append(
-                dict(station=st, freq=float(f), period=float(period), ang=float(ang))
+                dict(
+                    station=st,
+                    freq=float(f),
+                    period=float(period),
+                    ang=float(ang),
+                )
             )
     return pd.DataFrame.from_records(
         rows,
@@ -423,6 +477,7 @@ def _axial_mean_deg(a: np.ndarray, w: np.ndarray) -> float:
     ang = (ang + 180.0) % 180.0
     return float(ang)
 
+
 def plot_strike_rose_by_line(
     sites: Any,
     *,
@@ -441,24 +496,38 @@ def plot_strike_rose_by_line(
 ):
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     # 1) per-station strike + iqr (weight proxy)
     if method == "sweep":
         TB = estimate_strike_sweep(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     elif method == "pt":
         TB = estimate_strike_phase_tensor(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     else:
         TB = estimate_strike_consensus(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     axes_given = _axes_list(axes, 1) if axes is not None else None
     if TB.empty:
@@ -503,9 +572,17 @@ def plot_strike_rose_by_line(
     G = list(groups.keys())
     n = len(G)
     axes_given = _axes_list(axes, n) if axes is not None else None
-    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
+    fig = (
+        plt.figure(figsize=figsize)
+        if axes_given is None
+        else axes_given[0].figure
+    )
     for i, g in enumerate(G, 1):
-        ax = axes_given[i - 1] if axes_given is not None else fig.add_subplot(1, n, i, polar=True)
+        ax = (
+            axes_given[i - 1]
+            if axes_given is not None
+            else fig.add_subplot(1, n, i, polar=True)
+        )
         subset = TB[TB["station"].isin(groups[g])]
         if subset.empty:
             ax.text(0.5, 0.5, "empty", ha="center", va="center")
@@ -523,7 +600,8 @@ def plot_strike_rose_by_line(
         vmax = rr.max() if rr.size else 1.0
         cols = plt.cm.YlOrRd(rr / (vmax + 1e-12))
         ax.bar(
-            th, rr,
+            th,
+            rr,
             width=np.radians(edges[1] - edges[0]),
             bottom=0.0,
             color=cols,
@@ -540,10 +618,11 @@ def plot_strike_rose_by_line(
                 lw=2.5,
             )
         ax.text(
-            0.08, 0.90, f"{mu:.1f}°",
+            0.08,
+            0.90,
+            f"{mu:.1f}°",
             transform=ax.transAxes,
-            bbox=dict(boxstyle="round,pad=0.2",
-                      fc="white", ec="0.2", lw=0.6),
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="0.2", lw=0.6),
         )
         # polar cosmetics
         ax.set_theta_zero_location("N")
@@ -555,6 +634,7 @@ def plot_strike_rose_by_line(
 
 
 # ---- enhanced rose diagram ---------------------------------------------- #
+
 
 def plot_strike_rose(
     sites: Any,
@@ -760,63 +840,86 @@ def plot_strike_rose(
     """
     # ── resolve style → fill _UNSET visual params ─────────────────────────
     rs = resolve_rose_style(style)
-    def _v(val, attr): return getattr(rs, attr) if val is _UNSET else val
-    bar_style        = _v(bar_style,        "bar_style")
-    bar_color        = _v(bar_color,        "bar_color")
-    bar_alpha        = _v(bar_alpha,        "bar_alpha")
-    bar_edgecolor    = _v(bar_edgecolor,    "bar_edgecolor")
-    bar_edgelw       = _v(bar_edgelw,       "bar_edgelw")
-    cmap             = _v(cmap,             "cmap")
-    outer_ring_lw    = _v(outer_ring_lw,    "outer_ring_lw")
+
+    def _v(val, attr):
+        return getattr(rs, attr) if val is _UNSET else val
+
+    bar_style = _v(bar_style, "bar_style")
+    bar_color = _v(bar_color, "bar_color")
+    bar_alpha = _v(bar_alpha, "bar_alpha")
+    bar_edgecolor = _v(bar_edgecolor, "bar_edgecolor")
+    bar_edgelw = _v(bar_edgelw, "bar_edgelw")
+    cmap = _v(cmap, "cmap")
+    outer_ring_lw = _v(outer_ring_lw, "outer_ring_lw")
     outer_ring_color = _v(outer_ring_color, "outer_ring_color")
-    n_rings          = _v(n_rings,          "n_rings")
-    ring_color       = _v(ring_color,       "ring_color")
-    ring_ls          = _v(ring_ls,          "ring_ls")
-    ring_lw          = _v(ring_lw,          "ring_lw")
-    ring_labels      = _v(ring_labels,      "ring_labels")
+    n_rings = _v(n_rings, "n_rings")
+    ring_color = _v(ring_color, "ring_color")
+    ring_ls = _v(ring_ls, "ring_ls")
+    ring_lw = _v(ring_lw, "ring_lw")
+    ring_labels = _v(ring_labels, "ring_labels")
     ring_label_angle = _v(ring_label_angle, "ring_label_angle")
     ring_label_fontsize = _v(ring_label_fontsize, "ring_label_fontsize")
     ring_label_color = _v(ring_label_color, "ring_label_color")
-    ring_label_fmt   = _v(ring_label_fmt,   "ring_label_fmt")
-    spoke_every      = _v(spoke_every,      "spoke_every")
-    spoke_color      = _v(spoke_color,      "spoke_color")
-    spoke_ls         = _v(spoke_ls,         "spoke_ls")
-    spoke_lw         = _v(spoke_lw,         "spoke_lw")
-    compass_labels   = _v(compass_labels,   "compass_labels")
+    ring_label_fmt = _v(ring_label_fmt, "ring_label_fmt")
+    spoke_every = _v(spoke_every, "spoke_every")
+    spoke_color = _v(spoke_color, "spoke_color")
+    spoke_ls = _v(spoke_ls, "spoke_ls")
+    spoke_lw = _v(spoke_lw, "spoke_lw")
+    compass_labels = _v(compass_labels, "compass_labels")
     compass_fontsize = _v(compass_fontsize, "compass_fontsize")
-    compass_color    = _v(compass_color,    "compass_color")
+    compass_color = _v(compass_color, "compass_color")
     compass_fontweight = _v(compass_fontweight, "compass_fontweight")
-    show_mean        = _v(show_mean,        "show_mean")
-    mean_color       = _v(mean_color,       "mean_color")
-    mean_lw          = _v(mean_lw,          "mean_lw")
-    mean_ls          = _v(mean_ls,          "mean_ls")
-    show_secondary   = _v(show_secondary,   "show_secondary")
-    secondary_color  = _v(secondary_color,  "secondary_color")
-    secondary_ls     = _v(secondary_ls,     "secondary_ls")
-    secondary_lw     = _v(secondary_lw,     "secondary_lw")
-    show_annotation  = _v(show_annotation,  "show_annotation")
-    annotation_pos   = _v(annotation_pos,   "annotation_pos")
+    show_mean = _v(show_mean, "show_mean")
+    mean_color = _v(mean_color, "mean_color")
+    mean_lw = _v(mean_lw, "mean_lw")
+    mean_ls = _v(mean_ls, "mean_ls")
+    show_secondary = _v(show_secondary, "show_secondary")
+    secondary_color = _v(secondary_color, "secondary_color")
+    secondary_ls = _v(secondary_ls, "secondary_ls")
+    secondary_lw = _v(secondary_lw, "secondary_lw")
+    show_annotation = _v(show_annotation, "show_annotation")
+    annotation_pos = _v(annotation_pos, "annotation_pos")
     annotation_fontsize = _v(annotation_fontsize, "annotation_fontsize")
-    annotation_bg    = _v(annotation_bg,    "annotation_bg")
-    annotation_ec    = _v(annotation_ec,    "annotation_ec")
-    show_n_stations  = _v(show_n_stations,  "show_n")
+    annotation_bg = _v(annotation_bg, "annotation_bg")
+    annotation_ec = _v(annotation_ec, "annotation_ec")
+    show_n_stations = _v(show_n_stations, "show_n")
 
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     # ---- strike estimation -------------------------------------------------
     def _est(b: tuple[float, float] | None):
         if method == "sweep":
             return estimate_strike_sweep(
-                S, band=b, recursive=False, on_dup=on_dup,
-                strict=False, verbose=verbose)
+                S,
+                band=b,
+                recursive=False,
+                on_dup=on_dup,
+                strict=False,
+                verbose=verbose,
+            )
         if method == "pt":
             return estimate_strike_phase_tensor(
-                S, band=b, recursive=False, on_dup=on_dup,
-                strict=False, verbose=verbose)
+                S,
+                band=b,
+                recursive=False,
+                on_dup=on_dup,
+                strict=False,
+                verbose=verbose,
+            )
         return estimate_strike_consensus(
-            S, band=b, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose)
+            S,
+            band=b,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
+        )
 
     TB = _est(band)
     if TB.empty:
@@ -827,14 +930,23 @@ def plot_strike_rose(
         else:
             ax = axes_given[0]
             fig = ax.figure
-        ax.text(0.5, 0.5, "no strikes", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no strikes",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return fig
 
     TB = TB.copy()
     TB["ang"] = TB["ang"] % 180.0
-    TB["w"] = (1.0 / (TB["iqr"].abs() + 1e-6)
-               if weight == "inv_iqr" else np.ones(len(TB)))
+    TB["w"] = (
+        1.0 / (TB["iqr"].abs() + 1e-6)
+        if weight == "inv_iqr"
+        else np.ones(len(TB))
+    )
 
     # ---- optional per-band tables (bar_style="bands") ----------------------
     use_bands = bar_style == "bands" and bool(freq_bands)
@@ -843,18 +955,26 @@ def plot_strike_rose(
     _bl: list[str] = []
     if use_bands:
         n_fb = len(freq_bands)  # type: ignore[arg-type]
-        _bc = (list(band_colors) if band_colors is not None
-               else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb))))
-        _bl = (list(band_labels) if band_labels is not None
-               else [f"{lo:.4g}–{hi:.4g} s"
-                     for lo, hi in freq_bands])  # type: ignore[union-attr]
+        _bc = (
+            list(band_colors)
+            if band_colors is not None
+            else list(plt.get_cmap("tab10")(np.linspace(0, 0.8, n_fb)))
+        )
+        _bl = (
+            list(band_labels)
+            if band_labels is not None
+            else [f"{lo:.4g}–{hi:.4g} s" for lo, hi in freq_bands]
+        )  # type: ignore[union-attr]
         for fb in freq_bands:  # type: ignore[union-attr]
             tb = _est(fb)
             if not tb.empty:
                 tb = tb.copy()
                 tb["ang"] = tb["ang"] % 180.0
-                tb["w"] = (1.0 / (tb["iqr"].abs() + 1e-6)
-                           if weight == "inv_iqr" else np.ones(len(tb)))
+                tb["w"] = (
+                    1.0 / (tb["iqr"].abs() + 1e-6)
+                    if weight == "inv_iqr"
+                    else np.ones(len(tb))
+                )
             TB_list.append(tb)
 
     # ---- build groups ------------------------------------------------------
@@ -883,8 +1003,14 @@ def plot_strike_rose(
             else:
                 ax = axes_given[0]
                 fig = ax.figure
-            ax.text(0.5, 0.5, "no groups", ha="center", va="center",
-                    transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                "no groups",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
             return fig
 
     # ---- figure layout -----------------------------------------------------
@@ -893,18 +1019,28 @@ def plot_strike_rose(
     ncols = int(n_cols) if n_cols else n_g
     nrows = int(np.ceil(n_g / ncols))
     if figsize is None:
-        figsize = (subplot_size * ncols + 0.4,
-                   subplot_size * nrows + (0.6 if suptitle else 0.2))
+        figsize = (
+            subplot_size * ncols + 0.4,
+            subplot_size * nrows + (0.6 if suptitle else 0.2),
+        )
 
     axes_given = _axes_list(axes, n_g) if axes is not None else None
-    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
+    fig = (
+        plt.figure(figsize=figsize)
+        if axes_given is None
+        else axes_given[0].figure
+    )
 
     bins_ = int(max(12, bins))
     edges = np.linspace(0.0, 180.0, bins_ + 1)
     dw = np.radians(180.0 / bins_)
 
     for idx, g in enumerate(G):
-        ax = axes_given[idx] if axes_given is not None else fig.add_subplot(nrows, ncols, idx + 1, polar=True)
+        ax = (
+            axes_given[idx]
+            if axes_given is not None
+            else fig.add_subplot(nrows, ncols, idx + 1, polar=True)
+        )
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
 
@@ -912,8 +1048,14 @@ def plot_strike_rose(
         n_sta = len(groups[g])
 
         if subset.empty:
-            ax.text(0.5, 0.5, "empty", ha="center", va="center",
-                    transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                "empty",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
             ax.set_title(str(g), pad=10.0)
             continue
 
@@ -952,33 +1094,66 @@ def plot_strike_rose(
             bot = np.zeros(2 * bins_)
             for hb, bc in zip(h_stacks, _bc):
                 rr_b = np.concatenate([hb, hb])
-                ax.bar(th, rr_b, width=dw, bottom=bot,
-                       color=bc, edgecolor=bar_edgecolor,
-                       linewidth=bar_edgelw, align="center")
+                ax.bar(
+                    th,
+                    rr_b,
+                    width=dw,
+                    bottom=bot,
+                    color=bc,
+                    edgecolor=bar_edgecolor,
+                    linewidth=bar_edgelw,
+                    align="center",
+                )
                 bot = bot + rr_b
         elif bar_style == "gradient":
             col_vals = plt.get_cmap(cmap)(rr / (rmax + 1e-12))
-            ax.bar(th, rr, width=dw, bottom=0.0, color=col_vals,
-                   edgecolor=bar_edgecolor, linewidth=bar_edgelw,
-                   align="center")
+            ax.bar(
+                th,
+                rr,
+                width=dw,
+                bottom=0.0,
+                color=col_vals,
+                edgecolor=bar_edgecolor,
+                linewidth=bar_edgelw,
+                align="center",
+            )
         else:
-            ax.bar(th, rr, width=dw, bottom=0.0, color=bar_color,
-                   edgecolor=bar_edgecolor, linewidth=bar_edgelw,
-                   align="center")
+            ax.bar(
+                th,
+                rr,
+                width=dw,
+                bottom=0.0,
+                color=bar_color,
+                edgecolor=bar_edgecolor,
+                linewidth=bar_edgelw,
+                align="center",
+            )
 
         # ---- mean direction line ----------------------------------------
         mu = _axial_mean_deg(ang, w_arr)
         mu_rad = np.radians(mu)
         if show_mean:
-            ax.plot([mu_rad, mu_rad], [0.0, rline],
-                    color=mean_color, lw=mean_lw, ls=mean_ls,
-                    solid_capstyle="round", zorder=5)
+            ax.plot(
+                [mu_rad, mu_rad],
+                [0.0, rline],
+                color=mean_color,
+                lw=mean_lw,
+                ls=mean_ls,
+                solid_capstyle="round",
+                zorder=5,
+            )
             if show_secondary:
                 sc = secondary_color or mean_color
                 sl = secondary_lw if secondary_lw is not None else mean_lw
-                ax.plot([mu_rad + np.pi, mu_rad + np.pi], [0.0, rline],
-                        color=sc, lw=sl, ls=secondary_ls,
-                        solid_capstyle="round", zorder=5)
+                ax.plot(
+                    [mu_rad + np.pi, mu_rad + np.pi],
+                    [0.0, rline],
+                    color=sc,
+                    lw=sl,
+                    ls=secondary_ls,
+                    solid_capstyle="round",
+                    zorder=5,
+                )
 
         # ---- annotation box (strike angle + optional station count) -----
         if show_annotation:
@@ -986,11 +1161,19 @@ def plot_strike_rose(
             if show_n_stations:
                 txt += f"\nn={n_sta}"
             ax.text(
-                annotation_pos[0], annotation_pos[1], txt,
+                annotation_pos[0],
+                annotation_pos[1],
+                txt,
                 transform=ax.transAxes,
-                fontsize=annotation_fontsize, va="top", ha="left",
-                bbox=dict(boxstyle="round,pad=0.25",
-                          fc=annotation_bg, ec=annotation_ec, lw=0.7),
+                fontsize=annotation_fontsize,
+                va="top",
+                ha="left",
+                bbox=dict(
+                    boxstyle="round,pad=0.25",
+                    fc=annotation_bg,
+                    ec=annotation_ec,
+                    lw=0.7,
+                ),
                 zorder=6,
             )
 
@@ -1000,7 +1183,11 @@ def plot_strike_rose(
             r_levels = [float(v) for v in ring_labels]
         else:
             step = rmax / max(1, n_rings)
-            r_levels = [step * k for k in range(1, n_rings + 1)] if n_rings > 0 else []
+            r_levels = (
+                [step * k for k in range(1, n_rings + 1)]
+                if n_rings > 0
+                else []
+            )
         ax.set_yticks(r_levels)
         hide_polar_radius_labels(ax)
 
@@ -1008,43 +1195,68 @@ def plot_strike_rose(
         spoke_angles = np.arange(0.0, 360.0, float(spoke_every))
         if compass_labels == "NESW":
             cpts = {0: "N", 90: "E", 180: "S", 270: "W"}
-            lbls = [cpts.get(int(round(s)) % 360, "")
-                    for s in spoke_angles]
+            lbls = [cpts.get(int(round(s)) % 360, "") for s in spoke_angles]
         elif compass_labels == "degrees":
             lbls = [f"{int(s)}°" for s in spoke_angles]
         else:
             lbls = [""] * len(spoke_angles)
         ax.set_thetagrids(spoke_angles, labels=lbls)
-        ax.tick_params(axis="x", labelsize=compass_fontsize,
-                       labelcolor=compass_color, pad=4)
+        ax.tick_params(
+            axis="x",
+            labelsize=compass_fontsize,
+            labelcolor=compass_color,
+            pad=4,
+        )
         for lbl in ax.get_xticklabels():
             lbl.set_fontweight(compass_fontweight)
 
         # ---- grid styling -----------------------------------------------
-        ax.yaxis.grid(True, color=ring_color, linestyle=ring_ls,
-                      linewidth=ring_lw, alpha=0.8)
-        ax.xaxis.grid(True, color=spoke_color, linestyle=spoke_ls,
-                      linewidth=spoke_lw, alpha=0.7)
+        ax.yaxis.grid(
+            True,
+            color=ring_color,
+            linestyle=ring_ls,
+            linewidth=ring_lw,
+            alpha=0.8,
+        )
+        ax.xaxis.grid(
+            True,
+            color=spoke_color,
+            linestyle=spoke_ls,
+            linewidth=spoke_lw,
+            alpha=0.7,
+        )
 
         # ---- bold outer ring --------------------------------------------
         ax.spines["polar"].set_linewidth(outer_ring_lw)
         ax.spines["polar"].set_color(outer_ring_color)
 
         # ---- subplot title ----------------------------------------------
-        ax.set_title(str(g), pad=14.0,
-                     fontsize=annotation_fontsize + 1.5, fontweight="bold")
+        ax.set_title(
+            str(g),
+            pad=14.0,
+            fontsize=annotation_fontsize + 1.5,
+            fontweight="bold",
+        )
 
     # ---- figure-level band legend (bands style only) -----------------------
     if use_bands and _bl:
         handles = [_Patch(color=c, label=l) for c, l in zip(_bc, _bl)]
-        fig.legend(handles=handles, loc="lower center",
-                   ncol=min(len(_bl), 5), fontsize=annotation_fontsize - 0.5,
-                   frameon=True, framealpha=0.9,
-                   bbox_to_anchor=(0.5, -0.04))
+        fig.legend(
+            handles=handles,
+            loc="lower center",
+            ncol=min(len(_bl), 5),
+            fontsize=annotation_fontsize - 0.5,
+            frameon=True,
+            framealpha=0.9,
+            bbox_to_anchor=(0.5, -0.04),
+        )
 
     if suptitle:
-        fig.suptitle(suptitle, fontsize=suptitle_fontsize,
-                     y=1.02 if nrows == 1 else 1.01)
+        fig.suptitle(
+            suptitle,
+            fontsize=suptitle_fontsize,
+            y=1.02 if nrows == 1 else 1.01,
+        )
     if tight_layout:
         fig.tight_layout()
     return fig
@@ -1052,9 +1264,11 @@ def plot_strike_rose(
 
 # ---- STRIKE VIEWS: ribbon, profile, and map-sticks --------------------- #
 
+
 def _hsv_rgb(h, s, v):
     hsv = np.stack([h, s, v], axis=-1)
     return mcolors.hsv_to_rgb(hsv)
+
 
 def plot_strike_ribbon(
     sites: Any,
@@ -1062,7 +1276,7 @@ def plot_strike_ribbon(
     method: str = "sweep",  # sweep|pt|consensus
     win: int = 5,
     show_colorbar: bool = True,
-    cbar_ticks: list | None = None,   # None → [0, 45, 90, 135, 180]
+    cbar_ticks: list | None = None,  # None → [0, 45, 90, 135, 180]
     figsize: tuple[float, float] = (9.0, 4.2),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1073,23 +1287,25 @@ def plot_strike_ribbon(
     if method == "sweep":
         df = strike_curve_sweep(
             sites,
-            recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
     else:
         # consensus/pt → per-station single angle; expand flat
         tb = estimate_strike_consensus(
             sites,
-            recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         rows = []
         for _, r in tb.iterrows():
             # fake a thin band so it still renders
             for f in (1e-3, 1e3):
-                rows.append(
-                    dict(station=r.station, freq=f, ang=r.ang)
-                )
+                rows.append(dict(station=r.station, freq=f, ang=r.ang))
         df = pd.DataFrame.from_records(rows)
     if df.empty:
         if ax is None:
@@ -1115,12 +1331,9 @@ def plot_strike_ribbon(
             )
         else:
             vv = np.full_like(th, np.nan)
-        v0 = (np.nanpercentile(vv, 5)
-              if np.isfinite(vv).any() else 0.0)
-        v1 = (np.nanpercentile(vv, 95)
-              if np.isfinite(vv).any() else 1.0)
-        s_sat = 1.0 - np.clip((vv - v0) / (v1 - v0 + 1e-12),
-                              0.0, 1.0)
+        v0 = np.nanpercentile(vv, 5) if np.isfinite(vv).any() else 0.0
+        v1 = np.nanpercentile(vv, 95) if np.isfinite(vv).any() else 1.0
+        s_sat = 1.0 - np.clip((vv - v0) / (v1 - v0 + 1e-12), 0.0, 1.0)
         H.append(np.vstack([h, s_sat, np.ones_like(h)]))
         X.append(lp)
     ygrid = np.unique(np.concatenate(X))
@@ -1159,6 +1372,7 @@ def plot_strike_ribbon(
     if show_colorbar:
         from matplotlib.cm import ScalarMappable
         from matplotlib.colors import Normalize
+
         sm = ScalarMappable(
             cmap=plt.get_cmap("hsv"),
             norm=Normalize(vmin=0.0, vmax=180.0),
@@ -1172,11 +1386,14 @@ def plot_strike_ribbon(
         cb.ax.tick_params(labelsize=7)
         # saturation key: white = high variance, saturated = stable
         ax.text(
-            1.18, 0.02,
+            1.18,
+            0.02,
             "Saturation → stability",
             transform=ax.transAxes,
-            fontsize=6.5, color="0.40",
-            ha="center", va="bottom",
+            fontsize=6.5,
+            color="0.40",
+            ha="center",
+            va="bottom",
             rotation=90,
         )
 
@@ -1198,29 +1415,44 @@ def plot_strike_profile(
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if method == "sweep":
         tb = estimate_strike_sweep(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     elif method == "pt":
         tb = estimate_strike_phase_tensor(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     else:
         tb = estimate_strike_consensus(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     if tb.empty:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
         ax.text(0.5, 0.5, "no strikes", ha="center", va="center")
         return ax
+
     def _key(st, ed):
         x, y = _site_lonlat(ed)
         if sort_by == "lon":
@@ -1231,6 +1463,7 @@ def plot_strike_profile(
             return (0, st)
         # auto: lon then name
         return (0, float(x)) if x is not None else (1, st)
+
     order = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
@@ -1244,8 +1477,8 @@ def plot_strike_profile(
         _, ax = plt.subplots(figsize=figsize)
     ax.plot(x, ang, "-", lw=1.5)
     # IQR ribbon
-    lo = (ang - 0.5 * iq)
-    hi = (ang + 0.5 * iq)
+    lo = ang - 0.5 * iq
+    hi = ang + 0.5 * iq
     ax.fill_between(x, lo, hi, alpha=0.25)
     ax.set_ylim(-5.0, 185.0)
     ax.set_xlim(-0.5, len(order) - 0.5)
@@ -1273,23 +1506,37 @@ def plot_strike_mapsticks(
 ) -> plt.Axes:
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if method == "sweep":
         tb = estimate_strike_sweep(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     elif method == "pt":
         tb = estimate_strike_phase_tensor(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     else:
         tb = estimate_strike_consensus(
-            S, band=band, recursive=False, on_dup=on_dup,
-            strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     if tb.empty:
         if ax is None:
@@ -1319,7 +1566,8 @@ def plot_strike_mapsticks(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     lc = LineCollection(
-        segs, colors=[(0.1, 0.1, 0.1, a) for a in alphas],
+        segs,
+        colors=[(0.1, 0.1, 0.1, a) for a in alphas],
         linewidths=2.0,
     )
     ax.add_collection(lc)
@@ -1335,6 +1583,7 @@ def plot_strike_mapsticks(
 
 
 # ---- shared rose-panel renderer ----------------------------------------- #
+
 
 def _draw_rose_on_ax(
     ax: plt.Axes,
@@ -1380,13 +1629,27 @@ def _draw_rose_on_ax(
     if rs.bar_style == "gradient":
         cm_ = plt.get_cmap(cmap_name)
         cols = cm_(rr / (rmax + 1e-12))
-        ax.bar(th, rr, width=dw, color=cols,
-               edgecolor=rs.bar_edgecolor, linewidth=rs.bar_edgelw,
-               alpha=rs.bar_alpha, align="center")
+        ax.bar(
+            th,
+            rr,
+            width=dw,
+            color=cols,
+            edgecolor=rs.bar_edgecolor,
+            linewidth=rs.bar_edgelw,
+            alpha=rs.bar_alpha,
+            align="center",
+        )
     else:
-        ax.bar(th, rr, width=dw, color=rs.bar_color,
-               edgecolor=rs.bar_edgecolor, linewidth=rs.bar_edgelw,
-               alpha=rs.bar_alpha, align="center")
+        ax.bar(
+            th,
+            rr,
+            width=dw,
+            color=rs.bar_color,
+            edgecolor=rs.bar_edgecolor,
+            linewidth=rs.bar_edgelw,
+            alpha=rs.bar_alpha,
+            align="center",
+        )
 
     # ── concentric rings ─────────────────────────────────────────────────────
     if rs.ring_labels is not None:
@@ -1409,48 +1672,92 @@ def _draw_rose_on_ax(
     else:
         lbls = [""] * len(spoke_angles)
     ax.set_thetagrids(spoke_angles, labels=lbls)
-    ax.tick_params(axis="x", labelsize=rs.compass_fontsize,
-                   labelcolor=rs.compass_color, pad=4)
+    ax.tick_params(
+        axis="x",
+        labelsize=rs.compass_fontsize,
+        labelcolor=rs.compass_color,
+        pad=4,
+    )
     for lbl in ax.get_xticklabels():
         lbl.set_fontweight(rs.compass_fontweight)
 
     # ── grid styling ──────────────────────────────────────────────────────────
-    ax.yaxis.grid(True, color=rs.ring_color, linestyle=rs.ring_ls,
-                  linewidth=rs.ring_lw, alpha=0.8)
-    ax.xaxis.grid(True, color=rs.spoke_color, linestyle=rs.spoke_ls,
-                  linewidth=rs.spoke_lw, alpha=0.7)
+    ax.yaxis.grid(
+        True,
+        color=rs.ring_color,
+        linestyle=rs.ring_ls,
+        linewidth=rs.ring_lw,
+        alpha=0.8,
+    )
+    ax.xaxis.grid(
+        True,
+        color=rs.spoke_color,
+        linestyle=rs.spoke_ls,
+        linewidth=rs.spoke_lw,
+        alpha=0.7,
+    )
     ax.spines["polar"].set_linewidth(rs.outer_ring_lw)
     ax.spines["polar"].set_color(rs.outer_ring_color)
 
     # ── mean direction + annotation ───────────────────────────────────────────
     if len(ang) == 0:
-        ax.text(0.5, 0.5, "no data",
-                ha="center", va="center", transform=ax.transAxes,
-                fontsize=rs.annotation_fontsize, color="0.55")
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=rs.annotation_fontsize,
+            color="0.55",
+        )
     if len(ang) > 0:
         mu = _axial_mean_deg(ang, np.ones(len(ang)))
         mu_rad = np.radians(mu)
         if rs.show_mean:
-            ax.plot([mu_rad, mu_rad], [0.0, rline],
-                    color=rs.mean_color, lw=rs.mean_lw, ls=rs.mean_ls,
-                    solid_capstyle="round", zorder=5)
+            ax.plot(
+                [mu_rad, mu_rad],
+                [0.0, rline],
+                color=rs.mean_color,
+                lw=rs.mean_lw,
+                ls=rs.mean_ls,
+                solid_capstyle="round",
+                zorder=5,
+            )
             if rs.show_secondary:
                 sc = rs.secondary_color or rs.mean_color
-                sl = rs.secondary_lw if rs.secondary_lw is not None else rs.mean_lw
-                ax.plot([mu_rad + np.pi, mu_rad + np.pi], [0.0, rline],
-                        color=sc, lw=sl, ls=rs.secondary_ls,
-                        solid_capstyle="round", zorder=5)
+                sl = (
+                    rs.secondary_lw
+                    if rs.secondary_lw is not None
+                    else rs.mean_lw
+                )
+                ax.plot(
+                    [mu_rad + np.pi, mu_rad + np.pi],
+                    [0.0, rline],
+                    color=sc,
+                    lw=sl,
+                    ls=rs.secondary_ls,
+                    solid_capstyle="round",
+                    zorder=5,
+                )
         if rs.show_annotation:
             txt = f"{mu:.1f}°"
             if rs.show_n:
                 txt += f"\nn={len(ang)}"
             ax.text(
-                rs.annotation_pos[0], rs.annotation_pos[1], txt,
+                rs.annotation_pos[0],
+                rs.annotation_pos[1],
+                txt,
                 transform=ax.transAxes,
                 fontsize=rs.annotation_fontsize,
-                va="top", ha="left",
-                bbox=dict(boxstyle="round,pad=0.25",
-                          fc=rs.annotation_bg, ec=rs.annotation_ec, lw=0.7),
+                va="top",
+                ha="left",
+                bbox=dict(
+                    boxstyle="round,pad=0.25",
+                    fc=rs.annotation_bg,
+                    ec=rs.annotation_ec,
+                    lw=0.7,
+                ),
                 zorder=6,
             )
 
@@ -1460,12 +1767,17 @@ def _draw_rose_on_ax(
         fontsize=rs.annotation_fontsize + 1.5,
         fontweight="bold",
         pad=14,
-        bbox=dict(boxstyle="round,pad=0.3",
-                  facecolor=title_fc, edgecolor=title_ec, lw=0.8),
+        bbox=dict(
+            boxstyle="round,pad=0.3",
+            facecolor=title_fc,
+            edgecolor=title_ec,
+            lw=0.8,
+        ),
     )
 
 
 # ---- combined Strike-Analysis figure ------------------------------------ #
+
 
 def plot_strike_analysis(
     sites: Any,
@@ -1572,31 +1884,53 @@ def plot_strike_analysis(
     """
     rs = resolve_rose_style(style)
 
-    S = ensure_sites(sites, recursive=recursive, on_dup=on_dup,
-                     strict=strict, verbose=verbose)
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
 
     # ── 1. Z-strike angles (one per station) ────────────────────────────────
     if method == "pt":
         df_z = estimate_strike_phase_tensor(
-            S, band=band, recursive=False,
-            on_dup=on_dup, strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     elif method == "consensus":
         df_z = estimate_strike_consensus(
-            S, band=band, recursive=False,
-            on_dup=on_dup, strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
     else:
         df_z = estimate_strike_sweep(
-            S, band=band, recursive=False,
-            on_dup=on_dup, strict=False, verbose=verbose,
+            S,
+            band=band,
+            recursive=False,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
         )
-    ang_z = (df_z["ang"].to_numpy(float) % 180.0
-             if not df_z.empty else np.empty(0))
+    ang_z = (
+        df_z["ang"].to_numpy(float) % 180.0 if not df_z.empty else np.empty(0)
+    )
 
     # ── 2. PT azimuth angles (per frequency × station) ──────────────────────
     df_pt = build_phase_tensor_table(
-        S, recursive=False, on_dup=on_dup, strict=False, verbose=verbose,
+        S,
+        recursive=False,
+        on_dup=on_dup,
+        strict=False,
+        verbose=verbose,
     )
     if not df_pt.empty:
         if band is not None:
@@ -1622,8 +1956,8 @@ def plot_strike_analysis(
             mask_t &= (per_t >= lo_) & (per_t <= hi_)
         if not mask_t.any():
             continue
-        tx = np.real(t[mask_t, 0])   # Re(Tzx)
-        ty = np.real(t[mask_t, 1])   # Re(Tzy)
+        tx = np.real(t[mask_t, 0])  # Re(Tzx)
+        ty = np.real(t[mask_t, 1])  # Re(Tzy)
         az = np.degrees(np.arctan2(ty, tx)) % 180.0
         _tip_list.extend(az[np.isfinite(az)].tolist())
     ang_tipper = np.array(_tip_list, float)
@@ -1634,29 +1968,44 @@ def plot_strike_analysis(
     axes_given = _axes_list(axes, 3)
     if axes_given is None:
         fig, axes_arr = plt.subplots(
-            1, 3, figsize=figsize, subplot_kw=dict(polar=True),
+            1,
+            3,
+            figsize=figsize,
+            subplot_kw=dict(polar=True),
         )
     else:
         axes_arr = np.asarray(axes_given, dtype=object)
         fig = axes_arr[0].figure
 
     _draw_rose_on_ax(
-        axes_arr[0], ang_z, rs,
-        bins=bins, cmap_override=cmap_z,
+        axes_arr[0],
+        ang_z,
+        rs,
+        bins=bins,
+        cmap_override=cmap_z,
         title="Strike (Z)",
-        title_fc=title_fc_z, title_ec=title_ec,
+        title_fc=title_fc_z,
+        title_ec=title_ec,
     )
     _draw_rose_on_ax(
-        axes_arr[1], ang_pt, rs,
-        bins=bins, cmap_override=cmap_pt,
+        axes_arr[1],
+        ang_pt,
+        rs,
+        bins=bins,
+        cmap_override=cmap_pt,
         title="PT Azimuth",
-        title_fc=title_fc_pt, title_ec=title_ec,
+        title_fc=title_fc_pt,
+        title_ec=title_ec,
     )
     _draw_rose_on_ax(
-        axes_arr[2], ang_tipper, rs,
-        bins=bins, cmap_override=cmap_tipper,
+        axes_arr[2],
+        ang_tipper,
+        rs,
+        bins=bins,
+        cmap_override=cmap_tipper,
         title="Tipper Strike",
-        title_fc=title_fc_tipper, title_ec=title_ec,
+        title_fc=title_fc_tipper,
+        title_ec=title_ec,
     )
 
     if suptitle:

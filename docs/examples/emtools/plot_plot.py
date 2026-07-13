@@ -26,7 +26,6 @@ an "after processing" / "predicted" curve wherever one is needed.
 # grid. A handful of stations keeps the figure readable, the same
 # legend-size lesson from the ``inspect`` example.
 
-
 from _datasets import load_survey
 
 from pycsamt.emtools import (

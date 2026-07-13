@@ -7,15 +7,13 @@ pycsamt/log/_config.py
 Initialize and configure logging for pycsamt
 using the YAML config file `p.configlog.yml`.
 """
+
 import os
 
 from .logger import configure_logging
 
 
-def init_logging(
-    config_path: str = None,
-    use_default: bool = False
-) -> None:
+def init_logging(config_path: str = None, use_default: bool = False) -> None:
     """
     Initialize pycsamt logging configuration.
 
@@ -40,12 +38,9 @@ def init_logging(
         else:
             # bundled default
             pkg_dir = os.path.dirname(os.path.abspath(__file__))
-            config_path = os.path.join(pkg_dir, 'p.configlog.yml')
+            config_path = os.path.join(pkg_dir, "p.configlog.yml")
 
-    configure_logging(
-        config_path=config_path,
-        use_default=use_default
-    )
+    configure_logging(config_path=config_path, use_default=use_default)
 
 
 # Auto-configure on import

@@ -6,6 +6,7 @@ pycsamt.plot.utils
 Generic 2-D pseudosection plotter used by emtools functions
 (plot_sensitivity_depth_section, …).
 """
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ def plot2d(
     fig_dpi: int = 150,
     font_size: float = 7.0,
     ax: plt.Axes | None = None,
-    **_extra,          # absorb legacy BasePlot kwargs without error
+    **_extra,  # absorb legacy BasePlot kwargs without error
 ) -> plt.Axes:
     """Plot a 2-D pseudosection from a matrix.
 
@@ -95,8 +96,16 @@ def plot2d(
             y = np.log10(np.asarray(y, dtype=float))
 
     # Axis coordinates
-    y_vec = np.arange(n_rows, dtype=float) if y is None else np.asarray(y, dtype=float)
-    x_vec = (np.arange(n_cols) * float(distance)) if x is None else np.asarray(x, dtype=float)
+    y_vec = (
+        np.arange(n_rows, dtype=float)
+        if y is None
+        else np.asarray(y, dtype=float)
+    )
+    x_vec = (
+        (np.arange(n_cols) * float(distance))
+        if x is None
+        else np.asarray(x, dtype=float)
+    )
 
     # Station labels
     if stnlist is None:
@@ -126,15 +135,30 @@ def plot2d(
 
         if plot_contours:
             levels = mticker.MaxNLocator(nbins=15).tick_values(vmin, vmax)
-            norm = BoundaryNorm(levels, ncolors=plt.get_cmap(cmap).N, clip=True)
-            mappable = axe.pcolormesh(X, Y, np.flipud(ar), cmap=cmap, norm=norm,
-                                      shading="auto")
+            norm = BoundaryNorm(
+                levels, ncolors=plt.get_cmap(cmap).N, clip=True
+            )
+            mappable = axe.pcolormesh(
+                X, Y, np.flipud(ar), cmap=cmap, norm=norm, shading="auto"
+            )
             dx = dy = 0.05
-            axe.contourf(X + dx / 2, Y + dy / 2, np.flipud(ar),
-                         levels=levels, cmap=cmap)
+            axe.contourf(
+                X + dx / 2,
+                Y + dy / 2,
+                np.flipud(ar),
+                levels=levels,
+                cmap=cmap,
+            )
         else:
-            mappable = axe.pcolormesh(X, Y, np.flipud(ar), cmap=cmap,
-                                      vmin=vmin, vmax=vmax, shading="auto")
+            mappable = axe.pcolormesh(
+                X,
+                Y,
+                np.flipud(ar),
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax,
+                shading="auto",
+            )
 
     axe.set_xlim(x_vec.min(), x_vec.max())
     axe.set_ylim(y_vec.min(), y_vec.max())
@@ -154,15 +178,18 @@ def plot2d(
     _max_lbl = 20
     if n_cols > _max_lbl:
         _step = max(1, n_cols // _max_lbl)
-        _tick_x   = x_vec[::_step]
+        _tick_x = x_vec[::_step]
         _tick_lbl = [stnlist[i] for i in range(0, n_cols, _step)]
     else:
-        _tick_x   = x_vec
+        _tick_x = x_vec
         _tick_lbl = list(stnlist)
     axe2.set_xticks(_tick_x)
-    axe2.set_xticklabels(_tick_lbl,
-                         rotation=rotate_xlabel if rotate_xlabel else 90,
-                         fontsize=font_size, ha="left")
+    axe2.set_xticklabels(
+        _tick_lbl,
+        rotation=rotate_xlabel if rotate_xlabel else 90,
+        fontsize=font_size,
+        ha="left",
+    )
     axe2.tick_params(labelsize=font_size)
     if top_label:
         axe2.set_xlabel(top_label, fontsize=1.5 * font_size)

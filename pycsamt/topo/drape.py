@@ -32,6 +32,7 @@ import numpy as np
 
 try:
     from scipy.interpolate import interp1d as _scipy_interp1d
+
     _HAS_SCIPY = True
 except ImportError:
     _HAS_SCIPY = False
@@ -47,6 +48,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def interp_elev(
     chainage_km: np.ndarray,
@@ -76,8 +78,8 @@ def interp_elev(
         Interpolated elevation in **km** a.s.l.
     """
     chainage_km = np.asarray(chainage_km, dtype=float).ravel()
-    elev_km     = np.asarray(elev_km,     dtype=float).ravel()
-    x_query_km  = np.asarray(x_query_km,  dtype=float).ravel()
+    elev_km = np.asarray(elev_km, dtype=float).ravel()
+    x_query_km = np.asarray(x_query_km, dtype=float).ravel()
 
     if len(chainage_km) == 0:
         return np.zeros_like(x_query_km)
@@ -92,9 +94,9 @@ def interp_elev(
         return np.full_like(x_query_km, e[0] if len(e) else 0.0)
 
     if _HAS_SCIPY and method == "cubic":
-        fn = _scipy_interp1d(c, e, kind="cubic",
-                             bounds_error=False,
-                             fill_value=(e[0], e[-1]))
+        fn = _scipy_interp1d(
+            c, e, kind="cubic", bounds_error=False, fill_value=(e[0], e[-1])
+        )
         return fn(x_query_km)
 
     # numpy linear / nearest
@@ -160,10 +162,10 @@ def drape_section(
     where ``elev_nodes`` is the terrain interpolated to the x *node*
     positions (``nx+1`` values) from the cell-centre values.
     """
-    x_nodes          = np.asarray(x_nodes,          dtype=float)
-    z_nodes          = np.asarray(z_nodes,          dtype=float)
-    data             = np.asarray(data,             dtype=float)
-    elev_at_centres  = np.asarray(elev_at_centres,  dtype=float)
+    x_nodes = np.asarray(x_nodes, dtype=float)
+    z_nodes = np.asarray(z_nodes, dtype=float)
+    data = np.asarray(data, dtype=float)
+    elev_at_centres = np.asarray(elev_at_centres, dtype=float)
 
     nx = x_nodes.shape[0] - 1
     nz = z_nodes.shape[0] - 1
@@ -171,21 +173,30 @@ def drape_section(
     # Interpolate elevation from cell centres to node positions (nx+1)
     if nx > 0:
         x_centres = (x_nodes[:-1] + x_nodes[1:]) / 2.0
-        elev_nodes = np.interp(x_nodes, x_centres, elev_at_centres,
-                               left=elev_at_centres[0],
-                               right=elev_at_centres[-1])
+        elev_nodes = np.interp(
+            x_nodes,
+            x_centres,
+            elev_at_centres,
+            left=elev_at_centres[0],
+            right=elev_at_centres[-1],
+        )
     else:
-        elev_nodes = np.full(nx + 1, elev_at_centres[0] if len(elev_at_centres) else 0.0)
+        elev_nodes = np.full(
+            nx + 1, elev_at_centres[0] if len(elev_at_centres) else 0.0
+        )
 
     # Build 2-D draped z grid  (nz+1, nx+1)
     # Broadcasting: rows = depth nodes, cols = x nodes
-    z_draped = (elev_nodes[np.newaxis, :]                    # (1, nx+1)
-                - z_nodes[:, np.newaxis] * exaggeration)     # (nz+1, 1)
+    z_draped = (
+        elev_nodes[np.newaxis, :]  # (1, nx+1)
+        - z_nodes[:, np.newaxis] * exaggeration
+    )  # (nz+1, 1)
 
     data_out = data.copy()
     if clip_above_surface and nx > 0 and nz > 0:
-        data_out = mask_above_topo(x_nodes, z_nodes, data_out,
-                                   elev_at_centres, exaggeration)
+        data_out = mask_above_topo(
+            x_nodes, z_nodes, data_out, elev_at_centres, exaggeration
+        )
 
     return x_nodes, z_draped, data_out
 
@@ -228,15 +239,15 @@ def mask_above_topo(
     numpy.ndarray, shape (nz, nx)
         Data with cells above the terrain set to NaN.
     """
-    z_nodes         = np.asarray(z_nodes,          dtype=float)
-    elev_at_centres = np.asarray(elev_at_centres,  dtype=float)
-    data_out        = np.asarray(data,              dtype=float).copy()
+    z_nodes = np.asarray(z_nodes, dtype=float)
+    elev_at_centres = np.asarray(elev_at_centres, dtype=float)
+    data_out = np.asarray(data, dtype=float).copy()
 
     nz = z_nodes.shape[0] - 1
     nx = data_out.shape[1]
 
-    z_centres = (z_nodes[:-1] + z_nodes[1:]) / 2.0   # (nz,)
-    max_elev  = np.max(elev_at_centres) if len(elev_at_centres) else 0.0
+    z_centres = (z_nodes[:-1] + z_nodes[1:]) / 2.0  # (nz,)
+    max_elev = np.max(elev_at_centres) if len(elev_at_centres) else 0.0
 
     for j in range(nx):
         surf = elev_at_centres[j] if j < len(elev_at_centres) else 0.0

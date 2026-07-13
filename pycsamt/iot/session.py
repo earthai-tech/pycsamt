@@ -128,7 +128,8 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
     ) -> DeviceConfig:
         """Register a device, auto-creating its station when named."""
         cfg = (
-            device if isinstance(device, DeviceConfig)
+            device
+            if isinstance(device, DeviceConfig)
             else DeviceConfig.from_mapping(device)
         )
         self.devices[cfg.device_id] = cfg
@@ -153,7 +154,8 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
     ) -> StationConfig:
         """Register (or merge into) a station."""
         cfg = (
-            station if isinstance(station, StationConfig)
+            station
+            if isinstance(station, StationConfig)
             else StationConfig.from_mapping(station)
         )
         existing = self.stations.get(cfg.station_id)
@@ -169,8 +171,15 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         # Explicit geospatial/orientation values override an auto-created
         # placeholder created earlier from a device's ``station`` field.
         for attr in (
-            "lat", "lon", "elevation", "profile", "position_m",
-            "dipole_length_m", "ex_azimuth_deg", "ey_azimuth_deg", "operator",
+            "lat",
+            "lon",
+            "elevation",
+            "profile",
+            "position_m",
+            "dipole_length_m",
+            "ex_azimuth_deg",
+            "ey_azimuth_deg",
+            "operator",
         ):
             value = getattr(cfg, attr)
             if value is not None:
@@ -185,11 +194,14 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
     ) -> TelemetryPacket:
         """Append one telemetry packet, registering unknown devices."""
         pkt = (
-            packet if isinstance(packet, TelemetryPacket)
+            packet
+            if isinstance(packet, TelemetryPacket)
             else TelemetryPacket(**dict(packet))
         )
         if pkt.device_id not in self.devices:
-            self.devices[pkt.device_id] = DeviceConfig(device_id=pkt.device_id)
+            self.devices[pkt.device_id] = DeviceConfig(
+                device_id=pkt.device_id
+            )
         self.packets.append(pkt)
         # Register the station this telemetry belongs to so the session
         # inventory (``n_stations``) reflects everything that reported in.
@@ -264,21 +276,24 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
                 for channel in agg.channels:
                     if channel not in channels:
                         channels.append(channel)
-            stations_out.append(dict(
-                station_id=station_id,
-                coords=(station.coords if station else None),
-                profile=(station.profile if station else None),
-                position_m=(station.position_m if station else None),
-                channels=channels,
-                method=(agg.method if agg else None),
-                accepted_band_hz=(
-                    list(agg.accepted_band_hz)
-                    if agg and agg.accepted_band_hz else None
-                ),
-                acceptance_rate=(agg.acceptance_rate if agg else None),
-                n_packets=(agg.n_packets if agg else 0),
-                last_decision=(agg.last_decision if agg else None),
-            ))
+            stations_out.append(
+                dict(
+                    station_id=station_id,
+                    coords=(station.coords if station else None),
+                    profile=(station.profile if station else None),
+                    position_m=(station.position_m if station else None),
+                    channels=channels,
+                    method=(agg.method if agg else None),
+                    accepted_band_hz=(
+                        list(agg.accepted_band_hz)
+                        if agg and agg.accepted_band_hz
+                        else None
+                    ),
+                    acceptance_rate=(agg.acceptance_rate if agg else None),
+                    n_packets=(agg.n_packets if agg else 0),
+                    last_decision=(agg.last_decision if agg else None),
+                )
+            )
         return dict(
             survey_id=self.survey_id,
             method=self.method,
@@ -369,7 +384,8 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
                 sample_rate_hz=(agg.sample_rate_hz if agg else None),
                 battery_status=(
                     f"{agg.battery_v:.2f} V"
-                    if agg and agg.battery_v is not None else None
+                    if agg and agg.battery_v is not None
+                    else None
                 ),
                 accepted_band_hz=(agg.accepted_band_hz if agg else None),
                 qc_decisions=(list(agg.qc_decisions) if agg else []),
@@ -487,10 +503,14 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             sid = self._resolve_station_id(packet)
             if sid is None:
                 continue
-            agg = aggregates.setdefault(sid, _StationAggregate(station_id=sid))
+            agg = aggregates.setdefault(
+                sid, _StationAggregate(station_id=sid)
+            )
             agg.n_packets += 1
             ts = float(packet.timestamp)
-            agg.first_ts = ts if agg.first_ts is None else min(agg.first_ts, ts)
+            agg.first_ts = (
+                ts if agg.first_ts is None else min(agg.first_ts, ts)
+            )
             agg.last_ts = ts if agg.last_ts is None else max(agg.last_ts, ts)
             parsed = parse_payload(packet.kind, packet.payload)
             self._fold_payload(agg, packet.kind, parsed)
@@ -532,7 +552,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             agg.qc_decisions.append(
                 log_qc_decision(
                     station=agg.station_id,
-                    decision=(decision or ("accept" if accepted else "reject")),
+                    decision=(
+                        decision or ("accept" if accepted else "reject")
+                    ),
                     reasons=getattr(parsed, "reasons", None),
                     operator=self.operator,
                 )

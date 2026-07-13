@@ -4,6 +4,7 @@
 """
 pycsamt.decorators
 """
+
 from __future__ import annotations
 
 import functools
@@ -26,22 +27,22 @@ logger = get_logger(__name__)
 
 
 __all__ = [
-    'noop',
-    'Deprecated',
-    'GdalDataCheck',
-    'ReplaceBy',
-    'isdf',
-    'check_empty',
-    'has_fit',
+    "noop",
+    "Deprecated",
+    "GdalDataCheck",
+    "ReplaceBy",
+    "isdf",
+    "check_empty",
+    "has_fit",
 ]
 
 _T = TypeVar("_T", bound=type)
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def has_fit(
-        error: Literal["raise", "warn", "ignore"] = "raise"
-    ) -> Callable[[_T], _T]:
+    error: Literal["raise", "warn", "ignore"] = "raise",
+) -> Callable[[_T], _T]:
     """
     Ensure a class exposes a ``fit`` method.
 
@@ -101,7 +102,8 @@ def has_fit(
 
     … raises ``AttributeError: Empty defines neither 'fit' nor 'read'``.
     """
-    def _decorator(cls: _T) -> _T:                     # type: ignore[valid-type]
+
+    def _decorator(cls: _T) -> _T:  # type: ignore[valid-type]
         # Prevent double-patching
         if getattr(cls, "_has_fit_alias", False):
             return cls
@@ -115,9 +117,9 @@ def has_fit(
             # Build a thin wrapper re-exporting .read as .fit
             @functools.wraps(read_fn)
             def _fit(self, *a: Any, **k: Any):
-                return read_fn(self, *a, **k)          # type: ignore[arg-type]
+                return read_fn(self, *a, **k)  # type: ignore[arg-type]
 
-            cls.fit = _fit                             # type: ignore[attr-defined]
+            cls.fit = _fit  # type: ignore[attr-defined]
             cls._has_fit_alias = True
             return cls
 
@@ -132,12 +134,11 @@ def has_fit(
         def _noop(self, *a: Any, **k: Any) -> None:
             return None
 
-        cls.fit = _noop                                # type: ignore[attr-defined]
+        cls.fit = _noop  # type: ignore[attr-defined]
         cls._has_fit_alias = True
         return cls
 
     return _decorator
-
 
 
 def noop(reason: str | None = None) -> Callable[[F], F]:
@@ -149,8 +150,10 @@ def noop(reason: str | None = None) -> Callable[[F], F]:
     reason : str, optional
         Placeholder message for skipping or future implementation.
     """
+
     def decorator(obj: F) -> F:
         return obj
+
     return decorator
 
 
@@ -164,14 +167,17 @@ class Deprecated:
     reason : str
         Explanation for deprecation and guidance for replacement.
     """
+
     def __init__(self, reason: str) -> None:
         if not isinstance(reason, str) or not reason.strip():
-            raise ValueError("A non-empty deprecation reason must be provided.")
+            raise ValueError(
+                "A non-empty deprecation reason must be provided."
+            )
         self.reason = reason
 
     def __call__(self, obj: F) -> F:
         name = obj.__name__
-        original_doc = obj.__doc__ or ''
+        original_doc = obj.__doc__ or ""
         obj.__doc__ = f"[DEPRECATED] {self.reason}\n\n{original_doc}"
 
         @functools.wraps(obj)
@@ -179,7 +185,7 @@ class Deprecated:
             warnings.warn(
                 f"{name} is deprecated: {self.reason}",
                 category=DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return obj(*args, **kwargs)
 
@@ -198,6 +204,7 @@ class GdalDataCheck:
     raise_on_missing : bool
         If True, raises ImportError when GDAL data cannot be located.
     """
+
     _checked: bool = False
     _available: bool = False
 
@@ -216,24 +223,25 @@ class GdalDataCheck:
                 if self.raise_on_missing:
                     raise ImportError(msg)
             return func(*args, **kwargs)
+
         return wrapper  # type: ignore
 
     @staticmethod
     def _locate_gdal_data() -> bool:
-        path = os.environ.get('GDAL_DATA')
+        path = os.environ.get("GDAL_DATA")
         if path and os.path.isdir(path):
             logger.info(f"GDAL_DATA found: {path}")
             return True
         try:
             proc = subprocess.run(
-                ['gdal-config', '--datadir'],
+                ["gdal-config", "--datadir"],
                 capture_output=True,
                 check=True,
-                text=True
+                text=True,
             )
             path = proc.stdout.strip()
             if os.path.isdir(path):
-                os.environ['GDAL_DATA'] = path
+                os.environ["GDAL_DATA"] = path
                 logger.info(f"Set GDAL_DATA to: {path}")
                 return True
         except Exception:
@@ -255,10 +263,9 @@ class ReplaceBy:
         def old_func(...):
             ...
     """
+
     def __init__(
-        self,
-        new_obj: Callable[..., Any] | type,
-        reason: str | None = None
+        self, new_obj: Callable[..., Any] | type, reason: str | None = None
     ) -> None:
         self.new_obj = new_obj
         self.reason = reason or f"Use {new_obj.__name__} instead."
@@ -272,7 +279,7 @@ class ReplaceBy:
             warnings.warn(
                 f"{old_name} is replaced by {new_name}: {self.reason}",
                 category=DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return self.new_obj(*args, **kwargs)
 
@@ -288,6 +295,7 @@ def isdf(func):
     Function is designed to be flexible and efficient, suitable for
     both functions and methods.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         # Get the signature of the function
@@ -303,7 +311,7 @@ def isdf(func):
         # Determine if we're decorating a method (with 'self' or 'cls')
         is_method = False
         start_idx = 0
-        if param_list[0].name in ('self', 'cls'):
+        if param_list[0].name in ("self", "cls"):
             is_method = True
             start_idx = 1  # Skip 'self' or 'cls'
 
@@ -315,13 +323,13 @@ def isdf(func):
         # Prefer 'data' if it's among the parameters
         data_param_name = None
         for _idx, param in enumerate(param_list[start_idx:], start=start_idx):
-            if param.name == 'data':
-                data_param_name = 'data'
+            if param.name == "data":
+                data_param_name = "data"
                 break
         else:
             # If 'data' is not a parameter, use the first positional
             # parameter after 'self'/'cls'
-            if ( len(param_list) > start_idx) or is_method:
+            if (len(param_list) > start_idx) or is_method:
                 data_param_name = param_list[start_idx].name
             else:
                 # No parameters left to consider
@@ -330,7 +338,8 @@ def isdf(func):
         # Get 'data' argument from bound arguments
         data = bound_args.arguments.get(data_param_name, None)
         columns = bound_args.arguments.get(
-            'columns', kwargs.get('columns', None))
+            "columns", kwargs.get("columns", None)
+        )
         if isinstance(columns, str):
             columns = [columns]
 
@@ -361,7 +370,7 @@ def check_empty(
     params=None,
     allow_none=True,
     none_as_empty=False,
-    error='raise'
+    error="raise",
 ):
     r"""
     Validate that certain inputs are non-empty or valid
@@ -488,9 +497,9 @@ def check_empty(
             f"Parameter '{param_name}' is considered empty. Please "
             "provide a valid non-empty input."
         )
-        if error == 'raise':
+        if error == "raise":
             raise ValueError(msg)
-        elif error == 'warn':
+        elif error == "warn":
             warnings.warn(msg, UserWarning, stacklevel=2)
         # 'ignore' => do nothing
 
@@ -520,6 +529,7 @@ def check_empty(
         Decorator for the scenario: @check_empty(params=['...'])
         Only checks the parameters listed in <params>.
         """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # Use signature to map positional and keyword
@@ -535,6 +545,7 @@ def check_empty(
                     if p in bound.arguments:
                         _check_val(bound.arguments[p], p)
             return func(*args, **kwargs)
+
         return wrapper
 
     def decorator_no_args(func):
@@ -543,6 +554,7 @@ def check_empty(
         Only checks the first argument (positional or
         first keyword).
         """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # If there's at least one positional arg, check it;
@@ -554,6 +566,7 @@ def check_empty(
                 first_kwarg = next(iter(kwargs))
                 _check_val(kwargs[first_kwarg], first_kwarg)
             return func(*args, **kwargs)
+
         return wrapper
 
     # Distinguish between the two usage modes:
@@ -567,8 +580,8 @@ def check_empty(
 
 
 def ensure_fit(
-    error: Literal["raise", "warn", "ignore"] = "raise"
-    ) -> Callable[[_T], _T]:
+    error: Literal["raise", "warn", "ignore"] = "raise",
+) -> Callable[[_T], _T]:
     """
     Class decorator that guarantees an alias **fit → read** when the
     target class does **not** already define *fit*.
@@ -596,17 +609,20 @@ def ensure_fit(
         def read(self, src, **kw): ...
     ```
     """
-    def _decorator(cls: _T) -> _T:                         # type: ignore[valid-type]
+
+    def _decorator(cls: _T) -> _T:  # type: ignore[valid-type]
         # nothing to do if the class already exposes `.fit`
         if hasattr(cls, "fit"):
             return cls
 
         # fallback to `.read`
         if hasattr(cls, "read"):
+
             @functools.wraps(cls.read)
-            def _fit(self, *args, **kwargs):               # type: ignore[no-self-use]
-                return self.read(*args, **kwargs)          # pyright: ignore[reportGeneralTypeIssues]
-            cls.fit = _fit                                 # type: ignore[attr-defined]
+            def _fit(self, *args, **kwargs):  # type: ignore[no-self-use]
+                return self.read(*args, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+
+            cls.fit = _fit  # type: ignore[attr-defined]
             return cls
 
         # no suitable method found — decide how to react
@@ -615,9 +631,11 @@ def ensure_fit(
             raise AttributeError(msg)
         if error == "warn":
             warnings.warn(msg, RuntimeWarning, stacklevel=2)
-        def _noop(self, *a, **k):                          # type: ignore[no-self-use]
+
+        def _noop(self, *a, **k):  # type: ignore[no-self-use]
             return None
-        cls.fit = _noop                                    # type: ignore[attr-defined]
+
+        cls.fit = _noop  # type: ignore[attr-defined]
         return cls
 
     return _decorator

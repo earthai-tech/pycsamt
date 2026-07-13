@@ -22,6 +22,7 @@ The Swift (1967) skew S = |Z_xx − Z_yy| / |Z_xy + Z_yx| and the
 corresponding rotation angle provide additional dimensionality and
 strike information (non-zero for anisotropic / 3-D structures).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -49,19 +50,27 @@ __all__ = [
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-ANISO_RATIO_THRESH: float = 0.1    # |log10(Λ)| above which flag is raised
-SWIFT_SKEW_THRESH:  float = 0.2    # Swift skew above which 3-D is suspected
+ANISO_RATIO_THRESH: float = 0.1  # |log10(Λ)| above which flag is raised
+SWIFT_SKEW_THRESH: float = 0.2  # Swift skew above which 3-D is suspected
 
 _DETAIL_COLS = [
-    "station", "freq_hz", "period_s",
-    "rho_xy_ohmm", "rho_yx_ohmm",
-    "phi_xy_deg",  "phi_yx_deg",
-    "ratio_log10", "phase_diff_deg",
-    "swift_skew",  "strike_deg",
+    "station",
+    "freq_hz",
+    "period_s",
+    "rho_xy_ohmm",
+    "rho_yx_ohmm",
+    "phi_xy_deg",
+    "phi_yx_deg",
+    "ratio_log10",
+    "phase_diff_deg",
+    "swift_skew",
+    "strike_deg",
 ]
 _TABLE_COLS = [
-    "station", "n_freq",
-    "mean_ratio_log10", "max_abs_ratio_log10",
+    "station",
+    "n_freq",
+    "mean_ratio_log10",
+    "max_abs_ratio_log10",
     "mean_phase_diff_deg",
     "mean_swift_skew",
     "median_strike_deg",
@@ -72,6 +81,7 @@ _TABLE_COLS = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _unwrap(ed: Any) -> Any:
     edi = getattr(ed, "edi", None)
@@ -113,10 +123,10 @@ def _swift_skew(z_block: np.ndarray) -> np.ndarray:
     S = 0 for a 1-D / 2-D isotropic earth; S > 0 indicates 3-D structure
     or anisotropy.
     """
-    Zxx  = z_block[:, 0, 0]
-    Zxy  = z_block[:, 0, 1]
-    Zyx  = z_block[:, 1, 0]
-    Zyy  = z_block[:, 1, 1]
+    Zxx = z_block[:, 0, 0]
+    Zxy = z_block[:, 0, 1]
+    Zyx = z_block[:, 1, 0]
+    Zyy = z_block[:, 1, 1]
     denom = np.abs(Zxy + Zyx)
     with np.errstate(divide="ignore", invalid="ignore"):
         return np.where(denom < 1e-30, 0.0, np.abs(Zxx - Zyy) / denom)
@@ -135,10 +145,10 @@ def _swift_strike(z_block: np.ndarray) -> np.ndarray:
     Zyx = z_block[:, 1, 0]
     Zyy = z_block[:, 1, 1]
 
-    alpha = Zxy + Zyx       # sum of off-diagonal
-    delta = Zxx - Zyy       # difference of diagonal
+    alpha = Zxy + Zyx  # sum of off-diagonal
+    delta = Zxx - Zyy  # difference of diagonal
 
-    num   = 2.0 * np.real(alpha * np.conj(delta))
+    num = 2.0 * np.real(alpha * np.conj(delta))
     denom = np.abs(alpha) ** 2 - np.abs(delta) ** 2
 
     theta = 0.5 * np.arctan2(num, denom)
@@ -148,6 +158,7 @@ def _swift_strike(z_block: np.ndarray) -> np.ndarray:
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: sites-based
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def analyze_anisotropy(
     sites: Any,
@@ -209,11 +220,11 @@ def analyze_anisotropy(
             continue
 
         rho_xy, rho_yx, phi_xy, phi_yx = _rho_and_phase(z_block, freqs)
-        skew    = _swift_skew(z_block)
-        strike  = _swift_strike(z_block)
+        skew = _swift_skew(z_block)
+        strike = _swift_strike(z_block)
 
         for j in range(freqs.size):
-            f   = float(freqs[j])
+            f = float(freqs[j])
             rxy = float(rho_xy[j])
             ryx = float(rho_yx[j])
 
@@ -222,19 +233,21 @@ def analyze_anisotropy(
             else:
                 ratio = np.nan
 
-            rows.append({
-                "station":       station,
-                "freq_hz":       f,
-                "period_s":      1.0 / f if f > 0 else np.nan,
-                "rho_xy_ohmm":   rxy,
-                "rho_yx_ohmm":   ryx,
-                "phi_xy_deg":    float(phi_xy[j]),
-                "phi_yx_deg":    float(phi_yx[j]),
-                "ratio_log10":   ratio,
-                "phase_diff_deg":float(phi_xy[j] - phi_yx[j]),
-                "swift_skew":    float(skew[j]),
-                "strike_deg":    float(strike[j]),
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": f,
+                    "period_s": 1.0 / f if f > 0 else np.nan,
+                    "rho_xy_ohmm": rxy,
+                    "rho_yx_ohmm": ryx,
+                    "phi_xy_deg": float(phi_xy[j]),
+                    "phi_yx_deg": float(phi_yx[j]),
+                    "ratio_log10": ratio,
+                    "phase_diff_deg": float(phi_xy[j] - phi_yx[j]),
+                    "swift_skew": float(skew[j]),
+                    "strike_deg": float(strike[j]),
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_DETAIL_COLS)
@@ -289,32 +302,34 @@ def anisotropy_table(
 
     rows: list[dict] = []
     for station, grp in detail.groupby("station", sort=False):
-        ratio  = grp["ratio_log10"].dropna()
-        pdiff  = grp["phase_diff_deg"].dropna()
-        skew   = grp["swift_skew"].dropna()
+        ratio = grp["ratio_log10"].dropna()
+        pdiff = grp["phase_diff_deg"].dropna()
+        skew = grp["swift_skew"].dropna()
         strike = grp["strike_deg"].dropna()
 
-        mean_ratio   = float(ratio.mean())   if len(ratio)  else np.nan
-        max_abs_r    = float(ratio.abs().max()) if len(ratio) else np.nan
-        mean_pdiff   = float(pdiff.mean())   if len(pdiff)  else np.nan
-        mean_skew    = float(skew.mean())    if len(skew)   else np.nan
-        med_strike   = float(strike.median()) if len(strike) else np.nan
+        mean_ratio = float(ratio.mean()) if len(ratio) else np.nan
+        max_abs_r = float(ratio.abs().max()) if len(ratio) else np.nan
+        mean_pdiff = float(pdiff.mean()) if len(pdiff) else np.nan
+        mean_skew = float(skew.mean()) if len(skew) else np.nan
+        med_strike = float(strike.median()) if len(strike) else np.nan
 
         flag = bool(
             (np.isfinite(mean_ratio) and abs(mean_ratio) > ratio_threshold)
-            or (np.isfinite(mean_skew)  and mean_skew > skew_threshold)
+            or (np.isfinite(mean_skew) and mean_skew > skew_threshold)
         )
 
-        rows.append({
-            "station":            station,
-            "n_freq":             len(grp),
-            "mean_ratio_log10":   mean_ratio,
-            "max_abs_ratio_log10":max_abs_r,
-            "mean_phase_diff_deg":mean_pdiff,
-            "mean_swift_skew":    mean_skew,
-            "median_strike_deg":  med_strike,
-            "anisotropy_flag":    flag,
-        })
+        rows.append(
+            {
+                "station": station,
+                "n_freq": len(grp),
+                "mean_ratio_log10": mean_ratio,
+                "max_abs_ratio_log10": max_abs_r,
+                "mean_phase_diff_deg": mean_pdiff,
+                "mean_swift_skew": mean_skew,
+                "median_strike_deg": med_strike,
+                "anisotropy_flag": flag,
+            }
+        )
 
     return pd.DataFrame(rows, columns=_TABLE_COLS)
 
@@ -385,9 +400,9 @@ def plot_anisotropy(
         return ax
 
     stations = list(dict.fromkeys(df["station"]))
-    s_idx    = {s: k for k, s in enumerate(stations)}
+    s_idx = {s: k for k, s in enumerate(stations)}
     freqs_all = np.sort(df["freq_hz"].unique())
-    f_idx     = {f: k for k, f in enumerate(freqs_all)}
+    f_idx = {f: k for k, f in enumerate(freqs_all)}
 
     grid = np.full((len(freqs_all), len(stations)), np.nan)
     for _, row in df.iterrows():
@@ -402,7 +417,7 @@ def plot_anisotropy(
         y_vals = y_vals[order]
         grid = grid[order]
     x_vals = np.arange(len(stations))
-    X, Y   = np.meshgrid(x_vals, y_vals)
+    X, Y = np.meshgrid(x_vals, y_vals)
 
     valid = grid[np.isfinite(grid)]
     if len(valid) == 0:
@@ -413,14 +428,21 @@ def plot_anisotropy(
     vmin = -vmax if metric == "ratio_log10" else valid.min()
 
     norm = Normalize(vmin=vmin, vmax=vmax)
-    pcm  = ax.pcolormesh(X, Y, grid, cmap=cmap, norm=norm, shading="nearest")
-    cb   = plt.colorbar(pcm, ax=ax)
+    pcm = ax.pcolormesh(X, Y, grid, cmap=cmap, norm=norm, shading="nearest")
+    cb = plt.colorbar(pcm, ax=ax)
     cb.set_label(_METRIC_LABELS.get(metric, metric))
 
     if contour_zero and metric == "ratio_log10" and np.isfinite(grid).any():
         if grid.shape[0] >= 2 and grid.shape[1] >= 2:
-            ax.contour(X, Y, grid, levels=[0.0],
-                       colors="white", linewidths=1.2, linestyles="--")
+            ax.contour(
+                X,
+                Y,
+                grid,
+                levels=[0.0],
+                colors="white",
+                linewidths=1.2,
+                linestyles="--",
+            )
 
     PYCSAMT_STATION_RENDERING.apply(
         ax,
@@ -438,13 +460,15 @@ def plot_anisotropy(
     else:
         ax.set_ylabel("Frequency (Hz)")
 
-    ax.set_title(f"Anisotropy: {_METRIC_LABELS.get(metric, metric)} (wang2017)")
+    ax.set_title(
+        f"Anisotropy: {_METRIC_LABELS.get(metric, metric)} (wang2017)"
+    )
     return ax
 
 
 _METRIC_LABELS: dict = {
-    "ratio_log10":    "log₁₀(ρ_xy/ρ_yx)",
-    "swift_skew":     "Swift skew S",
+    "ratio_log10": "log₁₀(ρ_xy/ρ_yx)",
+    "swift_skew": "Swift skew S",
     "phase_diff_deg": "Δφ = φ_xy − φ_yx (°)",
-    "strike_deg":     "Strike angle θ (°)",
+    "strike_deg": "Strike angle θ (°)",
 }

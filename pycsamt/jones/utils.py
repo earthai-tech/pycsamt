@@ -7,6 +7,7 @@ J files. It does **not** assemble site objects; it only handles
 normalization, tokenization, and row conversion with robust error
 messages.
 """
+
 from __future__ import annotations
 
 import io
@@ -38,11 +39,20 @@ from .config import (
 )
 
 __all__ = [
-    "JParseError", "DataType", "ParsedRow",
+    "JParseError",
+    "DataType",
+    "ParsedRow",
     "iter_lines",
-    "is_comment", "is_blank", "parse_info", "parse_station",
-    "parse_datatype_units", "parse_npoints", "parse_row",
-    "strip_nondata", "iter_info", "iter_rows",
+    "is_comment",
+    "is_blank",
+    "parse_info",
+    "parse_station",
+    "parse_datatype_units",
+    "parse_npoints",
+    "parse_row",
+    "strip_nondata",
+    "iter_info",
+    "iter_rows",
 ]
 
 
@@ -93,9 +103,12 @@ class ParsedRow:
     flags: Mapping[str, bool]
 
 
-def iter_lines(obj: io.TextIOBase | str | Path | Sequence[str], *,
-               encoding: str = ENCODING_DEFAULT,
-               keepends: bool = False) -> Iterator[str]:
+def iter_lines(
+    obj: io.TextIOBase | str | Path | Sequence[str],
+    *,
+    encoding: str = ENCODING_DEFAULT,
+    keepends: bool = False,
+) -> Iterator[str]:
     """Yield lines from a path, file‑like, or a sequence of strings.
 
     Parameters
@@ -126,7 +139,6 @@ def iter_lines(obj: io.TextIOBase | str | Path | Sequence[str], *,
     # Assume an iterable of strings
     for ln in obj:  # type: ignore[assignment]
         yield ln if keepends else str(ln).rstrip("\r\n")
-
 
 
 def is_comment(s: str) -> bool:
@@ -184,8 +196,9 @@ def parse_datatype_units(line: str, *, lineno: int | None = None) -> DataType:
     if comp in TE_TM_TO_TENSOR:
         tensor_hint = TE_TM_TO_TENSOR[comp]
 
-    return DataType(kind=kind, comp=comp, units=units,
-                    tensor_hint=tensor_hint)
+    return DataType(
+        kind=kind, comp=comp, units=units, tensor_hint=tensor_hint
+    )
 
 
 def parse_npoints(line: str, *, lineno: int | None = None) -> int:
@@ -196,7 +209,9 @@ def parse_npoints(line: str, *, lineno: int | None = None) -> int:
     return int(m.group("n"))
 
 
-def parse_row(kind: str, line: str, *, lineno: int | None = None) -> ParsedRow:
+def parse_row(
+    kind: str, line: str, *, lineno: int | None = None
+) -> ParsedRow:
     """Parse a single data row for ``kind``.
 
     Handles R/S (rho‑phi) and complex TF kinds (Z/Q/C/T). Returns a
@@ -208,31 +223,40 @@ def parse_row(kind: str, line: str, *, lineno: int | None = None) -> ParsedRow:
         m = RE_ROW_R.match(line)
         if not m:
             raise JParseError(_fmt_err("Malformed R/S row", lineno, line))
-        gd = {name: _to_float(m.group(name), name, lineno)
-              for name in ("p", "rho", "pha", "rhomax", "rhomin",
-                           "phamax", "phamin", "wrho", "wpha")}
+        gd = {
+            name: _to_float(m.group(name), name, lineno)
+            for name in (
+                "p",
+                "rho",
+                "pha",
+                "rhomax",
+                "rhomin",
+                "phamax",
+                "phamin",
+                "wrho",
+                "wpha",
+            )
+        }
         period, freq, stored_as_freq = _normalize_period(gd.pop("p"))
         flags = {
             "stored_as_freq": stored_as_freq,
             "rejected": (gd["rho"] < 0.0) or (gd["wrho"] < 0.0),
         }
-        return ParsedRow(period=period, freq=freq,
-                         values=gd, flags=flags)
+        return ParsedRow(period=period, freq=freq, values=gd, flags=flags)
 
     if k in KIND_COMPLEX_TF:
         m = RE_ROW_TF.match(line)
         if not m:
             raise JParseError(_fmt_err("Malformed TF row", lineno, line))
-        gd = {name: _to_float(m.group(name), name, lineno)
-              for name in ("p", "real", "imag", "error", "weight")}
+        gd = {
+            name: _to_float(m.group(name), name, lineno)
+            for name in ("p", "real", "imag", "error", "weight")
+        }
         period, freq, stored_as_freq = _normalize_period(gd.pop("p"))
         flags = {"stored_as_freq": stored_as_freq}
-        return ParsedRow(period=period, freq=freq,
-                         values=gd, flags=flags)
+        return ParsedRow(period=period, freq=freq, values=gd, flags=flags)
 
-    raise JParseError(
-        _fmt_err(f"Unsupported kind '{kind}'", lineno, line)
-    )
+    raise JParseError(_fmt_err(f"Unsupported kind '{kind}'", lineno, line))
 
 
 def _normalize_units(token: str) -> str:
@@ -268,8 +292,9 @@ def _to_float(s: str, name: str, lineno: int | None) -> float:
     try:
         return float(s)
     except Exception as exc:  # noqa: BLE001
-        raise JParseError(_fmt_err(f"Bad float for '{name}'",
-                                   lineno, s)) from exc
+        raise JParseError(
+            _fmt_err(f"Bad float for '{name}'", lineno, s)
+        ) from exc
 
 
 def _fmt_err(msg: str, lineno: int | None, frag: str | None = None) -> str:
@@ -323,4 +348,3 @@ def iter_rows(kind: str, lines: Iterable[str]) -> Iterator[ParsedRow]:
         if is_blank(ln) or is_comment(ln):
             continue
         yield parse_row(kind, ln, lineno=i)
-

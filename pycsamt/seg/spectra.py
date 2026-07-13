@@ -35,6 +35,7 @@ __all__ = ["SpectraSECT", "SpectraIO", "SpectraMixin", "Spectra"]
 
 _EMPTY = 1.0e32
 
+
 class SpectraSECT(EDIComponentBase):
     r"""
     Minimal container for the ``>=SPECTRASECT`` header.
@@ -137,7 +138,7 @@ class SpectraSECT(EDIComponentBase):
         "maxblks",
     ]
 
-    def __init__(self, *args: Any, verbose:int=0, logger=None, **kws: Any):
+    def __init__(self, *args: Any, verbose: int = 0, logger=None, **kws: Any):
         super().__init__(verbose=verbose, logger=logger)
         self.sectid: str | None = None
         self.nchan: int | None = None
@@ -224,17 +225,12 @@ class SpectraSECT(EDIComponentBase):
             val = values.get(key, None)
             if val in (None, "", "None"):
                 continue
-            out.append(
-                f"  {key.upper()}={str(val).upper()}\n"
-            )
+            out.append(f"  {key.upper()}={str(val).upper()}\n")
         if self.meas_ids:
-            out.append(
-                f"    // {len(self.meas_ids)}\n"
-            )
+            out.append(f"    // {len(self.meas_ids)}\n")
             for mid in self.meas_ids:
                 out.append(f"     {str(mid)}\n")
         return out
-
 
     @staticmethod
     def _collect_id_to_chtype(lines: list[str]) -> dict[str, str]:
@@ -272,9 +268,7 @@ class _SpectraBlock(EDIComponentBase):
     """
 
     def __init__(
-        self, *args: Any,
-        verbose: int | bool =0 ,
-        logger=None, **kws: Any
+        self, *args: Any, verbose: int | bool = 0, logger=None, **kws: Any
     ):
         super().__init__(verbose=verbose, logger=logger)
         self.freq: float | None = None
@@ -392,9 +386,7 @@ class SpectraIO(EDIComponentBase):
     """
 
     def __init__(
-        self, *args: Any,
-        verbose: int | bool =0 ,
-        logger=None, **kws: Any
+        self, *args: Any, verbose: int | bool = 0, logger=None, **kws: Any
     ):
         super().__init__(verbose=verbose, logger=logger)
         self.blocks: list[_SpectraBlock] = []
@@ -450,7 +442,6 @@ class SpectraIO(EDIComponentBase):
             i = next_i
 
         return inst
-
 
     @staticmethod
     def _parse_block(
@@ -511,7 +502,6 @@ class SpectraIO(EDIComponentBase):
 
         return blk, j
 
-
     def write(
         self,
         per_line: int | None = None,
@@ -527,9 +517,7 @@ class SpectraIO(EDIComponentBase):
             # keep stable order in output
             for key in ("freq", "rotspec", "bw", "avgt"):
                 if key in hd and hd[key] is not None:
-                    head.append(
-                        f"{key.upper()}={hd[key]}"
-                    )
+                    head.append(f"{key.upper()}={hd[key]}")
             # include any extra options
             for k, v in sorted(blk.options.items()):
                 head.append(f"{k.upper()}={str(v).upper()}")
@@ -548,15 +536,11 @@ class SpectraIO(EDIComponentBase):
                 line_vals.append(ffmt.format(v))
                 cnt += 1
                 if cnt == kpl:
-                    out.append(
-                        "  " + " ".join(line_vals) + "\n"
-                    )
+                    out.append("  " + " ".join(line_vals) + "\n")
                     line_vals = []
                     cnt = 0
             if line_vals:
-                out.append(
-                    "  " + " ".join(line_vals) + "\n"
-                )
+                out.append("  " + " ".join(line_vals) + "\n")
 
         return out
 
@@ -568,6 +552,7 @@ class SpectraIO(EDIComponentBase):
 
     def __getitem__(self, idx):
         return self.blocks[idx]
+
 
 class SpectraMixin:
     r"""
@@ -623,13 +608,12 @@ class SpectraMixin:
         return SpectraSECT.from_file(edi_fn)
 
     @classmethod
-    def read_blocks(
-        cls, edi_fn: str
-    ) -> SpectraIO:
+    def read_blocks(cls, edi_fn: str) -> SpectraIO:
         sect = SpectraSECT.from_file(edi_fn)
         return SpectraIO.from_file(
             edi_fn, start_line=sect.start_data_lines_num
         )
+
 
 class Spectra(BaseEM):
     r"""
@@ -725,6 +709,7 @@ class Spectra(BaseEM):
            Magnetotelluric Method: Theory and Practice*.
            Cambridge Univ. Press.
     """
+
     # Holds: freq(nf,), S(nf,nc,nc)
     # Hermitian, per-block meta.
     def __init__(
@@ -798,7 +783,6 @@ class Spectra(BaseEM):
                 M[i, j] = float(z.imag)
         return M.ravel()
 
-
     @classmethod
     def from_io(
         cls,
@@ -830,8 +814,8 @@ class Spectra(BaseEM):
         # 3) try block hint or values length of the first block
         if (not nc or nc <= 0) and getattr(io, "blocks", None):
             first = next(
-                (b for b in io.blocks if getattr(
-                    b, "values", None)), None)
+                (b for b in io.blocks if getattr(b, "values", None)), None
+            )
             if first is not None:
                 hint = getattr(first, "nvals_hint", None)
                 if isinstance(hint, (int, float)) and hint > 0:
@@ -839,8 +823,7 @@ class Spectra(BaseEM):
                     if root * root == int(hint):
                         nc = root
                 if not nc or nc <= 0:
-                    nv = len(np.asarray(
-                        getattr(first, "values", []), float))
+                    nv = len(np.asarray(getattr(first, "values", []), float))
                     if nv > 0:
                         root = int(round(np.sqrt(nv)))
                         if root > 0 and root * root <= nv:
@@ -848,7 +831,6 @@ class Spectra(BaseEM):
 
         if not nc or nc <= 0:
             raise EdIDataError("bad SPECTRA header: cannot infer nchan")
-
 
         if not hasattr(io, "blocks") or not io.blocks:
             raise EdIDataError("no >SPECTRA blocks")
@@ -953,9 +935,7 @@ class Spectra(BaseEM):
             if f0 is None:
                 continue
 
-            vals = np.asarray(
-                getattr(blk, "values", []), float
-            )
+            vals = np.asarray(getattr(blk, "values", []), float)
             H = cls._unpack(vals, nc, empty=empty)
 
             freqs.append(float(f0))
@@ -1050,8 +1030,9 @@ class Spectra(BaseEM):
         Spectra
         """
         sect = SpectraSECT.from_file(str(path))
-        sio  = SpectraIO.from_file(str(path),
-                                   start_line=sect.start_data_lines_num)
+        sio = SpectraIO.from_file(
+            str(path), start_line=sect.start_data_lines_num
+        )
         return cls.from_io(sect, sio, empty=empty, verbose=verbose)
 
     def to_edi(
@@ -1173,19 +1154,20 @@ class Spectra(BaseEM):
         else:
             # No source: create a blank container; caller must fill header
             ed = _EDIFile.__new__(_EDIFile)
-            ed.path      = None
-            ed.verbose   = 0
+            ed.path = None
+            ed.verbose = 0
             ed._init_registry()
             ed._data_start = None
             from ..z.resphase import ResPhase as _RP
             from ..z.tipper import Tipper as _Tip
             from ..z.z import Z as _Z
-            ed.Z   = _Z(verbose=0)
+
+            ed.Z = _Z(verbose=0)
             ed.Res = _RP(verbose=0)
             ed.Tip = _Tip()
-            ed.block_size  = 6
-            ed.float_fmt   = "{: .6E}"
-            ed.header_tpl  = ">!****{title}****!\n"
+            ed.block_size = 6
+            ed.float_fmt = "{: .6E}"
+            ed.header_tpl = ">!****{title}****!\n"
 
         # ── Step 3: build >=MTSECT section ───────────────────────────────
         # Invert id_to_chtype: CHTYPE → first matching measurement ID
@@ -1281,8 +1263,7 @@ class Spectra(BaseEM):
             return
         th = float(theta_deg) * np.pi / 180.0
         R2 = np.array(
-            [[np.cos(th), -np.sin(th)],
-             [np.sin(th),  np.cos(th)]],
+            [[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]],
             float,
         )
         if pairs is None:
@@ -1428,7 +1409,7 @@ class Spectra(BaseEM):
         """
         has_read(
             self,
-            msg="Spectra not populated; call from_file()/from_io() first."
+            msg="Spectra not populated; call from_file()/from_io() first.",
         )
 
         if self.n_freq == 0 or self.n_chan < 2:
@@ -1449,7 +1430,8 @@ class Spectra(BaseEM):
 
         if id_to_chtype:
             kinds_raw = [
-                id_to_chtype.get(str(mid), "") for mid in self.chan_ids]
+                id_to_chtype.get(str(mid), "") for mid in self.chan_ids
+            ]
         else:
             kinds_raw = list(self.chan_ids)
 
@@ -1459,8 +1441,7 @@ class Spectra(BaseEM):
         def _all_idx(lbl: str) -> list[int]:
             L = _norm(lbl)
             return [
-                i for i, k in enumerate(kinds)
-                if (k == L) or k.startswith(L)
+                i for i, k in enumerate(kinds) if (k == L) or k.startswith(L)
             ]
 
         ex_all, ey_all = _all_idx(e_labels[0]), _all_idx(e_labels[1])
@@ -1493,17 +1474,19 @@ class Spectra(BaseEM):
         z_arr = np.zeros((self.n_freq, 2, 2), dtype=complex)
         z_err = (
             np.full((self.n_freq, 2, 2), np.nan, dtype=float)
-            if estimate_error else None
+            if estimate_error
+            else None
         )
 
         tip_arr = (
-            None if idx_hz is None else
-            np.zeros((self.n_freq, 1, 2), dtype=complex)
+            None
+            if idx_hz is None
+            else np.zeros((self.n_freq, 1, 2), dtype=complex)
         )
         tip_err = (
             None
-            if (idx_hz is None or not estimate_error) else
-            np.full((self.n_freq, 1, 2), np.nan, float)
+            if (idx_hz is None or not estimate_error)
+            else np.full((self.n_freq, 1, 2), np.nan, float)
         )
 
         I2 = np.eye(2, dtype=float)
@@ -1519,9 +1502,7 @@ class Spectra(BaseEM):
             try:
                 inv_SHH = np.linalg.inv(S_HH)
             except np.linalg.LinAlgError as exc:
-                raise EdIDataError(
-                    f"S_HH singular at k={k}: {exc}"
-                ) from exc
+                raise EdIDataError(f"S_HH singular at k={k}: {exc}") from exc
 
             z_arr[k] = S_EH @ inv_SHH
 
@@ -1541,17 +1522,10 @@ class Spectra(BaseEM):
             else:
                 M_k = effective_dof_from_meta(
                     segnum=(
-                        self.segnum[k] if hasattr(self, "segnum")
-                        else None
+                        self.segnum[k] if hasattr(self, "segnum") else None
                     ),
-                    avgt=(
-                        self.avgt[k] if hasattr(self, "avgt")
-                        else None
-                    ),
-                    bw=(
-                        self.bw[k] if hasattr(self, "bw")
-                        else None
-                    ),
+                    avgt=(self.avgt[k] if hasattr(self, "avgt") else None),
+                    bw=(self.bw[k] if hasattr(self, "bw") else None),
                 )
                 if M_k is not None:
                     M_k = float(M_k)
@@ -1586,33 +1560,39 @@ class Spectra(BaseEM):
         )
 
         if estimate_error and not valid_ze:
-            n_nan_ze = 0 if z_err is None else int(
-                np.count_nonzero(~np.isfinite(z_err))
+            n_nan_ze = (
+                0
+                if z_err is None
+                else int(np.count_nonzero(~np.isfinite(z_err)))
             )
-            n_neg_ze = 0 if z_err is None else int(
-                np.count_nonzero(z_err < 0.0)
+            n_neg_ze = (
+                0 if z_err is None else int(np.count_nonzero(z_err < 0.0))
             )
             logger.warning(
                 "Z error estimation skipped: invalid entries "
                 "(nan=%d, neg=%d) and/or missing DoF. "
                 "Errors will not be attached. Consider passing "
                 "`dof`, or disable with `estimate_error=False`.",
-                n_nan_ze, n_neg_ze,
+                n_nan_ze,
+                n_neg_ze,
             )
             z_err = None
 
         if estimate_error and (tip_arr is not None) and not valid_te:
-            n_nan_te = 0 if tip_err is None else int(
-                np.count_nonzero(~np.isfinite(tip_err))
+            n_nan_te = (
+                0
+                if tip_err is None
+                else int(np.count_nonzero(~np.isfinite(tip_err)))
             )
-            n_neg_te = 0 if tip_err is None else int(
-                np.count_nonzero(tip_err < 0.0)
+            n_neg_te = (
+                0 if tip_err is None else int(np.count_nonzero(tip_err < 0.0))
             )
             logger.warning(
                 "Tipper error estimation skipped: invalid entries "
                 "(nan=%d, neg=%d) and/or missing DoF. "
                 "Errors will not be attached.",
-                n_nan_te, n_neg_te,
+                n_nan_te,
+                n_neg_te,
             )
             tip_err = None
 
@@ -1761,6 +1741,7 @@ class Spectra(BaseEM):
 
         return spectra_from_Z(z_obj=z_obj, **kws)
 
+
 def spectra_from_Z(
     z_obj: Z,
     *,
@@ -1769,7 +1750,8 @@ def spectra_from_Z(
         np.ndarray,
         np.ndarray,
         np.ndarray | None,
-    ] | None = None,
+    ]
+    | None = None,
     tipper: Tipper | np.ndarray | None = None,
     include_hz: bool = False,
     chan_order: tuple[str, ...] = (
@@ -1917,9 +1899,7 @@ def spectra_from_Z(
         getattr(z_obj, "z", None) is None
         or getattr(z_obj, "freq", None) is None
     ):
-        raise EdIDataError(
-            "Z object is incomplete (z or freq missing)."
-        )
+        raise EdIDataError("Z object is incomplete (z or freq missing).")
 
     tip_arr = None
     if tipper is not None:
@@ -1952,4 +1932,3 @@ def spectra_from_Z(
     sp.segnum = np.zeros(nf, int)
     sp.band = [""] * nf
     return sp
-

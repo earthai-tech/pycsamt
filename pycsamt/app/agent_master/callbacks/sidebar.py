@@ -22,10 +22,11 @@ from ..layout import _chat_welcome
 
 # ── helpers ────────────────────────────────────────
 
+
 def _restore_bubble(msg: dict) -> html.Div:
     role = msg.get("role", "user")
     text = msg.get("content", "")
-    ts   = msg.get("ts", "")
+    ts = msg.get("ts", "")
     if role == "user":
         return html.Div(
             [
@@ -34,9 +35,7 @@ def _restore_bubble(msg: dict) -> html.Div:
                         [
                             html.Div(
                                 text,
-                                className=(
-                                    "am-bubble user"
-                                ),
+                                className=("am-bubble user"),
                             ),
                             html.Div(
                                 ts,
@@ -47,11 +46,7 @@ def _restore_bubble(msg: dict) -> html.Div:
                     style={"maxWidth": "100%"},
                 ),
                 html.Div(
-                    html.I(
-                        className=(
-                            "bi bi-person-fill"
-                        )
-                    ),
+                    html.I(className=("bi bi-person-fill")),
                     className="am-avatar user",
                 ),
             ],
@@ -65,9 +60,7 @@ def _restore_bubble(msg: dict) -> html.Div:
     return html.Div(
         [
             html.Div(
-                html.I(
-                    className="bi bi-robot"
-                ),
+                html.I(className="bi bi-robot"),
                 className="am-avatar agent",
             ),
             html.Div(
@@ -112,9 +105,7 @@ def register_sidebar(app) -> None:
         """,
         Output(IDs.SIDEBAR, "className"),
         Input(IDs.BTN_SIDEBAR, "n_clicks"),
-        Input(
-            "am-sidebar-close", "n_clicks"
-        ),
+        Input("am-sidebar-close", "n_clicks"),
         State(IDs.SIDEBAR, "className"),
         prevent_initial_call=True,
     )
@@ -237,6 +228,7 @@ def register_sidebar(app) -> None:
         # clear the assistant session so a new chat starts context-free
         try:
             from .chat import _reset_session
+
             _reset_session()
         except Exception:  # noqa: BLE001
             pass
@@ -271,14 +263,10 @@ def register_sidebar(app) -> None:
         preview = ""
         for m in messages:
             if m.get("role") == "user":
-                preview = (
-                    (m.get("content") or "")[:60]
-                )
+                preview = (m.get("content") or "")[:60]
                 break
         entry = {
-            "ts": datetime.now().strftime(
-                "%Y-%m-%d %H:%M"
-            ),
+            "ts": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "preview": preview or "(empty)",
             "messages": messages,
         }
@@ -299,9 +287,7 @@ def register_sidebar(app) -> None:
             "data",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_SAVE_SESSION, "n_clicks"
-        ),
+        Input(IDs.BTN_SAVE_SESSION, "n_clicks"),
         State(IDs.STORE_MESSAGES, "data"),
         State(IDs.STORE_HISTORY, "data"),
         prevent_initial_call=True,
@@ -313,14 +299,10 @@ def register_sidebar(app) -> None:
         preview = ""
         for m in messages:
             if m.get("role") == "user":
-                preview = (
-                    (m.get("content") or "")[:60]
-                )
+                preview = (m.get("content") or "")[:60]
                 break
         entry = {
-            "ts": datetime.now().strftime(
-                "%Y-%m-%d %H:%M"
-            ),
+            "ts": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "preview": preview or "(empty)",
             "messages": messages,
         }
@@ -345,8 +327,7 @@ def register_sidebar(app) -> None:
             allow_duplicate=True,
         ),
         Input(
-            {"type": "am-hist-item",
-             "index": ALL},
+            {"type": "am-hist-item", "index": ALL},
             "n_clicks",
         ),
         State(IDs.STORE_HISTORY, "data"),
@@ -367,13 +348,8 @@ def register_sidebar(app) -> None:
             raise PreventUpdate
         banner = html.Div(
             [
-                html.I(
-                    className=(
-                        "bi bi-clock-history me-2"
-                    )
-                ),
-                f"Session from "
-                f"{entry.get('ts', '')}",
+                html.I(className=("bi bi-clock-history me-2")),
+                f"Session from {entry.get('ts', '')}",
                 html.Span(
                     " — figures not restored.",
                     style={"opacity": ".65"},
@@ -381,10 +357,7 @@ def register_sidebar(app) -> None:
             ],
             className="am-restore-banner",
         )
-        children = [banner] + [
-            _restore_bubble(m)
-            for m in messages
-        ]
+        children = [banner] + [_restore_bubble(m) for m in messages]
         return messages, children
 
     # ── delete history entry ──────────────────
@@ -395,8 +368,7 @@ def register_sidebar(app) -> None:
             allow_duplicate=True,
         ),
         Input(
-            {"type": "am-hist-del",
-             "index": ALL},
+            {"type": "am-hist-del", "index": ALL},
             "n_clicks",
         ),
         State(IDs.STORE_HISTORY, "data"),
@@ -416,9 +388,7 @@ def register_sidebar(app) -> None:
 
     # ── render history list ───────────────────
     @app.callback(
-        Output(
-            IDs.SIDEBAR_HISTORY, "children"
-        ),
+        Output(IDs.SIDEBAR_HISTORY, "children"),
         Input(IDs.STORE_HISTORY, "data"),
     )
     def _render_history(history):
@@ -435,46 +405,29 @@ def register_sidebar(app) -> None:
                         html.Button(
                             [
                                 html.Div(
-                                    entry.get(
-                                        "ts", ""
-                                    ),
-                                    className=(
-                                        "am-hitem-ts"
-                                    ),
+                                    entry.get("ts", ""),
+                                    className=("am-hitem-ts"),
                                 ),
                                 html.Div(
                                     entry.get(
                                         "preview",
                                         "...",
                                     ),
-                                    className=(
-                                        "am-hitem-"
-                                        "preview"
-                                    ),
+                                    className=("am-hitem-preview"),
                                 ),
                             ],
-                            className=(
-                                "am-history-item"
-                            ),
+                            className=("am-history-item"),
                             id={
-                                "type": (
-                                    "am-hist-item"
-                                ),
+                                "type": ("am-hist-item"),
                                 "index": i,
                             },
                             n_clicks=0,
                         ),
                         html.Button(
-                            html.I(
-                                className="bi bi-x"
-                            ),
-                            className=(
-                                "am-hist-del-btn"
-                            ),
+                            html.I(className="bi bi-x"),
+                            className=("am-hist-del-btn"),
                             id={
-                                "type": (
-                                    "am-hist-del"
-                                ),
+                                "type": ("am-hist-del"),
                                 "index": i,
                             },
                             title="Remove",
@@ -488,9 +441,7 @@ def register_sidebar(app) -> None:
 
     # ── render figure thumbnails ──────────────
     @app.callback(
-        Output(
-            IDs.SIDEBAR_FIGS, "children"
-        ),
+        Output(IDs.SIDEBAR_FIGS, "children"),
         Input(IDs.STORE_FIGS, "data"),
     )
     def _render_figs(figs):
@@ -503,22 +454,15 @@ def register_sidebar(app) -> None:
             html.Div(
                 html.Button(
                     html.Img(
-                        src=(
-                            "data:image/png;"
-                            f"base64,{info['b64']}"
-                        ),
-                        className=(
-                            "am-sb-fig-thumb"
-                        ),
+                        src=(f"data:image/png;base64,{info['b64']}"),
+                        className=("am-sb-fig-thumb"),
                     ),
                     id={
                         "type": "am-fig-open",
                         "key": key,
                     },
                     className="am-sb-fig-btn",
-                    title=info.get(
-                        "title", key
-                    ),
+                    title=info.get("title", key),
                     n_clicks=0,
                 ),
                 className="am-sb-fig-item",

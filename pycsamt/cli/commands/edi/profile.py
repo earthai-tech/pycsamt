@@ -84,18 +84,18 @@ def profile(
         return
 
     prof = EDIProfile(coll)
-    bearing  = prof.get_bearing(method=bearing_method)
-    step_m   = prof.get_step(method=step_method)
-    n_sta    = len(prof.stations)
-    tbl      = prof.as_table()
+    bearing = prof.get_bearing(method=bearing_method)
+    step_m = prof.get_step(method=step_method)
+    n_sta = len(prof.stations)
+    tbl = prof.as_table()
 
     summary = {
-        "source":          str(source),
-        "n_stations":      n_sta,
-        "bearing_deg":     round(bearing, 2) if bearing is not None else None,
-        "bearing_method":  bearing_method,
-        "step_m":          round(float(step_m), 1) if step_m is not None else None,
-        "step_method":     step_method,
+        "source": str(source),
+        "n_stations": n_sta,
+        "bearing_deg": round(bearing, 2) if bearing is not None else None,
+        "bearing_method": bearing_method,
+        "step_m": round(float(step_m), 1) if step_m is not None else None,
+        "step_method": step_method,
     }
 
     if distances:
@@ -114,7 +114,9 @@ def profile(
     if output_format == "csv":
         rows = tbl if tbl else []
         if rows:
-            cols = [c for c in rows[0].keys() if c not in ("easting", "northing")]
+            cols = [
+                c for c in rows[0].keys() if c not in ("easting", "northing")
+            ]
             click.echo(",".join(cols))
             for r in rows:
                 click.echo(",".join(str(r.get(c, "")) for c in cols))
@@ -137,7 +139,11 @@ def profile(
         click.echo(hdr)
         click.echo("  " + "-" * (len(hdr) - 2))
         for i, r in enumerate(tbl):
-            d = f"{dist[i]:>10.0f}" if dist is not None and i < len(dist) else f"{'—':>10}"
+            d = (
+                f"{dist[i]:>10.0f}"
+                if dist is not None and i < len(dist)
+                else f"{'—':>10}"
+            )
             click.echo(
                 f"  {str(r.get('station', '?')):<22} "
                 f"{r.get('lat', float('nan')):>10.5f} "

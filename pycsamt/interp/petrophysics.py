@@ -89,12 +89,13 @@ __all__ = [
 
 # ── physical constants ─────────────────────────────────────────────────────────
 
-_MU0 = 4.0 * np.pi * 1e-7          # H/m
+_MU0 = 4.0 * np.pi * 1e-7  # H/m
 _PI2 = 2.0 * np.pi
-_BOSTICK_CONST = 503.3              # sqrt(1 / (μ₀ π))
+_BOSTICK_CONST = 503.3  # sqrt(1 / (μ₀ π))
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
+
 
 def _arr(x: Any) -> np.ndarray:
     """Cast x to a float64 ndarray."""
@@ -119,6 +120,7 @@ def _scalar_or_array(result: np.ndarray, was_scalar: bool) -> Any:
 # ─────────────────────────────────────────────────────────────────────────────
 # Archie model
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class ArchieModel(PyCSAMTObject):
@@ -215,7 +217,7 @@ class ArchieModel(PyCSAMTObject):
         phi, Sw, rho_w = _broadcast(phi, Sw, rho_w)
         was_scalar = all(np.ndim(x) == 0 for x in (phi, Sw, rho_w))
         phi = np.clip(phi, 1e-4, 0.99)
-        Sw  = np.clip(Sw,  1e-4, 1.00)
+        Sw = np.clip(Sw, 1e-4, 1.00)
         rho = self.a * rho_w * phi ** (-self.m) * Sw ** (-self.n)
         rho = np.clip(rho, 1e-2, 1e7)
         return _scalar_or_array(rho, was_scalar)
@@ -251,9 +253,9 @@ class ArchieModel(PyCSAMTObject):
         was_scalar = all(np.ndim(x) == 0 for x in (rho, phi, rho_w))
         phi = np.clip(phi, 1e-4, 0.99)
         rho = np.clip(rho, 1e-2, 1e7)
-        F   = self.a * phi ** (-self.m)
-        Sw  = (F * rho_w / rho) ** (1.0 / self.n)
-        Sw  = np.clip(Sw, 0.0, 1.0)
+        F = self.a * phi ** (-self.m)
+        Sw = (F * rho_w / rho) ** (1.0 / self.n)
+        Sw = np.clip(Sw, 0.0, 1.0)
         return _scalar_or_array(Sw, was_scalar)
 
     def porosity(
@@ -283,7 +285,7 @@ class ArchieModel(PyCSAMTObject):
         """
         rho, Sw, rho_w = _broadcast(rho, Sw, rho_w)
         was_scalar = all(np.ndim(x) == 0 for x in (rho, Sw, rho_w))
-        Sw  = np.clip(Sw,  1e-4, 1.0)
+        Sw = np.clip(Sw, 1e-4, 1.0)
         rho = np.clip(rho, 1e-2, 1e7)
         phi = (self.a * rho_w * Sw ** (-self.n) / rho) ** (1.0 / self.m)
         phi = np.clip(phi, 1e-4, 0.99)
@@ -317,8 +319,8 @@ class ArchieModel(PyCSAMTObject):
         rho, phi, Sw = _broadcast(rho, phi, Sw)
         was_scalar = all(np.ndim(x) == 0 for x in (rho, phi, Sw))
         phi = np.clip(phi, 1e-4, 0.99)
-        Sw  = np.clip(Sw,  1e-4, 1.0)
-        rho_w = rho * phi ** self.m * Sw ** self.n / self.a
+        Sw = np.clip(Sw, 1e-4, 1.0)
+        rho_w = rho * phi**self.m * Sw**self.n / self.a
         return _scalar_or_array(rho_w, was_scalar)
 
     def water_content(self, phi: Any, Sw: Any) -> Any:
@@ -329,12 +331,13 @@ class ArchieModel(PyCSAMTObject):
         return _scalar_or_array(theta, was_scalar)
 
     def __repr__(self) -> str:
-        return (f"ArchieModel(m={self.m}, n={self.n}, a={self.a})")
+        return f"ArchieModel(m={self.m}, n={self.n}, a={self.a})"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Waxman-Smits model
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class WaxmanSmitsModel(PyCSAMTObject):
@@ -378,7 +381,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
     m: float = 1.8
     n: float = 2.0
     a: float = 1.0
-    sigma_s: float = 0.0          # S/m surface conductivity
+    sigma_s: float = 0.0  # S/m surface conductivity
 
     def __post_init__(self):
         if self.m <= 0 or self.n <= 0 or self.a <= 0:
@@ -417,11 +420,11 @@ class WaxmanSmitsModel(PyCSAMTObject):
         phi, Sw, sigma_w = _broadcast(phi, Sw, sigma_w)
         was_scalar = all(np.ndim(x) == 0 for x in (phi, Sw, sigma_w))
         phi = np.clip(phi, 1e-4, 0.99)
-        Sw  = np.clip(Sw,  1e-4, 1.0)
-        sigma_w_si = sigma_w * 1e-3          # mS/m → S/m
-        F  = self._formation_factor(phi)
-        s  = (Sw ** self.n / F) * (sigma_w_si + self.sigma_s / Sw)
-        s  = np.maximum(s, 1e-10)
+        Sw = np.clip(Sw, 1e-4, 1.0)
+        sigma_w_si = sigma_w * 1e-3  # mS/m → S/m
+        F = self._formation_factor(phi)
+        s = (Sw**self.n / F) * (sigma_w_si + self.sigma_s / Sw)
+        s = np.maximum(s, 1e-10)
         rho = np.clip(1.0 / s, 1e-2, 1e7)
         return _scalar_or_array(rho, was_scalar)
 
@@ -464,21 +467,24 @@ class WaxmanSmitsModel(PyCSAMTObject):
         result = np.empty(rho.shape)
         F_arr = self._formation_factor(phi)
 
-        it = np.nditer([rho, phi, sigma_w_si, F_arr, result],
-                       op_flags=[['readonly']] * 4 + [['writeonly']])
+        it = np.nditer(
+            [rho, phi, sigma_w_si, F_arr, result],
+            op_flags=[["readonly"]] * 4 + [["writeonly"]],
+        )
         for rho_i, _phi_i, sw_i, F_i, out_i in it:
             sigma_obs = 1.0 / float(rho_i)
-            sw_si     = float(sw_i)
-            F_v       = float(F_i)
-            n, ss     = self.n, self.sigma_s
+            sw_si = float(sw_i)
+            F_v = float(F_i)
+            n, ss = self.n, self.sigma_s
 
             def residual(S):
-                return (S ** n / F_v) * (sw_si + ss / max(S, 1e-10)) - sigma_obs
+                return (S**n / F_v) * (sw_si + ss / max(S, 1e-10)) - sigma_obs
 
             # Archie initial guess
             if sw_si > 1e-12:
-                S0 = np.clip((F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n),
-                             1e-3, 1.0)
+                S0 = np.clip(
+                    (F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n), 1e-3, 1.0
+                )
             else:
                 S0 = 0.5
 
@@ -486,8 +492,9 @@ class WaxmanSmitsModel(PyCSAMTObject):
             try:
                 fa, fb = residual(1e-4), residual(1.0)
                 if fa * fb < 0:
-                    Sw_sol = brentq(residual, 1e-4, 1.0,
-                                    xtol=tol, maxiter=max_iter)
+                    Sw_sol = brentq(
+                        residual, 1e-4, 1.0, xtol=tol, maxiter=max_iter
+                    )
                 else:
                     Sw_sol = float(np.clip(S0, 0.0, 1.0))
             except Exception:
@@ -527,24 +534,27 @@ class WaxmanSmitsModel(PyCSAMTObject):
         """
         rho, Sw, sigma_w = _broadcast(rho, Sw, sigma_w)
         was_scalar = all(np.ndim(x) == 0 for x in (rho, Sw, sigma_w))
-        Sw  = np.clip(Sw,  1e-4, 1.0)
+        Sw = np.clip(Sw, 1e-4, 1.0)
         rho = np.clip(rho, 1e-2, 1e7)
-        sw_si    = sigma_w * 1e-3
+        sw_si = sigma_w * 1e-3
         sigma_obs = 1.0 / rho
-        F_needed = Sw ** self.n * (sw_si + self.sigma_s / Sw) / sigma_obs
+        F_needed = Sw**self.n * (sw_si + self.sigma_s / Sw) / sigma_obs
         F_needed = np.maximum(F_needed, 1e-6)
         phi = (F_needed / self.a) ** (-1.0 / self.m)
         phi = np.clip(phi, 1e-4, 0.99)
         return _scalar_or_array(phi, was_scalar)
 
     def __repr__(self) -> str:
-        return (f"WaxmanSmitsModel(m={self.m}, n={self.n}, "
-                f"a={self.a}, sigma_s={self.sigma_s})")
+        return (
+            f"WaxmanSmitsModel(m={self.m}, n={self.n}, "
+            f"a={self.a}, sigma_s={self.sigma_s})"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Hashin-Shtrikman bounds
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class HashinShtrikmanBounds(PyCSAMTObject):
     r"""Hashin-Shtrikman (1962) bounds on effective resistivity.
@@ -584,7 +594,7 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         if rho_matrix <= 0 or rho_fluid <= 0:
             raise ValueError("Resistivities must be positive.")
         self.rho_matrix = float(rho_matrix)
-        self.rho_fluid  = float(rho_fluid)
+        self.rho_fluid = float(rho_fluid)
 
     def bounds(
         self,
@@ -604,19 +614,19 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         """
         phi = _arr(phi)
         phi = np.clip(phi, 1e-6, 1.0 - 1e-6)
-        f_phi   = phi              # fluid volume fraction
-        f_mat   = 1.0 - phi        # matrix volume fraction
-        s_f     = 1.0 / self.rho_fluid
-        s_m     = 1.0 / self.rho_matrix
+        f_phi = phi  # fluid volume fraction
+        f_mat = 1.0 - phi  # matrix volume fraction
+        s_f = 1.0 / self.rho_fluid
+        s_m = 1.0 / self.rho_matrix
 
         # HS+ (fluid is the more conductive reference = lower ρ bound)
         f_mat / (s_m - s_f + 3.0 * s_f)
-        sigma_plus  = s_f + f_mat / (1.0 / (s_m - s_f) + f_phi / (3.0 * s_f))
+        sigma_plus = s_f + f_mat / (1.0 / (s_m - s_f) + f_phi / (3.0 * s_f))
 
         # HS- (matrix is reference = upper ρ bound)
         sigma_minus = s_m + f_phi / (1.0 / (s_f - s_m) + f_mat / (3.0 * s_m))
 
-        rho_lower = np.clip(1.0 / sigma_plus,  1e-4, 1e8)
+        rho_lower = np.clip(1.0 / sigma_plus, 1e-4, 1e8)
         rho_upper = np.clip(1.0 / sigma_minus, 1e-4, 1e8)
         return rho_lower, rho_upper
 
@@ -630,19 +640,24 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         """Return boolean mask: True where *rho* lies within HS bounds ± margin (log₁₀)."""
         rho = _arr(rho)
         lower, upper = self.bounds(phi)
-        log_rho   = np.log10(np.clip(rho,   1e-4, 1e8))
+        log_rho = np.log10(np.clip(rho, 1e-4, 1e8))
         log_lower = np.log10(np.clip(lower, 1e-4, 1e8))
         log_upper = np.log10(np.clip(upper, 1e-4, 1e8))
-        return (log_rho >= log_lower - margin) & (log_rho <= log_upper + margin)
+        return (log_rho >= log_lower - margin) & (
+            log_rho <= log_upper + margin
+        )
 
     def __repr__(self) -> str:
-        return (f"HashinShtrikmanBounds(rho_matrix={self.rho_matrix}, "
-                f"rho_fluid={self.rho_fluid})")
+        return (
+            f"HashinShtrikmanBounds(rho_matrix={self.rho_matrix}, "
+            f"rho_fluid={self.rho_fluid})"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Hydraulic property functions
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def kozeny_carman_K(
     phi: Any,
@@ -704,7 +719,13 @@ def kozeny_carman_K(
     phi = _arr(phi)
     was_scalar = phi.ndim == 0
     phi = np.clip(phi, 1e-4, 0.99)
-    K = (gravity / kinematic_viscosity) * T * d50_m**2 * phi**3 / (C * (1.0 - phi)**2)
+    K = (
+        (gravity / kinematic_viscosity)
+        * T
+        * d50_m**2
+        * phi**3
+        / (C * (1.0 - phi) ** 2)
+    )
     K = np.clip(K, 1e-15, 1e2)
     return _scalar_or_array(K, was_scalar)
 
@@ -760,8 +781,12 @@ def rho_to_hydraulic_conductivity(
     # soft-clip by prior (outliers clamped to 3× prior)
     phi = np.clip(_arr(phi), 1e-4, min(0.99, 3.0 * phi_prior))
     return kozeny_carman_K(
-        phi, d50_m=d50_m, C=C, T=T,
-        gravity=gravity, kinematic_viscosity=kinematic_viscosity,
+        phi,
+        d50_m=d50_m,
+        C=C,
+        T=T,
+        gravity=gravity,
+        kinematic_viscosity=kinematic_viscosity,
     )
 
 
@@ -815,10 +840,10 @@ def storativity(
     """
     phi, b = _broadcast(phi, thickness)
     was_scalar = all(np.ndim(x) == 0 for x in (phi, thickness))
-    S_confined   = np.clip(_arr(b), 0.0, None) * specific_storage
+    S_confined = np.clip(_arr(b), 0.0, None) * specific_storage
     S_unconfined = np.clip(_arr(phi), 0.0, 0.99)
     return (
-        _scalar_or_array(S_confined,   was_scalar),
+        _scalar_or_array(S_confined, was_scalar),
         _scalar_or_array(S_unconfined, was_scalar),
     )
 
@@ -826,6 +851,7 @@ def storativity(
 # ─────────────────────────────────────────────────────────────────────────────
 # Water chemistry
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def rho_w_to_tds(rho_w: Any, *, temp_c: float = 25.0) -> Any:
     r"""Pore-water resistivity → Total Dissolved Solids (mg/L).
@@ -862,7 +888,7 @@ def rho_w_to_tds(rho_w: Any, *, temp_c: float = 25.0) -> Any:
     rho_25 = np.clip(rho_25, 1e-3, 1e4)
     # EC in mS/cm from Ω·m: EC_mScm = 100 / (10 * rho) = 10 / rho
     ec_mScm = 10.0 / rho_25
-    tds = 640.0 * ec_mScm        # Keller (1966)
+    tds = 640.0 * ec_mScm  # Keller (1966)
     return _scalar_or_array(tds, was_scalar)
 
 
@@ -885,18 +911,18 @@ def tds_to_rho_w(tds: Any, *, temp_c: float = 25.0) -> Any:
     tds = np.clip(_arr(tds), 1.0, 1e7)
     was_scalar = tds.ndim == 0
     ec_mScm = tds / 640.0
-    rho_25  = 10.0 / np.maximum(ec_mScm, 1e-6)
+    rho_25 = 10.0 / np.maximum(ec_mScm, 1e-6)
     # undo temperature correction
-    rho_w   = rho_25 * (1.0 + 0.02 * (temp_c - 25.0))
+    rho_w = rho_25 * (1.0 + 0.02 * (temp_c - 25.0))
     return _scalar_or_array(np.clip(rho_w, 1e-3, 1e4), was_scalar)
 
 
 def ec_mscm_to_rho(ec: Any, *, temp_c: float = 25.0) -> Any:
     """Electrical conductivity (mS/cm) → resistivity (Ω·m)."""
-    ec  = np.clip(_arr(ec), 1e-6, 1e4)
+    ec = np.clip(_arr(ec), 1e-6, 1e4)
     was_scalar = ec.ndim == 0
     rho_25 = 10.0 / ec
-    rho    = rho_25 * (1.0 + 0.02 * (temp_c - 25.0))
+    rho = rho_25 * (1.0 + 0.02 * (temp_c - 25.0))
     return _scalar_or_array(np.clip(rho, 1e-4, 1e6), was_scalar)
 
 
@@ -905,13 +931,14 @@ def rho_to_ec_mscm(rho: Any, *, temp_c: float = 25.0) -> Any:
     rho = np.clip(_arr(rho), 1e-4, 1e6)
     was_scalar = rho.ndim == 0
     rho_25 = rho / (1.0 + 0.02 * (temp_c - 25.0))
-    ec     = 10.0 / np.maximum(rho_25, 1e-6)
+    ec = 10.0 / np.maximum(rho_25, 1e-6)
     return _scalar_or_array(ec, was_scalar)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EM-specific helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def skin_depth(rho: Any, freq: Any) -> Any:
     r"""EM skin depth (penetration depth) in metres.
@@ -936,7 +963,7 @@ def skin_depth(rho: Any, freq: Any) -> Any:
     """
     rho, freq = _broadcast(rho, freq)
     was_scalar = all(np.ndim(x) == 0 for x in (rho, freq))
-    rho  = np.clip(rho,  1e-2, 1e7)
+    rho = np.clip(rho, 1e-2, 1e7)
     freq = np.clip(freq, 1e-6, 1e6)
     delta = _BOSTICK_CONST * np.sqrt(rho / freq)
     return _scalar_or_array(delta, was_scalar)
@@ -999,9 +1026,9 @@ def aquifer_top_from_profile(
     -------
     depth : float or None — top depth (m), or None if threshold not crossed.
     """
-    rho  = 10.0 ** np.asarray(rho_log10, dtype=float)
-    z    = np.asarray(z_centers, dtype=float)
-    thr  = float(rho_threshold_ohm_m)
+    rho = 10.0 ** np.asarray(rho_log10, dtype=float)
+    z = np.asarray(z_centers, dtype=float)
+    thr = float(rho_threshold_ohm_m)
     mask = z >= min_depth
 
     for zi, ri in zip(z[mask], rho[mask]):
@@ -1046,8 +1073,8 @@ def water_table_from_profile(
     depth : float or None — estimated water table depth (m).
     """
     rho_log10 = np.asarray(rho_log10, dtype=float)
-    z         = np.asarray(z_centers, dtype=float)
-    rho       = 10.0 ** rho_log10
+    z = np.asarray(z_centers, dtype=float)
+    rho = 10.0**rho_log10
 
     # porosity prior from surface ρ (shallowest cell)
     phi_prior = 0.25

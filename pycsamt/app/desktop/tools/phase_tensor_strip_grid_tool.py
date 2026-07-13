@@ -20,6 +20,7 @@ Usage
     dlg = PhaseTensorStripGridDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -49,21 +50,23 @@ _COLOR_BY = ["skew", "ellipt", "theta", "alpha", "phi_min", "phi_max"]
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _StripGridWorker(QThread):
-    done  = Signal(object)   # Figure
+    done = Signal(object)  # Figure
     error = Signal(str)
 
     def __init__(self, sites, profiles: dict, c_by: str):
         super().__init__()
-        self._sites    = sites
+        self._sites = sites
         self._profiles = profiles
-        self._c_by     = c_by
+        self._c_by = c_by
 
     def run(self):
         try:
             from pycsamt.emtools.tensor import (
                 plot_phase_tensor_strip_grid,
             )
+
             fig = plot_phase_tensor_strip_grid(
                 self._sites,
                 profiles=self._profiles,
@@ -76,6 +79,7 @@ class _StripGridWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class PhaseTensorStripGridDialog(QDialog):
     """
@@ -92,7 +96,7 @@ class PhaseTensorStripGridDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Phase Tensor Strip Grid")
         self.setMinimumSize(1000, 640)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
         self._lines: dict[str, list] = {}
         self._build_ui()
@@ -174,16 +178,23 @@ class PhaseTensorStripGridDialog(QDialog):
             from pycsamt.site.lines import (
                 detect_lines_from_station_ids,
             )
+
             names = []
             for ed in _iter_items(self._sites):
                 try:
                     ed = _unwrap(ed)
                 except Exception:
                     pass
-                nm = getattr(ed, "station", None) or getattr(ed, "id", None) or "?"
+                nm = (
+                    getattr(ed, "station", None)
+                    or getattr(ed, "id", None)
+                    or "?"
+                )
                 names.append(str(nm))
             self._lines = detect_lines_from_station_ids(names)
-            summary = ", ".join(f"{k} ({len(v)})" for k, v in self._lines.items())
+            summary = ", ".join(
+                f"{k} ({len(v)})" for k, v in self._lines.items()
+            )
             self._lines_lbl.setText(summary or "No stations found.")
         except Exception as exc:
             self._lines_lbl.setText(f"Line detection failed: {exc}")

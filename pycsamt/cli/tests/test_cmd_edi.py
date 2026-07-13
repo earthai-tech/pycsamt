@@ -25,10 +25,10 @@ from pycsamt.cli import main
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_EDI_3EDIS    = _PROJECT_ROOT / "data" / "3edis"
-_EDI_TIPPER   = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
-_EDI_WILLY    = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
-_EDI_AMT      = _PROJECT_ROOT / "data" / "AMT"
+_EDI_3EDIS = _PROJECT_ROOT / "data" / "3edis"
+_EDI_TIPPER = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
+_EDI_WILLY = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+_EDI_AMT = _PROJECT_ROOT / "data" / "AMT"
 
 
 def _has(p: Path) -> bool:
@@ -39,16 +39,24 @@ def _has(p: Path) -> bool:
 # Help wiring
 # ---------------------------------------------------------------------------
 
+
 class TestEdiGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["edi", "--help"])
         assert result.exit_code == 0
-        for sub in ("info", "validate", "stations", "profile", "rotate", "select"):
+        for sub in (
+            "info",
+            "validate",
+            "stations",
+            "profile",
+            "rotate",
+            "select",
+        ):
             assert sub in result.output
 
-    @pytest.mark.parametrize("sub", [
-        "info", "validate", "stations", "profile", "rotate", "select"
-    ])
+    @pytest.mark.parametrize(
+        "sub", ["info", "validate", "stations", "profile", "rotate", "select"]
+    )
     def test_each_subcommand_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["edi", sub, "--help"])
         assert result.exit_code == 0
@@ -57,6 +65,7 @@ class TestEdiGroup:
 # ---------------------------------------------------------------------------
 # pycsamt edi info
 # ---------------------------------------------------------------------------
+
 
 class TestEdiInfo:
     @pytest.fixture(autouse=True)
@@ -68,7 +77,9 @@ class TestEdiInfo:
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         result = runner.invoke(main, ["edi", "info", str(edi_path)])
         assert result.exit_code == 0
-        assert "Station" in result.output or "station" in result.output.lower()
+        assert (
+            "Station" in result.output or "station" in result.output.lower()
+        )
         assert "n_freq" in result.output
 
     def test_single_file_json(self, runner: CliRunner) -> None:
@@ -106,7 +117,16 @@ class TestEdiInfo:
 
     def test_top_limit(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "info", str(_EDI_3EDIS), "--top", "1", "--format", "json"]
+            main,
+            [
+                "edi",
+                "info",
+                str(_EDI_3EDIS),
+                "--top",
+                "1",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -116,6 +136,7 @@ class TestEdiInfo:
 # ---------------------------------------------------------------------------
 # pycsamt edi validate
 # ---------------------------------------------------------------------------
+
 
 class TestEdiValidate:
     @pytest.fixture(autouse=True)
@@ -157,6 +178,7 @@ class TestEdiValidate:
 # pycsamt edi stations
 # ---------------------------------------------------------------------------
 
+
 class TestEdiStations:
     @pytest.fixture(autouse=True)
     def require_data(self) -> None:
@@ -187,8 +209,16 @@ class TestEdiStations:
 
     def test_top_limit(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "stations", str(self.edi_dir),
-                   "--top", "2", "--format", "json"]
+            main,
+            [
+                "edi",
+                "stations",
+                str(self.edi_dir),
+                "--top",
+                "2",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -196,8 +226,16 @@ class TestEdiStations:
 
     def test_sort_by_lat(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "stations", str(self.edi_dir),
-                   "--sort-by", "lat", "--format", "json"]
+            main,
+            [
+                "edi",
+                "stations",
+                str(self.edi_dir),
+                "--sort-by",
+                "lat",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -210,6 +248,7 @@ class TestEdiStations:
 # pycsamt edi profile
 # ---------------------------------------------------------------------------
 
+
 class TestEdiProfile:
     @pytest.fixture(autouse=True)
     def require_data(self) -> None:
@@ -219,7 +258,9 @@ class TestEdiProfile:
     def test_text_output(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["edi", "profile", str(_EDI_WILLY)])
         assert result.exit_code == 0
-        assert "Bearing" in result.output or "bearing" in result.output.lower()
+        assert (
+            "Bearing" in result.output or "bearing" in result.output.lower()
+        )
 
     def test_json_output(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -232,16 +273,31 @@ class TestEdiProfile:
 
     def test_bearing_method_linear(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "profile", str(_EDI_WILLY),
-                   "--bearing-method", "linear", "--format", "json"]
+            main,
+            [
+                "edi",
+                "profile",
+                str(_EDI_WILLY),
+                "--bearing-method",
+                "linear",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         assert json.loads(result.output).get("bearing_method") == "linear"
 
     def test_distances_flag(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "profile", str(_EDI_WILLY),
-                   "--distances", "--format", "json"]
+            main,
+            [
+                "edi",
+                "profile",
+                str(_EDI_WILLY),
+                "--distances",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         assert "station_table" in json.loads(result.output)
@@ -251,6 +307,7 @@ class TestEdiProfile:
 # pycsamt edi rotate
 # ---------------------------------------------------------------------------
 
+
 class TestEdiRotate:
     @pytest.fixture(autouse=True)
     def require_data(self) -> None:
@@ -259,24 +316,44 @@ class TestEdiRotate:
 
     def test_dry_run(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "rotate", str(_EDI_3EDIS), "--angle", "30", "--dry-run"]
+            main,
+            ["edi", "rotate", str(_EDI_3EDIS), "--angle", "30", "--dry-run"],
         )
         assert result.exit_code == 0
         assert "dry" in result.output.lower()
 
-    def test_rotate_writes_edis(self, runner: CliRunner, tmp_path: Path) -> None:
+    def test_rotate_writes_edis(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         result = runner.invoke(
-            main, ["edi", "rotate", str(_EDI_3EDIS),
-                   "--angle", "30", "--output-dir", str(tmp_path)]
+            main,
+            [
+                "edi",
+                "rotate",
+                str(_EDI_3EDIS),
+                "--angle",
+                "30",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         assert len(list(tmp_path.glob("*.edi"))) > 0
 
     def test_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["edi", "rotate", str(_EDI_3EDIS),
-                   "--angle", "45", "--output-dir", str(tmp_path),
-                   "--format", "json"]
+            main,
+            [
+                "edi",
+                "rotate",
+                str(_EDI_3EDIS),
+                "--angle",
+                "45",
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -284,7 +361,8 @@ class TestEdiRotate:
 
     def test_angle_required(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["edi", "rotate", str(_EDI_3EDIS), "--output-dir", str(tmp_path)]
+            main,
+            ["edi", "rotate", str(_EDI_3EDIS), "--output-dir", str(tmp_path)],
         )
         assert result.exit_code != 0
 
@@ -299,6 +377,7 @@ class TestEdiRotate:
 # pycsamt edi select
 # ---------------------------------------------------------------------------
 
+
 class TestEdiSelect:
     @pytest.fixture(autouse=True)
     def require_data(self) -> None:
@@ -310,32 +389,64 @@ class TestEdiSelect:
             main, ["edi", "select", str(_EDI_3EDIS), "--dry-run"]
         )
         assert result.exit_code == 0
-        assert "match" in result.output.lower() or "station" in result.output.lower()
+        assert (
+            "match" in result.output.lower()
+            or "station" in result.output.lower()
+        )
 
     def test_dry_run_json(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "select", str(_EDI_3EDIS), "--dry-run", "--format", "json"]
+            main,
+            [
+                "edi",
+                "select",
+                str(_EDI_3EDIS),
+                "--dry-run",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         assert "n_selected" in json.loads(result.output)
 
-    def test_select_by_station(self, runner: CliRunner, tmp_path: Path) -> None:
+    def test_select_by_station(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         from pycsamt.seg.collection import EDICollection
+
         coll = EDICollection.from_sources(_EDI_3EDIS)
         names = [e.station for e in coll if e.station]
         if not names:
             pytest.skip("No named stations in 3edis/")
         result = runner.invoke(
-            main, ["edi", "select", str(_EDI_3EDIS),
-                   "--stations", names[0], "--output-dir", str(tmp_path)]
+            main,
+            [
+                "edi",
+                "select",
+                str(_EDI_3EDIS),
+                "--stations",
+                names[0],
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         assert len(list(tmp_path.glob("*.edi"))) >= 1
 
-    def test_select_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
+    def test_select_json_output(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         result = runner.invoke(
-            main, ["edi", "select", str(_EDI_3EDIS),
-                   "--output-dir", str(tmp_path), "--format", "json"]
+            main,
+            [
+                "edi",
+                "select",
+                str(_EDI_3EDIS),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         raw = result.output
@@ -349,8 +460,16 @@ class TestEdiSelect:
 
     def test_has_tipper_filter_dry_run(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["edi", "select", str(_EDI_3EDIS),
-                   "--has-tipper", "--dry-run", "--format", "json"]
+            main,
+            [
+                "edi",
+                "select",
+                str(_EDI_3EDIS),
+                "--has-tipper",
+                "--dry-run",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         assert json.loads(result.output)["n_selected"] >= 0
@@ -359,6 +478,7 @@ class TestEdiSelect:
 # ---------------------------------------------------------------------------
 # Unit tests — low-level helpers (import from edi, not seg)
 # ---------------------------------------------------------------------------
+
 
 class TestEdiHelpers:
     @pytest.fixture(autouse=True)
@@ -370,12 +490,14 @@ class TestEdiHelpers:
         from pycsamt.cli.commands.edi._base import (
             _get_collection,
         )
+
         coll = _get_collection(_EDI_3EDIS)
         assert len(coll) > 0
 
     def test_get_edi_returns_edifile(self) -> None:
         from pycsamt.cli.commands.edi._base import _get_edi
         from pycsamt.seg.edi import EDIFile
+
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         edi = _get_edi(edi_path)
         assert isinstance(edi, EDIFile)
@@ -386,10 +508,11 @@ class TestEdiHelpers:
 
         from pycsamt.cli.commands.edi._base import _get_edi
         from pycsamt.seg.ops import rotate_impedance
+
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         edi = _get_edi(edi_path)
         z_orig = edi.Z.z.copy()
-        z_rot  = rotate_impedance(z_orig, 45.0)
+        z_rot = rotate_impedance(z_orig, 45.0)
         assert z_rot.shape == z_orig.shape
         assert not np.allclose(z_rot, z_orig)
 
@@ -398,9 +521,10 @@ class TestEdiHelpers:
 
         from pycsamt.cli.commands.edi._base import _get_edi
         from pycsamt.seg.ops import rotate_impedance
+
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         edi = _get_edi(edi_path)
         z_orig = edi.Z.z.copy()
-        z_rot  = rotate_impedance(z_orig, 45.0)
+        z_rot = rotate_impedance(z_orig, 45.0)
         z_back = rotate_impedance(z_rot, -45.0)
         assert np.allclose(z_back, z_orig, atol=1e-10)

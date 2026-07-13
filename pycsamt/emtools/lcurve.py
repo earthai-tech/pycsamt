@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -88,7 +87,7 @@ def _pick_corner(
     x: np.ndarray,
     y: np.ndarray,
     *,
-    method: str = "curvature",   # curvature|maxdist
+    method: str = "curvature",  # curvature|maxdist
     smooth: int = 3,
     skip: int = 1,
 ) -> tuple[int, np.ndarray]:
@@ -114,29 +113,25 @@ def lcurve_table(
     method: str = "curvature",
     smooth: int = 3,
     skip: int = 1,
-    return_dict: bool=False,
+    return_dict: bool = False,
 ):
     x, y, l = _prep_curve(misfit, rough, lam, sort=sort)
     if x.size == 0:
         return pd.DataFrame() if pd is not None else None
-    j, s = _pick_corner(
-        x, y, method=method, smooth=smooth, skip=skip
-    )
-    lx = np.log10(x); ly = np.log10(y)
+    j, s = _pick_corner(x, y, method=method, smooth=smooth, skip=skip)
+    lx = np.log10(x)
+    ly = np.log10(y)
     # local slope d log(misfit) / d log(rough)
     sl = np.gradient(ly) / (np.gradient(lx) + 1e-24)
     if return_dict:
-        return dict(
-            rough=x, misfit=y, lam=l, curv=s, slope=sl, corner=j
-        )
-    df = pd.DataFrame(
-        dict(rough=x, misfit=y, lam=l, curv=s, slope=sl)
-    )
+        return dict(rough=x, misfit=y, lam=l, curv=s, slope=sl, corner=j)
+    df = pd.DataFrame(dict(rough=x, misfit=y, lam=l, curv=s, slope=sl))
     df.attrs["corner_idx"] = j
     return df
 
 
 # ------------------------------- plotting ------------------------------- #
+
 
 def plot_lcurve(
     misfit: Any | Sequence[Any],
@@ -152,16 +147,14 @@ def plot_lcurve(
     alpha: float = 0.9,
     show_points: bool = True,
     show_path: bool = True,
-    arrow_every: int = 0,     # 0 disables
+    arrow_every: int = 0,  # 0 disables
     method: str = "curvature",
     smooth: int = 3,
     skip: int = 1,
     show_corner: bool = True,
     corner_style: dict[str, Any] | None = None,
     show_inset: bool = True,
-    inset_loc: tuple[float, float, float, float] = (
-        0.62, 0.12, 0.32, 0.32
-    ),
+    inset_loc: tuple[float, float, float, float] = (0.62, 0.12, 0.32, 0.32),
     figsize: tuple[float, float] = (6.0, 4.6),
     ax: plt.Axes | None = None,
 ):
@@ -169,12 +162,16 @@ def plot_lcurve(
     if isinstance(misfit, (list, tuple)):
         Ms = list(misfit)
         Rs = list(rough)  # type: ignore
-        Ls = list(lam) if isinstance(lam, (list, tuple)) else \
-             [None] * len(Ms)
-        labs = list(labels) if labels is not None else \
-               [f"C{i}" for i in range(len(Ms))]
+        Ls = list(lam) if isinstance(lam, (list, tuple)) else [None] * len(Ms)
+        labs = (
+            list(labels)
+            if labels is not None
+            else [f"C{i}" for i in range(len(Ms))]
+        )
     else:
-        Ms = [misfit]; Rs = [rough]; Ls = [lam]
+        Ms = [misfit]
+        Rs = [rough]
+        Ls = [lam]
         labs = [labels[0]] if labels else ["curve"]
     if colors is None:
         cols = [None] * len(Ms)
@@ -199,22 +196,23 @@ def plot_lcurve(
         x, y, l = _prep_curve(m, r, la, sort="auto")
         if x.size == 0:
             continue
-        j, score = _pick_corner(
-            x, y, method=method, smooth=smooth, skip=skip
-        )
+        j, score = _pick_corner(x, y, method=method, smooth=smooth, skip=skip)
         c = cols[i]
         if c is None:
-            c = plt.get_cmap(cmap)(0.15 + 0.65 * i / max(1, len(Ms)-1))
+            c = plt.get_cmap(cmap)(0.15 + 0.65 * i / max(1, len(Ms) - 1))
         # path and points
-        ax.set_xscale("log"); ax.set_yscale("log")
+        ax.set_xscale("log")
+        ax.set_yscale("log")
         if show_path:
-            ax.plot(
-                x, y, "-", color=c, lw=lw, alpha=alpha
-            )
+            ax.plot(x, y, "-", color=c, lw=lw, alpha=alpha)
         if show_points:
             ax.scatter(
-                x, y, c=np.linspace(0, 1, x.size),
-                s=12 * ms, cmap=cmap, edgecolors="none",
+                x,
+                y,
+                c=np.linspace(0, 1, x.size),
+                s=12 * ms,
+                cmap=cmap,
+                edgecolors="none",
                 alpha=0.85,
             )
         # optional arrows showing λ direction
@@ -222,22 +220,20 @@ def plot_lcurve(
             step = int(max(1, arrow_every))
             for k in range(0, x.size - step, step):
                 ax.annotate(
-                    "", xy=(x[k + step], y[k + step]),
+                    "",
+                    xy=(x[k + step], y[k + step]),
                     xytext=(x[k], y[k]),
-                    arrowprops=dict(arrowstyle="->",
-                                    lw=0.8, color=c,
-                                    shrinkA=0, shrinkB=0),
+                    arrowprops=dict(
+                        arrowstyle="->", lw=0.8, color=c, shrinkA=0, shrinkB=0
+                    ),
                 )
         # corner highlight
         if show_corner:
-            sty = dict(marker="*", ms=9, mec="k",
-                       mfc=c, mew=0.8)
+            sty = dict(marker="*", ms=9, mec="k", mfc=c, mew=0.8)
             if corner_style:
                 sty.update(corner_style)
             ax.plot([x[j]], [y[j]], **sty)
-            leg.append(
-                f"{labs[i]}  λ*≈{l[j]:.3g}"
-            )
+            leg.append(f"{labs[i]}  λ*≈{l[j]:.3g}")
         else:
             leg.append(labs[i])
 

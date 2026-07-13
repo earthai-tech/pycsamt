@@ -2,6 +2,7 @@
 # License: LGPL-3.0
 """TDEM analysis page — folder browser, fixed tab bar, per-category figures,
 rich parameter controls, and high-resolution export."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,36 +21,38 @@ from pycsamt.app.web.utils import empty_src
 
 PAGE_ID = "tdem"
 
+
 # ── Locate bundled JIANGSU sample data ────────────────────────────────────────
 def _sample_path() -> str:
     pkg_root = Path(__file__).resolve().parents[4]
-    jiangsu  = pkg_root / "data" / "TEMAVG" / "JIANGSU"
+    jiangsu = pkg_root / "data" / "TEMAVG" / "JIANGSU"
     return str(jiangsu) if jiangsu.is_dir() else ""
+
 
 _SAMPLE = _sample_path()
 
 # ── Tab definitions ────────────────────────────────────────────────────────────
 _TDEM_TABS = [
-    ("decay",     "Decay / Rho",    "bi-activity",  DECAY_PLOTS),
-    ("section",   "Survey Section", "bi-layers",    SECTION_PLOTS),
-    ("map",       "Map & Overview", "bi-map",       MAP_PLOTS),
-    ("dashboard", "Dashboard",      "bi-grid-3x3",  DASHBOARD_PLOTS),
+    ("decay", "Decay / Rho", "bi-activity", DECAY_PLOTS),
+    ("section", "Survey Section", "bi-layers", SECTION_PLOTS),
+    ("map", "Map & Overview", "bi-map", MAP_PLOTS),
+    ("dashboard", "Dashboard", "bi-grid-3x3", DASHBOARD_PLOTS),
 ]
 _TDEM_DEFAULT_TAB = "decay"
 
 _TDEM_TAB_GROUP = {
-    "decay":     "Decay / Rho",
-    "section":   "Survey Section",
-    "map":       "Map & Overview",
+    "decay": "Decay / Rho",
+    "section": "Survey Section",
+    "map": "Map & Overview",
     "dashboard": "Dashboard",
 }
 
 # First plot options for the default tab
 _FIRST_PLOTS = [{"label": lbl, "value": cls} for lbl, cls, *_ in DECAY_PLOTS]
-_FIRST_CLS   = _FIRST_PLOTS[0]["value"]
+_FIRST_CLS = _FIRST_PLOTS[0]["value"]
 
 _FIGSIZE_OPTIONS = [
-    {"label": "Compact  8×4",  "value": "8x4"},
+    {"label": "Compact  8×4", "value": "8x4"},
     {"label": "Standard 10×5", "value": "10x5"},
     {"label": "Wide     13×5", "value": "13x5"},
     {"label": "Tall     10×7", "value": "10x7"},
@@ -57,11 +60,12 @@ _FIGSIZE_OPTIONS = [
 
 _CMAP_OPTIONS = [
     {"label": "RdYlBu_r (default)", "value": "RdYlBu_r"},
-    {"label": "viridis",            "value": "viridis"},
-    {"label": "terrain",            "value": "terrain"},
-    {"label": "coolwarm",           "value": "coolwarm"},
-    {"label": "jet",                "value": "jet"},
+    {"label": "viridis", "value": "viridis"},
+    {"label": "terrain", "value": "terrain"},
+    {"label": "coolwarm", "value": "coolwarm"},
+    {"label": "jet", "value": "jet"},
 ]
+
 
 def _ctrl_label(text: str) -> html.Div:
     return html.Div(text, className="ctrl-label")
@@ -79,19 +83,24 @@ def layout() -> html.Div:
             html.Div(
                 [
                     dbc.Button(
-                        [html.I(className="bi bi-play-fill me-1"), "Generate"],
+                        [
+                            html.I(className="bi bi-play-fill me-1"),
+                            "Generate",
+                        ],
                         id=IDs.BTN_TDEM_RUN,
-                        color="primary", size="sm",
+                        color="primary",
+                        size="sm",
                         className="w-100 mb-1",
                         n_clicks=0,
                     ),
                     dbc.Spinner(
-                        html.Div(id=IDs.TDEM_SPINNER), size="sm", color="primary",
+                        html.Div(id=IDs.TDEM_SPINNER),
+                        size="sm",
+                        color="primary",
                     ),
                 ],
                 className="fwd-run-bar",
             ),
-
             # ── Scrollable controls ────────────────────────────────────────
             html.Div(
                 [
@@ -100,37 +109,57 @@ def layout() -> html.Div:
                         [
                             _ctrl_label("TEM Data Folder"),
                             dbc.Button(
-                                [html.I(className="bi bi-folder2-open me-2"), "Browse folder…"],
+                                [
+                                    html.I(
+                                        className="bi bi-folder2-open me-2"
+                                    ),
+                                    "Browse folder…",
+                                ],
                                 id=IDs.BTN_TDEM_BROWSE,
-                                color="secondary", size="sm",
+                                color="secondary",
+                                size="sm",
                                 className="w-100 mb-2 tdem-browse-btn",
                                 n_clicks=0,
                             ),
                             dbc.Input(
                                 id=IDs.TDEM_FOLDER,
                                 placeholder="Folder path will appear here",
-                                type="text", size="sm",
+                                type="text",
+                                size="sm",
                                 className="mb-2 tdem-path-input",
                             ),
                             dbc.Button(
-                                [html.I(className="bi bi-box-arrow-in-down me-1"), "Load"],
+                                [
+                                    html.I(
+                                        className="bi bi-box-arrow-in-down me-1"
+                                    ),
+                                    "Load",
+                                ],
                                 id=IDs.BTN_TDEM_LOAD,
-                                color="outline-teal", size="sm",
+                                color="outline-teal",
+                                size="sm",
                                 className="w-100 btn-tdem-load",
                                 n_clicks=0,
                             ),
-                            html.Div(id=IDs.TDEM_INFO, className="mt-2 tdem-info-text"),
+                            html.Div(
+                                id=IDs.TDEM_INFO,
+                                className="mt-2 tdem-info-text",
+                            ),
                         ],
                         className="ctrl-card",
                     ),
-
                     # 2. Demo data card
                     html.Div(
                         [
                             html.Div(
                                 [
                                     html.Span(
-                                        [html.I(className="bi bi-box-seam me-1"), "Demo dataset"],
+                                        [
+                                            html.I(
+                                                className="bi bi-box-seam me-1"
+                                            ),
+                                            "Demo dataset",
+                                        ],
                                         className="tdem-demo-badge",
                                     ),
                                 ],
@@ -141,13 +170,20 @@ def layout() -> html.Div:
                                 className="tdem-demo-desc",
                             ),
                             dbc.Button(
-                                [html.I(className="bi bi-play-circle me-1"), "Load demo"],
+                                [
+                                    html.I(
+                                        className="bi bi-play-circle me-1"
+                                    ),
+                                    "Load demo",
+                                ],
                                 id=IDs.BTN_TDEM_SAMPLE,
-                                color="outline-secondary", size="sm",
+                                color="outline-secondary",
+                                size="sm",
                                 className="w-100 mt-2",
                                 disabled=not bool(_SAMPLE),
                                 title=(
-                                    _SAMPLE if _SAMPLE
+                                    _SAMPLE
+                                    if _SAMPLE
                                     else "Sample data not bundled in this installation"
                                 ),
                                 n_clicks=0,
@@ -158,9 +194,10 @@ def layout() -> html.Div:
                             ),
                         ],
                         className="ctrl-card tdem-demo-card",
-                        style={"display": "block"} if _SAMPLE else {"display": "none"},
+                        style={"display": "block"}
+                        if _SAMPLE
+                        else {"display": "none"},
                     ),
-
                     # 3. Plot selector
                     html.Div(
                         [
@@ -174,14 +211,16 @@ def layout() -> html.Div:
                         ],
                         className="ctrl-card",
                     ),
-
                     # 4. Parameters
                     html.Div(
                         [
                             _ctrl_label("Parameters"),
                             html.Div(
                                 [
-                                    html.Div("Figure size", className="adv-param-label"),
+                                    html.Div(
+                                        "Figure size",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Select(
                                         id=IDs.TDEM_FIGSIZE,
                                         options=_FIGSIZE_OPTIONS,
@@ -194,11 +233,18 @@ def layout() -> html.Div:
                             html.Div(
                                 [
                                     html.Hr(className="adv-divider"),
-                                    html.Div("Sounding index", className="adv-param-label"),
+                                    html.Div(
+                                        "Sounding index",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Input(
                                         id=IDs.TDEM_SOUNDING_IDX,
-                                        type="number", value=0, min=0, step=1,
-                                        size="sm", className="adv-param-input",
+                                        type="number",
+                                        value=0,
+                                        min=0,
+                                        step=1,
+                                        size="sm",
+                                        className="adv-param-input",
                                     ),
                                     html.Div(
                                         "0 = first sounding · blank = all",
@@ -211,7 +257,10 @@ def layout() -> html.Div:
                             html.Div(
                                 [
                                     html.Hr(className="adv-divider"),
-                                    html.Div("Colormap", className="adv-param-label"),
+                                    html.Div(
+                                        "Colormap",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Select(
                                         id=IDs.TDEM_CMAP,
                                         options=_CMAP_OPTIONS,
@@ -225,11 +274,18 @@ def layout() -> html.Div:
                             html.Div(
                                 [
                                     html.Hr(className="adv-divider"),
-                                    html.Div("Gate index", className="adv-param-label"),
+                                    html.Div(
+                                        "Gate index",
+                                        className="adv-param-label",
+                                    ),
                                     dbc.Input(
                                         id=IDs.TDEM_GATE_IDX,
-                                        type="number", value=0, min=0, step=1,
-                                        size="sm", className="adv-param-input",
+                                        type="number",
+                                        value=0,
+                                        min=0,
+                                        step=1,
+                                        size="sm",
+                                        className="adv-param-input",
                                     ),
                                     html.Div(
                                         "0 = first gate · blank = all",
@@ -285,7 +341,9 @@ def layout() -> html.Div:
     )
 
     # ── Per-tab figure panels ─────────────────────────────────────────────────
-    def _fig_panel(tab_id: str, img_id: str, visible: bool = False) -> html.Div:
+    def _fig_panel(
+        tab_id: str, img_id: str, visible: bool = False
+    ) -> html.Div:
         return html.Div(
             html.Div(
                 html.Img(
@@ -302,9 +360,9 @@ def layout() -> html.Div:
 
     panels = html.Div(
         [
-            _fig_panel("decay",     IDs.IMG_TDEM_DECAY,   visible=True),
-            _fig_panel("section",   IDs.IMG_TDEM_SECTION),
-            _fig_panel("map",       IDs.IMG_TDEM_MAP),
+            _fig_panel("decay", IDs.IMG_TDEM_DECAY, visible=True),
+            _fig_panel("section", IDs.IMG_TDEM_SECTION),
+            _fig_panel("map", IDs.IMG_TDEM_MAP),
             _fig_panel("dashboard", IDs.IMG_TDEM_DASH),
         ],
         className="prof-view-panel",
@@ -324,7 +382,8 @@ def layout() -> html.Div:
     return html.Div(
         [
             _command_bar(
-                "tdem", "TDEM Analysis",
+                "tdem",
+                "TDEM Analysis",
                 "Time-domain EM · Decay, Section, Map & Dashboard",
             ),
             html.Div(
@@ -333,7 +392,11 @@ def layout() -> html.Div:
                 style={"flex": "1"},
             ),
         ],
-        style={"display": "flex", "flexDirection": "column", "height": "100%"},
+        style={
+            "display": "flex",
+            "flexDirection": "column",
+            "height": "100%",
+        },
     )
 
 

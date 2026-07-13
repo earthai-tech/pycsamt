@@ -29,6 +29,7 @@ __all__ = ["ModEmModel2D"]
 # Low-level parser
 # ----------------------------------------------------------------------
 
+
 def _parse_model2d(path: Path) -> dict:
     """Parse a ModEM 2-D model file into plain Python values."""
     with path.open("r", errors="replace") as fh:
@@ -38,8 +39,7 @@ def _parse_model2d(path: Path) -> dict:
     i = 0
     N = len(lines)
     while i < N and (
-        not lines[i].strip()
-        or lines[i].strip().startswith("#")
+        not lines[i].strip() or lines[i].strip().startswith("#")
     ):
         i += 1
 
@@ -71,7 +71,7 @@ def _parse_model2d(path: Path) -> dict:
                 pass
 
     x_widths = np.array(float_tokens[:nx], dtype=float)
-    z_widths = np.array(float_tokens[nx:nx + nz], dtype=float)
+    z_widths = np.array(float_tokens[nx : nx + nz], dtype=float)
 
     # Read rho grid: nz rows each of nx values
     rho_flat: list[float] = []
@@ -86,7 +86,7 @@ def _parse_model2d(path: Path) -> dict:
             except ValueError:
                 pass
 
-    rho_log = np.array(rho_flat[:nx * nz], dtype=float).reshape(nz, nx)
+    rho_log = np.array(rho_flat[: nx * nz], dtype=float).reshape(nz, nx)
 
     # Convert to loge if needed
     if log_type == "LOG10":
@@ -95,7 +95,7 @@ def _parse_model2d(path: Path) -> dict:
         with np.errstate(divide="ignore", invalid="ignore"):
             rho_loge = np.log(np.where(rho_log > 0, rho_log, np.nan))
     else:
-        rho_loge = rho_log   # already LOGE
+        rho_loge = rho_log  # already LOGE
 
     return {
         "nx": nx,
@@ -110,6 +110,7 @@ def _parse_model2d(path: Path) -> dict:
 # ----------------------------------------------------------------------
 # ModEmModel2D
 # ----------------------------------------------------------------------
+
 
 class ModEmModel2D(ModEmBase):
     def __init__(self, config: ModEmConfig | None = None, **kwargs):
@@ -257,8 +258,7 @@ class ModEmModel2D(ModEmBase):
 
         if obj.verbose:
             obj.logger.info(
-                "ModEmModel2D.halfspace: %d x %d grid, "
-                "rho=%.1f ohm m",
+                "ModEmModel2D.halfspace: %d x %d grid, rho=%.1f ohm m",
                 nx_total,
                 nz_total,
                 cfg.initial_rho,
@@ -359,9 +359,7 @@ class ModEmModel2D(ModEmBase):
             for i in range(0, len(arr), per_row):
                 rows.append(
                     "  "
-                    + "  ".join(
-                        f"{v:>10.4f}" for v in arr[i:i + per_row]
-                    )
+                    + "  ".join(f"{v:>10.4f}" for v in arr[i : i + per_row])
                 )
             return "\n".join(rows) + "\n"
 
@@ -370,14 +368,12 @@ class ModEmModel2D(ModEmBase):
         ]
         lines.append(_floats(self.x_widths))
         lines.append(_floats(self.z_widths))
-        lines.append("  1\n")   # block count
+        lines.append("  1\n")  # block count
 
         for iz in range(self.nz):
             lines.append(
                 "  "
-                + "  ".join(
-                    f"{v:>12.5E}" for v in self.rho_loge[iz, :]
-                )
+                + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, :])
                 + "\n"
             )
 

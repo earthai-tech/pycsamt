@@ -85,14 +85,27 @@ noisy = simulate_amt_station(
 )
 
 reports = {
-    "S001 (clean)": amt_edge_report(clean["data"]["ex"], SAMPLE_RATE, mains_hz=MAINS_HZ),
-    "S002 (noisy)": amt_edge_report(noisy["data"]["ex"], SAMPLE_RATE, mains_hz=MAINS_HZ),
+    "S001 (clean)": amt_edge_report(
+        clean["data"]["ex"], SAMPLE_RATE, mains_hz=MAINS_HZ
+    ),
+    "S002 (noisy)": amt_edge_report(
+        noisy["data"]["ex"], SAMPLE_RATE, mains_hz=MAINS_HZ
+    ),
 }
 qc_table = amt_edge_table(reports, api=False)
-print(qc_table[[
-    "channel", "powerline_contaminated", "powerline_total_ratio",
-    "dropout", "nan_fraction", "f_low_hz", "f_high_hz",
-]].to_string(index=False))
+print(
+    qc_table[
+        [
+            "channel",
+            "powerline_contaminated",
+            "powerline_total_ratio",
+            "dropout",
+            "nan_fraction",
+            "f_low_hz",
+            "f_high_hz",
+        ]
+    ].to_string(index=False)
+)
 
 ex = noisy["data"]["ex"]
 harmonics = detect_powerline_harmonics(ex, SAMPLE_RATE, mains_hz=MAINS_HZ)
@@ -201,10 +214,18 @@ for index, drift_ppm in enumerate([3.0, 7.0, 22.0], start=1):
         )
     )
 
-print(sync_status_table(sync_statuses, api=False)[[
-    "device_id", "offset_ms", "drift_ppm", "jitter_ms", "quality",
-    "within_tolerance",
-]].to_string(index=False))
+print(
+    sync_status_table(sync_statuses, api=False)[
+        [
+            "device_id",
+            "offset_ms",
+            "drift_ppm",
+            "jitter_ms",
+            "quality",
+            "within_tolerance",
+        ]
+    ].to_string(index=False)
+)
 
 plot_sync_quality(
     sync_statuses,

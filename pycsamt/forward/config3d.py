@@ -23,6 +23,7 @@ Quick start
     from pycsamt.forward.em3d import MT3DForward
     resp = MT3DForward(cfg.freq_grid(), grid, verbose=cfg.verbose).run()
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -249,32 +250,32 @@ class ForwardConfig3D:
     # ── Solver ───────────────────────────────────────────────────────────────
     freq_min: float = 1e-2
     freq_max: float = 1e3
-    n_freqs:  int   = 15
-    method:   str   = "quasi3d"
+    n_freqs: int = 15
+    method: str = "quasi3d"
 
     # ── Grid ─────────────────────────────────────────────────────────────────
-    nx:         int   = 20
-    ny:         int   = 20
-    nz:         int   = 15
-    x_max:      float = 8_000.0
-    y_max:      float = 8_000.0
-    z_max:      float = 4_000.0
-    n_pad:      int   = 8
+    nx: int = 20
+    ny: int = 20
+    nz: int = 15
+    x_max: float = 8_000.0
+    y_max: float = 8_000.0
+    z_max: float = 4_000.0
+    n_pad: int = 8
     pad_factor: float = 1.3
 
     # ── Earth model ──────────────────────────────────────────────────────────
-    bg_rho:         float          = 100.0
-    model_type:     str            = "halfspace"
-    anomaly_rho:    float          = 5.0
-    anomaly_x_lo:   float          = 2_000.0
-    anomaly_x_hi:   float          = 6_000.0
-    anomaly_y_lo:   float          = 2_000.0
-    anomaly_y_hi:   float          = 6_000.0
-    anomaly_z_lo:   float          =   300.0
-    anomaly_z_hi:   float          = 1_500.0
-    n_layers:       int            = 4
-    lateral_variation: bool        = True
-    corr_length:    float          = 2_000.0
+    bg_rho: float = 100.0
+    model_type: str = "halfspace"
+    anomaly_rho: float = 5.0
+    anomaly_x_lo: float = 2_000.0
+    anomaly_x_hi: float = 6_000.0
+    anomaly_y_lo: float = 2_000.0
+    anomaly_y_hi: float = 6_000.0
+    anomaly_z_lo: float = 300.0
+    anomaly_z_hi: float = 1_500.0
+    n_layers: int = 4
+    lateral_variation: bool = True
+    corr_length: float = 2_000.0
 
     # ── Stations ─────────────────────────────────────────────────────────────
     nx_stations: int = 5
@@ -294,7 +295,9 @@ class ForwardConfig3D:
         if self.n_freqs < 2:
             raise ValueError("n_freqs must be at least 2.")
         if self.method not in {"quasi3d"}:
-            raise ValueError(f"method must be 'quasi3d', got {self.method!r}.")
+            raise ValueError(
+                f"method must be 'quasi3d', got {self.method!r}."
+            )
         if any(n < 4 for n in (self.nx, self.ny, self.nz)):
             raise ValueError("nx, ny, nz must each be at least 4.")
         if any(v <= 0 for v in (self.x_max, self.y_max, self.z_max)):
@@ -317,7 +320,9 @@ class ForwardConfig3D:
                 (self.anomaly_z_lo, self.anomaly_z_hi, "z"),
             ):
                 if lo >= hi:
-                    raise ValueError(f"anomaly_{ax}_lo must be < anomaly_{ax}_hi.")
+                    raise ValueError(
+                        f"anomaly_{ax}_lo must be < anomaly_{ax}_hi."
+                    )
         if self.nx_stations < 1 or self.ny_stations < 1:
             raise ValueError("nx_stations and ny_stations must be ≥ 1.")
 
@@ -346,9 +351,14 @@ class ForwardConfig3D:
         from .grid3d import Grid3D
 
         kw = dict(
-            nx=self.nx, ny=self.ny, nz=self.nz,
-            x_max=self.x_max, y_max=self.y_max, z_max=self.z_max,
-            n_pad=self.n_pad, pad_factor=self.pad_factor,
+            nx=self.nx,
+            ny=self.ny,
+            nz=self.nz,
+            x_max=self.x_max,
+            y_max=self.y_max,
+            z_max=self.z_max,
+            n_pad=self.n_pad,
+            pad_factor=self.pad_factor,
             nx_stations=self.nx_stations,
             ny_stations=self.ny_stations,
         )
@@ -360,9 +370,12 @@ class ForwardConfig3D:
                 bg_rho=self.bg_rho,
                 anomaly_rho=self.anomaly_rho,
                 bounds=(
-                    self.anomaly_x_lo, self.anomaly_x_hi,
-                    self.anomaly_y_lo, self.anomaly_y_hi,
-                    self.anomaly_z_lo, self.anomaly_z_hi,
+                    self.anomaly_x_lo,
+                    self.anomaly_x_hi,
+                    self.anomaly_y_lo,
+                    self.anomaly_y_hi,
+                    self.anomaly_z_lo,
+                    self.anomaly_z_hi,
                 ),
                 **kw,
             )
@@ -396,7 +409,10 @@ class ForwardConfig3D:
     ) -> Path:
         """Write an annotated source-of-truth file."""
         return write_config_template(
-            path, self, _FWD3D_SCHEMA, fmt=fmt,
+            path,
+            self,
+            _FWD3D_SCHEMA,
+            fmt=fmt,
             title="PyCSAMT quasi-3D MT forward configuration",
         )
 

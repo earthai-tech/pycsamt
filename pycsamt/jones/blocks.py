@@ -36,9 +36,14 @@ from .utils import (
 logger = get_logger(__name__)
 
 __all__ = [
-    "RRow", "TFRow", "JBlock",
-    "RBlock", "TFBlock", "JBlocks",
+    "RRow",
+    "TFRow",
+    "JBlock",
+    "RBlock",
+    "TFBlock",
+    "JBlocks",
 ]
+
 
 @dataclass
 class RRow:
@@ -52,6 +57,7 @@ class RRow:
     wrho: float
     wpha: float
     rej: bool = False
+
 
 @dataclass
 class TFRow:
@@ -138,8 +144,6 @@ class JBlock(JComponentBase):
        J-format, version 2.0.
     """
 
-
-
     def __init__(
         self,
         head: Head | None = None,
@@ -212,38 +216,25 @@ class JBlock(JComponentBase):
         data = self.to_numpy()
         return pd.DataFrame(data)
 
-
     @property
     def nrows(self) -> int:
         return len(self.rows)
 
     @property
     def station(self) -> str | None:
-        return (
-            None if self.head is None
-            else self.head.station
-            )
+        return None if self.head is None else self.head.station
 
     @property
     def kind(self) -> str | None:
-        return (
-            None if self.head is None
-            else self.head.kind
-            )
+        return None if self.head is None else self.head.kind
 
     @property
     def comp(self) -> str | None:
-        return (
-            None if self.head is None
-            else self.head.comp
-        )
+        return None if self.head is None else self.head.comp
 
     @property
     def units(self) -> str | None:
-        return (
-            None if self.head is None
-            else self.head.units
-        )
+        return None if self.head is None else self.head.units
 
     @property
     def has_units(self) -> bool:
@@ -273,6 +264,7 @@ class JBlock(JComponentBase):
             f"{self.__class__.__name__}(station={st!r}, "
             f"dtype={k}{c}, nrows={self.nrows})"
         )
+
 
 class RBlock(JBlock):
     r"""
@@ -332,7 +324,6 @@ class RBlock(JBlock):
     .. [1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
-
 
     def read(
         self,
@@ -460,8 +451,16 @@ class RBlock(JBlock):
     @property
     def columns(self) -> tuple[str, ...]:
         return (
-            "period", "rho", "pha", "rhomax", "rhomin",
-            "phamax", "phamin", "wrho", "wpha", "rej",
+            "period",
+            "rho",
+            "pha",
+            "rhomax",
+            "rhomin",
+            "phamax",
+            "phamin",
+            "wrho",
+            "wpha",
+            "rej",
         )
 
 
@@ -522,6 +521,7 @@ class TFBlock(JBlock):
     .. [1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
+
     def read(
         self,
         data: tuple[Head, Sequence[str]] | None = None,
@@ -598,9 +598,7 @@ class TFBlock(JBlock):
         keep = n - rej
         pmin = np.nanmin(a["period"]) if n else np.nan
         pmax = np.nanmax(a["period"]) if n else np.nan
-        rms = np.sqrt(
-            np.nanmean(np.square(a["error"]))
-        ) if n else np.nan
+        rms = np.sqrt(np.nanmean(np.square(a["error"]))) if n else np.nan
         return {
             "kind": "TF",
             "nrows": n,
@@ -627,9 +625,14 @@ class TFBlock(JBlock):
     @property
     def columns(self) -> tuple[str, ...]:
         return (
-            "period", "real", "imag", "error", "weight",
+            "period",
+            "real",
+            "imag",
+            "error",
+            "weight",
             "rej",
         )
+
 
 class JBlocks(JComponentBase):
     r"""
@@ -732,8 +735,8 @@ class JBlocks(JComponentBase):
         verbose: int = 0,
     ) -> JBlocks:
         blocks = _extract_all_blocks(lines, verbose=verbose)
-        inst= cls(blocks=blocks, verbose=verbose)
-        inst._mark_read(True)           # ← important
+        inst = cls(blocks=blocks, verbose=verbose)
+        inst._mark_read(True)  # ← important
         return inst
 
     def read(
@@ -843,9 +846,7 @@ def _safe_div(a: float, b: float) -> float:
         return np.nan
 
 
-def _index_of_subsequence(
-    hay: Sequence[str], needle: Sequence[str]
-) -> int:
+def _index_of_subsequence(hay: Sequence[str], needle: Sequence[str]) -> int:
     if not needle:
         return -1
     n = len(needle)
@@ -858,6 +859,7 @@ def _index_of_subsequence(
         if ok:
             return i
     return -1
+
 
 def _block_factory(head: Head, *, verbose: int) -> JBlock:
     k = head.dtype.kind
@@ -884,8 +886,8 @@ def _extract_first_head_and_body(
 
 
 def _extract_all_blocks(
-        lines: Sequence[str], *, verbose: int = 0
-    ) -> list[JBlock]:
+    lines: Sequence[str], *, verbose: int = 0
+) -> list[JBlock]:
     """
     Robustly parse all data blocks from a J-file for
     a single station.
@@ -903,7 +905,11 @@ def _extract_all_blocks(
     first_data_line_index = 0
     for i, line in enumerate(seq):
         # Skip over the initial comment and info blocks
-        if RE_COMMENT.match(line) or RE_INFO.match(line) or RE_BLANK.match(line):
+        if (
+            RE_COMMENT.match(line)
+            or RE_INFO.match(line)
+            or RE_BLANK.match(line)
+        ):
             continue
         # The first non-header line must be the station
         if RE_STATION.match(line):
@@ -914,9 +920,7 @@ def _extract_all_blocks(
     if station_line is None:
         # If no station is found in the file, there are no blocks to parse.
         if verbose:
-            logger.warning(
-                "No station line found. Cannot parse data blocks."
-            )
+            logger.warning("No station line found. Cannot parse data blocks.")
         return []
 
     # 2. Now, loop through the rest of the
@@ -942,7 +946,7 @@ def _extract_all_blocks(
                 i += 1
 
         if not dtype_line:
-            break # No more data type lines found, we are done.
+            break  # No more data type lines found, we are done.
 
         # 3. Find the next count line, skipping blank lines
         count_line = None
@@ -989,6 +993,7 @@ def _extract_all_blocks(
 
     return blocks
 
+
 def _locate_header_indices(
     seq: Sequence[str], start: int
 ) -> tuple[int, int, int] | None:
@@ -1005,8 +1010,9 @@ def _locate_header_indices(
 
     # skip comments/info/blank first
     while i < n and (
-        RE_COMMENT.match(seq[i]) or RE_INFO.match(seq[i]) or
-        RE_BLANK.match(seq[i])
+        RE_COMMENT.match(seq[i])
+        or RE_INFO.match(seq[i])
+        or RE_BLANK.match(seq[i])
     ):
         i += 1
 
@@ -1061,7 +1067,8 @@ def _locate_header_indices(
     # unknown header after station; advance caller
     return None
 
-TFRow.__doc__= r"""
+
+TFRow.__doc__ = r"""
 One parsed transfer-function row of a J *Z/Q/C/T* block.
 
 The row stores period (s), real/imag parts, a standard error,
@@ -1107,7 +1114,7 @@ References
    J-format, version 2.0.
 """
 
-RRow.__doc__=r"""
+RRow.__doc__ = r"""
 One parsed resistivity/phase row of a J *R/S* block.
 
 The row stores period (s), apparent resistivity (Ω·m), phase

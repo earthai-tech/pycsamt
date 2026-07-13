@@ -39,13 +39,20 @@ def test_sphz_read_legacy_and_write_block_has_unit_meta():
 
     lines = s.write()
     # banner + Unit.Phase meta present
-    assert _has_line(lines, lambda ln: ln.strip().startswith("\\ $Phase-Stdev"))
+    assert _has_line(
+        lines, lambda ln: ln.strip().startswith("\\ $Phase-Stdev")
+    )
     assert _has_line(lines, lambda ln: ln.strip().startswith("$Unit.Phase="))
 
 
 def test_phase_convert_unit_roundtrip_mrad_deg():
     df = pd.DataFrame(
-        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "Z.perr": [1000.0]}
+        {
+            "station": [0.0],
+            "freq": [1.0],
+            "comp": ["ExHy"],
+            "Z.perr": [1000.0],
+        }
     )
     s = SPhz.from_avg((df, {"Unit.Phase": "mrad"}))
     # mrad -> deg
@@ -62,7 +69,9 @@ def test_phase_convert_unit_roundtrip_mrad_deg():
     assert s.meta["Unit.Phase"].lower() == "mrad"
 
 
-@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
+@pytest.mark.skipif(
+    pytest.importorskip("xarray") is None, reason="xarray required"
+)
 def test_phase_to_xarray_dims_and_var():
     df = pd.DataFrame(
         {
@@ -126,7 +135,9 @@ def test_pc_emag_read_modern_and_write_block_banner():
     assert np.allclose(p.frame["pc_emag"].to_numpy(), [5.0, 10.0])
 
     lines = p.write()
-    assert _has_line(lines, lambda ln: ln.strip().startswith('\\ $ Percent |E| Variation'))
+    assert _has_line(
+        lines, lambda ln: ln.strip().startswith("\\ $ Percent |E| Variation")
+    )
 
 
 def test_pc_hmag_read_legacy_and_to_tensor_like_position():
@@ -150,7 +161,9 @@ def test_pc_hmag_read_legacy_and_to_tensor_like_position():
     assert np.isnan(T[0, 0, 0, 0])
 
 
-@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
+@pytest.mark.skipif(
+    pytest.importorskip("xarray") is None, reason="xarray required"
+)
 def test_pc_rho_to_xarray_dims_and_var():
     df = pd.DataFrame(
         {
@@ -169,5 +182,6 @@ def test_pc_rho_to_xarray_dims_and_var():
     v = np.asarray(v).reshape(-1)
     assert np.allclose(v[:2], [1.1, 2.2])
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

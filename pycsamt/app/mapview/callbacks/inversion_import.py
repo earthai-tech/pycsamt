@@ -67,11 +67,21 @@ def _register_confirm(app) -> None:
         filenames = (staged or {}).get("filenames") or []
         contents = (staged or {}).get("contents") or []
         if not filenames:
-            return (no_update, "⚠ Browse to a ModEM results folder first.",
-                    no_update, no_update, no_update)
+            return (
+                no_update,
+                "⚠ Browse to a ModEM results folder first.",
+                no_update,
+                no_update,
+                no_update,
+            )
         if not session_id:
-            return (no_update, "⚠ Session not initialised — refresh.",
-                    no_update, no_update, no_update)
+            return (
+                no_update,
+                "⚠ Session not initialised — refresh.",
+                no_update,
+                no_update,
+                no_update,
+            )
 
         theme = theme or "light"
         old = get_view(session_id)
@@ -85,11 +95,18 @@ def _register_confirm(app) -> None:
 
             tmpdir = _decode_to_tempdir(filenames, contents)
             view = MapView.from_inversion_results(
-                tmpdir, known_stations=known_stations, theme=theme,
+                tmpdir,
+                known_stations=known_stations,
+                theme=theme,
             )
             if view.n_stations == 0:
-                return (no_update, "⚠ No ModEM stations could be parsed.",
-                        no_update, no_update, no_update)
+                return (
+                    no_update,
+                    "⚠ No ModEM stations could be parsed.",
+                    no_update,
+                    no_update,
+                    no_update,
+                )
 
             if mode == _MODE_APPEND and old is not None:
                 view = merge_views(old, view)
@@ -100,7 +117,13 @@ def _register_confirm(app) -> None:
             badge = f"{n_s} stations · {n_l} line(s)"
             return store, feedback, False, badge, "mv-data-badge visible"
         except Exception as exc:  # noqa: BLE001 - surface to the UI
-            return (no_update, f"✗ Error: {exc}", no_update, no_update, no_update)
+            return (
+                no_update,
+                f"✗ Error: {exc}",
+                no_update,
+                no_update,
+                no_update,
+            )
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir, ignore_errors=True)

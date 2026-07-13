@@ -31,13 +31,20 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -48,14 +55,13 @@ from pycsamt.emtools import drop_duplicates, ensure_sites, select_band
 from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 from pycsamt.site import SitesReport, write_sites
 
-
 # Replace this path with your corrected EDI folder.
 corrected_edi_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 
 # The workspace is deliberately inside the example folder for this gallery.
 # In a real project this would be something like:
 # ``PROJECT_ROOT / "inversion" / "L18_2026_07_prepared"``.
-workspace = Path(__file__).resolve().parent / "workspaces" / "l18_prepared_workspace"
+workspace = EXAMPLE_DIR / "workspaces" / "l18_prepared_workspace"
 
 # %%
 # 2. Decide the inversion contract before writing files
@@ -110,10 +116,16 @@ print(
     f"{summary['nfreq'].min()}-{summary['nfreq'].max()}"
 )
 print("Station summary:")
-print(summary[["station", "nfreq", "lat", "lon", "elev"]].head(8).to_string(index=False))
+print(
+    summary[["station", "nfreq", "lat", "lon", "elev"]]
+    .head(8)
+    .to_string(index=False)
+)
 
 if summary.empty:
-    raise RuntimeError("No stations were loaded from the corrected EDI folder.")
+    raise RuntimeError(
+        "No stations were loaded from the corrected EDI folder."
+    )
 if summary["nfreq"].min() <= 0:
     raise RuntimeError("At least one station has no valid frequency rows.")
 
@@ -201,8 +213,12 @@ def station_rows(sites_obj):
                 "n_frequency": int(fr.size),
                 "fmin_hz": float(np.nanmin(fr)) if fr.size else np.nan,
                 "fmax_hz": float(np.nanmax(fr)) if fr.size else np.nan,
-                "period_min_s": float(1.0 / np.nanmax(fr)) if fr.size else np.nan,
-                "period_max_s": float(1.0 / np.nanmin(fr)) if fr.size else np.nan,
+                "period_min_s": float(1.0 / np.nanmax(fr))
+                if fr.size
+                else np.nan,
+                "period_max_s": float(1.0 / np.nanmin(fr))
+                if fr.size
+                else np.nan,
                 "has_finite_z": bool(
                     z is not None and np.isfinite(np.asarray(z)).all()
                 ),
@@ -222,7 +238,10 @@ def frequency_rows(sites_obj):
     all_freq = np.sort(np.unique(np.concatenate(station_freqs)))
     rows = []
     for freq in all_freq:
-        present = sum(np.isclose(fr, freq, rtol=1e-6, atol=1e-12).any() for fr in station_freqs)
+        present = sum(
+            np.isclose(fr, freq, rtol=1e-6, atol=1e-12).any()
+            for fr in station_freqs
+        )
         rows.append(
             {
                 "frequency_hz": float(freq),
@@ -290,8 +309,12 @@ def impedance_rows(sites_obj, components, relative_floor, absolute_floor):
                     and np.isfinite(z_err[row_index, a, b])
                     else np.nan
                 )
-                floor = max(float(relative_floor) * abs(value), float(absolute_floor))
-                error = max(edi_error if np.isfinite(edi_error) else 0.0, floor)
+                floor = max(
+                    float(relative_floor) * abs(value), float(absolute_floor)
+                )
+                error = max(
+                    edi_error if np.isfinite(edi_error) else 0.0, floor
+                )
                 rows.append(
                     {
                         "station": station,
@@ -403,7 +426,9 @@ fig.tight_layout()
 fig.savefig(folders["figures"] / "station_frequency_counts.png", dpi=160)
 
 freq = np.array([row["frequency_hz"] for row in frequency_table], dtype=float)
-coverage = np.array([row["coverage_fraction"] for row in frequency_table], dtype=float)
+coverage = np.array(
+    [row["coverage_fraction"] for row in frequency_table], dtype=float
+)
 
 fig, ax = plt.subplots(figsize=(8.5, 4.2))
 ax.semilogx(freq, coverage, "o-", color="#16a34a")
@@ -431,7 +456,9 @@ print(
 )
 
 if len(reload_summary) != len(summary):
-    raise RuntimeError("Reloaded station count differs from the input station count.")
+    raise RuntimeError(
+        "Reloaded station count differs from the input station count."
+    )
 
 # %%
 # 12. What comes next?

@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Symbol cross-reference graph + signature-aware metadata (RAG Tier 3)."""
+
 from __future__ import annotations
 
 import tempfile
@@ -115,13 +116,14 @@ class TestRefsExtraction(unittest.TestCase):
 
     def test_leaf_with_no_calls_has_no_refs(self):
         self.assertEqual(
-            _by_symbol()["pycsamt.emtools.ss.estimate_ss_ama"].metadata["refs"],
+            _by_symbol()["pycsamt.emtools.ss.estimate_ss_ama"].metadata[
+                "refs"
+            ],
             [],
         )
 
 
 class TestSymbolGraph(unittest.TestCase):
-
     def test_related_resolves_qualified_refs(self):
         g = SymbolGraph(_indexed())
         rel = g.related("pycsamt.emtools.ss.correct_ss_ama")
@@ -142,22 +144,30 @@ class TestSymbolGraph(unittest.TestCase):
         )
 
     def test_unknown_symbol_returns_empty(self):
-        self.assertEqual(SymbolGraph(_indexed()).related("pycsamt.no.Thing"), [])
+        self.assertEqual(
+            SymbolGraph(_indexed()).related("pycsamt.no.Thing"), []
+        )
 
     def test_unique_leaf_recovers_reexport(self):
         # ref points at a package re-export; the real symbol lives deeper.
         chunks = [
             RAGChunk(
-                id="a", text="", source_path="pycsamt/a.py",
-                kind="python_symbol", symbol="pycsamt.a.caller",
+                id="a",
+                text="",
+                source_path="pycsamt/a.py",
+                kind="python_symbol",
+                symbol="pycsamt.a.caller",
                 module="pycsamt.a",
                 metadata={"refs": ["pycsamt.emtools.ensure_sites"]},
             ),
             RAGChunk(
-                id="b", text="", source_path="pycsamt/emtools/_core.py",
+                id="b",
+                text="",
+                source_path="pycsamt/emtools/_core.py",
                 kind="python_symbol",
                 symbol="pycsamt.emtools._core.ensure_sites",
-                module="pycsamt.emtools._core", metadata={},
+                module="pycsamt.emtools._core",
+                metadata={},
             ),
         ]
         self.assertEqual(
@@ -169,16 +179,32 @@ class TestSymbolGraph(unittest.TestCase):
         # Two symbols share the leaf name → refuse to guess.
         chunks = [
             RAGChunk(
-                id="a", text="", source_path="pycsamt/a.py",
-                kind="python_symbol", symbol="pycsamt.a.caller",
-                module="pycsamt.a", metadata={"refs": ["pycsamt.x.run"]},
+                id="a",
+                text="",
+                source_path="pycsamt/a.py",
+                kind="python_symbol",
+                symbol="pycsamt.a.caller",
+                module="pycsamt.a",
+                metadata={"refs": ["pycsamt.x.run"]},
             ),
-            RAGChunk(id="b", text="", source_path="pycsamt/b.py",
-                     kind="python_symbol", symbol="pycsamt.b.run",
-                     module="pycsamt.b", metadata={}),
-            RAGChunk(id="c", text="", source_path="pycsamt/c.py",
-                     kind="python_symbol", symbol="pycsamt.c.run",
-                     module="pycsamt.c", metadata={}),
+            RAGChunk(
+                id="b",
+                text="",
+                source_path="pycsamt/b.py",
+                kind="python_symbol",
+                symbol="pycsamt.b.run",
+                module="pycsamt.b",
+                metadata={},
+            ),
+            RAGChunk(
+                id="c",
+                text="",
+                source_path="pycsamt/c.py",
+                kind="python_symbol",
+                symbol="pycsamt.c.run",
+                module="pycsamt.c",
+                metadata={},
+            ),
         ]
         self.assertEqual(SymbolGraph(chunks).related("pycsamt.a.caller"), [])
 

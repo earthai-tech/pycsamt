@@ -93,4 +93,6 @@ class SerialTelemetryClient(BaseTelemetryClient):
             return {"raw": text}
 
     def _transport_healthcheck(self) -> bool:
-        return self._handle is not None and getattr(self._handle, "is_open", False)
+        return self._handle is not None and getattr(
+            self._handle, "is_open", False
+        )

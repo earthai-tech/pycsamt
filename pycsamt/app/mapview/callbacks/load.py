@@ -99,16 +99,22 @@ def _register_mode_buttons(app) -> None:
 
 def _modal_title(mode):
     if mode == _MODE_APPEND:
-        return [html.I(className="bi bi-layer-forward me-2"),
-                "Add Lines to Survey"]
-    return [html.I(className="bi bi-cloud-upload-fill me-2"),
-            "Load Survey Lines"]
+        return [
+            html.I(className="bi bi-layer-forward me-2"),
+            "Add Lines to Survey",
+        ]
+    return [
+        html.I(className="bi bi-cloud-upload-fill me-2"),
+        "Load Survey Lines",
+    ]
 
 
 def _mode_hint(mode):
     if mode == _MODE_APPEND:
-        return ("New lines are merged into the current survey; existing "
-                "stations are kept and new ones appended.")
+        return (
+            "New lines are merged into the current survey; existing "
+            "stations are kept and new ones appended."
+        )
     return "Existing survey data will be replaced."
 
 
@@ -122,8 +128,7 @@ def _sanitize(name, fallback):
     parts = []
     for part in raw.split("/"):
         clean = "".join(
-            ch if ch.isalnum() or ch in "._- " else "_"
-            for ch in part.strip()
+            ch if ch.isalnum() or ch in "._- " else "_" for ch in part.strip()
         ).strip(" .")
         if clean:
             parts.append(clean)
@@ -140,16 +145,18 @@ def _entries(contents, filenames, *, source):
     filenames = filenames or []
     out = []
     for i, content in enumerate(contents):
-        original = filenames[i] if i < len(filenames) else f"file_{i+1}.edi"
+        original = filenames[i] if i < len(filenames) else f"file_{i + 1}.edi"
         if Path(original).suffix.lower() not in _EXTS:
             continue
-        out.append({
-            "id": f"f-{i}",
-            "source": source,
-            "original": original,
-            "filename": _sanitize(original, f"file_{i+1}.edi"),
-            "content": content,
-        })
+        out.append(
+            {
+                "id": f"f-{i}",
+                "source": source,
+                "original": original,
+                "filename": _sanitize(original, f"file_{i + 1}.edi"),
+                "content": content,
+            }
+        )
     return out
 
 
@@ -230,12 +237,17 @@ def _register_line_filter(app) -> None:
             }
             for line, count in sorted(counts.items())
         ]
-        return options, [opt["value"] for opt in options], {"display": "block"}
+        return (
+            options,
+            [opt["value"] for opt in options],
+            {"display": "block"},
+        )
 
 
 def _register_preflight(app) -> None:
     """Compact one-line summary only — the load panel stays focused;
     per-site management lives in the Sites settings panel."""
+
     @app.callback(
         Output(IDs.DETECTED_SUMMARY, "children"),
         Input(IDs.UPLOAD_SELECTION, "data"),
@@ -246,8 +258,10 @@ def _register_preflight(app) -> None:
     def preflight(entries, selected_lines, mode):
         entries = _filtered_entries(entries, selected_lines)
         if not entries:
-            return [html.I(className="bi bi-info-circle me-1"),
-                    "No files match the selected folders."]
+            return [
+                html.I(className="bi bi-info-circle me-1"),
+                "No files match the selected folders.",
+            ]
         names = [e.get("original") or e.get("filename") for e in entries]
         line_counts = _infer_lines(names)
         mode_lbl = "add" if mode == _MODE_APPEND else "replace"
@@ -353,15 +367,29 @@ def _register_confirm_load(app) -> None:
         State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
-    def confirm(_n, entries, selected_lines, session_id, mode, existing, theme):
+    def confirm(
+        _n, entries, selected_lines, session_id, mode, existing, theme
+    ):
         entries = _filtered_entries(entries, selected_lines)
         usable = [e for e in (entries or []) if e.get("content")]
         if not usable:
-            return (no_update, "⚠ Choose a folder or drop files first.",
-                    no_update, no_update, no_update, no_update)
+            return (
+                no_update,
+                "⚠ Choose a folder or drop files first.",
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+            )
         if not session_id:
-            return (no_update, "⚠ Session not initialised — refresh.",
-                    no_update, no_update, no_update, no_update)
+            return (
+                no_update,
+                "⚠ Session not initialised — refresh.",
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+            )
 
         source = usable[0].get("source", "upload")
         theme = theme or "light"
@@ -369,12 +397,24 @@ def _register_confirm_load(app) -> None:
         try:
             line_map, tmpdir = _decode(usable, source)
             if not line_map:
-                return (no_update, "⚠ No recognised EDI/AVG/J files.",
-                        no_update, no_update, no_update, no_update)
+                return (
+                    no_update,
+                    "⚠ No recognised EDI/AVG/J files.",
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                )
             view = _build_view(line_map, theme)
             if view.n_stations == 0:
-                return (no_update, "⚠ No stations could be parsed.",
-                        no_update, no_update, no_update, no_update)
+                return (
+                    no_update,
+                    "⚠ No stations could be parsed.",
+                    no_update,
+                    no_update,
+                    no_update,
+                    no_update,
+                )
 
             if mode == _MODE_APPEND:
                 old = get_view(session_id)
@@ -383,12 +423,18 @@ def _register_confirm_load(app) -> None:
             set_view(session_id, view)
             store = store_from_view(view)
             n_s, n_l = store["n_stations"], store["n_lines"]
-            feedback = (f"✓ Loaded {n_s} station(s) from {n_l} line(s).")
+            feedback = f"✓ Loaded {n_s} station(s) from {n_l} line(s)."
             badge = f"{n_s} stations · {n_l} line(s)"
             return store, feedback, False, [], badge, "mv-data-badge visible"
         except Exception as exc:  # noqa: BLE001 - surface to the UI
-            return (no_update, f"✗ Error: {exc}",
-                    no_update, no_update, no_update, no_update)
+            return (
+                no_update,
+                f"✗ Error: {exc}",
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+            )
         finally:
             if tmpdir:
                 shutil.rmtree(tmpdir, ignore_errors=True)

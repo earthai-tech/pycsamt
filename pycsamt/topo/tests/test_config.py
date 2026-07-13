@@ -18,6 +18,7 @@ from pycsamt.topo.config import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_after_each():
     """Always reset the global singleton between tests."""
@@ -28,6 +29,7 @@ def _reset_after_each():
 # ---------------------------------------------------------------------------
 # Default values
 # ---------------------------------------------------------------------------
+
 
 class TestTopoConfigDefaults:
     def test_enabled_false(self):
@@ -81,6 +83,7 @@ class TestTopoConfigDefaults:
 # configure() method
 # ---------------------------------------------------------------------------
 
+
 class TestConfigure:
     def test_enable(self):
         cfg = TopoConfig()
@@ -91,7 +94,7 @@ class TestConfigure:
         cfg = TopoConfig()
         cfg.configure(exaggeration=3.5)
         assert cfg.exaggeration == pytest.approx(3.5)
-        assert cfg.enabled is False          # unchanged
+        assert cfg.enabled is False  # unchanged
 
     def test_update_multiple_fields(self):
         cfg = TopoConfig()
@@ -120,6 +123,7 @@ class TestConfigure:
 # reset() method
 # ---------------------------------------------------------------------------
 
+
 class TestReset:
     def test_reset_enabled(self):
         cfg = TopoConfig()
@@ -145,6 +149,7 @@ class TestReset:
 # ---------------------------------------------------------------------------
 # context() context manager
 # ---------------------------------------------------------------------------
+
 
 class TestContextManager:
     def test_context_restores_enabled(self):
@@ -188,6 +193,7 @@ class TestContextManager:
 # clone() method
 # ---------------------------------------------------------------------------
 
+
 class TestClone:
     def test_clone_independent(self):
         cfg = TopoConfig()
@@ -209,6 +215,7 @@ class TestClone:
 # Global singleton functions
 # ---------------------------------------------------------------------------
 
+
 class TestGlobalSingleton:
     def test_configure_topo_updates_singleton(self):
         configure_topo(enabled=True, exaggeration=2.0)
@@ -223,12 +230,14 @@ class TestGlobalSingleton:
 
     def test_singleton_identity(self):
         from pycsamt.topo.config import PYCSAMT_TOPO as T2
+
         assert PYCSAMT_TOPO is T2
 
 
 # ---------------------------------------------------------------------------
 # API re-exports
 # ---------------------------------------------------------------------------
+
 
 class TestApiReExports:
     def test_api_topo_config_class(self):

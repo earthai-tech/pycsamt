@@ -30,14 +30,20 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -47,8 +53,7 @@ if str(ROOT) not in sys.path:
 from pycsamt.models.modem import ModEmConfig, ModEmControl
 from pycsamt.models.occam2d import OccamConfig
 
-
-workspace = Path(__file__).resolve().parent / "workspaces" / "l18_prepared_workspace"
+workspace = EXAMPLE_DIR / "workspaces" / "l18_prepared_workspace"
 table_dir = workspace / "02_tables"
 model_dir = workspace / "03_model_placeholder"
 run_root = workspace / "04_run_files"
@@ -78,7 +83,9 @@ print("Validation status counts:")
 print(json.dumps(status_counts, indent=2))
 
 if status_counts.get("FAIL", 0):
-    raise RuntimeError("Workspace validation has FAIL rows; do not create run folders.")
+    raise RuntimeError(
+        "Workspace validation has FAIL rows; do not create run folders."
+    )
 
 complex_table = table_dir / "inversion_impedance_complex_table.csv"
 rho_phase_table = table_dir / "inversion_rho_phase_table.csv"
@@ -161,14 +168,18 @@ modem_config = ModEmConfig(
 )
 
 modem_control = ModEmControl.from_config(modem_config)
-modem_control_path = modem_control.write(modem_dir / modem_config.control_file)
+modem_control_path = modem_control.write(
+    modem_dir / modem_config.control_file
+)
 
 modem_data = modem_dir / modem_config.data_file
 modem_model = modem_dir / modem_config.model_file
 modem_x_edges = modem_dir / "x_edges_m.csv"
 modem_z_edges = modem_dir / "z_edges_m.csv"
 
-copy_required(table_dir / "backend_modem_style_impedance_long.csv", modem_data)
+copy_required(
+    table_dir / "backend_modem_style_impedance_long.csv", modem_data
+)
 copy_required(model_dir / "starting_resistivity_ohmm.csv", modem_model)
 copy_required(model_dir / "x_edges_m.csv", modem_x_edges)
 copy_required(model_dir / "z_edges_m.csv", modem_z_edges)
@@ -247,9 +258,15 @@ occam_config = OccamConfig(
     target_misfit=1.0,
 )
 
-copy_required(table_dir / "backend_occam_style_rho_phase_long.csv", occam_dir / occam_config.data_file)
+copy_required(
+    table_dir / "backend_occam_style_rho_phase_long.csv",
+    occam_dir / occam_config.data_file,
+)
 copy_required(model_dir / "x_edges_m.csv", occam_dir / occam_config.mesh_file)
-copy_required(model_dir / "starting_log10_resistivity.csv", occam_dir / occam_config.model_file)
+copy_required(
+    model_dir / "starting_log10_resistivity.csv",
+    occam_dir / occam_config.model_file,
+)
 copy_required(model_dir / "z_edges_m.csv", occam_dir / "z_edges_m.csv")
 copy_required(validation_report, occam_dir / "validation_report.json")
 
@@ -377,7 +394,9 @@ row_counts = [
     len(pd.read_csv(modem_dir / modem_config.data_file)),
     len(pd.read_csv(occam_dir / occam_config.data_file)),
 ]
-axs[0].bar(["ModEM-style", "Occam2D-style"], row_counts, color=["#2563eb", "#16a34a"])
+axs[0].bar(
+    ["ModEM-style", "Occam2D-style"], row_counts, color=["#2563eb", "#16a34a"]
+)
 axs[0].set_ylabel("Data rows")
 axs[0].set_title("Rows staged for each backend")
 axs[0].grid(axis="y", alpha=0.25)

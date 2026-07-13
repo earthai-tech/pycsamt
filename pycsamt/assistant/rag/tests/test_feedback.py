@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Thumbs up/down feedback → retrieval hard negatives (RAG Tier 3)."""
+
 from __future__ import annotations
 
 import tempfile
@@ -27,20 +28,23 @@ def _chunks() -> list[RAGChunk]:
     # Both mention the query terms; only feedback should separate them.
     return [
         RAGChunk(
-            id="bad", text="ASTATIC galvanic static shift ama correction",
-            source_path="pycsamt/zonge/ops.py", kind="python_symbol",
+            id="bad",
+            text="ASTATIC galvanic static shift ama correction",
+            source_path="pycsamt/zonge/ops.py",
+            kind="python_symbol",
             symbol=_BAD,
         ),
         RAGChunk(
-            id="good", text="correct_ss_ama galvanic static shift ama correction",
-            source_path="pycsamt/emtools/ss.py", kind="python_symbol",
+            id="good",
+            text="correct_ss_ama galvanic static shift ama correction",
+            source_path="pycsamt/emtools/ss.py",
+            kind="python_symbol",
             symbol=_GOOD,
         ),
     ]
 
 
 class TestFeedbackStore(unittest.TestCase):
-
     def test_record_and_load_roundtrip(self):
         s = _store()
         s.record(_QUERY, _GOOD, True)
@@ -83,16 +87,24 @@ class TestFeedbackStore(unittest.TestCase):
 
 
 class TestChunkKey(unittest.TestCase):
-
     def test_code_chunk_keys_on_symbol(self):
-        c = RAGChunk(id="x", text="", source_path="a.py",
-                     kind="python_symbol", symbol=_GOOD)
+        c = RAGChunk(
+            id="x",
+            text="",
+            source_path="a.py",
+            kind="python_symbol",
+            symbol=_GOOD,
+        )
         self.assertEqual(chunk_key(c), _GOOD)
 
     def test_doc_chunk_falls_back_to_id(self):
         # Doc/recipe chunks have no symbol; they must still be votable.
-        c = RAGChunk(id="docs/x.rst:sec3", text="", source_path="docs/x.rst",
-                     kind="doc_section")
+        c = RAGChunk(
+            id="docs/x.rst:sec3",
+            text="",
+            source_path="docs/x.rst",
+            kind="doc_section",
+        )
         self.assertEqual(chunk_key(c), "docs/x.rst:sec3")
 
 
@@ -105,23 +117,38 @@ class TestRetrieverFeedbackIntegration(unittest.TestCase):
         self.assertEqual(len(baseline.chunks), 2)
 
         s = _store()
-        s.record(_QUERY, chunk_key(baseline.chunks[0]), False)  # reject winner
-        s.record(_QUERY, chunk_key(baseline.chunks[1]), True)   # promote other
+        s.record(
+            _QUERY, chunk_key(baseline.chunks[0]), False
+        )  # reject winner
+        s.record(_QUERY, chunk_key(baseline.chunks[1]), True)  # promote other
 
-        tuned = Retriever(chunks, feedback_adjust=s.adjustments).search(_QUERY, k=2)
+        tuned = Retriever(chunks, feedback_adjust=s.adjustments).search(
+            _QUERY, k=2
+        )
         self.assertEqual(tuned.chunks[0].symbol, baseline.chunks[1].symbol)
         # demoted, not removed
         self.assertEqual(len(tuned.chunks), 2)
-        self.assertIn(baseline.chunks[0].symbol, [c.symbol for c in tuned.chunks])
+        self.assertIn(
+            baseline.chunks[0].symbol, [c.symbol for c in tuned.chunks]
+        )
 
     def test_doc_chunk_can_be_demoted(self):
         # A symbol-less doc section is the top hit; rejecting it must work.
         docs = [
-            RAGChunk(id="doc:sec1", text="galvanic static shift ama overview",
-                     source_path="docs/ss.rst", kind="doc_section", priority=3),
-            RAGChunk(id="code", text="galvanic static shift ama correction",
-                     source_path="pycsamt/emtools/ss.py",
-                     kind="python_symbol", symbol=_GOOD),
+            RAGChunk(
+                id="doc:sec1",
+                text="galvanic static shift ama overview",
+                source_path="docs/ss.rst",
+                kind="doc_section",
+                priority=3,
+            ),
+            RAGChunk(
+                id="code",
+                text="galvanic static shift ama correction",
+                source_path="pycsamt/emtools/ss.py",
+                kind="python_symbol",
+                symbol=_GOOD,
+            ),
         ]
         baseline = Retriever(docs).search(_QUERY, k=2)
         top = baseline.chunks[0]
@@ -129,13 +156,17 @@ class TestRetrieverFeedbackIntegration(unittest.TestCase):
 
         s = _store()
         s.record(_QUERY, chunk_key(top), False)
-        tuned = Retriever(docs, feedback_adjust=s.adjustments).search(_QUERY, k=2)
+        tuned = Retriever(docs, feedback_adjust=s.adjustments).search(
+            _QUERY, k=2
+        )
         self.assertNotEqual(tuned.chunks[0].id, top.id)
 
     def test_no_feedback_leaves_order_unchanged(self):
         chunks = _chunks()
         a = Retriever(chunks).search(_QUERY, k=2)
-        b = Retriever(chunks, feedback_adjust=_store().adjustments).search(_QUERY, k=2)
+        b = Retriever(chunks, feedback_adjust=_store().adjustments).search(
+            _QUERY, k=2
+        )
         self.assertEqual([c.id for c in a.chunks], [c.id for c in b.chunks])
 
     def test_broken_adjuster_does_not_break_search(self):

@@ -59,9 +59,13 @@ from .utils import (
 logger = get_logger(__name__)
 
 __all__ = [
-    "FieldAliases", "AvgRow", "AVGFrame" , "AVGComponentBase",
-    "guess_kind_from_df"
-    ]
+    "FieldAliases",
+    "AvgRow",
+    "AVGFrame",
+    "AVGComponentBase",
+    "guess_kind_from_df",
+]
+
 
 @dc(slots=True)
 class AVGFrame:
@@ -113,7 +117,7 @@ class AVGFrame:
     source: Path | None = None
 
     def __post_init__(self):
-        self.data = _standardise_columns (self.data)
+        self.data = _standardise_columns(self.data)
 
     @property
     def nrows(self) -> int:
@@ -133,8 +137,7 @@ class AVGFrame:
             source=self.source,
         )
 
-    def to_json(self, *, orient: str = "records",
-                indent: int = 0) -> str:
+    def to_json(self, *, orient: str = "records", indent: int = 0) -> str:
         """Serialise *data* to JSON (metadata excluded)."""
         return self.data.to_json(orient=orient, indent=indent)
 
@@ -142,8 +145,7 @@ class AVGFrame:
         """Serialise metadata to JSON."""
         # pandas 2.x removed pd.io.json.dumps/loads; use stdlib json
         # (default=str covers numpy scalars and paths in the metadata)
-        return json.dumps(dict(self.meta), indent=indent or None,
-                          default=str)
+        return json.dumps(dict(self.meta), indent=indent or None, default=str)
 
     def asdict(self) -> dict[str, Any]:
         """Plain dict for diagnostics / logging."""
@@ -170,6 +172,7 @@ class AVGFrame:
             f"ncols={len(self.columns)}, "
             f"meta_keys={keys}{more})"
         )
+
 
 class FieldAliases:
     r"""Dynamically provides all known aliases for canonical names.
@@ -214,10 +217,11 @@ class FieldAliases:
     pycsamt.zonge.schema.ALL_ALIASES : The source dictionary used
         to build this class.
     """
+
     # Dynamically populate the class attributes from the schema
     for canon, aliases in ALL_ALIASES.items():
         # Ensure the attribute name is a valid Python identifier
-        attr_name = canon.replace('.', '_').replace('%', 'pct')
+        attr_name = canon.replace(".", "_").replace("%", "pct")
         locals()[attr_name] = aliases
 
     # Statically define a few key ones for type hinting/clarity
@@ -276,7 +280,7 @@ class AvgRow:
     phase: float | None = None
 
     # Optional quality fields (kept simple)
-    e_err: float | None = None   # relative %
+    e_err: float | None = None  # relative %
     e_perr: float | None = None  # mrad
     h_err: float | None = None
     h_perr: float | None = None
@@ -292,8 +296,9 @@ class AvgRow:
 
     def __str__(self) -> str:
         r_fmt = (
-            f"{self.rho:.1f}" if isinstance(self.rho, (int, float))
-            and np.isfinite(self.rho) else "nan"
+            f"{self.rho:.1f}"
+            if isinstance(self.rho, (int, float)) and np.isfinite(self.rho)
+            else "nan"
         )
         return (
             f"AvgRow(stn={self.station}, f={self.freq:g} Hz, "
@@ -365,11 +370,10 @@ class AVGComponentBase(ABC):
         meta: MutableMapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose =0,
+        verbose=0,
     ) -> None:
         self._frame: pd.DataFrame = (
-            data.copy(deep=True) if data is not None
-            else pd.DataFrame()
+            data.copy(deep=True) if data is not None else pd.DataFrame()
         )
         self._meta: dict[str, Any] = dict(meta or {})
         self._name: str = name or self.__class__.__name__
@@ -379,10 +383,14 @@ class AVGComponentBase(ABC):
     @classmethod
     def from_avg(
         cls,
-        avg: str | Path | AVGFrame | pd.DataFrame | tuple[pd.DataFrame, Mapping[str, Any]],
+        avg: str
+        | Path
+        | AVGFrame
+        | pd.DataFrame
+        | tuple[pd.DataFrame, Mapping[str, Any]],
         *,
         meta: Mapping[str, Any] | None = None,
-        **kws
+        **kws,
     ) -> AVGComponentBase:
         """
         Build a component from a path / AVGFrame / dataframe.
@@ -496,9 +504,7 @@ class AVGComponentBase(ABC):
         """
         missing = [c for c in cols if c not in self._frame.columns]
         if missing:
-            raise AvgDataError(
-                f"{self._name}: missing columns {missing}"
-            )
+            raise AvgDataError(f"{self._name}: missing columns {missing}")
 
     def _select(self, *cols: str) -> pd.DataFrame:
         """
@@ -507,7 +513,6 @@ class AVGComponentBase(ABC):
         """
         keep = [c for c in cols if c in self._frame.columns]
         return self._frame.loc[:, keep].copy()
-
 
     def _write_csv_block(
         self,
@@ -540,9 +545,7 @@ class AVGComponentBase(ABC):
 
         # UTC stamp for provenance if desired
         if stamp:
-            ts = datetime.now(timezone.utc).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
+            ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             lines.append(f"$Written={ts}")
 
         # Guard against empty data
@@ -554,9 +557,7 @@ class AVGComponentBase(ABC):
         table = self._select(*cols)
         # Ensure stable column order as requested
         table = table.loc[:, list(cols)]
-        csv = table.to_csv(
-            index=False, float_format=float_fmt, na_rep=na_rep
-        )
+        csv = table.to_csv(index=False, float_format=float_fmt, na_rep=na_rep)
         # Separate header from CSV with a blank line for clarity
         lines.append("")
         lines.extend(csv.splitlines())
@@ -566,10 +567,7 @@ class AVGComponentBase(ABC):
         r, c = self.shape
         cols = ", ".join(self._frame.columns[:6])
         tail = "…" if self._frame.shape[1] > 6 else ""
-        return (
-            f"{self._name}[{r}×{c}] "
-            f"cols=[{cols}{tail}]"
-        )
+        return f"{self._name}[{r}×{c}] cols=[{cols}{tail}]"
 
     __repr__ = __str__
 
@@ -646,40 +644,49 @@ def guess_kind_from_df(
     elif isinstance(df_or_frame, pd.DataFrame):
         df = df_or_frame
     else:
-        raise AvgDataError(
-            "Input must be a pandas DataFrame or an AVGFrame."
-        )
+        raise AvgDataError("Input must be a pandas DataFrame or an AVGFrame.")
 
     cols = set(df.columns)
     kind = 0
 
     # 1. Check for modern indicators (most reliable)
-    if any('.' in str(c) for c in cols):
+    if any("." in str(c) for c in cols):
         kind = 2
     else:
         # 2. Check for legacy indicators
         legacy_indicators = {
-            '%Emag', 'sEphz', '%Hmag', 'sHphz', '%Rho', 'sPhz'
+            "%Emag",
+            "sEphz",
+            "%Hmag",
+            "sHphz",
+            "%Rho",
+            "sPhz",
         }
         if any(indicator in cols for indicator in legacy_indicators):
             kind = 1
         else:
             # 3. Check for already-standardized canonical names
             canonical_indicators = {
-                'pc_emag', 's_ephz', 'pc_hmag', 's_hphz',
-                'pc_rho', 's_phz'
+                "pc_emag",
+                "s_ephz",
+                "pc_hmag",
+                "s_hphz",
+                "pc_rho",
+                "s_phz",
             }
             if any(c in canonical_indicators for c in cols):
-                kind = 2 # Treat as structurally modern
+                kind = 2  # Treat as structurally modern
 
     # 4. Handle cases where no clear indicators are found
     if kind == 0:
-        if mode == 'strict':
+        if mode == "strict":
             msg = "Could not determine AVG kind from DataFrame columns."
             if error == "raise":
                 raise AvgDataError(msg)
             elif error == "warn":
-                warnings.warn(msg + " Defaulting to modern (kind-2).", stacklevel=2)
+                warnings.warn(
+                    msg + " Defaulting to modern (kind-2).", stacklevel=2
+                )
                 kind = 2
             # 'ignore'
 
@@ -696,5 +703,6 @@ def guess_kind_from_df(
         return df, meta or {}, kind
 
     return kind
+
 
 __all__.extend(["LegacyAVGBase"])

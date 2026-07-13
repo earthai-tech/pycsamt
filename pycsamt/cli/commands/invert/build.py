@@ -40,7 +40,8 @@ from ._base import invert
     help="Inversion code to build inputs for.",
 )
 @click.option(
-    "--workdir", "-w",
+    "--workdir",
+    "-w",
     type=click.Path(file_okay=False, writable=True, path_type=Path),
     default=Path("invert_run"),
     show_default=True,
@@ -55,7 +56,8 @@ from ._base import invert
     help="Occam2D only: comma-separated EM modes.",
 )
 @click.option(
-    "--freq", "freq_range",
+    "--freq",
+    "freq_range",
     type=FreqRange(),
     default=None,
     metavar="FMIN:FMAX",
@@ -164,7 +166,8 @@ def build(
     try:
         if solver == "occam2d":
             _build_occam2d(
-                sites, workdir,
+                sites,
+                workdir,
                 modes=[m.strip().upper() for m in modes.split(",")],
                 freq_range=freq_range,
                 error_floor_rho=error_floor_rho,
@@ -175,7 +178,8 @@ def build(
             )
         else:
             _build_modem(
-                sites, workdir,
+                sites,
+                workdir,
                 modem_mode=modem_mode,
                 freq_range=freq_range,
                 initial_rho=initial_rho,
@@ -193,6 +197,7 @@ def build(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _build_occam2d(
     sites: Any,
@@ -213,13 +218,20 @@ def _build_occam2d(
     )
 
     cfg = OccamConfig(modes=modes)
-    if error_floor_rho   is not None: cfg.error_floor_rho       = error_floor_rho
-    if error_floor_phase is not None: cfg.error_floor_phase      = error_floor_phase
-    if freq_range        is not None: cfg.freq_min, cfg.freq_max = freq_range
-    if n_layers          is not None: cfg.n_layers               = n_layers
-    if cell_size         is not None: cfg.cell_size_horizontal   = cell_size
+    if error_floor_rho is not None:
+        cfg.error_floor_rho = error_floor_rho
+    if error_floor_phase is not None:
+        cfg.error_floor_phase = error_floor_phase
+    if freq_range is not None:
+        cfg.freq_min, cfg.freq_max = freq_range
+    if n_layers is not None:
+        cfg.n_layers = n_layers
+    if cell_size is not None:
+        cfg.cell_size_horizontal = cell_size
 
-    InputBuilder(source=sites, workdir=workdir, config=cfg, verbose=verbose).build()
+    InputBuilder(
+        source=sites, workdir=workdir, config=cfg, verbose=verbose
+    ).build()
 
 
 def _build_modem(
@@ -240,9 +252,13 @@ def _build_modem(
     )
 
     cfg = ModEmConfig(mode=modem_mode)
-    if freq_range   is not None: cfg.freq_min, cfg.freq_max = freq_range
-    if initial_rho  is not None: cfg.initial_rho            = initial_rho
-    if cell_size    is not None: cfg.cell_size_h = cfg.cell_size_h_2d = cell_size
-    if n_layers     is not None: cfg.nz          = cfg.nz_2d          = n_layers
+    if freq_range is not None:
+        cfg.freq_min, cfg.freq_max = freq_range
+    if initial_rho is not None:
+        cfg.initial_rho = initial_rho
+    if cell_size is not None:
+        cfg.cell_size_h = cfg.cell_size_h_2d = cell_size
+    if n_layers is not None:
+        cfg.nz = cfg.nz_2d = n_layers
 
     InputBuilder(config=cfg).build(sites, workdir=workdir)

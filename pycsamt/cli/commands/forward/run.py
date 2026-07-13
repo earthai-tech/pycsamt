@@ -55,9 +55,11 @@ from ._base import forward
 # run command
 # ---------------------------------------------------------------------------
 
+
 @forward.command("run")
 @click.option(
-    "--resistivities", "-r",
+    "--resistivities",
+    "-r",
     default=None,
     metavar="R1,R2,...",
     help=(
@@ -66,7 +68,8 @@ from ._base import forward
     ),
 )
 @click.option(
-    "--thicknesses", "-t",
+    "--thicknesses",
+    "-t",
     default=None,
     metavar="T1,T2,...",
     help=(
@@ -76,7 +79,8 @@ from ._base import forward
     ),
 )
 @click.option(
-    "--geology", "-g",
+    "--geology",
+    "-g",
     default=None,
     metavar="SCENARIO",
     help=(
@@ -100,7 +104,8 @@ from ._base import forward
     help="1-D EM solver to use.",
 )
 @click.option(
-    "--freqs", "freq_range",
+    "--freqs",
+    "freq_range",
     type=FreqRange(),
     default="0.001:10000",
     show_default=True,
@@ -255,29 +260,36 @@ def run(
 # Output helper
 # ---------------------------------------------------------------------------
 
+
 def _emit(resp: Any, freqs: Any, solver: str, output_format: str) -> None:
     import numpy as np  # noqa: PLC0415
     import pandas as pd  # noqa: PLC0415
 
     if solver == "tem":
         times = np.atleast_1d(resp.times if resp.times is not None else freqs)
-        vals  = np.atleast_1d(resp.dBz_dt)
-        df = pd.DataFrame({
-            "time_s":          times,
-            "dBz_dt_T_per_s":  vals,
-        })
+        vals = np.atleast_1d(resp.dBz_dt)
+        df = pd.DataFrame(
+            {
+                "time_s": times,
+                "dBz_dt_T_per_s": vals,
+            }
+        )
     else:
         rho_a = np.atleast_1d(resp.rho_a)
         phase = np.atleast_1d(resp.phase)
-        df = pd.DataFrame({
-            "freq_Hz":      freqs,
-            "period_s":     np.where(freqs > 0, 1.0 / freqs, float("inf")),
-            "rho_a_Ohm_m":  rho_a,
-            "phase_deg":    phase,
-        })
+        df = pd.DataFrame(
+            {
+                "freq_Hz": freqs,
+                "period_s": np.where(freqs > 0, 1.0 / freqs, float("inf")),
+                "rho_a_Ohm_m": rho_a,
+                "phase_deg": phase,
+            }
+        )
 
     if output_format == "json":
-        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
+        click.echo(
+            df.to_json(orient="records", indent=2, default_handler=str)
+        )
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

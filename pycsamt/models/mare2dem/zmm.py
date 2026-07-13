@@ -60,6 +60,7 @@ __all__ = [
 # Data class for one ZMM station
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ZMMStation:
     """Impedance tensor data from one ``.zmm`` file.
@@ -121,6 +122,7 @@ class ZMMStation:
 # ---------------------------------------------------------------------------
 # ZMM reader
 # ---------------------------------------------------------------------------
+
 
 def read_zmm(path: str | Path) -> ZMMStation:
     """Read one EMTF ``.zmm`` impedance file.
@@ -267,7 +269,9 @@ def read_zmm(path: str | Path) -> ZMMStation:
 
     if tzy is not None and np.any(tzy != 0):
         st.tipper_zy = tzy
-        st.tipper_zy_se = np.abs(tzy) * 0.1  # 10% as default; no direct estimate
+        st.tipper_zy_se = (
+            np.abs(tzy) * 0.1
+        )  # 10% as default; no direct estimate
 
     return st
 
@@ -284,6 +288,7 @@ def _is_number(s: str) -> bool:
 # Error-floor application
 # ---------------------------------------------------------------------------
 
+
 def _apply_error_floor(
     stations: list[ZMMStation],
     err_floor_te: float,
@@ -294,11 +299,15 @@ def _apply_error_floor(
         if err_floor_te > 0:
             floor = s.apres_te * err_floor_te
             s.apres_te_se = np.maximum(s.apres_te_se, floor)
-            s.phase_te_se = np.maximum(s.phase_te_se, err_floor_te * 180.0 / math.pi / 2)
+            s.phase_te_se = np.maximum(
+                s.phase_te_se, err_floor_te * 180.0 / math.pi / 2
+            )
         if err_floor_tm > 0:
             floor = s.apres_tm * err_floor_tm
             s.apres_tm_se = np.maximum(s.apres_tm_se, floor)
-            s.phase_tm_se = np.maximum(s.phase_tm_se, err_floor_tm * 180.0 / math.pi / 2)
+            s.phase_tm_se = np.maximum(
+                s.phase_tm_se, err_floor_tm * 180.0 / math.pi / 2
+            )
         if err_floor_tipper > 0 and s.tipper_zy_se is not None:
             s.tipper_zy_se = np.maximum(s.tipper_zy_se, err_floor_tipper)
     return stations
@@ -307,6 +316,7 @@ def _apply_error_floor(
 # ---------------------------------------------------------------------------
 # Main public function
 # ---------------------------------------------------------------------------
+
 
 def make_mt_data_from_zmm(
     zmm_files: list[str | Path],
@@ -381,7 +391,8 @@ def make_mt_data_from_zmm(
     # ---- read ----
     stations = [read_zmm(f) for f in zmm_files]
     return make_mt_data_from_stations(
-        stations, out_file,
+        stations,
+        out_file,
         output_modes=output_modes,
         error_floor_te=error_floor_te,
         error_floor_tm=error_floor_tm,
@@ -425,9 +436,7 @@ def make_mt_data_from_stations(
     if not utm_zone:
         lons = [s.longitude for s in stations]
         lats = [s.latitude for s in stations]
-        _, _, zone_int, sh = lonlat_to_utm(
-            np.array(lons), np.array(lats)
-        )
+        _, _, zone_int, sh = lonlat_to_utm(np.array(lons), np.array(lats))
         hemi = "S" if sh else "N"
         utm_zone = f"{int(zone_int)}{hemi}"
     else:
@@ -437,8 +446,10 @@ def make_mt_data_from_stations(
     # ---- convert to UTM ----
     for s in stations:
         e, n, _, _ = lonlat_to_utm(
-            np.array([s.longitude]), np.array([s.latitude]),
-            zone=zone_int, south_hemi=sh,
+            np.array([s.longitude]),
+            np.array([s.latitude]),
+            zone=zone_int,
+            south_hemi=sh,
         )
         s._easting = float(e)
         s._northing = float(n)
@@ -485,15 +496,27 @@ def make_mt_data_from_stations(
         for row in op:
             keep &= ~((ref_periods >= row[0]) & (ref_periods <= row[1]))
         for s in stations:
-            for attr in ("periods", "apres_te", "phase_te", "apres_te_se",
-                         "phase_te_se", "apres_tm", "phase_tm", "apres_tm_se",
-                         "phase_tm_se"):
+            for attr in (
+                "periods",
+                "apres_te",
+                "phase_te",
+                "apres_te_se",
+                "phase_te_se",
+                "apres_tm",
+                "phase_tm",
+                "apres_tm_se",
+                "phase_tm_se",
+            ):
                 arr = getattr(s, attr)
                 if len(arr) == len(keep):
                     setattr(s, attr, arr[keep])
             if s.tipper_zy is not None and len(s.tipper_zy) == len(keep):
                 s.tipper_zy = s.tipper_zy[keep]
-                s.tipper_zy_se = s.tipper_zy_se[keep] if s.tipper_zy_se is not None else None
+                s.tipper_zy_se = (
+                    s.tipper_zy_se[keep]
+                    if s.tipper_zy_se is not None
+                    else None
+                )
 
     # ---- apply error floors ----
     stations = _apply_error_floor(
@@ -518,8 +541,14 @@ def make_mt_data_from_stations(
     rx_arr = np.zeros((n_rx, 8))
     for i, s in enumerate(stations):
         rx_arr[i, :] = [
-            s.x_profile, s.y_profile, z_rx[i],
-            0.0, 0.0, beta[i], 0.0, 0.0,
+            s.x_profile,
+            s.y_profile,
+            z_rx[i],
+            0.0,
+            0.0,
+            beta[i],
+            0.0,
+            0.0,
         ]
     rx_names = [s.name for s in stations]
 
@@ -542,32 +571,80 @@ def make_mt_data_from_stations(
 
             if modes in ("all", "all impedance", "te", "te+tipper"):
                 if s.apres_te_se[fi] > 0 and not np.isnan(s.apres_te[fi]):
-                    rows.append([123, ifreq, irx, irx,
-                                 math.log10(max(s.apres_te[fi], 1e-30)),
-                                 s.apres_te_se[fi] / s.apres_te[fi] * 0.4343])
-                    rows.append([104, ifreq, irx, irx,
-                                 s.phase_te[fi], s.phase_te_se[fi]])
+                    rows.append(
+                        [
+                            123,
+                            ifreq,
+                            irx,
+                            irx,
+                            math.log10(max(s.apres_te[fi], 1e-30)),
+                            s.apres_te_se[fi] / s.apres_te[fi] * 0.4343,
+                        ]
+                    )
+                    rows.append(
+                        [
+                            104,
+                            ifreq,
+                            irx,
+                            irx,
+                            s.phase_te[fi],
+                            s.phase_te_se[fi],
+                        ]
+                    )
 
             if modes in ("all", "all impedance", "tm"):
                 if s.apres_tm_se[fi] > 0 and not np.isnan(s.apres_tm[fi]):
-                    rows.append([125, ifreq, irx, irx,
-                                 math.log10(max(s.apres_tm[fi], 1e-30)),
-                                 s.apres_tm_se[fi] / s.apres_tm[fi] * 0.4343])
-                    rows.append([106, ifreq, irx, irx,
-                                 s.phase_tm[fi], s.phase_tm_se[fi]])
+                    rows.append(
+                        [
+                            125,
+                            ifreq,
+                            irx,
+                            irx,
+                            math.log10(max(s.apres_tm[fi], 1e-30)),
+                            s.apres_tm_se[fi] / s.apres_tm[fi] * 0.4343,
+                        ]
+                    )
+                    rows.append(
+                        [
+                            106,
+                            ifreq,
+                            irx,
+                            irx,
+                            s.phase_tm[fi],
+                            s.phase_tm_se[fi],
+                        ]
+                    )
 
             if modes in ("all", "tipper", "te+tipper"):
-                if (s.tipper_zy is not None
-                        and fi < len(s.tipper_zy)
-                        and s.tipper_zy_se is not None):
-                    rows.append([133, ifreq, irx, irx,
-                                 s.tipper_zy[fi].real,
-                                 s.tipper_zy_se[fi]])
-                    rows.append([134, ifreq, irx, irx,
-                                 s.tipper_zy[fi].imag,
-                                 s.tipper_zy_se[fi]])
+                if (
+                    s.tipper_zy is not None
+                    and fi < len(s.tipper_zy)
+                    and s.tipper_zy_se is not None
+                ):
+                    rows.append(
+                        [
+                            133,
+                            ifreq,
+                            irx,
+                            irx,
+                            s.tipper_zy[fi].real,
+                            s.tipper_zy_se[fi],
+                        ]
+                    )
+                    rows.append(
+                        [
+                            134,
+                            ifreq,
+                            irx,
+                            irx,
+                            s.tipper_zy[fi].imag,
+                            s.tipper_zy_se[fi],
+                        ]
+                    )
 
-    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    data = (
+        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    )
 
     # ---- UTM block ----
     theta = line_orientation - 90.0

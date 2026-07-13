@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for :mod:`pycsamt.ts` (readers, spectra, ts→EDI)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -63,15 +64,9 @@ def lims_file(tmp_path):
     rows = []
     for k in range(12):
         if k == 6:  # one missing row
-            rows.append(
-                "  ".join(["1.00000003E+32"] * 5)
-            )
+            rows.append("  ".join(["1.00000003E+32"] * 5))
             continue
-        rows.append(
-            "  ".join(
-                f"{0.1 * (k + j):.6f}" for j in range(5)
-            )
-        )
+        rows.append("  ".join(f"{0.1 * (k + j):.6f}" for j in range(5)))
     p = tmp_path / "tst01.ts"
     p.write_text(
         _LIMS_HEADER + "\n".join(rows) + "\n",
@@ -92,11 +87,7 @@ def emslab_file(tmp_path):
         # one explicit missing value
         vals[7] = -9999
         for i in range(0, 900, 15):
-            lines.append(
-                "".join(
-                    f"{v:5d}" for v in vals[i : i + 15]
-                )
-            )
+            lines.append("".join(f"{v:5d}" for v in vals[i : i + 15]))
         return lines
 
     lines = hour_block("8507180100", 10)
@@ -107,9 +98,7 @@ def emslab_file(tmp_path):
     return p
 
 
-def _synthetic_ts(
-    n=2**15, dt=5.0, z0=None, tipper=(0.3, -0.2), seed=7
-):
+def _synthetic_ts(n=2**15, dt=5.0, z0=None, tipper=(0.3, -0.2), seed=7):
     rng = np.random.default_rng(seed)
     if z0 is None:  # real (instantaneous) tensor
         z0 = np.array([[2.0, 12.0], [-10.0, -1.5]])
@@ -120,16 +109,18 @@ def _synthetic_ts(
     hz = tipper[0] * hx + tipper[1] * hy
     ts = TSData(
         data={
-            "HX": hx, "HY": hy, "HZ": hz,
-            "EX": ex, "EY": ey,
+            "HX": hx,
+            "HY": hy,
+            "HZ": hz,
+            "EX": ex,
+            "EY": ey,
         },
         dt=dt,
         station="SYN01",
         lat=-30.5,
         lon=20.25,
         elev=100.0,
-        azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0,
-              "EX": 0.0, "EY": 90.0},
+        azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0, "EX": 0.0, "EY": 90.0},
         dipole={"EX": 50.0, "EY": 60.0},
     )
     return ts, z0
@@ -184,8 +175,7 @@ def test_read_ascii(tmp_path):
         "\n".join(f"{a} {b}" for a, b in rows),
         encoding="utf-8",
     )
-    ts = read_ts(p, format="ascii", dt=1.0,
-                 chan=("HX", "HY"))
+    ts = read_ts(p, format="ascii", dt=1.0, chan=("HX", "HY"))
     assert ts.channels() == ["HX", "HY"]
     assert ts.get("HY")[3] == pytest.approx(7.0)
 
@@ -209,12 +199,8 @@ def test_synthetic_recovery_exact():
     assert np.abs(zhat.z - z0[None]).max() < 1e-8
     # tipper recovered
     assert tip is not None
-    assert np.abs(
-        tip.tipper[:, 0, 0] - 0.3
-    ).max() < 1e-8
-    assert np.abs(
-        tip.tipper[:, 0, 1] + 0.2
-    ).max() < 1e-8
+    assert np.abs(tip.tipper[:, 0, 0] - 0.3).max() < 1e-8
+    assert np.abs(tip.tipper[:, 0, 1] + 0.2).max() < 1e-8
     # DoF-based errors attached and finite
     assert zhat.z_err is not None
     assert np.isfinite(zhat.z_err).all()
@@ -229,7 +215,9 @@ def test_noise_robustness_and_gaps():
         x += 0.05 * np.std(x) * rng.standard_normal(x.size)
         x[5000:5600] = np.nan
     zhat, tip, sp = ts_to_z(
-        ts, nfft=2048, per_decade=4,
+        ts,
+        nfft=2048,
+        per_decade=4,
         estimate_error=False,
     )
     # 5% E-noise, gap-dropped segments: still within a few %
@@ -241,13 +229,17 @@ def test_remote_reference_estimator():
     ts, z0 = _synthetic_ts(seed=23)
     # noise-free remote copy of the magnetic channels
     remote = TSData(
-        data={"HX": ts.get("HX").copy(),
-              "HY": ts.get("HY").copy()},
-        dt=ts.dt, station="REM01",
+        data={"HX": ts.get("HX").copy(), "HY": ts.get("HY").copy()},
+        dt=ts.dt,
+        station="REM01",
     )
     zrr, tip, sp = ts_to_z(
-        ts, estimator="rr", remote=remote,
-        nfft=2048, per_decade=4, estimate_error=False,
+        ts,
+        estimator="rr",
+        remote=remote,
+        nfft=2048,
+        per_decade=4,
+        estimate_error=False,
     )
     assert "RHX" in sp.chan_ids and "RHY" in sp.chan_ids
     assert np.abs(zrr.z - z0[None]).max() < 1e-8
@@ -274,23 +266,21 @@ def test_ts_to_edi_roundtrip(tmp_path):
     assert ed.has_tipper
     # impedance round-trips through the EDI text format
     assert np.allclose(
-        ed.Z.z, np.broadcast_to(
-            z0[None], ed.Z.z.shape
-        ), rtol=1e-4, atol=1e-4,
+        ed.Z.z,
+        np.broadcast_to(z0[None], ed.Z.z.shape),
+        rtol=1e-4,
+        atol=1e-4,
     )
     # geometry made it into DEFINEMEAS
     dm = ed.get_section("definemeas")
     assert dm is not None
-    exm = [m for m in dm.emeas
-           if str(m.chtype).upper() == "EX"]
+    exm = [m for m in dm.emeas if str(m.chtype).upper() == "EX"]
     assert exm and float(exm[0].x2) == pytest.approx(25.0)
     # optional sections present
     assert ed.get_section("spectra") is not None
     ts_sec = ed.get_section("timeseries")
     assert ts_sec is not None
-    assert set(ts_sec.channels()) == {
-        "HX", "HY", "HZ", "EX", "EY"
-    }
+    assert set(ts_sec.channels()) == {"HX", "HY", "HZ", "EX", "EY"}
     assert ts_sec.get("HX").size == 64
 
 

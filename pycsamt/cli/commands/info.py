@@ -41,6 +41,7 @@ from ..survey import SurveyContext, resolve_survey
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _collect_edi_paths(source: Path | None, sites: Any = None) -> list[Path]:
     """Return a sorted list of .edi paths from a path or a Sites object."""
     if source is not None:
@@ -83,7 +84,6 @@ def _edi_info(path: Path) -> dict[str, Any]:
     }
 
     try:
-
         # Try the jones fast-path for J files accidentally renamed to .edi;
         # for genuine EDI files use the lightweight header-only parser.
         _parse_edi_header(path, record)
@@ -124,7 +124,16 @@ def _parse_edi_header(path: Path, record: dict[str, Any]) -> None:
             in_head = False
             # detect component blocks: >ZXX, >ZXYR, >TIPPER, etc.
             token = upper.lstrip(">").split()[0] if upper.lstrip(">") else ""
-            for comp in ("ZXX", "ZXY", "ZYX", "ZYY", "TXR", "TXI", "TYR", "TYI"):
+            for comp in (
+                "ZXX",
+                "ZXY",
+                "ZYX",
+                "ZYY",
+                "TXR",
+                "TXI",
+                "TYR",
+                "TYI",
+            ):
                 if token.startswith(comp):
                     components.add(comp[:3])
             in_freq = False
@@ -152,7 +161,12 @@ def _parse_edi_header(path: Path, record: dict[str, Any]) -> None:
                 except ValueError:
                     pass
 
-        if in_freq and stripped and not stripped.startswith(">") and not stripped.startswith("!"):
+        if (
+            in_freq
+            and stripped
+            and not stripped.startswith(">")
+            and not stripped.startswith("!")
+        ):
             freq_lines.append(stripped)
 
     # --- parse frequencies ---
@@ -177,6 +191,7 @@ def _parse_edi_header(path: Path, record: dict[str, Any]) -> None:
 # Formatters
 # ---------------------------------------------------------------------------
 
+
 def _fmt_text(records: list[dict[str, Any]], verbose: int) -> str:
     lines: list[str] = []
     for r in records:
@@ -188,8 +203,10 @@ def _fmt_text(records: list[dict[str, Any]], verbose: int) -> str:
             continue
         lines.append(f"  Lat / Lon  : {r['latitude']}, {r['longitude']}")
         lines.append(f"  Elevation  : {r['elevation']} m")
-        lines.append(f"  Frequencies: {r['n_frequencies']}  "
-                     f"[{r['freq_min_hz']:.4g} – {r['freq_max_hz']:.4g} Hz]")
+        lines.append(
+            f"  Frequencies: {r['n_frequencies']}  "
+            f"[{r['freq_min_hz']:.4g} – {r['freq_max_hz']:.4g} Hz]"
+        )
         lines.append(f"  Components : {', '.join(r['components']) or '—'}")
         if verbose >= 1 and r["quality"]:
             lines.append(f"  Quality    : {r['quality']}")
@@ -214,6 +231,7 @@ def _fmt_csv(records: list[dict[str, Any]]) -> str:
 # ---------------------------------------------------------------------------
 # Command
 # ---------------------------------------------------------------------------
+
 
 @click.command("info")
 @click.argument(

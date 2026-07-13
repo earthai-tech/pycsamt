@@ -10,6 +10,7 @@ Controls
   • Marker pad fraction  (fine-tunes the gap between topo surface and station
     markers — expressed as a fraction of the axes height)
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -72,6 +73,7 @@ class TopographyPage(SettingsPage):
     def populate(self) -> None:
         try:
             from pycsamt.topo import PYCSAMT_TOPO as T
+
             self._enabled_cb.setChecked(T.enabled)
             self._exag_spin.setValue(T.exaggeration)
             self._pad_spin.setValue(T.marker_pad_fraction)
@@ -83,15 +85,16 @@ class TopographyPage(SettingsPage):
     def collect(self) -> dict:
         return {
             "topography": {
-                "enabled":     self._enabled_cb.isChecked(),
+                "enabled": self._enabled_cb.isChecked(),
                 "exaggeration": self._exag_spin.value(),
-                "marker_pad":  self._pad_spin.value(),
+                "marker_pad": self._pad_spin.value(),
             }
         }
 
     def reset(self) -> None:
         try:
             from pycsamt.topo import PYCSAMT_TOPO
+
             PYCSAMT_TOPO.reset()
         except Exception:
             pass

@@ -11,6 +11,7 @@ Accepted inputs (passed through ``ensure_sites``):
     - ``APISurvey``
     - iterables of any of the above
 """
+
 from __future__ import annotations
 
 import warnings
@@ -105,7 +106,7 @@ def _extract_rho_phase(
     rho = np.asarray(rho, dtype=float)
     ph = np.asarray(ph, dtype=float)
 
-    if rho.ndim == 3:          # (n, 2, 2)
+    if rho.ndim == 3:  # (n, 2, 2)
         i, j = _COMP_IDX[comp]
         rho_c = rho[:, i, j]
         ph_c = ph[:, i, j]
@@ -115,8 +116,7 @@ def _extract_rho_phase(
     else:
         name = getattr(site, "name", "?")
         warnings.warn(
-            f"Unexpected rho shape {rho.shape} for "
-            f"site {name!r}. Skipping.",
+            f"Unexpected rho shape {rho.shape} for site {name!r}. Skipping.",
             UserWarning,
             stacklevel=5,
         )
@@ -128,11 +128,7 @@ def _extract_rho_phase(
     rho_c = rho_c[order]
     ph_c = ph_c[order]
 
-    valid = (
-        np.isfinite(rho_c)
-        & np.isfinite(ph_c)
-        & (rho_c > 0)
-    )
+    valid = np.isfinite(rho_c) & np.isfinite(ph_c) & (rho_c > 0)
     if not valid.any():
         return None, None, None
 
@@ -148,15 +144,9 @@ def _make_common_grid(
     """Build a log-spaced common frequency grid."""
     all_f = np.concatenate(all_freq)
     all_f = all_f[np.isfinite(all_f) & (all_f > 0)]
-    fmin = freq_min if freq_min is not None else float(
-        all_f.min()
-    )
-    fmax = freq_max if freq_max is not None else float(
-        all_f.max()
-    )
-    return np.logspace(
-        np.log10(fmin), np.log10(fmax), n_freqs
-    )
+    fmin = freq_min if freq_min is not None else float(all_f.min())
+    fmax = freq_max if freq_max is not None else float(all_f.max())
+    return np.logspace(np.log10(fmin), np.log10(fmax), n_freqs)
 
 
 def _interp_to_grid(
@@ -235,16 +225,11 @@ def sites_to_obs_1d(
         If *comp* is invalid or no valid site data
         survives extraction.
     """
-    if (
-        isinstance(sites, list)
-        and sites
-        and isinstance(sites[0], SiteObs1D)
-    ):
+    if isinstance(sites, list) and sites and isinstance(sites[0], SiteObs1D):
         return sites
     if comp not in _COMP_IDX:
         raise ValueError(
-            f"comp must be one of {list(_COMP_IDX)}; "
-            f"got {comp!r}."
+            f"comp must be one of {list(_COMP_IDX)}; got {comp!r}."
         )
     S = _normalize_sites(
         sites,
@@ -256,14 +241,11 @@ def sites_to_obs_1d(
     out: list[SiteObs1D] = []
     for site in S:
         name = getattr(site, "name", str(id(site)))
-        freq, rho_c, ph_c = _extract_rho_phase(
-            site, comp
-        )
+        freq, rho_c, ph_c = _extract_rho_phase(site, comp)
         if freq is None:
             if verbose > 0:
                 warnings.warn(
-                    f"No valid data for {name!r}. "
-                    "Skipping.",
+                    f"No valid data for {name!r}. Skipping.",
                     UserWarning,
                     stacklevel=2,
                 )
@@ -409,28 +391,18 @@ def obs_to_features_1d(
         )
         if rho_src is None or ph_src is None:
             continue
-        lr_g, ph_g = _interp_to_grid(
-            o.freq, rho_src, ph_src, freqs_grid
-        )
+        lr_g, ph_g = _interp_to_grid(o.freq, rho_src, ph_src, freqs_grid)
         # Fill NaN with fallback constants
-        lr_g = np.where(
-            np.isfinite(lr_g), lr_g, 2.0
-        )
-        ph_g = np.where(
-            np.isfinite(ph_g), ph_g, 45.0
-        )
-        feat = np.empty(
-            2 * n_freqs, dtype=np.float32
-        )
+        lr_g = np.where(np.isfinite(lr_g), lr_g, 2.0)
+        ph_g = np.where(np.isfinite(ph_g), ph_g, 45.0)
+        feat = np.empty(2 * n_freqs, dtype=np.float32)
         feat[:n_freqs] = lr_g.astype(np.float32)
         feat[n_freqs:] = ph_g.astype(np.float32)
         rows.append(feat)
         names.append(o.name)
 
     if not rows:
-        raise ValueError(
-            "obs_to_features_1d: no valid obs found."
-        )
+        raise ValueError("obs_to_features_1d: no valid obs found.")
     return np.vstack(rows), freqs_grid, names
 
 
@@ -515,16 +487,8 @@ def _extract_rho_phase_2d(
     else:
         return None, None, None, None, None
 
-    valid = (
-        np.isfinite(rho_te)
-        & np.isfinite(ph_te)
-        & (rho_te > 0)
-    )
-    valid_tm = (
-        np.isfinite(rho_tm)
-        & np.isfinite(ph_tm)
-        & (rho_tm > 0)
-    )
+    valid = np.isfinite(rho_te) & np.isfinite(ph_te) & (rho_te > 0)
+    valid_tm = np.isfinite(rho_tm) & np.isfinite(ph_tm) & (rho_tm > 0)
     # Use TE-valid mask; fill TM where TM missing
     if not valid.any():
         valid = valid_tm
@@ -532,9 +496,7 @@ def _extract_rho_phase_2d(
         return None, None, None, None, None
 
     rho_tm = np.where(valid_tm, rho_tm, rho_te)
-    ph_tm = np.where(
-        valid_tm, np.abs(ph_tm), np.abs(ph_te)
-    )
+    ph_tm = np.where(valid_tm, np.abs(ph_tm), np.abs(ph_te))
 
     return (
         freq[valid],
@@ -582,17 +544,12 @@ def sites_to_obs_2d(
     ValueError
         If no valid station data is found.
     """
-    if (
-        isinstance(sites, list)
-        and sites
-        and isinstance(sites[0], SiteObs2D)
-    ):
+    if isinstance(sites, list) and sites and isinstance(sites[0], SiteObs2D):
         return sites
     for comp in (comp_te, comp_tm):
         if comp not in _COMP_IDX:
             raise ValueError(
-                f"comp must be one of "
-                f"{list(_COMP_IDX)}; got {comp!r}."
+                f"comp must be one of {list(_COMP_IDX)}; got {comp!r}."
             )
     S = _normalize_sites(
         sites,
@@ -603,18 +560,13 @@ def sites_to_obs_2d(
     )
     out: list[SiteObs2D] = []
     for site in S:
-        name = getattr(
-            site, "name", str(id(site))
-        )
-        result = _extract_rho_phase_2d(
-            site, comp_te, comp_tm
-        )
+        name = getattr(site, "name", str(id(site)))
+        result = _extract_rho_phase_2d(site, comp_te, comp_tm)
         freq, rho_te, ph_te, rho_tm, ph_tm = result
         if freq is None:
             if verbose > 0:
                 warnings.warn(
-                    f"No valid data for {name!r}. "
-                    "Skipping.",
+                    f"No valid data for {name!r}. Skipping.",
                     UserWarning,
                     stacklevel=2,
                 )
@@ -670,11 +622,7 @@ def sites_to_panel_2d(
         ``X_panel``.
     """
     # Accept pre-built SiteObs2D list directly
-    if (
-        isinstance(sites, list)
-        and sites
-        and isinstance(sites[0], SiteObs2D)
-    ):
+    if isinstance(sites, list) and sites and isinstance(sites[0], SiteObs2D):
         obs: list[SiteObs2D] = sites
     else:
         obs = sites_to_obs_2d(
@@ -788,15 +736,10 @@ def sites_to_coords_3d(
     )
     _DEG_THRESH = 1e-5  # ~1 m
 
-    if (
-        all_ok.sum() >= 2
-        and (lat_rng > _DEG_THRESH or lon_rng > _DEG_THRESH)
-    ):
+    if all_ok.sum() >= 2 and (lat_rng > _DEG_THRESH or lon_rng > _DEG_THRESH):
         lat_ref = float(np.nanmean(lats))
         lon_ref = float(np.nanmean(lons))
-        cos_lat = float(
-            np.cos(np.radians(lat_ref))
-        )
+        cos_lat = float(np.cos(np.radians(lat_ref)))
         x = (lons - lon_ref) * cos_lat * 111320.0
         y = (lats - lat_ref) * 111320.0
         # Fill any remaining NaN with 0.0
@@ -807,10 +750,6 @@ def sites_to_coords_3d(
     # Fallback: row-major uniform grid
     side = int(np.ceil(np.sqrt(n)))
     sp = float(station_spacing)
-    xs = np.array(
-        [(i % side) * sp for i in range(n)]
-    )
-    ys = np.array(
-        [(i // side) * sp for i in range(n)]
-    )
+    xs = np.array([(i % side) * sp for i in range(n)])
+    ys = np.array([(i // side) * sp for i in range(n)])
     return np.column_stack([xs, ys])

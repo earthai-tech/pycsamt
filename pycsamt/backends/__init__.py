@@ -31,6 +31,7 @@ Set before importing pycsamt to override the default::
 
     PYCSAMT_AI_BACKEND=tensorflow python my_script.py
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -59,6 +60,7 @@ _CFG = BackendConfig()
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def get_backend() -> str:
     """
@@ -172,9 +174,11 @@ def get_backend_instance() -> Any:
     name = get_backend()
     if name == "torch":
         from ._torch import TorchBackend
+
         return TorchBackend()
     if name == "tensorflow":
         from ._tensorflow import TensorFlowBackend
+
         return TensorFlowBackend()
     if name == "none":
         return None

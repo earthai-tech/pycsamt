@@ -158,7 +158,7 @@ class PipelineAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.preset          = preset
+        self.preset = preset
         self.param_overrides = param_overrides or {}
 
     # ── execute ───────────────────────────────────────────────────────────────
@@ -216,9 +216,11 @@ class PipelineAgent(BaseAgent):
                 parsed = self.extract_json(rec_text)
                 if isinstance(parsed, dict):
                     recommendation = parsed
-                    effective_preset   = parsed.get("preset")   or effective_preset
-                    effective_steps    = parsed.get("steps")    or effective_steps
-                    merged_ov          = parsed.get("param_overrides") or {}
+                    effective_preset = (
+                        parsed.get("preset") or effective_preset
+                    )
+                    effective_steps = parsed.get("steps") or effective_steps
+                    merged_ov = parsed.get("param_overrides") or {}
                     effective_overrides = {**effective_overrides, **merged_ov}
                 else:
                     warnings_list.append(
@@ -261,7 +263,10 @@ class PipelineAgent(BaseAgent):
                 code = step.spec.code
                 if code in effective_overrides:
                     try:
-                        merged_params = {**step.params, **effective_overrides[code]}
+                        merged_params = {
+                            **step.params,
+                            **effective_overrides[code],
+                        }
                         pipe.replace(label, Step(code, **merged_params))
                     except Exception as exc:
                         warnings_list.append(
@@ -286,8 +291,8 @@ class PipelineAgent(BaseAgent):
             )
 
         n_sites_out = _count(pipe_result.sites_out)
-        steps_run   = [sr.step_code for sr in pipe_result.step_results]
-        n_errors    = pipe_result.n_errors
+        steps_run = [sr.step_code for sr in pipe_result.step_results]
+        n_errors = pipe_result.n_errors
 
         # ── build summary text for LLM ────────────────────────────────────────
         step_lines = "\n".join(
@@ -327,8 +332,8 @@ class PipelineAgent(BaseAgent):
                 )
 
         elapsed = time.time() - t0
-        status  = "success" if n_errors == 0 else "needs_review"
-        brief   = (
+        status = "success" if n_errors == 0 else "needs_review"
+        brief = (
             f"Pipeline '{preset_used}' ran {len(steps_run)} steps in "
             f"{pipe_result.elapsed_sec:.1f}s: "
             f"{n_sites_in}→{n_sites_out} sites, {n_errors} errors."
@@ -338,14 +343,14 @@ class PipelineAgent(BaseAgent):
             status=status,
             summary=brief,
             data={
-                "sites_out":        pipe_result.sites_out,
-                "pipeline_result":  pipe_result,
-                "preset_used":      preset_used,
-                "steps_run":        steps_run,
-                "n_sites_in":       n_sites_in,
-                "n_sites_out":      n_sites_out,
-                "n_errors":         n_errors,
-                "recommendation":   recommendation,
+                "sites_out": pipe_result.sites_out,
+                "pipeline_result": pipe_result,
+                "preset_used": preset_used,
+                "steps_run": steps_run,
+                "n_sites_in": n_sites_in,
+                "n_sites_out": n_sites_out,
+                "n_errors": n_errors,
+                "recommendation": recommendation,
             },
             warnings=warnings_list,
             llm_interpretation=llm_interp,
@@ -355,6 +360,7 @@ class PipelineAgent(BaseAgent):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _count(sites: Any) -> int:
     """Return number of stations in *sites*, tolerating any Sites-like object."""

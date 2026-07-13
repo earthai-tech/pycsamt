@@ -25,20 +25,24 @@ from ._base import _get_collection, edi
     metavar="EDI_DIR",
 )
 @click.option(
-    "--pattern", "-p",
+    "--pattern",
+    "-p",
     default=None,
     metavar="GLOB",
     help="Filter station names by a glob pattern (e.g. 'S0*', '18-02*').",
 )
 @click.option(
     "--sort-by",
-    type=click.Choice(["station", "lat", "lon", "elev"], case_sensitive=False),
+    type=click.Choice(
+        ["station", "lat", "lon", "elev"], case_sensitive=False
+    ),
     default="station",
     show_default=True,
     help="Column to sort the output table by.",
 )
 @click.option(
-    "--top", "-n",
+    "--top",
+    "-n",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
@@ -88,14 +92,18 @@ def stations(
 
     # Filter by pattern
     if pattern is not None:
-        rows = [r for r in rows if fnmatch.fnmatch(str(r.get("station", "")), pattern)]
+        rows = [
+            r
+            for r in rows
+            if fnmatch.fnmatch(str(r.get("station", "")), pattern)
+        ]
 
     # Sort
     _sort_key = {
         "station": lambda r: str(r.get("station", "")),
-        "lat":     lambda r: float(r.get("lat",  0) or 0),
-        "lon":     lambda r: float(r.get("lon",  0) or 0),
-        "elev":    lambda r: float(r.get("elev", 0) or 0),
+        "lat": lambda r: float(r.get("lat", 0) or 0),
+        "lon": lambda r: float(r.get("lon", 0) or 0),
+        "elev": lambda r: float(r.get("elev", 0) or 0),
     }
     rows.sort(key=_sort_key[sort_by])
 
@@ -119,6 +127,7 @@ def stations(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table(
             title=f"Station coordinates — {source}  ({len(rows)} stations)",
             show_header=True,
@@ -128,18 +137,25 @@ def stations(
             if any(c in r for r in rows):
                 tbl.add_column(c)
         for r in rows:
-            tbl.add_row(*[
-                f"{r.get(c, ''):.5f}" if isinstance(r.get(c), float) else str(r.get(c, ""))
-                for c in text_cols if any(c in row for row in rows)
-            ])
+            tbl.add_row(
+                *[
+                    f"{r.get(c, ''):.5f}"
+                    if isinstance(r.get(c), float)
+                    else str(r.get(c, ""))
+                    for c in text_cols
+                    if any(c in row for row in rows)
+                ]
+            )
         Console().print(tbl)
     except ImportError:
-        hdr = f"{'Station':<22} {'Lat':>12} {'Lon':>12} {'Elev':>8} {'Zone':<6}"
+        hdr = (
+            f"{'Station':<22} {'Lat':>12} {'Lon':>12} {'Elev':>8} {'Zone':<6}"
+        )
         click.echo(hdr)
         click.echo("-" * len(hdr))
         for r in rows:
-            lat  = r.get("lat",  float("nan"))
-            lon  = r.get("lon",  float("nan"))
+            lat = r.get("lat", float("nan"))
+            lon = r.get("lon", float("nan"))
             elev = r.get("elev", float("nan"))
             zone = r.get("zone", "")
             click.echo(

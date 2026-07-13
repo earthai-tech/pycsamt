@@ -130,6 +130,7 @@ class InputBuilder(Mare2DEMBase):
         fname = filename or cfg.resistivity_file
         log10_rho = math.log10(max(cfg.initial_rho, 1e-10))
         import numpy as np
+
         rf = ResistivityFile(
             resistivity_file=str(dest / fname),
             poly_file=poly_file or fname.replace(".resistivity", ".poly"),
@@ -209,13 +210,12 @@ class InputBuilder(Mare2DEMBase):
             self._em = read_emdata(data_path)
         elif isinstance(source, EMDataFile):
             from .iotools.emdata import write_emdata
+
             data_path = write_emdata(source, dest / _data_fname)
             self._em = source
         elif mt is not None or csem is not None:
             data_path = dest / _data_fname
-            self._em = make_data_file(
-                data_path, topo, mt=mt, csem=csem
-            )
+            self._em = make_data_file(data_path, topo, mt=mt, csem=csem)
         else:
             data_path = dest / _data_fname
             self.logger.warning(

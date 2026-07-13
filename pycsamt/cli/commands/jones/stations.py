@@ -26,14 +26,17 @@ from ._base import _get_collection, jones
 )
 @click.option(
     "--sort-by",
-    type=click.Choice(["station", "lat", "lon", "elev", "az", "n_freq"],
-                      case_sensitive=False),
+    type=click.Choice(
+        ["station", "lat", "lon", "elev", "az", "n_freq"],
+        case_sensitive=False,
+    ),
     default="station",
     show_default=True,
     help="Column to sort the output table by.",
 )
 @click.option(
-    "--top", "-n",
+    "--top",
+    "-n",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
@@ -75,11 +78,11 @@ def stations(
     # Sort
     _key = {
         "station": lambda r: str(r.get("station", "")),
-        "lat":     lambda r: float(r.get("lat",    0) or 0),
-        "lon":     lambda r: float(r.get("lon",    0) or 0),
-        "elev":    lambda r: float(r.get("elev",   0) or 0),
-        "az":      lambda r: float(r.get("az",     0) or 0),
-        "n_freq":  lambda r: int(  r.get("n_freq", 0) or 0),
+        "lat": lambda r: float(r.get("lat", 0) or 0),
+        "lon": lambda r: float(r.get("lon", 0) or 0),
+        "elev": lambda r: float(r.get("elev", 0) or 0),
+        "az": lambda r: float(r.get("az", 0) or 0),
+        "n_freq": lambda r: int(r.get("n_freq", 0) or 0),
     }
     rows.sort(key=_key[sort_by])
 
@@ -91,7 +94,14 @@ def stations(
         return
 
     display_cols = [
-        "station", "lat", "lon", "az", "n_freq", "has_z", "has_r", "has_t"
+        "station",
+        "lat",
+        "lon",
+        "az",
+        "n_freq",
+        "has_z",
+        "has_r",
+        "has_t",
     ]
 
     if output_format == "csv":
@@ -108,13 +118,19 @@ def stations(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table(
             title=f"Station metadata — {source}  ({len(rows)} stations)",
         )
         labels = {
-            "station": "Station", "lat": "Lat",  "lon": "Lon",
-            "az": "Az(°)", "n_freq": "n_freq",
-            "has_z": "Z", "has_r": "R/φ", "has_t": "T",
+            "station": "Station",
+            "lat": "Lat",
+            "lon": "Lon",
+            "az": "Az(°)",
+            "n_freq": "n_freq",
+            "has_z": "Z",
+            "has_r": "R/φ",
+            "has_t": "T",
         }
         for c in display_cols:
             tbl.add_column(labels.get(c, c))
@@ -140,7 +156,7 @@ def stations(
         for r in rows:
             lat = r.get("lat", float("nan")) or float("nan")
             lon = r.get("lon", float("nan")) or float("nan")
-            az  = r.get("az",  float("nan")) or float("nan")
+            az = r.get("az", float("nan")) or float("nan")
             click.echo(
                 f"{str(r.get('station', '?')):<18} "
                 f"{lat:>12.5f} {lon:>12.5f} {az:>8.1f} "

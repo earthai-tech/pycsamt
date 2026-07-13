@@ -31,108 +31,120 @@ from .chat import (
 # type="am-pf" lets _submit_params collect
 # all rendered workflow fields via ALL.
 
-_FID_N_LAYERS  = {
-    "type": "am-pf", "key": "n_layers",
+_FID_N_LAYERS = {
+    "type": "am-pf",
+    "key": "n_layers",
 }
 _FID_DEPTH_MAX = {
-    "type": "am-pf", "key": "depth_max",
+    "type": "am-pf",
+    "key": "depth_max",
 }
-_FID_EPOCHS    = {
-    "type": "am-pf", "key": "epochs",
+_FID_EPOCHS = {
+    "type": "am-pf",
+    "key": "epochs",
 }
-_FID_LR        = {
-    "type": "am-pf", "key": "lr",
+_FID_LR = {
+    "type": "am-pf",
+    "key": "lr",
 }
-_FID_SMOOTH    = {
+_FID_SMOOTH = {
     "type": "am-pf",
     "key": "smoothness_weight",
 }
-_FID_LATERAL   = {
+_FID_LATERAL = {
     "type": "am-pf",
     "key": "lateral_weight",
 }
-_FID_GRAPH_W   = {
-    "type": "am-pf", "key": "graph_weight",
+_FID_GRAPH_W = {
+    "type": "am-pf",
+    "key": "graph_weight",
 }
-_FID_RADIUS    = {
-    "type": "am-pf", "key": "radius",
+_FID_RADIUS = {
+    "type": "am-pf",
+    "key": "radius",
 }
-_FID_INV_CODE  = {
+_FID_INV_CODE = {
     "type": "am-pf",
     "key": "inversion_code",
 }
 _FID_CHECKPOINT = {
-    "type": "am-pf", "key": "checkpoint",
+    "type": "am-pf",
+    "key": "checkpoint",
 }
 
 # ── Pipeline step field IDs (pattern-matching)
 # type="am-ps" for step-level fields.
 
 _FID_PERIOD_MIN = {
-    "type": "am-ps", "key": "period_min",
+    "type": "am-ps",
+    "key": "period_min",
 }
 _FID_PERIOD_MAX = {
-    "type": "am-ps", "key": "period_max",
+    "type": "am-ps",
+    "key": "period_max",
 }
-_FID_COMPONENT  = {
-    "type": "am-ps", "key": "component",
+_FID_COMPONENT = {
+    "type": "am-ps",
+    "key": "component",
 }
-_FID_SNR        = {
+_FID_SNR = {
     "type": "am-ps",
     "key": "snr_threshold",
 }
-_FID_SS_METHOD  = {
-    "type": "am-ps", "key": "method",
+_FID_SS_METHOD = {
+    "type": "am-ps",
+    "key": "method",
 }
-_FID_DENOISE    = {
+_FID_DENOISE = {
     "type": "am-ps",
     "key": "denoise_method",
 }
 _FID_PLOT_STYLE = {
-    "type": "am-ps", "key": "plot_style",
+    "type": "am-ps",
+    "key": "plot_style",
 }
-_FID_RPT_FMT    = {
+_FID_RPT_FMT = {
     "type": "am-ps",
     "key": "report_format",
 }
 
 # ── Plotting-task fields (workflow-level → config → PlotAgent) ──
-_FID_PLOT_STATIONS  = {"type": "am-pf", "key": "stations"}
+_FID_PLOT_STATIONS = {"type": "am-pf", "key": "stations"}
 _FID_PLOT_COMPONENT = {"type": "am-pf", "key": "components"}
-_FID_PLOT_PMIN      = {"type": "am-pf", "key": "period_min"}
-_FID_PLOT_PMAX      = {"type": "am-pf", "key": "period_max"}
-_FID_PLOT_PUB       = {"type": "am-pf", "key": "publication"}
-_FID_PLOT_ERRBAR    = {"type": "am-pf", "key": "errorbar"}
-_FID_PLOT_COLORBY   = {"type": "am-pf", "key": "color_by"}
-_FID_PLOT_SCALE     = {"type": "am-pf", "key": "scale"}
-_FID_PLOT_VIEW      = {"type": "am-pf", "key": "view"}
-_FID_PLOT_PARTS     = {"type": "am-pf", "key": "parts"}
-_FID_PLOT_CONV      = {"type": "am-pf", "key": "convention"}
-_FID_PLOT_PERIOD    = {"type": "am-pf", "key": "period"}
-_FID_PLOT_METHOD    = {"type": "am-pf", "key": "method"}
-_FID_PLOT_SORTBY    = {"type": "am-pf", "key": "sort_by"}
-_FID_SKEW_TH        = {"type": "am-pf", "key": "skew_th"}
-_FID_ELLIPT_TH      = {"type": "am-pf", "key": "ellipt_th"}
-_FID_PLOT_PERLINE   = {"type": "am-pf", "key": "per_line"}
+_FID_PLOT_PMIN = {"type": "am-pf", "key": "period_min"}
+_FID_PLOT_PMAX = {"type": "am-pf", "key": "period_max"}
+_FID_PLOT_PUB = {"type": "am-pf", "key": "publication"}
+_FID_PLOT_ERRBAR = {"type": "am-pf", "key": "errorbar"}
+_FID_PLOT_COLORBY = {"type": "am-pf", "key": "color_by"}
+_FID_PLOT_SCALE = {"type": "am-pf", "key": "scale"}
+_FID_PLOT_VIEW = {"type": "am-pf", "key": "view"}
+_FID_PLOT_PARTS = {"type": "am-pf", "key": "parts"}
+_FID_PLOT_CONV = {"type": "am-pf", "key": "convention"}
+_FID_PLOT_PERIOD = {"type": "am-pf", "key": "period"}
+_FID_PLOT_METHOD = {"type": "am-pf", "key": "method"}
+_FID_PLOT_SORTBY = {"type": "am-pf", "key": "sort_by"}
+_FID_SKEW_TH = {"type": "am-pf", "key": "skew_th"}
+_FID_ELLIPT_TH = {"type": "am-pf", "key": "ellipt_th"}
+_FID_PLOT_PERLINE = {"type": "am-pf", "key": "per_line"}
 # ── Data / IO tool fields (Wave C) ──────────────────────────────
-_FID_DATUM          = {"type": "am-pf", "key": "datum"}
-_FID_ZONE           = {"type": "am-pf", "key": "zone"}
-_FID_HEMISPHERE     = {"type": "am-pf", "key": "hemisphere"}
-_FID_API            = {"type": "am-pf", "key": "api"}
-_FID_FORMAT         = {"type": "am-pf", "key": "format"}
-_FID_OUTDIR         = {"type": "am-pf", "key": "output_dir"}
-_FID_PLOTS          = {"type": "am-pf", "key": "plots"}
-_FID_DPI            = {"type": "am-pf", "key": "dpi"}
+_FID_DATUM = {"type": "am-pf", "key": "datum"}
+_FID_ZONE = {"type": "am-pf", "key": "zone"}
+_FID_HEMISPHERE = {"type": "am-pf", "key": "hemisphere"}
+_FID_API = {"type": "am-pf", "key": "api"}
+_FID_FORMAT = {"type": "am-pf", "key": "format"}
+_FID_OUTDIR = {"type": "am-pf", "key": "output_dir"}
+_FID_PLOTS = {"type": "am-pf", "key": "plots"}
+_FID_DPI = {"type": "am-pf", "key": "dpi"}
 # ── Stateful tool fields (Wave D) ───────────────────────────────
-_FID_MODE           = {"type": "am-pf", "key": "mode"}
-_FID_THRESHOLD      = {"type": "am-pf", "key": "threshold"}
-_FID_CI_HI          = {"type": "am-pf", "key": "ci_hi"}
-_FID_CI_LO          = {"type": "am-pf", "key": "ci_lo"}
-_FID_ALSO           = {"type": "am-pf", "key": "also"}
-_FID_REJECT         = {"type": "am-pf", "key": "reject"}
-_FID_PRESET         = {"type": "am-pf", "key": "preset"}
-_FID_RESISTIVITIES  = {"type": "am-pf", "key": "resistivities"}
-_FID_THICKNESSES    = {"type": "am-pf", "key": "thicknesses"}
+_FID_MODE = {"type": "am-pf", "key": "mode"}
+_FID_THRESHOLD = {"type": "am-pf", "key": "threshold"}
+_FID_CI_HI = {"type": "am-pf", "key": "ci_hi"}
+_FID_CI_LO = {"type": "am-pf", "key": "ci_lo"}
+_FID_ALSO = {"type": "am-pf", "key": "also"}
+_FID_REJECT = {"type": "am-pf", "key": "reject"}
+_FID_PRESET = {"type": "am-pf", "key": "preset"}
+_FID_RESISTIVITIES = {"type": "am-pf", "key": "resistivities"}
+_FID_THICKNESSES = {"type": "am-pf", "key": "thicknesses"}
 
 # ── Reusable step section definitions ────────
 
@@ -150,9 +162,7 @@ _STEP_SECTIONS: dict[str, dict] = {
                 "max": 1000.0,
                 "step": None,
                 "default": 0.0001,
-                "help": (
-                    "Shortest period to keep."
-                ),
+                "help": ("Shortest period to keep."),
             },
             {
                 "id": _FID_PERIOD_MAX,
@@ -163,9 +173,7 @@ _STEP_SECTIONS: dict[str, dict] = {
                 "max": 100000.0,
                 "step": None,
                 "default": 1.0,
-                "help": (
-                    "Longest period to keep."
-                ),
+                "help": ("Longest period to keep."),
             },
             {
                 "id": _FID_COMPONENT,
@@ -203,10 +211,7 @@ _STEP_SECTIONS: dict[str, dict] = {
                 "max": 10.0,
                 "step": 0.1,
                 "default": 0.5,
-                "help": (
-                    "Min signal-to-noise"
-                    " ratio to keep."
-                ),
+                "help": ("Min signal-to-noise ratio to keep."),
             },
         ],
     },
@@ -345,36 +350,33 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "n_layers",
                 "label": "Number of layers",
                 "type": "slider",
-                "min": 2, "max": 50,
-                "step": 1, "default": 10,
-                "help": (
-                    "Depth layers in the "
-                    "resistivity model (2-50)."
-                ),
+                "min": 2,
+                "max": 50,
+                "step": 1,
+                "default": 10,
+                "help": ("Depth layers in the resistivity model (2-50)."),
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 50000,
-                "step": 100, "default": 2000.0,
-                "help": (
-                    "Bottom of the model "
-                    "column in metres."
-                ),
+                "min": 100,
+                "max": 50000,
+                "step": 100,
+                "default": 2000.0,
+                "help": ("Bottom of the model column in metres."),
             },
             {
                 "id": _FID_EPOCHS,
                 "key": "epochs",
                 "label": "Training epochs",
                 "type": "slider",
-                "min": 100, "max": 3000,
-                "step": 100, "default": 500,
-                "help": (
-                    "More epochs improve fit "
-                    "at the cost of speed."
-                ),
+                "min": 100,
+                "max": 3000,
+                "step": 100,
+                "default": 500,
+                "help": ("More epochs improve fit at the cost of speed."),
             },
             {
                 "id": _FID_LR,
@@ -407,10 +409,7 @@ _SCHEMAS: dict[str, dict] = {
                 "label": "Model / checkpoint path",
                 "type": "text",
                 "default": "",
-                "placeholder": (
-                    "Leave blank to train"
-                    " from scratch"
-                ),
+                "placeholder": ("Leave blank to train from scratch"),
                 "help": (
                     "Optional: path to a "
                     "pre-trained model file "
@@ -437,28 +436,31 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "n_layers",
                 "label": "Number of layers",
                 "type": "slider",
-                "min": 2, "max": 50,
-                "step": 1, "default": 10,
+                "min": 2,
+                "max": 50,
+                "step": 1,
+                "default": 10,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 50000,
-                "step": 100, "default": 2000.0,
+                "min": 100,
+                "max": 50000,
+                "step": 100,
+                "default": 2000.0,
             },
             {
                 "id": _FID_EPOCHS,
                 "key": "epochs",
                 "label": "Optimisation epochs",
                 "type": "slider",
-                "min": 200, "max": 5000,
-                "step": 200, "default": 1000,
-                "help": (
-                    "PINN needs more iterations "
-                    "than pure ML."
-                ),
+                "min": 200,
+                "max": 5000,
+                "step": 200,
+                "default": 1000,
+                "help": ("PINN needs more iterations than pure ML."),
             },
             {
                 "id": _FID_LR,
@@ -486,25 +488,19 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "smoothness_weight",
                 "label": "Smoothness weight",
                 "type": "slider",
-                "min": 0.0, "max": 0.1,
-                "step": 0.005, "default": 0.01,
-                "help": (
-                    "Penalty for rapid "
-                    "resistivity changes."
-                ),
+                "min": 0.0,
+                "max": 0.1,
+                "step": 0.005,
+                "default": 0.01,
+                "help": ("Penalty for rapid resistivity changes."),
             },
             {
                 "id": _FID_CHECKPOINT,
                 "key": "checkpoint",
-                "label": (
-                    "Checkpoint path (optional)"
-                ),
+                "label": ("Checkpoint path (optional)"),
                 "type": "text",
                 "default": "",
-                "placeholder": (
-                    "Leave blank to train"
-                    " from scratch"
-                ),
+                "placeholder": ("Leave blank to train from scratch"),
                 "help": (
                     "Optional: resume PINN "
                     "training from a saved "
@@ -518,55 +514,55 @@ _SCHEMAS: dict[str, dict] = {
         "title": "Hybrid Inversion",
         "icon": "bi-diagram-3-fill",
         "color": "var(--green)",
-        "desc": (
-            "Two-stage: AI warm-start then "
-            "PINN physics refinement."
-        ),
+        "desc": ("Two-stage: AI warm-start then PINN physics refinement."),
         "fields": [
             {
                 "id": _FID_N_LAYERS,
                 "key": "n_layers",
                 "label": "Number of layers",
                 "type": "slider",
-                "min": 2, "max": 50,
-                "step": 1, "default": 10,
+                "min": 2,
+                "max": 50,
+                "step": 1,
+                "default": 10,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 50000,
-                "step": 100, "default": 2000.0,
+                "min": 100,
+                "max": 50000,
+                "step": 100,
+                "default": 2000.0,
             },
             {
                 "id": _FID_EPOCHS,
                 "key": "epochs",
                 "label": "PINN refinement epochs",
                 "type": "slider",
-                "min": 100, "max": 3000,
-                "step": 100, "default": 500,
+                "min": 100,
+                "max": 3000,
+                "step": 100,
+                "default": 500,
             },
             {
                 "id": _FID_SMOOTH,
                 "key": "smoothness_weight",
                 "label": "Smoothness weight",
                 "type": "slider",
-                "min": 0.0, "max": 0.1,
-                "step": 0.005, "default": 0.01,
+                "min": 0.0,
+                "max": 0.1,
+                "step": 0.005,
+                "default": 0.01,
             },
             {
                 "id": _FID_CHECKPOINT,
                 "key": "checkpoint",
-                "label": (
-                    "AI model / checkpoint path"
-                ),
+                "label": ("AI model / checkpoint path"),
                 "type": "text",
                 "default": "",
-                "placeholder": (
-                    "/path/to/model.pt or"
-                    " checkpoint/"
-                ),
+                "placeholder": ("/path/to/model.pt or checkpoint/"),
                 "help": (
                     "Required: path to a trained"
                     " AI inverter or checkpoint"
@@ -581,59 +577,56 @@ _SCHEMAS: dict[str, dict] = {
         "title": "2-D AI Inversion (U-Net)",
         "icon": "bi-layers-fill",
         "color": "var(--yellow)",
-        "desc": (
-            "U-Net profile inversion. "
-            "Requires >= 3 collinear sites."
-        ),
+        "desc": ("U-Net profile inversion. Requires >= 3 collinear sites."),
         "fields": [
             {
                 "id": _FID_N_LAYERS,
                 "key": "n_layers",
                 "label": "Depth layers",
                 "type": "slider",
-                "min": 5, "max": 100,
-                "step": 5, "default": 30,
+                "min": 5,
+                "max": 100,
+                "step": 5,
+                "default": 30,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 500, "max": 50000,
-                "step": 500, "default": 5000.0,
+                "min": 500,
+                "max": 50000,
+                "step": 500,
+                "default": 5000.0,
             },
             {
                 "id": _FID_LATERAL,
                 "key": "lateral_weight",
                 "label": "Lateral smoothness",
                 "type": "slider",
-                "min": 0.0, "max": 0.1,
-                "step": 0.005, "default": 0.005,
-                "help": (
-                    "Penalty for lateral "
-                    "resistivity jumps."
-                ),
+                "min": 0.0,
+                "max": 0.1,
+                "step": 0.005,
+                "default": 0.005,
+                "help": ("Penalty for lateral resistivity jumps."),
             },
             {
                 "id": _FID_EPOCHS,
                 "key": "epochs",
                 "label": "Training epochs",
                 "type": "slider",
-                "min": 100, "max": 3000,
-                "step": 100, "default": 500,
+                "min": 100,
+                "max": 3000,
+                "step": 100,
+                "default": 500,
             },
             {
                 "id": _FID_CHECKPOINT,
                 "key": "checkpoint",
-                "label": (
-                    "U-Net checkpoint (optional)"
-                ),
+                "label": ("U-Net checkpoint (optional)"),
                 "type": "text",
                 "default": "",
-                "placeholder": (
-                    "Leave blank to train"
-                    " from scratch"
-                ),
+                "placeholder": ("Leave blank to train from scratch"),
                 "help": (
                     "Optional: path to a "
                     "pre-trained U-Net model "
@@ -658,27 +651,32 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "n_layers",
                 "label": "Depth layers",
                 "type": "slider",
-                "min": 5, "max": 60,
-                "step": 5, "default": 20,
+                "min": 5,
+                "max": 60,
+                "step": 5,
+                "default": 20,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 500, "max": 50000,
-                "step": 500, "default": 5000.0,
+                "min": 500,
+                "max": 50000,
+                "step": 500,
+                "default": 5000.0,
             },
             {
                 "id": _FID_RADIUS,
                 "key": "radius",
                 "label": "Graph radius (m)",
                 "type": "number",
-                "min": 500, "max": 50000,
-                "step": 500, "default": 5000.0,
+                "min": 500,
+                "max": 50000,
+                "step": 500,
+                "default": 5000.0,
                 "help": (
-                    "Sites within this distance "
-                    "are linked as graph nodes."
+                    "Sites within this distance are linked as graph nodes."
                 ),
             },
             {
@@ -686,22 +684,18 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "graph_weight",
                 "label": "Graph smoothness",
                 "type": "slider",
-                "min": 0.0, "max": 0.05,
+                "min": 0.0,
+                "max": 0.05,
                 "step": 0.001,
                 "default": 0.005,
             },
             {
                 "id": _FID_CHECKPOINT,
                 "key": "checkpoint",
-                "label": (
-                    "GCN checkpoint (optional)"
-                ),
+                "label": ("GCN checkpoint (optional)"),
                 "type": "text",
                 "default": "",
-                "placeholder": (
-                    "Leave blank to train"
-                    " from scratch"
-                ),
+                "placeholder": ("Leave blank to train from scratch"),
                 "help": (
                     "Optional: path to a "
                     "pre-trained GCN model "
@@ -715,34 +709,37 @@ _SCHEMAS: dict[str, dict] = {
         "title": "Ensemble Inversion",
         "icon": "bi-collection-fill",
         "color": "var(--teal)",
-        "desc": (
-            "Multi-model ensemble with "
-            "uncertainty quantification."
-        ),
+        "desc": ("Multi-model ensemble with uncertainty quantification."),
         "fields": [
             {
                 "id": _FID_N_LAYERS,
                 "key": "n_layers",
                 "label": "Number of layers",
                 "type": "slider",
-                "min": 2, "max": 50,
-                "step": 1, "default": 10,
+                "min": 2,
+                "max": 50,
+                "step": 1,
+                "default": 10,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 50000,
-                "step": 100, "default": 2000.0,
+                "min": 100,
+                "max": 50000,
+                "step": 100,
+                "default": 2000.0,
             },
             {
                 "id": _FID_EPOCHS,
                 "key": "epochs",
                 "label": "Training epochs",
                 "type": "slider",
-                "min": 100, "max": 3000,
-                "step": 100, "default": 500,
+                "min": 100,
+                "max": 3000,
+                "step": 100,
+                "default": 500,
             },
         ],
         "steps": [],
@@ -751,10 +748,7 @@ _SCHEMAS: dict[str, dict] = {
         "title": "Pre-Inversion Setup",
         "icon": "bi-file-earmark-code-fill",
         "color": "var(--sapphire)",
-        "desc": (
-            "Prepare input files for "
-            "classical 2-D or 3-D codes."
-        ),
+        "desc": ("Prepare input files for classical 2-D or 3-D codes."),
         "fields": [
             {
                 "id": _FID_INV_CODE,
@@ -762,12 +756,9 @@ _SCHEMAS: dict[str, dict] = {
                 "label": "Inversion code",
                 "type": "radio",
                 "options": [
-                    {"label": "Occam2D",
-                     "value": "occam2d"},
-                    {"label": "ModEM",
-                     "value": "modem"},
-                    {"label": "MARE2DEM",
-                     "value": "mare2dem"},
+                    {"label": "Occam2D", "value": "occam2d"},
+                    {"label": "ModEM", "value": "modem"},
+                    {"label": "MARE2DEM", "value": "mare2dem"},
                 ],
                 "default": "occam2d",
                 "inline": True,
@@ -777,16 +768,20 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "n_layers",
                 "label": "Number of layers",
                 "type": "slider",
-                "min": 5, "max": 100,
-                "step": 5, "default": 30,
+                "min": 5,
+                "max": 100,
+                "step": 5,
+                "default": 30,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 500, "max": 100000,
-                "step": 500, "default": 10000.0,
+                "min": 500,
+                "max": 100000,
+                "step": 500,
+                "default": 10000.0,
             },
         ],
         "steps": [],
@@ -795,35 +790,37 @@ _SCHEMAS: dict[str, dict] = {
         "title": "ModEM 3-D Setup",
         "icon": "bi-grid-3x3-gap-fill",
         "color": "var(--red)",
-        "desc": (
-            "Generate ModEM input data "
-            "and mesh configuration."
-        ),
+        "desc": ("Generate ModEM input data and mesh configuration."),
         "fields": [
             {
                 "id": _FID_N_LAYERS,
                 "key": "n_layers",
                 "label": "Vertical layers",
                 "type": "slider",
-                "min": 10, "max": 100,
-                "step": 5, "default": 30,
+                "min": 10,
+                "max": 100,
+                "step": 5,
+                "default": 30,
             },
             {
                 "id": _FID_DEPTH_MAX,
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 1000, "max": 200000,
-                "step": 1000, "default": 50000.0,
+                "min": 1000,
+                "max": 200000,
+                "step": 1000,
+                "default": 50000.0,
             },
             {
-                "id": {"type": "am-pf",
-                       "key": "error_floor"},
+                "id": {"type": "am-pf", "key": "error_floor"},
                 "key": "error_floor",
                 "label": "Error floor (rel.)",
                 "type": "number",
-                "min": 0.01, "max": 0.5,
-                "step": 0.01, "default": 0.05,
+                "min": 0.01,
+                "max": 0.5,
+                "step": 0.01,
+                "default": 0.05,
             },
         ],
         "steps": [],
@@ -839,59 +836,58 @@ _SCHEMAS: dict[str, dict] = {
         ),
         "fields": [
             {
-                "id": {"type": "am-pf",
-                       "key": "output_modes"},
+                "id": {"type": "am-pf", "key": "output_modes"},
                 "key": "output_modes",
                 "label": "Data modes",
                 "type": "radio",
                 "options": [
-                    {"label": "TE + TM",
-                     "value": "all impedance"},
-                    {"label": "TE only",
-                     "value": "TE"},
-                    {"label": "TM only",
-                     "value": "TM"},
-                    {"label": "TE+TM+tipper",
-                     "value": "all"},
+                    {"label": "TE + TM", "value": "all impedance"},
+                    {"label": "TE only", "value": "TE"},
+                    {"label": "TM only", "value": "TM"},
+                    {"label": "TE+TM+tipper", "value": "all"},
                 ],
                 "default": "all impedance",
                 "inline": True,
             },
             {
-                "id": {"type": "am-pf",
-                       "key": "error_floor"},
+                "id": {"type": "am-pf", "key": "error_floor"},
                 "key": "error_floor",
                 "label": "Error floor (rel.)",
                 "type": "number",
-                "min": 0.01, "max": 0.5,
-                "step": 0.01, "default": 0.05,
+                "min": 0.01,
+                "max": 0.5,
+                "step": 0.01,
+                "default": 0.05,
             },
             {
-                "id": {"type": "am-pf",
-                       "key": "initial_rho"},
+                "id": {"type": "am-pf", "key": "initial_rho"},
                 "key": "initial_rho",
                 "label": "Start ρ (Ω·m)",
                 "type": "number",
-                "min": 0.1, "max": 10000,
-                "step": 0.1, "default": 100.0,
+                "min": 0.1,
+                "max": 10000,
+                "step": 0.1,
+                "default": 100.0,
             },
             {
-                "id": {"type": "am-pf",
-                       "key": "target_rms"},
+                "id": {"type": "am-pf", "key": "target_rms"},
                 "key": "target_rms",
                 "label": "Target RMS",
                 "type": "number",
-                "min": 0.5, "max": 5.0,
-                "step": 0.1, "default": 1.0,
+                "min": 0.5,
+                "max": 5.0,
+                "step": 0.1,
+                "default": 1.0,
             },
             {
-                "id": {"type": "am-pf",
-                       "key": "max_iterations"},
+                "id": {"type": "am-pf", "key": "max_iterations"},
                 "key": "max_iterations",
                 "label": "Max iterations",
                 "type": "slider",
-                "min": 10, "max": 300,
-                "step": 10, "default": 150,
+                "min": 10,
+                "max": 300,
+                "step": 10,
+                "default": 150,
             },
         ],
         "steps": [],
@@ -907,9 +903,7 @@ _SCHEMAS: dict[str, dict] = {
             "and static shift correction."
         ),
         "fields": [],
-        "steps": [
-            "load", "qc", "static_shift", "report"
-        ],
+        "steps": ["load", "qc", "static_shift", "report"],
     },
     "phase_analysis": {
         "title": "Phase Tensor Analysis",
@@ -922,7 +916,9 @@ _SCHEMAS: dict[str, dict] = {
         ),
         "fields": [],
         "steps": [
-            "load", "qc", "phase_analysis",
+            "load",
+            "qc",
+            "phase_analysis",
             "report",
         ],
     },
@@ -931,13 +927,10 @@ _SCHEMAS: dict[str, dict] = {
         "icon": "bi-arrows-expand-vertical",
         "color": "var(--yellow)",
         "desc": (
-            "Detect and correct galvanic "
-            "distortion from MT impedances."
+            "Detect and correct galvanic distortion from MT impedances."
         ),
         "fields": [],
-        "steps": [
-            "load", "qc", "static_shift", "report"
-        ],
+        "steps": ["load", "qc", "static_shift", "report"],
     },
     "tipper": {
         "title": "Tipper Analysis",
@@ -996,12 +989,11 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "strike_angle",
                 "label": "Strike angle (deg)",
                 "type": "number",
-                "min": -180, "max": 180,
-                "step": 5, "default": 0.0,
-                "help": (
-                    "Rotation from N, positive"
-                    " clockwise."
-                ),
+                "min": -180,
+                "max": 180,
+                "step": 5,
+                "default": 0.0,
+                "help": ("Rotation from N, positive clockwise."),
             },
         ],
         "steps": ["load", "qc", "report"],
@@ -1022,12 +1014,11 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 20000,
-                "step": 100, "default": 2000.0,
-                "help": (
-                    "Limit interpretation to "
-                    "this depth."
-                ),
+                "min": 100,
+                "max": 20000,
+                "step": 100,
+                "default": 2000.0,
+                "help": ("Limit interpretation to this depth."),
             },
             {
                 "id": {
@@ -1060,10 +1051,7 @@ _SCHEMAS: dict[str, dict] = {
                     },
                 ],
                 "default": "generic",
-                "help": (
-                    "Constrains the vocabulary "
-                    "and focus of the LLM."
-                ),
+                "help": ("Constrains the vocabulary and focus of the LLM."),
             },
             {
                 "id": {
@@ -1306,12 +1294,11 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "snr_threshold",
                 "label": "SNR threshold",
                 "type": "slider",
-                "min": 0.1, "max": 10.0,
-                "step": 0.1, "default": 0.5,
-                "help": (
-                    "Periods below this SNR "
-                    "are flagged and removed."
-                ),
+                "min": 0.1,
+                "max": 10.0,
+                "step": 0.1,
+                "default": 0.5,
+                "help": ("Periods below this SNR are flagged and removed."),
             },
         ],
         "steps": ["load"],
@@ -1356,12 +1343,11 @@ _SCHEMAS: dict[str, dict] = {
                 "key": "depth_max",
                 "label": "Max depth (m)",
                 "type": "number",
-                "min": 100, "max": 20000,
-                "step": 100, "default": 2000.0,
-                "help": (
-                    "Compute DOI down to "
-                    "this depth."
-                ),
+                "min": 100,
+                "max": 20000,
+                "step": 100,
+                "default": 2000.0,
+                "help": ("Compute DOI down to this depth."),
             },
         ],
         "steps": [],
@@ -1405,30 +1391,45 @@ _PLOT_FIELD_STATIONS = {
     ),
 }
 _PLOT_FIELD_PMIN = {
-    "id": _FID_PLOT_PMIN, "key": "period_min",
-    "label": "Min period (s)", "type": "number",
-    "min": 1e-6, "max": 1e5, "step": None, "default": None,
+    "id": _FID_PLOT_PMIN,
+    "key": "period_min",
+    "label": "Min period (s)",
+    "type": "number",
+    "min": 1e-6,
+    "max": 1e5,
+    "step": None,
+    "default": None,
     "help": "Optional lower period bound. Blank = no limit.",
 }
 _PLOT_FIELD_PMAX = {
-    "id": _FID_PLOT_PMAX, "key": "period_max",
-    "label": "Max period (s)", "type": "number",
-    "min": 1e-6, "max": 1e5, "step": None, "default": None,
+    "id": _FID_PLOT_PMAX,
+    "key": "period_max",
+    "label": "Max period (s)",
+    "type": "number",
+    "min": 1e-6,
+    "max": 1e5,
+    "step": None,
+    "default": None,
     "help": "Optional upper period bound. Blank = no limit.",
 }
 _PLOT_FIELD_PUB = {
-    "id": _FID_PLOT_PUB, "key": "publication",
-    "label": "Publication style", "type": "radio",
+    "id": _FID_PLOT_PUB,
+    "key": "publication",
+    "label": "Publication style",
+    "type": "radio",
     "options": [
         {"label": "Standard", "value": "off"},
         {"label": "Publication", "value": "on"},
     ],
-    "inline": True, "default": "off",
+    "inline": True,
+    "default": "off",
     "help": "Larger fonts, tighter layout and 300-dpi-ready styling.",
 }
 _PLOT_FIELD_COMPONENTS = {
-    "id": _FID_PLOT_COMPONENT, "key": "components",
-    "label": "Components", "type": "select",
+    "id": _FID_PLOT_COMPONENT,
+    "key": "components",
+    "label": "Components",
+    "type": "select",
     "options": [
         {"label": "xy + yx", "value": "xy,yx"},
         {"label": "xy", "value": "xy"},
@@ -1448,21 +1449,26 @@ _SCHEMAS["rhophi"] = {
     ),
     "fields": [
         _PLOT_FIELD_STATIONS,
-        dict(_PLOT_FIELD_COMPONENTS,
-             options=[
-                 {"label": "xy + yx", "value": "xy,yx"},
-                 {"label": "xy", "value": "xy"},
-                 {"label": "yx", "value": "yx"},
-                 {"label": "determinant", "value": "det"},
-             ]),
+        dict(
+            _PLOT_FIELD_COMPONENTS,
+            options=[
+                {"label": "xy + yx", "value": "xy,yx"},
+                {"label": "xy", "value": "xy"},
+                {"label": "yx", "value": "yx"},
+                {"label": "determinant", "value": "det"},
+            ],
+        ),
         {
-            "id": _FID_PLOT_ERRBAR, "key": "errorbar",
-            "label": "Error bars", "type": "radio",
+            "id": _FID_PLOT_ERRBAR,
+            "key": "errorbar",
+            "label": "Error bars",
+            "type": "radio",
             "options": [
                 {"label": "On", "value": "on"},
                 {"label": "Off", "value": "off"},
             ],
-            "inline": True, "default": "on",
+            "inline": True,
+            "default": "on",
             "help": "Show measurement error bars when available.",
         },
         _PLOT_FIELD_PMIN,
@@ -1501,8 +1507,10 @@ _SCHEMAS["pt_psection"] = {
     "fields": [
         _PLOT_FIELD_STATIONS,
         {
-            "id": _FID_PLOT_COLORBY, "key": "color_by",
-            "label": "Colour by", "type": "select",
+            "id": _FID_PLOT_COLORBY,
+            "key": "color_by",
+            "label": "Colour by",
+            "type": "select",
             "options": [
                 {"label": "Skew (β)", "value": "skew"},
                 {"label": "φ max", "value": "phi_max"},
@@ -1513,9 +1521,14 @@ _SCHEMAS["pt_psection"] = {
             "help": "Phase-tensor invariant used for the fill colour.",
         },
         {
-            "id": _FID_PLOT_SCALE, "key": "scale",
-            "label": "Ellipse scale", "type": "number",
-            "min": 0.1, "max": 100.0, "step": None, "default": None,
+            "id": _FID_PLOT_SCALE,
+            "key": "scale",
+            "label": "Ellipse scale",
+            "type": "number",
+            "min": 0.1,
+            "max": 100.0,
+            "step": None,
+            "default": None,
             "help": "Optional ellipse size factor. Blank = auto.",
         },
         _PLOT_FIELD_PMIN,
@@ -1534,9 +1547,11 @@ _SCHEMAS["pt_strip"] = {
         "classic 'ellipse timeseries' view. Pick one station."
     ),
     "fields": [
-        dict(_PLOT_FIELD_STATIONS,
-             label="Station",
-             help="Station to plot. Blank = first station."),
+        dict(
+            _PLOT_FIELD_STATIONS,
+            label="Station",
+            help="Station to plot. Blank = first station.",
+        ),
         _PLOT_FIELD_PMIN,
         _PLOT_FIELD_PMAX,
         _PLOT_FIELD_PUB,
@@ -1555,9 +1570,14 @@ _SCHEMAS["pt_strip_grid"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOT_PERLINE, "key": "per_line",
-            "label": "Stations / line", "type": "number",
-            "min": 1, "max": 20, "step": 1, "default": 4,
+            "id": _FID_PLOT_PERLINE,
+            "key": "per_line",
+            "label": "Stations / line",
+            "type": "number",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 4,
             "help": "Evenly spaced representative stations drawn per line.",
         },
     ],
@@ -1574,8 +1594,10 @@ _SCHEMAS["strike"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOT_METHOD, "key": "method",
-            "label": "Method", "type": "select",
+            "id": _FID_PLOT_METHOD,
+            "key": "method",
+            "label": "Method",
+            "type": "select",
             "options": [
                 {"label": "Consensus", "value": "consensus"},
                 {"label": "Impedance sweep", "value": "sweep"},
@@ -1601,15 +1623,25 @@ _SCHEMAS["dimensionality"] = {
     ),
     "fields": [
         {
-            "id": _FID_SKEW_TH, "key": "skew_th",
-            "label": "Skew threshold (°)", "type": "number",
-            "min": 0.1, "max": 30.0, "step": None, "default": 3.0,
+            "id": _FID_SKEW_TH,
+            "key": "skew_th",
+            "label": "Skew threshold (°)",
+            "type": "number",
+            "min": 0.1,
+            "max": 30.0,
+            "step": None,
+            "default": 3.0,
             "help": "|β| above this flags 3-D.",
         },
         {
-            "id": _FID_ELLIPT_TH, "key": "ellipt_th",
-            "label": "Ellipticity threshold", "type": "number",
-            "min": 0.01, "max": 1.0, "step": None, "default": 0.2,
+            "id": _FID_ELLIPT_TH,
+            "key": "ellipt_th",
+            "label": "Ellipticity threshold",
+            "type": "number",
+            "min": 0.01,
+            "max": 1.0,
+            "step": None,
+            "default": 0.2,
             "help": "Below this is treated as 1-D.",
         },
         _PLOT_FIELD_STATIONS,
@@ -1642,8 +1674,10 @@ _SCHEMAS["coords"] = {
     ),
     "fields": [
         {
-            "id": _FID_DATUM, "key": "datum",
-            "label": "Datum", "type": "select",
+            "id": _FID_DATUM,
+            "key": "datum",
+            "label": "Datum",
+            "type": "select",
             "options": [
                 {"label": "WGS84", "value": "WGS84"},
                 {"label": "NAD83", "value": "NAD83"},
@@ -1653,19 +1687,27 @@ _SCHEMAS["coords"] = {
             "help": "Geodetic datum for the UTM projection.",
         },
         {
-            "id": _FID_ZONE, "key": "zone",
-            "label": "UTM zone (0 = auto)", "type": "number",
-            "min": 0, "max": 60, "step": 1, "default": 0,
+            "id": _FID_ZONE,
+            "key": "zone",
+            "label": "UTM zone (0 = auto)",
+            "type": "number",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "default": 0,
             "help": "Force a UTM zone, or leave 0 to detect from longitude.",
         },
         {
-            "id": _FID_HEMISPHERE, "key": "hemisphere",
-            "label": "Hemisphere", "type": "radio",
+            "id": _FID_HEMISPHERE,
+            "key": "hemisphere",
+            "label": "Hemisphere",
+            "type": "radio",
             "options": [
                 {"label": "North", "value": "N"},
                 {"label": "South", "value": "S"},
             ],
-            "inline": True, "default": "N",
+            "inline": True,
+            "default": "N",
             "help": "Northern or southern hemisphere.",
         },
         _PLOT_FIELD_STATIONS,
@@ -1683,13 +1725,16 @@ _SCHEMAS["elevation"] = {
     ),
     "fields": [
         {
-            "id": _FID_API, "key": "api",
-            "label": "Elevation service", "type": "radio",
+            "id": _FID_API,
+            "key": "api",
+            "label": "Elevation service",
+            "type": "radio",
             "options": [
                 {"label": "Open-Meteo", "value": "open_meteo"},
                 {"label": "Open-Topo-Data", "value": "open_topo_data"},
             ],
-            "inline": True, "default": "open_meteo",
+            "inline": True,
+            "default": "open_meteo",
             "help": "Public elevation API queried over the network.",
         },
         _PLOT_FIELD_STATIONS,
@@ -1708,8 +1753,10 @@ _SCHEMAS["converter"] = {
     ),
     "fields": [
         {
-            "id": _FID_FORMAT, "key": "format",
-            "label": "Output format", "type": "select",
+            "id": _FID_FORMAT,
+            "key": "format",
+            "label": "Output format",
+            "type": "select",
             "options": [
                 {"label": "CSV  (station metadata)", "value": "csv"},
                 {"label": "JSON (station metadata)", "value": "json"},
@@ -1719,8 +1766,10 @@ _SCHEMAS["converter"] = {
             "help": "What to write for each station.",
         },
         {
-            "id": _FID_OUTDIR, "key": "output_dir",
-            "label": "Output folder", "type": "text",
+            "id": _FID_OUTDIR,
+            "key": "output_dir",
+            "label": "Output folder",
+            "type": "text",
             "default": "",
             "placeholder": "blank = ~/pycsamt_export",
             "help": "Destination folder (created if missing).",
@@ -1740,28 +1789,40 @@ _SCHEMAS["batch_export"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOTS, "key": "plots",
-            "label": "Plot bundle", "type": "select",
+            "id": _FID_PLOTS,
+            "key": "plots",
+            "label": "Plot bundle",
+            "type": "select",
             "options": [
-                {"label": "Overview (ρ/φ + phase + Φ section)",
-                 "value": "overview"},
-                {"label": "Phase tensor (Φ section + map + strip grid)",
-                 "value": "phase_tensor"},
+                {
+                    "label": "Overview (ρ/φ + phase + Φ section)",
+                    "value": "overview",
+                },
+                {
+                    "label": "Phase tensor (Φ section + map + strip grid)",
+                    "value": "phase_tensor",
+                },
                 {"label": "All of the above", "value": "all"},
                 {"label": "ρ/φ sounding curves", "value": "rhophi"},
                 {"label": "Phase pseudo-section", "value": "phase_psection"},
-                {"label": "Phase-tensor (Φ) pseudo-section",
-                 "value": "pt_psection"},
+                {
+                    "label": "Phase-tensor (Φ) pseudo-section",
+                    "value": "pt_psection",
+                },
                 {"label": "Phase-tensor map", "value": "pt_map"},
-                {"label": "Phase-tensor strip grid (by line)",
-                 "value": "pt_strip_grid"},
+                {
+                    "label": "Phase-tensor strip grid (by line)",
+                    "value": "pt_strip_grid",
+                },
             ],
             "default": "overview",
             "help": "Which standard plots to render and save.",
         },
         {
-            "id": _FID_FORMAT, "key": "format",
-            "label": "Image format", "type": "select",
+            "id": _FID_FORMAT,
+            "key": "format",
+            "label": "Image format",
+            "type": "select",
             "options": [
                 {"label": "PNG", "value": "png"},
                 {"label": "PDF", "value": "pdf"},
@@ -1772,14 +1833,21 @@ _SCHEMAS["batch_export"] = {
             "help": "Saved figure format.",
         },
         {
-            "id": _FID_DPI, "key": "dpi",
-            "label": "Resolution (dpi)", "type": "number",
-            "min": 72, "max": 600, "step": 1, "default": 150,
+            "id": _FID_DPI,
+            "key": "dpi",
+            "label": "Resolution (dpi)",
+            "type": "number",
+            "min": 72,
+            "max": 600,
+            "step": 1,
+            "default": 150,
             "help": "Raster resolution (72–600).",
         },
         {
-            "id": _FID_OUTDIR, "key": "output_dir",
-            "label": "Output folder", "type": "text",
+            "id": _FID_OUTDIR,
+            "key": "output_dir",
+            "label": "Output folder",
+            "type": "text",
             "default": "",
             "placeholder": "blank = ~/pycsamt_figures",
             "help": "Destination folder (created if missing).",
@@ -1799,19 +1867,24 @@ _SCHEMAS["freq_editor"] = {
     ),
     "fields": [
         {
-            "id": _FID_MODE, "key": "mode",
-            "label": "Mode", "type": "radio",
+            "id": _FID_MODE,
+            "key": "mode",
+            "label": "Mode",
+            "type": "radio",
             "options": [
                 {"label": "Recover", "value": "recover"},
                 {"label": "Drop", "value": "drop"},
                 {"label": "Mask", "value": "mask"},
             ],
-            "inline": True, "default": "recover",
+            "inline": True,
+            "default": "recover",
             "help": "Recover interpolates weak periods; drop/mask remove them.",
         },
         {
-            "id": _FID_PLOT_METHOD, "key": "method",
-            "label": "Confidence method", "type": "select",
+            "id": _FID_PLOT_METHOD,
+            "key": "method",
+            "label": "Confidence method",
+            "type": "select",
             "options": [
                 {"label": "Composite", "value": "composite"},
                 {"label": "SNR", "value": "snr"},
@@ -1822,26 +1895,43 @@ _SCHEMAS["freq_editor"] = {
             "help": "How per-period confidence is scored.",
         },
         {
-            "id": _FID_THRESHOLD, "key": "threshold",
-            "label": "Threshold", "type": "number",
-            "min": 0.0, "max": 1.0, "step": None, "default": 0.5,
+            "id": _FID_THRESHOLD,
+            "key": "threshold",
+            "label": "Threshold",
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": None,
+            "default": 0.5,
             "help": "Periods below this confidence are acted on.",
         },
         {
-            "id": _FID_CI_HI, "key": "ci_hi",
-            "label": "CI high", "type": "number",
-            "min": 0.0, "max": 1.0, "step": None, "default": 0.9,
+            "id": _FID_CI_HI,
+            "key": "ci_hi",
+            "label": "CI high",
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": None,
+            "default": 0.9,
             "help": "Upper confidence band.",
         },
         {
-            "id": _FID_CI_LO, "key": "ci_lo",
-            "label": "CI low", "type": "number",
-            "min": 0.0, "max": 1.0, "step": None, "default": 0.5,
+            "id": _FID_CI_LO,
+            "key": "ci_lo",
+            "label": "CI low",
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": None,
+            "default": 0.5,
             "help": "Lower confidence band.",
         },
         {
-            "id": _FID_ALSO, "key": "also",
-            "label": "Apply to", "type": "select",
+            "id": _FID_ALSO,
+            "key": "also",
+            "label": "Apply to",
+            "type": "select",
             "options": [
                 {"label": "Z + tipper", "value": "both"},
                 {"label": "Impedance (Z)", "value": "z"},
@@ -1851,14 +1941,17 @@ _SCHEMAS["freq_editor"] = {
             "help": "Which transfer functions to edit.",
         },
         {
-            "id": _FID_REJECT, "key": "reject",
-            "label": "Reject rows", "type": "radio",
+            "id": _FID_REJECT,
+            "key": "reject",
+            "label": "Reject rows",
+            "type": "radio",
             "options": [
                 {"label": "Drop", "value": "drop"},
                 {"label": "Mask", "value": "mask"},
                 {"label": "Keep", "value": "keep"},
             ],
-            "inline": True, "default": "drop",
+            "inline": True,
+            "default": "drop",
             "help": "What to do with rejected periods.",
         },
         _PLOT_FIELD_STATIONS,
@@ -1877,8 +1970,10 @@ _SCHEMAS["layered_model"] = {
     ),
     "fields": [
         {
-            "id": _FID_PRESET, "key": "preset",
-            "label": "Source", "type": "select",
+            "id": _FID_PRESET,
+            "key": "preset",
+            "label": "Source",
+            "type": "select",
             "options": [
                 {"label": "Custom (enter values below)", "value": "custom"},
                 {"label": "Random preset", "value": "random"},
@@ -1889,30 +1984,44 @@ _SCHEMAS["layered_model"] = {
             "help": "Custom uses the fields below; presets are auto-generated.",
         },
         {
-            "id": _FID_N_LAYERS, "key": "n_layers",
-            "label": "Number of layers (presets)", "type": "slider",
-            "min": 2, "max": 20, "step": 1, "default": 3,
+            "id": _FID_N_LAYERS,
+            "key": "n_layers",
+            "label": "Number of layers (presets)",
+            "type": "slider",
+            "min": 2,
+            "max": 20,
+            "step": 1,
+            "default": 3,
             "help": "Layer count for the random/blocky/smooth presets.",
         },
         {
-            "id": _FID_RESISTIVITIES, "key": "resistivities",
-            "label": "Resistivities (Ω·m)", "type": "text",
+            "id": _FID_RESISTIVITIES,
+            "key": "resistivities",
+            "label": "Resistivities (Ω·m)",
+            "type": "text",
             "default": "",
             "placeholder": "e.g. 100, 10, 500  (top → halfspace)",
             "help": "Comma-separated, one per layer. Blank = 100, 10, 500.",
         },
         {
-            "id": _FID_THICKNESSES, "key": "thicknesses",
-            "label": "Thicknesses (m)", "type": "text",
+            "id": _FID_THICKNESSES,
+            "key": "thicknesses",
+            "label": "Thicknesses (m)",
+            "type": "text",
             "default": "",
             "placeholder": "e.g. 300, 800  (one fewer than layers)",
             "help": "Comma-separated; one fewer than resistivities (no "
-                    "halfspace thickness). Blank = 300, 800.",
+            "halfspace thickness). Blank = 300, 800.",
         },
         {
-            "id": _FID_DEPTH_MAX, "key": "depth_max",
-            "label": "Max depth (m, random preset)", "type": "number",
-            "min": 100, "max": 50000, "step": 100, "default": 2000.0,
+            "id": _FID_DEPTH_MAX,
+            "key": "depth_max",
+            "label": "Max depth (m, random preset)",
+            "type": "number",
+            "min": 100,
+            "max": 50000,
+            "step": 100,
+            "default": 2000.0,
             "help": "Total depth spanned by the random preset.",
         },
     ],
@@ -1928,15 +2037,19 @@ _SCHEMAS["station_response"] = {
         "the Bode-predicted phase) for distortion checks."
     ),
     "fields": [
-        dict(_PLOT_FIELD_STATIONS,
-             label="Station",
-             help="Station to inspect. Blank = first station."),
-        dict(_PLOT_FIELD_COMPONENTS,
-             options=[
-                 {"label": "xy + yx", "value": "xy,yx"},
-                 {"label": "xy", "value": "xy"},
-                 {"label": "yx", "value": "yx"},
-             ]),
+        dict(
+            _PLOT_FIELD_STATIONS,
+            label="Station",
+            help="Station to inspect. Blank = first station.",
+        ),
+        dict(
+            _PLOT_FIELD_COMPONENTS,
+            options=[
+                {"label": "xy + yx", "value": "xy,yx"},
+                {"label": "xy", "value": "xy"},
+                {"label": "yx", "value": "yx"},
+            ],
+        ),
         _PLOT_FIELD_PMIN,
         _PLOT_FIELD_PMAX,
         _PLOT_FIELD_PUB,
@@ -1954,8 +2067,10 @@ _SCHEMAS["strike_profile"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOT_METHOD, "key": "method",
-            "label": "Strike method", "type": "select",
+            "id": _FID_PLOT_METHOD,
+            "key": "method",
+            "label": "Strike method",
+            "type": "select",
             "options": [
                 {"label": "Consensus", "value": "consensus"},
                 {"label": "Impedance sweep", "value": "sweep"},
@@ -1965,8 +2080,10 @@ _SCHEMAS["strike_profile"] = {
             "help": "Strike estimator to drive the profile.",
         },
         {
-            "id": _FID_PLOT_SORTBY, "key": "sort_by",
-            "label": "Order stations by", "type": "select",
+            "id": _FID_PLOT_SORTBY,
+            "key": "sort_by",
+            "label": "Order stations by",
+            "type": "select",
             "options": [
                 {"label": "Auto", "value": "auto"},
                 {"label": "Longitude", "value": "lon"},
@@ -1994,14 +2111,21 @@ _SCHEMAS["phase_tensor_map"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOT_PERIOD, "key": "period",
-            "label": "Period (s)", "type": "number",
-            "min": 1e-6, "max": 1e5, "step": None, "default": 1.0,
+            "id": _FID_PLOT_PERIOD,
+            "key": "period",
+            "label": "Period (s)",
+            "type": "number",
+            "min": 1e-6,
+            "max": 1e5,
+            "step": None,
+            "default": 1.0,
             "help": "Period at which to draw the ellipse map.",
         },
         {
-            "id": _FID_PLOT_COLORBY, "key": "color_by",
-            "label": "Colour by", "type": "select",
+            "id": _FID_PLOT_COLORBY,
+            "key": "color_by",
+            "label": "Colour by",
+            "type": "select",
             "options": [
                 {"label": "Skew (β)", "value": "skew"},
                 {"label": "φ max", "value": "s1"},
@@ -2012,9 +2136,14 @@ _SCHEMAS["phase_tensor_map"] = {
             "help": "Phase-tensor invariant used for the fill colour.",
         },
         {
-            "id": _FID_PLOT_SCALE, "key": "scale",
-            "label": "Ellipse scale", "type": "number",
-            "min": 0.1, "max": 100.0, "step": None, "default": None,
+            "id": _FID_PLOT_SCALE,
+            "key": "scale",
+            "label": "Ellipse scale",
+            "type": "number",
+            "min": 0.1,
+            "max": 100.0,
+            "step": None,
+            "default": None,
             "help": "Optional ellipse size factor. Blank = auto.",
         },
         _PLOT_FIELD_STATIONS,
@@ -2033,19 +2162,24 @@ _SCHEMAS["tipper_plot"] = {
     ),
     "fields": [
         {
-            "id": _FID_PLOT_VIEW, "key": "view",
-            "label": "View", "type": "radio",
+            "id": _FID_PLOT_VIEW,
+            "key": "view",
+            "label": "View",
+            "type": "radio",
             "options": [
                 {"label": "Components (Tx/Ty)", "value": "components"},
                 {"label": "Induction arrows", "value": "arrows"},
             ],
-            "inline": True, "default": "components",
+            "inline": True,
+            "default": "components",
             "help": "Component curves vs period, or a map of induction arrows.",
         },
         _PLOT_FIELD_STATIONS,
         {
-            "id": _FID_PLOT_PARTS, "key": "parts",
-            "label": "Parts (components view)", "type": "select",
+            "id": _FID_PLOT_PARTS,
+            "key": "parts",
+            "label": "Parts (components view)",
+            "type": "select",
             "options": [
                 {"label": "real + imaginary", "value": "real,imag"},
                 {"label": "real", "value": "real"},
@@ -2055,8 +2189,10 @@ _SCHEMAS["tipper_plot"] = {
             "help": "Real / imaginary tipper parts to draw.",
         },
         {
-            "id": _FID_PLOT_CONV, "key": "convention",
-            "label": "Arrow convention (arrows view)", "type": "select",
+            "id": _FID_PLOT_CONV,
+            "key": "convention",
+            "label": "Arrow convention (arrows view)",
+            "type": "select",
             "options": [
                 {"label": "Parkinson", "value": "park"},
                 {"label": "Wiese", "value": "wiese"},
@@ -2065,9 +2201,14 @@ _SCHEMAS["tipper_plot"] = {
             "help": "Sign convention for induction arrows.",
         },
         {
-            "id": _FID_PLOT_PERIOD, "key": "period",
-            "label": "Period for arrows (s)", "type": "number",
-            "min": 1e-6, "max": 1e5, "step": None, "default": 1.0,
+            "id": _FID_PLOT_PERIOD,
+            "key": "period",
+            "label": "Period for arrows (s)",
+            "type": "number",
+            "min": 1e-6,
+            "max": 1e5,
+            "step": None,
+            "default": 1.0,
             "help": "Period at which to draw induction arrows.",
         },
         _PLOT_FIELD_PUB,
@@ -2081,11 +2222,14 @@ _SCHEMAS["tipper_plot"] = {
 # CorrectionController ParamSpec list, so "different correction with different
 # parameter control" needs no hand-written schema per method.
 
+
 def _corr_field_from_spec(ps) -> dict:
     """Map a CorrectionController ``ParamSpec`` to a param-modal field dict."""
     fid = {"type": "am-pf", "key": ps.name}
     field = {
-        "id": fid, "key": ps.name, "label": ps.label,
+        "id": fid,
+        "key": ps.name,
+        "label": ps.label,
         "help": getattr(ps, "tip", "") or "",
     }
     kind = ps.kind
@@ -2097,16 +2241,24 @@ def _corr_field_from_spec(ps) -> dict:
         )
     elif kind == "check":
         field.update(
-            type="radio", inline=True,
-            options=[{"label": "Yes", "value": True},
-                     {"label": "No", "value": False}],
+            type="radio",
+            inline=True,
+            options=[
+                {"label": "Yes", "value": True},
+                {"label": "No", "value": False},
+            ],
             default=bool(ps.default),
         )
     else:  # "spin" (int) / "dspin" (float)
-        lo, hi, st = (tuple(ps.opts) + (None, None, None))[:3] if ps.opts \
+        lo, hi, st = (
+            (tuple(ps.opts) + (None, None, None))[:3]
+            if ps.opts
             else (None, None, None)
+        )
         field.update(
-            type="number", min=lo, max=hi,
+            type="number",
+            min=lo,
+            max=hi,
             step=(int(st) if (kind == "spin" and st) else st),
             default=ps.default,
         )
@@ -2131,9 +2283,9 @@ def _build_correction_schemas() -> None:
         fields.append(_PLOT_FIELD_STATIONS)  # optional station targeting
         _SCHEMAS[wf] = {
             "title": meta.get("title", wf),
-            "icon":  meta.get("icon", "bi-sliders"),
+            "icon": meta.get("icon", "bi-sliders"),
             "color": meta.get("color", "var(--blue)"),
-            "desc":  method_desc(wf) or meta.get("title", wf),
+            "desc": method_desc(wf) or meta.get("title", wf),
             "fields": fields,
             "steps": [],
         }
@@ -2143,6 +2295,7 @@ _build_correction_schemas()
 
 
 # ── Field & section renderers ─────────────────
+
 
 def _field_el(f: dict, val: Any) -> Any:
     fid = f["id"]
@@ -2203,9 +2356,7 @@ def _field_el(f: dict, val: Any) -> Any:
             id=fid,
             type="text",
             value=val or "",
-            placeholder=f.get(
-                "placeholder", ""
-            ),
+            placeholder=f.get("placeholder", ""),
             size="sm",
             debounce=True,
             className="am-pf-text",
@@ -2219,9 +2370,7 @@ def _render_form(
 ) -> list:
     rows = []
     for f in fields:
-        val = inv_config.get(
-            f["key"], f["default"]
-        )
+        val = inv_config.get(f["key"], f["default"])
         help_txt = f.get("help", "")
         rows.append(
             html.Div(
@@ -2230,16 +2379,14 @@ def _render_form(
                         [
                             html.Label(
                                 f["label"],
-                                className=(
-                                    "am-pf-label"
-                                ),
+                                className=("am-pf-label"),
                             ),
                             html.Small(
                                 help_txt,
-                                className=(
-                                    "am-pf-help"
-                                ),
-                            ) if help_txt else None,
+                                className=("am-pf-help"),
+                            )
+                            if help_txt
+                            else None,
                         ],
                         className="am-pf-label-row",
                     ),
@@ -2261,26 +2408,22 @@ def _render_steps_accordion(
         sdef = _STEP_SECTIONS.get(sname)
         if not sdef:
             continue
-        sc = config.get("step_params", {}).get(
-            sname, {}
-        )
+        sc = config.get("step_params", {}).get(sname, {})
         merged = {**config, **sc}
-        fields_html = _render_form(
-            sdef["fields"], merged
-        )
+        fields_html = _render_form(sdef["fields"], merged)
         item_id = f"am-pstep-{sname}"
         active.append(item_id)
         items.append(
             dbc.AccordionItem(
                 fields_html,
-                title=html.Span([
-                    html.I(
-                        className=(
-                            f"{sdef['icon']} me-2"
+                title=html.Span(
+                    [
+                        html.I(
+                            className=(f"{sdef['icon']} me-2"),
                         ),
-                    ),
-                    sdef["title"],
-                ]),
+                        sdef["title"],
+                    ]
+                ),
                 item_id=item_id,
                 class_name="am-step-item",
             )
@@ -2292,9 +2435,7 @@ def _render_steps_accordion(
             html.H6(
                 [
                     html.I(
-                        className=(
-                            "bi bi-diagram-3 me-2"
-                        ),
+                        className=("bi bi-diagram-3 me-2"),
                     ),
                     "Pipeline Steps",
                 ],
@@ -2337,11 +2478,7 @@ def _collect_step_params(
         sdata: dict = {}
         for f in sdef["fields"]:
             v = field_vals.get(f["key"])
-            sdata[f["key"]] = (
-                v
-                if v is not None
-                else f["default"]
-            )
+            sdata[f["key"]] = v if v is not None else f["default"]
         result[sname] = sdata
     return result
 
@@ -2358,22 +2495,13 @@ def _cancel_bubble() -> html.Div:
                     html.Div(
                         [
                             html.I(
-                                className=(
-                                    "bi bi-x-circle"
-                                    " me-2"
-                                ),
-                                style={
-                                    "color": (
-                                        "var(--red)"
-                                    )
-                                },
+                                className=("bi bi-x-circle me-2"),
+                                style={"color": ("var(--red)")},
                             ),
                             "Workflow cancelled.",
                         ]
                     ),
-                    html.Div(
-                        _ts(), className="am-ts"
-                    ),
+                    html.Div(_ts(), className="am-ts"),
                 ],
                 className="am-bubble agent",
             ),
@@ -2384,6 +2512,7 @@ def _cancel_bubble() -> html.Div:
 
 # ── Dynamic line / station options ────────────
 
+
 def _line_station_options(groups, edi_path):
     """Return ``(line_options, station_options, {line: [stations]})`` for the
     param modal's dependent dropdowns.
@@ -2392,6 +2521,7 @@ def _line_station_options(groups, edi_path):
     ungrouped). Station names are the EDI file stems, so no EDI parsing is
     needed."""
     from pathlib import Path
+
     line_to_st: dict[str, list[str]] = {}
     if groups:
         for ln, files in groups.items():
@@ -2402,8 +2532,9 @@ def _line_station_options(groups, edi_path):
         try:
             p = Path(str(edi_path))
             if p.is_dir():
-                stems = (sorted({f.stem for f in p.rglob("*.edi")})
-                         or sorted({f.stem for f in p.rglob("*.EDI")}))
+                stems = sorted({f.stem for f in p.rglob("*.edi")}) or sorted(
+                    {f.stem for f in p.rglob("*.EDI")}
+                )
                 if stems:
                     line_to_st["(all)"] = stems
             elif p.is_file():
@@ -2440,11 +2571,13 @@ def _prepare_dynamic_fields(fields, groups, edi_path, preselect):
     has_stations = any(f.get("key") == "stations" for f in fields)
     out: list = []
     if has_stations and len(line_opts) >= 2:
-        out.append(dict(
-            _PLOT_FIELD_LINES,
-            options=line_opts,
-            default=[ln for ln in (preselect or []) if ln in line_to_st],
-        ))
+        out.append(
+            dict(
+                _PLOT_FIELD_LINES,
+                options=line_opts,
+                default=[ln for ln in (preselect or []) if ln in line_to_st],
+            )
+        )
     for f in fields:
         if f.get("key") == "stations" and f.get("type") == "multiselect":
             f = dict(f, options=station_opts)
@@ -2454,20 +2587,15 @@ def _prepare_dynamic_fields(fields, groups, edi_path, preselect):
 
 # ── Callbacks ─────────────────────────────────
 
+
 def register_params(app) -> None:
 
     # Open modal when STORE_PENDING is set
     @app.callback(
         Output(IDs.MODAL_PARAMS, "is_open"),
-        Output(
-            IDs.PARAM_MODAL_TITLE, "children"
-        ),
-        Output(
-            IDs.PARAM_MODAL_DESC, "children"
-        ),
-        Output(
-            IDs.PARAM_FORM_BODY, "children"
-        ),
+        Output(IDs.PARAM_MODAL_TITLE, "children"),
+        Output(IDs.PARAM_MODAL_DESC, "children"),
+        Output(IDs.PARAM_FORM_BODY, "children"),
         Output(IDs.STORE_LINE_STATIONS, "data"),
         Input(IDs.STORE_PENDING, "data"),
         State(IDs.STORE_INV_CONFIG, "data"),
@@ -2484,9 +2612,7 @@ def register_params(app) -> None:
         ic = inv_config or {}
         title = [
             html.I(
-                className=(
-                    f"{schema['icon']} me-2"
-                ),
+                className=(f"{schema['icon']} me-2"),
                 style={"color": schema["color"]},
             ),
             schema["title"],
@@ -2494,11 +2620,11 @@ def register_params(app) -> None:
         # Loaded line groups + station names drive the line/station selectors.
         _groups = (
             (edi_store or {}).get("groups", {})
-            or pending.get("edi_groups", {}) or {}
+            or pending.get("edi_groups", {})
+            or {}
         )
-        _edi_path = (
-            (edi_store or {}).get("path", "")
-            or pending.get("edi_path", "")
+        _edi_path = (edi_store or {}).get("path", "") or pending.get(
+            "edi_path", ""
         )
         _presel = pending.get("selected_lines", []) or []
         form: list = []
@@ -2512,19 +2638,11 @@ def register_params(app) -> None:
         step_names = schema.get("steps", [])
         if step_names:
             if wf_fields:
-                form.append(
-                    html.Hr(
-                        className="am-pf-divider"
-                    )
-                )
-            acc = _render_steps_accordion(
-                step_names, ic
-            )
+                form.append(html.Hr(className="am-pf-divider"))
+            acc = _render_steps_accordion(step_names, ic)
             if acc:
                 form.append(acc)
-        return (
-            True, title, schema["desc"], form, line_to_st
-        )
+        return (True, title, schema["desc"], form, line_to_st)
 
     # Dependent dropdown: selected line(s) → station options.
     @app.callback(
@@ -2607,43 +2725,36 @@ def register_params(app) -> None:
         schema = _SCHEMAS.get(wf, {})
 
         pf_vals = {
-            s["id"]["key"]: s["value"]
-            for s in (
-                ctx.states_list[6] or []
-            )
+            s["id"]["key"]: s["value"] for s in (ctx.states_list[6] or [])
         }
         ps_vals = {
-            s["id"]["key"]: s["value"]
-            for s in (
-                ctx.states_list[7] or []
-            )
+            s["id"]["key"]: s["value"] for s in (ctx.states_list[7] or [])
         }
         new_ic = _collect_params(
             schema,
             pf_vals,
             inv_config or {},
         )
-        new_ic["step_params"] = (
-            _collect_step_params(
-                schema, ps_vals
-            )
-        )
+        new_ic["step_params"] = _collect_step_params(schema, ps_vals)
         new_ic["workflow"] = wf
 
         # Replace waiting bubble with thinking
         msgs = list(current_msgs or [])
         for i, c in enumerate(msgs):
             cid = (
-                c.get("props", {})
-                 .get("id", "")
+                c.get("props", {}).get("id", "")
                 if isinstance(c, dict)
                 else ""
             )
             if cid == "am-waiting-bubble":
-                msgs[i] = _thinking_bubble([{
-                    "label": "Starting...",
-                    "status": "running",
-                }])
+                msgs[i] = _thinking_bubble(
+                    [
+                        {
+                            "label": "Starting...",
+                            "status": "running",
+                        }
+                    ]
+                )
                 break
 
         # Apply line filter if user had pre-
@@ -2685,7 +2796,8 @@ def register_params(app) -> None:
         # current run still gets its workflow via new_ic passed to the
         # thread above.
         persist_ic = {
-            k: v for k, v in new_ic.items()
+            k: v
+            for k, v in new_ic.items()
             if k not in ("workflow", "lines", "stations")
         }
         return (
@@ -2715,9 +2827,7 @@ def register_params(app) -> None:
             "children",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_PARAM_CANCEL, "n_clicks"
-        ),
+        Input(IDs.BTN_PARAM_CANCEL, "n_clicks"),
         State(IDs.CHAT_WINDOW, "children"),
         prevent_initial_call=True,
     )
@@ -2728,8 +2838,7 @@ def register_params(app) -> None:
         replaced = False
         for i, c in enumerate(msgs):
             cid = (
-                c.get("props", {})
-                 .get("id", "")
+                c.get("props", {}).get("id", "")
                 if isinstance(c, dict)
                 else ""
             )

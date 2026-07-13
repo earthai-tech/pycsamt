@@ -15,6 +15,7 @@ Usage
     dlg = ElevationEnrichDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -38,22 +39,23 @@ from PySide6.QtWidgets import (
 )
 
 _APIS = ["open_meteo", "open_topo_data"]
-_C_OK   = QColor("#c8e6c9")
+_C_OK = QColor("#c8e6c9")
 _C_WARN = QColor("#fff9c4")
-_C_ERR  = QColor("#ffcdd2")
+_C_ERR = QColor("#ffcdd2")
 
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _ElevWorker(QThread):
     progress = Signal(int, int, str, float)  # cur, total, station, elevation
-    done     = Signal(list)                  # list of (name, lat, lon, elev)
-    error    = Signal(str)
+    done = Signal(list)  # list of (name, lat, lon, elev)
+    error = Signal(str)
 
     def __init__(self, stations: list, api: str):
         super().__init__()
-        self._stations = stations   # list of (name, lat, lon)
-        self._api      = api
+        self._stations = stations  # list of (name, lat, lon)
+        self._api = api
 
     def run(self):
         try:
@@ -70,8 +72,11 @@ class _ElevWorker(QThread):
             try:
                 if lat is None or lon is None:
                     raise ValueError("no coordinates")
-                elev = float(get_elevation_from_api(float(lat), float(lon),
-                                                    api_name=self._api))
+                elev = float(
+                    get_elevation_from_api(
+                        float(lat), float(lon), api_name=self._api
+                    )
+                )
                 self.progress.emit(idx + 1, total, str(name), elev)
                 results.append((str(name), lat, lon, elev))
             except Exception:
@@ -82,6 +87,7 @@ class _ElevWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class ElevationEnrichDialog(QDialog):
     """
@@ -98,10 +104,10 @@ class ElevationEnrichDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Elevation Enrichment")
         self.setMinimumSize(700, 520)
-        self._sites   = sites
-        self._worker  = None
-        self._station_list: list[tuple] = []   # (name, lat, lon)
-        self._results: list[tuple]      = []   # (name, lat, lon, elev)
+        self._sites = sites
+        self._worker = None
+        self._station_list: list[tuple] = []  # (name, lat, lon)
+        self._results: list[tuple] = []  # (name, lat, lon, elev)
         self._build_ui()
         self._populate_stations()
 
@@ -164,6 +170,7 @@ class ElevationEnrichDialog(QDialog):
             return
         try:
             from pycsamt.emtools._core import _iter_items
+
             for ed in _iter_items(self._sites):
                 # unwrap TFBundle / container objects if needed
                 for attr in ("edi", "site", "data"):
@@ -171,12 +178,13 @@ class ElevationEnrichDialog(QDialog):
                     if inner is not None and hasattr(inner, "Z"):
                         ed = inner
                         break
-                name = (
-                    getattr(ed, "station", None)
-                    or getattr(ed, "id", "?")
+                name = getattr(ed, "station", None) or getattr(ed, "id", "?")
+                lat = getattr(ed, "lat", None) or getattr(
+                    ed, "latitude", None
                 )
-                lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
-                lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+                lon = getattr(ed, "lon", None) or getattr(
+                    ed, "longitude", None
+                )
                 try:
                     lat = float(lat) if lat is not None else None
                     lon = float(lon) if lon is not None else None
@@ -189,7 +197,8 @@ class ElevationEnrichDialog(QDialog):
             return
 
         n_with_coords = sum(
-            1 for _, la, lo in self._station_list
+            1
+            for _, la, lo in self._station_list
             if la is not None and lo is not None
         )
         self._status_lbl.setText(
@@ -218,16 +227,21 @@ class ElevationEnrichDialog(QDialog):
         self._worker.error.connect(self._on_error)
         self._worker.start()
 
-    def _on_progress(self, cur: int, total: int, name: str, elev: float) -> None:
+    def _on_progress(
+        self, cur: int, total: int, name: str, elev: float
+    ) -> None:
         self._progress.setMaximum(total)
         self._progress.setValue(cur)
         import math
+
         ok = not math.isnan(elev)
         r = self._table.rowCount()
         self._table.insertRow(r)
         bg = _C_OK if ok else _C_ERR
 
-        for col, val in enumerate((name, "—", "—", f"{elev:.1f}" if ok else "ERROR")):
+        for col, val in enumerate(
+            (name, "—", "—", f"{elev:.1f}" if ok else "ERROR")
+        ):
             it = QTableWidgetItem(val)
             it.setBackground(bg)
             it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -237,7 +251,8 @@ class ElevationEnrichDialog(QDialog):
         self._run_btn.setEnabled(True)
         self._results = results
         import math
-        n_ok  = sum(1 for _, _, _, e in results if not math.isnan(e))
+
+        n_ok = sum(1 for _, _, _, e in results if not math.isnan(e))
         n_err = len(results) - n_ok
         self._status_lbl.setText(
             f"Done — {n_ok} elevations fetched, {n_err} errors."
@@ -246,12 +261,14 @@ class ElevationEnrichDialog(QDialog):
         # Fill lat/lon columns from station list
         for r, (_name, lat, lon, _) in enumerate(results):
             self._table.setItem(
-                r, 1,
-                QTableWidgetItem(f"{lat:.6f}" if lat is not None else "—")
+                r,
+                1,
+                QTableWidgetItem(f"{lat:.6f}" if lat is not None else "—"),
             )
             self._table.setItem(
-                r, 2,
-                QTableWidgetItem(f"{lon:.6f}" if lon is not None else "—")
+                r,
+                2,
+                QTableWidgetItem(f"{lon:.6f}" if lon is not None else "—"),
             )
 
     def _on_error(self, msg: str) -> None:
@@ -264,8 +281,10 @@ class ElevationEnrichDialog(QDialog):
         if not self._results:
             return
         from pathlib import Path
+
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Elevations",
+            self,
+            "Export Elevations",
             str(Path.home() / "station_elevations.csv"),
             "CSV (*.csv)",
         )
@@ -274,16 +293,19 @@ class ElevationEnrichDialog(QDialog):
         try:
             import csv
             import math
+
             with open(path, "w", newline="", encoding="utf-8") as fh:
                 writer = csv.writer(fh)
                 writer.writerow(["station", "lat", "lon", "elevation_m"])
                 for name, lat, lon, elev in self._results:
-                    writer.writerow([
-                        name,
-                        f"{lat:.6f}" if lat is not None else "",
-                        f"{lon:.6f}" if lon is not None else "",
-                        f"{elev:.2f}" if not math.isnan(elev) else "",
-                    ])
+                    writer.writerow(
+                        [
+                            name,
+                            f"{lat:.6f}" if lat is not None else "",
+                            f"{lon:.6f}" if lon is not None else "",
+                            f"{elev:.2f}" if not math.isnan(elev) else "",
+                        ]
+                    )
             self._status_lbl.setText(f"Saved → {path}")
         except Exception as exc:
             self._status_lbl.setText(f"Export error: {exc}")

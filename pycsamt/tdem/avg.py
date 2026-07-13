@@ -323,7 +323,8 @@ class TEMAVG(PyCSAMTObject):
         soundings: list[TEMSounding] = []
         for station in selected_stations:
             rows = [
-                rec for rec in self.rows_for_station(station)
+                rec
+                for rec in self.rows_for_station(station)
                 if rec.component == component
             ]
             if frequency is not None:
@@ -530,10 +531,7 @@ def _scale_temavg_magnitude(
         return values * 1e-6
     if unit in {"v", "volt", "volts", "si"}:
         return values.copy()
-    msg = (
-        "magnitude_unit must be one of 'uV/A', 'V/A', "
-        "'uV', 'V', or 'SI'."
-    )
+    msg = "magnitude_unit must be one of 'uV/A', 'V/A', 'uV', 'V', or 'SI'."
     raise ValueError(msg)
 
 

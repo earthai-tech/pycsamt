@@ -112,7 +112,7 @@ def _script_title(script: Path) -> str:
     match = _DOCSTRING_RE.search(text)
     if not match:
         return script.stem
-    for line in text[match.end():].splitlines():
+    for line in text[match.end() :].splitlines():
         line = line.strip()
         if line and not _UNDERLINE_RE.match(line):
             return _clean_rst(line)
@@ -123,17 +123,23 @@ def _script_title(script: Path) -> str:
 # Manifest
 # --------------------------------------------------------------------------
 
+
 def _examples_src(app) -> Path:
     """The gallery *source* tree (docs/examples)."""
-    return (Path(app.srcdir) / app.config.sphinx_gallery_conf["examples_dirs"][0]).resolve()
+    return (
+        Path(app.srcdir) / app.config.sphinx_gallery_conf["examples_dirs"][0]
+    ).resolve()
 
 
 def _section_names(app) -> list[str]:
     """Section directory names in the configured display order."""
     src = _examples_src(app)
     present = sorted(
-        d.name for d in src.iterdir()
-        if d.is_dir() and (d / "README.txt").exists() and list(d.glob("plot_*.py"))
+        d.name
+        for d in src.iterdir()
+        if d.is_dir()
+        and (d / "README.txt").exists()
+        and list(d.glob("plot_*.py"))
     )
     order = app.config.sphinx_gallery_conf.get("subsection_order")
     ordered = [
@@ -159,19 +165,23 @@ def _manifest(app) -> list[dict]:
             thumb = thumbs / f"sphx_glr_{script.stem}_thumb.png"
             if not thumb.exists():
                 continue
-            slides.append({
-                "title": _script_title(script),
-                "url": f"{name}/{script.stem}.html",
-                "thumb": f"../{THUMB_OUTDIR}/{name}/{thumb.name}",
-            })
-        sections.append({
-            "id": name,
-            "title": title or name,
-            "blurb": blurb,
-            "url": f"{name}/index.html",
-            "count": len(list(sec_dir.glob("plot_*.py"))),
-            "slides": slides,
-        })
+            slides.append(
+                {
+                    "title": _script_title(script),
+                    "url": f"{name}/{script.stem}.html",
+                    "thumb": f"../{THUMB_OUTDIR}/{name}/{thumb.name}",
+                }
+            )
+        sections.append(
+            {
+                "id": name,
+                "title": title or name,
+                "blurb": blurb,
+                "url": f"{name}/index.html",
+                "count": len(list(sec_dir.glob("plot_*.py"))),
+                "slides": slides,
+            }
+        )
     return sections
 
 
@@ -179,12 +189,13 @@ def _manifest(app) -> list[dict]:
 # Sphinx hooks
 # --------------------------------------------------------------------------
 
+
 def _swap_source(app, docname: str, source: list) -> None:
     """Replace the generated gallery index body, keep its toctree tail."""
     if docname != HUB_DOCNAME:
         return
     match = re.search(r"^\.\. toctree::", source[0], flags=re.MULTILINE)
-    tail = source[0][match.start():] if match else ""
+    tail = source[0][match.start() :] if match else ""
 
     sections = _manifest(app)
     # `<` must not appear inside the inline <script> payload.

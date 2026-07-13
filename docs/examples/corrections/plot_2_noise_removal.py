@@ -32,9 +32,12 @@ raw = curves(S, "rho")
 S_notch = notch_powerline(S, mains_hz=50.0, n_harm=30, recursive=False)
 notch = curves(S_notch, "rho")
 changed = sum(
-    not np.allclose(raw[s][1], notch[s][1], equal_nan=True) for s in raw)
-print(f"notch_powerline changed {changed}/{len(raw)} stations "
-      f"(0 = no mains energy in band, as expected for AMT)")
+    not np.allclose(raw[s][1], notch[s][1], equal_nan=True) for s in raw
+)
+print(
+    f"notch_powerline changed {changed}/{len(raw)} stations "
+    f"(0 = no mains energy in band, as expected for AMT)"
+)
 
 # %%
 # Log-frequency smoothing
@@ -48,9 +51,14 @@ sf = curves(S_sf, "rho")
 
 stations = list(raw)
 pick = [stations[3], stations[len(stations) // 2], stations[-4]]
-plot_before_after(raw, sf, pick, quantity="rho",
-                  labels=("raw", "log-freq smoothed"),
-                  title="Log-frequency smoothing")
+plot_before_after(
+    raw,
+    sf,
+    pick,
+    quantity="rho",
+    labels=("raw", "log-freq smoothed"),
+    title="Log-frequency smoothing",
+)
 
 # %%
 # Robust ρ/φ trend smoothing
@@ -61,15 +69,21 @@ plot_before_after(raw, sf, pick, quantity="rho",
 # are ignored rather than smeared. Here it is applied to the off-diagonal
 # components, shown for both ρ and φ.
 
-S_rp = smooth_rho_phase(S, components="offdiag", degree=3, robust=True,
-                        recursive=False)
+S_rp = smooth_rho_phase(
+    S, components="offdiag", degree=3, robust=True, recursive=False
+)
 rp_rho = curves(S_rp, "rho")
 rp_phase = curves(S_rp, "phase")
 raw_phase = curves(S, "phase")
 
-plot_before_after(raw, rp_rho, pick, quantity="rho",
-                  labels=("raw", "trend-smoothed"),
-                  title=r"Robust $\rho_a$ trend smoothing")
+plot_before_after(
+    raw,
+    rp_rho,
+    pick,
+    quantity="rho",
+    labels=("raw", "trend-smoothed"),
+    title=r"Robust $\rho_a$ trend smoothing",
+)
 
 # %%
 # ... and the matching phase
@@ -77,9 +91,14 @@ plot_before_after(raw, rp_rho, pick, quantity="rho",
 # The same fit cleans the phase, which feeds the inversion just as strongly
 # as resistivity.
 
-plot_before_after(raw_phase, rp_phase, pick, quantity="phase",
-                  labels=("raw", "trend-smoothed"),
-                  title="Robust phase trend smoothing")
+plot_before_after(
+    raw_phase,
+    rp_phase,
+    pick,
+    quantity="phase",
+    labels=("raw", "trend-smoothed"),
+    title="Robust phase trend smoothing",
+)
 
 # %%
 # **Takeaway.** Notch first (harmless, targeted), then smooth in

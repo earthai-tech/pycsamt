@@ -8,6 +8,7 @@ tippers.
 This module provides small, composable helpers that complement
 the object APIs in :mod:`pycsamt.z`.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -23,6 +24,7 @@ from ..utils.zmath import (
 )
 
 logger = get_logger(__name__)
+
 
 # Orientation correction
 def correct_for_sensor_orientation(
@@ -160,8 +162,9 @@ def correct_for_sensor_orientation(
         # angles in degrees (clockwise positive)
         a = np.deg2rad(ax)
         b = np.deg2rad(ay)
-        return np.array([[np.cos(a), np.cos(b)], [np.sin(a), np.sin(b)]],
-                        dtype=float)
+        return np.array(
+            [[np.cos(a), np.cos(b)], [np.sin(a), np.sin(b)]], dtype=float
+        )
 
     T = _rotmat(ex, ey)
     U = _rotmat(bx, by)
@@ -190,7 +193,7 @@ def correct_for_sensor_orientation(
         tmp = np.tensordot(Tabs, Ze, axes=([1], [1]))  # (2, n, 2)
         # Then over l: (i,n,l) x (l,j) -> (i,n,j)
         dZ = np.tensordot(tmp, Uabs, axes=([2], [0]))  # (2, n, 2)
-        Zerr = np.transpose(dZ, (1, 0, 2))             # (n, 2, 2)
+        Zerr = np.transpose(dZ, (1, 0, 2))  # (n, 2, 2)
     else:
         Zerr = None
 
@@ -255,7 +258,6 @@ def freq_from_periods(
     return 1.0 / P
 
 
-
 # Shape / validation helpers
 def ensure_z3(z: np.ndarray) -> np.ndarray:
     """
@@ -282,8 +284,7 @@ def ensure_z3(z: np.ndarray) -> np.ndarray:
         arr = arr[None, ...]
     elif not (arr.ndim == 3 and arr.shape[1:] == (2, 2)):
         raise ZError(
-            "Z must be shape (2, 2) or (n_freq, 2, 2); got "
-            f"{arr.shape!r}."
+            f"Z must be shape (2, 2) or (n_freq, 2, 2); got {arr.shape!r}."
         )
     return arr.astype(complex, copy=False)
 
@@ -347,7 +348,6 @@ def rho_phi_from_z(
     return rho, phi, rho_e, phi_e
 
 
-
 # Antisymmetry enforcement (Zxy ~ -Zyx)
 def enforce_offdiag_antisymmetry(
     z: np.ndarray, z_err: np.ndarray | None = None
@@ -407,7 +407,6 @@ def enforce_offdiag_antisymmetry(
     return Zc, Ec
 
 
-
 # Vectorized rotate / invert with optional errors
 def rotate_z(
     z: np.ndarray,
@@ -438,13 +437,13 @@ def rotate_z(
     if np.isscalar(angle_deg) or (
         isinstance(angle_deg, (list, tuple)) and len(angle_deg) == 1
     ):
-        alphas = np.full(n, float(np.asarray(angle_deg).ravel()[0]), dtype=float)
+        alphas = np.full(
+            n, float(np.asarray(angle_deg).ravel()[0]), dtype=float
+        )
     else:
         a = np.asarray(angle_deg, dtype=float).ravel()
         if a.size != n:
-            raise ZError(
-                f"Expected {n} angles, got {a.size}."
-            )
+            raise ZError(f"Expected {n} angles, got {a.size}.")
         alphas = a
 
     E = None if z_err is None else ensure_z3(z_err).astype(float, copy=False)

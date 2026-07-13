@@ -22,8 +22,9 @@ from pycsamt.map import MapView
 
 # sphinx_gallery_thumbnail_path = '_static/map_thumbs/plot_7_near_surface_3d.png'
 
-DATA = os.path.join(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."),
-                    "data", "AMT", "WILLY_DATA")
+DATA = os.path.join(
+    os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."), "data", "AMT", "WILLY_DATA"
+)
 mv = MapView.from_folder(DATA, recursive=True)
 print(f"{mv.n_stations} stations across {len(mv.lines)} lines")
 
@@ -35,8 +36,9 @@ print(f"{mv.n_stations} stations across {len(mv.lines)} lines")
 # the resistivity body hangs beneath the true ground surface with a marker
 # at every site.
 
-fig = mv.map3d(mode="block", depth_range=(0, 1000),
-               show_stations=True, station_size=4)
+fig = mv.map3d(
+    mode="block", depth_range=(0, 1000), show_stations=True, station_size=4
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -47,8 +49,9 @@ fig
 # on topography, with its stations. This ties the near-surface resistivity
 # straight back to the acquisition geometry.
 
-fig = mv.map3d(mode="fence", depth_range=(0, 1000),
-               show_stations=True, station_size=4)
+fig = mv.map3d(
+    mode="fence", depth_range=(0, 1000), show_stations=True, station_size=4
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -59,8 +62,14 @@ fig
 # Adding ``station_labels=True`` writes the site IDs, turning the scene into
 # a self-contained near-surface figure.
 
-fig = mv.map3d(mode="depth", depth_range=(0, 1000), n_slices=5,
-               show_stations=True, station_size=3, station_labels=True)
+fig = mv.map3d(
+    mode="depth",
+    depth_range=(0, 1000),
+    n_slices=5,
+    show_stations=True,
+    station_size=3,
+    station_labels=True,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -72,8 +81,14 @@ fig
 # its stations — often the clearest angle for presenting a near-surface
 # anomaly.
 
-fig = mv.map3d(mode="block", depth_range=(0, 1000), show_terrain=False,
-               show_stations=True, station_size=4, opacity=0.7)
+fig = mv.map3d(
+    mode="block",
+    depth_range=(0, 1000),
+    show_terrain=False,
+    show_stations=True,
+    station_size=4,
+    opacity=0.7,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 

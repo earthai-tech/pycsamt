@@ -1,10 +1,7 @@
-
-
-
 __all__ = [
-    'GEO_ROCK_RESISTIVITY',
-    'ROCK_HATCH_PATTERNS',
-    'RockProperties',
+    "GEO_ROCK_RESISTIVITY",
+    "ROCK_HATCH_PATTERNS",
+    "RockProperties",
 ]
 
 # Global resistivity ranges for common geological units
@@ -60,6 +57,7 @@ ROCK_HATCH_PATTERNS: dict[str, tuple[str, tuple[float, float, float]]] = {
     "graphite": (".++.", (0.2, 0.7, 0.7)),
 }
 
+
 class RockProperties:
     """
     Access and query geological rock metadata:
@@ -74,6 +72,7 @@ class RockProperties:
     >>> pattern, color = rp.get_pattern("shale")
     "=", (0.0, 0.0, 0.7)
     """
+
     def __init__(self):
         self._ranges = GEO_ROCK_RESISTIVITY
         self._patterns = ROCK_HATCH_PATTERNS
@@ -86,7 +85,9 @@ class RockProperties:
         return self._ranges.copy()
 
     @property
-    def hatch_patterns(self) -> dict[str, tuple[str, tuple[float, float, float]]]:
+    def hatch_patterns(
+        self,
+    ) -> dict[str, tuple[str, tuple[float, float, float]]]:
         """
         All hatch patterns keyed by rock name.
         """
@@ -100,7 +101,9 @@ class RockProperties:
         """
         return self._ranges[rock]
 
-    def get_pattern(self, rock: str) -> tuple[str, tuple[float, float, float]]:
+    def get_pattern(
+        self, rock: str
+    ) -> tuple[str, tuple[float, float, float]]:
         """
         Return (hatch, color) tuple for a given rock.
 

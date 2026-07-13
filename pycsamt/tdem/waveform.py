@@ -11,7 +11,12 @@ import numpy as np
 
 from ..api.property import PyCSAMTObject
 
-__all__ = ["SquareWaveform", "RampWaveform", "HalfSineWaveform", "CustomWaveform"]
+__all__ = [
+    "SquareWaveform",
+    "RampWaveform",
+    "HalfSineWaveform",
+    "CustomWaveform",
+]
 
 
 class _WaveformBase(PyCSAMTObject):
@@ -204,12 +209,19 @@ class CustomWaveform(_WaveformBase):
         self.verbose = int(verbose)
         self.logger = logger
         if self._t.shape != self._I.shape or self._t.ndim != 1:
-            raise ValueError("t_waveform and i_waveform must be 1-D arrays of equal length")
+            raise ValueError(
+                "t_waveform and i_waveform must be 1-D arrays of equal length"
+            )
 
     @property
     def base_frequency(self) -> float:
         return self._base_frequency
 
     def current_at(self, t: np.ndarray) -> np.ndarray:
-        return np.interp(np.asarray(t, float), self._t, self._I,
-                         left=self._I[0], right=self._I[-1])
+        return np.interp(
+            np.asarray(t, float),
+            self._t,
+            self._I,
+            left=self._I[0],
+            right=self._I[-1],
+        )

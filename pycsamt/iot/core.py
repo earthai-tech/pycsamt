@@ -136,7 +136,8 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
             protocol=self.protocol,
             sample_rate_hz=self.sample_rate_hz,
             channels=list(self.channels),
-            role=self.role.value if isinstance(self.role, DeviceRole)
+            role=self.role.value
+            if isinstance(self.role, DeviceRole)
             else str(self.role),
             enabled=bool(self.enabled),
             metadata=dict(self.metadata),
@@ -181,7 +182,8 @@ class TelemetryPacket(PyCSAMTObject):
             timestamp=float(self.timestamp),
             topic=self.topic,
             qos=int(self.qos),
-            kind=self.kind.value if isinstance(self.kind, PacketKind)
+            kind=self.kind.value
+            if isinstance(self.kind, PacketKind)
             else str(self.kind),
             retained=bool(self.retained),
             payload=dict(self.payload),
@@ -228,7 +230,8 @@ class DeploymentConfig(PyCSAMTObject, MetadataMixin):
         """Validate and normalise deployment fields."""
         self.survey_id = _as_nonempty_str(self.survey_id, "survey_id")
         self.devices = [
-            device if isinstance(device, DeviceConfig)
+            device
+            if isinstance(device, DeviceConfig)
             else DeviceConfig.from_mapping(device)
             for device in list(self.devices or [])
         ]
@@ -248,7 +251,8 @@ class DeploymentConfig(PyCSAMTObject, MetadataMixin):
     def add_device(self, device: DeviceConfig | Mapping[str, Any]) -> None:
         """Append a device and revalidate uniqueness."""
         self.devices.append(
-            device if isinstance(device, DeviceConfig)
+            device
+            if isinstance(device, DeviceConfig)
             else DeviceConfig.from_mapping(device)
         )
         self.validate()
@@ -284,8 +288,10 @@ def deployment_report(
 ) -> Any:
     """Return one row per device describing declared IoT capabilities."""
     deployment.validate()
-    caps = [c.value if isinstance(c, IoTCapability) else str(c)
-            for c in deployment.capabilities]
+    caps = [
+        c.value if isinstance(c, IoTCapability) else str(c)
+        for c in deployment.capabilities
+    ]
     rows = []
     for device in deployment.devices:
         row = device.as_dict()

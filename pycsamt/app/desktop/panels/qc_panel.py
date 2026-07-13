@@ -89,7 +89,7 @@ class QCPanel(QWidget):
 
     def refresh(self) -> None:
         """Re-render the currently selected plot."""
-        cat_idx  = self._bar.current_category()
+        cat_idx = self._bar.current_category()
         item_idx = self._bar.current_item()
         if cat_idx < 0 or cat_idx >= len(ALL_GROUPS):
             return
@@ -117,6 +117,7 @@ class QCPanel(QWidget):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── Helpers ───────────────────────────────────────────────────────
@@ -132,6 +133,7 @@ class QCPanel(QWidget):
             _annotate_empty,
             style_axes,
         )
+
         fig = self._canvas.figure
         fig.clear()
         ax = fig.add_subplot(111)

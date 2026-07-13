@@ -20,17 +20,13 @@ def _has_token(text: str, token: str) -> bool:
     return re.search(rf"\b{re.escape(token)}\b", text) is not None
 
 
-def _assert_blocks_have_kinds(
-    col: JBlocks, required: set[str]
-) -> None:
+def _assert_blocks_have_kinds(col: JBlocks, required: set[str]) -> None:
     kinds = {b.head.dtype.kind for b in col.blocks}  # type: ignore
     missing = required.difference(kinds)
     assert not missing, f"Missing kinds: {missing}"
 
 
-def _assert_blocks_have_comps(
-    col: JBlocks, tokens: set[str]
-) -> None:
+def _assert_blocks_have_comps(col: JBlocks, tokens: set[str]) -> None:
     # tokens like "ZXY", "RXY", ...
     seen = {
         f"{b.head.dtype.kind}{b.head.dtype.comp}"  # type: ignore
@@ -79,8 +75,7 @@ def test_roundtrip_R_only(tmp_path: Path, j_single_file: Path):
         # if original jf.freq finite, compare one value
         fi = float(jf.freq[0])  # type: ignore
         if math.isfinite(fi) and fi > 0:
-            assert math.isclose(1.0 / fi, pr[0],
-                                rel_tol=1e-6, abs_tol=1e-9)
+            assert math.isclose(1.0 / fi, pr[0], rel_tol=1e-6, abs_tol=1e-9)
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
@@ -131,10 +126,12 @@ def test_write_Z_only(tmp_path: Path, j_single_file: Path):
 def test_write_no_overwrite_suffix(tmp_path: Path, j_single_file: Path):
     jf = JFile.from_file(j_single_file, verbose=0)
     base = tmp_path / "dup.j"
-    out1 = jf.write(savepath=tmp_path, new_jfn=base.name,
-                    datatype="R", overwrite=False)
-    out2 = jf.write(savepath=tmp_path, new_jfn=base.name,
-                    datatype="R", overwrite=False)
+    out1 = jf.write(
+        savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False
+    )
+    out2 = jf.write(
+        savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False
+    )
     p1 = Path(out1)
     p2 = Path(out2)
     assert p1.exists() and p2.exists()
@@ -158,4 +155,3 @@ def test_writer_headers_and_station(tmp_path: Path, j_single_file: Path):
     assert hd.__has_read__() is True
     # station carried through and uppercase
     assert isinstance(hd.station, str) and hd.station == hd.station.upper()
-

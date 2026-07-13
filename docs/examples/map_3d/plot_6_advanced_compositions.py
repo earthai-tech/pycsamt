@@ -37,10 +37,11 @@ from pycsamt.map import MapView
 
 # sphinx_gallery_thumbnail_path = '_static/map_thumbs/plot_6_advanced_compositions.png'
 
-DEPTH_CAP = (0.0, 2000.0)          # top 2 km — see the admonition above
+DEPTH_CAP = (0.0, 2000.0)  # top 2 km — see the admonition above
 
-DATA = os.path.join(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."),
-                    "data", "AMT", "WILLY_DATA")
+DATA = os.path.join(
+    os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."), "data", "AMT", "WILLY_DATA"
+)
 mv = MapView.from_folder(DATA, recursive=True)
 print(f"{mv.n_stations} stations across {len(mv.lines)} lines")
 print(f"depth cap: {DEPTH_CAP[1]:.0f} m")
@@ -53,9 +54,16 @@ print(f"depth cap: {DEPTH_CAP[1]:.0f} m")
 # scale over resistivity's many decades. Capped to the top 2 km, the shallow
 # structure fills the frame instead of hiding at the top of a 30 km box.
 
-fig = mv.map3d(mode="block", depth_range=DEPTH_CAP, cmap="Turbo",
-               rho_range=(1.0, 5000.0), log_color=True, opacity=0.55,
-               show_stations=True, station_size=3)
+fig = mv.map3d(
+    mode="block",
+    depth_range=DEPTH_CAP,
+    cmap="Turbo",
+    rho_range=(1.0, 5000.0),
+    log_color=True,
+    opacity=0.55,
+    show_stations=True,
+    station_size=3,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -68,9 +76,15 @@ fig
 # useful when one very resistive or very conductive cell would otherwise
 # flatten the whole colour bar.
 
-fig = mv.map3d(mode="block", depth_range=DEPTH_CAP, cmap="RdYlBu_r",
-               value_range=(1.5, 3.3), opacity=0.6, show_stations=True,
-               station_size=3)
+fig = mv.map3d(
+    mode="block",
+    depth_range=DEPTH_CAP,
+    cmap="RdYlBu_r",
+    value_range=(1.5, 3.3),
+    opacity=0.6,
+    show_stations=True,
+    station_size=3,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -81,8 +95,13 @@ fig
 # constant-depth maps through the top 2 km, each lightly transparent so
 # deeper slices show through.
 
-fig = mv.map3d(mode="depth", depth_range=DEPTH_CAP, n_slices=10,
-               opacity=0.8, cmap="RdYlBu_r")
+fig = mv.map3d(
+    mode="depth",
+    depth_range=DEPTH_CAP,
+    n_slices=10,
+    opacity=0.8,
+    cmap="RdYlBu_r",
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -93,9 +112,15 @@ fig
 # resistivity band — here the transition into the conductive zone — and
 # renders it as several nested shells with crisp boundaries.
 
-fig = mv.map3d(mode="surface", depth_range=DEPTH_CAP, surface_count=14,
-               rho_range=(1.0, 800.0), opacity=0.45, show_stations=True,
-               station_size=3)
+fig = mv.map3d(
+    mode="surface",
+    depth_range=DEPTH_CAP,
+    surface_count=14,
+    rho_range=(1.0, 800.0),
+    opacity=0.45,
+    show_stations=True,
+    station_size=3,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -107,9 +132,15 @@ fig
 # outlines boundaries — the top of a conductor, a fault contact — more
 # sharply than the resistivity block does.
 
-fig = mv.map3d(mode="block", depth_range=DEPTH_CAP, quantity="phase",
-               cmap="Viridis", opacity=0.6, show_stations=True,
-               station_size=3)
+fig = mv.map3d(
+    mode="block",
+    depth_range=DEPTH_CAP,
+    quantity="phase",
+    cmap="Viridis",
+    opacity=0.6,
+    show_stations=True,
+    station_size=3,
+)
 fig.update_layout(height=660, scene_aspectmode="cube")
 fig
 
@@ -120,8 +151,14 @@ fig
 # (shallow) depth axis so thin structure stays legible. With station labels
 # this is the fence figure to export for a report.
 
-fig = mv.map3d(mode="fence", depth_range=DEPTH_CAP, azimuth=45.0,
-               aspectmode="cube", show_stations=True, station_labels=True)
+fig = mv.map3d(
+    mode="fence",
+    depth_range=DEPTH_CAP,
+    azimuth=45.0,
+    aspectmode="cube",
+    show_stations=True,
+    station_labels=True,
+)
 fig.update_layout(height=680)
 fig
 
@@ -132,10 +169,19 @@ fig
 # colour block, station markers, and a chosen camera — the kind of scene
 # you would drop straight into a report or slide.
 
-fig = mv.map3d(mode="block", depth_range=DEPTH_CAP, cmap="Turbo",
-               log_color=True, opacity=0.65, topography=True,
-               show_terrain=True, terrain_opacity=0.5,
-               show_stations=True, station_size=3, azimuth=25.0)
+fig = mv.map3d(
+    mode="block",
+    depth_range=DEPTH_CAP,
+    cmap="Turbo",
+    log_color=True,
+    opacity=0.65,
+    topography=True,
+    show_terrain=True,
+    terrain_opacity=0.5,
+    show_stations=True,
+    station_size=3,
+    azimuth=25.0,
+)
 fig.update_layout(height=700, scene_aspectmode="cube")
 fig
 

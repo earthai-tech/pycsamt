@@ -19,8 +19,9 @@ __all__ = [
     "Source",
     "Processing",
     "Copyright",
-    "PropertiesMixin"
+    "PropertiesMixin",
 ]
+
 
 class PlainMeta:
     """Small helper for to_dict/update/clone/validate."""
@@ -147,9 +148,7 @@ class Processing(PlainMeta):
         return "exp(+i ω t)"
 
     def validate(self) -> None:
-        self.signconvention = self._normalize_signconv(
-            self.signconvention
-        )
+        self.signconvention = self._normalize_signconv(self.signconvention)
         if self.runlist is not None and not isinstance(self.runlist, list):
             raise ValueError("runlist must be a list of str")
         if self.runlist is not None:
@@ -178,9 +177,8 @@ class Copyright(PlainMeta):
             return
         allowed = {"open", "public", "proprietary"}
         if self.release_status.lower() not in allowed:
-            raise ValueError(
-                f"release_status must be in {sorted(allowed)}"
-            )
+            raise ValueError(f"release_status must be in {sorted(allowed)}")
+
 
 class PropertiesMixin:
     """
@@ -223,9 +221,7 @@ class PropertiesMixin:
         except Exception:
             pass
         # ensure holders exist (preserve if already attached)
-        if not hasattr(self, "Source") or not isinstance(
-            self.Source, Source
-        ):
+        if not hasattr(self, "Source") or not isinstance(self.Source, Source):
             self.Source = Source()
         if not hasattr(self, "Processing") or not isinstance(
             self.Processing, Processing
@@ -358,13 +354,10 @@ class PropertiesMixin:
             )
         if p.processedby or p.processingtag:
             parts.append(
-                f"Processing(by={p.processedby!r}, "
-                f"tag={p.processingtag!r})"
+                f"Processing(by={p.processedby!r}, tag={p.processingtag!r})"
             )
         if c.release_status or c.owner:
             parts.append(
-                f"Copyright(status={c.release_status!r}, "
-                f"owner={c.owner!r})"
+                f"Copyright(status={c.release_status!r}, owner={c.owner!r})"
             )
         return "; ".join(parts) if parts else "no properties"
-

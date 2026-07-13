@@ -7,6 +7,7 @@ All functions follow the :class:`~pycsamt.ai.plot._style.EMStyle`
 publication conventions and accept an optional ``ax`` parameter for
 embedding in composite figures.
 """
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
@@ -35,6 +36,7 @@ _CLASS_NAMES_DEFAULT = ["1-D", "2-D", "3-D"]
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_confusion_matrix
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_confusion_matrix(
@@ -78,8 +80,7 @@ def plot_confusion_matrix(
 
     if class_names is None:
         class_names = (
-            _CLASS_NAMES_DEFAULT[:n] if n <= 3
-            else [str(c) for c in classes]
+            _CLASS_NAMES_DEFAULT[:n] if n <= 3 else [str(c) for c in classes]
         )
 
     # Build confusion matrix
@@ -124,8 +125,9 @@ def plot_confusion_matrix(
             val = cm_plot[i, j]
             color = "white" if val > thresh else EM_COLORS["text"]
             text = f"{val:{fmt}}" if fmt != "d" else str(int(cm[i, j]))
-            ax.text(j, i, text, ha="center", va="center",
-                    color=color, fontsize=9)
+            ax.text(
+                j, i, text, ha="center", va="center", color=color, fontsize=9
+            )
 
     add_colorbar(im, ax, label="Recall" if normalise else "Count", pad=0.03)
     fig.tight_layout()
@@ -135,6 +137,7 @@ def plot_confusion_matrix(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_residuals
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_residuals(
@@ -177,8 +180,12 @@ def plot_residuals(
 
     n_rows = int(np.ceil(n_params / n_cols))
     fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(figsize_per_panel[0] * n_cols, figsize_per_panel[1] * n_rows),
+        n_rows,
+        n_cols,
+        figsize=(
+            figsize_per_panel[0] * n_cols,
+            figsize_per_panel[1] * n_rows,
+        ),
     )
     axes = np.array(axes).reshape(-1)
 
@@ -193,17 +200,30 @@ def plot_residuals(
 
         lo = min(yt_m.min(), yp_m.min()) if len(yt_m) else 0
         hi = max(yt_m.max(), yp_m.max()) if len(yt_m) else 1
-        ax.plot([lo, hi], [lo, hi], "--", color=EM_COLORS["error"],
-                lw=0.8, zorder=1)
-        ax.scatter(yt_m, yp_m, s=6, alpha=0.5, color=color,
-                   linewidths=0, zorder=2)
+        ax.plot(
+            [lo, hi],
+            [lo, hi],
+            "--",
+            color=EM_COLORS["error"],
+            lw=0.8,
+            zorder=1,
+        )
+        ax.scatter(
+            yt_m, yp_m, s=6, alpha=0.5, color=color, linewidths=0, zorder=2
+        )
 
         if len(yt_m) > 1:
             ss_res = np.sum((yt_m - yp_m) ** 2)
             ss_tot = np.sum((yt_m - yt_m.mean()) ** 2)
             r2 = 1.0 - ss_res / (ss_tot + 1e-12)
-            ax.text(0.05, 0.93, f"R²={r2:.3f}", transform=ax.transAxes,
-                    fontsize=7, va="top")
+            ax.text(
+                0.05,
+                0.93,
+                f"R²={r2:.3f}",
+                transform=ax.transAxes,
+                fontsize=7,
+                va="top",
+            )
 
         ax.set_title(param_names[pi], fontsize=8)
         ax.set_xlabel("True", fontsize=7)
@@ -220,6 +240,7 @@ def plot_residuals(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_layer_errors
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_layer_errors(
@@ -257,7 +278,7 @@ def plot_layer_errors(
     n_rho = n_layers
     n_thick = n_layers - 1
     rho_mae = mae[:n_rho]
-    thick_mae = mae[n_rho: n_rho + n_thick]
+    thick_mae = mae[n_rho : n_rho + n_thick]
 
     rho_lbl = [
         (r"$\log_{10}\rho_{%d}$" if log_rho else r"$\rho_{%d}$") % (i + 1)
@@ -267,10 +288,9 @@ def plot_layer_errors(
 
     labels = rho_lbl + thick_lbl
     values = np.concatenate([rho_mae, thick_mae])
-    colors = (
-        [EM_COLORS["primary"]] * n_rho
-        + [EM_COLORS["secondary"]] * n_thick
-    )
+    colors = [EM_COLORS["primary"]] * n_rho + [
+        EM_COLORS["secondary"]
+    ] * n_thick
 
     if figsize is None:
         figsize = (max(5.0, len(labels) * 0.5), 3.5)
@@ -289,6 +309,7 @@ def plot_layer_errors(
 
     # Legend
     from matplotlib.patches import Patch
+
     ax.legend(
         handles=[
             Patch(color=EM_COLORS["primary"], label="Resistivity"),
@@ -305,6 +326,7 @@ def plot_layer_errors(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_uncertainty_bands
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_uncertainty_bands(
@@ -360,17 +382,34 @@ def plot_uncertainty_bands(
         fig = ax.get_figure()
 
     ax.fill_betweenx(
-        x, y_lower, y_upper,
-        color=EM_COLORS["primary"], alpha=0.20, linewidth=0,
+        x,
+        y_lower,
+        y_upper,
+        color=EM_COLORS["primary"],
+        alpha=0.20,
+        linewidth=0,
         label="Uncertainty band",
     )
-    ax.plot(y_pred, x, color=EM_COLORS["primary"], lw=1.5,
-            label="Predicted", zorder=3)
+    ax.plot(
+        y_pred,
+        x,
+        color=EM_COLORS["primary"],
+        lw=1.5,
+        label="Predicted",
+        zorder=3,
+    )
 
     if y_true is not None:
         y_true = np.asarray(y_true, dtype=float)
-        ax.plot(y_true, x, color=EM_COLORS["secondary"], lw=1.5,
-                ls="--", label="True", zorder=4)
+        ax.plot(
+            y_true,
+            x,
+            color=EM_COLORS["secondary"],
+            lw=1.5,
+            ls="--",
+            label="True",
+            zorder=4,
+        )
 
     ax.invert_yaxis()
     ax.set_xlabel(xlabel or r"$\log_{10}(\rho)$ (Ω·m)", fontsize=9)
@@ -384,6 +423,7 @@ def plot_uncertainty_bands(
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_feature_importance
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @EMStyle()
 def plot_feature_importance(
@@ -444,8 +484,9 @@ def plot_feature_importance(
     color[0] = EM_COLORS["secondary"]  # highlight top feature
 
     if horizontal:
-        ax.barh(y_pos, vals[::-1], color=color[::-1],
-                edgecolor="white", lw=0.4)
+        ax.barh(
+            y_pos, vals[::-1], color=color[::-1], edgecolor="white", lw=0.4
+        )
         ax.set_yticks(y_pos)
         ax.set_yticklabels(names[::-1], fontsize=8)
         ax.set_xlabel("Importance", fontsize=9)

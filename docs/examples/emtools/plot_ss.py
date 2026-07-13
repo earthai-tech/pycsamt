@@ -81,17 +81,29 @@ ax.legend(fontsize=8)
 
 from pycsamt.emtools import estimate_ss_ama  # noqa: E402
 
-ama_default = estimate_ss_ama(survey, sort_by="lat", half_window=3, max_skew=6.0)
+ama_default = estimate_ss_ama(
+    survey, sort_by="lat", half_window=3, max_skew=6.0
+)
 ama = estimate_ss_ama(survey, sort_by="lat", half_window=3, max_skew=45.0)
-print(f"max_skew=6.0 (default): {len(ama_default)}/28 stations get an estimate, "
-      f"mean n_used={ama_default['n_used'].mean():.1f} of 53 frequencies")
-print(f"max_skew=45.0 (survey-appropriate): {len(ama)}/28 stations, "
-      f"mean n_used={ama['n_used'].mean():.1f} of 53 frequencies")
+print(
+    f"max_skew=6.0 (default): {len(ama_default)}/28 stations get an estimate, "
+    f"mean n_used={ama_default['n_used'].mean():.1f} of 53 frequencies"
+)
+print(
+    f"max_skew=45.0 (survey-appropriate): {len(ama)}/28 stations, "
+    f"mean n_used={ama['n_used'].mean():.1f} of 53 frequencies"
+)
 print()
-print(ama[["station", "delta_log10_rho", "fac_z", "n_used"]]
-      .sort_values("delta_log10_rho").head(3))
-print(ama[["station", "delta_log10_rho", "fac_z", "n_used"]]
-      .sort_values("delta_log10_rho").tail(3))
+print(
+    ama[["station", "delta_log10_rho", "fac_z", "n_used"]]
+    .sort_values("delta_log10_rho")
+    .head(3)
+)
+print(
+    ama[["station", "delta_log10_rho", "fac_z", "n_used"]]
+    .sort_values("delta_log10_rho")
+    .tail(3)
+)
 
 # %%
 # **Reading this output.** At the default threshold, 2 of 28 stations
@@ -139,14 +151,20 @@ for i, ed in enumerate(_iter_items(s1)):
         _, z1, _ = _get_z_block(ed)
         break
 ratio = np.median(np.abs(z1[:, 0, 1]) / np.abs(z0[:, 0, 1]))
-print(f"{worst_station}: expected fac_z={expected_fac:.5f}, actual median |Z| ratio={ratio:.5f}")
+print(
+    f"{worst_station}: expected fac_z={expected_fac:.5f}, actual median |Z| ratio={ratio:.5f}"
+)
 
 one_shot = correct_ss_ama(survey, sort_by="lat", half_window=3, max_skew=45.0)
-print("correct_ss_ama (one-shot) matches estimate+apply:",
-      np.allclose(
-          _get_z_block(list(_iter_items(ensure_sites(one_shot, recursive=False)))[0])[1],
-          _get_z_block(list(_iter_items(s1))[0])[1],
-      ))
+print(
+    "correct_ss_ama (one-shot) matches estimate+apply:",
+    np.allclose(
+        _get_z_block(
+            list(_iter_items(ensure_sites(one_shot, recursive=False)))[0]
+        )[1],
+        _get_z_block(list(_iter_items(s1))[0])[1],
+    ),
+)
 
 # %%
 # **Reading this output.** The scaling is exact — the actual median
@@ -173,17 +191,30 @@ loess = estimate_ss_loess(survey, half_window=3, max_skew=45.0)
 bilateral = estimate_ss_bilateral(survey, half_window=4, max_skew=45.0)
 refmedian = estimate_ss_refmedian(survey, max_skew=45.0)
 
-merged = ama[["station", "delta_log10_rho"]].rename(columns={"delta_log10_rho": "ama"})
-for name, df in (("loess", loess), ("bilateral", bilateral), ("refmedian", refmedian)):
+merged = ama[["station", "delta_log10_rho"]].rename(
+    columns={"delta_log10_rho": "ama"}
+)
+for name, df in (
+    ("loess", loess),
+    ("bilateral", bilateral),
+    ("refmedian", refmedian),
+):
     merged = merged.merge(
-        df[["station", "delta_log10_rho"]].rename(columns={"delta_log10_rho": name}),
+        df[["station", "delta_log10_rho"]].rename(
+            columns={"delta_log10_rho": name}
+        ),
         on="station",
     )
 print(merged[["ama", "loess", "bilateral", "refmedian"]].corr().round(2))
 
 no_outlier = merged[merged["station"] != "18-025A"]
-print("ama-bilateral correlation excluding 18-025A:",
-      round(float(np.corrcoef(no_outlier["ama"], no_outlier["bilateral"])[0, 1]), 2))
+print(
+    "ama-bilateral correlation excluding 18-025A:",
+    round(
+        float(np.corrcoef(no_outlier["ama"], no_outlier["bilateral"])[0, 1]),
+        2,
+    ),
+)
 
 # %%
 # **Reading this output.** AMA, LOESS, and reference-median agree
@@ -213,7 +244,9 @@ from pycsamt.emtools import (  # noqa: E402
     ss_qc_station_curves,
 )
 
-ss_qc_psection(survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0)
+ss_qc_psection(
+    survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0
+)
 
 # %%
 # **Reading this figure.** Red (resistivity raised by the correction)
@@ -223,8 +256,14 @@ ss_qc_psection(survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0
 # red column, consistent with those being the stations needing the
 # largest overall shift from section 2.
 
-ss_qc_station_curves(survey, method="ama", station=str(worst_station),
-                      sort_by="lat", half_window=3, max_skew=45.0)
+ss_qc_station_curves(
+    survey,
+    method="ama",
+    station=str(worst_station),
+    sort_by="lat",
+    half_window=3,
+    max_skew=45.0,
+)
 
 # %%
 # **Reading this figure.** The single most-shifted station from
@@ -232,7 +271,9 @@ ss_qc_station_curves(survey, method="ama", station=str(worst_station),
 # much smaller resistivity range while keeping the same overall shape
 # — the correction rescales the curve, it does not reshape it.
 
-ss_qc_profile(survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0)
+ss_qc_profile(
+    survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0
+)
 
 # %%
 # **Reading this figure.** The per-station median *applied* correction
@@ -261,7 +302,11 @@ from pycsamt.emtools import (
 )
 
 ss_comparison_psection(
-    survey, method="ama", sort_by="lat", half_window=3, max_skew=45.0,
+    survey,
+    method="ama",
+    sort_by="lat",
+    half_window=3,
+    max_skew=45.0,
     suptitle="L18PLT static-shift correction (AMA)",
 )
 
@@ -297,8 +342,12 @@ for i, (fr, rho) in enumerate(rho1_list):
     logRho1[i, idx] = np.log10(np.maximum(rho, 1e-24))
 
 plot_ss_1d_curves(
-    logRho0, logRho1, freqs=freq_grid, station_labels=station_names,
-    stations=names4, n_cols=2,
+    logRho0,
+    logRho1,
+    freqs=freq_grid,
+    station_labels=station_names,
+    stations=names4,
+    n_cols=2,
 )
 
 # %%
@@ -308,7 +357,9 @@ plot_ss_1d_curves(
 # close to +1.9) is pulled up substantially, matching its outlier
 # position at the bottom of section 1's raw plot.
 
-plot_ss_summary(logRho0, logRho1, freqs=freq_grid, station_labels=station_names)
+plot_ss_summary(
+    logRho0, logRho1, freqs=freq_grid, station_labels=station_names
+)
 
 # %%
 # **Reading this figure.** Panel (d)'s bar chart shows four essentially
@@ -387,12 +438,17 @@ plot_ns_detection(survey, sort_by="lat", half_window=3, max_skew=45.0)
 # table — rather than assuming it must — is worth doing explicitly.
 
 merged_ns = ama.merge(
-    ns[["station", "distortion_type", "ss_delta_log10"]], on="station",
+    ns[["station", "distortion_type", "ss_delta_log10"]],
+    on="station",
 )
-print(merged_ns.groupby("distortion_type")["delta_log10_rho"]
-      .apply(lambda s: s.abs().mean()))
+print(
+    merged_ns.groupby("distortion_type")["delta_log10_rho"].apply(
+        lambda s: s.abs().mean()
+    )
+)
 corr_check = np.corrcoef(
-    merged_ns["delta_log10_rho"].abs(), merged_ns["ss_delta_log10"].abs(),
+    merged_ns["delta_log10_rho"].abs(),
+    merged_ns["ss_delta_log10"].abs(),
 )[0, 1]
 print(f"corr(|AMA delta|, |Lei ss_delta_log10|) = {corr_check:.4f}")
 

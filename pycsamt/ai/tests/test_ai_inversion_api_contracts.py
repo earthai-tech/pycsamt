@@ -4,6 +4,7 @@ These tests intentionally avoid fitting neural networks.  They protect the
 public AI inversion configuration and estimator interfaces on machines where a
 deep-learning backend may not be installed.
 """
+
 from __future__ import annotations
 
 import json

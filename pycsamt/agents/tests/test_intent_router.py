@@ -13,6 +13,7 @@ Run::
 
     pytest pycsamt/agents/tests/test_intent_router.py -v
 """
+
 from __future__ import annotations
 
 import unittest
@@ -95,12 +96,12 @@ class TestIntentRouterOffline(unittest.TestCase):
         cases = [r for r in self.results if r["expected"] == expected]
         wrong = [c for c in cases if c["got"] != expected]
         self.assertEqual(
-            wrong, [],
+            wrong,
+            [],
             msg=(
                 f"Intent {expected!r}: {len(wrong)}/{len(cases)} wrong\n"
                 + "\n".join(
-                    f"  got [{c['got']}] for: {c['text']!r}"
-                    for c in wrong
+                    f"  got [{c['got']}] for: {c['text']!r}" for c in wrong
                 )
             ),
         )
@@ -125,7 +126,8 @@ class TestIntentRouterOffline(unittest.TestCase):
         acc = n_ok / len(self.results)
         wrong = [r for r in self.results if r["got"] != r["expected"]]
         self.assertGreaterEqual(
-            acc, _MIN_ACCURACY,
+            acc,
+            _MIN_ACCURACY,
             msg=(
                 f"Intent accuracy {acc:.1%} < {_MIN_ACCURACY:.0%}\n"
                 + "\n".join(
@@ -193,10 +195,12 @@ class TestLazyExports(unittest.TestCase):
 
     def test_intent_router_exported(self):
         import pycsamt.agents as A
+
         self.assertTrue(hasattr(A, "IntentRouter"))
 
     def test_package_qa_exported(self):
         import pycsamt.agents as A
+
         self.assertTrue(hasattr(A, "PackageQAAgent"))
 
 

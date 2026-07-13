@@ -51,6 +51,7 @@ HybridInverter2D(n_stations=20, fitted)
 >>> section = inv.resistivity_section()  # doctest: +SKIP
 >>> s1 = inv.stage1_section()           # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -136,8 +137,7 @@ class HybridInverter2D(BaseHybridInverter):
     ) -> None:
         if mode not in ("te", "tm", "both"):
             raise ValueError(
-                "mode must be 'te', 'tm', or 'both'; "
-                f"got {mode!r}."
+                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
             )
         super().__init__(
             depth_max=depth_max,
@@ -145,9 +145,7 @@ class HybridInverter2D(BaseHybridInverter):
         )
         self.n_freqs = int(n_freqs)
         self.mode = mode
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.lateral_weight = float(lateral_weight)
         self.epochs = int(epochs)
         self.lr = float(lr)
@@ -155,32 +153,24 @@ class HybridInverter2D(BaseHybridInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._ai_inv = self._load_ai_inverter(
-            ai_inverter
-        )
+        self._ai_inv = self._load_ai_inverter(ai_inverter)
         self.n_layers = int(
-            n_layers
-            if n_layers is not None
-            else self._ai_inv.n_depth
+            n_layers if n_layers is not None else self._ai_inv.n_depth
         )
 
-        self._obs: list[SiteObs2D] = (
-            sites_to_obs_2d(
-                sites,
-                comp_te=comp_te,
-                comp_tm=comp_tm,
-                recursive=recursive,
-                on_dup=on_dup,
-                verbose=verbose,
-            )
+        self._obs: list[SiteObs2D] = sites_to_obs_2d(
+            sites,
+            comp_te=comp_te,
+            comp_tm=comp_tm,
+            recursive=recursive,
+            on_dup=on_dup,
+            verbose=verbose,
         )
         self._freqs_grid = _make_common_grid(
             [o.freq for o in self._obs],
             n_freqs=n_freqs,
         )
-        self._stage1_log_rho: np.ndarray | None = (
-            None
-        )
+        self._stage1_log_rho: np.ndarray | None = None
         self._result: dict | None = None
 
     # ── fit ──
@@ -208,17 +198,11 @@ class HybridInverter2D(BaseHybridInverter):
 
         # Stage 1: AI initial 2-D section
         if verbose:
-            print(
-                "Stage 1: EMInverter2D forward pass ..."
-            )
-        init_log_rho = self._run_stage1(
-            verbose=verbose
-        )
+            print("Stage 1: EMInverter2D forward pass ...")
+        init_log_rho = self._run_stage1(verbose=verbose)
 
         # Uniform initial thicknesses
-        dz = max(
-            self.depth_max / self.n_layers, 1.0
-        )
+        dz = max(self.depth_max / self.n_layers, 1.0)
         init_log_thick = np.full(
             (len(self._obs), self.n_layers - 1),
             np.log10(dz),
@@ -257,9 +241,7 @@ class HybridInverter2D(BaseHybridInverter):
 
     # ── outputs ──
 
-    def resistivity_section(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def resistivity_section(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the Stage-2 2-D resistivity section.
 
@@ -272,11 +254,11 @@ class HybridInverter2D(BaseHybridInverter):
         ndarray (n_layers, n_stations)
         """
         self._check_fitted()
-        lr = self._result["log_rho"]   # (S, L)
-        section = lr.T                 # (L, S)
+        lr = self._result["log_rho"]  # (S, L)
+        section = lr.T  # (L, S)
         if as_log10:
             return section
-        return 10.0 ** section
+        return 10.0**section
 
     def thickness_section(self) -> np.ndarray:
         """
@@ -288,11 +270,9 @@ class HybridInverter2D(BaseHybridInverter):
         """
         self._check_fitted()
         lt = self._result["log_thick"]  # (S, L-1)
-        return (10.0 ** lt).T           # (L-1, S)
+        return (10.0**lt).T  # (L-1, S)
 
-    def stage1_section(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def stage1_section(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the Stage-1 AI 2-D section.
 
@@ -305,14 +285,11 @@ class HybridInverter2D(BaseHybridInverter):
         ndarray (n_layers, n_stations)
         """
         if self._stage1_log_rho is None:
-            raise RuntimeError(
-                "Call fit() to populate Stage-1 "
-                "results."
-            )
+            raise RuntimeError("Call fit() to populate Stage-1 results.")
         s = self._stage1_log_rho.T  # (L, S)
         if as_log10:
             return s
-        return 10.0 ** s
+        return 10.0**s
 
     def convergence_curve(self):
         """
@@ -359,13 +336,9 @@ class HybridInverter2D(BaseHybridInverter):
 
         if stage == 1:
             if self._stage1_log_rho is None:
-                raise RuntimeError(
-                    "Call fit() first."
-                )
+                raise RuntimeError("Call fit() first.")
             lr_2d = self._stage1_log_rho  # (S, L)
-            dz = max(
-                self.depth_max / self.n_layers, 1.0
-            )
+            dz = max(self.depth_max / self.n_layers, 1.0)
             lt_2d = np.full(
                 (len(self._obs), self.n_layers - 1),
                 np.log10(dz),
@@ -378,12 +351,8 @@ class HybridInverter2D(BaseHybridInverter):
         for i, obs in enumerate(self._obs):
             try:
                 m = LayeredModel(
-                    resistivity=np.maximum(
-                        10.0 ** lr_2d[i], 1e-3
-                    ),
-                    thickness=np.maximum(
-                        10.0 ** lt_2d[i], 1.0
-                    ),
+                    resistivity=np.maximum(10.0 ** lr_2d[i], 1e-3),
+                    thickness=np.maximum(10.0 ** lt_2d[i], 1.0),
                 )
                 resp = MT1DForward(obs.freq).run(m)
                 rp = resp.rho_a
@@ -393,14 +362,10 @@ class HybridInverter2D(BaseHybridInverter):
                 pp = np.full_like(obs.freq, np.nan)
 
             rho_obs = (
-                obs.rho_te
-                if self.mode in ("te", "both")
-                else obs.rho_tm
+                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
             )
             ph_obs = (
-                obs.phase_te
-                if self.mode in ("te", "both")
-                else obs.phase_tm
+                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             )
             for k in range(len(obs.freq)):
                 rows.append(
@@ -436,23 +401,18 @@ class HybridInverter2D(BaseHybridInverter):
         if isinstance(ai_inverter, EMInverter2D):
             if not ai_inverter._is_fitted:
                 raise ValueError(
-                    "ai_inverter must be a fitted "
-                    "EMInverter2D instance."
+                    "ai_inverter must be a fitted EMInverter2D instance."
                 )
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
-            return EMInverter2D.load(
-                Path(ai_inverter)
-            )
+            return EMInverter2D.load(Path(ai_inverter))
         raise TypeError(
             "ai_inverter must be a fitted "
             "EMInverter2D or a path to a checkpoint; "
             f"got {type(ai_inverter)!r}."
         )
 
-    def _run_stage1(
-        self, *, verbose: bool
-    ) -> np.ndarray:
+    def _run_stage1(self, *, verbose: bool) -> np.ndarray:
         """
         Apply EMInverter2D to extract an initial
         2-D section.
@@ -481,9 +441,7 @@ class HybridInverter2D(BaseHybridInverter):
 
         if panel.shape[3] != n_sta_ai:
             # Spatially resample to match AI model
-            panel = _resize_panel_stations(
-                panel, n_sta_ai
-            )
+            panel = _resize_panel_stations(panel, n_sta_ai)
 
         # Fill NaN with column median before predict
         panel = _fill_nan_panel(panel)
@@ -497,24 +455,18 @@ class HybridInverter2D(BaseHybridInverter):
 
         # Resample back to actual station count
         if n_sta_ai != S:
-            rho_2d = _resize_section_stations(
-                rho_2d, S
-            )
+            rho_2d = _resize_section_stations(rho_2d, S)
 
         # rho_2d: (n_depth, S)
         # Clip to n_layers depth levels
         n_depth = rho_2d.shape[0]
         take = min(n_depth, self.n_layers)
-        init_lr = np.full(
-            (S, self.n_layers), 2.0
-        )
+        init_lr = np.full((S, self.n_layers), 2.0)
         init_lr[:, :take] = rho_2d[:take, :].T
 
         if take < self.n_layers:
             # Pad deeper layers with deepest value
-            init_lr[:, take:] = (
-                init_lr[:, take - 1: take]
-            )
+            init_lr[:, take:] = init_lr[:, take - 1 : take]
 
         self._stage1_log_rho = init_lr
         return init_lr
@@ -535,12 +487,8 @@ class HybridInverter2D(BaseHybridInverter):
                 rho_src = o.rho_tm
                 ph_src = o.phase_tm
             else:
-                rho_src = 0.5 * (
-                    o.rho_te + o.rho_tm
-                )
-                ph_src = 0.5 * (
-                    o.phase_te + o.phase_tm
-                )
+                rho_src = 0.5 * (o.rho_te + o.rho_tm)
+                ph_src = 0.5 * (o.phase_te + o.phase_tm)
 
             lr_g, ph_g = _interp_to_grid(
                 o.freq,
@@ -554,9 +502,7 @@ class HybridInverter2D(BaseHybridInverter):
         return lr_obs, ph_obs
 
     def __repr__(self) -> str:
-        status = (
-            "fitted" if self._is_fitted else "unfitted"
-        )
+        status = "fitted" if self._is_fitted else "unfitted"
         return (
             f"HybridInverter2D("
             f"n_stations={self.n_sites}, "
@@ -593,7 +539,7 @@ def _resize_panel_stations(
     out = np.empty((1, C, F, n_out), dtype=panel.dtype)
     for c in range(C):
         # zoom over (F, S) axis
-        slc = panel[0, c]          # (F, S_in)
+        slc = panel[0, c]  # (F, S_in)
         out[0, c] = zoom(
             slc,
             (1.0, factor),
@@ -656,10 +602,6 @@ def _fill_nan_panel(
             mask = ~np.isfinite(col)
             if mask.any():
                 finite = col[~mask]
-                fill = (
-                    float(finite.mean())
-                    if finite.size > 0
-                    else 0.0
-                )
+                fill = float(finite.mean()) if finite.size > 0 else 0.0
                 col[mask] = fill
     return out

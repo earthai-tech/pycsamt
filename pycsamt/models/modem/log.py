@@ -172,7 +172,9 @@ class ModEmLog(ModEmBase):
         if obj.verbose:
             obj.logger.info(
                 "ModEmLog.read: %d iterations, final RMS=%.4f from %s",
-                obj.n_iter, obj.final_rms, p,
+                obj.n_iter,
+                obj.final_rms,
+                p,
             )
         return obj
 

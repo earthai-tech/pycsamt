@@ -5,6 +5,7 @@ Centralized logging configuration for pycsamt.
 Supports loading from a YAML config file (`p.configlog.yml`) or falling back to
 basic default logging configuration.
 """
+
 import logging
 import logging.config
 import os
@@ -23,18 +24,21 @@ def get_data_home(data_home: str = None) -> str:
     """
     if data_home is None:
         data_home = os.environ.get(
-            "PYCSAMT_DATA", os.path.join("~", "pycsamt_data"))
+            "PYCSAMT_DATA", os.path.join("~", "pycsamt_data")
+        )
     data_home = os.path.expanduser(data_home)
     try:
         os.makedirs(data_home, exist_ok=True)
     except OSError as e:
         warnings.warn(
-            f"Could not create pycsamt data home {data_home}: {e}", stacklevel=2)
+            f"Could not create pycsamt data home {data_home}: {e}",
+            stacklevel=2,
+        )
     return data_home
 
+
 def configure_logging(
-    config_path: str = None,
-    use_default: bool = False
+    config_path: str = None, use_default: bool = False
 ) -> None:
     """
     Configure logging, but if any handler has a *relative* filename,
@@ -54,7 +58,8 @@ def configure_logging(
             datefmt="%Y-%m-%dT %H:%M:%S %z",
         )
         logging.getLogger(__name__).info(
-            "Logging configured with default/basicConfig")
+            "Logging configured with default/basicConfig"
+        )
         return
 
     # 1) find YAML...
@@ -100,11 +105,11 @@ def configure_logging(
     # 5) apply the dictConfig
     logging.config.dictConfig(cfg)
     logging.getLogger(__name__).info(
-        f"Loaded logging configuration from {config_path}")
+        f"Loaded logging configuration from {config_path}"
+    )
 
-def get_logger(
-    name: str = None
-) -> logging.Logger:
+
+def get_logger(name: str = None) -> logging.Logger:
     """
     Retrieve a named logger after ensuring logging is configured.
 
@@ -128,4 +133,5 @@ except Exception:
     # If anything goes wrong, fallback to basic
     logging.basicConfig(level=logging.INFO)
     logging.getLogger(__name__).exception(
-        "Unexpected error during logging setup; using basicConfig." )
+        "Unexpected error during logging setup; using basicConfig."
+    )

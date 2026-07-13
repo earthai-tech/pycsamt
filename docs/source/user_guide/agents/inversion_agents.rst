@@ -214,4 +214,3 @@ Typical Physics-Based Chain
 
 Use ``InversionComparisonAgent`` when multiple model outputs need to be
 compared and documented.
-:html_theme.sidebar_secondary.remove:

@@ -10,6 +10,7 @@ complete Zonge AVG dataset. It composes all other components
 (Header, Z, Resistivity, Phase, and QC metrics) into a single,
 convenient container.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -38,8 +39,7 @@ from .info import DataInfo
 from .survey import Topography
 from .utils import classify_avg_format, load_avg, write_avg
 
-__all__ = ["BaseAVG","AVG", "AMTAVG"]
-
+__all__ = ["BaseAVG", "AVG", "AMTAVG"]
 
 
 class BaseAVG(Zonge):
@@ -95,6 +95,7 @@ class BaseAVG(Zonge):
     AVG : The primary user-facing class for AVG data.
     DataInfo : The main component aggregator used by this class.
     """
+
     def __init__(self, verbose: bool = False):
         super().__init__(verbose=verbose)
 
@@ -191,12 +192,8 @@ class BaseAVG(Zonge):
         if isinstance(source, (str, Path)):
             self._source_path = Path(source)
             if self.verbose:
-                self._logger.info(
-                    f"Reading from file: {self._source_path}"
-                )
-            lines = self._source_path.read_text(
-                errors="replace"
-            ).splitlines()
+                self._logger.info(f"Reading from file: {self._source_path}")
+            lines = self._source_path.read_text(errors="replace").splitlines()
             self._kind = classify_avg_format(lines)
             df, final_meta = load_avg(self._source_path)
 
@@ -211,13 +208,12 @@ class BaseAVG(Zonge):
         elif isinstance(source, pd.DataFrame):
             if self.verbose:
                 self._logger.info("Reading from pandas DataFrame.")
-            frame = AVGFrame (data=source, meta=meta or {})
+            frame = AVGFrame(data=source, meta=meta or {})
 
             # Guess the kind from the now-standardized frame
             # The default 'soft' mode will handle this correctly
             df, final_meta, self._kind = guess_kind_from_df(
-                frame, transform=True,
-                verbose = self.verbose
+                frame, transform=True, verbose=self.verbose
             )
             self._source_path = frame.source
 
@@ -246,8 +242,8 @@ class BaseAVG(Zonge):
     def add_topography(
         self,
         stn_file: str | Path | pd.DataFrame,
-        utm_zone: str= None,
-        epsg: int =None,
+        utm_zone: str = None,
+        epsg: int = None,
     ) -> BaseAVG:
         r"""Read and attach station topography data.
 
@@ -275,10 +271,8 @@ class BaseAVG(Zonge):
 
         # Create and read the Topography component
         self.topo = Topography(
-            verbose=self.verbose,
-            utm_zone= utm_zone,
-            epsg= epsg
-            ).read(stn_file)
+            verbose=self.verbose, utm_zone=utm_zone, epsg=epsg
+        ).read(stn_file)
 
         # XXX TODO: Optional: add logic here to merge elevation
         # into the main df if needed for specific calculations,
@@ -340,21 +334,17 @@ class BaseAVG(Zonge):
         pycsamt.zonge.utils.write_avg : The underlying file writing
             function.
         """
-        has_read (self)
+        has_read(self)
 
         if path is None:
-            base = (
-                self._source_path.stem
-                if self._source_path
-                else "export"
-            )
+            base = self._source_path.stem if self._source_path else "export"
             path = Path.cwd() / f"{base}_modern.avg"
 
         if self.verbose:
             self._logger.info(f"Writing modern AVG file to: {path}")
 
         # Filter out artificial NaN rows before writing ---
-        df_to_write = self.info.df.dropna(subset=['rho']).copy()
+        df_to_write = self.info.df.dropna(subset=["rho"]).copy()
 
         meta = self.info.header.to_keywords()
         banner = _emit_hardware_banner(self.info.header.hardware)
@@ -419,14 +409,10 @@ class BaseAVG(Zonge):
         --------
         to_modern : Write data to a modern (kind-2) file.
         """
-        has_read (self)
+        has_read(self)
 
         if path is None:
-            base = (
-                self._source_path.stem
-                if self._source_path
-                else "export"
-            )
+            base = self._source_path.stem if self._source_path else "export"
             path = Path.cwd() / f"{base}_legacy.avg"
 
         lines = []
@@ -435,7 +421,7 @@ class BaseAVG(Zonge):
         today_str = datetime.now().strftime("%d %b %y")
         lines.append(
             f"\\ AMTAVG 7.76: "
-            f"\"{h.hardware.source_file or 'pycsamt.export'}\", "
+            f'"{h.hardware.source_file or "pycsamt.export"}", '
             f"Dated {h.hardware.dated or '...'}, "
             f"Processed {h.hardware.processed or today_str}"
         )
@@ -460,14 +446,15 @@ class BaseAVG(Zonge):
         # Map from the canonical lowercase names in self.info.df
         # to the names expected by the row.get() calls below.
         rename_map = {
-            "e.%err": "pc_emag", "e.perr": "s_ephz",
-            "h.%err": "pc_hmag", "h.perr": "s_hphz",
-            "rho.%err": "pc_rho", "z.perr": "s_phz",
+            "e.%err": "pc_emag",
+            "e.perr": "s_ephz",
+            "h.%err": "pc_hmag",
+            "h.perr": "s_hphz",
+            "rho.%err": "pc_rho",
+            "z.perr": "s_phz",
         }
-        df = self.info.df.dropna(subset=['rho']).copy()
-        df = df.rename(
-            columns=rename_map
-        ).sort_values(by=["station", "freq"])
+        df = self.info.df.dropna(subset=["rho"]).copy()
+        df = df.rename(columns=rename_map).sort_values(by=["station", "freq"])
 
         # Define format specifier to avoid linter confusion
         sci_fspec = f"%9.{precision}e"
@@ -507,14 +494,11 @@ class BaseAVG(Zonge):
         if self.verbose:
             self._logger.info(f"Writing legacy AVG file to: {path}")
 
-
     def write(
         self,
         path: str | Path | None = None,
         *,
-        fmt: Literal[
-            "kind1", "kind2", "legacy", "modern", "auto"
-        ] = "auto",
+        fmt: Literal["kind1", "kind2", "legacy", "modern", "auto"] = "auto",
         **kwargs,
     ):
         r"""Write AVG data to a file in the specified format.
@@ -601,7 +585,7 @@ class BaseAVG(Zonge):
         if self.info.df is None:
             return Bunch(status="Data not loaded")
 
-        has_read (self)
+        has_read(self)
 
         # Safely get values, providing defaults if not loaded
         hdr = self.info.header
@@ -664,20 +648,17 @@ class BaseAVG(Zonge):
             and not self.info.df.empty
         )
 
-
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""
         path_repr = (
-            f"Path('{self._source_path}')"
-            if self._source_path
-            else "None"
+            f"Path('{self._source_path}')" if self._source_path else "None"
         )
         return (
             f"{self.__class__.__name__}.from_file("
             f"path={path_repr}, "
             f"verbose={self.verbose})"
-            if self.__has_read__() else
-            f"{self.__class__.__name__}(verbose={self.verbose}, loaded=False)"
+            if self.__has_read__()
+            else f"{self.__class__.__name__}(verbose={self.verbose}, loaded=False)"
         )
 
     def _summary_stats(self) -> str:
@@ -695,9 +676,10 @@ class BaseAVG(Zonge):
         # Get location data ONLY if a topography file is loaded
         if self.topo is not None and not self.topo.frame.empty:
             # Ensure lat/lon are available for the summary
-            if 'latitude' not in self.topo.frame.columns or (
-                    'longitude' not in self.topo.frame.columns):
-                self.topo.convert_coords(to='ll', inplace=True)
+            if "latitude" not in self.topo.frame.columns or (
+                "longitude" not in self.topo.frame.columns
+            ):
+                self.topo.convert_coords(to="ll", inplace=True)
 
             lats = self.topo.latitude
             lons = self.topo.longitude
@@ -706,36 +688,28 @@ class BaseAVG(Zonge):
         freqs = self.info.frequency.unique()
 
         # Helper to safely format data ranges
-        def format_range(
-            arr: np.ndarray | None, fmt: str
-        ) -> str:
+        def format_range(arr: np.ndarray | None, fmt: str) -> str:
             """Safely formats the min/max of an array."""
             # Check if array is valid and has finite numbers
-            if (
-                arr is not None and arr.size > 0
-                and np.any(np.isfinite(arr))
-            ):
-                return (
-                    f"{np.nanmin(arr):{fmt}} to "
-                    f"{np.nanmax(arr):{fmt}}"
-                )
+            if arr is not None and arr.size > 0 and np.any(np.isfinite(arr)):
+                return f"{np.nanmin(arr):{fmt}} to {np.nanmax(arr):{fmt}}"
             return "N/A"
 
         # Generate range strings for all variables
         lat_range = format_range(lats, ".4f")
         lon_range = format_range(lons, ".4f")
-        elev_range = format_range(elevs, ".2f") # Fixed
+        elev_range = format_range(elevs, ".2f")  # Fixed
         freq_range = format_range(freqs, ".2E")
 
         lines = [
             "  " + "-" * 68,
             "  Statistical Summary:",
-            ("    Survey Type: "
-             f"{summary_bunch.get('survey_type', 'N/A')}"),
-            ("    Line Name:   "
-             f"{summary_bunch.get('line_name', 'N/A')}"),
-            (f"    Stations:    {n_stations} "
-             f"({summary_bunch.get('station_range', 'N/A')})"),
+            (f"    Survey Type: {summary_bunch.get('survey_type', 'N/A')}"),
+            (f"    Line Name:   {summary_bunch.get('line_name', 'N/A')}"),
+            (
+                f"    Stations:    {n_stations} "
+                f"({summary_bunch.get('station_range', 'N/A')})"
+            ),
             f"    Frequencies: {n_freqs}",
             f"    Freq Range (Hz): {freq_range}",
             f"    Latitude Range:  {lat_range}",
@@ -745,13 +719,13 @@ class BaseAVG(Zonge):
         ]
         return "\n".join(lines)
 
-
     def __str__(self) -> str:  # pragma: no cover
         """Provides a detailed, robust summary of the AVG data."""
         if not self.__has_read__():
             src = (
                 f"'{self._source_path.name}'"
-                if self._source_path else "Not Loaded"
+                if self._source_path
+                else "Not Loaded"
             )
             return f"{self.__class__.__name__}(source={src}, status=empty)"
 
@@ -761,11 +735,7 @@ class BaseAVG(Zonge):
             f" (Source: {self._source_path.name}) "
         )
         width = 95  # Adjusted width for new table format
-        header = [
-            "=" * width,
-            title.center(width),
-            "=" * width
-        ]
+        header = ["=" * width, title.center(width), "=" * width]
 
         # --- Statistical Summary ---
         stats_str = self._summary_stats()
@@ -781,38 +751,60 @@ class BaseAVG(Zonge):
             steps = topo.get_step()
             valid_steps = steps[steps > 0]
             total_length = valid_steps.sum()
-            mean_azimuth = topo.get_azimuth(mode='mean')
+            mean_azimuth = topo.get_azimuth(mode="mean")
             elevations = topo.elevation
 
             # 2. Format the calculated values for clean display
             length_str = (
-                f"{total_length / 1000:.2f} km" if total_length > 1000
+                f"{total_length / 1000:.2f} km"
+                if total_length > 1000
                 else f"{total_length:.1f} m"
             )
 
             def to_cardinal(deg: float) -> str:
                 """Helper to convert azimuth degree to cardinal direction."""
-                if np.isnan(deg): return ""
+                if np.isnan(deg):
+                    return ""
                 dirs = [
-                    "N", "N-NE", "NE", "E-NE", "E", "E-SE", "SE", "S-SE",
-                    "S", "S-SW", "SW", "W-SW", "W", "W-NW", "NW", "N-NW"
+                    "N",
+                    "N-NE",
+                    "NE",
+                    "E-NE",
+                    "E",
+                    "E-SE",
+                    "SE",
+                    "S-SE",
+                    "S",
+                    "S-SW",
+                    "SW",
+                    "W-SW",
+                    "W",
+                    "W-NW",
+                    "NW",
+                    "N-NW",
                 ]
                 return dirs[int(round(deg / 22.5)) % 16]
 
-            azimuth_str = (
-                f"{mean_azimuth:.1f}° ({to_cardinal(mean_azimuth)})"
-            )
+            azimuth_str = f"{mean_azimuth:.1f}° ({to_cardinal(mean_azimuth)})"
 
             spacing_str = (
-                f"Min: {valid_steps.min():.1f}, "
-                f"Mean: {valid_steps.mean():.1f}, "
-                f"Max: {valid_steps.max():.1f}"
-            ) if not valid_steps.empty else "N/A"
+                (
+                    f"Min: {valid_steps.min():.1f}, "
+                    f"Mean: {valid_steps.mean():.1f}, "
+                    f"Max: {valid_steps.max():.1f}"
+                )
+                if not valid_steps.empty
+                else "N/A"
+            )
 
             elev_range_str = (
-                f"{elevations.min():.1f} - {elevations.max():.1f} "
-                f"(Δ: {elevations.max() - elevations.min():.1f})"
-            ) if elevations.size > 1 else "N/A"
+                (
+                    f"{elevations.min():.1f} - {elevations.max():.1f} "
+                    f"(Δ: {elevations.max() - elevations.min():.1f})"
+                )
+                if elevations.size > 1
+                else "N/A"
+            )
 
             start_pt_str = f"({topo.easting[0]:.1f}, {topo.northing[0]:.1f})"
             end_pt_str = f"({topo.easting[-1]:.1f}, {topo.northing[-1]:.1f})"
@@ -839,66 +831,67 @@ class BaseAVG(Zonge):
             col2_width = max(len(header2), max(len(v) for _, v in table_data))
 
             # 5. Build the formatted table strings
-            separator = (f"  {'-' * (col1_width + col2_width + 7)}")
+            separator = f"  {'-' * (col1_width + col2_width + 7)}"
 
             details.append(separator)
-            details.append(f"  | {header1.ljust(col1_width)} | "
-                           f"{header2.ljust(col2_width)} |")
+            details.append(
+                f"  | {header1.ljust(col1_width)} | "
+                f"{header2.ljust(col2_width)} |"
+            )
             details.append(separator)
 
             for key, val in table_data:
-                details.append(f"  | {key.ljust(col1_width)} | "
-                               f"{val.ljust(col2_width)} |")
+                details.append(
+                    f"  | {key.ljust(col1_width)} | {val.ljust(col2_width)} |"
+                )
             details.append(separator)
-
 
         else:
             # Message when no topography data is loaded
-            details.append(
-                "  (Not available: topography file not loaded)"
-            )
+            details.append("  (Not available: topography file not loaded)")
         # --- New Section: Dataset Details ---
         dataset_details = ["\nDataset Details (Per-Station Summary):"]
         df = self.info.df.copy()
-        agg_cols = ['rho', 'phase', 'pc_rho', 's_phz']
+        agg_cols = ["rho", "phase", "pc_rho", "s_phz"]
 
         # 1. Aggregate main data to get per-station stats
-        summary_df = df.groupby('station')[agg_cols].agg(
-            ['min', 'max'])
+        summary_df = df.groupby("station")[agg_cols].agg(["min", "max"])
 
         # 2. FIX: Robustly flatten the MultiIndex columns into strings
         # This is the most important change. It turns ('rho','min') into 'rho_min'
         summary_df.columns = [
-            '_'.join(filter(None, col)).strip()
+            "_".join(filter(None, col)).strip()
             for col in summary_df.columns.values
         ]
         summary_df.reset_index(inplace=True)
 
         # 3. Create the combined string columns (now using simple string keys)
-        summary_df['Station'] = summary_df['station'].apply('{:,.1f}'.format)
-        summary_df['ρ Range'] = summary_df.apply(
+        summary_df["Station"] = summary_df["station"].apply("{:,.1f}".format)
+        summary_df["ρ Range"] = summary_df.apply(
             lambda r: f"{r['rho_min']:.2e} - {r['rho_max']:.2e}", axis=1
         )
-        summary_df['Φ Range'] = summary_df.apply(
+        summary_df["Φ Range"] = summary_df.apply(
             lambda r: f"{r['phase_min']:.2f} - {r['phase_max']:.2f}", axis=1
         )
-        summary_df['%err Range'] = summary_df.apply(
+        summary_df["%err Range"] = summary_df.apply(
             lambda r: f"{r['pc_rho_min']:.2f} - {r['pc_rho_max']:.2f}", axis=1
         )
-        summary_df['σΦ Range'] = summary_df.apply(
+        summary_df["σΦ Range"] = summary_df.apply(
             lambda r: f"{r['s_phz_min']:.2f} - {r['s_phz_max']:.2f}", axis=1
         )
 
         # Select only the formatted string columns for display
-        display_df = summary_df[[
-            'Station', 'ρ Range', 'Φ Range', '%err Range', 'σΦ Range'
-        ]]
+        display_df = summary_df[
+            ["Station", "ρ Range", "Φ Range", "%err Range", "σΦ Range"]
+        ]
 
         # 4. Calculate dynamic column widths (this code now works correctly)
         headers = {
-            'Station': 'Station', 'ρ Range': 'ρ Min - ρ Max',
-            'Φ Range': 'Φ Min - Φ Max', '%err Range': '%err Min - %err Max',
-            'σΦ Range': 'σΦ Min - σΦ Max'
+            "Station": "Station",
+            "ρ Range": "ρ Min - ρ Max",
+            "Φ Range": "Φ Min - Φ Max",
+            "%err Range": "%err Min - %err Max",
+            "σΦ Range": "σΦ Min - σΦ Max",
         }
         col_widths = {
             col: max(len(headers[col]), display_df[col].str.len().max())
@@ -906,25 +899,30 @@ class BaseAVG(Zonge):
         }
 
         # 4. Build the table strings
-        header_row = " | ".join([
-            headers[col].center(col_widths[col])
-            for col in display_df.columns
-        ])
-        separator_row = "-+-".join(['-' * col_widths[col]
-                                    for col in display_df.columns])
+        header_row = " | ".join(
+            [
+                headers[col].center(col_widths[col])
+                for col in display_df.columns
+            ]
+        )
+        separator_row = "-+-".join(
+            ["-" * col_widths[col] for col in display_df.columns]
+        )
 
         dataset_details.append(header_row)
         dataset_details.append(separator_row)
 
         # Function to format a single data row
         def format_row(row):
-            return " | ".join([
-                row['Station'].ljust(col_widths['Station']),
-                row['ρ Range'].center(col_widths['ρ Range']),
-                row['Φ Range'].center(col_widths['Φ Range']),
-                row['%err Range'].center(col_widths['%err Range']),
-                row['σΦ Range'].center(col_widths['σΦ Range'])
-            ])
+            return " | ".join(
+                [
+                    row["Station"].ljust(col_widths["Station"]),
+                    row["ρ Range"].center(col_widths["ρ Range"]),
+                    row["Φ Range"].center(col_widths["Φ Range"]),
+                    row["%err Range"].center(col_widths["%err Range"]),
+                    row["σΦ Range"].center(col_widths["σΦ Range"]),
+                ]
+            )
 
         # 5. Handle Truncation and build data rows
         n_stations = len(display_df)
@@ -932,8 +930,9 @@ class BaseAVG(Zonge):
             for _, row in display_df.head(5).iterrows():
                 dataset_details.append(format_row(row))
 
-            ellipsis_row = " | ".join(['...'.center(col_widths[col])
-                                      for col in display_df.columns])
+            ellipsis_row = " | ".join(
+                ["...".center(col_widths[col]) for col in display_df.columns]
+            )
             dataset_details.append(ellipsis_row)
 
             for _, row in display_df.tail(5).iterrows():
@@ -945,9 +944,8 @@ class BaseAVG(Zonge):
         dataset_details.append(separator_row)
 
         # --- Combine and Return ---
-        return "\n".join(
-            header + [stats_str] + details + dataset_details
-        )
+        return "\n".join(header + [stats_str] + details + dataset_details)
+
 
 @has_fit("raise")
 class AVG(BaseAVG):
@@ -1040,6 +1038,7 @@ class AVG(BaseAVG):
     .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
            User Manual*.
     """
+
     def __init__(self, verbose: bool = False):
         super().__init__(verbose=verbose)
 
@@ -1159,7 +1158,7 @@ class AVG(BaseAVG):
             extra="xarray is required for to_xarray()",
             errors="raise",
         )
-        has_read (self)
+        has_read(self)
 
         # Start with the primary data variables
         ds_rho = self.resistivity.to_xarray()
@@ -1180,7 +1179,8 @@ class AVG(BaseAVG):
             except Exception as e:
                 if self.verbose:
                     self._logger.warning(
-                        f"Could not compute impedance Z: {e}")
+                        f"Could not compute impedance Z: {e}"
+                    )
 
         # Optionally merge all available QC metrics
         if include_qc:
@@ -1208,8 +1208,7 @@ class AVG(BaseAVG):
         # Attach comprehensive header metadata
         ds.attrs.update(self.header.to_keywords())
         ds.attrs["source_file"] = (
-            str(self._source_path)
-            if self._source_path else "Unknown"
+            str(self._source_path) if self._source_path else "Unknown"
         )
         return ds
 
@@ -1269,7 +1268,7 @@ class AVG(BaseAVG):
         pycsamt.zonge.tensor.TensorBase.to_tensor : The underlying
             implementation.
         """
-        has_read (self)
+        has_read(self)
         component_map = {
             "z": self.z,
             "z_real": self.z,
@@ -1331,7 +1330,6 @@ class AVG(BaseAVG):
         data columns after parsing and normalization.
         """
         return self.info.df
-
 
 
 class AMTAVG(AVG):
@@ -1466,7 +1464,7 @@ class AMTAVG(AVG):
         freq = self.info.df["freq"]
         omega = 2 * PI * freq
 
-        rho = (np.abs(z_complex)**2) / (omega * MU_0)
+        rho = (np.abs(z_complex) ** 2) / (omega * MU_0)
         phi_rad = np.arctan2(np.imag(z_complex), np.real(z_complex))
 
         # Error propagation
@@ -1475,11 +1473,7 @@ class AMTAVG(AVG):
         safe_abs_z = np.where(abs_z == 0, np.nan, abs_z)
 
         rho_err = 200 * (z_err / safe_abs_z)
-        phi_err_mrad = (
-            1000
-            * (z_err / safe_abs_z)
-            * np.abs(np.sin(phi_rad))
-        )
+        phi_err_mrad = 1000 * (z_err / safe_abs_z) * np.abs(np.sin(phi_rad))
 
         if todeg:
             phi = np.rad2deg(phi_rad)
@@ -1698,21 +1692,21 @@ class AMTAVG(AVG):
         grouped = df.groupby(["station", "freq"])
 
         # Calculate mean and standard deviation for each group
-        stats = grouped[agg_cols].agg(['mean', 'std'])
+        stats = grouped[agg_cols].agg(["mean", "std"])
 
         # Calculate Coefficient of Variation where applicable
-        stats[('rho', 'cvar')] = (
-            100 * stats[('rho', 'std')] / stats[('rho', 'mean')]
+        stats[("rho", "cvar")] = (
+            100 * stats[("rho", "std")] / stats[("rho", "mean")]
         )
-        stats[('emag', 'cvar')] = (
-            100 * stats[('emag', 'std')] / stats[('emag', 'mean')]
+        stats[("emag", "cvar")] = (
+            100 * stats[("emag", "std")] / stats[("emag", "mean")]
         )
-        stats[('hmag', 'cvar')] = (
-            100 * stats[('hmag', 'std')] / stats[('hmag', 'mean')]
+        stats[("hmag", "cvar")] = (
+            100 * stats[("hmag", "std")] / stats[("hmag", "mean")]
         )
 
         # Flatten the multi-level column index
-        stats.columns = ['_'.join(col) for col in stats.columns]
+        stats.columns = ["_".join(col) for col in stats.columns]
         stats = stats.reset_index()
 
         if drop_on_failure:
@@ -1722,18 +1716,18 @@ class AMTAVG(AVG):
             # Create a map from the new stats columns to the
             # canonical component names
             update_map = {
-                'rho_cvar': 'pc_rho',
-                'phase_std': 's_phz',
-                'emag_cvar': 'pc_emag',
-                'hmag_cvar': 'pc_hmag',
+                "rho_cvar": "pc_rho",
+                "phase_std": "s_phz",
+                "emag_cvar": "pc_emag",
+                "hmag_cvar": "pc_hmag",
             }
             # Update the main DataFrame with the new QC values
             merged_df = pd.merge(
                 self.info.df,
                 stats,
-                on=['station', 'freq'],
-                how='left',
-                suffixes=('', '_stat')
+                on=["station", "freq"],
+                how="left",
+                suffixes=("", "_stat"),
             )
             for stat_col, canon_col in update_map.items():
                 # Check if column exists before updating
@@ -1821,10 +1815,8 @@ class AMTAVG(AVG):
         # phase_rad = df["phase"] * 1e-3
 
         # Group by station and component, then apply unwrap to each
-        unwrapped_rad = df.groupby(
-            ["station", "comp"]
-        )["phase"].transform(
-            lambda s: np.unwrap(s * 1e-3) # Convert to rad before unwrap
+        unwrapped_rad = df.groupby(["station", "comp"])["phase"].transform(
+            lambda s: np.unwrap(s * 1e-3)  # Convert to rad before unwrap
         )
 
         if todeg:
@@ -1951,22 +1943,28 @@ class AMTAVG(AVG):
         zyy_rot = s2 * zxx - cs * (zxy + zyx) + c2 * zyy
 
         # Create a new DataFrame for the rotated values
-        rotated_df = pd.DataFrame({
-            "z_xx_rot": zxx_rot,
-            "z_xy_rot": zxy_rot,
-            "z_yx_rot": zyx_rot,
-            "z_yy_rot": zyy_rot,
-        })
+        rotated_df = pd.DataFrame(
+            {
+                "z_xx_rot": zxx_rot,
+                "z_xy_rot": zxy_rot,
+                "z_yx_rot": zyx_rot,
+                "z_yy_rot": zyy_rot,
+            }
+        )
 
         if update_components:
             # Pick each row's rotated tensor element by its component
             # label (labels are stored upper-cased) and its
             # (station, freq) key.
             comp_map = {
-                "EXHX": zxx_rot, "ZXX": zxx_rot,
-                "EXHY": zxy_rot, "ZXY": zxy_rot,
-                "EYHX": zyx_rot, "ZYX": zyx_rot,
-                "EYHY": zyy_rot, "ZYY": zyy_rot,
+                "EXHX": zxx_rot,
+                "ZXX": zxx_rot,
+                "EXHY": zxy_rot,
+                "ZXY": zxy_rot,
+                "EYHX": zyx_rot,
+                "ZYX": zyx_rot,
+                "EYHY": zyy_rot,
+                "ZYY": zyy_rot,
             }
             z_new = np.full(len(df), np.nan + 0j, dtype=complex)
             comp_norm = df["comp"].astype(str).str.upper().to_numpy()
@@ -2045,19 +2043,13 @@ class AMTAVG(AVG):
         h_complex = h_mag * np.exp(1j * h_phase_rad)
 
         # Create Hx and Hy based on component type
-        df["hx"] = np.where(
-            df["comp"].isin(["ExHx", "EyHx"]), h_complex, 0
-        )
-        df["hy"] = np.where(
-            df["comp"].isin(["ExHy", "EyHy"]), h_complex, 0
-        )
+        df["hx"] = np.where(df["comp"].isin(["ExHx", "EyHx"]), h_complex, 0)
+        df["hy"] = np.where(df["comp"].isin(["ExHy", "EyHy"]), h_complex, 0)
         df["hz"] = hz_data
 
         tipper_results = []
         # Group by each measurement point
-        for (station, freq), group in df.groupby(
-            ["station", "freq"]
-        ):
+        for (station, freq), group in df.groupby(["station", "freq"]):
             # We need at least two equations (two components)
             if len(group) < 2:
                 continue
@@ -2072,12 +2064,14 @@ class AMTAVG(AVG):
             try:
                 # Solve for x using least squares
                 x, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
-                tipper_results.append({
-                    "station": station,
-                    "freq": freq,
-                    "tx": x[0],
-                    "ty": x[1],
-                })
+                tipper_results.append(
+                    {
+                        "station": station,
+                        "freq": freq,
+                        "tx": x[0],
+                        "ty": x[1],
+                    }
+                )
             except np.linalg.LinAlgError:
                 if self.verbose:
                     self._logger.warning(
@@ -2086,7 +2080,9 @@ class AMTAVG(AVG):
                     )
 
         if not tipper_results:
-            warnings.warn("Tipper calculation resulted in no data.", stacklevel=2)
+            warnings.warn(
+                "Tipper calculation resulted in no data.", stacklevel=2
+            )
             return pd.DataFrame()
 
         tipper_df = pd.DataFrame(tipper_results)
@@ -2102,24 +2098,31 @@ class AMTAVG(AVG):
     @property
     def z_xx(self):
         return self.z.z_xx
+
     @property
     def z_xy(self):
         return self.z.z_xy
+
     @property
     def z_yx(self):
         return self.z.z_yx
+
     @property
     def z_yy(self):
         return self.z.z_yy
+
     @property
     def z_xx_err(self):
         return self.z.z_xx_err
+
     @property
     def z_xy_err(self):
         return self.z.z_xy_err
+
     @property
     def z_yx_err(self):
         return self.z.z_yx_err
+
     @property
     def z_yy_err(self):
         return self.z.z_yy_err
@@ -2129,14 +2132,17 @@ class AMTAVG(AVG):
     def res_xx(self):
         df = self.resistivity.frame
         return df[df.comp == "ExHx"]["rho"]
+
     @property
     def res_xy(self):
         df = self.resistivity.frame
         return df[df.comp == "ExHy"]["rho"]
+
     @property
     def res_yx(self):
         df = self.resistivity.frame
         return df[df.comp == "EyHx"]["rho"]
+
     @property
     def res_yy(self):
         df = self.resistivity.frame
@@ -2147,14 +2153,17 @@ class AMTAVG(AVG):
     def res_xx_err(self):
         df = self.info.pc_rho.frame
         return df[df.comp == "ExHx"]["pc_rho"]
+
     @property
     def res_xy_err(self):
         df = self.info.pc_rho.frame
         return df[df.comp == "ExHy"]["pc_rho"]
+
     @property
     def res_yx_err(self):
         df = self.info.pc_rho.frame
         return df[df.comp == "EyHx"]["pc_rho"]
+
     @property
     def res_yy_err(self):
         df = self.info.pc_rho.frame
@@ -2165,14 +2174,17 @@ class AMTAVG(AVG):
     def phase_xx(self):
         df = self.phase.frame
         return df[df.comp == "ExHx"]["phase"]
+
     @property
     def phase_xy(self):
         df = self.phase.frame
         return df[df.comp == "ExHy"]["phase"]
+
     @property
     def phase_yx(self):
         df = self.phase.frame
         return df[df.comp == "EyHx"]["phase"]
+
     @property
     def phase_yy(self):
         df = self.phase.frame
@@ -2183,14 +2195,17 @@ class AMTAVG(AVG):
     def phase_xx_err(self):
         df = self.info.s_phz.frame
         return df[df.comp == "ExHx"]["s_phz"]
+
     @property
     def phase_xy_err(self):
         df = self.info.s_phz.frame
         return df[df.comp == "ExHy"]["s_phz"]
+
     @property
     def phase_yx_err(self):
         df = self.info.s_phz.frame
         return df[df.comp == "EyHx"]["s_phz"]
+
     @property
     def phase_yy_err(self):
         df = self.info.s_phz.frame

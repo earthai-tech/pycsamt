@@ -157,7 +157,8 @@ def _register_summary(app) -> None:
         recs = store.get("station_records", [])
         mset = set(masked)
         visible = sum(
-            1 for r in recs
+            1
+            for r in recs
             if (not active or (r.get("Line") or "line") in active)
             and str(r.get("ID")) not in mset
         )
@@ -196,7 +197,9 @@ def _register_summary(app) -> None:
 
 def _stat_pill(value, label):
     return html.Div(
-        [html.Div(value, className="mv-set-stat-v"),
-         html.Div(label, className="mv-set-stat-l")],
+        [
+            html.Div(value, className="mv-set-stat-v"),
+            html.Div(label, className="mv-set-stat-l"),
+        ],
         className="mv-set-stat",
     )

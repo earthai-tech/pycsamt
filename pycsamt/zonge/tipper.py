@@ -8,6 +8,7 @@ magnetotelluric Tipper transfer function, which relates the
 vertical magnetic field (Hz) to the horizontal components
 (Hx, Hy).
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -57,12 +58,11 @@ class Tipper(AVGComponentBase):
         meta: Mapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         """Initializes the Tipper component."""
         super().__init__(
-            data=data, meta=meta, name=name or "Tipper",
-            verbose=verbose
+            data=data, meta=meta, name=name or "Tipper", verbose=verbose
         )
 
     def read(
@@ -80,9 +80,7 @@ class Tipper(AVGComponentBase):
         NaNs for structural consistency.
         """
         if not isinstance(source, pd.DataFrame):
-            raise TypeError(
-                "Tipper.read expects a pandas.DataFrame."
-            )
+            raise TypeError("Tipper.read expects a pandas.DataFrame.")
 
         df = _standardise_columns(source.copy())
         self._meta = dict(meta or {})
@@ -109,9 +107,7 @@ class Tipper(AVGComponentBase):
         df["ty"] = df["ty"].map(_to_complex)
 
         keep_cols = ["station", "freq", "tx", "ty"]
-        self._frame = df.loc[
-            :, [c for c in keep_cols if c in df.columns]
-        ]
+        self._frame = df.loc[:, [c for c in keep_cols if c in df.columns]]
 
         return self
 
@@ -169,15 +165,16 @@ class Tipper(AVGComponentBase):
 
         n_st = (
             self._frame["station"].nunique()
-            if "station" in self._frame.columns else 0
+            if "station" in self._frame.columns
+            else 0
         )
         n_frq = (
             self._frame["freq"].nunique()
-            if "freq" in self._frame.columns else 0
+            if "freq" in self._frame.columns
+            else 0
         )
         return (
-            f"Tipper(rows={len(self._frame)}, "
-            f"stations={n_st}, freqs={n_frq})"
+            f"Tipper(rows={len(self._frame)}, stations={n_st}, freqs={n_frq})"
         )
 
     def __repr__(self) -> str:

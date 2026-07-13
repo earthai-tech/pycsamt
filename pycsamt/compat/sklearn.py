@@ -6,6 +6,7 @@ Provides helper utilities and compatibility shims for interacting with
 different versions of scikit-learn, ensuring smoother integration
 within the k-diagram package.
 """
+
 import inspect
 
 import numpy as np
@@ -289,8 +290,12 @@ def _type_of_target(y):
     import pandas as pd
 
     # Check if y is an array-like
-    if not isinstance(y, (np.ndarray, list, pd.Series, Sequence, pd.DataFrame)):
-        raise ValueError(f"Expected array-like (array or list), got {type(y)}")
+    if not isinstance(
+        y, (np.ndarray, list, pd.Series, Sequence, pd.DataFrame)
+    ):
+        raise ValueError(
+            f"Expected array-like (array or list), got {type(y)}"
+        )
 
     # check whether it is a series of pandas dataframe with single column.
     if isinstance(y, pd.Series) or (
@@ -324,7 +329,9 @@ def _type_of_target(y):
     return "unknown"
 
 
-def validate_params(params, *args, prefer_skip_nested_validation=True, **kwargs):
+def validate_params(
+    params, *args, prefer_skip_nested_validation=True, **kwargs
+):
     r"""
     Compatibility wrapper for scikit-learn's `validate_params` function
     to handle versions that require the `prefer_skip_nested_validation` argument,
@@ -466,7 +473,10 @@ def validate_params(params, *args, prefer_skip_nested_validation=True, **kwargs)
     except TypeError as e:
         # If the above call fails, check if it's because the argument
         # was not recognized. This indicates an older scikit-learn version.
-        if "unexpected keyword argument 'prefer_skip_nested_validation'" in str(e):
+        if (
+            "unexpected keyword argument 'prefer_skip_nested_validation'"
+            in str(e)
+        ):
             # If so, call the function again the "old" way, without the argument.
             return sklearn_validate_params(params, *args, **kwargs)
         else:
@@ -475,7 +485,9 @@ def validate_params(params, *args, prefer_skip_nested_validation=True, **kwargs)
             raise e
 
 
-def get_column_transformer_feature_names(column_transformer, input_features=None):
+def get_column_transformer_feature_names(
+    column_transformer, input_features=None
+):
     r"""
     Get feature names from a ColumnTransformer.
 
@@ -495,9 +507,14 @@ def get_column_transformer_feature_names(column_transformer, input_features=None
     if input_features is None:
         input_features = list(range(column_transformer._n_features))
 
-    for transformer_name, transformer, column in column_transformer.transformers_:
+    for (
+        transformer_name,
+        transformer,
+        column,
+    ) in column_transformer.transformers_:
         if transformer == "drop" or (
-            hasattr(transformer, "remainder") and transformer.remainder == "drop"
+            hasattr(transformer, "remainder")
+            and transformer.remainder == "drop"
         ):
             continue
 
@@ -528,7 +545,9 @@ def get_column_transformer_feature_names(column_transformer, input_features=None
     return output_features
 
 
-def get_column_transformer_feature_names2(column_transformer, input_features=None):
+def get_column_transformer_feature_names2(
+    column_transformer, input_features=None
+):
     r"""
     Get feature names from a ColumnTransformer.
 
@@ -544,15 +563,22 @@ def get_column_transformer_feature_names2(column_transformer, input_features=Non
     """
     output_features = []
 
-    for transformer_name, transformer, column in column_transformer.transformers_:
+    for (
+        transformer_name,
+        transformer,
+        column,
+    ) in column_transformer.transformers_:
         if transformer == "drop" or (
-            hasattr(transformer, "remainder") and transformer.remainder == "drop"
+            hasattr(transformer, "remainder")
+            and transformer.remainder == "drop"
         ):
             continue
 
         if hasattr(transformer, "get_feature_names_out"):
             # For transformers that support get_feature_names_out
-            if input_features is not None and hasattr(transformer, "feature_names_in_"):
+            if input_features is not None and hasattr(
+                transformer, "feature_names_in_"
+            ):
                 # Adjust for the case where column is a list of column names or indices
                 transformer_feature_names_in = (
                     [
@@ -646,6 +672,7 @@ def get_transformers_from_column_transformer(ct):
             "The ColumnTransformer instance does not have a 'transformers_' attribute."
         )
 
+
 def check_is_fitted(estimator, attributes=None, *, msg=None, all_or_any=all):
     r"""
     Compatibility wrapper for scikit-learn's check_is_fitted function.
@@ -674,7 +701,9 @@ def check_is_fitted(estimator, attributes=None, *, msg=None, all_or_any=all):
     return sklearn_check_is_fitted(estimator, **kw)
 
 
-def adjusted_mutual_info_score(labels_true, labels_pred, average_method="arithmetic"):
+def adjusted_mutual_info_score(
+    labels_true, labels_pred, average_method="arithmetic"
+):
     r"""
     Compatibility function for adjusted_mutual_info_score with the
     average_method parameter.
@@ -700,7 +729,9 @@ def adjusted_mutual_info_score(labels_true, labels_pred, average_method="arithme
     if SKLEARN_LT_0_22:
         return ami_score(labels_true, labels_pred)
     else:
-        return ami_score(labels_true, labels_pred, average_method=average_method)
+        return ami_score(
+            labels_true, labels_pred, average_method=average_method
+        )
 
 
 def fetch_openml(*args, **kwargs):
@@ -828,7 +859,9 @@ def get_pipeline_feature_names(pipeline, input_features=None):
     for _name, transformer in pipeline.steps:
         if hasattr(transformer, "get_feature_names_out"):
             # Transformer supports get_feature_names_out
-            current_features = transformer.get_feature_names_out(current_features)
+            current_features = transformer.get_feature_names_out(
+                current_features
+            )
         elif hasattr(transformer, "get_feature_names"):
             # Transformer supports get_feature_names and requires current feature names
             current_features = transformer.get_feature_names(current_features)

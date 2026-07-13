@@ -37,6 +37,7 @@ from pycsamt.app.desktop.agent_registry import get_entry
 # Logging bridge
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class _SignalLogHandler(logging.Handler):
     """Forwards log records to a Qt Signal callable (thread-safe)."""
 
@@ -74,29 +75,30 @@ class _StreamCapture(io.StringIO):
 # Worker thread
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class AgentWorker(QThread):
     """Background thread for LLM agents and processing operations."""
 
-    log_line    = Signal(str)
-    progress    = Signal(int)
-    result      = Signal(object)
-    error       = Signal(str)
-    agent_ready = Signal(object)   # emitted with agent instance after creation
+    log_line = Signal(str)
+    progress = Signal(int)
+    result = Signal(object)
+    error = Signal(str)
+    agent_ready = Signal(object)  # emitted with agent instance after creation
 
     def __init__(
         self,
         agent_name: str,
         sites,
-        params:  dict[str, Any],
+        params: dict[str, Any],
         api_key: str | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self._agent_name = agent_name
-        self._sites      = sites
-        self._params     = params
-        self._api_key    = api_key
-        self._cancelled  = False
+        self._sites = sites
+        self._params = params
+        self._api_key = api_key
+        self._cancelled = False
 
     # ── Cancellation ──────────────────────────────────────────────────
 
@@ -123,8 +125,12 @@ class AgentWorker(QThread):
             import unittest.mock as _mock
 
             import matplotlib.pyplot as _plt
-            with redirect_stdout(cap), redirect_stderr(cap), \
-                    _mock.patch.object(_plt, "show", lambda *a, **k: None):
+
+            with (
+                redirect_stdout(cap),
+                redirect_stderr(cap),
+                _mock.patch.object(_plt, "show", lambda *a, **k: None),
+            ):
                 if entry["type"] == "llm":
                     res = self._run_llm(entry)
                 else:
@@ -145,8 +151,11 @@ class AgentWorker(QThread):
         self.progress.emit(5)
 
         cls = getattr(ag, entry["class_name"])
-        init_kwargs = {k: v for k, v in self._params.items()
-                       if k in cls.__init__.__code__.co_varnames}
+        init_kwargs = {
+            k: v
+            for k, v in self._params.items()
+            if k in cls.__init__.__code__.co_varnames
+        }
         if self._api_key:
             init_kwargs["api_key"] = self._api_key
 
@@ -208,7 +217,11 @@ class AgentWorker(QThread):
         # If result is not renderable (no figure/axes) AND a separate result_plot
         # function is defined, call it now to produce the figure.
         result_plot_fn = entry.get("result_plot")
-        if result_plot_fn and result_plot_fn != fn_name and not _has_figure(res):
+        if (
+            result_plot_fn
+            and result_plot_fn != fn_name
+            and not _has_figure(res)
+        ):
             plot_fn = getattr(et, result_plot_fn, None)
             if plot_fn is not None:
                 try:
@@ -218,7 +231,7 @@ class AgentWorker(QThread):
                     plot_data = res if _is_sites_like(res) else None
                     ax = _call(plot_fn, self._params, data=plot_data)
                     if ax is not None:
-                        res = ax   # Axes → panel extracts .get_figure()
+                        res = ax  # Axes → panel extracts .get_figure()
                 except Exception as exc:
                     self.log_line.emit(f"Plot step failed: {exc}")
 
@@ -230,19 +243,22 @@ def _has_figure(obj) -> bool:
     """Return True if obj is or contains a matplotlib Figure / Axes."""
     if obj is None:
         return False
-    if hasattr(obj, "savefig"):   # Figure
+    if hasattr(obj, "savefig"):  # Figure
         return True
     if hasattr(obj, "get_figure"):  # Axes
         return True
     if hasattr(obj, "data") and isinstance(obj.data, dict):
-        return any(hasattr(v, "savefig") or hasattr(v, "get_figure")
-                   for v in obj.data.values())
+        return any(
+            hasattr(v, "savefig") or hasattr(v, "get_figure")
+            for v in obj.data.values()
+        )
     return False
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Follow-up chat worker
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class ChatWorker(QThread):
     """Background thread for post-run follow-up LLM queries.
@@ -252,13 +268,13 @@ class ChatWorker(QThread):
     """
 
     reply_done = Signal(str)
-    error      = Signal(str)
+    error = Signal(str)
 
     def __init__(self, agent, question: str, context: str = "", parent=None):
         super().__init__(parent)
-        self._agent    = agent
+        self._agent = agent
         self._question = question.strip()
-        self._context  = context.strip()
+        self._context = context.strip()
 
     def run(self) -> None:
         try:
@@ -285,9 +301,14 @@ def _is_sites_like(obj) -> bool:
         return False
     try:
         from pycsamt.site.base import Sites
+
         if isinstance(obj, Sites):
             return True
     except Exception:
         pass
     # Structural fallback: Sites exposes edic, by_index, and as_list
-    return hasattr(obj, "edic") and hasattr(obj, "by_index") and hasattr(obj, "as_list")
+    return (
+        hasattr(obj, "edic")
+        and hasattr(obj, "by_index")
+        and hasattr(obj, "as_list")
+    )

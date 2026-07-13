@@ -101,18 +101,31 @@ class IntermittentLink(BaseTelemetryClient):
 # keeps the example runnable on a checkout without the WILLY data.
 
 survey_dir = repo_root() / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
-if not (survey_dir.is_dir() and any(survey_dir.glob("*.edi"))):  # pragma: no cover
+if not (
+    survey_dir.is_dir() and any(survey_dir.glob("*.edi"))
+):  # pragma: no cover
     print("NOTE: bundled WILLY survey absent - using a synthetic stand-in.")
     tmp = Path(tempfile.mkdtemp())
     freq = np.logspace(4, 0, 24)
     for i in range(12):
-        z = impedance_to_z((1 + 1j) * np.sqrt(freq), freq, station=f"S{i:02d}")
-        z_to_edi(z, station=f"S{i:02d}", lat=32.12 + 0.002 * i,
-                 lon=119.13, elevation=20.0, savepath=str(tmp))
+        z = impedance_to_z(
+            (1 + 1j) * np.sqrt(freq), freq, station=f"S{i:02d}"
+        )
+        z_to_edi(
+            z,
+            station=f"S{i:02d}",
+            lat=32.12 + 0.002 * i,
+            lon=119.13,
+            elevation=20.0,
+            savepath=str(tmp),
+        )
     survey_dir = tmp
 
 session = field_session_from_edis(
-    str(survey_dir), survey_id="WILLY-L18", method="amt", operator="crew",
+    str(survey_dir),
+    survey_id="WILLY-L18",
+    method="amt",
+    operator="crew",
 )
 stations = [s.station_id for s in session.to_sites()]
 print(f"session: {len(stations)} stations from {survey_dir.name}")
@@ -140,10 +153,15 @@ timeline = []  # (station_index, state, pending)
 for i, station in enumerate(stations):
     link.online = i not in outage
     packet = TelemetryPacket(
-        device_id=f"{station}-node", timestamp=1_700_000_000.0 + i,
-        topic=f"pycsamt/WILLY-L18/{station}/qc", kind="qc",
-        payload={"station": station, "accepted": True,
-                 "channels": ["ex", "ey", "hx", "hy"]},
+        device_id=f"{station}-node",
+        timestamp=1_700_000_000.0 + i,
+        topic=f"pycsamt/WILLY-L18/{station}/qc",
+        kind="qc",
+        payload={
+            "station": station,
+            "accepted": True,
+            "channels": ["ex", "ey", "hx", "hy"],
+        },
     )
     before = buffered_client.pending
     ack = buffered_client.send(packet)
@@ -156,10 +174,14 @@ for i, station in enumerate(stations):
 
 n_delivered_live = sum(1 for _, s, _, _ in timeline if s == "delivered")
 n_buffered = sum(1 for _, s, _, _ in timeline if s == "buffered")
-print(f"live-delivered: {n_delivered_live}, buffered during outage: "
-      f"{n_buffered}")
-print(f"finally delivered: {len(link.delivered)}/{len(stations)} "
-      f"(pending: {buffered_client.pending})")
+print(
+    f"live-delivered: {n_delivered_live}, buffered during outage: "
+    f"{n_buffered}"
+)
+print(
+    f"finally delivered: {len(link.delivered)}/{len(stations)} "
+    f"(pending: {buffered_client.pending})"
+)
 assert len(link.delivered) == len(stations)  # nothing lost
 
 # %%
@@ -174,8 +196,11 @@ decisions = [
     for s in stations
 ]
 manifest = build_acquisition_manifest(
-    "WILLY-L18", records=list(session.to_manifest().records),
-    qc_decisions=decisions, method="amt", operator="crew",
+    "WILLY-L18",
+    records=list(session.to_manifest().records),
+    qc_decisions=decisions,
+    method="amt",
+    operator="crew",
 )
 key = "willy-2026-survey-key"
 signed = manifest.sign(key)
@@ -195,8 +220,10 @@ print(f"verify (tampered):    {verify_manifest(tampered, key)}")
 # that point on.
 
 chain = hash_chain(decisions)
-print(f"QC decision chain: {len(chain)} links, intact: "
-      f"{verify_hash_chain(chain)}")
+print(
+    f"QC decision chain: {len(chain)} links, intact: "
+    f"{verify_hash_chain(chain)}"
+)
 reordered = list(reversed(copy.deepcopy(chain)))
 print(f"reordered chain verifies: {verify_hash_chain(reordered)}")
 
@@ -213,21 +240,41 @@ pending = np.array([t[2] for t in timeline])
 states = [t[1] for t in timeline]
 
 fig, (ax_t, ax_i) = plt.subplots(
-    2, 1, figsize=(10.5, 7.0), constrained_layout=True,
+    2,
+    1,
+    figsize=(10.5, 7.0),
+    constrained_layout=True,
     gridspec_kw={"height_ratios": [3, 2]},
 )
 
 if outage:
-    ax_t.axvspan(min(outage) - 0.5, max(outage) + 0.5, color="#888",
-                 alpha=0.15, lw=0, label="uplink outage")
+    ax_t.axvspan(
+        min(outage) - 0.5,
+        max(outage) + 0.5,
+        color="#888",
+        alpha=0.15,
+        lw=0,
+        label="uplink outage",
+    )
 for state, colour in (("delivered", DELIVERED), ("buffered", BUFFERED)):
     m = np.array([s == state for s in states])
     if m.any():
-        ax_t.scatter(idx[m], np.zeros(m.sum()), c=colour, s=60, zorder=3,
-                     edgecolor="#222", linewidth=0.5, label=state)
+        ax_t.scatter(
+            idx[m],
+            np.zeros(m.sum()),
+            c=colour,
+            s=60,
+            zorder=3,
+            edgecolor="#222",
+            linewidth=0.5,
+            label=state,
+        )
 ax_t.plot(idx, pending, "-", color=FLUSHED, lw=1.8, label="buffered backlog")
-ax_t.set(xlabel="station index along the line", ylabel="packets buffered",
-         title="Store-and-forward telemetry through an uplink outage")
+ax_t.set(
+    xlabel="station index along the line",
+    ylabel="packets buffered",
+    title="Store-and-forward telemetry through an uplink outage",
+)
 ax_t.legend(frameon=False, ncol=2, loc="upper left")
 style_axis(ax_t)
 
@@ -245,11 +292,22 @@ bar_colours = [DELIVERED if p else BUFFERED for p in passed]
 ax_i.bar(range(len(checks)), passed, color=bar_colours, alpha=0.9)
 ax_i.set_xticks(range(len(checks)))
 ax_i.set_xticklabels(labels, fontsize=8)
-ax_i.set(ylim=(0, 1.25), ylabel="pass", yticks=[0, 1],
-         title="Provenance integrity and delivery guarantees")
+ax_i.set(
+    ylim=(0, 1.25),
+    ylabel="pass",
+    yticks=[0, 1],
+    title="Provenance integrity and delivery guarantees",
+)
 for i, p in enumerate(passed):
-    ax_i.text(i, p + 0.06, "PASS" if p else "FAIL", ha="center",
-              fontsize=8, color="#222", fontweight="bold")
+    ax_i.text(
+        i,
+        p + 0.06,
+        "PASS" if p else "FAIL",
+        ha="center",
+        fontsize=8,
+        color="#222",
+        fontweight="bold",
+    )
 style_axis(ax_i)
 
 plt.show()

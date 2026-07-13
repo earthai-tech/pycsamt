@@ -19,6 +19,7 @@ from pycsamt.jones.config import (
 
 # --------------------------- helpers ---------------------------
 
+
 def _r_block_lines() -> list[str]:
     # Head triple (RXY) + 3 rows (9 floats each)
     return [
@@ -53,6 +54,7 @@ def _join(*chunks: list[str]) -> list[str]:
 
 # ---------------------------- tests ----------------------------
 
+
 def test_rblock_read_normalize_numpy_qa():
     lines = _r_block_lines()
     blk = RBlock.from_lines(lines)
@@ -70,10 +72,9 @@ def test_rblock_read_normalize_numpy_qa():
     assert math.isnan(a["phamin"][2])
     # rejection rules
     # RBlock test
-    assert bool(a["rej"][1]) is True      # rho < 0
-    assert bool(a["rej"][2]) is True      # wrho < 0
-    assert bool(a["rej"][0]) is False     # not rejected
-
+    assert bool(a["rej"][1]) is True  # rho < 0
+    assert bool(a["rej"][2]) is True  # wrho < 0
+    assert bool(a["rej"][0]) is False  # not rejected
 
     # QA summary shape/content
     qa = blk.qa_summary()
@@ -160,8 +161,16 @@ def test_to_dataframe_optional_dep():
     blk = RBlock.from_lines(_r_block_lines())
     df = blk.to_dataframe()
     need = {
-        "period", "rho", "pha", "rhomax", "rhomin",
-        "phamax", "phamin", "wrho", "wpha", "rej",
+        "period",
+        "rho",
+        "pha",
+        "rhomax",
+        "rhomin",
+        "phamax",
+        "phamin",
+        "wrho",
+        "wpha",
+        "rej",
     }
     assert set(df.columns) >= need
 

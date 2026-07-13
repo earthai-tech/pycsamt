@@ -39,6 +39,7 @@ __all__ = [
 # Shared base
 # ----------------------------------------------------------------------
 
+
 class _ModEmPlotBase(ModEmBase):
     """Shared result handling for ModEM plotting helpers."""
 
@@ -68,6 +69,7 @@ def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
 # ----------------------------------------------------------------------
 # PlotMisfit
 # ----------------------------------------------------------------------
+
 
 class PlotMisfit(_ModEmPlotBase):
     """Plot RMS misfit as a function of inversion iteration.
@@ -154,6 +156,7 @@ class PlotMisfit(_ModEmPlotBase):
 # PlotModel2D
 # ----------------------------------------------------------------------
 
+
 class PlotModel2D(_ModEmPlotBase):
     """Plot a 2-D ModEM resistivity cross-section.
 
@@ -212,9 +215,7 @@ class PlotModel2D(_ModEmPlotBase):
         import matplotlib.pyplot as plt
 
         r = self._check_result()
-        model = (
-            r.model_final if self.which == "final" else r.model_initial
-        )
+        model = r.model_final if self.which == "final" else r.model_initial
         if model is None:
             msg = f"No {self.which} model in InversionResult."
             raise ValueError(msg)
@@ -235,7 +236,8 @@ class PlotModel2D(_ModEmPlotBase):
             iz_max = nz
 
         fig, ax = plt.subplots(
-            figsize=self.figsize or self.section_style.figsize_for(
+            figsize=self.figsize
+            or self.section_style.figsize_for(
                 n_stations=model.nx,
                 n_y=iz_max,
                 colorbar=True,
@@ -244,7 +246,7 @@ class PlotModel2D(_ModEmPlotBase):
         norm = mcolors.LogNorm(vmin=self.rho_min, vmax=self.rho_max)
         pm = ax.pcolormesh(
             x_km,
-            z_km[:iz_max + 1],
+            z_km[: iz_max + 1],
             rho[:iz_max, :],
             norm=norm,
             cmap=self.cmap,
@@ -264,10 +266,7 @@ class PlotModel2D(_ModEmPlotBase):
 
         if self.show_stations and r.data_obs is not None:
             mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
-            sx = (
-                r.data_obs.x_coords / 1e3
-                + model.x_nodes[-1] / 2e3
-            )
+            sx = r.data_obs.x_coords / 1e3 + model.x_nodes[-1] / 2e3
             ax.scatter(
                 sx,
                 np.zeros(len(sx)),
@@ -281,6 +280,7 @@ class PlotModel2D(_ModEmPlotBase):
 # ----------------------------------------------------------------------
 # PlotModel3D
 # ----------------------------------------------------------------------
+
 
 class PlotModel3D(_ModEmPlotBase):
     """Plot horizontal slices through a 3-D ModEM model.
@@ -338,9 +338,7 @@ class PlotModel3D(_ModEmPlotBase):
         import matplotlib.pyplot as plt
 
         r = self._check_result()
-        model = (
-            r.model_final if self.which == "final" else r.model_initial
-        )
+        model = r.model_final if self.which == "final" else r.model_initial
         if model is None:
             msg = f"No {self.which} model in InversionResult."
             raise ValueError(msg)
@@ -350,14 +348,12 @@ class PlotModel3D(_ModEmPlotBase):
         n_air = model.n_air
 
         if self.depths is None:
-            active = z_centres[n_air:n_air + 4]
+            active = z_centres[n_air : n_air + 4]
         else:
             active = np.asarray(self.depths, dtype=float)
 
         # find layer index for each requested depth
-        iz_list = [
-            int(np.argmin(np.abs(z_centres - d))) for d in active
-        ]
+        iz_list = [int(np.argmin(np.abs(z_centres - d))) for d in active]
         n_slices = len(iz_list)
         n_cols = min(self.n_cols, n_slices)
         n_rows = int(np.ceil(n_slices / n_cols))
@@ -395,10 +391,8 @@ class PlotModel3D(_ModEmPlotBase):
                 shading="flat",
             )
             depth_m = float(z_centres[iz])
-            self.section_style.add_colorbar(
-                pm, ax, label="Resistivity (Ω·m)"
-            )
-            ax.set_title(f"z = {depth_m/1e3:.2f} km", fontsize=9)
+            self.section_style.add_colorbar(pm, ax, label="Resistivity (Ω·m)")
+            ax.set_title(f"z = {depth_m / 1e3:.2f} km", fontsize=9)
             ax.set_xlabel("X (km)", fontsize=8)
             ax.set_ylabel("Y (km)", fontsize=8)
             ax.set_aspect("equal")
@@ -420,7 +414,7 @@ class PlotModel3D(_ModEmPlotBase):
 # PlotSection helpers
 # ----------------------------------------------------------------------
 
-_AIR_LOGE = 11.5   # ln(~100 000 Ω·m) — cells above this are treated as air
+_AIR_LOGE = 11.5  # ln(~100 000 Ω·m) — cells above this are treated as air
 
 
 def _detect_terrain(rho_loge_2d: np.ndarray) -> np.ndarray:
@@ -477,7 +471,7 @@ def _calibrate_z_ref(
     """
     z_nodes = np.concatenate([[0.0], np.cumsum(z_widths)])
     x_nodes = np.concatenate([[0.0], np.cumsum(x_widths)])  # N-S axis
-    cx = float(x_nodes[-1]) / 2.0   # N-S model centre
+    cx = float(x_nodes[-1]) / 2.0  # N-S model centre
 
     refs: list[float] = []
     for _name, (x_m, _y_m, z_m) in site_coords.items():
@@ -498,6 +492,7 @@ def _calibrate_z_ref(
 # ----------------------------------------------------------------------
 # PlotSection
 # ----------------------------------------------------------------------
+
 
 class PlotSection(_ModEmPlotBase):
     """Plot a vertical cross-section with topography and station markers.
@@ -623,11 +618,13 @@ class PlotSection(_ModEmPlotBase):
         self.direction = direction.upper()
         self.start_point = (
             tuple(float(v) for v in start_point)
-            if start_point is not None else None
+            if start_point is not None
+            else None
         )
         self.end_point = (
             tuple(float(v) for v in end_point)
-            if end_point is not None else None
+            if end_point is not None
+            else None
         )
         self.use_latlon = bool(use_latlon)
         self.origin_lat = origin_lat
@@ -663,9 +660,7 @@ class PlotSection(_ModEmPlotBase):
         import matplotlib.pyplot as plt
 
         r = self._check_result()
-        model = (
-            r.model_final if self.which == "final" else r.model_initial
-        )
+        model = r.model_final if self.which == "final" else r.model_initial
         if model is None:
             raise ValueError(f"No {self.which} model in InversionResult.")
 
@@ -677,12 +672,12 @@ class PlotSection(_ModEmPlotBase):
         #   x_widths (nx=168) → N-S (northing) direction
         #   y_widths (ny= 48) → E-W (easting)  direction
         #   rho_loge shape   → (nz, ny, nx)
-        x_nodes = model.x_nodes   # N-S nodes (169 values)
-        y_nodes = model.y_nodes   # E-W nodes  (49 values)
-        z_nodes = model.z_nodes   # depth downward (66 values)
+        x_nodes = model.x_nodes  # N-S nodes (169 values)
+        y_nodes = model.y_nodes  # E-W nodes  (49 values)
+        z_nodes = model.z_nodes  # depth downward (66 values)
 
-        cx = float(x_nodes[-1]) / 2.0   # N-S model centre (m)
-        cy = float(y_nodes[-1]) / 2.0   # E-W model centre (m)
+        cx = float(x_nodes[-1]) / 2.0  # N-S model centre (m)
+        cy = float(y_nodes[-1]) / 2.0  # E-W model centre (m)
 
         if self.direction == "NS":
             # Fix easting (E-W = model y dimension) → nearest y column
@@ -692,7 +687,7 @@ class PlotSection(_ModEmPlotBase):
             # N-S slice: rho[:, y_col, :] → shape (nz, nx=168)
             rho_2d = model.rho_loge[:, y_col, :]
             # Along-profile axis: northing from centre
-            prof_km = (x_nodes - cx) / 1e3          # 169 nodes
+            prof_km = (x_nodes - cx) / 1e3  # 169 nodes
             ax_label = "N-S distance from centre (km)"
         else:
             # Fix northing (N-S = model x dimension) → nearest x row
@@ -702,7 +697,7 @@ class PlotSection(_ModEmPlotBase):
             # E-W slice: rho[:, :, x_row] → shape (nz, ny=48)
             rho_2d = model.rho_loge[:, :, x_row]
             # Along-profile axis: easting from centre
-            prof_km = (y_nodes - cy) / 1e3          # 49 nodes
+            prof_km = (y_nodes - cy) / 1e3  # 49 nodes
             ax_label = "E-W distance from centre (km)"
 
         # Calibrate elevation axis from data_obs station Z values
@@ -710,15 +705,15 @@ class PlotSection(_ModEmPlotBase):
             z_ref = _calibrate_z_ref(
                 model.rho_loge,
                 model.z_widths,
-                model.x_widths,   # N-S widths
-                y_col,            # fixed E-W column
+                model.x_widths,  # N-S widths
+                y_col,  # fixed E-W column
                 r.data_obs.site_coords,
             )
         else:
             z_ref = 380.0
 
         # Elevation axis: positive = above sea level (m)
-        elev_m = z_ref - z_nodes          # 66 values
+        elev_m = z_ref - z_nodes  # 66 values
         elev_km = elev_m / 1e3
 
         # Depth crop (keep z where elevation > -depth_max)
@@ -726,7 +721,7 @@ class PlotSection(_ModEmPlotBase):
         iz_max = min(iz_max, model.nz)
 
         rho_2d_crop = rho_2d[:iz_max, :]
-        elev_km_crop = elev_km[:iz_max + 1]
+        elev_km_crop = elev_km[: iz_max + 1]
 
         # Detect terrain per column
         terrain_idx = _detect_terrain(rho_2d_crop)
@@ -734,11 +729,11 @@ class PlotSection(_ModEmPlotBase):
         # Mask air cells → NaN for display
         rho_disp = rho_2d_crop.copy().astype(float)
         for j in range(rho_disp.shape[1]):
-            rho_disp[:terrain_idx[j], j] = np.nan
+            rho_disp[: terrain_idx[j], j] = np.nan
         log10_rho = rho_disp / np.log(10.0)
 
         # Profile axis cell centres
-        prof_c = 0.5 * (prof_km[:-1] + prof_km[1:])   # ncols centres
+        prof_c = 0.5 * (prof_km[:-1] + prof_km[1:])  # ncols centres
 
         # Terrain profile in elevation (km)
         terrain_elev_km = np.array(
@@ -767,9 +762,13 @@ class PlotSection(_ModEmPlotBase):
         cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
         cb.set_label("Resistivity (Ω·m)", fontsize=9)
         ticks = [1, 10, 100, 1000]
-        tick_vals = [np.log10(t) for t in ticks if self.rho_min <= t <= self.rho_max]
+        tick_vals = [
+            np.log10(t) for t in ticks if self.rho_min <= t <= self.rho_max
+        ]
         cb.set_ticks(tick_vals)
-        cb.set_ticklabels([str(t) for t in ticks if self.rho_min <= t <= self.rho_max])
+        cb.set_ticklabels(
+            [str(t) for t in ticks if self.rho_min <= t <= self.rho_max]
+        )
 
         # Terrain fill (white = air zone above terrain surface)
         if self.show_terrain and terrain_idx.any():
@@ -780,18 +779,24 @@ class PlotSection(_ModEmPlotBase):
                 terrain_elev_km,
                 top_y,
             )
-            terrain_x = np.concatenate([
-                [prof_km[0]],
-                prof_c,
-                [prof_km[-1]],
-            ])
-            terrain_y = np.concatenate([
-                [top_y],
-                terrain_elev_km_plot,
-                [top_y],
-            ])
+            terrain_x = np.concatenate(
+                [
+                    [prof_km[0]],
+                    prof_c,
+                    [prof_km[-1]],
+                ]
+            )
+            terrain_y = np.concatenate(
+                [
+                    [top_y],
+                    terrain_elev_km_plot,
+                    [top_y],
+                ]
+            )
             ax.fill_between(
-                terrain_x, terrain_y, top_y,
+                terrain_x,
+                terrain_y,
+                top_y,
                 step=None,
                 color="white",
                 zorder=3,
@@ -805,11 +810,11 @@ class PlotSection(_ModEmPlotBase):
         #              lands exactly on the topographic line
         #   _NM_PAD  → bottom of station-name text, comfortably in the
         #              white air zone above the marker
-        _MK_PAD = 0.018   # km (~18 m)
-        _NM_PAD = 0.050   # km (~50 m)
+        _MK_PAD = 0.018  # km (~18 m)
+        _NM_PAD = 0.050  # km (~50 m)
 
         st_xs: list[float] = []
-        st_ys: list[float] = []   # terrain elevation at each station column
+        st_ys: list[float] = []  # terrain elevation at each station column
         st_names: list[str] = []
         if self.show_stations and r.data_obs is not None:
             mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
@@ -850,7 +855,7 @@ class PlotSection(_ModEmPlotBase):
 
         # Auto-crop horizontal extent to station region + margin
         if st_xs:
-            margin = 0.5   # km
+            margin = 0.5  # km
             xlo = min(st_xs) - margin
             xhi = max(st_xs) + margin
         else:
@@ -893,16 +898,20 @@ class PlotSection(_ModEmPlotBase):
                     "when use_latlon=True."
                 )
             x1, y1 = _latlon_to_model_xy(
-                self.start_point[0], self.start_point[1],
-                self.origin_lat, self.origin_lon,
+                self.start_point[0],
+                self.start_point[1],
+                self.origin_lat,
+                self.origin_lon,
             )
             x2, y2 = _latlon_to_model_xy(
-                self.end_point[0], self.end_point[1],
-                self.origin_lat, self.origin_lon,
+                self.end_point[0],
+                self.end_point[1],
+                self.origin_lat,
+                self.origin_lon,
             )
         else:
             x1, y1 = float(self.start_point[0]), float(self.start_point[1])
-            x2, y2 = float(self.end_point[0]),   float(self.end_point[1])
+            x2, y2 = float(self.end_point[0]), float(self.end_point[1])
 
         # ── Convert model-centre → model-edge coords ──────────────────
         x_nodes = model.x_nodes
@@ -916,65 +925,75 @@ class PlotSection(_ModEmPlotBase):
 
         dx = x2e - x1e
         dy = y2e - y1e
-        total_m = float(np.sqrt(dx ** 2 + dy ** 2))
+        total_m = float(np.sqrt(dx**2 + dy**2))
         if total_m < 1.0:
             raise ValueError(
                 "start_point and end_point are too close together "
                 f"(separation {total_m:.1f} m)."
             )
-        ux, uy = dx / total_m, dy / total_m   # unit vector along profile
+        ux, uy = dx / total_m, dy / total_m  # unit vector along profile
 
         # ── Sample n_samples points, nearest-cell lookup ───────────────
         n = self.n_samples
-        t = np.linspace(0.0, total_m, n)    # along-profile distances (m)
-        xs = x1e + t * ux                   # northing at each sample (m)
-        ys = y1e + t * uy                   # easting  at each sample (m)
+        t = np.linspace(0.0, total_m, n)  # along-profile distances (m)
+        xs = x1e + t * ux  # northing at each sample (m)
+        ys = y1e + t * uy  # easting  at each sample (m)
 
         rho_2d = np.full((model.nz, n), np.nan)
         for k in range(n):
-            xi = max(0, min(
-                int(np.searchsorted(x_nodes, xs[k], side="right")) - 1,
-                model.nx - 1,
-            ))
-            yi = max(0, min(
-                int(np.searchsorted(y_nodes, ys[k], side="right")) - 1,
-                model.ny - 1,
-            ))
+            xi = max(
+                0,
+                min(
+                    int(np.searchsorted(x_nodes, xs[k], side="right")) - 1,
+                    model.nx - 1,
+                ),
+            )
+            yi = max(
+                0,
+                min(
+                    int(np.searchsorted(y_nodes, ys[k], side="right")) - 1,
+                    model.ny - 1,
+                ),
+            )
             rho_2d[:, k] = model.rho_loge[:, yi, xi]
 
         # ── Elevation reference ────────────────────────────────────────
         if r.data_obs is not None:
             z_ref = _calibrate_z_ref_arbitrary(
-                model, x1e, y1e, ux, uy,
-                r.data_obs.site_coords, self.station_tol,
+                model,
+                x1e,
+                y1e,
+                ux,
+                uy,
+                r.data_obs.site_coords,
+                self.station_tol,
             )
         else:
             z_ref = 380.0
 
-        elev_m    = z_ref - z_nodes
-        elev_km   = elev_m / 1e3
-        iz_max    = int(np.searchsorted(z_nodes, z_ref + self.depth_max))
-        iz_max    = min(max(iz_max, 1), model.nz)
+        elev_m = z_ref - z_nodes
+        elev_km = elev_m / 1e3
+        iz_max = int(np.searchsorted(z_nodes, z_ref + self.depth_max))
+        iz_max = min(max(iz_max, 1), model.nz)
 
-        rho_crop      = rho_2d[:iz_max, :]
-        elev_km_crop  = elev_km[:iz_max + 1]
+        rho_crop = rho_2d[:iz_max, :]
+        elev_km_crop = elev_km[: iz_max + 1]
 
         # ── Terrain mask ───────────────────────────────────────────────
         terrain_idx = _detect_terrain(rho_crop)
 
         rho_disp = rho_crop.copy().astype(float)
         for j in range(rho_disp.shape[1]):
-            rho_disp[:terrain_idx[j], j] = np.nan
+            rho_disp[: terrain_idx[j], j] = np.nan
         log10_rho = rho_disp / np.log(10.0)
 
-        terrain_elev_km = np.array([
-            float(elev_km[terrain_idx[j]])
-            for j in range(rho_crop.shape[1])
-        ])
+        terrain_elev_km = np.array(
+            [float(elev_km[terrain_idx[j]]) for j in range(rho_crop.shape[1])]
+        )
 
         # Node edges for pcolormesh (n+1 values) and cell centres (n-1)
         dist_edges = np.linspace(0.0, total_m / 1e3, n + 1)  # km
-        dist_c     = 0.5 * (dist_edges[:-1] + dist_edges[1:])  # centres
+        dist_c = 0.5 * (dist_edges[:-1] + dist_edges[1:])  # centres
 
         # ── Figure ────────────────────────────────────────────────────
         fig, ax = plt.subplots(figsize=self.figsize)
@@ -983,54 +1002,61 @@ class PlotSection(_ModEmPlotBase):
             vmin=np.log10(self.rho_min), vmax=np.log10(self.rho_max)
         )
         pm = ax.pcolormesh(
-            dist_edges, elev_km_crop, log10_rho,
-            norm=norm, cmap=self.cmap, shading="flat",
+            dist_edges,
+            elev_km_crop,
+            log10_rho,
+            norm=norm,
+            cmap=self.cmap,
+            shading="flat",
         )
         cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
         cb.set_label("Resistivity (Ω·m)", fontsize=9)
         ticks = [1, 10, 100, 1000]
         tick_vals = [
-            np.log10(tv) for tv in ticks
-            if self.rho_min <= tv <= self.rho_max
+            np.log10(tv) for tv in ticks if self.rho_min <= tv <= self.rho_max
         ]
         cb.set_ticks(tick_vals)
-        cb.set_ticklabels([
-            str(tv) for tv in ticks
-            if self.rho_min <= tv <= self.rho_max
-        ])
+        cb.set_ticklabels(
+            [str(tv) for tv in ticks if self.rho_min <= tv <= self.rho_max]
+        )
 
         # ── Terrain fill ───────────────────────────────────────────────
         if self.show_terrain and terrain_idx.any():
             top_y = float(elev_km_crop[0])
             terrain_plot = np.where(
                 terrain_idx < len(elev_km_crop),
-                terrain_elev_km, top_y,
+                terrain_elev_km,
+                top_y,
             )
             terrain_x = np.concatenate(
                 [[dist_edges[0]], dist_c, [dist_edges[-1]]]
             )
             terrain_y = np.concatenate([[top_y], terrain_plot, [top_y]])
             ax.fill_between(
-                terrain_x, terrain_y, top_y,
-                color="white", zorder=3, linewidth=0,
+                terrain_x,
+                terrain_y,
+                top_y,
+                color="white",
+                zorder=3,
+                linewidth=0,
             )
             ax.plot(dist_c, terrain_plot, color="k", lw=1.0, zorder=4)
 
         # ── Station markers ────────────────────────────────────────────
         _MK_PAD = 0.018
         _NM_PAD = 0.050
-        st_xs:   list[float] = []
-        st_ys:   list[float] = []
-        st_names: list[str]  = []
+        st_xs: list[float] = []
+        st_ys: list[float] = []
+        st_names: list[str] = []
         if self.show_stations and r.data_obs is not None:
             mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
             for nm, (x_m, y_m, _) in r.data_obs.site_coords.items():
                 xme = float(x_m) + cx
                 yme = float(y_m) + cy
-                dxs    = xme - x1e
-                dys    = yme - y1e
+                dxs = xme - x1e
+                dys = yme - y1e
                 along_m = dxs * ux + dys * uy
-                perp    = abs(dys * ux - dxs * uy)
+                perp = abs(dys * ux - dxs * uy)
                 if (
                     perp > self.station_tol
                     or along_m < 0.0
@@ -1053,9 +1079,16 @@ class PlotSection(_ModEmPlotBase):
                     for i in order:
                         label = st_names[i].split("-")[-1]
                         ax.text(
-                            st_xs[i], st_ys[i] + _NM_PAD, label,
-                            rotation=90, ha="center", va="bottom",
-                            fontsize=5, color="k", zorder=7, clip_on=False,
+                            st_xs[i],
+                            st_ys[i] + _NM_PAD,
+                            label,
+                            rotation=90,
+                            ha="center",
+                            va="bottom",
+                            fontsize=5,
+                            color="k",
+                            zorder=7,
+                            clip_on=False,
                         )
 
         # ── Axis limits ────────────────────────────────────────────────
@@ -1084,9 +1117,7 @@ class PlotSection(_ModEmPlotBase):
                     f"({self.end_point[0]:.4f}°N,{self.end_point[1]:.4f}°E)"
                 )
             else:
-                label = (
-                    f"({x1:.0f},{y1:.0f}) → ({x2:.0f},{y2:.0f}) m"
-                )
+                label = f"({x1:.0f},{y1:.0f}) → ({x2:.0f},{y2:.0f}) m"
             ax.set_title(
                 f"ModEM arbitrary section — {label}  ({self.which})",
                 fontsize=10,
@@ -1103,10 +1134,12 @@ class PlotSection(_ModEmPlotBase):
 _RESP_COMPS = ("ZXX", "ZXY", "ZYX", "ZYY")
 _RESP_STYLE_KEY = {"ZXX": "xx", "ZXY": "xy", "ZYX": "yx", "ZYY": "yy"}
 _RESP_LATEX = {
-    "ZXX": r"$Z_{xx}$", "ZXY": r"$Z_{xy}$",
-    "ZYX": r"$Z_{yx}$", "ZYY": r"$Z_{yy}$",
+    "ZXX": r"$Z_{xx}$",
+    "ZXY": r"$Z_{xy}$",
+    "ZYX": r"$Z_{yx}$",
+    "ZYY": r"$Z_{yy}$",
 }
-_ERR_MASK = 1e10   # ModEM uses 2e15 to flag dead/masked data rows
+_ERR_MASK = 1e10  # ModEM uses 2e15 to flag dead/masked data rows
 
 
 def _collect_z_rows(
@@ -1135,8 +1168,9 @@ def _collect_z_rows(
                 err = float(row[8])
                 if filter_masked and err >= _ERR_MASK:
                     continue
-                rows.append((float(row[0]), float(row[6]),
-                              float(row[7]), err))
+                rows.append(
+                    (float(row[0]), float(row[6]), float(row[7]), err)
+                )
     rows.sort(key=lambda x: x[0])
     return rows
 
@@ -1145,20 +1179,20 @@ def _rho_phase_from_rows(rows: list):
     """Convert impedance rows to (periods, rho_a, drho, phi_deg, dphi_deg)."""
     if not rows:
         return None
-    p   = np.array([r[0] for r in rows])
-    re  = np.array([r[1] for r in rows])
-    im  = np.array([r[2] for r in rows])
+    p = np.array([r[0] for r in rows])
+    re = np.array([r[1] for r in rows])
+    im = np.array([r[2] for r in rows])
     err = np.array([r[3] for r in rows])
-    z2    = re**2 + im**2
+    z2 = re**2 + im**2
     # ModEM impedance is in field units ([mV/km]/[nT], per the data-file
     # header), so ρ_a = 0.2·|Z|²·T (the 0.2 folds in μ₀ + the unit conversion).
     # Using the SI form |Z|²/(μ₀·ω) on this field-unit Z over-estimates ρ_a —
     # and the error bars — by ~6.3·10⁵ (ρ_a shooting to ~10⁹ Ω·m).
     rho_a = 0.2 * z2 * p
     valid = (z2 > 0) & np.isfinite(z2)
-    drho  = np.where(valid, 0.4 * np.sqrt(z2) * np.abs(err) * p, np.nan)
-    phi   = np.degrees(np.arctan2(im, re))
-    dphi  = np.where(valid, np.degrees(np.abs(err) / np.sqrt(z2)), np.nan)
+    drho = np.where(valid, 0.4 * np.sqrt(z2) * np.abs(err) * p, np.nan)
+    phi = np.degrees(np.arctan2(im, re))
+    dphi = np.where(valid, np.degrees(np.abs(err) / np.sqrt(z2)), np.nan)
     return p, rho_a, drho, phi, dphi
 
 
@@ -1182,6 +1216,7 @@ def _z_rms(obs_rows: list, pred_rows: list, rtol: float = 1e-4) -> float:
 # ----------------------------------------------------------------------
 # PlotResponse
 # ----------------------------------------------------------------------
+
 
 class PlotResponse(_ModEmPlotBase):
     """Per-station MT response in MTPy style.
@@ -1235,13 +1270,13 @@ class PlotResponse(_ModEmPlotBase):
         **kwargs,
     ):
         super().__init__(result=result, **kwargs)
-        self.stations     = stations
+        self.stations = stations
         self.max_stations = max_stations
-        self.show_tipper  = show_tipper
-        self.period_min   = period_min
-        self.period_max   = period_max
-        self.figsize      = figsize
-        self.style        = style
+        self.show_tipper = show_tipper
+        self.period_min = period_min
+        self.period_max = period_max
+        self.figsize = figsize
+        self.style = style
 
     def plot(self):
         """Return a matplotlib figure with the per-station response panels."""
@@ -1256,22 +1291,26 @@ class PlotResponse(_ModEmPlotBase):
         if r.data_obs is None:
             raise ValueError("InversionResult has no data_obs loaded.")
 
-        data_obs  = r.data_obs
+        data_obs = r.data_obs
         data_pred = r.data_pred
-        names = list(self.stations or data_obs.site_names)[: self.max_stations]
-        n_st  = len(names)
+        names = list(self.stations or data_obs.site_names)[
+            : self.max_stations
+        ]
+        n_st = len(names)
 
-        inner_hr     = [2, 1, 1] if self.show_tipper else [2, 1]
+        inner_hr = [2, 1, 1] if self.show_tipper else [2, 1]
         n_rows_inner = len(inner_hr)
 
         # Figure geometry
-        col_w = 3.0;  rho_h = 2.4;  phs_h = 1.3
+        col_w = 3.0
+        rho_h = 2.4
+        phs_h = 1.3
         tip_h = 1.3 if self.show_tipper else 0.0
         gap_h = 0.5
-        st_h  = rho_h + phs_h + tip_h + 0.35
+        st_h = rho_h + phs_h + tip_h + 0.35
         fig_w = col_w * 4 + 1.0
         fig_h = st_h * n_st + gap_h * max(0, n_st - 1) + 0.4
-        fig   = plt.figure(
+        fig = plt.figure(
             figsize=self.figsize or (fig_w, max(3.0, fig_h)),
             constrained_layout=False,
         )
@@ -1286,34 +1325,45 @@ class PlotResponse(_ModEmPlotBase):
             mt = PYCSAMT_STYLE.mt
 
             _TOP = 0.04 if n_st == 1 else 0.02
-            _BOT = 0.06;  _L = 0.07;  _R = 0.01
+            _BOT = 0.06
+            _L = 0.07
+            _R = 0.01
             outer_gs = mgridspec.GridSpec(
-                n_st, 1, figure=fig,
+                n_st,
+                1,
+                figure=fig,
                 hspace=gap_h / st_h,
-                top=1.0 - _TOP, bottom=_BOT, left=_L, right=1.0 - _R,
+                top=1.0 - _TOP,
+                bottom=_BOT,
+                left=_L,
+                right=1.0 - _R,
             )
 
             _first_axes: list = []
 
             for st_i, name in enumerate(names):
                 inner_gs = mgridspec.GridSpecFromSubplotSpec(
-                    n_rows_inner, 4,
+                    n_rows_inner,
+                    4,
                     subplot_spec=outer_gs[st_i],
                     height_ratios=inner_hr,
-                    hspace=0.0,   # ρ_a and φ share zero whitespace
+                    hspace=0.0,  # ρ_a and φ share zero whitespace
                     wspace=0.10,
                 )
                 ax_r0 = None
 
                 for ci, comp in enumerate(_RESP_COMPS):
-                    cstyle   = getattr(mt, _RESP_STYLE_KEY[comp])
+                    cstyle = getattr(mt, _RESP_STYLE_KEY[comp])
                     obs_rows = _collect_z_rows(data_obs, name, comp)
                     prd_rows = (
-                        _collect_z_rows(data_pred, name, comp, filter_masked=False)
-                        if data_pred else []
+                        _collect_z_rows(
+                            data_pred, name, comp, filter_masked=False
+                        )
+                        if data_pred
+                        else []
                     )
 
-                    rms     = _z_rms(obs_rows, prd_rows)
+                    rms = _z_rms(obs_rows, prd_rows)
                     rms_str = f"  rms={rms:.2f}" if np.isfinite(rms) else ""
 
                     ax_r = fig.add_subplot(inner_gs[0, ci])
@@ -1330,11 +1380,21 @@ class PlotResponse(_ModEmPlotBase):
                         if self.period_min is not None:
                             m = p >= self.period_min
                             p, rho, drho, phi, dphi = (
-                                p[m], rho[m], drho[m], phi[m], dphi[m])
+                                p[m],
+                                rho[m],
+                                drho[m],
+                                phi[m],
+                                dphi[m],
+                            )
                         if self.period_max is not None:
                             m = p <= self.period_max
                             p, rho, drho, phi, dphi = (
-                                p[m], rho[m], drho[m], phi[m], dphi[m])
+                                p[m],
+                                rho[m],
+                                drho[m],
+                                phi[m],
+                                dphi[m],
+                            )
                         ekw = cstyle.errorbar_kwargs()
                         ekw["label"] = _RESP_LATEX[comp]
                         ax_r.errorbar(p, rho, yerr=drho, **ekw)
@@ -1360,21 +1420,34 @@ class PlotResponse(_ModEmPlotBase):
                         pred_ls = getattr(cstyle, "predicted_ls", ":")
                         label_pred = _RESP_LATEX[comp].rstrip("$") + r"^{m}$"
                         ax_r.plot(
-                            pp, rho2,
-                            color=pred_c, ls=pred_ls, lw=1.8, alpha=0.85,
+                            pp,
+                            rho2,
+                            color=pred_c,
+                            ls=pred_ls,
+                            lw=1.8,
+                            alpha=0.85,
                             label=label_pred,
                         )
                         ax_p.plot(
-                            pp, phi2,
-                            color=pred_c, ls=pred_ls, lw=1.8, alpha=0.85,
+                            pp,
+                            phi2,
+                            color=pred_c,
+                            ls=pred_ls,
+                            lw=1.8,
+                            alpha=0.85,
                         )
 
                     # ── Titles / axes ─────────────────────────────────────
-                    ax_r.set_title(_RESP_LATEX[comp] + rms_str, fontsize=8, pad=3)
-                    ax_r.set_xscale("log");  ax_r.set_yscale("log")
+                    ax_r.set_title(
+                        _RESP_LATEX[comp] + rms_str, fontsize=8, pad=3
+                    )
+                    ax_r.set_xscale("log")
+                    ax_r.set_yscale("log")
                     ax_p.set_xscale("log")
                     if ci == 0:
-                        ax_r.set_ylabel(r"$\rho_a\ (\Omega{\cdot}m)$", fontsize=8)
+                        ax_r.set_ylabel(
+                            r"$\rho_a\ (\Omega{\cdot}m)$", fontsize=8
+                        )
                         ax_p.set_ylabel(r"$\phi\ (°)$", fontsize=8)
                     else:
                         ax_r.tick_params(labelleft=False)
@@ -1382,25 +1455,38 @@ class PlotResponse(_ModEmPlotBase):
                     ax_p.set_xlabel(r"$T\ (s)$", fontsize=7)
                     ax_r.tick_params(labelsize=6, which="both", top=True)
                     ax_p.tick_params(labelsize=6, which="both")
-                    ax_r.legend(fontsize=6, loc="upper left",
-                                framealpha=0.6, borderpad=0.3)
+                    ax_r.legend(
+                        fontsize=6,
+                        loc="upper left",
+                        framealpha=0.6,
+                        borderpad=0.3,
+                    )
 
             # Station-name annotations (above first ρ_a axis per station)
             for _ax, _nm in _first_axes:
                 _ax.annotate(
                     _nm,
-                    xy=(0.0, 1.0), xycoords="axes fraction",
-                    xytext=(0.0, 1.06), textcoords="axes fraction",
-                    fontsize=8, fontweight="bold",
-                    va="bottom", ha="left", annotation_clip=False,
+                    xy=(0.0, 1.0),
+                    xycoords="axes fraction",
+                    xytext=(0.0, 1.06),
+                    textcoords="axes fraction",
+                    fontsize=8,
+                    fontweight="bold",
+                    va="bottom",
+                    ha="left",
+                    annotation_clip=False,
                 )
 
             # Small legend note at the top-right corner
             fig.text(
-                1.0 - _R, 1.0 - _TOP + 0.005,
+                1.0 - _R,
+                1.0 - _TOP + 0.005,
                 r"obs $\bullet$ — pred $\cdots$",
-                fontsize=7, ha="right", va="bottom",
-                transform=fig.transFigure, color="#444444",
+                fontsize=7,
+                ha="right",
+                va="bottom",
+                transform=fig.transFigure,
+                color="#444444",
             )
 
         return fig
@@ -1409,6 +1495,7 @@ class PlotResponse(_ModEmPlotBase):
 # ----------------------------------------------------------------------
 # PlotPseudo
 # ----------------------------------------------------------------------
+
 
 class PlotPseudo(_ModEmPlotBase):
     """Plot apparent-resistivity and phase pseudo-sections.
@@ -1474,7 +1561,7 @@ class PlotPseudo(_ModEmPlotBase):
                 si = row[1]
                 real, imag = row[6], row[7]
                 pi_idx = np.argmin(np.abs(periods - period))
-                z2 = real ** 2 + imag ** 2
+                z2 = real**2 + imag**2
                 # field-unit ρ_a = 0.2·|Z|²·T (see _rho_phase_from_rows note)
                 rho_mat[pi_idx, si] = 0.2 * z2 * period
                 phs_mat[pi_idx, si] = np.degrees(np.arctan2(imag, real))
@@ -1505,9 +1592,7 @@ class PlotPseudo(_ModEmPlotBase):
         )
         fig.colorbar(pm_r, ax=ax_rho, label="rho_a (ohm m)")
         ax_rho.set_ylabel("log10 Period (s)")
-        ax_rho.set_title(
-            f"ModEM pseudo-section - {self.component} rho_a"
-        )
+        ax_rho.set_title(f"ModEM pseudo-section - {self.component} rho_a")
 
         pm_p = ax_phs.pcolormesh(
             offsets,
@@ -1521,9 +1606,7 @@ class PlotPseudo(_ModEmPlotBase):
         fig.colorbar(pm_p, ax=ax_phs, label="Phase (deg)")
         ax_phs.set_ylabel("log10 Period (s)")
         ax_phs.set_xlabel("Offset (km)")
-        ax_phs.set_title(
-            f"ModEM pseudo-section - {self.component} phase"
-        )
+        ax_phs.set_title(f"ModEM pseudo-section - {self.component} phase")
 
         fig.tight_layout()
         return fig
@@ -1532,6 +1615,7 @@ class PlotPseudo(_ModEmPlotBase):
 # ======================================================================
 # Shared helpers for the new plot classes
 # ======================================================================
+
 
 def _latlon_to_model_xy(lat, lon, origin_lat, origin_lon):
     """Convert a lat/lon point to model-centre XY coordinates (metres).
@@ -1583,14 +1667,20 @@ def _calibrate_z_ref_arbitrary(
         perp = abs(dys * ux - dxs * uy)
         if perp > station_tol:
             continue
-        xi = max(0, min(
-            int(np.searchsorted(model.x_nodes, xme, side="right")) - 1,
-            model.nx - 1,
-        ))
-        yi = max(0, min(
-            int(np.searchsorted(model.y_nodes, yme, side="right")) - 1,
-            model.ny - 1,
-        ))
+        xi = max(
+            0,
+            min(
+                int(np.searchsorted(model.x_nodes, xme, side="right")) - 1,
+                model.nx - 1,
+            ),
+        )
+        yi = max(
+            0,
+            min(
+                int(np.searchsorted(model.y_nodes, yme, side="right")) - 1,
+                model.ny - 1,
+            ),
+        )
         col = model.rho_loge[:, yi, xi]
         hits = np.where(col < _AIR_LOGE)[0]
         if not hits.size:
@@ -1620,11 +1710,9 @@ def _build_cov_ind(cov):
     Returns ndarray shape (nx_earth, ny_earth, nz_earth), int32.
     Equivalent to MATLAB ``c1.ind``.
     """
-    ind = np.zeros(
-        (cov.nx_earth, cov.ny_earth, cov.nz_earth), dtype=np.int32
-    )
+    ind = np.zeros((cov.nx_earth, cov.ny_earth, cov.nz_earth), dtype=np.int32)
     for blk in cov.mask_blocks:
-        l0 = max(0, int(blk["layer_start"]) - 1)   # 0-based
+        l0 = max(0, int(blk["layer_start"]) - 1)  # 0-based
         l1 = min(cov.nz_earth, int(blk["layer_end"]))
         mask = np.asarray(blk["mask"], dtype=np.int32)
         if mask.shape == (cov.nx_earth, cov.ny_earth):
@@ -1664,6 +1752,7 @@ def _section_slice(model, col_idx, direction="NS"):
 # ======================================================================
 # PlotDepthMap
 # ======================================================================
+
 
 class PlotDepthMap(_ModEmPlotBase):
     """Geo-referenced horizontal depth slices through a 3-D ModEM model.
@@ -1746,7 +1835,7 @@ class PlotDepthMap(_ModEmPlotBase):
         n_air = model.n_air
 
         if self.depths is None:
-            active = z_centres[n_air: n_air + 4]
+            active = z_centres[n_air : n_air + 4]
         else:
             active = np.asarray(self.depths, dtype=float)
 
@@ -1758,11 +1847,13 @@ class PlotDepthMap(_ModEmPlotBase):
         use_geo = self.origin_lat is not None and self.origin_lon is not None
         if use_geo:
             lat_nodes, lon_nodes = _xy_nodes_to_geo(
-                model.x_nodes, model.y_nodes,
-                self.origin_lat, self.origin_lon,
+                model.x_nodes,
+                model.y_nodes,
+                self.origin_lat,
+                self.origin_lon,
             )
-            x_axis = lon_nodes   # easting on x-axis
-            y_axis = lat_nodes   # northing on y-axis
+            x_axis = lon_nodes  # easting on x-axis
+            y_axis = lat_nodes  # northing on y-axis
             xlabel, ylabel = "Longitude (°E)", "Latitude (°N)"
         else:
             cx = float(model.x_nodes[-1]) / 2e3
@@ -1780,14 +1871,18 @@ class PlotDepthMap(_ModEmPlotBase):
             if use_geo:
                 m_lat = 111_195.0
                 m_lon = 111_195.0 * np.cos(np.radians(self.origin_lat))
-                sta_x = np.array([
-                    self.origin_lon + ym / m_lon
-                    for _, (_, ym, _) in r.data_obs.site_coords.items()
-                ])
-                sta_y = np.array([
-                    self.origin_lat + xm / m_lat
-                    for _, (xm, _, _) in r.data_obs.site_coords.items()
-                ])
+                sta_x = np.array(
+                    [
+                        self.origin_lon + ym / m_lon
+                        for _, (_, ym, _) in r.data_obs.site_coords.items()
+                    ]
+                )
+                sta_y = np.array(
+                    [
+                        self.origin_lat + xm / m_lat
+                        for _, (xm, _, _) in r.data_obs.site_coords.items()
+                    ]
+                )
             else:
                 sta_x = r.data_obs.y_coords / 1e3
                 sta_y = r.data_obs.x_coords / 1e3
@@ -1797,7 +1892,8 @@ class PlotDepthMap(_ModEmPlotBase):
         norm = mcolors.Normalize(vmin=log_vmin, vmax=log_vmax)
 
         fig, axes = plt.subplots(
-            n_rows, n_cols,
+            n_rows,
+            n_cols,
             figsize=(5.5 * n_cols, 4.5 * n_rows),
             squeeze=False,
         )
@@ -1806,17 +1902,24 @@ class PlotDepthMap(_ModEmPlotBase):
             row, col = divmod(k, n_cols)
             ax = axes[row][col]
 
-            rho_slice = model.rho_linear[iz, :, :]       # (ny, nx)
+            rho_slice = model.rho_linear[iz, :, :]  # (ny, nx)
             log10_rho = np.log10(np.clip(rho_slice, 1e-6, None)).T  # (nx, ny)
 
             pm = ax.pcolormesh(
-                x_axis, y_axis, log10_rho,
-                norm=norm, cmap=self.cmap, shading="flat",
+                x_axis,
+                y_axis,
+                log10_rho,
+                norm=norm,
+                cmap=self.cmap,
+                shading="flat",
             )
             cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.80)
             cb.set_label("Resistivity (Ω·m)", fontsize=8)
-            ticks_rho = [t for t in [1, 10, 100, 1000, 10000]
-                         if self.rho_min <= t <= self.rho_max]
+            ticks_rho = [
+                t
+                for t in [1, 10, 100, 1000, 10000]
+                if self.rho_min <= t <= self.rho_max
+            ]
             cb.set_ticks([np.log10(t) for t in ticks_rho])
             cb.set_ticklabels([str(t) for t in ticks_rho])
 
@@ -1834,11 +1937,13 @@ class PlotDepthMap(_ModEmPlotBase):
 
         geo_label = (
             f"  (origin {self.origin_lat:.4f}°N, {self.origin_lon:.4f}°E)"
-            if use_geo else ""
+            if use_geo
+            else ""
         )
         fig.suptitle(
             f"ModEM depth maps — {self.which}{geo_label}",
-            y=1.01, fontsize=10,
+            y=1.01,
+            fontsize=10,
         )
         fig.tight_layout()
         return fig
@@ -1847,6 +1952,7 @@ class PlotDepthMap(_ModEmPlotBase):
 # ======================================================================
 # PlotAllProfiles
 # ======================================================================
+
 
 class PlotAllProfiles(_ModEmPlotBase):
     """Multiple parallel vertical cross-sections in a subplot grid.
@@ -1958,7 +2064,8 @@ class PlotAllProfiles(_ModEmPlotBase):
         n_cols = min(self.n_cols, n)
         n_rows = int(np.ceil(n / n_cols))
         fig, axes = plt.subplots(
-            n_rows, n_cols,
+            n_rows,
+            n_cols,
             figsize=self.figsize or (5.5 * n_cols, 3.8 * n_rows),
             squeeze=False,
         )
@@ -1999,7 +2106,7 @@ class PlotAllProfiles(_ModEmPlotBase):
 
             iz_max = int(np.searchsorted(z_nodes, self.depth_max))
             iz_max = min(max(iz_max, 1), model.nz)
-            rho_crop = rho_2d[:iz_max, :]            # (iz_max, n_along)
+            rho_crop = rho_2d[:iz_max, :]  # (iz_max, n_along)
             depth_km = -z_nodes[: iz_max + 1] / 1e3  # negative = depth
 
             terrain_idx = _detect_terrain(rho_crop)
@@ -2011,26 +2118,34 @@ class PlotAllProfiles(_ModEmPlotBase):
             log10_rho = rho_disp / np.log(10.0)
 
             pm = ax.pcolormesh(
-                prof_km, depth_km, log10_rho,
-                norm=norm, cmap=self.cmap, shading="flat",
+                prof_km,
+                depth_km,
+                log10_rho,
+                norm=norm,
+                cmap=self.cmap,
+                shading="flat",
             )
 
             if self.show_terrain and terrain_idx.any():
                 prof_c = 0.5 * (prof_km[:-1] + prof_km[1:])
                 top_y = float(depth_km[0])
-                terrain_d = np.array([
-                    -float(z_nodes[terrain_idx[j]]) / 1e3
-                    for j in range(rho_crop.shape[1])
-                ])
+                terrain_d = np.array(
+                    [
+                        -float(z_nodes[terrain_idx[j]]) / 1e3
+                        for j in range(rho_crop.shape[1])
+                    ]
+                )
                 terrain_x = np.concatenate(
                     [[prof_km[0]], prof_c, [prof_km[-1]]]
                 )
-                terrain_y = np.concatenate(
-                    [[top_y], terrain_d, [top_y]]
-                )
+                terrain_y = np.concatenate([[top_y], terrain_d, [top_y]])
                 ax.fill_between(
-                    terrain_x, terrain_y, top_y,
-                    color="white", zorder=3, linewidth=0,
+                    terrain_x,
+                    terrain_y,
+                    top_y,
+                    color="white",
+                    zorder=3,
+                    linewidth=0,
                 )
                 ax.plot(prof_c, terrain_d, color="k", lw=0.8, zorder=4)
 
@@ -2043,7 +2158,8 @@ class PlotAllProfiles(_ModEmPlotBase):
                         col_a = max(0, min(col_a, len(terrain_idx) - 1))
                         t_d = -float(z_nodes[terrain_idx[col_a]]) / 1e3
                         ax.scatter(
-                            [along / 1e3], [t_d],
+                            [along / 1e3],
+                            [t_d],
                             **mk.kwargs(s=20, zorder=6, clip_on=False),
                         )
 
@@ -2056,8 +2172,11 @@ class PlotAllProfiles(_ModEmPlotBase):
             if col == n_cols - 1 or k == n - 1:
                 cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
                 cb.set_label("Resistivity (Ω·m)", fontsize=7)
-                ticks_rho = [t for t in [1, 10, 100, 1000, 10000]
-                             if self.rho_min <= t <= self.rho_max]
+                ticks_rho = [
+                    t
+                    for t in [1, 10, 100, 1000, 10000]
+                    if self.rho_min <= t <= self.rho_max
+                ]
                 cb.set_ticks([np.log10(t) for t in ticks_rho])
                 cb.set_ticklabels([str(t) for t in ticks_rho], fontsize=7)
 
@@ -2068,7 +2187,8 @@ class PlotAllProfiles(_ModEmPlotBase):
         fig.suptitle(
             f"ModEM {self.direction} profiles — {self.which}  "
             f"(depth ≤ {self.depth_max / 1e3:.1f} km)",
-            fontsize=10, y=1.01,
+            fontsize=10,
+            y=1.01,
         )
         fig.tight_layout()
         return fig
@@ -2077,6 +2197,7 @@ class PlotAllProfiles(_ModEmPlotBase):
 # ======================================================================
 # PlotCovariance
 # ======================================================================
+
 
 class PlotCovariance(_ModEmPlotBase):
     """Three-panel covariance activation map from a ModEM .cov file.
@@ -2142,27 +2263,31 @@ class PlotCovariance(_ModEmPlotBase):
                 "Ensure the .cov file is in the result directory."
             )
 
-        ind = _build_cov_ind(cov)   # (nx_earth, ny_earth, nz_earth)
+        ind = _build_cov_ind(cov)  # (nx_earth, ny_earth, nz_earth)
 
         model = r.model_final if self.which == "final" else r.model_initial
         depth_km = None
         if model is not None and model.nz >= cov.nz_earth:
-            z_nodes_earth = model.z_nodes[model.n_air:]
+            z_nodes_earth = model.z_nodes[model.n_air :]
             if len(z_nodes_earth) > cov.nz_earth:
                 depth_km = z_nodes_earth[: cov.nz_earth + 1] / 1e3
 
         n_panels = 4 if self.show_smoothing else 3
         fig, axes = plt.subplots(
-            1, n_panels,
+            1,
+            n_panels,
             figsize=self.figsize or (4.5 * n_panels, 4.5),
         )
 
         # Panel 1: plan view (sum over depth)
-        plan = ind.sum(axis=2)   # (nx, ny)
+        plan = ind.sum(axis=2)  # (nx, ny)
         ax = axes[0]
         im = ax.imshow(
-            plan, cmap=self.cmap_mask,
-            aspect="auto", origin="upper", interpolation="nearest",
+            plan,
+            cmap=self.cmap_mask,
+            aspect="auto",
+            origin="upper",
+            interpolation="nearest",
         )
         fig.colorbar(im, ax=ax, label="Σ mask (depth layers)", shrink=0.85)
         ax.set_xlabel("EW cell index")
@@ -2170,21 +2295,31 @@ class PlotCovariance(_ModEmPlotBase):
         ax.set_title("Plan view\n(sum over depth)")
 
         # Panel 2: NS × depth (sum over EW)
-        xz = ind.sum(axis=1)     # (nx, nz)
+        xz = ind.sum(axis=1)  # (nx, nz)
         ax = axes[1]
         if depth_km is not None:
-            extent = [0, cov.nx_earth,
-                      float(depth_km[-1]), float(depth_km[0])]
+            extent = [
+                0,
+                cov.nx_earth,
+                float(depth_km[-1]),
+                float(depth_km[0]),
+            ]
             im2 = ax.imshow(
-                xz.T, cmap=self.cmap_mask,
-                aspect="auto", origin="upper",
-                extent=extent, interpolation="nearest",
+                xz.T,
+                cmap=self.cmap_mask,
+                aspect="auto",
+                origin="upper",
+                extent=extent,
+                interpolation="nearest",
             )
             ax.set_ylabel("Depth (km)")
         else:
             im2 = ax.imshow(
-                xz.T, cmap=self.cmap_mask,
-                aspect="auto", origin="upper", interpolation="nearest",
+                xz.T,
+                cmap=self.cmap_mask,
+                aspect="auto",
+                origin="upper",
+                interpolation="nearest",
             )
             ax.set_ylabel("Depth layer index")
         fig.colorbar(im2, ax=ax, label="Σ mask (EW)", shrink=0.85)
@@ -2192,21 +2327,31 @@ class PlotCovariance(_ModEmPlotBase):
         ax.set_title("N-S × depth\n(sum over EW)")
 
         # Panel 3: EW × depth (sum over NS)
-        yz = ind.sum(axis=0)     # (ny, nz)
+        yz = ind.sum(axis=0)  # (ny, nz)
         ax = axes[2]
         if depth_km is not None:
-            extent = [0, cov.ny_earth,
-                      float(depth_km[-1]), float(depth_km[0])]
+            extent = [
+                0,
+                cov.ny_earth,
+                float(depth_km[-1]),
+                float(depth_km[0]),
+            ]
             im3 = ax.imshow(
-                yz.T, cmap=self.cmap_mask,
-                aspect="auto", origin="upper",
-                extent=extent, interpolation="nearest",
+                yz.T,
+                cmap=self.cmap_mask,
+                aspect="auto",
+                origin="upper",
+                extent=extent,
+                interpolation="nearest",
             )
             ax.set_ylabel("Depth (km)")
         else:
             im3 = ax.imshow(
-                yz.T, cmap=self.cmap_mask,
-                aspect="auto", origin="upper", interpolation="nearest",
+                yz.T,
+                cmap=self.cmap_mask,
+                aspect="auto",
+                origin="upper",
+                interpolation="nearest",
             )
             ax.set_ylabel("Depth layer index")
         fig.colorbar(im3, ax=ax, label="Σ mask (NS)", shrink=0.85)
@@ -2218,7 +2363,7 @@ class PlotCovariance(_ModEmPlotBase):
             ax = axes[3]
             nz_e = cov.nz_earth
             if depth_km is not None and len(depth_km) > nz_e:
-                z_plot = 0.5 * (depth_km[:nz_e] + depth_km[1: nz_e + 1])
+                z_plot = 0.5 * (depth_km[:nz_e] + depth_km[1 : nz_e + 1])
                 z_label = "Depth (km)"
                 ax.invert_yaxis()
             else:
@@ -2230,14 +2375,19 @@ class PlotCovariance(_ModEmPlotBase):
             sz = getattr(cov, "smooth_z", None)
 
             if sx is not None and len(sx) == nz_e:
-                ax.plot(sx, z_plot, "b-o", ms=3, lw=1.2,
-                        label="smooth_x (NS)")
+                ax.plot(
+                    sx, z_plot, "b-o", ms=3, lw=1.2, label="smooth_x (NS)"
+                )
             if sy is not None and len(sy) == nz_e:
-                ax.plot(sy, z_plot, "r--s", ms=3, lw=1.2,
-                        label="smooth_y (EW)")
+                ax.plot(
+                    sy, z_plot, "r--s", ms=3, lw=1.2, label="smooth_y (EW)"
+                )
             if sz is not None:
                 ax.axvline(
-                    float(sz), color="gray", ls=":", lw=1.0,
+                    float(sz),
+                    color="gray",
+                    ls=":",
+                    lw=1.0,
                     label=f"smooth_z={float(sz):.2f}",
                 )
             ax.set_xlabel("Smoothing coefficient")

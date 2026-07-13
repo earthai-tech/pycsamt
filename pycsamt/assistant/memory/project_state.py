@@ -23,6 +23,7 @@ __all__ = ["ProjectState"]
 
 def _default_path(root: Path | str | None = None) -> Path:
     from ..rag.ingest import repo_root
+
     base = Path(root) if root is not None else repo_root()
     return base / ".pycsamt_rag" / "project_state.json"
 
@@ -33,15 +34,13 @@ class ProjectState:
     def __init__(self, path: str | Path | None = None):
         self.path = Path(path) if path is not None else _default_path()
         self.data: dict[str, Any] = {
-            "lines": {},          # line -> last-used info
-            "preferences": {},    # arbitrary user prefs
+            "lines": {},  # line -> last-used info
+            "preferences": {},  # arbitrary user prefs
             "updated": None,
         }
         if self.path.is_file():
             try:
-                loaded = json.loads(
-                    self.path.read_text(encoding="utf-8")
-                )
+                loaded = json.loads(self.path.read_text(encoding="utf-8"))
                 if isinstance(loaded, dict):
                     self.data.update(loaded)
             except (OSError, json.JSONDecodeError):
@@ -58,7 +57,8 @@ class ProjectState:
         """Lines the user has worked on, most-recent first."""
         lines = self.data.get("lines", {})
         return sorted(
-            lines, key=lambda k: lines[k].get("last_used", ""),
+            lines,
+            key=lambda k: lines[k].get("last_used", ""),
             reverse=True,
         )
 

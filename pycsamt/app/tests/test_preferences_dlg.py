@@ -28,6 +28,7 @@ def dlg(qapp, session):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_prefs_dlg_creates(qapp, session):
     d = PreferencesDialog(session=session)
     assert d is not None
@@ -40,13 +41,14 @@ def test_has_four_tabs(dlg):
 
 def test_tab_names(dlg):
     labels = [dlg._tabs.tabText(i) for i in range(4)]
-    assert "General"  in labels
-    assert "Solvers"  in labels
+    assert "General" in labels
+    assert "Solvers" in labels
     assert "AI / LLM" in labels
     assert "Advanced" in labels
 
 
 # ── General tab ───────────────────────────────────────────────────────────
+
 
 def test_theme_combo_preselects_session_theme(qapp):
     sess = SessionState(theme="light")
@@ -61,6 +63,7 @@ def test_max_recent_files_default(dlg):
 
 # ── Solvers tab ───────────────────────────────────────────────────────────
 
+
 def test_occam2d_edit_prepopulated(qapp):
     sess = SessionState(occam2d_binary="/usr/bin/Occam2D")
     d = PreferencesDialog(session=sess)
@@ -74,8 +77,10 @@ def test_workdir_edit_exists(dlg):
 
 # ── AI / LLM tab ─────────────────────────────────────────────────────────
 
+
 def test_api_key_echo_is_password(dlg):
     from PySide6.QtWidgets import QLineEdit
+
     assert dlg._api_key_edit.echoMode() == QLineEdit.EchoMode.Password
 
 
@@ -88,15 +93,20 @@ def test_api_key_prepopulated(qapp):
 
 def test_provider_change_updates_model_combo(dlg):
     dlg._provider_combo.setCurrentText("openai")
-    model_items = [dlg._model_combo.itemText(i) for i in range(dlg._model_combo.count())]
+    model_items = [
+        dlg._model_combo.itemText(i) for i in range(dlg._model_combo.count())
+    ]
     assert any("gpt" in m for m in model_items)
 
     dlg._provider_combo.setCurrentText("claude")
-    model_items = [dlg._model_combo.itemText(i) for i in range(dlg._model_combo.count())]
+    model_items = [
+        dlg._model_combo.itemText(i) for i in range(dlg._model_combo.count())
+    ]
     assert any("claude" in m for m in model_items)
 
 
 # ── Advanced tab ──────────────────────────────────────────────────────────
+
 
 def test_log_level_default(qapp):
     sess = SessionState(log_level="WARNING")
@@ -113,6 +123,7 @@ def test_tile_provider_preselected(qapp):
 
 
 # ── Accepted → session updated ────────────────────────────────────────────
+
 
 def test_accept_updates_session_theme(qapp):
     sess = SessionState(theme="dark")

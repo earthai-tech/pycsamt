@@ -25,6 +25,7 @@ def panel(qapp):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_profile_panel_creates(qapp):
     p = ProfilePanel()
     assert p is not None
@@ -55,6 +56,7 @@ def test_tab_labels(panel):
 
 # ── Canvases ──────────────────────────────────────────────────────────────
 
+
 def test_rho_phi_canvas_exists(panel):
     assert panel._canvas_rho_phi is not None
 
@@ -81,10 +83,12 @@ def test_phase_tensor_strip_canvas_exists(panel):
 
 # ── PlotController linkage ────────────────────────────────────────────────
 
+
 def test_plot_controller_created(panel):
     from pycsamt.app.desktop.controllers.plot_controller import (
         PlotController,
     )
+
     assert isinstance(panel._ctrl, PlotController)
 
 
@@ -97,9 +101,10 @@ def test_set_dark_mode_updates_controller(panel):
 
 # ── No-data draw calls ────────────────────────────────────────────────────
 
+
 def test_set_sites_none_does_not_raise(panel):
     panel._ctrl.set_sites(None)
-    panel._redraw_all()   # must not raise
+    panel._redraw_all()  # must not raise
 
 
 def test_set_selected_station_no_data(panel):
@@ -132,6 +137,7 @@ def test_redraw_phase_tensor_strip_does_not_raise(panel):
 
 # ── Freq range signal ─────────────────────────────────────────────────────
 
+
 def test_freq_range_change_updates_controller(panel):
     panel._on_freq_range_changed(1.0, 1000.0)
     T_min = 1.0 / 1000.0
@@ -142,6 +148,7 @@ def test_freq_range_change_updates_controller(panel):
 
 
 # ── Tab switching ─────────────────────────────────────────────────────────
+
 
 def test_tab_switch_does_not_raise(panel):
     for i in range(6):

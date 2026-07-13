@@ -206,9 +206,7 @@ class OtherSECT(EDIComponentBase):
             val = vals.get(key, None)
             if val in (None, "", "None"):
                 continue
-            out.append(
-                f"  {key.upper()}={str(val).upper()}\n"
-            )
+            out.append(f"  {key.upper()}={str(val).upper()}\n")
 
         for k, v in sorted(self.extra.items()):
             if v in (None, "", "None"):
@@ -335,7 +333,6 @@ class OtherIO(EDIComponentBase):
         for k, v in kws.items():
             setattr(self, k, v)
 
-
     @classmethod
     def from_file(
         cls,
@@ -359,15 +356,11 @@ class OtherIO(EDIComponentBase):
                     break
             if start_line is None:
                 for i, ln in enumerate(lines):
-                    if ln.upper().lstrip().startswith(
-                        ">=OTHERSECT"
-                    ):
+                    if ln.upper().lstrip().startswith(">=OTHERSECT"):
                         start_line = i + 1
                         break
         if start_line is None:
-            raise EdIDataError(
-                "No OTHER data blocks found."
-            )
+            raise EdIDataError("No OTHER data blocks found.")
 
         inst = cls(verbose=verbose, logger=logger)
         i = start_line
@@ -390,9 +383,7 @@ class OtherIO(EDIComponentBase):
 
         # NEW: raise when no blocks were collected
         if not inst.blocks:
-            raise EdIDataError(
-                "No OTHER data blocks found."
-            )
+            raise EdIDataError("No OTHER data blocks found.")
 
         return inst
 
@@ -483,11 +474,7 @@ class OtherIO(EDIComponentBase):
             n_hint = (
                 blk.nitems_hint
                 if blk.nitems_hint is not None
-                else (
-                    len(blk.values)
-                    if blk.values
-                    else len(blk.raw_lines)
-                )
+                else (len(blk.values) if blk.values else len(blk.raw_lines))
             )
             out.append(" ".join(head) + f" // {n_hint}\n")
 
@@ -532,6 +519,7 @@ class OtherMixin:
     ----------
     .. [1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
     """
+
     @classmethod
     def read_other_header(
         cls,

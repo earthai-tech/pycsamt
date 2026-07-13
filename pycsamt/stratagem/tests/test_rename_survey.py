@@ -95,15 +95,17 @@ def _make_coord_csv(tmp_path: Path, n: int = 4) -> Path:
 
     rows = []
     for i in range(n):
-        easting  = 362_589.0 + i * 20.0
+        easting = 362_589.0 + i * 20.0
         northing = 2_850_835.0 - i * 20.0
-        rows.append({
-            "stations": f"K0+{i * 20:06.4f}",
-            "longitude": northing,
-            "latitude":  easting,
-            "elev": 261.94 + i,
-            "step": i * 20.0,
-        })
+        rows.append(
+            {
+                "stations": f"K0+{i * 20:06.4f}",
+                "longitude": northing,
+                "latitude": easting,
+                "elev": 261.94 + i,
+                "step": i * 20.0,
+            }
+        )
     csv = tmp_path / "coords.csv"
     pd.DataFrame(rows).to_csv(csv, index=False)
     return csv
@@ -111,6 +113,7 @@ def _make_coord_csv(tmp_path: Path, n: int = 4) -> Path:
 
 def _load_edis(tmp_path: Path, n: int = 4):
     from pycsamt.stratagem.io import EDIBatch
+
     _make_edi_dir(tmp_path, n=n)
     return EDIBatch(tmp_path / "edis").fit().edi_objects_
 
@@ -118,6 +121,7 @@ def _load_edis(tmp_path: Path, n: int = 4):
 # ---------------------------------------------------------------------------
 # EDIRenamer
 # ---------------------------------------------------------------------------
+
 
 class TestEDIRenamer:
     def test_fit_returns_self(self, tmp_path):
@@ -171,7 +175,9 @@ class TestEDIRenamer:
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
         EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
-        rn2 = EDIRenamer(basename="T.", overwrite=False).fit(tmp_path / "edis", out)
+        rn2 = EDIRenamer(basename="T.", overwrite=False).fit(
+            tmp_path / "edis", out
+        )
         assert len(rn2.skipped_) == 2
 
     def test_overwrite_replaces(self, tmp_path):
@@ -180,7 +186,9 @@ class TestEDIRenamer:
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
         EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
-        rn = EDIRenamer(basename="T.", overwrite=True).fit(tmp_path / "edis", out)
+        rn = EDIRenamer(basename="T.", overwrite=True).fit(
+            tmp_path / "edis", out
+        )
         assert len(rn.skipped_) == 0
 
     def test_missing_source_raises(self, tmp_path):
@@ -199,6 +207,7 @@ class TestEDIRenamer:
 # ---------------------------------------------------------------------------
 # EDIWriter
 # ---------------------------------------------------------------------------
+
 
 class TestEDIWriter:
     def test_fit_returns_self(self, tmp_path):
@@ -240,6 +249,7 @@ class TestEDIWriter:
 # StratagemSurvey
 # ---------------------------------------------------------------------------
 
+
 class TestStratagemSurvey:
     def _setup(self, tmp_path: Path, n: int = 5):
         _make_edi_dir(tmp_path, n=n)
@@ -274,7 +284,11 @@ class TestStratagemSurvey:
         from pycsamt.stratagem.survey import StratagemSurvey
 
         edi_dir, csv = self._setup(tmp_path)
-        sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit().run_qc(include_skew=False)
+        sv = (
+            StratagemSurvey(edi_dir, csv, epsg=32649)
+            .fit()
+            .run_qc(include_skew=False)
+        )
         assert sv.qc_ is not None
         assert len(sv.qc_.report_) == 5
 

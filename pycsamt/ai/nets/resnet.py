@@ -18,6 +18,7 @@ Liu, W. et al. (2021). Deep learning AMT inversion using
 residual-based deep convolutional neural network.
 *Journal of Geophysics and Engineering*, 18(6), 876-888.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -29,6 +30,7 @@ def _require_torch():
     try:
         import torch
         import torch.nn as nn
+
         return torch, nn
     except ImportError:
         raise ImportError(
@@ -47,19 +49,22 @@ try:
 
     class _ResBlock(nn.Module):
         """Basic 1-D residual block."""
-        def __init__(
-            self, in_ch, out_ch, stride=1
-        ):
+
+        def __init__(self, in_ch, out_ch, stride=1):
             super().__init__()
             self.conv1 = nn.Conv1d(
-                in_ch, out_ch, 3,
+                in_ch,
+                out_ch,
+                3,
                 stride=stride,
                 padding=1,
                 bias=False,
             )
             self.bn1 = nn.BatchNorm1d(out_ch)
             self.conv2 = nn.Conv1d(
-                out_ch, out_ch, 3,
+                out_ch,
+                out_ch,
+                3,
                 padding=1,
                 bias=False,
             )
@@ -67,7 +72,9 @@ try:
             if stride != 1 or in_ch != out_ch:
                 self.shortcut = nn.Sequential(
                     nn.Conv1d(
-                        in_ch, out_ch, 1,
+                        in_ch,
+                        out_ch,
+                        1,
                         stride=stride,
                         bias=False,
                     ),
@@ -98,8 +105,11 @@ try:
             super().__init__()
             self.stem = nn.Sequential(
                 nn.Conv1d(
-                    1, channels[0], 7,
-                    padding=3, bias=False,
+                    1,
+                    channels[0],
+                    7,
+                    padding=3,
+                    bias=False,
                 ),
                 nn.BatchNorm1d(channels[0]),
                 nn.ReLU(inplace=True),
@@ -108,13 +118,8 @@ try:
             in_ch = channels[0]
             for si, out_ch in enumerate(channels):
                 for bi in range(n_blocks):
-                    stride = (
-                        2 if (si > 0 and bi == 0)
-                        else 1
-                    )
-                    stage_list.append(
-                        _ResBlock(in_ch, out_ch, stride)
-                    )
+                    stride = 2 if (si > 0 and bi == 0) else 1
+                    stage_list.append(_ResBlock(in_ch, out_ch, stride))
                     in_ch = out_ch
             self.stages = nn.Sequential(*stage_list)
             self.pool = nn.AdaptiveAvgPool1d(1)
@@ -134,6 +139,7 @@ except ImportError:
 
 
 # ── Factory class ─────────────────────────────────
+
 
 class ResNet1DNet:
     r"""
@@ -175,7 +181,8 @@ class ResNet1DNet:
     def build(self):
         """Return the ``nn.Module``."""
         return _build_resnet1d(
-            self.n_features, self.n_out,
+            self.n_features,
+            self.n_out,
             channels=self.channels,
             dropout=self.dropout,
             n_blocks=self.n_blocks,
@@ -193,10 +200,7 @@ class ResNet1DNet:
 
 # ── Internal build ────────────────────────────────
 
-def _build_resnet1d(
-    n_features, n_out, channels, dropout, n_blocks
-):
+
+def _build_resnet1d(n_features, n_out, channels, dropout, n_blocks):
     _require_torch()
-    return _ResNet1DModule(
-        tuple(channels), n_blocks, dropout, n_out
-    )
+    return _ResNet1DModule(tuple(channels), n_blocks, dropout, n_out)

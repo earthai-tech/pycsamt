@@ -5,6 +5,7 @@
 Uses numpy (present in the env) but never any embedding service — the
 backend resolution path is checked to *decline* without a key.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -23,7 +24,6 @@ from pycsamt.assistant.rag.embeddings import (
 
 
 class TestRRF(unittest.TestCase):
-
     def test_fuses_and_rewards_agreement(self):
         # Item 1 is rank-0 in both lists → must score highest.
         fused = rrf_fuse([[1, 0, 2], [1, 2, 0]])
@@ -32,9 +32,9 @@ class TestRRF(unittest.TestCase):
 
     def test_weights_bias_a_ranker(self):
         base = rrf_fuse([[0], [1]])
-        self.assertAlmostEqual(base[0], base[1])          # symmetric
+        self.assertAlmostEqual(base[0], base[1])  # symmetric
         weighted = rrf_fuse([[0], [1]], weights=[3.0, 1.0])
-        self.assertGreater(weighted[0], weighted[1])       # ranker 0 wins
+        self.assertGreater(weighted[0], weighted[1])  # ranker 0 wins
 
     def test_absent_items_contribute_nothing(self):
         fused = rrf_fuse([[0, 1]])
@@ -42,7 +42,6 @@ class TestRRF(unittest.TestCase):
 
 
 class TestCosine(unittest.TestCase):
-
     def test_identical_vectors_score_one(self):
         mat = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
         s = cosine_scores(np.array([1.0, 0.0]), mat)
@@ -51,12 +50,11 @@ class TestCosine(unittest.TestCase):
 
     def test_handles_unnormalised_query(self):
         mat = np.array([[1.0, 0.0]], dtype=np.float32)
-        s = cosine_scores(np.array([5.0, 0.0]), mat)   # not unit-norm
+        s = cosine_scores(np.array([5.0, 0.0]), mat)  # not unit-norm
         self.assertAlmostEqual(float(s[0]), 1.0, places=5)
 
 
 class TestVectorStore(unittest.TestCase):
-
     def test_roundtrip(self):
         mat = np.random.RandomState(0).rand(4, 8).astype(np.float32)
         p = Path(tempfile.mkdtemp()) / "e.npz"
@@ -72,7 +70,6 @@ class TestVectorStore(unittest.TestCase):
 
 
 class TestBackendResolution(unittest.TestCase):
-
     def test_no_key_declines(self):
         # Without a key, dense retrieval must stay off (returns None).
         self.assertIsNone(resolve_embedding_backend(api_key=None))

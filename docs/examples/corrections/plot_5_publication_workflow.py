@@ -26,12 +26,15 @@ from pycsamt.emtools import (
 
 raw_sites = demo_line("L18PLT")
 
-step1 = correct_ss_ama(raw_sites, recursive=False)                 # static shift
-step2 = smooth_rho_phase(step1, components="offdiag", robust=True,
-                         recursive=False)                          # denoise
-final = rotate_to_strike(step2, recursive=False)                  # rotate
+step1 = correct_ss_ama(raw_sites, recursive=False)  # static shift
+step2 = smooth_rho_phase(
+    step1, components="offdiag", robust=True, recursive=False
+)  # denoise
+final = rotate_to_strike(step2, recursive=False)  # rotate
 
-print("workflow: raw -> static shift -> rho/phi smoothing -> rotate to strike")
+print(
+    "workflow: raw -> static shift -> rho/phi smoothing -> rotate to strike"
+)
 raw = curves(raw_sites, "rho")
 fin = curves(final, "rho")
 print(f"{len(raw)} stations processed")
@@ -44,10 +47,15 @@ print(f"{len(raw)} stations processed")
 
 stations = list(raw)
 pick = [stations[3], stations[len(stations) // 2], stations[-4]]
-plot_before_after(raw, fin, pick, quantity="rho",
-                  labels=("raw", "fully corrected"),
-                  colors=("#b0b7c3", "#c44536"),
-                  title="Raw vs fully corrected apparent resistivity")
+plot_before_after(
+    raw,
+    fin,
+    pick,
+    quantity="rho",
+    labels=("raw", "fully corrected"),
+    colors=("#b0b7c3", "#c44536"),
+    title="Raw vs fully corrected apparent resistivity",
+)
 
 # %%
 # ... and phase
@@ -55,10 +63,15 @@ plot_before_after(raw, fin, pick, quantity="rho",
 
 raw_ph = curves(raw_sites, "phase")
 fin_ph = curves(final, "phase")
-plot_before_after(raw_ph, fin_ph, pick, quantity="phase",
-                  labels=("raw", "fully corrected"),
-                  colors=("#b0b7c3", "#c44536"),
-                  title="Raw vs fully corrected phase")
+plot_before_after(
+    raw_ph,
+    fin_ph,
+    pick,
+    quantity="phase",
+    labels=("raw", "fully corrected"),
+    colors=("#b0b7c3", "#c44536"),
+    title="Raw vs fully corrected phase",
+)
 
 # %%
 # The whole line, before and after
@@ -76,18 +89,28 @@ periods = raw[names[0]][0]
 R = np.column_stack([np.log10(raw[s][1]) for s in names])
 F = np.column_stack([np.log10(fin[s][1]) for s in names])
 vmin, vmax = np.nanpercentile(np.concatenate([R, F]), [3, 97])
-fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True,
-                         constrained_layout=True)
+fig, axes = plt.subplots(
+    2, 1, figsize=(11, 7), sharex=True, constrained_layout=True
+)
 for ax, Z, ttl in [(axes[0], R, "raw"), (axes[1], F, "fully corrected")]:
-    im = ax.pcolormesh(np.arange(len(names)), np.log10(periods), Z,
-                       cmap="Spectral_r", vmin=vmin, vmax=vmax, shading="auto")
+    im = ax.pcolormesh(
+        np.arange(len(names)),
+        np.log10(periods),
+        Z,
+        cmap="Spectral_r",
+        vmin=vmin,
+        vmax=vmax,
+        shading="auto",
+    )
     ax.set_ylabel(r"$\log_{10}$ period (s)")
     ax.set_title(ttl, fontsize=10)
 axes[1].set_xticks(range(len(names)))
 axes[1].set_xticklabels(names, rotation=90, fontsize=6)
 fig.colorbar(im, ax=axes, label=r"$\log_{10}\rho_a$", shrink=0.8)
-fig.suptitle("Apparent-resistivity pseudo-section — before and after correction",
-             fontsize=12)
+fig.suptitle(
+    "Apparent-resistivity pseudo-section — before and after correction",
+    fontsize=12,
+)
 
 # %%
 # What the corrections did, quantified
@@ -103,17 +126,23 @@ fig.suptitle("Apparent-resistivity pseudo-section — before and after correctio
 
 from pycsamt.emtools.qc import build_qc_table
 
-moved = np.median([
-    np.nanmedian(np.abs(np.log10(fin[s][1]) - np.log10(raw[s][1])))
-    for s in names
-])
+moved = np.median(
+    [
+        np.nanmedian(np.abs(np.log10(fin[s][1]) - np.log10(raw[s][1])))
+        for s in names
+    ]
+)
 qc_raw = build_qc_table(raw_sites)
 qc_fin = build_qc_table(final)
 print(f"median |dlog10 rho_a| moved by the workflow : {moved:.2f}")
-print(f"median SNR (preserved)                      : "
-      f"{qc_raw['snr_med'].mean():.1f} -> {qc_fin['snr_med'].mean():.1f}")
-print(f"good-frequency fraction (preserved)         : "
-      f"{qc_raw['frac_ok'].mean():.2f} -> {qc_fin['frac_ok'].mean():.2f}")
+print(
+    f"median SNR (preserved)                      : "
+    f"{qc_raw['snr_med'].mean():.1f} -> {qc_fin['snr_med'].mean():.1f}"
+)
+print(
+    f"good-frequency fraction (preserved)         : "
+    f"{qc_raw['frac_ok'].mean():.2f} -> {qc_fin['frac_ok'].mean():.2f}"
+)
 
 # %%
 # **Takeaway.** Four correction waves — static shift, noise removal, source

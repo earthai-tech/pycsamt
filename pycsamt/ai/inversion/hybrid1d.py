@@ -59,6 +59,7 @@ HybridInverter1D(n_stations=5, fitted)
 >>> models = inv.predict()              # doctest: +SKIP
 >>> df = inv.convergence_curves()       # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -137,9 +138,7 @@ class HybridInverter1D(BaseHybridInverter):
         super().__init__(device=device)
         self.solver = solver
         self.max_iter = int(max_iter)
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.lr = float(lr)
         self.comp = comp
         self.n_freqs = int(n_freqs)
@@ -147,9 +146,7 @@ class HybridInverter1D(BaseHybridInverter):
         self.on_dup = on_dup
         self.verbose = verbose
 
-        self._ai_inv = self._load_ai_inverter(
-            ai_inverter
-        )
+        self._ai_inv = self._load_ai_inverter(ai_inverter)
         self._obs: list[SiteObs1D] = sites_to_obs_1d(
             sites,
             comp=comp,
@@ -194,14 +191,9 @@ class HybridInverter1D(BaseHybridInverter):
         self._stage2 = []
         n_layers = self._ai_inv.n_layers
 
-        for i, (obs, params) in enumerate(
-            zip(self._obs, init_params)
-        ):
+        for i, (obs, params) in enumerate(zip(self._obs, init_params)):
             if verbose:
-                print(
-                    f"[{i + 1}/{len(self._obs)}]"
-                    f" Refining {obs.name} ..."
-                )
+                print(f"[{i + 1}/{len(self._obs)}] Refining {obs.name} ...")
             # Unpack AI output: [log_rho..., log_thick...]
             init_lr = params[:n_layers]
             init_lt = params[n_layers:]
@@ -248,9 +240,7 @@ class HybridInverter1D(BaseHybridInverter):
         list of LayeredModel
         """
         if not self._stage1:
-            raise RuntimeError(
-                "Call fit() to populate stage-1 models."
-            )
+            raise RuntimeError("Call fit() to populate stage-1 models.")
         return self._results_to_models(self._stage1)
 
     def convergence_curves(self):
@@ -266,12 +256,8 @@ class HybridInverter1D(BaseHybridInverter):
         import pandas as pd
 
         rows = []
-        for obs, res in zip(
-            self._obs, self._stage2
-        ):
-            for ep, val in enumerate(
-                res["history"], start=1
-            ):
+        for obs, res in zip(self._obs, self._stage2):
+            for ep, val in enumerate(res["history"], start=1):
                 rows.append(
                     {
                         "station": obs.name,
@@ -305,15 +291,8 @@ class HybridInverter1D(BaseHybridInverter):
         )
         from pycsamt.forward.synthetic import LayeredModel
 
-        results = (
-            self._stage2 if stage == 2
-            else self._stage1
-        )
-        Fwd = (
-            MT1DForward
-            if self.solver == "mt1d"
-            else CSAMT1DForward
-        )
+        results = self._stage2 if stage == 2 else self._stage1
+        Fwd = MT1DForward if self.solver == "mt1d" else CSAMT1DForward
         rows = []
         for obs, res in zip(self._obs, results):
             rho = 10.0 ** res["log_rho"]
@@ -327,12 +306,8 @@ class HybridInverter1D(BaseHybridInverter):
                 rho_pred = resp.rho_a
                 ph_pred = resp.phase
             except Exception:
-                rho_pred = np.full_like(
-                    obs.rho_obs, np.nan
-                )
-                ph_pred = np.full_like(
-                    obs.phase_obs, np.nan
-                )
+                rho_pred = np.full_like(obs.rho_obs, np.nan)
+                ph_pred = np.full_like(obs.phase_obs, np.nan)
             for k in range(len(obs.freq)):
                 rows.append(
                     {
@@ -368,23 +343,18 @@ class HybridInverter1D(BaseHybridInverter):
         if isinstance(ai_inverter, EMInverter1D):
             if not ai_inverter._is_fitted:
                 raise ValueError(
-                    "ai_inverter must be a fitted "
-                    "EMInverter1D instance."
+                    "ai_inverter must be a fitted EMInverter1D instance."
                 )
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
-            return EMInverter1D.load(
-                Path(ai_inverter)
-            )
+            return EMInverter1D.load(Path(ai_inverter))
         raise TypeError(
             "ai_inverter must be a fitted "
             "EMInverter1D or a path to a checkpoint; "
             f"got {type(ai_inverter)!r}."
         )
 
-    def _run_stage1(
-        self, *, verbose: bool
-    ) -> list[np.ndarray]:
+    def _run_stage1(self, *, verbose: bool) -> list[np.ndarray]:
         """
         Apply EMInverter1D to all stations.
 
@@ -410,13 +380,9 @@ class HybridInverter1D(BaseHybridInverter):
             )
         # Use obs_to_features_1d to avoid running
         # ensure_sites on SiteObs1D dataclasses.
-        X, _, _ = obs_to_features_1d(
-            self._obs, n_freqs=_n_freqs
-        )
+        X, _, _ = obs_to_features_1d(self._obs, n_freqs=_n_freqs)
         # predict returns (n_stations, 2*n_layers-1)
-        params = self._ai_inv.predict(
-            X, as_log_rho=True
-        )
+        params = self._ai_inv.predict(X, as_log_rho=True)
         # Store as stage1 results (compatible format)
         self._stage1 = []
         for _i, row in enumerate(params):
@@ -433,9 +399,7 @@ class HybridInverter1D(BaseHybridInverter):
             )
         return list(params)
 
-    def _results_to_models(
-        self, results: list[dict]
-    ) -> list:
+    def _results_to_models(self, results: list[dict]) -> list:
         """Convert result dicts to LayeredModel list."""
         from pycsamt.forward.synthetic import LayeredModel
 
@@ -454,9 +418,7 @@ class HybridInverter1D(BaseHybridInverter):
         return models
 
     def __repr__(self) -> str:
-        status = (
-            "fitted" if self._is_fitted else "unfitted"
-        )
+        status = "fitted" if self._is_fitted else "unfitted"
         return (
             f"HybridInverter1D("
             f"n_stations={self.n_sites}, "

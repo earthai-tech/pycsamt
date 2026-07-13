@@ -17,6 +17,7 @@ Layout
   ─────────────────────────┴───────────────────────
   Per-station table (station | strike° | IQR | n)
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -42,22 +43,24 @@ from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
+
 class _StrikeWorker(QThread):
-    done   = Signal(object)   # DataFrame
-    error  = Signal(str)
+    done = Signal(object)  # DataFrame
+    error = Signal(str)
 
     def __init__(self, sites, band, w_sweep, w_pt):
         super().__init__()
-        self._sites   = sites
-        self._band    = band
+        self._sites = sites
+        self._band = band
         self._w_sweep = w_sweep
-        self._w_pt    = w_pt
+        self._w_pt = w_pt
 
     def run(self):
         try:
             from pycsamt.emtools.strike import (
                 estimate_strike_consensus,
             )
+
             df = estimate_strike_consensus(
                 self._sites,
                 band=self._band,
@@ -71,6 +74,7 @@ class _StrikeWorker(QThread):
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class StrikeAnalyzerDialog(QDialog):
     """
@@ -87,9 +91,9 @@ class StrikeAnalyzerDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Strike Analyzer")
         self.setMinimumSize(860, 560)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
-        self._df     = None
+        self._df = None
         self._build_ui()
 
     # ── Build ─────────────────────────────────────────────────────────────────
@@ -186,8 +190,10 @@ class StrikeAnalyzerDialog(QDialog):
 
         band = (self._band_min.value(), self._band_max.value())
         self._worker = _StrikeWorker(
-            self._sites, band,
-            self._w_sweep.value(), self._w_pt.value(),
+            self._sites,
+            band,
+            self._w_sweep.value(),
+            self._w_pt.value(),
         )
         self._worker.done.connect(self._on_done)
         self._worker.error.connect(self._on_error)
@@ -197,7 +203,9 @@ class StrikeAnalyzerDialog(QDialog):
         self._df = df
         self._run_btn.setEnabled(True)
         if df.empty:
-            self._status_lbl.setText("No strike estimates — check data coverage.")
+            self._status_lbl.setText(
+                "No strike estimates — check data coverage."
+            )
             return
         self._status_lbl.setText(f"Done — {len(df)} stations.")
         self._fill_table(df)
@@ -216,14 +224,20 @@ class StrikeAnalyzerDialog(QDialog):
             self._table.insertRow(r)
             ang = row.get("ang", float("nan"))
             iqr = row.get("iqr", float("nan"))
-            n   = int(row.get("n",  0))
-            self._table.setItem(r, 0, QTableWidgetItem(str(row.get("station", ""))))
-            self._table.setItem(r, 1, QTableWidgetItem(
-                f"{ang:.1f}" if np.isfinite(ang) else "—"
-            ))
-            self._table.setItem(r, 2, QTableWidgetItem(
-                f"{iqr:.1f}" if np.isfinite(iqr) else "—"
-            ))
+            n = int(row.get("n", 0))
+            self._table.setItem(
+                r, 0, QTableWidgetItem(str(row.get("station", "")))
+            )
+            self._table.setItem(
+                r,
+                1,
+                QTableWidgetItem(f"{ang:.1f}" if np.isfinite(ang) else "—"),
+            )
+            self._table.setItem(
+                r,
+                2,
+                QTableWidgetItem(f"{iqr:.1f}" if np.isfinite(iqr) else "—"),
+            )
             self._table.setItem(r, 3, QTableWidgetItem(str(n)))
 
     def _draw_rose(self, df) -> None:
@@ -236,19 +250,32 @@ class StrikeAnalyzerDialog(QDialog):
 
         # Rose histogram (0-180° because strike is undirected)
         bins = np.linspace(0, np.pi, 19)
-        rad  = np.deg2rad(angles % 180)
+        rad = np.deg2rad(angles % 180)
         counts, edges = np.histogram(rad, bins=bins)
         # Mirror for full rose (0-360)
         width = edges[1] - edges[0]
-        ax.bar(edges[:-1], counts, width=width, color="#1e66f5",
-               alpha=0.75, align="edge")
-        ax.bar(edges[:-1] + np.pi, counts, width=width, color="#1e66f5",
-               alpha=0.75, align="edge")
+        ax.bar(
+            edges[:-1],
+            counts,
+            width=width,
+            color="#1e66f5",
+            alpha=0.75,
+            align="edge",
+        )
+        ax.bar(
+            edges[:-1] + np.pi,
+            counts,
+            width=width,
+            color="#1e66f5",
+            alpha=0.75,
+            align="edge",
+        )
 
         consensus = float(np.nanmedian(angles % 180))
         ax.set_title(
             f"Regional strike  —  consensus {consensus:.1f}°",
-            fontsize=9, pad=12,
+            fontsize=9,
+            pad=12,
         )
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)

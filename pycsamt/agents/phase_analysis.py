@@ -101,9 +101,9 @@ class PhaseAnalysisAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.skew_th   = skew_th
+        self.skew_th = skew_th
         self.ellipt_th = ellipt_th
-        self.band      = band
+        self.band = band
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -112,19 +112,22 @@ class PhaseAnalysisAgent(BaseAgent):
 
         # ── resolve sites ─────────────────────────────────────────────────────
         from ..emtools._core import ensure_sites
+
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        output_dir     = input_data.get("output_dir")
-        period_range   = input_data.get("period_range")
-        run_mohr       = bool(input_data.get("run_mohr", False))
-        run_fingerprint= bool(input_data.get("run_fingerprint", True))
-        band           = period_range or self.band
+        output_dir = input_data.get("output_dir")
+        period_range = input_data.get("period_range")
+        run_mohr = bool(input_data.get("run_mohr", False))
+        run_fingerprint = bool(input_data.get("run_fingerprint", True))
+        band = period_range or self.band
 
         # ── phase tensor table ────────────────────────────────────────────────
         from ..emtools.dimensionality import (
@@ -141,7 +144,7 @@ class PhaseAnalysisAgent(BaseAgent):
             plot_phase_tensor_rose,
         )
 
-        pt_table  = None
+        pt_table = None
         dim_table = None
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
@@ -180,10 +183,12 @@ class PhaseAnalysisAgent(BaseAgent):
 
         # ── strike estimation ─────────────────────────────────────────────────
         strike_consensus = np.nan
-        strike_iqr       = np.nan
+        strike_iqr = np.nan
         try:
             st_result = estimate_strike_consensus(
-                sites, band=band, verbose=0,
+                sites,
+                band=band,
+                verbose=0,
             )
             # returns a DataFrame with columns: station, ang, iqr, lo, hi, n
             if hasattr(st_result, "ang"):
@@ -210,10 +215,13 @@ class PhaseAnalysisAgent(BaseAgent):
                 figsize=(10.0, 5.5),
                 verbose=0,
             )
-            fig = ax_pt.get_figure() if hasattr(ax_pt, "get_figure") else ax_pt
+            fig = (
+                ax_pt.get_figure() if hasattr(ax_pt, "get_figure") else ax_pt
+            )
             figures["pt_psection"] = fig
-            p = self._save_figure(fig, output_dir, "pt_psection",
-                                  warnings_list=warnings)
+            p = self._save_figure(
+                fig, output_dir, "pt_psection", warnings_list=warnings
+            )
             if p:
                 fig_paths["pt_psection"] = p
         except Exception as exc:
@@ -223,12 +231,20 @@ class PhaseAnalysisAgent(BaseAgent):
         try:
             fig_rose = plot_phase_tensor_rose(sites, band=band, verbose=0)
             if fig_rose is not None:
-                f = fig_rose if hasattr(fig_rose, "savefig") else (
-                    fig_rose.get_figure() if hasattr(fig_rose, "get_figure") else None)
+                f = (
+                    fig_rose
+                    if hasattr(fig_rose, "savefig")
+                    else (
+                        fig_rose.get_figure()
+                        if hasattr(fig_rose, "get_figure")
+                        else None
+                    )
+                )
                 if f is not None:
                     figures["pt_rose"] = f
-                    p = self._save_figure(f, output_dir, "pt_rose",
-                                          warnings_list=warnings)
+                    p = self._save_figure(
+                        f, output_dir, "pt_rose", warnings_list=warnings
+                    )
                     if p:
                         fig_paths["pt_rose"] = p
         except Exception as exc:
@@ -238,12 +254,23 @@ class PhaseAnalysisAgent(BaseAgent):
         try:
             fig_strike = plot_strike_analysis(sites, band=band, verbose=0)
             if fig_strike is not None:
-                f = fig_strike if hasattr(fig_strike, "savefig") else (
-                    fig_strike.get_figure() if hasattr(fig_strike, "get_figure") else None)
+                f = (
+                    fig_strike
+                    if hasattr(fig_strike, "savefig")
+                    else (
+                        fig_strike.get_figure()
+                        if hasattr(fig_strike, "get_figure")
+                        else None
+                    )
+                )
                 if f is not None:
                     figures["strike_analysis"] = f
-                    p = self._save_figure(f, output_dir, "strike_analysis",
-                                          warnings_list=warnings)
+                    p = self._save_figure(
+                        f,
+                        output_dir,
+                        "strike_analysis",
+                        warnings_list=warnings,
+                    )
                     if p:
                         fig_paths["strike_analysis"] = p
         except Exception as exc:
@@ -257,11 +284,19 @@ class PhaseAnalysisAgent(BaseAgent):
                 ellipt_th=self.ellipt_th,
                 verbose=0,
             )
-            fig = ax_dim.get_figure() if hasattr(ax_dim, "get_figure") else ax_dim
+            fig = (
+                ax_dim.get_figure()
+                if hasattr(ax_dim, "get_figure")
+                else ax_dim
+            )
             if fig is not None:
                 figures["dim_confidence"] = fig
-                p = self._save_figure(fig, output_dir, "dim_confidence_grid",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig,
+                    output_dir,
+                    "dim_confidence_grid",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["dim_confidence"] = p
         except Exception as exc:
@@ -273,14 +308,19 @@ class PhaseAnalysisAgent(BaseAgent):
                 from ..emtools.advanced import (
                     plot_survey_fingerprint,
                 )
+
                 fig_fp = plot_survey_fingerprint(
                     sites,
                     quantities=["skew", "ellipt", "theta", "s1"],
                     period_range=band,
                 )
                 figures["survey_fingerprint"] = fig_fp
-                p = self._save_figure(fig_fp, output_dir, "survey_fingerprint",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_fp,
+                    output_dir,
+                    "survey_fingerprint",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["survey_fingerprint"] = p
             except Exception as exc:
@@ -292,12 +332,19 @@ class PhaseAnalysisAgent(BaseAgent):
                 from ..emtools.advanced import (
                     plot_impedance_mohr_circles,
                 )
+
                 fig_mohr = plot_impedance_mohr_circles(
-                    sites, n_periods=8, verbose=0,
+                    sites,
+                    n_periods=8,
+                    verbose=0,
                 )
                 figures["mohr_circles"] = fig_mohr
-                p = self._save_figure(fig_mohr, output_dir, "mohr_circles",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_mohr,
+                    output_dir,
+                    "mohr_circles",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["mohr_circles"] = p
             except Exception as exc:
@@ -309,9 +356,9 @@ class PhaseAnalysisAgent(BaseAgent):
         if self.api_key:
             prompt = (
                 f"Phase tensor analysis summary:\n"
-                f"  1-D observations: {n_1d} ({100*n_1d/n_obs:.0f}%)\n"
-                f"  2-D observations: {n_2d} ({100*n_2d/n_obs:.0f}%)\n"
-                f"  3-D observations: {n_3d} ({100*n_3d/n_obs:.0f}%)\n"
+                f"  1-D observations: {n_1d} ({100 * n_1d / n_obs:.0f}%)\n"
+                f"  2-D observations: {n_2d} ({100 * n_2d / n_obs:.0f}%)\n"
+                f"  3-D observations: {n_3d} ({100 * n_3d / n_obs:.0f}%)\n"
                 f"  Consensus strike: {strike_consensus:.1f}°  "
                 f"  IQR: {strike_iqr:.1f}°\n"
                 f"  Skew threshold: {self.skew_th}°, "
@@ -334,16 +381,16 @@ class PhaseAnalysisAgent(BaseAgent):
                 f"{len(figures)} figure(s) produced."
             ),
             data={
-                "pt_table":          pt_table,
-                "dim_table":         dim_table,
-                "n_1d":              n_1d,
-                "n_2d":              n_2d,
-                "n_3d":              n_3d,
-                "strike_consensus":  float(strike_consensus),
-                "strike_iqr":        float(strike_iqr),
-                "figures":           figures,
-                "figure_paths":      fig_paths,
-                "sites":             sites,
+                "pt_table": pt_table,
+                "dim_table": dim_table,
+                "n_1d": n_1d,
+                "n_2d": n_2d,
+                "n_3d": n_3d,
+                "strike_consensus": float(strike_consensus),
+                "strike_iqr": float(strike_iqr),
+                "figures": figures,
+                "figure_paths": fig_paths,
+                "sites": sites,
             },
             warnings=warnings,
             llm_interpretation=interp,

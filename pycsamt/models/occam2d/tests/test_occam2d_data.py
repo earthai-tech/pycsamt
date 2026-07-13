@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-DATA_DIR  = Path(__file__).parents[4] / "data" / "occam2D"
+DATA_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 DATA_FILE = DATA_DIR / "OccamDataFile.dat"
 
 pytestmark = pytest.mark.skipif(
@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def data():
     from pycsamt.models.occam2d.data import OccamData
+
     return OccamData.read(DATA_FILE)
 
 
@@ -94,9 +95,9 @@ def test_data_type_codes_present(data):
 
 def test_data_first_row(data):
     row = data.data_blocks[0]
-    assert int(row[0]) == 1   # site 1
-    assert int(row[1]) == 1   # freq 1
-    assert int(row[2]) == 5   # type RhoTM
+    assert int(row[0]) == 1  # site 1
+    assert int(row[1]) == 1  # freq 1
+    assert int(row[2]) == 5  # type RhoTM
     assert math.isclose(row[3], 4.8243, rel_tol=1e-3)
     assert math.isclose(row[4], 6.5578, rel_tol=1e-3)
 
@@ -105,8 +106,10 @@ def test_data_first_row(data):
 # Data type codes dict (independent of sample data)
 # -----------------------------------------------------------------------
 
+
 def test_data_file_type_code_keys():
     from pycsamt.models.occam2d.data import DATA_TYPE_CODES
+
     assert "RhoTE" in DATA_TYPE_CODES
     assert "PhsTM" in DATA_TYPE_CODES
     assert DATA_TYPE_CODES["RhoTE"] == 1
@@ -117,8 +120,10 @@ def test_data_file_type_code_keys():
 # Defaults
 # -----------------------------------------------------------------------
 
+
 def test_data_defaults():
     from pycsamt.models.occam2d.data import OccamData
+
     d = OccamData()
     assert d.n_sites == 0
     assert d.n_frequencies == 0
@@ -129,14 +134,17 @@ def test_data_defaults():
 # Error handling
 # -----------------------------------------------------------------------
 
+
 def test_missing_file_raises():
     from pycsamt.models.occam2d.data import OccamData
+
     with pytest.raises(FileNotFoundError):
         OccamData.read("/nonexistent/OccamDataFile.dat")
 
 
 def test_wrong_format_raises(tmp_path):
     from pycsamt.models.occam2d.data import OccamData
+
     bad = tmp_path / "bad.dat"
     bad.write_text("FORMAT: WRONG_FORMAT\nTITLE: test\n")
     with pytest.raises(ValueError, match="OCCAM2MTDATA"):

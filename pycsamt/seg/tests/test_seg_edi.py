@@ -12,12 +12,9 @@ from pycsamt.z.z import Z
 
 # ---------------- helpers to craft minimal EDI ----------------
 
+
 def _mk_head(station: str = "S1") -> str:
-    return (
-        ">HEAD\n"
-        f"  DATAID={station}\n"
-        "  EMPTY=1.0E+32\n"
-    )
+    return f">HEAD\n  DATAID={station}\n  EMPTY=1.0E+32\n"
 
 
 def _mk_info() -> str:
@@ -38,11 +35,7 @@ def _mk_emapsect(sectid: str = "S1") -> str:
 
 def _mk_freq_block(freq: list[float]) -> str:
     body = "  " + "  ".join(f"{f: .6E}".upper() for f in freq)
-    return (
-        ">!****FREQUENCIES****!\n"
-        f">FREQ  //{len(freq)}\n"
-        f"{body}\n"
-    )
+    return f">!****FREQUENCIES****!\n>FREQ  //{len(freq)}\n{body}\n"
 
 
 def _mk_z_blocks(n: int, rot: str = "ROT=ZROT") -> str:
@@ -50,12 +43,8 @@ def _mk_z_blocks(n: int, rot: str = "ROT=ZROT") -> str:
     zr = "  " + "  ".join(
         f"{v: .6E}".upper() for v in np.linspace(1e-3, 2e-3, n)
     )
-    zi = "  " + "  ".join(
-        f"{0.0: .6E}".upper() for _ in range(n)
-    )
-    zv = "  " + "  ".join(
-        f"{1e-6: .6E}".upper() for _ in range(n)
-    )
+    zi = "  " + "  ".join(f"{0.0: .6E}".upper() for _ in range(n))
+    zv = "  " + "  ".join(f"{1e-6: .6E}".upper() for _ in range(n))
     return (
         ">!****IMPEDANCES****!\n"
         f">ZXXR {rot}  //{n}\n{zr}\n"
@@ -68,18 +57,12 @@ def _mk_tipper_blocks(n: int) -> str:
     txr = "  " + "  ".join(
         f"{v: .6E}".upper() for v in np.linspace(0.1, 0.2, n)
     )
-    txi = "  " + "  ".join(
-        f"{0.0: .6E}".upper() for _ in range(n)
-    )
-    tvr = "  " + "  ".join(
-        f"{1e-4: .6E}".upper() for _ in range(n)
-    )
+    txi = "  " + "  ".join(f"{0.0: .6E}".upper() for _ in range(n))
+    tvr = "  " + "  ".join(f"{1e-4: .6E}".upper() for _ in range(n))
     tyr = txr
     tyi = txi
     tyv = tvr
-    trot = "  " + "  ".join(
-        f"{0.0: .6E}".upper() for _ in range(n)
-    )
+    trot = "  " + "  ".join(f"{0.0: .6E}".upper() for _ in range(n))
     return (
         ">!****TIPPER ROTATION ANGLES****!\n"
         f">TROT  //{n}\n{trot}\n"
@@ -105,21 +88,11 @@ def _mk_spectra_section() -> str:
 
 
 def _mk_tseries_section() -> str:
-    head = (
-        ">=TSERIESSECT\n"
-        "  SECTID=TSA\n"
-        "  NCHAN=2\n"
-        "  DT=0.5\n"
-    )
+    head = ">=TSERIESSECT\n  SECTID=TSA\n  NCHAN=2\n  DT=0.5\n"
     blk1 = (
-        ">TSERIES ID=HX NPTS=3 DT=0.1 // 3\n"
-        "  1.0E+00  2.0E+00\n"
-        "  3.0E+00\n"
+        ">TSERIES ID=HX NPTS=3 DT=0.1 // 3\n  1.0E+00  2.0E+00\n  3.0E+00\n"
     )
-    blk2 = (
-        ">TSERIES ID=HY NPTS=2 DT=0.2 // 2\n"
-        "  1.0E+00  0.0E+00\n"
-    )
+    blk2 = ">TSERIES ID=HY NPTS=2 DT=0.2 // 2\n  1.0E+00  0.0E+00\n"
     return head + blk1 + blk2
 
 
@@ -146,7 +119,7 @@ def test_read_mt_minimal(tmp_path: Path) -> None:
 
     ed = EDIFile(fn)
     assert ed.Z.n_freq == 2
-    assert np.allclose(ed.Z.freq, [10.0 , 1.0]) # reverse ascending
+    assert np.allclose(ed.Z.freq, [10.0, 1.0])  # reverse ascending
     # ZXX real non-zero, imag zero as crafted
     assert np.allclose(ed.Z.z[:, 0, 0].imag, 0.0)
     assert np.all(ed.Z.z[:, 0, 0].real > 0.0)
@@ -233,7 +206,7 @@ def test_interpolate_creates_new_grid() -> None:
     ed = EDIFile(path=None)
     f = np.array([1.0, 10.0, 100.0])
     z = np.zeros((3, 2, 2), complex)
-    z[:, 0, 0] = (1e-3 + 0j)
+    z[:, 0, 0] = 1e-3 + 0j
     ed.Z._freq = f
     ed.Z._z = z
     ed.Z._z_err = np.zeros_like(z.real)
@@ -264,9 +237,8 @@ def test_write_new_edi_swaps(tmp_path: Path) -> None:
     # build a new Z (3 freqs) to swap in
     f2 = np.array([1.0, 3.0, 9.0])
     z2 = np.zeros((3, 2, 2), complex)
-    z2[:, 0, 0] = (2e-3 + 0j)
-    newZ = Z(z_array=z2, z_err_array=np.zeros_like(z2.real),
-             freq=f2)
+    z2[:, 0, 0] = 2e-3 + 0j
+    newZ = Z(z_array=z2, z_err_array=np.zeros_like(z2.real), freq=f2)
 
     out = ed.write_new_edi(
         edi_fn=str(tmp_path / "swapped.edi"),
@@ -275,4 +247,3 @@ def test_write_new_edi_swaps(tmp_path: Path) -> None:
     txt = Path(out).read_text(encoding="utf-8")
     # new count present
     assert ">FREQ" in txt and "//3" in txt.split(">FREQ")[1]
-

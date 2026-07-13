@@ -27,10 +27,10 @@ from pycsamt.cli import main
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_AVG_DIR      = _PROJECT_ROOT / "data" / "avg"
-_K2_AVG       = _AVG_DIR / "K2.AVG"
-_K1_AVG       = _AVG_DIR / "K1.AVG"
-_K2_STN       = _AVG_DIR / "K2.stn"
+_AVG_DIR = _PROJECT_ROOT / "data" / "avg"
+_K2_AVG = _AVG_DIR / "K2.AVG"
+_K1_AVG = _AVG_DIR / "K1.AVG"
+_K2_STN = _AVG_DIR / "K2.stn"
 
 
 def _has_k2() -> bool:
@@ -49,6 +49,7 @@ def _has_k2_stn() -> bool:
 # Help wiring
 # ---------------------------------------------------------------------------
 
+
 class TestAvgGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["avg", "--help"])
@@ -56,9 +57,9 @@ class TestAvgGroup:
         for sub in ("info", "validate", "stations", "correct", "export"):
             assert sub in result.output
 
-    @pytest.mark.parametrize("sub", [
-        "info", "validate", "stations", "correct", "export"
-    ])
+    @pytest.mark.parametrize(
+        "sub", ["info", "validate", "stations", "correct", "export"]
+    )
     def test_each_subcommand_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["avg", sub, "--help"])
         assert result.exit_code == 0
@@ -67,6 +68,7 @@ class TestAvgGroup:
 # ---------------------------------------------------------------------------
 # pycsamt avg info
 # ---------------------------------------------------------------------------
+
 
 class TestAvgInfo:
     @pytest.fixture(autouse=True)
@@ -77,7 +79,9 @@ class TestAvgInfo:
     def test_text_output(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["avg", "info", str(_K2_AVG)])
         assert result.exit_code == 0
-        assert "Station" in result.output or "station" in result.output.lower()
+        assert (
+            "Station" in result.output or "station" in result.output.lower()
+        )
         assert "Frequenc" in result.output or "freq" in result.output.lower()
 
     def test_json_output(self, runner: CliRunner) -> None:
@@ -96,7 +100,9 @@ class TestAvgInfo:
         )
         assert result.exit_code == 0
         lines = [ln for ln in result.output.strip().splitlines() if ln]
-        assert "project" in lines[0].lower() or "n_stations" in lines[0].lower()
+        assert (
+            "project" in lines[0].lower() or "n_stations" in lines[0].lower()
+        )
 
     def test_project_in_output(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -121,6 +127,7 @@ class TestAvgInfo:
 # ---------------------------------------------------------------------------
 # pycsamt avg validate
 # ---------------------------------------------------------------------------
+
 
 class TestAvgValidate:
     @pytest.fixture(autouse=True)
@@ -162,8 +169,16 @@ class TestAvgValidate:
 
     def test_top_limit(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["avg", "validate", str(_K2_AVG),
-                   "--top", "3", "--format", "json"]
+            main,
+            [
+                "avg",
+                "validate",
+                str(_K2_AVG),
+                "--top",
+                "3",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -171,8 +186,16 @@ class TestAvgValidate:
 
     def test_custom_threshold(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["avg", "validate", str(_K2_AVG), "--threshold", "0.0",
-                   "--format", "json"]
+            main,
+            [
+                "avg",
+                "validate",
+                str(_K2_AVG),
+                "--threshold",
+                "0.0",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -183,6 +206,7 @@ class TestAvgValidate:
 # ---------------------------------------------------------------------------
 # pycsamt avg stations
 # ---------------------------------------------------------------------------
+
 
 class TestAvgStations:
     @pytest.fixture(autouse=True)
@@ -225,8 +249,16 @@ class TestAvgStations:
         if not _has_k2_stn():
             pytest.skip("K2.stn not found")
         result = runner.invoke(
-            main, ["avg", "stations", str(_K2_AVG),
-                   "--stn-file", str(_K2_STN), "--format", "json"]
+            main,
+            [
+                "avg",
+                "stations",
+                str(_K2_AVG),
+                "--stn-file",
+                str(_K2_STN),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -236,8 +268,16 @@ class TestAvgStations:
 
     def test_sort_by_name(self, runner: CliRunner) -> None:
         result = runner.invoke(
-            main, ["avg", "stations", str(_K2_AVG),
-                   "--sort-by", "name", "--format", "json"]
+            main,
+            [
+                "avg",
+                "stations",
+                str(_K2_AVG),
+                "--sort-by",
+                "name",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
 
@@ -245,6 +285,7 @@ class TestAvgStations:
 # ---------------------------------------------------------------------------
 # pycsamt avg correct
 # ---------------------------------------------------------------------------
+
 
 class TestAvgCorrect:
     @pytest.fixture(autouse=True)
@@ -257,15 +298,25 @@ class TestAvgCorrect:
             main, ["avg", "correct", str(_K2_AVG), "--dry-run"]
         )
         assert result.exit_code == 0
-        assert "dry" in result.output.lower() or "method" in result.output.lower()
+        assert (
+            "dry" in result.output.lower()
+            or "method" in result.output.lower()
+        )
 
     def test_static_shift_text(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG),
-                   "--method", "static-shift",
-                   "--output-dir", str(tmp_path)]
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "static-shift",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("*.avg"))
@@ -275,45 +326,70 @@ class TestAvgCorrect:
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG),
-                   "--method", "static-shift",
-                   "--output-dir", str(tmp_path),
-                   "--format", "json"]
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "static-shift",
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "output" in data
         assert "corrections" in data
-        assert any(c["correction"] == "static_shift"
-                   for c in data["corrections"])
+        assert any(
+            c["correction"] == "static_shift" for c in data["corrections"]
+        )
 
     def test_shift_factors_reasonable(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG),
-                   "--method", "static-shift",
-                   "--output-dir", str(tmp_path),
-                   "--format", "json"]
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "static-shift",
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         data = json.loads(result.output)
-        ss = next(c for c in data["corrections"]
-                  if c["correction"] == "static_shift")
+        ss = next(
+            c
+            for c in data["corrections"]
+            if c["correction"] == "static_shift"
+        )
         # Shift factors should be finite and in a reasonable range
         assert ss["shift_min"] > 0
         assert ss["shift_max"] < 1e6
 
     def test_tma_filter(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG),
-                   "--filter", "tma",
-                   "--output-dir", str(tmp_path)]
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--filter",
+                "tma",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
 
-    def test_no_output_dir_uses_dot(
-        self, runner: CliRunner
-    ) -> None:
+    def test_no_output_dir_uses_dot(self, runner: CliRunner) -> None:
         # Default output_dir is "." — should still work
         result = runner.invoke(
             main, ["avg", "correct", str(_K2_AVG), "--dry-run"]
@@ -325,6 +401,7 @@ class TestAvgCorrect:
 # pycsamt avg export
 # ---------------------------------------------------------------------------
 
+
 class TestAvgExport:
     @pytest.fixture(autouse=True)
     def require_k2(self) -> None:
@@ -333,8 +410,16 @@ class TestAvgExport:
 
     def test_export_modern(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--format", "modern", "--output-dir", str(tmp_path)]
+            main,
+            [
+                "avg",
+                "export",
+                str(_K2_AVG),
+                "--format",
+                "modern",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("*.avg"))
@@ -342,8 +427,16 @@ class TestAvgExport:
 
     def test_export_legacy(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--format", "legacy", "--output-dir", str(tmp_path)]
+            main,
+            [
+                "avg",
+                "export",
+                str(_K2_AVG),
+                "--format",
+                "legacy",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("*.avg"))
@@ -351,9 +444,16 @@ class TestAvgExport:
 
     def test_json_summary(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--output-dir", str(tmp_path),
-                   "--format-out", "json"]
+            main,
+            [
+                "avg",
+                "export",
+                str(_K2_AVG),
+                "--output-dir",
+                str(tmp_path),
+                "--format-out",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -362,9 +462,16 @@ class TestAvgExport:
 
     def test_custom_stem(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--stem", "my_survey",
-                   "--output-dir", str(tmp_path)]
+            main,
+            [
+                "avg",
+                "export",
+                str(_K2_AVG),
+                "--stem",
+                "my_survey",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("my_survey*.avg"))
@@ -375,24 +482,31 @@ class TestAvgExport:
     ) -> None:
         # Write once
         runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--output-dir", str(tmp_path)]
+            main,
+            ["avg", "export", str(_K2_AVG), "--output-dir", str(tmp_path)],
         )
         # Write again without --overwrite should fail
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--output-dir", str(tmp_path)]
+            main,
+            ["avg", "export", str(_K2_AVG), "--output-dir", str(tmp_path)],
         )
         assert result.exit_code != 0
 
     def test_overwrite_flag(self, runner: CliRunner, tmp_path: Path) -> None:
         runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--output-dir", str(tmp_path)]
+            main,
+            ["avg", "export", str(_K2_AVG), "--output-dir", str(tmp_path)],
         )
         result = runner.invoke(
-            main, ["avg", "export", str(_K2_AVG),
-                   "--output-dir", str(tmp_path), "--overwrite"]
+            main,
+            [
+                "avg",
+                "export",
+                str(_K2_AVG),
+                "--output-dir",
+                str(tmp_path),
+                "--overwrite",
+            ],
         )
         assert result.exit_code == 0
 
@@ -400,6 +514,7 @@ class TestAvgExport:
 # ---------------------------------------------------------------------------
 # Unit tests — helpers
 # ---------------------------------------------------------------------------
+
 
 class TestAvgHelpers:
     @pytest.fixture(autouse=True)
@@ -410,6 +525,7 @@ class TestAvgHelpers:
     def test_get_avg_returns_avg_object(self) -> None:
         from pycsamt.cli.commands.avg._base import _get_avg
         from pycsamt.zonge.avg import AVG
+
         obj = _get_avg(_K2_AVG)
         assert isinstance(obj, AVG)
         assert obj.df is not None
@@ -418,6 +534,7 @@ class TestAvgHelpers:
         import pandas as pd
 
         from pycsamt.cli.commands.avg._base import _load_raw
+
         df, meta, kind = _load_raw(_K2_AVG)
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
@@ -425,12 +542,18 @@ class TestAvgHelpers:
 
     def test_k2_has_qc_columns(self) -> None:
         from pycsamt.cli.commands.avg._base import _get_avg
+
         obj = _get_avg(_K2_AVG)
-        qc = [c for c in obj.df.columns if c.startswith("pc_") or c.startswith("s_")]
+        qc = [
+            c
+            for c in obj.df.columns
+            if c.startswith("pc_") or c.startswith("s_")
+        ]
         assert len(qc) > 0
 
     def test_k2_summary_fields(self) -> None:
         from pycsamt.cli.commands.avg._base import _get_avg
+
         obj = _get_avg(_K2_AVG)
         s = obj.summary
         assert s.num_stations == 28

@@ -118,7 +118,10 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
     """
 
     __repr_fields__ = (
-        "edi_dir", "epsg", "utm_zone", "n_stations_",
+        "edi_dir",
+        "epsg",
+        "utm_zone",
+        "n_stations_",
     )
 
     def __init__(
@@ -486,10 +489,14 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
             f"  raw_reader : {'yes (' + str(self.raw_reader_.n_stations_) + ' stations)' if self.raw_reader_ else 'not loaded'}",
         ]
         if self.injector_ is not None:
-            lines.append(f"  coord order: {'reversed' if self.injector_.reversed_ else 'forward'}")
+            lines.append(
+                f"  coord order: {'reversed' if self.injector_.reversed_ else 'forward'}"
+            )
         if self.qc_ is not None:
             n_flag = len(self.qc_.flagged_stations())
-            lines.append(f"  QC flags   : {n_flag} / {len(self.qc_.report_)} stations")
+            lines.append(
+                f"  QC flags   : {n_flag} / {len(self.qc_.report_)} stations"
+            )
         if hasattr(self, "_ss_corrector_"):
             med = self._ss_corrector_.factors_["fac_z"].median()
             lines.append(f"  SS fac_z   : median={med:.3f}")
@@ -500,9 +507,13 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
                 f"band={ff.n_dropped_band_}, incoh={ff.n_masked_stat_}"
             )
         if hasattr(self, "_noise_remover_"):
-            lines.append(f"  noise rm   : {self._noise_remover_.n_stations_} stations")
+            lines.append(
+                f"  noise rm   : {self._noise_remover_.n_stations_} stations"
+            )
         if hasattr(self, "_writer_"):
-            lines.append(f"  export     : {self._writer_.n_written_} files → {self._last_export_dir_}")
+            lines.append(
+                f"  export     : {self._writer_.n_written_} files → {self._last_export_dir_}"
+            )
         if hasattr(self, "_renamer_"):
             lines.append(f"  rename     : {self._renamer_.n_renamed_} files")
         return "\n".join(lines)

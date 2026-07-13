@@ -34,8 +34,11 @@ from _interp_data import demo_model
 
 rm = demo_model()
 print(rm)
-print("grid (n_z, n_x):", rm.rho_2d.shape,
-      f" depth 0-{rm.z_centers.max():.0f} m,  distance 0-{rm.x_centers.max():.0f} m")
+print(
+    "grid (n_z, n_x):",
+    rm.rho_2d.shape,
+    f" depth 0-{rm.z_centers.max():.0f} m,  distance 0-{rm.x_centers.max():.0f} m",
+)
 
 # %%
 # The section itself
@@ -44,10 +47,16 @@ print("grid (n_z, n_x):", rm.rho_2d.shape,
 # conductive (water, clay), warm colours resistive (dry ground, basement).
 
 fig, ax = plt.subplots(figsize=(10, 4.2), constrained_layout=True)
-im = ax.pcolormesh(rm.x_centers, rm.z_centers, rm.rho_2d,
-                   cmap="Spectral", shading="auto")
-ax.plot(rm.station_x, np.full_like(rm.station_x, rm.z_centers.min()),
-        "kv", ms=6, clip_on=False)
+im = ax.pcolormesh(
+    rm.x_centers, rm.z_centers, rm.rho_2d, cmap="Spectral", shading="auto"
+)
+ax.plot(
+    rm.station_x,
+    np.full_like(rm.station_x, rm.z_centers.min()),
+    "kv",
+    ms=6,
+    clip_on=False,
+)
 ax.invert_yaxis()
 ax.set_xlabel("distance (m)")
 ax.set_ylabel("depth (m)")

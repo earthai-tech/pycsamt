@@ -6,6 +6,7 @@ pycsamt.metadata
 
 Metadata classes for citations, authorship, and software/licensing info.
 """
+
 from __future__ import annotations
 
 import re
@@ -15,7 +16,9 @@ from typing import Any
 
 class MetadataError(Exception):
     """Base exception for metadata classes."""
+
     pass
+
 
 @dataclass
 class Reference:
@@ -41,6 +44,7 @@ class Reference:
     extra : Dict[str, Any]
         Any additional fields.
     """
+
     author: str
     title: str
     journal: str | None = None
@@ -50,7 +54,9 @@ class Reference:
     doi: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
-    DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[-._;()/:A-Z0-9]+$", re.IGNORECASE)
+    DOI_PATTERN = re.compile(
+        r"^10\.\d{4,9}/[-._;()/:A-Z0-9]+$", re.IGNORECASE
+    )
 
     def __post_init__(self):
         if self.year is not None:
@@ -66,7 +72,7 @@ class Reference:
         """
         base = asdict(self)
         base.update(self.extra)
-        base.pop('extra', None)
+        base.pop("extra", None)
         return base
 
     @classmethod
@@ -74,17 +80,29 @@ class Reference:
         """
         Construct a Reference from a dict.
         """
-        extra = {k: v for k, v in data.items()
-                 if k not in {'author','title','journal','year','volume','pages','doi'}}
+        extra = {
+            k: v
+            for k, v in data.items()
+            if k
+            not in {
+                "author",
+                "title",
+                "journal",
+                "year",
+                "volume",
+                "pages",
+                "doi",
+            }
+        }
         return cls(
-            author=data['author'],
-            title=data['title'],
-            journal=data.get('journal'),
-            year=data.get('year'),
-            volume=data.get('volume'),
-            pages=data.get('pages'),
-            doi=data.get('doi'),
-            extra=extra
+            author=data["author"],
+            title=data["title"],
+            journal=data.get("journal"),
+            year=data.get("year"),
+            volume=data.get("volume"),
+            pages=data.get("pages"),
+            doi=data.get("doi"),
+            extra=extra,
         )
 
     def to_bibtex(self, key: str) -> str:
@@ -102,7 +120,15 @@ class Reference:
             Multi-line BibTeX entry.
         """
         fields = []
-        for attr in ['author','title','journal','year','volume','pages','doi']:
+        for attr in [
+            "author",
+            "title",
+            "journal",
+            "year",
+            "volume",
+            "pages",
+            "doi",
+        ]:
             val = getattr(self, attr)
             if val:
                 fields.append(f"  {attr} = {{{val}}},")
@@ -134,6 +160,7 @@ class CopyrightInfo:
     extra : Dict[str, Any]
         Additional fields.
     """
+
     release_status: str
     conditions_of_use: str
     reference: Reference = field(default_factory=Reference)
@@ -141,14 +168,14 @@ class CopyrightInfo:
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
-        d['reference'] = self.reference.to_dict()
+        d["reference"] = self.reference.to_dict()
         d.update(self.extra)
-        d.pop('extra', None)
+        d.pop("extra", None)
         return d
 
     def __repr__(self) -> str:
-        return (
-            f"<CopyrightInfo status={self.release_status!r}>")
+        return f"<CopyrightInfo status={self.release_status!r}>"
+
 
 @dataclass
 class Person:
@@ -163,6 +190,7 @@ class Person:
     organization_url : Optional[str]
     extra : Dict[str, Any]
     """
+
     name: str | None = None
     email: str | None = None
     organization: str | None = None
@@ -172,11 +200,12 @@ class Person:
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.update(self.extra)
-        d.pop('extra', None)
+        d.pop("extra", None)
         return d
 
     def __repr__(self) -> str:
         return f"<Person name={self.name!r} email={self.email!r}>"
+
 
 @dataclass
 class Software:
@@ -191,6 +220,7 @@ class Software:
     author : Person
     extra : Dict[str, Any]
     """
+
     name: str
     version: str | None = None
     release: str | None = None
@@ -199,12 +229,13 @@ class Software:
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
-        d['author'] = self.author.to_dict()
+        d["author"] = self.author.to_dict()
         d.update(self.extra)
-        d.pop('extra', None)
+        d.pop("extra", None)
         return d
 
     def __repr__(self) -> str:
         return f"<Software name={self.name!r} version={self.version!r}>"
 
-__all__ = ['Reference', 'CopyrightInfo', 'Person', 'Software']
+
+__all__ = ["Reference", "CopyrightInfo", "Person", "Software"]

@@ -27,6 +27,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -34,7 +41,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -43,10 +50,9 @@ if str(ROOT) not in sys.path:
 
 from pycsamt.models.modem import InversionResult, PlotPseudo, PlotResponse
 
-
 sample_dir = ROOT / "data" / "modem" / "willy_27freq_watex_line02_sample"
-figure_dir = Path(__file__).resolve().parent / "workspaces" / "modem_result_figures"
-table_dir = Path(__file__).resolve().parent / "workspaces" / "modem_result_tables"
+figure_dir = EXAMPLE_DIR / "workspaces" / "modem_result_figures"
+table_dir = EXAMPLE_DIR / "workspaces" / "modem_result_tables"
 
 for path in (figure_dir, table_dir):
     path.mkdir(parents=True, exist_ok=True)
@@ -96,7 +102,9 @@ def data_to_frame(data, source):
     for block in data.blocks:
         component_type = block["component_type"]
         for row in block["rows"]:
-            period, site_idx, x_m, y_m, z_m, component, real, imag, error = row
+            period, site_idx, x_m, y_m, z_m, component, real, imag, error = (
+                row
+            )
             station = data.site_names[int(site_idx)]
             rows.append(
                 {
@@ -165,7 +173,9 @@ with np.errstate(divide="ignore", invalid="ignore"):
     matched["phase_pred_deg"] = np.degrees(
         np.arctan2(matched["imag_pred"], matched["real_pred"])
     )
-matched["phase_error_deg"] = matched["phase_pred_deg"] - matched["phase_obs_deg"]
+matched["phase_error_deg"] = (
+    matched["phase_pred_deg"] - matched["phase_obs_deg"]
+)
 
 matched_file = table_dir / "modem_observed_predicted_matched_rows.csv"
 matched.to_csv(matched_file, index=False)
@@ -253,7 +263,9 @@ plt.show()
 
 for component in ("ZXY", "ZYX"):
     fig_pseudo = PlotPseudo(result=result, component=component).plot()
-    pseudo_file = figure_dir / f"modem_observed_pseudo_{component.lower()}.png"
+    pseudo_file = (
+        figure_dir / f"modem_observed_pseudo_{component.lower()}.png"
+    )
     fig_pseudo.savefig(pseudo_file, dpi=120)
     plt.show()
     print(f"{component} pseudo-section: {pseudo_file}")
@@ -345,7 +357,9 @@ component_summary = (
     )
     .sort_values("rms_combined")
 )
-component_summary_file = table_dir / "modem_response_component_misfit_summary.csv"
+component_summary_file = (
+    table_dir / "modem_response_component_misfit_summary.csv"
+)
 component_summary.to_csv(component_summary_file)
 
 fig_bar, ax_bar = plt.subplots(figsize=(8.5, 4.6), constrained_layout=True)

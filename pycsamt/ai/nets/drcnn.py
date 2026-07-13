@@ -35,6 +35,7 @@ References
 ----------
 Guo R. et al. (2021) *IEEE TGRS* — DRCNN for joint AMT+seismic.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -82,7 +83,8 @@ try:
             )
             if in_features != out_features:
                 self.shortcut = nn.Linear(
-                    in_features, out_features,
+                    in_features,
+                    out_features,
                     bias=False,
                 )
             else:
@@ -109,19 +111,25 @@ try:
             dropout: float,
         ) -> None:
             super().__init__()
-            self.encoders = nn.ModuleList([
-                _DenseBlock(
-                    nf, hidden_dim,
-                    growth_rate, n_layers, dropout,
-                )
-                for nf in n_features_list
-            ])
-            fused_dim = (
-                hidden_dim * len(n_features_list)
+            self.encoders = nn.ModuleList(
+                [
+                    _DenseBlock(
+                        nf,
+                        hidden_dim,
+                        growth_rate,
+                        n_layers,
+                        dropout,
+                    )
+                    for nf in n_features_list
+                ]
             )
+            fused_dim = hidden_dim * len(n_features_list)
             self.fusion = _DenseBlock(
-                fused_dim, hidden_dim,
-                growth_rate, n_layers, dropout,
+                fused_dim,
+                hidden_dim,
+                growth_rate,
+                n_layers,
+                dropout,
             )
             self.head = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim // 2),
@@ -133,13 +141,9 @@ try:
         def forward(self, *inputs):
             if len(inputs) != len(self.encoders):
                 raise ValueError(
-                    f"Expected {len(self.encoders)}"
-                    f" inputs, got {len(inputs)}"
+                    f"Expected {len(self.encoders)} inputs, got {len(inputs)}"
                 )
-            encoded = [
-                enc(x)
-                for enc, x in zip(self.encoders, inputs)
-            ]
+            encoded = [enc(x) for enc, x in zip(self.encoders, inputs)]
             fused = torch.cat(encoded, dim=-1)
             out = self.fusion(fused)
             return self.head(out)
@@ -149,6 +153,7 @@ except ImportError:
 
 
 # ── Factory class ─────────────────────────────────
+
 
 class DRCNNNet:
     r"""
@@ -190,9 +195,7 @@ class DRCNNNet:
         hidden_dim: int = 256,
         dropout: float = 0.2,
     ) -> None:
-        self.n_features_list = tuple(
-            int(n) for n in n_features_list
-        )
+        self.n_features_list = tuple(int(n) for n in n_features_list)
         self.n_out = int(n_out)
         self.growth_rate = int(growth_rate)
         self.n_layers = int(n_layers)
@@ -221,6 +224,7 @@ class DRCNNNet:
 
 # ── Internal build helpers ────────────────────────
 
+
 def _dense_block_1d(
     in_features: int,
     out_features: int,
@@ -235,8 +239,11 @@ def _dense_block_1d(
             "Install with: pip install torch"
         )
     return _DenseBlock(
-        in_features, out_features,
-        growth_rate, n_layers, dropout,
+        in_features,
+        out_features,
+        growth_rate,
+        n_layers,
+        dropout,
     )
 
 

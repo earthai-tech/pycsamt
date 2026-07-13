@@ -97,7 +97,7 @@ class TipperAnalysisAgent(BaseAgent):
             section_preset="pseudosection",
         )
         self.convention = convention.lower()
-        self.use_imag   = use_imag
+        self.use_imag = use_imag
         self.period_ref = period_ref
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
@@ -109,7 +109,8 @@ class TipperAnalysisAgent(BaseAgent):
             from ..core.base import MTBase
         except ImportError as exc:
             return AgentResult.failed(
-                f"pycsamt.core.base not available: {exc}", elapsed=time.time() - t0,
+                f"pycsamt.core.base not available: {exc}",
+                elapsed=time.time() - t0,
             )
 
         from ..emtools._core import (
@@ -121,14 +122,18 @@ class TipperAnalysisAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        convention = str(input_data.get("convention", self.convention)).lower()
-        use_imag   = bool(input_data.get("use_imag",   self.use_imag))
+        convention = str(
+            input_data.get("convention", self.convention)
+        ).lower()
+        use_imag = bool(input_data.get("use_imag", self.use_imag))
         output_dir = input_data.get("output_dir")
 
         mtbase = MTBase()
@@ -160,31 +165,45 @@ class TipperAnalysisAgent(BaseAgent):
                 if t_arr.ndim == 3 and t_arr.shape[1] == 1:
                     t_arr = t_arr[:, 0, :]  # → (n_freq, 2)
                 if t_arr.shape != (len(fr), 2):
-                    warnings.append(f"{nm}: unexpected tipper shape {t_arr.shape}.")
+                    warnings.append(
+                        f"{nm}: unexpected tipper shape {t_arr.shape}."
+                    )
                     continue
 
                 per = 1.0 / np.where(fr == 0, np.nan, fr)
                 amp, phi = mtbase.tipper_amp_phase(t_arr, phase_unit="deg")
                 ax_arr, ay_arr = mtbase.induction_arrows(
-                    t_arr, convention=convention, use_imag=use_imag,
+                    t_arr,
+                    convention=convention,
+                    use_imag=use_imag,
                 )
 
                 for fi in range(len(fr)):
                     if not np.isfinite(per[fi]):
                         continue
-                    records.append({
-                        "station":   nm,
-                        "period_s":  float(per[fi]),
-                        "freq_hz":   float(fr[fi]),
-                        "Tx_re":     float(t_arr[fi, 0].real),
-                        "Tx_im":     float(t_arr[fi, 0].imag),
-                        "Ty_re":     float(t_arr[fi, 1].real),
-                        "Ty_im":     float(t_arr[fi, 1].imag),
-                        "amplitude": float(amp[fi]) if np.ndim(amp) > 0 else float(amp),
-                        "phase_deg": float(phi[fi]) if np.ndim(phi) > 0 else float(phi),
-                        "arrow_x":   float(ax_arr[fi]) if np.ndim(ax_arr) > 0 else float(ax_arr),
-                        "arrow_y":   float(ay_arr[fi]) if np.ndim(ay_arr) > 0 else float(ay_arr),
-                    })
+                    records.append(
+                        {
+                            "station": nm,
+                            "period_s": float(per[fi]),
+                            "freq_hz": float(fr[fi]),
+                            "Tx_re": float(t_arr[fi, 0].real),
+                            "Tx_im": float(t_arr[fi, 0].imag),
+                            "Ty_re": float(t_arr[fi, 1].real),
+                            "Ty_im": float(t_arr[fi, 1].imag),
+                            "amplitude": float(amp[fi])
+                            if np.ndim(amp) > 0
+                            else float(amp),
+                            "phase_deg": float(phi[fi])
+                            if np.ndim(phi) > 0
+                            else float(phi),
+                            "arrow_x": float(ax_arr[fi])
+                            if np.ndim(ax_arr) > 0
+                            else float(ax_arr),
+                            "arrow_y": float(ay_arr[fi])
+                            if np.ndim(ay_arr) > 0
+                            else float(ay_arr),
+                        }
+                    )
                     all_periods.append(float(per[fi]))
 
             except Exception as exc:
@@ -201,6 +220,7 @@ class TipperAnalysisAgent(BaseAgent):
 
         try:
             import pandas as pd
+
             tipper_table = pd.DataFrame(records)
         except ImportError:
             tipper_table = records  # fallback: plain list
@@ -208,7 +228,9 @@ class TipperAnalysisAgent(BaseAgent):
         # ── choose reference period for arrow map ─────────────────────────
         period_ref = input_data.get("period_ref") or self.period_ref
         if period_ref is None and all_periods:
-            period_ref = float(np.exp(np.nanmean(np.log(np.clip(all_periods, 1e-9, None)))))
+            period_ref = float(
+                np.exp(np.nanmean(np.log(np.clip(all_periods, 1e-9, None))))
+            )
 
         # ── build arrow table at reference period ─────────────────────────
         arrow_records: list[dict] = []
@@ -231,19 +253,26 @@ class TipperAnalysisAgent(BaseAgent):
                 sta_rows = [r for r in rows if r["station"] == sta]
                 if not sta_rows:
                     continue
-                closest = min(sta_rows,
-                              key=lambda r: abs(np.log10(max(r["period_s"], 1e-9))
-                                                - np.log10(max(period_ref, 1e-9))))
-                arrow_records.append({
-                    "station": sta,
-                    "period_s": closest["period_s"],
-                    "arrow_x":  closest["arrow_x"],
-                    "arrow_y":  closest["arrow_y"],
-                    "amplitude":closest["amplitude"],
-                })
+                closest = min(
+                    sta_rows,
+                    key=lambda r: abs(
+                        np.log10(max(r["period_s"], 1e-9))
+                        - np.log10(max(period_ref, 1e-9))
+                    ),
+                )
+                arrow_records.append(
+                    {
+                        "station": sta,
+                        "period_s": closest["period_s"],
+                        "arrow_x": closest["arrow_x"],
+                        "arrow_y": closest["arrow_y"],
+                        "amplitude": closest["amplitude"],
+                    }
+                )
 
         try:
             import pandas as pd
+
             arrow_table = pd.DataFrame(arrow_records)
         except ImportError:
             arrow_table = arrow_records
@@ -256,8 +285,12 @@ class TipperAnalysisAgent(BaseAgent):
             fig_amp = _plot_tipper_amplitude(rows, station_names_ordered)
             if fig_amp is not None:
                 figures["tipper_amplitude"] = fig_amp
-                p = self._save_figure(fig_amp, output_dir, "tipper_amplitude",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_amp,
+                    output_dir,
+                    "tipper_amplitude",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["tipper_amplitude"] = p
         except Exception as exc:
@@ -265,23 +298,35 @@ class TipperAnalysisAgent(BaseAgent):
 
         try:
             fig_arr = _plot_induction_arrows(
-                arrow_records, period_ref, convention,
+                arrow_records,
+                period_ref,
+                convention,
             )
             if fig_arr is not None:
                 figures["induction_arrows"] = fig_arr
-                p = self._save_figure(fig_arr, output_dir, "induction_arrows",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_arr,
+                    output_dir,
+                    "induction_arrows",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["induction_arrows"] = p
         except Exception as exc:
             warnings.append(f"Induction arrow figure: {exc}")
 
         try:
-            fig_pseudo = _plot_tipper_pseudosection(rows, station_names_ordered)
+            fig_pseudo = _plot_tipper_pseudosection(
+                rows, station_names_ordered
+            )
             if fig_pseudo is not None:
                 figures["tipper_pseudosection"] = fig_pseudo
-                p = self._save_figure(fig_pseudo, output_dir, "tipper_pseudosection",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_pseudo,
+                    output_dir,
+                    "tipper_pseudosection",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["tipper_pseudosection"] = p
         except Exception as exc:
@@ -290,10 +335,17 @@ class TipperAnalysisAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and records:
-            amps = [r["amplitude"] for r in records if np.isfinite(r["amplitude"])]
+            amps = [
+                r["amplitude"] for r in records if np.isfinite(r["amplitude"])
+            ]
             mean_amp = float(np.mean(amps)) if amps else float("nan")
-            max_tip  = max(arrow_records, key=lambda r: r["amplitude"],
-                           default={}).get("station", "?") if arrow_records else "?"
+            max_tip = (
+                max(
+                    arrow_records, key=lambda r: r["amplitude"], default={}
+                ).get("station", "?")
+                if arrow_records
+                else "?"
+            )
             prompt = (
                 f"Tipper analysis summary:\n"
                 f"  Convention: {convention}, use_imag: {use_imag}\n"
@@ -315,13 +367,13 @@ class TipperAnalysisAgent(BaseAgent):
                 f"{len(figures)} figures."
             ),
             data={
-                "tipper_table":            tipper_table,
-                "arrow_table":             arrow_table,
-                "period_ref":              period_ref,
-                "n_stations_with_tipper":  n_sta_tip,
-                "convention":              convention,
-                "figures":                 figures,
-                "figure_paths":            fig_paths,
+                "tipper_table": tipper_table,
+                "arrow_table": arrow_table,
+                "period_ref": period_ref,
+                "n_stations_with_tipper": n_sta_tip,
+                "convention": convention,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -332,6 +384,7 @@ class TipperAnalysisAgent(BaseAgent):
 
 # ── plot helpers ──────────────────────────────────────────────────────────────
 
+
 def _plot_tipper_amplitude(rows: list[dict], station_order: list[str]) -> Any:
     """Tipper amplitude vs period, one curve per station."""
     import matplotlib.pyplot as plt
@@ -341,8 +394,10 @@ def _plot_tipper_amplitude(rows: list[dict], station_order: list[str]) -> Any:
 
     fig, ax = plt.subplots(figsize=(10, 5))
     for sta in station_order:
-        sta_rows = sorted([r for r in rows if r["station"] == sta],
-                          key=lambda r: r["period_s"])
+        sta_rows = sorted(
+            [r for r in rows if r["station"] == sta],
+            key=lambda r: r["period_s"],
+        )
         if not sta_rows:
             continue
         per = [r["period_s"] for r in sta_rows]
@@ -372,19 +427,29 @@ def _plot_induction_arrows(
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    xs = [i for i in range(len(arrow_records))]  # use station index as x-position
+    xs = [
+        i for i in range(len(arrow_records))
+    ]  # use station index as x-position
     [0.0] * len(arrow_records)
 
     for xi, rec in zip(xs, arrow_records):
         ax_val, ay_val = rec["arrow_x"], rec["arrow_y"]
         scale = 2.0
         ax.annotate(
-            "", xy=(xi + ax_val * scale, ay_val * scale),
+            "",
+            xy=(xi + ax_val * scale, ay_val * scale),
             xytext=(xi, 0.0),
             arrowprops=dict(arrowstyle="->", color="#c0392b", lw=1.5),
         )
-        ax.text(xi, -0.15, rec["station"], ha="center", va="top",
-                fontsize=6.5, rotation=90)
+        ax.text(
+            xi,
+            -0.15,
+            rec["station"],
+            ha="center",
+            va="top",
+            fontsize=6.5,
+            rotation=90,
+        )
 
     ax.axhline(0, color="k", lw=0.5, ls="--")
     ax.set_xlim(-0.5, len(arrow_records) - 0.5)
@@ -395,7 +460,8 @@ def _plot_induction_arrows(
     ax.set_title(
         f"Induction arrows — {convention.capitalize()} convention  "
         f"(T = {per_str})",
-        fontsize=10, fontweight="bold",
+        fontsize=10,
+        fontweight="bold",
     )
     ax.tick_params(labelsize=8)
     fig.tight_layout()
@@ -412,7 +478,9 @@ def _plot_tipper_pseudosection(
     if not rows or not station_order:
         return None
 
-    periods = sorted({r["period_s"] for r in rows if np.isfinite(r["period_s"])})
+    periods = sorted(
+        {r["period_s"] for r in rows if np.isfinite(r["period_s"])}
+    )
     if not periods:
         return None
 
@@ -438,14 +506,18 @@ def _plot_tipper_pseudosection(
         origin="upper",
         extent=(-0.5, len(station_order) - 0.5, log_per[-1], log_per[0]),
         cmap="hot_r",
-        vmin=0.0, vmax=vmax,
+        vmin=0.0,
+        vmax=vmax,
         interpolation="bilinear",
     )
     ax.set_xticks(range(len(station_order)))
     ax.set_xticklabels(station_order, rotation=90, fontsize=6.5)
     ax.set_ylabel("log₁₀ Period (s)", fontsize=9)
-    ax.set_title("Tipper amplitude pseudosection", fontsize=10, fontweight="bold")
+    ax.set_title(
+        "Tipper amplitude pseudosection", fontsize=10, fontweight="bold"
+    )
     from mpl_toolkits.axes_grid1 import make_axes_locatable
+
     div = make_axes_locatable(ax)
     cax = div.append_axes("right", size="2%", pad=0.05)
     plt.colorbar(im, cax=cax, label="|T|")

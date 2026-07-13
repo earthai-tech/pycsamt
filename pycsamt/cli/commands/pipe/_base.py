@@ -29,6 +29,7 @@ import click
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _resolve_pipeline(
     config: Path | None,
     preset: str | None,
@@ -73,6 +74,7 @@ def _resolve_pipeline(
             from pycsamt.pipeline import (
                 list_presets,  # noqa: PLC0415
             )
+
             names = [p.name for p in list_presets()]
             raise click.BadParameter(
                 f"Unknown preset {preset!r}.  Available: {names}",
@@ -81,16 +83,18 @@ def _resolve_pipeline(
         if name:
             pipe.name = name
         if verbose >= 1:
-            click.echo(f"  Loaded preset {preset!r} ({len(pipe)} steps)", err=True)
+            click.echo(
+                f"  Loaded preset {preset!r} ({len(pipe)} steps)", err=True
+            )
         return pipe
 
     if steps:
         from pycsamt.pipeline import (
             lookup_step,  # noqa: PLC0415
         )
+
         step_objects = [
-            (lookup_step(code).name, Step(code))
-            for code in steps
+            (lookup_step(code).name, Step(code)) for code in steps
         ]
         pipe = Pipeline(step_objects, name=name or "cli_pipeline")
         if verbose >= 1:
@@ -120,6 +124,7 @@ def _resolve_sites(
     from pycsamt.cli.survey import (
         resolve_survey,  # noqa: PLC0415
     )
+
     return resolve_survey(
         edi_source or survey_path,
         fresh=fresh,
@@ -173,7 +178,11 @@ def _find_step_index(
 ) -> int | None:
     """Return the 0-based index of the step matching *query* (label or code)."""
     for i, (label, step) in enumerate(steps):
-        if label == query or step.spec.code == query or step.spec.name == query:
+        if (
+            label == query
+            or step.spec.code == query
+            or step.spec.name == query
+        ):
             return i
     return None
 
@@ -236,9 +245,10 @@ def _rich_pipe_table(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         console = Console()
         t = Table(title=title, border_style=style, show_header=False)
-        t.add_column("Key",   style="bold")
+        t.add_column("Key", style="bold")
         t.add_column("Value", style="white")
         for k, v in rows:
             t.add_row(k, str(v))
@@ -252,6 +262,7 @@ def _rich_pipe_table(
 # ---------------------------------------------------------------------------
 # Root group
 # ---------------------------------------------------------------------------
+
 
 @click.group("pipe")
 @click.pass_context

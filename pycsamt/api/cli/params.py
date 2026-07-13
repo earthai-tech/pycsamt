@@ -35,6 +35,7 @@ import click
 # EDIPath — single EDI file, must exist and have .edi extension
 # ---------------------------------------------------------------------------
 
+
 class EDIPath(click.Path):
     """A Click Path type that additionally requires a ``.edi`` extension."""
 
@@ -68,6 +69,7 @@ class EDIPath(click.Path):
 # ---------------------------------------------------------------------------
 # EDIDir — directory that contains at least one .edi file
 # ---------------------------------------------------------------------------
+
 
 class EDIDir(click.Path):
     """A Click Path type for a directory that contains EDI files."""
@@ -103,6 +105,7 @@ class EDIDir(click.Path):
 # ---------------------------------------------------------------------------
 # FreqRange — "fmin:fmax" string → (float, float)
 # ---------------------------------------------------------------------------
+
 
 class FreqRange(click.ParamType):
     """Parse a ``fmin:fmax`` frequency-range string into ``(float, float)``.
@@ -145,6 +148,7 @@ class FreqRange(click.ParamType):
 # StationList — comma-separated station ids → list[str]
 # ---------------------------------------------------------------------------
 
+
 class StationList(click.ParamType):
     """Parse a comma-separated list of station identifiers.
 
@@ -177,6 +181,7 @@ class StationList(click.ParamType):
 # ---------------------------------------------------------------------------
 # PipeStepList — comma-separated step codes/names → list[str] of codes
 # ---------------------------------------------------------------------------
+
 
 class PipeStepList(click.ParamType):
     """Parse a comma-separated list of pipeline step codes or names.

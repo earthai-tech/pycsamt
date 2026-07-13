@@ -46,7 +46,12 @@ from ....api.cli.options import (
 from ._base import interp
 
 # Occam2D workdir signature files
-_OCCAM_SIGNATURES = {"Occam2DMesh", "Occam2DModel", "OccamData.dat", "OccamStartup"}
+_OCCAM_SIGNATURES = {
+    "Occam2DMesh",
+    "Occam2DModel",
+    "OccamData.dat",
+    "OccamStartup",
+}
 
 
 def _detect_solver(workdir: Path) -> str:
@@ -71,7 +76,8 @@ def _detect_solver(workdir: Path) -> str:
     help="Inversion solver.  'auto' detects from workdir files.",
 )
 @click.option(
-    "--iteration", "-i",
+    "--iteration",
+    "-i",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
@@ -104,7 +110,8 @@ def _detect_solver(workdir: Path) -> str:
     help="Clip the model at this depth (metres) before classifying.",
 )
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     type=click.Path(writable=True, path_type=Path),
     default=None,
     metavar="FILE",
@@ -178,12 +185,16 @@ def classify(
         if verbose >= 1:
             click.echo(
                 f"Loading Occam2D result from {workdir}/"
-                + (f"  iteration={iteration}" if iteration else "  (last iteration)"),
+                + (
+                    f"  iteration={iteration}"
+                    if iteration
+                    else "  (last iteration)"
+                ),
                 err=True,
             )
 
         result = InversionResult(workdir, iteration=iteration)
-        model  = ResistivityModel.from_occam2d(result)
+        model = ResistivityModel.from_occam2d(result)
 
         if max_depth is not None:
             mask = model.z_centers <= max_depth
@@ -203,7 +214,7 @@ def classify(
 
     # ── classify ──────────────────────────────────────────────────────────────
     try:
-        cal  = ModelCalibrator(ptol=ptol, verbose=verbose >= 2).fit(model)
+        cal = ModelCalibrator(ptol=ptol, verbose=verbose >= 2).fit(model)
         logs = cal.stratigraphic_logs(merge_tolerance=merge_tol)
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error during classification: {exc}", err=True)
@@ -230,28 +241,35 @@ def classify(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _logs_to_dataframe(logs):
     import pandas as pd  # noqa: PLC0415
 
     rows = []
     for log in logs:
         for layer in log.layers:
-            rows.append({
-                "station":       log.station_name,
-                "depth_top_m":   round(layer.depth_top, 2),
-                "depth_bot_m":   round(layer.depth_bot, 2),
-                "thickness_m":   round(layer.depth_bot - layer.depth_top, 2),
-                "rock":          layer.rock.name,
-                "rho_min":       layer.rock.rho_min,
-                "rho_max":       layer.rock.rho_max,
-                "description":   layer.rock.description,
-            })
+            rows.append(
+                {
+                    "station": log.station_name,
+                    "depth_top_m": round(layer.depth_top, 2),
+                    "depth_bot_m": round(layer.depth_bot, 2),
+                    "thickness_m": round(
+                        layer.depth_bot - layer.depth_top, 2
+                    ),
+                    "rock": layer.rock.name,
+                    "rho_min": layer.rock.rho_min,
+                    "rho_max": layer.rock.rho_max,
+                    "description": layer.rock.description,
+                }
+            )
     return pd.DataFrame(rows)
 
 
 def _emit(df, output_format: str) -> None:
     if output_format == "json":
-        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
+        click.echo(
+            df.to_json(orient="records", indent=2, default_handler=str)
+        )
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

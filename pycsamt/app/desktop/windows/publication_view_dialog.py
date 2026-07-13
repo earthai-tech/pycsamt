@@ -47,7 +47,8 @@ class PublicationViewDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(
-            f"Publication View — {station_name}" if station_name
+            f"Publication View — {station_name}"
+            if station_name
             else "Publication View"
         )
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
@@ -91,9 +92,11 @@ class PublicationViewDialog(QDialog):
             from pycsamt.app.desktop.dialogs.export_dlg import (
                 ExportDialog,
             )
+
             ExportDialog(figure=self._canvas.figure, parent=self).exec()
         except Exception:
             from PySide6.QtWidgets import QFileDialog
+
             path, _ = QFileDialog.getSaveFileName(
                 self,
                 "Export figure",
@@ -101,4 +104,6 @@ class PublicationViewDialog(QDialog):
                 "PDF (*.pdf);;PNG (*.png);;SVG (*.svg)",
             )
             if path:
-                self._canvas.figure.savefig(path, bbox_inches="tight", dpi=200)
+                self._canvas.figure.savefig(
+                    path, bbox_inches="tight", dpi=200
+                )

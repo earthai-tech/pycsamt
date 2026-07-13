@@ -25,8 +25,8 @@ from pycsamt.utils.mathext import (
     z2rhoa,
 )
 
-
 # ------------------------- round_dipole_length ------------------------
+
 
 @pytest.mark.parametrize(
     "value, expected",
@@ -42,6 +42,7 @@ def test_round_dipole_length_rejects_non_numeric():
 
 
 # --------------------------- compute_azimuth --------------------------
+
 
 @pytest.fixture()
 def stub_utm_to_ll(monkeypatch):
@@ -85,11 +86,10 @@ def test_compute_azimuth_input_validation(stub_utm_to_ll):
 
 # ---------------------------- linkage_matrix --------------------------
 
+
 def _cluster_frame():
     rng = np.random.default_rng(0)
-    return pd.DataFrame(
-        rng.normal(size=(6, 3)), columns=list("abc")
-    )
+    return pd.DataFrame(rng.normal(size=(6, 3)), columns=list("abc"))
 
 
 @pytest.mark.parametrize("kind", ["design", "squareform", "condense"])
@@ -113,6 +113,7 @@ def test_linkage_matrix_as_frame_and_column_checks():
 
 # --------------------------- hanning / betaj --------------------------
 
+
 def test_d_hanning_window_center_and_outside():
     W = 5
     assert d_hanning_window(0.0, 0.0, W) == pytest.approx(2.0 / W)
@@ -131,6 +132,7 @@ def test_betaj_window_smaller_than_dipole_raises():
 
 
 # ----------------------------- rhoa2z / z2rhoa ------------------------
+
 
 def test_z2rhoa_documented_value():
     z = np.array([[2 + 3j]])
@@ -156,6 +158,7 @@ def test_rhoa2z_and_z2rhoa_length_checks():
 
 
 # ------------------------------ rhophi2z ------------------------------
+
 
 def test_rhophi2z_scalar_documented_example():
     z = rhophi2z(823, 25, 500)
@@ -191,25 +194,21 @@ def test_rhophi2z_inconsistent_2x2_raises():
 
 # ---------------------------- savitzky_golay1d ------------------------
 
+
 def test_savitzky_golay1d_smooths_noise():
     rng = np.random.default_rng(42)
     t = np.linspace(-4, 4, 200)
     clean = np.exp(-(t**2))
     noisy = clean + rng.normal(0, 0.05, t.shape)
-    smoothed = savitzky_golay1d(noisy, window_size=31, order=4,
-                                mode="valid")
+    smoothed = savitzky_golay1d(noisy, window_size=31, order=4, mode="valid")
     assert smoothed.shape == noisy.shape
     # smoothing should reduce the residual w.r.t. the clean signal
-    assert (
-        np.linalg.norm(smoothed - clean)
-        < np.linalg.norm(noisy - clean)
-    )
+    assert np.linalg.norm(smoothed - clean) < np.linalg.norm(noisy - clean)
 
 
 def test_savitzky_golay1d_derivative_of_line():
     y = 2.0 * np.arange(50.0)
-    dy = savitzky_golay1d(y, window_size=7, order=2, deriv=1,
-                          mode="valid")
+    dy = savitzky_golay1d(y, window_size=7, order=2, deriv=1, mode="valid")
     interior = dy[3:-3]
     assert np.allclose(interior, 2.0, atol=1e-8)
 

@@ -28,6 +28,7 @@ Library (right)
     • Presets           → one button per geology prior
     • [→ Send to Inversion]
 """
+
 from __future__ import annotations
 
 import logging
@@ -78,8 +79,10 @@ logger = logging.getLogger(__name__)
 
 # ── tiny helpers ──────────────────────────────────────────────────────────────
 
-def _spin(value: float, lo: float, hi: float, decimals: int = 0,
-          step: float = 1.0) -> QDoubleSpinBox:
+
+def _spin(
+    value: float, lo: float, hi: float, decimals: int = 0, step: float = 1.0
+) -> QDoubleSpinBox:
     sb = QDoubleSpinBox()
     sb.setRange(lo, hi)
     sb.setDecimals(decimals)
@@ -105,6 +108,7 @@ def _label(text: str) -> QLabel:
 
 # ── ForwardModelWindow ────────────────────────────────────────────────────────
 
+
 class ForwardModelWindow(PanelWindow):
     """
     3-panel floating window for interactive MT forward modelling.
@@ -119,8 +123,8 @@ class ForwardModelWindow(PanelWindow):
     def __init__(self, parent: QWidget | None = None) -> None:
         # Must be set before super().__init__() because _build_content is
         # called inside PanelWindow._build_shell() during super().__init__().
-        self._ctrl        = ForwardController()
-        self._worker      = None
+        self._ctrl = ForwardController()
+        self._worker = None
         self._last_result: Any = None
 
         super().__init__(
@@ -190,16 +194,16 @@ class ForwardModelWindow(PanelWindow):
 
     def _build_stacked_model(self, layout: QVBoxLayout) -> None:
         self._stacked = QStackedWidget()
-        self._stacked.addWidget(self._build_1d_page())   # index 0
-        self._stacked.addWidget(self._build_2d_page())   # index 1
-        self._stacked.addWidget(self._build_3d_page())   # index 2
+        self._stacked.addWidget(self._build_1d_page())  # index 0
+        self._stacked.addWidget(self._build_2d_page())  # index 1
+        self._stacked.addWidget(self._build_3d_page())  # index 2
         layout.addWidget(self._stacked)
 
     # ── 1D page ───────────────────────────────────────────────────────────────
 
     def _build_1d_page(self) -> QWidget:
         page = QWidget()
-        v    = QVBoxLayout(page)
+        v = QVBoxLayout(page)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(4)
 
@@ -227,14 +231,18 @@ class ForwardModelWindow(PanelWindow):
         self._btn_rem_layer = QPushButton("−")
         self._btn_rem_layer.setFixedWidth(28)
         self._btn_rem_layer.setToolTip("Remove selected layer")
-        self._btn_up_layer  = QPushButton("↑")
+        self._btn_up_layer = QPushButton("↑")
         self._btn_up_layer.setFixedWidth(28)
         self._btn_up_layer.setToolTip("Move layer up")
-        self._btn_dn_layer  = QPushButton("↓")
+        self._btn_dn_layer = QPushButton("↓")
         self._btn_dn_layer.setFixedWidth(28)
         self._btn_dn_layer.setToolTip("Move layer down")
-        for b in (self._btn_add_layer, self._btn_rem_layer,
-                  self._btn_up_layer, self._btn_dn_layer):
+        for b in (
+            self._btn_add_layer,
+            self._btn_rem_layer,
+            self._btn_up_layer,
+            self._btn_dn_layer,
+        ):
             btn_row.addWidget(b)
         btn_row.addStretch()
         lay.addLayout(btn_row)
@@ -254,8 +262,8 @@ class ForwardModelWindow(PanelWindow):
 
     def _populate_default_1d_model(self) -> None:
         rows = [
-            (100.0,  300.0),
-            (1000.0, None),   # halfspace — no thickness
+            (100.0, 300.0),
+            (1000.0, None),  # halfspace — no thickness
         ]
         self._layer_table.setRowCount(0)
         for rho, h in rows:
@@ -286,7 +294,7 @@ class ForwardModelWindow(PanelWindow):
 
     def _add_layer(self) -> None:
         sel = self._layer_table.currentRow()
-        n   = self._layer_table.rowCount()
+        n = self._layer_table.rowCount()
         # Insert before halfspace (last row)
         insert_at = max(0, min(n - 1, sel + 1) if sel >= 0 else n - 1)
         self._layer_table.insertRow(insert_at)
@@ -317,9 +325,9 @@ class ForwardModelWindow(PanelWindow):
         self._layer_table.setCurrentCell(sel - 1, 1)
 
     def _move_layer_down(self) -> None:
-        n   = self._layer_table.rowCount()
+        n = self._layer_table.rowCount()
         sel = self._layer_table.currentRow()
-        if sel < 0 or sel >= n - 2:   # can't move halfspace
+        if sel < 0 or sel >= n - 2:  # can't move halfspace
             return
         self._swap_rows(sel, sel + 1)
         self._layer_table.setCurrentCell(sel + 1, 1)
@@ -337,13 +345,13 @@ class ForwardModelWindow(PanelWindow):
                 ib.setText(ta)
 
     def _read_1d_model(self) -> tuple[np.ndarray, np.ndarray]:
-        n   = self._layer_table.rowCount()
+        n = self._layer_table.rowCount()
         rho = []
-        h   = []
+        h = []
         for i in range(n):
             r_item = self._layer_table.item(i, 1)
             h_item = self._layer_table.item(i, 2)
-            r_val  = float(r_item.text() if r_item else "100")
+            r_val = float(r_item.text() if r_item else "100")
             rho.append(max(r_val, 1e-3))
             if i < n - 1:
                 h_txt = h_item.text() if h_item else "100"
@@ -361,7 +369,7 @@ class ForwardModelWindow(PanelWindow):
 
     def _build_2d_page(self) -> QWidget:
         page = QWidget()
-        v    = QVBoxLayout(page)
+        v = QVBoxLayout(page)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(4)
 
@@ -369,18 +377,18 @@ class ForwardModelWindow(PanelWindow):
         grp_g, lay_g = make_group("Grid")
         form_g = QFormLayout()
         form_g.setSpacing(4)
-        self._2d_nx    = _ispin(30, 5, 200)
-        self._2d_nz    = _ispin(20, 5, 100)
-        self._2d_dx    = _spin(500.0, 10.0, 50000.0, 0, 50.0)
-        self._2d_dzmin = _spin(50.0,  1.0,  1000.0,  0, 10.0)
+        self._2d_nx = _ispin(30, 5, 200)
+        self._2d_nz = _ispin(20, 5, 100)
+        self._2d_dx = _spin(500.0, 10.0, 50000.0, 0, 50.0)
+        self._2d_dzmin = _spin(50.0, 1.0, 1000.0, 0, 10.0)
         self._2d_dzmax = _spin(1000.0, 10.0, 50000.0, 0, 100.0)
-        self._2d_npad  = _ispin(5, 2, 20)
+        self._2d_npad = _ispin(5, 2, 20)
         form_g.addRow("nx cells:", self._2d_nx)
         form_g.addRow("nz cells:", self._2d_nz)
-        form_g.addRow("dx (m):",   self._2d_dx)
+        form_g.addRow("dx (m):", self._2d_dx)
         form_g.addRow("dz min (m):", self._2d_dzmin)
         form_g.addRow("dz max (m):", self._2d_dzmax)
-        form_g.addRow("n_pad:",    self._2d_npad)
+        form_g.addRow("n_pad:", self._2d_npad)
         lay_g.addLayout(form_g)
         v.addWidget(grp_g)
 
@@ -390,7 +398,7 @@ class ForwardModelWindow(PanelWindow):
         form_b.setSpacing(4)
         self._2d_bgrho = _spin(100.0, 0.1, 100000.0, 1, 10.0)
         form_b.addRow("ρ (Ω·m):", self._2d_bgrho)
-        self._2d_nsta  = _ispin(10, 2, 100)
+        self._2d_nsta = _ispin(10, 2, 100)
         form_b.addRow("Stations:", self._2d_nsta)
         lay_b.addLayout(form_b)
         v.addWidget(grp_b)
@@ -402,16 +410,16 @@ class ForwardModelWindow(PanelWindow):
         self._2d_anom_widget = QWidget()
         form_a = QFormLayout(self._2d_anom_widget)
         form_a.setSpacing(4)
-        self._2d_ax   = _spin(7500.0,  0.0, 1e6, 0, 500.0)
-        self._2d_az   = _spin(500.0,   0.0, 1e5, 0, 50.0)
-        self._2d_aw   = _spin(2000.0,  10.0, 1e5, 0, 100.0)
-        self._2d_ah   = _spin(1000.0,  10.0, 1e5, 0, 100.0)
-        self._2d_arho = _spin(10.0,    0.1, 1e5,  1, 5.0)
+        self._2d_ax = _spin(7500.0, 0.0, 1e6, 0, 500.0)
+        self._2d_az = _spin(500.0, 0.0, 1e5, 0, 50.0)
+        self._2d_aw = _spin(2000.0, 10.0, 1e5, 0, 100.0)
+        self._2d_ah = _spin(1000.0, 10.0, 1e5, 0, 100.0)
+        self._2d_arho = _spin(10.0, 0.1, 1e5, 1, 5.0)
         form_a.addRow("Centre x (m):", self._2d_ax)
-        form_a.addRow("Top z (m):",    self._2d_az)
-        form_a.addRow("Width (m):",    self._2d_aw)
-        form_a.addRow("Height (m):",   self._2d_ah)
-        form_a.addRow("ρ (Ω·m):",      self._2d_arho)
+        form_a.addRow("Top z (m):", self._2d_az)
+        form_a.addRow("Width (m):", self._2d_aw)
+        form_a.addRow("Height (m):", self._2d_ah)
+        form_a.addRow("ρ (Ω·m):", self._2d_arho)
         self._2d_anom_widget.setVisible(False)
         lay_a.addWidget(self._2d_anom_widget)
         self._2d_anom_cb.toggled.connect(self._2d_anom_widget.setVisible)
@@ -424,7 +432,7 @@ class ForwardModelWindow(PanelWindow):
 
     def _build_3d_page(self) -> QWidget:
         page = QWidget()
-        v    = QVBoxLayout(page)
+        v = QVBoxLayout(page)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(4)
 
@@ -432,15 +440,15 @@ class ForwardModelWindow(PanelWindow):
         grp_g, lay_g = make_group("Grid")
         form_g = QFormLayout()
         form_g.setSpacing(4)
-        self._3d_nx   = _ispin(12, 4, 80)
-        self._3d_ny   = _ispin(12, 4, 80)
-        self._3d_nz   = _ispin(10, 4, 50)
-        self._3d_dx   = _spin(1000.0, 50.0, 50000.0, 0, 100.0)
-        self._3d_dy   = _spin(1000.0, 50.0, 50000.0, 0, 100.0)
+        self._3d_nx = _ispin(12, 4, 80)
+        self._3d_ny = _ispin(12, 4, 80)
+        self._3d_nz = _ispin(10, 4, 50)
+        self._3d_dx = _spin(1000.0, 50.0, 50000.0, 0, 100.0)
+        self._3d_dy = _spin(1000.0, 50.0, 50000.0, 0, 100.0)
         self._3d_npad = _ispin(4, 2, 12)
-        form_g.addRow("nx:",    self._3d_nx)
-        form_g.addRow("ny:",    self._3d_ny)
-        form_g.addRow("nz:",    self._3d_nz)
+        form_g.addRow("nx:", self._3d_nx)
+        form_g.addRow("ny:", self._3d_ny)
+        form_g.addRow("nz:", self._3d_nz)
         form_g.addRow("dx (m):", self._3d_dx)
         form_g.addRow("dy (m):", self._3d_dy)
         form_g.addRow("n_pad:", self._3d_npad)
@@ -451,14 +459,14 @@ class ForwardModelWindow(PanelWindow):
         grp_b, lay_b = make_group("Background & Stations")
         form_b = QFormLayout()
         form_b.setSpacing(4)
-        self._3d_bgrho  = _spin(100.0, 0.1, 1e5, 1, 10.0)
-        self._3d_nsx    = _ispin(4, 1, 20)
-        self._3d_nsy    = _ispin(4, 1, 20)
-        self._3d_stasp  = _spin(1000.0, 50.0, 1e5, 0, 100.0)
+        self._3d_bgrho = _spin(100.0, 0.1, 1e5, 1, 10.0)
+        self._3d_nsx = _ispin(4, 1, 20)
+        self._3d_nsy = _ispin(4, 1, 20)
+        self._3d_stasp = _spin(1000.0, 50.0, 1e5, 0, 100.0)
         form_b.addRow("Background ρ:", self._3d_bgrho)
-        form_b.addRow("Stations X:",   self._3d_nsx)
-        form_b.addRow("Stations Y:",   self._3d_nsy)
-        form_b.addRow("Spacing (m):",  self._3d_stasp)
+        form_b.addRow("Stations X:", self._3d_nsx)
+        form_b.addRow("Stations Y:", self._3d_nsy)
+        form_b.addRow("Spacing (m):", self._3d_stasp)
         lay_b.addLayout(form_b)
         v.addWidget(grp_b)
 
@@ -469,14 +477,14 @@ class ForwardModelWindow(PanelWindow):
         self._3d_anom_widget = QWidget()
         form_a = QFormLayout(self._3d_anom_widget)
         form_a.setSpacing(4)
-        self._3d_ax   = _spin(6000.0,  0.0, 1e6, 0, 500.0)
-        self._3d_ay   = _spin(6000.0,  0.0, 1e6, 0, 500.0)
-        self._3d_az   = _spin(500.0,   0.0, 1e5, 0, 50.0)
-        self._3d_arho = _spin(10.0,    0.1, 1e5, 1, 5.0)
+        self._3d_ax = _spin(6000.0, 0.0, 1e6, 0, 500.0)
+        self._3d_ay = _spin(6000.0, 0.0, 1e6, 0, 500.0)
+        self._3d_az = _spin(500.0, 0.0, 1e5, 0, 50.0)
+        self._3d_arho = _spin(10.0, 0.1, 1e5, 1, 5.0)
         form_a.addRow("Centre x (m):", self._3d_ax)
         form_a.addRow("Centre y (m):", self._3d_ay)
-        form_a.addRow("Top z (m):",    self._3d_az)
-        form_a.addRow("ρ (Ω·m):",      self._3d_arho)
+        form_a.addRow("Top z (m):", self._3d_az)
+        form_a.addRow("ρ (Ω·m):", self._3d_arho)
         self._3d_anom_widget.setVisible(False)
         lay_a.addWidget(self._3d_anom_widget)
         self._3d_anom_cb.toggled.connect(self._3d_anom_widget.setVisible)
@@ -492,9 +500,9 @@ class ForwardModelWindow(PanelWindow):
         form = QFormLayout()
         form.setSpacing(4)
 
-        self._nfreq  = _ispin(30, 5, 200)
-        self._fmin   = _spin(1e-3, 1e-4, 1e3, 4, 1e-4)   # 4 decimals, min 0.0001
-        self._fmax   = _spin(1e3,  1e-3, 1e6, 1, 10.0)
+        self._nfreq = _ispin(30, 5, 200)
+        self._fmin = _spin(1e-3, 1e-4, 1e3, 4, 1e-4)  # 4 decimals, min 0.0001
+        self._fmax = _spin(1e3, 1e-3, 1e6, 1, 10.0)
 
         self._axis_combo = QComboBox()
         self._axis_combo.addItems(["Period (s)", "Frequency (Hz)"])
@@ -503,23 +511,27 @@ class ForwardModelWindow(PanelWindow):
         self._mode_combo.addItems(["MT", "CSAMT", "TEM"])
 
         self._noise_combo = QComboBox()
-        self._noise_combo.addItems(["None", "Gaussian 5%", "Multiplicative 5%"])
+        self._noise_combo.addItems(
+            ["None", "Gaussian 5%", "Multiplicative 5%"]
+        )
 
-        form.addRow("n_freq:",  self._nfreq)
+        form.addRow("n_freq:", self._nfreq)
         form.addRow("f_min (Hz):", self._fmin)
         form.addRow("f_max (Hz):", self._fmax)
-        form.addRow("x-axis:",  self._axis_combo)
-        form.addRow("Mode:",    self._mode_combo)
-        form.addRow("Noise:",   self._noise_combo)
+        form.addRow("x-axis:", self._axis_combo)
+        form.addRow("Mode:", self._mode_combo)
+        form.addRow("Noise:", self._noise_combo)
         lay.addLayout(form)
         layout.addWidget(grp)
 
     def _build_run_buttons(self, layout: QVBoxLayout) -> None:
-        self._btn_compute = icon_button("▶  Compute", "results",
-                                        "Run the forward solver")
+        self._btn_compute = icon_button(
+            "▶  Compute", "results", "Run the forward solver"
+        )
         self._btn_compute.setObjectName("ComputeButton")
-        self._btn_export  = icon_button("⬆  Export",  "export",
-                                        "Export current figure")
+        self._btn_export = icon_button(
+            "⬆  Export", "export", "Export current figure"
+        )
         layout.addWidget(self._btn_compute)
         layout.addWidget(self._btn_export)
         self._btn_compute.clicked.connect(self._on_compute)
@@ -537,21 +549,21 @@ class ForwardModelWindow(PanelWindow):
     def _build_result_tabs(self) -> None:
         """Create all canvas tabs for 1D, 2D, 3D results."""
         # ── 1D canvases ───────────────────────────────────────────────
-        self._c1d_curves      = MplCanvas(toolbar=True)
-        self._c1d_model       = MplCanvas(toolbar=True)
+        self._c1d_curves = MplCanvas(toolbar=True)
+        self._c1d_model = MplCanvas(toolbar=True)
         self._c1d_sensitivity = MplCanvas(toolbar=True)
-        self._c1d_observed    = MplCanvas(toolbar=True)
+        self._c1d_observed = MplCanvas(toolbar=True)
 
         # ── 2D canvases ───────────────────────────────────────────────
-        self._c2d_pseudo    = MplCanvas(toolbar=True)
-        self._c2d_model     = MplCanvas(toolbar=True)
-        self._c2d_profiles  = MplCanvas(toolbar=True)
+        self._c2d_pseudo = MplCanvas(toolbar=True)
+        self._c2d_model = MplCanvas(toolbar=True)
+        self._c2d_profiles = MplCanvas(toolbar=True)
 
         # ── 3D canvases ───────────────────────────────────────────────
-        self._c3d_model    = MplCanvas(toolbar=True)
-        self._c3d_map      = MplCanvas(toolbar=True)
-        self._c3d_section  = MplCanvas(toolbar=True)
-        self._c3d_tensors  = MplCanvas(toolbar=True)
+        self._c3d_model = MplCanvas(toolbar=True)
+        self._c3d_map = MplCanvas(toolbar=True)
+        self._c3d_section = MplCanvas(toolbar=True)
+        self._c3d_tensors = MplCanvas(toolbar=True)
 
         # Initially show 1D tabs
         self._set_tabs_for_dim("1D")
@@ -559,17 +571,17 @@ class ForwardModelWindow(PanelWindow):
     def _set_tabs_for_dim(self, dim: str) -> None:
         self._tab_widget.clear()
         if dim == "1D":
-            self._tab_widget.addTab(self._c1d_curves,      "ρₐ / φ Curves")
-            self._tab_widget.addTab(self._c1d_model,       "Model Profile")
+            self._tab_widget.addTab(self._c1d_curves, "ρₐ / φ Curves")
+            self._tab_widget.addTab(self._c1d_model, "Model Profile")
             self._tab_widget.addTab(self._c1d_sensitivity, "Sensitivity")
-            self._tab_widget.addTab(self._c1d_observed,    "vs Observed")
+            self._tab_widget.addTab(self._c1d_observed, "vs Observed")
         elif dim == "2D":
-            self._tab_widget.addTab(self._c2d_pseudo,   "Pseudosection")
-            self._tab_widget.addTab(self._c2d_model,    "2D Model")
+            self._tab_widget.addTab(self._c2d_pseudo, "Pseudosection")
+            self._tab_widget.addTab(self._c2d_model, "2D Model")
             self._tab_widget.addTab(self._c2d_profiles, "Profile Responses")
         else:
-            self._tab_widget.addTab(self._c3d_model,   "3D Model")
-            self._tab_widget.addTab(self._c3d_map,     "Response Map")
+            self._tab_widget.addTab(self._c3d_model, "3D Model")
+            self._tab_widget.addTab(self._c3d_map, "Response Map")
             self._tab_widget.addTab(self._c3d_section, "Section")
             self._tab_widget.addTab(self._c3d_tensors, "Tensors")
 
@@ -595,12 +607,14 @@ class ForwardModelWindow(PanelWindow):
         saved_lay.addWidget(self._lib_list)
         self._refresh_lib_list()
 
-        btn_save   = QPushButton("Save current")
+        btn_save = QPushButton("Save current")
         btn_rename = QPushButton("Rename")
         btn_delete = QPushButton("Delete")
-        btn_load   = QPushButton("Load →")
+        btn_load = QPushButton("Load →")
         for b in (btn_save, btn_rename, btn_delete, btn_load):
-            b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            b.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
             saved_lay.addWidget(b)
         btn_save.clicked.connect(self._save_current_model)
         btn_rename.clicked.connect(self._rename_selected_model)
@@ -612,21 +626,25 @@ class ForwardModelWindow(PanelWindow):
         preset_grp, preset_lay = make_group("Presets (1D)")
 
         scroll_inner = QWidget()
-        scroll_v     = QVBoxLayout(scroll_inner)
+        scroll_v = QVBoxLayout(scroll_inner)
         scroll_v.setContentsMargins(0, 0, 0, 0)
         scroll_v.setSpacing(2)
 
         for name in GEOLOGY_PRESET_NAMES:
             btn = QPushButton(name.capitalize())
             btn.setToolTip(f"Load {name} geological prior")
-            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            btn.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
             btn.clicked.connect(lambda _, n=name: self._load_preset(n))
             scroll_v.addWidget(btn)
         scroll_v.addStretch(1)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll.setWidget(scroll_inner)
         scroll.setMaximumHeight(240)
@@ -660,9 +678,7 @@ class ForwardModelWindow(PanelWindow):
         self._set_tabs_for_dim(dim)
         # 3D is slow — warn the user
         if dim == "3D":
-            self._compute_label.setText(
-                "3D can take several minutes."
-            )
+            self._compute_label.setText("3D can take several minutes.")
         else:
             self._compute_label.setText("")
 
@@ -671,58 +687,62 @@ class ForwardModelWindow(PanelWindow):
     # =========================================================================
 
     def _build_params_dict(self) -> dict:
-        dim   = self._current_dim()
+        dim = self._current_dim()
         noise_map = {
             "None": "none",
             "Gaussian 5%": "gaussian",
             "Multiplicative 5%": "multiplicative",
         }
         p: dict = {
-            "dim":    dim,
+            "dim": dim,
             "n_freq": self._nfreq.value(),
-            "f_min":  self._fmin.value(),
-            "f_max":  self._fmax.value(),
-            "noise":  noise_map.get(self._noise_combo.currentText(), "none"),
+            "f_min": self._fmin.value(),
+            "f_max": self._fmax.value(),
+            "noise": noise_map.get(self._noise_combo.currentText(), "none"),
         }
         if dim == "1D":
             rho, h = self._read_1d_model()
             p["resistivity"] = rho.tolist()
-            p["thickness"]   = h.tolist()
+            p["thickness"] = h.tolist()
         elif dim == "2D":
-            p.update({
-                "nx":         self._2d_nx.value(),
-                "nz":         self._2d_nz.value(),
-                "dx":         self._2d_dx.value(),
-                "dz_min":     self._2d_dzmin.value(),
-                "dz_max":     self._2d_dzmax.value(),
-                "n_pad":      self._2d_npad.value(),
-                "bg_rho":     self._2d_bgrho.value(),
-                "n_stations": int(self._2d_nsta.value()),
-                "anomaly":    self._2d_anom_cb.isChecked(),
-                "anom_x":     self._2d_ax.value(),
-                "anom_z":     self._2d_az.value(),
-                "anom_w":     self._2d_aw.value(),
-                "anom_h":     self._2d_ah.value(),
-                "anom_rho":   self._2d_arho.value(),
-            })
+            p.update(
+                {
+                    "nx": self._2d_nx.value(),
+                    "nz": self._2d_nz.value(),
+                    "dx": self._2d_dx.value(),
+                    "dz_min": self._2d_dzmin.value(),
+                    "dz_max": self._2d_dzmax.value(),
+                    "n_pad": self._2d_npad.value(),
+                    "bg_rho": self._2d_bgrho.value(),
+                    "n_stations": int(self._2d_nsta.value()),
+                    "anomaly": self._2d_anom_cb.isChecked(),
+                    "anom_x": self._2d_ax.value(),
+                    "anom_z": self._2d_az.value(),
+                    "anom_w": self._2d_aw.value(),
+                    "anom_h": self._2d_ah.value(),
+                    "anom_rho": self._2d_arho.value(),
+                }
+            )
         else:
-            p.update({
-                "nx":          self._3d_nx.value(),
-                "ny":          self._3d_ny.value(),
-                "nz":          self._3d_nz.value(),
-                "dx":          self._3d_dx.value(),
-                "dy":          self._3d_dy.value(),
-                "n_pad":       self._3d_npad.value(),
-                "bg_rho":      self._3d_bgrho.value(),
-                "n_sx":        self._3d_nsx.value(),
-                "n_sy":        self._3d_nsy.value(),
-                "sta_spacing": self._3d_stasp.value(),
-                "anomaly":     self._3d_anom_cb.isChecked(),
-                "anom_x":      self._3d_ax.value(),
-                "anom_y":      self._3d_ay.value(),
-                "anom_z":      self._3d_az.value(),
-                "anom_rho":    self._3d_arho.value(),
-            })
+            p.update(
+                {
+                    "nx": self._3d_nx.value(),
+                    "ny": self._3d_ny.value(),
+                    "nz": self._3d_nz.value(),
+                    "dx": self._3d_dx.value(),
+                    "dy": self._3d_dy.value(),
+                    "n_pad": self._3d_npad.value(),
+                    "bg_rho": self._3d_bgrho.value(),
+                    "n_sx": self._3d_nsx.value(),
+                    "n_sy": self._3d_nsy.value(),
+                    "sta_spacing": self._3d_stasp.value(),
+                    "anomaly": self._3d_anom_cb.isChecked(),
+                    "anom_x": self._3d_ax.value(),
+                    "anom_y": self._3d_ay.value(),
+                    "anom_z": self._3d_az.value(),
+                    "anom_rho": self._3d_arho.value(),
+                }
+            )
         return p
 
     def _on_compute(self) -> None:
@@ -731,6 +751,7 @@ class ForwardModelWindow(PanelWindow):
         from pycsamt.app.desktop.workers.forward_worker import (
             ForwardWorker,
         )
+
         params = self._build_params_dict()
         self._btn_compute.setEnabled(False)
         self._compute_label.setText("Computing…")
@@ -769,7 +790,7 @@ class ForwardModelWindow(PanelWindow):
 
     def _plot_1d(self, resp) -> None:
         use_period = self._axis_combo.currentIndex() == 0
-        x     = 1.0 / resp.freqs if use_period else resp.freqs
+        x = 1.0 / resp.freqs if use_period else resp.freqs
         xlabel = "Period (s)" if use_period else "Frequency (Hz)"
 
         # Tab 0: ρₐ/φ curves
@@ -791,10 +812,9 @@ class ForwardModelWindow(PanelWindow):
         self._c1d_model.figure.clear()
         ax = self._c1d_model.figure.add_subplot(111)
         from pycsamt.forward.plot import plot_model_1d
+
         try:
-            plot_model_1d(ax=ax,
-                          resistivity=rho, thickness=h,
-                          label="model")
+            plot_model_1d(ax=ax, resistivity=rho, thickness=h, label="model")
         except Exception:
             depths = np.concatenate([[0], np.cumsum(h), [np.sum(h) * 1.5]])
             for i, _r in enumerate(rho):
@@ -823,15 +843,16 @@ class ForwardModelWindow(PanelWindow):
 
     def _plot_1d_sensitivity(self, resp) -> None:
         from pycsamt.forward import LayeredModel, MT1DForward
+
         rho, h = self._read_1d_model()
-        n_layers  = len(rho)
-        n_freq    = len(resp.freqs)
-        sens      = np.zeros((n_layers, n_freq))
-        eps       = 0.05  # 5% perturbation
+        n_layers = len(rho)
+        n_freq = len(resp.freqs)
+        sens = np.zeros((n_layers, n_freq))
+        eps = 0.05  # 5% perturbation
 
         for i in range(n_layers):
             rho_p = rho.copy()
-            rho_p[i] *= (1 + eps)
+            rho_p[i] *= 1 + eps
             resp_p = MT1DForward(resp.freqs).run(
                 LayeredModel(resistivity=rho_p, thickness=h)
             )
@@ -846,7 +867,9 @@ class ForwardModelWindow(PanelWindow):
             interpolation="nearest",
             extent=[0, n_freq, n_layers, 0],
         )
-        self._c1d_sensitivity.figure.colorbar(im, ax=ax, label="d ln ρₐ / d ln ρ")
+        self._c1d_sensitivity.figure.colorbar(
+            im, ax=ax, label="d ln ρₐ / d ln ρ"
+        )
         ax.set_xlabel("Frequency index (low → high)")
         ax.set_ylabel("Layer index (top → bottom)")
         ax.set_title("Jacobian sensitivity")
@@ -859,6 +882,7 @@ class ForwardModelWindow(PanelWindow):
             plot_pseudosection_2d,
             plot_response_profiles,
         )
+
         # Tab 0: pseudosection
         self._c2d_pseudo.figure.clear()
         ax = self._c2d_pseudo.figure.add_subplot(111)
@@ -915,7 +939,9 @@ class ForwardModelWindow(PanelWindow):
                 else:
                     src_fig = result.figure
                 buf = io.BytesIO()
-                src_fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
+                src_fig.savefig(
+                    buf, format="png", dpi=110, bbox_inches="tight"
+                )
                 plt.close(src_fig)
                 buf.seek(0)
                 img = _imread(buf)
@@ -928,7 +954,9 @@ class ForwardModelWindow(PanelWindow):
 
         # ── Tab 0: 3D Model (no ax, takes grid3d) ──────────────────────
         _render_own_figure(
-            self._c3d_model, plot_model_3d, resp.grid,
+            self._c3d_model,
+            plot_model_3d,
+            resp.grid,
             label="3D Model",
         )
 
@@ -954,7 +982,9 @@ class ForwardModelWindow(PanelWindow):
 
         # ── Tab 3: Tensor components (no ax, multi-panel) ──────────────
         _render_own_figure(
-            self._c3d_tensors, plot_tensor_components_3d, resp,
+            self._c3d_tensors,
+            plot_tensor_components_3d,
+            resp,
             label="Tensors",
         )
 
@@ -971,9 +1001,10 @@ class ForwardModelWindow(PanelWindow):
         dim = self._current_dim()
         if dim != "1D":
             QMessageBox.information(
-                self, "Save Model",
+                self,
+                "Save Model",
                 "Library save is supported for 1D models.\n"
-                "2D/3D parameters are reproduced from the builder controls."
+                "2D/3D parameters are reproduced from the builder controls.",
             )
             return
         rho, h = self._read_1d_model()
@@ -1004,7 +1035,8 @@ class ForwardModelWindow(PanelWindow):
         if not name:
             return
         r = QMessageBox.question(
-            self, "Delete Model",
+            self,
+            "Delete Model",
             f"Delete '{name}'?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
@@ -1060,7 +1092,7 @@ class ForwardModelWindow(PanelWindow):
         if dim == "1D":
             rho, h = self._read_1d_model()
             payload["resistivity"] = rho.tolist()
-            payload["thickness"]   = h.tolist()
+            payload["thickness"] = h.tolist()
         elif dim == "2D":
             payload["bg_rho"] = self._2d_bgrho.value()
         else:
@@ -1077,6 +1109,7 @@ class ForwardModelWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         current = self._tab_widget.currentWidget()
         if not isinstance(current, MplCanvas):
             return
@@ -1098,4 +1131,6 @@ class ForwardModelWindow(PanelWindow):
                 if btn.property("dim") == "1D":
                     btn.setChecked(True)
             self._on_dim_changed()
-            self._set_1d_model(payload["resistivity"], payload.get("thickness", []))
+            self._set_1d_model(
+                payload["resistivity"], payload.get("thickness", [])
+            )

@@ -109,7 +109,7 @@ class ProfilePanel(QWidget):
 
     def set_sites(self, sites) -> None:
         """Load a Sites collection and redraw all tabs."""
-        self._pt_last_key = None   # new data always means a fresh PT draw
+        self._pt_last_key = None  # new data always means a fresh PT draw
         self._ctrl.set_sites(sites)
         try:
             freqs = []
@@ -126,7 +126,7 @@ class ProfilePanel(QWidget):
         try:
             self._redraw_all()
         except Exception:
-            pass   # never let a canvas draw block the caller's post-set_sites work
+            pass  # never let a canvas draw block the caller's post-set_sites work
 
     def set_selected_station(self, station_id: str) -> None:
         """Highlight a station; redraw ρₐ/φ tab and mark active pseudosection."""
@@ -192,13 +192,17 @@ class ProfilePanel(QWidget):
             _annotate_empty,
             style_axes,
         )
+
         for canvas, msg in (
-            (self._canvas_rho_phi,  "Select a station to view ρₐ / φ curves"),
-            (self._canvas_rho_ps,   "Load survey data"),
-            (self._canvas_ph_ps,    "Load survey data"),
-            (self._canvas_tipper,   "Load survey data"),
-            (self._canvas_pt,       "Load survey data"),
-            (self._canvas_pt_strip, "Select a station to view its ellipse strip"),
+            (self._canvas_rho_phi, "Select a station to view ρₐ / φ curves"),
+            (self._canvas_rho_ps, "Load survey data"),
+            (self._canvas_ph_ps, "Load survey data"),
+            (self._canvas_tipper, "Load survey data"),
+            (self._canvas_pt, "Load survey data"),
+            (
+                self._canvas_pt_strip,
+                "Select a station to view its ellipse strip",
+            ),
         ):
             canvas.figure.clear()
             ax = canvas.figure.add_subplot(111)
@@ -263,9 +267,11 @@ class ProfilePanel(QWidget):
         trigger a full recompute + redraw cycle.
         """
         current_key = self._ctrl.phase_tensor_key()
-        if (self._pt_last_key is not None
-                and current_key == self._pt_last_key
-                and len(self._canvas_pt.figure.axes) > 0):
+        if (
+            self._pt_last_key is not None
+            and current_key == self._pt_last_key
+            and len(self._canvas_pt.figure.axes) > 0
+        ):
             # Nothing changed — just repaint the existing figure (fast path).
             self._canvas_pt.draw()
             return

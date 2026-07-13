@@ -306,7 +306,7 @@ class BundleContainerMixin(BundleMixin):
     """
 
     def iter_bundles(self) -> Iterator[TFBundle]:
-        """ Yield contained items as :class:`TFBundle` objects."""
+        """Yield contained items as :class:`TFBundle` objects."""
         if hasattr(self, "items"):
             for _, v in self.items():  # type: ignore
                 if hasattr(v, "to_bundle"):
@@ -359,6 +359,7 @@ class _ProxyFromBundle:
     Used internally to feed :func:`pycsamt.core.base.to_edi`
     with a minimal object that satisfies the dispatch contract.
     """
+
     def __init__(self, b: TFBundle) -> None:
         self._b = b
 

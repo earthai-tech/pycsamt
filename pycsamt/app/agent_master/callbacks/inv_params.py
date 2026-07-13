@@ -11,21 +11,26 @@ from dash.exceptions import PreventUpdate
 from .._ids import IDs
 
 _PINN_KWS = {
-    "pinn", "physics-informed",
-    "physics informed", "no training data",
+    "pinn",
+    "physics-informed",
+    "physics informed",
+    "no training data",
     "gradient descent",
 }
 _HYBRID_KWS = {
-    "hybrid", "two-stage", "two stage",
-    "ai + physics", "warm start", "warmstart",
+    "hybrid",
+    "two-stage",
+    "two stage",
+    "ai + physics",
+    "warm start",
+    "warmstart",
 }
 
 
 def _is_pinn_or_hybrid(text: str) -> bool:
     t = text.lower()
-    return (
-        any(kw in t for kw in _PINN_KWS)
-        or any(kw in t for kw in _HYBRID_KWS)
+    return any(kw in t for kw in _PINN_KWS) or any(
+        kw in t for kw in _HYBRID_KWS
     )
 
 
@@ -61,8 +66,7 @@ def register_inv_params(app) -> None:
     @app.callback(
         Output(IDs.STORE_INV_CONFIG, "data"),
         Output(IDs.INV_STATUS, "children"),
-        Output(IDs.CANVAS_INV_PARAMS, "is_open",
-               allow_duplicate=True),
+        Output(IDs.CANVAS_INV_PARAMS, "is_open", allow_duplicate=True),
         Input(IDs.BTN_INV_CONFIRM, "n_clicks"),
         State(IDs.INV_MODE, "value"),
         State(IDs.INV_DIM, "value"),
@@ -80,11 +84,17 @@ def register_inv_params(app) -> None:
     )
     def confirm_inv_params(
         n_clicks,
-        mode, dim, solver,
-        n_layers, depth_max,
-        epochs, lr,
-        smooth_w, lat_w,
-        graph_w, radius,
+        mode,
+        dim,
+        solver,
+        n_layers,
+        depth_max,
+        epochs,
+        lr,
+        smooth_w,
+        lat_w,
+        graph_w,
+        radius,
         checkpoint,
     ):
         if not n_clicks:
@@ -93,23 +103,16 @@ def register_inv_params(app) -> None:
         # --- basic validation -------------------------
         errors = []
         if not n_layers or int(n_layers) < 2:
-            errors.append(
-                "n_layers must be >= 2."
-            )
+            errors.append("n_layers must be >= 2.")
         if not depth_max or float(depth_max) <= 0:
-            errors.append(
-                "depth_max must be positive."
-            )
+            errors.append("depth_max must be positive.")
         if not epochs or int(epochs) < 1:
-            errors.append(
-                "epochs must be >= 1."
-            )
+            errors.append("epochs must be >= 1.")
         if not lr or float(lr) <= 0:
-            errors.append(
-                "Learning rate must be > 0."
-            )
+            errors.append("Learning rate must be > 0.")
         if errors:
             from dash import html
+
             msg = html.Span(
                 "; ".join(errors),
                 style={"color": "var(--red)"},
@@ -124,15 +127,14 @@ def register_inv_params(app) -> None:
             "depth_max": float(depth_max),
             "epochs": int(epochs),
             "lr": float(lr),
-            "smoothness_weight": float(
-                smooth_w or 0.01
-            ),
+            "smoothness_weight": float(smooth_w or 0.01),
             "lateral_weight": float(lat_w or 0.005),
             "graph_weight": float(graph_w or 0.005),
             "radius": float(radius or 5000.0),
             "checkpoint": checkpoint or "",
         }
         from dash import html
+
         ok_msg = html.Span(
             "Parameters saved.",
             style={"color": "var(--green)"},

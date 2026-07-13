@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Forward Modelling page (1D, 2D MT, 3D MT)."""
+
 from __future__ import annotations
 
 import matplotlib
@@ -19,15 +20,19 @@ from dash import (
 )
 from dash.exceptions import PreventUpdate
 
-_FWD_TAB_IDS  = ["1d", "2d", "3d"]
+_FWD_TAB_IDS = ["1d", "2d", "3d"]
 _FWD_TAB_KEYS = ["fwd-tab-1d", "fwd-tab-2d", "fwd-tab-3d"]
-_FWD_TAB_IDX  = {k: i for i, k in enumerate(_FWD_TAB_KEYS)}
+_FWD_TAB_IDX = {k: i for i, k in enumerate(_FWD_TAB_KEYS)}
 _FWD_TAB_ICON = {
     "fwd-tab-1d": "bi-reception-4",
     "fwd-tab-2d": "bi-grid",
     "fwd-tab-3d": "bi-cube",
 }
-_FWD_TAB_LABEL = {"fwd-tab-1d": "1-D", "fwd-tab-2d": "2-D MT", "fwd-tab-3d": "3-D MT"}
+_FWD_TAB_LABEL = {
+    "fwd-tab-1d": "1-D",
+    "fwd-tab-2d": "2-D MT",
+    "fwd-tab-3d": "3-D MT",
+}
 
 from pycsamt.app.desktop.controllers.forward_controller import (
     ForwardController,
@@ -47,6 +52,7 @@ _HIDE = {"display": "none"}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _build_model(table_data, halfspace_rho):
     """Build LayeredModel from finite-layer table rows + halfspace ρ."""
     from pycsamt.forward import LayeredModel
@@ -56,7 +62,7 @@ def _build_model(table_data, halfspace_rho):
     halfspace_rho = float(halfspace_rho or 1000.0)
 
     rho_finite = np.array([float(r["resistivity"]) for r in table_data])
-    thk_finite = np.array([float(r["thickness"])   for r in table_data])
+    thk_finite = np.array([float(r["thickness"]) for r in table_data])
 
     if np.any(thk_finite <= 0):
         raise ValueError("All layer thicknesses must be > 0 m.")
@@ -69,17 +75,17 @@ def _build_model(table_data, halfspace_rho):
 
 
 def _plot_model_1d(ax, model, dark: bool):
-    rho   = model.resistivity
-    thk   = model.thickness
-    tops  = np.concatenate([[0.0], np.cumsum(thk)])
+    rho = model.resistivity
+    thk = model.thickness
+    tops = np.concatenate([[0.0], np.cumsum(thk)])
 
     depths_plot, rho_plot = [], []
     for i in range(len(rho) - 1):
         depths_plot += [tops[i], tops[i + 1]]
-        rho_plot    += [rho[i],  rho[i]]
+        rho_plot += [rho[i], rho[i]]
     bottom = tops[-1] * 1.2 if tops[-1] > 0 else 500.0
     depths_plot += [tops[-1], bottom]
-    rho_plot    += [rho[-1],  rho[-1]]
+    rho_plot += [rho[-1], rho[-1]]
 
     colour = "#89b4fa" if dark else "#1e66f5"
     ax.plot(rho_plot, depths_plot, color=colour, lw=2)
@@ -93,7 +99,7 @@ def _plot_model_1d(ax, model, dark: bool):
 
 
 def _plot_mt_response(axes, resp, dark: bool):
-    c_rho   = "#a6e3a1" if dark else "#40a02b"
+    c_rho = "#a6e3a1" if dark else "#40a02b"
     c_phase = "#f38ba8" if dark else "#d20f39"
     T = 1.0 / resp.freqs
 
@@ -112,11 +118,17 @@ def _plot_mt_response(axes, resp, dark: bool):
 
 def _plot_tem_response(ax, resp, dark: bool):
     colour = "#f9e2af" if dark else "#df8e1d"
-    vals   = np.abs(resp.dBz_dt)
-    mask   = np.isfinite(vals) & (vals > 0)
+    vals = np.abs(resp.dBz_dt)
+    mask = np.isfinite(vals) & (vals > 0)
     if mask.sum() < 2:
-        ax.text(0.5, 0.5, "No valid TEM response",
-                ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "No valid TEM response",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return
     ax.loglog(resp.times[mask], vals[mask], color=colour, lw=2)
     ax.set_xlabel("Time (s)")
@@ -126,15 +138,26 @@ def _plot_tem_response(ax, resp, dark: bool):
 
 # ── 1D runner ─────────────────────────────────────────────────────────────────
 
-def _run_1d(table_data, halfspace_rho, method, f_min, f_max, n_pts,
-            offset, loop_r, dark):
-    model  = _build_model(table_data, halfspace_rho)
+
+def _run_1d(
+    table_data,
+    halfspace_rho,
+    method,
+    f_min,
+    f_max,
+    n_pts,
+    offset,
+    loop_r,
+    dark,
+):
+    model = _build_model(table_data, halfspace_rho)
     method = (method or "MT1D").upper()
 
     if method == "TEM1D":
         from pycsamt.forward.em1d import TEM1DForward
+
         times = np.logspace(f_min, f_max, n_pts)
-        resp  = TEM1DForward(times, loop_radius=float(loop_r or 50)).run(model)
+        resp = TEM1DForward(times, loop_radius=float(loop_r or 50)).run(model)
 
         fig, axes = plt.subplots(1, 2, figsize=(11, 5))
         _plot_model_1d(axes[0], model, dark)
@@ -142,9 +165,10 @@ def _run_1d(table_data, halfspace_rho, method, f_min, f_max, n_pts,
 
     elif method == "CSAMT1D":
         from pycsamt.forward.em1d import CSAMT1DForward
+
         freqs = np.logspace(f_min, f_max, n_pts)
-        r     = float(offset or 5000)
-        resp  = CSAMT1DForward(freqs, source_offset=r).run(model)
+        r = float(offset or 5000)
+        resp = CSAMT1DForward(freqs, source_offset=r).run(model)
 
         fig, axes = plt.subplots(1, 3, figsize=(14, 5))
         _plot_model_1d(axes[0], model, dark)
@@ -152,8 +176,9 @@ def _run_1d(table_data, halfspace_rho, method, f_min, f_max, n_pts,
 
     else:
         from pycsamt.forward.em1d import MT1DForward
+
         freqs = np.logspace(f_min, f_max, n_pts)
-        resp  = MT1DForward(freqs).run(model)
+        resp = MT1DForward(freqs).run(model)
 
         fig, axes = plt.subplots(1, 3, figsize=(14, 5))
         _plot_model_1d(axes[0], model, dark)
@@ -164,16 +189,39 @@ def _run_1d(table_data, halfspace_rho, method, f_min, f_max, n_pts,
     plt.close(fig)
     n_layers = model.n_layers
     gate_label = "time gates" if method == "TEM1D" else "frequencies"
-    msg = (f"{method} done — {n_layers} layers "
-           f"({n_layers - 1} finite + halfspace), {n_pts} {gate_label}")
+    msg = (
+        f"{method} done — {n_layers} layers "
+        f"({n_layers - 1} finite + halfspace), {n_pts} {gate_label}"
+    )
     return src, msg
 
 
 # ── 2D runner ─────────────────────────────────────────────────────────────────
 
-def _run_2d(m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
-            a2rho, ax2lo, ax2hi, az2lo, az2hi, n2lay, seed2, plot2,
-            table_data, halfspace_rho, f_min, f_max, n_pts, dark):
+
+def _run_2d(
+    m2d_type,
+    bg2,
+    nx2,
+    nz2,
+    x2max,
+    z2max,
+    n2st,
+    a2rho,
+    ax2lo,
+    ax2hi,
+    az2lo,
+    az2hi,
+    n2lay,
+    seed2,
+    plot2,
+    table_data,
+    halfspace_rho,
+    f_min,
+    f_max,
+    n_pts,
+    dark,
+):
     from pycsamt.forward import Grid2D, MT2DForward
     from pycsamt.forward.plot import (
         plot_model_2d,
@@ -182,42 +230,64 @@ def _run_2d(m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
     )
 
     m2d_type = m2d_type or "halfspace"
-    bg2      = float(bg2 or 100.0)
-    nx2      = int(nx2 or 25)
-    nz2      = int(nz2 or 20)
-    x2max    = float(x2max or 8000)
-    z2max    = float(z2max or 5000)
-    n2st     = int(n2st or 10)
-    plot2    = plot2 or "model"
+    bg2 = float(bg2 or 100.0)
+    nx2 = int(nx2 or 25)
+    nz2 = int(nz2 or 20)
+    x2max = float(x2max or 8000)
+    z2max = float(z2max or 5000)
+    n2st = int(n2st or 10)
+    plot2 = plot2 or "model"
 
     if m2d_type == "anomaly":
-        bounds = (float(ax2lo or 2000), float(ax2hi or 4000),
-                  float(az2lo or 200),  float(az2hi or 800))
+        bounds = (
+            float(ax2lo or 2000),
+            float(ax2hi or 4000),
+            float(az2lo or 200),
+            float(az2hi or 800),
+        )
         grid = Grid2D.with_anomaly(
-            bg_rho=bg2, anomaly_rho=float(a2rho or 5),
+            bg_rho=bg2,
+            anomaly_rho=float(a2rho or 5),
             anomaly_bounds=bounds,
-            nx=nx2, nz=nz2, x_max=x2max, z_max=z2max, n_stations=n2st,
+            nx=nx2,
+            nz=nz2,
+            x_max=x2max,
+            z_max=z2max,
+            n_stations=n2st,
         )
 
     elif m2d_type == "from_layers":
         model_1d = _build_model(table_data, halfspace_rho)
         grid = Grid2D.from_1d_layers(
-            model_1d, nx=nx2, x_max=x2max, n_stations=n2st,
+            model_1d,
+            nx=nx2,
+            x_max=x2max,
+            n_stations=n2st,
         )
 
     elif m2d_type == "random":
         grid = Grid2D.random(
-            nx=nx2, nz=nz2, x_max=x2max, z_max=z2max,
-            n_layers=int(n2lay or 4), n_stations=n2st,
-            lateral_variation=True, seed=int(seed2) if seed2 is not None else 42,
+            nx=nx2,
+            nz=nz2,
+            x_max=x2max,
+            z_max=z2max,
+            n_layers=int(n2lay or 4),
+            n_stations=n2st,
+            lateral_variation=True,
+            seed=int(seed2) if seed2 is not None else 42,
         )
 
     else:  # halfspace
         grid = Grid2D.halfspace(
-            rho=bg2, nx=nx2, nz=nz2, x_max=x2max, z_max=z2max, n_stations=n2st,
+            rho=bg2,
+            nx=nx2,
+            nz=nz2,
+            x_max=x2max,
+            z_max=z2max,
+            n_stations=n2st,
         )
 
-    freqs  = np.logspace(f_min, f_max, n_pts)
+    freqs = np.logspace(f_min, f_max, n_pts)
     resp2d = MT2DForward(freqs, grid, verbose=False).run()
 
     # Choose plot
@@ -258,17 +328,45 @@ def _run_2d(m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
     plt.close(fig)
 
     n_st = len(resp2d.stations_x)
-    msg = (f"MT2D done — {m2d_type} model, "
-           f"{n_pts} freqs, {n_st} stations, "
-           f"grid {grid.nx}×{grid.nz}")
+    msg = (
+        f"MT2D done — {m2d_type} model, "
+        f"{n_pts} freqs, {n_st} stations, "
+        f"grid {grid.nx}×{grid.nz}"
+    )
     return src, msg, resp2d
 
 
 # ── 3D runner ─────────────────────────────────────────────────────────────────
 
-def _run_3d(m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
-            a3rho, ax3lo, ax3hi, ay3lo, ay3hi, az3lo, az3hi, n3lay, seed3,
-            plot3, comp3, freq3idx, f_min, f_max, n_pts, dark):
+
+def _run_3d(
+    m3d_type,
+    bg3,
+    nx3,
+    ny3,
+    nz3,
+    x3max,
+    y3max,
+    z3max,
+    nx3st,
+    ny3st,
+    a3rho,
+    ax3lo,
+    ax3hi,
+    ay3lo,
+    ay3hi,
+    az3lo,
+    az3hi,
+    n3lay,
+    seed3,
+    plot3,
+    comp3,
+    freq3idx,
+    f_min,
+    f_max,
+    n_pts,
+    dark,
+):
     from pycsamt.forward import Grid3D, MT3DForward
     from pycsamt.forward.plot import (
         plot_model_3d,
@@ -278,77 +376,106 @@ def _run_3d(m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
     )
 
     m3d_type = m3d_type or "halfspace"
-    bg3      = float(bg3 or 100.0)
-    nx3      = int(nx3 or 15)
-    ny3      = int(ny3 or 15)
-    nz3      = int(nz3 or 12)
-    x3max    = float(x3max or 8000)
-    y3max    = float(y3max or 8000)
-    z3max    = float(z3max or 5000)
-    nx3st    = int(nx3st or 4)
-    ny3st    = int(ny3st or 4)
-    plot3    = plot3 or "model"
-    comp3    = comp3 or "xy"
+    bg3 = float(bg3 or 100.0)
+    nx3 = int(nx3 or 15)
+    ny3 = int(ny3 or 15)
+    nz3 = int(nz3 or 12)
+    x3max = float(x3max or 8000)
+    y3max = float(y3max or 8000)
+    z3max = float(z3max or 5000)
+    nx3st = int(nx3st or 4)
+    ny3st = int(ny3st or 4)
+    plot3 = plot3 or "model"
+    comp3 = comp3 or "xy"
     freq3idx = int(freq3idx or 0)
 
     if m3d_type == "block":
         bounds = (
-            float(ax3lo or 2000), float(ax3hi or 6000),
-            float(ay3lo or 2000), float(ay3hi or 6000),
-            float(az3lo or 300),  float(az3hi or 1500),
+            float(ax3lo or 2000),
+            float(ax3hi or 6000),
+            float(ay3lo or 2000),
+            float(ay3hi or 6000),
+            float(az3lo or 300),
+            float(az3hi or 1500),
         )
         grid = Grid3D.block_anomaly(
-            bg_rho=bg3, anomaly_rho=float(a3rho or 5),
+            bg_rho=bg3,
+            anomaly_rho=float(a3rho or 5),
             bounds=bounds,
-            nx=nx3, ny=ny3, nz=nz3,
-            x_max=x3max, y_max=y3max, z_max=z3max,
-            nx_stations=nx3st, ny_stations=ny3st,
+            nx=nx3,
+            ny=ny3,
+            nz=nz3,
+            x_max=x3max,
+            y_max=y3max,
+            z_max=z3max,
+            nx_stations=nx3st,
+            ny_stations=ny3st,
         )
 
     elif m3d_type == "random":
         grid = Grid3D.random_layered(
-            nx=nx3, ny=ny3, nz=nz3,
-            x_max=x3max, y_max=y3max, z_max=z3max,
+            nx=nx3,
+            ny=ny3,
+            nz=nz3,
+            x_max=x3max,
+            y_max=y3max,
+            z_max=z3max,
             n_layers=int(n3lay or 4),
-            nx_stations=nx3st, ny_stations=ny3st,
+            nx_stations=nx3st,
+            ny_stations=ny3st,
             lateral_variation=True,
             seed=int(seed3) if seed3 is not None else 42,
         )
 
     else:  # halfspace
         grid = Grid3D.halfspace(
-            rho=bg3, nx=nx3, ny=ny3, nz=nz3,
-            x_max=x3max, y_max=y3max, z_max=z3max,
-            nx_stations=nx3st, ny_stations=ny3st,
+            rho=bg3,
+            nx=nx3,
+            ny=ny3,
+            nz=nz3,
+            x_max=x3max,
+            y_max=y3max,
+            z_max=z3max,
+            nx_stations=nx3st,
+            ny_stations=ny3st,
         )
 
-    freqs  = np.logspace(f_min, f_max, n_pts)
+    freqs = np.logspace(f_min, f_max, n_pts)
     resp3d = MT3DForward(freqs, grid, method="quasi3d", verbose=False).run()
 
     # Clamp freq index
-    n_freqs    = len(resp3d.freqs)
-    freq3idx   = min(freq3idx, n_freqs - 1)
+    n_freqs = len(resp3d.freqs)
+    freq3idx = min(freq3idx, n_freqs - 1)
 
     if plot3 == "model":
         axes = plot_model_3d(grid, show_stations=True)
-        fig  = np.asarray(axes).flat[0].figure
+        fig = np.asarray(axes).flat[0].figure
 
     elif plot3 == "map":
         fig, ax = plt.subplots(figsize=(7, 6))
-        plot_response_map_3d(resp3d, freq_idx=freq3idx, component=comp3,
-                             quantity="rho_a", ax=ax)
+        plot_response_map_3d(
+            resp3d,
+            freq_idx=freq3idx,
+            component=comp3,
+            quantity="rho_a",
+            ax=ax,
+        )
 
     elif plot3 == "section":
         fig, ax = plt.subplots(figsize=(11, 5))
-        plot_response_section_3d(resp3d, component=comp3, quantity="rho_a", ax=ax)
+        plot_response_section_3d(
+            resp3d, component=comp3, quantity="rho_a", ax=ax
+        )
 
     elif plot3 == "tensor":
-        axes = plot_tensor_components_3d(resp3d, freq_idx=freq3idx, quantity="rho_a")
-        fig  = np.asarray(axes).flat[0].figure
+        axes = plot_tensor_components_3d(
+            resp3d, freq_idx=freq3idx, quantity="rho_a"
+        )
+        fig = np.asarray(axes).flat[0].figure
 
     else:
         axes = plot_model_3d(grid, show_stations=True)
-        fig  = np.asarray(axes).flat[0].figure
+        fig = np.asarray(axes).flat[0].figure
 
     try:
         fig.tight_layout()
@@ -358,13 +485,16 @@ def _run_3d(m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
     plt.close(fig)
 
     n_st = len(resp3d.stations_xy)
-    msg = (f"MT3D quasi-3D done — {m3d_type} model, "
-           f"{n_pts} freqs, {n_st} stations, "
-           f"grid {grid.nx}×{grid.ny}×{grid.nz}")
+    msg = (
+        f"MT3D quasi-3D done — {m3d_type} model, "
+        f"{n_pts} freqs, {n_st} stations, "
+        f"grid {grid.nx}×{grid.ny}×{grid.nz}"
+    )
     return src, msg, resp3d
 
 
 # ── Callbacks ─────────────────────────────────────────────────────────────────
+
 
 def register_forward(app) -> None:
 
@@ -419,17 +549,17 @@ def register_forward(app) -> None:
         }
         """,
         # sidebar ctrl panels
-        Output("fwd-ctrl-1d",     "style"),
-        Output("fwd-ctrl-2d",     "style"),
-        Output("fwd-ctrl-3d",     "style"),
+        Output("fwd-ctrl-1d", "style"),
+        Output("fwd-ctrl-2d", "style"),
+        Output("fwd-ctrl-3d", "style"),
         # dim-bar btn classes
-        Output("fwd-dim-btn-1d",  "className"),
-        Output("fwd-dim-btn-2d",  "className"),
-        Output("fwd-dim-btn-3d",  "className"),
+        Output("fwd-dim-btn-1d", "className"),
+        Output("fwd-dim-btn-2d", "className"),
+        Output("fwd-dim-btn-3d", "className"),
         # view panels
-        Output(IDs.FWD_1D_PANEL,  "style"),
-        Output(IDs.FWD_2D_PANEL,  "style"),
-        Output(IDs.FWD_3D_PANEL,  "style"),
+        Output(IDs.FWD_1D_PANEL, "style"),
+        Output(IDs.FWD_2D_PANEL, "style"),
+        Output(IDs.FWD_3D_PANEL, "style"),
         # view tab classes
         Output("fwd-view-tab-1d", "className"),
         Output("fwd-view-tab-2d", "className"),
@@ -442,11 +572,11 @@ def register_forward(app) -> None:
     @app.callback(
         Output(IDs.FWD_CTX_BAR, "children"),
         Input(IDs.FWD_ACTIVE_TAB, "data"),
-        Input(IDs.FWD_METHOD,     "value"),
+        Input(IDs.FWD_METHOD, "value"),
     )
     def update_fwd_ctx_bar(active_tab, method):
         active_tab = active_tab or "fwd-tab-1d"
-        icon  = _FWD_TAB_ICON.get(active_tab, "bi-reception-4")
+        icon = _FWD_TAB_ICON.get(active_tab, "bi-reception-4")
         label = _FWD_TAB_LABEL.get(active_tab, "1-D")
         parts = [
             html.Span(
@@ -470,57 +600,57 @@ def register_forward(app) -> None:
 
     # 2. Show/hide 1D method-specific params + relabel freq axis
     @app.callback(
-        Output(IDs.FWD_CSAMT_CARD,  "style"),
-        Output(IDs.FWD_TEM_CARD,    "style"),
-        Output(IDs.FWD_FREQ_LABEL,  "children"),
-        Output(IDs.FWD_FREQ_MIN,    "value"),
-        Output(IDs.FWD_FREQ_MAX,    "value"),
-        Output(IDs.FWD_DIM,         "data"),
-        Input(IDs.FWD_METHOD,       "value"),
+        Output(IDs.FWD_CSAMT_CARD, "style"),
+        Output(IDs.FWD_TEM_CARD, "style"),
+        Output(IDs.FWD_FREQ_LABEL, "children"),
+        Output(IDs.FWD_FREQ_MIN, "value"),
+        Output(IDs.FWD_FREQ_MAX, "value"),
+        Output(IDs.FWD_DIM, "data"),
+        Input(IDs.FWD_METHOD, "value"),
     )
     def sync_method_ui(method):
         method = method or "MT1D"
         csamt_style = _SHOW if method == "CSAMT1D" else _HIDE
-        tem_style   = _SHOW if method == "TEM1D"   else _HIDE
+        tem_style = _SHOW if method == "TEM1D" else _HIDE
         if method == "TEM1D":
-            label    = "Time range [log₁₀ s]"
+            label = "Time range [log₁₀ s]"
             f_min, f_max = -6, -2
         else:
-            label    = "Frequency range [log₁₀ Hz]"
+            label = "Frequency range [log₁₀ Hz]"
             f_min, f_max = -3, 4
         return csamt_style, tem_style, label, f_min, f_max, method
 
     # 3. Show/hide 2D anomaly / random cards
     @app.callback(
         Output(IDs.FWD2_ANOMALY_CARD, "style"),
-        Output(IDs.FWD2_RANDOM_CARD,  "style"),
-        Input(IDs.FWD2_MODEL_TYPE,    "value"),
+        Output(IDs.FWD2_RANDOM_CARD, "style"),
+        Input(IDs.FWD2_MODEL_TYPE, "value"),
     )
     def sync_2d_model(m_type):
         return (
             _SHOW if m_type == "anomaly" else _HIDE,
-            _SHOW if m_type == "random"  else _HIDE,
+            _SHOW if m_type == "random" else _HIDE,
         )
 
     # 4. Show/hide 3D block / random cards
     @app.callback(
-        Output(IDs.FWD3_BLOCK_CARD,  "style"),
+        Output(IDs.FWD3_BLOCK_CARD, "style"),
         Output(IDs.FWD3_RANDOM_CARD, "style"),
-        Input(IDs.FWD3_MODEL_TYPE,   "value"),
+        Input(IDs.FWD3_MODEL_TYPE, "value"),
     )
     def sync_3d_model(m_type):
         return (
-            _SHOW if m_type == "block"  else _HIDE,
+            _SHOW if m_type == "block" else _HIDE,
             _SHOW if m_type == "random" else _HIDE,
         )
 
     # 5. Load geological preset (1D only)
     @app.callback(
-        Output(IDs.FWD_LAYER_TABLE,   "data"),
+        Output(IDs.FWD_LAYER_TABLE, "data"),
         Output(IDs.FWD_HALFSPACE_RHO, "value"),
-        Output(IDs.FWD_FEEDBACK,      "children"),
-        Input(IDs.BTN_FWD_PRESET,     "n_clicks"),
-        State(IDs.FWD_PRESET,         "value"),
+        Output(IDs.FWD_FEEDBACK, "children"),
+        Input(IDs.BTN_FWD_PRESET, "n_clicks"),
+        State(IDs.FWD_PRESET, "value"),
         prevent_initial_call=True,
     )
     def load_preset(n_clicks, preset_name):
@@ -528,13 +658,21 @@ def register_forward(app) -> None:
             raise PreventUpdate
         try:
             record = ForwardController.build_preset_1d(preset_name)
-            rho    = record["resistivity"]
-            thk    = record["thickness"]
+            rho = record["resistivity"]
+            thk = record["thickness"]
             rows = [
-                {"layer": i + 1, "resistivity": float(rho[i]), "thickness": float(thk[i])}
+                {
+                    "layer": i + 1,
+                    "resistivity": float(rho[i]),
+                    "thickness": float(thk[i]),
+                }
                 for i in range(len(thk))
             ]
-            return rows, float(rho[-1]), f"Preset '{preset_name}' loaded — {len(rho)} layers"
+            return (
+                rows,
+                float(rho[-1]),
+                f"Preset '{preset_name}' loaded — {len(rho)} layers",
+            )
         except Exception as exc:
             return no_update, no_update, f"Error: {exc}"
 
@@ -542,21 +680,27 @@ def register_forward(app) -> None:
     @app.callback(
         Output(IDs.FWD_LAYER_TABLE, "data", allow_duplicate=True),
         Input(IDs.BTN_FWD_ADD_LAYER, "n_clicks"),
-        State(IDs.FWD_LAYER_TABLE,   "data"),
+        State(IDs.FWD_LAYER_TABLE, "data"),
         prevent_initial_call=True,
     )
     def add_layer(n_clicks, current_data):
         if not n_clicks:
             raise PreventUpdate
-        data     = list(current_data or [])
+        data = list(current_data or [])
         last_rho = float(data[-1]["resistivity"]) if data else 100.0
-        data.append({"layer": len(data) + 1, "resistivity": last_rho, "thickness": 500})
+        data.append(
+            {
+                "layer": len(data) + 1,
+                "resistivity": last_rho,
+                "thickness": 500,
+            }
+        )
         return data
 
     # 7. Renumber layers on row delete
     @app.callback(
         Output(IDs.FWD_LAYER_TABLE, "data", allow_duplicate=True),
-        Input(IDs.FWD_LAYER_TABLE,  "data"),
+        Input(IDs.FWD_LAYER_TABLE, "data"),
         prevent_initial_call=True,
     )
     def renumber_layers(data):
@@ -568,85 +712,125 @@ def register_forward(app) -> None:
 
     # 8. Run forward (dispatches to 1D / 2D / 3D, writes only to active tab image)
     @app.callback(
-        Output(IDs.IMG_FWD_1D,        "src"),
-        Output(IDs.IMG_FWD_2D,        "src"),
-        Output(IDs.IMG_FWD_3D,        "src"),
-        Output(IDs.FWD_SPINNER,       "children"),
-        Output(IDs.FWD_FEEDBACK,      "children",  allow_duplicate=True),
-        Output(IDs.TOAST_ERROR,       "is_open",   allow_duplicate=True),
-        Output(IDs.TOAST_BODY,        "children",  allow_duplicate=True),
-        Input(IDs.BTN_FWD_RUN,        "n_clicks"),
+        Output(IDs.IMG_FWD_1D, "src"),
+        Output(IDs.IMG_FWD_2D, "src"),
+        Output(IDs.IMG_FWD_3D, "src"),
+        Output(IDs.FWD_SPINNER, "children"),
+        Output(IDs.FWD_FEEDBACK, "children", allow_duplicate=True),
+        Output(IDs.TOAST_ERROR, "is_open", allow_duplicate=True),
+        Output(IDs.TOAST_BODY, "children", allow_duplicate=True),
+        Input(IDs.BTN_FWD_RUN, "n_clicks"),
         # Dimension
-        State(IDs.FWD_ACTIVE_TAB,     "data"),
+        State(IDs.FWD_ACTIVE_TAB, "data"),
         # 1D States
-        State(IDs.FWD_LAYER_TABLE,    "data"),
-        State(IDs.FWD_HALFSPACE_RHO,  "value"),
-        State(IDs.FWD_METHOD,         "value"),
+        State(IDs.FWD_LAYER_TABLE, "data"),
+        State(IDs.FWD_HALFSPACE_RHO, "value"),
+        State(IDs.FWD_METHOD, "value"),
         # Shared freq
-        State(IDs.FWD_FREQ_MIN,       "value"),
-        State(IDs.FWD_FREQ_MAX,       "value"),
-        State(IDs.FWD_N_FREQ,         "value"),
+        State(IDs.FWD_FREQ_MIN, "value"),
+        State(IDs.FWD_FREQ_MAX, "value"),
+        State(IDs.FWD_N_FREQ, "value"),
         # 1D method-specific
-        State(IDs.FWD_OFFSET,         "value"),
-        State(IDs.FWD_LOOP_R,         "value"),
+        State(IDs.FWD_OFFSET, "value"),
+        State(IDs.FWD_LOOP_R, "value"),
         # 2D States
-        State(IDs.FWD2_MODEL_TYPE,    "value"),
-        State(IDs.FWD2_BG_RHO,        "value"),
-        State(IDs.FWD2_NX,            "value"),
-        State(IDs.FWD2_NZ,            "value"),
-        State(IDs.FWD2_X_MAX,         "value"),
-        State(IDs.FWD2_Z_MAX,         "value"),
-        State(IDs.FWD2_N_STATIONS,    "value"),
-        State(IDs.FWD2_ANOMALY_RHO,   "value"),
-        State(IDs.FWD2_AX_LO,         "value"),
-        State(IDs.FWD2_AX_HI,         "value"),
-        State(IDs.FWD2_AZ_LO,         "value"),
-        State(IDs.FWD2_AZ_HI,         "value"),
-        State(IDs.FWD2_N_LAYERS,      "value"),
-        State(IDs.FWD2_SEED,          "value"),
-        State(IDs.FWD2_PLOT_TYPE,     "value"),
+        State(IDs.FWD2_MODEL_TYPE, "value"),
+        State(IDs.FWD2_BG_RHO, "value"),
+        State(IDs.FWD2_NX, "value"),
+        State(IDs.FWD2_NZ, "value"),
+        State(IDs.FWD2_X_MAX, "value"),
+        State(IDs.FWD2_Z_MAX, "value"),
+        State(IDs.FWD2_N_STATIONS, "value"),
+        State(IDs.FWD2_ANOMALY_RHO, "value"),
+        State(IDs.FWD2_AX_LO, "value"),
+        State(IDs.FWD2_AX_HI, "value"),
+        State(IDs.FWD2_AZ_LO, "value"),
+        State(IDs.FWD2_AZ_HI, "value"),
+        State(IDs.FWD2_N_LAYERS, "value"),
+        State(IDs.FWD2_SEED, "value"),
+        State(IDs.FWD2_PLOT_TYPE, "value"),
         # 3D States
-        State(IDs.FWD3_MODEL_TYPE,    "value"),
-        State(IDs.FWD3_BG_RHO,        "value"),
-        State(IDs.FWD3_NX,            "value"),
-        State(IDs.FWD3_NY,            "value"),
-        State(IDs.FWD3_NZ,            "value"),
-        State(IDs.FWD3_X_MAX,         "value"),
-        State(IDs.FWD3_Y_MAX,         "value"),
-        State(IDs.FWD3_Z_MAX,         "value"),
-        State(IDs.FWD3_NX_ST,         "value"),
-        State(IDs.FWD3_NY_ST,         "value"),
-        State(IDs.FWD3_ANOMALY_RHO,   "value"),
-        State(IDs.FWD3_AX_LO,         "value"),
-        State(IDs.FWD3_AX_HI,         "value"),
-        State(IDs.FWD3_AY_LO,         "value"),
-        State(IDs.FWD3_AY_HI,         "value"),
-        State(IDs.FWD3_AZ_LO,         "value"),
-        State(IDs.FWD3_AZ_HI,         "value"),
-        State(IDs.FWD3_N_LAYERS,      "value"),
-        State(IDs.FWD3_SEED,          "value"),
-        State(IDs.FWD3_PLOT_TYPE,     "value"),
-        State(IDs.FWD3_COMPONENT,     "value"),
-        State(IDs.FWD3_FREQ_IDX,      "value"),
+        State(IDs.FWD3_MODEL_TYPE, "value"),
+        State(IDs.FWD3_BG_RHO, "value"),
+        State(IDs.FWD3_NX, "value"),
+        State(IDs.FWD3_NY, "value"),
+        State(IDs.FWD3_NZ, "value"),
+        State(IDs.FWD3_X_MAX, "value"),
+        State(IDs.FWD3_Y_MAX, "value"),
+        State(IDs.FWD3_Z_MAX, "value"),
+        State(IDs.FWD3_NX_ST, "value"),
+        State(IDs.FWD3_NY_ST, "value"),
+        State(IDs.FWD3_ANOMALY_RHO, "value"),
+        State(IDs.FWD3_AX_LO, "value"),
+        State(IDs.FWD3_AX_HI, "value"),
+        State(IDs.FWD3_AY_LO, "value"),
+        State(IDs.FWD3_AY_HI, "value"),
+        State(IDs.FWD3_AZ_LO, "value"),
+        State(IDs.FWD3_AZ_HI, "value"),
+        State(IDs.FWD3_N_LAYERS, "value"),
+        State(IDs.FWD3_SEED, "value"),
+        State(IDs.FWD3_PLOT_TYPE, "value"),
+        State(IDs.FWD3_COMPONENT, "value"),
+        State(IDs.FWD3_FREQ_IDX, "value"),
         # Theme + session
-        State(IDs.STORE_THEME,        "data"),
-        State(IDs.SESSION_ID,         "data"),
+        State(IDs.STORE_THEME, "data"),
+        State(IDs.SESSION_ID, "data"),
         prevent_initial_call=True,
     )
     def run_forward(
-        n_clicks, dimension,
+        n_clicks,
+        dimension,
         # 1D
-        table_data, halfspace_rho, method,
-        freq_min, freq_max, n_freq, offset, loop_r,
+        table_data,
+        halfspace_rho,
+        method,
+        freq_min,
+        freq_max,
+        n_freq,
+        offset,
+        loop_r,
         # 2D
-        m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
-        a2rho, ax2lo, ax2hi, az2lo, az2hi, n2lay, seed2, plot2,
+        m2d_type,
+        bg2,
+        nx2,
+        nz2,
+        x2max,
+        z2max,
+        n2st,
+        a2rho,
+        ax2lo,
+        ax2hi,
+        az2lo,
+        az2hi,
+        n2lay,
+        seed2,
+        plot2,
         # 3D
-        m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
-        a3rho, ax3lo, ax3hi, ay3lo, ay3hi, az3lo, az3hi, n3lay, seed3,
-        plot3, comp3, freq3idx,
+        m3d_type,
+        bg3,
+        nx3,
+        ny3,
+        nz3,
+        x3max,
+        y3max,
+        z3max,
+        nx3st,
+        ny3st,
+        a3rho,
+        ax3lo,
+        ax3hi,
+        ay3lo,
+        ay3hi,
+        az3lo,
+        az3hi,
+        n3lay,
+        seed3,
+        plot3,
+        comp3,
+        freq3idx,
         # theme + session
-        theme, session_id,
+        theme,
+        session_id,
     ):
         if not n_clicks:
             raise PreventUpdate
@@ -667,28 +851,77 @@ def register_forward(app) -> None:
 
         try:
             from pycsamt.app.web.cache import cache_set_fwd
+
             if dimension == "fwd-tab-2d":
                 src, msg, resp = _run_2d(
-                    m2d_type, bg2, nx2, nz2, x2max, z2max, n2st,
-                    a2rho, ax2lo, ax2hi, az2lo, az2hi, n2lay, seed2, plot2,
-                    table_data, halfspace_rho, f_min, f_max, n_pts, dark,
+                    m2d_type,
+                    bg2,
+                    nx2,
+                    nz2,
+                    x2max,
+                    z2max,
+                    n2st,
+                    a2rho,
+                    ax2lo,
+                    ax2hi,
+                    az2lo,
+                    az2hi,
+                    n2lay,
+                    seed2,
+                    plot2,
+                    table_data,
+                    halfspace_rho,
+                    f_min,
+                    f_max,
+                    n_pts,
+                    dark,
                 )
                 cache_set_fwd(session_id, "2d", resp)
                 imgs[1] = src
 
             elif dimension == "fwd-tab-3d":
                 src, msg, resp = _run_3d(
-                    m3d_type, bg3, nx3, ny3, nz3, x3max, y3max, z3max, nx3st, ny3st,
-                    a3rho, ax3lo, ax3hi, ay3lo, ay3hi, az3lo, az3hi, n3lay, seed3,
-                    plot3, comp3, freq3idx, f_min, f_max, n_pts, dark,
+                    m3d_type,
+                    bg3,
+                    nx3,
+                    ny3,
+                    nz3,
+                    x3max,
+                    y3max,
+                    z3max,
+                    nx3st,
+                    ny3st,
+                    a3rho,
+                    ax3lo,
+                    ax3hi,
+                    ay3lo,
+                    ay3hi,
+                    az3lo,
+                    az3hi,
+                    n3lay,
+                    seed3,
+                    plot3,
+                    comp3,
+                    freq3idx,
+                    f_min,
+                    f_max,
+                    n_pts,
+                    dark,
                 )
                 cache_set_fwd(session_id, "3d", resp)
                 imgs[2] = src
 
             else:  # 1D
                 src, msg = _run_1d(
-                    table_data, halfspace_rho, method,
-                    f_min, f_max, n_pts, offset, loop_r, dark,
+                    table_data,
+                    halfspace_rho,
+                    method,
+                    f_min,
+                    f_max,
+                    n_pts,
+                    offset,
+                    loop_r,
+                    dark,
                 )
                 imgs[0] = src
 
@@ -700,12 +933,12 @@ def register_forward(app) -> None:
 
     # 9. Save model to library (1D only)
     @app.callback(
-        Output(IDs.FWD_FEEDBACK,      "children",  allow_duplicate=True),
-        Input(IDs.BTN_FWD_SAVE,       "n_clicks"),
-        State(IDs.FWD_MODEL_NAME,     "value"),
-        State(IDs.FWD_LAYER_TABLE,    "data"),
-        State(IDs.FWD_HALFSPACE_RHO,  "value"),
-        State(IDs.FWD_METHOD,         "value"),
+        Output(IDs.FWD_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.BTN_FWD_SAVE, "n_clicks"),
+        State(IDs.FWD_MODEL_NAME, "value"),
+        State(IDs.FWD_LAYER_TABLE, "data"),
+        State(IDs.FWD_HALFSPACE_RHO, "value"),
+        State(IDs.FWD_METHOD, "value"),
         prevent_initial_call=True,
     )
     def save_model(n_clicks, name, table_data, halfspace_rho, method):
@@ -714,9 +947,12 @@ def register_forward(app) -> None:
         if not name:
             return "Enter a model name first."
         try:
-            model  = _build_model(table_data, halfspace_rho)
+            model = _build_model(table_data, halfspace_rho)
             record = ForwardController.model_to_record(
-                name, method or "MT1D", model.resistivity, model.thickness,
+                name,
+                method or "MT1D",
+                model.resistivity,
+                model.thickness,
             )
             _CTRL.save_model(name, record)
             return f"Saved '{name}' ({model.n_layers} layers, {method})."

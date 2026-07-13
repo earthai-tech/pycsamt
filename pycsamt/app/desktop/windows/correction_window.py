@@ -18,6 +18,7 @@ MainWindow can replace the global dataset.
 
 ``corrections_reverted`` notifies MainWindow that no corrections are active.
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
@@ -50,12 +51,12 @@ from PySide6.QtWidgets import (
 
 # Small symbol prefix per category for the dropdown — purely cosmetic
 _CAT_ICON = {
-    "Static Shift":    "⇅",
-    "Noise Removal":   "∿",
-    "Source Effects":  "⊕",
+    "Static Shift": "⇅",
+    "Noise Removal": "∿",
+    "Source Effects": "⊕",
     "Tensor Rotation": "↻",
-    "Coordinates":     "⊙",
-    "Stratagem":       "✦",
+    "Coordinates": "⊙",
+    "Stratagem": "✦",
 }
 
 from pycsamt.app.desktop.controllers.correction_controller import (
@@ -90,7 +91,7 @@ class CorrectionWindow(PanelWindow):
     """
 
     corrections_committed = Signal(object)
-    corrections_reverted  = Signal()
+    corrections_reverted = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(
@@ -102,10 +103,12 @@ class CorrectionWindow(PanelWindow):
         )
         self.resize(1300, 780)
         self._ctrl = CorrectionController()
-        self._preview_sites = None   # result of last Preview (not in stack)
+        self._preview_sites = None  # result of last Preview (not in stack)
 
         self._populate_category_combo()
-        self._on_category_changed(0)   # populate _combo_correction on first open
+        self._on_category_changed(
+            0
+        )  # populate _combo_correction on first open
         self._refresh_all()
 
     # ── Left params panel ─────────────────────────────────────────────
@@ -122,7 +125,9 @@ class CorrectionWindow(PanelWindow):
         self._combo_category = QComboBox()
         self._combo_category.setObjectName("CategoryCombo")
         self._combo_category.setToolTip("Select the correction family")
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_cat.addWidget(self._combo_category)
 
         # Sub-correction within the chosen category
@@ -131,7 +136,9 @@ class CorrectionWindow(PanelWindow):
         lay_cat.addWidget(corr_lbl)
         self._combo_correction = QComboBox()
         self._combo_correction.setObjectName("CorrectionCombo")
-        self._combo_correction.currentIndexChanged.connect(self._on_correction_changed)
+        self._combo_correction.currentIndexChanged.connect(
+            self._on_correction_changed
+        )
         lay_cat.addWidget(self._combo_correction)
 
         # Description chip — subtle left-accent border via stylesheet
@@ -149,11 +156,11 @@ class CorrectionWindow(PanelWindow):
         self._grp_strat.setVisible(False)
 
         self._radio_use_current = QRadioButton("Use currently loaded data")
-        self._radio_load_dir    = QRadioButton("Load from EDI directory")
+        self._radio_load_dir = QRadioButton("Load from EDI directory")
         self._radio_use_current.setChecked(True)
         self._strat_radio_grp = QButtonGroup(self)
         self._strat_radio_grp.addButton(self._radio_use_current, 0)
-        self._strat_radio_grp.addButton(self._radio_load_dir,    1)
+        self._strat_radio_grp.addButton(self._radio_load_dir, 1)
         lay_strat.addWidget(self._radio_use_current)
         lay_strat.addWidget(self._radio_load_dir)
 
@@ -237,7 +244,7 @@ class CorrectionWindow(PanelWindow):
         act_row.setSpacing(6)
         self._btn_preview = QPushButton("▶  Preview")
         self._btn_preview.setToolTip("Compute result without saving to stack")
-        self._btn_apply   = QPushButton("✓  Apply")
+        self._btn_apply = QPushButton("✓  Apply")
         self._btn_apply.setObjectName("CommitButton")
         self._btn_apply.setToolTip("Apply correction and push to stack")
         self._btn_preview.clicked.connect(self._on_preview)
@@ -257,8 +264,12 @@ class CorrectionWindow(PanelWindow):
         self._stack_list = QListWidget()
         self._stack_list.setObjectName("StackList")
         self._stack_list.setMaximumHeight(120)
-        self._stack_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._stack_list.customContextMenuRequested.connect(self._on_stack_ctx_menu)
+        self._stack_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self._stack_list.customContextMenuRequested.connect(
+            self._on_stack_ctx_menu
+        )
         lay_stk.addWidget(self._stack_list)
 
         undo_row = QHBoxLayout()
@@ -266,7 +277,7 @@ class CorrectionWindow(PanelWindow):
         self._btn_undo = QPushButton("↩  Undo")
         self._btn_undo.setObjectName("FileListBtn")
         self._btn_undo.clicked.connect(self._on_undo)
-        self._btn_clr  = QPushButton("✗  Clear")
+        self._btn_clr = QPushButton("✗  Clear")
         self._btn_clr.setObjectName("FileListBtn")
         self._btn_clr.clicked.connect(self._on_clear_stack)
         undo_row.addWidget(self._btn_undo)
@@ -292,7 +303,9 @@ class CorrectionWindow(PanelWindow):
 
         self._btn_revert = QPushButton("↺  Revert to Raw")
         self._btn_revert.setObjectName("RevertButton")
-        self._btn_revert.setToolTip("Clear all corrections in this panel (does not affect main data).")
+        self._btn_revert.setToolTip(
+            "Clear all corrections in this panel (does not affect main data)."
+        )
         self._btn_revert.clicked.connect(self._on_revert)
 
         self._btn_export_strat = QPushButton("💾  Export Stratagem EDIs…")
@@ -318,7 +331,9 @@ class CorrectionWindow(PanelWindow):
 
         bar.addWidget(QLabel("View:"))
         self._combo_mode = QComboBox()
-        self._combo_mode.addItems(["Before / After", "Overlay", "Diff", "2D Section"])
+        self._combo_mode.addItems(
+            ["Before / After", "Overlay", "Diff", "2D Section"]
+        )
         self._combo_mode.setFixedWidth(150)
         self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
         bar.addWidget(self._combo_mode)
@@ -327,7 +342,9 @@ class CorrectionWindow(PanelWindow):
         self._combo_coord_view = QComboBox()
         self._combo_coord_view.addItems(["Position map", "Elevation profile"])
         self._combo_coord_view.setFixedWidth(140)
-        self._combo_coord_view.currentIndexChanged.connect(self._refresh_plots)
+        self._combo_coord_view.currentIndexChanged.connect(
+            self._refresh_plots
+        )
         self._combo_coord_view.setVisible(False)
         bar.addWidget(self._combo_coord_view)
 
@@ -336,7 +353,9 @@ class CorrectionWindow(PanelWindow):
         sep.setObjectName("Separator")
         bar.addWidget(sep)
 
-        self._btn_export = icon_button("⬆  Export…", "export", "Export current figure")
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Export current figure"
+        )
         self._btn_export.setFixedWidth(110)
         self._btn_export.clicked.connect(self._on_export)
         bar.addWidget(self._btn_export)
@@ -378,7 +397,7 @@ class CorrectionWindow(PanelWindow):
             return pane, canvas
 
         before_pane, self._canvas_before = _canvas_pane("Before")
-        after_pane,  self._canvas_after  = _canvas_pane("After / Preview")
+        after_pane, self._canvas_after = _canvas_pane("After / Preview")
 
         self._canvas_splitter.addWidget(before_pane)
         self._canvas_splitter.addWidget(after_pane)
@@ -397,13 +416,13 @@ class CorrectionWindow(PanelWindow):
 
         # ── Page 2: Stratagem Studio ───────────────────────────────────
         strat_page = QWidget()
-        strat_v    = QVBoxLayout(strat_page)
+        strat_v = QVBoxLayout(strat_page)
         strat_v.setContentsMargins(0, 0, 0, 0)
         strat_v.setSpacing(0)
 
         # Progress bar (hidden by default; visible while a worker runs)
         self._strat_progress = QProgressBar()
-        self._strat_progress.setRange(0, 0)   # indeterminate pulse
+        self._strat_progress.setRange(0, 0)  # indeterminate pulse
         self._strat_progress.setFixedHeight(6)
         self._strat_progress.setVisible(False)
         strat_v.addWidget(self._strat_progress)
@@ -413,8 +432,8 @@ class CorrectionWindow(PanelWindow):
         strat_v.addWidget(self._strat_tabs)
 
         # Tab 0 — QC Report (horizontal bar charts)
-        qc_page  = QWidget()
-        qc_v     = QVBoxLayout(qc_page)
+        qc_page = QWidget()
+        qc_v = QVBoxLayout(qc_page)
         qc_v.setContentsMargins(0, 0, 0, 0)
         self._canvas_strat_qc = MplCanvas(qc_page, toolbar=True)
         qc_v.addWidget(self._canvas_strat_qc)
@@ -422,15 +441,15 @@ class CorrectionWindow(PanelWindow):
 
         # Tab 1 — Before / After impedance
         ba_page = QWidget()
-        ba_v    = QVBoxLayout(ba_page)
+        ba_v = QVBoxLayout(ba_page)
         ba_v.setContentsMargins(0, 0, 0, 0)
         ba_splitter = QSplitter(Qt.Orientation.Vertical)
         ba_splitter.setHandleWidth(4)
 
         def _strat_pane(title):
-            p   = QWidget()
+            p = QWidget()
             p.setObjectName("CanvasPane")
-            v   = QVBoxLayout(p)
+            v = QVBoxLayout(p)
             v.setContentsMargins(0, 0, 0, 0)
             v.setSpacing(0)
             lbl = QLabel(f"  {title}")
@@ -441,8 +460,12 @@ class CorrectionWindow(PanelWindow):
             v.addWidget(c)
             return p, c
 
-        ba_before_pane, self._canvas_strat_before = _strat_pane("Before (raw)")
-        ba_after_pane,  self._canvas_strat_after  = _strat_pane("After (corrected)")
+        ba_before_pane, self._canvas_strat_before = _strat_pane(
+            "Before (raw)"
+        )
+        ba_after_pane, self._canvas_strat_after = _strat_pane(
+            "After (corrected)"
+        )
         ba_splitter.addWidget(ba_before_pane)
         ba_splitter.addWidget(ba_after_pane)
         ba_splitter.setSizes([350, 350])
@@ -450,8 +473,8 @@ class CorrectionWindow(PanelWindow):
         self._strat_tabs.addTab(ba_page, "Before / After")
 
         # Tab 2 — Static-shift factors bar chart
-        ss_page  = QWidget()
-        ss_v     = QVBoxLayout(ss_page)
+        ss_page = QWidget()
+        ss_v = QVBoxLayout(ss_page)
         ss_v.setContentsMargins(0, 0, 0, 0)
         self._canvas_strat_ss = MplCanvas(ss_page, toolbar=True)
         ss_v.addWidget(self._canvas_strat_ss)
@@ -459,7 +482,7 @@ class CorrectionWindow(PanelWindow):
 
         # Tab 3 — Station QC table (raw numbers)
         tbl_page = QWidget()
-        tbl_v    = QVBoxLayout(tbl_page)
+        tbl_v = QVBoxLayout(tbl_page)
         self._strat_qc_table = QTableWidget()
         self._strat_qc_table.setObjectName("StationTable")
         self._strat_qc_table.setAlternatingRowColors(True)
@@ -516,7 +539,7 @@ class CorrectionWindow(PanelWindow):
         self._combo_correction.setCurrentIndex(0)
 
         is_strat = cat in STRATAGEM_CATEGORIES
-        is_ss    = cat in STATIC_SHIFT_CATEGORIES
+        is_ss = cat in STATIC_SHIFT_CATEGORIES
 
         # Show / hide category-specific side panels
         self._grp_strat.setVisible(is_strat)
@@ -565,8 +588,8 @@ class CorrectionWindow(PanelWindow):
         if idx < 0 or idx >= len(corrections):
             return
         label = corrections[idx]
-        info  = CATALOGUE[cat][label]
-        desc  = info.get("desc", "")
+        info = CATALOGUE[cat][label]
+        desc = info.get("desc", "")
         self._desc_lbl.setVisible(bool(desc))
         self._desc_lbl.setText(
             f"<small style='color:#888'>{desc}</small>" if desc else ""
@@ -602,7 +625,9 @@ class CorrectionWindow(PanelWindow):
         if spec.kind == "dspin":
             w = QDoubleSpinBox()
             lo, hi, step = spec.opts
-            decimals = max(0, -int(np.floor(np.log10(step))) if step < 1 else 1)
+            decimals = max(
+                0, -int(np.floor(np.log10(step))) if step < 1 else 1
+            )
             w.setRange(lo, hi)
             w.setSingleStep(step)
             w.setDecimals(decimals)
@@ -611,21 +636,28 @@ class CorrectionWindow(PanelWindow):
         if spec.kind == "combo":
             w = QComboBox()
             w.addItems(spec.opts)
-            idx = spec.opts.index(spec.default) if spec.default in spec.opts else 0
+            idx = (
+                spec.opts.index(spec.default)
+                if spec.default in spec.opts
+                else 0
+            )
             w.setCurrentIndex(idx)
             return w
         if spec.kind == "check":
             from PySide6.QtWidgets import QCheckBox
+
             w = QCheckBox()
             w.setChecked(bool(spec.default))
             return w
         # fallback: line edit
         from PySide6.QtWidgets import QLineEdit
+
         w = QLineEdit(str(spec.default))
         return w
 
     def _get_param_values(self) -> dict:
         from PySide6.QtWidgets import QLineEdit
+
         vals = {}
         for name, widget in self._param_widgets.items():
             if isinstance(widget, QSpinBox):
@@ -651,6 +683,7 @@ class CorrectionWindow(PanelWindow):
     def _get_affected_stations(self) -> list[str]:
         """Parse station names from the Affected Stations text field."""
         import re
+
         text = self._txt_ss_stations.toPlainText().strip()
         if not text:
             return []
@@ -668,7 +701,7 @@ class CorrectionWindow(PanelWindow):
         if cidx < 0 or cidx >= len(corrections):
             return "", ""
         label = corrections[cidx]
-        fn    = CATALOGUE[cat][label]["fn"]
+        fn = CATALOGUE[cat][label]["fn"]
         return fn, label
 
     # ── Action slots ──────────────────────────────────────────────────
@@ -686,11 +719,15 @@ class CorrectionWindow(PanelWindow):
         try:
             result = self._ctrl.preview(fn_name, kwargs)
             if result is not None:
-                self._preview_sites = result   # may be DataFrame for coord corrections
+                self._preview_sites = (
+                    result  # may be DataFrame for coord corrections
+                )
                 self._action_status.setText(f"Preview: {label}")
                 self._refresh_plots()
             else:
-                self._action_status.setText("Preview failed — check parameters.")
+                self._action_status.setText(
+                    "Preview failed — check parameters."
+                )
         except Exception as exc:
             self._action_status.setText(f"Error: {exc}")
         finally:
@@ -720,7 +757,9 @@ class CorrectionWindow(PanelWindow):
                 else:
                     self._refresh_plots()
             else:
-                self._action_status.setText("Apply failed — check parameters.")
+                self._action_status.setText(
+                    "Apply failed — check parameters."
+                )
         except Exception as exc:
             self._action_status.setText(f"Error: {exc}")
         finally:
@@ -745,7 +784,7 @@ class CorrectionWindow(PanelWindow):
         row = self._stack_list.row(item)
         menu = QMenu(self)
         act_remove = menu.addAction(f"Remove step {row + 1}")
-        act_view   = menu.addAction("Show 'After' for this step")
+        act_view = menu.addAction("Show 'After' for this step")
         chosen = menu.exec(self._stack_list.mapToGlobal(pos))
         if chosen == act_remove:
             self._ctrl.remove_step(row)
@@ -768,8 +807,7 @@ class CorrectionWindow(PanelWindow):
 
     def _on_browse_edi_dir(self) -> None:
         path = QFileDialog.getExistingDirectory(
-            self, "Select EDI Directory", "",
-            QFileDialog.Option.ShowDirsOnly
+            self, "Select EDI Directory", "", QFileDialog.Option.ShowDirsOnly
         )
         if path:
             self._edi_dir_label.setText(path)
@@ -785,7 +823,9 @@ class CorrectionWindow(PanelWindow):
         self._edi_load_status.setText("Loading…")
         try:
             n = self._ctrl.load_edi_dir(path)
-            self._edi_load_status.setText(f"✓  {n} station{'s' if n != 1 else ''} loaded.")
+            self._edi_load_status.setText(
+                f"✓  {n} station{'s' if n != 1 else ''} loaded."
+            )
             self._refresh_all()
             # Switch to Stratagem category automatically
             strat_row = CATEGORIES.index("Stratagem")
@@ -814,17 +854,19 @@ class CorrectionWindow(PanelWindow):
             pass
         # Before / After impedance curves
         try:
-            raw_sites  = self._ctrl.raw_sites
+            raw_sites = self._ctrl.raw_sites
             curr_sites = self._ctrl.current_sites
             if raw_sites is not None:
                 ax_b = self._canvas_strat_before.axes
                 ax_b.cla()
-                self._ctrl.plot_rho_curves(raw_sites,  ax_b, "Before (raw)")
+                self._ctrl.plot_rho_curves(raw_sites, ax_b, "Before (raw)")
                 self._canvas_strat_before.draw()
             if curr_sites is not None and curr_sites is not raw_sites:
                 ax_a = self._canvas_strat_after.axes
                 ax_a.cla()
-                self._ctrl.plot_rho_curves(curr_sites, ax_a, "After (corrected)")
+                self._ctrl.plot_rho_curves(
+                    curr_sites, ax_a, "After (corrected)"
+                )
                 self._canvas_strat_after.draw()
         except Exception:
             pass
@@ -851,22 +893,29 @@ class CorrectionWindow(PanelWindow):
                 )
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 # Flag rows in red
-                if "flagged" in df.columns and bool(row.get("flagged", False)):
+                if "flagged" in df.columns and bool(
+                    row.get("flagged", False)
+                ):
                     from PySide6.QtGui import QColor
+
                     item.setForeground(QColor("#f38ba8"))
                 tbl.setItem(r, c, item)
         tbl.resizeColumnsToContents()
 
     def _on_strat_export(self) -> None:
         path = QFileDialog.getExistingDirectory(
-            self, "Export Stratagem EDIs to…", "",
-            QFileDialog.Option.ShowDirsOnly
+            self,
+            "Export Stratagem EDIs to…",
+            "",
+            QFileDialog.Option.ShowDirsOnly,
         )
         if not path:
             return
         try:
             n = self._ctrl.export_stratagem(path)
-            self._action_status.setText(f"✓  Exported {n} EDI file(s) to {path}")
+            self._action_status.setText(
+                f"✓  Exported {n} EDI file(s) to {path}"
+            )
         except Exception as exc:
             self._action_status.setText(f"✕  Export failed: {exc}")
 
@@ -894,6 +943,7 @@ class CorrectionWindow(PanelWindow):
             from pycsamt.gis.coord_correction import (
                 apply_coords_df_to_sites,
             )
+
             final_coords = self._ctrl.current_coords_df()
             if final_coords is not None:
                 apply_coords_df_to_sites(sites, final_coords)
@@ -915,6 +965,7 @@ class CorrectionWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         mode = self._combo_mode.currentText()
         fig = (
             self._canvas_single.figure
@@ -952,7 +1003,9 @@ class CorrectionWindow(PanelWindow):
         if n == 0:
             self._stack_status.setText("No corrections applied")
         else:
-            self._stack_status.setText(f"{n} correction{'s' if n != 1 else ''} in stack")
+            self._stack_status.setText(
+                f"{n} correction{'s' if n != 1 else ''} in stack"
+            )
         has_corr = n > 0
         self._btn_undo.setEnabled(has_corr)
         self._btn_clr.setEnabled(has_corr)
@@ -966,13 +1019,19 @@ class CorrectionWindow(PanelWindow):
         return CATEGORIES[row] in STATIC_SHIFT_CATEGORIES
 
     def _refresh_plots(self) -> None:
-        mode       = self._combo_mode.currentText()
-        is_coord   = self._is_coord_category()
-        _crow      = self._combo_category.currentIndex()
-        is_rotation = CATEGORIES[_crow] in ROTATION_CATEGORIES \
-                      if 0 <= _crow < len(CATEGORIES) else False
-        elev_view  = (self._combo_coord_view.currentText() == "Elevation profile"
-                      if is_coord else False)
+        mode = self._combo_mode.currentText()
+        is_coord = self._is_coord_category()
+        _crow = self._combo_category.currentIndex()
+        is_rotation = (
+            CATEGORIES[_crow] in ROTATION_CATEGORIES
+            if 0 <= _crow < len(CATEGORIES)
+            else False
+        )
+        elev_view = (
+            self._combo_coord_view.currentText() == "Elevation profile"
+            if is_coord
+            else False
+        )
 
         # ── 2D pseudosection view (Static Shift only) ────────────────────────
         if mode == "2D Section":
@@ -982,16 +1041,24 @@ class CorrectionWindow(PanelWindow):
                 # Coordinates category has no impedance data — show message
                 fig_ps.clear()
                 ax_msg = fig_ps.add_subplot(111)
-                ax_msg.set_facecolor("#181825" if self._ctrl.dark else "#eff1f5")
-                fig_ps.patch.set_facecolor("#1e1e2e" if self._ctrl.dark else "#e6e9ef")
+                ax_msg.set_facecolor(
+                    "#181825" if self._ctrl.dark else "#eff1f5"
+                )
+                fig_ps.patch.set_facecolor(
+                    "#1e1e2e" if self._ctrl.dark else "#e6e9ef"
+                )
                 tc = "#a6adc8" if self._ctrl.dark else "#6c6f85"
                 ax_msg.text(
-                    0.5, 0.5,
+                    0.5,
+                    0.5,
                     "2D pseudosection requires impedance (Z) data.\n"
                     "Not applicable for coordinate corrections.\n\n"
                     "Switch to  Before / After  or  Overlay  to compare positions.",
                     transform=ax_msg.transAxes,
-                    ha="center", va="center", fontsize=10, color=tc,
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    color=tc,
                     multialignment="center",
                 )
                 ax_msg.axis("off")
@@ -1005,7 +1072,8 @@ class CorrectionWindow(PanelWindow):
             affected = self._get_affected_stations()
             try:
                 self._ctrl.plot_rho_pseudosection(
-                    current_data, fig_ps,
+                    current_data,
+                    fig_ps,
                     affected_stations=affected or None,
                     title="ρ_a Pseudosection  —  Static Shift",
                 )
@@ -1022,24 +1090,26 @@ class CorrectionWindow(PanelWindow):
         if is_coord:
             # Coords: always use DataFrame snapshots (never EDI head objects)
             before_data = self._ctrl.raw_coords_df
-            after_data  = (
-                self._preview_sites         # may be a DataFrame from preview()
+            after_data = (
+                self._preview_sites  # may be a DataFrame from preview()
                 if self._preview_sites is not None
                 else self._ctrl.current_coords_df()
             )
             after_label = (
-                "Preview" if self._preview_sites is not None
+                "Preview"
+                if self._preview_sites is not None
                 else f"After  ({self._ctrl.n_steps} step{'s' if self._ctrl.n_steps != 1 else ''})"
             )
         else:
             before_data = self._ctrl.raw_sites
-            after_data  = (
+            after_data = (
                 self._preview_sites
                 if self._preview_sites is not None
                 else self._ctrl.current_sites
             )
             after_label = (
-                "Preview" if self._preview_sites is not None
+                "Preview"
+                if self._preview_sites is not None
                 else f"After  ({self._ctrl.n_steps} step{'s' if self._ctrl.n_steps != 1 else ''})"
             )
 
@@ -1056,13 +1126,26 @@ class CorrectionWindow(PanelWindow):
             self._canvas_before.figure.clear()
             ax_b = self._canvas_before.figure.add_subplot(111)
             if is_coord and elev_view:
-                _draw(self._ctrl.plot_station_elevation, before_data, ax_b,
-                      "Before — elevation")
+                _draw(
+                    self._ctrl.plot_station_elevation,
+                    before_data,
+                    ax_b,
+                    "Before — elevation",
+                )
             elif is_coord:
-                _draw(self._ctrl.plot_station_map, before_data, ax_b,
-                      "Before — positions")
+                _draw(
+                    self._ctrl.plot_station_map,
+                    before_data,
+                    ax_b,
+                    "Before — positions",
+                )
             else:
-                _draw(self._ctrl.plot_rho_curves, before_data, ax_b, "Before (raw)")
+                _draw(
+                    self._ctrl.plot_rho_curves,
+                    before_data,
+                    ax_b,
+                    "Before (raw)",
+                )
             try:
                 self._canvas_before.figure.tight_layout(pad=1.0)
             except Exception:
@@ -1072,11 +1155,20 @@ class CorrectionWindow(PanelWindow):
             self._canvas_after.figure.clear()
             ax_a = self._canvas_after.figure.add_subplot(111)
             if is_coord and elev_view:
-                _draw(self._ctrl.plot_station_elevation, after_data, ax_a, after_label)
+                _draw(
+                    self._ctrl.plot_station_elevation,
+                    after_data,
+                    ax_a,
+                    after_label,
+                )
             elif is_coord:
-                _draw(self._ctrl.plot_station_map, after_data, ax_a, after_label)
+                _draw(
+                    self._ctrl.plot_station_map, after_data, ax_a, after_label
+                )
             else:
-                _draw(self._ctrl.plot_rho_curves, after_data, ax_a, after_label)
+                _draw(
+                    self._ctrl.plot_rho_curves, after_data, ax_a, after_label
+                )
             try:
                 self._canvas_after.figure.tight_layout(pad=1.0)
             except Exception:
@@ -1093,28 +1185,50 @@ class CorrectionWindow(PanelWindow):
                 if is_coord and elev_view:
                     # True overlay: both profiles on one axis, distinct colours
                     ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_station_elevation_overlay,
-                          before_data, after_data, ax)
+                    _draw(
+                        self._ctrl.plot_station_elevation_overlay,
+                        before_data,
+                        after_data,
+                        ax,
+                    )
                 elif is_coord:
                     ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_station_map_overlay,
-                          before_data, after_data, ax)
+                    _draw(
+                        self._ctrl.plot_station_map_overlay,
+                        before_data,
+                        after_data,
+                        ax,
+                    )
                 elif is_rotation:
                     # Rose diagram for tensor rotation
-                    _draw(self._ctrl.plot_rotation_rose,
-                          before_data, after_data, fig)
+                    _draw(
+                        self._ctrl.plot_rotation_rose,
+                        before_data,
+                        after_data,
+                        fig,
+                    )
                 else:
                     ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_overlay, before_data, after_data, ax)
+                    _draw(
+                        self._ctrl.plot_overlay, before_data, after_data, ax
+                    )
 
             else:  # Diff
                 if is_coord:
                     ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_displacement_diff,
-                          before_data, after_data, ax)
+                    _draw(
+                        self._ctrl.plot_displacement_diff,
+                        before_data,
+                        after_data,
+                        ax,
+                    )
                 elif is_rotation:
-                    _draw(self._ctrl.plot_rotation_rose,
-                          before_data, after_data, fig)
+                    _draw(
+                        self._ctrl.plot_rotation_rose,
+                        before_data,
+                        after_data,
+                        fig,
+                    )
                 else:
                     ax = fig.add_subplot(111)
                     _draw(self._ctrl.plot_diff, before_data, after_data, ax)

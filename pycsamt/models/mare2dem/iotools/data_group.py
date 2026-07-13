@@ -70,8 +70,7 @@ class DataGroupFile:
 
     def __repr__(self) -> str:
         return (
-            f"DataGroupFile(n_groups={self.n_groups}, "
-            f"n_data={self.n_data})"
+            f"DataGroupFile(n_groups={self.n_groups}, n_data={self.n_data})"
         )
 
 
@@ -126,7 +125,7 @@ def read_data_group(path: str | Path) -> DataGroupFile:
         if sep < 0:
             continue
         code = raw[:sep].strip().lower()
-        value = raw[sep + 1:].strip()
+        value = raw[sep + 1 :].strip()
         for ch in ("!", "%"):
             ci = value.find(ch)
             if ci >= 0:

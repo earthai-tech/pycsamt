@@ -25,7 +25,8 @@ from ._base import _get_collection, _get_jfile, jones
     metavar="J_OR_DIR",
 )
 @click.option(
-    "--top", "-n",
+    "--top",
+    "-n",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
@@ -68,17 +69,22 @@ def info(
 # Single-file display
 # ---------------------------------------------------------------------------
 
+
 def _info_single(path: Path, fmt: str, verbose: int) -> None:
     jf = _get_jfile(path, verbose=verbose)
 
     freq = jf.freq
     n_freq = int(jf.n_freq or 0)
-    freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
-    freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
+    freq_min = (
+        float(freq.min()) if freq is not None and freq.size else float("nan")
+    )
+    freq_max = (
+        float(freq.max()) if freq is not None and freq.size else float("nan")
+    )
 
     banner = getattr(getattr(jf, "heads", None), "banner", None)
     software = getattr(banner, "software", None) if banner else None
-    bdate    = getattr(banner, "date",     None) if banner else None
+    bdate = getattr(banner, "date", None) if banner else None
 
     blocks = jf.blocks
     block_kinds = []
@@ -86,25 +92,25 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
         for b in blocks.blocks:
             kind = getattr(b, "kind", None) or "?"
             comp = getattr(b, "comp", None) or "?"
-            nr   = int(getattr(b, "nrows", 0) or 0)
+            nr = int(getattr(b, "nrows", 0) or 0)
             block_kinds.append({"kind": kind, "comp": comp, "nrows": nr})
 
     row = {
-        "station":  jf.station or path.stem,
-        "path":     str(path),
-        "n_freq":   n_freq,
+        "station": jf.station or path.stem,
+        "path": str(path),
+        "n_freq": n_freq,
         "freq_min": round(freq_min, 4),
         "freq_max": round(freq_max, 4),
-        "has_z":    jf.Z is not None and getattr(jf.Z, "z", None) is not None,
-        "has_r":    jf.Res is not None,
-        "has_t":    jf.Tip is not None,
-        "lat":      jf.lat,
-        "lon":      jf.lon,
-        "elev":     jf.elev,
-        "azimuth":  jf.azimuth,
+        "has_z": jf.Z is not None and getattr(jf.Z, "z", None) is not None,
+        "has_r": jf.Res is not None,
+        "has_t": jf.Tip is not None,
+        "lat": jf.lat,
+        "lon": jf.lon,
+        "elev": jf.elev,
+        "azimuth": jf.azimuth,
         "software": software,
-        "date":     bdate,
-        "blocks":   block_kinds,
+        "date": bdate,
+        "blocks": block_kinds,
     }
 
     if fmt == "json":
@@ -112,8 +118,19 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
         return
 
     if fmt == "csv":
-        keys = ["station", "n_freq", "freq_min", "freq_max",
-                "has_z", "has_r", "has_t", "lat", "lon", "elev", "path"]
+        keys = [
+            "station",
+            "n_freq",
+            "freq_min",
+            "freq_max",
+            "has_z",
+            "has_r",
+            "has_t",
+            "lat",
+            "lon",
+            "elev",
+            "path",
+        ]
         click.echo(",".join(keys))
         click.echo(",".join(str(row.get(k, "")) for k in keys))
         return
@@ -123,7 +140,9 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
     click.echo(f"n_freq    : {n_freq}")
     if n_freq > 0:
         click.echo(f"Freq range: {freq_min:.4g} – {freq_max:.4g} Hz")
-    click.echo(f"Data      : Z={row['has_z']}  R/φ={row['has_r']}  T={row['has_t']}")
+    click.echo(
+        f"Data      : Z={row['has_z']}  R/φ={row['has_r']}  T={row['has_t']}"
+    )
     if row["lat"] is not None:
         click.echo(f"Lat / Lon : {row['lat']:.6f}  /  {row['lon']:.6f}")
     if row["elev"] is not None:
@@ -136,12 +155,15 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
         click.echo(f"Blocks    : {len(block_kinds)}")
         if verbose >= 1:
             for bk in block_kinds:
-                click.echo(f"  {bk['kind']}{bk['comp']}  ({bk['nrows']} rows)")
+                click.echo(
+                    f"  {bk['kind']}{bk['comp']}  ({bk['nrows']} rows)"
+                )
 
 
 # ---------------------------------------------------------------------------
 # Collection display
 # ---------------------------------------------------------------------------
+
 
 def _info_collection(
     path: Path, top: int | None, fmt: str, verbose: int
@@ -159,7 +181,16 @@ def _info_collection(
         click.echo(json.dumps(rows, indent=2, default=str))
         return
 
-    keys = ["station", "n_freq", "has_z", "has_r", "has_t", "lat", "lon", "az"]
+    keys = [
+        "station",
+        "n_freq",
+        "has_z",
+        "has_r",
+        "has_t",
+        "lat",
+        "lon",
+        "az",
+    ]
     keys = [k for k in keys if any(k in r for r in rows)]
 
     if fmt == "csv":
@@ -171,22 +202,37 @@ def _info_collection(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table(
             title=f"Jones J collection — {path}  ({len(rows)} stations)",
         )
         col_labels = {
-            "station": "Station", "n_freq": "n_freq",
-            "has_z": "Z",  "has_r": "R/φ", "has_t": "T",
-            "lat": "Lat",  "lon": "Lon",   "az": "Az(°)",
+            "station": "Station",
+            "n_freq": "n_freq",
+            "has_z": "Z",
+            "has_r": "R/φ",
+            "has_t": "T",
+            "lat": "Lat",
+            "lon": "Lon",
+            "az": "Az(°)",
         }
         for k in keys:
             tbl.add_column(col_labels.get(k, k))
         for r in rows:
-            tbl.add_row(*[
-                f"{r.get(k, ''):.5f}" if isinstance(r.get(k), float) and k in ("lat", "lon")
-                else ("yes" if r.get(k) is True else "no" if r.get(k) is False else str(r.get(k, "")))
-                for k in keys
-            ])
+            tbl.add_row(
+                *[
+                    f"{r.get(k, ''):.5f}"
+                    if isinstance(r.get(k), float) and k in ("lat", "lon")
+                    else (
+                        "yes"
+                        if r.get(k) is True
+                        else "no"
+                        if r.get(k) is False
+                        else str(r.get(k, ""))
+                    )
+                    for k in keys
+                ]
+            )
         Console().print(tbl)
     except ImportError:
         hdr = (
@@ -198,7 +244,7 @@ def _info_collection(
         for r in rows:
             lat = r.get("lat", float("nan"))
             lon = r.get("lon", float("nan"))
-            az  = r.get("az",  float("nan"))
+            az = r.get("az", float("nan"))
             click.echo(
                 f"{str(r.get('station', '?')):<18} "
                 f"{r.get('n_freq', 0):>6} "

@@ -114,7 +114,9 @@ class ModEMBackend(BaseInversionBackend):
         try:
             from ...models import modem
         except ImportError as exc:
-            raise ImportError("ModEM backend requires pycsamt.models.modem.") from exc
+            raise ImportError(
+                "ModEM backend requires pycsamt.models.modem."
+            ) from exc
 
         modem_cfg = _modem_config(modem, cfg)
         builder_cls = getattr(modem, "InputBuilder", None)
@@ -122,7 +124,9 @@ class ModEMBackend(BaseInversionBackend):
             try:
                 builder = builder_cls(config=modem_cfg)
                 build_options = _build_options(cfg.backend_options)
-                files = builder.build(source, workdir=workdir, **build_options)
+                files = builder.build(
+                    source, workdir=workdir, **build_options
+                )
                 native = builder
                 file_map = {key: str(value) for key, value in files.items()}
                 status = "prepared"
@@ -130,8 +134,12 @@ class ModEMBackend(BaseInversionBackend):
                 warnings.append(f"ModEM preparation failed: {exc}")
                 status = "needs_review"
         else:
-            file_map = _configured_files(workdir, modem_cfg, cfg.backend_options)
-            warnings.append("ModEM InputBuilder is not available; created workdir only.")
+            file_map = _configured_files(
+                workdir, modem_cfg, cfg.backend_options
+            )
+            warnings.append(
+                "ModEM InputBuilder is not available; created workdir only."
+            )
 
         runner_cls = getattr(modem, "ModEmRunner", None)
         runner = None
@@ -139,10 +147,13 @@ class ModEMBackend(BaseInversionBackend):
         if runner_cls is not None:
             runner = runner_cls(workdir=workdir, config=modem_cfg)
             native = native or runner
-            missing = _missing_runner_files(file_map, required=_required_runner_keys(modem_cfg))
+            missing = _missing_runner_files(
+                file_map, required=_required_runner_keys(modem_cfg)
+            )
             if missing:
                 warnings.append(
-                    "ModEM runner not ready; missing files: " + ", ".join(missing)
+                    "ModEM runner not ready; missing files: "
+                    + ", ".join(missing)
                 )
             else:
                 command = runner.command(
@@ -151,7 +162,8 @@ class ModEMBackend(BaseInversionBackend):
                     _relative_to_workdir(file_map["control"], workdir),
                     covariance=(
                         _relative_to_workdir(file_map["covariance"], workdir)
-                        if "covariance" in file_map else None
+                        if "covariance" in file_map
+                        else None
                     ),
                     mode=modem_cfg.mode,
                     use_mpi=runner_options.get("use_mpi", None),
@@ -163,26 +175,37 @@ class ModEMBackend(BaseInversionBackend):
                         loaded = runner.run(
                             _relative_to_workdir(file_map["model"], workdir),
                             _relative_to_workdir(file_map["data"], workdir),
-                            _relative_to_workdir(file_map["control"], workdir),
+                            _relative_to_workdir(
+                                file_map["control"], workdir
+                            ),
                             covariance=(
-                                _relative_to_workdir(file_map["covariance"], workdir)
-                                if "covariance" in file_map else None
+                                _relative_to_workdir(
+                                    file_map["covariance"], workdir
+                                )
+                                if "covariance" in file_map
+                                else None
                             ),
                             mode=modem_cfg.mode,
                             use_mpi=runner_options.get("use_mpi", None),
                             n_procs=runner_options.get("n_procs", None),
                             extra_args=runner_options.get("extra_args", None),
                             timeout=runner_options.get("timeout", None),
-                            load_result=bool(runner_options.get("load_result", True)),
+                            load_result=bool(
+                                runner_options.get("load_result", True)
+                            ),
                         )
                         native = loaded or runner
                         executed = True
-                        status = "loaded" if loaded is not None else "executed"
+                        status = (
+                            "loaded" if loaded is not None else "executed"
+                        )
                     except Exception as exc:
                         warnings.append(f"ModEM runner failed: {exc}")
                         status = "needs_review"
         else:
-            warnings.append("ModEM ModEmRunner is not available; execution disabled.")
+            warnings.append(
+                "ModEM ModEmRunner is not available; execution disabled."
+            )
 
         result_cls = getattr(modem, "InversionResult", None)
         rms = float("nan")
@@ -192,7 +215,13 @@ class ModEMBackend(BaseInversionBackend):
                 if _has_loaded_result(loaded):
                     native = loaded
                     status = "loaded"
-                    rms = float(getattr(loaded, "final_rms", getattr(loaded, "rms", float("nan"))))
+                    rms = float(
+                        getattr(
+                            loaded,
+                            "final_rms",
+                            getattr(loaded, "rms", float("nan")),
+                        )
+                    )
             except Exception as exc:
                 warnings.append(f"ModEM result loading skipped: {exc}")
 
@@ -226,7 +255,8 @@ def _modem_config(modem: Any, cfg: Any) -> Any:
     raw = cfg.backend_options.get("config")
     if raw is None:
         values = {
-            key: value for key, value in cfg.backend_options.items()
+            key: value
+            for key, value in cfg.backend_options.items()
             if key in getattr(cfg_cls, "__dataclass_fields__", {})
         }
         values.setdefault("mode", cfg.dimension)
@@ -246,15 +276,23 @@ def _modem_config(modem: Any, cfg: Any) -> Any:
 def _build_options(options: dict[str, Any]) -> dict[str, Any]:
     excluded = {"config", "runner", "files"}
     modem_fields = {
-        "mode", "binary_2d", "binary_3d", "use_mpi", "n_procs", "mpi_command",
+        "mode",
+        "binary_2d",
+        "binary_3d",
+        "use_mpi",
+        "n_procs",
+        "mpi_command",
     }
     return {
-        key: value for key, value in options.items()
+        key: value
+        for key, value in options.items()
         if key not in excluded and key not in modem_fields
     }
 
 
-def _configured_files(workdir: Path, modem_cfg: Any, options: dict[str, Any]) -> dict[str, str]:
+def _configured_files(
+    workdir: Path, modem_cfg: Any, options: dict[str, Any]
+) -> dict[str, str]:
     raw = dict(options.get("files", {}))
     aliases = {
         "data_file": "data",
@@ -286,7 +324,9 @@ def _required_runner_keys(modem_cfg: Any) -> tuple[str, ...]:
     return ("model", "data", "control")
 
 
-def _missing_runner_files(files: dict[str, str], *, required: tuple[str, ...]) -> list[str]:
+def _missing_runner_files(
+    files: dict[str, str], *, required: tuple[str, ...]
+) -> list[str]:
     missing: list[str] = []
     for key in required:
         path = files.get(key)

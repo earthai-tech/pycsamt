@@ -22,8 +22,9 @@ from pycsamt.map import MapView
 
 # sphinx_gallery_thumbnail_path = '_static/map_thumbs/plot_2_profiles_and_sections.png'
 
-DATA = os.path.join(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."),
-                    "data", "AMT", "WILLY_DATA")
+DATA = os.path.join(
+    os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."), "data", "AMT", "WILLY_DATA"
+)
 mv = MapView.from_folder(DATA, recursive=True)
 print(f"{mv.n_stations} stations, lines: {mv.lines}")
 

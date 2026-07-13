@@ -31,6 +31,7 @@ from pycsamt.topo.overlay import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_topo():
     yield
@@ -40,8 +41,8 @@ def _reset_topo():
 
 def _simple_inputs(n: int = 8):
     """Synthetic profile with n stations."""
-    chain = np.linspace(0.0, 5.0, n)                   # km
-    elev  = 200.0 + 50.0 * np.sin(np.pi * chain / 5.0)  # m, smooth hill
+    chain = np.linspace(0.0, 5.0, n)  # km
+    elev = 200.0 + 50.0 * np.sin(np.pi * chain / 5.0)  # m, smooth hill
     names = [f"S{i:02d}" for i in range(n)]
     return chain, elev, names
 
@@ -49,21 +50,25 @@ def _simple_inputs(n: int = 8):
 def _make_section_axes():
     fig, ax = plt.subplots()
     ax.set_xlim(0, 5)
-    ax.set_ylim(0.0, 0.5)     # km scale — y is absolute elevation
+    ax.set_ylim(0.0, 0.5)  # km scale — y is absolute elevation
     return fig, ax
 
 
 def _make_ps_axes():
     """Return (fig, ax) for a pseudosection-style plot."""
     fig, ax = plt.subplots()
-    ax.imshow(np.random.default_rng(0).random((20, 8)), aspect="auto",
-              extent=[0, 8, 0, 1])
+    ax.imshow(
+        np.random.default_rng(0).random((20, 8)),
+        aspect="auto",
+        extent=[0, 8, 0, 1],
+    )
     return fig, ax
 
 
 # ---------------------------------------------------------------------------
 # draw_topo_section
 # ---------------------------------------------------------------------------
+
 
 class TestDrawTopoSection:
     def test_returns_none(self):
@@ -147,11 +152,15 @@ class TestDrawTopoSection:
     def test_exaggeration_applied(self):
         """With exaggeration=2, the surface line y-peak should be ~doubled."""
         chain = np.array([0.0, 1.0, 2.0])
-        elev_m = np.array([100.0, 200.0, 100.0])    # max = 200 m = 0.2 km
+        elev_m = np.array([100.0, 200.0, 100.0])  # max = 200 m = 0.2 km
         _, ax = _make_section_axes()
         cfg = TopoConfig()
-        cfg.configure(exaggeration=2.0, show_surface_line=True,
-                      clip_below_surface=False, station_pins_at_surface=False)
+        cfg.configure(
+            exaggeration=2.0,
+            show_surface_line=True,
+            clip_below_surface=False,
+            station_pins_at_surface=False,
+        )
         draw_topo_section(ax, chain, elev_m, cfg=cfg)
         # surface line is lines[0]; station pins are now a scatter (collection)
         surface_line = ax.lines[0]
@@ -160,7 +169,7 @@ class TestDrawTopoSection:
     def test_custom_station_x(self):
         chain, elev, names = _simple_inputs(n=4)
         _, ax = _make_section_axes()
-        sx = chain + 0.1    # shifted x positions for markers
+        sx = chain + 0.1  # shifted x positions for markers
         draw_topo_section(ax, chain, elev, names, station_x_km=sx)
 
     def test_real_willy_l18(self):
@@ -174,28 +183,35 @@ class TestDrawTopoSection:
 
         base = os.path.join(
             os.path.dirname(__file__),
-            "..", "..", "..", "data", "AMT", "WILLY_DATA", "L18PLT",
+            "..",
+            "..",
+            "..",
+            "data",
+            "AMT",
+            "WILLY_DATA",
+            "L18PLT",
         )
         paths = sorted(glob.glob(os.path.join(base, "*.edi")))
         if not paths:
             pytest.skip("WILLY L18PLT data not found")
-        edis  = [EDIFile(p) for p in paths]
+        edis = [EDIFile(p) for p in paths]
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
         names = extract_station_names(edis)
 
         _, ax = _make_section_axes()
         ax.set_xlim(chain[0], chain[-1])
-        ax.set_ylim(0.03, 0.25)   # km scale (30–250 m)
+        ax.set_ylim(0.03, 0.25)  # km scale (30–250 m)
         draw_topo_section(ax, chain, elev, names)
 
         fig = ax.get_figure()
-        fig.canvas.draw()   # forces rendering — catches any artist error
+        fig.canvas.draw()  # forces rendering — catches any artist error
 
 
 # ---------------------------------------------------------------------------
 # draw_topo_strip
 # ---------------------------------------------------------------------------
+
 
 class TestDrawTopoStrip:
     def test_returns_axes(self):
@@ -275,24 +291,31 @@ class TestDrawTopoStrip:
 
         base = os.path.join(
             os.path.dirname(__file__),
-            "..", "..", "..", "data", "AMT", "WILLY_DATA", "L22PLT",
+            "..",
+            "..",
+            "..",
+            "data",
+            "AMT",
+            "WILLY_DATA",
+            "L22PLT",
         )
         paths = sorted(glob.glob(os.path.join(base, "*.edi")))
         if not paths:
             pytest.skip("WILLY L22PLT data not found")
-        edis  = [EDIFile(p) for p in paths]
+        edis = [EDIFile(p) for p in paths]
         chain = extract_chainage(edis)
-        elev  = extract_elevation(edis)
+        elev = extract_elevation(edis)
 
         fig, ax = _make_ps_axes()
         ax_strip = draw_topo_strip(fig, ax, chain, elev)
-        fig.canvas.draw()   # final render check
+        fig.canvas.draw()  # final render check
         assert ax_strip is not None
 
 
 # ---------------------------------------------------------------------------
 # add_station_labels
 # ---------------------------------------------------------------------------
+
 
 class TestAddStationLabels:
     def test_adds_correct_number_of_texts(self):
@@ -305,7 +328,9 @@ class TestAddStationLabels:
 
     def test_no_labels_for_empty_names(self):
         _, ax = _make_section_axes()
-        add_station_labels(ax, np.array([]), np.array([]), [], color="#ffffff")
+        add_station_labels(
+            ax, np.array([]), np.array([]), [], color="#ffffff"
+        )
         assert len(ax.texts) == 0
 
     def test_label_positions(self):
@@ -327,6 +352,12 @@ class TestAddStationLabels:
 
     def test_fontsize(self):
         _, ax = _make_section_axes()
-        add_station_labels(ax, np.array([1.0]), np.array([0.1]),
-                           ["X"], color="#fff", fontsize=9)
+        add_station_labels(
+            ax,
+            np.array([1.0]),
+            np.array([0.1]),
+            ["X"],
+            color="#fff",
+            fontsize=9,
+        )
         assert ax.texts[0].get_fontsize() == pytest.approx(9.0)

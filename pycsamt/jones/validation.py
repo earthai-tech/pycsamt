@@ -213,16 +213,12 @@ class IsJ(ABC):
             ext = path.suffix.lower().lstrip(".")
             if ext in {"j", "jones", "txt", "dat"}:
                 return True
-            raise JError(
-                "Unexpected extension; expected .j/.jones/.txt/.dat"
-            )
+            raise JError("Unexpected extension; expected .j/.jones/.txt/.dat")
 
         try:
             lines = _read_lines(path)
         except PermissionError:
-            raise PermissionError(
-                "Permission denied while reading file"
-            )
+            raise PermissionError("Permission denied while reading file")
 
         # Heuristic header checks (optional but helpful)
         # - zero or more info lines at the top are OK
@@ -238,9 +234,7 @@ class IsJ(ABC):
         return True
 
 
-def is_j_file(
-    file: str | os.PathLike | IsJ, *, deep: bool = True
-) -> bool:
+def is_j_file(file: str | os.PathLike | IsJ, *, deep: bool = True) -> bool:
     """
     Convenience wrapper around :meth:`IsJ._assert_j`.
     """

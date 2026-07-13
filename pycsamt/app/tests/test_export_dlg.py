@@ -36,6 +36,7 @@ def dlg(qapp, simple_fig):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_export_dlg_creates(qapp, simple_fig):
     d = ExportDialog(figure=simple_fig)
     assert d is not None
@@ -43,7 +44,9 @@ def test_export_dlg_creates(qapp, simple_fig):
 
 
 def test_format_combo_has_all_formats(dlg):
-    combo_items = [dlg._fmt_combo.itemText(i) for i in range(dlg._fmt_combo.count())]
+    combo_items = [
+        dlg._fmt_combo.itemText(i) for i in range(dlg._fmt_combo.count())
+    ]
     for fmt_key in _FORMATS:
         assert fmt_key in combo_items
 
@@ -68,6 +71,7 @@ def test_path_extension_updates_on_format_change(dlg):
 
 
 # ── Export to disk ────────────────────────────────────────────────────────
+
 
 def test_export_png_creates_file(qapp, simple_fig, tmp_path):
     out = tmp_path / "test.png"

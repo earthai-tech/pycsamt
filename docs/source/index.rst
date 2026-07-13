@@ -177,7 +177,7 @@
          <div class="pyc-feature pyc-feature--orange pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-sliders"></i></span>
-             <h3><a href="user_guide/processing.html">Processing &amp; corrections</a></h3>
+             <h3><a href="user_guide/processing/index.html">Processing &amp; corrections</a></h3>
            </div>
            <p>
              A catalogue of 25 correction methods in six categories: notch
@@ -185,10 +185,10 @@
              analysis, and more — each with a stable identifier.
            </p>
            <div class="pyc-feature-tags">
-             <a href="user_guide/processing.html">Catalogue</a>
+             <a href="user_guide/processing/index.html">Catalogue</a>
              <span>Static shift</span><span>Notch</span><span>Phase tensor</span>
            </div>
-           <a class="pyc-feature-more" href="user_guide/processing.html">
+           <a class="pyc-feature-more" href="user_guide/processing/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>
@@ -216,7 +216,7 @@
          <div class="pyc-feature pyc-feature--blue pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-brain"></i></span>
-             <h3><a href="user_guide/inversion.html">Inversion — classical &amp; AI</a></h3>
+             <h3><a href="user_guide/inversion/index.html">Inversion — classical &amp; AI</a></h3>
            </div>
            <p>
              Drive Occam2D, ModEM, and MARE2DEM end to end — input builders,
@@ -225,10 +225,10 @@
            </p>
            <div class="pyc-feature-tags">
              <a href="user_guide/models/index.html">Solvers</a>
-             <a href="user_guide/ai_inversion.html">PINN</a>
+             <a href="user_guide/ai_inversion/index.html">PINN</a>
              <span>Occam2D</span><span>ModEM</span><span>MARE2DEM</span>
            </div>
-           <a class="pyc-feature-more" href="user_guide/inversion.html">
+           <a class="pyc-feature-more" href="user_guide/inversion/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>
@@ -236,7 +236,7 @@
          <div class="pyc-feature pyc-feature--orange pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-map"></i></span>
-             <h3><a href="user_guide/interpretation.html">Interpretation &amp; mapping</a></h3>
+             <h3><a href="user_guide/interpretation/index.html">Interpretation &amp; mapping</a></h3>
            </div>
            <p>
              Classify resistivity, derive pseudostratigraphic logs, and render
@@ -245,10 +245,10 @@
            </p>
            <div class="pyc-feature-tags">
              <a href="user_guide/map/index.html">Map tools</a>
-             <a href="user_guide/mapping.html">Mapping guide</a>
+             <a href="user_guide/map/index.html">Mapping guide</a>
              <span>Pseudosection</span><span>3-D</span>
            </div>
-           <a class="pyc-feature-more" href="user_guide/interpretation.html">
+           <a class="pyc-feature-more" href="user_guide/interpretation/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>

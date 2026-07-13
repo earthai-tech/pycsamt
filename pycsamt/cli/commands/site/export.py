@@ -34,7 +34,8 @@ from ._base import _get_sites, site
 @output_dir_option
 @overwrite_option
 @click.option(
-    "--zip", "pack_zip",
+    "--zip",
+    "pack_zip",
     is_flag=True,
     default=False,
     help="Pack all EDI outputs into a single zip archive.",
@@ -122,6 +123,7 @@ def export(
         from pycsamt.site.export import (
             pack_zip as _pack_zip,  # noqa: PLC0415
         )
+
         try:
             out = _pack_zip(sites_obj, archive_path)
         except Exception as exc:  # noqa: BLE001
@@ -134,13 +136,16 @@ def export(
     from pycsamt.site.export import (
         write_sites,  # noqa: PLC0415
     )
+
     try:
         written = write_sites(
             sites_obj,
             output_dir,
             template=template,
             exist_ok=overwrite,
-            manifest_csv=str(output_dir / "manifest.csv") if manifest else None,
+            manifest_csv=str(output_dir / "manifest.csv")
+            if manifest
+            else None,
         )
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error exporting sites: {exc}", err=True)

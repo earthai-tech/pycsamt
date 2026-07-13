@@ -95,4 +95,5 @@ def register_callbacks(app) -> None:
     from pycsamt.app.web.pages.agents_page import (
         register_callbacks as _reg_agents_page,
     )
+
     _reg_agents_page(app)

@@ -17,10 +17,19 @@ from .results import InversionResult
 
 PathLike = Union[str, Path]
 
-__all__ = ["to_archive", "to_csv", "to_geojson", "to_geotiff", "to_npz", "to_vtk"]
+__all__ = [
+    "to_archive",
+    "to_csv",
+    "to_geojson",
+    "to_geotiff",
+    "to_npz",
+    "to_vtk",
+]
 
 
-def to_csv(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> Path:
+def to_csv(
+    result: InversionResult, path: PathLike, *, log_rho: bool = True
+) -> Path:
     """Export a recovered resistivity model as long-form CSV.
 
     The CSV writer stores one row per model cell with profile position, depth,
@@ -57,7 +66,7 @@ def to_csv(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> 
     """
     model = result.to_resistivity_model()
     rho = np.asarray(model.rho_2d, dtype=float)
-    values = rho if log_rho else 10.0 ** rho
+    values = rho if log_rho else 10.0**rho
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="") as fh:
@@ -69,7 +78,9 @@ def to_csv(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> 
             if ix < len(model.station_names):
                 station = model.station_names[ix]
             for iz, z in enumerate(model.z_centers):
-                writer.writerow([float(x), float(z), float(values[iz, ix]), station])
+                writer.writerow(
+                    [float(x), float(z), float(values[iz, ix]), station]
+                )
     return out
 
 
@@ -140,7 +151,9 @@ def to_npz(result: InversionResult, path: PathLike) -> Path:
     return out
 
 
-def to_geojson(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> Path:
+def to_geojson(
+    result: InversionResult, path: PathLike, *, log_rho: bool = True
+) -> Path:
     """Export a 2-D inversion section as GeoJSON cell polygons.
 
     Coordinates are profile-distance/depth pairs in metres. Depth is positive
@@ -178,7 +191,7 @@ def to_geojson(result: InversionResult, path: PathLike, *, log_rho: bool = True)
     """
     model = result.to_resistivity_model()
     rho = np.asarray(model.rho_2d, dtype=float)
-    values = rho if log_rho else 10.0 ** rho
+    values = rho if log_rho else 10.0**rho
     x_edges = _cell_edges(model.x_centers)
     z_edges = _cell_edges(model.z_centers)
     value_key = _rho_key(log_rho)
@@ -195,24 +208,30 @@ def to_geojson(result: InversionResult, path: PathLike, *, log_rho: bool = True)
                 "z_center_m": float(model.z_centers[iz]),
                 value_key: float(values[iz, ix]),
             }
-            properties.update({
-                key: float(array[iz, ix])
-                for key, array in uncertainty.items()
-            })
-            features.append({
-                "type": "Feature",
-                "properties": properties,
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [[
-                        [x0, z0],
-                        [x1, z0],
-                        [x1, z1],
-                        [x0, z1],
-                        [x0, z0],
-                    ]],
-                },
-            })
+            properties.update(
+                {
+                    key: float(array[iz, ix])
+                    for key, array in uncertainty.items()
+                }
+            )
+            features.append(
+                {
+                    "type": "Feature",
+                    "properties": properties,
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [x0, z0],
+                                [x1, z0],
+                                [x1, z1],
+                                [x0, z1],
+                                [x0, z0],
+                            ]
+                        ],
+                    },
+                }
+            )
 
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -226,7 +245,9 @@ def to_geojson(result: InversionResult, path: PathLike, *, log_rho: bool = True)
     return out
 
 
-def to_vtk(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> Path:
+def to_vtk(
+    result: InversionResult, path: PathLike, *, log_rho: bool = True
+) -> Path:
     """Export a 2-D inversion section as legacy ASCII VTK.
 
     The file is a ``RECTILINEAR_GRID`` with one cell in the cross-line
@@ -265,7 +286,7 @@ def to_vtk(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> 
     """
     model = result.to_resistivity_model()
     rho = np.asarray(model.rho_2d, dtype=float)
-    values = rho if log_rho else 10.0 ** rho
+    values = rho if log_rho else 10.0**rho
     x_edges = _cell_edges(model.x_centers)
     z_edges = _cell_edges(model.z_centers)
     uncertainty = _uncertainty_arrays(result, rho.shape)
@@ -342,7 +363,7 @@ def to_geotiff(
 
     model = result.to_resistivity_model()
     rho = np.asarray(model.rho_2d, dtype=float)
-    values = rho if log_rho else 10.0 ** rho
+    values = rho if log_rho else 10.0**rho
     x_edges = _cell_edges(model.x_centers)
     z_edges = _cell_edges(model.z_centers)
     dx = _mean_spacing(x_edges)
@@ -423,7 +444,9 @@ def to_archive(
     """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="pycsamt-inv-export-") as tmp_name:
+    with tempfile.TemporaryDirectory(
+        prefix="pycsamt-inv-export-"
+    ) as tmp_name:
         tmp = Path(tmp_name)
         metadata_path = tmp / "metadata.json"
         with metadata_path.open("w", encoding="utf-8") as fh:
@@ -431,7 +454,9 @@ def to_archive(
         npz_path = to_npz(result, tmp / "result.npz")
         csv_path = to_csv(result, tmp / "model.csv", log_rho=log_rho)
 
-        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(
+            out, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zf:
             zf.write(metadata_path, "metadata.json")
             zf.write(npz_path, "result.npz")
             zf.write(csv_path, "model.csv")
@@ -449,7 +474,9 @@ def _cell_edges(centers: Any) -> np.ndarray:
         raise ValueError("cannot export model with empty cell coordinates.")
     if centers.size == 1:
         half_width = max(abs(float(centers[0])) * 0.05, 0.5)
-        return np.array([centers[0] - half_width, centers[0] + half_width], dtype=float)
+        return np.array(
+            [centers[0] - half_width, centers[0] + half_width], dtype=float
+        )
     mids = 0.5 * (centers[:-1] + centers[1:])
     first = centers[0] - (mids[0] - centers[0])
     last = centers[-1] + (centers[-1] - mids[-1])
@@ -467,7 +494,9 @@ def _rho_key(log_rho: bool) -> str:
     return "rho_log10_ohm_m" if log_rho else "rho_ohm_m"
 
 
-def _uncertainty_arrays(result: InversionResult, shape: tuple[int, int]) -> dict[str, np.ndarray]:
+def _uncertainty_arrays(
+    result: InversionResult, shape: tuple[int, int]
+) -> dict[str, np.ndarray]:
     if result.uncertainty is None:
         return {}
     out: dict[str, np.ndarray] = {}
@@ -511,7 +540,9 @@ def _metadata(result: InversionResult) -> dict[str, Any]:
         "metadata": dict(result.metadata),
     }
     if result.uncertainty is not None:
-        payload["uncertainty"] = {"metadata": dict(result.uncertainty.metadata)}
+        payload["uncertainty"] = {
+            "metadata": dict(result.uncertainty.metadata)
+        }
     if result.history is not None:
         payload["history"] = {
             "n_records": result.history.n_records,

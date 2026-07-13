@@ -26,8 +26,10 @@ from pycsamt.interp import ModelCalibrator
 rm = demo_model()
 boreholes = demo_boreholes()
 for bh in boreholes:
-    print(f"{bh.name} @ x={bh.x:.0f} m: "
-          f"{', '.join(iv.lithology for iv in bh.intervals)}")
+    print(
+        f"{bh.name} @ x={bh.x:.0f} m: "
+        f"{', '.join(iv.lithology for iv in bh.intervals)}"
+    )
 
 # %%
 # Calibrate
@@ -37,7 +39,9 @@ for bh in boreholes:
 # resistivity-lithology boundaries to match, returning a corrected
 # :class:`~pycsamt.interp.ResistivityModel` via ``calibrated_model()``.
 
-cal = ModelCalibrator(max_borehole_distance=800.0, verbose=False).fit(rm, boreholes)
+cal = ModelCalibrator(max_borehole_distance=800.0, verbose=False).fit(
+    rm, boreholes
+)
 nm = cal.calibrated_model()
 print("native method:", rm.method)
 print("calibrated method:", nm.method)

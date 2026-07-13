@@ -24,6 +24,7 @@ from pycsamt.cli.tests.conftest import (
 # invert (group help)
 # ---------------------------------------------------------------------------
 
+
 class TestInvertGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["invert", "--help"])
@@ -35,6 +36,7 @@ class TestInvertGroup:
 # ---------------------------------------------------------------------------
 # invert build
 # ---------------------------------------------------------------------------
+
 
 class TestInvertBuild:
     def test_help(self, runner: CliRunner) -> None:
@@ -48,7 +50,9 @@ class TestInvertBuild:
     ) -> None:
         result = runner.invoke(main, ["invert", "build"])
         assert result.exit_code != 0
-        assert "No active survey" in (result.output + str(result.exception or ""))
+        assert "No active survey" in (
+            result.output + str(result.exception or "")
+        )
 
     def test_build_occam2d_called(
         self,
@@ -63,21 +67,31 @@ class TestInvertBuild:
         mock_builder = MagicMock()
         mock_builder.return_value.build.return_value = mock_builder
 
-        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites), \
-             patch("pycsamt.cli.commands.invert.build.InputBuilder",
-                   mock_builder, create=True):
+        with (
+            patch("pycsamt.cli.survey._build_sites", return_value=fake_sites),
+            patch(
+                "pycsamt.cli.commands.invert.build.InputBuilder",
+                mock_builder,
+                create=True,
+            ),
+        ):
             result = runner.invoke(
                 main,
                 [
-                    "invert", "build",
+                    "invert",
+                    "build",
                     str(edi_dir),
-                    "--solver", "occam2d",
-                    "--workdir", str(workdir),
+                    "--solver",
+                    "occam2d",
+                    "--workdir",
+                    str(workdir),
                 ],
             )
         # The command may fail because OccamConfig/InputBuilder aren't mocked
         # deeply, but it should not raise a Python exception
-        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
 
     def test_explicit_path_takes_priority_over_context(
         self,
@@ -93,7 +107,10 @@ class TestInvertBuild:
 
         # Set context pointing to edi_dir
         from pycsamt.cli.survey import set_survey
-        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
+
+        with patch(
+            "pycsamt.cli.survey._build_sites", return_value=fake_sites
+        ):
             set_survey(edi_dir)
 
         # Call with explicit alt_dir — resolve_survey should use alt_dir
@@ -107,11 +124,19 @@ class TestInvertBuild:
                 resolved_paths.append(explicit)
             return fake_sites
 
-        with patch("pycsamt.cli.commands.invert.build.resolve_survey",
-                   side_effect=tracking_resolve):
+        with patch(
+            "pycsamt.cli.commands.invert.build.resolve_survey",
+            side_effect=tracking_resolve,
+        ):
             runner.invoke(
                 main,
-                ["invert", "build", str(alt_dir), "--workdir", str(tmp_path / "wd")],
+                [
+                    "invert",
+                    "build",
+                    str(alt_dir),
+                    "--workdir",
+                    str(tmp_path / "wd"),
+                ],
             )
 
         assert any(alt_dir.resolve() == p.resolve() for p in resolved_paths)
@@ -120,6 +145,7 @@ class TestInvertBuild:
 # ---------------------------------------------------------------------------
 # invert status
 # ---------------------------------------------------------------------------
+
 
 class TestInvertStatus:
     def test_help(self, runner: CliRunner) -> None:
@@ -131,7 +157,9 @@ class TestInvertStatus:
     ) -> None:
         result = runner.invoke(main, ["invert", "status", str(occam_workdir)])
         assert result.exit_code == 0
-        assert "OCCAM2D" in result.output.upper() or "occam2d" in result.output
+        assert (
+            "OCCAM2D" in result.output.upper() or "occam2d" in result.output
+        )
 
     def test_occam2d_workdir_json(
         self, runner: CliRunner, occam_workdir: Path
@@ -157,7 +185,13 @@ class TestInvertStatus:
     ) -> None:
         result = runner.invoke(
             main,
-            ["invert", "status", str(occam_workdir_with_iters), "--format", "json"],
+            [
+                "invert",
+                "status",
+                str(occam_workdir_with_iters),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -168,7 +202,13 @@ class TestInvertStatus:
     ) -> None:
         result = runner.invoke(
             main,
-            ["invert", "status", str(occam_workdir_with_iters), "--format", "json"],
+            [
+                "invert",
+                "status",
+                str(occam_workdir_with_iters),
+                "--format",
+                "json",
+            ],
         )
         data = json.loads(result.output)
         assert data["rms_last"] == pytest.approx(1.087, abs=0.01)
@@ -186,8 +226,15 @@ class TestInvertStatus:
     ) -> None:
         result = runner.invoke(
             main,
-            ["invert", "status", str(modem_workdir),
-             "--solver", "modem", "--format", "json"],
+            [
+                "invert",
+                "status",
+                str(modem_workdir),
+                "--solver",
+                "modem",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -197,6 +244,7 @@ class TestInvertStatus:
 # ---------------------------------------------------------------------------
 # invert run
 # ---------------------------------------------------------------------------
+
 
 class TestInvertRun:
     def test_help(self, runner: CliRunner) -> None:
@@ -220,20 +268,31 @@ class TestInvertRun:
         mock_runner.return_value.run.return_value = 0
         with patch(
             "pycsamt.cli.commands.invert.run.OccamRunner",
-            mock_runner, create=True,
+            mock_runner,
+            create=True,
         ):
             result = runner.invoke(
                 main,
-                ["invert", "run", str(occam_workdir),
-                 "--solver", "occam2d", "--max-iter", "50"],
+                [
+                    "invert",
+                    "run",
+                    str(occam_workdir),
+                    "--solver",
+                    "occam2d",
+                    "--max-iter",
+                    "50",
+                ],
             )
         # OccamRunner may not be importable in test env, but should not traceback
-        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
 
 
 # ---------------------------------------------------------------------------
 # invert results
 # ---------------------------------------------------------------------------
+
 
 class TestInvertResults:
     def test_help(self, runner: CliRunner) -> None:
@@ -248,25 +307,45 @@ class TestInvertResults:
             main, ["invert", "results", str(occam_workdir)]
         )
         # Expected to fail (no iter files) but should not traceback uncontrolled
-        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
 
 
 # ---------------------------------------------------------------------------
 # invert plot (sub-group help only — no live data needed)
 # ---------------------------------------------------------------------------
 
+
 class TestInvertPlot:
     def test_plot_group_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["invert", "plot", "--help"])
         assert result.exit_code == 0
-        for sub in ("model", "misfit", "response", "pseudo",
-                    "section", "1d", "per-site", "grid"):
+        for sub in (
+            "model",
+            "misfit",
+            "response",
+            "pseudo",
+            "section",
+            "1d",
+            "per-site",
+            "grid",
+        ):
             assert sub in result.output
 
-    @pytest.mark.parametrize("sub", [
-        "model", "misfit", "response", "pseudo",
-        "section", "1d", "per-site", "grid",
-    ])
+    @pytest.mark.parametrize(
+        "sub",
+        [
+            "model",
+            "misfit",
+            "response",
+            "pseudo",
+            "section",
+            "1d",
+            "per-site",
+            "grid",
+        ],
+    )
     def test_each_subcommand_has_help(
         self, runner: CliRunner, sub: str
     ) -> None:

@@ -96,16 +96,20 @@ def parse_topo(
     y_max = max(y.max(), ty[-1])
     dy = y_max - y_min if y_max != y_min else 1e6
 
-    ty_ext = np.concatenate([
-        [y_min - 2 * dy, y_min - dy],
-        ty,
-        [y_max + dy, y_max + 2 * dy],
-    ])
-    tz_ext = np.concatenate([
-        [tz[0], tz[0]],
-        tz,
-        [tz[-1], tz[-1]],
-    ])
+    ty_ext = np.concatenate(
+        [
+            [y_min - 2 * dy, y_min - dy],
+            ty,
+            [y_max + dy, y_max + 2 * dy],
+        ]
+    )
+    tz_ext = np.concatenate(
+        [
+            [tz[0], tz[0]],
+            tz,
+            [tz[-1], tz[-1]],
+        ]
+    )
 
     # linear interpolation for depth
     z = np.interp(y, ty_ext, tz_ext)

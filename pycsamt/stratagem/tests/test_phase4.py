@@ -93,6 +93,7 @@ def _make_edi_dir(tmp_path: Path, n: int = 3, start: int = 2) -> Path:
 # StratagemRawReader: stations_ and station_numbers_
 # ---------------------------------------------------------------------------
 
+
 class TestStationsAttribute:
     def test_stations_stores_file_names(self, tmp_path):
         from pycsamt.stratagem.io import StratagemRawReader
@@ -130,6 +131,7 @@ class TestStationsAttribute:
 # StratagemRawReader: match_to_edis
 # ---------------------------------------------------------------------------
 
+
 class TestMatchToEdis:
     def test_exact_match(self, tmp_path):
         """Raw 1-4, EDI starting at 2: EDI[0]=station2 → raw[1]."""
@@ -139,7 +141,7 @@ class TestMatchToEdis:
         )
 
         _make_raw_dir(tmp_path, n=4)
-        _make_edi_dir(tmp_path, n=3, start=2)   # Z2HX002..Z2HX004
+        _make_edi_dir(tmp_path, n=3, start=2)  # Z2HX002..Z2HX004
         rdr = StratagemRawReader(tmp_path / "raw").fit()
         batch = EDIBatch(tmp_path / "edis").fit()
 
@@ -157,12 +159,12 @@ class TestMatchToEdis:
         )
 
         _make_raw_dir(tmp_path, n=4)
-        _make_edi_dir(tmp_path, n=1, start=5)   # Z2HX005.edi — no raw file
+        _make_edi_dir(tmp_path, n=1, start=5)  # Z2HX005.edi — no raw file
         rdr = StratagemRawReader(tmp_path / "raw").fit()
         batch = EDIBatch(tmp_path / "edis").fit()
 
         mapping = rdr.match_to_edis(batch.edi_objects_)
-        assert 0 not in mapping   # no match for station 5
+        assert 0 not in mapping  # no match for station 5
 
     def test_returns_dict(self, tmp_path):
         from pycsamt.stratagem.io import (
@@ -187,6 +189,7 @@ class TestMatchToEdis:
 # ---------------------------------------------------------------------------
 # StratagemRawReader: station_frame
 # ---------------------------------------------------------------------------
+
 
 class TestStationFrame:
     def test_returns_dataframe(self, tmp_path):
@@ -230,6 +233,7 @@ class TestStationFrame:
 # StratagemRawReader: freq_frame
 # ---------------------------------------------------------------------------
 
+
 class TestFreqFrame:
     def test_returns_dataframe(self, tmp_path):
         from pycsamt.stratagem.io import StratagemRawReader
@@ -263,6 +267,7 @@ class TestFreqFrame:
 # ---------------------------------------------------------------------------
 # StratagemRawReader: stack_audit
 # ---------------------------------------------------------------------------
+
 
 class TestStackAudit:
     def test_returns_dataframe(self, tmp_path):
@@ -306,6 +311,7 @@ class TestStackAudit:
 # FrequencyFilter: correct station-number alignment
 # ---------------------------------------------------------------------------
 
+
 class TestFrequencyFilterAlignment:
     """Verify the hardware mask is applied to the correct EDI stations."""
 
@@ -329,8 +335,12 @@ class TestFrequencyFilterAlignment:
  1.500e+001 2.930e+000 0.000e+000 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 """
         )
-        (d / "X2HX.001").write_text(all_bad, encoding="utf-8")    # station 1 - all bad
-        (d / "X2HX.002").write_text(_RAW_19COL, encoding="utf-8") # station 2 - has valid data
+        (d / "X2HX.001").write_text(
+            all_bad, encoding="utf-8"
+        )  # station 1 - all bad
+        (d / "X2HX.002").write_text(
+            _RAW_19COL, encoding="utf-8"
+        )  # station 2 - has valid data
         (d / "X2HX.003").write_text(_RAW_19COL, encoding="utf-8")
         (d / "X2HX.004").write_text(_RAW_19COL, encoding="utf-8")
 
@@ -344,7 +354,9 @@ class TestFrequencyFilterAlignment:
         # EDI[0] = Z2HX002 (station 2) → raw[1] = X2HX.002 (has valid data)
         # NOT raw[0] = X2HX.001 (all bad)
         mapping = rdr.match_to_edis(edis)
-        assert mapping[0] == 1, f"EDI[0] should map to raw[1], got {mapping[0]}"
+        assert mapping[0] == 1, (
+            f"EDI[0] should map to raw[1], got {mapping[0]}"
+        )
 
         # FrequencyFilter should apply the raw[1] mask to EDI[0].
         # Disable the incoherence step (snr_thresh/min_frac=0) so the test

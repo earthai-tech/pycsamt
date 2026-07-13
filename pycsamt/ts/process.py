@@ -38,6 +38,7 @@ References
        influence magnetotelluric response function
        estimation. *GJI*, 157(3), 988-1006.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -59,9 +60,7 @@ __all__ = [
 
 
 # ------------------------------------------------------------ preprocess
-def _fill_small_gaps(
-    x: np.ndarray, max_gap: int
-) -> np.ndarray:
+def _fill_small_gaps(x: np.ndarray, max_gap: int) -> np.ndarray:
     """
     Linearly interpolate interior ``NaN`` runs of length
     ``<= max_gap`` samples.  Longer runs (and leading/trailing
@@ -167,8 +166,7 @@ def target_frequencies(
     hi = float(fmax) if fmax else fs / 4.0
     if not (0.0 < lo < hi <= fs / 2.0):
         raise EdIDataError(
-            f"Invalid frequency range [{lo}, {hi}] for "
-            f"fs={fs} Hz."
+            f"Invalid frequency range [{lo}, {hi}] for fs={fs} Hz."
         )
     ndec = np.log10(hi / lo)
     n = max(2, int(round(ndec * per_decade)) + 1)
@@ -177,9 +175,7 @@ def target_frequencies(
 
 
 # --------------------------------------------------------- cross spectra
-def _segment_starts(
-    n: int, nfft: int, step: int
-) -> np.ndarray:
+def _segment_starts(n: int, nfft: int, step: int) -> np.ndarray:
     if n < nfft:
         return np.empty(0, dtype=int)
     return np.arange(0, n - nfft + 1, step, dtype=int)
@@ -192,9 +188,7 @@ def _band_edges(freqs_desc: np.ndarray) -> np.ndarray:
     """
     f = np.asarray(freqs_desc, float)
     mids = np.sqrt(f[:-1] * f[1:])
-    ratio = (
-        np.sqrt(f[0] / f[1]) if f.size > 1 else np.sqrt(2.0)
-    )
+    ratio = np.sqrt(f[0] / f[1]) if f.size > 1 else np.sqrt(2.0)
     hi = f[0] * ratio
     lo = f[-1] / ratio
     return np.concatenate([[hi], mids, [lo]])
@@ -290,9 +284,7 @@ def cross_spectra(
     per segment (a noisy burst pollutes all its bands).
     """
     if ts.dt is None:
-        raise EdIDataError(
-            "TSData.dt is not set; cannot process."
-        )
+        raise EdIDataError("TSData.dt is not set; cannot process.")
     dt = float(ts.dt)
 
     # ---- channel order: canonical first, extras after
@@ -304,19 +296,13 @@ def cross_spectra(
     # ---- optional remote reference channels
     if remote is not None:
         if remote.dt is None or float(remote.dt) != dt:
-            raise EdIDataError(
-                "remote record must share the same dt."
-            )
-        n_common = min(
-            M.shape[0], remote.n_samples
-        )
+            raise EdIDataError("remote record must share the same dt.")
+        n_common = min(M.shape[0], remote.n_samples)
         M = M[:n_common]
         cols = []
         for src in ("HX", "HY"):
             if src in remote:
-                cols.append(
-                    remote.get(src)[:n_common]
-                )
+                cols.append(remote.get(src)[:n_common])
                 order.append("RH" + src[-1])
         if cols:
             M = np.column_stack([M] + cols)
@@ -326,22 +312,16 @@ def cross_spectra(
     # ---- fill small gaps (idempotent if already done)
     if np.isnan(M).any():
         for j in range(nc):
-            M[:, j] = _fill_small_gaps(
-                M[:, j], int(fill_gap)
-            )
+            M[:, j] = _fill_small_gaps(M[:, j], int(fill_gap))
 
     # ---- segmentation: default targets ~60+ segments at
     # 50% overlap, a robust averaging/low-frequency tradeoff
     if nfft is None:
-        nfft = int(
-            2 ** np.floor(np.log2(max(n // 32, 256)))
-        )
+        nfft = int(2 ** np.floor(np.log2(max(n // 32, 256))))
         nfft = int(min(nfft, 65536))
     nfft = int(nfft)
     if nfft > n:
-        raise EdIDataError(
-            f"nfft={nfft} exceeds record length {n}."
-        )
+        raise EdIDataError(f"nfft={nfft} exceeds record length {n}.")
     overlap = float(np.clip(overlap, 0.0, 0.9))
     step = max(1, int(round(nfft * (1.0 - overlap))))
     starts = _segment_starts(n, nfft, step)
@@ -357,18 +337,14 @@ def cross_spectra(
             fmax=fmax,
         )
     else:
-        fgrid = np.sort(
-            np.asarray(list(freqs), float)
-        )[::-1]
+        fgrid = np.sort(np.asarray(list(freqs), float))[::-1]
     edges = _band_edges(fgrid)
 
     band_bins: list[np.ndarray] = []
     keep: list[int] = []
     for j in range(fgrid.size):
         hi, lo = edges[j], edges[j + 1]
-        sel = np.flatnonzero(
-            (fbin > 0.0) & (fbin > lo) & (fbin <= hi)
-        )
+        sel = np.flatnonzero((fbin > 0.0) & (fbin > lo) & (fbin <= hi))
         if sel.size:
             band_bins.append(sel)
             keep.append(j)
@@ -406,9 +382,7 @@ def cross_spectra(
         Sj = np.empty((nf, nc, nc), dtype=complex)
         for j, sel in enumerate(band_bins):
             xb = X[sel, :]  # (nb, nc)
-            Sj[j] = scale * (
-                xb.T @ np.conj(xb)
-            ) / float(sel.size)
+            Sj[j] = scale * (xb.T @ np.conj(xb)) / float(sel.size)
         seg_S.append(Sj)
         used_starts.append(int(s0))
 
@@ -427,9 +401,7 @@ def cross_spectra(
     S = A.mean(axis=0)
 
     idx = {c: k for k, c in enumerate(order)}
-    can_z = all(
-        c in idx for c in ("HX", "HY", "EX", "EY")
-    )
+    can_z = all(c in idx for c in ("HX", "HY", "EX", "EY"))
     if robust and str(robust).lower() == "huber" and can_z:
         h = [idx["HX"], idx["HY"]]
         e = [idx["EX"], idx["EY"]]
@@ -456,54 +428,34 @@ def cross_spectra(
                 res = (
                     See
                     - pred
-                    - np.conj(
-                        np.swapaxes(pred, -1, -2)
-                    )
+                    - np.conj(np.swapaxes(pred, -1, -2))
                     + Zj @ Shh @ np.conj(Zj.T)
                 )
-                tr = np.trace(
-                    res, axis1=-2, axis2=-1
-                ).real
+                tr = np.trace(res, axis1=-2, axis2=-1).real
                 # normalize by band E power -> comparable
-                pe = np.trace(
-                    See, axis1=-2, axis2=-1
-                ).real
+                pe = np.trace(See, axis1=-2, axis2=-1).real
                 good = pe > 0
-                r[good] += np.clip(
-                    tr[good] / pe[good], 0.0, None
-                )
-            med = float(np.median(r[r > 0])) if (
-                r > 0
-            ).any() else 0.0
+                r[good] += np.clip(tr[good] / pe[good], 0.0, None)
+            med = float(np.median(r[r > 0])) if (r > 0).any() else 0.0
             if med <= 0:
                 break
-            weights = np.minimum(
-                1.0, huber_k * med / np.maximum(r, 1e-30)
-            )
+            weights = np.minimum(1.0, huber_k * med / np.maximum(r, 1e-30))
             wsum = float(weights.sum())
             if wsum <= 0:
                 weights = np.ones(n_seg, float)
                 break
-            S = np.tensordot(
-                weights, A, axes=(0, 0)
-            ) / wsum
+            S = np.tensordot(weights, A, axes=(0, 0)) / wsum
 
     # enforce Hermitian symmetry (numerical hygiene)
     S = 0.5 * (S + np.conj(np.swapaxes(S, -1, -2)))
 
     # ---- effective DoF per band
-    neff = (
-        float(weights.sum()) ** 2
-        / float((weights**2).sum())
-    )
+    neff = float(weights.sum()) ** 2 / float((weights**2).sum())
     nb = np.array([b.size for b in band_bins], float)
-    segnum = np.maximum(
-        1, np.rint(neff * nb)
-    ).astype(int)
+    segnum = np.maximum(1, np.rint(neff * nb)).astype(int)
     bw = np.array(
         [
-            fbin[b].max() - fbin[b].min()
-            + (fbin[1] - fbin[0])
+            fbin[b].max() - fbin[b].min() + (fbin[1] - fbin[0])
             for b in band_bins
         ],
         float,
@@ -515,8 +467,13 @@ def cross_spectra(
             "cross_spectra: %d segments (nfft=%d, "
             "overlap=%.0f%%), %d bands "
             "[%.3e, %.3e] Hz, neff=%.1f",
-            n_seg, nfft, 100 * overlap, nf,
-            fgrid.min(), fgrid.max(), neff,
+            n_seg,
+            nfft,
+            100 * overlap,
+            nf,
+            fgrid.min(),
+            fgrid.max(),
+            neff,
         )
 
     return {
@@ -598,18 +555,10 @@ def ts_to_spectra(
     if isinstance(ts, (str,)) or hasattr(ts, "__fspath__"):
         from .readers import read_ts as _read
 
-        ts = _read(
-            ts, verbose=verbose, **(reader_kws or {})
-        )
+        ts = _read(ts, verbose=verbose, **(reader_kws or {}))
 
-    rec = (
-        preprocess(ts, fill_gap=fill_gap)
-        if preprocess_first
-        else ts
-    )
-    est = cross_spectra(
-        rec, fill_gap=fill_gap, verbose=verbose, **kws
-    )
+    rec = preprocess(ts, fill_gap=fill_gap) if preprocess_first else ts
+    est = cross_spectra(rec, fill_gap=fill_gap, verbose=verbose, **kws)
 
     sp = Spectra(
         name=name or ts.station or ts.name,
@@ -625,9 +574,7 @@ def ts_to_spectra(
     sp.avgf = np.full(nf, np.nan, float)
     sp.rotspec = np.zeros(nf, float)
     sp.segnum = np.asarray(est["segnum"], int)
-    sp.band = [
-        f"{f:.4E}Hz" for f in np.asarray(est["freq"])
-    ]
+    sp.band = [f"{f:.4E}Hz" for f in np.asarray(est["freq"])]
     # processing provenance for >INFO synthesis downstream
     sp.meta = {
         "n_segments": est["n_segments"],

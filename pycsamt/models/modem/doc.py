@@ -640,17 +640,15 @@ log_type : {"loge", "log10", "linear"}, default "loge"
 """,
 )
 
-_modem_param_docs = (
-    DocstringComponents.from_nested_components(
-        common=DocstringComponents(_modem_common_params),
-        config=DocstringComponents(_modem_config_params),
-        data=DocstringComponents(_modem_data_params),
-        model=DocstringComponents(_modem_model_params),
-        covariance=DocstringComponents(_modem_covariance_params),
-        control=DocstringComponents(_modem_control_params),
-        builder=DocstringComponents(_modem_builder_params),
-        runner=DocstringComponents(_modem_runner_params),
-        result=DocstringComponents(_modem_result_params),
-        iotool=DocstringComponents(_modem_iotool_params),
-    )
+_modem_param_docs = DocstringComponents.from_nested_components(
+    common=DocstringComponents(_modem_common_params),
+    config=DocstringComponents(_modem_config_params),
+    data=DocstringComponents(_modem_data_params),
+    model=DocstringComponents(_modem_model_params),
+    covariance=DocstringComponents(_modem_covariance_params),
+    control=DocstringComponents(_modem_control_params),
+    builder=DocstringComponents(_modem_builder_params),
+    runner=DocstringComponents(_modem_runner_params),
+    result=DocstringComponents(_modem_result_params),
+    iotool=DocstringComponents(_modem_iotool_params),
 )

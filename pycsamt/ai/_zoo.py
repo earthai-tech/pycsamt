@@ -15,6 +15,7 @@ Model naming convention
 Examples: ``mt1d-resnet-5layer-v1``, ``mt1d-cnn-7layer-v1``,
 ``joint-drcnn-5layer-v1``.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -115,6 +116,7 @@ _MODEL_ZOO: dict[str, dict[str, Any]] = {
 # Public utilities
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def list_pretrained() -> dict[str, str]:
     """
     Return a dict of available pre-trained models.
@@ -154,8 +156,7 @@ def get_pretrained_info(name: str) -> dict[str, Any]:
     if name not in _MODEL_ZOO:
         available = ", ".join(sorted(_MODEL_ZOO))
         raise KeyError(
-            f"Unknown model {name!r}.  "
-            f"Available models: {available}"
+            f"Unknown model {name!r}.  Available models: {available}"
         )
     return dict(_MODEL_ZOO[name])
 

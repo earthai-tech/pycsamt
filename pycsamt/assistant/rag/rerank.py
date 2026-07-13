@@ -28,7 +28,12 @@ from typing import Callable
 
 from .schemas import RAGChunk
 
-__all__ = ["build_rerank_prompt", "parse_ranking", "llm_rerank", "RANK_SYSTEM"]
+__all__ = [
+    "build_rerank_prompt",
+    "parse_ranking",
+    "llm_rerank",
+    "RANK_SYSTEM",
+]
 
 RANK_SYSTEM = (
     "You are a precise retrieval re-ranker for the pyCSAMT geophysics "
@@ -108,5 +113,5 @@ def llm_rerank(
     ranked = [pool[i] for i in order]
     ranked_set = set(order)
     leftovers = [pool[i] for i in range(len(pool)) if i not in ranked_set]
-    tail = chunks[len(pool):] if top_n else []
+    tail = chunks[len(pool) :] if top_n else []
     return ranked + leftovers + tail

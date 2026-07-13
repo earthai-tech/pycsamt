@@ -94,8 +94,12 @@ STATION = "18-001A"
 
 def _freq_counts(sites) -> set:
     S = ensure_sites(sites, recursive=False)
-    return {fr.size for ed in _iter_items(S)
-            for _, z, fr in [_get_z_block(ed)] if z is not None}
+    return {
+        fr.size
+        for ed in _iter_items(S)
+        for _, z, fr in [_get_z_block(ed)]
+        if z is not None
+    }
 
 
 def _count_finite(sites) -> tuple:
@@ -108,6 +112,7 @@ def _count_finite(sites) -> tuple:
         n_tot += fr.size
         n_fin += int(np.isfinite(z.reshape(z.shape[0], -1)).all(axis=1).sum())
     return n_fin, n_tot
+
 
 # %%
 # 1. Band selection — the simplest operation
@@ -134,8 +139,10 @@ print("10-1000 Hz only:", _freq_counts(narrowed))
 # consume it internally through the same ``ci_hi``/``ci_lo`` thresholds.
 
 table = frequency_confidence_table(survey)
-print(f"confidence range: {table['confidence'].min():.3f}-{table['confidence'].max():.3f} "
-      f"(median {table['confidence'].median():.3f})")
+print(
+    f"confidence range: {table['confidence'].min():.3f}-{table['confidence'].max():.3f} "
+    f"(median {table['confidence'].median():.3f})"
+)
 
 d = table[table["station"] == STATION].sort_values("period_s")
 fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -187,11 +194,15 @@ for th in (0.50, 0.70, 0.85):
 # no trusted rows at all for this survey (section 2), so nothing can be
 # recovered; lowering ``ci_hi`` below the real ceiling changes that.
 
-rec_default = recover_low_confidence_frequencies(survey, ci_hi=0.90, ci_lo=0.50)
+rec_default = recover_low_confidence_frequencies(
+    survey, ci_hi=0.90, ci_lo=0.50
+)
 n_fin, n_tot = _count_finite(rec_default)
 print(f"recover, default ci_hi=0.90: {n_fin}/{n_tot} finite")
 
-rec_working = recover_low_confidence_frequencies(survey, ci_hi=0.72, ci_lo=0.50)
+rec_working = recover_low_confidence_frequencies(
+    survey, ci_hi=0.72, ci_lo=0.50
+)
 n_fin, n_tot = _count_finite(rec_working)
 print(f"recover, ci_hi=0.72: {n_fin}/{n_tot} finite")
 
@@ -202,7 +213,14 @@ _, z1, fr1 = _get_z_block(next(_iter_items(d1)))
 per = 1.0 / fr0
 fig, ax = plt.subplots(figsize=(7, 4.5))
 ax.loglog(per, np.abs(z0[:, 0, 1]), "o-", ms=4, color="0.6", label="before")
-ax.loglog(per, np.abs(z1[:, 0, 1]), "x--", ms=5, color="#d62728", label="after (ci_hi=0.72)")
+ax.loglog(
+    per,
+    np.abs(z1[:, 0, 1]),
+    "x--",
+    ms=5,
+    color="#d62728",
+    label="after (ci_hi=0.72)",
+)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$|Z_{xy}|$")
 ax.legend(fontsize=8)
@@ -233,7 +251,12 @@ ax.set_title(f"{STATION} — before/after recovery")
 # one strategy and immediately attaches a report and a decision table.
 
 result = edit_frequencies_by_confidence(
-    survey, mode="recover", ci_hi=0.72, ci_lo=0.50, reject="drop", api=False,
+    survey,
+    mode="recover",
+    ci_hi=0.72,
+    ci_lo=0.50,
+    reject="drop",
+    api=False,
 )
 print(result.summary())
 
@@ -252,7 +275,11 @@ print(result.summary())
 # :func:`~pycsamt.emtools.frequency.plot_frequency_edit_summary` plots it.
 
 report = frequency_edit_report(survey, result.sites, ci_hi=0.72, ci_lo=0.50)
-print(report[["station", "confidence_median_before", "confidence_median_after"]].head())
+print(
+    report[
+        ["station", "confidence_median_before", "confidence_median_after"]
+    ].head()
+)
 
 plot_frequency_edit_summary(survey, result.sites, ci_hi=0.72, ci_lo=0.50)
 
@@ -299,7 +326,14 @@ _, zs1, _ = _get_z_block(next(_iter_items(sm1)))
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 ax.loglog(per, np.abs(z0[:, 0, 1]), "o-", ms=3, color="0.6", label="raw")
-ax.loglog(per, np.abs(zs0[:, 0, 1]), "s--", ms=3, color="#1f77b4", label="smoothed (k=5)")
+ax.loglog(
+    per,
+    np.abs(zs0[:, 0, 1]),
+    "s--",
+    ms=3,
+    color="#1f77b4",
+    label="smoothed (k=5)",
+)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$|Z_{xy}|$")
 ax.legend(fontsize=8)
@@ -321,15 +355,25 @@ ax.set_title(f"{STATION} — 5-point moving-average smoothing")
 # -processed data rarely lines up so neatly:
 
 kap = load_survey("mt_kap03")
-print("KAP03 native per-station sizes:",
-      sorted({fr.size for ed in _iter_items(ensure_sites(kap, recursive=False))
-              for _, z, fr in [_get_z_block(ed)] if z is not None}))
+print(
+    "KAP03 native per-station sizes:",
+    sorted(
+        {
+            fr.size
+            for ed in _iter_items(ensure_sites(kap, recursive=False))
+            for _, z, fr in [_get_z_block(ed)]
+            if z is not None
+        }
+    ),
+)
 
 kap_union = align_grid(kap, mode="union")
 kap_inter = align_grid(kap, mode="intersection")
 print("KAP03 union:", _freq_counts(kap_union))
-print("KAP03 intersection (no exact match anywhere -> silent no-op):",
-      _freq_counts(kap_inter))
+print(
+    "KAP03 intersection (no exact match anywhere -> silent no-op):",
+    _freq_counts(kap_inter),
+)
 
 # %%
 # **Reading this output.** KAP03's 26 stations are nominally on a

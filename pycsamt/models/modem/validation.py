@@ -47,27 +47,29 @@ __all__ = [
 ]
 
 # Known component type tokens that appear after '>' in data files
-_DATA_COMPONENT_TYPES = frozenset({
-    "FULL_IMPEDANCE",
-    "OFF_DIAGONAL_IMPEDANCE",
-    "DETERMINANT_IMPEDANCE",
-    "TE_IMPEDANCE",
-    "TM_IMPEDANCE",
-    "FULL_VERTICAL_COMPONENTS",
-    "PHASE_TENSOR",
-})
+_DATA_COMPONENT_TYPES = frozenset(
+    {
+        "FULL_IMPEDANCE",
+        "OFF_DIAGONAL_IMPEDANCE",
+        "DETERMINANT_IMPEDANCE",
+        "TE_IMPEDANCE",
+        "TM_IMPEDANCE",
+        "FULL_VERTICAL_COMPONENTS",
+        "PHASE_TENSOR",
+    }
+)
 
 
 class ModEmFileType:
     """String constants returned by :func:`detect_file_type`."""
 
-    DATA        = "data"
-    MODEL_2D    = "model_2d"
-    MODEL_3D    = "model_3d"
-    COVARIANCE  = "covariance"
-    CONTROL     = "control"
-    LOG         = "log"
-    UNKNOWN     = "unknown"
+    DATA = "data"
+    MODEL_2D = "model_2d"
+    MODEL_3D = "model_3d"
+    COVARIANCE = "covariance"
+    CONTROL = "control"
+    LOG = "log"
+    UNKNOWN = "unknown"
 
 
 def _head(path: PathLike, n_lines: int = 20) -> list[str]:
@@ -389,12 +391,12 @@ def detect_file_type(path: PathLike) -> str:
         Validate ModEM inversion-control files.
     """
     for fn, typ in [
-        (is_log_file,        ModEmFileType.LOG),
-        (is_data_file,       ModEmFileType.DATA),
-        (is_model_3d_file,   ModEmFileType.MODEL_3D),
-        (is_model_2d_file,   ModEmFileType.MODEL_2D),
+        (is_log_file, ModEmFileType.LOG),
+        (is_data_file, ModEmFileType.DATA),
+        (is_model_3d_file, ModEmFileType.MODEL_3D),
+        (is_model_2d_file, ModEmFileType.MODEL_2D),
         (is_covariance_file, ModEmFileType.COVARIANCE),
-        (is_control_file,    ModEmFileType.CONTROL),
+        (is_control_file, ModEmFileType.CONTROL),
     ]:
         if fn(path):
             return typ

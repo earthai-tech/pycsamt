@@ -55,10 +55,14 @@ nf = curves(S_nf, "rho")
 
 stations = list(raw)
 pick = [stations[2], stations[len(stations) // 2], stations[-3]]
-plot_before_after(raw, nf, pick, quantity="rho",
-                  labels=("raw", "near-field corrected"),
-                  title="Near-field / source-overprint correction "
-                        "(source_offset = 5 km)")
+plot_before_after(
+    raw,
+    nf,
+    pick,
+    quantity="rho",
+    labels=("raw", "near-field corrected"),
+    title="Near-field / source-overprint correction (source_offset = 5 km)",
+)
 
 # %%
 # Where the correction acted
@@ -69,13 +73,22 @@ plot_before_after(raw, nf, pick, quantity="rho",
 
 names = [s for s in raw if np.array_equal(raw[s][0], nf[s][0])]
 periods = raw[names[0]][0]
-delta = np.column_stack([np.log10(nf[s][1]) - np.log10(raw[s][1]) for s in names])
+delta = np.column_stack(
+    [np.log10(nf[s][1]) - np.log10(raw[s][1]) for s in names]
+)
 vmax = float(np.nanpercentile(np.abs(delta), 98)) or 0.1
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(figsize=(10, 4.6), constrained_layout=True)
-im = ax.pcolormesh(np.arange(len(names)), np.log10(periods), delta,
-                   cmap="PuOr_r", vmin=-vmax, vmax=vmax, shading="auto")
+im = ax.pcolormesh(
+    np.arange(len(names)),
+    np.log10(periods),
+    delta,
+    cmap="PuOr_r",
+    vmin=-vmax,
+    vmax=vmax,
+    shading="auto",
+)
 ax.set_xticks(range(len(names)))
 ax.set_xticklabels(names, rotation=90, fontsize=6)
 ax.set_ylabel(r"$\log_{10}$ period (s)")

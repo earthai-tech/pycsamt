@@ -51,22 +51,22 @@ Input Assumptions
 
 The examples below assume:
 
-- EDI files are stored in ``data/edis``;
-- the pipeline config will be stored at ``config/first_qc.yaml``;
-- output will be written to ``results/first_qc``.
+- EDI files are stored in ``data/AMT/WILLY_DATA/L18PLT``;
+- the pipeline config will be stored at ``config/l18_first_qc.yaml``;
+- output will be written to ``results/l18_first_qc``.
 
-The EDI input can be a flat folder or a directory with line subfolders:
+The bundled ``L18PLT`` line is a flat EDI folder:
 
 .. code-block:: text
 
    data/
-     edis/
-       L18PLT/
-         S001.edi
-         S002.edi
-       L22PLT/
-         S101.edi
-         S102.edi
+     AMT/
+       WILLY_DATA/
+         L18PLT/
+           18-001A.edi
+           18-002U.edi
+           ...
+           18-025A.edi
 
 If your survey has several independent lines, start by running the workflow on
 one line. After the parameters are stable, apply the same config to the other
@@ -80,8 +80,8 @@ This is a complete first-pass QC pipeline:
 .. code-block:: yaml
    :linenos:
 
-   name: first_qc
-   output_dir: results/first_qc
+   name: l18_first_qc
+   output_dir: results/l18_first_qc
 
    steps:
      - name: notch
@@ -97,7 +97,7 @@ This is a complete first-pass QC pipeline:
      - name: select_band
        code: FREQ001
        params:
-         band_hz: [0.001, 10000.0]
+         band_hz: [1.0, 10000.0]
 
      - name: align_grid
        code: FREQ004
@@ -105,7 +105,7 @@ This is a complete first-pass QC pipeline:
      - name: qc_snapshot
        code: QC001
 
-Save it as ``config/first_qc.yaml``.
+Save it as ``config/l18_first_qc.yaml``.
 
 The keys mean:
 
@@ -132,6 +132,16 @@ The keys mean:
     Keyword arguments forwarded to the underlying processing function. Values
     here override the step defaults.
 
+The configured chain is intentionally short: remove harmonic power-line noise,
+normalise the frequency rows, keep the survey band used for this first QC pass,
+align the station grids, and then write a diagnostic snapshot.
+
+.. figure:: ../images/tutorials/run_pipeline_from_config/pipeline_configured_chain.png
+   :alt: Configured pyCSAMT pipeline chain for the L18PLT tutorial
+   :width: 100%
+
+   Five explicit steps are easier to review than a long automatic workflow.
+
 Load and Inspect the Pipeline
 -----------------------------
 
@@ -142,7 +152,7 @@ Load the YAML file with :meth:`pycsamt.pipeline.Pipeline.from_yaml`:
 
    from pycsamt.pipeline import Pipeline
 
-   pipe = Pipeline.from_yaml("config/first_qc.yaml")
+   pipe = Pipeline.from_yaml("config/l18_first_qc.yaml")
    print(pipe)
 
 For a dataframe view of the resolved steps:
@@ -152,6 +162,18 @@ For a dataframe view of the resolved steps:
 
    table = pipe.describe()
    print(table[["label", "code", "category", "params"]])
+
+Example output:
+
+.. code-block:: text
+
+                label     code       category                                            params
+   #
+   1            notch    NR001  noise_removal  {'mains_hz': 50.0, 'n_harm': 30, 'tol_hz': 0.08}
+   2  drop_duplicates  FREQ002      frequency                                                {}
+   3      select_band  FREQ001      frequency                       {'band_hz': [1.0, 10000.0]}
+   4       align_grid  FREQ004      frequency                                                {}
+   5      qc_snapshot    QC001             qc                                                {}
 
 Before running a workflow for the first time, inspect the steps and check:
 
@@ -172,10 +194,10 @@ Read the EDI survey through the public API:
    from pycsamt.api import read_edis
 
    survey = read_edis(
-       "data/edis",
-       recursive=True,
+       "data/AMT/WILLY_DATA/L18PLT",
+       recursive=False,
        strict=False,
-       progress="auto",
+       progress=False,
    )
 
    sites = survey.collection
@@ -183,6 +205,18 @@ Read the EDI survey through the public API:
 
 The pipeline runs on a site collection. ``survey.collection`` is the lower-level
 object used by the pipeline and by the editing/QC tools.
+
+The bundled line loads as 28 stations:
+
+.. code-block:: text
+
+   APIFrame: edi_survey_summary
+   kind: edi.summary
+   shape: 28 rows x 6 columns
+   columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: data/AMT/WILLY_DATA/L18PLT
 
 Run the Pipeline
 ----------------
@@ -196,14 +230,14 @@ Run the loaded pipeline:
    print(result.summary())
 
 Because the config defines ``output_dir``, this writes to
-``results/first_qc``. To override the output directory from Python:
+``results/l18_first_qc``. To override the output directory from Python:
 
 .. code-block:: python
    :linenos:
 
    result = pipe.run(
        sites,
-       outdir="results/first_qc_trial_02",
+       outdir="results/l18_first_qc_trial_02",
    )
 
 To run fully in memory with no filesystem output:
@@ -251,6 +285,30 @@ By default, the pipeline continues after step errors according to the pipeline
 runtime configuration. For strict production runs, configure the error policy
 or use the CLI ``--on-error raise`` option.
 
+For the bundled ``L18PLT`` line, the full run completes with all five steps OK:
+
+.. code-block:: text
+
+   PipelineResult  'l18_first_qc'
+     Sites   : 28 in -> 28 out
+     Steps   : 5 (5 ok, 0 err)
+     Time    : 6.72 s
+     Plots   : 9
+     Output  : results/l18_first_qc
+
+   [ 1] notch                [NR001]  OK  1.97s  sites 28->28  plots=2
+   [ 2] drop_duplicates      [FREQ002]  OK  0.25s  sites 28->28  plots=1
+   [ 3] select_band          [FREQ001]  OK  2.16s  sites 28->28  plots=2
+   [ 4] align_grid           [FREQ004]  OK  0.41s  sites 28->28  plots=1
+   [ 5] qc_snapshot          [QC001]  OK  1.93s  sites 28->28  plots=3
+
+Timings vary by machine, but the station count, step status, and artifact
+counts are the values to check first.
+
+.. figure:: ../images/tutorials/run_pipeline_from_config/pipeline_step_status.png
+   :alt: Pipeline step status and plot counts for the L18PLT config run
+   :width: 100%
+
 Understand the Output Folder
 ----------------------------
 
@@ -258,18 +316,27 @@ A normal run writes a directory like this:
 
 .. code-block:: text
 
-   results/first_qc/
-     processed/
-       S001.edi
-       S002.edi
+   results/l18_first_qc/
+     pipeline.yaml
      plots/
        01_notch/
-         ...
+         nr_qc_harmonic_waterfall.png
+         nr_qc_snr_gain_profile.png
        02_drop_duplicates/
-         ...
+         plot_coverage_quality_heatmap.png
        03_select_band/
-         ...
-     pipeline.yaml
+         plot_band_microstrips.png
+         plot_coverage_quality_heatmap.png
+       04_align_grid/
+         plot_coverage_quality_heatmap.png
+       05_qc_snapshot/
+         plot_coverage_psection.png
+         plot_qc_quicklook.png
+         plot_station_confidence_dashboard.png
+     processed/
+       18-001A.edi
+       18-002U.edi
+       ...
      report.html
      summary.txt
 
@@ -293,6 +360,13 @@ The important files are:
 The output tree is intentionally stable so that scripts, reports, and later
 inversion preparation can point to predictable paths.
 
+The example run writes 28 processed EDI files, 9 QC figures, 2 reports, and
+1 saved copy of the pipeline config:
+
+.. figure:: ../images/tutorials/run_pipeline_from_config/pipeline_output_artifacts.png
+   :alt: Artifact counts written by the L18PLT pipeline config run
+   :width: 90%
+
 Generate a Starter Config
 -------------------------
 
@@ -303,9 +377,9 @@ The CLI can scaffold a valid config:
 
    pycsamt pipe init \
        --preset basic_qc \
-       --name first_qc \
-       --outdir results/first_qc \
-       --output config/first_qc.yaml
+       --name l18_first_qc \
+       --outdir results/l18_first_qc \
+       --output config/l18_first_qc.yaml
 
 Print a scaffold without writing it:
 
@@ -319,8 +393,8 @@ Generate JSON or Python config files when needed:
 .. code-block:: bash
    :linenos:
 
-   pycsamt pipe init --format json --preset basic_qc -o config/first_qc.json
-   pycsamt pipe init --format py --preset basic_qc -o config/first_qc.py
+   pycsamt pipe init --format json --preset basic_qc -o config/l18_first_qc.json
+   pycsamt pipe init --format py --preset basic_qc -o config/l18_first_qc.py
 
 YAML is recommended for most survey projects. Python configs are useful for
 trusted internal workflows that need constants or small local logic.
@@ -386,16 +460,16 @@ Run the same YAML file from the command line:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
-       --out results/first_qc
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
+       --out results/l18_first_qc
 
 The positional source form is also accepted:
 
 .. code-block:: bash
    :linenos:
 
-   pycsamt pipe run data/edis --config config/first_qc.yaml --out results/first_qc
+   pycsamt pipe run data/AMT/WILLY_DATA/L18PLT --config config/l18_first_qc.yaml --out results/l18_first_qc
 
 Use verbose mode to show progress:
 
@@ -403,9 +477,9 @@ Use verbose mode to show progress:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
-       --out results/first_qc \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
+       --out results/l18_first_qc \
        -v
 
 Useful output controls:
@@ -413,10 +487,10 @@ Useful output controls:
 .. code-block:: bash
    :linenos:
 
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --no-plots
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --no-edi
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --no-report
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --plot-fmt pdf --dpi 300
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --no-plots
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --no-edi
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --no-report
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --plot-fmt pdf --dpi 300
 
 Use machine-readable output for automation:
 
@@ -424,8 +498,8 @@ Use machine-readable output for automation:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
        --format json
 
 Debug Before Running
@@ -437,8 +511,8 @@ Always dry-run a new config:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
        --dry-run
 
 Preview the pipeline table:
@@ -446,8 +520,8 @@ Preview the pipeline table:
 .. code-block:: bash
    :linenos:
 
-   pycsamt pipe show config/first_qc.yaml
-   pycsamt pipe show config/first_qc.yaml --format json
+   pycsamt pipe show config/l18_first_qc.yaml
+   pycsamt pipe show config/l18_first_qc.yaml --format json
 
 Run only the first steps:
 
@@ -455,8 +529,8 @@ Run only the first steps:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
        --n-steps 2 \
        --out results/debug_first_two
 
@@ -466,14 +540,14 @@ Start or stop at a named step:
    :linenos:
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
        --from-step select_band \
        --out results/debug_from_band
 
    pycsamt pipe run \
-       --config config/first_qc.yaml \
-       --survey data/edis \
+       --config config/l18_first_qc.yaml \
+       --survey data/AMT/WILLY_DATA/L18PLT \
        --until-step align_grid \
        --out results/debug_until_align
 
@@ -493,9 +567,9 @@ CLI options:
 .. code-block:: bash
    :linenos:
 
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --on-error warn
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --on-error skip
-   pycsamt pipe run --config config/first_qc.yaml --survey data/edis --on-error raise
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --on-error warn
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --on-error skip
+   pycsamt pipe run --config config/l18_first_qc.yaml --survey data/AMT/WILLY_DATA/L18PLT --on-error raise
 
 Python configuration:
 

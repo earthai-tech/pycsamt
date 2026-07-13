@@ -76,6 +76,7 @@ def test_jcbbase_container_minimal():
 
     # If abstract, make a tiny concrete subclass
     try:
+
         class _Mini(JCBBase):  # type: ignore[misc]
             def parse(self, inputs):
                 # `items` is a read-only property over `_items`
@@ -87,6 +88,7 @@ def test_jcbbase_container_minimal():
 
     class _FakeJF:
         """Minimal JFile stand-in: summary()/str() touch these attrs."""
+
         site = "S1"
         freq = None
         Tip = None

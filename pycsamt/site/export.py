@@ -323,19 +323,22 @@ def pack_zip(
             _ensure_parent(dst)
             _write_via_backend(ed, dst)
             file_map.append((dst, name))
-            rows.append({
-                "index": ctx["index"],
-                "station": ctx["station"],
-                "lat": ctx["lat"],
-                "lon": ctx["lon"],
-                "elev": ctx["elev"],
-                "chainage": ctx["chainage"],
-                "filename": name,
-                "path": str(out_zip),
-            })
+            rows.append(
+                {
+                    "index": ctx["index"],
+                    "station": ctx["station"],
+                    "lat": ctx["lat"],
+                    "lon": ctx["lon"],
+                    "elev": ctx["elev"],
+                    "chainage": ctx["chainage"],
+                    "filename": name,
+                    "path": str(out_zip),
+                }
+            )
 
         with zipfile.ZipFile(
-                out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            out_zip, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zf:
             for fp, arcname in file_map:
                 zf.write(fp, arcname)
 
@@ -344,11 +347,14 @@ def pack_zip(
 
     return out_zip
 
+
 # ----- helpers ------------
+
 
 class _SafeDict(dict):
     def __missing__(self, key):
         return ""
+
 
 def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -449,7 +455,7 @@ def _write_via_backend(ed: Any, path: Path) -> None:
 
 
 def _rows_for_manifest(
-    items: Iterable[tuple[int, Any, Path]]
+    items: Iterable[tuple[int, Any, Path]],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for idx, ed, fp in items:
@@ -469,8 +475,7 @@ def _rows_for_manifest(
     return rows
 
 
-def _write_manifest_csv(rows: list[dict[str, Any]],
-                        csv_path: Path) -> None:
+def _write_manifest_csv(rows: list[dict[str, Any]], csv_path: Path) -> None:
     if not rows:
         return
     _ensure_parent(csv_path)
@@ -490,10 +495,12 @@ def _write_manifest_csv(rows: list[dict[str, Any]],
         for r in rows:
             w.writerow(r)
 
+
 def _iter_any_sites(sites: Any):
     # Accept Sites wrapper
     try:
         from .base import Sites
+
         if isinstance(sites, Sites):
             # Sites exposes .as_list() of EDI-like items
             for ed in sites.as_list():
@@ -504,6 +511,7 @@ def _iter_any_sites(sites: Any):
 
     # Accept EDICollection (if present)
     from .utils import as_edicollection
+
     coll = as_edicollection(sites)
     if coll is not None:
         for ed in coll:

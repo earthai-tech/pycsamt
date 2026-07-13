@@ -53,6 +53,7 @@ def _mk_edi(
     p.write_text("\n".join(lines), encoding="utf-8")
     return p
 
+
 @pytest.fixture()
 def two_edifiles(tmp_path: Path) -> list[EDIFile]:
     f1 = _mk_edi(

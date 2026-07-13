@@ -143,7 +143,8 @@ class PyCSAMTObject:
         """Filter private and excluded repr field names."""
         exclude = set(self.__repr_exclude__)
         return (
-            name for name in names
+            name
+            for name in names
             if isinstance(name, str)
             and not name.startswith("_")
             and name not in exclude
@@ -158,7 +159,8 @@ class PyCSAMTObject:
             if isinstance(slots, str):
                 slots = (slots,)
             names.extend(
-                slot for slot in slots
+                slot
+                for slot in slots
                 if slot not in {"__dict__", "__weakref__"}
             )
         return names
@@ -206,8 +208,7 @@ class PyCSAMTObject:
             if len(seq) > 3:
                 sample += ", ..."
             return (
-                f"{type(value).__name__}(len={len(seq)}, "
-                f"sample=[{sample}])"
+                f"{type(value).__name__}(len={len(seq)}, sample=[{sample}])"
             )
         shape = getattr(value, "shape", None)
         dtype = getattr(value, "dtype", None)
@@ -243,7 +244,8 @@ class PyCSAMTObject:
             exclude = getattr(obj, "__repr_exclude__", set())
             try:
                 return {
-                    key: value for key, value in asdict(obj).items()
+                    key: value
+                    for key, value in asdict(obj).items()
                     if key not in exclude
                 }
             except Exception:
@@ -279,9 +281,11 @@ class PyCSAMTObject:
         names: list[str] = []
         if hasattr(obj, "__dict__"):
             names.extend(obj.__dict__.keys())
-        names.extend(obj.__class__._slot_names() if isinstance(
-            obj, PyCSAMTObject
-        ) else [])
+        names.extend(
+            obj.__class__._slot_names()
+            if isinstance(obj, PyCSAMTObject)
+            else []
+        )
         out: dict[str, Any] = {}
         exclude = getattr(obj, "__repr_exclude__", set())
         for name in dict.fromkeys(names):

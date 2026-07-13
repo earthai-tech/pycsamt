@@ -97,8 +97,10 @@ def ensure_pkg(  # noqa: D401
             if not auto_install:
                 raise
             if verbose:
-                print(f"[deps] installing '{dist_name}' via pip ...",
-                      file=sys.stderr)
+                print(
+                    f"[deps] installing '{dist_name}' via pip ...",
+                    file=sys.stderr,
+                )
             ok = ensure_package(
                 dist_name,
                 install=True,

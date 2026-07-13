@@ -63,9 +63,7 @@ def test_builder_chaining_public_api() -> None:
         .with_options(show_labels=False)
     )
     profile = (
-        pcmap.ProfileMap(data)
-        .with_quantity("phase")
-        .with_component("xy")
+        pcmap.ProfileMap(data).with_quantity("phase").with_component("xy")
     )
     volume = (
         pcmap.VolumeMap(data)

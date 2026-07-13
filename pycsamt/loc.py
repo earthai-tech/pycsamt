@@ -30,7 +30,8 @@ __all__ = ["Location"]
 _Number = Union[float, int, str]
 
 
-__all__= ["BaseLoc", "Location", "UTMZone", "Bounds", "GeoPath"]
+__all__ = ["BaseLoc", "Location", "UTMZone", "Bounds", "GeoPath"]
+
 
 class BaseLoc(PyCSAMTObject):
     """
@@ -129,12 +130,10 @@ class BaseLoc(PyCSAMTObject):
         ``_require_utm`` to normalize and validate.
         """
 
-
         z = getattr(self, "_utm_zone", None)
         e = getattr(self, "_easting", None)
         n = getattr(self, "_northing", None)
         return bool(z) and e is not None and n is not None
-
 
     def _require_latlon(self) -> tuple[float, float]:
         r"""
@@ -192,7 +191,6 @@ class BaseLoc(PyCSAMTObject):
         e = _as_float(e, "easting")
         n = _as_float(n, "northing")
         return z, float(e), float(n)
-
 
     def _set_latlon(self, la: Any, lo: Any) -> None:
         r"""
@@ -267,7 +265,6 @@ class BaseLoc(PyCSAMTObject):
         self._utm_zone = None
         self._easting = None
         self._northing = None
-
 
     def ensure_utm(self) -> tuple[str, float, float]:
         r"""
@@ -441,16 +438,11 @@ class BaseLoc(PyCSAMTObject):
         easts = np.asarray(list(easts), dtype=float)
         norths = np.asarray(list(norths), dtype=float)
         zones = list(zones)
-        if (
-            easts.size != norths.size
-            or easts.size != len(zones)
-        ):
+        if easts.size != norths.size or easts.size != len(zones):
             raise LocationError("size mismatch")
         las = np.zeros_like(easts, dtype=float)
         los = np.zeros_like(easts, dtype=float)
-        for i, (e, n, z) in enumerate(
-            zip(easts, norths, zones)
-        ):
+        for i, (e, n, z) in enumerate(zip(easts, norths, zones)):
             z_s = _norm_zone(z)
             la, lo = utm_to_ll(
                 reference_ellipsoid=23,
@@ -461,7 +453,6 @@ class BaseLoc(PyCSAMTObject):
             las[i] = float(la)
             los[i] = float(lo)
         return las, los
-
 
     def distance_to(self, other: Any) -> float:
         r"""
@@ -557,7 +548,6 @@ class BaseLoc(PyCSAMTObject):
             return False
         return d <= tol_m
 
-
     def to_dict(self) -> dict[str, Any]:
         r"""
         Serialize the object to a dictionary of primitive values.
@@ -634,7 +624,6 @@ class BaseLoc(PyCSAMTObject):
             obj._set_utm(z, e, n)
         return obj
 
-
     def __eq__(self, other: object) -> bool:
         r"""
         Semantic equality for location objects.
@@ -664,9 +653,8 @@ class BaseLoc(PyCSAMTObject):
         if self.has_latlon and other.has_latlon:
             la1, lo1 = self._require_latlon()
             la2, lo2 = other._require_latlon()
-            return (
-                round(la1, 7) == round(la2, 7)
-                and round(lo1, 7) == round(lo2, 7)
+            return round(la1, 7) == round(la2, 7) and round(lo1, 7) == round(
+                lo2, 7
             )
         if self.has_utm and other.has_utm:
             z1, e1, n1 = self._require_utm()
@@ -803,10 +791,7 @@ class Location(BaseLoc):
                 )
             # keep old behavior: auto-compute UTM
             self.to_utm()
-        elif (
-            easting is not None
-            and northing is not None
-        ):
+        elif easting is not None and northing is not None:
             if self._utm_zone is None:
                 raise LocationError(
                     "utm_zone is required when initializing "
@@ -850,9 +835,7 @@ class Location(BaseLoc):
         try:
             v = assert_lat_value(val)
         except (TypeError, ValueError) as exc:
-            raise LocationError(
-                f"Invalid latitude: {val!r}"
-            ) from exc
+            raise LocationError(f"Invalid latitude: {val!r}") from exc
         if v is None:
             raise LocationError("Invalid latitude: None")
         self._latitude = float(v)
@@ -888,13 +871,10 @@ class Location(BaseLoc):
         try:
             v = assert_lon_value(val)
         except (TypeError, ValueError) as exc:
-            raise LocationError(
-                f"Invalid longitude: {val!r}"
-            ) from exc
+            raise LocationError(f"Invalid longitude: {val!r}") from exc
         if v is None:
             raise LocationError("Invalid longitude: None")
         self._longitude = float(v)
-
 
     @property
     def elevation(self) -> float:
@@ -1106,31 +1086,19 @@ class Location(BaseLoc):
                Manual. USGS Professional Paper 1395.
         """
 
-
         # Keep signature for compatibility. 'datum' unused.
-        if (
-            (isinstance(lats, str) or isinstance(lons, str))
-            and data is None
-        ):
+        if (isinstance(lats, str) or isinstance(lons, str)) and data is None:
             raise TypeError(
                 "Data can't be None when latitude or longitude "
                 "is a string (column name)."
             )
         if data is not None:
-            lats, lons = assert_xy_in(
-                lats, lons, data=data
-            )
+            lats, lons = assert_xy_in(lats, lons, data=data)
         if lats is None or lons is None:
-            raise TypeError(
-                "Both longitude and latitude are required."
-            )
+            raise TypeError("Both longitude and latitude are required.")
 
-        lats = is_iterable(
-            lats, exclude_string=True, transform=True
-        )
-        lons = is_iterable(
-            lons, exclude_string=True, transform=True
-        )
+        lats = is_iterable(lats, exclude_string=True, transform=True)
+        lons = is_iterable(lons, exclude_string=True, transform=True)
         _check_consistency_size(lats, lons)
 
         lats = np.asarray(lats, dtype=object)
@@ -1143,9 +1111,7 @@ class Location(BaseLoc):
             vla = assert_lat_value(la)
             vlo = assert_lon_value(lo)
             if vla is None or vlo is None:
-                raise LocationError(
-                    f"Invalid lat/lon at index {i}"
-                )
+                raise LocationError(f"Invalid lat/lon at index {i}")
             z, e, n = ll_to_utm(
                 reference_ellipsoid=23,
                 lat=float(vla),
@@ -1153,8 +1119,7 @@ class Location(BaseLoc):
             )
             if utm_zone is not None and str(z) != str(utm_zone):
                 logger.warning(
-                    "Point %d in zone %s differs from requested "
-                    "%s.",
+                    "Point %d in zone %s differs from requested %s.",
                     i,
                     z,
                     utm_zone,
@@ -1229,28 +1194,19 @@ class Location(BaseLoc):
 
         # Keep signature for compatibility. 'datum' unused.
         if (
-            (isinstance(easts, str) or isinstance(norths, str))
-            and data is None
-        ):
+            isinstance(easts, str) or isinstance(norths, str)
+        ) and data is None:
             raise TypeError(
                 "Data can't be None when easting or northing "
                 "is a string (column name)."
             )
         if data is not None:
-            easts, norths = assert_xy_in(
-                easts, norths, data=data
-            )
+            easts, norths = assert_xy_in(easts, norths, data=data)
         if easts is None or norths is None:
-            raise TypeError(
-                "Both easting and northing are required."
-            )
+            raise TypeError("Both easting and northing are required.")
 
-        easts = is_iterable(
-            easts, exclude_string=True, transform=True
-        )
-        norths = is_iterable(
-            norths, exclude_string=True, transform=True
-        )
+        easts = is_iterable(easts, exclude_string=True, transform=True)
+        norths = is_iterable(norths, exclude_string=True, transform=True)
         _check_consistency_size(easts, norths)
 
         easts = np.asarray(easts, dtype=float)
@@ -1258,8 +1214,7 @@ class Location(BaseLoc):
 
         if utm_zone is None:
             raise LocationError(
-                "utm_zone is required to convert UTM array "
-                "to lat/lon."
+                "utm_zone is required to convert UTM array to lat/lon."
             )
         z = _norm_zone(utm_zone)
 
@@ -1304,6 +1259,7 @@ class Location(BaseLoc):
             ")"
         )
 
+
 class UTMZone(PyCSAMTObject):
     r"""
     Lightweight UTM zone parser and formatter.
@@ -1344,12 +1300,12 @@ class UTMZone(PyCSAMTObject):
 
     @property
     def number(self) -> int:
-        """ int : Zone number in ``[1, 60]``."""
+        """int : Zone number in ``[1, 60]``."""
         return int(self._num)
 
     @property
     def hemisphere(self) -> str:
-        """ str : Hemisphere letter, either ``"N"`` or ``"S"``."""
+        """str : Hemisphere letter, either ``"N"`` or ``"S"``."""
         return str(self._hem)
 
     def as_str(self) -> str:
@@ -1402,9 +1358,7 @@ class UTMZone(PyCSAMTObject):
 
         lat = _lat_ok(lat, "latitude")
         lon = _lon_ok(lon, "longitude")
-        z, _, _ = ll_to_utm(
-            reference_ellipsoid=23, lat=lat, lon=lon
-        )
+        z, _, _ = ll_to_utm(reference_ellipsoid=23, lat=lat, lon=lon)
         return cls(z)
 
     def __repr__(self) -> str:
@@ -1503,21 +1457,12 @@ class Bounds(PyCSAMTObject):
         (0.0, 10.0, 1.0, 12.0)
         """
 
-        if (
-            (isinstance(lats, str) or isinstance(lons, str))
-            and data is None
-        ):
-            raise TypeError(
-                "data required when lats/lons are column names"
-            )
+        if (isinstance(lats, str) or isinstance(lons, str)) and data is None:
+            raise TypeError("data required when lats/lons are column names")
         if data is not None:
             lats, lons = assert_xy_in(lats, lons, data=data)
-        lats = is_iterable(
-            lats, exclude_string=True, transform=True
-        )
-        lons = is_iterable(
-            lons, exclude_string=True, transform=True
-        )
+        lats = is_iterable(lats, exclude_string=True, transform=True)
+        lons = is_iterable(lons, exclude_string=True, transform=True)
         _check_consistency_size(lats, lons)
         la = np.asarray(lats, dtype=object)
         lo = np.asarray(lons, dtype=object)
@@ -1723,9 +1668,7 @@ class Bounds(PyCSAMTObject):
 
         la_c, lo_c = self.center()
         if zone is None:
-            zone, _, _ = ll_to_utm(
-                reference_ellipsoid=23, lat=la_c, lon=lo_c
-            )
+            zone, _, _ = ll_to_utm(reference_ellipsoid=23, lat=la_c, lon=lo_c)
         zone = _norm_zone(zone)
         pts = [
             (self.min_lat, self.min_lon),
@@ -1736,9 +1679,7 @@ class Bounds(PyCSAMTObject):
         es: list[float] = []
         ns: list[float] = []
         for i, (la, lo) in enumerate(pts):
-            z, e, n = ll_to_utm(
-                reference_ellipsoid=23, lat=la, lon=lo
-            )
+            z, e, n = ll_to_utm(reference_ellipsoid=23, lat=la, lon=lo)
             if _norm_zone(z) != zone:
                 logger.warning(
                     "Corner %d zone %s != %s; using %s.",
@@ -1760,6 +1701,7 @@ class Bounds(PyCSAMTObject):
     def __repr__(self) -> str:
         a, b, c, d = self.to_tuple()
         return f"Bounds({a:.6f},{b:.6f},{c:.6f},{d:.6f})"
+
 
 class GeoPath(PyCSAMTObject):
     r"""
@@ -1990,9 +1932,7 @@ class GeoPath(PyCSAMTObject):
         easts: list[float] = []
         norths: list[float] = []
         for la, lo in self._pts:
-            z, e, n = ll_to_utm(
-                reference_ellipsoid=23, lat=la, lon=lo
-            )
+            z, e, n = ll_to_utm(reference_ellipsoid=23, lat=la, lon=lo)
             zones.append(_norm_zone(z))
             easts.append(float(e))
             norths.append(float(n))
@@ -2057,8 +1997,8 @@ class GeoPath(PyCSAMTObject):
             dy = y2 - y1
             if dx == 0 and dy == 0:
                 return math.hypot(x0 - x1, y0 - y1)
-            t = ((x0 - x1) * dx + (y0 - y1) * dy)
-            t /= (dx * dx + dy * dy)
+            t = (x0 - x1) * dx + (y0 - y1) * dy
+            t /= dx * dx + dy * dy
             t = max(0.0, min(1.0, t))
             xt = x1 + t * dx
             yt = y1 + t * dy
@@ -2083,7 +2023,7 @@ class GeoPath(PyCSAMTObject):
         return GeoPath(out)
 
     def __repr__(self) -> str:
-        """ Return a concise representation for debugging."""
+        """Return a concise representation for debugging."""
         return f"GeoPath(n={len(self._pts)})"
 
 
@@ -2092,6 +2032,7 @@ def _lat_ok(x, name="lat") -> float:
     if v is None:
         raise LocationError(f"Invalid {name}: {x!r}")
     return float(v)
+
 
 def _lon_ok(x, name="lon") -> float:
     v = assert_lon_value(x)
@@ -2131,9 +2072,7 @@ def _coerce_latlon(la: Any, lo: Any) -> tuple[float, float]:
         la_v = assert_lat_value(la)
         lo_v = assert_lon_value(lo)
     except (TypeError, ValueError) as exc:
-        raise LocationError(
-            "lat/lon missing or invalid"
-        ) from exc
+        raise LocationError("lat/lon missing or invalid") from exc
     if la_v is None or lo_v is None:
         raise LocationError("lat/lon missing or invalid")
     return float(la_v), float(lo_v)
@@ -2171,6 +2110,7 @@ def _deg_per_m_lon(lat: float) -> float:
     c = math.cos(math.radians(lat))
     return 1.0 / (111_320.0 * max(c, 1e-12))
 
+
 def _to_float(name: str, value: _Number) -> float:
     try:
         v = float(value)  # type: ignore[arg-type]
@@ -2181,7 +2121,5 @@ def _to_float(name: str, value: _Number) -> float:
 
 def _in_range(name: str, v: float, lo: float, hi: float) -> float:
     if np.isnan(v) or v < lo or v > hi:
-        raise LocationError(
-            f"{name} out of range [{lo}, {hi}]: {v}"
-        )
+        raise LocationError(f"{name} out of range [{lo}, {hi}]: {v}")
     return v

@@ -11,6 +11,7 @@ _HAS_EDIS = _EDI_DIR.exists() and any(_EDI_DIR.glob("*.edi"))
 
 def _load_sites():
     from pycsamt.agents import MTLoaderAgent
+
     r = MTLoaderAgent().execute({"path": str(_EDI_DIR)})
     if r.status != "success":
         return None
@@ -19,14 +20,14 @@ def _load_sites():
 
 @unittest.skipUnless(_HAS_EDIS, "3edis dataset not found")
 class TestDataQCAgent(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         from pycsamt.agents import DataQCAgent
+
         cls.sites = _load_sites()
         if cls.sites is None:
             raise unittest.SkipTest("Could not load sites.")
-        cls.agent  = DataQCAgent()
+        cls.agent = DataQCAgent()
         cls.result = cls.agent.execute({"sites": cls.sites})
 
     def test_status_success_or_needs_review(self):
@@ -54,14 +55,14 @@ class TestDataQCAgent(unittest.TestCase):
 
 @unittest.skipUnless(_HAS_EDIS, "3edis dataset not found")
 class TestStaticShiftAgent(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         from pycsamt.agents import StaticShiftAgent
-        cls.sites  = _load_sites()
+
+        cls.sites = _load_sites()
         if cls.sites is None:
             raise unittest.SkipTest("Could not load sites.")
-        cls.agent  = StaticShiftAgent()
+        cls.agent = StaticShiftAgent()
         cls.result = cls.agent.execute({"sites": cls.sites})
 
     def test_status_not_failed(self):

@@ -63,6 +63,7 @@ natural environments. *SEG Distinguished Instructors Short Course*, 7.
 Mackie, R.L. et al. (1993). Three-dimensional electromagnetic modeling
 using finite differences. *Geophysics*, 58(2), 215-226.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -101,6 +102,7 @@ MU0: float = 4.0e-7 * np.pi
 # Output container
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ForwardResponse3D:
     """Full (approximate) impedance tensor from the 3-D MT forward solver.
@@ -124,34 +126,39 @@ class ForwardResponse3D:
         Source model.
     """
 
-    freqs:       np.ndarray
+    freqs: np.ndarray
     stations_xy: np.ndarray
 
-    zxy:  np.ndarray
-    zyx:  np.ndarray
-    zxx:  np.ndarray
-    zyy:  np.ndarray
+    zxy: np.ndarray
+    zyx: np.ndarray
+    zxx: np.ndarray
+    zyy: np.ndarray
 
-    rho_a_xy:  np.ndarray
-    phase_xy:  np.ndarray
-    rho_a_yx:  np.ndarray
-    phase_yx:  np.ndarray
-    rho_a_xx:  np.ndarray
-    phase_xx:  np.ndarray
-    rho_a_yy:  np.ndarray
-    phase_yy:  np.ndarray
+    rho_a_xy: np.ndarray
+    phase_xy: np.ndarray
+    rho_a_yx: np.ndarray
+    phase_yx: np.ndarray
+    rho_a_xx: np.ndarray
+    phase_xx: np.ndarray
+    rho_a_yy: np.ndarray
+    phase_yy: np.ndarray
 
-    method: str   = "quasi3d"
-    grid:   Grid3D = field(repr=False, default=None)
+    method: str = "quasi3d"
+    grid: Grid3D = field(repr=False, default=None)
 
     # ── convenience ──────────────────────────────────────────────────────────
 
     @property
-    def n_freqs(self) -> int:    return len(self.freqs)
+    def n_freqs(self) -> int:
+        return len(self.freqs)
+
     @property
-    def n_stations(self) -> int: return len(self.stations_xy)
+    def n_stations(self) -> int:
+        return len(self.stations_xy)
+
     @property
-    def periods(self) -> np.ndarray: return 1.0 / self.freqs
+    def periods(self) -> np.ndarray:
+        return 1.0 / self.freqs
 
     # ── feature extraction for ML training ───────────────────────────────────
 
@@ -182,15 +189,19 @@ class ForwardResponse3D:
         if components == "all":
             comp_list = ["xy", "yx", "xx", "yy"]
         else:
-            comp_list = [c.strip() for c in components.replace(",", "_").split("_") if c.strip()]
+            comp_list = [
+                c.strip()
+                for c in components.replace(",", "_").split("_")
+                if c.strip()
+            ]
 
         parts = []
         for c in comp_list:
-            rho  = getattr(self, f"rho_a_{c}")   # (n_freqs, n_stations)
-            phi  = getattr(self, f"phase_{c}")
+            rho = getattr(self, f"rho_a_{c}")  # (n_freqs, n_stations)
+            phi = getattr(self, f"phase_{c}")
             if log_rho:
                 rho = np.log10(np.maximum(rho, 1e-12))
-            parts.append(rho.T)          # (n_stations, n_freqs)
+            parts.append(rho.T)  # (n_stations, n_freqs)
             if include_phase:
                 parts.append(phi.T)
         return np.concatenate(parts, axis=1)
@@ -219,13 +230,14 @@ class ForwardResponse3D:
         SurveyDataset3D
             Single-survey dataset (``n_surveys = 1``).
         """
-        X = self.to_feature_array(components=components)       # (n_st, n_feat)
+        X = self.to_feature_array(components=components)  # (n_st, n_feat)
         if y_models is None:
             y_models = np.zeros((self.n_stations, 1), dtype=np.float32)
-        X = X[None].astype(np.float32)       # (1, n_st, n_feat)
+        X = X[None].astype(np.float32)  # (1, n_st, n_feat)
         y = y_models[None].astype(np.float32)  # (1, n_st, n_params)
         return SurveyDataset3D(
-            X=X, y=y,
+            X=X,
+            y=y,
             coords=self.stations_xy.astype(np.float32),
             freqs=self.freqs.astype(np.float32),
             solver="quasi3d",
@@ -256,6 +268,7 @@ class ForwardResponse3D:
 # ─────────────────────────────────────────────────────────────────────────────
 # Forward solver
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class MT3DForward:
     """Quasi-3D magnetotelluric forward solver.
@@ -311,14 +324,16 @@ class MT3DForward:
         method: str = "quasi3d",
         verbose: bool = True,
     ):
-        self.freqs   = np.asarray(freqs, dtype=float)
-        self.grid    = grid
-        self.method  = method.lower()
+        self.freqs = np.asarray(freqs, dtype=float)
+        self.grid = grid
+        self.method = method.lower()
         self.verbose = verbose
 
         _valid = {"quasi3d", "fd3d"}
         if self.method not in _valid:
-            raise ValueError(f"method must be one of {_valid!r}, got {method!r}.")
+            raise ValueError(
+                f"method must be one of {_valid!r}, got {method!r}."
+            )
 
     def run(self) -> ForwardResponse3D:
         """Run the forward solver and return the full impedance tensor.
@@ -335,10 +350,10 @@ class MT3DForward:
 
     def _run_quasi3d(self) -> ForwardResponse3D:
         """Quasi-3D solver: orthogonal 2-D profile stacking."""
-        grid   = self.grid
-        freqs  = self.freqs
-        ns     = grid.n_stations
-        nf     = len(freqs)
+        grid = self.grid
+        freqs = self.freqs
+        ns = grid.n_stations
+        nf = len(freqs)
 
         # Accumulation buffers for xz and yz profile contributions
         zxy_xz = np.zeros((nf, ns), dtype=complex)
@@ -347,38 +362,46 @@ class MT3DForward:
         zyx_yz = np.zeros((nf, ns), dtype=complex)
 
         # ── XZ profiles  (one per unique y-row of stations) ──────────────────
-        y_cells         = grid._station_y_cells()
-        unique_y_cells  = np.unique(y_cells)
-        n_xz_profiles   = len(unique_y_cells)
+        y_cells = grid._station_y_cells()
+        unique_y_cells = np.unique(y_cells)
+        n_xz_profiles = len(unique_y_cells)
 
         if self.verbose:
-            print(f"  [MT3D quasi3d] {n_xz_profiles} XZ profiles + "
-                  f"{len(np.unique(grid._station_x_cells()))} YZ profiles …")
+            print(
+                f"  [MT3D quasi3d] {n_xz_profiles} XZ profiles + "
+                f"{len(np.unique(grid._station_x_cells()))} YZ profiles …"
+            )
 
         for ki, yi in enumerate(unique_y_cells):
             if self.verbose:
-                print(f"    XZ profile {ki+1}/{n_xz_profiles}  (y-cell {yi})",
-                      end="\r", flush=True)
+                print(
+                    f"    XZ profile {ki + 1}/{n_xz_profiles}  (y-cell {yi})",
+                    end="\r",
+                    flush=True,
+                )
 
             g2d_xz, st_idx = grid.xz_slice(yi)
-            resp_xz        = MT2DForward(freqs, g2d_xz, verbose=False).run()
+            resp_xz = MT2DForward(freqs, g2d_xz, verbose=False).run()
 
             for local_i, global_i in enumerate(st_idx):
                 zxy_xz[:, global_i] = resp_xz.zxy[:, local_i]
                 zyx_xz[:, global_i] = resp_xz.zyx[:, local_i]
 
         # ── YZ profiles  (one per unique x-column of stations) ───────────────
-        x_cells         = grid._station_x_cells()
-        unique_x_cells  = np.unique(x_cells)
-        n_yz_profiles   = len(unique_x_cells)
+        x_cells = grid._station_x_cells()
+        unique_x_cells = np.unique(x_cells)
+        n_yz_profiles = len(unique_x_cells)
 
         for ki, xi in enumerate(unique_x_cells):
             if self.verbose:
-                print(f"    YZ profile {ki+1}/{n_yz_profiles}  (x-cell {xi})",
-                      end="\r", flush=True)
+                print(
+                    f"    YZ profile {ki + 1}/{n_yz_profiles}  (x-cell {xi})",
+                    end="\r",
+                    flush=True,
+                )
 
             g2d_yz, st_idx = grid.yz_slice(xi)
-            resp_yz        = MT2DForward(freqs, g2d_yz, verbose=False).run()
+            resp_yz = MT2DForward(freqs, g2d_yz, verbose=False).run()
 
             # In the YZ solver, horizontal axis = y_3D.
             # TE  → E-field perpendicular to yz-plane = E_x_3D
@@ -401,7 +424,7 @@ class MT3DForward:
         zxx = np.zeros((nf, ns), dtype=complex)
         zyy = np.zeros((nf, ns), dtype=complex)
 
-        omega = 2.0 * np.pi * freqs[:, None]   # (nf, 1) for broadcasting
+        omega = 2.0 * np.pi * freqs[:, None]  # (nf, 1) for broadcasting
 
         rho_a_xy, phase_xy = _z_to_rho_phase(zxy, omega)
         rho_a_yx, phase_yx = _z_to_rho_phase(zyx, omega)
@@ -411,11 +434,18 @@ class MT3DForward:
         return ForwardResponse3D(
             freqs=freqs,
             stations_xy=grid.stations_xy.copy(),
-            zxy=zxy, zyx=zyx, zxx=zxx, zyy=zyy,
-            rho_a_xy=rho_a_xy, phase_xy=phase_xy,
-            rho_a_yx=rho_a_yx, phase_yx=phase_yx,
-            rho_a_xx=rho_a_xx, phase_xx=phase_xx,
-            rho_a_yy=rho_a_yy, phase_yy=phase_yy,
+            zxy=zxy,
+            zyx=zyx,
+            zxx=zxx,
+            zyy=zyy,
+            rho_a_xy=rho_a_xy,
+            phase_xy=phase_xy,
+            rho_a_yx=rho_a_yx,
+            phase_yx=phase_yx,
+            rho_a_xx=rho_a_xx,
+            phase_xx=phase_xx,
+            rho_a_yy=rho_a_yy,
+            phase_yy=phase_yy,
             method=self.method,
             grid=grid,
         )
@@ -442,7 +472,7 @@ class MT3DForward:
         the error increases; use at least 6 cells per skin depth for
         quantitative work.
         """
-        grid  = self.grid
+        grid = self.grid
         freqs = self.freqs
         nx, ny, nz = grid.nx, grid.ny, grid.nz
         ns = grid.n_stations
@@ -456,20 +486,23 @@ class MT3DForward:
                 f"FD3D: grid has {n_edges} edges (nx={nx}, ny={ny}, nz={nz}). "
                 f"Grids with > {_FD3D_EDGE_WARN} edges are slow in pure Python. "
                 "Consider using method='quasi3d' or reducing the grid size.",
-                RuntimeWarning, stacklevel=3,
+                RuntimeWarning,
+                stacklevel=3,
             )
 
         if self.verbose:
-            print(f"  [MT3D fd3d] {n_edges} unknowns  "
-                  f"(nx={nx}, ny={ny}, nz={nz})  {nf} freq …")
+            print(
+                f"  [MT3D fd3d] {n_edges} unknowns  "
+                f"(nx={nx}, ny={ny}, nz={nz})  {nf} freq …"
+            )
 
         # ── Frequency-independent assembly ────────────────────────────────────
-        C     = _build_curl_matrix(grid)
-        sigma = _edge_conductivity(grid)    # shape (n_edges,)
+        C = _build_curl_matrix(grid)
+        sigma = _edge_conductivity(grid)  # shape (n_edges,)
         M_sig = sparse.diags(sigma, format="csr")
 
-        bc_mask = _boundary_edge_mask(nx, ny, nz)   # boolean (n_edges,)
-        bc_idx  = np.where(bc_mask)[0]
+        bc_mask = _boundary_edge_mask(nx, ny, nz)  # boolean (n_edges,)
+        bc_idx = np.where(bc_mask)[0]
 
         # ── Storage ──────────────────────────────────────────────────────────
         zxy_all = np.zeros((nf, ns), dtype=complex)
@@ -480,15 +513,22 @@ class MT3DForward:
         for fi, freq in enumerate(freqs):
             omega = 2.0 * np.pi * freq
             if self.verbose:
-                print(f"  [MT3D fd3d] freq {fi+1}/{nf}  {freq:.4g} Hz",
-                      end="\r", flush=True)
+                print(
+                    f"  [MT3D fd3d] freq {fi + 1}/{nf}  {freq:.4g} Hz",
+                    end="\r",
+                    flush=True,
+                )
 
             # System matrix A = C^T C + iωμ₀ σ
-            A_base = C.T @ C + 1j * omega * MU0 * M_sig   # (n_edges, n_edges)
+            A_base = C.T @ C + 1j * omega * MU0 * M_sig  # (n_edges, n_edges)
 
             # ── Solve two polarisations ───────────────────────────────────────
-            E_xpol = self._fd3d_solve(A_base, bc_mask, bc_idx, grid, omega, "x")
-            E_ypol = self._fd3d_solve(A_base, bc_mask, bc_idx, grid, omega, "y")
+            E_xpol = self._fd3d_solve(
+                A_base, bc_mask, bc_idx, grid, omega, "x"
+            )
+            E_ypol = self._fd3d_solve(
+                A_base, bc_mask, bc_idx, grid, omega, "y"
+            )
 
             # ── Extract impedance tensor at surface stations ──────────────────
             zxx, zxy, zyx, zyy = _extract_z_tensor_fd3d(
@@ -511,11 +551,18 @@ class MT3DForward:
         return ForwardResponse3D(
             freqs=freqs,
             stations_xy=grid.stations_xy.copy(),
-            zxy=zxy_all, zyx=zyx_all, zxx=zxx_all, zyy=zyy_all,
-            rho_a_xy=rho_a_xy, phase_xy=phase_xy,
-            rho_a_yx=rho_a_yx, phase_yx=phase_yx,
-            rho_a_xx=rho_a_xx, phase_xx=phase_xx,
-            rho_a_yy=rho_a_yy, phase_yy=phase_yy,
+            zxy=zxy_all,
+            zyx=zyx_all,
+            zxx=zxx_all,
+            zyy=zyy_all,
+            rho_a_xy=rho_a_xy,
+            phase_xy=phase_xy,
+            rho_a_yx=rho_a_yx,
+            phase_yx=phase_yx,
+            rho_a_xx=rho_a_xx,
+            phase_xx=phase_xx,
+            rho_a_yy=rho_a_yy,
+            phase_yy=phase_yy,
             method="fd3d",
             grid=grid,
         )
@@ -548,7 +595,7 @@ class MT3DForward:
 
         prec = None
         try:
-            ilu  = spilu(A_mod.tocsc(), drop_tol=1e-6, fill_factor=20)
+            ilu = spilu(A_mod.tocsc(), drop_tol=1e-6, fill_factor=20)
             prec = LinearOperator(A_mod.shape, ilu.solve)
         except Exception:
             pass
@@ -561,7 +608,8 @@ class MT3DForward:
             warnings.warn(
                 f"FD3D BiCGSTAB did not converge (pol={pol!r}, info={info}). "
                 "Result may be inaccurate.  Try coarser grid or fewer freqs.",
-                RuntimeWarning, stacklevel=4,
+                RuntimeWarning,
+                stacklevel=4,
             )
         return E
 
@@ -571,6 +619,7 @@ class MT3DForward:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── Edge / face dimension helpers ─────────────────────────────────────────────
+
 
 def _fd3d_edge_counts(nx: int, ny: int, nz: int) -> tuple[int, int, int]:
     """Return (n_ex, n_ey, n_ez) edge counts for a nx×ny×nz cell grid."""
@@ -588,6 +637,7 @@ def _fd3d_face_counts(nx: int, ny: int, nz: int) -> tuple[int, int, int]:
 
 
 # ── Vectorised edge global-index helpers ─────────────────────────────────────
+
 
 def _ex_idx(I, J, K, ny, nz) -> np.ndarray:
     """Global index of Ex edge at (I,J,K).  I=0..nx-1, J=0..ny, K=0..nz."""
@@ -608,6 +658,7 @@ def _ez_idx(I, J, K, nx, ny, nz) -> np.ndarray:
 
 
 # ── Curl matrix ───────────────────────────────────────────────────────────────
+
 
 def _build_curl_matrix(grid: Grid3D) -> sparse.csr_matrix:
     """Build the discrete curl operator C (n_faces × n_edges).
@@ -639,51 +690,54 @@ def _build_curl_matrix(grid: Grid3D) -> sparse.csr_matrix:
 
     # ── Hx faces  (curl E)_x = ∂Ez/∂y − ∂Ey/∂z ─────────────────────────────
     # i=0..nx,  j=0..ny-1,  k=0..nz-1
-    ii, jj, kk = np.meshgrid(np.arange(nx + 1), np.arange(ny),
-                               np.arange(nz), indexing="ij")
+    ii, jj, kk = np.meshgrid(
+        np.arange(nx + 1), np.arange(ny), np.arange(nz), indexing="ij"
+    )
     ii, jj, kk = ii.ravel(), jj.ravel(), kk.ravel()
-    row_hx = ii * ny * nz + jj * nz + kk                # row in C
+    row_hx = ii * ny * nz + jj * nz + kk  # row in C
 
     # +Ez[i, j+1, k] / dy[j]
-    _add(row_hx, _ez_idx(ii, jj + 1, kk, nx, ny, nz),  1.0 / dy[jj])
+    _add(row_hx, _ez_idx(ii, jj + 1, kk, nx, ny, nz), 1.0 / dy[jj])
     # -Ez[i, j,   k] / dy[j]
-    _add(row_hx, _ez_idx(ii, jj,     kk, nx, ny, nz), -1.0 / dy[jj])
+    _add(row_hx, _ez_idx(ii, jj, kk, nx, ny, nz), -1.0 / dy[jj])
     # -Ey[i, j,   k+1] / dz[k]
     _add(row_hx, _ey_idx(ii, jj, kk + 1, nx, ny, nz), -1.0 / dz[kk])
     # +Ey[i, j,   k]   / dz[k]
-    _add(row_hx, _ey_idx(ii, jj, kk,     nx, ny, nz),  1.0 / dz[kk])
+    _add(row_hx, _ey_idx(ii, jj, kk, nx, ny, nz), 1.0 / dz[kk])
 
     # ── Hy faces  (curl E)_y = ∂Ex/∂z − ∂Ez/∂x ─────────────────────────────
     # i=0..nx-1,  j=0..ny,  k=0..nz-1
-    ii, jj, kk = np.meshgrid(np.arange(nx), np.arange(ny + 1),
-                               np.arange(nz), indexing="ij")
+    ii, jj, kk = np.meshgrid(
+        np.arange(nx), np.arange(ny + 1), np.arange(nz), indexing="ij"
+    )
     ii, jj, kk = ii.ravel(), jj.ravel(), kk.ravel()
     row_hy = n_hx + ii * (ny + 1) * nz + jj * nz + kk
 
     # +Ex[i, j, k+1] / dz[k]
-    _add(row_hy, _ex_idx(ii, jj, kk + 1, ny, nz),      1.0 / dz[kk])
+    _add(row_hy, _ex_idx(ii, jj, kk + 1, ny, nz), 1.0 / dz[kk])
     # -Ex[i, j, k]   / dz[k]
-    _add(row_hy, _ex_idx(ii, jj, kk,     ny, nz),      -1.0 / dz[kk])
+    _add(row_hy, _ex_idx(ii, jj, kk, ny, nz), -1.0 / dz[kk])
     # -Ez[i+1, j, k] / dx[i]
     _add(row_hy, _ez_idx(ii + 1, jj, kk, nx, ny, nz), -1.0 / dx[ii])
     # +Ez[i,   j, k] / dx[i]
-    _add(row_hy, _ez_idx(ii,     jj, kk, nx, ny, nz),  1.0 / dx[ii])
+    _add(row_hy, _ez_idx(ii, jj, kk, nx, ny, nz), 1.0 / dx[ii])
 
     # ── Hz faces  (curl E)_z = ∂Ey/∂x − ∂Ex/∂y ─────────────────────────────
     # i=0..nx-1,  j=0..ny-1,  k=0..nz
-    ii, jj, kk = np.meshgrid(np.arange(nx), np.arange(ny),
-                               np.arange(nz + 1), indexing="ij")
+    ii, jj, kk = np.meshgrid(
+        np.arange(nx), np.arange(ny), np.arange(nz + 1), indexing="ij"
+    )
     ii, jj, kk = ii.ravel(), jj.ravel(), kk.ravel()
     row_hz = n_hx + n_hy + ii * ny * (nz + 1) + jj * (nz + 1) + kk
 
     # +Ey[i+1, j, k] / dx[i]
-    _add(row_hz, _ey_idx(ii + 1, jj, kk, nx, ny, nz),  1.0 / dx[ii])
+    _add(row_hz, _ey_idx(ii + 1, jj, kk, nx, ny, nz), 1.0 / dx[ii])
     # -Ey[i,   j, k] / dx[i]
-    _add(row_hz, _ey_idx(ii,     jj, kk, nx, ny, nz), -1.0 / dx[ii])
+    _add(row_hz, _ey_idx(ii, jj, kk, nx, ny, nz), -1.0 / dx[ii])
     # -Ex[i, j+1, k] / dy[j]
-    _add(row_hz, _ex_idx(ii, jj + 1, kk, ny, nz),     -1.0 / dy[jj])
+    _add(row_hz, _ex_idx(ii, jj + 1, kk, ny, nz), -1.0 / dy[jj])
     # +Ex[i, j,   k] / dy[j]
-    _add(row_hz, _ex_idx(ii, jj,     kk, ny, nz),      1.0 / dy[jj])
+    _add(row_hz, _ex_idx(ii, jj, kk, ny, nz), 1.0 / dy[jj])
 
     rows = np.concatenate(row_list)
     cols = np.concatenate(col_list)
@@ -695,6 +749,7 @@ def _build_curl_matrix(grid: Grid3D) -> sparse.csr_matrix:
 
 
 # ── Edge conductivity (mass matrix diagonal) ─────────────────────────────────
+
 
 def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     """Return conductivity values at every edge midpoint.
@@ -709,7 +764,7 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     """
     _dx, _dy, _dz = grid.dx, grid.dy, grid.dz
     nx, ny, nz = grid.nx, grid.ny, grid.nz
-    sigma = grid.conductivity   # (nz, ny, nx)
+    sigma = grid.conductivity  # (nz, ny, nx)
 
     n_ex, n_ey, n_ez = _fd3d_edge_counts(nx, ny, nz)
     n_edges = n_ex + n_ey + n_ez
@@ -720,10 +775,14 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     for j in range(ny + 1):
         for k in range(nz + 1):
             cells = []
-            if j > 0  and k > 0:  cells.append(sigma[k-1, j-1, :])
-            if j < ny and k > 0:  cells.append(sigma[k-1, j,   :])
-            if j > 0  and k < nz: cells.append(sigma[k,   j-1, :])
-            if j < ny and k < nz: cells.append(sigma[k,   j,   :])
+            if j > 0 and k > 0:
+                cells.append(sigma[k - 1, j - 1, :])
+            if j < ny and k > 0:
+                cells.append(sigma[k - 1, j, :])
+            if j > 0 and k < nz:
+                cells.append(sigma[k, j - 1, :])
+            if j < ny and k < nz:
+                cells.append(sigma[k, j, :])
             s = np.mean(cells, axis=0) if cells else np.zeros(nx)
             idx = _ex_idx(np.arange(nx), j, k, ny, nz)
             sig_edge[idx] = s
@@ -732,10 +791,14 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     for i in range(nx + 1):
         for k in range(nz + 1):
             cells = []
-            if i > 0  and k > 0:  cells.append(sigma[k-1, :, i-1])
-            if i < nx and k > 0:  cells.append(sigma[k-1, :, i  ])
-            if i > 0  and k < nz: cells.append(sigma[k,   :, i-1])
-            if i < nx and k < nz: cells.append(sigma[k,   :, i  ])
+            if i > 0 and k > 0:
+                cells.append(sigma[k - 1, :, i - 1])
+            if i < nx and k > 0:
+                cells.append(sigma[k - 1, :, i])
+            if i > 0 and k < nz:
+                cells.append(sigma[k, :, i - 1])
+            if i < nx and k < nz:
+                cells.append(sigma[k, :, i])
             s = np.mean(cells, axis=0) if cells else np.zeros(ny)
             idx = _ey_idx(i, np.arange(ny), k, nx, ny, nz)
             sig_edge[idx] = s
@@ -744,10 +807,14 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
     for i in range(nx + 1):
         for j in range(ny + 1):
             cells = []
-            if i > 0  and j > 0:  cells.append(sigma[:, j-1, i-1])
-            if i < nx and j > 0:  cells.append(sigma[:, j-1, i  ])
-            if i > 0  and j < ny: cells.append(sigma[:, j,   i-1])
-            if i < nx and j < ny: cells.append(sigma[:, j,   i  ])
+            if i > 0 and j > 0:
+                cells.append(sigma[:, j - 1, i - 1])
+            if i < nx and j > 0:
+                cells.append(sigma[:, j - 1, i])
+            if i > 0 and j < ny:
+                cells.append(sigma[:, j, i - 1])
+            if i < nx and j < ny:
+                cells.append(sigma[:, j, i])
             s = np.mean(cells, axis=0) if cells else np.zeros(nz)
             idx = _ez_idx(i, j, np.arange(nz), nx, ny, nz)
             sig_edge[idx] = s
@@ -756,6 +823,7 @@ def _edge_conductivity(grid: Grid3D) -> np.ndarray:
 
 
 # ── Boundary edge mask ────────────────────────────────────────────────────────
+
 
 def _boundary_edge_mask(nx: int, ny: int, nz: int) -> np.ndarray:
     """Return a boolean mask of length n_edges; True for boundary edges.
@@ -801,6 +869,7 @@ def _boundary_edge_mask(nx: int, ny: int, nz: int) -> np.ndarray:
 
 # ── Boundary condition vector ─────────────────────────────────────────────────
 
+
 def _bc_vector_3d(grid: Grid3D, omega: float, pol: str) -> np.ndarray:
     """Return the Dirichlet BC vector for one polarisation.
 
@@ -820,27 +889,32 @@ def _bc_vector_3d(grid: Grid3D, omega: float, pol: str) -> np.ndarray:
     """
     _dx, _dy, _dz = grid.dx, grid.dy, grid.dz
     nx, ny, nz = grid.nx, grid.ny, grid.nz
-    sigma  = grid.conductivity     # (nz, ny, nx)
-    z_nodes = grid.z_nodes         # (nz+1,)
+    sigma = grid.conductivity  # (nz, ny, nx)
+    z_nodes = grid.z_nodes  # (nz+1,)
 
     n_ex, n_ey, n_ez = _fd3d_edge_counts(nx, ny, nz)
     b = np.zeros(n_ex + n_ey + n_ez, dtype=complex)
 
     # Average conductivity of 4 corner columns for the 1-D decay
-    sigma_corners = np.mean([
-        sigma[:, 0,  0 ], sigma[:, 0,  -1],
-        sigma[:, -1, 0 ], sigma[:, -1, -1],
-    ], axis=0)                          # shape (nz,)
+    sigma_corners = np.mean(
+        [
+            sigma[:, 0, 0],
+            sigma[:, 0, -1],
+            sigma[:, -1, 0],
+            sigma[:, -1, -1],
+        ],
+        axis=0,
+    )  # shape (nz,)
     sigma_avg = float(np.mean(sigma_corners))
-    k_1d = np.sqrt(1j * omega * MU0 * sigma_avg)   # complex wavenumber
+    k_1d = np.sqrt(1j * omega * MU0 * sigma_avg)  # complex wavenumber
 
     def E_decay(z):
         """Normalised 1-D plane-wave E-field at depth z [m]."""
         return np.exp(-k_1d * z)
 
     pol = pol.lower()
-    ii  = np.arange(nx)
-    jj  = np.arange(ny)
+    ii = np.arange(nx)
+    jj = np.arange(ny)
 
     if pol == "x":
         # Ex edges: boundary j=0/ny, k=0/nz
@@ -874,6 +948,7 @@ def _bc_vector_3d(grid: Grid3D, omega: float, pol: str) -> np.ndarray:
 
 # ── Dirichlet enforcement ─────────────────────────────────────────────────────
 
+
 def _apply_dirichlet_3d(
     A: sparse.csr_matrix,
     b: np.ndarray,
@@ -902,14 +977,15 @@ def _apply_dirichlet_3d(
     b_mod[bc_idx] = b[bc_idx]
 
     # ── Projection: zero all boundary rows AND columns, add I at bc ─────────
-    int_w  = (~bc_mask).astype(np.float64)
-    P      = sparse.diags(int_w, format="csr")
-    I_bc   = sparse.diags((bc_mask).astype(np.float64), format="csr")
-    A_mod  = (P @ A @ P + I_bc).tocsr()
+    int_w = (~bc_mask).astype(np.float64)
+    P = sparse.diags(int_w, format="csr")
+    I_bc = sparse.diags((bc_mask).astype(np.float64), format="csr")
+    A_mod = (P @ A @ P + I_bc).tocsr()
     return A_mod, b_mod
 
 
 # ── Surface impedance extraction ──────────────────────────────────────────────
+
 
 def _extract_z_tensor_fd3d(
     E_xpol: np.ndarray,
@@ -954,24 +1030,24 @@ def _extract_z_tensor_fd3d(
         return E[:n_ex].reshape(nx, ny + 1, nz + 1)
 
     def _ey_arr(E):
-        return E[n_ex: n_ex + n_ey].reshape(nx + 1, ny, nz + 1)
+        return E[n_ex : n_ex + n_ey].reshape(nx + 1, ny, nz + 1)
 
     def _ez_arr(E):
-        return E[n_ex + n_ey:].reshape(nx + 1, ny + 1, nz)
+        return E[n_ex + n_ey :].reshape(nx + 1, ny + 1, nz)
 
     # ── Surface E-field at nodes (i,j,k=0) ───────────────────────────────────
     # Ex[i,j,0]: i=0..nx-1, j=0..ny (top-face Ex edges)
     # Ey[i,j,0]: i=0..nx, j=0..ny-1 (top-face Ey edges)
 
-    Ex_xp = _ex_arr(E_xpol)[:, :, 0]    # (nx, ny+1)
-    Ey_xp = _ey_arr(E_xpol)[:, :, 0]    # (nx+1, ny)
-    Ez_xp = _ez_arr(E_xpol)[:, :, 0]    # (nx+1, ny+1) ... first depth layer
+    Ex_xp = _ex_arr(E_xpol)[:, :, 0]  # (nx, ny+1)
+    Ey_xp = _ey_arr(E_xpol)[:, :, 0]  # (nx+1, ny)
+    Ez_xp = _ez_arr(E_xpol)[:, :, 0]  # (nx+1, ny+1) ... first depth layer
 
     Ex_yp = _ex_arr(E_ypol)[:, :, 0]
     Ey_yp = _ey_arr(E_ypol)[:, :, 0]
     Ez_yp = _ez_arr(E_ypol)[:, :, 0]
 
-    Ex_xp_next = _ex_arr(E_xpol)[:, :, 1]   # k=1 layer for ∂/∂z
+    Ex_xp_next = _ex_arr(E_xpol)[:, :, 1]  # k=1 layer for ∂/∂z
     Ey_xp_next = _ey_arr(E_xpol)[:, :, 1]
     Ex_yp_next = _ex_arr(E_ypol)[:, :, 1]
     Ey_yp_next = _ey_arr(E_ypol)[:, :, 1]
@@ -983,48 +1059,56 @@ def _extract_z_tensor_fd3d(
 
     # Hx: shape (nx+1, ny) at face (i,j,k=0) — i=0..nx, j=0..ny-1
     def _Hx(Ex_a, Ey_a, Ez_a, Ey_next):
-        dEy_dz = (Ey_next - Ey_a) / dz[0]                     # (nx+1, ny)
-        dEz_dy = (Ez_a[:, 1:] - Ez_a[:, :-1]) / dy[None, :]   # (nx+1, ny)
+        dEy_dz = (Ey_next - Ey_a) / dz[0]  # (nx+1, ny)
+        dEz_dy = (Ez_a[:, 1:] - Ez_a[:, :-1]) / dy[None, :]  # (nx+1, ny)
         return (dEy_dz - dEz_dy) / (1j * omega * MU0)
 
     # Hy face (i,j,0): i=0..nx-1, j=0..ny
     def _Hy(Ex_a, Ez_a, Ex_next):
-        dEz_dx = (Ez_a[1:, :] - Ez_a[:-1, :]) / dx[:, None]   # (nx, ny+1)
-        dEx_dz = (Ex_next - Ex_a) / dz[0]                      # (nx, ny+1)
+        dEz_dx = (Ez_a[1:, :] - Ez_a[:-1, :]) / dx[:, None]  # (nx, ny+1)
+        dEx_dz = (Ex_next - Ex_a) / dz[0]  # (nx, ny+1)
         return (dEz_dx - dEx_dz) / (1j * omega * MU0)
 
     Hx_xp = _Hx(Ex_xp, Ey_xp, Ez_xp, Ey_xp_next)  # (nx+1, ny)
-    Hy_xp = _Hy(Ex_xp, Ez_xp, Ex_xp_next)           # (nx, ny+1)
+    Hy_xp = _Hy(Ex_xp, Ez_xp, Ex_xp_next)  # (nx, ny+1)
     Hx_yp = _Hx(Ex_yp, Ey_yp, Ez_yp, Ey_yp_next)
     Hy_yp = _Hy(Ex_yp, Ez_yp, Ex_yp_next)
 
     # ── Interpolate to station positions ─────────────────────────────────────
-    x_nodes = grid.x_nodes   # (nx+1,)
-    y_nodes = grid.y_nodes   # (ny+1,)
+    x_nodes = grid.x_nodes  # (nx+1,)
+    y_nodes = grid.y_nodes  # (ny+1,)
     x_st, y_st = grid.stations_xy[:, 0], grid.stations_xy[:, 1]
 
     def _interp2(field, x_vals, y_vals):
         """Bilinear interpolation of 2-D field to (x_st, y_st)."""
-        xi = np.clip(np.searchsorted(x_vals, x_st, side="right") - 1,
-                     0, len(x_vals) - 2)
-        yi = np.clip(np.searchsorted(y_vals, y_st, side="right") - 1,
-                     0, len(y_vals) - 2)
-        tx = (x_st - x_vals[xi]) / (x_vals[xi+1] - x_vals[xi])
-        ty = (y_st - y_vals[yi]) / (y_vals[yi+1] - y_vals[yi])
-        return ((1-tx)*(1-ty) * field[xi,   yi  ]
-              + tx    *(1-ty) * field[xi+1, yi  ]
-              + (1-tx)*ty     * field[xi,   yi+1]
-              + tx    *ty     * field[xi+1, yi+1])
+        xi = np.clip(
+            np.searchsorted(x_vals, x_st, side="right") - 1,
+            0,
+            len(x_vals) - 2,
+        )
+        yi = np.clip(
+            np.searchsorted(y_vals, y_st, side="right") - 1,
+            0,
+            len(y_vals) - 2,
+        )
+        tx = (x_st - x_vals[xi]) / (x_vals[xi + 1] - x_vals[xi])
+        ty = (y_st - y_vals[yi]) / (y_vals[yi + 1] - y_vals[yi])
+        return (
+            (1 - tx) * (1 - ty) * field[xi, yi]
+            + tx * (1 - ty) * field[xi + 1, yi]
+            + (1 - tx) * ty * field[xi, yi + 1]
+            + tx * ty * field[xi + 1, yi + 1]
+        )
 
-    x_ex = x_nodes[:-1]          # Ex defined at x_centers[i=0..nx-1]
-    x_ey = x_nodes                # Ey at x_nodes[i=0..nx]
-    y_ex = y_nodes                # Ex at y_nodes[j=0..ny]
-    y_ey = y_nodes[:-1]           # Ey at y_centers[j=0..ny-1]
+    x_ex = x_nodes[:-1]  # Ex defined at x_centers[i=0..nx-1]
+    x_ey = x_nodes  # Ey at x_nodes[i=0..nx]
+    y_ex = y_nodes  # Ex at y_nodes[j=0..ny]
+    y_ey = y_nodes[:-1]  # Ey at y_centers[j=0..ny-1]
 
-    x_hx = x_nodes                # Hx face at x_nodes[i=0..nx]
-    y_hx = y_nodes[:-1]           # Hx face at y_centers
-    x_hy = x_nodes[:-1]           # Hy face at x_centers
-    y_hy = y_nodes                 # Hy face at y_nodes
+    x_hx = x_nodes  # Hx face at x_nodes[i=0..nx]
+    y_hx = y_nodes[:-1]  # Hx face at y_centers
+    x_hy = x_nodes[:-1]  # Hy face at x_centers
+    y_hy = y_nodes  # Hy face at y_nodes
 
     Ex_xp_st = _interp2(Ex_xp, x_ex, y_ex)
     Ey_xp_st = _interp2(Ey_xp, x_ey, y_ey)
@@ -1043,11 +1127,15 @@ def _extract_z_tensor_fd3d(
     zyy = np.zeros(ns, dtype=complex)
 
     for s in range(ns):
-        E_mat = np.array([[Ex_xp_st[s], Ex_yp_st[s]],
-                          [Ey_xp_st[s], Ey_yp_st[s]]], dtype=complex)
-        H_mat = np.array([[Hx_xp_st[s], Hx_yp_st[s]],
-                          [Hy_xp_st[s], Hy_yp_st[s]]], dtype=complex)
-        det = H_mat[0,0]*H_mat[1,1] - H_mat[0,1]*H_mat[1,0]
+        E_mat = np.array(
+            [[Ex_xp_st[s], Ex_yp_st[s]], [Ey_xp_st[s], Ey_yp_st[s]]],
+            dtype=complex,
+        )
+        H_mat = np.array(
+            [[Hx_xp_st[s], Hx_yp_st[s]], [Hy_xp_st[s], Hy_yp_st[s]]],
+            dtype=complex,
+        )
+        det = H_mat[0, 0] * H_mat[1, 1] - H_mat[0, 1] * H_mat[1, 0]
         if abs(det) > 1e-30:
             Z = E_mat @ np.linalg.inv(H_mat)
             zxx[s], zxy[s] = Z[0, 0], Z[0, 1]

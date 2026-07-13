@@ -4,23 +4,20 @@
 """
 Text formatting utilities for pycsamt.
 """
+
 import re
 from collections.abc import Iterable, Sequence
 from typing import Any, Optional, Union
 
-__all__ = [
-    'smart_format',
-    'fmt_text',
-    'str2columns',
-    'listing_items_format'
-    ]
+__all__ = ["smart_format", "fmt_text", "str2columns", "listing_items_format"]
+
 
 def smart_format(
     items: Union[Iterable[Any], Any],
-    choice: str = 'and',
-    sep: str = ', ',
+    choice: str = "and",
+    sep: str = ", ",
     oxford_comma: bool = True,
-    quote: bool = True
+    quote: bool = True,
 ) -> str:
     """
     Nicely format a sequence into a human-readable list string.
@@ -60,10 +57,12 @@ def smart_format(
         return s
     seq = list(items)
     if not seq:
-        return ''
+        return ""
+
     # prepare representation
     def fmt(x: Any) -> str:
         return repr(x) if quote else str(x)
+
     formatted = [fmt(x) for x in seq]
     n = len(formatted)
     if n == 1:
@@ -80,12 +79,13 @@ def smart_format(
         body = sep.join(formatted[:-1])
         return f"{body} {choice} {formatted[-1]}"
 
+
 def fmt_text(
     features: Union[Sequence[Any], Iterable[Sequence[Any]], dict],
     headers: Optional[Sequence[str]] = None,
-    inline: str = '-',
+    inline: str = "-",
     width: int = 80,
-    col_sep: str = ' | '
+    col_sep: str = " | ",
 ) -> str:
     # normalize features to list of rows
     rows = []
@@ -96,10 +96,16 @@ def fmt_text(
             else:
                 row = [k, v]
             rows.append(row)
-    elif isinstance(features, Iterable) and not isinstance(features, (str, bytes)):
+    elif isinstance(features, Iterable) and not isinstance(
+        features, (str, bytes)
+    ):
         # list of rows or single row
         first = next(iter(features), None)
-        if not first or not isinstance(first, Iterable) or isinstance(first, str):
+        if (
+            not first
+            or not isinstance(first, Iterable)
+            or isinstance(first, str)
+        ):
             rows = [list(features)]
         else:
             rows = [list(r) for r in features]
@@ -110,7 +116,7 @@ def fmt_text(
     if headers is None:
         headers = [str(i) for i in range(ncols)]
     if len(headers) < ncols:
-        headers = list(headers) + [''] * (ncols - len(headers))
+        headers = list(headers) + [""] * (ncols - len(headers))
     # compute column widths
     cols = list(zip(*rows))
     widths = []
@@ -118,7 +124,7 @@ def fmt_text(
         max_cell = max(len(str(cell)) for cell in col)
         widths.append(max(len(headers[i]), max_cell))
     # build line
-    total_width = sum(widths) + len(col_sep)*(ncols-1)
+    total_width = sum(widths) + len(col_sep) * (ncols - 1)
     line = inline * min(width, total_width)
     # build header
     header_cells = [f"{headers[i]:^{widths[i]}}" for i in range(ncols)]
@@ -128,20 +134,21 @@ def fmt_text(
     for r in rows:
         cells = []
         for i in range(ncols):
-            val = r[i] if i < len(r) else ''
+            val = r[i] if i < len(r) else ""
             cells.append(f"{str(val):^{widths[i]}}")
         body.append(col_sep.join(cells))
     # assemble
     out = [line, header, line] + body + [line]
-    return '\n'.join(out)
+    return "\n".join(out)
+
 
 def str2columns(
     text: str,
-    regex: Optional[Union[str, re.Pattern]] = None, # r'[#&.*@!_,;\s-]\s*'
+    regex: Optional[Union[str, re.Pattern]] = None,  # r'[#&.*@!_,;\s-]\s*'
     pattern: Optional[str] = None,
     lower: bool = False,
     unique: bool = False,
-    strip_chars: Optional[str] = None
+    strip_chars: Optional[str] = None,
 ) -> list:
     """
     Split a string into tokens using non-alphanumeric separators.
@@ -155,7 +162,9 @@ def str2columns(
     if isinstance(regex, re.Pattern):
         splitter = regex
     else:
-        pat = regex if isinstance(regex, str) else (pattern or r'[^0-9A-Za-z]+')
+        pat = (
+            regex if isinstance(regex, str) else (pattern or r"[^0-9A-Za-z]+")
+        )
         splitter = re.compile(pat)
     tokens = [tok for tok in splitter.split(txt) if tok]
     if strip_chars:
@@ -163,10 +172,12 @@ def str2columns(
     if lower:
         tokens = [tok.lower() for tok in tokens]
     if unique:
-        seen = set(); uniq = []
+        seen = set()
+        uniq = []
         for tok in tokens:
             if tok not in seen:
-                seen.add(tok); uniq.append(tok)
+                seen.add(tok)
+                uniq.append(tok)
         tokens = uniq
     return tokens
 
@@ -174,17 +185,18 @@ def str2columns(
 def listing_items_format(
     items: Any,
     /,
-    begin_text: str = '',
-    end_text: str = '',
-    bullet: str = '-',
+    begin_text: str = "",
+    end_text: str = "",
+    bullet: str = "-",
     enumerate_items: bool = True,
     indent: int = 3,
     inline: bool = False,
-    verbose: bool = True
+    verbose: bool = True,
 ) -> Optional[str]:
-    """ Format list by enumerate them successively with carriage return """
+    """Format list by enumerate them successively with carriage return"""
     # normalize to list
     from .arrayops import is_iterable
+
     try:
         seq = list(items) if is_iterable(items) else [items]
     except Exception:
@@ -198,7 +210,7 @@ def listing_items_format(
     # list items
     for idx, val in enumerate(seq, 1):
         prefix = f"{idx}. " if enumerate_items else f"{bullet} "
-        line = ' ' * indent + prefix + str(val)
+        line = " " * indent + prefix + str(val)
         out_lines.append(line)
         if verbose:
             print(line)
@@ -207,5 +219,5 @@ def listing_items_format(
         out_lines.append(end_text)
         if verbose:
             print(end_text)
-    result = ''.join(out_lines)
+    result = "".join(out_lines)
     return None if verbose else result

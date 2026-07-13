@@ -106,6 +106,7 @@ class PolyFile:
 # Reader
 # ---------------------------------------------------------------------------
 
+
 def _next_data_line(lines: list[str], pos: int) -> tuple[list[str], int]:
     """Return the next non-comment, non-empty token list and updated pos."""
     while pos < len(lines):
@@ -175,7 +176,7 @@ def read_poly(path: str | Path) -> PolyFile:
             arr = np.array(node_rows, dtype=float)
             pf.nodes = arr[:, 1:3]
             if n_attr2 > 0:
-                pf.node_attributes = arr[:, 3: 3 + n_attr2]
+                pf.node_attributes = arr[:, 3 : 3 + n_attr2]
             if n_bm2 > 0:
                 pf.node_boundary_markers = arr[:, 3 + n_attr2].astype(int)
 
@@ -189,11 +190,11 @@ def read_poly(path: str | Path) -> PolyFile:
             while len(ele_rows) < n_tri:
                 t, epos = _next_data_line(elines, epos)
                 if t:
-                    ele_rows.append([int(v) for v in t[:1 + n_dpt + n_ea]])
+                    ele_rows.append([int(v) for v in t[: 1 + n_dpt + n_ea]])
             if ele_rows:
                 arr = np.array(ele_rows, dtype=int)
                 # store as segments placeholder (not standard, but useful)
-                pf.segments = arr[:, 1: 1 + n_dpt]
+                pf.segments = arr[:, 1 : 1 + n_dpt]
     else:
         # normal .poly file — read nodes
         ncols = 3 + n_attr + n_bmark
@@ -205,7 +206,7 @@ def read_poly(path: str | Path) -> PolyFile:
         arr = np.array(node_rows, dtype=float)
         pf.nodes = arr[:, 1:3]
         if n_attr > 0:
-            pf.node_attributes = arr[:, 3: 3 + n_attr]
+            pf.node_attributes = arr[:, 3 : 3 + n_attr]
         if n_bmark > 0:
             pf.node_boundary_markers = arr[:, 3 + n_attr].astype(int)
 
@@ -254,6 +255,7 @@ def read_poly(path: str | Path) -> PolyFile:
 # Writer
 # ---------------------------------------------------------------------------
 
+
 def write_poly(
     pf: PolyFile,
     path: str | Path,
@@ -286,8 +288,15 @@ def write_poly(
     nodes = pf.nodes
     n_nodes = len(nodes)
     has_attr = pf.node_attributes is not None and len(pf.node_attributes) > 0
-    pf.node_attributes.shape[1] if has_attr and pf.node_attributes.ndim == 2 else 0
-    n_bmark = 1 if pf.node_boundary_markers is not None and len(pf.node_boundary_markers) else 0
+    pf.node_attributes.shape[
+        1
+    ] if has_attr and pf.node_attributes.ndim == 2 else 0
+    n_bmark = (
+        1
+        if pf.node_boundary_markers is not None
+        and len(pf.node_boundary_markers)
+        else 0
+    )
 
     with dest.open("w") as fh:
         # --- Nodes ---
@@ -295,14 +304,21 @@ def write_poly(
         for i, nd in enumerate(nodes):
             row = f"{i + 1} {nd[0]:.16g} {nd[1]:.16g}"
             if n_bmark:
-                bm = int(pf.node_boundary_markers[i]) if i < len(pf.node_boundary_markers) else 0
+                bm = (
+                    int(pf.node_boundary_markers[i])
+                    if i < len(pf.node_boundary_markers)
+                    else 0
+                )
                 row += f" {bm}"
             fh.write(row + "\n")
 
         # --- Segments ---
         segs = pf.segments
         n_segs = len(segs)
-        has_smk = pf.segment_markers is not None and len(pf.segment_markers) == n_segs
+        has_smk = (
+            pf.segment_markers is not None
+            and len(pf.segment_markers) == n_segs
+        )
         fh.write(f"{n_segs} {1 if has_smk else 0}\n")
         for i, seg in enumerate(segs):
             row = f"{i + 1} {int(seg[0])} {int(seg[1])}"

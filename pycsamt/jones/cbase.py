@@ -89,7 +89,6 @@ class JParseMixin:
     .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
-
     J_SUFFIXES = {".j", ".jones", ".txt", ".dat"}
 
     def _as_path(self, p: Pathish) -> Path:
@@ -155,12 +154,14 @@ class JParseMixin:
             if _is_glob(str(p)):
                 if p.is_absolute():
                     parent, name = p.parent, p.name
-                    it = parent.rglob(name) if "**" in name else \
-                         parent.glob(name)
+                    it = (
+                        parent.rglob(name)
+                        if "**" in name
+                        else parent.glob(name)
+                    )
                 else:
                     pat = str(p)
-                    it = base.rglob(pat) if "**" in pat else \
-                         base.glob(pat)
+                    it = base.rglob(pat) if "**" in pat else base.glob(pat)
                 any_yielded = False
                 for m in it:
                     if self._is_j_path(m):
@@ -271,10 +272,7 @@ class JParseMixin:
         # Require at least a header triple; banner/info are helpful hints
         return bool(found_triple or (found_banner and found_info))
 
-
-    def is_j_file(
-        self, src: Pathish, *, deep: bool = True
-    ) -> bool:
+    def is_j_file(self, src: Pathish, *, deep: bool = True) -> bool:
         """
         Spec-level check via :class:`IsJ`. Returns ``True`` if
         the file satisfies the structural requirements; ``False``
@@ -297,6 +295,7 @@ class _JParseResult:
     path: Path
     jf: JFile | None
     error: BaseException | None
+
 
 class JCoreParser(JParseMixin):
     r"""
@@ -404,7 +403,8 @@ class JCoreParser(JParseMixin):
 
         jfs: list[JFile] = []
         src_list = (
-            sources if isinstance(sources, list)
+            sources
+            if isinstance(sources, list)
             else list(self._iter_paths(sources))
         )
         for p in self._iter_j_files(src_list):
@@ -428,7 +428,6 @@ class JCoreParser(JParseMixin):
         out = [(r.path, r.error) for r in self.results if r.error]
         out.extend(self._errors)
         return out
-
 
 
 class JCBBase:
@@ -507,6 +506,7 @@ class JCBBase:
     ----------
     .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
+
     def __init__(
         self,
         items: Iterable[JFile] | None = None,

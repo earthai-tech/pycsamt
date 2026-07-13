@@ -13,6 +13,7 @@ Responsibilities
 - Restore from browser localStorage snapshot (BTN_SESSION_RESTORE).
 - Clear snapshot (BTN_SESSION_CLEAR).
 """
+
 from __future__ import annotations
 
 import base64
@@ -33,11 +34,11 @@ from pycsamt.app.web.layout import IDs
 
 # ── Keys included in every session snapshot ────────────────────────────────────
 _SESSION_KEYS = {
-    "store_data":         IDs.STORE_DATA,
-    "active_lines":       IDs.STORE_ACTIVE_LINES,
-    "corr_store":         IDs.CORR_STORE,
-    "elevation_raw":      "tool-elev-raw-store",
-    "elevation_corrected":"tool-elev-corrected-store",
+    "store_data": IDs.STORE_DATA,
+    "active_lines": IDs.STORE_ACTIVE_LINES,
+    "corr_store": IDs.CORR_STORE,
+    "elevation_raw": "tool-elev-raw-store",
+    "elevation_corrected": "tool-elev-corrected-store",
 }
 
 _VERSION = "2.0"
@@ -50,16 +51,26 @@ def _now_iso() -> str:
 
 def _ok_icon(msg: str) -> html.Span:
     return html.Span(
-        [html.I(className="bi bi-check-circle-fill me-1",
-                style={"color": "var(--green)"}), msg],
+        [
+            html.I(
+                className="bi bi-check-circle-fill me-1",
+                style={"color": "var(--green)"},
+            ),
+            msg,
+        ],
         className="small",
     )
 
 
 def _err_icon(msg: str) -> html.Span:
     return html.Span(
-        [html.I(className="bi bi-x-circle-fill me-1",
-                style={"color": "var(--red)"}), msg],
+        [
+            html.I(
+                className="bi bi-x-circle-fill me-1",
+                style={"color": "var(--red)"},
+            ),
+            msg,
+        ],
         className="small",
     )
 
@@ -69,7 +80,7 @@ def register_session(app) -> None:
     # ── 1. Initialise session UUID ────────────────────────────────────────────
     @app.callback(
         Output(IDs.SESSION_ID, "data"),
-        Input(IDs.SESSION_ID,  "data"),
+        Input(IDs.SESSION_ID, "data"),
         prevent_initial_call=False,
     )
     def _init_session_id(existing_id):
@@ -81,7 +92,7 @@ def register_session(app) -> None:
     @app.callback(
         Output(IDs.SESSION_CANVAS, "is_open"),
         Input(IDs.BTN_SESSION_OPEN, "n_clicks"),
-        State(IDs.SESSION_CANVAS,   "is_open"),
+        State(IDs.SESSION_CANVAS, "is_open"),
         prevent_initial_call=True,
     )
     def _toggle_session_canvas(n, is_open):
@@ -91,34 +102,37 @@ def register_session(app) -> None:
     @app.callback(
         Output(IDs.SESSION_SNAPSHOT, "data"),
         Output(IDs.SESSION_AUTOSAVE, "children"),
-        Input(IDs.STORE_DATA,                "data"),
-        Input("tool-elev-raw-store",         "data"),
-        Input("tool-elev-corrected-store",   "data"),
-        State(IDs.STORE_ACTIVE_LINES,        "data"),
-        State(IDs.CORR_STORE,                "data"),
-        State(IDs.SESSION_NOTE,              "value"),
+        Input(IDs.STORE_DATA, "data"),
+        Input("tool-elev-raw-store", "data"),
+        Input("tool-elev-corrected-store", "data"),
+        State(IDs.STORE_ACTIVE_LINES, "data"),
+        State(IDs.CORR_STORE, "data"),
+        State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _auto_snapshot(store_data, elev_raw, elev_corr,
-                       active_lines, corr_store, note):
+    def _auto_snapshot(
+        store_data, elev_raw, elev_corr, active_lines, corr_store, note
+    ):
         if not store_data:
             return no_update, no_update
         snapshot = {
-            "version":      _VERSION,
-            "pycsamt":      _PYCSAMT_VERSION,
-            "saved_at":     _now_iso(),
-            "note":         note or "",
-            "store_data":   store_data,
+            "version": _VERSION,
+            "pycsamt": _PYCSAMT_VERSION,
+            "saved_at": _now_iso(),
+            "note": note or "",
+            "store_data": store_data,
             "active_lines": active_lines,
-            "corr_store":   corr_store,
-            "elevation_raw":       elev_raw,
+            "corr_store": corr_store,
+            "elevation_raw": elev_raw,
             "elevation_corrected": elev_corr,
         }
-        n_sta   = (store_data or {}).get("n_stations", 0)
+        n_sta = (store_data or {}).get("n_stations", 0)
         chip = html.Span(
             [
-                html.I(className="bi bi-check-circle-fill me-1",
-                       style={"color": "var(--green)", "fontSize": "10px"}),
+                html.I(
+                    className="bi bi-check-circle-fill me-1",
+                    style={"color": "var(--green)", "fontSize": "10px"},
+                ),
                 f"Auto-saved · {n_sta} stations",
             ],
             className="session-autosave-chip",
@@ -127,32 +141,33 @@ def register_session(app) -> None:
 
     # ── 4. Download session JSON ──────────────────────────────────────────────
     @app.callback(
-        Output(IDs.SESSION_DL,       "data"),
-        Output(IDs.SESSION_FEEDBACK, "children",  allow_duplicate=True),
-        Input(IDs.BTN_SESSION_SAVE,  "n_clicks"),
-        State(IDs.STORE_DATA,                "data"),
-        State(IDs.STORE_ACTIVE_LINES,        "data"),
-        State(IDs.CORR_STORE,                "data"),
-        State("tool-elev-raw-store",         "data"),
-        State("tool-elev-corrected-store",   "data"),
-        State(IDs.SESSION_NOTE,              "value"),
+        Output(IDs.SESSION_DL, "data"),
+        Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.BTN_SESSION_SAVE, "n_clicks"),
+        State(IDs.STORE_DATA, "data"),
+        State(IDs.STORE_ACTIVE_LINES, "data"),
+        State(IDs.CORR_STORE, "data"),
+        State("tool-elev-raw-store", "data"),
+        State("tool-elev-corrected-store", "data"),
+        State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _session_download(n, store_data, active_lines, corr,
-                          elev_raw, elev_corr, note):
+    def _session_download(
+        n, store_data, active_lines, corr, elev_raw, elev_corr, note
+    ):
         if not n:
             return no_update, no_update
         if not store_data:
             return no_update, _err_icon("No survey loaded — nothing to save.")
         snapshot = {
-            "version":      _VERSION,
-            "pycsamt":      _PYCSAMT_VERSION,
-            "saved_at":     _now_iso(),
-            "note":         note or "",
-            "store_data":   store_data,
+            "version": _VERSION,
+            "pycsamt": _PYCSAMT_VERSION,
+            "saved_at": _now_iso(),
+            "note": note or "",
+            "store_data": store_data,
             "active_lines": active_lines,
-            "corr_store":   corr,
-            "elevation_raw":       elev_raw,
+            "corr_store": corr,
+            "elevation_raw": elev_raw,
             "elevation_corrected": elev_corr,
         }
         n_sta = (store_data or {}).get("n_stations", 0)
@@ -166,14 +181,14 @@ def register_session(app) -> None:
 
     # ── 5. Upload + restore session from JSON file ────────────────────────────
     @app.callback(
-        Output(IDs.STORE_DATA,               "data",    allow_duplicate=True),
-        Output(IDs.STORE_ACTIVE_LINES,       "data",    allow_duplicate=True),
-        Output(IDs.CORR_STORE,               "data",    allow_duplicate=True),
-        Output("tool-elev-raw-store",        "data",    allow_duplicate=True),
-        Output("tool-elev-corrected-store",  "data",    allow_duplicate=True),
-        Output(IDs.SESSION_FEEDBACK,         "children",allow_duplicate=True),
-        Input(IDs.SESSION_UL,                "contents"),
-        State(IDs.SESSION_UL,                "filename"),
+        Output(IDs.STORE_DATA, "data", allow_duplicate=True),
+        Output(IDs.STORE_ACTIVE_LINES, "data", allow_duplicate=True),
+        Output(IDs.CORR_STORE, "data", allow_duplicate=True),
+        Output("tool-elev-raw-store", "data", allow_duplicate=True),
+        Output("tool-elev-corrected-store", "data", allow_duplicate=True),
+        Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.SESSION_UL, "contents"),
+        State(IDs.SESSION_UL, "filename"),
         prevent_initial_call=True,
     )
     def _session_upload_restore(contents, filename):
@@ -203,14 +218,14 @@ def register_session(app) -> None:
 
     # ── 6. Restore from localStorage snapshot (BTN_SESSION_RESTORE) ──────────
     @app.callback(
-        Output(IDs.STORE_DATA,               "data",    allow_duplicate=True),
-        Output(IDs.STORE_ACTIVE_LINES,       "data",    allow_duplicate=True),
-        Output(IDs.CORR_STORE,               "data",    allow_duplicate=True),
-        Output("tool-elev-raw-store",        "data",    allow_duplicate=True),
-        Output("tool-elev-corrected-store",  "data",    allow_duplicate=True),
-        Output(IDs.SESSION_FEEDBACK,         "children",allow_duplicate=True),
-        Input(IDs.BTN_SESSION_RESTORE,       "n_clicks"),
-        State(IDs.SESSION_SNAPSHOT,          "data"),
+        Output(IDs.STORE_DATA, "data", allow_duplicate=True),
+        Output(IDs.STORE_ACTIVE_LINES, "data", allow_duplicate=True),
+        Output(IDs.CORR_STORE, "data", allow_duplicate=True),
+        Output("tool-elev-raw-store", "data", allow_duplicate=True),
+        Output("tool-elev-corrected-store", "data", allow_duplicate=True),
+        Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.BTN_SESSION_RESTORE, "n_clicks"),
+        State(IDs.SESSION_SNAPSHOT, "data"),
         prevent_initial_call=True,
     )
     def _session_browser_restore(n, snap):
@@ -218,14 +233,16 @@ def register_session(app) -> None:
             return (no_update,) * 6
         if not snap:
             return (no_update,) * 5 + (
-                _err_icon("No browser snapshot found — save a session first."),
+                _err_icon(
+                    "No browser snapshot found — save a session first."
+                ),
             )
         try:
             _validate_snapshot(snap)
             saved_at = snap.get("saved_at", "unknown time")
-            n_sta    = (snap.get("store_data") or {}).get("n_stations", "?")
-            note     = snap.get("note", "")
-            detail   = f" · {note}" if note else ""
+            n_sta = (snap.get("store_data") or {}).get("n_stations", "?")
+            note = snap.get("note", "")
+            detail = f" · {note}" if note else ""
             msg = _ok_icon(
                 f"Restored snapshot from {saved_at}{detail} ({n_sta} stations). "
                 "Reload EDI files to re-enable plots."
@@ -243,7 +260,7 @@ def register_session(app) -> None:
 
     # ── 7. Clear snapshot ─────────────────────────────────────────────────────
     @app.callback(
-        Output(IDs.SESSION_SNAPSHOT, "data",     allow_duplicate=True),
+        Output(IDs.SESSION_SNAPSHOT, "data", allow_duplicate=True),
         Output(IDs.SESSION_AUTOSAVE, "children", allow_duplicate=True),
         Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
         Input(IDs.BTN_SESSION_CLEAR, "n_clicks"),

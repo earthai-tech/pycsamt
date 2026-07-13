@@ -41,12 +41,7 @@ from pycsamt.tdem import (
     read_temavg_survey,
 )
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 AVG_FILE = DATA_DIR / "TEM100.AVG"
 Z_FILE = DATA_DIR / "TEM100.Z"
 
@@ -54,7 +49,7 @@ Z_FILE = DATA_DIR / "TEM100.Z"
 def _sounding() -> TEMSounding:
     """Return a small synthetic sounding for plotting."""
     t = np.logspace(-5, -3, 8)
-    data = 1e-6 * t ** -1.5
+    data = 1e-6 * t**-1.5
     return TEMSounding(
         t,
         data,
@@ -97,7 +92,9 @@ def test_plot_transformed_rho_returns_figure_by_default():
     fig2 = plot_transformed_rho(_sounding(), show_phase=False)
 
     assert len(fig.axes) == 2
-    assert fig.axes[0].get_position().height > fig.axes[1].get_position().height
+    assert (
+        fig.axes[0].get_position().height > fig.axes[1].get_position().height
+    )
     assert len(fig2.axes) == 1
     plt.close(fig)
     plt.close(fig2)

@@ -65,17 +65,18 @@ __all__ = [
 # Constants
 # -------------------------------------------------------------------------
 
-_N_AIR_2D = 10          # air layers added by readCond_2D
-_AIR_RHO   = 1e12       # Ω·m for air cells
-_AIR_LOGE  = np.log(_AIR_RHO)      # ≈ 27.63
-_AIR_THRESH = 20.0      # min loge value considered "air" for auto-detection
-_VALUES_WRAP_WIDTH  = 10   # widths per line (2D / 3D header widths)
-_VALUES_WRAP_RHO_2D = 19   # rho values per line (2D body)
+_N_AIR_2D = 10  # air layers added by readCond_2D
+_AIR_RHO = 1e12  # Ω·m for air cells
+_AIR_LOGE = np.log(_AIR_RHO)  # ≈ 27.63
+_AIR_THRESH = 20.0  # min loge value considered "air" for auto-detection
+_VALUES_WRAP_WIDTH = 10  # widths per line (2D / 3D header widths)
+_VALUES_WRAP_RHO_2D = 19  # rho values per line (2D body)
 
 
 # -------------------------------------------------------------------------
 # Internal helpers
 # -------------------------------------------------------------------------
+
 
 def _to_loge(arr: np.ndarray, log_type: str) -> np.ndarray:
     """Convert a raw rho array from *log_type* encoding to ln(ρ)."""
@@ -109,7 +110,9 @@ def _detect_air_layers(rho_loge: np.ndarray) -> int:
     return n
 
 
-def _write_widths(fh, widths: np.ndarray, per_line: int = _VALUES_WRAP_WIDTH) -> None:
+def _write_widths(
+    fh, widths: np.ndarray, per_line: int = _VALUES_WRAP_WIDTH
+) -> None:
     """Write a sequence of widths, *per_line* per row, ``%11.4G`` format."""
     for j, v in enumerate(widths, 1):
         fh.write(f"{v:11.4G}")
@@ -121,6 +124,7 @@ def _write_widths(fh, widths: np.ndarray, per_line: int = _VALUES_WRAP_WIDTH) ->
 # 2D Mackie
 # -------------------------------------------------------------------------
 
+
 def _parse_mackie2d(path: Path) -> dict:
     """Low-level parser for the 2D Mackie file format."""
     with path.open("r", errors="replace") as fh:
@@ -128,7 +132,9 @@ def _parse_mackie2d(path: Path) -> dict:
 
     i = 0
     N = len(lines)
-    while i < N and (not lines[i].strip() or lines[i].strip().startswith("#")):
+    while i < N and (
+        not lines[i].strip() or lines[i].strip().startswith("#")
+    ):
         i += 1
 
     ctrl = lines[i].split()
@@ -149,13 +155,19 @@ def _parse_mackie2d(path: Path) -> dict:
         all_tokens.extend(stripped.split())
 
     t = 0
-    y_widths = np.array([float(all_tokens[t + k]) for k in range(ny)], dtype=float)
+    y_widths = np.array(
+        [float(all_tokens[t + k]) for k in range(ny)], dtype=float
+    )
     t += ny
-    z_earth = np.array([float(all_tokens[t + k]) for k in range(nz)], dtype=float)
+    z_earth = np.array(
+        [float(all_tokens[t + k]) for k in range(nz)], dtype=float
+    )
     t += nz
     t += 1  # skip sentinel integer
 
-    rho_flat = np.array([float(all_tokens[t + k]) for k in range(ny * nz)], dtype=float)
+    rho_flat = np.array(
+        [float(all_tokens[t + k]) for k in range(ny * nz)], dtype=float
+    )
     # file layout: z outer, y inner → shape (nz, ny)
     rho_arr = rho_flat.reshape(nz, ny)
     rho_loge_earth = _to_loge(rho_arr, log_type)
@@ -163,19 +175,19 @@ def _parse_mackie2d(path: Path) -> dict:
     # add air layers — mirrors readCond_2D.m (nzAir = 10)
     n_air = _N_AIR_2D
     h0 = max(float(z_earth[0]), 10.0)
-    dz_air_up = [h0 * (3.0 ** k) for k in range(n_air)]  # surface → up
-    z_air = list(reversed(dz_air_up))                      # top → surface
+    dz_air_up = [h0 * (3.0**k) for k in range(n_air)]  # surface → up
+    z_air = list(reversed(dz_air_up))  # top → surface
     z_full = np.array(z_air + list(z_earth), dtype=float)
 
     rho_air = np.full((n_air, ny), _AIR_LOGE, dtype=float)
     rho_loge = np.vstack([rho_air, rho_loge_earth])
 
     return {
-        "x_widths":  y_widths,   # horizontal dimension
-        "z_widths":  z_full,
-        "rho_loge":  rho_loge,
-        "n_air":     n_air,
-        "log_type":  log_type,
+        "x_widths": y_widths,  # horizontal dimension
+        "z_widths": z_full,
+        "rho_loge": rho_loge,
+        "n_air": n_air,
+        "log_type": log_type,
     }
 
 
@@ -206,7 +218,7 @@ def read_mackie2d(path: PathLike) -> ModEmModel2D:  # noqa: F821
     obj.x_widths = d["x_widths"]
     obj.z_widths = d["z_widths"]
     obj.rho_loge = d["rho_loge"]
-    obj.n_air    = d["n_air"]     # dynamic attribute, not in base class
+    obj.n_air = d["n_air"]  # dynamic attribute, not in base class
     obj.log_type = d["log_type"]  # type: ignore[attr-defined]
     return obj
 
@@ -243,7 +255,7 @@ def write_mackie2d(
     if n_air is None:
         n_air = _detect_air_layers(model.rho_loge)
 
-    rho_earth = model.rho_loge[n_air:]   # (nz_earth, nx)
+    rho_earth = model.rho_loge[n_air:]  # (nz_earth, nx)
     nz_earth, nx = rho_earth.shape
     z_earth = model.z_widths[n_air:]
 
@@ -280,6 +292,7 @@ def write_mackie2d(
 # 3D Mackie
 # -------------------------------------------------------------------------
 
+
 def _parse_mackie3d(path: Path) -> dict:
     """Low-level parser for the 3D Mackie file format."""
     with path.open("r", errors="replace") as fh:
@@ -287,14 +300,16 @@ def _parse_mackie3d(path: Path) -> dict:
 
     N = len(lines)
     i = 0
-    while i < N and (not lines[i].strip() or lines[i].strip().startswith("#")):
+    while i < N and (
+        not lines[i].strip() or lines[i].strip().startswith("#")
+    ):
         i += 1
 
     ctrl = lines[i].split()
     i += 1
-    nx     = int(ctrl[0])
-    ny     = int(ctrl[1])
-    nz     = int(ctrl[2])
+    nx = int(ctrl[0])
+    ny = int(ctrl[1])
+    nz = int(ctrl[2])
     nz_air = int(ctrl[3]) if len(ctrl) > 3 else 0
     log_type = "LINEAR"
     for tok in ctrl:
@@ -317,12 +332,12 @@ def _parse_mackie3d(path: Path) -> dict:
             if len(widths) == target:
                 break
 
-    x_widths = np.array(widths[:nx],             dtype=float)
-    y_widths = np.array(widths[nx: nx + ny],      dtype=float)
-    z_widths = np.array(widths[nx + ny:],         dtype=float)
+    x_widths = np.array(widths[:nx], dtype=float)
+    y_widths = np.array(widths[nx : nx + ny], dtype=float)
+    z_widths = np.array(widths[nx + ny :], dtype=float)
 
     # read blocks: each starts with "k1 [k2]" line then ny rows of nx values
-    rho_arr  = np.zeros((nz, ny, nx), dtype=float)
+    rho_arr = np.zeros((nz, ny, nx), dtype=float)
     assigned = [False] * nz
 
     while not all(assigned) and i < N:
@@ -345,7 +360,7 @@ def _parse_mackie3d(path: Path) -> dict:
             break
         i += 1
 
-        k1 = ints[0] - 1   # 0-indexed
+        k1 = ints[0] - 1  # 0-indexed
         k2 = ints[1] - 1 if len(ints) >= 2 else k1
 
         # read ny rows of nx values; each row is on one line
@@ -357,7 +372,7 @@ def _parse_mackie3d(path: Path) -> dict:
                 continue
             rows.append([float(v) for v in row_ln.split()])
 
-        slice_arr = np.array(rows, dtype=float)   # (ny, nx)
+        slice_arr = np.array(rows, dtype=float)  # (ny, nx)
         loge_slice = _to_loge(slice_arr, log_type)
 
         for k in range(k1, k2 + 1):
@@ -366,7 +381,7 @@ def _parse_mackie3d(path: Path) -> dict:
                 assigned[k] = True
 
     # optional footer: WINGLINK … origin (km) … rotation
-    origin   = np.zeros(3, dtype=float)
+    origin = np.zeros(3, dtype=float)
     rotation = 0.0
     while i < N:
         ln = lines[i].strip()
@@ -377,7 +392,7 @@ def _parse_mackie3d(path: Path) -> dict:
         if len(parts) == 3:
             try:
                 vals = [float(p) for p in parts]
-                origin = np.array(vals) * 1000.0   # km → m
+                origin = np.array(vals) * 1000.0  # km → m
                 break
             except ValueError:
                 pass
@@ -394,14 +409,14 @@ def _parse_mackie3d(path: Path) -> dict:
             pass
 
     return {
-        "x_widths":  x_widths,
-        "y_widths":  y_widths,
-        "z_widths":  z_widths,
-        "rho_loge":  rho_arr,
-        "n_air":     nz_air,
-        "log_type":  log_type,
-        "origin":    origin,
-        "rotation":  rotation,
+        "x_widths": x_widths,
+        "y_widths": y_widths,
+        "z_widths": z_widths,
+        "rho_loge": rho_arr,
+        "n_air": nz_air,
+        "log_type": log_type,
+        "origin": origin,
+        "rotation": rotation,
     }
 
 
@@ -432,9 +447,9 @@ def read_mackie3d(path: PathLike) -> ModEmModel3D:  # noqa: F821
     obj.y_widths = d["y_widths"]
     obj.z_widths = d["z_widths"]
     obj.rho_loge = d["rho_loge"]
-    obj.n_air    = d["n_air"]
+    obj.n_air = d["n_air"]
     obj.log_type = d["log_type"]
-    obj.origin   = d["origin"]   # type: ignore[attr-defined]
+    obj.origin = d["origin"]  # type: ignore[attr-defined]
     obj.rotation = d["rotation"]  # type: ignore[attr-defined]
     return obj
 
@@ -492,7 +507,7 @@ def write_mackie3d(
                 fh.write("".join(f"{v:13.5E}" for v in row) + "\n")
 
         # footer (WINGLINK compatibility)
-        ox, oy, oz = [v / 1000.0 for v in origin]   # m → km
+        ox, oy, oz = [v / 1000.0 for v in origin]  # m → km
         fh.write("WINGLINK \n")
         fh.write("site \n")
         fh.write("1 1 \n")

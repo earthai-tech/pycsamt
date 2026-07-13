@@ -55,6 +55,7 @@ Example
 PINNInverter3D(n_stations=25, fitted)
 >>> vol = inv.resistivity_volume()  # doctest: +SKIP
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -153,8 +154,7 @@ class PINNInverter3D(BasePINNInverter):
     ) -> None:
         if mode not in ("te", "tm", "both"):
             raise ValueError(
-                "mode must be 'te', 'tm', or 'both'; "
-                f"got {mode!r}."
+                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
             )
         super().__init__(
             n_layers=n_layers,
@@ -163,9 +163,7 @@ class PINNInverter3D(BasePINNInverter):
         )
         self.n_freqs = int(n_freqs)
         self.mode = mode
-        self.smoothness_weight = float(
-            smoothness_weight
-        )
+        self.smoothness_weight = float(smoothness_weight)
         self.graph_weight = float(graph_weight)
         self.radius = float(radius)
         self.epochs = int(epochs)
@@ -174,15 +172,13 @@ class PINNInverter3D(BasePINNInverter):
         self.comp_tm = comp_tm
         self.verbose = verbose
 
-        self._obs: list[SiteObs2D] = (
-            sites_to_obs_2d(
-                sites,
-                comp_te=comp_te,
-                comp_tm=comp_tm,
-                recursive=recursive,
-                on_dup=on_dup,
-                verbose=verbose,
-            )
+        self._obs: list[SiteObs2D] = sites_to_obs_2d(
+            sites,
+            comp_te=comp_te,
+            comp_tm=comp_tm,
+            recursive=recursive,
+            on_dup=on_dup,
+            verbose=verbose,
         )
         self._freqs_grid = _make_common_grid(
             [o.freq for o in self._obs],
@@ -191,9 +187,7 @@ class PINNInverter3D(BasePINNInverter):
 
         # Station coordinates
         if station_coords is not None:
-            self._coords = np.asarray(
-                station_coords, dtype=float
-            )
+            self._coords = np.asarray(station_coords, dtype=float)
         else:
             self._coords = sites_to_coords_3d(
                 sites,
@@ -205,13 +199,12 @@ class PINNInverter3D(BasePINNInverter):
 
         # Adjacency matrix
         if adjacency is not None:
-            self._adjacency = np.asarray(
-                adjacency, dtype=np.float64
-            )
+            self._adjacency = np.asarray(adjacency, dtype=np.float64)
         else:
             from pycsamt.ai.nets.gcn import (
                 build_adjacency,
             )
+
             self._adjacency = build_adjacency(
                 self._coords,
                 radius=self.radius,
@@ -267,9 +260,7 @@ class PINNInverter3D(BasePINNInverter):
 
     # ── outputs ──
 
-    def resistivity_volume(
-        self, *, as_log10: bool = True
-    ) -> np.ndarray:
+    def resistivity_volume(self, *, as_log10: bool = True) -> np.ndarray:
         """
         Return the quasi-3D resistivity volume.
 
@@ -281,11 +272,11 @@ class PINNInverter3D(BasePINNInverter):
             :attr:`stations`.
         """
         self._check_fitted()
-        lr = self._result["log_rho"]   # (S, L)
-        section = lr.T                 # (L, S)
+        lr = self._result["log_rho"]  # (S, L)
+        section = lr.T  # (L, S)
         if as_log10:
             return section
-        return 10.0 ** section
+        return 10.0**section
 
     def thickness_volume(self) -> np.ndarray:
         """
@@ -297,7 +288,7 @@ class PINNInverter3D(BasePINNInverter):
         """
         self._check_fitted()
         lt = self._result["log_thick"]  # (S, L-1)
-        return (10.0 ** lt).T           # (L-1, S)
+        return (10.0**lt).T  # (L-1, S)
 
     def station_coords(self) -> np.ndarray:
         """Return station (x, y) positions [m]."""
@@ -351,12 +342,8 @@ class PINNInverter3D(BasePINNInverter):
         for i, obs in enumerate(self._obs):
             try:
                 m = LayeredModel(
-                    resistivity=np.maximum(
-                        10.0 ** lr_2d[i], 1e-3
-                    ),
-                    thickness=np.maximum(
-                        10.0 ** lt_2d[i], 1.0
-                    ),
+                    resistivity=np.maximum(10.0 ** lr_2d[i], 1e-3),
+                    thickness=np.maximum(10.0 ** lt_2d[i], 1.0),
                 )
                 resp = MT1DForward(obs.freq).run(m)
                 rp, pp = resp.rho_a, resp.phase
@@ -365,14 +352,10 @@ class PINNInverter3D(BasePINNInverter):
                 pp = np.full_like(obs.freq, np.nan)
 
             rho_obs = (
-                obs.rho_te
-                if self.mode in ("te", "both")
-                else obs.rho_tm
+                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
             )
             ph_obs = (
-                obs.phase_te
-                if self.mode in ("te", "both")
-                else obs.phase_tm
+                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             )
             for k in range(len(obs.freq)):
                 rows.append(
@@ -417,12 +400,8 @@ class PINNInverter3D(BasePINNInverter):
                 rho_src = o.rho_tm
                 ph_src = o.phase_tm
             else:
-                rho_src = 0.5 * (
-                    o.rho_te + o.rho_tm
-                )
-                ph_src = 0.5 * (
-                    o.phase_te + o.phase_tm
-                )
+                rho_src = 0.5 * (o.rho_te + o.rho_tm)
+                ph_src = 0.5 * (o.phase_te + o.phase_tm)
 
             lg, pg = _interp_to_grid(
                 o.freq,
@@ -436,9 +415,7 @@ class PINNInverter3D(BasePINNInverter):
         return lr_obs, ph_obs
 
     def __repr__(self) -> str:
-        status = (
-            "fitted" if self._is_fitted else "unfitted"
-        )
+        status = "fitted" if self._is_fitted else "unfitted"
         return (
             f"PINNInverter3D("
             f"n_stations={self.n_sites}, "

@@ -45,13 +45,15 @@ class AgentPanel(QWidget):
     """
 
     # Emitted just before the worker thread starts so the dock can show itself
-    agent_started = Signal(str)   # agent_name
+    agent_started = Signal(str)  # agent_name
 
-    def __init__(self, app_controller=None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, app_controller=None, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
-        self._ctrl   = app_controller
-        self._worker: object | None = None   # AgentWorker (set on run)
-        self._result_figure = None              # last matplotlib Figure
+        self._ctrl = app_controller
+        self._worker: object | None = None  # AgentWorker (set on run)
+        self._result_figure = None  # last matplotlib Figure
         self._build_ui()
 
     # ── Construction ──────────────────────────────────────────────────
@@ -107,7 +109,9 @@ class AgentPanel(QWidget):
         self._log_text = QPlainTextEdit()
         self._log_text.setReadOnly(True)
         self._log_text.setMaximumBlockCount(3000)
-        self._log_text.setPlaceholderText("Agent log output will appear here…")
+        self._log_text.setPlaceholderText(
+            "Agent log output will appear here…"
+        )
         self._tabs.addTab(self._log_text, "Log")
 
         # Tab 1: Result figure
@@ -139,7 +143,9 @@ class AgentPanel(QWidget):
         )
 
         if self._ctrl is None or self._ctrl.sites is None:
-            self._status_lbl.setText("Load survey data before running an agent.")
+            self._status_lbl.setText(
+                "Load survey data before running an agent."
+            )
             return
 
         # Get API key from session if available
@@ -167,7 +173,7 @@ class AgentPanel(QWidget):
             AgentWorker,
         )
 
-        self.agent_started.emit(agent_name)   # let the dock show itself first
+        self.agent_started.emit(agent_name)  # let the dock show itself first
 
         self._log_text.clear()
         self._summary_browser.clear()
@@ -176,7 +182,7 @@ class AgentPanel(QWidget):
         self._btn_stop.setEnabled(True)
         self._btn_run.setEnabled(False)
         self._status_lbl.setText(f"Running: {agent_name}…")
-        self._tabs.setCurrentIndex(0)   # show Log tab
+        self._tabs.setCurrentIndex(0)  # show Log tab
 
         self._worker = AgentWorker(
             agent_name=agent_name,
@@ -254,7 +260,10 @@ class AgentPanel(QWidget):
             lines.append(f"<b>Elapsed:</b> {result.elapsed_seconds:.1f} s")
         if hasattr(result, "cost_estimate") and result.cost_estimate:
             lines.append(f"<b>Cost estimate:</b> {result.cost_estimate}")
-        if hasattr(result, "llm_interpretation") and result.llm_interpretation:
+        if (
+            hasattr(result, "llm_interpretation")
+            and result.llm_interpretation
+        ):
             lines.append("<hr>")
             lines.append("<b>LLM Interpretation:</b>")
             lines.append(result.llm_interpretation.replace("\n", "<br>"))
@@ -265,7 +274,9 @@ class AgentPanel(QWidget):
                 lines.append(f"• {w}")
 
         if not lines:
-            lines.append("<i>Processing result — see Log tab for details.</i>")
+            lines.append(
+                "<i>Processing result — see Log tab for details.</i>"
+            )
 
         self._summary_browser.setHtml("<br>".join(lines))
         if lines:
@@ -277,6 +288,7 @@ class AgentPanel(QWidget):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         fig = self._result_figure or self._result_canvas.figure
         if fig is None:
             return
@@ -285,6 +297,7 @@ class AgentPanel(QWidget):
 
 
 # ── Module-level helper (shared with agent_window) ────────────────────────────
+
 
 def _is_renderable(obj) -> bool:
     """Return True if *obj* is a matplotlib Figure or Axes."""

@@ -40,6 +40,7 @@ Dataset layout
     Structured array with per-sample metadata:
     ``n_layers``, ``depth_max``, ``noise_level``, ``seed``.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -63,6 +64,7 @@ __all__ = [
 # Dataset container
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ForwardDataset:
     """
@@ -83,6 +85,7 @@ class ForwardDataset:
     solver : str
         Solver used to generate this dataset.
     """
+
     X: np.ndarray
     y: np.ndarray
     freqs: np.ndarray | None = None
@@ -112,12 +115,16 @@ class ForwardDataset:
         meta = None
         if "meta_n_layers" in d:
             n = len(d["meta_n_layers"])
-            meta = np.zeros(n, dtype=[("n_layers", "i4"), ("noise_level", "f4")])
+            meta = np.zeros(
+                n, dtype=[("n_layers", "i4"), ("noise_level", "f4")]
+            )
             meta["n_layers"] = d["meta_n_layers"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
-            X=d["X"], y=d["y"],
-            freqs=freqs, times=times,
+            X=d["X"],
+            y=d["y"],
+            freqs=freqs,
+            times=times,
             meta=meta,
             solver=str(d["solver"]),
         )
@@ -141,16 +148,20 @@ class ForwardDataset:
         n_test = int(n * test_frac)
         n_val = int(n * val_frac)
         test_idx = idx[:n_test]
-        val_idx = idx[n_test: n_test + n_val]
-        train_idx = idx[n_test + n_val:]
+        val_idx = idx[n_test : n_test + n_val]
+        train_idx = idx[n_test + n_val :]
 
         def _subset(indices):
             m = self.meta[indices] if self.meta is not None else None
             return ForwardDataset(
-                X=self.X[indices], y=self.y[indices],
-                freqs=self.freqs, times=self.times,
-                meta=m, solver=self.solver,
+                X=self.X[indices],
+                y=self.y[indices],
+                freqs=self.freqs,
+                times=self.times,
+                meta=m,
+                solver=self.solver,
             )
+
         return _subset(train_idx), _subset(val_idx), _subset(test_idx)
 
     def __len__(self) -> int:
@@ -169,6 +180,7 @@ class ForwardDataset:
 # Worker (must be module-level for pickle in ProcessPoolExecutor)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _worker(args):
     """
     Generate one (X, y) sample.
@@ -176,16 +188,29 @@ def _worker(args):
     Parameters are passed as a single tuple to satisfy ProcessPoolExecutor.
     """
     (
-        solver_name, n_layers, rho_range, depth_max,
-        freqs, times, loop_radius, noise_level,
-        noise_type, geology, include_phase, seed,
+        solver_name,
+        n_layers,
+        rho_range,
+        depth_max,
+        freqs,
+        times,
+        loop_radius,
+        noise_level,
+        noise_type,
+        geology,
+        include_phase,
+        seed,
     ) = args
 
     from pycsamt.forward.noise import add_noise
     from pycsamt.forward.synthetic import LayeredModel
 
     rng = np.random.default_rng(seed)
-    n_lay = int(rng.integers(n_layers[0], n_layers[1] + 1)) if isinstance(n_layers, tuple) else n_layers
+    n_lay = (
+        int(rng.integers(n_layers[0], n_layers[1] + 1))
+        if isinstance(n_layers, tuple)
+        else n_layers
+    )
 
     if geology is not None:
         model = LayeredModel.from_geology(geology, seed=rng)
@@ -200,19 +225,24 @@ def _worker(args):
     # Run forward solver
     if solver_name == "mt1d":
         from pycsamt.forward.em1d import MT1DForward
+
         resp = MT1DForward(freqs).run(model)
     elif solver_name == "tem1d":
         from pycsamt.forward.em1d import TEM1DForward
+
         resp = TEM1DForward(times, loop_radius=loop_radius).run(model)
     elif solver_name == "csamt1d":
         from pycsamt.forward.em1d import CSAMT1DForward
+
         resp = CSAMT1DForward(freqs).run(model)
     else:
         raise ValueError(f"Unknown solver: {solver_name!r}")
 
     # Apply noise
     if noise_level > 0.0:
-        resp = add_noise(resp, noise_type, level=noise_level, seed=rng.integers(2**31))
+        resp = add_noise(
+            resp, noise_type, level=noise_level, seed=rng.integers(2**31)
+        )
 
     # Feature vector
     x_vec = resp.to_array(log_rho=True, include_phase=include_phase)
@@ -226,6 +256,7 @@ def _worker(args):
 # ─────────────────────────────────────────────────────────────────────────────
 # Main entry point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def generate_dataset(
     solver: str = "mt1d",
@@ -303,7 +334,9 @@ def generate_dataset(
 
     solver = solver.lower().strip()
     if solver not in ("mt1d", "tem1d", "csamt1d"):
-        raise ValueError(f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'.")
+        raise ValueError(
+            f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'."
+        )
 
     # Default grids
     if freqs is None and solver in ("mt1d", "csamt1d"):
@@ -326,9 +359,17 @@ def generate_dataset(
 
     args_list = [
         (
-            solver, n_layers, rho_range, depth_max,
-            freqs, times, loop_radius, noise_level,
-            noise_type, geology, include_phase,
+            solver,
+            n_layers,
+            rho_range,
+            depth_max,
+            freqs,
+            times,
+            loop_radius,
+            noise_level,
+            noise_type,
+            geology,
+            include_phase,
             int(child_seeds[i]),
         )
         for i in range(n_samples)
@@ -343,7 +384,9 @@ def generate_dataset(
                 print(f"  {i + 1}/{n_samples} samples generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {pool.submit(_worker, a): i for i, a in enumerate(args_list)}
+            futures = {
+                pool.submit(_worker, a): i for i, a in enumerate(args_list)
+            }
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())
@@ -372,9 +415,12 @@ def generate_dataset(
     meta["noise_level"] = nv_list
 
     ds = ForwardDataset(
-        X=X, y=y_arr,
-        freqs=freqs, times=times,
-        meta=meta, solver=solver,
+        X=X,
+        y=y_arr,
+        freqs=freqs,
+        times=times,
+        meta=meta,
+        solver=solver,
     )
 
     if output is not None:
@@ -388,6 +434,7 @@ def generate_dataset(
 # ─────────────────────────────────────────────────────────────────────────────
 # Pseudo-3D survey dataset container
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class SurveyDataset3D:
@@ -443,8 +490,12 @@ class SurveyDataset3D:
 
     def save(self, path: str) -> None:
         """Save to a compressed ``.npz`` file."""
-        arrays = dict(X=self.X, y=self.y, coords=self.coords,
-                      solver=np.array(self.solver))
+        arrays = dict(
+            X=self.X,
+            y=self.y,
+            coords=self.coords,
+            solver=np.array(self.solver),
+        )
         if self.freqs is not None:
             arrays["freqs"] = self.freqs
         if self.meta is not None:
@@ -460,12 +511,17 @@ class SurveyDataset3D:
         meta = None
         if "meta_corr_length" in d:
             n = len(d["meta_corr_length"])
-            meta = np.zeros(n, dtype=[("corr_length", "f4"), ("noise_level", "f4")])
+            meta = np.zeros(
+                n, dtype=[("corr_length", "f4"), ("noise_level", "f4")]
+            )
             meta["corr_length"] = d["meta_corr_length"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
-            X=d["X"], y=d["y"], coords=d["coords"],
-            freqs=freqs, meta=meta,
+            X=d["X"],
+            y=d["y"],
+            coords=d["coords"],
+            freqs=freqs,
+            meta=meta,
             solver=str(d["solver"]),
         )
 
@@ -488,15 +544,20 @@ class SurveyDataset3D:
         n_test = int(n * test_frac)
         n_val = int(n * val_frac)
         test_idx = idx[:n_test]
-        val_idx = idx[n_test: n_test + n_val]
-        train_idx = idx[n_test + n_val:]
+        val_idx = idx[n_test : n_test + n_val]
+        train_idx = idx[n_test + n_val :]
 
         def _subset(indices):
             m = self.meta[indices] if self.meta is not None else None
             return SurveyDataset3D(
-                X=self.X[indices], y=self.y[indices], coords=self.coords,
-                freqs=self.freqs, meta=m, solver=self.solver,
+                X=self.X[indices],
+                y=self.y[indices],
+                coords=self.coords,
+                freqs=self.freqs,
+                meta=m,
+                solver=self.solver,
             )
+
         return _subset(train_idx), _subset(val_idx), _subset(test_idx)
 
     def __len__(self) -> int:
@@ -516,8 +577,10 @@ class SurveyDataset3D:
 # Gaussian Random Field helper
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _grf_cholesky(coords: np.ndarray, corr_length: float,
-                  nugget: float = 1e-6) -> np.ndarray:
+
+def _grf_cholesky(
+    coords: np.ndarray, corr_length: float, nugget: float = 1e-6
+) -> np.ndarray:
     """
     Cholesky factor of a squared-exponential covariance matrix.
 
@@ -549,7 +612,7 @@ def _grf_cholesky(coords: np.ndarray, corr_length: float,
         (coords[:, None, :] - coords[None, :, :]) ** 2,
         axis=-1,
     )
-    C = np.exp(-d2 / (2.0 * corr_length ** 2))
+    C = np.exp(-d2 / (2.0 * corr_length**2))
     C += nugget * np.eye(len(coords))
     return np.linalg.cholesky(C)
 
@@ -557,6 +620,7 @@ def _grf_cholesky(coords: np.ndarray, corr_length: float,
 # ─────────────────────────────────────────────────────────────────────────────
 # Per-survey worker (module-level for ProcessPoolExecutor pickling)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _worker_3d(args):
     """
@@ -566,11 +630,18 @@ def _worker_3d(args):
     ``ProcessPoolExecutor.submit`` can pickle the call.
     """
     (
-        solver_name, n_layers, n_stations,
-        log_rho_mean, log_rho_std,
-        thickness_range, L_chol,
-        freqs, noise_level, noise_type,
-        include_phase, seed,
+        solver_name,
+        n_layers,
+        n_stations,
+        log_rho_mean,
+        log_rho_std,
+        thickness_range,
+        L_chol,
+        freqs,
+        noise_level,
+        noise_type,
+        include_phase,
+        seed,
     ) = args
 
     from pycsamt.forward.em1d import MT1DForward
@@ -604,21 +675,25 @@ def _worker_3d(args):
         resp = fwd.run(model)
         if noise_level > 0.0:
             resp = add_noise(
-                resp, noise_type,
+                resp,
+                noise_type,
                 level=noise_level,
-                seed=int(rng.integers(2 ** 31)),
+                seed=int(rng.integers(2**31)),
             )
-        x_list.append(resp.to_array(log_rho=True, include_phase=include_phase))
+        x_list.append(
+            resp.to_array(log_rho=True, include_phase=include_phase)
+        )
         y_list.append(model.to_vector(log_rho=True))
 
-    X_survey = np.array(x_list, dtype=np.float32)   # (n_sta, n_feat)
-    y_survey = np.array(y_list, dtype=np.float32)   # (n_sta, n_params)
+    X_survey = np.array(x_list, dtype=np.float32)  # (n_sta, n_feat)
+    y_survey = np.array(y_list, dtype=np.float32)  # (n_sta, n_params)
     return X_survey, y_survey
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main 3-D entry point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def generate_dataset_3d(
     solver: str = "mt1d",
@@ -747,8 +822,9 @@ def generate_dataset_3d(
         raw = np.column_stack([gX.ravel(), gY.ravel()])
         coords = raw[:n_stations].astype(np.float32)
     elif station_layout == "random":
-        coords = rng_base.uniform(0.0, float(extent),
-                                  (n_stations, 2)).astype(np.float32)
+        coords = rng_base.uniform(0.0, float(extent), (n_stations, 2)).astype(
+            np.float32
+        )
     else:
         raise ValueError(
             f"station_layout must be 'grid' or 'random'; got {station_layout!r}."
@@ -758,14 +834,21 @@ def generate_dataset_3d(
     L_chol = _grf_cholesky(coords.astype(float), float(corr_length))
 
     # ── per-survey worker arguments ───────────────────────────────────────────
-    child_seeds = rng_base.integers(0, 2 ** 31, n_surveys)
+    child_seeds = rng_base.integers(0, 2**31, n_surveys)
     args_list = [
         (
-            solver, int(n_layers), int(n_stations),
-            float(log_rho_mean), float(log_rho_std),
-            thickness_range, L_chol,
-            freqs, float(noise_level), noise_type,
-            bool(include_phase), int(child_seeds[i]),
+            solver,
+            int(n_layers),
+            int(n_stations),
+            float(log_rho_mean),
+            float(log_rho_std),
+            thickness_range,
+            L_chol,
+            freqs,
+            float(noise_level),
+            noise_type,
+            bool(include_phase),
+            int(child_seeds[i]),
         )
         for i in range(n_surveys)
     ]
@@ -780,7 +863,9 @@ def generate_dataset_3d(
                 print(f"  {i + 1}/{n_surveys} surveys generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)}
+            futures = {
+                pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)
+            }
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())
@@ -798,8 +883,11 @@ def generate_dataset_3d(
     meta["noise_level"] = float(noise_level)
 
     ds = SurveyDataset3D(
-        X=X, y=y, coords=coords,
-        freqs=freqs, meta=meta,
+        X=X,
+        y=y,
+        coords=coords,
+        freqs=freqs,
+        meta=meta,
         solver=solver,
     )
 

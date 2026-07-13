@@ -23,6 +23,7 @@ need padding to push Dirichlet BCs away from the model region.
 :attr:`n_pad` records the padding count added on **each** side in x and y
 and at the **bottom** in z, consistent with :class:`~pycsamt.forward.grid2d.Grid2D`.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ __all__ = ["Grid3D"]
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _ensure_rng(seed) -> np.random.Generator:
     if isinstance(seed, np.random.Generator):
         return seed
@@ -47,6 +49,7 @@ def _ensure_rng(seed) -> np.random.Generator:
 # ─────────────────────────────────────────────────────────────────────────────
 # Grid3D
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class Grid3D:
@@ -91,18 +94,18 @@ class Grid3D:
         ...     nx_stations=5, ny_stations=5)
     """
 
-    dx:          np.ndarray
-    dy:          np.ndarray
-    dz:          np.ndarray
+    dx: np.ndarray
+    dy: np.ndarray
+    dz: np.ndarray
     resistivity: np.ndarray
     stations_xy: np.ndarray
-    n_pad:       int  = 0
-    name:        str  = ""
+    n_pad: int = 0
+    name: str = ""
 
     def __post_init__(self):
-        self.dx          = np.asarray(self.dx,          dtype=float)
-        self.dy          = np.asarray(self.dy,          dtype=float)
-        self.dz          = np.asarray(self.dz,          dtype=float)
+        self.dx = np.asarray(self.dx, dtype=float)
+        self.dy = np.asarray(self.dy, dtype=float)
+        self.dz = np.asarray(self.dz, dtype=float)
         self.resistivity = np.asarray(self.resistivity, dtype=float)
         self.stations_xy = np.asarray(self.stations_xy, dtype=float)
 
@@ -119,8 +122,12 @@ class Grid3D:
 
         xlo, xhi = self.x_nodes[0], self.x_nodes[-1]
         ylo, yhi = self.y_nodes[0], self.y_nodes[-1]
-        bad_x = (self.stations_xy[:, 0] < xlo) | (self.stations_xy[:, 0] > xhi)
-        bad_y = (self.stations_xy[:, 1] < ylo) | (self.stations_xy[:, 1] > yhi)
+        bad_x = (self.stations_xy[:, 0] < xlo) | (
+            self.stations_xy[:, 0] > xhi
+        )
+        bad_y = (self.stations_xy[:, 1] < ylo) | (
+            self.stations_xy[:, 1] > yhi
+        )
         if bad_x.any() or bad_y.any():
             raise ValueError(
                 f"{(bad_x | bad_y).sum()} station(s) outside the grid extent."
@@ -129,13 +136,20 @@ class Grid3D:
     # ── shape ────────────────────────────────────────────────────────────────
 
     @property
-    def nx(self) -> int: return len(self.dx)
+    def nx(self) -> int:
+        return len(self.dx)
+
     @property
-    def ny(self) -> int: return len(self.dy)
+    def ny(self) -> int:
+        return len(self.dy)
+
     @property
-    def nz(self) -> int: return len(self.dz)
+    def nz(self) -> int:
+        return len(self.dz)
+
     @property
-    def n_stations(self) -> int: return len(self.stations_xy)
+    def n_stations(self) -> int:
+        return len(self.stations_xy)
 
     # ── coordinates ──────────────────────────────────────────────────────────
 
@@ -153,33 +167,51 @@ class Grid3D:
 
     @property
     def x_centers(self) -> np.ndarray:
-        xn = self.x_nodes; return 0.5 * (xn[:-1] + xn[1:])
+        xn = self.x_nodes
+        return 0.5 * (xn[:-1] + xn[1:])
 
     @property
     def y_centers(self) -> np.ndarray:
-        yn = self.y_nodes; return 0.5 * (yn[:-1] + yn[1:])
+        yn = self.y_nodes
+        return 0.5 * (yn[:-1] + yn[1:])
 
     @property
     def z_centers(self) -> np.ndarray:
-        zn = self.z_nodes; return 0.5 * (zn[:-1] + zn[1:])
+        zn = self.z_nodes
+        return 0.5 * (zn[:-1] + zn[1:])
 
     @property
-    def x_extent(self) -> float: return float(self.dx.sum())
+    def x_extent(self) -> float:
+        return float(self.dx.sum())
+
     @property
-    def y_extent(self) -> float: return float(self.dy.sum())
+    def y_extent(self) -> float:
+        return float(self.dy.sum())
+
     @property
-    def z_extent(self) -> float: return float(self.dz.sum())
+    def z_extent(self) -> float:
+        return float(self.dz.sum())
 
     # ── station cell lookup ───────────────────────────────────────────────────
 
     def _station_x_cells(self) -> np.ndarray:
         """x-cell index for every station."""
-        idx = np.searchsorted(self.x_nodes, self.stations_xy[:, 0], side="right") - 1
+        idx = (
+            np.searchsorted(
+                self.x_nodes, self.stations_xy[:, 0], side="right"
+            )
+            - 1
+        )
         return np.clip(idx, 0, self.nx - 1)
 
     def _station_y_cells(self) -> np.ndarray:
         """y-cell index for every station."""
-        idx = np.searchsorted(self.y_nodes, self.stations_xy[:, 1], side="right") - 1
+        idx = (
+            np.searchsorted(
+                self.y_nodes, self.stations_xy[:, 1], side="right"
+            )
+            - 1
+        )
         return np.clip(idx, 0, self.ny - 1)
 
     # ── 2-D slice extraction (used by the quasi-3D solver) ───────────────────
@@ -201,16 +233,19 @@ class Grid3D:
             ``stations_xy[station_indices[k]]``.
         """
         y_cells = self._station_y_cells()
-        mask    = y_cells == yi
+        mask = y_cells == yi
         indices = np.where(mask)[0]
 
-        x_st = self.stations_xy[indices, 0] if len(indices) > 0 else np.array(
-            [self.x_nodes[self.n_pad + self.nx // 2]]
+        x_st = (
+            self.stations_xy[indices, 0]
+            if len(indices) > 0
+            else np.array([self.x_nodes[self.n_pad + self.nx // 2]])
         )
 
-        rho_xz = self.resistivity[:, yi, :]   # (nz, nx)
-        g2d    = Grid2D(
-            dx=self.dx, dz=self.dz,
+        rho_xz = self.resistivity[:, yi, :]  # (nz, nx)
+        g2d = Grid2D(
+            dx=self.dx,
+            dz=self.dz,
             resistivity=rho_xz,
             x_stations=x_st,
             n_pad=self.n_pad,
@@ -233,23 +268,28 @@ class Grid3D:
             station (used as the horizontal axis in the yz-plane solver).
         """
         x_cells = self._station_x_cells()
-        mask    = x_cells == xi
+        mask = x_cells == xi
         indices = np.where(mask)[0]
 
-        y_st = self.stations_xy[indices, 1] if len(indices) > 0 else np.array(
-            [self.y_nodes[self.n_pad + self.ny // 2]]
+        y_st = (
+            self.stations_xy[indices, 1]
+            if len(indices) > 0
+            else np.array([self.y_nodes[self.n_pad + self.ny // 2]])
         )
 
-        rho_yz = self.resistivity[:, :, xi]   # (nz, ny)
-        g2d    = Grid2D(
-            dx=self.dy, dz=self.dz,
+        rho_yz = self.resistivity[:, :, xi]  # (nz, ny)
+        g2d = Grid2D(
+            dx=self.dy,
+            dz=self.dz,
             resistivity=rho_yz,
             x_stations=y_st,
             n_pad=self.n_pad,
         )
         return g2d, indices
 
-    def column_profile_3d(self, xi: int, yi: int) -> tuple[np.ndarray, np.ndarray]:
+    def column_profile_3d(
+        self, xi: int, yi: int
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return the 1-D resistivity/thickness profile at cell (xi, yi).
 
         Parameters
@@ -323,32 +363,76 @@ class Grid3D:
         cx, cy, cz = self._cx, self._cy, self._cz
         rho = self.resistivity
 
-        xn = (self.x_nodes[self.n_pad: self.nx + 1 - self.n_pad]
-              if clip_core and self.n_pad else self.x_nodes)
-        yn = (self.y_nodes[self.n_pad: self.ny + 1 - self.n_pad]
-              if clip_core and self.n_pad else self.y_nodes)
-        zn = (self.z_nodes[: self.nz + 1 - self.n_pad]
-              if clip_core and self.n_pad else self.z_nodes)
+        xn = (
+            self.x_nodes[self.n_pad : self.nx + 1 - self.n_pad]
+            if clip_core and self.n_pad
+            else self.x_nodes
+        )
+        yn = (
+            self.y_nodes[self.n_pad : self.ny + 1 - self.n_pad]
+            if clip_core and self.n_pad
+            else self.y_nodes
+        )
+        zn = (
+            self.z_nodes[: self.nz + 1 - self.n_pad]
+            if clip_core and self.n_pad
+            else self.z_nodes
+        )
 
         # midpoint indices in core
-        mid_y = self.n_pad + (self.ny - 2 * self.n_pad) // 2 if self.n_pad else self.ny // 2
-        mid_x = self.n_pad + (self.nx - 2 * self.n_pad) // 2 if self.n_pad else self.nx // 2
+        mid_y = (
+            self.n_pad + (self.ny - 2 * self.n_pad) // 2
+            if self.n_pad
+            else self.ny // 2
+        )
+        mid_x = (
+            self.n_pad + (self.nx - 2 * self.n_pad) // 2
+            if self.n_pad
+            else self.nx // 2
+        )
         mid_z = (self.nz - self.n_pad) // 2 if self.n_pad else self.nz // 2
 
         slices = [
-            (rho[cz, mid_y, cx], xn, zn, "x (m)", "z (m)",
-             f"XZ slice (y = {self.y_centers[mid_y]:.0f} m)"),
-            (rho[cz, cy, mid_x], yn, zn, "y (m)", "z (m)",
-             f"YZ slice (x = {self.x_centers[mid_x]:.0f} m)"),
-            (rho[mid_z, cy, cx], xn, yn, "x (m)", "y (m)",
-             f"XY slice (z = {self.z_centers[mid_z]:.0f} m)"),
+            (
+                rho[cz, mid_y, cx],
+                xn,
+                zn,
+                "x (m)",
+                "z (m)",
+                f"XZ slice (y = {self.y_centers[mid_y]:.0f} m)",
+            ),
+            (
+                rho[cz, cy, mid_x],
+                yn,
+                zn,
+                "y (m)",
+                "z (m)",
+                f"YZ slice (x = {self.x_centers[mid_x]:.0f} m)",
+            ),
+            (
+                rho[mid_z, cy, cx],
+                xn,
+                yn,
+                "x (m)",
+                "y (m)",
+                f"XY slice (z = {self.z_centers[mid_z]:.0f} m)",
+            ),
         ]
 
-        fig, axs = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+        fig, axs = plt.subplots(
+            1, 3, figsize=figsize, constrained_layout=True
+        )
         for ax, (data, h_nodes, v_nodes, xlb, ylb, ttl) in zip(axs, slices):
             d = np.log10(np.maximum(data, 1e-12)) if log_scale else data
-            pc = ax.pcolormesh(h_nodes, v_nodes, d, cmap=cmap, shading="flat",
-                               vmin=vmin, vmax=vmax)
+            pc = ax.pcolormesh(
+                h_nodes,
+                v_nodes,
+                d,
+                cmap=cmap,
+                shading="flat",
+                vmin=vmin,
+                vmax=vmax,
+            )
             if ylb == "z (m)":
                 ax.invert_yaxis()
             ax.set_xlabel(xlb, fontsize=8)
@@ -356,17 +440,24 @@ class Grid3D:
             ax.set_title(ttl, fontsize=8, pad=4)
             cb = fig.colorbar(pc, ax=ax, pad=0.02, shrink=0.95, aspect=22)
             cb.ax.tick_params(labelsize=7)
-            lbl = (r"$\log_{10}\rho$  (Ω·m)" if log_scale else r"$\rho$  (Ω·m)")
+            lbl = r"$\log_{10}\rho$  (Ω·m)" if log_scale else r"$\rho$  (Ω·m)"
             cb.set_label(lbl, fontsize=7)
 
         if show_stations and self.n_stations > 0:
             # Draw stations on the top XY-slice panel (axs[2])
             axs[2].plot(
-                self.stations_xy[:, 0], self.stations_xy[:, 1],
-                "v", ms=5, color="k", label="stations", zorder=5,
+                self.stations_xy[:, 0],
+                self.stations_xy[:, 1],
+                "v",
+                ms=5,
+                color="k",
+                label="stations",
+                zorder=5,
             )
 
-        fig.suptitle(self.name or "3-D resistivity model", fontsize=10, y=1.01)
+        fig.suptitle(
+            self.name or "3-D resistivity model", fontsize=10, y=1.01
+        )
         return fig, axs
 
     def __repr__(self) -> str:
@@ -375,7 +466,8 @@ class Grid3D:
             f"x_ext={self.x_extent:.0f} m, y_ext={self.y_extent:.0f} m, "
             f"z_ext={self.z_extent:.0f} m, "
             f"n_stations={self.n_stations}, n_pad={self.n_pad}"
-            + (f", name={self.name!r}" if self.name else "") + ")"
+            + (f", name={self.name!r}" if self.name else "")
+            + ")"
         )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -427,8 +519,8 @@ class Grid3D:
         dy_core = np.full(ny, y_max / ny)
         dz_core = np.full(nz, z_max / nz)
 
-        dx_pad = make_padding(dx_core[0],  n_pad, pad_factor)
-        dy_pad = make_padding(dy_core[0],  n_pad, pad_factor)
+        dx_pad = make_padding(dx_core[0], n_pad, pad_factor)
+        dy_pad = make_padding(dy_core[0], n_pad, pad_factor)
         dz_pad = make_padding(dz_core[-1], n_pad, pad_factor)
 
         dx_full = np.concatenate([dx_pad[::-1], dx_core, dx_pad])
@@ -447,7 +539,9 @@ class Grid3D:
         stations = np.column_stack([gx.ravel(), gy.ravel()])
 
         return cls(
-            dx=dx_full, dy=dy_full, dz=dz_full,
+            dx=dx_full,
+            dy=dy_full,
+            dz=dz_full,
             resistivity=rho_grid,
             stations_xy=stations,
             n_pad=n_pad,
@@ -460,7 +554,12 @@ class Grid3D:
         bg_rho: float = 100.0,
         anomaly_rho: float = 5.0,
         bounds: tuple[float, float, float, float, float, float] = (
-            2_000.0, 6_000.0, 2_000.0, 6_000.0, 300.0, 1_500.0
+            2_000.0,
+            6_000.0,
+            2_000.0,
+            6_000.0,
+            300.0,
+            1_500.0,
         ),
         *,
         nx: int = 25,
@@ -505,10 +604,16 @@ class Grid3D:
         """
         g = cls.halfspace(
             rho=bg_rho,
-            nx=nx, ny=ny, nz=nz,
-            x_max=x_max, y_max=y_max, z_max=z_max,
-            n_pad=n_pad, pad_factor=pad_factor,
-            nx_stations=nx_stations, ny_stations=ny_stations,
+            nx=nx,
+            ny=ny,
+            nz=nz,
+            x_max=x_max,
+            y_max=y_max,
+            z_max=z_max,
+            n_pad=n_pad,
+            pad_factor=pad_factor,
+            nx_stations=nx_stations,
+            ny_stations=ny_stations,
             name=name or f"bg={bg_rho} + block={anomaly_rho} Ω·m",
         )
 
@@ -574,21 +679,29 @@ class Grid3D:
 
         g = cls.halfspace(
             rho=100.0,
-            nx=nx, ny=ny, nz=nz,
-            x_max=x_max, y_max=y_max, z_max=z_max,
-            n_pad=n_pad, pad_factor=pad_factor,
-            nx_stations=nx_stations, ny_stations=ny_stations,
+            nx=nx,
+            ny=ny,
+            nz=nz,
+            x_max=x_max,
+            y_max=y_max,
+            z_max=z_max,
+            n_pad=n_pad,
+            pad_factor=pad_factor,
+            nx_stations=nx_stations,
+            ny_stations=ny_stations,
             name=name,
         )
         nx_tot, ny_tot, nz_tot = g.nx, g.ny, g.nz
 
         # Background layers
-        layer_bounds = np.round(np.linspace(0, nz_tot, n_layers + 1)).astype(int)
+        layer_bounds = np.round(np.linspace(0, nz_tot, n_layers + 1)).astype(
+            int
+        )
         log_lo, log_hi = np.log10(rho_min), np.log10(rho_max)
         rho_3d = np.ones((nz_tot, ny_tot, nx_tot))
         for k in range(n_layers):
             rho_k = 10.0 ** rng.uniform(log_lo, log_hi)
-            rho_3d[layer_bounds[k]: layer_bounds[k + 1], :, :] = rho_k
+            rho_3d[layer_bounds[k] : layer_bounds[k + 1], :, :] = rho_k
 
         if lateral_variation:
             # 2-D Gaussian random field in xy for each depth layer
@@ -601,11 +714,14 @@ class Grid3D:
                 sx = max(1.0, corr_length / dx_mean)
                 sy = max(1.0, corr_length / dy_mean)
                 from scipy.ndimage import gaussian_filter
-                smooth = gaussian_filter(noise, sigma=[sy, sx], mode="reflect")
-                smooth /= max(smooth.std(), 1e-10)   # normalise to unit std
-                log_perturb = 0.3 * smooth            # ±30% log perturbation
+
+                smooth = gaussian_filter(
+                    noise, sigma=[sy, sx], mode="reflect"
+                )
+                smooth /= max(smooth.std(), 1e-10)  # normalise to unit std
+                log_perturb = 0.3 * smooth  # ±30% log perturbation
                 rho_3d[iz] = np.clip(
-                    rho_3d[iz] * 10.0 ** log_perturb, rho_min, rho_max
+                    rho_3d[iz] * 10.0**log_perturb, rho_min, rho_max
                 )
 
         g.resistivity = rho_3d

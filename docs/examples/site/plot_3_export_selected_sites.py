@@ -64,7 +64,6 @@ from pycsamt.site import (
     write_sites,
 )
 
-
 edi_root = ROOT / "data" / "AMT" / "WILLY_DATA"
 export_root = Path("site_gallery_exports")
 export_dir = export_root / "line18_first5"
@@ -95,7 +94,9 @@ selected_sites = by_index(selected_sites, [0, 1, 2, 3, 4])
 selected_sites = drop_empty(selected_sites)
 
 if len(selected_sites) == 0:
-    raise RuntimeError("The export selection is empty; nothing can be written.")
+    raise RuntimeError(
+        "The export selection is empty; nothing can be written."
+    )
 
 selected_table = SitesReport(selected_sites).to_dataframe()
 
@@ -236,7 +237,9 @@ print("Archive members:")
 print("\n".join(archive_names))
 
 if archive_names != sorted(written_filenames):
-    raise RuntimeError("Zip archive contents do not match the directory export.")
+    raise RuntimeError(
+        "Zip archive contents do not match the directory export."
+    )
 
 print("Archive contents match the directory export.")
 
@@ -251,10 +254,16 @@ reloaded_sites = ensure_sites(export_dir, recursive=False, verbose=0)
 reloaded_table = SitesReport(reloaded_sites).to_dataframe()
 
 print(f"Reloaded exported stations: {len(reloaded_sites)}")
-print(reloaded_table[["station", "nfreq", "freq_min", "freq_max"]].to_string(index=False))
+print(
+    reloaded_table[["station", "nfreq", "freq_min", "freq_max"]].to_string(
+        index=False
+    )
+)
 
 if len(reloaded_sites) != len(selected_sites):
-    raise RuntimeError("Reloaded station count does not match selected station count.")
+    raise RuntimeError(
+        "Reloaded station count does not match selected station count."
+    )
 
 # %%
 # 8. What to keep from this pattern

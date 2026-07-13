@@ -9,6 +9,7 @@ for advanced data conditioning and analysis, such as static shift
 correction, filtering, and data merging, mirroring the
 capabilities of Zonge's ASTATIC program.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from .base import AVGFrame
 
 __all__ = ["ASTATIC"]
+
 
 class ASTATIC(Zonge):
     r"""A class for advanced processing of Zonge AVG data.
@@ -117,14 +119,14 @@ class ASTATIC(Zonge):
 
     def __init__(
         self,
-        avg_data: BaseAVG | AMTAVG | None=None,
+        avg_data: BaseAVG | AMTAVG | None = None,
         verbose: bool = False,
-        **kws
-        ):
-        super().__init__( verbose = verbose )
+        **kws,
+    ):
+        super().__init__(verbose=verbose)
         self.avg: BaseAVG | AMTAVG | None = avg_data
 
-        if self.avg is not None :
+        if self.avg is not None:
             self.read(avg_data)
 
     def read(
@@ -202,9 +204,7 @@ class ASTATIC(Zonge):
         if isinstance(source, (str, Path, pd.DataFrame)):
             # If source is a file or raw DataFrame, create a new
             # AMTAVG instance to read and process it.
-            self.avg = AMTAVG(verbose=self.verbose).read(
-                source, meta=meta
-            )
+            self.avg = AMTAVG(verbose=self.verbose).read(source, meta=meta)
         elif hasattr(source, "__has_read__"):
             # If source is an AVG-like object, check if it's loaded
             has_read(source)
@@ -218,7 +218,7 @@ class ASTATIC(Zonge):
             src_name = (
                 self.avg._source_path.name
                 if self.avg._source_path
-                else 'DataFrame'
+                else "DataFrame"
             )
             self._logger.info(
                 f"ASTATIC processor initialized with data from '{src_name}'."
@@ -280,9 +280,9 @@ class ASTATIC(Zonge):
         has_read(self, attributes="avg")
         df = self.avg.df.copy()
 
-        required = ['emag', 'ephz', 'freq']
+        required = ["emag", "ephz", "freq"]
         missing = [c for c in required if c not in df.columns]
-        if missing :
+        if missing:
             raise ProcessingError(
                 "DataFrame is missing required columns for capacitive "
                 f"coupling correction: {missing}"
@@ -302,27 +302,27 @@ class ASTATIC(Zonge):
 
         Zc = _resolve_param(contact_resistance, "contact_resistance")
         L = _resolve_param(setup_length, "setup_length")
-        C_per_m = _resolve_param(
-            wire_capacitance, "wire_capacitance"
-        ) * 1e-12  # pF/m to F/m
+        C_per_m = (
+            _resolve_param(wire_capacitance, "wire_capacitance") * 1e-12
+        )  # pF/m to F/m
 
         # --- Perform Correction ---
-        omega = 2 * PI * df['freq']
+        omega = 2 * PI * df["freq"]
         # Total capacitance C = C_per_meter * Length
         C_total = C_per_m * L
         # Capacitive admittance Yc = i * omega * C
         Yc = 1j * omega * C_total
 
         # Reconstruct the complex measured E-field
-        e_phase_rad = df['ephz'] * 1e-3
-        E_measured = df['emag'] * np.exp(1j * e_phase_rad)
+        e_phase_rad = df["ephz"] * 1e-3
+        E_measured = df["emag"] * np.exp(1j * e_phase_rad)
 
         # Apply the correction
         E_corrected = E_measured / (1 + Zc * Yc)
 
         # Deconstruct back into magnitude and phase
-        df['emag'] = np.abs(E_corrected)
-        df['ephz'] = np.angle(E_corrected, deg=False) * 1000.0 # to mrad
+        df["emag"] = np.abs(E_corrected)
+        df["ephz"] = np.angle(E_corrected, deg=False) * 1000.0  # to mrad
 
         if update_components:
             # Update the main AVG object and trigger recalculation
@@ -334,7 +334,7 @@ class ASTATIC(Zonge):
                     "AVG object updated."
                 )
 
-        return df[['emag', 'ephz']]
+        return df[["emag", "ephz"]]
 
     def correct_static_shift(
         self,
@@ -381,59 +381,64 @@ class ASTATIC(Zonge):
             raise NotReadError("AVG object's DataFrame is not loaded.")
 
         df = self.avg.df
-        required = ['station', 'freq', 'rho', 'phase', 'comp']
+        required = ["station", "freq", "rho", "phase", "comp"]
         if not all(c in df.columns for c in required):
             raise ProcessingError(
                 "DataFrame must contain 'station', 'freq', 'rho', "
                 "'phase', and 'comp' columns."
             )
 
-        stations = sorted(df['station'].unique())
+        stations = sorted(df["station"].unique())
 
         # Interpolate data to the reference frequency for all stations
         interp_data = {}
         for station in stations:
-            st_data = df[df['station'] == station].sort_values('freq')
-            if len(st_data) < 2: continue
+            st_data = df[df["station"] == station].sort_values("freq")
+            if len(st_data) < 2:
+                continue
 
-            log_freq = np.log(st_data['freq'])
+            log_freq = np.log(st_data["freq"])
             interp_data[station] = {
-                'rho': np.exp(np.interp(
-                    np.log(reference_freq), log_freq, np.log(st_data['rho'])
-                )),
-                'phase': np.interp(
-                    np.log(reference_freq), log_freq, st_data['phase']
-                )
+                "rho": np.exp(
+                    np.interp(
+                        np.log(reference_freq),
+                        log_freq,
+                        np.log(st_data["rho"]),
+                    )
+                ),
+                "phase": np.interp(
+                    np.log(reference_freq), log_freq, st_data["phase"]
+                ),
             }
 
-        rho_profile = pd.Series(
-            {s: d['rho'] for s, d in interp_data.items()}
-        )
+        rho_profile = pd.Series({s: d["rho"] for s, d in interp_data.items()})
 
         # Dispatch to the appropriate filter
-        if filter_method == 'tma':
+        if filter_method == "tma":
             smoothed_rho = tma(rho_profile, **kwargs)
 
-        elif filter_method in ('flma', 'ama'):
+        elif filter_method in ("flma", "ama"):
             omega = 2 * PI * reference_freq
             phase_profile = pd.Series(
-                {s: d['phase'] for s, d in interp_data.items()}
+                {s: d["phase"] for s, d in interp_data.items()}
             )
             # Calculate complex impedance at the reference frequency
-            z_profile = np.sqrt(
-                rho_profile * omega * MU_0
-            ) * np.exp(1j * phase_profile * 1e-3)
+            z_profile = np.sqrt(rho_profile * omega * MU_0) * np.exp(
+                1j * phase_profile * 1e-3
+            )
 
-            if filter_method == 'flma':
+            if filter_method == "flma":
                 smoothed_z = flma(z_profile, rho_profile.index, **kwargs)
-            else: # ama
+            else:  # ama
                 smoothed_z = ama(
-                    z_profile, rho_profile.index, frequency=reference_freq,
-                    **kwargs
+                    z_profile,
+                    rho_profile.index,
+                    frequency=reference_freq,
+                    **kwargs,
                 )
 
             # Convert smoothed impedance back to resistivity
-            smoothed_rho = (np.abs(smoothed_z)**2) / (omega * MU_0)
+            smoothed_rho = (np.abs(smoothed_z) ** 2) / (omega * MU_0)
         else:
             raise ValueError(f"Unknown filter method: '{filter_method}'")
 
@@ -441,8 +446,8 @@ class ASTATIC(Zonge):
 
         if update_components:
             df_copy = df.copy()
-            df_copy['rho'] *= df_copy['station'].map(shift_factors)
-            df_copy['rho_sc'] = df_copy['rho']
+            df_copy["rho"] *= df_copy["station"].map(shift_factors)
+            df_copy["rho_sc"] = df_copy["rho"]
 
             self.avg.info.read(df_copy, self.avg.info.meta)
             if self.avg.verbose:
@@ -451,10 +456,11 @@ class ASTATIC(Zonge):
                     "AVG object updated."
                 )
 
-        return pd.DataFrame({
-            "station": stations,
-            "rho_original": rho_profile,
-            "rho_smoothed": smoothed_rho,
-            "shift_factor": shift_factors,
-        })
-
+        return pd.DataFrame(
+            {
+                "station": stations,
+                "rho_original": rho_profile,
+                "rho_smoothed": smoothed_rho,
+                "shift_factor": shift_factors,
+            }
+        )

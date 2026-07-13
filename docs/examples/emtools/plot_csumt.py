@@ -61,11 +61,22 @@ from pycsamt.emtools.csumt import F_MAX_CSUMT, F_MIN_CSUMT
 
 freq = np.logspace(-1, 6, 300)  # 0.1 Hz to 1 MHz - spans AMT and CSUMT
 fig, ax = plt.subplots(figsize=(7, 5))
-for rho, color in zip([10.0, 100.0, 1000.0], ["#1f77b4", "#2ca02c", "#d62728"]):
-    ax.loglog(freq, bostick_depth_from_rho(rho, freq), color=color,
-              label=fr"$\rho_a$ = {rho:g} $\Omega\cdot$m")
-ax.axvspan(F_MIN_CSUMT, F_MAX_CSUMT, color="0.85", zorder=0,
-           label="CSUMT band (9.6 kHz-614.4 kHz)")
+for rho, color in zip(
+    [10.0, 100.0, 1000.0], ["#1f77b4", "#2ca02c", "#d62728"]
+):
+    ax.loglog(
+        freq,
+        bostick_depth_from_rho(rho, freq),
+        color=color,
+        label=rf"$\rho_a$ = {rho:g} $\Omega\cdot$m",
+    )
+ax.axvspan(
+    F_MIN_CSUMT,
+    F_MAX_CSUMT,
+    color="0.85",
+    zorder=0,
+    label="CSUMT band (9.6 kHz-614.4 kHz)",
+)
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel("Bostick depth D(f)  (m)")
 ax.set_title(r"$D(f) = 356\sqrt{\rho_a/f}$")
@@ -90,8 +101,10 @@ ax.grid(True, which="both", alpha=0.3)
 rho_design = 300.0  # close to this survey's own median rho_a (below)
 d_shallow = float(bostick_depth_from_rho(rho_design, F_MAX_CSUMT))
 d_deep = float(bostick_depth_from_rho(rho_design, F_MIN_CSUMT))
-print(f"At rho={rho_design:g} Ohm.m, CSUMT band resolves depths "
-      f"{d_shallow:.1f}-{d_deep:.1f} m")
+print(
+    f"At rho={rho_design:g} Ohm.m, CSUMT band resolves depths "
+    f"{d_shallow:.1f}-{d_deep:.1f} m"
+)
 
 # %%
 # 3. Designing a frequency schedule for target depths
@@ -106,16 +119,32 @@ sched = frequency_schedule(targets, rho_design)
 recovered_depth = bostick_depth_from_rho(rho_design, sched)
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.scatter(targets, frequency_for_depth(targets, rho_design), s=60,
-           facecolors="none", edgecolors="0.3", label="requested targets", zorder=3)
-ax.scatter(recovered_depth, sched, s=40, color="#d62728", marker="x",
-           label="kept in schedule", zorder=4)
+ax.scatter(
+    targets,
+    frequency_for_depth(targets, rho_design),
+    s=60,
+    facecolors="none",
+    edgecolors="0.3",
+    label="requested targets",
+    zorder=3,
+)
+ax.scatter(
+    recovered_depth,
+    sched,
+    s=40,
+    color="#d62728",
+    marker="x",
+    label="kept in schedule",
+    zorder=4,
+)
 ax.axhspan(F_MIN_CSUMT, F_MAX_CSUMT, color="0.9", zorder=0)
 ax.set_yscale("log")
 ax.set_xlabel("Depth (m)")
 ax.set_ylabel("Frequency (Hz)")
 targets_str = ", ".join(f"{t:g}" for t in targets)
-ax.set_title(f"Frequency schedule for targets [{targets_str}] m  (rho={rho_design:g})")
+ax.set_title(
+    f"Frequency schedule for targets [{targets_str}] m  (rho={rho_design:g})"
+)
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -145,8 +174,10 @@ print(f"schedule with min_resolution_m=5m: {len(sched_padded)} frequencies")
 
 survey = load_survey("amt_l18plt")
 bd = bostick_depth(survey)
-print(f"measured rho_a: {bd['rho_a_ohmm'].min():.1f}-{bd['rho_a_ohmm'].max():.1f} "
-      f"Ohm.m (median {bd['rho_a_ohmm'].median():.0f})")
+print(
+    f"measured rho_a: {bd['rho_a_ohmm'].min():.1f}-{bd['rho_a_ohmm'].max():.1f} "
+    f"Ohm.m (median {bd['rho_a_ohmm'].median():.0f})"
+)
 
 station = "18-001A"
 d = bd[bd["station"] == station].sort_values("period_s")
@@ -179,16 +210,22 @@ cov = depth_coverage_table(survey)
 cov_sorted = cov.sort_values("depth_max_m")
 
 fig, ax = plt.subplots(figsize=(7, 6))
-ax.barh(cov_sorted["station"], cov_sorted["depth_max_m"] / 1000.0, color="#1f77b4")
+ax.barh(
+    cov_sorted["station"], cov_sorted["depth_max_m"] / 1000.0, color="#1f77b4"
+)
 ax.set_xlabel("Deepest Bostick depth reached (km)")
 ax.tick_params(axis="y", labelsize=6)
 ax.set_title("L18PLT — per-station depth coverage")
 fig.tight_layout()
 
-print(f"shallowest max-depth station: {cov_sorted.iloc[0]['station']} "
-      f"({cov_sorted.iloc[0]['depth_max_m']:.0f} m)")
-print(f"deepest max-depth station: {cov_sorted.iloc[-1]['station']} "
-      f"({cov_sorted.iloc[-1]['depth_max_m']:.0f} m)")
+print(
+    f"shallowest max-depth station: {cov_sorted.iloc[0]['station']} "
+    f"({cov_sorted.iloc[0]['depth_max_m']:.0f} m)"
+)
+print(
+    f"deepest max-depth station: {cov_sorted.iloc[-1]['station']} "
+    f"({cov_sorted.iloc[-1]['depth_max_m']:.0f} m)"
+)
 
 # %%
 # **Reading this figure.** All 28 stations share the same 53-frequency
@@ -238,18 +275,35 @@ binned = (
 )
 
 rho_med = float(bd["rho_a_ohmm"].median())
-f_sweep = np.logspace(np.log10(bd["freq_hz"].min()), np.log10(bd["freq_hz"].max()), 40)
+f_sweep = np.logspace(
+    np.log10(bd["freq_hz"].min()), np.log10(bd["freq_hz"].max()), 40
+)
 analytic_depth, analytic_res = [], []
 for f_lo, f_hi in zip(f_sweep[:-1], f_sweep[1:]):
-    analytic_depth.append(float(np.sqrt(
-        bostick_depth_from_rho(rho_med, f_lo) * bostick_depth_from_rho(rho_med, f_hi)
-    )))
+    analytic_depth.append(
+        float(
+            np.sqrt(
+                bostick_depth_from_rho(rho_med, f_lo)
+                * bostick_depth_from_rho(rho_med, f_hi)
+            )
+        )
+    )
     analytic_res.append(vertical_resolution_pair(rho_med, f_lo, f_hi))
 
 fig, ax = plt.subplots(figsize=(7, 5))
-ax.loglog(centers[binned.index - 1], binned.values, "o-", label="measured (median, binned)")
-ax.loglog(analytic_depth, analytic_res, "--", color="0.3",
-          label=fr"analytic, $\rho$={rho_med:.0f} $\Omega\cdot$m")
+ax.loglog(
+    centers[binned.index - 1],
+    binned.values,
+    "o-",
+    label="measured (median, binned)",
+)
+ax.loglog(
+    analytic_depth,
+    analytic_res,
+    "--",
+    color="0.3",
+    label=rf"analytic, $\rho$={rho_med:.0f} $\Omega\cdot$m",
+)
 ax.set_xlabel("Depth (m)")
 ax.set_ylabel(r"Vertical resolution $\Delta D$ (m)")
 ax.set_title("L18PLT — resolution coarsens with depth")

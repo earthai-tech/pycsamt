@@ -20,6 +20,7 @@ Example
 >>> bh.tres_at_depth(95.0)
 180.0
 """
+
 from __future__ import annotations
 
 import csv
@@ -39,6 +40,7 @@ PathLike = Union[str, Path]
 # Interval
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Interval:
     """A single depth interval in a borehole log.
@@ -56,10 +58,10 @@ class Interval:
         ``None`` when no electrical measurement is available.
     """
 
-    top:          float
-    bottom:       float
-    lithology:    str
-    resistivity:  float | None = None
+    top: float
+    bottom: float
+    lithology: str
+    resistivity: float | None = None
 
     # ------------------------------------------------------------------
 
@@ -80,6 +82,7 @@ class Interval:
 # ---------------------------------------------------------------------------
 # Borehole
 # ---------------------------------------------------------------------------
+
 
 class Borehole:
     """Borehole / well log with depth-interval data.
@@ -218,8 +221,11 @@ class Borehole:
                         res = float(res_raw)
                     except ValueError:
                         pass
-                intervals.append(Interval(top=top, bottom=bot,
-                                          lithology=lith, resistivity=res))
+                intervals.append(
+                    Interval(
+                        top=top, bottom=bot, lithology=lith, resistivity=res
+                    )
+                )
 
         return cls(name, x, intervals, collar_elevation=collar_elevation)
 
@@ -320,7 +326,11 @@ class Borehole:
 
         depths = np.array(curves[dept_key])
         resis = np.array(curves.get(res_key, [null_val] * len(depths)))
-        liths = np.array(curves.get(lith_key, [0] * len(depths))) if lith_key else None
+        liths = (
+            np.array(curves.get(lith_key, [0] * len(depths)))
+            if lith_key
+            else None
+        )
 
         mask_null = np.isclose(resis, null_val, atol=1.0)
         resis = np.where(mask_null, np.nan, resis)
@@ -328,7 +338,9 @@ class Borehole:
         # Build intervals: group consecutive same-lithology / same-depth-step
         intervals: list[Interval] = []
         if len(depths) < 2:
-            return cls(well_name, x, intervals, collar_elevation=collar_elevation)
+            return cls(
+                well_name, x, intervals, collar_elevation=collar_elevation
+            )
 
         ds = step if step is not None else float(np.median(np.diff(depths)))
 
@@ -344,12 +356,19 @@ class Borehole:
             top = float(depths[i])
             bottom = float(depths[j - 1]) + ds
             rho_chunk = resis[i:j]
-            rho_mean = float(np.nanmean(rho_chunk)) if not np.all(np.isnan(rho_chunk)) else None
-            intervals.append(Interval(
-                top=top, bottom=bottom,
-                lithology=str(lith_i),
-                resistivity=rho_mean,
-            ))
+            rho_mean = (
+                float(np.nanmean(rho_chunk))
+                if not np.all(np.isnan(rho_chunk))
+                else None
+            )
+            intervals.append(
+                Interval(
+                    top=top,
+                    bottom=bottom,
+                    lithology=str(lith_i),
+                    resistivity=rho_mean,
+                )
+            )
             i = j
 
         return cls(well_name, x, intervals, collar_elevation=collar_elevation)
@@ -363,7 +382,9 @@ class Borehole:
         try:
             import pandas as pd
         except ImportError as exc:
-            raise ImportError("pandas is required for Borehole.to_dataframe") from exc
+            raise ImportError(
+                "pandas is required for Borehole.to_dataframe"
+            ) from exc
         rows = [
             {
                 "top": iv.top,

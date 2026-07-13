@@ -37,8 +37,7 @@ def _load_edi(p: Path) -> EDIFile:
 
 def _dup_edi(tmp_path: Path, src: Path, stem: str) -> Path:
     dst = tmp_path / f"{stem}.edi"
-    dst.write_text(src.read_text(encoding="utf-8"),
-                   encoding="utf-8")
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dst
 
 
@@ -50,8 +49,7 @@ def test_is_pathlike_and_edi_flags(simulated_edi: Path):
     assert not is_edi_file("not-edi")
 
 
-def test_iter_and_as_collection(tmp_path: Path,
-                                simulated_edi: Path):
+def test_iter_and_as_collection(tmp_path: Path, simulated_edi: Path):
     p1 = _dup_edi(tmp_path, simulated_edi, "A01")
     p2 = _dup_edi(tmp_path, simulated_edi, "A02")
     ed1 = _load_edi(p1)
@@ -91,8 +89,7 @@ def test_get_set_coords_inplace(simulated_edi: Path):
     assert math.isfinite(c0.lon)
     assert math.isfinite(c0.elev)
 
-    set_coords(ed, lat=26.5, lon=11.25, elev=1200.0,
-               inplace=True)
+    set_coords(ed, lat=26.5, lon=11.25, elev=1200.0, inplace=True)
     c1 = get_coords(ed)
     assert c1.lat == pytest.approx(26.5, rel=0, abs=1e-6)
     assert c1.lon == pytest.approx(11.25, rel=0, abs=1e-6)
@@ -143,8 +140,7 @@ def test_freq_and_selectors(simulated_edi: Path):
     assert set(np.round(f[sel3], 5)) == {100.0, 200.0}
 
 
-def test_match_and_select_by_name(tmp_path: Path,
-                                  simulated_edi: Path):
+def test_match_and_select_by_name(tmp_path: Path, simulated_edi: Path):
     p = _dup_edi(tmp_path, simulated_edi, "S0")
     ed = _load_edi(p)
     edA = set_station_name(ed, "A01", inplace=False)
@@ -197,9 +193,9 @@ def test_angles_and_units():
 
 
 @pytest.mark.parametrize("use_collection", [False, True])
-def test_select_by_name_on_collection(tmp_path: Path,
-                                      simulated_edi: Path,
-                                      use_collection: bool):
+def test_select_by_name_on_collection(
+    tmp_path: Path, simulated_edi: Path, use_collection: bool
+):
     p1 = _dup_edi(tmp_path, simulated_edi, "U1")
     p2 = _dup_edi(tmp_path, simulated_edi, "U2")
     ed1 = set_station_name(_load_edi(p1), "X11", inplace=True)

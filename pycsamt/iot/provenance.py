@@ -311,7 +311,9 @@ class ProvenanceRecord(PyCSAMTObject):
             return None
         return float(self.occupation_end - self.occupation_start)
 
-    def add_raw_file(self, path: str, *, algo: str = "sha256") -> dict[str, Any]:
+    def add_raw_file(
+        self, path: str, *, algo: str = "sha256"
+    ) -> dict[str, Any]:
         """Hash *path* and attach the integrity record."""
         record = hash_raw_file(path, algo=algo)
         self.raw_files.append(record)
@@ -336,7 +338,8 @@ class ProvenanceRecord(PyCSAMTObject):
             battery_status=self.battery_status,
             accepted_band_hz=(
                 list(self.accepted_band_hz)
-                if self.accepted_band_hz is not None else None
+                if self.accepted_band_hz is not None
+                else None
             ),
             field_notes=self.field_notes,
             qc_decisions=list(self.qc_decisions),
@@ -370,16 +373,20 @@ class AcquisitionManifest(PyCSAMTObject):
     def validate(self) -> None:
         self.survey_id = _c.as_nonempty_str(self.survey_id, "survey_id")
         self.records = [
-            r if isinstance(r, ProvenanceRecord)
+            r
+            if isinstance(r, ProvenanceRecord)
             else ProvenanceRecord(**dict(r))
             for r in list(self.records or [])
         ]
         if not self.environment:
             self.environment = _default_environment()
 
-    def add_record(self, record: ProvenanceRecord | Mapping[str, Any]) -> None:
+    def add_record(
+        self, record: ProvenanceRecord | Mapping[str, Any]
+    ) -> None:
         self.records.append(
-            record if isinstance(record, ProvenanceRecord)
+            record
+            if isinstance(record, ProvenanceRecord)
             else ProvenanceRecord(**dict(record))
         )
 
@@ -430,7 +437,9 @@ class AcquisitionManifest(PyCSAMTObject):
         """Return the QC decisions as a tamper-evident hash chain."""
         return hash_chain(self.qc_decisions)
 
-    def sign(self, key: str | bytes, *, algo: str = "sha256") -> dict[str, Any]:
+    def sign(
+        self, key: str | bytes, *, algo: str = "sha256"
+    ) -> dict[str, Any]:
         """Return an HMAC-signed envelope around the manifest.
 
         The result wraps the manifest payload under ``manifest`` alongside
@@ -488,7 +497,9 @@ def build_acquisition_manifest(
         method=method,
         operator=operator,
         records=[
-            r if isinstance(r, ProvenanceRecord) else ProvenanceRecord(**dict(r))
+            r
+            if isinstance(r, ProvenanceRecord)
+            else ProvenanceRecord(**dict(r))
             for r in list(records or [])
         ],
         devices=[dict(d) for d in list(devices or [])],
@@ -525,7 +536,8 @@ def export_station_audit(
 ) -> str:
     """Write a single-station provenance audit to *path* (JSON)."""
     prov = (
-        record if isinstance(record, ProvenanceRecord)
+        record
+        if isinstance(record, ProvenanceRecord)
         else ProvenanceRecord(**dict(record))
     )
     parent = os.path.dirname(os.path.abspath(path))

@@ -17,11 +17,8 @@ from typing import (
 from ..exceptions import EdIDataError, FileHandlingError
 
 _TAG_RE = re.compile(r"^\s*>(=)?\s*([A-Za-z0-9!.]+)")
-_FLOAT_RE = re.compile(
-    r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?"
-)
+_FLOAT_RE = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?")
 _NFREQ_RE = re.compile(r"\bNFREQ\s*=\s*(\d+)\b", re.IGNORECASE)
-
 
 
 def _strip_norm(s: str) -> str:
@@ -35,6 +32,7 @@ def _to_int_or_none(v: Any) -> int | None:
         return int(float(v))
     except Exception:
         return None
+
 
 def _to_float_or_none(v: Any) -> float | None:
     if v in (None, "", "None"):
@@ -66,6 +64,7 @@ def _is_tag(line: str, tag: str) -> bool:
         return False
     return s.upper().startswith(tag.upper())
 
+
 def _extract_tag(line: str) -> str | None:
     s = line.strip()
     if not s.startswith(">"):
@@ -73,6 +72,7 @@ def _extract_tag(line: str) -> str | None:
     # up to first space
     parts = s.split(None, 1)
     return parts[0]
+
 
 def _extract_tag_in(line: str) -> str | None:
     m = _TAG_RE.match(line)
@@ -141,7 +141,6 @@ def _has_any_data_block(tags: Iterable[str]) -> bool:
         ">TIPPHS",
     }
     return any(t in tagset for t in cand)
-
 
 
 class IsEdi(ABC):
@@ -299,22 +298,15 @@ class IsEdi(ABC):
         >>> IsEdi._assert_edi("survey01.edi", deep=True)
         True
         """
-        seg_url = (
-            "https://www.mtnet.info/docs/seg_mt_emap_1987.pdf"
-        )
-        base_msg = (
-            "Unrecognized SEG EDI file. See standard: "
-            f"{seg_url}"
-        )
+        seg_url = "https://www.mtnet.info/docs/seg_mt_emap_1987.pdf"
+        base_msg = f"Unrecognized SEG EDI file. See standard: {seg_url}"
 
         if file is None:
             raise FileHandlingError("NoneType not allowed")
 
         if isinstance(file, IsEdi):
             if not file.is_valid:
-                raise EdIDataError(
-                    "EDI object reports invalid state"
-                )
+                raise EdIDataError("EDI object reports invalid state")
             return True
 
         path = Path(file)  # type: ignore[arg-type]
@@ -324,18 +316,12 @@ class IsEdi(ABC):
         if not deep:
             if path.suffix.lower().lstrip(".") == "edi":
                 return True
-            raise EdIDataError(
-                "SEG-EDI files usually use '.edi' extension"
-            )
+            raise EdIDataError("SEG-EDI files usually use '.edi' extension")
 
         try:
-            text = path.read_text(
-                encoding="utf-8-sig", errors="replace"
-            )
+            text = path.read_text(encoding="utf-8-sig", errors="replace")
         except PermissionError:
-            raise PermissionError(
-                "Permission denied while reading file"
-            )
+            raise PermissionError("Permission denied while reading file")
 
         lines = text.splitlines()
 
@@ -357,14 +343,10 @@ class IsEdi(ABC):
             raise EdIDataError(base_msg)
 
         if not first_tag.startswith(">HEAD"):
-            raise EdIDataError(
-                f"{base_msg} (first block should be >HEAD)"
-            )
+            raise EdIDataError(f"{base_msg} (first block should be >HEAD)")
 
         if not last_tag.startswith(">END"):
-            raise EdIDataError(
-                f"{base_msg} (last block should be >END)"
-            )
+            raise EdIDataError(f"{base_msg} (last block should be >END)")
 
         # All top-level tags (upper-cased: '>HEAD', '>=MTSECT', ...)
         tags = list(_iter_blocks(lines))
@@ -372,7 +354,8 @@ class IsEdi(ABC):
         # Impedance-style markers
         have_freq = any(t.startswith(">FREQ") for t in tags)
         have_meas_section = any(
-            t in {
+            t
+            in {
                 ">=MTSECT",
                 ">=DEFINEMEAS",
                 ">=EMAPSECT",
@@ -382,43 +365,26 @@ class IsEdi(ABC):
         ) or any(t.startswith(">=DEFINEMEAS") for t in tags)
 
         # Spectra-style markers
-        have_spectra_sect = any(
-            t.startswith(">=SPECTRASECT") for t in tags
-        )
-        have_spectra_blocks = any(
-            t.startswith(">SPECTRA") for t in tags
-        )
+        have_spectra_sect = any(t.startswith(">=SPECTRASECT") for t in tags)
+        have_spectra_blocks = any(t.startswith(">SPECTRA") for t in tags)
 
         # Time-series markers
-        have_tseries_sect = any(
-            t.startswith(">=TSERIESSECT") for t in tags
-        )
-        have_tseries_blocks = any(
-            t.startswith(">TSERIES") for t in tags
-        )
+        have_tseries_sect = any(t.startswith(">=TSERIESSECT") for t in tags)
+        have_tseries_blocks = any(t.startswith(">TSERIES") for t in tags)
 
         # NEW: Other-style markers (may exist without >FREQ)
-        have_other_sect = any(
-            t.startswith(">=OTHERSECT") for t in tags
-        )
+        have_other_sect = any(t.startswith(">=OTHERSECT") for t in tags)
         # You can be permissive and accept header-only OTHER
         valid_other = have_other_sect
 
         valid_impedance = have_freq and (
             have_meas_section or have_spectra_sect
         )
-        valid_spectra = (
-            have_spectra_sect or have_spectra_blocks
-        )
-        valid_tseries = (
-            have_tseries_sect or have_tseries_blocks
-        )
+        valid_spectra = have_spectra_sect or have_spectra_blocks
+        valid_tseries = have_tseries_sect or have_tseries_blocks
 
         if not (
-            valid_impedance
-            or valid_spectra
-            or valid_tseries
-            or valid_other
+            valid_impedance or valid_spectra or valid_tseries or valid_other
         ):
             raise EdIDataError(
                 f"{base_msg} (need >FREQ+section OR "
@@ -435,4 +401,3 @@ class IsEdi(ABC):
             )
 
         return True
-

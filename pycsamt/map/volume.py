@@ -181,8 +181,7 @@ def _edi_profile_grids(
     if value_table.empty or rho_table.empty:
         return {}
     station_line = {
-        station.id: station.line or "line"
-        for station in data.stations
+        station.id: station.line or "line" for station in data.stations
     }
     station_elev = {
         station.id: (
@@ -360,14 +359,14 @@ def _fence_figure(profiles, options, colors):
                 opacity=float(options.opacity),
                 name=name,
                 showscale=idx == 0,
-                colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                colorbar=dict(
+                    title=dict(text=_colorbar_title(options), side="right")
+                ),
                 contours=_surface_contours(options),
             )
         )
         if options.show_terrain and options.topography:
-            fig.add_trace(
-                _terrain_trace(xx[0], yy[0], elev, name)
-            )
+            fig.add_trace(_terrain_trace(xx[0], yy[0], elev, name))
         if options.show_labels:
             fig.add_trace(
                 go.Scatter3d(
@@ -448,8 +447,10 @@ def _fill_nan_2d(z, x, values):
         from scipy.interpolate import griddata
 
         filled = griddata(
-            (zz[good], xx[good]), values[good],
-            (zz, xx), method="nearest",
+            (zz[good], xx[good]),
+            values[good],
+            (zz, xx),
+            method="nearest",
         )
         return np.where(good, values, filled)
     except Exception:  # noqa: BLE001
@@ -481,7 +482,10 @@ def _block_figure(profiles, options, colors):
                     # Fade rather than hard-cut so the block still reads
                     # as one solid shape instead of a jagged threshold.
                     opacityscale=[
-                        [0.0, 0.0], [0.2, 0.3], [0.5, 0.7], [1.0, 1.0],
+                        [0.0, 0.0],
+                        [0.2, 0.3],
+                        [0.5, 0.7],
+                        [1.0, 1.0],
                     ],
                     opacity=float(options.opacity),
                     surface_count=max(2, int(options.surface_count)),
@@ -489,7 +493,11 @@ def _block_figure(profiles, options, colors):
                     cmin=cmin,
                     cmax=cmax,
                     showscale=True,
-                    colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                    colorbar=dict(
+                        title=dict(
+                            text=_colorbar_title(options), side="right"
+                        )
+                    ),
                 )
             )
     _style_3d(fig, options, colors)
@@ -531,18 +539,12 @@ def _depth_figure(profiles, options, colors):
                 x,
                 offset * np.cos(az),
             )
-            x_rows.append(
-                _pad_row(x + offset * np.sin(az), width)
-            )
+            x_rows.append(_pad_row(x + offset * np.sin(az), width))
             y_rows.append(_pad_row(y, width))
             z = _elev_for(grid, options) - float(depth)
-            z_rows.append(
-                _pad_row(z, width)
-            )
+            z_rows.append(_pad_row(z, width))
             color = _color_values(values, options)
-            val_rows.append(
-                _pad_row(color, width)
-            )
+            val_rows.append(_pad_row(color, width))
         fig.add_trace(
             go.Surface(
                 x=np.vstack(x_rows),
@@ -554,7 +556,9 @@ def _depth_figure(profiles, options, colors):
                 cmax=cmax,
                 opacity=float(options.opacity),
                 showscale=True,
-                colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                colorbar=dict(
+                    title=dict(text=_colorbar_title(options), side="right")
+                ),
                 contours=_surface_contours(options),
             )
         )
@@ -597,7 +601,11 @@ def _surface_figure(profiles, options, colors):
                     opacity=float(options.opacity),
                     colorscale=to_plotly_cmap(options.cmap),
                     caps=dict(x_show=False, y_show=False),
-                    colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                    colorbar=dict(
+                        title=dict(
+                            text=_colorbar_title(options), side="right"
+                        )
+                    ),
                     cmin=lo,
                     cmax=hi,
                 )
@@ -608,30 +616,18 @@ def _surface_figure(profiles, options, colors):
 
 def _prepare_volume_table(table, station_line, options):
     out = table.copy()
-    out["line"] = (
-        out["station"].map(station_line).fillna("line")
-    )
+    out["line"] = out["station"].map(station_line).fillna("line")
     if options.period_range:
         lo, hi = options.period_range
-        keep = (
-            (out["period"] >= lo)
-            & (out["period"] <= hi)
-        )
+        keep = (out["period"] >= lo) & (out["period"] <= hi)
         out = out[keep]
     return out
 
 
 def _station_x(group, stations):
-    x_map = (
-        group.groupby("station")["distance"]
-        .median()
-        .to_dict()
-    )
+    x_map = group.groupby("station")["distance"].median().to_dict()
     x = np.array(
-        [
-            x_map.get(str(station), np.nan)
-            for station in stations
-        ],
+        [x_map.get(str(station), np.nan) for station in stations],
         dtype=float,
     )
     if not np.isfinite(x).all():
@@ -948,8 +944,10 @@ def _dense_volume_grid(profiles, options):
         vals_sorted = values[np.ix_(zo, xo)]
         try:
             interp = RegularGridInterpolator(
-                (z_sorted, x_sorted), vals_sorted,
-                bounds_error=False, fill_value=np.nan,
+                (z_sorted, x_sorted),
+                vals_sorted,
+                bounds_error=False,
+                fill_value=np.nan,
             )
         except ValueError:
             continue
@@ -1031,10 +1029,9 @@ def _colorbar_title(options) -> str:
 
 
 def _slice_depths(profiles, options):
-    all_z = np.concatenate([
-        np.asarray(grid["z"], dtype=float)
-        for grid in profiles.values()
-    ])
+    all_z = np.concatenate(
+        [np.asarray(grid["z"], dtype=float) for grid in profiles.values()]
+    )
     all_z = all_z[np.isfinite(all_z)]
     if all_z.size == 0:
         return np.array([0.0])

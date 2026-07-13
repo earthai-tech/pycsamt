@@ -16,11 +16,12 @@ from scipy.optimize import curve_fit
 from ..exceptions import StatsError
 
 __all__ = [
-    'get_confidence_ratio',
-    'drawn_boundaries',
-    'remove_outliers',
-    'scale_position',
+    "get_confidence_ratio",
+    "drawn_boundaries",
+    "remove_outliers",
+    "scale_position",
 ]
+
 
 def get_confidence_ratio(
     arr: Any,
@@ -28,7 +29,7 @@ def get_confidence_ratio(
     invalid: Optional[Union[Iterable[Any], Any]] = None,
     consider_nan: bool = True,
     as_percent: bool = False,
-    average: bool = False
+    average: bool = False,
 ) -> Union[np.ndarray, float]:
     """
     Compute confidence ratio along an axis by counting valid items.
@@ -71,9 +72,9 @@ def get_confidence_ratio(
     # map axis names
     if isinstance(axis, str):
         name = axis.lower()
-        if name in ('cols', 'columns', 'x'):
+        if name in ("cols", "columns", "x"):
             ax = 1
-        elif name in ('rows', 'y'):
+        elif name in ("rows", "y"):
             ax = 0
         else:
             raise StatsError(f"Unknown axis name: {axis}")
@@ -88,13 +89,12 @@ def get_confidence_ratio(
         if consider_nan and np.isnan(v):
             valid = 0
         elif invalid is not None and (
-            v in invalid if hasattr(invalid, '__iter__')
-            else v == invalid
+            v in invalid if hasattr(invalid, "__iter__") else v == invalid
         ):
             valid = 0
         else:
             valid = 1
-        ratio = valid/total
+        ratio = valid / total
         return ratio * 100 if as_percent else ratio
     # ensure axis in range
     if ax < 0 or ax >= nd:
@@ -111,7 +111,7 @@ def get_confidence_ratio(
             mask |= np.isin(a, inv)
         except Exception:
             # fallback scalar compare
-            mask |= (a == invalid)
+            mask |= a == invalid
     # count total and valid per slice
     total = a.shape[ax]
     # sum of invalids along axis
@@ -127,14 +127,14 @@ def get_confidence_ratio(
 
 def remove_outliers(
     data: Any,
-    method: str = 'IQR',
+    method: str = "IQR",
     threshold: float = 3.0,
     fill_value: Optional[float] = None,
     axis: int = 1,
     interpolate: bool = False,
-    kind: str = 'linear'
+    kind: str = "linear",
 ) -> Any:
-    """ Efficient strategy to remove outliers in the data.
+    """Efficient strategy to remove outliers in the data.
 
     Indeed, an outlier is the data point of the given sample,
     observation, or distribution that shall lie outside the overall pattern.
@@ -262,14 +262,14 @@ def remove_outliers(
     # DataFrame path
     if isinstance(data, pd.DataFrame):
         df = data.copy()
-        if method.lower() == 'iqr':
+        if method.lower() == "iqr":
             Q1 = df.quantile(0.25)
             Q3 = df.quantile(0.75)
             IQR = Q3 - Q1
             lower = Q1 - 1.5 * IQR
             upper = Q3 + 1.5 * IQR
             mask = (df < lower) | (df > upper)
-        elif method.lower() in ('zscore','z-score'):
+        elif method.lower() in ("zscore", "z-score"):
             z = (df - df.mean()) / df.std()
             mask = z.abs() > threshold
         else:
@@ -286,7 +286,7 @@ def remove_outliers(
     except Exception as e:
         raise StatsError(f"Cannot convert input: {e}")
     m = method.lower()
-    if m == 'iqr':
+    if m == "iqr":
         flat = arr[~np.isnan(arr)]
         Q1 = np.percentile(flat, 25)
         Q3 = np.percentile(flat, 75)
@@ -294,7 +294,7 @@ def remove_outliers(
         lower = Q1 - 1.5 * IQR
         upper = Q3 + 1.5 * IQR
         mask = (arr < lower) | (arr > upper)
-    elif m in ('zscore','z-score'):
+    elif m in ("zscore", "z-score"):
         mean = np.nanmean(arr)
         std = np.nanstd(arr)
         z = (arr - mean) / std
@@ -329,7 +329,7 @@ def scale_position(
     xy_numeric: bool = False,
     asarray: bool = True,
     show: bool = False,
-    plot_kwargs: dict = None
+    plot_kwargs: dict = None,
 ) -> Union[tuple, np.ndarray]:
     """
     Fit and rescale y vs. x using a model, return scaled y.
@@ -366,6 +366,7 @@ def scale_position(
 
     if plot_kwargs is None:
         plot_kwargs = {}
+
     def _linear(x, a, b):
         return a * x + b
 
@@ -374,12 +375,8 @@ def scale_position(
     # handle DataFrame input
     if isinstance(y, pd.DataFrame):
         if column is None:
-            raise ValueError(
-                "column required for DataFrame y"
-            )
-        y = (y.iloc[:, column]
-             if isinstance(column, int)
-             else y[column])
+            raise ValueError("column required for DataFrame y")
+        y = y.iloc[:, column] if isinstance(column, int) else y[column]
 
     # convert y to Series
     if isinstance(y, (np.ndarray, list)):
@@ -392,22 +389,24 @@ def scale_position(
         x = np.arange(len(y))
     if isinstance(x, (np.ndarray, list)):
         x = pd.Series(x)
-    y, x = y.align(x, join='inner')
+    y, x = y.align(x, join="inner")
 
     if xy_numeric:
-        y = pd.to_numeric(y, errors='raise')
-        x = pd.to_numeric(x, errors='raise')
+        y = pd.to_numeric(y, errors="raise")
+        x = pd.to_numeric(x, errors="raise")
 
     popt, pcov = curve_fit(
-        f, x.values, y.values,
-        p0=initial_params, bounds=bounds or (-np.inf, np.inf)
+        f,
+        x.values,
+        y.values,
+        p0=initial_params,
+        bounds=bounds or (-np.inf, np.inf),
     )
     y_fit = f(x.values, *popt)
 
     if show:
-        plt.plot(x, y, '.', label='data', **plot_kwargs)
-        plt.plot(x, y_fit, '-',
-                 label=f"fit: {popt}")
+        plt.plot(x, y, ".", label="data", **plot_kwargs)
+        plt.plot(x, y_fit, "-", label=f"fit: {popt}")
         plt.legend()
         plt.show()
 
@@ -415,10 +414,9 @@ def scale_position(
         return y_fit, popt, pcov
     return pd.Series(y_fit, index=y.index), popt, pcov
 
+
 def drawn_boundaries(
-    profile: Any,
-    peak_value: float,
-    peak_index: int
+    profile: Any, peak_value: float, peak_index: int
 ) -> tuple:
     """
     Identify anomaly boundaries around a peak in a 1D profile.
@@ -471,12 +469,7 @@ def drawn_boundaries(
             break
     # assemble boundaries
     if left_vals:
-        boundaries = np.concatenate([
-            left_vals, [peak], right_vals
-        ])
+        boundaries = np.concatenate([left_vals, [peak], right_vals])
     else:
-        boundaries = np.concatenate([
-            [peak], right_vals
-        ])
+        boundaries = np.concatenate([[peak], right_vals])
     return peak, peak_index, boundaries
-

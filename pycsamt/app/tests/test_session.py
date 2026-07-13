@@ -12,6 +12,7 @@ from pycsamt.app.desktop.models.session import SessionState
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 
+
 def test_default_theme():
     s = SessionState()
     assert s.theme == "dark"
@@ -29,6 +30,7 @@ def test_default_dock_fields_are_none():
 
 
 # ── Round-trip save / load ────────────────────────────────────────────────
+
 
 def test_save_and_load_round_trip(tmp_path):
     p = tmp_path / "session.json"
@@ -86,6 +88,7 @@ def test_save_creates_parent_directories(tmp_path):
 
 
 # ── Mutability ────────────────────────────────────────────────────────────
+
 
 def test_session_fields_are_mutable():
     s = SessionState()

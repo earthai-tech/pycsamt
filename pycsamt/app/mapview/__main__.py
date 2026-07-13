@@ -50,6 +50,7 @@ def main() -> int:
     view = None
     if args.data:
         from pycsamt.map import MapView
+
         view = MapView.from_folder(args.data)
 
     launch(

@@ -189,6 +189,7 @@ if _pd is not None:
     Series = _pd.Series
     DataFrame = _pd.DataFrame
 else:  # pragma: no cover
+
     class Series:  # noqa: D101
         def __class_getitem__(cls, item: Any) -> type[Series]:
             return cls
@@ -201,6 +202,7 @@ else:  # pragma: no cover
 # ---------------------------------------------------------------------------
 # Legacy-compatible generic names
 # ---------------------------------------------------------------------------
+
 
 class _CompatAlias:
     """Runtime-safe base for legacy subscripted aliases.

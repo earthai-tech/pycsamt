@@ -123,7 +123,13 @@ def get_intersections(
     # Bounding-box pre-filter
     overlap_idx = do_rects_overlap(xyb, xya, tol=tol)
     if len(overlap_idx) == 0:
-        return np.array([], dtype=int), np.array([]), np.array([]), pa_full, pb_full
+        return (
+            np.array([], dtype=int),
+            np.array([]),
+            np.array([]),
+            pa_full,
+            pb_full,
+        )
 
     sub = xya[overlap_idx]
     na = len(sub)
@@ -148,8 +154,10 @@ def get_intersections(
     yi_sub = sub[:, 2] + dya * pa_sub
 
     interior = (
-        (pa_sub > 0 + tol) & (pa_sub < 1 - tol)
-        & (pb_sub > 0 + tol) & (pb_sub < 1 - tol)
+        (pa_sub > 0 + tol)
+        & (pa_sub < 1 - tol)
+        & (pb_sub > 0 + tol)
+        & (pb_sub < 1 - tol)
     )
 
     pa_full[overlap_idx] = pa_sub

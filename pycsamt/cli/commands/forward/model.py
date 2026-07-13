@@ -42,6 +42,7 @@ from ._base import forward
 # model — sub-group
 # ---------------------------------------------------------------------------
 
+
 @forward.group("model")
 @click.pass_context
 def model(ctx: click.Context) -> None:
@@ -64,9 +65,11 @@ def model(ctx: click.Context) -> None:
 # geology
 # ---------------------------------------------------------------------------
 
+
 @model.command("geology")
 @click.option(
-    "--name", "-n",
+    "--name",
+    "-n",
     default=None,
     metavar="SCENARIO",
     help=(
@@ -132,6 +135,7 @@ def model_geology(
 # Output helpers
 # ---------------------------------------------------------------------------
 
+
 def _emit_table(priors: dict, output_format: str) -> None:
     import pandas as pd  # noqa: PLC0415
 
@@ -140,18 +144,22 @@ def _emit_table(priors: dict, output_format: str) -> None:
         n_lo, n_hi = p.get("n_layers", ("—", "—"))
         lr_lo, lr_hi = p.get("log_rho_range", ("—", "—"))
         d_lo, d_hi = p.get("depth_max_range", ("—", "—"))
-        rows.append({
-            "scenario":        scenario,
-            "n_layers":        f"{n_lo}–{n_hi}",
-            "log10_rho_range": f"{lr_lo:.1f}–{lr_hi:.1f}",
-            "depth_max_m":     f"{d_lo:.0f}–{d_hi:.0f}",
-            "description":     (p.get("description", "") or "")[:60],
-        })
+        rows.append(
+            {
+                "scenario": scenario,
+                "n_layers": f"{n_lo}–{n_hi}",
+                "log10_rho_range": f"{lr_lo:.1f}–{lr_hi:.1f}",
+                "depth_max_m": f"{d_lo:.0f}–{d_hi:.0f}",
+                "description": (p.get("description", "") or "")[:60],
+            }
+        )
 
     df = pd.DataFrame(rows)
 
     if output_format == "json":
-        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
+        click.echo(
+            df.to_json(orient="records", indent=2, default_handler=str)
+        )
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:
@@ -160,7 +168,9 @@ def _emit_table(priors: dict, output_format: str) -> None:
 
 def _emit_detail(name: str, prior: dict, output_format: str) -> None:
     if output_format == "json":
-        click.echo(json.dumps({"scenario": name, **prior}, indent=2, default=str))
+        click.echo(
+            json.dumps({"scenario": name, **prior}, indent=2, default=str)
+        )
         return
 
     if output_format == "csv":
@@ -170,15 +180,17 @@ def _emit_detail(name: str, prior: dict, output_format: str) -> None:
         click.echo(pd.DataFrame(rows).to_csv(index=False))
         return
 
-    n_lo, n_hi       = prior.get("n_layers",        ("—", "—"))
-    lr_lo, lr_hi     = prior.get("log_rho_range",    ("—", "—"))
-    d_lo, d_hi       = prior.get("depth_max_range",  ("—", "—"))
-    desc             = prior.get("description",      "")
+    n_lo, n_hi = prior.get("n_layers", ("—", "—"))
+    lr_lo, lr_hi = prior.get("log_rho_range", ("—", "—"))
+    d_lo, d_hi = prior.get("depth_max_range", ("—", "—"))
+    desc = prior.get("description", "")
 
     click.echo(f"\nScenario      : {name}")
     click.echo(f"n_layers      : {n_lo} – {n_hi}")
-    click.echo(f"log10(ρ) range: {lr_lo:.2f} – {lr_hi:.2f}  "
-               f"(ρ ≈ {10**lr_lo:.0f} – {10**lr_hi:.0f} Ω·m)")
+    click.echo(
+        f"log10(ρ) range: {lr_lo:.2f} – {lr_hi:.2f}  "
+        f"(ρ ≈ {10**lr_lo:.0f} – {10**lr_hi:.0f} Ω·m)"
+    )
     click.echo(f"depth_max     : {d_lo:.0f} – {d_hi:.0f} m")
     if desc:
         click.echo(f"description   : {desc}")

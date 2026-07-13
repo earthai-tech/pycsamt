@@ -44,8 +44,9 @@ from pycsamt.topo import (
     interp_elev,
 )
 
-
-sites = ensure_sites(ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT", verbose=0)
+sites = ensure_sites(
+    ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT", verbose=0
+)
 names = extract_station_names(sites)
 chain_km = extract_chainage(sites)
 elev_m = extract_elevation(sites)
@@ -84,13 +85,17 @@ x_draped, z_draped, log_rho_draped = drape_section(
 
 fig, axs = plt.subplots(2, 1, figsize=(10, 7.2), sharex=True)
 
-pcm0 = axs[0].pcolormesh(x_nodes, -z_nodes, log_rho, shading="auto", cmap="turbo")
+pcm0 = axs[0].pcolormesh(
+    x_nodes, -z_nodes, log_rho, shading="auto", cmap="turbo"
+)
 axs[0].set_ylabel("Flat datum z (km)")
 axs[0].set_title("Flat section: all stations pinned to z = 0")
 axs[0].grid(alpha=0.2)
 fig.colorbar(pcm0, ax=axs[0], label="log10 resistivity")
 
-pcm1 = axs[1].pcolormesh(x_draped, z_draped, log_rho_draped, shading="auto", cmap="turbo")
+pcm1 = axs[1].pcolormesh(
+    x_draped, z_draped, log_rho_draped, shading="auto", cmap="turbo"
+)
 axs[1].set_xlabel("Chainage (km)")
 axs[1].set_ylabel("Elevation (km)")
 axs[1].set_title("Draped section: station elevations define the surface")
@@ -115,7 +120,9 @@ fig.tight_layout()
 # Always state the display exaggeration used in a figure.
 
 for exaggeration in (1.0, 2.0, 4.0):
-    _, z_tmp, _ = drape_section(x_nodes, z_nodes, log_rho, elev_at_centres, exaggeration=exaggeration)
+    _, z_tmp, _ = drape_section(
+        x_nodes, z_nodes, log_rho, elev_at_centres, exaggeration=exaggeration
+    )
     section_base = z_tmp[-1]
     print(
         f"exaggeration={exaggeration:g}: section-base elevation range "

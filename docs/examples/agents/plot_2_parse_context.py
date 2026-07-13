@@ -76,8 +76,14 @@ import matplotlib.pyplot as plt
 
 # The fields worth surfacing, in a sensible reading order.
 field_order = [
-    "workflow", "data_path", "output_dir", "period_range",
-    "component", "station", "inversion_code", "verbose",
+    "workflow",
+    "data_path",
+    "output_dir",
+    "period_range",
+    "component",
+    "station",
+    "inversion_code",
+    "verbose",
 ]
 rows = [(k, str(config.get(k, "—"))) for k in field_order if k in config]
 
@@ -85,12 +91,28 @@ fig, ax = plt.subplots(figsize=(9, 5.2))
 ax.axis("off")
 
 # Title, then the originating request wrapped beneath it, then the table.
-ax.text(0.5, 1.18, "ContextInputAgent — parsed workflow configuration",
-        transform=ax.transAxes, ha="center", va="bottom",
-        fontsize=12, fontweight="bold")
+ax.text(
+    0.5,
+    1.18,
+    "ContextInputAgent — parsed workflow configuration",
+    transform=ax.transAxes,
+    ha="center",
+    va="bottom",
+    fontsize=12,
+    fontweight="bold",
+)
 wrapped = textwrap.fill(f'request: "{request}"', width=92)
-ax.text(0.5, 1.10, wrapped, transform=ax.transAxes, ha="center", va="top",
-        fontsize=8.5, family="monospace", color="0.35")
+ax.text(
+    0.5,
+    1.10,
+    wrapped,
+    transform=ax.transAxes,
+    ha="center",
+    va="top",
+    fontsize=8.5,
+    family="monospace",
+    color="0.35",
+)
 
 table = ax.table(
     cellText=rows,
@@ -104,7 +126,7 @@ table.auto_set_font_size(False)
 table.set_fontsize(9.5)
 
 # Header styling + zebra striping for readability.
-for (r, c), cell in table.get_celld().items():
+for (r, _c), cell in table.get_celld().items():
     cell.set_edgecolor("0.8")
     if r == 0:
         cell.set_facecolor("#2c3e50")

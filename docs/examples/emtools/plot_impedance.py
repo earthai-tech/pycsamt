@@ -56,7 +56,9 @@ plot_phasor_wheel(survey, station=STATION)
 # ------------------------------------------------------------------------------
 # Restricting with ``pband`` isolates part of the recorded band.
 
-fig, (axs, axl) = plt.subplots(1, 2, figsize=(9.5, 5), subplot_kw={"polar": True})
+fig, (axs, axl) = plt.subplots(
+    1, 2, figsize=(9.5, 5), subplot_kw={"polar": True}
+)
 plot_phasor_wheel(survey, station=STATION, pband=(9e-5, 1e-3), ax=axs)
 axs.set_title(f"{STATION} — short period (< 1 ms)")
 plot_phasor_wheel(survey, station=STATION, pband=(1e-1, 1.0), ax=axl)
@@ -76,14 +78,18 @@ fig.tight_layout()
 # the diagonal shows how it compares to the off-diagonal that carries
 # the main 1-D/2-D signal.
 
-plot_phasor_wheel(survey, station=STATION, components=("xy", "yx", "xx", "yy"))
+plot_phasor_wheel(
+    survey, station=STATION, components=("xy", "yx", "xx", "yy")
+)
 
 d = ensure_sites(survey, recursive=False)
 _, z0, fr0 = _get_z_block(next(_iter_items(d)))
-print(f"{STATION}: mean|Zxy|={np.abs(z0[:,0,1]).mean():.1f}, "
-      f"mean|Zyx|={np.abs(z0[:,1,0]).mean():.1f}, "
-      f"mean|Zxx|={np.abs(z0[:,0,0]).mean():.1f}, "
-      f"mean|Zyy|={np.abs(z0[:,1,1]).mean():.1f}")
+print(
+    f"{STATION}: mean|Zxy|={np.abs(z0[:, 0, 1]).mean():.1f}, "
+    f"mean|Zyx|={np.abs(z0[:, 1, 0]).mean():.1f}, "
+    f"mean|Zxx|={np.abs(z0[:, 0, 0]).mean():.1f}, "
+    f"mean|Zyy|={np.abs(z0[:, 1, 1]).mean():.1f}"
+)
 
 # %%
 # **Reading this figure/output.** The diagonal components (``xx``,
@@ -203,8 +209,10 @@ for i, ed in enumerate(_iter_items(ensure_sites(survey, recursive=False))):
 per = 1.0 / fr
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-for pcts, label, alpha in [((25.0, 50.0, 75.0), "50% band (25-75)", 0.35),
-                           ((10.0, 50.0, 90.0), "80% band (10-90)", 0.20)]:
+for pcts, label, alpha in [
+    ((25.0, 50.0, 75.0), "50% band (25-75)", 0.35),
+    ((10.0, 50.0, 90.0), "80% band (10-90)", 0.20),
+]:
     mag, ph, band = _det_ci(z, fr, ze, pcts=pcts, n_draws=200, seed=0)
     ax.fill_between(per, band[:, 0], band[:, 1], alpha=alpha, label=label)
 ax.plot(per, mag, "-", color="0.1", lw=1.4, label="median")

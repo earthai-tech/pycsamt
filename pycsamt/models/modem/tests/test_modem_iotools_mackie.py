@@ -12,7 +12,11 @@ import pytest
 
 _EX2D = (
     Path(__file__).parents[4]
-    / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
+    / "ModEMv626"
+    / "ModEM"
+    / "examples"
+    / "2D_MT"
+    / "BLOCK2"
 )
 _SKIP_REAL = pytest.mark.skipif(
     not _EX2D.exists(), reason="ModEMv626 example data not available"
@@ -23,9 +27,11 @@ _SKIP_REAL = pytest.mark.skipif(
 # Helpers to build tiny synthetic models
 # ---------------------------------------------------------------------------
 
+
 def _make_model2d(nx=5, nz_earth=3, rho_val=100.0, n_air=0):
     """Return a ModEmModel2D with uniform resistivity (no air layers by default)."""
     from pycsamt.models.modem.model2d import ModEmModel2D
+
     obj = ModEmModel2D()
     obj.x_widths = np.full(nx, 1000.0)
     z_earth = np.geomspace(50.0, 500.0, nz_earth)
@@ -38,13 +44,16 @@ def _make_model2d(nx=5, nz_earth=3, rho_val=100.0, n_air=0):
 def _make_model3d(nx=4, ny=3, nz=5, n_air=2, rho_val=100.0):
     """Return a ModEmModel3D with uniform resistivity."""
     from pycsamt.models.modem.model3d import ModEmModel3D
+
     obj = ModEmModel3D()
     obj.x_widths = np.full(nx, 2000.0)
     obj.y_widths = np.full(ny, 2000.0)
-    obj.z_widths = np.concatenate([
-        np.full(n_air,    50.0),
-        np.geomspace(100.0, 500.0, nz - n_air),
-    ])
+    obj.z_widths = np.concatenate(
+        [
+            np.full(n_air, 50.0),
+            np.geomspace(100.0, 500.0, nz - n_air),
+        ]
+    )
     rho_grid = np.full((nz, ny, nx), math.log(rho_val))
     if n_air > 0:
         rho_grid[:n_air] = math.log(1e12)
@@ -57,11 +66,13 @@ def _make_model3d(nx=4, ny=3, nz=5, n_air=2, rho_val=100.0):
 # 2D — write / read roundtrip
 # ===========================================================================
 
+
 class TestMackie2DRoundtrip:
     def test_write_creates_file(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie2d,
         )
+
         m = _make_model2d()
         out = write_mackie2d(m, tmp_path / "m.rho")
         assert out.exists()
@@ -70,6 +81,7 @@ class TestMackie2DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5, nz_earth=3)
         out = write_mackie2d(m, tmp_path / "m.rho")
         first = out.read_text().splitlines()[0]
@@ -80,6 +92,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=6, nz_earth=4)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -91,6 +104,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5, nz_earth=3)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -102,6 +116,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -113,6 +128,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5, nz_earth=3)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -126,6 +142,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5, nz_earth=3, rho_val=50.0)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -139,6 +156,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d()
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
@@ -148,6 +166,7 @@ class TestMackie2DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie2d,
         )
+
         m = _make_model2d()
         out = write_mackie2d(m, tmp_path / "m.rho")
         text = out.read_text()
@@ -159,6 +178,7 @@ class TestMackie2DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie2d,
         )
+
         m = _make_model2d()
         out = write_mackie2d(m, tmp_path / "m.rho", log_type="LOGE")
         assert "LOGE" in out.read_text().splitlines()[0]
@@ -170,6 +190,7 @@ class TestMackie2DRoundtrip:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = _make_model2d(nx=5, nz_earth=4)
         # model has n_air=0, so n_air=0 means write all layers as earth
         write_mackie2d(m, tmp_path / "m.rho", n_air=0)
@@ -181,6 +202,7 @@ class TestMackie2DRoundtrip:
 # 2D — real file tests
 # ===========================================================================
 
+
 class TestMackie2DRealFile:
     @_SKIP_REAL
     def test_read_returns_model2d(self):
@@ -188,6 +210,7 @@ class TestMackie2DRealFile:
             read_mackie2d,
         )
         from pycsamt.models.modem.model2d import ModEmModel2D
+
         m = read_mackie2d(_EX2D / "m0.rho")
         assert isinstance(m, ModEmModel2D)
 
@@ -196,6 +219,7 @@ class TestMackie2DRealFile:
         from pycsamt.models.modem.iotools.mackie import (
             read_mackie2d,
         )
+
         m = read_mackie2d(_EX2D / "m0.rho")
         assert m.nx == 100
 
@@ -205,6 +229,7 @@ class TestMackie2DRealFile:
             _N_AIR_2D,
             read_mackie2d,
         )
+
         m = read_mackie2d(_EX2D / "m0.rho")
         # file has 31 earth layers + 10 air = 41 total
         assert m.nz == 31 + _N_AIR_2D
@@ -215,6 +240,7 @@ class TestMackie2DRealFile:
             _N_AIR_2D,
             read_mackie2d,
         )
+
         m = read_mackie2d(_EX2D / "m0.rho")
         earth = m.rho_loge[_N_AIR_2D:]
         assert np.all(np.isfinite(earth))
@@ -226,6 +252,7 @@ class TestMackie2DRealFile:
             read_mackie2d,
             write_mackie2d,
         )
+
         m = read_mackie2d(_EX2D / "m0.rho")
         out = write_mackie2d(m, tmp_path / "m0_out.rho")
         back = read_mackie2d(out)
@@ -238,11 +265,13 @@ class TestMackie2DRealFile:
 # 3D — write / read roundtrip
 # ===========================================================================
 
+
 class TestMackie3DRoundtrip:
     def test_write_creates_file(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie3d,
         )
+
         m = _make_model3d()
         out = write_mackie3d(m, tmp_path / "m.mac")
         assert out.exists()
@@ -251,6 +280,7 @@ class TestMackie3DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie3d,
         )
+
         m = _make_model3d(nx=4, ny=3, nz=5, n_air=2)
         out = write_mackie3d(m, tmp_path / "m.mac")
         first = out.read_text().splitlines()[0]
@@ -260,6 +290,7 @@ class TestMackie3DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie3d,
         )
+
         m = _make_model3d()
         out = write_mackie3d(m, tmp_path / "m.mac")
         assert "VALUES" in out.read_text().splitlines()[0]
@@ -269,6 +300,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(nx=4, ny=3, nz=5, n_air=2)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -279,6 +311,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(n_air=2)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -289,6 +322,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(nx=4)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -299,6 +333,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(ny=3)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -309,6 +344,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(nz=5, n_air=2)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -319,6 +355,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(nx=4, ny=3, nz=5, n_air=2, rho_val=200.0)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -331,6 +368,7 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d(n_air=2)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
@@ -342,6 +380,7 @@ class TestMackie3DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             write_mackie3d,
         )
+
         m = _make_model3d()
         out = write_mackie3d(m, tmp_path / "m.mac")
         assert "WINGLINK" in out.read_text()
@@ -351,10 +390,13 @@ class TestMackie3DRoundtrip:
             read_mackie3d,
             write_mackie3d,
         )
+
         m = _make_model3d()
         write_mackie3d(m, tmp_path / "m.mac", origin=(1000.0, 2000.0, 0.0))
         back = read_mackie3d(tmp_path / "m.mac")
-        np.testing.assert_allclose(back.origin[:2], [1000.0, 2000.0], atol=1.0)
+        np.testing.assert_allclose(
+            back.origin[:2], [1000.0, 2000.0], atol=1.0
+        )
 
     def test_non_uniform_rho_roundtrip(self, tmp_path):
         """Heterogeneous rho grid survives write–read cycle."""
@@ -363,6 +405,7 @@ class TestMackie3DRoundtrip:
             write_mackie3d,
         )
         from pycsamt.models.modem.model3d import ModEmModel3D
+
         rng = np.random.default_rng(42)
         nx, ny, nz = 3, 3, 4
         m = ModEmModel3D()
@@ -379,6 +422,7 @@ class TestMackie3DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             read_mackie3d,
         )
+
         with pytest.raises(FileNotFoundError):
             read_mackie3d("/nonexistent/path/model.mac")
 
@@ -386,5 +430,6 @@ class TestMackie3DRoundtrip:
         from pycsamt.models.modem.iotools.mackie import (
             read_mackie2d,
         )
+
         with pytest.raises(FileNotFoundError):
             read_mackie2d("/nonexistent/path/model.rho")

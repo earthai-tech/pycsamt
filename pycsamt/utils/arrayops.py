@@ -4,6 +4,7 @@
 """
 Array and list manipulation utilities.
 """
+
 from __future__ import annotations
 
 import re
@@ -24,18 +25,18 @@ from .text import (
 from .validation import _assert_all_types, _is_numeric_dtype
 
 __all__ = [
-    'concat_array_from_list',
-    'is_iterable',
-    'reshape',
-    'assert_xy_in',
-    'frameify',
-    'interpolate_grid',
-    'drop_nan_in',
+    "concat_array_from_list",
+    "is_iterable",
+    "reshape",
+    "assert_xy_in",
+    "frameify",
+    "interpolate_grid",
+    "drop_nan_in",
 ]
 
+
 def concat_array_from_list(
-    list_of_arrays: Iterable[Any],
-    concat_axis: int = 1
+    list_of_arrays: Iterable[Any], concat_axis: int = 1
 ) -> np.ndarray:
     """
     Concatenate a list of array-like objects into a 2D array,
@@ -80,7 +81,7 @@ def concat_array_from_list(
            [ 2., nan, nan]])
     """
     # Validate axis
-    axis = int(_assert_all_types(concat_axis, int, objname='concat_axis'))
+    axis = int(_assert_all_types(concat_axis, int, objname="concat_axis"))
     if axis not in (0, 1):
         raise ValueError(f"concat_axis must be 0 or 1, got {axis}")
     # Coerce to list
@@ -101,9 +102,7 @@ def concat_array_from_list(
             try:
                 arr = np.asarray(item)
             except Exception:
-                raise TypeError(
-                    f"Item {item!r} is not array-like"
-                )
+                raise TypeError(f"Item {item!r} is not array-like")
         if arr.ndim == 0:
             arr = arr.reshape(1)
         elif arr.ndim > 1:
@@ -136,7 +135,7 @@ def is_iterable(
     y: Any,
     exclude_string: bool = False,
     transform: bool = False,
-    parse_string: bool = False
+    parse_string: bool = False,
 ) -> bool | list:
     """
     Check if `y` is iterable, with options to transform or parse strings.
@@ -166,9 +165,9 @@ def is_iterable(
     TypeError
         If string parsing fails or `y` is not transformable.
     """
-    _assert_all_types(exclude_string, bool, objname='exclude_string')
-    _assert_all_types(transform, bool, objname='transform')
-    _assert_all_types(parse_string, bool, objname='parse_string')
+    _assert_all_types(exclude_string, bool, objname="exclude_string")
+    _assert_all_types(transform, bool, objname="transform")
+    _assert_all_types(parse_string, bool, objname="parse_string")
     if parse_string and not transform:
         raise ValueError("parse_string requires transform=True")
     if isinstance(y, str) and parse_string:
@@ -177,7 +176,7 @@ def is_iterable(
         except Exception as e:
             raise TypeError(f"Error parsing string: {e}")
     is_str = isinstance(y, str)
-    is_it = hasattr(y, '__iter__') and not (exclude_string and is_str)
+    is_it = hasattr(y, "__iter__") and not (exclude_string and is_str)
     if not transform:
         return is_it
     try:
@@ -186,10 +185,7 @@ def is_iterable(
         return [y]
 
 
-def reshape(
-    arr: Any,
-    axis: int | None = None
-) -> np.ndarray:
+def reshape(arr: Any, axis: int | None = None) -> np.ndarray:
     """
     Reshape 1D or singleton 2D arrays to desired orientation.
 
@@ -215,13 +211,9 @@ def reshape(
     """
     a = np.asarray(arr)
     if a.ndim > 2:
-        raise ValueError(
-            f"Input ndim must be <= 2, got {a.ndim}"
-        )
+        raise ValueError(f"Input ndim must be <= 2, got {a.ndim}")
     if axis not in (None, 0, 1):
-        raise ValueError(
-            f"axis must be None, 0, or 1, got {axis!r}"
-        )
+        raise ValueError(f"axis must be None, 0, or 1, got {axis!r}")
     # 1D case
     if a.ndim == 1:
         n = a.shape[0]
@@ -236,9 +228,13 @@ def reshape(
     # squeeze when one dim is 1
     if axis is None:
         if n == 1:
-            return a.reshape(m,)
+            return a.reshape(
+                m,
+            )
         if m == 1:
-            return a.reshape(n,)
+            return a.reshape(
+                n,
+            )
         return a
     # axis specified for singleton dims
     if axis == 0:
@@ -253,6 +249,7 @@ def reshape(
         return a.reshape(1, m)
     return a
 
+
 def frameify(
     data: Any,
     *,
@@ -260,16 +257,16 @@ def frameify(
     return_feature_types: bool = False,
     missing_values: Any = np.nan,
     drop_nan_columns: bool = True,
-    how: str = 'all',
+    how: str = "all",
     sanitize_columns: bool = False,
     regex: str | re.Pattern | None = None,
-    fill_pattern: str = '_',
+    fill_pattern: str = "_",
     reset_index: bool = False,
     drop_index: bool = True,
     pop_cat_features: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> pd.DataFrame | tuple:
-    r""" Convert array to dataframe and coerce arguments to appropriate dtypes.
+    r"""Convert array to dataframe and coerce arguments to appropriate dtypes.
 
     Function includes additional tools to manipulate the transformed data
     such as:
@@ -371,72 +368,82 @@ def frameify(
 
     # pass ellipsis argument to False
 
-    if not is_iterable (data, exclude_string=True):
-        raise TypeError(f"Expect array. Got {type (data).__name__!r}")
+    if not is_iterable(data, exclude_string=True):
+        raise TypeError(f"Expect array. Got {type(data).__name__!r}")
 
-    if hasattr ( data, '__array__') and hasattr ( data, 'columns'):
+    if hasattr(data, "__array__") and hasattr(data, "columns"):
         df = data.copy()
         if columns is not None:
             if verbose:
                 print("Dataframe is passed. Columns should be replaced.")
-            df =pd.DataFrame ( np.array ( data), columns =columns )
+            df = pd.DataFrame(np.array(data), columns=columns)
 
     else:
-        df = pd.DataFrame (data, columns =columns  )
+        df = pd.DataFrame(data, columns=columns)
 
     # sanitize columns
     if sanitize_columns:
         # Pass in the case columns are all integer values.
-        if not _is_numeric_dtype(df.columns , to_array=True):
-           # for consistency reconvert to str
-           df.columns = df.columns.astype(str)
-           df = sanitize_frame_cols(
-               df, regex=regex, fill_pattern=fill_pattern )
+        if not _is_numeric_dtype(df.columns, to_array=True):
+            # for consistency reconvert to str
+            df.columns = df.columns.astype(str)
+            df = sanitize_frame_cols(
+                df, regex=regex, fill_pattern=fill_pattern
+            )
 
-    #replace empty string by Nan if NaN exist in dataframe
-    df= df.replace(r'^\s*$', missing_values, regex=True)
+    # replace empty string by Nan if NaN exist in dataframe
+    df = df.replace(r"^\s*$", missing_values, regex=True)
 
     # check the possibililty to cast all
     # the numerical data
     for serie in df.columns:
         try:
-            df= df.astype(
-                {serie:np.float64})
-        except:continue
+            df = df.astype({serie: np.float64})
+        except:
+            continue
 
     # drop nan  columns if exists
     if drop_nan_columns:
         if verbose:
-            nan_columns = df.columns [ df.isna().all()].tolist()
+            nan_columns = df.columns[df.isna().all()].tolist()
             print("No NaN column found.") if len(
-                nan_columns)==0 else listing_items_format (nan_columns,
-                    "NaN columns found in the data",
-                    " ", inline =True, lstyle='.')
+                nan_columns
+            ) == 0 else listing_items_format(
+                nan_columns,
+                "NaN columns found in the data",
+                " ",
+                inline=True,
+                lstyle=".",
+            )
         # drop rows and columns with NaN values everywhere.
-        df.dropna ( axis=1, how='all', inplace =True)
-        if str(how).lower()=='all':
-            df.dropna ( axis=0, how='all', inplace =True)
+        df.dropna(axis=1, how="all", inplace=True)
+        if str(how).lower() == "all":
+            df.dropna(axis=0, how="all", inplace=True)
 
     # reset_index of the dataframe
     # This is useful after droping rows
     if reset_index:
-        df.reset_index (inplace =True, drop = drop_index )
+        df.reset_index(inplace=True, drop=drop_index)
     # collect numeric and non-numeric data
-    nf, cf =[], []
+    nf, cf = [], []
     for serie in df.columns:
-        if _is_numeric_dtype(df[serie], to_array =True ):
+        if _is_numeric_dtype(df[serie], to_array=True):
             nf.append(serie)
-        else: cf.append(serie)
+        else:
+            cf.append(serie)
 
     if pop_cat_features:
-        [ df.pop(item) for item in cf ]
+        [df.pop(item) for item in cf]
         if verbose:
-            msg ="Dataframe does not contain any categorial features."
-            b= f"Feature{'s' if len(cf)>1 else ''}"
-            e = (f"{'have' if len(cf) >1 else 'has'} been dropped"
-                 " from the dataframe.")
-            print(msg) if len(cf)==0 else listing_items_format (
-                cf , b, e ,lstyle ='.', inline=True)
+            msg = "Dataframe does not contain any categorial features."
+            b = f"Feature{'s' if len(cf) > 1 else ''}"
+            e = (
+                f"{'have' if len(cf) > 1 else 'has'} been dropped"
+                " from the dataframe."
+            )
+            print(msg) if len(cf) == 0 else listing_items_format(
+                cf, b, e, lstyle=".", inline=True
+            )
 
         return df
 
@@ -452,7 +459,7 @@ def assert_xy_in(
     to_frame: bool = False,
     columns: Sequence[str] | None = None,
     xy_numeric: bool = False,
-    dropna: bool = False
+    dropna: bool = False,
 ) -> tuple | pd.DataFrame:
     """
     Validate and extract paired x, y data from arrays or DataFrame.
@@ -493,10 +500,9 @@ def assert_xy_in(
     def _get_series(val):
         # If name given, fetch from DataFrame
         if isinstance(val, str):
-            if data is None or not hasattr(data, 'columns'):
+            if data is None or not hasattr(data, "columns"):
                 raise TypeError(
-                    "`data` DataFrame required when x or y is"
-                    " string name"
+                    "`data` DataFrame required when x or y is string name"
                 )
             if val not in data.columns:
                 raise KeyError(f"Column {val!r} not in DataFrame")
@@ -522,25 +528,20 @@ def assert_xy_in(
     # Ensure lengths match
     if len(x_ser) != len(y_ser):
         raise ValueError(
-            f"Length mismatch: x has {len(x_ser)}, "
-            f"y has {len(y_ser)}"
+            f"Length mismatch: x has {len(x_ser)}, y has {len(y_ser)}"
         )
 
     # Optionally coerce to numeric dtype
     if xy_numeric:
-        x_ser = pd.to_numeric(x_ser, errors='raise')
-        y_ser = pd.to_numeric(y_ser, errors='raise')
+        x_ser = pd.to_numeric(x_ser, errors="raise")
+        y_ser = pd.to_numeric(y_ser, errors="raise")
 
     # Return as DataFrame if requested
     if to_frame:
-        cols = (list(columns)
-                if columns is not None else ['x', 'y'])
+        cols = list(columns) if columns is not None else ["x", "y"]
         if len(cols) != 2:
-            raise ValueError(
-                "`columns` must be sequence of two names"
-            )
-        return pd.DataFrame({cols[0]: x_ser.values,
-                             cols[1]: y_ser.values})
+            raise ValueError("`columns` must be sequence of two names")
+        return pd.DataFrame({cols[0]: x_ser.values, cols[1]: y_ser.values})
 
     # Return numpy arrays
     if asarray:
@@ -549,12 +550,13 @@ def assert_xy_in(
     # Return pandas Series
     return x_ser, y_ser
 
-def interpolate_grid (
+
+def interpolate_grid(
     arr,
-    method ='cubic',
-    fill_value='auto',
-    view = False,
-    ):
+    method="cubic",
+    fill_value="auto",
+    view=False,
+):
     """
     Interpolate data containing missing values.
 
@@ -604,23 +606,23 @@ def interpolate_grid (
 
     """
     is2d = True
-    if not hasattr(arr, '__array__'):
-        arr = np.array (arr)
+    if not hasattr(arr, "__array__"):
+        arr = np.array(arr)
 
-    if arr.ndim==1:
-        #convert to two dimension array
-        arr = np.vstack ((arr, arr ))
-        is2d =False
+    if arr.ndim == 1:
+        # convert to two dimension array
+        arr = np.vstack((arr, arr))
+        is2d = False
         # raise TypeError(
         #     "Expect two dimensional array for grid interpolation.")
 
     # make x, y array for mapping
     x = np.arange(0, arr.shape[1])
     y = np.arange(0, arr.shape[0])
-    #mask invalid values
-    arr= np.ma.masked_invalid(arr)
+    # mask invalid values
+    arr = np.ma.masked_invalid(arr)
     xx, yy = np.meshgrid(x, y)
-    #get only the valid values
+    # get only the valid values
     x1 = xx[~arr.mask]
     y1 = yy[~arr.mask]
     newarr = arr[~arr.mask]
@@ -629,50 +631,49 @@ def interpolate_grid (
     # fall back to fill-only when data are too sparse or entirely masked.
     if x1.size < 4:
         arri = arr.data.copy().astype(float)
-        if fill_value == 'auto':
-            arri = _fill_nan(arri, method='both ')
+        if fill_value == "auto":
+            arri = _fill_nan(arri, method="both ")
         else:
             arri[np.isnan(arri)] = float(
-                _assert_all_types(fill_value, float, int, objname="'fill_value'")
+                _assert_all_types(
+                    fill_value, float, int, objname="'fill_value'"
+                )
             )
         if not is2d:
             arri = arri[0]
         return arri
 
-    arri = spi.griddata(
-        (x1, y1),
-        newarr.ravel(),
-        (xx, yy),
-        method=method
+    arri = spi.griddata((x1, y1), newarr.ravel(), (xx, yy), method=method)
+
+    if fill_value == "auto":
+        arri = _fill_nan(arri, method="both ")
+    else:
+        arri[np.isnan(arri)] = float(
+            _assert_all_types(fill_value, float, int, objname="'fill_value'")
         )
 
-    if fill_value =='auto':
-        arri = _fill_nan(arri, method ='both ')
-    else:
-        arri [np.isnan(arri)] = float( _assert_all_types(
-            fill_value, float, int, objname ="'fill_value'" )
-            )
+    if view:
+        fig, ax = plt.subplots(
+            nrows=1,
+            ncols=2,
+            sharey=True,
+        )
+        ax[0].imshow(arr, interpolation="nearest", label="Raw Grid")
+        ax[1].imshow(arri, interpolation="nearest", label="Interpolate Grid")
 
-    if view :
-        fig, ax  = plt.subplots (nrows = 1, ncols = 2 , sharey= True, )
-        ax[0].imshow(arr ,interpolation='nearest', label ='Raw Grid')
-        ax[1].imshow (arri, interpolation ='nearest',
-                      label = 'Interpolate Grid')
+        ax[0].set_title("Raw Grid")
+        ax[1].set_title("Interpolate Grid")
 
-        ax[0].set_title ('Raw Grid')
-        ax[1].set_title ('Interpolate Grid')
-
-        plt.show ()
+        plt.show()
 
     if not is2d:
         arri = arri[0, :]
 
     return arri
 
+
 def _fill_nan(
-    arr: Sequence[Any] | np.ndarray,
-    *,
-    method: str = 'ff'
+    arr: Sequence[Any] | np.ndarray, *, method: str = "ff"
 ) -> np.ndarray:
     """
     Efficiently forward/backward fill NaNs in array.
@@ -718,44 +719,45 @@ def _fill_nan(
         )
     # normalize method
     m = method.lower().strip()
-    if m in ('forward','ff','fwd'):
-        m = 'ff'
-    elif m in ('backward','bf','bwd'):
-        m = 'bf'
-    elif m in ('both','fb','bff','ffbf'):
-        m = 'both'
+    if m in ("forward", "ff", "fwd"):
+        m = "ff"
+    elif m in ("backward", "bf", "bwd"):
+        m = "bf"
+    elif m in ("both", "fb", "bff", "ffbf"):
+        m = "both"
     else:
         raise ValueError(
             f"Unknown method {method!r}; choose 'ff','bf', or 'both'"
         )
+
     # define forward fill
     def _ffill(a):
         mask = np.isnan(a)
         idx = np.where(~mask, np.arange(a.shape[1]), 0)
         np.maximum.accumulate(idx, axis=1, out=idx)
         return a[np.arange(a.shape[0])[:, None], idx]
+
     # define backward fill
     def _bfill(a):
         mask = np.isnan(a)
-        idx = np.where(~mask, np.arange(a.shape[1]), a.shape[1]-1)
+        idx = np.where(~mask, np.arange(a.shape[1]), a.shape[1] - 1)
         idx = np.minimum.accumulate(idx[:, ::-1], axis=1)[:, ::-1]
         return a[np.arange(a.shape[0])[:, None], idx]
+
     # apply methods
-    if m == 'both':
+    if m == "both":
         temp = _ffill(arr2)
         filled = _bfill(temp)
-    elif m == 'ff':
+    elif m == "ff":
         filled = _ffill(arr2)
     else:
         filled = _bfill(arr2)
     # return to original shape
     return filled[0] if filled.shape[0] == 1 else filled
 
+
 def fill_nan(
-    arr: Sequence[Any] | np.ndarray,
-    *,
-    method: str = 'ff',
-    axis: int = 1
+    arr: Sequence[Any] | np.ndarray, *, method: str = "ff", axis: int = 1
 ) -> np.ndarray:
     """
     Efficiently forward/backward fill NaNs along a given axis.
@@ -800,7 +802,6 @@ def fill_nan(
            [1., 5., 3.]])
     """
 
-
     # Convert to float array
     a = np.array(arr, dtype=float)
 
@@ -811,9 +812,7 @@ def fill_nan(
     elif a.ndim == 2:
         orig1d = False
     else:
-        raise ValueError(
-            f"fill_nan supports 1D/2D arrays; got ndim={a.ndim}"
-        )
+        raise ValueError(f"fill_nan supports 1D/2D arrays; got ndim={a.ndim}")
 
     # Validate axis
     if axis not in (0, 1):
@@ -821,16 +820,15 @@ def fill_nan(
 
     # Normalize method name
     m = method.lower().strip()
-    if m in ('forward', 'ff', 'fwd'):
-        m = 'ff'
-    elif m in ('backward', 'bf', 'bwd'):
-        m = 'bf'
-    elif m in ('both', 'fb', 'bff', 'ffbf'):
-        m = 'both'
+    if m in ("forward", "ff", "fwd"):
+        m = "ff"
+    elif m in ("backward", "bf", "bwd"):
+        m = "bf"
+    elif m in ("both", "fb", "bff", "ffbf"):
+        m = "both"
     else:
         raise ValueError(
-            "method must be 'ff', 'bf', or 'both'; got "
-            f"{method!r}"
+            f"method must be 'ff', 'bf', or 'both'; got {method!r}"
         )
 
     def _ffill_row(row: np.ndarray) -> np.ndarray:
@@ -852,18 +850,17 @@ def fill_nan(
 
     # Select and apply fill along axis
     if axis == 1:
+
         def filler(mat, fn):
             return np.vstack([fn(row) for row in mat])
     else:
         # for axis=0, transpose, fill, then transpose back
         def filler(mat, fn):
-            return (
-                    np.vstack([fn(col) for col in mat.T]).T
-                )
+            return np.vstack([fn(col) for col in mat.T]).T
 
-    if m == 'ff':
+    if m == "ff":
         out = filler(a, _ffill_row)
-    elif m == 'bf':
+    elif m == "bf":
         out = filler(a, _bfill_row)
     else:  # both
         tmp = filler(a, _ffill_row)
@@ -871,6 +868,7 @@ def fill_nan(
 
     # Restore 1D shape if needed
     return out[0] if orig1d else out
+
 
 def drop_nan_in(
     y_true,
@@ -941,8 +939,7 @@ def drop_nan_in(
             return yt, *preds
         if nan_policy != "omit" and nan_policy != "raise":
             raise ValueError(
-                "nan_policy must be one of "
-                "{'raise','propagate','omit'}."
+                "nan_policy must be one of {'raise','propagate','omit'}."
             )
         # fall through to omit
 
@@ -952,13 +949,10 @@ def drop_nan_in(
             if error == "raise":
                 raise ValueError("NaNs in y_true.")
             if error == "warn":
-                warnings.warn(
-                    "NaNs in y_true; dropping rows.", stacklevel=2
-                )
+                warnings.warn("NaNs in y_true; dropping rows.", stacklevel=2)
             elif error != "ignore":
                 raise ValueError(
-                    "error must be one of "
-                    "{'raise','warn','ignore'}."
+                    "error must be one of {'raise','warn','ignore'}."
                 )
 
     # build mask (omit or ignore/warn path)
@@ -966,4 +960,3 @@ def drop_nan_in(
     yt_f = yt[mask]
     preds_f = tuple(p[mask] for p in preds)
     return yt_f, *preds_f
-

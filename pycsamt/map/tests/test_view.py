@@ -82,10 +82,12 @@ def test_resolve_groups_mapping_passthrough() -> None:
 
 
 def test_resolve_groups_list_of_dirs() -> None:
-    groups = resolve_line_groups([
-        _WILLY / "L18PLT",
-        _WILLY / "L22PLT",
-    ])
+    groups = resolve_line_groups(
+        [
+            _WILLY / "L18PLT",
+            _WILLY / "L22PLT",
+        ]
+    )
     assert set(groups) == {"L18PLT", "L22PLT"}
 
 
@@ -129,9 +131,7 @@ def test_mapview_renders_all_views() -> None:
 
 def test_mapview_table_columns() -> None:
     df = MapView(_map_data()).table()
-    assert {"ID", "Latitude", "Longitude", "Line"} <= set(
-        df.columns
-    )
+    assert {"ID", "Latitude", "Longitude", "Line"} <= set(df.columns)
     assert len(df) == 3
 
 

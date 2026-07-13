@@ -39,6 +39,7 @@ from .utils import to_xarray as _to_xr
 
 __all__ = ["Resistivity", "Phase"]
 
+
 class Resistivity(TensorBase):
     r"""
     Apparent resistivity (:math:`\rho_a`) per component.
@@ -74,11 +75,10 @@ class Resistivity(TensorBase):
         meta: Mapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         super().__init__(
-            data=data, meta=meta, name=name or "Resistivity",
-            verbose=verbose
+            data=data, meta=meta, name=name or "Resistivity", verbose=verbose
         )
 
     def read(  # noqa: D401
@@ -112,7 +112,7 @@ class Resistivity(TensorBase):
                 "Resistivity.read expects DataFrame or vector-like."
             )
 
-        df= find_and_rename_column(source.copy(), self.VAR_NAME)
+        df = find_and_rename_column(source.copy(), self.VAR_NAME)
 
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
@@ -185,6 +185,7 @@ class Resistivity(TensorBase):
             attrs=merged,
         )
 
+
 class Phase(TensorBase):
     r"""Impedance phase (:math:`\varphi`) per component.
 
@@ -245,11 +246,10 @@ class Phase(TensorBase):
         meta: Mapping[str, Any] | None = None,
         *,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         super().__init__(
-            data=data, meta=meta, name=name or "Phase",
-            verbose=verbose
+            data=data, meta=meta, name=name or "Phase", verbose=verbose
         )
 
     def read(  # noqa: D401
@@ -278,11 +278,9 @@ class Phase(TensorBase):
             return
 
         if not isinstance(source, pd.DataFrame):
-            raise TypeError(
-                "Phase.read expects DataFrame or vector-like."
-            )
+            raise TypeError("Phase.read expects DataFrame or vector-like.")
 
-        df= find_and_rename_column(source.copy(), self.VAR_NAME)
+        df = find_and_rename_column(source.copy(), self.VAR_NAME)
 
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
@@ -306,7 +304,6 @@ class Phase(TensorBase):
         self._frame = df[["station", "freq", "comp", self.VAR_NAME]]
 
         return self
-
 
     def write(
         self,

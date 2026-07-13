@@ -149,7 +149,6 @@ class ResPhase(BaseEM):
            Magnetotellurics*. CUP.
     """
 
-
     def __init__(
         self,
         z_array: np.ndarray | None = None,
@@ -178,9 +177,7 @@ class ResPhase(BaseEM):
     @property
     def resistivity(self) -> np.ndarray:
         if self._resistivity is None:
-            raise ResistivityError(
-                "resistivity not computed/attached"
-            )
+            raise ResistivityError("resistivity not computed/attached")
         return self._resistivity
 
     @resistivity.setter
@@ -192,15 +189,11 @@ class ResPhase(BaseEM):
         return self._resistivity_err
 
     @resistivity_err.setter
-    def resistivity_err(
-        self, res_err_array: np.ndarray | None
-    ) -> None:
+    def resistivity_err(self, res_err_array: np.ndarray | None) -> None:
         if res_err_array is None:
             self._resistivity_err = None
         else:
-            self._resistivity_err = np.asarray(
-                res_err_array, dtype=float
-            )
+            self._resistivity_err = np.asarray(res_err_array, dtype=float)
 
     @property
     def phase(self) -> np.ndarray:
@@ -217,16 +210,11 @@ class ResPhase(BaseEM):
         return self._phase_err
 
     @phase_err.setter
-    def phase_err(
-        self, phase_err_array: np.ndarray | None
-    ) -> None:
+    def phase_err(self, phase_err_array: np.ndarray | None) -> None:
         if phase_err_array is None:
             self._phase_err = None
         else:
-            self._phase_err = np.asarray(
-                phase_err_array, dtype=float
-            )
-
+            self._phase_err = np.asarray(phase_err_array, dtype=float)
 
     def compute_resistivity_phase(
         self,
@@ -294,22 +282,15 @@ class ResPhase(BaseEM):
             self.freq = freq
 
         if self._z is None or self.freq is None:
-            raise ZError(
-                "missing Z and/or 'freq' to compute ρ and φ"
-            )
+            raise ZError("missing Z and/or 'freq' to compute ρ and φ")
 
         z = np.asarray(self._z, dtype=complex)
         f = np.asarray(self.freq, dtype=float)
 
         if z.ndim != 3 or z.shape[1:] != (2, 2):
-            raise ZError(
-                "Z must have shape (n,2,2); got "
-                f"{z.shape!r}"
-            )
+            raise ZError(f"Z must have shape (n,2,2); got {z.shape!r}")
         if f.ndim != 1 or f.shape[0] != z.shape[0]:
-            raise ZError(
-                "freq must be 1-D with length equal to Z.shape[0]"
-            )
+            raise ZError("freq must be 1-D with length equal to Z.shape[0]")
         if np.any(f <= 0.0) or not np.all(np.isfinite(f)):
             raise ZError("freq must be finite and > 0")
         if not np.all(np.isfinite(z.real + z.imag)):
@@ -342,12 +323,11 @@ class ResPhase(BaseEM):
                     re = z[k, i, j].real
                     im = z[k, i, j].imag
                     dz = z_err[k, i, j]
-                    r_rel, ph_err = z_error2r_phi_error(
-                        re, im, dz
-                    )
+                    r_rel, ph_err = z_error2r_phi_error(re, im, dz)
                     val = self._resistivity[k, i, j]
                     rho_e[k, i, j] = (
-                        0.0 if (val == 0.0) or (not np.isfinite(r_rel))
+                        0.0
+                        if (val == 0.0) or (not np.isfinite(r_rel))
                         else val * r_rel
                     )
                     phi_e[k, i, j] = ph_err
@@ -441,14 +421,10 @@ class ResPhase(BaseEM):
             raise PhaseError("phase must be real-valued")
 
         if f.ndim != 1 or f.size != rho.shape[0]:
-            raise ZError(
-                "freq must be 1-D with length equal to ρ.shape[0]"
-            )
+            raise ZError("freq must be 1-D with length equal to ρ.shape[0]")
         if np.any(f <= 0.0) or not np.all(np.isfinite(f)):
             raise ZError("freq must be finite and > 0")
-        if not np.all(np.isfinite(rho)) or not np.all(
-            np.isfinite(phi)
-        ):
+        if not np.all(np.isfinite(rho)) or not np.all(np.isfinite(phi)):
             raise ZError("ρ and φ must be finite")
 
         self._resistivity = rho
@@ -483,8 +459,9 @@ class ResPhase(BaseEM):
                 f"{rho_err.shape!r} vs {rho.shape!r}, "
                 f"{phi_err.shape!r} vs {phi.shape!r}"
             )
-        if (not np.all(np.isfinite(rho_err))
-                or not np.all(np.isfinite(phi_err))):
+        if not np.all(np.isfinite(rho_err)) or not np.all(
+            np.isfinite(phi_err)
+        ):
             raise ZError("ρ_err and φ_err must be finite")
         if np.any(rho_err < 0) or np.any(phi_err < 0):
             raise ZError("ρ_err and φ_err must be non-negative")
@@ -511,9 +488,7 @@ class ResPhase(BaseEM):
     # ---------------------------
     def _need_rho(self) -> None:
         if self._resistivity is None:
-            raise ResistivityError(
-                "resistivity not computed/attached"
-            )
+            raise ResistivityError("resistivity not computed/attached")
 
     def _need_phi(self) -> None:
         if self._phase is None:
@@ -614,18 +589,13 @@ class ResPhase(BaseEM):
     def _zdet(self) -> np.ndarray:
         if self._z is None:
             raise ZError("Z is not set")
-        return np.array(
-            [np.linalg.det(zz) ** 0.5 for zz in self._z]
-        )
+        return np.array([np.linalg.det(zz) ** 0.5 for zz in self._z])
 
     @property
     def _zdet_var(self) -> np.ndarray:
         if self._z_err is not None:
             return np.array(
-                [
-                    abs(np.linalg.det(zzv)) ** 0.5
-                    for zzv in self._z_err
-                ]
+                [abs(np.linalg.det(zzv)) ** 0.5 for zzv in self._z_err]
             )
         return np.ones_like(self._zdet, dtype=float)
 
@@ -639,9 +609,7 @@ class ResPhase(BaseEM):
         zd = self._zdet
         zv = self._zdet_var
         with np.errstate(divide="ignore", invalid="ignore"):
-            out = np.arcsin(
-                np.clip(zv / np.abs(zd), -1.0, 1.0)
-            )
+            out = np.arcsin(np.clip(zv / np.abs(zd), -1.0, 1.0))
         return np.degrees(out)
 
     @property

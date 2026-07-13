@@ -25,20 +25,21 @@ import numpy as np
 
 # ---
 
-_DARK_LINE   = "#89b4fa"   # Catppuccin Sapphire
-_DARK_OBS    = "#f38ba8"   # Red
-_DARK_PRED   = "#a6e3a1"   # Green
-_DARK_LOSS   = "#f38ba8"
+_DARK_LINE = "#89b4fa"  # Catppuccin Sapphire
+_DARK_OBS = "#f38ba8"  # Red
+_DARK_PRED = "#a6e3a1"  # Green
+_DARK_LOSS = "#f38ba8"
 
-_LIGHT_LINE  = "#1e66f5"
-_LIGHT_OBS   = "#d20f39"
-_LIGHT_PRED  = "#40a02b"
-_LIGHT_LOSS  = "#d20f39"
+_LIGHT_LINE = "#1e66f5"
+_LIGHT_OBS = "#d20f39"
+_LIGHT_PRED = "#40a02b"
+_LIGHT_LOSS = "#d20f39"
 
 
 # ---
 # Session -> observation list
 # ---
+
 
 def session_to_obs_1d(
     session_id: str,
@@ -70,12 +71,8 @@ def session_to_obs_1d(
 
     sites = cache_get(session_id)
     if not sites:
-        raise ValueError(
-            "No data loaded for this session."
-        )
-    obs = sites_to_obs_1d(
-        sites, comp=comp, verbose=0
-    )
+        raise ValueError("No data loaded for this session.")
+    obs = sites_to_obs_1d(sites, comp=comp, verbose=0)
     if stations:
         keep = set(stations)
         obs = [o for o in obs if o.name in keep]
@@ -120,9 +117,7 @@ def session_to_obs_2d(
 
     sites = cache_get(session_id)
     if not sites:
-        raise ValueError(
-            "No data loaded for this session."
-        )
+        raise ValueError("No data loaded for this session.")
     obs = sites_to_obs_2d(
         sites,
         comp_te=comp_te,
@@ -143,6 +138,7 @@ def session_to_obs_2d(
 # ---
 # Checkpoint decode
 # ---
+
 
 def decode_npz_checkpoint(
     content_b64: str,
@@ -174,6 +170,7 @@ def decode_npz_checkpoint(
 # ---
 # PINN inverter factory
 # ---
+
 
 def build_pinn_inv(
     obs: list,
@@ -247,6 +244,7 @@ def build_pinn_inv(
         from pycsamt.ai.inversion import (
             PINNInverter1D,
         )
+
         return PINNInverter1D(
             obs,
             solver=solver,
@@ -262,6 +260,7 @@ def build_pinn_inv(
         from pycsamt.ai.inversion import (
             PINNInverter2D,
         )
+
         return PINNInverter2D(
             obs,
             n_layers=n_layers,
@@ -281,11 +280,13 @@ def build_pinn_inv(
     from pycsamt.ai.inversion import PINNInverter3D
 
     n_sta = len(obs)
-    step  = float(station_spacing)
-    xy = np.column_stack([
-        np.arange(n_sta, dtype=float) * step,
-        np.zeros(n_sta),
-    ])
+    step = float(station_spacing)
+    xy = np.column_stack(
+        [
+            np.arange(n_sta, dtype=float) * step,
+            np.zeros(n_sta),
+        ]
+    )
     return PINNInverter3D(
         obs,
         n_layers=n_layers,
@@ -307,6 +308,7 @@ def build_pinn_inv(
 # ---
 # Hybrid inverter factory
 # ---
+
 
 def build_hybrid_inv(
     obs: list,
@@ -373,6 +375,7 @@ def build_hybrid_inv(
         from pycsamt.ai.inversion import (
             HybridInverter1D,
         )
+
         return HybridInverter1D(
             obs,
             checkpoint,
@@ -389,6 +392,7 @@ def build_hybrid_inv(
         from pycsamt.ai.inversion import (
             HybridInverter2D,
         )
+
         return HybridInverter2D(
             obs,
             checkpoint,
@@ -408,11 +412,13 @@ def build_hybrid_inv(
     from pycsamt.ai.inversion import HybridInverter3D
 
     n_sta = len(obs)
-    step  = float(station_spacing)
-    xy = np.column_stack([
-        np.arange(n_sta, dtype=float) * step,
-        np.zeros(n_sta),
-    ])
+    step = float(station_spacing)
+    xy = np.column_stack(
+        [
+            np.arange(n_sta, dtype=float) * step,
+            np.zeros(n_sta),
+        ]
+    )
     return HybridInverter3D(
         obs,
         checkpoint,
@@ -434,6 +440,7 @@ def build_hybrid_inv(
 # ---
 # Plot: resistivity section / volume
 # ---
+
 
 def plot_pinn_section(
     inv: Any,
@@ -477,9 +484,7 @@ def plot_pinn_section(
         apply_web_light_theme()
 
     if dim == "1d":
-        return _plot_1d_models(
-            inv, dark=dark, fig_to_src=fig_to_src
-        )
+        return _plot_1d_models(inv, dark=dark, fig_to_src=fig_to_src)
 
     # 2-D / 3-D colour section
     if dim == "3d":
@@ -490,9 +495,7 @@ def plot_pinn_section(
     stations = list(getattr(inv, "stations", []))
     n_sta = mat.shape[1]
 
-    fig, ax = plt.subplots(
-        figsize=(max(8, n_sta * 0.45 + 2), 5)
-    )
+    fig, ax = plt.subplots(figsize=(max(8, n_sta * 0.45 + 2), 5))
     im = ax.imshow(
         mat,
         aspect="auto",
@@ -501,19 +504,13 @@ def plot_pinn_section(
         interpolation="bilinear",
     )
     cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label(
-        "log10(resistivity / Ohm.m)", fontsize=9
-    )
+    cbar.set_label("log10(resistivity / Ohm.m)", fontsize=9)
     ax.set_xlabel("Station")
     ax.set_ylabel("Depth layer")
-    ax.set_title(
-        f"PINN {dim.upper()} Resistivity Section"
-    )
+    ax.set_title(f"PINN {dim.upper()} Resistivity Section")
     if stations:
         step = max(1, len(stations) // 15)
-        ax.set_xticks(
-            range(0, len(stations), step)
-        )
+        ax.set_xticks(range(0, len(stations), step))
         ax.set_xticklabels(
             stations[::step],
             rotation=45,
@@ -550,8 +547,8 @@ def _plot_1d_models(
 
     for i, m in enumerate(models):
         ax = flat[i]
-        rho  = np.asarray(m.resistivity)
-        thk  = np.asarray(m.thickness)
+        rho = np.asarray(m.resistivity)
+        thk = np.asarray(m.thickness)
         tops = np.concatenate([[0.0], np.cumsum(thk)])
         d, r = [], []
         for j in range(len(rho) - 1):
@@ -565,11 +562,7 @@ def _plot_1d_models(
         ax.invert_yaxis()
         ax.set_xlabel("rho (Ohm.m)", fontsize=7)
         ax.set_ylabel("Depth (m)", fontsize=7)
-        name = (
-            stations[i]
-            if i < len(stations)
-            else f"S{i}"
-        )
+        name = stations[i] if i < len(stations) else f"S{i}"
         ax.set_title(name, fontsize=8)
 
     for i in range(len(models), len(flat)):
@@ -582,6 +575,7 @@ def _plot_1d_models(
 # ---
 # Plot: Adam loss convergence
 # ---
+
 
 def plot_pinn_convergence(
     inv: Any,
@@ -626,7 +620,8 @@ def plot_pinn_convergence(
     if not history:
         fig, ax = plt.subplots(figsize=(7, 3))
         ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             "No loss history available.",
             ha="center",
             va="center",
@@ -664,11 +659,7 @@ def _extract_loss_history(inv: Any) -> list[float]:
         try:
             df = fn()
             if "loss" in df.columns:
-                return (
-                    df.groupby("epoch")["loss"]
-                    .mean()
-                    .tolist()
-                )
+                return df.groupby("epoch")["loss"].mean().tolist()
         except Exception:
             pass
 
@@ -684,6 +675,7 @@ def _extract_loss_history(inv: Any) -> list[float]:
 # ---
 # Plot: observed vs predicted data fit
 # ---
+
 
 def plot_pinn_data_fit(
     inv: Any,
@@ -728,7 +720,7 @@ def plot_pinn_data_fit(
     else:
         apply_web_light_theme()
 
-    c_obs  = _DARK_OBS  if dark else _LIGHT_OBS
+    c_obs = _DARK_OBS if dark else _LIGHT_OBS
     c_pred = _DARK_PRED if dark else _LIGHT_PRED
 
     if df is None:
@@ -737,9 +729,9 @@ def plot_pinn_data_fit(
         except Exception as exc:
             fig, ax = plt.subplots(figsize=(7, 3))
             ax.text(
-                0.5, 0.5,
-                f"Could not compute"
-                f" residuals:\n{exc}",
+                0.5,
+                0.5,
+                f"Could not compute residuals:\n{exc}",
                 ha="center",
                 va="center",
                 transform=ax.transAxes,
@@ -752,7 +744,8 @@ def plot_pinn_data_fit(
     if df.empty:
         fig, ax = plt.subplots(figsize=(7, 3))
         ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             f"No data for station {station!r}.",
             ha="center",
             va="center",
@@ -761,24 +754,30 @@ def plot_pinn_data_fit(
         fig.tight_layout()
         return fig_to_src(fig)
 
-    freq     = df["freq"].values
-    period   = 1.0 / freq
-    rho_obs  = df["rho_obs"].values
+    freq = df["freq"].values
+    period = 1.0 / freq
+    rho_obs = df["rho_obs"].values
     rho_pred = df["rho_pred"].values
-    ph_obs   = df["phase_obs"].values
-    ph_pred  = df["phase_pred"].values
+    ph_obs = df["phase_obs"].values
+    ph_pred = df["phase_pred"].values
 
-    fig, (ax1, ax2) = plt.subplots(
-        1, 2, figsize=(10, 4)
-    )
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
 
     ax1.loglog(
-        period, rho_obs,
-        "o", color=c_obs, ms=4, label="Observed",
+        period,
+        rho_obs,
+        "o",
+        color=c_obs,
+        ms=4,
+        label="Observed",
     )
     ax1.loglog(
-        period, rho_pred,
-        "-", color=c_pred, lw=2, label="Predicted",
+        period,
+        rho_pred,
+        "-",
+        color=c_pred,
+        lw=2,
+        label="Predicted",
     )
     ax1.set_xlabel("Period (s)")
     ax1.set_ylabel("App. resistivity (Ohm.m)")
@@ -786,21 +785,27 @@ def plot_pinn_data_fit(
     ax1.legend(fontsize=8)
 
     ax2.semilogx(
-        period, ph_obs,
-        "o", color=c_obs, ms=4, label="Observed",
+        period,
+        ph_obs,
+        "o",
+        color=c_obs,
+        ms=4,
+        label="Observed",
     )
     ax2.semilogx(
-        period, ph_pred,
-        "-", color=c_pred, lw=2, label="Predicted",
+        period,
+        ph_pred,
+        "-",
+        color=c_pred,
+        lw=2,
+        label="Predicted",
     )
     ax2.set_xlabel("Period (s)")
     ax2.set_ylabel("Phase (deg)")
     ax2.set_title(f"{station}  phase")
     ax2.legend(fontsize=8)
 
-    fig.suptitle(
-        f"Data Fit  --  {station}", fontsize=11
-    )
+    fig.suptitle(f"Data Fit  --  {station}", fontsize=11)
     fig.tight_layout()
     return fig_to_src(fig)
 
@@ -808,6 +813,7 @@ def plot_pinn_data_fit(
 # ---
 # Statistics HTML div
 # ---
+
 
 def pinn_stats_div(
     inv: Any,
@@ -833,56 +839,52 @@ def pinn_stats_div(
     """
     from dash import html
 
-    n_sites   = getattr(inv, "n_sites", "?")
-    n_layers  = getattr(inv, "n_layers", "?")
+    n_sites = getattr(inv, "n_sites", "?")
+    n_layers = getattr(inv, "n_layers", "?")
     depth_max = getattr(inv, "depth_max", "?")
-    epochs    = getattr(
-        inv, "epochs",
-        getattr(inv, "max_iter", "?")
-    )
-    lr        = getattr(inv, "lr", "?")
+    epochs = getattr(inv, "epochs", getattr(inv, "max_iter", "?"))
+    lr = getattr(inv, "lr", "?")
 
     rows: list = [
-        ("Track",          f"{label} {dim.upper()}"),
-        ("Stations",       str(n_sites)),
-        ("Layers",         str(n_layers)),
-        ("Depth max (m)",  str(depth_max)),
-        ("Epochs",         str(epochs)),
-        ("Learning rate",  str(lr)),
-        ("Elapsed (s)",    f"{elapsed_s:.1f}"),
+        ("Track", f"{label} {dim.upper()}"),
+        ("Stations", str(n_sites)),
+        ("Layers", str(n_layers)),
+        ("Depth max (m)", str(depth_max)),
+        ("Epochs", str(epochs)),
+        ("Learning rate", str(lr)),
+        ("Elapsed (s)", f"{elapsed_s:.1f}"),
     ]
 
     loss_history = _extract_loss_history(inv)
     if loss_history:
-        rows.append(
-            ("Final loss",
-             f"{loss_history[-1]:.4e}")
-        )
+        rows.append(("Final loss", f"{loss_history[-1]:.4e}"))
 
     _td_key = {
-        "color":         "#a6adc8",
-        "paddingRight":  "16px",
-        "fontSize":      "11px",
-        "whiteSpace":    "nowrap",
+        "color": "#a6adc8",
+        "paddingRight": "16px",
+        "fontSize": "11px",
+        "whiteSpace": "nowrap",
     }
     _td_val = {
-        "color":    "#cdd6f4",
+        "color": "#cdd6f4",
         "fontSize": "11px",
     }
 
     trs = [
-        html.Tr([
-            html.Td(k, style=_td_key),
-            html.Td(v, style=_td_val),
-        ])
+        html.Tr(
+            [
+                html.Td(k, style=_td_key),
+                html.Td(v, style=_td_val),
+            ]
+        )
         for k, v in rows
     ]
     return html.Div(
         html.Table(
             trs,
             style={
-                "width":           "100%",
-                "borderCollapse":  "collapse",
+                "width": "100%",
+                "borderCollapse": "collapse",
             },
         ),
         className="inv-stats-pinn",

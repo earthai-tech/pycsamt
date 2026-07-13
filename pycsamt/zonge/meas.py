@@ -17,6 +17,7 @@ Exports
 Both classes keep *context* columns ('station', 'freq', 'comp')
 when available, which helps downstream grouping and reshaping.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -57,28 +58,42 @@ class CompMeas(AVGComponentBase):
 
     # canonical forms allowed by the pipeline
     _VALID: set[str] = {
-        "ExHy", "ExHx", "EyHy", "EyHx",
-        "Zxx", "Zxy", "Zyx", "Zyy",
+        "ExHy",
+        "ExHx",
+        "EyHy",
+        "EyHx",
+        "Zxx",
+        "Zxy",
+        "Zyx",
+        "Zyy",
     }
 
     # tolerant normalisation map (upper/lower → canonical)
     _NORM: dict[str, str] = {
-        "EXHY": "ExHy", "EXHX": "ExHx",
-        "EYHY": "EyHy", "EYHX": "EyHx",
-        "exhy": "ExHy", "exhx": "ExHx",
-        "eyhy": "EyHy", "eyhx": "EyHx",
-        "ZXX": "Zxx", "ZXY": "Zxy",
-        "ZYX": "Zyx", "ZYY": "Zyy",
-        "zxx": "Zxx", "zxy": "Zxy",
-        "zyx": "Zyx", "zyy": "Zyy",
+        "EXHY": "ExHy",
+        "EXHX": "ExHx",
+        "EYHY": "EyHy",
+        "EYHX": "EyHx",
+        "exhy": "ExHy",
+        "exhx": "ExHx",
+        "eyhy": "EyHy",
+        "eyhx": "EyHx",
+        "ZXX": "Zxx",
+        "ZXY": "Zxy",
+        "ZYX": "Zyx",
+        "ZYY": "Zyy",
+        "zxx": "Zxx",
+        "zxy": "Zxy",
+        "zyx": "Zyx",
+        "zyy": "Zyy",
     }
 
-    required: set[str] = set()              # flexible on input
-    provides: set[str] = {"comp"}           # always provides comp
+    required: set[str] = set()  # flexible on input
+    provides: set[str] = {"comp"}  # always provides comp
 
-    def read(self,
-             source: pd.DataFrame,
-             meta: Mapping[str, Any] | None = None) -> None:
+    def read(
+        self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None
+    ) -> None:
         """
         Ensure a normalised ``comp`` column exists.
 
@@ -102,8 +117,7 @@ class CompMeas(AVGComponentBase):
         # be introduced during xarray conversion). Filtering *all*
         # invalid labels here made the validation below unreachable.
         df = df[
-            df["comp"].notna()
-            & (df["comp"].astype(str).str.lower() != "nan")
+            df["comp"].notna() & (df["comp"].astype(str).str.lower() != "nan")
         ].copy()
 
         # validate – bail early with a friendly message
@@ -115,7 +129,7 @@ class CompMeas(AVGComponentBase):
             )
 
         self._frame = df
-        self._meta  = dict(meta or {})
+        self._meta = dict(meta or {})
 
     def write(self) -> Sequence[str]:
         """
@@ -143,13 +157,14 @@ class CompMeas(AVGComponentBase):
 
     def __str__(self) -> str:
         kinds = ",".join(self.unique[:4])
-        more  = "…" if len(self.unique) > 4 else ""
+        more = "…" if len(self.unique) > 4 else ""
         return f"CompMeas[{len(self._frame)}] {{{kinds}{more}}}"
 
 
 @dataclass
 class _AmpStats:
     """Small stats tuple for quick diagnostics."""
+
     vmin: float | None = None
     vmax: float | None = None
     mean: float | None = None
@@ -173,7 +188,7 @@ class Amps(AVGComponentBase):
     >>> ds = amps.to_xarray()   # optional grid for convenience
     """
 
-    required: set[str] = set()            # tolerant – legacy files
+    required: set[str] = set()  # tolerant – legacy files
     provides: set[str] = {"amps"}
 
     def __init__(
@@ -181,14 +196,14 @@ class Amps(AVGComponentBase):
         data: pd.DataFrame | None = None,
         meta: Mapping[str, Any] | None = None,
         *,
-        name: str | None = None
+        name: str | None = None,
     ) -> None:
         super().__init__(data=data, meta=meta, name=name)
         self._stats = _AmpStats()
 
-    def read(self,
-             source: pd.DataFrame,
-             meta: Mapping[str, Any] | None = None) -> None:
+    def read(
+        self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None
+    ) -> None:
         """
         Parse *source* and populate the ``amps`` column as float.
 
@@ -208,7 +223,7 @@ class Amps(AVGComponentBase):
         df["amps"] = df["amps"].map(_to_float)
 
         self._frame = df
-        self._meta  = dict(meta or {})
+        self._meta = dict(meta or {})
         self._compute_stats()
 
         return self
@@ -216,8 +231,7 @@ class Amps(AVGComponentBase):
     def _compute_stats(self) -> None:
         """Compute quick stats on finite ``amps`` values."""
         s = pd.to_numeric(
-            self._frame.get("amps", pd.Series(dtype=float)),
-            errors="coerce"
+            self._frame.get("amps", pd.Series(dtype=float)), errors="coerce"
         )
 
         s = s[np.isfinite(s.values)]
@@ -241,19 +255,20 @@ class Amps(AVGComponentBase):
         """Return the ``amps`` column as a Series (copy)."""
         return self._frame.get("amps", pd.Series(dtype=float)).copy()
 
-    def to_frame(self) -> pd.DataFrame:          # override for clarity
+    def to_frame(self) -> pd.DataFrame:  # override for clarity
         """
         Return a small table with context + ``amps`` only.
         """
-        keep = [c for c in ("station", "freq", "comp", "amps")
-                if c in self._frame]
+        keep = [
+            c for c in ("station", "freq", "comp", "amps") if c in self._frame
+        ]
         return self._frame.loc[:, keep].copy()
 
     def to_xarray(
         self,
         *,
         coords: Sequence[str] = ("station", "freq", "comp"),
-        attrs: dict[str, Any] | None = None
+        attrs: dict[str, Any] | None = None,
     ):
         """
         Optional convenience: grid the column into an xarray
@@ -267,7 +282,7 @@ class Amps(AVGComponentBase):
             df,
             coords=coords,
             data_vars=["amps"],
-            attrs=attrs or {"component": "amps"}
+            attrs=attrs or {"component": "amps"},
         )
 
     def write(self) -> Sequence[str]:
@@ -275,8 +290,9 @@ class Amps(AVGComponentBase):
         Serialise as a compact CSV fragment.  We keep context
         columns if present so the block remains useful alone.
         """
-        cols = [c for c in ("station", "freq", "comp", "amps")
-                if c in self._frame]
+        cols = [
+            c for c in ("station", "freq", "comp", "amps") if c in self._frame
+        ]
         if not cols:
             return []
         return self._write_csv_block(
@@ -313,26 +329,25 @@ class Frequency(AVGComponentBase):
     """
 
     # what we require/provide as a component table
-    required: set[str] = set()         # we can construct from a vector
+    required: set[str] = set()  # we can construct from a vector
     provides: set[str] = {"freq"}
-
 
     def __init__(
         self,
         data: pd.DataFrame | None = None,
         meta: Mapping[str, Any] | None = None,
         *,
-        name: str | None = None
-        ) -> None:
-        super().__init__(
-            data=data, meta=meta, name=name or "Frequency")
+        name: str | None = None,
+    ) -> None:
+        super().__init__(data=data, meta=meta, name=name or "Frequency")
         # ensure we always carry a frequency unit tag
         self._meta.setdefault("Unit.Freq", "Hz")
 
-    def read(self,
+    def read(
+        self,
         source: pd.DataFrame | Sequence[float] | np.ndarray | pd.Series,
         meta: Mapping[str, Any] | None = None,
-        **kws: Any
+        **kws: Any,
     ) -> None:
         """
         Load frequency values from a tidy frame *or* a flat vector.
@@ -346,8 +361,9 @@ class Frequency(AVGComponentBase):
 
         # vector-like → build a tiny tidy frame
         if isinstance(source, (list, tuple, np.ndarray, pd.Series)):
-            vec = pd.to_numeric(pd.Series(source, dtype="float64"),
-                                errors="coerce")
+            vec = pd.to_numeric(
+                pd.Series(source, dtype="float64"), errors="coerce"
+            )
             df = pd.DataFrame({"freq": vec})
             if "station" in kws:
                 df["station"] = kws["station"]
@@ -360,8 +376,7 @@ class Frequency(AVGComponentBase):
 
         # dataframe path
         if not isinstance(source, pd.DataFrame):
-            raise TypeError(
-                "Frequency.read expects DataFrame or vector-like")
+            raise TypeError("Frequency.read expects DataFrame or vector-like")
 
         df = _standardise_columns(source.copy())
 
@@ -410,29 +425,26 @@ class Frequency(AVGComponentBase):
     def _validate_positive(self) -> None:
         """Raise on non-positive *numeric* frequency values."""
         s = pd.to_numeric(
-            self._frame.get("freq", pd.Series(dtype=float)),
-            errors="coerce"
+            self._frame.get("freq", pd.Series(dtype=float)), errors="coerce"
         )
         bad = s.notna() & (s <= 0.0)
         if bool(bad.any()):
             n = int(bad.sum())
-            raise FrequencyError(
-                f"found {n} non-positive frequency value(s)")
+            raise FrequencyError(f"found {n} non-positive frequency value(s)")
 
     def unique(
-       self,
-       *,
-       sort: bool = True,
-       dropna: bool = True,
-       rtol: float = 1e-6,
-       atol: float = 1e-12
+        self,
+        *,
+        sort: bool = True,
+        dropna: bool = True,
+        rtol: float = 1e-6,
+        atol: float = 1e-12,
     ) -> np.ndarray:
         """
         Unique global frequency grid with tolerance deduplication.
         """
         s = pd.to_numeric(
-            self._frame.get("freq", pd.Series(dtype=float)),
-            errors="coerce"
+            self._frame.get("freq", pd.Series(dtype=float)), errors="coerce"
         )
         if dropna:
             s = s.dropna()
@@ -445,10 +457,7 @@ class Frequency(AVGComponentBase):
         return uniq
 
     def by_station(
-        self,
-        *,
-        rtol: float = 1e-6,
-        atol: float = 1e-12
+        self, *, rtol: float = 1e-6, atol: float = 1e-12
     ) -> dict[float, np.ndarray]:
         """
         Per-station unique frequency grids (sorted).
@@ -469,16 +478,17 @@ class Frequency(AVGComponentBase):
         return int(self.unique().size)
 
     @staticmethod
-    def logspace(decade_start: int,
-                 decade_stop: int,
-                 n_points: int) -> np.ndarray:
+    def logspace(
+        decade_start: int, decade_stop: int, n_points: int
+    ) -> np.ndarray:
         """
         Canonical log-spaced grid (10**start → 10**stop), inclusive.
         """
         if n_points < 2:
             raise ValueError("n_points must be >= 2")
-        return np.logspace(decade_start, decade_stop, n_points,
-                           endpoint=True, base=10.0)
+        return np.logspace(
+            decade_start, decade_stop, n_points, endpoint=True, base=10.0
+        )
 
     def to_xarray(
         self,
@@ -520,7 +530,9 @@ class Frequency(AVGComponentBase):
         cp = ds.coords["comp"].values
         fq = ds.coords["freq"].values  # 1-D list of freqs
 
-        ds = ds.drop_vars("freq")  # remove the 1-D coord variable named 'freq'
+        ds = ds.drop_vars(
+            "freq"
+        )  # remove the 1-D coord variable named 'freq'
 
         # 3) Broadcast freq values over (station, freq, comp)
         freq3 = np.broadcast_to(
@@ -542,10 +554,13 @@ class Frequency(AVGComponentBase):
         f = f.dropna()
         if f.empty:
             return "Frequency[n=? span=?–? Hz, unique=0]"
-        return (f"Frequency[{len(self._frame)}×{self._frame.shape[1]}] "
-                f"span={f.min():g}–{f.max():g} Hz, unique={self.n_unique}")
+        return (
+            f"Frequency[{len(self._frame)}×{self._frame.shape[1]}] "
+            f"span={f.min():g}–{f.max():g} Hz, unique={self.n_unique}"
+        )
 
     __repr__ = __str__
+
 
 def _to_float(x: Any) -> float | np.floating | np.nan:
     """
@@ -564,8 +579,7 @@ def _to_float(x: Any) -> float | np.floating | np.nan:
         return np.nan
 
 
-def _keep_context(df: pd.DataFrame,
-                  cols: Sequence[str]) -> pd.DataFrame:
+def _keep_context(df: pd.DataFrame, cols: Sequence[str]) -> pd.DataFrame:
     """
     Return a *copy* of ``df`` with the selected columns if present,
     preserving a helpful context subset first: station/freq/comp.
@@ -576,10 +590,9 @@ def _keep_context(df: pd.DataFrame,
     return df.loc[:, keep].copy()
 
 
-def _unique_tol(arr: np.ndarray,
-                *,
-                rtol: float = 1e-6,
-                atol: float = 1e-12) -> np.ndarray:
+def _unique_tol(
+    arr: np.ndarray, *, rtol: float = 1e-6, atol: float = 1e-12
+) -> np.ndarray:
     """
     Return sorted uniques using an *isclose* tolerance, which is
     useful when frequencies come from decimal strings like '.5'
@@ -593,4 +606,3 @@ def _unique_tol(arr: np.ndarray,
         if not np.isclose(x, keep[-1], rtol=rtol, atol=atol):
             keep.append(x)
     return np.asarray(keep, dtype=float)
-

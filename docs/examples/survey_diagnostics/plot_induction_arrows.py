@@ -70,8 +70,10 @@ plot_tipper_polar(KAP, component="imag", cmap="viridis", figsize=(6, 6))
 # depth increases.
 
 plot_induction_arrows(
-    KAP, periods=[25, 100, 400, 1600, 6400, 16000],
-    scale=2.0, figsize=(11, 4.5),
+    KAP,
+    periods=[25, 100, 400, 1600, 6400, 16000],
+    scale=2.0,
+    figsize=(11, 4.5),
 )
 
 # %%
@@ -122,7 +124,10 @@ plot_induction_rose(KAP, component="imag", nbins=36, figsize=(5.5, 5.5))
 # capstone for a tipper-bearing line.
 
 plot_strike_analysis(
-    KAP, style="pycsamt", method="sweep", bins=36,
+    KAP,
+    style="pycsamt",
+    method="sweep",
+    bins=36,
     suptitle="Strike analysis — KAP03  (Z | PT azimuth | Tipper)",
     subplot_size=4.0,
 )
@@ -135,7 +140,11 @@ plot_strike_analysis(
 # long-period regional trend.
 
 plot_strike_analysis(
-    KAP, style="pycsamt", method="sweep", band=(25, 400), bins=36,
+    KAP,
+    style="pycsamt",
+    method="sweep",
+    band=(25, 400),
+    bins=36,
     suptitle="Strike analysis — KAP03  (short-period band)",
     subplot_size=4.0,
 )

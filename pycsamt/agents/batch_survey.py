@@ -31,13 +31,21 @@ Reply in plain English.
 """
 
 _SUPPORTED_WORKFLOWS = {
-    "qc":             ["MTLoaderAgent", "DataQCAgent", "StaticShiftAgent"],
-    "ai_inversion":   ["MTLoaderAgent", "DataQCAgent", "DenoisingAgent",
-                       "AIInversionAgent"],
-    "phase_analysis": ["MTLoaderAgent", "DataQCAgent", "StaticShiftAgent",
-                       "PhaseAnalysisAgent"],
-    "sensitivity":    ["MTLoaderAgent", "SensitivityAgent"],
-    "tipper":         ["MTLoaderAgent", "TipperAnalysisAgent"],
+    "qc": ["MTLoaderAgent", "DataQCAgent", "StaticShiftAgent"],
+    "ai_inversion": [
+        "MTLoaderAgent",
+        "DataQCAgent",
+        "DenoisingAgent",
+        "AIInversionAgent",
+    ],
+    "phase_analysis": [
+        "MTLoaderAgent",
+        "DataQCAgent",
+        "StaticShiftAgent",
+        "PhaseAnalysisAgent",
+    ],
+    "sensitivity": ["MTLoaderAgent", "SensitivityAgent"],
+    "tipper": ["MTLoaderAgent", "TipperAnalysisAgent"],
 }
 
 
@@ -91,7 +99,7 @@ class BatchSurveyAgent(BaseAgent):
             llm_provider=llm_provider,
         )
         self.workflow = workflow
-        self.n_jobs   = n_jobs
+        self.n_jobs = n_jobs
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -103,22 +111,25 @@ class BatchSurveyAgent(BaseAgent):
             return AgentResult.failed(
                 "No 'profiles' key provided.",
                 hint="Pass profiles={'L01': '/data/L01', 'L02': '/data/L02'} "
-                     "or a list of paths.",
+                "or a list of paths.",
                 elapsed=time.time() - t0,
             )
 
         # normalise to dict
         if isinstance(profiles_raw, (list, tuple)):
-            profiles = {f"profile_{i:02d}": str(p)
-                        for i, p in enumerate(profiles_raw)}
+            profiles = {
+                f"profile_{i:02d}": str(p) for i, p in enumerate(profiles_raw)
+            }
         else:
             profiles = {str(k): str(v) for k, v in profiles_raw.items()}
 
         if not profiles:
-            return AgentResult.failed("Empty profiles dict.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "Empty profiles dict.", elapsed=time.time() - t0
+            )
 
-        workflow  = str(input_data.get("workflow", self.workflow))
-        n_jobs    = int(input_data.get("n_jobs",   self.n_jobs))
+        workflow = str(input_data.get("workflow", self.workflow))
+        n_jobs = int(input_data.get("n_jobs", self.n_jobs))
         output_dir = input_data.get("output_dir")
 
         agent_names = _SUPPORTED_WORKFLOWS.get(workflow)
@@ -127,24 +138,29 @@ class BatchSurveyAgent(BaseAgent):
                 f"Unknown workflow {workflow!r}; using 'qc'. "
                 f"Supported: {list(_SUPPORTED_WORKFLOWS)}."
             )
-            workflow    = "qc"
+            workflow = "qc"
             agent_names = _SUPPORTED_WORKFLOWS["qc"]
 
         # ── build per-profile extra kwargs ────────────────────────────────
-        extra = {k: v for k, v in input_data.items()
-                 if k not in ("profiles", "workflow", "n_jobs", "output_dir")}
+        extra = {
+            k: v
+            for k, v in input_data.items()
+            if k not in ("profiles", "workflow", "n_jobs", "output_dir")
+        }
 
         # ── run profiles ──────────────────────────────────────────────────
         profile_results: dict[str, AgentResult] = {}
 
         def _run_one(name: str, path: str) -> tuple[str, AgentResult]:
             import os
+
             prof_out = os.path.join(output_dir, name) if output_dir else None
             inp = {"path": path, "output_dir": prof_out}
             inp.update(extra)
             try:
                 return name, _run_pipeline(
-                    agent_names, inp,
+                    agent_names,
+                    inp,
                     api_key=self.api_key,
                     model=self.model,
                     llm_provider=self.llm_provider,
@@ -154,6 +170,7 @@ class BatchSurveyAgent(BaseAgent):
 
         try:
             from joblib import Parallel, delayed
+
             pairs = Parallel(n_jobs=n_jobs, prefer="threads")(
                 delayed(_run_one)(name, path)
                 for name, path in profiles.items()
@@ -166,21 +183,28 @@ class BatchSurveyAgent(BaseAgent):
             profile_results[name] = result
 
         # ── summary table ─────────────────────────────────────────────────
-        n_success = sum(1 for r in profile_results.values() if r.status != "failed")
-        n_failed  = len(profile_results) - n_success
+        n_success = sum(
+            1 for r in profile_results.values() if r.status != "failed"
+        )
+        n_failed = len(profile_results) - n_success
 
         rows = []
         for name, r in profile_results.items():
             row = {
                 "profile": name,
-                "status":  r.status,
+                "status": r.status,
                 "elapsed": round(r.elapsed_seconds, 2),
-                "cost":    round(r.cost_estimate_usd, 6),
+                "cost": round(r.cost_estimate_usd, 6),
                 "n_warnings": len(r.warnings),
             }
             # pull common metrics
-            for key in ("rms_global", "rms", "n_stations", "n_flagged",
-                        "mean_doi_km"):
+            for key in (
+                "rms_global",
+                "rms",
+                "n_stations",
+                "n_flagged",
+                "mean_doi_km",
+            ):
                 val = r.get(key)
                 if val is not None:
                     row[key] = val
@@ -188,6 +212,7 @@ class BatchSurveyAgent(BaseAgent):
 
         try:
             import pandas as pd
+
             summary_table = pd.DataFrame(rows)
         except ImportError:
             summary_table = rows
@@ -200,8 +225,12 @@ class BatchSurveyAgent(BaseAgent):
             fig = _plot_batch_summary(profile_results)
             if fig is not None:
                 figures["batch_summary"] = fig
-                p = self._save_figure(fig, output_dir, "batch_survey_summary",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig,
+                    output_dir,
+                    "batch_survey_summary",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["batch_summary"] = p
         except Exception as exc:
@@ -210,8 +239,11 @@ class BatchSurveyAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and profile_results:
-            worst = max(profile_results,
-                        key=lambda n: len(profile_results[n].warnings), default="?")
+            worst = max(
+                profile_results,
+                key=lambda n: len(profile_results[n].warnings),
+                default="?",
+            )
             prompt = (
                 f"Batch survey processing ({workflow}):\n"
                 f"  Profiles: {len(profiles)}\n"
@@ -231,12 +263,12 @@ class BatchSurveyAgent(BaseAgent):
             ),
             data={
                 "profile_results": profile_results,
-                "summary_table":   summary_table,
-                "n_success":       n_success,
-                "n_failed":        n_failed,
-                "workflow":        workflow,
-                "figures":         figures,
-                "figure_paths":    fig_paths,
+                "summary_table": summary_table,
+                "n_success": n_success,
+                "n_failed": n_failed,
+                "workflow": workflow,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -246,6 +278,7 @@ class BatchSurveyAgent(BaseAgent):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
 
 def _run_pipeline(
     agent_names: list[str],
@@ -264,9 +297,10 @@ def _run_pipeline(
 
     for agent_name in agent_names:
         try:
-            mod  = importlib.import_module(f".{_agent_module(agent_name)}",
-                                           package="pycsamt.agents")
-            cls  = getattr(mod, agent_name)
+            mod = importlib.import_module(
+                f".{_agent_module(agent_name)}", package="pycsamt.agents"
+            )
+            cls = getattr(mod, agent_name)
             agent = cls(**common)
             result = agent.execute(current_input)
             last_result = result
@@ -280,24 +314,26 @@ def _run_pipeline(
 
         except Exception as exc:
             return AgentResult.failed(
-                f"{agent_name} failed: {exc}", elapsed=0.0,
+                f"{agent_name} failed: {exc}",
+                elapsed=0.0,
             )
 
     return last_result or AgentResult.failed(
-        "No agents ran.", elapsed=0.0,
+        "No agents ran.",
+        elapsed=0.0,
     )
 
 
 def _agent_module(name: str) -> str:
     _MAP = {
-        "MTLoaderAgent":        "loader",
-        "DataQCAgent":          "qc",
-        "StaticShiftAgent":     "static_shift",
-        "DenoisingAgent":       "denoising",
-        "AIInversionAgent":     "ai_inversion",
-        "PhaseAnalysisAgent":   "phase_analysis",
-        "SensitivityAgent":     "sensitivity",
-        "TipperAnalysisAgent":  "tipper_analysis",
+        "MTLoaderAgent": "loader",
+        "DataQCAgent": "qc",
+        "StaticShiftAgent": "static_shift",
+        "DenoisingAgent": "denoising",
+        "AIInversionAgent": "ai_inversion",
+        "PhaseAnalysisAgent": "phase_analysis",
+        "SensitivityAgent": "sensitivity",
+        "TipperAnalysisAgent": "tipper_analysis",
     }
     return _MAP.get(name, name.lower())
 
@@ -306,18 +342,30 @@ def _plot_batch_summary(profile_results: dict[str, Any]) -> Any:
     """Horizontal bar chart: elapsed time per profile, coloured by status."""
     import matplotlib.pyplot as plt
 
-    names   = list(profile_results.keys())
+    names = list(profile_results.keys())
     elapsed = [profile_results[n].elapsed_seconds for n in names]
-    colors  = ["#27ae60" if profile_results[n].status != "failed"
-               else "#e74c3c" for n in names]
+    colors = [
+        "#27ae60" if profile_results[n].status != "failed" else "#e74c3c"
+        for n in names
+    ]
 
     fig, ax = plt.subplots(figsize=(6, max(3, len(names) * 0.35)))
-    ax.barh(range(len(names)), elapsed, color=colors, alpha=0.85, edgecolor="white")
+    ax.barh(
+        range(len(names)),
+        elapsed,
+        color=colors,
+        alpha=0.85,
+        edgecolor="white",
+    )
     ax.set_yticks(range(len(names)))
     ax.set_yticklabels(names, fontsize=7)
     ax.set_xlabel("Elapsed time (s)", fontsize=9)
-    ax.set_title("Batch survey — processing time per profile\n"
-                 "(green = success, red = failed)", fontsize=9, fontweight="bold")
+    ax.set_title(
+        "Batch survey — processing time per profile\n"
+        "(green = success, red = failed)",
+        fontsize=9,
+        fontweight="bold",
+    )
     ax.tick_params(labelsize=8)
     ax.invert_yaxis()
     fig.tight_layout()

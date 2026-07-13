@@ -51,10 +51,7 @@ def _detect_mode_from_rho(path: Path) -> str:
                 if not stripped or stripped.startswith("#"):
                     continue
                 parts = stripped.split()
-                n_int = sum(
-                    1 for tok in parts
-                    if tok.lstrip("-").isdigit()
-                )
+                n_int = sum(1 for tok in parts if tok.lstrip("-").isdigit())
                 return "3d" if n_int >= 3 else "2d"
     except OSError:
         pass
@@ -172,23 +169,23 @@ class InversionResult(ModEmBase):
         if "mi" in self.models:
             self.model_final = self.models["mi"]
         elif any(re.match(r"m\d+", k) for k in self.models):
+
             def _old_sort(k: str) -> int:
                 mm = re.match(r"m(\d+)", k)
                 return int(mm.group(1)) if mm else -1
+
             old_keys = [k for k in self.models if re.match(r"m\d+", k)]
             self.model_final = self.models[max(old_keys, key=_old_sort)]
 
         # Resolve initial / final from real ModEM naming (iter_NNNN keys)
-        iter_keys = sorted(
-            [k for k in self.models if k.startswith("iter_")]
-        )
+        iter_keys = sorted([k for k in self.models if k.startswith("iter_")])
         if iter_keys and self.model_initial is None:
             self.model_initial = self.models[iter_keys[0]]
         if iter_keys and self.model_final is None:
             self.model_final = self.models[iter_keys[-1]]
 
         # -- data files ------------------------------------------------
-        _ERR_SENTINEL = 1e10   # ModEM uses 2e15 to mark masked/unused data
+        _ERR_SENTINEL = 1e10  # ModEM uses 2e15 to mark masked/unused data
 
         if not self.load_data:
             if self.verbose:

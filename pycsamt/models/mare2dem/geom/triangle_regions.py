@@ -89,6 +89,7 @@ def get_triangle_regions(
     # ---- build segment adjacency (boundary edges) ----
     try:
         from scipy.sparse import lil_matrix
+
         A = lil_matrix((n_nodes, n_nodes), dtype=np.int8)
         for s in segs:
             A[s[0], s[1]] = 1
@@ -129,6 +130,7 @@ def get_triangle_regions(
         seeds = np.asarray(region_seeds, dtype=float)
         try:
             from scipy.spatial import Delaunay as _DT
+
             # build Delaunay from pts to query point locations
             _dt = _DT(pts)
             for seed in seeds:

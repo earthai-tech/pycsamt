@@ -30,6 +30,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +45,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -48,15 +55,13 @@ if str(ROOT) not in sys.path:
 from pycsamt.models.modem import InversionResult, PlotMisfit
 from pycsamt.models.modem.plot import PlotSection
 
-
 sample_dir = ROOT / "data" / "modem" / "willy_27freq_watex_line02_sample"
-figure_dir = Path(__file__).resolve().parent / "workspaces" / "modem_result_figures"
+figure_dir = EXAMPLE_DIR / "workspaces" / "modem_result_figures"
 figure_dir.mkdir(parents=True, exist_ok=True)
 
 if not sample_dir.exists():
     raise RuntimeError(
-        "The ModEM result sample is missing. Expected folder: "
-        f"{sample_dir}"
+        f"The ModEM result sample is missing. Expected folder: {sample_dir}"
     )
 
 # %%
@@ -94,7 +99,9 @@ if result.mode != "3d":
 # as a diagnostic/interpretive product, not as a final truth.
 
 fig_misfit = PlotMisfit(result=result).plot()
-fig_misfit.axes[0].set_title("ModEM convergence before section interpretation")
+fig_misfit.axes[0].set_title(
+    "ModEM convergence before section interpretation"
+)
 misfit_file = figure_dir / "modem_sample_misfit.png"
 fig_misfit.savefig(misfit_file, dpi=120)
 plt.show()
@@ -309,7 +316,9 @@ change_summary = pd.DataFrame(
         {
             "first_snapshot": first_key,
             "final_snapshot": final_key,
-            "median_abs_log10_change": float(np.nanmedian(np.abs(log10_ratio))),
+            "median_abs_log10_change": float(
+                np.nanmedian(np.abs(log10_ratio))
+            ),
             "p90_abs_log10_change": float(
                 np.nanpercentile(np.abs(log10_ratio), 90)
             ),
@@ -324,7 +333,9 @@ change_summary.to_csv(change_file, index=False)
 print("Section change summary:")
 print(change_summary.to_string(index=False))
 
-fig_change, ax_change = plt.subplots(figsize=(9.5, 5.0), constrained_layout=True)
+fig_change, ax_change = plt.subplots(
+    figsize=(9.5, 5.0), constrained_layout=True
+)
 change_limit = max(0.5, float(np.nanpercentile(np.abs(log10_ratio), 98)))
 mesh = ax_change.pcolormesh(
     sections[final_key]["distance_km"],
@@ -338,9 +349,7 @@ mesh = ax_change.pcolormesh(
 ax_change.invert_yaxis()
 ax_change.set_xlabel(sections[final_key]["distance_label"])
 ax_change.set_ylabel("Depth below model top (km)")
-ax_change.set_title(
-    f"Log10 resistivity change: {first_key} to {final_key}"
-)
+ax_change.set_title(f"Log10 resistivity change: {first_key} to {final_key}")
 cb = fig_change.colorbar(mesh, ax=ax_change, pad=0.015)
 cb.set_label("log10(final / initial)")
 change_plot_file = figure_dir / "modem_sample_section_log10_change.png"

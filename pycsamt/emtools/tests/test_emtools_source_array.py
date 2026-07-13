@@ -1,6 +1,7 @@
 """
 Tests for pycsamt.emtools.source_array
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -21,6 +22,7 @@ from pycsamt.emtools.source_array import (
 # ─────────────────────────────────────────────────────────────────────────────
 # wavenumber
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_wavenumber_freespace_positive():
     k = wavenumber(100.0)
@@ -61,6 +63,7 @@ def test_wavenumber_earth_formula():
 # ─────────────────────────────────────────────────────────────────────────────
 # sdas_element_pattern
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_element_null_at_0():
     """θ=0 is along dipole axis → null."""
@@ -109,6 +112,7 @@ def test_element_symmetric():
 # array_factor
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_af_broadside_unity_beta0():
     """At θ_b=0 with β=0, normalised AF = 1."""
     AF = array_factor(0.0, N=3, d=100.0, k=0.002, beta=0.0)
@@ -137,7 +141,7 @@ def test_af_steered_max_near_target():
     theta = np.linspace(-90, 90, 1800)
     AF = array_factor(theta, N=5, d=d, k=k, beta=beta)
     theta_max = float(theta[AF.argmax()])
-    assert abs(theta_max - theta_m) < 5.0   # within 5° tolerance
+    assert abs(theta_max - theta_m) < 5.0  # within 5° tolerance
 
 
 def test_af_scalar():
@@ -156,6 +160,7 @@ def test_af_n1_equals_one():
 # pas_pattern
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_pas_normalized_max_one():
     theta = np.linspace(-90, 90, 500)
     P = pas_pattern(theta, N=3, d=100.0, k=0.002)
@@ -172,7 +177,7 @@ def test_pas_n1_equals_element():
     """N=1 PAS pattern equals normalised element pattern."""
     theta = np.linspace(5.0, 85.0, 50)
     k = wavenumber(100.0, rho=100.0)
-    P   = pas_pattern(theta, N=1, d=100.0, k=k, l=1000.0)
+    P = pas_pattern(theta, N=1, d=100.0, k=k, l=1000.0)
     # element pattern evaluated at 90° - theta (broadside → dipole angle)
     F = sdas_element_pattern(90.0 - theta, l=1000.0, k=k)
     # both normalised; compare up to constant scale
@@ -187,17 +192,19 @@ def test_pas_steered_peak():
     beta = beam_steer(theta_m, d, k)
     theta = np.linspace(-85, 85, 1700)
     P_unsteered = pas_pattern(theta, N=4, d=d, k=k, beta=0.0, l=1000.0)
-    P_steered   = pas_pattern(theta, N=4, d=d, k=k, beta=beta, l=1000.0)
+    P_steered = pas_pattern(theta, N=4, d=d, k=k, beta=beta, l=1000.0)
     peak_u = float(theta[P_unsteered.argmax()])
     peak_s = float(theta[P_steered.argmax()])
     # Steered peak must be closer to θ_m than unsteered peak
-    assert abs(peak_s - theta_m) <= abs(peak_u - theta_m) + 1.0, \
+    assert abs(peak_s - theta_m) <= abs(peak_u - theta_m) + 1.0, (
         f"steered peak {peak_s:.1f}° not shifted toward {theta_m}° (unsteered={peak_u:.1f}°)"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # beam_steer
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_beam_steer_broadside_zero():
     """Broadside (θ_m=0) requires β=0."""
@@ -223,13 +230,15 @@ def test_beam_steer_roundtrip():
     d = 150.0
     beta = beam_steer(theta_m, d, k)
     angles = steering_angles(3, d, k, beta)
-    assert any(abs(a - theta_m) < 1.0 for a in angles), \
+    assert any(abs(a - theta_m) < 1.0 for a in angles), (
         f"Expected ~{theta_m}° in {angles}"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # steering_angles
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_steering_angles_beta0_broadside():
     """β=0 → n=0 solution is θ_m=0° (broadside)."""
@@ -255,6 +264,7 @@ def test_steering_angles_sorted():
 # sdas_directivity
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_directivity_positive():
     D = sdas_directivity(l=1000.0, k=0.002)
     assert D > 0
@@ -268,13 +278,14 @@ def test_directivity_finite():
 def test_directivity_increases_with_length():
     """Longer dipole → more directive."""
     D_short = sdas_directivity(l=100.0, k=0.002)
-    D_long  = sdas_directivity(l=3000.0, k=0.002)
+    D_long = sdas_directivity(l=3000.0, k=0.002)
     assert D_long >= D_short
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # snr_gain_db
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_snr_gain_n1_zero():
     assert snr_gain_db(1) == pytest.approx(0.0, abs=1e-6)
@@ -297,11 +308,14 @@ def test_snr_gain_increases_with_n():
 # plot_radiation_pattern
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_returns_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     theta = np.linspace(-90, 90, 200)
     P = pas_pattern(theta, N=3, d=100.0, k=0.002)
     ax = plot_radiation_pattern(theta, P, polar=False)
@@ -312,8 +326,10 @@ def test_plot_returns_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_polar():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     theta = np.linspace(-90, 90, 200)
     P = pas_pattern(theta, N=3, d=100.0, k=0.002)
     ax = plot_radiation_pattern(theta, P, polar=True)
@@ -324,19 +340,25 @@ def test_plot_polar():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_multi_pattern():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     theta = np.linspace(-90, 90, 200)
     k = wavenumber(100.0, rho=100.0)
     d = 100.0
-    pats = np.vstack([
-        pas_pattern(theta, N=1, d=d, k=k),
-        pas_pattern(theta, N=3, d=d, k=k),
-        pas_pattern(theta, N=5, d=d, k=k),
-    ])
+    pats = np.vstack(
+        [
+            pas_pattern(theta, N=1, d=d, k=k),
+            pas_pattern(theta, N=3, d=d, k=k),
+            pas_pattern(theta, N=5, d=d, k=k),
+        ]
+    )
     ax = plot_radiation_pattern(
-        theta, pats, polar=False,
-        labels=["N=1 (SDAS)", "N=3 (PAS)", "N=5 (PAS)"]
+        theta,
+        pats,
+        polar=False,
+        labels=["N=1 (SDAS)", "N=3 (PAS)", "N=5 (PAS)"],
     )
     assert ax is not None
     plt.close("all")
@@ -345,8 +367,10 @@ def test_plot_multi_pattern():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_log_scale():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     theta = np.linspace(-90, 90, 200)
     P = pas_pattern(theta, N=3, d=100.0, k=0.002)
     ax = plot_radiation_pattern(theta, P, polar=False, log_scale=True)
@@ -357,8 +381,10 @@ def test_plot_log_scale():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_existing_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     _, ax_in = plt.subplots()
     theta = np.linspace(-90, 90, 200)
     P = pas_pattern(theta, N=2, d=100.0, k=0.002)

@@ -94,8 +94,11 @@ def simulate_amt_channel(
 
     if mains_hz and powerline_amplitude > 0:
         x = x + simulate_powerline_noise(
-            n_samples, fs, mains_hz=mains_hz,
-            amplitude=powerline_amplitude, seed=int(rng.integers(0, 2**31)),
+            n_samples,
+            fs,
+            mains_hz=mains_hz,
+            amplitude=powerline_amplitude,
+            seed=int(rng.integers(0, 2**31)),
         )
 
     if dropout_rate and dropout_rate > 0:
@@ -118,7 +121,7 @@ def _inject_dropouts(
     for _ in range(n_gaps):
         length = max(1, n_drop // n_gaps)
         start = int(rng.integers(0, max(1, n - length)))
-        x[start:start + length] = np.nan
+        x[start : start + length] = np.nan
     return x
 
 
@@ -174,17 +177,21 @@ def simulate_amt_station(
     data: dict[str, np.ndarray] = {}
     for channel in channels:
         data[channel] = simulate_amt_channel(
-            n_samples, sample_rate,
-            snr_db=snr_db, mains_hz=mains_hz,
+            n_samples,
+            sample_rate,
+            snr_db=snr_db,
+            mains_hz=mains_hz,
             powerline_amplitude=powerline_amplitude,
             dropout_rate=dropout_rate,
             seed=int(rng.integers(0, 2**31)),
         )
 
     # Aggregate QC proxies from the synthetic data.
-    coverage = float(np.mean([
-        np.mean(np.isfinite(v)) for v in data.values()
-    ])) if data else 1.0
+    coverage = (
+        float(np.mean([np.mean(np.isfinite(v)) for v in data.values()]))
+        if data
+        else 1.0
+    )
     accepted = bool(coverage >= 0.95 and snr_db >= 6.0)
     battery_v = float(11.0 + rng.uniform(0.0, 2.0))
 
@@ -279,7 +286,8 @@ def simulate_iot_network(
             survey_id=survey_id,
             profile=profile,
             position_m=idx * float(station_spacing_m),
-            timestamp=_EPOCH_BASE + i * (n_samples / float(sample_rate) + 1.0),
+            timestamp=_EPOCH_BASE
+            + i * (n_samples / float(sample_rate) + 1.0),
             seed=int(rng.integers(0, 2**31)),
         )
         stations.append(result)

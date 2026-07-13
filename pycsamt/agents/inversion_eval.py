@@ -84,9 +84,9 @@ class InversionEvaluationAgent(BaseAgent):
 
         obs_raw = input_data.get("sites_obs") or input_data.get("path_obs")
         mod_raw = input_data.get("sites_mod") or input_data.get("path_mod")
-        component  = str(input_data.get("component", "xy")).lower()
+        component = str(input_data.get("component", "xy")).lower()
         output_dir = input_data.get("output_dir")
-        ri, ci     = (0, 1) if component == "xy" else (1, 0)
+        ri, ci = (0, 1) if component == "xy" else (1, 0)
 
         if obs_raw is None:
             return AgentResult.failed(
@@ -96,10 +96,12 @@ class InversionEvaluationAgent(BaseAgent):
         try:
             sites_obs = ensure_sites(obs_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         if mod_raw is None:
-            warnings.append("No model response provided; RMS cannot be computed.")
+            warnings.append(
+                "No model response provided; RMS cannot be computed."
+            )
             sites_mod = None
         else:
             try:
@@ -111,8 +113,10 @@ class InversionEvaluationAgent(BaseAgent):
         # ── per-station RMS ───────────────────────────────────────────────────
         rms_per: dict[str, float] = {}
         if sites_mod is not None:
-            obs_dict = {_name(ed, i): ed
-                        for i, ed in enumerate(_iter_items(sites_obs))}
+            obs_dict = {
+                _name(ed, i): ed
+                for i, ed in enumerate(_iter_items(sites_obs))
+            }
             for i, ed_m in enumerate(_iter_items(sites_mod)):
                 nm = _name(ed_m, i)
                 ed_o = obs_dict.get(nm)
@@ -123,19 +127,31 @@ class InversionEvaluationAgent(BaseAgent):
                     _, z_m, fr_m = _get_z_block(ed_m)
                     if z_o is None or z_m is None:
                         continue
-                    rho_o = (0.2/np.where(fr_o==0,np.nan,fr_o)) * np.abs(z_o[:,ri,ci])**2
-                    rho_m = (0.2/np.where(fr_m==0,np.nan,fr_m)) * np.abs(z_m[:,ri,ci])**2
+                    rho_o = (
+                        0.2 / np.where(fr_o == 0, np.nan, fr_o)
+                    ) * np.abs(z_o[:, ri, ci]) ** 2
+                    rho_m = (
+                        0.2 / np.where(fr_m == 0, np.nan, fr_m)
+                    ) * np.abs(z_m[:, ri, ci]) ** 2
                     n = min(len(rho_o), len(rho_m))
-                    mask = np.isfinite(rho_o[:n]) & (rho_o[:n] > 0) & \
-                           np.isfinite(rho_m[:n]) & (rho_m[:n] > 0)
+                    mask = (
+                        np.isfinite(rho_o[:n])
+                        & (rho_o[:n] > 0)
+                        & np.isfinite(rho_m[:n])
+                        & (rho_m[:n] > 0)
+                    )
                     if mask.sum() < 2:
                         continue
-                    res = np.log10(rho_o[:n][mask]) - np.log10(rho_m[:n][mask])
+                    res = np.log10(rho_o[:n][mask]) - np.log10(
+                        rho_m[:n][mask]
+                    )
                     rms_per[nm] = float(np.sqrt(np.mean(res**2)))
                 except Exception as exc:
                     warnings.append(f"RMS for {nm}: {exc}")
 
-        rms_global = float(np.mean(list(rms_per.values()))) if rms_per else np.nan
+        rms_global = (
+            float(np.mean(list(rms_per.values()))) if rms_per else np.nan
+        )
 
         # ── residual PT ───────────────────────────────────────────────────────
         residual_pt = None
@@ -150,7 +166,10 @@ class InversionEvaluationAgent(BaseAgent):
                         suffixes=("_obs", "_mod"),
                     )
                     for col in ("skew", "ellipt", "theta"):
-                        if f"{col}_obs" in merged.columns and f"{col}_mod" in merged.columns:
+                        if (
+                            f"{col}_obs" in merged.columns
+                            and f"{col}_mod" in merged.columns
+                        ):
                             merged[f"d_{col}"] = (
                                 merged[f"{col}_obs"] - merged[f"{col}_mod"]
                             )
@@ -167,16 +186,29 @@ class InversionEvaluationAgent(BaseAgent):
                 from ..emtools.inspect import (
                     plot_station_response,
                 )
+
                 fig_resp = plot_station_response(
-                    sites_obs, sites_model=sites_mod,
+                    sites_obs,
+                    sites_model=sites_mod,
                 )
                 if fig_resp is not None:
-                    f = fig_resp if hasattr(fig_resp,"savefig") else (
-                        fig_resp.get_figure() if hasattr(fig_resp,"get_figure") else None)
+                    f = (
+                        fig_resp
+                        if hasattr(fig_resp, "savefig")
+                        else (
+                            fig_resp.get_figure()
+                            if hasattr(fig_resp, "get_figure")
+                            else None
+                        )
+                    )
                     if f is not None:
                         figures["station_response"] = f
-                        p = self._save_figure(f, output_dir, "inversion_response",
-                                              warnings_list=warnings)
+                        p = self._save_figure(
+                            f,
+                            output_dir,
+                            "inversion_response",
+                            warnings_list=warnings,
+                        )
                         if p:
                             fig_paths["station_response"] = p
             except Exception as exc:
@@ -199,16 +231,16 @@ class InversionEvaluationAgent(BaseAgent):
         return AgentResult(
             status="success" if not np.isnan(rms_global) else "needs_review",
             summary=(
-                f"Inversion evaluation: global RMS = "
-                f"{rms_global:.3f}" if not np.isnan(rms_global)
+                f"Inversion evaluation: global RMS = {rms_global:.3f}"
+                if not np.isnan(rms_global)
                 else "Inversion evaluation: no model response provided."
             ),
             data={
-                "rms_per_station":   rms_per,
-                "rms_global":        rms_global,
+                "rms_per_station": rms_per,
+                "rms_global": rms_global,
                 "residual_pt_table": residual_pt,
-                "figures":           figures,
-                "figure_paths":      fig_paths,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,

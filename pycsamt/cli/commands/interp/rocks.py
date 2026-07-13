@@ -40,7 +40,8 @@ from ._base import interp
 
 @interp.command("rocks")
 @click.option(
-    "--rho", "-r",
+    "--rho",
+    "-r",
     type=float,
     default=None,
     metavar="OHM_M",
@@ -117,16 +118,17 @@ def rocks(
 # Output helpers
 # ---------------------------------------------------------------------------
 
+
 def _emit_database(db, output_format: str) -> None:
     import pandas as pd  # noqa: PLC0415
 
     rows = [
         {
-            "code":        e.code,
-            "name":        e.name,
-            "rho_min":     e.rho_min,
-            "rho_max":     e.rho_max,
-            "rho_mid":     round(e.rho_mid, 2),
+            "code": e.code,
+            "name": e.name,
+            "rho_min": e.rho_min,
+            "rho_max": e.rho_max,
+            "rho_mid": round(e.rho_mid, 2),
             "description": e.description,
         }
         for e in db._entries
@@ -134,7 +136,9 @@ def _emit_database(db, output_format: str) -> None:
     df = pd.DataFrame(rows).sort_values("rho_min").reset_index(drop=True)
 
     if output_format == "json":
-        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
+        click.echo(
+            df.to_json(orient="records", indent=2, default_handler=str)
+        )
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:
@@ -143,18 +147,19 @@ def _emit_database(db, output_format: str) -> None:
 
 def _emit_entry(rho: float, entry, output_format: str) -> None:
     data = {
-        "query_rho_Ohm_m":  rho,
-        "code":              entry.code,
-        "name":              entry.name,
-        "rho_min_Ohm_m":     entry.rho_min,
-        "rho_max_Ohm_m":     entry.rho_max,
-        "rho_mid_Ohm_m":     round(entry.rho_mid, 2),
-        "description":       entry.description,
+        "query_rho_Ohm_m": rho,
+        "code": entry.code,
+        "name": entry.name,
+        "rho_min_Ohm_m": entry.rho_min,
+        "rho_max_Ohm_m": entry.rho_max,
+        "rho_mid_Ohm_m": round(entry.rho_mid, 2),
+        "description": entry.description,
     }
     if output_format == "json":
         click.echo(json.dumps(data, indent=2, default=str))
     elif output_format == "csv":
         import pandas as pd  # noqa: PLC0415
+
         click.echo(pd.DataFrame([data]).to_csv(index=False))
     else:
         click.echo(f"\nQuery  : {rho} Ω·m")

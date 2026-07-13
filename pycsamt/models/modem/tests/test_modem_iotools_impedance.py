@@ -1,6 +1,5 @@
 """Tests for pycsamt.models.modem.iotools.impedance."""
 
-
 import numpy as np
 import pytest
 
@@ -21,25 +20,29 @@ from pycsamt.models.modem.iotools.impedance import (
 # Synthetic data builders
 # ---------------------------------------------------------------------------
 
+
 def _z3d_imp(n_sites=3, n_comp=4, periods=(10.0, 100.0)):
     """Build an ImpedanceFile with simple 3D data."""
     rng = np.random.default_rng(7)
     comps = ["ZXX", "ZXY", "ZYX", "ZYY"][:n_comp]
     blocks = []
     for T in periods:
-        Z    = (rng.standard_normal((n_sites, n_comp))
-                + 1j * rng.standard_normal((n_sites, n_comp)))
+        Z = rng.standard_normal((n_sites, n_comp)) + 1j * rng.standard_normal(
+            (n_sites, n_comp)
+        )
         Zerr = np.abs(rng.standard_normal((n_sites, n_comp))) * 0.1
-        loc  = rng.uniform(-5000, 5000, (n_sites, 3))
+        loc = rng.uniform(-5000, 5000, (n_sites, 3))
         loc[:, 2] = 0.0  # surface
-        blocks.append(ZBlock(
-            period=T,
-            site_names=[f"S{k:02d}" for k in range(n_sites)],
-            site_loc=loc,
-            comp_names=comps,
-            Z=Z,
-            Zerr=Zerr,
-        ))
+        blocks.append(
+            ZBlock(
+                period=T,
+                site_names=[f"S{k:02d}" for k in range(n_sites)],
+                site_loc=loc,
+                comp_names=comps,
+                Z=Z,
+                Zerr=Zerr,
+            )
+        )
     return ImpedanceFile(
         description="Synthetic test data",
         units="[V/m]/[T]",
@@ -54,33 +57,53 @@ def _z2d_imp(n_sites=4, periods_te=(10.0,), periods_tm=(10.0,)):
     rng = np.random.default_rng(13)
     blocks = []
     for T in periods_te:
-        Z    = (rng.standard_normal((n_sites, 1))
-                + 1j * rng.standard_normal((n_sites, 1)))
+        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal(
+            (n_sites, 1)
+        )
         Zerr = np.abs(rng.standard_normal((n_sites, 1))) * 0.05
-        ys   = np.linspace(-10000, 10000, n_sites)
-        loc  = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
-        blocks.append(ZBlock(
-            period=T, site_names=[f"S{k:02d}" for k in range(n_sites)],
-            site_loc=loc, comp_names=["ZTE"], Z=Z, Zerr=Zerr, mode="TE",
-        ))
+        ys = np.linspace(-10000, 10000, n_sites)
+        loc = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
+        blocks.append(
+            ZBlock(
+                period=T,
+                site_names=[f"S{k:02d}" for k in range(n_sites)],
+                site_loc=loc,
+                comp_names=["ZTE"],
+                Z=Z,
+                Zerr=Zerr,
+                mode="TE",
+            )
+        )
     for T in periods_tm:
-        Z    = (rng.standard_normal((n_sites, 1))
-                + 1j * rng.standard_normal((n_sites, 1)))
+        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal(
+            (n_sites, 1)
+        )
         Zerr = np.abs(rng.standard_normal((n_sites, 1))) * 0.05
-        ys   = np.linspace(-10000, 10000, n_sites)
-        loc  = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
-        blocks.append(ZBlock(
-            period=T, site_names=[f"S{k:02d}" for k in range(n_sites)],
-            site_loc=loc, comp_names=["ZTM"], Z=Z, Zerr=Zerr, mode="TM",
-        ))
+        ys = np.linspace(-10000, 10000, n_sites)
+        loc = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
+        blocks.append(
+            ZBlock(
+                period=T,
+                site_names=[f"S{k:02d}" for k in range(n_sites)],
+                site_loc=loc,
+                comp_names=["ZTM"],
+                Z=Z,
+                Zerr=Zerr,
+                mode="TM",
+            )
+        )
     return ImpedanceFile(
-        description="Synthetic 2D test", units="[V/m]/[T]", sign=-1, blocks=blocks,
+        description="Synthetic 2D test",
+        units="[V/m]/[T]",
+        sign=-1,
+        blocks=blocks,
     )
 
 
 # ===========================================================================
 # ZBlock / ImpedanceFile dataclass
 # ===========================================================================
+
 
 def test_zblock_n_sites():
     blk = _z3d_imp().blocks[0]
@@ -104,6 +127,7 @@ def test_impedancefile_n_periods():
 # ===========================================================================
 # Old 3D format roundtrip
 # ===========================================================================
+
 
 class TestZ3dOld:
     def test_write_creates_file(self, tmp_path):
@@ -210,6 +234,7 @@ class TestZ3dOld:
 # Old 2D format roundtrip
 # ===========================================================================
 
+
 class TestZ2dOld:
     def test_write_creates_file(self, tmp_path):
         imp = _z2d_imp()
@@ -253,6 +278,7 @@ class TestZ2dOld:
 # Current list format writers
 # ===========================================================================
 
+
 class TestListFormat:
     def test_z3d_list_creates_file(self, tmp_path):
         imp = _z3d_imp()
@@ -277,8 +303,11 @@ class TestListFormat:
     def test_z3d_list_data_lines_count(self, tmp_path):
         imp = _z3d_imp(n_sites=3, n_comp=4, periods=(10.0,))
         out = write_z3d_list(imp, tmp_path / "out.dat")
-        data_lines = [ln for ln in out.read_text().splitlines()
-                      if ln and not ln.startswith("#") and not ln.startswith(">")]
+        data_lines = [
+            ln
+            for ln in out.read_text().splitlines()
+            if ln and not ln.startswith("#") and not ln.startswith(">")
+        ]
         # 3 sites × 4 components = 12 data lines
         assert len(data_lines) == 12
 
@@ -297,6 +326,7 @@ class TestListFormat:
 # ===========================================================================
 # Convert functions
 # ===========================================================================
+
 
 class TestConvert:
     def test_convert_z3d(self, tmp_path):
@@ -320,5 +350,6 @@ class TestConvert:
         text = new.read_text()
         for T in [7.0, 70.0, 700.0]:
             # period appears as %12.6E in each data line
-            assert any(f"{T:.6E}" in ln for ln in text.splitlines()), \
+            assert any(f"{T:.6E}" in ln for ln in text.splitlines()), (
                 f"Period {T} not found in output"
+            )

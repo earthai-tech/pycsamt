@@ -84,6 +84,7 @@ def test_registry_add_obj_and_query(tmp_path: Path):
 
     class EdiLike:
         __module__ = "pycsamt.seg.edi"
+
         def __init__(self):
             self.station = "S001"
             self.station_id = 1

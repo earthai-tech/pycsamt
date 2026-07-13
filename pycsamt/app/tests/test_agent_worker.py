@@ -17,6 +17,7 @@ from pycsamt.app.desktop.workers.agent_worker import (
 
 # ── _SignalLogHandler ─────────────────────────────────────────────────────
 
+
 def test_signal_log_handler_emits_line():
     received = []
     handler = _SignalLogHandler(received.append)
@@ -29,12 +30,14 @@ def test_signal_log_handler_emits_line():
 def test_signal_log_handler_ignores_exceptions():
     def bad_fn(line):
         raise RuntimeError("sink error")
+
     handler = _SignalLogHandler(bad_fn)
     record = logging.LogRecord("test", logging.INFO, "", 0, "msg", (), None)
-    handler.emit(record)   # must not propagate
+    handler.emit(record)  # must not propagate
 
 
 # ── AgentWorker construction ──────────────────────────────────────────────
+
 
 def test_agent_worker_creates(qapp):
     w = AgentWorker(
@@ -49,7 +52,7 @@ def test_agent_worker_unknown_name_emits_error(qapp):
     errors = []
     w = AgentWorker(agent_name="UNKNOWN_AGENT", sites=None, params={})
     w.error.connect(errors.append)
-    w.run()   # run synchronously in test
+    w.run()  # run synchronously in test
     assert len(errors) == 1
     assert "UNKNOWN_AGENT" in errors[0]
 
@@ -62,6 +65,7 @@ def test_agent_worker_cancel_flag(qapp):
 
 
 # ── Processing mode — no-data graceful failure ────────────────────────────
+
 
 def test_agent_worker_processing_no_sites_emits_error(qapp):
     errors = []
@@ -77,6 +81,7 @@ def test_agent_worker_processing_no_sites_emits_error(qapp):
 
 
 # ── Signals exist ─────────────────────────────────────────────────────────
+
 
 def test_agent_worker_has_required_signals(qapp):
     w = AgentWorker("QC Quicklook", sites=None, params={})

@@ -44,13 +44,23 @@ from pycsamt.emtools import (
 
 freq_sweep = np.logspace(-1, 3, 60)
 fig, ax = plt.subplots(figsize=(7.5, 4.2))
-for offset, color in zip([500.0, 2000.0, 8000.0], ["#d62728", "#ff7f0e", "#2ca02c"]):
+for offset, color in zip(
+    [500.0, 2000.0, 8000.0], ["#d62728", "#ff7f0e", "#2ca02c"]
+):
     beta = overprint_beta(rho=300.0, freq=freq_sweep, offset=offset)
     ax.loglog(freq_sweep, beta, color=color, label=f"r={offset:g} m")
     above = freq_sweep[beta > BETA_THRESH_PCT]
     if above.size:
-        print(f"offset={offset:g} m: beta>{BETA_THRESH_PCT:g}% for f up to {above.max():.3g} Hz")
-ax.axhline(BETA_THRESH_PCT, color="0.3", ls="--", lw=1, label=f"threshold {BETA_THRESH_PCT:g}%")
+        print(
+            f"offset={offset:g} m: beta>{BETA_THRESH_PCT:g}% for f up to {above.max():.3g} Hz"
+        )
+ax.axhline(
+    BETA_THRESH_PCT,
+    color="0.3",
+    ls="--",
+    lw=1,
+    label=f"threshold {BETA_THRESH_PCT:g}%",
+)
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel(r"$\beta_{Ey}$ (%)")
 ax.set_title(r"$\beta_{Ey}$ vs. frequency at $\rho$=300 $\Omega\cdot$m")
@@ -85,8 +95,10 @@ with warnings.catch_warnings():
     detail = detect_source_overprint(survey, source_offset=2000.0)
 
 print(detail["beta_pct"].describe())
-print(f"flagged (beta > {BETA_THRESH_PCT:g}%): "
-      f"{int(detail['overprint_flag'].sum())}/{len(detail)} station-frequency rows")
+print(
+    f"flagged (beta > {BETA_THRESH_PCT:g}%): "
+    f"{int(detail['overprint_flag'].sum())}/{len(detail)} station-frequency rows"
+)
 
 # %%
 # **Reading this output.** At the assumed 2 km offset, 944 of 1484
@@ -116,12 +128,20 @@ with warnings.catch_warnings():
     table_default_split = source_overprint_table(survey, source_offset=2000.0)
     table = source_overprint_table(survey, source_offset=2000.0, f_split=50.0)
 
-print("f_split=1.0 Hz (default): all lf_slope NaN?",
-      table_default_split["lf_slope"].isna().all())
-print(table[["station", "beta_max_pct", "overprint_frac", "slope_delta"]]
-      .sort_values("slope_delta").head(3))
-print(table[["station", "beta_max_pct", "overprint_frac", "slope_delta"]]
-      .sort_values("slope_delta").tail(3))
+print(
+    "f_split=1.0 Hz (default): all lf_slope NaN?",
+    table_default_split["lf_slope"].isna().all(),
+)
+print(
+    table[["station", "beta_max_pct", "overprint_frac", "slope_delta"]]
+    .sort_values("slope_delta")
+    .head(3)
+)
+print(
+    table[["station", "beta_max_pct", "overprint_frac", "slope_delta"]]
+    .sort_values("slope_delta")
+    .tail(3)
+)
 
 # %%
 # **Reading this output.** With a sensible split, ``18-020A`` has the
@@ -181,7 +201,9 @@ print(norm["zone"].value_counts())
 # :math:`\varphi_{diff}=\varphi_{obs}-\varphi_{ref}` side by side.
 
 fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0))
-plot_normalized_response(survey, rho_ref=300.0, source_offset=2000.0, axes=axes)
+plot_normalized_response(
+    survey, rho_ref=300.0, source_offset=2000.0, axes=axes
+)
 fig.tight_layout()
 
 # %%
@@ -222,8 +244,10 @@ def rho_xy(sites, name="18-016A"):
 before, fr0 = rho_xy(survey, "18-016A")
 corrected = correct_near_field(survey, source_offset=2000.0)
 after, _ = rho_xy(corrected, "18-016A")
-print(f"18-016A: max |change| in log10(rho) after near-field correction = "
-      f"{np.nanmax(np.abs(np.log10(before) - np.log10(after))):.2f}")
+print(
+    f"18-016A: max |change| in log10(rho) after near-field correction = "
+    f"{np.nanmax(np.abs(np.log10(before) - np.log10(after))):.2f}"
+)
 
 # %%
 # **Reading this output.** A swing of more than 6 decades in
@@ -245,7 +269,8 @@ print(f"18-016A: max |change| in log10(rho) after near-field correction = "
 # actually agree on which frequencies are source-contaminated.
 
 merged = detail.merge(
-    norm[["station", "freq_hz", "zone"]], on=["station", "freq_hz"],
+    norm[["station", "freq_hz", "zone"]],
+    on=["station", "freq_hz"],
 )
 agreement = merged.groupby("zone")["overprint_flag"].mean()
 print(agreement)

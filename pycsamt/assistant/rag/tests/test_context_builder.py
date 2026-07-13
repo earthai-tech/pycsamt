@@ -5,6 +5,7 @@ Tests for the context builder and its wiring into PackageQAAgent
 (RAG Step 4). Hermetic — small in-memory corpus, fake registry,
 monkeypatched default builder.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -29,7 +30,9 @@ def _chunks() -> list[RAGChunk]:
             "Docstring:\nEstimate AMA static-shift factors per station.\n\n"
             "Code:\ndef estimate_ss_ama(...): ...",
             source_path="pycsamt/emtools/ss.py",
-            kind="python_symbol", workflow="static_shift", priority=3,
+            kind="python_symbol",
+            workflow="static_shift",
+            priority=3,
             symbol="pycsamt.emtools.ss.estimate_ss_ama",
             metadata={"signature": "estimate_ss_ama(sites, half_window=3)"},
         ),
@@ -38,7 +41,9 @@ def _chunks() -> list[RAGChunk]:
             text="Static shift correction recipe. Use StaticShiftAgent or "
             "estimate_ss_ama / correct_ss_ama. galvanic distortion.",
             source_path="assistant_recipes/static_shift.md",
-            kind="recipe", workflow="static_shift", priority=3,
+            kind="recipe",
+            workflow="static_shift",
+            priority=3,
             title="Static-shift recipe",
         ),
     ]
@@ -50,8 +55,11 @@ class _FakeRegistry:
 
     def resolve_line(self, name):
         return {
-            "line": "L22PLT", "edi_dir": "/data/L22PLT", "exists": True,
-            "n_edi_files": 25, "sort_by": "lon",
+            "line": "L22PLT",
+            "edi_dir": "/data/L22PLT",
+            "exists": True,
+            "n_edi_files": 25,
+            "sort_by": "lon",
             "output_root": "results/willy/L22PLT",
             "default_workflows": ["load", "qc", "static_shift"],
             "static_shift": {"method": "ama", "half_window": 3},
@@ -60,16 +68,15 @@ class _FakeRegistry:
 
 
 class TestContextBuilder(unittest.TestCase):
-
     def setUp(self):
-        self.builder = ContextBuilder(
-            Retriever(_chunks()), _FakeRegistry()
-        )
+        self.builder = ContextBuilder(Retriever(_chunks()), _FakeRegistry())
 
     def test_rerank_fn_reorders_chunks(self):
         # A rerank_fn that names candidates "2, 1" reverses the two-chunk
         # pool, whatever order retrieval produced.
-        default_ids = [c.id for c in self.builder.build("static shift").chunks]
+        default_ids = [
+            c.id for c in self.builder.build("static shift").chunks
+        ]
         self.assertEqual(len(default_ids), 2)
         reranked = self.builder.build(
             "static shift", rerank_fn=lambda prompt, system: "2, 1"
@@ -82,9 +89,7 @@ class TestContextBuilder(unittest.TestCase):
         # No rerank_fn → identical to a plain build (no crash, same lead).
         a = self.builder.build("static shift")
         b = self.builder.build("static shift", rerank_fn=None)
-        self.assertEqual(
-            [c.id for c in a.chunks], [c.id for c in b.chunks]
-        )
+        self.assertEqual([c.id for c in a.chunks], [c.id for c in b.chunks])
 
     def test_session_rewrites_followup_for_retrieval(self):
         # A subject-less follow-up retrieves nothing on its own, but with a
@@ -135,14 +140,14 @@ class TestContextBuilder(unittest.TestCase):
 
 
 class TestClarification(unittest.TestCase):
-
     def test_confident_context_needs_no_clarification(self):
         ac = AssembledContext(query="static shift", top_score=50.0)
         self.assertIsNone(needs_clarification(ac))
 
     def test_project_context_is_confident(self):
         ac = AssembledContext(
-            query="do that again", top_score=1.0,
+            query="do that again",
+            top_score=1.0,
             project_context={"line": "L22PLT"},
         )
         self.assertIsNone(needs_clarification(ac))
@@ -170,15 +175,24 @@ class TestApiCardsAndGraph(unittest.TestCase):
                 text="Symbol: pycsamt.emtools.ss.correct_ss_ama\n\n"
                 "Docstring:\nCorrect static shift by AMA.",
                 source_path="pycsamt/emtools/ss.py",
-                kind="python_symbol", workflow="static_shift", priority=3,
+                kind="python_symbol",
+                workflow="static_shift",
+                priority=3,
                 symbol="pycsamt.emtools.ss.correct_ss_ama",
                 module="pycsamt.emtools.ss",
                 metadata={
                     "signature": "correct_ss_ama(sites, half_window=3) -> dict",
                     "params": [
-                        {"name": "sites", "annotation": None, "default": None},
-                        {"name": "half_window", "annotation": "int",
-                         "default": "3"},
+                        {
+                            "name": "sites",
+                            "annotation": None,
+                            "default": None,
+                        },
+                        {
+                            "name": "half_window",
+                            "annotation": "int",
+                            "default": "3",
+                        },
                     ],
                     "returns": "dict",
                     "refs": ["ensure_sites"],
@@ -189,11 +203,15 @@ class TestApiCardsAndGraph(unittest.TestCase):
                 text="Symbol: pycsamt.emtools.ss.ensure_sites\n\n"
                 "Docstring:\nLoad EDIs into Sites.",
                 source_path="pycsamt/emtools/ss.py",
-                kind="python_symbol", priority=3,
+                kind="python_symbol",
+                priority=3,
                 symbol="pycsamt.emtools.ss.ensure_sites",
                 module="pycsamt.emtools.ss",
-                metadata={"signature": "ensure_sites(path)", "params": [],
-                          "refs": []},
+                metadata={
+                    "signature": "ensure_sites(path)",
+                    "params": [],
+                    "refs": [],
+                },
             ),
         ]
 
@@ -207,7 +225,9 @@ class TestApiCardsAndGraph(unittest.TestCase):
 
     def test_api_card_rendered_for_lead_symbol(self):
         ac = self.builder.build("correct static shift ama")
-        self.assertIn("API: correct_ss_ama(sites, half_window=3)", ac.context_text)
+        self.assertIn(
+            "API: correct_ss_ama(sites, half_window=3)", ac.context_text
+        )
         self.assertIn("half_window: int = 3", ac.context_text)
 
     def test_related_symbols_from_graph(self):
@@ -249,6 +269,7 @@ class TestPackageQAWithRAG(unittest.TestCase):
 
     def test_offline_uses_rag(self):
         from pycsamt.agents.package_qa import PackageQAAgent
+
         qa = PackageQAAgent()  # no key → offline
         r = qa.execute({"question": "how to correct static shift"})
         self.assertEqual(r.status, "success")
@@ -258,6 +279,7 @@ class TestPackageQAWithRAG(unittest.TestCase):
 
     def test_use_rag_false_falls_back(self):
         from pycsamt.agents.package_qa import PackageQAAgent
+
         qa = PackageQAAgent(use_rag=False)
         r = qa.execute({"question": "what workflows are supported?"})
         # falls back to the docstring lookup, not rag_offline

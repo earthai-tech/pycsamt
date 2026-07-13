@@ -11,9 +11,7 @@ import sys
 def _parse() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="pycsamt-agent-master",
-        description=(
-            "Launch the pyCSAMT Agent Master GUI."
-        ),
+        description=("Launch the pyCSAMT Agent Master GUI."),
     )
     p.add_argument(
         "--host",
@@ -43,6 +41,7 @@ def _parse() -> argparse.Namespace:
 def main() -> int:
     args = _parse()
     from .app import launch
+
     launch(
         host=args.host,
         port=args.port,

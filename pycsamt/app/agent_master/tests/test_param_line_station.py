@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Param-modal line/station selectors: options, auto-injection, dependence."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -13,6 +14,7 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 class TestParamLineStation(unittest.TestCase):
     def _mod(self):
         from pycsamt.app.agent_master.callbacks import params
+
         return params
 
     def test_line_station_options(self):

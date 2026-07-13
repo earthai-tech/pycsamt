@@ -6,6 +6,7 @@ Tests for the RAG ingestion layer (Step 1).
 Pure stdlib — no DL backend, no Dash, no network. Uses temporary files
 so it doesn't depend on the repo layout.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -57,7 +58,6 @@ class StaticShiftAgent:
 
 
 class TestConfig(unittest.TestCase):
-
     def test_is_excluded(self):
         self.assertTrue(config.is_excluded("pycsamt/__pycache__/x.pyc"))
         self.assertTrue(config.is_excluded("pycsamt/app/web/app.py"))
@@ -87,7 +87,6 @@ class TestConfig(unittest.TestCase):
 
 
 class TestAstIndexer(unittest.TestCase):
-
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.pkg = self.tmp / "pycsamt" / "emtools"
@@ -107,15 +106,11 @@ class TestAstIndexer(unittest.TestCase):
         chunks = index_python_file(self.f, self.tmp)
         symbols = {c.symbol for c in chunks}
         # module doc + public function + class + public methods + __init__
-        self.assertIn("pycsamt.emtools.ss", symbols)            # module doc
+        self.assertIn("pycsamt.emtools.ss", symbols)  # module doc
         self.assertIn("pycsamt.emtools.ss.estimate_ss_ama", symbols)
         self.assertIn("pycsamt.emtools.ss.StaticShiftAgent", symbols)
-        self.assertIn(
-            "pycsamt.emtools.ss.StaticShiftAgent.execute", symbols
-        )
-        self.assertIn(
-            "pycsamt.emtools.ss.StaticShiftAgent.__init__", symbols
-        )
+        self.assertIn("pycsamt.emtools.ss.StaticShiftAgent.execute", symbols)
+        self.assertIn("pycsamt.emtools.ss.StaticShiftAgent.__init__", symbols)
         # private symbols excluded
         self.assertNotIn("pycsamt.emtools.ss._private_helper", symbols)
         self.assertNotIn(
@@ -125,7 +120,8 @@ class TestAstIndexer(unittest.TestCase):
     def test_signature_and_workflow_captured(self):
         chunks = index_python_file(self.f, self.tmp)
         fn = next(
-            c for c in chunks
+            c
+            for c in chunks
             if c.symbol == "pycsamt.emtools.ss.estimate_ss_ama"
         )
         self.assertIn("half_window", fn.metadata["signature"])
@@ -140,11 +136,8 @@ class TestAstIndexer(unittest.TestCase):
 
 
 class TestDocIndexer(unittest.TestCase):
-
     def test_split_md(self):
-        secs = split_sections(
-            "# Title\nintro\n## Sub\nbody text here", ".md"
-        )
+        secs = split_sections("# Title\nintro\n## Sub\nbody text here", ".md")
         titles = [t for t, _ in secs]
         self.assertIn("Title", titles)
         self.assertIn("Sub", titles)
@@ -171,7 +164,6 @@ class TestDocIndexer(unittest.TestCase):
 
 
 class TestIngest(unittest.TestCase):
-
     def _make_tree(self) -> Path:
         tmp = Path(tempfile.mkdtemp())
         (tmp / "pycsamt" / "emtools").mkdir(parents=True)
@@ -192,7 +184,7 @@ class TestIngest(unittest.TestCase):
         tmp = self._make_tree()
         [
             tmp / "pycsamt" / "emtools" / "ss.py",
-            tmp / "pycsamt" / "app" / "ui.py",   # excluded by config
+            tmp / "pycsamt" / "app" / "ui.py",  # excluded by config
             tmp / "README.md",
         ]
         # build_chunks indexes any file passed; the exclusion lives in
@@ -200,6 +192,7 @@ class TestIngest(unittest.TestCase):
         from pycsamt.assistant.rag.ingest import (
             iter_index_files,
         )
+
         walked = {p.name for p in iter_index_files(tmp)}
         self.assertIn("ss.py", walked)
         self.assertIn("README.md", walked)
@@ -207,12 +200,8 @@ class TestIngest(unittest.TestCase):
 
         chunks = build_chunks(tmp)
         self.assertGreater(len(chunks), 0)
-        self.assertTrue(
-            any(c.source_path == "README.md" for c in chunks)
-        )
-        self.assertFalse(
-            any("app/ui.py" in c.source_path for c in chunks)
-        )
+        self.assertTrue(any(c.source_path == "README.md" for c in chunks))
+        self.assertFalse(any("app/ui.py" in c.source_path for c in chunks))
 
     def test_save_load_roundtrip(self):
         tmp = self._make_tree()
@@ -234,12 +223,16 @@ class TestIngest(unittest.TestCase):
 
 
 class TestSchemas(unittest.TestCase):
-
     def test_chunk_roundtrip(self):
         c = RAGChunk(
-            id="x:1:2", text="hello", source_path="a/b.py",
-            kind="python_symbol", symbol="a.b.f", workflow="qc",
-            priority=3, metadata={"signature": "f()"},
+            id="x:1:2",
+            text="hello",
+            source_path="a/b.py",
+            kind="python_symbol",
+            symbol="a.b.f",
+            workflow="qc",
+            priority=3,
+            metadata={"signature": "f()"},
         )
         d = c.to_dict()
         c2 = RAGChunk.from_dict(d)

@@ -30,14 +30,15 @@ import pytest
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-_ROOT   = Path(__file__).parents[3]          # pycsamt/
+_ROOT = Path(__file__).parents[3]  # pycsamt/
 _TIPPER = _ROOT / "data" / "AMT" / "TIPPER"
-_WILLY  = _ROOT / "data" / "AMT" / "WILLY_DATA"
+_WILLY = _ROOT / "data" / "AMT" / "WILLY_DATA"
 
 _HAS_TIPPER = _TIPPER.exists() and any(_TIPPER.glob("*.edi"))
-_HAS_WILLY  = _WILLY.exists()  and any(_WILLY.rglob("*.edi"))
+_HAS_WILLY = _WILLY.exists() and any(_WILLY.rglob("*.edi"))
 
 # ── Session-scoped fixtures ───────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def tipper_sites():
@@ -46,6 +47,7 @@ def tipper_sites():
     if not _HAS_TIPPER:
         pytest.skip("TIPPER data not available")
     from pycsamt.emtools import ensure_sites
+
     return ensure_sites(str(_TIPPER))
 
 
@@ -56,6 +58,7 @@ def willy_sites():
     if not _HAS_WILLY:
         pytest.skip("WILLY data not available")
     from pycsamt.emtools import ensure_sites
+
     return ensure_sites(str(_WILLY))
 
 
@@ -64,6 +67,7 @@ def adv_ctrl():
     from pycsamt.app.desktop.controllers.advanced_controller import (
         AdvancedController,
     )
+
     return AdvancedController()
 
 
@@ -72,6 +76,7 @@ def topo_ctrl():
     from pycsamt.app.desktop.controllers.advanced_controller import (
         TopoPreviewController,
     )
+
     return TopoPreviewController()
 
 
@@ -80,10 +85,12 @@ def conv_ctrl():
     from pycsamt.app.desktop.controllers.advanced_controller import (
         ConversionController,
     )
+
     return ConversionController()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fig():
     """Return a fresh matplotlib Figure and close it after use."""
@@ -96,11 +103,13 @@ def _close():
 
 # ── AdvancedController construction ──────────────────────────────────────────
 
+
 class TestAdvancedControllerConstruction:
     def test_creates(self):
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         assert ctrl is not None
 
@@ -108,18 +117,21 @@ class TestAdvancedControllerConstruction:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         assert AdvancedController().dark is True
 
     def test_default_sites_none(self):
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         assert AdvancedController()._sites is None
 
     def test_set_sites(self):
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites("dummy")
         assert ctrl._sites == "dummy"
@@ -128,6 +140,7 @@ class TestAdvancedControllerConstruction:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites("dummy")
         ctrl.clear()
@@ -135,6 +148,7 @@ class TestAdvancedControllerConstruction:
 
 
 # ── draw() — no-data paths ────────────────────────────────────────────────────
+
 
 class TestDrawNoData:
     """draw() must never raise; it annotates the figure when data is missing."""
@@ -159,12 +173,15 @@ class TestDrawNoData:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
-        ctrl.set_sites(object())   # truthy mock — any non-None value is enough
+        ctrl.set_sites(object())  # truthy mock — any non-None value is enough
         fig = _fig()
         ctrl.draw("no_such_fn", False, fig)
         texts = [t.get_text() for ax in fig.axes for t in ax.texts]
-        assert any("not" in t.lower() or "function" in t.lower() for t in texts)
+        assert any(
+            "not" in t.lower() or "function" in t.lower() for t in texts
+        )
         _close()
 
     def test_no_sites_shows_load_message(self, adv_ctrl):
@@ -180,6 +197,7 @@ class TestDrawNoData:
 #
 # Each catalogue group is split into its own parametrised class so that
 # failures are clearly attributed to a group and don't block the others.
+
 
 def _catalogue_ids(group):
     return [fn for _, fn, _ in group]
@@ -202,16 +220,24 @@ from pycsamt.app.desktop.controllers.advanced_controller import (
 
 
 class TestStrikePlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(STRIKE_PLOTS),
-                              ids=_catalogue_ids(STRIKE_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(STRIKE_PLOTS),
+        ids=_catalogue_ids(STRIKE_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, willy_sites
+    ):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(STRIKE_PLOTS),
-                              ids=_catalogue_ids(STRIKE_PLOTS))
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(STRIKE_PLOTS),
+        ids=_catalogue_ids(STRIKE_PLOTS),
+    )
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -224,17 +250,26 @@ class TestStrikePlots:
 
 # Phase Tensor ────────────────────────────────────────────────────────────────
 
+
 class TestPhaseTensorPlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(PHASE_TENSOR_PLOTS),
-                              ids=_catalogue_ids(PHASE_TENSOR_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(PHASE_TENSOR_PLOTS),
+        ids=_catalogue_ids(PHASE_TENSOR_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, willy_sites
+    ):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(PHASE_TENSOR_PLOTS),
-                              ids=_catalogue_ids(PHASE_TENSOR_PLOTS))
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(PHASE_TENSOR_PLOTS),
+        ids=_catalogue_ids(PHASE_TENSOR_PLOTS),
+    )
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -247,18 +282,29 @@ class TestPhaseTensorPlots:
 
 # Induction / Tipper (use TIPPER data — has actual tipper channels) ────────────
 
+
 class TestInductionPlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(INDUCTION_PLOTS),
-                              ids=_catalogue_ids(INDUCTION_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, tipper_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(INDUCTION_PLOTS),
+        ids=_catalogue_ids(INDUCTION_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, tipper_sites
+    ):
         adv_ctrl.set_sites(tipper_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(INDUCTION_PLOTS),
-                              ids=_catalogue_ids(INDUCTION_PLOTS))
-    def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, tipper_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(INDUCTION_PLOTS),
+        ids=_catalogue_ids(INDUCTION_PLOTS),
+    )
+    def test_draw_produces_axes(
+        self, fn_name, has_ax, adv_ctrl, tipper_sites
+    ):
         adv_ctrl.set_sites(tipper_sites)
         fig = _fig()
         ret = adv_ctrl.draw(fn_name, has_ax, fig)
@@ -270,17 +316,26 @@ class TestInductionPlots:
 
 # Impedance / Z ───────────────────────────────────────────────────────────────
 
+
 class TestImpedancePlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(IMPEDANCE_PLOTS),
-                              ids=_catalogue_ids(IMPEDANCE_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(IMPEDANCE_PLOTS),
+        ids=_catalogue_ids(IMPEDANCE_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, willy_sites
+    ):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(IMPEDANCE_PLOTS),
-                              ids=_catalogue_ids(IMPEDANCE_PLOTS))
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(IMPEDANCE_PLOTS),
+        ids=_catalogue_ids(IMPEDANCE_PLOTS),
+    )
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -293,17 +348,26 @@ class TestImpedancePlots:
 
 # Depth Imaging ───────────────────────────────────────────────────────────────
 
+
 class TestDepthPlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(DEPTH_PLOTS),
-                              ids=_catalogue_ids(DEPTH_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(DEPTH_PLOTS),
+        ids=_catalogue_ids(DEPTH_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, willy_sites
+    ):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
-        adv_ctrl.draw(fn_name, has_ax, fig)   # must never raise
+        adv_ctrl.draw(fn_name, has_ax, fig)  # must never raise
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(DEPTH_PLOTS),
-                              ids=_catalogue_ids(DEPTH_PLOTS))
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(DEPTH_PLOTS),
+        ids=_catalogue_ids(DEPTH_PLOTS),
+    )
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -316,17 +380,26 @@ class TestDepthPlots:
 
 # Survey Tools ────────────────────────────────────────────────────────────────
 
+
 class TestSurveyPlots:
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(SURVEY_PLOTS),
-                              ids=_catalogue_ids(SURVEY_PLOTS))
-    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(SURVEY_PLOTS),
+        ids=_catalogue_ids(SURVEY_PLOTS),
+    )
+    def test_draw_does_not_raise(
+        self, fn_name, has_ax, adv_ctrl, willy_sites
+    ):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
         _close()
 
-    @pytest.mark.parametrize("fn_name,has_ax", _catalogue_params(SURVEY_PLOTS),
-                              ids=_catalogue_ids(SURVEY_PLOTS))
+    @pytest.mark.parametrize(
+        "fn_name,has_ax",
+        _catalogue_params(SURVEY_PLOTS),
+        ids=_catalogue_ids(SURVEY_PLOTS),
+    )
     def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
@@ -343,53 +416,63 @@ class TestSurveyPlots:
 # signature mismatch surfaces immediately rather than being silently caught
 # by AdvancedController.draw()'s except block.
 
+
 class TestEmtoolsDirectStrike:
     def test_plot_strike_rose(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_strike_rose(willy_sites, verbose=0)
         _close()
 
     def test_plot_strike_rose_by_line(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_strike_rose_by_line(willy_sites, verbose=0)
         _close()
 
     def test_plot_strike_analysis(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_strike_analysis(willy_sites, verbose=0)
         _close()
 
     def test_plot_theta_rose_grid(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_theta_rose_grid(willy_sites, verbose=0)
         _close()
 
     def test_plot_theta_vs_period(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_theta_vs_period(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_theta_stability_stripe(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_theta_stability_stripe(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_strike_ribbon(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_strike_ribbon(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_strike_mapsticks(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_strike_mapsticks(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_strike_stability_bands(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_strike_stability_bands(willy_sites, verbose=0)
         _close()
 
@@ -397,12 +480,14 @@ class TestEmtoolsDirectStrike:
 class TestEmtoolsDirectPhaseTensor:
     def test_plot_phase_tensor_map(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_phase_tensor_map(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_phase_tensor_rose(self, willy_sites):
         import pycsamt.emtools as et
+
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="polar")
         et.plot_phase_tensor_rose(willy_sites, ax=ax, verbose=0)
@@ -410,11 +495,13 @@ class TestEmtoolsDirectPhaseTensor:
 
     def test_plot_phase_tensor_summary(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_phase_tensor_summary(willy_sites, verbose=0)
         _close()
 
     def test_plot_phasor_wheel(self, willy_sites):
         import pycsamt.emtools as et
+
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="polar")
         et.plot_phasor_wheel(willy_sites, ax=ax, verbose=0)
@@ -422,17 +509,20 @@ class TestEmtoolsDirectPhaseTensor:
 
     def test_plot_pt_period_clock(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_pt_period_clock(willy_sites, verbose=0)
         _close()
 
     def test_plot_skew_ellipt_density(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_skew_ellipt_density(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_dimensionality_ternary(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_dimensionality_ternary(willy_sites, verbose=0)
         _close()
 
@@ -440,24 +530,28 @@ class TestEmtoolsDirectPhaseTensor:
 class TestEmtoolsDirectInduction:
     def test_plot_induction_arrows(self, tipper_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_induction_arrows(tipper_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_induction_map(self, tipper_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_induction_map(tipper_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_induction_section(self, tipper_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_induction_section(tipper_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_induction_rose(self, tipper_sites):
         import pycsamt.emtools as et
+
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="polar")
         et.plot_induction_rose(tipper_sites, ax=ax, verbose=0)
@@ -465,6 +559,7 @@ class TestEmtoolsDirectInduction:
 
     def test_plot_tipper_polar(self, tipper_sites):
         import pycsamt.emtools as et
+
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="polar")
         et.plot_tipper_polar(tipper_sites, ax=ax, verbose=0)
@@ -472,16 +567,19 @@ class TestEmtoolsDirectInduction:
 
     def test_plot_tipper_hodograms(self, tipper_sites):
         import pycsamt.emtools as et
+
         et.plot_tipper_hodograms(tipper_sites, verbose=0)
         _close()
 
     def test_plot_induction_multiperiod_map(self, tipper_sites):
         import pycsamt.emtools as et
+
         et.plot_induction_multiperiod_map(tipper_sites, verbose=0)
         _close()
 
     def test_plot_induction_convention(self, tipper_sites):
         import pycsamt.emtools as et
+
         et.plot_induction_convention(tipper_sites, verbose=0)
         _close()
 
@@ -489,49 +587,58 @@ class TestEmtoolsDirectInduction:
 class TestEmtoolsDirectImpedance:
     def test_plot_impedance_mohr_circles(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_impedance_mohr_circles(willy_sites, verbose=0)
         _close()
 
     def test_plot_zt_argand(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_zt_argand(willy_sites, verbose=0)
         _close()
 
     def test_plot_z_invariants_section(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_z_invariants_section(willy_sites, verbose=0)
         _close()
 
     def test_plot_rho_phase_bode(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_rho_phase_bode(willy_sites, verbose=0)
         _close()
 
     def test_plot_apparent_resistivity_polar(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_apparent_resistivity_polar(willy_sites, verbose=0)
         _close()
 
     def test_plot_xyyx_crossover_map(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_xyyx_crossover_map(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_offdiag_antisym_residual(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_offdiag_antisym_residual(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_anisotropy(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_anisotropy(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_ellipticity_psection(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_ellipticity_psection(willy_sites, ax=ax, verbose=0)
         _close()
@@ -540,29 +647,34 @@ class TestEmtoolsDirectImpedance:
 class TestEmtoolsDirectDepth:
     def test_plot_depth_section(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_depth_section(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_apparent_depth_psection(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_apparent_depth_psection(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_gradient_section(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_gradient_section(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_sensitivity_depth_section(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_sensitivity_depth_section(willy_sites, verbose=0)
         _close()
 
     def test_plot_mt_composite_section(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_mt_composite_section(willy_sites, verbose=0)
         _close()
 
@@ -571,21 +683,25 @@ class TestEmtoolsDirectDepth:
         import inspect
 
         import pycsamt.emtools as et
+
         sig = inspect.signature(et.plot_atom_psection)
         params = list(sig.parameters.keys())
         assert "model" in params
-        assert params.index("model") == 1   # second positional after sites
+        assert params.index("model") == 1  # second positional after sites
 
     def test_plot_atom_psection_no_model_shows_instruction(self, willy_sites):
         """Without a trained model, draw() shows an instruction, not a traceback."""
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         fig = _fig()
         ctrl.draw("plot_atom_psection", True, fig)
-        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        texts = " ".join(
+            t.get_text() for ax in fig.axes for t in ax.texts
+        ).lower()
         assert "model" in texts or "train" in texts or "trained" in texts
         _close()
 
@@ -594,6 +710,7 @@ class TestEmtoolsDirectDepth:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         model = ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -606,6 +723,7 @@ class TestEmtoolsDirectDepth:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         with pytest.raises(ValueError, match="No survey data"):
             ctrl.train_dim_model()
@@ -615,6 +733,7 @@ class TestEmtoolsDirectDepth:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -622,7 +741,9 @@ class TestEmtoolsDirectDepth:
         ctrl.draw("plot_atom_psection", True, fig)
         assert len(fig.axes) >= 1
         # Must not be a pure error annotation
-        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        texts = " ".join(
+            t.get_text() for ax in fig.axes for t in ax.texts
+        ).lower()
         assert "train" not in texts and "no dictionary" not in texts
         _close()
 
@@ -631,6 +752,7 @@ class TestEmtoolsDirectDepth:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             AdvancedController,
         )
+
         ctrl = AdvancedController()
         ctrl.set_sites(willy_sites)
         ctrl.train_dim_model(n_atoms=4, n_iter=10)
@@ -642,43 +764,51 @@ class TestEmtoolsDirectDepth:
 class TestEmtoolsDirectSurvey:
     def test_plot_survey_fingerprint(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_survey_fingerprint(willy_sites, verbose=0)
         _close()
 
     def test_plot_distortion_radar(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_distortion_radar(willy_sites, verbose=0)
         _close()
 
     def test_plot_sites_compare(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_sites_compare(willy_sites, verbose=0)
         _close()
 
     def test_plot_sites_panels(self, willy_sites):
         """Regression: was broken by return_errors / wrong unpack (fixed)."""
         import pycsamt.emtools as et
+
         et.plot_sites_panels(willy_sites, verbose=0)
         _close()
 
     def test_plot_normalized_response(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_normalized_response(willy_sites, verbose=0)
         _close()
 
     def test_plot_tf_coherence_network(self, willy_sites):
         import pycsamt.emtools as et
+
         et.plot_tf_coherence_network(willy_sites, verbose=0)
         _close()
 
     def test_plot_dim_map(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_dim_map(willy_sites, ax=ax, verbose=0)
         _close()
 
     def test_plot_dim_occupancy_area(self, willy_sites):
         import pycsamt.emtools as et
+
         fig, ax = plt.subplots()
         et.plot_dim_occupancy_area(willy_sites, ax=ax, verbose=0)
         _close()
@@ -686,11 +816,13 @@ class TestEmtoolsDirectSurvey:
 
 # ── TopoPreviewController ─────────────────────────────────────────────────────
 
+
 class TestTopoPreviewController:
     def test_creates(self):
         from pycsamt.app.desktop.controllers.advanced_controller import (
             TopoPreviewController,
         )
+
         ctrl = TopoPreviewController()
         assert ctrl is not None
 
@@ -698,6 +830,7 @@ class TestTopoPreviewController:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             TopoPreviewController,
         )
+
         assert TopoPreviewController().dark is True
 
     def test_elevation_profile_no_data_does_not_raise(self, topo_ctrl):
@@ -721,19 +854,25 @@ class TestTopoPreviewController:
         assert "n_stations" in stats
         assert stats["n_stations"] == 0
 
-    def test_fill_preview_with_sites_does_not_raise(self, topo_ctrl, willy_sites):
+    def test_fill_preview_with_sites_does_not_raise(
+        self, topo_ctrl, willy_sites
+    ):
         topo_ctrl.set_sites(willy_sites)
         fig = _fig()
         topo_ctrl.plot_fill_preview(fig)
         _close()
 
-    def test_elevation_histogram_with_sites_does_not_raise(self, topo_ctrl, willy_sites):
+    def test_elevation_histogram_with_sites_does_not_raise(
+        self, topo_ctrl, willy_sites
+    ):
         topo_ctrl.set_sites(willy_sites)
         fig = _fig()
         topo_ctrl.plot_elevation_histogram(fig)
         _close()
 
-    def test_get_stats_with_sites_returns_n_stations(self, topo_ctrl, willy_sites):
+    def test_get_stats_with_sites_returns_n_stations(
+        self, topo_ctrl, willy_sites
+    ):
         topo_ctrl.set_sites(willy_sites)
         stats = topo_ctrl.get_stats()
         assert stats["n_stations"] > 0
@@ -749,6 +888,7 @@ class TestTopoPreviewController:
         from pycsamt.app.desktop.controllers.advanced_controller import (
             TopoPreviewController,
         )
+
         ctrl = TopoPreviewController()
         for dark in (True, False):
             ctrl.dark = dark
@@ -757,6 +897,7 @@ class TestTopoPreviewController:
 
 
 # ── ConversionController ──────────────────────────────────────────────────────
+
 
 class TestConversionController:
     def test_creates(self, conv_ctrl):
@@ -825,12 +966,14 @@ class TestConversionController:
         class FakeAVG:
             def transform(self, path, **kw):
                 from pycsamt.core.config import get_config
+
                 calls["path"] = path
                 calls["kw"] = kw
                 calls["freq_order"] = get_config().freq_order
                 return ["edi"]
 
         import pycsamt.transformers as transformers
+
         monkeypatch.setattr(transformers, "AVGtoEDI", lambda: FakeAVG())
 
         conv_ctrl.set_source("AVG -> EDI", "/tmp/in.avg")
@@ -865,6 +1008,7 @@ class TestConversionController:
         class FakeAVGtoEDI:
             def transform(self, source, **kw):
                 from pycsamt.core.config import get_config
+
                 calls["source"] = source
                 calls["kw"] = kw
                 calls["freq_tol"] = get_config().freq_tol
@@ -874,21 +1018,24 @@ class TestConversionController:
 
         import pycsamt.transformers as transformers
         import pycsamt.zonge.avg as avg_mod
+
         monkeypatch.setattr(transformers, "AVGtoEDI", lambda: FakeAVGtoEDI())
         monkeypatch.setattr(avg_mod, "AVG", FakeAVG)
 
         conv_ctrl.set_source("AVG -> EDI", "/tmp/in.avg")
-        collection, failures = conv_ctrl.run({
-            "freq_order": "ascending",
-            "freq_tol": 1e-6,
-            "compute_z": True,
-            "compute_rho_phi": True,
-            "stn_path": "/tmp/K1.stn",
-            "utm_zone": "50N",
-            "epsg": "32650",
-            "convert_stn_coords": True,
-            "name": "K1",
-        })
+        collection, failures = conv_ctrl.run(
+            {
+                "freq_order": "ascending",
+                "freq_tol": 1e-6,
+                "compute_z": True,
+                "compute_rho_phi": True,
+                "stn_path": "/tmp/K1.stn",
+                "utm_zone": "50N",
+                "epsg": "32650",
+                "convert_stn_coords": True,
+                "name": "K1",
+            }
+        )
 
         assert collection == ["edi"]
         assert failures == []
@@ -901,19 +1048,23 @@ class TestConversionController:
         assert calls["compute_z"] is True
         assert calls["compute_rho_phi"] is True
 
-    def test_avg_run_with_real_stn_utm_populates_edi_coordinates(self, conv_ctrl):
+    def test_avg_run_with_real_stn_utm_populates_edi_coordinates(
+        self, conv_ctrl
+    ):
         avg_path = _ROOT / "data" / "avg" / "K1.AVG"
         stn_path = _ROOT / "data" / "avg" / "K1.stn"
         if not avg_path.exists() or not stn_path.exists():
             pytest.skip("K1 AVG/STN fixtures are not available")
 
         conv_ctrl.set_source("AVG -> EDI", str(avg_path))
-        collection, failures = conv_ctrl.run({
-            "freq_order": "descending",
-            "stn_path": str(stn_path),
-            "utm_zone": "49N",
-            "convert_stn_coords": True,
-        })
+        collection, failures = conv_ctrl.run(
+            {
+                "freq_order": "descending",
+                "stn_path": str(stn_path),
+                "utm_zone": "49N",
+                "convert_stn_coords": True,
+            }
+        )
 
         assert failures == []
         assert len(collection) >= 1
@@ -946,13 +1097,16 @@ class TestConversionController:
                 return ["edi"]
 
         import pycsamt.transformers as transformers
+
         monkeypatch.setattr(transformers, "JtoEDI", lambda: FakeJ())
 
         conv_ctrl.set_source("J -> EDI", "/tmp/in.j")
-        collection, failures = conv_ctrl.run({
-            "freq_order": "descending",
-            "station_suffix": "_IMP",
-        })
+        collection, failures = conv_ctrl.run(
+            {
+                "freq_order": "descending",
+                "station_suffix": "_IMP",
+            }
+        )
 
         assert collection == ["edi"]
         assert failures == []
@@ -976,18 +1130,21 @@ class TestConversionController:
                 return FakeResult()
 
         import pycsamt.transformers as transformers
+
         monkeypatch.setattr(transformers, "SpectraToEDI", FakeSpectra)
 
         conv_ctrl.set_source("Spectra -> EDI", "/tmp/spec")
-        collection, failures = conv_ctrl.run({
-            "e_labels": "EX,EY",
-            "h_labels": "HX,HY",
-            "estimate_errors": True,
-            "use_remote_ref": True,
-            "station_suffix": "_IMP",
-            "skip_errors": False,
-            "output_dir": "/tmp/out",
-        })
+        collection, failures = conv_ctrl.run(
+            {
+                "e_labels": "EX,EY",
+                "h_labels": "HX,HY",
+                "estimate_errors": True,
+                "use_remote_ref": True,
+                "station_suffix": "_IMP",
+                "skip_errors": False,
+                "output_dir": "/tmp/out",
+            }
+        )
 
         assert collection == ["edi"]
         assert failures == ["bad"]
@@ -1004,6 +1161,7 @@ class TestConversionController:
 
 
 # ── AdvancedController dark/light mode ───────────────────────────────────────
+
 
 class TestAdvancedControllerDarkMode:
     def test_dark_mode_toggle(self, adv_ctrl, willy_sites):
@@ -1025,13 +1183,17 @@ class TestAdvancedControllerDarkMode:
 
 # ── Regression tests for fixed bugs ──────────────────────────────────────────
 
+
 class TestRegressions:
     def test_get_z_block_wrong_kwarg_fixed(self):
         """plot_sites_panels was calling _get_z_block(return_errors=True) instead
         of _get_z_block(with_errors=True). Verify the correct kwarg now works."""
-        import logging; logging.disable(logging.CRITICAL)
+        import logging
+
+        logging.disable(logging.CRITICAL)
         from pycsamt.emtools import ensure_sites
         from pycsamt.emtools._core import _get_z_block
+
         if not _HAS_WILLY:
             pytest.skip("WILLY data not available")
         sites = ensure_sites(str(_WILLY))
@@ -1043,6 +1205,7 @@ class TestRegressions:
         """The old broken keyword 'return_errors' must raise TypeError."""
         from pycsamt.emtools import ensure_sites
         from pycsamt.emtools._core import _get_z_block
+
         if not _HAS_WILLY:
             pytest.skip("WILLY data not available")
         sites = ensure_sites(str(_WILLY))
@@ -1053,5 +1216,6 @@ class TestRegressions:
     def test_plot_sites_panels_no_longer_raises(self, willy_sites):
         """Regression: plot_sites_panels raised ValueError (too many values to unpack)."""
         import pycsamt.emtools as et
+
         et.plot_sites_panels(willy_sites, verbose=0)
         _close()

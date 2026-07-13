@@ -108,7 +108,8 @@ class TensorRotationAgent(BaseAgent):
             )
         except ImportError as exc:
             return AgentResult.failed(
-                f"pycsamt.seg.ops not available: {exc}", elapsed=time.time() - t0,
+                f"pycsamt.seg.ops not available: {exc}",
+                elapsed=time.time() - t0,
             )
 
         from ..emtools._core import (
@@ -120,16 +121,18 @@ class TensorRotationAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        theta     = float(input_data.get("strike_deg", self.strike_deg))
+        theta = float(input_data.get("strike_deg", self.strike_deg))
         output_dir = input_data.get("output_dir")
-        overwrite  = bool(input_data.get("overwrite", False))
-        suffix     = str(input_data.get("file_suffix", "_rot"))
+        overwrite = bool(input_data.get("overwrite", False))
+        suffix = str(input_data.get("file_suffix", "_rot"))
 
         if output_dir is None:
             return AgentResult.failed(
@@ -139,10 +142,10 @@ class TensorRotationAgent(BaseAgent):
             )
         os.makedirs(output_dir, exist_ok=True)
 
-        written_paths: list[str]  = []
+        written_paths: list[str] = []
         failed_stations: list[str] = []
         diag_ratios_before: list[float] = []
-        diag_ratios_after:  list[float] = []
+        diag_ratios_after: list[float] = []
 
         for i, ed in enumerate(_iter_items(sites)):
             nm = _name(ed, i)
@@ -155,14 +158,14 @@ class TensorRotationAgent(BaseAgent):
             # ── diagonal-suppression metric before rotation ─────────────────
             mask = np.isfinite(z[:, 0, 0]) & (np.abs(z[:, 0, 1]) > 1e-30)
             if mask.any():
-                ratio_b = float(np.nanmean(
-                    np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1])
-                ))
+                ratio_b = float(
+                    np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1]))
+                )
                 diag_ratios_before.append(ratio_b)
 
             # ── rotate Z ───────────────────────────────────────────────────
             try:
-                z_rot = rotate_impedance(z, theta)   # (n_freq, 2, 2)
+                z_rot = rotate_impedance(z, theta)  # (n_freq, 2, 2)
                 if z_rot.ndim == 2:
                     z_rot = z_rot[np.newaxis]
             except Exception as exc:
@@ -171,9 +174,11 @@ class TensorRotationAgent(BaseAgent):
                 continue
 
             if mask.any():
-                ratio_a = float(np.nanmean(
-                    np.abs(z_rot[mask, 0, 0]) / np.abs(z_rot[mask, 0, 1])
-                ))
+                ratio_a = float(
+                    np.nanmean(
+                        np.abs(z_rot[mask, 0, 0]) / np.abs(z_rot[mask, 0, 1])
+                    )
+                )
                 diag_ratios_after.append(ratio_a)
 
             # ── rotate tipper (if present) ────────────────────────────────
@@ -199,8 +204,9 @@ class TensorRotationAgent(BaseAgent):
                 continue
 
             try:
-                written = _write_rotated_edi(ed, z_rot, tip_rot, out_path, nm,
-                                              theta, warnings)
+                written = _write_rotated_edi(
+                    ed, z_rot, tip_rot, out_path, nm, theta, warnings
+                )
                 if written:
                     written_paths.append(written)
                 else:
@@ -214,7 +220,9 @@ class TensorRotationAgent(BaseAgent):
         # ── diagonal-suppression summary ──────────────────────────────────
         diag_reduction = float("nan")
         if diag_ratios_before and diag_ratios_after:
-            diag_reduction = float(np.mean(diag_ratios_before) - np.mean(diag_ratios_after))
+            diag_reduction = float(
+                np.mean(diag_ratios_before) - np.mean(diag_ratios_after)
+            )
 
         # ── figure: before/after Zxy pseudosection ─────────────────────────
         figures: dict[str, Any] = {}
@@ -223,8 +231,12 @@ class TensorRotationAgent(BaseAgent):
             fig = _plot_rotation_summary(sites, theta, warnings)
             if fig is not None:
                 figures["rotation_summary"] = fig
-                p = self._save_figure(fig, output_dir, "tensor_rotation_summary",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig,
+                    output_dir,
+                    "tensor_rotation_summary",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["rotation_summary"] = p
         except Exception as exc:
@@ -233,7 +245,11 @@ class TensorRotationAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and n_written:
-            dr_str = f"{diag_reduction:+.3f}" if not np.isnan(diag_reduction) else "N/A"
+            dr_str = (
+                f"{diag_reduction:+.3f}"
+                if not np.isnan(diag_reduction)
+                else "N/A"
+            )
             prompt = (
                 f"Tensor rotation summary:\n"
                 f"  Rotation angle: {theta:.1f}°\n"
@@ -246,7 +262,11 @@ class TensorRotationAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
-        dr_disp = f"{diag_reduction:+.3f}" if not np.isnan(diag_reduction) else "N/A"
+        dr_disp = (
+            f"{diag_reduction:+.3f}"
+            if not np.isnan(diag_reduction)
+            else "N/A"
+        )
         return AgentResult(
             status="success" if n_written > 0 else "needs_review",
             summary=(
@@ -255,13 +275,13 @@ class TensorRotationAgent(BaseAgent):
                 f"Diagonal suppression: {dr_disp}."
             ),
             data={
-                "strike_deg":       theta,
-                "written_paths":    written_paths,
-                "failed_stations":  failed_stations,
-                "n_written":        n_written,
+                "strike_deg": theta,
+                "written_paths": written_paths,
+                "failed_stations": failed_stations,
+                "n_written": n_written,
                 "z_diag_reduction": diag_reduction,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -271,6 +291,7 @@ class TensorRotationAgent(BaseAgent):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
 
 def _write_rotated_edi(
     ed: Any,
@@ -284,12 +305,21 @@ def _write_rotated_edi(
     """Write rotated impedance to a new EDI file. Returns path or None."""
     try:
         # Try write_new_edi if the EDI object supports it
-        if hasattr(ed, "write_new_edi") and hasattr(ed, "Z") and ed.Z is not None:
+        if (
+            hasattr(ed, "write_new_edi")
+            and hasattr(ed, "Z")
+            and ed.Z is not None
+        ):
             import copy
+
             Z_copy = copy.deepcopy(ed.Z)
             Z_copy.z = z_rot
             Tip_copy = None
-            if tip_rot is not None and hasattr(ed, "Tip") and ed.Tip is not None:
+            if (
+                tip_rot is not None
+                and hasattr(ed, "Tip")
+                and ed.Tip is not None
+            ):
                 Tip_copy = copy.deepcopy(ed.Tip)
                 if hasattr(Tip_copy, "tipper"):
                     Tip_copy.tipper = tip_rot[:, np.newaxis, :]
@@ -302,10 +332,15 @@ def _write_rotated_edi(
         # Fallback: patch Z on a deepcopy and call write()
         if hasattr(ed, "write"):
             import copy
+
             ed_copy = copy.deepcopy(ed)
             if hasattr(ed_copy, "Z") and ed_copy.Z is not None:
                 ed_copy.Z.z = z_rot
-            if tip_rot is not None and hasattr(ed_copy, "Tip") and ed_copy.Tip is not None:
+            if (
+                tip_rot is not None
+                and hasattr(ed_copy, "Tip")
+                and ed_copy.Tip is not None
+            ):
                 ed_copy.Tip.tipper = tip_rot[:, np.newaxis, :]
             return ed_copy.write(new_edifn=out_path)
 
@@ -317,7 +352,9 @@ def _write_rotated_edi(
         return None
 
 
-def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any:
+def _plot_rotation_summary(
+    sites: Any, theta: float, warnings: list[str]
+) -> Any:
     """Simple bar chart: mean |Zxx/Zxy| per station before rotation."""
     import matplotlib.pyplot as plt
 
@@ -339,11 +376,15 @@ def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any
             mask = np.isfinite(z[:, 0, 0]) & (np.abs(z[:, 0, 1]) > 1e-30)
             if not mask.any():
                 continue
-            rb = float(np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1])))
+            rb = float(
+                np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1]))
+            )
             z_r = rotate_impedance(z, theta)
             if z_r.ndim == 2:
                 z_r = z_r[np.newaxis]
-            ra = float(np.nanmean(np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1])))
+            ra = float(
+                np.nanmean(np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1]))
+            )
             station_names.append(nm)
             ratios_before.append(rb)
             ratios_after.append(ra)
@@ -356,14 +397,30 @@ def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any
     n = len(station_names)
     x = np.arange(n)
     fig, ax = plt.subplots(figsize=(max(6, n * 0.6), 4))
-    ax.bar(x - 0.18, ratios_before, width=0.35, label="Before", color="#3498db", alpha=0.8)
-    ax.bar(x + 0.18, ratios_after,  width=0.35, label=f"After θ={theta:.1f}°",
-           color="#e74c3c", alpha=0.8)
+    ax.bar(
+        x - 0.18,
+        ratios_before,
+        width=0.35,
+        label="Before",
+        color="#3498db",
+        alpha=0.8,
+    )
+    ax.bar(
+        x + 0.18,
+        ratios_after,
+        width=0.35,
+        label=f"After θ={theta:.1f}°",
+        color="#e74c3c",
+        alpha=0.8,
+    )
     ax.set_xticks(x)
     ax.set_xticklabels(station_names, rotation=90, fontsize=7)
     ax.set_ylabel("|Zxx| / |Zxy|  (lower = better suppression)", fontsize=8)
-    ax.set_title(f"Tensor rotation — diagonal suppression  (θ = {theta:.1f}°)",
-                 fontsize=9, fontweight="bold")
+    ax.set_title(
+        f"Tensor rotation — diagonal suppression  (θ = {theta:.1f}°)",
+        fontsize=9,
+        fontweight="bold",
+    )
     ax.legend(fontsize=8)
     ax.tick_params(labelsize=7)
     fig.tight_layout()

@@ -21,39 +21,50 @@ from typing import Final
 
 __all__ = [
     # maths
-    "PI", "TAU", "DEG2RAD", "RAD2DEG", "LN10", "MRAD",
-    "_RAD_THR", "_DEG_SCALE",
+    "PI",
+    "TAU",
+    "DEG2RAD",
+    "RAD2DEG",
+    "LN10",
+    "MRAD",
+    "_RAD_THR",
+    "_DEG_SCALE",
     # numerical helpers
     "EPS_TOL",
     # fundamental EM
-    "MU_0", "EPSILON_0", "C_0", "ETA_0",
+    "MU_0",
+    "EPSILON_0",
+    "C_0",
+    "ETA_0",
     # geophysical helpers
     "RHO_FACTOR",
     # unit conversions
-    "MICROVOLTS_TO_VOLTS", "PICOTESLA_TO_TESLA",
-    "METERS_TO_KILOMETERS", "PERCENT_FACTOR",
+    "MICROVOLTS_TO_VOLTS",
+    "PICOTESLA_TO_TESLA",
+    "METERS_TO_KILOMETERS",
+    "PERCENT_FACTOR",
     # zonge conventions
     "ZONGE_RHO_FACTOR",
     # earth radius
-    "_EARTH_R"
+    "_EARTH_R",
 ]
 # ---------------------------------------------------------------------
 # Pure mathematics
 # ---------------------------------------------------------------------
 
-PI:        Final[float] = math.pi
-TAU:       Final[float] = math.tau                  # 2 π
-DEG2RAD:   Final[float] = PI / 180.0                 # °
-RAD2DEG:   Final[float] = 180.0 / PI                 # rad
-LN10:      Final[float] = math.log(10.0)
-MRAD:      Final[float] = 1.0e3                      # 1 mrad = 10⁻³ rad
+PI: Final[float] = math.pi
+TAU: Final[float] = math.tau  # 2 π
+DEG2RAD: Final[float] = PI / 180.0  # °
+RAD2DEG: Final[float] = 180.0 / PI  # rad
+LN10: Final[float] = math.log(10.0)
+MRAD: Final[float] = 1.0e3  # 1 mrad = 10⁻³ rad
 
 # ------------------------------------------------------------------
 # Small-angle / auto-unit heuristics
 # ------------------------------------------------------------------
 
 # 5° expressed in *radians* – used in a few auto-unit check helpers
-_RAD_THR:   Final[float] = math.radians(5.0)
+_RAD_THR: Final[float] = math.radians(5.0)
 # factor to convert **radians → degrees** via multiplication
 _DEG_SCALE: Final[float] = RAD2DEG
 
@@ -62,16 +73,16 @@ _DEG_SCALE: Final[float] = RAD2DEG
 # ------------------------------------------------------------------
 
 # Generic *ε* for “close-to-zero” comparisons (unit-less)
-EPS_TOL:    Final[float] = 1.0e-9
+EPS_TOL: Final[float] = 1.0e-9
 
 # ---------------------------------------------------------------------
 # Electromagnetic (vacuum) – CODATA 2018
 # ---------------------------------------------------------------------
 
-MU_0:       Final[float] = 4.0e-7 * PI  # H m⁻¹ – permeability
-EPSILON_0:  Final[float] = 8.854_187_817e-12      # F m⁻¹ – permittivity
-C_0:        Final[float] = 1.0 / math.sqrt(MU_0 * EPSILON_0)  # m s⁻¹
-ETA_0:      Final[float] = math.sqrt(MU_0 / EPSILON_0)      # Ω
+MU_0: Final[float] = 4.0e-7 * PI  # H m⁻¹ – permeability
+EPSILON_0: Final[float] = 8.854_187_817e-12  # F m⁻¹ – permittivity
+C_0: Final[float] = 1.0 / math.sqrt(MU_0 * EPSILON_0)  # m s⁻¹
+ETA_0: Final[float] = math.sqrt(MU_0 / EPSILON_0)  # Ω
 
 # ---------------------------------------------------------------------
 # Handy factor for apparent-resistivity computations
@@ -83,16 +94,16 @@ RHO_FACTOR: Final[float] = 1.0 / (MU_0 * 2.0 * PI)
 # Unit Conversion Factors
 # ---------------------------------------------------------------------
 MICROVOLTS_TO_VOLTS: Final[float] = 1e-6
-PICOTESLA_TO_TESLA:  Final[float] = 1e-12
+PICOTESLA_TO_TESLA: Final[float] = 1e-12
 METERS_TO_KILOMETERS: Final[float] = 1e-3
-PERCENT_FACTOR:      Final[float] = 100.0
+PERCENT_FACTOR: Final[float] = 100.0
 
 # ---------------------------------------------------------------------
 # Zonge-specific Conventions
 # ---------------------------------------------------------------------
 # Factor used in legacy Zonge resistivity formula:
 #   ρₐ = (1 / (5 * f)) * |E/H|²
-ZONGE_RHO_FACTOR:    Final[float] = 0.2  # 1 / 5
+ZONGE_RHO_FACTOR: Final[float] = 0.2  # 1 / 5
 
 # ---- small geodesy helpers --------------------------------------------------
 _EARTH_R = 6_371_000.0  # meters

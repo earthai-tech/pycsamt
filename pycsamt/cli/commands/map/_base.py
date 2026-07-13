@@ -42,7 +42,9 @@ def _get_sites(
         resolve_survey,  # noqa: PLC0415
     )
 
-    return resolve_survey(explicit or survey_path, fresh=fresh, verbose=verbose)
+    return resolve_survey(
+        explicit or survey_path, fresh=fresh, verbose=verbose
+    )
 
 
 def _finite_float(value: Any) -> float | None:
@@ -71,7 +73,8 @@ def _site_summary(site: Any) -> dict[str, Any]:
         pass
 
     return {
-        "name": getattr(site, "name", None) or getattr(site, "station", "site"),
+        "name": getattr(site, "name", None)
+        or getattr(site, "station", "site"),
         "lat": lat,
         "lon": lon,
         "elev": elev,
@@ -79,7 +82,9 @@ def _site_summary(site: Any) -> dict[str, Any]:
     }
 
 
-def _station_rows(sites: Any, *, drop_missing: bool = False) -> list[dict[str, Any]]:
+def _station_rows(
+    sites: Any, *, drop_missing: bool = False
+) -> list[dict[str, Any]]:
     """Extract station coordinates from *sites* as JSON-ready rows."""
     api_rows = _station_rows_from_map_api(sites, drop_missing=drop_missing)
     if api_rows:

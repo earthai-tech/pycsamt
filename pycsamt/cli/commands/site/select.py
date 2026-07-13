@@ -44,7 +44,8 @@ from ._base import _get_sites, site
     help="Keep only these station IDs (comma-separated).",
 )
 @click.option(
-    "--freq", "freq_range",
+    "--freq",
+    "freq_range",
     type=FreqRange(),
     default=None,
     metavar="FMIN:FMAX",
@@ -189,7 +190,7 @@ def select(
             )
 
     n_out = len(result)
-    n_in  = len(sites_obj)
+    n_in = len(sites_obj)
 
     if n_out == 0:
         click.echo(
@@ -202,16 +203,18 @@ def select(
     # --- summary ---
     names = [s.name for s in result]
     summary: dict[str, Any] = {
-        "n_input":    n_in,
+        "n_input": n_in,
         "n_selected": n_out,
-        "stations":   names,
+        "stations": names,
     }
 
     if dry_run:
         if output_format == "json":
             click.echo(json.dumps(summary, indent=2))
         else:
-            click.echo(f"Dry run — {n_out}/{n_in} station(s) would be selected:")
+            click.echo(
+                f"Dry run — {n_out}/{n_in} station(s) would be selected:"
+            )
             for nm in names:
                 click.echo(f"  {nm}")
         return
@@ -222,6 +225,7 @@ def select(
         from pycsamt.site.export import (
             write_sites,  # noqa: PLC0415
         )
+
         written = write_sites(result, output_dir, exist_ok=overwrite)
         summary["written"] = [str(p) for p in written]
         if verbose >= 1:
@@ -234,6 +238,7 @@ def select(
         click.echo(json.dumps(summary, indent=2, default=str))
     elif output_format == "csv":
         import pandas as pd  # noqa: PLC0415
+
         df = pd.DataFrame({"station": names})
         click.echo(df.to_csv(index=False))
     else:

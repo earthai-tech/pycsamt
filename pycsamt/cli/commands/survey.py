@@ -73,13 +73,22 @@ from ..survey import (
 # Rich helpers
 # ---------------------------------------------------------------------------
 
-def _rich_kv(title: str, rows: list[tuple[str, str]], style: str = "cyan") -> None:
+
+def _rich_kv(
+    title: str, rows: list[tuple[str, str]], style: str = "cyan"
+) -> None:
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         console = Console()
-        t = Table(title=title, border_style=style, show_header=False,
-                  box=None, padding=(0, 2))
+        t = Table(
+            title=title,
+            border_style=style,
+            show_header=False,
+            box=None,
+            padding=(0, 2),
+        )
         t.add_column(style="bold dim")
         t.add_column(style="white")
         for k, v in rows:
@@ -97,6 +106,7 @@ def _rich_kv(title: str, rows: list[tuple[str, str]], style: str = "cyan") -> No
 def _rich_warn(msg: str) -> None:
     try:
         from rich.console import Console  # noqa: PLC0415
+
         Console().print(f"[yellow]Warning:[/yellow] {msg}")
     except ImportError:
         click.echo(f"Warning: {msg}", err=True)
@@ -105,6 +115,7 @@ def _rich_warn(msg: str) -> None:
 def _rich_ok(msg: str) -> None:
     try:
         from rich.console import Console  # noqa: PLC0415
+
         Console().print(f"[green]✓[/green] {msg}")
     except ImportError:
         click.echo(msg)
@@ -113,6 +124,7 @@ def _rich_ok(msg: str) -> None:
 # ---------------------------------------------------------------------------
 # survey — top-level group
 # ---------------------------------------------------------------------------
+
 
 @click.group("survey")
 @click.pass_context
@@ -133,11 +145,17 @@ def survey(ctx: click.Context) -> None:
 # survey set
 # ---------------------------------------------------------------------------
 
+
 @survey.command("set")
-@click.argument("path", type=click.Path(exists=True, path_type=Path),
-                metavar="EDI_DIR")
-@click.option("--force", is_flag=True, default=False,
-              help="Rebuild cache even if it is still valid.")
+@click.argument(
+    "path", type=click.Path(exists=True, path_type=Path), metavar="EDI_DIR"
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Rebuild cache even if it is still valid.",
+)
 @verbose_option
 @no_color_option
 @click.pass_context
@@ -169,14 +187,13 @@ def survey_set(
     except Exception:  # noqa: BLE001
         station_list = "—"
 
-    _rich_ok(
-        f"Active survey set — {len(sites)} station(s): {station_list}"
-    )
+    _rich_ok(f"Active survey set — {len(sites)} station(s): {station_list}")
 
 
 # ---------------------------------------------------------------------------
 # survey show
 # ---------------------------------------------------------------------------
+
 
 @survey.command("show")
 @format_option
@@ -210,22 +227,25 @@ def survey_show(
         return
 
     cache_status = (
-        "[green]valid[/green]" if summary["cache_valid"] else "[red]stale[/red]"
+        "[green]valid[/green]"
+        if summary["cache_valid"]
+        else "[red]stale[/red]"
     )
     try:
         from rich.markup import escape  # noqa: PLC0415
+
         escape(summary["survey_path"])
     except ImportError:
         summary["survey_path"]
         cache_status = "valid" if summary["cache_valid"] else "stale"
 
     rows = [
-        ("Path",         summary["survey_path"]),
-        ("Set at",       summary["set_at"]),
-        ("Stations",     str(summary["n_stations"])),
+        ("Path", summary["survey_path"]),
+        ("Set at", summary["set_at"]),
+        ("Stations", str(summary["n_stations"])),
         ("Station list", ", ".join(summary["station_names"]) or "—"),
-        ("Cache",        cache_status),
-        ("Cache path",   summary["cache_path"]),
+        ("Cache", cache_status),
+        ("Cache path", summary["cache_path"]),
     ]
     if "cached_at" in summary:
         rows.append(("Cached at", summary["cached_at"]))
@@ -237,9 +257,11 @@ def survey_show(
 # survey clear
 # ---------------------------------------------------------------------------
 
+
 @survey.command("clear")
-@click.option("--yes", is_flag=True, default=False,
-              help="Skip the confirmation prompt.")
+@click.option(
+    "--yes", is_flag=True, default=False, help="Skip the confirmation prompt."
+)
 @no_color_option
 @click.pass_context
 def survey_clear(
@@ -279,9 +301,14 @@ def survey_clear(
 # survey rebuild
 # ---------------------------------------------------------------------------
 
+
 @survey.command("rebuild")
-@click.option("--force", is_flag=True, default=False,
-              help="Rebuild unconditionally even if cache is still valid.")
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Rebuild unconditionally even if cache is still valid.",
+)
 @verbose_option
 @no_color_option
 @click.pass_context
@@ -319,6 +346,7 @@ def survey_rebuild(
 # survey cache (sub-group)
 # ---------------------------------------------------------------------------
 
+
 @survey.group("cache")
 @click.pass_context
 def survey_cache(ctx: click.Context) -> None:
@@ -352,7 +380,7 @@ def cache_list(ctx: click.Context, output_format: str) -> None:
         if not d.is_dir():
             continue
         meta_path = d / "meta.json"
-        pkl_path  = d / "sites.pkl"
+        pkl_path = d / "sites.pkl"
         entry: dict = {"key": d.name}
         if meta_path.exists():
             try:
@@ -361,7 +389,9 @@ def cache_list(ctx: click.Context, output_format: str) -> None:
             except Exception:  # noqa: BLE001
                 pass
         entry["pkl_size_kb"] = (
-            round(pkl_path.stat().st_size / 1024, 1) if pkl_path.exists() else 0
+            round(pkl_path.stat().st_size / 1024, 1)
+            if pkl_path.exists()
+            else 0
         )
         entries.append(entry)
 
@@ -380,20 +410,28 @@ def cache_list(ctx: click.Context, output_format: str) -> None:
     rows = []
     for e in entries:
         marker = " [active]" if e["key"] == active_key else ""
-        path   = e.get("survey_path", "—")
-        n      = str(e.get("n_stations", "?"))
-        size   = f"{e['pkl_size_kb']} KB"
+        path = e.get("survey_path", "—")
+        n = str(e.get("n_stations", "?"))
+        size = f"{e['pkl_size_kb']} KB"
         cached = e.get("cached_at", "—")
-        rows.append((e["key"] + marker, f"{path}  ({n} stations, {size}, {cached})"))
+        rows.append(
+            (e["key"] + marker, f"{path}  ({n} stations, {size}, {cached})")
+        )
 
     _rich_kv("Cached Surveys", rows, style="blue")
 
 
 @survey_cache.command("purge")
-@click.option("--all", "purge_all", is_flag=True, default=False,
-              help="Purge every cached survey, not just the active one.")
-@click.option("--yes", is_flag=True, default=False,
-              help="Skip the confirmation prompt.")
+@click.option(
+    "--all",
+    "purge_all",
+    is_flag=True,
+    default=False,
+    help="Purge every cached survey, not just the active one.",
+)
+@click.option(
+    "--yes", is_flag=True, default=False, help="Skip the confirmation prompt."
+)
 @click.pass_context
 def cache_purge(ctx: click.Context, purge_all: bool, yes: bool) -> None:
     """Delete the Sites cache for the active survey (or all surveys).
@@ -422,8 +460,7 @@ def cache_purge(ctx: click.Context, purge_all: bool, yes: bool) -> None:
     active = SurveyContext.load()
     if active is None:
         raise click.UsageError(
-            "No active survey.  "
-            "Pass --all to purge every cache entry."
+            "No active survey.  Pass --all to purge every cache entry."
         )
     if not yes:
         confirmed = click.confirm(

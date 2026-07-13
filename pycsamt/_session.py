@@ -15,13 +15,7 @@ from .seg.edi import EDIFile
 from .transformers.jedi import AVGtoEDI, JtoEDI
 from .zonge.avg import AVG
 
-__all__ = [
-    "Session",
-    "work_session",
-    "Normalize",
-    "normalize_session"
-
-]
+__all__ = ["Session", "work_session", "Normalize", "normalize_session"]
 
 
 class Session(CoreObject):
@@ -176,7 +170,6 @@ class Session(CoreObject):
         self._orig_t_x = None
         self._orig_t_j = None
 
-
     def _record(self, obj: Any, *, tag: str) -> None:
         r"""
         Register ``obj`` in the session registry with a tag.
@@ -247,6 +240,7 @@ class Session(CoreObject):
                     tag = "transform"
                 self._record(out, tag=tag)
                 return out
+
             return inner
 
         if self._orig_t_x is None and hasattr(tr, "AVGtoEDI"):
@@ -266,13 +260,13 @@ class Session(CoreObject):
 
         from .core import base as b
         from .transformers import jedi as tr
+
         try:
             if self._orig_to_edi is not None:
                 b.to_edi = self._orig_to_edi  # type: ignore
         except Exception:
             pass
         try:
-
             if self._orig_t_x is not None:
                 tr.AVGtoEDI.transform = self._orig_t_x  # type: ignore
             if self._orig_t_j is not None:
@@ -563,12 +557,12 @@ class Normalize(CoreObject):
 
         # return None
 
-    # @@ class Normalize(CoreObject):
-    # -    def _as_edi_coll(self, src: Any) -> Any:
-    # +    def _as_edi_coll(self, src: Any) -> Any:
-    #          r"""
-    #          Return an :class:`EDICollection` view of ``src`` when possible."""
-    # @
+        # @@ class Normalize(CoreObject):
+        # -    def _as_edi_coll(self, src: Any) -> Any:
+        # +    def _as_edi_coll(self, src: Any) -> Any:
+        #          r"""
+        #          Return an :class:`EDICollection` view of ``src`` when possible."""
+        # @
 
         # Helper: recognize an EDI-like item by structure (duck-typing)
         def _is_edi_like(x: Any) -> bool:
@@ -680,7 +674,9 @@ class Normalize(CoreObject):
 
             # Folder / glob / non-Jones-suffix → try JCollection(sources=...)
             try:
-                coll = JCollection.from_sources(sources=src, verbose=0)  # real API
+                coll = JCollection.from_sources(
+                    sources=src, verbose=0
+                )  # real API
                 return coll if len(coll) > 0 else None
             except:
                 # Fallback for stubs
@@ -695,7 +691,7 @@ class Normalize(CoreObject):
                 coll = JCollection(items=items, verbose=0)
                 return coll if len(coll) > 0 else None
             except TypeError:
-               pass
+                pass
 
         return None
 
@@ -759,7 +755,8 @@ class Normalize(CoreObject):
             if suf == "":
                 try:
                     coll = EDICollection.from_sources(
-                        sources=source, verbose=0)
+                        sources=source, verbose=0
+                    )
                     if len(coll) > 0:
                         return coll
                 except:
@@ -770,9 +767,11 @@ class Normalize(CoreObject):
         j = self._to_j(source)
         if j is not None:
             ed = JtoEDI().transform(j)
-            return ed if isinstance(
-                ed, EDICollection) else EDICollection(items=[ed], verbose=0)
-
+            return (
+                ed
+                if isinstance(ed, EDICollection)
+                else EDICollection(items=[ed], verbose=0)
+            )
 
         a = self._to_avg(source)
         if a is not None:
@@ -863,6 +862,7 @@ class Normalize(CoreObject):
             except Exception:
                 pass
         return out
+
 
 def normalize_session(
     root: Path | str,

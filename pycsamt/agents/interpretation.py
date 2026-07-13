@@ -34,13 +34,13 @@ Reply in plain scientific English, 5–8 sentences. No bullet points.
 
 # ── Keller (1988) / Palacky (1987) resistivity-lithology table ───────────────
 _LITHO_TABLE = [
-    (0,      2,      "sea water / saline brine"),
-    (2,      10,     "marine clay / saturated shale"),
-    (10,     50,     "weathered basement / clay-rich soil"),
-    (50,     200,    "fractured rock / sandy alluvium"),
-    (200,    1000,   "limestone / sandstone / crystalline basement"),
-    (1000,   5000,   "compact limestone / granite / quartzite"),
-    (5000,   1e9,    "massive resistive basement / dry crystalline rock"),
+    (0, 2, "sea water / saline brine"),
+    (2, 10, "marine clay / saturated shale"),
+    (10, 50, "weathered basement / clay-rich soil"),
+    (50, 200, "fractured rock / sandy alluvium"),
+    (200, 1000, "limestone / sandstone / crystalline basement"),
+    (1000, 5000, "compact limestone / granite / quartzite"),
+    (5000, 1e9, "massive resistive basement / dry crystalline rock"),
 ]
 
 
@@ -104,12 +104,8 @@ class InterpretationAgent(BaseAgent):
 
         model_raw = input_data.get("model")
         if model_raw is None:
-            model_raw = input_data.get(
-                "layered_model"
-            )
-        geo_context = input_data.get(
-            "context", self.context
-        )
+            model_raw = input_data.get("layered_model")
+        geo_context = input_data.get("context", self.context)
         rms = input_data.get("rms")
 
         if model_raw is None:
@@ -123,17 +119,34 @@ class InterpretationAgent(BaseAgent):
 
         # ── extract resistivities and thicknesses ─────────────────────────────
         if isinstance(model_raw, dict):
-            rhos = list(model_raw.get("resistivity",  model_raw.get("resistivities", [])))
-            ths  = list(model_raw.get("thickness",    model_raw.get("thicknesses",   [])))
+            rhos = list(
+                model_raw.get(
+                    "resistivity", model_raw.get("resistivities", [])
+                )
+            )
+            ths = list(
+                model_raw.get("thickness", model_raw.get("thicknesses", []))
+            )
         else:
-            rhos = list(getattr(model_raw, "resistivity",
-                        getattr(model_raw, "resistivities", [])))
-            ths  = list(getattr(model_raw, "thickness",
-                        getattr(model_raw, "thicknesses",   [])))
+            rhos = list(
+                getattr(
+                    model_raw,
+                    "resistivity",
+                    getattr(model_raw, "resistivities", []),
+                )
+            )
+            ths = list(
+                getattr(
+                    model_raw,
+                    "thickness",
+                    getattr(model_raw, "thicknesses", []),
+                )
+            )
 
         if not rhos:
             return AgentResult.failed(
-                "Model has no resistivities.", elapsed=time.time() - t0,
+                "Model has no resistivities.",
+                elapsed=time.time() - t0,
             )
 
         # ── rule-based layer interpretation ───────────────────────────────────
@@ -147,33 +160,31 @@ class InterpretationAgent(BaseAgent):
         layer_interps: list[dict] = []
         for k, rho in enumerate(rhos):
             top = depths[k]
-            bot = (
-                depths[k + 1]
-                if k + 1 < len(depths) else None
-            )
+            bot = depths[k + 1] if k + 1 < len(depths) else None
             litho = resistivity_to_lithology(float(rho))
-            layer_interps.append({
-                "layer":        k + 1,
-                "resistivity":  float(rho),
-                "depth_top_m":  top,
-                "depth_bot_m":  bot,
-                "thickness_m":  float(ths[k]) if k < len(ths) else None,
-                "lithology":    litho,
-            })
+            layer_interps.append(
+                {
+                    "layer": k + 1,
+                    "resistivity": float(rho),
+                    "depth_top_m": top,
+                    "depth_bot_m": bot,
+                    "thickness_m": float(ths[k]) if k < len(ths) else None,
+                    "lithology": litho,
+                }
+            )
 
-        dominant = max(layer_interps,
-                       key=lambda d: d.get("thickness_m") or 1e9)["lithology"]
+        dominant = max(
+            layer_interps, key=lambda d: d.get("thickness_m") or 1e9
+        )["lithology"]
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp_text = ""
         if self.api_key:
+
             def _bot_str(d):
                 b = d.get("depth_bot_m")
-                return (
-                    "basement"
-                    if b is None
-                    else f"{b:.0f}"
-                )
+                return "basement" if b is None else f"{b:.0f}"
+
             layer_str = "\n".join(
                 f"  Layer {d['layer']}: "
                 f"{d['resistivity']:.0f} Ohm.m, "
@@ -182,10 +193,7 @@ class InterpretationAgent(BaseAgent):
                 f" -- {d['lithology']}"
                 for d in layer_interps
             )
-            rms_line = (
-                f"RMS misfit: {rms:.3f}\n"
-                if rms else ""
-            )
+            rms_line = f"RMS misfit: {rms:.3f}\n" if rms else ""
             prompt = (
                 f"Geological context: "
                 f"{geo_context or 'not specified'}\n"
@@ -194,15 +202,14 @@ class InterpretationAgent(BaseAgent):
                 f"{layer_str}\n\n"
                 "Write a geological interpretation."
             )
-            interp_text = (
-                self.query_llm(prompt, max_tokens=350)
-                or ""
-            )
+            interp_text = self.query_llm(prompt, max_tokens=350) or ""
         else:
             # fallback: build a simple rule-based summary
-            lines = [f"Layer {d['layer']}: {d['resistivity']:.0f} Ω·m "
-                     f"({d['depth_top_m']:.0f} m) — {d['lithology']}"
-                     for d in layer_interps]
+            lines = [
+                f"Layer {d['layer']}: {d['resistivity']:.0f} Ω·m "
+                f"({d['depth_top_m']:.0f} m) — {d['lithology']}"
+                for d in layer_interps
+            ]
             interp_text = ". ".join(lines) + "."
 
         elapsed = time.time() - t0
@@ -214,9 +221,9 @@ class InterpretationAgent(BaseAgent):
             ),
             data={
                 "layer_interpretations": layer_interps,
-                "summary_text":          interp_text,
-                "dominant_lithology":    dominant,
-                "formation_depths_m":    depths,
+                "summary_text": interp_text,
+                "dominant_lithology": dominant,
+                "formation_depths_m": depths,
             },
             warnings=warnings,
             llm_interpretation=interp_text,

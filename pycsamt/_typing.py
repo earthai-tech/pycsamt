@@ -8,4 +8,3 @@ This module remains as a thin shim for older modules that still import
 from __future__ import annotations
 
 from .api.typing import *  # noqa: F403
-

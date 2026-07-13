@@ -28,9 +28,7 @@ _CFG_FILE = _CFG_DIR / "agent_master.json"
 def _load_cfg() -> dict:
     if _CFG_FILE.exists():
         try:
-            return json.loads(
-                _CFG_FILE.read_text()
-            )
+            return json.loads(_CFG_FILE.read_text())
         except Exception:
             pass
     return {}
@@ -38,12 +36,11 @@ def _load_cfg() -> dict:
 
 def _save_cfg(cfg: dict) -> None:
     _CFG_DIR.mkdir(parents=True, exist_ok=True)
-    _CFG_FILE.write_text(
-        json.dumps(cfg, indent=2)
-    )
+    _CFG_FILE.write_text(json.dumps(cfg, indent=2))
 
 
 # ── credential resolution ──────────────────────────────────────────────────────
+
 
 def _env_key(provider: str) -> str:
     var = env_var(provider)
@@ -155,7 +152,12 @@ def register_settings(app) -> None:
         show = {"display": "block"}
         if not is_llm(provider):
             return (
-                hide, show, "", [], None, "",
+                hide,
+                show,
+                "",
+                [],
+                None,
+                "",
                 _status_badge(OFFLINE, "none"),
             )
 
@@ -163,7 +165,9 @@ def register_settings(app) -> None:
         drafts = drafts or {}
         # A key typed this session (not yet saved) wins over disk/env.
         draft_key = drafts.get(f"key_{provider}")
-        key = draft_key if draft_key is not None else _stored_key(provider, cfg)
+        key = (
+            draft_key if draft_key is not None else _stored_key(provider, cfg)
+        )
 
         models = models_for(provider)
         model = (
@@ -189,7 +193,8 @@ def register_settings(app) -> None:
     @app.callback(
         Output(IDs.STORE_KEY_DRAFTS, "data"),
         Output(
-            IDs.PROVIDER_BADGE, "children",
+            IDs.PROVIDER_BADGE,
+            "children",
             allow_duplicate=True,
         ),
         Input(IDs.KEY_INPUT, "value"),
@@ -250,12 +255,14 @@ def register_settings(app) -> None:
     # providers never wipes another provider's key, then persist.
     @app.callback(
         Output(
-            IDs.STORE_SETTINGS, "data",
+            IDs.STORE_SETTINGS,
+            "data",
             allow_duplicate=True,
         ),
         Output(IDs.KEYS_STATUS, "children"),
         Output(
-            IDs.PROVIDER_BADGE, "children",
+            IDs.PROVIDER_BADGE,
+            "children",
             allow_duplicate=True,
         ),
         Input(IDs.BTN_SAVE_KEYS, "n_clicks"),
@@ -269,8 +276,14 @@ def register_settings(app) -> None:
         prevent_initial_call=True,
     )
     def save_settings(
-        n, provider, key, model,
-        export_fmt, output_dir, line_registry, drafts,
+        n,
+        provider,
+        key,
+        model,
+        export_fmt,
+        output_dir,
+        line_registry,
+        drafts,
     ):
         if not n:
             raise PreventUpdate
@@ -282,9 +295,7 @@ def register_settings(app) -> None:
                 cfg[field] = value
         if is_llm(provider):
             cfg[f"key_{provider}"] = (key or "").strip()
-            cfg[f"model_{provider}"] = (
-                model or default_model(provider) or ""
-            )
+            cfg[f"model_{provider}"] = model or default_model(provider) or ""
         cfg["provider"] = provider or OFFLINE
         cfg["export_fmt"] = export_fmt or "png"
         cfg["output_dir"] = output_dir or ""
@@ -320,13 +331,6 @@ def register_settings(app) -> None:
     def toggle_theme(n, current):
         if not n:
             raise PreventUpdate
-        new = (
-            "dark" if current == "light"
-            else "light"
-        )
-        icon = (
-            "bi bi-sun-fill"
-            if new == "dark"
-            else "bi bi-moon-stars"
-        )
+        new = "dark" if current == "light" else "light"
+        icon = "bi bi-sun-fill" if new == "dark" else "bi bi-moon-stars"
         return new, icon

@@ -87,6 +87,18 @@ def _site_attr(site, *names):
         v = getattr(site, n, None)
         if v is not None:
             return v
+        for container_name in ("Res", "Z"):
+            container = getattr(site, container_name, None)
+            if container is None:
+                continue
+            aliases = {
+                "rho": ("rho", "resistivity"),
+                "rho_err": ("rho_err", "resistivity_err"),
+            }.get(n, (n,))
+            for alias in aliases:
+                v = getattr(container, alias, None)
+                if v is not None:
+                    return v
     return None
 
 

@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pycsamt.forward.em1d import ForwardResponse, MT1DForward
+from pycsamt.forward.em1d import MT1DForward
 from pycsamt.forward.synthetic import LayeredModel
 
 
@@ -77,7 +77,7 @@ def test_forward_response_to_array_layout():
     vec = resp.to_array()
     assert vec.shape == (2 * freqs.size,)
     assert np.allclose(vec[: freqs.size], np.log10(resp.rho_a))
-    assert np.allclose(vec[freqs.size:], resp.phase)
+    assert np.allclose(vec[freqs.size :], resp.phase)
 
     vec_no_phase = resp.to_array(include_phase=False)
     assert vec_no_phase.shape == freqs.shape

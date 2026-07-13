@@ -35,6 +35,7 @@ from pycsamt.tdem.waveform import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _synthetic_sounding(n=25, rho_true=100.0, current=8.0, loop_side=100.0):
     """
     Produce a synthetic TEMSounding for a uniform half-space with true
@@ -43,13 +44,11 @@ def _synthetic_sounding(n=25, rho_true=100.0, current=8.0, loop_side=100.0):
     Forward formula (Ward & Hohmann 1988 / Christiansen 2009):
         |dBdt| = M × MU0^(5/2) / (10 × sqrt(π) × ρ^(3/2) × t^(5/2))
     """
-    tx_area = loop_side ** 2
+    tx_area = loop_side**2
     M = current * tx_area
     t = np.logspace(-5, -2, n)
 
-    dBdt = (M * MU0 ** 2.5) / (
-        10.0 * np.sqrt(np.pi) * rho_true ** 1.5 * t ** 2.5
-    )
+    dBdt = (M * MU0**2.5) / (10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5)
 
     return TEMSounding(
         time_gates=t,
@@ -67,11 +66,12 @@ def _synthetic_sounding(n=25, rho_true=100.0, current=8.0, loop_side=100.0):
 # TEMSounding tests
 # ---------------------------------------------------------------------------
 
+
 class TestTEMSounding:
     def test_basic_creation(self):
         snd = _synthetic_sounding()
         assert snd.n_gates == 25
-        assert snd.moment == pytest.approx(8.0 * 100.0 ** 2)
+        assert snd.moment == pytest.approx(8.0 * 100.0**2)
 
     def test_dBdt_passthrough(self):
         snd = _synthetic_sounding()
@@ -108,8 +108,13 @@ class TestTEMSounding:
         dBdt_true = np.ones(10) * 1e-6
         voltage = dBdt_true * rx_area * rx_turns
         snd = TEMSounding(
-            t, voltage, current=1.0, tx_area=100.0,
-            data_type="voltage", rx_area=rx_area, rx_turns=rx_turns
+            t,
+            voltage,
+            current=1.0,
+            tx_area=100.0,
+            data_type="voltage",
+            rx_area=rx_area,
+            rx_turns=rx_turns,
         )
         np.testing.assert_allclose(snd.dBdt(), dBdt_true, rtol=1e-10)
 
@@ -122,6 +127,7 @@ class TestTEMSounding:
 # ---------------------------------------------------------------------------
 # Late-time apparent resistivity
 # ---------------------------------------------------------------------------
+
 
 class TestRhoLatetime:
     def test_recovers_true_rho(self):
@@ -148,6 +154,7 @@ class TestRhoLatetime:
 # Pseudo-frequency mapping
 # ---------------------------------------------------------------------------
 
+
 class TestPseudoFreq:
     def test_skin_depth_convention(self):
         t = np.array([1e-3])
@@ -167,6 +174,7 @@ class TestPseudoFreq:
 # ---------------------------------------------------------------------------
 # Phase estimation
 # ---------------------------------------------------------------------------
+
 
 class TestPhaseEstimation:
     def test_homogeneous_is_45(self):
@@ -190,6 +198,7 @@ class TestPhaseEstimation:
 # ---------------------------------------------------------------------------
 # Z array construction
 # ---------------------------------------------------------------------------
+
 
 class TestBuildZArray:
     def test_shape(self):
@@ -228,13 +237,23 @@ class TestBuildZArray:
 # LateTimeTransform integration
 # ---------------------------------------------------------------------------
 
+
 class TestLateTimeTransform:
     def test_result_keys(self):
         snd = _synthetic_sounding()
         tr = LateTimeTransform()
         res = tr.transform(snd)
-        for key in ("freq", "Z", "Z_err", "rho_a", "phase_xy",
-                    "station_name", "x", "y", "elevation"):
+        for key in (
+            "freq",
+            "Z",
+            "Z_err",
+            "rho_a",
+            "phase_xy",
+            "station_name",
+            "x",
+            "y",
+            "elevation",
+        ):
             assert key in res
 
     def test_freq_shape_matches_rho(self):
@@ -255,7 +274,7 @@ class TestLateTimeTransform:
 
     def test_error_propagation(self):
         snd = _synthetic_sounding(n=20, rho_true=100.0)
-        snd.error = snd.data * 0.05   # 5 % relative error
+        snd.error = snd.data * 0.05  # 5 % relative error
         res = LateTimeTransform().transform(snd)
         assert not np.all(np.isnan(res["Z_err"]))
 
@@ -283,7 +302,9 @@ class TestLateTimeTransform:
 
     def test_diffusion_convention(self):
         snd = _synthetic_sounding(n=20)
-        res_sd = LateTimeTransform(freq_convention="skin_depth").transform(snd)
+        res_sd = LateTimeTransform(freq_convention="skin_depth").transform(
+            snd
+        )
         res_df = LateTimeTransform(freq_convention="diffusion").transform(snd)
         # diffusion gives half the frequency of skin_depth
         np.testing.assert_allclose(
@@ -299,10 +320,11 @@ class TestLateTimeTransform:
 # Biot-Savart helpers
 # ---------------------------------------------------------------------------
 
+
 class TestBiotSavartRect:
     def test_square_centre_known(self):
         """Hz at centre of square loop (side 2a) = I√2/(πa) per amp."""
-        a = 50.0    # half-side
+        a = 50.0  # half-side
         hz = _biot_savart_rect_hz(0.0, 0.0, a, a)
         expected = np.sqrt(2.0) / (np.pi * a)
         np.testing.assert_allclose(hz, expected, rtol=1e-8)
@@ -331,12 +353,12 @@ class TestBiotSavartRect:
         """Hz at a point near the wire should be larger than at the centre."""
         a = b = 50.0
         hz_centre = _biot_savart_rect_hz(0.0, 0.0, a, b)
-        hz_near   = _biot_savart_rect_hz(0.0, 45.0, a, b)  # close to top wire
+        hz_near = _biot_savart_rect_hz(0.0, 45.0, a, b)  # close to top wire
         assert hz_near > hz_centre
 
     def test_rectangular_not_equal_square(self):
         """Hz at centre of a 2:1 rectangle ≠ Hz at centre of a square."""
-        hz_sq   = _biot_savart_rect_hz(0.0, 0.0, 50.0, 50.0)
+        hz_sq = _biot_savart_rect_hz(0.0, 0.0, 50.0, 50.0)
         hz_rect = _biot_savart_rect_hz(0.0, 0.0, 50.0, 25.0)
         assert not np.isclose(hz_sq, hz_rect)
 
@@ -404,13 +426,14 @@ class TestLoopInnerRadius:
 # New apparent-resistivity formulas
 # ---------------------------------------------------------------------------
 
+
 class TestRhoAInLoop:
     def _make_central_snd(self, rho_true=100.0, n=25, loop_side=100.0):
-        tx_area = loop_side ** 2
+        tx_area = loop_side**2
         M = 8.0 * tx_area
         t = np.logspace(-5, -2, n)
-        dBdt = (M * MU0 ** 2.5) / (
-            10.0 * np.sqrt(np.pi) * rho_true ** 1.5 * t ** 2.5
+        dBdt = (M * MU0**2.5) / (
+            10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5
         )
         return dBdt, t, M
 
@@ -425,7 +448,7 @@ class TestRhoAInLoop:
         """Off-centre receiver should produce a different ρ_a (higher near wire)."""
         dBdt, t, M = self._make_central_snd()
         rho_central = _rho_a_late_time(dBdt, t, M)
-        rho_offset  = _rho_a_in_loop(dBdt, t, M, "square", (100.0,), 40.0, 0.0)
+        rho_offset = _rho_a_in_loop(dBdt, t, M, "square", (100.0,), 40.0, 0.0)
         # Near the wire the effective moment is larger → ρ_a is larger
         assert np.all(rho_offset > rho_central)
 
@@ -436,17 +459,19 @@ class TestRhoAInLoop:
 
     def test_rectangular_loop(self):
         dBdt, t, M = self._make_central_snd(loop_side=200.0)
-        rho = _rho_a_in_loop(dBdt, t, M, "rectangular", (200.0, 100.0), 30.0, 0.0)
+        rho = _rho_a_in_loop(
+            dBdt, t, M, "rectangular", (200.0, 100.0), 30.0, 0.0
+        )
         assert np.all(np.isfinite(rho))
 
 
 class TestRhoAOffsetLoop:
     def _make_offset_snd(self, rho_true=100.0, offset=500.0, n=25):
-        M = 8.0 * 100.0 ** 2
+        M = 8.0 * 100.0**2
         t = np.logspace(-5, -2, n)
         # Forward model: offset formula for σ = 1/rho_true
-        dBdt = (M * MU0 ** 2.5) / (
-            20.0 * np.sqrt(np.pi) * rho_true ** 1.5 * (offset ** 3) * t ** 2.5
+        dBdt = (M * MU0**2.5) / (
+            20.0 * np.sqrt(np.pi) * rho_true**1.5 * (offset**3) * t**2.5
         )
         return dBdt, t, M
 
@@ -466,7 +491,7 @@ class TestRhoAOffsetLoop:
 
     def test_invalid_offset_raises(self):
         dBdt = np.ones(10) * 1e-8
-        t    = np.logspace(-5, -2, 10)
+        t = np.logspace(-5, -2, 10)
         with pytest.raises(ValueError, match="offset must be > 0"):
             _rho_a_offset_loop(dBdt, t, 1e4, 0.0)
 
@@ -480,14 +505,20 @@ class TestRhoAOffsetLoop:
 # LateTimeTransform — config auto-detection
 # ---------------------------------------------------------------------------
 
+
 class TestLateTimeConfigDetection:
     def _make_snd(self, offset=0.0, loop_side=100.0):
         t = np.logspace(-5, -2, 20)
-        M = 8.0 * loop_side ** 2
-        dBdt = M * MU0 ** 2.5 / (10 * np.sqrt(np.pi) * 100.0 ** 1.5 * t ** 2.5)
+        M = 8.0 * loop_side**2
+        dBdt = M * MU0**2.5 / (10 * np.sqrt(np.pi) * 100.0**1.5 * t**2.5)
         return TEMSounding(
-            t, dBdt, current=8.0, tx_area=loop_side ** 2,
-            offset=offset, loop_dims=(loop_side,), loop_shape="square",
+            t,
+            dBdt,
+            current=8.0,
+            tx_area=loop_side**2,
+            offset=offset,
+            loop_dims=(loop_side,),
+            loop_shape="square",
         )
 
     def test_detects_central(self):
@@ -495,7 +526,9 @@ class TestLateTimeConfigDetection:
         assert LateTimeTransform._detect_config(snd) == "central"
 
     def test_detects_in_loop(self):
-        snd = self._make_snd(offset=30.0, loop_side=100.0)  # 30 < 50 (half-side)
+        snd = self._make_snd(
+            offset=30.0, loop_side=100.0
+        )  # 30 < 50 (half-side)
         assert LateTimeTransform._detect_config(snd) == "in_loop"
 
     def test_detects_offset(self):
@@ -521,7 +554,7 @@ class TestLateTimeConfigDetection:
     def test_geometry_correction_false_uses_central(self):
         """With correction disabled, in-loop should give same ρ_a as central."""
         snd_central = self._make_snd(offset=0.0)
-        snd_inloop  = self._make_snd(offset=30.0)
+        snd_inloop = self._make_snd(offset=30.0)
         tr = LateTimeTransform(loop_geometry_correction=False)
         res_c = tr.transform(snd_central)
         res_i = tr.transform(snd_inloop)
@@ -530,7 +563,9 @@ class TestLateTimeConfigDetection:
     def test_in_loop_correction_increases_rho(self):
         """Off-centre Rx (near wire) → η > 1 → ρ_a_corrected > ρ_a_central."""
         snd_central = self._make_snd(offset=0.0)
-        snd_inloop  = self._make_snd(offset=40.0)  # close to wire (half-side=50)
+        snd_inloop = self._make_snd(
+            offset=40.0
+        )  # close to wire (half-side=50)
         tr = LateTimeTransform()
         res_c = tr.transform(snd_central)
         res_i = tr.transform(snd_inloop)
@@ -543,9 +578,14 @@ class TestLateTimeConfigDetection:
         t = np.logspace(-5, -2, 20)
         dBdt = 1e-8 * np.ones(20)
         snd = TEMSounding(
-            t, dBdt, current=8.0, tx_area=100.0 ** 2,
-            offset=30.0, loop_dims=(100.0,), loop_shape="square",
-            rx_position=(20.0, 20.0),   # 2-D offset
+            t,
+            dBdt,
+            current=8.0,
+            tx_area=100.0**2,
+            offset=30.0,
+            loop_dims=(100.0,),
+            loop_shape="square",
+            rx_position=(20.0, 20.0),  # 2-D offset
         )
         res = LateTimeTransform().transform(snd)
         assert np.any(np.isfinite(res["rho_a"]))
@@ -553,14 +593,21 @@ class TestLateTimeConfigDetection:
     def test_offset_loop_recovers_rho(self):
         """Offset-loop transform should recover the true resistivity."""
         rho_true, offset = 150.0, 400.0
-        M = 8.0 * 100.0 ** 2
+        M = 8.0 * 100.0**2
         t = np.logspace(-5, -2, 25)
-        dBdt = M * MU0 ** 2.5 / (
-            20 * np.sqrt(np.pi) * rho_true ** 1.5 * offset ** 3 * t ** 2.5
+        dBdt = (
+            M
+            * MU0**2.5
+            / (20 * np.sqrt(np.pi) * rho_true**1.5 * offset**3 * t**2.5)
         )
         snd = TEMSounding(
-            t, dBdt, current=8.0, tx_area=100.0 ** 2,
-            offset=offset, loop_dims=(100.0,), loop_shape="square",
+            t,
+            dBdt,
+            current=8.0,
+            tx_area=100.0**2,
+            offset=offset,
+            loop_dims=(100.0,),
+            loop_shape="square",
         )
         res = LateTimeTransform().transform(snd)
         np.testing.assert_allclose(res["rho_a"], rho_true, rtol=1e-5)
@@ -570,16 +617,17 @@ class TestLateTimeConfigDetection:
 # Waveform tests
 # ---------------------------------------------------------------------------
 
+
 def _analytical_halfsapce_dBdt(t, rho=100.0, a=50.0, current=1.0):
     """
     Exact central-loop step-off dBz/dt for a half-space (Ward & Hohmann 1988).
     Returns negative values (physically correct, decaying secondary field).
     """
-    tx_area = np.pi * a ** 2
+    tx_area = np.pi * a**2
     moment = current * tx_area
     u = a * np.sqrt(MU0 / (4.0 * rho * t))
-    dPhi_dt = -(4.0 * u ** 5 / np.sqrt(np.pi)) * np.exp(-(u ** 2)) / t
-    return MU0 * moment / (2.0 * np.pi * a ** 3) * dPhi_dt
+    dPhi_dt = -(4.0 * u**5 / np.sqrt(np.pi)) * np.exp(-(u**2)) / t
+    return MU0 * moment / (2.0 * np.pi * a**3) * dPhi_dt
 
 
 class TestFourierTransform:
@@ -597,7 +645,7 @@ class TestFourierTransform:
             time_gates=t,
             data=dBdt,
             current=1.0,
-            tx_area=np.pi * a ** 2,
+            tx_area=np.pi * a**2,
         )
 
     # ── output structure ────────────────────────────────────────────────────
@@ -639,7 +687,9 @@ class TestFourierTransform:
     def test_phase_in_range(self):
         """Phase must be in [0°, 90°] after clipping."""
         snd = self._sounding_analytical()
-        res = FourierTransform(n_freq=20, waveform_correction=False).transform(snd)
+        res = FourierTransform(
+            n_freq=20, waveform_correction=False
+        ).transform(snd)
         assert np.all(res["phase_xy"] >= 0.0)
         assert np.all(res["phase_xy"] <= 90.0)
 
@@ -648,11 +698,14 @@ class TestFourierTransform:
         from pycsamt.tdem.transform import (
             _cosine_transform_1d,
         )
+
         snd = self._sounding_analytical()
         t = snd.time_gates
         dBdt = snd.dBdt()
         omega_test = np.array([1e3])
-        fc = _cosine_transform_1d(dBdt / snd.moment, t, omega_test, n_interp=0)
+        fc = _cosine_transform_1d(
+            dBdt / snd.moment, t, omega_test, n_interp=0
+        )
         # negative dBdt → negative cosine transform → im_k = fc/omega < 0
         assert fc[0] < 0
 
@@ -667,7 +720,9 @@ class TestFourierTransform:
     def test_custom_freq_range_honoured(self):
         snd = self._sounding_late_time()
         f_lo, f_hi = 1.0, 100.0
-        res = FourierTransform(n_freq=20, freq_min=f_lo, freq_max=f_hi).transform(snd)
+        res = FourierTransform(
+            n_freq=20, freq_min=f_lo, freq_max=f_hi
+        ).transform(snd)
         assert res["freq"].min() >= f_lo * 0.99
         assert res["freq"].max() <= f_hi * 1.01
 
@@ -694,11 +749,18 @@ class TestFourierTransform:
         t = np.logspace(-4, -2, 25)
         dBdt = _analytical_halfsapce_dBdt(t)
         snd = TEMSounding(
-            time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2,
+            time_gates=t,
+            data=dBdt,
+            current=1.0,
+            tx_area=np.pi * 50.0**2,
             waveform=RampWaveform(base_frequency=25.0, ramp_off=5e-5),
         )
-        res_no  = FourierTransform(n_freq=10, waveform_correction=False).transform(snd)
-        res_yes = FourierTransform(n_freq=10, waveform_correction=True).transform(snd)
+        res_no = FourierTransform(
+            n_freq=10, waveform_correction=False
+        ).transform(snd)
+        res_yes = FourierTransform(
+            n_freq=10, waveform_correction=True
+        ).transform(snd)
         # with ramp correction fewer gates may survive and/or freqs differ
         freqs_differ = not np.allclose(res_yes["freq"], res_no["freq"])
         shape_differs = res_yes["freq"].shape != res_no["freq"].shape
@@ -709,10 +771,15 @@ class TestFourierTransform:
         dBdt = _analytical_halfsapce_dBdt(t)
         wf = RampWaveform(base_frequency=25.0, ramp_off=2e-4)
         TEMSounding(
-            time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2,
+            time_gates=t,
+            data=dBdt,
+            current=1.0,
+            tx_area=np.pi * 50.0**2,
             waveform=wf,
         )
-        TEMSounding(time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0 ** 2)
+        TEMSounding(
+            time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0**2
+        )
         # ramp correction drops early gates that fall within the ramp window
         corrected_d, corrected_t, _ = _apply_waveform_correction(dBdt, t, wf)
         assert len(corrected_t) < len(t)
@@ -721,8 +788,9 @@ class TestFourierTransform:
 
     def test_too_few_gates_raises(self):
         t = np.logspace(-4, -2, 3)
-        snd = TEMSounding(time_gates=t, data=np.ones(3) * -1e-6,
-                          current=1.0, tx_area=100.0)
+        snd = TEMSounding(
+            time_gates=t, data=np.ones(3) * -1e-6, current=1.0, tx_area=100.0
+        )
         with pytest.raises(ValueError, match="4 time gates"):
             FourierTransform().transform(snd)
 
@@ -745,9 +813,14 @@ class TestFourierTransform:
     def test_station_metadata_propagated(self):
         t = np.logspace(-5, -2, 20)
         snd = TEMSounding(
-            time_gates=t, data=_synthetic_sounding(n=20).dBdt(),
-            current=8.0, tx_area=1e4,
-            station_name="ST01", x=10.0, y=20.0, elevation=5.0,
+            time_gates=t,
+            data=_synthetic_sounding(n=20).dBdt(),
+            current=8.0,
+            tx_area=1e4,
+            station_name="ST01",
+            x=10.0,
+            y=20.0,
+            elevation=5.0,
         )
         res = FourierTransform(n_freq=10).transform(snd)
         assert res["station_name"] == "ST01"
@@ -759,6 +832,7 @@ class TestFourierTransform:
 # ---------------------------------------------------------------------------
 # Waveform correction helpers
 # ---------------------------------------------------------------------------
+
 
 class TestWaveformMoments:
     """Tests for _waveform_moments across all waveform types."""
@@ -794,10 +868,10 @@ class TestWaveformMoments:
         # A CustomWaveform with linear turn-off should give the same moments as RampWaveform
         tau_r = 3e-4
         t_wf = np.array([-1e-3, 0.0, tau_r, tau_r + 1e-5])
-        I_wf = np.array([1.0,   1.0, 0.0,  0.0])
-        cw   = CustomWaveform(t_wf, I_wf, base_frequency=25.0)
+        I_wf = np.array([1.0, 1.0, 0.0, 0.0])
+        cw = CustomWaveform(t_wf, I_wf, base_frequency=25.0)
         tau_eff, tau_window = _waveform_moments(cw)
-        assert tau_eff    == pytest.approx(tau_r / 2.0, rel=1e-2)
+        assert tau_eff == pytest.approx(tau_r / 2.0, rel=1e-2)
         # tau_window = 99th percentile ≈ 0.99*tau_r; allow 5% tolerance
         assert tau_window == pytest.approx(tau_r, rel=0.05)
 
@@ -814,7 +888,7 @@ class TestApplyWaveformCorrection:
         return np.logspace(-4, -2, n)
 
     def _data(self, t):
-        1.0 * (50.0 ** 2) * np.pi
+        1.0 * (50.0**2) * np.pi
         return _analytical_halfsapce_dBdt(t)
 
     def test_none_waveform_noop(self):
@@ -836,7 +910,9 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 1e-4
-        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
+        dc, tc, _ = _apply_waveform_correction(
+            d, t, RampWaveform(25.0, ramp_off=tau_r)
+        )
         # corrected times must be shifted by tau_r/2 for surviving gates
         surviving = t + tau_r / 2.0 > tau_r
         np.testing.assert_allclose(tc, t[surviving] + tau_r / 2.0)
@@ -845,7 +921,9 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 1e-4
-        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
+        dc, tc, _ = _apply_waveform_correction(
+            d, t, RampWaveform(25.0, ramp_off=tau_r)
+        )
         surviving = t + tau_r / 2.0 > tau_r
         amp = 1.0 + (tau_r / 2.0) / (2.0 * tc)
         np.testing.assert_allclose(dc, d[surviving] * amp, rtol=1e-10)
@@ -854,7 +932,9 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 5e-4  # large ramp to ensure some gates are rejected
-        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
+        dc, tc, _ = _apply_waveform_correction(
+            d, t, RampWaveform(25.0, ramp_off=tau_r)
+        )
         assert len(tc) < len(t)
         assert np.all(tc > tau_r / 2.0)
 
@@ -877,8 +957,9 @@ class TestApplyWaveformCorrection:
         d = self._data(t)
         err = np.abs(d) * 0.05
         tau_r = 5e-4
-        dc, tc, ec = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r),
-                                                 error=err)
+        dc, tc, ec = _apply_waveform_correction(
+            d, t, RampWaveform(25.0, ramp_off=tau_r), error=err
+        )
         assert ec is not None
         assert len(ec) == len(tc)
 
@@ -890,33 +971,41 @@ class TestLateTimeTransformWaveform:
         t = np.logspace(-5, -2, n)
         dBdt = _analytical_halfsapce_dBdt(t)
         return TEMSounding(
-            time_gates=t, data=dBdt, current=1.0,
-            tx_area=np.pi * 50.0 ** 2,
+            time_gates=t,
+            data=dBdt,
+            current=1.0,
+            tx_area=np.pi * 50.0**2,
             waveform=RampWaveform(base_frequency=25.0, ramp_off=tau_r),
         )
 
     def test_correction_changes_result(self):
         snd = self._ramp_sounding(tau_r=5e-4)
-        res_on  = LateTimeTransform(waveform_correction=True).transform(snd)
+        res_on = LateTimeTransform(waveform_correction=True).transform(snd)
         res_off = LateTimeTransform(waveform_correction=False).transform(snd)
         # gate rejection changes shape or (if same shape) values differ
-        assert (res_on["freq"].shape != res_off["freq"].shape
-                or not np.allclose(res_on["freq"], res_off["freq"]))
+        assert res_on["freq"].shape != res_off[
+            "freq"
+        ].shape or not np.allclose(res_on["freq"], res_off["freq"])
 
     def test_correction_reduces_gate_count(self):
         snd = self._ramp_sounding(tau_r=5e-4)
-        res_on  = LateTimeTransform(waveform_correction=True).transform(snd)
+        res_on = LateTimeTransform(waveform_correction=True).transform(snd)
         res_off = LateTimeTransform(waveform_correction=False).transform(snd)
         assert len(res_on["freq"]) < len(res_off["freq"])
 
     def test_square_waveform_is_noop(self):
         t = np.logspace(-5, -2, 25)
         dBdt = _analytical_halfsapce_dBdt(t)
-        snd_sq = TEMSounding(time_gates=t, data=dBdt, current=1.0,
-                             tx_area=np.pi * 50.0 ** 2,
-                             waveform=SquareWaveform(25.0))
-        snd_no = TEMSounding(time_gates=t, data=dBdt, current=1.0,
-                             tx_area=np.pi * 50.0 ** 2)
+        snd_sq = TEMSounding(
+            time_gates=t,
+            data=dBdt,
+            current=1.0,
+            tx_area=np.pi * 50.0**2,
+            waveform=SquareWaveform(25.0),
+        )
+        snd_no = TEMSounding(
+            time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0**2
+        )
         res_sq = LateTimeTransform(waveform_correction=True).transform(snd_sq)
         res_no = LateTimeTransform(waveform_correction=True).transform(snd_no)
         np.testing.assert_array_equal(res_sq["rho_a"], res_no["rho_a"])
@@ -924,10 +1013,14 @@ class TestLateTimeTransformWaveform:
     def test_halfsine_waveform_shifts_freqs(self):
         t = np.logspace(-5, -2, 30)
         dBdt = _analytical_halfsapce_dBdt(t)
-        snd = TEMSounding(time_gates=t, data=dBdt, current=1.0,
-                          tx_area=np.pi * 50.0 ** 2,
-                          waveform=HalfSineWaveform(25.0))
-        res_on  = LateTimeTransform(waveform_correction=True).transform(snd)
+        snd = TEMSounding(
+            time_gates=t,
+            data=dBdt,
+            current=1.0,
+            tx_area=np.pi * 50.0**2,
+            waveform=HalfSineWaveform(25.0),
+        )
+        res_on = LateTimeTransform(waveform_correction=True).transform(snd)
         res_off = LateTimeTransform(waveform_correction=False).transform(snd)
         # time shift → all frequencies shift
         assert not np.allclose(res_on["freq"], res_off["freq"])
@@ -942,17 +1035,21 @@ class TestLateTimeTransformWaveform:
 class TestWaveforms:
     def test_square_off_time(self):
         wf = SquareWaveform(base_frequency=25.0)
-        I = wf.current_at(np.array([0.011]))  # in the off-time of 25 Hz (hp=0.02)
+        I = wf.current_at(
+            np.array([0.011])
+        )  # in the off-time of 25 Hz (hp=0.02)
         assert I[0] == pytest.approx(0.0)
 
     def test_square_on_time(self):
         wf = SquareWaveform(base_frequency=25.0)
-        I = wf.current_at(np.array([0.005]))  # in the on-time (hp=0.02, duty=0.5)
+        I = wf.current_at(
+            np.array([0.005])
+        )  # in the on-time (hp=0.02, duty=0.5)
         assert I[0] == pytest.approx(1.0)
 
     def test_ramp_midpoint(self):
         wf = RampWaveform(base_frequency=25.0, ramp_off=1e-4)
-        I = wf.current_at(np.array([5e-5]))   # midpoint of ramp
+        I = wf.current_at(np.array([5e-5]))  # midpoint of ramp
         assert I[0] == pytest.approx(0.5)
 
     def test_ramp_post_ramp(self):
@@ -965,48 +1062,57 @@ class TestWaveforms:
 # Per-segment Biot-Savart helpers
 # ---------------------------------------------------------------------------
 
+
 class TestBiotSavartRectHzSegments:
     """Tests for _biot_savart_rect_hz_segments."""
 
     def test_sum_matches_full_at_centre(self):
         # At the loop centre (0,0), segment sum must equal the static result
         a = b = 50.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(0.0, 0.0, a, b)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            0.0, 0.0, a, b
+        )
         assert pytest.approx(hz_rx.sum(), rel=1e-10) == hz_00.sum()
 
     def test_sum_matches_full_off_centre(self):
         # At (20,10) the segment sums must still equal the full Biot-Savart value
         a = b = 50.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(20.0, 10.0, a, b)
-        full_rx  = _biot_savart_rect_hz(20.0, 10.0, a, b)
-        full_00  = _biot_savart_rect_hz(0.0,  0.0,  a, b)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            20.0, 10.0, a, b
+        )
+        full_rx = _biot_savart_rect_hz(20.0, 10.0, a, b)
+        full_00 = _biot_savart_rect_hz(0.0, 0.0, a, b)
         assert pytest.approx(hz_rx.sum(), rel=1e-8) == full_rx
         assert pytest.approx(hz_00.sum(), rel=1e-8) == full_00
 
     def test_returns_four_segments(self):
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(5.0, 0.0, 50.0, 50.0)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            5.0, 0.0, 50.0, 50.0
+        )
         for arr in (hz_rx, hz_00, dist_rx, dist_00):
             assert len(arr) == 4
 
     def test_distances_bottom_wire(self):
         # Bottom wire of a 100×100 m loop is at y=-50; receiver at y=10 → dist = 60
         a = b = 50.0
-        _, _, dist_rx, dist_00 = _biot_savart_rect_hz_segments(0.0, 10.0, a, b)
-        assert dist_rx[0] == pytest.approx(60.0)   # |ry - (-b)|
-        assert dist_00[0] == pytest.approx(50.0)    # b
+        _, _, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            0.0, 10.0, a, b
+        )
+        assert dist_rx[0] == pytest.approx(60.0)  # |ry - (-b)|
+        assert dist_00[0] == pytest.approx(50.0)  # b
 
     def test_distances_right_wire(self):
         # Right wire at x=+50; receiver at x=20 → dist = 30
         a = b = 50.0
         _, _, dist_rx, _ = _biot_savart_rect_hz_segments(20.0, 0.0, a, b)
-        assert dist_rx[1] == pytest.approx(30.0)    # |a - rx|
+        assert dist_rx[1] == pytest.approx(30.0)  # |a - rx|
 
     def test_rectangular_asymmetric(self):
         # 80×120 m loop; segment sums must match full Biot-Savart
         a, b = 40.0, 60.0
         hz_rx, hz_00, _, _ = _biot_savart_rect_hz_segments(10.0, -5.0, a, b)
         full_rx = _biot_savart_rect_hz(10.0, -5.0, a, b)
-        full_00 = _biot_savart_rect_hz(0.0,   0.0, a, b)
+        full_00 = _biot_savart_rect_hz(0.0, 0.0, a, b)
         assert pytest.approx(hz_rx.sum(), rel=1e-8) == full_rx
         assert pytest.approx(hz_00.sum(), rel=1e-8) == full_00
 
@@ -1024,7 +1130,9 @@ class TestBiotSavartCircleHzSegments:
     def test_sum_matches_full_off_centre(self):
         r = 50.0
         rx, ry = 15.0, 10.0
-        hz_rx, hz_00, _, _ = _biot_savart_circle_hz_segments(rx, ry, r, n_seg=720)
+        hz_rx, hz_00, _, _ = _biot_savart_circle_hz_segments(
+            rx, ry, r, n_seg=720
+        )
         full_rx = _biot_savart_circle_hz(rx, ry, r)
         full_00 = _biot_savart_circle_hz(0.0, 0.0, r)
         assert pytest.approx(hz_rx.sum(), rel=1e-3) == full_rx
@@ -1032,7 +1140,9 @@ class TestBiotSavartCircleHzSegments:
 
     def test_n_seg_segments_returned(self):
         n = 180
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(0.0, 0.0, 30.0, n_seg=n)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(
+            0.0, 0.0, 30.0, n_seg=n
+        )
         for arr in (hz_rx, hz_00, dist_rx, dist_00):
             assert len(arr) == n
 
@@ -1046,33 +1156,42 @@ class TestBiotSavartCircleHzSegments:
 # Time-dependent in-loop geometry factor
 # ---------------------------------------------------------------------------
 
+
 class TestInLoopGeometryFactorTD:
     """Tests for _in_loop_geometry_factor_td."""
 
     def _square_loop(self):
-        return "square", [100.0]   # 100 m side
+        return "square", [100.0]  # 100 m side
 
     def test_central_receiver_returns_ones(self):
         # rx=0, ry=0 must return η=1 for all time gates
         t = np.logspace(-5, -2, 20)
         rho_a = np.full(20, 100.0)
-        eta = _in_loop_geometry_factor_td(0.0, 0.0, "square", [100.0], t, rho_a)
+        eta = _in_loop_geometry_factor_td(
+            0.0, 0.0, "square", [100.0], t, rho_a
+        )
         np.testing.assert_allclose(eta, 1.0)
 
     def test_late_time_converges_to_static(self):
         # At very late time (large ρ_a) w_i → 1 for all segments → η_td → η_static
         t = np.logspace(-5, -2, 20)
-        rho_a = np.full(20, 1e6)   # very high resistivity → large diffusion length
-        eta_td = _in_loop_geometry_factor_td(20.0, 10.0, "square", [100.0], t, rho_a)
+        rho_a = np.full(
+            20, 1e6
+        )  # very high resistivity → large diffusion length
+        eta_td = _in_loop_geometry_factor_td(
+            20.0, 10.0, "square", [100.0], t, rho_a
+        )
         eta_st = _in_loop_geometry_factor(20.0, 10.0, "square", [100.0])
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-4)
 
     def test_early_time_near_wire_exceeds_static(self):
         # Near-wire receiver: η_td(early) >> η_static because near segment dominates
-        t = np.array([1e-6])       # very early gate
-        rho_a = np.array([0.01])   # low resistivity → short diffusion length
+        t = np.array([1e-6])  # very early gate
+        rho_a = np.array([0.01])  # low resistivity → short diffusion length
         # rx=45 m, 5 m from right wire of 100 m loop (a=50)
-        eta_td = _in_loop_geometry_factor_td(45.0, 0.0, "square", [100.0], t, rho_a)
+        eta_td = _in_loop_geometry_factor_td(
+            45.0, 0.0, "square", [100.0], t, rho_a
+        )
         eta_st = _in_loop_geometry_factor(45.0, 0.0, "square", [100.0])
         assert float(eta_td[0]) > float(eta_st)
 
@@ -1080,27 +1199,37 @@ class TestInLoopGeometryFactorTD:
         n = 15
         t = np.logspace(-5, -2, n)
         rho_a = np.ones(n) * 50.0
-        eta = _in_loop_geometry_factor_td(10.0, 0.0, "square", [100.0], t, rho_a)
+        eta = _in_loop_geometry_factor_td(
+            10.0, 0.0, "square", [100.0], t, rho_a
+        )
         assert eta.shape == (n,)
 
     def test_rectangular_loop_shape(self):
         t = np.logspace(-5, -2, 10)
         rho_a = np.full(10, 1e6)
-        eta_td = _in_loop_geometry_factor_td(10.0, 5.0, "rectangular", [80.0, 120.0], t, rho_a)
-        eta_st = _in_loop_geometry_factor(10.0, 5.0, "rectangular", [80.0, 120.0])
+        eta_td = _in_loop_geometry_factor_td(
+            10.0, 5.0, "rectangular", [80.0, 120.0], t, rho_a
+        )
+        eta_st = _in_loop_geometry_factor(
+            10.0, 5.0, "rectangular", [80.0, 120.0]
+        )
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-4)
 
     def test_circle_loop_shape(self):
         t = np.logspace(-5, -2, 10)
         rho_a = np.full(10, 1e6)
-        eta_td = _in_loop_geometry_factor_td(5.0, 0.0, "circle", [50.0], t, rho_a)
+        eta_td = _in_loop_geometry_factor_td(
+            5.0, 0.0, "circle", [50.0], t, rho_a
+        )
         eta_st = _in_loop_geometry_factor(5.0, 0.0, "circle", [50.0])
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-3)
 
     def test_eta_always_positive(self):
         t = np.logspace(-6, -2, 30)
         rho_a = np.logspace(-2, 4, 30)
-        eta = _in_loop_geometry_factor_td(25.0, 15.0, "square", [100.0], t, rho_a)
+        eta = _in_loop_geometry_factor_td(
+            25.0, 15.0, "square", [100.0], t, rho_a
+        )
         assert np.all(eta > 0.0)
 
 
@@ -1108,14 +1237,15 @@ class TestInLoopGeometryFactorTD:
 # _rho_a_in_loop with time-dependent geometry (n_iter)
 # ---------------------------------------------------------------------------
 
+
 class TestRhoAInLoopTD:
     """Tests for the iterative geometry correction in _rho_a_in_loop."""
 
     def _make_data(self, n=25, rho_true=100.0):
         t = np.logspace(-5, -2, n)
         loop_side = 100.0
-        M = 8.0 * loop_side ** 2
-        dBdt = M * MU0 ** 2.5 / (10.0 * np.sqrt(np.pi) * rho_true ** 1.5 * t ** 2.5)
+        M = 8.0 * loop_side**2
+        dBdt = M * MU0**2.5 / (10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5)
         return dBdt, t, M
 
     def test_central_receiver_unchanged_by_iter(self):
@@ -1128,22 +1258,30 @@ class TestRhoAInLoopTD:
     def test_n_iter_0_matches_static_only(self):
         # n_iter=0 should give the same result as using only η_static
         dBdt, t, M = self._make_data()
-        r_iter0 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=0)
-        eta_st   = _in_loop_geometry_factor(20.0, 10.0, "square", [100.0])
+        r_iter0 = _rho_a_in_loop(
+            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=0
+        )
+        eta_st = _in_loop_geometry_factor(20.0, 10.0, "square", [100.0])
         r_static = _rho_a_late_time(dBdt, t, M * eta_st)
         np.testing.assert_allclose(r_iter0, r_static, rtol=1e-10)
 
     def test_n_iter_3_differs_from_static_at_early_time(self):
         # Near a wire, iterative correction should differ from static at early gates
         dBdt, t, M = self._make_data()
-        r0 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=0)
-        r3 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=3)
+        r0 = _rho_a_in_loop(
+            dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=0
+        )
+        r3 = _rho_a_in_loop(
+            dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=3
+        )
         # At least some early-time gates should differ
         assert not np.allclose(r0[:5], r3[:5], rtol=1e-4)
 
     def test_output_finite_and_positive(self):
         dBdt, t, M = self._make_data()
-        r = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3)
+        r = _rho_a_in_loop(
+            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3
+        )
         assert np.all(np.isfinite(r))
         assert np.all(r > 0.0)
 
@@ -1151,7 +1289,9 @@ class TestRhoAInLoopTD:
         # Default n_iter=3 should match explicit n_iter=3
         dBdt, t, M = self._make_data()
         r_default = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0)
-        r3        = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3)
+        r3 = _rho_a_in_loop(
+            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3
+        )
         np.testing.assert_array_equal(r_default, r3)
 
 
@@ -1159,18 +1299,22 @@ class TestRhoAInLoopTD:
 # LateTimeTransform with in_loop_n_iter parameter
 # ---------------------------------------------------------------------------
 
+
 class TestLateTimeTransformInLoopNIter:
     """Tests for LateTimeTransform.in_loop_n_iter propagation."""
 
     def _sounding_in_loop(self, rx=20.0, ry=10.0, n=25, rho_true=100.0):
         loop_side = 100.0
-        M = 8.0 * loop_side ** 2
+        M = 8.0 * loop_side**2
         t = np.logspace(-5, -2, n)
-        dBdt = M * MU0 ** 2.5 / (10.0 * np.sqrt(np.pi) * rho_true ** 1.5 * t ** 2.5)
+        dBdt = M * MU0**2.5 / (10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5)
         return TEMSounding(
-            time_gates=t, data=dBdt,
-            current=8.0, tx_area=loop_side ** 2,
-            loop_shape="square", loop_dims=[loop_side],
+            time_gates=t,
+            data=dBdt,
+            current=8.0,
+            tx_area=loop_side**2,
+            loop_shape="square",
+            loop_dims=[loop_side],
             rx_offset=(rx, ry),
         )
 
@@ -1184,7 +1328,9 @@ class TestLateTimeTransformInLoopNIter:
         res3 = LateTimeTransform(in_loop_n_iter=3).transform(snd)
         # result dict is sorted by ascending frequency (late→early time)
         # the TD correction affects early-time (high-freq) gates → compare tail
-        assert not np.allclose(res0["rho_a"][-5:], res3["rho_a"][-5:], rtol=1e-4)
+        assert not np.allclose(
+            res0["rho_a"][-5:], res3["rho_a"][-5:], rtol=1e-4
+        )
 
     def test_n_iter_0_vs_3_same_on_centre(self):
         snd = self._sounding_in_loop(rx=0.0, ry=0.0)

@@ -31,6 +31,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -38,7 +45,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -47,8 +54,7 @@ if str(ROOT) not in sys.path:
 
 from pycsamt.models.modem import InversionResult
 
-
-example_dir = Path(__file__).resolve().parent
+example_dir = EXAMPLE_DIR
 workspace = example_dir / "workspaces" / "l18_prepared_workspace"
 modem_sample = ROOT / "data" / "modem" / "willy_27freq_watex_line02_sample"
 
@@ -220,7 +226,9 @@ if modem_sample.exists():
         modem_records.append(
             copy_if_exists(
                 modem_sample / name,
-                package_dirs["models"] if name.endswith(".rho") else package_dirs["logs"],
+                package_dirs["models"]
+                if name.endswith(".rho")
+                else package_dirs["logs"],
                 label="modem_result_evidence",
                 required=name in {"README.txt", "Modular_NLCG.log"},
             )
@@ -260,14 +268,20 @@ if modem_sample.exists():
             "best_rms": safe_float(result.best_rms),
             "iteration_numbers": [int(v) for v in result.iteration_numbers],
             "model_keys": model_keys,
-            "has_observed_data": (modem_sample / "27-freq-run-watex01.dat").exists(),
-            "has_predicted_data": (modem_sample / "Modular_NLCG_073.dat").exists(),
+            "has_observed_data": (
+                modem_sample / "27-freq-run-watex01.dat"
+            ).exists(),
+            "has_predicted_data": (
+                modem_sample / "Modular_NLCG_073.dat"
+            ).exists(),
             "observed_sites": "not loaded in fast package mode",
             "observed_periods": "not loaded in fast package mode",
         }
     )
 
-summary_file = package_dirs["metadata"] / "selected_inversion_run_summary.json"
+summary_file = (
+    package_dirs["metadata"] / "selected_inversion_run_summary.json"
+)
 summary_file.write_text(json.dumps(run_summary, indent=2), encoding="utf-8")
 manifest_records.append(
     {
@@ -435,7 +449,9 @@ memo_lines.extend(
     ]
 )
 
-memo_file = write_text(package_dirs["report"] / "interpretation_memo.md", memo_lines)
+memo_file = write_text(
+    package_dirs["report"] / "interpretation_memo.md", memo_lines
+)
 
 # %%
 # 10. Write the package manifest and a package summary figure
@@ -449,7 +465,9 @@ manifest.to_csv(manifest_file, index=False)
 summary_counts = (
     manifest.assign(
         category=manifest["destination"].map(
-            lambda p: Path(p).parent.name if isinstance(p, str) and p else "missing"
+            lambda p: (
+                Path(p).parent.name if isinstance(p, str) and p else "missing"
+            )
         )
     )
     .groupby("category")
@@ -460,13 +478,19 @@ summary_counts = (
 fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8), constrained_layout=True)
 ax_count, ax_status = axes
 
-ax_count.bar(summary_counts["category"], summary_counts["n_files"], color="tab:blue")
+ax_count.bar(
+    summary_counts["category"], summary_counts["n_files"], color="tab:blue"
+)
 ax_count.set_title("Packaged artefacts by folder")
 ax_count.set_ylabel("File count")
 ax_count.tick_params(axis="x", rotation=30)
 ax_count.grid(axis="y", alpha=0.25)
 
-status_counts = manifest["exists"].value_counts().rename(index={True: "copied", False: "missing"})
+status_counts = (
+    manifest["exists"]
+    .value_counts()
+    .rename(index={True: "copied", False: "missing"})
+)
 ax_status.pie(
     status_counts.to_numpy(),
     labels=status_counts.index,

@@ -32,7 +32,9 @@ from pycsamt.emtools import (
 from pycsamt.seg.spectra import Spectra
 
 ROOT = Path(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."))
-sp = Spectra.from_file(str(ROOT / "data" / "MT" / "SPECTRA" / "spectra01.edi"))
+sp = Spectra.from_file(
+    str(ROOT / "data" / "MT" / "SPECTRA" / "spectra01.edi")
+)
 print("spectra summary:")
 print(spectra_summary(sp))
 _ax = plot_psd(sp)
@@ -74,8 +76,10 @@ def n_freq(sites):
     return np.array([len(np.asarray(e.freq)) for e in _iter_items(sites)])
 
 
-print(f"KAP03: {len(n_freq(K))} stations, {n_freq(K).max()} frequencies "
-      f"(period 25-17067 s), real tipper channel")
+print(
+    f"KAP03: {len(n_freq(K))} stations, {n_freq(K).max()} frequencies "
+    f"(period 25-17067 s), real tipper channel"
+)
 
 # %%
 # Raw induction arrows
@@ -109,10 +113,14 @@ s2 = select_band(s1, fmin=1e-4, fmax=5e-2, recursive=False)
 s3 = drop_low_confidence_frequencies(s2, threshold=0.5, recursive=False)
 s4 = notch_powerline(s3, also="both", recursive=False)
 final = smooth_logfreq(s4, win=5, also="both", recursive=False)
-print(f"frequencies: {n_freq(K).max()} raw -> {n_freq(final).max()} processed "
-      f"(band-trimmed and confidence-pruned)")
-print("chain: raw -> drop_dup -> select_band -> drop_low_conf -> "
-      "notch(both) -> smooth(both)")
+print(
+    f"frequencies: {n_freq(K).max()} raw -> {n_freq(final).max()} processed "
+    f"(band-trimmed and confidence-pruned)"
+)
+print(
+    "chain: raw -> drop_dup -> select_band -> drop_low_conf -> "
+    "notch(both) -> smooth(both)"
+)
 
 # %%
 # Processed tipper section
@@ -144,8 +152,10 @@ import tempfile
 outdir = Path(tempfile.mkdtemp(prefix="kap03_tipper_"))
 paths = write_sites(final, outdir, exist_ok=True)
 reloaded = ensure_sites(str(outdir))
-print(f"wrote {len(paths)} tipper-preserving EDIs; re-loaded "
-      f"{len(n_freq(reloaded))} with {n_freq(reloaded).max()} frequencies")
+print(
+    f"wrote {len(paths)} tipper-preserving EDIs; re-loaded "
+    f"{len(n_freq(reloaded))} with {n_freq(reloaded).max()} frequencies"
+)
 
 # %%
 # **Takeaway.** Tipper rides through the same ``Sites -> Sites`` pipeline as

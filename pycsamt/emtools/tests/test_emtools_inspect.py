@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.inspect"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -31,23 +32,34 @@ def _no_api_view():
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeTipper:
     def __init__(self, tipper, freq):
         self.tipper = np.asarray(tipper, dtype=complex)
-        self.freq   = np.asarray(freq, dtype=float)
+        self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
-    def __init__(self, station, z, freq, *, tipper=None,
-                 lat=None, lon=None, east=None, north=None):
+    def __init__(
+        self,
+        station,
+        z,
+        freq,
+        *,
+        tipper=None,
+        lat=None,
+        lon=None,
+        east=None,
+        north=None,
+    ):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
         if tipper is not None:
             self.Tipper = _FakeTipper(tipper, freq)
@@ -55,7 +67,7 @@ class _FakeSite:
             self.lat = float(lat)
             self.lon = float(lon)
         if east is not None:
-            self.east  = float(east)
+            self.east = float(east)
             self.north = float(north)
 
     def get_section(self, *_, **__):
@@ -69,7 +81,7 @@ def _freqs(n: int = 10, f_lo: float = 1.0, f_hi: float = 1e4) -> np.ndarray:
 def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -82,22 +94,23 @@ def _tipper(freqs: np.ndarray, amp: float = 0.1) -> np.ndarray:
     return t
 
 
-def _site(name: str, n: int = 10, *, with_tipper=False,
-          lat=None, lon=None) -> _FakeSite:
+def _site(
+    name: str, n: int = 10, *, with_tipper=False, lat=None, lon=None
+) -> _FakeSite:
     fr = _freqs(n)
     tip = _tipper(fr) if with_tipper else None
-    return _FakeSite(name, _iso_z(fr), fr,
-                     tipper=tip, lat=lat, lon=lon)
+    return _FakeSite(name, _iso_z(fr), fr, tipper=tip, lat=lat, lon=lon)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # sites_summary
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSitesSummary:
 
+class TestSitesSummary:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sites = [_site("S00")]
         df = sites_summary(sites, api=False)
         assert isinstance(df, pd.DataFrame)
@@ -105,7 +118,13 @@ class TestSitesSummary:
     def test_expected_columns(self):
         sites = [_site("S00")]
         df = sites_summary(sites, api=False)
-        for col in ("station", "n_freq", "has_tipper", "period_min", "period_max"):
+        for col in (
+            "station",
+            "n_freq",
+            "has_tipper",
+            "period_min",
+            "period_max",
+        ):
             assert col in df.columns
 
     def test_one_row_per_site(self):
@@ -135,6 +154,7 @@ class TestSitesSummary:
         import pandas as pd
 
         from pycsamt.api.view.frame import APIFrame
+
         df = sites_summary([])
         assert isinstance(df, (pd.DataFrame, APIFrame))
 
@@ -143,8 +163,8 @@ class TestSitesSummary:
 # list_missing_sections
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestListMissingSections:
 
+class TestListMissingSections:
     def test_returns_dict(self):
         sites = [_site("S00")]
         result = list_missing_sections(sites)
@@ -169,10 +189,11 @@ class TestListMissingSections:
 # frequency_coverage
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestFrequencyCoverage:
 
+class TestFrequencyCoverage:
     def test_per_site_returns_dataframe(self):
         import pandas as pd
+
         sites = [_site(f"S{i}") for i in range(3)]
         result = frequency_coverage(sites, mode="per-site")
         assert isinstance(result, (pd.DataFrame, dict, type(None))) or True
@@ -181,15 +202,15 @@ class TestFrequencyCoverage:
         try:
             frequency_coverage([])
         except Exception:
-            pass   # allowed to return empty; must not crash catastrophically
+            pass  # allowed to return empty; must not crash catastrophically
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_coverage
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotCoverage:
 
+class TestPlotCoverage:
     def test_returns_figure(self):
         sites = [_site(f"S{i}") for i in range(3)]
         result = plot_coverage(sites)
@@ -215,8 +236,8 @@ class TestPlotCoverage:
 # plot_rhoa_phi
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotRhoaPhi:
 
+class TestPlotRhoaPhi:
     def test_returns_figure(self):
         sites = [_site("S00")]
         result = plot_rhoa_phi(sites)
@@ -241,8 +262,8 @@ class TestPlotRhoaPhi:
 # plot_tipper_components
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotTipperComponents:
 
+class TestPlotTipperComponents:
     def test_returns_figure_with_tipper(self):
         sites = [_site("S00", with_tipper=True)]
         result = plot_tipper_components(sites)
@@ -260,8 +281,8 @@ class TestPlotTipperComponents:
 # pseudosection
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPseudosection:
 
+class TestPseudosection:
     def test_returns_axes(self):
         sites = [_site(f"S{i}") for i in range(3)]
         result = pseudosection(sites)

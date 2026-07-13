@@ -52,9 +52,7 @@ def apply_elevations(
     # Normalized fallback so minor id-formatting differences between
     # the elevation source and the survey's own station ids don't
     # block an otherwise-obvious match.
-    norm_lookup = {
-        normalize_station_id(k): v for k, v in elev_map.items()
-    }
+    norm_lookup = {normalize_station_id(k): v for k, v in elev_map.items()}
 
     def _resolve(station_id: str) -> float | None:
         if station_id in lookup and _finite(lookup[station_id]):
@@ -112,11 +110,7 @@ def fetch_elevations(
             dtype=float,
         )
     )
-    return {
-        sid: float(e)
-        for sid, e in zip(ids, elevs)
-        if np.isfinite(e)
-    }
+    return {sid: float(e) for sid, e in zip(ids, elevs) if np.isfinite(e)}
 
 
 def export_elevations(
@@ -219,7 +213,9 @@ def export_elevations(
                 "line", data=np.asarray(lines, dtype=object), dtype=str_dtype
             )
     else:
-        msg = f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
+        msg = (
+            f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
+        )
         raise ValueError(msg)
     return path
 

@@ -188,6 +188,7 @@ def _bundle_unpack(d: dict[str, Any]) -> TFBundle:
 
     Unboxes 0-D arrays and parses JSON attrs.
     """
+
     def _sc(x):
         # unbox 0-D numpy scalars to Python types
         if isinstance(x, np.ndarray) and x.shape == ():
@@ -723,12 +724,15 @@ class RegistryAPI(CoreObject):
         try:
             if r.kind == "edi" and p and p.exists():
                 from pycsamt.seg.edi import EDIFile
+
                 return EDIFile.from_file(p)
             if r.kind == "avg" and p and p.exists():
                 from pycsamt.zonge.avg import AVG
+
                 return AVG.from_file(p)
             if r.kind in {"j", "j_col"} and p and p.exists():
                 from pycsamt.jones.j import JFile
+
                 return JFile.from_file(p)
         except Exception:
             return r.path

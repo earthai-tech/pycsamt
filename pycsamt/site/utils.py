@@ -23,14 +23,25 @@ from ..seg.edi import EDIFile
 from ..seg.heads import Head
 
 __all__ = [
-    "is_pathlike", "is_edi_file", "is_edi_collection",
-    "iter_edifiles", "as_edicollection",
-    "station_name", "set_station_name",
-    "get_coords", "set_coords",
-    "maybe_copy", "apply_inplace",
-    "get_freq", "freq_match", "freq_select",
-    "select_by_name", "match_name",
-    "wrap_azimuth", "deg_to_mrad", "mrad_to_deg",
+    "is_pathlike",
+    "is_edi_file",
+    "is_edi_collection",
+    "iter_edifiles",
+    "as_edicollection",
+    "station_name",
+    "set_station_name",
+    "get_coords",
+    "set_coords",
+    "maybe_copy",
+    "apply_inplace",
+    "get_freq",
+    "freq_match",
+    "freq_select",
+    "select_by_name",
+    "match_name",
+    "wrap_azimuth",
+    "deg_to_mrad",
+    "mrad_to_deg",
 ]
 
 _Coord = namedtuple("_Coord", ["lat", "lon", "elev"])
@@ -214,7 +225,6 @@ def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
                 yield it  # type: ignore
 
 
-
 def _is_pathlike(obj: Any) -> bool:
     return isinstance(obj, (str, bytes, Path, PathLike))
 
@@ -322,6 +332,7 @@ def as_edicollection(
         return EDICollection(items=items, verbose=verbose)  # type: ignore
     except TypeError:
         return EDICollection(items, verbose=verbose)  # type: ignore
+
 
 def station_name(ed: Any) -> str:
     r"""
@@ -921,14 +932,14 @@ def match_name(
         # glob-like?
         if any(c in pat for c in ("*", "?", "[")):
             rx = re.compile(
-                "^" + re.escape(pat).replace("\\*", ".*")
-                .replace("\\?", ".") + "$",
+                "^"
+                + re.escape(pat).replace("\\*", ".*").replace("\\?", ".")
+                + "$",
                 flags=re.IGNORECASE,
             )
             return bool(rx.match(name))
         # regex-looking string?
-        if any(c in pat for c in (".", "^", "$", "+",
-                                  "|", "(", ")", "\\")):
+        if any(c in pat for c in (".", "^", "$", "+", "|", "(", ")", "\\")):
             rx = re.compile(pat, flags=re.IGNORECASE)
             return bool(rx.search(name))
         return name.upper() == str(pat).upper()
@@ -1094,8 +1105,10 @@ def _ensure_head(ed: EDIFile) -> Any:
     try:
         h = Head()
     except Exception:
+
         class _H:
             pass
+
         h = _H()
     try:
         ed.set_section("head", h)  # type: ignore

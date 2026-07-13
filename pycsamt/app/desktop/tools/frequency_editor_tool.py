@@ -25,6 +25,7 @@ Usage
         # push dlg.edited_sites back to MainWindow
         ...
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -53,42 +54,55 @@ from PySide6.QtWidgets import (
 
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
-_MODES   = ["recover", "drop", "mask"]
+_MODES = ["recover", "drop", "mask"]
 _METHODS = ["composite", "snr", "phase_slope", "coherence"]
 _INTERPS = ["linear", "nearest"]
 _REJECTS = ["drop", "mask", "keep"]
-_ALSOS   = ["both", "z", "tipper"]
+_ALSOS = ["both", "z", "tipper"]
 
-_C_KEEP    = QColor("#c8e6c9")
+_C_KEEP = QColor("#c8e6c9")
 _C_RECOVER = QColor("#fff9c4")
-_C_DROP    = QColor("#ffcdd2")
-_FG_DARK   = QColor("#1a1a1a")   # forced dark text so pastels stay readable in dark mode
+_C_DROP = QColor("#ffcdd2")
+_FG_DARK = QColor(
+    "#1a1a1a"
+)  # forced dark text so pastels stay readable in dark mode
 _ACTION_COLOR = {
-    "kept":      _C_KEEP,
+    "kept": _C_KEEP,
     "recovered": _C_RECOVER,
-    "dropped":   _C_DROP,
-    "masked":    _C_DROP,
+    "dropped": _C_DROP,
+    "masked": _C_DROP,
 }
 
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _EditWorker(QThread):
-    done  = Signal(object, object, object)   # (result, decisions_df, fig)
+    done = Signal(object, object, object)  # (result, decisions_df, fig)
     error = Signal(str)
 
-    def __init__(self, sites, mode: str, method: str, threshold: float,
-                 ci_hi: float, ci_lo: float, interp: str, reject: str, also: str):
+    def __init__(
+        self,
+        sites,
+        mode: str,
+        method: str,
+        threshold: float,
+        ci_hi: float,
+        ci_lo: float,
+        interp: str,
+        reject: str,
+        also: str,
+    ):
         super().__init__()
-        self._sites     = sites
-        self._mode      = mode
-        self._method    = method
+        self._sites = sites
+        self._mode = mode
+        self._method = method
         self._threshold = threshold
-        self._ci_hi     = ci_hi
-        self._ci_lo     = ci_lo
-        self._interp    = interp
-        self._reject    = reject
-        self._also      = also
+        self._ci_hi = ci_hi
+        self._ci_lo = ci_lo
+        self._interp = interp
+        self._reject = reject
+        self._also = also
 
     def run(self):
         try:
@@ -139,6 +153,7 @@ class _EditWorker(QThread):
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
 
+
 class FrequencyEditorDialog(QDialog):
     """
     Confidence-based frequency QC workflow dialog.
@@ -159,9 +174,9 @@ class FrequencyEditorDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Frequency Editor")
         self.setMinimumSize(960, 620)
-        self._sites      = sites
-        self._worker     = None
-        self._result     = None
+        self._sites = sites
+        self._worker = None
+        self._result = None
         self.edited_sites = None
         self._build_ui()
 
@@ -176,35 +191,46 @@ class FrequencyEditorDialog(QDialog):
 
         grp_mode = QGroupBox("Edit strategy")
         form_m = QFormLayout(grp_mode)
-        self._mode_combo = QComboBox(); self._mode_combo.addItems(_MODES)
+        self._mode_combo = QComboBox()
+        self._mode_combo.addItems(_MODES)
         form_m.addRow("Mode:", self._mode_combo)
-        self._method_combo = QComboBox(); self._method_combo.addItems(_METHODS)
+        self._method_combo = QComboBox()
+        self._method_combo.addItems(_METHODS)
         form_m.addRow("CI method:", self._method_combo)
         bar.addWidget(grp_mode)
 
         grp_thresh = QGroupBox("Thresholds")
         form_t = QFormLayout(grp_thresh)
         self._thresh_spin = QDoubleSpinBox()
-        self._thresh_spin.setRange(0.0, 1.0); self._thresh_spin.setDecimals(2)
-        self._thresh_spin.setValue(0.50); self._thresh_spin.setSingleStep(0.05)
+        self._thresh_spin.setRange(0.0, 1.0)
+        self._thresh_spin.setDecimals(2)
+        self._thresh_spin.setValue(0.50)
+        self._thresh_spin.setSingleStep(0.05)
         form_t.addRow("Threshold:", self._thresh_spin)
         self._cihi_spin = QDoubleSpinBox()
-        self._cihi_spin.setRange(0.0, 1.0); self._cihi_spin.setDecimals(2)
-        self._cihi_spin.setValue(0.90); self._cihi_spin.setSingleStep(0.05)
+        self._cihi_spin.setRange(0.0, 1.0)
+        self._cihi_spin.setDecimals(2)
+        self._cihi_spin.setValue(0.90)
+        self._cihi_spin.setSingleStep(0.05)
         form_t.addRow("CI high:", self._cihi_spin)
         self._cilo_spin = QDoubleSpinBox()
-        self._cilo_spin.setRange(0.0, 1.0); self._cilo_spin.setDecimals(2)
-        self._cilo_spin.setValue(0.50); self._cilo_spin.setSingleStep(0.05)
+        self._cilo_spin.setRange(0.0, 1.0)
+        self._cilo_spin.setDecimals(2)
+        self._cilo_spin.setValue(0.50)
+        self._cilo_spin.setSingleStep(0.05)
         form_t.addRow("CI low:", self._cilo_spin)
         bar.addWidget(grp_thresh)
 
         grp_adv = QGroupBox("Advanced")
         form_a = QFormLayout(grp_adv)
-        self._interp_combo = QComboBox(); self._interp_combo.addItems(_INTERPS)
+        self._interp_combo = QComboBox()
+        self._interp_combo.addItems(_INTERPS)
         form_a.addRow("Interpolation:", self._interp_combo)
-        self._reject_combo = QComboBox(); self._reject_combo.addItems(_REJECTS)
+        self._reject_combo = QComboBox()
+        self._reject_combo.addItems(_REJECTS)
         form_a.addRow("Reject rows:", self._reject_combo)
-        self._also_combo = QComboBox(); self._also_combo.addItems(_ALSOS)
+        self._also_combo = QComboBox()
+        self._also_combo.addItems(_ALSOS)
         form_a.addRow("Apply to:", self._also_combo)
         bar.addWidget(grp_adv)
 
@@ -254,7 +280,9 @@ class FrequencyEditorDialog(QDialog):
         # Legend
         leg = QHBoxLayout()
         for color, text in (
-            (_C_KEEP, "Kept"), (_C_RECOVER, "Recovered"), (_C_DROP, "Dropped / Masked")
+            (_C_KEEP, "Kept"),
+            (_C_RECOVER, "Recovered"),
+            (_C_DROP, "Dropped / Masked"),
         ):
             lbl = QLabel(f"  {text}  ")
             lbl.setAutoFillBackground(True)
@@ -299,8 +327,8 @@ class FrequencyEditorDialog(QDialog):
         self.edited_sites = result.sites if hasattr(result, "sites") else None
         self._apply_btn.setEnabled(self.edited_sites is not None)
 
-        n_drop = getattr(result, "n_dropped",  0)
-        n_mask = getattr(result, "n_masked",   0)
+        n_drop = getattr(result, "n_dropped", 0)
+        n_mask = getattr(result, "n_masked", 0)
         n_recv = getattr(result, "n_recovered", 0)
         self._status_lbl.setText(
             f"Done — dropped: {n_drop}  masked: {n_mask}  recovered: {n_recv}"
@@ -327,7 +355,8 @@ class FrequencyEditorDialog(QDialog):
             (c for c in ("period", "Period", "T") if c in df.columns), None
         )
         conf_col = next(
-            (c for c in ("confidence", "ci", "score") if c in df.columns), None
+            (c for c in ("confidence", "ci", "score") if c in df.columns),
+            None,
         )
         action_col = "action" if "action" in df.columns else None
 
@@ -344,13 +373,15 @@ class FrequencyEditorDialog(QDialog):
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 return it
 
-            self._table.setItem(r, 0, _item(row[station_col] if station_col else "—"))
-            self._table.setItem(r, 1, _item(
-                f"{row[period_col]:.4g}" if period_col else "—"
-            ))
-            self._table.setItem(r, 2, _item(
-                f"{row[conf_col]:.3f}" if conf_col else "—"
-            ))
+            self._table.setItem(
+                r, 0, _item(row[station_col] if station_col else "—")
+            )
+            self._table.setItem(
+                r, 1, _item(f"{row[period_col]:.4g}" if period_col else "—")
+            )
+            self._table.setItem(
+                r, 2, _item(f"{row[conf_col]:.3f}" if conf_col else "—")
+            )
             self._table.setItem(r, 3, _item(action))
 
     # ── Apply ─────────────────────────────────────────────────────────────────

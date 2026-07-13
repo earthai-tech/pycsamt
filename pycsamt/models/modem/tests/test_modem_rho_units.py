@@ -9,6 +9,7 @@ ModEM impedance data are written in **field units** ``[mV/km]/[nT]``
 propagated error bars — by ``1/(0.2·2π·μ₀)`` ≈ 6.3·10⁵ (ρ_a shooting to
 ~10⁹ Ω·m on data whose true ρ_a is ~10²).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -24,7 +25,7 @@ def test_rho_uses_field_formula():
     err = 50.0
     p, rho, drho, phi, dphi = _rho_phase_from_rows([(T, re, im, err)])
 
-    z2 = re ** 2 + im ** 2
+    z2 = re**2 + im**2
     expected_rho = 0.2 * z2 * T
     np.testing.assert_allclose(rho[0], expected_rho, rtol=1e-9)
 
@@ -42,6 +43,6 @@ def test_rho_not_si_formula():
     T = 1.0e-3
     re, im = 1000.0, 1000.0
     p, rho, drho, phi, dphi = _rho_phase_from_rows([(T, re, im, 10.0)])
-    z2 = re ** 2 + im ** 2
+    z2 = re**2 + im**2
     si_rho = z2 / ((4.0e-7 * np.pi) * (2.0 * np.pi / T))
     assert rho[0] < si_rho / 1.0e4  # field result is ~6.3e5× smaller

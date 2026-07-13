@@ -54,6 +54,8 @@ def quiet_recompute_logs():
         yield
     finally:
         logging.disable(logging.NOTSET)
+
+
 from pycsamt.emtools.remove_noise import (
     apply_emap_filter,
     confidence_gated_emap_filter,
@@ -67,8 +69,13 @@ source = load_sites("amt_l22plt")
 
 with quiet_recompute_logs():
     edit = edit_frequencies_by_confidence(
-        source, before_sites=before, mode="recover", method="composite",
-        ci_hi=0.90, ci_lo=0.50, reject="drop",
+        source,
+        before_sites=before,
+        mode="recover",
+        method="composite",
+        ci_hi=0.90,
+        ci_lo=0.50,
+        reject="drop",
     )
 
 # The edit returns a per-cell decision table and a per-station report —
@@ -86,8 +93,12 @@ print(edit.decisions.head().to_string(index=False))
 # you can confirm the operation improved the line as a whole.
 
 plot_frequency_edit_summary(
-    before, edit.sites, method="composite",
-    ci_hi=0.90, ci_lo=0.50, figsize=(10, 4.0),
+    before,
+    edit.sites,
+    method="composite",
+    ci_hi=0.90,
+    ci_lo=0.50,
+    figsize=(10, 4.0),
 )
 
 # %%
@@ -98,8 +109,12 @@ plot_frequency_edit_summary(
 # grid — a precise audit of what the edit changed and where.
 
 plot_frequency_edit_decisions(
-    before, edit.sites, method="composite",
-    ci_hi=0.90, ci_lo=0.50, figsize=(12, 4.8),
+    before,
+    edit.sites,
+    method="composite",
+    ci_hi=0.90,
+    ci_lo=0.50,
+    figsize=(12, 4.8),
 )
 
 # %%
@@ -115,7 +130,10 @@ emap_source = load_sites("amt_l22plt")
 flma = apply_emap_filter(emap_source, method="flma", window=5, component="xy")
 
 report = emap_filter_report(
-    emap_before, flma, component="xy", period_s=0.01,
+    emap_before,
+    flma,
+    component="xy",
+    period_s=0.01,
 )
 print(report.head().to_string(index=False))
 
@@ -127,8 +145,12 @@ print(report.head().to_string(index=False))
 # period, showing how much smoothing the window applies.
 
 plot_emap_filter_profile(
-    emap_before, flma, method="flma", component="xy",
-    period_s=0.01, figsize=(10.5, 4.0),
+    emap_before,
+    flma,
+    method="flma",
+    component="xy",
+    period_s=0.01,
+    figsize=(10.5, 4.0),
 )
 
 # %%
@@ -139,7 +161,11 @@ plot_emap_filter_profile(
 # side-by-side over every station and period.
 
 plot_emap_filter_psection(
-    emap_before, flma, method="flma", component="xy", figsize=(11.5, 8.2),
+    emap_before,
+    flma,
+    method="flma",
+    component="xy",
+    figsize=(11.5, 8.2),
 )
 
 # %%
@@ -155,14 +181,22 @@ gated_before = load_sites("amt_l22plt")
 gated_source = load_sites("amt_l22plt")
 with quiet_recompute_logs():
     gated = confidence_gated_emap_filter(
-        gated_source, before_sites=gated_before, method="flma",
-        confidence_method="composite", component="xy",
-        window=5, ci_hi=0.90, ci_lo=0.50,
+        gated_source,
+        before_sites=gated_before,
+        method="flma",
+        confidence_method="composite",
+        component="xy",
+        window=5,
+        ci_hi=0.90,
+        ci_lo=0.50,
     )
 print("gated decision table columns:", list(gated.decisions.columns))
 print(gated.decisions.head().to_string(index=False))
 
 plot_emap_filter_psection(
-    gated_before, gated.sites,
-    method="confidence-gated FLMA", component="xy", figsize=(11.5, 8.2),
+    gated_before,
+    gated.sites,
+    method="confidence-gated FLMA",
+    component="xy",
+    figsize=(11.5, 8.2),
 )

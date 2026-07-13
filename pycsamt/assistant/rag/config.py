@@ -35,12 +35,12 @@ EXCLUDE_PATTERNS = (
     ".pyc",
     "docs/source/_static",
     "docs/source/images",
-    "pycsamt/app/",                 # Dash/desktop UI glue, not the science API
+    "pycsamt/app/",  # Dash/desktop UI glue, not the science API
     "pycsamt/app/desktop/resources",
     "pycsamt/app/web/assets",
-    "pycsamt/assistant/rag/",       # the retriever's own machinery + keyword
-    "pycsamt/assistant/evals/",     # tables are dense false-attractors, not API
-    "/tests/",                      # unit tests are not reference material
+    "pycsamt/assistant/rag/",  # the retriever's own machinery + keyword
+    "pycsamt/assistant/evals/",  # tables are dense false-attractors, not API
+    "/tests/",  # unit tests are not reference material
     ".pytest_cache",
     ".ruff_cache",
     ".git/",
@@ -85,30 +85,46 @@ HIGH_PRIORITY_PATHS = (
 # ── workflow tagging (keep aligned with pycsamt.agents._workflows) ──────────────
 WORKFLOW_KEYWORDS: dict[str, tuple[str, ...]] = {
     "static_shift": (
-        "static shift", "static-shift", "galvanic",
-        "estimate_ss_ama", "correct_ss_ama", "staticshift",
+        "static shift",
+        "static-shift",
+        "galvanic",
+        "estimate_ss_ama",
+        "correct_ss_ama",
+        "staticshift",
     ),
     "qc": (
-        "quality control", "dataqc", "qc_flags",
-        "build_qc_table", "dead band", "snr",
+        "quality control",
+        "dataqc",
+        "qc_flags",
+        "build_qc_table",
+        "dead band",
+        "snr",
     ),
     "phase_analysis": (
-        "phase tensor", "phaseanalysis", "strike",
-        "skew", "dimensionality", "mohr", "argand",
+        "phase tensor",
+        "phaseanalysis",
+        "strike",
+        "skew",
+        "dimensionality",
+        "mohr",
+        "argand",
     ),
     "denoise": ("denoise", "denoising", "rpca", "hampel"),
     "tipper": ("tipper", "induction arrow", "wiese", "parkinson"),
     "sensitivity": ("sensitivity", "bostick", "depth of investigation"),
     "rotation": ("tensor rotation", "rotate", "strike rotation"),
     "ai_inversion": (
-        "ai inversion", "eminverter", "aiinversion",
-        "neural inversion", "cnn inversion",
+        "ai inversion",
+        "eminverter",
+        "aiinversion",
+        "neural inversion",
+        "cnn inversion",
     ),
     "inv2d": ("unet", "inv2d", "2d inversion"),
     "inv3d": ("gcn", "inv3d", "3d inversion"),
     "pre_inversion": ("occam2d", "occam", "mesh", "startup"),
     "modem": ("modem",),
-    "mare2dem":("mare2dem",),
+    "mare2dem": ("mare2dem",),
     "forward": ("forward model", "mt1dforward", "layeredmodel"),
     "report": ("survey report", "reportagent"),
     "code_gen": ("code generation", "codegenerationagent"),
@@ -159,6 +175,7 @@ WORKFLOW_PATH_MAP: tuple[tuple[str, str], ...] = (
 
 # ── helpers ─────────────────────────────────────────────────────────────────────
 
+
 def _posix(rel_path: str) -> str:
     return PurePosixPath(rel_path).as_posix()
 
@@ -190,10 +207,7 @@ def should_index(rel_path: str) -> bool:
         return False
     if p in ROOT_DOCS:
         return True
-    return any(
-        p == root or p.startswith(root + "/")
-        for root in INDEX_ROOTS
-    )
+    return any(p == root or p.startswith(root + "/") for root in INDEX_ROOTS)
 
 
 def priority_for(rel_path: str) -> int:

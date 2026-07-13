@@ -65,13 +65,14 @@ _Z_COMPONENTS = ("Zxx", "Zxy", "Zyx", "Zyy")
 _ALL_COMPONENTS = _Z_COMPONENTS + ("Tipper",)
 
 # Coverage thresholds
-_THRESH_GOOD    = 0.90
+_THRESH_GOOD = 0.90
 _THRESH_PARTIAL = 0.50
 
 
 # ---------------------------------------------------------------------------
 # QualityFlag
 # ---------------------------------------------------------------------------
+
 
 class QualityFlag(str, Enum):
     """Data-quality classification for one component or a whole station.
@@ -88,9 +89,9 @@ class QualityFlag(str, Enum):
         Zero finite values; component is absent.
     """
 
-    GOOD    = "good"
+    GOOD = "good"
     PARTIAL = "partial"
-    POOR    = "poor"
+    POOR = "poor"
     MISSING = "missing"
 
     @classmethod
@@ -127,6 +128,7 @@ class QualityFlag(str, Enum):
 # ---------------------------------------------------------------------------
 # ComponentQuality
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ComponentQuality:
@@ -217,7 +219,7 @@ class ComponentQuality:
             fs = s[np.isfinite(s)]
             if fs.size:
                 snr_mean = float(fs.mean())
-                snr_std  = float(fs.std())
+                snr_std = float(fs.std())
 
         return cls(
             name=name,
@@ -230,19 +232,24 @@ class ComponentQuality:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "name":     self.name,
+            "name": self.name,
             "coverage": round(self.coverage, 4),
-            "n_valid":  self.n_valid,
-            "n_total":  self.n_total,
-            "flag":     self.flag.value,
-            "snr_mean": round(self.snr_mean, 2) if self.snr_mean is not None else None,
-            "snr_std":  round(self.snr_std, 2)  if self.snr_std  is not None else None,
+            "n_valid": self.n_valid,
+            "n_total": self.n_total,
+            "flag": self.flag.value,
+            "snr_mean": round(self.snr_mean, 2)
+            if self.snr_mean is not None
+            else None,
+            "snr_std": round(self.snr_std, 2)
+            if self.snr_std is not None
+            else None,
         }
 
     def __repr__(self) -> str:
         snr = (
             f"  SNR={self.snr_mean:.1f} dB"
-            if self.snr_mean is not None else ""
+            if self.snr_mean is not None
+            else ""
         )
         return (
             f"ComponentQuality({self.name!r}  {self.pct_str}"
@@ -253,6 +260,7 @@ class ComponentQuality:
 # ---------------------------------------------------------------------------
 # DataQuality
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DataQuality:
@@ -291,9 +299,13 @@ class DataQuality:
     overall: QualityFlag = field(init=False)
 
     def __post_init__(self) -> None:
-        self.overall = QualityFlag.worst(
-            [c.flag for c in self.components if c.n_total > 0]
-        ) if self.components else QualityFlag.MISSING
+        self.overall = (
+            QualityFlag.worst(
+                [c.flag for c in self.components if c.n_total > 0]
+            )
+            if self.components
+            else QualityFlag.MISSING
+        )
 
     # ------------------------------------------------------------------
     # Constructors
@@ -306,14 +318,18 @@ class DataQuality:
         Accepts any object exposing ``.name``, ``.freq``, ``.z``,
         and ``.tipper`` (as per :class:`~pycsamt.site.base.SiteMixin`).
         """
-        name  = getattr(site, "name", "?")
-        freq  = _safe_array(getattr(site, "freq", None))
-        z     = getattr(site, "z",     None)
-        tip   = getattr(site, "tipper", None)
+        name = getattr(site, "name", "?")
+        freq = _safe_array(getattr(site, "freq", None))
+        z = getattr(site, "z", None)
+        tip = getattr(site, "tipper", None)
 
-        n_freq    = int(freq.size)  if freq  is not None else 0
-        freq_min  = float(freq.min()) if freq is not None and freq.size else None
-        freq_max  = float(freq.max()) if freq is not None and freq.size else None
+        n_freq = int(freq.size) if freq is not None else 0
+        freq_min = (
+            float(freq.min()) if freq is not None and freq.size else None
+        )
+        freq_max = (
+            float(freq.max()) if freq is not None and freq.size else None
+        )
 
         comps: list[ComponentQuality] = []
         if z is not None:
@@ -338,6 +354,7 @@ class DataQuality:
         """Build from a spectra/impedance EDI file path."""
         from pycsamt.seg.edi import EDIFile  # noqa: PLC0415
         from pycsamt.site.base import Site  # noqa: PLC0415
+
         ed = EDIFile(str(edi_path))
         site = Site(ed)
         return cls.from_site(site)
@@ -378,8 +395,11 @@ class DataQuality:
         lines = [
             f"Station : {self.station}",
             f"  Frequencies : {self.n_freq}"
-            + (f"  [{self.freq_min:.3g} – {self.freq_max:.3g} Hz]"
-               if self.freq_min is not None else ""),
+            + (
+                f"  [{self.freq_min:.3g} – {self.freq_max:.3g} Hz]"
+                if self.freq_min is not None
+                else ""
+            ),
             f"  Overall     : {self.overall.value.upper()}",
         ]
         for c in self.components:
@@ -391,11 +411,11 @@ class DataQuality:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "station":   self.station,
-            "n_freq":    self.n_freq,
-            "freq_min":  self.freq_min,
-            "freq_max":  self.freq_max,
-            "overall":   self.overall.value,
+            "station": self.station,
+            "n_freq": self.n_freq,
+            "freq_min": self.freq_min,
+            "freq_max": self.freq_max,
+            "overall": self.overall.value,
             "mean_coverage": round(self.mean_coverage, 4),
             "components": [c.to_dict() for c in self.components],
         }
@@ -410,6 +430,7 @@ class DataQuality:
 # ---------------------------------------------------------------------------
 # Collection utilities
 # ---------------------------------------------------------------------------
+
 
 def assess_collection(sites: Any) -> list[DataQuality]:
     """Compute :class:`DataQuality` for every site in *sites*.
@@ -437,16 +458,18 @@ def quality_dataframe(sites: Any, *, api: bool | None = None) -> Any:
     try:
         import pandas as pd  # noqa: PLC0415
     except ImportError as exc:
-        raise ImportError("pandas is required for quality_dataframe()") from exc
+        raise ImportError(
+            "pandas is required for quality_dataframe()"
+        ) from exc
 
     rows = []
     for dq in assess_collection(sites):
         row: dict[str, Any] = {
-            "station":       dq.station,
-            "n_freq":        dq.n_freq,
-            "freq_min":      dq.freq_min,
-            "freq_max":      dq.freq_max,
-            "overall":       dq.overall.value,
+            "station": dq.station,
+            "n_freq": dq.n_freq,
+            "freq_min": dq.freq_min,
+            "freq_max": dq.freq_max,
+            "overall": dq.overall.value,
             "mean_coverage": round(dq.mean_coverage, 4),
         }
         for c in dq.components:
@@ -468,6 +491,7 @@ def quality_dataframe(sites: Any, *, api: bool | None = None) -> Any:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _safe_array(arr: Any) -> np.ndarray | None:
     if arr is None:

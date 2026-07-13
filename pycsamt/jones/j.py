@@ -21,10 +21,13 @@ from .heads import Heads
 
 logger = get_logger(__name__)
 
+
 def _as_path(p: str | Path) -> Path:
     return p if isinstance(p, Path) else Path(p)
 
-__all__= ['JMixin', "JIOMixin", "JFile"]
+
+__all__ = ["JMixin", "JIOMixin", "JFile"]
+
 
 class JMixin:
     r"""
@@ -327,9 +330,7 @@ class JIOMixin(JMixin):
             )
 
             # Also provide Res/Phase when Z exists.
-            rp_out = ResPhase(
-                freq=freq, name=z_parts[k0]["head"].station
-                )  # type: ignore  # noqa: E501
+            rp_out = ResPhase(freq=freq, name=z_parts[k0]["head"].station)  # type: ignore  # noqa: E501
             try:
                 rp_out.compute_resistivity_phase(
                     z_array=z_mat,
@@ -341,7 +342,9 @@ class JIOMixin(JMixin):
 
         # Z from R/phi (fallback)
         if z_out is None and r_parts:
-            have_keys = [k for k in ("RXX", "RXY", "RYX", "RYY") if k in r_parts]
+            have_keys = [
+                k for k in ("RXX", "RXY", "RYX", "RYY") if k in r_parts
+            ]
             if not have_keys:
                 have_keys = list(r_parts.keys())
             k0 = have_keys[0]
@@ -431,7 +434,7 @@ class JIOMixin(JMixin):
                 tipper_array=t_arr,
                 tipper_err_array=e_arr,
                 freq=freq,
-                name=t_parts[k0]["head"].station
+                name=t_parts[k0]["head"].station,
             )
 
         return z_out, tip_out, rp_out
@@ -558,9 +561,7 @@ class JFile(JIOMixin):
             self.read(self.path)
 
     @classmethod
-    def from_file(
-        cls, path: str | Path, *, verbose: int = 0
-    ) -> JFile:
+    def from_file(cls, path: str | Path, *, verbose: int = 0) -> JFile:
         r"""
         Construct and read a J file in one call.
 
@@ -684,11 +685,8 @@ class JFile(JIOMixin):
             raise ValueError("path is required")
 
         # Parse headers and all blocks ONCE.
-        self.heads = Heads.from_file(
-            self.path, verbose=self.verbose
-        )
-        self.blocks = JBlocks.from_file(
-            self.path, verbose=self.verbose)
+        self.heads = Heads.from_file(self.path, verbose=self.verbose)
+        self.blocks = JBlocks.from_file(self.path, verbose=self.verbose)
 
         # Scan the already-parsed blocks object
         # (no re-reading from disk).
@@ -702,7 +700,6 @@ class JFile(JIOMixin):
 
         self._read_ok = True
         return self
-
 
     def write(
         self,
@@ -782,9 +779,7 @@ class JFile(JIOMixin):
         """
 
         if not self.__has_read__():
-            raise RuntimeError(
-                "Cannot write JFile; call .read() first."
-            )
+            raise RuntimeError("Cannot write JFile; call .read() first.")
 
         def _ensure_parent(p: Path) -> None:
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -800,22 +795,18 @@ class JFile(JIOMixin):
             # Space for sign pad, G for general format
             return f"{val:{width}.{precision}G}"
 
-        def _fmt_sci(
-            val: float, width: int, precision: int
-        ) -> str:
+        def _fmt_sci(val: float, width: int, precision: int) -> str:
             """Formats a number in scientific notation."""
             if not np.isfinite(val):
                 return f"{'NaN':>{width}}"
             # Format and clean up E+0 -> E+, E-0 -> E-
             s = f"{val:{width}.{precision}E}"
-            return s.replace('E+0', 'E+').replace('E-0', 'E-')
+            return s.replace("E+0", "E+").replace("E-0", "E-")
 
         # --- 2. Write Main Headers (Banner & Info) ---
         if self.heads:
             lines.extend(
-                self.heads.banner.write(
-                    new=True, include_origin=True
-                )
+                self.heads.banner.write(new=True, include_origin=True)
             )
             lines.extend(self.heads.info.write())
 
@@ -828,7 +819,7 @@ class JFile(JIOMixin):
         have = {
             "Z": self.Z is not None,
             "R": self.Res is not None,
-            "T": self.Tip is not None
+            "T": self.Tip is not None,
         }
         key = (datatype or "ZRT").upper().strip()
         flags = {
@@ -853,9 +844,7 @@ class JFile(JIOMixin):
                 pha = self.Res.phase[:, i, j]
 
                 for k in range(self.n_freq):
-                    p, r_val, ph_val = (
-                        self.periods[k], rho[k], pha[k]
-                    )
+                    p, r_val, ph_val = (self.periods[k], rho[k], pha[k])
                     # Create nicely aligned 9-column output
                     row = (
                         f"{_fmt_sci(p, 11, 4)}"
@@ -871,8 +860,12 @@ class JFile(JIOMixin):
                     lines.append(row)
 
         # --- 5. Write T-Blocks (Tipper) ---
-        if (flags.get("T") and self.Tip and
-                self.Tip.tipper is not None and self.periods is not None):
+        if (
+            flags.get("T")
+            and self.Tip
+            and self.Tip.tipper is not None
+            and self.periods is not None
+        ):
             for code, k in {"ZX": 0, "ZY": 1}.items():
                 t_comp = self.Tip.tipper[:, 0, k]
                 if np.all(np.abs(t_comp) < 1e-12):
@@ -884,11 +877,15 @@ class JFile(JIOMixin):
                 lines.append(f"T{code}")
                 lines.append(str(self.n_freq))
                 err = self.Tip.tipper_err
-                t_err = err[:, 0, k] if err is not None else np.zeros(self.n_freq)
+                t_err = (
+                    err[:, 0, k] if err is not None else np.zeros(self.n_freq)
+                )
 
                 for l_idx in range(self.n_freq):
                     p, t, e = (
-                        self.periods[l_idx], t_comp[l_idx], t_err[l_idx]
+                        self.periods[l_idx],
+                        t_comp[l_idx],
+                        t_err[l_idx],
                     )
                     row = (
                         f"{_fmt_sci(p, 11, 4)}"
@@ -900,8 +897,12 @@ class JFile(JIOMixin):
                     lines.append(row)
 
         # --- 6. Write Z-Blocks (Impedance) ---
-        if (flags.get("Z") and self.Z and
-                self.Z.z is not None and self.periods is not None):
+        if (
+            flags.get("Z")
+            and self.Z
+            and self.Z.z is not None
+            and self.periods is not None
+        ):
             for comp_code, (i, j) in self._tidx.items():
                 z_comp = self.Z.z[:, i, j]
                 if np.all(np.abs(z_comp) < 1e-12):
@@ -913,12 +914,12 @@ class JFile(JIOMixin):
                 lines.append(f"Z{comp_code} SI")
                 lines.append(str(self.n_freq))
                 err = self.Z.z_err
-                z_err = err[:, i, j] if err is not None else np.zeros(self.n_freq)
+                z_err = (
+                    err[:, i, j] if err is not None else np.zeros(self.n_freq)
+                )
 
                 for k in range(self.n_freq):
-                    p, z, e = (
-                        self.periods[k], z_comp[k], z_err[k]
-                    )
+                    p, z, e = (self.periods[k], z_comp[k], z_err[k])
                     row = (
                         f"{_fmt_sci(p, 11, 4)}"
                         f"{_fmt(z.real, 12, 4)}"
@@ -930,11 +931,10 @@ class JFile(JIOMixin):
 
         # --- 7. Finalize and Save File ---
         path = self.path
-        base = Path(
-            new_jfn or j_fn or (path.name if path else "out.j")
-        )
+        base = Path(new_jfn or j_fn or (path.name if path else "out.j"))
         folder = Path(
-            savepath or (path.parent if path and path.parent.exists() else ".")
+            savepath
+            or (path.parent if path and path.parent.exists() else ".")
         )
         out_path = folder / base
 
@@ -951,7 +951,6 @@ class JFile(JIOMixin):
             logger.info("Wrote J file: %s", out_path)
 
         return str(out_path)
-
 
     @property
     def freq(self) -> np.ndarray | None:
@@ -973,7 +972,6 @@ class JFile(JIOMixin):
         f = self.freq
         return 0 if f is None else int(f.size)
 
-
     @property
     def station(self) -> str | None:
         if self.heads is not None and self.heads.head is not None:
@@ -983,7 +981,6 @@ class JFile(JIOMixin):
         if self.path is not None:
             return self.path.stem
         return None
-
 
     @property
     def name(self) -> str | None:
@@ -996,20 +993,17 @@ class JFile(JIOMixin):
             return self.path.stem
         return None
 
-
     @property
     def lat(self) -> float | None:
         if self.heads is not None:
             return self.heads.latitude
         return None
 
-
     @property
     def lon(self) -> float | None:
         if self.heads is not None:
             return self.heads.longitude
         return None
-
 
     @property
     def azimuth(self) -> float | None:
@@ -1021,7 +1015,6 @@ class JFile(JIOMixin):
             # explicit fallback to the hint
             return self.az_hint
         return None
-
 
     @property
     def az_hint(self) -> float | None:
@@ -1040,7 +1033,7 @@ class JFile(JIOMixin):
         return None
 
     @property
-    def site (self):
+    def site(self):
         # site / station
         # be in defensive
         return self.station or "UNKNOWN"
@@ -1109,4 +1102,3 @@ class JFile(JIOMixin):
             f"  path={s['pstr']!r},\n"
             f")"
         )
-

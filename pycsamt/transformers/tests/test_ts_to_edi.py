@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for :class:`pycsamt.transformers.TStoEDI`."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -63,8 +64,7 @@ def _synthetic_ts(n=2**14, dt=5.0, seed=7):
         station="SYN01",
         lat=-30.5,
         lon=20.25,
-        azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0,
-              "EX": 0.0, "EY": 90.0},
+        azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0, "EX": 0.0, "EY": 90.0},
         dipole={"EX": 50.0, "EY": 60.0},
     ), z0
 
@@ -73,14 +73,9 @@ def _synthetic_ts(n=2**14, dt=5.0, seed=7):
 def lims_file(tmp_path):
     rng = np.random.default_rng(5)
     rows = rng.standard_normal((2048, 5))
-    body = "\n".join(
-        "  ".join(f"{v:.6f}" for v in row)
-        for row in rows
-    )
+    body = "\n".join("  ".join(f"{v:.6f}" for v in row) for row in rows)
     p = tmp_path / "tst01.ts"
-    p.write_text(
-        _LIMS_HEADER + body + "\n", encoding="utf-8"
-    )
+    p.write_text(_LIMS_HEADER + body + "\n", encoding="utf-8")
     return p
 
 
@@ -97,15 +92,14 @@ def test_transform_single_tsdata():
     assert np.allclose(
         ed.Z.z,
         np.broadcast_to(z0[None], ed.Z.z.shape),
-        rtol=1e-6, atol=1e-8,
+        rtol=1e-6,
+        atol=1e-8,
     )
 
 
 def test_station_suffix_and_override():
     ts, _ = _synthetic_ts()
-    tr = TStoEDI(
-        nfft=2048, per_decade=4, station_suffix="_TS"
-    )
+    tr = TStoEDI(nfft=2048, per_decade=4, station_suffix="_TS")
     ed = tr.transform(ts)[0]
     assert ed.station == "SYN01_TS"
     # explicit override wins over the suffix
@@ -113,13 +107,11 @@ def test_station_suffix_and_override():
     assert ed2.station == "CUSTOM01"
 
 
-def test_transform_lims_file_writes_edi(
-    lims_file, tmp_path
-):
+def test_transform_lims_file_writes_edi(lims_file, tmp_path):
     out_dir = tmp_path / "edis"
-    col = TStoEDI(
-        nfft=512, per_decade=4, verbose=1
-    ).transform(lims_file, output_dir=out_dir)
+    col = TStoEDI(nfft=512, per_decade=4, verbose=1).transform(
+        lims_file, output_dir=out_dir
+    )
     assert len(col) == 1
     ed = col[0]
     assert ed.station == "tst01"
@@ -135,9 +127,7 @@ def test_transform_lims_file_writes_edi(
     assert dm is not None and len(dm.emeas) == 2
 
 
-def test_batch_directory_with_failure(
-    lims_file, tmp_path
-):
+def test_batch_directory_with_failure(lims_file, tmp_path):
     # a junk record that no reader can process
     bad = lims_file.parent / "bad.ts"
     bad.write_text("hello\nworld\n", encoding="utf-8")
@@ -151,9 +141,9 @@ def test_batch_directory_with_failure(
 
     # strict mode raises on the first failure
     with pytest.raises(RuntimeError):
-        TStoEDI(
-            nfft=512, per_decade=4, skip_errors=False
-        ).transform(lims_file.parent)
+        TStoEDI(nfft=512, per_decade=4, skip_errors=False).transform(
+            lims_file.parent
+        )
 
 
 def test_resolve_sources_errors(tmp_path):
@@ -171,10 +161,6 @@ def test_resolve_sources_errors(tmp_path):
 
 def test_mixed_source_list(lims_file):
     ts, _ = _synthetic_ts()
-    col = TStoEDI(nfft=512, per_decade=4).transform(
-        [ts, lims_file]
-    )
-    stations = sorted(
-        (e.station or "") for e in col
-    )
+    col = TStoEDI(nfft=512, per_decade=4).transform([ts, lims_file])
+    stations = sorted((e.station or "") for e in col)
     assert stations == ["SYN01", "tst01"]

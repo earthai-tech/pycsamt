@@ -77,6 +77,7 @@ def _write_modem_pair(tmp_path):
 # group_modem_stations
 # ---------------------------------------------------------------------------
 
+
 def test_group_modem_stations_name_token_fallback():
     names = ["23-18-001A", "23-18-002A", "23-22-001A"]
     groups = group_modem_stations(names)
@@ -98,6 +99,7 @@ def test_group_modem_stations_prefers_known_stations():
 # ---------------------------------------------------------------------------
 # station_curtain
 # ---------------------------------------------------------------------------
+
 
 def test_station_curtain_samples_real_positions(tmp_path):
     from pycsamt.models.modem.section import station_curtain
@@ -126,6 +128,7 @@ def test_station_curtain_skips_unknown_stations(tmp_path):
 # ---------------------------------------------------------------------------
 # load_modem_lines / MapView.from_inversion_results (end-to-end)
 # ---------------------------------------------------------------------------
+
 
 def test_load_modem_lines_builds_multiline_mapdata(tmp_path):
     folder, data, _ = _write_modem_pair(tmp_path)
@@ -165,21 +168,22 @@ def test_load_modem_lines_missing_folder_raises(tmp_path):
 # fetch_elevation (mocked — no live network call in tests)
 # ---------------------------------------------------------------------------
 
+
 def test_fetch_elevation_fills_only_missing_stations(tmp_path, monkeypatch):
     folder, data, _ = _write_modem_pair(tmp_path)
 
     def _fake_fetch(probe_data, **_kw):
         return {s.id: 999.0 for s in probe_data.stations}
 
-    monkeypatch.setattr(
-        "pycsamt.map.topo.fetch_elevations", _fake_fetch
-    )
+    monkeypatch.setattr("pycsamt.map.topo.fetch_elevations", _fake_fetch)
 
     line18 = [n for n in data.site_names if n.split("-")[1] == "18"]
     known = [StationRecord(id=line18[0], elevation=42.0)]
 
     map_data = load_modem_lines(
-        folder, known_stations=known, fetch_elevation=True,
+        folder,
+        known_stations=known,
+        fetch_elevation=True,
     )
     by_id = {s.id: s for s in map_data.stations}
     # Already-known elevation is preserved, not overwritten by the fetch.

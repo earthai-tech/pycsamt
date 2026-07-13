@@ -8,9 +8,7 @@ from pycsamt.seg.spectra import Spectra, spectra_from_Z
 
 def _rand_cx(shape, scale=1.0, rng=None):
     rng = np.random.default_rng() if rng is None else rng
-    a = rng.standard_normal(shape) + 1j * rng.standard_normal(
-        shape
-    )
+    a = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
     return a * scale
 
 
@@ -47,34 +45,18 @@ def test_synthesize_spectra_from_z_synth_no_hz():
     idx = {k: i for i, k in enumerate(order)}
     # References
     S_EH_ref = np.einsum("fij,fjk->fik", Z, S_HH)
-    S_EE_ref = np.einsum(
-        "fij,fjk,flk->fil", Z, S_HH, np.conjugate(Z)
-    )
+    S_EE_ref = np.einsum("fij,fjk,flk->fil", Z, S_HH, np.conjugate(Z))
 
     # E/H blocks
-    assert np.allclose(
-        Sfull[:, idx["EX"], idx["HX"]], S_EH_ref[:, 0, 0]
-    )
-    assert np.allclose(
-        Sfull[:, idx["EX"], idx["HY"]], S_EH_ref[:, 0, 1]
-    )
-    assert np.allclose(
-        Sfull[:, idx["EY"], idx["HX"]], S_EH_ref[:, 1, 0]
-    )
-    assert np.allclose(
-        Sfull[:, idx["EY"], idx["HY"]], S_EH_ref[:, 1, 1]
-    )
+    assert np.allclose(Sfull[:, idx["EX"], idx["HX"]], S_EH_ref[:, 0, 0])
+    assert np.allclose(Sfull[:, idx["EX"], idx["HY"]], S_EH_ref[:, 0, 1])
+    assert np.allclose(Sfull[:, idx["EY"], idx["HX"]], S_EH_ref[:, 1, 0])
+    assert np.allclose(Sfull[:, idx["EY"], idx["HY"]], S_EH_ref[:, 1, 1])
 
     # E/E blocks
-    assert np.allclose(
-        Sfull[:, idx["EX"], idx["EX"]], S_EE_ref[:, 0, 0]
-    )
-    assert np.allclose(
-        Sfull[:, idx["EX"], idx["EY"]], S_EE_ref[:, 0, 1]
-    )
-    assert np.allclose(
-        Sfull[:, idx["EY"], idx["EY"]], S_EE_ref[:, 1, 1]
-    )
+    assert np.allclose(Sfull[:, idx["EX"], idx["EX"]], S_EE_ref[:, 0, 0])
+    assert np.allclose(Sfull[:, idx["EX"], idx["EY"]], S_EE_ref[:, 0, 1])
+    assert np.allclose(Sfull[:, idx["EY"], idx["EY"]], S_EE_ref[:, 1, 1])
     # symmetry for E/E off-diagonal
     assert np.allclose(
         Sfull[:, idx["EY"], idx["EX"]],
@@ -102,9 +84,7 @@ def test_synthesize_spectra_from_z_synth_with_hz():
     idx = {k: i for i, k in enumerate(order)}
     S_ZH_ref = np.einsum("fik,fkj->fij", T, S_HH)
     # HZ/HX
-    assert np.allclose(
-        Sfull[:, idx["HZ"], idx["HX"]], S_ZH_ref[:, 0, 0]
-    )
+    assert np.allclose(Sfull[:, idx["HZ"], idx["HX"]], S_ZH_ref[:, 0, 0])
     # HX/HZ conjugate
     assert np.allclose(
         Sfull[:, idx["HX"], idx["HZ"]],

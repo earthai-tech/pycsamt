@@ -50,9 +50,16 @@ from .plotting import (
 __all__ = ["ToolAgent", "TOOL_KINDS"]
 
 TOOL_KINDS = (
-    "strike", "dimensionality", "validator",
-    "coords", "elevation", "converter", "batch_export",
-    "freq_editor", "layered_model", "correction",
+    "strike",
+    "dimensionality",
+    "validator",
+    "coords",
+    "elevation",
+    "converter",
+    "batch_export",
+    "freq_editor",
+    "layered_model",
+    "correction",
 )
 
 # Tools that do not need a loaded EDI dataset.
@@ -60,14 +67,19 @@ _DATALESS_KINDS = ("layered_model",)
 
 # Plot bundles offered by the batch_export tool. Values are PlotAgent kinds.
 _EXPORT_BUNDLES: dict[str, tuple[str, ...]] = {
-    "overview":     ("rhophi", "phase_psection", "pt_psection"),
+    "overview": ("rhophi", "phase_psection", "pt_psection"),
     "phase_tensor": ("pt_psection", "pt_map", "pt_strip_grid"),
-    "all":          ("rhophi", "phase_psection", "pt_psection", "pt_map",
-                      "pt_strip_grid"),
-    "rhophi":       ("rhophi",),
+    "all": (
+        "rhophi",
+        "phase_psection",
+        "pt_psection",
+        "pt_map",
+        "pt_strip_grid",
+    ),
+    "rhophi": ("rhophi",),
     "phase_psection": ("phase_psection",),
-    "pt_psection":  ("pt_psection",),
-    "pt_map":       ("pt_map",),
+    "pt_psection": ("pt_psection",),
+    "pt_map": ("pt_map",),
     "pt_strip_grid": ("pt_strip_grid",),
 }
 
@@ -77,7 +89,7 @@ def _as_fig(obj):
     or an Axes."""
     if obj is None:
         return None
-    if hasattr(obj, "savefig"):          # already a Figure
+    if hasattr(obj, "savefig"):  # already a Figure
         return obj
     getf = getattr(obj, "get_figure", None)
     if callable(getf):
@@ -85,7 +97,9 @@ def _as_fig(obj):
     return getattr(obj, "figure", None)
 
 
-def _df_to_text(df, columns=None, max_rows: int = 30, ndigits: int = 2) -> str:
+def _df_to_text(
+    df, columns=None, max_rows: int = 30, ndigits: int = 2
+) -> str:
     """Compact fixed-width rendering of a DataFrame for a chat code block."""
     d = df
     if columns:
@@ -109,6 +123,7 @@ def _df_to_text(df, columns=None, max_rows: int = 30, ndigits: int = 2) -> str:
 def _circular_strike_mean(ang_deg) -> float:
     """Mean of strike angles modulo 180° (geoelectric strike ambiguity)."""
     import numpy as np
+
     a = np.asarray(ang_deg, float)
     a = a[np.isfinite(a)]
     if a.size == 0:
@@ -145,6 +160,7 @@ def _station_coords(sites) -> list:
 
     ``lat`` / ``lon`` are ``None`` when a station carries no coordinates."""
     from ..emtools._core import _iter_items, _name, _unwrap
+
     out = []
     for i, ed in enumerate(_iter_items(sites)):
         name = _name(ed, i)
@@ -164,17 +180,27 @@ def _ll_to_utm(lat: float, lon: float, zone, hem: str, datum: str):
     fallback to :func:`pycsamt.gis.utils.ll_to_utm`."""
     try:
         from pyproj import Proj
+
         if zone is None:
             zone = int((lon + 180) / 6) + 1
-        proj = Proj(proj="utm", zone=zone, datum=datum,
-                    south=(hem == "S"), ellps=datum)
+        proj = Proj(
+            proj="utm",
+            zone=zone,
+            datum=datum,
+            south=(hem == "S"),
+            ellps=datum,
+        )
         e, n = proj(lon, lat)
         return e, n, zone
     except Exception:  # noqa: BLE001
         from ..gis.utils import ll_to_utm
+
         res = ll_to_utm(lat, lon)
-        return (res["easting"], res["northing"],
-                res.get("zone_number", zone or 0))
+        return (
+            res["easting"],
+            res["northing"],
+            res.get("zone_number", zone or 0),
+        )
 
 
 def _corr_coord_figure(raw_sites, corrected_sites, label: str):
@@ -196,17 +222,32 @@ def _corr_coord_figure(raw_sites, corrected_sites, label: str):
         return None
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.scatter(df0["lon"], df0["lat"], s=28, facecolors="none",
-               edgecolors="#3498db", label="Before", zorder=3)
-    ax.scatter(df1["lon"], df1["lat"], s=14, color="#e74c3c",
-               label="After", zorder=4)
+    ax.scatter(
+        df0["lon"],
+        df0["lat"],
+        s=28,
+        facecolors="none",
+        edgecolors="#3498db",
+        label="Before",
+        zorder=3,
+    )
+    ax.scatter(
+        df1["lon"], df1["lat"], s=14, color="#e74c3c", label="After", zorder=4
+    )
     # connect each station's old → new position
     for (_, r0), (_, r1) in zip(df0.iterrows(), df1.iterrows()):
-        ax.plot([r0["lon"], r1["lon"]], [r0["lat"], r1["lat"]],
-                color="#999", lw=0.6, zorder=2)
+        ax.plot(
+            [r0["lon"], r1["lon"]],
+            [r0["lat"], r1["lat"]],
+            color="#999",
+            lw=0.6,
+            zorder=2,
+        )
     ax.set_xlabel("Longitude", fontsize=8)
     ax.set_ylabel("Latitude", fontsize=8)
-    ax.set_title(f"{label} — station positions", fontsize=9, fontweight="bold")
+    ax.set_title(
+        f"{label} — station positions", fontsize=9, fontweight="bold"
+    )
     ax.legend(fontsize=8)
     ax.tick_params(labelsize=7)
     fig.tight_layout()
@@ -243,6 +284,7 @@ class ToolAgent:
             )
 
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt  # noqa: F401
 
@@ -250,15 +292,24 @@ class ToolAgent:
         if kind in _DATALESS_KINDS:
             warnings: list[str] = []
             try:
-                summary, table, figs = self._layered_model(input_data, warnings)
+                summary, table, figs = self._layered_model(
+                    input_data, warnings
+                )
             except Exception as exc:  # noqa: BLE001
                 return AgentResult.failed(
-                    f"{kind} failed: {exc}", elapsed=time.time() - t0,
+                    f"{kind} failed: {exc}",
+                    elapsed=time.time() - t0,
                 )
             return AgentResult(
-                status="success", summary=summary,
-                data={"table_text": table, "figures": figs, "tool_kind": kind},
-                warnings=warnings, elapsed_seconds=time.time() - t0,
+                status="success",
+                summary=summary,
+                data={
+                    "table_text": table,
+                    "figures": figs,
+                    "tool_kind": kind,
+                },
+                warnings=warnings,
+                elapsed_seconds=time.time() - t0,
                 cost_estimate_usd=0.0,
             )
 
@@ -274,6 +325,7 @@ class ToolAgent:
             )
 
         from ..emtools._core import ensure_sites
+
         try:
             sites = ensure_sites(src, recursive=True, strict=False, verbose=0)
         except Exception as exc:  # noqa: BLE001
@@ -294,9 +346,7 @@ class ToolAgent:
                     sub, input_data, warnings
                 )
             elif kind == "coords":
-                summary, table, figs = self._coords(
-                    sub, input_data, warnings
-                )
+                summary, table, figs = self._coords(sub, input_data, warnings)
             elif kind == "elevation":
                 summary, table, figs = self._elevation(
                     sub, input_data, warnings
@@ -328,7 +378,9 @@ class ToolAgent:
             )
 
         data: dict[str, Any] = {
-            "table_text": table, "figures": figs, "tool_kind": kind,
+            "table_text": table,
+            "figures": figs,
+            "tool_kind": kind,
         }
         if self._corrected is not None:
             data["corrected_sites"] = self._corrected
@@ -349,6 +401,7 @@ class ToolAgent:
             estimate_strike_sweep,
             plot_strike_analysis,
         )
+
         method = str(d.get("method", "consensus") or "consensus").lower()
         band = _period_range(d)
         fn = {
@@ -359,7 +412,9 @@ class ToolAgent:
         res = fn(sites, band=band, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
 
-        regional = _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        regional = (
+            _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        )
         summary = (
             f"**Geoelectric strike ({method})** — regional ≈ "
             f"{regional:.1f}° (N{regional:+.0f}°E) across {len(df)} station(s). "
@@ -371,7 +426,9 @@ class ToolAgent:
         try:
             fmethod = "pt" if method == "pt" else "sweep"
             fig = _as_fig(
-                plot_strike_analysis(sites, method=fmethod, band=band, verbose=0)
+                plot_strike_analysis(
+                    sites, method=fmethod, band=band, verbose=0
+                )
             )
             if fig is not None:
                 figs["Strike analysis"] = fig
@@ -383,6 +440,7 @@ class ToolAgent:
         from ..emtools.dimensionality import (
             classify_dimensionality,
         )
+
         try:
             skew_th = float(d.get("skew_th", 3.0) or 3.0)
         except (TypeError, ValueError):
@@ -413,11 +471,17 @@ class ToolAgent:
         if "station" in df and "dim" in df:
             agg = (
                 df.groupby("station")["dim"]
-                .agg(lambda s: int(s.mode().iloc[0]) if not s.mode().empty else 0)
+                .agg(
+                    lambda s: (
+                        int(s.mode().iloc[0]) if not s.mode().empty else 0
+                    )
+                )
                 .reset_index()
             )
             agg["class"] = agg["dim"].map(_LBL)
-            table = _df_to_text(agg, columns=["station", "class"], max_rows=40)
+            table = _df_to_text(
+                agg, columns=["station", "class"], max_rows=40
+            )
         else:
             table = _df_to_text(df, max_rows=20)
 
@@ -426,6 +490,7 @@ class ToolAgent:
             from ..emtools.tensor import (
                 plot_dimensionality_psection,
             )
+
             fig = _as_fig(plot_dimensionality_psection(sites, verbose=0))
             if fig is not None:
                 figs["Dimensionality pseudo-section"] = fig
@@ -437,6 +502,7 @@ class ToolAgent:
         import pandas as pd
 
         from ..agents.loader import _quality_scan
+
         rows, scan_warn = _quality_scan(sites)
         if not rows:
             return (
@@ -445,6 +511,7 @@ class ToolAgent:
                 {},
             )
         df = pd.DataFrame(rows)
+
         # a station is "flagged" if it lacks Z / coords or scores low
         def _flag(r):
             issues = []
@@ -455,6 +522,7 @@ class ToolAgent:
             if (r.get("qc_score") or 0) < 50:
                 issues.append("low-QC")
             return ",".join(issues) or "ok"
+
         df["flags"] = df.apply(_flag, axis=1)
         n_flag = int((df["flags"] != "ok").sum())
         summary = (
@@ -463,8 +531,14 @@ class ToolAgent:
         )
         table = _df_to_text(
             df,
-            columns=["station", "has_z", "has_coords", "n_freq",
-                     "qc_score", "flags"],
+            columns=[
+                "station",
+                "has_z",
+                "has_coords",
+                "n_freq",
+                "qc_score",
+                "flags",
+            ],
             max_rows=40,
         )
         return summary, table, {}
@@ -487,8 +561,12 @@ class ToolAgent:
         n_ok = 0
         for name, lat, lon in _station_coords(sites):
             rec = {
-                "station": name, "lat": lat, "lon": lon,
-                "easting": None, "northing": None, "zone": None,
+                "station": name,
+                "lat": lat,
+                "lon": lon,
+                "easting": None,
+                "northing": None,
+                "zone": None,
             }
             if lat is not None and lon is not None:
                 try:
@@ -515,7 +593,8 @@ class ToolAgent:
         table = _df_to_text(
             df,
             columns=["station", "lat", "lon", "easting", "northing", "zone"],
-            max_rows=60, ndigits=6,
+            max_rows=60,
+            ndigits=6,
         )
         return summary, table, {}
 
@@ -527,13 +606,15 @@ class ToolAgent:
         api = str(d.get("api", "open_meteo") or "open_meteo")
         coords = _station_coords(sites)
         with_coords = [
-            (n, la, lo) for n, la, lo in coords
+            (n, la, lo)
+            for n, la, lo in coords
             if la is not None and lo is not None
         ]
         if not with_coords:
             return (
                 "No stations carry coordinates — cannot fetch elevation.",
-                "(empty)", {},
+                "(empty)",
+                {},
             )
 
         # One batched request (the API accepts arrays); fall back to NaN on
@@ -541,6 +622,7 @@ class ToolAgent:
         elev_map: dict[str, float] = {}
         try:
             from ..gis.utils import get_elevation_from_api
+
             lats = np.array([la for _, la, lo in with_coords], dtype=float)
             lons = np.array([lo for _, la, lo in with_coords], dtype=float)
             res = get_elevation_from_api(lats, lons, api_name=api)
@@ -553,10 +635,14 @@ class ToolAgent:
         rows = []
         for name, lat, lon in coords:
             ev = elev_map.get(name, float("nan"))
-            rows.append({
-                "station": name, "lat": lat, "lon": lon,
-                "elevation_m": round(ev, 1) if np.isfinite(ev) else None,
-            })
+            rows.append(
+                {
+                    "station": name,
+                    "lat": lat,
+                    "lon": lon,
+                    "elevation_m": round(ev, 1) if np.isfinite(ev) else None,
+                }
+            )
         df = pd.DataFrame(rows)
         n_ok = int(df["elevation_m"].notna().sum())
         summary = (
@@ -565,8 +651,10 @@ class ToolAgent:
             "Queried an open elevation web service over the network."
         )
         table = _df_to_text(
-            df, columns=["station", "lat", "lon", "elevation_m"],
-            max_rows=60, ndigits=6,
+            df,
+            columns=["station", "lat", "lon", "elevation_m"],
+            max_rows=60,
+            ndigits=6,
         )
         return summary, table, {}
 
@@ -585,8 +673,9 @@ class ToolAgent:
         fmt = str(d.get("format", "csv") or "csv").lower()
         if fmt not in ("csv", "json", "edi"):
             fmt = "csv"
-        out_dir = (str(d.get("output_dir") or "").strip()
-                   or _default_out_dir("pycsamt_export"))
+        out_dir = str(d.get("output_dir") or "").strip() or _default_out_dir(
+            "pycsamt_export"
+        )
 
         rows = []
         n_edi = 0
@@ -610,19 +699,25 @@ class ToolAgent:
                     n_freq = int(fa.size)
                     if n_freq:
                         periods = 1.0 / fa
-                        t_min, t_max = float(periods.min()), float(periods.max())
+                        t_min, t_max = (
+                            float(periods.min()),
+                            float(periods.max()),
+                        )
                 if ze is not None:
                     has_err = bool(np.any(np.isfinite(np.asarray(ze))))
             except Exception:  # noqa: BLE001
                 pass
-            rows.append({
-                "station": name,
-                "lat": lat, "lon": lon,
-                "n_freq": n_freq,
-                "t_min": round(t_min, 6) if np.isfinite(t_min) else None,
-                "t_max": round(t_max, 6) if np.isfinite(t_max) else None,
-                "has_z_err": has_err,
-            })
+            rows.append(
+                {
+                    "station": name,
+                    "lat": lat,
+                    "lon": lon,
+                    "n_freq": n_freq,
+                    "t_min": round(t_min, 6) if np.isfinite(t_min) else None,
+                    "t_max": round(t_max, 6) if np.isfinite(t_max) else None,
+                    "has_z_err": has_err,
+                }
+            )
 
         if not rows:
             return "No stations to convert.", "(empty)", {}
@@ -632,6 +727,7 @@ class ToolAgent:
         try:
             if fmt == "csv":
                 import csv
+
                 path = os.path.join(out_dir, "survey_stations.csv")
                 with open(path, "w", newline="", encoding="utf-8") as fh:
                     w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
@@ -640,6 +736,7 @@ class ToolAgent:
                 written.append(path)
             elif fmt == "json":
                 import json
+
                 path = os.path.join(out_dir, "survey_stations.json")
                 with open(path, "w", encoding="utf-8") as fh:
                     json.dump(rows, fh, indent=2)
@@ -667,16 +764,25 @@ class ToolAgent:
                 "wrote nothing (try CSV/JSON)."
             )
         df = pd.DataFrame(rows)
-        what = (f"{len(written)} EDI file(s)" if fmt == "edi"
-                else f"{fmt.upper()} ({len(rows)} stations)")
-        summary = (
-            f"**Format conversion** → wrote {what} to `{out_dir}`."
+        what = (
+            f"{len(written)} EDI file(s)"
+            if fmt == "edi"
+            else f"{fmt.upper()} ({len(rows)} stations)"
         )
+        summary = f"**Format conversion** → wrote {what} to `{out_dir}`."
         table = _df_to_text(
             df,
-            columns=["station", "lat", "lon", "n_freq",
-                     "t_min", "t_max", "has_z_err"],
-            max_rows=40, ndigits=6,
+            columns=[
+                "station",
+                "lat",
+                "lon",
+                "n_freq",
+                "t_min",
+                "t_max",
+                "has_z_err",
+            ],
+            max_rows=40,
+            ndigits=6,
         )
         return summary, table, {}
 
@@ -695,17 +801,22 @@ class ToolAgent:
         except (TypeError, ValueError):
             dpi = 150
         dpi = max(72, min(600, dpi))
-        out_dir = (str(d.get("output_dir") or "").strip()
-                   or _default_out_dir("pycsamt_figures"))
+        out_dir = str(d.get("output_dir") or "").strip() or _default_out_dir(
+            "pycsamt_figures"
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         figs_out: dict = {}
         rows = []
         for kind in kinds:
             try:
-                res = PlotAgent().execute({
-                    "sites": sites, "kind": kind, "publication": "on",
-                })
+                res = PlotAgent().execute(
+                    {
+                        "sites": sites,
+                        "kind": kind,
+                        "publication": "on",
+                    }
+                )
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"{kind}: render failed ({exc})")
                 continue
@@ -728,14 +839,17 @@ class ToolAgent:
         if not rows:
             return (
                 "No figures could be rendered for the selected bundle.",
-                "(empty)", {},
+                "(empty)",
+                {},
             )
         df = pd.DataFrame(rows)
         summary = (
             f"**Batch plot export** ({bundle}) — saved {len(rows)} figure(s) "
             f"as {fmt.upper()} @ {dpi} dpi to `{out_dir}`."
         )
-        table = _df_to_text(df, columns=["plot", "file", "saved"], max_rows=40)
+        table = _df_to_text(
+            df, columns=["plot", "file", "saved"], max_rows=40
+        )
         return summary, table, figs_out
 
     # ── stateful tools (Wave D) ───────────────────────────────────────────────
@@ -759,14 +873,23 @@ class ToolAgent:
                 return float(d.get(key, default) or default)
             except (TypeError, ValueError):
                 return default
+
         threshold = _f("threshold", 0.50)
         ci_hi = _f("ci_hi", 0.90)
         ci_lo = _f("ci_lo", 0.50)
 
         result = edit_frequencies_by_confidence(
-            sites, mode=mode, method=method, threshold=threshold,
-            ci_hi=ci_hi, ci_lo=ci_lo, interpolation="linear",
-            reject=reject, also=also, inplace=False, verbose=0,
+            sites,
+            mode=mode,
+            method=method,
+            threshold=threshold,
+            ci_hi=ci_hi,
+            ci_lo=ci_lo,
+            interpolation="linear",
+            reject=reject,
+            also=also,
+            inplace=False,
+            verbose=0,
         )
         edited = getattr(result, "sites", None)
         self._corrected = edited
@@ -784,23 +907,35 @@ class ToolAgent:
             f"**Frequency editor** ({mode}, method {method}, "
             f"threshold {threshold:g}) — dropped {n_drop}, masked {n_mask}, "
             f"recovered {n_recv}. "
-            + ("Edited data is ready — choose **apply / export** below."
-               if edited is not None else
-               "No edited survey was returned.")
+            + (
+                "Edited data is ready — choose **apply / export** below."
+                if edited is not None
+                else "No edited survey was returned."
+            )
         )
 
         table = "(no per-row decisions returned)"
-        if decisions is not None and getattr(decisions, "empty", True) is False:
-            cols = [c for c in ("station", "period", "confidence", "action")
-                    if c in decisions.columns]
-            table = _df_to_text(decisions, columns=cols or None,
-                                max_rows=40, ndigits=4)
+        if (
+            decisions is not None
+            and getattr(decisions, "empty", True) is False
+        ):
+            cols = [
+                c
+                for c in ("station", "period", "confidence", "action")
+                if c in decisions.columns
+            ]
+            table = _df_to_text(
+                decisions, columns=cols or None, max_rows=40, ndigits=4
+            )
 
         figs = {}
         try:
             ax = plot_frequency_edit_summary(
-                sites, edited if edited is not None else sites,
-                method=method, ci_hi=ci_hi, ci_lo=ci_lo,
+                sites,
+                edited if edited is not None else sites,
+                method=method,
+                ci_hi=ci_hi,
+                ci_lo=ci_lo,
             )
             fig = _as_fig(ax)
             if fig is not None:
@@ -885,7 +1020,9 @@ class ToolAgent:
         self._corrected = None if diagnostic else corrected
 
         n_sta = len(list(_iter_items(corrected)))
-        param_txt = ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "defaults"
+        param_txt = (
+            ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "defaults"
+        )
         if diagnostic:
             summary = (
                 f"**{category} — {label}** over {n_sta} station(s) "
@@ -899,15 +1036,20 @@ class ToolAgent:
             )
 
         # ── table ──────────────────────────────────────────────────────────
-        if fn_name == "_strat_qc" and ctrl._strat_qc_report is not None \
-                and not ctrl._strat_qc_report.empty:
+        if (
+            fn_name == "_strat_qc"
+            and ctrl._strat_qc_report is not None
+            and not ctrl._strat_qc_report.empty
+        ):
             table = _df_to_text(ctrl._strat_qc_report, max_rows=40, ndigits=3)
         elif kwargs:
             tbl_df = pd.DataFrame(
                 [{"parameter": k, "value": v} for k, v in kwargs.items()]
             )
             table = _df_to_text(
-                tbl_df, columns=["parameter", "value"], max_rows=30,
+                tbl_df,
+                columns=["parameter", "value"],
+                max_rows=30,
             )
         else:
             table = "(no parameters)"
@@ -962,7 +1104,8 @@ class ToolAgent:
                 depth_max = 2000.0
             if preset == "random":
                 model = LayeredModel.random(
-                    n_layers, depth_max=depth_max, seed=0)
+                    n_layers, depth_max=depth_max, seed=0
+                )
             elif preset == "blocky":
                 model = LayeredModel.blocky(n_layers)
             else:
@@ -995,13 +1138,16 @@ class ToolAgent:
         rows = []
         thick = list(model.thickness)
         for i, rho in enumerate(model.resistivity):
-            rows.append({
-                "layer": "halfspace" if i >= len(thick) else f"L{i + 1}",
-                "rho_ohm_m": round(float(rho), 2),
-                "thickness_m": (round(float(thick[i]), 1)
-                                if i < len(thick) else None),
-                "top_depth_m": round(float(model.depth[i]), 1),
-            })
+            rows.append(
+                {
+                    "layer": "halfspace" if i >= len(thick) else f"L{i + 1}",
+                    "rho_ohm_m": round(float(rho), 2),
+                    "thickness_m": (
+                        round(float(thick[i]), 1) if i < len(thick) else None
+                    ),
+                    "top_depth_m": round(float(model.depth[i]), 1),
+                }
+            )
         df = pd.DataFrame(rows)
         summary = (
             f"**Layered model** ({preset}) — {model.n_layers} layers, "
@@ -1009,7 +1155,8 @@ class ToolAgent:
             f"Ω·m, total depth {float(model.depth[-1]):.0f} m."
         )
         table = _df_to_text(
-            df, columns=["layer", "rho_ohm_m", "thickness_m", "top_depth_m"],
+            df,
+            columns=["layer", "rho_ohm_m", "thickness_m", "top_depth_m"],
             max_rows=22,
         )
         return summary, table, ({"1-D resistivity model": fig} if fig else {})

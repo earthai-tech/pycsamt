@@ -41,6 +41,7 @@ import pytest
 
 # ── fixtures / helpers ────────────────────────────────────────────────────────
 
+
 def _api_key() -> str | None:
     return (
         os.environ.get("PYCSAMT_TEST_API_KEY")
@@ -57,6 +58,7 @@ def _provider() -> str:
 
 # ── offline tests ─────────────────────────────────────────────────────────────
 
+
 class TestPackageQAOffline(unittest.TestCase):
     """All tests without LLM calls (offline mode)."""
 
@@ -64,44 +66,34 @@ class TestPackageQAOffline(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         self.agent = PackageQAAgent()  # no api_key
 
     # ── basic contract ────────────────────────────
 
     def test_execute_returns_success(self):
-        r = self.agent.execute({
-            "question": (
-                "What does StaticShiftAgent do?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("What does StaticShiftAgent do?")}
+        )
         self.assertEqual(r.status, "success")
 
     def test_answer_key_present(self):
-        r = self.agent.execute({
-            "question": "What is DataQCAgent?"
-        })
+        r = self.agent.execute({"question": "What is DataQCAgent?"})
         self.assertIn("answer", r.data)
-        self.assertIsInstance(
-            r.data["answer"], str
-        )
+        self.assertIsInstance(r.data["answer"], str)
 
     def test_answer_nonempty(self):
-        r = self.agent.execute({
-            "question": "How do I load EDI files?"
-        })
-        self.assertGreater(
-            len(r.data.get("answer", "")), 10
-        )
+        r = self.agent.execute({"question": "How do I load EDI files?"})
+        self.assertGreater(len(r.data.get("answer", "")), 10)
 
     def test_source_is_docstring_lookup(self):
         # Offline QA now prefers the RAG-composed answer when the corpus
         # is available; the docstring lookup remains the fallback and is
         # tested explicitly with RAG disabled.
         from pycsamt.agents.package_qa import PackageQAAgent
+
         agent = PackageQAAgent(use_rag=False)
-        r = agent.execute({
-            "question": "What is the Sites class?"
-        })
+        r = agent.execute({"question": "What is the Sites class?"})
         self.assertEqual(
             r.data.get("source"),
             "docstring_lookup",
@@ -113,171 +105,154 @@ class TestPackageQAOffline(unittest.TestCase):
         self.assertIn("question", r.error.lower())
 
     def test_uses_request_key_as_fallback(self):
-        r = self.agent.execute({
-            "request": (
-                "Tell me about StaticShiftAgent"
-            )
-        })
+        r = self.agent.execute(
+            {"request": ("Tell me about StaticShiftAgent")}
+        )
         self.assertEqual(r.status, "success")
 
     # ── content correctness (offline) ────────────
 
     def test_static_shift_mentions_correction(self):
-        r = self.agent.execute({
-            "question": (
-                "What does StaticShiftAgent do?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("What does StaticShiftAgent do?")}
+        )
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "shift", "correct", "static",
+                    "shift",
+                    "correct",
+                    "static",
                     "galvanic",
                 )
             ),
-            f"Expected shift/correct in answer, "
-            f"got: {ans[:200]}",
+            f"Expected shift/correct in answer, got: {ans[:200]}",
         )
 
     def test_qc_mentions_quality(self):
-        r = self.agent.execute({
-            "question": (
-                "What is DataQCAgent used for?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("What is DataQCAgent used for?")}
+        )
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "qc", "quality", "flag",
-                    "station", "data",
+                    "qc",
+                    "quality",
+                    "flag",
+                    "station",
+                    "data",
                 )
             ),
-            f"Expected qc/quality in answer, "
-            f"got: {ans[:200]}",
+            f"Expected qc/quality in answer, got: {ans[:200]}",
         )
 
     def test_sites_class_question(self):
-        r = self.agent.execute({
-            "question": "What is the Sites class?"
-        })
+        r = self.agent.execute({"question": "What is the Sites class?"})
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "site", "edi", "station",
-                    "impedance", "sites",
+                    "site",
+                    "edi",
+                    "station",
+                    "impedance",
+                    "sites",
                 )
             ),
-            f"Expected sites/edi/station in answer,"
-            f" got: {ans[:200]}",
+            f"Expected sites/edi/station in answer, got: {ans[:200]}",
         )
 
     def test_loader_question(self):
-        r = self.agent.execute({
-            "question": (
-                "How do I load EDI files in"
-                " pycsamt?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("How do I load EDI files in pycsamt?")}
+        )
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "mtloaderagent", "loader",
-                    "edi", "load",
+                    "mtloaderagent",
+                    "loader",
+                    "edi",
+                    "load",
                 )
             ),
-            f"Expected loader/edi in answer, "
-            f"got: {ans[:200]}",
+            f"Expected loader/edi in answer, got: {ans[:200]}",
         )
 
     def test_workflow_question_mentions_workflow(self):
-        r = self.agent.execute({
-            "question": (
-                "What workflows does pycsamt"
-                " support?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("What workflows does pycsamt support?")}
+        )
         ans = r.data.get("answer", "").lower()
         # at least one workflow keyword present
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "qc", "inversion",
-                    "static", "phase",
+                    "qc",
+                    "inversion",
+                    "static",
+                    "phase",
                 )
             ),
-            f"No workflow keywords in answer: "
-            f"{ans[:200]}",
+            f"No workflow keywords in answer: {ans[:200]}",
         )
 
     def test_inversion_question(self):
-        r = self.agent.execute({
-            "question": (
-                "What is AIInversionAgent?"
-            )
-        })
+        r = self.agent.execute({"question": ("What is AIInversionAgent?")})
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "inver", "neural", "ai",
-                    "network", "model",
+                    "inver",
+                    "neural",
+                    "ai",
+                    "network",
+                    "model",
                 )
             ),
-            f"Expected inversion terms in answer, "
-            f"got: {ans[:200]}",
+            f"Expected inversion terms in answer, got: {ans[:200]}",
         )
 
     def test_pinn_question(self):
-        r = self.agent.execute({
-            "question": (
-                "How does PINN inversion work"
-                " in pycsamt?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("How does PINN inversion work in pycsamt?")}
+        )
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
                 kw in ans
                 for kw in (
-                    "pinn", "physics", "inver",
+                    "pinn",
+                    "physics",
+                    "inver",
                     "neural",
                 )
             ),
-            f"Expected pinn/physics in answer, "
-            f"got: {ans[:200]}",
+            f"Expected pinn/physics in answer, got: {ans[:200]}",
         )
 
     def test_excerpts_returned(self):
-        r = self.agent.execute({
-            "question": (
-                "What does StaticShiftAgent do?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("What does StaticShiftAgent do?")}
+        )
         excerpts = r.data.get("excerpts", [])
         self.assertIsInstance(excerpts, list)
 
     def test_unknown_question_graceful(self):
-        r = self.agent.execute({
-            "question": (
-                "How do I order pizza with pycsamt?"
-            )
-        })
+        r = self.agent.execute(
+            {"question": ("How do I order pizza with pycsamt?")}
+        )
         # Should not crash; returns success with
         # a fallback answer
         self.assertEqual(r.status, "success")
-        self.assertGreater(
-            len(r.data.get("answer", "")), 5
-        )
+        self.assertGreater(len(r.data.get("answer", "")), 5)
 
     # ── system prompt contract ─────────────────────
 
@@ -285,6 +260,7 @@ class TestPackageQAOffline(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         prompt = PackageQAAgent.SYSTEM_PROMPT
         self.assertIn("pycsamt", prompt)
 
@@ -292,6 +268,7 @@ class TestPackageQAOffline(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         prompt = PackageQAAgent.SYSTEM_PROMPT
         self.assertIn("StaticShiftAgent", prompt)
         self.assertIn("DataQCAgent", prompt)
@@ -300,6 +277,7 @@ class TestPackageQAOffline(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         prompt = PackageQAAgent.SYSTEM_PROMPT
         self.assertIn("qc", prompt)
         self.assertIn("static_shift", prompt)
@@ -308,11 +286,13 @@ class TestPackageQAOffline(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         prompt = PackageQAAgent.SYSTEM_PROMPT
         self.assertIn("from pycsamt", prompt)
 
 
 # ── live LLM tests ────────────────────────────────────────────────────────────
+
 
 @pytest.mark.live
 class TestPackageQALive(unittest.TestCase):
@@ -339,17 +319,17 @@ class TestPackageQALive(unittest.TestCase):
         from pycsamt.agents.package_qa import (
             PackageQAAgent,
         )
+
         cls.agent = PackageQAAgent(
             api_key=key,
             llm_provider=_provider(),
         )
 
     def _ask(self, question: str) -> str:
-        r = self.agent.execute(
-            {"question": question}
-        )
+        r = self.agent.execute({"question": question})
         self.assertEqual(
-            r.status, "success",
+            r.status,
+            "success",
             f"LLM call failed: {r.error}",
         )
         return r.data.get("answer", "")
@@ -365,12 +345,14 @@ class TestPackageQALive(unittest.TestCase):
             any(
                 kw in ans_lower
                 for kw in (
-                    "ama", "loess", "median",
-                    "static", "galvanic",
+                    "ama",
+                    "loess",
+                    "median",
+                    "static",
+                    "galvanic",
                 )
             ),
-            f"Answer missing expected terms: "
-            f"{ans[:300]}",
+            f"Answer missing expected terms: {ans[:300]}",
         )
 
     def test_sites_class_described_correctly(self):
@@ -383,26 +365,27 @@ class TestPackageQALive(unittest.TestCase):
             any(
                 kw in ans_lower
                 for kw in (
-                    "impedance", "frequenc",
-                    "resistiv", "edi",
+                    "impedance",
+                    "frequenc",
+                    "resistiv",
+                    "edi",
                 )
             ),
-            f"Answer missing impedance/freq terms:"
-            f" {ans[:300]}",
+            f"Answer missing impedance/freq terms: {ans[:300]}",
         )
 
     def test_workflow_listing_accurate(self):
-        ans = self._ask(
-            "List all supported pycsamt workflows."
-        )
+        ans = self._ask("List all supported pycsamt workflows.")
         for wf in (
-            "qc", "static_shift",
-            "ai_inversion", "report",
+            "qc",
+            "static_shift",
+            "ai_inversion",
+            "report",
         ):
             self.assertIn(
-                wf, ans.lower(),
-                f"Workflow {wf!r} missing from"
-                f" answer: {ans[:400]}",
+                wf,
+                ans.lower(),
+                f"Workflow {wf!r} missing from answer: {ans[:400]}",
             )
 
     def test_code_example_is_valid_python(self):
@@ -413,9 +396,9 @@ class TestPackageQALive(unittest.TestCase):
         )
         # Should include at least one import
         self.assertIn(
-            "import", ans.lower(),
-            f"Expected import in code example:"
-            f" {ans[:300]}",
+            "import",
+            ans.lower(),
+            f"Expected import in code example: {ans[:300]}",
         )
         self.assertTrue(
             any(
@@ -426,15 +409,11 @@ class TestPackageQALive(unittest.TestCase):
                     "pycsamt",
                 )
             ),
-            f"Expected pycsamt class in example:"
-            f" {ans[:300]}",
+            f"Expected pycsamt class in example: {ans[:300]}",
         )
 
     def test_unknown_class_not_hallucinated(self):
-        ans = self._ask(
-            "What does the QuantumInverterAgent"
-            " do in pycsamt?"
-        )
+        ans = self._ask("What does the QuantumInverterAgent do in pycsamt?")
         ans_lower = ans.lower()
         # LLM should say it doesn't exist,
         # not hallucinate a description
@@ -442,40 +421,33 @@ class TestPackageQALive(unittest.TestCase):
             any(
                 kw in ans_lower
                 for kw in (
-                    "not", "no such", "does not"
-                    " exist", "not found",
+                    "not",
+                    "no such",
+                    "does not exist",
+                    "not found",
                     "cannot find",
                 )
             ),
-            f"LLM may have hallucinated an answer:"
-            f" {ans[:400]}",
+            f"LLM may have hallucinated an answer: {ans[:400]}",
         )
 
     def test_source_is_llm(self):
-        r = self.agent.execute({
-            "question": (
-                "What is StaticShiftAgent?"
-            )
-        })
-        self.assertEqual(
-            r.data.get("source"), "llm"
-        )
+        r = self.agent.execute({"question": ("What is StaticShiftAgent?")})
+        self.assertEqual(r.data.get("source"), "llm")
 
     def test_answer_references_pycsamt(self):
-        ans = self._ask(
-            "How does pycsamt handle"
-            " phase tensor analysis?"
-        )
+        ans = self._ask("How does pycsamt handle phase tensor analysis?")
         self.assertTrue(
             any(
                 kw in ans.lower()
                 for kw in (
-                    "pycsamt", "phase",
-                    "tensor", "phaseanaly",
+                    "pycsamt",
+                    "phase",
+                    "tensor",
+                    "phaseanaly",
                 )
             ),
-            f"Answer doesn't reference pycsamt"
-            f" or phase: {ans[:300]}",
+            f"Answer doesn't reference pycsamt or phase: {ans[:300]}",
         )
 
 

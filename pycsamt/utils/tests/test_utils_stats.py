@@ -18,25 +18,29 @@ from pycsamt.utils.stats import (
     scale_position,
 )
 
-
 # ------------------------- get_confidence_ratio -----------------------
 
+
 def test_confidence_ratio_counts_nans_per_column():
-    arr = np.array([
-        [1.0, np.nan],
-        [2.0, 5.0],
-        [3.0, np.nan],
-        [4.0, 6.0],
-    ])
+    arr = np.array(
+        [
+            [1.0, np.nan],
+            [2.0, 5.0],
+            [3.0, np.nan],
+            [4.0, 6.0],
+        ]
+    )
     ratio = get_confidence_ratio(arr, axis=0)
     assert np.allclose(ratio, [1.0, 0.5])
 
 
 def test_confidence_ratio_axis_names_and_percent():
-    arr = np.array([
-        [1.0, np.nan],
-        [2.0, 5.0],
-    ])
+    arr = np.array(
+        [
+            [1.0, np.nan],
+            [2.0, 5.0],
+        ]
+    )
     # 'cols'/'x' -> axis 1: ratio per row
     per_row = get_confidence_ratio(arr, axis="cols", as_percent=True)
     assert np.allclose(per_row, [50.0, 100.0])
@@ -45,10 +49,12 @@ def test_confidence_ratio_axis_names_and_percent():
 
 
 def test_confidence_ratio_invalid_values_and_average():
-    arr = np.array([
-        [0.0, 1.0],
-        [0.0, 2.0],
-    ])
+    arr = np.array(
+        [
+            [0.0, 1.0],
+            [0.0, 2.0],
+        ]
+    )
     ratio = get_confidence_ratio(arr, axis=0, invalid=[0.0])
     assert np.allclose(ratio, [0.0, 1.0])
     avg = get_confidence_ratio(arr, axis=0, invalid=[0.0], average=True)
@@ -65,6 +71,7 @@ def test_confidence_ratio_scalar_and_errors():
 
 
 # ---------------------------- remove_outliers -------------------------
+
 
 def _data_with_outlier():
     base = np.array([10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 1000.0])
@@ -96,20 +103,24 @@ def test_remove_outliers_zscore_threshold():
 
 
 def test_remove_outliers_2d_drops_rows():
-    arr = np.vstack([
-        np.full(3, 10.0),
-        np.full(3, 11.0),
-        np.array([10.0, 10.0, 1e6]),
-    ])
+    arr = np.vstack(
+        [
+            np.full(3, 10.0),
+            np.full(3, 11.0),
+            np.array([10.0, 10.0, 1e6]),
+        ]
+    )
     out = remove_outliers(arr, method="IQR")
     assert out.shape[0] == 2
 
 
 def test_remove_outliers_dataframe_paths():
-    df = pd.DataFrame({
-        "a": [10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 1000.0],
-        "b": np.arange(8.0),
-    })
+    df = pd.DataFrame(
+        {
+            "a": [10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 1000.0],
+            "b": np.arange(8.0),
+        }
+    )
     dropped = remove_outliers(df, method="IQR")
     assert isinstance(dropped, pd.DataFrame)
     assert 1000.0 not in dropped["a"].values
@@ -129,6 +140,7 @@ def test_remove_outliers_bad_inputs_raise():
 
 
 # ----------------------------- scale_position -------------------------
+
 
 def test_scale_position_recovers_linear_model():
     x = np.arange(10.0)
@@ -166,6 +178,7 @@ def test_scale_position_custom_func():
 
 
 # ---------------------------- drawn_boundaries ------------------------
+
 
 def test_drawn_boundaries_assembles_walls():
     profile = [5.0, 3.0, 1.0, 4.0, 6.0]

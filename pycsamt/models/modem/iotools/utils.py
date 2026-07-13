@@ -30,6 +30,7 @@ _MU_0 = 4.0 * np.pi * 1e-7
 # Skin depth
 # -------------------------------------------------------------------------
 
+
 def skin_depth(
     period: float | np.ndarray,
     rho: float | np.ndarray = 100.0,
@@ -61,8 +62,8 @@ def skin_depth(
     >>> skin_depth([1.0, 10.0, 100.0], rho=10.0)
     array([159.154..., 503.292..., 1591.549...])
     """
-    T   = np.asarray(period, dtype=float)
-    rho = np.asarray(rho,    dtype=float)
+    T = np.asarray(period, dtype=float)
+    rho = np.asarray(rho, dtype=float)
     omega = 2.0 * np.pi / T
     return np.sqrt(2.0 * rho / (omega * _MU_0))
 
@@ -73,12 +74,12 @@ def skin_depth(
 
 # Conversion factors to SI ([V/m]/[T])
 _UNIT_TO_SI: dict[str, float] = {
-    "[v/m]/[t]":      1.0,
-    "v/m/t":          1.0,
-    "[mv/km]/[nt]":   1.0,       # same numerical value as SI for MT
-    "mv/km/nt":       1.0,
-    "ohm":            1.0,
-    "mt":             1.0,
+    "[v/m]/[t]": 1.0,
+    "v/m/t": 1.0,
+    "[mv/km]/[nt]": 1.0,  # same numerical value as SI for MT
+    "mv/km/nt": 1.0,
+    "ohm": 1.0,
+    "mt": 1.0,
 }
 
 
@@ -110,8 +111,7 @@ def imp_units_factor(from_units: str, to_units: str) -> float:
     for key in (fu, tu):
         if key not in _UNIT_TO_SI:
             raise ValueError(
-                f"Unknown impedance unit '{key}'. "
-                f"Known: {list(_UNIT_TO_SI)}"
+                f"Unknown impedance unit '{key}'. Known: {list(_UNIT_TO_SI)}"
             )
     return _UNIT_TO_SI[fu] / _UNIT_TO_SI[tu]
 
@@ -119,6 +119,7 @@ def imp_units_factor(from_units: str, to_units: str) -> float:
 # -------------------------------------------------------------------------
 # Resistivity encoding conversions
 # -------------------------------------------------------------------------
+
 
 def loge_to_log10(rho_loge: np.ndarray) -> np.ndarray:
     """Convert ``ln(ρ)`` to ``log₁₀(ρ)``."""

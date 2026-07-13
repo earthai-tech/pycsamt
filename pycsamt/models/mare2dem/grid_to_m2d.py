@@ -46,11 +46,11 @@ def _make_nodes_segs_regions(
     regions : (n_regions, 2) float array – seed points.
     res   : (n_regions,) float array – resistivity per region (linear Ω·m).
     """
-    nZ_c, nY_c = Y.shape   # number of cell-centre rows and columns
+    nZ_c, nY_c = Y.shape  # number of cell-centre rows and columns
 
     # 1D cell-centre arrays (assume uniform within rows/columns)
-    y_c = Y[0, :]           # shape (nY_c,)
-    z_c = Z[:, 0]           # shape (nZ_c,)
+    y_c = Y[0, :]  # shape (nY_c,)
+    z_c = Z[:, 0]  # shape (nZ_c,)
 
     # 1D cell-edge arrays
     def _edges(centers: np.ndarray) -> np.ndarray:
@@ -61,14 +61,14 @@ def _make_nodes_segs_regions(
         e[-1] = centers[-1] + d[-1] / 2.0
         return e
 
-    y_e = _edges(y_c)   # length nY_c + 1
-    z_e = _edges(z_c)   # length nZ_c + 1
+    y_e = _edges(y_c)  # length nY_c + 1
+    z_e = _edges(z_c)  # length nZ_c + 1
 
-    nY = len(y_e)   # nY_c + 1
-    nZ = len(z_e)   # nZ_c + 1
+    nY = len(y_e)  # nY_c + 1
+    nZ = len(z_e)  # nZ_c + 1
 
     # Node index: iz * nY + iy  (0-based)
-    Ye, Ze = np.meshgrid(y_e, z_e)   # both (nZ, nY)
+    Ye, Ze = np.meshgrid(y_e, z_e)  # both (nZ, nY)
     nodes = np.column_stack([Ye.ravel(), Ze.ravel()])  # (nZ*nY, 2)
 
     # node index function (1-based)
@@ -97,32 +97,44 @@ def _make_nodes_segs_regions(
     max_z = nodes[:, 1].max()
 
     # bounding-box nodes (6 extra nodes, 1-based offsets)
-    box_nodes = np.array([
-        [min_y - padding_y, min_z - padding_z],
-        [min_y - padding_y, min_z],
-        [min_y - padding_y, max_z + padding_z],
-        [max_y + padding_y, max_z + padding_z],
-        [max_y + padding_y, min_z],
-        [max_y + padding_y, min_z - padding_z],
-    ])
+    box_nodes = np.array(
+        [
+            [min_y - padding_y, min_z - padding_z],
+            [min_y - padding_y, min_z],
+            [min_y - padding_y, max_z + padding_z],
+            [max_y + padding_y, max_z + padding_z],
+            [max_y + padding_y, min_z],
+            [max_y + padding_y, min_z - padding_z],
+        ]
+    )
     all_nodes = np.vstack([box_nodes, nodes])
     n_box = 6
     # renumber grid segs
     segs_grid[:, :2] += n_box
 
     # boundary box segs
-    box_segs = np.array([
-        [1, 2, 1], [2, 3, 1], [3, 4, 1],
-        [4, 5, 1], [5, 6, 1], [6, 1, 1],
-    ], dtype=int)
+    box_segs = np.array(
+        [
+            [1, 2, 1],
+            [2, 3, 1],
+            [3, 4, 1],
+            [4, 5, 1],
+            [5, 6, 1],
+            [6, 1, 1],
+        ],
+        dtype=int,
+    )
 
     # connect sides to top of central grid
-    top_left_grid = n_box + nidx(0, 0)           # iz=0, iy=0
-    top_right_grid = n_box + nidx(0, nY - 1)     # iz=0, iy=nY-1
-    connect_segs = np.array([
-        [2, top_left_grid, 1],
-        [5, top_right_grid, 1],
-    ], dtype=int)
+    top_left_grid = n_box + nidx(0, 0)  # iz=0, iy=0
+    top_right_grid = n_box + nidx(0, nY - 1)  # iz=0, iy=nY-1
+    connect_segs = np.array(
+        [
+            [2, top_left_grid, 1],
+            [5, top_right_grid, 1],
+        ],
+        dtype=int,
+    )
 
     all_segs = np.vstack([box_segs, connect_segs, segs_grid])
 
@@ -132,10 +144,12 @@ def _make_nodes_segs_regions(
 
     # add air and ground padding regions
     mean_rho = 10.0 ** np.mean(np.log10(np.maximum(Rho, 1e-10)))
-    extra_seeds = np.array([
-        [min_y - padding_y + 0.1, min_z - padding_z + 0.1],  # air
-        [min_y - padding_y + 0.1, min_z + 0.1],              # ground padding
-    ])
+    extra_seeds = np.array(
+        [
+            [min_y - padding_y + 0.1, min_z - padding_z + 0.1],  # air
+            [min_y - padding_y + 0.1, min_z + 0.1],  # ground padding
+        ]
+    )
     regions = np.vstack([regions, extra_seeds])
     res = np.concatenate([res, [1e12, mean_rho]])
 
@@ -219,11 +233,13 @@ def grid_to_mare2dem(
     pf.nodes = nodes
     pf.segments = segs[:, :2].astype(int)
     pf.segment_markers = segs[:, 2].astype(int)
-    pf.regions = np.column_stack([
-        regions,
-        np.arange(1, len(regions) + 1, dtype=float),
-        -np.ones(len(regions), dtype=float),
-    ])
+    pf.regions = np.column_stack(
+        [
+            regions,
+            np.arange(1, len(regions) + 1, dtype=float),
+            -np.ones(len(regions), dtype=float),
+        ]
+    )
     poly_path = write_poly(pf, dest / f"{model_name}.poly")
 
     # ---- .resistivity file ----

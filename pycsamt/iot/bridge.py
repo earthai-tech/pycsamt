@@ -122,9 +122,7 @@ def _scalar_to_tensor(
         if z_err is not None:
             z_err[:, 1, 0] = err
     else:
-        raise ValueError(
-            "component must be one of: 'offdiag', 'xy', 'yx'."
-        )
+        raise ValueError("component must be one of: 'offdiag', 'xy', 'yx'.")
     return z, z_err
 
 
@@ -212,9 +210,7 @@ def impedance_to_z(
             )
     elif arr.ndim == 1:
         if arr.shape[0] != n:
-            raise ValueError(
-                f"1-D impedance must match len(freq) = {n}."
-            )
+            raise ValueError(f"1-D impedance must match len(freq) = {n}.")
         z_stack, _ = _scalar_to_tensor(arr, None, component)
     else:
         raise ValueError("impedance has an unsupported number of dimensions.")
@@ -774,9 +770,7 @@ def field_session_from_edis(
     from .station import StationConfig
 
     records = read_edi_survey(sources)
-    session = FieldSession(
-        survey_id, operator=operator, method=method
-    )
+    session = FieldSession(survey_id, operator=operator, method=method)
     for rec in records:
         station_id = rec["station"]
         device_id = f"{station_id}{device_suffix}"

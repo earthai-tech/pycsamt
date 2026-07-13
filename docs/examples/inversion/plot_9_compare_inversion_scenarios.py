@@ -32,6 +32,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -39,7 +46,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -48,10 +55,9 @@ if str(ROOT) not in sys.path:
 
 from pycsamt.models.modem import InversionResult
 
-
 sample_dir = ROOT / "data" / "modem" / "willy_27freq_watex_line02_sample"
-figure_dir = Path(__file__).resolve().parent / "workspaces" / "modem_result_figures"
-table_dir = Path(__file__).resolve().parent / "workspaces" / "modem_result_tables"
+figure_dir = EXAMPLE_DIR / "workspaces" / "modem_result_figures"
+table_dir = EXAMPLE_DIR / "workspaces" / "modem_result_tables"
 
 for path in (figure_dir, table_dir):
     path.mkdir(parents=True, exist_ok=True)
@@ -75,7 +81,9 @@ baseline = InversionResult(
 if baseline.log is None:
     raise RuntimeError("The baseline ModEM sample has no readable log.")
 if baseline.model_initial is None or baseline.model_final is None:
-    raise RuntimeError("The baseline ModEM sample needs initial and final models.")
+    raise RuntimeError(
+        "The baseline ModEM sample needs initial and final models."
+    )
 
 print(baseline)
 print(f"Final RMS: {baseline.final_rms:.3f}")
@@ -106,7 +114,7 @@ def late_rms_drop(result, n_tail=6):
     values = values[np.isfinite(values)]
     if values.size < 2:
         return np.nan
-    tail = values[-min(n_tail, values.size):]
+    tail = values[-min(n_tail, values.size) :]
     return float(tail[0] - tail[-1])
 
 
@@ -118,7 +126,9 @@ def model_change_metrics(result):
     finite = log10_change[np.isfinite(log10_change)]
     return {
         "median_abs_log10_model_change": float(np.nanmedian(np.abs(finite))),
-        "p90_abs_log10_model_change": float(np.nanpercentile(np.abs(finite), 90)),
+        "p90_abs_log10_model_change": float(
+            np.nanpercentile(np.abs(finite), 90)
+        ),
         "cells_changed_factor10_pct": float(
             np.nanmean(np.abs(finite) >= 1.0) * 100.0
         ),
@@ -247,8 +257,12 @@ scenarios = pd.DataFrame(scenario_rows)
 # This keeps the example anchored to real run statistics while still showing
 # how to compare alternative processing choices.
 
-scenarios["final_rms"] = baseline_stats["final_rms"] * scenarios["final_rms_factor"]
-scenarios["best_rms"] = baseline_stats["best_rms"] * scenarios["final_rms_factor"]
+scenarios["final_rms"] = (
+    baseline_stats["final_rms"] * scenarios["final_rms_factor"]
+)
+scenarios["best_rms"] = (
+    baseline_stats["best_rms"] * scenarios["final_rms_factor"]
+)
 scenarios["late_rms_drop"] = baseline_stats["late_rms_drop"] / np.sqrt(
     scenarios["roughness_factor"]
 )
@@ -340,8 +354,7 @@ scored["score_interpretability"] = normalize_good_high(
 scored["weighted_score"] = (
     weights["fit"] * scored["score_fit"]
     + weights["simplicity"] * scored["score_simplicity"]
-    + weights["processing_confidence"]
-    * scored["score_processing_confidence"]
+    + weights["processing_confidence"] * scored["score_processing_confidence"]
     + weights["interpretability"] * scored["score_interpretability"]
 )
 scored = scored.sort_values("weighted_score", ascending=False)
@@ -436,7 +449,9 @@ ax_rms.legend()
 ax_rms.grid(axis="y", alpha=0.25)
 
 best = scored.iloc[0]
-baseline_row = scenarios[scenarios["scenario"] == "S0_baseline_corrected_topo"].iloc[0]
+baseline_row = scenarios[
+    scenarios["scenario"] == "S0_baseline_corrected_topo"
+].iloc[0]
 summary_lines = [
     "Decision notes",
     "--------------",
@@ -492,7 +507,9 @@ fig_radar, ax_radar = plt.subplots(
 for _, row in scored.iterrows():
     values = row[radar_metrics].to_numpy(dtype=float)
     values = np.concatenate([values, [values[0]]])
-    ax_radar.plot(angles, values, linewidth=1.8, label=row["scenario"].split("_", 1)[0])
+    ax_radar.plot(
+        angles, values, linewidth=1.8, label=row["scenario"].split("_", 1)[0]
+    )
     ax_radar.fill(angles, values, alpha=0.08)
 
 ax_radar.set_xticks(angles[:-1])

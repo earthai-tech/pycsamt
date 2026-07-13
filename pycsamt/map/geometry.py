@@ -139,10 +139,7 @@ def survey_uv(
     perp = np.array([-strike[1], strike[0]])
     u = centered @ strike
     v = centered @ perp
-    return {
-        sid: (float(ui), float(vi))
-        for sid, ui, vi in zip(ids, u, v)
-    }
+    return {sid: (float(ui), float(vi)) for sid, ui, vi in zip(ids, u, v)}
 
 
 def normalize_offsets(

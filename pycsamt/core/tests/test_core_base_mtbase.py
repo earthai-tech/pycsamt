@@ -1,4 +1,3 @@
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -12,6 +11,7 @@ def mt():
 
 
 # ----------------------------- Constants --------------------------------- #
+
 
 def test_constants_self_consistency(mt):
     # C0 == 1/sqrt(mu0*eps0) and ~ C
@@ -45,6 +45,7 @@ def test_constants_self_consistency(mt):
 
 # --------------------------- Basic utilities ------------------------------ #
 
+
 def test_omega(mt):
     f = np.array([0.0, 0.25, 1.0])
     w = mt.omega(f)
@@ -64,11 +65,12 @@ def test_freq_period_roundtrip(mt):
 
 # -------------------------- Z, rho, phase -------------------------------- #
 
+
 def test_rho_phase_and_inverse(mt):
     # Choose rho, f, phi then rebuild Z and recover
-    rho = np.array([10.0, 100.0])    # ohm·m
-    f = np.array([1.0, 0.1])         # Hz
-    phi = np.array([45.0, 30.0])     # deg
+    rho = np.array([10.0, 100.0])  # ohm·m
+    f = np.array([1.0, 0.1])  # Hz
+    phi = np.array([45.0, 30.0])  # deg
 
     Z = mt.z_from_rho_phase(rho, phi, f, phase_unit="deg")
     rho2, phi2 = mt.rho_phase_from_z(Z, f, phase_unit="deg")
@@ -91,7 +93,7 @@ def test_determinant_and_invariant(mt):
 
     f = 0.5
     rho_det, phi_det = mt.rho_phase_from_det(z, f, phase_unit="deg")
-    rho_expected = (A ** 2) / (mt.MU0 * mt.omega(f))
+    rho_expected = (A**2) / (mt.MU0 * mt.omega(f))
     assert_allclose(rho_det, rho_expected, rtol=1e-12, atol=0)
     assert_allclose(phi_det, np.degrees(theta), rtol=1e-12, atol=0)
 
@@ -99,19 +101,19 @@ def test_determinant_and_invariant(mt):
 def test_rotate_impedance_invariant_det(mt):
     # complex tensor; determinant invariant magnitude should hold
     A, theta = 2.0, np.deg2rad(15.0)
-    z = np.array([[0, A*np.exp(1j*theta)], [-A*np.exp(1j*theta), 0]])
+    z = np.array([[0, A * np.exp(1j * theta)], [-A * np.exp(1j * theta), 0]])
     det0 = mt.determinant_z(z)
     z_rot = mt.rotate_impedance(z, theta_deg=37.0)
     det1 = mt.determinant_z(z_rot)
     assert_allclose(det1, det0, rtol=1e-12, atol=1e-12)
 
 
-
 # --------------------------- Diffusion scales ----------------------------- #
+
 
 def test_skin_depth(mt):
     rho = 100.0  # ohm·m
-    f = 1.0      # Hz
+    f = 1.0  # Hz
     delta = mt.skin_depth(f, rho)
 
     # Rule-of-thumb: δ ≈ 503 * sqrt(rho/f)  (meters)
@@ -120,6 +122,7 @@ def test_skin_depth(mt):
 
 
 # ------------------------------- Tipper ----------------------------------- #
+
 
 def test_tipper_amp_phase(mt):
     # Tx = 3 + 4j, Ty = 0 -> amp = |Tx| = 5, phase = arg(Tx)
@@ -135,7 +138,9 @@ def test_tipper_rotate(mt):
     Tr = MTBase.tipper_rotate(T, 90.0)
     assert_allclose(Tr, np.array([0.0, -1.0]), rtol=1e-12, atol=1e-12)
     # or
-    assert_allclose(Tr.reshape(1,2), np.array([[0.0, -1.0]]), rtol=1e-12, atol=1e-12)
+    assert_allclose(
+        Tr.reshape(1, 2), np.array([[0.0, -1.0]]), rtol=1e-12, atol=1e-12
+    )
 
 
 def test_induction_arrows(mt):
@@ -146,12 +151,15 @@ def test_induction_arrows(mt):
     assert_allclose(ay, [1.0])
 
     # Parkinson uses components directly -> (1, 0)
-    ax2, ay2 = MTBase.induction_arrows(T, convention="parkinson", use_imag=False)
+    ax2, ay2 = MTBase.induction_arrows(
+        T, convention="parkinson", use_imag=False
+    )
     assert_allclose(ax2, [1.0])
     assert_allclose(ay2, [0.0])
 
 
 # --------------------- Apparent conductivity (sigma_a) -------------------- #
+
 
 def test_apparent_conductivity_from_z(mt):
     Z = np.array([5.0, 10.0])  # ohms
@@ -163,6 +171,7 @@ def test_apparent_conductivity_from_z(mt):
 
 # --------------------------- Half-space impedance ------------------------- #
 
+
 def test_halfspace_impedance(mt):
     f = np.logspace(-3, 3, 7)
     rho = 100.0
@@ -171,11 +180,14 @@ def test_halfspace_impedance(mt):
     # Magnitude should be sqrt(mu0*w*rho); phase ~ 45°
     mag = np.abs(Z)
     ang = np.degrees(np.angle(Z))
-    assert_allclose(mag, np.sqrt(mt.MU0 * mt.omega(f) * rho), rtol=1e-12, atol=0.0)
+    assert_allclose(
+        mag, np.sqrt(mt.MU0 * mt.omega(f) * rho), rtol=1e-12, atol=0.0
+    )
     assert_allclose(ang, np.full_like(ang, 45.0), rtol=1e-12, atol=1e-12)
 
 
 # ------------------------ Mixed-units conversion -------------------------- #
+
 
 def test_z_mvk_nt_to_ohms(mt):
     z_field = np.array([50.0])  # (mV/km)/nT
@@ -186,6 +198,7 @@ def test_z_mvk_nt_to_ohms(mt):
 
 
 # ----------------------------- Rotations ---------------------------------- #
+
 
 def test_rotate_fields(mt):
     e = np.array([[1.0, 0.0]])
@@ -199,6 +212,7 @@ def test_rotate_fields(mt):
 
 
 # ----------------------------- Phase tensor -------------------------------- #
+
 
 def test_phase_tensor_basic(mt):
     # Choose X = I, Y = diag(a, a) -> Phi = Y
@@ -216,7 +230,9 @@ def test_phase_tensor_params_shapes_and_values(mt):
     Z = np.zeros((4, 2, 2), dtype=complex)
     Z.real[...] = np.eye(2)
     Z.imag[...] = np.array([[a, 0.0], [0.0, a]])
-    phi_max, phi_min, alpha, beta, ellipt = mt.phase_tensor_params(Z, angle_unit="deg")
+    phi_max, phi_min, alpha, beta, ellipt = mt.phase_tensor_params(
+        Z, angle_unit="deg"
+    )
 
     # Shapes
     assert phi_max.shape == (4,)
@@ -251,6 +267,7 @@ def test_phase_tensor_azimuth(mt):
 
 # ----------------------------- Swift skew --------------------------------- #
 
+
 def test_swift_skew_ideal_2d(mt):
     # 2D ideal: zxx=zyy=0, zxy=-zyx=Ae^{iθ} -> skew s=0
     A, theta = 3.0, np.deg2rad(20.0)
@@ -264,6 +281,7 @@ def test_swift_skew_ideal_2d(mt):
 
 
 # ----------------------------- Misc helpers -------------------------------- #
+
 
 def test_z_field_unit_consistency_vs_si(mt):
     # Compare rho computed via SI vs legacy Zonge formula using matched units
@@ -282,9 +300,9 @@ def test_z_field_unit_consistency_vs_si(mt):
     # # but they should scale similarly (same order of magnitude).
     # ratio = rho_si / rho_zonge
 
-    Z_si = ((E_mVkm * mt.MV_PER_KM_TO_V_PER_M) /
-        (B_nT * mt.NANOTESLA_TO_TESLA)) * mt.H_TO_B  # multiply by μ0
+    Z_si = (
+        (E_mVkm * mt.MV_PER_KM_TO_V_PER_M) / (B_nT * mt.NANOTESLA_TO_TESLA)
+    ) * mt.H_TO_B  # multiply by μ0
     rho_si = (Z_si**2) * mt.RHO_FACTOR / f
     rho_zonge = (mt.ZONGE_RHO_FACTOR / f) * (E_mVkm / B_nT) ** 2
     assert_allclose(rho_si, rho_zonge, rtol=1e-2, atol=0)
-

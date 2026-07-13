@@ -28,9 +28,7 @@ def _kv_tokens_from_lines(lines: list[str]) -> list[str]:
     """
     Try project parser first, then robust regex fallback.
     """
-    tokens = gather_measurement_key_value_with_str_parser(
-        lines
-    )
+    tokens = gather_measurement_key_value_with_str_parser(lines)
     if tokens:
         return tokens
 
@@ -125,7 +123,6 @@ class MTEMAP(EDIComponentBase):
         print("".join(lines))
     """
 
-
     KEY_ORDER: list[str] = [
         "sectid",
         "nfreq",
@@ -181,16 +178,13 @@ class MTEMAP(EDIComponentBase):
         self.type = None
         self.chksum = None
 
-        self._section_lines: list[str] | None = (
-            mt_or_emap_section_list
-        )
+        self._section_lines: list[str] | None = mt_or_emap_section_list
 
         for k, v in kwargs.items():
             setattr(self, k, v)
 
         if self._section_lines is not None:
             self.read(self._section_lines)
-
 
     @classmethod
     def from_file(cls, edi_path: str) -> MTEMAP:
@@ -244,9 +238,7 @@ class MTEMAP(EDIComponentBase):
             u = ln.upper()
             if re.match(r"^\s*DATAID\s*=", u):
                 try:
-                    dataid = _strip_norm(
-                        ln.split("=", 1)[1]
-                    )
+                    dataid = _strip_norm(ln.split("=", 1)[1])
                 except Exception:
                     pass
                 break
@@ -255,16 +247,12 @@ class MTEMAP(EDIComponentBase):
         start_idx = None
         for i, ln in enumerate(lines):
             u = ln.upper().lstrip()
-            if u.startswith(">=MTSECT") or u.startswith(
-                ">=EMAPSECT"
-            ):
+            if u.startswith(">=MTSECT") or u.startswith(">=EMAPSECT"):
                 start_idx = i
                 break
 
         if start_idx is None:
-            raise EdIDataError(
-                "No >=MTSECT or >=EMAPSECT found."
-            )
+            raise EdIDataError("No >=MTSECT or >=EMAPSECT found.")
 
         # Find end of this header block: next data/meta block.
         stop_idx = len(lines)
@@ -280,9 +268,7 @@ class MTEMAP(EDIComponentBase):
                 stop_idx = j
                 break
 
-        section_lines = [
-            ln for ln in lines[start_idx + 1 : stop_idx]
-        ]
+        section_lines = [ln for ln in lines[start_idx + 1 : stop_idx]]
 
         tokens = _kv_tokens_from_lines(section_lines)
 
@@ -328,9 +314,7 @@ class MTEMAP(EDIComponentBase):
             self._section_lines = mt_or_emap_section_list
 
         if not self._section_lines:
-            raise EdIDataError(
-                "No MT/EMAP section lines to read."
-            )
+            raise EdIDataError("No MT/EMAP section lines to read.")
 
         for raw in self._section_lines:
             if "=" not in raw:
@@ -367,8 +351,7 @@ class MTEMAP(EDIComponentBase):
                 self.chksum = _to_int_or_none(val)
 
         if (
-            (self.sectid is None)
-            or self._looks_numeric(self.sectid)
+            (self.sectid is None) or self._looks_numeric(self.sectid)
         ) and self.temp_sectid:
             self.sectid = self.temp_sectid
 
@@ -396,9 +379,7 @@ class MTEMAP(EDIComponentBase):
         ``HZ`` are omitted by convention.
         """
 
-        is_emap = (self.ndipole is not None) or (
-            self.type not in (None, "")
-        )
+        is_emap = (self.ndipole is not None) or (self.type not in (None, ""))
         header = ">=EMAPSECT\n" if is_emap else ">=MTSECT\n"
         lines: list[str] = [header]
 
@@ -440,10 +421,7 @@ class MTEMAP(EDIComponentBase):
             else:
                 fmt = "{:>7}"
 
-            lines.append(
-                f"  {key.upper()}="
-                f"{fmt.format(str(val).upper())}\n"
-            )
+            lines.append(f"  {key.upper()}={fmt.format(str(val).upper())}\n")
 
         return lines
 

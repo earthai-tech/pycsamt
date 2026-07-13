@@ -106,7 +106,6 @@ class TSect(EDIComponentBase):
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
-
     KEY_ORDER: list[str] = [
         "sectid",
         "nchan",
@@ -206,9 +205,7 @@ class TSect(EDIComponentBase):
             val = vals.get(key, None)
             if val in (None, "", "None"):
                 continue
-            out.append(
-                f"  {key.upper()}={str(val).upper()}\n"
-            )
+            out.append(f"  {key.upper()}={str(val).upper()}\n")
         for k, v in sorted(self.extra.items()):
             if v in (None, "", "None"):
                 continue
@@ -250,12 +247,8 @@ class _TSBlock(EDIComponentBase):
         npts = self.options.get("npts", None)
         dt = self.options.get("dt", None)
         cid = self.options.get("id", None)
-        self.npts = (
-            _to_int_or_none(npts) if npts is not None else None
-        )
-        self.dt = (
-            _to_float_or_none(dt) if dt is not None else None
-        )
+        self.npts = _to_int_or_none(npts) if npts is not None else None
+        self.dt = _to_float_or_none(dt) if dt is not None else None
         self.id = str(cid) if cid not in (None, "") else None
 
 
@@ -356,9 +349,7 @@ class TSIO(EDIComponentBase):
         logger=None,
     ) -> TSIO:
         if not os.path.isfile(edi_path):
-            raise FileNotFoundError(
-                f"{edi_path!r} is not a file."
-            )
+            raise FileNotFoundError(f"{edi_path!r} is not a file.")
         with open(edi_path, encoding="utf-8") as f:
             lines = f.readlines()
 
@@ -420,9 +411,8 @@ class TSIO(EDIComponentBase):
 
             # best-effort typing: only ints for integer-like tokens
             vlow = val.lower()
-            is_int_like = (
-                vlow.isdigit()
-                or (vlow.startswith(("+", "-")) and vlow[1:].isdigit())
+            is_int_like = vlow.isdigit() or (
+                vlow.startswith(("+", "-")) and vlow[1:].isdigit()
             )
 
             if is_int_like:
@@ -430,7 +420,6 @@ class TSIO(EDIComponentBase):
             else:
                 fval = _to_float_or_none(val)
                 blk.options[key] = fval if fval is not None else val
-
 
         blk.apply_aliases()
 
@@ -581,6 +570,7 @@ class TimeSeriesMixin:
             logger=logger,
         )
 
+
 class TimeSeries(BaseEM):
     r"""
     Container for ``>TSERIES`` data aggregated by channel.
@@ -709,22 +699,16 @@ class TimeSeries(BaseEM):
         dt = float(self.dt_map.get(cid, 1.0))
         return np.arange(x.size, dtype=float) * dt
 
-
     @classmethod
     def from_io(
-        cls,
-        sect: TSect,
-        io: TSIO, *,
-        empty: float | None = None
+        cls, sect: TSect, io: TSIO, *, empty: float | None = None
     ) -> TimeSeries:
         inst = cls()
         inst._order: list[str] = []
         inst._data: dict[str, np.ndarray] = {}
         inst.dt_map: dict[str, float] = {}
         inst.npts_map: dict[str, int] = {}
-        inst._sect_dt = (
-            float(sect.dt) if sect.dt is not None else None
-        )
+        inst._sect_dt = float(sect.dt) if sect.dt is not None else None
 
         def _cid(blk: _TSBlock, k: int) -> str:
             cid = getattr(blk, "id", None)
@@ -741,16 +725,11 @@ class TimeSeries(BaseEM):
                 inst._data[cid] = vals
                 inst.npts_map[cid] = int(vals.size)
             else:
-                inst._data[cid] = np.concatenate(
-                    (inst._data[cid], vals)
-                )
+                inst._data[cid] = np.concatenate((inst._data[cid], vals))
                 inst.npts_map[cid] += int(vals.size)
 
             bdt = blk.options.get("dt", None)
-            dt = (
-                float(bdt) if bdt is not None
-                else inst._sect_dt
-            )
+            dt = float(bdt) if bdt is not None else inst._sect_dt
             if dt is not None:
                 inst.dt_map[cid] = dt
 
@@ -796,7 +775,6 @@ class TimeSeries(BaseEM):
         io.blocks = blks
         return sect, io
 
-
     def align(
         self,
         ids: list[str] | None = None,
@@ -816,4 +794,3 @@ class TimeSeries(BaseEM):
 
     def __len__(self) -> int:
         return sum(a.size for a in self.data.values())
-

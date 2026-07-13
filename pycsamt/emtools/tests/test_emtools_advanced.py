@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.advanced (novel diagnostic plots)"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -25,20 +26,21 @@ from pycsamt.emtools.advanced import (
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z      = np.asarray(z, dtype=complex)
-        self.z_err  = np.abs(z) * 0.05
-        self.freq   = np.asarray(freq, dtype=float)
+        self.z = np.asarray(z, dtype=complex)
+        self.z_err = np.abs(z) * 0.05
+        self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     def __init__(self, station, z, freq, *, east=None, north=None):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
         if east is not None:
-            self.east  = float(east)
+            self.east = float(east)
             self.north = float(north)
 
     def get_section(self, *_, **__):
@@ -52,7 +54,7 @@ def _freqs(n: int = 12, f_lo: float = 0.1, f_hi: float = 1e4) -> np.ndarray:
 def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -60,21 +62,23 @@ def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
 def _3d_z(freqs: np.ndarray, skew: float = 0.4) -> np.ndarray:
     z = _iso_z(freqs)
     amp = np.abs(z[:, 0, 1])
-    z[:, 0, 0] =  skew * amp * (0.6 + 0.8j)
+    z[:, 0, 0] = skew * amp * (0.6 + 0.8j)
     z[:, 1, 1] = -skew * amp * (0.5 + 0.7j)
     return z
 
 
-def _site(name: str, n: int = 12, *, east=None, north=None,
-          three_d=False) -> _FakeSite:
+def _site(
+    name: str, n: int = 12, *, east=None, north=None, three_d=False
+) -> _FakeSite:
     fr = _freqs(n)
     z = _3d_z(fr) if three_d else _iso_z(fr)
     return _FakeSite(name, z, fr, east=east, north=north)
 
 
 def _profile(n: int = 4) -> list:
-    return [_site(f"S{i:02d}", east=float(i) * 200.0, north=0.0)
-            for i in range(n)]
+    return [
+        _site(f"S{i:02d}", east=float(i) * 200.0, north=0.0) for i in range(n)
+    ]
 
 
 def _mixed(n: int = 3) -> list:
@@ -82,8 +86,9 @@ def _mixed(n: int = 3) -> list:
     for i in range(n):
         fr = _freqs()
         z = _3d_z(fr) if i % 2 else _iso_z(fr)
-        sites.append(_FakeSite(f"S{i:02d}", z, fr,
-                               east=float(i) * 200.0, north=0.0))
+        sites.append(
+            _FakeSite(f"S{i:02d}", z, fr, east=float(i) * 200.0, north=0.0)
+        )
     return sites
 
 
@@ -91,8 +96,8 @@ def _mixed(n: int = 3) -> list:
 # plot_impedance_mohr_circles
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotImpedanceMohrCircles:
 
+class TestPlotImpedanceMohrCircles:
     def test_returns_figure(self):
         sites = [_site("S00")]
         fig = plot_impedance_mohr_circles(sites)
@@ -129,8 +134,8 @@ class TestPlotImpedanceMohrCircles:
 # plot_zt_argand
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotZtArgand:
 
+class TestPlotZtArgand:
     def test_returns_figure(self):
         sites = [_site("S00")]
         fig = plot_zt_argand(sites)
@@ -161,8 +166,8 @@ class TestPlotZtArgand:
 # plot_survey_fingerprint
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotSurveyFingerprint:
 
+class TestPlotSurveyFingerprint:
     def test_returns_figure(self):
         sites = _mixed(4)
         fig = plot_survey_fingerprint(sites)
@@ -187,8 +192,8 @@ class TestPlotSurveyFingerprint:
 # plot_dimensionality_ternary
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotDimensionalityTernary:
 
+class TestPlotDimensionalityTernary:
     def test_returns_figure(self):
         sites = _mixed(3)
         fig = plot_dimensionality_ternary(sites)
@@ -214,8 +219,8 @@ class TestPlotDimensionalityTernary:
 # plot_distortion_radar
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotDistortionRadar:
 
+class TestPlotDistortionRadar:
     def test_returns_figure(self):
         sites = [_site("S00", three_d=True)]
         fig = plot_distortion_radar(sites)
@@ -241,8 +246,8 @@ class TestPlotDistortionRadar:
 # plot_rho_phase_bode
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotRhoPhaseBode:
 
+class TestPlotRhoPhaseBode:
     def test_returns_figure(self):
         sites = [_site("S00")]
         fig = plot_rho_phase_bode(sites)
@@ -273,8 +278,8 @@ class TestPlotRhoPhaseBode:
 # plot_pt_period_clock
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotPtPeriodClock:
 
+class TestPlotPtPeriodClock:
     def test_returns_figure(self):
         sites = _mixed(3)
         fig = plot_pt_period_clock(sites)
@@ -294,8 +299,8 @@ class TestPlotPtPeriodClock:
 # plot_apparent_resistivity_polar
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotApparentResistivityPolar:
 
+class TestPlotApparentResistivityPolar:
     def test_returns_figure(self):
         sites = [_site("S00")]
         fig = plot_apparent_resistivity_polar(sites)
@@ -321,8 +326,8 @@ class TestPlotApparentResistivityPolar:
 # plot_apparent_anisotropy_section
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotApparentAnisotropySection:
 
+class TestPlotApparentAnisotropySection:
     def test_returns_figure(self):
         sites = _profile(4)
         fig = plot_apparent_anisotropy_section(sites)
@@ -348,8 +353,8 @@ class TestPlotApparentAnisotropySection:
 # plot_snr_section
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotSnrSection:
 
+class TestPlotSnrSection:
     def test_returns_figure(self):
         sites = _profile(4)
         fig = plot_snr_section(sites)
@@ -367,8 +372,8 @@ class TestPlotSnrSection:
 # plot_z_invariants_section
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotZInvariantsSection:
 
+class TestPlotZInvariantsSection:
     def test_returns_figure(self):
         sites = _profile(4)
         fig = plot_z_invariants_section(sites)

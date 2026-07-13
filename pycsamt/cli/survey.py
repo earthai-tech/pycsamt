@@ -57,14 +57,15 @@ if TYPE_CHECKING:
 # Paths
 # ---------------------------------------------------------------------------
 
-_PYCSAMT_DIR  = Path.home() / ".pycsamt"
+_PYCSAMT_DIR = Path.home() / ".pycsamt"
 _CONTEXT_FILE = _PYCSAMT_DIR / "context.json"
-_CACHE_ROOT   = _PYCSAMT_DIR / "cache"
+_CACHE_ROOT = _PYCSAMT_DIR / "cache"
 
 
 # ---------------------------------------------------------------------------
 # Cache key
 # ---------------------------------------------------------------------------
+
 
 def _cache_key(path: Path) -> str:
     """Return a 12-char hex key derived from the resolved absolute path."""
@@ -85,6 +86,7 @@ def _source_mtime(path: Path) -> float:
 # ---------------------------------------------------------------------------
 # SurveyContext — reads/writes ~/.pycsamt/context.json
 # ---------------------------------------------------------------------------
+
 
 class SurveyContext:
     """Thin wrapper around ``~/.pycsamt/context.json``.
@@ -144,15 +146,13 @@ class SurveyContext:
         except Exception:  # noqa: BLE001
             names = []
         data: dict[str, Any] = {
-            "survey_path":   str(path.resolve()),
-            "cache_key":     key,
-            "set_at":        datetime.now().isoformat(timespec="seconds"),
-            "n_stations":    len(sites),
+            "survey_path": str(path.resolve()),
+            "cache_key": key,
+            "set_at": datetime.now().isoformat(timespec="seconds"),
+            "n_stations": len(sites),
             "station_names": names,
         }
-        _CONTEXT_FILE.write_text(
-            json.dumps(data, indent=2), encoding="utf-8"
-        )
+        _CONTEXT_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return cls(data)
 
     @classmethod
@@ -165,6 +165,7 @@ class SurveyContext:
 # ---------------------------------------------------------------------------
 # Cache helpers
 # ---------------------------------------------------------------------------
+
 
 def _cache_dir(key: str) -> Path:
     return _CACHE_ROOT / key
@@ -185,10 +186,10 @@ def _write_cache(key: str, path: Path, sites: Sites) -> None:
     with open(_cache_pkl(key), "wb") as fh:
         pickle.dump(sites, fh, protocol=pickle.HIGHEST_PROTOCOL)
     meta = {
-        "survey_path":       str(path.resolve()),
-        "cached_at":         datetime.now().isoformat(timespec="seconds"),
-        "cached_at_mtime":   _source_mtime(path),
-        "n_stations":        len(sites),
+        "survey_path": str(path.resolve()),
+        "cached_at": datetime.now().isoformat(timespec="seconds"),
+        "cached_at_mtime": _source_mtime(path),
+        "n_stations": len(sites),
     }
     _cache_meta(key).write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
@@ -220,6 +221,7 @@ def _cache_is_valid(key: str, path: Path) -> bool:
 def _purge_cache(key: str) -> None:
     """Delete all cache files for *key*."""
     import shutil  # noqa: PLC0415
+
     d = _cache_dir(key)
     if d.exists():
         shutil.rmtree(d)
@@ -228,6 +230,7 @@ def _purge_cache(key: str) -> None:
 # ---------------------------------------------------------------------------
 # Core: build Sites from source
 # ---------------------------------------------------------------------------
+
 
 def _build_sites(path: Path, verbose: int = 0) -> Sites:
     """Call ``ensure_sites`` and return a ``Sites`` object for *path*."""
@@ -243,6 +246,7 @@ def _build_sites(path: Path, verbose: int = 0) -> Sites:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def set_survey(path: Path, *, force: bool = False, verbose: int = 0) -> Sites:
     """Build (or load cached) ``Sites`` for *path* and write the context.
@@ -261,7 +265,7 @@ def set_survey(path: Path, *, force: bool = False, verbose: int = 0) -> Sites:
     Sites
     """
     path = path.resolve()
-    key  = _cache_key(path)
+    key = _cache_key(path)
 
     if not force and _cache_is_valid(key, path):
         sites = _read_cache(key)
@@ -307,7 +311,7 @@ def resolve_survey(
     """
     if explicit is not None:
         path = explicit.resolve()
-        key  = _cache_key(path)
+        key = _cache_key(path)
 
         if not fresh and _cache_is_valid(key, path):
             sites = _read_cache(key)
@@ -337,7 +341,7 @@ def resolve_survey(
         )
 
     path = ctx.survey_path
-    key  = ctx.cache_key
+    key = ctx.cache_key
 
     if not fresh and _cache_is_valid(key, path):
         sites = _read_cache(key)
@@ -367,16 +371,16 @@ def survey_summary(verbose: int = 0) -> dict[str, Any] | None:
     ctx = SurveyContext.load()
     if ctx is None:
         return None
-    key  = ctx.cache_key
+    key = ctx.cache_key
     meta_path = _cache_meta(key)
     summary: dict[str, Any] = {
         "survey_path": str(ctx.survey_path),
-        "set_at":      ctx.set_at,
-        "n_stations":  ctx.n_stations,
+        "set_at": ctx.set_at,
+        "n_stations": ctx.n_stations,
         "station_names": ctx.station_names,
-        "cache_key":   key,
+        "cache_key": key,
         "cache_valid": _cache_is_valid(key, ctx.survey_path),
-        "cache_path":  str(_cache_dir(key)),
+        "cache_path": str(_cache_dir(key)),
     }
     if meta_path.exists():
         try:

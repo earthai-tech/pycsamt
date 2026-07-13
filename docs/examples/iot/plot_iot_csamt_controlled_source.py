@@ -76,15 +76,39 @@ def repo_root() -> Path:
 
 def _synthetic_avg() -> pd.DataFrame:
     """A CSAMT-plausible stand-in when the bundled .avg is absent."""
-    freq = np.array([0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256,
-                     512, 1024, 2048, 4096, 8192.0])
+    freq = np.array(
+        [
+            0.125,
+            0.25,
+            0.5,
+            1,
+            2,
+            4,
+            8,
+            16,
+            32,
+            64,
+            128,
+            256,
+            512,
+            1024,
+            2048,
+            4096,
+            8192.0,
+        ]
+    )
     # far-field rho ~ 300 ohm.m; near-field low-freq rise; keyed current.
     rho = 300.0 * (1.0 + 40.0 / (freq + 0.2))
     phase = 45.0 - 10.0 * np.log10(freq / freq.min() + 1)
     amps = np.clip(9.5 - 6.0 * (freq < 1.0), 3.5, 10.0)
     return pd.DataFrame(
-        {"station": "SYNTH", "freq": freq, "rho": rho, "phase": phase,
-         "amps": amps}
+        {
+            "station": "SYNTH",
+            "freq": freq,
+            "rho": rho,
+            "phase": phase,
+            "amps": amps,
+        }
     )
 
 
@@ -104,15 +128,19 @@ else:  # pragma: no cover - clean checkout without the bundled file
 # a mid-line station with a full frequency sweep
 counts = df.groupby("station")["freq"].nunique()
 station = counts.sort_values().index[len(counts) // 2]
-sub = (df[df["station"] == station]
-       .dropna(subset=["freq", "rho"])
-       .sort_values("freq"))
+sub = (
+    df[df["station"] == station]
+    .dropna(subset=["freq", "rho"])
+    .sort_values("freq")
+)
 freq = sub["freq"].to_numpy(float)
 rho = sub["rho"].to_numpy(float)
 amps = sub["amps"].to_numpy(float)
 print(f"source={source}  station-position={station}  n_freq={len(freq)}")
 print(f"frequency comb: {freq.min():g} - {freq.max():g} Hz")
-print(f"apparent resistivity: {np.nanmin(rho):.0f} - {np.nanmax(rho):.0f} ohm.m")
+print(
+    f"apparent resistivity: {np.nanmin(rho):.0f} - {np.nanmax(rho):.0f} ohm.m"
+)
 print(f"transmitter current: {np.nanmin(amps):.1f} - {np.nanmax(amps):.1f} A")
 
 # %%
@@ -127,11 +155,16 @@ print(f"transmitter current: {np.nanmin(amps):.1f} - {np.nanmax(amps):.1f} A")
 zones = classify_field_zones(freq, rho, offset_m=TX_RX_OFFSET_M)
 delta = skin_depth_m(rho, freq)
 first_far = zones.first_far_field_hz()
-print(f"field zones: {zones.n_near} near, {zones.n_transition} transition, "
-      f"{zones.n_far} far")
-print(f"far-field fraction: {zones.far_fraction:.0%}  "
-      f"(plane-wave valid at >= {first_far:g} Hz)"
-      if first_far else "far-field fraction: none reached")
+print(
+    f"field zones: {zones.n_near} near, {zones.n_transition} transition, "
+    f"{zones.n_far} far"
+)
+print(
+    f"far-field fraction: {zones.far_fraction:.0%}  "
+    f"(plane-wave valid at >= {first_far:g} Hz)"
+    if first_far
+    else "far-field fraction: none reached"
+)
 print(f"near-field correction recommended: {zones.correction_recommended}")
 
 # %%
@@ -143,9 +176,11 @@ print(f"near-field correction recommended: {zones.correction_recommended}")
 # ``assess_source_stability`` picks up.
 
 source_status = assess_source_stability(amps, max_cv=0.1)
-print(f"source stable: {source_status.stable}  "
-      f"(current CV={source_status.current_cv:.3f}, "
-      f"mean={source_status.current_mean_a:.1f} A)")
+print(
+    f"source stable: {source_status.stable}  "
+    f"(current CV={source_status.current_cv:.3f}, "
+    f"mean={source_status.current_mean_a:.1f} A)"
+)
 if source_status.flags:
     print(f"source flags: {source_status.flags}")
 
@@ -175,7 +210,10 @@ print(f"target sub-bands: {target_bands_for_method('csamt')}")
 zone_colours = [ZONE_COLOR[z] for z in zones.zones]
 
 fig, (ax_rho, ax_cur) = plt.subplots(
-    1, 2, figsize=(11.5, 5.2), constrained_layout=True,
+    1,
+    2,
+    figsize=(11.5, 5.2),
+    constrained_layout=True,
 )
 
 good = np.isfinite(rho) & (rho > 0)
@@ -184,21 +222,34 @@ for f, r, c in zip(freq[good], rho[good], np.array(zone_colours)[good]):
     ax_rho.loglog([f], [r], "o", ms=8, color=c, mec="#222", mew=0.6, zorder=3)
 if first_far:
     ax_rho.axvspan(first_far, freq.max(), color=Z_FAR, alpha=0.08, lw=0)
-ax_rho.set(xlabel="frequency (Hz)",
-           ylabel=r"apparent resistivity ($\Omega\!\cdot\!$m)",
-           title=f"CSAMT sounding with field zones - {station}")
-handles = [plt.Line2D([], [], marker="o", ls="", mec="#222",
-                      color=ZONE_COLOR[z], label=z)
-           for z in ("near", "transition", "far")]
+ax_rho.set(
+    xlabel="frequency (Hz)",
+    ylabel=r"apparent resistivity ($\Omega\!\cdot\!$m)",
+    title=f"CSAMT sounding with field zones - {station}",
+)
+handles = [
+    plt.Line2D(
+        [], [], marker="o", ls="", mec="#222", color=ZONE_COLOR[z], label=z
+    )
+    for z in ("near", "transition", "far")
+]
 ax_rho.legend(handles=handles, frameon=False, title="field zone")
 style_axis(ax_rho)
 
 ax_cur.semilogx(freq, amps, "o-", color=CURRENT, ms=6, lw=1.4)
-ax_cur.axhline(source_status.current_mean_a, color="#444", ls="--", lw=1.0,
-               label=f"on-state mean {source_status.current_mean_a:.1f} A")
-ax_cur.set(xlabel="frequency (Hz)", ylabel="transmitter current (A)",
-           title="Source current across the comb",
-           ylim=(0, max(11.0, np.nanmax(amps) * 1.15)))
+ax_cur.axhline(
+    source_status.current_mean_a,
+    color="#444",
+    ls="--",
+    lw=1.0,
+    label=f"on-state mean {source_status.current_mean_a:.1f} A",
+)
+ax_cur.set(
+    xlabel="frequency (Hz)",
+    ylabel="transmitter current (A)",
+    title="Source current across the comb",
+    ylim=(0, max(11.0, np.nanmax(amps) * 1.15)),
+)
 ax_cur.legend(frameon=False, loc="lower right")
 style_axis(ax_cur)
 

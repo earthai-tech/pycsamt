@@ -89,18 +89,15 @@ def _haversine(
     radius_km: float = 6_371.0,
 ) -> float:
     """Great-circle distance ( *km* )."""
-    lat1, lon1, lat2, lon2 = map(
-        math.radians, (lat1, lon1, lat2, lon2)
-    )
+    lat1, lon1, lat2, lon2 = map(math.radians, (lat1, lon1, lat2, lon2))
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = (
         math.sin(dlat / 2.0) ** 2.0
-        + math.cos(lat1)
-        * math.cos(lat2)
-        * math.sin(dlon / 2.0) ** 2.0
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2.0) ** 2.0
     )
     return 2.0 * radius_km * math.asin(math.sqrt(a))
+
 
 def _euclidean(
     lat1: float,
@@ -111,11 +108,13 @@ def _euclidean(
     """Rough planar distance in *deg* units."""
     return math.hypot(lat2 - lat1, lon2 - lon1)
 
+
 _DIST_METRICS = {
     "haversine": _haversine,
     "cartesian": _euclidean,
     "euclidean": _euclidean,
 }
+
 
 def sort_edis_by_location(
     edi_objs: Iterable[_Edi],
@@ -191,13 +190,14 @@ def sort_edis_by_location(
         "index",
     }
     if by not in allowed:
-        raise ValueError(
-            f"'by' must be in {sorted(allowed)}, got '{by}'"
-        )
+        raise ValueError(f"'by' must be in {sorted(allowed)}, got '{by}'")
 
     ref_lat, ref_lon = (
-        (reference if reference is not None else (
-            edi_list[0].head.lat, edi_list[0].head.lon))
+        (
+            reference
+            if reference is not None
+            else (edi_list[0].head.lat, edi_list[0].head.lon)
+        )
         if by == "distance"
         else (None, None)
     )
@@ -223,18 +223,19 @@ def sort_edis_by_location(
     if by == "distance":
         dist_fun = _DIST_METRICS[metric]
         for r in recs:
-            r["distance"] = dist_fun(
-                ref_lat, ref_lon, r["lat"], r["lon"]
-            )
+            r["distance"] = dist_fun(ref_lat, ref_lon, r["lat"], r["lon"])
 
     # define sorting key
     if by in {"ll", "lonlat"}:
+
         def key_fun(r):
             return (r["lon"], r["lat"])
     elif by == "latlon":
+
         def key_fun(r):
             return (r["lat"], r["lon"])
     else:
+
         def key_fun(r):
             return r[by]
 
@@ -261,6 +262,7 @@ def sort_edis_by_location(
 
     return edi_sorted, names
 
+
 def _safe_number(s: str) -> int | float | str:
     """
     Try to parse a string as int/float (including E-format). If it
@@ -279,8 +281,12 @@ def _safe_number(s: str) -> int | float | str:
         try:
             f = float(s_norm)
             # Cast to int if integral
-            return int(f) if f.is_integer() and (
-                "." not in s_norm and "e" not in s_norm.lower()) else f
+            return (
+                int(f)
+                if f.is_integer()
+                and ("." not in s_norm and "e" not in s_norm.lower())
+                else f
+            )
         except ValueError:
             return s  # fall back to string
     return s
@@ -415,6 +421,7 @@ def _format_block_numbers(
         buf.append(" " * indent + " ".join(line))
     return "\n".join(buf)
 
+
 def quick_edi_stats(
     *,
     total: int,
@@ -430,8 +437,7 @@ def quick_edi_stats(
     rate = (ok / total) * 100 if total else 0.0
     print(bar)
     print(
-        f"{label:<15} read  : {ok:>6d}/{total:<6d}"
-        f"  —  success {rate:6.2f} %"
+        f"{label:<15} read  : {ok:>6d}/{total:<6d}  —  success {rate:6.2f} %"
     )
     print(bar)
 
@@ -452,6 +458,7 @@ def _format_kv(k: str, v):
         pass
     # quote if whitespace or quotes present
     return f'{k}="{s.replace(chr(34), "")}"'
+
 
 def _ensure_1d(a: Sequence[float] | np.ndarray) -> np.ndarray:
     v = np.asarray(a).ravel()
@@ -575,7 +582,9 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
             else:
                 lines.append(f"  {k}={v}")
         if meas:
-            lines.append(">!***CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT***!")
+            lines.append(
+                ">!***CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT***!"
+            )
             for m in meas:
                 kind = str(m.get("KIND", "")).upper()
                 kv = {k: v for k, v in m.items() if k != "KIND"}
@@ -618,10 +627,18 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     # > IMPEDANCE blocks
     imp: Mapping[str, Any] = obj.get("impedance") or {}
     for key in (
-        "ZXXR", "ZXXI", "ZXX.VAR",
-        "ZXYR", "ZXYI", "ZXY.VAR",
-        "ZYXR", "ZYXI", "ZYX.VAR",
-        "ZYYR", "ZYYI", "ZYY.VAR",
+        "ZXXR",
+        "ZXXI",
+        "ZXX.VAR",
+        "ZXYR",
+        "ZXYI",
+        "ZXY.VAR",
+        "ZYXR",
+        "ZYXI",
+        "ZYX.VAR",
+        "ZYYR",
+        "ZYYI",
+        "ZYY.VAR",
     ):
         if key in imp and imp[key] is not None:
             arr = _ensure_1d(imp[key])
@@ -633,10 +650,14 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
     rho: Mapping[str, Any] = obj.get("resistivity") or {}
     for key in (
         "RHOROT",
-        "RHOXY", "RHOXY.ERR",
-        "RHOYX", "RHOYX.ERR",
-        "PHSXY", "PHSXY.ERR",
-        "PHSYX", "PHSYX.ERR",
+        "RHOXY",
+        "RHOXY.ERR",
+        "RHOYX",
+        "RHOYX.ERR",
+        "PHSXY",
+        "PHSXY.ERR",
+        "PHSYX",
+        "PHSYX.ERR",
     ):
         if key in rho and rho[key] is not None:
             arr = _ensure_1d(rho[key])
@@ -660,6 +681,7 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
 
     lines.append(">END")
     return "\n".join(lines)
+
 
 def strip_item(
     item_to_clean: Container | None,
@@ -871,6 +893,3 @@ def show_edi_stats(
         print(line.center(width), file=stream)
 
     print(bar, file=stream)
-
-
-

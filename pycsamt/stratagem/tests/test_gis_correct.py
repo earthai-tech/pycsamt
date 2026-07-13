@@ -105,8 +105,8 @@ def _make_csv(tmp_path: Path, n: int = 3) -> Path:
         rows.append(
             {
                 "stations": f"K0+{i * 20:06.4f}",
-                "longitude": northing,   # intentionally mislabeled
-                "latitude": easting,     # intentionally mislabeled
+                "longitude": northing,  # intentionally mislabeled
+                "latitude": easting,  # intentionally mislabeled
                 "elev": 261.94 + i,
                 "step": i * 20.0,
             }
@@ -121,6 +121,7 @@ def _make_csv(tmp_path: Path, n: int = 3) -> Path:
 # _detect_coord_cols
 # ---------------------------------------------------------------------------
 
+
 class TestDetectCoordCols:
     def test_explicit_override(self):
         df = pd.DataFrame({"E": [1.0], "N": [2.0], "elev": [0.0]})
@@ -128,13 +129,15 @@ class TestDetectCoordCols:
         assert e == "E" and n == "N"
 
     def test_auto_detect_by_magnitude(self):
-        df = pd.DataFrame({
-            "longitude": [2_850_835.0, 2_850_815.0],  # northing (big)
-            "latitude":  [362_589.0,   362_609.0],    # easting (small)
-            "elev":      [261.9,        262.0],
-        })
+        df = pd.DataFrame(
+            {
+                "longitude": [2_850_835.0, 2_850_815.0],  # northing (big)
+                "latitude": [362_589.0, 362_609.0],  # easting (small)
+                "elev": [261.9, 262.0],
+            }
+        )
         e, n = _detect_coord_cols(df, None, None, exclude={"elev", "step"})
-        assert e == "latitude"   # smaller median → easting
+        assert e == "latitude"  # smaller median → easting
         assert n == "longitude"  # larger median  → northing
 
     def test_raises_when_too_few_cols(self):
@@ -147,19 +150,23 @@ class TestDetectCoordCols:
 # StationLocator
 # ---------------------------------------------------------------------------
 
+
 class TestStationLocator:
     def _dummy_edis(self, n: int):
         # minimal objects with no path; StationLocator only needs len(edi_objects)
         class _E:
             path = None
             station = None
+
         return [_E() for _ in range(n)]
 
     def test_forward_order(self):
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.linspace(109.5, 110.0, n)
-        loc = StationLocator(order="forward").fit(self._dummy_edis(n), lats, lons)
+        loc = StationLocator(order="forward").fit(
+            self._dummy_edis(n), lats, lons
+        )
         assert loc.index_map_ == list(range(n))
         assert loc.reversed_ is False
 
@@ -167,7 +174,9 @@ class TestStationLocator:
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.linspace(109.5, 110.0, n)
-        loc = StationLocator(order="reversed").fit(self._dummy_edis(n), lats, lons)
+        loc = StationLocator(order="reversed").fit(
+            self._dummy_edis(n), lats, lons
+        )
         assert loc.index_map_ == list(range(n - 1, -1, -1))
         assert loc.reversed_ is True
 
@@ -194,7 +203,9 @@ class TestStationLocator:
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.zeros(n)
-        loc = StationLocator(order="auto").fit(self._dummy_edis(n), lats, lons)
+        loc = StationLocator(order="auto").fit(
+            self._dummy_edis(n), lats, lons
+        )
         assert len(loc.index_map_) == n
         assert set(loc.index_map_) == set(range(n))
 
@@ -202,6 +213,7 @@ class TestStationLocator:
 # ---------------------------------------------------------------------------
 # CoordinateInjector
 # ---------------------------------------------------------------------------
+
 
 class TestCoordinateInjector:
     def test_fit_returns_self(self, tmp_path):
@@ -244,7 +256,7 @@ class TestCoordinateInjector:
     def test_mismatch_raises(self, tmp_path):
         _make_edi_dir(tmp_path, n=3)
         batch = EDIBatch(tmp_path / "edis").fit()
-        csv = _make_csv(tmp_path, n=5)   # 5 rows, 3 EDIs → mismatch
+        csv = _make_csv(tmp_path, n=5)  # 5 rows, 3 EDIs → mismatch
         with pytest.raises(Exception):
             CoordinateInjector(epsg=32649, utm_zone="49N").fit(batch, csv)
 
@@ -255,7 +267,12 @@ class TestCoordinateInjector:
         inj = CoordinateInjector(epsg=32649, utm_zone="49N").fit(batch, csv)
         frame = inj.coordinate_frame()
         assert frame.shape == (3, 4)
-        assert list(frame.columns) == ["station", "latitude", "longitude", "elevation"]
+        assert list(frame.columns) == [
+            "station",
+            "latitude",
+            "longitude",
+            "elevation",
+        ]
 
     def test_export_creates_files(self, tmp_path):
         _make_edi_dir(tmp_path, n=3)
@@ -277,12 +294,14 @@ class TestCoordinateInjector:
         _make_edi_dir(tmp_path, n=2)
         batch = EDIBatch(tmp_path / "edis").fit()
 
-        df = pd.DataFrame({
-            "stations": ["A", "B"],
-            "E": [362_589.0, 362_609.0],
-            "N": [2_850_835.0, 2_850_815.0],
-            "elev": [261.9, 262.0],
-        })
+        df = pd.DataFrame(
+            {
+                "stations": ["A", "B"],
+                "E": [362_589.0, 362_609.0],
+                "N": [2_850_835.0, 2_850_815.0],
+                "elev": [261.9, 262.0],
+            }
+        )
         csv = tmp_path / "custom.csv"
         df.to_csv(csv, index=False)
 

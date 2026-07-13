@@ -25,6 +25,7 @@ from pycsamt.models.mare2dem.noise import (
 # Mare2DEMLog — OccamLog.2012.0 format
 # ==========================================================================
 
+
 class TestMare2DEMLog:
     """Tests on the real MARE2DEM log file from demo_mt_inversion."""
 
@@ -79,6 +80,7 @@ class TestMare2DEMLog:
 # InversionResult — scan directory
 # ==========================================================================
 
+
 class TestInversionResult:
     """Tests on InversionResult scanning the demo_mt_inversion directory."""
 
@@ -123,6 +125,7 @@ class TestInversionResult:
 # diff_resistivity
 # ==========================================================================
 
+
 class TestDiffResistivity:
     """Tests on the resistivity model diff utility."""
 
@@ -157,7 +160,9 @@ class TestDiffResistivity:
         )
         assert out.exists()
 
-    def test_diff_mismatched_regions_raises(self, hill_dir, inversion_dir, tmp_path):
+    def test_diff_mismatched_regions_raises(
+        self, hill_dir, inversion_dir, tmp_path
+    ):
         with pytest.raises(ValueError, match="regions"):
             diff_resistivity(
                 hill_dir / "hill.0.resistivity",
@@ -179,6 +184,7 @@ class TestDiffResistivity:
 # ==========================================================================
 # add_synthetic_noise
 # ==========================================================================
+
 
 class TestAddSyntheticNoise:
     """Tests on add_synthetic_noise using the hill response file."""
@@ -229,6 +235,7 @@ class TestAddSyntheticNoise:
         import numpy as np
 
         from pycsamt.models.mare2dem import EMDataFile
+
         em = EMDataFile()
         em.data = np.zeros((5, 6))  # 6-column data, not a response file
         nc = NoiseConfig()

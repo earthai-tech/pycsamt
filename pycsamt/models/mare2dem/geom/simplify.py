@@ -27,8 +27,7 @@ def _perpendicular_distance(
         return np.linalg.norm(points - p1, axis=1)
     # signed area / base length = perpendicular distance
     cross = np.abs(
-        (d[0]) * (p1[1] - points[:, 1])
-        - (p1[0] - points[:, 0]) * (d[1])
+        (d[0]) * (p1[1] - points[:, 1]) - (p1[0] - points[:, 0]) * (d[1])
     )
     return cross / norm
 
@@ -44,10 +43,8 @@ def _dp_recursive(
     """Recursively mark points to keep."""
     if end <= start + 1:
         return
-    seg = points[start: end + 1]
-    dists = _perpendicular_distance(
-        seg[1:-1], points[start], points[end]
-    )
+    seg = points[start : end + 1]
+    dists = _perpendicular_distance(seg[1:-1], points[start], points[end])
     if len(dists) == 0:
         return
     max_dist = dists.max()
@@ -96,6 +93,8 @@ def dp_simplify(
         return pts.copy()
 
     keep: set[int] = {0, len(pts) - 1}
-    _dp_recursive(pts, list(range(len(pts))), 0, len(pts) - 1, tolerance, keep)
+    _dp_recursive(
+        pts, list(range(len(pts))), 0, len(pts) - 1, tolerance, keep
+    )
     kept = sorted(keep)
     return pts[kept]

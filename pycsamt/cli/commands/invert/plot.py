@@ -64,7 +64,8 @@ from ._base import (
 # ---------------------------------------------------------------------------
 
 _save_option = click.option(
-    "--save", "save_path",
+    "--save",
+    "save_path",
     type=click.Path(path_type=Path),
     default=None,
     metavar="FILE",
@@ -114,6 +115,7 @@ _solver_option = click.option(
 # Helper: save / show figure
 # ---------------------------------------------------------------------------
 
+
 def _handle_figure(fig: Any, save_path: Path | None, show: bool) -> None:
     """Save and/or display *fig*.  Raises if neither is requested."""
     if save_path is None and not show:
@@ -129,12 +131,14 @@ def _handle_figure(fig: Any, save_path: Path | None, show: bool) -> None:
         click.echo(f"Saved: {save_path}")
     if show:
         import matplotlib.pyplot as plt  # noqa: PLC0415
+
         plt.show()
 
 
 # ---------------------------------------------------------------------------
 # pycsamt invert plot  (sub-group)
 # ---------------------------------------------------------------------------
+
 
 @invert.group("plot")
 @click.pass_context
@@ -165,19 +169,42 @@ def plot(ctx: click.Context) -> None:
 # plot model
 # ---------------------------------------------------------------------------
 
+
 @plot.command("model")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
-@click.option("--rho-min", type=float, default=1.0,   show_default=True,
-              help="Color-scale lower bound (Ω·m).")
-@click.option("--rho-max", type=float, default=1000.0, show_default=True,
-              help="Color-scale upper bound (Ω·m).")
-@click.option("--depth-max", type=float, default=None, metavar="METRES",
-              help="Maximum display depth in metres.")
-@click.option("--no-stations", is_flag=True, default=False,
-              help="Hide station markers on the section.")
+@click.option(
+    "--rho-min",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Color-scale lower bound (Ω·m).",
+)
+@click.option(
+    "--rho-max",
+    type=float,
+    default=1000.0,
+    show_default=True,
+    help="Color-scale upper bound (Ω·m).",
+)
+@click.option(
+    "--depth-max",
+    type=float,
+    default=None,
+    metavar="METRES",
+    help="Maximum display depth in metres.",
+)
+@click.option(
+    "--no-stations",
+    is_flag=True,
+    default=False,
+    help="Hide station markers on the section.",
+)
 @_cmap_option
 @_dpi_option
 @_save_option
@@ -218,6 +245,7 @@ def plot_model(
             from pycsamt.models.occam2d.plot import (
                 PlotModel,  # noqa: PLC0415
             )
+
             fig = PlotModel(
                 result,
                 rho_min=rho_min,
@@ -231,6 +259,7 @@ def plot_model(
             from pycsamt.models.modem.plot import (
                 PlotModel2D,  # noqa: PLC0415
             )
+
             fig = PlotModel2D(
                 result,
                 rho_min=rho_min,
@@ -250,15 +279,27 @@ def plot_model(
 # plot misfit
 # ---------------------------------------------------------------------------
 
+
 @plot.command("misfit")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
-@click.option("--no-roughness", is_flag=True, default=False,
-              help="Hide the roughness secondary axis.")
-@click.option("--lagrange", is_flag=True, default=False,
-              help="Add a lower panel for the Lagrange multiplier.")
+@click.option(
+    "--no-roughness",
+    is_flag=True,
+    default=False,
+    help="Hide the roughness secondary axis.",
+)
+@click.option(
+    "--lagrange",
+    is_flag=True,
+    default=False,
+    help="Add a lower panel for the Lagrange multiplier.",
+)
 @_dpi_option
 @_save_option
 @_show_option
@@ -294,6 +335,7 @@ def plot_misfit(
             from pycsamt.models.occam2d.plot import (
                 PlotMisfit,  # noqa: PLC0415
             )
+
             fig = PlotMisfit(
                 result,
                 show_roughness=not no_roughness,
@@ -304,6 +346,7 @@ def plot_misfit(
             from pycsamt.models.modem.plot import (
                 PlotMisfit,  # noqa: PLC0415
             )
+
             fig = PlotMisfit(result, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -316,13 +359,21 @@ def plot_misfit(
 # plot response
 # ---------------------------------------------------------------------------
 
+
 @plot.command("response")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
-@click.option("--station", default=None, metavar="NAME",
-              help="Show only this station (default: all stations).")
+@click.option(
+    "--station",
+    default=None,
+    metavar="NAME",
+    help="Show only this station (default: all stations).",
+)
 @_dpi_option
 @_save_option
 @_show_option
@@ -357,11 +408,13 @@ def plot_response(
             from pycsamt.models.occam2d.plot import (
                 PlotResponse,  # noqa: PLC0415
             )
+
             fig = PlotResponse(result, station=station, dpi=dpi).plot()
         else:
             from pycsamt.models.modem.plot import (
                 PlotResponse,  # noqa: PLC0415
             )
+
             fig = PlotResponse(result, station=station, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -374,9 +427,13 @@ def plot_response(
 # plot pseudo
 # ---------------------------------------------------------------------------
 
+
 @plot.command("pseudo")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
 @_cmap_option
@@ -414,11 +471,13 @@ def plot_pseudo(
             from pycsamt.models.occam2d.plot import (
                 PlotPseudo,  # noqa: PLC0415
             )
+
             fig = PlotPseudo(result, cmap=cmap, dpi=dpi).plot()
         else:
             from pycsamt.models.modem.plot import (
                 PlotPseudo,  # noqa: PLC0415
             )
+
             fig = PlotPseudo(result, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -431,13 +490,22 @@ def plot_pseudo(
 # plot section  (ModEM only — 3-D depth slice)
 # ---------------------------------------------------------------------------
 
+
 @plot.command("section")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
-@click.option("--depth", type=float, default=None, metavar="METRES",
-              help="Depth of the horizontal slice in metres.")
+@click.option(
+    "--depth",
+    type=float,
+    default=None,
+    metavar="METRES",
+    help="Depth of the horizontal slice in metres.",
+)
 @_cmap_option
 @_dpi_option
 @_save_option
@@ -478,6 +546,7 @@ def plot_section(
         from pycsamt.models.modem.plot import (
             PlotSection,  # noqa: PLC0415
         )
+
         fig = PlotSection(result, depth=depth, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -490,13 +559,21 @@ def plot_section(
 # plot 1d  (Occam2D only — sounding depth profiles)
 # ---------------------------------------------------------------------------
 
+
 @plot.command("1d")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
-@click.option("--stations", default=None, metavar="S01,S02,…",
-              help="Comma-separated station names to include (default: all).")
+@click.option(
+    "--stations",
+    default=None,
+    metavar="S01,S02,…",
+    help="Comma-separated station names to include (default: all).",
+)
 @_cmap_option
 @_dpi_option
 @_save_option
@@ -540,6 +617,7 @@ def plot_1d(
         from pycsamt.models.occam2d.plot import (
             PlotSounding1D,  # noqa: PLC0415
         )
+
         fig = PlotSounding1D(
             result, stations=station_list, cmap=cmap, dpi=dpi
         ).plot()
@@ -554,9 +632,13 @@ def plot_1d(
 # plot per-site  (Occam2D — PlotSiteMisfit)
 # ---------------------------------------------------------------------------
 
+
 @plot.command("per-site")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
 @_cmap_option
@@ -588,15 +670,14 @@ def plot_per_site(
     configure_cli(log__level=verbose, log__color=not no_color)
     solver_name = _resolve_solver(solver, workdir)
     if solver_name != "occam2d":
-        raise click.UsageError(
-            "'per-site' is an Occam2D-only sub-command."
-        )
+        raise click.UsageError("'per-site' is an Occam2D-only sub-command.")
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
 
     try:
         from pycsamt.models.occam2d.plot import (
             PlotSiteMisfit,  # noqa: PLC0415
         )
+
         fig = PlotSiteMisfit(result, cmap=cmap, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
@@ -609,9 +690,13 @@ def plot_per_site(
 # plot grid  (Occam2D — PlotResponseGrid)
 # ---------------------------------------------------------------------------
 
+
 @plot.command("grid")
-@click.argument("workdir", type=click.Path(exists=True, file_okay=False,
-                path_type=Path), metavar="WORKDIR")
+@click.argument(
+    "workdir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    metavar="WORKDIR",
+)
 @_solver_option
 @_iteration_option
 @_dpi_option
@@ -641,15 +726,14 @@ def plot_grid(
     configure_cli(log__level=verbose, log__color=not no_color)
     solver_name = _resolve_solver(solver, workdir)
     if solver_name != "occam2d":
-        raise click.UsageError(
-            "'grid' is an Occam2D-only sub-command."
-        )
+        raise click.UsageError("'grid' is an Occam2D-only sub-command.")
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
 
     try:
         from pycsamt.models.occam2d.plot import (
             PlotResponseGrid,  # noqa: PLC0415
         )
+
         fig = PlotResponseGrid(result, dpi=dpi).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)

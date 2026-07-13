@@ -134,8 +134,12 @@ def diff_resistivity(
 
     result.resistivity = diff_fn(rf1.resistivity, rf2.resistivity)
     result.free_parameter = rf1.free_parameter.copy()
-    result.bounds = rf1.bounds.copy() if rf1.bounds is not None else np.array([])
-    result.prejudice = rf1.prejudice.copy() if rf1.prejudice is not None else np.array([])
+    result.bounds = (
+        rf1.bounds.copy() if rf1.bounds is not None else np.array([])
+    )
+    result.prejudice = (
+        rf1.prejudice.copy() if rf1.prejudice is not None else np.array([])
+    )
 
     write_resistivity(result, out_file)
     return result

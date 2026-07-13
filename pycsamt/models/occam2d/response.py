@@ -40,12 +40,13 @@ PathLike = Union[str, Path]
 
 __all__ = ["OccamResponse"]
 
-_N_COLS = 7   # expected number of columns per data row
+_N_COLS = 7  # expected number of columns per data row
 
 
 # -----------------------------------------------------------------------
 # Low-level parser
 # -----------------------------------------------------------------------
+
 
 def _parse_response(path: Path) -> np.ndarray:
     """Return a (n_data, 7) float array from a ``.resp`` file.
@@ -78,6 +79,7 @@ def _parse_response(path: Path) -> np.ndarray:
 # -----------------------------------------------------------------------
 # OccamResponse
 # -----------------------------------------------------------------------
+
 
 class OccamResponse(OccamBase):
     r"""Represent an Occam2D response file.
@@ -185,11 +187,11 @@ class OccamResponse(OccamBase):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data:      np.ndarray = np.empty((0, _N_COLS))
-        self.observed:  np.ndarray = np.array([])
-        self.modeled:   np.ndarray = np.array([])
+        self.data: np.ndarray = np.empty((0, _N_COLS))
+        self.observed: np.ndarray = np.array([])
+        self.modeled: np.ndarray = np.array([])
         self.residuals: np.ndarray = np.array([])
-        self.rms:       float      = 0.0
+        self.rms: float = 0.0
 
     # ------------------------------------------------------------------
     # I/O
@@ -255,20 +257,22 @@ class OccamResponse(OccamBase):
         >>> response.n_data
         >>> response.type_codes
         """
-        p   = Path(path)
+        p = Path(path)
         arr = _parse_response(p)
         obj = cls(**kwargs)
 
-        obj.data      = arr
-        obj.observed  = arr[:, 4]
-        obj.modeled   = arr[:, 5]
+        obj.data = arr
+        obj.observed = arr[:, 4]
+        obj.modeled = arr[:, 5]
         obj.residuals = arr[:, 6]
-        obj.rms       = float(np.sqrt(np.mean(obj.residuals ** 2)))
+        obj.rms = float(np.sqrt(np.mean(obj.residuals**2)))
 
         if obj.verbose:
             obj.logger.info(
                 "OccamResponse.read: %d data points, rms=%.4f from %s",
-                obj.n_data, obj.rms, p,
+                obj.n_data,
+                obj.rms,
+                p,
             )
         return obj
 
@@ -282,12 +286,20 @@ class OccamResponse(OccamBase):
     @property
     def site_indices(self) -> np.ndarray:
         """1-based site indices (int)."""
-        return self.data[:, 0].astype(int) if self.data.size else np.array([], dtype=int)
+        return (
+            self.data[:, 0].astype(int)
+            if self.data.size
+            else np.array([], dtype=int)
+        )
 
     @property
     def freq_indices(self) -> np.ndarray:
         """1-based frequency indices (int)."""
-        return self.data[:, 1].astype(int) if self.data.size else np.array([], dtype=int)
+        return (
+            self.data[:, 1].astype(int)
+            if self.data.size
+            else np.array([], dtype=int)
+        )
 
     @property
     def type_codes(self) -> np.ndarray:
@@ -332,7 +344,9 @@ class OccamResponse(OccamBase):
         result: dict[int, float] = {}
         for s in np.unique(self.site_indices):
             mask = self.site_indices == s
-            result[int(s)] = float(np.sqrt(np.mean(self.residuals[mask] ** 2)))
+            result[int(s)] = float(
+                np.sqrt(np.mean(self.residuals[mask] ** 2))
+            )
         return result
 
     def misfit_per_frequency(self) -> dict[int, float]:
@@ -368,5 +382,7 @@ class OccamResponse(OccamBase):
         result: dict[int, float] = {}
         for f in np.unique(self.freq_indices):
             mask = self.freq_indices == f
-            result[int(f)] = float(np.sqrt(np.mean(self.residuals[mask] ** 2)))
+            result[int(f)] = float(
+                np.sqrt(np.mean(self.residuals[mask] ** 2))
+            )
         return result

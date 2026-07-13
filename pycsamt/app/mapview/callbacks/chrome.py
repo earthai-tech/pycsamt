@@ -23,13 +23,13 @@ def register_chrome(app) -> None:
 # Plotly's responsive mode only re-lays out on a window resize event, so we
 # fire one after toggling a panel to make the canvas reclaim/yield space.
 _RESIZE = (
-    "setTimeout(function(){"
-    "window.dispatchEvent(new Event('resize'));}, 80);"
+    "setTimeout(function(){window.dispatchEvent(new Event('resize'));}, 80);"
 )
 
 
 def _register_seed(app) -> None:
     """Adopt a view handed in by ``MapView.launch`` on first load."""
+
     @app.callback(
         Output(IDs.STORE_DATA, "data"),
         Output(IDs.DATA_BADGE_TEXT, "children"),
@@ -78,7 +78,9 @@ def _register_sidebar(app) -> None:
         """
         function(n) {
             var hidden = (n || 0) % 2 === 1;
-            """ + _RESIZE + """
+            """
+        + _RESIZE
+        + """
             return hidden ? 'mv-datapanel mv-datapanel--hidden'
                           : 'mv-datapanel';
         }
@@ -94,7 +96,9 @@ def _register_inspector(app) -> None:
         """
         function(n) {
             var collapsed = (n || 0) % 2 === 1;
-            """ + _RESIZE + """
+            """
+        + _RESIZE
+        + """
             return collapsed ? 'mv-inspector mv-inspector--collapsed'
                              : 'mv-inspector';
         }
@@ -114,7 +118,9 @@ def _register_dock(app) -> None:
             var id = trig[0].prop_id.split('.')[0];
             var isOpen = currentStyle && currentStyle.display === 'block';
             var open = id === 'mv-dock-close' ? false : !isOpen;
-            """ + _RESIZE + """
+            """
+        + _RESIZE
+        + """
             return [
                 open ? {display:'block'} : {display:'none'},
                 open ? 'bi bi-chevron-down ms-2' : 'bi bi-chevron-up ms-2'

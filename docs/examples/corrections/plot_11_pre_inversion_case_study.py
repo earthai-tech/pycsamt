@@ -33,13 +33,20 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -64,9 +71,8 @@ from pycsamt.emtools import (
 from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 from pycsamt.site import SitesReport, write_sites
 
-
 raw_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
-export_dir = Path(__file__).resolve().parent / "edi_out" / "pre_inversion_l18"
+export_dir = EXAMPLE_DIR / "edi_out" / "pre_inversion_l18"
 
 # %%
 # 2. Load the collected EDI folder
@@ -85,7 +91,11 @@ print(
     f"{raw_report['nfreq'].min()}-{raw_report['nfreq'].max()}"
 )
 print("First stations:")
-print(raw_report[["station", "nfreq", "lat", "lon", "elev"]].head().to_string(index=False))
+print(
+    raw_report[["station", "nfreq", "lat", "lon", "elev"]]
+    .head()
+    .to_string(index=False)
+)
 
 # %%
 # 3. Small utility functions for tensor-level diagnostics
@@ -145,7 +155,9 @@ def z_logmag_matrix(sites, component="xy"):
             continue
         labels.append(_name(ed, i))
         grids.append(np.asarray(fr, dtype=float))
-        values.append(np.log10(np.abs(np.asarray(z)[:, ij[0], ij[1]]) + 1e-24))
+        values.append(
+            np.log10(np.abs(np.asarray(z)[:, ij[0], ij[1]]) + 1e-24)
+        )
     if not values:
         return [], np.array([], dtype=float), np.empty((0, 0), dtype=float)
     common = np.sort(np.unique(np.concatenate(grids)))
@@ -232,8 +244,12 @@ print("Frequency-edit decisions:")
 print(freq_edit.decisions["action"].value_counts(dropna=False).to_string())
 
 fig, axs = plt.subplots(1, 2, figsize=(13.0, 4.8))
-plot_frequency_edit_summary(s2, s3, method="composite", ci_hi=ci_hi, ci_lo=ci_lo, ax=axs[0])
-plot_frequency_edit_decisions(s2, s3, method="composite", ci_hi=ci_hi, ci_lo=ci_lo, ax=axs[1])
+plot_frequency_edit_summary(
+    s2, s3, method="composite", ci_hi=ci_hi, ci_lo=ci_lo, ax=axs[0]
+)
+plot_frequency_edit_decisions(
+    s2, s3, method="composite", ci_hi=ci_hi, ci_lo=ci_lo, ax=axs[1]
+)
 fig.suptitle("Frequency conditioning before correction", fontsize=12)
 fig.tight_layout()
 
@@ -247,7 +263,9 @@ fig.tight_layout()
 s4 = correct_ss_ama(s3, recursive=False)
 
 labels_ss, freqs_ss, before_ss = z_logmag_matrix(s3, component="xy")
-_labels_ss_after, _freqs_ss_after, after_ss = z_logmag_matrix(s4, component="xy")
+_labels_ss_after, _freqs_ss_after, after_ss = z_logmag_matrix(
+    s4, component="xy"
+)
 
 fig = plot_ss_summary(
     before_ss,
@@ -317,7 +335,9 @@ idx_final = [labels_final.index(name) for name in shared]
 fig, ax = plt.subplots(figsize=(11.0, 4.0))
 x = np.arange(len(shared))
 ax.plot(x, ratio_raw[idx_raw], "o-", color="#a8a29e", label="collected")
-ax.plot(x, ratio_final[idx_final], "o-", color="#16a34a", label="pre-inversion")
+ax.plot(
+    x, ratio_final[idx_final], "o-", color="#16a34a", label="pre-inversion"
+)
 ax.set_xticks(x)
 ax.set_xticklabels(shared, rotation=90, fontsize=7)
 ax.set_ylabel("median diagonal/off-diagonal ratio")

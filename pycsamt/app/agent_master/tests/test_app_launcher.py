@@ -3,6 +3,7 @@
 Covers request detection routing and the launch card component.
 Launcher functions that spawn real subprocesses are not exercised here.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -45,9 +46,7 @@ class TestDetectAppRequest(unittest.TestCase):
         kind, reason = C._detect_app_request("open the web app")
         self.assertEqual(kind, "web")
         self.assertEqual(reason, "")
-        kind, reason = C._detect_app_request(
-            "open the full pipeline editor"
-        )
+        kind, reason = C._detect_app_request("open the full pipeline editor")
         self.assertEqual(kind, "web")
         self.assertTrue(reason)
 
@@ -71,9 +70,7 @@ class TestLaunchBubble(unittest.TestCase):
         self.assertIn("Launching pyCSAMT Web App", s)
 
     def test_mapview_card(self):
-        b = C._launch_bubble(
-            "mapview", url="http://127.0.0.1:8770"
-        )
+        b = C._launch_bubble("mapview", url="http://127.0.0.1:8770")
         s = str(b)
         self.assertIn("Launching MapView", s)
         self.assertIn("8770", s)
@@ -89,7 +86,8 @@ class TestLaunchBubble(unittest.TestCase):
 
     def test_desktop_failure_card(self):
         b = C._launch_bubble(
-            "desktop", note="PySide6 is probably not installed.",
+            "desktop",
+            note="PySide6 is probably not installed.",
             ok=False,
         )
         s = str(b)

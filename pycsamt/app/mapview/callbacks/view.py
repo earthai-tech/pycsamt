@@ -64,8 +64,9 @@ def _register_render(app) -> None:
         State(IDs.SESSION_ID, "data"),
         prevent_initial_call=False,
     )
-    def render(store, view_name, controls, theme, lines, fit, masked,
-               session_id):
+    def render(
+        store, view_name, controls, theme, lines, fit, masked, session_id
+    ):
         theme = theme or "light"
         if not store or not store.get("n_stations"):
             return empty_figure(theme), {"display": "flex"}

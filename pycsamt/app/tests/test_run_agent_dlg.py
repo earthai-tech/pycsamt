@@ -27,6 +27,7 @@ def dlg(qapp):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_run_agent_dlg_creates(qapp):
     d = RunAgentDialog()
     assert d is not None
@@ -54,10 +55,12 @@ def test_api_key_prepopulated(qapp):
 
 def test_api_key_echo_mode_password(dlg):
     from PySide6.QtWidgets import QLineEdit
+
     assert dlg._api_key_edit.echoMode() == QLineEdit.EchoMode.Password
 
 
 # ── _ParamPage ────────────────────────────────────────────────────────────
+
 
 def test_param_page_creates_for_all_agents(qapp):
     for name in agent_names():
@@ -99,6 +102,7 @@ def test_param_page_no_params(qapp):
 
 # ── Agent selection ───────────────────────────────────────────────────────
 
+
 def test_first_item_selected_on_open(dlg):
     # First selectable item should have the first agent selected
     assert dlg._stack.currentIndex() >= 0
@@ -109,6 +113,7 @@ def test_agent_selection_switches_page(dlg):
     for i in range(dlg._list.count()):
         item = dlg._list.item(i)
         from PySide6.QtCore import Qt
+
         if item.data(Qt.ItemDataRole.UserRole) == "QC Quicklook":
             dlg._list.setCurrentRow(i)
             current_page = dlg._stack.currentWidget()

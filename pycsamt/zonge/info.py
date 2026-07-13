@@ -8,6 +8,7 @@ primary facade for interacting with a complete Zonge AVG dataset.
 It composes all other components (Header, Z, Resistivity, Phase,
 and various QC metrics) into a single, convenient container.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -32,7 +33,7 @@ from .z import Z
 __all__ = ["DataInfo"]
 
 
-class DataInfo (Zonge):
+class DataInfo(Zonge):
     r"""High-level aggregator for a complete Zonge AVG dataset.
 
     This class acts as the primary container and orchestrator for
@@ -108,7 +109,7 @@ class DataInfo (Zonge):
     """
 
     def __init__(self, verbose: bool = False) -> None:
-        super().__init__(verbose = verbose)
+        super().__init__(verbose=verbose)
 
         # Core data holders
         self._frame: AVGFrame | None = None
@@ -136,7 +137,11 @@ class DataInfo (Zonge):
     @classmethod
     def from_avg(
         cls,
-        avg: str | Path | AVGFrame | pd.DataFrame | tuple[pd.DataFrame, Mapping[str, Any]],
+        avg: str
+        | Path
+        | AVGFrame
+        | pd.DataFrame
+        | tuple[pd.DataFrame, Mapping[str, Any]],
         *,
         meta: Mapping[str, Any] | None = None,
     ) -> DataInfo:
@@ -180,10 +185,19 @@ class DataInfo (Zonge):
 
         # Populate data components from the DataFrame
         components = [
-            self.station, self.z, self.resistivity, self.phase,
-            self.frequency, self.amps, self.comp, self.pc_emag,
-            self.pc_hmag, self.pc_rho, self.s_ephz,
-            self.s_hphz, self.s_phz,
+            self.station,
+            self.z,
+            self.resistivity,
+            self.phase,
+            self.frequency,
+            self.amps,
+            self.comp,
+            self.pc_emag,
+            self.pc_hmag,
+            self.pc_rho,
+            self.s_ephz,
+            self.s_hphz,
+            self.s_phz,
         ]
 
         for comp in components:
@@ -221,15 +235,7 @@ class DataInfo (Zonge):
             if "station" in self.df.columns
             else 0
         )
-        n_f = (
-            self.df["freq"].nunique()
-            if "freq" in self.df.columns
-            else 0
-        )
-        return (
-            f"DataInfo(stations={n_st}, freqs={n_f}, "
-            f"rows={len(self.df)})"
-        )
+        n_f = self.df["freq"].nunique() if "freq" in self.df.columns else 0
+        return f"DataInfo(stations={n_st}, freqs={n_f}, rows={len(self.df)})"
 
     __repr__ = __str__
-

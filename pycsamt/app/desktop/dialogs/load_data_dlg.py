@@ -35,9 +35,9 @@ from PySide6.QtWidgets import (
 )
 
 _FORMAT_MAP = {
-    "EDI":          ("*.edi",),
-    "AVG":          ("*.avg",),
-    "J / ModEM":    ("*.j",),
+    "EDI": ("*.edi",),
+    "AVG": ("*.avg",),
+    "J / ModEM": ("*.j",),
     "All supported": ("*.edi", "*.avg", "*.j"),
 }
 
@@ -53,7 +53,7 @@ class _DropZone(QLabel):
 
     raw_paths_dropped = Signal(list)
 
-    _TEXT_IDLE  = "⬇   Drop EDI files or a folder here"
+    _TEXT_IDLE = "⬇   Drop EDI files or a folder here"
     _TEXT_HOVER = "  Release to add files"
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -62,7 +62,9 @@ class _DropZone(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setAcceptDrops(True)
         self.setMinimumHeight(88)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.setProperty("drag_over", "false")
         self.setText(self._TEXT_IDLE)
 
@@ -77,7 +79,7 @@ class _DropZone(QLabel):
         self._set_drag_over(False)
 
     def dropEvent(self, event: QDropEvent) -> None:
-        urls  = event.mimeData().urls()
+        urls = event.mimeData().urls()
         paths = [u.toLocalFile() for u in urls if u.isLocalFile()]
         if paths:
             self.raw_paths_dropped.emit(paths)
@@ -118,7 +120,9 @@ class LoadDataDialog(QDialog):
         self.setWindowTitle("Open Survey Data")
         self.setMinimumSize(580, 460)
         self._last_dir = last_dir or str(Path.home())
-        self._recomputed_dir = Path(recomputed_dir) if recomputed_dir else None
+        self._recomputed_dir = (
+            Path(recomputed_dir) if recomputed_dir else None
+        )
         self.selected_paths: list[str] = []
         self._build_ui()
 
@@ -258,10 +262,12 @@ class LoadDataDialog(QDialog):
         if found:
             self._set_paths(found)
         else:
-            self._drop_zone.setText("⚠  No EDI files found in recomputed folder")
+            self._drop_zone.setText(
+                "⚠  No EDI files found in recomputed folder"
+            )
 
     def _browse_files(self) -> None:
-        exts     = " ".join(_FORMAT_MAP[self._fmt_combo.currentText()])
+        exts = " ".join(_FORMAT_MAP[self._fmt_combo.currentText()])
         fmt_name = self._fmt_combo.currentText()
         paths, _ = QFileDialog.getOpenFileNames(
             self,
@@ -280,7 +286,7 @@ class LoadDataDialog(QDialog):
         if not folder:
             return
         self._last_dir = folder
-        exts  = _FORMAT_MAP[self._fmt_combo.currentText()]
+        exts = _FORMAT_MAP[self._fmt_combo.currentText()]
         found: list[str] = []
         for ext in exts:
             found.extend(str(p) for p in Path(folder).rglob(ext))

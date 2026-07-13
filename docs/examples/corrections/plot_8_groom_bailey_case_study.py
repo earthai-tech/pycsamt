@@ -45,10 +45,8 @@ from _corr_data import curves, demo_line, plot_before_after
 from pycsamt.emtools import (
     apply_groom_bailey,
     groom_bailey_decomposition,
-    groom_bailey_table,
 )
 from pycsamt.emtools._core import _iter_items
-
 
 S = demo_line("L18PLT")
 raw_rho_xy = curves(S, quantity="rho", component="xy")

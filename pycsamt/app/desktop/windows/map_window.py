@@ -58,9 +58,18 @@ from pycsamt.app.desktop.windows._base import (
 # ── available colormaps ───────────────────────────────────────────────────────
 
 _CMAPS = [
-    "plasma", "viridis", "magma", "inferno", "jet",
-    "RdBu_r", "seismic", "coolwarm", "terrain",
-    "hot", "YlOrRd", "copper",
+    "plasma",
+    "viridis",
+    "magma",
+    "inferno",
+    "jet",
+    "RdBu_r",
+    "seismic",
+    "coolwarm",
+    "terrain",
+    "hot",
+    "YlOrRd",
+    "copper",
 ]
 
 # ── basemap providers (must match MapPanel._BASEMAP_PROVIDERS keys) ───────────
@@ -142,7 +151,7 @@ class MapViewerWindow(PanelWindow):
         radio_row = QHBoxLayout()
         self._radio_hz = QRadioButton("Hz")
         self._radio_hz.setChecked(True)
-        self._radio_s  = QRadioButton("s (period)")
+        self._radio_s = QRadioButton("s (period)")
         self._radio_grp = QButtonGroup(self)
         self._radio_grp.addButton(self._radio_hz)
         self._radio_grp.addButton(self._radio_s)
@@ -213,7 +222,7 @@ class MapViewerWindow(PanelWindow):
         _utm_hem_grp = QButtonGroup(self)
         _utm_hem_grp.addButton(self._radio_utm_n)
         _utm_hem_grp.addButton(self._radio_utm_s)
-        self._utm_hem_grp = _utm_hem_grp   # keep alive
+        self._utm_hem_grp = _utm_hem_grp  # keep alive
         utm_row.addWidget(self._radio_utm_n)
         utm_row.addWidget(self._radio_utm_s)
         lay_crs.addWidget(self._wgt_utm)
@@ -244,11 +253,15 @@ class MapViewerWindow(PanelWindow):
         layout.addWidget(grp_crs)
 
         # Wire CRS controls
-        self._combo_crs_mode.currentTextChanged.connect(self._on_crs_mode_changed)
+        self._combo_crs_mode.currentTextChanged.connect(
+            self._on_crs_mode_changed
+        )
         self._spin_utm_zone.valueChanged.connect(self._update_crs_info)
         self._radio_utm_n.toggled.connect(self._update_crs_info)
         self._edit_epsg.textChanged.connect(self._update_crs_info)
-        self._on_crs_mode_changed(self._combo_crs_mode.currentText())  # init visibility
+        self._on_crs_mode_changed(
+            self._combo_crs_mode.currentText()
+        )  # init visibility
 
         # ── 5. Display ────────────────────────────────────────────────────────
         grp_disp, lay_disp = make_group("Display")
@@ -289,7 +302,7 @@ class MapViewerWindow(PanelWindow):
         cbar_row.addWidget(self._radio_cbar_v)
         cbar_row.addWidget(self._radio_cbar_h)
         lay_disp.addLayout(cbar_row)
-        self._cbar_orient_grp = cbar_orient_grp   # keep alive
+        self._cbar_orient_grp = cbar_orient_grp  # keep alive
 
         layout.addWidget(grp_disp)
 
@@ -315,9 +328,9 @@ class MapViewerWindow(PanelWindow):
         grp_over, lay_over = make_group("Overlay")
         self._chk_profile = QCheckBox("Profile lines")
         self._chk_profile.setChecked(True)
-        self._chk_labels  = QCheckBox("Station labels")
+        self._chk_labels = QCheckBox("Station labels")
         self._chk_labels.setChecked(True)
-        self._chk_grid    = QCheckBox("Grid")
+        self._chk_grid = QCheckBox("Grid")
         self._chk_grid.setChecked(True)
         lay_over.addWidget(self._chk_profile)
         lay_over.addWidget(self._chk_labels)
@@ -354,7 +367,7 @@ class MapViewerWindow(PanelWindow):
         grp_act, lay_act = make_group("Actions")
         self._btn_refresh = icon_button("↻  Refresh", "map-view")
         self._btn_refresh.clicked.connect(self._on_refresh)
-        self._btn_export  = icon_button("⬆  Export…", "export")
+        self._btn_export = icon_button("⬆  Export…", "export")
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_refresh)
         lay_act.addWidget(self._btn_export)
@@ -393,6 +406,7 @@ class MapViewerWindow(PanelWindow):
     def _contextily_available() -> bool:
         try:
             import contextily  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -451,6 +465,7 @@ class MapViewerWindow(PanelWindow):
                 from pycsamt.site.base import (
                     _extract_z_arrays,
                 )
+
                 arrs = _extract_z_arrays(site.edi)
                 z = arrs.get("z")
                 f = arrs.get("freq")
@@ -462,7 +477,7 @@ class MapViewerWindow(PanelWindow):
                     z = z[:, :4].reshape(-1, 2, 2)
                 if z.ndim == 3 and z.shape[1] == 2:
                     zxy = z[:, 0, 1]
-                    rho = 0.2 * np.abs(zxy)**2 / (f + 1e-24)
+                    rho = 0.2 * np.abs(zxy) ** 2 / (f + 1e-24)
                     rho = rho[np.isfinite(rho) & (rho > 0)]
                     if rho.size:
                         vals.append(float(np.exp(np.log(rho).mean())))
@@ -484,7 +499,7 @@ class MapViewerWindow(PanelWindow):
     # ── CRS helpers ───────────────────────────────────────────────────────────
 
     def _on_crs_mode_changed(self, text: str) -> None:
-        is_utm    = "UTM" in text
+        is_utm = "UTM" in text
         is_custom = "Custom" in text
         self._wgt_utm.setVisible(is_utm)
         self._wgt_epsg.setVisible(is_custom)
@@ -514,6 +529,7 @@ class MapViewerWindow(PanelWindow):
         crs = self._resolve_source_crs()
         try:
             from pyproj import CRS
+
             c = CRS.from_user_input(crs)
             geo = "geographic" if c.is_geographic else "projected"
             self._lbl_crs_info.setText(f"→ {crs}  ({geo})")
@@ -527,13 +543,12 @@ class MapViewerWindow(PanelWindow):
         crs = self._resolve_source_crs()
         try:
             from pyproj import CRS, Transformer
-            c   = CRS.from_user_input(crs)
+
+            c = CRS.from_user_input(crs)
             geo = "geographic" if c.is_geographic else "projected"
             # Quick sanity-check: can we project to EPSG:3857?
             Transformer.from_crs(crs, "EPSG:3857", always_xy=True)
-            self._lbl_crs_info.setText(
-                f"✓ {crs}  ({geo})\n{c.name}"
-            )
+            self._lbl_crs_info.setText(f"✓ {crs}  ({geo})\n{c.name}")
             self._lbl_crs_info.setStyleSheet("color: #a6e3a1;")  # green
         except Exception as exc:
             self._lbl_crs_info.setText(f"✗ {exc}")
@@ -544,9 +559,9 @@ class MapViewerWindow(PanelWindow):
     def _contour_mode_str(self) -> str:
         lbl = self._combo_contour.currentText()
         return {
-            "None":           "none",
-            "Lines":          "lines",
-            "Filled":         "filled",
+            "None": "none",
+            "Lines": "lines",
+            "Filled": "filled",
             "Filled + labels": "filled_labels",
         }.get(lbl, "none")
 
@@ -559,10 +574,14 @@ class MapViewerWindow(PanelWindow):
         """
         # Map type
         _type_labels = {
-            "station": "Station", "elevation": "Elevation",
-            "depth": "Depth",     "resistivity": "Resistivity",
+            "station": "Station",
+            "elevation": "Elevation",
+            "depth": "Depth",
+            "resistivity": "Resistivity",
         }
-        idx = self._combo_type.findText(_type_labels.get(panel._map_type, "Station"))
+        idx = self._combo_type.findText(
+            _type_labels.get(panel._map_type, "Station")
+        )
         if idx >= 0:
             self._combo_type.setCurrentIndex(idx)
 
@@ -605,8 +624,10 @@ class MapViewerWindow(PanelWindow):
 
         # Contour
         _contour_labels = {
-            "none": "None", "lines": "Lines",
-            "filled": "Filled", "filled_labels": "Filled + labels",
+            "none": "None",
+            "lines": "Lines",
+            "filled": "Filled",
+            "filled_labels": "Filled + labels",
         }
         idx = self._combo_contour.findText(
             _contour_labels.get(panel._contour_mode, "None")
@@ -629,7 +650,9 @@ class MapViewerWindow(PanelWindow):
         # Frequency / component (set text directly; combo may be empty if no
         # sites are loaded yet — redraw() on map_panel handles it gracefully)
         comp_labels = {"xy": "XY", "yx": "YX", "det": "Det"}
-        idx = self._combo_comp.findText(comp_labels.get(panel._component, "XY"))
+        idx = self._combo_comp.findText(
+            comp_labels.get(panel._component, "XY")
+        )
         if idx >= 0:
             self._combo_comp.setCurrentIndex(idx)
         self._spin_depth.setValue(panel._target_depth_m)
@@ -644,43 +667,45 @@ class MapViewerWindow(PanelWindow):
     # ── slots ─────────────────────────────────────────────────────────────────
 
     def _on_refresh(self) -> None:
-        map_type   = self._combo_type.currentText().lower()
-        freq_hz    = self._current_freq_hz()
-        depth_m    = self._spin_depth.value()
-        component  = self._combo_comp.currentText().lower()
-        cmap       = self._combo_cmap.currentText()
-        ms         = self._spin_ms.value()
-        alpha      = self._slider_alpha.value() / 100.0
-        c_mode     = self._contour_mode_str()
-        c_levels   = self._spin_levels.value()
-        show_prof  = self._chk_profile.isChecked()
-        show_lbl   = self._chk_labels.isChecked()
-        show_grid  = self._chk_grid.isChecked()
-        provider   = self._combo_basemap.currentText()
-        base_a     = self._slider_base_alpha.value() / 100.0
-        show_cbar   = self._chk_cbar.isChecked()
-        cbar_orient = "vertical" if self._radio_cbar_v.isChecked() else "horizontal"
-        source_crs  = self._resolve_source_crs()
+        map_type = self._combo_type.currentText().lower()
+        freq_hz = self._current_freq_hz()
+        depth_m = self._spin_depth.value()
+        component = self._combo_comp.currentText().lower()
+        cmap = self._combo_cmap.currentText()
+        ms = self._spin_ms.value()
+        alpha = self._slider_alpha.value() / 100.0
+        c_mode = self._contour_mode_str()
+        c_levels = self._spin_levels.value()
+        show_prof = self._chk_profile.isChecked()
+        show_lbl = self._chk_labels.isChecked()
+        show_grid = self._chk_grid.isChecked()
+        provider = self._combo_basemap.currentText()
+        base_a = self._slider_base_alpha.value() / 100.0
+        show_cbar = self._chk_cbar.isChecked()
+        cbar_orient = (
+            "vertical" if self._radio_cbar_v.isChecked() else "horizontal"
+        )
+        source_crs = self._resolve_source_crs()
 
         try:
             self._map_panel.redraw(
-                map_type       = map_type,
-                target_freq_hz = freq_hz,
-                target_depth_m = depth_m,
-                component      = component,
-                cmap_name      = cmap,
-                marker_size    = ms,
-                marker_alpha   = alpha,
-                contour_mode   = c_mode,
-                contour_levels = c_levels,
-                show_profile   = show_prof,
-                show_labels    = show_lbl,
-                show_grid      = show_grid,
-                provider       = provider,
-                basemap_alpha  = base_a,
-                show_cbar      = show_cbar,
-                cbar_orient    = cbar_orient,
-                source_crs     = source_crs,
+                map_type=map_type,
+                target_freq_hz=freq_hz,
+                target_depth_m=depth_m,
+                component=component,
+                cmap_name=cmap,
+                marker_size=ms,
+                marker_alpha=alpha,
+                contour_mode=c_mode,
+                contour_levels=c_levels,
+                show_profile=show_prof,
+                show_labels=show_lbl,
+                show_grid=show_grid,
+                provider=provider,
+                basemap_alpha=base_a,
+                show_cbar=show_cbar,
+                cbar_orient=cbar_orient,
+                source_crs=source_crs,
             )
         except Exception:
             try:
@@ -692,10 +717,14 @@ class MapViewerWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
-        ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()
+
+        ExportDialog(
+            figure=self._map_panel._canvas.figure, parent=self
+        ).exec()
 
 
 # ── MapDetailWindow ───────────────────────────────────────────────────────────
+
 
 class MapDetailWindow(QDialog):
     """
@@ -769,7 +798,7 @@ class MapDetailWindow(QDialog):
         _fl.addWidget(self._combo_freq)
         self._btn_hz = QRadioButton("Hz")
         self._btn_hz.setChecked(True)
-        self._btn_s  = QRadioButton("s")
+        self._btn_s = QRadioButton("s")
         _fg = QButtonGroup(self)
         _fg.addButton(self._btn_hz)
         _fg.addButton(self._btn_s)
@@ -922,9 +951,9 @@ class MapDetailWindow(QDialog):
         # Overlay toggles
         self._chk_profile = QCheckBox("Profile")
         self._chk_profile.setChecked(True)
-        self._chk_labels  = QCheckBox("Labels")
+        self._chk_labels = QCheckBox("Labels")
         self._chk_labels.setChecked(True)
-        self._chk_grid    = QCheckBox("Grid")
+        self._chk_grid = QCheckBox("Grid")
         self._chk_grid.setChecked(True)
         row.addWidget(self._chk_profile)
         row.addWidget(self._chk_labels)
@@ -976,10 +1005,14 @@ class MapDetailWindow(QDialog):
         """
         # Map type
         _type_labels = {
-            "station": "Station", "elevation": "Elevation",
-            "depth": "Depth",     "resistivity": "Resistivity",
+            "station": "Station",
+            "elevation": "Elevation",
+            "depth": "Depth",
+            "resistivity": "Resistivity",
         }
-        idx = self._combo_type.findText(_type_labels.get(panel._map_type, "Station"))
+        idx = self._combo_type.findText(
+            _type_labels.get(panel._map_type, "Station")
+        )
         if idx >= 0:
             self._combo_type.setCurrentIndex(idx)
 
@@ -1023,8 +1056,10 @@ class MapDetailWindow(QDialog):
 
         # Contour
         _contour_labels = {
-            "none": "None", "lines": "Lines",
-            "filled": "Filled", "filled_labels": "Filled + labels",
+            "none": "None",
+            "lines": "Lines",
+            "filled": "Filled",
+            "filled_labels": "Filled + labels",
         }
         idx = self._combo_contour.findText(
             _contour_labels.get(panel._contour_mode, "None")
@@ -1046,7 +1081,9 @@ class MapDetailWindow(QDialog):
 
         # Component / depth / freq
         _comp_labels = {"xy": "XY", "yx": "YX", "det": "Det"}
-        idx = self._combo_comp.findText(_comp_labels.get(panel._component, "XY"))
+        idx = self._combo_comp.findText(
+            _comp_labels.get(panel._component, "XY")
+        )
         if idx >= 0:
             self._combo_comp.setCurrentIndex(idx)
         self._spin_depth.setValue(panel._target_depth_m)
@@ -1116,34 +1153,41 @@ class MapDetailWindow(QDialog):
 
     def _contour_mode_str(self) -> str:
         return {
-            "None": "none", "Lines": "lines",
-            "Filled": "filled", "Filled + labels": "filled_labels",
+            "None": "none",
+            "Lines": "lines",
+            "Filled": "filled",
+            "Filled + labels": "filled_labels",
         }.get(self._combo_contour.currentText(), "none")
 
     def _on_refresh(self) -> None:
         self._map_panel.redraw(
-            map_type       = self._combo_type.currentText().lower(),
-            target_freq_hz = self._current_freq_hz(),
-            target_depth_m = self._spin_depth.value(),
-            component      = self._combo_comp.currentText().lower(),
-            cmap_name      = self._combo_cmap.currentText(),
-            marker_size    = self._spin_ms.value(),
-            marker_alpha   = self._slider_alpha.value() / 100.0,
-            contour_mode   = self._contour_mode_str(),
-            contour_levels = self._spin_levels.value(),
-            show_profile   = self._chk_profile.isChecked(),
-            show_labels    = self._chk_labels.isChecked(),
-            show_grid      = self._chk_grid.isChecked(),
-            provider       = self._combo_basemap.currentText(),
-            basemap_alpha  = self._slider_base_alpha.value() / 100.0,
-            show_cbar      = self._chk_cbar.isChecked(),
-            cbar_orient    = "vertical" if self._radio_cbar_v.isChecked() else "horizontal",
-            source_crs     = self._resolve_crs(),
-            log_scale      = self._chk_log.isChecked(),
+            map_type=self._combo_type.currentText().lower(),
+            target_freq_hz=self._current_freq_hz(),
+            target_depth_m=self._spin_depth.value(),
+            component=self._combo_comp.currentText().lower(),
+            cmap_name=self._combo_cmap.currentText(),
+            marker_size=self._spin_ms.value(),
+            marker_alpha=self._slider_alpha.value() / 100.0,
+            contour_mode=self._contour_mode_str(),
+            contour_levels=self._spin_levels.value(),
+            show_profile=self._chk_profile.isChecked(),
+            show_labels=self._chk_labels.isChecked(),
+            show_grid=self._chk_grid.isChecked(),
+            provider=self._combo_basemap.currentText(),
+            basemap_alpha=self._slider_base_alpha.value() / 100.0,
+            show_cbar=self._chk_cbar.isChecked(),
+            cbar_orient="vertical"
+            if self._radio_cbar_v.isChecked()
+            else "horizontal",
+            source_crs=self._resolve_crs(),
+            log_scale=self._chk_log.isChecked(),
         )
 
     def _on_export(self) -> None:
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
-        ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()
+
+        ExportDialog(
+            figure=self._map_panel._canvas.figure, parent=self
+        ).exec()

@@ -135,7 +135,7 @@ class ReportAgent(BaseAgent):
             section_preset="publication",
         )
         self.report_title = report_title
-        self.formats      = [f.lower() for f in (formats or ["md", "html"])]
+        self.formats = [f.lower() for f in (formats or ["md", "html"])]
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -143,13 +143,13 @@ class ReportAgent(BaseAgent):
         warnings: list[str] = []
 
         output_dir = input_data.get("output_dir", "pycsamt_report")
-        title      = input_data.get("title", self.report_title)
-        results    = input_data.get("results", {})
+        title = input_data.get("title", self.report_title)
+        results = input_data.get("results", {})
 
         os.makedirs(output_dir, exist_ok=True)
 
         # ── copy figures to report dir ────────────────────────────────────────
-        fig_refs: dict[str, str] = {}   # section_name → relative image path
+        fig_refs: dict[str, str] = {}  # section_name → relative image path
         for step_name, res in results.items():
             if not isinstance(res, AgentResult):
                 continue
@@ -157,22 +157,31 @@ class ReportAgent(BaseAgent):
             if isinstance(fps, dict):
                 for fig_name, src_path in fps.items():
                     if src_path and Path(src_path).exists():
-                        dst = os.path.join(output_dir, f"{step_name}_{fig_name}.png")
+                        dst = os.path.join(
+                            output_dir, f"{step_name}_{fig_name}.png"
+                        )
                         try:
                             import shutil
+
                             shutil.copy2(src_path, dst)
-                            fig_refs[f"{step_name}_{fig_name}"] = os.path.basename(dst)
+                            fig_refs[f"{step_name}_{fig_name}"] = (
+                                os.path.basename(dst)
+                            )
                         except Exception as exc:
-                            warnings.append(f"Could not copy figure {src_path}: {exc}")
+                            warnings.append(
+                                f"Could not copy figure {src_path}: {exc}"
+                            )
 
         # ── build section texts ───────────────────────────────────────────────
         sections: dict[str, str] = {}
-        sections["loading"]        = self._section_loading(results, warnings)
-        sections["qc"]             = self._section_qc(results, warnings)
-        sections["static_shift"]   = self._section_ss(results, warnings)
+        sections["loading"] = self._section_loading(results, warnings)
+        sections["qc"] = self._section_qc(results, warnings)
+        sections["static_shift"] = self._section_ss(results, warnings)
         sections["phase_analysis"] = self._section_pt(results, warnings)
-        sections["forward"]        = self._section_fwd(results, warnings)
-        sections["recommendations"]= self._section_rec(results, sections, warnings)
+        sections["forward"] = self._section_fwd(results, warnings)
+        sections["recommendations"] = self._section_rec(
+            results, sections, warnings
+        )
 
         # ── assemble markdown ─────────────────────────────────────────────────
         md = _build_markdown(title, sections, fig_refs, results)
@@ -191,7 +200,10 @@ class ReportAgent(BaseAgent):
         if "html" in self.formats:
             try:
                 import markdown as _md_pkg
-                html = _md_pkg.markdown(md, extensions=["tables", "fenced_code"])
+
+                html = _md_pkg.markdown(
+                    md, extensions=["tables", "fenced_code"]
+                )
                 html = _HTML_TEMPLATE.format(title=title, body=html)
                 html_path = os.path.join(output_dir, "survey_report.html")
                 Path(html_path).write_text(html, encoding="utf-8")
@@ -204,7 +216,7 @@ class ReportAgent(BaseAgent):
                 warnings.append(f"HTML report failed: {exc}")
 
         elapsed = time.time() - t0
-        n_sec   = sum(1 for v in sections.values() if v.strip())
+        n_sec = sum(1 for v in sections.values() if v.strip())
         return AgentResult(
             status="success",
             summary=(
@@ -213,13 +225,13 @@ class ReportAgent(BaseAgent):
                 f"Saved to {output_dir}."
             ),
             data={
-                "report_md":       md,
-                "report_html":     html,
-                "report_path_md":  md_path,
+                "report_md": md,
+                "report_html": html,
+                "report_path_md": md_path,
                 "report_path_html": html_path,
-                "sections":        sections,
-                "figure_refs":     fig_refs,
-                "output_dir":      output_dir,
+                "sections": sections,
+                "figure_refs": fig_refs,
+                "output_dir": output_dir,
             },
             warnings=warnings,
             elapsed_seconds=elapsed,
@@ -240,7 +252,7 @@ class ReportAgent(BaseAgent):
         load_r = results.get("load") or results.get("loader")
         if load_r is None:
             return "No data loading results available."
-        n_st  = load_r.get("n_stations", "?")
+        n_st = load_r.get("n_stations", "?")
         stats = load_r.get("summary_stats") or {}
         t_min = stats.get("global_t_min_s")
         t_max = stats.get("global_t_max_s")
@@ -262,14 +274,16 @@ class ReportAgent(BaseAgent):
         if qc_r is None:
             return "No QC analysis results available."
         n_flagged = qc_r.get("n_flagged", 0)
-        flagged   = qc_r.get("flagged_stations", [])
+        flagged = qc_r.get("flagged_stations", [])
         base = (
             f"QC analysis identified {n_flagged} station(s) below threshold. "
             + (f"Flagged: {', '.join(flagged)}. " if flagged else "")
             + "All other stations met minimum data quality criteria."
         )
         if self.api_key:
-            llm_text = self._llm_section("qc", f"n_flagged={n_flagged}, flagged={flagged}")
+            llm_text = self._llm_section(
+                "qc", f"n_flagged={n_flagged}, flagged={flagged}"
+            )
             return llm_text or base
         return base
 
@@ -295,8 +309,8 @@ class ReportAgent(BaseAgent):
         n_1d = pt_r.get("n_1d", 0)
         n_2d = pt_r.get("n_2d", 0)
         n_3d = pt_r.get("n_3d", 0)
-        st   = pt_r.get("strike_consensus", float("nan"))
-        iqr  = pt_r.get("strike_iqr",      float("nan"))
+        st = pt_r.get("strike_consensus", float("nan"))
+        iqr = pt_r.get("strike_iqr", float("nan"))
         base = (
             f"Phase tensor analysis found predominantly "
             f"{'1-D' if n_1d >= n_2d and n_1d >= n_3d else '2-D' if n_2d >= n_3d else '3-D'} "
@@ -316,7 +330,11 @@ class ReportAgent(BaseAgent):
         rms = fwd_r.get("rms")
         base = (
             "A 1-D MT forward model was computed. "
-            + (f"Data–model RMS misfit: {rms:.3f} log₁₀(Ω·m). " if rms else "")
+            + (
+                f"Data–model RMS misfit: {rms:.3f} log₁₀(Ω·m). "
+                if rms
+                else ""
+            )
             + "The synthetic response covers the full available period range."
         )
         if self.api_key:
@@ -348,6 +366,7 @@ class ReportAgent(BaseAgent):
 
 # ── markdown assembler ────────────────────────────────────────────────────────
 
+
 def _build_markdown(
     title: str,
     sections: dict[str, str],
@@ -365,20 +384,26 @@ def _build_markdown(
     ]
 
     _SEC_TITLES = {
-        "loading":         "1. Data Loading",
-        "qc":              "2. Quality Control",
-        "static_shift":    "3. Static-Shift Correction",
-        "phase_analysis":  "4. Phase Tensor Analysis",
-        "forward":         "5. Forward Modelling",
+        "loading": "1. Data Loading",
+        "qc": "2. Quality Control",
+        "static_shift": "3. Static-Shift Correction",
+        "phase_analysis": "4. Phase Tensor Analysis",
+        "forward": "5. Forward Modelling",
         "recommendations": "6. Recommendations",
     }
 
     _FIG_KEYS = {
-        "qc":            ["qc_confidence_section", "qc_confidence_profile"],
-        "static_shift":  ["static_shift_ss_summary", "static_shift_ss_comparison"],
-        "phase_analysis":["phase_analysis_pt_psection", "phase_analysis_strike_analysis",
-                          "phase_analysis_survey_fingerprint"],
-        "forward":       ["forward_response_and_model", "forward_response"],
+        "qc": ["qc_confidence_section", "qc_confidence_profile"],
+        "static_shift": [
+            "static_shift_ss_summary",
+            "static_shift_ss_comparison",
+        ],
+        "phase_analysis": [
+            "phase_analysis_pt_psection",
+            "phase_analysis_strike_analysis",
+            "phase_analysis_survey_fingerprint",
+        ],
+        "forward": ["forward_response_and_model", "forward_response"],
     }
 
     for sec_key, sec_title in _SEC_TITLES.items():

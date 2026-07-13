@@ -119,12 +119,16 @@ class Occam2DBackend(BaseInversionBackend):
                 InversionResult as OccamResult,
             )
         except ImportError as exc:
-            raise ImportError("Occam2D backend requires pycsamt.models.occam2d.") from exc
+            raise ImportError(
+                "Occam2D backend requires pycsamt.models.occam2d."
+            ) from exc
 
         occam_cfg = _occam_config(OccamConfig, cfg)
         if source is not None:
             try:
-                builder = InputBuilder(source, workdir=workdir, config=occam_cfg)
+                builder = InputBuilder(
+                    source, workdir=workdir, config=occam_cfg
+                )
                 build_options = _build_options(cfg.backend_options)
                 build_options.setdefault("error_floor_rho", cfg.error_floor)
                 build_options.setdefault("error_floor_phase", cfg.phase_error)
@@ -141,19 +145,26 @@ class Occam2DBackend(BaseInversionBackend):
         missing = _missing_runner_files(files)
         runner = OccamRunner(
             workdir,
-            binary_path=runner_options.get("binary_path", cfg.backend_options.get("binary_path")),
-            startup_file=runner_options.get("startup_file", occam_cfg.startup_file),
+            binary_path=runner_options.get(
+                "binary_path", cfg.backend_options.get("binary_path")
+            ),
+            startup_file=runner_options.get(
+                "startup_file", occam_cfg.startup_file
+            ),
         )
         native = native or runner
         if missing:
             warnings.append(
-                "Occam2D runner not ready; missing files: " + ", ".join(missing)
+                "Occam2D runner not ready; missing files: "
+                + ", ".join(missing)
             )
         else:
             binary_name = str(
                 runner_options.get(
                     "binary_path",
-                    cfg.backend_options.get("binary_path", occam_cfg.binary_name),
+                    cfg.backend_options.get(
+                        "binary_path", occam_cfg.binary_name
+                    ),
                 )
             )
             command = _command_string(binary_name, runner.startup_file)
@@ -163,8 +174,12 @@ class Occam2DBackend(BaseInversionBackend):
                 try:
                     exit_code = runner.run(
                         max_iter=runner_options.get("max_iter", None),
-                        target_misfit=runner_options.get("target_misfit", None),
-                        auto_compile=bool(runner_options.get("auto_compile", False)),
+                        target_misfit=runner_options.get(
+                            "target_misfit", None
+                        ),
+                        auto_compile=bool(
+                            runner_options.get("auto_compile", False)
+                        ),
                     )
                     native = runner
                     executed = True
@@ -217,7 +232,8 @@ def _occam_config(config_cls: Any, cfg: Any) -> Any:
     raw = cfg.backend_options.get("config")
     if raw is None:
         values = {
-            key: value for key, value in cfg.backend_options.items()
+            key: value
+            for key, value in cfg.backend_options.items()
             if key in getattr(config_cls, "__dataclass_fields__", {})
         }
         return config_cls(**values)
@@ -231,10 +247,15 @@ def _occam_config(config_cls: Any, cfg: Any) -> Any:
 def _build_options(options: dict[str, Any]) -> dict[str, Any]:
     excluded = {"config", "runner", "files", "binary_path"}
     config_fields = {
-        "data_file", "mesh_file", "model_file", "startup_file", "binary_name",
+        "data_file",
+        "mesh_file",
+        "model_file",
+        "startup_file",
+        "binary_name",
     }
     return {
-        key: value for key, value in options.items()
+        key: value
+        for key, value in options.items()
         if key not in excluded and key not in config_fields
     }
 
@@ -260,7 +281,9 @@ def _builder_files(builder: Any) -> dict[str, str]:
     return files
 
 
-def _configured_files(workdir: Path, occam_cfg: Any, options: dict[str, Any]) -> dict[str, str]:
+def _configured_files(
+    workdir: Path, occam_cfg: Any, options: dict[str, Any]
+) -> dict[str, str]:
     raw = dict(options.get("files", {}))
     defaults = {
         "data": occam_cfg.data_file,

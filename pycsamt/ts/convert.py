@@ -41,6 +41,7 @@ pycsamt.seg.spectra.Spectra.to_Z
 pycsamt.seg.edi.EDIFile
     Writer that assembles the final file.
 """
+
 from __future__ import annotations
 
 import math
@@ -70,9 +71,7 @@ def _as_tsdata(
         return source
     from .readers import read_ts
 
-    return read_ts(
-        source, verbose=verbose, **(reader_kws or {})
-    )
+    return read_ts(source, verbose=verbose, **(reader_kws or {}))
 
 
 # ------------------------------------------------- remote reference (RR)
@@ -114,16 +113,8 @@ def _rr_estimate(
     S = np.asarray(sp._S)
     nf = S.shape[0]
     z_arr = np.empty((nf, 2, 2), complex)
-    tip_arr = (
-        np.empty((nf, 1, 2), complex)
-        if hz is not None
-        else None
-    )
-    z_err = (
-        np.full((nf, 2, 2), np.nan, float)
-        if estimate_error
-        else None
-    )
+    tip_arr = np.empty((nf, 1, 2), complex) if hz is not None else None
+    z_err = np.full((nf, 2, 2), np.nan, float) if estimate_error else None
 
     dof = effective_dof_from_meta(
         segnum=getattr(sp, "segnum", None),
@@ -139,14 +130,10 @@ def _rr_estimate(
         try:
             inv_Shr = np.linalg.inv(Shr)
         except np.linalg.LinAlgError as exc:
-            raise EdIDataError(
-                f"S_HR singular at band {k}: {exc}"
-            ) from exc
+            raise EdIDataError(f"S_HR singular at band {k}: {exc}") from exc
         z_arr[k] = S[k][np.ix_(e, r)] @ inv_Shr
         if tip_arr is not None:
-            tip_arr[k, 0, :] = (
-                S[k][np.ix_([hz], r)] @ inv_Shr
-            )
+            tip_arr[k, 0, :] = S[k][np.ix_([hz], r)] @ inv_Shr
         if z_err is not None and dof is not None:
             M_k = float(np.atleast_1d(dof)[k])
             z_err[k] = z_error_from_blocks(
@@ -165,8 +152,7 @@ def _rr_estimate(
     freq = np.asarray(sp.freq, float)
     nm = getattr(sp, "name", None)
     z_obj = (
-        Z(z_array=z_arr, freq=freq, name=nm,
-          z_err_array=z_err)
+        Z(z_array=z_arr, freq=freq, name=nm, z_err_array=z_err)
         if z_err is not None
         else Z(z_array=z_arr, freq=freq, name=nm)
     )
@@ -226,12 +212,8 @@ def ts_to_z(
         Impedance object, tipper when HZ exists, and the
         spectra stack used for the estimate.
     """
-    ts = _as_tsdata(
-        source, verbose=verbose, reader_kws=reader_kws
-    )
-    sp = ts_to_spectra(
-        ts, verbose=verbose, **spectra_kws
-    )
+    ts = _as_tsdata(source, verbose=verbose, reader_kws=reader_kws)
+    sp = ts_to_spectra(ts, verbose=verbose, **spectra_kws)
     est = str(estimator or "ls").strip().lower()
     if est == "rr":
         z_obj, tip = _rr_estimate(
@@ -246,8 +228,7 @@ def ts_to_z(
         )
     else:
         raise EdIDataError(
-            f"Unknown estimator {estimator!r}; use 'ls' "
-            "or 'rr'."
+            f"Unknown estimator {estimator!r}; use 'ls' or 'rr'."
         )
     return z_obj, tip, sp
 
@@ -265,9 +246,7 @@ def _edi_date(stamp: str | None) -> str | None:
         return s
 
 
-def _meas_ids(
-    ts: TSData, site_num: int = 1
-) -> dict[str, str]:
+def _meas_ids(ts: TSData, site_num: int = 1) -> dict[str, str]:
     """SEG-style measurement ids ``(10*site + C).run``."""
     ids: dict[str, str] = {}
     extra = 6
@@ -302,8 +281,7 @@ def _make_head(ts: TSData, station: str):
     instrument = ts.meta.get("instrument")
     if instrument:
         kw["acqby"] = f"LiMS-{instrument}"
-    return Head(**{k: v for k, v in kw.items()
-                   if v is not None})
+    return Head(**{k: v for k, v in kw.items() if v is not None})
 
 
 def _make_info(ts: TSData, sp, estimator: str):
@@ -312,8 +290,7 @@ def _make_info(ts: TSData, sp, estimator: str):
     m = getattr(sp, "meta", {}) or {}
     freq = np.asarray(sp.freq, float)
     lines = [
-        "Impedance estimated from field time series by "
-        "pycsamt.ts",
+        "Impedance estimated from field time series by pycsamt.ts",
         f"source file      : {m.get('source')}",
         f"station          : {ts.station}",
         f"sampling dt      : {ts.dt} s",
@@ -324,8 +301,7 @@ def _make_info(ts: TSData, sp, estimator: str):
         f"overlap={m.get('overlap')})",
         f"bands            : {freq.size} in "
         f"[{freq.min():.4E}, {freq.max():.4E}] Hz",
-        "stacking         : Huber-weighted section "
-        "averages",
+        "stacking         : Huber-weighted section averages",
         f"estimator        : {estimator.upper()} "
         + (
             "(Z = S_ER inv(S_HR))"
@@ -334,15 +310,11 @@ def _make_info(ts: TSData, sp, estimator: str):
         ),
     ]
     if ts.start or ts.stop:
-        lines.insert(
-            3, f"acquisition      : {ts.start} -> {ts.stop}"
-        )
+        lines.insert(3, f"acquisition      : {ts.start} -> {ts.stop}")
     return Info(info_text=lines, maxinfo=999)
 
 
-def _make_definemeas(
-    ts: TSData, ids: dict[str, str]
-):
+def _make_definemeas(ts: TSData, ids: dict[str, str]):
     from ..seg.meas import (
         DefineMeas,
         Emeasurement,
@@ -398,22 +370,16 @@ def _make_definemeas(
     return dm
 
 
-def _make_mtsect(
-    station: str, nfreq: int, ids: dict[str, str]
-):
+def _make_mtsect(station: str, nfreq: int, ids: dict[str, str]):
     from ..seg.mtemap import MTEMAP
 
     kw = {
-        c.lower(): ids[c]
-        for c in ("HX", "HY", "HZ", "EX", "EY")
-        if c in ids
+        c.lower(): ids[c] for c in ("HX", "HY", "HZ", "EX", "EY") if c in ids
     }
     for c in ("RHX", "RHY"):
         if c in ids:
             kw["r" + c[-1].lower()] = ids[c]
-    return MTEMAP(
-        sectid=str(station), nfreq=int(nfreq), **kw
-    )
+    return MTEMAP(sectid=str(station), nfreq=int(nfreq), **kw)
 
 
 # --------------------------------------------------------------- ts→EDI
@@ -473,12 +439,8 @@ reader_kws, verbose, **spectra_kws
     """
     from ..seg.edi import EDIFile
 
-    ts = _as_tsdata(
-        source, verbose=verbose, reader_kws=reader_kws
-    )
-    sid = str(
-        station or ts.station or ts.name or "SITE"
-    )
+    ts = _as_tsdata(source, verbose=verbose, reader_kws=reader_kws)
+    sid = str(station or ts.station or ts.name or "SITE")
 
     z_obj, tip, sp = ts_to_z(
         ts,
@@ -493,12 +455,8 @@ reader_kws, verbose, **spectra_kws
     ids = _meas_ids(ts)
     ed = EDIFile(verbose=verbose)
     ed.add_section("head", _make_head(ts, sid))
-    ed.add_section(
-        "info", _make_info(ts, sp, estimator)
-    )
-    ed.add_section(
-        "definemeas", _make_definemeas(ts, ids)
-    )
+    ed.add_section("info", _make_info(ts, sp, estimator))
+    ed.add_section("definemeas", _make_definemeas(ts, ids))
     ed.add_section(
         "mtsect",
         _make_mtsect(sid, z_obj.n_freq, ids),
@@ -512,9 +470,7 @@ reader_kws, verbose, **spectra_kws
     if include_tseries:
         ed.add_section(
             "timeseries",
-            ts.to_seg_timeseries(
-                max_samples=tseries_max_samples
-            ),
+            ts.to_seg_timeseries(max_samples=tseries_max_samples),
         )
     return ed
 
@@ -618,9 +574,7 @@ def ts_to_edi(
     )
     sid = ed.station or "SITE"
     name = out or f"{sid}_ts.edi"
-    path = ed.write(
-        new_edifn=name, savepath=savepath
-    )
+    path = ed.write(new_edifn=name, savepath=savepath)
     if verbose:
         logger.info("EDI written: %s", path)
     return path

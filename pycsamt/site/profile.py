@@ -356,6 +356,7 @@ class Profile:
 
 # ------------------------ helpers (minimal) ------------------------
 
+
 def _finite(x: float) -> bool:
     return math.isfinite(float(x))
 
@@ -375,7 +376,9 @@ def _iter_sites(sites: Iterable[Any]) -> list[tuple[str, float, float, Any]]:
     return out
 
 
-def _xy_local(lats: np.ndarray, lons: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _xy_local(
+    lats: np.ndarray, lons: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     la0 = float(np.nanmean(lats))
     lo0 = float(np.nanmean(lons))
     dy = (lats - la0) * _M_PER_DEG

@@ -93,18 +93,22 @@ def estimate_area_of_interest(
 
         # CSEM-only: limit max depth to max Tx–Rx range
         if em.mt is None or not len(em.mt.receivers):
-            if (em.csem is not None
-                    and len(em.csem.receivers)
-                    and len(em.csem.transmitters)
-                    and em.data is not None
-                    and len(em.data)):
+            if (
+                em.csem is not None
+                and len(em.csem.receivers)
+                and len(em.csem.transmitters)
+                and em.data is not None
+                and len(em.data)
+            ):
                 csem_mask = em.data[:, 0] < 100
                 if csem_mask.any():
                     itx = em.data[csem_mask, 2].astype(int) - 1
                     irx = em.data[csem_mask, 3].astype(int) - 1
                     n_tx = len(em.csem.transmitters)
                     n_rx = len(em.csem.receivers)
-                    valid = (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
+                    valid = (
+                        (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
+                    )
                     if valid.any():
                         r = np.abs(
                             em.csem.receivers[irx[valid], 1]
@@ -117,10 +121,14 @@ def estimate_area_of_interest(
         if dy > dz:
             ylim = np.array([ymin - dr / 10, ymax + dr / 10])
             dd = dy - dz
-            zlim = np.array([zmin - dd / 2 - dr / 10, zmax + dd / 2 + dr / 10])
+            zlim = np.array(
+                [zmin - dd / 2 - dr / 10, zmax + dd / 2 + dr / 10]
+            )
         else:
             zlim = np.array([zmin - dr / 10, zmax + dr / 10])
             dd = dz - dy
-            ylim = np.array([ymin - dd / 2 - dr / 10, ymax + dd / 2 + dr / 10])
+            ylim = np.array(
+                [ymin - dd / 2 - dr / 10, ymax + dd / 2 + dr / 10]
+            )
 
     return ylim, zlim

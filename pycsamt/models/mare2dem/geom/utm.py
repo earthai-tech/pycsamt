@@ -33,19 +33,19 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 ELLIPSOIDS: dict[str, tuple[float, float]] = {
-    "wgs84":  (6_378_137.0,   1 / 298.257),
-    "grs80":  (6_378_137.0,   1 / 298.257),
-    "intl24": (6_378_388.0,   1 / 297.000),
-    "ed50":   (6_378_388.0,   1 / 297.000),
-    "sphere": (6_370_997.0,   0.0),
-    "normal": (1.0,           0.0),
-    "grs67":  (6_378_160.0,   1 / 247.247),
-    "wgs72":  (6_378_135.0,   1 / 298.260),
-    "wgs66":  (6_378_145.0,   1 / 298.250),
-    "wgs60":  (6_378_165.0,   1 / 298.300),
-    "clrk66": (6_378_206.4,   1 / 294.980),
-    "clrk80": (6_378_249.1,   1 / 293.466),
-    "intl67": (6_378_157.5,   1 / 298.250),
+    "wgs84": (6_378_137.0, 1 / 298.257),
+    "grs80": (6_378_137.0, 1 / 298.257),
+    "intl24": (6_378_388.0, 1 / 297.000),
+    "ed50": (6_378_388.0, 1 / 297.000),
+    "sphere": (6_370_997.0, 0.0),
+    "normal": (1.0, 0.0),
+    "grs67": (6_378_160.0, 1 / 247.247),
+    "wgs72": (6_378_135.0, 1 / 298.260),
+    "wgs66": (6_378_145.0, 1 / 298.250),
+    "wgs60": (6_378_165.0, 1 / 298.300),
+    "clrk66": (6_378_206.4, 1 / 294.980),
+    "clrk80": (6_378_249.1, 1 / 293.466),
+    "intl67": (6_378_157.5, 1 / 298.250),
 }
 
 _K0 = 0.9996
@@ -57,6 +57,7 @@ _DEG2RAD = math.pi / 180.0
 # ---------------------------------------------------------------------------
 # Pure-Python WGS-84 implementation (no external dependency)
 # ---------------------------------------------------------------------------
+
 
 def _ll_to_utm_pure(
     lat: np.ndarray,
@@ -79,12 +80,12 @@ def _ll_to_utm_pure(
     sinL = np.sin(lat_r)
     tanL = np.tan(lat_r)
     cosL = np.cos(lat_r)
-    T = tanL ** 2
-    C = ep2 * cosL ** 2
+    T = tanL**2
+    C = ep2 * cosL**2
     A = (lon_r - lambda0) * cosL
-    A2 = A ** 2
-    A4 = A2 ** 2
-    S = sinL ** 2
+    A2 = A**2
+    A4 = A2**2
+    S = sinL**2
     N = a / np.sqrt(1 - e2 * S)
 
     M0 = 1 - e2 * 0.25 - e4 * 0.046875 - e6 * 0.01953125
@@ -99,13 +100,13 @@ def _ll_to_utm_pure(
     )
 
     X0 = A4 * A / 120
-    X1 = 5 - 18 * T + T ** 2 + 72 * C - 58 * ep2
+    X1 = 5 - 18 * T + T**2 + 72 * C - 58 * ep2
     X2 = A2 * A / 6
     X3 = 1 - T + C
     easting = N * (A + X3 * X2 + X1 * X0)
 
-    Y0 = 61 - 58 * T + T ** 2 + 600 * C - 330 * ep2
-    Y1 = 5 - T + 9 * C + 4 * C ** 2
+    Y0 = 61 - 58 * T + T**2 + 600 * C - 330 * ep2
+    Y1 = 5 - T + 9 * C + 4 * C**2
     northing = M + N * tanL * (A2 / 2 + Y1 * A4 / 24 + Y0 * A4 * A2 / 720)
 
     easting = easting * _K0 + _FALSE_EAST
@@ -147,37 +148,45 @@ def _utm_to_ll_pure(
     e1 = (1 - np.sqrt(1 - e2)) / (1 + np.sqrt(1 - e2))
     phi1 = (
         mu
-        + (1.5 * e1 - 27 / 32 * e1 ** 3) * np.sin(2 * mu)
-        + (21 / 16 * e1 ** 2 - 55 / 32 * e1 ** 4) * np.sin(4 * mu)
-        + 151 / 96 * e1 ** 3 * np.sin(6 * mu)
-        + 1097 / 512 * e1 ** 4 * np.sin(8 * mu)
+        + (1.5 * e1 - 27 / 32 * e1**3) * np.sin(2 * mu)
+        + (21 / 16 * e1**2 - 55 / 32 * e1**4) * np.sin(4 * mu)
+        + 151 / 96 * e1**3 * np.sin(6 * mu)
+        + 1097 / 512 * e1**4 * np.sin(8 * mu)
     )
 
     sin_phi1 = np.sin(phi1)
     cos_phi1 = np.cos(phi1)
     tan_phi1 = np.tan(phi1)
 
-    N1 = a / np.sqrt(1 - e2 * sin_phi1 ** 2)
-    T1 = tan_phi1 ** 2
-    C1 = ep2 * cos_phi1 ** 2
-    R1 = a * (1 - e2) / (1 - e2 * sin_phi1 ** 2) ** 1.5
+    N1 = a / np.sqrt(1 - e2 * sin_phi1**2)
+    T1 = tan_phi1**2
+    C1 = ep2 * cos_phi1**2
+    R1 = a * (1 - e2) / (1 - e2 * sin_phi1**2) ** 1.5
     D = x / (N1 * _K0)
-    D2 = D ** 2
-    D4 = D2 ** 2
+    D2 = D**2
+    D4 = D2**2
 
     lat = phi1 - (N1 * tan_phi1 / R1) * (
         D2 / 2
-        - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * ep2) * D4 / 24
-        + (61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * ep2 - 3 * C1 ** 2)
-        * D4 * D2 / 720
+        - (5 + 3 * T1 + 10 * C1 - 4 * C1**2 - 9 * ep2) * D4 / 24
+        + (61 + 90 * T1 + 298 * C1 + 45 * T1**2 - 252 * ep2 - 3 * C1**2)
+        * D4
+        * D2
+        / 720
     )
 
-    lon = lambda0 + (
-        D
-        - (1 + 2 * T1 + C1) * D2 * D / 6
-        + (5 - 2 * C1 + 28 * T1 - 3 * C1 ** 2 + 8 * ep2 + 24 * T1 ** 2)
-        * D4 * D / 120
-    ) / cos_phi1
+    lon = (
+        lambda0
+        + (
+            D
+            - (1 + 2 * T1 + C1) * D2 * D / 6
+            + (5 - 2 * C1 + 28 * T1 - 3 * C1**2 + 8 * ep2 + 24 * T1**2)
+            * D4
+            * D
+            / 120
+        )
+        / cos_phi1
+    )
 
     return lat / _DEG2RAD, lon / _DEG2RAD
 
@@ -185,6 +194,7 @@ def _utm_to_ll_pure(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def lonlat_to_utm(
     lon: float | np.ndarray,
@@ -247,18 +257,26 @@ def lonlat_to_utm(
 
     try:
         from pyproj import CRS, Transformer
+
         crs_ll = CRS.from_epsg(4326)
-        crs_utm = CRS.from_dict({
-            "proj": "utm", "zone": zone, "south": south_hemi,
-            "datum": "WGS84", "units": "m",
-        })
+        crs_utm = CRS.from_dict(
+            {
+                "proj": "utm",
+                "zone": zone,
+                "south": south_hemi,
+                "datum": "WGS84",
+                "units": "m",
+            }
+        )
         tf = Transformer.from_crs(crs_ll, crs_utm, always_xy=True)
         east, north = tf.transform(lon_arr, lat_arr)
         return np.asarray(east), np.asarray(north), zone, south_hemi
     except ImportError:
         pass
 
-    east, north = _ll_to_utm_pure(lat_arr, lon_arr, zone, south_hemi, ellipsoid)
+    east, north = _ll_to_utm_pure(
+        lat_arr, lon_arr, zone, south_hemi, ellipsoid
+    )
     return east, north, zone, south_hemi
 
 
@@ -308,11 +326,17 @@ def utm_to_lonlat(
 
     try:
         from pyproj import CRS, Transformer
+
         crs_ll = CRS.from_epsg(4326)
-        crs_utm = CRS.from_dict({
-            "proj": "utm", "zone": zone, "south": south_hemi,
-            "datum": "WGS84", "units": "m",
-        })
+        crs_utm = CRS.from_dict(
+            {
+                "proj": "utm",
+                "zone": zone,
+                "south": south_hemi,
+                "datum": "WGS84",
+                "units": "m",
+            }
+        )
         tf = Transformer.from_crs(crs_utm, crs_ll, always_xy=True)
         lon, lat = tf.transform(e_arr, n_arr)
         return np.asarray(lon, dtype=float), np.asarray(lat, dtype=float)

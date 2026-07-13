@@ -94,7 +94,9 @@ class InversionMesh(PyCSAMTObject, MetadataMixin):
         >>> InversionMesh.for_1d([10.0, 30.0]).z_centers.tolist()
         [10.0, 30.0]
         """
-        return cls(dimension="1d", x_centers=np.array([0.0]), z_centers=depths)
+        return cls(
+            dimension="1d", x_centers=np.array([0.0]), z_centers=depths
+        )
 
     def validate(self) -> None:
         if self.dimension not in {"1d", "2d", "3d"}:
@@ -157,7 +159,9 @@ def depth_widths(
         raise ValueError("depth_max must be positive.")
     if n_cells <= 0:
         raise ValueError("n_cells must be positive.")
-    min_cell = float(options.get("min_cell_size", max(depth_max / n_cells / 4.0, 1.0)))
+    min_cell = float(
+        options.get("min_cell_size", max(depth_max / n_cells / 4.0, 1.0))
+    )
     growth = float(options.get("growth_factor", 1.08))
     if min_cell <= 0.0:
         raise ValueError("min_cell_size must be positive.")
@@ -217,10 +221,14 @@ def build_1d_tensor_mesh(
     n_layers = int(getattr(start, "n_layers", len(start.resistivities)))
     thicknesses = np.asarray(start.thicknesses, dtype=float)
     n_cells = int(options.get("n_cells", max(32, n_layers * 12)))
-    depth_max = float(options.get(
-        "depth_max",
-        max(float(np.sum(thicknesses)) * 3.0, float(thicknesses[-1]) * 4.0),
-    ))
+    depth_max = float(
+        options.get(
+            "depth_max",
+            max(
+                float(np.sum(thicknesses)) * 3.0, float(thicknesses[-1]) * 4.0
+            ),
+        )
+    )
     widths = depth_widths(depth_max, n_cells, options)
     mesh = tensor_mesh_cls([widths], origin=options.get("origin", "0"))
     z_centers = np.cumsum(widths) - 0.5 * widths
@@ -366,7 +374,9 @@ def build_fd2d_grid(
     station_x = np.asarray(station_x, dtype=float)
     n_st = int(station_x.size)
     if n_st < 2:
-        raise ValueError("finite-difference 2-D inversion requires at least two stations.")
+        raise ValueError(
+            "finite-difference 2-D inversion requires at least two stations."
+        )
     x0 = float(np.nanmin(station_x))
     shifted = station_x - x0
     spread = float(np.nanmax(shifted))
@@ -374,11 +384,21 @@ def build_fd2d_grid(
         raise ValueError("station_x must span a non-zero profile length.")
     nx_core = int(options.get("nx", options.get("fd2d_nx", max(n_st - 1, 2))))
     n_pad = int(options.get("n_pad", options.get("fd2d_n_pad", 0)))
-    pad_factor = float(options.get("pad_factor", options.get("fd2d_pad_factor", 1.3)))
-    x_margin = float(options.get("x_margin", options.get("fd2d_x_margin", 0.05 * spread)))
-    x_max = float(options.get("x_max", options.get("fd2d_x_max", spread + 2.0 * x_margin)))
+    pad_factor = float(
+        options.get("pad_factor", options.get("fd2d_pad_factor", 1.3))
+    )
+    x_margin = float(
+        options.get("x_margin", options.get("fd2d_x_margin", 0.05 * spread))
+    )
+    x_max = float(
+        options.get(
+            "x_max", options.get("fd2d_x_max", spread + 2.0 * x_margin)
+        )
+    )
     if nx_core <= 0 or n_pad < 0:
-        raise ValueError("nx must be positive and n_pad must be non-negative.")
+        raise ValueError(
+            "nx must be positive and n_pad must be non-negative."
+        )
     dx_core = np.full(nx_core, x_max / nx_core, dtype=float)
     if n_pad > 0:
         make_padding_func = _resolve_make_padding(make_padding_func)
@@ -391,8 +411,12 @@ def build_fd2d_grid(
 
     thicknesses = np.asarray(start.thicknesses, dtype=float)
     dz_core = thicknesses.copy()
-    last = dz_core[-1] if dz_core.size else float(options.get("dz_min", 100.0))
-    dz_core = np.r_[dz_core, float(options.get("halfspace_thickness", 3.0 * last))]
+    last = (
+        dz_core[-1] if dz_core.size else float(options.get("dz_min", 100.0))
+    )
+    dz_core = np.r_[
+        dz_core, float(options.get("halfspace_thickness", 3.0 * last))
+    ]
     if n_pad > 0:
         make_padding_func = _resolve_make_padding(make_padding_func)
         dz_pad = make_padding_func(dz_core[-1], n_pad, pad_factor)

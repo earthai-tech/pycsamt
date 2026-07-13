@@ -1,4 +1,5 @@
 """Pipeline API configuration for pyCSAMT."""
+
 from .config import (
     PYCSAMT_PIPE,
     PipelineAPIConfig,

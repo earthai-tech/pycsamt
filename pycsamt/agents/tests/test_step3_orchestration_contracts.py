@@ -65,7 +65,9 @@ def test_context_and_orchestrator_use_registry_for_specific_workflows():
         assert orch_result["workflow_type"] == expected
 
 
-def test_orchestrator_returns_agent_result_contract_for_dry_run(tmp_path: Path):
+def test_orchestrator_returns_agent_result_contract_for_dry_run(
+    tmp_path: Path,
+):
     result = WorkflowOrchestratorAgent().execute(
         {
             "request": "QC the survey",

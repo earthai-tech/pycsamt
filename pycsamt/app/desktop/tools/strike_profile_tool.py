@@ -14,6 +14,7 @@ Usage
     dlg = StrikeProfileDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -43,15 +44,16 @@ _SORT_BY = ["auto", "lon", "lat", "name"]
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _ProfileWorker(QThread):
-    done  = Signal(object)   # Figure
+    done = Signal(object)  # Figure
     error = Signal(str)
 
     def __init__(self, sites, method: str, band, sort_by: str):
         super().__init__()
-        self._sites   = sites
-        self._method  = method
-        self._band    = band
+        self._sites = sites
+        self._method = method
+        self._band = band
         self._sort_by = sort_by
 
     def run(self):
@@ -59,6 +61,7 @@ class _ProfileWorker(QThread):
             from pycsamt.emtools.strike import (
                 plot_strike_profile,
             )
+
             set(plt.get_fignums())
             ax = plot_strike_profile(
                 self._sites,
@@ -75,6 +78,7 @@ class _ProfileWorker(QThread):
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
 
+
 class StrikeProfileDialog(QDialog):
     """
     Strike angle vs. station-position line plot.
@@ -90,7 +94,7 @@ class StrikeProfileDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Strike Profile Viewer")
         self.setMinimumSize(860, 480)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
         self._build_ui()
 

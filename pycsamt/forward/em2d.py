@@ -53,6 +53,7 @@ smooth, two-dimensional models from magnetotelluric data. *Geophysics*
 Wait, J.R. (1954). On the relation between telluric currents and the Earth's
 magnetic field. *Geophysics* 19, 281-289.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -69,12 +70,13 @@ __all__ = [
     "ForwardResponse2D",
 ]
 
-MU0: float = 4.0e-7 * np.pi   # H/m
+MU0: float = 4.0e-7 * np.pi  # H/m
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Output container
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class ForwardResponse2D:
@@ -105,15 +107,16 @@ class ForwardResponse2D:
     grid : Grid2D
         The model grid used for the forward run.
     """
-    freqs:      np.ndarray
+
+    freqs: np.ndarray
     stations_x: np.ndarray
-    zxy:        np.ndarray
-    zyx:        np.ndarray
-    rho_a_te:   np.ndarray
-    phase_te:   np.ndarray
-    rho_a_tm:   np.ndarray
-    phase_tm:   np.ndarray
-    grid:       Grid2D = field(repr=False)
+    zxy: np.ndarray
+    zyx: np.ndarray
+    rho_a_te: np.ndarray
+    phase_te: np.ndarray
+    rho_a_tm: np.ndarray
+    phase_tm: np.ndarray
+    grid: Grid2D = field(repr=False)
 
     # ─── convenience ─────────────────────────────────────────────────────
 
@@ -166,14 +169,18 @@ class ForwardResponse2D:
         ndarray, shape (n_stations, n_features)
         """
         parts = []
-        for mode_key in (["te"] if mode == "te"
-                         else ["tm"] if mode == "tm"
-                         else ["te", "tm"]):
-            rho = getattr(self, f"rho_a_{mode_key}")    # (n_freqs, n_stations)
+        for mode_key in (
+            ["te"]
+            if mode == "te"
+            else ["tm"]
+            if mode == "tm"
+            else ["te", "tm"]
+        ):
+            rho = getattr(self, f"rho_a_{mode_key}")  # (n_freqs, n_stations)
             phi = getattr(self, f"phase_{mode_key}")
             if log_rho:
                 rho = np.log10(np.maximum(rho, 1e-12))
-            parts.append(rho.T)        # (n_stations, n_freqs)
+            parts.append(rho.T)  # (n_stations, n_freqs)
             if include_phase:
                 parts.append(phi.T)
         return np.concatenate(parts, axis=1)
@@ -200,6 +207,7 @@ class ForwardResponse2D:
         axes : ndarray of Axes, shape (2,)
         """
         import matplotlib.pyplot as plt
+
         if ax is None:
             fig, ax = plt.subplots(2, 1, figsize=figsize, sharex=True)
         per = self.periods
@@ -223,6 +231,7 @@ class ForwardResponse2D:
 # ─────────────────────────────────────────────────────────────────────────────
 # 1-D MT helpers (boundary conditions)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _z1d_column(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
     """Surface impedance for a 1-D column profile."""
@@ -299,6 +308,7 @@ def _hy_1d_profile(
 # FD matrix assemblers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _node_index(i: int, j: int, nx1: int) -> int:
     """Global node index from row i (depth) and column j (x)."""
     return i * nx1 + j
@@ -318,12 +328,12 @@ def _assemble_te(
     -------
     A : scipy.sparse.csr_matrix, shape (n_nodes, n_nodes)
     """
-    dx = grid.dx        # (nx,)
-    dz = grid.dz        # (nz,)
+    dx = grid.dx  # (nx,)
+    dz = grid.dz  # (nz,)
     nx, nz = grid.nx, grid.nz
     nx1 = nx + 1
     nz1 = nz + 1
-    n   = nx1 * nz1
+    n = nx1 * nz1
 
     rows, cols, vals = [], [], []
 
@@ -337,56 +347,70 @@ def _assemble_te(
 
             # Boundary nodes — leave for caller to overwrite
             if i == 0 or i == nz or j == 0 or j == nx:
-                rows.append(k); cols.append(k); vals.append(1.0)
+                rows.append(k)
+                cols.append(k)
+                vals.append(1.0)
                 continue
 
             # ── x-direction second difference ──────────────────────────
-            dx_l = dx[j - 1]   # cell to the left  of node j
-            dx_r = dx[j]       # cell to the right of node j
+            dx_l = dx[j - 1]  # cell to the left  of node j
+            dx_r = dx[j]  # cell to the right of node j
             dx_avg = 0.5 * (dx_l + dx_r)
 
-            c_xr =  1.0 / (dx_r * dx_avg)
-            c_xl =  1.0 / (dx_l * dx_avg)
+            c_xr = 1.0 / (dx_r * dx_avg)
+            c_xl = 1.0 / (dx_l * dx_avg)
             c_xc = -(c_xr + c_xl)
 
             # ── z-direction second difference ──────────────────────────
-            dz_u = dz[i - 1]   # cell above node i
-            dz_d = dz[i]       # cell below node i
+            dz_u = dz[i - 1]  # cell above node i
+            dz_d = dz[i]  # cell below node i
             dz_avg = 0.5 * (dz_u + dz_d)
 
-            c_zd =  1.0 / (dz_d * dz_avg)
-            c_zu =  1.0 / (dz_u * dz_avg)
+            c_zd = 1.0 / (dz_d * dz_avg)
+            c_zu = 1.0 / (dz_u * dz_avg)
             c_zc = -(c_zd + c_zu)
 
             # ── reaction term iωμ₀σ ────────────────────────────────────
             # Average conductivity over the four surrounding cells
             s_tl = sigma[i - 1, j - 1]
-            s_tr = sigma[i - 1, j    ]
-            s_bl = sigma[i,     j - 1]
-            s_br = sigma[i,     j    ]
+            s_tr = sigma[i - 1, j]
+            s_bl = sigma[i, j - 1]
+            s_br = sigma[i, j]
             # Area-weighted average of σ at this node
             a_tl = dx_l * dz_u
             a_tr = dx_r * dz_u
             a_bl = dx_l * dz_d
             a_br = dx_r * dz_d
             a_tot = a_tl + a_tr + a_bl + a_br
-            sigma_n = (a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br) / a_tot
+            sigma_n = (
+                a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br
+            ) / a_tot
             react = 1j * omega * MU0 * sigma_n
 
             # ── diagonal ───────────────────────────────────────────────
             diag = c_xc + c_zc - react
-            rows.append(k); cols.append(k); vals.append(diag)
+            rows.append(k)
+            cols.append(k)
+            vals.append(diag)
 
             # ── off-diagonal ───────────────────────────────────────────
-            k_xr = _node_index(i,     j + 1, nx1)
-            k_xl = _node_index(i,     j - 1, nx1)
-            k_zd = _node_index(i + 1, j,     nx1)
-            k_zu = _node_index(i - 1, j,     nx1)
+            k_xr = _node_index(i, j + 1, nx1)
+            k_xl = _node_index(i, j - 1, nx1)
+            k_zd = _node_index(i + 1, j, nx1)
+            k_zu = _node_index(i - 1, j, nx1)
 
-            rows.append(k); cols.append(k_xr); vals.append(c_xr)
-            rows.append(k); cols.append(k_xl); vals.append(c_xl)
-            rows.append(k); cols.append(k_zd); vals.append(c_zd)
-            rows.append(k); cols.append(k_zu); vals.append(c_zu)
+            rows.append(k)
+            cols.append(k_xr)
+            vals.append(c_xr)
+            rows.append(k)
+            cols.append(k_xl)
+            vals.append(c_xl)
+            rows.append(k)
+            cols.append(k_zd)
+            vals.append(c_zd)
+            rows.append(k)
+            cols.append(k_zu)
+            vals.append(c_zu)
 
     return sparse.csr_matrix(
         (vals, (rows, cols)), shape=(n, n), dtype=complex
@@ -412,12 +436,12 @@ def _assemble_tm(
     -------
     A : scipy.sparse.csr_matrix, shape (n_nodes, n_nodes)
     """
-    dx  = grid.dx
-    dz  = grid.dz
-    rho = grid.resistivity    # (nz, nx)  — use resistivity, not conductivity
+    dx = grid.dx
+    dz = grid.dz
+    rho = grid.resistivity  # (nz, nx)  — use resistivity, not conductivity
     nx, nz = grid.nx, grid.nz
     nx1 = nx + 1
-    n   = nx1 * (nz + 1)
+    n = nx1 * (nz + 1)
 
     rows, cols, vals = [], [], []
 
@@ -427,15 +451,17 @@ def _assemble_tm(
 
             # Boundary nodes — placeholder; overwritten by _apply_dirichlet
             if i == 0 or i == nz or j == 0 or j == nx:
-                rows.append(k); cols.append(k); vals.append(1.0)
+                rows.append(k)
+                cols.append(k)
+                vals.append(1.0)
                 continue
 
             # Cell sizes adjacent to node (i, j):
             #   row i-1 (above), row i (below), col j-1 (left), col j (right)
-            dx_l  = dx[j - 1]
-            dx_r  = dx[j]
-            dz_u  = dz[i - 1]
-            dz_d  = dz[i]
+            dx_l = dx[j - 1]
+            dx_r = dx[j]
+            dz_u = dz[i - 1]
+            dz_d = dz[i]
             dx_avg = 0.5 * (dx_l + dx_r)
             dz_avg = 0.5 * (dz_u + dz_d)
 
@@ -455,28 +481,38 @@ def _assemble_tm(
             rho_zu = 0.5 * (rho[i - 1, j - 1] + rho[i - 1, j])
 
             # ── FD coefficients ──────────────────────────────────────────
-            c_xr = rho_xr / (dx_r  * dx_avg)
-            c_xl = rho_xl / (dx_l  * dx_avg)
+            c_xr = rho_xr / (dx_r * dx_avg)
+            c_xl = rho_xl / (dx_l * dx_avg)
             c_xc = -(c_xr + c_xl)
 
-            c_zd = rho_zd / (dz_d  * dz_avg)
-            c_zu = rho_zu / (dz_u  * dz_avg)
+            c_zd = rho_zd / (dz_d * dz_avg)
+            c_zu = rho_zu / (dz_u * dz_avg)
             c_zc = -(c_zd + c_zu)
 
             # Reaction term:  ∂/∂x(ρ…) + ∂/∂z(ρ…) = iωμ₀ H_y
             diag = c_xc + c_zc - 1j * omega * MU0
 
-            rows.append(k); cols.append(k); vals.append(diag)
+            rows.append(k)
+            cols.append(k)
+            vals.append(diag)
 
-            k_xr = _node_index(i,     j + 1, nx1)
-            k_xl = _node_index(i,     j - 1, nx1)
-            k_zd = _node_index(i + 1, j,     nx1)
-            k_zu = _node_index(i - 1, j,     nx1)
+            k_xr = _node_index(i, j + 1, nx1)
+            k_xl = _node_index(i, j - 1, nx1)
+            k_zd = _node_index(i + 1, j, nx1)
+            k_zu = _node_index(i - 1, j, nx1)
 
-            rows.append(k); cols.append(k_xr); vals.append(c_xr)
-            rows.append(k); cols.append(k_xl); vals.append(c_xl)
-            rows.append(k); cols.append(k_zd); vals.append(c_zd)
-            rows.append(k); cols.append(k_zu); vals.append(c_zu)
+            rows.append(k)
+            cols.append(k_xr)
+            vals.append(c_xr)
+            rows.append(k)
+            cols.append(k_xl)
+            vals.append(c_xl)
+            rows.append(k)
+            cols.append(k_zd)
+            vals.append(c_zd)
+            rows.append(k)
+            cols.append(k_zu)
+            vals.append(c_zu)
 
     return sparse.csr_matrix(
         (vals, (rows, cols)), shape=(n, n), dtype=complex
@@ -486,6 +522,7 @@ def _assemble_tm(
 # ─────────────────────────────────────────────────────────────────────────────
 # Boundary condition builders
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _bc_te(grid: Grid2D, omega: float) -> np.ndarray:
     """Return the Dirichlet BC vector for the TE mode.
@@ -498,8 +535,8 @@ def _bc_te(grid: Grid2D, omega: float) -> np.ndarray:
     """
     nx, nz = grid.nx, grid.nz
     nx1 = nx + 1
-    n   = nx1 * (nz + 1)
-    b   = np.zeros(n, dtype=complex)
+    n = nx1 * (nz + 1)
+    b = np.zeros(n, dtype=complex)
 
     z_nodes = grid.z_nodes
 
@@ -536,8 +573,8 @@ def _bc_tm(grid: Grid2D, omega: float) -> np.ndarray:
     """
     nx, nz = grid.nx, grid.nz
     nx1 = nx + 1
-    n   = nx1 * (nz + 1)
-    b   = np.zeros(n, dtype=complex)
+    n = nx1 * (nz + 1)
+    b = np.zeros(n, dtype=complex)
 
     z_nodes = grid.z_nodes
 
@@ -566,11 +603,12 @@ def _bc_tm(grid: Grid2D, omega: float) -> np.ndarray:
 # Surface field extraction
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _surface_impedance_te(
-    ey_surface: np.ndarray,    # E_y at z=0, shape (nx+1,)
-    ey_below:   np.ndarray,    # E_y at z=dz[0], shape (nx+1,)
-    dz0:        float,
-    omega:      float,
+    ey_surface: np.ndarray,  # E_y at z=0, shape (nx+1,)
+    ey_below: np.ndarray,  # E_y at z=dz[0], shape (nx+1,)
+    dz0: float,
+    omega: float,
 ) -> np.ndarray:
     """Compute Z_xy = E_y / H_x at the surface nodes.
 
@@ -592,12 +630,12 @@ def _surface_impedance_te(
 
 
 def _surface_impedance_tm(
-    hy_surface: np.ndarray,    # H_y at z=0, shape (nx+1,)
-    hy_below:   np.ndarray,    # H_y at z=dz[0], shape (nx+1,)
-    sigma_top:  np.ndarray,    # σ of top-row cells, shape (nx,)
-    dx:         np.ndarray,    # cell widths, shape (nx,)
-    dz0:        float,
-    omega:      float,
+    hy_surface: np.ndarray,  # H_y at z=0, shape (nx+1,)
+    hy_below: np.ndarray,  # H_y at z=dz[0], shape (nx+1,)
+    sigma_top: np.ndarray,  # σ of top-row cells, shape (nx,)
+    dx: np.ndarray,  # cell widths, shape (nx,)
+    dz0: float,
+    omega: float,
 ) -> np.ndarray:
     """Compute Z_yx = −E_x / H_y at the surface nodes.
 
@@ -613,12 +651,12 @@ def _surface_impedance_tm(
 
     # σ at nodes: average of left/right cells (edge nodes get one side)
     sigma_nodes = np.empty(len(dx) + 1)
-    sigma_nodes[0]    = sigma_top[0]
+    sigma_nodes[0] = sigma_top[0]
     sigma_nodes[1:-1] = 0.5 * (sigma_top[:-1] + sigma_top[1:])
-    sigma_nodes[-1]   = sigma_top[-1]
+    sigma_nodes[-1] = sigma_top[-1]
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        Ex  = np.where(sigma_nodes > 0.0, dHy_dz / sigma_nodes, 0.0 + 0j)
+        Ex = np.where(sigma_nodes > 0.0, dHy_dz / sigma_nodes, 0.0 + 0j)
         Zyx = np.where(np.abs(hy_surface) > 1e-30, -Ex / hy_surface, 0.0 + 0j)
     return Zyx
 
@@ -645,9 +683,9 @@ def _z_to_rho_phase(
 
 
 def _interpolate_to_stations(
-    surface_field: np.ndarray,   # shape (nx+1,) — node values
-    x_nodes:       np.ndarray,   # shape (nx+1,)
-    x_stations:    np.ndarray,   # shape (n_stations,)
+    surface_field: np.ndarray,  # shape (nx+1,) — node values
+    x_nodes: np.ndarray,  # shape (nx+1,)
+    x_stations: np.ndarray,  # shape (n_stations,)
 ) -> np.ndarray:
     """Linear interpolation of a surface node field to station positions."""
     return np.interp(x_stations, x_nodes, surface_field)
@@ -656,6 +694,7 @@ def _interpolate_to_stations(
 # ─────────────────────────────────────────────────────────────────────────────
 # Main forward class
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class MT2DForward:
     """
@@ -707,8 +746,8 @@ class MT2DForward:
         *,
         verbose: bool = True,
     ):
-        self.freqs   = np.asarray(freqs, dtype=float)
-        self.grid    = grid
+        self.freqs = np.asarray(freqs, dtype=float)
+        self.grid = grid
         self.verbose = verbose
 
     def run(self) -> ForwardResponse2D:
@@ -718,18 +757,18 @@ class MT2DForward:
         -------
         ForwardResponse2D
         """
-        grid    = self.grid
-        freqs   = self.freqs
-        nf      = len(freqs)
-        ns      = grid.n_stations
-        nx1     = grid.nx + 1
+        grid = self.grid
+        freqs = self.freqs
+        nf = len(freqs)
+        ns = grid.n_stations
+        nx1 = grid.nx + 1
         x_nodes = grid.x_nodes
-        dz0     = grid.dz[0]
+        dz0 = grid.dz[0]
 
         zxy_all = np.zeros((nf, ns), dtype=complex)
         zyx_all = np.zeros((nf, ns), dtype=complex)
 
-        sigma_top = grid.conductivity[0, :]   # top cell row
+        sigma_top = grid.conductivity[0, :]  # top cell row
 
         for fi, freq in enumerate(freqs):
             omega = 2.0 * np.pi * freq
@@ -742,12 +781,14 @@ class MT2DForward:
             b_te = _bc_te(grid, omega)
             A_te, b_te = _apply_dirichlet(A_te, b_te, grid)
             ey_flat = spsolve(A_te, b_te)
-            ey_grid = ey_flat.reshape(grid.nz + 1, nx1)    # (nz+1, nx+1)
+            ey_grid = ey_flat.reshape(grid.nz + 1, nx1)  # (nz+1, nx+1)
 
-            ey_surf  = ey_grid[0, :]
+            ey_surf = ey_grid[0, :]
             ey_below = ey_grid[1, :]
             Zxy_nodes = _surface_impedance_te(ey_surf, ey_below, dz0, omega)
-            Zxy_st    = _interpolate_to_stations(Zxy_nodes, x_nodes, grid.x_stations)
+            Zxy_st = _interpolate_to_stations(
+                Zxy_nodes, x_nodes, grid.x_stations
+            )
             zxy_all[fi, :] = Zxy_st
 
             # ── TM mode ──────────────────────────────────────────────────
@@ -757,19 +798,25 @@ class MT2DForward:
             hy_flat = spsolve(A_tm, b_tm)
             hy_grid = hy_flat.reshape(grid.nz + 1, nx1)
 
-            hy_surf  = hy_grid[0, :]
+            hy_surf = hy_grid[0, :]
             hy_below = hy_grid[1, :]
             Zyx_nodes = _surface_impedance_tm(
                 hy_surf, hy_below, sigma_top, grid.dx, dz0, omega
             )
-            Zyx_st = _interpolate_to_stations(Zyx_nodes, x_nodes, grid.x_stations)
+            Zyx_st = _interpolate_to_stations(
+                Zyx_nodes, x_nodes, grid.x_stations
+            )
             zyx_all[fi, :] = Zyx_st
 
         if self.verbose:
             print(f"  [MT2D] {nf} frequencies done.          ")
 
-        rho_a_te, phase_te = _z_to_rho_phase(zxy_all, 2.0 * np.pi * freqs[:, None])
-        rho_a_tm, phase_tm = _z_to_rho_phase(zyx_all, 2.0 * np.pi * freqs[:, None])
+        rho_a_te, phase_te = _z_to_rho_phase(
+            zxy_all, 2.0 * np.pi * freqs[:, None]
+        )
+        rho_a_tm, phase_tm = _z_to_rho_phase(
+            zyx_all, 2.0 * np.pi * freqs[:, None]
+        )
 
         return ForwardResponse2D(
             freqs=freqs,
@@ -787,6 +834,7 @@ class MT2DForward:
 # ─────────────────────────────────────────────────────────────────────────────
 # Dirichlet enforcement
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _apply_dirichlet(
     A: sparse.csr_matrix,
@@ -806,15 +854,15 @@ def _apply_dirichlet(
     """
     nx, nz = grid.nx, grid.nz
     nx1 = nx + 1
-    n   = nx1 * (nz + 1)
+    n = nx1 * (nz + 1)
 
     # Identify boundary node indices
     bc_mask = np.zeros(n, dtype=bool)
     for j in range(nx1):
-        bc_mask[_node_index(0,  j,  nx1)] = True
-        bc_mask[_node_index(nz, j,  nx1)] = True
+        bc_mask[_node_index(0, j, nx1)] = True
+        bc_mask[_node_index(nz, j, nx1)] = True
     for i in range(nz + 1):
-        bc_mask[_node_index(i, 0,  nx1)] = True
+        bc_mask[_node_index(i, 0, nx1)] = True
         bc_mask[_node_index(i, nx, nx1)] = True
 
     bc_indices = np.where(bc_mask)[0]

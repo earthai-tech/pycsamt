@@ -22,6 +22,7 @@ from ._registry import StepSpec, lookup_step
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_figure(obj: Any) -> Any:
     """Return a :class:`matplotlib.figure.Figure` from *obj*.
 
@@ -31,6 +32,7 @@ def _to_figure(obj: Any) -> Any:
     """
     try:
         import matplotlib.figure as _mf
+
         if isinstance(obj, _mf.Figure):
             return obj
         get_fig = getattr(obj, "get_figure", None)
@@ -46,6 +48,7 @@ def _to_figure(obj: Any) -> Any:
 # ---------------------------------------------------------------------------
 # Step
 # ---------------------------------------------------------------------------
+
 
 class Step:
     """A configured pipeline step.
@@ -141,6 +144,7 @@ class Step:
 # ---------------------------------------------------------------------------
 # StepResult
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class StepResult:

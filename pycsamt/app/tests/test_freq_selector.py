@@ -15,6 +15,7 @@ from pycsamt.app.desktop.widgets.freq_selector import (
 
 # ── _RangeSlider unit tests ───────────────────────────────────────────────
 
+
 def test_range_slider_creates(qapp):
     s = _RangeSlider(0.001, 1000.0)
     assert s is not None
@@ -38,7 +39,7 @@ def test_range_slider_set_selection(qapp):
 
 def test_range_slider_selection_clamped_to_range(qapp):
     s = _RangeSlider(1.0, 100.0)
-    s.set_selection(0.001, 99999.0)   # outside range
+    s.set_selection(0.001, 99999.0)  # outside range
     assert s.lo_hz >= 1.0
     assert s.hi_hz <= 100.0
     s.close()
@@ -68,6 +69,7 @@ def test_range_slider_emits_signal(qapp):
 
 
 # ── FreqSelector widget tests ─────────────────────────────────────────────
+
 
 @pytest.fixture
 def sel(qapp):
@@ -126,6 +128,7 @@ def test_freq_selector_range_changed_signal(sel):
 # The widget displays log10 values with a Hz/period toggle; the old
 # unit-suffix formatters (_fmt_freq/_fmt_period) were removed.
 
+
 def test_fmt_log10_integer_decade(sel):
     assert sel._fmt_log10(1000.0) == "3"
     assert sel._fmt_log10(0.001) == "-3"
@@ -133,6 +136,7 @@ def test_fmt_log10_integer_decade(sel):
 
 def test_fmt_log10_fractional(sel):
     import math
+
     assert sel._fmt_log10(50.0) == f"{math.log10(50.0):.2f}"
 
 

@@ -15,12 +15,7 @@ from pycsamt.tdem import (
 )
 from pycsamt.tdem.io import read_temavg
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 AVG_FILE = DATA_DIR / "TEM100.AVG"
 
 pytestmark = pytest.mark.skipif(

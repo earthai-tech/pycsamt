@@ -13,6 +13,7 @@ Usage
     dlg = PhaseTensorMapDialog(sites, parent=self)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -44,20 +45,28 @@ _TIPPER_COMP = ["real", "imag", "amplitude"]
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 class _MapWorker(QThread):
-    done  = Signal(object)   # Figure
+    done = Signal(object)  # Figure
     error = Signal(str)
 
-    def __init__(self, sites, period: float, c_by: str,
-                 show_tipper: bool, tipper_conv: str, tipper_comp: str,
-                 station_labels: bool):
+    def __init__(
+        self,
+        sites,
+        period: float,
+        c_by: str,
+        show_tipper: bool,
+        tipper_conv: str,
+        tipper_comp: str,
+        station_labels: bool,
+    ):
         super().__init__()
-        self._sites         = sites
-        self._period        = period
-        self._c_by          = c_by
-        self._show_tipper   = show_tipper
-        self._tipper_conv   = tipper_conv
-        self._tipper_comp   = tipper_comp
+        self._sites = sites
+        self._period = period
+        self._c_by = c_by
+        self._show_tipper = show_tipper
+        self._tipper_conv = tipper_conv
+        self._tipper_comp = tipper_comp
         self._station_labels = station_labels
 
     def run(self):
@@ -65,6 +74,7 @@ class _MapWorker(QThread):
             from pycsamt.emtools.tensor import (
                 plot_phase_tensor_map,
             )
+
             set(plt.get_fignums())
             ax = plot_phase_tensor_map(
                 self._sites,
@@ -84,6 +94,7 @@ class _MapWorker(QThread):
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
 
+
 class PhaseTensorMapDialog(QDialog):
     """
     Geographic phase-tensor ellipse map at a single period.
@@ -99,7 +110,7 @@ class PhaseTensorMapDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Phase Tensor Map")
         self.setMinimumSize(920, 640)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
         self._build_ui()
 

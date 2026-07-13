@@ -93,9 +93,7 @@ def index_doc_file(
     prio = priority_for(rel_path)
     chunks: list[RAGChunk] = []
 
-    for idx, (title, body) in enumerate(
-        split_sections(text, suffix)
-    ):
+    for idx, (title, body) in enumerate(split_sections(text, suffix)):
         if len(body) < _MIN_SECTION_CHARS and not title:
             continue
         header = f"{title}\n\n" if title else ""

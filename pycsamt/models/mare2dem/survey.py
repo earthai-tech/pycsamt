@@ -54,6 +54,7 @@ __all__ = [
 # Survey configuration dataclasses
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MTSurveyConfig:
     """MT receiver and data-selection configuration.
@@ -94,9 +95,7 @@ class MTSurveyConfig:
     frequencies: np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=float)
     )
-    rx_y: np.ndarray = field(
-        default_factory=lambda: np.empty(0, dtype=float)
-    )
+    rx_y: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     rx_type: str = "marine"
     rx_z: np.ndarray | None = None
     rx_z_offset: float | np.ndarray | None = None
@@ -167,9 +166,7 @@ class CSEMSurveyConfig:
     frequencies: np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=float)
     )
-    tx_y: np.ndarray = field(
-        default_factory=lambda: np.empty(0, dtype=float)
-    )
+    tx_y: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     rx_y: np.ndarray | None = None
     rx_r: np.ndarray | None = None
     tx_z: np.ndarray | None = None
@@ -200,6 +197,7 @@ class CSEMSurveyConfig:
 # ---------------------------------------------------------------------------
 # Internal geometry helpers
 # ---------------------------------------------------------------------------
+
 
 def _broadcast(val: Any, n: int) -> np.ndarray:
     """Broadcast a scalar or 1-D array to length *n*."""
@@ -300,6 +298,7 @@ def _place_transmitters(
 # MT data builder
 # ---------------------------------------------------------------------------
 
+
 def _build_mt_config(
     topo: Any,
     mt: MTSurveyConfig,
@@ -308,7 +307,9 @@ def _build_mt_config(
     y_rx = np.asarray(mt.rx_y, dtype=float).ravel()
     n_rx = len(y_rx)
     x_rx, z_rx, theta, alpha, beta = _place_receivers(
-        topo, y_rx, mt.rx_type,
+        topo,
+        y_rx,
+        mt.rx_type,
         rx_z=mt.rx_z,
         rx_z_offset=mt.rx_z_offset,
         rx_beta=mt.rx_beta,
@@ -322,15 +323,21 @@ def _build_mt_config(
     if mt.rx_type in ("land", "amphibious"):
         tilted = np.where(beta != 0)[0]
         for idx in tilted:
-            hrx = np.array([x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0])
+            hrx = np.array(
+                [x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0]
+            )
             extra_rx.append(hrx)
-            base_name = (mt.rx_name[idx] if mt.rx_name and idx < len(mt.rx_name)
-                         else f"MT{idx + 1}")
+            base_name = (
+                mt.rx_name[idx]
+                if mt.rx_name and idx < len(mt.rx_name)
+                else f"MT{idx + 1}"
+            )
             extra_names.append(f"{base_name}_B")
             irx_mag[idx] = n_rx + len(extra_rx) - 1
 
-    rx_arr = np.column_stack([x_rx, y_rx, z_rx, theta, alpha, beta,
-                               np.zeros(n_rx), np.zeros(n_rx)])
+    rx_arr = np.column_stack(
+        [x_rx, y_rx, z_rx, theta, alpha, beta, np.zeros(n_rx), np.zeros(n_rx)]
+    )
     if extra_rx:
         rx_arr = np.vstack([rx_arr, np.array(extra_rx)])
 
@@ -351,16 +358,24 @@ def _build_mt_config(
     nf = len(freqs)
     rows: list[list[float]] = []
     data_codes_map = {
-        "lTE":            [(123, True), (104, False)],  # True = use irx_mag for H
-        "lTM":            [(125, True), (106, False)],
-        "lZDet":          [(129, True), (110, False)],
-        "lTipperRealImag":[(133, True), (134, True)],
-        "lTipper":        [(135, True), (136, True)],
-        "lMTFields":      [
-            (151, False), (152, False), (153, False), (154, False),
-            (155, False), (156, False),
-            (161, False), (162, False), (163, False), (164, False),
-            (165, False), (166, False),
+        "lTE": [(123, True), (104, False)],  # True = use irx_mag for H
+        "lTM": [(125, True), (106, False)],
+        "lZDet": [(129, True), (110, False)],
+        "lTipperRealImag": [(133, True), (134, True)],
+        "lTipper": [(135, True), (136, True)],
+        "lMTFields": [
+            (151, False),
+            (152, False),
+            (153, False),
+            (154, False),
+            (155, False),
+            (156, False),
+            (161, False),
+            (162, False),
+            (163, False),
+            (164, False),
+            (165, False),
+            (166, False),
         ],
     }
 
@@ -380,13 +395,16 @@ def _build_mt_config(
                     else:
                         rows.append([code, ifreq, e_idx, e_idx, 0.0, 0.0])
 
-    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    data = (
+        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    )
     return mt_cfg, data
 
 
 # ---------------------------------------------------------------------------
 # CSEM data builder
 # ---------------------------------------------------------------------------
+
 
 def _build_csem_config(
     topo: Any,
@@ -399,7 +417,8 @@ def _build_csem_config(
 
     # Transmitters
     txs, tx_types = _place_transmitters(
-        topo, y_tx,
+        topo,
+        y_tx,
         tx_z=csem.tx_z,
         tx_z_offset=csem.tx_z_offset,
         tx_azimuth=csem.tx_azimuth,
@@ -418,16 +437,17 @@ def _build_csem_config(
         r_rx = np.asarray(csem.rx_r, dtype=float).ravel()
         n_rx_per_tx = len(r_rx)
         tow_sign = np.sign(np.mean(np.diff(y_tx))) if len(y_tx) > 1 else 1
-        y_rx = (
-            np.repeat(y_tx, n_rx_per_tx)
-            - tow_sign * np.tile(r_rx, len(y_tx))
+        y_rx = np.repeat(y_tx, n_rx_per_tx) - tow_sign * np.tile(
+            r_rx, len(y_tx)
         )
     else:
         y_rx = np.asarray(csem.rx_y, dtype=float).ravel()
 
     n_rx = len(y_rx)
     x_rx, z_rx, theta_rx, alpha_rx, beta_rx = _place_receivers(
-        topo, y_rx, csem.rx_type,
+        topo,
+        y_rx,
+        csem.rx_type,
         rx_z=csem.rx_z,
         rx_z_offset=csem.rx_z_offset,
         rx_beta=csem.rx_beta,
@@ -440,16 +460,27 @@ def _build_csem_config(
     if has_b and csem.rx_type in ("land", "amphibious"):
         tilted = np.where(beta_rx != 0)[0]
         for idx in tilted:
-            hrx = np.array([x_rx[idx], y_rx[idx], z_rx[idx],
-                             0.0, 0.0, 0.0, 0.0, 0.0])
+            hrx = np.array(
+                [x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0]
+            )
             extra_rx.append(hrx)
             irx_mag[idx] = n_rx + len(extra_rx) - 1
     elif not has_b:
         # drop duplicate H receivers
         pass
 
-    rx_arr = np.column_stack([x_rx, y_rx, z_rx, theta_rx, alpha_rx, beta_rx,
-                               np.zeros(n_rx), np.zeros(n_rx)])
+    rx_arr = np.column_stack(
+        [
+            x_rx,
+            y_rx,
+            z_rx,
+            theta_rx,
+            alpha_rx,
+            beta_rx,
+            np.zeros(n_rx),
+            np.zeros(n_rx),
+        ]
+    )
     if extra_rx:
         rx_arr = np.vstack([rx_arr, np.array(extra_rx)])
 
@@ -487,7 +518,11 @@ def _build_csem_config(
                 irx = _irx_local + 1  # 1-based
                 if towed:
                     n_rx_per_tx_local = n_rx // n_tx
-                    irx = (_irx_local % n_rx_per_tx_local) + (itx - 1) * n_rx_per_tx_local + 1
+                    irx = (
+                        (_irx_local % n_rx_per_tx_local)
+                        + (itx - 1) * n_rx_per_tx_local
+                        + 1
+                    )
 
                 # range check
                 tx_pos = txs[itx - 1, :3]
@@ -507,7 +542,9 @@ def _build_csem_config(
                         rows.append([amp_code, ifreq, itx, irx_b, 0.0, 0.0])
                         rows.append([phase_code, ifreq, itx, irx_b, 0.0, 0.0])
 
-    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    data = (
+        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    )
 
     csem_cfg = CSEMConfig(
         phase_convention=csem.phase_convention,
@@ -524,6 +561,7 @@ def _build_csem_config(
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def make_data_file(
     out_file: str | Path,
@@ -593,8 +631,7 @@ def make_data_file(
             all_data.append(csem_data)
 
     em.data = (
-        np.vstack(all_data) if all_data
-        else np.empty((0, 6), dtype=float)
+        np.vstack(all_data) if all_data else np.empty((0, 6), dtype=float)
     )
 
     write_emdata(em, out_file)

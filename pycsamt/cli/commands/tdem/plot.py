@@ -36,7 +36,8 @@ _KINDS = [
     metavar="SURVEY_DIR",
 )
 @click.option(
-    "--kind", "-k",
+    "--kind",
+    "-k",
     type=click.Choice(_KINDS, case_sensitive=False),
     default="decay",
     show_default=True,
@@ -74,7 +75,8 @@ _KINDS = [
     help="TEMAVG component column for sounding extraction.",
 )
 @click.option(
-    "--output-dir", "-o",
+    "--output-dir",
+    "-o",
     "output_dir",
     type=click.Path(file_okay=False, writable=True, path_type=Path),
     default=None,
@@ -157,8 +159,7 @@ def plot(
     import matplotlib.pyplot as plt  # noqa: PLC0415
 
     stems_list = (
-        [s.strip() for s in stems.split(",") if s.strip()]
-        if stems else None
+        [s.strip() for s in stems.split(",") if s.strip()] if stems else None
     )
 
     survey = _get_survey(survey_dir, pattern=pattern, verbose=verbose)
@@ -201,21 +202,31 @@ def plot(
 
         elif kind == "section":
             avg_data = (
-                {s: survey.avg_files[s] for s in stems_list
-                 if s in survey.avg_files}
-                if stems_list else survey.avg_files
+                {
+                    s: survey.avg_files[s]
+                    for s in stems_list
+                    if s in survey.avg_files
+                }
+                if stems_list
+                else survey.avg_files
             )
             if not avg_data:
-                click.echo("No AVG data available for section plot.", err=True)
+                click.echo(
+                    "No AVG data available for section plot.", err=True
+                )
                 sys.exit(1)
             first_avg = next(iter(avg_data.values()))
             ax_or_axes = _tdem_plot.plot_temavg_section(first_avg)
 
         elif kind == "z-section":
             z_data = (
-                {s: survey.z_files[s] for s in stems_list
-                 if s in survey.z_files}
-                if stems_list else survey.z_files
+                {
+                    s: survey.z_files[s]
+                    for s in stems_list
+                    if s in survey.z_files
+                }
+                if stems_list
+                else survey.z_files
             )
             if not z_data:
                 click.echo(
@@ -235,9 +246,13 @@ def plot(
 
         elif kind == "gate-profile":
             avg_data = (
-                {s: survey.avg_files[s] for s in stems_list
-                 if s in survey.avg_files}
-                if stems_list else survey.avg_files
+                {
+                    s: survey.avg_files[s]
+                    for s in stems_list
+                    if s in survey.avg_files
+                }
+                if stems_list
+                else survey.avg_files
             )
             if not avg_data:
                 click.echo("No AVG data available.", err=True)
@@ -253,20 +268,28 @@ def plot(
 
         elif kind == "dashboard":
             avg_data = (
-                {s: survey.avg_files[s] for s in stems_list
-                 if s in survey.avg_files}
-                if stems_list else survey.avg_files
+                {
+                    s: survey.avg_files[s]
+                    for s in stems_list
+                    if s in survey.avg_files
+                }
+                if stems_list
+                else survey.avg_files
             )
             z_data = (
-                {s: survey.z_files[s] for s in stems_list
-                 if s in survey.z_files}
-                if stems_list else survey.z_files
+                {
+                    s: survey.z_files[s]
+                    for s in stems_list
+                    if s in survey.z_files
+                }
+                if stems_list
+                else survey.z_files
             )
             soundings = survey.to_soundings(
                 stems=stems_list, component=component, verbose=verbose
             )
             first_avg = next(iter(avg_data.values()), None)
-            first_z   = next(iter(z_data.values()), None)
+            first_z = next(iter(z_data.values()), None)
             ax_or_axes = _tdem_plot.plot_tem_dashboard(
                 first_avg, first_z, soundings
             )

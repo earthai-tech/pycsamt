@@ -60,9 +60,7 @@ def test_tsect_from_file_parses_header_and_ids(tmp_path: Path):
     # points to the first >TSERIES line
     with p.open("r", encoding="utf-8") as f:
         lines = f.readlines()
-    assert lines[head.start_data_lines_num].lstrip().startswith(
-        ">TSERIES"
-    )
+    assert lines[head.start_data_lines_num].lstrip().startswith(">TSERIES")
 
     # round-trip write includes ordered keys and ID list
     out = "".join(head.write())
@@ -116,9 +114,7 @@ def test_tsio_from_file_parses_blocks(tmp_path: Path):
 
     # parse header to get body start
     sect = TSect.from_file(str(p))
-    io = TSIO.from_file(
-        str(p), start_line=sect.start_data_lines_num
-    )
+    io = TSIO.from_file(str(p), start_line=sect.start_data_lines_num)
     assert len(io.blocks) == 2
 
     b0, b1 = io.blocks
@@ -152,9 +148,7 @@ def test_tsio_parse_tolerates_bad_tokens(tmp_path: Path):
     ).strip("\n")
     p = _write(tmp_path, "ts_bad.edi", edi)
     sect = TSect.from_file(str(p))
-    io = TSIO.from_file(
-        str(p), start_line=sect.start_data_lines_num
-    )
+    io = TSIO.from_file(str(p), start_line=sect.start_data_lines_num)
     assert len(io.blocks) == 1
     # 'bad' ignored, numeric kept
     assert io.blocks[0].values == [2.0, 3.0]
@@ -218,4 +212,3 @@ def test_timeseries_mixin_helpers(tmp_path: Path):
     assert isinstance(header, TSect)
     assert isinstance(blocks, TSIO)
     assert len(blocks.blocks) == 1
-

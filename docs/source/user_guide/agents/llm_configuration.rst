@@ -695,4 +695,3 @@ Related API
 * :class:`pycsamt.api.agents.BudgetExceededError`
 * :class:`pycsamt.agents.BaseAgent`
 * :class:`pycsamt.agents.AgentResult`
-:html_theme.sidebar_secondary.remove:

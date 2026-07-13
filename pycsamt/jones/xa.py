@@ -105,9 +105,8 @@ def build_jdataset(
     if not datasets:
         # Return an empty dataset with expected coordinates
         return xr.Dataset(
-            coords={"site": [], "freq": [], "output_ch": [],
-                    "input_ch": []}
-            )
+            coords={"site": [], "freq": [], "output_ch": [], "input_ch": []}
+        )
 
     # Concatenate the data variables
     full_ds = xr.concat(datasets, dim="site", join="outer")
@@ -120,6 +119,7 @@ def build_jdataset(
         full_ds = full_ds.assign_coords({col: ("site", meta_df[col])})
 
     return full_ds
+
 
 class XAJMixin:
     r"""
@@ -160,6 +160,7 @@ class XAJMixin:
     >>> print(ds.dims)
     Frozen({'site': 4, 'freq': 17, 'output_ch': 2, 'input_ch': 2, 'tcomp': 2})
     """
+
     def to_xarray(
         self,
         *,
@@ -254,6 +255,7 @@ class JFileAcc:
     >>> print(site_nia001.dims)
     Frozen({'freq': 17, 'output_ch': 2, 'input_ch': 2, 'tcomp': 2})
     """
+
     def __init__(self, ds: xr.Dataset) -> None:
         self._ds = ds
 
@@ -371,48 +373,57 @@ class JFileAcc:
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=figsize)
 
         comp_map = {
-            "xy": ("Hx", "Hy"), "yx": ("Hy", "Hx"),
-            "xx": ("Hx", "Hx"), "yy": ("Hy", "Hy")
+            "xy": ("Hx", "Hy"),
+            "yx": ("Hy", "Hx"),
+            "xx": ("Hx", "Hx"),
+            "yy": ("Hy", "Hy"),
         }
 
         default_grid_props = {
-            'which': 'both', 'linestyle': '--',
-            'linewidth': 0.5
-            }
+            "which": "both",
+            "linestyle": "--",
+            "linewidth": 0.5,
+        }
         if grid_props:
             default_grid_props.update(grid_props)
 
         for comp in components:
             comp_lower = comp.lower()
             if comp_lower not in comp_map:
-                logger.warning(
-                    f"Component '{comp}' is not valid. Skipping.")
+                logger.warning(f"Component '{comp}' is not valid. Skipping.")
                 continue
 
             output_ch, input_ch = comp_map[comp_lower]
 
             # --- Resistivity Plot (Log-Log) ---
             rho_data = ds_site["rho"].sel(
-                output_ch=output_ch, input_ch=input_ch)
+                output_ch=output_ch, input_ch=input_ch
+            )
             rho_data.plot.line(
-                ax=axes[0], xscale="log", yscale="log",
-                label=f"$\\rho_{{{comp_lower}}}$", **plot_kwargs
+                ax=axes[0],
+                xscale="log",
+                yscale="log",
+                label=f"$\\rho_{{{comp_lower}}}$",
+                **plot_kwargs,
             )
 
             # --- Phase Plot (Semi-Log) ---
             phi_data = ds_site["phi"].sel(
-                output_ch=output_ch, input_ch=input_ch)
+                output_ch=output_ch, input_ch=input_ch
+            )
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
 
             phi_data.plot.line(
-                ax=axes[1], xscale="log",
-                label=f"$\\phi_{{{comp_lower}}}$", **plot_kwargs
+                ax=axes[1],
+                xscale="log",
+                label=f"$\\phi_{{{comp_lower}}}$",
+                **plot_kwargs,
             )
 
         # --- Aesthetics and Formatting ---
         axes[0].set_ylabel("Apparent Resistivity (Ω·m)")
-        axes[0].set_xlabel("") # Remove x-label from top plot
+        axes[0].set_xlabel("")  # Remove x-label from top plot
 
         axes[1].set_ylabel("Phase (degrees)")
         axes[1].set_xlabel("Frequency (Hz)")
@@ -460,7 +471,7 @@ def _meta_from_jfile(jf: JFile) -> dict[str, object]:
         software = jf.heads.banner.software
 
     return {
-        "site": _site_id_from_jfile(jf), # Added for indexing
+        "site": _site_id_from_jfile(jf),  # Added for indexing
         "path": str(p) if isinstance(p, Path) else None,
         "filename": p.name if isinstance(p, Path) else None,
         "dataid": jf.site,
@@ -490,40 +501,46 @@ def _ds_from_jfile(jf: JFile) -> xr.Dataset:
     # --- Transfer Function Data (Z) ---
     z = _get_tensor_or_zeros(jf.Z, "z", n_freq, np.complex128)
     z_err = _get_tensor_or_zeros(jf.Z, "z_err", n_freq, np.float64)
-    z_rej = _get_rejection_flags(jf, 'Z', n_freq)
+    z_rej = _get_rejection_flags(jf, "Z", n_freq)
 
     zrot_val = getattr(jf.Z, "rotation_angle", np.zeros(n_freq))
     zrot = (
         np.asarray(zrot_val).astype(np.float64)
         if zrot_val.size == n_freq
         else np.zeros(n_freq, dtype=np.float64)
-        )
+    )
 
     # --- Resistivity and Phase Data (R/S) ---
     rho = _get_tensor_or_zeros(jf.Res, "resistivity", n_freq, np.float64)
     phi = _get_tensor_or_zeros(jf.Res, "phase", n_freq, np.float64)
-    rho_err = _get_tensor_or_zeros(jf.Res, "resistivity_err", n_freq, np.float64)
+    rho_err = _get_tensor_or_zeros(
+        jf.Res, "resistivity_err", n_freq, np.float64
+    )
     phi_err = _get_tensor_or_zeros(jf.Res, "phase_err", n_freq, np.float64)
-    rho_rej = _get_rejection_flags(jf, 'R', n_freq)
+    rho_rej = _get_rejection_flags(jf, "R", n_freq)
 
     # --- Tipper Data (T) ---
     tip_val = getattr(jf.Tip, "tipper", None)
     tip = (
-        np.asarray(tip_val) if tip_val is not None
+        np.asarray(tip_val)
+        if tip_val is not None
         else np.zeros((n_freq, 1, 2), dtype=np.complex128)
     )
     tip_da = (
-        tip[:, 0, :] if tip.ndim == 3 and tip.shape[1] == 1
+        tip[:, 0, :]
+        if tip.ndim == 3 and tip.shape[1] == 1
         else np.zeros((n_freq, 2), dtype=np.complex128)
     )
 
     tip_err_val = getattr(jf.Tip, "tipper_err", None)
     tip_err = (
-        np.asarray(tip_err_val) if tip_err_val is not None
+        np.asarray(tip_err_val)
+        if tip_err_val is not None
         else np.zeros_like(tip_da, dtype=np.float64)
     )
     tip_err_da = (
-        tip_err[:, 0, :] if tip_err.ndim == 3 and tip_err.shape[1] == 1
+        tip_err[:, 0, :]
+        if tip_err.ndim == 3 and tip_err.shape[1] == 1
         else np.zeros((n_freq, 2), dtype=np.float64)
     )
 
@@ -551,7 +568,6 @@ def _ds_from_jfile(jf: JFile) -> xr.Dataset:
         },
     ).expand_dims(site=[sid])
 
-
     return ds
 
 
@@ -569,6 +585,7 @@ def _get_tensor_or_zeros(
 
     # Fallback for safety
     return np.zeros((n_freq, 2, 2), dtype=dtype)
+
 
 def _get_rejection_flags(
     jf: JFile, kind_prefix: str, n_freq: int
@@ -603,5 +620,3 @@ def _get_rejection_flags(
             rej_tensor[idx_jfile, i, j] = block_data["rej"][idx_block]
 
     return rej_tensor
-
-

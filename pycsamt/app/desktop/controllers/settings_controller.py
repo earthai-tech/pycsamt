@@ -9,6 +9,7 @@ Responsibilities
 * Snapshot and restore all singletons (Cancel support in APIConfigDialog).
 * Serialise / deserialise settings to JSON (Save Profile / Load Profile).
 """
+
 from __future__ import annotations
 
 import json
@@ -38,12 +39,13 @@ class SettingsController:
             from pycsamt.api.control import (
                 PYCSAMT_CONTROL as C,
             )
+
             snap["view_controls"] = {
-                "rho_view":    C.rho.view,
+                "rho_view": C.rho.view,
                 "phase_range": list(C.phase.range),
-                "phase_unit":  C.phase.unit,
-                "phase_wrap":  C.phase.wrap,
-                "x_view":      C.x.view,
+                "phase_unit": C.phase.unit,
+                "phase_wrap": C.phase.wrap,
+                "x_view": C.x.view,
             }
         except Exception:
             pass
@@ -53,14 +55,15 @@ class SettingsController:
             from pycsamt.api.station import (
                 PYCSAMT_STATION_RENDERING as SR,
             )
+
             ps = SR.pseudosection
             snap["station"] = {
-                "side":          ps.side,
-                "show_markers":  ps.show_markers,
+                "side": ps.side,
+                "show_markers": ps.show_markers,
                 "marker_symbol": ps.marker.marker,
-                "marker_size":   ps.marker.size,
+                "marker_size": ps.marker.size,
                 "marker_offset": ps.marker.offset,
-                "max_labels":    ps.max_labels,
+                "max_labels": ps.max_labels,
             }
         except Exception:
             pass
@@ -70,9 +73,10 @@ class SettingsController:
             from pycsamt.api.section import (
                 PYCSAMT_SECTION as SEC,
             )
+
             ax = SEC.pseudosection.axis
             snap["section"] = {
-                "y_direction":  ax.y_direction,
+                "y_direction": ax.y_direction,
                 "station_side": ax.station_side,
             }
         except Exception:
@@ -81,10 +85,11 @@ class SettingsController:
         # Topography
         try:
             from pycsamt.topo import PYCSAMT_TOPO as T
+
             snap["topography"] = {
-                "enabled":     T.enabled,
+                "enabled": T.enabled,
                 "exaggeration": T.exaggeration,
-                "marker_pad":  T.marker_pad_fraction,
+                "marker_pad": T.marker_pad_fraction,
             }
         except Exception:
             pass
@@ -110,6 +115,7 @@ class SettingsController:
             from pycsamt.api.control import (
                 PYCSAMT_CONTROL as C,
             )
+
             if "rho_view" in kw:
                 C.rho.view = kw["rho_view"]
             if "phase_range" in kw:
@@ -130,6 +136,7 @@ class SettingsController:
             from pycsamt.api.station import (
                 PYCSAMT_STATION_RENDERING as SR,
             )
+
             ps = SR.pseudosection
             if "side" in kw:
                 ps.side = kw["side"]
@@ -153,7 +160,14 @@ class SettingsController:
             from pycsamt.api.section import (
                 PYCSAMT_SECTION as SEC,
             )
-            for preset in ("pseudosection", "dashboard", "compact", "publication", "dynamic"):
+
+            for preset in (
+                "pseudosection",
+                "dashboard",
+                "compact",
+                "publication",
+                "dynamic",
+            ):
                 try:
                     ax = SEC.style_for(preset).axis
                     if "y_direction" in kw:
@@ -169,6 +183,7 @@ class SettingsController:
         """Write fields to :data:`PYCSAMT_TOPO`."""
         try:
             from pycsamt.topo import PYCSAMT_TOPO as T
+
             if "enabled" in kw:
                 T.enabled = bool(kw["enabled"])
             if "exaggeration" in kw:
@@ -187,6 +202,7 @@ class SettingsController:
                 from pycsamt.api.control import (
                     PYCSAMT_CONTROL,
                 )
+
                 PYCSAMT_CONTROL.reset()
             elif tab == "pseudosections":
                 from pycsamt.api.section import (
@@ -195,23 +211,33 @@ class SettingsController:
                 from pycsamt.api.station import (
                     PYCSAMT_STATION_RENDERING,
                 )
+
                 PYCSAMT_STATION_RENDERING.reset()
                 PYCSAMT_SECTION.reset()
             elif tab == "topography":
                 from pycsamt.topo import PYCSAMT_TOPO
+
                 PYCSAMT_TOPO.reset()
             elif tab == "display":
                 from pycsamt.api.style import PYCSAMT_STYLE
+
                 PYCSAMT_STYLE.reset()
             elif tab == "interpretation":
                 from pycsamt.api.interp import PYCSAMT_INTERP
+
                 PYCSAMT_INTERP.reset()
         except Exception:
             pass
 
     def reset_all(self) -> None:
         """Reset all API singletons to package defaults."""
-        for tab in ("view_controls", "pseudosections", "topography", "display", "interpretation"):
+        for tab in (
+            "view_controls",
+            "pseudosections",
+            "topography",
+            "display",
+            "interpretation",
+        ):
             self.reset_tab(tab)
 
     # ── Persistence ───────────────────────────────────────────────────────────

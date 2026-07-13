@@ -27,11 +27,11 @@ from PySide6.QtWidgets import (
 )
 
 _FORMATS = {
-    "PNG  (raster, lossless)":  ("png",  "*.png"),
-    "PDF  (vector)":            ("pdf",  "*.pdf"),
-    "SVG  (vector)":            ("svg",  "*.svg"),
-    "EPS  (vector, legacy)":    ("eps",  "*.eps"),
-    "TIFF (raster, high-res)":  ("tiff", "*.tiff"),
+    "PNG  (raster, lossless)": ("png", "*.png"),
+    "PDF  (vector)": ("pdf", "*.pdf"),
+    "SVG  (vector)": ("svg", "*.svg"),
+    "EPS  (vector, legacy)": ("eps", "*.eps"),
+    "TIFF (raster, high-res)": ("tiff", "*.tiff"),
 }
 
 _DPI_PRESETS = [72, 100, 150, 200, 300, 600]
@@ -73,7 +73,9 @@ class ExportDialog(QDialog):
         # Format
         self._fmt_combo = QComboBox()
         self._fmt_combo.addItems(list(_FORMATS.keys()))
-        self._fmt_combo.currentTextChanged.connect(self._update_path_extension)
+        self._fmt_combo.currentTextChanged.connect(
+            self._update_path_extension
+        )
         form.addRow("Format:", self._fmt_combo)
 
         # DPI
@@ -110,7 +112,7 @@ class ExportDialog(QDialog):
     # ── Slots ─────────────────────────────────────────────────────────
 
     def _browse(self) -> None:
-        fmt_key  = self._fmt_combo.currentText()
+        fmt_key = self._fmt_combo.currentText()
         ext_glob = _FORMATS[fmt_key][1]
         path, _ = QFileDialog.getSaveFileName(
             self,
@@ -123,18 +125,20 @@ class ExportDialog(QDialog):
 
     def _update_path_extension(self, fmt_key: str) -> None:
         """Swap the file extension in the path field when format changes."""
-        ext  = _FORMATS[fmt_key][0]
-        cur  = Path(self._path_edit.text())
+        ext = _FORMATS[fmt_key][0]
+        cur = Path(self._path_edit.text())
         self._path_edit.setText(str(cur.with_suffix(f".{ext}")))
 
     def _on_export(self) -> None:
         fmt_key = self._fmt_combo.currentText()
-        ext, _  = _FORMATS[fmt_key]
-        dpi     = self._dpi_spin.value()
-        path    = self._path_edit.text().strip()
+        ext, _ = _FORMATS[fmt_key]
+        dpi = self._dpi_spin.value()
+        path = self._path_edit.text().strip()
 
         if not path:
-            QMessageBox.warning(self, "Export", "Please specify a destination path.")
+            QMessageBox.warning(
+                self, "Export", "Please specify a destination path."
+            )
             return
 
         try:

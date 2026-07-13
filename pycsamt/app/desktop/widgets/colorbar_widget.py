@@ -56,7 +56,7 @@ class ColorbarWidget(QWidget):
             figsize = (4.0, 0.5)
 
         self._fig = Figure(figsize=figsize, facecolor="#1e1e2e")
-        self._ax  = self._fig.add_axes([0.1, 0.05, 0.4, 0.9])
+        self._ax = self._fig.add_axes([0.1, 0.05, 0.4, 0.9])
         self._canvas = FigureCanvasQTAgg(self._fig)
         self._canvas.setSizePolicy(
             QSizePolicy.Policy.Preferred,
@@ -91,7 +91,7 @@ class ColorbarWidget(QWidget):
         if isinstance(cmap, str):
             cmap = mcm.get_cmap(cmap)
         norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-        sm   = mcm.ScalarMappable(cmap=cmap, norm=norm)
+        sm = mcm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
 
         self._cb = self._fig.colorbar(

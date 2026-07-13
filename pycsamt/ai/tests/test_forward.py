@@ -1,17 +1,18 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for pycsamt.forward — LayeredModel, forward solvers, ForwardDataset."""
+
 import unittest
 
 import numpy as np
 
 
 class TestLayeredModel(unittest.TestCase):
-
     def _make_model(self, n=4):
         from pycsamt.forward import LayeredModel
-        rho = np.array([100., 10., 500., 50., 1000.])[:n + 1]
-        thick = np.array([5., 20., 100., 300.])[:n]
+
+        rho = np.array([100.0, 10.0, 500.0, 50.0, 1000.0])[: n + 1]
+        thick = np.array([5.0, 20.0, 100.0, 300.0])[:n]
         return LayeredModel(resistivity=rho, thickness=thick)
 
     def test_basic_construction(self):
@@ -31,6 +32,7 @@ class TestLayeredModel(unittest.TestCase):
 
     def test_from_vector(self):
         from pycsamt.forward import LayeredModel
+
         m = self._make_model(4)
         v = m.to_vector()
         m2 = LayeredModel.from_vector(v, n_layers=5)
@@ -39,8 +41,9 @@ class TestLayeredModel(unittest.TestCase):
 
     def test_positive_validation(self):
         from pycsamt.forward import LayeredModel
+
         with self.assertRaises((ValueError, TypeError)):
-            LayeredModel(resistivity=[-10., 50.], thickness=[5.])
+            LayeredModel(resistivity=[-10.0, 50.0], thickness=[5.0])
 
     def test_repr_not_empty(self):
         m = self._make_model(3)
@@ -48,6 +51,7 @@ class TestLayeredModel(unittest.TestCase):
 
     def test_random_constructor(self):
         from pycsamt.forward import LayeredModel
+
         m = LayeredModel.random(n_layers=5, seed=0)
         self.assertEqual(m.n_layers, 5)
         self.assertEqual(len(m.thickness), 4)
@@ -55,17 +59,19 @@ class TestLayeredModel(unittest.TestCase):
 
     def test_depth_property(self):
         m = self._make_model(3)
-        self.assertEqual(len(m.depth), 4)   # n_layers = 4, depth for each layer top
+        self.assertEqual(
+            len(m.depth), 4
+        )  # n_layers = 4, depth for each layer top
         self.assertEqual(m.depth[0], 0.0)
 
 
 class TestForwardResponse(unittest.TestCase):
-
     def _mt_response(self):
         from pycsamt.forward import LayeredModel, MT1DForward
+
         model = LayeredModel(
-            resistivity=np.array([100., 10., 1000.]),
-            thickness=np.array([30., 200.]),
+            resistivity=np.array([100.0, 10.0, 1000.0]),
+            thickness=np.array([30.0, 200.0]),
         )
         freqs = np.logspace(-2, 4, 30)
         solver = MT1DForward(freqs)
@@ -95,17 +101,18 @@ class TestForwardResponse(unittest.TestCase):
 
 
 class TestMT1DForward(unittest.TestCase):
-
     def setUp(self):
         from pycsamt.forward import LayeredModel
+
         self.model = LayeredModel(
-            resistivity=np.array([100., 10., 1000.]),
-            thickness=np.array([30., 200.]),
+            resistivity=np.array([100.0, 10.0, 1000.0]),
+            thickness=np.array([30.0, 200.0]),
         )
         self.freqs = np.logspace(-2, 4, 40)
 
     def test_output_shape(self):
         from pycsamt.forward import MT1DForward
+
         resp = MT1DForward(self.freqs).run(self.model)
         if resp.rho_a is not None:
             self.assertEqual(resp.rho_a.shape, (40,))
@@ -113,6 +120,7 @@ class TestMT1DForward(unittest.TestCase):
     def test_homogeneous_space(self):
         """Half-space: apparent resistivity should equal halfspace resistivity."""
         from pycsamt.forward import LayeredModel, MT1DForward
+
         rho0 = 100.0
         model_hs = LayeredModel(
             resistivity=np.array([rho0]),
@@ -125,6 +133,7 @@ class TestMT1DForward(unittest.TestCase):
     def test_skin_depth_trend(self):
         """Low frequencies should see deeper (higher resistivity) structure."""
         from pycsamt.forward import MT1DForward
+
         resp = MT1DForward(self.freqs).run(self.model)
         if resp.rho_a is not None:
             rho = resp.rho_a
@@ -132,7 +141,6 @@ class TestMT1DForward(unittest.TestCase):
 
 
 class TestCSAMT1DForward(unittest.TestCase):
-
     def test_farfield_equals_mt(self):
         """Very large offset: CSAMT result should approach MT result."""
         from pycsamt.forward import (
@@ -140,9 +148,10 @@ class TestCSAMT1DForward(unittest.TestCase):
             LayeredModel,
             MT1DForward,
         )
+
         model = LayeredModel(
-            resistivity=np.array([100., 500.]),
-            thickness=np.array([50.]),
+            resistivity=np.array([100.0, 500.0]),
+            thickness=np.array([50.0]),
         )
         freqs = np.logspace(1, 4, 20)
         mt_resp = MT1DForward(freqs).run(model)
@@ -154,12 +163,12 @@ class TestCSAMT1DForward(unittest.TestCase):
 
 
 class TestTEM1DForward(unittest.TestCase):
-
     def test_output_shape(self):
         from pycsamt.forward import LayeredModel, TEM1DForward
+
         model = LayeredModel(
-            resistivity=np.array([100., 10., 1000.]),
-            thickness=np.array([30., 200.]),
+            resistivity=np.array([100.0, 10.0, 1000.0]),
+            thickness=np.array([30.0, 200.0]),
         )
         times = np.logspace(-6, -2, 25)
         resp = TEM1DForward(times).run(model)
@@ -175,8 +184,9 @@ class TestTEM1DForward(unittest.TestCase):
         least-squares fit in log-log space) must be negative.
         """
         from pycsamt.forward import LayeredModel, TEM1DForward
+
         model = LayeredModel(
-            resistivity=np.array([100.]),
+            resistivity=np.array([100.0]),
             thickness=np.array([]),
         )
         times = np.logspace(-5, -2, 20)
@@ -198,9 +208,9 @@ class TestTEM1DForward(unittest.TestCase):
 
 
 class TestGenerateDataset(unittest.TestCase):
-
     def test_mt1d_small(self):
         from pycsamt.forward.batch import generate_dataset
+
         ds = generate_dataset(
             solver="MT1D",
             n_samples=10,
@@ -214,6 +224,7 @@ class TestGenerateDataset(unittest.TestCase):
 
     def test_feature_dimension(self):
         from pycsamt.forward.batch import generate_dataset
+
         n_freqs = 12
         ds = generate_dataset(
             solver="MT1D",
@@ -229,6 +240,7 @@ class TestGenerateDataset(unittest.TestCase):
 
     def test_target_dimension(self):
         from pycsamt.forward.batch import generate_dataset
+
         n_layers = 4
         ds = generate_dataset(
             solver="MT1D",
@@ -243,6 +255,7 @@ class TestGenerateDataset(unittest.TestCase):
 
     def test_dataset_split(self):
         from pycsamt.forward.batch import generate_dataset
+
         ds = generate_dataset(
             solver="MT1D",
             n_samples=20,
@@ -263,11 +276,12 @@ class TestGenerateDataset(unittest.TestCase):
             ForwardDataset,
             generate_dataset,
         )
+
         ds = generate_dataset(
             solver="MT1D",
             n_samples=8,
             freqs=np.logspace(0, 3, 8),
-            n_layers=3,   # n_layers >= 3 to avoid batch.py edge case
+            n_layers=3,  # n_layers >= 3 to avoid batch.py edge case
             seed=1,
             verbose=False,
         )
@@ -285,6 +299,7 @@ class TestSurveyDataset3D(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from pycsamt.forward.batch import generate_dataset_3d
+
         cls.ds = generate_dataset_3d(
             n_surveys=20,
             n_stations=9,
@@ -297,7 +312,7 @@ class TestSurveyDataset3D(unittest.TestCase):
 
     def test_X_shape(self):
         ds = self.ds
-        self.assertEqual(ds.X.shape, (20, 9, 20))   # 10 freqs × 2 (rho+phase)
+        self.assertEqual(ds.X.shape, (20, 9, 20))  # 10 freqs × 2 (rho+phase)
 
     def test_y_shape(self):
         ds = self.ds
@@ -343,6 +358,7 @@ class TestSurveyDataset3D(unittest.TestCase):
         import tempfile
 
         from pycsamt.forward.batch import SurveyDataset3D
+
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "ds3d.npz")
             self.ds.save(path)
@@ -361,10 +377,15 @@ class TestGenerateDataset3D(unittest.TestCase):
 
     def _gen(self, **kw):
         from pycsamt.forward.batch import generate_dataset_3d
+
         defaults = dict(
-            n_surveys=10, n_stations=4, n_layers=3,
+            n_surveys=10,
+            n_stations=4,
+            n_layers=3,
             freqs=np.logspace(0, 3, 8),
-            corr_length=1500., seed=0, verbose=False,
+            corr_length=1500.0,
+            seed=0,
+            verbose=False,
         )
         defaults.update(kw)
         return generate_dataset_3d(**defaults)
@@ -393,18 +414,28 @@ class TestGenerateDataset3D(unittest.TestCase):
 
     def test_invalid_layout_raises(self):
         from pycsamt.forward.batch import generate_dataset_3d
+
         with self.assertRaises(ValueError):
             generate_dataset_3d(
-                n_surveys=2, n_stations=4, station_layout="hexagonal",
-                freqs=np.logspace(0, 2, 5), seed=0, verbose=False,
+                n_surveys=2,
+                n_stations=4,
+                station_layout="hexagonal",
+                freqs=np.logspace(0, 2, 5),
+                seed=0,
+                verbose=False,
             )
 
     def test_invalid_solver_raises(self):
         from pycsamt.forward.batch import generate_dataset_3d
+
         with self.assertRaises(ValueError):
             generate_dataset_3d(
-                n_surveys=2, n_stations=4, solver="tem1d",
-                freqs=np.logspace(0, 2, 5), seed=0, verbose=False,
+                n_surveys=2,
+                n_stations=4,
+                solver="tem1d",
+                freqs=np.logspace(0, 2, 5),
+                seed=0,
+                verbose=False,
             )
 
     def test_deterministic_with_seed(self):
@@ -424,8 +455,8 @@ class TestGenerateDataset3D(unittest.TestCase):
 
     def test_corr_length_effect(self):
         """High corr_length → adjacent stations more similar than low corr_length."""
-        ds_lo = self._gen(corr_length=10., n_surveys=50)
-        ds_hi = self._gen(corr_length=9000., n_surveys=50)
+        ds_lo = self._gen(corr_length=10.0, n_surveys=50)
+        ds_hi = self._gen(corr_length=9000.0, n_surveys=50)
         # Variance of (station_0 - station_1) in y[:, 0, :] vs y[:, 1, :]
         diff_lo = ds_lo.y[:, 0, :] - ds_lo.y[:, 1, :]
         diff_hi = ds_hi.y[:, 0, :] - ds_hi.y[:, 1, :]
@@ -435,8 +466,9 @@ class TestGenerateDataset3D(unittest.TestCase):
     def test_gcn_pipeline_shapes(self):
         """generate_dataset_3d → build_adjacency → GCNInverter3D compatible shapes."""
         from pycsamt.ai.nets.gcn import build_adjacency
+
         ds = self._gen(n_surveys=10, n_stations=9, n_layers=3)
-        A = build_adjacency(ds.coords, radius=5000.)
+        A = build_adjacency(ds.coords, radius=5000.0)
         self.assertEqual(A.shape, (9, 9))
         self.assertEqual(ds.X.shape, (10, 9, ds.n_features))
         self.assertEqual(ds.y.shape, (10, 9, 5))

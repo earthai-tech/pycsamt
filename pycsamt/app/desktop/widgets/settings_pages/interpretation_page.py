@@ -14,6 +14,7 @@ Profile style
   • Colormap
   • Reference line style
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -27,16 +28,24 @@ from PySide6.QtWidgets import (
 from .base_page import SettingsPage
 
 _CMAPS = [
-    "viridis", "plasma", "magma", "inferno",
-    "RdBu_r",  "seismic", "jet",  "turbo",
-    "coolwarm", "bwr",    "Spectral_r",
+    "viridis",
+    "plasma",
+    "magma",
+    "inferno",
+    "RdBu_r",
+    "seismic",
+    "jet",
+    "turbo",
+    "coolwarm",
+    "bwr",
+    "Spectral_r",
 ]
 
 _WT_MARKERS = [
-    ("None (no marker)",  "none"),
-    ("Dashed line  --",   "--"),
-    ("Solid line   —",    "-"),
-    ("Dotted line  ·",    ":"),
+    ("None (no marker)", "none"),
+    ("Dashed line  --", "--"),
+    ("Solid line   —", "-"),
+    ("Dotted line  ·", ":"),
 ]
 
 
@@ -93,7 +102,8 @@ class InterpretationPage(SettingsPage):
     def populate(self) -> None:
         try:
             from pycsamt.api.interp import PYCSAMT_INTERP as I
-            sec  = I.pseudosection
+
+            sec = I.pseudosection
             prof = I.profile
 
             sec_cmap = getattr(sec, "cmap", None) or "viridis"
@@ -101,7 +111,9 @@ class InterpretationPage(SettingsPage):
                 self._sec_cmap.setCurrentText(sec_cmap)
 
             wt_ls = getattr(sec, "wt_linestyle", "--") or "--"
-            idx = next((i for i, (_, v) in enumerate(_WT_MARKERS) if v == wt_ls), 1)
+            idx = next(
+                (i for i, (_, v) in enumerate(_WT_MARKERS) if v == wt_ls), 1
+            )
             self._wt_combo.setCurrentIndex(idx)
 
             alpha = getattr(sec, "alpha", 0.85) or 0.85
@@ -116,9 +128,10 @@ class InterpretationPage(SettingsPage):
     def collect(self) -> dict:
         try:
             from pycsamt.api.interp import PYCSAMT_INTERP as I
-            sec_cmap  = self._sec_cmap.currentText()
-            wt_ls     = _WT_MARKERS[self._wt_combo.currentIndex()][1]
-            alpha     = self._alpha_spin.value()
+
+            sec_cmap = self._sec_cmap.currentText()
+            wt_ls = _WT_MARKERS[self._wt_combo.currentIndex()][1]
+            alpha = self._alpha_spin.value()
             prof_cmap = self._prof_cmap.currentText()
 
             try:
@@ -145,6 +158,7 @@ class InterpretationPage(SettingsPage):
     def reset(self) -> None:
         try:
             from pycsamt.api.interp import PYCSAMT_INTERP
+
             PYCSAMT_INTERP.reset()
         except Exception:
             pass

@@ -25,11 +25,9 @@ def _list_dirs(path: str) -> list[str]:
     """Return sorted subdirectory names in path."""
     try:
         entries = sorted(
-            e for e in os.listdir(path)
-            if os.path.isdir(
-                os.path.join(path, e)
-            )
-            and not e.startswith(".")
+            e
+            for e in os.listdir(path)
+            if os.path.isdir(os.path.join(path, e)) and not e.startswith(".")
         )
         return entries
     except PermissionError:
@@ -55,9 +53,7 @@ def _dir_listing(path: str) -> list:
         html.Button(
             [
                 html.I(
-                    className=(
-                        "bi bi-folder me-2"
-                    ),
+                    className=("bi bi-folder me-2"),
                     style={
                         "color": "#e8a020",
                     },
@@ -93,21 +89,11 @@ def register_outdir(app) -> None:
 
     # 1. Open modal on browse button click
     @app.callback(
-        Output(
-            IDs.MODAL_OUTPUT_BROWSE, "is_open"
-        ),
-        Output(
-            IDs.OUTPUT_BROWSE_STORE, "data"
-        ),
-        Output(
-            IDs.OUTPUT_BROWSE_PATH, "children"
-        ),
-        Output(
-            IDs.OUTPUT_BROWSE_LIST, "children"
-        ),
-        Input(
-            IDs.BTN_OUTPUT_BROWSE, "n_clicks"
-        ),
+        Output(IDs.MODAL_OUTPUT_BROWSE, "is_open"),
+        Output(IDs.OUTPUT_BROWSE_STORE, "data"),
+        Output(IDs.OUTPUT_BROWSE_PATH, "children"),
+        Output(IDs.OUTPUT_BROWSE_LIST, "children"),
+        Input(IDs.BTN_OUTPUT_BROWSE, "n_clicks"),
         State(IDs.OUTPUT_DIR, "value"),
         prevent_initial_call=True,
     )
@@ -116,10 +102,7 @@ def register_outdir(app) -> None:
             raise PreventUpdate
         # Start from current value, EDI path,
         # or home directory
-        start = (
-            current_val
-            or os.path.expanduser("~")
-        )
+        start = current_val or os.path.expanduser("~")
         if not os.path.isdir(start):
             start = os.path.expanduser("~")
         return (
@@ -152,14 +135,10 @@ def register_outdir(app) -> None:
             allow_duplicate=True,
         ),
         Input(
-            {"type": "am-outdir-entry",
-             "index": ALL,
-             "name": ALL},
+            {"type": "am-outdir-entry", "index": ALL, "name": ALL},
             "n_clicks",
         ),
-        State(
-            IDs.OUTPUT_BROWSE_STORE, "data"
-        ),
+        State(IDs.OUTPUT_BROWSE_STORE, "data"),
         prevent_initial_call=True,
     )
     def enter_subdir(n_clicks, store):
@@ -169,9 +148,7 @@ def register_outdir(app) -> None:
         if not isinstance(triggered, dict):
             raise PreventUpdate
         name = triggered.get("name", "")
-        cur = (store or {}).get(
-            "path", os.path.expanduser("~")
-        )
+        cur = (store or {}).get("path", os.path.expanduser("~"))
         new_path = os.path.join(cur, name)
         if not os.path.isdir(new_path):
             raise PreventUpdate
@@ -199,20 +176,14 @@ def register_outdir(app) -> None:
             "children",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_OUTPUT_UP, "n_clicks"
-        ),
-        State(
-            IDs.OUTPUT_BROWSE_STORE, "data"
-        ),
+        Input(IDs.BTN_OUTPUT_UP, "n_clicks"),
+        State(IDs.OUTPUT_BROWSE_STORE, "data"),
         prevent_initial_call=True,
     )
     def go_up(n, store):
         if not n:
             raise PreventUpdate
-        cur = (store or {}).get(
-            "path", os.path.expanduser("~")
-        )
+        cur = (store or {}).get("path", os.path.expanduser("~"))
         parent = str(Path(cur).parent)
         if parent == cur:
             raise PreventUpdate
@@ -249,36 +220,27 @@ def register_outdir(app) -> None:
             "value",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_OUTPUT_MKDIR, "n_clicks"
-        ),
-        State(
-            IDs.OUTPUT_MKDIR_INPUT, "value"
-        ),
-        State(
-            IDs.OUTPUT_BROWSE_STORE, "data"
-        ),
+        Input(IDs.BTN_OUTPUT_MKDIR, "n_clicks"),
+        State(IDs.OUTPUT_MKDIR_INPUT, "value"),
+        State(IDs.OUTPUT_BROWSE_STORE, "data"),
         prevent_initial_call=True,
     )
     def mkdir(n, name, store):
         if not n or not (name or "").strip():
             raise PreventUpdate
-        cur = (store or {}).get(
-            "path", os.path.expanduser("~")
-        )
+        cur = (store or {}).get("path", os.path.expanduser("~"))
         name = name.strip()
         new_dir = os.path.join(cur, name)
         try:
-            Path(new_dir).mkdir(
-                parents=True, exist_ok=True
-            )
+            Path(new_dir).mkdir(parents=True, exist_ok=True)
             status = html.Span(
                 f"Created: {name}",
                 style={"color": "#2f9e44"},
             )
         except Exception as exc:
             return (
-                no_update, no_update,
+                no_update,
+                no_update,
                 no_update,
                 html.Span(
                     str(exc),
@@ -296,20 +258,14 @@ def register_outdir(app) -> None:
 
     # 5. Confirm: set OUTPUT_DIR and close
     @app.callback(
-        Output(
-            IDs.OUTPUT_DIR, "value"
-        ),
+        Output(IDs.OUTPUT_DIR, "value"),
         Output(
             IDs.MODAL_OUTPUT_BROWSE,
             "is_open",
             allow_duplicate=True,
         ),
-        Input(
-            IDs.BTN_OUTPUT_CONFIRM, "n_clicks"
-        ),
-        State(
-            IDs.OUTPUT_BROWSE_STORE, "data"
-        ),
+        Input(IDs.BTN_OUTPUT_CONFIRM, "n_clicks"),
+        State(IDs.OUTPUT_BROWSE_STORE, "data"),
         prevent_initial_call=True,
     )
     def confirm_output_dir(n, store):

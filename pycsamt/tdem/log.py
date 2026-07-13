@@ -329,10 +329,7 @@ def _parse_log_record(
             time_base=parts[8],
         )
     except ValueError as exc:
-        msg = (
-            f"Cannot parse TEMAVG log row in {path!s} "
-            f"at line {line_no}."
-        )
+        msg = f"Cannot parse TEMAVG log row in {path!s} at line {line_no}."
         raise ValueError(msg) from exc
 
 

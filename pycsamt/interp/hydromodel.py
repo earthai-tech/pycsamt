@@ -75,6 +75,7 @@ _PetroModel = Union[ArchieModel, WaxmanSmitsModel]
 # Configuration dataclass
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class PetrophysicalConfig(PyCSAMTObject):
     """All petrophysical and hydraulic parameters needed by :class:`EMHydroModel`.
@@ -117,7 +118,9 @@ class PetrophysicalConfig(PyCSAMTObject):
         (default 0.5 m).
     """
 
-    petro: _PetroModel = field(default_factory=lambda: ArchieModel(m=1.8, n=2.0))
+    petro: _PetroModel = field(
+        default_factory=lambda: ArchieModel(m=1.8, n=2.0)
+    )
     rho_w: float = 20.0
     porosity_prior: float = 0.25
     Sw_water_table_threshold: float = 0.85
@@ -141,6 +144,7 @@ class PetrophysicalConfig(PyCSAMTObject):
 # ─────────────────────────────────────────────────────────────────────────────
 # Result dataclass
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class EMHydroResult(PyCSAMTObject):
@@ -213,21 +217,35 @@ class EMHydroResult(PyCSAMTObject):
             name = _station_name(model, ix)
             wt = float(self.water_table[ix])
             sat_mask = model.z_centers >= (wt if np.isfinite(wt) else 0.0)
-            phi_sat = float(np.nanmean(self.porosity[sat_mask, ix])) if sat_mask.any() else float("nan")
-            K_sat   = float(np.nanmean(self.hydraulic_K[sat_mask, ix])) if sat_mask.any() else float("nan")
-            rows.append({
-                "station": name,
-                "x_m": float(x),
-                "water_table_m": wt,
-                "mean_porosity_sat": phi_sat,
-                "mean_K_ms": K_sat,
-                "transmissivity_m2s": float(self.transmissivity[ix]),
-                "storativity_confined": float(self.storativity_confined[ix]),
-                "storativity_unconfined": float(self.storativity_unconfined[ix]),
-                "dar_zarrouk_TR_ohm_m2": float(self.dar_zarrouk_TR[ix]),
-                "dar_zarrouk_S_siemens": float(self.dar_zarrouk_S[ix]),
-                "tds_mg_per_L": float(self.tds),
-            })
+            phi_sat = (
+                float(np.nanmean(self.porosity[sat_mask, ix]))
+                if sat_mask.any()
+                else float("nan")
+            )
+            K_sat = (
+                float(np.nanmean(self.hydraulic_K[sat_mask, ix]))
+                if sat_mask.any()
+                else float("nan")
+            )
+            rows.append(
+                {
+                    "station": name,
+                    "x_m": float(x),
+                    "water_table_m": wt,
+                    "mean_porosity_sat": phi_sat,
+                    "mean_K_ms": K_sat,
+                    "transmissivity_m2s": float(self.transmissivity[ix]),
+                    "storativity_confined": float(
+                        self.storativity_confined[ix]
+                    ),
+                    "storativity_unconfined": float(
+                        self.storativity_unconfined[ix]
+                    ),
+                    "dar_zarrouk_TR_ohm_m2": float(self.dar_zarrouk_TR[ix]),
+                    "dar_zarrouk_S_siemens": float(self.dar_zarrouk_S[ix]),
+                    "tds_mg_per_L": float(self.tds),
+                }
+            )
         return rows
 
     # ── CSV export ─────────────────────────────────────────────────────────
@@ -239,22 +257,34 @@ class EMHydroResult(PyCSAMTObject):
         model = self.resistivity_model
         with out.open("w", newline="") as fh:
             w = csv.writer(fh)
-            w.writerow([
-                "station", "x_m", "z_m",
-                "rho_log10", "rho_ohm_m",
-                "porosity", "saturation", "hydraulic_K_ms",
-            ])
+            w.writerow(
+                [
+                    "station",
+                    "x_m",
+                    "z_m",
+                    "rho_log10",
+                    "rho_ohm_m",
+                    "porosity",
+                    "saturation",
+                    "hydraulic_K_ms",
+                ]
+            )
             for ix, x in enumerate(model.x_centers):
                 name = _station_name(model, ix)
                 for iz, z in enumerate(model.z_centers):
                     rlog = float(model.rho_2d[iz, ix])
-                    w.writerow([
-                        name, float(x), float(z),
-                        rlog, 10.0 ** rlog,
-                        float(self.porosity[iz, ix]),
-                        float(self.saturation[iz, ix]),
-                        float(self.hydraulic_K[iz, ix]),
-                    ])
+                    w.writerow(
+                        [
+                            name,
+                            float(x),
+                            float(z),
+                            rlog,
+                            10.0**rlog,
+                            float(self.porosity[iz, ix]),
+                            float(self.saturation[iz, ix]),
+                            float(self.hydraulic_K[iz, ix]),
+                        ]
+                    )
         return out
 
     def station_report_csv(self, path: PathLike) -> Path:
@@ -275,13 +305,16 @@ class EMHydroResult(PyCSAMTObject):
         try:
             import pandas as pd
         except ImportError as exc:
-            raise ImportError("pandas is required for to_dataframe().") from exc
+            raise ImportError(
+                "pandas is required for to_dataframe()."
+            ) from exc
         return pd.DataFrame(self.station_report())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main model class
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class EMHydroModel(PyCSAMTObject):
     """Quantitative hydrogeological model from an EM resistivity section.
@@ -352,9 +385,9 @@ class EMHydroModel(PyCSAMTObject):
 
     def fit(self) -> EMHydroResult:
         """Run all petrophysical transforms and return :class:`EMHydroResult`."""
-        model  = self.resistivity_model
-        cfg    = self.config
-        petro  = cfg.petro
+        model = self.resistivity_model
+        cfg = self.config
+        petro = cfg.petro
 
         # ── pass 1: water table ────────────────────────────────────────────
         wt = self._compute_water_table()
@@ -406,7 +439,7 @@ class EMHydroModel(PyCSAMTObject):
     def _compute_water_table(self) -> np.ndarray:
         """One-pass water-table depth estimate per column."""
         model = self.resistivity_model
-        cfg   = self.config
+        cfg = self.config
         petro = cfg.petro
         wt = np.full(model.n_x, np.nan)
         for ix in range(model.n_x):
@@ -414,7 +447,9 @@ class EMHydroModel(PyCSAMTObject):
             depth = water_table_from_profile(
                 col,
                 model.z_centers,
-                petro if isinstance(petro, ArchieModel) else _archie_from_ws(petro),
+                petro
+                if isinstance(petro, ArchieModel)
+                else _archie_from_ws(petro),
                 rho_w=cfg.rho_w,
                 Sw_threshold=cfg.Sw_water_table_threshold,
                 min_depth=cfg.min_wt_search_depth,
@@ -423,40 +458,48 @@ class EMHydroModel(PyCSAMTObject):
                 wt[ix] = depth
         return wt
 
-    def _compute_porosity_saturation(
-        self, wt: np.ndarray
-    ) -> tuple:
+    def _compute_porosity_saturation(self, wt: np.ndarray) -> tuple:
         """Two-zone porosity/saturation per cell.
 
         Saturated zone (z ≥ water table): assume Sw=1, invert for φ.
         Vadose zone   (z <  water table): use φ_prior, invert for Sw.
         """
         model = self.resistivity_model
-        cfg   = self.config
+        cfg = self.config
         petro = cfg.petro
-        archie = petro if isinstance(petro, ArchieModel) else _archie_from_ws(petro)
+        archie = (
+            petro
+            if isinstance(petro, ArchieModel)
+            else _archie_from_ws(petro)
+        )
 
         phi_map = np.full(model.rho_2d.shape, cfg.porosity_prior)
-        Sw_map  = np.ones(model.rho_2d.shape)
+        Sw_map = np.ones(model.rho_2d.shape)
 
         for ix in range(model.n_x):
             wt_depth = wt[ix] if np.isfinite(wt[ix]) else 0.0
             for iz, z in enumerate(model.z_centers):
                 rho_log = float(model.rho_2d[iz, ix])
-                rho = 10.0 ** rho_log
+                rho = 10.0**rho_log
                 if not np.isfinite(rho) or rho <= 0:
                     continue
                 if z >= wt_depth:
                     # saturated — invert for porosity
                     phi = float(archie.porosity(rho, 1.0, cfg.rho_w))
-                    phi = float(np.clip(phi, 1e-4, min(0.99, 3.0 * cfg.porosity_prior)))
+                    phi = float(
+                        np.clip(
+                            phi, 1e-4, min(0.99, 3.0 * cfg.porosity_prior)
+                        )
+                    )
                     phi_map[iz, ix] = phi
-                    Sw_map[iz, ix]  = 1.0
+                    Sw_map[iz, ix] = 1.0
                 else:
                     # vadose — invert for saturation
                     phi_map[iz, ix] = cfg.porosity_prior
-                    Sw = float(archie.saturation(rho, cfg.porosity_prior, cfg.rho_w))
-                    Sw_map[iz, ix]  = float(np.clip(Sw, 0.0, 1.0))
+                    Sw = float(
+                        archie.saturation(rho, cfg.porosity_prior, cfg.rho_w)
+                    )
+                    Sw_map[iz, ix] = float(np.clip(Sw, 0.0, 1.0))
 
         return phi_map, Sw_map
 
@@ -468,9 +511,9 @@ class EMHydroModel(PyCSAMTObject):
         A logistic sigmoid over ±20 m around ``fracture_depth_m`` blends the
         two models, removing the abrupt step that caused a sharp colour band.
         """
-        _BLEND_HALF_WIDTH = 20.0   # metres; sigmoid scale = half_width / 4
+        _BLEND_HALF_WIDTH = 20.0  # metres; sigmoid scale = half_width / 4
         model = self.resistivity_model
-        cfg   = self.config
+        cfg = self.config
         K_map = np.zeros(model.rho_2d.shape)
 
         for iz, z in enumerate(model.z_centers):
@@ -504,9 +547,9 @@ class EMHydroModel(PyCSAMTObject):
     ) -> tuple:
         """Integrate K × dz over the saturated zone per column."""
         model = self.resistivity_model
-        cfg   = self.config
-        n_x   = model.n_x
-        T_arr  = np.zeros(n_x)
+        cfg = self.config
+        n_x = model.n_x
+        T_arr = np.zeros(n_x)
         Sc_arr = np.zeros(n_x)
         Su_arr = np.zeros(n_x)
 
@@ -515,13 +558,13 @@ class EMHydroModel(PyCSAMTObject):
             sat_mask = model.z_centers >= wt_depth
             if not sat_mask.any():
                 continue
-            K_sat  = K_map[sat_mask, ix]
-            phi_sat= phi_map[sat_mask, ix]
-            h_sat  = h[sat_mask]
+            K_sat = K_map[sat_mask, ix]
+            phi_sat = phi_map[sat_mask, ix]
+            h_sat = h[sat_mask]
             b_total = float(np.sum(h_sat))
-            T_arr[ix]  = float(np.sum(K_sat * h_sat))
+            T_arr[ix] = float(np.sum(K_sat * h_sat))
             Sc_arr[ix] = b_total * cfg.specific_storage
-            Su_arr[ix] = float(np.nanmean(phi_sat))   # specific yield ≈ φ
+            Su_arr[ix] = float(np.nanmean(phi_sat))  # specific yield ≈ φ
 
         return T_arr, Sc_arr, Su_arr
 
@@ -532,11 +575,11 @@ class EMHydroModel(PyCSAMTObject):
         S  = Σ hᵢ/ρᵢ   (longitudinal conductance, siemens)
         """
         model = self.resistivity_model
-        rho_2d = 10.0 ** model.rho_2d       # (n_z, n_x)
-        h_col  = h[:, np.newaxis]            # broadcast over x
+        rho_2d = 10.0**model.rho_2d  # (n_z, n_x)
+        h_col = h[:, np.newaxis]  # broadcast over x
 
         TR = np.sum(rho_2d * h_col, axis=0)
-        S  = np.sum(h_col / np.maximum(rho_2d, 1e-10), axis=0)
+        S = np.sum(h_col / np.maximum(rho_2d, 1e-10), axis=0)
         return TR, S
 
 
@@ -544,14 +587,15 @@ class EMHydroModel(PyCSAMTObject):
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _cell_thicknesses(z_centers: np.ndarray) -> np.ndarray:
     """Estimate cell thicknesses from centre positions (metres)."""
     z = np.asarray(z_centers, dtype=float)
     if z.size == 1:
         return np.array([max(1.0, float(z[0]))])
-    mids  = 0.5 * (z[:-1] + z[1:])
+    mids = 0.5 * (z[:-1] + z[1:])
     first = max(0.0, z[0] - (mids[0] - z[0]))
-    last  = z[-1] + (z[-1] - mids[-1])
+    last = z[-1] + (z[-1] - mids[-1])
     edges = np.r_[first, mids, last]
     return np.diff(edges)
 
@@ -567,7 +611,10 @@ def _archie_from_ws(ws: WaxmanSmitsModel) -> ArchieModel:
     return ArchieModel(m=ws.m, n=ws.n, a=ws.a)
 
 
-def _replace_config(cfg: PetrophysicalConfig, **kwargs) -> PetrophysicalConfig:
+def _replace_config(
+    cfg: PetrophysicalConfig, **kwargs
+) -> PetrophysicalConfig:
     """Return a new PetrophysicalConfig with selected fields overridden."""
     import dataclasses
+
     return dataclasses.replace(cfg, **kwargs)

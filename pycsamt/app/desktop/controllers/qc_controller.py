@@ -8,6 +8,7 @@ delegates to pycsamt.emtools, and applies the active theme style.
 Functions that create their own multi-axes figure are handled via
 _render_to_fig(); single-axes functions use the provided axes directly.
 """
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
@@ -16,16 +17,24 @@ import numpy as np
 # ── Theme style dicts (same palette as PlotController) ────────────────────────
 
 _DARK = dict(
-    facecolor="#181825", labelcolor="#cdd6f4", title_color="#cdd6f4",
+    facecolor="#181825",
+    labelcolor="#cdd6f4",
+    title_color="#cdd6f4",
     tick_params={"colors": "#a6adc8", "labelsize": 8},
-    spines_color="#45475a", grid_color="#313244",
-    grid_alpha=0.35, grid_linestyle="--",
+    spines_color="#45475a",
+    grid_color="#313244",
+    grid_alpha=0.35,
+    grid_linestyle="--",
 )
 _LIGHT = dict(
-    facecolor="#eff1f5", labelcolor="#4c4f69", title_color="#4c4f69",
+    facecolor="#eff1f5",
+    labelcolor="#4c4f69",
+    title_color="#4c4f69",
     tick_params={"colors": "#6c6f85", "labelsize": 8},
-    spines_color="#bcc0cc", grid_color="#ccd0da",
-    grid_alpha=0.5, grid_linestyle="--",
+    spines_color="#bcc0cc",
+    grid_color="#ccd0da",
+    grid_alpha=0.5,
+    grid_linestyle="--",
 )
 
 
@@ -38,16 +47,28 @@ def _style_ax(ax, dark: bool = True) -> None:
     ax.tick_params(**s["tick_params"])
     for sp in ax.spines.values():
         sp.set_edgecolor(s["spines_color"])
-    ax.grid(True, color=s["grid_color"], alpha=s["grid_alpha"],
-            linestyle=s["grid_linestyle"])
+    ax.grid(
+        True,
+        color=s["grid_color"],
+        alpha=s["grid_alpha"],
+        linestyle=s["grid_linestyle"],
+    )
     fig = ax.get_figure()
     if fig is not None:
         fig.patch.set_facecolor("#1e1e2e" if dark else "#e6e9ef")
 
 
 def _annotate_empty(ax, msg: str = "No data") -> None:
-    ax.text(0.5, 0.5, msg, transform=ax.transAxes,
-            ha="center", va="center", fontsize=11, color="#585b70")
+    ax.text(
+        0.5,
+        0.5,
+        msg,
+        transform=ax.transAxes,
+        ha="center",
+        va="center",
+        fontsize=11,
+        color="#585b70",
+    )
 
 
 def _style_all_axes(fig, dark: bool) -> None:
@@ -64,58 +85,62 @@ def _style_all_axes(fig, dark: bool) -> None:
 #   has_ax_param=False → called as fn(sites, verbose=0), returns Figure
 
 OVERVIEW_PLOTS: list = [
-    ("QC Quicklook (multi-panel)",    "plot_qc_quicklook",               False),
-    ("Coverage quality heatmap",      "plot_coverage_quality_heatmap",   True),
-    ("Frequency confidence section",  "plot_frequency_confidence_psection", True),
-    ("Confidence band summary",       "plot_confidence_band_summary",    True),
-    ("Confidence profile",            "plot_confidence_profile",         True),
+    ("QC Quicklook (multi-panel)", "plot_qc_quicklook", False),
+    ("Coverage quality heatmap", "plot_coverage_quality_heatmap", True),
+    (
+        "Frequency confidence section",
+        "plot_frequency_confidence_psection",
+        True,
+    ),
+    ("Confidence band summary", "plot_confidence_band_summary", True),
+    ("Confidence profile", "plot_confidence_profile", True),
 ]
 
 COVERAGE_PLOTS: list = [
-    ("Coverage (per-site presence)",  "plot_coverage",                   True),
-    ("Coverage pseudosection",        "plot_coverage_psection",          True),
-    ("Polar coverage",                "plot_polar_coverage",             True),
+    ("Coverage (per-site presence)", "plot_coverage", True),
+    ("Coverage pseudosection", "plot_coverage_psection", True),
+    ("Polar coverage", "plot_polar_coverage", True),
 ]
 
 NOISE_PLOTS: list = [
-    ("SNR histogram",                 "plot_snr_hist",                   True),
-    ("ΔZ off-diagonal psection",      "nr_qc_delta_offdiag_psection",   True),
-    ("Harmonic waterfall",            "nr_qc_harmonic_waterfall",        True),
-    ("SNR gain profile",              "nr_qc_snr_gain_profile",          True),
-    ("Station off-diagonal curves",   "nr_qc_station_offdiag_curves",   True),
+    ("SNR histogram", "plot_snr_hist", True),
+    ("ΔZ off-diagonal psection", "nr_qc_delta_offdiag_psection", True),
+    ("Harmonic waterfall", "nr_qc_harmonic_waterfall", True),
+    ("SNR gain profile", "nr_qc_snr_gain_profile", True),
+    ("Station off-diagonal curves", "nr_qc_station_offdiag_curves", True),
 ]
 
 SKEW_DIM_PLOTS: list = [
-    ("Skew traffic psection",         "plot_skew_traffic_psection",      True),
-    ("Skew percentile ribbon",        "plot_skew_percentile_ribbon",     True),
-    ("Dimensionality psection",       "plot_dimensionality_psection",    True),
-    ("Dimensionality grid",           "plot_dimensionality_grid",        True),
-    ("Phase tensor skew map",         "plot_phase_tensor_skewmap",       True),
-    ("Dim confidence grid",           "plot_dim_confidence_grid",        True),
+    ("Skew traffic psection", "plot_skew_traffic_psection", True),
+    ("Skew percentile ribbon", "plot_skew_percentile_ribbon", True),
+    ("Dimensionality psection", "plot_dimensionality_psection", True),
+    ("Dimensionality grid", "plot_dimensionality_grid", True),
+    ("Phase tensor skew map", "plot_phase_tensor_skewmap", True),
+    ("Dim confidence grid", "plot_dim_confidence_grid", True),
 ]
 
 STATIC_SHIFT_PLOTS: list = [
-    ("SS QC pseudosection",           "ss_qc_psection",                  True),
-    ("SS QC profile",                 "ss_qc_profile",                   True),
-    ("SS QC station curves",          "ss_qc_station_curves",            True),
-    ("SS radar",                      "plot_ss_radar",                   True),
+    ("SS QC pseudosection", "ss_qc_psection", True),
+    ("SS QC profile", "ss_qc_profile", True),
+    ("SS QC station curves", "ss_qc_station_curves", True),
+    ("SS radar", "plot_ss_radar", True),
 ]
 
 DISTORTION_PLOTS: list = [
-    ("Near-surface detection",        "plot_ns_detection",               True),
-    ("Near-surface overprint section","plot_overprint_section",          True),
-    ("Field zones",                   "plot_field_zones",                True),
-    ("Strike profile",                "plot_strike_profile",             True),
-    ("Strike ribbon",                 "plot_strike_ribbon",              True),
+    ("Near-surface detection", "plot_ns_detection", True),
+    ("Near-surface overprint section", "plot_overprint_section", True),
+    ("Field zones", "plot_field_zones", True),
+    ("Strike profile", "plot_strike_profile", True),
+    ("Strike ribbon", "plot_strike_ribbon", True),
 ]
 
 ALL_GROUPS: list = [
-    ("Overview",      OVERVIEW_PLOTS),
-    ("Coverage",      COVERAGE_PLOTS),
-    ("Noise / SNR",   NOISE_PLOTS),
-    ("Skew / Dim",    SKEW_DIM_PLOTS),
-    ("Static Shift",  STATIC_SHIFT_PLOTS),
-    ("Distortion",    DISTORTION_PLOTS),
+    ("Overview", OVERVIEW_PLOTS),
+    ("Coverage", COVERAGE_PLOTS),
+    ("Noise / SNR", NOISE_PLOTS),
+    ("Skew / Dim", SKEW_DIM_PLOTS),
+    ("Static Shift", STATIC_SHIFT_PLOTS),
+    ("Distortion", DISTORTION_PLOTS),
 ]
 
 GROUP_ICONS: dict[str, str] = {
@@ -250,6 +275,7 @@ def describe_plot(fn_name: str) -> str:
 
 # ── Controller ────────────────────────────────────────────────────────────────
 
+
 class QCController:
     """
     Pure-Python controller that renders QC plots into matplotlib Figure objects.
@@ -276,11 +302,15 @@ class QCController:
                 _iter_items,
                 ensure_sites,
             )
+
             all_edis = list(_iter_items(self._sites))
             sel = set(station_ids)
-            filtered = [ed for ed in all_edis
-                        if getattr(ed, "station", None) in sel
-                        or getattr(ed, "dataid",  None) in sel]
+            filtered = [
+                ed
+                for ed in all_edis
+                if getattr(ed, "station", None) in sel
+                or getattr(ed, "dataid", None) in sel
+            ]
             if filtered:
                 self._sites = ensure_sites(filtered, recursive=False)
         except Exception:
@@ -291,9 +321,14 @@ class QCController:
 
     # ── Main entry-point ──────────────────────────────────────────────────────
 
-    def draw(self, fn_name: str, has_ax: bool, fig,
-             figsize: tuple[float, float] | None = None,
-             **draw_kwargs) -> object | None:
+    def draw(
+        self,
+        fn_name: str,
+        has_ax: bool,
+        fig,
+        figsize: tuple[float, float] | None = None,
+        **draw_kwargs,
+    ) -> object | None:
         """Render *fn_name* with optional kwargs forwarded to the emtools function.
 
         Only kwargs whose names appear in the function's signature are passed;
@@ -337,8 +372,11 @@ class QCController:
         # Filter draw_kwargs to only those the function actually accepts
         try:
             valid = set(inspect.signature(fn).parameters.keys())
-            kw = {k: v for k, v in draw_kwargs.items()
-                  if k in valid and v is not None}
+            kw = {
+                k: v
+                for k, v in draw_kwargs.items()
+                if k in valid and v is not None
+            }
         except Exception:
             kw = {}
 
@@ -378,7 +416,7 @@ class QCController:
         """Call a multi-axes function and return the Figure it creates."""
         before = set(plt.get_fignums())
         result = fn(self._sites, verbose=0, **kwargs)
-        after  = set(plt.get_fignums())
+        after = set(plt.get_fignums())
         if hasattr(result, "get_axes"):
             return result
         new_nums = after - before
@@ -388,6 +426,7 @@ class QCController:
 
 
 # ── Auto-bounds helper for polar coverage ─────────────────────────────────────
+
 
 def _auto_rho_bounds(
     sites,
@@ -406,6 +445,7 @@ def _auto_rho_bounds(
             _rho_a_from_z,
             _unwrap,
         )
+
         rho_vals = []
         for _i, ed in enumerate(_iter_items(sites)):
             ed = _unwrap(ed)
@@ -414,12 +454,16 @@ def _auto_rho_bounds(
                 continue
             try:
                 rho = _rho_a_from_z(z_block, freqs, "xy")
-                rho_vals.extend(float(r) for r in rho if np.isfinite(r) and r > 0)
+                rho_vals.extend(
+                    float(r) for r in rho if np.isfinite(r) and r > 0
+                )
             except Exception:
                 continue
         if rho_vals:
             arr = np.asarray(rho_vals)
-            return float(np.percentile(arr, lo_pct)), float(np.percentile(arr, hi_pct))
+            return float(np.percentile(arr, lo_pct)), float(
+                np.percentile(arr, hi_pct)
+            )
     except Exception:
         pass
     return 0.5, 5000.0

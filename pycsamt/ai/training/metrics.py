@@ -16,6 +16,7 @@ Metrics
                    are easier to recover and receive less weight).
 ``layer_rmse``     Per-layer RMSE vector.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -36,6 +37,7 @@ __all__ = [
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _valid(y_true: np.ndarray, y_pred: np.ndarray):
     """Return (yt, yp) with NaN rows removed (any NaN in a row discards it)."""
     mask = np.isfinite(y_true).all(axis=-1) & np.isfinite(y_pred).all(axis=-1)
@@ -45,6 +47,7 @@ def _valid(y_true: np.ndarray, y_pred: np.ndarray):
 # ─────────────────────────────────────────────────────────────────────────────
 # Numpy metrics
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -84,7 +87,9 @@ def relative_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     Useful when comparing models with very different resistivity ranges.
     """
-    mask = np.isfinite(y_true) & np.isfinite(y_pred) & (np.abs(y_true) > 1e-12)
+    mask = (
+        np.isfinite(y_true) & np.isfinite(y_pred) & (np.abs(y_true) > 1e-12)
+    )
     if mask.sum() == 0:
         return float("nan")
     yt, yp = y_true[mask], y_pred[mask]
@@ -169,6 +174,7 @@ def summarise(
 # PyTorch masked loss
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def masked_mse_loss(pred, target):
     """
     MSE loss that ignores ``NaN`` (padding) entries in *target*.
@@ -184,7 +190,7 @@ def masked_mse_loss(pred, target):
     """
     mask = torch_isfinite(target)
     if not mask.any():
-        return pred.sum() * 0.0   # differentiable zero
+        return pred.sum() * 0.0  # differentiable zero
     diff = (pred[mask] - target[mask]) ** 2
     return diff.mean()
 
@@ -193,6 +199,7 @@ def torch_isfinite(t):
     """Return a bool mask without importing torch at module level."""
     try:
         import torch
+
         return torch.isfinite(t)
     except ImportError:
         raise ImportError("PyTorch required for masked_mse_loss")

@@ -49,7 +49,7 @@ def _write_sample_edi(p: Path) -> None:
         "  >EMEAS ID=255.025 CHTYPE=EY X=22.4 Y=-44.7 X2=-22.4 "
         "Y2=44.7 ACQCHAN=CH2\n\n"
     )
-    spectra = ">=SPECTRASECT\n  SECTID=\"demo\"\n  NCHAN=5\n\n"
+    spectra = '>=SPECTRASECT\n  SECTID="demo"\n  NCHAN=5\n\n'
     tail = ">END\n"
 
     p.write_text(
@@ -187,4 +187,3 @@ def test_mixins_return_expected(tmp_path: Path) -> None:
     assert all(isinstance(h, Hmeasurement) for h in h_list)
     assert len(e_list) == 2
     assert len(h_list) == 3
-

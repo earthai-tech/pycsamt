@@ -44,12 +44,13 @@ from pycsamt.app.desktop.agent_registry import (
 # Per-agent parameter page
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class _ParamPage(QWidget):
     """A QFormLayout page for one agent's parameters."""
 
     def __init__(self, entry: dict, parent=None) -> None:
         super().__init__(parent)
-        self._entry    = entry
+        self._entry = entry
         self._widgets: dict[str, QWidget] = {}
         self._build()
 
@@ -69,8 +70,8 @@ class _ParamPage(QWidget):
 
         for param_name, spec in self._entry.get("params", {}).items():
             label = spec.get("label", param_name)
-            tip   = spec.get("tip", "")
-            w     = self._make_widget(spec)
+            tip = spec.get("tip", "")
+            w = self._make_widget(spec)
             if tip:
                 w.setToolTip(tip)
             self._widgets[param_name] = w
@@ -135,6 +136,7 @@ class _ParamPage(QWidget):
 # Main dialog
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class RunAgentDialog(QDialog):
     """
     Modal dialog for selecting and configuring a pycsamt agent.
@@ -155,8 +157,8 @@ class RunAgentDialog(QDialog):
         self.setMinimumSize(680, 440)
 
         self.selected_agent: str = ""
-        self.params:         dict[str, Any] = {}
-        self.api_key:        str = api_key or ""
+        self.params: dict[str, Any] = {}
+        self.api_key: str = api_key or ""
 
         self._pages: dict[str, _ParamPage] = {}
         self._build_ui()
@@ -188,7 +190,9 @@ class RunAgentDialog(QDialog):
         self._populate_agents()
 
         # ── Geological context (LLM agents only) ──────────────────
-        self._grp_context = QGroupBox("Geological Context  (optional — sent to LLM)")
+        self._grp_context = QGroupBox(
+            "Geological Context  (optional — sent to LLM)"
+        )
         self._grp_context.setVisible(False)
         ctx_lay = QVBoxLayout(self._grp_context)
         ctx_lay.setContentsMargins(8, 6, 8, 6)
@@ -279,7 +283,7 @@ class RunAgentDialog(QDialog):
         if page:
             self._stack.setCurrentWidget(page)
         # Show context box only for LLM agents
-        entry  = get_entry(name) or {}
+        entry = get_entry(name) or {}
         is_llm = entry.get("type") == "llm"
         self._grp_context.setVisible(is_llm)
 
@@ -291,10 +295,10 @@ class RunAgentDialog(QDialog):
         if not name:
             return
         self.selected_agent = name
-        self.params         = self._pages[name].current_params()
-        self.api_key        = self._api_key_edit.text().strip()
+        self.params = self._pages[name].current_params()
+        self.api_key = self._api_key_edit.text().strip()
         ctx = self._ctx_edit.toPlainText().strip()
         if ctx:
             self.params["user_prompt"] = ctx
-            self.params["context"]     = ctx   # compat alias
+            self.params["context"] = ctx  # compat alias
         self.accept()

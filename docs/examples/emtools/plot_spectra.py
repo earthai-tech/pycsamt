@@ -58,10 +58,14 @@ spectra_dir = dataset_path("mt_spectra")
 sp1 = Spectra.from_file(spectra_dir / "spectra01.edi")
 sp2 = Spectra.from_file(spectra_dir / "spectra02.edi")
 
-print(f"{sp1.name}: {sp1.n_freq} freqs, {sp1.freq.min():.4g}"
-      f"-{sp1.freq.max():.4g} Hz, {sp1.n_chan} channels")
-print(f"{sp2.name}: {sp2.n_freq} freqs, {sp2.freq.min():.4g}"
-      f"-{sp2.freq.max():.4g} Hz, {sp2.n_chan} channels")
+print(
+    f"{sp1.name}: {sp1.n_freq} freqs, {sp1.freq.min():.4g}"
+    f"-{sp1.freq.max():.4g} Hz, {sp1.n_chan} channels"
+)
+print(
+    f"{sp2.name}: {sp2.n_freq} freqs, {sp2.freq.min():.4g}"
+    f"-{sp2.freq.max():.4g} Hz, {sp2.n_chan} channels"
+)
 print("channel types:", sp1.id_to_chtype)
 
 # %%
@@ -102,8 +106,9 @@ for ch in df_psd["channel"].unique():
 # are the cross terms ``EX``-``HY`` and ``EY``-``HX``.
 
 mt_pairs = [(3, 1), (4, 0)]  # (EX, HY), (EY, HX) by channel index
-axs = plot_coherence(sp1, pairs=mt_pairs,
-                      title=f"{sp1.name} — MT-relevant coherence")
+axs = plot_coherence(
+    sp1, pairs=mt_pairs, title=f"{sp1.name} — MT-relevant coherence"
+)
 
 df_coh = coherence_table(sp1, pairs=mt_pairs)
 print(df_coh.groupby("pair")["coherence"].agg(["min", "max", "mean"]))
@@ -148,16 +153,22 @@ print(df_sum[["freq", "mean_coherence"]].tail(3))
 # a frequency range; :func:`~pycsamt.emtools.spectra.mask_low_coherence`
 # flags frequencies that clear a coherence threshold.
 
-mask_full_all = mask_low_coherence(sp1, pairs=mt_pairs, threshold=0.5,
-                                    require_all=True)
-print(f"full band ({sp1.n_freq} freqs): "
-      f"{mask_full_all.sum()}/{sp1.n_freq} pass thr=0.5 on both pairs")
+mask_full_all = mask_low_coherence(
+    sp1, pairs=mt_pairs, threshold=0.5, require_all=True
+)
+print(
+    f"full band ({sp1.n_freq} freqs): "
+    f"{mask_full_all.sum()}/{sp1.n_freq} pass thr=0.5 on both pairs"
+)
 
 sp1_hi = band_select(sp1, 100, 10400)
-mask_hi_all = mask_low_coherence(sp1_hi, pairs=mt_pairs, threshold=0.5,
-                                  require_all=True)
-print(f"restricted to [100, 10400] Hz ({sp1_hi.n_freq} freqs): "
-      f"{mask_hi_all.sum()}/{sp1_hi.n_freq} pass")
+mask_hi_all = mask_low_coherence(
+    sp1_hi, pairs=mt_pairs, threshold=0.5, require_all=True
+)
+print(
+    f"restricted to [100, 10400] Hz ({sp1_hi.n_freq} freqs): "
+    f"{mask_hi_all.sum()}/{sp1_hi.n_freq} pass"
+)
 
 # %%
 # **Reading this output.** Over the full band, 42 of 51 frequencies
@@ -179,9 +190,11 @@ fig = plot_spectra_matrix(sp1, freq_idx=0, quantity="abs")
 
 M = sp1.S[0]
 print(f"f = {sp1.freq[0]:.4g} Hz")
-print("log10|S_ij| range across the full 7x7 matrix:",
-      f"{np.log10(np.abs(M[M != 0]).min()):.2f} to "
-      f"{np.log10(np.abs(M).max()):.2f}")
+print(
+    "log10|S_ij| range across the full 7x7 matrix:",
+    f"{np.log10(np.abs(M[M != 0]).min()):.2f} to "
+    f"{np.log10(np.abs(M).max()):.2f}",
+)
 
 # %%
 # **Reading this output.** At the top frequency (10400 Hz), log10|S_ij|
@@ -206,10 +219,14 @@ fig = plot_z_from_spectra(sp1)
 
 z1, _ = sp1.to_Z(estimate_error=False)
 rho = z1.resistivity
-print(f"rho_xy range: {np.nanmin(rho[:, 0, 1]):.2f}"
-      f"-{np.nanmax(rho[:, 0, 1]):.2f} ohm.m")
-print(f"rho_yx range: {np.nanmin(rho[:, 1, 0]):.2f}"
-      f"-{np.nanmax(rho[:, 1, 0]):.2f} ohm.m")
+print(
+    f"rho_xy range: {np.nanmin(rho[:, 0, 1]):.2f}"
+    f"-{np.nanmax(rho[:, 0, 1]):.2f} ohm.m"
+)
+print(
+    f"rho_yx range: {np.nanmin(rho[:, 1, 0]):.2f}"
+    f"-{np.nanmax(rho[:, 1, 0]):.2f} ohm.m"
+)
 
 # %%
 # **Reading this output.** ``rho_xy`` runs 3.9–119.8 Ω·m and ``rho_yx``

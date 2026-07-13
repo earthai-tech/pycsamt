@@ -44,7 +44,14 @@ from pycsamt.app.desktop.widgets.colorbar_widget import (
 )
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
-_COLORMAPS = ["jet_r", "RdBu_r", "viridis_r", "plasma_r", "rainbow_r", "bwr_r"]
+_COLORMAPS = [
+    "jet_r",
+    "RdBu_r",
+    "viridis_r",
+    "plasma_r",
+    "rainbow_r",
+    "bwr_r",
+]
 
 
 class SectionPanel(QWidget):
@@ -61,9 +68,9 @@ class SectionPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._result        = None   # InversionResult (primary)
-        self._result_ref    = None   # InversionResult (comparison overlay)
-        self._dark: bool    = True
+        self._result = None  # InversionResult (primary)
+        self._result_ref = None  # InversionResult (comparison overlay)
+        self._dark: bool = True
         self._build_ui()
 
     # ── Construction ──────────────────────────────────────────────────
@@ -78,12 +85,16 @@ class SectionPanel(QWidget):
         btn_bar.setContentsMargins(4, 4, 4, 2)
 
         self._btn_load = QPushButton("Load Result…")
-        self._btn_load.setStatusTip("Load an Occam2D inversion working directory")
+        self._btn_load.setStatusTip(
+            "Load an Occam2D inversion working directory"
+        )
         self._btn_load.clicked.connect(self._on_load)
         btn_bar.addWidget(self._btn_load)
 
         self._btn_compare = QPushButton("+ Compare…")
-        self._btn_compare.setStatusTip("Overlay a second inversion result for comparison")
+        self._btn_compare.setStatusTip(
+            "Overlay a second inversion result for comparison"
+        )
         self._btn_compare.setEnabled(False)
         self._btn_compare.clicked.connect(self._on_load_ref)
         btn_bar.addWidget(self._btn_compare)
@@ -131,7 +142,9 @@ class SectionPanel(QWidget):
         # ── Bottom: summary text ───────────────────────────────────
         self._summary = QTextBrowser()
         self._summary.setMaximumHeight(80)
-        self._summary.setPlaceholderText("Load an inversion result to view the section.")
+        self._summary.setPlaceholderText(
+            "Load an inversion result to view the section."
+        )
         root.addWidget(self._summary)
 
         # Draw initial empty state
@@ -204,7 +217,9 @@ class SectionPanel(QWidget):
         self._spin_exag.setDecimals(1)
         self._spin_exag.setSuffix(" ×")
         self._spin_exag.setEnabled(False)
-        self._spin_exag.setToolTip("Vertical exaggeration of the terrain surface")
+        self._spin_exag.setToolTip(
+            "Vertical exaggeration of the terrain surface"
+        )
         self._spin_exag.valueChanged.connect(self._on_exag_changed)
         topo_form.addRow("Exaggeration:", self._spin_exag)
 
@@ -241,6 +256,7 @@ class SectionPanel(QWidget):
 
     def _on_topo_toggled(self, checked: bool) -> None:
         from pycsamt.topo import configure_topo
+
         configure_topo(enabled=checked)
         self._spin_exag.setEnabled(checked)
         if self._result is not None:
@@ -248,12 +264,13 @@ class SectionPanel(QWidget):
 
     def _on_exag_changed(self, value: float) -> None:
         from pycsamt.topo import configure_topo
+
         configure_topo(exaggeration=value)
         if self._result is not None and self._chk_topo.isChecked():
             self._redraw()
 
     def clear(self) -> None:
-        self._result     = None
+        self._result = None
         self._result_ref = None
         self._btn_compare.setEnabled(False)
         self._btn_export.setEnabled(False)
@@ -273,7 +290,9 @@ class SectionPanel(QWidget):
 
     def _on_load_ref(self) -> None:
         workdir = QFileDialog.getExistingDirectory(
-            self, "Select reference Occam2D working directory", str(Path.home())
+            self,
+            "Select reference Occam2D working directory",
+            str(Path.home()),
         )
         if not workdir:
             return
@@ -282,6 +301,7 @@ class SectionPanel(QWidget):
     def _load_from_workdir(self, workdir: str, is_reference: bool) -> None:
         try:
             from pycsamt.models.occam2d import InversionResult
+
             result = InversionResult(workdir=workdir)
         except Exception as exc:
             self._summary.setPlainText(f"Failed to load '{workdir}':\n{exc}")
@@ -306,12 +326,15 @@ class SectionPanel(QWidget):
         ax = self._canvas.axes
         ax.cla()
         ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             "Load an inversion result\nor run an inversion from\n"
             "Processing → Inversion Wizard",
             transform=ax.transAxes,
-            ha="center", va="center",
-            fontsize=11, color="#585b70",
+            ha="center",
+            va="center",
+            fontsize=11,
+            color="#585b70",
         )
         style_axes(ax, self._dark)
         self._canvas.draw()
@@ -331,9 +354,14 @@ class SectionPanel(QWidget):
         except Exception as exc:
             ax.cla()
             ax.text(
-                0.5, 0.5, f"Render error:\n{exc}",
-                transform=ax.transAxes, ha="center", va="center",
-                fontsize=10, color="#f38ba8",
+                0.5,
+                0.5,
+                f"Render error:\n{exc}",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=10,
+                color="#f38ba8",
             )
 
         style_axes(ax, self._dark)
@@ -349,32 +377,33 @@ class SectionPanel(QWidget):
 
     def _draw_section(self, ax, result, alpha: float = 1.0) -> None:
         """Draw pcolormesh 2-D resistivity section on *ax*."""
-        rho_log10 = np.asarray(result.rho_2d)   # (nz, nx) in log10(Ω·m)
-        mesh      = result.mesh
+        rho_log10 = np.asarray(result.rho_2d)  # (nz, nx) in log10(Ω·m)
+        mesh = result.mesh
         xn = np.asarray(mesh.x_nodes)
         zn = np.asarray(mesh.z_nodes)
 
-        rho_lin = np.where(np.isfinite(rho_log10), 10.0 ** rho_log10, np.nan)
+        rho_lin = np.where(np.isfinite(rho_log10), 10.0**rho_log10, np.nan)
 
         rho_min = self._rho_min.value()
         rho_max = self._rho_max.value()
-        cmap    = self._cmap_combo.currentText()
+        cmap = self._cmap_combo.currentText()
 
         # Clip depth if requested
         depth_max = self._depth_max.value()
         if depth_max > 0:
-            zn       = zn[: np.searchsorted(zn, depth_max) + 1]
-            rho_lin  = rho_lin[: len(zn) - 1, :]
+            zn = zn[: np.searchsorted(zn, depth_max) + 1]
+            rho_lin = rho_lin[: len(zn) - 1, :]
 
         norm = LogNorm(vmin=rho_min, vmax=rho_max, clip=True)
 
         # Centre x on profile midpoint for readability
         x_shift = float((xn.min() + xn.max()) / 2.0)
-        xn_c    = (xn - x_shift) / 1000.0   # m → km
-        zn_km   = zn / 1000.0
+        xn_c = (xn - x_shift) / 1000.0  # m → km
+        zn_km = zn / 1000.0
 
         # ── Topography draped rendering ────────────────────────────────
         from pycsamt.topo.config import PYCSAMT_TOPO
+
         use_topo = PYCSAMT_TOPO.enabled and self._chk_topo.isChecked()
 
         if use_topo:
@@ -384,17 +413,30 @@ class SectionPanel(QWidget):
         else:
             # Standard flat-datum rendering
             ax.pcolormesh(
-                xn_c, zn_km, rho_lin,
-                norm=norm, cmap=cmap, alpha=alpha, shading="flat",
+                xn_c,
+                zn_km,
+                rho_lin,
+                norm=norm,
+                cmap=cmap,
+                alpha=alpha,
+                shading="flat",
             )
-            ax.set_ylim(zn_km.max(), 0)   # depth positive downward
+            ax.set_ylim(zn_km.max(), 0)  # depth positive downward
             ax.set_ylabel("Depth (km)", fontsize=9)
 
             if self._show_stations.isChecked():
                 try:
-                    sx = (np.asarray(result.mesh.station_x) - x_shift) / 1000.0
-                    ax.plot(sx, np.zeros_like(sx),
-                            "v", color="#f5c542", ms=6, zorder=5)
+                    sx = (
+                        np.asarray(result.mesh.station_x) - x_shift
+                    ) / 1000.0
+                    ax.plot(
+                        sx,
+                        np.zeros_like(sx),
+                        "v",
+                        color="#f5c542",
+                        ms=6,
+                        zorder=5,
+                    )
                 except Exception:
                     pass
 
@@ -402,7 +444,9 @@ class SectionPanel(QWidget):
 
         # RMS annotation
         try:
-            rms_txt = f"RMS = {result.final_rms:.3f}  ({result.n_iterations} iter)"
+            rms_txt = (
+                f"RMS = {result.final_rms:.3f}  ({result.n_iterations} iter)"
+            )
             ax.set_title(rms_txt, fontsize=9, pad=3)
         except Exception:
             pass
@@ -420,53 +464,82 @@ class SectionPanel(QWidget):
 
         # Try to get station elevations from the result object
         try:
-            sx_m      = np.asarray(result.mesh.station_x)
-            sx_km     = (sx_m - x_shift) / 1000.0
-            elev_m    = np.asarray(getattr(result.mesh, "station_elev",
-                                           np.zeros(len(sx_m))))
-            elev_km   = elev_m / 1000.0
+            sx_m = np.asarray(result.mesh.station_x)
+            sx_km = (sx_m - x_shift) / 1000.0
+            elev_m = np.asarray(
+                getattr(result.mesh, "station_elev", np.zeros(len(sx_m)))
+            )
+            elev_km = elev_m / 1000.0
         except Exception:
             # No elevation data → fall back to flat rendering
-            ax.pcolormesh(xn_c, zn_km, rho_lin,
-                          norm=norm, cmap=cmap, alpha=alpha, shading="flat")
+            ax.pcolormesh(
+                xn_c,
+                zn_km,
+                rho_lin,
+                norm=norm,
+                cmap=cmap,
+                alpha=alpha,
+                shading="flat",
+            )
             ax.set_ylim(zn_km.max(), 0)
             ax.set_ylabel("Depth (km)", fontsize=9)
             return
 
         # Cell-centre x positions for elevation interpolation
         x_centres = (xn_c[:-1] + xn_c[1:]) / 2.0
-        elev_at_centres = interp_elev(sx_km, elev_km, x_centres,
-                                      PYCSAMT_TOPO.interp_method)
+        elev_at_centres = interp_elev(
+            sx_km, elev_km, x_centres, PYCSAMT_TOPO.interp_method
+        )
 
         # Build terrain-following z grid
         _, z_draped, rho_draped = drape_section(
-            xn_c, zn_km, rho_lin, elev_at_centres,
+            xn_c,
+            zn_km,
+            rho_lin,
+            elev_at_centres,
             exaggeration=PYCSAMT_TOPO.exaggeration,
             clip_above_surface=PYCSAMT_TOPO.clip_below_surface,
         )
 
         # pcolormesh with 2-D Y grid (requires Matplotlib >= 3.3)
         ax.pcolormesh(
-            xn_c, z_draped, rho_draped,
-            norm=norm, cmap=cmap, alpha=alpha, shading="flat",
+            xn_c,
+            z_draped,
+            rho_draped,
+            norm=norm,
+            cmap=cmap,
+            alpha=alpha,
+            shading="flat",
         )
 
         # Y-axis: absolute elevation (surface at top)
         y_surface = np.max(elev_at_centres)
-        y_deep    = y_surface - zn_km.max() * PYCSAMT_TOPO.exaggeration
+        y_deep = y_surface - zn_km.max() * PYCSAMT_TOPO.exaggeration
         ax.set_ylim(y_deep, y_surface + 0.05 * abs(y_surface - y_deep))
         ax.set_ylabel("Elevation (km a.s.l.)", fontsize=9)
 
         # Terrain overlay
         if self._show_stations.isChecked():
             try:
-                snames = [str(getattr(result.mesh, "station_names", [f"S{i}" for i in range(len(sx_km))])
-                              [i] if hasattr(result.mesh, "station_names") else f"S{i}")
-                          for i in range(len(sx_km))]
+                snames = [
+                    str(
+                        getattr(
+                            result.mesh,
+                            "station_names",
+                            [f"S{i}" for i in range(len(sx_km))],
+                        )[i]
+                        if hasattr(result.mesh, "station_names")
+                        else f"S{i}"
+                    )
+                    for i in range(len(sx_km))
+                ]
             except Exception:
                 snames = None
             draw_topo_section(
-                ax, sx_km, elev_m, snames,
+                ax,
+                sx_km,
+                elev_m,
+                snames,
                 station_x_km=sx_km,
                 dark=self._dark,
             )
@@ -475,14 +548,16 @@ class SectionPanel(QWidget):
         """Overlay dashed contour lines from the reference result."""
         try:
             rho_log10 = np.asarray(result_ref.rho_2d)
-            mesh      = result_ref.mesh
+            mesh = result_ref.mesh
             xn = np.asarray(mesh.x_nodes)
             zn = np.asarray(mesh.z_nodes)
             x_shift = float((xn.min() + xn.max()) / 2.0)
             xc = ((xn[:-1] + xn[1:]) / 2.0 - x_shift) / 1000.0
             zc = ((zn[:-1] + zn[1:]) / 2.0) / 1000.0
             ax.contour(
-                xc, zc, rho_log10,
+                xc,
+                zc,
+                rho_log10,
                 levels=8,
                 colors="white",
                 linewidths=0.6,
@@ -516,4 +591,5 @@ class SectionPanel(QWidget):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         ExportDialog(figure=self._canvas.figure, parent=self).exec()

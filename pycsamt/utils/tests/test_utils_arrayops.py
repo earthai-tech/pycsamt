@@ -21,8 +21,8 @@ from pycsamt.utils.arrayops import (
     reshape,
 )
 
-
 # ------------------------ concat_array_from_list ----------------------
+
 
 def test_concat_columns_with_padding_and_none():
     a = np.arange(3)
@@ -54,6 +54,7 @@ def test_concat_flattens_higher_dims_and_scalars():
 
 # ------------------------------ is_iterable ---------------------------
 
+
 def test_is_iterable_bool_semantics():
     assert is_iterable([1, 2])
     assert is_iterable("abc")
@@ -71,6 +72,7 @@ def test_is_iterable_transform_and_parse():
 
 
 # -------------------------------- reshape -----------------------------
+
 
 def test_reshape_1d_orientations():
     a = np.arange(4)
@@ -99,10 +101,12 @@ def test_reshape_invalid_inputs():
 
 # ------------------------------- frameify -----------------------------
 
+
 def test_frameify_array_with_columns_and_types():
     arr = np.array([[1.0, "x"], [2.0, "y"]], dtype=object)
-    df, nf, cf = frameify(arr, columns=["num", "cat"],
-                          return_feature_types=True)
+    df, nf, cf = frameify(
+        arr, columns=["num", "cat"], return_feature_types=True
+    )
     assert list(df.columns) == ["num", "cat"]
     assert nf == ["num"]
     assert cf == ["cat"]
@@ -110,20 +114,26 @@ def test_frameify_array_with_columns_and_types():
 
 
 def test_frameify_drops_all_nan_columns_and_rows():
-    df_in = pd.DataFrame({
-        "a": [1.0, 2.0, np.nan],
-        "b": [np.nan, np.nan, np.nan],
-    })
+    df_in = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, np.nan],
+            "b": [np.nan, np.nan, np.nan],
+        }
+    )
     df = frameify(df_in)
     assert "b" not in df.columns
     assert len(df) == 2  # last row was all-NaN after dropping b
 
 
 def test_frameify_replaces_empty_strings():
-    df = frameify(pd.DataFrame({
-        "a": ["1", " ", "3"],
-        "b": ["4", "5", "6"],
-    }))
+    df = frameify(
+        pd.DataFrame(
+            {
+                "a": ["1", " ", "3"],
+                "b": ["4", "5", "6"],
+            }
+        )
+    )
     assert df["a"].isna().sum() == 1
     assert len(df) == 3  # row survives thanks to column b
 
@@ -141,6 +151,7 @@ def test_frameify_rejects_non_array():
 
 # ------------------------------ assert_xy_in --------------------------
 
+
 def test_assert_xy_in_from_dataframe_columns():
     data = pd.DataFrame({"e": [1.0, 2.0], "n": [3.0, 4.0]})
     x, y = assert_xy_in("e", "n", data=data)
@@ -152,15 +163,14 @@ def test_assert_xy_in_from_dataframe_columns():
 def test_assert_xy_in_series_output_and_frame():
     x, y = assert_xy_in([1, 2], [3, 4], asarray=False)
     assert isinstance(x, pd.Series)
-    df = assert_xy_in([1, 2], [3, 4], to_frame=True,
-                      columns=["east", "north"])
+    df = assert_xy_in(
+        [1, 2], [3, 4], to_frame=True, columns=["east", "north"]
+    )
     assert list(df.columns) == ["east", "north"]
 
 
 def test_assert_xy_in_dropna_and_numeric():
-    x, y = assert_xy_in(
-        [1.0, np.nan, 3.0], [4.0, 5.0, 6.0], dropna=True
-    )
+    x, y = assert_xy_in([1.0, np.nan, 3.0], [4.0, 5.0, 6.0], dropna=True)
     assert x.size == y.size == 2
     x2, _ = assert_xy_in(["1", "2"], ["3", "4"], xy_numeric=True)
     assert x2.dtype.kind in "if"
@@ -170,8 +180,7 @@ def test_assert_xy_in_errors():
     with pytest.raises(TypeError):
         assert_xy_in("col", [1, 2])
     with pytest.raises(KeyError):
-        assert_xy_in("missing", "n",
-                     data=pd.DataFrame({"n": [1]}))
+        assert_xy_in("missing", "n", data=pd.DataFrame({"n": [1]}))
     with pytest.raises(ValueError):
         assert_xy_in([1, 2, 3], [1, 2])
     with pytest.raises(ValueError):
@@ -179,6 +188,7 @@ def test_assert_xy_in_errors():
 
 
 # ---------------------------- interpolate_grid ------------------------
+
 
 def test_interpolate_grid_fills_all_nans():
     x = [28, np.nan, 50, 60]
@@ -207,6 +217,7 @@ def test_interpolate_grid_constant_fill_value():
 
 # -------------------------------- fill_nan ----------------------------
 
+
 def test_fill_nan_1d_directions():
     a = np.array([np.nan, 1.0, np.nan, 2.0])
     ff = fill_nan(a, method="ff")
@@ -218,8 +229,7 @@ def test_fill_nan_1d_directions():
 
 
 def test_fill_nan_2d_axis0_and_axis1():
-    m = np.array([[1.0, np.nan, 3.0],
-                  [np.nan, 5.0, np.nan]])
+    m = np.array([[1.0, np.nan, 3.0], [np.nan, 5.0, np.nan]])
     by_col = fill_nan(m, method="both", axis=0)
     assert np.allclose(by_col, [[1.0, 5.0, 3.0], [1.0, 5.0, 3.0]])
     by_row = fill_nan(m, method="both", axis=1)
@@ -236,6 +246,7 @@ def test_fill_nan_validation():
 
 
 # ------------------------------ drop_nan_in ---------------------------
+
 
 def test_drop_nan_in_aligns_predictions():
     yt = np.array([1.0, 2.0, np.nan, 4.0])

@@ -9,6 +9,7 @@ Survey layout.
 - Topography: robust container for .stn station location files.
 
 """
+
 from __future__ import annotations
 
 import warnings
@@ -125,29 +126,29 @@ class Topography(AVGComponentBase):
     .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
            User Manual*, "STN Files" section, p. 36.
     """
+
     def __init__(
         self,
         data: pd.DataFrame | None = None,
         meta: Mapping[str, Any] | None = None,
         *,
-        utm_zone: str =None,
-        epsg: int =None,
+        utm_zone: str = None,
+        epsg: int = None,
         name: str | None = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         super().__init__(
-            data=data, meta=meta, name=name or "Topography",
-            verbose=verbose
+            data=data, meta=meta, name=name or "Topography", verbose=verbose
         )
-        self.utm_zone =utm_zone
-        self.epsg= epsg
+        self.utm_zone = utm_zone
+        self.epsg = epsg
         self._azimuths: np.ndarray | None = None
 
     def read(
         self,
         source: str | Path | pd.DataFrame,
         meta: Mapping[str, Any] | None = None,
-        **kws: Any
+        **kws: Any,
     ) -> Topography:
         r"""Read topography data from a file path or DataFrame.
 
@@ -211,10 +212,11 @@ class Topography(AVGComponentBase):
         self._frame = self._normalize_stn_columns(df)
 
         # initialize longitude and latitude
-        self._longitude = pd.Series (
-            np.zeros((self._frame.shape[0],), dtype=float ))
-        self._latitude = pd.Series (
-            np.zeros((self._frame.shape[0],), dtype=float )
+        self._longitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
+        )
+        self._latitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
         )
 
         # reset the cache when new data is loaded
@@ -222,9 +224,7 @@ class Topography(AVGComponentBase):
 
         return self
 
-    def _normalize_stn_columns(
-            self, df: pd.DataFrame
-        ) -> pd.DataFrame:
+    def _normalize_stn_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Find and rename columns to a canonical schema.
         """
@@ -233,20 +233,23 @@ class Topography(AVGComponentBase):
             col_lower = str(col).lower()
             if "station" in col_lower or "dot" in col_lower:
                 rename_map[col] = "station"
-            elif "east" in col_lower or col_lower == 'e':
+            elif "east" in col_lower or col_lower == "e":
                 rename_map[col] = "easting"
-            elif "north" in col_lower or col_lower == 'n':
+            elif "north" in col_lower or col_lower == "n":
                 rename_map[col] = "northing"
-            elif "elev" in col_lower or col_lower == 'h':
+            elif "elev" in col_lower or col_lower == "h":
                 rename_map[col] = "elevation"
-            elif "head" in col_lower: rename_map[col] = "heading"
-            elif "pitch" in col_lower: rename_map[col] = "pitch"
-            elif "roll" in col_lower: rename_map[col] = "roll"
+            elif "head" in col_lower:
+                rename_map[col] = "heading"
+            elif "pitch" in col_lower:
+                rename_map[col] = "pitch"
+            elif "roll" in col_lower:
+                rename_map[col] = "roll"
 
         df = df.rename(columns=rename_map)
         # Convert all columns to numeric
         for col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
         required = ["station", "easting", "northing", "elevation"]
         missing = [c for c in required if c not in df.columns]
@@ -260,7 +263,7 @@ class Topography(AVGComponentBase):
         self,
         to: Literal["utm", "ll", "auto"] = "auto",
         *,
-        inplace: bool = True
+        inplace: bool = True,
     ) -> pd.DataFrame | None:
         r"""Convert between UTM and geographic (lat/lon) coordinates.
 
@@ -326,41 +329,44 @@ class Topography(AVGComponentBase):
 
         if to == "ll":
             if self.utm_zone is None and self.epsg is None:
-                self._logger.error (
+                self._logger.error(
                     "UTM zone or 'epsg' needs to be set for"
                     " converting easting/northing"
                     " to longitude/latitude"
                 )
                 new_df = pd.DataFrame(
-                    {"latitude": self._latitude,
-                     "longitude": self._longitude
-                     },
-                    index=self._frame.index
+                    {
+                        "latitude": self._latitude,
+                        "longitude": self._longitude,
+                    },
+                    index=self._frame.index,
                 )
             else:
                 lat, lon = to_ll(
-                    x_coords, y_coords,
-                    zone =self.utm_zone,
-                    epsg = self.epsg,
-                    as_frame=False
+                    x_coords,
+                    y_coords,
+                    zone=self.utm_zone,
+                    epsg=self.epsg,
+                    as_frame=False,
                 )
                 new_df = pd.DataFrame(
                     {"latitude": lat, "longitude": lon},
-                    index=self._frame.index
+                    index=self._frame.index,
                 )
-            self._longitude = new_df['longitude']
-            self._latitude = new_df['latitude']
+            self._longitude = new_df["longitude"]
+            self._latitude = new_df["latitude"]
 
         elif to == "utm":
             east, north, zone = to_utm(
-                x_coords, y_coords,
-                epsg= self.epsg,
-                utm_zone= self.utm_zone,
-                as_frame=False
+                x_coords,
+                y_coords,
+                epsg=self.epsg,
+                utm_zone=self.utm_zone,
+                as_frame=False,
             )
             new_df = pd.DataFrame(
                 {"easting": east, "northing": north, "utm_zone": zone},
-                index=self._frame.index
+                index=self._frame.index,
             )
 
         else:
@@ -374,8 +380,7 @@ class Topography(AVGComponentBase):
                 self._frame[col] = new_df[col]
             if self.verbose:
                 self._logger.info(
-                    f"Coordinates converted to '{to}' and updated "
-                    "in place."
+                    f"Coordinates converted to '{to}' and updated in place."
                 )
 
             return None
@@ -385,7 +390,7 @@ class Topography(AVGComponentBase):
     def to_grid(
         self,
         resolution: int = 100,
-        method: Literal['linear', 'cubic', 'nearest'] = 'cubic'
+        method: Literal["linear", "cubic", "nearest"] = "cubic",
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         r"""Interpolate scattered station data onto a regular 2D grid.
 
@@ -434,18 +439,17 @@ class Topography(AVGComponentBase):
         if self._frame.empty:
             raise ProcessingError("Topography data has not been loaded.")
 
-        points = self._frame[['easting', 'northing']].values
+        points = self._frame[["easting", "northing"]].values
         values = self.elevations
 
         # Create the target grid
         grid_x, grid_y = np.mgrid[
-            self.easting.min():self.easting.max():complex(resolution),
-            self.northing.min():self.northing.max():complex(resolution)
+            self.easting.min() : self.easting.max() : complex(resolution),
+            self.northing.min() : self.northing.max() : complex(resolution),
         ]
 
         # Interpolate the data
-        grid_z = griddata(
-            points, values, (grid_x, grid_y), method=method)
+        grid_z = griddata(points, values, (grid_x, grid_y), method=method)
 
         return grid_x, grid_y, grid_z
 
@@ -487,15 +491,11 @@ class Topography(AVGComponentBase):
         steps = np.hypot(dx, dy)
 
         return pd.Series(
-            np.concatenate(([0], steps)),
-            index=self._frame.index
+            np.concatenate(([0], steps)), index=self._frame.index
         )
 
     def correct_coords(
-        self,
-        step: float | None = None,
-        *,
-        inplace: bool = True
+        self, step: float | None = None, *, inplace: bool = True
     ) -> pd.DataFrame | None:
         r"""Regularize station coordinates to a best-fit straight line.
 
@@ -543,14 +543,15 @@ class Topography(AVGComponentBase):
         """
         if self._frame.empty or len(self._frame) < 2:
             warnings.warn(
-                "Not enough data to correct coordinates.", stacklevel=2)
+                "Not enough data to correct coordinates.", stacklevel=2
+            )
             return
 
         x = self.easting
         y = self.northing
 
         # 1. Determine the best-fit line
-        m, c = np.polyfit(x, y, 1) # y = mx + c
+        m, c = np.polyfit(x, y, 1)  # y = mx + c
 
         # 2. Calculate the uniform step distance
         if step is None:
@@ -573,8 +574,8 @@ class Topography(AVGComponentBase):
         new_northings = y_proj_start + distances * line_direction[1]
 
         if inplace:
-            self._frame['easting'] = new_eastings
-            self._frame['northing'] = new_northings
+            self._frame["easting"] = new_eastings
+            self._frame["northing"] = new_northings
             if self.verbose:
                 self._logger.info(
                     "Coordinates have been corrected and updated in place."
@@ -583,8 +584,8 @@ class Topography(AVGComponentBase):
             return None
 
         df_corrected = self._frame.copy()
-        df_corrected['easting'] = new_eastings
-        df_corrected['northing'] = new_northings
+        df_corrected["easting"] = new_eastings
+        df_corrected["northing"] = new_northings
 
         return df_corrected
 
@@ -595,10 +596,10 @@ class Topography(AVGComponentBase):
         step: float,
         azimuth: float,
         *,
-        initial_station_name: float = 0.,
-        initial_elevation: float = 0.,
-        elevation_gradient: float = 0.,
-        coord_type: Literal['utm', 'll'] = 'utm'
+        initial_station_name: float = 0.0,
+        initial_elevation: float = 0.0,
+        elevation_gradient: float = 0.0,
+        coord_type: Literal["utm", "ll"] = "utm",
     ) -> Topography:
         r"""Generate a synthetic station topography dataset.
 
@@ -650,53 +651,59 @@ class Topography(AVGComponentBase):
         if n_stations <= 0:
             raise ValueError("Number of stations must be positive.")
 
-        station_names = np.arange(
-            n_stations) * step + initial_station_name
+        station_names = np.arange(n_stations) * step + initial_station_name
         distances = np.arange(n_stations) * step
         elevations = initial_elevation + distances * elevation_gradient
 
-        start_coord =ensure_n_items (
+        start_coord = ensure_n_items(
             items=start_coord,
-            name ='(latitude, longitude)',
+            name="(latitude, longitude)",
             expect="numeric",
             coerce=True,
-            n=2
+            n=2,
         )
-        if coord_type == 'll':
+        if coord_type == "ll":
             import_optional_dependency(
-                'geopy', extra=(
+                "geopy",
+                extra=(
                     "'geopy' is required for geodetectic"
-                    " position calculations")
-               )
+                    " position calculations"
+                ),
+            )
             # For lat/lon, we must calculate geodetic positions
             from geopy.distance import geodesic
-            start_lat, start_lon = normalize_lat_lon (
-                *start_coord, assume='latlon')
+
+            start_lat, start_lon = normalize_lat_lon(
+                *start_coord, assume="latlon"
+            )
             # start_lat, start_lon = start_coord
 
             points = [start_coord]
             for _i in range(1, n_stations):
-                new_point = geodesic(
-                    meters=step).destination(points[-1], bearing=azimuth)
+                new_point = geodesic(meters=step).destination(
+                    points[-1], bearing=azimuth
+                )
                 points.append((new_point.latitude, new_point.longitude))
 
             latitudes, longitudes = zip(*points)
             eastings, northings, _ = to_utm(latitudes, longitudes)
 
-        else: # UTM coordinates
-            azimuth_rad = np.deg2rad(90 - azimuth) # Convert from bearing
+        else:  # UTM coordinates
+            azimuth_rad = np.deg2rad(90 - azimuth)  # Convert from bearing
             dx = distances * np.cos(azimuth_rad)
             dy = distances * np.sin(azimuth_rad)
             start_x, start_y = start_coord
             eastings = start_x + dx
             northings = start_y + dy
 
-        df = pd.DataFrame({
-            'station': station_names,
-            'easting': eastings,
-            'northing': northings,
-            'elevation': elevations
-        })
+        df = pd.DataFrame(
+            {
+                "station": station_names,
+                "easting": eastings,
+                "northing": northings,
+                "elevation": elevations,
+            }
+        )
 
         return Topography(data=df)
 
@@ -740,9 +747,11 @@ class Topography(AVGComponentBase):
             return []
 
         header = ",".join(self._frame.columns)
-        data_lines = self._frame.to_csv(
-            index=False, header=False, lineterminator='\n'
-        ).strip('\n').split('\n')
+        data_lines = (
+            self._frame.to_csv(index=False, header=False, lineterminator="\n")
+            .strip("\n")
+            .split("\n")
+        )
 
         return [header] + data_lines
 
@@ -810,8 +819,7 @@ class Topography(AVGComponentBase):
             # The UTM zone is required for this operation
             if zone is None:
                 raise ValueError(
-                    "A UTM 'zone' must be provided when "
-                    "from_='utm'."
+                    "A UTM 'zone' must be provided when from_='utm'."
                 )
             # Fetch elevations using existing easting/northing
             elevations = get_elevation_from_utm(
@@ -823,14 +831,14 @@ class Topography(AVGComponentBase):
 
         elif from_ == "api":
             # Check if lat/lon data exists; if not, create it
-            if 'latitude' not in self._frame.columns or (
-                    'longitude' not in self._frame.columns):
+            if "latitude" not in self._frame.columns or (
+                "longitude" not in self._frame.columns
+            ):
                 if self.verbose:
                     self._logger.info(
-                        "Latitude/Longitude not found. "
-                        "Converting from UTM."
+                        "Latitude/Longitude not found. Converting from UTM."
                     )
-                self.convert_coords(to='ll', inplace=True)
+                self.convert_coords(to="ll", inplace=True)
 
             # Fetch elevations using latitude and longitude
             elevations = get_elevation_from_api(
@@ -846,9 +854,7 @@ class Topography(AVGComponentBase):
         return elevations
 
     def get_azimuth(
-        self,
-        *,
-        mode: Literal["mean", "median"] | None = None
+        self, *, mode: Literal["mean", "median"] | None = None
     ) -> float | np.ndarray:
         r"""Returns the survey line azimuth(s).
 
@@ -907,8 +913,7 @@ class Topography(AVGComponentBase):
             return np.median(valid_azimuths)
 
         raise ValueError(
-            f"Invalid mode '{mode}'. Choose from 'mean', 'median',"
-            " or None."
+            f"Invalid mode '{mode}'. Choose from 'mean', 'median', or None."
         )
 
     @property
@@ -950,26 +955,23 @@ class Topography(AVGComponentBase):
     @property
     def stations(self) -> np.ndarray:
         # This will be deprecated and
-        return self._frame.get(
-            "station", pd.Series(dtype=float)).values
+        return self._frame.get("station", pd.Series(dtype=float)).values
 
     @property
     def easting(self) -> np.ndarray:
-        return self._frame.get(
-            "easting", pd.Series(dtype=float)).values
+        return self._frame.get("easting", pd.Series(dtype=float)).values
 
     @property
     def northing(self) -> np.ndarray:
         # north for single value of northing
-        return self._frame.get(
-            "northing", pd.Series(dtype=float)).values
+        return self._frame.get("northing", pd.Series(dtype=float)).values
 
     @property
     def elevations(self) -> np.ndarray:
-        return self._frame.get(
-            "elevation", pd.Series(dtype=float)).values
+        return self._frame.get("elevation", pd.Series(dtype=float)).values
+
     @property
-    def elevation (self):
+    def elevation(self):
         # use elev for single station and elevation
         # for pd.Series or array
         # of multiple elevations
@@ -985,8 +987,7 @@ class Topography(AVGComponentBase):
             An array of station latitudes, or an empty array if
             latitude data is not available in the frame.
         """
-        return self._frame.get(
-            "latitude", self._latitude).values
+        return self._frame.get("latitude", self._latitude).values
 
     @property
     def longitude(self) -> np.ndarray:
@@ -998,8 +999,7 @@ class Topography(AVGComponentBase):
             An array of station longitudes, or an empty array if
             longitude data is not available in the frame.
         """
-        return self._frame.get(
-            "longitude", self._longitude).values
+        return self._frame.get("longitude", self._longitude).values
 
 
 def _to_float_series(s: pd.Series) -> pd.Series:
@@ -1055,7 +1055,6 @@ class Station(AVGComponentBase):
     index_by_value: dict[float, np.ndarray] = field(default_factory=dict)
     index_by_name: dict[str, np.ndarray] = field(default_factory=dict)
 
-
     def read(
         self,
         source: pd.DataFrame | Sequence[float] | np.ndarray,
@@ -1100,7 +1099,7 @@ class Station(AVGComponentBase):
 
         # build a minimal frame with a numeric 'station' column
         if isinstance(source, pd.DataFrame):
-            source = find_and_rename_column(source.copy(), 'station')
+            source = find_and_rename_column(source.copy(), "station")
 
             if "station" not in source.columns:
                 raise StationError("column 'station' missing in frame")
@@ -1204,8 +1203,11 @@ class Station(AVGComponentBase):
 
         # CSV of station and metres view (if present)
         cols = ["station"] + (
-            ["station_m"] if "station_m" in self._frame.columns else [])
-        csv = self._frame.loc[:, cols].to_csv(index=False, float_format="%.6g")
+            ["station_m"] if "station_m" in self._frame.columns else []
+        )
+        csv = self._frame.loc[:, cols].to_csv(
+            index=False, float_format="%.6g"
+        )
         lines.extend(csv.splitlines())
         return lines
 
@@ -1228,8 +1230,9 @@ class Station(AVGComponentBase):
 
     def label_map(self) -> dict[float, str]:
         """Map station numeric value → generated label (e.g., 'S03')."""
-        return {float(v): n for v, n in zip(
-            self.values, self.names, strict=True)}
+        return {
+            float(v): n for v, n in zip(self.values, self.names, strict=True)
+        }
 
     def to_keywords(self) -> dict[str, Any]:
         """
@@ -1258,7 +1261,6 @@ class Station(AVGComponentBase):
             out["Stn.GdpBeg"] = left
             out["Stn.GdpInc"] = inc
         return out
-
 
     def __str__(self) -> str:
         if self.values.size == 0:

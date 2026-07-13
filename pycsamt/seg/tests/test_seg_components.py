@@ -9,6 +9,7 @@ from pycsamt.seg.components import ComponentsMixin
 class _Host(ComponentsMixin):
     """Minimal host that exposes a sections dict and the
     trio add/get/has required by ComponentsMixin."""
+
     def __init__(self) -> None:
         self.sections: dict[str, object] = {}
 
@@ -117,12 +118,10 @@ def test_compose_headers_from_order_and_tolerance() -> None:
     h = _Host()
     h.cset("head", _WList("HEAD"))
     h.cset("info", _WStr("INFO"))
-    h.cset("bad", _WBad())       # should be tolerated
+    h.cset("bad", _WBad())  # should be tolerated
     h.cset("noval", _NoWrite())  # ignored (no write())
 
-    out = h.compose_headers_from(
-        keys_order=["info", "head", "noval", "bad"]
-    )
+    out = h.compose_headers_from(keys_order=["info", "head", "noval", "bad"])
     # INFO should come before HEAD due to keys_order
     pos_info = out.find(">INFO")
     pos_head = out.find(">HEAD")

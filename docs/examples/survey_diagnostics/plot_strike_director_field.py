@@ -31,7 +31,7 @@ from pycsamt.emtools.tensor import (
     plot_theta_vs_period,
 )
 
-L18 = load_sites("amt_l18plt")          # 28 stations, real error tensors
+L18 = load_sites("amt_l18plt")  # 28 stations, real error tensors
 plot_theta_vs_period(L18, figsize=(9, 4.2))
 
 # %%
@@ -79,7 +79,10 @@ plot_strike_director_field(L18, figsize=(12, 5.2))
 # a complementary read of the same field.
 
 plot_strike_director_field(
-    L18, color_by="ellipt", cmap="viridis", figsize=(12, 5.2),
+    L18,
+    color_by="ellipt",
+    cmap="viridis",
+    figsize=(12, 5.2),
     title="Strike director field — coloured by 2-D strength (L18PLT)",
 )
 
@@ -92,7 +95,10 @@ plot_strike_director_field(
 # nearly uniform.
 
 plot_strike_director_field(
-    L18, length_by=None, streamlines=False, figsize=(12, 5.2),
+    L18,
+    length_by=None,
+    streamlines=False,
+    figsize=(12, 5.2),
     title="Pure strike-orientation field (L18PLT)",
 )
 
@@ -106,7 +112,9 @@ plot_strike_director_field(
 
 KAP = load_sites("mt_kap03")
 plot_strike_director_field(
-    KAP, figsize=(12, 5.2), title="Strike director field (KAP03)",
+    KAP,
+    figsize=(12, 5.2),
+    title="Strike director field (KAP03)",
 )
 
 # %%

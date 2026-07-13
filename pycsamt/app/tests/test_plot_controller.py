@@ -17,12 +17,14 @@ from pycsamt.app.desktop.controllers.plot_controller import (
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
+
 def make_fig_and_axes():
     fig, ax = plt.subplots()
     return fig, ax
 
 
 # ── Construction ──────────────────────────────────────────────────────────
+
 
 def test_plot_controller_creates():
     assert PlotController() is not None
@@ -42,6 +44,7 @@ def test_default_station_is_none():
 
 
 # ── State setters ─────────────────────────────────────────────────────────
+
 
 def test_set_sites():
     ctrl = PlotController()
@@ -78,10 +81,11 @@ def test_clear():
 
 # ── draw_rho_phi — no data ────────────────────────────────────────────────
 
+
 def test_draw_rho_phi_no_data_does_not_raise():
     ctrl = PlotController()
     fig, _ = make_fig_and_axes()
-    ctrl.draw_rho_phi(fig)   # must not raise
+    ctrl.draw_rho_phi(fig)  # must not raise
     plt.close(fig)
 
 
@@ -95,7 +99,7 @@ def test_draw_rho_phi_creates_two_axes_when_no_data():
 
 def test_draw_rho_phi_no_station_shows_prompt():
     ctrl = PlotController()
-    ctrl.set_sites(object())   # truthy mock
+    ctrl.set_sites(object())  # truthy mock
     fig = plt.figure()
     ctrl.draw_rho_phi(fig)
     texts = [t.get_text() for ax in fig.axes for t in ax.texts]
@@ -104,6 +108,7 @@ def test_draw_rho_phi_no_station_shows_prompt():
 
 
 # ── draw_rho_pseudosection — no data ─────────────────────────────────────
+
 
 def test_draw_rho_pseudosection_no_data_does_not_raise():
     ctrl = PlotController()
@@ -123,6 +128,7 @@ def test_draw_rho_pseudosection_shows_load_message():
 
 # ── draw_phase_pseudosection — no data ────────────────────────────────────
 
+
 def test_draw_phase_pseudosection_no_data_does_not_raise():
     ctrl = PlotController()
     fig, ax = make_fig_and_axes()
@@ -131,6 +137,7 @@ def test_draw_phase_pseudosection_no_data_does_not_raise():
 
 
 # ── draw_tipper — no data ─────────────────────────────────────────────────
+
 
 def test_draw_tipper_no_data_does_not_raise():
     ctrl = PlotController()
@@ -141,6 +148,7 @@ def test_draw_tipper_no_data_does_not_raise():
 
 # ── draw_phase_tensor — no data ───────────────────────────────────────────
 
+
 def test_draw_phase_tensor_no_data_does_not_raise():
     ctrl = PlotController()
     fig, ax = make_fig_and_axes()
@@ -150,10 +158,11 @@ def test_draw_phase_tensor_no_data_does_not_raise():
 
 # ── style_axes ────────────────────────────────────────────────────────────
 
+
 def test_style_axes_dark_sets_facecolor():
     fig, ax = make_fig_and_axes()
     style_axes(ax, dark=True)
-    assert ax.get_facecolor() != (1, 1, 1, 1)   # not white
+    assert ax.get_facecolor() != (1, 1, 1, 1)  # not white
     plt.close(fig)
 
 
@@ -164,6 +173,7 @@ def test_style_axes_light_does_not_raise():
 
 
 # ── _annotate_empty ───────────────────────────────────────────────────────
+
 
 def test_annotate_empty_adds_text():
     fig, ax = make_fig_and_axes()

@@ -26,6 +26,7 @@ We intentionally keep this module free of I/O logic; only constants
 and patterns live here to preserve a clean import graph and make unit
 tests deterministic.
 """
+
 from __future__ import annotations
 
 import re
@@ -51,9 +52,9 @@ MISSING_FLOAT: Final[float] = -999.0
 # Information‑block keys (normalized, upper‑case as they appear in files)
 INFO_KEYS: Final[Sequence[str]] = (
     "AZIMUTH",  # site X‑axis azimuth in degrees (TN)
-    "LATITUDE", # site latitude in degrees (decimal)
-    "LONGITUDE",# site longitude in degrees (decimal)
-    "ELEVATION",# site elevation in metres
+    "LATITUDE",  # site latitude in degrees (decimal)
+    "LONGITUDE",  # site longitude in degrees (decimal)
+    "ELEVATION",  # site elevation in metres
 )
 
 # Normalization map from key -> canonical attribute name for our objects
@@ -67,27 +68,33 @@ INFO_KEY_ALIASES: Final[Mapping[str, str]] = {
 
 # Data type codes (2nd record) and units tokens
 # First character denotes the *kind* of block
-KIND_RESISTIVITY: Final[str] = "R"   # rho/phi (or upward‑biased when 'S')
+KIND_RESISTIVITY: Final[str] = "R"  # rho/phi (or upward‑biased when 'S')
 KIND_RESISTIVITY_UP: Final[str] = "S"
-KIND_IMPEDANCE: Final[str] = "Z"     # complex TF (or upward‑biased when 'Q')
+KIND_IMPEDANCE: Final[str] = "Z"  # complex TF (or upward‑biased when 'Q')
 KIND_IMPEDANCE_UP: Final[str] = "Q"
-KIND_SCHMUCKER: Final[str] = "C"     # Schmucker C function (complex TF)
-KIND_GDS_TF: Final[str] = "T"        # GDS transfer functions (complex TF)
+KIND_SCHMUCKER: Final[str] = "C"  # Schmucker C function (complex TF)
+KIND_GDS_TF: Final[str] = "T"  # GDS transfer functions (complex TF)
 
-KIND_COMPLEX_TF: Final[frozenset[str]] = frozenset({
-    KIND_IMPEDANCE, KIND_IMPEDANCE_UP, KIND_SCHMUCKER, KIND_GDS_TF
-})
-KIND_RHO_PHI: Final[frozenset[str]] = frozenset({
-    KIND_RESISTIVITY, KIND_RESISTIVITY_UP
-})
+KIND_COMPLEX_TF: Final[frozenset[str]] = frozenset(
+    {KIND_IMPEDANCE, KIND_IMPEDANCE_UP, KIND_SCHMUCKER, KIND_GDS_TF}
+)
+KIND_RHO_PHI: Final[frozenset[str]] = frozenset(
+    {KIND_RESISTIVITY, KIND_RESISTIVITY_UP}
+)
 
 # Second/third characters denote the *component* or aggregation
 COMPONENT_CODES: Final[frozenset[str]] = frozenset(
     {
-        "XX", "XY", "YX", "YY",  # impedance tensor entries
-        "TE", "TM",                # rotational modes
-        "AV", "DE",                # Berdichevsky average / determinant avg
-        "ZX", "ZY",                # Tzx, Tzy
+        "XX",
+        "XY",
+        "YX",
+        "YY",  # impedance tensor entries
+        "TE",
+        "TM",  # rotational modes
+        "AV",
+        "DE",  # Berdichevsky average / determinant avg
+        "ZX",
+        "ZY",  # Tzx, Tzy
     }
 )
 
@@ -100,21 +107,34 @@ TE_TM_TO_TENSOR: Final[Mapping[str, str]] = {
 # Units accepted after Z/Q/C/T kinds. Only the keywords are relevant; extra
 # words like "UNITS" or punctuation are for readability in the wild.
 UNITS_CANONICAL: Final[Mapping[str, str]] = {
-    "SI": "ohms",            # impedance in Ω
-    "FIELD": "mV/km/nT",     # field units
+    "SI": "ohms",  # impedance in Ω
+    "FIELD": "mV/km/nT",  # field units
 }
 
 # Liberal matcher to normalize unit tokens ("S.I.", "si", "FIELD UNITS", ...)
-_RE_UNIT_TOKEN = r"(?P<unit>SI|S\.?I\.?|FIELD)"  # captured group name is 'unit'
+_RE_UNIT_TOKEN = (
+    r"(?P<unit>SI|S\.?I\.?|FIELD)"  # captured group name is 'unit'
+)
 
 # Column layouts for data rows
 
 FIELDS_R: Final[Sequence[str]] = (
-    "period", "rho", "pha", "rhomax", "rhomin",
-    "phamax", "phamin", "wrho", "wpha",
+    "period",
+    "rho",
+    "pha",
+    "rhomax",
+    "rhomin",
+    "phamax",
+    "phamin",
+    "wrho",
+    "wpha",
 )
 FIELDS_TF: Final[Sequence[str]] = (
-    "period", "real", "imag", "error", "weight",
+    "period",
+    "real",
+    "imag",
+    "error",
+    "weight",
 )
 
 # Rules implied by the specification (applied by the parser):
@@ -214,8 +234,10 @@ TENSOR_INDEX: Final[Mapping[str, tuple[int, int]]] = {
 
 # For convenience, accepted order when constructing averages (RAV/RDE)
 CANONICAL_ORDER_R: Final[Sequence[str]] = (
-    "RXY", "RYX",  # minimal pair for TE/TM averages
-    "RXX", "RYY",  # include diagonals if present
+    "RXY",
+    "RYX",  # minimal pair for TE/TM averages
+    "RXX",
+    "RYY",  # include diagonals if present
 )
 
 
@@ -236,6 +258,7 @@ class DTypeSpec:
     fields: Sequence[str]
     regex: Pattern[str]
     notes: str = ""
+
 
 DTYPE_SPECS: Final[Mapping[str, DTypeSpec]] = {
     "R": DTypeSpec(FIELDS_R, RE_ROW_R, "rho/phi rows (9 floats)"),
@@ -269,24 +292,49 @@ FLOAT_FORMAT_TF: Final[str] = "{:+.6e}"
 
 __all__ = [
     # tokens
-    "COMMENT_PREFIX", "INFO_PREFIX", "ENCODING_DEFAULT", "LINE_ENDING",
-    "JONES_SPEC_VERSION", "MISSING_FLOAT",
+    "COMMENT_PREFIX",
+    "INFO_PREFIX",
+    "ENCODING_DEFAULT",
+    "LINE_ENDING",
+    "JONES_SPEC_VERSION",
+    "MISSING_FLOAT",
     # info
-    "INFO_KEYS", "INFO_KEY_ALIASES",
+    "INFO_KEYS",
+    "INFO_KEY_ALIASES",
     # kinds & components
-    "KIND_RESISTIVITY", "KIND_RESISTIVITY_UP", "KIND_IMPEDANCE",
-    "KIND_IMPEDANCE_UP", "KIND_SCHMUCKER", "KIND_GDS_TF",
-    "KIND_COMPLEX_TF", "KIND_RHO_PHI", "COMPONENT_CODES",
-    "TE_TM_TO_TENSOR", "UNITS_CANONICAL",
+    "KIND_RESISTIVITY",
+    "KIND_RESISTIVITY_UP",
+    "KIND_IMPEDANCE",
+    "KIND_IMPEDANCE_UP",
+    "KIND_SCHMUCKER",
+    "KIND_GDS_TF",
+    "KIND_COMPLEX_TF",
+    "KIND_RHO_PHI",
+    "COMPONENT_CODES",
+    "TE_TM_TO_TENSOR",
+    "UNITS_CANONICAL",
     # layouts & rules
-    "FIELDS_R", "FIELDS_TF", "RULES_R", "RULES_TF",
+    "FIELDS_R",
+    "FIELDS_TF",
+    "RULES_R",
+    "RULES_TF",
     # regexes
-    "RE_STATION", "RE_DATATYPE_UNITS", "RE_NPOINTS", "RE_ROW_R",
-    "RE_ROW_TF", "RE_INFO", "RE_COMMENT", "RE_BLANK",
+    "RE_STATION",
+    "RE_DATATYPE_UNITS",
+    "RE_NPOINTS",
+    "RE_ROW_R",
+    "RE_ROW_TF",
+    "RE_INFO",
+    "RE_COMMENT",
+    "RE_BLANK",
     # tensor helpers
-    "TENSOR_INDEX", "CANONICAL_ORDER_R",
+    "TENSOR_INDEX",
+    "CANONICAL_ORDER_R",
     # specs & descriptions
-    "DTypeSpec", "DTYPE_SPECS", "COL_DESCR",
+    "DTypeSpec",
+    "DTYPE_SPECS",
+    "COL_DESCR",
     # output formats
-    "FLOAT_FORMAT_R", "FLOAT_FORMAT_TF",
+    "FLOAT_FORMAT_R",
+    "FLOAT_FORMAT_TF",
 ]

@@ -53,7 +53,9 @@ table = skew_table(survey)
 abs_skew = table["skew"].abs()
 print(abs_skew.describe())
 
-by_station = table.groupby("station")["skew"].apply(lambda s: s.abs().median())
+by_station = table.groupby("station")["skew"].apply(
+    lambda s: s.abs().median()
+)
 print("lowest-skew stations:\n", by_station.sort_values().head(3))
 print("highest-skew stations:\n", by_station.sort_values().tail(3))
 
@@ -92,8 +94,10 @@ fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.2))
 for ax, name in zip(axes, ("18-016A", "18-018A")):
     z, fr = z_by_name[name]
     eta = bahr_skewness(z)
-    print(f"{name}: Bahr eta min/median/max = "
-          f"{np.nanmin(eta):.2f} / {np.nanmedian(eta):.2f} / {np.nanmax(eta):.2f}")
+    print(
+        f"{name}: Bahr eta min/median/max = "
+        f"{np.nanmin(eta):.2f} / {np.nanmedian(eta):.2f} / {np.nanmax(eta):.2f}"
+    )
     plot_skewness(fr, z, threshold=0.4, ax=ax, title=name)
 
 # %%
@@ -136,7 +140,9 @@ def n_finite(sites, name):
 for name in ("18-001A", "18-016A", "18-018A"):
     kept_d, total = n_finite(masked_default, name)
     kept_l, _ = n_finite(masked_loose, name)
-    print(f"{name}: thresh=6 (default) keeps {kept_d}/{total};  thresh=45 keeps {kept_l}/{total}")
+    print(
+        f"{name}: thresh=6 (default) keeps {kept_d}/{total};  thresh=45 keeps {kept_l}/{total}"
+    )
 
 # %%
 # **Reading this output.** At the module's default ``thresh=6``, almost
@@ -158,7 +164,8 @@ for name in ("18-001A", "18-016A", "18-018A"):
 logging.disable(logging.ERROR)
 for name in ("18-016A", "18-018A"):
     kept_strict, total = n_finite(
-        keep_longest_low_skew(survey, thresh=25.0, min_len=5), name,
+        keep_longest_low_skew(survey, thresh=25.0, min_len=5),
+        name,
     )
     print(f"{name}: thresh=25, min_len=5 keeps {kept_strict}/{total}")
 logging.disable(logging.NOTSET)
@@ -183,9 +190,13 @@ logging.disable(logging.NOTSET)
 
 logging.disable(logging.ERROR)
 for name in ("18-001A", "18-016A", "18-018A"):
-    k0, total = n_finite(close_skew_gaps(survey, thresh=25.0, max_gap=0), name)
+    k0, total = n_finite(
+        close_skew_gaps(survey, thresh=25.0, max_gap=0), name
+    )
     k3, _ = n_finite(close_skew_gaps(survey, thresh=25.0, max_gap=3), name)
-    print(f"{name}: max_gap=0 keeps {k0}/{total};  max_gap=3 keeps {k3}/{total}")
+    print(
+        f"{name}: max_gap=0 keeps {k0}/{total};  max_gap=3 keeps {k3}/{total}"
+    )
 logging.disable(logging.NOTSET)
 
 # %%
@@ -212,7 +223,9 @@ for frac in (0.6, 0.3, 0.1):
         _, z, fr = _get_z_block(ed)
         total += z.shape[0]
         kept += int(np.isfinite(z).all(axis=(1, 2)).sum())
-    print(f"frac={frac}: kept {kept}/{total} station-frequency rows survey-wide")
+    print(
+        f"frac={frac}: kept {kept}/{total} station-frequency rows survey-wide"
+    )
 logging.disable(logging.NOTSET)
 
 # %%
@@ -286,7 +299,9 @@ b = pt["skew"].abs().to_numpy(dtype=float)
 lp = np.log10(np.maximum(p, 1e-9))
 tail = lp >= np.percentile(lp, 90)
 raw_vote_tail = float(np.nanmean(b[tail] <= 30.0))
-print(f"raw pointwise fraction |beta|<=30 in the longest-period decile: {raw_vote_tail:.2f}")
+print(
+    f"raw pointwise fraction |beta|<=30 in the longest-period decile: {raw_vote_tail:.2f}"
+)
 
 # %%
 # **Reading this output.** The raw pointwise fraction in the longest

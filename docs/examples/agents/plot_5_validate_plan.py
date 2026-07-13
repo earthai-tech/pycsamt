@@ -50,8 +50,8 @@ print("validation_errors :", good.validation_errors())
 
 bad = WorkflowPlan(
     request="Do the thing",
-    workflow_type="mega_inversion",     # not a recognised workflow
-    data_path="",                       # nothing to load
+    workflow_type="mega_inversion",  # not a recognised workflow
+    data_path="",  # nothing to load
     provider="offline",
 )
 
@@ -78,8 +78,11 @@ def plan_checks(plan):
     has_path = bool(plan.data_path)
     checks = [
         ("request present", bool(plan.request), ""),
-        ("known workflow", "unknown workflow" not in joined,
-         plan.workflow_type),
+        (
+            "known workflow",
+            "unknown workflow" not in joined,
+            plan.workflow_type,
+        ),
         ("data path set", has_path, ""),
         ("data path exists", has_path and "does not exist" not in joined, ""),
     ]
@@ -87,38 +90,75 @@ def plan_checks(plan):
 
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.6))
-panels = [("Ready to run", good, "#2e7d32"),
-          ("Needs attention", bad, "#c62828")]
+panels = [
+    ("Ready to run", good, "#2e7d32"),
+    ("Needs attention", bad, "#c62828"),
+]
 
 for ax, (title, plan, accent) in zip(axes, panels):
     ok_all, checks, errors = plan_checks(plan)
     ax.axis("off")
-    ax.set_title(f"{title}\nworkflow_type = {plan.workflow_type!r}",
-                 fontsize=11, color=accent, fontweight="bold")
+    ax.set_title(
+        f"{title}\nworkflow_type = {plan.workflow_type!r}",
+        fontsize=11,
+        color=accent,
+        fontweight="bold",
+    )
 
     y = 0.82
     for label, ok, detail in checks:
         mark, mcol = ("PASS", "#2e7d32") if ok else ("FAIL", "#c62828")
-        ax.text(0.04, y, mark, transform=ax.transAxes, fontsize=9,
-                fontweight="bold", color=mcol, family="monospace")
+        ax.text(
+            0.04,
+            y,
+            mark,
+            transform=ax.transAxes,
+            fontsize=9,
+            fontweight="bold",
+            color=mcol,
+            family="monospace",
+        )
         text = label + (f"  ({detail})" if detail else "")
-        ax.text(0.24, y, text, transform=ax.transAxes, fontsize=9.5,
-                color="0.2")
+        ax.text(
+            0.24, y, text, transform=ax.transAxes, fontsize=9.5, color="0.2"
+        )
         y -= 0.13
 
     if errors:
-        ax.text(0.04, y - 0.02, "notes:", transform=ax.transAxes,
-                fontsize=8.5, fontweight="bold", color="0.35")
+        ax.text(
+            0.04,
+            y - 0.02,
+            "notes:",
+            transform=ax.transAxes,
+            fontsize=8.5,
+            fontweight="bold",
+            color="0.35",
+        )
         y -= 0.13
         for err in errors:
             wrapped = err if len(err) <= 52 else err[:49] + "…"
-            ax.text(0.06, y, f"• {wrapped}", transform=ax.transAxes,
-                    fontsize=8, color="0.35")
+            ax.text(
+                0.06,
+                y,
+                f"• {wrapped}",
+                transform=ax.transAxes,
+                fontsize=8,
+                color="0.35",
+            )
             y -= 0.09
 
     # a coloured frame around each panel
-    ax.add_patch(plt.Rectangle((0.01, 0.01), 0.98, 0.98, transform=ax.transAxes,
-                               fill=False, edgecolor=accent, linewidth=1.5))
+    ax.add_patch(
+        plt.Rectangle(
+            (0.01, 0.01),
+            0.98,
+            0.98,
+            transform=ax.transAxes,
+            fill=False,
+            edgecolor=accent,
+            linewidth=1.5,
+        )
+    )
 
 fig.suptitle("validate_workflow_plan — pre-flight check", fontsize=12)
 fig.tight_layout()

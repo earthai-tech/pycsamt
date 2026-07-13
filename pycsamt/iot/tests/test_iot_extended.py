@@ -86,8 +86,14 @@ def test_string_booleans_are_parsed_explicitly():
 # ---------------------------------------------------------------------------
 def test_station_config_validates_and_tabulates():
     station = StationConfig(
-        "S01", lat=6.5, lon=3.4, elevation=120.0, profile="L1",
-        position_m=50.0, channels=["EX", "HY"], device_ids=["node-1"],
+        "S01",
+        lat=6.5,
+        lon=3.4,
+        elevation=120.0,
+        profile="L1",
+        position_m=50.0,
+        channels=["EX", "HY"],
+        device_ids=["node-1"],
     )
     assert station.has_location
     assert station.coords == (6.5, 3.4, 120.0)
@@ -165,7 +171,10 @@ def test_detect_powerline_harmonics_flags_mains_tone():
     assert result.dominant.frequency_hz == pytest.approx(50.0)
 
     clean = rng.standard_normal(n)
-    assert detect_powerline_harmonics(clean, fs, mains_hz=50.0).contaminated is False
+    assert (
+        detect_powerline_harmonics(clean, fs, mains_hz=50.0).contaminated
+        is False
+    )
 
 
 def test_channel_snr_orders_clean_above_noisy():
@@ -225,10 +234,12 @@ def test_impedance_stability_and_sensor_dropout():
     )
     assert assess_impedance_stability(unstable).stable is False
 
-    series = np.concatenate([
-        np.random.default_rng(6).standard_normal(50),
-        np.full(30, 2.0),  # stuck sensor
-    ])
+    series = np.concatenate(
+        [
+            np.random.default_rng(6).standard_normal(50),
+            np.full(30, 2.0),  # stuck sensor
+        ]
+    )
     series[5] = np.nan
     drop = detect_sensor_dropout(series)
     assert drop["dropout"] is True
@@ -250,11 +261,16 @@ def test_sync_drift_quality_and_batch():
     assert quality == SyncQuality.EXCELLENT
     assert assess_sync_quality(offset_ms=float("nan")) == SyncQuality.UNKNOWN
 
-    table = batch_assess_sync({
-        "node-1": (sim["local"], sim["reference"]),
-        "node-2": {"local": sim["local"], "reference": sim["reference"],
-                   "gps_lock": True},
-    })
+    table = batch_assess_sync(
+        {
+            "node-1": (sim["local"], sim["reference"]),
+            "node-2": {
+                "local": sim["local"],
+                "reference": sim["reference"],
+                "gps_lock": True,
+            },
+        }
+    )
     assert set(table["device_id"]) == {"node-1", "node-2"}
 
 
@@ -294,7 +310,9 @@ def test_file_client_round_trip(tmp_path):
 
 def test_dry_run_client_records_without_io(tmp_path):
     path = tmp_path / "should_not_exist.jsonl"
-    client = build_telemetry_client("file", endpoint=str(path))  # dry_run=True
+    client = build_telemetry_client(
+        "file", endpoint=str(path)
+    )  # dry_run=True
     client.send(TelemetryPacket("node-1", 1.0, "t", {}))
     assert len(client.sent) == 1
     assert not path.exists()
@@ -350,7 +368,9 @@ def test_hashing_helpers(tmp_path):
 
 
 def test_manifest_build_write_and_bundle(tmp_path):
-    decision = log_qc_decision("S01", "Accept", channel="EX", reasons=["snr_ok"])
+    decision = log_qc_decision(
+        "S01", "Accept", channel="EX", reasons=["snr_ok"]
+    )
     assert decision["decision"] == "accept"
     manifest = build_acquisition_manifest(
         "SURVEY-1",
@@ -375,8 +395,11 @@ def test_manifest_build_write_and_bundle(tmp_path):
 # ---------------------------------------------------------------------------
 def test_simulator_network_and_station():
     packets = simulate_iot_network(
-        n_stations=6, profiles=["L1", "L3"],
-        channels=["ex", "ey", "hx", "hy"], dropout_rate=0.05, seed=0,
+        n_stations=6,
+        profiles=["L1", "L3"],
+        channels=["ex", "ey", "hx", "hy"],
+        dropout_rate=0.05,
+        seed=0,
     )
     assert len(packets) == 12  # one health + one qc per station
     assert all(isinstance(p, TelemetryPacket) for p in packets)
@@ -416,7 +439,9 @@ def test_field_session_end_to_end(tmp_path):
 
     session = FieldSession(
         "SSL2026",
-        devices=[DeviceConfig("node-1", station="S01", channels=["ex", "hy"])],
+        devices=[
+            DeviceConfig("node-1", station="S01", channels=["ex", "hy"])
+        ],
         method="amt",
     )
     session.add_station(StationConfig("S01", lat=6.5, lon=3.4, profile="L1"))

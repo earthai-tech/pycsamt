@@ -157,16 +157,24 @@ def _make_synthetic_site(name, seed, mains_scale=8.0):
 synthetic_sites = [_make_synthetic_site(f"S{i:02d}", i) for i in range(6)]
 before_amp = np.abs(synthetic_sites[0].Z.z[:, 0, 1]).copy()
 notched = notch_powerline(
-    synthetic_sites, mains_hz=50.0, n_harm=9, tol_hz=0.6, mode="interp",
+    synthetic_sites,
+    mains_hz=50.0,
+    n_harm=9,
+    tol_hz=0.6,
+    mode="interp",
 )
 for i, ed in enumerate(_iter_items(notched)):
     if _name(ed, i) == "S00":
         _, z_after, fr_after = _get_z_block(ed)
         break
 after_amp = np.abs(z_after[:, 0, 1])
-print(f"synthetic |Z_xy| max: before={before_amp.max():.1f}  after={after_amp.max():.1f}")
+print(
+    f"synthetic |Z_xy| max: before={before_amp.max():.1f}  after={after_amp.max():.1f}"
+)
 i50 = np.argmin(np.abs(fr_after - 50.0))
-print(f"synthetic |Z_xy| at 50 Hz: before={before_amp[i50]:.1f}  after={after_amp[i50]:.1f}")
+print(
+    f"synthetic |Z_xy| at 50 Hz: before={before_amp[i50]:.1f}  after={after_amp[i50]:.1f}"
+)
 
 # %%
 # **Reading this output.** The injected 50 Hz spike (amplitude 1403 in
@@ -190,8 +198,12 @@ sm_log = smooth_logfreq(survey, win=5, kind="tri")
 rho_sl, _ = rho_xy(sm_log)
 sm_rp = smooth_rho_phase(survey, degree=3, robust=True)
 rho_srp, _ = rho_xy(sm_rp)
-print(f"smooth_logfreq:   max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sl))):.3g}")
-print(f"smooth_rho_phase: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_srp))):.3g}")
+print(
+    f"smooth_logfreq:   max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sl))):.3g}"
+)
+print(
+    f"smooth_rho_phase: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_srp))):.3g}"
+)
 
 fig, ax = plt.subplots(figsize=(7.5, 4.2))
 ax.set_xscale("log")
@@ -242,7 +254,9 @@ print(
 
 sp = spatial_median_filter(survey, half_window=2, lam=0.25)
 rho_sp, _ = rho_xy(sp)
-print(f"spatial_median_filter: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sp))):.3g}")
+print(
+    f"spatial_median_filter: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sp))):.3g}"
+)
 
 rp = rpca_offdiag_denoise(survey, rank=2)
 rho_rp, _ = rho_xy(rp)
@@ -287,7 +301,9 @@ print(
 
 eo = enforce_offdiag_consistency(survey, mode="anti", lam=0.5)
 rho_eo, _ = rho_xy(eo)
-print(f"enforce_offdiag_consistency: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_eo))):.3g}")
+print(
+    f"enforce_offdiag_consistency: max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_eo))):.3g}"
+)
 
 # Masking to NaN and trimming rows both pass through a transient state
 # where the real Z container's own internal resistivity/phase refresh
@@ -303,9 +319,15 @@ rho_mi2, _ = rho_xy(mi_strict)
 dropped = drop_freqs_manual(survey, drop_freqs=[102.4])
 rho_dm, fr_dm = rho_xy(dropped)
 logging.disable(logging.NOTSET)
-print(f"mask_incoherent_freqs (default): n masked = {np.sum(np.isnan(rho_mi))} of {rho_mi.size}")
-print(f"mask_incoherent_freqs (snr_thresh=15, deliberately strict): n masked = {np.sum(np.isnan(rho_mi2))} of {rho_mi2.size}")
-print(f"drop_freqs_manual([102.4 Hz]): n freq before/after = {fr0.size} / {fr_dm.size}")
+print(
+    f"mask_incoherent_freqs (default): n masked = {np.sum(np.isnan(rho_mi))} of {rho_mi.size}"
+)
+print(
+    f"mask_incoherent_freqs (snr_thresh=15, deliberately strict): n masked = {np.sum(np.isnan(rho_mi2))} of {rho_mi2.size}"
+)
+print(
+    f"drop_freqs_manual([102.4 Hz]): n freq before/after = {fr0.size} / {fr_dm.size}"
+)
 
 # %%
 # **Reading this output.** ``mask_incoherent_freqs`` at its default
@@ -327,10 +349,14 @@ print(f"drop_freqs_manual([102.4 Hz]): n freq before/after = {fr0.size} / {fr_dm
 
 sg_gated = shrink_to_group_trend(survey, lam=0.25)
 rho_sg1, _ = rho_xy(sg_gated)
-print(f"shrink_to_group_trend (gate_harm=True, default): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sg1))):.3g}")
+print(
+    f"shrink_to_group_trend (gate_harm=True, default): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sg1))):.3g}"
+)
 sg_all = shrink_to_group_trend(survey, lam=0.25, gate_harm=False)
 rho_sg2, _ = rho_xy(sg_all)
-print(f"shrink_to_group_trend (gate_harm=False): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sg2))):.3g}")
+print(
+    f"shrink_to_group_trend (gate_harm=False): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_sg2))):.3g}"
+)
 
 # %%
 # **Reading this output.** Same story as section 2: with the default
@@ -352,11 +378,17 @@ print(f"shrink_to_group_trend (gate_harm=False): max |change| = {np.nanmax(np.ab
 
 cs = correct_static_shift(survey, window_m=1500.0)
 rho_cs, _ = rho_xy(cs)
-print(f"correct_static_shift (AMA, window=1500 m): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_cs))):.3g}")
+print(
+    f"correct_static_shift (AMA, window=1500 m): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_cs))):.3g}"
+)
 for method in ("ama", "flma", "tma"):
-    out_m = apply_emap_filter(survey, method=method, window=5, window_m=1500.0)
+    out_m = apply_emap_filter(
+        survey, method=method, window=5, window_m=1500.0
+    )
     rho_m, _ = rho_xy(out_m)
-    print(f"apply_emap_filter({method!r}): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_m))):.3g}")
+    print(
+        f"apply_emap_filter({method!r}): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_m))):.3g}"
+    )
 
 plot_emap_filter_profile(survey, method="flma", component="xy")
 
@@ -387,10 +419,22 @@ plot_emap_filter_psection(survey, method="flma", component="xy")
 # preserved above ``ci_hi``, fully replaced below ``ci_lo``, blended
 # in between. The result is an :class:`~pycsamt.emtools.remove_noise.EMAPFilterResult`.
 
-result = confidence_gated_emap_filter(survey, method="flma", ci_hi=0.90, ci_lo=0.50)
+result = confidence_gated_emap_filter(
+    survey, method="flma", ci_hi=0.90, ci_lo=0.50
+)
 print(result.summary())
 report = result.report.sort_values("median_confidence")
-print(report[["station", "n_preserved", "n_blended", "n_filtered", "median_confidence"]].head(5))
+print(
+    report[
+        [
+            "station",
+            "n_preserved",
+            "n_blended",
+            "n_filtered",
+            "median_confidence",
+        ]
+    ].head(5)
+)
 
 # %%
 # **Reading this output.** Not one of the 1484 station-frequency rows
@@ -414,7 +458,9 @@ print(report[["station", "n_preserved", "n_blended", "n_filtered", "median_confi
 
 pipe = remove_noise_pipeline(survey)
 rho_pipe, _ = rho_xy(pipe)
-print(f"remove_noise_pipeline (defaults): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_pipe))):.3g}")
+print(
+    f"remove_noise_pipeline (defaults): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_pipe))):.3g}"
+)
 
 fig, ax = plt.subplots(figsize=(9.0, 4.8))
 nr_qc_delta_offdiag_psection(survey, method="pipeline", ax=ax)
@@ -438,6 +484,7 @@ nr_qc_snr_gain_profile(survey, method="pipeline", ax=ax)
 # handful — including ``18-021B`` and ``18-024U`` — gain close to 1 dB
 # or more, presumably the stations where the pipeline's default
 # ``gate_snr=2.5`` was actually triggered by genuinely noisy rows.
+
 
 def _make_waterfall_site(name, station_scale):
     freq = np.arange(10.0, 500.0, 1.0)
@@ -463,7 +510,12 @@ waterfall_sites = [
 ]
 fig, ax = plt.subplots(figsize=(9.0, 4.6))
 nr_qc_harmonic_waterfall(
-    waterfall_sites, method="notch", mains_hz=50.0, n_harm=9, tol_hz=0.6, ax=ax,
+    waterfall_sites,
+    method="notch",
+    mains_hz=50.0,
+    n_harm=9,
+    tol_hz=0.6,
+    ax=ax,
 )
 
 # %%
@@ -478,7 +530,9 @@ nr_qc_harmonic_waterfall(
 # to right (``S07``) across the row.
 
 fig, ax = plt.subplots(figsize=(8.0, 4.2))
-nr_qc_station_offdiag_curves(survey, method="pipeline", station="18-016A", ax=ax)
+nr_qc_station_offdiag_curves(
+    survey, method="pipeline", station="18-016A", ax=ax
+)
 
 # %%
 # **Reading this figure.** The full pipeline's before/after

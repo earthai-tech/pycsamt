@@ -46,7 +46,6 @@ from pycsamt.topo import (
     interp_elev,
 )
 
-
 edi_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 sites = ensure_sites(edi_dir, recursive=False, verbose=0)
 
@@ -85,7 +84,9 @@ slope_deg = np.degrees(np.arctan2(relief_m, spacing_m))
 
 print(f"Median station spacing: {np.median(spacing_m):.1f} m")
 print(f"Maximum station spacing: {np.max(spacing_m):.1f} m")
-print(f"Maximum absolute terrain slope: {np.max(np.abs(slope_deg)):.1f} degrees")
+print(
+    f"Maximum absolute terrain slope: {np.max(np.abs(slope_deg)):.1f} degrees"
+)
 
 # %%
 # 4. Plot the elevation profile
@@ -94,12 +95,21 @@ print(f"Maximum absolute terrain slope: {np.max(np.abs(slope_deg)):.1f} degrees"
 fig, axs = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
 
 axs[0].plot(chain_km, elev_m, marker="o", lw=1.8, color="#7c3aed")
-axs[0].fill_between(chain_km, elev_m, elev_m.min() - 10, color="#c4b5fd", alpha=0.35)
+axs[0].fill_between(
+    chain_km, elev_m, elev_m.min() - 10, color="#c4b5fd", alpha=0.35
+)
 axs[0].set_ylabel("Elevation (m)")
 axs[0].set_title("WILLY L18 station topography")
 axs[0].grid(alpha=0.25)
 
-axs[1].bar(chain_km[:-1], spacing_m, width=np.diff(chain_km), align="edge", color="#0f766e", alpha=0.75)
+axs[1].bar(
+    chain_km[:-1],
+    spacing_m,
+    width=np.diff(chain_km),
+    align="edge",
+    color="#0f766e",
+    alpha=0.75,
+)
 axs[1].set_xlabel("Chainage (km)")
 axs[1].set_ylabel("Spacing (m)")
 axs[1].set_title("Station spacing")
@@ -118,8 +128,21 @@ x_query = np.linspace(chain_km.min(), chain_km.max(), 200)
 elev_query_km = interp_elev(chain_km, elev_m / 1000.0, x_query)
 
 fig, ax = plt.subplots(figsize=(9, 3.4))
-ax.plot(x_query, elev_query_km * 1000.0, color="#111827", lw=2, label="interpolated")
-ax.scatter(chain_km, elev_m, s=45, color="#f97316", edgecolor="black", label="stations")
+ax.plot(
+    x_query,
+    elev_query_km * 1000.0,
+    color="#111827",
+    lw=2,
+    label="interpolated",
+)
+ax.scatter(
+    chain_km,
+    elev_m,
+    s=45,
+    color="#f97316",
+    edgecolor="black",
+    label="stations",
+)
 ax.set_xlabel("Chainage (km)")
 ax.set_ylabel("Elevation (m)")
 ax.set_title("Interpolated topography for downstream section meshes")

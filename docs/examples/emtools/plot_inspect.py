@@ -42,16 +42,18 @@ surveys = {
 summaries = {name: sites_summary(s) for name, s in surveys.items()}
 print(summaries["L18PLT"].head())
 
-overview = pd.DataFrame({
-    name: {
-        "n_sites": len(df),
-        "has_tipper": df["has_tipper"].any(),
-        "n_freq (unique)": sorted(df["n_freq"].unique()),
-        "period_min": df["period_min"].min(),
-        "period_max": df["period_max"].max(),
+overview = pd.DataFrame(
+    {
+        name: {
+            "n_sites": len(df),
+            "has_tipper": df["has_tipper"].any(),
+            "n_freq (unique)": sorted(df["n_freq"].unique()),
+            "period_min": df["period_min"].min(),
+            "period_max": df["period_max"].max(),
+        }
+        for name, df in summaries.items()
     }
-    for name, df in summaries.items()
-}).T
+).T
 print(overview)
 
 # %%
@@ -180,7 +182,9 @@ plot_station_response(surveys["KAP03"], station="kap151")
 from pycsamt.emtools import smooth_mavg  # noqa: E402
 
 smoothed = smooth_mavg(surveys["KAP03"], k=5)
-plot_station_response(surveys["KAP03"], station="kap151", sites_model=smoothed)
+plot_station_response(
+    surveys["KAP03"], station="kap151", sites_model=smoothed
+)
 
 # %%
 # **Reading this figure.** The dashed "model" line tracks the solid

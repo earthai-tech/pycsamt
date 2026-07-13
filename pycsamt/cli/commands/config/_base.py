@@ -43,52 +43,71 @@ import click
 
 TOML_PATH: Path = Path.home() / ".pycsamt.toml"
 
-_KNOWN_SECTIONS: frozenset[str] = frozenset({
-    "cli", "control", "style", "section_view", "station",
-    "interp", "plot", "agent", "pipe", "view",
-})
+_KNOWN_SECTIONS: frozenset[str] = frozenset(
+    {
+        "cli",
+        "control",
+        "style",
+        "section_view",
+        "station",
+        "interp",
+        "plot",
+        "agent",
+        "pipe",
+        "view",
+    }
+)
 
 # Human-readable descriptions (shown in config list / show)
 _SECTION_LABELS: dict[str, str] = {
-    "cli":          "CLI behaviour (verbosity, color, output format)",
-    "control":      "Plot axis controls (rho scale, phase range, x-axis)",
-    "style":        "Visual style (MT components, multiline, PT ellipses)",
+    "cli": "CLI behaviour (verbosity, color, output format)",
+    "control": "Plot axis controls (rho scale, phase range, x-axis)",
+    "style": "Visual style (MT components, multiline, PT ellipses)",
     "section_view": "Section-plot layout (figure size, colorbar, axis direction)",
-    "station":      "Station-tick rendering (density, rotation, marker)",
-    "interp":       "Hydro-interp colormaps and figure sizes",
-    "plot":         "Figure export (format, DPI, save directory)",
-    "agent":        "LLM provider configuration (model, budget)",
-    "pipe":         "Pipeline runtime settings (error mode, progress, output)",
-    "view":         "DataFrame backend (pycsamt / pandas)",
+    "station": "Station-tick rendering (density, rotation, marker)",
+    "interp": "Hydro-interp colormaps and figure sizes",
+    "plot": "Figure export (format, DPI, save directory)",
+    "agent": "LLM provider configuration (model, budget)",
+    "pipe": "Pipeline runtime settings (error mode, progress, output)",
+    "view": "DataFrame backend (pycsamt / pandas)",
 }
 
 # Environment variables recognised by pycsamt (shown in config env)
 _ENV_VARS: list[tuple[str, str, str]] = [
     # var,                          section,  description
-    ("PYCSAMT_VERBOSE",             "cli",    "Verbosity level (0=quiet, 1=info, 2=debug)"),
-    ("PYCSAMT_NO_COLOR",            "cli",    "Disable ANSI color (any non-empty value)"),
-    ("PYCSAMT_OUTPUT",              "cli",    "Output format: text | json | csv"),
-    ("PYCSAMT_OUTPUT_DIR",          "cli",    "Default output directory"),
-    ("PYCSAMT_JOBS",                "cli",    "Parallel worker count"),
-    ("PYCSAMT_FMT",                 "plot",   "Export format: png | pdf | svg | jpg"),
-    ("PYCSAMT_BASE_FMT",            "plot",   "Base format for additive tokens"),
-    ("PYCSAMT_DPI",                 "plot",   "Raster DPI"),
-    ("PYCSAMT_SAVEDIR",             "plot",   "Default figure save directory"),
-    ("PYCSAMT_TRANSPARENT",         "plot",   "Transparent background (any non-empty value)"),
-    ("PYCSAMT_BBOX",                "plot",   "bbox_inches value (e.g. 'tight')"),
-    ("ANTHROPIC_API_KEY",           "agent",  "Claude / Anthropic API key"),
-    ("PYCSAMT_CLAUDE_API_KEY",      "agent",  "Claude API key (pycsamt alias)"),
-    ("OPENAI_API_KEY",              "agent",  "OpenAI API key"),
-    ("PYCSAMT_OPENAI_API_KEY",      "agent",  "OpenAI API key (pycsamt alias)"),
-    ("GOOGLE_API_KEY",              "agent",  "Google Gemini API key"),
-    ("GOOGLE_GENERATIVEAI_API_KEY", "agent",  "Google Generative AI API key (alias)"),
-    ("PYCSAMT_GEMINI_API_KEY",      "agent",  "Gemini API key (pycsamt alias)"),
-    ("PYCSAMT_API_VIEW",            "view",   "DataFrame backend: pycsamt | pandas"),
+    ("PYCSAMT_VERBOSE", "cli", "Verbosity level (0=quiet, 1=info, 2=debug)"),
+    ("PYCSAMT_NO_COLOR", "cli", "Disable ANSI color (any non-empty value)"),
+    ("PYCSAMT_OUTPUT", "cli", "Output format: text | json | csv"),
+    ("PYCSAMT_OUTPUT_DIR", "cli", "Default output directory"),
+    ("PYCSAMT_JOBS", "cli", "Parallel worker count"),
+    ("PYCSAMT_FMT", "plot", "Export format: png | pdf | svg | jpg"),
+    ("PYCSAMT_BASE_FMT", "plot", "Base format for additive tokens"),
+    ("PYCSAMT_DPI", "plot", "Raster DPI"),
+    ("PYCSAMT_SAVEDIR", "plot", "Default figure save directory"),
+    (
+        "PYCSAMT_TRANSPARENT",
+        "plot",
+        "Transparent background (any non-empty value)",
+    ),
+    ("PYCSAMT_BBOX", "plot", "bbox_inches value (e.g. 'tight')"),
+    ("ANTHROPIC_API_KEY", "agent", "Claude / Anthropic API key"),
+    ("PYCSAMT_CLAUDE_API_KEY", "agent", "Claude API key (pycsamt alias)"),
+    ("OPENAI_API_KEY", "agent", "OpenAI API key"),
+    ("PYCSAMT_OPENAI_API_KEY", "agent", "OpenAI API key (pycsamt alias)"),
+    ("GOOGLE_API_KEY", "agent", "Google Gemini API key"),
+    (
+        "GOOGLE_GENERATIVEAI_API_KEY",
+        "agent",
+        "Google Generative AI API key (alias)",
+    ),
+    ("PYCSAMT_GEMINI_API_KEY", "agent", "Gemini API key (pycsamt alias)"),
+    ("PYCSAMT_API_VIEW", "view", "DataFrame backend: pycsamt | pandas"),
 ]
 
 # ---------------------------------------------------------------------------
 # TOML I/O
 # ---------------------------------------------------------------------------
+
 
 def _read_toml() -> dict[str, Any]:
     """Load ``~/.pycsamt.toml``; return empty dict when absent or unreadable."""
@@ -113,6 +132,7 @@ def _write_toml(data: dict[str, Any]) -> None:
     TOML_PATH.parent.mkdir(parents=True, exist_ok=True)
     try:
         import tomli_w
+
         with open(TOML_PATH, "wb") as fh:
             tomli_w.dump(data, fh)
     except ImportError:
@@ -140,6 +160,7 @@ def _write_toml(data: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Key parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_key(key: str) -> tuple[str, str]:
     """Parse a dot-notation key into ``(section, toml_key)``.
@@ -178,6 +199,7 @@ def toml_key_to_dotted(section: str, toml_key: str) -> str:
 # Value coercion
 # ---------------------------------------------------------------------------
 
+
 def coerce(value: str) -> bool | int | float | str:
     """Coerce a CLI string value to an appropriate Python scalar."""
     if value.lower() in ("true", "yes", "on"):
@@ -198,6 +220,7 @@ def coerce(value: str) -> bool | int | float | str:
 # ---------------------------------------------------------------------------
 # Per-section appliers   (TOML dict  →  configure_*() call)
 # ---------------------------------------------------------------------------
+
 
 def apply_section(section: str, kwargs: dict[str, Any]) -> None:
     """Apply a TOML section's key-value pairs to the matching API singleton.
@@ -220,12 +243,14 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
             from pycsamt.api.cli.config import (
                 configure_cli,  # noqa: PLC0415
             )
+
             _apply_flat_or_nested(kw, configure_cli)
 
         elif section == "control":
             from pycsamt.api.control import (
                 configure_control,  # noqa: PLC0415
             )
+
             configure_control(**kw)
 
         elif section == "style":
@@ -234,23 +259,27 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                 from pycsamt.api.style import (
                     use_style,  # noqa: PLC0415
                 )
+
                 use_style(preset)
             if kw:
                 from pycsamt.api.style import (
                     configure_style,  # noqa: PLC0415
                 )
+
                 configure_style(**kw)
 
         elif section == "section_view":
             from pycsamt.api.section import (
                 configure_section,  # noqa: PLC0415
             )
+
             configure_section(**kw)
 
         elif section == "station":
             from pycsamt.api.station import (
                 configure_station_rendering,  # noqa: PLC0415
             )
+
             configure_station_rendering(**kw)
 
         elif section == "interp":
@@ -259,11 +288,13 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                 from pycsamt.api.interp import (
                     use_interp,  # noqa: PLC0415
                 )
+
                 use_interp(preset)
             if kw:
                 from pycsamt.api.interp import (
                     configure_interp,  # noqa: PLC0415
                 )
+
                 configure_interp(**kw)
 
         elif section == "plot":
@@ -273,9 +304,10 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                 set_fmt,
                 set_savedir,
             )
-            fmt      = kw.pop("fmt", None)
-            dpi      = kw.pop("dpi", None)
-            savedir  = kw.pop("savedir", None)
+
+            fmt = kw.pop("fmt", None)
+            dpi = kw.pop("dpi", None)
+            savedir = kw.pop("savedir", None)
             base_fmt = kw.pop("base_fmt", None)
             if fmt is not None:
                 set_fmt(str(fmt))
@@ -293,8 +325,9 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
             from pycsamt.api.agents import (
                 AGENT_CONFIG,  # noqa: PLC0415
             )
-            provider   = kw.pop("provider", None)
-            model      = kw.pop("model", None)
+
+            provider = kw.pop("provider", None)
+            model = kw.pop("model", None)
             budget_usd = kw.pop("budget_usd", None)
             if provider:
                 try:
@@ -310,12 +343,14 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
             from pycsamt.api.pipe.config import (
                 configure_pipe,  # noqa: PLC0415
             )
+
             configure_pipe(**kw)
 
         elif section == "view":
             from pycsamt.api.view.config import (
                 configure_api_view,  # noqa: PLC0415
             )
+
             configure_api_view(**kw)
 
     except Exception as exc:  # noqa: BLE001
@@ -344,6 +379,7 @@ def _apply_flat_or_nested(
 # Apply all TOML sections  (called at CLI startup)
 # ---------------------------------------------------------------------------
 
+
 def load_all_config(toml_data: dict[str, Any] | None = None) -> None:
     """Apply every section in ``~/.pycsamt.toml`` to its singleton.
 
@@ -364,22 +400,23 @@ def load_all_config(toml_data: dict[str, Any] | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 _SINGLETON_MAP: dict[str, tuple[str, str]] = {
-    "cli":          ("pycsamt.api.cli.config",      "PYCSAMT_CLI"),
-    "control":      ("pycsamt.api.control",         "PYCSAMT_CONTROL"),
-    "style":        ("pycsamt.api.style",           "PYCSAMT_STYLE"),
-    "section_view": ("pycsamt.api.section",         "PYCSAMT_SECTION"),
-    "station":      ("pycsamt.api.station",         "PYCSAMT_STATION_RENDERING"),
-    "interp":       ("pycsamt.api.interp",          "PYCSAMT_INTERP"),
-    "plot":         ("pycsamt.api.plot",            "PLOT_CONFIG"),
-    "agent":        ("pycsamt.api.agents",          "AGENT_CONFIG"),
-    "pipe":         ("pycsamt.api.pipe.config",     "PYCSAMT_PIPE"),
-    "view":         ("pycsamt.api.view.config",     "PYCSAMT_API_VIEW"),
+    "cli": ("pycsamt.api.cli.config", "PYCSAMT_CLI"),
+    "control": ("pycsamt.api.control", "PYCSAMT_CONTROL"),
+    "style": ("pycsamt.api.style", "PYCSAMT_STYLE"),
+    "section_view": ("pycsamt.api.section", "PYCSAMT_SECTION"),
+    "station": ("pycsamt.api.station", "PYCSAMT_STATION_RENDERING"),
+    "interp": ("pycsamt.api.interp", "PYCSAMT_INTERP"),
+    "plot": ("pycsamt.api.plot", "PLOT_CONFIG"),
+    "agent": ("pycsamt.api.agents", "AGENT_CONFIG"),
+    "pipe": ("pycsamt.api.pipe.config", "PYCSAMT_PIPE"),
+    "view": ("pycsamt.api.view.config", "PYCSAMT_API_VIEW"),
 }
 
 
 def get_singleton(section: str) -> Any:
     """Return the live singleton for *section*."""
     import importlib  # noqa: PLC0415
+
     module_path, attr = _SINGLETON_MAP[section]
     mod = importlib.import_module(module_path)
     return getattr(mod, attr)
@@ -401,6 +438,7 @@ def get_value(section: str, toml_key: str) -> Any:
 # ---------------------------------------------------------------------------
 # Section summary helpers  (used by config show)
 # ---------------------------------------------------------------------------
+
 
 def section_summary(section: str) -> str:
     """Return a human-readable summary string for the given section."""

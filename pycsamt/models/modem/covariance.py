@@ -31,6 +31,7 @@ _HEADER_LINES = 16
 # Low-level parser
 # ----------------------------------------------------------------------
 
+
 def _parse_covariance(path: Path) -> dict:
     """Parse a ModEM covariance file into plain Python values."""
     with path.open("r", errors="replace") as fh:
@@ -72,7 +73,7 @@ def _parse_covariance(path: Path) -> dict:
 
     smooth_x = np.array(smooth_vals[:nz_earth], dtype=float)
     smooth_y = np.array(
-        smooth_vals[nz_earth:2 * nz_earth],
+        smooth_vals[nz_earth : 2 * nz_earth],
         dtype=float,
     )
     if len(smooth_vals) > 2 * nz_earth:
@@ -98,9 +99,7 @@ def _parse_covariance(path: Path) -> dict:
             i += 1
         parts = lines[i].split()
         i += 1
-        exceptions.append(
-            (int(parts[0]), int(parts[1]), float(parts[2]))
-        )
+        exceptions.append((int(parts[0]), int(parts[1]), float(parts[2])))
 
     # -- mask blocks: (layer_start, layer_end, Ny by Nx grid) ----------
     mask_blocks: list[dict] = []
@@ -114,7 +113,7 @@ def _parse_covariance(path: Path) -> dict:
         if len(parts) >= 2:
             try:
                 l_start = int(parts[0])
-                l_end   = int(parts[1])
+                l_end = int(parts[1])
                 i += 1
             except ValueError:
                 i += 1
@@ -136,7 +135,7 @@ def _parse_covariance(path: Path) -> dict:
                 try:
                     int(row_parts[0])
                     int(row_parts[1])
-                    i -= 1   # put back
+                    i -= 1  # put back
                     break
                 except ValueError:
                     pass
@@ -386,16 +385,12 @@ class ModEmCovariance(ModEmBase):
         def _float_row(arr: np.ndarray, per_row: int = 20) -> str:
             parts = []
             for i in range(0, len(arr), per_row):
-                parts.append(
-                    " ".join(f"{v}" for v in arr[i:i + per_row])
-                )
+                parts.append(" ".join(f"{v}" for v in arr[i : i + per_row]))
             return "\n".join(parts)
 
         lines: list[str] = [_HEADER_TEMPLATE + "\n"]
         lines.append("\n")
-        lines.append(
-            f"{self.nx_earth} {self.ny_earth} {self.nz_earth}\n"
-        )
+        lines.append(f"{self.nx_earth} {self.ny_earth} {self.nz_earth}\n")
         lines.append("\n")
         lines.append(_float_row(self.smooth_x) + "\n")
         lines.append(_float_row(self.smooth_y) + "\n")

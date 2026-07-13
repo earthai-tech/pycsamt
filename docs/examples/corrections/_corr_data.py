@@ -27,7 +27,9 @@ def demo_line(line: str = "L18PLT"):
     """Load one WILLY_DATA line as ``Sites`` (L18PLT carries real error tensors,
     which the static-shift and QC steps need)."""
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT", ".")
-    return ensure_sites(str(Path(root) / "data" / "AMT" / "WILLY_DATA" / line))
+    return ensure_sites(
+        str(Path(root) / "data" / "AMT" / "WILLY_DATA" / line)
+    )
 
 
 def curves(sites, quantity: str = "rho", component: str = "xy"):
@@ -36,20 +38,35 @@ def curves(sites, quantity: str = "rho", component: str = "xy"):
     out = {}
     for k, ed in enumerate(_iter_items(sites)):
         period = 1.0 / np.asarray(ed.freq, dtype=float)
-        arr = np.asarray(ed.rho if quantity == "rho" else ed.phase, dtype=float)
+        arr = np.asarray(
+            ed.rho if quantity == "rho" else ed.phase, dtype=float
+        )
         out[_name(ed, k)] = (period, arr[:, i, j])
     return out
 
 
-def plot_before_after(before, after, stations, *, quantity="rho",
-                      labels=("raw", "corrected"), colors=("#b0b7c3", "#3e65b0"),
-                      title="", figsize=None):
+def plot_before_after(
+    before,
+    after,
+    stations,
+    *,
+    quantity="rho",
+    labels=("raw", "corrected"),
+    colors=("#b0b7c3", "#3e65b0"),
+    title="",
+    figsize=None,
+):
     """Overlay raw vs corrected curves for several stations, one panel each."""
     import matplotlib.pyplot as plt
 
     n = len(stations)
-    fig, axes = plt.subplots(1, n, figsize=figsize or (4.0 * n, 4.2),
-                             sharey=True, constrained_layout=True)
+    fig, axes = plt.subplots(
+        1,
+        n,
+        figsize=figsize or (4.0 * n, 4.2),
+        sharey=True,
+        constrained_layout=True,
+    )
     if n == 1:
         axes = [axes]
     for ax, st in zip(axes, stations):
@@ -64,7 +81,9 @@ def plot_before_after(before, after, stations, *, quantity="rho",
         ax.set_title(st, fontsize=9)
         ax.set_xlabel("period (s)")
         ax.grid(True, which="both", ls=":", lw=0.4, alpha=0.6)
-    ylab = r"$\rho_a$  ($\Omega\cdot$m)" if quantity == "rho" else "phase (deg)"
+    ylab = (
+        r"$\rho_a$  ($\Omega\cdot$m)" if quantity == "rho" else "phase (deg)"
+    )
     axes[0].set_ylabel(ylab)
     axes[0].legend(fontsize=8, framealpha=0.85)
     if title:

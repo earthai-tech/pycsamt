@@ -6,11 +6,11 @@ import unittest
 
 
 class TestKeywordClassification(unittest.TestCase):
-
     def _classify(self, text):
         from pycsamt.agents.orchestrator import (
             _keyword_classify,
         )
+
         wf, reason = _keyword_classify(text)
         return wf
 
@@ -19,7 +19,8 @@ class TestKeywordClassification(unittest.TestCase):
 
     def test_phase_analysis_keywords(self):
         self.assertEqual(
-            self._classify("compute phase tensor and strike analysis"), "phase_analysis"
+            self._classify("compute phase tensor and strike analysis"),
+            "phase_analysis",
         )
 
     def test_ai_inversion_keywords(self):
@@ -60,11 +61,11 @@ class TestKeywordClassification(unittest.TestCase):
 
 
 class TestWorkflowStepsRegistry(unittest.TestCase):
-
     def test_all_phase4_workflows_registered(self):
         from pycsamt.agents.orchestrator import (
             _WORKFLOW_STEPS,
         )
+
         for wf in ("inv2d", "inv3d", "ensemble_inversion", "joint_inversion"):
             self.assertIn(wf, _WORKFLOW_STEPS)
             self.assertGreater(len(_WORKFLOW_STEPS[wf]), 0)
@@ -73,64 +74,83 @@ class TestWorkflowStepsRegistry(unittest.TestCase):
         from pycsamt.agents.orchestrator import (
             _WORKFLOW_STEPS,
         )
-        for wf in ("qc", "phase_analysis", "pre_inversion",
-                   "ai_inversion", "modem", "full"):
+
+        for wf in (
+            "qc",
+            "phase_analysis",
+            "pre_inversion",
+            "ai_inversion",
+            "modem",
+            "full",
+        ):
             self.assertIn(wf, _WORKFLOW_STEPS)
 
     def test_step_tuples_have_4_or_5_elements(self):
         from pycsamt.agents.orchestrator import (
             _WORKFLOW_STEPS,
         )
+
         for wf, steps in _WORKFLOW_STEPS.items():
             for step in steps:
                 self.assertIn(
-                    len(step), (4, 5),
-                    f"{wf}: step {step[0]!r} has"
-                    f" wrong length {len(step)}"
+                    len(step),
+                    (4, 5),
+                    f"{wf}: step {step[0]!r} has wrong length {len(step)}",
                 )
 
 
 class TestOrchestratorDryRun(unittest.TestCase):
-
     def test_dry_run_qc_workflow(self):
         from pycsamt.agents import WorkflowOrchestratorAgent
+
         ag = WorkflowOrchestratorAgent()
-        r  = ag.execute({
-            "request":  "QC the data",
-            "data_path": "/data/test",
-            "dry_run":   True,
-        })
+        r = ag.execute(
+            {
+                "request": "QC the data",
+                "data_path": "/data/test",
+                "dry_run": True,
+            }
+        )
         self.assertIn(r.status, ("success", "needs_review"))
 
     def test_workflow_type_returned(self):
         from pycsamt.agents import WorkflowOrchestratorAgent
+
         ag = WorkflowOrchestratorAgent()
-        r  = ag.execute({
-            "request":  "phase tensor analysis",
-            "data_path": "/data/test",
-            "dry_run":   True,
-        })
+        r = ag.execute(
+            {
+                "request": "phase tensor analysis",
+                "data_path": "/data/test",
+                "dry_run": True,
+            }
+        )
         self.assertIn("workflow_type", r.data)
 
     def test_steps_list_in_output(self):
         from pycsamt.agents import WorkflowOrchestratorAgent
+
         ag = WorkflowOrchestratorAgent()
-        r  = ag.execute({
-            "config": {"workflow": "qc"},
-            "data_path": "/data/test",
-            "dry_run":   True,
-        })
+        r = ag.execute(
+            {
+                "config": {"workflow": "qc"},
+                "data_path": "/data/test",
+                "dry_run": True,
+            }
+        )
         steps = r.get("steps") or []
         self.assertIsInstance(steps, list)
 
     def test_explicit_config_workflow_respected(self):
         from pycsamt.agents import WorkflowOrchestratorAgent
+
         ag = WorkflowOrchestratorAgent()
-        r  = ag.execute({
-            "config":   {"workflow": "modem"},
-            "data_path": "/data/test",
-            "dry_run":   True,
-        })
+        r = ag.execute(
+            {
+                "config": {"workflow": "modem"},
+                "data_path": "/data/test",
+                "dry_run": True,
+            }
+        )
         self.assertEqual(r.get("workflow_type"), "modem")
 
 

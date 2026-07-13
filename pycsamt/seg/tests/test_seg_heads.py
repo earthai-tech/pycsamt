@@ -125,7 +125,7 @@ def test_info_mixin_instance_read():
             self.info = Info()
 
     host = Host()
-    kv = ["  PROJECT=Mix", '  PROCESSEDBY=tool', "  RUNLIST=A,B"]
+    kv = ["  PROJECT=Mix", "  PROCESSEDBY=tool", "  RUNLIST=A,B"]
     info = host.read(kv)
     assert isinstance(info, Info)
     assert host.info.Source.project == "Mix"

@@ -44,7 +44,9 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
         timeout: float = 10.0,
         **options: Any,
     ) -> None:
-        super().__init__(endpoint, dry_run=dry_run, timeout=timeout, **options)
+        super().__init__(
+            endpoint, dry_run=dry_run, timeout=timeout, **options
+        )
 
     def _connect(self) -> None:
         websocket = _import_websocket()
@@ -87,4 +89,6 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
             return {"raw": message}
 
     def _transport_healthcheck(self) -> bool:
-        return self._handle is not None and getattr(self._handle, "connected", False)
+        return self._handle is not None and getattr(
+            self._handle, "connected", False
+        )

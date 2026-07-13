@@ -8,6 +8,7 @@ impedance tensor from apparent resistivity and phase data. It
 inherits from TensorBase to provide powerful reshaping and
 analysis capabilities.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -92,9 +93,7 @@ class Z(TensorBase):
         Read and prepare data for impedance calculation.
         """
         if not isinstance(source, pd.DataFrame):
-            raise TypeError(
-                "Z.read expects a pandas.DataFrame."
-            )
+            raise TypeError("Z.read expects a pandas.DataFrame.")
 
         # df = source.copy()
         df = _standardise_columns(source.copy())
@@ -106,9 +105,7 @@ class Z(TensorBase):
         required = ["rho", "phase", "freq"]
         missing = [c for c in required if c not in df.columns]
         if missing:
-            raise AvgDataError(
-                f"Z: missing required columns: {missing}"
-            )
+            raise AvgDataError(f"Z: missing required columns: {missing}")
         # --- Optional error columns ---
         optional_qc = ["pc_rho", "s_phz"]
         for col in optional_qc:
@@ -127,7 +124,7 @@ class Z(TensorBase):
 
         # Normalize component labels to uppercase canonical form
         df["comp"] = df["comp"].map(_norm_comp)
-        df.dropna(subset=['comp'], inplace=True)
+        df.dropna(subset=["comp"], inplace=True)
 
         # Normalize types
         for col in ["rho", "phase", "freq", "pc_rho", "s_phz"]:
@@ -135,19 +132,20 @@ class Z(TensorBase):
                 df[col] = df[col].map(_to_num)
 
         keep_cols = [
-            "station", "freq", "comp", "rho", "phase",
-            "pc_rho", "s_phz"
+            "station",
+            "freq",
+            "comp",
+            "rho",
+            "phase",
+            "pc_rho",
+            "s_phz",
         ]
-        self._frame = df.loc[
-            :, [c for c in keep_cols if c in df.columns]
-        ]
+        self._frame = df.loc[:, [c for c in keep_cols if c in df.columns]]
 
         return self
 
     def _get_component_series(
-        self,
-        comp_names: tuple[str, ...],
-        series: pd.Series
+        self, comp_names: tuple[str, ...], series: pd.Series
     ) -> pd.Series:
         """Helper to filter a property series by component."""
         if self._frame.empty or "comp" not in self._frame.columns:
@@ -213,30 +211,24 @@ class Z(TensorBase):
         .. math::
             |dZ| \approx \frac{1}{2} |Z| \frac{d\rho}{\rho}
         """
-        if (
-                self._frame.empty
-                or "rho" not in self._frame.columns
-            ):
+        if self._frame.empty or "rho" not in self._frame.columns:
             return pd.Series(dtype="float64")
 
         has_rho_err = "pc_rho" in self._frame.columns
         has_phi_err = "s_phz" in self._frame.columns
 
         if not has_rho_err and not has_phi_err:
-            return pd.Series(dtype="float64",
-                             index=self._frame.index)
+            return pd.Series(dtype="float64", index=self._frame.index)
 
         z_mag = np.sqrt(
-            self._frame["rho"]
-            * (2 * PI * self._frame["freq"])
-            * MU_0
+            self._frame["rho"] * (2 * PI * self._frame["freq"]) * MU_0
         )
 
         term_rho_sq = 0.0
         if has_rho_err:
             # Relative error drho/rho
             rel_err_rho = self._frame["pc_rho"] / 100.0
-            term_rho_sq = (0.5 * rel_err_rho)**2
+            term_rho_sq = (0.5 * rel_err_rho) ** 2
 
         term_phi_sq = 0.0
         if has_phi_err:
@@ -251,50 +243,42 @@ class Z(TensorBase):
     @property
     def z_xx(self) -> pd.Series:
         """Complex impedance for the Zxx component."""
-        return self._get_component_series(
-            ("ZXX", "ExHX"), self.z)
+        return self._get_component_series(("ZXX", "ExHX"), self.z)
 
     @property
     def z_xy(self) -> pd.Series:
         """Complex impedance for the Zxy component."""
-        return self._get_component_series(
-            ("ZXY", "EXHY"), self.z)
+        return self._get_component_series(("ZXY", "EXHY"), self.z)
 
     @property
     def z_yx(self) -> pd.Series:
         """Complex impedance for the Zyx component."""
-        return self._get_component_series(
-            ("ZYX", "EYHX"), self.z)
+        return self._get_component_series(("ZYX", "EYHX"), self.z)
 
     @property
     def z_yy(self) -> pd.Series:
         """Complex impedance for the Zyy component."""
-        return self._get_component_series(
-            ("ZYY", "EYHY"), self.z)
+        return self._get_component_series(("ZYY", "EYHY"), self.z)
 
     @property
     def z_xx_err(self) -> pd.Series:
         """Propagated error for the Zxx component."""
-        return self._get_component_series(
-            ("ZXX", "EXHX"), self.z_err)
+        return self._get_component_series(("ZXX", "EXHX"), self.z_err)
 
     @property
     def z_xy_err(self) -> pd.Series:
         """Propagated error for the Zxy component."""
-        return self._get_component_series(
-            ("ZXY", "EXHY"), self.z_err)
+        return self._get_component_series(("ZXY", "EXHY"), self.z_err)
 
     @property
     def z_yx_err(self) -> pd.Series:
         """Propagated error for the Zyx component."""
-        return self._get_component_series(
-            ("ZYX", "EYHX"), self.z_err)
+        return self._get_component_series(("ZYX", "EYHX"), self.z_err)
 
     @property
     def z_yy_err(self) -> pd.Series:
         """Propagated error for the Zyy component."""
-        return self._get_component_series(
-            ("ZYY", "EYHY"), self.z_err)
+        return self._get_component_series(("ZYY", "EYHY"), self.z_err)
 
     def to_tensor(
         self,
@@ -320,14 +304,20 @@ class Z(TensorBase):
             tb._frame = temp_frame
 
             T_real, freqs, stations = tb.to_tensor(
-                var="__real", station=station, agg=agg,
-                fill_value=fill_value, sort_freq=sort_freq,
-                align=align
+                var="__real",
+                station=station,
+                agg=agg,
+                fill_value=fill_value,
+                sort_freq=sort_freq,
+                align=align,
             )
             T_imag, _, _ = tb.to_tensor(
-                var="__imag", station=station, agg=agg,
-                fill_value=fill_value, sort_freq=sort_freq,
-                align=align
+                var="__imag",
+                station=station,
+                agg=agg,
+                fill_value=fill_value,
+                sort_freq=sort_freq,
+                align=align,
             )
             return T_real + 1j * T_imag, freqs, stations
 
@@ -336,15 +326,21 @@ class Z(TensorBase):
             tb = TensorBase()
             tb._frame = temp_frame
             return tb.to_tensor(
-                var=var, station=station, agg=agg,
-                fill_value=fill_value, sort_freq=sort_freq,
-                align=align
+                var=var,
+                station=station,
+                agg=agg,
+                fill_value=fill_value,
+                sort_freq=sort_freq,
+                align=align,
             )
         else:
             return super().to_tensor(
-                var=var, station=station, agg=agg,
-                fill_value=fill_value, sort_freq=sort_freq,
-                align=align
+                var=var,
+                station=station,
+                agg=agg,
+                fill_value=fill_value,
+                sort_freq=sort_freq,
+                align=align,
             )
 
     def to_xarray(
@@ -369,8 +365,7 @@ class Z(TensorBase):
 
         # Use the new to_tensor method to get the data
         T, freqs, stations = self.to_tensor(
-            var=var, station=station, agg=agg,
-            fill_value=fill_value
+            var=var, station=station, agg=agg, fill_value=fill_value
         )
 
         e_axis = np.array(["Ex", "Ey"])
@@ -382,20 +377,24 @@ class Z(TensorBase):
 
         if stations.size == 0:
             da = xr.DataArray(
-                T, dims=("freq", "e", "h"),
-                coords={
-                    "freq": freqs, "e": e_axis, "h": h_axis
-                },
-                attrs=merged_attrs, name=var,
+                T,
+                dims=("freq", "e", "h"),
+                coords={"freq": freqs, "e": e_axis, "h": h_axis},
+                attrs=merged_attrs,
+                name=var,
             )
         else:
             da = xr.DataArray(
-                T, dims=("station", "freq", "e", "h"),
+                T,
+                dims=("station", "freq", "e", "h"),
                 coords={
-                    "station": stations, "freq": freqs,
-                    "e": e_axis, "h": h_axis
+                    "station": stations,
+                    "freq": freqs,
+                    "e": e_axis,
+                    "h": h_axis,
                 },
-                attrs=merged_attrs, name=var,
+                attrs=merged_attrs,
+                name=var,
             )
         return da
 
@@ -407,9 +406,7 @@ class Z(TensorBase):
             return ["\\ $Z (Impedance) Block", ""]
 
         # Create a temporary frame for writing
-        df_write = self._frame[
-            ["station", "freq", "comp"]
-        ].copy()
+        df_write = self._frame[["station", "freq", "comp"]].copy()
 
         df_write["z_real"] = self.z_real
         df_write["z_imag"] = self.z_imag

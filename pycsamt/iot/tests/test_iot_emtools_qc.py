@@ -24,8 +24,12 @@ FREQ = np.logspace(4, 0, 12)
 
 def _session():
     session = FieldSession("SURV1", method="amt")
-    session.add_station(StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0))
-    session.add_station(StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0))
+    session.add_station(
+        StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0)
+    )
+    session.add_station(
+        StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0)
+    )
     return session
 
 
@@ -34,8 +38,9 @@ def _impedance():
     err = np.full((FREQ.size, 2, 2), 0.05)
     return {
         "S01": impedance_to_z(zxy, FREQ, impedance_err=err, station="S01"),
-        "S02": impedance_to_z(zxy * 1.5, FREQ, impedance_err=err,
-                              station="S02"),
+        "S02": impedance_to_z(
+            zxy * 1.5, FREQ, impedance_err=err, station="S02"
+        ),
     }
 
 

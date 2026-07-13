@@ -42,6 +42,7 @@ Alternatively, construct the config entirely in Python::
     )
     ds = generate_dataset(**cfg.to_dataset_kwargs())
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -253,6 +254,7 @@ _FORWARD_CONFIG_SCHEMA: list[ConfigParameter] = [
 
 # ── dataclass ───────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ForwardConfig:
     """Collect settings that define a 1-D forward modelling / dataset run.
@@ -339,35 +341,35 @@ class ForwardConfig:
     """
 
     # ── Solver ───────────────────────────────────────────────────────────────
-    solver:      str   = "mt1d"
-    freq_min:    float = 1e-4
-    freq_max:    float = 1e4
-    n_freqs:     int   = 30
-    time_min:    float = 1e-6
-    time_max:    float = 1e-2
-    n_times:     int   = 25
+    solver: str = "mt1d"
+    freq_min: float = 1e-4
+    freq_max: float = 1e4
+    n_freqs: int = 30
+    time_min: float = 1e-6
+    time_max: float = 1e-2
+    n_times: int = 25
     loop_radius: float = 50.0
 
     # ── Earth model ──────────────────────────────────────────────────────────
-    n_layers_min: int            = 3
-    n_layers_max: int            = 7
-    rho_min:      float          = 1.0
-    rho_max:      float          = 10_000.0
-    depth_max:    float          = 2_000.0
-    geology:      str | None  = None
+    n_layers_min: int = 3
+    n_layers_max: int = 7
+    rho_min: float = 1.0
+    rho_max: float = 10_000.0
+    depth_max: float = 2_000.0
+    geology: str | None = None
 
     # ── Dataset ──────────────────────────────────────────────────────────────
-    n_samples:     int   = 10_000
-    noise_level:   float = 0.05
-    noise_type:    str   = "gaussian"
-    include_phase: bool  = True
-    seed:          int | None = None
-    n_jobs:        int   = 1
+    n_samples: int = 10_000
+    noise_level: float = 0.05
+    noise_type: str = "gaussian"
+    include_phase: bool = True
+    seed: int | None = None
+    n_jobs: int = 1
 
     # ── Output ───────────────────────────────────────────────────────────────
-    output_dir:  str | None = "."
-    output_name: str           = "forward_dataset"
-    verbose:     bool          = True
+    output_dir: str | None = "."
+    output_name: str = "forward_dataset"
+    verbose: bool = True
 
     # ─────────────────────────────────────────────────────────────────────────
     # Validation
@@ -395,7 +397,9 @@ class ForwardConfig:
             if self.freq_min <= 0.0:
                 raise ValueError("freq_min must be strictly positive.")
             if self.freq_max <= self.freq_min:
-                raise ValueError("freq_max must be strictly greater than freq_min.")
+                raise ValueError(
+                    "freq_max must be strictly greater than freq_min."
+                )
             if self.n_freqs < 4:
                 raise ValueError("n_freqs must be at least 4.")
 
@@ -403,14 +407,18 @@ class ForwardConfig:
             if self.time_min <= 0.0:
                 raise ValueError("time_min must be strictly positive.")
             if self.time_max <= self.time_min:
-                raise ValueError("time_max must be strictly greater than time_min.")
+                raise ValueError(
+                    "time_max must be strictly greater than time_min."
+                )
             if self.n_times < 4:
                 raise ValueError("n_times must be at least 4.")
             if self.loop_radius <= 0.0:
                 raise ValueError("loop_radius must be strictly positive.")
 
         if self.n_layers_min < 2:
-            raise ValueError("n_layers_min must be at least 2 (min: 1 layer + halfspace).")
+            raise ValueError(
+                "n_layers_min must be at least 2 (min: 1 layer + halfspace)."
+            )
         if self.n_layers_max < self.n_layers_min:
             raise ValueError("n_layers_max must be >= n_layers_min.")
 
@@ -418,7 +426,9 @@ class ForwardConfig:
             if self.rho_min <= 0.0:
                 raise ValueError("rho_min must be strictly positive.")
             if self.rho_max <= self.rho_min:
-                raise ValueError("rho_max must be strictly greater than rho_min.")
+                raise ValueError(
+                    "rho_max must be strictly greater than rho_min."
+                )
             if self.depth_max <= 0.0:
                 raise ValueError("depth_max must be strictly positive.")
 
@@ -483,9 +493,11 @@ class ForwardConfig:
         kw: dict[str, Any] = dict(
             solver=self.solver,
             n_samples=self.n_samples,
-            n_layers=(self.n_layers_min
-                      if self.n_layers_min == self.n_layers_max
-                      else (self.n_layers_min, self.n_layers_max)),
+            n_layers=(
+                self.n_layers_min
+                if self.n_layers_min == self.n_layers_max
+                else (self.n_layers_min, self.n_layers_max)
+            ),
             rho_range=(self.rho_min, self.rho_max),
             depth_max=self.depth_max,
             loop_radius=self.loop_radius,

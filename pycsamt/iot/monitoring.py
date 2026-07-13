@@ -70,7 +70,9 @@ def _payload(packet: TelemetryPacket | Mapping[str, Any]) -> dict[str, Any]:
     return dict(payload or {})
 
 
-def _packet_dict(packet: TelemetryPacket | Mapping[str, Any]) -> dict[str, Any]:
+def _packet_dict(
+    packet: TelemetryPacket | Mapping[str, Any],
+) -> dict[str, Any]:
     if isinstance(packet, TelemetryPacket):
         return packet.as_dict()
     out = dict(packet)
@@ -275,7 +277,8 @@ class MonitoringStatus(PyCSAMTObject):
     def as_dict(self) -> dict[str, Any]:
         """Return a flat serialisable status dictionary."""
         return dict(
-            level=self.level.value if isinstance(self.level, MonitoringLevel)
+            level=self.level.value
+            if isinstance(self.level, MonitoringLevel)
             else str(self.level),
             n_packet=self.n_packet,
             packet_success_rate=self.packet_success_rate,
@@ -329,11 +332,11 @@ class TelemetryMonitor(PyCSAMTObject):
             n_packet=len(enriched),
             packet_success_rate=self._packet_success_rate(enriched),
             edge_acceptance_rate=self._edge_acceptance_rate(enriched),
-            mean_latency_s=_safe_mean(row.get("latency_s")
-                                      for row in enriched),
+            mean_latency_s=_safe_mean(
+                row.get("latency_s") for row in enriched
+            ),
             max_gap_s=self._max_gap(enriched),
-            battery_min_v=_safe_min(row.get("battery_v")
-                                    for row in enriched),
+            battery_min_v=_safe_min(row.get("battery_v") for row in enriched),
             clock_offset_max_ms=_safe_max(
                 abs(_as_float_or_nan(row.get("clock_offset_ms")))
                 for row in enriched
@@ -348,13 +351,16 @@ class TelemetryMonitor(PyCSAMTObject):
                 if row.get("station") is not None
             ],
             channels=[
-                ch for row in enriched
+                ch
+                for row in enriched
                 for ch in list(row.get("channels") or [])
             ],
-            frequency_min_hz=_safe_min(row.get("frequency_min_hz")
-                                       for row in enriched),
-            frequency_max_hz=_safe_max(row.get("frequency_max_hz")
-                                       for row in enriched),
+            frequency_min_hz=_safe_min(
+                row.get("frequency_min_hz") for row in enriched
+            ),
+            frequency_max_hz=_safe_max(
+                row.get("frequency_max_hz") for row in enriched
+            ),
             issues=issues,
         )
 
@@ -450,8 +456,7 @@ class TelemetryMonitor(PyCSAMTObject):
         mean_latency = _safe_mean(row.get("latency_s") for row in rows)
         battery_min = _safe_min(row.get("battery_v") for row in rows)
         clock_max = _safe_max(
-            abs(_as_float_or_nan(row.get("clock_offset_ms")))
-            for row in rows
+            abs(_as_float_or_nan(row.get("clock_offset_ms"))) for row in rows
         )
         if success < self.config.min_packet_success_rate:
             issues.append("packet_success_rate_below_threshold")
@@ -460,10 +465,14 @@ class TelemetryMonitor(PyCSAMTObject):
         if self.config.max_gap_s is not None and np.isfinite(max_gap):
             if max_gap > self.config.max_gap_s:
                 issues.append("packet_gap_above_threshold")
-        if self.config.expected_interval_s is not None and np.isfinite(max_gap):
+        if self.config.expected_interval_s is not None and np.isfinite(
+            max_gap
+        ):
             if max_gap > 2.5 * self.config.expected_interval_s:
                 issues.append("packet_gap_exceeds_expected_interval")
-        if self.config.max_latency_s is not None and np.isfinite(mean_latency):
+        if self.config.max_latency_s is not None and np.isfinite(
+            mean_latency
+        ):
             if mean_latency > self.config.max_latency_s:
                 issues.append("latency_above_threshold")
         if self.config.min_battery_v is not None and np.isfinite(battery_min):
@@ -599,7 +608,8 @@ def monitoring_status_table(
 ) -> Any:
     """Return monitoring statuses as a pyCSAMT table."""
     rows = (
-        [statuses] if isinstance(statuses, MonitoringStatus)
+        [statuses]
+        if isinstance(statuses, MonitoringStatus)
         else list(statuses)
     )
     df = pd.DataFrame.from_records([status.as_dict() for status in rows])

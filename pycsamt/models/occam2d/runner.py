@@ -165,15 +165,15 @@ class OccamRunner(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.workdir      = Path(workdir)
+        self.workdir = Path(workdir)
         self._binary_path = Path(binary_path) if binary_path else None
         self.startup_file = startup_file
 
-        self.binary:     Path | None             = None
-        self.process:    subprocess.Popen | None = None
-        self.exit_code:  int | None              = None
-        self.stdout_log  = self.workdir / "occam_stdout.log"
-        self.stderr_log  = self.workdir / "occam_stderr.log"
+        self.binary: Path | None = None
+        self.process: subprocess.Popen | None = None
+        self.exit_code: int | None = None
+        self.stdout_log = self.workdir / "occam_stdout.log"
+        self.stderr_log = self.workdir / "occam_stderr.log"
 
     # ------------------------------------------------------------------
     # Binary discovery
@@ -314,7 +314,9 @@ class OccamRunner(OccamBase):
                 f"or pass fc='<compiler>'."
             )
 
-        self.logger.info("Compiling Occam2D with %s %s in %s", fc, flags, _SOURCE_DIR)
+        self.logger.info(
+            "Compiling Occam2D with %s %s in %s", fc, flags, _SOURCE_DIR
+        )
         result = subprocess.run(
             ["make", f"FC90={fc}", f"FCFLAGS={flags}"],
             cwd=_SOURCE_DIR,
@@ -322,9 +324,7 @@ class OccamRunner(OccamBase):
             text=True,
         )
         if result.returncode != 0:
-            raise RuntimeError(
-                f"Compilation failed:\n{result.stderr}"
-            )
+            raise RuntimeError(f"Compilation failed:\n{result.stderr}")
         compiled = _SOURCE_DIR / "Occam2D"
         if not compiled.is_file():
             raise RuntimeError(
@@ -398,7 +398,9 @@ class OccamRunner(OccamBase):
 
         # Optionally patch startup file before running
         if max_iter is not None or target_misfit is not None:
-            self._patch_startup(max_iter=max_iter, target_misfit=target_misfit)
+            self._patch_startup(
+                max_iter=max_iter, target_misfit=target_misfit
+            )
 
         self.logger.info("Running Occam2D in %s", self.workdir)
 
@@ -417,7 +419,8 @@ class OccamRunner(OccamBase):
         if self.exit_code != 0:
             self.logger.warning(
                 "Occam2D exited with code %d.  See %s",
-                self.exit_code, self.stderr_log,
+                self.exit_code,
+                self.stderr_log,
             )
         else:
             self.logger.info("Occam2D finished successfully.")
@@ -483,7 +486,8 @@ class OccamRunner(OccamBase):
         )
         self.logger.info(
             "Occam2D started (pid=%d).  Logging to %s",
-            self.process.pid, self.stdout_log,
+            self.process.pid,
+            self.stdout_log,
         )
         return self.process
 
@@ -502,7 +506,9 @@ class OccamRunner(OccamBase):
             :meth:`run_async`.
         """
         if self.process is None:
-            raise RuntimeError("No async run in progress.  Call run_async() first.")
+            raise RuntimeError(
+                "No async run in progress.  Call run_async() first."
+            )
         self.exit_code = self.process.wait()
         return self.exit_code
 
@@ -522,9 +528,7 @@ class OccamRunner(OccamBase):
         """Patch startup iteration and target-misfit fields."""
         startup_path = self.workdir / self.startup_file
         if not startup_path.is_file():
-            raise FileNotFoundError(
-                f"Startup file not found: {startup_path}"
-            )
+            raise FileNotFoundError(f"Startup file not found: {startup_path}")
         lines = startup_path.read_text().splitlines()
         new_lines = []
         for line in lines:

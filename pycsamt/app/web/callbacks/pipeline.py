@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Callbacks for the Processing Pipeline page."""
+
 from __future__ import annotations
 
 import os
@@ -37,19 +38,20 @@ from pycsamt.app.web.utils import (
     no_active_lines_src,
 )
 
-_CTRL  = PipelineController()
+_CTRL = PipelineController()
 _STEPS = _build_steps()
 
 _STATUS_CLASS: dict = {
     StepStatus.PENDING: "step-pending",
     StepStatus.RUNNING: "step-running",
-    StepStatus.DONE:    "step-done",
-    StepStatus.ERROR:   "step-failed",
+    StepStatus.DONE: "step-done",
+    StepStatus.ERROR: "step-failed",
     StepStatus.SKIPPED: "step-skipped",
 }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _stepper_classes() -> list[str]:
     classes = []
@@ -72,6 +74,7 @@ def _result_to_figure(obj):
     """Normalise an Axes or Figure return value to a Figure."""
     try:
         import matplotlib.figure as _mf
+
         if isinstance(obj, _mf.Figure):
             return obj
         get_fig = getattr(obj, "get_figure", None)
@@ -114,7 +117,7 @@ def _generate_preview(step, sites, dark: bool) -> str:
     if sites is not None:
         try:
             fig = plt.figure(figsize=(10, 4))
-            ax  = fig.add_subplot(111)
+            ax = fig.add_subplot(111)
             sites.plot_pseudosection(ax=ax, component="res")
             src = fig_to_src(fig)
             plt.close(fig)
@@ -144,6 +147,7 @@ def _filter_by_active_lines(sites, store_data, active_lines_store):
 
 # ── Callbacks ─────────────────────────────────────────────────────────────────
 
+
 def register_pipeline(app) -> None:
 
     # ── 0. Clientside tab switcher ────────────────────────────────────────
@@ -171,27 +175,27 @@ def register_pipeline(app) -> None:
             ];
         }
         """,
-        Output(IDs.PIPE_ACTIVE_TAB,      "data"),
-        Output("pipe-panel-log",         "style"),
-        Output("pipe-panel-preview",     "style"),
-        Output("pipe-panel-status",      "style"),
-        Output("pipe-tab-btn-log",       "className"),
-        Output("pipe-tab-btn-preview",   "className"),
-        Output("pipe-tab-btn-status",    "className"),
-        Input("pipe-tab-btn-log",        "n_clicks"),
-        Input("pipe-tab-btn-preview",    "n_clicks"),
-        Input("pipe-tab-btn-status",     "n_clicks"),
-        State(IDs.PIPE_ACTIVE_TAB,       "data"),
+        Output(IDs.PIPE_ACTIVE_TAB, "data"),
+        Output("pipe-panel-log", "style"),
+        Output("pipe-panel-preview", "style"),
+        Output("pipe-panel-status", "style"),
+        Output("pipe-tab-btn-log", "className"),
+        Output("pipe-tab-btn-preview", "className"),
+        Output("pipe-tab-btn-status", "className"),
+        Input("pipe-tab-btn-log", "n_clicks"),
+        Input("pipe-tab-btn-preview", "n_clicks"),
+        Input("pipe-tab-btn-status", "n_clicks"),
+        State(IDs.PIPE_ACTIVE_TAB, "data"),
         prevent_initial_call=True,
     )
 
     # ── 1. Sync step info + show/hide export folder ───────────────────────
     @app.callback(
-        Output(IDs.PIPE_STEP_INFO,    "children"),
-        Output(IDs.PIPE_METHOD,       "options"),
-        Output(IDs.PIPE_METHOD,       "value"),
-        Output(IDs.PIPE_EXPORT_CARD,  "style"),
-        Input(IDs.PIPE_STEP,          "value"),
+        Output(IDs.PIPE_STEP_INFO, "children"),
+        Output(IDs.PIPE_METHOD, "options"),
+        Output(IDs.PIPE_METHOD, "value"),
+        Output(IDs.PIPE_EXPORT_CARD, "style"),
+        Input(IDs.PIPE_STEP, "value"),
     )
     def sync_step_info(step_id):
         if step_id is None or step_id == "":
@@ -200,34 +204,42 @@ def register_pipeline(app) -> None:
         step = _STEPS[step_id]
         opts = [{"label": m.label, "value": m.name} for m in step.methods]
         export_style = (
-            {"display": "block"} if step_id == 7
-            else {"display": "none"}
+            {"display": "block"} if step_id == 7 else {"display": "none"}
         )
         return step.description, opts, step.default_method, export_style
 
     # ── 2. Run a single step ──────────────────────────────────────────────
     @app.callback(
-        Output(IDs.PIPE_LOG,           "children"),
-        Output(IDs.IMG_PIPE,           "src"),
-        Output(IDs.PIPE_STORE,         "data"),
-        Output(IDs.PIPE_VIEW_STEP,     "value"),
-        Output(IDs.PIPE_STEP,          "value"),       # auto-advance
-        Output(IDs.PIPE_SPINNER,       "children"),
-        Output(IDs.TOAST_ERROR,        "is_open",  allow_duplicate=True),
-        Output(IDs.TOAST_BODY,         "children", allow_duplicate=True),
-        Input(IDs.BTN_PIPE_RUN,        "n_clicks"),
-        State(IDs.PIPE_STEP,           "value"),
-        State(IDs.PIPE_METHOD,         "value"),
-        State(IDs.PIPE_EXPORT_FOLDER,  "value"),
-        State(IDs.SESSION_ID,          "data"),
-        State(IDs.PIPE_STORE,          "data"),
-        State(IDs.STORE_ACTIVE_LINES,  "data"),
-        State(IDs.STORE_DATA,          "data"),
-        State(IDs.STORE_THEME,         "data"),
+        Output(IDs.PIPE_LOG, "children"),
+        Output(IDs.IMG_PIPE, "src"),
+        Output(IDs.PIPE_STORE, "data"),
+        Output(IDs.PIPE_VIEW_STEP, "value"),
+        Output(IDs.PIPE_STEP, "value"),  # auto-advance
+        Output(IDs.PIPE_SPINNER, "children"),
+        Output(IDs.TOAST_ERROR, "is_open", allow_duplicate=True),
+        Output(IDs.TOAST_BODY, "children", allow_duplicate=True),
+        Input(IDs.BTN_PIPE_RUN, "n_clicks"),
+        State(IDs.PIPE_STEP, "value"),
+        State(IDs.PIPE_METHOD, "value"),
+        State(IDs.PIPE_EXPORT_FOLDER, "value"),
+        State(IDs.SESSION_ID, "data"),
+        State(IDs.PIPE_STORE, "data"),
+        State(IDs.STORE_ACTIVE_LINES, "data"),
+        State(IDs.STORE_DATA, "data"),
+        State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
-    def run_step(n_clicks, step_id, method, export_folder, session_id,
-                 preview_store, active_lines_store, store_data, theme):
+    def run_step(
+        n_clicks,
+        step_id,
+        method,
+        export_folder,
+        session_id,
+        preview_store,
+        active_lines_store,
+        store_data,
+        theme,
+    ):
         if not n_clicks:
             raise PreventUpdate
 
@@ -243,7 +255,16 @@ def register_pipeline(app) -> None:
             )
             if all_muted:
                 msg = "No active lines — unmute at least one line to run the pipeline."
-                return msg, no_active_lines_src(dark), store, no_update, no_update, "", False, ""
+                return (
+                    msg,
+                    no_active_lines_src(dark),
+                    store,
+                    no_update,
+                    no_update,
+                    "",
+                    False,
+                    "",
+                )
 
             step_id = int(step_id)
             step = _CTRL.steps[step_id]
@@ -268,16 +289,21 @@ def register_pipeline(app) -> None:
             store[str(step_id)] = src
 
             # Auto-advance to next step (stay on last step)
-            next_step = str(step_id + 1) if step_id < len(_STEPS) - 1 else str(step_id)
+            next_step = (
+                str(step_id + 1)
+                if step_id < len(_STEPS) - 1
+                else str(step_id)
+            )
 
             return (
                 "\n".join(log_lines),
                 src,
                 store,
-                str(step_id),   # preview picker shows just-completed step
-                next_step,      # PIPE_STEP advances to next
+                str(step_id),  # preview picker shows just-completed step
+                next_step,  # PIPE_STEP advances to next
                 "",
-                False, "",
+                False,
+                "",
             )
 
         except Exception as exc:
@@ -288,29 +314,37 @@ def register_pipeline(app) -> None:
                 empty_src(dark=dark),
                 store,
                 no_update,
-                no_update,      # stay on current step on error
+                no_update,  # stay on current step on error
                 "",
-                True, str(exc),
+                True,
+                str(exc),
             )
 
     # ── 3. Run all steps ──────────────────────────────────────────────────
     @app.callback(
-        Output(IDs.PIPE_LOG,           "children",  allow_duplicate=True),
-        Output(IDs.PIPE_STORE,         "data",      allow_duplicate=True),
-        Output(IDs.PIPE_SPINNER,       "children",  allow_duplicate=True),
-        Output(IDs.TOAST_ERROR,        "is_open",   allow_duplicate=True),
-        Output(IDs.TOAST_BODY,         "children",  allow_duplicate=True),
-        Input(IDs.BTN_PIPE_ALL,        "n_clicks"),
-        State(IDs.PIPE_EXPORT_FOLDER,  "value"),
-        State(IDs.SESSION_ID,          "data"),
-        State(IDs.PIPE_STORE,          "data"),
-        State(IDs.STORE_ACTIVE_LINES,  "data"),
-        State(IDs.STORE_DATA,          "data"),
-        State(IDs.STORE_THEME,         "data"),
+        Output(IDs.PIPE_LOG, "children", allow_duplicate=True),
+        Output(IDs.PIPE_STORE, "data", allow_duplicate=True),
+        Output(IDs.PIPE_SPINNER, "children", allow_duplicate=True),
+        Output(IDs.TOAST_ERROR, "is_open", allow_duplicate=True),
+        Output(IDs.TOAST_BODY, "children", allow_duplicate=True),
+        Input(IDs.BTN_PIPE_ALL, "n_clicks"),
+        State(IDs.PIPE_EXPORT_FOLDER, "value"),
+        State(IDs.SESSION_ID, "data"),
+        State(IDs.PIPE_STORE, "data"),
+        State(IDs.STORE_ACTIVE_LINES, "data"),
+        State(IDs.STORE_DATA, "data"),
+        State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
-    def run_all(n_clicks, export_folder, session_id,
-                preview_store, active_lines_store, store_data, theme):
+    def run_all(
+        n_clicks,
+        export_folder,
+        session_id,
+        preview_store,
+        active_lines_store,
+        store_data,
+        theme,
+    ):
         if not n_clicks:
             raise PreventUpdate
 
@@ -327,7 +361,10 @@ def register_pipeline(app) -> None:
             if all_muted:
                 return (
                     "No active lines — unmute at least one line.",
-                    store, "", False, "",
+                    store,
+                    "",
+                    False,
+                    "",
                 )
 
             _CTRL.set_input_sites(sites)
@@ -340,7 +377,9 @@ def register_pipeline(app) -> None:
                     step.reset_params()
                     step.params["folder"] = export_folder.strip()
                 try:
-                    _CTRL.execute_step(i, log_cb=lambda m: log_lines.append(m))
+                    _CTRL.execute_step(
+                        i, log_cb=lambda m: log_lines.append(m)
+                    )
                     log_lines.append(f"── Step {i + 1} done ──")
                     # Cache preview for each step
                     result_sites = _CTRL._sites_chain[i]
@@ -361,25 +400,25 @@ def register_pipeline(app) -> None:
 
     # ── 4. Browse per-step previews ───────────────────────────────────────
     @app.callback(
-        Output(IDs.IMG_PIPE,       "src",       allow_duplicate=True),
-        Input(IDs.PIPE_VIEW_STEP,  "value"),
-        State(IDs.PIPE_STORE,      "data"),
-        State(IDs.STORE_THEME,     "data"),
+        Output(IDs.IMG_PIPE, "src", allow_duplicate=True),
+        Input(IDs.PIPE_VIEW_STEP, "value"),
+        State(IDs.PIPE_STORE, "data"),
+        State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
     def view_step_preview(step_id, preview_store, theme):
         if step_id is None or step_id == "":
             raise PreventUpdate
         store = preview_store or {}
-        dark  = (theme or "dark") == "dark"
-        src   = store.get(str(step_id))
+        dark = (theme or "dark") == "dark"
+        src = store.get(str(step_id))
         return src if src else empty_src(dark=dark)
 
     # ── 5. Skip a step ────────────────────────────────────────────────────
     @app.callback(
         Output(IDs.PIPE_LOG, "children", allow_duplicate=True),
         Input(IDs.BTN_PIPE_SKIP, "n_clicks"),
-        State(IDs.PIPE_STEP,     "value"),
+        State(IDs.PIPE_STEP, "value"),
         prevent_initial_call=True,
     )
     def skip_step(n_clicks, step_id):
@@ -391,10 +430,13 @@ def register_pipeline(app) -> None:
 
     # ── 6. Reset pipeline ─────────────────────────────────────────────────
     @app.callback(
-        Output(IDs.PIPE_LOG,      "children",  allow_duplicate=True),
-        Output(IDs.PIPE_STATUS,   "children"),
-        Output(IDs.PIPE_STORE,    "data",      allow_duplicate=True),
-        *[Output(f"pipe-node-{s.id}", "className", allow_duplicate=True) for s in _STEPS],
+        Output(IDs.PIPE_LOG, "children", allow_duplicate=True),
+        Output(IDs.PIPE_STATUS, "children"),
+        Output(IDs.PIPE_STORE, "data", allow_duplicate=True),
+        *[
+            Output(f"pipe-node-{s.id}", "className", allow_duplicate=True)
+            for s in _STEPS
+        ],
         Input(IDs.BTN_PIPE_RESET, "n_clicks"),
         prevent_initial_call=True,
     )
@@ -410,16 +452,19 @@ def register_pipeline(app) -> None:
     _STEP_COLOUR = {
         StepStatus.PENDING: "#a6adc8",
         StepStatus.RUNNING: "#f9e2af",
-        StepStatus.DONE:    "#a6e3a1",
-        StepStatus.ERROR:   "#f38ba8",
+        StepStatus.DONE: "#a6e3a1",
+        StepStatus.ERROR: "#f38ba8",
         StepStatus.SKIPPED: "#cba6f7",
     }
 
     # ── 7. Refresh stepper nodes after each log update ────────────────────
     @app.callback(
-        Output(IDs.PIPE_STATUS,  "children",  allow_duplicate=True),
-        *[Output(f"pipe-node-{s.id}", "className", allow_duplicate=True) for s in _STEPS],
-        Input(IDs.PIPE_LOG,      "children"),
+        Output(IDs.PIPE_STATUS, "children", allow_duplicate=True),
+        *[
+            Output(f"pipe-node-{s.id}", "className", allow_duplicate=True)
+            for s in _STEPS
+        ],
+        Input(IDs.PIPE_LOG, "children"),
         prevent_initial_call=True,
     )
     def update_status(_log):
@@ -429,12 +474,18 @@ def register_pipeline(app) -> None:
             rows.append(
                 html.Div(
                     [
-                        html.Span(f"{step.id + 1}. {step.name}",
-                                  style={"color": colour, "fontWeight": "500"}),
-                        html.Span(f"  [{step.status.value}]",
-                                  style={"color": colour, "fontSize": "10px"}),
                         html.Span(
-                            f"  {step.elapsed_s:.2f}s" if step.elapsed_s else "",
+                            f"{step.id + 1}. {step.name}",
+                            style={"color": colour, "fontWeight": "500"},
+                        ),
+                        html.Span(
+                            f"  [{step.status.value}]",
+                            style={"color": colour, "fontSize": "10px"},
+                        ),
+                        html.Span(
+                            f"  {step.elapsed_s:.2f}s"
+                            if step.elapsed_s
+                            else "",
                             style={"color": "#585b70", "fontSize": "10px"},
                         ),
                     ],
@@ -451,7 +502,8 @@ def register_pipeline(app) -> None:
         """Return sorted list of subdirectory names under *path*."""
         try:
             entries = sorted(
-                e for e in os.listdir(path)
+                e
+                for e in os.listdir(path)
                 if not e.startswith(".")
                 and os.path.isdir(os.path.join(path, e))
             )
@@ -466,8 +518,11 @@ def register_pipeline(app) -> None:
             return [
                 html.Div(
                     "No sub-folders here.",
-                    style={"color": "#6c7086", "fontSize": "11px",
-                           "padding": "8px"},
+                    style={
+                        "color": "#6c7086",
+                        "fontSize": "11px",
+                        "padding": "8px",
+                    },
                 )
             ]
         items = []
@@ -476,14 +531,19 @@ def register_pipeline(app) -> None:
             items.append(
                 dbc.ListGroupItem(
                     [
-                        html.I(className="bi bi-folder-fill me-2",
-                               style={"color": "#f9e2af"}),
+                        html.I(
+                            className="bi bi-folder-fill me-2",
+                            style={"color": "#f9e2af"},
+                        ),
                         name,
                     ],
                     id={"type": "pipe-dir-item", "index": full},
                     action=True,
-                    style={"cursor": "pointer", "fontSize": "12px",
-                           "padding": "6px 10px"},
+                    style={
+                        "cursor": "pointer",
+                        "fontSize": "12px",
+                        "padding": "6px 10px",
+                    },
                     n_clicks=0,
                 )
             )
@@ -492,11 +552,11 @@ def register_pipeline(app) -> None:
     # ── 8a. Open browse modal ─────────────────────────────────────────────
     @app.callback(
         Output(IDs.PIPE_BROWSE_MODAL, "is_open"),
-        Output(IDs.PIPE_BROWSE_PATH,  "data"),
-        Input(IDs.BTN_PIPE_BROWSE,    "n_clicks"),
-        Input("pipe-browse-cancel",   "n_clicks"),
+        Output(IDs.PIPE_BROWSE_PATH, "data"),
+        Input(IDs.BTN_PIPE_BROWSE, "n_clicks"),
+        Input("pipe-browse-cancel", "n_clicks"),
         State(IDs.PIPE_EXPORT_FOLDER, "value"),
-        State(IDs.PIPE_BROWSE_MODAL,  "is_open"),
+        State(IDs.PIPE_BROWSE_MODAL, "is_open"),
         prevent_initial_call=True,
     )
     def toggle_browse_modal(n_open, n_cancel, current_folder, is_open):
@@ -532,7 +592,7 @@ def register_pipeline(app) -> None:
     @app.callback(
         Output(IDs.PIPE_BROWSE_PATH, "data", allow_duplicate=True),
         Input(IDs.BTN_PIPE_BROWSE_UP, "n_clicks"),
-        State(IDs.PIPE_BROWSE_PATH,   "data"),
+        State(IDs.PIPE_BROWSE_PATH, "data"),
         prevent_initial_call=True,
     )
     def navigate_up(n_clicks, current_path):
@@ -546,8 +606,8 @@ def register_pipeline(app) -> None:
     # ── 8d. Refresh listing when path changes ─────────────────────────────
     @app.callback(
         Output(IDs.PIPE_BROWSE_LIST, "children"),
-        Output(IDs.PIPE_BROWSE_CWD,  "children"),
-        Input(IDs.PIPE_BROWSE_PATH,  "data"),
+        Output(IDs.PIPE_BROWSE_CWD, "children"),
+        Input(IDs.PIPE_BROWSE_PATH, "data"),
     )
     def refresh_listing(path):
         if not path:
@@ -556,11 +616,11 @@ def register_pipeline(app) -> None:
 
     # ── 8e. Create new folder ─────────────────────────────────────────────
     @app.callback(
-        Output(IDs.PIPE_BROWSE_PATH, "data",     allow_duplicate=True),
-        Output(IDs.PIPE_BROWSE_NEW,  "value"),
+        Output(IDs.PIPE_BROWSE_PATH, "data", allow_duplicate=True),
+        Output(IDs.PIPE_BROWSE_NEW, "value"),
         Input(IDs.BTN_PIPE_BROWSE_MK, "n_clicks"),
-        State(IDs.PIPE_BROWSE_NEW,    "value"),
-        State(IDs.PIPE_BROWSE_PATH,   "data"),
+        State(IDs.PIPE_BROWSE_NEW, "value"),
+        State(IDs.PIPE_BROWSE_PATH, "data"),
         prevent_initial_call=True,
     )
     def make_dir(n_clicks, name, current_path):
@@ -572,14 +632,14 @@ def register_pipeline(app) -> None:
             os.makedirs(new_dir, exist_ok=True)
         except Exception:
             raise PreventUpdate
-        return new_dir, ""     # navigate into the new folder and clear input
+        return new_dir, ""  # navigate into the new folder and clear input
 
     # ── 8f. Confirm selection → populate export folder + close modal ──────
     @app.callback(
-        Output(IDs.PIPE_EXPORT_FOLDER, "value",   allow_duplicate=True),
-        Output(IDs.PIPE_BROWSE_MODAL,  "is_open", allow_duplicate=True),
+        Output(IDs.PIPE_EXPORT_FOLDER, "value", allow_duplicate=True),
+        Output(IDs.PIPE_BROWSE_MODAL, "is_open", allow_duplicate=True),
         Input(IDs.BTN_PIPE_BROWSE_SEL, "n_clicks"),
-        State(IDs.PIPE_BROWSE_PATH,    "data"),
+        State(IDs.PIPE_BROWSE_PATH, "data"),
         prevent_initial_call=True,
     )
     def select_folder(n_clicks, path):

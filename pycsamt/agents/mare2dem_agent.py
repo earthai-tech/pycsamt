@@ -235,10 +235,10 @@ class Mare2DEMAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="inversion",
         )
-        self.n_procs        = n_procs
-        self.use_mpi        = use_mpi
-        self.initial_rho    = initial_rho
-        self.target_rms     = target_rms
+        self.n_procs = n_procs
+        self.use_mpi = use_mpi
+        self.initial_rho = initial_rho
+        self.target_rms = target_rms
         self.max_iterations = max_iterations
 
     # ------------------------------------------------------------------
@@ -251,20 +251,20 @@ class Mare2DEMAgent(BaseAgent):
         warnings: list[str] = []
 
         # ── resolve parameters ─────────────────────────────────────────
-        mode           = str(input_data.get("mode", "prepare")).lower()
-        output_dir     = input_data.get("output_dir", "pycsamt_mare2dem")
-        source_dir     = input_data.get("source_dir")
-        auto_download  = bool(input_data.get("download_source", False))
-        n_procs        = int(input_data.get("n_procs",        self.n_procs))
-        max_iter       = int(input_data.get("max_iterations", self.max_iterations))
-        target_rms     = float(input_data.get("target_rms",   self.target_rms))
-        initial_rho    = float(input_data.get("initial_rho",  self.initial_rho))
-        topo           = input_data.get("topo", 0.0)
-        emdata_src     = input_data.get("emdata")
-        resist_src     = input_data.get("resistivity")
-        mt_kwargs      = input_data.get("mt")
-        csem_kwargs    = input_data.get("csem")
-        sites_src      = input_data.get("sites")
+        mode = str(input_data.get("mode", "prepare")).lower()
+        output_dir = input_data.get("output_dir", "pycsamt_mare2dem")
+        source_dir = input_data.get("source_dir")
+        auto_download = bool(input_data.get("download_source", False))
+        n_procs = int(input_data.get("n_procs", self.n_procs))
+        max_iter = int(input_data.get("max_iterations", self.max_iterations))
+        target_rms = float(input_data.get("target_rms", self.target_rms))
+        initial_rho = float(input_data.get("initial_rho", self.initial_rho))
+        topo = input_data.get("topo", 0.0)
+        emdata_src = input_data.get("emdata")
+        resist_src = input_data.get("resistivity")
+        mt_kwargs = input_data.get("mt")
+        csem_kwargs = input_data.get("csem")
+        sites_src = input_data.get("sites")
         if sites_src is None:
             sites_src = input_data.get("path")
 
@@ -307,21 +307,27 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── source management ──────────────────────────────────────────
         source_downloaded = False
-        binary_found      = False
+        binary_found = False
 
         sm = SourceManager(config=cfg)
         binary_found = sm.is_built()
         if not binary_found:
             if auto_download:
                 try:
-                    self._log.info("Mare2DEMAgent: downloading MARE2DEM source...")
+                    self._log.info(
+                        "Mare2DEMAgent: downloading MARE2DEM source..."
+                    )
                     sm.download()
-                    self._log.info("Mare2DEMAgent: building MARE2DEM binary...")
+                    self._log.info(
+                        "Mare2DEMAgent: building MARE2DEM binary..."
+                    )
                     sm.build()
-                    binary_found      = sm.is_built()
+                    binary_found = sm.is_built()
                     source_downloaded = binary_found
                     if binary_found:
-                        self._log.info("Mare2DEMAgent: MARE2DEM binary ready.")
+                        self._log.info(
+                            "Mare2DEMAgent: MARE2DEM binary ready."
+                        )
                     else:
                         warnings.append(
                             "Source downloaded but build may have failed. "
@@ -342,13 +348,17 @@ class Mare2DEMAgent(BaseAgent):
 
         if mode == "report":
             return self._report(
-                output_dir, cfg, binary_found, source_downloaded,
-                warnings, t0,
+                output_dir,
+                cfg,
+                binary_found,
+                source_downloaded,
+                warnings,
+                t0,
             )
 
         # ── prepare input files ────────────────────────────────────────
-        data_path: Path | None     = None
-        resist_path: Path | None   = None
+        data_path: Path | None = None
+        resist_path: Path | None = None
         settings_path: Path | None = None
         n_mt_rx = n_csem_tx = n_data = 0
 
@@ -359,7 +369,8 @@ class Mare2DEMAgent(BaseAgent):
             if emdata_src is not None:
                 # copy / link existing file
                 files = builder.build(
-                    emdata_src, output_dir,
+                    emdata_src,
+                    output_dir,
                     data_filename=cfg.data_file,
                     model_filename=cfg.resistivity_file,
                     settings_filename=cfg.settings_file,
@@ -367,9 +378,12 @@ class Mare2DEMAgent(BaseAgent):
             elif mt_kwargs is not None or csem_kwargs is not None:
                 # build from survey parameters
                 mt_cfg = MTSurveyConfig(**mt_kwargs) if mt_kwargs else None
-                csem_cfg = CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
+                csem_cfg = (
+                    CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
+                )
                 files = builder.build(
-                    None, output_dir,
+                    None,
+                    output_dir,
                     topo=topo,
                     mt=mt_cfg,
                     csem=csem_cfg,
@@ -382,6 +396,7 @@ class Mare2DEMAgent(BaseAgent):
                 from ..models.mare2dem.edi import (
                     make_mt_data_from_edi,
                 )
+
                 err_floor = float(input_data.get("error_floor", 0.05))
                 out_modes = str(input_data.get("output_modes", "all"))
                 cr_value = input_data.get(
@@ -395,7 +410,8 @@ class Mare2DEMAgent(BaseAgent):
                 )
                 data_file = Path(output_dir) / cfg.data_file
                 make_mt_data_from_edi(
-                    sites_src, data_file,
+                    sites_src,
+                    data_file,
                     output_modes=out_modes,
                     error_floor_te=err_floor,
                     error_floor_tm=err_floor,
@@ -428,32 +444,38 @@ class Mare2DEMAgent(BaseAgent):
                     elapsed=time.time() - t0,
                 )
 
-            data_path     = files.get("data")
-            resist_path   = files.get("model")
+            data_path = files.get("data")
+            resist_path = files.get("model")
             settings_path = files.get("settings")
 
             # override resistivity if caller supplied one
             if resist_src is not None:
                 import shutil
+
                 dest = Path(output_dir) / cfg.resistivity_file
                 shutil.copy2(str(resist_src), str(dest))
                 resist_path = dest
-                self._log.info("Mare2DEMAgent: used provided resistivity: %s", dest)
+                self._log.info(
+                    "Mare2DEMAgent: used provided resistivity: %s", dest
+                )
 
             # read back statistics
             if data_path and data_path.exists():
                 try:
                     em = read_emdata(data_path)
-                    n_mt_rx   = em.n_mt_receivers
+                    n_mt_rx = em.n_mt_receivers
                     n_csem_tx = em.n_csem_transmitters
-                    n_data    = em.n_data
+                    n_data = em.n_data
                 except Exception:
                     pass
 
             self._log.info(
                 "Mare2DEMAgent: files written to %s "
                 "(mt_rx=%d, csem_tx=%d, n_data=%d)",
-                output_dir, n_mt_rx, n_csem_tx, n_data,
+                output_dir,
+                n_mt_rx,
+                n_csem_tx,
+                n_data,
             )
 
         except Exception as exc:
@@ -465,9 +487,9 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── run MARE2DEM ───────────────────────────────────────────────
         result_obj = None
-        final_rms  = None
-        n_iter     = 0
-        converged  = False
+        final_rms = None
+        n_iter = 0
+        converged = False
 
         if mode == "run":
             if not binary_found:
@@ -486,12 +508,14 @@ class Mare2DEMAgent(BaseAgent):
                     result_obj = runner.run(stem, load_result=True)
                     if result_obj is not None:
                         final_rms = result_obj.final_rms
-                        n_iter    = result_obj.n_iterations
+                        n_iter = result_obj.n_iterations
                         converged = result_obj.converged
                         self._log.info(
                             "Mare2DEMAgent: inversion complete — "
                             "iterations=%d, final_rms=%.4f, converged=%s",
-                            n_iter, final_rms or 0, converged,
+                            n_iter,
+                            final_rms or 0,
+                            converged,
                         )
                 except Exception as exc:
                     warnings.append(
@@ -520,7 +544,8 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── assemble result ────────────────────────────────────────────
         files_ok = sum(
-            1 for p in [data_path, resist_path, settings_path]
+            1
+            for p in [data_path, resist_path, settings_path]
             if p and p.exists()
         )
         elapsed = time.time() - t0
@@ -549,19 +574,19 @@ class Mare2DEMAgent(BaseAgent):
             status=status,
             summary=summary,
             data={
-                "data_path":           data_path,
-                "resistivity_path":    resist_path,
-                "settings_path":       settings_path,
-                "binary_found":        binary_found,
-                "source_downloaded":   source_downloaded,
-                "n_mt_receivers":      n_mt_rx,
+                "data_path": data_path,
+                "resistivity_path": resist_path,
+                "settings_path": settings_path,
+                "binary_found": binary_found,
+                "source_downloaded": source_downloaded,
+                "n_mt_receivers": n_mt_rx,
                 "n_csem_transmitters": n_csem_tx,
-                "n_data":              n_data,
-                "final_rms":           final_rms,
-                "n_iterations":        n_iter,
-                "converged":           converged,
-                "result":              result_obj,
-                "output_dir":          output_dir,
+                "n_data": n_data,
+                "final_rms": final_rms,
+                "n_iterations": n_iter,
+                "converged": converged,
+                "result": result_obj,
+                "output_dir": output_dir,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -594,19 +619,20 @@ class Mare2DEMAgent(BaseAgent):
             )
 
         final_rms = result_obj.final_rms
-        n_iter    = result_obj.n_iterations
+        n_iter = result_obj.n_iterations
         converged = result_obj.converged
 
-        n_mt_rx   = result_obj.data.n_data if result_obj.data else 0
+        n_mt_rx = result_obj.data.n_data if result_obj.data else 0
         n_csem_tx = (
-            result_obj.data.n_csem_transmitters
-            if result_obj.data else 0
+            result_obj.data.n_csem_transmitters if result_obj.data else 0
         )
-        n_data    = result_obj.data.n_data if result_obj.data else 0
+        n_data = result_obj.data.n_data if result_obj.data else 0
 
         self._log.info(
             "Mare2DEMAgent (report): iterations=%d, final_rms=%s, converged=%s",
-            n_iter, final_rms, converged,
+            n_iter,
+            final_rms,
+            converged,
         )
 
         # LLM interpretation
@@ -637,19 +663,19 @@ class Mare2DEMAgent(BaseAgent):
             status=status,
             summary=summary,
             data={
-                "data_path":           None,
-                "resistivity_path":    None,
-                "settings_path":       None,
-                "binary_found":        binary_found,
-                "source_downloaded":   source_downloaded,
-                "n_mt_receivers":      n_mt_rx,
+                "data_path": None,
+                "resistivity_path": None,
+                "settings_path": None,
+                "binary_found": binary_found,
+                "source_downloaded": source_downloaded,
+                "n_mt_receivers": n_mt_rx,
                 "n_csem_transmitters": n_csem_tx,
-                "n_data":              n_data,
-                "final_rms":           final_rms,
-                "n_iterations":        n_iter,
-                "converged":           converged,
-                "result":              result_obj,
-                "output_dir":          output_dir,
+                "n_data": n_data,
+                "final_rms": final_rms,
+                "n_iterations": n_iter,
+                "converged": converged,
+                "result": result_obj,
+                "output_dir": output_dir,
             },
             warnings=warnings,
             llm_interpretation=interp,

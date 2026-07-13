@@ -24,25 +24,25 @@ import numpy as np
 # ──────────────────────────────────────────────────────────────────────────────
 
 _DARK: dict = {
-    "facecolor":        "#181825",
-    "labelcolor":       "#cdd6f4",
-    "title_color":      "#cdd6f4",
-    "tick_params":      {"colors": "#a6adc8", "labelsize": 8},
-    "spines_color":     "#45475a",
-    "grid_color":       "#313244",
-    "grid_alpha":       0.35,
-    "grid_linestyle":   "--",
+    "facecolor": "#181825",
+    "labelcolor": "#cdd6f4",
+    "title_color": "#cdd6f4",
+    "tick_params": {"colors": "#a6adc8", "labelsize": 8},
+    "spines_color": "#45475a",
+    "grid_color": "#313244",
+    "grid_alpha": 0.35,
+    "grid_linestyle": "--",
 }
 
 _LIGHT: dict = {
-    "facecolor":        "#eff1f5",
-    "labelcolor":       "#4c4f69",
-    "title_color":      "#4c4f69",
-    "tick_params":      {"colors": "#6c6f85", "labelsize": 8},
-    "spines_color":     "#bcc0cc",
-    "grid_color":       "#ccd0da",
-    "grid_alpha":       0.5,
-    "grid_linestyle":   "--",
+    "facecolor": "#eff1f5",
+    "labelcolor": "#4c4f69",
+    "title_color": "#4c4f69",
+    "tick_params": {"colors": "#6c6f85", "labelsize": 8},
+    "spines_color": "#bcc0cc",
+    "grid_color": "#ccd0da",
+    "grid_alpha": 0.5,
+    "grid_linestyle": "--",
 }
 
 
@@ -55,13 +55,21 @@ def style_axes(ax, dark: bool = True) -> None:
     ax.yaxis.label.set_color(s["labelcolor"])
     # Use explicit labelcolor so set_xticklabels() Text objects are also covered
     tc = s["tick_params"]["colors"]
-    ax.tick_params(axis="both", which="both",
-                   colors=tc, labelcolor=tc,
-                   labelsize=s["tick_params"]["labelsize"])
+    ax.tick_params(
+        axis="both",
+        which="both",
+        colors=tc,
+        labelcolor=tc,
+        labelsize=s["tick_params"]["labelsize"],
+    )
     for spine in ax.spines.values():
         spine.set_edgecolor(s["spines_color"])
-    ax.grid(True, color=s["grid_color"], alpha=s["grid_alpha"],
-            linestyle=s["grid_linestyle"])
+    ax.grid(
+        True,
+        color=s["grid_color"],
+        alpha=s["grid_alpha"],
+        linestyle=s["grid_linestyle"],
+    )
     fig = ax.get_figure()
     if fig is not None:
         fig.patch.set_facecolor("#1e1e2e" if dark else "#e6e9ef")
@@ -74,8 +82,8 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
 
     Call AFTER emtools functions + style_axes on the primary axes.
     """
-    s    = _DARK if dark else _LIGHT
-    fig  = ref_ax.get_figure()
+    s = _DARK if dark else _LIGHT
+    fig = ref_ax.get_figure()
     if fig is None:
         return
 
@@ -85,9 +93,13 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
         ax.xaxis.label.set_color(s["labelcolor"])
         ax.yaxis.label.set_color(s["labelcolor"])
         tc = s["tick_params"]["colors"]
-        ax.tick_params(axis="both", which="both",
-                       colors=tc, labelcolor=tc,
-                       labelsize=s["tick_params"]["labelsize"])
+        ax.tick_params(
+            axis="both",
+            which="both",
+            colors=tc,
+            labelcolor=tc,
+            labelsize=s["tick_params"]["labelsize"],
+        )
         for spine in ax.spines.values():
             spine.set_edgecolor(s["spines_color"])
         try:
@@ -97,17 +109,17 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
 
     # ── 2. Fix annotation Text boxes (emtools hard-codes fc="white") ──────
     if dark:
-        bbox_fc  = "#1a1a2e"      # near-black, slightly blue-tinted
-        bbox_ec  = "#45475a"      # subtle border
+        bbox_fc = "#1a1a2e"  # near-black, slightly blue-tinted
+        bbox_ec = "#45475a"  # subtle border
         # Remap the annotation text colours to palette variants visible on dark
         _COL_MAP = {
             "#2166ac": "#89b4fa",  # dark-blue → Catppuccin blue
             "#b2182b": "#f38ba8",  # dark-red  → Catppuccin red
         }
     else:
-        bbox_fc  = "white"
-        bbox_ec  = "none"
-        _COL_MAP = {}             # no remapping in light mode
+        bbox_fc = "white"
+        bbox_ec = "none"
+        _COL_MAP = {}  # no remapping in light mode
 
     for txt in ref_ax.texts:
         bb = txt.get_bbox_patch()
@@ -134,10 +146,14 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
 
 def _annotate_empty(ax, msg: str = "No data") -> None:
     ax.text(
-        0.5, 0.5, msg,
+        0.5,
+        0.5,
+        msg,
         transform=ax.transAxes,
-        ha="center", va="center",
-        fontsize=11, color="#585b70",
+        ha="center",
+        va="center",
+        fontsize=11,
+        color="#585b70",
     )
 
 
@@ -160,7 +176,8 @@ def _relabel_colorbar_log10(cb_ax) -> None:
             if t > 0:
                 v = np.log10(t)
                 labels.append(
-                    f"{int(round(v))}" if abs(v - round(v)) < 0.08
+                    f"{int(round(v))}"
+                    if abs(v - round(v)) < 0.08
                     else f"{v:.2f}"
                 )
             else:
@@ -184,9 +201,10 @@ def _add_station_markers(ax, dark: bool = True) -> None:
         from pycsamt.api.station import (
             PYCSAMT_STATION_RENDERING,
         )
+
         xticks = np.asarray(ax.get_xticks(), dtype=float)
-        xlim   = ax.get_xlim()
-        valid  = xticks[(xticks >= xlim[0] - 0.5) & (xticks <= xlim[1] + 0.5)]
+        xlim = ax.get_xlim()
+        valid = xticks[(xticks >= xlim[0] - 0.5) & (xticks <= xlim[1] + 0.5)]
         if valid.size == 0:
             return
         m = PYCSAMT_STATION_RENDERING.style_for("pseudosection").marker
@@ -243,14 +261,15 @@ def _fix_psection_axes(ax, colorbar_label: str = "") -> None:
                 if val > 0:
                     v = np.log10(val)
                     new_labels.append(
-                        f"{int(round(v))}" if abs(v - round(v)) < 0.08
+                        f"{int(round(v))}"
+                        if abs(v - round(v)) < 0.08
                         else f"{v:.1f}"
                     )
                 else:
                     new_labels.append(lbl)
             except ValueError:
                 new_labels.append(lbl)
-        if any(s for s in new_labels):        # only set if we got something
+        if any(s for s in new_labels):  # only set if we got something
             ax.set_yticklabels(new_labels, fontsize=8)
         ax.set_ylabel(r"$\log_{10}(T)\ \mathrm{(s)}$", fontsize=9)
     except Exception:
@@ -277,6 +296,7 @@ def _fix_psection_axes(ax, colorbar_label: str = "") -> None:
 # PlotController
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class PlotController:
     """
     Pure-Python controller that drives all scientific panel redraws.
@@ -288,14 +308,14 @@ class PlotController:
     """
 
     def __init__(self) -> None:
-        self._sites         = None
-        self._station_id:   str | None   = None
+        self._sites = None
+        self._station_id: str | None = None
         self._period_range: tuple[float, float] | None = None
-        self._components:   tuple[str, ...] = ("xy", "yx")
-        self._phase_ylim:   tuple[float, float] | None = None
-        self._show_errbar:  bool = True
-        self._bw_mode:      bool = False
-        self.dark: bool     = True
+        self._components: tuple[str, ...] = ("xy", "yx")
+        self._phase_ylim: tuple[float, float] | None = None
+        self._show_errbar: bool = True
+        self._bw_mode: bool = False
+        self.dark: bool = True
         # Phase-tensor DataFrame cache: id(sites) → built DataFrame
         # Avoids re-running build_phase_tensor_table() on every tab switch.
         self._pt_df_cache: dict = {}
@@ -304,7 +324,7 @@ class PlotController:
 
     def set_sites(self, sites) -> None:
         self._sites = sites
-        self._pt_df_cache.clear()   # stale when new data loaded
+        self._pt_df_cache.clear()  # stale when new data loaded
 
     def set_station(self, station_id: str | None) -> None:
         self._station_id = station_id
@@ -370,6 +390,7 @@ class PlotController:
     def _get_or_build_pt_df(self):
         """Return the cached phase-tensor DataFrame, building it if needed."""
         import pandas as pd
+
         if self._sites is None:
             return pd.DataFrame()
         key = id(self._sites)
@@ -377,13 +398,14 @@ class PlotController:
             from pycsamt.emtools.tensor import (
                 build_phase_tensor_table,
             )
+
             self._pt_df_cache[key] = build_phase_tensor_table(
                 self._sites, verbose=0
             )
         return self._pt_df_cache[key]
 
     def clear(self) -> None:
-        self._sites      = None
+        self._sites = None
         self._station_id = None
         self._pt_df_cache.clear()
 
@@ -395,7 +417,7 @@ class PlotController:
             return None
         T_min, T_max = self._period_range
         if T_min <= 1e-9 and T_max >= 1e8:
-            return None          # full range → no filter needed
+            return None  # full range → no filter needed
         return (T_min, T_max)
 
     def _clip_xaxis_period(self, *axes) -> None:
@@ -422,7 +444,9 @@ class PlotController:
                 new_lo = max(min(yb, yt), T_min)
                 new_hi = min(max(yb, yt), T_max)
                 # Preserve inverted axes (some pseudosections put long T at bottom)
-                ax.set_ylim(new_lo, new_hi) if yb <= yt else ax.set_ylim(new_hi, new_lo)
+                ax.set_ylim(new_lo, new_hi) if yb <= yt else ax.set_ylim(
+                    new_hi, new_lo
+                )
             except Exception:
                 pass
 
@@ -466,7 +490,7 @@ class PlotController:
         fig.clear()
         # Tight 2:1 layout — rho gets the extra space freed by hiding
         # the duplicate x-axis on the top panel.
-        gs   = fig.add_gridspec(2, 1, height_ratios=[2, 1], hspace=0.0)
+        gs = fig.add_gridspec(2, 1, height_ratios=[2, 1], hspace=0.0)
         ax_r = fig.add_subplot(gs[0])
         ax_p = fig.add_subplot(gs[1], sharex=ax_r)
 
@@ -500,41 +524,52 @@ class PlotController:
                 raise ValueError("No impedance data available")
 
             fr = np.asarray(fr, dtype=float)
-            T  = 1.0 / (fr + 1e-24)
+            T = 1.0 / (fr + 1e-24)
 
             for comp in self._components:
-                color = "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
-                ls    = self._COMP_LS.get(comp, "-")
+                color = (
+                    "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                )
+                ls = self._COMP_LS.get(comp, "-")
                 label = f"Z$_{{{comp.upper()}}}$"
 
                 zz = _comp_slice(z, comp)
                 ee = None
-                if ze is not None and isinstance(ze, np.ndarray) \
-                        and ze.shape == z.shape:
+                if (
+                    ze is not None
+                    and isinstance(ze, np.ndarray)
+                    and ze.shape == z.shape
+                ):
                     ee = _comp_slice(ze, comp)
 
-                rho     = _rhoa_from(zz, fr)
+                rho = _rhoa_from(zz, fr)
                 rho_err = _err_rhoa(zz, ee, fr) if self._show_errbar else None
-                ph      = _phase_deg(zz)
-                ph_err  = _err_phase_deg(zz, ee) if self._show_errbar else None
+                ph = _phase_deg(zz)
+                ph_err = _err_phase_deg(zz, ee) if self._show_errbar else None
 
                 kw = dict(
-                    color=color, ls=ls,
-                    marker=".", ms=5, mfc="white", mec=color, mew=0.9,
-                    elinewidth=0.65, capsize=2.5, lw=0.9,
+                    color=color,
+                    ls=ls,
+                    marker=".",
+                    ms=5,
+                    mfc="white",
+                    mec=color,
+                    mew=0.9,
+                    elinewidth=0.65,
+                    capsize=2.5,
+                    lw=0.9,
                 )
                 ax_r.errorbar(T, rho, yerr=rho_err, label=label, **kw)
-                ax_p.errorbar(T, ph,  yerr=ph_err,  label=label, **kw)
+                ax_p.errorbar(T, ph, yerr=ph_err, label=label, **kw)
 
             ax_r.set_xscale("log")
             ax_r.set_yscale("log")
-            ax_r.set_ylabel(
-                r"$\rho_a\ (\Omega\cdot\mathrm{m})$", fontsize=9
-            )
+            ax_r.set_ylabel(r"$\rho_a\ (\Omega\cdot\mathrm{m})$", fontsize=9)
             ax_r.set_title(
                 r"$\rho_a$"
                 f" / $\\varphi$ — {self._station_id}",
-                fontsize=10, pad=3,
+                fontsize=10,
+                pad=3,
             )
             # x ticks/labels only on the bottom (phase) panel
             ax_r.tick_params(labelbottom=False)
@@ -549,8 +584,9 @@ class PlotController:
                 ax_p.set_ylim(self._phase_ylim)
 
             n_comps = len(self._components)
-            ax_r.legend(ncols=n_comps, fontsize=8, loc="best",
-                        framealpha=0.65)
+            ax_r.legend(
+                ncols=n_comps, fontsize=8, loc="best", framealpha=0.65
+            )
 
             # Apply period/frequency range filter (axes share X via sharex)
             self._clip_xaxis_period(ax_p)
@@ -569,6 +605,7 @@ class PlotController:
     def draw_rho_pseudosection(self, ax) -> None:
         """Draw log(ρₐ_xy) pseudosection on *ax*."""
         import pycsamt.emtools as et
+
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
             style_axes(ax, self.dark)
@@ -581,11 +618,17 @@ class PlotController:
                 verbose=0,
                 period_range=self._active_period_range(),
             )
-            _fix_psection_axes(ax, colorbar_label=r"$\log_{10}(\rho_a)\ (\Omega{\cdot}m)$")
+            _fix_psection_axes(
+                ax, colorbar_label=r"$\log_{10}(\rho_a)\ (\Omega{\cdot}m)$"
+            )
             _add_station_markers(ax, self.dark)
             self._mark_station(ax)
-            ax.set_title(r"$\rho_a$ (XY) — Pseudosection", fontsize=10,
-                         loc="left", pad=4)
+            ax.set_title(
+                r"$\rho_a$ (XY) — Pseudosection",
+                fontsize=10,
+                loc="left",
+                pad=4,
+            )
         except Exception as exc:
             _annotate_empty(ax, f"Pseudosection error:\n{exc}")
         style_axes(ax, self.dark)
@@ -596,6 +639,7 @@ class PlotController:
     def draw_phase_pseudosection(self, ax) -> None:
         """Draw phase_xy pseudosection on *ax*."""
         import pycsamt.emtools as et
+
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
             style_axes(ax, self.dark)
@@ -611,8 +655,12 @@ class PlotController:
             _fix_psection_axes(ax, colorbar_label=r"$\varphi$ (°)")
             _add_station_markers(ax, self.dark)
             self._mark_station(ax)
-            ax.set_title(r"$\varphi$ (XY) — Pseudosection", fontsize=10,
-                         loc="left", pad=4)
+            ax.set_title(
+                r"$\varphi$ (XY) — Pseudosection",
+                fontsize=10,
+                loc="left",
+                pad=4,
+            )
         except Exception as exc:
             _annotate_empty(ax, f"Pseudosection error:\n{exc}")
         style_axes(ax, self.dark)
@@ -623,6 +671,7 @@ class PlotController:
     def draw_tipper(self, ax) -> None:
         """Draw tipper components on *ax*."""
         import pycsamt.emtools as et
+
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
             style_axes(ax, self.dark)
@@ -630,7 +679,8 @@ class PlotController:
         try:
             target = (
                 self._get_site(self._station_id)
-                if self._station_id else self._sites
+                if self._station_id
+                else self._sites
             )
             et.plot_tipper_components(target, ax=ax, verbose=0)
             ax.set_title(
@@ -660,6 +710,7 @@ class PlotController:
         import numpy as np
 
         import pycsamt.emtools as et
+
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
             style_axes(ax, self.dark)
@@ -676,10 +727,10 @@ class PlotController:
             )
 
             et.plot_phase_tensor_psection(
-                pt_df,             # pre-built DataFrame → skips build step
+                pt_df,  # pre-built DataFrame → skips build step
                 ax=ax,
                 period_range=self._active_period_range(),
-                period_up=False,   # high freq (short T, near-surface) at TOP
+                period_up=False,  # high freq (short T, near-surface) at TOP
                 verbose=0,
                 **edge_kw,
             )
@@ -687,7 +738,7 @@ class PlotController:
             # ── Station labels and markers at top ─────────────────────
             # Collect tick positions before repositioning
             xticks = ax.get_xticks()
-            xlim   = ax.get_xlim()
+            xlim = ax.get_xlim()
             # Preserve existing label strings
             st_labels = [t.get_text() for t in ax.get_xticklabels()]
 
@@ -695,13 +746,16 @@ class PlotController:
             ax.xaxis.tick_top()
             ax.xaxis.set_label_position("top")
             # Re-apply labels with top-friendly alignment (vertical, centered)
-            ax.set_xticklabels(st_labels, rotation=90, ha="center",
-                               va="bottom", fontsize=8)
+            ax.set_xticklabels(
+                st_labels, rotation=90, ha="center", va="bottom", fontsize=8
+            )
 
             # Station surface pins — hollow ▽ at y=1 (axes-fraction top edge).
             # mfc='none' keeps these unfilled: only inversion uses filled ▼.
-            trans     = ax.get_xaxis_transform()
-            valid     = xticks[(xticks >= xlim[0] - 0.1) & (xticks <= xlim[1] + 0.1)]
+            trans = ax.get_xaxis_transform()
+            valid = xticks[
+                (xticks >= xlim[0] - 0.1) & (xticks <= xlim[1] + 0.1)
+            ]
             pin_color = "#cccccc" if self.dark else "#444444"
             ax.plot(
                 valid,
@@ -719,13 +773,16 @@ class PlotController:
 
             ax.set_title(
                 r"Phase Tensor $\beta$ — Pseudosection",
-                fontsize=10, pad=3,
+                fontsize=10,
+                pad=3,
             )
 
             # Explicitly recolor station tick labels — set_xticklabels()
             # creates Text objects whose color isn't always updated by the
             # later tick_params call when ticks have been moved to top.
-            tick_col = (_DARK if self.dark else _LIGHT)["tick_params"]["colors"]
+            tick_col = (_DARK if self.dark else _LIGHT)["tick_params"][
+                "colors"
+            ]
             for lbl in ax.get_xticklabels():
                 lbl.set_color(tick_col)
 
@@ -744,6 +801,7 @@ class PlotController:
         :meth:`draw_phase_tensor` (built once per Sites object).
         """
         import pycsamt.emtools as et
+
         if self._sites is None:
             _annotate_empty(ax, "Load survey data first")
             style_axes(ax, self.dark)
@@ -759,7 +817,7 @@ class PlotController:
                 linewidth=0.35,
             )
             et.plot_phase_tensor_strip(
-                pt_df,             # pre-built DataFrame → skips build step
+                pt_df,  # pre-built DataFrame → skips build step
                 station=self._station_id,
                 period_range=self._active_period_range(),
                 ax=ax,
@@ -768,7 +826,8 @@ class PlotController:
             )
             ax.set_title(
                 f"Phase-tensor ellipse strip — {self._station_id}",
-                fontsize=10, pad=3,
+                fontsize=10,
+                pad=3,
             )
         except Exception as exc:
             _annotate_empty(ax, f"Phase tensor strip error:\n{exc}")
@@ -826,7 +885,7 @@ class PlotController:
             if z is None or fr is None:
                 raise ValueError("No impedance data")
             fr = np.asarray(fr, dtype=float)
-            T  = 1.0 / (fr + 1e-24)
+            T = 1.0 / (fr + 1e-24)
 
             # ── tipper block (optional) ────────────────────────────────
             t_out = _get_t_block(site, with_errors=True)
@@ -835,7 +894,8 @@ class PlotController:
             else:
                 _, tipper, tfr = t_out[:3]
             has_tipper = (
-                tipper is not None and tfr is not None
+                tipper is not None
+                and tfr is not None
                 and np.asarray(tipper).size > 0
             )
             if has_tipper:
@@ -843,26 +903,27 @@ class PlotController:
                 Tt = 1.0 / (np.asarray(tfr, float) + 1e-24)
 
             # ── GridSpec ───────────────────────────────────────────────
-            comps   = sorted(self._components)   # xx, xy, yx, yy
-            n_cols  = max(1, len(comps))
+            comps = sorted(self._components)  # xx, xy, yx, yy
+            n_cols = max(1, len(comps))
             if has_tipper:
-                n_rows      = 4          # rho, phase, Tx, Ty
-                h_ratios    = [4, 2, 1, 1]
+                n_rows = 4  # rho, phase, Tx, Ty
+                h_ratios = [4, 2, 1, 1]
             else:
-                n_rows      = 2
-                h_ratios    = [2, 1]
+                n_rows = 2
+                h_ratios = [2, 1]
 
             gs = fig.add_gridspec(
-                n_rows, n_cols,
+                n_rows,
+                n_cols,
                 height_ratios=h_ratios,
                 hspace=0.0,
                 wspace=0.10,
             )
 
-            ax_rho_row   = []
+            ax_rho_row = []
             ax_phase_row = []
-            ax_tx_row    = []
-            ax_ty_row    = []
+            ax_tx_row = []
+            ax_ty_row = []
 
             for j in range(n_cols):
                 ar = fig.add_subplot(gs[0, j])
@@ -879,27 +940,39 @@ class PlotController:
             for j, comp in enumerate(comps):
                 ar = ax_rho_row[j]
                 ap = ax_phase_row[j]
-                color = "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
-                ls    = self._COMP_LS.get(comp, "-")
+                color = (
+                    "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                )
+                ls = self._COMP_LS.get(comp, "-")
 
                 zz = _comp_slice(z, comp)
                 ee = None
-                if ze is not None and isinstance(ze, np.ndarray) \
-                        and ze.shape == z.shape:
+                if (
+                    ze is not None
+                    and isinstance(ze, np.ndarray)
+                    and ze.shape == z.shape
+                ):
                     ee = _comp_slice(ze, comp)
 
-                rho     = _rhoa_from(zz, fr)
+                rho = _rhoa_from(zz, fr)
                 rho_err = _err_rhoa(zz, ee, fr) if self._show_errbar else None
-                ph      = _phase_deg(zz)
-                ph_err  = _err_phase_deg(zz, ee) if self._show_errbar else None
+                ph = _phase_deg(zz)
+                ph_err = _err_phase_deg(zz, ee) if self._show_errbar else None
 
                 kw = dict(
-                    color=color, ls=ls,
-                    marker=".", ms=4, mfc="white", mec=color, mew=0.8,
-                    elinewidth=0.6, capsize=2, lw=0.9,
+                    color=color,
+                    ls=ls,
+                    marker=".",
+                    ms=4,
+                    mfc="white",
+                    mec=color,
+                    mew=0.8,
+                    elinewidth=0.6,
+                    capsize=2,
+                    lw=0.9,
                 )
                 ar.errorbar(T, rho, yerr=rho_err, **kw)
-                ap.errorbar(T, ph,  yerr=ph_err,  **kw)
+                ap.errorbar(T, ph, yerr=ph_err, **kw)
 
                 ar.set_xscale("log")
                 ar.set_yscale("log")
@@ -908,7 +981,8 @@ class PlotController:
                 # Component label
                 ar.set_title(
                     f"$Z_{{{comp.upper()}}}$",
-                    fontsize=9, pad=2,
+                    fontsize=9,
+                    pad=2,
                 )
 
                 # Y labels only on leftmost column
@@ -940,18 +1014,30 @@ class PlotController:
                     atx = ax_tx_row[j]
                     aty = ax_ty_row[j]
                     tip_kw = dict(
-                        marker=".", ms=3, mfc="white", lw=0.8,
-                        elinewidth=0.5, capsize=1.5,
+                        marker=".",
+                        ms=3,
+                        mfc="white",
+                        lw=0.8,
+                        elinewidth=0.5,
+                        capsize=1.5,
                     )
                     # Tx real/imag — same column style as impedance
                     tx_vals = tipper[:, 0]
                     atx.errorbar(
-                        Tt, np.real(tx_vals), color=color, ls="-",
-                        label="real", **tip_kw,
+                        Tt,
+                        np.real(tx_vals),
+                        color=color,
+                        ls="-",
+                        label="real",
+                        **tip_kw,
                     )
                     atx.errorbar(
-                        Tt, np.imag(tx_vals), color=color, ls="--",
-                        label="imag", **tip_kw,
+                        Tt,
+                        np.imag(tx_vals),
+                        color=color,
+                        ls="--",
+                        label="imag",
+                        **tip_kw,
                     )
                     atx.axhline(0, color="0.55", lw=0.5)
                     atx.set_xscale("log")
@@ -959,11 +1045,17 @@ class PlotController:
                     # Ty
                     ty_vals = tipper[:, 1]
                     aty.errorbar(
-                        Tt, np.real(ty_vals), color=color, ls="-",
+                        Tt,
+                        np.real(ty_vals),
+                        color=color,
+                        ls="-",
                         **tip_kw,
                     )
                     aty.errorbar(
-                        Tt, np.imag(ty_vals), color=color, ls="--",
+                        Tt,
+                        np.imag(ty_vals),
+                        color=color,
+                        ls="--",
                         **tip_kw,
                     )
                     aty.axhline(0, color="0.55", lw=0.5)
@@ -980,8 +1072,9 @@ class PlotController:
                     atx.tick_params(labelbottom=False, labelsize=7)
                     aty.tick_params(labelbottom=True, labelsize=7)
 
-                for ax in ([ar, ap]
-                           + ([ax_tx_row[j], ax_ty_row[j]] if has_tipper else [])):
+                for ax in [ar, ap] + (
+                    [ax_tx_row[j], ax_ty_row[j]] if has_tipper else []
+                ):
                     ax.grid(True, which="both", alpha=0.2, lw=0.4)
                     style_axes(ax, self.dark)
 
@@ -993,7 +1086,8 @@ class PlotController:
             # Global title
             fig.suptitle(
                 f"Response — {self._station_id}",
-                fontsize=10, y=1.01,
+                fontsize=10,
+                y=1.01,
             )
 
         except Exception as exc:

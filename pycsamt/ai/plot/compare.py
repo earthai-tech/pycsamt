@@ -16,6 +16,7 @@ Usage
 >>> fig = plot_compare(true_models, pred_models, n_cols=5)
 >>> fig.savefig("comparison.png", dpi=300)
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -28,6 +29,7 @@ __all__ = ["plot_compare", "plot_profile_pair"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_compare(
     true_models,
@@ -87,7 +89,8 @@ def plot_compare(
     ctx = EMStyle() if style else _NullContext()
     with ctx:
         fig, axes = plt.subplots(
-            n_rows, n_cols,
+            n_rows,
+            n_cols,
             figsize=(fw, fh),
             sharey=False,
         )
@@ -98,12 +101,16 @@ def plot_compare(
             label = site_labels[i] if site_labels else f"Site {i}"
             tm = _to_model(true_models[i])
             pm = _to_model(pred_models[i])
-            _draw_pair(ax, tm, pm,
-                       depth_max=depth_max,
-                       log_scale=log_scale,
-                       show_rmse=show_rmse,
-                       label=label,
-                       colors=EM_COLORS)
+            _draw_pair(
+                ax,
+                tm,
+                pm,
+                depth_max=depth_max,
+                log_scale=log_scale,
+                show_rmse=show_rmse,
+                label=label,
+                colors=EM_COLORS,
+            )
 
         # Hide empty panels
         for j in range(n_sites, len(axes)):
@@ -155,13 +162,17 @@ def plot_profile_pair(
 
     tm = _to_model(true_model)
     pm = _to_model(pred_model)
-    _draw_pair(ax, tm, pm,
-               depth_max=depth_max,
-               log_scale=log_scale,
-               show_rmse=show_rmse,
-               label="",
-               colors=EM_COLORS,
-               legend=legend)
+    _draw_pair(
+        ax,
+        tm,
+        pm,
+        depth_max=depth_max,
+        log_scale=log_scale,
+        show_rmse=show_rmse,
+        label="",
+        colors=EM_COLORS,
+        legend=legend,
+    )
     return ax
 
 
@@ -169,15 +180,33 @@ def plot_profile_pair(
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _draw_pair(ax, true_m, pred_m, *, depth_max, log_scale, show_rmse,
-               label, colors, legend=False):
+
+def _draw_pair(
+    ax,
+    true_m,
+    pred_m,
+    *,
+    depth_max,
+    log_scale,
+    show_rmse,
+    label,
+    colors,
+    legend=False,
+):
     """Draw one profile pair onto *ax*."""
     # True model
-    _plot_profile(ax, true_m, color=colors["true"],
-                  linestyle="--", lw=1.4, label="True")
+    _plot_profile(
+        ax, true_m, color=colors["true"], linestyle="--", lw=1.4, label="True"
+    )
     # Predicted model
-    _plot_profile(ax, pred_m, color=colors["pred"],
-                  linestyle="-", lw=1.8, label="Predicted")
+    _plot_profile(
+        ax,
+        pred_m,
+        color=colors["pred"],
+        linestyle="-",
+        lw=1.8,
+        label="Predicted",
+    )
 
     # Shade the difference
     _shade_diff(ax, true_m, pred_m)
@@ -196,13 +225,17 @@ def _draw_pair(ax, true_m, pred_m, *, depth_max, log_scale, show_rmse,
         err = _rmse_log_rho(true_m, pred_m)
         if np.isfinite(err):
             ax.text(
-                0.97, 0.97,
+                0.97,
+                0.97,
                 f"RMSE={err:.3f}",
                 transform=ax.transAxes,
-                ha="right", va="top",
+                ha="right",
+                va="top",
                 fontsize=7.5,
                 color=colors["error"],
-                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", pad=1),
+                bbox=dict(
+                    facecolor="white", alpha=0.7, edgecolor="none", pad=1
+                ),
             )
     if legend:
         ax.legend(fontsize=8, loc="lower left")
@@ -220,8 +253,7 @@ def _shade_diff(ax, true_m, pred_m):
     rho_p, _ = _staircase(pred_m)
     n = min(len(rho_t), len(rho_p))
     ax.fill_betweenx(
-        depth[:n], rho_t[:n], rho_p[:n],
-        alpha=0.12, color="#762a83"
+        depth[:n], rho_t[:n], rho_p[:n], alpha=0.12, color="#762a83"
     )
 
 
@@ -241,6 +273,7 @@ def _model_arrays(model):
     """Return (rho_array, depth_array) from LayeredModel or vector."""
     try:
         from pycsamt.forward.synthetic import LayeredModel
+
         if isinstance(model, LayeredModel):
             return model.resistivity, model.depth
     except ImportError:
@@ -264,8 +297,10 @@ def _rmse_log_rho(true_m, pred_m):
     rho_t, _ = _model_arrays(true_m)
     rho_p, _ = _model_arrays(pred_m)
     n = min(len(rho_t), len(rho_p))
-    diff = np.log10(np.maximum(rho_t[:n], 1e-6)) - np.log10(np.maximum(rho_p[:n], 1e-6))
-    return float(np.sqrt(np.mean(diff ** 2)))
+    diff = np.log10(np.maximum(rho_t[:n], 1e-6)) - np.log10(
+        np.maximum(rho_p[:n], 1e-6)
+    )
+    return float(np.sqrt(np.mean(diff**2)))
 
 
 def _to_model(m):
@@ -274,5 +309,8 @@ def _to_model(m):
 
 
 class _NullContext:
-    def __enter__(self): return self
-    def __exit__(self, *_): pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass

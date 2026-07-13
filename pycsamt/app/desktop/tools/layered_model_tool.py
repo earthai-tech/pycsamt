@@ -16,6 +16,7 @@ Usage
     dlg.exec()
     model = dlg.model   # LayeredModel or None
 """
+
 from __future__ import annotations
 
 import matplotlib
@@ -45,12 +46,13 @@ from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 _PRESETS = ["— choose preset —", "Random", "Blocky", "Smooth"]
 _DEFAULT_LAYERS = [
     (100.0, 300.0),
-    (10.0,  800.0),
-    (500.0, None),   # halfspace
+    (10.0, 800.0),
+    (500.0, None),  # halfspace
 ]
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class LayeredModelDialog(QDialog):
     """
@@ -106,7 +108,9 @@ class LayeredModelDialog(QDialog):
 
         # Layer table: columns = [Layer, ρ (Ω·m), Thickness (m)]
         self._table = QTableWidget(0, 3)
-        self._table.setHorizontalHeaderLabels(["Layer", "ρ (Ω·m)", "Thickness (m)"])
+        self._table.setHorizontalHeaderLabels(
+            ["Layer", "ρ (Ω·m)", "Thickness (m)"]
+        )
         self._table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -116,7 +120,9 @@ class LayeredModelDialog(QDialog):
         self._table.horizontalHeader().setSectionResizeMode(
             2, QHeaderView.ResizeMode.Stretch
         )
-        self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._table.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
         left_lay.addWidget(self._table)
 
         # Add / Remove row buttons
@@ -170,9 +176,9 @@ class LayeredModelDialog(QDialog):
         label = "Halfspace" if thick is None else f"Layer {idx}"
         self._table.setItem(r, 0, QTableWidgetItem(label))
         self._table.setItem(r, 1, QTableWidgetItem(f"{rho:.1f}"))
-        self._table.setItem(r, 2, QTableWidgetItem(
-            "" if thick is None else f"{thick:.1f}"
-        ))
+        self._table.setItem(
+            r, 2, QTableWidgetItem("" if thick is None else f"{thick:.1f}")
+        )
 
     def _add_row(self) -> None:
         n = self._table.rowCount()
@@ -200,6 +206,7 @@ class LayeredModelDialog(QDialog):
     def _apply_model_preset(self, kind: str, n: int) -> None:
         try:
             from pycsamt.forward.synthetic import LayeredModel
+
             if kind == "random":
                 m = LayeredModel.random(n)
             elif kind == "blocky":
@@ -221,10 +228,11 @@ class LayeredModelDialog(QDialog):
     def _read_model(self):
         """Parse table → LayeredModel, or raise ValueError."""
         from pycsamt.forward.synthetic import LayeredModel
+
         rhos, thicks = [], []
         n = self._table.rowCount()
         for r in range(n):
-            rho_item   = self._table.item(r, 1)
+            rho_item = self._table.item(r, 1)
             thick_item = self._table.item(r, 2)
             try:
                 rhos.append(float(rho_item.text()))

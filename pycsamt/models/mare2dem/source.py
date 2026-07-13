@@ -73,22 +73,28 @@ _BINARY_NAME = "MARE2DEM"
 # Platform user-data directory (no external dependencies)
 # ---------------------------------------------------------------------------
 
+
 def _user_data_dir() -> Path:
     """Return the platform-appropriate user-data directory for pycsamt."""
     system = platform.system()
     if system == "Darwin":
         base = Path.home() / "Library" / "Application Support"
     elif system == "Windows":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        base = Path(
+            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+        )
     else:
         # Linux, FreeBSD, WSL
-        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        base = Path(
+            os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
+        )
     return base / "pycsamt" / "mare2dem"
 
 
 # ---------------------------------------------------------------------------
 # Compiler auto-detection
 # ---------------------------------------------------------------------------
+
 
 def _detect_fc() -> str:
     """Return the best available MPI-Fortran compiler name."""
@@ -135,6 +141,7 @@ def _is_intel_compiler(name: str) -> bool:
 # ---------------------------------------------------------------------------
 # Include-file generator
 # ---------------------------------------------------------------------------
+
 
 def _generate_inc(
     fc: str,
@@ -216,6 +223,7 @@ def _generate_inc(
 # SourceManager
 # ---------------------------------------------------------------------------
 
+
 class SourceManager(Mare2DEMBase):
     """Download, build, and locate the MARE2DEM binary.
 
@@ -235,6 +243,7 @@ class SourceManager(Mare2DEMBase):
         super().__init__(**kwargs)
         # Lazy import to avoid circular dependency
         from .config import Mare2DEMConfig
+
         self.config: Mare2DEMConfig = config or Mare2DEMConfig()
         self._explicit_source_dir: Path | None = (
             Path(source_dir) if source_dir is not None else None
@@ -429,6 +438,7 @@ class SourceManager(Mare2DEMBase):
 
             try:
                 from tqdm import tqdm as _tqdm
+
                 progress = _tqdm(
                     total=total,
                     unit="B",
@@ -460,7 +470,7 @@ class SourceManager(Mare2DEMBase):
             prefix = members[0].name.split("/")[0] if members else ""
             for member in members:
                 if prefix and member.name.startswith(prefix + "/"):
-                    member.name = member.name[len(prefix) + 1:]
+                    member.name = member.name[len(prefix) + 1 :]
                 if member.name:
                     tar.extract(member, dest)  # nosec — controlled source
 
@@ -557,9 +567,7 @@ class SourceManager(Mare2DEMBase):
         # ---- build ----
         cmd = ["make", f"INCLUDE={_inc}"]
         if self.verbose:
-            self.logger.info(
-                "SourceManager: %s (cwd=%s)", " ".join(cmd), src
-            )
+            self.logger.info("SourceManager: %s (cwd=%s)", " ".join(cmd), src)
 
         print("Building MARE2DEM (this may take several minutes) …")
         print(f"  FC = {_fc}")

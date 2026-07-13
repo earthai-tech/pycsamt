@@ -28,6 +28,7 @@ All three quantities are derived from the standard impedance-based
 :math:`\\rho_a`, so no source moment or source–receiver geometry is
 required.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -55,20 +56,35 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 _SPATIAL_COLS = [
-    "station_a", "station_b", "x_m", "dx_m",
-    "freq_hz", "period_s", "depth_m",
-    "rho_a_ohmm", "delta_rho_x",
+    "station_a",
+    "station_b",
+    "x_m",
+    "dx_m",
+    "freq_hz",
+    "period_s",
+    "depth_m",
+    "rho_a_ohmm",
+    "delta_rho_x",
 ]
 
 _FREQ_COLS = [
-    "station", "x_m",
-    "freq_hz", "period_s", "depth_m",
-    "rho_a_ohmm", "delta_rho_z",
+    "station",
+    "x_m",
+    "freq_hz",
+    "period_s",
+    "depth_m",
+    "rho_a_ohmm",
+    "delta_rho_z",
 ]
 
 _JOINT_COLS = [
-    "station_a", "station_b", "x_m", "dx_m",
-    "freq_hz", "period_s", "depth_m",
+    "station_a",
+    "station_b",
+    "x_m",
+    "dx_m",
+    "freq_hz",
+    "period_s",
+    "depth_m",
     "delta_rho_zx",
 ]
 
@@ -191,6 +207,7 @@ def _build_rho_grid(
 # Public: rho_spatial_gradient
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def rho_spatial_gradient(
     sites: Any,
     spacing_m: float = 200.0,
@@ -266,26 +283,28 @@ def rho_spatial_gradient(
         return pd.DataFrame(columns=_SPATIAL_COLS)
 
     # Δρ_a^x[pair_idx, freq_idx] = rho_grid[j, f] - rho_grid[j-1, f]
-    delta_x = rho_grid[1:, :] - rho_grid[:-1, :]   # (N-1, F)
-    x_mid   = 0.5 * (x_pos[1:] + x_pos[:-1])       # (N-1,)
-    dx      = x_pos[1:] - x_pos[:-1]                # (N-1,)
+    delta_x = rho_grid[1:, :] - rho_grid[:-1, :]  # (N-1, F)
+    x_mid = 0.5 * (x_pos[1:] + x_pos[:-1])  # (N-1,)
+    dx = x_pos[1:] - x_pos[:-1]  # (N-1,)
     rho_mid = 0.5 * (rho_grid[1:, :] + rho_grid[:-1, :])  # (N-1, F)
 
     rows: list[dict] = []
     for j in range(N - 1):
         for k in range(F):
             rho_m = float(rho_mid[j, k])
-            rows.append({
-                "station_a":  names[j],
-                "station_b":  names[j + 1],
-                "x_m":        float(x_mid[j]),
-                "dx_m":       float(dx[j]),
-                "freq_hz":    float(freqs[k]),
-                "period_s":   1.0 / max(float(freqs[k]), 1e-12),
-                "depth_m":    _skin_depth_m(rho_m, float(freqs[k])),
-                "rho_a_ohmm": rho_m,
-                "delta_rho_x": float(delta_x[j, k]),
-            })
+            rows.append(
+                {
+                    "station_a": names[j],
+                    "station_b": names[j + 1],
+                    "x_m": float(x_mid[j]),
+                    "dx_m": float(dx[j]),
+                    "freq_hz": float(freqs[k]),
+                    "period_s": 1.0 / max(float(freqs[k]), 1e-12),
+                    "depth_m": _skin_depth_m(rho_m, float(freqs[k])),
+                    "rho_a_ohmm": rho_m,
+                    "delta_rho_x": float(delta_x[j, k]),
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_SPATIAL_COLS)
@@ -295,6 +314,7 @@ def rho_spatial_gradient(
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: rho_frequency_gradient
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def rho_frequency_gradient(
     sites: Any,
@@ -369,23 +389,25 @@ def rho_frequency_gradient(
 
     # Δρ_a^z[station_idx, freq_pair_idx] = rho_grid[i, k] - rho_grid[i, k-1]
     # freq_pair_idx k corresponds to (freqs[k-1], freqs[k]) pair → assign to freqs[k]
-    delta_z  = rho_grid[:, 1:] - rho_grid[:, :-1]           # (N, F-1)
-    rho_mean = 0.5 * (rho_grid[:, 1:] + rho_grid[:, :-1])   # (N, F-1)
-    freq_k   = freqs[1:]                                      # (F-1,) upper frequencies
+    delta_z = rho_grid[:, 1:] - rho_grid[:, :-1]  # (N, F-1)
+    rho_mean = 0.5 * (rho_grid[:, 1:] + rho_grid[:, :-1])  # (N, F-1)
+    freq_k = freqs[1:]  # (F-1,) upper frequencies
 
     rows: list[dict] = []
     for i in range(N):
         for k in range(F - 1):
             rho_m = float(rho_mean[i, k])
-            rows.append({
-                "station":    names[i],
-                "x_m":        float(x_pos[i]),
-                "freq_hz":    float(freq_k[k]),
-                "period_s":   1.0 / max(float(freq_k[k]), 1e-12),
-                "depth_m":    _skin_depth_m(rho_m, float(freq_k[k])),
-                "rho_a_ohmm": rho_m,
-                "delta_rho_z": float(delta_z[i, k]),
-            })
+            rows.append(
+                {
+                    "station": names[i],
+                    "x_m": float(x_pos[i]),
+                    "freq_hz": float(freq_k[k]),
+                    "period_s": 1.0 / max(float(freq_k[k]), 1e-12),
+                    "depth_m": _skin_depth_m(rho_m, float(freq_k[k])),
+                    "rho_a_ohmm": rho_m,
+                    "delta_rho_z": float(delta_z[i, k]),
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_FREQ_COLS)
@@ -395,6 +417,7 @@ def rho_frequency_gradient(
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: rho_joint_gradient
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def rho_joint_gradient(
     sites: Any,
@@ -485,36 +508,41 @@ def rho_joint_gradient(
     # joint gradient: delta_zx[j, k] = delta_x[j, k] - delta_x[j, k-1]  (N-1, F-1)
     delta_zx = delta_x[:, 1:] - delta_x[:, :-1]
 
-    x_mid  = 0.5 * (x_pos[1:] + x_pos[:-1])   # (N-1,)
-    dx     = x_pos[1:] - x_pos[:-1]            # (N-1,)
-    freq_k = freqs[1:]                          # (F-1,) upper frequencies
+    x_mid = 0.5 * (x_pos[1:] + x_pos[:-1])  # (N-1,)
+    dx = x_pos[1:] - x_pos[:-1]  # (N-1,)
+    freq_k = freqs[1:]  # (F-1,) upper frequencies
 
     # For depth: use median rho_a of the 4 surrounding corners
     # corners: rho_grid[j, k-1], rho_grid[j, k], rho_grid[j+1, k-1], rho_grid[j+1, k]
     rho_corners = np.nanmedian(
-        np.stack([
-            rho_grid[:-1, :-1],   # (j,   k-1)
-            rho_grid[:-1, 1:],    # (j,   k  )
-            rho_grid[1:,  :-1],   # (j+1, k-1)
-            rho_grid[1:,  1:],    # (j+1, k  )
-        ], axis=0),
+        np.stack(
+            [
+                rho_grid[:-1, :-1],  # (j,   k-1)
+                rho_grid[:-1, 1:],  # (j,   k  )
+                rho_grid[1:, :-1],  # (j+1, k-1)
+                rho_grid[1:, 1:],  # (j+1, k  )
+            ],
+            axis=0,
+        ),
         axis=0,
-    )   # (N-1, F-1)
+    )  # (N-1, F-1)
 
     rows: list[dict] = []
     for j in range(N - 1):
         for k in range(F - 1):
             rho_m = float(rho_corners[j, k])
-            rows.append({
-                "station_a":    names[j],
-                "station_b":    names[j + 1],
-                "x_m":          float(x_mid[j]),
-                "dx_m":         float(dx[j]),
-                "freq_hz":      float(freq_k[k]),
-                "period_s":     1.0 / max(float(freq_k[k]), 1e-12),
-                "depth_m":      _skin_depth_m(rho_m, float(freq_k[k])),
-                "delta_rho_zx": float(delta_zx[j, k]),
-            })
+            rows.append(
+                {
+                    "station_a": names[j],
+                    "station_b": names[j + 1],
+                    "x_m": float(x_mid[j]),
+                    "dx_m": float(dx[j]),
+                    "freq_hz": float(freq_k[k]),
+                    "period_s": 1.0 / max(float(freq_k[k]), 1e-12),
+                    "depth_m": _skin_depth_m(rho_m, float(freq_k[k])),
+                    "delta_rho_zx": float(delta_zx[j, k]),
+                }
+            )
 
     if not rows:
         return pd.DataFrame(columns=_JOINT_COLS)
@@ -524,6 +552,7 @@ def rho_joint_gradient(
 # ─────────────────────────────────────────────────────────────────────────────
 # Public: plot_gradient_section
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_gradient_section(
     sites: Any,
@@ -595,9 +624,14 @@ def plot_gradient_section(
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize, TwoSlopeNorm
 
-    _Q = {"joint": "joint", "zx": "joint",
-          "spatial": "spatial", "x": "spatial",
-          "frequency": "frequency", "z": "frequency"}
+    _Q = {
+        "joint": "joint",
+        "zx": "joint",
+        "spatial": "spatial",
+        "x": "spatial",
+        "frequency": "frequency",
+        "z": "frequency",
+    }
     q = _Q.get(quantity.lower())
     if q is None:
         raise ValueError(
@@ -607,35 +641,56 @@ def plot_gradient_section(
 
     if q == "joint":
         df = rho_joint_gradient(
-            sites, spacing_m, comp=comp,
-            recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose,
+            sites,
+            spacing_m,
+            comp=comp,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         val_col = "delta_rho_zx"
-        x_col   = "x_m"
-        title   = r"$\Delta\rho_a^{zx}$ — joint gradient (zhang2021)"
+        x_col = "x_m"
+        title = r"$\Delta\rho_a^{zx}$ — joint gradient (zhang2021)"
     elif q == "spatial":
         df = rho_spatial_gradient(
-            sites, spacing_m, comp=comp,
-            recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose,
+            sites,
+            spacing_m,
+            comp=comp,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         val_col = "delta_rho_x"
-        x_col   = "x_m"
-        title   = r"$\Delta\rho_a^x$ — spatial gradient (zhang2021)"
+        x_col = "x_m"
+        title = r"$\Delta\rho_a^x$ — spatial gradient (zhang2021)"
     else:
         df = rho_frequency_gradient(
-            sites, comp=comp, spacing_m=spacing_m,
-            recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose,
+            sites,
+            comp=comp,
+            spacing_m=spacing_m,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         val_col = "delta_rho_z"
-        x_col   = "x_m"
-        title   = r"$\Delta\rho_a^z$ — frequency gradient (zhang2021)"
+        x_col = "x_m"
+        title = r"$\Delta\rho_a^z$ — frequency gradient (zhang2021)"
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         ax.set_title(title)
         return ax
 
@@ -667,23 +722,28 @@ def plot_gradient_section(
         norm = Normalize(vmin=vmin, vmax=vmax)
 
     X_idx, Y_idx = np.meshgrid(np.arange(len(all_x)), np.arange(len(all_y)))
-    pcm = ax.pcolormesh(X_idx, Y_idx, grid, cmap=cmap, norm=norm,
-                        shading="nearest")
+    pcm = ax.pcolormesh(
+        X_idx, Y_idx, grid, cmap=cmap, norm=norm, shading="nearest"
+    )
     plt.colorbar(pcm, ax=ax, label="Ω·m")
 
     # x-axis: station positions
-    n_xtick  = min(10, len(all_x))
-    x_step   = max(1, len(all_x) // n_xtick)
-    xt_idx   = np.arange(0, len(all_x), x_step)
+    n_xtick = min(10, len(all_x))
+    x_step = max(1, len(all_x) // n_xtick)
+    xt_idx = np.arange(0, len(all_x), x_step)
     ax.set_xticks(xt_idx)
-    ax.set_xticklabels([f"{all_x[k]:.0f}" for k in xt_idx],
-                       rotation=45, ha="right", fontsize=8)
+    ax.set_xticklabels(
+        [f"{all_x[k]:.0f}" for k in xt_idx],
+        rotation=45,
+        ha="right",
+        fontsize=8,
+    )
     ax.set_xlabel("Position (m)")
 
     # y-axis: period or frequency
-    n_ytick  = min(8, len(all_y))
-    y_step   = max(1, len(all_y) // n_ytick)
-    yt_idx   = np.arange(0, len(all_y), y_step)
+    n_ytick = min(8, len(all_y))
+    y_step = max(1, len(all_y) // n_ytick)
+    yt_idx = np.arange(0, len(all_y), y_step)
     ax.set_yticks(yt_idx)
     ax.set_yticklabels([f"{all_y[k]:.3g}" for k in yt_idx], fontsize=8)
     ax.set_ylabel("Period (s)" if period_axis else "Frequency (Hz)")

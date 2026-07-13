@@ -90,7 +90,9 @@ ax1.legend(fontsize=8)
 ax1.set_title(f"{station} — dimensionality features vs. period")
 
 ax2.semilogx(d["period"], d["ellipt_abs"], "o-", ms=3, color="#d62728")
-ax2.axhline(ELLIPT_TH, color="0.3", ls="--", lw=1, label=f"ellipt_th={ELLIPT_TH:g}")
+ax2.axhline(
+    ELLIPT_TH, color="0.3", ls="--", lw=1, label=f"ellipt_th={ELLIPT_TH:g}"
+)
 ax2.set_ylabel("ellipticity")
 ax2.set_xlabel("Period (s)")
 ax2.legend(fontsize=8)
@@ -121,8 +123,14 @@ labels = {0: "1D", 1: "2D", 2: "3D"}
 fig, ax = plt.subplots(figsize=(6.5, 5.5))
 for k in (2, 1, 0):  # draw 3D first so 1D/2D aren't hidden underneath
     m = dim_df["dim"] == k
-    ax.scatter(dim_df.loc[m, "beta_abs"], dim_df.loc[m, "ellipt_abs"],
-               s=8, alpha=0.4, color=colors[k], label=f"{labels[k]} (n={int(m.sum())})")
+    ax.scatter(
+        dim_df.loc[m, "beta_abs"],
+        dim_df.loc[m, "ellipt_abs"],
+        s=8,
+        alpha=0.4,
+        color=colors[k],
+        label=f"{labels[k]} (n={int(m.sum())})",
+    )
 ax.axvline(SKEW_TH, color="0.2", ls="--", lw=1)
 ax.axhline(ELLIPT_TH, color="0.2", ls="--", lw=1)
 ax.set_xlabel(r"$|\beta|$ (deg)")
@@ -159,16 +167,24 @@ for sth in skew_ths:
     frac_3d.append(1.0 - d0 - d1)
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.stackplot(skew_ths, frac_1d, frac_2d, frac_3d,
-             colors=[colors[0], colors[1], colors[2]],
-             labels=["1D", "2D", "3D"], alpha=0.85)
+ax.stackplot(
+    skew_ths,
+    frac_1d,
+    frac_2d,
+    frac_3d,
+    colors=[colors[0], colors[1], colors[2]],
+    labels=["1D", "2D", "3D"],
+    alpha=0.85,
+)
 ax.axvline(SKEW_TH, color="black", ls=":", lw=1.2)
 ax.set_xlabel("skew_th (deg)")
 ax.set_ylabel("fraction of (station, frequency) pairs")
 ax.set_xlim(skew_ths.min(), skew_ths.max())
 ax.set_ylim(0, 1)
 ax.legend(fontsize=8, loc="center right")
-ax.set_title("L18PLT — dimensionality mix vs. skew_th (ellipt_th fixed at 0.2)")
+ax.set_title(
+    "L18PLT — dimensionality mix vs. skew_th (ellipt_th fixed at 0.2)"
+)
 
 # %%
 # **Reading this figure.** The 3-D fraction falls smoothly and
@@ -233,23 +249,42 @@ plot_dim_map(survey, period=0.01)
 projected = project_to_2d(survey, method="swift")
 dim_after = classify_dimensionality(projected)
 
-before_frac = dim_df["dim"].value_counts(normalize=True).reindex([0, 1, 2]).fillna(0.0)
-after_frac = dim_after["dim"].value_counts(normalize=True).reindex([0, 1, 2]).fillna(0.0)
+before_frac = (
+    dim_df["dim"].value_counts(normalize=True).reindex([0, 1, 2]).fillna(0.0)
+)
+after_frac = (
+    dim_after["dim"]
+    .value_counts(normalize=True)
+    .reindex([0, 1, 2])
+    .fillna(0.0)
+)
 
 fig, ax = plt.subplots(figsize=(6, 4.5))
 x = np.arange(3)
 w = 0.35
-ax.bar(x - w / 2, before_frac.to_numpy(), width=w, label="before", color="0.6")
-ax.bar(x + w / 2, after_frac.to_numpy(), width=w, label="after project_to_2d", color="#d62728")
+ax.bar(
+    x - w / 2, before_frac.to_numpy(), width=w, label="before", color="0.6"
+)
+ax.bar(
+    x + w / 2,
+    after_frac.to_numpy(),
+    width=w,
+    label="after project_to_2d",
+    color="#d62728",
+)
 ax.set_xticks(x, ["1D", "2D", "3D"])
 ax.set_ylabel("fraction")
 ax.legend(fontsize=8)
 ax.set_title("Effect of strike rotation + antisymmetrization")
 
-print(f"mean |beta|: before={dim_df['beta_abs'].mean():.1f} deg, "
-      f"after={dim_after['beta_abs'].mean():.1f} deg")
-print(f"mean ellipticity: before={dim_df['ellipt_abs'].mean():.3f}, "
-      f"after={dim_after['ellipt_abs'].mean():.3f}")
+print(
+    f"mean |beta|: before={dim_df['beta_abs'].mean():.1f} deg, "
+    f"after={dim_after['beta_abs'].mean():.1f} deg"
+)
+print(
+    f"mean ellipticity: before={dim_df['ellipt_abs'].mean():.3f}, "
+    f"after={dim_after['ellipt_abs'].mean():.3f}"
+)
 
 # %%
 # **Reading this figure.** Mean :math:`|\beta|` and mean ellipticity both drop
@@ -281,8 +316,12 @@ print("rule-based:", dim_df["dim"].value_counts().to_dict())
 print("dictionary:", encoded["dim_pred"].value_counts().to_dict())
 
 fig, ax = plt.subplots(figsize=(5.5, 5))
-confusion = pd.crosstab(dim_df["dim"].map(labels), encoded["dim_pred"].map(labels))
-confusion = confusion.reindex(index=["1D", "2D", "3D"], columns=["1D", "2D", "3D"], fill_value=0)
+confusion = pd.crosstab(
+    dim_df["dim"].map(labels), encoded["dim_pred"].map(labels)
+)
+confusion = confusion.reindex(
+    index=["1D", "2D", "3D"], columns=["1D", "2D", "3D"], fill_value=0
+)
 im = ax.imshow(confusion.to_numpy(), cmap="Blues")
 ax.set_xticks(range(3), confusion.columns)
 ax.set_yticks(range(3), confusion.index)
@@ -291,8 +330,14 @@ ax.set_ylabel("rule-based label")
 for i in range(3):
     for j in range(3):
         v = confusion.to_numpy()[i, j]
-        ax.text(j, i, str(v), ha="center", va="center",
-                color="white" if v > confusion.to_numpy().max() / 2 else "black")
+        ax.text(
+            j,
+            i,
+            str(v),
+            ha="center",
+            va="center",
+            color="white" if v > confusion.to_numpy().max() / 2 else "black",
+        )
 ax.set_title(f"Rule vs. dictionary — {agree:.0%} agreement")
 fig.colorbar(im, ax=ax, shrink=0.8, label="count")
 
@@ -355,8 +400,12 @@ def _frac_masked(sites) -> float:
     return n_nan / n_tot if n_tot else float("nan")
 
 
-print(f"rule-based mask (keep 1D+2D) discards {_frac_masked(masked_rule):.1%} of the survey")
-print(f"dictionary mask (keep 1D+2D) discards {_frac_masked(masked_dict):.1%} of the survey")
+print(
+    f"rule-based mask (keep 1D+2D) discards {_frac_masked(masked_rule):.1%} of the survey"
+)
+print(
+    f"dictionary mask (keep 1D+2D) discards {_frac_masked(masked_dict):.1%} of the survey"
+)
 
 # %%
 # **Reading this output.** Keeping only what the rule calls 1-D/2-D

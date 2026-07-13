@@ -89,9 +89,7 @@ def test_spectraio_from_file_parses_blocks(tmp_path: Path):
     p = _write(tmp_path, "sp_data.edi", edi)
 
     sect = SpectraSECT.from_file(str(p))
-    io = SpectraIO.from_file(
-        str(p), start_line=sect.start_data_lines_num
-    )
+    io = SpectraIO.from_file(str(p), start_line=sect.start_data_lines_num)
 
     assert len(io.blocks) == 2
 
@@ -218,4 +216,3 @@ def test_spectramixin_helpers(tmp_path: Path):
     assert isinstance(io, SpectraIO)
     assert len(io.blocks) == 1
     assert io.blocks[0].values == [11.0, 22.0]
-

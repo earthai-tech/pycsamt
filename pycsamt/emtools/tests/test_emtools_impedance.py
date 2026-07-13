@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.impedance"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -17,17 +18,18 @@ from pycsamt.emtools.impedance import (
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
-        self.z_err = np.abs(z) * 0.05   # 5 % error
+        self.z_err = np.abs(z) * 0.05  # 5 % error
 
 
 class _FakeSite:
     def __init__(self, station, z, freq):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
 
     def get_section(self, *_, **__):
@@ -41,7 +43,7 @@ def _freqs(n: int = 10, f_lo: float = 1.0, f_hi: float = 1e4) -> np.ndarray:
 def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -65,8 +67,8 @@ def _site(name: str, z=None, n: int = 12) -> _FakeSite:
 # plot_phasor_wheel
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotPhasorWheel:
 
+class TestPlotPhasorWheel:
     def test_returns_figure(self):
         sites = [_site("S00")]
         result = plot_phasor_wheel(sites)
@@ -105,8 +107,8 @@ class TestPlotPhasorWheel:
 # plot_offdiag_antisym_residual
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotOffdiagAntisymResidual:
 
+class TestPlotOffdiagAntisymResidual:
     def test_returns_figure(self):
         sites = [_site("S00")]
         result = plot_offdiag_antisym_residual(sites)
@@ -138,8 +140,8 @@ class TestPlotOffdiagAntisymResidual:
 # plot_determinant_track
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotDeterminantTrack:
 
+class TestPlotDeterminantTrack:
     def test_returns_figure(self):
         sites = [_site(f"S{i}") for i in range(3)]
         result = plot_determinant_track(sites)

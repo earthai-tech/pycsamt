@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Clientside navigation — page switching, active-button highlight, sidebar toggle."""
+
 from __future__ import annotations
 
 from dash import (
@@ -78,9 +79,9 @@ def register_navigation(app) -> None:
     )
 
     # NAV_SECTION → update navbar breadcrumb chip
-    _labels_json = str(
-        {pid: lbl for pid, _, lbl in _NAV_ENTRIES}
-    ).replace("'", '"')
+    _labels_json = str({pid: lbl for pid, _, lbl in _NAV_ENTRIES}).replace(
+        "'", '"'
+    )
     clientside_callback(
         f"""
         function(section) {{

@@ -35,12 +35,11 @@ __all__ = [
     "rename_all",
     "set_coords_all",
     "set_coords_from_table",
-    "set_coords_from_en"
+    "set_coords_from_en",
 ]
 
 
-def rotate(site: Any, angle_deg: float, *,
-           inplace: bool = False) -> Any:
+def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
     r"""
     Rotate impedance tensor Z (and tipper T, if present) by an
     azimuthal angle in degrees.
@@ -118,8 +117,7 @@ def rotate(site: Any, angle_deg: float, *,
             a = np.asarray(zz, complex)
             if a.ndim == 3 and a.shape[-2:] == (2, 2):
                 newz = r[None, :, :] @ a @ rinv[None, :, :]
-                _set_attr_first(z, ("z", "impedance", "_z"),
-                                newz)
+                _set_attr_first(z, ("z", "impedance", "_z"), newz)
             ze = _get_attr_any(
                 z, "z_error", "z_err", "impedance_err", "_z_err"
             )
@@ -130,8 +128,8 @@ def rotate(site: Any, angle_deg: float, *,
                 if e.ndim == 3 and e.shape[-2:] == (2, 2):
                     newe = ar[None, :, :] * e * ari[None, :, :]
                     _set_attr_first(
-                        z, ("z_error", "z_err", "impedance_err",
-                            "_z_err"),
+                        z,
+                        ("z_error", "z_err", "impedance_err", "_z_err"),
                         newe,
                     )
 
@@ -147,9 +145,7 @@ def rotate(site: Any, angle_deg: float, *,
             _, rinv = _rotm(angle_deg)
             a = np.asarray(t, complex)
             if a.ndim == 2 and a.shape[1] == 2:
-                _set_attr_first(
-                    tip_obj, ("tipper", "_tipper"), a @ rinv.T
-                )
+                _set_attr_first(tip_obj, ("tipper", "_tipper"), a @ rinv.T)
     else:
         if z is not None:
             t = _get_attr_any(z, "tipper", "tip", "_tipper")
@@ -158,7 +154,8 @@ def rotate(site: Any, angle_deg: float, *,
                 a = np.asarray(t, complex)
                 if a.ndim == 2 and a.shape[1] == 2:
                     _set_attr_first(
-                        z, ("tipper", "tip", "_tipper"),
+                        z,
+                        ("tipper", "tip", "_tipper"),
                         a @ rinv.T,
                     )
 
@@ -265,9 +262,9 @@ def select_freq(
         return ed
     m = np.isfinite(f)
     if fmin is not None:
-        m &= (f >= float(fmin))
+        m &= f >= float(fmin)
     if fmax is not None:
-        m &= (f <= float(fmax))
+        m &= f <= float(fmax)
     if getattr(ed, "Z", None) is not None:
         _slice_fields(ed.Z, m)
     for cand in ("T", "TIP", "Tip"):
@@ -386,6 +383,7 @@ def rename(
     except Exception:
         pass
     return ed
+
 
 def set_coords(
     site: Any,
@@ -553,8 +551,8 @@ def fill_missing(
             zcur = _get_attr_any(z, "z", "impedance", "_z")
             znew = (
                 np.zeros((n, 2, 2), complex)
-                if zcur is None else
-                _fill_array(zcur, (n, 2, 2), how)
+                if zcur is None
+                else _fill_array(zcur, (n, 2, 2), how)
             )
             _set_attr_first(z, ("z", "impedance", "_z"), znew)
 
@@ -564,19 +562,15 @@ def fill_missing(
             if ze is not None:
                 _set_attr_first(
                     z,
-                    ("z_error", "z_err", "impedance_err",
-                     "_z_err"),
+                    ("z_error", "z_err", "impedance_err", "_z_err"),
                     _fill_array(ze, (n, 2, 2), how),
                 )
 
-            rr = _get_attr_any(
-                z, "rho", "res", "resistivity", "_resistivity"
-            )
+            rr = _get_attr_any(z, "rho", "res", "resistivity", "_resistivity")
             if rr is not None:
                 _set_attr_first(
                     z,
-                    ("rho", "res", "resistivity",
-                     "_resistivity"),
+                    ("rho", "res", "resistivity", "_resistivity"),
                     _fill_array(rr, (n, 2, 2), how),
                 )
 
@@ -606,8 +600,8 @@ def fill_missing(
             tcur = _get_attr_any(tp, "tipper", "_tipper")
             tnew = (
                 np.zeros((n, 2), complex)
-                if tcur is None else
-                _fill_array(tcur, (n, 2), how)
+                if tcur is None
+                else _fill_array(tcur, (n, 2), how)
             )
             _set_attr_first(tp, ("tipper", "_tipper"), tnew)
 
@@ -621,9 +615,7 @@ def fill_missing(
     return ed
 
 
-
-def rotate_all(sites: Any, angle_deg: float, *,
-               inplace: bool = False):
+def rotate_all(sites: Any, angle_deg: float, *, inplace: bool = False):
     r"""
     Rotate every site in a collection by an azimuthal angle in
     degrees.
@@ -848,8 +840,7 @@ def rename_all(
     items = []
     for ed, _ in _each_site(sites):
         cur = station_name(ed)
-        new = name_fn(ed) if name_fn else (policy(cur)
-                                           if policy else cur)
+        new = name_fn(ed) if name_fn else (policy(cur) if policy else cur)
         items.append(rename(ed, name=str(new), inplace=False))
     return _wrap_output(sites, items, inplace=inplace)
 
@@ -941,20 +932,22 @@ def set_coords_all(
         if fr is None:
             return None
         try:
-            col = ("station" if "station" in fr.columns else None)
+            col = "station" if "station" in fr.columns else None
             if not col:
                 return None
             row = fr[fr[col] == name]
             if row is None or len(row) == 0:
                 return None
-            la = float(row["lat"].iloc[0] if "lat" in row else
-                       row["latitude"].iloc[0])
+            la = float(
+                row["lat"].iloc[0]
+                if "lat" in row
+                else row["latitude"].iloc[0]
+            )
             if "lon" in row:
                 lo = float(row["lon"].iloc[0])
             else:
                 lo = float(row["longitude"].iloc[0])
-            ev = float(row.get("elev", row.get("elevation",
-                                               0.0)).iloc[0])
+            ev = float(row.get("elev", row.get("elevation", 0.0)).iloc[0])
             return la, lo, ev
         except Exception:
             return None
@@ -991,6 +984,7 @@ def set_coords_all(
             )
         )
     return _wrap_output(sites, items, inplace=inplace)
+
 
 def recompute_res_phase(
     site: Any,
@@ -1076,6 +1070,7 @@ def recompute_res_phase(
         # Best-effort: never raise here
         pass
     return ed
+
 
 def set_coords_from_table(
     sites: Any,
@@ -1220,9 +1215,7 @@ def set_coords_from_table(
     """
 
     df, cols = _maybe_df(table, columns=columns)
-    mapping = _frame_to_mapping(
-        df, cols, crs_from=crs_from, to_crs=to_crs
-    )
+    mapping = _frame_to_mapping(df, cols, crs_from=crs_from, to_crs=to_crs)
     return set_coords_all(sites, mapping, inplace=inplace)
 
 
@@ -1360,8 +1353,7 @@ def _slice_fields(obj: Any, sl: Any) -> None:
     groups = [
         ("freq", ("freq", "frequency", "_freq")),
         ("z", ("z", "impedance", "_z")),
-        ("z_error", ("z_error", "z_err", "impedance_err",
-                     "_z_err")),
+        ("z_error", ("z_error", "z_err", "impedance_err", "_z_err")),
         ("rho", ("rho", "res", "resistivity", "_resistivity")),
         ("phase", ("phase", "phi", "_phase")),
         ("tipper", ("tipper", "tip", "_tipper")),
@@ -1381,6 +1373,7 @@ def _slice_fields(obj: Any, sl: Any) -> None:
                 # keep going to other fields
                 pass
 
+
 def _maybe_df(table: Any, columns: dict | None = None):
     """
     Coerce many table-like inputs to a small DataFrame with
@@ -1389,8 +1382,14 @@ def _maybe_df(table: Any, columns: dict | None = None):
       {'station','lat','lon','elev'} or {'station','easting',
        'northing','elev'} when lat/lon are absent.
     """
-    cols = {"station": None, "lat": None, "lon": None,
-            "elev": None, "easting": None, "northing": None}
+    cols = {
+        "station": None,
+        "lat": None,
+        "lon": None,
+        "elev": None,
+        "easting": None,
+        "northing": None,
+    }
 
     def _pick(name: str, choices: list[str]) -> str | None:
         for c in choices:
@@ -1434,8 +1433,7 @@ def _maybe_df(table: Any, columns: dict | None = None):
 
     # 4) Auto-detect columns when not provided
     if cols["station"] is None:
-        cols["station"] = _pick("station", ["station", "name",
-                                            "site", "id"])
+        cols["station"] = _pick("station", ["station", "name", "site", "id"])
     if cols["lat"] is None and cols["easting"] is None:
         cols["lat"] = _pick("lat", ["lat", "latitude"])
     if cols["lon"] is None and cols["easting"] is None:
@@ -1481,6 +1479,7 @@ def _project_en_to_lonlat(
     lon, lat = tr.transform(e, n)
     return np.asarray(lon, float), np.asarray(lat, float)
 
+
 def _frame_to_mapping(
     df: Any,
     cols: dict,
@@ -1507,12 +1506,9 @@ def _frame_to_mapping(
             )
         ev = np.asarray(df[cols["easting"]], float)
         nv = np.asarray(df[cols["northing"]], float)
-        lonv, latv = _project_en_to_lonlat(ev, nv, crs_from,
-                                           to_crs=to_crs)
+        lonv, latv = _project_en_to_lonlat(ev, nv, crs_from, to_crs=to_crs)
     else:
-        raise ValueError(
-            "Could not resolve lat/lon nor easting/northing."
-        )
+        raise ValueError("Could not resolve lat/lon nor easting/northing.")
 
     if elevc and elevc in df.columns:
         elv = np.asarray(df[elevc], float)
@@ -1553,9 +1549,9 @@ def _set_attr_first(obj: Any, names: Iterable[str], val: Any):
 def _each_site(container: Any):
     try:
         from .base import Sites  # lazy import
+
         if isinstance(container, Sites):
-            for i, s in enumerate(getattr(container, "_items",
-                                          [])):
+            for i, s in enumerate(getattr(container, "_items", [])):
                 yield getattr(s, "edi", s), i
             return
     except Exception:
@@ -1564,12 +1560,11 @@ def _each_site(container: Any):
         yield ed, i
 
 
-def _wrap_output(
-    src: Any, items: list[Any], *, inplace: bool
-) -> Any:
+def _wrap_output(src: Any, items: list[Any], *, inplace: bool) -> Any:
     if inplace:
         try:
             from .base import Sites
+
             if isinstance(src, Sites):
                 for (s, _), ne in zip(_each_site(src), items):
                     # preserve Site wrappers, swap underlying EDI
@@ -1579,6 +1574,7 @@ def _wrap_output(
             pass
     try:
         from .base import Sites
+
         return Sites(items)
     except Exception:
         return items
@@ -1591,9 +1587,7 @@ def _fill_array(a: Any, shape: tuple[int, ...], how: str) -> np.ndarray:
         return np.full(shape, np.nan, float)
     out = np.array(a, copy=True)
     if how == "zero":
-        out = np.nan_to_num(
-            out, nan=0.0, posinf=0.0, neginf=0.0
-        )
+        out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
     else:
         out[~np.isfinite(out)] = np.nan
     return out

@@ -11,10 +11,10 @@ _HAS_EDIS = _EDI_DIR.exists() and any(_EDI_DIR.glob("*.edi"))
 
 @unittest.skipUnless(_HAS_EDIS, "3edis dataset not found")
 class TestMTLoaderAgentWithRealData(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         from pycsamt.agents import MTLoaderAgent
+
         cls.agent = MTLoaderAgent()
         cls.result = cls.agent.execute({"path": str(_EDI_DIR)})
 
@@ -48,15 +48,16 @@ class TestMTLoaderAgentWithRealData(unittest.TestCase):
 
 
 class TestMTLoaderAgentMissingPath(unittest.TestCase):
-
     def test_nonexistent_path_fails(self):
         from pycsamt.agents import MTLoaderAgent
+
         r = MTLoaderAgent().execute({"path": "/nonexistent/path/to/edis"})
         self.assertEqual(r.status, "failed")
         self.assertIsNotNone(r.error)
 
     def test_no_path_fails(self):
         from pycsamt.agents import MTLoaderAgent
+
         r = MTLoaderAgent().execute({})
         self.assertEqual(r.status, "failed")
 

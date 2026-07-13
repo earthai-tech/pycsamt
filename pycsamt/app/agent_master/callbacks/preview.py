@@ -26,6 +26,7 @@ def _convert_png_to(
     Returns raw bytes for the target format.
     """
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
@@ -35,15 +36,13 @@ def _convert_png_to(
 
     try:
         import cv2
+
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-        img_rgb = cv2.cvtColor(
-            img, cv2.COLOR_BGR2RGB
-        )
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     except ImportError:
         from PIL import Image
-        img_rgb = np.array(
-            Image.open(io.BytesIO(raw))
-        )
+
+        img_rgb = np.array(Image.open(io.BytesIO(raw)))
 
     fig, ax = plt.subplots(
         figsize=(
@@ -94,40 +93,26 @@ def register_preview(app) -> None:
         State(IDs.STORE_SETTINGS, "data"),
         prevent_initial_call=True,
     )
-    def export_figure(
-        n_clicks, fig_key, fig_store, settings
-    ):
+    def export_figure(n_clicks, fig_key, fig_store, settings):
         if not any(n_clicks):
             raise PreventUpdate
         triggered = ctx.triggered_id
         if not triggered:
             raise PreventUpdate
         fmt = triggered.get("fmt", "png")
-        if (
-            not fig_key
-            or not fig_store
-            or fig_key not in fig_store
-        ):
+        if not fig_key or not fig_store or fig_key not in fig_store:
             raise PreventUpdate
 
         info = fig_store[fig_key]
         b64 = info.get("b64", "")
         title = info.get("title", "figure")
-        safe = (
-            title.replace(" ", "_")
-            .replace("/", "_")
-            .lower()
-        )
+        safe = title.replace(" ", "_").replace("/", "_").lower()
         fname = f"{safe}.{fmt}"
 
         if fmt == "png":
             raw = base64.b64decode(b64)
-            return dcc.send_bytes(
-                raw, filename=fname
-            )
+            return dcc.send_bytes(raw, filename=fname)
 
         # convert for non-PNG formats
         raw = _convert_png_to(b64, fmt)
-        return dcc.send_bytes(
-            raw, filename=fname
-        )
+        return dcc.send_bytes(raw, filename=fname)

@@ -133,10 +133,8 @@ class CollectionMixin(ParseMixin):
             logger.info("Added with %d errors.", len(errs))
         return self
 
-    def select(
-        self, stations: Sequence[str]
-    ) -> EDICollection:
-        stations = columns_manager( stations, empty_as_none=False )
+    def select(self, stations: Sequence[str]) -> EDICollection:
+        stations = columns_manager(stations, empty_as_none=False)
 
         keep = {str(s) for s in stations}
         out = EDICollection(verbose=self.verbose)
@@ -146,9 +144,7 @@ class CollectionMixin(ParseMixin):
                 out.add(ed)
         return out
 
-    def where(
-        self, fn: Callable[[EDIFile], bool]
-    ) -> EDICollection:
+    def where(self, fn: Callable[[EDIFile], bool]) -> EDICollection:
         out = EDICollection(verbose=self.verbose)
         for ed in self:  # type: ignore[operator]
             if fn(ed):
@@ -327,7 +323,6 @@ class EDICollection(CBBase, CollectionMixin):
     ) -> None:
         super().__init__(items=items, verbose=verbose)
 
-
     @classmethod
     def from_sources(
         cls,
@@ -355,7 +350,6 @@ class EDICollection(CBBase, CollectionMixin):
             )
         return col
 
-
     def merge(
         self,
         other: EDICollection,
@@ -375,7 +369,6 @@ class EDICollection(CBBase, CollectionMixin):
                 continue
             out.add(ed)
         return out
-
 
     def _resolve(self, site: str):
         """Find item by key, station, stem or filename
@@ -401,8 +394,7 @@ class EDICollection(CBBase, CollectionMixin):
             if p is None:
                 continue
             if (
-                p.stem.lower() in {low} |
-                {c.lower() for c in cands}
+                p.stem.lower() in {low} | {c.lower() for c in cands}
                 or p.name.lower() == low
                 or str(p).lower() == low
             ):
@@ -417,7 +409,6 @@ class EDICollection(CBBase, CollectionMixin):
 
     def _head(self, ed: EDIFile):
         return ed.get_section("head")
-
 
     def get(
         self,
@@ -447,8 +438,9 @@ class EDICollection(CBBase, CollectionMixin):
         if w == "z":
             return getattr(ed.Z, "z", None)
         if w in {"zxx", "zxy", "zyx", "zyy"}:
-            m = {"zxx": (0, 0), "zxy": (0, 1),
-                 "zyx": (1, 0), "zyy": (1, 1)}[w]
+            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[
+                w
+            ]
             z = getattr(ed.Z, "z", None)
             if z is None:
                 return default
@@ -515,11 +507,11 @@ class EDICollection(CBBase, CollectionMixin):
         if edi is not None:
             # try a collection-level replace
             try:
-                self.remove(site)          # optional on CBBase
+                self.remove(site)  # optional on CBBase
             except Exception:
                 pass
             try:
-                self.add(edi)              # CBBase.add
+                self.add(edi)  # CBBase.add
             except Exception:
                 # fallback: mutate mapping directly
                 idx = getattr(self, "_index", None)
@@ -581,7 +573,6 @@ class EDICollection(CBBase, CollectionMixin):
 
         return ed
 
-
     def adjust(
         self,
         site: str,
@@ -618,7 +609,7 @@ class EDICollection(CBBase, CollectionMixin):
                 if hasattr(head, "long"):
                     head.long = float(lon)
                 else:
-                    head.lon = float(lon)   # type: ignore[attr-defined]
+                    head.lon = float(lon)  # type: ignore[attr-defined]
             except Exception:
                 pass
         if elev is not None:
@@ -724,7 +715,6 @@ class EDICollection(CBBase, CollectionMixin):
         policy: StationNamePolicy | None = None,
         **kwargs,
     ) -> EDIFile | list[EDIFile] | None:
-
         r"""
         Fetch EDI files by station, coordinates, or other metadata.
 
@@ -838,12 +828,10 @@ class EDICollection(CBBase, CollectionMixin):
                specification.
         """
 
-
         matches: list[EDIFile] = []
 
         site_cands = (
-            set(_site_candidates(site, policy))
-            if site is not None else set()
+            set(_site_candidates(site, policy)) if site is not None else set()
         )
 
         for edi in self:
@@ -853,9 +841,7 @@ class EDICollection(CBBase, CollectionMixin):
             # --- station match (case-insensitive, with variants)
             if site is not None:
                 est = getattr(edi, "station", None)
-                if not (
-                    est and est.upper() in site_cands
-                ):
+                if not (est and est.upper() in site_cands):
                     ok = False
 
             # --- geo match with tolerance
@@ -960,11 +946,7 @@ class EDICollection(CBBase, CollectionMixin):
         return np.asarray(vals, dtype=float)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"EDICollection(n={len(self)}, "
-            f"stations={self.stations()!r})"
-        )
-
+        return f"EDICollection(n={len(self)}, stations={self.stations()!r})"
 
     def _summary_stats(self, summary_data: list[dict]) -> str:
         """Creates a statistical summary block from summary data."""
@@ -977,29 +959,35 @@ class EDICollection(CBBase, CollectionMixin):
         with_ts = sum(1 for r in summary_data if r.get("ts"))
 
         # Get all frequencies from all files to find the true min/max
-        all_freqs = np.concatenate([
-            edi.Z.freq for edi in self if edi.Z.freq is not None
-            and edi.Z.freq.size > 0
-        ]) if total_files > 0 else np.array([])
+        all_freqs = (
+            np.concatenate(
+                [
+                    edi.Z.freq
+                    for edi in self
+                    if edi.Z.freq is not None and edi.Z.freq.size > 0
+                ]
+            )
+            if total_files > 0
+            else np.array([])
+        )
 
         lats = self.latitude[~np.isnan(self.latitude)]
         lons = self.longitude[~np.isnan(self.longitude)]
 
         freq_range = (
             f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}"
-            if all_freqs.size > 0 else "N/A"
+            if all_freqs.size > 0
+            else "N/A"
         )
-        lat_range =(
-            f"{min(lats):.4f} to {max(lats):.4f}"
-            if len(lats) > 0 else "N/A"
+        lat_range = (
+            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
         )
         lon_range = (
-            f"{min(lons):.4f} to {max(lons):.4f}"
-            if len(lons) > 0 else "N/A"
+            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
         )
 
         lines = [
-            "  " + "-"*65,
+            "  " + "-" * 65,
             "  Statistical Summary:",
             f"    Total Sites: {total_files}",
             f"    Content Counts: Tipper={with_tipper},"
@@ -1007,10 +995,9 @@ class EDICollection(CBBase, CollectionMixin):
             f"    Frequency Range (Hz): {freq_range}",
             f"    Latitude Range:       {lat_range}",
             f"    Longitude Range:      {lon_range}",
-            "  " + "-"*65,
+            "  " + "-" * 65,
         ]
         return "\n".join(lines)
-
 
     def __str__(self) -> str:  # pragma: no cover
         """Provides a detailed and statistical summary of the collection."""
@@ -1021,16 +1008,13 @@ class EDICollection(CBBase, CollectionMixin):
         # --- Header ---
         title = f" EDICollection Summary (Total Sites: {len(summary_data)}) "
         width = 70
-        header = [
-            "=" * width,
-            title.center(width),
-            "=" * width
-        ]
+        header = ["=" * width, title.center(width), "=" * width]
 
         # --- Per-Site Details ---
         details = ["\nSite Details:"]
         max_station_len = max(
-            [len(r['station']) for r in summary_data] + [len("Station")])
+            [len(r["station"]) for r in summary_data] + [len("Station")]
+        )
 
         table_header = (
             f"  {'Station'.ljust(max_station_len)} | Freqs"
@@ -1053,7 +1037,7 @@ class EDICollection(CBBase, CollectionMixin):
         details.append("  " + "-" * table_width)
         details.append(
             "  *Y = Yes (data present); *N = No (data not present)"
-            )
+        )
 
         # --- Statistical Summary ---
         stats_str = self._summary_stats(summary_data)
@@ -1081,18 +1065,12 @@ def _site_candidates(
     if x is not None:
         n = int(round(x))
         cands.add(str(n).upper())
-        cands.add(
-            f"{pol.prefix}{n:0{pol.pad}d}".upper()
-        )
+        cands.add(f"{pol.prefix}{n:0{pol.pad}d}".upper())
         # common “×10” slip: try n*10 and n/10
         cands.add(str(n * 10).upper())
-        cands.add(
-            f"{pol.prefix}{n * 10:0{pol.pad}d}".upper()
-        )
+        cands.add(f"{pol.prefix}{n * 10:0{pol.pad}d}".upper())
         if n % 10 == 0:
             m = n // 10
             cands.add(str(m).upper())
-            cands.add(
-                f"{pol.prefix}{m:0{pol.pad}d}".upper()
-            )
+            cands.add(f"{pol.prefix}{m:0{pol.pad}d}".upper())
     return list(cands)

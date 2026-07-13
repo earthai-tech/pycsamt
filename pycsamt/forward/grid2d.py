@@ -49,6 +49,7 @@ de Groot-Hedlin, C., Constable, S. (1990). Occam's inversion to generate
 smooth, two-dimensional models from magnetotelluric data. *Geophysics*,
 55(12), 1613-1624.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -63,6 +64,7 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def make_padding(
     core_spacing: float,
@@ -101,6 +103,7 @@ def _ensure_rng(seed) -> np.random.Generator:
 # ─────────────────────────────────────────────────────────────────────────────
 # Grid2D
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class Grid2D:
@@ -175,20 +178,20 @@ class Grid2D:
         >>> g = Grid2D.from_1d_layers(m, nx=40, x_max=6_000.0, n_stations=12)
     """
 
-    dx:          np.ndarray
-    dz:          np.ndarray
+    dx: np.ndarray
+    dz: np.ndarray
     resistivity: np.ndarray
-    x_stations:  np.ndarray
-    n_pad:       int   = 0
-    name:        str   = ""
+    x_stations: np.ndarray
+    n_pad: int = 0
+    name: str = ""
 
     # ─── post-init normalisation ──────────────────────────────────────────
 
     def __post_init__(self):
-        self.dx          = np.asarray(self.dx,          dtype=float)
-        self.dz          = np.asarray(self.dz,          dtype=float)
+        self.dx = np.asarray(self.dx, dtype=float)
+        self.dz = np.asarray(self.dz, dtype=float)
         self.resistivity = np.asarray(self.resistivity, dtype=float)
-        self.x_stations  = np.asarray(self.x_stations,  dtype=float)
+        self.x_stations = np.asarray(self.x_stations, dtype=float)
 
         if self.resistivity.shape != (self.nz, self.nx):
             raise ValueError(
@@ -307,8 +310,8 @@ class Grid2D:
         thick : ndarray, shape (nz-1,)
             Layer thicknesses [m].  (Bottom layer is a halfspace.)
         """
-        rho   = self.resistivity[:, col]
-        thick = self.dz[:-1]      # nz-1 thicknesses; last cell = halfspace
+        rho = self.resistivity[:, col]
+        thick = self.dz[:-1]  # nz-1 thicknesses; last cell = halfspace
         return rho, thick
 
     def station_cell_indices(self) -> np.ndarray:
@@ -332,7 +335,9 @@ class Grid2D:
         indices : ndarray of int, shape (n_stations,)
         """
         xn = self.x_nodes
-        return np.argmin(np.abs(xn[:, None] - self.x_stations[None, :]), axis=0)
+        return np.argmin(
+            np.abs(xn[:, None] - self.x_stations[None, :]), axis=0
+        )
 
     # ─── conductivity helpers ─────────────────────────────────────────────
 
@@ -415,14 +420,26 @@ class Grid2D:
         xs = self.core_x_slice if clip_core else slice(None)
         zs = self.core_z_slice if clip_core else slice(None)
         rho = self.resistivity[zs, xs]
-        xn  = self.x_nodes[self.n_pad : self.nx + 1 - self.n_pad] if clip_core else self.x_nodes
-        zn  = self.z_nodes[: self.nz + 1 - self.n_pad] if clip_core else self.z_nodes
+        xn = (
+            self.x_nodes[self.n_pad : self.nx + 1 - self.n_pad]
+            if clip_core
+            else self.x_nodes
+        )
+        zn = (
+            self.z_nodes[: self.nz + 1 - self.n_pad]
+            if clip_core
+            else self.z_nodes
+        )
 
         if log_scale:
             pc = ax.pcolormesh(
-                xn, zn, np.log10(rho),
-                cmap=cmap, shading="flat",
-                vmin=vmin, vmax=vmax,
+                xn,
+                zn,
+                np.log10(rho),
+                cmap=cmap,
+                shading="flat",
+                vmin=vmin,
+                vmax=vmax,
             )
             cbar = ax.get_figure().colorbar(pc, ax=ax, pad=0.02)
             cbar.set_label("log₁₀(ρ)  [Ω·m]", fontsize=8)
@@ -431,14 +448,21 @@ class Grid2D:
                 vmin=vmin or rho.min(),
                 vmax=vmax or rho.max(),
             )
-            pc = ax.pcolormesh(xn, zn, rho, cmap=cmap, norm=norm, shading="flat")
+            pc = ax.pcolormesh(
+                xn, zn, rho, cmap=cmap, norm=norm, shading="flat"
+            )
             cbar = ax.get_figure().colorbar(pc, ax=ax, pad=0.02)
             cbar.set_label("ρ  [Ω·m]", fontsize=8)
 
         if show_stations and self.n_stations > 0:
             ax.plot(
-                self.x_stations, np.zeros_like(self.x_stations),
-                "v", color="k", ms=5, zorder=5, label="stations",
+                self.x_stations,
+                np.zeros_like(self.x_stations),
+                "v",
+                color="k",
+                ms=5,
+                zorder=5,
+                label="stations",
             )
 
         ax.invert_yaxis()
@@ -470,7 +494,7 @@ class Grid2D:
         nx: int = 40,
         nz: int = 30,
         x_max: float = 10_000.0,
-        z_max: float =  5_000.0,
+        z_max: float = 5_000.0,
         n_pad: int = 8,
         pad_factor: float = 1.3,
         n_stations: int = 10,
@@ -509,7 +533,7 @@ class Grid2D:
         dx_core = np.full(nx, x_max / nx)
         dz_core = np.full(nz, z_max / nz)
 
-        dx_pad = make_padding(dx_core[0],  n_pad, pad_factor)
+        dx_pad = make_padding(dx_core[0], n_pad, pad_factor)
         dz_pad = make_padding(dz_core[-1], n_pad, pad_factor)
 
         dx_full = np.concatenate([dx_pad[::-1], dx_core, dx_pad])
@@ -524,7 +548,8 @@ class Grid2D:
         x_st = np.linspace(0.0, sx_max, n_stations) + x_pad_offset
 
         return cls(
-            dx=dx_full, dz=dz_full,
+            dx=dx_full,
+            dz=dz_full,
             resistivity=rho_grid,
             x_stations=x_st,
             n_pad=n_pad,
@@ -534,7 +559,7 @@ class Grid2D:
     @classmethod
     def from_1d_layers(
         cls,
-        model,           # LayeredModel
+        model,  # LayeredModel
         *,
         nx: int = 40,
         x_max: float = 10_000.0,
@@ -578,15 +603,16 @@ class Grid2D:
         Grid2D
         """
         dx_core = np.full(nx, x_max / nx)
-        dx_pad  = make_padding(dx_core[0], n_pad, pad_factor)
+        dx_pad = make_padding(dx_core[0], n_pad, pad_factor)
         dx_full = np.concatenate([dx_pad[::-1], dx_core, dx_pad])
 
         # Build dz from model thicknesses; add a deep halfspace cell
         thick = np.asarray(model.thickness, dtype=float)
-        dz_core = np.concatenate([np.maximum(thick, dz_min),
-                                   [np.maximum(thick[-1] * 3.0, dz_min)]])
+        dz_core = np.concatenate(
+            [np.maximum(thick, dz_min), [np.maximum(thick[-1] * 3.0, dz_min)]]
+        )
         len(dz_core)
-        dz_pad  = make_padding(dz_core[-1], n_pad, pad_factor)
+        dz_pad = make_padding(dz_core[-1], n_pad, pad_factor)
         dz_full = np.concatenate([dz_core, dz_pad])
 
         nx_total = len(dx_full)
@@ -596,9 +622,7 @@ class Grid2D:
         # model.resistivity has n_layers values; dz_core has len(thick)+1
         # cells (last cell is the halfspace discretisation) — they match.
         rho_col = np.asarray(model.resistivity, dtype=float)
-        rho_col_full = np.concatenate(
-            [rho_col, np.full(n_pad, rho_col[-1])]
-        )
+        rho_col_full = np.concatenate([rho_col, np.full(n_pad, rho_col[-1])])
         rho_grid = np.tile(rho_col_full[:, None], (1, nx_total))
 
         x_pad_offset = dx_pad[::-1].sum()
@@ -606,7 +630,8 @@ class Grid2D:
         x_st = np.linspace(0.0, sx_max, n_stations) + x_pad_offset
 
         return cls(
-            dx=dx_full, dz=dz_full,
+            dx=dx_full,
+            dz=dz_full,
             resistivity=rho_grid,
             x_stations=x_st,
             n_pad=n_pad,
@@ -618,7 +643,12 @@ class Grid2D:
         cls,
         bg_rho: float = 100.0,
         anomaly_rho: float = 5.0,
-        anomaly_bounds: tuple[float, float, float, float] = (2_000.0, 4_000.0, 200.0, 800.0),
+        anomaly_bounds: tuple[float, float, float, float] = (
+            2_000.0,
+            4_000.0,
+            200.0,
+            800.0,
+        ),
         *,
         nx: int = 50,
         nz: int = 35,
@@ -670,9 +700,13 @@ class Grid2D:
             ... )
         """
         g = cls.halfspace(
-            rho=bg_rho, nx=nx, nz=nz,
-            x_max=x_max, z_max=z_max,
-            n_pad=n_pad, pad_factor=pad_factor,
+            rho=bg_rho,
+            nx=nx,
+            nz=nz,
+            x_max=x_max,
+            z_max=z_max,
+            n_pad=n_pad,
+            pad_factor=pad_factor,
             n_stations=n_stations,
             station_x_max=station_x_max,
             name=name or f"bg={bg_rho} + anomaly={anomaly_rho} Ω·m",
@@ -740,9 +774,13 @@ class Grid2D:
 
         # Build grid geometry
         g = cls.halfspace(
-            rho=100.0, nx=nx, nz=nz,
-            x_max=x_max, z_max=z_max,
-            n_pad=n_pad, pad_factor=pad_factor,
+            rho=100.0,
+            nx=nx,
+            nz=nz,
+            x_max=x_max,
+            z_max=z_max,
+            n_pad=n_pad,
+            pad_factor=pad_factor,
             n_stations=n_stations,
             name=name,
         )
@@ -757,7 +795,7 @@ class Grid2D:
         rho_bg = np.ones((nz_tot, nx_tot))
         for k in range(n_layers):
             rho_k = 10.0 ** rng.uniform(log_lo, log_hi)
-            rho_bg[layer_bounds[k]: layer_bounds[k + 1], :] = rho_k
+            rho_bg[layer_bounds[k] : layer_bounds[k + 1], :] = rho_k
 
         if lateral_variation:
             # Column-wise log-normal perturbation, spatially correlated in x
@@ -765,9 +803,10 @@ class Grid2D:
             # Smooth in x with a running mean over 3 cells
             log_perturb = np.apply_along_axis(
                 lambda v: np.convolve(v, np.ones(3) / 3, mode="same"),
-                axis=1, arr=log_perturb,
+                axis=1,
+                arr=log_perturb,
             )
-            rho_bg = np.clip(rho_bg * 10.0 ** log_perturb, rho_min, rho_max)
+            rho_bg = np.clip(rho_bg * 10.0**log_perturb, rho_min, rho_max)
 
         g.resistivity = rho_bg
         return g

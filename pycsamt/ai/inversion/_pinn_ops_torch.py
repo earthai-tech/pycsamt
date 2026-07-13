@@ -9,6 +9,7 @@ All ``import torch`` calls are deferred to function
 bodies so that importing this module never fails on
 systems without PyTorch.
 """
+
 from __future__ import annotations
 
 import math
@@ -52,8 +53,8 @@ def _mt1d_torch(freqs_t, log_rho, log_thick):
     """
     import torch
 
-    rho = 10.0 ** log_rho
-    thick = 10.0 ** log_thick
+    rho = 10.0**log_rho
+    thick = 10.0**log_thick
     omega = 2.0 * _PI * freqs_t
 
     j_mu_w = torch.complex(
@@ -108,21 +109,19 @@ def _mt1d_torch_batch(freqs_t, log_rho, log_thick):
     import torch
 
     S, L = log_rho.shape
-    rho = 10.0 ** log_rho
-    thick = 10.0 ** log_thick
+    rho = 10.0**log_rho
+    thick = 10.0**log_thick
     omega = 2.0 * _PI * freqs_t
 
     j_mu_w = torch.complex(
         torch.zeros_like(omega),
         _MU0 * omega,
-    ).unsqueeze(0)                 # (1, F)
+    ).unsqueeze(0)  # (1, F)
 
     rho_c = rho.to(torch.cdouble)
 
-    k_n = torch.sqrt(
-        j_mu_w / rho_c[:, -1:]
-    )
-    Z = j_mu_w / k_n              # (S, F)
+    k_n = torch.sqrt(j_mu_w / rho_c[:, -1:])
+    Z = j_mu_w / k_n  # (S, F)
 
     j_unit = torch.tensor(
         0 + 1j,
@@ -130,24 +129,15 @@ def _mt1d_torch_batch(freqs_t, log_rho, log_thick):
         device=freqs_t.device,
     )
     for idx in range(L - 2, -1, -1):
-        k_j = torch.sqrt(
-            j_mu_w / rho_c[:, idx: idx + 1]
-        )
+        k_j = torch.sqrt(j_mu_w / rho_c[:, idx : idx + 1])
         Z0_j = j_mu_w / k_j
-        h = (
-            thick[:, idx]
-            .to(torch.cdouble)
-            .unsqueeze(1)
-        )
+        h = thick[:, idx].to(torch.cdouble).unsqueeze(1)
         kh = k_j * h
         tanh_v = torch.tanh(j_unit * kh)
         denom = Z0_j + Z * tanh_v
         Z = Z0_j * (Z + Z0_j * tanh_v) / denom
 
-    rho_a = (
-        torch.abs(Z) ** 2
-        / (_MU0 * omega.unsqueeze(0))
-    )
+    rho_a = torch.abs(Z) ** 2 / (_MU0 * omega.unsqueeze(0))
     phase = torch.angle(Z) * (180.0 / _PI)
     return rho_a, phase
 
@@ -218,18 +208,10 @@ def _fit_station_torch(
     )
 
     if init_log_rho is None:
-        init_lr = float(
-            np.mean(
-                np.log10(np.maximum(rho_obs, 1e-3))
-            )
-        )
-        init_lr_v = np.full(
-            n_layers, init_lr, dtype=np.float64
-        )
+        init_lr = float(np.mean(np.log10(np.maximum(rho_obs, 1e-3))))
+        init_lr_v = np.full(n_layers, init_lr, dtype=np.float64)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=np.float64
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=np.float64)
 
     if init_log_thick is None:
         dz = depth_max / n_layers
@@ -239,9 +221,7 @@ def _fit_station_torch(
             dtype=np.float64,
         )
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=np.float64
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=np.float64)
 
     log_rho = torch.tensor(
         init_lr_v,
@@ -256,61 +236,37 @@ def _fit_station_torch(
         requires_grad=True,
     )
 
-    opt = torch.optim.Adam(
-        [log_rho, log_thick], lr=lr
-    )
+    opt = torch.optim.Adam([log_rho, log_thick], lr=lr)
     history: list[float] = []
 
-    valid = (
-        torch.isfinite(log_rho_obs_t)
-        & torch.isfinite(ph_obs_t)
-    )
+    valid = torch.isfinite(log_rho_obs_t) & torch.isfinite(ph_obs_t)
 
     for ep in range(1, epochs + 1):
         opt.zero_grad()
-        rho_pred, ph_pred = _mt1d_torch(
-            freqs_t, log_rho, log_thick
-        )
-        lr_pred = torch.log10(
-            rho_pred.clamp(min=1e-12)
-        )
+        rho_pred, ph_pred = _mt1d_torch(freqs_t, log_rho, log_thick)
+        lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
 
         # NaN-safe loss: detach pred at missing obs
-        lr_safe = torch.where(
-            valid, log_rho_obs_t, lr_pred.detach()
-        )
-        ph_safe = torch.where(
-            valid, ph_obs_t, ph_pred.detach()
-        )
+        lr_safe = torch.where(valid, log_rho_obs_t, lr_pred.detach())
+        ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
         n_v = valid.sum().clamp(min=1)
         data_loss = (
-            (lr_pred - lr_safe) ** 2
-            + ((ph_pred - ph_safe) / 90.0) ** 2
+            (lr_pred - lr_safe) ** 2 + ((ph_pred - ph_safe) / 90.0) ** 2
         ).sum() / n_v
-        smooth = (
-            (log_rho[1:] - log_rho[:-1]) ** 2
-        ).mean()
+        smooth = ((log_rho[1:] - log_rho[:-1]) ** 2).mean()
         loss = data_loss + lam * smooth
         loss.backward()
         opt.step()
         history.append(loss.detach().item())
 
-        if log_every > 0 and (
-            ep == 1 or ep % log_every == 0
-        ):
+        if log_every > 0 and (ep == 1 or ep % log_every == 0):
             print(
-                f"  {obs.name}"
-                f"  ep {ep:>5d}/{epochs}"
-                f"  loss={loss.item():.5f}"
+                f"  {obs.name}  ep {ep:>5d}/{epochs}  loss={loss.item():.5f}"
             )
 
     return {
-        "log_rho": (
-            log_rho.detach().cpu().numpy()
-        ),
-        "log_thick": (
-            log_thick.detach().cpu().numpy()
-        ),
+        "log_rho": (log_rho.detach().cpu().numpy()),
+        "log_thick": (log_thick.detach().cpu().numpy()),
         "history": history,
     }
 
@@ -384,10 +340,7 @@ def _fit_2d_joint_torch(
         dtype=torch.float64,
         device=device,
     )
-    valid = (
-        torch.isfinite(lr_obs_t)
-        & torch.isfinite(ph_obs_t)
-    )
+    valid = torch.isfinite(lr_obs_t) & torch.isfinite(ph_obs_t)
 
     if init_log_rho is None:
         mean_lr = float(np.nanmean(log_rho_obs))
@@ -395,19 +348,13 @@ def _fit_2d_joint_torch(
             mean_lr = 2.0
         init_lr_v = np.full((S, L), mean_lr)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=float
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=float)
 
     if init_log_thick is None:
         dz = max(depth_max / L, 1.0)
-        init_lt_v = np.full(
-            (S, L - 1), np.log10(dz)
-        )
+        init_lt_v = np.full((S, L - 1), np.log10(dz))
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=float
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=float)
 
     log_rho = torch.tensor(
         init_lr_v,
@@ -422,44 +369,25 @@ def _fit_2d_joint_torch(
         requires_grad=True,
     )
 
-    opt = torch.optim.Adam(
-        [log_rho, log_thick], lr=lr
-    )
+    opt = torch.optim.Adam([log_rho, log_thick], lr=lr)
     history: list[float] = []
 
     for ep in range(1, epochs + 1):
         opt.zero_grad()
-        rho_pred, ph_pred = _mt1d_torch_batch(
-            freqs_t, log_rho, log_thick
-        )
-        lr_pred = torch.log10(
-            rho_pred.clamp(min=1e-12)
-        )
+        rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
+        lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
 
-        lr_safe = torch.where(
-            valid, lr_obs_t, lr_pred.detach()
-        )
-        ph_safe = torch.where(
-            valid, ph_obs_t, ph_pred.detach()
-        )
+        lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
+        ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
         res_rho = (lr_pred - lr_safe) ** 2
         res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
         n_v = valid.sum().clamp(min=1)
-        data_loss = (
-            (res_rho + res_ph).sum() / n_v
-        )
+        data_loss = (res_rho + res_ph).sum() / n_v
 
-        vert = (
-            (log_rho[:, 1:] - log_rho[:, :-1]) ** 2
-        ).mean()
+        vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
 
         if S > 1:
-            lat = (
-                (
-                    log_rho[1:, :]
-                    - log_rho[:-1, :]
-                ) ** 2
-            ).mean()
+            lat = ((log_rho[1:, :] - log_rho[:-1, :]) ** 2).mean()
         else:
             lat = torch.tensor(
                 0.0,
@@ -469,27 +397,18 @@ def _fit_2d_joint_torch(
 
         loss = data_loss + lam_z * vert + lam_x * lat
         loss.backward()
-        nn.utils.clip_grad_norm_(
-            [log_rho, log_thick], max_norm=5.0
-        )
+        nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
         opt.step()
         with torch.no_grad():
             log_thick.clamp_(0.0, 5.0)
         history.append(loss.detach().item())
 
         if log_every > 0 and ep % log_every == 0:
-            print(
-                f"  epoch {ep:>5d}/{epochs}"
-                f"  loss={history[-1]:.5f}"
-            )
+            print(f"  epoch {ep:>5d}/{epochs}  loss={history[-1]:.5f}")
 
     return {
-        "log_rho": (
-            log_rho.detach().cpu().numpy()
-        ),
-        "log_thick": (
-            log_thick.detach().cpu().numpy()
-        ),
+        "log_rho": (log_rho.detach().cpu().numpy()),
+        "log_thick": (log_thick.detach().cpu().numpy()),
         "history": history,
     }
 
@@ -566,10 +485,7 @@ def _fit_3d_joint_torch(
         dtype=torch.float64,
         device=device,
     )
-    valid = (
-        torch.isfinite(lr_obs_t)
-        & torch.isfinite(ph_obs_t)
-    )
+    valid = torch.isfinite(lr_obs_t) & torch.isfinite(ph_obs_t)
 
     A_t = torch.tensor(
         adjacency,
@@ -584,19 +500,13 @@ def _fit_3d_joint_torch(
             mean_lr = 2.0
         init_lr_v = np.full((S, L), mean_lr)
     else:
-        init_lr_v = np.asarray(
-            init_log_rho, dtype=float
-        )
+        init_lr_v = np.asarray(init_log_rho, dtype=float)
 
     if init_log_thick is None:
         dz = max(depth_max / L, 1.0)
-        init_lt_v = np.full(
-            (S, L - 1), np.log10(dz)
-        )
+        init_lt_v = np.full((S, L - 1), np.log10(dz))
     else:
-        init_lt_v = np.asarray(
-            init_log_thick, dtype=float
-        )
+        init_lt_v = np.asarray(init_log_thick, dtype=float)
 
     log_rho = torch.tensor(
         init_lr_v,
@@ -611,72 +521,40 @@ def _fit_3d_joint_torch(
         requires_grad=True,
     )
 
-    opt = torch.optim.Adam(
-        [log_rho, log_thick], lr=lr
-    )
+    opt = torch.optim.Adam([log_rho, log_thick], lr=lr)
     history: list[float] = []
 
     for ep in range(1, epochs + 1):
         opt.zero_grad()
-        rho_pred, ph_pred = _mt1d_torch_batch(
-            freqs_t, log_rho, log_thick
-        )
-        lr_pred = torch.log10(
-            rho_pred.clamp(min=1e-12)
-        )
+        rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
+        lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
 
-        lr_safe = torch.where(
-            valid, lr_obs_t, lr_pred.detach()
-        )
-        ph_safe = torch.where(
-            valid, ph_obs_t, ph_pred.detach()
-        )
+        lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
+        ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
         res_rho = (lr_pred - lr_safe) ** 2
         res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
         n_v = valid.sum().clamp(min=1)
-        data_loss = (
-            (res_rho + res_ph).sum() / n_v
-        )
+        data_loss = (res_rho + res_ph).sum() / n_v
 
-        vert = (
-            (log_rho[:, 1:] - log_rho[:, :-1]) ** 2
-        ).mean()
+        vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
 
         # Graph Laplacian: L = D - A
-        Lm = (
-            d_vec.unsqueeze(1) * log_rho
-            - A_t @ log_rho
-        )
-        spatial = (
-            (Lm * log_rho).sum() / log_rho.numel()
-        )
+        Lm = d_vec.unsqueeze(1) * log_rho - A_t @ log_rho
+        spatial = (Lm * log_rho).sum() / log_rho.numel()
 
-        loss = (
-            data_loss
-            + lam_z * vert
-            + lam_g * spatial
-        )
+        loss = data_loss + lam_z * vert + lam_g * spatial
         loss.backward()
-        nn.utils.clip_grad_norm_(
-            [log_rho, log_thick], max_norm=5.0
-        )
+        nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
         opt.step()
         with torch.no_grad():
             log_thick.clamp_(0.0, 5.0)
         history.append(loss.detach().item())
 
         if log_every > 0 and ep % log_every == 0:
-            print(
-                f"  epoch {ep:>5d}/{epochs}"
-                f"  loss={history[-1]:.5f}"
-            )
+            print(f"  epoch {ep:>5d}/{epochs}  loss={history[-1]:.5f}")
 
     return {
-        "log_rho": (
-            log_rho.detach().cpu().numpy()
-        ),
-        "log_thick": (
-            log_thick.detach().cpu().numpy()
-        ),
+        "log_rho": (log_rho.detach().cpu().numpy()),
+        "log_thick": (log_thick.detach().cpu().numpy()),
         "history": history,
     }

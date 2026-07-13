@@ -60,10 +60,10 @@ class InversionWizardDialog(QDialog):
         self.setWindowTitle("Inversion Wizard — Occam2D")
         self.setMinimumSize(640, 520)
 
-        self._sites   = sites
+        self._sites = sites
         self._session = session
-        self._result  = None
-        self._worker  = None
+        self._result = None
+        self._worker = None
 
         self._build_ui()
 
@@ -87,13 +87,15 @@ class InversionWizardDialog(QDialog):
         self._stack = QStackedWidget()
         root.addWidget(self._stack)
 
-        self._page_data   = self._build_page_data()
+        self._page_data = self._build_page_data()
         self._page_config = self._build_page_config()
-        self._page_run    = self._build_page_run()
+        self._page_run = self._build_page_run()
         self._page_result = self._build_page_result()
         for page in (
-            self._page_data, self._page_config,
-            self._page_run,  self._page_result,
+            self._page_data,
+            self._page_config,
+            self._page_run,
+            self._page_result,
         ):
             self._stack.addWidget(page)
 
@@ -124,9 +126,11 @@ class InversionWizardDialog(QDialog):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        layout.addWidget(QLabel(
-            "Select the stations / profile to invert and the output directory."
-        ))
+        layout.addWidget(
+            QLabel(
+                "Select the stations / profile to invert and the output directory."
+            )
+        )
 
         # Station list
         layout.addWidget(QLabel("Available stations:"))
@@ -172,7 +176,8 @@ class InversionWizardDialog(QDialog):
 
     def _browse_workdir(self) -> None:
         d = QFileDialog.getExistingDirectory(
-            self, "Select output directory",
+            self,
+            "Select output directory",
             self._workdir_edit.text() or str(Path.home()),
         )
         if d:
@@ -345,7 +350,9 @@ class InversionWizardDialog(QDialog):
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:
-            self._run_log.appendPlainText("ERROR: no working directory specified.")
+            self._run_log.appendPlainText(
+                "ERROR: no working directory specified."
+            )
             return
 
         Path(workdir).mkdir(parents=True, exist_ok=True)
@@ -374,7 +381,9 @@ class InversionWizardDialog(QDialog):
         selected = self._selected_sites()
         try:
             self._run_log.appendPlainText("Building Occam2D input files…")
-            builder = InputBuilder(source=selected, workdir=workdir, config=config)
+            builder = InputBuilder(
+                source=selected, workdir=workdir, config=config
+            )
             builder.build()
             self._run_log.appendPlainText("Input files written.")
         except Exception as exc:
@@ -420,12 +429,14 @@ class InversionWizardDialog(QDialog):
         self._run_progress.setVisible(False)
         self._btn_launch.setEnabled(True)
         self._btn_stop_inv.setEnabled(False)
-        self._btn_next.click()   # advance to Results page
+        self._btn_next.click()  # advance to Results page
 
         try:
             self._result_text.setPlainText(result.summary)
         except Exception:
-            self._result_text.setPlainText("Inversion completed successfully.")
+            self._result_text.setPlainText(
+                "Inversion completed successfully."
+            )
         self._btn_open_viewer.setEnabled(True)
 
     @Slot(str)
@@ -442,8 +453,7 @@ class InversionWizardDialog(QDialog):
         if self._sites is None:
             return None
         selected_names = {
-            item.text()
-            for item in self._station_list.selectedItems()
+            item.text() for item in self._station_list.selectedItems()
         }
         if not selected_names:
             return self._sites
@@ -455,6 +465,7 @@ class InversionWizardDialog(QDialog):
     def _build_occam_config(self):
         """Return an ``OccamConfig`` from current form values."""
         from pycsamt.models.occam2d import OccamConfig
+
         modes = []
         if self._mode_te.isChecked():
             modes.append("te")

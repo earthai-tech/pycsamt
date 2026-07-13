@@ -13,5 +13,6 @@ def main(argv: list[str] | None = None) -> None:
 
     _main(argv=sys.argv[1:] if argv is None else argv)
 
+
 if __name__ == "__main__":
     main()

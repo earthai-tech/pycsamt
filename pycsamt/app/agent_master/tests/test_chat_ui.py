@@ -5,6 +5,7 @@ Tests for the executing-message redesign and the pin-message feature.
 
 Requires Dash (the chat callbacks module imports it); skipped otherwise.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -15,10 +16,10 @@ _HAS_DASH = importlib.util.find_spec("dash") is not None
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestHelpModal(unittest.TestCase):
-
     def test_help_toggle_registered_and_modal_built(self):
         from pycsamt.app.agent_master import create_app
         from pycsamt.app.agent_master._ids import IDs
+
         app = create_app()
         self.assertTrue(
             any(IDs.MODAL_HELP in k for k in app.callback_map),
@@ -29,6 +30,7 @@ class TestHelpModal(unittest.TestCase):
         from pycsamt.app.agent_master.layout import (
             _help_modal,
         )
+
         # builds without error and is a real component tree
         modal = _help_modal()
         self.assertEqual(modal.id, "am-modal-help")
@@ -36,9 +38,9 @@ class TestHelpModal(unittest.TestCase):
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestExecutingMessage(unittest.TestCase):
-
     def test_elapsed_format(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertEqual(C._fmt_elapsed(0), "0:00")
         self.assertEqual(C._fmt_elapsed(3), "0:03")
         self.assertEqual(C._fmt_elapsed(75), "1:15")
@@ -46,23 +48,23 @@ class TestExecutingMessage(unittest.TestCase):
 
     def test_thinking_bubble_has_timeline_and_id(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         steps = [
             {"label": "Parsing request...", "status": "done"},
-            {"label": "Executing phase_analysis...",
-             "status": "running"},
+            {"label": "Executing phase_analysis...", "status": "running"},
         ]
-        b = C._thinking_bubble(
-            steps, workflow="phase_analysis", elapsed=3.0
-        )
+        b = C._thinking_bubble(steps, workflow="phase_analysis", elapsed=3.0)
         self.assertEqual(b.id, "am-thinking-bubble")
 
     def test_thinking_bubble_no_steps(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         b = C._thinking_bubble([])
         self.assertEqual(b.id, "am-thinking-bubble")
 
     def test_workflow_label_lookup(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertEqual(
             C._WF_RUNNING_LABEL["phase_analysis"],
             "phase tensor analysis",
@@ -72,18 +74,25 @@ class TestExecutingMessage(unittest.TestCase):
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestPinLogic(unittest.TestCase):
-
     def _messages(self):
         return [
-            {"role": "user", "content": "run qc",
-             "ts": "10:00", "mid": "am-msg-1"},
-            {"role": "assistant",
-             "content": "QC complete: 25 stations.",
-             "ts": "10:01", "mid": "am-msg-2"},
+            {
+                "role": "user",
+                "content": "run qc",
+                "ts": "10:00",
+                "mid": "am-msg-1",
+            },
+            {
+                "role": "assistant",
+                "content": "QC complete: 25 stations.",
+                "ts": "10:01",
+                "mid": "am-msg-2",
+            },
         ]
 
     def test_pin_adds_entry(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         pins = C._apply_pin_toggle([], "am-msg-2", self._messages())
         self.assertEqual(len(pins), 1)
         self.assertEqual(pins[0]["mid"], "am-msg-2")
@@ -92,6 +101,7 @@ class TestPinLogic(unittest.TestCase):
 
     def test_pin_toggles_off(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         msgs = self._messages()
         pins = C._apply_pin_toggle([], "am-msg-2", msgs)
         pins = C._apply_pin_toggle(pins, "am-msg-2", msgs)
@@ -99,18 +109,19 @@ class TestPinLogic(unittest.TestCase):
 
     def test_pin_unknown_message_raises(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         with self.assertRaises(KeyError):
             C._apply_pin_toggle([], "am-msg-nope", self._messages())
 
     def test_remove_pin(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         pins = [{"mid": "a"}, {"mid": "b"}]
-        self.assertEqual(
-            C._remove_pin(pins, "a"), [{"mid": "b"}]
-        )
+        self.assertEqual(C._remove_pin(pins, "a"), [{"mid": "b"}])
 
     def test_snippet_truncates(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         long = "word " * 40
         snip = C._pin_snippet(long, limit=30)
         self.assertLessEqual(len(snip), 30)
@@ -118,6 +129,7 @@ class TestPinLogic(unittest.TestCase):
 
     def test_bubbles_carry_mid_and_pin_button(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         ub = C._user_bubble("hi", mid="am-msg-1")
         ab = C._agent_bubble("done", mid="am-msg-2")
         self.assertEqual(ub.id, "am-msg-1")
@@ -133,8 +145,8 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
 
     def test_drop_workflow_strips_only_workflow(self):
         import pycsamt.app.agent_master.callbacks.chat as C
-        ic = {"workflow": "ai_inversion", "n_layers": 10,
-              "epochs": 500}
+
+        ic = {"workflow": "ai_inversion", "n_layers": 10, "epochs": 500}
         out = C._drop_workflow(ic)
         self.assertNotIn("workflow", out)
         self.assertEqual(out["n_layers"], 10)
@@ -142,6 +154,7 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
 
     def test_drop_workflow_handles_none(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertEqual(C._drop_workflow(None), {})
 
     def test_request_routes_by_text_not_stale_workflow(self):
@@ -155,11 +168,10 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
         captured = {}
 
         def fake_execute(self, input_data):
-            captured["wf"] = (
-                input_data.get("config", {}).get("workflow")
-            )
+            captured["wf"] = input_data.get("config", {}).get("workflow")
             return AgentResult(
-                "success", "stub",
+                "success",
+                "stub",
                 {"result": AgentResult("success", "i", {})},
             )
 
@@ -173,9 +185,12 @@ class TestWorkflowNotForcedByStaleConfig(unittest.TestCase):
             jid = C._new_job()
             with contextlib.redirect_stdout(io.StringIO()):
                 C._run_agent(
-                    jid, "run static shift",
+                    jid,
+                    "run static shift",
                     {"path": "/x", "groups": {}},
-                    {"provider": "offline"}, clean, [],
+                    {"provider": "offline"},
+                    clean,
+                    [],
                 )
         finally:
             O.WorkflowOrchestratorAgent.execute = orig
@@ -208,10 +223,13 @@ class TestCodeDispatchRAG(unittest.TestCase):
 
         chunks = [
             RAGChunk(
-                id="1", text="estimate_ss_ama / correct_ss_ama AMA "
+                id="1",
+                text="estimate_ss_ama / correct_ss_ama AMA "
                 "static shift correction recipe.",
                 source_path="assistant_recipes/static_shift.md",
-                kind="recipe", workflow="static_shift", priority=3,
+                kind="recipe",
+                workflow="static_shift",
+                priority=3,
                 title="static shift",
             ),
         ]
@@ -225,11 +243,15 @@ class TestCodeDispatchRAG(unittest.TestCase):
 
             def resolve_line(self, name):
                 return {
-                    "line": "L22PLT", "edi_dir": str(self._p),
-                    "exists": True, "n_edi_files": 1, "sort_by": "lon",
+                    "line": "L22PLT",
+                    "edi_dir": str(self._p),
+                    "exists": True,
+                    "n_edi_files": 1,
+                    "sort_by": "lon",
                     "output_root": "results/willy/L22PLT",
                     "default_workflows": ["static_shift"],
-                    "static_shift": {"method": "ama"}, "plot": {},
+                    "static_shift": {"method": "ama"},
+                    "plot": {},
                 }
 
         self._orig = cb.default_context_builder
@@ -241,10 +263,12 @@ class TestCodeDispatchRAG(unittest.TestCase):
         from pycsamt.assistant.rag import (
             context_builder as cb,
         )
+
         cb.default_context_builder = self._orig
 
     def test_line_resolved_into_generated_code(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         jid = C._new_job()
 
         def step(label, status="done"):
@@ -257,9 +281,14 @@ class TestCodeDispatchRAG(unittest.TestCase):
         C._dispatch_code(
             jid,
             "generate code for static shift for line L22PLT",
-            {}, {"provider": "offline"},
-            workflow=None, llm_prov="claude", api_key=None,
-            sel_model=None, offline=True, step=step,
+            {},
+            {"provider": "offline"},
+            workflow=None,
+            llm_prov="claude",
+            api_key=None,
+            sel_model=None,
+            offline=True,
+            step=step,
         )
         job = C._get_job(jid)
         code = job.get("code", "")
@@ -267,10 +296,11 @@ class TestCodeDispatchRAG(unittest.TestCase):
         # real resolved path is embedded (check separator-agnostically:
         # the unique temp dir name + the line dir, not the placeholder)
         from pathlib import Path
+
         self.assertIn(Path(self._edi_dir).parent.name, code)
         self.assertIn("L22PLT", code)
-        self.assertNotIn("/path/to/EDIs", code)   # placeholder replaced
-        self.assertIn("estimate_ss_ama", code)    # correct API
+        self.assertNotIn("/path/to/EDIs", code)  # placeholder replaced
+        self.assertIn("estimate_ss_ama", code)  # correct API
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
@@ -279,6 +309,7 @@ class TestCodeTargetWorkflow(unittest.TestCase):
 
     def test_targets(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         cases = {
             "generate code for static shift": "static_shift",
             "generate code for dimensionality": "phase_analysis",
@@ -287,12 +318,14 @@ class TestCodeTargetWorkflow(unittest.TestCase):
         }
         for text, expected in cases.items():
             self.assertEqual(
-                C._code_target_workflow(text), expected,
+                C._code_target_workflow(text),
+                expected,
                 msg=f"{text!r} -> {C._code_target_workflow(text)}",
             )
 
     def test_no_subject_returns_none(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertIsNone(C._code_target_workflow("write me a script"))
 
 
@@ -304,6 +337,7 @@ class TestCodeBlockCollapsible(unittest.TestCase):
         from dash import html
 
         import pycsamt.app.agent_master.callbacks.chat as C
+
         blk = C._code_block("x = 1\ny = 2")
         details = blk.children[0]
         self.assertIsInstance(details, html.Details)
@@ -338,8 +372,10 @@ class TestNamedLineWorkflow(unittest.TestCase):
 
             def resolve_line(self, name):
                 return {
-                    "line": "L22PLT", "edi_dir": str(self._p),
-                    "exists": True, "n_edi_files": 1,
+                    "line": "L22PLT",
+                    "edi_dir": str(self._p),
+                    "exists": True,
+                    "n_edi_files": 1,
                 }
 
         self._orig = pr.ProjectRegistry.from_default
@@ -349,10 +385,12 @@ class TestNamedLineWorkflow(unittest.TestCase):
 
     def tearDown(self):
         import pycsamt.assistant.tools.project_registry as pr
+
         pr.ProjectRegistry.from_default = self._orig
 
     def test_names_registry_line(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self.assertTrue(
             C._names_registry_line("run static shift on line L22PLT")
         )
@@ -368,7 +406,8 @@ class TestNamedLineWorkflow(unittest.TestCase):
         def fake_exec(self, input_data):
             captured["data_path"] = input_data.get("data_path")
             return AgentResult(
-                "success", "stub",
+                "success",
+                "stub",
                 {"result": AgentResult("success", "i", {})},
             )
 
@@ -378,8 +417,12 @@ class TestNamedLineWorkflow(unittest.TestCase):
             jid = C._new_job()
             # empty edi_store → must resolve the named line
             C._run_agent(
-                jid, "run static shift on line L22PLT",
-                {}, {"provider": "offline"}, {}, [],
+                jid,
+                "run static shift on line L22PLT",
+                {},
+                {"provider": "offline"},
+                {},
+                [],
             )
         finally:
             O.WorkflowOrchestratorAgent.execute = orig
@@ -410,8 +453,12 @@ class TestSessionFollowup(unittest.TestCase):
                 return "L22PLT" if "l22plt" in t.lower() else None
 
             def resolve_line(self, name):
-                return {"line": "L22PLT", "edi_dir": str(edi),
-                        "exists": True, "n_edi_files": 1}
+                return {
+                    "line": "L22PLT",
+                    "edi_dir": str(edi),
+                    "exists": True,
+                    "n_edi_files": 1,
+                }
 
         self._orig = pr.ProjectRegistry.from_default
         pr.ProjectRegistry.from_default = classmethod(
@@ -422,6 +469,7 @@ class TestSessionFollowup(unittest.TestCase):
     def tearDown(self):
         import pycsamt.app.agent_master.callbacks.chat as C
         import pycsamt.assistant.tools.project_registry as pr
+
         pr.ProjectRegistry.from_default = self._orig
         C._reset_session()
 
@@ -429,12 +477,14 @@ class TestSessionFollowup(unittest.TestCase):
         import pycsamt.agents.orchestrator as O
         import pycsamt.app.agent_master.callbacks.chat as C
         from pycsamt.agents._base import AgentResult
+
         captured = {}
 
         def fake_exec(self, input_data):
             captured["data_path"] = input_data.get("data_path")
             return AgentResult(
-                "success", "stub",
+                "success",
+                "stub",
                 {"result": AgentResult("success", "i", {})},
             )
 
@@ -449,6 +499,7 @@ class TestSessionFollowup(unittest.TestCase):
 
     def test_followup_inherits_line(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         # 1) name the line
         p1 = self._run_capturing("run static shift on line L22PLT")
         self.assertEqual(p1, self._edi_dir)
@@ -459,6 +510,7 @@ class TestSessionFollowup(unittest.TestCase):
 
     def test_reset_clears_session(self):
         import pycsamt.app.agent_master.callbacks.chat as C
+
         self._run_capturing("run static shift on line L22PLT")
         self.assertTrue(C._session_has_data())
         C._reset_session()
@@ -474,11 +526,15 @@ class TestRecentRuns(unittest.TestCase):
         from pycsamt.assistant.memory.workflow_history import (
             WorkflowHistory,
         )
+
         WorkflowHistory.default().clear()
         C._record_run(
-            workflow="static_shift", path="/data/L22PLT",
-            output_dir="out", status="success",
-            summary="done", n_figures=2,
+            workflow="static_shift",
+            path="/data/L22PLT",
+            output_dir="out",
+            status="success",
+            summary="done",
+            n_figures=2,
         )
         runs = C._recent_runs()
         self.assertTrue(runs)
@@ -489,24 +545,28 @@ class TestRecentRuns(unittest.TestCase):
     def test_record_run_never_raises(self):
         # tracing is best-effort; bad inputs must not raise
         import pycsamt.app.agent_master.callbacks.chat as C
+
         C._record_run(
-            workflow="qc", path=None, output_dir="o",
-            status="failed", summary="x", n_figures=0,
+            workflow="qc",
+            path=None,
+            output_dir="o",
+            status="failed",
+            summary="x",
+            n_figures=0,
         )
 
     def test_callback_registered(self):
         from pycsamt.app.agent_master import create_app
+
         app = create_app()
-        self.assertTrue(
-            any("am-sidebar-runs" in k for k in app.callback_map)
-        )
+        self.assertTrue(any("am-sidebar-runs" in k for k in app.callback_map))
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
 class TestPinCallbacksRegistered(unittest.TestCase):
-
     def test_pin_callbacks_present(self):
         from pycsamt.app.agent_master import create_app
+
         app = create_app()
         keys = list(app.callback_map)
         self.assertTrue(

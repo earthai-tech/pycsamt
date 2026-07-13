@@ -25,6 +25,7 @@ FrequencyEditorDialog     — confidence-based frequency QC workflow
 LayeredModelDialog        — interactive 1-D earth model builder
 ElevationEnrichDialog     — fetch elevation for all stations via open API
 """
+
 from .batch_export_tool import BatchExportDialog
 from .converter_tool import FormatConverterDialog
 from .coord_tool import CoordTransformDialog

@@ -84,8 +84,8 @@ def j_single(j_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_J_DATA       = _PROJECT_ROOT / "data" / "j"
-_JC_DATA      = _PROJECT_ROOT / "data" / "jc"
+_J_DATA = _PROJECT_ROOT / "data" / "j"
+_JC_DATA = _PROJECT_ROOT / "data" / "jc"
 
 
 def _has_j_data() -> bool:
@@ -100,6 +100,7 @@ def _has_jc_data() -> bool:
 # Help wiring
 # ---------------------------------------------------------------------------
 
+
 class TestJonesGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["jones", "--help"])
@@ -107,9 +108,9 @@ class TestJonesGroup:
         for sub in ("info", "validate", "stations", "blocks", "select"):
             assert sub in result.output
 
-    @pytest.mark.parametrize("sub", [
-        "info", "validate", "stations", "blocks", "select"
-    ])
+    @pytest.mark.parametrize(
+        "sub", ["info", "validate", "stations", "blocks", "select"]
+    )
     def test_each_subcommand_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["jones", sub, "--help"])
         assert result.exit_code == 0
@@ -119,14 +120,19 @@ class TestJonesGroup:
 # pycsamt jones info
 # ---------------------------------------------------------------------------
 
+
 class TestJonesInfo:
-    def test_single_file_text(self, runner: CliRunner, j_single: Path) -> None:
+    def test_single_file_text(
+        self, runner: CliRunner, j_single: Path
+    ) -> None:
         result = runner.invoke(main, ["jones", "info", str(j_single)])
         assert result.exit_code == 0
         assert "S01" in result.output
         assert "n_freq" in result.output
 
-    def test_single_file_json(self, runner: CliRunner, j_single: Path) -> None:
+    def test_single_file_json(
+        self, runner: CliRunner, j_single: Path
+    ) -> None:
         result = runner.invoke(
             main, ["jones", "info", str(j_single), "--format", "json"]
         )
@@ -162,7 +168,8 @@ class TestJonesInfo:
 
     def test_top_limit(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "info", str(j_dir), "--top", "1", "--format", "json"]
+            main,
+            ["jones", "info", str(j_dir), "--top", "1", "--format", "json"],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -173,13 +180,14 @@ class TestJonesInfo:
 # pycsamt jones validate
 # ---------------------------------------------------------------------------
 
+
 class TestJonesValidate:
     def test_single_valid(self, runner: CliRunner, j_single: Path) -> None:
-        result = runner.invoke(
-            main, ["jones", "validate", str(j_single)]
-        )
+        result = runner.invoke(main, ["jones", "validate", str(j_single)])
         assert result.exit_code == 0
-        assert "ok" in result.output.lower() or "valid" in result.output.lower()
+        assert (
+            "ok" in result.output.lower() or "valid" in result.output.lower()
+        )
 
     def test_directory_valid(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(main, ["jones", "validate", str(j_dir)])
@@ -200,7 +208,9 @@ class TestJonesValidate:
         )
         assert result.exit_code == 0
 
-    def test_invalid_file_exits_1(self, runner: CliRunner, tmp_path: Path) -> None:
+    def test_invalid_file_exits_1(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         bad = tmp_path / "bad.j"
         bad.write_text("this is not a j file\n")
         result = runner.invoke(main, ["jones", "validate", str(bad)])
@@ -214,6 +224,7 @@ class TestJonesValidate:
 # ---------------------------------------------------------------------------
 # pycsamt jones stations
 # ---------------------------------------------------------------------------
+
 
 class TestJonesStations:
     def test_text_output(self, runner: CliRunner, j_dir: Path) -> None:
@@ -240,8 +251,16 @@ class TestJonesStations:
 
     def test_sort_by_lat(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "stations", str(j_dir),
-                   "--sort-by", "lat", "--format", "json"]
+            main,
+            [
+                "jones",
+                "stations",
+                str(j_dir),
+                "--sort-by",
+                "lat",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -251,7 +270,16 @@ class TestJonesStations:
 
     def test_top_limit(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "stations", str(j_dir), "--top", "1", "--format", "json"]
+            main,
+            [
+                "jones",
+                "stations",
+                str(j_dir),
+                "--top",
+                "1",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -261,6 +289,7 @@ class TestJonesStations:
 # ---------------------------------------------------------------------------
 # pycsamt jones blocks
 # ---------------------------------------------------------------------------
+
 
 class TestJonesBlocks:
     def test_text_output(self, runner: CliRunner, j_single: Path) -> None:
@@ -289,7 +318,16 @@ class TestJonesBlocks:
 
     def test_kind_filter(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "blocks", str(j_single), "--kind", "R", "--format", "json"]
+            main,
+            [
+                "jones",
+                "blocks",
+                str(j_single),
+                "--kind",
+                "R",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -297,8 +335,16 @@ class TestJonesBlocks:
 
     def test_comp_filter(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "blocks", str(j_single),
-                   "--comp", "XY", "--format", "json"]
+            main,
+            [
+                "jones",
+                "blocks",
+                str(j_single),
+                "--comp",
+                "XY",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -310,7 +356,9 @@ class TestJonesBlocks:
         )
         assert result.exit_code == 0
 
-    def test_no_match_shows_error(self, runner: CliRunner, j_single: Path) -> None:
+    def test_no_match_shows_error(
+        self, runner: CliRunner, j_single: Path
+    ) -> None:
         result = runner.invoke(
             main, ["jones", "blocks", str(j_single), "--kind", "T"]
         )
@@ -320,6 +368,7 @@ class TestJonesBlocks:
 # ---------------------------------------------------------------------------
 # pycsamt jones select
 # ---------------------------------------------------------------------------
+
 
 class TestJonesSelect:
     def test_dry_run_all(self, runner: CliRunner, j_dir: Path) -> None:
@@ -331,7 +380,8 @@ class TestJonesSelect:
 
     def test_dry_run_json(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir), "--dry-run", "--format", "json"]
+            main,
+            ["jones", "select", str(j_dir), "--dry-run", "--format", "json"],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -341,8 +391,16 @@ class TestJonesSelect:
         self, runner: CliRunner, j_dir: Path, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir),
-                   "--stations", "S01", "--output-dir", str(tmp_path)]
+            main,
+            [
+                "jones",
+                "select",
+                str(j_dir),
+                "--stations",
+                "S01",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("*.j"))
@@ -352,7 +410,8 @@ class TestJonesSelect:
         self, runner: CliRunner, j_dir: Path, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir), "--output-dir", str(tmp_path)]
+            main,
+            ["jones", "select", str(j_dir), "--output-dir", str(tmp_path)],
         )
         assert result.exit_code == 0
         written = list(tmp_path.glob("*.j"))
@@ -362,8 +421,16 @@ class TestJonesSelect:
         self, runner: CliRunner, j_dir: Path, tmp_path: Path
     ) -> None:
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir),
-                   "--output-dir", str(tmp_path), "--format", "json"]
+            main,
+            [
+                "jones",
+                "select",
+                str(j_dir),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         # tqdm may prefix the JSON — find the first '{'
@@ -376,25 +443,45 @@ class TestJonesSelect:
 
     def test_has_r_filter(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir), "--has-r", "--dry-run",
-                   "--format", "json"]
+            main,
+            [
+                "jones",
+                "select",
+                str(j_dir),
+                "--has-r",
+                "--dry-run",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["n_selected"] == 2  # both have R data
 
-    def test_has_z_filter_dry_run(self, runner: CliRunner, j_dir: Path) -> None:
+    def test_has_z_filter_dry_run(
+        self, runner: CliRunner, j_dir: Path
+    ) -> None:
         # Our synthetic files have Res (converted from R) but may or may not
         # have explicit Z. Just verify the filter runs without crashing.
         result = runner.invoke(
-            main, ["jones", "select", str(j_dir), "--has-z", "--dry-run",
-                   "--format", "json"]
+            main,
+            [
+                "jones",
+                "select",
+                str(j_dir),
+                "--has-z",
+                "--dry-run",
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "n_selected" in data
 
-    def test_no_output_dir_fails(self, runner: CliRunner, j_dir: Path) -> None:
+    def test_no_output_dir_fails(
+        self, runner: CliRunner, j_dir: Path
+    ) -> None:
         result = runner.invoke(main, ["jones", "select", str(j_dir)])
         assert result.exit_code != 0
 
@@ -403,12 +490,14 @@ class TestJonesSelect:
 # Unit tests — low-level helpers
 # ---------------------------------------------------------------------------
 
+
 class TestJonesHelpers:
     def test_get_jfile(self, j_single: Path) -> None:
         from pycsamt.cli.commands.jones._base import (
             _get_jfile,
         )
         from pycsamt.jones.j import JFile
+
         jf = _get_jfile(j_single)
         assert isinstance(jf, JFile)
         assert jf.station == "S01"
@@ -419,6 +508,7 @@ class TestJonesHelpers:
             _get_collection,
         )
         from pycsamt.jones.collection import JCollection
+
         coll = _get_collection(j_dir)
         assert isinstance(coll, JCollection)
         assert len(coll) == 2
@@ -427,6 +517,7 @@ class TestJonesHelpers:
         from pycsamt.cli.commands.jones._base import (
             _get_jfile,
         )
+
         jf = _get_jfile(j_single)
         assert jf.Res is not None
 
@@ -434,6 +525,7 @@ class TestJonesHelpers:
         from pycsamt.cli.commands.jones._base import (
             _get_jfile,
         )
+
         jf = _get_jfile(j_single)
         assert jf.lat == pytest.approx(30.0)
         assert jf.lon == pytest.approx(100.0)
@@ -443,6 +535,7 @@ class TestJonesHelpers:
         from pycsamt.cli.commands.jones._base import (
             _get_jfile,
         )
+
         jf = _get_jfile(j_single)
         blks = jf.blocks
         assert blks is not None and blks.n == 2

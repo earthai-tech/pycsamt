@@ -77,7 +77,11 @@ plot_apparent_depth_psection(L22, figsize=(12, 4.8))
 # (here the 50–90 % interval), flagging stations that need attention.
 
 plot_confidence_profile(
-    L22, method="composite", figsize=(12, 4.2), ci_hi=0.95, ci_lo=0.85,
+    L22,
+    method="composite",
+    figsize=(12, 4.2),
+    ci_hi=0.95,
+    ci_lo=0.85,
 )
 
 # %%
@@ -88,7 +92,11 @@ plot_confidence_profile(
 # confidence drops, not just which stations are weak overall.
 
 plot_frequency_confidence_psection(
-    L22, method="composite", figsize=(12, 4.8), ci_hi=0.95, ci_lo=0.85,
+    L22,
+    method="composite",
+    figsize=(12, 4.8),
+    ci_hi=0.95,
+    ci_lo=0.85,
 )
 
 # %%
@@ -99,7 +107,11 @@ plot_frequency_confidence_psection(
 # depth across the whole line.
 
 plot_confidence_band_summary(
-    L22, method="composite", figsize=(8.5, 4.0), ci_hi=0.95, ci_lo=0.85,
+    L22,
+    method="composite",
+    figsize=(8.5, 4.0),
+    ci_hi=0.95,
+    ci_lo=0.85,
 )
 
 # %%
@@ -111,6 +123,10 @@ plot_confidence_band_summary(
 # to keep, edit, or drop a specific site.
 
 plot_station_confidence_dashboard(
-    L22, station="22-14BF", method="composite",
-    figsize=(10.5, 6.0), ci_hi=0.95, ci_lo=0.85,
+    L22,
+    station="22-14BF",
+    method="composite",
+    figsize=(10.5, 6.0),
+    ci_hi=0.95,
+    ci_lo=0.85,
 )

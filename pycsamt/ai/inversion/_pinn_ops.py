@@ -12,6 +12,7 @@ User code (pinn1d / pinn2d / pinn3d and the Hybrid
 classes) should import from here rather than from the
 backend-specific modules.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -26,6 +27,7 @@ __all__ = [
 def _backend() -> str:
     """Return active backend name or raise."""
     from pycsamt.backends import get_backend
+
     name = get_backend()
     if name == "none":
         raise ImportError(

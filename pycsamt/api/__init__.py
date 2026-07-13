@@ -1,4 +1,5 @@
 """Public API helpers shared across pyCSAMT packages."""
+
 from pycsamt.topo.config import (
     PYCSAMT_TOPO,
     Y_DEPTH_TYPES,

@@ -64,41 +64,43 @@ _JOBS_LOCK = threading.Lock()
 _CORR_CACHE: dict[str, Any] = {}
 
 # Workflows that produce corrected_sites data.
-_CORRECTION_WFLOWS = frozenset({
-    "static_shift",
-    "denoise",
-    "qc",
-    "pre_inversion",
-    "full",
-})
+_CORRECTION_WFLOWS = frozenset(
+    {
+        "static_shift",
+        "denoise",
+        "qc",
+        "pre_inversion",
+        "full",
+    }
+)
 
 # Plotting tasks handled by the lightweight PlotAgent (not the orchestrator):
 # rho/phi sounding curves, scalar phase pseudo-section, and phase-tensor (Φ)
 # ellipse pseudo-section. Each maps to a PlotAgent "kind".
 _PLOT_KIND = {
-    "rhophi":         "rhophi",
+    "rhophi": "rhophi",
     "phase_psection": "phase_psection",
-    "pt_psection":    "pt_psection",
-    "tipper_plot":    "tipper",
+    "pt_psection": "pt_psection",
+    "tipper_plot": "tipper",
     "phase_tensor_map": "pt_map",
     "station_response": "station_response",
-    "strike_profile":  "strike_profile",
-    "pt_strip":       "pt_strip",
-    "pt_strip_grid":  "pt_strip_grid",
+    "strike_profile": "strike_profile",
+    "pt_strip": "pt_strip",
+    "pt_strip_grid": "pt_strip_grid",
 }
 _PLOT_WORKFLOWS = frozenset(_PLOT_KIND)
 
 # Analysis tools handled by the lightweight ToolAgent (table + figure).
 _TOOL_KIND = {
-    "strike":         "strike",
+    "strike": "strike",
     "dimensionality": "dimensionality",
-    "validator":      "validator",
-    "coords":         "coords",
-    "elevation":      "elevation",
-    "converter":      "converter",
-    "batch_export":   "batch_export",
-    "freq_editor":    "freq_editor",
-    "layered_model":  "layered_model",
+    "validator": "validator",
+    "coords": "coords",
+    "elevation": "elevation",
+    "converter": "converter",
+    "batch_export": "batch_export",
+    "freq_editor": "freq_editor",
+    "layered_model": "layered_model",
 }
 # Correction methods (Static Shift, Noise Removal, Tensor Rotation, …) all run
 # through the single parameterised ``correction`` ToolAgent kind; the registry
@@ -117,21 +119,21 @@ _NO_DATA_WORKFLOWS = frozenset({"layered_model"})
 # Each agent response declares its KIND so the chat
 # bubble renders the right shape instead of guessing
 # from which fields happen to be populated.
-KIND_ANSWER   = "answer"     # Q&A about the package
-KIND_CODE     = "code"       # generated script
-KIND_WORKFLOW = "workflow"   # pipeline result (+figs)
-KIND_CLARIFY  = "clarify"    # needs more info
-KIND_META     = "meta"       # capabilities / chitchat
-KIND_ERROR    = "error"      # could not proceed
+KIND_ANSWER = "answer"  # Q&A about the package
+KIND_CODE = "code"  # generated script
+KIND_WORKFLOW = "workflow"  # pipeline result (+figs)
+KIND_CLARIFY = "clarify"  # needs more info
+KIND_META = "meta"  # capabilities / chitchat
+KIND_ERROR = "error"  # could not proceed
 
 # Per-kind header chip: (icon class, label, css colour var).
 _KIND_HEADER: dict[str, tuple[str, str, str]] = {
-    KIND_ANSWER:   ("bi-chat-left-text", "Answer", "var(--blue)"),
-    KIND_CODE:     ("bi-code-slash", "Generated code", "var(--green)"),
+    KIND_ANSWER: ("bi-chat-left-text", "Answer", "var(--blue)"),
+    KIND_CODE: ("bi-code-slash", "Generated code", "var(--green)"),
     KIND_WORKFLOW: ("bi-diagram-3", "Workflow result", "var(--blue)"),
-    KIND_CLARIFY:  ("bi-question-circle", "Needs input", "var(--yellow)"),
-    KIND_META:     ("bi-stars", "pyCSAMT assistant", "var(--blue)"),
-    KIND_ERROR:    ("bi-exclamation-triangle", "Couldn't proceed", "var(--red)"),
+    KIND_CLARIFY: ("bi-question-circle", "Needs input", "var(--yellow)"),
+    KIND_META: ("bi-stars", "pyCSAMT assistant", "var(--blue)"),
+    KIND_ERROR: ("bi-exclamation-triangle", "Couldn't proceed", "var(--red)"),
 }
 
 
@@ -153,40 +155,42 @@ def _new_job() -> str:
 
 # Friendly labels for the executing-message header.
 _WF_RUNNING_LABEL: dict[str, str] = {
-    "qc":                 "quality control",
-    "static_shift":       "static-shift correction",
-    "phase_analysis":     "phase tensor analysis",
-    "denoise":            "denoising",
-    "tipper":             "tipper analysis",
-    "sensitivity":        "sensitivity / DOI analysis",
-    "rotation":           "tensor rotation",
-    "freq_decimation":    "frequency decimation",
-    "ai_inversion":       "1-D AI inversion",
-    "inv1d":              "1-D AI inversion",
-    "inv2d":              "2-D U-Net inversion",
-    "inv3d":              "3-D GCN inversion",
-    "pinn_inversion":     "PINN inversion",
-    "hybrid_inversion":   "hybrid inversion",
+    "qc": "quality control",
+    "static_shift": "static-shift correction",
+    "phase_analysis": "phase tensor analysis",
+    "denoise": "denoising",
+    "tipper": "tipper analysis",
+    "sensitivity": "sensitivity / DOI analysis",
+    "rotation": "tensor rotation",
+    "freq_decimation": "frequency decimation",
+    "ai_inversion": "1-D AI inversion",
+    "inv1d": "1-D AI inversion",
+    "inv2d": "2-D U-Net inversion",
+    "inv3d": "3-D GCN inversion",
+    "pinn_inversion": "PINN inversion",
+    "hybrid_inversion": "hybrid inversion",
     "ensemble_inversion": "ensemble inversion",
-    "joint_inversion":    "joint inversion",
-    "pre_inversion":      "inversion preparation",
-    "modem":              "ModEM preparation",
-    "report":             "survey report",
-    "interpretation":     "geological interpretation",
-    "interpret":          "geological interpretation",
-    "forward":            "forward modelling",
-    "full":               "full pipeline",
-    "comparison":         "inversion comparison",
-    "batch":              "batch processing",
-    "code_gen":           "code generation",
-    "data_overview":      "survey data reading",
+    "joint_inversion": "joint inversion",
+    "pre_inversion": "inversion preparation",
+    "modem": "ModEM preparation",
+    "report": "survey report",
+    "interpretation": "geological interpretation",
+    "interpret": "geological interpretation",
+    "forward": "forward modelling",
+    "full": "full pipeline",
+    "comparison": "inversion comparison",
+    "batch": "batch processing",
+    "code_gen": "code generation",
+    "data_overview": "survey data reading",
 }
 
 # Correction-method running labels, merged from the central registry.
-_WF_RUNNING_LABEL.update({
-    _wf: _meta.get("running_label", "data correction")
-    for _wf, _meta in _CORR_METHODS.items()
-})
+_WF_RUNNING_LABEL.update(
+    {
+        _wf: _meta.get("running_label", "data correction")
+        for _wf, _meta in _CORR_METHODS.items()
+    }
+)
 
 
 def _fmt_elapsed(seconds: float) -> str:
@@ -199,13 +203,30 @@ def _fmt_elapsed(seconds: float) -> str:
 # *subject* ("static shift") of a code request. Stripping them lets the
 # workflow classifier see the real target.
 _CODE_ACTION_PHRASES = (
-    "generate code for", "write code for", "give me code for",
-    "show me code for", "code example for", "sample code for",
-    "produce code for", "python script for", "create a notebook for",
-    "notebook for", "write a script for", "script for", "code for",
-    "generate code", "write code", "give me code", "show me code",
-    "python script", "create notebook", "write a script",
-    "produce code", "a script to", "script to", "code to",
+    "generate code for",
+    "write code for",
+    "give me code for",
+    "show me code for",
+    "code example for",
+    "sample code for",
+    "produce code for",
+    "python script for",
+    "create a notebook for",
+    "notebook for",
+    "write a script for",
+    "script for",
+    "code for",
+    "generate code",
+    "write code",
+    "give me code",
+    "show me code",
+    "python script",
+    "create notebook",
+    "write a script",
+    "produce code",
+    "a script to",
+    "script to",
+    "code to",
 )
 
 
@@ -217,6 +238,7 @@ def _code_target_workflow(text: str) -> str | None:
     the remaining subject ("static shift") routes to ``static_shift``.
     """
     from pycsamt.agents._workflows import classify_workflow
+
     t = " " + text.lower() + " "
     for p in _CODE_ACTION_PHRASES:
         t = t.replace(p, " ")
@@ -233,15 +255,10 @@ def _drop_workflow(inv_config: dict | None) -> dict:
     (e.g. all requests routed to ai_inversion). Normal/line-picker runs
     must classify the workflow from the request text, so they strip it.
     """
-    return {
-        k: v for k, v in (inv_config or {}).items()
-        if k != "workflow"
-    }
+    return {k: v for k, v in (inv_config or {}).items() if k != "workflow"}
 
 
-def _update_job(
-    jid: str, **kw: Any
-) -> None:
+def _update_job(jid: str, **kw: Any) -> None:
     with _JOBS_LOCK:
         if jid in _JOBS:
             _JOBS[jid].update(kw)
@@ -256,6 +273,7 @@ def _get_job(
 
 # ── figure helpers ─────────────────────────────────
 
+
 def _fig_to_b64(fig: Any) -> str:
     buf = io.BytesIO()
     fig.savefig(
@@ -265,9 +283,7 @@ def _fig_to_b64(fig: Any) -> str:
         bbox_inches="tight",
     )
     buf.seek(0)
-    return base64.b64encode(
-        buf.read()
-    ).decode()
+    return base64.b64encode(buf.read()).decode()
 
 
 def _fig_thumb_item(
@@ -276,16 +292,11 @@ def _fig_thumb_item(
     b64: str,
 ) -> html.Div:
     """Compact thumbnail tile inside the accordion."""
-    short = (
-        title if len(title) <= 28
-        else title[:26] + "..."
-    )
+    short = title if len(title) <= 28 else title[:26] + "..."
     return html.Div(
         [
             html.Img(
-                src=(
-                    f"data:image/png;base64,{b64}"
-                ),
+                src=(f"data:image/png;base64,{b64}"),
                 className="am-fig-thumb",
                 id={
                     "type": "am-fig-img",
@@ -300,17 +311,10 @@ def _fig_thumb_item(
             ),
             html.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-arrows-fullscreen"
-                            " me-1"
-                        )
-                    ),
+                    html.I(className=("bi bi-arrows-fullscreen me-1")),
                     "View",
                 ],
-                className=(
-                    "am-fig-btn am-fig-thumb-btn"
-                ),
+                className=("am-fig-btn am-fig-thumb-btn"),
                 id={
                     "type": "am-fig-open",
                     "key": fig_key,
@@ -331,15 +335,12 @@ def _fig_accordion(figs: dict) -> html.Div:
     """
     n = len(figs)
     thumbs = [
-        _fig_thumb_item(k, v["title"], v["b64"])
-        for k, v in figs.items()
+        _fig_thumb_item(k, v["title"], v["b64"]) for k, v in figs.items()
     ]
     header = html.Span(
         [
             html.I(
-                className=(
-                    "bi bi-bar-chart-fill me-2"
-                ),
+                className=("bi bi-bar-chart-fill me-2"),
                 style={"color": "var(--blue)"},
             ),
             f"Figures ({n})",
@@ -370,6 +371,7 @@ def _fig_accordion(figs: dict) -> html.Div:
 
 # ── message bubble builders ────────────────────────
 
+
 def _ts() -> str:
     return datetime.now().strftime("%H:%M")
 
@@ -399,9 +401,7 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
             n_clicks=0,
         ),
         html.Button(
-            html.I(
-                className="bi bi-folder2-open"
-            ),
+            html.I(className="bi bi-folder2-open"),
             className="am-msg-action am-edi-msg-btn",
             title="Load EDI",
             n_clicks=0,
@@ -416,9 +416,7 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
                     [
                         html.Div(
                             text,
-                            className=(
-                                "am-bubble user"
-                            ),
+                            className=("am-bubble user"),
                         ),
                         html.Div(
                             _ts(),
@@ -426,18 +424,14 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
                         ),
                         html.Div(
                             toolbar_btns,
-                            className=(
-                                "am-msg-toolbar"
-                            ),
+                            className=("am-msg-toolbar"),
                         ),
                     ]
                 ),
                 style={"maxWidth": "100%"},
             ),
             html.Div(
-                html.I(
-                    className="bi bi-person-fill"
-                ),
+                html.I(className="bi bi-person-fill"),
                 className="am-avatar user",
             ),
         ],
@@ -460,9 +454,7 @@ def _exec_step_row(label: str, status: str) -> html.Div:
         )
     elif status == "running":
         dot = html.Span(
-            html.I(
-                className="bi bi-arrow-repeat am-tl-spin"
-            ),
+            html.I(className="bi bi-arrow-repeat am-tl-spin"),
             className="am-tl-dot",
         )
     else:  # waiting / pending
@@ -489,14 +481,8 @@ def _thinking_bubble(
     """
     steps = steps or []
     n_total = len(steps)
-    n_done = sum(
-        1 for s in steps if s.get("status") == "done"
-    )
-    name = (
-        _WF_RUNNING_LABEL.get(workflow, workflow)
-        if workflow
-        else None
-    )
+    n_done = sum(1 for s in steps if s.get("status") == "done")
+    name = _WF_RUNNING_LABEL.get(workflow, workflow) if workflow else None
 
     # Current step = last non-done step, else last step, else a
     # workflow-level fallback while the first step is being created.
@@ -509,13 +495,9 @@ def _thinking_bubble(
         cur_idx = n_total - 1
     if cur_idx is not None:
         cur_label = steps[cur_idx].get("label", "...")
-        cur_status = steps[cur_idx].get(
-            "status", "running"
-        )
+        cur_status = steps[cur_idx].get("status", "running")
     else:
-        cur_label = (
-            f"Running {name}..." if name else "Thinking..."
-        )
+        cur_label = f"Running {name}..." if name else "Thinking..."
         cur_status = "running"
 
     # Ghost: the most recent completed step other than the current one.
@@ -546,8 +528,7 @@ def _thinking_bubble(
                 cur_label,
                 className="am-think-lbl",
                 id=(
-                    "am-think-lbl-"
-                    f"{cur_idx if cur_idx is not None else 'x'}"
+                    f"am-think-lbl-{cur_idx if cur_idx is not None else 'x'}"
                 ),
             ),
             html.Span(
@@ -576,9 +557,7 @@ def _thinking_bubble(
             className="am-think-track",
         )
     else:
-        track = html.Div(
-            html.I(), className="am-think-track indet"
-        )
+        track = html.Div(html.I(), className="am-think-track indet")
 
     # Full timeline, revealed on hover (reuses the rail/dot rows).
     panel_children = []
@@ -606,9 +585,7 @@ def _thinking_bubble(
             className="am-think-panel-empty",
         )
     )
-    panel = html.Div(
-        panel_children, className="am-think-panel"
-    )
+    panel = html.Div(panel_children, className="am-think-panel")
 
     body = [ghost_el] if ghost_el is not None else []
     body += [line, track, panel]
@@ -627,11 +604,10 @@ def _strip_thinking(msgs: list | None) -> list:
     removed so a final notice can take its place.
     """
     out = []
-    for child in (msgs or []):
+    for child in msgs or []:
         if (
             isinstance(child, dict)
-            and child.get("props", {}).get("id")
-            == "am-thinking-bubble"
+            and child.get("props", {}).get("id") == "am-thinking-bubble"
         ):
             continue
         out.append(child)
@@ -656,11 +632,13 @@ def _stop_job_response(
     msgs = _strip_thinking(current_msgs)
     msgs.append(_agent_bubble("Task stopped.", kind=KIND_ERROR))
     new_stored = list(stored_messages or [])
-    new_stored.append({
-        "role": "assistant",
-        "content": "Task stopped by user.",
-        "ts": _ts(),
-    })
+    new_stored.append(
+        {
+            "role": "assistant",
+            "content": "Task stopped by user.",
+            "ts": _ts(),
+        }
+    )
     return msgs, {}, True, no_update, new_stored, {}
 
 
@@ -680,6 +658,7 @@ def _code_block(code: str) -> html.Div:
     toggling the accordion.
     """
     import uuid as _uuid
+
     copy_id = f"am-copy-{_uuid.uuid4().hex[:8]}"
     n_lines = code.count("\n") + 1
     return html.Div(
@@ -690,14 +669,11 @@ def _code_block(code: str) -> html.Div:
                         [
                             html.I(
                                 className=(
-                                    "bi bi-chevron-right"
-                                    " am-code-chevron"
+                                    "bi bi-chevron-right am-code-chevron"
                                 )
                             ),
                             html.I(
-                                className=(
-                                    "bi bi-code-slash me-1"
-                                ),
+                                className=("bi bi-code-slash me-1"),
                                 style={"color": "#61afef"},
                             ),
                             html.Span(
@@ -724,9 +700,7 @@ def _code_block(code: str) -> html.Div:
             ),
             html.Button(
                 [
-                    html.I(
-                        className="bi bi-clipboard me-1"
-                    ),
+                    html.I(className="bi bi-clipboard me-1"),
                     "Copy",
                 ],
                 id=copy_id,
@@ -826,10 +800,7 @@ def _agent_bubble(
             html.Div(
                 [
                     html.I(
-                        className=(
-                            "bi bi-check-circle-fill"
-                            " am-step-icon"
-                        )
+                        className=("bi bi-check-circle-fill am-step-icon")
                     ),
                     html.Span(s["label"]),
                 ],
@@ -869,16 +840,12 @@ def _agent_bubble(
                                 ],
                                 className="am-trace-summary",
                             ),
-                            html.Div(
-                                step_divs, className="am-steps"
-                            ),
+                            html.Div(step_divs, className="am-steps"),
                         ],
                         className="am-trace",
                     ),
                     html.Button(
-                        html.I(
-                            className="bi bi-box-arrow-up-right"
-                        ),
+                        html.I(className="bi bi-box-arrow-up-right"),
                         id={
                             "type": "am-trace-open",
                             "index": _trace_idx,
@@ -905,13 +872,8 @@ def _agent_bubble(
             html.Div(
                 [
                     html.I(
-                        className=(
-                            "bi bi-bar-chart-fill"
-                            " me-2"
-                        ),
-                        style={
-                            "color": "var(--blue)"
-                        },
+                        className=("bi bi-bar-chart-fill me-2"),
+                        style={"color": "var(--blue)"},
                     ),
                     html.Span(
                         f"{n} figure"
@@ -937,18 +899,12 @@ def _agent_bubble(
             html.Div(
                 [
                     html.Div(children),
-                    html.Div(
-                        _ts(), className="am-ts"
-                    ),
+                    html.Div(_ts(), className="am-ts"),
                     html.Div(
                         [
                             html.Button(
-                                html.I(
-                                    className="bi bi-clipboard"
-                                ),
-                                className=(
-                                    "am-msg-action am-copy-btn"
-                                ),
+                                html.I(className="bi bi-clipboard"),
+                                className=("am-msg-action am-copy-btn"),
                                 title="Copy answer",
                                 n_clicks=0,
                                 **{"data-copy": text or ""},
@@ -956,7 +912,9 @@ def _agent_bubble(
                             _pin_button(mid),
                         ],
                         className="am-msg-toolbar",
-                    ) if mid else html.Div(),
+                    )
+                    if mid
+                    else html.Div(),
                 ],
                 className=(
                     "am-bubble agent am-bubble-flat"
@@ -976,47 +934,53 @@ def _agent_bubble(
 # (load, qc, denoise) whose figures are suppressed
 # unless the user explicitly asked for them.
 # None means "show figures from all steps."
-_WORKFLOW_FIGURE_STEPS: dict[
-    str, set[str] | None
-] = {
-    "qc":               {"qc", "static_shift", "report"},
-    "static_shift":     {"static_shift"},
-    "phase_analysis":   {"phase_analysis", "report"},
-    "ai_inversion":     {"ai_inv", "interpret", "report"},
-    "inv1d":            {"ai_inv", "interpret", "report"},
-    "inv2d":            {"inv2d", "interpret", "report"},
-    "inv3d":            {"inv3d", "interpret", "report"},
+_WORKFLOW_FIGURE_STEPS: dict[str, set[str] | None] = {
+    "qc": {"qc", "static_shift", "report"},
+    "static_shift": {"static_shift"},
+    "phase_analysis": {"phase_analysis", "report"},
+    "ai_inversion": {"ai_inv", "interpret", "report"},
+    "inv1d": {"ai_inv", "interpret", "report"},
+    "inv2d": {"inv2d", "interpret", "report"},
+    "inv3d": {"inv3d", "interpret", "report"},
     "ensemble_inversion": {
-        "ensemble", "interpret", "report",
+        "ensemble",
+        "interpret",
+        "report",
     },
-    "pinn_inversion":   {
-        "pinn_inv", "interpret", "report",
+    "pinn_inversion": {
+        "pinn_inv",
+        "interpret",
+        "report",
     },
     "hybrid_inversion": {
-        "hybrid_inv", "interpret", "report",
+        "hybrid_inv",
+        "interpret",
+        "report",
     },
-    "joint_inversion":  {
-        "joint", "interpret", "report",
+    "joint_inversion": {
+        "joint",
+        "interpret",
+        "report",
     },
-    "tipper":           {"tipper", "report"},
-    "modem":            {"modem", "report"},
-    "mare2dem":         {"mare2dem", "report"},
-    "occam2d":          {"occam2d", "report"},
-    "pre_inversion":    {
-        "phase_analysis", "occam2d", "report",
+    "tipper": {"tipper", "report"},
+    "modem": {"modem", "report"},
+    "mare2dem": {"mare2dem", "report"},
+    "occam2d": {"occam2d", "report"},
+    "pre_inversion": {
+        "phase_analysis",
+        "occam2d",
+        "report",
     },
-    "sensitivity":      {"sensitivity", "report"},
-    "rotation":         {"rotate"},
-    "freq_decimation":  {"decimate", "report"},
-    "batch":            {"batch", "report"},
-    "comparison":       {"compare", "report"},
-    "full":             None,  # show everything
+    "sensitivity": {"sensitivity", "report"},
+    "rotation": {"rotate"},
+    "freq_decimation": {"decimate", "report"},
+    "batch": {"batch", "report"},
+    "comparison": {"compare", "report"},
+    "full": None,  # show everything
 }
 # Default set for unlisted workflows: skip
 # only load and denoise steps.
-_SKIP_ALWAYS: frozenset[str] = frozenset(
-    {"load", "denoise"}
-)
+_SKIP_ALWAYS: frozenset[str] = frozenset({"load", "denoise"})
 
 
 # ── Smart param detection ─────────────────────────
@@ -1029,29 +993,49 @@ _SKIP_ALWAYS: frozenset[str] = frozenset(
 # rotation) run with sensible defaults and do
 # NOT need a param modal.  Only inversion and
 # a few analytical workflows need user input.
-_NEEDS_PARAMS: frozenset[str] = frozenset({
-    # Inversion workflows (model params needed)
-    "ai_inversion", "inv1d",
-    "inv2d", "inv3d",
-    "pinn_inversion", "hybrid_inversion",
-    "ensemble_inversion",
-    "pre_inversion", "modem", "mare2dem",
-    # Analysis workflows (optional params)
-    "denoise",
-    "sensitivity",
-    "interpret", "interpretation",
-    "report",
-    "code_gen",
-    # Plotting tasks (station / component / period / publication)
-    "rhophi", "phase_psection", "pt_psection", "tipper_plot",
-    "phase_tensor_map", "station_response", "strike_profile",
-    "pt_strip", "pt_strip_grid",
-    "strike", "dimensionality", "validator",
-    # Data / IO tools
-    "coords", "elevation", "converter", "batch_export",
-    # Stateful tools
-    "freq_editor", "layered_model",
-})
+_NEEDS_PARAMS: frozenset[str] = frozenset(
+    {
+        # Inversion workflows (model params needed)
+        "ai_inversion",
+        "inv1d",
+        "inv2d",
+        "inv3d",
+        "pinn_inversion",
+        "hybrid_inversion",
+        "ensemble_inversion",
+        "pre_inversion",
+        "modem",
+        "mare2dem",
+        # Analysis workflows (optional params)
+        "denoise",
+        "sensitivity",
+        "interpret",
+        "interpretation",
+        "report",
+        "code_gen",
+        # Plotting tasks (station / component / period / publication)
+        "rhophi",
+        "phase_psection",
+        "pt_psection",
+        "tipper_plot",
+        "phase_tensor_map",
+        "station_response",
+        "strike_profile",
+        "pt_strip",
+        "pt_strip_grid",
+        "strike",
+        "dimensionality",
+        "validator",
+        # Data / IO tools
+        "coords",
+        "elevation",
+        "converter",
+        "batch_export",
+        # Stateful tools
+        "freq_editor",
+        "layered_model",
+    }
+)
 
 # Correction methods always open the parameter modal (the parameter set IS the
 # "different correction with different control").
@@ -1061,50 +1045,54 @@ _NEEDS_PARAMS = _NEEDS_PARAMS | frozenset(_CORR_METHODS)
 # file set on disk (Occam2D / ModEM / MARE2DEM).  With several survey
 # lines loaded they run once per selected line, and with no line named
 # the line picker asks the user first ("Run all" builds every line).
-_PREP_WORKFLOWS: frozenset[str] = frozenset({
-    "pre_inversion", "modem", "mare2dem",
-})
+_PREP_WORKFLOWS: frozenset[str] = frozenset(
+    {
+        "pre_inversion",
+        "modem",
+        "mare2dem",
+    }
+)
 
 _WF_LABELS: dict[str, str] = {
-    "ai_inversion":       "1-D AI inversion",
-    "inv1d":              "1-D AI inversion",
-    "inv2d":              "2-D U-Net inversion",
-    "inv3d":              "3-D GCN inversion",
-    "pinn_inversion":     "PINN inversion",
-    "hybrid_inversion":   "hybrid inversion",
+    "ai_inversion": "1-D AI inversion",
+    "inv1d": "1-D AI inversion",
+    "inv2d": "2-D U-Net inversion",
+    "inv3d": "3-D GCN inversion",
+    "pinn_inversion": "PINN inversion",
+    "hybrid_inversion": "hybrid inversion",
     "ensemble_inversion": "ensemble inversion",
-    "pre_inversion":      "pre-inversion setup",
-    "modem":              "ModEM preparation",
-    "mare2dem":           "MARE2DEM preparation",
-    "qc":                 "QC pipeline",
-    "phase_analysis":     "phase tensor analysis",
-    "static_shift":    "static shift correction",
-    "tipper":             "tipper analysis",
-    "rotation":           "data rotation",
-    "interpret":     "geological interpretation",
+    "pre_inversion": "pre-inversion setup",
+    "modem": "ModEM preparation",
+    "mare2dem": "MARE2DEM preparation",
+    "qc": "QC pipeline",
+    "phase_analysis": "phase tensor analysis",
+    "static_shift": "static shift correction",
+    "tipper": "tipper analysis",
+    "rotation": "data rotation",
+    "interpret": "geological interpretation",
     "interpretation": "geological interpretation",
-    "report":             "survey report",
-    "code_gen":           "code generation",
-    "denoise":            "data denoising",
-    "sensitivity":    "sensitivity / DOI analysis",
-    "rhophi":             "rho/phi sounding curves",
-    "phase_psection":     "phase pseudo-section",
-    "pt_psection":        "phase-tensor pseudo-section",
-    "pt_strip":           "phase-tensor ellipse strip",
-    "pt_strip_grid":      "phase-tensor strip grid (by line)",
-    "tipper_plot":        "tipper plot",
-    "phase_tensor_map":   "phase-tensor map",
-    "station_response":   "station response",
-    "strike_profile":     "strike profile",
-    "strike":             "strike analyzer",
-    "dimensionality":     "dimensionality classifier",
-    "validator":          "EDI validator",
-    "coords":             "coordinate transformer",
-    "elevation":          "elevation enrichment",
-    "converter":          "format converter",
-    "batch_export":       "batch plot export",
-    "freq_editor":        "frequency editor",
-    "layered_model":      "layered model builder",
+    "report": "survey report",
+    "code_gen": "code generation",
+    "denoise": "data denoising",
+    "sensitivity": "sensitivity / DOI analysis",
+    "rhophi": "rho/phi sounding curves",
+    "phase_psection": "phase pseudo-section",
+    "pt_psection": "phase-tensor pseudo-section",
+    "pt_strip": "phase-tensor ellipse strip",
+    "pt_strip_grid": "phase-tensor strip grid (by line)",
+    "tipper_plot": "tipper plot",
+    "phase_tensor_map": "phase-tensor map",
+    "station_response": "station response",
+    "strike_profile": "strike profile",
+    "strike": "strike analyzer",
+    "dimensionality": "dimensionality classifier",
+    "validator": "EDI validator",
+    "coords": "coordinate transformer",
+    "elevation": "elevation enrichment",
+    "converter": "format converter",
+    "batch_export": "batch plot export",
+    "freq_editor": "frequency editor",
+    "layered_model": "layered model builder",
 }
 
 
@@ -1121,6 +1109,7 @@ def _quick_workflow(text: str) -> str | None:
             _normalise_config,
             _regex_extract,
         )
+
         cfg = _regex_extract(text)
         cfg = _normalise_config(cfg, text)
         wf = cfg.get("workflow", "")
@@ -1130,9 +1119,7 @@ def _quick_workflow(text: str) -> str | None:
 
 
 def _waiting_bubble(wf: str) -> html.Div:
-    label = _WF_LABELS.get(
-        wf, wf.replace("_", " ")
-    )
+    label = _WF_LABELS.get(wf, wf.replace("_", " "))
     return html.Div(
         [
             html.Div(
@@ -1144,35 +1131,22 @@ def _waiting_bubble(wf: str) -> html.Div:
                     html.Div(
                         [
                             html.I(
-                                className=(
-                                    "bi bi-sliders2"
-                                    " me-2"
-                                ),
-                                style={
-                                    "color": (
-                                        "var(--blue)"
-                                    )
-                                },
+                                className=("bi bi-sliders2 me-2"),
+                                style={"color": ("var(--blue)")},
                             ),
                             html.Span(
-                                f"To run {label},"
-                                " I need a few"
-                                " parameters."
+                                f"To run {label}, I need a few parameters."
                             ),
                             html.Span(
                                 " Please fill in"
                                 " the form above"
                                 " and click"
                                 " Run Workflow.",
-                                style={
-                                    "opacity": ".7"
-                                },
+                                style={"opacity": ".7"},
                             ),
                         ]
                     ),
-                    html.Div(
-                        _ts(), className="am-ts"
-                    ),
+                    html.Div(_ts(), className="am-ts"),
                 ],
                 className="am-bubble agent",
             ),
@@ -1195,15 +1169,8 @@ def _line_waiting_bubble() -> html.Div:
                     html.Div(
                         [
                             html.I(
-                                className=(
-                                    "bi bi-layers"
-                                    " me-2"
-                                ),
-                                style={
-                                    "color": (
-                                        "var(--blue)"
-                                    )
-                                },
+                                className=("bi bi-layers me-2"),
+                                style={"color": ("var(--blue)")},
                             ),
                             html.Span(
                                 "Multiple survey"
@@ -1215,9 +1182,7 @@ def _line_waiting_bubble() -> html.Div:
                             ),
                         ]
                     ),
-                    html.Div(
-                        _ts(), className="am-ts"
-                    ),
+                    html.Div(_ts(), className="am-ts"),
                 ],
                 className="am-bubble agent",
             ),
@@ -1227,9 +1192,7 @@ def _line_waiting_bubble() -> html.Div:
     )
 
 
-def _extract_line_ref(
-    text: str, groups: dict
-) -> str | None:
+def _extract_line_ref(text: str, groups: dict) -> str | None:
     """Detect a line/profile reference in text.
 
     Checks known group names first (direct match),
@@ -1241,32 +1204,30 @@ def _extract_line_ref(
     for key in groups:
         if key.lower() in t:
             return key
-    m = re.search(
-        r"\b(?:line|profile)\s+(\S+)", t
-    )
+    m = re.search(r"\b(?:line|profile)\s+(\S+)", t)
     if m:
         tok = m.group(1).strip(".,;:!?\"'”’")
         if tok:
             return tok
     _ordinals = {
-        "first": "1", "second": "2",
-        "third": "3", "fourth": "4",
-        "fifth": "5", "sixth": "6",
-        "seventh": "7", "eighth": "8",
-        "ninth": "9", "tenth": "10",
+        "first": "1",
+        "second": "2",
+        "third": "3",
+        "fourth": "4",
+        "fifth": "5",
+        "sixth": "6",
+        "seventh": "7",
+        "eighth": "8",
+        "ninth": "9",
+        "tenth": "10",
     }
     for word, num in _ordinals.items():
-        if (
-            f"{word} line" in t
-            or f"{word} profile" in t
-        ):
+        if f"{word} line" in t or f"{word} profile" in t:
             return num
     return None
 
 
-def _match_group(
-    ref: str, groups: dict
-) -> str | None:
+def _match_group(ref: str, groups: dict) -> str | None:
     """Return the group key matching ref.
 
     Exact first, then case-insensitive,
@@ -1289,17 +1250,12 @@ def _match_group(
     if ref_l.isdigit():
         n = int(ref_l)
         hits = [
-            key for key in groups
-            if n in [
-                int(run) for run in
-                re.findall(r"\d+", key)
-            ]
+            key
+            for key in groups
+            if n in [int(run) for run in re.findall(r"\d+", key)]
         ]
     else:
-        hits = [
-            key for key in groups
-            if ref_l in key.lower()
-        ]
+        hits = [key for key in groups if ref_l in key.lower()]
     if len(hits) == 1:
         return hits[0]
     return None
@@ -1307,96 +1263,115 @@ def _match_group(
 
 # ── PINN / Hybrid keyword detection ───────────────
 
-_PINN_KWS = frozenset({
-    "pinn", "physics-informed",
-    "physics informed", "no training data",
-    "gradient descent",
-})
-_HYBRID_KWS = frozenset({
-    "hybrid", "two-stage", "two stage",
-    "ai + physics", "warm start", "warmstart",
-})
+_PINN_KWS = frozenset(
+    {
+        "pinn",
+        "physics-informed",
+        "physics informed",
+        "no training data",
+        "gradient descent",
+    }
+)
+_HYBRID_KWS = frozenset(
+    {
+        "hybrid",
+        "two-stage",
+        "two stage",
+        "ai + physics",
+        "warm start",
+        "warmstart",
+    }
+)
 
 
 def _is_pinn_or_hybrid(text: str) -> bool:
     t = text.lower()
-    return (
-        any(kw in t for kw in _PINN_KWS)
-        or any(kw in t for kw in _HYBRID_KWS)
+    return any(kw in t for kw in _PINN_KWS) or any(
+        kw in t for kw in _HYBRID_KWS
     )
 
 
 # ── Application launchers (web / mapview / desktop) ──────────────
 
-_WEB_APP_KWS: frozenset[str] = frozenset({
-    "open web app",
-    "launch web app",
-    "open the web",
-    "web interface",
-    "full interface",
-    "full app",
-    "go to web app",
-    "pycsamt web",
-    "web application",
-    "launch app",
-    "full web",
-    "open web",
-    "start web app",
-    "open full app",
-})
+_WEB_APP_KWS: frozenset[str] = frozenset(
+    {
+        "open web app",
+        "launch web app",
+        "open the web",
+        "web interface",
+        "full interface",
+        "full app",
+        "go to web app",
+        "pycsamt web",
+        "web application",
+        "launch app",
+        "full web",
+        "open web",
+        "start web app",
+        "open full app",
+    }
+)
 
 # Tasks too complex for chat → redirect to the web app.
 # (Map-flavoured phrases route to MapView below; "phase tensor map"
 # is deliberately absent — it is a chat plot workflow.)
-_COMPLEX_VIZ_KWS: frozenset[str] = frozenset({
-    "explore results",
-    "browse data",
-    "browse edis",
-    "full visualization",
-    "interactive plot",
-    "full pipeline editor",
-})
+_COMPLEX_VIZ_KWS: frozenset[str] = frozenset(
+    {
+        "explore results",
+        "browse data",
+        "browse edis",
+        "full visualization",
+        "interactive plot",
+        "full pipeline editor",
+    }
+)
 
 # Explicit MapView requests.
-_MAPVIEW_KWS: frozenset[str] = frozenset({
-    "mapview",
-    "map view",
-    "map workbench",
-    "open the map",
-    "launch the map",
-    "open map",
-    "launch map",
-    "start mapview",
-    "map platform",
-    "station map viewer",
-})
+_MAPVIEW_KWS: frozenset[str] = frozenset(
+    {
+        "mapview",
+        "map view",
+        "map workbench",
+        "open the map",
+        "launch the map",
+        "open map",
+        "launch map",
+        "start mapview",
+        "map platform",
+        "station map viewer",
+    }
+)
 
 # Map-flavoured visualisation → MapView is its home turf.
-_MAPVIEW_VIZ_KWS: frozenset[str] = frozenset({
-    "3d map",
-    "station map",
-    "interactive map",
-    "3d visualization",
-    "pseudosection viewer",
-    "interactive pseudosection",
-})
+_MAPVIEW_VIZ_KWS: frozenset[str] = frozenset(
+    {
+        "3d map",
+        "station map",
+        "interactive map",
+        "3d visualization",
+        "pseudosection viewer",
+        "interactive pseudosection",
+    }
+)
 
 # Native desktop application.
-_DESKTOP_KWS: frozenset[str] = frozenset({
-    "desktop app",
-    "desktop application",
-    "desktop gui",
-    "open the gui",
-    "launch the gui",
-    "start the gui",
-    "gui app",
-    "launch desktop",
-    "open desktop",
-    "start the desktop",
-    "native app",
-    "pycsamt gui",
-    "pycsamt desktop",
-})
+_DESKTOP_KWS: frozenset[str] = frozenset(
+    {
+        "desktop app",
+        "desktop application",
+        "desktop gui",
+        "open the gui",
+        "launch the gui",
+        "start the gui",
+        "gui app",
+        "launch desktop",
+        "open desktop",
+        "start the desktop",
+        "native app",
+        "pycsamt gui",
+        "pycsamt desktop",
+    }
+)
 
 _webapp_state: dict = {
     "url": None,
@@ -1421,9 +1396,7 @@ def _is_web_app_request(text: str) -> bool:
 
 def _is_complex_viz(text: str) -> bool:
     t = text.lower()
-    return any(
-        kw in t for kw in _COMPLEX_VIZ_KWS
-    )
+    return any(kw in t for kw in _COMPLEX_VIZ_KWS)
 
 
 _VIZ_REDIRECT_REASON = (
@@ -1451,9 +1424,8 @@ def _detect_app_request(text: str) -> tuple[str, str] | None:
 
 def _port_in_use(port: int) -> bool:
     import socket as _socket
-    with _socket.socket(
-        _socket.AF_INET, _socket.SOCK_STREAM
-    ) as s:
+
+    with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
         s.settimeout(0.4)
         return s.connect_ex(("127.0.0.1", port)) == 0
 
@@ -1466,11 +1438,7 @@ def _ensure_mapview() -> str:
 
     with _ext_lock:
         st = _EXT_APPS["mapview"]
-        if (
-            st["proc"] is not None
-            and st["proc"].poll() is None
-            and st["url"]
-        ):
+        if st["proc"] is not None and st["proc"].poll() is None and st["url"]:
             return st["url"]
         if _port_in_use(_MAPVIEW_PORT):
             # A MapView (or a previous launch) already owns the
@@ -1480,8 +1448,12 @@ def _ensure_mapview() -> str:
         port = _free_port(_MAPVIEW_PORT)
         st["proc"] = subprocess.Popen(
             [
-                _sys.executable, "-m", "pycsamt.app.mapview",
-                "--port", str(port), "--no-browser",
+                _sys.executable,
+                "-m",
+                "pycsamt.app.mapview",
+                "--port",
+                str(port),
+                "--no-browser",
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -1501,9 +1473,7 @@ def _ensure_desktop() -> tuple[bool, str]:
     with _ext_lock:
         st = _EXT_APPS["desktop"]
         if st["proc"] is not None and st["proc"].poll() is None:
-            return True, (
-                "It's already running — check your open windows."
-            )
+            return True, ("It's already running — check your open windows.")
         try:
             st["proc"] = subprocess.Popen(
                 [_sys.executable, "-m", "pycsamt.app.desktop"],
@@ -1519,13 +1489,14 @@ def _ensure_desktop() -> tuple[bool, str]:
         return False, (
             "It exited immediately — PySide6 is probably not "
             "installed. Install the desktop extra with "
-            "`pip install \"pycsamt[desktop]\"` and try again."
+            '`pip install "pycsamt[desktop]"` and try again.'
         )
     return True, "A native pyCSAMT window should appear shortly."
 
 
 def _free_port(preferred: int = 8051) -> int:
     import socket as _socket
+
     try:
         with _socket.socket(
             _socket.AF_INET,
@@ -1566,6 +1537,7 @@ def _ensure_web_app() -> str:
                 from pycsamt.app.web.app import (
                     create_app,
                 )
+
                 wa = create_app(debug=False)
                 wa.run(
                     host="127.0.0.1",
@@ -1630,16 +1602,12 @@ def _launch_bubble(
             [
                 html.I(
                     className=f"{icon} me-2",
-                    style={
-                        "color": (
-                            "var(--green)" if ok else "var(--red)"
-                        )
-                    },
+                    style={"color": ("var(--green)" if ok else "var(--red)")},
                 ),
                 html.Strong(
-                    title if ok else title.replace(
-                        "Launching", "Could not launch"
-                    )
+                    title
+                    if ok
+                    else title.replace("Launching", "Could not launch")
                 ),
             ],
             className="am-webapp-hdr",
@@ -1650,11 +1618,7 @@ def _launch_bubble(
         card.append(
             html.A(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-box-arrow-up-right me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-box-arrow-up-right me-2")),
                     url,
                 ],
                 href=url,
@@ -1664,18 +1628,16 @@ def _launch_bubble(
             )
         )
     default_note = (
-        "Server is starting — the link will be ready in a few"
-        " seconds."
-        if url else ""
+        "Server is starting — the link will be ready in a few seconds."
+        if url
+        else ""
     )
     note = note or default_note
     if note:
         card.append(
             html.Div(
                 [
-                    html.I(
-                        className="bi bi-info-circle me-1"
-                    ),
+                    html.I(className="bi bi-info-circle me-1"),
                     note,
                 ],
                 className="am-webapp-note",
@@ -1702,6 +1664,7 @@ def _launch_bubble(
 
 # ── intent dispatch helpers ────────────────────────
 
+
 def _api_key_hint() -> str:
     """Reusable note nudging the user to set an API key for online mode."""
     return (
@@ -1724,6 +1687,7 @@ def _correction_capability_block() -> str:
     registered (one bullet per catalogue category, with a few example methods).
     """
     from collections import OrderedDict
+
     by_cat: OrderedDict[str, list[str]] = OrderedDict()
     for meta in _CORR_METHODS.values():
         by_cat.setdefault(meta.get("category", "Correction"), []).append(
@@ -1731,9 +1695,11 @@ def _correction_capability_block() -> str:
         )
     if not by_cat:
         return ""
-    lines = ["**Correct & condition** your data with full parameter control"
-             " (I'll open a parameter form, then you can apply the result to"
-             " the session or export it):"]
+    lines = [
+        "**Correct & condition** your data with full parameter control"
+        " (I'll open a parameter form, then you can apply the result to"
+        " the session or export it):"
+    ]
     for cat, labels in by_cat.items():
         shown = ", ".join(labels[:4])
         more = f", +{len(labels) - 4} more" if len(labels) > 4 else ""
@@ -1776,8 +1742,8 @@ def _capability_text() -> str:
         "- strike analyzer (geoelectric strike per station)\n"
         "- dimensionality classifier (1-D / 2-D / 3-D)\n"
         "- EDI validator (per-station quality checklist)\n\n"
-        + _correction_capability_block() +
-        "**Data & I/O tools** (I'll ask for the options first):\n"
+        + _correction_capability_block()
+        + "**Data & I/O tools** (I'll ask for the options first):\n"
         "- coordinate transformer (station lat/lon → UTM)\n"
         "- elevation enrichment (fetch elevation from an open web API)\n"
         "- format converter (re-export the survey to CSV / JSON / EDI)\n"
@@ -1792,7 +1758,7 @@ def _capability_text() -> str:
         "- strike, azimuth/bearing, dimensionality (1-D/2-D/3-D), skew\n"
         "- station count, period & frequency range, coordinates & length\n"
         "- data-quality score, and a one-line summary"
-        " (\"tell me about L22PLT\")\n\n"
+        ' ("tell me about L22PLT")\n\n'
         "**Answer questions** about pyCSAMT — classes, functions, the Sites"
         " data model, and which method to use.\n\n"
         "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
@@ -1827,13 +1793,12 @@ def _unknown_task_text(text: str) -> str:
         " reports.\n"
         "- **Answer questions** about pyCSAMT (classes, functions, methods).\n"
         "- **Generate Python code** for a pyCSAMT workflow.\n"
-        "- **List my capabilities** — just ask \"what can you do?\".\n\n"
+        '- **List my capabilities** — just ask "what can you do?".\n\n'
         "If you need maps, interactive pseudosection viewers, or a feature"
         " that isn't here, say *“open the map view”*, *“open the web"
         " app”*, or *“open the desktop app”* and I'll launch it.\n\n"
-        "Tip: phrase it as an action + target, e.g. \"run static shift\","
-        " \"denoise the data\", or \"run AI inversion\".\n\n"
-        + _api_key_hint()
+        'Tip: phrase it as an action + target, e.g. "run static shift",'
+        ' "denoise the data", or "run AI inversion".\n\n' + _api_key_hint()
     )
 
 
@@ -1872,9 +1837,7 @@ def _lines_bullets(groups: dict) -> str:
     )
 
 
-def _smart_unknown_reply(
-    text: str, edi_store: dict
-) -> str | None:
+def _smart_unknown_reply(text: str, edi_store: dict) -> str | None:
     """Context-aware reply for an unrecognised request.
 
     Handles the two frequent cases professionally instead of the
@@ -1891,9 +1854,7 @@ def _smart_unknown_reply(
     ordinal_note = ""
     sel = [
         str(s)
-        for s in (
-            (edi_store or {}).get("selected_lines") or []
-        )
+        for s in ((edi_store or {}).get("selected_lines") or [])
         if not groups or s in groups
     ]
     if sel:
@@ -1926,13 +1887,10 @@ def _smart_unknown_reply(
     if not plotish:
         return None
 
-    where = (
-        f" for **{line_lbl}**{ordinal_note}" if line_lbl else ""
-    )
+    where = f" for **{line_lbl}**{ordinal_note}" if line_lbl else ""
     suffix = f" of {line_lbl}" if line_lbl else ""
     menu = "\n".join(
-        f"- **{lbl}** — *“{ex}{suffix}”*"
-        for lbl, ex in _PLOT_MENU
+        f"- **{lbl}** — *“{ex}{suffix}”*" for lbl, ex in _PLOT_MENU
     )
     return (
         f"Happy to plot something{where} — which figure would "
@@ -1972,14 +1930,14 @@ def _dispatch_question(
     # "same for line 3") inherits the active workflow / line for retrieval.
     sess = _session()
     session_ctx = {
-        "last_workflow": getattr(sess, "last_workflow", None) if sess else None,
+        "last_workflow": getattr(sess, "last_workflow", None)
+        if sess
+        else None,
         "last_line": getattr(sess, "line", None) if sess else None,
         "recent_turns": history[-6:] if history else None,
     }
 
-    with (
-        AGENT_CONFIG.offline() if offline else _nullctx()
-    ):
+    with AGENT_CONFIG.offline() if offline else _nullctx():
         qa = PackageQAAgent(
             llm_provider=llm_prov,
             api_key=api_key,
@@ -2060,14 +2018,17 @@ def _dispatch_plot(
         else:
             msg = res.summary + (
                 "\n\nHint: " + (res.get("hint") or "")
-                if res.get("hint") else ""
+                if res.get("hint")
+                else ""
             )
         _update_job(
             jid,
             status="done",
             result=msg,
             steps=_JOBS[jid]["steps"],
-            kind=KIND_META if res.get("reason") == "no_tipper" else KIND_ERROR,
+            kind=KIND_META
+            if res.get("reason") == "no_tipper"
+            else KIND_ERROR,
         )
         return
 
@@ -2141,10 +2102,13 @@ def _dispatch_tool(
     if res.status == "failed":
         step("Analysis failed", "done")
         _update_job(
-            jid, status="done",
-            result=res.summary + ("." if not res.summary.endswith(".") else "")
+            jid,
+            status="done",
+            result=res.summary
+            + ("." if not res.summary.endswith(".") else "")
             + f" (dataset{where or ''})",
-            steps=_JOBS[jid]["steps"], kind=KIND_ERROR,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_ERROR,
         )
         return
 
@@ -2152,7 +2116,8 @@ def _dispatch_tool(
     for fname, fig in (res.data.get("figures") or {}).items():
         if isinstance(fig, plt.Figure):
             figs[str(uuid.uuid4())] = {
-                "title": fname, "b64": _fig_to_b64(fig),
+                "title": fname,
+                "b64": _fig_to_b64(fig),
             }
             plt.close(fig)
 
@@ -2165,8 +2130,12 @@ def _dispatch_tool(
         result += "\n\n" + "\n".join(f"⚠ {w}" for w in res.warnings[:3])
 
     _record_run(
-        workflow=kind, path=str(edi_path), output_dir="",
-        status=res.status, summary=res.summary, n_figures=len(figs),
+        workflow=kind,
+        path=str(edi_path),
+        output_dir="",
+        status=res.status,
+        summary=res.summary,
+        n_figures=len(figs),
     )
     step("Done", "done")
 
@@ -2180,14 +2149,21 @@ def _dispatch_tool(
         _postproc = {"jid": jid, "workflow": kind, "output_dir": ""}
 
     _update_job(
-        jid, status="done", result=result, steps=_JOBS[jid]["steps"],
-        figs=figs, kind=KIND_WORKFLOW if figs else KIND_ANSWER,
+        jid,
+        status="done",
+        result=result,
+        steps=_JOBS[jid]["steps"],
+        figs=figs,
+        kind=KIND_WORKFLOW if figs else KIND_ANSWER,
         **({"postproc": _postproc} if _postproc else {}),
     )
 
 
 def _resolve_metric_targets(
-    text: str, edi_store: dict, settings: dict, all_lines: bool,
+    text: str,
+    edi_store: dict,
+    settings: dict,
+    all_lines: bool,
 ) -> list[tuple[str, Any]]:
     """Resolve which line(s) a metric question is about.
 
@@ -2195,6 +2171,7 @@ def _resolve_metric_targets(
     files, or a directory the MetricsAgent can load. Empty when no data is
     available."""
     import os
+
     groups = (edi_store or {}).get("groups", {}) or {}
     edi_path = (edi_store or {}).get("path", "") or ""
     sel_lines = (edi_store or {}).get("selected_lines", []) or []
@@ -2230,6 +2207,7 @@ def _resolve_metric_targets(
         from pycsamt.assistant.tools.project_registry import (
             ProjectRegistry,
         )
+
         reg = ProjectRegistry.from_default()
         if reg is not None:
             ln = reg.find_line_in_text(text)
@@ -2274,13 +2252,15 @@ def _dispatch_metrics(
     targets = _resolve_metric_targets(text, edi_store, settings, all_lines)
     if not targets:
         _update_job(
-            jid, status="done",
+            jid,
+            status="done",
             result=(
                 "I don't have any survey data to read values from yet. "
                 "Load an EDI dataset with **Load EDI** (top-left), or name a "
                 "known survey line, then ask again."
             ),
-            steps=_JOBS[jid]["steps"], kind=KIND_META,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_META,
         )
         return
 
@@ -2305,13 +2285,16 @@ def _dispatch_metrics(
                 continue
             vals = (res.data or {}).get("values", {})
             if len(kinds) == 1:
-                out_lines.append(f"- **{label}**: {vals.get(kinds[0], 'n/a')}")
+                out_lines.append(
+                    f"- **{label}**: {vals.get(kinds[0], 'n/a')}"
+                )
             else:
                 sub = "; ".join(f"{k}: {vals.get(k, 'n/a')}" for k in kinds)
                 out_lines.append(f"- **{label}**: {sub}")
         header = (
             f"Here's the {kinds[0]} for each line:"
-            if len(kinds) == 1 else "Here's what I found per line:"
+            if len(kinds) == 1
+            else "Here's what I found per line:"
         )
         result_text = header + "\n" + "\n".join(out_lines)
 
@@ -2319,15 +2302,21 @@ def _dispatch_metrics(
         result_text += "\n\n" + "\n".join(f"⚠ {w}" for w in warnings[:3])
 
     _record_run(
-        workflow="metrics", path="", output_dir="",
-        status="success", summary=result_text[:200], n_figures=0,
+        workflow="metrics",
+        path="",
+        output_dir="",
+        status="success",
+        summary=result_text[:200],
+        n_figures=0,
     )
     step("Done", "done")
     _update_job(
-        jid, status="done", result=result_text,
-        steps=_JOBS[jid]["steps"], kind=KIND_ANSWER,
+        jid,
+        status="done",
+        result=result_text,
+        steps=_JOBS[jid]["steps"],
+        kind=KIND_ANSWER,
     )
-
 
 
 # ── inversion preparation: per-line file-set builds ──────────────────────
@@ -2339,28 +2328,40 @@ def _dispatch_metrics(
 
 _PREP_STEP_NAME: dict[str, str] = {
     "pre_inversion": "occam2d",
-    "modem":         "modem",
-    "mare2dem":      "mare2dem",
+    "modem": "modem",
+    "mare2dem": "mare2dem",
 }
 
 _PREP_CODE_LABEL: dict[str, str] = {
     "pre_inversion": "Occam2D",
-    "modem":         "ModEM",
-    "mare2dem":      "MARE2DEM",
+    "modem": "ModEM",
+    "mare2dem": "MARE2DEM",
 }
 
 # inv-config (param modal) keys each prep agent reads from its input.
 _PREP_PARAM_KEYS: dict[str, tuple] = {
     "pre_inversion": ("modes", "period_range", "title"),
-    "modem":         ("error_floor", "period_range", "component_types"),
-    "mare2dem":      ("error_floor", "output_modes", "initial_rho",
-                      "target_rms", "max_iterations", "topo"),
+    "modem": ("error_floor", "period_range", "component_types"),
+    "mare2dem": (
+        "error_floor",
+        "output_modes",
+        "initial_rho",
+        "target_rms",
+        "max_iterations",
+        "topo",
+    ),
 }
 
 # Output data keys that hold written file paths in the prep AgentResult.
 _PREP_FILE_KEYS = (
-    "data_path", "mesh_path", "model_path", "startup_path",
-    "cov_path", "ctrl_path", "resistivity_path", "settings_path",
+    "data_path",
+    "mesh_path",
+    "model_path",
+    "startup_path",
+    "cov_path",
+    "ctrl_path",
+    "resistivity_path",
+    "settings_path",
 )
 
 _PREP_NEXT_STEPS: dict[str, str] = {
@@ -2389,11 +2390,13 @@ _PREP_NEXT_STEPS: dict[str, str] = {
 
 def _prep_all_lines_requested(text: str) -> bool:
     """True when the request names all survey lines explicitly."""
-    return bool(re.search(
-        r"\b(?:all|every|each)\s+(?:the\s+)?(?:survey\s+)?"
-        r"(?:lines?|profiles?)\b",
-        (text or "").lower(),
-    ))
+    return bool(
+        re.search(
+            r"\b(?:all|every|each)\s+(?:the\s+)?(?:survey\s+)?"
+            r"(?:lines?|profiles?)\b",
+            (text or "").lower(),
+        )
+    )
 
 
 def _safe_dirname(label: str) -> str:
@@ -2406,6 +2409,7 @@ def _safe_dirname(label: str) -> str:
 
 def _fmt_file_size(path) -> str:
     import os
+
     try:
         kb = os.path.getsize(str(path)) / 1024.0
     except OSError:
@@ -2419,6 +2423,7 @@ def _collect_prep_files(result, prep_step: str):
     Returns ``(files, stats, warns, step_results)`` where *files* is a
     list of existing paths written by the prep step."""
     import os
+
     exec_res = (result.data or {}).get("result")
     step_results = (
         exec_res.data if exec_res is not None and exec_res.data else {}
@@ -2436,9 +2441,7 @@ def _collect_prep_files(result, prep_step: str):
         except (OSError, ValueError):
             continue
     stats = {
-        k: d.get(k)
-        for k in ("n_stations", "n_periods", "n_data")
-        if d.get(k)
+        k: d.get(k) for k in ("n_stations", "n_periods", "n_data") if d.get(k)
     }
     warns = list(getattr(sres, "warnings", None) or [])
     return files, stats, warns, step_results
@@ -2454,6 +2457,7 @@ def _prep_rag_note(query: str) -> str:
         from pycsamt.assistant.rag.context_builder import (
             default_context_builder,
         )
+
         builder = default_context_builder()
         if builder is None:
             return ""
@@ -2510,13 +2514,15 @@ def _dispatch_inversion_prep(
     )
     if not targets:
         _update_job(
-            jid, status="done",
+            jid,
+            status="done",
             result=(
                 "I don't have survey data to prepare inversion files "
                 "from yet. Load an EDI dataset with **Load EDI** "
                 "(top-left), or name a known survey line, then ask again."
             ),
-            steps=_JOBS[jid]["steps"], kind=KIND_META,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_META,
         )
         return
 
@@ -2528,13 +2534,14 @@ def _dispatch_inversion_prep(
     # modal) via the orchestrator's per-step injection.
     _ic = inv_config or {}
     prep_params = {
-        k: _ic[k] for k in _PREP_PARAM_KEYS.get(wtype, ())
+        k: _ic[k]
+        for k in _PREP_PARAM_KEYS.get(wtype, ())
         if _ic.get(k) not in (None, "", [])
     }
     if prep_params:
-        cfg.setdefault("step_params", {}).setdefault(
-            prep_step, {}
-        ).update(prep_params)
+        cfg.setdefault("step_params", {}).setdefault(prep_step, {}).update(
+            prep_params
+        )
 
     multi = len(targets) > 1
     figs: dict = {}
@@ -2543,24 +2550,22 @@ def _dispatch_inversion_prep(
 
     for label, src in targets:
         step(f"Building {code} files for {label}...", "running")
-        out_dir = (
-            os.path.join(root, _safe_dirname(label)) if multi else root
-        )
+        out_dir = os.path.join(root, _safe_dirname(label)) if multi else root
         try:
-            with (
-                AGENT_CONFIG.offline() if offline else _nullctx()
-            ):
+            with AGENT_CONFIG.offline() if offline else _nullctx():
                 orch = WorkflowOrchestratorAgent(
                     llm_provider=llm_prov,
                     api_key=api_key,
                     model=sel_model,
                 )
-                result = orch.execute({
-                    "config":     dict(cfg),
-                    "request":    text,
-                    "data_path":  src,
-                    "output_dir": out_dir,
-                })
+                result = orch.execute(
+                    {
+                        "config": dict(cfg),
+                        "request": text,
+                        "data_path": src,
+                        "output_dir": out_dir,
+                    }
+                )
         except Exception as exc:  # noqa: BLE001
             sections.append(f"**{label}** — ⚠ {exc}")
             step(f"{label} failed", "error")
@@ -2612,9 +2617,7 @@ def _dispatch_inversion_prep(
         for w in warns[:2]:
             sec += f"\n  - ⚠ {w}"
         sections.append(sec)
-        step(
-            f"{label} done", "done" if ok and files else "error"
-        )
+        step(f"{label} done", "done" if ok and files else "error")
 
     if multi:
         header = (
@@ -2629,9 +2632,7 @@ def _dispatch_inversion_prep(
     guide = _PREP_NEXT_STEPS.get(wtype, "")
     if n_ok and guide:
         parts.append(f"**Next steps.** {guide}")
-    rag_note = _prep_rag_note(
-        f"{code} inversion input files runner prepare"
-    )
+    rag_note = _prep_rag_note(f"{code} inversion input files runner prepare")
     if n_ok and rag_note:
         parts.append(rag_note)
 
@@ -2658,28 +2659,70 @@ def _dispatch_inversion_prep(
 # session, compute statistics, and answer with a rich overview card — no
 # LLM call and no pipeline run.
 _DATA_READ_VERBS = (
-    "read", "show", "list", "describe", "summar", "inspect",
-    "check", "overview", "stat",
+    "read",
+    "show",
+    "list",
+    "describe",
+    "summar",
+    "inspect",
+    "check",
+    "overview",
+    "stat",
 )
 _DATA_READ_NOUNS = (
-    "edi", "data", "dataset", "station", "site", "survey", "line",
+    "edi",
+    "data",
+    "dataset",
+    "station",
+    "site",
+    "survey",
+    "line",
 )
 # Phrasing that belongs to another intent (plots, workflows, code, docs).
 _DATA_READ_BLOCK = (
-    "plot", "map", "pseudosection", "pseudo-section", "section",
-    "figure", "chart", "rose", "diagram", "code", "script",
-    "run ", "invert", "inversion", "correct", "filter", "denoise",
-    "export", "save", "write", "how do i", "how to", "what is",
-    "what does", "why",
+    "plot",
+    "map",
+    "pseudosection",
+    "pseudo-section",
+    "section",
+    "figure",
+    "chart",
+    "rose",
+    "diagram",
+    "code",
+    "script",
+    "run ",
+    "invert",
+    "inversion",
+    "correct",
+    "filter",
+    "denoise",
+    "export",
+    "save",
+    "write",
+    "how do i",
+    "how to",
+    "what is",
+    "what does",
+    "why",
 )
 
 
 _LINES_QUERY_PATTERNS = (
-    "what are the lines", "what lines", "which lines",
-    "list lines", "list the lines", "available lines",
-    "loaded lines", "how many lines", "the lines?",
-    "what are the profiles", "which profiles",
-    "list profiles", "loaded profiles", "how many profiles",
+    "what are the lines",
+    "what lines",
+    "which lines",
+    "list lines",
+    "list the lines",
+    "available lines",
+    "loaded lines",
+    "how many lines",
+    "the lines?",
+    "what are the profiles",
+    "which profiles",
+    "list profiles",
+    "loaded profiles",
+    "how many profiles",
 )
 
 
@@ -2715,15 +2758,15 @@ def _looks_like_data_read(text: str) -> bool:
     return any(
         p in t
         for p in (
-            "what data", "which data",
-            "what's loaded", "whats loaded",
+            "what data",
+            "which data",
+            "what's loaded",
+            "whats loaded",
         )
     )
 
 
-def _line_stats(
-    label: str, sites, warnings: list[str]
-) -> dict:
+def _line_stats(label: str, sites, warnings: list[str]) -> dict:
     """Per-line statistics shown on the overview card."""
     import numpy as np
 
@@ -2745,13 +2788,14 @@ def _line_stats(
         freq = (1.0 / max(tmaxs), 1.0 / min(tmins))
 
     scores = [
-        float(r["qc_score"]) for r in rows
-        if r.get("qc_score") is not None
+        float(r["qc_score"]) for r in rows if r.get("qc_score") is not None
     ]
     qc = float(np.nanmean(scores)) if scores else None
     flagged = sum(
-        1 for r in rows
-        if not r.get("has_z") or not r.get("has_coords")
+        1
+        for r in rows
+        if not r.get("has_z")
+        or not r.get("has_coords")
         or (r.get("qc_score") or 0) < 50
     )
     if flagged:
@@ -2774,9 +2818,10 @@ def _line_stats(
                 es.append(e)
                 ns.append(n)
             es, ns = np.asarray(es), np.asarray(ns)
-            length_km = float(
-                np.hypot(es.max() - es.min(), ns.max() - ns.min())
-            ) / 1000.0
+            length_km = (
+                float(np.hypot(es.max() - es.min(), ns.max() - ns.min()))
+                / 1000.0
+            )
     except Exception:  # noqa: BLE001
         pass
 
@@ -2812,9 +2857,7 @@ def _fmt_freq(freq) -> str:
     return f"{_fmt_hz(freq[0])} – {_fmt_hz(freq[1])}"
 
 
-def _overview_payload(
-    lines: list[dict], warnings: list[str]
-) -> dict:
+def _overview_payload(lines: list[dict], warnings: list[str]) -> dict:
     """JSON-safe payload for the survey overview card."""
     import numpy as np
 
@@ -2822,37 +2865,25 @@ def _overview_payload(
     flo = [ln["freq"][0] for ln in lines if ln.get("freq")]
     fhi = [ln["freq"][1] for ln in lines if ln.get("freq")]
     qcs = [ln["qc"] for ln in lines if ln.get("qc") is not None]
-    lens = [
-        ln["length_km"] for ln in lines if ln.get("length_km")
-    ]
+    lens = [ln["length_km"] for ln in lines if ln.get("length_km")]
     tiles = [
         {"value": f"{n_st}", "label": "stations"},
         {
-            "value": (
-                _fmt_freq((min(flo), max(fhi)))
-                if flo else "n/a"
-            ),
+            "value": (_fmt_freq((min(flo), max(fhi))) if flo else "n/a"),
             "label": "frequency range",
         },
         {
-            "value": (
-                f"≈ {sum(lens):.1f} km" if lens else "n/a"
-            ),
+            "value": (f"≈ {sum(lens):.1f} km" if lens else "n/a"),
             "label": (
-                "profile length"
-                if len(lines) == 1 else "total length"
+                "profile length" if len(lines) == 1 else "total length"
             ),
         },
         {
-            "value": (
-                f"{float(np.mean(qcs)):.0f}/100" if qcs else "n/a"
-            ),
+            "value": (f"{float(np.mean(qcs)):.0f}/100" if qcs else "n/a"),
             "label": "mean QC score",
         },
     ]
-    scope_bits = [
-        f"{len(lines)} line{'s' if len(lines) != 1 else ''}"
-    ]
+    scope_bits = [f"{len(lines)} line{'s' if len(lines) != 1 else ''}"]
     if any(ln.get("tipper") for ln in lines):
         scope_bits.append("tipper present")
     return {
@@ -2865,15 +2896,14 @@ def _overview_payload(
                 "freq": _fmt_freq(ln.get("freq")),
                 "qc": (
                     f"{ln['qc']:.0f}/100"
-                    if ln.get("qc") is not None else "n/a"
+                    if ln.get("qc") is not None
+                    else "n/a"
                 ),
                 "flagged": ln.get("flagged", 0),
             }
             for ln in lines
         ],
-        "stations": (
-            lines[0]["stations"] if len(lines) == 1 else []
-        ),
+        "stations": (lines[0]["stations"] if len(lines) == 1 else []),
         "warnings": warnings,
     }
 
@@ -2912,27 +2942,36 @@ def _data_overview_card(card: dict) -> html.Div:
         children.append(
             html.Table(
                 [
-                    html.Thead(html.Tr([
-                        html.Th("Line"),
-                        html.Th("Stations"),
-                        html.Th("Frequency range"),
-                        html.Th("QC"),
-                    ])),
-                    html.Tbody([
-                        html.Tr([
-                            html.Td(r["label"]),
-                            html.Td(str(r["n_stations"])),
-                            html.Td(r["freq"]),
-                            html.Td(
-                                r["qc"]
-                                + (
-                                    f" · {r['flagged']} flagged"
-                                    if r.get("flagged") else ""
-                                )
-                            ),
-                        ])
-                        for r in rows
-                    ]),
+                    html.Thead(
+                        html.Tr(
+                            [
+                                html.Th("Line"),
+                                html.Th("Stations"),
+                                html.Th("Frequency range"),
+                                html.Th("QC"),
+                            ]
+                        )
+                    ),
+                    html.Tbody(
+                        [
+                            html.Tr(
+                                [
+                                    html.Td(r["label"]),
+                                    html.Td(str(r["n_stations"])),
+                                    html.Td(r["freq"]),
+                                    html.Td(
+                                        r["qc"]
+                                        + (
+                                            f" · {r['flagged']} flagged"
+                                            if r.get("flagged")
+                                            else ""
+                                        )
+                                    ),
+                                ]
+                            )
+                            for r in rows
+                        ]
+                    ),
                 ],
                 className="am-ov-table",
             )
@@ -2944,16 +2983,16 @@ def _data_overview_card(card: dict) -> html.Div:
         extra = len(chips) - len(shown)
         children.append(
             html.Div(
-                [
-                    html.Span(c, className="am-ov-chip")
-                    for c in shown
-                ]
+                [html.Span(c, className="am-ov-chip") for c in shown]
                 + (
-                    [html.Span(
-                        f"+{extra} more",
-                        className="am-ov-chip more",
-                    )]
-                    if extra > 0 else []
+                    [
+                        html.Span(
+                            f"+{extra} more",
+                            className="am-ov-chip more",
+                        )
+                    ]
+                    if extra > 0
+                    else []
                 ),
                 className="am-ov-chips",
             )
@@ -2963,9 +3002,7 @@ def _data_overview_card(card: dict) -> html.Div:
         children.append(
             html.Div(
                 [
-                    html.I(
-                        className="bi bi-exclamation-triangle"
-                    ),
+                    html.I(className="bi bi-exclamation-triangle"),
                     html.Span(w),
                 ],
                 className="am-ov-warn",
@@ -3025,9 +3062,11 @@ def _dispatch_data_overview(
             kind = KIND_ANSWER
         elif (edi_store or {}).get("path"):
             import os as _os
-            label = _os.path.basename(
-                str(edi_store["path"]).rstrip("/\\")
-            ) or "the survey"
+
+            label = (
+                _os.path.basename(str(edi_store["path"]).rstrip("/\\"))
+                or "the survey"
+            )
             result = (
                 f"One dataset is loaded (**{label}**) with no "
                 "separate line grouping. Say *“read the data”* "
@@ -3039,23 +3078,29 @@ def _dispatch_data_overview(
             result = _NO_DATA_GUIDANCE
             kind = KIND_META
         _update_job(
-            jid, status="done", result=result,
-            steps=_JOBS[jid]["steps"], kind=kind,
+            jid,
+            status="done",
+            result=result,
+            steps=_JOBS[jid]["steps"],
+            kind=kind,
         )
         return
 
     # A named line reads that line only; otherwise read every line.
-    named = bool(groups) and bool(
-        _extract_line_ref(text, groups)
-    )
+    named = bool(groups) and bool(_extract_line_ref(text, groups))
     targets = _resolve_metric_targets(
-        text, edi_store, settings, all_lines=not named,
+        text,
+        edi_store,
+        settings,
+        all_lines=not named,
     )
     if not targets:
         _update_job(
-            jid, status="done",
+            jid,
+            status="done",
             result=_NO_DATA_GUIDANCE,
-            steps=_JOBS[jid]["steps"], kind=KIND_META,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_META,
         )
         return
 
@@ -3067,23 +3112,25 @@ def _dispatch_data_overview(
         step(f"Reading {label}...", "running")
         try:
             sites = ensure_sites(
-                src, recursive=True, strict=False, verbose=0,
+                src,
+                recursive=True,
+                strict=False,
+                verbose=0,
             )
             lines.append(_line_stats(label, sites, warnings))
         except Exception as exc:  # noqa: BLE001
-            warnings.append(
-                f"{label}: could not be read ({exc})"
-            )
+            warnings.append(f"{label}: could not be read ({exc})")
 
     if not lines:
         _update_job(
-            jid, status="done",
+            jid,
+            status="done",
             result=(
                 "I found stored survey entries but could not read "
-                "any of them.\n\n"
-                + "\n".join(f"- {w}" for w in warnings[:4])
+                "any of them.\n\n" + "\n".join(f"- {w}" for w in warnings[:4])
             ),
-            steps=_JOBS[jid]["steps"], kind=KIND_ERROR,
+            steps=_JOBS[jid]["steps"],
+            kind=KIND_ERROR,
         )
         return
 
@@ -3105,13 +3152,21 @@ def _dispatch_data_overview(
         )
 
     _record_run(
-        workflow="data_overview", path="", output_dir="",
-        status="success", summary=lead[:200], n_figures=0,
+        workflow="data_overview",
+        path="",
+        output_dir="",
+        status="success",
+        summary=lead[:200],
+        n_figures=0,
     )
     step("Overview ready", "done")
     _update_job(
-        jid, status="done", result=lead, card=card,
-        steps=_JOBS[jid]["steps"], kind=KIND_ANSWER,
+        jid,
+        status="done",
+        result=lead,
+        card=card,
+        steps=_JOBS[jid]["steps"],
+        kind=KIND_ANSWER,
     )
 
 
@@ -3134,20 +3189,14 @@ def _dispatch_code(
     from pycsamt.api.agents import AGENT_CONFIG
 
     step("Extracting configuration...", "done")
-    with (
-        AGENT_CONFIG.offline() if offline else _nullctx()
-    ):
+    with AGENT_CONFIG.offline() if offline else _nullctx():
         ctx_agent = ContextInputAgent(
             llm_provider=llm_prov,
             api_key=api_key,
             model=sel_model,
         )
         ctx_res = ctx_agent.execute({"request": text})
-    cfg = (
-        ctx_res.data.get("config", {})
-        if ctx_res and ctx_res.data
-        else {}
-    )
+    cfg = ctx_res.data.get("config", {}) if ctx_res and ctx_res.data else {}
     # Pick the workflow the code should be ABOUT (the subject), not the
     # "code_gen" action. Priority: router slot (if specific) → subject
     # extracted from the text → sensible default.
@@ -3170,6 +3219,7 @@ def _dispatch_code(
         from pycsamt.assistant.rag.context_builder import (
             default_context_builder,
         )
+
         builder = default_context_builder()
         if builder is not None:
             ac = builder.build(text)
@@ -3197,9 +3247,7 @@ def _dispatch_code(
 
     _update_job(jid, workflow="code_gen")
     step("Generating code...", "running")
-    with (
-        AGENT_CONFIG.offline() if offline else _nullctx()
-    ):
+    with AGENT_CONFIG.offline() if offline else _nullctx():
         cg = CodeGenerationAgent(
             llm_provider=llm_prov,
             api_key=api_key,
@@ -3223,6 +3271,7 @@ def _dispatch_code(
         from pycsamt.assistant.tools.validation_tools import (
             validate_generated_code,
         )
+
         rep = validate_generated_code(code)
         if rep["ok"]:
             _valid_note = (
@@ -3242,15 +3291,12 @@ def _dispatch_code(
     except Exception:  # noqa: BLE001 — validation is best-effort
         _valid_note = ""
 
-    _line_note = (
-        f" for line {resolved_line}" if resolved_line else ""
-    )
+    _line_note = f" for line {resolved_line}" if resolved_line else ""
     summary = (
         "Here is a standalone pyCSAMT script that"
         f" reproduces the {cfg.get('workflow', 'qc')}"
         f" workflow{_line_note}. Copy it from the code block"
-        " below — edit the data path if needed."
-        + _valid_note
+        " below — edit the data path if needed." + _valid_note
     )
     step("Code ready", "done")
     _update_job(
@@ -3265,6 +3311,7 @@ def _dispatch_code(
 
 # ── agent runner ───────────────────────────────────
 
+
 def _run_agent(
     jid: str,
     text: str,
@@ -3277,19 +3324,16 @@ def _run_agent(
     Execute in a background thread.
     Writes steps + result to _JOBS[jid].
     """
+
     def _step(label: str, status: str = "done"):
         with _JOBS_LOCK:
-            _JOBS[jid]["steps"].append(
-                {"label": label, "status": status}
-            )
+            _JOBS[jid]["steps"].append({"label": label, "status": status})
 
     try:
         _step("Parsing request...", "done")
 
         # configure provider + api key
-        provider = settings.get(
-            "provider", "offline"
-        )
+        provider = settings.get("provider", "offline")
         key_map = {
             "claude": "ANTHROPIC_API_KEY",
             "openai": "OPENAI_API_KEY",
@@ -3299,28 +3343,17 @@ def _run_agent(
         }
         api_key: str | None = None
         if provider in key_map:
-            api_key = (
-                settings.get(
-                    f"key_{provider}", ""
-                ) or None
-            )
+            api_key = settings.get(f"key_{provider}", "") or None
             if api_key:
                 import os
-                os.environ[
-                    key_map[provider]
-                ] = api_key
+
+                os.environ[key_map[provider]] = api_key
 
         # "offline" maps to "claude" provider
         # name so BaseAgent validates it, but
         # api_key stays None → regex fallback.
-        llm_prov = (
-            provider
-            if provider != "offline"
-            else "claude"
-        )
-        sel_model = settings.get(
-            f"model_{llm_prov}"
-        ) or None
+        llm_prov = provider if provider != "offline" else "claude"
+        sel_model = settings.get(f"model_{llm_prov}") or None
 
         # import agents lazily
         from pycsamt.agents.context import (
@@ -3370,14 +3403,15 @@ def _run_agent(
         if _looks_like_data_read(text):
             _step("Intent: data overview", "done")
             _dispatch_data_overview(
-                jid, text, edi_store, settings, step=_step,
+                jid,
+                text,
+                edi_store,
+                settings,
+                step=_step,
             )
             return
 
-        with (
-            AGENT_CONFIG.offline()
-            if _offline else _nullctx()
-        ):
+        with AGENT_CONFIG.offline() if _offline else _nullctx():
             _router = IntentRouter(
                 llm_provider=llm_prov,
                 api_key=api_key,
@@ -3412,12 +3446,17 @@ def _run_agent(
             return
         if decision.intent == _I_METRICS:
             _dispatch_metrics(
-                jid, text, edi_store, settings, step=_step,
+                jid,
+                text,
+                edi_store,
+                settings,
+                step=_step,
             )
             return
         if decision.intent == _I_QUESTION:
             _dispatch_question(
-                jid, text,
+                jid,
+                text,
                 llm_prov=llm_prov,
                 api_key=api_key,
                 sel_model=sel_model,
@@ -3428,7 +3467,10 @@ def _run_agent(
             return
         if decision.intent == _I_CODE:
             _dispatch_code(
-                jid, text, edi_store, settings,
+                jid,
+                text,
+                edi_store,
+                settings,
                 workflow=decision.workflow,
                 llm_prov=llm_prov,
                 api_key=api_key,
@@ -3441,18 +3483,13 @@ def _run_agent(
         # ── WORKFLOW / PLOT → run the pipeline ─────
         _step("Classifying workflow...", "done")
 
-        with (
-            AGENT_CONFIG.offline()
-            if _offline else _nullctx()
-        ):
+        with AGENT_CONFIG.offline() if _offline else _nullctx():
             ctx_agent = ContextInputAgent(
                 llm_provider=llm_prov,
                 api_key=api_key,
                 model=sel_model,
             )
-            ctx_result = ctx_agent.execute(
-                {"request": text}
-            )
+            ctx_result = ctx_agent.execute({"request": text})
 
         if ctx_result.status == "failed":
             _update_job(
@@ -3493,12 +3530,15 @@ def _run_agent(
         from pycsamt.agents.orchestrator import (
             _WORKFLOW_STEPS as _WF_STEPS,
         )
+
         _explicit_wf = _ic.get("workflow")
         _kw_wf = _cwf(text, default=None)
         _router_wf = (
             decision.workflow
-            if (decision.workflow in _WF_STEPS
-                or decision.workflow in _PLOT_WORKFLOWS)
+            if (
+                decision.workflow in _WF_STEPS
+                or decision.workflow in _PLOT_WORKFLOWS
+            )
             else None
         )
         _ctx_wf = cfg.get("workflow")
@@ -3550,84 +3590,46 @@ def _run_agent(
         # code's dedicated chain.
         if wtype == "pre_inversion":
             _code = str(
-                _ic.get("inversion_code")
-                or cfg.get("inversion_code")
-                or ""
+                _ic.get("inversion_code") or cfg.get("inversion_code") or ""
             ).lower()
             if _code in ("modem", "mare2dem"):
                 wtype = _code
                 cfg["workflow"] = _code
         _update_job(jid, workflow=wtype)
         _step(f"Workflow: {wtype}", "done")
-        if wtype in (
-            "pinn_inversion", "hybrid_inversion"
-        ):
+        if wtype in ("pinn_inversion", "hybrid_inversion"):
             _pi = {
                 "dim": _ic.get("dim", 1),
-                "n_layers": _ic.get(
-                    "n_layers", 10
-                ),
-                "depth_max": _ic.get(
-                    "depth_max", 2000.0
-                ),
+                "n_layers": _ic.get("n_layers", 10),
+                "depth_max": _ic.get("depth_max", 2000.0),
                 "epochs": _ic.get("epochs", 500),
                 "lr": _ic.get("lr", 0.01),
-                "smoothness_weight": _ic.get(
-                    "smoothness_weight", 0.01
-                ),
-                "lateral_weight": _ic.get(
-                    "lateral_weight", 0.005
-                ),
-                "graph_weight": _ic.get(
-                    "graph_weight", 0.005
-                ),
-                "radius": _ic.get(
-                    "radius", 5000.0
-                ),
-                "solver": _ic.get(
-                    "solver", "mt1d"
-                ),
+                "smoothness_weight": _ic.get("smoothness_weight", 0.01),
+                "lateral_weight": _ic.get("lateral_weight", 0.005),
+                "graph_weight": _ic.get("graph_weight", 0.005),
+                "radius": _ic.get("radius", 5000.0),
+                "solver": _ic.get("solver", "mt1d"),
             }
             cfg["pinn_params"] = _pi
             cfg["hybrid_params"] = _pi
-            cfg["checkpoint"] = _ic.get(
-                "checkpoint", ""
-            )
+            cfg["checkpoint"] = _ic.get("checkpoint", "")
         elif wtype in (
-            "ai_inversion", "inv1d",
-            "inv2d", "inv3d",
+            "ai_inversion",
+            "inv1d",
+            "inv2d",
+            "inv3d",
             "ensemble_inversion",
         ):
             cfg["ai_inv_params"] = {
-                "n_layers": int(
-                    _ic.get("n_layers", 10)
-                ),
-                "depth_max": float(
-                    _ic.get("depth_max", 2000.0)
-                ),
-                "epochs": int(
-                    _ic.get("epochs", 500)
-                ),
-                "lr": float(
-                    _ic.get("lr", 0.01)
-                ),
-                "lateral_weight": float(
-                    _ic.get(
-                        "lateral_weight", 0.005
-                    )
-                ),
-                "graph_weight": float(
-                    _ic.get(
-                        "graph_weight", 0.005
-                    )
-                ),
-                "radius": float(
-                    _ic.get("radius", 5000.0)
-                ),
+                "n_layers": int(_ic.get("n_layers", 10)),
+                "depth_max": float(_ic.get("depth_max", 2000.0)),
+                "epochs": int(_ic.get("epochs", 500)),
+                "lr": float(_ic.get("lr", 0.01)),
+                "lateral_weight": float(_ic.get("lateral_weight", 0.005)),
+                "graph_weight": float(_ic.get("graph_weight", 0.005)),
+                "radius": float(_ic.get("radius", 5000.0)),
             }
-            cfg["checkpoint"] = _ic.get(
-                "checkpoint", ""
-            )
+            cfg["checkpoint"] = _ic.get("checkpoint", "")
 
         # Pass pipeline step params into cfg
         _step_p = _ic.get("step_params")
@@ -3636,45 +3638,31 @@ def _run_agent(
 
         # build orchestrator input_data
         edi_path = (
-            edi_store.get("path", "")
-            if edi_store
-            else ""
+            edi_store.get("path", "") if edi_store else ""
         ) or cfg.get("data_path", "")
 
         # Filter to selected lines if set
-        sel_lines = (edi_store or {}).get(
-            "selected_lines", []
-        )
+        sel_lines = (edi_store or {}).get("selected_lines", [])
         if sel_lines:
-            grp = (edi_store or {}).get(
-                "groups", {}
-            )
+            grp = (edi_store or {}).get("groups", {})
             file_list: list[str] = []
             for ln in sel_lines:
-                file_list.extend(
-                    grp.get(ln, [])
-                )
+                file_list.extend(grp.get(ln, []))
             if file_list:
                 edi_path = file_list
 
         # Fall back to YAML line registry when no
         # EDI is loaded but user names a survey line.
         if not edi_path:
-            _reg_yaml = (settings or {}).get(
-                "line_registry", ""
-            )
+            _reg_yaml = (settings or {}).get("line_registry", "")
             if _reg_yaml:
                 try:
                     import yaml as _yaml
-                    _reg = (
-                        _yaml.safe_load(_reg_yaml)
-                        or {}
-                    )
+
+                    _reg = _yaml.safe_load(_reg_yaml) or {}
                     _tl = text.lower()
                     for _ln, _lp in _reg.items():
-                        if (
-                            str(_ln).lower() in _tl
-                        ):
+                        if str(_ln).lower() in _tl:
                             edi_path = str(_lp)
                             break
                 except Exception:
@@ -3689,6 +3677,7 @@ def _run_agent(
                 from pycsamt.assistant.tools.project_registry import (
                     ProjectRegistry,
                 )
+
                 _reg = ProjectRegistry.from_default()
                 if _reg is not None:
                     _ln = _reg.find_line_in_text(text)
@@ -3723,26 +3712,46 @@ def _run_agent(
 
         # Guard: workflows that need EDI data
         # must have a valid path.
-        _EDI_REQUIRED = frozenset({
-            "qc", "static_shift",
-            "phase_analysis", "ai_inversion",
-            "inv1d", "inv2d", "inv3d",
-            "pinn_inversion", "hybrid_inversion",
-            "ensemble_inversion", "pre_inversion",
-            "modem", "mare2dem", "tipper", "rotation",
-            "denoise", "sensitivity",
-            "freq_decimation",
-            "rhophi", "phase_psection", "pt_psection", "tipper_plot",
-            "phase_tensor_map", "station_response", "strike_profile",
-            "pt_strip", "pt_strip_grid",
-            "strike", "dimensionality", "validator",
-            "coords", "elevation", "converter", "batch_export",
-            "freq_editor",  # layered_model is synthetic → no data needed
-        }) | frozenset(_CORR_METHODS)  # all correction methods need data
-        if (
-            wtype in _EDI_REQUIRED
-            and not edi_path
-        ):
+        _EDI_REQUIRED = frozenset(
+            {
+                "qc",
+                "static_shift",
+                "phase_analysis",
+                "ai_inversion",
+                "inv1d",
+                "inv2d",
+                "inv3d",
+                "pinn_inversion",
+                "hybrid_inversion",
+                "ensemble_inversion",
+                "pre_inversion",
+                "modem",
+                "mare2dem",
+                "tipper",
+                "rotation",
+                "denoise",
+                "sensitivity",
+                "freq_decimation",
+                "rhophi",
+                "phase_psection",
+                "pt_psection",
+                "tipper_plot",
+                "phase_tensor_map",
+                "station_response",
+                "strike_profile",
+                "pt_strip",
+                "pt_strip_grid",
+                "strike",
+                "dimensionality",
+                "validator",
+                "coords",
+                "elevation",
+                "converter",
+                "batch_export",
+                "freq_editor",  # layered_model is synthetic → no data needed
+            }
+        ) | frozenset(_CORR_METHODS)  # all correction methods need data
+        if wtype in _EDI_REQUIRED and not edi_path:
             _update_job(
                 jid,
                 status="done",
@@ -3759,6 +3768,7 @@ def _run_agent(
 
         # Friendly label for plot / tool messages (line, selected lines, dir).
         import os as _os
+
         _task_label = _resolved_line or (
             ", ".join(sel_lines) if sel_lines else ""
         )
@@ -3768,8 +3778,12 @@ def _run_agent(
         # ── inversion preparation → per-line file-set builds ──────────
         if wtype in _PREP_WORKFLOWS:
             _dispatch_inversion_prep(
-                jid, wtype, text,
-                edi_store, settings, cfg,
+                jid,
+                wtype,
+                text,
+                edi_store,
+                settings,
+                cfg,
                 inv_config=(inv_config or {}),
                 llm_prov=llm_prov,
                 api_key=api_key,
@@ -3810,16 +3824,13 @@ def _run_agent(
             return
 
         orch_input = {
-            "config":     cfg,
-            "request":    text,
-            "data_path":  edi_path,
+            "config": cfg,
+            "request": text,
+            "data_path": edi_path,
             "output_dir": output_dir,
         }
 
-        with (
-            AGENT_CONFIG.offline()
-            if _offline else _nullctx()
-        ):
+        with AGENT_CONFIG.offline() if _offline else _nullctx():
             orch = WorkflowOrchestratorAgent(
                 llm_provider=llm_prov,
                 api_key=api_key,
@@ -3833,9 +3844,7 @@ def _run_agent(
 
         _step(
             f"Completed {wtype}",
-            "done"
-            if result.status != "failed"
-            else "error",
+            "done" if result.status != "failed" else "error",
         )
 
         # collect figures and generated code
@@ -3846,26 +3855,14 @@ def _run_agent(
         generated_code: str = ""
         step_results: dict = {}
         if result.status != "failed":
-            exec_res = (
-                result.data or {}
-            ).get("result")
-            step_results = (
-                exec_res.data
-                if exec_res and exec_res.data
-                else {}
-            )
-            _fig_steps = (
-                _WORKFLOW_FIGURE_STEPS.get(wtype)
-            )
+            exec_res = (result.data or {}).get("result")
+            step_results = exec_res.data if exec_res and exec_res.data else {}
+            _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype)
             # None means "show all steps";
             # a set means only those steps.
             # For unlisted workflows, skip
             # load/denoise by default.
-            if (
-                _fig_steps is None
-                and wtype
-                not in _WORKFLOW_FIGURE_STEPS
-            ):
+            if _fig_steps is None and wtype not in _WORKFLOW_FIGURE_STEPS:
                 _fig_steps = None  # show all
             for sname, sres in step_results.items():
                 if not hasattr(sres, "data"):
@@ -3877,61 +3874,33 @@ def _run_agent(
                     if sname not in _fig_steps:
                         # close any open figs for
                         # this suppressed step
-                        _sf = (
-                            sres.data or {}
-                        ).get("figures", {})
-                        for _f in (
-                            _sf or {}
-                        ).values():
-                            if isinstance(
-                                _f, plt.Figure
-                            ):
+                        _sf = (sres.data or {}).get("figures", {})
+                        for _f in (_sf or {}).values():
+                            if isinstance(_f, plt.Figure):
                                 plt.close(_f)
                         continue
                 elif sname in _SKIP_ALWAYS:
                     continue
-                step_figs = (
-                    sres.data or {}
-                ).get("figures", {})
-                for fname, fig in (
-                    step_figs or {}
-                ).items():
+                step_figs = (sres.data or {}).get("figures", {})
+                for fname, fig in (step_figs or {}).items():
                     if isinstance(fig, plt.Figure):
                         b64 = _fig_to_b64(fig)
                         plt.close(fig)
                         figs[str(uuid.uuid4())] = {
-                            "title": (
-                                f"[{sname}] {fname}"
-                            ),
+                            "title": (f"[{sname}] {fname}"),
                             "b64": b64,
                         }
 
             # extract generated code (code_gen step)
             code_res = step_results.get("code_gen")
-            if code_res and hasattr(
-                code_res, "data"
-            ):
-                generated_code = (
-                    (code_res.data or {}).get(
-                        "code", ""
-                    ) or ""
-                )
+            if code_res and hasattr(code_res, "data"):
+                generated_code = (code_res.data or {}).get("code", "") or ""
 
         # cache corrected sites for post-proc modal
-        if (
-            result.status != "failed"
-            and wtype in _CORRECTION_WFLOWS
-        ):
-            for _sn, _sr in (
-                step_results.items()
-            ):
-                _d = (
-                    getattr(_sr, "data", None)
-                    or {}
-                )
-                _corr = _d.get(
-                    "corrected_sites"
-                )
+        if result.status != "failed" and wtype in _CORRECTION_WFLOWS:
+            for _sn, _sr in step_results.items():
+                _d = getattr(_sr, "data", None) or {}
+                _corr = _d.get("corrected_sites")
                 if _corr is not None:
                     _CORR_CACHE[jid] = _corr
                     _update_job(
@@ -3945,11 +3914,7 @@ def _run_agent(
                     break
 
         # AgentResult.summary is the text field
-        summary = (
-            result.summary
-            or result.error
-            or "Workflow completed."
-        )
+        summary = result.summary or result.error or "Workflow completed."
 
         # Trace the run to the workflow history (observability +
         # the sidebar "Recent runs" view). Best-effort.
@@ -3969,11 +3934,7 @@ def _run_agent(
             steps=_JOBS[jid]["steps"],
             figs=figs,
             code=generated_code,
-            kind=(
-                KIND_ERROR
-                if result.status == "failed"
-                else KIND_WORKFLOW
-            ),
+            kind=(KIND_ERROR if result.status == "failed" else KIND_WORKFLOW),
         )
 
     except Exception as exc:  # noqa: BLE001
@@ -3994,10 +3955,11 @@ def _run_agent(
 
 # ── pinned-messages helpers ────────────────────────
 
+
 def _pin_snippet(text: str, limit: int = 60) -> str:
     """One-line snippet for the sidebar pin entry."""
     line = " ".join((text or "").split())
-    return line if len(line) <= limit else line[:limit - 1] + "…"
+    return line if len(line) <= limit else line[: limit - 1] + "…"
 
 
 def _apply_pin_toggle(
@@ -4019,37 +3981,32 @@ def _apply_pin_toggle(
     )
     if not msg:
         raise KeyError(mid)
-    pins.append({
-        "mid": mid,
-        "role": msg.get("role", "assistant"),
-        "snippet": _pin_snippet(msg.get("content", "")),
-        "ts": msg.get("ts", _ts()),
-    })
+    pins.append(
+        {
+            "mid": mid,
+            "role": msg.get("role", "assistant"),
+            "snippet": _pin_snippet(msg.get("content", "")),
+            "ts": msg.get("ts", _ts()),
+        }
+    )
     return pins
 
 
 def _remove_pin(pins: list | None, mid: str) -> list:
     """Return *pins* without the entry for *mid*."""
-    return [
-        p for p in (pins or []) if p.get("mid") != mid
-    ]
+    return [p for p in (pins or []) if p.get("mid") != mid]
 
 
 def _pin_item(pin: dict) -> html.Div:
     """Render one pinned-message row in the sidebar."""
     mid = pin.get("mid", "")
     role = pin.get("role", "assistant")
-    icon = (
-        "bi-person-fill" if role == "user"
-        else "bi-robot"
-    )
+    icon = "bi-person-fill" if role == "user" else "bi-robot"
     return html.Div(
         [
             html.Button(
                 [
-                    html.I(
-                        className=f"bi {icon} am-pin-role"
-                    ),
+                    html.I(className=f"bi {icon} am-pin-role"),
                     html.Span(
                         pin.get("snippet", ""),
                         className="am-pin-text",
@@ -4074,6 +4031,7 @@ def _pin_item(pin: dict) -> html.Div:
 
 # ── workflow trace (Recent runs) ───────────────────
 
+
 def _record_run(
     *,
     workflow: str,
@@ -4089,6 +4047,7 @@ def _record_run(
             WorkflowHistory,
             WorkflowRun,
         )
+
         WorkflowHistory.default().record(
             WorkflowRun(
                 workflow=workflow,
@@ -4116,6 +4075,7 @@ def _session() -> Any:
     if _SESSION is None:
         try:
             from pycsamt.assistant.memory import SessionState
+
             _SESSION = SessionState()
         except Exception:  # noqa: BLE001
             _SESSION = False  # mark as tried-and-unavailable
@@ -4148,6 +4108,7 @@ def _names_registry_line(text: str) -> bool:
         from pycsamt.assistant.tools.project_registry import (
             ProjectRegistry,
         )
+
         reg = ProjectRegistry.from_default()
         if reg is None:
             return False
@@ -4165,6 +4126,7 @@ def _recent_runs(n: int = 8) -> list[dict]:
         from pycsamt.assistant.memory.workflow_history import (
             WorkflowHistory,
         )
+
         return list(reversed(WorkflowHistory.default().recent(n)))
     except Exception:  # noqa: BLE001
         return []
@@ -4176,10 +4138,7 @@ def _run_item(run: dict) -> html.Div:
     status = run.get("status", "")
     ok = status != "failed"
     ts = (run.get("timestamp", "") or "").replace("T", " ")[5:16]
-    icon = (
-        "bi-check-circle-fill" if ok
-        else "bi-exclamation-triangle-fill"
-    )
+    icon = "bi-check-circle-fill" if ok else "bi-exclamation-triangle-fill"
     color = "var(--green)" if ok else "var(--red)"
     label = _WF_RUNNING_LABEL.get(wf, wf.replace("_", " "))
     return html.Div(
@@ -4203,6 +4162,7 @@ def _run_item(run: dict) -> html.Div:
 
 # ── callbacks ──────────────────────────────────────
 
+
 def register_chat(app) -> None:
 
     # 1. Send message → add user bubble,
@@ -4210,9 +4170,7 @@ def register_chat(app) -> None:
     @app.callback(
         Output(IDs.CHAT_WINDOW, "children"),
         Output(IDs.STORE_JOB, "data"),
-        Output(
-            IDs.INTERVAL_POLL, "disabled"
-        ),
+        Output(IDs.INTERVAL_POLL, "disabled"),
         Output(IDs.INPUT, "value"),
         Output(IDs.STORE_MESSAGES, "data"),
         Output(IDs.STORE_PENDING, "data"),
@@ -4225,9 +4183,7 @@ def register_chat(app) -> None:
         State(IDs.CHAT_WINDOW, "children"),
         State(IDs.STORE_EDI, "data"),
         State(IDs.STORE_SETTINGS, "data"),
-        State(
-            IDs.STORE_INV_CONFIG, "data"
-        ),
+        State(IDs.STORE_INV_CONFIG, "data"),
         State(IDs.STORE_MESSAGES, "data"),
         State(IDs.INTERVAL_POLL, "disabled"),
         State(IDs.STORE_JOB, "data"),
@@ -4257,13 +4213,10 @@ def register_chat(app) -> None:
             )
 
         triggered = ctx.triggered_id
-        if (
-            isinstance(triggered, dict)
-            and triggered.get("type")
-            == "am-chip"
-        ):
+        if isinstance(triggered, dict) and triggered.get("type") == "am-chip":
             idx = triggered["index"]
             from ..layout import _PROMPT_CHIPS
+
             text = _PROMPT_CHIPS[idx]
 
         if not text or not text.strip():
@@ -4272,22 +4225,22 @@ def register_chat(app) -> None:
         text = text.strip()
 
         _user_mid = _mid()
-        new_stored = list(
-            stored_messages or []
+        new_stored = list(stored_messages or [])
+        new_stored.append(
+            {
+                "role": "user",
+                "content": text,
+                "ts": _ts(),
+                "mid": _user_mid,
+            }
         )
-        new_stored.append({
-            "role": "user",
-            "content": text,
-            "ts": _ts(),
-            "mid": _user_mid,
-        })
 
         msgs = [
-            c for c in (current_msgs or [])
+            c
+            for c in (current_msgs or [])
             if not (
                 isinstance(c, dict)
-                and c.get("props", {}).get("id")
-                == IDs.WELCOME
+                and c.get("props", {}).get("id") == IDs.WELCOME
             )
         ]
         msgs.append(_user_bubble(text, mid=_user_mid))
@@ -4303,8 +4256,10 @@ def register_chat(app) -> None:
             if _app_kind == "desktop":
                 _ok, _note = _ensure_desktop()
                 wb = _launch_bubble(
-                    "desktop", reason=_reason,
-                    note=_note, ok=_ok,
+                    "desktop",
+                    reason=_reason,
+                    note=_note,
+                    ok=_ok,
                 )
                 _log = (
                     "Launched the pyCSAMT desktop app."
@@ -4314,24 +4269,34 @@ def register_chat(app) -> None:
             elif _app_kind == "mapview":
                 _mv_url = _ensure_mapview()
                 wb = _launch_bubble(
-                    "mapview", url=_mv_url, reason=_reason,
+                    "mapview",
+                    url=_mv_url,
+                    reason=_reason,
                 )
                 _log = f"Launched MapView: {_mv_url}"
             else:
                 _wa_url = _ensure_web_app()
                 wb = _launch_bubble(
-                    "web", url=_wa_url, reason=_reason,
+                    "web",
+                    url=_wa_url,
+                    reason=_reason,
                 )
                 _log = f"Redirecting to web app: {_wa_url}"
             msgs.append(wb)
-            new_stored.append({
-                "role": "assistant",
-                "content": _log,
-                "ts": _ts(),
-            })
+            new_stored.append(
+                {
+                    "role": "assistant",
+                    "content": _log,
+                    "ts": _ts(),
+                }
+            )
             return (
-                msgs, no_update, True,
-                "", new_stored, {},
+                msgs,
+                no_update,
+                True,
+                "",
+                new_stored,
+                {},
             )
 
         # Strip any persisted "workflow" from the inversion-config
@@ -4350,22 +4315,28 @@ def register_chat(app) -> None:
             NO_DATA_INTENTS,
             classify_intent_offline,
         )
+
         _qi, _ = classify_intent_offline(text)
         # Data-overview requests skip the EDI guard too: with no data
         # stored, the dispatcher replies with load instructions instead
         # of the terse guard message.
         if _qi in NO_DATA_INTENTS or _looks_like_data_read(text):
             msgs.append(
-                _thinking_bubble([{
-                    "label": "Parsing request...",
-                    "status": "running",
-                }])
+                _thinking_bubble(
+                    [
+                        {
+                            "label": "Parsing request...",
+                            "status": "running",
+                        }
+                    ]
+                )
             )
             jid = _new_job()
             t = threading.Thread(
                 target=_run_agent,
                 args=(
-                    jid, text,
+                    jid,
+                    text,
                     dict(edi_store or {}),
                     settings or {},
                     _inv_clean,
@@ -4375,22 +4346,25 @@ def register_chat(app) -> None:
             )
             t.start()
             return (
-                msgs, {"jid": jid}, False,
-                "", new_stored, {},
+                msgs,
+                {"jid": jid},
+                False,
+                "",
+                new_stored,
+                {},
             )
 
         # ── guard: no EDI loaded ──────────────
         # Skip the guard when the request names a known survey line —
         # _run_agent resolves it via the project registry, so the user
         # need not load EDIs manually for "run X on line L22PLT".
-        edi_path = (edi_store or {}).get(
-            "path", ""
-        )
+        edi_path = (edi_store or {}).get("path", "")
         # Synthetic tools (e.g. layered model) need no dataset — let them
         # through the no-EDI guard straight to the param modal.
         from pycsamt.agents._workflows import (
             classify_workflow as _cwf_guard,
         )
+
         _dataless = _cwf_guard(text) in _NO_DATA_WORKFLOWS
         if (
             not edi_path
@@ -4405,14 +4379,20 @@ def register_chat(app) -> None:
                 "files, then confirm."
             )
             msgs.append(_agent_bubble(_no_edi))
-            new_stored.append({
-                "role": "assistant",
-                "content": _no_edi,
-                "ts": _ts(),
-            })
+            new_stored.append(
+                {
+                    "role": "assistant",
+                    "content": _no_edi,
+                    "ts": _ts(),
+                }
+            )
             return (
-                msgs, no_update, True,
-                "", new_stored, {},
+                msgs,
+                no_update,
+                True,
+                "",
+                new_stored,
+                {},
             )
 
         # ── line disambiguation ───────────────
@@ -4420,35 +4400,27 @@ def register_chat(app) -> None:
         # that can't be resolved to a group key.
         # If ambiguous: show the line picker modal.
         # If exact match: pre-filter edi_store.
-        _groups = (edi_store or {}).get(
-            "groups", {}
-        )
+        _groups = (edi_store or {}).get("groups", {})
         _sel_lines: list[str] = []
         if _groups and len(_groups) > 1:
-            _ref = _extract_line_ref(
-                text, _groups
-            )
+            _ref = _extract_line_ref(text, _groups)
             if _ref is not None:
-                _exact = _match_group(
-                    _ref, _groups
-                )
+                _exact = _match_group(_ref, _groups)
                 if _exact is None:
                     # Ambiguous → show picker
-                    msgs.append(
-                        _line_waiting_bubble()
-                    )
+                    msgs.append(_line_waiting_bubble())
                     pending = {
                         "disambiguation": "lines",
                         "text": text,
-                        "groups": {
-                            k: list(v)
-                            for k, v in
-                            _groups.items()
-                        },
+                        "groups": {k: list(v) for k, v in _groups.items()},
                     }
                     return (
-                        msgs, {}, True,
-                        "", new_stored, pending,
+                        msgs,
+                        {},
+                        True,
+                        "",
+                        new_stored,
+                        pending,
                     )
                 else:
                     _sel_lines = [_exact]
@@ -4462,25 +4434,21 @@ def register_chat(app) -> None:
                 from pycsamt.agents._workflows import (
                     classify_workflow as _cwf_prep,
                 )
-                if (
-                    _cwf_prep(text, default=None)
-                    in _PREP_WORKFLOWS
-                ):
-                    msgs.append(
-                        _line_waiting_bubble()
-                    )
+
+                if _cwf_prep(text, default=None) in _PREP_WORKFLOWS:
+                    msgs.append(_line_waiting_bubble())
                     pending = {
                         "disambiguation": "lines",
                         "text": text,
-                        "groups": {
-                            k: list(v)
-                            for k, v in
-                            _groups.items()
-                        },
+                        "groups": {k: list(v) for k, v in _groups.items()},
                     }
                     return (
-                        msgs, {}, True,
-                        "", new_stored, pending,
+                        msgs,
+                        {},
+                        True,
+                        "",
+                        new_stored,
+                        pending,
                     )
 
         # ── param detection ───────────────────
@@ -4492,43 +4460,40 @@ def register_chat(app) -> None:
                 "text": text,
                 # snapshot edi_path so _submit_params
                 # can fall back if STORE_EDI is None
-                "edi_path": (
-                    (edi_store or {}).get(
-                        "path", ""
-                    ) or ""
-                ),
-                "edi_groups": (
-                    (edi_store or {}).get(
-                        "groups", {}
-                    )
-                ),
+                "edi_path": ((edi_store or {}).get("path", "") or ""),
+                "edi_groups": ((edi_store or {}).get("groups", {})),
             }
             if _sel_lines:
-                pending["selected_lines"] = (
-                    _sel_lines
-                )
+                pending["selected_lines"] = _sel_lines
             return (
-                msgs, {}, True,
-                "", new_stored, pending,
+                msgs,
+                {},
+                True,
+                "",
+                new_stored,
+                pending,
             )
 
         # ── normal flow: start job ────────────
         msgs.append(
-            _thinking_bubble([{
-                "label": "Parsing request...",
-                "status": "running",
-            }])
+            _thinking_bubble(
+                [
+                    {
+                        "label": "Parsing request...",
+                        "status": "running",
+                    }
+                ]
+            )
         )
         _edi_use = dict(edi_store or {})
         if _sel_lines:
-            _edi_use["selected_lines"] = (
-                _sel_lines
-            )
+            _edi_use["selected_lines"] = _sel_lines
         jid = _new_job()
         t = threading.Thread(
             target=_run_agent,
             args=(
-                jid, text,
+                jid,
+                text,
                 _edi_use,
                 settings or {},
                 _inv_clean,
@@ -4539,8 +4504,12 @@ def register_chat(app) -> None:
         t.start()
 
         return (
-            msgs, {"jid": jid}, False,
-            "", new_stored, {},
+            msgs,
+            {"jid": jid},
+            False,
+            "",
+            new_stored,
+            {},
         )
 
     # 2. Poll → update thinking / finish
@@ -4561,9 +4530,7 @@ def register_chat(app) -> None:
             "data",
             allow_duplicate=True,
         ),
-        Output(
-            IDs.STORE_POSTPROC, "data"
-        ),
+        Output(IDs.STORE_POSTPROC, "data"),
         Input(IDs.INTERVAL_POLL, "n_intervals"),
         State(IDs.STORE_JOB, "data"),
         State(IDs.CHAT_WINDOW, "children"),
@@ -4595,8 +4562,11 @@ def register_chat(app) -> None:
         # send_message already replaced the thinking bubble.
         if status == "cancelled":
             return (
-                no_update, True, no_update,
-                no_update, no_update,
+                no_update,
+                True,
+                no_update,
+                no_update,
+                no_update,
             )
 
         # replace last thinking bubble with
@@ -4605,19 +4575,14 @@ def register_chat(app) -> None:
         thinking_idx = None
         for i, child in enumerate(msgs):
             if isinstance(child, dict):
-                cid = child.get(
-                    "props", {}
-                ).get("id", "")
+                cid = child.get("props", {}).get("id", "")
                 if cid == "am-thinking-bubble":
                     thinking_idx = i
                     break
 
         if status == "running":
             _started = job.get("started")
-            _elapsed = (
-                time.time() - _started
-                if _started else None
-            )
+            _elapsed = time.time() - _started if _started else None
             new_thinking = _thinking_bubble(
                 steps,
                 workflow=job.get("workflow"),
@@ -4626,16 +4591,15 @@ def register_chat(app) -> None:
             if thinking_idx is not None:
                 msgs[thinking_idx] = new_thinking
             return (
-                msgs, False, no_update,
-                no_update, no_update,
+                msgs,
+                False,
+                no_update,
+                no_update,
+                no_update,
             )
 
         # job done / error
-        result_text = (
-            job.get("result")
-            or job.get("error")
-            or "Done."
-        )
+        result_text = job.get("result") or job.get("error") or "Done."
         figs = job.get("figs", {})
         code = job.get("code", "")
         kind = job.get("kind")
@@ -4647,8 +4611,12 @@ def register_chat(app) -> None:
 
         _agent_mid = _mid()
         agent_bub = _agent_bubble(
-            result_text, steps, figs,
-            code=code, kind=kind, mid=_agent_mid,
+            result_text,
+            steps,
+            figs,
+            code=code,
+            kind=kind,
+            mid=_agent_mid,
             card=card,
         )
 
@@ -4664,17 +4632,19 @@ def register_chat(app) -> None:
         with _JOBS_LOCK:
             _JOBS.pop(jid, None)
 
-        new_stored = list(
-            stored_messages or []
+        new_stored = list(stored_messages or [])
+        new_stored.append(
+            {
+                "role": "assistant",
+                "content": result_text,
+                "ts": _ts(),
+                "mid": _agent_mid,
+            }
         )
-        new_stored.append({
-            "role": "assistant",
-            "content": result_text,
-            "ts": _ts(),
-            "mid": _agent_mid,
-        })
         return (
-            msgs, True, new_fig_store,
+            msgs,
+            True,
+            new_fig_store,
             new_stored,
             postproc if postproc else no_update,
         )
@@ -4752,15 +4722,10 @@ def register_chat(app) -> None:
         if not triggered:
             raise PreventUpdate
         fig_key = triggered.get("key")
-        if not fig_store or fig_key not in (
-            fig_store
-        ):
+        if not fig_store or fig_key not in (fig_store):
             raise PreventUpdate
         info = fig_store[fig_key]
-        src = (
-            f"data:image/png;base64,"
-            f"{info['b64']}"
-        )
+        src = f"data:image/png;base64,{info['b64']}"
         return (
             True,
             src,
@@ -4780,9 +4745,7 @@ def register_chat(app) -> None:
         prevent_initial_call=True,
     )
     def toggle_pin(_clicks, pins, messages):
-        if not ctx.triggered or not ctx.triggered[0].get(
-            "value"
-        ):
+        if not ctx.triggered or not ctx.triggered[0].get("value"):
             raise PreventUpdate
         trig = ctx.triggered_id
         if not isinstance(trig, dict):
@@ -4796,7 +4759,8 @@ def register_chat(app) -> None:
     # 6. Unpin from the sidebar → STORE_PINS
     @app.callback(
         Output(
-            IDs.STORE_PINS, "data",
+            IDs.STORE_PINS,
+            "data",
             allow_duplicate=True,
         ),
         Input(
@@ -4807,9 +4771,7 @@ def register_chat(app) -> None:
         prevent_initial_call=True,
     )
     def unpin(_clicks, pins):
-        if not ctx.triggered or not ctx.triggered[0].get(
-            "value"
-        ):
+        if not ctx.triggered or not ctx.triggered[0].get("value"):
             raise PreventUpdate
         trig = ctx.triggered_id
         if not isinstance(trig, dict):

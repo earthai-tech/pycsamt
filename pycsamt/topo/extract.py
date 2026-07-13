@@ -35,6 +35,7 @@ __all__ = [
 # Public functions
 # ---------------------------------------------------------------------------
 
+
 def extract_elevation(sites: Any) -> np.ndarray:
     """Extract per-station elevation (m a.s.l.) from a Sites or EDI collection.
 
@@ -98,12 +99,12 @@ def extract_chainage(sites: Any) -> np.ndarray:
     lats = np.array([c[0] for c in coords], dtype=float)
     lons = np.array([c[1] for c in coords], dtype=float)
 
-    R_lat = 111_000.0                                    # m / deg latitude
+    R_lat = 111_000.0  # m / deg latitude
     R_lon = 111_000.0 * np.cos(np.radians(np.mean(lats)))  # m / deg longitude
 
     dlat = np.diff(lats) * R_lat
     dlon = np.diff(lons) * R_lon
-    segs = np.sqrt(dlat**2 + dlon**2)                   # m
+    segs = np.sqrt(dlat**2 + dlon**2)  # m
     return np.concatenate([[0.0], np.cumsum(segs)]) / 1000.0  # km
 
 
@@ -145,6 +146,7 @@ def extract_station_names(sites: Any) -> list[str]:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _iter_edis(sites: Any):
     """Yield individual EDI-like objects from any container type."""
@@ -247,16 +249,18 @@ def _read_latlon(sites: Any) -> list[tuple[float, float]]:
             # seg.edi.EDIFile — Location sub-object
             loc = getattr(h, "Location", None)
             if loc is not None:
-                lat = (getattr(loc, "latitude", None)
-                       or getattr(loc, "lat", None))
-                lon = (getattr(loc, "longitude", None)
-                       or getattr(loc, "lon", None)
-                       or getattr(loc, "long", None))
+                lat = getattr(loc, "latitude", None) or getattr(
+                    loc, "lat", None
+                )
+                lon = (
+                    getattr(loc, "longitude", None)
+                    or getattr(loc, "lon", None)
+                    or getattr(loc, "long", None)
+                )
             # Fall back to direct attributes on head
             if lat is None or lon is None:
                 lat = getattr(h, "lat", None)
-                lon = (getattr(h, "lon", None)
-                       or getattr(h, "long", None))
+                lon = getattr(h, "lon", None) or getattr(h, "long", None)
         if lat is not None and lon is not None:
             try:
                 coords.append((float(lat), float(lon)))

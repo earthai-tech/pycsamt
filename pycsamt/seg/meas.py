@@ -26,22 +26,19 @@ from .validation import (
     _to_float_or_none,
 )
 
-__all__= [
+__all__ = [
     "Hmeasurement",
     "Emeasurement",
     "DefineMeas",
     "MeasMixin",
     "EMeasMixin",
     "DefineMeasMixin",
-    "HMeasMixin"
-    ]
-
+    "HMeasMixin",
+]
 
 
 # TOKEN =  key=value   (value may contain +/-, dot, colon or text)
-_TOKEN_RE = re.compile(
-    r"(?P<k>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<v>[^\s]+)"
-)
+_TOKEN_RE = re.compile(r"(?P<k>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<v>[^\s]+)")
 
 
 def _kv_tokens_from_line(line: str) -> dict[str, str]:
@@ -385,9 +382,7 @@ class EMeasMixin:
     """
 
     @classmethod
-    def from_file(
-        cls, edi_fn: str | Path
-    ) -> list[Emeasurement]:
+    def from_file(cls, edi_fn: str | Path) -> list[Emeasurement]:
         dm = DefineMeas.from_file(edi_fn)
         return dm.emeas
 
@@ -398,8 +393,6 @@ class HMeasMixin:
     """
 
     @classmethod
-    def from_file(
-        cls, edi_fn: str | Path
-    ) -> list[Hmeasurement]:
+    def from_file(cls, edi_fn: str | Path) -> list[Hmeasurement]:
         dm = DefineMeas.from_file(edi_fn)
         return dm.hmeas

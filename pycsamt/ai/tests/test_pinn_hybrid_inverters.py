@@ -12,16 +12,17 @@ environment for the TensorFlow classes
 Skip decorators ensure only the tests whose backend
 is installed actually execute.
 """
+
 import unittest
 
 import numpy as np
 
 # ── global constants ─────────────────────────────────
 
-_NF = 8       # n_freqs (small for speed)
-_NS = 3       # n_stations
-_NL = 3       # n_layers
-_FREQS = np.logspace(3, 0, _NF)   # 1000 … 1 Hz
+_NF = 8  # n_freqs (small for speed)
+_NS = 3  # n_stations
+_NL = 3  # n_layers
+_FREQS = np.logspace(3, 0, _NF)  # 1000 … 1 Hz
 
 
 # ── backend probe helpers ─────────────────────────────
@@ -30,6 +31,7 @@ _FREQS = np.logspace(3, 0, _NF)   # 1000 … 1 Hz
 def _has_torch():
     try:
         import torch  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -38,6 +40,7 @@ def _has_torch():
 def _has_tf():
     try:
         import tensorflow  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -45,6 +48,7 @@ def _has_tf():
 
 def _set_backend(name):
     from pycsamt.backends import set_backend
+
     set_backend(name)
 
 
@@ -55,6 +59,7 @@ def _obs1d(name="S01"):
     from pycsamt.ai.inversion._sites_bridge import (
         SiteObs1D,
     )
+
     rho = np.full(_NF, 100.0)
     ph = np.full(_NF, 45.0)
     return SiteObs1D(
@@ -69,6 +74,7 @@ def _obs2d(name="S01"):
     from pycsamt.ai.inversion._sites_bridge import (
         SiteObs2D,
     )
+
     rho = np.full(_NF, 100.0)
     ph = np.full(_NF, 45.0)
     return SiteObs2D(
@@ -82,17 +88,18 @@ def _obs2d(name="S01"):
 
 
 def _obs_list_1d(n=_NS):
-    return [_obs1d(f"S{i+1:02d}") for i in range(n)]
+    return [_obs1d(f"S{i + 1:02d}") for i in range(n)]
 
 
 def _obs_list_2d(n=_NS):
-    return [_obs2d(f"S{i+1:02d}") for i in range(n)]
+    return [_obs2d(f"S{i + 1:02d}") for i in range(n)]
 
 
 def _freqs_grid_for(obs_list):
     from pycsamt.ai.inversion._sites_bridge import (
         _make_common_grid,
     )
+
     return _make_common_grid(
         [o.freq for o in obs_list],
         n_freqs=_NF,
@@ -105,9 +112,7 @@ def _adj(n=_NS):
 
 
 def _coords(n=_NS):
-    return np.column_stack(
-        [np.arange(n) * 500.0, np.zeros(n)]
-    )
+    return np.column_stack([np.arange(n) * 500.0, np.zeros(n)])
 
 
 # ── mock AI inverters ─────────────────────────────────
@@ -132,9 +137,7 @@ class _MockAI2D:
 
     def predict(self, panel, as_log_rho=False):
         n_sta = panel.shape[3]
-        return np.full(
-            (1, self.n_depth, n_sta), 2.0
-        )
+        return np.full((1, self.n_depth, n_sta), 2.0)
 
 
 class _MockAI3D:
@@ -157,6 +160,7 @@ class _MockAI3D:
 
 def _make_pinn1d(**kw):
     from pycsamt.ai.inversion import PINNInverter1D
+
     inv = object.__new__(PINNInverter1D)
     inv.n_layers = kw.get("n_layers", _NL)
     inv.depth_max = kw.get("depth_max", 500.0)
@@ -170,15 +174,14 @@ def _make_pinn1d(**kw):
     inv.recursive = True
     inv.on_dup = "replace"
     inv.verbose = 0
-    inv._obs = _obs_list_1d(
-        kw.get("n_stations", _NS)
-    )
+    inv._obs = _obs_list_1d(kw.get("n_stations", _NS))
     inv._results = []
     return inv
 
 
 def _make_pinn2d(**kw):
     from pycsamt.ai.inversion import PINNInverter2D
+
     n_s = kw.get("n_stations", _NS)
     obs = _obs_list_2d(n_s)
     inv = object.__new__(PINNInverter2D)
@@ -204,6 +207,7 @@ def _make_pinn2d(**kw):
 
 def _make_pinn3d(**kw):
     from pycsamt.ai.inversion import PINNInverter3D
+
     n_s = kw.get("n_stations", _NS)
     obs = _obs_list_2d(n_s)
     inv = object.__new__(PINNInverter3D)
@@ -232,6 +236,7 @@ def _make_pinn3d(**kw):
 
 def _make_hybrid1d(**kw):
     from pycsamt.ai.inversion import HybridInverter1D
+
     n_s = kw.get("n_stations", _NS)
     inv = object.__new__(HybridInverter1D)
     inv.n_layers = _NL
@@ -258,6 +263,7 @@ def _make_hybrid1d(**kw):
 
 def _make_hybrid2d(**kw):
     from pycsamt.ai.inversion import HybridInverter2D
+
     n_s = kw.get("n_stations", _NS)
     obs = _obs_list_2d(n_s)
     inv = object.__new__(HybridInverter2D)
@@ -286,6 +292,7 @@ def _make_hybrid2d(**kw):
 
 def _make_hybrid3d(**kw):
     from pycsamt.ai.inversion import HybridInverter3D
+
     n_s = kw.get("n_stations", _NS)
     obs = _obs_list_2d(n_s)
     inv = object.__new__(HybridInverter3D)
@@ -331,6 +338,7 @@ class TestPINNHybridInterface(unittest.TestCase):
             PINNInverter2D,
             PINNInverter3D,
         )
+
         for cls in (
             PINNInverter1D,
             PINNInverter2D,
@@ -344,6 +352,7 @@ class TestPINNHybridInterface(unittest.TestCase):
             HybridInverter2D,
             HybridInverter3D,
         )
+
         for cls in (
             HybridInverter1D,
             HybridInverter2D,
@@ -360,6 +369,7 @@ class TestPINNHybridInterface(unittest.TestCase):
             PINNInverter2D,
             PINNInverter3D,
         )
+
         for cls in (
             PINNInverter1D,
             PINNInverter2D,
@@ -379,6 +389,7 @@ class TestPINNHybridInterface(unittest.TestCase):
             HybridInverter2D,
             HybridInverter3D,
         )
+
         for cls in (
             HybridInverter1D,
             HybridInverter2D,
@@ -399,6 +410,7 @@ class TestPINNHybridInterface(unittest.TestCase):
             PINNInverter3D,
         )
         from pycsamt.api.property import PyCSAMTObject
+
         for cls in (
             PINNInverter1D,
             PINNInverter2D,
@@ -428,21 +440,15 @@ class TestPINNHybridInterface(unittest.TestCase):
 
     def test_repr_hybrid1d(self):
         inv = _make_hybrid1d()
-        self.assertIn(
-            "HybridInverter1D", repr(inv)
-        )
+        self.assertIn("HybridInverter1D", repr(inv))
 
     def test_repr_hybrid2d(self):
         inv = _make_hybrid2d()
-        self.assertIn(
-            "HybridInverter2D", repr(inv)
-        )
+        self.assertIn("HybridInverter2D", repr(inv))
 
     def test_repr_hybrid3d(self):
         inv = _make_hybrid3d()
-        self.assertIn(
-            "HybridInverter3D", repr(inv)
-        )
+        self.assertIn("HybridInverter3D", repr(inv))
 
     # ── unfitted guard ───────────────────────────────
 
@@ -519,9 +525,7 @@ class TestPINNHybridInterface(unittest.TestCase):
 #                pytest test_pinn_hybrid_inverters.py
 # ════════════════════════════════════════════════════
 
-_SKIP_TORCH = unittest.skipUnless(
-    _has_torch(), "torch not available"
-)
+_SKIP_TORCH = unittest.skipUnless(_has_torch(), "torch not available")
 
 
 @_SKIP_TORCH
@@ -560,13 +564,14 @@ class TestPINNTorch(unittest.TestCase):
         inv.fit(epochs=3, verbose=False)
         df = inv.residuals()
         expected = {
-            "station", "freq",
-            "rho_obs", "rho_pred",
-            "phase_obs", "phase_pred",
+            "station",
+            "freq",
+            "rho_obs",
+            "rho_pred",
+            "phase_obs",
+            "phase_pred",
         }
-        self.assertEqual(
-            set(df.columns), expected
-        )
+        self.assertEqual(set(df.columns), expected)
 
     def test_1d_convergence_curve_base(self):
         inv = _make_pinn1d()
@@ -603,6 +608,7 @@ class TestPINNTorch(unittest.TestCase):
 
     def test_2d_convergence_curve_df(self):
         import pandas as pd
+
         inv = _make_pinn2d(epochs=5)
         inv.fit(verbose=False)
         df = inv.convergence_curve()
@@ -638,9 +644,7 @@ class TestPINNTorch(unittest.TestCase):
     def test_3d_volume_linear(self):
         inv = _make_pinn3d(epochs=5)
         inv.fit(verbose=False)
-        rho = inv.resistivity_volume(
-            as_log10=False
-        )
+        rho = inv.resistivity_volume(as_log10=False)
         self.assertTrue(np.all(rho > 0))
 
     def test_3d_thickness_shape(self):
@@ -652,6 +656,7 @@ class TestPINNTorch(unittest.TestCase):
 
     def test_3d_convergence_curve_df(self):
         import pandas as pd
+
         inv = _make_pinn3d(epochs=5)
         inv.fit(verbose=False)
         df = inv.convergence_curve()
@@ -668,9 +673,7 @@ class TestPINNTorch(unittest.TestCase):
         A = inv.adjacency()
         self.assertEqual(A.shape, (_NS, _NS))
         A[0, 0] = -999.0
-        self.assertNotEqual(
-            inv.adjacency()[0, 0], -999.0
-        )
+        self.assertNotEqual(inv.adjacency()[0, 0], -999.0)
 
     def test_3d_station_coords_shape(self):
         inv = _make_pinn3d()
@@ -726,15 +729,14 @@ class TestHybridTorch(unittest.TestCase):
 
     def test_h1d_convergence_curves_df(self):
         import pandas as pd
+
         inv = _make_hybrid1d(max_iter=5)
         inv.fit(verbose=False)
         df = inv.convergence_curves()
         self.assertIsInstance(df, pd.DataFrame)
         self.assertIn("station", df.columns)
         self.assertIn("loss", df.columns)
-        self.assertEqual(
-            len(df), 5 * _NS
-        )
+        self.assertEqual(len(df), 5 * _NS)
 
     def test_h1d_stations_property(self):
         inv = _make_hybrid1d(max_iter=3)
@@ -769,6 +771,7 @@ class TestHybridTorch(unittest.TestCase):
 
     def test_h2d_convergence_curve_df(self):
         import pandas as pd
+
         inv = _make_hybrid2d(epochs=5)
         inv.fit(verbose=False)
         df = inv.convergence_curve()
@@ -808,6 +811,7 @@ class TestHybridTorch(unittest.TestCase):
 
     def test_h3d_convergence_curve_df(self):
         import pandas as pd
+
         inv = _make_hybrid3d(epochs=5)
         inv.fit(verbose=False)
         df = inv.convergence_curve()
@@ -831,9 +835,7 @@ class TestHybridTorch(unittest.TestCase):
 #                -m pytest test_pinn_hybrid_inverters.py
 # ════════════════════════════════════════════════════
 
-_SKIP_TF = unittest.skipUnless(
-    _has_tf(), "tensorflow not available"
-)
+_SKIP_TF = unittest.skipUnless(_has_tf(), "tensorflow not available")
 
 
 @_SKIP_TF
@@ -863,6 +865,7 @@ class TestPINNTF(unittest.TestCase):
 
     def test_1d_residuals_returns_df(self):
         import pandas as pd
+
         inv = _make_pinn1d()
         inv.fit(epochs=3, verbose=False)
         df = inv.residuals()
@@ -957,6 +960,7 @@ class TestHybridTF(unittest.TestCase):
 
     def test_h1d_history_row_count(self):
         import pandas as pd
+
         inv = _make_hybrid1d(max_iter=5)
         inv.fit(verbose=False)
         df = inv.convergence_curves()

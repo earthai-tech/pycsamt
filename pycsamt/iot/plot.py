@@ -100,7 +100,9 @@ def plot_field_dashboard(
         figsize=figsize,
         constrained_layout=True,
     )
-    fig.suptitle(title or f"IoT field dashboard: {sess.survey_id}", fontsize=14)
+    fig.suptitle(
+        title or f"IoT field dashboard: {sess.survey_id}", fontsize=14
+    )
 
     _plot_station_panel(axes[0, 0], dashboard, station_axis=station_axis)
     _plot_acceptance_panel(axes[0, 1], dashboard)
@@ -185,7 +187,9 @@ def plot_power_budget(
     | TelemetryPacket
     | FieldSession
     | Mapping[str, Any]
-    | Iterable[EnergyConfig | EnergyEstimate | TelemetryPacket | Mapping[str, Any]],
+    | Iterable[
+        EnergyConfig | EnergyEstimate | TelemetryPacket | Mapping[str, Any]
+    ],
     *,
     figsize: tuple[float, float] = (12.0, 7.5),
     title: str = "IoT power budget",
@@ -317,7 +321,8 @@ def _sync_rows(sync: Any) -> list[dict[str, Any]]:
 def _sync_items(sync: Any) -> list[Any]:
     if isinstance(sync, FieldSession):
         return [
-            packet for packet in sync.packets
+            packet
+            for packet in sync.packets
             if packet.kind is PacketKind.SYNC
         ]
     if isinstance(sync, (SyncStatus, TelemetryPacket)):
@@ -356,7 +361,9 @@ def _sync_row(item: Any, *, index: int) -> dict[str, Any]:
     )
     row["drift_ppm"] = _float_or_nan(row.get("drift_ppm"))
     row["jitter_ms"] = _float_or_nan(row.get("jitter_ms"))
-    row["n_reference_points"] = int(_finite_or_zero(row.get("n_reference_points")))
+    row["n_reference_points"] = int(
+        _finite_or_zero(row.get("n_reference_points"))
+    )
     row["gps_lock"] = _optional_bool(row.get("gps_lock"))
     row["within_tolerance"] = _optional_bool(row.get("within_tolerance"))
     row["quality"] = str(row.get("quality") or "unknown").lower()
@@ -454,8 +461,10 @@ def _plot_sync_reference_points(
     points = [_finite_or_zero(row.get("n_reference_points")) for row in rows]
     gps = [row.get("gps_lock") for row in rows]
     colors = [
-        _LEVEL_COLORS["ok"] if value is True
-        else _LEVEL_COLORS["critical"] if value is False
+        _LEVEL_COLORS["ok"]
+        if value is True
+        else _LEVEL_COLORS["critical"]
+        if value is False
         else _LEVEL_COLORS["unknown"]
         for value in gps
     ]
@@ -466,9 +475,30 @@ def _plot_sync_reference_points(
     ax.set_ylabel("Reference points")
     ax.grid(True, axis="y", alpha=0.25)
     handles = [
-        Line2D([0], [0], marker="s", linestyle="", color=_LEVEL_COLORS["ok"], label="GPS lock"),
-        Line2D([0], [0], marker="s", linestyle="", color=_LEVEL_COLORS["critical"], label="GPS lost"),
-        Line2D([0], [0], marker="s", linestyle="", color=_LEVEL_COLORS["unknown"], label="unknown"),
+        Line2D(
+            [0],
+            [0],
+            marker="s",
+            linestyle="",
+            color=_LEVEL_COLORS["ok"],
+            label="GPS lock",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="s",
+            linestyle="",
+            color=_LEVEL_COLORS["critical"],
+            label="GPS lost",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="s",
+            linestyle="",
+            color=_LEVEL_COLORS["unknown"],
+            label="unknown",
+        ),
     ]
     ax.legend(handles=handles, frameon=False, fontsize=8, loc="best")
 
@@ -508,7 +538,8 @@ def _power_rows(power: Any) -> list[dict[str, Any]]:
 def _power_items(power: Any) -> list[Any]:
     if isinstance(power, FieldSession):
         return [
-            packet for packet in power.packets
+            packet
+            for packet in power.packets
             if packet.kind is PacketKind.POWER
         ]
     if isinstance(power, (EnergyConfig, EnergyEstimate, TelemetryPacket)):
@@ -617,7 +648,9 @@ def _plot_power_runtime(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.legend(frameon=False)
     for idx, row in enumerate(rows):
         if math.isinf(_float_or_nan(row.get("runtime_days"))):
-            ax.text(idx - width / 2, runtime[idx], "inf", ha="center", fontsize=8)
+            ax.text(
+                idx - width / 2, runtime[idx], "inf", ha="center", fontsize=8
+            )
 
 
 def _plot_power_breakdown(ax: Any, rows: list[Mapping[str, Any]]) -> None:
@@ -627,18 +660,18 @@ def _plot_power_breakdown(ax: Any, rows: list[Mapping[str, Any]]) -> None:
         return
     labels = _power_labels(rows)
     x = np.arange(len(rows), dtype=float)
-    telemetry = np.asarray([
-        _finite_or_zero(row.get("telemetry_wh_per_day")) for row in rows
-    ])
-    edge = np.asarray([
-        _finite_or_zero(row.get("edge_wh_per_day")) for row in rows
-    ])
-    aux = np.asarray([
-        _finite_or_zero(row.get("auxiliary_wh_per_day")) for row in rows
-    ])
-    load = np.asarray([
-        _finite_or_zero(row.get("load_wh_per_day")) for row in rows
-    ])
+    telemetry = np.asarray(
+        [_finite_or_zero(row.get("telemetry_wh_per_day")) for row in rows]
+    )
+    edge = np.asarray(
+        [_finite_or_zero(row.get("edge_wh_per_day")) for row in rows]
+    )
+    aux = np.asarray(
+        [_finite_or_zero(row.get("auxiliary_wh_per_day")) for row in rows]
+    )
+    load = np.asarray(
+        [_finite_or_zero(row.get("load_wh_per_day")) for row in rows]
+    )
     base = np.maximum(load - telemetry - edge - aux, 0.0)
     bottom = np.zeros(len(rows))
     for values, label, color in [
@@ -693,7 +726,10 @@ def _plot_power_states(ax: Any, rows: list[Mapping[str, Any]]) -> None:
 
 
 def _power_labels(rows: list[Mapping[str, Any]]) -> list[str]:
-    return [str(row.get("device_id") or f"device-{i + 1}") for i, row in enumerate(rows)]
+    return [
+        str(row.get("device_id") or f"device-{i + 1}")
+        for i, row in enumerate(rows)
+    ]
 
 
 def _finite_or_zero(value: Any) -> float:
@@ -732,7 +768,9 @@ def _edge_qc_rows(edge: Any) -> list[dict[str, Any]]:
 
 def _edge_items(edge: Any) -> list[Any]:
     if isinstance(edge, FieldSession):
-        return [packet for packet in edge.packets if packet.kind is PacketKind.QC]
+        return [
+            packet for packet in edge.packets if packet.kind is PacketKind.QC
+        ]
     if isinstance(edge, EdgeProcessingResult):
         return [edge]
     if isinstance(edge, TelemetryPacket):
@@ -744,7 +782,9 @@ def _edge_items(edge: Any) -> list[Any]:
             return [TelemetryPacket(**dict(edge))]
         if "metrics" in edge:
             return [EdgeProcessingResult(**dict(edge))]
-        raise TypeError("edge mapping must describe a session, packet, or result.")
+        raise TypeError(
+            "edge mapping must describe a session, packet, or result."
+        )
     if isinstance(edge, Iterable) and not isinstance(edge, (str, bytes)):
         out: list[Any] = []
         for item in edge:
@@ -801,19 +841,31 @@ def _rows_from_qc_packet(
     *,
     result_index: int,
 ) -> list[dict[str, Any]]:
-    pkt = packet if isinstance(packet, TelemetryPacket) else TelemetryPacket(**dict(packet))
+    pkt = (
+        packet
+        if isinstance(packet, TelemetryPacket)
+        else TelemetryPacket(**dict(packet))
+    )
     payload = dict(pkt.payload or {})
     metrics = dict(payload.get("metrics") or {})
     decision = str(payload.get("decision", "") or "").lower()
     if not decision:
         accepted = _accepted_from_payload(payload)
-        decision = "accept" if accepted is True else "reject" if accepted is False else "unknown"
+        decision = (
+            "accept"
+            if accepted is True
+            else "reject"
+            if accepted is False
+            else "unknown"
+        )
     accepted = _accepted_from_payload(payload)
     if accepted is None:
         accepted = decision in {"accept", "ok", "pass", "warning"}
     station = _payload_first(payload, "station", "site", "station_id")
     reasons = _split_reasons(payload.get("reasons"))
-    warnings = _split_reasons(metrics.get("warnings") or payload.get("warnings"))
+    warnings = _split_reasons(
+        metrics.get("warnings") or payload.get("warnings")
+    )
     base = dict(
         result_index=result_index,
         station=station,
@@ -831,7 +883,11 @@ def _rows_from_qc_packet(
     )
     channels = payload.get("channels")
     rows: list[dict[str, Any]] = []
-    if isinstance(channels, list) and channels and isinstance(channels[0], Mapping):
+    if (
+        isinstance(channels, list)
+        and channels
+        and isinstance(channels[0], Mapping)
+    ):
         for channel in channels:
             row = dict(base)
             row.update(
@@ -848,8 +904,10 @@ def _rows_from_qc_packet(
             )
             rows.append(row)
     else:
-        channel_names = channels if isinstance(channels, list) else (
-            [channels] if isinstance(channels, str) else ["window"]
+        channel_names = (
+            channels
+            if isinstance(channels, list)
+            else ([channels] if isinstance(channels, str) else ["window"])
         )
         for channel in channel_names:
             row = dict(base)
@@ -878,10 +936,19 @@ def _plot_qc_decisions(ax: Any, rows: list[Mapping[str, Any]]) -> None:
         _empty_panel(ax, "No QC rows")
         return
     decisions = [str(row.get("decision", "unknown")) for row in rows]
-    counts = {decision: decisions.count(decision) for decision in sorted(set(decisions))}
+    counts = {
+        decision: decisions.count(decision)
+        for decision in sorted(set(decisions))
+    }
     labels = list(counts.keys())
     colors = [_decision_color(label) for label in labels]
-    ax.bar(labels, list(counts.values()), color=colors, edgecolor="black", linewidth=0.5)
+    ax.bar(
+        labels,
+        list(counts.values()),
+        color=colors,
+        edgecolor="black",
+        linewidth=0.5,
+    )
     ax.set_ylabel("Channel/window count")
     ax.tick_params(axis="x", rotation=25)
     for idx, value in enumerate(counts.values()):
@@ -929,7 +996,9 @@ def _plot_qc_metric(
         return
     labels = _qc_labels(rows)
     plot_values = [v if math.isfinite(v) else 0.0 for v in values]
-    colors = [_decision_color(str(row.get("decision", "unknown"))) for row in rows]
+    colors = [
+        _decision_color(str(row.get("decision", "unknown"))) for row in rows
+    ]
     x = np.arange(len(rows), dtype=float)
     ax.bar(x, plot_values, color=colors, edgecolor="black", linewidth=0.4)
     for threshold in thresholds:
@@ -939,7 +1008,9 @@ def _plot_qc_metric(
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45, ha="right")
     if ylim[1] is None:
-        top = max(max(plot_values) * 1.25, max(thresholds or (0.05,)) * 1.2, 0.1)
+        top = max(
+            max(plot_values) * 1.25, max(thresholds or (0.05,)) * 1.2, 0.1
+        )
         ax.set_ylim(ylim[0], top)
     else:
         ax.set_ylim(*ylim)
@@ -950,7 +1021,9 @@ def _plot_qc_reasons(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Reasons and warnings")
     reason_counts: dict[str, int] = defaultdict(int)
     for row in rows:
-        for reason in list(row.get("reasons") or []) + list(row.get("channel_reasons") or []):
+        for reason in list(row.get("reasons") or []) + list(
+            row.get("channel_reasons") or []
+        ):
             reason_counts[str(reason)] += 1
         for warning in row.get("warnings") or []:
             reason_counts[f"warn:{warning}"] += 1
@@ -1021,7 +1094,8 @@ def _packet_row(packet: TelemetryPacket) -> dict[str, Any]:
     row = packet.as_dict()
     payload = dict(row.get("payload") or {})
     row["kind"] = (
-        row["kind"].value if isinstance(row.get("kind"), PacketKind)
+        row["kind"].value
+        if isinstance(row.get("kind"), PacketKind)
         else str(row.get("kind"))
     )
     row["station"] = _payload_first(
@@ -1052,13 +1126,20 @@ def _payload_first(payload: Mapping[str, Any], *keys: str) -> Any:
 
 
 def _accepted_from_payload(payload: Mapping[str, Any]) -> bool | None:
-    value = _payload_first(payload, "accepted", "edge_accepted", "qc_accepted")
+    value = _payload_first(
+        payload, "accepted", "edge_accepted", "qc_accepted"
+    )
     if value is not None:
         return _as_bool(value)
     decision = _payload_first(payload, "decision", "edge_decision")
     if decision is None:
         return None
-    return str(decision).strip().lower() in {"accept", "ok", "pass", "warning"}
+    return str(decision).strip().lower() in {
+        "accept",
+        "ok",
+        "pass",
+        "warning",
+    }
 
 
 def _as_bool(value: Any) -> bool:
@@ -1128,7 +1209,9 @@ def _station_level(row: Mapping[str, Any]) -> str:
     return "unknown"
 
 
-def _plot_station_panel(ax: Any, data: Mapping[str, Any], *, station_axis: str) -> None:
+def _plot_station_panel(
+    ax: Any, data: Mapping[str, Any], *, station_axis: str
+) -> None:
     stations = list(data.get("stations", []))
     ax.set_title("Station health")
     if not stations:
@@ -1158,7 +1241,9 @@ def _plot_station_panel(ax: Any, data: Mapping[str, Any], *, station_axis: str) 
     ax.scatter(xs, ys, s=sizes, c=colors, edgecolor="black", linewidth=0.8)
     for x, y, label in zip(xs, ys, labels):
         ax.text(x, y, f" {label}", va="center", fontsize=8)
-    ax.set_xlabel("Longitude" if use_map else "Profile position / station index")
+    ax.set_xlabel(
+        "Longitude" if use_map else "Profile position / station index"
+    )
     ax.set_ylabel("Latitude" if use_map else "Profile")
     if not use_map and profile_index:
         ax.set_yticks(list(profile_index.values()))
@@ -1166,7 +1251,9 @@ def _plot_station_panel(ax: Any, data: Mapping[str, Any], *, station_axis: str) 
     ax.grid(True, alpha=0.25)
 
 
-def _use_map_axis(stations: list[Mapping[str, Any]], station_axis: str) -> bool:
+def _use_map_axis(
+    stations: list[Mapping[str, Any]], station_axis: str
+) -> bool:
     mode = station_axis.lower()
     if mode not in {"auto", "profile", "map"}:
         raise ValueError("station_axis must be 'auto', 'profile', or 'map'.")
@@ -1195,15 +1282,15 @@ def _plot_acceptance_panel(ax: Any, data: Mapping[str, Any]) -> None:
         _empty_panel(ax, "No QC data")
         return
     labels = [str(row.get("station_id")) for row in stations]
-    values = [
-        _float_or_nan(row.get("acceptance_rate")) for row in stations
-    ]
+    values = [_float_or_nan(row.get("acceptance_rate")) for row in stations]
     plot_values = [v if math.isfinite(v) else 0.0 for v in values]
     colors = [
         _LEVEL_COLORS.get(row.get("health_level"), "#9e9e9e")
         for row in stations
     ]
-    ax.bar(labels, plot_values, color=colors, edgecolor="black", linewidth=0.5)
+    ax.bar(
+        labels, plot_values, color=colors, edgecolor="black", linewidth=0.5
+    )
     ax.axhline(0.85, color="#de2d26", lw=1.0, ls="--", label="0.85")
     ax.axhline(0.95, color="#2ca25f", lw=1.0, ls=":", label="0.95")
     ax.set_ylim(0, 1.05)
@@ -1239,8 +1326,15 @@ def _plot_operations_panel(ax: Any, data: Mapping[str, Any]) -> None:
         power = str(row.get("power_state", "") or "")
         notes = " / ".join(v for v in (power, sync) if v)
         if notes:
-            ax.text(idx, ax.get_ylim()[0], notes, rotation=90,
-                    va="bottom", ha="center", fontsize=7)
+            ax.text(
+                idx,
+                ax.get_ylim()[0],
+                notes,
+                rotation=90,
+                va="bottom",
+                ha="center",
+                fontsize=7,
+            )
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45)
     ax.grid(True, axis="y", alpha=0.25)
@@ -1255,7 +1349,9 @@ def _plot_timeline_panel(ax: Any, data: Mapping[str, Any]) -> None:
         return
     kinds = sorted({str(row.get("kind")) for row in packets})
     kind_index = {kind: i for i, kind in enumerate(kinds)}
-    times = np.asarray([_float_or_nan(row.get("timestamp")) for row in packets])
+    times = np.asarray(
+        [_float_or_nan(row.get("timestamp")) for row in packets]
+    )
     finite_times = times[np.isfinite(times)]
     if finite_times.size and finite_times.max() > finite_times.min():
         xvals = (times - finite_times.min()) / 60.0
@@ -1265,8 +1361,10 @@ def _plot_timeline_panel(ax: Any, data: Mapping[str, Any]) -> None:
         xlabel = "Packet index"
     yvals = [kind_index[str(row.get("kind"))] for row in packets]
     colors = [
-        _LEVEL_COLORS["critical"] if row.get("accepted") is False
-        else _LEVEL_COLORS["ok"] if row.get("accepted") is True
+        _LEVEL_COLORS["critical"]
+        if row.get("accepted") is False
+        else _LEVEL_COLORS["ok"]
+        if row.get("accepted") is True
         else "#6baed6"
         for row in packets
     ]

@@ -63,6 +63,7 @@ import numpy as np
 
 try:
     from scipy.optimize import OptimizeResult, minimize
+
     _SCIPY_OK = True
 except ImportError:
     _SCIPY_OK = False
@@ -88,6 +89,7 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Constraint dataclasses
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class WaterLevelConstraint(PyCSAMTObject):
@@ -292,15 +294,15 @@ class ConstrainedCalibrator(PyCSAMTObject):
                 "At least one of calibrate_rho_w, calibrate_m, "
                 "calibrate_phi_prior must be True."
             )
-        self.constraints     = list(constraints)
+        self.constraints = list(constraints)
         self.calibrate_rho_w = calibrate_rho_w
-        self.calibrate_m     = calibrate_m
+        self.calibrate_m = calibrate_m
         self.calibrate_phi_prior = calibrate_phi_prior
-        self.rho_w_bounds    = rho_w_bounds
-        self.m_bounds        = m_bounds
-        self.phi_bounds      = phi_bounds
-        self.n_restarts      = int(n_restarts)
-        self.verbose         = verbose
+        self.rho_w_bounds = rho_w_bounds
+        self.m_bounds = m_bounds
+        self.phi_bounds = phi_bounds
+        self.n_restarts = int(n_restarts)
+        self.verbose = verbose
 
         # fitted attributes
         self.calibrated_config_: PetrophysicalConfig | None = None
@@ -369,8 +371,12 @@ class ConstrainedCalibrator(PyCSAMTObject):
                 if k in ("petro",):
                     print(f"  {k}: {fitted_cfg.petro!r}")
                 elif k not in (
-                    "kozeny_C", "kozeny_tortuosity", "fracture_depth_m",
-                    "fracture_rho_matrix", "specific_storage", "min_wt_search_depth",
+                    "kozeny_C",
+                    "kozeny_tortuosity",
+                    "fracture_depth_m",
+                    "fracture_rho_matrix",
+                    "specific_storage",
+                    "min_wt_search_depth",
                 ):
                     print(f"  {k}: {v}")
 
@@ -381,46 +387,67 @@ class ConstrainedCalibrator(PyCSAMTObject):
         )
         return calibrated_model.fit()
 
-    def constraint_residuals(
-        self, result: EMHydroResult
-    ) -> list[dict]:
+    def constraint_residuals(self, result: EMHydroResult) -> list[dict]:
         """Return per-constraint residuals for the given result (for diagnostics)."""
         rows = []
         for c in self.constraints:
             ix = _nearest_x_ix(result.resistivity_model, c.x)
-            row = {"type": type(c).__name__, "x_m": c.x, "station": getattr(c, "station", "")}
+            row = {
+                "type": type(c).__name__,
+                "x_m": c.x,
+                "station": getattr(c, "station", ""),
+            }
 
             if isinstance(c, WaterLevelConstraint):
-                obs  = c.depth_m
+                obs = c.depth_m
                 pred = float(result.water_table[ix])
-                row.update({"observed": obs, "predicted": pred,
-                            "residual_m": pred - obs,
-                            "normalized": (pred - obs) / c.uncertainty_m})
+                row.update(
+                    {
+                        "observed": obs,
+                        "predicted": pred,
+                        "residual_m": pred - obs,
+                        "normalized": (pred - obs) / c.uncertainty_m,
+                    }
+                )
 
             elif isinstance(c, PumpingTestConstraint):
-                obs  = np.log10(c.T_m2s)
+                obs = np.log10(c.T_m2s)
                 pred = np.log10(max(result.transmissivity[ix], 1e-20))
-                row.update({"observed_T_m2s": c.T_m2s,
-                            "predicted_T_m2s": result.transmissivity[ix],
-                            "residual_log10": pred - obs,
-                            "normalized": (pred - obs) / np.log10(c.uncertainty_factor)})
+                row.update(
+                    {
+                        "observed_T_m2s": c.T_m2s,
+                        "predicted_T_m2s": result.transmissivity[ix],
+                        "residual_log10": pred - obs,
+                        "normalized": (pred - obs)
+                        / np.log10(c.uncertainty_factor),
+                    }
+                )
 
             elif isinstance(c, SlugTestConstraint):
-                iz   = _nearest_z_ix(result.resistivity_model, c.depth_m)
-                obs  = np.log10(c.K_ms)
+                iz = _nearest_z_ix(result.resistivity_model, c.depth_m)
+                obs = np.log10(c.K_ms)
                 pred = np.log10(max(float(result.hydraulic_K[iz, ix]), 1e-20))
-                row.update({"observed_K_ms": c.K_ms,
-                            "predicted_K_ms": float(result.hydraulic_K[iz, ix]),
-                            "residual_log10": pred - obs,
-                            "normalized": (pred - obs) / np.log10(c.uncertainty_factor)})
+                row.update(
+                    {
+                        "observed_K_ms": c.K_ms,
+                        "predicted_K_ms": float(result.hydraulic_K[iz, ix]),
+                        "residual_log10": pred - obs,
+                        "normalized": (pred - obs)
+                        / np.log10(c.uncertainty_factor),
+                    }
+                )
 
             elif isinstance(c, ECConstraint):
                 rho_w_from_ec = float(ec_mscm_to_rho(c.ec_mscm))
-                rho_w_model   = result.config.rho_w
-                row.update({"observed_ec_mscm": c.ec_mscm,
-                            "rho_w_from_ec": rho_w_from_ec,
-                            "rho_w_model": rho_w_model,
-                            "residual_rho_w": rho_w_model - rho_w_from_ec})
+                rho_w_model = result.config.rho_w
+                row.update(
+                    {
+                        "observed_ec_mscm": c.ec_mscm,
+                        "rho_w_from_ec": rho_w_from_ec,
+                        "rho_w_model": rho_w_model,
+                        "residual_rho_w": rho_w_model - rho_w_from_ec,
+                    }
+                )
             rows.append(row)
         return rows
 
@@ -469,9 +496,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
             )
         return dataclasses.replace(cfg, **updates)
 
-    def _objective(
-        self, x: np.ndarray, base_model: EMHydroModel
-    ) -> float:
+    def _objective(self, x: np.ndarray, base_model: EMHydroModel) -> float:
         """Weighted sum of squared normalised residuals."""
         cfg = self._unpack_params(x, base_model.config)
         try:
@@ -494,6 +519,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
 # Residual helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _constraint_residual_sq(
     c: _AnyConstraint,
     result: EMHydroResult,
@@ -503,7 +529,7 @@ def _constraint_residual_sq(
     if isinstance(c, WaterLevelConstraint):
         wt = float(result.water_table[ix])
         if not np.isfinite(wt):
-            return 10.0   # mild penalty for undetected water table
+            return 10.0  # mild penalty for undetected water table
         return ((wt - c.depth_m) / c.uncertainty_m) ** 2
 
     if isinstance(c, PumpingTestConstraint):
@@ -514,7 +540,7 @@ def _constraint_residual_sq(
         return ((np.log10(T_model) - np.log10(c.T_m2s)) / sigma_log) ** 2
 
     if isinstance(c, SlugTestConstraint):
-        iz      = _nearest_z_ix(result.resistivity_model, c.depth_m)
+        iz = _nearest_z_ix(result.resistivity_model, c.depth_m)
         K_model = float(result.hydraulic_K[iz, ix])
         if K_model <= 0:
             return 25.0
@@ -522,10 +548,15 @@ def _constraint_residual_sq(
         return ((np.log10(K_model) - np.log10(c.K_ms)) / sigma_log) ** 2
 
     if isinstance(c, ECConstraint):
-        rho_w_obs   = float(ec_mscm_to_rho(c.ec_mscm))
+        rho_w_obs = float(ec_mscm_to_rho(c.ec_mscm))
         rho_w_model = result.config.rho_w
-        sigma       = float(ec_mscm_to_rho(c.ec_mscm - c.uncertainty_mscm)
-                            - ec_mscm_to_rho(c.ec_mscm + c.uncertainty_mscm)) / 2.0
+        sigma = (
+            float(
+                ec_mscm_to_rho(c.ec_mscm - c.uncertainty_mscm)
+                - ec_mscm_to_rho(c.ec_mscm + c.uncertainty_mscm)
+            )
+            / 2.0
+        )
         sigma = max(abs(sigma), 1e-4)
         return ((rho_w_model - rho_w_obs) / sigma) ** 2
 

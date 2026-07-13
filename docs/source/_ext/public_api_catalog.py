@@ -14,19 +14,28 @@ def _public_names(module: object) -> Iterable[str]:
     """Return the declared public API, falling back to visible attributes."""
     declared = getattr(module, "__all__", None)
     if declared:
-        return sorted({str(name) for name in declared if not str(name).startswith("_")})
+        return sorted(
+            {str(name) for name in declared if not str(name).startswith("_")}
+        )
     return sorted(name for name in vars(module) if not name.startswith("_"))
 
 
 def _members(module_name: str) -> dict[str, list[str]]:
     """Classify public modules, classes, and functions for *module_name*."""
     module = importlib.import_module(module_name)
-    result: dict[str, list[str]] = {"Modules": [], "Classes": [], "Functions": []}
+    result: dict[str, list[str]] = {
+        "Modules": [],
+        "Classes": [],
+        "Functions": [],
+    }
 
     package_path = getattr(module, "__path__", None)
     if package_path is not None:
         for info in pkgutil.iter_modules(package_path):
-            if not info.name.startswith("_") and info.name not in {"tests", "test"}:
+            if not info.name.startswith("_") and info.name not in {
+                "tests",
+                "test",
+            }:
                 result["Modules"].append(f"{module_name}.{info.name}")
 
     for name in _public_names(module):

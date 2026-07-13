@@ -19,23 +19,26 @@ import pytest
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 
-_AGENTS_TESTS = Path(__file__).resolve().parent          # agents/tests/
-_PROJECT_ROOT = _AGENTS_TESTS.parents[3]                 # repo root
-_EDI_DIR      = _PROJECT_ROOT / "data" / "3edis"
+_AGENTS_TESTS = Path(__file__).resolve().parent  # agents/tests/
+_PROJECT_ROOT = _AGENTS_TESTS.parents[3]  # repo root
+_EDI_DIR = _PROJECT_ROOT / "data" / "3edis"
 
 
 # ── backend helper ────────────────────────────────────────────────────────────
+
 
 def has_backend() -> bool:
     """Return True when PyTorch or TensorFlow is installed."""
     try:
         from pycsamt.backends import get_backend
+
         return get_backend() != "none"
     except Exception:
         return False
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
@@ -70,8 +73,9 @@ def loaded_sites(edi_dir: Path):
     """Sites object loaded from the 3edis directory (session-scoped)."""
     try:
         from pycsamt.agents import MTLoaderAgent
+
         ag = MTLoaderAgent()
-        r  = ag.execute({"path": str(edi_dir)})
+        r = ag.execute({"path": str(edi_dir)})
         if r.status == "failed":
             pytest.skip(f"MTLoaderAgent failed: {r.error}")
         return r["sites"]

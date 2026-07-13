@@ -32,8 +32,10 @@ print("status    :", result.status)
 print("cost (USD):", result.cost_estimate_usd)
 print(f"{len(rows)} models registered:\n")
 for row in rows:
-    print(f"  {row['name']:<32} {row['arch']:<8} "
-          f"{row['n_layers']:>2} layers  -> {row['solver']}")
+    print(
+        f"  {row['name']:<32} {row['arch']:<8} "
+        f"{row['n_layers']:>2} layers  -> {row['solver']}"
+    )
 
 # %%
 # Chart the catalogue
@@ -62,12 +64,25 @@ ax.set_xlim(0, max(depths) + 2)
 ax.set_title("ModelZooAgent — offline checkpoint catalogue", fontsize=11)
 
 for bar, row in zip(bars, rows):
-    ax.text(bar.get_width() + 0.15, bar.get_y() + bar.get_height() / 2,
-            row["solver"], va="center", fontsize=8, color="0.3")
+    ax.text(
+        bar.get_width() + 0.15,
+        bar.get_y() + bar.get_height() / 2,
+        row["solver"],
+        va="center",
+        fontsize=8,
+        color="0.3",
+    )
 
-handles = [Patch(facecolor=palette[a], edgecolor="black", label=a)
-           for a in archs]
-ax.legend(handles=handles, title="architecture", fontsize=8,
-          title_fontsize=9, loc="lower right", framealpha=0.9)
+handles = [
+    Patch(facecolor=palette[a], edgecolor="black", label=a) for a in archs
+]
+ax.legend(
+    handles=handles,
+    title="architecture",
+    fontsize=8,
+    title_fontsize=9,
+    loc="lower right",
+    framealpha=0.9,
+)
 ax.tick_params(axis="y", labelsize=8)
 fig.tight_layout()

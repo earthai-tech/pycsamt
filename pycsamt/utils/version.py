@@ -21,7 +21,13 @@ from ..api.typing import (
     Union,
 )
 
-__all__ = ["parse", "Version", "LegacyVersion", "InvalidVersion", "VERSION_PATTERN"]
+__all__ = [
+    "parse",
+    "Version",
+    "LegacyVersion",
+    "InvalidVersion",
+    "VERSION_PATTERN",
+]
 
 
 class InfinityType:
@@ -103,7 +109,12 @@ LocalType = Union[
     ],
 ]
 CmpKey = Tuple[
-    int, Tuple[int, ...], PrePostDevType, PrePostDevType, PrePostDevType, LocalType
+    int,
+    Tuple[int, ...],
+    PrePostDevType,
+    PrePostDevType,
+    PrePostDevType,
+    LocalType,
 ]
 LegacyCmpKey = Tuple[int, Tuple[str, ...]]
 VersionComparisonMethod = Callable[
@@ -187,7 +198,8 @@ class LegacyVersion(_BaseVersion):
         warnings.warn(
             "Creating a LegacyVersion has been deprecated and will be "
             "removed in the next major release.",
-            DeprecationWarning, stacklevel=2,
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     def __str__(self) -> str:
@@ -241,7 +253,9 @@ class LegacyVersion(_BaseVersion):
         return False
 
 
-_legacy_version_component_re = re.compile(r"(\d+ | [a-z]+ | \.| -)", re.VERBOSE)
+_legacy_version_component_re = re.compile(
+    r"(\d+ | [a-z]+ | \.| -)", re.VERBOSE
+)
 
 _legacy_version_replacement_map = {
     "pre": "c",
@@ -331,8 +345,9 @@ VERSION_PATTERN = r"""
 
 
 class Version(_BaseVersion):
-
-    _regex = re.compile(r"^\s*" + VERSION_PATTERN + r"\s*$", re.VERBOSE | re.IGNORECASE)
+    _regex = re.compile(
+        r"^\s*" + VERSION_PATTERN + r"\s*$", re.VERBOSE | re.IGNORECASE
+    )
 
     def __init__(self, version: str) -> None:
 
@@ -345,11 +360,16 @@ class Version(_BaseVersion):
         self._version = _Version(
             epoch=int(match.group("epoch")) if match.group("epoch") else 0,
             release=tuple(int(i) for i in match.group("release").split(".")),
-            pre=_parse_letter_version(match.group("pre_l"), match.group("pre_n")),
-            post=_parse_letter_version(
-                match.group("post_l"), match.group("post_n1") or match.group("post_n2")
+            pre=_parse_letter_version(
+                match.group("pre_l"), match.group("pre_n")
             ),
-            dev=_parse_letter_version(match.group("dev_l"), match.group("dev_n")),
+            post=_parse_letter_version(
+                match.group("post_l"),
+                match.group("post_n1") or match.group("post_n2"),
+            ),
+            dev=_parse_letter_version(
+                match.group("dev_l"), match.group("dev_n")
+            ),
             local=_parse_local_version(match.group("local")),
         )
 
@@ -532,7 +552,9 @@ def _cmpkey(
     # re-reverse it back into the correct order and make it a tuple and use
     # that for our sorting key.
     _release = tuple(
-        reversed(list(itertools.dropwhile(lambda x: x == 0, reversed(release))))
+        reversed(
+            list(itertools.dropwhile(lambda x: x == 0, reversed(release)))
+        )
     )
 
     # We need to "trick" the sorting algorithm to put 1.0.dev0 before 1.0a0.
@@ -574,8 +596,8 @@ def _cmpkey(
         # - Shorter versions sort before longer versions when the prefixes
         #   match exactly
         _local = tuple(
-            (i, "") if isinstance(i, int) else (NegativeInfinity, i) for i in local
+            (i, "") if isinstance(i, int) else (NegativeInfinity, i)
+            for i in local
         )
 
     return epoch, _release, _pre, _post, _dev, _local
-

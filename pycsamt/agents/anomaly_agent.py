@@ -88,8 +88,8 @@ class AnomalyDetectionAgent(BaseAgent):
             section_preset="pseudosection",
         )
         self.threshold_percentile = threshold_percentile
-        self.latent_dim           = latent_dim
-        self.epochs               = epochs
+        self.latent_dim = latent_dim
+        self.epochs = epochs
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -102,6 +102,7 @@ class AnomalyDetectionAgent(BaseAgent):
                 AnomalyDetector,
             )
             from ..backends import get_backend_instance
+
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -121,11 +122,13 @@ class AnomalyDetectionAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         output_dir = input_data.get("output_dir")
         freqs = np.logspace(-4, 3, 40)
@@ -144,7 +147,7 @@ class AnomalyDetectionAgent(BaseAgent):
                 warnings.append(f"{nm}: skipped.")
                 continue
             station_names.append(nm)
-            feat_list.append(feat)   # (n_freqs, n_comp)
+            feat_list.append(feat)  # (n_freqs, n_comp)
 
         if len(feat_list) < 3:
             return AgentResult.failed(
@@ -165,17 +168,22 @@ class AnomalyDetectionAgent(BaseAgent):
                 latent_dim=self.latent_dim,
                 threshold_percentile=self.threshold_percentile,
             )
-            detector.fit(X, epochs=self.epochs, batch_size=max(4, n_sta // 2),
-                         verbose=False)
+            detector.fit(
+                X,
+                epochs=self.epochs,
+                batch_size=max(4, n_sta // 2),
+                verbose=False,
+            )
         except Exception as exc:
             return AgentResult.failed(
-                f"AnomalyDetector.fit failed: {exc}", elapsed=time.time() - t0,
+                f"AnomalyDetector.fit failed: {exc}",
+                elapsed=time.time() - t0,
             )
 
         # ── score + flag ───────────────────────────────────────────────────────
         try:
-            scores = detector.transform(X)    # (n_sta,) reconstruction errors
-            flags  = detector.flag_anomalies(X)  # (n_sta,) bool
+            scores = detector.transform(X)  # (n_sta,) reconstruction errors
+            flags = detector.flag_anomalies(X)  # (n_sta,) bool
         except Exception as exc:
             return AgentResult.failed(
                 f"AnomalyDetector.transform failed: {exc}",
@@ -188,11 +196,14 @@ class AnomalyDetectionAgent(BaseAgent):
         # ── flag table ─────────────────────────────────────────────────────────
         try:
             import pandas as pd
-            flag_table = pd.DataFrame({
-                "station": station_names,
-                "score":   scores,
-                "flagged": flags.astype(bool),
-            })
+
+            flag_table = pd.DataFrame(
+                {
+                    "station": station_names,
+                    "score": scores,
+                    "flagged": flags.astype(bool),
+                }
+            )
         except Exception:
             flag_table = None
 
@@ -202,42 +213,63 @@ class AnomalyDetectionAgent(BaseAgent):
 
         try:
             import matplotlib.pyplot as plt
+
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4))
 
             # anomaly score bar chart
             colors = ["#e74c3c" if f else "#2ecc71" for f in flags]
-            ax1.bar(range(n_sta), scores, color=colors, edgecolor="none", alpha=0.8)
+            ax1.bar(
+                range(n_sta),
+                scores,
+                color=colors,
+                edgecolor="none",
+                alpha=0.8,
+            )
             thresh = np.percentile(scores, self.threshold_percentile)
-            ax1.axhline(thresh, color="#e74c3c", lw=1.5, ls="--",
-                        label=f"threshold ({self.threshold_percentile:.0f}th pct)")
+            ax1.axhline(
+                thresh,
+                color="#e74c3c",
+                lw=1.5,
+                ls="--",
+                label=f"threshold ({self.threshold_percentile:.0f}th pct)",
+            )
             ax1.set_xticks(range(n_sta))
             ax1.set_xticklabels(station_names, rotation=90, fontsize=6.5)
             ax1.set_ylabel("Reconstruction error", fontsize=9)
-            ax1.set_title("Anomaly scores per station", fontsize=9, fontweight="bold")
+            ax1.set_title(
+                "Anomaly scores per station", fontsize=9, fontweight="bold"
+            )
             ax1.legend(fontsize=8)
             ax1.tick_params(labelsize=8)
 
             # flag map on pseudosection
             from ..emtools.inspect import pseudosection as _ps
+
             try:
                 ax2 = _ps(sites, quantity="rho_xy", ax=ax2)
                 # overlay flagged stations
                 for si, (nm, flag) in enumerate(zip(station_names, flags)):
                     if flag:
                         ax2.axvline(si, color="red", lw=0.8, alpha=0.4)
-                ax2.set_title("ρa section  (red = flagged)", fontsize=9, fontweight="bold")
+                ax2.set_title(
+                    "ρa section  (red = flagged)",
+                    fontsize=9,
+                    fontweight="bold",
+                )
             except Exception:
                 ax2.text(0.5, 0.5, "pseudosection unavailable", ha="center")
 
             fig.suptitle(
                 f"Anomaly detection — {n_flagged}/{n_sta} flagged "
-                f"({100*n_flagged/max(n_sta,1):.0f}%)",
-                fontsize=10, fontweight="bold",
+                f"({100 * n_flagged / max(n_sta, 1):.0f}%)",
+                fontsize=10,
+                fontweight="bold",
             )
             fig.tight_layout()
             figures["anomaly_map"] = fig
-            p = self._save_figure(fig, output_dir, "anomaly_detection",
-                                  warnings_list=warnings)
+            p = self._save_figure(
+                fig, output_dir, "anomaly_detection", warnings_list=warnings
+            )
             if p:
                 fig_paths["anomaly_map"] = p
         except Exception as exc:
@@ -246,12 +278,11 @@ class AnomalyDetectionAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         if self.api_key:
-            top5 = sorted(zip(station_names, scores),
-                          key=lambda x: -x[1])[:5]
+            top5 = sorted(zip(station_names, scores), key=lambda x: -x[1])[:5]
             prompt = (
                 f"Anomaly detection summary:\n"
                 f"  Stations: {n_sta}, flagged: {n_flagged} "
-                f"({100*n_flagged/max(n_sta,1):.0f}%)\n"
+                f"({100 * n_flagged / max(n_sta, 1):.0f}%)\n"
                 f"  Threshold percentile: {self.threshold_percentile:.0f}\n"
                 f"  Highest anomaly scores: "
                 f"{[(nm, f'{sc:.3f}') for nm, sc in top5]}\n"
@@ -265,18 +296,18 @@ class AnomalyDetectionAgent(BaseAgent):
             status="success",
             summary=(
                 f"Anomaly detection: {n_flagged}/{n_sta} stations flagged "
-                f"({100*n_flagged/max(n_sta,1):.0f}%). "
+                f"({100 * n_flagged / max(n_sta, 1):.0f}%). "
                 f"{len(figures)} figures."
             ),
             data={
-                "anomaly_scores":   scores,
-                "flags":            flags,
-                "flag_table":       flag_table,
-                "n_flagged":        n_flagged,
+                "anomaly_scores": scores,
+                "flags": flags,
+                "flag_table": flag_table,
+                "n_flagged": n_flagged,
                 "flagged_stations": flagged_stations,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
-                "sites":            sites,
+                "figures": figures,
+                "figure_paths": fig_paths,
+                "sites": sites,
             },
             warnings=warnings,
             llm_interpretation=interp,

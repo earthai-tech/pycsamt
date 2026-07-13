@@ -62,10 +62,13 @@ def test_empty_map_data_returns_valid_empty_figures() -> None:
     data = MapData(sites=None)
     station = build_station_map(data, StationMapOptions())
     assert station.data == ()
-    assert build_pseudosection(
-        data,
-        ProfileMapOptions(components=("xy",)),
-    ).data == ()
+    assert (
+        build_pseudosection(
+            data,
+            ProfileMapOptions(components=("xy",)),
+        ).data
+        == ()
+    )
     assert build_3d_map(data, VolumeMapOptions()).data == ()
 
 

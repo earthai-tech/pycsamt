@@ -41,7 +41,12 @@ from ._workflows import (  # noqa: E402
 )
 
 _KNOWN_INVERSION_CODES = {
-    "occam2d", "modem", "mare2dem", "nlcg", "zonal", "smooth2d",
+    "occam2d",
+    "modem",
+    "mare2dem",
+    "nlcg",
+    "zonal",
+    "smooth2d",
 }
 
 _COMPONENTS = {"xy", "yx", "xx", "yy", "all", "off_diagonal"}
@@ -95,6 +100,7 @@ Rules:
 
 
 # ── agent ─────────────────────────────────────────────────────────────────────
+
 
 class ContextInputAgent(BaseAgent):
     """Parse a natural-language MT workflow request into a structured config.
@@ -175,9 +181,7 @@ class ContextInputAgent(BaseAgent):
             if llm_raw:
                 config = self.extract_json(llm_raw)
                 if config:
-                    self._log.debug(
-                        "LLM extraction succeeded."
-                    )
+                    self._log.debug("LLM extraction succeeded.")
                     # Regex wins when it found a specific
                     # workflow (not the qc default). LLM
                     # over-generalises (e.g. maps
@@ -188,13 +192,9 @@ class ContextInputAgent(BaseAgent):
         if config is None:
             config = regex_cfg
             if not self.api_key:
-                self._log.debug(
-                    "No API key -- using regex."
-                )
+                self._log.debug("No API key -- using regex.")
             else:
-                self._log.warning(
-                    "LLM failed; falling back to regex."
-                )
+                self._log.warning("LLM failed; falling back to regex.")
 
         # ── normalise & validate ──────────────────────────────────────────────
         config = _normalise_config(config, request)
@@ -202,12 +202,11 @@ class ContextInputAgent(BaseAgent):
 
         # ── build validated WorkflowPlan ──────────────────────────
         from ._workflow_plan import WorkflowPlan
+
         plan = WorkflowPlan.from_config(
             config,
             request=request,
-            provider=(
-                self.llm_provider if self.api_key else "offline"
-            ),
+            provider=(self.llm_provider if self.api_key else "offline"),
         )
 
         # ── optional LLM summary ──────────────────────────────────
@@ -236,17 +235,13 @@ class ContextInputAgent(BaseAgent):
         )
 
         return AgentResult(
-            status=(
-                "success"
-                if config.get("data_path")
-                else "needs_review"
-            ),
+            status=("success" if config.get("data_path") else "needs_review"),
             summary=summary,
             data={
-                "config":        config,
+                "config": config,
                 "workflow_plan": plan,
-                "raw_request":   request,
-                "llm_raw":       llm_raw,
+                "raw_request": request,
+                "llm_raw": llm_raw,
             },
             warnings=warnings,
             llm_interpretation=interpretation,
@@ -256,6 +251,7 @@ class ContextInputAgent(BaseAgent):
 
 
 # ── regex extraction ──────────────────────────────────────────────────────────
+
 
 def _regex_extract(text: str) -> dict[str, Any]:
     """Extract a workflow config from *text* using regex patterns.
@@ -270,14 +266,14 @@ def _regex_extract(text: str) -> dict[str, Any]:
     # plain words like "EDI" that appear before the actual path.
     path_patterns = [
         # keyword immediately followed by an absolute/home path
-        r'(?:load(?:ing)?|read(?:ing)?|from|on|in|at|path[:\s]+)'
+        r"(?:load(?:ing)?|read(?:ing)?|from|on|in|at|path[:\s]+)"
         r'\s+["\']?([/~][\w/\\\-\.]+)["\']?',
         # quoted absolute path (any extension)
         r'["\']([/~][\w/\\\-\.]+)["\']',
         # bare absolute path — must NOT be preceded by a
         # word char or slash (prevents matching inner components
         # of a path like the "/willy" in "/data/willy")
-        r'(?<![/\w])([/~][\w/\\\-\.]{5,})',
+        r"(?<![/\w])([/~][\w/\\\-\.]{5,})",
     ]
     for pat in path_patterns:
         m = re.search(pat, text, re.IGNORECASE)
@@ -293,7 +289,8 @@ def _regex_extract(text: str) -> dict[str, Any]:
     # ── output directory ──────────────────────────────────────────────────────
     m = re.search(
         r'(?:save|output|write|report)\s+(?:to\s+)?["\']?([/~\w][\w/\\\-\.]+)["\']?',
-        text, re.IGNORECASE,
+        text,
+        re.IGNORECASE,
     )
     if m:
         cfg["output_dir"] = os.path.expanduser(m.group(1))
@@ -304,6 +301,7 @@ def _regex_extract(text: str) -> dict[str, Any]:
     # Leave the key unset when nothing matches so _normalise_config
     # applies the qc default.
     from ._workflows import classify_workflow
+
     _wf = classify_workflow(text)
     if _wf:
         cfg["workflow"] = _wf
@@ -311,8 +309,8 @@ def _regex_extract(text: str) -> dict[str, Any]:
     # ── period range ──────────────────────────────────────────────────────────
     # e.g. "1e-4 to 1 s", "0.0001 – 1.0 s", "T_min=0.001, T_max=10"
     period_pat = re.compile(
-        r'(?:period[s]?\s*(?:range|from|between|:)?\s*)'
-        r'([\d\.e\+\-]+)\s*(?:to|–|-|,)\s*([\d\.e\+\-]+)',
+        r"(?:period[s]?\s*(?:range|from|between|:)?\s*)"
+        r"([\d\.e\+\-]+)\s*(?:to|–|-|,)\s*([\d\.e\+\-]+)",
         re.IGNORECASE,
     )
     m = period_pat.search(text)
@@ -324,8 +322,8 @@ def _regex_extract(text: str) -> dict[str, Any]:
 
     # frequency → period conversion
     freq_pat = re.compile(
-        r'(?:freq(?:uency)?\s*(?:range|from|:)?\s*)'
-        r'([\d\.e\+\-]+)\s*(?:to|–|-|,)\s*([\d\.e\+\-]+)\s*(?:hz)?',
+        r"(?:freq(?:uency)?\s*(?:range|from|:)?\s*)"
+        r"([\d\.e\+\-]+)\s*(?:to|–|-|,)\s*([\d\.e\+\-]+)\s*(?:hz)?",
         re.IGNORECASE,
     )
     m = freq_pat.search(text)
@@ -339,13 +337,15 @@ def _regex_extract(text: str) -> dict[str, Any]:
 
     # ── component ─────────────────────────────────────────────────────────────
     comp_pat = re.compile(
-        r'\b(xy|yx|xx|yy|off[-_]diagonal|all(?:\s+components?)?)\b',
+        r"\b(xy|yx|xx|yy|off[-_]diagonal|all(?:\s+components?)?)\b",
         re.IGNORECASE,
     )
     m = comp_pat.search(text)
     if m:
         raw = m.group(1).lower().replace(" ", "_").replace("-", "_")
-        cfg["component"] = "off_diagonal" if "diagonal" in raw else raw.split("_")[0]
+        cfg["component"] = (
+            "off_diagonal" if "diagonal" in raw else raw.split("_")[0]
+        )
 
     # ── inversion code ────────────────────────────────────────────────────────
     for code in _KNOWN_INVERSION_CODES:
@@ -354,8 +354,11 @@ def _regex_extract(text: str) -> dict[str, Any]:
             break
 
     # ── depth ─────────────────────────────────────────────────────────────────
-    m = re.search(r'depth[_\s]*(?:max)?\s*[=:]\s*([\d\.]+)\s*(km|m)?',
-                  text, re.IGNORECASE)
+    m = re.search(
+        r"depth[_\s]*(?:max)?\s*[=:]\s*([\d\.]+)\s*(km|m)?",
+        text,
+        re.IGNORECASE,
+    )
     if m:
         val = float(m.group(1))
         unit = (m.group(2) or "km").lower()
@@ -363,8 +366,9 @@ def _regex_extract(text: str) -> dict[str, Any]:
 
     # ── station ───────────────────────────────────────────────────────────────
     m = re.search(
-        r'station[s]?\s*[=:\s]+([A-Za-z0-9_\-]+)',
-        text, re.IGNORECASE,
+        r"station[s]?\s*[=:\s]+([A-Za-z0-9_\-]+)",
+        text,
+        re.IGNORECASE,
     )
     if m:
         cfg["station"] = m.group(1)
@@ -377,7 +381,9 @@ def _regex_extract(text: str) -> dict[str, Any]:
 # (single source of truth, shared with the orchestrator).
 
 
-def _normalise_config(cfg: dict[str, Any], original_text: str) -> dict[str, Any]:
+def _normalise_config(
+    cfg: dict[str, Any], original_text: str
+) -> dict[str, Any]:
     """Fill defaults, normalise aliases, clean up types."""
     # workflow alias normalisation (shared registry)
     cfg["workflow"] = _normalise_workflow(cfg.get("workflow", ""))
@@ -439,7 +445,9 @@ def _validate_config(cfg: dict[str, Any]) -> list[str]:
     if pr is not None:
         lo, hi = pr
         if lo <= 0:
-            warnings.append(f"period_range lower bound must be > 0; got {lo}.")
+            warnings.append(
+                f"period_range lower bound must be > 0; got {lo}."
+            )
         if hi <= lo:
             warnings.append(
                 f"period_range upper bound {hi} ≤ lower bound {lo}."

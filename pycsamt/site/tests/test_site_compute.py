@@ -22,8 +22,7 @@ def _load_edi(p: Path) -> EDIFile:
 
 def _dup_edi(tmp_path: Path, src: Path, stem: str) -> Path:
     dst = tmp_path / f"{stem}.edi"
-    dst.write_text(src.read_text(encoding="utf-8"),
-                   encoding="utf-8")
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dst
 
 
@@ -43,8 +42,7 @@ def test_strike_estimate_single_and_multi(
 ) -> None:
     ed1 = _load_edi(simulated_edi)
     # Ensure Z has the right shape for deterministic result
-    ed1 = ed.fill_missing(ed1, how="zero",
-                          components=("Z",), inplace=False)
+    ed1 = ed.fill_missing(ed1, how="zero", components=("Z",), inplace=False)
 
     ang = cmp.strike_estimate(ed1, method="swift")
     assert isinstance(ang, float)
@@ -62,17 +60,13 @@ def test_strike_estimate_single_and_multi(
     ang = cmp.strike_estimate(ed1, method="swift")
     assert ang == pytest.approx(0.0, abs=1e-6)
 
-    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "S01",
-                              "S02")
-    e1 = ed.fill_missing(e1, how="zero",
-                         components=("Z",), inplace=False)
-    e2 = ed.fill_missing(e2, how="zero",
-                         components=("Z",), inplace=False)
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "S01", "S02")
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Z",), inplace=False)
 
     df = cmp.strike_estimate([e1, e2], method="swift", api=False)
     assert isinstance(df, pd.DataFrame)
-    assert list(df.columns) == ["station", "method",
-                                "theta_deg"]
+    assert list(df.columns) == ["station", "method", "theta_deg"]
     assert len(df) == 2
     assert np.all(np.isfinite(df["theta_deg"].values))
 
@@ -81,12 +75,9 @@ def test_compute_dataframe_results_can_return_api_frame(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
     reset_api_view()
-    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "A11",
-                              "A12")
-    e1 = ed.fill_missing(e1, how="zero",
-                         components=("Z",), inplace=False)
-    e2 = ed.fill_missing(e2, how="zero",
-                         components=("Z",), inplace=False)
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "A11", "A12")
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Z",), inplace=False)
     sites = [e1, e2]
 
     strike = cmp.strike_estimate(sites, api=True)
@@ -109,13 +100,11 @@ def test_res_at_freq_nearest_and_interp(
 ) -> None:
     ed1 = _load_edi(simulated_edi)
     # Fill Z so Zxy, Zyx exist and are zeros
-    ed1 = ed.fill_missing(ed1, how="zero",
-                          components=("Z",), inplace=False)
+    ed1 = ed.fill_missing(ed1, how="zero", components=("Z",), inplace=False)
 
     # Nearest mode: f_used must be one from the header
     out_near = cmp.res_at_freq(ed1, 150.0, how="nearest")
-    assert set(out_near.keys()) == {"res_xy", "res_yx",
-                                    "f_used"}
+    assert set(out_near.keys()) == {"res_xy", "res_yx", "f_used"}
     assert out_near["f_used"] in {100.0, 200.0}
     # Off-diagonals are 0 -> apparent resistivities are 0
     assert out_near["res_xy"] == pytest.approx(0.0)
@@ -128,28 +117,21 @@ def test_res_at_freq_nearest_and_interp(
     assert out_int["res_yx"] == pytest.approx(0.0)
 
     # Multi-site path returns a DataFrame
-    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "R01",
-                              "R02")
-    e1 = ed.fill_missing(e1, how="zero",
-                         components=("Z",), inplace=False)
-    e2 = ed.fill_missing(e2, how="zero",
-                         components=("Z",), inplace=False)
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "R01", "R02")
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Z",), inplace=False)
 
     df = cmp.res_at_freq([e1, e2], 150.0, how="interp", api=False)
     assert isinstance(df, pd.DataFrame)
-    assert list(df.columns) == ["station", "res_xy", "res_yx",
-                                "f_used"]
+    assert list(df.columns) == ["station", "res_xy", "res_yx", "f_used"]
     assert len(df) == 2
-    assert np.allclose(df["f_used"].values,
-                       np.array([150.0, 150.0]))
+    assert np.allclose(df["f_used"].values, np.array([150.0, 150.0]))
 
 
-def test_phase_slope_band(tmp_path: Path,
-                          simulated_edi: Path) -> None:
+def test_phase_slope_band(tmp_path: Path, simulated_edi: Path) -> None:
     ed1 = _load_edi(simulated_edi)
     # Zero Z => phase is 0 deg over the band -> slope 0
-    ed1 = ed.fill_missing(ed1, how="zero",
-                          components=("Z",), inplace=False)
+    ed1 = ed.fill_missing(ed1, how="zero", components=("Z",), inplace=False)
 
     out = cmp.phase_slope(ed1, band=(90.0, 210.0))
     assert set(out.keys()) == {"slope_xy", "slope_yx"}
@@ -157,21 +139,15 @@ def test_phase_slope_band(tmp_path: Path,
     assert out["slope_yx"] == pytest.approx(0.0, abs=1e-6)
 
     # Multi-site variant
-    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "P01",
-                              "P02")
-    e1 = ed.fill_missing(e1, how="zero",
-                         components=("Z",), inplace=False)
-    e2 = ed.fill_missing(e2, how="zero",
-                         components=("Z",), inplace=False)
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "P01", "P02")
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Z",), inplace=False)
     df = cmp.phase_slope([e1, e2], band=(90.0, 210.0), api=False)
     assert isinstance(df, pd.DataFrame)
-    assert list(df.columns) == ["station", "slope_xy",
-                                "slope_yx"]
+    assert list(df.columns) == ["station", "slope_xy", "slope_yx"]
     assert len(df) == 2
-    assert np.allclose(df["slope_xy"].values,
-                       np.zeros(2), atol=1e-6)
-    assert np.allclose(df["slope_yx"].values,
-                       np.zeros(2), atol=1e-6)
+    assert np.allclose(df["slope_xy"].values, np.zeros(2), atol=1e-6)
+    assert np.allclose(df["slope_yx"].values, np.zeros(2), atol=1e-6)
 
 
 def test_tipper_magnitude_presence_and_stats(
@@ -186,12 +162,9 @@ def test_tipper_magnitude_presence_and_stats(
     assert math.isnan(out["max"])
 
     # Allocate an all-zero tipper -> stats become zeros
-    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "T01",
-                              "T02")
-    e1 = ed.fill_missing(e1, how="zero",
-                         components=("Tip",), inplace=False)
-    e2 = ed.fill_missing(e2, how="zero",
-                         components=("Tip",), inplace=False)
+    e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "T01", "T02")
+    e1 = ed.fill_missing(e1, how="zero", components=("Tip",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Tip",), inplace=False)
 
     # (n_freq, 1, 2) zero-filled tippers are accepted since the
     # tipper-shape widening in site.compute._tip_arr
@@ -203,14 +176,16 @@ def test_tipper_magnitude_presence_and_stats(
     # Create a tipper holder and attach zero arrays
     f = cmp.get_freq(e1)
     n = len(f) if f is not None else 0
-    class _Tip: pass
+
+    class _Tip:
+        pass
+
     tp = _Tip()
     tp._tipper = np.zeros((n, 2), complex)
     e1.Tip = tp
 
     # Now fill_missing can operate on the existing tipper
-    e1 = ed.fill_missing(e1, how="zero", components=("Tip",),
-                         inplace=True)
+    e1 = ed.fill_missing(e1, how="zero", components=("Tip",), inplace=True)
 
     s = cmp.tipper_magnitude(e1, per_freq=False)
     assert s["mean"] == pytest.approx(0.0)

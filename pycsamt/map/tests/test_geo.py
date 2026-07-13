@@ -59,8 +59,13 @@ def test_geo_contour_image_interp_and_smoothing() -> None:
     val = 50.0 + rng.rand(15) * 500.0
     for interp in ("cubic", "linear", "nearest"):
         out = build_geo_contour_image(
-            lon, lat, val, interp=interp, smooth_sigma=1.5,
-            grid_res=120, n_levels=10,
+            lon,
+            lat,
+            val,
+            interp=interp,
+            smooth_sigma=1.5,
+            grid_res=120,
+            n_levels=10,
         )
         assert out is not None
         assert out["image"].startswith("data:image/png;base64,")

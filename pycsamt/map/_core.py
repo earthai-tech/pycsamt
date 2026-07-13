@@ -93,9 +93,7 @@ class MapData:
     @property
     def lines(self) -> tuple[str, ...]:
         """Return available profile/line names."""
-        return tuple(
-            profile.name for profile in self.profiles
-        )
+        return tuple(profile.name for profile in self.profiles)
 
     @property
     def has_geo(self) -> bool:
@@ -103,8 +101,7 @@ class MapData:
         if not self.stations:
             return False
         return all(
-            station.latitude is not None
-            and station.longitude is not None
+            station.latitude is not None and station.longitude is not None
             for station in self.stations
         )
 
@@ -338,10 +335,7 @@ def component_values(
     """Extract a 1-D value series for one component."""
     values = np.asarray(arr, dtype=float)
     if values.ndim < 3 or values.shape[-2:] != (2, 2):
-        msg = (
-            "Expected impedance values with shape "
-            "(nfreq, 2, 2)."
-        )
+        msg = "Expected impedance values with shape (nfreq, 2, 2)."
         raise ValueError(msg)
     spec = component_spec(component)
     if spec.indices is not None:
@@ -421,10 +415,7 @@ def station_distance_km(data: MapData) -> np.ndarray:
     if not stations:
         return np.array([], dtype=float)
     lat = np.array(
-        [
-            s.latitude if s.latitude is not None else np.nan
-            for s in stations
-        ],
+        [s.latitude if s.latitude is not None else np.nan for s in stations],
         dtype=float,
     )
     lon = np.array(
@@ -434,19 +425,18 @@ def station_distance_km(data: MapData) -> np.ndarray:
         ],
         dtype=float,
     )
-    if (
-        not np.isfinite(lat).all()
-        or not np.isfinite(lon).all()
-    ):
+    if not np.isfinite(lat).all() or not np.isfinite(lon).all():
         return np.arange(len(stations), dtype=float)
     x = lon * 111.320 * np.cos(np.deg2rad(np.nanmean(lat)))
     y = lat * 110.574
     dist = np.zeros(len(stations), dtype=float)
     for i in range(1, len(stations)):
-        dist[i] = dist[i - 1] + float(np.hypot(
-            x[i] - x[i - 1],
-            y[i] - y[i - 1],
-        ))
+        dist[i] = dist[i - 1] + float(
+            np.hypot(
+                x[i] - x[i - 1],
+                y[i] - y[i - 1],
+            )
+        )
     return dist
 
 
@@ -466,10 +456,7 @@ def value_at_frequency(
         component=component,
         tolerance=tolerance,
     )
-    return {
-        station: item.value
-        for station, item in details.items()
-    }
+    return {station: item.value for station, item in details.items()}
 
 
 def value_at_frequency_details(
@@ -496,10 +483,7 @@ def value_at_frequency_details(
             frequency,
             tolerance=tolerance,
         )
-        if (
-            selection is None
-            or not selection.within_tolerance
-        ):
+        if selection is None or not selection.within_tolerance:
             continue
         q_name = quantity.lower()
         if q_name in {"phase", "phi"}:
@@ -588,10 +572,7 @@ def pseudosection_table(
         )
         periods = np.where(freq > 0, 1.0 / freq, np.nan)
         for period, value in zip(periods, vals):
-            if (
-                not np.isfinite(period)
-                or not np.isfinite(value)
-            ):
+            if not np.isfinite(period) or not np.isfinite(value):
                 continue
             if quantity == "rho" and value <= 0:
                 continue
@@ -654,21 +635,14 @@ def _coords_float(
         coords = _get_field(obj, "coords")
         if coords is None or len(coords) < 2:
             return None
-        raw = (
-            coords[0]
-            if _is_latitude_names(names)
-            else coords[1]
-        )
+        raw = coords[0] if _is_latitude_names(names) else coords[1]
     except (TypeError, ValueError, IndexError):
         return None
     return _finite_or_none(raw)
 
 
 def _is_latitude_names(names: tuple[str, ...]) -> bool:
-    return any(
-        str(name).lower().startswith("lat")
-        for name in names
-    )
+    return any(str(name).lower().startswith("lat") for name in names)
 
 
 def _first_float(obj: Any, *names: str) -> float | None:

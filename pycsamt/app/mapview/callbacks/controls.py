@@ -22,10 +22,10 @@ _DEPTH_PRESETS = {
 }
 
 _RHO_PRESETS = {
-    IDs.BTN_RHO_ALL:  (1,     100_000),
-    IDs.BTN_RHO_COND: (1,     100),
-    IDs.BTN_RHO_MID:  (100,   1_000),
-    IDs.BTN_RHO_RES:  (1_000, 100_000),
+    IDs.BTN_RHO_ALL: (1, 100_000),
+    IDs.BTN_RHO_COND: (1, 100),
+    IDs.BTN_RHO_MID: (100, 1_000),
+    IDs.BTN_RHO_RES: (1_000, 100_000),
 }
 
 
@@ -118,8 +118,7 @@ def _register_freq_slider(app) -> None:
         # sparse marks: ends + middle
         idxs = sorted({0, n // 2, n - 1})
         marks = {
-            i: {"label": _fmt_freq(freqs[i]),
-                "style": {"fontSize": "9px"}}
+            i: {"label": _fmt_freq(freqs[i]), "style": {"fontSize": "9px"}}
             for i in idxs
         }
         return 0, n - 1, marks, 0
@@ -179,15 +178,56 @@ def _register_gather(app) -> None:
         State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
-    def gather(overlay, quantity, component, freq_idx, cmap, log, mode3d,
-               labels, opacity, azimuth, spacing, depth_lo, depth_hi,
-               n_slices, surfaces, contours, scale, vmin, vmax,
-               rho_lo, rho_hi, topo, terrain, basemap, contour_levels,
-               contour_mode, show_sta, sta_labels, sta_symbol, sta_size, sta_color,
-               contour_enable, marker_size, map_opacity, profiles,
-               crs_mode, utm_zone, utm_hem, epsg, contour_interp,
-               contour_smooth, contour_res, aspect, x_unit, depth_unit,
-               smooth_sections, section_res, store):
+    def gather(
+        overlay,
+        quantity,
+        component,
+        freq_idx,
+        cmap,
+        log,
+        mode3d,
+        labels,
+        opacity,
+        azimuth,
+        spacing,
+        depth_lo,
+        depth_hi,
+        n_slices,
+        surfaces,
+        contours,
+        scale,
+        vmin,
+        vmax,
+        rho_lo,
+        rho_hi,
+        topo,
+        terrain,
+        basemap,
+        contour_levels,
+        contour_mode,
+        show_sta,
+        sta_labels,
+        sta_symbol,
+        sta_size,
+        sta_color,
+        contour_enable,
+        marker_size,
+        map_opacity,
+        profiles,
+        crs_mode,
+        utm_zone,
+        utm_hem,
+        epsg,
+        contour_interp,
+        contour_smooth,
+        contour_res,
+        aspect,
+        x_unit,
+        depth_unit,
+        smooth_sections,
+        section_res,
+        store,
+    ):
         freqs = (store or {}).get("frequencies", [])
         freq = None
         if freqs:
@@ -235,7 +275,9 @@ def _register_gather(app) -> None:
             "utm_hem": utm_hem or "N",
             "epsg": epsg,
             "contour_interp": contour_interp or "cubic",
-            "contour_smooth": contour_smooth if contour_smooth is not None else 1.0,
+            "contour_smooth": contour_smooth
+            if contour_smooth is not None
+            else 1.0,
             "contour_res": int(contour_res) if contour_res else 150,
             "aspect": aspect or "data",
             "x_unit": x_unit or "m",

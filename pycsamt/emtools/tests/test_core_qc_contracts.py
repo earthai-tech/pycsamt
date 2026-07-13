@@ -9,9 +9,7 @@ import pytest
 
 matplotlib.use("Agg")
 
-from pycsamt.emtools import _core
-from pycsamt.emtools import qc
-from pycsamt.emtools import ss
+from pycsamt.emtools import _core, qc, ss
 
 
 class _FakeZ:
@@ -60,7 +58,9 @@ def test_ensure_sites_rejects_none_before_loader():
 
 def test_qc_table_has_stable_columns_and_skips_invalid_z(monkeypatch):
     valid = _site("S01")
-    invalid = SimpleNamespace(station="BAD", Z=SimpleNamespace(z=np.ones((2, 3))))
+    invalid = SimpleNamespace(
+        station="BAD", Z=SimpleNamespace(z=np.ones((2, 3)))
+    )
     skew = pd.DataFrame(
         {
             "station": ["S01", "S01"],
@@ -109,7 +109,10 @@ def test_qc_flags_report_low_coverage_and_low_snr(monkeypatch):
     flags = qc.qc_flags([site], min_frac_ok=0.9, min_snr_med=2.0)
 
     assert flags.loc[0, "station"] == "S02"
-    assert set(flags.loc[0, "flags"].split(",")) == {"low_coverage", "low_snr"}
+    assert set(flags.loc[0, "flags"].split(",")) == {
+        "low_coverage",
+        "low_snr",
+    }
 
 
 def test_plot_ss_summary_uses_synthetic_arrays():
@@ -144,4 +147,7 @@ def test_plot_ss_1d_curves_falls_back_when_station_selection_is_unknown():
     )
 
     assert fig.axes[0].get_title() == "S01"
-    assert {line.get_label() for line in fig.axes[0].lines} >= {"before", "after"}
+    assert {line.get_label() for line in fig.axes[0].lines} >= {
+        "before",
+        "after",
+    }

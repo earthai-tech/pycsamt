@@ -34,7 +34,9 @@ print(stratagem_preset_catalogue())
 presets = list_stratagem_presets()
 print(f"{len(presets)} Stratagem presets:\n")
 for p in presets:
-    print(f"  {p.name:<18} {len(p.steps)} steps — {p.description.splitlines()[0]}")
+    print(
+        f"  {p.name:<18} {len(p.steps)} steps — {p.description.splitlines()[0]}"
+    )
 
 # %%
 # Inside a preset

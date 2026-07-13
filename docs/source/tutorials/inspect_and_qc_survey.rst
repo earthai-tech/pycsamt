@@ -39,8 +39,14 @@ After this tutorial you should be able to:
 Input Assumptions
 -----------------
 
-The examples below assume that the EDI files are stored in ``data/edis``. The
-path can be:
+The examples below use the bundled WILLY ``L18PLT`` line:
+
+.. code-block:: text
+
+   data/AMT/WILLY_DATA/L18PLT
+
+Replace that path with your own EDI directory when you repeat the workflow on
+student, field, or project data. The path can be:
 
 - a single ``.edi`` file
 - a directory containing EDI files
@@ -50,12 +56,12 @@ For example:
 
 .. code-block:: text
 
-   data/
+   my_project/
      edis/
-       L18PLT/
+       line_01/
          S001.edi
          S002.edi
-       L22PLT/
+       line_02/
          S101.edi
          S102.edi
 
@@ -74,11 +80,13 @@ past recoverable metadata issues.
 
    from pycsamt.api import read_edis
 
+   edi_dir = "data/AMT/WILLY_DATA/L18PLT"
+
    survey = read_edis(
-       "data/edis",
-       recursive=True,
+       edi_dir,
+       recursive=False,
        strict=False,
-       progress="auto",
+       progress=False,
    )
 
    sites = survey.collection
@@ -86,6 +94,17 @@ past recoverable metadata issues.
 
 ``survey`` is the public survey object returned by the API. ``sites`` is the
 site collection used by most station editing, computation, and QC helpers.
+For the bundled line, the summary confirms that all 28 stations were loaded:
+
+.. code-block:: text
+
+   APIFrame: edi_survey_summary
+   kind: edi.summary
+   shape: 28 rows x 6 columns
+   columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: data/AMT/WILLY_DATA/L18PLT
 
 If you only need a pandas-friendly station inventory, inspect the survey
 summary table:
@@ -97,8 +116,18 @@ summary table:
    print(inventory.head())
    print(inventory.columns)
 
-At this stage, check that the number of stations is what you expected and that
-station names are not duplicated unintentionally.
+Example output:
+
+.. code-block:: text
+
+      station                                      path  n_freq  tipper  spectra     ts
+   23-18-001A  data/AMT/WILLY_DATA/L18PLT/18-001A.edi      53   False    False  False
+   23-18-002U  data/AMT/WILLY_DATA/L18PLT/18-002U.edi      53   False    False  False
+   23-18-003A  data/AMT/WILLY_DATA/L18PLT/18-003A.edi      53   False    False  False
+
+At this stage, check that the number of stations is what you expected, that
+station names are not duplicated unintentionally, and that the frequency count
+is consistent across the line.
 
 Create an Output Folder
 -----------------------
@@ -136,6 +165,21 @@ rows per station and, when possible, adds simple phase-tensor skew diagnostics.
    qc_df = qc.to_pandas(copy=True)
    print(qc)
    print(qc_df.head())
+
+For ``L18PLT``, the compact QC table starts like this:
+
+.. code-block:: text
+
+   station  n_freq  frac_ok   snr_med  skew_med     pmin     pmax
+   18-001A      53      1.0 17.658396 50.326802 0.000096 0.992063
+   18-002U      53      1.0 16.687366 36.059416 0.000096 0.992063
+   18-003A      53      1.0 12.031672 31.245824 0.000096 0.992063
+   18-004A      53      1.0 10.430580 31.005169 0.000096 0.992063
+   18-005U      53      1.0 14.360341 36.404849 0.000096 0.992063
+
+The important teaching point is that complete coverage does not mean the data
+are automatically ready for inversion. This line has ``frac_ok = 1.0`` at the
+first stations, but the skew column still asks for dimensionality review.
 
 The most useful columns are:
 
@@ -202,6 +246,8 @@ A practical first review is to sort stations by coverage and signal quality.
 
 Stations near the top of this sorted table should be checked before automated
 static-shift correction, dimensionality analysis, or inversion preparation.
+In this line, the sort mostly separates stations by signal-quality proxy and
+skew because the frequency coverage is complete.
 
 Create Simple QC Flags
 ----------------------
@@ -225,6 +271,22 @@ them for local data quality, acquisition style, and survey objectives.
 
    flagged.to_csv(qc_dir / "station_qc_flags.csv", index=False)
    print(flagged[["station", "frac_ok", "snr_med", "flags"]].head(20))
+
+Example output:
+
+.. code-block:: text
+
+   station  frac_ok   snr_med      flags
+   18-001A      1.0 17.658396  high_skew
+   18-002U      1.0 16.687366  high_skew
+   18-003A      1.0 12.031672  high_skew
+   18-004A      1.0 10.430580  high_skew
+   18-005U      1.0 14.360341  high_skew
+
+Here every station receives ``high_skew`` with the conservative threshold used
+for the tutorial. That is not an instruction to remove the whole line. It is a
+clear sign that the next review should include phase-tensor, strike, geology,
+and inversion residual diagnostics.
 
 Typical flags are:
 
@@ -270,6 +332,18 @@ several indicators into a normalized confidence score between ``0`` and ``1``.
    station_ci_df = station_ci.to_pandas(copy=True)
    station_ci_df.to_csv(qc_dir / "station_confidence.csv", index=False)
    print(station_ci_df.head())
+
+The first rows show how the composite score combines several checks:
+
+.. code-block:: text
+
+   station  distance_m  confidence  confidence_err  coverage  uncertainty  offdiag  diagonal    phase  spatial
+   18-001A         0.0    0.709038        0.342984       1.0     0.716714 0.462176  0.000000 0.975510 0.488179
+   18-002U       200.0    0.774634        0.265434       1.0     0.561796 0.551179  0.328771 0.976991 0.990216
+   18-003A       400.0    0.713303        0.247746       1.0     0.551732 0.452082  0.387056 0.971592 0.492792
+
+The confidence score is lower than the coverage score because it includes
+tensor consistency, diagonal leakage, phase continuity, and spatial coherence.
 
 Important confidence columns include:
 
@@ -319,6 +393,21 @@ not universal geophysical laws.
 
    low_ci.to_csv(qc_dir / "stations_to_review.csv", index=False)
 
+For the bundled line and thresholds above:
+
+.. code-block:: text
+
+   stations to review
+   station  confidence  coverage    phase  spatial
+   18-017U    0.595479       1.0 0.969783  0.03816
+   18-018A    0.578410       1.0 0.957546  0.00000
+   18-021U    0.570986       1.0 0.938165  0.00000
+   18-022U    0.544020       1.0 0.941638  0.00000
+
+   stations suitable for first trials
+   station  confidence  coverage
+   18-023A    0.853279       1.0
+
 If many neighboring stations have low confidence in the same frequency band,
 the problem may be survey-wide cultural noise or a real geologic response. If
 one isolated station is poor across nearly all frequencies, inspect acquisition
@@ -357,6 +446,18 @@ station-frequency sample.
        "flags",
    ]].head(20))
 
+The line has 73 station-frequency rows below ``0.50`` confidence:
+
+.. code-block:: text
+
+   station  frequency_hz  period_s  confidence                                                               flags
+   18-003A      2997.000  0.000334    0.480450                  reject,high_error,offdiag_mismatch,spatial_outlier
+   18-003A         1.438  0.695410    0.485396 reject,high_error,offdiag_mismatch,diagonal_leakage,spatial_outlier
+   18-003A         1.008  0.992063    0.477361 reject,high_error,offdiag_mismatch,diagonal_leakage,spatial_outlier
+   18-004A      4277.000  0.000234    0.490229 reject,high_error,offdiag_mismatch,diagonal_leakage,spatial_outlier
+   18-004A      3580.000  0.000279    0.456718 reject,high_error,offdiag_mismatch,diagonal_leakage,spatial_outlier
+   18-004A      2997.000  0.000334    0.496109 reject,high_error,offdiag_mismatch,diagonal_leakage,spatial_outlier
+
 The frequency table is useful when you want to:
 
 - mask a narrow noisy band rather than remove a whole station
@@ -393,6 +494,33 @@ profile-wide.
        bbox_inches="tight",
    )
    plt.close(ax.figure)
+
+The tutorial figures are generated by
+``docs/scripts/generate_tutorial_inspect_qc.py`` from the same code path. The
+first figure compares the station-level SNR proxy with the composite
+confidence score:
+
+.. image:: ../images/tutorials/inspect_and_qc_survey/station_inventory_qc.png
+   :alt: Station-level QC inventory for the L18PLT tutorial line.
+   :width: 100%
+
+The next two views show the same confidence logic in profile and
+period-frequency space:
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. image:: ../images/tutorials/inspect_and_qc_survey/confidence_review_grid.png
+         :alt: Station confidence profile and period-band confidence summary.
+         :width: 100%
+
+   .. grid-item::
+
+      .. image:: ../images/tutorials/inspect_and_qc_survey/frequency_confidence_psection.png
+         :alt: Frequency-level confidence pseudosection for the L18PLT tutorial line.
+         :width: 100%
 
 Use this plot to distinguish three common cases:
 
@@ -444,11 +572,11 @@ terminal checks before opening a notebook.
 .. code-block:: bash
    :linenos:
 
-   pycsamt edi info data/edis
-   pycsamt edi validate data/edis --deep
-   pycsamt site info data/edis --format csv > qc_review/site_inventory.csv
-   pycsamt site compute strike data/edis --format csv > qc_review/strike.csv
-   pycsamt site compute tipper data/edis --format csv > qc_review/tipper.csv
+   pycsamt edi info data/AMT/WILLY_DATA/L18PLT
+   pycsamt edi validate data/AMT/WILLY_DATA/L18PLT --deep
+   pycsamt site info data/AMT/WILLY_DATA/L18PLT --format csv > qc_review/site_inventory.csv
+   pycsamt site compute strike data/AMT/WILLY_DATA/L18PLT --format csv > qc_review/strike.csv
+   pycsamt site compute tipper data/AMT/WILLY_DATA/L18PLT --format csv > qc_review/tipper.csv
 
 Use the CLI outputs as supporting diagnostics. Use the Python QC tables when
 you need confidence thresholds, frequency-level masking, or custom reporting.

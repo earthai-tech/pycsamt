@@ -36,9 +36,7 @@ def store_from_view(view: MapView, *, data_dir: str = "[browsed]") -> dict:
     """Return a JSON-serialisable session store from *view*."""
     df = view.table()
     records = df.to_dict("records")
-    line_counts = dict(
-        Counter(s.line or "line" for s in view.data.stations)
-    )
+    line_counts = dict(Counter(s.line or "line" for s in view.data.stations))
     freqs = sorted(
         {float(f) for f in frequency_axis(view.data) if f > 0},
         reverse=True,
@@ -96,11 +94,11 @@ def merge_views(old: MapView, new: MapView) -> MapView:
     edi_by_id: dict[str, Any] = {}
     for edi in (*old.data.iter_edis(), *new.data.iter_edis()):
         edi_by_id[_station_id_from_edi(edi)] = edi
-    edis = tuple(
-        edi_by_id[sid] for sid in order if sid in edi_by_id
-    )
+    edis = tuple(edi_by_id[sid] for sid in order if sid in edi_by_id)
     metadata = _carried_metadata(old.data.metadata, new.data.metadata)
-    data = MapData(sites=edis, stations=stations, profiles=(), metadata=metadata)
+    data = MapData(
+        sites=edis, stations=stations, profiles=(), metadata=metadata
+    )
     return MapView(data, theme=old.theme, backend=old.backend)
 
 
@@ -122,11 +120,12 @@ def exclude_stations(view: MapView, masked) -> MapView:
         return view
     ids = {s.id for s in keep}
     edis = tuple(
-        e for e in view.data.iter_edis()
-        if _station_id_from_edi(e) in ids
+        e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids
     )
     metadata = _carried_metadata(view.data.metadata)
-    data = MapData(sites=edis, stations=tuple(keep), profiles=(), metadata=metadata)
+    data = MapData(
+        sites=edis, stations=tuple(keep), profiles=(), metadata=metadata
+    )
     return MapView(data, theme=view.theme, backend=view.backend)
 
 
@@ -138,17 +137,12 @@ def restrict_to_lines(
     if not active:
         return view
     active_set = set(active)
-    keep = [
-        s
-        for s in view.data.stations
-        if (s.line or "line") in active_set
-    ]
+    keep = [s for s in view.data.stations if (s.line or "line") in active_set]
     if len(keep) == len(view.data.stations):
         return view
     ids = {s.id for s in keep}
     edis = tuple(
-        e for e in view.data.iter_edis()
-        if _station_id_from_edi(e) in ids
+        e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids
     )
     data = MapData(
         sites=edis,
@@ -183,13 +177,14 @@ def reproject_view(view, mode, zone, hem, epsg):
 
     stations = view.data.stations
     lon = np.array(
-        [s.longitude if s.longitude is not None else np.nan
-         for s in stations],
+        [
+            s.longitude if s.longitude is not None else np.nan
+            for s in stations
+        ],
         dtype=float,
     )
     lat = np.array(
-        [s.latitude if s.latitude is not None else np.nan
-         for s in stations],
+        [s.latitude if s.latitude is not None else np.nan for s in stations],
         dtype=float,
     )
     good = np.isfinite(lon) & np.isfinite(lat)
@@ -203,7 +198,8 @@ def reproject_view(view, mode, zone, hem, epsg):
         return view
     new_stations = tuple(
         replace(s, longitude=float(xt[i]), latitude=float(yt[i]))
-        if good[i] else s
+        if good[i]
+        else s
         for i, s in enumerate(stations)
     )
     data = MapData(

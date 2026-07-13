@@ -34,6 +34,7 @@ from typing import Any
 
 # ── low-level helpers ──────────────────────────────────────────────────────────
 
+
 def _full_doc(obj: Any) -> str:
     """Return full docstring, normalized whitespace."""
     return inspect.getdoc(obj) or ""
@@ -41,31 +42,21 @@ def _full_doc(obj: Any) -> str:
 
 def _first_para(doc: str, max_chars: int = 280) -> str:
     """Return first paragraph of a docstring."""
-    first = (doc or "").split("\n\n")[0].replace(
-        "\n", " "
-    )
-    return (
-        first[:max_chars] + "..."
-        if len(first) > max_chars
-        else first
-    )
+    first = (doc or "").split("\n\n")[0].replace("\n", " ")
+    return first[:max_chars] + "..." if len(first) > max_chars else first
 
 
 def _sig(cls: type, max_chars: int = 120) -> str:
     """Return __init__ signature without 'self'."""
     try:
         s = str(inspect.signature(cls.__init__))
-        s = s.replace("(self, ", "(").replace(
-            "(self)", "()"
-        )
+        s = s.replace("(self, ", "(").replace("(self)", "()")
         return s[:max_chars]
     except (ValueError, TypeError):
         return "()"
 
 
-def _section_text(
-    doc: str, section: str
-) -> str:
+def _section_text(doc: str, section: str) -> str:
     r"""
     Extract a named section from a numpydoc
     docstring (e.g. 'Parameters', 'Input keys').
@@ -78,11 +69,7 @@ def _section_text(
     for i, ln in enumerate(lines):
         if ln.strip() == section:
             # check next line is dashes
-            nxt = (
-                lines[i + 1].strip()
-                if i + 1 < len(lines)
-                else ""
-            )
+            nxt = lines[i + 1].strip() if i + 1 < len(lines) else ""
             if set(nxt) <= {"-"}:
                 in_sec = True
                 continue
@@ -92,9 +79,7 @@ def _section_text(
                 ln.strip()
                 and not ln.startswith(" ")
                 and i + 1 < len(lines)
-                and set(
-                    lines[i + 1].strip()
-                ) <= {"-"}
+                and set(lines[i + 1].strip()) <= {"-"}
             ):
                 break
             out.append(ln)
@@ -107,14 +92,10 @@ def _method_entry(
     max_chars: int = 200,
 ) -> str:
     """Format a single method as a reference entry."""
-    doc = _first_para(
-        _full_doc(method), max_chars
-    )
+    doc = _first_para(_full_doc(method), max_chars)
     try:
         sig = str(inspect.signature(method))
-        sig = sig.replace("(self, ", "(").replace(
-            "(self)", "()"
-        )[:80]
+        sig = sig.replace("(self, ", "(").replace("(self)", "()")[:80]
     except (ValueError, TypeError):
         sig = "(...)"
     return f"  .{name}{sig}\n    {doc}"
@@ -127,10 +108,12 @@ def _section(title: str, body: str) -> str:
 
 # ── importers ─────────────────────────────────────────────────────────────────
 
+
 def _import(module_path: str, name: str) -> Any:
     """Import name from module, return None on failure."""
     try:
         import importlib
+
         mod = importlib.import_module(module_path)
         return getattr(mod, name, None)
     except Exception:
@@ -139,38 +122,22 @@ def _import(module_path: str, name: str) -> Any:
 
 def _collect_agents() -> dict[str, type]:
     _MAP = {
-        "WorkflowOrchestratorAgent":
-            "pycsamt.agents.orchestrator",
-        "ContextInputAgent":
-            "pycsamt.agents.context",
-        "MTLoaderAgent":
-            "pycsamt.agents",
-        "DataQCAgent":
-            "pycsamt.agents",
-        "StaticShiftAgent":
-            "pycsamt.agents.static_shift",
-        "DenoisingAgent":
-            "pycsamt.agents",
-        "PhaseAnalysisAgent":
-            "pycsamt.agents",
-        "ForwardModelAgent":
-            "pycsamt.agents",
-        "InterpretationAgent":
-            "pycsamt.agents.interpretation",
-        "ReportAgent":
-            "pycsamt.agents",
-        "AIInversionAgent":
-            "pycsamt.agents",
-        "PINNInversionAgent":
-            "pycsamt.agents.pinn_agent",
-        "HybridInversionAgent":
-            "pycsamt.agents.hybrid_agent",
-        "Inv2DAgent":
-            "pycsamt.agents",
-        "Inv3DAgent":
-            "pycsamt.agents",
-        "CodeGenerationAgent":
-            "pycsamt.agents.code_gen",
+        "WorkflowOrchestratorAgent": "pycsamt.agents.orchestrator",
+        "ContextInputAgent": "pycsamt.agents.context",
+        "MTLoaderAgent": "pycsamt.agents",
+        "DataQCAgent": "pycsamt.agents",
+        "StaticShiftAgent": "pycsamt.agents.static_shift",
+        "DenoisingAgent": "pycsamt.agents",
+        "PhaseAnalysisAgent": "pycsamt.agents",
+        "ForwardModelAgent": "pycsamt.agents",
+        "InterpretationAgent": "pycsamt.agents.interpretation",
+        "ReportAgent": "pycsamt.agents",
+        "AIInversionAgent": "pycsamt.agents",
+        "PINNInversionAgent": "pycsamt.agents.pinn_agent",
+        "HybridInversionAgent": "pycsamt.agents.hybrid_agent",
+        "Inv2DAgent": "pycsamt.agents",
+        "Inv3DAgent": "pycsamt.agents",
+        "CodeGenerationAgent": "pycsamt.agents.code_gen",
     }
     out: dict[str, type] = {}
     for name, mod in _MAP.items():
@@ -182,9 +149,9 @@ def _collect_agents() -> dict[str, type]:
 
 def _collect_core() -> dict[str, type]:
     _MAP = {
-        "Sites":        "pycsamt.site",
+        "Sites": "pycsamt.site",
         "EDICollection": "pycsamt.edi",
-        "EDIFile":      "pycsamt.edi",
+        "EDIFile": "pycsamt.edi",
     }
     out: dict[str, type] = {}
     for name, mod in _MAP.items():
@@ -244,6 +211,7 @@ Use case: export corrected Sites after static shift or QC.
 
 
 # ── agent entry builder (deep) ─────────────────────────────────────────────────
+
 
 def _agent_entry(name: str, cls: type) -> str:
     """Build a full reference entry for one agent."""
@@ -375,8 +343,7 @@ def _build_tier_core() -> str:
         " processing, correction, and AI-assisted"
         " inversion. Agents are self-contained"
         " workflow components; Sites is the main"
-        " data container for loaded EDI data.\n\n"
-        + _WORKFLOW_TABLE
+        " data container for loaded EDI data.\n\n" + _WORKFLOW_TABLE
     )
 
 
@@ -384,24 +351,21 @@ def _build_tier_agents() -> str:
     agents = _collect_agents()
     if not agents:
         return ""
-    entries = [
-        _agent_entry(n, c)
-        for n, c in agents.items()
-    ]
+    entries = [_agent_entry(n, c) for n, c in agents.items()]
     body = "\n\n".join(entries)
     return _section("Agent class reference", body)
 
 
 def _build_tier_sites() -> str:
-    core  = _collect_core()
+    core = _collect_core()
     parts: list[str] = []
 
     sites_cls = core.get("Sites")
     if sites_cls:
         doc = _full_doc(sites_cls)
         params = _section_text(doc, "Parameters")
-        attrs  = _section_text(doc, "Attributes")
-        lines  = [
+        attrs = _section_text(doc, "Attributes")
+        lines = [
             f"Sites{_sig(sites_cls)}",
             f"  {_first_para(doc, 280)}",
         ]
@@ -419,24 +383,17 @@ def _build_tier_sites() -> str:
         for mname in _SITES_KEY_METHODS:
             m = getattr(sites_cls, mname, None)
             if m:
-                lines.append(
-                    _method_entry(mname, m, 160)
-                )
+                lines.append(_method_entry(mname, m, 160))
         parts.append("\n".join(lines))
 
     # EDICollection
     edi_cls = core.get("EDICollection")
     if edi_cls:
         doc = _full_doc(edi_cls)
-        entry = (
-            f"EDICollection{_sig(edi_cls)}\n"
-            f"  {_first_para(doc, 240)}"
-        )
+        entry = f"EDICollection{_sig(edi_cls)}\n  {_first_para(doc, 240)}"
         to_sites = getattr(edi_cls, "to_sites", None)
         if to_sites:
-            entry += "\n" + _method_entry(
-                "to_sites", to_sites, 160
-            )
+            entry += "\n" + _method_entry("to_sites", to_sites, 160)
         parts.append(entry)
 
     # Helper functions
@@ -445,9 +402,7 @@ def _build_tier_sites() -> str:
     parts.append(_WRITE_SITES_NOTE)
 
     body = "\n\n".join(parts)
-    return _section(
-        "Sites / EDI data model reference", body
-    )
+    return _section("Sites / EDI data model reference", body)
 
 
 def _build_tier_examples() -> str:
@@ -730,6 +685,7 @@ def _build_tier_emtools() -> str:
 
 # ── public API ─────────────────────────────────────────────────────────────────
 
+
 def build_tiers() -> dict[str, str]:
     r"""
     Build all context tiers.
@@ -740,11 +696,11 @@ def build_tiers() -> dict[str, str]:
                     'examples', 'emtools'
     """
     return {
-        "core":     _build_tier_core(),
-        "agents":   _build_tier_agents(),
-        "sites":    _build_tier_sites(),
+        "core": _build_tier_core(),
+        "agents": _build_tier_agents(),
+        "sites": _build_tier_sites(),
         "examples": _build_tier_examples(),
-        "emtools":  _build_tier_emtools(),
+        "emtools": _build_tier_emtools(),
     }
 
 
@@ -771,13 +727,12 @@ def build_package_context(
 
 # ── backward-compat re-exports ────────────────────────────────────────────────
 
+
 def _short_doc(obj: Any, max_chars: int = 300) -> str:
     return _first_para(_full_doc(obj), max_chars)
 
 
-def _sig_compat(
-    cls: type, max_chars: int = 120
-) -> str:
+def _sig_compat(cls: type, max_chars: int = 120) -> str:
     return _sig(cls, max_chars)
 
 
@@ -786,10 +741,10 @@ def _sig_compat(
 # Built once at import — safe in LLM system prompts.
 _TIERS: dict[str, str] = build_tiers()
 
-TIER_CORE     = _TIERS["core"]
-TIER_AGENTS   = _TIERS["agents"]
-TIER_SITES    = _TIERS["sites"]
+TIER_CORE = _TIERS["core"]
+TIER_AGENTS = _TIERS["agents"]
+TIER_SITES = _TIERS["sites"]
 TIER_EXAMPLES = _TIERS["examples"]
-TIER_EMTOOLS  = _TIERS["emtools"]
+TIER_EMTOOLS = _TIERS["emtools"]
 
 PACKAGE_CONTEXT: str = "\n".join(_TIERS.values())

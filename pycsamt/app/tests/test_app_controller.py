@@ -11,6 +11,7 @@ from pycsamt.app.desktop.models.session import SessionState
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_creates_with_default_session(monkeypatch):
     # Prevent reading the real on-disk session (which may have persisted state).
     monkeypatch.setattr(SessionState, "load", classmethod(lambda cls: cls()))
@@ -28,6 +29,7 @@ def test_creates_with_given_session():
 
 
 # ── set_sites ────────────────────────────────────────────────────────────
+
 
 def test_set_sites_stores_object():
     ctrl = AppController()
@@ -57,13 +59,16 @@ def test_set_sites_fires_multiple_callbacks():
 
 def test_set_sites_ignores_callback_exception():
     ctrl = AppController()
+
     def bad_cb(sites):
         raise RuntimeError("oops")
+
     ctrl.on_data_loaded(bad_cb)
-    ctrl.set_sites(object())   # must not raise
+    ctrl.set_sites(object())  # must not raise
 
 
 # ── select_station ────────────────────────────────────────────────────────
+
 
 def test_select_station_stores_id():
     ctrl = AppController()
@@ -87,6 +92,7 @@ def test_select_station_fires_callbacks():
 
 # ── post_status ───────────────────────────────────────────────────────────
 
+
 def test_post_status_fires_callbacks():
     ctrl = AppController()
     msgs = []
@@ -96,6 +102,7 @@ def test_post_status_fires_callbacks():
 
 
 # ── add_recent_file ───────────────────────────────────────────────────────
+
 
 def test_add_recent_file_prepends():
     ctrl = AppController()
@@ -122,11 +129,12 @@ def test_add_recent_file_caps_at_20():
 
 # ── n_stations ────────────────────────────────────────────────────────────
 
+
 def test_n_stations_is_zero_when_no_data():
     assert AppController().n_stations == 0
 
 
 def test_n_stations_reflects_sites_len():
     ctrl = AppController()
-    ctrl.set_sites([1, 2, 3])   # a list counts as mock Sites
+    ctrl.set_sites([1, 2, 3])  # a list counts as mock Sites
     assert ctrl.n_stations == 3

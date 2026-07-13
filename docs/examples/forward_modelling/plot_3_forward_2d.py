@@ -35,19 +35,31 @@ from pycsamt.forward import (
 # Use the fault-zone validate panel (9th figure) as the section thumbnail.
 # sphinx_gallery_thumbnail_number = 9
 
-FREQS_2D = np.logspace(-2, 2, 18)   # 0.01 - 100 Hz
+FREQS_2D = np.logspace(-2, 2, 18)  # 0.01 - 100 Hz
 
 GRID_FAULT = Grid2D.with_anomaly(
-    bg_rho=500.0, anomaly_rho=3.0,
-    anomaly_bounds=(2_500., 5_500., 300., 1_800.),
-    nx=45, nz=32, x_max=9_000., z_max=5_000.,
-    n_stations=12, n_pad=8, name="fault-zone conductor",
+    bg_rho=500.0,
+    anomaly_rho=3.0,
+    anomaly_bounds=(2_500.0, 5_500.0, 300.0, 1_800.0),
+    nx=45,
+    nz=32,
+    x_max=9_000.0,
+    z_max=5_000.0,
+    n_stations=12,
+    n_pad=8,
+    name="fault-zone conductor",
 )
 GRID_SALT = Grid2D.with_anomaly(
-    bg_rho=50.0, anomaly_rho=5_000.0,
-    anomaly_bounds=(3_000., 6_000., 500., 3_000.),
-    nx=45, nz=32, x_max=9_000., z_max=5_000.,
-    n_stations=12, n_pad=8, name="resistive intrusion",
+    bg_rho=50.0,
+    anomaly_rho=5_000.0,
+    anomaly_bounds=(3_000.0, 6_000.0, 500.0, 3_000.0),
+    nx=45,
+    nz=32,
+    x_max=9_000.0,
+    z_max=5_000.0,
+    n_stations=12,
+    n_pad=8,
+    name="resistive intrusion",
 )
 
 RESP_FAULT = MT2DForward(FREQS_2D, GRID_FAULT, verbose=False).run()
@@ -76,24 +88,31 @@ ax = plot_model_2d(GRID_SALT, figsize=(11, 4))
 # the conductor laterally, while TM (across strike) keeps it sharp — the
 # classic reason both modes are modelled and inverted together.
 
-ax = plot_pseudosection_2d(RESP_FAULT, mode="te", quantity="rho_a", figsize=(11, 5))
+ax = plot_pseudosection_2d(
+    RESP_FAULT, mode="te", quantity="rho_a", figsize=(11, 5)
+)
 
 # %%
 
-ax = plot_pseudosection_2d(RESP_FAULT, mode="tm", quantity="rho_a", figsize=(11, 5))
+ax = plot_pseudosection_2d(
+    RESP_FAULT, mode="tm", quantity="rho_a", figsize=(11, 5)
+)
 
 # %%
 # The same TE data as phase rather than apparent resistivity — phase leads
 # the resistivity contrast and often flags the anomaly edges more crisply:
 
-ax = plot_pseudosection_2d(RESP_FAULT, mode="te", quantity="phase", figsize=(11, 5))
+ax = plot_pseudosection_2d(
+    RESP_FAULT, mode="te", quantity="phase", figsize=(11, 5)
+)
 
 # %%
 # For the resistive intrusion, adding contour lines (``n_contours``) makes
 # the resistive core and its overprint on the section stand out:
 
-ax = plot_pseudosection_2d(RESP_SALT, mode="te", quantity="rho_a",
-                           n_contours=8, figsize=(11, 5))
+ax = plot_pseudosection_2d(
+    RESP_SALT, mode="te", quantity="rho_a", n_contours=8, figsize=(11, 5)
+)
 
 # %%
 # 3. Lateral response profiles
@@ -103,13 +122,15 @@ ax = plot_pseudosection_2d(RESP_SALT, mode="te", quantity="rho_a",
 # periods, so you can read the anomaly's lateral extent directly. TE and
 # TM again disagree over the conductor.
 
-ax = plot_response_profiles(RESP_FAULT, mode="te", quantity="rho_a",
-                            n_freqs_shown=5, figsize=(9, 4))
+ax = plot_response_profiles(
+    RESP_FAULT, mode="te", quantity="rho_a", n_freqs_shown=5, figsize=(9, 4)
+)
 
 # %%
 
-ax = plot_response_profiles(RESP_FAULT, mode="tm", quantity="rho_a",
-                            n_freqs_shown=5, figsize=(9, 4))
+ax = plot_response_profiles(
+    RESP_FAULT, mode="tm", quantity="rho_a", n_freqs_shown=5, figsize=(9, 4)
+)
 
 # %%
 # 4. The combined validate panel
@@ -120,20 +141,52 @@ ax = plot_response_profiles(RESP_FAULT, mode="tm", quantity="rho_a",
 # test.
 
 fig, axs = plt.subplots(3, 1, figsize=(12, 13), constrained_layout=True)
-plot_model_2d(GRID_FAULT, ax=axs[0], show_stations=True, title="Resistivity model")
-plot_pseudosection_2d(RESP_FAULT, ax=axs[1], mode="te", quantity="rho_a",
-                      show_stations=True, title=r"TE - $\log_{10}\rho_a$")
-plot_pseudosection_2d(RESP_FAULT, ax=axs[2], mode="tm", quantity="rho_a",
-                      show_stations=True, title=r"TM - $\log_{10}\rho_a$")
-fig.suptitle("2-D forward validate view - fault-zone conductor", y=1.01, fontsize=11)
+plot_model_2d(
+    GRID_FAULT, ax=axs[0], show_stations=True, title="Resistivity model"
+)
+plot_pseudosection_2d(
+    RESP_FAULT,
+    ax=axs[1],
+    mode="te",
+    quantity="rho_a",
+    show_stations=True,
+    title=r"TE - $\log_{10}\rho_a$",
+)
+plot_pseudosection_2d(
+    RESP_FAULT,
+    ax=axs[2],
+    mode="tm",
+    quantity="rho_a",
+    show_stations=True,
+    title=r"TM - $\log_{10}\rho_a$",
+)
+fig.suptitle(
+    "2-D forward validate view - fault-zone conductor", y=1.01, fontsize=11
+)
 
 # %%
 # The same three-row summary for the resistive intrusion:
 
 fig, axs = plt.subplots(3, 1, figsize=(12, 13), constrained_layout=True)
-plot_model_2d(GRID_SALT, ax=axs[0], show_stations=True, title="Resistivity model")
-plot_pseudosection_2d(RESP_SALT, ax=axs[1], mode="te", quantity="rho_a",
-                      show_stations=True, title=r"TE - $\log_{10}\rho_a$")
-plot_pseudosection_2d(RESP_SALT, ax=axs[2], mode="tm", quantity="rho_a",
-                      show_stations=True, title=r"TM - $\log_{10}\rho_a$")
-fig.suptitle("2-D forward validate view - resistive intrusion", y=1.01, fontsize=11)
+plot_model_2d(
+    GRID_SALT, ax=axs[0], show_stations=True, title="Resistivity model"
+)
+plot_pseudosection_2d(
+    RESP_SALT,
+    ax=axs[1],
+    mode="te",
+    quantity="rho_a",
+    show_stations=True,
+    title=r"TE - $\log_{10}\rho_a$",
+)
+plot_pseudosection_2d(
+    RESP_SALT,
+    ax=axs[2],
+    mode="tm",
+    quantity="rho_a",
+    show_stations=True,
+    title=r"TM - $\log_{10}\rho_a$",
+)
+fig.suptitle(
+    "2-D forward validate view - resistive intrusion", y=1.01, fontsize=11
+)

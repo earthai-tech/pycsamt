@@ -177,7 +177,8 @@ def import_topo(
         lat = data[:, cfg.col_latitude - 1]
 
         east, north, zone_used, _ = lonlat_to_utm(
-            lon, lat,
+            lon,
+            lat,
             zone=utm_zone,
             south_hemi=south_hemi,
         )

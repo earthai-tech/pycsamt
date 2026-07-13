@@ -90,7 +90,7 @@ class ResistivityModel:
         """Return a homogeneous half-space resistivity model stub."""
         m = cls()
         m._rf = ResistivityFile()
-        m._rf.resistivity = np.array([[10.0 ** log10_rho]])
+        m._rf.resistivity = np.array([[10.0**log10_rho]])
         m._rf.free_parameter = np.zeros((1, 1))
         m._rf.bounds = np.array([[-2.0, 5.0]])
         m._rf.prejudice = np.zeros((1, 2))

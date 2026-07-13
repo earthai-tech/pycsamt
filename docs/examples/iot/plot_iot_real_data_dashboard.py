@@ -276,4 +276,3 @@ plot_sync_quality(
 )
 
 plt.show()
-

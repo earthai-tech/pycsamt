@@ -157,11 +157,12 @@ def test_rename_all_and_set_coords_all(
     e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "N01", "N02")
     src = [e1, e2]
 
-
     rn = ed.rename_all(
         src,
-        name_fn=lambda edi: "X_{}".format(Path(getattr(edi, 'path',
-            getattr(edi, 'file', ''))).stem or getattr(edi, 'name', 'site')),
+        name_fn=lambda edi: "X_{}".format(
+            Path(getattr(edi, "path", getattr(edi, "file", ""))).stem
+            or getattr(edi, "name", "site")
+        ),
         inplace=False,
     )
     assert isinstance(rn, Sites)

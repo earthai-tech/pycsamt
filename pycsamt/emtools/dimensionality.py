@@ -33,6 +33,7 @@ from .tensor import (
 
 # -------------------------- local helpers ------------------------------- #
 
+
 def _det_phase_from_z(z: np.ndarray) -> np.ndarray:
     detz = z[:, 0, 0] * z[:, 1, 1] - z[:, 0, 1] * z[:, 1, 0]
     return np.degrees(np.angle(detz))
@@ -78,8 +79,14 @@ def phase_features_table(
     )
     if pt.empty:
         cols = [
-            "station", "freq", "period", "beta_abs",
-            "ellipt_abs", "logrho_det", "phi_det", "tip_amp",
+            "station",
+            "freq",
+            "period",
+            "beta_abs",
+            "ellipt_abs",
+            "logrho_det",
+            "phi_det",
+            "tip_amp",
         ]
         df = pd.DataFrame(columns=cols)
 
@@ -136,6 +143,7 @@ def phase_features_table(
         description="Phase tensor and impedance-derived dimensionality features.",
     )
 
+
 def classify_dimensionality(
     sites: Any,
     *,
@@ -156,7 +164,6 @@ def classify_dimensionality(
         api=False,
     )
     if df.empty:
-
         return maybe_wrap_frame(
             df,
             api=api,
@@ -165,7 +172,7 @@ def classify_dimensionality(
             source=sites,
         )
     lab = np.full(len(df), 2, dtype=int)
-    ok2 = (df["beta_abs"] <= skew_th)
+    ok2 = df["beta_abs"] <= skew_th
     lab[ok2 & (df["ellipt_abs"] <= ellipt_th)] = 0
     lab[ok2 & (df["ellipt_abs"] > ellipt_th)] = 1
     out = df.copy()
@@ -181,7 +188,9 @@ def classify_dimensionality(
         description="Rule-based dimensionality labels from phase features.",
     )
 
+
 # -------------------- pre-2D inversion assessment ----------------------- #
+
 
 def pre2d_inversion_assessment(
     sites: Any,
@@ -273,7 +282,9 @@ def pre2d_inversion_assessment(
         if sub.empty:
             return np.nan
         vals = sub[col].to_numpy(dtype=float)
-        return float(np.nanmedian(vals)) if np.isfinite(vals).any() else np.nan
+        return (
+            float(np.nanmedian(vals)) if np.isfinite(vals).any() else np.nan
+        )
 
     stations = []
     for i, ed in enumerate(_iter_items(S)):
@@ -311,7 +322,8 @@ def pre2d_inversion_assessment(
             ang = cdf["ang"].to_numpy(dtype=float)
             strike_curve_iqr = (
                 float(np.nanpercentile(ang, 75) - np.nanpercentile(ang, 25))
-                if np.isfinite(ang).any() else np.nan
+                if np.isfinite(ang).any()
+                else np.nan
             )
         cons_ang = _by_station(consensus, station, "ang")
         cons_iqr = _by_station(consensus, station, "iqr")
@@ -321,30 +333,32 @@ def pre2d_inversion_assessment(
             recommendation = "unstable_strike_review_band"
         else:
             recommendation = "acceptable_for_2d_with_documented_rotation"
-        rows.append(dict(
-            station=station,
-            period_min_s=float(band[0]) if band is not None else np.nan,
-            period_max_s=float(band[1]) if band is not None else np.nan,
-            n_samples=n,
-            frac_1d=frac_1d,
-            frac_2d=frac_2d,
-            frac_3d=frac_3d,
-            beta_abs_median=beta_med,
-            beta_abs_p95=beta_p95,
-            ellipt_abs_median=ellipt_med,
-            strike_sweep_deg=_by_station(sweep, station, "ang"),
-            strike_pt_deg=_by_station(pt, station, "ang"),
-            strike_consensus_deg=cons_ang,
-            strike_consensus_iqr_deg=cons_iqr,
-            strike_curve_iqr_deg=strike_curve_iqr,
-            rotated_to_strike=bool(rotation_applied),
-            rotation_method=str(rotation_method),
-            rotation_angle_deg=cons_ang if rotation_applied else np.nan,
-            groom_bailey_attempted=bool(groom_bailey_attempted),
-            groom_bailey_applied=bool(groom_bailey_applied),
-            groom_bailey_reason=str(gb_reason),
-            recommendation=recommendation,
-        ))
+        rows.append(
+            dict(
+                station=station,
+                period_min_s=float(band[0]) if band is not None else np.nan,
+                period_max_s=float(band[1]) if band is not None else np.nan,
+                n_samples=n,
+                frac_1d=frac_1d,
+                frac_2d=frac_2d,
+                frac_3d=frac_3d,
+                beta_abs_median=beta_med,
+                beta_abs_p95=beta_p95,
+                ellipt_abs_median=ellipt_med,
+                strike_sweep_deg=_by_station(sweep, station, "ang"),
+                strike_pt_deg=_by_station(pt, station, "ang"),
+                strike_consensus_deg=cons_ang,
+                strike_consensus_iqr_deg=cons_iqr,
+                strike_curve_iqr_deg=strike_curve_iqr,
+                rotated_to_strike=bool(rotation_applied),
+                rotation_method=str(rotation_method),
+                rotation_angle_deg=cons_ang if rotation_applied else np.nan,
+                groom_bailey_attempted=bool(groom_bailey_attempted),
+                groom_bailey_applied=bool(groom_bailey_applied),
+                groom_bailey_reason=str(gb_reason),
+                recommendation=recommendation,
+            )
+        )
     df = pd.DataFrame.from_records(rows)
 
     return maybe_wrap_frame(
@@ -359,7 +373,9 @@ def pre2d_inversion_assessment(
         ),
     )
 
+
 # ---------------------- site-level masking/projection -------------------- #
+
 
 def mask_by_dimensionality(
     sites: Any,
@@ -452,6 +468,7 @@ def project_to_2d(
     # antisymmetrize off-diagonals
     if antisym:
         from .tensor import antisymmetrize
+
         S = antisymmetrize(
             S,
             how="rms",
@@ -461,6 +478,7 @@ def project_to_2d(
 
 
 # --------------------- dictionary learning (MOD + ISTA) ------------------ #
+
 
 def _standardize(X: np.ndarray):
     mu = np.nanmean(X, axis=0)
@@ -474,12 +492,13 @@ def _soft(x: np.ndarray, t: float) -> np.ndarray:
     return np.sign(x) * np.maximum(np.abs(x) - t, 0.0)
 
 
-def _ista(D: np.ndarray, x: np.ndarray, lam: float,
-          n_iter: int) -> np.ndarray:
+def _ista(
+    D: np.ndarray, x: np.ndarray, lam: float, n_iter: int
+) -> np.ndarray:
     # min 0.5||x - D a||^2 + lam||a||
     a = np.zeros(D.shape[1], dtype=float)
     smax = np.linalg.svd(D, compute_uv=False)[0]
-    L = (smax ** 2) + 1e-12
+    L = (smax**2) + 1e-12
     t = 1.0 / L
     for _ in range(n_iter):
         r = x - D @ a
@@ -529,8 +548,12 @@ def learn_dim_dictionary(
     )
     if df.empty:
         return dict(
-            D=None, A=None, mu=None, sd=None,
-            feat=[], meta=dict(samples=0),
+            D=None,
+            A=None,
+            mu=None,
+            sd=None,
+            feat=[],
+            meta=dict(samples=0),
         )
     X, feats = _feature_matrix(df)
     Z, mu, sd = _standardize(X)
@@ -603,7 +626,6 @@ def encode_dimensionality(
         api=False,
     )
     if df.empty:
-
         return maybe_wrap_frame(
             df,
             api=api,
@@ -694,6 +716,7 @@ def mask_by_dictionary(
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
+
 
 # ---- novelty dimensionality plots (max 3) ------------------------------- #
 
@@ -791,7 +814,7 @@ def plot_atom_psection(
     elif energy == "max":
         eng = np.max(Am, axis=1)
     else:
-        eng = np.sqrt(np.sum(Am ** 2, axis=1))
+        eng = np.sqrt(np.sum(Am**2, axis=1))
     v = eng[np.isfinite(eng)]
     v0 = np.nanpercentile(v, 5) if v.size else 0.0
     v1 = np.nanpercentile(v, 95) if v.size else 1.0
@@ -840,14 +863,15 @@ def plot_atom_psection(
         ax.invert_yaxis()
     # legend: colored squares for a few atoms
     from matplotlib.lines import Line2D
+
     max_lab = min(k, 10)
     h = [
-        Line2D([0], [0], marker="s", ls="", color=cols[j],
-               label=f"a{j}")
+        Line2D([0], [0], marker="s", ls="", color=cols[j], label=f"a{j}")
         for j in range(max_lab)
     ]
-    ax.legend(handles=h, ncols=min(max_lab, 10),
-              fontsize=7, loc="upper right")
+    ax.legend(
+        handles=h, ncols=min(max_lab, 10), fontsize=7, loc="upper right"
+    )
     return ax
 
 
@@ -911,7 +935,7 @@ def plot_dim_confidence_grid(
     rgb = np.zeros((D.shape[0], D.shape[1], 3))
     a = np.zeros((D.shape[0], D.shape[1]))
     for k, col in pal.items():
-        m = (np.round(D) == k)
+        m = np.round(D) == k
         for j in range(3):
             rgb[:, :, j][m] = col[j]
     a[:, :] = np.nan_to_num(C, nan=0.0)
@@ -932,21 +956,21 @@ def plot_dim_confidence_grid(
         preset="pseudosection",
         xlim=(-0.5, D.shape[1] - 0.5),
     )
-    yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))  # shape[0] = n_logp
-    yv = np.linspace(piv_d.index.min(), piv_d.index.max(),
-                     num=min(8, len(piv_d.index)))
+    yt = np.linspace(
+        0, D.shape[0] - 1, num=min(8, D.shape[0])
+    )  # shape[0] = n_logp
+    yv = np.linspace(
+        piv_d.index.min(), piv_d.index.max(), num=min(8, len(piv_d.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
     if not ax.yaxis_inverted():
         ax.invert_yaxis()
     # legend
     handles = [
-        Line2D([0], [0], marker="s", ls="",
-               color=pal[0], label="1D"),
-        Line2D([0], [0], marker="s", ls="",
-               color=pal[1], label="2D"),
-        Line2D([0], [0], marker="s", ls="",
-               color=pal[2], label="3D"),
+        Line2D([0], [0], marker="s", ls="", color=pal[0], label="1D"),
+        Line2D([0], [0], marker="s", ls="", color=pal[1], label="2D"),
+        Line2D([0], [0], marker="s", ls="", color=pal[2], label="3D"),
     ]
     ax.legend(handles=handles, ncols=3, fontsize=8, loc="upper right")
     return ax
@@ -1071,8 +1095,7 @@ def plot_dim_map(
         i = int(np.nanargmin(np.abs(p - period)))
         rows.append(sdf.iloc[i])
     if not rows:
-        ax.text(0.5, 0.5, "no match @period",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "no match @period", ha="center", va="center")
         return ax
     pal = {
         0: ((0.20, 0.60, 0.20), "o"),
@@ -1090,12 +1113,9 @@ def plot_dim_map(
     ax.set_ylabel("Lat")
     # legend
     handles = [
-        Line2D([0], [0], marker="o", ls="", color=pal[0][0],
-               label="1D"),
-        Line2D([0], [0], marker="s", ls="", color=pal[1][0],
-               label="2D"),
-        Line2D([0], [0], marker="^", ls="", color=pal[2][0],
-               label="3D"),
+        Line2D([0], [0], marker="o", ls="", color=pal[0][0], label="1D"),
+        Line2D([0], [0], marker="s", ls="", color=pal[1][0], label="2D"),
+        Line2D([0], [0], marker="^", ls="", color=pal[2][0], label="3D"),
     ]
     ax.legend(handles=handles, ncols=3, fontsize=8, loc="best")
     return ax

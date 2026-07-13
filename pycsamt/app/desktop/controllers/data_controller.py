@@ -26,7 +26,15 @@ class DataController:
     """
 
     #: Columns exposed to the StationModel
-    STATION_COLUMNS = ["ID", "Line", "Latitude", "Longitude", "Elevation", "N_freq", "Tipper"]
+    STATION_COLUMNS = [
+        "ID",
+        "Line",
+        "Latitude",
+        "Longitude",
+        "Elevation",
+        "N_freq",
+        "Tipper",
+    ]
 
     def __init__(self, progress_callback=None) -> None:
         self._progress_cb = progress_callback
@@ -59,8 +67,7 @@ class DataController:
 
         # Build stem → line lookup (EDIFile.station == Path.stem typically)
         self._station_to_line = {
-            Path(p).stem: line
-            for p, line in (path_to_line or {}).items()
+            Path(p).stem: line for p, line in (path_to_line or {}).items()
         }
 
         edis = []
@@ -88,6 +95,7 @@ class DataController:
         if not hasattr(self._sites, "as_list"):
             try:
                 from pycsamt.site.base import to_sites
+
                 self._sites = to_sites(self._sites)
             except Exception:
                 return pd.DataFrame(columns=self.STATION_COLUMNS)
@@ -107,26 +115,29 @@ class DataController:
                 except Exception:
                     loc = None
                 s = {
-                    "name":   edi.station,
-                    "lat":    loc.lat  if loc is not None else float("nan"),
-                    "lon":    loc.lon  if loc is not None else float("nan"),
-                    "elev":   loc.elev if loc is not None else float("nan"),
-                    "nfreq":  edi.n_freq,
+                    "name": edi.station,
+                    "lat": loc.lat if loc is not None else float("nan"),
+                    "lon": loc.lon if loc is not None else float("nan"),
+                    "elev": loc.elev if loc is not None else float("nan"),
+                    "nfreq": edi.n_freq,
                     "tipper": edi.has_tipper,
                 }
             station_name = s.get("name", "")
-            rows.append({
-                "ID":        station_name,
-                "Line":      self._station_to_line.get(station_name, "—"),
-                "Latitude":  s.get("lat", float("nan")),
-                "Longitude": s.get("lon", float("nan")),
-                "Elevation": s.get("elev", float("nan")),
-                "N_freq":    s.get("nfreq", 0),
-                "Tipper":    bool(s.get("tipper", False)) or bool(edi.has_tipper),
-            })
+            rows.append(
+                {
+                    "ID": station_name,
+                    "Line": self._station_to_line.get(station_name, "—"),
+                    "Latitude": s.get("lat", float("nan")),
+                    "Longitude": s.get("lon", float("nan")),
+                    "Elevation": s.get("elev", float("nan")),
+                    "N_freq": s.get("nfreq", 0),
+                    "Tipper": bool(s.get("tipper", False))
+                    or bool(edi.has_tipper),
+                }
+            )
 
         df = pd.DataFrame(rows, columns=self.STATION_COLUMNS)
-        df["Latitude"]  = pd.to_numeric(df["Latitude"],  errors="coerce")
+        df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
         df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
         df["Elevation"] = pd.to_numeric(df["Elevation"], errors="coerce")
         return df

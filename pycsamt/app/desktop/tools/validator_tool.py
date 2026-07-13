@@ -35,6 +35,7 @@ Signal
 ``modified_sites`` attribute is populated when the user clicks *Apply to Survey*
 and ``exec()`` returns ``Accepted``.  MainWindow reads it to update the survey.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -61,14 +62,14 @@ from PySide6.QtWidgets import (
 )
 
 # ── Colours ───────────────────────────────────────────────────────────────────
-_GREEN    = QColor("#c8e6c9")
-_YELLOW   = QColor("#fff9c4")
-_RED      = QColor("#ffcdd2")
+_GREEN = QColor("#c8e6c9")
+_YELLOW = QColor("#fff9c4")
+_RED = QColor("#ffcdd2")
 _EXCLUDED = QColor("#e0e0e0")
 
 # Foreground colours — always dark so text is visible over light pastels
 # regardless of whether the OS is in dark or light mode.
-_FG_NORMAL   = QColor("#1a1a1a")
+_FG_NORMAL = QColor("#1a1a1a")
 _FG_EXCLUDED = QColor("#666666")
 _ICONS = Path(__file__).resolve().parents[1] / "resources" / "icons"
 
@@ -80,17 +81,26 @@ def _icon(name: str) -> QIcon:
             return QIcon(str(path))
     return QIcon()
 
+
 # ── Column layout ─────────────────────────────────────────────────────────────
 _COLS = [
-    "Station", "Lat", "Lon",
-    "Z ok", "Errors", "N freq",
-    "T min (s)", "T max (s)", "NaN rows", "Status",
+    "Station",
+    "Lat",
+    "Lon",
+    "Z ok",
+    "Errors",
+    "N freq",
+    "T min (s)",
+    "T max (s)",
+    "NaN rows",
+    "Status",
 ]
 _COL_STATION = 0
-_COL_STATUS  = len(_COLS) - 1
+_COL_STATUS = len(_COLS) - 1
 
 
 # ── QC helper ─────────────────────────────────────────────────────────────────
+
 
 def _check_site(ed) -> dict:
     """Run all QC checks on one EDI/site object and return a result dict."""
@@ -125,33 +135,46 @@ def _check_site(ed) -> dict:
         result["Status"] = "WARN"
 
     # Z tensor
-    Z_obj = getattr(ed, "Z", None) or getattr(getattr(ed, "edi", None), "Z", None)
+    Z_obj = getattr(ed, "Z", None) or getattr(
+        getattr(ed, "edi", None), "Z", None
+    )
     z = z_err = freqs = None
     if Z_obj is not None:
-        z     = getattr(Z_obj, "z",     None)
+        z = getattr(Z_obj, "z", None)
         z_err = getattr(Z_obj, "z_err", None)
-        freqs = getattr(Z_obj, "freq",  None)
+        freqs = getattr(Z_obj, "freq", None)
 
     if z is None or (hasattr(z, "size") and z.size == 0):
-        result["Z ok"]   = "NO"
+        result["Z ok"] = "NO"
         result["Status"] = "FAIL"
     else:
         z_arr = np.asarray(z)
-        xy_ok = np.any(np.isfinite(z_arr[:, 0, 1])) if z_arr.ndim == 3 else False
-        yx_ok = np.any(np.isfinite(z_arr[:, 1, 0])) if z_arr.ndim == 3 else False
+        xy_ok = (
+            np.any(np.isfinite(z_arr[:, 0, 1])) if z_arr.ndim == 3 else False
+        )
+        yx_ok = (
+            np.any(np.isfinite(z_arr[:, 1, 0])) if z_arr.ndim == 3 else False
+        )
         result["Z ok"] = "YES" if (xy_ok and yx_ok) else "PARTIAL"
         if not (xy_ok and yx_ok) and result["Status"] == "PASS":
             result["Status"] = "WARN"
         if z_arr.ndim == 3:
             nan_rows = int(
-                np.sum(np.all(~np.isfinite(z_arr.reshape(z_arr.shape[0], -1)), axis=1))
+                np.sum(
+                    np.all(
+                        ~np.isfinite(z_arr.reshape(z_arr.shape[0], -1)),
+                        axis=1,
+                    )
+                )
             )
             result["NaN rows"] = str(nan_rows)
             if nan_rows > 0 and result["Status"] == "PASS":
                 result["Status"] = "WARN"
 
     # Error estimates
-    if z_err is None or (hasattr(z_err, "size") and not np.any(np.isfinite(z_err))):
+    if z_err is None or (
+        hasattr(z_err, "size") and not np.any(np.isfinite(z_err))
+    ):
         result["Errors"] = "NO"
         if result["Status"] == "PASS":
             result["Status"] = "WARN"
@@ -178,6 +201,7 @@ def _check_site(ed) -> dict:
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class EDIValidatorDialog(QDialog):
     """
@@ -210,11 +234,11 @@ class EDIValidatorDialog(QDialog):
         self.setMinimumSize(1020, 580)
 
         self._sites = sites
-        self._items: list       = []   # raw EDI objects, parallel to rows
-        self._results: list     = []   # QC result dicts, parallel to rows
-        self._excluded: set     = set()  # row indices soft-excluded
-        self._populating: bool  = False
-        self.modified_sites     = None
+        self._items: list = []  # raw EDI objects, parallel to rows
+        self._results: list = []  # QC result dicts, parallel to rows
+        self._excluded: set = set()  # row indices soft-excluded
+        self._populating: bool = False
+        self.modified_sites = None
 
         self._build_ui()
         self._run_checks()
@@ -233,9 +257,9 @@ class EDIValidatorDialog(QDialog):
 
         leg = QHBoxLayout()
         for color, fg, text in (
-            (_GREEN,    _FG_NORMAL,   "Pass"),
-            (_YELLOW,   _FG_NORMAL,   "Warning"),
-            (_RED,      _FG_NORMAL,   "Fail"),
+            (_GREEN, _FG_NORMAL, "Pass"),
+            (_YELLOW, _FG_NORMAL, "Warning"),
+            (_RED, _FG_NORMAL, "Fail"),
             (_EXCLUDED, _FG_EXCLUDED, "Excluded"),
         ):
             lbl = QLabel(f"  {text}  ")
@@ -259,25 +283,46 @@ class EDIValidatorDialog(QDialog):
             b.clicked.connect(slot)
             return b
 
-        tb.addWidget(_tbtn(
-            "✏  Rename", "Rename selected station  (or double-click name)",
-            self._on_rename,
-        ))
-        tb.addWidget(_tbtn(
-            "🗑  Delete", "Remove selected station(s) from the survey",
-            self._on_delete,
-        ))
+        tb.addWidget(
+            _tbtn(
+                "✏  Rename",
+                "Rename selected station  (or double-click name)",
+                self._on_rename,
+            )
+        )
+        tb.addWidget(
+            _tbtn(
+                "🗑  Delete",
+                "Remove selected station(s) from the survey",
+                self._on_delete,
+            )
+        )
         tb.addSpacing(6)
         self._excl_btn = _tbtn(
-            "⊘  Exclude", "Toggle exclude / include for selected stations",
+            "⊘  Exclude",
+            "Toggle exclude / include for selected stations",
             self._on_toggle_exclude,
         )
         tb.addWidget(self._excl_btn)
         tb.addSpacing(6)
-        tb.addWidget(_tbtn("↑  Move Up",   "Move selected station up in profile order",   self._on_move_up))
-        tb.addWidget(_tbtn("↓  Move Down", "Move selected station down in profile order", self._on_move_down))
+        tb.addWidget(
+            _tbtn(
+                "↑  Move Up",
+                "Move selected station up in profile order",
+                self._on_move_up,
+            )
+        )
+        tb.addWidget(
+            _tbtn(
+                "↓  Move Down",
+                "Move selected station down in profile order",
+                self._on_move_down,
+            )
+        )
         tb.addStretch()
-        tb.addWidget(_tbtn("Export CSV…", "Save current table as CSV", self._on_export))
+        tb.addWidget(
+            _tbtn("Export CSV…", "Save current table as CSV", self._on_export)
+        )
         self._apply_btn = _tbtn(
             "Apply to Survey",
             "Push renames + filtered list back to the loaded survey",
@@ -294,14 +339,24 @@ class EDIValidatorDialog(QDialog):
         self._table.setHorizontalHeaderLabels(_COLS)
         hh = self._table.horizontalHeader()
         hh.setSectionResizeMode(_COL_STATION, QHeaderView.ResizeMode.Stretch)
-        hh.setSectionResizeMode(_COL_STATUS,  QHeaderView.ResizeMode.ResizeToContents)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self._table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        hh.setSectionResizeMode(
+            _COL_STATUS, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self._table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self._table.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
         self._table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         self._table.setAlternatingRowColors(False)
         self._table.itemChanged.connect(self._on_item_changed)
-        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._table.customContextMenuRequested.connect(self._show_context_menu)
+        self._table.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self._table.customContextMenuRequested.connect(
+            self._show_context_menu
+        )
         root.addWidget(self._table, stretch=1)
 
         # ── Bottom buttons ────────────────────────────────────────────────
@@ -333,6 +388,7 @@ class EDIValidatorDialog(QDialog):
                 _iter_items,
                 _unwrap,
             )
+
             items = list(_iter_items(self._sites))
         except Exception:
             try:
@@ -345,22 +401,33 @@ class EDIValidatorDialog(QDialog):
                 self._summary_lbl.setText("Cannot iterate over loaded data.")
                 return
 
-        self._items   = []
+        self._items = []
         self._results = []
         for ed in items:
             try:
-                ed = _unwrap(ed) if "pycsamt" in str(type(ed).__module__) else ed
+                ed = (
+                    _unwrap(ed)
+                    if "pycsamt" in str(type(ed).__module__)
+                    else ed
+                )
             except Exception:
                 pass
             self._items.append(ed)
             try:
                 self._results.append(_check_site(ed))
             except Exception as exc:
-                self._results.append({
-                    "Station": "?", "Status": "FAIL",
-                    **{c: "—" for c in _COLS if c not in ("Station", "Status")},
-                    "NaN rows": str(exc),
-                })
+                self._results.append(
+                    {
+                        "Station": "?",
+                        "Status": "FAIL",
+                        **{
+                            c: "—"
+                            for c in _COLS
+                            if c not in ("Station", "Status")
+                        },
+                        "NaN rows": str(exc),
+                    }
+                )
 
         self._excluded = set()
         self._fill_table()
@@ -376,10 +443,10 @@ class EDIValidatorDialog(QDialog):
         for r, res in enumerate(self._results):
             self._table.insertRow(r)
             excluded = r in self._excluded
-            status   = res.get("Status", "PASS")
+            status = res.get("Status", "PASS")
 
             if excluded:
-                bg     = _EXCLUDED
+                bg = _EXCLUDED
                 n_excl += 1
             elif status == "PASS":
                 bg, n_pass = _GREEN, n_pass + 1
@@ -431,10 +498,11 @@ class EDIValidatorDialog(QDialog):
         rows = self._selected_rows()
         if not rows:
             return
-        row      = rows[0]
+        row = rows[0]
         old_name = self._results[row]["Station"]
         new_name, ok = QInputDialog.getText(
-            self, "Rename Station",
+            self,
+            "Rename Station",
             f"New name for  '{old_name}':",
             text=old_name,
         )
@@ -457,7 +525,8 @@ class EDIValidatorDialog(QDialog):
             f"  {names}\n\n"
             "This does not affect files on disk.  "
             "Click <b>Apply to Survey</b> to push the change to the loaded survey.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.Cancel,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
@@ -483,9 +552,9 @@ class EDIValidatorDialog(QDialog):
         if not rows:
             return
         if any(r not in self._excluded for r in rows):
-            self._excluded.update(rows)       # exclude all selected
+            self._excluded.update(rows)  # exclude all selected
         else:
-            self._excluded -= set(rows)       # include all selected
+            self._excluded -= set(rows)  # include all selected
         self._fill_table()
         for r in rows:
             self._table.selectRow(r)
@@ -497,8 +566,14 @@ class EDIValidatorDialog(QDialog):
         for r in rows:
             if r == 0:
                 continue
-            self._items[r],   self._items[r - 1]   = self._items[r - 1],   self._items[r]
-            self._results[r], self._results[r - 1] = self._results[r - 1], self._results[r]
+            self._items[r], self._items[r - 1] = (
+                self._items[r - 1],
+                self._items[r],
+            )
+            self._results[r], self._results[r - 1] = (
+                self._results[r - 1],
+                self._results[r],
+            )
             self._excluded = _swap_excluded(self._excluded, r, r - 1)
         self._fill_table()
         for r in rows:
@@ -513,8 +588,14 @@ class EDIValidatorDialog(QDialog):
         for r in reversed(rows):
             if r >= n - 1:
                 continue
-            self._items[r],   self._items[r + 1]   = self._items[r + 1],   self._items[r]
-            self._results[r], self._results[r + 1] = self._results[r + 1], self._results[r]
+            self._items[r], self._items[r + 1] = (
+                self._items[r + 1],
+                self._items[r],
+            )
+            self._results[r], self._results[r + 1] = (
+                self._results[r + 1],
+                self._results[r],
+            )
             self._excluded = _swap_excluded(self._excluded, r, r + 1)
         self._fill_table()
         for r in rows:
@@ -528,15 +609,15 @@ class EDIValidatorDialog(QDialog):
         if not rows:
             return
         menu = QMenu(self)
-        menu.addAction("✏  Rename…",    self._on_rename)
-        menu.addAction("🗑  Delete",     self._on_delete)
+        menu.addAction("✏  Rename…", self._on_rename)
+        menu.addAction("🗑  Delete", self._on_delete)
         menu.addSeparator()
         any_included = any(r not in self._excluded for r in rows)
-        excl_label   = "⊘  Exclude" if any_included else "✓  Include"
-        menu.addAction(excl_label,      self._on_toggle_exclude)
+        excl_label = "⊘  Exclude" if any_included else "✓  Include"
+        menu.addAction(excl_label, self._on_toggle_exclude)
         menu.addSeparator()
-        menu.addAction("↑  Move Up",    self._on_move_up)
-        menu.addAction("↓  Move Down",  self._on_move_down)
+        menu.addAction("↑  Move Up", self._on_move_up)
+        menu.addAction("↓  Move Down", self._on_move_down)
         menu.exec(self._table.viewport().mapToGlobal(pos))
 
     # ── Apply to Survey ───────────────────────────────────────────────────────
@@ -556,8 +637,7 @@ class EDIValidatorDialog(QDialog):
 
         # Build filtered list (excluded rows removed)
         self.modified_sites = [
-            ed for i, ed in enumerate(self._items)
-            if i not in self._excluded
+            ed for i, ed in enumerate(self._items) if i not in self._excluded
         ]
 
         n_kept = len(self.modified_sites)
@@ -575,7 +655,8 @@ class EDIValidatorDialog(QDialog):
         if not self._results:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Validation Report",
+            self,
+            "Export Validation Report",
             str(Path.home() / "survey_validation.csv"),
             "CSV (*.csv)",
         )
@@ -583,11 +664,19 @@ class EDIValidatorDialog(QDialog):
             return
         try:
             import csv
+
             with open(path, "w", newline="", encoding="utf-8") as fh:
                 writer = csv.DictWriter(fh, fieldnames=_COLS + ["Excluded"])
                 writer.writeheader()
                 for r, res in enumerate(self._results):
-                    writer.writerow({**res, "Excluded": "yes" if r in self._excluded else "no"})
+                    writer.writerow(
+                        {
+                            **res,
+                            "Excluded": "yes"
+                            if r in self._excluded
+                            else "no",
+                        }
+                    )
             self._summary_lbl.setText(
                 self._summary_lbl.text() + f"  →  saved {path}"
             )
@@ -597,13 +686,16 @@ class EDIValidatorDialog(QDialog):
 
 # ── Internal helper ───────────────────────────────────────────────────────────
 
+
 def _swap_excluded(excluded: set, a: int, b: int) -> set:
     """Swap indices a and b inside the excluded set."""
     new = set(excluded)
     a_in = a in excluded
     b_in = b in excluded
     if a_in and not b_in:
-        new.discard(a); new.add(b)
+        new.discard(a)
+        new.add(b)
     elif b_in and not a_in:
-        new.discard(b); new.add(a)
+        new.discard(b)
+        new.add(a)
     return new

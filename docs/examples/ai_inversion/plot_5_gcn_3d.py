@@ -31,10 +31,17 @@ from pycsamt.forward.batch import generate_dataset_3d
 # sphinx_gallery_thumbnail_number = 1
 
 N_LAYERS = 3
-ds = generate_dataset_3d(solver="mt1d", n_surveys=220, n_stations=25,
-                         n_layers=N_LAYERS, freqs=np.logspace(-1, 3, 16),
-                         extent=10_000.0, station_layout="grid",
-                         seed=0, verbose=False)
+ds = generate_dataset_3d(
+    solver="mt1d",
+    n_surveys=220,
+    n_stations=25,
+    n_layers=N_LAYERS,
+    freqs=np.logspace(-1, 3, 16),
+    extent=10_000.0,
+    station_layout="grid",
+    seed=0,
+    verbose=False,
+)
 print("X:", ds.X.shape, " y:", ds.y.shape, " coords:", ds.coords.shape)
 print("features/station:", ds.n_features, " params/station:", ds.y.shape[-1])
 train, val, test = ds.split()
@@ -50,8 +57,12 @@ from pycsamt.ai.nets import build_adjacency
 
 RADIUS = 3200.0
 A = build_adjacency(ds.coords, radius=RADIUS)
-print("adjacency:", A.shape, " mean neighbours/station:",
-      f"{(A > 0).sum(axis=1).mean() - 1:.1f}")
+print(
+    "adjacency:",
+    A.shape,
+    " mean neighbours/station:",
+    f"{(A > 0).sum(axis=1).mean() - 1:.1f}",
+)
 
 # %%
 # The graph, in 3-D
@@ -63,22 +74,40 @@ print("adjacency:", A.shape, " mean neighbours/station:",
 import matplotlib.pyplot as plt
 
 x, y = ds.coords[:, 0], ds.coords[:, 1]
-node_val = test.y[0][:, 0]                      # shallow-layer log-rho, survey 0
+node_val = test.y[0][:, 0]  # shallow-layer log-rho, survey 0
 fig = plt.figure(figsize=(9.5, 5.2))
 ax = fig.add_subplot(111, projection="3d")
 for i in range(len(x)):
     for j in range(i + 1, len(x)):
         if A[i, j] > 0:
-            ax.plot([x[i], x[j]], [y[i], y[j]], [0, 0],
-                    color="#94a3b8", alpha=0.5, lw=0.8)
-sc = ax.scatter(x, y, np.zeros_like(x), c=node_val, cmap="viridis",
-                s=90, edgecolor="#111827", linewidth=0.4, depthshade=False)
-ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
-ax.set_zlabel(""); ax.set_zticks([])
+            ax.plot(
+                [x[i], x[j]],
+                [y[i], y[j]],
+                [0, 0],
+                color="#94a3b8",
+                alpha=0.5,
+                lw=0.8,
+            )
+sc = ax.scatter(
+    x,
+    y,
+    np.zeros_like(x),
+    c=node_val,
+    cmap="viridis",
+    s=90,
+    edgecolor="#111827",
+    linewidth=0.4,
+    depthshade=False,
+)
+ax.set_xlabel("Easting (m)")
+ax.set_ylabel("Northing (m)")
+ax.set_zlabel("")
+ax.set_zticks([])
 ax.set_title("Station graph — nodes coloured by shallow resistivity", pad=10)
 ax.view_init(elev=32, azim=-58)
-fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.1,
-             label=r"$\log_{10}\rho$ (shallow)")
+fig.colorbar(
+    sc, ax=ax, shrink=0.6, pad=0.1, label=r"$\log_{10}\rho$ (shallow)"
+)
 
 # %%
 # Train the GCN and predict
@@ -95,9 +124,15 @@ from pycsamt.ai.inversion.inv3d import GCNInverter3D
 _DOCS = bool(os.environ.get("PYCSAMT_DOCS_BUILD"))
 
 inv = GCNInverter3D(n_features=ds.n_features, n_layers=N_LAYERS, hidden=(64,))
-inv.fit(train.X, train.y, coords=ds.coords, radius=RADIUS,
-        epochs=12 if _DOCS else 60, verbose=False)
-pred = inv.predict(test.X)                      # (n_test, n_stations, n_out)
+inv.fit(
+    train.X,
+    train.y,
+    coords=ds.coords,
+    radius=RADIUS,
+    epochs=12 if _DOCS else 60,
+    verbose=False,
+)
+pred = inv.predict(test.X)  # (n_test, n_stations, n_out)
 print("predicted survey tensor:", pred.shape)
 
 # %%
@@ -109,13 +144,27 @@ print("predicted survey tensor:", pred.shape)
 
 survey = 0
 true0, pred0 = test.y[survey], pred[survey]
-fig, (axp, axt) = plt.subplots(1, 2, figsize=(11, 4.4), constrained_layout=True)
+fig, (axp, axt) = plt.subplots(
+    1, 2, figsize=(11, 4.4), constrained_layout=True
+)
 vmin, vmax = float(true0[:, 0].min()), float(true0[:, 0].max())
-for ax, val, ttl in [(axp, pred0[:, 0], "GCN prediction"),
-                     (axt, true0[:, 0], "ground truth")]:
-    s = ax.scatter(x, y, c=val, cmap="viridis", s=180, vmin=vmin, vmax=vmax,
-                   edgecolor="#111827", linewidth=0.4)
-    ax.set_title(ttl, fontsize=11); ax.set_xlabel("Easting (m)")
+for ax, val, ttl in [
+    (axp, pred0[:, 0], "GCN prediction"),
+    (axt, true0[:, 0], "ground truth"),
+]:
+    s = ax.scatter(
+        x,
+        y,
+        c=val,
+        cmap="viridis",
+        s=180,
+        vmin=vmin,
+        vmax=vmax,
+        edgecolor="#111827",
+        linewidth=0.4,
+    )
+    ax.set_title(ttl, fontsize=11)
+    ax.set_xlabel("Easting (m)")
     ax.set_aspect("equal")
 axp.set_ylabel("Northing (m)")
 fig.colorbar(s, ax=[axp, axt], shrink=0.8, label=r"$\log_{10}\rho$ (shallow)")
@@ -139,15 +188,18 @@ def survey_section(param_grid, depth_max=1500.0, n=60):
     for col, sta in enumerate(order):
         row = param_grid[sta]
         logrho = row[:N_LAYERS]
-        thick = np.maximum(row[N_LAYERS:], 1.0)      # thickness is in metres
+        thick = np.maximum(row[N_LAYERS:], 1.0)  # thickness is in metres
         edges = np.concatenate([[0.0], np.cumsum(thick), [np.inf]])
         for i in range(N_LAYERS):
-            sec[(depths >= edges[i]) & (depths < edges[i + 1]), col] = logrho[i]
+            sec[(depths >= edges[i]) & (depths < edges[i + 1]), col] = logrho[
+                i
+            ]
     return sec
 
 
-fig = plot_section_pair(survey_section(true0), survey_section(pred0),
-                        depth_max=1500.0)
+fig = plot_section_pair(
+    survey_section(true0), survey_section(pred0), depth_max=1500.0
+)
 
 # %%
 # Where is the GCN unsure? An uncertainty map
@@ -157,12 +209,16 @@ fig = plot_section_pair(survey_section(true0), survey_section(pred0),
 # highest at the survey edges, where each node has fewer graph neighbours to
 # borrow strength from.
 
-mean_u, std_u = inv.predict_with_uncertainty(test.X[survey:survey + 1], n_mc=20)
-unc = std_u[0][:, 0]                            # shallow-layer std
+mean_u, std_u = inv.predict_with_uncertainty(
+    test.X[survey : survey + 1], n_mc=20
+)
+unc = std_u[0][:, 0]  # shallow-layer std
 fig, ax = plt.subplots(figsize=(6.2, 5.2), constrained_layout=True)
-s = ax.scatter(x, y, c=unc, cmap="magma", s=200, edgecolor="#111827",
-               linewidth=0.4)
-ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
+s = ax.scatter(
+    x, y, c=unc, cmap="magma", s=200, edgecolor="#111827", linewidth=0.4
+)
+ax.set_xlabel("Easting (m)")
+ax.set_ylabel("Northing (m)")
 ax.set_aspect("equal")
 ax.set_title("MC-dropout uncertainty (shallow layer)", fontsize=11)
 fig.colorbar(s, ax=ax, shrink=0.85, label=r"std of $\log_{10}\rho$")

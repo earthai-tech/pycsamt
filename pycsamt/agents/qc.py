@@ -103,9 +103,9 @@ class DataQCAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.method       = method
-        self.min_frac_ok  = min_frac_ok
-        self.min_snr_med  = min_snr_med
+        self.method = method
+        self.min_frac_ok = min_frac_ok
+        self.min_snr_med = min_snr_med
         self.max_skew_med = max_skew_med
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
@@ -115,6 +115,7 @@ class DataQCAgent(BaseAgent):
 
         # ── resolve sites ─────────────────────────────────────────────────────
         from ..emtools._core import ensure_sites
+
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
             return AgentResult.failed(
@@ -157,12 +158,16 @@ class DataQCAgent(BaseAgent):
             warnings.append(f"qc_flags: {exc}")
 
         try:
-            conf_table = station_confidence_table(sites, method=self.method, verbose=0)
+            conf_table = station_confidence_table(
+                sites, method=self.method, verbose=0
+            )
         except Exception as exc:
             warnings.append(f"station_confidence_table: {exc}")
 
         try:
-            freq_conf = frequency_confidence_table(sites, method=self.method, verbose=0)
+            freq_conf = frequency_confidence_table(
+                sites, method=self.method, verbose=0
+            )
         except Exception as exc:
             warnings.append(f"frequency_confidence_table: {exc}")
 
@@ -181,13 +186,23 @@ class DataQCAgent(BaseAgent):
         # confidence pseudosection
         try:
             ax_conf = plot_frequency_confidence_psection(
-                sites, method=self.method,
-                section="pseudosection", verbose=0,
+                sites,
+                method=self.method,
+                section="pseudosection",
+                verbose=0,
             )
-            fig = ax_conf.get_figure() if hasattr(ax_conf, "get_figure") else ax_conf
+            fig = (
+                ax_conf.get_figure()
+                if hasattr(ax_conf, "get_figure")
+                else ax_conf
+            )
             figures["confidence_section"] = fig
-            p = self._save_figure(fig, output_dir, "qc_confidence_section",
-                                  warnings_list=warnings)
+            p = self._save_figure(
+                fig,
+                output_dir,
+                "qc_confidence_section",
+                warnings_list=warnings,
+            )
             if p:
                 fig_paths["confidence_section"] = p
         except Exception as exc:
@@ -195,11 +210,21 @@ class DataQCAgent(BaseAgent):
 
         # confidence profile (per-station score bar)
         try:
-            ax_prof = plot_confidence_profile(sites, method=self.method, verbose=0)
-            fig = ax_prof.get_figure() if hasattr(ax_prof, "get_figure") else ax_prof
+            ax_prof = plot_confidence_profile(
+                sites, method=self.method, verbose=0
+            )
+            fig = (
+                ax_prof.get_figure()
+                if hasattr(ax_prof, "get_figure")
+                else ax_prof
+            )
             figures["confidence_profile"] = fig
-            p = self._save_figure(fig, output_dir, "qc_confidence_profile",
-                                  warnings_list=warnings)
+            p = self._save_figure(
+                fig,
+                output_dir,
+                "qc_confidence_profile",
+                warnings_list=warnings,
+            )
             if p:
                 fig_paths["confidence_profile"] = p
         except Exception as exc:
@@ -220,8 +245,10 @@ class DataQCAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
-        status = "success" if n_flagged == 0 else (
-            "needs_review" if n_flagged < 5 else "needs_review"
+        status = (
+            "success"
+            if n_flagged == 0
+            else ("needs_review" if n_flagged < 5 else "needs_review")
         )
         return AgentResult(
             status=status,
@@ -231,15 +258,15 @@ class DataQCAgent(BaseAgent):
                 f"{len(figures)} figure(s) produced."
             ),
             data={
-                "qc_table":         qc_table,
-                "flags":            flags_df,
+                "qc_table": qc_table,
+                "flags": flags_df,
                 "confidence_table": conf_table,
-                "freq_conf_table":  freq_conf,
-                "n_flagged":        n_flagged,
+                "freq_conf_table": freq_conf,
+                "n_flagged": n_flagged,
                 "flagged_stations": flagged,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
-                "sites":            sites,
+                "figures": figures,
+                "figure_paths": fig_paths,
+                "sites": sites,
             },
             warnings=warnings,
             llm_interpretation=interp,

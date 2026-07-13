@@ -27,37 +27,33 @@ _PROMPT_CHIPS = [
 ]
 
 _URLS = {
-    "docs": (
-        "https://pycsamt.readthedocs.io"
-    ),
-    "github": (
-        "https://github.com/"
-        "earthai-tech/pycsamt"
-    ),
+    "docs": ("https://pycsamt.readthedocs.io"),
+    "github": ("https://github.com/earthai-tech/pycsamt"),
     "web": "http://localhost:8051",
 }
 
 # deterministic particles (px, left%, top%,
 # delay_s, dur_s)
 _DOTS = [
-    ( 8,  8, 15, 0.0,  8),
-    ( 5, 18, 72, 1.2,  6),
+    (8, 8, 15, 0.0, 8),
+    (5, 18, 72, 1.2, 6),
     (12, 28, 35, 0.4, 10),
-    ( 4, 40, 80, 2.1,  7),
-    ( 7, 52, 25, 0.8,  9),
-    (10, 62, 60, 1.6,  8),
-    ( 5, 73, 88, 0.2,  6),
-    ( 8, 82, 42, 1.9,  9),
-    ( 4, 90, 18, 0.6,  7),
-    ( 6, 95, 65, 2.5,  8),
-    ( 9, 35, 92, 1.1, 10),
-    ( 3, 48,  8, 0.9,  6),
-    ( 6, 68, 78, 1.7,  8),
-    ( 4, 15, 50, 2.3,  7),
+    (4, 40, 80, 2.1, 7),
+    (7, 52, 25, 0.8, 9),
+    (10, 62, 60, 1.6, 8),
+    (5, 73, 88, 0.2, 6),
+    (8, 82, 42, 1.9, 9),
+    (4, 90, 18, 0.6, 7),
+    (6, 95, 65, 2.5, 8),
+    (9, 35, 92, 1.1, 10),
+    (3, 48, 8, 0.9, 6),
+    (6, 68, 78, 1.7, 8),
+    (4, 15, 50, 2.3, 7),
 ]
 
 
 # ── Splash overlay ─────────────────────────────────
+
 
 def _splash() -> html.Div:
     particles = html.Div(
@@ -65,11 +61,11 @@ def _splash() -> html.Div:
             html.Div(
                 className="wlc-particle",
                 style={
-                    "width":  f"{sz}px",
+                    "width": f"{sz}px",
                     "height": f"{sz}px",
-                    "left":   f"{lft}%",
-                    "top":    f"{top}%",
-                    "animationDelay":    f"{dly}s",
+                    "left": f"{lft}%",
+                    "top": f"{top}%",
+                    "animationDelay": f"{dly}s",
                     "animationDuration": f"{dur}s",
                 },
             )
@@ -91,8 +87,7 @@ def _splash() -> html.Div:
                         className="wlc-card-title",
                     ),
                     html.Div(
-                        "EDI files · folders"
-                        " · multi-line",
+                        "EDI files · folders · multi-line",
                         className="wlc-card-desc",
                     ),
                 ],
@@ -111,8 +106,7 @@ def _splash() -> html.Div:
                         className="wlc-card-title",
                     ),
                     html.Div(
-                        "Natural-language"
-                        " workflow routing",
+                        "Natural-language workflow routing",
                         className="wlc-card-desc",
                     ),
                 ],
@@ -131,8 +125,7 @@ def _splash() -> html.Div:
                         className="wlc-card-title",
                     ),
                     html.Div(
-                        "CNN · U-Net · GCN"
-                        " inverters",
+                        "CNN · U-Net · GCN inverters",
                         className="wlc-card-desc",
                     ),
                 ],
@@ -151,8 +144,7 @@ def _splash() -> html.Div:
                         className="wlc-card-title",
                     ),
                     html.Div(
-                        "Provenance ·"
-                        " reproducibility",
+                        "Provenance · reproducibility",
                         className="wlc-card-desc",
                     ),
                 ],
@@ -170,10 +162,7 @@ def _splash() -> html.Div:
             html.Div(
                 [
                     html.Img(
-                        src=(
-                            "/am-icons/"
-                            "pycsamt-v2-symbol.svg"
-                        ),
+                        src=("/am-icons/pycsamt-v2-symbol.svg"),
                         className="wlc-logo",
                     ),
                     html.H1(
@@ -195,8 +184,7 @@ def _splash() -> html.Div:
                         className="wlc-title",
                     ),
                     html.P(
-                        "Describe your workflow."
-                        " I handle the rest.",
+                        "Describe your workflow. I handle the rest.",
                         className="wlc-slogan",
                     ),
                     html.P(
@@ -209,12 +197,7 @@ def _splash() -> html.Div:
                     cards,
                     html.Button(
                         [
-                            html.I(
-                                className=(
-                                    "bi bi-chat-dots-fill"
-                                    " me-2"
-                                )
-                            ),
+                            html.I(className=("bi bi-chat-dots-fill me-2")),
                             "Start Agent Master",
                         ],
                         id=IDs.SPLASH_CTA,
@@ -222,8 +205,7 @@ def _splash() -> html.Div:
                         n_clicks=0,
                     ),
                     html.P(
-                        "Load an EDI folder or type"
-                        " a request to begin",
+                        "Load an EDI folder or type a request to begin",
                         className="wlc-hint",
                     ),
                 ],
@@ -236,6 +218,7 @@ def _splash() -> html.Div:
 
 
 # ── Sidebar ────────────────────────────────────────
+
 
 def _sidebar() -> html.Div:
     return html.Div(
@@ -250,9 +233,7 @@ def _sidebar() -> html.Div:
                     ),
                     html.Button(
                         html.I(
-                            className=(
-                                "bi bi-layout-sidebar"
-                            ),
+                            className=("bi bi-layout-sidebar"),
                         ),
                         id="am-sidebar-close",
                         className="am-icon-btn",
@@ -382,6 +363,7 @@ def _sidebar() -> html.Div:
 
 # ── Top bar ────────────────────────────────────────
 
+
 def _topbar() -> html.Div:
     return html.Div(
         id="am-topbar",
@@ -389,9 +371,7 @@ def _topbar() -> html.Div:
             # Sidebar toggle
             html.Button(
                 html.I(
-                    className=(
-                        "bi bi-layout-sidebar"
-                    ),
+                    className=("bi bi-layout-sidebar"),
                 ),
                 id=IDs.BTN_SIDEBAR,
                 className="am-icon-btn",
@@ -402,10 +382,7 @@ def _topbar() -> html.Div:
             html.Div(
                 [
                     html.Img(
-                        src=(
-                            "/am-icons/"
-                            "pycsamt-v2-symbol.svg"
-                        ),
+                        src=("/am-icons/pycsamt-v2-symbol.svg"),
                         className="am-nav-logo",
                     ),
                     html.Span(
@@ -416,16 +393,12 @@ def _topbar() -> html.Div:
                             ),
                             html.Span(
                                 "CSAMT",
-                                className=(
-                                    "am-brand-csamt"
-                                ),
+                                className=("am-brand-csamt"),
                             ),
                             " ",
                             html.Span(
                                 "Agent",
-                                className=(
-                                    "am-brand-agent"
-                                ),
+                                className=("am-brand-agent"),
                             ),
                         ],
                         className="am-brand-text",
@@ -436,11 +409,7 @@ def _topbar() -> html.Div:
             # Load EDI
             html.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-folder2-open me-1"
-                        )
-                    ),
+                    html.I(className=("bi bi-folder2-open me-1")),
                     "Load EDI",
                 ],
                 id=IDs.BTN_LOAD_EDI,
@@ -450,12 +419,7 @@ def _topbar() -> html.Div:
             # EDI badge
             html.Div(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-check-circle-fill"
-                            " me-1"
-                        )
-                    ),
+                    html.I(className=("bi bi-check-circle-fill me-1")),
                     html.Span(
                         "",
                         id=IDs.EDI_BADGE_TEXT,
@@ -467,11 +431,7 @@ def _topbar() -> html.Div:
             # Save session
             html.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-cloud-check me-1"
-                        )
-                    ),
+                    html.I(className=("bi bi-cloud-check me-1")),
                     "Save",
                 ],
                 id=IDs.BTN_SAVE_SESSION,
@@ -496,9 +456,7 @@ def _topbar() -> html.Div:
             ),
             # Help / About
             html.Button(
-                html.I(
-                    className="bi bi-question-circle"
-                ),
+                html.I(className="bi bi-question-circle"),
                 id=IDs.BTN_HELP,
                 className="am-icon-btn",
                 title="Help & About",
@@ -506,9 +464,7 @@ def _topbar() -> html.Div:
             ),
             # Settings
             html.Button(
-                html.I(
-                    className="bi bi-gear-fill"
-                ),
+                html.I(className="bi bi-gear-fill"),
                 id=IDs.BTN_SETTINGS,
                 className="am-icon-btn",
                 title="Settings",
@@ -519,6 +475,7 @@ def _topbar() -> html.Div:
 
 
 # ── In-chat welcome (post-splash) ─────────────────
+
 
 def _chat_welcome() -> html.Div:
     chips = [
@@ -535,15 +492,10 @@ def _chat_welcome() -> html.Div:
         className="am-chat-welcome",
         children=[
             html.Img(
-                src=(
-                    "/am-icons/"
-                    "pycsamt-v2-symbol.svg"
-                ),
+                src=("/am-icons/pycsamt-v2-symbol.svg"),
                 className="am-welcome-logo",
             ),
-            html.H3(
-                "pyCSAMT Agent Master"
-            ),
+            html.H3("pyCSAMT Agent Master"),
             html.P(
                 "Load an EDI dataset and describe "
                 "your workflow in natural language."
@@ -558,36 +510,28 @@ def _chat_welcome() -> html.Div:
 
 # ── "+" resource menu ──────────────────────────────
 
+
 def _plus_menu() -> html.Div:
 
     def _ext(icon, label, href):
         return html.A(
             [
-                html.I(
-                    className=f"bi {icon} me-2"
-                ),
+                html.I(className=f"bi {icon} me-2"),
                 html.Span(label),
                 html.I(
-                    className=(
-                        "bi bi-arrow-up-right"
-                        " ms-auto"
-                    ),
+                    className=("bi bi-arrow-up-right ms-auto"),
                 ),
             ],
             href=href,
             target="_blank",
             rel="noopener noreferrer",
-            className=(
-                "am-plus-item am-plus-ext"
-            ),
+            className=("am-plus-item am-plus-ext"),
         )
 
     def _action(icon, label, btn_id):
         return html.Button(
             [
-                html.I(
-                    className=f"bi {icon} me-2"
-                ),
+                html.I(className=f"bi {icon} me-2"),
                 html.Span(label),
             ],
             id=btn_id,
@@ -616,9 +560,7 @@ def _plus_menu() -> html.Div:
                 "Launch Web App",
                 IDs.PLUS_WEB,
             ),
-            html.Hr(
-                className="am-plus-divider"
-            ),
+            html.Hr(className="am-plus-divider"),
             html.Div(
                 "Open panel",
                 className="am-plus-section",
@@ -633,9 +575,7 @@ def _plus_menu() -> html.Div:
                 "Settings",
                 IDs.PLUS_SETTINGS,
             ),
-            html.Hr(
-                className="am-plus-divider"
-            ),
+            html.Hr(className="am-plus-divider"),
             html.Div(
                 "Insert",
                 className="am-plus-section",
@@ -653,6 +593,7 @@ def _plus_menu() -> html.Div:
 
 # ── Input bar ──────────────────────────────────────
 
+
 def _input_bar() -> html.Div:
     return html.Div(
         id="am-input-bar",
@@ -661,24 +602,14 @@ def _input_bar() -> html.Div:
             html.Div(
                 [
                     html.Button(
-                        html.I(
-                            className=(
-                                "bi bi-plus-lg"
-                            )
-                        ),
+                        html.I(className=("bi bi-plus-lg")),
                         id=IDs.BTN_PLUS,
                         className="am-plus-btn",
-                        title=(
-                            "Resources & actions"
-                        ),
+                        title=("Resources & actions"),
                         n_clicks=0,
                     ),
                     html.Button(
-                        html.I(
-                            className=(
-                                "bi bi-paperclip"
-                            )
-                        ),
+                        html.I(className=("bi bi-paperclip")),
                         id=IDs.BTN_ATTACH,
                         className="am-attach-btn",
                         title="Load EDI file",
@@ -686,18 +617,11 @@ def _input_bar() -> html.Div:
                     ),
                     dcc.Textarea(
                         id=IDs.INPUT,
-                        placeholder=(
-                            "Describe your "
-                            "workflow..."
-                        ),
+                        placeholder=("Describe your workflow..."),
                         style={},
                     ),
                     html.Button(
-                        html.I(
-                            className=(
-                                "bi bi-arrow-up"
-                            )
-                        ),
+                        html.I(className=("bi bi-arrow-up")),
                         id=IDs.BTN_SEND,
                         n_clicks=0,
                         disabled=False,
@@ -711,16 +635,14 @@ def _input_bar() -> html.Div:
 
 # ── EDI offcanvas ──────────────────────────────────
 
+
 def _edi_canvas() -> dbc.Offcanvas:
     mode_opts = [
         {
             "label": html.Span(
                 [
                     html.I(
-                        className=(
-                            "bi bi-folder2-open"
-                            " me-2"
-                        ),
+                        className=("bi bi-folder2-open me-2"),
                         style={"color": "#f9e2af"},
                     ),
                     "Folder names (default)",
@@ -746,10 +668,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             "label": html.Span(
                 [
                     html.I(
-                        className=(
-                            "bi bi-pencil-square"
-                            " me-2"
-                        ),
+                        className=("bi bi-pencil-square me-2"),
                         style={"color": "#a6e3a1"},
                     ),
                     "Edit / Rename",
@@ -769,12 +688,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             # Big browse-folder button (primary)
             dbc.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-folder2-open"
-                            " me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-folder2-open me-2")),
                     html.Span(
                         "Browse folder",
                         style={"fontWeight": "600"},
@@ -799,16 +713,8 @@ def _edi_canvas() -> dbc.Offcanvas:
                 id=IDs.UPLOAD_EDI,
                 children=html.Div(
                     [
-                        html.I(
-                            className=(
-                                "bi bi-file-earmark"
-                                "-plus me-2"
-                            )
-                        ),
-                        html.Span(
-                            "Drop EDI files"
-                            " or click to pick"
-                        ),
+                        html.I(className=("bi bi-file-earmark-plus me-2")),
+                        html.Span("Drop EDI files or click to pick"),
                     ]
                 ),
                 className="am-upload-zone mb-2",
@@ -823,8 +729,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             dbc.Input(
                 id=IDs.EDI_PATH_INPUT,
                 placeholder=(
-                    "Path appears here after"
-                    " browsing — or type one"
+                    "Path appears here after browsing — or type one"
                 ),
                 size="sm",
                 className="mb-3",
@@ -853,9 +758,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             ),
             dbc.Button(
                 [
-                    html.I(
-                        className="bi bi-stars me-2"
-                    ),
+                    html.I(className="bi bi-stars me-2"),
                     "Detect lines",
                 ],
                 id=IDs.BTN_DETECT_LINES,
@@ -868,12 +771,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             ),
             dbc.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-check2-circle"
-                            " me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-check2-circle me-2")),
                     "Apply renames",
                 ],
                 id=IDs.BTN_APPLY_RENAME,
@@ -896,11 +794,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             html.Hr(className="my-2"),
             dbc.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-check-lg me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-check-lg me-2")),
                     "Load into session",
                 ],
                 id=IDs.BTN_LOAD_CONFIRM,
@@ -920,6 +814,7 @@ def _edi_canvas() -> dbc.Offcanvas:
 
 
 # ── Settings offcanvas ─────────────────────────────
+
 
 def _settings_canvas() -> dbc.Offcanvas:
     # One credential panel, populated by the provider dropdown. It carries
@@ -1020,11 +915,7 @@ def _settings_canvas() -> dbc.Offcanvas:
             ),
             dbc.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-floppy me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-floppy me-2")),
                     "Save settings",
                 ],
                 id=IDs.BTN_SAVE_KEYS,
@@ -1041,14 +932,10 @@ def _settings_canvas() -> dbc.Offcanvas:
             dbc.Select(
                 id=IDs.EXPORT_FORMAT,
                 options=[
-                    {"label": "PNG (300 dpi)",
-                     "value": "png"},
-                    {"label": "SVG (vector)",
-                     "value": "svg"},
-                    {"label": "EPS (vector)",
-                     "value": "eps"},
-                    {"label": "PDF",
-                     "value": "pdf"},
+                    {"label": "PNG (300 dpi)", "value": "png"},
+                    {"label": "SVG (vector)", "value": "svg"},
+                    {"label": "EPS (vector)", "value": "eps"},
+                    {"label": "PDF", "value": "pdf"},
                 ],
                 value="png",
                 size="sm",
@@ -1063,33 +950,24 @@ def _settings_canvas() -> dbc.Offcanvas:
                 [
                     dbc.Input(
                         id=IDs.OUTPUT_DIR,
-                        placeholder=(
-                            "Default: "
-                            "pycsamt_workflow_output/"
-                        ),
+                        placeholder=("Default: pycsamt_workflow_output/"),
                         size="sm",
                         style={
                             "flex": "1",
-                            "borderRadius":
-                            "6px 0 0 6px",
+                            "borderRadius": "6px 0 0 6px",
                             "fontSize": "12px",
                         },
                         readonly=True,
                     ),
                     dbc.Button(
-                        html.I(
-                            className=(
-                                "bi bi-folder2-open"
-                            )
-                        ),
+                        html.I(className=("bi bi-folder2-open")),
                         id=IDs.BTN_OUTPUT_BROWSE,
                         size="sm",
                         color="secondary",
                         outline=True,
                         title="Browse / create folder",
                         style={
-                            "borderRadius":
-                            "0 6px 6px 0",
+                            "borderRadius": "0 6px 6px 0",
                             "borderLeft": "none",
                         },
                         n_clicks=0,
@@ -1098,8 +976,7 @@ def _settings_canvas() -> dbc.Offcanvas:
                 className="d-flex mb-1",
             ),
             html.Div(
-                "Click the folder icon to browse"
-                " or create an output folder.",
+                "Click the folder icon to browse or create an output folder.",
                 style={
                     "fontSize": "10px",
                     "color": "var(--fg-muted)",
@@ -1114,8 +991,7 @@ def _settings_canvas() -> dbc.Offcanvas:
             dbc.Textarea(
                 id=IDs.LINE_REGISTRY,
                 placeholder=(
-                    "L22PLT: /data/willy/L22PLT\n"
-                    "L18PLT: /data/willy/L18PLT"
+                    "L22PLT: /data/willy/L22PLT\nL18PLT: /data/willy/L18PLT"
                 ),
                 rows=4,
                 style={
@@ -1149,16 +1025,13 @@ def _settings_canvas() -> dbc.Offcanvas:
 
 # ── Line selector modal ────────────────────────────
 
+
 def _line_sel_modal() -> dbc.Modal:
     return dbc.Modal(
         [
             dbc.ModalHeader(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-layers me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-layers me-2")),
                     "Select line(s) to process",
                 ],
                 close_button=True,
@@ -1187,9 +1060,7 @@ def _line_sel_modal() -> dbc.Modal:
                             dbc.Col(
                                 dbc.Button(
                                     "Run selected",
-                                    id=(
-                                        IDs.BTN_LINE_RUN_SEL
-                                    ),
+                                    id=(IDs.BTN_LINE_RUN_SEL),
                                     color="primary",
                                     size="sm",
                                     className="w-100",
@@ -1199,9 +1070,7 @@ def _line_sel_modal() -> dbc.Modal:
                             dbc.Col(
                                 dbc.Button(
                                     "Run all lines",
-                                    id=(
-                                        IDs.BTN_LINE_RUN_ALL
-                                    ),
+                                    id=(IDs.BTN_LINE_RUN_ALL),
                                     color="secondary",
                                     size="sm",
                                     className="w-100",
@@ -1229,6 +1098,7 @@ def _line_sel_modal() -> dbc.Modal:
 
 # ── Post-correction action modal ───────────────────
 
+
 def _postproc_modal() -> dbc.Modal:
     return dbc.Modal(
         [
@@ -1247,9 +1117,7 @@ def _postproc_modal() -> dbc.Modal:
                             dbc.Col(
                                 dbc.Button(
                                     "Apply to session",
-                                    id=(
-                                        IDs.BTN_POSTPROC_APPLY
-                                    ),
+                                    id=(IDs.BTN_POSTPROC_APPLY),
                                     color="primary",
                                     size="sm",
                                     className="w-100",
@@ -1259,9 +1127,7 @@ def _postproc_modal() -> dbc.Modal:
                             dbc.Col(
                                 dbc.Button(
                                     "Export to folder",
-                                    id=(
-                                        IDs.BTN_POSTPROC_EXPORT
-                                    ),
+                                    id=(IDs.BTN_POSTPROC_EXPORT),
                                     color="secondary",
                                     size="sm",
                                     className="w-100",
@@ -1275,18 +1141,13 @@ def _postproc_modal() -> dbc.Modal:
                         [
                             dbc.Input(
                                 id=IDs.POSTPROC_PATH,
-                                placeholder=(
-                                    "Enter export"
-                                    " folder path..."
-                                ),
+                                placeholder=("Enter export folder path..."),
                                 size="sm",
                                 className="mb-2",
                             ),
                             dbc.Button(
                                 "Confirm export",
-                                id=(
-                                    IDs.BTN_POSTPROC_OK
-                                ),
+                                id=(IDs.BTN_POSTPROC_OK),
                                 color="success",
                                 size="sm",
                                 n_clicks=0,
@@ -1314,16 +1175,13 @@ def _postproc_modal() -> dbc.Modal:
 
 # ── Output folder browser modal ────────────────────
 
+
 def _output_browse_modal() -> dbc.Modal:
     return dbc.Modal(
         [
             dbc.ModalHeader(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-folder2-open me-2"
-                        )
-                    ),
+                    html.I(className=("bi bi-folder2-open me-2")),
                     "Select output folder",
                 ],
                 close_button=True,
@@ -1334,11 +1192,7 @@ def _output_browse_modal() -> dbc.Modal:
                     html.Div(
                         [
                             dbc.Button(
-                                html.I(
-                                    className=(
-                                        "bi bi-arrow-up"
-                                    )
-                                ),
+                                html.I(className=("bi bi-arrow-up")),
                                 id=IDs.BTN_OUTPUT_UP,
                                 size="sm",
                                 color="light",
@@ -1351,15 +1205,11 @@ def _output_browse_modal() -> dbc.Modal:
                                 id=IDs.OUTPUT_BROWSE_PATH,
                                 style={
                                     "fontSize": "11px",
-                                    "wordBreak":
-                                    "break-all",
+                                    "wordBreak": "break-all",
                                 },
                             ),
                         ],
-                        className=(
-                            "d-flex align-items-center"
-                            " mb-2"
-                        ),
+                        className=("d-flex align-items-center mb-2"),
                     ),
                     # directory listing
                     html.Div(
@@ -1367,10 +1217,7 @@ def _output_browse_modal() -> dbc.Modal:
                         style={
                             "maxHeight": "260px",
                             "overflowY": "auto",
-                            "border": (
-                                "1px solid"
-                                " var(--am-border)"
-                            ),
+                            "border": ("1px solid var(--am-border)"),
                             "borderRadius": "6px",
                             "padding": "6px",
                         },
@@ -1385,24 +1232,18 @@ def _output_browse_modal() -> dbc.Modal:
                         [
                             dbc.Input(
                                 id=IDs.OUTPUT_MKDIR_INPUT,
-                                placeholder=(
-                                    "new_folder_name"
-                                ),
+                                placeholder=("new_folder_name"),
                                 size="sm",
                                 style={
                                     "flex": "1",
-                                    "borderRadius":
-                                    "6px 0 0 6px",
+                                    "borderRadius": "6px 0 0 6px",
                                 },
                                 debounce=False,
                             ),
                             dbc.Button(
                                 [
                                     html.I(
-                                        className=(
-                                            "bi bi-folder-plus"
-                                            " me-1"
-                                        )
+                                        className=("bi bi-folder-plus me-1")
                                     ),
                                     "Create",
                                 ],
@@ -1410,8 +1251,7 @@ def _output_browse_modal() -> dbc.Modal:
                                 size="sm",
                                 color="secondary",
                                 style={
-                                    "borderRadius":
-                                    "0 6px 6px 0",
+                                    "borderRadius": "0 6px 6px 0",
                                 },
                                 n_clicks=0,
                             ),
@@ -1431,12 +1271,7 @@ def _output_browse_modal() -> dbc.Modal:
             dbc.ModalFooter(
                 dbc.Button(
                     [
-                        html.I(
-                            className=(
-                                "bi bi-check2-circle"
-                                " me-1"
-                            )
-                        ),
+                        html.I(className=("bi bi-check2-circle me-1")),
                         "Use this folder",
                     ],
                     id=IDs.BTN_OUTPUT_CONFIRM,
@@ -1454,6 +1289,7 @@ def _output_browse_modal() -> dbc.Modal:
 
 
 # ── Figure modal ───────────────────────────────────
+
 
 def _fig_modal() -> dbc.Modal:
     return dbc.Modal(
@@ -1481,9 +1317,7 @@ def _fig_modal() -> dbc.Modal:
             ),
             dbc.ModalFooter(
                 [
-                    dcc.Store(
-                        id=IDs.MODAL_FIG_KEY
-                    ),
+                    dcc.Store(id=IDs.MODAL_FIG_KEY),
                     html.Small(
                         "Export:",
                         style={
@@ -1505,15 +1339,15 @@ def _fig_modal() -> dbc.Modal:
                                 n_clicks=0,
                             )
                             for fmt in [
-                                "png", "svg",
-                                "eps", "pdf",
+                                "png",
+                                "svg",
+                                "eps",
+                                "pdf",
                             ]
                         ],
                         size="sm",
                     ),
-                    dcc.Download(
-                        id=IDs.EXPORT_DL
-                    ),
+                    dcc.Download(id=IDs.EXPORT_DL),
                 ],
                 className="am-modal-footer",
             ),
@@ -1526,8 +1360,8 @@ def _fig_modal() -> dbc.Modal:
     )
 
 
-
 # ── Smart param-collection modal ───────────────────
+
 
 def _param_modal() -> dbc.Modal:
     return dbc.Modal(
@@ -1537,18 +1371,14 @@ def _param_modal() -> dbc.Modal:
                     [
                         html.I(
                             id="am-param-icon",
-                            className=(
-                                "bi bi-sliders2 me-2"
-                            ),
+                            className=("bi bi-sliders2 me-2"),
                         ),
                         html.Span(
                             "Configure Workflow",
                             id=IDs.PARAM_MODAL_TITLE,
                         ),
                     ],
-                    className=(
-                        "d-flex align-items-center"
-                    ),
+                    className=("d-flex align-items-center"),
                 ),
                 className="am-modal-header",
                 close_button=True,
@@ -1570,12 +1400,7 @@ def _param_modal() -> dbc.Modal:
                 [
                     dbc.Button(
                         [
-                            html.I(
-                                className=(
-                                    "bi bi-x-circle"
-                                    " me-1"
-                                )
-                            ),
+                            html.I(className=("bi bi-x-circle me-1")),
                             "Cancel",
                         ],
                         id=IDs.BTN_PARAM_CANCEL,
@@ -1586,12 +1411,7 @@ def _param_modal() -> dbc.Modal:
                     ),
                     dbc.Button(
                         [
-                            html.I(
-                                className=(
-                                    "bi bi-play-fill"
-                                    " me-1"
-                                )
-                            ),
+                            html.I(className=("bi bi-play-fill me-1")),
                             "Run Workflow",
                         ],
                         id=IDs.BTN_PARAM_RUN,
@@ -1614,6 +1434,7 @@ def _param_modal() -> dbc.Modal:
 
 
 # ── PINN / Hybrid parameter offcanvas ─────────────
+
 
 def _inv_params_canvas() -> dbc.Offcanvas:
     def _label(text):
@@ -1643,10 +1464,14 @@ def _inv_params_canvas() -> dbc.Offcanvas:
                     dbc.RadioItems(
                         id=IDs.INV_MODE,
                         options=[
-                            {"label": "PINN (physics-informed)",
-                             "value": "pinn"},
-                            {"label": "Hybrid (AI warm-start)",
-                             "value": "hybrid"},
+                            {
+                                "label": "PINN (physics-informed)",
+                                "value": "pinn",
+                            },
+                            {
+                                "label": "Hybrid (AI warm-start)",
+                                "value": "hybrid",
+                            },
                         ],
                         value="pinn",
                         inline=True,
@@ -1680,8 +1505,7 @@ def _inv_params_canvas() -> dbc.Offcanvas:
                     id=IDs.INV_SOLVER,
                     options=[
                         {"label": "mt1d", "value": "mt1d"},
-                        {"label": "csamt1d",
-                         "value": "csamt1d"},
+                        {"label": "csamt1d", "value": "csamt1d"},
                     ],
                     value="mt1d",
                 ),
@@ -1804,23 +1628,18 @@ def _inv_params_canvas() -> dbc.Offcanvas:
                 id=IDs.INV_PANEL_HYBRID,
                 style={"display": "none"},
                 children=[
-                    html.Hr(
-                        style={"margin": "8px 0"}
-                    ),
+                    html.Hr(style={"margin": "8px 0"}),
                     html.Small(
                         "Hybrid: AI inverter",
                         className="am-section-heading",
                     ),
                     _row(
-                        "Checkpoint path"
-                        " (optional)",
+                        "Checkpoint path (optional)",
                         dbc.Input(
                             id=IDs.INV_CHECKPOINT,
                             type="text",
                             value="",
-                            placeholder=(
-                                "/path/to/checkpoint.pt"
-                            ),
+                            placeholder=("/path/to/checkpoint.pt"),
                         ),
                     ),
                 ],
@@ -1834,11 +1653,7 @@ def _inv_params_canvas() -> dbc.Offcanvas:
             ),
             dbc.Button(
                 [
-                    html.I(
-                        className=(
-                            "bi bi-check2-circle me-1"
-                        )
-                    ),
+                    html.I(className=("bi bi-check2-circle me-1")),
                     "Confirm & Apply",
                 ],
                 id=IDs.BTN_INV_CONFIRM,
@@ -1898,9 +1713,7 @@ def _help_capability(icon, color, title, desc) -> html.Div:
 def _help_tip(icon, text) -> html.Li:
     return html.Li(
         [
-            html.I(
-                className=f"bi {icon} am-help-tip-icon"
-            ),
+            html.I(className=f"bi {icon} am-help-tip-icon"),
             html.Span(text),
         ],
         className="am-help-tip",
@@ -1910,6 +1723,7 @@ def _help_tip(icon, text) -> html.Li:
 def _help_modal() -> dbc.Modal:
     try:
         from importlib.metadata import version as _v
+
         _ver = _v("pycsamt")
     except Exception:
         _ver = "2.0"
@@ -1920,10 +1734,7 @@ def _help_modal() -> dbc.Modal:
                 dbc.ModalTitle(
                     [
                         html.Img(
-                            src=(
-                                "/am-icons/"
-                                "pycsamt-v2-symbol.svg"
-                            ),
+                            src=("/am-icons/pycsamt-v2-symbol.svg"),
                             className="am-help-logo",
                         ),
                         html.Span(
@@ -1957,7 +1768,6 @@ def _help_modal() -> dbc.Modal:
                         " full workflows in plain language.",
                         className="am-help-lead",
                     ),
-
                     html.Div(
                         "What I can do",
                         className="am-help-section",
@@ -1965,25 +1775,29 @@ def _help_modal() -> dbc.Modal:
                     html.Div(
                         [
                             _help_capability(
-                                "bi-chat-left-text", "blue",
+                                "bi-chat-left-text",
+                                "blue",
                                 "Answer questions",
                                 "Explain pyCSAMT classes,"
                                 " functions and the data model.",
                             ),
                             _help_capability(
-                                "bi-code-slash", "green",
+                                "bi-code-slash",
+                                "green",
                                 "Generate code",
                                 "Produce ready-to-run pyCSAMT"
                                 " scripts for any workflow.",
                             ),
                             _help_capability(
-                                "bi-diagram-3", "mauve",
+                                "bi-diagram-3",
+                                "mauve",
                                 "Run workflows",
                                 "QC, static shift, phase tensor,"
                                 " denoising, inversions, reports.",
                             ),
                             _help_capability(
-                                "bi-window-fullscreen", "teal",
+                                "bi-window-fullscreen",
+                                "teal",
                                 "Launch the web app",
                                 "Open interactive maps and"
                                 " pseudosections when needed.",
@@ -1991,7 +1805,6 @@ def _help_modal() -> dbc.Modal:
                         ],
                         className="am-help-caps",
                     ),
-
                     html.Div(
                         "Try asking",
                         className="am-help-section",
@@ -2008,13 +1821,10 @@ def _help_modal() -> dbc.Modal:
                                 title="Use this prompt",
                                 n_clicks=0,
                             )
-                            for i, ex in enumerate(
-                                _HELP_EXAMPLES
-                            )
+                            for i, ex in enumerate(_HELP_EXAMPLES)
                         ],
                         className="am-help-examples",
                     ),
-
                     html.Div(
                         "Tips",
                         className="am-help-section",
@@ -2066,9 +1876,7 @@ def _help_modal() -> dbc.Modal:
                     html.Div(className="am-topbar-spacer"),
                     html.A(
                         [
-                            html.I(
-                                className="bi bi-book me-1"
-                            ),
+                            html.I(className="bi bi-book me-1"),
                             "Docs",
                         ],
                         href="https://pycsamt.readthedocs.io",
@@ -2077,15 +1885,10 @@ def _help_modal() -> dbc.Modal:
                     ),
                     html.A(
                         [
-                            html.I(
-                                className="bi bi-github me-1"
-                            ),
+                            html.I(className="bi bi-github me-1"),
                             "GitHub",
                         ],
-                        href=(
-                            "https://github.com/"
-                            "earthai-tech/pycsamt"
-                        ),
+                        href=("https://github.com/earthai-tech/pycsamt"),
                         target="_blank",
                         className="am-help-link",
                     ),
@@ -2109,21 +1912,16 @@ def _help_modal() -> dbc.Modal:
 
 # ── Full layout ────────────────────────────────────
 
+
 def create_layout() -> html.Div:
     return html.Div(
         id="am-root",
         className="am-root",
         children=[
             # ── data stores ────────────────────────
-            dcc.Store(
-                id=IDs.STORE_MESSAGES, data=[]
-            ),
-            dcc.Store(
-                id=IDs.STORE_EDI, data={}
-            ),
-            dcc.Store(
-                id=IDs.STORE_SESSION, data={}
-            ),
+            dcc.Store(id=IDs.STORE_MESSAGES, data=[]),
+            dcc.Store(id=IDs.STORE_EDI, data={}),
+            dcc.Store(id=IDs.STORE_SESSION, data={}),
             dcc.Store(
                 id=IDs.STORE_SETTINGS,
                 storage_type="local",
@@ -2139,25 +1937,19 @@ def create_layout() -> html.Div:
                 storage_type="memory",
                 data={},
             ),
-            dcc.Store(
-                id=IDs.STORE_JOB, data={}
-            ),
+            dcc.Store(id=IDs.STORE_JOB, data={}),
             dcc.Store(
                 id=IDs.STORE_THEME,
                 storage_type="local",
                 data="dark",
             ),
-            dcc.Store(
-                id=IDs.STORE_FIGS, data={}
-            ),
+            dcc.Store(id=IDs.STORE_FIGS, data={}),
             dcc.Store(
                 id=IDs.LOAD_MODE_STORE,
                 data="replace",
             ),
             # JS folder loader → Python callback
-            dcc.Store(
-                id=IDs.FOLDER_STORE, data={}
-            ),
+            dcc.Store(id=IDs.FOLDER_STORE, data={}),
             # chat session history (localStorage)
             dcc.Store(
                 id=IDs.STORE_HISTORY,
@@ -2193,17 +1985,11 @@ def create_layout() -> html.Div:
             # auto-scroll trigger (dummy target)
             dcc.Store(id="am-scroll-dummy"),
             # pending workflow config
-            dcc.Store(
-                id=IDs.STORE_PENDING, data={}
-            ),
+            dcc.Store(id=IDs.STORE_PENDING, data={}),
             # line → stations map for the param-modal dependent dropdown
-            dcc.Store(
-                id=IDs.STORE_LINE_STATIONS, data={}
-            ),
+            dcc.Store(id=IDs.STORE_LINE_STATIONS, data={}),
             # post-correction action store
-            dcc.Store(
-                id=IDs.STORE_POSTPROC, data={}
-            ),
+            dcc.Store(id=IDs.STORE_POSTPROC, data={}),
             # output folder browser nav state
             dcc.Store(
                 id=IDs.OUTPUT_BROWSE_STORE,
@@ -2240,9 +2026,7 @@ def create_layout() -> html.Div:
                         children=[
                             html.Div(
                                 id=IDs.CHAT_WINDOW,
-                                children=[
-                                    _chat_welcome()
-                                ],
+                                children=[_chat_welcome()],
                             ),
                             _input_bar(),
                         ],

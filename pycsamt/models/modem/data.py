@@ -39,11 +39,11 @@ _KNOWN_COMPONENTS = {
 
 # Columns in the data record array
 _COL_PERIOD = 0
-_COL_SITE_IDX = 1   # 0-based index into site_names
-_COL_X = 2   # northing (m)
-_COL_Y = 3   # easting  (m)
-_COL_Z = 4   # elevation (m)
-_COL_COMP_IDX = 5   # index into component list for this block
+_COL_SITE_IDX = 1  # 0-based index into site_names
+_COL_X = 2  # northing (m)
+_COL_Y = 3  # easting  (m)
+_COL_Z = 4  # elevation (m)
+_COL_COMP_IDX = 5  # index into component list for this block
 _COL_REAL = 6
 _COL_IMAG = 7
 _COL_ERROR = 8
@@ -52,6 +52,7 @@ _COL_ERROR = 8
 # ----------------------------------------------------------------------
 # Low-level parser
 # ----------------------------------------------------------------------
+
 
 def _parse_data(path: Path) -> dict:
     """Parse a ModEM data file into plain Python values."""
@@ -105,9 +106,7 @@ def _parse_data(path: Path) -> dict:
 
             sign_conv = block_meta[0] if len(block_meta) > 0 else ""
             units_str = block_meta[1] if len(block_meta) > 1 else ""
-            rot_angle = (
-                float(block_meta[2]) if len(block_meta) > 2 else 0.0
-            )
+            rot_angle = float(block_meta[2]) if len(block_meta) > 2 else 0.0
             if len(block_meta) > 3:
                 origin_xy = [float(v) for v in block_meta[3].split()]
             else:
@@ -120,8 +119,10 @@ def _parse_data(path: Path) -> dict:
             # Data rows
             data_rows: list[tuple] = []
             rows_read = 0
-            expected = n_periods * n_sites * len(
-                _KNOWN_COMPONENTS.get(comp_type, ("Z",))
+            expected = (
+                n_periods
+                * n_sites
+                * len(_KNOWN_COMPONENTS.get(comp_type, ("Z",)))
             )
             # read until we have all rows or hit next header
             while i < N and (expected == 0 or rows_read < expected):
@@ -206,6 +207,7 @@ def _parse_data(path: Path) -> dict:
 # ----------------------------------------------------------------------
 # ModEmData
 # ----------------------------------------------------------------------
+
 
 class ModEmData(ModEmBase):
     def __init__(
@@ -328,8 +330,7 @@ class ModEmData(ModEmBase):
         obj.periods = parsed["periods"]
         if obj.verbose:
             obj.logger.info(
-                "ModEmData.read: %d sites, %d periods, "
-                "%d blocks from %s",
+                "ModEmData.read: %d sites, %d periods, %d blocks from %s",
                 obj.n_sites,
                 obj.n_periods,
                 len(obj.blocks),
@@ -374,8 +375,10 @@ class ModEmData(ModEmBase):
 
         lines: list[str] = []
         lines.append(f"# {self.comment}\n")
-        lines.append("# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) "
-                     "Component Real Imag Error\n")
+        lines.append(
+            "# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) "
+            "Component Real Imag Error\n"
+        )
 
         for blk in self.blocks:
             comp = blk["component_type"]
@@ -405,7 +408,8 @@ class ModEmData(ModEmBase):
                 period, sidx, x, y, z, comp_str, real, imag, err = row
                 code = (
                     self.site_names[sidx]
-                    if sidx < len(self.site_names) else f"S{sidx:04d}"
+                    if sidx < len(self.site_names)
+                    else f"S{sidx:04d}"
                 )
                 lonlat = self.site_lonlat.get(code)
                 lat = lonlat[1] if lonlat is not None else 0.0
@@ -516,8 +520,8 @@ class ModEmData(ModEmBase):
                 lat, lon = float(c[0]), float(c[1])
                 elev = float(c[2]) if len(c) > 2 else 0.0
             else:
-                lat  = float(getattr(it, "lat",  0.0))
-                lon  = float(getattr(it, "lon",  0.0))
+                lat = float(getattr(it, "lat", 0.0))
+                lon = float(getattr(it, "lon", 0.0))
                 elev = float(getattr(it, "elev", 0.0))
             # Convert lat/lon to X(northing)/Y(easting) in metres
             x_m, y_m = _latlon_to_xy(lat, lon, lat_ref=lat, lon_ref=lon)
@@ -527,18 +531,26 @@ class ModEmData(ModEmBase):
 
         # Recompute offsets relative to centroid
         if len(names) > 1:
-            lats = np.array([
-                float(getattr(it, "coords", [0,0,0])[0]
-                      if getattr(it, "coords", None) is not None
-                      else getattr(it, "lat", 0.0))
-                for it in items
-            ])
-            lons = np.array([
-                float(getattr(it, "coords", [0,0,0])[1]
-                      if getattr(it, "coords", None) is not None
-                      else getattr(it, "lon", 0.0))
-                for it in items
-            ])
+            lats = np.array(
+                [
+                    float(
+                        getattr(it, "coords", [0, 0, 0])[0]
+                        if getattr(it, "coords", None) is not None
+                        else getattr(it, "lat", 0.0)
+                    )
+                    for it in items
+                ]
+            )
+            lons = np.array(
+                [
+                    float(
+                        getattr(it, "coords", [0, 0, 0])[1]
+                        if getattr(it, "coords", None) is not None
+                        else getattr(it, "lon", 0.0)
+                    )
+                    for it in items
+                ]
+            )
             lat0, lon0 = float(lats.mean()), float(lons.mean())
             for it, name in zip(items, names):
                 c = getattr(it, "coords", None)
@@ -596,9 +608,7 @@ class ModEmData(ModEmBase):
                 for comp_str, (ri, ci) in _comp_indices(comp_type):
                     z_val = complex(z_arr[fi, ri, ci])
                     if z_err_arr is not None:
-                        z_e = abs(
-                            float(np.asarray(z_err_arr)[fi, ri, ci])
-                        )
+                        z_e = abs(float(np.asarray(z_err_arr)[fi, ri, ci]))
                     else:
                         z_e = 0.0
                     # Floor relative to max |Z| at this frequency.
@@ -640,9 +650,10 @@ class ModEmData(ModEmBase):
 
         if obj.verbose:
             obj.logger.info(
-                "ModEmData.from_edi: %d sites, %d periods, "
-                "component=%s",
-                len(names), len(global_periods), comp_type,
+                "ModEmData.from_edi: %d sites, %d periods, component=%s",
+                len(names),
+                len(global_periods),
+                comp_type,
             )
         return obj
 
@@ -651,6 +662,7 @@ class ModEmData(ModEmBase):
 # Helpers
 # ----------------------------------------------------------------------
 
+
 def _normalise_source(source) -> list:
     """Return a list of site-like objects from supported sources."""
     if hasattr(source, "_items"):
@@ -658,6 +670,7 @@ def _normalise_source(source) -> list:
     if hasattr(source, "edic"):
         try:
             from pycsamt.site.base import Site
+
             return [Site(e) for e in source.edic]
         except Exception:
             return list(source.edic)
@@ -694,9 +707,14 @@ def _match_freq(
 def _comp_indices(comp_type: str) -> list[tuple[str, tuple[int, int]]]:
     """Return component names and tensor indices for a Z array."""
     _map = {
-        "ZXX": (0, 0), "ZXY": (0, 1), "ZYX": (1, 0), "ZYY": (1, 1),
-        "TE":  (0, 1), "TM":  (1, 0),
-        "HZX": (0, 0), "HZY": (0, 1),
+        "ZXX": (0, 0),
+        "ZXY": (0, 1),
+        "ZYX": (1, 0),
+        "ZYY": (1, 1),
+        "TE": (0, 1),
+        "TM": (1, 0),
+        "HZX": (0, 0),
+        "HZY": (0, 1),
         "ZDet": None,
     }
     comps = _KNOWN_COMPONENTS.get(comp_type, ())

@@ -38,6 +38,7 @@ PROVIDER_RATES: dict[str, dict[str, dict[str, float]]] = _BUILTIN_RATES
 # Public helpers — delegate to AGENT_CONFIG so custom overrides apply
 # ---------------------------------------------------------------------------
 
+
 def get_rate(provider: str, model: str) -> dict[str, float]:
     """Return the resolved ``{"input": …, "output": …}`` rate.
 
@@ -85,7 +86,9 @@ def estimate_cost(
     >>> estimate_cost("claude", "claude-sonnet-4-6", 500, 200)
     0.00451...
     """
-    return AGENT_CONFIG.estimate_cost(provider, model, input_tokens, output_tokens)
+    return AGENT_CONFIG.estimate_cost(
+        provider, model, input_tokens, output_tokens
+    )
 
 
 def format_cost(usd: float) -> str:

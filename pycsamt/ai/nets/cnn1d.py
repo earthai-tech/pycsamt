@@ -17,6 +17,7 @@ Puzyrev, V. et al. (2019). Deep CNNs for 1D inversion of EM data.
 Puzyrev, V. & Swidinsky, A. (2021). Inversion of 1D frequency- and
 time-domain EM data with CNNs. *Computers & Geosciences*, 149, 104681.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -28,6 +29,7 @@ def _require_torch():
     try:
         import torch
         import torch.nn as nn
+
         return torch, nn
     except ImportError:
         raise ImportError(
@@ -76,7 +78,8 @@ class CNN1DNet:
         """Return the ``nn.Module``."""
         torch, nn = _require_torch()
         return _CNN1DModule(
-            self.n_features, self.n_out,
+            self.n_features,
+            self.n_out,
             channels=self.channels,
             kernel_size=self.kernel_size,
             dropout=self.dropout,
@@ -90,6 +93,7 @@ class CNN1DNet:
 
 
 # ─── Internal nn.Module ───────────────────────────────────────────────────────
+
 
 def _build_cnn1d(n_features, n_out, channels, kernel_size, dropout):
     """Build and return a CNN1D nn.Module (called lazily)."""
@@ -136,7 +140,7 @@ def _build_cnn1d(n_features, n_out, channels, kernel_size, dropout):
 
         def forward(self, x):
             # x: (batch, n_features)
-            x = x.unsqueeze(1)               # (batch, 1, n_features)
+            x = x.unsqueeze(1)  # (batch, 1, n_features)
             x = self.encoder(x)
             x = x.reshape(x.size(0), -1)
             return self.head(x)
@@ -147,8 +151,12 @@ def _build_cnn1d(n_features, n_out, channels, kernel_size, dropout):
 # Monkey-patch build to use the lazy factory
 def _cnn1d_build(self):
     return _build_cnn1d(
-        self.n_features, self.n_out,
-        self.channels, self.kernel_size, self.dropout
+        self.n_features,
+        self.n_out,
+        self.channels,
+        self.kernel_size,
+        self.dropout,
     )
+
 
 CNN1DNet.build = _cnn1d_build

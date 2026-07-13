@@ -93,9 +93,7 @@ def test_heads_write_roundtrip(j_single_file: Path):
         if st is None and RE_STATION.match(s):
             st = s
             continue
-        if st is not None and dt is None and (
-            RE_DATATYPE_UNITS.match(s)
-        ):
+        if st is not None and dt is None and (RE_DATATYPE_UNITS.match(s)):
             dt = s
             continue
         if st is not None and dt is not None and ct is None:
@@ -118,9 +116,7 @@ def test_info_write_roundtrip(j_single_file: Path):
 def test_property_from_file_true(j_single_file: Path):
     prop = JSiteProperty.from_file(j_single_file, strict=False)
     if prop.azimuth is not None:
-        assert 0.0 <= prop.azimuth < 360.0 or (
-            -360.0 < prop.azimuth < 360.0
-        )
+        assert 0.0 <= prop.azimuth < 360.0 or (-360.0 < prop.azimuth < 360.0)
     if prop.latitude is not None:
         assert -90.0 <= prop.latitude <= 90.0
     if prop.longitude is not None:

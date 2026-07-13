@@ -42,7 +42,7 @@ class StationModel(QAbstractTableModel):
 
     def set_dataframe(self, df: pd.DataFrame) -> None:
         """Replace the backing DataFrame and refresh all views."""
-        self._recomputed_ids.clear()   # clear before reset so views never see stale badges
+        self._recomputed_ids.clear()  # clear before reset so views never see stale badges
         self.beginResetModel()
         self._df = df.reset_index(drop=True)
         self.endResetModel()
@@ -57,7 +57,7 @@ class StationModel(QAbstractTableModel):
         # Pass [] for roles so Qt treats all roles as changed (avoids PySide6
         # strict-int issues with enum values in QList<int>).
         if len(self._df) > 0:
-            top    = self.index(0, 0)
+            top = self.index(0, 0)
             bottom = self.index(len(self._df) - 1, 0)
             self.dataChanged.emit(top, bottom, [])
 
@@ -77,7 +77,9 @@ class StationModel(QAbstractTableModel):
             return 0
         return len(_COLUMNS)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
         if not index.isValid():
             return None
         col_name = _COLUMNS[index.column()]
@@ -107,13 +109,19 @@ class StationModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.ToolTipRole:
             if col_name == "ID" and str(value) in self._recomputed_ids:
-                return "This station has been recomputed with EDIRecomputer (◈)"
+                return (
+                    "This station has been recomputed with EDIRecomputer (◈)"
+                )
             return None
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if col_name == "ID":
-                return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                return int(
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                )
+            return int(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
 
         return None
 

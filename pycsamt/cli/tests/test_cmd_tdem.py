@@ -26,7 +26,7 @@ from pycsamt.cli import main
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_TEMAVG_DIR   = _PROJECT_ROOT / "data" / "TEMAVG" / "JIANGSU"
+_TEMAVG_DIR = _PROJECT_ROOT / "data" / "TEMAVG" / "JIANGSU"
 
 
 def _has_temavg() -> bool:
@@ -36,6 +36,7 @@ def _has_temavg() -> bool:
 # ---------------------------------------------------------------------------
 # pycsamt tdem  (group help)
 # ---------------------------------------------------------------------------
+
 
 class TestTdemGroup:
     def test_help(self, runner: CliRunner) -> None:
@@ -55,6 +56,7 @@ class TestTdemGroup:
 # pycsamt tdem info
 # ---------------------------------------------------------------------------
 
+
 class TestTdemInfo:
     @pytest.fixture(autouse=True)
     def require_temavg(self) -> None:
@@ -73,8 +75,14 @@ class TestTdemInfo:
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
-        for key in ("root", "n_avg_files", "n_z_files", "n_log_files",
-                    "avg_stems", "has_coordinates"):
+        for key in (
+            "root",
+            "n_avg_files",
+            "n_z_files",
+            "n_log_files",
+            "avg_stems",
+            "has_coordinates",
+        ):
             assert key in data
 
     def test_n_avg_files_positive(self, runner: CliRunner) -> None:
@@ -85,9 +93,7 @@ class TestTdemInfo:
         assert data["n_avg_files"] > 0
 
     def test_verbose_flag(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["tdem", "info", str(_TEMAVG_DIR), "-v"]
-        )
+        result = runner.invoke(main, ["tdem", "info", str(_TEMAVG_DIR), "-v"])
         assert result.exit_code == 0
 
     def test_nonexistent_dir_fails(self, runner: CliRunner) -> None:
@@ -98,6 +104,7 @@ class TestTdemInfo:
 # ---------------------------------------------------------------------------
 # pycsamt tdem convert
 # ---------------------------------------------------------------------------
+
 
 class TestTdemConvert:
     @pytest.fixture(autouse=True)
@@ -117,8 +124,13 @@ class TestTdemConvert:
     ) -> None:
         result = runner.invoke(
             main,
-            ["tdem", "convert", str(_TEMAVG_DIR),
-             "--output-dir", str(tmp_path)],
+            [
+                "tdem",
+                "convert",
+                str(_TEMAVG_DIR),
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
         assert "Soundings" in result.output
@@ -128,8 +140,15 @@ class TestTdemConvert:
     ) -> None:
         result = runner.invoke(
             main,
-            ["tdem", "convert", str(_TEMAVG_DIR),
-             "--output-dir", str(tmp_path), "--format", "json"],
+            [
+                "tdem",
+                "convert",
+                str(_TEMAVG_DIR),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -137,17 +156,12 @@ class TestTdemConvert:
             assert key in data
 
     def test_no_output_dir_fails(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["tdem", "convert", str(_TEMAVG_DIR)]
-        )
+        result = runner.invoke(main, ["tdem", "convert", str(_TEMAVG_DIR)])
         assert result.exit_code != 0
 
-    def test_stems_filter(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_stems_filter(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
-            main,
-            ["tdem", "info", str(_TEMAVG_DIR), "--format", "json"]
+            main, ["tdem", "info", str(_TEMAVG_DIR), "--format", "json"]
         )
         stems = json.loads(result.output).get("avg_stems", [])
         if not stems:
@@ -156,23 +170,34 @@ class TestTdemConvert:
         one_stem = stems[0]
         result = runner.invoke(
             main,
-            ["tdem", "convert", str(_TEMAVG_DIR),
-             "--stems", one_stem,
-             "--output-dir", str(tmp_path),
-             "--format", "json"],
+            [
+                "tdem",
+                "convert",
+                str(_TEMAVG_DIR),
+                "--stems",
+                one_stem,
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["n_soundings"] >= 1
 
-    def test_method_fourier(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_method_fourier(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
-            ["tdem", "convert", str(_TEMAVG_DIR),
-             "--method", "fourier",
-             "--output-dir", str(tmp_path)],
+            [
+                "tdem",
+                "convert",
+                str(_TEMAVG_DIR),
+                "--method",
+                "fourier",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0
 
@@ -187,6 +212,7 @@ class TestTdemConvert:
 # pycsamt tdem plot
 # ---------------------------------------------------------------------------
 
+
 class TestTdemPlot:
     @pytest.fixture(autouse=True)
     def require_temavg(self) -> None:
@@ -194,12 +220,20 @@ class TestTdemPlot:
             pytest.skip("data/TEMAVG/JIANGSU/ not found")
 
     @pytest.mark.parametrize("kind", ["decay", "rho", "section", "map"])
-    def test_plot_saves_file(self, runner: CliRunner, tmp_path: Path, kind: str) -> None:
+    def test_plot_saves_file(
+        self, runner: CliRunner, tmp_path: Path, kind: str
+    ) -> None:
         result = runner.invoke(
             main,
-            ["tdem", "plot", str(_TEMAVG_DIR),
-             "--kind", kind,
-             "--output-dir", str(tmp_path)],
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--kind",
+                kind,
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         if result.exit_code != 0:
             pytest.skip(f"Plot kind {kind!r} not available: {result.output}")
@@ -217,6 +251,7 @@ class TestTdemPlot:
 # Workflow unit tests (no CLI, no CliRunner needed)
 # ---------------------------------------------------------------------------
 
+
 class TestTdemWorkflowUnit:
     @pytest.fixture(autouse=True)
     def require_temavg(self) -> None:
@@ -227,6 +262,7 @@ class TestTdemWorkflowUnit:
         from pycsamt.tdem.workflow import (
             read_temavg_soundings,
         )
+
         soundings = read_temavg_soundings(_TEMAVG_DIR)
         assert isinstance(soundings, list)
         assert len(soundings) > 0
@@ -235,12 +271,14 @@ class TestTdemWorkflowUnit:
         from pycsamt.tdem.workflow import (
             read_temavg_soundings,
         )
+
         soundings = read_temavg_soundings(_TEMAVG_DIR)
         snd = soundings[0]
         assert len(snd.time_gates) > 0
 
     def test_survey_has_avg_files(self) -> None:
         from pycsamt.tdem.survey import read_temavg_survey
+
         survey = read_temavg_survey(_TEMAVG_DIR)
         assert len(survey.avg_files) > 0
 
@@ -248,6 +286,7 @@ class TestTdemWorkflowUnit:
         from pycsamt.tdem.workflow import (
             transform_temavg_survey,
         )
+
         result = transform_temavg_survey(_TEMAVG_DIR)
         assert result.n_soundings > 0
 
@@ -255,6 +294,7 @@ class TestTdemWorkflowUnit:
         from pycsamt.tdem.workflow import (
             transform_temavg_survey,
         )
+
         result = transform_temavg_survey(_TEMAVG_DIR, savepath=tmp_path)
         assert result.n_soundings > 0
         assert len(result.written_paths) > 0

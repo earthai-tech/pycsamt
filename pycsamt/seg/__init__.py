@@ -6,13 +6,25 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 __all__ = [
-    "EDIMixin", "EDIOMixin", "EDIFile",
-    "Spectra", "SpectraSECT", "SpectraIO",
-    "TimeSeries", "TSect", "TSIO",
-    "OtherSECT", "OtherIO",
+    "EDIMixin",
+    "EDIOMixin",
+    "EDIFile",
+    "Spectra",
+    "SpectraSECT",
+    "SpectraIO",
+    "TimeSeries",
+    "TSect",
+    "TSIO",
+    "OtherSECT",
+    "OtherIO",
     "IsEdi",
-    "SurveyBase", "EDIProfile", "Stations", "Topography",
-    "XAMixin", "build_dataset", "EDIAcc",
+    "SurveyBase",
+    "EDIProfile",
+    "Stations",
+    "Topography",
+    "XAMixin",
+    "build_dataset",
+    "EDIAcc",
 ]
 
 # Map exported names to (module, attribute)
@@ -38,6 +50,7 @@ _EXPORTS = {
     "EDIAcc": ("xa", "EDIAcc"),
 }
 
+
 def __getattr__(name: str):
     if name in _EXPORTS:
         mod, attr = _EXPORTS[name]
@@ -53,6 +66,7 @@ def __getattr__(name: str):
         globals()[name] = val  # cache after first access
         return val
     raise AttributeError(name)
+
 
 # Type checkers/IDE intellisense still see the symbols:
 if TYPE_CHECKING:

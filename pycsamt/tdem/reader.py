@@ -49,6 +49,7 @@ Quick start
     # inspect cached results
     print(reader.results)
 """
+
 from __future__ import annotations
 
 import logging
@@ -72,14 +73,14 @@ Pathish = Union[str, Path]
 # Each entry: format_name → (reader_callable, [file_extensions])
 # Extensions are lower-cased without the leading dot.
 _REGISTRY: dict[str, tuple] = {
-    "xyz":      (io.read_xyz,          ["xyz", "csv", "txt"]),
-    "temavg":   (io.read_temavg,       ["avg"]),
-    "tem_z":    (io.read_tem_z,        ["z"]),
-    "tem_log":  (io.read_tem_log,      ["log"]),
-    "geosoft":  (io.read_geosoft_dat,  ["dat"]),
-    "amira":    (io.read_amira,        ["tem"]),
-    "zonge":    (io.read_zonge,        ["avg", "tem"]),
-    "walkttem": (io.read_walkttem,     ["tem"]),
+    "xyz": (io.read_xyz, ["xyz", "csv", "txt"]),
+    "temavg": (io.read_temavg, ["avg"]),
+    "tem_z": (io.read_tem_z, ["z"]),
+    "tem_log": (io.read_tem_log, ["log"]),
+    "geosoft": (io.read_geosoft_dat, ["dat"]),
+    "amira": (io.read_amira, ["tem"]),
+    "zonge": (io.read_zonge, ["avg", "tem"]),
+    "walkttem": (io.read_walkttem, ["tem"]),
 }
 
 # ── Extension → candidate format names ───────────────────────────────────────
@@ -94,6 +95,7 @@ for _fmt, (_fn, _exts) in _REGISTRY.items():
 # ─────────────────────────────────────────────────────────────────────────────
 # Format auto-detection
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _first_lines(path: Path, n: int = 10) -> list[str]:
     """Return the first *n* non-blank, non-comment lines of *path*."""
@@ -134,9 +136,11 @@ def _detect_format(path: Path) -> str:
 
     if ext == "avg":
         # Zonge TEMAVG processed format starts with `\ TEMAVG`
-        if any(ln.upper().startswith(("\\", "/ TEMAVG", "\\ TEMAVG")) or
-               "TEMAVG" in ln.upper()
-               for ln in lines[:3]):
+        if any(
+            ln.upper().startswith(("\\", "/ TEMAVG", "\\ TEMAVG"))
+            or "TEMAVG" in ln.upper()
+            for ln in lines[:3]
+        ):
             # Could still be Zonge GDP (starts with *)
             if any(ln.startswith("*") for ln in lines[:3]):
                 return "zonge"
@@ -145,26 +149,38 @@ def _detect_format(path: Path) -> str:
 
     if ext == "tem":
         # WalkTEM / Aarhus Workbench uses TXOPERATION or GATESET keywords
-        if any(kw in joined
-               for kw in ("TXOPERATION", "GATESET", "GENERALHEADER",
-                          "DATASTATUS", "END_TXOPERATION")):
+        if any(
+            kw in joined
+            for kw in (
+                "TXOPERATION",
+                "GATESET",
+                "GENERALHEADER",
+                "DATASTATUS",
+                "END_TXOPERATION",
+            )
+        ):
             return "walkttem"
         # AMIRA / EMIT uses TRANSMITTER_ keywords or `;` comments
-        if any(kw in joined
-               for kw in ("TRANSMITTER_AREA", "TRANSMITTER_CURRENT",
-                          "GATE_TIMES", "DATA_UNIT")) or any(
-               ln.startswith(";") for ln in lines[:5]):
+        if any(
+            kw in joined
+            for kw in (
+                "TRANSMITTER_AREA",
+                "TRANSMITTER_CURRENT",
+                "GATE_TIMES",
+                "DATA_UNIT",
+            )
+        ) or any(ln.startswith(";") for ln in lines[:5]):
             return "amira"
         # Zonge GDP uses `*` comment lines
         if any(ln.startswith("*") for ln in lines[:5]):
             return "zonge"
-        return "amira"   # safest default for unknown .tem
+        return "amira"  # safest default for unknown .tem
 
     if ext in ("dat",):
         # Geosoft DAT: comment lines start with `/`
         if any(ln.startswith("/") for ln in lines[:5]):
             return "geosoft"
-        return "geosoft"   # .dat with no `/` lines → still try geosoft
+        return "geosoft"  # .dat with no `/` lines → still try geosoft
 
     if ext in ("z",):
         return "tem_z"
@@ -178,6 +194,7 @@ def _detect_format(path: Path) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # TEMReader
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TEMReader(PyCSAMTObject, MetadataMixin):
     """Unified TEM file reader with format auto-detection.
@@ -238,9 +255,17 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
 
     # Fields shown by PyCSAMTObject.__repr__
     __repr_fields__ = (
-        "current", "tx_area", "loop_side", "loop_radius",
-        "rx_area", "rx_turns", "data_unit", "data_type",
-        "gate_times_unit", "store", "verbose",
+        "current",
+        "tx_area",
+        "loop_side",
+        "loop_radius",
+        "rx_area",
+        "rx_turns",
+        "data_unit",
+        "data_type",
+        "gate_times_unit",
+        "store",
+        "verbose",
     )
     __repr_exclude__ = {"logger", "_log", "_results"}
 
@@ -260,17 +285,17 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
         verbose: int = 0,
         logger: logging.Logger | None = None,
     ) -> None:
-        self.current         = current
-        self.tx_area         = tx_area
-        self.loop_side       = loop_side
-        self.loop_radius     = loop_radius
-        self.rx_area         = rx_area
-        self.rx_turns        = rx_turns
-        self.data_unit       = data_unit
-        self.data_type       = data_type
+        self.current = current
+        self.tx_area = tx_area
+        self.loop_side = loop_side
+        self.loop_radius = loop_radius
+        self.rx_area = rx_area
+        self.rx_turns = rx_turns
+        self.data_unit = data_unit
+        self.data_type = data_type
         self.gate_times_unit = gate_times_unit
-        self.store           = store
-        self.verbose         = verbose
+        self.store = store
+        self.verbose = verbose
         self._log: logging.Logger = logger or get_logger(__name__)
         self._results: dict[str, Any] = {}
 
@@ -292,13 +317,21 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
     def _defaults(self) -> dict[str, Any]:
         """Return non-None instance-level acquisition defaults."""
         keys = (
-            "current", "tx_area", "loop_side", "loop_radius",
-            "rx_area", "rx_turns", "data_unit", "data_type",
+            "current",
+            "tx_area",
+            "loop_side",
+            "loop_radius",
+            "rx_area",
+            "rx_turns",
+            "data_unit",
+            "data_type",
             "gate_times_unit",
         )
-        return {k: getattr(self, k)
-                for k in keys
-                if getattr(self, k, None) is not None}
+        return {
+            k: getattr(self, k)
+            for k in keys
+            if getattr(self, k, None) is not None
+        }
 
     def _merge(self, **call_kwargs: Any) -> dict[str, Any]:
         """Merge instance defaults with per-call kwargs.
@@ -307,9 +340,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
         they do not shadow a real instance default.
         """
         merged = self._defaults()
-        merged.update(
-            {k: v for k, v in call_kwargs.items() if v is not None}
-        )
+        merged.update({k: v for k, v in call_kwargs.items() if v is not None})
         return merged
 
     # ── Registry access ───────────────────────────────────────────────────────
@@ -374,8 +405,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
 
         if fmt is not None and fmt not in _REGISTRY:
             raise ValueError(
-                f"Unknown format {fmt!r}.  "
-                f"Valid formats: {self.formats}"
+                f"Unknown format {fmt!r}.  Valid formats: {self.formats}"
             )
 
         resolved_fmt = fmt or _detect_format(p)
@@ -395,7 +425,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
                 f"({exc})"
             )
             safe_keys = {"verbose", "logger"}
-            safe_kw   = {k: v for k, v in merged.items() if k in safe_keys}
+            safe_kw = {k: v for k, v in merged.items() if k in safe_keys}
             result = reader_fn(p, **safe_kw)
 
         n = len(result) if hasattr(result, "__len__") else 1
@@ -546,9 +576,17 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
             Any writable :class:`TEMReader` attribute.
         """
         _valid = {
-            "current", "tx_area", "loop_side", "loop_radius",
-            "rx_area", "rx_turns", "data_unit", "data_type",
-            "gate_times_unit", "store", "verbose",
+            "current",
+            "tx_area",
+            "loop_side",
+            "loop_radius",
+            "rx_area",
+            "rx_turns",
+            "data_unit",
+            "data_type",
+            "gate_times_unit",
+            "store",
+            "verbose",
         }
         for k, v in kwargs.items():
             if k not in _valid:

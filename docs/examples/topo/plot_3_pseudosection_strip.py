@@ -44,8 +44,9 @@ from pycsamt.topo import (
     extract_station_names,
 )
 
-
-sites = ensure_sites(ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT", verbose=0)
+sites = ensure_sites(
+    ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT", verbose=0
+)
 names = extract_station_names(sites)
 chain_km = extract_chainage(sites)
 elev_m = extract_elevation(sites)
@@ -113,7 +114,9 @@ draw_topo_strip(
 # pseudosection vertical axis remains frequency.  Do not read the strip as a
 # model surface or as terrain-draped depth.
 
-print(f"Elevation range shown in strip: {elev_m.min():.1f}-{elev_m.max():.1f} m")
+print(
+    f"Elevation range shown in strip: {elev_m.min():.1f}-{elev_m.max():.1f} m"
+)
 print(f"Number of station labels: {len(names)}")
 
 # %%

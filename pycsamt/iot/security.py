@@ -147,7 +147,8 @@ class Credential(PyCSAMTObject):
     def reveal(self) -> dict[str, Any]:
         """Return the raw credential values (handle with care)."""
         return dict(
-            scheme=self.scheme.value if isinstance(self.scheme, AuthScheme)
+            scheme=self.scheme.value
+            if isinstance(self.scheme, AuthScheme)
             else str(self.scheme),
             token=self.token,
             username=self.username,
@@ -159,7 +160,8 @@ class Credential(PyCSAMTObject):
     def as_dict(self) -> dict[str, Any]:
         """Return a redacted, serialisable credential summary."""
         return dict(
-            scheme=self.scheme.value if isinstance(self.scheme, AuthScheme)
+            scheme=self.scheme.value
+            if isinstance(self.scheme, AuthScheme)
             else str(self.scheme),
             token=redact_secret(self.token),
             username=self.username,
@@ -242,7 +244,8 @@ class SecurityConfig(PyCSAMTObject):
             require_tls=self.require_tls,
             allowed_protocols=(
                 list(self.allowed_protocols)
-                if self.allowed_protocols is not None else None
+                if self.allowed_protocols is not None
+                else None
             ),
         )
 
@@ -254,6 +257,7 @@ class SecurityConfig(PyCSAMTObject):
         ``USERNAME``, ``PASSWORD``, ``TLS`` (truthy), ``CA_CERT``,
         ``CERTFILE``, ``KEYFILE``.
         """
+
         def _env(name: str) -> str | None:
             return os.environ.get(prefix + name)
 
@@ -264,7 +268,9 @@ class SecurityConfig(PyCSAMTObject):
         if token:
             credential = Credential(scheme=AuthScheme.BEARER, token=token)
         elif api_key:
-            credential = Credential(scheme=AuthScheme.API_KEY, api_key=api_key)
+            credential = Credential(
+                scheme=AuthScheme.API_KEY, api_key=api_key
+            )
         elif username and password:
             credential = Credential(
                 scheme=AuthScheme.BASIC, username=username, password=password

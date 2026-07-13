@@ -31,6 +31,7 @@ from .utils import iter_info, iter_lines
 
 __all__ = ["JSiteProperty"]
 
+
 @dataclass
 class JSiteProperty:
     r"""
@@ -232,9 +233,7 @@ class JSiteProperty:
                     az = _to_float_safe(val)
                     props["azimuth"] = _norm_azimuth(az)
                 elif key_up == "LATITUDE":
-                    lat = _parse_latitude(
-                        val, strict=strict, verbose=verbose
-                    )
+                    lat = _parse_latitude(val, strict=strict, verbose=verbose)
                     props["latitude"] = lat
                 elif key_up == "LONGITUDE":
                     lon = _parse_longitude(
@@ -243,9 +242,7 @@ class JSiteProperty:
                     props["longitude"] = lon
                 elif key_up == "ELEVATION":
                     el = _maybe_missing_float(val)
-                    props["elevation"] = (
-                        float(el) if el is not None else None
-                    )
+                    props["elevation"] = float(el) if el is not None else None
                 else:
                     extra[key_up] = str(val).strip()
             except ValueError as exc:
@@ -263,7 +260,6 @@ class JSiteProperty:
             verbose=verbose,
             strict=strict,
         )
-
 
     @classmethod
     def from_mapping(
@@ -353,8 +349,10 @@ class JSiteProperty:
                 parts.append(f"{k}={v!r}")
         s = ", ".join(parts)
         if self.extra:
-            s = f"{s}, extra={len(self.extra)} keys" if s else (
-                f"extra={len(self.extra)} keys"
+            s = (
+                f"{s}, extra={len(self.extra)} keys"
+                if s
+                else (f"extra={len(self.extra)} keys")
             )
         return f"JSiteProperty({s})"
 
@@ -394,6 +392,7 @@ def _parse_latitude(
         lat = _coerce_lat(lat)
     return lat
 
+
 def _parse_longitude(
     value: str, *, strict: bool, verbose: int | bool
 ) -> float | None:
@@ -416,15 +415,14 @@ def _parse_longitude(
 
     fixed = _coerce_lon(lon)
     if abs(fixed - lon) > 1e-12:
-        _vwarn(
-            f"Longitude {lon:.6f} normalized to {fixed:.6f}", verbose
-        )
+        _vwarn(f"Longitude {lon:.6f} normalized to {fixed:.6f}", verbose)
     return fixed
 
 
 def _vwarn(msg: str, verbose: int | bool) -> None:
     if verbose:
         warnings.warn(msg, RuntimeWarning, stacklevel=2)
+
 
 def _to_float_safe(s: str) -> float:
     """Best‑effort float parser for simple
@@ -452,12 +450,3 @@ def _coerce_lat(v: float) -> float:
 
 def _coerce_lon(v: float) -> float:
     return ((v + 180.0) % 360.0) - 180.0
-
-
-
-
-
-
-
-
-

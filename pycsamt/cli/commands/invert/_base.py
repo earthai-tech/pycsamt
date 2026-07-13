@@ -27,16 +27,20 @@ import click
 # Solver fingerprints
 # ---------------------------------------------------------------------------
 
-_OCCAM_SIGNATURES = frozenset({
-    "OccamDataFile.dat",
-    "Occam2DMesh",
-    "Occam2DModel",
-    "Startup",
-    # Backward-compatible aliases from early CLI fixtures and examples.
-    "OccamData.dat",
-    "Occam2DStartup",
-})
-_MODEM_SIGNATURES  = frozenset({"ModEMData.dat", "ModEM.inv", "Modular_NLCG.log"})
+_OCCAM_SIGNATURES = frozenset(
+    {
+        "OccamDataFile.dat",
+        "Occam2DMesh",
+        "Occam2DModel",
+        "Startup",
+        # Backward-compatible aliases from early CLI fixtures and examples.
+        "OccamData.dat",
+        "Occam2DStartup",
+    }
+)
+_MODEM_SIGNATURES = frozenset(
+    {"ModEMData.dat", "ModEM.inv", "Modular_NLCG.log"}
+)
 
 
 def _detect_solver(workdir: Path) -> str | None:
@@ -68,6 +72,7 @@ def _resolve_solver(solver: str | None, workdir: Path) -> str:
 # Rich helper
 # ---------------------------------------------------------------------------
 
+
 def _rich_table(
     title: str,
     rows: list[tuple[str, str]],
@@ -77,9 +82,10 @@ def _rich_table(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         console = Console()
         t = Table(title=title, border_style=style, show_header=False)
-        t.add_column("Key",   style="bold")
+        t.add_column("Key", style="bold")
         t.add_column("Value", style="white")
         for k, v in rows:
             t.add_row(k, v)
@@ -93,6 +99,7 @@ def _rich_table(
 # ---------------------------------------------------------------------------
 # Shared InversionResult loader
 # ---------------------------------------------------------------------------
+
 
 def _load_inversion_result(
     workdir: Path,
@@ -119,6 +126,7 @@ def _load_inversion_result(
 # ---------------------------------------------------------------------------
 # Root group
 # ---------------------------------------------------------------------------
+
 
 @click.group("invert")
 @click.pass_context

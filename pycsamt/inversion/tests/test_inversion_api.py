@@ -119,143 +119,307 @@ def test_emdata_public_docstrings_describe_coercion_contracts():
     assert "from pycsamt.inversion.data import EMData" in EMData.__doc__
     assert "References" in EMData.__doc__
     assert "periods" in EMData.from_dict.__doc__
-    assert "from pycsamt.inversion.data import EMData" in EMData.from_dict.__doc__
+    assert (
+        "from pycsamt.inversion.data import EMData"
+        in EMData.from_dict.__doc__
+    )
     assert "to_soundings()" in EMData.coerce.__doc__
     assert "class Response" in EMData.coerce.__doc__
 
 
 def test_export_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.export import to_csv" in export.to_csv.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_csv" in export.to_csv.__doc__
+    )
     assert "RFC 4180" in export.to_csv.__doc__
-    assert "from pycsamt.inversion.export import to_npz" in export.to_npz.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_npz" in export.to_npz.__doc__
+    )
     assert "numpy.savez_compressed" in export.to_npz.__doc__
-    assert "from pycsamt.inversion.export import to_geojson" in export.to_geojson.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_geojson"
+        in export.to_geojson.__doc__
+    )
     assert "RFC 7946" in export.to_geojson.__doc__
-    assert "from pycsamt.inversion.export import to_vtk" in export.to_vtk.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_vtk" in export.to_vtk.__doc__
+    )
     assert "Visualization Toolkit" in export.to_vtk.__doc__
-    assert "from pycsamt.inversion.export import to_geotiff" in export.to_geotiff.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_geotiff"
+        in export.to_geotiff.__doc__
+    )
     assert "GeoTIFF" in export.to_geotiff.__doc__
-    assert "from pycsamt.inversion.export import to_archive" in export.to_archive.__doc__
+    assert (
+        "from pycsamt.inversion.export import to_archive"
+        in export.to_archive.__doc__
+    )
     assert "metadata.json" in export.to_archive.__doc__
 
 
 def test_mesh_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.mesh import InversionMesh" in InversionMesh.__doc__
+    assert (
+        "from pycsamt.inversion.mesh import InversionMesh"
+        in InversionMesh.__doc__
+    )
     assert "Oldenburg" in InversionMesh.__doc__
-    assert "from pycsamt.inversion.mesh import depth_widths" in depth_widths.__doc__
+    assert (
+        "from pycsamt.inversion.mesh import depth_widths"
+        in depth_widths.__doc__
+    )
     assert "Ward" in depth_widths.__doc__
-    assert "from pycsamt.inversion.mesh import build_1d_tensor_mesh" in build_1d_tensor_mesh.__doc__
-    assert "from pycsamt.inversion.mesh import build_3d_tensor_mesh" in build_3d_tensor_mesh.__doc__
-    assert "from pycsamt.inversion.mesh import build_fd2d_grid" in build_fd2d_grid.__doc__
-    assert "from pycsamt.inversion.mesh import core_rho_from_start" in core_rho_from_start.__doc__
+    assert (
+        "from pycsamt.inversion.mesh import build_1d_tensor_mesh"
+        in build_1d_tensor_mesh.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.mesh import build_3d_tensor_mesh"
+        in build_3d_tensor_mesh.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.mesh import build_fd2d_grid"
+        in build_fd2d_grid.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.mesh import core_rho_from_start"
+        in core_rho_from_start.__doc__
+    )
 
 
 def test_model_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.__doc__
+    assert (
+        "from pycsamt.inversion.model import StartingModel"
+        in StartingModel.__doc__
+    )
     assert "ReferenceModel" in StartingModel.__doc__
     assert "Constable" in StartingModel.__doc__
-    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.default.__doc__
-    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.from_dict.__doc__
-    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.coerce.__doc__
-    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.to_layered_model.__doc__
+    assert (
+        "from pycsamt.inversion.model import StartingModel"
+        in StartingModel.default.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.model import StartingModel"
+        in StartingModel.from_dict.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.model import StartingModel"
+        in StartingModel.coerce.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.model import StartingModel"
+        in StartingModel.to_layered_model.__doc__
+    )
 
 
 def test_objective_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.objective import ErrorModel" in ErrorModel.__doc__
+    assert (
+        "from pycsamt.inversion.objective import ErrorModel"
+        in ErrorModel.__doc__
+    )
     assert "Tarantola" in ErrorModel.__doc__
-    assert "from pycsamt.inversion.objective import ErrorModel" in ErrorModel.errors.__doc__
-    assert "from pycsamt.inversion.objective import ErrorModel" in ErrorModel.mask.__doc__
-    assert "from pycsamt.inversion.objective import relative_errors" in relative_errors.__doc__
-    assert "from pycsamt.inversion.objective import error_model_from_config" in error_model_from_config.__doc__
-    assert "from pycsamt.inversion.objective import component_errors" in component_errors.__doc__
-    assert "from pycsamt.inversion.objective import component_mask" in component_mask.__doc__
-    assert "from pycsamt.inversion.objective import weighted_rms" in weighted_rms.__doc__
+    assert (
+        "from pycsamt.inversion.objective import ErrorModel"
+        in ErrorModel.errors.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import ErrorModel"
+        in ErrorModel.mask.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import relative_errors"
+        in relative_errors.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import error_model_from_config"
+        in error_model_from_config.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import component_errors"
+        in component_errors.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import component_mask"
+        in component_mask.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.objective import weighted_rms"
+        in weighted_rms.__doc__
+    )
 
 
 def test_regularization_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.regularization import Regularization" in Regularization.__doc__
+    assert (
+        "from pycsamt.inversion.regularization import Regularization"
+        in Regularization.__doc__
+    )
     assert "Tikhonov" in Regularization.__doc__
-    assert "from pycsamt.inversion.regularization import Regularization" in Regularization.validate.__doc__
-    assert "from pycsamt.inversion.regularization import regularization_from_config" in regularization_from_config.__doc__
-    assert "from pycsamt.inversion.regularization import regularization_weight" in regularization_weight.__doc__
-    assert "from pycsamt.inversion.regularization import pygimli_lambda" in pygimli_lambda.__doc__
-    assert "from pycsamt.inversion.regularization import regularization_residual" in regularization_residual.__doc__
+    assert (
+        "from pycsamt.inversion.regularization import Regularization"
+        in Regularization.validate.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.regularization import regularization_from_config"
+        in regularization_from_config.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.regularization import regularization_weight"
+        in regularization_weight.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.regularization import pygimli_lambda"
+        in pygimli_lambda.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.regularization import regularization_residual"
+        in regularization_residual.__doc__
+    )
     assert "Farquharson" in regularization_residual.__doc__
 
 
 def test_results_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.results import InversionHistory" in InversionHistory.__doc__
+    assert (
+        "from pycsamt.inversion.results import InversionHistory"
+        in InversionHistory.__doc__
+    )
     assert "Constable" in InversionHistory.__doc__
-    assert "from pycsamt.inversion.results import InversionHistory" in InversionHistory.arrays.__doc__
-    assert "from pycsamt.inversion.results import InversionUncertainty" in InversionUncertainty.__doc__
-    assert "from pycsamt.inversion.results import InversionResult" in InversionResult.__doc__
+    assert (
+        "from pycsamt.inversion.results import InversionHistory"
+        in InversionHistory.arrays.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.results import InversionUncertainty"
+        in InversionUncertainty.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.results import InversionResult"
+        in InversionResult.__doc__
+    )
     assert "to_resistivity_model" in InversionResult.__doc__
-    assert "from pycsamt.inversion.results import InversionResult" in InversionResult.converged.__doc__
-    assert "from pycsamt.inversion.results import InversionResult" in InversionResult.to_resistivity_model.__doc__
-    assert "from pycsamt.inversion.results import InversionResult" in InversionResult.summary.__doc__
+    assert (
+        "from pycsamt.inversion.results import InversionResult"
+        in InversionResult.converged.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.results import InversionResult"
+        in InversionResult.to_resistivity_model.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.results import InversionResult"
+        in InversionResult.summary.__doc__
+    )
 
 
 def test_plot_public_docstrings_include_examples_and_references():
     assert "Available plots" in plot.__doc__
     assert "from pycsamt.inversion.plot import plot_model" in plot.__doc__
-    assert "from pycsamt.inversion.plot import plot_model" in plot.plot_model.__doc__
+    assert (
+        "from pycsamt.inversion.plot import plot_model"
+        in plot.plot_model.__doc__
+    )
     assert "to_resistivity_model" in plot.plot_model.__doc__
     assert "Tufte" in plot.plot_model.__doc__
-    assert "from pycsamt.inversion.plot import plot_rms" in plot.plot_rms.__doc__
+    assert (
+        "from pycsamt.inversion.plot import plot_rms" in plot.plot_rms.__doc__
+    )
     assert "station_rms" in plot.plot_rms.__doc__
     assert "Aster" in plot.plot_rms.__doc__
 
 
 def test_workflow_public_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.workflow import InversionWorkflow" in InversionWorkflow.__doc__
-    assert "from pycsamt.inversion.workflow import run_inversion" in InversionWorkflow.__doc__
+    assert (
+        "from pycsamt.inversion.workflow import InversionWorkflow"
+        in InversionWorkflow.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.workflow import run_inversion"
+        in InversionWorkflow.__doc__
+    )
     assert "Aster" in InversionWorkflow.__doc__
-    assert "from pycsamt.inversion.workflow import InversionWorkflow" in InversionWorkflow.__init__.__doc__
-    assert "from pycsamt.inversion.workflow import InversionWorkflow" in InversionWorkflow.run.__doc__
-    assert "from pycsamt.inversion.workflow import run_inversion" in run_inversion.__doc__
+    assert (
+        "from pycsamt.inversion.workflow import InversionWorkflow"
+        in InversionWorkflow.__init__.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.workflow import InversionWorkflow"
+        in InversionWorkflow.run.__doc__
+    )
+    assert (
+        "from pycsamt.inversion.workflow import run_inversion"
+        in run_inversion.__doc__
+    )
 
 
 def test_builtin_backend_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.backends.builtin import Builtin1DBackend" in Builtin1DBackend.__doc__
+    assert (
+        "from pycsamt.inversion.backends.builtin import Builtin1DBackend"
+        in Builtin1DBackend.__doc__
+    )
     assert "finite-difference 2-D MT profile mode" in Builtin1DBackend.__doc__
     assert "Constable" in Builtin1DBackend.__doc__
-    assert "from pycsamt.inversion.backends.builtin import Builtin1DBackend" in Builtin1DBackend.run.__doc__
+    assert (
+        "from pycsamt.inversion.backends.builtin import Builtin1DBackend"
+        in Builtin1DBackend.run.__doc__
+    )
     assert "scipy" in Builtin1DBackend.run.__doc__.lower()
 
 
 def test_modem_backend_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.backends.modem import ModEMBackend" in ModEMBackend.__doc__
+    assert (
+        "from pycsamt.inversion.backends.modem import ModEMBackend"
+        in ModEMBackend.__doc__
+    )
     assert "ModEM ecosystem" in ModEMBackend.__doc__
     assert "Kelbert" in ModEMBackend.__doc__
-    assert "from pycsamt.inversion.backends.modem import ModEMBackend" in ModEMBackend.run.__doc__
+    assert (
+        "from pycsamt.inversion.backends.modem import ModEMBackend"
+        in ModEMBackend.run.__doc__
+    )
     assert "run_external" in ModEMBackend.run.__doc__
 
 
 def test_occam2d_backend_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.backends.occam2d import Occam2DBackend" in Occam2DBackend.__doc__
+    assert (
+        "from pycsamt.inversion.backends.occam2d import Occam2DBackend"
+        in Occam2DBackend.__doc__
+    )
     assert "Occam2D-style workflows" in Occam2DBackend.__doc__
     assert "deGroot-Hedlin" in Occam2DBackend.__doc__
-    assert "from pycsamt.inversion.backends.occam2d import Occam2DBackend" in Occam2DBackend.run.__doc__
+    assert (
+        "from pycsamt.inversion.backends.occam2d import Occam2DBackend"
+        in Occam2DBackend.run.__doc__
+    )
     assert "run_external" in Occam2DBackend.run.__doc__
 
 
 def test_pygimli_backend_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.backends.pygimli import PyGIMLiBackend" in PyGIMLiBackend.__doc__
+    assert (
+        "from pycsamt.inversion.backends.pygimli import PyGIMLiBackend"
+        in PyGIMLiBackend.__doc__
+    )
     assert "stitched station-by-station 1-D" in PyGIMLiBackend.__doc__
     assert "2-D finite-element pyGIMLi EM inversion" in PyGIMLiBackend.__doc__
     assert "mt_operator" in PyGIMLiBackend.__doc__
     assert "Rücker" in PyGIMLiBackend.__doc__
-    assert "from pycsamt.inversion.backends.pygimli import PyGIMLiBackend" in PyGIMLiBackend.run.__doc__
+    assert (
+        "from pycsamt.inversion.backends.pygimli import PyGIMLiBackend"
+        in PyGIMLiBackend.run.__doc__
+    )
     assert "pygimli" in PyGIMLiBackend.run.__doc__.lower()
 
 
 def test_simpeg_backend_docstrings_include_examples_and_references():
-    assert "from pycsamt.inversion.backends.simpeg import SimPEGBackend" in SimPEGBackend.__doc__
+    assert (
+        "from pycsamt.inversion.backends.simpeg import SimPEGBackend"
+        in SimPEGBackend.__doc__
+    )
     assert "Simulation3DPrimarySecondary" in SimPEGBackend.__doc__
     assert "log conductivity" in SimPEGBackend.__doc__
     assert "target_chifact" in SimPEGBackend.__doc__
     assert "Cockett" in SimPEGBackend.__doc__
-    assert "from pycsamt.inversion.backends.simpeg import SimPEGBackend" in SimPEGBackend.run.__doc__
+    assert (
+        "from pycsamt.inversion.backends.simpeg import SimPEGBackend"
+        in SimPEGBackend.run.__doc__
+    )
     assert "rho_3d" in SimPEGBackend.run.__doc__
 
 
@@ -296,10 +460,12 @@ def test_emdata_coerce_station_response_collection():
             self.rho_a = np.asarray(rho, dtype=float)
             self.phase = np.array([45.0, 47.0])
 
-    data = EMData.coerce([
-        Station("S1", 0.0, [100.0, 120.0]),
-        Station("S2", 500.0, [110.0, 130.0]),
-    ])
+    data = EMData.coerce(
+        [
+            Station("S1", 0.0, [100.0, 120.0]),
+            Station("S2", 500.0, [110.0, 130.0]),
+        ]
+    )
     assert data.rho_a.shape == (2, 2)
     assert data.station_names == ["S1", "S2"]
     np.testing.assert_allclose(data.station_x, [0.0, 500.0])
@@ -314,10 +480,12 @@ def test_emdata_coerce_tdem_soundings_collection():
             self.data = np.asarray(values, dtype=float)
             self.error = np.array([1e-10, 1e-11])
 
-    data = EMData.coerce([
-        Sounding("T1", 0.0, [1e-8, 1e-9]),
-        Sounding("T2", 100.0, [2e-8, 2e-9]),
-    ])
+    data = EMData.coerce(
+        [
+            Sounding("T1", 0.0, [1e-8, 1e-9]),
+            Sounding("T2", 100.0, [2e-8, 2e-9]),
+        ]
+    )
     assert data.method == "tdem"
     assert data.has_tdem_response
     assert data.values.shape == (2, 2)
@@ -350,7 +518,9 @@ def test_backend_registry():
 
 def test_simpeg_backend_missing_dependency_is_clear():
     if importlib.util.find_spec("simpeg") is not None:
-        pytest.skip("SimPEG is installed; missing-dependency path not applicable.")
+        pytest.skip(
+            "SimPEG is installed; missing-dependency path not applicable."
+        )
     cfg = InversionConfig(
         method="mt",
         dimension="1d",
@@ -362,11 +532,13 @@ def test_simpeg_backend_missing_dependency_is_clear():
 
 
 def test_simpeg_observation_packing_order_and_errors():
-    data = EMData.coerce({
-        "freqs": [1.0, 10.0],
-        "rho_a": [100.0, 200.0],
-        "phase": [45.0, 50.0],
-    })
+    data = EMData.coerce(
+        {
+            "freqs": [1.0, 10.0],
+            "rho_a": [100.0, 200.0],
+            "phase": [45.0, 50.0],
+        }
+    )
     cfg = InversionConfig(error_floor=0.05, phase_error=2.0)
     values, errors = simpeg_backend._pack_nsem_observations(data, cfg)
     np.testing.assert_allclose(values, [100.0, 45.0, 200.0, 50.0])
@@ -374,22 +546,28 @@ def test_simpeg_observation_packing_order_and_errors():
 
 
 def test_simpeg_3d_observation_packing_and_station_locations():
-    data = EMData.coerce({
-        "freqs": [1.0, 10.0],
-        "rho_a": [[100.0, 200.0], [110.0, 210.0]],
-        "phase": [[45.0, 50.0], [46.0, 51.0]],
-        "station_x": [0.0, 500.0],
-        "metadata": {"station_y": [10.0, 20.0]},
-    })
+    data = EMData.coerce(
+        {
+            "freqs": [1.0, 10.0],
+            "rho_a": [[100.0, 200.0], [110.0, 210.0]],
+            "phase": [[45.0, 50.0], [46.0, 51.0]],
+            "station_x": [0.0, 500.0],
+            "metadata": {"station_y": [10.0, 20.0]},
+        }
+    )
     cfg = InversionConfig(error_floor=0.05, phase_error=2.0)
     values, errors = simpeg_backend._pack_nsem_observations(data, cfg)
     np.testing.assert_allclose(
         values,
         [100.0, 110.0, 45.0, 46.0, 200.0, 210.0, 50.0, 51.0],
     )
-    np.testing.assert_allclose(errors, [5.0, 5.5, 2.0, 2.0, 10.0, 10.5, 2.0, 2.0])
+    np.testing.assert_allclose(
+        errors, [5.0, 5.5, 2.0, 2.0, 10.0, 10.5, 2.0, 2.0]
+    )
     locations = simpeg_backend._station_locations(data)
-    np.testing.assert_allclose(locations, [[0.0, 10.0, 0.0], [500.0, 20.0, 0.0]])
+    np.testing.assert_allclose(
+        locations, [[0.0, 10.0, 0.0], [500.0, 20.0, 0.0]]
+    )
 
 
 def test_simpeg_3d_model_reshape_helper():
@@ -414,7 +592,9 @@ def test_mesh_builders_centralize_tensor_mesh_setup():
             self.shape_cells = tuple(w.size for w in self.widths)
 
     start = StartingModel([100.0, 200.0], [50.0])
-    widths = depth_widths(100.0, 4, {"min_cell_size": 5.0, "growth_factor": 1.0})
+    widths = depth_widths(
+        100.0, 4, {"min_cell_size": 5.0, "growth_factor": 1.0}
+    )
     np.testing.assert_allclose(widths, [25.0, 25.0, 25.0, 25.0])
 
     mesh_1d, z = build_1d_tensor_mesh(
@@ -428,7 +608,14 @@ def test_mesh_builders_centralize_tensor_mesh_setup():
     mesh_3d, centers = build_3d_tensor_mesh(
         [0.0, 100.0],
         [10.0, 20.0],
-        {"nx": 2, "ny": 2, "nz": 2, "depth_max": 100.0, "x_pad": 0.0, "y_pad": 0.0},
+        {
+            "nx": 2,
+            "ny": 2,
+            "nz": 2,
+            "depth_max": 100.0,
+            "x_pad": 0.0,
+            "y_pad": 0.0,
+        },
         TensorMesh,
     )
     assert mesh_3d.shape_cells == (2, 2, 2)
@@ -445,7 +632,9 @@ def test_fd2d_grid_builder_uses_padding_and_station_offset():
     )
     assert core_shape == (2, 2)
     assert grid.resistivity.shape == (3, 4)
-    np.testing.assert_allclose(core_rho_from_start(start, 2, 2), [[100.0, 100.0], [200.0, 200.0]])
+    np.testing.assert_allclose(
+        core_rho_from_start(start, 2, 2), [[100.0, 100.0], [200.0, 200.0]]
+    )
     assert hasattr(grid, "_pycsamt_x_offset")
 
 
@@ -512,11 +701,13 @@ def test_error_model_component_floors_and_masks():
 
 
 def test_simpeg_error_model_honors_masks_and_absolute_phase():
-    data = EMData.coerce({
-        "freqs": [1.0],
-        "rho_a": [[100.0], [200.0]],
-        "phase": [[45.0], [50.0]],
-    })
+    data = EMData.coerce(
+        {
+            "freqs": [1.0],
+            "rho_a": [[100.0], [200.0]],
+            "phase": [[45.0], [50.0]],
+        }
+    )
     cfg = InversionConfig(
         error_floor=0.05,
         phase_error=2.0,
@@ -531,11 +722,13 @@ def test_simpeg_error_model_honors_masks_and_absolute_phase():
 
 
 def test_pygimli_tdem_error_model_relative_floor():
-    data = EMData.coerce({
-        "method": "tdem",
-        "times": [1e-4, 1e-3],
-        "values": [1e-8, 1e-9],
-    })
+    data = EMData.coerce(
+        {
+            "method": "tdem",
+            "times": [1e-4, 1e-3],
+            "values": [1e-8, 1e-9],
+        }
+    )
     cfg = InversionConfig(
         method="tdem",
         backend_options={"tdem_relative": 0.1, "tdem_absolute": 1e-10},
@@ -577,7 +770,9 @@ def test_simpeg_regularization_helper_uses_shared_alphas():
     assert reg.alpha_x == 2.0
     assert reg.alpha_y == 2.5
     assert reg.alpha_z == 3.0
-    np.testing.assert_allclose(reg.reference_model, np.log(1.0 / np.array([100.0, 200.0, 400.0])))
+    np.testing.assert_allclose(
+        reg.reference_model, np.log(1.0 / np.array([100.0, 200.0, 400.0]))
+    )
 
 
 def test_builtin_1d_regularization_metadata_smoke(tmp_path):
@@ -586,7 +781,11 @@ def test_builtin_1d_regularization_metadata_smoke(tmp_path):
         LayeredModel([100.0, 300.0], [500.0])
     )
     cfg = InversionConfig(
-        data={"freqs": freqs, "rho_a": response.rho_a, "phase": response.phase},
+        data={
+            "freqs": freqs,
+            "rho_a": response.rho_a,
+            "phase": response.phase,
+        },
         n_layers=2,
         max_iter=2,
         regularization="damped",
@@ -665,7 +864,12 @@ def test_modem_file_validation_helpers(tmp_path):
 
 
 def test_occam2d_backend_dry_run_command_ready(tmp_path):
-    for name in ("OccamDataFile.dat", "Occam2DMesh", "Occam2DModel", "Startup"):
+    for name in (
+        "OccamDataFile.dat",
+        "Occam2DMesh",
+        "Occam2DModel",
+        "Startup",
+    ):
         (tmp_path / name).write_text("", encoding="utf-8")
     cfg = InversionConfig(
         method="mt",
@@ -717,12 +921,17 @@ def test_occam2d_file_validation_helpers(tmp_path):
         f"mesh={tmp_path / 'Occam2DMesh'}",
         f"model={tmp_path / 'Occam2DModel'}",
     ]
-    assert occam2d_backend._command_string("Occam2D", "Startup") == "Occam2D Startup"
+    assert (
+        occam2d_backend._command_string("Occam2D", "Startup")
+        == "Occam2D Startup"
+    )
 
 
 def test_pygimli_backend_missing_dependency_is_clear():
     if importlib.util.find_spec("pygimli") is not None:
-        pytest.skip("pyGIMLi is installed; missing-dependency path not applicable.")
+        pytest.skip(
+            "pyGIMLi is installed; missing-dependency path not applicable."
+        )
     cfg = InversionConfig(
         method="tdem",
         dimension="1d",
@@ -734,11 +943,13 @@ def test_pygimli_backend_missing_dependency_is_clear():
 
 
 def test_pygimli_observation_packing_helpers():
-    data = EMData.coerce({
-        "freqs": [1.0, 10.0],
-        "rho_a": [100.0, 200.0],
-        "phase": [45.0, 50.0],
-    })
+    data = EMData.coerce(
+        {
+            "freqs": [1.0, 10.0],
+            "rho_a": [100.0, 200.0],
+            "phase": [45.0, 50.0],
+        }
+    )
     values = pygimli_backend._pack_mt_observations(data)
     errors = pygimli_backend._pack_mt_errors(
         data,
@@ -769,7 +980,9 @@ def test_pygimli_mt_operator_fallbacks_select_block_model():
     assert operator_name == "MT1dBlockModelling"
     assert parameterization == "thickness_resistivity"
     assert fop.kwargs["nLayers"] == 3
-    np.testing.assert_allclose(start_model, [50.0, 150.0, 100.0, 200.0, 300.0])
+    np.testing.assert_allclose(
+        start_model, [50.0, 150.0, 100.0, 200.0, 300.0]
+    )
 
 
 def test_pygimli_tdem_operator_constructor_fallback():
@@ -970,7 +1183,10 @@ def test_builtin_2d_stitched_profile_and_exports(tmp_path):
     assert archive_path.exists()
     with np.load(npz_path) as loaded:
         assert "uncertainty_confidence" in loaded
-        assert loaded["uncertainty_confidence"].shape == result.uncertainty.confidence.shape
+        assert (
+            loaded["uncertainty_confidence"].shape
+            == result.uncertainty.confidence.shape
+        )
         assert "history_objective" in loaded
     with geojson_path.open(encoding="utf-8") as fh:
         geojson = json.load(fh)
@@ -981,7 +1197,9 @@ def test_builtin_2d_stitched_profile_and_exports(tmp_path):
     assert "RECTILINEAR_GRID" in vtk_text
     assert "SCALARS rho_log10_ohm_m" in vtk_text
     with zipfile.ZipFile(archive_path) as zf:
-        assert {"metadata.json", "result.npz", "model.csv"}.issubset(set(zf.namelist()))
+        assert {"metadata.json", "result.npz", "model.csv"}.issubset(
+            set(zf.namelist())
+        )
 
     ax_model = plot.plot_model(result, section="compact", colorbar=False)
     ax_rms = plot.plot_rms(result)
@@ -1080,8 +1298,18 @@ def test_inversion_history_container_arrays_and_result_coercion():
         backend="builtin",
         history={
             "records": [
-                {"iteration": 0, "phi_d": 4.0, "phi_m": 1.0, "objective": 5.0},
-                {"iteration": 1, "phi_d": 2.0, "phi_m": 0.5, "objective": 2.5},
+                {
+                    "iteration": 0,
+                    "phi_d": 4.0,
+                    "phi_m": 1.0,
+                    "objective": 5.0,
+                },
+                {
+                    "iteration": 1,
+                    "phi_d": 2.0,
+                    "phi_m": 0.5,
+                    "objective": 2.5,
+                },
             ],
             "metadata": {"type": "test"},
         },

@@ -114,7 +114,7 @@ class MTLoaderAgent(BaseAgent):
             section_preset="pseudosection",
         )
         self.recursive = recursive
-        self.on_dup    = on_dup
+        self.on_dup = on_dup
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -124,7 +124,7 @@ class MTLoaderAgent(BaseAgent):
         path = (
             input_data.get("path")
             or input_data.get("data_path")
-            or input_data.get("sites")          # already a Sites object
+            or input_data.get("sites")  # already a Sites object
         )
         if path is None:
             return AgentResult.failed(
@@ -163,66 +163,79 @@ class MTLoaderAgent(BaseAgent):
 
         try:
             import pandas as pd
+
             qt = pd.DataFrame(rows)
         except ImportError:
-            qt = rows   # fall back to list of dicts if pandas not available
+            qt = rows  # fall back to list of dicts if pandas not available
 
         station_names = [r["station"] for r in rows]
         n_st = len(station_names)
 
         # ── summary statistics ────────────────────────────────────────────────
         scores = np.array([r["qc_score"] for r in rows], float)
-        has_z  = sum(1 for r in rows if r["has_z"])
+        has_z = sum(1 for r in rows if r["has_z"])
         has_coords = sum(1 for r in rows if r["has_coords"])
         n_freq_all = [r["n_freq"] for r in rows if r["n_freq"] > 0]
 
         summary_stats = {
-            "n_stations":          n_st,
-            "n_with_z":            has_z,
-            "n_with_coords":       has_coords,
-            "n_with_tipper":       sum(1 for r in rows if r["has_tipper"]),
-            "mean_qc_score":       float(np.mean(scores)) if scores.size else 0.0,
-            "min_qc_score":        float(np.min(scores))  if scores.size else 0.0,
-            "median_n_freq":       float(np.median(n_freq_all)) if n_freq_all else 0.0,
-            "global_t_min_s":      min((r["t_min_s"] for r in rows
-                                        if r["t_min_s"] is not None), default=None),
-            "global_t_max_s":      max((r["t_max_s"] for r in rows
-                                        if r["t_max_s"] is not None), default=None),
+            "n_stations": n_st,
+            "n_with_z": has_z,
+            "n_with_coords": has_coords,
+            "n_with_tipper": sum(1 for r in rows if r["has_tipper"]),
+            "mean_qc_score": float(np.mean(scores)) if scores.size else 0.0,
+            "min_qc_score": float(np.min(scores)) if scores.size else 0.0,
+            "median_n_freq": float(np.median(n_freq_all))
+            if n_freq_all
+            else 0.0,
+            "global_t_min_s": min(
+                (r["t_min_s"] for r in rows if r["t_min_s"] is not None),
+                default=None,
+            ),
+            "global_t_max_s": max(
+                (r["t_max_s"] for r in rows if r["t_max_s"] is not None),
+                default=None,
+            ),
         }
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interpretation: str | None = None
         if self.api_key:
-            prompt = _build_interpretation_prompt(summary_stats, rows, warnings)
+            prompt = _build_interpretation_prompt(
+                summary_stats, rows, warnings
+            )
             interpretation = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
         mean_score = summary_stats["mean_qc_score"]
         status = (
-            "success"      if mean_score >= 60 else
-            "needs_review" if mean_score >= 30 else
-            "failed"
+            "success"
+            if mean_score >= 60
+            else "needs_review"
+            if mean_score >= 30
+            else "failed"
         )
         summary = (
-            f"Loaded {n_st} station(s) from {_path_label(path)}. "
-            f"Mean QC score {mean_score:.0f}/100. "
-            f"Period range: "
-            f"{summary_stats['global_t_min_s']:.2e}–"
-            f"{summary_stats['global_t_max_s']:.2e} s."
-        ) if summary_stats["global_t_min_s"] else (
-            f"Loaded {n_st} station(s); no finite periods found."
+            (
+                f"Loaded {n_st} station(s) from {_path_label(path)}. "
+                f"Mean QC score {mean_score:.0f}/100. "
+                f"Period range: "
+                f"{summary_stats['global_t_min_s']:.2e}–"
+                f"{summary_stats['global_t_max_s']:.2e} s."
+            )
+            if summary_stats["global_t_min_s"]
+            else (f"Loaded {n_st} station(s); no finite periods found.")
         )
 
         return AgentResult(
             status=status,
             summary=summary,
             data={
-                "sites":         sites,
+                "sites": sites,
                 "station_names": station_names,
-                "n_stations":    n_st,
+                "n_stations": n_st,
                 "quality_table": qt,
                 "summary_stats": summary_stats,
-                "path":          str(path),
+                "path": str(path),
             },
             warnings=warnings,
             llm_interpretation=interpretation,
@@ -232,6 +245,7 @@ class MTLoaderAgent(BaseAgent):
 
 
 # ── quality scan ──────────────────────────────────────────────────────────────
+
 
 def _quality_scan(
     sites: Any,
@@ -271,15 +285,15 @@ def _quality_scan(
         )
 
         # ── frequency / period stats ──────────────────────────────────────────
-        n_freq   = 0
-        t_min_s  = None
-        t_max_s  = None
+        n_freq = 0
+        t_min_s = None
+        t_max_s = None
         snr_proxy = np.nan
 
         if has_z and fr is not None:
             per = 1.0 / np.where(fr == 0, np.nan, fr)
             finite_mask = np.isfinite(per)
-            finite_per  = per[finite_mask]
+            finite_per = per[finite_mask]
             n_freq = int(finite_mask.sum())
             if n_freq > 0:
                 t_min_s = float(np.nanmin(finite_per))
@@ -306,17 +320,21 @@ def _quality_scan(
         if n_freq < 5:
             warnings.append(f"{nm}: only {n_freq} finite frequency band(s).")
 
-        rows.append({
-            "station":    nm,
-            "has_z":      has_z,
-            "has_tipper": has_tipper,
-            "has_coords": has_coords,
-            "n_freq":     n_freq,
-            "t_min_s":    t_min_s,
-            "t_max_s":    t_max_s,
-            "snr_proxy":  round(float(snr_proxy), 2) if np.isfinite(snr_proxy) else None,
-            "qc_score":   score,
-        })
+        rows.append(
+            {
+                "station": nm,
+                "has_z": has_z,
+                "has_tipper": has_tipper,
+                "has_coords": has_coords,
+                "n_freq": n_freq,
+                "t_min_s": t_min_s,
+                "t_max_s": t_max_s,
+                "snr_proxy": round(float(snr_proxy), 2)
+                if np.isfinite(snr_proxy)
+                else None,
+                "qc_score": score,
+            }
+        )
 
     return rows, warnings
 
@@ -358,6 +376,7 @@ def _compute_qc_score(
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _path_label(path: Any) -> str:
     """Return a short display label for *path*."""
     try:
@@ -373,7 +392,7 @@ def _build_interpretation_prompt(
     warnings: list[str],
 ) -> str:
     low_score = [r["station"] for r in rows if r["qc_score"] < 50]
-    no_z      = [r["station"] for r in rows if not r["has_z"]]
+    no_z = [r["station"] for r in rows if not r["has_z"]]
     return (
         f"Survey quality summary:\n"
         f"  Stations: {stats['n_stations']}, "

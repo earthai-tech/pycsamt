@@ -71,19 +71,20 @@ _PRESETS = {"default", "publication", "dark", "accessible"}
 
 # ── quantity → cmap_* attribute name ─────────────────────────────────────────
 _QUANTITY_CMAP_ATTR: dict[str, str] = {
-    "K":          "cmap_K",
+    "K": "cmap_K",
     "saturation": "cmap_Sw",
-    "porosity":   "cmap_phi",
-    "timelapse":  "cmap_timelapse",
-    "spread":     "cmap_spread",
-    "p50":        "cmap_p50",
-    "crossplot":  "cmap_crossplot",
+    "porosity": "cmap_phi",
+    "timelapse": "cmap_timelapse",
+    "spread": "cmap_spread",
+    "p50": "cmap_p50",
+    "crossplot": "cmap_crossplot",
 }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Leaf dataclass — 2-D colour sections
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class HydroSectionStyle:
@@ -119,42 +120,42 @@ class HydroSectionStyle:
         Colourbar geometry and tick label size.
     """
 
-    cmap_K:         str   = "viridis"
-    cmap_Sw:        str   = "RdYlBu"
-    cmap_phi:       str   = "YlOrRd"
-    cmap_timelapse: str   = "RdBu_r"
-    cmap_spread:    str   = "hot_r"
-    cmap_p50:       str   = "viridis"
+    cmap_K: str = "viridis"
+    cmap_Sw: str = "RdYlBu"
+    cmap_phi: str = "YlOrRd"
+    cmap_timelapse: str = "RdBu_r"
+    cmap_spread: str = "hot_r"
+    cmap_p50: str = "viridis"
 
-    wt_color:       str   = "deepskyblue"
-    wt_lw:          float = 2.5
-    wt_ls:          str   = "--"
+    wt_color: str = "deepskyblue"
+    wt_lw: float = 2.5
+    wt_ls: str = "--"
 
-    station_color:  str   = "k"
-    station_alpha:  float = 0.45
-    station_lw:     float = 0.40
+    station_color: str = "k"
+    station_alpha: float = 0.45
+    station_lw: float = 0.40
 
-    cb_fraction:    float = 0.025
-    cb_pad:         float = 0.01
-    cb_fontsize:    int   = 8
-    nan_color:      str   = "0.88"   # colour for NaN / masked cells in imshow
+    cb_fraction: float = 0.025
+    cb_pad: float = 0.01
+    cb_fontsize: int = 8
+    nan_color: str = "0.88"  # colour for NaN / masked cells in imshow
 
     # ── petrophysical cross-plot ──────────────────────────────────────────
-    cmap_crossplot:      str   = "viridis"   # PlotPetrophysicalCrossPlot
-    scatter_alpha:       float = 0.60
-    scatter_size:        float = 12.0
-    hs_alpha:            float = 0.12        # Hashin-Shtrikman fill opacity
-    model_curve_color:   str   = "k"
-    model_curve_ls:      str   = "--"
-    model_curve_lw:      float = 1.6
+    cmap_crossplot: str = "viridis"  # PlotPetrophysicalCrossPlot
+    scatter_alpha: float = 0.60
+    scatter_size: float = 12.0
+    hs_alpha: float = 0.12  # Hashin-Shtrikman fill opacity
+    model_curve_color: str = "k"
+    model_curve_ls: str = "--"
+    model_curve_lw: float = 1.6
 
     # ── 1-D depth profile ─────────────────────────────────────────────────
-    rho_curve_color:     str   = "0.15"      # PlotResistivityDepthProfile
-    rho_fill_color:      str   = "steelblue"
-    rho_fill_alpha:      float = 0.12
-    zone_boundary_color: str   = "0.55"
-    zone_boundary_ls:    str   = "--"
-    zone_label_fontsize: int   = 7
+    rho_curve_color: str = "0.15"  # PlotResistivityDepthProfile
+    rho_fill_color: str = "steelblue"
+    rho_fill_alpha: float = 0.12
+    zone_boundary_color: str = "0.55"
+    zone_boundary_ls: str = "--"
+    zone_label_fontsize: int = 7
 
     # ── convenience methods ───────────────────────────────────────────────
 
@@ -266,6 +267,7 @@ class HydroSectionStyle:
 # Leaf dataclass — 1-D profile plots
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class HydroProfileStyle:
     """Visual parameters for 1-D hydrogeophysical profile plots.
@@ -295,37 +297,37 @@ class HydroProfileStyle:
         Station-tick axvline appearance.
     """
 
-    color_wt:       str   = "steelblue"
-    color_T:        str   = "seagreen"
+    color_wt: str = "steelblue"
+    color_T: str = "seagreen"
 
     envelope_alpha: float = 0.25
-    p50_lw:         float = 2.0
-    scatter_size:   float = 14.0
+    p50_lw: float = 2.0
+    scatter_size: float = 14.0
 
-    ref_color:      str   = "tomato"
-    ref_ls:         str   = "--"
-    ref_lw:         float = 1.4
+    ref_color: str = "tomato"
+    ref_ls: str = "--"
+    ref_lw: float = 1.4
 
-    grid_alpha:     float = 0.30
-    grid_axis:      str   = "y"
+    grid_alpha: float = 0.30
+    grid_axis: str = "y"
 
-    station_color:  str   = "0.6"
-    station_alpha:  float = 0.50
-    station_lw:     float = 0.35
+    station_color: str = "0.6"
+    station_alpha: float = 0.50
+    station_lw: float = 0.35
 
     # ── Dar-Zarrouk / aquifer characterization ────────────────────────────
-    color_TR:              str   = "darkorange"   # PlotAquiferCharacterization
-    color_S:               str   = "mediumpurple"
-    tr_threshold:          float = 1000.0         # Ω·m² — productive aquifer
-    s_threshold_moderate:  float = 1.0            # S — poor/moderate boundary
-    s_threshold_good:      float = 5.0            # S — moderate/good boundary
+    color_TR: str = "darkorange"  # PlotAquiferCharacterization
+    color_S: str = "mediumpurple"
+    tr_threshold: float = 1000.0  # Ω·m² — productive aquifer
+    s_threshold_moderate: float = 1.0  # S — poor/moderate boundary
+    s_threshold_good: float = 5.0  # S — moderate/good boundary
 
     # ── uncertainty histogram ─────────────────────────────────────────────
-    hist_alpha:    float = 0.70                   # PlotUncertaintyHistogram
-    hist_edgecolor:str   = "white"
-    hist_bins:     int   = 30
-    kde_color:     str   = "k"
-    kde_lw:        float = 1.8
+    hist_alpha: float = 0.70  # PlotUncertaintyHistogram
+    hist_edgecolor: str = "white"
+    hist_bins: int = 30
+    kde_color: str = "k"
+    kde_lw: float = 1.8
 
     # ── convenience methods ───────────────────────────────────────────────
 
@@ -407,6 +409,7 @@ class HydroProfileStyle:
 # Composition dataclass — one complete interp preset bundle
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class InterpStyle:
     """Complete visual bundle for one hydrogeophysical interpretation preset.
@@ -425,19 +428,15 @@ class InterpStyle:
         Default figure size for 2-panel uncertainty sections.
     """
 
-    section:             HydroSectionStyle = field(
-        default_factory=HydroSectionStyle
-    )
-    profile:             HydroProfileStyle = field(
-        default_factory=HydroProfileStyle
-    )
-    figsize_section:       tuple[float, float] = (13.0, 5.0)
-    figsize_profile:       tuple[float, float] = (13.0, 6.0)
-    figsize_uncertainty:   tuple[float, float] = (13.0, 8.0)
-    figsize_crossplot:     tuple[float, float] = (7.0,  5.5)
-    figsize_depth_profile: tuple[float, float] = (4.5,  9.0)
-    figsize_aquifer_char:  tuple[float, float] = (13.0, 9.0)
-    figsize_tl_panel:      tuple[float, float] = (3.5,  4.5)
+    section: HydroSectionStyle = field(default_factory=HydroSectionStyle)
+    profile: HydroProfileStyle = field(default_factory=HydroProfileStyle)
+    figsize_section: tuple[float, float] = (13.0, 5.0)
+    figsize_profile: tuple[float, float] = (13.0, 6.0)
+    figsize_uncertainty: tuple[float, float] = (13.0, 8.0)
+    figsize_crossplot: tuple[float, float] = (7.0, 5.5)
+    figsize_depth_profile: tuple[float, float] = (4.5, 9.0)
+    figsize_aquifer_char: tuple[float, float] = (13.0, 9.0)
+    figsize_tl_panel: tuple[float, float] = (3.5, 4.5)
 
     def copy(self, **kw: Any) -> InterpStyle:
         """Return a deep copy with optional top-level field overrides."""
@@ -451,34 +450,70 @@ class InterpStyle:
 # Preset catalogue
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _make_default() -> InterpStyle:
     return InterpStyle(
         section=HydroSectionStyle(
-            cmap_K="viridis", cmap_Sw="RdYlBu", cmap_phi="YlOrRd",
-            cmap_timelapse="RdBu_r", cmap_spread="hot_r", cmap_p50="viridis",
+            cmap_K="viridis",
+            cmap_Sw="RdYlBu",
+            cmap_phi="YlOrRd",
+            cmap_timelapse="RdBu_r",
+            cmap_spread="hot_r",
+            cmap_p50="viridis",
             cmap_crossplot="viridis",
-            wt_color="deepskyblue", wt_lw=2.5, wt_ls="--",
-            station_color="k", station_alpha=0.45, station_lw=0.40,
-            cb_fraction=0.025, cb_pad=0.01, cb_fontsize=8,
-            scatter_alpha=0.60, scatter_size=12.0,
-            hs_alpha=0.12, model_curve_color="k", model_curve_ls="--", model_curve_lw=1.6,
-            rho_curve_color="0.15", rho_fill_color="steelblue", rho_fill_alpha=0.12,
-            zone_boundary_color="0.55", zone_boundary_ls="--", zone_label_fontsize=7,
+            wt_color="deepskyblue",
+            wt_lw=2.5,
+            wt_ls="--",
+            station_color="k",
+            station_alpha=0.45,
+            station_lw=0.40,
+            cb_fraction=0.025,
+            cb_pad=0.01,
+            cb_fontsize=8,
+            scatter_alpha=0.60,
+            scatter_size=12.0,
+            hs_alpha=0.12,
+            model_curve_color="k",
+            model_curve_ls="--",
+            model_curve_lw=1.6,
+            rho_curve_color="0.15",
+            rho_fill_color="steelblue",
+            rho_fill_alpha=0.12,
+            zone_boundary_color="0.55",
+            zone_boundary_ls="--",
+            zone_label_fontsize=7,
         ),
         profile=HydroProfileStyle(
-            color_wt="steelblue", color_T="seagreen",
-            envelope_alpha=0.25, p50_lw=2.0, scatter_size=14.0,
-            ref_color="tomato", ref_ls="--", ref_lw=1.4,
-            grid_alpha=0.30, grid_axis="y",
-            station_color="0.6", station_alpha=0.50, station_lw=0.35,
-            color_TR="darkorange", color_S="mediumpurple",
-            tr_threshold=1000.0, s_threshold_moderate=1.0, s_threshold_good=5.0,
-            hist_alpha=0.70, hist_edgecolor="white", hist_bins=30,
-            kde_color="k", kde_lw=1.8,
+            color_wt="steelblue",
+            color_T="seagreen",
+            envelope_alpha=0.25,
+            p50_lw=2.0,
+            scatter_size=14.0,
+            ref_color="tomato",
+            ref_ls="--",
+            ref_lw=1.4,
+            grid_alpha=0.30,
+            grid_axis="y",
+            station_color="0.6",
+            station_alpha=0.50,
+            station_lw=0.35,
+            color_TR="darkorange",
+            color_S="mediumpurple",
+            tr_threshold=1000.0,
+            s_threshold_moderate=1.0,
+            s_threshold_good=5.0,
+            hist_alpha=0.70,
+            hist_edgecolor="white",
+            hist_bins=30,
+            kde_color="k",
+            kde_lw=1.8,
         ),
-        figsize_section=(13.0, 5.0), figsize_profile=(13.0, 6.0),
-        figsize_uncertainty=(13.0, 8.0), figsize_crossplot=(7.0, 5.5),
-        figsize_depth_profile=(4.5, 9.0), figsize_aquifer_char=(13.0, 9.0),
+        figsize_section=(13.0, 5.0),
+        figsize_profile=(13.0, 6.0),
+        figsize_uncertainty=(13.0, 8.0),
+        figsize_crossplot=(7.0, 5.5),
+        figsize_depth_profile=(4.5, 9.0),
+        figsize_aquifer_char=(13.0, 9.0),
         figsize_tl_panel=(3.5, 4.5),
     )
 
@@ -487,31 +522,67 @@ def _make_publication() -> InterpStyle:
     """Clean, journal-ready style — grayscale-compatible, compact figures."""
     return InterpStyle(
         section=HydroSectionStyle(
-            cmap_K="plasma", cmap_Sw="RdBu", cmap_phi="cividis",
-            cmap_timelapse="PiYG", cmap_spread="Greys", cmap_p50="plasma",
+            cmap_K="plasma",
+            cmap_Sw="RdBu",
+            cmap_phi="cividis",
+            cmap_timelapse="PiYG",
+            cmap_spread="Greys",
+            cmap_p50="plasma",
             cmap_crossplot="cividis",
-            wt_color="black", wt_lw=1.2, wt_ls="--",
-            station_color="k", station_alpha=0.30, station_lw=0.30,
-            cb_fraction=0.020, cb_pad=0.01, cb_fontsize=7, nan_color="0.93",
-            scatter_alpha=0.50, scatter_size=10.0,
-            hs_alpha=0.10, model_curve_color="0.2", model_curve_ls="--", model_curve_lw=1.4,
-            rho_curve_color="k", rho_fill_color="0.6", rho_fill_alpha=0.10,
-            zone_boundary_color="0.45", zone_boundary_ls=":", zone_label_fontsize=6,
+            wt_color="black",
+            wt_lw=1.2,
+            wt_ls="--",
+            station_color="k",
+            station_alpha=0.30,
+            station_lw=0.30,
+            cb_fraction=0.020,
+            cb_pad=0.01,
+            cb_fontsize=7,
+            nan_color="0.93",
+            scatter_alpha=0.50,
+            scatter_size=10.0,
+            hs_alpha=0.10,
+            model_curve_color="0.2",
+            model_curve_ls="--",
+            model_curve_lw=1.4,
+            rho_curve_color="k",
+            rho_fill_color="0.6",
+            rho_fill_alpha=0.10,
+            zone_boundary_color="0.45",
+            zone_boundary_ls=":",
+            zone_label_fontsize=6,
         ),
         profile=HydroProfileStyle(
-            color_wt="k", color_T="0.40",
-            envelope_alpha=0.15, p50_lw=1.8, scatter_size=10.0,
-            ref_color="0.45", ref_ls=":", ref_lw=1.0,
-            grid_alpha=0.20, grid_axis="y",
-            station_color="0.70", station_alpha=0.40, station_lw=0.30,
-            color_TR="0.30", color_S="0.60",
-            tr_threshold=1000.0, s_threshold_moderate=1.0, s_threshold_good=5.0,
-            hist_alpha=0.60, hist_edgecolor="white", hist_bins=30,
-            kde_color="k", kde_lw=1.6,
+            color_wt="k",
+            color_T="0.40",
+            envelope_alpha=0.15,
+            p50_lw=1.8,
+            scatter_size=10.0,
+            ref_color="0.45",
+            ref_ls=":",
+            ref_lw=1.0,
+            grid_alpha=0.20,
+            grid_axis="y",
+            station_color="0.70",
+            station_alpha=0.40,
+            station_lw=0.30,
+            color_TR="0.30",
+            color_S="0.60",
+            tr_threshold=1000.0,
+            s_threshold_moderate=1.0,
+            s_threshold_good=5.0,
+            hist_alpha=0.60,
+            hist_edgecolor="white",
+            hist_bins=30,
+            kde_color="k",
+            kde_lw=1.6,
         ),
-        figsize_section=(8.5, 3.8), figsize_profile=(8.5, 5.0),
-        figsize_uncertainty=(8.5, 6.5), figsize_crossplot=(5.5, 4.5),
-        figsize_depth_profile=(3.8, 8.0), figsize_aquifer_char=(8.5, 7.5),
+        figsize_section=(8.5, 3.8),
+        figsize_profile=(8.5, 5.0),
+        figsize_uncertainty=(8.5, 6.5),
+        figsize_crossplot=(5.5, 4.5),
+        figsize_depth_profile=(3.8, 8.0),
+        figsize_aquifer_char=(8.5, 7.5),
         figsize_tl_panel=(2.8, 3.8),
     )
 
@@ -520,31 +591,67 @@ def _make_dark() -> InterpStyle:
     """Dark-background theme — high contrast for presentations."""
     return InterpStyle(
         section=HydroSectionStyle(
-            cmap_K="inferno", cmap_Sw="cool", cmap_phi="magma",
-            cmap_timelapse="RdBu_r", cmap_spread="hot", cmap_p50="inferno",
+            cmap_K="inferno",
+            cmap_Sw="cool",
+            cmap_phi="magma",
+            cmap_timelapse="RdBu_r",
+            cmap_spread="hot",
+            cmap_p50="inferno",
             cmap_crossplot="plasma",
-            wt_color="cyan", wt_lw=2.0, wt_ls="--",
-            station_color="w", station_alpha=0.50, station_lw=0.40,
-            cb_fraction=0.025, cb_pad=0.01, cb_fontsize=8, nan_color="0.18",
-            scatter_alpha=0.65, scatter_size=14.0,
-            hs_alpha=0.18, model_curve_color="w", model_curve_ls="--", model_curve_lw=1.8,
-            rho_curve_color="w", rho_fill_color="deepskyblue", rho_fill_alpha=0.15,
-            zone_boundary_color="0.70", zone_boundary_ls="--", zone_label_fontsize=7,
+            wt_color="cyan",
+            wt_lw=2.0,
+            wt_ls="--",
+            station_color="w",
+            station_alpha=0.50,
+            station_lw=0.40,
+            cb_fraction=0.025,
+            cb_pad=0.01,
+            cb_fontsize=8,
+            nan_color="0.18",
+            scatter_alpha=0.65,
+            scatter_size=14.0,
+            hs_alpha=0.18,
+            model_curve_color="w",
+            model_curve_ls="--",
+            model_curve_lw=1.8,
+            rho_curve_color="w",
+            rho_fill_color="deepskyblue",
+            rho_fill_alpha=0.15,
+            zone_boundary_color="0.70",
+            zone_boundary_ls="--",
+            zone_label_fontsize=7,
         ),
         profile=HydroProfileStyle(
-            color_wt="cyan", color_T="#00ff88",
-            envelope_alpha=0.20, p50_lw=2.0, scatter_size=14.0,
-            ref_color="orangered", ref_ls="--", ref_lw=1.4,
-            grid_alpha=0.20, grid_axis="y",
-            station_color="w", station_alpha=0.40, station_lw=0.35,
-            color_TR="orange", color_S="violet",
-            tr_threshold=1000.0, s_threshold_moderate=1.0, s_threshold_good=5.0,
-            hist_alpha=0.65, hist_edgecolor="0.3", hist_bins=30,
-            kde_color="w", kde_lw=1.8,
+            color_wt="cyan",
+            color_T="#00ff88",
+            envelope_alpha=0.20,
+            p50_lw=2.0,
+            scatter_size=14.0,
+            ref_color="orangered",
+            ref_ls="--",
+            ref_lw=1.4,
+            grid_alpha=0.20,
+            grid_axis="y",
+            station_color="w",
+            station_alpha=0.40,
+            station_lw=0.35,
+            color_TR="orange",
+            color_S="violet",
+            tr_threshold=1000.0,
+            s_threshold_moderate=1.0,
+            s_threshold_good=5.0,
+            hist_alpha=0.65,
+            hist_edgecolor="0.3",
+            hist_bins=30,
+            kde_color="w",
+            kde_lw=1.8,
         ),
-        figsize_section=(13.0, 5.0), figsize_profile=(13.0, 6.0),
-        figsize_uncertainty=(13.0, 8.0), figsize_crossplot=(7.0, 5.5),
-        figsize_depth_profile=(4.5, 9.0), figsize_aquifer_char=(13.0, 9.0),
+        figsize_section=(13.0, 5.0),
+        figsize_profile=(13.0, 6.0),
+        figsize_uncertainty=(13.0, 8.0),
+        figsize_crossplot=(7.0, 5.5),
+        figsize_depth_profile=(4.5, 9.0),
+        figsize_aquifer_char=(13.0, 9.0),
         figsize_tl_panel=(3.5, 4.5),
     )
 
@@ -553,31 +660,66 @@ def _make_accessible() -> InterpStyle:
     """Colorblind-safe palette (Paul Tol / IBM accessible colours)."""
     return InterpStyle(
         section=HydroSectionStyle(
-            cmap_K="cividis", cmap_Sw="BrBG", cmap_phi="viridis",
-            cmap_timelapse="PuOr", cmap_spread="Greys", cmap_p50="cividis",
+            cmap_K="cividis",
+            cmap_Sw="BrBG",
+            cmap_phi="viridis",
+            cmap_timelapse="PuOr",
+            cmap_spread="Greys",
+            cmap_p50="cividis",
             cmap_crossplot="cividis",
-            wt_color="#0077bb", wt_lw=2.0, wt_ls="--",
-            station_color="k", station_alpha=0.45, station_lw=0.40,
-            cb_fraction=0.025, cb_pad=0.01, cb_fontsize=8,
-            scatter_alpha=0.60, scatter_size=12.0,
-            hs_alpha=0.12, model_curve_color="#ee3377", model_curve_ls="--", model_curve_lw=1.6,
-            rho_curve_color="0.15", rho_fill_color="#0077bb", rho_fill_alpha=0.12,
-            zone_boundary_color="0.55", zone_boundary_ls="--", zone_label_fontsize=7,
+            wt_color="#0077bb",
+            wt_lw=2.0,
+            wt_ls="--",
+            station_color="k",
+            station_alpha=0.45,
+            station_lw=0.40,
+            cb_fraction=0.025,
+            cb_pad=0.01,
+            cb_fontsize=8,
+            scatter_alpha=0.60,
+            scatter_size=12.0,
+            hs_alpha=0.12,
+            model_curve_color="#ee3377",
+            model_curve_ls="--",
+            model_curve_lw=1.6,
+            rho_curve_color="0.15",
+            rho_fill_color="#0077bb",
+            rho_fill_alpha=0.12,
+            zone_boundary_color="0.55",
+            zone_boundary_ls="--",
+            zone_label_fontsize=7,
         ),
         profile=HydroProfileStyle(
-            color_wt="#0077bb", color_T="#009988",
-            envelope_alpha=0.25, p50_lw=2.0, scatter_size=14.0,
-            ref_color="#ee3377", ref_ls="--", ref_lw=1.4,
-            grid_alpha=0.30, grid_axis="y",
-            station_color="0.6", station_alpha=0.50, station_lw=0.35,
-            color_TR="#ee7733", color_S="#aa3377",
-            tr_threshold=1000.0, s_threshold_moderate=1.0, s_threshold_good=5.0,
-            hist_alpha=0.70, hist_edgecolor="white", hist_bins=30,
-            kde_color="#333333", kde_lw=1.8,
+            color_wt="#0077bb",
+            color_T="#009988",
+            envelope_alpha=0.25,
+            p50_lw=2.0,
+            scatter_size=14.0,
+            ref_color="#ee3377",
+            ref_ls="--",
+            ref_lw=1.4,
+            grid_alpha=0.30,
+            grid_axis="y",
+            station_color="0.6",
+            station_alpha=0.50,
+            station_lw=0.35,
+            color_TR="#ee7733",
+            color_S="#aa3377",
+            tr_threshold=1000.0,
+            s_threshold_moderate=1.0,
+            s_threshold_good=5.0,
+            hist_alpha=0.70,
+            hist_edgecolor="white",
+            hist_bins=30,
+            kde_color="#333333",
+            kde_lw=1.8,
         ),
-        figsize_section=(13.0, 5.0), figsize_profile=(13.0, 6.0),
-        figsize_uncertainty=(13.0, 8.0), figsize_crossplot=(7.0, 5.5),
-        figsize_depth_profile=(4.5, 9.0), figsize_aquifer_char=(13.0, 9.0),
+        figsize_section=(13.0, 5.0),
+        figsize_profile=(13.0, 6.0),
+        figsize_uncertainty=(13.0, 8.0),
+        figsize_crossplot=(7.0, 5.5),
+        figsize_depth_profile=(4.5, 9.0),
+        figsize_aquifer_char=(13.0, 9.0),
         figsize_tl_panel=(3.5, 4.5),
     )
 
@@ -585,6 +727,7 @@ def _make_accessible() -> InterpStyle:
 # ─────────────────────────────────────────────────────────────────────────────
 # Container singleton
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class PyCSAMTInterp:
     """Package-wide visual control container for hydro-geophysical plots.
@@ -606,9 +749,9 @@ class PyCSAMTInterp:
         self._init_defaults()
 
     def _init_defaults(self) -> None:
-        self.default:    InterpStyle = _make_default()
-        self.publication:InterpStyle = _make_publication()
-        self.dark:       InterpStyle = _make_dark()
+        self.default: InterpStyle = _make_default()
+        self.publication: InterpStyle = _make_publication()
+        self.dark: InterpStyle = _make_dark()
         self.accessible: InterpStyle = _make_accessible()
 
     # ── preset access ──────────────────────────────────────────────────────
@@ -726,7 +869,9 @@ class PyCSAMTInterp:
     # ── snapshot / restore helpers ─────────────────────────────────────────
 
     def _snapshot(self) -> dict[str, InterpStyle]:
-        return {name: copy.deepcopy(self.style_for(name)) for name in _PRESETS}
+        return {
+            name: copy.deepcopy(self.style_for(name)) for name in _PRESETS
+        }
 
     def _restore(self, snapshot: dict[str, InterpStyle]) -> None:
         for name, value in snapshot.items():
@@ -768,6 +913,7 @@ def use_interp(preset: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Style resolution helpers (used by interp/plot.py)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def resolve_section_style(
     style: str | InterpStyle | HydroSectionStyle | None,

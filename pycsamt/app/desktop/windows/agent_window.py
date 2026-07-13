@@ -72,6 +72,7 @@ from pycsamt.app.desktop.windows._base import (
 # Figure pop-out: hover-reveal overlay button + publication-ready viewer
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _HoverRevealButton(QPushButton):
     """
     Transparent expand button overlaid on a result container widget.
@@ -104,13 +105,13 @@ class _HoverRevealButton(QPushButton):
     def __init__(
         self,
         container: QWidget,
-        get_canvas_fn,          # () → MplCanvas | None
+        get_canvas_fn,  # () → MplCanvas | None
         parent=None,
     ) -> None:
         super().__init__("⤢", parent or container)
-        self._container  = container
+        self._container = container
         self._get_canvas = get_canvas_fn
-        self._shown      = False
+        self._shown = False
 
         self.setFixedSize(30, 30)
         self.setToolTip("Open in full-size viewer (publication-ready)")
@@ -167,9 +168,9 @@ class _HoverRevealButton(QPushButton):
             else "Figure Viewer"
         )
         viewer = FigureViewerWindow(
-            figure = fig,
-            title  = label,
-            parent = self._container.window(),
+            figure=fig,
+            title=label,
+            parent=self._container.window(),
         )
         viewer.show()
 
@@ -202,7 +203,7 @@ class FigureViewerWindow(QDialog):
     ) -> None:
         super().__init__(parent)
         self._figure = figure
-        self._dpi    = 150
+        self._dpi = 150
 
         self.setWindowTitle(title)
         self.setWindowFlags(
@@ -220,7 +221,7 @@ class FigureViewerWindow(QDialog):
         # ── Scrollable image area ─────────────────────────────────────────
         self._scroll = QScrollArea()
         self._scroll.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._scroll.setWidgetResizable(False)   # widget drives size, not area
+        self._scroll.setWidgetResizable(False)  # widget drives size, not area
         self._scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
@@ -271,6 +272,7 @@ class FigureViewerWindow(QDialog):
     def _render(self) -> None:
         """Rasterise figure at self._dpi → pixmap in QLabel.  Figure unchanged."""
         import io
+
         buf = io.BytesIO()
         try:
             self._figure.savefig(
@@ -283,7 +285,7 @@ class FigureViewerWindow(QDialog):
         px = QPixmap()
         px.loadFromData(buf.getvalue())
         self._img_label.setPixmap(px)
-        self._img_label.resize(px.size())   # let scrollbars appear as needed
+        self._img_label.resize(px.size())  # let scrollbars appear as needed
 
     def _on_dpi_changed(self, text: str) -> None:
         try:
@@ -296,8 +298,8 @@ class FigureViewerWindow(QDialog):
 
     def wheelEvent(self, event) -> None:
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            delta   = event.angleDelta().y()
-            step    = 25 if delta > 0 else -25
+            delta = event.angleDelta().y()
+            step = 25 if delta > 0 else -25
             new_dpi = max(50, min(400, self._dpi + step))
             if new_dpi != self._dpi:
                 self._dpi = new_dpi
@@ -374,9 +376,9 @@ def _format_result_html(result) -> str:
     sections: list[str] = []
 
     # ── Status badge + metadata row ────────────────────────────────────────
-    status  = getattr(result, "status", None)
+    status = getattr(result, "status", None)
     elapsed = getattr(result, "elapsed_seconds", None)
-    cost    = getattr(result, "cost_estimate_usd", None)
+    cost = getattr(result, "cost_estimate_usd", None)
     if status or elapsed is not None or cost:
         if status == "success":
             badge_bg = "#a6e3a1"
@@ -436,7 +438,8 @@ def _format_result_html(result) -> str:
             "border-radius:6px;padding:10px;margin:10px 0;'>"
             "<div style='color:#fab387;font-weight:bold;margin-bottom:6px;"
             f"font-size:11px;'>⚠&nbsp; Warnings ({len(warnings)})</div>"
-            + rows + "</div>"
+            + rows
+            + "</div>"
         )
 
     if not sections:
@@ -448,8 +451,7 @@ def _format_result_html(result) -> str:
     body = "\n".join(sections)
     return (
         "<html><body style='font-family:system-ui,sans-serif;"
-        "font-size:13px;padding:12px;'>"
-        + body + "</body></html>"
+        "font-size:13px;padding:12px;'>" + body + "</body></html>"
     )
 
 
@@ -457,26 +459,27 @@ def _format_result_html(result) -> str:
 # AgentRunnerWindow
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class AgentRunnerWindow(PanelWindow):
     """Floating Agent Runner with category-card browser on the left."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(
-            title       = "Agent Runner",
-            session_key = "agent_runner",
-            params_width= 320,
-            icon_name   = "agents",
-            parent      = parent,
+            title="Agent Runner",
+            session_key="agent_runner",
+            params_width=320,
+            icon_name="agents",
+            parent=parent,
         )
         self.resize(1400, 840)
-        self._worker               = None
-        self._ctrl                 = None
-        self._current_agent: str   = ""
+        self._worker = None
+        self._ctrl = None
+        self._current_agent: str = ""
         self._params_widgets: dict[str, QWidget] = {}
-        self._last_agent           = None   # last-run LLM agent instance
-        self._last_result_context  = ""     # text context for follow-up chat
-        self._last_interpretation  = ""     # raw LLM interpretation (for copy)
-        self._chat_worker          = None   # ChatWorker for follow-up queries
+        self._last_agent = None  # last-run LLM agent instance
+        self._last_result_context = ""  # text context for follow-up chat
+        self._last_interpretation = ""  # raw LLM interpretation (for copy)
+        self._chat_worker = None  # ChatWorker for follow-up queries
 
     # ── Shell override ────────────────────────────────────────────────────────
 
@@ -502,13 +505,15 @@ class AgentRunnerWindow(PanelWindow):
 
         detail_outer = QWidget()
         detail_outer.setObjectName("ParamsPanel")
-        detail_vlay  = QVBoxLayout(detail_outer)
+        detail_vlay = QVBoxLayout(detail_outer)
         detail_vlay.setContentsMargins(0, 0, 0, 0)
         detail_vlay.setSpacing(0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
 
         inner = QWidget()
@@ -594,7 +599,9 @@ class AgentRunnerWindow(PanelWindow):
         api_lay = QVBoxLayout(self._grp_apikey)
         api_lay.setContentsMargins(6, 8, 6, 6)
         self._edit_apikey = QLineEdit()
-        self._edit_apikey.setPlaceholderText("sk-…  (leave blank for env var)")
+        self._edit_apikey.setPlaceholderText(
+            "sk-…  (leave blank for env var)"
+        )
         self._edit_apikey.setEchoMode(QLineEdit.EchoMode.Password)
         api_lay.addWidget(self._edit_apikey)
         self._grp_apikey.setVisible(False)
@@ -608,7 +615,7 @@ class AgentRunnerWindow(PanelWindow):
         run_lay.setSpacing(5)
 
         btn_row = QHBoxLayout()
-        self._btn_run  = QPushButton("▶  Run Agent")
+        self._btn_run = QPushButton("▶  Run Agent")
         self._btn_run.setIcon(_icon("agents"))
         self._btn_run.setEnabled(False)
         self._btn_stop = QPushButton("■  Stop")
@@ -663,7 +670,9 @@ class AgentRunnerWindow(PanelWindow):
         _result_vlay.setSpacing(0)
         self._result_inner_tabs = QTabWidget()
         self._result_inner_tabs.setDocumentMode(True)
-        self._result_inner_tabs.setTabBarAutoHide(True)  # hidden when only 1 figure
+        self._result_inner_tabs.setTabBarAutoHide(
+            True
+        )  # hidden when only 1 figure
         # Seed with a placeholder canvas so the widget is never empty
         self._result_canvas = MplCanvas(self, toolbar=True)
         self._result_inner_tabs.addTab(self._result_canvas, "Result")
@@ -672,7 +681,7 @@ class AgentRunnerWindow(PanelWindow):
 
         # Summary tab = thin copy-button toolbar + browser
         _sum_widget = QWidget()
-        _sum_vlay   = QVBoxLayout(_sum_widget)
+        _sum_vlay = QVBoxLayout(_sum_widget)
         _sum_vlay.setContentsMargins(0, 0, 0, 0)
         _sum_vlay.setSpacing(0)
 
@@ -700,11 +709,13 @@ class AgentRunnerWindow(PanelWindow):
 
         # Hover-reveal pop-out button — floats over the result container
         _HoverRevealButton(
-            container     = _result_container,
-            get_canvas_fn = lambda: (
-                w if isinstance(
+            container=_result_container,
+            get_canvas_fn=lambda: (
+                w
+                if isinstance(
                     w := self._result_inner_tabs.currentWidget(), MplCanvas
-                ) else None
+                )
+                else None
             ),
         )
 
@@ -722,7 +733,7 @@ class AgentRunnerWindow(PanelWindow):
         # Header row
         chat_hdr = QHBoxLayout()
         _chat_ic = _icon("chat")
-        _ic_lbl  = QLabel()
+        _ic_lbl = QLabel()
         if not _chat_ic.isNull():
             _ic_lbl.setPixmap(_chat_ic.pixmap(16, 16))
         else:
@@ -765,7 +776,9 @@ class AgentRunnerWindow(PanelWindow):
         self._chat_input.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self._chat_input.installEventFilter(self)   # Enter=send, Shift+Enter=newline
+        self._chat_input.installEventFilter(
+            self
+        )  # Enter=send, Shift+Enter=newline
         chat_inp_row.addWidget(self._chat_input)
 
         self._btn_chat_send = QPushButton("▶")
@@ -838,7 +851,7 @@ class AgentRunnerWindow(PanelWindow):
             self._status_lbl.setText("Select an agent first.")
             return
 
-        params  = self._collect_params()
+        params = self._collect_params()
         api_key = self._edit_apikey.text().strip() or None
 
         self._log_text.clear()
@@ -855,11 +868,11 @@ class AgentRunnerWindow(PanelWindow):
         self._chat_status.setText("")
 
         self._worker = AgentWorker(
-            agent_name = agent_name,
-            sites      = self._ctrl.sites,
-            params     = params,
-            api_key    = api_key,
-            parent     = self,
+            agent_name=agent_name,
+            sites=self._ctrl.sites,
+            params=params,
+            api_key=api_key,
+            parent=self,
         )
         self._worker.log_line.connect(self._on_log_line)
         self._worker.progress.connect(self._progress.setValue)
@@ -895,7 +908,11 @@ class AgentRunnerWindow(PanelWindow):
                 self._result_inner_tabs.removeTab(0)
 
             for i, (label, renderable) in enumerate(figs):
-                canvas = self._result_canvas if i == 0 else MplCanvas(self, toolbar=True)
+                canvas = (
+                    self._result_canvas
+                    if i == 0
+                    else MplCanvas(self, toolbar=True)
+                )
                 try:
                     canvas.show_figure(renderable)
                 except Exception:
@@ -907,9 +924,9 @@ class AgentRunnerWindow(PanelWindow):
                 if hasattr(figs[0][1], "get_figure")
                 else figs[0][1]
             )
-            self._tabs.setCurrentIndex(1)   # Result tab
+            self._tabs.setCurrentIndex(1)  # Result tab
         else:
-            self._tabs.setCurrentIndex(2)   # Summary tab
+            self._tabs.setCurrentIndex(2)  # Summary tab
 
         self._summary_browser.setHtml(_format_result_html(result))
 
@@ -933,7 +950,7 @@ class AgentRunnerWindow(PanelWindow):
         if self._last_agent is not None:
             self._append_chat_message(
                 "system",
-                "Analysis complete — ask me a follow-up question about the results."
+                "Analysis complete — ask me a follow-up question about the results.",
             )
 
     @Slot(str)
@@ -957,9 +974,9 @@ class AgentRunnerWindow(PanelWindow):
             self._form_params.removeRow(0)
         self._params_widgets.clear()
 
-        meta        = AGENT_REGISTRY.get(agent_name, {})
+        meta = AGENT_REGISTRY.get(agent_name, {})
         params_spec = meta.get("params", {})
-        is_llm      = meta.get("type") == "llm"
+        is_llm = meta.get("type") == "llm"
 
         for param_name, spec in params_spec.items():
             w = self._make_param_widget(spec)
@@ -975,7 +992,7 @@ class AgentRunnerWindow(PanelWindow):
 
     @staticmethod
     def _make_param_widget(spec: dict) -> QWidget:
-        kind    = spec.get("type", "str")
+        kind = spec.get("type", "str")
         default = spec.get("default")
 
         if kind == "combo":
@@ -1022,7 +1039,7 @@ class AgentRunnerWindow(PanelWindow):
             AGENT_REGISTRY,
         )
 
-        meta        = AGENT_REGISTRY.get(self._current_agent, {})
+        meta = AGENT_REGISTRY.get(self._current_agent, {})
         params_spec = meta.get("params", {})
         result: dict = {}
 
@@ -1042,7 +1059,7 @@ class AgentRunnerWindow(PanelWindow):
         ctx = self._ctx_edit.toPlainText().strip()
         if ctx:
             result["user_prompt"] = ctx
-            result["context"]     = ctx
+            result["context"] = ctx
         return result
 
     def _reset_run_ui(self) -> None:
@@ -1068,8 +1085,9 @@ class AgentRunnerWindow(PanelWindow):
         """Intercept Enter in the chat input to send instead of inserting a newline."""
         if obj is self._chat_input and event.type() == QEvent.Type.KeyPress:
             ke = QKeyEvent(event)
-            if (ke.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
-                    and not (ke.modifiers() & Qt.KeyboardModifier.ShiftModifier)):
+            if ke.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (
+                ke.modifiers() & Qt.KeyboardModifier.ShiftModifier
+            ):
                 self._on_chat_send()
                 return True
         return super().eventFilter(obj, event)
@@ -1128,9 +1146,9 @@ class AgentRunnerWindow(PanelWindow):
     def _append_chat_message(self, role: str, text: str) -> None:
         safe = (
             text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\n", "<br/>")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\n", "<br/>")
         )
         if role == "system":
             html = (
@@ -1144,7 +1162,7 @@ class AgentRunnerWindow(PanelWindow):
                 "border-radius:12px 12px 4px 12px;font-size:12px;'>"
                 f"<small><b>You</b></small><br/>{safe}</div>"
             )
-        else:   # agent
+        else:  # agent
             html = (
                 "<div style='background:#1e3428;color:#cdd6f4;"
                 "text-align:left;margin:4px 2px;padding:8px 12px;"

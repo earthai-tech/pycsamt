@@ -14,11 +14,13 @@ from pycsamt.app.desktop.panels.map_panel import MapPanel
 
 @pytest.fixture
 def coords_df():
-    return pd.DataFrame({
-        "ID":        ["A01", "A02", "A03"],
-        "Latitude":  [48.50,  48.51,  48.52],
-        "Longitude": [7.75,   7.76,   7.77],
-    })
+    return pd.DataFrame(
+        {
+            "ID": ["A01", "A02", "A03"],
+            "Latitude": [48.50, 48.51, 48.52],
+            "Longitude": [7.75, 7.76, 7.77],
+        }
+    )
 
 
 @pytest.fixture
@@ -29,6 +31,7 @@ def panel(qapp):
 
 
 # ── Construction ──────────────────────────────────────────────────────────
+
 
 def test_map_panel_creates(qapp):
     p = MapPanel()
@@ -50,6 +53,7 @@ def test_panel_public_surface(panel):
 
 
 # ── Data binding ──────────────────────────────────────────────────────────
+
 
 def test_set_dataframe_does_not_raise(panel, coords_df):
     panel.set_dataframe(coords_df)
@@ -73,6 +77,7 @@ def test_scatter_created_after_set_dataframe(panel, coords_df):
 
 # ── Highlight ────────────────────────────────────────────────────────────
 
+
 def test_highlight_station_sets_selected_id(panel, coords_df):
     panel.set_dataframe(coords_df)
     panel.highlight_station("A02")
@@ -81,10 +86,11 @@ def test_highlight_station_sets_selected_id(panel, coords_df):
 
 def test_highlight_unknown_station_does_not_raise(panel, coords_df):
     panel.set_dataframe(coords_df)
-    panel.highlight_station("UNKNOWN")   # must not raise
+    panel.highlight_station("UNKNOWN")  # must not raise
 
 
 # ── Signal ───────────────────────────────────────────────────────────────
+
 
 def test_station_selected_signal_exists(panel):
     assert hasattr(panel, "station_selected")

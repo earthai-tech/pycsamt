@@ -42,9 +42,11 @@ from PySide6.QtWidgets import (
 class _StationPopup(QFrame):
     """Internal floating popup: search field + scrollable station list."""
 
-    station_chosen = Signal(str)   # emitted when user confirms a station
+    station_chosen = Signal(str)  # emitted when user confirms a station
 
-    def __init__(self, max_visible: int = 12, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, max_visible: int = 12, parent: QWidget | None = None
+    ) -> None:
         # Qt.WindowType.Popup: auto-closes on Escape / click outside
         super().__init__(parent, Qt.WindowType.Popup)
         self.setObjectName("StationPopupFrame")
@@ -76,8 +78,12 @@ class _StationPopup(QFrame):
         # Station list
         self._list = QListWidget(self)
         self._list.setObjectName("StationList")
-        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self._list.setEditTriggers(QListWidget.EditTrigger.NoEditTriggers)
         self._list.itemClicked.connect(
             lambda it: self.station_chosen.emit(it.text())
@@ -99,13 +105,17 @@ class _StationPopup(QFrame):
 
     def preferred_height(self) -> int:
         """Height that accommodates the search row + up to max_visible items."""
-        row_h = max(self._list.sizeHintForRow(0), 24) if self._list.count() else 26
-        n     = min(self._max_visible, max(1, len(self._all_names)))
+        row_h = (
+            max(self._list.sizeHintForRow(0), 24)
+            if self._list.count()
+            else 26
+        )
+        n = min(self._max_visible, max(1, len(self._all_names)))
         return (
             self._search.sizeHint().height()
-            + 8           # separator + spacing
+            + 8  # separator + spacing
             + n * row_h
-            + 12          # frame padding
+            + 12  # frame padding
         )
 
     # ── Internals ─────────────────────────────────────────────────────
@@ -120,7 +130,8 @@ class _StationPopup(QFrame):
     def _apply_filter(self, text: str) -> None:
         lo = text.lower().strip()
         filtered = (
-            [n for n in self._all_names if lo in n.lower()] if lo
+            [n for n in self._all_names if lo in n.lower()]
+            if lo
             else self._all_names
         )
         self._refresh_list(filtered)
@@ -196,15 +207,15 @@ class SearchableComboBox(QComboBox):
 
     def set_names(self, names: list[str]) -> None:
         """Replace the station list.  Resets any current selection."""
-        n           = len(names)
+        n = len(names)
         placeholder = (
             f"— select station ({n}) —" if n > 0 else self._PLACEHOLDER
         )
         self.blockSignals(True)
         self.clear()
-        self.addItem(placeholder)      # index 0 — the "nothing selected" state
+        self.addItem(placeholder)  # index 0 — the "nothing selected" state
         for name in names:
-            self.addItem(name)         # index 1..N
+            self.addItem(name)  # index 1..N
         self.setCurrentIndex(0)
         self.blockSignals(False)
 
@@ -231,8 +242,8 @@ class SearchableComboBox(QComboBox):
         """Override: open our custom popup instead of the built-in dropdown."""
         pos = self.mapToGlobal(self.rect().bottomLeft())
         self._popup.reset_search()
-        w   = max(self.width(), 220)
-        h   = self._popup.preferred_height()
+        w = max(self.width(), 220)
+        h = self._popup.preferred_height()
         self._popup.move(pos)
         self._popup.resize(w, h)
         self._popup.show()

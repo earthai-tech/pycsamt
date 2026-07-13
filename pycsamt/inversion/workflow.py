@@ -47,7 +47,11 @@ __all__ = ["InversionWorkflow", "run_inversion"]
 
 
 class InversionWorkflow(PyCSAMTObject):
-    def __init__(self, config: InversionConfig | dict[str, Any] | None = None, **kw: Any):
+    def __init__(
+        self,
+        config: InversionConfig | dict[str, Any] | None = None,
+        **kw: Any,
+    ):
         """Create a workflow and instantiate its backend.
 
         Parameters
@@ -128,7 +132,9 @@ class InversionWorkflow(PyCSAMTObject):
         return self.backend.run(data=data)
 
 
-def run_inversion(config: InversionConfig | dict[str, Any] | None = None, **kw: Any) -> InversionResult:
+def run_inversion(
+    config: InversionConfig | dict[str, Any] | None = None, **kw: Any
+) -> InversionResult:
     """Run an inversion in one call.
 
     This convenience function is equivalent to

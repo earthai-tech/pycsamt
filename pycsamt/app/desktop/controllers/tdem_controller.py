@@ -16,6 +16,7 @@ Each draw_*(fig) method:
      axes are then transplanted into the canvas Figure).
   3. Applies dark/light theme styling across all axes.
 """
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
@@ -32,37 +33,38 @@ from pycsamt.app.desktop.controllers.qc_controller import (
 #              "dashboard"→ special multi-arg call
 
 DECAY_PLOTS: list = [
-    ("Decay curves",           "PlotDecayCurve",       True,  "soundings"),
+    ("Decay curves", "PlotDecayCurve", True, "soundings"),
     # PlotTransformedRho.plot() needs 2 axes when show_phase=True; let it
     # create its own figure (has_ax=False) so _call_figure_cls handles it.
-    ("Apparent resistivity",   "PlotTransformedRho",   False, "soundings"),
+    ("Apparent resistivity", "PlotTransformedRho", False, "soundings"),
 ]
 
 SECTION_PLOTS: list = [
-    ("TEMAVG section",         "PlotTEMAVGSection",    True,  "survey"),
-    ("Z-contour section",      "PlotTEMZSection",      True,  "survey"),
-    ("Gate profile",           "PlotGateProfile",      True,  "survey"),
+    ("TEMAVG section", "PlotTEMAVGSection", True, "survey"),
+    ("Z-contour section", "PlotTEMZSection", True, "survey"),
+    ("Gate profile", "PlotGateProfile", True, "survey"),
 ]
 
 MAP_PLOTS: list = [
-    ("Station map",            "PlotSurveyMap",        True,  "survey"),
-    ("Survey overview",        "PlotSurveyOverview",   False, "survey"),
-    ("Elevation profile",      "PlotElevationProfile", True,  "survey"),
+    ("Station map", "PlotSurveyMap", True, "survey"),
+    ("Survey overview", "PlotSurveyOverview", False, "survey"),
+    ("Elevation profile", "PlotElevationProfile", True, "survey"),
 ]
 
 DASHBOARD_PLOTS: list = [
-    ("Full TEM dashboard",     "PlotTEMDashboard",     False, "dashboard"),
+    ("Full TEM dashboard", "PlotTEMDashboard", False, "dashboard"),
 ]
 
 TDEM_GROUPS: list = [
-    ("Decay / Rho",     DECAY_PLOTS),
-    ("Survey Section",  SECTION_PLOTS),
-    ("Map & Overview",  MAP_PLOTS),
-    ("Dashboard",       DASHBOARD_PLOTS),
+    ("Decay / Rho", DECAY_PLOTS),
+    ("Survey Section", SECTION_PLOTS),
+    ("Map & Overview", MAP_PLOTS),
+    ("Dashboard", DASHBOARD_PLOTS),
 ]
 
 
 # ── Controller ────────────────────────────────────────────────────────────────
+
 
 class TDEMController:
     """
@@ -75,9 +77,9 @@ class TDEMController:
     """
 
     def __init__(self) -> None:
-        self._survey   = None          # TEMSurvey
-        self._soundings: list = []     # list[TEMSounding]
-        self._folder:  str  = ""
+        self._survey = None  # TEMSurvey
+        self._soundings: list = []  # list[TEMSounding]
+        self._folder: str = ""
         self.dark: bool = True
 
         # Summary info shown in the params panel
@@ -190,10 +192,13 @@ class TDEMController:
                 if data_key == "dashboard":
                     # Dashboard always uses has_ax=False in the catalogue, but
                     # guard here defensively.
-                    plot_obj = cls(self._survey, self._survey, self._soundings)
+                    plot_obj = cls(
+                        self._survey, self._survey, self._soundings
+                    )
                 else:
                     plot_obj = cls(data)
                 import inspect
+
                 sig = inspect.signature(plot_obj.plot)
                 if "axes" in sig.parameters:
                     plot_obj.plot(axes=ax)
@@ -239,7 +244,9 @@ class TDEMController:
             else:
                 # PlotTEMDashboard(avg, zplot, soundings)
                 # Pass survey for both avg and zplot — both accept TEMSurvey.
-                result = cls(self._survey, self._survey, self._soundings).plot()
+                result = cls(
+                    self._survey, self._survey, self._soundings
+                ).plot()
         except Exception:
             return None
         after = set(plt.get_fignums())
@@ -255,7 +262,7 @@ class TDEMController:
             self.summary = "No data loaded"
             return
         n_avg = getattr(self._survey, "n_avg_files", 0)
-        n_z   = getattr(self._survey, "n_z_files",  0)
+        n_z = getattr(self._survey, "n_z_files", 0)
         n_snd = len(self._soundings)
         self.summary = (
             f"Folder: {self._folder}\n"

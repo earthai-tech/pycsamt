@@ -51,11 +51,11 @@ PROVIDER_MODELS: dict[str, list[str]] = {
 
 #: ``provider -> (display name, environment variable fallback)``
 PROVIDER_META: dict[str, tuple[str, str]] = {
-    "claude":   ("Claude (Anthropic)", "ANTHROPIC_API_KEY"),
-    "openai":   ("OpenAI",             "OPENAI_API_KEY"),
-    "gemini":   ("Gemini (Google)",    "GOOGLE_API_KEY"),
-    "deepseek": ("DeepSeek",           "DEEPSEEK_API_KEY"),
-    "minimax":  ("MiniMax",            "MINIMAX_API_KEY"),
+    "claude": ("Claude (Anthropic)", "ANTHROPIC_API_KEY"),
+    "openai": ("OpenAI", "OPENAI_API_KEY"),
+    "gemini": ("Gemini (Google)", "GOOGLE_API_KEY"),
+    "deepseek": ("DeepSeek", "DEEPSEEK_API_KEY"),
+    "minimax": ("MiniMax", "MINIMAX_API_KEY"),
 }
 
 PROVIDER_OPTIONS: list[dict[str, str]] = [

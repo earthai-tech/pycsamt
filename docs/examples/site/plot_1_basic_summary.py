@@ -90,7 +90,9 @@ print(f"Loaded station count: {len(sites)}")
 # EDI files do not contain valid impedance data.
 
 if len(sites) == 0:
-    raise RuntimeError(f"No stations with valid impedance were loaded from {edi_dir}")
+    raise RuntimeError(
+        f"No stations with valid impedance were loaded from {edi_dir}"
+    )
 
 # %%
 # 3. Build the high-level site report

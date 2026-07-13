@@ -8,7 +8,7 @@ to organize, store, and manipulate structured data.
 
 from .util import format_dict_result
 
-__all__ = ['Bunch', 'FlexDict']
+__all__ = ["Bunch", "FlexDict"]
 
 
 class Bunch(dict):
@@ -24,9 +24,7 @@ class Bunch(dict):
         try:
             return self[key]
         except KeyError:
-            message = (
-                f"'Bunch' object has no attribute '{key}'"
-            )
+            message = f"'Bunch' object has no attribute '{key}'"
             raise AttributeError(message)
 
     def __setattr__(self, key, value):
@@ -39,13 +37,11 @@ class Bunch(dict):
         return super().__dir__() + list(self.keys())
 
     def __repr__(self):
-        keys = ', '.join(list(self.keys()))
+        keys = ", ".join(list(self.keys()))
         return f"<Bunch object with keys: {keys}>"
 
     def __str__(self):
-        dict_o = {
-            k: v for k, v in self.items() if '__' not in str(k)
-        }
+        dict_o = {k: v for k, v in self.items() if "__" not in str(k)}
         return format_dict_result(
             dict_o, dict_name="Bunch", include_message=True
         )
@@ -65,15 +61,11 @@ class FlexDict(dict):
         try:
             return self[item]
         except KeyError:
-            message = (
-                f"'FlexDict' object has no attribute '{item}'"
-            )
+            message = f"'FlexDict' object has no attribute '{item}'"
             raise AttributeError(message)
 
     def __setattr__(self, key, value):
-        special_symbols = [
-            '**', '%%', '&&', '||', '$$'
-        ]
+        special_symbols = ["**", "%%", "&&", "||", "$$"]
         for symbol in special_symbols:
             if symbol in key:
                 key = key.split(symbol)[0]
@@ -88,5 +80,5 @@ class FlexDict(dict):
         return list(self.keys())
 
     def __repr__(self):
-        keys = ', '.join(self.keys())
+        keys = ", ".join(self.keys())
         return f"<FlexDict with keys: {keys}>"

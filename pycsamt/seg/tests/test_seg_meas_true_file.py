@@ -26,9 +26,7 @@ from pycsamt.seg.meas import (
         "000CSA_csamt.edi",
     ],
 )
-def test_define_meas_parses_real_files(
-    edi_path: Path, which: str
-) -> None:
+def test_define_meas_parses_real_files(edi_path: Path, which: str) -> None:
     p = edi_path / which
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
@@ -53,9 +51,7 @@ def test_define_meas_parses_real_files(
         "000CSA_csamt.edi",
     ],
 )
-def test_mixins_on_real_files(
-    edi_path: Path, which: str
-) -> None:
+def test_mixins_on_real_files(edi_path: Path, which: str) -> None:
     p = edi_path / which
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")

@@ -45,8 +45,8 @@ _EXPANSION_WEIGHT = 0.35
 # Dense fusion tuning (only used when a vector store + backend are present).
 _RRF_K = 60
 _DENSE_WEIGHT = 1.0
-_DENSE_MIN_SIM = 0.20          # ignore near-orthogonal (irrelevant) chunks
-_FUSE_DEPTH_MULT = 5           # fuse the top max(k*mult, 50) of each ranker
+_DENSE_MIN_SIM = 0.20  # ignore near-orthogonal (irrelevant) chunks
+_FUSE_DEPTH_MULT = 5  # fuse the top max(k*mult, 50) of each ranker
 # A rejected ("hard negative") symbol is demoted, never erased — user
 # feedback should reorder results, not silently hide a correct answer.
 _FEEDBACK_FLOOR = 0.15
@@ -99,9 +99,7 @@ class BM25:
         self.b = b
         self.n_docs = len(corpus_tokens)
         self.doc_len = [len(d) for d in corpus_tokens]
-        self.avgdl = (
-            sum(self.doc_len) / self.n_docs if self.n_docs else 0.0
-        )
+        self.avgdl = sum(self.doc_len) / self.n_docs if self.n_docs else 0.0
         postings: dict[str, list[tuple[int, int]]] = {}
         df: dict[str, int] = {}
         for i, toks in enumerate(corpus_tokens):
@@ -139,7 +137,7 @@ class Retriever:
     """Rank :class:`RAGChunk` objects for a query (BM25 + boosts)."""
 
     # boost factors
-    _PRIORITY_STEP = 0.12     # per priority level above 1
+    _PRIORITY_STEP = 0.12  # per priority level above 1
     _WORKFLOW_BOOST = 1.6
     _RECIPE_BOOST = 1.25
     _SYMBOL_BOOST = 1.5
@@ -371,9 +369,11 @@ def build_retriever(
             index_is_stale,
             load_index,
         )
+
         loaded = load_index(root=root)
         if loaded is not None and index_is_stale(root=root):
             import logging
+
             logging.getLogger(__name__).warning(
                 "pycsamt RAG: persisted index at %s is stale (source tree "
                 "changed since it was built); serving it anyway. Rebuild "

@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for conversational query rewriting (RAG Tier 2)."""
+
 from __future__ import annotations
 
 import unittest
@@ -12,10 +13,13 @@ from pycsamt.assistant.rag.rewrite import (
 
 
 class TestIsFollowUp(unittest.TestCase):
-
     def test_anaphoric_followups(self):
-        for q in ("do that again", "run it once more", "same for this one",
-                  "now do that"):
+        for q in (
+            "do that again",
+            "run it once more",
+            "same for this one",
+            "now do that",
+        ):
             self.assertTrue(is_follow_up(q), q)
 
     def test_self_contained_is_not_followup(self):
@@ -28,7 +32,6 @@ class TestIsFollowUp(unittest.TestCase):
 
 
 class TestRewriteQuery(unittest.TestCase):
-
     def test_followup_inherits_last_workflow(self):
         out = rewrite_query("do that again", last_workflow="static_shift")
         self.assertNotEqual(out, "do that again")
@@ -41,7 +44,8 @@ class TestRewriteQuery(unittest.TestCase):
     def test_line_reference_inherits_line(self):
         out = rewrite_query(
             "now do the same on that line",
-            last_workflow="qc", last_line="L22PLT",
+            last_workflow="qc",
+            last_line="L22PLT",
         )
         self.assertIn("L22PLT", out)
 

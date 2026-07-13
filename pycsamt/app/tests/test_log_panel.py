@@ -12,6 +12,7 @@ pytest.importorskip("PySide6", reason="PySide6 required")
 @pytest.fixture
 def log_panel(qapp):
     from pycsamt.app.desktop.panels.log_panel import LogPanel
+
     panel = LogPanel()
     yield panel
     panel.close()
@@ -19,14 +20,17 @@ def log_panel(qapp):
 
 # ── Construction ──────────────────────────────────────────────────────────
 
+
 def test_log_panel_creates_without_error(qapp):
     from pycsamt.app.desktop.panels.log_panel import LogPanel
+
     panel = LogPanel()
     assert panel is not None
     panel.close()
 
 
 # ── append_line ───────────────────────────────────────────────────────────
+
 
 def test_append_line_adds_text(log_panel):
     log_panel.append_line("hello world")
@@ -51,6 +55,7 @@ def test_multiple_lines_are_all_present(log_panel):
 
 # ── clear ─────────────────────────────────────────────────────────────────
 
+
 def test_clear_removes_all_text(log_panel):
     log_panel.append_line("will be cleared")
     log_panel.clear()
@@ -59,11 +64,13 @@ def test_clear_removes_all_text(log_panel):
 
 # ── block cap ─────────────────────────────────────────────────────────────
 
+
 def test_max_block_count_is_set(log_panel):
     assert log_panel._text.maximumBlockCount() == 2000
 
 
 # ── read-only ─────────────────────────────────────────────────────────────
+
 
 def test_text_widget_is_read_only(log_panel):
     assert log_panel._text.isReadOnly()

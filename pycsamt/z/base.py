@@ -196,7 +196,6 @@ class EMBase:
             raise ZError("freq must be > 0")
         self._freq = ff
 
-
     @property
     def n_freq(self) -> int:
         f = getattr(self, "_freq", None)
@@ -228,7 +227,6 @@ class EMBase:
             if isinstance(a, np.ndarray):
                 return True
         return False
-
 
     def copy(self) -> EMBase:
         return _copy.copy(self)
@@ -290,10 +288,8 @@ class EMBase:
                 bad.append(f"{name}:{tuple(value.shape)}")
         if bad:
             raise ZError(
-
-                    "freq-aligned arrays mismatch n_freq. "
-                    f"n={n}; bad={', '.join(bad)}"
-
+                "freq-aligned arrays mismatch n_freq. "
+                f"n={n}; bad={', '.join(bad)}"
             )
 
     def _array_sig(self) -> tuple[_StrSeq, _StrSeq]:

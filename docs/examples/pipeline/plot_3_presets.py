@@ -33,7 +33,9 @@ print(preset_catalogue())
 presets = list_presets()
 print(f"{len(presets)} presets:\n")
 for p in presets:
-    print(f"  {p.name:<18} {len(p.steps)} steps  — {p.description.splitlines()[0]}")
+    print(
+        f"  {p.name:<18} {len(p.steps)} steps  — {p.description.splitlines()[0]}"
+    )
 
 # %%
 # Inspect one preset
@@ -59,8 +61,13 @@ configure_pipe(show_progress=False, plot_dpi=72)
 pipe = Pipeline(preset.steps, name=preset.name)
 
 with quiet_logs():
-    result = pipe.run(sites, outdir=scratch_dir(),
-                      save_plots=False, save_edis=True, save_report=True)
+    result = pipe.run(
+        sites,
+        outdir=scratch_dir(),
+        save_plots=False,
+        save_edis=True,
+        save_report=True,
+    )
 print(result.summary())
 
 # %%

@@ -16,6 +16,7 @@ Phase
 X-axis  (period / frequency axis on profile plots)
   • View  (log10_period / period / log10_frequency / frequency)
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -31,13 +32,13 @@ from PySide6.QtWidgets import (
 
 from .base_page import SettingsPage
 
-_RHO_VIEWS  = [("log₁₀ ρ  (log10)", "log10"), ("ρ  (linear)", "linear")]
+_RHO_VIEWS = [("log₁₀ ρ  (log10)", "log10"), ("ρ  (linear)", "linear")]
 _PHASE_UNITS = [("Degree (°)", "degree"), ("Radian (rad)", "radian")]
 _X_VIEWS = [
     ("log₁₀ Period  (s)  — recommended", "log10_period"),
-    ("Period  (s)",                        "period"),
-    ("log₁₀ Frequency  (Hz)",             "log10_frequency"),
-    ("Frequency  (Hz)",                    "frequency"),
+    ("Period  (s)", "period"),
+    ("log₁₀ Frequency  (Hz)", "log10_frequency"),
+    ("Frequency  (Hz)", "frequency"),
 ]
 
 
@@ -114,18 +115,36 @@ class ViewControlsPage(SettingsPage):
             from pycsamt.api.control import (
                 PYCSAMT_CONTROL as C,
             )
+
             self._rho_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_RHO_VIEWS) if v == C.rho.view), 0)
+                next(
+                    (
+                        i
+                        for i, (_, v) in enumerate(_RHO_VIEWS)
+                        if v == C.rho.view
+                    ),
+                    0,
+                )
             )
             lo, hi = C.phase.range
             self._ph_min.setValue(lo)
             self._ph_max.setValue(hi)
             self._ph_unit_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_PHASE_UNITS) if v == C.phase.unit), 0)
+                next(
+                    (
+                        i
+                        for i, (_, v) in enumerate(_PHASE_UNITS)
+                        if v == C.phase.unit
+                    ),
+                    0,
+                )
             )
             self._ph_wrap_cb.setChecked(C.phase.wrap)
             self._x_combo.setCurrentIndex(
-                next((i for i, (_, v) in enumerate(_X_VIEWS) if v == C.x.view), 0)
+                next(
+                    (i for i, (_, v) in enumerate(_X_VIEWS) if v == C.x.view),
+                    0,
+                )
             )
         except Exception:
             pass
@@ -133,17 +152,20 @@ class ViewControlsPage(SettingsPage):
     def collect(self) -> dict:
         return {
             "view_controls": {
-                "rho_view":    _RHO_VIEWS[self._rho_combo.currentIndex()][1],
+                "rho_view": _RHO_VIEWS[self._rho_combo.currentIndex()][1],
                 "phase_range": (self._ph_min.value(), self._ph_max.value()),
-                "phase_unit":  _PHASE_UNITS[self._ph_unit_combo.currentIndex()][1],
-                "phase_wrap":  self._ph_wrap_cb.isChecked(),
-                "x_view":      _X_VIEWS[self._x_combo.currentIndex()][1],
+                "phase_unit": _PHASE_UNITS[
+                    self._ph_unit_combo.currentIndex()
+                ][1],
+                "phase_wrap": self._ph_wrap_cb.isChecked(),
+                "x_view": _X_VIEWS[self._x_combo.currentIndex()][1],
             }
         }
 
     def reset(self) -> None:
         try:
             from pycsamt.api.control import PYCSAMT_CONTROL
+
             PYCSAMT_CONTROL.reset()
         except Exception:
             pass

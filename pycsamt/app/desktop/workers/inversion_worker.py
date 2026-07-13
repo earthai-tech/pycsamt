@@ -32,9 +32,9 @@ class InversionWorker(QThread):
     """Background thread for an Occam2D inversion run."""
 
     stdout_line = Signal(str)
-    progress    = Signal(int)
-    finished    = Signal(object)   # InversionResult
-    error       = Signal(str)
+    progress = Signal(int)
+    finished = Signal(object)  # InversionResult
+    error = Signal(str)
 
     def __init__(
         self,
@@ -45,11 +45,11 @@ class InversionWorker(QThread):
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self._workdir       = Path(workdir)
-        self._binary_path   = binary_path or None
-        self._max_iter      = max_iter
+        self._workdir = Path(workdir)
+        self._binary_path = binary_path or None
+        self._max_iter = max_iter
         self._target_misfit = target_misfit
-        self._cancelled     = False
+        self._cancelled = False
 
     # ── Cancellation ──────────────────────────────────────────────────
 
@@ -101,15 +101,19 @@ class InversionWorker(QThread):
 
         # Run with per-iteration stdout capture if supported
         if hasattr(runner, "iter_callback"):
+
             def _cb(i: int, rms: float) -> None:
                 if self._cancelled:
                     raise InterruptedError("Cancelled by user.")
                 pct = min(95, int(i / max(self._max_iter, 1) * 90 + 5))
                 self.progress.emit(pct)
                 self.stdout_line.emit(f"  iter {i:3d}  RMS = {rms:.4f}")
+
             runner.iter_callback = _cb
         else:
-            self.stdout_line.emit("Running Occam2D…  (output after completion)")
+            self.stdout_line.emit(
+                "Running Occam2D…  (output after completion)"
+            )
 
         exit_code = runner.run(
             max_iter=self._max_iter,

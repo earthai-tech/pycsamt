@@ -35,9 +35,15 @@ def test_schema_for_routes_source():
 # ---------------------------------------------------------------------------
 def test_source_payload_folds_aliases():
     raw = {
-        "tx_id": "TX1", "current": 9.8, "tx_voltage": 250.0,
-        "frequency": 32.0, "ab_m": 100.0, "duty": 0.5,
-        "transmitting": True, "tx_rx_offset": 5000.0, "bearing_deg": 45.0,
+        "tx_id": "TX1",
+        "current": 9.8,
+        "tx_voltage": 250.0,
+        "frequency": 32.0,
+        "ab_m": 100.0,
+        "duty": 0.5,
+        "transmitting": True,
+        "tx_rx_offset": 5000.0,
+        "bearing_deg": 45.0,
     }
     p = parse_payload("source", raw)
     assert isinstance(p, SourcePayload)
@@ -73,7 +79,7 @@ def test_source_payload_as_dict_roundtrip():
     d = p.as_dict(drop_none=True)
     assert d["source_id"] == "TX1"
     assert d["on"] is False
-    assert "azimuth_deg" not in d          # None dropped
+    assert "azimuth_deg" not in d  # None dropped
 
 
 def test_string_boolean_on_state():
@@ -118,12 +124,19 @@ def test_non_finite_current_rejected():
 def test_source_packet_through_field_session():
     session = FieldSession("CS1", method="csamt")
     session.add_device(DeviceConfig("tx-1", role="transmitter"))
-    session.add_packet({
-        "device_id": "tx-1", "timestamp": 10.0, "topic": "t",
-        "kind": "source",
-        "payload": {"source_id": "TX1", "tx_current_a": 9.8,
-                    "tx_frequency_hz": 32.0},
-    })
+    session.add_packet(
+        {
+            "device_id": "tx-1",
+            "timestamp": 10.0,
+            "topic": "t",
+            "kind": "source",
+            "payload": {
+                "source_id": "TX1",
+                "tx_current_a": 9.8,
+                "tx_frequency_hz": 32.0,
+            },
+        }
+    )
     assert session.n_packets == 1
     assert session.packets[0].kind is PacketKind.SOURCE
     # assessment must tolerate the new kind without error

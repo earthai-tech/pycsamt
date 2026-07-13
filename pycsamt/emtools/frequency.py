@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -76,6 +75,7 @@ class FrequencyEditResult:
 
 
 # ------------------------------- helpers -------------------------------- #
+
 
 def _sorted_unique(fr: np.ndarray) -> np.ndarray:
     fr = np.asarray(fr, dtype=float)
@@ -165,7 +165,9 @@ def _interp_rows_by_freq(
             x_fill,
             method=method,
         )
-        flat_out[fill, j] = interp if np.iscomplexobj(flat_out) else interp.real
+        flat_out[fill, j] = (
+            interp if np.iscomplexobj(flat_out) else interp.real
+        )
     return flat_out.reshape(values.shape)
 
 
@@ -254,10 +256,9 @@ def _station_confidence_vectors(
     return confidence, flags
 
 
-def _apply_row_mask_to_block(obj: Any,
-                             fields: Sequence[str],
-                             keep: np.ndarray,
-                             fr: np.ndarray) -> None:
+def _apply_row_mask_to_block(
+    obj: Any, fields: Sequence[str], keep: np.ndarray, fr: np.ndarray
+) -> None:
     """Apply a row-keep mask to tensor/tipper arrays and their frequency."""
     if _set_masked_strict_block(obj, fields, keep, fr):
         return
@@ -268,10 +269,9 @@ def _apply_row_mask_to_block(obj: Any,
     _set_block_freq(obj, fr[keep])
 
 
-def _set_bad_rows_to_nan(obj: Any,
-                         fields: Sequence[str],
-                         bad: np.ndarray,
-                         fr: np.ndarray) -> None:
+def _set_bad_rows_to_nan(
+    obj: Any, fields: Sequence[str], bad: np.ndarray, fr: np.ndarray
+) -> None:
     """Set selected tensor/tipper rows to NaN."""
     for field in fields:
         value = getattr(obj, field, None)
@@ -296,10 +296,9 @@ def _set_array_field(obj: Any, field: str, value: np.ndarray) -> None:
         pass
 
 
-def _set_masked_strict_block(obj: Any,
-                             fields: Sequence[str],
-                             keep: np.ndarray,
-                             fr: np.ndarray) -> bool:
+def _set_masked_strict_block(
+    obj: Any, fields: Sequence[str], keep: np.ndarray, fr: np.ndarray
+) -> bool:
     """Atomically subset strict Z-like containers."""
     if not hasattr(obj, "compute_resistivity_phase"):
         return False
@@ -327,7 +326,6 @@ def _set_masked_strict_block(obj: Any,
     return True
 
 
-
 def _set_block_freq(obj: Any, fr: np.ndarray) -> None:
     try:
         obj.freq = fr
@@ -350,9 +348,7 @@ def _regrid_z(
     for a in range(2):
         for b in range(2):
             y = z[:, a, b]
-            out[:, a, b] = _interp_complex(
-                x, y, xn, method=method
-            )
+            out[:, a, b] = _interp_complex(x, y, xn, method=method)
     return out
 
 
@@ -405,9 +401,14 @@ def _apply_grid_one(
         except Exception:
             pass
         tipper_err = getattr(T, "tipper_err", None)
-        if isinstance(tipper_err, np.ndarray) and tipper_err.shape[0] == frt.size:
+        if (
+            isinstance(tipper_err, np.ndarray)
+            and tipper_err.shape[0] == frt.size
+        ):
             try:
-                T.tipper_err = _regrid_t(tipper_err, frt, fnew, method=method).real
+                T.tipper_err = _regrid_t(
+                    tipper_err, frt, fnew, method=method
+                ).real
             except Exception:
                 try:
                     T._tipper_err = _regrid_t(
@@ -455,6 +456,7 @@ def _intersect_grid(SitesObj) -> np.ndarray:
 
 
 # ------------------------------ public API ------------------------------- #
+
 
 def select_band(
     sites: Any,
@@ -738,15 +740,16 @@ def recover_low_confidence_frequencies(
     def _recover_block(obj, fields, fr, conf):
         trusted = np.isfinite(conf) & (conf >= float(ci_hi))
         recover = (
-            np.isfinite(conf)
-            & (conf >= float(ci_lo))
-            & (conf < float(ci_hi))
+            np.isfinite(conf) & (conf >= float(ci_lo)) & (conf < float(ci_hi))
         )
         reject_mask = np.isfinite(conf) & (conf < float(ci_lo))
         if recover.any():
             for field in fields:
                 value = getattr(obj, field, None)
-                if isinstance(value, np.ndarray) and value.shape[0] == fr.size:
+                if (
+                    isinstance(value, np.ndarray)
+                    and value.shape[0] == fr.size
+                ):
                     recovered = _interp_rows_by_freq(
                         value,
                         fr,
@@ -1094,10 +1097,16 @@ def frequency_edit_report(
         }
     )
     out = left.merge(right, on="station", how="outer")
-    out = out.merge(_conf_summary(tb_before, "before"), on="station", how="left")
-    out = out.merge(_conf_summary(tb_after, "after"), on="station", how="left")
+    out = out.merge(
+        _conf_summary(tb_before, "before"), on="station", how="left"
+    )
+    out = out.merge(
+        _conf_summary(tb_after, "after"), on="station", how="left"
+    )
     out["n_dropped"] = out["n_freq_before"] - out["n_freq_after"]
-    out["n_masked_or_unfinite"] = out["n_finite_before"] - out["n_finite_after"]
+    out["n_masked_or_unfinite"] = (
+        out["n_finite_before"] - out["n_finite_after"]
+    )
     out["confidence_delta"] = (
         out["confidence_median_after"] - out["confidence_median_before"]
     )
@@ -1217,9 +1226,7 @@ def frequency_edit_decision_table(
                     frequency_hz=float(freq),
                     period_s=float(1.0 / freq) if freq else np.nan,
                     log10_period=(
-                        float(np.log10(1.0 / freq))
-                        if freq > 0
-                        else np.nan
+                        float(np.log10(1.0 / freq)) if freq > 0 else np.nan
                     ),
                     confidence=float(cvec[j]),
                     flags=str(flagvec[j]),
@@ -1738,6 +1745,7 @@ def plot_coverage_quality_heatmap(
 
 # ------------------------- apparent depth image -------------------------- #
 
+
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     # ρa_xy/yx = 0.2 * |Z|^2 / f (ohm·m); det via geom. mean
     zx = z[:, 0, 1]
@@ -1796,10 +1804,15 @@ def plot_apparent_depth_psection(
         ax.text(0.5, 0.5, "no data", ha="center", va="center")
         return ax
     # pivot to station × axis_y
-    dtype = [("station", "U64"), ("freq", "f8"),
-             ("period", "f8"), ("depth", "f8")]
+    dtype = [
+        ("station", "U64"),
+        ("freq", "f8"),
+        ("period", "f8"),
+        ("depth", "f8"),
+    ]
     arr = np.array(rows, dtype=dtype)
     import pandas as pd
+
     df = pd.DataFrame(arr)
     ykey = "period" if axis_y == "period" else "freq"
     piv = df.pivot_table(
@@ -1836,10 +1849,12 @@ def plot_apparent_depth_psection(
         preset="pseudosection",
         xlim=(-0.5, Zplot.shape[1] - 0.5),
     )
-    yt = np.linspace(0, Zplot.shape[0] - 1,
-                     num=min(8, Zplot.shape[0]))  # shape[0] = n_periods
-    yv = np.linspace(piv.index.min(), piv.index.max(),
-                     num=min(8, len(piv.index)))
+    yt = np.linspace(
+        0, Zplot.shape[0] - 1, num=min(8, Zplot.shape[0])
+    )  # shape[0] = n_periods
+    yv = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.3g}" for v in yv])
     if axis_y == "period" and not ax.yaxis_inverted():
@@ -1850,6 +1865,7 @@ def plot_apparent_depth_psection(
 
 
 # ------------------------- band-collapsed microplots --------------------- #
+
 
 def _det_phase_from_z(z: np.ndarray) -> np.ndarray:
     detz = z[:, 0, 0] * z[:, 1, 1] - z[:, 0, 1] * z[:, 1, 0]
@@ -1918,7 +1934,7 @@ def plot_band_microstrips(
         bands = list(zip(edges[:-1], edges[1:]))
     # aggregate per band
     rows = []
-    for (nm, per, lgr, ph, ta) in sites_data:
+    for nm, per, lgr, ph, ta in sites_data:
         for bi, (lo, hi) in enumerate(bands):
             m = (per >= lo) & (per < hi)
             if not np.any(m):
@@ -1933,9 +1949,11 @@ def plot_band_microstrips(
             rows.append((nm, bi, r, p, tt))
     # normalize per metric for color
     import pandas as pd
+
     df = pd.DataFrame(
         rows, columns=["station", "band", "logrho", "phi", "tamp"]
     )
+
     # global min/max (robust) for color normalization
     def _rng(s: pd.Series) -> tuple[float, float]:
         v = s.to_numpy()
@@ -1943,11 +1961,14 @@ def plot_band_microstrips(
         if v.size == 0:
             return 0.0, 1.0
         return (np.nanpercentile(v, 5), np.nanpercentile(v, 95))
+
     r0, r1 = _rng(df["logrho"])
     p0, p1 = _rng(df["phi"])
     t0, t1 = _rng(df["tamp"])
+
     def _norm(x, a, b):
         return np.clip((x - a) / (b - a + 1e-12), 0.0, 1.0)
+
     df["cr"] = _norm(df["logrho"], r0, r1)
     df["cp"] = _norm(df["phi"], p0, p1)
     df["ct"] = _norm(df["tamp"], t0, t1)
@@ -1965,28 +1986,34 @@ def plot_band_microstrips(
         yP = yi + 0.00
         yT = yi + 0.22
         ax.scatter(
-            [xi], [yR],
+            [xi],
+            [yR],
             s=marker_size,
             c=[[row["cr"]]],
             cmap="viridis",
             marker="o",
-            vmin=0.0, vmax=1.0,
+            vmin=0.0,
+            vmax=1.0,
         )
         ax.scatter(
-            [xi], [yP],
+            [xi],
+            [yP],
             s=marker_size,
             c=[[row["cp"]]],
             cmap="viridis",
             marker="s",
-            vmin=0.0, vmax=1.0,
+            vmin=0.0,
+            vmax=1.0,
         )
         ax.scatter(
-            [xi], [yT],
+            [xi],
+            [yT],
             s=marker_size,
             c=[[row["ct"]]],
             cmap="viridis",
             marker="^",
-            vmin=0.0, vmax=1.0,
+            vmin=0.0,
+            vmax=1.0,
         )
     ax.set_xlim(-0.5, len(bands) - 0.5)
     ax.set_ylim(-0.6, len(st) - 0.4)
@@ -1995,10 +2022,7 @@ def plot_band_microstrips(
     ax.set_yticks(y0)
     ax.set_yticklabels(st)
     # simple mini-legend using text markers
-    ax.text(1.01, 0.85, "o log10 ρ_det",
-            transform=ax.transAxes)
-    ax.text(1.01, 0.70, "s φ_det",
-            transform=ax.transAxes)
-    ax.text(1.01, 0.55, "^ |T|",
-            transform=ax.transAxes)
+    ax.text(1.01, 0.85, "o log10 ρ_det", transform=ax.transAxes)
+    ax.text(1.01, 0.70, "s φ_det", transform=ax.transAxes)
+    ax.text(1.01, 0.55, "^ |T|", transform=ax.transAxes)
     return ax

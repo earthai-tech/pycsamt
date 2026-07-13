@@ -27,8 +27,9 @@ from pycsamt.map import MapView
 # no raster the gallery can thumbnail).
 # sphinx_gallery_thumbnail_path = '_static/map_thumbs/plot_1_station_maps.png'
 
-DATA = os.path.join(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."),
-                    "data", "AMT", "WILLY_DATA")
+DATA = os.path.join(
+    os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."), "data", "AMT", "WILLY_DATA"
+)
 mv = MapView.from_folder(DATA, recursive=True)
 print(f"{mv.n_stations} stations across {len(mv.lines)} lines: {mv.lines}")
 print("geo-referenced:", mv.has_geo)
@@ -62,8 +63,13 @@ fig
 # draws filled contours beneath the markers — a continuous resistivity map
 # rather than discrete points.
 
-fig = mv.station(overlay="rho", component="xy", frequency=100.0,
-                 show_contours=True, contour_levels=14)
+fig = mv.station(
+    overlay="rho",
+    component="xy",
+    frequency=100.0,
+    show_contours=True,
+    contour_levels=14,
+)
 fig.update_layout(height=600)
 fig
 
@@ -74,8 +80,9 @@ fig
 # phase responds to *gradients* in resistivity, so it often sharpens
 # boundaries the resistivity map smooths over.
 
-fig = mv.station(overlay="phase", component="xy", frequency=100.0,
-                 show_contours=True)
+fig = mv.station(
+    overlay="phase", component="xy", frequency=100.0, show_contours=True
+)
 fig.update_layout(height=600)
 fig
 
@@ -86,8 +93,13 @@ fig
 # ~1000 Hz (shallow) shows a different pattern than the ~100 Hz map above —
 # the basis for reading a station map as a depth-dependent slice.
 
-fig = mv.station(overlay="rho", component="xy", frequency=1000.0,
-                 show_contours=True, title="Apparent resistivity ~1000 Hz (shallow)")
+fig = mv.station(
+    overlay="rho",
+    component="xy",
+    frequency=1000.0,
+    show_contours=True,
+    title="Apparent resistivity ~1000 Hz (shallow)",
+)
 fig.update_layout(height=600)
 fig
 

@@ -33,6 +33,13 @@ import os
 import sys
 from pathlib import Path
 
+# sphinx-gallery executes examples without __file__ (the gallery
+# runner sets the working directory to this example's folder).
+try:
+    EXAMPLE_DIR = Path(__file__).resolve().parent
+except NameError:
+    EXAMPLE_DIR = Path.cwd()
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -40,7 +47,7 @@ import pandas as pd
 
 def repo_root():
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT")
-    return Path(root) if root else Path(__file__).resolve().parents[3]
+    return Path(root) if root else EXAMPLE_DIR.parents[2]
 
 
 ROOT = repo_root()
@@ -49,8 +56,7 @@ if str(ROOT) not in sys.path:
 
 from pycsamt.models.occam2d import OccamLog
 
-
-workspace = Path(__file__).resolve().parent / "workspaces" / "l18_prepared_workspace"
+workspace = EXAMPLE_DIR / "workspaces" / "l18_prepared_workspace"
 table_dir = workspace / "02_tables"
 run_root = workspace / "04_run_files"
 figure_dir = workspace / "05_figures"
@@ -76,7 +82,9 @@ if not audit_file.exists():
     )
 
 audit = pd.read_csv(audit_file)
-folder_health = audit.groupby("folder")["exists"].mean().rename("completeness")
+folder_health = (
+    audit.groupby("folder")["exists"].mean().rename("completeness")
+)
 print("Run-folder completeness:")
 print(folder_health.to_string())
 
@@ -221,10 +229,24 @@ modem_history["stepsize"] = np.nan
 history = pd.concat(
     [
         occam_history[
-            ["backend", "iteration", "rms", "roughness", "lagrange", "stepsize"]
+            [
+                "backend",
+                "iteration",
+                "rms",
+                "roughness",
+                "lagrange",
+                "stepsize",
+            ]
         ],
         modem_history[
-            ["backend", "iteration", "rms", "roughness", "lagrange", "stepsize"]
+            [
+                "backend",
+                "iteration",
+                "rms",
+                "roughness",
+                "lagrange",
+                "stepsize",
+            ]
         ],
     ],
     ignore_index=True,
@@ -277,8 +299,13 @@ def diagnose_backend(frame, target, stagnation_window=4, small_drop=0.02):
     target_reached = bool((finite["rms"] <= target).any())
 
     roughening = False
-    if "roughness" in finite and finite["roughness"].notna().sum() >= stagnation_window:
-        rough_tail = finite.dropna(subset=["roughness"]).tail(stagnation_window)
+    if (
+        "roughness" in finite
+        and finite["roughness"].notna().sum() >= stagnation_window
+    ):
+        rough_tail = finite.dropna(subset=["roughness"]).tail(
+            stagnation_window
+        )
         if len(rough_tail) >= stagnation_window:
             roughening = bool(
                 rough_tail["roughness"].iloc[-1]
@@ -287,7 +314,9 @@ def diagnose_backend(frame, target, stagnation_window=4, small_drop=0.02):
 
     if target_reached:
         status = "PASS"
-        message = "Target RMS was reached; inspect the best model and response fit."
+        message = (
+            "Target RMS was reached; inspect the best model and response fit."
+        )
     elif late_drop < small_drop:
         status = "WARN"
         message = (

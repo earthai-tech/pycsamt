@@ -32,13 +32,15 @@ from ._base import _get_sites, site
 @survey_option
 @fresh_option
 @click.option(
-    "--station", "-s",
+    "--station",
+    "-s",
     default=None,
     metavar="NAME",
     help="Show detailed report for a single station only.",
 )
 @click.option(
-    "--top", "-n",
+    "--top",
+    "-n",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",

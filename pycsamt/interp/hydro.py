@@ -79,11 +79,15 @@ class HydroGeophysicalModel(PyCSAMTObject, MetadataMixin):
     logs: list[StratigraphicLog] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def aquifer_zones(self, *, min_confidence: float = 0.0) -> list[AquiferZone]:
+    def aquifer_zones(
+        self, *, min_confidence: float = 0.0
+    ) -> list[AquiferZone]:
         """Return aquifer-favourable zones above a confidence threshold."""
         return [
-            zone for zone in self.zones
-            if zone.zone_type == "aquifer" and zone.confidence >= min_confidence
+            zone
+            for zone in self.zones
+            if zone.zone_type == "aquifer"
+            and zone.confidence >= min_confidence
         ]
 
     def station_summary(self) -> list[dict[str, Any]]:
@@ -96,14 +100,18 @@ class HydroGeophysicalModel(PyCSAMTObject, MetadataMixin):
             col_conf = self.confidence[:, ix]
             aquifer_cells = col_units == "aquifer"
             clay_cells = np.isin(col_units, ["clay", "saline"])
-            rows.append({
-                "station": name,
-                "x_m": float(x),
-                "aquifer_cells": int(np.sum(aquifer_cells)),
-                "clay_or_saline_cells": int(np.sum(clay_cells)),
-                "mean_confidence": float(np.nanmean(col_conf)),
-                "n_zones": sum(1 for z in self.zones if z.station == name),
-            })
+            rows.append(
+                {
+                    "station": name,
+                    "x_m": float(x),
+                    "aquifer_cells": int(np.sum(aquifer_cells)),
+                    "clay_or_saline_cells": int(np.sum(clay_cells)),
+                    "mean_confidence": float(np.nanmean(col_conf)),
+                    "n_zones": sum(
+                        1 for z in self.zones if z.station == name
+                    ),
+                }
+            )
         return rows
 
     def to_csv(self, path: PathLike) -> Path:
@@ -113,28 +121,32 @@ class HydroGeophysicalModel(PyCSAMTObject, MetadataMixin):
         model = self.resistivity_model
         with out.open("w", newline="") as fh:
             writer = csv.writer(fh)
-            writer.writerow([
-                "station",
-                "x_m",
-                "z_m",
-                "rho_log10",
-                "rho_ohm_m",
-                "hydro_unit",
-                "confidence",
-            ])
+            writer.writerow(
+                [
+                    "station",
+                    "x_m",
+                    "z_m",
+                    "rho_log10",
+                    "rho_ohm_m",
+                    "hydro_unit",
+                    "confidence",
+                ]
+            )
             for ix, x in enumerate(model.x_centers):
                 station = _station_name(model, ix)
                 for iz, z in enumerate(model.z_centers):
                     rho_log = float(model.rho_2d[iz, ix])
-                    writer.writerow([
-                        station,
-                        float(x),
-                        float(z),
-                        rho_log,
-                        float(10.0 ** rho_log),
-                        str(self.unit_map[iz, ix]),
-                        float(self.confidence[iz, ix]),
-                    ])
+                    writer.writerow(
+                        [
+                            station,
+                            float(x),
+                            float(z),
+                            rho_log,
+                            float(10.0**rho_log),
+                            str(self.unit_map[iz, ix]),
+                            float(self.confidence[iz, ix]),
+                        ]
+                    )
         return out
 
     def zones_to_csv(self, path: PathLike) -> Path:
@@ -143,27 +155,31 @@ class HydroGeophysicalModel(PyCSAMTObject, MetadataMixin):
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", newline="") as fh:
             writer = csv.writer(fh)
-            writer.writerow([
-                "station",
-                "x_m",
-                "top_m",
-                "bottom_m",
-                "thickness_m",
-                "mean_rho_ohm_m",
-                "confidence",
-                "zone_type",
-            ])
+            writer.writerow(
+                [
+                    "station",
+                    "x_m",
+                    "top_m",
+                    "bottom_m",
+                    "thickness_m",
+                    "mean_rho_ohm_m",
+                    "confidence",
+                    "zone_type",
+                ]
+            )
             for zone in self.zones:
-                writer.writerow([
-                    zone.station,
-                    zone.x,
-                    zone.top,
-                    zone.bottom,
-                    zone.thickness,
-                    zone.mean_rho_ohm_m,
-                    zone.confidence,
-                    zone.zone_type,
-                ])
+                writer.writerow(
+                    [
+                        zone.station,
+                        zone.x,
+                        zone.top,
+                        zone.bottom,
+                        zone.thickness,
+                        zone.mean_rho_ohm_m,
+                        zone.confidence,
+                        zone.zone_type,
+                    ]
+                )
         return out
 
 
@@ -228,7 +244,7 @@ class HydroInterpreter(PyCSAMTObject):
             for iz in range(res_model.n_z):
                 rho_log = float(res_model.rho_2d[iz, ix])
                 z = float(res_model.z_centers[iz])
-                unit, conf = self._classify_cell(10.0 ** rho_log, z)
+                unit, conf = self._classify_cell(10.0**rho_log, z)
                 unit_map[iz, ix] = unit
                 confidence[iz, ix] = conf
 
@@ -257,7 +273,9 @@ class HydroInterpreter(PyCSAMTObject):
         self._result = out
         return out
 
-    def aquifer_zones(self, *, min_confidence: float = 0.0) -> list[AquiferZone]:
+    def aquifer_zones(
+        self, *, min_confidence: float = 0.0
+    ) -> list[AquiferZone]:
         """Return aquifer zones from the last fitted model."""
         if self._result is None:
             raise RuntimeError("HydroInterpreter.fit must be called first.")
@@ -278,9 +296,13 @@ class HydroInterpreter(PyCSAMTObject):
             return "aquifer", _range_confidence(rho, aq_lo, aq_hi)
         fr_lo, fr_hi = self.fracture_range
         if fr_lo <= rho <= fr_hi:
-            return "fractured/weathered", 0.65 * _range_confidence(rho, fr_lo, fr_hi)
+            return "fractured/weathered", 0.65 * _range_confidence(
+                rho, fr_lo, fr_hi
+            )
         if rho >= self.basement_min:
-            return "resistive basement", min(1.0, np.log10(rho / self.basement_min + 1.0))
+            return "resistive basement", min(
+                1.0, np.log10(rho / self.basement_min + 1.0)
+            )
         return "transition", 0.35
 
     def _extract_zones(
@@ -304,15 +326,19 @@ class HydroInterpreter(PyCSAMTObject):
                     bottom = float(z_edges[stop])
                     if bottom - top >= self.min_zone_thickness:
                         rho_vals = 10.0 ** model.rho_2d[start:stop, ix]
-                        zones.append(AquiferZone(
-                            station=station,
-                            x=float(x),
-                            top=top,
-                            bottom=bottom,
-                            mean_rho_ohm_m=float(np.nanmean(rho_vals)),
-                            confidence=float(np.nanmean(confidence[start:stop, ix])),
-                            zone_type="aquifer",
-                        ))
+                        zones.append(
+                            AquiferZone(
+                                station=station,
+                                x=float(x),
+                                top=top,
+                                bottom=bottom,
+                                mean_rho_ohm_m=float(np.nanmean(rho_vals)),
+                                confidence=float(
+                                    np.nanmean(confidence[start:stop, ix])
+                                ),
+                                zone_type="aquifer",
+                            )
+                        )
                     start = None
         return zones
 
@@ -332,22 +358,30 @@ def _coerce_resistivity_model(model: Any) -> ResistivityModel:
             method=str(model.get("method", "generic")),
             rms=float(model.get("rms", float("nan"))),
         )
-    raise TypeError("model must be a ResistivityModel or expose to_resistivity_model().")
+    raise TypeError(
+        "model must be a ResistivityModel or expose to_resistivity_model()."
+    )
 
 
-def _logs_from_model(model: ResistivityModel, db: RockDatabase) -> list[StratigraphicLog]:
+def _logs_from_model(
+    model: ResistivityModel, db: RockDatabase
+) -> list[StratigraphicLog]:
     logs: list[StratigraphicLog] = []
     station_x = model.station_x if len(model.station_x) else model.x_centers
-    names = model.station_names or [f"S{i:03d}" for i in range(len(station_x))]
+    names = model.station_names or [
+        f"S{i:03d}" for i in range(len(station_x))
+    ]
     for ix, x in enumerate(station_x):
         col_idx = int(np.argmin(np.abs(model.x_centers - x)))
-        logs.append(StratigraphicLog.from_column(
-            station_name=names[ix] if ix < len(names) else f"S{ix:03d}",
-            x=float(x),
-            z_centers=model.z_centers,
-            rho_log10=model.rho_2d[:, col_idx],
-            db=db,
-        ))
+        logs.append(
+            StratigraphicLog.from_column(
+                station_name=names[ix] if ix < len(names) else f"S{ix:03d}",
+                x=float(x),
+                z_centers=model.z_centers,
+                rho_log10=model.rho_2d[:, col_idx],
+                db=db,
+            )
+        )
     return logs
 
 

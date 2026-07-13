@@ -38,6 +38,7 @@ References
 .. [3] EMSLAB Group (1988). The EMSLAB electromagnetic
        sounding experiment. *EOS Trans. AGU*, 69.
 """
+
 from __future__ import annotations
 
 import re
@@ -64,16 +65,15 @@ __all__ = [
 ]
 
 # EMSLAB hour-record header: 6-char station + yymmddhhmm
-_EMSLAB_HDR = re.compile(
-    r"^([A-Z][A-Z0-9]{2,5})(\d{10})\s*$"
-)
+_EMSLAB_HDR = re.compile(r"^([A-Z][A-Z0-9]{2,5})(\d{10})\s*$")
 #: EMSLAB multiplex order (README.emslab)
-_EMSLAB_CHAN: tuple[str, ...] = (
-    "HX", "HY", "HZ", "EX", "EY"
-)
+_EMSLAB_CHAN: tuple[str, ...] = ("HX", "HY", "HZ", "EX", "EY")
 _EMSLAB_UNITS = {
-    "HX": "nT", "HY": "nT", "HZ": "nT",
-    "EX": "mV/km", "EY": "mV/km",
+    "HX": "nT",
+    "HY": "nT",
+    "HZ": "nT",
+    "EX": "mV/km",
+    "EY": "mV/km",
 }
 
 
@@ -87,9 +87,7 @@ def sniff_format(path: str | Path) -> str:
     """
     p = Path(path)
     head: list[str] = []
-    with p.open(
-        "r", encoding="utf-8-sig", errors="replace"
-    ) as f:
+    with p.open("r", encoding="utf-8-sig", errors="replace") as f:
         for _ in range(400):
             ln = f.readline()
             if not ln:
@@ -107,9 +105,7 @@ def sniff_format(path: str | Path) -> str:
         return "emslab"
     for ln in stripped:
         u = ln.upper()
-        if u.startswith(">INFO_START") or u.startswith(
-            ">NCHAN"
-        ):
+        if u.startswith(">INFO_START") or u.startswith(">NCHAN"):
             return "lims"
     return "ascii"
 
@@ -181,9 +177,7 @@ def read_lims(
 
     # header is small: read the first chunk line by line
     head_lines: list[str] = []
-    with p.open(
-        "r", encoding="utf-8-sig", errors="replace"
-    ) as f:
+    with p.open("r", encoding="utf-8-sig", errors="replace") as f:
         for _ in range(2000):
             ln = f.readline()
             if not ln:
@@ -192,9 +186,7 @@ def read_lims(
 
     info, comments, data_start = _lims_header(head_lines)
     if not info:
-        raise FileHandlingError(
-            f"{p} has no LiMS '>KEY :value' INFO block."
-        )
+        raise FileHandlingError(f"{p} has no LiMS '>KEY :value' INFO block.")
 
     nchan = int(float(info.get("NCHAN", 0) or 0))
     if nchan <= 0:
@@ -209,9 +201,7 @@ def read_lims(
     baseline: dict[str, float] = {}
     sensor: dict[str, str] = {}
     for k in range(1, nchan + 1):
-        cid = (
-            info.get(f"CHAN_{k}", f"CH{k}") or f"CH{k}"
-        ).upper()
+        cid = (info.get(f"CHAN_{k}", f"CH{k}") or f"CH{k}").upper()
         chan.append(cid)
         if f"AZIM_{k}" in info:
             try:
@@ -255,9 +245,7 @@ def read_lims(
         )
         if m:
             try:
-                dipole[m.group(1).upper()] = float(
-                    m.group(2)
-                )
+                dipole[m.group(1).upper()] = float(m.group(2))
             except ValueError:
                 pass
 
@@ -278,16 +266,13 @@ def read_lims(
             "pandas parse failed (%s); using numpy loader",
             exc,
         )
-        values = np.loadtxt(
-            str(p), skiprows=data_start, comments="#"
-        )
+        values = np.loadtxt(str(p), skiprows=data_start, comments="#")
 
     if values.ndim == 1:
         values = values[None, :]
     if values.shape[1] != nchan:
         raise FileHandlingError(
-            f"{p}: expected {nchan} columns, found "
-            f"{values.shape[1]}."
+            f"{p}: expected {nchan} columns, found {values.shape[1]}."
         )
 
     if missing is not None:
@@ -296,9 +281,7 @@ def read_lims(
             values = values.copy()
             values[bad] = np.nan
 
-    data = {
-        cid: values[:, j] for j, cid in enumerate(chan)
-    }
+    data = {cid: values[:, j] for j, cid in enumerate(chan)}
 
     ts = TSData(
         data=data,
@@ -329,7 +312,10 @@ def read_lims(
     if verbose:
         logger.info(
             "LiMS %s: %d chan x %d samples, dt=%s s",
-            ts.station, ts.n_chan, ts.n_samples, ts.dt,
+            ts.station,
+            ts.n_chan,
+            ts.n_samples,
+            ts.dt,
         )
     return ts
 
@@ -393,9 +379,7 @@ def read_emslab(
     hours: list[tuple[datetime, list[str]]] = []
     current: list[str] | None = None
 
-    with p.open(
-        "r", encoding="utf-8-sig", errors="replace"
-    ) as f:
+    with p.open("r", encoding="utf-8-sig", errors="replace") as f:
         for raw in f:
             line = raw.rstrip("\n")
             m = _EMSLAB_HDR.match(line.strip())
@@ -416,9 +400,7 @@ def read_emslab(
                 current.append(line)
 
     if not hours:
-        raise FileHandlingError(
-            f"{p}: no EMSLAB hour records found."
-        )
+        raise FileHandlingError(f"{p}: no EMSLAB hour records found.")
 
     # fixed-width decode of one hour block -> (nsamp, nch)
     def _decode(lines: list[str]) -> np.ndarray:
@@ -443,12 +425,7 @@ def read_emslab(
     for tstamp, lines in hours:
         if prev_end is not None and tstamp > prev_end:
             # pad fully missing hours to keep timing uniform
-            gap_h = int(
-                round(
-                    (tstamp - prev_end).total_seconds()
-                    / 3600.0
-                )
-            )
+            gap_h = int(round((tstamp - prev_end).total_seconds() / 3600.0))
             if gap_h > 0:
                 blocks.append(
                     np.full(
@@ -470,15 +447,10 @@ def read_emslab(
     values = np.where(values == -9999.0, np.nan, values)
     values = values * float(scale)
 
-    data = {
-        str(cid).upper(): values[:, j]
-        for j, cid in enumerate(chan)
-    }
+    data = {str(cid).upper(): values[:, j] for j, cid in enumerate(chan)}
     # first sample is one interval AFTER the hour mark
     start = t0 + timedelta(seconds=dt)
-    stop = start + timedelta(
-        seconds=dt * (values.shape[0] - 1)
-    )
+    stop = start + timedelta(seconds=dt * (values.shape[0] - 1))
 
     ts = TSData(
         data=data,
@@ -491,9 +463,7 @@ def read_emslab(
         start=start.strftime("%Y-%m-%d %H:%M:%S"),
         stop=stop.strftime("%Y-%m-%d %H:%M:%S"),
         units={
-            str(c).upper(): _EMSLAB_UNITS.get(
-                str(c).upper(), ""
-            )
+            str(c).upper(): _EMSLAB_UNITS.get(str(c).upper(), "")
             for c in chan
         },
         missing=-9999.0,
@@ -503,7 +473,10 @@ def read_emslab(
     if verbose:
         logger.info(
             "EMSLAB %s: %d chan x %d samples, dt=%s s",
-            station, ts.n_chan, ts.n_samples, ts.dt,
+            station,
+            ts.n_chan,
+            ts.n_samples,
+            ts.dt,
         )
     return ts
 
@@ -523,9 +496,7 @@ def read_edi_tseries(
     from ..seg.time_series import TSIO, TimeSeries, TSect
 
     sect = TSect.from_file(str(path))
-    io = TSIO.from_file(
-        str(path), start_line=sect.start_data_lines_num
-    )
+    io = TSIO.from_file(str(path), start_line=sect.start_data_lines_num)
     seg_ts = TimeSeries.from_io(sect, io)
 
     dt = None
@@ -590,8 +561,7 @@ def read_ascii(
     )
     if len(order) != ncol:
         raise FileHandlingError(
-            f"{p}: {ncol} columns but {len(order)} channel "
-            "names given."
+            f"{p}: {ncol} columns but {len(order)} channel names given."
         )
     if missing is not None:
         values = np.where(
@@ -599,9 +569,7 @@ def read_ascii(
             np.nan,
             values,
         )
-    data = {
-        cid: values[:, j] for j, cid in enumerate(order)
-    }
+    data = {cid: values[:, j] for j, cid in enumerate(order)}
     return TSData(
         data=data,
         dt=dt,

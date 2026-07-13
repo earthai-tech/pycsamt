@@ -39,7 +39,7 @@ from pycsamt.pipeline import (
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_DATA_DIR     = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
+_DATA_DIR = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
 _PIPE_RESULTS = _PROJECT_ROOT / "pipe_results"
 
 # ── Skip guard ────────────────────────────────────────────────────────────────
@@ -54,6 +54,7 @@ pytestmark = pytest.mark.skipif(
 _N_STATIONS = 5
 
 # ── Module-level fixtures (run once for the whole module) ─────────────────────
+
 
 @pytest.fixture(scope="module")
 def willy_sites():
@@ -78,11 +79,11 @@ def pipeline_result(willy_sites):
 
     pipe = Pipeline(
         [
-            ("drop_dup",    Step("FREQ002")),
+            ("drop_dup", Step("FREQ002")),
             ("select_band", Step("FREQ001", band_hz=(0.01, 10_000))),
-            ("align",       Step("FREQ004")),
-            ("notch",       Step("NR001", mains_hz=50)),
-            ("qc_snap",     Step("QC001")),
+            ("align", Step("FREQ004")),
+            ("notch", Step("NR001", mains_hz=50)),
+            ("qc_snap", Step("QC001")),
         ],
         name="willy_l22_integration",
     )
@@ -101,6 +102,7 @@ def pipeline_result(willy_sites):
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 class TestPipelineResult:
     """Validate the PipelineResult object returned by the run."""
@@ -188,7 +190,9 @@ class TestPlotOutput:
     """Verify QC figures were saved under plots/."""
 
     def test_plots_has_step_subdirs(self, pipeline_result):
-        subdirs = [d for d in (_PIPE_RESULTS / "plots").iterdir() if d.is_dir()]
+        subdirs = [
+            d for d in (_PIPE_RESULTS / "plots").iterdir() if d.is_dir()
+        ]
         assert len(subdirs) > 0, "No step subdirectories in plots/"
 
     def test_step_subdir_names_are_numbered(self, pipeline_result):
@@ -240,7 +244,9 @@ class TestReportContent:
     def test_report_html_contains_all_step_codes(self, pipeline_result):
         html = (_PIPE_RESULTS / "report.html").read_text(encoding="utf-8")
         for code in ("FREQ002", "NR001", "QC001"):
-            assert code in html, f"Step code {code!r} missing from report.html"
+            assert code in html, (
+                f"Step code {code!r} missing from report.html"
+            )
 
 
 class TestPipelineYAML:
@@ -248,12 +254,14 @@ class TestPipelineYAML:
 
     def test_yaml_is_valid_yaml(self, pipeline_result):
         import yaml
+
         text = (_PIPE_RESULTS / "pipeline.yaml").read_text(encoding="utf-8")
         data = yaml.safe_load(text)
         assert isinstance(data, dict)
 
     def test_yaml_contains_name(self, pipeline_result):
         import yaml
+
         data = yaml.safe_load(
             (_PIPE_RESULTS / "pipeline.yaml").read_text(encoding="utf-8")
         )
@@ -261,6 +269,7 @@ class TestPipelineYAML:
 
     def test_yaml_steps_count(self, pipeline_result):
         import yaml
+
         data = yaml.safe_load(
             (_PIPE_RESULTS / "pipeline.yaml").read_text(encoding="utf-8")
         )
@@ -272,12 +281,14 @@ class TestPipelineYAML:
         assert len(reloaded) == 5
         assert reloaded.name == "willy_l22_integration"
 
-    def test_reloaded_pipeline_runs_on_same_data(self, pipeline_result, willy_sites):
+    def test_reloaded_pipeline_runs_on_same_data(
+        self, pipeline_result, willy_sites
+    ):
         """A pipeline reloaded from the saved YAML must run without error."""
         reloaded = Pipeline.from_yaml(_PIPE_RESULTS / "pipeline.yaml")
         result2 = reloaded.run(
             willy_sites,
-            outdir=None,        # in-memory, no disk writes
+            outdir=None,  # in-memory, no disk writes
             save_plots=False,
             save_edis=False,
             save_report=False,
@@ -299,6 +310,7 @@ class TestStepResultDetails:
 
     def test_step_labels_match_registry(self, pipeline_result):
         from pycsamt.pipeline import lookup_step
+
         for sr in pipeline_result.step_results:
             spec = lookup_step(sr.step_code)
             assert sr.step_label == spec.label

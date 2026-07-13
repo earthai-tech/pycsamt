@@ -79,17 +79,23 @@ def _register_apply(app) -> None:
             if src == "upload":
                 elev_map = upload_elev or {}
                 if not elev_map:
-                    return (no_update,
-                            _msg("Upload a file first.", ok=False),
-                            no_update)
+                    return (
+                        no_update,
+                        _msg("Upload a file first.", ok=False),
+                        no_update,
+                    )
             elif src == "fetch":
                 elev_map = view.fetch_elevations(api_name=api or "open_meteo")
                 if not elev_map:
-                    return (no_update,
-                            _msg("Fetch returned no elevations "
-                                 "(check coordinates / connection).",
-                                 ok=False),
-                            no_update)
+                    return (
+                        no_update,
+                        _msg(
+                            "Fetch returned no elevations "
+                            "(check coordinates / connection).",
+                            ok=False,
+                        ),
+                        no_update,
+                    )
             else:  # stations — already on the view, just confirm draping
                 store = store_from_view(view)
                 return store, _msg("Using station EDI elevations."), True
@@ -98,7 +104,8 @@ def _register_apply(app) -> None:
             set_view(session_id, new_view)
             store = store_from_view(new_view)
             n = sum(
-                1 for s in new_view.data.stations
+                1
+                for s in new_view.data.stations
                 if str(s.id) in {str(k) for k in elev_map}
             )
             return store, _msg(f"Applied {n} elevations. Draping on."), True

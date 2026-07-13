@@ -180,8 +180,7 @@ class ComponentsMixin:
         if isinstance(sec, dict) and k in sec:
             del sec[k]
 
-    def snapshot(self, keys: Iterable[str] | None = None
-                 ) -> dict[str, Any]:
+    def snapshot(self, keys: Iterable[str] | None = None) -> dict[str, Any]:
         """
         Return a shallow snapshot mapping key -> component or
         ``None`` if absent.  If ``keys`` is omitted, use all
@@ -339,4 +338,3 @@ class ComponentsMixin:
             _emit_one(k)
 
         return "".join(out)
-

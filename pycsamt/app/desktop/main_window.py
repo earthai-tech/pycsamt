@@ -95,13 +95,13 @@ from pycsamt.app.desktop.windows.pipeline_window import (
 )
 
 _RESOURCES = Path(__file__).parent / "resources"
-_ICONS     = _RESOURCES / "icons"
+_ICONS = _RESOURCES / "icons"
 
 # Tracks current theme so _icon() can recolor SVGs without being passed a flag.
 _DARK_MODE: bool = False
 
 # Matches any 6-digit hex colour in an SVG source string.
-_HEX6_RE = re.compile(r'#[0-9a-fA-F]{6}', re.IGNORECASE)
+_HEX6_RE = re.compile(r"#[0-9a-fA-F]{6}", re.IGNORECASE)
 
 
 def _is_near_black(hex6: str) -> bool:
@@ -116,7 +116,10 @@ def _recolor_svg(text: str, target: str = "#cdd6f4") -> bytes:
         text,
     )
     # Pass 2: replace the named keyword "black" in attribute values / inline styles
-    result = re.sub(r'(?<=[";\s:])black(?=[";\s])', target, result, flags=re.IGNORECASE)
+    result = re.sub(
+        r'(?<=[";\s:])black(?=[";\s])', target, result, flags=re.IGNORECASE
+    )
+
     # Pass 3: inject fill on individual shape elements that carry no explicit fill,
     # so icons that use the SVG default (black) fill — e.g. interpret.svg — become
     # visible on a dark background.  Elements with an existing fill= or fill: are
@@ -125,12 +128,15 @@ def _recolor_svg(text: str, target: str = "#cdd6f4") -> bytes:
     def _maybe_fill(m: re.Match) -> str:
         tag = m.group(0)
         if "fill=" not in tag and "fill:" not in tag:
-            return (tag[:-2] + f' fill="{target}"/>'
-                    if tag.endswith("/>")
-                    else tag[:-1] + f' fill="{target}">')
+            return (
+                tag[:-2] + f' fill="{target}"/>'
+                if tag.endswith("/>")
+                else tag[:-1] + f' fill="{target}">'
+            )
         return tag
+
     result = re.sub(
-        r'<(?:path|rect|circle|ellipse|polygon|polyline|line)\b[^>]*?(?:/>|>)',
+        r"<(?:path|rect|circle|ellipse|polygon|polyline|line)\b[^>]*?(?:/>|>)",
         _maybe_fill,
         result,
     )
@@ -145,8 +151,9 @@ def _icon(name: str) -> QIcon:
             if _DARK_MODE and str(c).endswith(".svg"):
                 try:
                     from PySide6.QtSvg import QSvgRenderer
+
                     svg_bytes = _recolor_svg(p.read_text("utf-8"))
-                    renderer  = QSvgRenderer(QByteArray(svg_bytes))
+                    renderer = QSvgRenderer(QByteArray(svg_bytes))
                     icon = QIcon()
                     for s in (16, 22, 32, 48):
                         pm = QPixmap(s, s)
@@ -164,26 +171,30 @@ def _icon(name: str) -> QIcon:
 
 # ── Main window ───────────────────────────────────────────────────────────────
 
+
 class MainWindow(QMainWindow):
     """Lean host window — station list + detail card + panel launchers."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._session    = SessionState.load()
+        self._session = SessionState.load()
         self._controller = AppController(self._session)
-        self._loader     = None      # LoaderWorker kept alive while running
-        self._recomputed_ids: set[str] = set()   # stations marked recomputed
-        self._last_recompute_output = None        # Path to last recomputed EDI folder
+        self._loader = None  # LoaderWorker kept alive while running
+        self._recomputed_ids: set[str] = set()  # stations marked recomputed
+        self._last_recompute_output = (
+            None  # Path to last recomputed EDI folder
+        )
 
         # Settings controller — load saved profile (silently no-ops if absent)
         from pycsamt.app.desktop.controllers.settings_controller import (
             SettingsController,
         )
+
         self._settings_ctrl = SettingsController()
         self._settings_ctrl.load()
 
         self._setup_window()
-        self._create_panel_windows()          # windows must exist before theme is applied
+        self._create_panel_windows()  # windows must exist before theme is applied
         self._apply_theme(self._session.theme)
         self._create_central_widget()
         self._create_log_dock()
@@ -211,7 +222,7 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self, theme: str) -> None:
         global _DARK_MODE
-        _DARK_MODE = (theme == "dark")
+        _DARK_MODE = theme == "dark"
 
         qss = _RESOURCES / f"{theme}_theme.qss"
         if qss.exists():
@@ -238,7 +249,6 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
 
-
     def _toggle_theme(self) -> None:
         new = "light" if self._session.theme == "dark" else "dark"
         self._apply_theme(new)
@@ -248,26 +258,34 @@ class MainWindow(QMainWindow):
     # ── Independent panel windows (created once, shown/hidden on demand) ──
 
     def _create_panel_windows(self) -> None:
-        self._profile_win    = ProfileViewerWindow(parent=self)
-        self._map_win        = MapViewerWindow(parent=self)
-        self._qc_win         = QCDashboardWindow(parent=self)
+        self._profile_win = ProfileViewerWindow(parent=self)
+        self._map_win = MapViewerWindow(parent=self)
+        self._qc_win = QCDashboardWindow(parent=self)
         self._correction_win = CorrectionWindow(parent=self)
-        self._advanced_win   = AdvancedToolsWindow(parent=self)
-        self._tdem_win       = TDEMWindow(parent=self)
-        self._pipeline_win   = PipelineWindow(parent=self)
-        self._forward_win    = ForwardModelWindow(parent=self)
-        self._inversion_win  = InversionWindow(parent=self)
-        self._interp_win     = InterpretationWindow(parent=self)
+        self._advanced_win = AdvancedToolsWindow(parent=self)
+        self._tdem_win = TDEMWindow(parent=self)
+        self._pipeline_win = PipelineWindow(parent=self)
+        self._forward_win = ForwardModelWindow(parent=self)
+        self._inversion_win = InversionWindow(parent=self)
+        self._interp_win = InterpretationWindow(parent=self)
 
         # Wire forward → inversion bridge
-        self._forward_win.send_to_inversion.connect(self._on_forward_send_to_inversion)
+        self._forward_win.send_to_inversion.connect(
+            self._on_forward_send_to_inversion
+        )
         # Wire inversion result → interpretation model
-        self._inversion_win.result_ready.connect(self._on_inversion_result_ready)
+        self._inversion_win.result_ready.connect(
+            self._on_inversion_result_ready
+        )
 
         # Wire correction window → main data
-        self._correction_win.corrections_committed.connect(self._on_corrections_committed)
+        self._correction_win.corrections_committed.connect(
+            self._on_corrections_committed
+        )
         # Wire advanced tools conversion → main data
-        self._advanced_win.conversion_committed.connect(self._on_conversion_committed)
+        self._advanced_win.conversion_committed.connect(
+            self._on_conversion_committed
+        )
 
         # Restore positions from session
         geo = self._session.window_geometries
@@ -335,12 +353,14 @@ class MainWindow(QMainWindow):
 
     def _create_log_dock(self) -> None:
         self._log_panel = LogPanel(self)
-        self._log_dock  = QDockWidget("Log", self)
+        self._log_dock = QDockWidget("Log", self)
         self._log_dock.setObjectName("LogDock")
         self._log_dock.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
         self._log_dock.setWidget(self._log_panel)
         self._log_dock.setMaximumHeight(120)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._log_dock)
+        self.addDockWidget(
+            Qt.DockWidgetArea.BottomDockWidgetArea, self._log_dock
+        )
 
     # ── Menu bar (File | View | Help) ─────────────────────────────────
 
@@ -383,7 +403,9 @@ class MainWindow(QMainWindow):
 
         act_profile = QAction(_icon("profile-view"), "&Profile Viewer", self)
         act_profile.setShortcut("Ctrl+P")
-        act_profile.triggered.connect(lambda: self._show_window(self._profile_win))
+        act_profile.triggered.connect(
+            lambda: self._show_window(self._profile_win)
+        )
         view_menu.addAction(act_profile)
 
         act_map = QAction(_icon("map-view"), "&Map Viewer", self)
@@ -396,14 +418,20 @@ class MainWindow(QMainWindow):
         act_qc.triggered.connect(lambda: self._show_window(self._qc_win))
         view_menu.addAction(act_qc)
 
-        act_corr = QAction(_icon("sites-correction"), "&Data Corrections", self)
+        act_corr = QAction(
+            _icon("sites-correction"), "&Data Corrections", self
+        )
         act_corr.setShortcut("Ctrl+R")
-        act_corr.triggered.connect(lambda: self._show_window(self._correction_win))
+        act_corr.triggered.connect(
+            lambda: self._show_window(self._correction_win)
+        )
         view_menu.addAction(act_corr)
 
         act_fwd = QAction(_icon("forward"), "&Forward Modelling", self)
         act_fwd.setShortcut("Ctrl+F")
-        act_fwd.triggered.connect(lambda: self._show_window(self._forward_win))
+        act_fwd.triggered.connect(
+            lambda: self._show_window(self._forward_win)
+        )
         view_menu.addAction(act_fwd)
 
         act_inv = QAction(_icon("inversion"), "&Inversion Wizard…", self)
@@ -411,14 +439,20 @@ class MainWindow(QMainWindow):
         act_inv.triggered.connect(self._open_inversion_wizard)
         view_menu.addAction(act_inv)
 
-        act_interp = QAction(_icon("interpret"), "&Interpretation Studio", self)
+        act_interp = QAction(
+            _icon("interpret"), "&Interpretation Studio", self
+        )
         act_interp.setShortcut("Ctrl+Shift+I")
-        act_interp.triggered.connect(lambda: self._show_window(self._interp_win))
+        act_interp.triggered.connect(
+            lambda: self._show_window(self._interp_win)
+        )
         view_menu.addAction(act_interp)
 
         act_pipe = QAction(_icon("pipeline"), "&Processing Pipeline", self)
         act_pipe.setShortcut("Ctrl+Shift+P")
-        act_pipe.triggered.connect(lambda: self._show_window(self._pipeline_win))
+        act_pipe.triggered.connect(
+            lambda: self._show_window(self._pipeline_win)
+        )
         view_menu.addAction(act_pipe)
 
         act_tdem = QAction(_icon("tdem"), "&TDEM Analysis", self)
@@ -433,7 +467,9 @@ class MainWindow(QMainWindow):
 
         act_adv = QAction(_icon("advanced-tools"), "&Advanced Tools", self)
         act_adv.setShortcut("Ctrl+Shift+T")
-        act_adv.triggered.connect(lambda: self._show_window(self._advanced_win))
+        act_adv.triggered.connect(
+            lambda: self._show_window(self._advanced_win)
+        )
         view_menu.addAction(act_adv)
 
         view_menu.addSeparator()
@@ -443,14 +479,14 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
 
         theme_menu = view_menu.addMenu("Theme")
-        self._act_dark  = QAction("☾  Dark",  self, checkable=True)
+        self._act_dark = QAction("☾  Dark", self, checkable=True)
         self._act_light = QAction("☀  Light", self, checkable=True)
         # QActionGroup enforces mutual exclusivity: checking one unchecks the other.
         _theme_grp = QActionGroup(self)
         _theme_grp.setExclusive(True)
         _theme_grp.addAction(self._act_dark)
         _theme_grp.addAction(self._act_light)
-        self._act_dark.setChecked(self._session.theme  == "dark")
+        self._act_dark.setChecked(self._session.theme == "dark")
         self._act_light.setChecked(self._session.theme == "light")
         self._act_dark.triggered.connect(lambda: self._apply_theme("dark"))
         self._act_light.triggered.connect(lambda: self._apply_theme("light"))
@@ -460,7 +496,9 @@ class MainWindow(QMainWindow):
         # ── Tools ─────────────────────────────────────────────────────
         tools_menu = mb.addMenu("&Tools")
 
-        act_strike = QAction(_icon("strike-analyzer"), "&Strike Analyzer…", self)
+        act_strike = QAction(
+            _icon("strike-analyzer"), "&Strike Analyzer…", self
+        )
         act_strike.setShortcut("Ctrl+Shift+S")
         act_strike.setStatusTip("Regional-strike and dimensionality analysis")
         act_strike.triggered.connect(self._open_strike_analyzer)
@@ -484,13 +522,17 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
 
-        act_conv = QAction(_icon("format-converter"), "&Format Converter…", self)
+        act_conv = QAction(
+            _icon("format-converter"), "&Format Converter…", self
+        )
         act_conv.setShortcut("Ctrl+Shift+C")
         act_conv.setStatusTip("Export survey to EDI / CSV / JSON")
         act_conv.triggered.connect(self._open_format_converter)
         tools_menu.addAction(act_conv)
 
-        act_batch = QAction(_icon("batch-export"), "&Batch Export Plots…", self)
+        act_batch = QAction(
+            _icon("batch-export"), "&Batch Export Plots…", self
+        )
         act_batch.setShortcut("Ctrl+Shift+E")
         act_batch.setStatusTip("Save every open canvas figure to a folder")
         act_batch.triggered.connect(self._open_batch_export)
@@ -498,7 +540,9 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
 
-        act_coord = QAction(_icon("coordinate-transformer"), "&Coordinate Transformer…", self)
+        act_coord = QAction(
+            _icon("coordinate-transformer"), "&Coordinate Transformer…", self
+        )
         act_coord.setShortcut("Ctrl+Shift+G")
         act_coord.setStatusTip("Convert UTM ↔ Lat/Lon (pyproj-backed)")
         act_coord.triggered.connect(self._open_coord_transformer)
@@ -506,49 +550,75 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
 
-        act_station_resp = QAction(_icon("station-response"), "Station &Response Inspector…", self)
+        act_station_resp = QAction(
+            _icon("station-response"), "Station &Response Inspector…", self
+        )
         act_station_resp.setShortcut("Ctrl+Shift+R")
-        act_station_resp.setStatusTip("Plot full impedance tensor response for a selected station")
+        act_station_resp.setStatusTip(
+            "Plot full impedance tensor response for a selected station"
+        )
         act_station_resp.triggered.connect(self._open_station_response)
         tools_menu.addAction(act_station_resp)
 
-        act_strike_profile = QAction(_icon("strike-profile"), "Strike &Profile Viewer…", self)
+        act_strike_profile = QAction(
+            _icon("strike-profile"), "Strike &Profile Viewer…", self
+        )
         act_strike_profile.setShortcut("Ctrl+Shift+P")
-        act_strike_profile.setStatusTip("Strike angle vs. station-position line plot with IQR ribbon")
+        act_strike_profile.setStatusTip(
+            "Strike angle vs. station-position line plot with IQR ribbon"
+        )
         act_strike_profile.triggered.connect(self._open_strike_profile)
         tools_menu.addAction(act_strike_profile)
 
-        act_pt_map = QAction(_icon("phase-tensor"), "Phase &Tensor Map…", self)
+        act_pt_map = QAction(
+            _icon("phase-tensor"), "Phase &Tensor Map…", self
+        )
         act_pt_map.setShortcut("Ctrl+Shift+T")
-        act_pt_map.setStatusTip("Geographic map of phase-tensor ellipses at a chosen period")
+        act_pt_map.setStatusTip(
+            "Geographic map of phase-tensor ellipses at a chosen period"
+        )
         act_pt_map.triggered.connect(self._open_phase_tensor_map)
         tools_menu.addAction(act_pt_map)
 
-        act_pt_strip_grid = QAction(_icon("phase-tensor"), "Phase Tensor Strip &Grid…", self)
+        act_pt_strip_grid = QAction(
+            _icon("phase-tensor"), "Phase Tensor Strip &Grid…", self
+        )
         act_pt_strip_grid.setShortcut("Ctrl+Shift+N")
         act_pt_strip_grid.setStatusTip(
             "Ellipse-strip vs. period, tiled by survey line (multi-profile view)"
         )
-        act_pt_strip_grid.triggered.connect(self._open_phase_tensor_strip_grid)
+        act_pt_strip_grid.triggered.connect(
+            self._open_phase_tensor_strip_grid
+        )
         tools_menu.addAction(act_pt_strip_grid)
 
         tools_menu.addSeparator()
 
-        act_dim = QAction(_icon("dimensionnality"), "&Dimensionality Classifier…", self)
+        act_dim = QAction(
+            _icon("dimensionnality"), "&Dimensionality Classifier…", self
+        )
         act_dim.setShortcut("Ctrl+Shift+D")
-        act_dim.setStatusTip("Classify each station × frequency as 1D / 2D / 3D")
+        act_dim.setStatusTip(
+            "Classify each station × frequency as 1D / 2D / 3D"
+        )
         act_dim.triggered.connect(self._open_dimensionality)
         tools_menu.addAction(act_dim)
 
-        act_freq_ed = QAction(_icon("frequency-editor"), "&Frequency Editor…", self)
+        act_freq_ed = QAction(
+            _icon("frequency-editor"), "&Frequency Editor…", self
+        )
         act_freq_ed.setShortcut("Ctrl+Shift+F")
-        act_freq_ed.setStatusTip("Confidence-based frequency QC: drop / mask / recover frequency bands")
+        act_freq_ed.setStatusTip(
+            "Confidence-based frequency QC: drop / mask / recover frequency bands"
+        )
         act_freq_ed.triggered.connect(self._open_frequency_editor)
         tools_menu.addAction(act_freq_ed)
 
         tools_menu.addSeparator()
 
-        act_lm = QAction(_icon("layered-model"), "&Layered Model Builder…", self)
+        act_lm = QAction(
+            _icon("layered-model"), "&Layered Model Builder…", self
+        )
         act_lm.setShortcut("Ctrl+Shift+L")
         act_lm.setStatusTip("Build and preview a 1-D layered earth model")
         act_lm.triggered.connect(self._open_layered_model)
@@ -556,26 +626,30 @@ class MainWindow(QMainWindow):
 
         act_elev = QAction(_icon("elevation"), "&Elevation Enrichment…", self)
         act_elev.setShortcut("Ctrl+Shift+H")
-        act_elev.setStatusTip("Fetch elevation for all loaded stations via open elevation API")
+        act_elev.setStatusTip(
+            "Fetch elevation for all loaded stations via open elevation API"
+        )
         act_elev.triggered.connect(self._open_elevation_enrichment)
         tools_menu.addAction(act_elev)
 
-        self._all_icon_actions.extend([
-            (act_strike,         "strike-analyzer"),
-            (act_valid,          "EDI-validator"),
-            (act_recompute,      "recompute"),
-            (act_conv,           "format-converter"),
-            (act_batch,          "batch-export"),
-            (act_coord,          "coordinate-transformer"),
-            (act_station_resp,   "station-response"),
-            (act_strike_profile, "strike-profile"),
-            (act_pt_map,         "phase-tensor"),
-            (act_pt_strip_grid,  "phase-tensor"),
-            (act_dim,            "dimensionnality"),
-            (act_freq_ed,        "frequency-editor"),
-            (act_lm,             "layered-model"),
-            (act_elev,           "elevation"),
-        ])
+        self._all_icon_actions.extend(
+            [
+                (act_strike, "strike-analyzer"),
+                (act_valid, "EDI-validator"),
+                (act_recompute, "recompute"),
+                (act_conv, "format-converter"),
+                (act_batch, "batch-export"),
+                (act_coord, "coordinate-transformer"),
+                (act_station_resp, "station-response"),
+                (act_strike_profile, "strike-profile"),
+                (act_pt_map, "phase-tensor"),
+                (act_pt_strip_grid, "phase-tensor"),
+                (act_dim, "dimensionnality"),
+                (act_freq_ed, "frequency-editor"),
+                (act_lm, "layered-model"),
+                (act_elev, "elevation"),
+            ]
+        )
 
         # ── Settings ──────────────────────────────────────────────────
         settings_menu = mb.addMenu("&Settings")
@@ -591,19 +665,25 @@ class MainWindow(QMainWindow):
         settings_menu.addSeparator()
 
         act_reset_all = QAction("Reset All to Defaults", self)
-        act_reset_all.setStatusTip("Reset all API singletons to package defaults")
+        act_reset_all.setStatusTip(
+            "Reset all API singletons to package defaults"
+        )
         act_reset_all.triggered.connect(self._reset_all_settings)
         settings_menu.addAction(act_reset_all)
 
         settings_menu.addSeparator()
 
         act_save_profile = QAction("Save Profile…", self)
-        act_save_profile.setStatusTip("Save current API configuration to a JSON profile")
+        act_save_profile.setStatusTip(
+            "Save current API configuration to a JSON profile"
+        )
         act_save_profile.triggered.connect(self._save_settings_profile)
         settings_menu.addAction(act_save_profile)
 
         act_load_profile = QAction("Load Profile…", self)
-        act_load_profile.setStatusTip("Load an API configuration profile from JSON")
+        act_load_profile.setStatusTip(
+            "Load an API configuration profile from JSON"
+        )
         act_load_profile.triggered.connect(self._load_settings_profile)
         settings_menu.addAction(act_load_profile)
 
@@ -611,13 +691,15 @@ class MainWindow(QMainWindow):
 
         # ── Help ──────────────────────────────────────────────────────
         help_menu = mb.addMenu("&Help")
-        act_docs  = QAction(_icon("docs"), "&Documentation", self)
+        act_docs = QAction(_icon("docs"), "&Documentation", self)
         act_docs.setStatusTip("Open pycsamt documentation in your browser")
         act_docs.triggered.connect(self._open_documentation)
         help_menu.addAction(act_docs)
 
         act_gh = QAction(_icon("github"), "pycsamt on &GitHub", self)
-        act_gh.setStatusTip("Open the pycsamt GitHub repository in your browser")
+        act_gh.setStatusTip(
+            "Open the pycsamt GitHub repository in your browser"
+        )
         act_gh.triggered.connect(self._open_github)
         help_menu.addAction(act_gh)
 
@@ -630,26 +712,28 @@ class MainWindow(QMainWindow):
 
         # Register every icon-bearing action created in this method so that
         # _apply_theme can re-ice all of them when the user switches theme.
-        self._all_icon_actions.extend([
-            (self._act_open,  "open"),
-            (self._act_save,  "save-session"),
-            (act_prefs,       "tools"),
-            (act_profile,     "profile-view"),
-            (act_map,         "map-view"),
-            (act_qc,          "qc"),
-            (act_corr,        "sites-correction"),
-            (act_fwd,         "forward"),
-            (act_inv,         "inversion"),
-            (act_interp,      "interpret"),
-            (act_pipe,        "pipeline"),
-            (act_tdem,        "tdem"),
-            (act_agents,      "agents"),
-            (act_adv,         "advanced-tools"),
-            (_log_tva,        "log"),
-            (act_docs,        "docs"),
-            (act_gh,          "github"),
-            (act_about,       "help"),
-        ])
+        self._all_icon_actions.extend(
+            [
+                (self._act_open, "open"),
+                (self._act_save, "save-session"),
+                (act_prefs, "tools"),
+                (act_profile, "profile-view"),
+                (act_map, "map-view"),
+                (act_qc, "qc"),
+                (act_corr, "sites-correction"),
+                (act_fwd, "forward"),
+                (act_inv, "inversion"),
+                (act_interp, "interpret"),
+                (act_pipe, "pipeline"),
+                (act_tdem, "tdem"),
+                (act_agents, "agents"),
+                (act_adv, "advanced-tools"),
+                (_log_tva, "log"),
+                (act_docs, "docs"),
+                (act_gh, "github"),
+                (act_about, "help"),
+            ]
+        )
 
     # ── Toolbar ───────────────────────────────────────────────────────
 
@@ -675,26 +759,57 @@ class MainWindow(QMainWindow):
         # ── Primary workflow — max 10 visible actions (+ More) ───────────
         # Slots 1-2: Open / Save already added above.
         # Slots 3-10: the eight core scientific tools.
-        _tb("profile-view",     "Profile",     "Open Profile Viewer",
-            lambda: self._show_window(self._profile_win))
-        _tb("map-view",         "Map",         "Open Map Viewer",
-            lambda: self._show_window(self._map_win))
+        _tb(
+            "profile-view",
+            "Profile",
+            "Open Profile Viewer",
+            lambda: self._show_window(self._profile_win),
+        )
+        _tb(
+            "map-view",
+            "Map",
+            "Open Map Viewer",
+            lambda: self._show_window(self._map_win),
+        )
         tb.addSeparator()
-        _tb("qc",               "QC",          "Open QC Dashboard",
-            lambda: self._show_window(self._qc_win))
-        _tb("sites-correction", "Corrections", "Open Data Corrections",
-            lambda: self._show_window(self._correction_win))
-        _tb("forward",          "Forward",     "Open Forward Modelling",
-            lambda: self._show_window(self._forward_win))
-        _tb("inversion",        "Inversion",   "Open Inversion Wizard",
-            self._open_inversion_wizard)
-        _tb("interpret",        "Interpret",   "Open Interpretation Studio",
-            lambda: self._show_window(self._interp_win))
-        _tb("pipeline",         "Pipeline",    "Open Processing Pipeline",
-            lambda: self._show_window(self._pipeline_win))
+        _tb(
+            "qc",
+            "QC",
+            "Open QC Dashboard",
+            lambda: self._show_window(self._qc_win),
+        )
+        _tb(
+            "sites-correction",
+            "Corrections",
+            "Open Data Corrections",
+            lambda: self._show_window(self._correction_win),
+        )
+        _tb(
+            "forward",
+            "Forward",
+            "Open Forward Modelling",
+            lambda: self._show_window(self._forward_win),
+        )
+        _tb(
+            "inversion",
+            "Inversion",
+            "Open Inversion Wizard",
+            self._open_inversion_wizard,
+        )
+        _tb(
+            "interpret",
+            "Interpret",
+            "Open Interpretation Studio",
+            lambda: self._show_window(self._interp_win),
+        )
+        _tb(
+            "pipeline",
+            "Pipeline",
+            "Open Processing Pipeline",
+            lambda: self._show_window(self._pipeline_win),
+        )
         tb.addSeparator()
-        _tb("agents",           "Agents",      "Open Agent Master",
-            self._open_agent_master)
+        _tb("agents", "Agents", "Open Agent Master", self._open_agent_master)
 
         # ── Secondary-tools dropdown — sits directly next to Agents ──────────
         # One click opens the menu; items are grouped into three sections so
@@ -714,7 +829,9 @@ class MainWindow(QMainWindow):
         sec_menu.addSection("Processing")
         _act_adv = QAction(_icon("advanced-tools"), "Advanced Tools", self)
         _act_adv.setStatusTip("Open advanced EM processing and diagnostics")
-        _act_adv.triggered.connect(lambda: self._show_window(self._advanced_win))
+        _act_adv.triggered.connect(
+            lambda: self._show_window(self._advanced_win)
+        )
         sec_menu.addAction(_act_adv)
 
         # ── Section 3: output ─────────────────────────────────────────────────
@@ -725,11 +842,13 @@ class MainWindow(QMainWindow):
         sec_menu.addAction(_act_exp)
 
         # Track More-menu actions so _apply_theme can re-ice them on theme switch
-        self._all_icon_actions.extend([
-            (_act_tdem,  "tdem"),
-            (_act_adv,   "advanced-tools"),
-            (_act_exp,   "export"),
-        ])
+        self._all_icon_actions.extend(
+            [
+                (_act_tdem, "tdem"),
+                (_act_adv, "advanced-tools"),
+                (_act_exp, "export"),
+            ]
+        )
 
         self._more_btn = QToolButton(self)
         self._more_btn.setObjectName("MoreToolButton")
@@ -737,8 +856,12 @@ class MainWindow(QMainWindow):
         self._more_btn.setIcon(_icon("more"))
         self._more_btn.setIconSize(QSize(22, 22))
         self._more_btn.setToolTip("TDEM · Advanced Tools · Export")
-        self._more_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        self._more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._more_btn.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
+        self._more_btn.setPopupMode(
+            QToolButton.ToolButtonPopupMode.InstantPopup
+        )
         self._more_btn.setMenu(self._more_menu)
         self._more_btn.setMinimumWidth(58)
         tb.addWidget(self._more_btn)
@@ -791,15 +914,15 @@ class MainWindow(QMainWindow):
         # Station panel clicks → controller
         self._station_panel.station_selected.connect(ctrl.select_station)
         # Double-click on station → open Profile Viewer for that station
-        self._station_panel.station_selected.connect(self._on_station_double_clicked)
+        self._station_panel.station_selected.connect(
+            self._on_station_double_clicked
+        )
 
         # Detail card action buttons
         self._detail_card.open_profile_requested.connect(
             self._on_open_profile_for_station
         )
-        self._detail_card.show_on_map_requested.connect(
-            self._on_show_on_map
-        )
+        self._detail_card.show_on_map_requested.connect(self._on_show_on_map)
 
         # Map window station pick → controller
         self._map_win.station_selected.connect(ctrl.select_station)
@@ -810,6 +933,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.dialogs.load_data_dlg import (
             LoadDataDialog,
         )
+
         dlg = LoadDataDialog(
             self,
             last_dir=self._session.last_data_dir,
@@ -830,6 +954,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.workers.loader_worker import (
             LoaderWorker,
         )
+
         self._loaded_paths = list(paths)
         self._loader = LoaderWorker(paths, parent=self)
         self._loader.progress.connect(self._progress_bar.setValue)
@@ -847,7 +972,7 @@ class MainWindow(QMainWindow):
         self._recomputed_ids.clear()
 
         ctrl = self._controller
-        df   = None
+        df = None
         if self._loader is not None:
             df = self._loader.data_controller.dataframe
 
@@ -873,7 +998,7 @@ class MainWindow(QMainWindow):
                     try:
                         _call()
                     except Exception:
-                        pass   # never let a panel window block the status update
+                        pass  # never let a panel window block the status update
         finally:
             # Always update the status bar — even if a panel window throws.
             n = ctrl.n_stations
@@ -935,11 +1060,18 @@ class MainWindow(QMainWindow):
 
     def _panel_windows(self) -> list:
         wins = []
-        for attr in ("_profile_win", "_map_win", "_qc_win",
-                     "_correction_win",
-                     "_advanced_win", "_tdem_win",
-                     "_pipeline_win", "_forward_win", "_inversion_win",
-                     "_interp_win"):
+        for attr in (
+            "_profile_win",
+            "_map_win",
+            "_qc_win",
+            "_correction_win",
+            "_advanced_win",
+            "_tdem_win",
+            "_pipeline_win",
+            "_forward_win",
+            "_inversion_win",
+            "_interp_win",
+        ):
             w = getattr(self, attr, None)
             if w is not None:
                 wins.append(w)
@@ -954,13 +1086,16 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.controllers.data_controller import (
             DataController,
         )
+
         dc = DataController()
         dc._sites = corrected_sites
-        dc._df    = dc._build_dataframe()
+        dc._df = dc._build_dataframe()
         df = dc.dataframe
         if df is not None and not df.empty:
             self._station_panel.set_dataframe(df)
-            self._survey_overview.update_survey(df, getattr(self, "_loaded_paths", None))
+            self._survey_overview.update_survey(
+                df, getattr(self, "_loaded_paths", None)
+            )
             self._profile_win.set_sites(corrected_sites)
             self._map_win.set_dataframe(df)
             self._map_win.set_sites(corrected_sites)
@@ -980,6 +1115,7 @@ class MainWindow(QMainWindow):
         """Replace global sites with an EDICollection converted by AdvancedToolsWindow."""
         try:
             from pycsamt.site.base import to_sites
+
             converted_sites = to_sites(converted_sites)
         except Exception as exc:
             self._log(f"Could not commit converted dataset: {exc}")
@@ -989,13 +1125,16 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.controllers.data_controller import (
             DataController,
         )
+
         dc = DataController()
         dc._sites = converted_sites
-        dc._df    = dc._build_dataframe()
+        dc._df = dc._build_dataframe()
         df = dc.dataframe
         if df is not None and not df.empty:
             self._station_panel.set_dataframe(df)
-            self._survey_overview.update_survey(df, getattr(self, "_loaded_paths", None))
+            self._survey_overview.update_survey(
+                df, getattr(self, "_loaded_paths", None)
+            )
             self._correction_win.set_sites(converted_sites)
             self._profile_win.set_sites(converted_sites)
             self._map_win.set_dataframe(df)
@@ -1014,7 +1153,7 @@ class MainWindow(QMainWindow):
     def _on_forward_send_to_inversion(self, payload: dict) -> None:
         """Show the InversionWindow pre-loaded with the forward model."""
         self._log(
-            f"Forward model sent to Inversion (dim={payload.get('dim','1D')})."
+            f"Forward model sent to Inversion (dim={payload.get('dim', '1D')})."
         )
         self._inversion_win.load_starting_model(payload)
         self._show_window(self._inversion_win)
@@ -1031,7 +1170,10 @@ class MainWindow(QMainWindow):
             return
         try:
             from pycsamt.interp._base import ResistivityModel
-            if isinstance(result, ResistivityModel) or hasattr(result, "rho_2d"):
+
+            if isinstance(result, ResistivityModel) or hasattr(
+                result, "rho_2d"
+            ):
                 self._interp_win._ctrl.set_model(result)
             else:
                 result_dir = getattr(result, "result_dir", None)
@@ -1048,6 +1190,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         # Try to grab figure from the most recently active panel window
         fig = None
         for win in reversed(self._panel_windows()):
@@ -1071,6 +1214,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.dialogs.preferences_dlg import (
             PreferencesDialog,
         )
+
         dlg = PreferencesDialog(session=self._session, parent=self)
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_theme(self._session.theme)
@@ -1087,6 +1231,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.dialogs.settings_dialog import (
             APIConfigDialog,
         )
+
         dlg = APIConfigDialog(self._settings_ctrl, parent=self, open_tab=tab)
         dlg.settings_changed.connect(self._on_settings_changed)
         dlg.exec()
@@ -1120,25 +1265,31 @@ class MainWindow(QMainWindow):
     def _reset_all_settings(self) -> None:
         """Reset all PYCSAMT_* singletons to defaults and refresh panels."""
         from PySide6.QtWidgets import QMessageBox
+
         reply = QMessageBox.question(
             self,
             "Reset All Settings",
             "Reset ALL API configuration to package defaults?\n\n"
             "This will revert all pseudosection, view, display, and topography "
             "settings to their original values.\n\nThis action cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
         self._settings_ctrl.reset_all()
-        self._on_settings_changed(["station", "section", "view_controls", "topography"])
+        self._on_settings_changed(
+            ["station", "section", "view_controls", "topography"]
+        )
         self._log("All API settings reset to package defaults.")
 
     def _save_settings_profile(self) -> None:
         from PySide6.QtWidgets import QFileDialog
+
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save Settings Profile",
+            self,
+            "Save Settings Profile",
             str(self._settings_ctrl.SETTINGS_PATH.parent),
             "JSON files (*.json)",
         )
@@ -1151,8 +1302,10 @@ class MainWindow(QMainWindow):
 
     def _load_settings_profile(self) -> None:
         from PySide6.QtWidgets import QFileDialog
+
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load Settings Profile",
+            self,
+            "Load Settings Profile",
             str(self._settings_ctrl.SETTINGS_PATH.parent),
             "JSON files (*.json)",
         )
@@ -1181,6 +1334,7 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.dialogs.no_data_dialog import (
             NoDataDialog,
         )
+
         if NoDataDialog.require(self, tool_name):
             self._act_open.trigger()
         return False
@@ -1193,7 +1347,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.strike_tool import (
             StrikeAnalyzerDialog,
         )
-        StrikeAnalyzerDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        StrikeAnalyzerDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_edi_validator(self) -> None:
         if not self._require_sites("EDI Validator & Station Manager"):
@@ -1201,10 +1358,15 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.validator_tool import (
             EDIValidatorDialog,
         )
-        dlg = EDIValidatorDialog(getattr(self._controller, "sites", None), parent=self)
+
+        dlg = EDIValidatorDialog(
+            getattr(self._controller, "sites", None), parent=self
+        )
         dlg.open_recompute_requested.connect(self._open_recompute)
         if dlg.exec() and dlg.modified_sites is not None:
-            self._apply_modified_sites(dlg.modified_sites, source="EDI Validator")
+            self._apply_modified_sites(
+                dlg.modified_sites, source="EDI Validator"
+            )
 
     def _open_format_converter(self) -> None:
         if not self._require_sites("Format Converter"):
@@ -1212,12 +1374,16 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.converter_tool import (
             FormatConverterDialog,
         )
-        FormatConverterDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        FormatConverterDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_batch_export(self) -> None:
         from pycsamt.app.desktop.tools.batch_export_tool import (
             BatchExportDialog,
         )
+
         figures = self._collect_figures()
         BatchExportDialog(figures, parent=self).exec()
 
@@ -1225,22 +1391,25 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.coord_tool import (
             CoordTransformDialog,
         )
-        CoordTransformDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        CoordTransformDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _collect_figures(self) -> list:
         """Return [(label, Figure)] for every visible canvas in all panel windows."""
         figures = []
         _LABEL = {
-            "_profile_win":    "Profile",
-            "_map_win":        "Map",
-            "_qc_win":         "QC",
+            "_profile_win": "Profile",
+            "_map_win": "Map",
+            "_qc_win": "QC",
             "_correction_win": "Correction",
-            "_advanced_win":   "Advanced",
-            "_tdem_win":       "TDEM",
-            "_pipeline_win":   "Pipeline",
-            "_forward_win":    "Forward",
-            "_inversion_win":  "Inversion",
-            "_interp_win":     "Interpretation",
+            "_advanced_win": "Advanced",
+            "_tdem_win": "TDEM",
+            "_pipeline_win": "Pipeline",
+            "_forward_win": "Forward",
+            "_inversion_win": "Inversion",
+            "_interp_win": "Interpretation",
         }
         for attr, label in _LABEL.items():
             win = getattr(self, attr, None)
@@ -1258,7 +1427,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.station_response_tool import (
             StationResponseDialog,
         )
-        StationResponseDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        StationResponseDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_strike_profile(self) -> None:
         if not self._require_sites("Strike Profile Viewer"):
@@ -1266,7 +1438,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.strike_profile_tool import (
             StrikeProfileDialog,
         )
-        StrikeProfileDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        StrikeProfileDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_phase_tensor_map(self) -> None:
         if not self._require_sites("Phase Tensor Map"):
@@ -1274,7 +1449,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.phase_tensor_map_tool import (
             PhaseTensorMapDialog,
         )
-        PhaseTensorMapDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        PhaseTensorMapDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_phase_tensor_strip_grid(self) -> None:
         if not self._require_sites("Phase Tensor Strip Grid"):
@@ -1282,7 +1460,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.phase_tensor_strip_grid_tool import (
             PhaseTensorStripGridDialog,
         )
-        PhaseTensorStripGridDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        PhaseTensorStripGridDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_dimensionality(self) -> None:
         if not self._require_sites("Dimensionality Classifier"):
@@ -1290,7 +1471,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.dimensionality_tool import (
             DimensionalityDialog,
         )
-        DimensionalityDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        DimensionalityDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_frequency_editor(self) -> None:
         if not self._require_sites("Frequency Editor"):
@@ -1298,14 +1482,20 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.frequency_editor_tool import (
             FrequencyEditorDialog,
         )
-        dlg = FrequencyEditorDialog(getattr(self._controller, "sites", None), parent=self)
+
+        dlg = FrequencyEditorDialog(
+            getattr(self._controller, "sites", None), parent=self
+        )
         if dlg.exec() and dlg.edited_sites is not None:
-            self._apply_modified_sites(dlg.edited_sites, source="Frequency Editor")
+            self._apply_modified_sites(
+                dlg.edited_sites, source="Frequency Editor"
+            )
 
     def _open_layered_model(self) -> None:
         from pycsamt.app.desktop.tools.layered_model_tool import (
             LayeredModelDialog,
         )
+
         LayeredModelDialog(parent=self).exec()
 
     def _open_elevation_enrichment(self) -> None:
@@ -1314,7 +1504,10 @@ class MainWindow(QMainWindow):
         from pycsamt.app.desktop.tools.elevation_tool import (
             ElevationEnrichDialog,
         )
-        ElevationEnrichDialog(getattr(self._controller, "sites", None), parent=self).exec()
+
+        ElevationEnrichDialog(
+            getattr(self._controller, "sites", None), parent=self
+        ).exec()
 
     def _open_recompute(self) -> None:
         from PySide6.QtWidgets import QMessageBox
@@ -1327,13 +1520,14 @@ class MainWindow(QMainWindow):
 
         # If already recomputed — warn and ask for confirmation before re-opening
         if self._recomputed_ids:
-            n   = len(self._recomputed_ids)
+            n = len(self._recomputed_ids)
             ans = QMessageBox.question(
                 self,
                 "Already Recomputed",
                 f"{n} station(s) in this survey have already been recomputed.\n\n"
                 "Do you want to recompute again with new settings?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if ans != QMessageBox.StandardButton.Yes:
@@ -1345,7 +1539,9 @@ class MainWindow(QMainWindow):
 
     def _on_recompute_committed(self, result) -> None:
         """Apply a completed recompute result back into the app."""
-        new_ids = {rec.station for rec in result.records if rec.status == "ok"}
+        new_ids = {
+            rec.station for rec in result.records if rec.status == "ok"
+        }
         self._recomputed_ids.update(new_ids)
         self._last_recompute_output = result.output_root
 
@@ -1356,12 +1552,17 @@ class MainWindow(QMainWindow):
         self._apply_modified_sites(recomputed_sites, source="Recompute")
 
         # Now stamp the badges onto the freshly-loaded model rows.
-        self._station_panel._table._model.mark_recomputed(self._recomputed_ids)
+        self._station_panel._table._model.mark_recomputed(
+            self._recomputed_ids
+        )
 
         n = len(new_ids)
-        self._log(f"Recompute committed — {n} station(s) marked with ◈ badge.")
+        self._log(
+            f"Recompute committed — {n} station(s) marked with ◈ badge."
+        )
         self.statusBar().showMessage(
-            f"Recomputed {n} station(s). Marked with ◈ in the station list.", 6000
+            f"Recomputed {n} station(s). Marked with ◈ in the station list.",
+            6000,
         )
 
     def _apply_modified_sites(self, new_sites, *, source: str = "") -> None:
@@ -1371,9 +1572,10 @@ class MainWindow(QMainWindow):
             from pycsamt.app.desktop.controllers.data_controller import (
                 DataController,
             )
+
             dc = DataController()
             dc._sites = new_sites
-            dc._df    = dc._build_dataframe()
+            dc._df = dc._build_dataframe()
             df = dc.dataframe
             if df is not None and not df.empty:
                 self._station_panel.set_dataframe(df)
@@ -1400,17 +1602,22 @@ class MainWindow(QMainWindow):
     def _open_documentation(self) -> None:
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
+
         QDesktopServices.openUrl(QUrl("http://pycsamt.readthedocs.io/"))
 
     def _open_github(self) -> None:
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
-        QDesktopServices.openUrl(QUrl("https://github.com/earthai-tech/pycsamt"))
+
+        QDesktopServices.openUrl(
+            QUrl("https://github.com/earthai-tech/pycsamt")
+        )
 
     def _open_about(self) -> None:
         from pycsamt.app.desktop.dialogs.about_dialog import (
             AboutDialog,
         )
+
         AboutDialog(parent=self).exec()
 
     # ── Recent files ──────────────────────────────────────────────────
@@ -1449,9 +1656,7 @@ class MainWindow(QMainWindow):
         self._session.dock_geometry = (
             self.saveGeometry().toBase64().data().decode()
         )
-        self._session.dock_state = (
-            self.saveState().toBase64().data().decode()
-        )
+        self._session.dock_state = self.saveState().toBase64().data().decode()
         for win in self._panel_windows():
             win.save_geometry_to(self._session.window_geometries)
 
@@ -1468,9 +1673,7 @@ class MainWindow(QMainWindow):
         if self._session.dock_state:
             try:
                 self.restoreState(
-                    QByteArray.fromBase64(
-                        self._session.dock_state.encode()
-                    )
+                    QByteArray.fromBase64(self._session.dock_state.encode())
                 )
             except Exception:
                 pass
@@ -1509,12 +1712,14 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         from PySide6.QtWidgets import QMessageBox
+
         reply = QMessageBox.question(
             self,
             "Quit pycsamt",
             "Are you sure you want to quit?\n\n"
             "Any unsaved session data will be lost.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )
         if reply != QMessageBox.StandardButton.Yes:

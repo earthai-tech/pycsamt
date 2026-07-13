@@ -78,9 +78,7 @@ def skin_depth_m(resistivity: Any, freq: Any) -> np.ndarray:
     f = np.asarray(freq, dtype=float)
     with np.errstate(divide="ignore", invalid="ignore"):
         delta = _SKIN_DEPTH_CONST * np.sqrt(rho / f)
-    delta = np.where(
-        np.isfinite(delta) & (rho > 0) & (f > 0), delta, np.nan
-    )
+    delta = np.where(np.isfinite(delta) & (rho > 0) & (f > 0), delta, np.nan)
     return delta
 
 
@@ -116,7 +114,8 @@ class FieldZoneCoverage(PyCSAMTObject):
     def first_far_field_hz(self) -> float | None:
         """Lowest frequency that reaches the far field, if any."""
         far = [
-            f for f, z in zip(self.freq_hz, self.zones)
+            f
+            for f, z in zip(self.freq_hz, self.zones)
             if z == FieldZone.FAR.value
         ]
         return min(far) if far else None
@@ -203,8 +202,12 @@ def classify_field_zones(
         else:
             zone = FieldZone.TRANSITION
         coverage.freq_hz.append(float(fi))
-        coverage.skin_depth_m.append(float(di) if np.isfinite(di) else float("nan"))
-        coverage.offset_ratio.append(float(ri) if np.isfinite(ri) else float("nan"))
+        coverage.skin_depth_m.append(
+            float(di) if np.isfinite(di) else float("nan")
+        )
+        coverage.offset_ratio.append(
+            float(ri) if np.isfinite(ri) else float("nan")
+        )
         coverage.zones.append(zone.value)
         if zone is FieldZone.FAR:
             coverage.n_far += 1
@@ -252,7 +255,11 @@ class TransmitterComb(PyCSAMTObject):
 
     @property
     def detection_fraction(self) -> float:
-        return (self.n_detected / self.n_expected) if self.lines else float("nan")
+        return (
+            (self.n_detected / self.n_expected)
+            if self.lines
+            else float("nan")
+        )
 
     def missing(self) -> list[float]:
         """Expected frequencies whose energy was not resolvable."""
@@ -400,7 +407,9 @@ def assess_source_stability(
     SourceStability
     """
     max_cv = _c.as_positive(max_cv, "max_cv")
-    on_threshold_frac = _c.as_probability(on_threshold_frac, "on_threshold_frac")
+    on_threshold_frac = _c.as_probability(
+        on_threshold_frac, "on_threshold_frac"
+    )
     x = _prep_signal(tx_current)
     flags: list[str] = []
     if x.size < 3:
@@ -414,8 +423,10 @@ def assess_source_stability(
         )
 
     peak = float(np.max(np.abs(x)))
-    on_mask = np.abs(x) >= on_threshold_frac * peak if peak > 0 else np.zeros(
-        x.shape, dtype=bool
+    on_mask = (
+        np.abs(x) >= on_threshold_frac * peak
+        if peak > 0
+        else np.zeros(x.shape, dtype=bool)
     )
     on_fraction = float(np.mean(on_mask))
     on = x[on_mask]
@@ -469,12 +480,13 @@ def csamt_edge_report(
 ) -> dict[str, Any]:
     """Run the core CSAMT edge diagnostics on one channel and collate them."""
     lines = list(tx_frequencies)
-    comb = detect_transmitter_frequencies(
-        data, sample_rate, lines
-    )
+    comb = detect_transmitter_frequencies(data, sample_rate, lines)
     zones = classify_field_zones(
-        lines, resistivity, offset_m,
-        near_ratio=near_ratio, far_ratio=far_ratio,
+        lines,
+        resistivity,
+        offset_m,
+        near_ratio=near_ratio,
+        far_ratio=far_ratio,
     )
     report: dict[str, Any] = dict(
         transmitter=comb.as_dict(),
@@ -494,26 +506,27 @@ def csamt_edge_table(
 ) -> Any:
     """Flatten one or more :func:`csamt_edge_report` results into a table."""
     items = (
-        list(reports.items()) if isinstance(reports, dict)
-        else list(reports)
+        list(reports.items()) if isinstance(reports, dict) else list(reports)
     )
     rows: list[dict[str, Any]] = []
     for channel, report in items:
         comb = report.get("transmitter", {})
         zones = report.get("field_zones", {})
         source = report.get("source_stability", {})
-        rows.append(dict(
-            channel=str(channel).lower(),
-            n_tx_expected=comb.get("n_expected"),
-            n_tx_detected=comb.get("n_detected"),
-            tx_detection_fraction=comb.get("detection_fraction"),
-            far_fraction=zones.get("far_fraction"),
-            all_far_field=zones.get("all_far_field"),
-            correction_recommended=zones.get("correction_recommended"),
-            first_far_field_hz=zones.get("first_far_field_hz"),
-            source_stable=source.get("stable"),
-            current_cv=source.get("current_cv"),
-        ))
+        rows.append(
+            dict(
+                channel=str(channel).lower(),
+                n_tx_expected=comb.get("n_expected"),
+                n_tx_detected=comb.get("n_detected"),
+                tx_detection_fraction=comb.get("detection_fraction"),
+                far_fraction=zones.get("far_fraction"),
+                all_far_field=zones.get("all_far_field"),
+                correction_recommended=zones.get("correction_recommended"),
+                first_far_field_hz=zones.get("first_far_field_hz"),
+                source_stable=source.get("stable"),
+                current_cv=source.get("current_cv"),
+            )
+        )
     df = pd.DataFrame.from_records(rows)
     return maybe_wrap_frame(
         df,

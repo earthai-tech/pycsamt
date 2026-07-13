@@ -20,12 +20,7 @@ from pycsamt.tdem.transform import (
 )
 from pycsamt.tdem.waveform import SquareWaveform
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 AVG_FILE = DATA_DIR / "TEM100.AVG"
 
 
@@ -109,4 +104,3 @@ def test_temavg_workflow_bundle_tracks_runtime_attrs():
     assert bundle.soundings[0].verbose == 8
     assert "verbose" not in repr(bundle)
     assert "logger" not in repr(bundle)
-

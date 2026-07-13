@@ -61,6 +61,7 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
+
     _RICH = True
 except ImportError:
     _RICH = False
@@ -71,15 +72,16 @@ __all__ = ["SiteReport", "SitesReport"]
 # Constants
 # ---------------------------------------------------------------------------
 
-_COMPONENTS   = ("Zxx", "Zxy", "Zyx", "Zyy")
-_COMP_LOWER   = tuple(c.lower() for c in _COMPONENTS)
-_BAR_CHARS    = "█▓▒░"  # filled → empty
-_BAR_WIDTH    = 10
+_COMPONENTS = ("Zxx", "Zxy", "Zyx", "Zyy")
+_COMP_LOWER = tuple(c.lower() for c in _COMPONENTS)
+_BAR_CHARS = "█▓▒░"  # filled → empty
+_BAR_WIDTH = 10
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _bar(fraction: float, width: int = _BAR_WIDTH) -> str:
     """Return a Unicode block-character progress bar string.
@@ -91,8 +93,8 @@ def _bar(fraction: float, width: int = _BAR_WIDTH) -> str:
     >>> _bar(0.0)   # '░░░░░░░░░░'
     """
     fraction = max(0.0, min(1.0, float(fraction)))
-    filled   = round(fraction * width)
-    empty    = width - filled
+    filled = round(fraction * width)
+    empty = width - filled
     return "█" * filled + "░" * empty
 
 
@@ -155,10 +157,10 @@ def _rho_stats(
         return None, None
     try:
         r = np.asarray(rho, dtype=float)
-        if r.ndim == 3:        # (n, 2, 2)
+        if r.ndim == 3:  # (n, 2, 2)
             row, col = divmod(comp_idx, 2)
             col_data = r[:, row, col]
-        elif r.ndim == 2:      # (n, 4)  Zxx=0 Zxy=1 Zyx=2 Zyy=3
+        elif r.ndim == 2:  # (n, 4)  Zxx=0 Zxy=1 Zyx=2 Zyy=3
             col_data = r[:, comp_idx]
         else:
             return None, None
@@ -251,6 +253,7 @@ def _print_plain(lines: list[str]) -> None:
 # SiteReport
 # ---------------------------------------------------------------------------
 
+
 class SiteReport:
     """Statistics and display for a single :class:`~pycsamt.site.base.Site`.
 
@@ -272,7 +275,7 @@ class SiteReport:
     """
 
     def __init__(self, site: Any) -> None:
-        self._site  = site
+        self._site = site
         self._stats = self._compute()
 
     # ------------------------------------------------------------------
@@ -306,7 +309,9 @@ class SiteReport:
         """Return a plain dict of all computed statistics."""
         return dict(self._stats)
 
-    def to_dataframe(self, kind: str = "resphase", *, api: bool | None = None) -> Any:
+    def to_dataframe(
+        self, kind: str = "resphase", *, api: bool | None = None
+    ) -> Any:
         """Export site arrays to a :class:`pandas.DataFrame`.
 
         Parameters
@@ -335,16 +340,16 @@ class SiteReport:
             lat, lon, elev = None, None, None
 
         freq = _safe_arr(getattr(site, "freq", None))
-        nfreq    = int(freq.size) if freq is not None else 0
+        nfreq = int(freq.size) if freq is not None else 0
         freq_min = float(freq.min()) if freq is not None else None
         freq_max = float(freq.max()) if freq is not None else None
-        per_min  = 1.0 / freq_max if freq_max else None
-        per_max  = 1.0 / freq_min if freq_min else None
+        per_min = 1.0 / freq_max if freq_max else None
+        per_max = 1.0 / freq_min if freq_min else None
 
-        rho   = getattr(site, "rho",   None)
+        rho = getattr(site, "rho", None)
         phase = getattr(site, "phase", None)
-        z     = getattr(site, "z",     None)
-        tip   = getattr(site, "tipper", None)
+        z = getattr(site, "z", None)
+        tip = getattr(site, "tipper", None)
 
         # Z component presence
         comp_present = {}
@@ -368,22 +373,26 @@ class SiteReport:
             quality[c] = q
 
         return {
-            "name":       getattr(site, "name", "?"),
-            "lat":        lat,
-            "lon":        lon,
-            "elev":       elev,
-            "nfreq":      nfreq,
-            "freq_min":   freq_min,
-            "freq_max":   freq_max,
-            "per_min":    per_min,
-            "per_max":    per_max,
+            "name": getattr(site, "name", "?"),
+            "lat": lat,
+            "lon": lon,
+            "elev": elev,
+            "nfreq": nfreq,
+            "freq_min": freq_min,
+            "freq_max": freq_max,
+            "per_min": per_min,
+            "per_max": per_max,
             "components": comp_present,
             "has_tipper": has_tip,
-            "rho_xy_mean": rho_xy_m, "rho_xy_std": rho_xy_s,
-            "rho_yx_mean": rho_yx_m, "rho_yx_std": rho_yx_s,
-            "phi_xy_mean": phi_xy_m, "phi_xy_std": phi_xy_s,
-            "phi_yx_mean": phi_yx_m, "phi_yx_std": phi_yx_s,
-            "quality":    quality,
+            "rho_xy_mean": rho_xy_m,
+            "rho_xy_std": rho_xy_s,
+            "rho_yx_mean": rho_yx_m,
+            "rho_yx_std": rho_yx_s,
+            "phi_xy_mean": phi_xy_m,
+            "phi_xy_std": phi_xy_s,
+            "phi_yx_mean": phi_yx_m,
+            "phi_yx_std": phi_yx_s,
+            "quality": quality,
         }
 
     # ------------------------------------------------------------------
@@ -391,57 +400,56 @@ class SiteReport:
     # ------------------------------------------------------------------
 
     def _rich_report(self, *, detail: bool = False) -> None:
-        s   = self._stats
+        s = self._stats
         con = Console()
-        t   = Table.grid(padding=(0, 2))
-        t.add_column(style="bold dim",  no_wrap=True)
+        t = Table.grid(padding=(0, 2))
+        t.add_column(style="bold dim", no_wrap=True)
         t.add_column(style="white")
 
         def row(k: str, v: str) -> None:
             t.add_row(k, v)
 
         coords = (
-            f"{s['lat']:.5f}°N  {s['lon']:.5f}°E  "
-            f"elev {s['elev']:.0f} m"
+            f"{s['lat']:.5f}°N  {s['lon']:.5f}°E  elev {s['elev']:.0f} m"
             if s["lat"] is not None
             else "—"
         )
         freq_str = (
             f"{s['nfreq']}  ·  "
             f"{_fmt_freq(s['freq_min'])} → {_fmt_freq(s['freq_max'])}"
-            if s["nfreq"] > 0 else "—"
+            if s["nfreq"] > 0
+            else "—"
         )
         per_str = (
             f"{_fmt_freq(s['per_min'])} → {_fmt_freq(s['per_max'])}"
-            if s["per_min"] is not None else "—"
+            if s["per_min"] is not None
+            else "—"
         )
         comp_str = "  ".join(
             f"[green]{c} ✓[/green]" if v else f"[red]{c} ✗[/red]"
             for c, v in s["components"].items()
         )
         tip_str = (
-            "[green]✓  Tx  Ty[/green]"
-            if s["has_tipper"]
-            else "[dim]—[/dim]"
+            "[green]✓  Tx  Ty[/green]" if s["has_tipper"] else "[dim]—[/dim]"
         )
 
         row("Coordinates", coords)
         row("Frequencies", freq_str)
-        row("Periods",     per_str)
-        row("Components",  comp_str)
-        row("Tipper",      tip_str)
+        row("Periods", per_str)
+        row("Components", comp_str)
+        row("Tipper", tip_str)
         t.add_row("", "")
 
-        row("ρ_xy",        _fmt_rho(s["rho_xy_mean"], s["rho_xy_std"]))
-        row("ρ_yx",        _fmt_rho(s["rho_yx_mean"], s["rho_yx_std"]))
-        row("φ_xy",        _fmt_phi(s["phi_xy_mean"], s["phi_xy_std"]))
-        row("φ_yx",        _fmt_phi(s["phi_yx_mean"], s["phi_yx_std"]))
+        row("ρ_xy", _fmt_rho(s["rho_xy_mean"], s["rho_xy_std"]))
+        row("ρ_yx", _fmt_rho(s["rho_yx_mean"], s["rho_yx_std"]))
+        row("φ_xy", _fmt_phi(s["phi_xy_mean"], s["phi_xy_std"]))
+        row("φ_yx", _fmt_phi(s["phi_yx_mean"], s["phi_yx_std"]))
         t.add_row("", "")
 
         for comp, q in s["quality"].items():
             if q is not None:
-                bar  = _bar(q)
-                pct  = f"{q * 100:.0f}%"
+                bar = _bar(q)
+                pct = f"{q * 100:.0f}%"
                 row(f"Quality {comp}", f"{bar} {pct}")
 
         panel = Panel(
@@ -470,16 +478,18 @@ class SiteReport:
 
         coords = (
             f"{s['lat']:.5f}°N  {s['lon']:.5f}°E  elev {s['elev']:.0f} m"
-            if s["lat"] is not None else "—"
+            if s["lat"] is not None
+            else "—"
         )
         row("Coordinates", coords)
         if s["nfreq"] > 0:
-            row("Frequencies",
+            row(
+                "Frequencies",
                 f"{s['nfreq']}  ·  "
-                f"{_fmt_freq(s['freq_min'])} → {_fmt_freq(s['freq_max'])}")
+                f"{_fmt_freq(s['freq_min'])} → {_fmt_freq(s['freq_max'])}",
+            )
         comp_str = "  ".join(
-            f"{c}{'✓' if v else '✗'}"
-            for c, v in s["components"].items()
+            f"{c}{'✓' if v else '✗'}" for c, v in s["components"].items()
         )
         row("Components", comp_str)
         row("Tipper", "✓" if s["has_tipper"] else "—")
@@ -499,6 +509,7 @@ class SiteReport:
 # ---------------------------------------------------------------------------
 # SitesReport
 # ---------------------------------------------------------------------------
+
 
 class SitesReport:
     """Statistics and display for a :class:`~pycsamt.site.base.Sites` collection.
@@ -520,11 +531,11 @@ class SitesReport:
     """
 
     def __init__(self, sites: Any) -> None:
-        self._sites   = list(sites)
+        self._sites = list(sites)
         self._records: list[dict[str, Any]] = [
             SiteReport(s)._compute() for s in self._sites
         ]
-        self._survey  = self._survey_stats()
+        self._survey = self._survey_stats()
 
     # ------------------------------------------------------------------
     # Public interface
@@ -566,30 +577,33 @@ class SitesReport:
     def to_dataframe(self, *, api: bool | None = None) -> Any:
         """Return a :class:`pandas.DataFrame` with one row per station."""
         import pandas as pd  # noqa: PLC0415
+
         rows = []
         for r in self._records:
-            rows.append({
-                "station":    r["name"],
-                "lat":        r["lat"],
-                "lon":        r["lon"],
-                "elev":       r["elev"],
-                "nfreq":      r["nfreq"],
-                "freq_min":   r["freq_min"],
-                "freq_max":   r["freq_max"],
-                "has_Zxx":    r["components"].get("Zxx", False),
-                "has_Zxy":    r["components"].get("Zxy", False),
-                "has_Zyx":    r["components"].get("Zyx", False),
-                "has_Zyy":    r["components"].get("Zyy", False),
-                "has_tipper": r["has_tipper"],
-                "rho_xy":     r["rho_xy_mean"],
-                "rho_xy_std": r["rho_xy_std"],
-                "rho_yx":     r["rho_yx_mean"],
-                "rho_yx_std": r["rho_yx_std"],
-                "phi_xy":     r["phi_xy_mean"],
-                "phi_xy_std": r["phi_xy_std"],
-                "phi_yx":     r["phi_yx_mean"],
-                "phi_yx_std": r["phi_yx_std"],
-            })
+            rows.append(
+                {
+                    "station": r["name"],
+                    "lat": r["lat"],
+                    "lon": r["lon"],
+                    "elev": r["elev"],
+                    "nfreq": r["nfreq"],
+                    "freq_min": r["freq_min"],
+                    "freq_max": r["freq_max"],
+                    "has_Zxx": r["components"].get("Zxx", False),
+                    "has_Zxy": r["components"].get("Zxy", False),
+                    "has_Zyx": r["components"].get("Zyx", False),
+                    "has_Zyy": r["components"].get("Zyy", False),
+                    "has_tipper": r["has_tipper"],
+                    "rho_xy": r["rho_xy_mean"],
+                    "rho_xy_std": r["rho_xy_std"],
+                    "rho_yx": r["rho_yx_mean"],
+                    "rho_yx_std": r["rho_yx_std"],
+                    "phi_xy": r["phi_xy_mean"],
+                    "phi_xy_std": r["phi_xy_std"],
+                    "phi_yx": r["phi_yx_mean"],
+                    "phi_yx_std": r["phi_yx_std"],
+                }
+            )
         df = pd.DataFrame(rows)
 
         return maybe_wrap_frame(
@@ -613,8 +627,8 @@ class SitesReport:
         if not recs:
             return {"n_stations": 0}
 
-        lats  = [r["lat"]  for r in recs if r["lat"]  is not None]
-        lons  = [r["lon"]  for r in recs if r["lon"]  is not None]
+        lats = [r["lat"] for r in recs if r["lat"] is not None]
+        lons = [r["lon"] for r in recs if r["lon"] is not None]
         elevs = [r["elev"] for r in recs if r["elev"] is not None]
 
         fmins = [r["freq_min"] for r in recs if r["freq_min"] is not None]
@@ -634,19 +648,19 @@ class SitesReport:
                 nfreq_vals.append(r["nfreq"])
 
         return {
-            "n_stations":     len(recs),
-            "lat_min":        min(lats)  if lats  else None,
-            "lat_max":        max(lats)  if lats  else None,
-            "lon_min":        min(lons)  if lons  else None,
-            "lon_max":        max(lons)  if lons  else None,
-            "elev_min":       min(elevs) if elevs else None,
-            "elev_max":       max(elevs) if elevs else None,
+            "n_stations": len(recs),
+            "lat_min": min(lats) if lats else None,
+            "lat_max": max(lats) if lats else None,
+            "lon_min": min(lons) if lons else None,
+            "lon_max": max(lons) if lons else None,
+            "elev_min": min(elevs) if elevs else None,
+            "elev_max": max(elevs) if elevs else None,
             "freq_min_common": min(fmins) if fmins else None,
             "freq_max_common": max(fmaxs) if fmaxs else None,
-            "nfreq_min":      min(nfreq_vals) if nfreq_vals else None,
-            "nfreq_max":      max(nfreq_vals) if nfreq_vals else None,
-            "comp_counts":    comp_counts,
-            "tip_count":      tip_count,
+            "nfreq_min": min(nfreq_vals) if nfreq_vals else None,
+            "nfreq_max": max(nfreq_vals) if nfreq_vals else None,
+            "comp_counts": comp_counts,
+            "tip_count": tip_count,
         }
 
     # ------------------------------------------------------------------
@@ -659,7 +673,7 @@ class SitesReport:
         *,
         detail: bool = False,
     ) -> None:
-        sv  = self._survey
+        sv = self._survey
         con = Console()
 
         # --- header panel ---
@@ -685,56 +699,65 @@ class SitesReport:
         hdr = Table.grid(padding=(0, 2))
         hdr.add_column(style="bold dim")
         hdr.add_column(style="white")
-        hdr.add_row("Stations",    str(n))
+        hdr.add_row("Stations", str(n))
         if bbox:
-            hdr.add_row("Coverage",   bbox)
+            hdr.add_row("Coverage", bbox)
         if nf_str:
             hdr.add_row("Frequencies", nf_str)
 
         con.print()
-        con.print(Panel(
-            hdr,
-            title="[bold bright_cyan]Survey Summary[/bold bright_cyan]",
-            border_style="bright_cyan",
-            expand=False,
-        ))
+        con.print(
+            Panel(
+                hdr,
+                title="[bold bright_cyan]Survey Summary[/bold bright_cyan]",
+                border_style="bright_cyan",
+                expand=False,
+            )
+        )
 
         # --- per-station table ---
         tbl = Table(
-            title=f"[dim]Stations ({len(records)}" +
-                  (f" of {n}" if len(records) < n else "") + ")[/dim]",
+            title=f"[dim]Stations ({len(records)}"
+            + (f" of {n}" if len(records) < n else "")
+            + ")[/dim]",
             border_style="blue",
             show_lines=False,
         )
-        tbl.add_column("Station",  style="bold cyan",  no_wrap=True)
-        tbl.add_column("Freq",     style="dim",         justify="right")
+        tbl.add_column("Station", style="bold cyan", no_wrap=True)
+        tbl.add_column("Freq", style="dim", justify="right")
         for c in _COMPONENTS:
             tbl.add_column(c, justify="center", width=4)
         tbl.add_column("Tip", justify="center", width=4)
-        tbl.add_column("ρ_xy Ω·m",  justify="right")
-        tbl.add_column("φ_xy °",    justify="right")
-        tbl.add_column("Cover",     no_wrap=True)
+        tbl.add_column("ρ_xy Ω·m", justify="right")
+        tbl.add_column("φ_xy °", justify="right")
+        tbl.add_column("Cover", no_wrap=True)
 
         for r in records:
             comp_cells = [
-                "[green]✓[/green]" if r["components"].get(c, False)
+                "[green]✓[/green]"
+                if r["components"].get(c, False)
                 else "[red]✗[/red]"
                 for c in _COMPONENTS
             ]
-            tip_cell = "[green]✓[/green]" if r["has_tipper"] else "[dim]—[/dim]"
+            tip_cell = (
+                "[green]✓[/green]" if r["has_tipper"] else "[dim]—[/dim]"
+            )
 
             rho_s = (
                 f"{r['rho_xy_mean']:.0f}±{r['rho_xy_std']:.0f}"
-                if r["rho_xy_mean"] is not None else "—"
+                if r["rho_xy_mean"] is not None
+                else "—"
             )
             phi_s = (
                 f"{r['phi_xy_mean']:.1f}±{r['phi_xy_std']:.1f}"
-                if r["phi_xy_mean"] is not None else "—"
+                if r["phi_xy_mean"] is not None
+                else "—"
             )
 
             # coverage = average quality across present components
             qs = [
-                q for c, q in r["quality"].items()
+                q
+                for c, q in r["quality"].items()
                 if q is not None and r["components"].get(c, False)
             ]
             cover = _bar(float(np.mean(qs)), width=6) if qs else "——"
@@ -759,7 +782,7 @@ class SitesReport:
         avail.add_column(style="dim", justify="right", width=6)
 
         all_comps = list(_COMPONENTS) + ["Tipper"]
-        counts    = {c: sv["comp_counts"].get(c, 0) for c in _COMPONENTS}
+        counts = {c: sv["comp_counts"].get(c, 0) for c in _COMPONENTS}
         counts["Tipper"] = sv["tip_count"]
 
         for comp in all_comps:
@@ -773,12 +796,14 @@ class SitesReport:
             )
 
         con.print()
-        con.print(Panel(
-            avail,
-            title="[dim]Component Availability[/dim]",
-            border_style="dim",
-            expand=False,
-        ))
+        con.print(
+            Panel(
+                avail,
+                title="[dim]Component Availability[/dim]",
+                border_style="dim",
+                expand=False,
+            )
+        )
         con.print()
 
     # ------------------------------------------------------------------
@@ -792,7 +817,7 @@ class SitesReport:
         detail: bool = False,
     ) -> list[str]:
         sv = self._survey
-        n  = sv["n_stations"]
+        n = sv["n_stations"]
         lines = [
             "",
             f"Survey: {n} station(s)",
@@ -826,14 +851,17 @@ class SitesReport:
             tip_cell = f"{'✓' if r['has_tipper'] else '—':4}"
             rho_s = (
                 f"{r['rho_xy_mean']:.0f}±{r['rho_xy_std']:.0f} Ω·m"
-                if r["rho_xy_mean"] is not None else "—"
+                if r["rho_xy_mean"] is not None
+                else "—"
             )
             phi_s = (
                 f"{r['phi_xy_mean']:.1f}±{r['phi_xy_std']:.1f}°"
-                if r["phi_xy_mean"] is not None else "—"
+                if r["phi_xy_mean"] is not None
+                else "—"
             )
             qs = [
-                q for c, q in r["quality"].items()
+                q
+                for c, q in r["quality"].items()
                 if q is not None and r["components"].get(c, False)
             ]
             cover = _bar(float(np.mean(qs)), width=6) if qs else "——"
@@ -846,7 +874,9 @@ class SitesReport:
 
         lines += ["", "Component availability:"]
         for comp in list(_COMPONENTS) + ["Tipper"]:
-            cnt  = sv["comp_counts"].get(comp, sv["tip_count"] if comp == "Tipper" else 0)
+            cnt = sv["comp_counts"].get(
+                comp, sv["tip_count"] if comp == "Tipper" else 0
+            )
             frac = cnt / n if n > 0 else 0.0
             lines.append(
                 f"  {comp:<6}  {_bar(frac, 16)}  {cnt}/{n}  {frac * 100:.0f}%"

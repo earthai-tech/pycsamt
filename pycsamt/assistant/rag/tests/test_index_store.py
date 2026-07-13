@@ -3,6 +3,7 @@
 """
 Tests for the persisted RAG index + CLI (RAG Step 5). Hermetic temp tree.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -39,7 +40,6 @@ def _tree() -> Path:
 
 
 class TestIndexStore(unittest.TestCase):
-
     def setUp(self):
         self.root = _tree()
 
@@ -74,9 +74,7 @@ class TestIndexStore(unittest.TestCase):
         build_index(root=self.root)
         # delete the source after building; persisted retriever still works
         (self.root / "pycsamt" / "emtools" / "ss.py").unlink()
-        r = build_retriever(
-            self.root, use_cache=False, prefer_persisted=True
-        )
+        r = build_retriever(self.root, use_cache=False, prefer_persisted=True)
         ctx = r.search("estimate_ss_ama AMA static shift", k=3)
         self.assertTrue(ctx.chunks)  # came from the persisted index
 
@@ -111,8 +109,9 @@ class TestFreshness(unittest.TestCase):
 
     def test_content_change_invalidates(self):
         f = self.root / "pycsamt" / "emtools" / "ss.py"
-        f.write_text(f.read_text(encoding="utf-8") + "\n# edited\n",
-                     encoding="utf-8")
+        f.write_text(
+            f.read_text(encoding="utf-8") + "\n# edited\n", encoding="utf-8"
+        )
         self.assertTrue(index_is_stale(root=self.root))
 
     def test_new_indexed_file_invalidates(self):
@@ -132,7 +131,6 @@ class TestFreshness(unittest.TestCase):
 
 
 class TestCli(unittest.TestCase):
-
     def test_build_then_stats(self):
         root = _tree()
         self.assertEqual(cli.main(["--root", str(root), "build"]), 0)

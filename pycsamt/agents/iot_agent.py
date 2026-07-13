@@ -193,20 +193,20 @@ class IoTFieldAgent(BaseAgent):
                 "No acquisition source: provide 'session', 'packets', or an "
                 "EDI 'path'/'edis'/'sites'.",
                 hint="e.g. execute({'packets': [...]}) or "
-                     "execute({'path': '/data/EDIs'}).",
+                "execute({'path': '/data/EDIs'}).",
                 elapsed=time.time() - t0,
             )
 
-        n_packets  = session.n_packets
+        n_packets = session.n_packets
         n_stations = session.n_stations
-        n_devices  = session.n_devices
+        n_devices = session.n_devices
 
         data: dict[str, Any] = {
-            "session":    session,
-            "source":     src,
-            "n_packets":  n_packets,
+            "session": session,
+            "source": src,
+            "n_packets": n_packets,
             "n_stations": n_stations,
-            "n_devices":  n_devices,
+            "n_devices": n_devices,
         }
 
         # ── monitoring status ─────────────────────────────────────────────────
@@ -214,8 +214,9 @@ class IoTFieldAgent(BaseAgent):
         try:
             status = session.assess(now=now)
             data["status"] = status
-            data["level"]  = (
-                status.level.value if hasattr(status.level, "value")
+            data["level"] = (
+                status.level.value
+                if hasattr(status.level, "value")
                 else str(status.level)
             )
             data["issues"] = list(status.issues)
@@ -233,64 +234,84 @@ class IoTFieldAgent(BaseAgent):
 
         if status is not None:
             self._try(
-                warnings, "monitoring_status_table",
+                warnings,
+                "monitoring_status_table",
                 lambda: data.__setitem__(
-                    "status_table", monitoring_status_table(status, api=api)),
+                    "status_table", monitoring_status_table(status, api=api)
+                ),
             )
         if n_packets:
             self._try(
-                warnings, "telemetry_summary",
+                warnings,
+                "telemetry_summary",
                 lambda: data.__setitem__(
                     "telemetry_summary",
-                    telemetry_summary(session.packets, api=api)),
+                    telemetry_summary(session.packets, api=api),
+                ),
             )
             self._try(
-                warnings, "packet_table",
+                warnings,
+                "packet_table",
                 lambda: data.__setitem__(
-                    "packet_table", packet_table(session.packets, api=api)),
+                    "packet_table", packet_table(session.packets, api=api)
+                ),
             )
         self._try(
-            warnings, "station_table",
+            warnings,
+            "station_table",
             lambda: data.__setitem__(
-                "station_table", session.station_table(api=api)),
+                "station_table", session.station_table(api=api)
+            ),
         )
         self._try(
-            warnings, "to_pipeline_input",
+            warnings,
+            "to_pipeline_input",
             lambda: data.__setitem__(
-                "pipeline_input", session.to_pipeline_input()),
+                "pipeline_input", session.to_pipeline_input()
+            ),
         )
 
         # ── optional deployment capability table ──────────────────────────────
         deployment = input_data.get("deployment")
         if deployment is not None:
             from ..iot import deployment_report
+
             self._try(
-                warnings, "deployment_report",
+                warnings,
+                "deployment_report",
                 lambda: data.__setitem__(
-                    "deployment_table", deployment_report(deployment, api=api)),
+                    "deployment_table", deployment_report(deployment, api=api)
+                ),
             )
 
         # ── optional clock-sync summary ───────────────────────────────────────
         sync_refs = input_data.get("sync_references")
         if sync_refs:
             from ..iot import batch_assess_sync
+
             self._try(
-                warnings, "batch_assess_sync",
+                warnings,
+                "batch_assess_sync",
                 lambda: data.__setitem__(
                     "sync_table",
                     batch_assess_sync(
-                        sync_refs, config=session.sync_config, api=api)),
+                        sync_refs, config=session.sync_config, api=api
+                    ),
+                ),
             )
 
         # ── optional power-budget summary ─────────────────────────────────────
         energy_cfgs = input_data.get("energy_configs")
         if energy_cfgs:
             from ..iot import estimate_deployment_energy
+
             self._try(
-                warnings, "estimate_deployment_energy",
+                warnings,
+                "estimate_deployment_energy",
                 lambda: data.__setitem__(
                     "power_table",
-                    estimate_deployment_energy(energy_cfgs, api=api)),
+                    estimate_deployment_energy(energy_cfgs, api=api),
+                ),
             )
 
         # ── optional acquisition manifest (provenance) ────────────────────────
@@ -299,7 +320,10 @@ class IoTFieldAgent(BaseAgent):
         # ── figures ───────────────────────────────────────────────────────────
         if input_data.get("figures", True):
             self._render_figures(
-                session, input_data.get("output_dir"), data, warnings,
+                session,
+                input_data.get("output_dir"),
+                data,
+                warnings,
                 now=now,
             )
 
@@ -315,8 +339,8 @@ class IoTFieldAgent(BaseAgent):
         else:  # warn / critical
             result_status = "needs_review"
 
-        n_fig    = len(data.get("figures", {}))
-        n_issue  = len(data.get("issues", []))
+        n_fig = len(data.get("figures", {}))
+        n_issue = len(data.get("issues", []))
         summary = (
             f"IoT field assessment: level={level}, "
             f"{n_packets} packet(s) across {n_stations} station(s)/"
@@ -336,7 +360,9 @@ class IoTFieldAgent(BaseAgent):
 
     # ── source resolution ─────────────────────────────────────────────────────
     def _resolve_session(
-        self, input_data: dict[str, Any], warnings: list[str],
+        self,
+        input_data: dict[str, Any],
+        warnings: list[str],
     ) -> tuple[Any, str]:
         """Return ``(FieldSession | None, source_label)`` from *input_data*."""
         from ..iot import FieldSession
@@ -372,15 +398,18 @@ class IoTFieldAgent(BaseAgent):
         )
         if edis is not None:
             from ..iot import field_session_from_edis
+
             try:
                 sess = field_session_from_edis(
-                    edis, survey_id=survey_id,
+                    edis,
+                    survey_id=survey_id,
                     operator=input_data.get("operator"),
                     method=self.method,
                 )
                 warnings.append(
                     "Seeded a re-occupation session from EDIs; no live "
-                    "telemetry, so monitoring reflects planned stations only.")
+                    "telemetry, so monitoring reflects planned stations only."
+                )
                 return sess, "edis"
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"field_session_from_edis: {exc}")
@@ -416,6 +445,7 @@ class IoTFieldAgent(BaseAgent):
         path = input_data.get("manifest_path")
         if not path and input_data.get("output_dir"):
             import os
+
             path = os.path.join(
                 input_data["output_dir"],
                 f"{session.survey_id}_manifest.json",
@@ -454,8 +484,8 @@ class IoTFieldAgent(BaseAgent):
         fig_paths: dict[str, str] = {}
 
         specs = (
-            ("dashboard",  lambda: plot_field_dashboard(session, now=now)),
-            ("edge_qc",    lambda: plot_edge_qc_summary(session)),
+            ("dashboard", lambda: plot_field_dashboard(session, now=now)),
+            ("edge_qc", lambda: plot_edge_qc_summary(session)),
             ("power_budget", lambda: plot_power_budget(session)),
             ("sync_quality", lambda: plot_sync_quality(session)),
         )
@@ -466,7 +496,8 @@ class IoTFieldAgent(BaseAgent):
                     continue
                 figures[name] = fig
                 p = self._save_figure(
-                    fig, output_dir, f"iot_{name}", warnings_list=warnings)
+                    fig, output_dir, f"iot_{name}", warnings_list=warnings
+                )
                 if p:
                     fig_paths[name] = p
             except Exception as exc:  # noqa: BLE001
@@ -477,7 +508,10 @@ class IoTFieldAgent(BaseAgent):
 
     # ── LLM interpretation ─────────────────────────────────────────────────────
     def _interpret(
-        self, status: Any, data: dict[str, Any], warnings: list[str],
+        self,
+        status: Any,
+        data: dict[str, Any],
+        warnings: list[str],
     ) -> str | None:
         if not self.api_key or status is None:
             return None

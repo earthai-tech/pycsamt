@@ -71,6 +71,7 @@ __all__ = [
 # Formation
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Formation:
     """A named geological scenario for layered-Earth modelling.
@@ -167,28 +168,32 @@ class Formation:
         expected by ``GEOLOGY_PRIORS`` in ``forward/synthetic.py``.
         """
         return {
-            "n_layers":       self.n_layers_range,
-            "log_rho_range":  self.log_rho_range,
+            "n_layers": self.n_layers_range,
+            "log_rho_range": self.log_rho_range,
             "depth_max_range": self.depth_range,
-            "description":    self.description,
+            "description": self.description,
         }
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "name":              self.name,
+            "name": self.name,
             "resistivity_range": list(self.resistivity_range),
-            "depth_range":       list(self.depth_range),
-            "n_layers_range":    list(self.n_layers_range),
-            "description":       self.description,
-            "rock_types":        list(self.rock_types),
+            "depth_range": list(self.depth_range),
+            "n_layers_range": list(self.n_layers_range),
+            "description": self.description,
+            "rock_types": list(self.rock_types),
             **self.extra,
         }
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Formation:
         known = {
-            "name", "resistivity_range", "depth_range",
-            "n_layers_range", "description", "rock_types",
+            "name",
+            "resistivity_range",
+            "depth_range",
+            "n_layers_range",
+            "description",
+            "rock_types",
         }
         extra = {k: v for k, v in d.items() if k not in known}
         return cls(
@@ -229,111 +234,135 @@ class Formation:
 
 _BUILTIN_FORMATIONS: list[dict[str, Any]] = [
     # ── Sedimentary / basin ─────────────────────────────────────────────
-    dict(name="sedimentary",
-         resistivity_range=(3.0, 3162.0),
-         depth_range=(500, 3000),
-         n_layers_range=(3, 7),
-         description="Alternating clay/shale and sand/carbonate layers",
-         rock_types=["clay", "shale", "sedimentary rock", "dolomite/limestone"]),
-
-    dict(name="evaporite",
-         resistivity_range=(1e3, 1e6),
-         depth_range=(200, 3000),
-         n_layers_range=(2, 5),
-         description="Salt/anhydrite evaporite basin",
-         rock_types=["hard rock"]),
-
-    dict(name="coastal",
-         resistivity_range=(0.5, 500.0),
-         depth_range=(10, 500),
-         n_layers_range=(3, 6),
-         description="Coastal/delta mixing zone: fresh water over saline sediments",
-         rock_types=["fresh water", "salt water", "clay", "gravel/sand"]),
-
+    dict(
+        name="sedimentary",
+        resistivity_range=(3.0, 3162.0),
+        depth_range=(500, 3000),
+        n_layers_range=(3, 7),
+        description="Alternating clay/shale and sand/carbonate layers",
+        rock_types=[
+            "clay",
+            "shale",
+            "sedimentary rock",
+            "dolomite/limestone",
+        ],
+    ),
+    dict(
+        name="evaporite",
+        resistivity_range=(1e3, 1e6),
+        depth_range=(200, 3000),
+        n_layers_range=(2, 5),
+        description="Salt/anhydrite evaporite basin",
+        rock_types=["hard rock"],
+    ),
+    dict(
+        name="coastal",
+        resistivity_range=(0.5, 500.0),
+        depth_range=(10, 500),
+        n_layers_range=(3, 6),
+        description="Coastal/delta mixing zone: fresh water over saline sediments",
+        rock_types=["fresh water", "salt water", "clay", "gravel/sand"],
+    ),
     # ── Crystalline / hard rock ─────────────────────────────────────────
-    dict(name="crystalline",
-         resistivity_range=(100.0, 31623.0),
-         depth_range=(5000, 30000),
-         n_layers_range=(3, 6),
-         description="Resistive upper to conductive lower crust",
-         rock_types=["igneous rock", "metamorphic rock", "hard rock"]),
-
-    dict(name="basement",
-         resistivity_range=(1e3, 1e5),
-         depth_range=(1000, 20000),
-         n_layers_range=(2, 4),
-         description="Deep resistive basement / craton",
-         rock_types=["igneous rock", "metamorphic rock"]),
-
-    dict(name="volcanic",
-         resistivity_range=(10.0, 1e4),
-         depth_range=(200, 5000),
-         n_layers_range=(3, 7),
-         description="Volcanic pile: alternating lavas and pyroclastics",
-         rock_types=["igneous rock", "hard rock"]),
-
+    dict(
+        name="crystalline",
+        resistivity_range=(100.0, 31623.0),
+        depth_range=(5000, 30000),
+        n_layers_range=(3, 6),
+        description="Resistive upper to conductive lower crust",
+        rock_types=["igneous rock", "metamorphic rock", "hard rock"],
+    ),
+    dict(
+        name="basement",
+        resistivity_range=(1e3, 1e5),
+        depth_range=(1000, 20000),
+        n_layers_range=(2, 4),
+        description="Deep resistive basement / craton",
+        rock_types=["igneous rock", "metamorphic rock"],
+    ),
+    dict(
+        name="volcanic",
+        resistivity_range=(10.0, 1e4),
+        depth_range=(200, 5000),
+        n_layers_range=(3, 7),
+        description="Volcanic pile: alternating lavas and pyroclastics",
+        rock_types=["igneous rock", "hard rock"],
+    ),
     # ── Geothermal / hydrothermal ────────────────────────────────────────
-    dict(name="geothermal",
-         resistivity_range=(2.0, 1e4),
-         depth_range=(500, 5000),
-         n_layers_range=(3, 5),
-         description="Resistive cap over conductive geothermal reservoir",
-         rock_types=["clay", "shale", "igneous rock"]),
-
-    dict(name="hydrothermal",
-         resistivity_range=(1.0, 1e3),
-         depth_range=(200, 3000),
-         n_layers_range=(3, 6),
-         description="Hydrothermal alteration zone with clay cap",
-         rock_types=["clay", "saprolite", "shale"]),
-
+    dict(
+        name="geothermal",
+        resistivity_range=(2.0, 1e4),
+        depth_range=(500, 5000),
+        n_layers_range=(3, 5),
+        description="Resistive cap over conductive geothermal reservoir",
+        rock_types=["clay", "shale", "igneous rock"],
+    ),
+    dict(
+        name="hydrothermal",
+        resistivity_range=(1.0, 1e3),
+        depth_range=(200, 3000),
+        n_layers_range=(3, 6),
+        description="Hydrothermal alteration zone with clay cap",
+        rock_types=["clay", "saprolite", "shale"],
+    ),
     # ── Marine / offshore ────────────────────────────────────────────────
-    dict(name="marine",
-         resistivity_range=(0.3, 1e3),
-         depth_range=(100, 2000),
-         n_layers_range=(3, 6),
-         description="Seawater over possible HC reservoir (CSEM context)",
-         rock_types=["sea water", "sedimentary rock", "gravel/sand"]),
-
+    dict(
+        name="marine",
+        resistivity_range=(0.3, 1e3),
+        depth_range=(100, 2000),
+        n_layers_range=(3, 6),
+        description="Seawater over possible HC reservoir (CSEM context)",
+        rock_types=["sea water", "sedimentary rock", "gravel/sand"],
+    ),
     # ── Permafrost / Arctic ──────────────────────────────────────────────
-    dict(name="permafrost",
-         resistivity_range=(10.0, 31623.0),
-         depth_range=(50, 500),
-         n_layers_range=(3, 5),
-         description="Frozen resistive layer over conductive unfrozen sediments",
-         rock_types=["permafrost", "tills"]),
-
+    dict(
+        name="permafrost",
+        resistivity_range=(10.0, 31623.0),
+        depth_range=(50, 500),
+        n_layers_range=(3, 5),
+        description="Frozen resistive layer over conductive unfrozen sediments",
+        rock_types=["permafrost", "tills"],
+    ),
     # ── Ore-bearing / mining ─────────────────────────────────────────────
-    dict(name="mineralized",
-         resistivity_range=(0.01, 1e3),
-         depth_range=(50, 1000),
-         n_layers_range=(3, 6),
-         description="Conductive ore-bearing zone embedded in resistive host rock",
-         rock_types=["massive sulphide", "ore minerals", "graphite",
-                     "igneous rock"]),
-
-    dict(name="porphyry",
-         resistivity_range=(10.0, 1e4),
-         depth_range=(200, 2000),
-         n_layers_range=(3, 6),
-         description="Porphyry copper system: clay-alteration cap over "
-                     "mineralised core",
-         rock_types=["clay", "igneous rock", "massive sulphide"]),
-
+    dict(
+        name="mineralized",
+        resistivity_range=(0.01, 1e3),
+        depth_range=(50, 1000),
+        n_layers_range=(3, 6),
+        description="Conductive ore-bearing zone embedded in resistive host rock",
+        rock_types=[
+            "massive sulphide",
+            "ore minerals",
+            "graphite",
+            "igneous rock",
+        ],
+    ),
+    dict(
+        name="porphyry",
+        resistivity_range=(10.0, 1e4),
+        depth_range=(200, 2000),
+        n_layers_range=(3, 6),
+        description="Porphyry copper system: clay-alteration cap over "
+        "mineralised core",
+        rock_types=["clay", "igneous rock", "massive sulphide"],
+    ),
     # ── Regolith / laterite ──────────────────────────────────────────────
-    dict(name="laterite",
-         resistivity_range=(10.0, 5000.0),
-         depth_range=(10, 200),
-         n_layers_range=(3, 6),
-         description="Deeply weathered tropical profile: laterite / saprolite / "
-                     "bedrock",
-         rock_types=["saprolite", "clay", "tills", "igneous rock"]),
+    dict(
+        name="laterite",
+        resistivity_range=(10.0, 5000.0),
+        depth_range=(10, 200),
+        n_layers_range=(3, 6),
+        description="Deeply weathered tropical profile: laterite / saprolite / "
+        "bedrock",
+        rock_types=["saprolite", "clay", "tills", "igneous rock"],
+    ),
 ]
 
 
 # ---------------------------------------------------------------------------
 # GeologyCatalog
 # ---------------------------------------------------------------------------
+
 
 class GeologyCatalog:
     """Registry of geological formations for layered-Earth modelling.
@@ -414,8 +443,7 @@ class GeologyCatalog:
         if key not in self._store:
             available = sorted(self._store.keys())
             raise KeyError(
-                f"Formation {name!r} not found.  "
-                f"Available: {available}"
+                f"Formation {name!r} not found.  Available: {available}"
             )
         return self._store[key]
 
@@ -452,13 +480,16 @@ class GeologyCatalog:
             Maximum number of results to return.
         """
         containing = [
-            f for f in self._store.values()
+            f
+            for f in self._store.values()
             if f.resistivity_range[0] <= rho <= f.resistivity_range[1]
         ]
         if containing:
             return sorted(
                 containing,
-                key=lambda f: math.log10(f.resistivity_range[1] / f.resistivity_range[0])
+                key=lambda f: math.log10(
+                    f.resistivity_range[1] / f.resistivity_range[0]
+                ),
             )[:n]
 
         # Fall back: distance in log space
@@ -468,7 +499,7 @@ class GeologyCatalog:
             key=lambda f: min(
                 abs(log_rho - math.log10(max(f.resistivity_range[0], 1e-9))),
                 abs(log_rho - math.log10(max(f.resistivity_range[1], 1e-9))),
-            )
+            ),
         )[:n]
 
     def lookup_by_depth(
@@ -478,7 +509,8 @@ class GeologyCatalog:
     ) -> list[Formation]:
         """Return formations whose depth range contains *depth_m* (metres)."""
         containing = [
-            f for f in self._store.values()
+            f
+            for f in self._store.values()
             if f.depth_range[0] <= depth_m <= f.depth_range[1]
         ]
         if containing:
@@ -491,14 +523,15 @@ class GeologyCatalog:
             key=lambda f: min(
                 abs(depth_m - f.depth_range[0]),
                 abs(depth_m - f.depth_range[1]),
-            )
+            ),
         )[:n]
 
     def lookup_by_rock_type(self, rock_type: str) -> list[Formation]:
         """Return formations that list *rock_type* in their ``rock_types``."""
         q = rock_type.lower()
         return [
-            f for f in self._store.values()
+            f
+            for f in self._store.values()
             if any(q in rt.lower() for rt in f.rock_types)
         ]
 
@@ -527,22 +560,26 @@ class GeologyCatalog:
         try:
             import pandas as pd  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError("pandas is required for to_dataframe()") from exc
+            raise ImportError(
+                "pandas is required for to_dataframe()"
+            ) from exc
 
         rows = []
         for f in self._store.values():
-            rows.append({
-                "name":        f.name,
-                "rho_min":     f.resistivity_range[0],
-                "rho_max":     f.resistivity_range[1],
-                "rho_mid":     round(f.rho_mid, 2),
-                "depth_min_m": f.depth_range[0],
-                "depth_max_m": f.depth_range[1],
-                "n_layers_min": f.n_layers_range[0],
-                "n_layers_max": f.n_layers_range[1],
-                "description": f.description,
-                "rock_types":  ", ".join(f.rock_types),
-            })
+            rows.append(
+                {
+                    "name": f.name,
+                    "rho_min": f.resistivity_range[0],
+                    "rho_max": f.resistivity_range[1],
+                    "rho_mid": round(f.rho_mid, 2),
+                    "depth_min_m": f.depth_range[0],
+                    "depth_max_m": f.depth_range[1],
+                    "n_layers_min": f.n_layers_range[0],
+                    "n_layers_max": f.n_layers_range[1],
+                    "description": f.description,
+                    "rock_types": ", ".join(f.rock_types),
+                }
+            )
         df = pd.DataFrame(rows).sort_values("name").reset_index(drop=True)
 
         return maybe_wrap_frame(
@@ -551,9 +588,7 @@ class GeologyCatalog:
             name="geology_catalog",
             kind="metadata.geology",
             source=self.__class__.__name__,
-            description=(
-                "Resistivity and lithology ranges by formation."
-            ),
+            description=("Resistivity and lithology ranges by formation."),
         )
 
     def __repr__(self) -> str:

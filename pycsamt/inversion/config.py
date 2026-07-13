@@ -181,7 +181,13 @@ class InversionConfig(PyCSAMTObject, MetadataMixin):
             raise ValueError("method must be mt/amt/csamt/emap/tdem.")
         if self.dimension not in {"1d", "2d", "3d"}:
             raise ValueError("dimension must be '1d', '2d', or '3d'.")
-        if self.backend not in {"builtin", "occam2d", "modem", "simpeg", "pygimli"}:
+        if self.backend not in {
+            "builtin",
+            "occam2d",
+            "modem",
+            "simpeg",
+            "pygimli",
+        }:
             raise ValueError("unsupported inversion backend.")
         if self.n_layers < 2:
             raise ValueError("n_layers must be >= 2.")
@@ -216,7 +222,9 @@ class InversionConfig(PyCSAMTObject, MetadataMixin):
         )
 
     @classmethod
-    def from_file(cls, path: str | Path, *, strict: bool = True) -> InversionConfig:
+    def from_file(
+        cls, path: str | Path, *, strict: bool = True
+    ) -> InversionConfig:
         """Load a Python/JSON/YAML configuration file."""
         return cls(**read_config_file(path, cls, strict=strict))
 

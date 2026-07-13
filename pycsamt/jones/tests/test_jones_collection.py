@@ -17,6 +17,7 @@ from pycsamt.jones.j import JFile
 
 class _Dummy(JParseMixin):
     """Lightweight concrete to access JParseMixin helpers."""
+
     pass
 
 
@@ -68,7 +69,9 @@ def test_fast_station_scan(j_single_file: Path):
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_coreparser_parse_single(j_single_file: Path):
-    pr = JCoreParser(recursive=True, strict=False, on_dup="replace", verbose=0)
+    pr = JCoreParser(
+        recursive=True, strict=False, on_dup="replace", verbose=0
+    )
     items = pr.parse([j_single_file])
     assert isinstance(items, list) and len(items) >= 1
     assert all(isinstance(it, JFile) for it in items)
@@ -94,6 +97,7 @@ def test_jcbbase_load_and_write(tmp_path: Path, j_single_file: Path):
     assert isinstance(out, list) and out
     for p in out:
         assert Path(p).exists()
+
 
 def test_collection_from_single_file(j_single_file: Path):
     col = JCollection.from_sources([j_single_file], verbose=0)

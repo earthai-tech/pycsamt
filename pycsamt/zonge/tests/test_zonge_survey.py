@@ -123,5 +123,6 @@ def test_from_avg_tuple_pathway_works_without_filesystem():
     assert st.increment == 25.0
     assert st.to_keywords()["Stn.Inc"] == 25.0
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

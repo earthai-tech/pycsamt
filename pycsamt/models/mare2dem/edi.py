@@ -41,6 +41,7 @@ def _latlon(ed: Any) -> tuple[float, float]:
             continue
         try:
             from ...site.utils import get_coords
+
             c = get_coords(obj)
             if c is not None:
                 return float(c.lat), float(c.lon)
@@ -115,11 +116,15 @@ def stations_from_edi(
     )
 
     sites = ensure_sites(source, verbose=0)
-    confidence_lookup = _frequency_confidence_lookup(
-        sites,
-        method=confidence_method,
-        weights=confidence_weights,
-    ) if confidence_weighting else {}
+    confidence_lookup = (
+        _frequency_confidence_lookup(
+            sites,
+            method=confidence_method,
+            weights=confidence_weights,
+        )
+        if confidence_weighting
+        else {}
+    )
     out: list[ZMMStation] = []
     skipped: list[str] = []
     n_ref: int | None = None
@@ -179,11 +184,13 @@ def stations_from_edi(
             # guard degenerate stored errors (zero / NaN)
             rel_te = np.where(
                 np.isfinite(rel_te) & (rel_te > 0),
-                rel_te, default_rel_error,
+                rel_te,
+                default_rel_error,
             )
             rel_tm = np.where(
                 np.isfinite(rel_tm) & (rel_tm > 0),
-                rel_tm, default_rel_error,
+                rel_tm,
+                default_rel_error,
             )
             if confidence_weighting:
                 cr = _station_confidence_values(
@@ -354,7 +361,8 @@ def make_mt_data_from_edi(
         confidence_power=confidence_power,
     )
     return make_mt_data_from_stations(
-        stations, out_file,
+        stations,
+        out_file,
         output_modes=output_modes,
         error_floor_te=error_floor_te,
         error_floor_tm=error_floor_tm,

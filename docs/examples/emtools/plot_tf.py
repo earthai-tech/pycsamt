@@ -64,7 +64,11 @@ survey = load_survey("mt_kap03")
 names = survey.stations  # already SW->NE, kap103...kap175
 s0 = survey.get_site(names[0])
 period = 1.0 / s0.Z.freq
-p_min, p_med, p_max = float(period.min()), float(np.median(period)), float(period.max())
+p_min, p_med, p_max = (
+    float(period.min()),
+    float(np.median(period)),
+    float(period.max()),
+)
 
 # Rank stations by mean tipper amplitude across the whole band — the
 # first real diagnostic: which sites see the strongest response overall.
@@ -75,7 +79,9 @@ for name in names:
         amplitude[name] = float(np.abs(site.Tip.tipper).mean())
 strongest = max(amplitude, key=amplitude.get)
 ranked = sorted(amplitude, key=amplitude.get, reverse=True)
-print(f"strongest station (whole-band mean): {strongest} ({amplitude[strongest]:.3f})")
+print(
+    f"strongest station (whole-band mean): {strongest} ({amplitude[strongest]:.3f})"
+)
 print("next four:", [(n, round(amplitude[n], 3)) for n in ranked[1:5]])
 
 # %%
@@ -210,13 +216,17 @@ plot_induction_convention(survey, period=p_med, station_labels=False)
 # time.
 
 plot_induction_rose(
-    survey, component="real", pband=(p_min, 200.0),
+    survey,
+    component="real",
+    pband=(p_min, 200.0),
     title="Induction rose — short period (25-200 s)",
 )
 
 # %%
 plot_induction_rose(
-    survey, component="real", pband=(2000.0, p_max),
+    survey,
+    component="real",
+    pband=(2000.0, p_max),
     title="Induction rose — long period (2000-17067 s)",
 )
 

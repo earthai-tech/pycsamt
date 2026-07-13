@@ -12,6 +12,7 @@ Responsibilities
 - Test connection (format validation).
 - Save / Load / Reset profile JSON.
 """
+
 from __future__ import annotations
 
 import base64
@@ -32,13 +33,13 @@ from pycsamt.app.web.layout import IDs
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 _DEFAULTS = {
-    "interp":     "bilinear",
-    "skindepth":  "cagniard",
-    "dem":        "open-elevation",
-    "cmap":       "viridis",
+    "interp": "bilinear",
+    "skindepth": "cagniard",
+    "dem": "open-elevation",
+    "cmap": "viridis",
     "ai_provider": "claude",
-    "ai_key":      "",
-    "ai_model":    "claude-sonnet-4-6",
+    "ai_key": "",
+    "ai_model": "claude-sonnet-4-6",
 }
 
 _MODEL_OPTIONS = {
@@ -61,16 +62,16 @@ _MODEL_OPTIONS = {
             "label": "gpt-4o  (default)",
             "value": "gpt-4o",
         },
-        {"label": "gpt-4o-mini",    "value": "gpt-4o-mini"},
-        {"label": "gpt-4-turbo",    "value": "gpt-4-turbo"},
-        {"label": "gpt-3.5-turbo",  "value": "gpt-3.5-turbo"},
+        {"label": "gpt-4o-mini", "value": "gpt-4o-mini"},
+        {"label": "gpt-4-turbo", "value": "gpt-4-turbo"},
+        {"label": "gpt-3.5-turbo", "value": "gpt-3.5-turbo"},
     ],
     "gemini": [
         {
             "label": "gemini-2.0-flash  (default)",
             "value": "gemini-2.0-flash",
         },
-        {"label": "gemini-1.5-pro",   "value": "gemini-1.5-pro"},
+        {"label": "gemini-1.5-pro", "value": "gemini-1.5-pro"},
         {"label": "gemini-1.5-flash", "value": "gemini-1.5-flash"},
     ],
     "deepseek": [
@@ -86,16 +87,16 @@ _MODEL_OPTIONS = {
 }
 
 _MODEL_DEFAULT = {
-    "claude":   "claude-sonnet-4-6",
-    "openai":   "gpt-4o",
-    "gemini":   "gemini-2.0-flash",
+    "claude": "claude-sonnet-4-6",
+    "openai": "gpt-4o",
+    "gemini": "gemini-2.0-flash",
     "deepseek": "deepseek-chat",
 }
 
 _KEY_PREFIX = {
-    "claude":   ("sk-ant-",),
-    "openai":   ("sk-",),
-    "gemini":   (),
+    "claude": ("sk-ant-",),
+    "openai": ("sk-",),
+    "gemini": (),
     "deepseek": ("sk-",),
 }
 
@@ -114,15 +115,15 @@ def register_settings(app) -> None:
 
     # ── 2. Populate form on open ──────────────────────────────────────────────
     @app.callback(
-        Output("settings-interp",       "value"),
-        Output("settings-skindepth",    "value"),
-        Output("settings-dem",          "value"),
-        Output("settings-cmap",         "value"),
+        Output("settings-interp", "value"),
+        Output("settings-skindepth", "value"),
+        Output("settings-dem", "value"),
+        Output("settings-cmap", "value"),
         Output(IDs.SETTINGS_AI_PROVIDER, "data"),
-        Output(IDs.SETTINGS_AI_KEY,     "value"),
-        Output(IDs.SETTINGS_AI_MODEL,   "value"),
-        Input(IDs.SETTINGS_CANVAS,      "is_open"),
-        State(IDs.SETTINGS_STORE,       "data"),
+        Output(IDs.SETTINGS_AI_KEY, "value"),
+        Output(IDs.SETTINGS_AI_MODEL, "value"),
+        Input(IDs.SETTINGS_CANVAS, "is_open"),
+        State(IDs.SETTINGS_STORE, "data"),
         prevent_initial_call=True,
     )
     def _populate(is_open, stored):
@@ -130,41 +131,46 @@ def register_settings(app) -> None:
             return (no_update,) * 7
         cfg = {**_DEFAULTS, **(stored or {})}
         return (
-            cfg["interp"], cfg["skindepth"], cfg["dem"], cfg["cmap"],
-            cfg["ai_provider"], cfg["ai_key"], cfg["ai_model"],
+            cfg["interp"],
+            cfg["skindepth"],
+            cfg["dem"],
+            cfg["cmap"],
+            cfg["ai_provider"],
+            cfg["ai_key"],
+            cfg["ai_model"],
         )
 
     # ── 3. Persist all settings to store ─────────────────────────────────────
     @app.callback(
         Output(IDs.SETTINGS_STORE, "data"),
-        Input("settings-interp",         "value"),
-        Input("settings-skindepth",      "value"),
-        Input("settings-dem",            "value"),
-        Input("settings-cmap",           "value"),
-        Input(IDs.SETTINGS_AI_PROVIDER,  "data"),
-        Input(IDs.SETTINGS_AI_KEY,       "value"),
-        Input(IDs.SETTINGS_AI_MODEL,     "value"),
+        Input("settings-interp", "value"),
+        Input("settings-skindepth", "value"),
+        Input("settings-dem", "value"),
+        Input("settings-cmap", "value"),
+        Input(IDs.SETTINGS_AI_PROVIDER, "data"),
+        Input(IDs.SETTINGS_AI_KEY, "value"),
+        Input(IDs.SETTINGS_AI_MODEL, "value"),
         prevent_initial_call=True,
     )
     def _persist(interp, skindepth, dem, cmap, provider, key, model):
         return {
-            "interp":      interp    or _DEFAULTS["interp"],
-            "skindepth":   skindepth or _DEFAULTS["skindepth"],
-            "dem":         dem       or _DEFAULTS["dem"],
-            "cmap":        cmap      or _DEFAULTS["cmap"],
-            "ai_provider": provider  or _DEFAULTS["ai_provider"],
-            "ai_key":      key       or "",
-            "ai_model":    model     or _DEFAULTS["ai_model"],
+            "interp": interp or _DEFAULTS["interp"],
+            "skindepth": skindepth or _DEFAULTS["skindepth"],
+            "dem": dem or _DEFAULTS["dem"],
+            "cmap": cmap or _DEFAULTS["cmap"],
+            "ai_provider": provider or _DEFAULTS["ai_provider"],
+            "ai_key": key or "",
+            "ai_model": model or _DEFAULTS["ai_model"],
         }
 
     # ── 4. Provider pill → store + button classNames + model options ──────────
     @app.callback(
         Output(IDs.SETTINGS_AI_PROVIDER, "data", allow_duplicate=True),
         Output({"type": "settings-provider-btn", "index": ALL}, "className"),
-        Output(IDs.SETTINGS_AI_MODEL,    "options"),
-        Output(IDs.SETTINGS_AI_MODEL,    "value",   allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_MODEL, "options"),
+        Output(IDs.SETTINGS_AI_MODEL, "value", allow_duplicate=True),
         Input({"type": "settings-provider-btn", "index": ALL}, "n_clicks"),
-        State(IDs.SETTINGS_AI_PROVIDER,  "data"),
+        State(IDs.SETTINGS_AI_PROVIDER, "data"),
         prevent_initial_call=True,
     )
     def _pick_provider(n_clicks, current):
@@ -172,21 +178,15 @@ def register_settings(app) -> None:
         if not triggered or not isinstance(triggered, dict):
             return no_update, no_update, no_update, no_update
         provider = triggered["index"]
-        providers = [
-            "claude", "openai", "gemini", "deepseek"
-        ]
+        providers = ["claude", "openai", "gemini", "deepseek"]
         classes = [
             "settings-provider-btn active"
             if p == provider
             else "settings-provider-btn"
             for p in providers
         ]
-        opts  = _MODEL_OPTIONS.get(
-            provider, _MODEL_OPTIONS["claude"]
-        )
-        model = _MODEL_DEFAULT.get(
-            provider, opts[0]["value"]
-        )
+        opts = _MODEL_OPTIONS.get(provider, _MODEL_OPTIONS["claude"])
+        model = _MODEL_DEFAULT.get(provider, opts[0]["value"])
         return provider, classes, opts, model
 
     # ── 5. Restore provider button state on open ──────────────────────────────
@@ -197,7 +197,8 @@ def register_settings(app) -> None:
             allow_duplicate=True,
         ),
         Output(
-            IDs.SETTINGS_AI_MODEL, "options",
+            IDs.SETTINGS_AI_MODEL,
+            "options",
             allow_duplicate=True,
         ),
         Input(IDs.SETTINGS_AI_PROVIDER, "data"),
@@ -205,9 +206,7 @@ def register_settings(app) -> None:
     )
     def _sync_provider_ui(provider):
         provider = provider or "claude"
-        providers = [
-            "claude", "openai", "gemini", "deepseek"
-        ]
+        providers = ["claude", "openai", "gemini", "deepseek"]
         classes = [
             "settings-provider-btn active"
             if p == provider
@@ -216,9 +215,7 @@ def register_settings(app) -> None:
         ]
         return (
             classes,
-            _MODEL_OPTIONS.get(
-                provider, _MODEL_OPTIONS["claude"]
-            ),
+            _MODEL_OPTIONS.get(provider, _MODEL_OPTIONS["claude"]),
         )
 
     # ── 6. Show / hide API key (clientside) ───────────────────────────────────
@@ -230,10 +227,10 @@ def register_settings(app) -> None:
             return [new_type, icon];
         }
         """,
-        Output(IDs.SETTINGS_AI_KEY,      "type"),
-        Output("settings-ai-eye-icon",   "className"),
-        Input(IDs.SETTINGS_AI_KEY_SHOW,  "n_clicks"),
-        State(IDs.SETTINGS_AI_KEY,       "type"),
+        Output(IDs.SETTINGS_AI_KEY, "type"),
+        Output("settings-ai-eye-icon", "className"),
+        Input(IDs.SETTINGS_AI_KEY_SHOW, "n_clicks"),
+        State(IDs.SETTINGS_AI_KEY, "type"),
         prevent_initial_call=True,
     )
 
@@ -241,9 +238,9 @@ def register_settings(app) -> None:
     @app.callback(
         Output(IDs.SETTINGS_AI_STATUS, "children"),
         Output(IDs.SETTINGS_AI_STATUS, "className"),
-        Input(IDs.SETTINGS_AI_TEST,    "n_clicks"),
-        State(IDs.SETTINGS_AI_KEY,     "value"),
-        State(IDs.SETTINGS_AI_PROVIDER,"data"),
+        Input(IDs.SETTINGS_AI_TEST, "n_clicks"),
+        State(IDs.SETTINGS_AI_KEY, "value"),
+        State(IDs.SETTINGS_AI_PROVIDER, "data"),
         prevent_initial_call=True,
     )
     def _test_connection(n, key, provider):
@@ -252,36 +249,43 @@ def register_settings(app) -> None:
         key = (key or "").strip()
         if not key:
             return (
-                [_status_icon("bi-x-circle-fill", "danger"), " No API key entered"],
+                [
+                    _status_icon("bi-x-circle-fill", "danger"),
+                    " No API key entered",
+                ],
                 "settings-ai-status settings-ai-err",
             )
         prefixes = _KEY_PREFIX.get(provider or "claude", ())
         if prefixes and not any(key.startswith(p) for p in prefixes):
             prov_name = (provider or "claude").capitalize()
             return (
-                [_status_icon("bi-exclamation-triangle-fill", "warn"),
-                 f" Key format invalid for {prov_name}"],
+                [
+                    _status_icon("bi-exclamation-triangle-fill", "warn"),
+                    f" Key format invalid for {prov_name}",
+                ],
                 "settings-ai-status settings-ai-warn",
             )
         masked = key[:8] + "•" * min(len(key) - 8, 20)
         return (
-            [_status_icon("bi-check-circle-fill", "ok"),
-             f" Key accepted · {masked}"],
+            [
+                _status_icon("bi-check-circle-fill", "ok"),
+                f" Key accepted · {masked}",
+            ],
             "settings-ai-status settings-ai-ok",
         )
 
     # ── 8. Reset to defaults ──────────────────────────────────────────────────
     @app.callback(
-        Output("settings-interp",        "value",  allow_duplicate=True),
-        Output("settings-skindepth",     "value",  allow_duplicate=True),
-        Output("settings-dem",           "value",  allow_duplicate=True),
-        Output("settings-cmap",          "value",  allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_PROVIDER, "data",   allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_KEY,      "value",  allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_MODEL,    "value",  allow_duplicate=True),
-        Output(IDs.SETTINGS_STORE,       "data",   allow_duplicate=True),
-        Output(IDs.SETTINGS_FEEDBACK,    "children"),
-        Input(IDs.BTN_SETTINGS_RESET,    "n_clicks"),
+        Output("settings-interp", "value", allow_duplicate=True),
+        Output("settings-skindepth", "value", allow_duplicate=True),
+        Output("settings-dem", "value", allow_duplicate=True),
+        Output("settings-cmap", "value", allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_PROVIDER, "data", allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_KEY, "value", allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_MODEL, "value", allow_duplicate=True),
+        Output(IDs.SETTINGS_STORE, "data", allow_duplicate=True),
+        Output(IDs.SETTINGS_FEEDBACK, "children"),
+        Input(IDs.BTN_SETTINGS_RESET, "n_clicks"),
         prevent_initial_call=True,
     )
     def _reset(n):
@@ -289,45 +293,58 @@ def register_settings(app) -> None:
             return (no_update,) * 9
         d = _DEFAULTS
         return (
-            d["interp"], d["skindepth"], d["dem"], d["cmap"],
-            d["ai_provider"], d["ai_key"], d["ai_model"],
+            d["interp"],
+            d["skindepth"],
+            d["dem"],
+            d["cmap"],
+            d["ai_provider"],
+            d["ai_key"],
+            d["ai_model"],
             d,
-            [_status_icon("bi-check-circle-fill", "ok"), " All settings reset to defaults."],
+            [
+                _status_icon("bi-check-circle-fill", "ok"),
+                " All settings reset to defaults.",
+            ],
         )
 
     # ── 9. Save profile JSON ──────────────────────────────────────────────────
     app.layout.children  # safe-guard: ensure layout is initialised
 
     @app.callback(
-        Output("settings-download",       "data"),
-        Output(IDs.SETTINGS_FEEDBACK,     "children", allow_duplicate=True),
-        Input(IDs.BTN_SETTINGS_SAVE,      "n_clicks"),
-        State(IDs.SETTINGS_STORE,         "data"),
+        Output("settings-download", "data"),
+        Output(IDs.SETTINGS_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.BTN_SETTINGS_SAVE, "n_clicks"),
+        State(IDs.SETTINGS_STORE, "data"),
         prevent_initial_call=True,
     )
     def _save(n, stored):
         if not n:
             return no_update, no_update
         cfg = {**_DEFAULTS, **(stored or {})}
-        cfg.pop("ai_key", None)         # never export key
+        cfg.pop("ai_key", None)  # never export key
         return (
-            dict(content=json.dumps(cfg, indent=2),
-                 filename="pycsamt_settings.json"),
-            [_status_icon("bi-check-circle-fill", "ok"), " Profile saved (API key excluded)."],
+            dict(
+                content=json.dumps(cfg, indent=2),
+                filename="pycsamt_settings.json",
+            ),
+            [
+                _status_icon("bi-check-circle-fill", "ok"),
+                " Profile saved (API key excluded).",
+            ],
         )
 
     # ── 10. Load profile from uploaded JSON ───────────────────────────────────
     @app.callback(
-        Output("settings-interp",        "value",  allow_duplicate=True),
-        Output("settings-skindepth",     "value",  allow_duplicate=True),
-        Output("settings-dem",           "value",  allow_duplicate=True),
-        Output("settings-cmap",          "value",  allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_PROVIDER, "data",   allow_duplicate=True),
-        Output(IDs.SETTINGS_AI_MODEL,    "value",  allow_duplicate=True),
-        Output(IDs.SETTINGS_STORE,       "data",   allow_duplicate=True),
-        Output(IDs.SETTINGS_FEEDBACK,    "children", allow_duplicate=True),
-        Input(IDs.SETTINGS_UPLOAD,       "contents"),
-        State(IDs.SETTINGS_UPLOAD,       "filename"),
+        Output("settings-interp", "value", allow_duplicate=True),
+        Output("settings-skindepth", "value", allow_duplicate=True),
+        Output("settings-dem", "value", allow_duplicate=True),
+        Output("settings-cmap", "value", allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_PROVIDER, "data", allow_duplicate=True),
+        Output(IDs.SETTINGS_AI_MODEL, "value", allow_duplicate=True),
+        Output(IDs.SETTINGS_STORE, "data", allow_duplicate=True),
+        Output(IDs.SETTINGS_FEEDBACK, "children", allow_duplicate=True),
+        Input(IDs.SETTINGS_UPLOAD, "contents"),
+        State(IDs.SETTINGS_UPLOAD, "filename"),
         prevent_initial_call=True,
     )
     def _load(contents, filename):
@@ -335,24 +352,38 @@ def register_settings(app) -> None:
             return (no_update,) * 8
         try:
             _, encoded = contents.split(",", 1)
-            cfg = {**_DEFAULTS, **json.loads(base64.b64decode(encoded).decode())}
+            cfg = {
+                **_DEFAULTS,
+                **json.loads(base64.b64decode(encoded).decode()),
+            }
             return (
-                cfg["interp"], cfg["skindepth"], cfg["dem"], cfg["cmap"],
-                cfg["ai_provider"], cfg["ai_model"],
+                cfg["interp"],
+                cfg["skindepth"],
+                cfg["dem"],
+                cfg["cmap"],
+                cfg["ai_provider"],
+                cfg["ai_model"],
                 cfg,
-                [_status_icon("bi-check-circle-fill", "ok"),
-                 f" Profile loaded from {filename}."],
+                [
+                    _status_icon("bi-check-circle-fill", "ok"),
+                    f" Profile loaded from {filename}.",
+                ],
             )
         except Exception as exc:
             return (no_update,) * 7 + (
-                [_status_icon("bi-x-circle-fill", "danger"),
-                 f" Could not parse {filename}: {exc}"],
+                [
+                    _status_icon("bi-x-circle-fill", "danger"),
+                    f" Could not parse {filename}: {exc}",
+                ],
             )
 
 
 def _status_icon(icon_cls: str, variant: str) -> object:
     from dash import html
-    color = {"ok": "var(--green)", "warn": "var(--yellow)",
-             "danger": "var(--red)"}.get(variant, "inherit")
-    return html.I(className=f"bi {icon_cls} me-1",
-                  style={"color": color})
+
+    color = {
+        "ok": "var(--green)",
+        "warn": "var(--yellow)",
+        "danger": "var(--red)",
+    }.get(variant, "inherit")
+    return html.I(className=f"bi {icon_cls} me-1", style={"color": color})

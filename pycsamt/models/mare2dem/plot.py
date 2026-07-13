@@ -38,6 +38,7 @@ __all__ = [
 # PlotConvergence (functional — already ported)
 # ---------------------------------------------------------------------------
 
+
 class PlotConvergence(Mare2DEMBase):
     """Plot RMS misfit convergence from a MARE2DEM log.
 
@@ -58,6 +59,7 @@ class PlotConvergence(Mare2DEMBase):
         super().__init__(**kwargs)
         from .log import Mare2DEMLog
         from .results import InversionResult
+
         if isinstance(log_or_result, Mare2DEMLog):
             self._log = log_or_result
         elif isinstance(log_or_result, InversionResult):
@@ -107,6 +109,7 @@ class PlotConvergence(Mare2DEMBase):
 # ---------------------------------------------------------------------------
 # PlotSurveyLayout — port of plotMARE2DEM_SurveyLayout.m
 # ---------------------------------------------------------------------------
+
 
 class PlotSurveyLayout(Mare2DEMBase):
     """Plot survey receiver and transmitter positions on a map.
@@ -170,7 +173,9 @@ class PlotSurveyLayout(Mare2DEMBase):
         cc = np.cos(np.radians(theta))
         ss = np.sin(np.radians(theta))
 
-        def _to_map(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        def _to_map(
+            x: np.ndarray, y: np.ndarray
+        ) -> tuple[np.ndarray, np.ndarray]:
             """Project profile (x, y) to UTM (E, N)."""
             N = cc * x + (-ss) * y + n0
             E = ss * x + cc * y + e0
@@ -185,24 +190,34 @@ class PlotSurveyLayout(Mare2DEMBase):
 
         if em.csem is not None:
             if len(em.csem.receivers):
-                E, N = _to_map(em.csem.receivers[:, 0], em.csem.receivers[:, 1])
+                E, N = _to_map(
+                    em.csem.receivers[:, 0], em.csem.receivers[:, 1]
+                )
                 h = ax.plot(E, N, "bo", ms=4, label="CSEM Receivers")[0]
-                handles.append(h); labels.append("CSEM Receivers")
+                handles.append(h)
+                labels.append("CSEM Receivers")
             if len(em.csem.transmitters):
-                E, N = _to_map(em.csem.transmitters[:, 0], em.csem.transmitters[:, 1])
-                h = ax.plot(E, N, "rx", ms=8, mew=1.5, label="Transmitters")[0]
-                handles.append(h); labels.append("Transmitters")
+                E, N = _to_map(
+                    em.csem.transmitters[:, 0], em.csem.transmitters[:, 1]
+                )
+                h = ax.plot(E, N, "rx", ms=8, mew=1.5, label="Transmitters")[
+                    0
+                ]
+                handles.append(h)
+                labels.append("Transmitters")
 
         if em.mt is not None and len(em.mt.receivers):
             E, N = _to_map(em.mt.receivers[:, 0], em.mt.receivers[:, 1])
             h = ax.plot(E, N, "go", ms=7, label="MT Receivers")[0]
-            handles.append(h); labels.append("MT Receivers")
+            handles.append(h)
+            labels.append("MT Receivers")
 
         ax.set_xlabel(f"Easting ({label})")
         ax.set_ylabel(f"Northing ({label})")
         title = getattr(em, "path", None)
-        ax.set_title(str(title) if title else "MARE2DEM Survey Layout",
-                     fontsize=9)
+        ax.set_title(
+            str(title) if title else "MARE2DEM Survey Layout", fontsize=9
+        )
         ax.legend(handles, labels, fontsize=8)
         ax.grid(True, alpha=0.3)
         ax.set_aspect("equal")
@@ -216,6 +231,7 @@ class PlotSurveyLayout(Mare2DEMBase):
 # ---------------------------------------------------------------------------
 # PlotRxParams — receiver geometry QC (port of plotRxParams sub-function)
 # ---------------------------------------------------------------------------
+
 
 class PlotRxParams(Mare2DEMBase):
     """Plot receiver geometry parameters (x, y, z, θ, α, β).
@@ -259,11 +275,20 @@ class PlotRxParams(Mare2DEMBase):
         if not datasets:
             raise ValueError("No receiver data found in EMDataFile.")
 
-        param_labels = ["x", "y (km)", "z (km)", "θ (deg)", "α (deg)", "β (deg)"]
+        param_labels = [
+            "x",
+            "y (km)",
+            "z (km)",
+            "θ (deg)",
+            "α (deg)",
+            "β (deg)",
+        ]
         n_panels = 6
 
         if fig is None:
-            fig, axes = plt.subplots(n_panels, 1, figsize=(8, 12), sharex=True)
+            fig, axes = plt.subplots(
+                n_panels, 1, figsize=(8, 12), sharex=True
+            )
         else:
             axes = fig.axes
 
@@ -293,6 +318,7 @@ class PlotRxParams(Mare2DEMBase):
 # ---------------------------------------------------------------------------
 # PlotTxParams
 # ---------------------------------------------------------------------------
+
 
 class PlotTxParams(Mare2DEMBase):
     """Plot CSEM transmitter geometry parameters (x, y, z, azimuth, dip).
@@ -328,7 +354,9 @@ class PlotTxParams(Mare2DEMBase):
         param_labels = ["x", "y", "z", "Azimuth (deg)", "Dip (deg)"]
 
         if fig is None:
-            fig, axes = plt.subplots(n_panels, 1, figsize=(8, 10), sharex=True)
+            fig, axes = plt.subplots(
+                n_panels, 1, figsize=(8, 10), sharex=True
+            )
         else:
             axes = fig.axes
 
@@ -355,6 +383,7 @@ class PlotTxParams(Mare2DEMBase):
 # ---------------------------------------------------------------------------
 # plot_poly — port of m2d_plot_poly.m
 # ---------------------------------------------------------------------------
+
 
 def plot_poly(
     poly_file: str | Path,
@@ -432,6 +461,7 @@ def plot_poly(
 # PlotModel — 2-D resistivity section
 # ---------------------------------------------------------------------------
 
+
 class PlotModel(Mare2DEMBase):
     """Plot the log10-resistivity 2-D section.
 
@@ -469,21 +499,15 @@ class PlotModel(Mare2DEMBase):
                 p = Path(model_or_result.path)
                 self._workdir = p.parent
                 self._title_stem = p.stem
-        elif isinstance(
-            model_or_result, InversionResult
-        ):
+        elif isinstance(model_or_result, InversionResult):
             rf_like = model_or_result.model
             if isinstance(rf_like, ResistivityModel):
                 self._rf = rf_like._rf
                 if rf_like.path is not None:
-                    self._title_stem = (
-                        Path(rf_like.path).stem
-                    )
+                    self._title_stem = Path(rf_like.path).stem
             elif isinstance(rf_like, ResistivityFile):
                 self._rf = rf_like
-                self._title_stem = Path(
-                    rf_like.resistivity_file
-                ).stem
+                self._title_stem = Path(rf_like.resistivity_file).stem
             self._workdir = model_or_result.workdir
         else:
             raise TypeError(
@@ -517,16 +541,14 @@ class PlotModel(Mare2DEMBase):
         def _first_data(lines):
             return next(
                 (
-                    i for i, ln in enumerate(lines)
-                    if ln.strip()
-                    and not ln.strip().startswith("#")
+                    i
+                    for i, ln in enumerate(lines)
+                    if ln.strip() and not ln.strip().startswith("#")
                 ),
                 None,
             )
 
-        nlines = node_p.read_text(
-            errors="replace"
-        ).splitlines()
+        nlines = node_p.read_text(errors="replace").splitlines()
         ni = _first_data(nlines)
         if ni is None:
             return None, None, None
@@ -538,16 +560,12 @@ class PlotModel(Mare2DEMBase):
             ln = nlines[ni].strip()
             ni += 1
             if ln and not ln.startswith("#"):
-                nrows.append(
-                    [float(v) for v in ln.split()]
-                )
+                nrows.append([float(v) for v in ln.split()])
         if not nrows:
             return None, None, None
         nodes = np.array(nrows, dtype=float)[:, 1:3]
 
-        elines = ele_p.read_text(
-            errors="replace"
-        ).splitlines()
+        elines = ele_p.read_text(errors="replace").splitlines()
         ei = _first_data(elines)
         if ei is None:
             return None, None, None
@@ -566,13 +584,9 @@ class PlotModel(Mare2DEMBase):
             if not ln or ln.startswith("#"):
                 continue
             parts = ln.split()
-            erows.append(
-                [int(v) for v in parts[1: 1 + n_dpt]]
-            )
+            erows.append([int(v) for v in parts[1 : 1 + n_dpt]])
             if n_ea > 0 and len(parts) > 1 + n_dpt:
-                rattrs.append(
-                    int(float(parts[1 + n_dpt]))
-                )
+                rattrs.append(int(float(parts[1 + n_dpt])))
             else:
                 rattrs.append(0)
 
@@ -605,10 +619,7 @@ class PlotModel(Mare2DEMBase):
         rf = self._rf
         rho = (
             rf.resistivity[:, 0]
-            if (
-                rf is not None
-                and len(rf.resistivity)
-            )
+            if (rf is not None and len(rf.resistivity))
             else np.array([])
         )
         if len(rho):
@@ -624,7 +635,8 @@ class PlotModel(Mare2DEMBase):
         fig.tight_layout()
         if savefig is not None:
             fig.savefig(
-                str(savefig), dpi=dpi,
+                str(savefig),
+                dpi=dpi,
                 bbox_inches="tight",
             )
         return fig
@@ -685,21 +697,24 @@ class PlotModel(Mare2DEMBase):
         rf = self._rf
         gb = (
             rf.global_bounds
-            if (
-                rf is not None
-                and rf.global_bounds is not None
-            )
+            if (rf is not None and rf.global_bounds is not None)
             else None
         )
-        _vmin = vmin if vmin is not None else (
-            float(gb[0]) if gb is not None else None
+        _vmin = (
+            vmin
+            if vmin is not None
+            else (float(gb[0]) if gb is not None else None)
         )
-        _vmax = vmax if vmax is not None else (
-            float(gb[1]) if gb is not None else None
+        _vmax = (
+            vmax
+            if vmax is not None
+            else (float(gb[1]) if gb is not None else None)
         )
 
         tc = ax.tripcolor(
-            y, z, els,
+            y,
+            z,
+            els,
             facecolors=rho_vals,
             cmap=cmap,
             vmin=_vmin,
@@ -718,7 +733,8 @@ class PlotModel(Mare2DEMBase):
 
         if savefig is not None:
             fig.savefig(
-                str(savefig), dpi=dpi,
+                str(savefig),
+                dpi=dpi,
                 bbox_inches="tight",
             )
         return fig
@@ -727,6 +743,7 @@ class PlotModel(Mare2DEMBase):
 # ---------------------------------------------------------------------------
 # PlotResponse — observed vs predicted MT response
 # ---------------------------------------------------------------------------
+
 
 class PlotResponse(Mare2DEMBase):
     """Compare observed and predicted MT responses.
@@ -748,9 +765,7 @@ class PlotResponse(Mare2DEMBase):
         from .results import InversionResult
 
         if not isinstance(result, InversionResult):
-            raise TypeError(
-                "result must be an InversionResult."
-            )
+            raise TypeError("result must be an InversionResult.")
         self._result = result
 
     def plot(
@@ -800,30 +815,20 @@ class PlotResponse(Mare2DEMBase):
         resp = self._result.response
 
         if em is None or em.mt is None:
-            raise ValueError(
-                "No MT data found in InversionResult."
-            )
+            raise ValueError("No MT data found in InversionResult.")
 
         freqs = em.mt.frequencies
         if len(freqs) == 0:
-            raise ValueError(
-                "MT section has no frequencies."
-            )
+            raise ValueError("MT section has no frequencies.")
 
         periods = 1.0 / freqs
         rx_names = em.mt.receiver_name
         n_rx = len(em.mt.receivers)
 
         if station is not None:
-            rx_set = [
-                i
-                for i, nm in enumerate(rx_names)
-                if nm == station
-            ]
+            rx_set = [i for i, nm in enumerate(rx_names) if nm == station]
             if not rx_set:
-                raise ValueError(
-                    f"Station {station!r} not found."
-                )
+                raise ValueError(f"Station {station!r} not found.")
         else:
             rx_set = list(range(min(n_rx, max_rx)))
 
@@ -832,41 +837,30 @@ class PlotResponse(Mare2DEMBase):
             figsize = (12, 4 * n_plot)
 
         fig, axes = plt.subplots(
-            n_plot, 2,
+            n_plot,
+            2,
             figsize=figsize,
             squeeze=False,
         )
 
         obs = em.data
-        pred = (
-            resp.data if resp is not None else None
-        )
+        pred = resp.data if resp is not None else None
 
         _MODES = [
-            (123, 104, "tab:red",  "TE"),
+            (123, 104, "tab:red", "TE"),
             (125, 106, "tab:blue", "TM"),
         ]
 
         for row, irx in enumerate(rx_set):
             ax_r = axes[row, 0]
             ax_p = axes[row, 1]
-            nm = (
-                rx_names[irx]
-                if irx < len(rx_names)
-                else f"Rx{irx + 1}"
-            )
+            nm = rx_names[irx] if irx < len(rx_names) else f"Rx{irx + 1}"
 
             for c_rho, c_phi, color, lbl in _MODES:
                 codes = obs[:, 0].astype(int)
                 rxcol = obs[:, 3].astype(int)
-                m_rho = (
-                    (codes == c_rho)
-                    & (rxcol == irx + 1)
-                )
-                m_phi = (
-                    (codes == c_phi)
-                    & (rxcol == irx + 1)
-                )
+                m_rho = (codes == c_rho) & (rxcol == irx + 1)
+                m_phi = (codes == c_phi) & (rxcol == irx + 1)
 
                 if m_rho.any():
                     fi = obs[m_rho, 1].astype(int) - 1
@@ -884,14 +878,9 @@ class PlotResponse(Mare2DEMBase):
                 if pred is not None:
                     pc = pred[:, 0].astype(int)
                     pr = pred[:, 3].astype(int)
-                    mr = (
-                        (pc == c_rho)
-                        & (pr == irx + 1)
-                    )
+                    mr = (pc == c_rho) & (pr == irx + 1)
                     if mr.any():
-                        fi_r = (
-                            pred[mr, 1].astype(int) - 1
-                        )
+                        fi_r = pred[mr, 1].astype(int) - 1
                         ax_r.plot(
                             periods[fi_r],
                             pred[mr, 6],
@@ -918,14 +907,9 @@ class PlotResponse(Mare2DEMBase):
                 if pred is not None:
                     pc = pred[:, 0].astype(int)
                     pr = pred[:, 3].astype(int)
-                    mp = (
-                        (pc == c_phi)
-                        & (pr == irx + 1)
-                    )
+                    mp = (pc == c_phi) & (pr == irx + 1)
                     if mp.any():
-                        fi_r = (
-                            pred[mp, 1].astype(int) - 1
-                        )
+                        fi_r = pred[mp, 1].astype(int) - 1
                         ax_p.plot(
                             periods[fi_r],
                             pred[mp, 6],
@@ -954,7 +938,8 @@ class PlotResponse(Mare2DEMBase):
         fig.tight_layout()
         if savefig is not None:
             fig.savefig(
-                str(savefig), dpi=dpi,
+                str(savefig),
+                dpi=dpi,
                 bbox_inches="tight",
             )
         return fig

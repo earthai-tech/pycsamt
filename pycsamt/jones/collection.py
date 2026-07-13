@@ -278,6 +278,7 @@ class JCollection(JCBBase, JCollectionMixin):
     ----------
     .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
+
     def __init__(
         self,
         items: Iterable[JFile] | None = None,
@@ -355,9 +356,11 @@ class JCollection(JCBBase, JCollectionMixin):
             p = getattr(jf, "path", None)
             if p is None:
                 continue
-            if (p.stem.lower() == site_lower or
-                p.name.lower() == site_lower or
-                str(p).lower() == site_lower):
+            if (
+                p.stem.lower() == site_lower
+                or p.name.lower() == site_lower
+                or str(p).lower() == site_lower
+            ):
                 return jf
         raise KeyError(f"site not found: {site!r}")
 
@@ -395,8 +398,9 @@ class JCollection(JCBBase, JCollectionMixin):
         if w == "z":
             return getattr(getattr(jf, "Z", None), "z", None)
         if w in {"zxx", "zxy", "zyx", "zyy"}:
-            m = {"zxx": (0, 0), "zxy": (0, 1),
-                 "zyx": (1, 0), "zyy": (1, 1)}[w]
+            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[
+                w
+            ]
             z = getattr(getattr(jf, "Z", None), "z", None)
             if z is None:
                 return default
@@ -419,8 +423,16 @@ class JCollection(JCBBase, JCollectionMixin):
             return a[:, 0] if w == "tx" else a[:, 1]
 
         # -------- resistivity/phase --------
-        if w in {"rxx", "rxy", "ryx", "ryy",
-                 "phixx", "phixy", "phiyx", "phiyy"}:
+        if w in {
+            "rxx",
+            "rxy",
+            "ryx",
+            "ryy",
+            "phixx",
+            "phixy",
+            "phiyx",
+            "phiyy",
+        }:
             rp = getattr(jf, "Res", None)
             if rp is None:
                 return default
@@ -606,8 +618,9 @@ class JCollection(JCBBase, JCollectionMixin):
             f = getattr(jf, "freq", None)
             n = int(getattr(f, "size", 0))
             row = {
-                "station": getattr(jf, "site", None) or
-                getattr(jf, "name", None) or "-",
+                "station": getattr(jf, "site", None)
+                or getattr(jf, "name", None)
+                or "-",
                 "n_freq": n,
                 "has_z": bool(getattr(jf, "Z", None)),
                 "has_r": bool(getattr(jf, "Res", None)),
@@ -618,7 +631,6 @@ class JCollection(JCBBase, JCollectionMixin):
             }
             rows.append({k: row.get(k) for k in fields})
         return rows
-
 
     @staticmethod
     def _site_of(it) -> str | None:
@@ -734,9 +746,10 @@ class JCollection(JCBBase, JCollectionMixin):
         items_iterator = self._items
         try:
             from tqdm import tqdm
+
             items_iterator = tqdm(self._items, desc="Exporting J-Files")
         except (NameError, ImportError):
-            pass # tqdm not installed
+            pass  # tqdm not installed
 
         for jf in items_iterator:
             sid = jf.site or "unknown_station"
@@ -768,7 +781,6 @@ class JCollection(JCBBase, JCollectionMixin):
 
         return {"successful": successful_paths, "failed": failed_items}
 
-
     def fetch(
         self,
         site: str | None = None,
@@ -776,7 +788,7 @@ class JCollection(JCBBase, JCollectionMixin):
         lon: float | None = None,
         tol: float = 0.001,
         first: bool = False,
-        **kwargs
+        **kwargs,
     ) -> JFile | list[JFile] | None:
         """
         Fetches JFile objects from the collection based on specified criteria.
@@ -836,18 +848,18 @@ class JCollection(JCBBase, JCollectionMixin):
 
             # --- Match by site name (case-insensitive) ---
             if site is not None:
-                jf_site = getattr(jf, 'site', None)
+                jf_site = getattr(jf, "site", None)
                 if not (jf_site and jf_site.upper() == site.upper()):
                     is_match = False
 
             # --- Match by geographic coordinates with tolerance ---
             if lat is not None and is_match:
-                jf_lat = getattr(jf, 'lat', None)
+                jf_lat = getattr(jf, "lat", None)
                 if jf_lat is None or abs(jf_lat - lat) > tol:
                     is_match = False
 
             if lon is not None and is_match:
-                jf_lon = getattr(jf, 'lon', None)
+                jf_lon = getattr(jf, "lon", None)
                 if jf_lon is None or abs(jf_lon - lon) > tol:
                     is_match = False
 
@@ -891,36 +903,44 @@ class JCollection(JCBBase, JCollectionMixin):
         with_t = sum(1 for r in summary_data if r.get("has_t"))
 
         # Get all frequencies from all files to find the true min/max
-        all_freqs = np.concatenate([
-            jf.freq for jf in self if jf.freq is not None and jf.freq.size > 0
-        ]) if total_files > 0 else np.array([])
+        all_freqs = (
+            np.concatenate(
+                [
+                    jf.freq
+                    for jf in self
+                    if jf.freq is not None and jf.freq.size > 0
+                ]
+            )
+            if total_files > 0
+            else np.array([])
+        )
 
         lats = self.latitude[~np.isnan(self.latitude)]
         lons = self.longitude[~np.isnan(self.longitude)]
 
-        freq_range = (f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}"
-                      if all_freqs.size > 0 else "N/A")
+        freq_range = (
+            f"Min={np.min(all_freqs):.2E}, Max={np.max(all_freqs):.2E}"
+            if all_freqs.size > 0
+            else "N/A"
+        )
         lat_range = (
-            f"{min(lats):.4f} to {max(lats):.4f}"
-            if len(lats) > 0 else "N/A"
+            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
         )
         lon_range = (
-            f"{min(lons):.4f} to {max(lons):.4f}"
-            if len(lons) > 0 else "N/A"
+            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
         )
 
         lines = [
-            "  " + "-"*68,
+            "  " + "-" * 68,
             "  Statistical Summary:",
             f"    Total Sites: {total_files}",
             f"    Component Counts: Z={with_z}, R={with_r}, T={with_t}",
             f"    Frequency Range (Hz): {freq_range}",
             f"    Latitude Range:       {lat_range}",
             f"    Longitude Range:      {lon_range}",
-            "  " + "-"*68,
+            "  " + "-" * 68,
         ]
         return "\n".join(lines)
-
 
     def __str__(self) -> str:  # pragma: no cover
         """Provides a detailed and statistical summary of the collection."""
@@ -931,18 +951,15 @@ class JCollection(JCBBase, JCollectionMixin):
         # --- Header ---
         title = f" JCollection Summary (Total Sites: {len(summary_data)}) "
         width = 72
-        header = [
-            "=" * width,
-            title.center(width),
-            "=" * width
-        ]
+        header = ["=" * width, title.center(width), "=" * width]
 
         # --- Per-Site Details ---
         details = ["\nSite Details:"]
         # Calculate max station length, ensuring
         # it's at least as wide as the header
         max_station_len = max(
-            [len(r['station']) for r in summary_data] + [len("Station")])
+            [len(r["station"]) for r in summary_data] + [len("Station")]
+        )
 
         table_header = (
             f"  {'Station'.ljust(max_station_len)} | Freqs"
@@ -956,9 +973,9 @@ class JCollection(JCBBase, JCollectionMixin):
             tip = "Y" if r["has_t"] else "N"
             zz = "Y" if r["has_z"] else "N"
             rr = "Y" if r["has_r"] else "N"
-            lat_str = f"{r['lat']:.4f}" if r['lat'] is not None else "N/A"
-            lon_str = f"{r['lon']:.4f}" if r['lon'] is not None else "N/A"
-            az_str = f"{r['az']:.1f}" if r['az'] is not None else "N/A"
+            lat_str = f"{r['lat']:.4f}" if r["lat"] is not None else "N/A"
+            lon_str = f"{r['lon']:.4f}" if r["lon"] is not None else "N/A"
+            az_str = f"{r['az']:.1f}" if r["az"] is not None else "N/A"
 
             details.append(
                 f"  {r['station'].ljust(max_station_len)} | "
@@ -967,7 +984,9 @@ class JCollection(JCBBase, JCollectionMixin):
             )
 
         details.append("  " + "-" * table_width)
-        details.append("  *Y = Yes (data present); *N = No (data not present)")
+        details.append(
+            "  *Y = Yes (data present); *N = No (data not present)"
+        )
 
         # --- Statistical Summary ---
         stats_str = self._summary_stats(summary_data)
@@ -976,9 +995,4 @@ class JCollection(JCBBase, JCollectionMixin):
         return "\n".join(header + [stats_str] + details)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"JCollection(n={len(self)}, "
-            f"stations={self.stations()!r})"
-        )
-
-
+        return f"JCollection(n={len(self)}, stations={self.stations()!r})"

@@ -24,9 +24,15 @@ from dash.exceptions import PreventUpdate
 from .._ids import IDs
 
 _LINE_COLORS = [
-    "#1c7ed6", "#2f9e44", "#e67700",
-    "#7048e8", "#c92a2a", "#0c8599",
-    "#a61e4d", "#5c7cfa", "#f76707",
+    "#1c7ed6",
+    "#2f9e44",
+    "#e67700",
+    "#7048e8",
+    "#c92a2a",
+    "#0c8599",
+    "#a61e4d",
+    "#5c7cfa",
+    "#f76707",
     "#37b24d",
 ]
 _SHOW = {"display": "block"}
@@ -38,6 +44,7 @@ def _color(i: int) -> str:
 
 
 # ── Line detection helpers ─────────────────────────
+
 
 def _detect_from_ids(
     station_ids: list[str],
@@ -51,17 +58,11 @@ def _detect_from_ids(
     """
     groups: dict[str, list[str]] = {}
     for sid in station_ids:
-        m = re.match(
-            r"^([A-Za-z]*\d+)", str(sid)
-        )
-        prefix = (
-            m.group(1) if m else str(sid)[:4]
-        )
+        m = re.match(r"^([A-Za-z]*\d+)", str(sid))
+        prefix = m.group(1) if m else str(sid)[:4]
         if prefix.isdigit():
             prefix = f"L{prefix}"
-        groups.setdefault(
-            prefix, []
-        ).append(sid)
+        groups.setdefault(prefix, []).append(sid)
     return groups
 
 
@@ -76,18 +77,14 @@ def _folder_to_lines(
         edis = sorted(p.rglob("*.EDI"))
     for edi in edis:
         line = edi.parent.name
-        groups.setdefault(line, []).append(
-            str(edi)
-        )
+        groups.setdefault(line, []).append(str(edi))
     # single flat folder: use parent name
     if len(groups) == 1:
         only_key = list(groups.keys())[0]
         if only_key == p.name:
             pass  # already correct
     if not groups and edis:
-        groups["Default"] = [
-            str(e) for e in edis
-        ]
+        groups["Default"] = [str(e) for e in edis]
     return groups
 
 
@@ -126,9 +123,7 @@ def _build_lines_panel(
             )
         ]
     rows = []
-    for i, (name, files) in enumerate(
-        groups.items()
-    ):
+    for i, (name, files) in enumerate(groups.items()):
         count = len(files)
         name_el = (
             dbc.Input(
@@ -142,18 +137,14 @@ def _build_lines_panel(
                 debounce=True,
             )
             if editable
-            else html.Span(
-                name, className="am-line-name"
-            )
+            else html.Span(name, className="am-line-name")
         )
         rows.append(
             html.Div(
                 [
                     html.Div(
                         className="am-line-dot",
-                        style={
-                            "background": _color(i)
-                        },
+                        style={"background": _color(i)},
                     ),
                     name_el,
                     html.Span(
@@ -183,14 +174,12 @@ def _build_lines_panel(
 
 # ── Error helper ───────────────────────────────────
 
+
 def _err_div(msg: str) -> html.Div:
     return html.Div(
         [
             html.I(
-                className=(
-                    "bi bi-exclamation-triangle"
-                    " me-1"
-                ),
+                className=("bi bi-exclamation-triangle me-1"),
                 style={"color": "var(--tag-err)"},
             ),
             html.Span(
@@ -206,6 +195,7 @@ def _err_div(msg: str) -> html.Div:
 
 
 # ── Callbacks ──────────────────────────────────────
+
 
 def register_edi(app) -> None:
 
@@ -225,7 +215,8 @@ def register_edi(app) -> None:
     # JS folder store → decode + write temp → set path
     @app.callback(
         Output(
-            IDs.EDI_PATH_INPUT, "value",
+            IDs.EDI_PATH_INPUT,
+            "value",
             allow_duplicate=True,
         ),
         Input(IDs.FOLDER_STORE, "data"),
@@ -234,32 +225,22 @@ def register_edi(app) -> None:
     def handle_folder_store(store_data):
         if not store_data:
             raise PreventUpdate
-        filenames = store_data.get(
-            "filenames", []
-        )
+        filenames = store_data.get("filenames", [])
         contents = store_data.get("contents", [])
         if not filenames:
             raise PreventUpdate
 
-        tmp = tempfile.mkdtemp(
-            prefix="am_edi_folder_"
-        )
-        for fname, content in zip(
-            filenames, contents
-        ):
+        tmp = tempfile.mkdtemp(prefix="am_edi_folder_")
+        for fname, content in zip(filenames, contents):
             # fname is like "L18PLT/18-001A.edi"
-            parts = fname.replace("\\", "/").split(
-                "/"
-            )
+            parts = fname.replace("\\", "/").split("/")
             dest = Path(tmp)
             for part in parts[:-1]:
                 dest = dest / part
                 dest.mkdir(exist_ok=True)
             out = dest / parts[-1]
             _, b64 = content.split(",", 1)
-            out.write_bytes(
-                base64.b64decode(b64)
-            )
+            out.write_bytes(base64.b64decode(b64))
         return tmp
 
     # Mode → show/hide detect / rename buttons
@@ -288,22 +269,14 @@ def register_edi(app) -> None:
             raise PreventUpdate
         p = Path(path.strip())
         if not p.exists():
-            return no_update, _err_div(
-                f"Path not found: {p}"
-            )
+            return no_update, _err_div(f"Path not found: {p}")
         if p.is_file():
             groups = {"Default": [str(p)]}
         else:
             groups = _folder_to_lines(str(p))
-        if (
-            mode == "auto"
-            and ctx.triggered_id
-            == IDs.BTN_DETECT_LINES
-        ):
+        if mode == "auto" and ctx.triggered_id == IDs.BTN_DETECT_LINES:
             all_ids = [
-                Path(f).stem
-                for files in groups.values()
-                for f in files
+                Path(f).stem for files in groups.values() for f in files
             ]
             groups = _detect_from_ids(all_ids)
         panel = _build_lines_panel(
@@ -311,20 +284,15 @@ def register_edi(app) -> None:
             mode=mode,
             editable=(mode == "edit"),
         )
-        n_edi = sum(
-            len(v) for v in groups.values()
-        )
+        n_edi = sum(len(v) for v in groups.values())
         status = html.Div(
             [
                 html.I(
-                    className=(
-                        "bi bi-check-circle me-1"
-                    ),
+                    className=("bi bi-check-circle me-1"),
                     style={"color": "var(--tag-ok)"},
                 ),
                 html.Span(
-                    f"{n_edi} EDI file(s) in "
-                    f"{len(groups)} line(s)",
+                    f"{n_edi} EDI file(s) in {len(groups)} line(s)",
                     style={"fontSize": "12px"},
                 ),
             ],
@@ -347,12 +315,8 @@ def register_edi(app) -> None:
         if isinstance(filenames, str):
             filenames = [filenames]
         filenames = filenames or []
-        tmp = tempfile.mkdtemp(
-            prefix="am_edi_upload_"
-        )
-        for content, fname in zip(
-            contents, filenames
-        ):
+        tmp = tempfile.mkdtemp(prefix="am_edi_upload_")
+        for content, fname in zip(contents, filenames):
             _, b64 = content.split(",", 1)
             data = base64.b64decode(b64)
             out = Path(tmp) / fname
@@ -365,7 +329,8 @@ def register_edi(app) -> None:
         Output(IDs.EDI_BADGE, "className"),
         Output(IDs.EDI_BADGE_TEXT, "children"),
         Output(
-            IDs.CANVAS_EDI, "is_open",
+            IDs.CANVAS_EDI,
+            "is_open",
             allow_duplicate=True,
         ),
         Input(IDs.BTN_LOAD_CONFIRM, "n_clicks"),
@@ -386,7 +351,9 @@ def register_edi(app) -> None:
         if p.is_file():
             groups = {"Default": [str(p)]}
         elif mode == "auto":
-            groups = _detect_lines_to_files(str(p)) or _folder_to_lines(str(p))
+            groups = _detect_lines_to_files(str(p)) or _folder_to_lines(
+                str(p)
+            )
         elif mode == "edit":
             base = _folder_to_lines(str(p))
             names = rename_vals or []
@@ -396,22 +363,14 @@ def register_edi(app) -> None:
                 groups[str(nm)] = list(files)
         else:  # folder (default)
             groups = _folder_to_lines(str(p))
-        n_edi = sum(
-            len(v) for v in groups.values()
-        )
+        n_edi = sum(len(v) for v in groups.values())
         store = {
             "path": str(p),
-            "groups": {
-                k: list(v)
-                for k, v in groups.items()
-            },
+            "groups": {k: list(v) for k, v in groups.items()},
             "n_edi": n_edi,
             "mode": mode,
         }
-        badge_text = (
-            f"{n_edi} EDI · "
-            f"{len(groups)} line(s)"
-        )
+        badge_text = f"{n_edi} EDI · {len(groups)} line(s)"
         return (
             store,
             "am-edi-badge visible",

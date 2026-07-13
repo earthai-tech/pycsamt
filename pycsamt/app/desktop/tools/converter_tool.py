@@ -15,6 +15,7 @@ Workflow
 2. Choose output format and target folder.
 3. Click Convert → background worker iterates stations, progress bar updates.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,21 +39,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-_FORMATS = ["CSV (station metadata)", "JSON (station metadata)", "EDI (re-export)"]
+_FORMATS = [
+    "CSV (station metadata)",
+    "JSON (station metadata)",
+    "EDI (re-export)",
+]
 
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
+
 class _ConvertWorker(QThread):
-    progress = Signal(int, int, str)   # current, total, message
-    done     = Signal(str)             # summary
-    error    = Signal(str)
+    progress = Signal(int, int, str)  # current, total, message
+    done = Signal(str)  # summary
+    error = Signal(str)
 
     def __init__(self, sites, out_dir: Path, fmt: str):
         super().__init__()
-        self._sites   = sites
+        self._sites = sites
         self._out_dir = out_dir
-        self._fmt     = fmt
+        self._fmt = fmt
 
     def run(self):
         try:
@@ -60,17 +66,22 @@ class _ConvertWorker(QThread):
                 _iter_items,
                 _unwrap,
             )
+
             items = list(_iter_items(self._sites))
         except Exception:
             try:
-                items = list(self._sites) if hasattr(self._sites, "__iter__") else [self._sites]
+                items = (
+                    list(self._sites)
+                    if hasattr(self._sites, "__iter__")
+                    else [self._sites]
+                )
             except Exception as exc:
                 self.error.emit(f"Cannot iterate survey: {exc}")
                 return
 
         self._out_dir.mkdir(parents=True, exist_ok=True)
         total = len(items)
-        rows  = []
+        rows = []
 
         for idx, ed in enumerate(items):
             try:
@@ -79,12 +90,11 @@ class _ConvertWorker(QThread):
                 pass
 
             # Collect metadata
-            name = (
-                getattr(ed, "station", None)
-                or getattr(ed, "id", f"S{idx:03d}")
+            name = getattr(ed, "station", None) or getattr(
+                ed, "id", f"S{idx:03d}"
             )
-            lat  = getattr(ed, "lat", None) or getattr(ed, "latitude",  None)
-            lon  = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+            lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
+            lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
             try:
                 lat = float(lat) if lat is not None else float("nan")
                 lon = float(lon) if lon is not None else float("nan")
@@ -105,14 +115,18 @@ class _ConvertWorker(QThread):
                     n_freq = len(fa)
                     if n_freq:
                         periods = 1.0 / fa
-                        t_min, t_max = float(periods.min()), float(periods.max())
+                        t_min, t_max = (
+                            float(periods.min()),
+                            float(periods.max()),
+                        )
                 z_err = getattr(Z_obj, "z_err", None)
                 if z_err is not None:
                     has_err = bool(np.any(np.isfinite(np.asarray(z_err))))
 
             row = dict(
                 station=str(name),
-                lat=lat, lon=lon,
+                lat=lat,
+                lon=lon,
                 n_freq=n_freq,
                 t_min=round(t_min, 6) if np.isfinite(t_min) else None,
                 t_max=round(t_max, 6) if np.isfinite(t_max) else None,
@@ -137,25 +151,28 @@ class _ConvertWorker(QThread):
         try:
             if "CSV" in self._fmt:
                 import csv
+
                 out_path = self._out_dir / "survey_stations.csv"
                 with open(out_path, "w", newline="", encoding="utf-8") as fh:
-                    writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+                    writer = csv.DictWriter(
+                        fh, fieldnames=list(rows[0].keys())
+                    )
                     writer.writeheader()
                     writer.writerows(rows)
             elif "JSON" in self._fmt:
                 import json
+
                 out_path = self._out_dir / "survey_stations.json"
                 out_path.write_text(json.dumps(rows, indent=2))
         except Exception as exc:
             self.error.emit(f"Write error: {exc}")
             return
 
-        self.done.emit(
-            f"Converted {total} stations → {self._out_dir}"
-        )
+        self.done.emit(f"Converted {total} stations → {self._out_dir}")
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
+
 
 class FormatConverterDialog(QDialog):
     """
@@ -174,7 +191,7 @@ class FormatConverterDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Format Converter")
         self.setMinimumSize(520, 420)
-        self._sites  = sites
+        self._sites = sites
         self._worker = None
         self._build_ui()
 
@@ -192,6 +209,7 @@ class FormatConverterDialog(QDialog):
         if self._sites is not None:
             try:
                 from pycsamt.emtools._core import _iter_items
+
                 cnt = sum(1 for _ in _iter_items(self._sites))
                 src_lbl = f"Loaded survey  ({cnt} stations)"
             except Exception:
@@ -255,7 +273,7 @@ class FormatConverterDialog(QDialog):
             self._log.append("Load survey data first.")
             return
         out_dir = Path(self._dir_edit.text().strip())
-        fmt     = self._fmt_combo.currentText()
+        fmt = self._fmt_combo.currentText()
         self._run_btn.setEnabled(False)
         self._progress.setValue(0)
         self._log.clear()

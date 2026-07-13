@@ -51,7 +51,7 @@ class MplCanvas(QWidget):
         super().__init__(parent)
 
         self.figure = Figure(tight_layout=True)
-        self.axes   = self.figure.add_subplot(111)
+        self.axes = self.figure.add_subplot(111)
 
         self._canvas = FigureCanvasQTAgg(self.figure)
         self._canvas.setSizePolicy(
@@ -103,11 +103,9 @@ class MplCanvas(QWidget):
 
         # ── Resize figure to fill the available widget area ────────────
         # Use the widget's current pixel size; fall back to window size.
-        avail_w = self.width()  or 900
+        avail_w = self.width() or 900
         avail_h = self.height() or 600
-        toolbar_h = (
-            self._toolbar.sizeHint().height() if self._toolbar else 0
-        )
+        toolbar_h = self._toolbar.sizeHint().height() if self._toolbar else 0
         canvas_h = max(avail_h - toolbar_h - 4, 100)
         dpi = fig.get_dpi() or 100
         fig.set_size_inches(avail_w / dpi, canvas_h / dpi)
@@ -128,7 +126,7 @@ class MplCanvas(QWidget):
 
         # ── Store references ───────────────────────────────────────────
         self.figure = fig
-        self.axes   = fig.axes[0] if fig.axes else fig.add_subplot(111)
+        self.axes = fig.axes[0] if fig.axes else fig.add_subplot(111)
 
         # Draw after the layout has settled
         QTimer.singleShot(0, self._canvas.draw_idle)
@@ -164,62 +162,66 @@ import matplotlib as _mpl
 
 # Theme colour tables — kept in sync with the QSS palettes.
 _DARK_STYLE = dict(
-    fig_bg  = "#1e1e2e",
-    axes_bg = "#181825",
-    fg      = "#cdd6f4",
-    tick    = "#a6adc8",
-    spine   = "#45475a",
+    fig_bg="#1e1e2e",
+    axes_bg="#181825",
+    fg="#cdd6f4",
+    tick="#a6adc8",
+    spine="#45475a",
 )
 _LIGHT_STYLE = dict(
-    fig_bg  = "#e6e9ef",
-    axes_bg = "#eff1f5",
-    fg      = "#4c4f69",
-    tick    = "#6c6f85",
-    spine   = "#bcc0cc",
+    fig_bg="#e6e9ef",
+    axes_bg="#eff1f5",
+    fg="#4c4f69",
+    tick="#6c6f85",
+    spine="#bcc0cc",
 )
 
 
 def apply_mpl_dark_theme() -> None:
     """Set matplotlib rcParams to match the dark QSS palette."""
-    _mpl.rcParams.update({
-        "axes.facecolor":    "#181825",
-        "figure.facecolor":  "#1e1e2e",
-        "savefig.facecolor": "#1e1e2e",
-        "axes.edgecolor":    "#45475a",
-        "axes.labelcolor":   "#cdd6f4",
-        "text.color":        "#cdd6f4",
-        "xtick.color":       "#a6adc8",
-        "ytick.color":       "#a6adc8",
-        "grid.color":        "#313244",
-        "axes.grid":         True,
-        "grid.linestyle":    "--",
-        "grid.alpha":        0.35,
-        "lines.color":       "#89b4fa",
-        "patch.edgecolor":   "#45475a",
-        "legend.facecolor":  "#1e1e2e",
-        "legend.edgecolor":  "#45475a",
-        "legend.labelcolor": "#cdd6f4",
-    })
+    _mpl.rcParams.update(
+        {
+            "axes.facecolor": "#181825",
+            "figure.facecolor": "#1e1e2e",
+            "savefig.facecolor": "#1e1e2e",
+            "axes.edgecolor": "#45475a",
+            "axes.labelcolor": "#cdd6f4",
+            "text.color": "#cdd6f4",
+            "xtick.color": "#a6adc8",
+            "ytick.color": "#a6adc8",
+            "grid.color": "#313244",
+            "axes.grid": True,
+            "grid.linestyle": "--",
+            "grid.alpha": 0.35,
+            "lines.color": "#89b4fa",
+            "patch.edgecolor": "#45475a",
+            "legend.facecolor": "#1e1e2e",
+            "legend.edgecolor": "#45475a",
+            "legend.labelcolor": "#cdd6f4",
+        }
+    )
 
 
 def apply_mpl_light_theme() -> None:
     """Set matplotlib rcParams to match the light QSS palette."""
-    _mpl.rcParams.update({
-        "axes.facecolor":    "#eff1f5",
-        "figure.facecolor":  "#e6e9ef",
-        "savefig.facecolor": "#e6e9ef",
-        "axes.edgecolor":    "#bcc0cc",
-        "axes.labelcolor":   "#4c4f69",
-        "text.color":        "#4c4f69",
-        "xtick.color":       "#6c6f85",
-        "ytick.color":       "#6c6f85",
-        "grid.color":        "#ccd0da",
-        "axes.grid":         True,
-        "grid.linestyle":    "--",
-        "grid.alpha":        0.5,
-        "lines.color":       "#1e66f5",
-        "patch.edgecolor":   "#bcc0cc",
-        "legend.facecolor":  "#eff1f5",
-        "legend.edgecolor":  "#bcc0cc",
-        "legend.labelcolor": "#4c4f69",
-    })
+    _mpl.rcParams.update(
+        {
+            "axes.facecolor": "#eff1f5",
+            "figure.facecolor": "#e6e9ef",
+            "savefig.facecolor": "#e6e9ef",
+            "axes.edgecolor": "#bcc0cc",
+            "axes.labelcolor": "#4c4f69",
+            "text.color": "#4c4f69",
+            "xtick.color": "#6c6f85",
+            "ytick.color": "#6c6f85",
+            "grid.color": "#ccd0da",
+            "axes.grid": True,
+            "grid.linestyle": "--",
+            "grid.alpha": 0.5,
+            "lines.color": "#1e66f5",
+            "patch.edgecolor": "#bcc0cc",
+            "legend.facecolor": "#eff1f5",
+            "legend.edgecolor": "#bcc0cc",
+            "legend.labelcolor": "#4c4f69",
+        }
+    )

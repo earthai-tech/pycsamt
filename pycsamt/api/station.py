@@ -156,24 +156,28 @@ class StationAxisStyle:
             y0, y1 = ax.get_ylim()
             y_range = abs(y1 - y0)
             from pycsamt.topo.config import PYCSAMT_TOPO
+
             pad_frac = PYCSAMT_TOPO.marker_pad_fraction
             # Direction toward the top of the display (+1 if normal, -1 if inverted)
             toward_top = 1.0 if y1 >= y0 else -1.0
             pad = toward_top * pad_frac * y_range
 
             marker_y = elev + pad
-            label_y  = elev + pad * 3.5  # label further above the marker
+            label_y = elev + pad * 3.5  # label further above the marker
 
             # Suppress axis ticklabels — labels are drawn inline instead
             ax.set_xticks(x, minor=True)
-            ax.tick_params(axis="x", which="minor", length=self.tick_length, top=True)
+            ax.tick_params(
+                axis="x", which="minor", length=self.tick_length, top=True
+            )
             ax.set_xticks([])
             ax.set_xticklabels([])
 
             # All markers always visible
             if self.show_markers:
                 ax.scatter(
-                    x, marker_y,
+                    x,
+                    marker_y,
                     transform=ax.transData,
                     **self.marker.kwargs(),
                 )
@@ -183,7 +187,8 @@ class StationAxisStyle:
                 ha = "center"
                 for i in idx:
                     ax.text(
-                        x[i], label_y[i],
+                        x[i],
+                        label_y[i],
                         raw_labels[i],
                         fontsize=self.fontsize,
                         rotation=self.rotation,

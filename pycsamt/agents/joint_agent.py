@@ -45,10 +45,14 @@ Given a joint MT inversion result, write 4-5 sentences that:
 Reply in plain scientific English.
 """
 
-_DEFAULT_FREQS_MT  = np.logspace(-4, 3, 40)   # primary:  1e-4 – 1e3 Hz  (40 pts)
-_DEFAULT_FREQS_SEC = np.logspace(-4, 1, 20)    # secondary: 1e-4 – 10 Hz (20 pts)
-_N_COMP_MT  = 4    # Re/Im of Zxy + Zyx
-_N_COMP_SEC = 2    # |Z| + phase for one component
+_DEFAULT_FREQS_MT = np.logspace(
+    -4, 3, 40
+)  # primary:  1e-4 – 1e3 Hz  (40 pts)
+_DEFAULT_FREQS_SEC = np.logspace(
+    -4, 1, 20
+)  # secondary: 1e-4 – 10 Hz (20 pts)
+_N_COMP_MT = 4  # Re/Im of Zxy + Zyx
+_N_COMP_SEC = 2  # |Z| + phase for one component
 
 
 class JointInversionAgent(BaseAgent):
@@ -122,13 +126,13 @@ class JointInversionAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="inversion",
         )
-        self.modalities        = modalities or ["mt", "tem"]
-        self.n_layers          = n_layers
-        self.n_freqs_primary   = n_freqs_primary
+        self.modalities = modalities or ["mt", "tem"]
+        self.n_layers = n_layers
+        self.n_freqs_primary = n_freqs_primary
         self.n_freqs_secondary = n_freqs_secondary
-        self.n_train_samples   = n_train_samples
-        self.epochs            = epochs
-        self.growth_rate       = growth_rate
+        self.n_train_samples = n_train_samples
+        self.epochs = epochs
+        self.growth_rate = growth_rate
 
     # ── public ────────────────────────────────────────────────────────────────
 
@@ -142,6 +146,7 @@ class JointInversionAgent(BaseAgent):
             from ..ai.inversion.joint import JointInverter
             from ..backends import get_backend_instance
             from ..forward.batch import generate_dataset
+
             if get_backend_instance() is None:
                 raise ImportError("No DL backend.")
         except ImportError as exc:
@@ -161,7 +166,9 @@ class JointInversionAgent(BaseAgent):
         # ── load primary MT sites ─────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -169,13 +176,14 @@ class JointInversionAgent(BaseAgent):
 
         output_dir = input_data.get("output_dir")
         import os
+
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
-        freqs_mt  = _DEFAULT_FREQS_MT[:self.n_freqs_primary]
-        freqs_sec = _DEFAULT_FREQS_SEC[:self.n_freqs_secondary]
+        freqs_mt = _DEFAULT_FREQS_MT[: self.n_freqs_primary]
+        freqs_sec = _DEFAULT_FREQS_SEC[: self.n_freqs_secondary]
 
-        n_feat_mt  = self.n_freqs_primary  * _N_COMP_MT
+        n_feat_mt = self.n_freqs_primary * _N_COMP_MT
         n_feat_sec = self.n_freqs_secondary * _N_COMP_SEC
 
         # ── load optional secondary sites ─────────────────────────────────────
@@ -185,8 +193,10 @@ class JointInversionAgent(BaseAgent):
             try:
                 sec_sites = ensure_sites(sec_path, verbose=0)
             except Exception as exc:
-                warnings.append(f"Could not load secondary sites: {exc}. "
-                                "Synthesising secondary responses.")
+                warnings.append(
+                    f"Could not load secondary sites: {exc}. "
+                    "Synthesising secondary responses."
+                )
 
         # ── collect observed primary features ─────────────────────────────────
         station_names: list[str] = []
@@ -202,7 +212,7 @@ class JointInversionAgent(BaseAgent):
                 warnings.append(f"{nm}: skipped (bad MT data).")
                 continue
             station_names.append(nm)
-            X_mt_obs.append(feat.reshape(-1))   # (n_feat_mt,)
+            X_mt_obs.append(feat.reshape(-1))  # (n_feat_mt,)
 
         if len(station_names) < 2:
             return AgentResult.failed(
@@ -211,12 +221,19 @@ class JointInversionAgent(BaseAgent):
             )
 
         len(station_names)
-        X_mt_obs_arr = np.stack(X_mt_obs, axis=0).astype(np.float32)  # (n_sta, n_feat_mt)
+        X_mt_obs_arr = np.stack(X_mt_obs, axis=0).astype(
+            np.float32
+        )  # (n_sta, n_feat_mt)
 
         # ── collect or synthesise secondary features ──────────────────────────
         X_sec_obs_arr = _collect_secondary_features(
-            station_names, sites, sec_sites, freqs_mt, freqs_sec,
-            n_feat_sec, warnings,
+            station_names,
+            sites,
+            sec_sites,
+            freqs_mt,
+            freqs_sec,
+            n_feat_sec,
+            warnings,
         )
 
         # ── generate synthetic training data ──────────────────────────────────
@@ -235,8 +252,8 @@ class JointInversionAgent(BaseAgent):
                 n_jobs=1,
                 verbose=False,
             )
-            X_mt_train  = ds_mt.X.reshape(len(ds_mt.X), -1).astype(np.float32)
-            y_train     = ds_mt.y.astype(np.float32)
+            X_mt_train = ds_mt.X.reshape(len(ds_mt.X), -1).astype(np.float32)
+            y_train = ds_mt.y.astype(np.float32)
 
             # secondary: same models, low-frequency range, 2 components
             ds_sec = generate_dataset(
@@ -250,13 +267,15 @@ class JointInversionAgent(BaseAgent):
                 verbose=False,
             )
             # keep only first 2 components (log|Zxy|, phase Zxy)
-            X_sec_raw   = ds_sec.X   # (n_samp, n_freqs_sec, 4)
-            X_sec_train = X_sec_raw[:, :, :_N_COMP_SEC].reshape(
-                len(X_sec_raw), -1
-            ).astype(np.float32)
+            X_sec_raw = ds_sec.X  # (n_samp, n_freqs_sec, 4)
+            X_sec_train = (
+                X_sec_raw[:, :, :_N_COMP_SEC]
+                .reshape(len(X_sec_raw), -1)
+                .astype(np.float32)
+            )
 
             # align feature sizes if mismatch
-            X_mt_train  = _pad_or_trim(X_mt_train,  n_feat_mt)
+            X_mt_train = _pad_or_trim(X_mt_train, n_feat_mt)
             X_sec_train = _pad_or_trim(X_sec_train, n_feat_sec)
 
         except Exception as exc:
@@ -268,7 +287,8 @@ class JointInversionAgent(BaseAgent):
         # ── train JointInverter ───────────────────────────────────────────────
         self._log.info(
             "Training JointInverter (DRCNN) — modalities %s — %d epochs…",
-            self.modalities, self.epochs,
+            self.modalities,
+            self.epochs,
         )
         try:
             inverter = JointInverter(
@@ -294,24 +314,31 @@ class JointInversionAgent(BaseAgent):
         predictions: dict[str, np.ndarray] = {}
         rms_per: dict[str, float] = {}
 
-        X_mt_obs_arr  = _pad_or_trim(X_mt_obs_arr,  n_feat_mt)
+        X_mt_obs_arr = _pad_or_trim(X_mt_obs_arr, n_feat_mt)
         X_sec_obs_arr = _pad_or_trim(X_sec_obs_arr, n_feat_sec)
 
         try:
-            y_pred_all = inverter.predict([X_mt_obs_arr, X_sec_obs_arr])  # (n_sta, n_layers)
+            y_pred_all = inverter.predict(
+                [X_mt_obs_arr, X_sec_obs_arr]
+            )  # (n_sta, n_layers)
         except Exception as exc:
             return AgentResult.failed(
-                f"Joint prediction failed: {exc}", elapsed=time.time() - t0,
+                f"Joint prediction failed: {exc}",
+                elapsed=time.time() - t0,
             )
 
         for si, nm in enumerate(station_names):
             log_rho = y_pred_all[si]
             predictions[nm] = log_rho
-            rms = _forward_rms_joint(sites, nm, si, log_rho, freqs_mt, self.n_layers)
+            rms = _forward_rms_joint(
+                sites, nm, si, log_rho, freqs_mt, self.n_layers
+            )
             if rms is not None:
                 rms_per[nm] = rms
 
-        rms_global = float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        rms_global = (
+            float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        )
         n_pred = len(predictions)
 
         # ── figures ───────────────────────────────────────────────────────────
@@ -320,13 +347,20 @@ class JointInversionAgent(BaseAgent):
 
         try:
             fig_sec = _plot_joint_section(
-                predictions, self.n_layers, freqs_mt, station_names,
+                predictions,
+                self.n_layers,
+                freqs_mt,
+                station_names,
                 self.modalities,
             )
             if fig_sec is not None:
                 figures["joint_section"] = fig_sec
-                p = self._save_figure(fig_sec, output_dir, "joint_inversion_section",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_sec,
+                    output_dir,
+                    "joint_inversion_section",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["joint_section"] = p
         except Exception as exc:
@@ -335,13 +369,15 @@ class JointInversionAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and n_pred:
-            rms_str = f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
+            rms_str = (
+                f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
+            )
             prompt = (
                 f"Joint inversion summary:\n"
                 f"  Modalities: {' + '.join(self.modalities)}\n"
                 f"  Stations predicted: {n_pred}\n"
                 f"  Layers: {self.n_layers}, max depth: "
-                f"{_default_thicknesses(self.n_layers, freqs_mt).sum()/1000:.1f} km\n"
+                f"{_default_thicknesses(self.n_layers, freqs_mt).sum() / 1000:.1f} km\n"
                 f"  Global RMS: {rms_str} log₁₀(Ω·m)\n"
                 f"  Secondary synthesised: {sec_sites is None}\n"
                 f"  Warnings: {warnings[:3] if warnings else 'none'}\n\n"
@@ -350,7 +386,9 @@ class JointInversionAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=250)
 
         elapsed = time.time() - t0
-        rms_disp = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        rms_disp = (
+            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        )
         return AgentResult(
             status="success" if n_pred > 0 else "needs_review",
             summary=(
@@ -359,15 +397,15 @@ class JointInversionAgent(BaseAgent):
                 f"{rms_disp}. {len(figures)} figure(s)."
             ),
             data={
-                "inverter":        inverter,
-                "predictions":     predictions,
+                "inverter": inverter,
+                "predictions": predictions,
                 "rms_per_station": rms_per,
-                "rms_global":      rms_global,
-                "modalities":      self.modalities,
-                "freqs_mt":        freqs_mt,
+                "rms_global": rms_global,
+                "modalities": self.modalities,
+                "freqs_mt": freqs_mt,
                 "freqs_secondary": freqs_sec,
-                "figures":         figures,
-                "figure_paths":    fig_paths,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -377,6 +415,7 @@ class JointInversionAgent(BaseAgent):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
 
 def _collect_secondary_features(
     station_names: list[str],
@@ -411,7 +450,7 @@ def _collect_secondary_features(
             # log|Zxy| + phase Zxy at secondary frequencies
             feat = _extract_sec_features(z, fr, freqs_sec)
             if feat is not None:
-                X_sec[si, :len(feat)] = feat[:n_feat_sec]
+                X_sec[si, : len(feat)] = feat[:n_feat_sec]
         return X_sec
 
     # fallback: derive from primary sites at low-frequency subset
@@ -424,7 +463,7 @@ def _collect_secondary_features(
             continue
         feat = _extract_sec_features(z, fr, freqs_sec)
         if feat is not None:
-            X_sec[si, :len(feat)] = feat[:n_feat_sec]
+            X_sec[si, : len(feat)] = feat[:n_feat_sec]
 
     warnings.append(
         "No secondary dataset provided — low-frequency MT sub-band used as "
@@ -440,12 +479,12 @@ def _extract_sec_features(
 ) -> np.ndarray | None:
     """Return (n_freqs_target * 2,) — log|Zxy| and phase at target freqs."""
     try:
-        per     = 1.0 / np.where(fr == 0, np.nan, fr)
-        per_t   = 1.0 / np.where(freqs_target == 0, np.nan, freqs_target)
-        n_t     = len(freqs_target)
-        zxy     = np.abs(z[:, 0, 1])
-        pha     = np.degrees(np.angle(z[:, 0, 1]))
-        mask    = np.isfinite(per) & np.isfinite(zxy) & (zxy > 0)
+        per = 1.0 / np.where(fr == 0, np.nan, fr)
+        per_t = 1.0 / np.where(freqs_target == 0, np.nan, freqs_target)
+        n_t = len(freqs_target)
+        zxy = np.abs(z[:, 0, 1])
+        pha = np.degrees(np.angle(z[:, 0, 1]))
+        mask = np.isfinite(per) & np.isfinite(zxy) & (zxy > 0)
         if mask.sum() < 2:
             return None
         log_z = np.log10(np.clip(zxy[mask], 1e-30, None))
@@ -500,21 +539,23 @@ def _forward_rms_joint(
             _, z, fr = _get_z_block(ed)
             if z is None:
                 return None
-            rhos = 10 ** log_rho
-            ths  = _default_thicknesses(n_layers, freqs)
-            lm   = LayeredModel(resistivity=rhos, thickness=ths[:n_layers - 1])
-            fwd  = MT1DForward(freqs=freqs)
+            rhos = 10**log_rho
+            ths = _default_thicknesses(n_layers, freqs)
+            lm = LayeredModel(resistivity=rhos, thickness=ths[: n_layers - 1])
+            fwd = MT1DForward(freqs=freqs)
             resp = fwd.run(lm)
             rho_fwd = np.asarray(resp.rho_a)
-            rho_xy  = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
+            rho_xy = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
             rho_raw = getattr(ed, "rho", None)
             rho_obs = (
-                rho_raw[:, 0, 1] if rho_raw is not None
-                else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
+                rho_raw[:, 0, 1]
+                if rho_raw is not None
+                else (0.2 / np.where(fr == 0, np.nan, fr))
+                * np.abs(z[:, 0, 1]) ** 2
             )
-            per     = 1.0 / np.where(fr == 0, np.nan, fr)
+            per = 1.0 / np.where(fr == 0, np.nan, fr)
             per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
-            mask    = np.isfinite(per) & (rho_obs > 0)
+            mask = np.isfinite(per) & (rho_obs > 0)
             if mask.sum() < 2:
                 return None
             interp = np.interp(
@@ -553,15 +594,15 @@ def _plot_joint_section(
         n = min(len(v), n_layers)
         mat[:n, si] = v[:n]
 
-    ths    = _default_thicknesses(n_layers, freqs)
+    ths = _default_thicknesses(n_layers, freqs)
     depths = np.concatenate([[0], np.cumsum(ths)]) / 1000.0  # km
 
-    section   = PYCSAMT_SECTION.style_for("inversion")
+    section = PYCSAMT_SECTION.style_for("inversion")
     fig_w, fig_h = section.figsize_for(n_stations=n_st, n_y=n_layers)
-    fig, ax   = plt.subplots(figsize=(fig_w, fig_h))
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
 
-    vv   = mat[np.isfinite(mat)]
-    vmin = float(np.percentile(vv, 5))  if vv.size else 0.0
+    vv = mat[np.isfinite(mat)]
+    vmin = float(np.percentile(vv, 5)) if vv.size else 0.0
     vmax = float(np.percentile(vv, 95)) if vv.size else 4.0
 
     im = ax.imshow(
@@ -575,8 +616,11 @@ def _plot_joint_section(
         interpolation="bilinear",
     )
     PYCSAMT_STATION_RENDERING.apply(
-        ax, np.arange(n_st, dtype=float), station_names,
-        preset="inversion", xlim=(-0.5, n_st - 0.5),
+        ax,
+        np.arange(n_st, dtype=float),
+        station_names,
+        preset="inversion",
+        xlim=(-0.5, n_st - 0.5),
     )
     ax.set_ylabel("Depth (km)", fontsize=9)
     ax.tick_params(axis="y", labelsize=8)

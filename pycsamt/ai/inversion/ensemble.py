@@ -30,6 +30,7 @@ References
 Lakshminarayanan B. et al. (2017) *NeurIPS* — Simple and Scalable
 Predictive Uncertainty Estimation using Deep Ensembles.
 """
+
 from __future__ import annotations
 
 import copy
@@ -43,12 +44,14 @@ import numpy as np
 
 __all__ = ["EnsembleInverter"]
 
+
 # lazy import so calibration module is not pulled in unless used
 def _get_calibrators():
     from .calibration import (
         ConformalPredictor,
         PosteriorCalibrator,
     )
+
     return ConformalPredictor, PosteriorCalibrator
 
 
@@ -87,8 +90,7 @@ class EnsembleInverter:
         self.base_estimator = base_estimator
         self.n_estimators = int(n_estimators)
         self.seeds = (
-            list(seeds) if seeds is not None
-            else list(range(n_estimators))
+            list(seeds) if seeds is not None else list(range(n_estimators))
         )
         if len(self.seeds) < self.n_estimators:
             extra = range(len(self.seeds), n_estimators)
@@ -96,8 +98,8 @@ class EnsembleInverter:
 
         self._members: list[Any] = []
         self._is_fitted: bool = False
-        self._conformal: Any | None = None       # ConformalPredictor
-        self._posterior_cal: Any | None = None   # PosteriorCalibrator
+        self._conformal: Any | None = None  # ConformalPredictor
+        self._posterior_cal: Any | None = None  # PosteriorCalibrator
 
     # ─── fit ──────────────────────────────────────────────────────────────
 
@@ -131,13 +133,16 @@ class EnsembleInverter:
         self
         """
         self._members = []
-        for i, seed in enumerate(self.seeds[:self.n_estimators]):
+        for i, seed in enumerate(self.seeds[: self.n_estimators]):
             member = copy.deepcopy(self.base_estimator)
             if verbose:
-                print(f"\n=== Ensemble member {i + 1}/{self.n_estimators} "
-                      f"(seed={seed}) ===")
+                print(
+                    f"\n=== Ensemble member {i + 1}/{self.n_estimators} "
+                    f"(seed={seed}) ==="
+                )
             member.fit(
-                X, y,
+                X,
+                y,
                 epochs=epochs,
                 batch_size=batch_size,
                 lr=lr,
@@ -199,8 +204,8 @@ class EnsembleInverter:
             Calibrated or raw inter-member standard deviation.
         """
         preds = self._all_predictions(X, **kwargs)  # (M, n, p)
-        mean  = preds.mean(axis=0)
-        std   = preds.std(axis=0, ddof=min(1, len(preds) - 1))
+        mean = preds.mean(axis=0)
+        std = preds.std(axis=0, ddof=min(1, len(preds) - 1))
         if _use_calibrated and self._posterior_cal is not None:
             std = self._posterior_cal.calibrated_std(std)
         return mean, std
@@ -225,10 +230,7 @@ class EnsembleInverter:
         quantiles : dict  {q_value: ndarray (n_samples, n_params)}
         """
         preds = self._all_predictions(X, **kwargs)  # (M, n, p)
-        return {
-            float(qi): np.quantile(preds, qi, axis=0)
-            for qi in q
-        }
+        return {float(qi): np.quantile(preds, qi, axis=0) for qi in q}
 
     # ─── calibrated uncertainty ───────────────────────────────────────────
 
@@ -274,7 +276,9 @@ class EnsembleInverter:
         cp.calibrate(X_cal, y_cal)
         self._conformal = cp
 
-        mean, sigma = self.predict_with_uncertainty(X_cal, _use_calibrated=False)
+        mean, sigma = self.predict_with_uncertainty(
+            X_cal, _use_calibrated=False
+        )
         pc = PosteriorCalibrator()
         pc.fit(y_cal, mean, sigma)
         self._posterior_cal = pc
@@ -369,7 +373,9 @@ class EnsembleInverter:
             raise RuntimeError(
                 "Conformal predictor not attached.  Call calibrate() first."
             )
-        return self._conformal.coverage_diagnostics(X_test, y_test, alphas=alphas)
+        return self._conformal.coverage_diagnostics(
+            X_test, y_test, alphas=alphas
+        )
 
     def score(
         self,
@@ -392,6 +398,7 @@ class EnsembleInverter:
         score : float
         """
         from .._base import _compute_metric
+
         y_pred = self.predict(X)
         return _compute_metric(y, y_pred, metric)
 
@@ -473,6 +480,7 @@ class EnsembleInverter:
         path = Path(path)
         if base_class is None:
             from .inv1d import EMInverter1D
+
             base_class = EMInverter1D
 
         meta = np.load(path / "_ensemble_meta.npz", allow_pickle=True)
@@ -494,7 +502,9 @@ class EnsembleInverter:
 
     def _check_fitted(self) -> None:
         if not self._is_fitted or not self._members:
-            raise RuntimeError("EnsembleInverter is not fitted.  Call fit() first.")
+            raise RuntimeError(
+                "EnsembleInverter is not fitted.  Call fit() first."
+            )
 
     def _all_predictions(self, X: np.ndarray, **kwargs) -> np.ndarray:
         self._check_fitted()
@@ -536,7 +546,7 @@ class EnsembleInverter:
         from ..plot.diagnostics import plot_uncertainty_bands
 
         mean, std = self.predict_with_uncertainty(X)
-        m = mean[sample_idx]   # (n_params,)
+        m = mean[sample_idx]  # (n_params,)
         s = std[sample_idx]
 
         n_layers = self.base_estimator.n_layers
@@ -553,7 +563,10 @@ class EnsembleInverter:
             rho_true_plot = np.asarray(y_true)[:n_layers]
 
         fig = plot_uncertainty_bands(
-            depths[:n_layers], rho_m, rho_hi, rho_lo,
+            depths[:n_layers],
+            rho_m,
+            rho_hi,
+            rho_lo,
             y_true=rho_true_plot,
             xlabel=r"$\log_{10}(\rho)$ (Ω·m)",
             ylabel="Depth (m)",
@@ -572,6 +585,4 @@ class EnsembleInverter:
 
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"
-        return (
-            f"EnsembleInverter(n_estimators={self.n_estimators}, {status})"
-        )
+        return f"EnsembleInverter(n_estimators={self.n_estimators}, {status})"

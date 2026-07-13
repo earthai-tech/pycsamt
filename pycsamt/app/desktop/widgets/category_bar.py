@@ -12,6 +12,7 @@ that groups content by category uses the same interaction model.
 The item combo can be hidden via ``set_item_combo_visible(False)`` when a
 panel only needs one level of selection (e.g. ProfilePanel view-type).
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
@@ -42,9 +43,9 @@ class CategoryComboBar(QWidget):
     """
 
     category_changed = Signal(int)
-    item_changed     = Signal(int)
-    refresh_clicked  = Signal()
-    export_clicked   = Signal()
+    item_changed = Signal(int)
+    refresh_clicked = Signal()
+    export_clicked = Signal()
 
     def __init__(
         self,

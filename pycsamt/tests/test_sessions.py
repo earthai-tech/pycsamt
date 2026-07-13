@@ -25,8 +25,7 @@ def _install_stubs(monkeypatch):
     for name in mods:
         if name not in sys.modules:
             m = types.ModuleType(name)
-            if name in {"pycsamt.seg", "pycsamt.zonge",
-                        "pycsamt.jones"}:
+            if name in {"pycsamt.seg", "pycsamt.zonge", "pycsamt.jones"}:
                 m.__path__ = []  # make it package-like
             monkeypatch.setitem(sys.modules, name, m)
 
@@ -37,14 +36,15 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
+
     monkeypatch.setattr(jj, "JFile", JFile, raising=False)
 
     jcoll = sys.modules["pycsamt.jones.collection"]
 
     class JCollection(list):
         pass
-    monkeypatch.setattr(jcoll, "JCollection", JCollection,
-                        raising=False)
+
+    monkeypatch.setattr(jcoll, "JCollection", JCollection, raising=False)
 
     # SEG: EDIFile + EDICollection stubs
     seg_edi = sys.modules["pycsamt.seg.edi"]
@@ -56,6 +56,7 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
+
     monkeypatch.setattr(seg_edi, "EDIFile", EDIFile, raising=False)
 
     seg_coll = sys.modules["pycsamt.seg.collection"]
@@ -63,8 +64,10 @@ def _install_stubs(monkeypatch):
     class EDICollection(list):
         def __init__(self, items, verbose: int = 0):
             super().__init__(items)
-    monkeypatch.setattr(seg_coll, "EDICollection", EDICollection,
-                        raising=False)
+
+    monkeypatch.setattr(
+        seg_coll, "EDICollection", EDICollection, raising=False
+    )
 
     # Zonge: AVG stub
     zavg = sys.modules["pycsamt.zonge.avg"]
@@ -81,6 +84,7 @@ def _install_stubs(monkeypatch):
         @classmethod
         def from_file(cls, path):
             return cls()
+
     monkeypatch.setattr(zavg, "AVG", AVG, raising=False)
 
     # pycsamt._session imports all of these names directly at import
@@ -91,8 +95,7 @@ def _install_stubs(monkeypatch):
     monkeypatch.setattr(smod, "JFile", JFile, raising=False)
     monkeypatch.setattr(smod, "JCollection", JCollection, raising=False)
     monkeypatch.setattr(smod, "EDIFile", EDIFile, raising=False)
-    monkeypatch.setattr(smod, "EDICollection", EDICollection,
-                        raising=False)
+    monkeypatch.setattr(smod, "EDICollection", EDICollection, raising=False)
     monkeypatch.setattr(smod, "AVG", AVG, raising=False)
 
     return seg_edi, seg_coll, zavg, jj
@@ -118,9 +121,7 @@ def test_public_api_all(env):
     }
 
 
-def test_session_wraps_to_edi_and_transformers(
-    env, tmp_path, monkeypatch
-):
+def test_session_wraps_to_edi_and_transformers(env, tmp_path, monkeypatch):
     ctx = _import_ctx()
     smod = importlib.import_module("pycsamt._session")
 
@@ -129,6 +130,7 @@ def test_session_wraps_to_edi_and_transformers(
     def fake_to_edi(src, *a, **k):  # noqa: ANN001
         called["to_edi"] += 1
         return {"ok": True}
+
     monkeypatch.setattr(smod, "to_edi", fake_to_edi)
 
     def fake_x(self, *a, **k):  # noqa: ANN001
@@ -139,10 +141,8 @@ def test_session_wraps_to_edi_and_transformers(
         called["j"] += 1
         return {"edi": 1}
 
-    monkeypatch.setattr(tr.AVGtoEDI, "transform", fake_x,
-                        raising=False)
-    monkeypatch.setattr(tr.JtoEDI, "transform", fake_j,
-                        raising=False)
+    monkeypatch.setattr(tr.AVGtoEDI, "transform", fake_x, raising=False)
+    monkeypatch.setattr(tr.JtoEDI, "transform", fake_j, raising=False)
 
     with ctx.work_session(tmp_path) as s:
         # hit the wrapper symbol captured in _session
@@ -161,15 +161,14 @@ def test_session_wraps_to_edi_and_transformers(
     assert len(rec3) == 1
 
 
-def test_normalize_routes_avg_path_and_edi_wrap(
-    env, tmp_path, monkeypatch
-):
+def test_normalize_routes_avg_path_and_edi_wrap(env, tmp_path, monkeypatch):
     ctx = _import_ctx()
     seg_edi = sys.modules["pycsamt.seg.edi"]
     seg_coll = sys.modules["pycsamt.seg.collection"]
 
     def tx(self, a):  # noqa: ANN001
         return seg_coll.EDICollection([seg_edi.EDIFile()])
+
     monkeypatch.setattr(tr.AVGtoEDI, "transform", tx, raising=False)
 
     avg_path = tmp_path / "a.avg"
@@ -183,8 +182,8 @@ def test_normalize_routes_avg_path_and_edi_wrap(
     # EDI file path → wrapped to collection
     def fe(cls, p):  # noqa: ANN001
         return cls()
-    monkeypatch.setattr(seg_edi.EDIFile, "from_file",
-                        classmethod(fe))
+
+    monkeypatch.setattr(seg_edi.EDIFile, "from_file", classmethod(fe))
 
     edi_path = tmp_path / "a.edi"
     edi_path.write_text("", encoding="utf-8")
@@ -206,6 +205,7 @@ def test_normalize_routes_j_path(env, tmp_path, monkeypatch):
 
     def tj(self, j):  # noqa: ANN001
         return seg_edi.EDIFile()
+
     monkeypatch.setattr(tr.JtoEDI, "transform", tj, raising=False)
 
     j_path = tmp_path / "a.j"
@@ -219,6 +219,7 @@ def test_normalize_routes_j_path(env, tmp_path, monkeypatch):
     assert len(out) == 1
     assert hasattr(out[0], "Z")  # EDI-like
 
+
 def test_normalize_with_avg_object_and_topo_injection(
     env, tmp_path, monkeypatch
 ):
@@ -229,6 +230,7 @@ def test_normalize_with_avg_object_and_topo_injection(
 
     def tx(self, a):  # noqa: ANN001
         return seg_coll.EDICollection([seg_edi.EDIFile()])
+
     monkeypatch.setattr(tr.AVGtoEDI, "transform", tx, raising=False)
 
     avg = zavg.AVG()

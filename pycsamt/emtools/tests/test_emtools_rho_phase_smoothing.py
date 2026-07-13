@@ -1,4 +1,5 @@
 """Tests for rho/phase trend smoothing."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -48,15 +49,51 @@ def _noisy_site():
     fr = _freqs()
     x = np.log10(fr)
     trend = 80.0 * (1.0 + 0.18 * (x - x.mean()) ** 2)
-    wiggle = np.array([
-        1.00, 1.30, 0.74, 1.18, 0.82, 1.25, 0.78, 1.15,
-        0.85, 1.22, 0.80, 1.18, 0.86, 1.26, 0.76, 1.08,
-    ])
+    wiggle = np.array(
+        [
+            1.00,
+            1.30,
+            0.74,
+            1.18,
+            0.82,
+            1.25,
+            0.78,
+            1.15,
+            0.85,
+            1.22,
+            0.80,
+            1.18,
+            0.86,
+            1.26,
+            0.76,
+            1.08,
+        ]
+    )
     rho = trend * wiggle
-    phase = 43.0 + 7.0 * (x - x.mean()) + np.array([
-        0.0, 9.0, -7.0, 6.0, -8.0, 7.0, -6.0, 5.0,
-        -4.0, 6.0, -5.0, 8.0, -6.0, 7.0, -8.0, 0.0,
-    ])
+    phase = (
+        43.0
+        + 7.0 * (x - x.mean())
+        + np.array(
+            [
+                0.0,
+                9.0,
+                -7.0,
+                6.0,
+                -8.0,
+                7.0,
+                -6.0,
+                5.0,
+                -4.0,
+                6.0,
+                -5.0,
+                8.0,
+                -6.0,
+                7.0,
+                -8.0,
+                0.0,
+            ]
+        )
+    )
     z = np.zeros((fr.size, 2, 2), dtype=complex)
     z[:, 0, 1] = _z_from_rho_phase(fr, rho, phase)
     z[:, 1, 0] = _z_from_rho_phase(fr, rho * 1.05, phase + 180.0, sign=-1.0)

@@ -54,6 +54,7 @@ __all__ = ["NoiseRemover", "StaticShiftCorrector"]
 # helpers
 # ---------------------------------------------------------------------------
 
+
 def _write_edis(
     edi_objects: list,
     savepath: Path,
@@ -88,6 +89,7 @@ def _write_edis(
 # ---------------------------------------------------------------------------
 # StaticShiftCorrector
 # ---------------------------------------------------------------------------
+
 
 class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
     """Estimate and remove static-shift from Stratagem AMT impedance data.
@@ -136,7 +138,11 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
     """
 
     __repr_fields__ = (
-        "sort_by", "half_window", "weights", "max_skew", "n_stations_",
+        "sort_by",
+        "half_window",
+        "weights",
+        "max_skew",
+        "n_stations_",
     )
 
     def __init__(
@@ -204,15 +210,18 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
                 f"  No static-shift correction applied."
             )
             stations = [
-                edi.station or f"S{i:03d}" for i, edi in enumerate(edi_objects)
+                edi.station or f"S{i:03d}"
+                for i, edi in enumerate(edi_objects)
             ]
-            self.factors_ = pd.DataFrame({
-                "station": stations,
-                "delta_log10_rho": 0.0,
-                "fac_rho": 1.0,
-                "fac_z": 1.0,
-                "n_used": 0,
-            })
+            self.factors_ = pd.DataFrame(
+                {
+                    "station": stations,
+                    "delta_log10_rho": 0.0,
+                    "fac_rho": 1.0,
+                    "fac_z": 1.0,
+                    "n_used": 0,
+                }
+            )
         else:
             # apply correction in-place on Z only when estimation succeeded
             apply_ss_factors(
@@ -272,6 +281,7 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
 # NoiseRemover
 # ---------------------------------------------------------------------------
 
+
 class NoiseRemover(PyCSAMTObject):
     """Multi-stage noise-removal pipeline for Stratagem AMT data.
 
@@ -326,7 +336,11 @@ class NoiseRemover(PyCSAMTObject):
     """
 
     __repr_fields__ = (
-        "mains_hz", "n_harm", "hampel_win", "smooth", "n_stations_",
+        "mains_hz",
+        "n_harm",
+        "hampel_win",
+        "smooth",
+        "n_stations_",
     )
 
     def __init__(
@@ -417,8 +431,7 @@ class NoiseRemover(PyCSAMTObject):
         if self.verbose:
             print(
                 f"[NoiseRemover] processed {self.n_stations_} stations "
-                f"(notch + hampel"
-                + (" + smooth)" if self.smooth else ")")
+                f"(notch + hampel" + (" + smooth)" if self.smooth else ")")
             )
 
         return self

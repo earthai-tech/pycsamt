@@ -73,7 +73,7 @@ def write_meshtools3d(
     --------
     >>> msh, con = write_meshtools3d(model, "output/my_model")
     """
-    p = Path(path).with_suffix("")   # strip extension
+    p = Path(path).with_suffix("")  # strip extension
     msh_path = p.with_suffix(".msh")
     con_path = p.with_suffix(".con")
 
@@ -82,12 +82,16 @@ def write_meshtools3d(
     n_air = model.n_air
     nz_earth = model.nz - n_air
 
-    origin = np.asarray(getattr(model, "origin", [0.0, 0.0, 0.0]), dtype=float)
-    ox, oy, oz = origin * 1000.0   # km → m (matches MATLAB: 1000*Cond.grid.origin)
+    origin = np.asarray(
+        getattr(model, "origin", [0.0, 0.0, 0.0]), dtype=float
+    )
+    ox, oy, oz = (
+        origin * 1000.0
+    )  # km → m (matches MATLAB: 1000*Cond.grid.origin)
 
     dx = model.x_widths
     dy = model.y_widths
-    dz = model.z_widths[n_air:]     # earth layers only
+    dz = model.z_widths[n_air:]  # earth layers only
 
     # -- mesh file -----------------------------------------------------------
     with msh_path.open("w") as fh:
@@ -96,12 +100,12 @@ def write_meshtools3d(
 
         for widths in (dx, dy, dz):
             for j in range(0, len(widths), _WIDTHS_PER_LINE):
-                row = widths[j: j + _WIDTHS_PER_LINE]
+                row = widths[j : j + _WIDTHS_PER_LINE]
                 fh.write(" ".join(f"{v:G}" for v in row) + "\n")
             fh.write("\n\n")
 
     # -- conductivity file ---------------------------------------------------
-    sigma = np.exp(-model.rho_loge[n_air:])   # ln(ρ) → σ = 1/ρ
+    sigma = np.exp(-model.rho_loge[n_air:])  # ln(ρ) → σ = 1/ρ
     # Write order: j (ny) outer, i (nx) middle, k (nzEarth) inner
     with con_path.open("w") as fh:
         for j in range(ny):

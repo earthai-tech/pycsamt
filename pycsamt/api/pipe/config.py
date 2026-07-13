@@ -94,8 +94,7 @@ class PipelineAPIConfig:
             if not hasattr(self, k):
                 valid = [f.name for f in fields(self)]
                 raise AttributeError(
-                    f"Unknown pipe config key {k!r}.  "
-                    f"Valid keys: {valid}"
+                    f"Unknown pipe config key {k!r}.  Valid keys: {valid}"
                 )
             setattr(self, k, v)
 

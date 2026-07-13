@@ -41,6 +41,7 @@ time-domain EM data with CNNs. *Computers & Geosciences*, 149, 104681.
 Egbert, G.D. (1997). Robust multiple station magnetotelluric data
 processing. *Geophysical Journal International*, 130, 475–496.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -61,6 +62,7 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 # Abstract base
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class _BaseNoiseModel(ABC):
     """Abstract base for all noise models."""
@@ -84,13 +86,16 @@ class _BaseNoiseModel(ABC):
             Random seed for reproducibility.
         """
 
-    def __call__(self, response: ForwardResponse, **kwargs) -> ForwardResponse:
+    def __call__(
+        self, response: ForwardResponse, **kwargs
+    ) -> ForwardResponse:
         return self.apply(response, **kwargs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gaussian noise
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class GaussianNoise(_BaseNoiseModel):
     """
@@ -132,7 +137,9 @@ class GaussianNoise(_BaseNoiseModel):
             raise ValueError(f"level must be in (0, 1), got {level}")
         self.level = level
         self.apply_to = apply_to
-        self.phase_level = phase_level if phase_level is not None else level * 45.0
+        self.phase_level = (
+            phase_level if phase_level is not None else level * 45.0
+        )
 
     def apply(
         self,
@@ -154,7 +161,7 @@ class GaussianNoise(_BaseNoiseModel):
             # Noise in log₁₀ space then exponentiate
             log_rho = np.log10(rho_a)
             log_rho += rng.normal(0.0, self.level, rho_a.shape)
-            rho_a = 10.0 ** log_rho
+            rho_a = 10.0**log_rho
 
         if self.apply_to in ("rho_phase", "both", "phase"):
             phase += rng.normal(0.0, self.phase_level, phase.shape)
@@ -162,9 +169,11 @@ class GaussianNoise(_BaseNoiseModel):
         # Recompute Z consistent with perturbed rho_a and phase
         omega = 2.0 * np.pi * resp.freqs
         from .em1d import MU0
+
         z = np.sqrt(rho_a * omega * MU0) * np.exp(1j * np.deg2rad(phase))
 
         import copy
+
         out = copy.copy(resp)
         out.rho_a = rho_a
         out.phase = phase
@@ -177,14 +186,16 @@ class GaussianNoise(_BaseNoiseModel):
         log_db += rng.normal(0.0, self.level, db.shape)
 
         import copy
+
         out = copy.copy(resp)
-        out.dBz_dt = np.sign(db) * 10.0 ** log_db
+        out.dBz_dt = np.sign(db) * 10.0**log_db
         return out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Multiplicative log-space noise
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class MultiplicativeNoise(_BaseNoiseModel):
     """
@@ -211,11 +222,14 @@ class MultiplicativeNoise(_BaseNoiseModel):
     ) -> ForwardResponse:
         rng = np.random.default_rng(seed)
         import copy
+
         out = copy.copy(response)
 
         if response.rho_a is not None:
             log_rho = np.log10(np.maximum(response.rho_a, 1e-12))
-            out.rho_a = 10.0 ** (log_rho + rng.normal(0.0, self.sigma_log10, log_rho.shape))
+            out.rho_a = 10.0 ** (
+                log_rho + rng.normal(0.0, self.sigma_log10, log_rho.shape)
+            )
 
         if response.dBz_dt is not None:
             db = response.dBz_dt
@@ -229,6 +243,7 @@ class MultiplicativeNoise(_BaseNoiseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 # Field-realistic noise (frequency-dependent)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class FieldRealisticNoise(_BaseNoiseModel):
     """
@@ -300,9 +315,7 @@ class FieldRealisticNoise(_BaseNoiseModel):
         if self.dead_band:
             f_lo, f_hi = self.dead_band_freq_range
             db_mask = (freqs >= f_lo) & (freqs <= f_hi)
-            sigma[db_mask] = np.maximum(
-                sigma[db_mask], self.dead_band_level
-            )
+            sigma[db_mask] = np.maximum(sigma[db_mask], self.dead_band_level)
 
         return sigma
 
@@ -313,25 +326,32 @@ class FieldRealisticNoise(_BaseNoiseModel):
         seed: int | None = None,
     ) -> ForwardResponse:
         if response.freqs is None:
-            raise ValueError("FieldRealisticNoise requires freqs; use GaussianNoise for TEM.")
+            raise ValueError(
+                "FieldRealisticNoise requires freqs; use GaussianNoise for TEM."
+            )
 
         rng = np.random.default_rng(seed)
         sigma = self.noise_profile(response.freqs)
 
         import copy
+
         out = copy.copy(response)
 
         if response.rho_a is not None:
             log_rho = np.log10(np.maximum(response.rho_a, 1e-12))
             log_rho += rng.normal(0.0, 1.0, sigma.shape) * sigma
-            out.rho_a = 10.0 ** log_rho
+            out.rho_a = 10.0**log_rho
 
         if response.phase is not None:
-            out.phase = response.phase + rng.normal(0.0, 1.0, sigma.shape) * sigma * 45.0
+            out.phase = (
+                response.phase
+                + rng.normal(0.0, 1.0, sigma.shape) * sigma * 45.0
+            )
 
         if out.rho_a is not None and out.phase is not None:
             omega = 2.0 * np.pi * response.freqs
             from .em1d import MU0
+
             out.z = np.sqrt(out.rho_a * omega * MU0) * np.exp(
                 1j * np.deg2rad(out.phase)
             )
@@ -340,6 +360,7 @@ class FieldRealisticNoise(_BaseNoiseModel):
     def plot_profile(self, freqs: np.ndarray, ax=None):
         """Visualise the noise level vs frequency.  Returns Axes."""
         import matplotlib.pyplot as plt
+
         if ax is None:
             _, ax = plt.subplots(figsize=(5, 3))
         sigma = self.noise_profile(freqs)
@@ -354,6 +375,7 @@ class FieldRealisticNoise(_BaseNoiseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 # Functional helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def add_gaussian_noise(
     response: ForwardResponse,

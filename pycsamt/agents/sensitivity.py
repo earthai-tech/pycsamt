@@ -95,9 +95,9 @@ class SensitivityAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="pseudosection",
         )
-        self.component    = component.lower()
+        self.component = component.lower()
         self.rho_override = rho_override
-        self.depth_max    = depth_max
+        self.depth_max = depth_max
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -119,17 +119,19 @@ class SensitivityAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        component    = str(input_data.get("component",    self.component))
+        component = str(input_data.get("component", self.component))
         rho_override = input_data.get("rho_override", self.rho_override)
         period_range = input_data.get("period_range")
-        depth_max    = input_data.get("depth_max", self.depth_max)
-        output_dir   = input_data.get("output_dir")
+        depth_max = input_data.get("depth_max", self.depth_max)
+        output_dir = input_data.get("output_dir")
 
         # ── compute resolution table ──────────────────────────────────────
         try:
@@ -140,7 +142,8 @@ class SensitivityAgent(BaseAgent):
             )
         except Exception as exc:
             return AgentResult.failed(
-                f"vertical_resolution failed: {exc}", elapsed=time.time() - t0,
+                f"vertical_resolution failed: {exc}",
+                elapsed=time.time() - t0,
             )
 
         # ── DOI per station (max Bostick depth_lo) ────────────────────────
@@ -155,7 +158,9 @@ class SensitivityAgent(BaseAgent):
 
         mean_doi_km = float("nan")
         if doi_per_station:
-            mean_doi_km = float(np.mean(list(doi_per_station.values()))) / 1000.0
+            mean_doi_km = (
+                float(np.mean(list(doi_per_station.values()))) / 1000.0
+            )
 
         # ── figures ───────────────────────────────────────────────────────
         figures: dict[str, Any] = {}
@@ -178,9 +183,12 @@ class SensitivityAgent(BaseAgent):
             )
             if fig_sens is not None:
                 figures["sensitivity_section"] = fig_sens
-                p = self._save_figure(fig_sens, output_dir,
-                                      "sensitivity_depth_section",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_sens,
+                    output_dir,
+                    "sensitivity_depth_section",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["sensitivity_section"] = p
         except Exception as exc:
@@ -191,8 +199,12 @@ class SensitivityAgent(BaseAgent):
             fig_doi = _plot_doi_bar(doi_per_station)
             if fig_doi is not None:
                 figures["doi_bar"] = fig_doi
-                p = self._save_figure(fig_doi, output_dir, "doi_per_station",
-                                      warnings_list=warnings)
+                p = self._save_figure(
+                    fig_doi,
+                    output_dir,
+                    "doi_per_station",
+                    warnings_list=warnings,
+                )
                 if p:
                     fig_paths["doi_bar"] = p
         except Exception as exc:
@@ -208,9 +220,9 @@ class SensitivityAgent(BaseAgent):
                 f"  Component: Z{component}\n"
                 f"  Stations analysed: {len(doi_per_station)}\n"
                 f"  Mean DOI: {mean_doi_km:.2f} km\n"
-                f"  Max DOI: {doi_per_station[max_doi_sta]/1000:.2f} km "
+                f"  Max DOI: {doi_per_station[max_doi_sta] / 1000:.2f} km "
                 f"at station {max_doi_sta}\n"
-                f"  Min DOI: {doi_per_station[min_doi_sta]/1000:.2f} km "
+                f"  Min DOI: {doi_per_station[min_doi_sta] / 1000:.2f} km "
                 f"at station {min_doi_sta}\n"
                 f"  ρ override: {rho_override or 'from data'}\n"
                 f"  Warnings: {warnings[:3] if warnings else 'none'}\n\n"
@@ -219,7 +231,9 @@ class SensitivityAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=220)
 
         elapsed = time.time() - t0
-        doi_str = f"{mean_doi_km:.2f} km" if not np.isnan(mean_doi_km) else "N/A"
+        doi_str = (
+            f"{mean_doi_km:.2f} km" if not np.isnan(mean_doi_km) else "N/A"
+        )
         return AgentResult(
             status="success",
             summary=(
@@ -228,11 +242,11 @@ class SensitivityAgent(BaseAgent):
             ),
             data={
                 "resolution_table": res_table,
-                "doi_per_station":  doi_per_station,
-                "mean_doi_km":      mean_doi_km,
-                "component":        component,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
+                "doi_per_station": doi_per_station,
+                "mean_doi_km": mean_doi_km,
+                "component": component,
+                "figures": figures,
+                "figure_paths": fig_paths,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -243,6 +257,7 @@ class SensitivityAgent(BaseAgent):
 
 # ── private helpers ───────────────────────────────────────────────────────────
 
+
 def _plot_doi_bar(doi_per_station: dict[str, float]) -> Any:
     """Horizontal bar chart of DOI (km) per station."""
     if not doi_per_station:
@@ -250,11 +265,17 @@ def _plot_doi_bar(doi_per_station: dict[str, float]) -> Any:
     import matplotlib.pyplot as plt
 
     stations = list(doi_per_station.keys())
-    depths   = [doi_per_station[s] / 1000.0 for s in stations]
+    depths = [doi_per_station[s] / 1000.0 for s in stations]
 
     fig, ax = plt.subplots(figsize=(6, max(3, len(stations) * 0.35)))
-    ax.barh(range(len(stations)), depths, color="#2980b9", alpha=0.8,
-                   edgecolor="white", linewidth=0.4)
+    ax.barh(
+        range(len(stations)),
+        depths,
+        color="#2980b9",
+        alpha=0.8,
+        edgecolor="white",
+        linewidth=0.4,
+    )
     ax.set_yticks(range(len(stations)))
     ax.set_yticklabels(stations, fontsize=7)
     ax.set_xlabel("Depth of investigation (km)", fontsize=9)

@@ -37,10 +37,16 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 _DATA_FORMATS = {
-    "emdata_2.0", "emdata_2.1", "emdata_2.2", "emdata_2.3",
+    "emdata_2.0",
+    "emdata_2.1",
+    "emdata_2.2",
+    "emdata_2.3",
 }
 _RESP_FORMATS = {
-    "emresp_2.0", "emresp_2.1", "emresp_2.2", "emresp_2.3",
+    "emresp_2.0",
+    "emresp_2.1",
+    "emresp_2.2",
+    "emresp_2.3",
 }
 _ALL_FORMATS = _DATA_FORMATS | _RESP_FORMATS
 
@@ -52,6 +58,7 @@ _RESP_NCOLS = 8
 # ---------------------------------------------------------------------------
 # Helper: parse one text line, strip comments, normalise 'd' exponents
 # ---------------------------------------------------------------------------
+
 
 def _parse_line(line: str) -> tuple[str, bool]:
     """Return (cleaned_line, is_comment).
@@ -77,12 +84,13 @@ def _strtok(s: str, sep: str = ":") -> tuple[str, str]:
     idx = s.find(sep)
     if idx < 0:
         return s, ""
-    return s[:idx], s[idx + 1:]
+    return s[:idx], s[idx + 1 :]
 
 
 # ---------------------------------------------------------------------------
 # Data classes for each section
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class UTMOrigin:
@@ -101,6 +109,7 @@ class UTMOrigin:
     theta : float
         Profile strike direction (degrees).
     """
+
     grid: int = 0
     hemi: str = "N"
     north0: float = 0.0
@@ -135,6 +144,7 @@ class CSEMConfig:
     receiver_name : list of str
         Receiver labels.
     """
+
     phase_convention: str = "lag"
     reciprocity_used: str = ""
     frequencies: np.ndarray = field(
@@ -166,6 +176,7 @@ class MTConfig:
     receiver_name : list of str
         Receiver labels (station names).
     """
+
     frequencies: np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=float)
     )
@@ -192,6 +203,7 @@ class DCConfig:
     transmitter_name : list of str
     receiver_name : list of str
     """
+
     tx_electrodes: np.ndarray = field(
         default_factory=lambda: np.empty((0, 3), dtype=float)
     )
@@ -235,6 +247,7 @@ class EMDataFile:
         ``[type, freq#, tx#, rx#, data, std_err]``.
         Response files add ``[response, residual]``.
     """
+
     path: Path | None = None
     format: str = "EMData_2.3"
     is_response: bool = False
@@ -288,6 +301,7 @@ class EMDataFile:
 # ---------------------------------------------------------------------------
 # Reader
 # ---------------------------------------------------------------------------
+
 
 class _EMDataReader:
     """Internal line-by-line parser for MARE2DEM ``.emdata`` files."""
@@ -387,7 +401,7 @@ class _EMDataReader:
                 parts = value.split()
                 if parts:
                     grid_str = parts[0].rstrip("nNsS")
-                    hemi = parts[0][len(grid_str):].upper() or (
+                    hemi = parts[0][len(grid_str) :].upper() or (
                         parts[1].upper() if len(parts) > 1 else "N"
                     )
                     offset = 1
@@ -397,9 +411,21 @@ class _EMDataReader:
                     try:
                         out.utm.grid = int(grid_str)
                         out.utm.hemi = hemi
-                        out.utm.north0 = float(parts[offset]) if len(parts) > offset else 0.0
-                        out.utm.east0 = float(parts[offset + 1]) if len(parts) > offset + 1 else 0.0
-                        out.utm.theta = float(parts[offset + 2]) if len(parts) > offset + 2 else 0.0
+                        out.utm.north0 = (
+                            float(parts[offset])
+                            if len(parts) > offset
+                            else 0.0
+                        )
+                        out.utm.east0 = (
+                            float(parts[offset + 1])
+                            if len(parts) > offset + 1
+                            else 0.0
+                        )
+                        out.utm.theta = (
+                            float(parts[offset + 2])
+                            if len(parts) > offset + 2
+                            else 0.0
+                        )
                     except (ValueError, IndexError):
                         pass
                 continue
@@ -437,12 +463,16 @@ class _EMDataReader:
                     if fmt in ("emdata_2.1", "emresp_2.1"):
                         vals = [float(p) for p in parts[:5]]
                         txs[n_read, :5] = vals
-                        tx_types.append(parts[5] if len(parts) > 5 else "edipole")
+                        tx_types.append(
+                            parts[5] if len(parts) > 5 else "edipole"
+                        )
                         tx_names.append(parts[6] if len(parts) > 6 else "")
                     elif fmt in ("emdata_2.2", "emresp_2.2"):
                         vals = [float(p) for p in parts[:6]]
                         txs[n_read, :6] = vals
-                        tx_types.append(parts[6] if len(parts) > 6 else "edipole")
+                        tx_types.append(
+                            parts[6] if len(parts) > 6 else "edipole"
+                        )
                         tx_names.append(parts[7] if len(parts) > 7 else "")
                     else:  # 2.3 (default) or 2.0
                         num_cols = min(7, len(parts))
@@ -456,8 +486,16 @@ class _EMDataReader:
                                 break
                         vals = [float(p) for p in parts[:str_idx]]
                         txs[n_read, : len(vals)] = vals
-                        tx_types.append(parts[str_idx] if len(parts) > str_idx else "edipole")
-                        tx_names.append(parts[str_idx + 1] if len(parts) > str_idx + 1 else "")
+                        tx_types.append(
+                            parts[str_idx]
+                            if len(parts) > str_idx
+                            else "edipole"
+                        )
+                        tx_names.append(
+                            parts[str_idx + 1]
+                            if len(parts) > str_idx + 1
+                            else ""
+                        )
                     n_read += 1
                 out.csem.transmitters = txs
                 out.csem.transmitter_type = tx_types
@@ -510,10 +548,14 @@ class _EMDataReader:
                         rx_names.append(str(n_read + 1))
                     elif fmt in ("emdata_2.1", "emresp_2.1"):
                         rxs[n_read, :6] = [float(p) for p in parts[:6]]
-                        rx_names.append(parts[6] if len(parts) > 6 else str(n_read + 1))
+                        rx_names.append(
+                            parts[6] if len(parts) > 6 else str(n_read + 1)
+                        )
                     elif fmt in ("emdata_2.2", "emresp_2.2"):
                         rxs[n_read, :7] = [float(p) for p in parts[:7]]
-                        rx_names.append(parts[7] if len(parts) > 7 else str(n_read + 1))
+                        rx_names.append(
+                            parts[7] if len(parts) > 7 else str(n_read + 1)
+                        )
                     else:  # 2.3
                         # find where numeric tokens end
                         str_idx = 8
@@ -523,8 +565,14 @@ class _EMDataReader:
                             except ValueError:
                                 str_idx = k
                                 break
-                        rxs[n_read, : str_idx] = [float(p) for p in parts[:str_idx]]
-                        rx_names.append(parts[str_idx] if len(parts) > str_idx else str(n_read + 1))
+                        rxs[n_read, :str_idx] = [
+                            float(p) for p in parts[:str_idx]
+                        ]
+                        rx_names.append(
+                            parts[str_idx]
+                            if len(parts) > str_idx
+                            else str(n_read + 1)
+                        )
                     n_read += 1
                 out.csem.receivers = rxs
                 out.csem.receiver_name = rx_names
@@ -560,10 +608,14 @@ class _EMDataReader:
                         rx_names.append(str(n_read + 1))
                     elif fmt in ("emdata_2.1", "emresp_2.1"):
                         rxs[n_read, :7] = [float(p) for p in parts[:7]]
-                        rx_names.append(parts[7] if len(parts) > 7 else str(n_read + 1))
+                        rx_names.append(
+                            parts[7] if len(parts) > 7 else str(n_read + 1)
+                        )
                     else:  # 2.2, 2.3
                         rxs[n_read, :8] = [float(p) for p in parts[:8]]
-                        rx_names.append(parts[8] if len(parts) > 8 else str(n_read + 1))
+                        rx_names.append(
+                            parts[8] if len(parts) > 8 else str(n_read + 1)
+                        )
                     n_read += 1
                 out.mt.receivers = rxs
                 out.mt.receiver_name = rx_names
@@ -617,7 +669,9 @@ class _EMDataReader:
             # --- DATA block ---
             if code in ("# data", "#data"):
                 n_data = int(value)
-                n_cols = _RESP_NCOLS if file_type == "response" else _DATA_NCOLS
+                n_cols = (
+                    _RESP_NCOLS if file_type == "response" else _DATA_NCOLS
+                )
                 # Skip optional comment header line
                 line_peek = self._next_line()
                 if line_peek is not None:
@@ -626,7 +680,7 @@ class _EMDataReader:
                         self._pos -= 1  # put back
 
                 # Try fast numpy read of remaining text
-                remaining = "\n".join(self._lines[self._pos:])
+                remaining = "\n".join(self._lines[self._pos :])
                 try:
                     arr = np.fromstring(
                         remaining.replace("\n", " "), sep=" ", dtype=float
@@ -657,6 +711,7 @@ class _EMDataReader:
 # Writer
 # ---------------------------------------------------------------------------
 
+
 def _write_float_col(f, arr: np.ndarray) -> None:
     for v in arr:
         f.write(f"{v:.14g}\n")
@@ -664,8 +719,16 @@ def _write_float_col(f, arr: np.ndarray) -> None:
 
 def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
     """Low-level writer that mirrors m2d_writeEMData2DFile.m."""
-    n_cols = len(em.data[0]) if len(em.data) and len(em.data.shape) > 1 else _DATA_NCOLS
-    fmt_str = "EMResp_2.3" if (n_cols == _RESP_NCOLS or em.is_response) else "EMData_2.3"
+    n_cols = (
+        len(em.data[0])
+        if len(em.data) and len(em.data.shape) > 1
+        else _DATA_NCOLS
+    )
+    fmt_str = (
+        "EMResp_2.3"
+        if (n_cols == _RESP_NCOLS or em.is_response)
+        else "EMData_2.3"
+    )
     out_file.write(f"Format:  {fmt_str}\n")
 
     if em.comment:
@@ -710,16 +773,22 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
             out_file.write(f"Reciprocity Used: {csem.reciprocity_used}\n")
 
         if csem.time_offsets is not None and len(csem.time_offsets):
-            out_file.write(f"# CSEM Time Offsets:    {len(csem.time_offsets)}\n")
+            out_file.write(
+                f"# CSEM Time Offsets:    {len(csem.time_offsets)}\n"
+            )
             _write_float_col(out_file, csem.time_offsets)
 
         if csem.tdem_waveform is not None and len(csem.tdem_waveform):
-            out_file.write(f"# TDEM waveform points:    {len(csem.tdem_waveform)}\n")
+            out_file.write(
+                f"# TDEM waveform points:    {len(csem.tdem_waveform)}\n"
+            )
             for row in csem.tdem_waveform:
                 out_file.write(f"{row[0]:.14g} {row[1]:.14g}f\n")
 
         if len(csem.frequencies):
-            out_file.write(f"# CSEM Frequencies:    {len(csem.frequencies)}\n")
+            out_file.write(
+                f"# CSEM Frequencies:    {len(csem.frequencies)}\n"
+            )
             _write_float_col(out_file, csem.frequencies)
 
         n_tx = len(csem.transmitters)
@@ -734,8 +803,16 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
             pad = np.zeros((len(txs), 7 - txs.shape[1]))
             txs = np.hstack([txs, pad])
         for i, tx in enumerate(txs):
-            tx_type = csem.transmitter_type[i] if i < len(csem.transmitter_type) else "edipole"
-            tx_name = csem.transmitter_name[i] if i < len(csem.transmitter_name) else ""
+            tx_type = (
+                csem.transmitter_type[i]
+                if i < len(csem.transmitter_type)
+                else "edipole"
+            )
+            tx_name = (
+                csem.transmitter_name[i]
+                if i < len(csem.transmitter_name)
+                else ""
+            )
             out_file.write(
                 f"  {tx[0]:22.15g} {tx[1]:22.15g} {tx[2]:22.15g} "
                 f"{tx[3]:9.2f} {tx[4]:9.2f} {tx[5]:10.5g} "
@@ -753,7 +830,9 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
             pad = np.zeros((len(rxs), 8 - rxs.shape[1]))
             rxs = np.hstack([rxs, pad])
         for i, rx in enumerate(rxs):
-            name = csem.receiver_name[i] if i < len(csem.receiver_name) else ""
+            name = (
+                csem.receiver_name[i] if i < len(csem.receiver_name) else ""
+            )
             out_file.write(
                 f"  {rx[0]:22.15g} {rx[1]:22.15g} {rx[2]:22.15g} "
                 f"{rx[3]:9.2f} {rx[4]:9.2f} {rx[5]:9.2f} "
@@ -771,9 +850,13 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
 
         n_tx = len(dc.transmitters)
         out_file.write(f"# DC Transmitters:   {n_tx}\n")
-        out_file.write(f"{'!':1s} {'Electrode A':>12s} {'Electrode B':>12s} {'Name':>12s}\n")
+        out_file.write(
+            f"{'!':1s} {'Electrode A':>12s} {'Electrode B':>12s} {'Name':>12s}\n"
+        )
         for i, tx in enumerate(dc.transmitters):
-            name = dc.transmitter_name[i] if i < len(dc.transmitter_name) else ""
+            name = (
+                dc.transmitter_name[i] if i < len(dc.transmitter_name) else ""
+            )
             out_file.write(f"{tx[0]:12d} {tx[1]:12d} {name:12s}\n")
 
         n_rx_el = len(dc.rx_electrodes)
@@ -784,7 +867,9 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
 
         n_rx = len(dc.receivers)
         out_file.write(f"# DC Receivers:   {n_rx}\n")
-        out_file.write(f"{'!':1s} {'Electrode M':>12s} {'Electrode N':>12s} {'Name':>12s}\n")
+        out_file.write(
+            f"{'!':1s} {'Electrode M':>12s} {'Electrode N':>12s} {'Name':>12s}\n"
+        )
         for i, rx in enumerate(dc.receivers):
             name = dc.receiver_name[i] if i < len(dc.receiver_name) else ""
             out_file.write(f"{rx[0]:12d} {rx[1]:12d} {name:12s}\n")
@@ -816,6 +901,7 @@ def _write_emdata_file(out_file: TextIO, em: EMDataFile) -> None:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def read_emdata(path: str | Path, *, silent: bool = False) -> EMDataFile:
     """Read a MARE2DEM ``.emdata`` or ``.EMResp`` file.

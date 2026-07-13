@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import numpy as np
@@ -18,6 +17,7 @@ from pycsamt.seg.time_series import (
 )
 
 # ----------------------------- helpers
+
 
 def _hermitian_example() -> np.ndarray:
     # 3x3 Hermitian with easy-to-check entries
@@ -53,6 +53,7 @@ def _pack_like_spectra(H: np.ndarray) -> np.ndarray:
 
 
 # ----------------------------- Spectra
+
 
 def test_spectra_from_io_roundtrip() -> None:
     # make header
@@ -127,6 +128,7 @@ def test_spectra_from_io_roundtrip() -> None:
 
 
 # ----------------------------- TimeSeries
+
 
 def test_timeseries_from_io_and_to_io() -> None:
     # header with dt fallback

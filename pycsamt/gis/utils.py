@@ -29,6 +29,7 @@ Examples
    extended for *pycsamt* v2, with additional validation,
    deprecations, and compatibility layers.
 """
+
 from __future__ import annotations
 
 import re
@@ -74,21 +75,21 @@ Arr1D = NDArray[np.float64]
 Obj1D = NDArray[object]
 
 __all__ = [
-    'project_point_ll2utm',
-    'project_point_utm2ll',
-    'll_to_utm',
-    'utm_to_ll',
-    'get_utm_string_from_sr',
-    'get_utm_zone',
-    'utm_zone_to_epsg',
-    'get_epsg',
-    'assert_xy_coordinate_system',
-    'decimal_to_dms',
-    'dms_to_decimal',
+    "project_point_ll2utm",
+    "project_point_utm2ll",
+    "ll_to_utm",
+    "utm_to_ll",
+    "get_utm_string_from_sr",
+    "get_utm_zone",
+    "utm_zone_to_epsg",
+    "get_epsg",
+    "assert_xy_coordinate_system",
+    "decimal_to_dms",
+    "dms_to_decimal",
     "to_utm",
     "to_ll",
     "normalize_lat_lon",
-    'GisError'
+    "GisError",
 ]
 
 _HEMI_RE = re.compile(r"\s*([NSEW])\s*$", re.IGNORECASE)
@@ -103,8 +104,7 @@ def normalize_lat_lon(
     assume: Literal["lonlat", "latlon", "auto"] = ...,
     error: Literal["ignore", "raise"] = ...,
     clip: bool = ...,
-) -> tuple[float, float]:
-    ...
+) -> tuple[float, float]: ...
 
 
 @overload
@@ -115,8 +115,8 @@ def normalize_lat_lon(
     assume: Literal["lonlat", "latlon", "auto"] = ...,
     error: Literal["ignore", "raise"] = ...,
     clip: bool = ...,
-) -> tuple[np.ndarray, np.ndarray]:
-    ...
+) -> tuple[np.ndarray, np.ndarray]: ...
+
 
 def normalize_lat_lon(
     a: Any,
@@ -167,6 +167,7 @@ def normalize_lat_lon(
     - If both are ``|val| <= 90``, use ``assume``.
     - Values with ``|val| > 180`` are invalid unless ``clip``.
     """
+
     def _to_float(v):
         if v is None or v == "None":
             return np.nan
@@ -263,8 +264,7 @@ def normalize_lat_lon(
     it = np.nditer(
         [a_arr, b_arr, lat_out, lon_out],
         flags=["multi_index", "refs_ok"],
-        op_flags=[["readonly"], ["readonly"],
-                  ["writeonly"], ["writeonly"]],
+        op_flags=[["readonly"], ["readonly"], ["writeonly"], ["writeonly"]],
     )
     for xa, xb, yl, yo in it:
         lat, lon = _coerce_pair(xa.item(), xb.item())
@@ -272,6 +272,7 @@ def normalize_lat_lon(
         yo[...] = lon
 
     return lat_out, lon_out
+
 
 def assert_xy_coordinate_system(x, y) -> str:
     r"""
@@ -321,6 +322,7 @@ def assert_xy_coordinate_system(x, y) -> str:
     >>> assert_xy_coordinate_system(x, y)
     'dms'
     """
+
     def _is_dms(a) -> bool:
         a = np.asarray(a, dtype=object).ravel()
         if a.size == 0:
@@ -343,18 +345,13 @@ def assert_xy_coordinate_system(x, y) -> str:
         return "utm"
 
     # Decimal-degree bounds (either orientation)
-    x180_y90 = (
-        np.all(np.abs(xf) <= 180.0)
-        and np.all(np.abs(yf) <= 90.0)
-    )
-    x90_y180 = (
-        np.all(np.abs(xf) <= 90.0)
-        and np.all(np.abs(yf) <= 180.0)
-    )
+    x180_y90 = np.all(np.abs(xf) <= 180.0) and np.all(np.abs(yf) <= 90.0)
+    x90_y180 = np.all(np.abs(xf) <= 90.0) and np.all(np.abs(yf) <= 180.0)
     if x180_y90 or x90_y180:
         return "ll"
 
     return "utm"
+
 
 def _assert_minutes(minutes: float) -> float:
     r"""
@@ -568,15 +565,14 @@ def convert_position_str2float(
         raise ValueError(f"Invalid minutes: {parts[1]!r}") from exc
     try:
         seconds = abs(float(parts[2]))
-    except ValueError as exc: # noqa
+    except ValueError as exc:  # noqa
         # Handle cases like '00N' already stripped above, but be safe
         # by removing any trailing non-numeric tokens.
         t = re.sub(r"[^\d.+\-eE]", "", parts[2])
         try:
             seconds = abs(float(t))
         except Exception as exc2:
-            raise ValueError(
-                f"Invalid seconds: {parts[2]!r}") from exc2
+            raise ValueError(f"Invalid seconds: {parts[2]!r}") from exc2
 
     # Sign: hemisphere (if any) overrides degree sign. Capture it
     # before rollover so carries apply to the magnitude, not the
@@ -639,9 +635,7 @@ def assert_lat_value(latitude) -> float | None:
         lat_value = convert_position_str2float(latitude)
 
     if abs(lat_value) >= 90:
-        raise ValueError(
-            f"|Latitude| > 90, unacceptable!: {lat_value!r}"
-        )
+        raise ValueError(f"|Latitude| > 90, unacceptable!: {lat_value!r}")
     return lat_value
 
 
@@ -687,9 +681,7 @@ def assert_lon_value(longitude) -> float | None:
         lon_value = convert_position_str2float(longitude)
 
     if abs(lon_value) >= 180:
-        raise ValueError(
-            f"|Longitude| > 180, unacceptable!: {lon_value!r}"
-        )
+        raise ValueError(f"|Longitude| > 180, unacceptable!: {lon_value!r}")
     return lon_value
 
 
@@ -727,9 +719,7 @@ def assert_elevation_value(elevation) -> float:
         elev_value = float(elevation)
     except (ValueError, TypeError):
         elev_value = 0.0
-        logger.warning(
-            f"{elevation} is not a number, setting elevation to 0"
-        )
+        logger.warning(f"{elevation} is not a number, setting elevation to 0")
     return elev_value
 
 
@@ -786,9 +776,7 @@ def convert_position_float2str(position: float) -> str:
     >>> convert_position_float2str(-118.34563)
     '-118:20:44.27'
     """
-    assert type(position) is float, (
-        "Given value is not a float"
-    )
+    assert type(position) is float, "Given value is not a float"
 
     deg = int(position)
     sign = -1 if deg < 0 else 1
@@ -811,9 +799,7 @@ def convert_position_float2str(position: float) -> str:
     "GDAL SpatialReference → UTM string is deprecated; "
     "use 'get_utm_zone' for standard UTM formatting."
 )
-def get_utm_string_from_sr(
-        spatial_ref: osr.SpatialReference
-    ) -> str:
+def get_utm_string_from_sr(spatial_ref: osr.SpatialReference) -> str:
     r"""
     Return a UTM zone string (e.g., ``'11N'``) from a GDAL
     ``SpatialReference``.
@@ -973,6 +959,7 @@ def get_epsg(
     )
     return utm_zone_to_epsg(zone_number, is_northern)
 
+
 @overload
 def to_ll(
     easting: Any,
@@ -1006,6 +993,7 @@ def to_ll(
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
 ) -> tuple[Arr1D, Arr1D]: ...
+
 
 def to_ll(
     easting,
@@ -1079,14 +1067,14 @@ def to_ll(
     # Resolve inputs to 1-D numpy arrays; keep optional index
     # --------------------------------------------------------------
 
-    idx =None
+    idx = None
+
     def _extract(v, name: str):
         nonlocal idx
         if isinstance(v, str):
             if data is None:
                 raise ValueError(
-                    f"'{name}' is a column name but "
-                    "'data' is not provided."
+                    f"'{name}' is a column name but 'data' is not provided."
                 )
             col = data[v]
 
@@ -1109,7 +1097,7 @@ def to_ll(
         )
 
     if zone is not None:
-        if isinstance (zone, str):
+        if isinstance(zone, str):
             z_arr = np.asarray([zone], dtype=object)
         else:
             z_arr = _extract(zone, "zone")
@@ -1117,8 +1105,7 @@ def to_ll(
             z_arr = np.full(e_arr.shape, z_arr.item(), dtype=object)
         if z_arr.shape != e_arr.shape:
             raise ValueError(
-                "zone shape must match easting/northing or be "
-                "scalar."
+                "zone shape must match easting/northing or be scalar."
             )
     else:
         # allow None when epsg is provided
@@ -1150,6 +1137,7 @@ def to_ll(
     # Return per user request
     # --------------------------------------------------------------
     if as_frame:
+
         def _orig(v, arr):
             if np.isscalar(v):
                 return np.asarray([v])
@@ -1181,13 +1169,17 @@ def to_ll(
         return df
 
     # scalar squeeze if the inputs were scalars
-    if np.isscalar(easting) and np.isscalar(northing) and (
-        np.isscalar(zone) or zone is None
+    if (
+        np.isscalar(easting)
+        and np.isscalar(northing)
+        and (np.isscalar(zone) or zone is None)
     ):
         return (lat_arr.item(), lon_arr.item())
     return (lat_arr, lon_arr)
 
+
 # ---------- overloads for to_utm ----------
+
 
 @overload
 def to_utm(
@@ -1222,6 +1214,7 @@ def to_utm(
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
 ) -> tuple[Arr1D, Arr1D, Obj1D]: ...
+
 
 def to_utm(
     lat: str | float | Sequence,
@@ -1297,13 +1290,13 @@ def to_utm(
     # Resolve input into 1-D arrays and an optional index for frames
     # ------------------------------------------------------------------
     idx = None
+
     def _extract(v, name: str):
         nonlocal idx
         if isinstance(v, str):
             if data is None:
                 raise ValueError(
-                    f"'{name}' is a column name but 'data' "
-                    "is not provided."
+                    f"'{name}' is a column name but 'data' is not provided."
                 )
             col = data[v]
 
@@ -1322,8 +1315,7 @@ def to_utm(
 
     if lat_arr.shape != lon_arr.shape:
         raise ValueError(
-            "lat and lon shapes differ: "
-            f"{lat_arr.shape} != {lon_arr.shape}"
+            f"lat and lon shapes differ: {lat_arr.shape} != {lon_arr.shape}"
         )
     # ------------------------------------------------------------------
     # Delegate to projection helper
@@ -1388,6 +1380,7 @@ def to_utm(
     if np.isscalar(lat) and np.isscalar(lon):
         return (e_arr[0], n_arr[0], z_arr[0])
     return (e_arr, n_arr, z_arr)
+
 
 def project_point_ll2utm(
     lat,
@@ -1495,9 +1488,7 @@ def project_point_ll2utm(
         else:
             ogrerr = ll_cs.SetWellKnownGeogCS(str(datum))
         if ogrerr != OGRERR_NONE:
-            raise GisError(
-                f"GDAL/OSR error code: {ogrerr}"
-            )
+            raise GisError(f"GDAL/OSR error code: {ogrerr}")
 
         for i in range(n):
             la = float(lat_arr[i])
@@ -1507,18 +1498,14 @@ def project_point_ll2utm(
             if isinstance(epsg, int):
                 ogrerr = utm_cs.ImportFromEPSG(epsg)
                 if ogrerr != OGRERR_NONE:
-                    raise GisError(
-                        f"GDAL/OSR error code: {ogrerr}"
-                    )
+                    raise GisError(f"GDAL/OSR error code: {ogrerr}")
                 # zone string for info (derive if missing)
                 _, _, zone_str = get_utm_zone(la, lo)
             else:
                 # tie projected CRS to same geographic part
                 ogrerr = utm_cs.CopyGeogCSFrom(ll_cs)
                 if ogrerr != OGRERR_NONE:
-                    raise GisError(
-                        f"GDAL/OSR error code: {ogrerr}"
-                    )
+                    raise GisError(f"GDAL/OSR error code: {ogrerr}")
                 if (
                     utm_zone is None
                     or not isinstance(utm_zone, str)
@@ -1533,12 +1520,8 @@ def project_point_ll2utm(
 
             # enforce (lon, lat) order in GDAL ≥ 3
             if hasattr(osr, "OAMS_TRADITIONAL_GIS_ORDER"):
-                ll_cs.SetAxisMappingStrategy(
-                    osr.OAMS_TRADITIONAL_GIS_ORDER
-                )
-                utm_cs.SetAxisMappingStrategy(
-                    osr.OAMS_TRADITIONAL_GIS_ORDER
-                )
+                ll_cs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+                utm_cs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
             xform = osr.CoordinateTransformation(ll_cs, utm_cs)
             x, y, z = xform.TransformPoint(lo, la, 0.0)
@@ -1572,12 +1555,10 @@ def project_point_ll2utm(
                     znum = int(utm_zone[:-1])
                     znorth = utm_zone[-1].lower() > "n"
                     zone_str = utm_zone
-                proj4 = (
-                    "+proj=utm +zone={} +{} +datum={}".format(
-                        znum,
-                        "north" if znorth else "south",
-                        datum,
-                    )
+                proj4 = "+proj=utm +zone={} +{} +datum={}".format(
+                    znum,
+                    "north" if znorth else "south",
+                    datum,
                 )
                 dst = pyproj.CRS.from_string(proj4)
 
@@ -1600,6 +1581,7 @@ def project_point_ll2utm(
             out["utm_zone"][0],
         )
     return np.rec.array(out)
+
 
 def project_point_utm2ll(
     easting: float,
@@ -1692,9 +1674,7 @@ def project_point_utm2ll(
         if HAS_GDAL:
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise RuntimeError(
-                    f"GDAL/OSR error code: {ogrerr}"
-                )
+                raise RuntimeError(f"GDAL/OSR error code: {ogrerr}")
         else:
             pp = pyproj.Proj(f"+init=EPSG:{epsg}")
     elif isinstance(utm_zone, (str, np.bytes_)):
@@ -1720,20 +1700,16 @@ def project_point_utm2ll(
         if HAS_GDAL:
             utm_cs.SetUTM(zone_number, is_northern)
         else:
-            projstring = (
-                "+proj=utm +zone={} +{} +datum={}".format(
-                    zone_number,
-                    "north" if is_northern else "south",
-                    datum,
-                )
+            projstring = "+proj=utm +zone={} +{} +datum={}".format(
+                zone_number,
+                "north" if is_northern else "south",
+                datum,
             )
             pp = pyproj.Proj(projstring)
 
     if HAS_GDAL:
         ll_cs = utm_cs.CloneGeogCS()
-        utm2ll = osr.CoordinateTransformation(
-            utm_cs, ll_cs
-        ).TransformPoint
+        utm2ll = osr.CoordinateTransformation(utm_cs, ll_cs).TransformPoint
         ll_point = list(utm2ll(easting, northing, 0.0))
         lon, lat = ll_point[0], ll_point[1]
     else:
@@ -1839,8 +1815,7 @@ def project_points_ll2utm(
 
     if np.shape(lat) != np.shape(lon):
         raise ValueError(
-            "latitude and longitude arrays are of "
-            "different lengths"
+            "latitude and longitude arrays are of different lengths"
         )
 
     flattened = False
@@ -1866,9 +1841,7 @@ def project_points_ll2utm(
         if HAS_GDAL:
             ogrerr = utm_cs.ImportFromEPSG(epsg)
             if ogrerr != OGRERR_NONE:
-                raise RuntimeError(
-                    f"GDAL/osgeo ogr error code: {ogrerr}"
-                )
+                raise RuntimeError(f"GDAL/osgeo ogr error code: {ogrerr}")
             zone_id = utm_cs.GetUTMZone()
             if zone_id and zone_id > 0:
                 utm_cs.SetUTM(abs(zone_id), zone_id > 0)
@@ -1882,9 +1855,7 @@ def project_points_ll2utm(
         else:
             latc = (np.nanmax(lat) + np.nanmin(lat)) / 2.0
             lonc = (np.nanmax(lon) + np.nanmin(lon)) / 2.0
-            zone_number = int(
-                np.floor((lonc + 180.0) / 6.0) + 1
-            )
+            zone_number = int(np.floor((lonc + 180.0) / 6.0) + 1)
             letter = utm_letter_designator(latc)
             is_northern = letter >= "N"
             utm_zone = f"{zone_number}{letter}"
@@ -1892,19 +1863,15 @@ def project_points_ll2utm(
         if HAS_GDAL:
             utm_cs.SetUTM(zone_number, is_northern)
         else:
-            projstring = (
-                "+proj=utm +zone={:d} +{} +datum={}".format(
-                    zone_number,
-                    "north" if is_northern else "south",
-                    datum,
-                )
+            projstring = "+proj=utm +zone={:d} +{} +datum={}".format(
+                zone_number,
+                "north" if is_northern else "south",
+                datum,
             )
             pp = pyproj.Proj(projstring)
 
     if HAS_GDAL:
-        ll2utm = osr.CoordinateTransformation(
-            ll_cs, utm_cs
-        ).TransformPoints
+        ll2utm = osr.CoordinateTransformation(ll_cs, utm_cs).TransformPoints
         pts = np.array(ll2utm(np.array([lon, lat]).T))
         easting = pts[:, 0]
         northing = pts[:, 1]
@@ -1918,10 +1885,9 @@ def project_points_ll2utm(
 
     return (easting, northing, utm_zone)
 
+
 def ll_to_utm(
-    reference_ellipsoid: int,
-    lat: float,
-    lon: float
+    reference_ellipsoid: int, lat: float, lon: float
 ) -> tuple[str, float, float]:
     """
     Convert latitude/longitude to UTM coordinates.
@@ -1964,10 +1930,14 @@ def ll_to_utm(
         zone_number = 32
     # Svalbard exceptions
     if 72.0 <= lat < 84.0:
-        if   0.0  <= long_temp <  9.0: zone_number = 31
-        elif  9.0 <= long_temp < 21.0: zone_number = 33
-        elif 21.0 <= long_temp < 33.0: zone_number = 35
-        elif 33.0 <= long_temp < 42.0: zone_number = 37
+        if 0.0 <= long_temp < 9.0:
+            zone_number = 31
+        elif 9.0 <= long_temp < 21.0:
+            zone_number = 33
+        elif 21.0 <= long_temp < 33.0:
+            zone_number = 35
+        elif 33.0 <= long_temp < 42.0:
+            zone_number = 37
 
     long_origin = (zone_number - 1) * 6 - 180 + 3
     long_origin_rad = long_origin * DEG2RAD
@@ -1982,28 +1952,34 @@ def ll_to_utm(
 
     # meridional arc
     M = a * (
-        (1 - ecc_sq/4 - 3*ecc_sq**2/64 - 5*ecc_sq**3/256) * lat_rad
-        - (3*ecc_sq/8 + 3*ecc_sq**2/32 + 45*ecc_sq**3/1024) * np.sin(2*lat_rad)
-        + (15*ecc_sq**2/256 + 45*ecc_sq**3/1024) * np.sin(4*lat_rad)
-        - (35*ecc_sq**3/3072) * np.sin(6*lat_rad)
+        (1 - ecc_sq / 4 - 3 * ecc_sq**2 / 64 - 5 * ecc_sq**3 / 256) * lat_rad
+        - (3 * ecc_sq / 8 + 3 * ecc_sq**2 / 32 + 45 * ecc_sq**3 / 1024)
+        * np.sin(2 * lat_rad)
+        + (15 * ecc_sq**2 / 256 + 45 * ecc_sq**3 / 1024) * np.sin(4 * lat_rad)
+        - (35 * ecc_sq**3 / 3072) * np.sin(6 * lat_rad)
     )
 
     # easting
     easting = (
-        k0 * N * (
+        k0
+        * N
+        * (
             A
             + (1 - T + C) * A**3 / 6
-            + (5 - 18*T + T**2 + 72*C - 58*ecc_prime_sq) * A**5 / 120
+            + (5 - 18 * T + T**2 + 72 * C - 58 * ecc_prime_sq) * A**5 / 120
         )
         + 500_000.0
     )
 
     # northing
     northing = k0 * (
-        M + N * np.tan(lat_rad) * (
+        M
+        + N
+        * np.tan(lat_rad)
+        * (
             A**2 / 2
-            + (5 - T + 9*C + 4*C**2) * A**4 / 24
-            + (61 - 58*T + T**2 + 600*C - 330*ecc_prime_sq) * A**6 / 720
+            + (5 - T + 9 * C + 4 * C**2) * A**4 / 24
+            + (61 - 58 * T + T**2 + 600 * C - 330 * ecc_prime_sq) * A**6 / 720
         )
     )
     # southern hemisphere offset
@@ -2012,11 +1988,9 @@ def ll_to_utm(
 
     return utm_zone, easting, northing
 
+
 def utm_to_ll(
-    reference_ellipsoid: int,
-    northing: float,
-    easting: float,
-    zone: str
+    reference_ellipsoid: int, northing: float, easting: float, zone: str
 ) -> tuple[float, float]:
     """
     Convert UTM coordinates to latitude/longitude.
@@ -2054,7 +2028,7 @@ def utm_to_ll(
 
     # Determine hemisphere
     zone_letter = zone[-1]
-    if zone_letter.upper() < 'N':
+    if zone_letter.upper() < "N":
         # southern hemisphere
         y -= 10_000_000.0
 
@@ -2064,38 +2038,46 @@ def utm_to_ll(
 
     # Calculate footpoint latitude
     M = y / k0
-    mu = M / (a * (1 - ecc_sq/4 - 3*ecc_sq**2/64 - 5*ecc_sq**3/256))
+    mu = M / (a * (1 - ecc_sq / 4 - 3 * ecc_sq**2 / 64 - 5 * ecc_sq**3 / 256))
     phi1_rad = (
         mu
-        + (3*e1/2 - 27*e1**3/32) * np.sin(2*mu)
-        + (21*e1**2/16 - 55*e1**4/32) * np.sin(4*mu)
-        + (151*e1**3/96) * np.sin(6*mu)
+        + (3 * e1 / 2 - 27 * e1**3 / 32) * np.sin(2 * mu)
+        + (21 * e1**2 / 16 - 55 * e1**4 / 32) * np.sin(4 * mu)
+        + (151 * e1**3 / 96) * np.sin(6 * mu)
     )
 
     # Precompute
     ecc_prime_sq = ecc_sq / (1 - ecc_sq)
-    n1 = a / np.sqrt(1 - ecc_sq * np.sin(phi1_rad)**2)
-    t1 = np.tan(phi1_rad)**2
-    c1 = ecc_prime_sq * np.cos(phi1_rad)**2
-    r1 = a * (1 - ecc_sq) / (1 - ecc_sq * np.sin(phi1_rad)**2)**1.5
-    d  = x / (n1 * k0)
+    n1 = a / np.sqrt(1 - ecc_sq * np.sin(phi1_rad) ** 2)
+    t1 = np.tan(phi1_rad) ** 2
+    c1 = ecc_prime_sq * np.cos(phi1_rad) ** 2
+    r1 = a * (1 - ecc_sq) / (1 - ecc_sq * np.sin(phi1_rad) ** 2) ** 1.5
+    d = x / (n1 * k0)
 
     # Latitude
-    lat_rad = (
-        phi1_rad
-        - (n1 * np.tan(phi1_rad) / r1) * (
-            d**2/2
-            - (5 + 3*t1 + 10*c1 - 4*c1**2 - 9*ecc_prime_sq) * d**4/24
-            + (61 + 90*t1 + 298*c1 + 45*t1**2 - 252*ecc_prime_sq - 3*c1**2) * d**6/720
+    lat_rad = phi1_rad - (n1 * np.tan(phi1_rad) / r1) * (
+        d**2 / 2
+        - (5 + 3 * t1 + 10 * c1 - 4 * c1**2 - 9 * ecc_prime_sq) * d**4 / 24
+        + (
+            61
+            + 90 * t1
+            + 298 * c1
+            + 45 * t1**2
+            - 252 * ecc_prime_sq
+            - 3 * c1**2
         )
+        * d**6
+        / 720
     )
     lat = lat_rad * RAD2DEG
 
     # Longitude
     lon_rad = (
         d
-        - (1 + 2*t1 + c1) * d**3/6
-        + (5 - 2*c1 + 28*t1 - 3*c1**2 + 8*ecc_prime_sq + 24*t1**2) * d**5/120
+        - (1 + 2 * t1 + c1) * d**3 / 6
+        + (5 - 2 * c1 + 28 * t1 - 3 * c1**2 + 8 * ecc_prime_sq + 24 * t1**2)
+        * d**5
+        / 120
     ) / np.cos(phi1_rad)
     lon = long_origin + lon_rad * RAD2DEG
 
@@ -2153,21 +2135,20 @@ def epsg_project(
     try:
         import pyproj  # type: ignore
     except Exception:  # pragma: no cover
-        logger.warning("Please install 'pyproj' to use "
-                       "epsg_project.")
+        logger.warning("Please install 'pyproj' to use epsg_project.")
         return None
 
     if epsg_from is None or epsg_to is None:
-        logger.warning("Both 'epsg_from' and 'epsg_to' must be "
-                       "provided.")
+        logger.warning("Both 'epsg_from' and 'epsg_to' must be provided.")
         return None
 
     try:
         src = pyproj.CRS.from_user_input(EPSG_DICT[epsg_from])
         dst = pyproj.CRS.from_user_input(EPSG_DICT[epsg_to])
     except KeyError:
-        logger.warning("EPSG code not in EPSG_DICT: from=%r to=%r",
-                       epsg_from, epsg_to)
+        logger.warning(
+            "EPSG code not in EPSG_DICT: from=%r to=%r", epsg_from, epsg_to
+        )
         return None
 
     transformer = pyproj.Transformer.from_crs(
@@ -2237,13 +2218,12 @@ def utm_wgs84_conv(
 
     tol = 1e-10
     if abs(lat - new_lat) > tol:
-        logger.warning("lat round-trip mismatch: in=%r out=%r",
-                       lat, new_lat)
+        logger.warning("lat round-trip mismatch: in=%r out=%r", lat, new_lat)
     if abs(lon - new_lon) > tol:
-        logger.warning("lon round-trip mismatch: in=%r out=%r",
-                       lon, new_lon)
+        logger.warning("lon round-trip mismatch: in=%r out=%r", lon, new_lon)
 
     return e, n, z, L
+
 
 @Deprecated(
     "Deprecated; will be removed in a future release. "
@@ -2309,14 +2289,10 @@ def transform_utm_to_ll(
             zone_num = int(zone[:-1])
             zone_letter = zone[-1]
         except Exception as exc:  # noqa: BLE001
-            raise ValueError(
-                f"Invalid UTM zone string: {zone!r}"
-            ) from exc
+            raise ValueError(f"Invalid UTM zone string: {zone!r}") from exc
         is_north = zone_letter.lower() >= "n"
     else:
-        raise ValueError(
-            f"Unsupported zone type: {type(zone).__name__}"
-        )
+        raise ValueError(f"Unsupported zone type: {type(zone).__name__}")
 
     utm_sr.SetUTM(zone_num, is_north)
 
@@ -2399,9 +2375,9 @@ def _resolve_api_name(name: str | None) -> str:
 
     # Map shorthand symbols to their corresponding API names.
     symbol_map = {
-        ',': 'open_meteo',       # Comma for comma_separated
-        '|': 'open_topo_data',   # Pipe for pipe_separated
-        'indiv': 'usgs_ned',
+        ",": "open_meteo",  # Comma for comma_separated
+        "|": "open_topo_data",  # Pipe for pipe_separated
+        "indiv": "usgs_ned",
     }
 
     # First, check if the provided name is a direct valid key.
@@ -2420,9 +2396,8 @@ def _resolve_api_name(name: str | None) -> str:
     )
     return ElevationAPIConfig.DEFAULT_API
 
-def _extract_value_from_nested_dict(
-    data: dict, key_path: str
-) -> Any:
+
+def _extract_value_from_nested_dict(data: dict, key_path: str) -> Any:
     r"""Extract a value from a nested dict using a dot-path.
 
     This helper traverses a dictionary structure using a
@@ -2444,7 +2419,7 @@ def _extract_value_from_nested_dict(
         key along the path does not exist.
     """
     # Split the path into individual keys.
-    keys = key_path.split('.')
+    keys = key_path.split(".")
     value = data
     # Sequentially access each key in the path.
     for key in keys:
@@ -2468,26 +2443,25 @@ def _extract_value_from_nested_dict(
 
     return value
 
+
 @overload
 def get_elevation_from_api(
-    latitude: float,
-    longitude: float,
-    api_name: str | None = None
-) -> float:
-    ...
+    latitude: float, longitude: float, api_name: str | None = None
+) -> float: ...
+
 
 @overload
 def get_elevation_from_api(
     latitude: Sequence[float] | np.ndarray,
     longitude: Sequence[float] | np.ndarray,
-    api_name: str | None = None
-) -> np.ndarray:
-    ...
+    api_name: str | None = None,
+) -> np.ndarray: ...
+
 
 def get_elevation_from_api(
     latitude: float | Sequence[float] | np.ndarray,
     longitude: float | Sequence[float] | np.ndarray,
-    api_name: str | None = None
+    api_name: str | None = None,
 ) -> float | np.ndarray:
     r"""Fetches elevation from sea level for geographic coords.
 
@@ -2559,17 +2533,14 @@ def get_elevation_from_api(
 
     # Lazily import requests to avoid hard dependency.
     requests = import_optional_dependency(
-        "requests",
-        extra="'requests' is required to fetch elevation data."
+        "requests", extra="'requests' is required to fetch elevation data."
     )
     # Resolve the API name from full name or symbol.
     resolved_api_name = _resolve_api_name(api_name)
-    api_config = ElevationAPIConfig.get_api_config(
-        resolved_api_name
-    )
-    api_url = api_config['url']
-    params_format = api_config['params_format']
-    response_key = api_config['response_key']
+    api_config = ElevationAPIConfig.get_api_config(resolved_api_name)
+    api_url = api_config["url"]
+    params_format = api_config["params_format"]
+    response_key = api_config["response_key"]
 
     is_scalar = np.isscalar(latitude)
 
@@ -2584,8 +2555,8 @@ def get_elevation_from_api(
         lon_arr = np.asarray(longitude, dtype=float)
         chunks = [
             get_elevation_from_api(
-                lat_arr[i:i + _MAX_BATCH],
-                lon_arr[i:i + _MAX_BATCH],
+                lat_arr[i : i + _MAX_BATCH],
+                lon_arr[i : i + _MAX_BATCH],
                 api_name,
             )
             for i in range(0, len(lat_arr), _MAX_BATCH)
@@ -2595,24 +2566,21 @@ def get_elevation_from_api(
     params = {}
 
     # Prepare parameters based on the API's required format.
-    if params_format == 'comma_separated':
+    if params_format == "comma_separated":
         params = {
             "latitude": (
-                latitude if is_scalar
-                else ",".join(map(str, latitude))
+                latitude if is_scalar else ",".join(map(str, latitude))
             ),
             "longitude": (
-                longitude if is_scalar
-                else ",".join(map(str, longitude))
+                longitude if is_scalar else ",".join(map(str, longitude))
             ),
         }
-    elif params_format == 'pipe_separated':
+    elif params_format == "pipe_separated":
         if is_scalar:
             locations = f"{latitude},{longitude}"
         else:
             locations = "|".join(
-                [f"{lat},{lon}" for lat, lon in zip(
-                    latitude, longitude)]
+                [f"{lat},{lon}" for lat, lon in zip(latitude, longitude)]
             )
         params = {"locations": locations}
 
@@ -2626,54 +2594,40 @@ def get_elevation_from_api(
         data = response.json()
 
         # Extract elevation using the nested key path.
-        elevations = _extract_value_from_nested_dict(
-            data, response_key
-        )
+        elevations = _extract_value_from_nested_dict(data, response_key)
 
         if elevations is None:
-            raise GisError(
-                "Elevation data not found in API response."
-            )
+            raise GisError("Elevation data not found in API response.")
 
         if is_scalar:
             # Return a single float for scalar input.
             return float(
-                elevations[0] if isinstance(elevations, list)
-                else elevations
+                elevations[0] if isinstance(elevations, list) else elevations
             )
         else:
             # Return a NumPy array for array input.
             return np.array(elevations, dtype=float)
 
     except requests.exceptions.RequestException as e:
-        logger.error(
-            f"API request to {resolved_api_name} failed: {e}"
-        )
+        logger.error(f"API request to {resolved_api_name} failed: {e}")
         # If the failed API was not the default, try fallback.
         if resolved_api_name != ElevationAPIConfig.DEFAULT_API:
             logger.info(
-                "Trying fallback API: "
-                f"{ElevationAPIConfig.DEFAULT_API}"
+                f"Trying fallback API: {ElevationAPIConfig.DEFAULT_API}"
             )
             return get_elevation_from_api(
-                latitude, longitude,
-                ElevationAPIConfig.DEFAULT_API
+                latitude, longitude, ElevationAPIConfig.DEFAULT_API
             )
 
         # If fallback also fails or was the default, raise error.
-        raise GisError(
-            f"Failed to fetch elevation data from API: {e}"
-        ) from e
+        raise GisError(f"Failed to fetch elevation data from API: {e}") from e
+
 
 @overload
 def get_elevation_from_utm(
-    easting: float,
-    northing: float,
-    zone: str,
-    datum: str = "WGS84",
-    **kws
-) -> float:
-    ...
+    easting: float, northing: float, zone: str, datum: str = "WGS84", **kws
+) -> float: ...
+
 
 @overload
 def get_elevation_from_utm(
@@ -2681,16 +2635,16 @@ def get_elevation_from_utm(
     northing: Sequence[float] | np.ndarray,
     zone: str,
     datum: str = "WGS84",
-    **kws
-) -> np.ndarray:
-    ...
+    **kws,
+) -> np.ndarray: ...
+
 
 def get_elevation_from_utm(
     easting: float | Sequence[float] | np.ndarray,
     northing: float | Sequence[float] | np.ndarray,
     zone: str,
     datum: str = "WGS84",
-    **kws
+    **kws,
 ) -> float | np.ndarray:
     r"""Fetches elevation from sea level for UTM coordinates.
 
@@ -2750,7 +2704,7 @@ def get_elevation_from_utm(
             northing=northing,
             zone=zone,
             datum=datum,
-            as_frame=False
+            as_frame=False,
         )
 
         # Step 2: Fetch elevation using the geographic coords.
@@ -2759,9 +2713,7 @@ def get_elevation_from_utm(
 
     except Exception as e:
         # Catch any error from conversion or the API call.
-        logger.error(
-            f"Failed to get elevation from UTM coordinates: {e}"
-        )
+        logger.error(f"Failed to get elevation from UTM coordinates: {e}")
         # Raise a specific error for better error handling.
         raise GisError(
             "Could not process UTM coordinates to get elevation"
@@ -2769,8 +2721,7 @@ def get_elevation_from_utm(
 
 
 def calculate_azimuth(
-    easting: Sequence[float] | NDArray,
-    northing: Sequence[float] | NDArray
+    easting: Sequence[float] | NDArray, northing: Sequence[float] | NDArray
 ) -> NDArray:
     r"""Calculates the forward azimuth between consecutive points.
 

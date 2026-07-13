@@ -35,22 +35,38 @@ from .validation import IsJ, is_j_file
 
 __all__ = [
     # heads / header API
-    "Banner", "Head", "Heads", "HeadMixin",
-    "Info", "InfoMixin", "JSiteProperty",
+    "Banner",
+    "Head",
+    "Heads",
+    "HeadMixin",
+    "Info",
+    "InfoMixin",
+    "JSiteProperty",
     # blocks API
-    "RRow", "TFRow", "JBlock",
-    "RBlock", "TFBlock", "JBlocks",
+    "RRow",
+    "TFRow",
+    "JBlock",
+    "RBlock",
+    "TFBlock",
+    "JBlocks",
     # high-level IO
-    "JMixin", "JIOMixin", "JFile",
+    "JMixin",
+    "JIOMixin",
+    "JFile",
     # validation
-    "IsJ", "is_j_file",
+    "IsJ",
+    "is_j_file",
     # collection helpers
-    "JParseMixin", "JCoreParser", "JCBBase",
+    "JParseMixin",
+    "JCoreParser",
+    "JCBBase",
     # "_as_path",
     # "is_j_like",
-    "JCollectionMixin", "JCollection",
+    "JCollectionMixin",
+    "JCollection",
     # components bag façade
     "JComponentMixin",
     # utils types
-    "iter_lines",  "parse_datatype_units",
+    "iter_lines",
+    "parse_datatype_units",
 ]

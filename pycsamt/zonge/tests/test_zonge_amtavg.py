@@ -3,6 +3,7 @@
 """
 Pytest suite for the AMTAVG class.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -34,6 +35,7 @@ def full_modern_avg_content():
         "1,512,10,900,400,180,0.11,3,4,5,18,30,14\n"
     )
 
+
 @pytest.fixture(scope="module")
 def amtavg_instance(tmp_path_factory, full_modern_avg_content):
     """
@@ -41,17 +43,17 @@ def amtavg_instance(tmp_path_factory, full_modern_avg_content):
     AMTAVG instance from it. This fixture is module-scoped for
     efficiency as the loading process is the same for all tests.
     """
-    path = (
-        tmp_path_factory.mktemp("data") / "full_modern.avg"
-    )
+    path = tmp_path_factory.mktemp("data") / "full_modern.avg"
     path.write_text(full_modern_avg_content)
     return AMTAVG.from_file(path, verbose=True)
+
 
 # --- Tests for AMTAVG ---------------------------------------------
 class TestAMTAVG:
     def test_inheritance(self):
         """Test that AMTAVG inherits from AVG."""
         from pycsamt.zonge.avg import AVG
+
         assert issubclass(AMTAVG, AVG)
 
     def test_z_tensor_properties(self, amtavg_instance):
@@ -134,5 +136,6 @@ class TestAMTAVG:
         assert "AMTAVG.from_file(" in repr(amtavg_instance)
         assert "full_modern.avg" in repr(amtavg_instance)
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

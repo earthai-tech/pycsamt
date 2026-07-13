@@ -22,7 +22,12 @@ import os
 from typing import Any
 
 from ..core import TelemetryPacket
-from .base import BaseTelemetryClient, TelemetryAck, TelemetryError, _coerce_packet
+from .base import (
+    BaseTelemetryClient,
+    TelemetryAck,
+    TelemetryError,
+    _coerce_packet,
+)
 
 __all__ = ["StoreAndForwardClient"]
 
@@ -146,7 +151,9 @@ class StoreAndForwardClient:
         return sent
 
     # -- helpers -----------------------------------------------------------
-    def _queued_ack(self, packet: TelemetryPacket, detail: str) -> TelemetryAck:
+    def _queued_ack(
+        self, packet: TelemetryPacket, detail: str
+    ) -> TelemetryAck:
         return TelemetryAck(
             ok=False,
             protocol=self.client.protocol.value,

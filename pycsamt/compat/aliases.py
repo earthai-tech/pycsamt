@@ -88,6 +88,7 @@ __all__ = [
     "compat_alias",
 ]
 
+
 def make_compat_alias(
     new_func: Callable,
     *,
@@ -218,6 +219,7 @@ def make_compat_alias(
     _wrapper.__is_compat_alias__ = True
     _wrapper.__compat_target__ = new_func
     return _wrapper
+
 
 def install_compat_aliases(
     mapping: dict[str, Callable],
@@ -468,4 +470,3 @@ def compat_alias(
         return func
 
     return _dec
-

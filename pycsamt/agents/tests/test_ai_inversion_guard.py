@@ -10,6 +10,7 @@ impedance features up front and returns immediately.
 
 Skipped if no DL backend (torch/tensorflow) is installed.
 """
+
 from __future__ import annotations
 
 import time
@@ -22,6 +23,7 @@ from pycsamt.agents.ai_inversion import AIInversionAgent
 def _backend_available() -> bool:
     try:
         from pycsamt.backends import get_backend_instance
+
         return get_backend_instance() is not None
     except Exception:
         return False
@@ -29,7 +31,6 @@ def _backend_available() -> bool:
 
 @unittest.skipUnless(_backend_available(), "no DL backend")
 class TestAIInversionFastFail(unittest.TestCase):
-
     def setUp(self):
         self._orig = aimod._z_to_features
 
@@ -41,8 +42,10 @@ class TestAIInversionFastFail(unittest.TestCase):
         aimod._z_to_features = lambda *a, **k: None
 
         agent = AIInversionAgent(
-            arch="resnet", n_layers=5,
-            epochs=30, n_train_samples=2000,
+            arch="resnet",
+            n_layers=5,
+            epochs=30,
+            n_train_samples=2000,
         )
         t0 = time.time()
         res = agent.execute({"path": "data/3edis"})

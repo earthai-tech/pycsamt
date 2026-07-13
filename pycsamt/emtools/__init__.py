@@ -5,6 +5,7 @@ pycsamt.emtools — public API
 All user-facing functions and constants from the emtools sub-modules,
 organised by workflow stage.
 """
+
 from __future__ import annotations
 
 # ─── Rose diagram style system (canonical: pycsamt.api._rose_style) ──────────

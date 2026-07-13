@@ -24,13 +24,13 @@ class LoaderWorker(QThread):
     """Background EDI loader thread."""
 
     progress = Signal(int)
-    finished = Signal(object)   # Sites
-    error    = Signal(str)
+    finished = Signal(object)  # Sites
+    error = Signal(str)
 
     def __init__(self, paths: list[str], parent=None) -> None:
         super().__init__(parent)
         self._paths = list(paths)
-        self._ctrl  = DataController(progress_callback=self.progress.emit)
+        self._ctrl = DataController(progress_callback=self.progress.emit)
 
     def run(self) -> None:
         try:

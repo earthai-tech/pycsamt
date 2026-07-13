@@ -142,6 +142,7 @@ def resolve_embedding_backend(
 
 # ── persisted vector store ──────────────────────────────────────────────────────
 
+
 def save_vectors(
     path: Path | str, ids: Sequence[str], vectors: np.ndarray
 ) -> Path:
@@ -178,6 +179,7 @@ def load_vectors(
 
 
 # ── fusion ──────────────────────────────────────────────────────────────────────
+
 
 def cosine_scores(qvec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
     """Cosine similarity of a query vector against every row of *matrix*.

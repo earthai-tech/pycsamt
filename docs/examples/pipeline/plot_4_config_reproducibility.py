@@ -21,9 +21,9 @@ from pycsamt.pipeline import Pipeline, Step
 pipe = Pipeline(
     [
         ("select_band", Step("FREQ001", band_hz=(0.01, 10_000))),
-        ("notch",       Step("NR001", mains_hz=50)),
+        ("notch", Step("NR001", mains_hz=50)),
         ("static_shift", Step("SS001")),
-        ("qc_snap",     Step("QC001")),
+        ("qc_snap", Step("QC001")),
     ],
     name="documented_workflow",
 )
@@ -46,7 +46,7 @@ reloaded = Pipeline.from_yaml(cfg_path)
 original = [(lbl, s.spec.code) for lbl, s in pipe]
 restored = [(lbl, s.spec.code) for lbl, s in reloaded]
 print("round-trip identical:", original == restored)
-for (lbl, code) in restored:
+for lbl, code in restored:
     print(f"  {lbl:<14} {code}")
 
 # %%
@@ -76,20 +76,49 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 fig, ax = plt.subplots(figsize=(10, 2.4), constrained_layout=True)
-ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+ax.set_axis_off()
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
 n = len(restored)
 xs = [(i + 0.5) / n for i in range(n)]
 for i, (lbl, code) in enumerate(restored):
-    ax.add_patch(FancyBboxPatch((xs[i] - 0.4 / n, 0.35), 0.8 / n, 0.34,
-                 boxstyle="round,pad=0.01,rounding_size=0.02",
-                 fc="#eef3fb", ec="#3e65b0", lw=1.4))
-    ax.text(xs[i], 0.57, code, ha="center", va="center", fontsize=9, weight="bold")
-    ax.text(xs[i], 0.45, lbl, ha="center", va="center", fontsize=7.5, color="#374151")
+    ax.add_patch(
+        FancyBboxPatch(
+            (xs[i] - 0.4 / n, 0.35),
+            0.8 / n,
+            0.34,
+            boxstyle="round,pad=0.01,rounding_size=0.02",
+            fc="#eef3fb",
+            ec="#3e65b0",
+            lw=1.4,
+        )
+    )
+    ax.text(
+        xs[i], 0.57, code, ha="center", va="center", fontsize=9, weight="bold"
+    )
+    ax.text(
+        xs[i],
+        0.45,
+        lbl,
+        ha="center",
+        va="center",
+        fontsize=7.5,
+        color="#374151",
+    )
     if i < n - 1:
-        ax.add_patch(FancyArrowPatch((xs[i] + 0.42 / n, 0.52),
-                     (xs[i + 1] - 0.42 / n, 0.52), arrowstyle="-|>",
-                     mutation_scale=13, color="#64748b", lw=1.3))
-ax.set_title(f"pipeline '{reloaded.name}' — rebuilt from workflow.yaml", fontsize=10)
+        ax.add_patch(
+            FancyArrowPatch(
+                (xs[i] + 0.42 / n, 0.52),
+                (xs[i + 1] - 0.42 / n, 0.52),
+                arrowstyle="-|>",
+                mutation_scale=13,
+                color="#64748b",
+                lw=1.3,
+            )
+        )
+ax.set_title(
+    f"pipeline '{reloaded.name}' — rebuilt from workflow.yaml", fontsize=10
+)
 
 # %%
 # **Takeaway.** Because the pipeline *is* the config, a result and its recipe

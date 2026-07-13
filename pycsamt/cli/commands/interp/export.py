@@ -58,20 +58,24 @@ from .classify import _detect_solver
     help="Inversion solver.  'auto' detects from workdir files.",
 )
 @click.option(
-    "--iteration", "-i",
+    "--iteration",
+    "-i",
     type=click.IntRange(min=1),
     default=None,
     metavar="INT",
     help="Iteration to load (default: last available).",
 )
 @click.option(
-    "--format", "-f", "export_format",
+    "--format",
+    "-f",
+    "export_format",
     type=click.Choice(["xyz", "las", "csv", "vtk"], case_sensitive=False),
     required=True,
     help="Output format.",
 )
 @click.option(
-    "--output-dir", "-o",
+    "--output-dir",
+    "-o",
     type=click.Path(file_okay=False, writable=True, path_type=Path),
     default=Path("."),
     show_default=True,
@@ -166,7 +170,7 @@ def export(
         )
 
         result = InversionResult(workdir, iteration=iteration)
-        model  = ResistivityModel.from_occam2d(result)
+        model = ResistivityModel.from_occam2d(result)
 
         if max_depth is not None:
             mask = model.z_centers <= max_depth
@@ -180,7 +184,7 @@ def export(
                 rms=model.rms,
             )
 
-        cal  = ModelCalibrator(ptol=ptol).fit(model)
+        cal = ModelCalibrator(ptol=ptol).fit(model)
         logs = cal.stratigraphic_logs(merge_tolerance=merge_tol)
 
     except Exception as exc:  # noqa: BLE001
@@ -215,15 +219,13 @@ def export(
         elif fmt == "las":
             for log in logs:
                 name = log.station_name.replace(" ", "_")
-                out  = output_dir / f"{name}.las"
+                out = output_dir / f"{name}.las"
                 if out.exists() and not overwrite:
                     raise click.UsageError(
                         f"{out} already exists.  Pass --overwrite to replace it."
                     )
                 _export.to_las(log, str(out))
-            click.echo(
-                f"Written {len(logs)} LAS file(s) → {output_dir}/"
-            )
+            click.echo(f"Written {len(logs)} LAS file(s) → {output_dir}/")
 
         elif fmt == "csv":
             out = output_dir / "layers.csv"

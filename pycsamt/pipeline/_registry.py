@@ -26,11 +26,13 @@ from typing import Any, Callable
 # Special-case wrappers
 # ---------------------------------------------------------------------------
 
+
 def _emap_confidence_fn(sites: Any, **kw: Any) -> Any:
     """Wrap confidence_gated_emap_filter → return result.sites."""
     from pycsamt.emtools.remove_noise import (
         confidence_gated_emap_filter,
     )
+
     return confidence_gated_emap_filter(sites, **kw).sites
 
 
@@ -40,6 +42,7 @@ def _ss_loess_fn(sites: Any, **kw: Any) -> Any:
         apply_ss_factors,
         estimate_ss_loess,
     )
+
     factors = estimate_ss_loess(sites, **kw)
     return apply_ss_factors(sites, factors)
 
@@ -50,6 +53,7 @@ def _ss_refmedian_fn(sites: Any, **kw: Any) -> Any:
         apply_ss_factors,
         estimate_ss_refmedian,
     )
+
     factors = estimate_ss_refmedian(sites, **kw)
     return apply_ss_factors(sites, factors)
 
@@ -60,6 +64,7 @@ def _ss_bilateral_fn(sites: Any, **kw: Any) -> Any:
         apply_ss_factors,
         estimate_ss_bilateral,
     )
+
     factors = estimate_ss_bilateral(sites, **kw)
     return apply_ss_factors(sites, factors)
 
@@ -72,6 +77,7 @@ def _qc_snapshot_fn(sites: Any, **kw: Any) -> Any:
 # ---------------------------------------------------------------------------
 # StepSpec
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class StepSpec:
@@ -158,9 +164,7 @@ _EMTOOLS = "pycsamt.emtools"
 STEP_REGISTRY: dict[str, StepSpec] = {
     spec.code: spec
     for spec in [
-
         # ── Frequency management ────────────────────────────────────────
-
         StepSpec(
             code="FREQ001",
             name="select_band",
@@ -267,16 +271,18 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="frequency",
             mod=f"{_EMTOOLS}.frequency",
             fn_name="recover_low_confidence_frequencies",
-            defaults={"method": "composite", "ci_hi": 0.9, "ci_lo": 0.5,
-                      "interpolation": "linear"},
+            defaults={
+                "method": "composite",
+                "ci_hi": 0.9,
+                "ci_lo": 0.5,
+                "interpolation": "linear",
+            },
             qc_defs=[
                 (f"{_EMTOOLS}.frequency", "plot_frequency_edit_summary"),
                 (f"{_EMTOOLS}.frequency", "plot_coverage_quality_heatmap"),
             ],
         ),
-
         # ── Noise removal ───────────────────────────────────────────────
-
         StepSpec(
             code="NR001",
             name="notch_powerline",
@@ -445,17 +451,20 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="noise_removal",
             mod=f"{_EMTOOLS}.remove_noise",
             fn_name="remove_noise_pipeline",
-            defaults={"mains_hz": 50.0, "n_harm": 30, "tol_hz": 0.08,
-                      "smooth_win": 5, "gate_snr": 2.5},
+            defaults={
+                "mains_hz": 50.0,
+                "n_harm": 30,
+                "tol_hz": 0.08,
+                "smooth_win": 5,
+                "gate_snr": 2.5,
+            },
             qc_defs=[
                 (f"{_EMTOOLS}.remove_noise", "nr_qc_harmonic_waterfall"),
                 (f"{_EMTOOLS}.remove_noise", "nr_qc_snr_gain_profile"),
                 (f"{_EMTOOLS}.remove_noise", "nr_qc_delta_offdiag_psection"),
             ],
         ),
-
         # ── Static shift correction ──────────────────────────────────────
-
         StepSpec(
             code="SS001",
             name="correct_ss_ama",
@@ -506,9 +515,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
                 (f"{_EMTOOLS}.ss", "plot_ss_summary"),
             ],
         ),
-
         # ── Tensor analysis ──────────────────────────────────────────────
-
         StepSpec(
             code="TZ001",
             name="rotate_strike",
@@ -591,15 +598,18 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="tensor",
             mod=f"{_EMTOOLS}.tensor",
             fn_name="orient_from_sensors",
-            defaults={"ex": 0.0, "ey": 0.0, "bx": 0.0, "by": 0.0,
-                      "degrees": True},
+            defaults={
+                "ex": 0.0,
+                "ey": 0.0,
+                "bx": 0.0,
+                "by": 0.0,
+                "degrees": True,
+            },
             qc_defs=[
                 (f"{_EMTOOLS}.tensor", "plot_phase_tensor_psection"),
             ],
         ),
-
         # ── Dimensionality ───────────────────────────────────────────────
-
         StepSpec(
             code="DIM001",
             name="classify_dim",
@@ -638,9 +648,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
                 (f"{_EMTOOLS}.dimensionality", "plot_dim_map"),
             ],
         ),
-
         # ── Skewness ─────────────────────────────────────────────────────
-
         StepSpec(
             code="SK001",
             name="mask_by_skew",
@@ -690,9 +698,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
                 (f"{_EMTOOLS}.skew", "plot_skew_percentile_ribbon"),
             ],
         ),
-
         # ── Source effects ───────────────────────────────────────────────
-
         StepSpec(
             code="SRC001",
             name="correct_near_field",
@@ -717,9 +723,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
                 (f"{_EMTOOLS}.source_effects", "plot_normalized_response"),
             ],
         ),
-
         # ── QC / diagnostics ─────────────────────────────────────────────
-
         StepSpec(
             code="QC001",
             name="qc_snapshot",
@@ -774,12 +778,15 @@ STEP_REGISTRY: dict[str, StepSpec] = {
 }
 
 # Build a secondary index: name → StepSpec (for lookup by human name)
-_NAME_INDEX: dict[str, StepSpec] = {spec.name: spec for spec in STEP_REGISTRY.values()}
+_NAME_INDEX: dict[str, StepSpec] = {
+    spec.name: spec for spec in STEP_REGISTRY.values()
+}
 
 
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def lookup_step(code_or_name: str) -> StepSpec:
     """Return the :class:`StepSpec` for *code_or_name*.

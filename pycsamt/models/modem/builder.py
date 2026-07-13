@@ -191,7 +191,8 @@ class InputBuilder(ModEmBase):
         if self.verbose:
             self.logger.info(
                 "InputBuilder.build: wrote %d files to %s",
-                len(files), wd,
+                len(files),
+                wd,
             )
 
         return files

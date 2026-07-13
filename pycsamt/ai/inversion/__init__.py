@@ -4,6 +4,7 @@ pycsamt.ai.inversion
 
 High-level AI-based EM inversion workflows.
 """
+
 from ._sites_bridge import (
     SiteObs1D,
     SiteObs2D,

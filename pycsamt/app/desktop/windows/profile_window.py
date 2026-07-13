@@ -98,12 +98,18 @@ class ProfileViewerWindow(PanelWindow):
         grp_cmp, lay_cmp = make_group("Components")
         row1 = QHBoxLayout()
         row2 = QHBoxLayout()
-        self._chk_xy = QCheckBox("XY"); self._chk_xy.setChecked(True)
-        self._chk_yx = QCheckBox("YX"); self._chk_yx.setChecked(True)
-        self._chk_xx = QCheckBox("XX"); self._chk_xx.setChecked(False)
-        self._chk_yy = QCheckBox("YY"); self._chk_yy.setChecked(False)
-        row1.addWidget(self._chk_xy); row1.addWidget(self._chk_yx)
-        row2.addWidget(self._chk_xx); row2.addWidget(self._chk_yy)
+        self._chk_xy = QCheckBox("XY")
+        self._chk_xy.setChecked(True)
+        self._chk_yx = QCheckBox("YX")
+        self._chk_yx.setChecked(True)
+        self._chk_xx = QCheckBox("XX")
+        self._chk_xx.setChecked(False)
+        self._chk_yy = QCheckBox("YY")
+        self._chk_yy.setChecked(False)
+        row1.addWidget(self._chk_xy)
+        row1.addWidget(self._chk_yx)
+        row2.addWidget(self._chk_xx)
+        row2.addWidget(self._chk_yy)
         lay_cmp.addLayout(row1)
         lay_cmp.addLayout(row2)
         # Auto-refresh when any component checkbox changes
@@ -116,15 +122,17 @@ class ProfileViewerWindow(PanelWindow):
         self._combo_phase = QComboBox()
         # (label, ymin, ymax) — None means auto
         self._PHASE_RANGES = [
-            ("Auto (data range)",          None,   None),
-            ("−90° to 90°    (−π/2 to π/2)",  -90.0,  90.0),
-            ("−180° to 180°  (−π to π)",   -180.0, 180.0),
+            ("Auto (data range)", None, None),
+            ("−90° to 90°    (−π/2 to π/2)", -90.0, 90.0),
+            ("−180° to 180°  (−π to π)", -180.0, 180.0),
             ("−360° to 360°  (−2π to 2π)", -360.0, 360.0),
-            ("0° to 90°",                    0.0,   90.0),
+            ("0° to 90°", 0.0, 90.0),
         ]
         for label, _, _ in self._PHASE_RANGES:
             self._combo_phase.addItem(label)
-        self._combo_phase.currentIndexChanged.connect(self._on_phase_range_changed)
+        self._combo_phase.currentIndexChanged.connect(
+            self._on_phase_range_changed
+        )
         lay_phase.addWidget(self._combo_phase)
         layout.addWidget(grp_phase)
 
@@ -133,7 +141,7 @@ class ProfileViewerWindow(PanelWindow):
         self._chk_errbar = QCheckBox("Error bars")
         self._chk_errbar.setChecked(True)
         self._chk_errbar.toggled.connect(self._on_errbar_toggled)
-        self._chk_legend  = QCheckBox("Legend")
+        self._chk_legend = QCheckBox("Legend")
         self._chk_legend.setChecked(True)
         self._chk_bw = QCheckBox("B/W (black lines)")
         self._chk_bw.setChecked(False)
@@ -168,7 +176,9 @@ class ProfileViewerWindow(PanelWindow):
         self._spin_exag.setDecimals(1)
         self._spin_exag.setSuffix(" ×")
         self._spin_exag.setEnabled(False)
-        self._spin_exag.setToolTip("Vertical exaggeration of terrain surface (1 = true scale)")
+        self._spin_exag.setToolTip(
+            "Vertical exaggeration of terrain surface (1 = true scale)"
+        )
         self._spin_exag.valueChanged.connect(self._on_exag_changed)
         form_topo.addRow("Exaggeration:", self._spin_exag)
         lay_topo.addLayout(form_topo)
@@ -176,9 +186,13 @@ class ProfileViewerWindow(PanelWindow):
 
         # ── Action buttons ────────────────────────────────────────────
         grp_act, lay_act = make_group("Actions")
-        self._btn_refresh = icon_button("↻  Refresh", "profile-view", "Redraw current tab")
+        self._btn_refresh = icon_button(
+            "↻  Refresh", "profile-view", "Redraw current tab"
+        )
         self._btn_refresh.clicked.connect(self._on_refresh)
-        self._btn_export  = icon_button("⬆  Export…", "export", "Export figure to file")
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Export figure to file"
+        )
         self._btn_export.clicked.connect(self._on_export)
         self._btn_pub = icon_button(
             "📐  Publication…",
@@ -211,7 +225,7 @@ class ProfileViewerWindow(PanelWindow):
         try:
             self._profile_panel.set_sites(sites)
         except Exception:
-            pass   # panel redraw errors must not block combo population
+            pass  # panel redraw errors must not block combo population
         self._populate_station_combo(sites)
         self._update_period_range(sites)
 
@@ -241,6 +255,7 @@ class ProfileViewerWindow(PanelWindow):
 
     def _on_topo_toggled(self, checked: bool) -> None:
         from pycsamt.topo import configure_topo
+
         configure_topo(enabled=checked)
         self._spin_exag.setEnabled(checked)
         # Sync the section_panel checkbox if it exists
@@ -260,6 +275,7 @@ class ProfileViewerWindow(PanelWindow):
 
     def _on_exag_changed(self, value: float) -> None:
         from pycsamt.topo import configure_topo
+
         configure_topo(exaggeration=value)
         if self._chk_topo.isChecked():
             tab = self._profile_panel._tabs.currentIndex()
@@ -303,12 +319,16 @@ class ProfileViewerWindow(PanelWindow):
     def _apply_components(self) -> None:
         """Collect checked components and push to PlotController."""
         comps = []
-        if self._chk_xy.isChecked(): comps.append("xy")
-        if self._chk_yx.isChecked(): comps.append("yx")
-        if self._chk_xx.isChecked(): comps.append("xx")
-        if self._chk_yy.isChecked(): comps.append("yy")
+        if self._chk_xy.isChecked():
+            comps.append("xy")
+        if self._chk_yx.isChecked():
+            comps.append("yx")
+        if self._chk_xx.isChecked():
+            comps.append("xx")
+        if self._chk_yy.isChecked():
+            comps.append("yy")
         if not comps:
-            comps = ["xy"]   # always show at least one component
+            comps = ["xy"]  # always show at least one component
             self._chk_xy.setChecked(True)
         self._profile_panel._ctrl.set_components(tuple(comps))
 
@@ -332,7 +352,8 @@ class ProfileViewerWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
-        tab  = self._profile_panel._tabs.currentIndex()
+
+        tab = self._profile_panel._tabs.currentIndex()
         canvases = [
             self._profile_panel._canvas_rho_phi,
             self._profile_panel._canvas_rho_ps,
@@ -350,10 +371,13 @@ class ProfileViewerWindow(PanelWindow):
         from pycsamt.app.desktop.windows.publication_view_dialog import (
             PublicationViewDialog,
         )
-        ctrl  = self._profile_panel._ctrl
-        name  = self._combo_station.current_station()
+
+        ctrl = self._profile_panel._ctrl
+        name = self._combo_station.current_station()
         if not name:
-            self._info_lbl.setText("Select a station before opening Publication View.")
+            self._info_lbl.setText(
+                "Select a station before opening Publication View."
+            )
             return
         # Push current component / errbar state
         self._apply_components()
@@ -363,7 +387,7 @@ class ProfileViewerWindow(PanelWindow):
             dark=ctrl.dark,
             parent=self,
         )
-        dlg.show()     # non-modal: user can keep interacting with the main window
+        dlg.show()  # non-modal: user can keep interacting with the main window
 
     # ── Helpers ───────────────────────────────────────────────────────
 

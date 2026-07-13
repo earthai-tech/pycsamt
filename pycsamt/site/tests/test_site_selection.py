@@ -16,8 +16,7 @@ def _load_edi(p: Path) -> EDIFile:
 
 def _dup_edi(tmp_path: Path, src: Path, stem: str) -> Path:
     dst = tmp_path / f"{stem}.edi"
-    dst.write_text(src.read_text(encoding="utf-8"),
-                   encoding="utf-8")
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dst
 
 
@@ -36,8 +35,7 @@ def _mk_edifiles(
 def test_by_names_exact_wildcard_regex_callable(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi,
-                              "A01", "A02", "B01")
+    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "A01", "A02", "B01")
     s = Sites([e1, e2, e3])
 
     # exact (case-insensitive)
@@ -54,6 +52,7 @@ def test_by_names_exact_wildcard_regex_callable(
 
     # regex
     import re as _re
+
     out = sel.by_names(s, _re.compile(r"^B\d+"))
     assert len(out) == 1 and out.by_index(0).name == "B01"
 
@@ -67,8 +66,7 @@ def test_by_names_exact_wildcard_regex_callable(
 def test_by_index_positive_and_negative(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi,
-                              "I01", "I02", "I03")
+    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "I01", "I02", "I03")
     s = Sites([e1, e2, e3])
 
     out = sel.by_index(s, [0, -1, 10])
@@ -83,8 +81,7 @@ def test_by_index_positive_and_negative(
 def test_by_chainage_head_and_fallback_attr(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "C01",
-                          "C02")
+    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "C01", "C02")
     # set HEAD.chainage
     h1 = e1.get_section("head")  # type: ignore
     h2 = e2.get_section("head")  # type: ignore
@@ -105,8 +102,7 @@ def test_by_chainage_head_and_fallback_attr(
 def test_by_freq_range_intersection(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "F01",
-                          "F02")
+    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "F01", "F02")
     s = Sites([e1, e2])
 
     # simulated EDI has 100 and 200 Hz
@@ -120,13 +116,10 @@ def test_by_freq_range_intersection(
 def test_by_bbox_with_coordinate_update(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "B01",
-                          "B02")
+    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "B01", "B02")
     # move stations apart
-    e1 = ed.set_coords(e1, lat=0.0, lon=0.0, elev=0.0,
-                       inplace=False)
-    e2 = ed.set_coords(e2, lat=10.0, lon=10.0, elev=0.0,
-                       inplace=False)
+    e1 = ed.set_coords(e1, lat=0.0, lon=0.0, elev=0.0, inplace=False)
+    e2 = ed.set_coords(e2, lat=10.0, lon=10.0, elev=0.0, inplace=False)
 
     s = Sites([e1, e2])
     out = sel.by_bbox(s, -1.0, -1.0, 1.0, 1.0)
@@ -136,16 +129,13 @@ def test_by_bbox_with_coordinate_update(
     assert len(out) == 1 and out.by_index(0).name == "B02"
 
 
-def test_by_predicate_lambda(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
-    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi,
-                              "P01", "Q02", "P03")
+def test_by_predicate_lambda(tmp_path: Path, simulated_edi: Path) -> None:
+    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "P01", "Q02", "P03")
     s = Sites([e1, e2, e3])
 
-    out = sel.by_predicate(s, lambda edf: ed.station_name(
-        edf
-    ).startswith("P"))
+    out = sel.by_predicate(
+        s, lambda edf: ed.station_name(edf).startswith("P")
+    )
     # Note: station_name is also in utils; we reuse bound
     # from selection's import through the Sites wrapper at
     # call time.
@@ -157,11 +147,9 @@ def test_by_predicate_lambda(
 def test_keep_finite_z_and_drop_empty(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "Z01",
-                          "Z02")
+    e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "Z01", "Z02")
     # Make Z01 have finite z; Z02 becomes empty
-    e1 = ed.fill_missing(e1, how="zero", components=("Z",),
-                         inplace=False)
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
     # empty Z section object, no arrays
     e2.Z = type("Z", (), {})()  # type: ignore
 
@@ -177,13 +165,10 @@ def test_keep_finite_z_and_drop_empty(
 def test_mask_large_phase_err_threshold_and_no_err(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
-    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi,
-                              "E01", "E02", "E03")
+    e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "E01", "E02", "E03")
     # Allocate finite z and phase_err for E01/E02
-    e1 = ed.fill_missing(e1, how="zero", components=("Z",),
-                         inplace=False)
-    e2 = ed.fill_missing(e2, how="zero", components=("Z",),
-                         inplace=False)
+    e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)
+    e2 = ed.fill_missing(e2, how="zero", components=("Z",), inplace=False)
 
     # Inject phase_err
     z1 = getattr(e1, "Z", None)

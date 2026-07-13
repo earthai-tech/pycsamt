@@ -8,6 +8,7 @@ This module provides the core filtering algorithms used for
 static shift correction, mirroring the methods described in the
 Zonge ASTATIC program manual.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -29,12 +30,15 @@ from ..decorators import isdf
 from ..exceptions import ProcessingError
 
 __all__ = [
-    "tma", "flma", "ama",
+    "tma",
+    "flma",
+    "ama",
     "interpolate_to_log_space",
     "smooth_rho_from_phase",
     "get_reference_frequency",
-    "get_skew", "get_strike",
-    "prepare_strike_frame"
+    "get_skew",
+    "get_strike",
+    "prepare_strike_frame",
 ]
 
 
@@ -47,6 +51,7 @@ def tma(
     trim_proportion: float = 0.2,
 ) -> pd.DataFrame: ...
 
+
 @overload
 def tma(
     rho_profile: np.ndarray,
@@ -55,6 +60,7 @@ def tma(
     window_size: int = 5,
     trim_proportion: float = 0.2,
 ) -> np.ndarray: ...
+
 
 @overload
 def tma(
@@ -116,7 +122,7 @@ def tma(
     if window_size % 2 == 0:
         raise ValueError("`window_size` must be an odd integer.")
 
-    input_type = "series" # Default
+    input_type = "series"  # Default
     if isinstance(rho_profile, str):
         if data is None:
             raise ValueError(
@@ -133,12 +139,8 @@ def tma(
 
     # Perform the rolling trimmed mean calculation
     smoothed_series = series.rolling(
-        window=window_size,
-        center=True,
-        min_periods=window_size // 2 + 1
-    ).apply(
-        lambda x: trim_mean(x.dropna(), trim_proportion)
-    )
+        window=window_size, center=True, min_periods=window_size // 2 + 1
+    ).apply(lambda x: trim_mean(x.dropna(), trim_proportion))
 
     # Return the data in the same format as the input
     if input_type == "dataframe":
@@ -150,6 +152,7 @@ def tma(
 
     return smoothed_series
 
+
 @overload
 def flma(
     z_profile: str,
@@ -159,6 +162,7 @@ def flma(
     data: pd.DataFrame,
     filter_width_dipoles: float = 5.0,
 ) -> pd.DataFrame: ...
+
 
 @overload
 def flma(
@@ -170,6 +174,7 @@ def flma(
     filter_width_dipoles: float = 5.0,
 ) -> np.ndarray: ...
 
+
 @overload
 def flma(
     z_profile: pd.Series,
@@ -179,6 +184,7 @@ def flma(
     data: None = None,
     filter_width_dipoles: float = 5.0,
 ) -> pd.Series: ...
+
 
 def flma(
     z_profile: pd.Series | np.ndarray | str,
@@ -246,16 +252,14 @@ def flma(
         stn_series = stations
 
     # --- Core Filtering Logic ---
-    smoothed_z = pd.Series(index=z_series.index, dtype='complex128')
+    smoothed_z = pd.Series(index=z_series.index, dtype="complex128")
     filter_radius = (filter_width_dipoles / 2.0) * dipole_length
 
     for i, stn_center in enumerate(stn_series):
         window_min = stn_center - filter_radius
         window_max = stn_center + filter_radius
 
-        window_mask = (stn_series >= window_min) & (
-            stn_series <= window_max
-        )
+        window_mask = (stn_series >= window_min) & (stn_series <= window_max)
         z_in_window = z_series[window_mask]
 
         if z_in_window.empty or z_in_window.isnull().all():
@@ -263,9 +267,7 @@ def flma(
             continue
 
         weights = hann(len(z_in_window))
-        smoothed_z.iloc[i] = np.average(
-            z_in_window.dropna(), weights=weights
-        )
+        smoothed_z.iloc[i] = np.average(z_in_window.dropna(), weights=weights)
 
     # --- Return data in the original format ---
     if input_type == "dataframe":
@@ -276,6 +278,7 @@ def flma(
         return smoothed_z.to_numpy()
 
     return smoothed_z
+
 
 @overload
 def ama(
@@ -289,6 +292,7 @@ def ama(
     iterations: int = 3,
 ) -> pd.DataFrame: ...
 
+
 @overload
 def ama(
     z_profile: np.ndarray,
@@ -301,6 +305,7 @@ def ama(
     iterations: int = 3,
 ) -> np.ndarray: ...
 
+
 @overload
 def ama(
     z_profile: pd.Series,
@@ -312,6 +317,7 @@ def ama(
     skin_depth_factor: float = 2.0,
     iterations: int = 3,
 ) -> pd.Series: ...
+
 
 def ama(
     z_profile: pd.Series | np.ndarray | str,
@@ -382,13 +388,11 @@ def ama(
     smoothed_z = z_series.copy()
 
     for _ in range(iterations):
-        rho_local = (np.abs(smoothed_z)**2) / (omega * MU_0)
+        rho_local = (np.abs(smoothed_z) ** 2) / (omega * MU_0)
         skin_depth = 503 * np.sqrt(rho_local / frequency)
         filter_radius = (skin_depth_factor / 2.0) * skin_depth
 
-        current_pass_z = pd.Series(
-            index=z_series.index, dtype='complex128'
-        )
+        current_pass_z = pd.Series(index=z_series.index, dtype="complex128")
         for i, stn_center in enumerate(stn_series):
             radius = filter_radius.iloc[i]
             window_min = stn_center - radius
@@ -419,6 +423,7 @@ def ama(
 
     return smoothed_z
 
+
 @isdf
 def interpolate_to_log_space(
     df: pd.DataFrame,
@@ -426,7 +431,7 @@ def interpolate_to_log_space(
     freq_min: float | None = None,
     freq_max: float | None = None,
     num_points: int = 50,
-    interp_kind: str = 'cubic',
+    interp_kind: str = "cubic",
 ) -> pd.DataFrame:
     r"""Interpolate AVG data onto a regular log-spaced grid.
 
@@ -460,7 +465,7 @@ def interpolate_to_log_space(
         A new DataFrame with the data interpolated onto the
         specified logarithmic frequency grid.
     """
-    required_cols = ['station', 'freq', 'rho', 'phase', 'comp']
+    required_cols = ["station", "freq", "rho", "phase", "comp"]
     if not all(col in df.columns for col in required_cols):
         raise ProcessingError(
             "Input DataFrame must contain 'station', 'freq', 'rho', "
@@ -468,34 +473,36 @@ def interpolate_to_log_space(
         )
 
     # Determine frequency range for the new grid
-    f_min = freq_min or df['freq'].min()
-    f_max = freq_max or df['freq'].max()
-    new_freq_log = np.logspace(
-        np.log10(f_min), np.log10(f_max), num_points
-    )
+    f_min = freq_min or df["freq"].min()
+    f_max = freq_max or df["freq"].max()
+    new_freq_log = np.logspace(np.log10(f_min), np.log10(f_max), num_points)
 
     interpolated_data = []
     # Group by each unique sounding curve
-    for (station, comp), group in df.groupby(['station', 'comp']):
+    for (station, comp), group in df.groupby(["station", "comp"]):
         # Sort by frequency to ensure correct interpolation order
-        sounding = group.sort_values('freq').dropna(
-            subset=['rho', 'phase']
-        )
+        sounding = group.sort_values("freq").dropna(subset=["rho", "phase"])
         if len(sounding) < 2:
-            continue # Cannot interpolate with fewer than 2 points
+            continue  # Cannot interpolate with fewer than 2 points
 
-        log_freq = np.log(sounding['freq'])
-        log_rho = np.log(sounding['rho'])
-        phase_rad = sounding['phase'] * 1e-3 # to radians
+        log_freq = np.log(sounding["freq"])
+        log_rho = np.log(sounding["rho"])
+        phase_rad = sounding["phase"] * 1e-3  # to radians
 
         # Create interpolation functions
         interp_rho = interp1d(
-            log_freq, log_rho, kind=interp_kind,
-            bounds_error=False, fill_value=np.nan
+            log_freq,
+            log_rho,
+            kind=interp_kind,
+            bounds_error=False,
+            fill_value=np.nan,
         )
         interp_phase = interp1d(
-            log_freq, phase_rad, kind=interp_kind,
-            bounds_error=False, fill_value=np.nan
+            log_freq,
+            phase_rad,
+            kind=interp_kind,
+            bounds_error=False,
+            fill_value=np.nan,
         )
 
         # Evaluate at the new frequency points
@@ -503,19 +510,22 @@ def interpolate_to_log_space(
         new_phase_rad = interp_phase(np.log(new_freq_log))
 
         # Assemble the new DataFrame for this sounding
-        interp_sounding = pd.DataFrame({
-            'station': station,
-            'comp': comp,
-            'freq': new_freq_log,
-            'rho': np.exp(new_rho_log),
-            'phase': new_phase_rad * 1000.0, # back to mrad
-        })
+        interp_sounding = pd.DataFrame(
+            {
+                "station": station,
+                "comp": comp,
+                "freq": new_freq_log,
+                "rho": np.exp(new_rho_log),
+                "phase": new_phase_rad * 1000.0,  # back to mrad
+            }
+        )
         interpolated_data.append(interp_sounding)
 
     if not interpolated_data:
-        return pd.DataFrame() # Return empty if no data was processed
+        return pd.DataFrame()  # Return empty if no data was processed
 
     return pd.concat(interpolated_data, ignore_index=True)
+
 
 @isdf
 def smooth_rho_from_phase(
@@ -545,7 +555,7 @@ def smooth_rho_from_phase(
         A new DataFrame with a 'rho_smoothed' column containing
         the reconstructed, smoother apparent resistivity values.
     """
-    required_cols = ['station', 'freq', 'rho', 'phase', 'comp']
+    required_cols = ["station", "freq", "rho", "phase", "comp"]
     if not all(col in df.columns for col in required_cols):
         raise ProcessingError(
             "Input DataFrame must contain 'station', 'freq', 'rho', "
@@ -553,22 +563,19 @@ def smooth_rho_from_phase(
         )
 
     df_out = df.copy()
-    df_out['rho_smoothed'] = np.nan
+    df_out["rho_smoothed"] = np.nan
 
     # Group by each unique sounding curve
-    for (_station, _comp), group in df.groupby(['station', 'comp']):
-        sounding = group.sort_values('freq').dropna(
-            subset=['rho', 'phase']
-        )
+    for (_station, _comp), group in df.groupby(["station", "comp"]):
+        sounding = group.sort_values("freq").dropna(subset=["rho", "phase"])
         if len(sounding) < 5:  # Need enough points for spline
             continue
 
-        log_freq = np.log(sounding['freq'])
-        phase_rad = sounding['phase'] * 1e-3  # to radians
+        log_freq = np.log(sounding["freq"])
+        phase_rad = sounding["phase"] * 1e-3  # to radians
 
         # 1. Smooth the phase data with a spline
-        spline = UnivariateSpline(
-            log_freq, phase_rad, s=smoothing_factor)
+        spline = UnivariateSpline(log_freq, phase_rad, s=smoothing_factor)
         phase_smooth = spline(log_freq)
 
         # 2. Apply Hilbert transform to get the imaginary part of ln(Z)
@@ -583,20 +590,21 @@ def smooth_rho_from_phase(
         z_mag_smooth = np.exp(log_z_mag)
 
         # 5. Calculate the new, smoother apparent resistivity
-        omega = 2 * PI * sounding['freq']
+        omega = 2 * PI * sounding["freq"]
         rho_smooth = (z_mag_smooth**2) / (omega * MU_0)
 
         # Place the smoothed values back into the output DataFrame
-        df_out.loc[sounding.index, 'rho_smoothed'] = rho_smooth
+        df_out.loc[sounding.index, "rho_smoothed"] = rho_smooth
 
     return df_out
+
 
 @isdf
 def get_reference_frequency(
     df: pd.DataFrame,
-    mode: str | float = 'auto',
+    mode: str | float = "auto",
     *,
-    qc_column: str = 'pc_rho',
+    qc_column: str = "pc_rho",
     qc_threshold: float = 20.0,
 ) -> float:
     r"""Determine a suitable reference frequency for static shift.
@@ -647,7 +655,7 @@ def get_reference_frequency(
     if isinstance(mode, (int, float)):
         return float(mode)
 
-    required_cols = ['station', 'freq', qc_column]
+    required_cols = ["station", "freq", qc_column]
     if not all(col in df.columns for col in required_cols):
         raise ProcessingError(
             "Input DataFrame must contain 'station', 'freq', and "
@@ -660,15 +668,17 @@ def get_reference_frequency(
     if clean_df.empty:
         warnings.warn(
             f"No data found with '{qc_column}' < {qc_threshold}. "
-            "Falling back to the absolute maximum frequency.", stacklevel=2
+            "Falling back to the absolute maximum frequency.",
+            stacklevel=2,
         )
-        return df['freq'].max()
+        return df["freq"].max()
 
     # 2. Find the highest clean frequency for each station
-    max_freq_per_station = clean_df.groupby('station')['freq'].max()
+    max_freq_per_station = clean_df.groupby("station")["freq"].max()
 
     # 3. Return the median of these frequencies for robustness
     return max_freq_per_station.median()
+
 
 @isdf
 def get_strike(df: pd.DataFrame) -> pd.DataFrame:
@@ -729,11 +739,10 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
     pycsamt.zonge.avg.AMTAVG.rotate : Rotate the tensor by a given
         angle.
     """
-    required = ['station', 'freq', 'comp', 'z']
+    required = ["station", "freq", "comp", "z"]
     if not all(c in df.columns for c in required):
         raise ProcessingError(
-            f"Input DataFrame is missing one of required columns: "
-            f"{required}"
+            f"Input DataFrame is missing one of required columns: {required}"
         )
 
     # Pivot to get tensor components for each measurement point
@@ -743,37 +752,40 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
 
     # Split complex data before pivoting ---
     df_copy = df.copy()
-    df_copy['z_real'] = np.real(df_copy['z'])
-    df_copy['z_imag'] = np.imag(df_copy['z'])
+    df_copy["z_real"] = np.real(df_copy["z"])
+    df_copy["z_imag"] = np.imag(df_copy["z"])
 
     tensor_df_real = df_copy.pivot_table(
-        index=['station', 'freq'], columns='comp', values='z_real'
+        index=["station", "freq"], columns="comp", values="z_real"
     )
     tensor_df_imag = df_copy.pivot_table(
-        index=['station', 'freq'], columns='comp', values='z_imag'
+        index=["station", "freq"], columns="comp", values="z_imag"
     )
     # Recombine into a complex tensor after pivoting
     tensor_df = (tensor_df_real + 1j * tensor_df_imag).reset_index()
 
     # Ensure all four components are present
-    for comp in ['ExHx', 'ExHy', 'EyHx', 'EyHy']:
+    for comp in ["ExHx", "ExHy", "EyHx", "EyHy"]:
         if comp not in tensor_df.columns:
             tensor_df[comp] = 0 + 0j
 
-    zxx, zxy = tensor_df['ExHx'], tensor_df['ExHy']
-    zyx, zyy = tensor_df['EyHx'], tensor_df['EyHy']
+    zxx, zxy = tensor_df["ExHx"], tensor_df["ExHy"]
+    zyx, zyy = tensor_df["EyHx"], tensor_df["EyHy"]
 
     # Calculate strike angle using tensor decomposition
-    real_a = np.real (zxy + zyx)
-    real_b = np.real (zxx - zyy)
+    real_a = np.real(zxy + zyx)
+    real_b = np.real(zxx - zyy)
     strike_rad = 0.5 * np.arctan2(real_a, real_b)
     strike_deg = np.rad2deg(strike_rad)
 
-    return pd.DataFrame({
-        'station': tensor_df['station'],
-        'freq': tensor_df['freq'],
-        'strike_angle': strike_deg
-    })
+    return pd.DataFrame(
+        {
+            "station": tensor_df["station"],
+            "freq": tensor_df["freq"],
+            "strike_angle": strike_deg,
+        }
+    )
+
 
 @isdf
 def get_skew(df: pd.DataFrame) -> pd.DataFrame:
@@ -829,50 +841,52 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
     --------
     get_strike : Calculate the geoelectric strike angle.
     """
-    required = ['station', 'freq', 'comp', 'z']
+    required = ["station", "freq", "comp", "z"]
     if not all(c in df.columns for c in required):
         raise ProcessingError(
-            f"Input DataFrame is missing one of required columns: "
-            f"{required}"
+            f"Input DataFrame is missing one of required columns: {required}"
         )
 
     # Pivot to get tensor components for each measurement point
     df_copy = df.copy()
-    df_copy['z_real'] = np.real(df_copy['z'])
-    df_copy['z_imag'] = np.imag(df_copy['z'])
+    df_copy["z_real"] = np.real(df_copy["z"])
+    df_copy["z_imag"] = np.imag(df_copy["z"])
 
     tensor_df_real = df_copy.pivot_table(
-        index=['station', 'freq'], columns='comp', values='z_real'
+        index=["station", "freq"], columns="comp", values="z_real"
     )
     tensor_df_imag = df_copy.pivot_table(
-        index=['station', 'freq'], columns='comp', values='z_imag'
+        index=["station", "freq"], columns="comp", values="z_imag"
     )
     # Recombine into a complex tensor after pivoting
     tensor_df = (tensor_df_real + 1j * tensor_df_imag).reset_index()
 
     # Ensure all four components are present
-    for comp in ['ExHx', 'ExHy', 'EyHx', 'EyHy']:
+    for comp in ["ExHx", "ExHy", "EyHx", "EyHy"]:
         if comp not in tensor_df.columns:
             tensor_df[comp] = 0 + 0j
 
-    zxx, zxy = tensor_df['ExHx'], tensor_df['ExHy']
-    zyx, zyy = tensor_df['EyHx'], tensor_df['EyHy']
+    zxx, zxy = tensor_df["ExHx"], tensor_df["ExHy"]
+    zyx, zyy = tensor_df["EyHx"], tensor_df["EyHy"]
 
     # Calculate Swift's skew
     numerator = np.abs(zxx + zyy)
     denominator = np.abs(zxy - zyx)
     # Avoid division by zero
     skew = np.divide(
-        numerator, denominator,
+        numerator,
+        denominator,
         out=np.full_like(numerator, np.nan, dtype=float),
-        where=(denominator != 0)
+        where=(denominator != 0),
     )
 
-    return pd.DataFrame({
-        'station': tensor_df['station'],
-        'freq': tensor_df['freq'],
-        'skew': skew
-    })
+    return pd.DataFrame(
+        {
+            "station": tensor_df["station"],
+            "freq": tensor_df["freq"],
+            "skew": skew,
+        }
+    )
 
 
 def prepare_strike_frame(
@@ -947,14 +961,10 @@ def prepare_strike_frame(
     """
     need_base = {station_col, freq_col, comp_col}
 
-    def _subset(
-        fr: pd.DataFrame, cols: list[str]
-    ) -> pd.DataFrame:
+    def _subset(fr: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
         miss = [c for c in cols if c not in fr.columns]
         if miss:
-            raise ProcessingError(
-                f"Missing columns: {miss}"
-            )
+            raise ProcessingError(f"Missing columns: {miss}")
         out = fr.loc[:, cols]
         return out.copy() if copy else out
 
@@ -972,15 +982,15 @@ def prepare_strike_frame(
             if drop_na:
                 out = out.dropna(how=na_policy)
             # try to ensure complex dtype
-            if not np.issubdtype(
-                out[z_col].dtype, np.complexfloating
-            ):
+            if not np.issubdtype(out[z_col].dtype, np.complexfloating):
                 out[z_col] = out[z_col].astype(complex)
             out = out.rename(
-                columns={station_col: "station",
-                         freq_col: "freq",
-                         comp_col: "comp",
-                         z_col: "z"}
+                columns={
+                    station_col: "station",
+                    freq_col: "freq",
+                    comp_col: "comp",
+                    z_col: "z",
+                }
             )
             if ensure_sorted:
                 out = out.sort_values(["station", "freq", "comp"])
@@ -1024,9 +1034,7 @@ def prepare_strike_frame(
             ph_rad = ph
         else:
             # auto
-            max_abs = (
-                np.nanmax(np.abs(ph)) if ph.size else 0.0
-            )
+            max_abs = np.nanmax(np.abs(ph)) if ph.size else 0.0
             if max_abs <= np.pi * 1.5:
                 ph_rad = ph  # already radians
             elif max_abs <= 180.0:
@@ -1040,9 +1048,11 @@ def prepare_strike_frame(
         ret = ret.copy() if copy else ret
         ret["z"] = zc
         ret = ret.rename(
-            columns={station_col: "station",
-                     freq_col: "freq",
-                     comp_col: "comp"}
+            columns={
+                station_col: "station",
+                freq_col: "freq",
+                comp_col: "comp",
+            }
         )
         if ensure_sorted:
             ret = ret.sort_values(["station", "freq", "comp"])
@@ -1055,15 +1065,15 @@ def prepare_strike_frame(
         out = _mask_components(out)
         if drop_na:
             out = out.dropna(how=na_policy)
-        if not np.issubdtype(
-            out[z_col].dtype, np.complexfloating
-        ):
+        if not np.issubdtype(out[z_col].dtype, np.complexfloating):
             out[z_col] = out[z_col].astype(complex)
         out = out.rename(
-            columns={station_col: "station",
-                     freq_col: "freq",
-                     comp_col: "comp",
-                     z_col: "z"}
+            columns={
+                station_col: "station",
+                freq_col: "freq",
+                comp_col: "comp",
+                z_col: "z",
+            }
         )
         if ensure_sorted:
             out = out.sort_values(["station", "freq", "comp"])
@@ -1073,4 +1083,3 @@ def prepare_strike_frame(
         "Provide 'z_frame' with a complex 'z' column or "
         "'df' with 'rho','phase','freq' to derive z."
     )
-

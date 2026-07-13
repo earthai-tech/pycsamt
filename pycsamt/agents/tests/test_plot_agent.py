@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Tests for PlotAgent (rho/phi, phase & phase-tensor pseudo-sections)."""
+
 from __future__ import annotations
 
 import os
@@ -26,9 +27,12 @@ from pycsamt.emtools._core import ensure_sites  # noqa: E402
 _DATA = os.path.join("data", "3edis")
 _HAS_DATA = os.path.isdir(_DATA)
 _TIP = "edi_out"
-_HAS_TIP = os.path.isdir(_TIP) and _has_tipper(
-    ensure_sites(_TIP, recursive=True, verbose=0)
-) if os.path.isdir(_TIP) else False
+_HAS_TIP = (
+    os.path.isdir(_TIP)
+    and _has_tipper(ensure_sites(_TIP, recursive=True, verbose=0))
+    if os.path.isdir(_TIP)
+    else False
+)
 
 
 class TestPlotHelpers(unittest.TestCase):
@@ -100,9 +104,17 @@ class TestPlotAgentFigures(unittest.TestCase):
     def test_kinds_constant(self):
         self.assertEqual(
             set(PLOT_KINDS),
-            {"rhophi", "phase_psection", "pt_psection", "tipper", "pt_map",
-             "station_response", "strike_profile", "pt_strip",
-             "pt_strip_grid"},
+            {
+                "rhophi",
+                "phase_psection",
+                "pt_psection",
+                "tipper",
+                "pt_map",
+                "station_response",
+                "strike_profile",
+                "pt_strip",
+                "pt_strip_grid",
+            },
         )
 
     def test_pt_map(self):

@@ -18,6 +18,7 @@ Features extracted per (site, frequency) observation
 The combined score lies in ``[0, 1]`` — 1 means good quality, 0 means
 flagged bad.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,6 +34,7 @@ __all__ = ["EMQCScorer"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal feature extraction
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     """
@@ -58,9 +60,7 @@ def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
 
     # SNR from error array
     if ze is not None and ze.shape == z.shape:
-        amp = np.sqrt(
-            0.5 * (np.abs(zxy) ** 2 + np.abs(zyx) ** 2)
-        )
+        amp = np.sqrt(0.5 * (np.abs(zxy) ** 2 + np.abs(zyx) ** 2))
         err = np.sqrt(
             0.5 * (np.abs(ze[:, 0, 1]) ** 2 + np.abs(ze[:, 1, 0]) ** 2)
         )
@@ -70,6 +70,7 @@ def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
         amp_xy = np.abs(zxy)
         if len(amp_xy) > 3:
             from scipy.signal import medfilt
+
             smooth = medfilt(amp_xy, kernel_size=3)
             residual = np.abs(amp_xy - smooth)
             F[:, 0] = amp_xy / (residual + 1e-24)
@@ -105,7 +106,9 @@ def _sites_to_feature_df(sites: Any) -> pd.DataFrame:
             ensure_sites,
         )
     except ImportError as exc:
-        raise ImportError("emtools is required for site-based QC scoring") from exc
+        raise ImportError(
+            "emtools is required for site-based QC scoring"
+        ) from exc
 
     S = ensure_sites(sites, recursive=True, on_dup="replace")
     rows: list[dict[str, Any]] = []
@@ -138,6 +141,7 @@ def _sites_to_feature_df(sites: Any) -> pd.DataFrame:
 # ─────────────────────────────────────────────────────────────────────────────
 # EMQCScorer
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class EMQCScorer(BaseEMProcessor):
     """
@@ -196,7 +200,13 @@ class EMQCScorer(BaseEMProcessor):
         self.random_state = random_state
 
         self._model: Any = None  # IsolationForest
-        self._feat_cols: list[str] = ["snr", "swift_skew", "asym", "phase_xy", "phase_yx"]
+        self._feat_cols: list[str] = [
+            "snr",
+            "swift_skew",
+            "asym",
+            "phase_xy",
+            "phase_yx",
+        ]
         self._is_fitted: bool = False
 
     # ─── BaseEMProcessor interface ────────────────────────────────────────
@@ -230,7 +240,9 @@ class EMQCScorer(BaseEMProcessor):
         valid = np.all(np.isfinite(feat), axis=1)
         feat_clean = feat[valid]
         if len(feat_clean) == 0:
-            raise ValueError("No valid (finite) feature rows found in training data.")
+            raise ValueError(
+                "No valid (finite) feature rows found in training data."
+            )
 
         self._model = IsolationForest(
             n_estimators=self.n_estimators,
@@ -341,9 +353,12 @@ class EMQCScorer(BaseEMProcessor):
         try:
             import io
             import pickle
+
             buf = io.BytesIO()
             pickle.dump(self._model, buf)
-            return {"_iso_model": np.frombuffer(buf.getvalue(), dtype=np.uint8)}
+            return {
+                "_iso_model": np.frombuffer(buf.getvalue(), dtype=np.uint8)
+            }
         except Exception:
             return {}
 
@@ -352,6 +367,7 @@ class EMQCScorer(BaseEMProcessor):
             try:
                 import io
                 import pickle
+
                 buf = io.BytesIO(bytes(weights["_iso_model"]))
                 self._model = pickle.load(buf)
                 self._is_fitted = True

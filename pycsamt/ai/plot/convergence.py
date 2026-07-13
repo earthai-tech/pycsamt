@@ -13,6 +13,7 @@ Usage
 >>> fig = plot_convergence(trainer.history)
 >>> fig.savefig("convergence.png", dpi=300)
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -97,26 +98,49 @@ def plot_convergence(
         val_mean = val_mat.mean(axis=0)
 
         # ── Loss curves ──────────────────────────────────────────────────
-        ax.plot(epochs, train_mean,
-                color=EM_COLORS["primary"], lw=1.8, label="Train loss")
-        ax.plot(epochs, val_mean,
-                color=EM_COLORS["secondary"], lw=1.8, label="Val loss")
+        ax.plot(
+            epochs,
+            train_mean,
+            color=EM_COLORS["primary"],
+            lw=1.8,
+            label="Train loss",
+        )
+        ax.plot(
+            epochs,
+            val_mean,
+            color=EM_COLORS["secondary"],
+            lw=1.8,
+            label="Val loss",
+        )
 
         if n_runs > 1:
             train_std = train_mat.std(axis=0)
             val_std = val_mat.std(axis=0)
-            ax.fill_between(epochs,
-                            train_mean - train_std, train_mean + train_std,
-                            color=EM_COLORS["primary"], alpha=0.15)
-            ax.fill_between(epochs,
-                            val_mean - val_std, val_mean + val_std,
-                            color=EM_COLORS["secondary"], alpha=0.15)
+            ax.fill_between(
+                epochs,
+                train_mean - train_std,
+                train_mean + train_std,
+                color=EM_COLORS["primary"],
+                alpha=0.15,
+            )
+            ax.fill_between(
+                epochs,
+                val_mean - val_std,
+                val_mean + val_std,
+                color=EM_COLORS["secondary"],
+                alpha=0.15,
+            )
 
         # Best epoch marker
         if best_epoch is None:
             best_epoch = int(np.argmin(val_mean)) + 1
-        ax.axvline(best_epoch, color="#555555", lw=1.0,
-                   linestyle="--", label=f"Best epoch ({best_epoch})")
+        ax.axvline(
+            best_epoch,
+            color="#555555",
+            lw=1.0,
+            linestyle="--",
+            label=f"Best epoch ({best_epoch})",
+        )
 
         ax.set_xlabel("Epoch", fontsize=11)
         ax.set_ylabel("MSE loss", fontsize=11)
@@ -129,9 +153,14 @@ def plot_convergence(
         if show_lr and "lr" in histories[0]:
             lr_vals = np.array(histories[0]["lr"])
             ax2 = ax.twinx()
-            ax2.plot(epochs, lr_vals,
-                     color="#999999", lw=1.0, linestyle=":",
-                     label="LR")
+            ax2.plot(
+                epochs,
+                lr_vals,
+                color="#999999",
+                lw=1.0,
+                linestyle=":",
+                label="LR",
+            )
             ax2.set_ylabel("Learning rate", fontsize=9, color="#777777")
             ax2.tick_params(axis="y", labelsize=8, colors="#777777")
             ax2.set_yscale("log")
@@ -184,6 +213,7 @@ def plot_lr_schedule(
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _ema(arr: np.ndarray, alpha: float) -> np.ndarray:
     """Exponential moving average, forward-pass."""
     out = np.empty_like(arr)
@@ -194,5 +224,8 @@ def _ema(arr: np.ndarray, alpha: float) -> np.ndarray:
 
 
 class _NullCtx:
-    def __enter__(self): return self
-    def __exit__(self, *_): pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass

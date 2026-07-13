@@ -13,12 +13,7 @@ from pycsamt.tdem import (
 )
 from pycsamt.tdem.io import read_tem_log
 
-DATA_DIR = (
-    Path(__file__).parents[3]
-    / "data"
-    / "TEMAVG"
-    / "JIANGSU"
-)
+DATA_DIR = Path(__file__).parents[3] / "data" / "TEMAVG" / "JIANGSU"
 LOG_FILE = DATA_DIR / "TEM100.LOG"
 
 pytestmark = pytest.mark.skipif(

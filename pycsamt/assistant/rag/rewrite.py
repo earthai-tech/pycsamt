@@ -30,15 +30,30 @@ __all__ = ["is_follow_up", "rewrite_query"]
 # Cues that a message continues a previous one rather than introducing a
 # new subject ("run it again", "same for line 3", "now do that").
 _FOLLOWUP_CUES = (
-    "again", "same", "as well", "as before", "like before", "redo",
-    "repeat", "once more", "also do", "then do", "do that", "do this",
-    "do it", "run it", "that one", "this one", "the other one",
-    "same thing", "same as", "now do", "and now",
+    "again",
+    "same",
+    "as well",
+    "as before",
+    "like before",
+    "redo",
+    "repeat",
+    "once more",
+    "also do",
+    "then do",
+    "do that",
+    "do this",
+    "do it",
+    "run it",
+    "that one",
+    "this one",
+    "the other one",
+    "same thing",
+    "same as",
+    "now do",
+    "and now",
 )
 # Bare anaphora words that, standing in for the subject, signal a follow-up.
-_ANAPHORA = frozenset(
-    "it that this them those these one".split()
-)
+_ANAPHORA = frozenset("it that this them those these one".split())
 # Generic references to "the line" without naming one.
 _LINE_REF = re.compile(
     r"\b(that|this|the|same|it|its)\s+line\b|\bsame\s+data\b", re.IGNORECASE
@@ -63,8 +78,10 @@ def is_follow_up(query: str) -> bool:
     words = _WORD.findall(ql)
     # A short message that is essentially just an anaphor ("that", "it too").
     content = [w for w in words if w not in _ANAPHORA]
-    return bool(words) and len(content) <= 1 and any(
-        w in _ANAPHORA for w in words
+    return (
+        bool(words)
+        and len(content) <= 1
+        and any(w in _ANAPHORA for w in words)
     )
 
 
@@ -107,7 +124,11 @@ def rewrite_query(
         terms = _workflow_terms(wf)
         if terms:
             extra.append(terms)
-    if last_line and _LINE_REF.search(q) and last_line.lower() not in q.lower():
+    if (
+        last_line
+        and _LINE_REF.search(q)
+        and last_line.lower() not in q.lower()
+    ):
         extra.append(last_line)
 
     return f"{q} {' '.join(extra)}".strip() if extra else q

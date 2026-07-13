@@ -6,6 +6,7 @@ Electromagnetic utilities.
 
 Aggregates helpers for AMT/CSAMT processing.
 """
+
 from __future__ import annotations
 
 import os
@@ -34,29 +35,28 @@ from .plot import plot_errorbar
 from .stats import get_confidence_ratio, remove_outliers
 from .validation import assert_ratio, isinstance_relaxed
 
-__all__ =[
-    'check_em_kind',
-    'extract_z_list',
-    'parse_tensor',
-    'compute_qc',
-    'full_freq',
-    'tensor2d',
-    'align_tensor',
-    'export_edis',
-    'plot_confidence',
-    'plot_strike',
-    'plot_tensors',
-    'plot_station_tensors',
-    'wrap_phase',
-    'plot_lcurve',
-
+__all__ = [
+    "check_em_kind",
+    "extract_z_list",
+    "parse_tensor",
+    "compute_qc",
+    "full_freq",
+    "tensor2d",
+    "align_tensor",
+    "export_edis",
+    "plot_confidence",
+    "plot_strike",
+    "plot_tensors",
+    "plot_station_tensors",
+    "wrap_phase",
+    "plot_lcurve",
 ]
 
 _BACKWARD_SINCE = "2.0.0"
 _BACKWARD_REMOVE = "2.17.0"
 
 
-def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
+def check_em_kind(objs, /) -> str:  # _assert_z_or_edi_objs
     """
     Validate a collection of EM objects and return their common kind.
 
@@ -114,9 +114,7 @@ def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
             "got 'str'/'bytes'."
         )
     if not hasattr(objs, "__iter__"):
-        raise TypeError(
-            "Input must be an iterable of Edi or Z objects."
-        )
+        raise TypeError("Input must be an iterable of Edi or Z objects.")
 
     # Materialize once; allows single pass over generators.
     items = list(objs)
@@ -124,29 +122,22 @@ def check_em_kind(objs, /) -> str: # _assert_z_or_edi_objs
         raise TypeError("Input iterable is empty.")
 
     # Determine membership per class with robust isinstance checks.
-    is_edi = [
-        bool(isinstance_relaxed(o, Edi)) for o in items
-    ]
-    is_z = [
-        bool(isinstance_relaxed(o, Z)) for o in items
-    ]
+    is_edi = [bool(isinstance_relaxed(o, Edi)) for o in items]
+    is_z = [bool(isinstance_relaxed(o, Z)) for o in items]
 
     # Any non-EM object?
     if not all(e or z for e, z in zip(is_edi, is_z)):
-        raise EMError(
-            "All elements must be Edi or Z instances."
-        )
+        raise EMError("All elements must be Edi or Z instances.")
 
     # Mixed kinds?
     if any(is_edi) and any(is_z):
-        raise EMError(
-            "Do not mix Edi and Z objects in the same collection."
-        )
+        raise EMError("Do not mix Edi and Z objects in the same collection.")
 
     # Uniform kind → return the label.
     return "EDI" if all(is_edi) else "Z"
 
-def extract_z_list(objs, /): # get_z_from
+
+def extract_z_list(objs, /):  # get_z_from
     """
     Return a list of :class:`Z` objects from EDI or Z inputs.
 
@@ -194,11 +185,10 @@ def extract_z_list(objs, /): # get_z_from
     try:
         return [e.Z for e in items]
     except AttributeError as exc:
-        raise EMError(
-            "An Edi object is missing the '.Z' attribute."
-        ) from exc
+        raise EMError("An Edi object is missing the '.Z' attribute.") from exc
 
-def parse_tensor(                                           # validate_tensor
+
+def parse_tensor(  # validate_tensor
     out: str = "resxy",
     *,
     tensor: str | None = None,
@@ -267,9 +257,7 @@ def parse_tensor(                                           # validate_tensor
     """
     # Validate paired arguments; both or none must be given.
     if (tensor and not component) or (component and not tensor):
-        raise EMError(
-            "Provide both 'tensor' and 'component' or neither."
-        )
+        raise EMError("Provide both 'tensor' and 'component' or neither.")
 
     # When both are given, build a compact 'out' token.
     if tensor and component:
@@ -303,9 +291,7 @@ def parse_tensor(                                           # validate_tensor
     #  - tensor name or alias
     #  - component token (xx|xy|yx|yy)
     #  - error token (err|error)
-    r_name = re.compile(
-        r"(res|rho|rhoa|phase|phs|z|tensor|freq|frequency)"
-    )
+    r_name = re.compile(r"(res|rho|rhoa|phase|phs|z|tensor|freq|frequency)")
     r_comp = re.compile(r"(xx|xy|yx|yy)")
     r_err = re.compile(r"(err|error)")
 
@@ -350,7 +336,8 @@ def parse_tensor(                                           # validate_tensor
     # function's contract matches the legacy behavior.
     return name, comp
 
-def align_tensor(                         # fittensor
+
+def align_tensor(  # fittensor
     ref_freq: ArrayLike,
     site_freq: ArrayLike,
     z: NDArray[DType[complex]],
@@ -450,7 +437,8 @@ def align_tensor(                         # fittensor
 
     return z_aligned
 
-def export_edis(                                                # exportEDIS
+
+def export_edis(  # exportEDIS
     edi_objs: list[EDIO],
     new_z: list[ZO],
     savepath: str | None = None,
@@ -537,7 +525,7 @@ def export_edis(                                                # exportEDIS
         )
 
 
-def plot_confidence(   # plot_confidence_in
+def plot_confidence(  # plot_confidence_in
     z_or_edis_obj_list: list[EDIO | ZO],
     /,
     tensor: str = "res",
@@ -637,9 +625,7 @@ def plot_confidence(   # plot_confidence_in
     tkn = str(tensor).strip().lower()
 
     if view not in {"1d", "2d"}:
-        raise ValueError(
-            "Invalid 'view'. Expect '1d' or '2d'."
-        )
+        raise ValueError("Invalid 'view'. Expect '1d' or '2d'.")
 
     # Force error arrays for resistivity/phase requests.
     # Examples of accepted aliases are broadened here.
@@ -694,6 +680,7 @@ def plot_confidence(   # plot_confidence_in
         from ..plot.utils import (
             plot2d,  # only needed for 2D path
         )
+
         # Optional outlier removal for cleaner 2-D maps.
         ar2d = (
             remove_outliers(rerr, fill_value=np.nan)
@@ -836,15 +823,15 @@ def plot_confidence(   # plot_confidence_in
 
     return ax
 
+
 @compat_alias(
     "get2dtensor",
     since=_BACKWARD_SINCE,
     remove_in=_BACKWARD_REMOVE,
     export=True,
-    extra=(f"Use 'tensor2d'. Removal in "
-           f"v{_BACKWARD_REMOVE}."),
+    extra=(f"Use 'tensor2d'. Removal in v{_BACKWARD_REMOVE}."),
 )
-def tensor2d(                                                 # get2dtensor
+def tensor2d(  # get2dtensor
     z_or_edis_obj_list: list[EDIO | ZO],
     /,
     tensor: str = "z",
@@ -1003,13 +990,13 @@ def tensor2d(                                                 # get2dtensor
 
     return (mat2d, freqs) if return_freqs else mat2d
 
+
 @compat_alias(
     "qc",
     since=_BACKWARD_SINCE,
     remove_in=_BACKWARD_REMOVE,
     export=True,
-    extra=(f"Use 'compute_qc'. Removal in "
-           f"v{_BACKWARD_REMOVE}."),
+    extra=(f"Use 'compute_qc'. Removal in v{_BACKWARD_REMOVE}."),
 )
 def compute_qc(
     z_or_edis_obj_list: list[EDIO | ZO],
@@ -1022,7 +1009,12 @@ def compute_qc(
     return_data: bool = False,
     to_log10: bool = False,
     return_qco: bool = False,
-) -> tuple[float] | tuple[float, np.ndarray] | tuple[float, np.ndarray, np.ndarray] | Bunch:
+) -> (
+    tuple[float]
+    | tuple[float, np.ndarray]
+    | tuple[float, np.ndarray, np.ndarray]
+    | Bunch
+):
     """
     Assess data quality across a collection of EDI/Z objects.
 
@@ -1160,9 +1152,7 @@ def compute_qc(
     # Optional log10 transform of retained frequencies.
     if to_log10:
         if np.any(f_ret <= 0.0):
-            raise ValueError(
-                "Frequencies must be > 0 for log10 transform."
-            )
+            raise ValueError("Frequencies must be > 0 for log10 transform.")
         f_ret = np.log10(f_ret)
 
     # Flatten frequency to a 1-D shape.
@@ -1178,7 +1168,12 @@ def compute_qc(
         return_data = True
 
     # Assemble the return payload.
-    out: tuple[float] | tuple[float, np.ndarray] | tuple[float, np.ndarray, np.ndarray] | Bunch
+    out: (
+        tuple[float]
+        | tuple[float, np.ndarray]
+        | tuple[float, np.ndarray, np.ndarray]
+        | Bunch
+    )
 
     if return_qco:
         out = Bunch(
@@ -1201,13 +1196,13 @@ def compute_qc(
 
     return out
 
+
 @compat_alias(
     "get_full_frequency",
     since=_BACKWARD_SINCE,
     remove_in=_BACKWARD_REMOVE,
     export=True,
-    extra=(f"Use 'full_freq'. Removal in "
-           f"v{_BACKWARD_REMOVE}."),
+    extra=(f"Use 'full_freq'. Removal in v{_BACKWARD_REMOVE}."),
 )
 def full_freq(
     z_or_edis_obj_list: list[EDIO | ZO],
@@ -1287,24 +1282,24 @@ def full_freq(
     if to_log10:
         if np.any(f_ref <= 0.0):
             raise ValueError(
-                "Frequencies must be strictly positive to compute "
-                "log10()."
+                "Frequencies must be strictly positive to compute log10()."
             )
         f_ref = np.log10(f_ref)
 
     return f_ref
 
+
 # XXX TODO:
+
 
 @compat_alias(
     "plot_tensors2",
     since=_BACKWARD_SINCE,
     remove_in=_BACKWARD_REMOVE,
     export=True,
-    extra=(f"Use 'plot_station_tensors'. Removal in "
-           f"v{_BACKWARD_REMOVE}."),
+    extra=(f"Use 'plot_station_tensors'. Removal in v{_BACKWARD_REMOVE}."),
 )
-def plot_station_tensors(   # plot_tensors2
+def plot_station_tensors(  # plot_tensors2
     z_or_edis_obj_list: list[EDIO | ZO],
     /,
     station: int | str = "S00",
@@ -1462,9 +1457,7 @@ def _init_axes(**kwargs: Any) -> tuple[plt.Figure, list[plt.Axes]]:
     plt.clf()
 
     # 2 rows (res/phase or real/imag) × 4 comps (xx, xy, yx, yy).
-    gs = gridspec.GridSpec(
-        2, 4, wspace=kwargs.get("subplot_wspace", 0.3)
-    )
+    gs = gridspec.GridSpec(2, 4, wspace=kwargs.get("subplot_wspace", 0.3))
     axes = [fig.add_subplot(gs[i, j]) for i in range(2) for j in range(4)]
     return fig, axes
 
@@ -1484,7 +1477,7 @@ def _prepare_station_data(
 
     if plot_z:
         # Real/imag parts of Z with corresponding errors.
-        res = np.abs(z_obj.z.real)        # use absolute magnitude
+        res = np.abs(z_obj.z.real)  # use absolute magnitude
         res_err = np.abs(z_obj.z_err.real)
         phs = np.abs(z_obj.z.imag)
         phs_err = np.abs(z_obj.z_err.imag)
@@ -1543,9 +1536,7 @@ def _apply_filters(
             or len(freq_limits) != 2
             or not all(isinstance(x, (int, float)) for x in freq_limits)
         ):
-            raise ValueError(
-                "freq_limits must be (min_freq, max_freq)."
-            )
+            raise ValueError("freq_limits must be (min_freq, max_freq).")
         f_min, f_max = sorted(freq_limits)
         m = (freq >= f_min) & (freq <= f_max)
         idx = np.where(m)[0]
@@ -1556,7 +1547,7 @@ def _apply_filters(
 
     # Phase wrapping / clipping if requested.
     if phase_limits is not None:
-        phs_new = wrap_phase(                                   # adjusted phase range
+        phs_new = wrap_phase(  # adjusted phase range
             phs[idx, :, :],
             value_range=phase_limits,
             mod_base=mod_base,
@@ -1591,9 +1582,9 @@ def _draw_station_panels(
 
     # Style defaults
     ms = kwargs.pop("ms", 1.5)
-    ms_r = kwargs.pop("ms_r", 3.0) # noqa
+    ms_r = kwargs.pop("ms_r", 3.0)  # noqa
     lw = kwargs.pop("lw", 0.5)
-    lw_r = kwargs.pop("lw_r", 1.0) # noqa
+    lw_r = kwargs.pop("lw_r", 1.0)  # noqa
     e_capthick = kwargs.pop("e_capthick", 0.5)
     e_capsize = kwargs.pop("e_capsize", 2.0)
     color_mode = kwargs.pop("color_mode", "color")
@@ -1602,7 +1593,7 @@ def _draw_station_panels(
     tick_label_size = kwargs.pop("tick_label_size", 8)
 
     plt.rcParams["font.size"] = font_size
-    fontdict = {"size": font_size + 2, "weight": "bold"} # noqa
+    fontdict = {"size": font_size + 2, "weight": "bold"}  # noqa
 
     # Color/marker scheme
     if color_mode == "color":
@@ -1696,8 +1687,8 @@ def _draw_station_panels(
 
     # Iterate in the fixed order xx, xy, yx, yy.
     for i, comp in enumerate(comp_info):
-        ax_r = axes[i]        # top row
-        ax_p = axes[i + 4]    # bottom row
+        ax_r = axes[i]  # top row
+        ax_p = axes[i + 4]  # bottom row
         r, c = comp_info[comp]["idx"]
         color = comp_info[comp]["color"]
         marker = comp_info[comp]["marker"]
@@ -1740,8 +1731,12 @@ def _draw_station_panels(
         ax_r.set_xscale("log")
         ax_r.set_yscale("log")
         ax_p.set_xscale("log")
-        ax_r.grid(True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5)
-        ax_p.grid(True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5)
+        ax_r.grid(
+            True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5
+        )
+        ax_p.grid(
+            True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5
+        )
 
         # Data-driven y limits (guard against non-finite).
         def _finite_min_max(a: np.ndarray) -> tuple[float, float]:
@@ -1758,14 +1753,14 @@ def _draw_station_panels(
 
         # Tick sizes
         ax_r.tick_params(
-            axis="both", which="major", labelsize=kwargs.get(
-                "tick_label_size", tick_label_size
-            ),
+            axis="both",
+            which="major",
+            labelsize=kwargs.get("tick_label_size", tick_label_size),
         )
         ax_p.tick_params(
-            axis="both", which="major", labelsize=kwargs.get(
-                "tick_label_size", tick_label_size
-            ),
+            axis="both",
+            which="major",
+            labelsize=kwargs.get("tick_label_size", tick_label_size),
         )
 
         if i == 0:
@@ -1781,9 +1776,7 @@ def _draw_station_panels(
             )
 
         # Legend labels with LaTeX formatting.
-        res_label = (
-            rf"$z_{{{comp}}}$" if plot_z else rf"$\rho_{{{comp}}}$"
-        )
+        res_label = rf"$z_{{{comp}}}$" if plot_z else rf"$\rho_{{{comp}}}$"
         phs_label = rf"$\phi_{{{comp}}}$"
         res_labels.append(res_label)
         phs_labels.append(phs_label)
@@ -1795,7 +1788,10 @@ def _draw_station_panels(
     for ax in axes[:4]:
         ax.set_xlabel("")
         ax.tick_params(
-            axis="x", which="both", bottom=False, top=False,
+            axis="x",
+            which="both",
+            bottom=False,
+            top=False,
             labelbottom=False,
         )
     for ax in axes[4:]:
@@ -1899,9 +1895,7 @@ def wrap_phase(
     arr = np.asarray(phase, dtype=float)
 
     if mod_base not in (90, 180, 270, 360):
-        raise ValueError(
-            "mod_base must be one of {90, 180, 270, 360}."
-        )
+        raise ValueError("mod_base must be one of {90, 180, 270, 360}.")
 
     # ---- wrap to [0, mod_base) ------------------------------------------
     # numpy's remainder yields values in [0, mod_base) for positive base.
@@ -2072,9 +2066,7 @@ def plot_strike(
         elif os.path.isfile(p):
             paths = [p]
         else:
-            raise FileNotFoundError(
-                f"Path does not exist: {p!r}"
-            )
+            raise FileNotFoundError(f"Path does not exist: {p!r}")
     else:
         # Iterable of paths (e.g., list/tuple/generator)
         paths = [str(x) for x in list_of_edis]
@@ -2103,15 +2095,14 @@ def plot_strike(
             **kws,
         )
 
+
 @compat_alias(
     "plot_l_curve",
     since=_BACKWARD_SINCE,
     remove_in=_BACKWARD_REMOVE,
     export=True,
-    extra=(f"Use 'plot_lcurve'. Removal in "
-           f"v{_BACKWARD_REMOVE}."),
+    extra=(f"Use 'plot_lcurve'. Removal in v{_BACKWARD_REMOVE}."),
 )
-
 def plot_lcurve(
     rms: Iterable[float | int],
     roughness: Iterable[float | int],
@@ -2227,12 +2218,17 @@ def plot_lcurve(
             hansen_point = _hansen_knee(rough_arr, rms_arr)
 
         if hansen_point is not None:
-            if not (isinstance(hansen_point, (tuple, list)) and len(hansen_point) == 2):
+            if not (
+                isinstance(hansen_point, (tuple, list))
+                and len(hansen_point) == 2
+            ):
                 raise ValueError(
                     "Hansen knee point must be a tuple '(roughness, rms)'."
                 )
             hx, hy = float(hansen_point[0]), float(hansen_point[1])
-            hpoint_kws = _merge_plot_kws(hpoint_kws, {"marker": "o", "color": "red"})
+            hpoint_kws = _merge_plot_kws(
+                hpoint_kws, {"marker": "o", "color": "red"}
+            )
             ax.plot(hx, hy, **hpoint_kws)
             ax.annotate(
                 f"{hx:g}",
@@ -2255,7 +2251,9 @@ def plot_lcurve(
             # Column-stack roughness and rms into point coordinates.
             pts = np.column_stack([rough_arr, rms_arr])
             for (x, y), tval in zip(pts, tau_arr):
-                if hansen_point is not None and np.allclose([x, y], hansen_point):
+                if hansen_point is not None and np.allclose(
+                    [x, y], hansen_point
+                ):
                     continue
                 ax.annotate(
                     str(tval),
@@ -2271,7 +2269,10 @@ def plot_lcurve(
                 from .validation import (
                     _assert_all_types as _aat,
                 )
-                rms_target_val = float(_aat(rms_target, float, int, objname="RMS target"))
+
+                rms_target_val = float(
+                    _aat(rms_target, float, int, objname="RMS target")
+                )
             except Exception:
                 rms_target_val = float(rms_target)
 
@@ -2293,6 +2294,7 @@ def plot_lcurve(
         if savefig:
             try:
                 from .plotutils import savefigure
+
                 savefigure(fig, savefig, dpi=300)
             except Exception:
                 fig.savefig(savefig, dpi=300, bbox_inches="tight")

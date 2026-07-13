@@ -252,11 +252,11 @@ class TEMSounding(PyCSAMTObject):
         """
         if tx_area is None:
             if loop_side is not None:
-                tx_area = loop_side ** 2
+                tx_area = loop_side**2
                 kwargs.setdefault("loop_shape", "square")
                 kwargs.setdefault("loop_dims", (float(loop_side),))
             elif loop_radius is not None:
-                tx_area = np.pi * loop_radius ** 2
+                tx_area = np.pi * loop_radius**2
                 kwargs.setdefault("loop_shape", "circle")
                 kwargs.setdefault("loop_dims", (float(loop_radius),))
             else:
@@ -274,15 +274,15 @@ class TEMSounding(PyCSAMTObject):
     def summary(self) -> dict:
         """Return a compact dict of key acquisition parameters."""
         return {
-            "station":     self.station_name or "(unnamed)",
-            "n_gates":     self.n_gates,
-            "t_min_ms":    float(self.time_gates.min()) * 1e3,
-            "t_max_ms":    float(self.time_gates.max()) * 1e3,
-            "moment":      self.moment,
-            "data_type":   self.data_type,
-            "loop_shape":  self.loop_shape,
-            "offset_m":    self.offset,
-            "has_error":   self.error is not None,
+            "station": self.station_name or "(unnamed)",
+            "n_gates": self.n_gates,
+            "t_min_ms": float(self.time_gates.min()) * 1e3,
+            "t_max_ms": float(self.time_gates.max()) * 1e3,
+            "moment": self.moment,
+            "data_type": self.data_type,
+            "loop_shape": self.loop_shape,
+            "offset_m": self.offset,
+            "has_error": self.error is not None,
         }
 
     def __repr__(self) -> str:

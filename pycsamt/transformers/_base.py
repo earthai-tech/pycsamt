@@ -107,7 +107,6 @@ class TransformerMixin(MTBase):
 
     """
 
-
     def extract(self, source: Any) -> TFBundle:  # noqa: D401
         r"""
         Extract a :class:`TFBundle` from ``source``.
@@ -155,7 +154,6 @@ class TransformerMixin(MTBase):
         """
 
         raise NotImplementedError
-
 
     def post_emit(
         self,
@@ -241,7 +239,6 @@ class TransformerMixin(MTBase):
         """
 
         return b
-
 
     def _order_freq(self, b: TFBundle) -> TFBundle:
         r"""
@@ -528,7 +525,6 @@ class TransformerMixin(MTBase):
 
         return h
 
-
     def _ensure_info(self, ed, survey_id: str):
         info = ed.get_section("info")
         if info is None:
@@ -541,7 +537,6 @@ class TransformerMixin(MTBase):
             )
             ed.add_section("info", info)
         return info
-
 
     def _ensure_definemeas(
         self,

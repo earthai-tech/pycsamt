@@ -109,6 +109,7 @@ def plot(
             build_station_map,
             ensure_map_data,
         )
+
         data = ensure_map_data(sites, verbose=verbose)
         fig = build_station_map(
             data,

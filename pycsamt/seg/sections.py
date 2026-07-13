@@ -106,9 +106,7 @@ def iter_sections(
     with open(edi_path, encoding="utf-8") as f:
         lines = f.readlines()
 
-    want = (
-        {t.upper(): True for t in include} if include else None
-    )
+    want = {t.upper(): True for t in include} if include else None
 
     i = 0
     n = len(lines)
@@ -130,16 +128,13 @@ def iter_sections(
             continue
 
         j = _find_header_end(lines, i)
-        header_lines = [
-            s.rstrip("\n") for s in lines[i + 1 : j]
-        ]
+        header_lines = [s.rstrip("\n") for s in lines[i + 1 : j]]
 
         try:
             header = _make_header(tag_u, header_lines, j)
         except Exception as exc:
             raise EdIDataError(
-                f"Failed to parse header {tag_u} at line "
-                f"{i}: {exc}"
+                f"Failed to parse header {tag_u} at line {i}: {exc}"
             ) from exc
 
         yield (tag_u, header, j)

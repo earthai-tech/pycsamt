@@ -92,6 +92,7 @@ class EDIMixin(CoreObject):
     ----------
     .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
     """
+
     def _init_registry(self) -> None:
         self.sections: dict[str, Any] = {}
 
@@ -181,6 +182,7 @@ class EDIOMixin(CoreObject):
     ----------
     .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
     """
+
     # tolerant key sets (lower-case)
     _Z_PAIRS = ("zxx", "zxy", "zyx", "zyy")
     _RHO_PREF = ("rho", "frho")
@@ -220,8 +222,7 @@ class EDIOMixin(CoreObject):
             if k in {"freq", "zrot", "trot"}:
                 return True
             if any(
-                k in (f"{c}r", f"{c}i", f"{c}.var")
-                for c in self._Z_PAIRS
+                k in (f"{c}r", f"{c}i", f"{c}.var") for c in self._Z_PAIRS
             ):
                 return True
             if any(k.startswith(p) for p in self._RHO_PREF):
@@ -251,14 +252,18 @@ class EDIOMixin(CoreObject):
                     continue
                 key = toks[0].lower()
                 if not _is_known(key):
-                    cur =None
+                    cur = None
                     continue
 
                 base = key.split(".", 1)[0]
                 # normalize tipper keys: TXR.EXP -> txr
                 if base in {
-                    "txr", "txi", "tyr", "tyi",
-                    "txvar", "tyvar",
+                    "txr",
+                    "txi",
+                    "tyr",
+                    "tyi",
+                    "txvar",
+                    "tyvar",
                 }:
                     cur = base
                 else:
@@ -338,8 +343,9 @@ class EDIOMixin(CoreObject):
 
             def _get2(prefix: str, suf: str) -> np.ndarray:
                 # e.g. "rho", "xy" -> try RHOXY / FRHOXY
-                for p in (self._RHO_PREF if
-                          prefix == "rho" else self._PHS_PREF):
+                for p in (
+                    self._RHO_PREF if prefix == "rho" else self._PHS_PREF
+                ):
                     key = f"{p}{suf}".lower()
                     if key in comp:
                         a = np.asarray(comp[key], float)
@@ -348,8 +354,9 @@ class EDIOMixin(CoreObject):
 
             def _gete2(prefix: str, suf: str) -> np.ndarray:
                 # ERR or .ERR forms
-                for p in (self._RHO_PREF if
-                          prefix == "rho" else self._PHS_PREF):
+                for p in (
+                    self._RHO_PREF if prefix == "rho" else self._PHS_PREF
+                ):
                     for tail in (".err", "err"):
                         key = f"{p}{suf}{tail}".lower()
                         if key in comp:
@@ -366,12 +373,10 @@ class EDIOMixin(CoreObject):
                 phi[:, ij[0], ij[1]] = _get2("phs", suf)
 
             re = sum(
-                np.any(_gete2("rho", s))
-                for s in ("xx", "xy", "yx", "yy")
+                np.any(_gete2("rho", s)) for s in ("xx", "xy", "yx", "yy")
             )
             pe = sum(
-                np.any(_gete2("phs", s))
-                for s in ("xx", "xy", "yx", "yy")
+                np.any(_gete2("phs", s)) for s in ("xx", "xy", "yx", "yy")
             )
 
             if re or pe:
@@ -562,6 +567,7 @@ class EDIFile(EDIMixin, EDIOMixin):
     .. [2] B. Groom, R. Bailey (1989).  Decomposition of the
            magnetotelluric impedance tensor.  *Geophysics*.
     """
+
     def __init__(
         self,
         path: str | Path | None = None,
@@ -580,9 +586,8 @@ class EDIFile(EDIMixin, EDIOMixin):
 
         # writer configuration
         self.block_size = 6
-        self.float_fmt = "{: .6E}"      # scientific, uppercase E
+        self.float_fmt = "{: .6E}"  # scientific, uppercase E
         self.header_tpl = ">!****{title}****!\n"
-
 
         if self.path is not None:
             self.read()
@@ -672,7 +677,6 @@ class EDIFile(EDIMixin, EDIOMixin):
                 except Exception as exc:
                     logger.debug("SPECTRA load failed: %s", exc)
 
-
                 # Fallback: expose a non-empty Spectra container only if needed
                 if spec_obj is None:
                     spec_obj = Spectra(verbose=self.verbose)
@@ -699,13 +703,14 @@ class EDIFile(EDIMixin, EDIOMixin):
 
                 # assert/log once to catch this class of issues
                 if getattr(spec_obj, "chan_ids", None) in (None, []):
-                    logger.debug(
-                        "Spectra chan_ids empty; check SPECTRASECT.")
+                    logger.debug("Spectra chan_ids empty; check SPECTRASECT.")
 
                 # --- FALLBACK: build Z/Tipper from Spectra if no MT blocks
                 if (not has_tf) and getattr(spec_obj, "n_freq", 0) > 0:
                     try:
-                        z_from_sp, tip_from_sp = spec_obj.to_Z(estimate_error=False)
+                        z_from_sp, tip_from_sp = spec_obj.to_Z(
+                            estimate_error=False
+                        )
                         if z_from_sp is not None:
                             self.Z = z_from_sp
                             # ensure rho/phi are available downstream
@@ -792,14 +797,12 @@ class EDIFile(EDIMixin, EDIOMixin):
         # After Z is built, create and populate
         # the ResPhase object for API consistency.
         if self.Z.freq is not None and self.Z.z is not None:
-            station_name = getattr(
-                head, "dataid", None
-            ) if head else self.station
+            station_name = (
+                getattr(head, "dataid", None) if head else self.station
+            )
 
             # Instantiate and populate the ResPhase container
-            self.Res = ResPhase(
-                freq=self.Z.freq, name=station_name
-                )
+            self.Res = ResPhase(freq=self.Z.freq, name=station_name)
             try:
                 self.Res.compute_resistivity_phase(
                     z_array=self.Z.z,
@@ -874,9 +877,7 @@ class EDIFile(EDIMixin, EDIOMixin):
 
         # explicit override if user passed a value
         dt_auto = _detect_tf_mode()
-        dtype = (
-            (datatype or dt_auto or "mt").strip().lower()
-        )
+        dtype = (datatype or dt_auto or "mt").strip().lower()
 
         out_dir = (
             Path(savepath).expanduser().resolve()
@@ -927,9 +928,7 @@ class EDIFile(EDIMixin, EDIOMixin):
             np.ndarray, np.ndarray, np.ndarray, bool
         ]:
             if self.Z.freq is None or self.Z.n_freq == 0:
-                raise EdIDataError(
-                    "no frequency vector for MT/EMAP"
-                )
+                raise EdIDataError("no frequency vector for MT/EMAP")
             f = np.asarray(self.Z.freq, float)
             _append(self.header_tpl.format(title="FREQUENCIES"))
             _append(self._emit_block("FREQ", f, rot=None))
@@ -943,9 +942,7 @@ class EDIFile(EDIMixin, EDIOMixin):
                     zrot = np.full(f.size, 0.0, dtype=float)
 
             tip = getattr(self.Tip, "tipper", None)
-            tip_ok = (
-                tip is not None and tip.size and not np.all(tip == 0.0)
-            )
+            tip_ok = tip is not None and tip.size and not np.all(tip == 0.0)
             trot = getattr(self.Tip, "rotation_angle", None)
             if tip_ok:
                 if np.ndim(trot) == 0:
@@ -972,9 +969,7 @@ class EDIFile(EDIMixin, EDIOMixin):
 
             if dtype == "mt":
                 _append(
-                    self.header_tpl.format(
-                        title="IMPEDANCE ROTATION ANGLES"
-                    )
+                    self.header_tpl.format(title="IMPEDANCE ROTATION ANGLES")
                 )
                 _append(self._emit_block("ZROT", zrot))
 
@@ -1004,18 +999,14 @@ class EDIFile(EDIMixin, EDIOMixin):
                 _append(
                     self._emit_block(
                         f"{tag}.VAR",
-                        self._sanitize_payload(
-                            np.square(ze[:, i, j])
-                        ),
+                        self._sanitize_payload(np.square(ze[:, i, j])),
                         rot=rot_tag,
                     )
                 )
 
-            if dtype == "emap" or dtype =="mt":
+            if dtype == "emap" or dtype == "mt":
                 _append(
-                    self.header_tpl.format(
-                        title="RESISTIVITIES AND PHASES"
-                    )
+                    self.header_tpl.format(title="RESISTIVITIES AND PHASES")
                 )
 
                 def _rho_phi(
@@ -1044,18 +1035,10 @@ class EDIFile(EDIMixin, EDIOMixin):
                 _rho_phi("RHOYX", self.Z.res_yx, self.Z.res_err_yx)
                 _rho_phi("RHOYY", self.Z.res_yy, self.Z.res_err_yy)
 
-                _rho_phi(
-                    "PHSXX", self.Z.phase_xx, self.Z.phase_err_xx
-                )
-                _rho_phi(
-                    "PHSXY", self.Z.phase_xy, self.Z.phase_err_xy
-                )
-                _rho_phi(
-                    "PHSYX", self.Z.phase_yx, self.Z.phase_err_yx
-                )
-                _rho_phi(
-                    "PHSYY", self.Z.phase_yy, self.Z.phase_err_yy
-                )
+                _rho_phi("PHSXX", self.Z.phase_xx, self.Z.phase_err_xx)
+                _rho_phi("PHSXY", self.Z.phase_xy, self.Z.phase_err_xy)
+                _rho_phi("PHSYX", self.Z.phase_yx, self.Z.phase_err_yx)
+                _rho_phi("PHSYY", self.Z.phase_yy, self.Z.phase_err_yy)
 
                 if add_filter_array is not None:
                     a = np.asarray(add_filter_array, float)
@@ -1082,17 +1065,11 @@ class EDIFile(EDIMixin, EDIOMixin):
 
             if tip_ok and dtype == "mt":
                 _append(
-                    self.header_tpl.format(
-                        title="TIPPER ROTATION ANGLES"
-                    )
+                    self.header_tpl.format(title="TIPPER ROTATION ANGLES")
                 )
                 _append(self._emit_block("TROT", trot))
 
-                _append(
-                    self.header_tpl.format(
-                        title="TIPPER PARAMETERS"
-                    )
-                )
+                _append(self.header_tpl.format(title="TIPPER PARAMETERS"))
                 tip = np.asarray(self.Tip.tipper)
                 terr = getattr(self.Tip, "_tipper_err", None)
                 tvar = (
@@ -1104,27 +1081,21 @@ class EDIFile(EDIMixin, EDIOMixin):
                     _append(
                         self._emit_block(
                             f"{tag}R.EXP",
-                            self._sanitize_payload(
-                                tip[:, 0, idx].real
-                            ),
+                            self._sanitize_payload(tip[:, 0, idx].real),
                             rot="ROT=TROT",
                         )
                     )
                     _append(
                         self._emit_block(
                             f"{tag}I.EXP",
-                            self._sanitize_payload(
-                                tip[:, 0, idx].imag
-                            ),
+                            self._sanitize_payload(tip[:, 0, idx].imag),
                             rot="ROT=TROT",
                         )
                     )
                     _append(
                         self._emit_block(
                             f"{tag}VAR.EXP",
-                            self._sanitize_payload(
-                                tvar[:, 0, idx]
-                            ),
+                            self._sanitize_payload(tvar[:, 0, idx]),
                             rot="ROT=TROT",
                         )
                     )
@@ -1135,15 +1106,21 @@ class EDIFile(EDIMixin, EDIOMixin):
         spec_obj = self.get_section("spectra")
 
         # synthesize when asked and no spectra loaded
-        if (spec_io is None and spec_obj is None and synthesize_spectra
-                and self.Z.n_freq > 0):
+        if (
+            spec_io is None
+            and spec_obj is None
+            and synthesize_spectra
+            and self.Z.n_freq > 0
+        ):
             try:
                 sp = Spectra.from_Z(
                     self.Z,
                     include_hz=self.has_tipper,
                     tipper=self.Tip if self.has_tipper else None,
-                    name=(getattr(self.get_section("head"), "dataid", None)
-                          or getattr(self.Z, "name", None)),
+                    name=(
+                        getattr(self.get_section("head"), "dataid", None)
+                        or getattr(self.Z, "name", None)
+                    ),
                     verbose=self.verbose,
                 )
                 spec_obj = sp
@@ -1229,7 +1206,6 @@ class EDIFile(EDIMixin, EDIOMixin):
                 pass
         return float(empty)
 
-
     def _sanitize_payload(
         self,
         arr: np.ndarray,
@@ -1244,7 +1220,6 @@ class EDIFile(EDIMixin, EDIOMixin):
         bad = (~np.isfinite(out)) | (out == 0.0)
         out[bad] = sentinel
         return out
-
 
     def _emit_block(
         self,
@@ -1267,7 +1242,6 @@ class EDIFile(EDIMixin, EDIOMixin):
         )
         return [head, body, "\n"]
 
-
     def interpolate(
         self,
         new_freq: np.ndarray | list[float],
@@ -1281,9 +1255,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         try:
             from scipy.interpolate import interp1d
         except Exception as exc:  # pragma: no cover
-            raise ImportError(
-                "SciPy is required for interpolation."
-            ) from exc
+            raise ImportError("SciPy is required for interpolation.") from exc
 
         nf = np.asarray(new_freq, float)
         nf = np.around(nf, 2)
@@ -1294,9 +1266,7 @@ class EDIFile(EDIMixin, EDIOMixin):
 
         if bounds_error:
             if nf.min() < of.min() or nf.max() > of.max():
-                raise ValueError(
-                    "new frequency range must lie within src."
-                )
+                raise ValueError("new frequency range must lie within src.")
 
         n_new = int(nf.size)
         out = Z(
@@ -1347,22 +1317,15 @@ class EDIFile(EDIMixin, EDIOMixin):
 
                 order = np.argsort(f)
                 f2 = f[order]
-                fr = interp1d(
-                    f2, zr[order], kind=kind, bounds_error=True
-                )
-                fi = interp1d(
-                    f2, zi[order], kind=kind, bounds_error=True
-                )
-                fe = interp1d(
-                    f2, ze[order], kind=kind, bounds_error=True
-                )
+                fr = interp1d(f2, zr[order], kind=kind, bounds_error=True)
+                fi = interp1d(f2, zi[order], kind=kind, bounds_error=True)
+                fe = interp1d(f2, ze[order], kind=kind, bounds_error=True)
 
                 out.z[idx, i, j] = fr(fn) + 1j * fi(fn)
                 out.z_err[idx, i, j] = fe(fn)
 
         out.compute_resistivity_phase()
         return out
-
 
     # backward-compat
     interpolate_z = interpolate
@@ -1418,7 +1381,6 @@ class EDIFile(EDIMixin, EDIOMixin):
 
         # forward to main writer; map to new_edifn param
         return fresh.write(new_edifn=edi_fn, **kwargs)
-
 
     @property
     def n_freq(self) -> int:
@@ -1595,7 +1557,7 @@ class EDIFile(EDIMixin, EDIOMixin):
     def __repr__(self) -> str:  # pragma: no cover
         # concise, eval-like summary for debugging.
         p = str(self.path) if self.path else "-"
-        nf = self.n_freq # int(getattr(self.Z, "n_freq", 0) or 0)
+        nf = self.n_freq  # int(getattr(self.Z, "n_freq", 0) or 0)
         has_mt = bool(self.has_section("mtsect"))
         has_sp = bool(self.get_section("spectra") is not None)
         has_ts = bool(self.get_section("timeseries") is not None)
@@ -1610,14 +1572,13 @@ class EDIFile(EDIMixin, EDIOMixin):
             ")"
         )
 
-
     def __str__(self) -> str:  # pragma: no cover
         # human-friendly multi-line snapshot.
         p = str(self.path) if self.path else "-"
         head = self.get_section("head")
         sid = getattr(head, "dataid", None) if head else None
         sid = sid or "?"
-        nf = self.n_freq #int(getattr(self.Z, "n_freq", 0) or 0)
+        nf = self.n_freq  # int(getattr(self.Z, "n_freq", 0) or 0)
 
         tags: list[str] = []
         if self.has_section("mtsect"):
@@ -1671,5 +1632,3 @@ def _rev_if_asc(freq: np.ndarray) -> tuple[np.ndarray, bool]:
         return freq, False
     rev = bool(freq[-1] > freq[0])
     return (freq[::-1], True) if rev else (freq, False)
-
-

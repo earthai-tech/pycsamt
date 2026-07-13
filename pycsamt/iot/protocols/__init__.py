@@ -88,7 +88,8 @@ def build_telemetry_client(
         generic :class:`TelemetryClient` recorder (e.g. for ``lora``).
     """
     proto = (
-        protocol if isinstance(protocol, IoTProtocol)
+        protocol
+        if isinstance(protocol, IoTProtocol)
         else IoTProtocol(str(protocol).strip().lower())
     )
     cls = CLIENT_REGISTRY.get(proto)

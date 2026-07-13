@@ -35,13 +35,15 @@ import numpy as np
 from pycsamt.emtools import lcurve_table, plot_lcurve
 
 lam_demo = np.logspace(-3, 3, 30)
-rough_demo = 1.0 / (1.0 + lam_demo**2)          # decreases with lambda
+rough_demo = 1.0 / (1.0 + lam_demo**2)  # decreases with lambda
 misfit_demo = lam_demo**2 / (1.0 + lam_demo**2)  # increases with lambda
 
 table_demo = lcurve_table(misfit_demo, rough_demo, lam_demo)
 j_demo = table_demo.attrs["corner_idx"]
-print(f"synthetic corner: lambda*={table_demo['lam'].iloc[j_demo]:.3g}, "
-      f"index {j_demo} of {len(table_demo)}")
+print(
+    f"synthetic corner: lambda*={table_demo['lam'].iloc[j_demo]:.3g}, "
+    f"index {j_demo} of {len(table_demo)}"
+)
 
 plot_lcurve(misfit_demo, rough_demo, lam_demo)
 
@@ -133,17 +135,35 @@ plot_lcurve(mi_18001a, ro_18001a, lambdas, labels=["18-001A"])
 # choice shows what the corner is actually protecting against.
 
 per_18001a = 1.0 / fr_18001a
-j_small = 5   # lambda far below the corner
+j_small = 5  # lambda far below the corner
 j_large = 50  # lambda far above the corner
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.semilogx(per_18001a, d_18001a, "o", ms=4, color="0.6", label="observed (noisy)")
-ax.plot(per_18001a, models_18001a[j_small], "-", color="#d62728",
-        label=f"lambda={lambdas[j_small]:.3g} (under-regularized)")
-ax.plot(per_18001a, models_18001a[j], "-", color="#2ca02c", lw=2.2,
-        label=f"lambda*={lam_star:.3g} (corner)")
-ax.plot(per_18001a, models_18001a[j_large], "-", color="#1f77b4",
-        label=f"lambda={lambdas[j_large]:.3g} (over-regularized)")
+ax.semilogx(
+    per_18001a, d_18001a, "o", ms=4, color="0.6", label="observed (noisy)"
+)
+ax.plot(
+    per_18001a,
+    models_18001a[j_small],
+    "-",
+    color="#d62728",
+    label=f"lambda={lambdas[j_small]:.3g} (under-regularized)",
+)
+ax.plot(
+    per_18001a,
+    models_18001a[j],
+    "-",
+    color="#2ca02c",
+    lw=2.2,
+    label=f"lambda*={lam_star:.3g} (corner)",
+)
+ax.plot(
+    per_18001a,
+    models_18001a[j_large],
+    "-",
+    color="#1f77b4",
+    label=f"lambda={lambdas[j_large]:.3g} (over-regularized)",
+)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\log_{10}\rho_a$")
 ax.legend(fontsize=7)
@@ -209,14 +229,22 @@ for n in names:
 # differentiating for the curvature method specifically.
 
 for sm in (1, 3, 7):
-    t_curv = lcurve_table(mi_18001a, ro_18001a, lambdas, method="curvature", smooth=sm)
-    t_dist = lcurve_table(mi_18001a, ro_18001a, lambdas, method="maxdist", smooth=sm)
+    t_curv = lcurve_table(
+        mi_18001a, ro_18001a, lambdas, method="curvature", smooth=sm
+    )
+    t_dist = lcurve_table(
+        mi_18001a, ro_18001a, lambdas, method="maxdist", smooth=sm
+    )
     lam_curv = t_curv["lam"].iloc[t_curv.attrs["corner_idx"]]
     lam_dist = t_dist["lam"].iloc[t_dist.attrs["corner_idx"]]
-    print(f"smooth={sm}: curvature lambda*={lam_curv:.4g}   maxdist lambda*={lam_dist:.4g}")
+    print(
+        f"smooth={sm}: curvature lambda*={lam_curv:.4g}   maxdist lambda*={lam_dist:.4g}"
+    )
 
 fig, (axc, axd) = plt.subplots(1, 2, figsize=(11, 4.5), sharey=True)
-plot_lcurve(mi_18001a, ro_18001a, lambdas, method="curvature", smooth=7, ax=axc)
+plot_lcurve(
+    mi_18001a, ro_18001a, lambdas, method="curvature", smooth=7, ax=axc
+)
 axc.set_title("method='curvature', smooth=7")
 plot_lcurve(mi_18001a, ro_18001a, lambdas, method="maxdist", smooth=7, ax=axd)
 axd.set_title("method='maxdist', smooth=7")

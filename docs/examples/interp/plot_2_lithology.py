@@ -40,12 +40,18 @@ from _interp_data import demo_model
 from pycsamt.interp import HydroInterpreter
 
 rm = demo_model()
-hydro = HydroInterpreter(water_table_depth=20.0, aquifer_range=(30.0, 300.0),
-                         clay_max=20.0, min_zone_thickness=8.0).fit(rm)
+hydro = HydroInterpreter(
+    water_table_depth=20.0,
+    aquifer_range=(30.0, 300.0),
+    clay_max=20.0,
+    min_zone_thickness=8.0,
+).fit(rm)
 logs = hydro.logs
 _mid = logs[len(logs) // 2]
-print(f"{len(logs)} logs, e.g. {_mid.station_name!r} with "
-      f"{len(_mid.layers)} layers")
+print(
+    f"{len(logs)} logs, e.g. {_mid.station_name!r} with "
+    f"{len(_mid.layers)} layers"
+)
 
 # %%
 # A single stratigraphic log

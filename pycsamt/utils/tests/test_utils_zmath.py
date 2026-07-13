@@ -31,8 +31,8 @@ from pycsamt.utils.zmath import (
     get_period_list,
     invertmatrix_incl_errors,
     make_log_increasing_array,
-    multiplymatrices_incl_errors,
     mu0,
+    multiplymatrices_incl_errors,
     nearest_index,
     old_z_error2r_phi_error,
     propagate_error_polar2rect,
@@ -47,8 +47,8 @@ from pycsamt.utils.zmath import (
     z_error2r_phi_error,
 )
 
-
 # --------------------------- centre_point -----------------------------
+
 
 def test_centre_point_midrange():
     x = np.array([0.0, 2.0, 10.0])
@@ -62,6 +62,7 @@ def test_centre_point_empty_raises():
 
 
 # ------------------------------ roundsf -------------------------------
+
 
 @pytest.mark.parametrize(
     "number, sf, expected",
@@ -89,6 +90,7 @@ def test_roundsf_sf_below_one_clamps():
 
 # --------------------------- get_period_list --------------------------
 
+
 def test_get_period_list_exact_decades():
     periods = get_period_list(1.0, 100.0, 4)
     assert periods.size == 9
@@ -111,13 +113,16 @@ def test_get_period_list_inside_range_stays_within_bounds():
     assert periods[-1] <= 50.0
 
 
-@pytest.mark.parametrize("pmin, pmax", [(-1.0, 10.0), (0.0, 10.0), (10.0, 1.0)])
+@pytest.mark.parametrize(
+    "pmin, pmax", [(-1.0, 10.0), (0.0, 10.0), (10.0, 1.0)]
+)
 def test_get_period_list_invalid_bounds_raise(pmin, pmax):
     with pytest.raises(PeriodListError):
         get_period_list(pmin, pmax, 4)
 
 
 # ---------------------------- nearest_index ---------------------------
+
 
 def test_nearest_index_basic():
     arr = np.array([0.0, 1.0, 4.0, 9.0])
@@ -131,6 +136,7 @@ def test_nearest_index_empty_raises():
 
 
 # ---------------------- make_log_increasing_array ---------------------
+
 
 def test_make_log_increasing_array_contract():
     z1, target, n = 1.0, 100.0, 10
@@ -147,8 +153,9 @@ def test_make_log_increasing_array_contract():
         dict(z1_layer=-1.0, target_depth=10.0, n_layers=5),
         dict(z1_layer=1.0, target_depth=0.0, n_layers=5),
         dict(z1_layer=1.0, target_depth=10.0, n_layers=0),
-        dict(z1_layer=1.0, target_depth=10.0, n_layers=5,
-             increment_factor=1.5),
+        dict(
+            z1_layer=1.0, target_depth=10.0, n_layers=5, increment_factor=1.5
+        ),
     ],
 )
 def test_make_log_increasing_array_invalid_inputs(kwargs):
@@ -157,6 +164,7 @@ def test_make_log_increasing_array_invalid_inputs(kwargs):
 
 
 # ---------------------- invertmatrix_incl_errors ----------------------
+
 
 def test_invertmatrix_identity_roundtrip():
     m = np.array([[2.0, 1.0], [1.0, 2.0]])
@@ -189,6 +197,7 @@ def test_invertmatrix_bad_inputs_raise():
 
 # ------------------------------ rhophi2z ------------------------------
 
+
 def test_rhophi2z_field_units_convention():
     # |Z| = sqrt(5 * f * rho) with phase preserved
     rho = np.full((2, 2), 823.0)
@@ -206,13 +215,12 @@ def test_rhophi2z_requires_2x2():
 
 # ---------------------- compute_determinant_error ---------------------
 
+
 def test_compute_determinant_error_theoretical():
     z = np.array([[1 + 1j, 2 + 0j], [0 + 1j, 3 + 3j]])
     err = np.array([[0.1, 0.2], [0.3, 0.4]])
     a, b, c, d = z[0, 0], z[0, 1], z[1, 0], z[1, 1]
-    expected = abs(
-        0.1 * abs(d) + 0.4 * abs(a) - 0.2 * abs(c) - 0.3 * abs(b)
-    )
+    expected = abs(0.1 * abs(d) + 0.4 * abs(a) - 0.2 * abs(c) - 0.3 * abs(b))
     error, sqrt_error = compute_determinant_error(z, err)
     assert error == pytest.approx(expected)
     assert sqrt_error == pytest.approx(math.sqrt(expected))
@@ -241,6 +249,7 @@ def test_compute_determinant_error_shape_mismatch():
 
 
 # ---------------------- polar/rect error transport --------------------
+
 
 def test_propagate_error_polar2rect_pure_radial():
     x_err, y_err = propagate_error_polar2rect(1.0, 0.1, 0.0, 0.0)
@@ -285,6 +294,7 @@ def test_old_z_error2r_phi_error_basic():
 
 
 # ----------------------- rotations and products -----------------------
+
 
 def test_rotatematrix_identity_invariant():
     m = np.eye(2)
@@ -357,6 +367,7 @@ def test_multiplymatrices_bad_inputs_raise():
 
 # ---------------------------- reorient_data2D -------------------------
 
+
 def test_reorient_data2d_default_axes_identity():
     x = np.array([1.0, 2.0, 3.0])
     y = np.array([4.0, 5.0, 6.0])
@@ -387,6 +398,7 @@ def test_reorient_data2d_parallel_sensors_raise():
 
 # ------------------------------ rhophi_to_z ---------------------------
 
+
 def test_rhophi_to_z_from_resistivity_si_units():
     freq = np.array([10.0])
     rho = np.array([100.0])
@@ -405,14 +417,14 @@ def test_rhophi_to_z_degree_flag_and_heuristic():
     explicit = rhophi_to_z(deg_phase, freq, resistivity=rho, deg=True)
     auto = rhophi_to_z(deg_phase, freq, resistivity=rho)
     assert np.allclose(explicit[3], auto[3])
-    assert np.allclose(
-        np.angle(explicit[3]), np.deg2rad(deg_phase)
-    )
+    assert np.allclose(np.angle(explicit[3]), np.deg2rad(deg_phase))
 
 
 def test_rhophi_to_z_zabs_overrides_resistivity():
     z_abs, z_re, z_im, _ = rhophi_to_z(
-        np.array([0.0]), np.array([1.0]), z_abs=np.array([7.0]),
+        np.array([0.0]),
+        np.array([1.0]),
+        z_abs=np.array([7.0]),
         resistivity=np.array([1.0]),
     )
     assert z_abs[0] == pytest.approx(7.0)
@@ -424,20 +436,20 @@ def test_rhophi_to_z_missing_inputs_raise():
     with pytest.raises(ImpedanceConversionError):
         rhophi_to_z(np.array([0.1]), np.array([1.0]))
     with pytest.raises(EmptyArrayError):
-        rhophi_to_z(np.array([]), np.array([1.0]),
-                    resistivity=np.array([1.0]))
+        rhophi_to_z(
+            np.array([]), np.array([1.0]), resistivity=np.array([1.0])
+        )
 
 
 # ---------------------------- z_err_to_rphi_err -----------------------
+
 
 def test_z_err_to_rphi_err_relationship():
     rho_rel, phase_deg = z_err_to_rphi_err(
         np.array([3.0]), np.array([4.0]), np.array([0.5])
     )
     assert rho_rel[0] == pytest.approx(0.2)
-    assert phase_deg[0] == pytest.approx(
-        math.degrees(math.atan(0.1))
-    )
+    assert phase_deg[0] == pytest.approx(math.degrees(math.atan(0.1)))
 
 
 def test_z_err_to_rphi_err_cap_and_units():
@@ -448,7 +460,9 @@ def test_z_err_to_rphi_err_cap_and_units():
     assert phase_deg[0] == pytest.approx(90.0)
 
     _, phase_mrad = z_err_to_rphi_err(
-        np.array([3.0]), np.array([4.0]), np.array([0.5]),
+        np.array([3.0]),
+        np.array([4.0]),
+        np.array([0.5]),
         deg_out=False,
     )
     assert phase_mrad[0] == pytest.approx(math.atan(0.1) * 1e3)

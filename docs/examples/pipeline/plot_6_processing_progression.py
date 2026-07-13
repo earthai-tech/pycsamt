@@ -36,16 +36,21 @@ raw = demo_sites(n=10)
 configure_pipe(show_progress=False, plot_dpi=72)
 pipe = Pipeline(
     [
-        ("notch",        Step("NR001", mains_hz=50)),
+        ("notch", Step("NR001", mains_hz=50)),
         ("static_shift", Step("SS001")),
-        ("denoise",      Step("NR002")),
-        ("qc_snap",      Step("QC001")),
+        ("denoise", Step("NR002")),
+        ("qc_snap", Step("QC001")),
     ],
     name="cleanup",
 )
 with quiet_logs():
-    result = pipe.run(raw, outdir=scratch_dir(), save_plots=False,
-                      save_edis=True, save_report=False)
+    result = pipe.run(
+        raw,
+        outdir=scratch_dir(),
+        save_plots=False,
+        save_edis=True,
+        save_report=False,
+    )
 print(result.summary())
 
 before = station_rho(result.sites_in)
@@ -61,8 +66,9 @@ after = station_rho(result.sites_out)
 
 stations = list(before)
 pick = [stations[1], stations[len(stations) // 2], stations[-2]]
-fig, axes = plt.subplots(1, 3, figsize=(12, 4.2), sharey=True,
-                         constrained_layout=True)
+fig, axes = plt.subplots(
+    1, 3, figsize=(12, 4.2), sharey=True, constrained_layout=True
+)
 for ax, st in zip(axes, pick):
     pb, rb = before[st]
     pa, ra = after[st]
@@ -84,13 +90,20 @@ fig.suptitle("Apparent resistivity — raw vs processed", fontsize=12)
 
 names = [s for s in before if np.array_equal(before[s][0], after[s][0])]
 periods = before[names[0]][0]
-delta = np.column_stack([
-    np.log10(after[s][1]) - np.log10(before[s][1]) for s in names
-])                                   # (n_period, n_station)
+delta = np.column_stack(
+    [np.log10(after[s][1]) - np.log10(before[s][1]) for s in names]
+)  # (n_period, n_station)
 vmax = float(np.nanpercentile(np.abs(delta), 98))
 fig, ax = plt.subplots(figsize=(10, 4.6), constrained_layout=True)
-im = ax.pcolormesh(np.arange(len(names)), np.log10(periods), delta,
-                   cmap="RdBu_r", vmin=-vmax, vmax=vmax, shading="auto")
+im = ax.pcolormesh(
+    np.arange(len(names)),
+    np.log10(periods),
+    delta,
+    cmap="RdBu_r",
+    vmin=-vmax,
+    vmax=vmax,
+    shading="auto",
+)
 ax.set_xticks(range(len(names)))
 ax.set_xticklabels(names, rotation=90, fontsize=6)
 ax.set_ylabel(r"$\log_{10}$ period (s)")
@@ -119,8 +132,10 @@ ax.bar(x + 0.2, snr_a, width=0.4, color="#16a34a", label="processed")
 ax.set_xticks(x)
 ax.set_xticklabels(qc_before["station"], rotation=90, fontsize=6)
 ax.set_ylabel("median SNR")
-ax.set_title(f"Data quality per station  "
-             f"(mean SNR {snr_b.mean():.1f} -> {snr_a.mean():.1f})")
+ax.set_title(
+    f"Data quality per station  "
+    f"(mean SNR {snr_b.mean():.1f} -> {snr_a.mean():.1f})"
+)
 ax.legend(fontsize=8)
 ax.grid(axis="y", alpha=0.3)
 

@@ -19,7 +19,8 @@ import numpy as np
 StrLike = Union[str, np.str_]
 Container = Union[StrLike, Sequence[StrLike], np.ndarray]
 
-def make_ids(                    # noqa: D401
+
+def make_ids(  # noqa: D401
     items: Sequence[Any] | int,
     *,
     prefix: str | None = "",
@@ -93,9 +94,11 @@ def make_ids(                    # noqa: D401
 
     # build ids
     tmpl = f"{{:0{width}d}}" if width else "{:d}"
-    ids = [f"{prefix}{tmpl.format(idx)}" for idx in range(
-        start, start + count)]
+    ids = [
+        f"{prefix}{tmpl.format(idx)}" for idx in range(start, start + count)
+    ]
     return ids
+
 
 def ensure_package(  # noqa: D401
     package: str,
@@ -172,14 +175,18 @@ def ensure_package(  # noqa: D401
     if verbose >= 2:
         print("[pip]", " ".join(cmd), file=sys.stderr)
 
-    stdout = subprocess.DEVNULL if silent else (
-        subprocess.PIPE if capture_output else None
+    stdout = (
+        subprocess.DEVNULL
+        if silent
+        else (subprocess.PIPE if capture_output else None)
     )
     stderr = subprocess.DEVNULL if silent else subprocess.STDOUT
 
     t0 = time.perf_counter()
     try:
-        subprocess.check_call(cmd, stdout=stdout, stderr=stderr, timeout=timeout)
+        subprocess.check_call(
+            cmd, stdout=stdout, stderr=stderr, timeout=timeout
+        )
         ok = True
     except subprocess.SubprocessError as exc:
         ok = False
@@ -327,6 +334,7 @@ def strip_item(
     # Sequence -> list
     return cleaned
 
+
 def count_functions(
     module_name: str,
     include_class: bool = False,
@@ -369,16 +377,12 @@ def count_functions(
     try:
         mod = importlib.import_module(module_name)
     except Exception as exc:
-        raise ImportError(
-            f"Cannot import module: {module_name}"
-        ) from exc
+        raise ImportError(f"Cannot import module: {module_name}") from exc
 
     try:
         src = inspect.getsource(mod)
     except Exception as exc:
-        raise ValueError(
-            f"Cannot read source for {module_name}"
-        ) from exc
+        raise ValueError(f"Cannot read source for {module_name}") from exc
 
     tree = ast.parse(src)
 
@@ -478,8 +482,7 @@ def get_valid_kwargs(
 
     if sig is None:
         warnings.warn(
-            "Unable to retrieve signature; no kwargs will be "
-            "passed.",
+            "Unable to retrieve signature; no kwargs will be passed.",
             stacklevel=2,
         )
         return {}
@@ -497,9 +500,7 @@ def get_valid_kwargs(
         inspect.Parameter.KEYWORD_ONLY,
     }
     valid_names = {
-        name
-        for name, p in sig.parameters.items()
-        if p.kind in eligible_kinds
+        name for name, p in sig.parameters.items() if p.kind in eligible_kinds
     }
 
     valid = {k: v for k, v in kwargs.items() if k in valid_names}
@@ -628,7 +629,8 @@ def error_policy(
     # that break the later ``msg.format(error=...)`` call.
     default_msg = (
         "Invalid error policy: '{error}'. Valid options are "
-        + ", ".join(repr(p) for p in sorted(valid_policies)) + "."
+        + ", ".join(repr(p) for p in sorted(valid_policies))
+        + "."
     )
     if exception is None:
         exception = ValueError

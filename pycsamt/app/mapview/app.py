@@ -31,7 +31,10 @@ matplotlib.use("Agg", force=True)
 _ICONS_DIR = os.path.normpath(
     os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "..", "desktop", "resources", "icons",
+        "..",
+        "desktop",
+        "resources",
+        "icons",
     )
 )
 
@@ -56,9 +59,11 @@ def create_app(
     )
 
     from .layout import create_layout
+
     app.layout = create_layout()
 
     from .callbacks import register_all
+
     register_all(app)
 
     # serve the shared icon set at /mv-icons/<filename>
@@ -108,6 +113,7 @@ def launch(
     """
     if view is not None:
         from .cache import set_seed
+
         set_seed(view)
 
     app = create_app(debug=debug)

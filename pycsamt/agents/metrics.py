@@ -54,71 +54,143 @@ __all__ = [
 ]
 
 METRIC_KINDS = (
-    "strike", "azimuth", "dimensionality", "skew",
-    "stations", "periods", "frequencies", "coordinates",
-    "quality", "summary",
+    "strike",
+    "azimuth",
+    "dimensionality",
+    "skew",
+    "stations",
+    "periods",
+    "frequencies",
+    "coordinates",
+    "quality",
+    "summary",
 )
 
 # Ordered synonym table: most-specific phrases first. First match per kind.
 _SYNONYMS: dict[str, tuple[str, ...]] = {
     "summary": (
-        "summary", "overview", "tell me about", "describe the line",
-        "describe this line", "about this line", "about the line",
-        "give me a rundown", "brief on", "characterise", "characterize",
+        "summary",
+        "overview",
+        "tell me about",
+        "describe the line",
+        "describe this line",
+        "about this line",
+        "about the line",
+        "give me a rundown",
+        "brief on",
+        "characterise",
+        "characterize",
     ),
     "strike": (
-        "geoelectric strike", "strike direction", "strike angle",
-        "regional strike", "strike of", "strike for", "strike",
+        "geoelectric strike",
+        "strike direction",
+        "strike angle",
+        "regional strike",
+        "strike of",
+        "strike for",
+        "strike",
     ),
     "azimuth": (
-        "azimuth", "bearing", "profile direction", "line direction",
-        "profile orientation", "line orientation", "orientation",
+        "azimuth",
+        "bearing",
+        "profile direction",
+        "line direction",
+        "profile orientation",
+        "line orientation",
+        "orientation",
     ),
     "dimensionality": (
-        "dimensionality", "dimension", "1d 2d 3d", "1d/2d/3d",
+        "dimensionality",
+        "dimension",
+        "1d 2d 3d",
+        "1d/2d/3d",
         "how many dimensions",
     ),
     "skew": ("skew", "phase tensor skew", "beta", "asymmetry"),
     "stations": (
-        "how many stations", "number of stations", "station count",
-        "count of stations", "n stations", "stations",
+        "how many stations",
+        "number of stations",
+        "station count",
+        "count of stations",
+        "n stations",
+        "stations",
     ),
     "periods": (
-        "period range", "period band", "periods", "shortest period",
+        "period range",
+        "period band",
+        "periods",
+        "shortest period",
         "longest period",
     ),
     "frequencies": (
-        "frequency range", "frequency band", "frequencies", "frequency",
+        "frequency range",
+        "frequency band",
+        "frequencies",
+        "frequency",
     ),
     "coordinates": (
-        "coordinates", "bounding box", "profile length", "line length",
-        "how long is the line", "extent", "location",
+        "coordinates",
+        "bounding box",
+        "profile length",
+        "line length",
+        "how long is the line",
+        "extent",
+        "location",
     ),
     "quality": (
-        "data quality", "quality score", "qc score", "quality",
+        "data quality",
+        "quality score",
+        "qc score",
+        "quality",
     ),
 }
 
 # Words that mean "the full survey / every line".
 _ALL_SCOPE = (
-    "all lines", "all the lines", "every line", "each line",
-    "all profiles", "across lines", "all surveys", "per line",
+    "all lines",
+    "all the lines",
+    "every line",
+    "each line",
+    "all profiles",
+    "across lines",
+    "all surveys",
+    "per line",
 )
 
 # Phrasing that marks a *visual* / workflow request, not a value question.
 _VISUAL_OR_WORKFLOW = (
-    "plot", "rose", "map", "pseudosection", "pseudo-section", "section",
-    "figure", "chart", "diagram", "analyzer", "analyser", "analysis",
-    "run ", "render", "draw", "export", "save",
+    "plot",
+    "rose",
+    "map",
+    "pseudosection",
+    "pseudo-section",
+    "section",
+    "figure",
+    "chart",
+    "diagram",
+    "analyzer",
+    "analyser",
+    "analysis",
+    "run ",
+    "render",
+    "draw",
+    "export",
+    "save",
 )
 
 # Kinds whose names double as pyCSAMT *concepts* ("what is geoelectric
 # strike?" is a QUESTION, "what's the strike of L22PLT?" is a value). These
 # require explicit data scope to count as a metric question; the survey-only
 # kinds (stations / periods / …) accept plain question phrasing.
-_CONCEPT_OVERLAP = frozenset({
-    "strike", "azimuth", "dimensionality", "skew", "summary",
-})
+_CONCEPT_OVERLAP = frozenset(
+    {
+        "strike",
+        "azimuth",
+        "dimensionality",
+        "skew",
+        "summary",
+    }
+)
 
 
 def parse_metric_request(text: str) -> tuple[list[str], bool]:
@@ -174,20 +246,31 @@ def looks_like_metric_query(text: str) -> bool:
         return False
     # A value word alone isn't enough ("strike" could be a workflow). Require
     # question-style or line-scoped phrasing.
-    question_like = (
-        t.endswith("?")
-        or t.startswith((
-            "what", "how", "which", "give", "show", "tell",
-            "list", "whats", "what's",
-        ))
+    question_like = t.endswith("?") or t.startswith(
+        (
+            "what",
+            "how",
+            "which",
+            "give",
+            "show",
+            "tell",
+            "list",
+            "whats",
+            "what's",
+        )
     )
     scoped = (
         all_lines
-        or " of " in t or " for " in t
-        or "this line" in t or "these lines" in t
-        or "the line" in t or "the lines" in t
-        or "the survey" in t or "this survey" in t
-        or "my data" in t or "my survey" in t
+        or " of " in t
+        or " for " in t
+        or "this line" in t
+        or "these lines" in t
+        or "the line" in t
+        or "the lines" in t
+        or "the survey" in t
+        or "this survey" in t
+        or "my data" in t
+        or "my survey" in t
         or "in the line" in t
     )
     # Concept-overlapping value words ("strike", "summary", …) need explicit
@@ -214,7 +297,9 @@ class MetricsAgent:
         self._last_cost = 0.0
 
         kinds = input_data.get("kinds") or [input_data.get("kind", "summary")]
-        kinds = [str(k).strip() for k in kinds if str(k).strip() in METRIC_KINDS]
+        kinds = [
+            str(k).strip() for k in kinds if str(k).strip() in METRIC_KINDS
+        ]
         if not kinds:
             kinds = ["summary"]
 
@@ -230,6 +315,7 @@ class MetricsAgent:
             )
 
         from ..emtools._core import ensure_sites
+
         try:
             sites = ensure_sites(src, recursive=True, strict=False, verbose=0)
         except Exception as exc:  # noqa: BLE001
@@ -241,6 +327,7 @@ class MetricsAgent:
         stations = input_data.get("stations")
         if stations:
             from .plotting import _as_list
+
             sites = _filter_sites(sites, _as_list(stations))
 
         label = str(input_data.get("label") or "").strip()
@@ -282,16 +369,18 @@ class MetricsAgent:
     # ── individual metrics ──────────────────────────────────────────────────
     def _m_strike(self, sites, warnings) -> str:
         from ..emtools.strike import estimate_strike_consensus
+
         band = None
         res = estimate_strike_consensus(sites, band=band, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
-        reg = _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        reg = (
+            _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        )
         import numpy as np
+
         if not np.isfinite(reg):
             return "no usable strike could be estimated"
-        compass = (
-            f"N{reg:.0f}°E" if reg >= 0 else f"N{abs(reg):.0f}°W"
-        )
+        compass = f"N{reg:.0f}°E" if reg >= 0 else f"N{abs(reg):.0f}°W"
         return (
             f"regional geoelectric strike ≈ {compass}, with the inherent "
             f"90° ambiguity, from {len(df)} station(s)"
@@ -301,6 +390,7 @@ class MetricsAgent:
         import numpy as np
 
         from ..gis.coord_correction import _pca_azimuth
+
         es, ns = [], []
         for _, lat, lon in _station_coords(sites):
             if lat is None or lon is None:
@@ -323,6 +413,7 @@ class MetricsAgent:
         from ..emtools.dimensionality import (
             classify_dimensionality,
         )
+
         res = classify_dimensionality(sites, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
         if "dim" not in df or df.empty:
@@ -346,6 +437,7 @@ class MetricsAgent:
         from ..emtools.dimensionality import (
             classify_dimensionality,
         )
+
         res = classify_dimensionality(sites, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
         if "beta_abs" not in df or df.empty:
@@ -359,7 +451,11 @@ class MetricsAgent:
         names = [r.get("station", "?") for r in rows]
         head = ", ".join(str(n) for n in names[:6])
         more = f" … (+{len(names) - 6} more)" if len(names) > 6 else ""
-        return f"{len(names)} station(s): {head}{more}" if names else "no stations found"
+        return (
+            f"{len(names)} station(s): {head}{more}"
+            if names
+            else "no stations found"
+        )
 
     def _m_periods(self, sites, warnings) -> str:
         rows = self._scan(sites)
@@ -385,8 +481,12 @@ class MetricsAgent:
 
     def _m_coordinates(self, sites, warnings) -> str:
         import numpy as np
-        coords = [(la, lo) for _, la, lo in _station_coords(sites)
-                  if la is not None and lo is not None]
+
+        coords = [
+            (la, lo)
+            for _, la, lo in _station_coords(sites)
+            if la is not None and lo is not None
+        ]
         if not coords:
             return "no station coordinates are available"
         lats = np.array([c[0] for c in coords])
@@ -400,14 +500,16 @@ class MetricsAgent:
                 es.append(e)
                 ns.append(n)
             es, ns = np.asarray(es), np.asarray(ns)
-            length_km = float(
-                np.hypot(es.max() - es.min(), ns.max() - ns.min())
-            ) / 1000.0
+            length_km = (
+                float(np.hypot(es.max() - es.min(), ns.max() - ns.min()))
+                / 1000.0
+            )
         except Exception:  # noqa: BLE001
             pass
         span = (
             f", profile span ≈ {length_km:.1f} km"
-            if np.isfinite(length_km) else ""
+            if np.isfinite(length_km)
+            else ""
         )
         return (
             f"spans lat {lats.min():.4f}–{lats.max():.4f}°, "
@@ -417,13 +519,16 @@ class MetricsAgent:
 
     def _m_quality(self, sites, warnings) -> str:
         import numpy as np
+
         rows = self._scan(sites)
         if not rows:
             return "no stations with valid data found"
         scores = np.array([r.get("qc_score") or 0 for r in rows], float)
         n_flag = sum(
-            1 for r in rows
-            if not r.get("has_z") or not r.get("has_coords")
+            1
+            for r in rows
+            if not r.get("has_z")
+            or not r.get("has_coords")
             or (r.get("qc_score") or 0) < 50
         )
         tip = "present" if _has_tipper(sites) else "absent"
@@ -434,7 +539,13 @@ class MetricsAgent:
 
     def _m_summary(self, sites, warnings) -> str:
         parts = []
-        for k in ("stations", "periods", "strike", "dimensionality", "quality"):
+        for k in (
+            "stations",
+            "periods",
+            "strike",
+            "dimensionality",
+            "quality",
+        ):
             try:
                 parts.append(self._compute(k, sites, warnings))
             except Exception as exc:  # noqa: BLE001
@@ -445,5 +556,6 @@ class MetricsAgent:
     @staticmethod
     def _scan(sites) -> list:
         from .loader import _quality_scan
+
         rows, _ = _quality_scan(sites)
         return rows or []

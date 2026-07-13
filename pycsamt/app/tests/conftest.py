@@ -15,6 +15,7 @@ import pytest
 
 # ── Qt / offscreen setup ───────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="session", autouse=True)
 def qt_offscreen():
     """Force Qt to use the offscreen (headless) platform for all tests."""
@@ -77,25 +78,30 @@ def no_modal_dialogs(monkeypatch):
     yes = QMessageBox.StandardButton.Yes
     ok = QMessageBox.StandardButton.Ok
     monkeypatch.setattr(
-        QMessageBox, "question",
+        QMessageBox,
+        "question",
         staticmethod(lambda *a, **k: yes),
     )
     monkeypatch.setattr(
-        QMessageBox, "information",
+        QMessageBox,
+        "information",
         staticmethod(lambda *a, **k: ok),
     )
     monkeypatch.setattr(
-        QMessageBox, "warning",
+        QMessageBox,
+        "warning",
         staticmethod(lambda *a, **k: ok),
     )
     monkeypatch.setattr(
-        QMessageBox, "critical",
+        QMessageBox,
+        "critical",
         staticmethod(lambda *a, **k: ok),
     )
     yield
 
 
 # ── EDI fixtures ───────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def simulated_edi(tmp_path_factory):
@@ -139,7 +145,16 @@ def simulated_edi(tmp_path_factory):
         f">FREQ // {nfreq}",
     ]
     lines.append("  " + "  ".join(f"{f:.6E}" for f in freqs))
-    for comp in ("ZXXR", "ZXXI", "ZXYR", "ZXYI", "ZYXR", "ZYXI", "ZYYR", "ZYYI"):
+    for comp in (
+        "ZXXR",
+        "ZXXI",
+        "ZXYR",
+        "ZXYI",
+        "ZYXR",
+        "ZYXI",
+        "ZYYR",
+        "ZYYI",
+    ):
         lines.append(f">{comp} // {nfreq}")
         lines.append("  " + "  ".join(f"{v:.6E}" for v in z_real))
     lines.append(">END")

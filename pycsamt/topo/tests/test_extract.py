@@ -33,8 +33,14 @@ from pycsamt.topo.extract import (
 
 _DATA_ROOT = os.path.join(
     os.path.dirname(__file__),
-    "..", "..", "..", "data", "AMT", "WILLY_DATA",
+    "..",
+    "..",
+    "..",
+    "data",
+    "AMT",
+    "WILLY_DATA",
 )
+
 
 def _load_profile(profile: str) -> list[EDIFile]:
     edi_dir = os.path.join(_DATA_ROOT, profile)
@@ -61,6 +67,7 @@ def _get_l18():
 # has_elevation
 # ---------------------------------------------------------------------------
 
+
 class TestHasElevation:
     def test_true_for_edi_file_list(self):
         edis, _ = _get_l18()
@@ -79,8 +86,10 @@ class TestHasElevation:
 
     def test_false_warns_for_zero_elevation(self):
         """A list of EDIFile objects with no lat/lon/elev should warn."""
+
         class _FakeEDI:
             """Minimal stand-in with zero elevation and no head."""
+
             station = "FAKE001"
 
         # extract_elevation emits the warning; has_elevation suppresses it
@@ -91,6 +100,7 @@ class TestHasElevation:
 # ---------------------------------------------------------------------------
 # extract_elevation
 # ---------------------------------------------------------------------------
+
 
 class TestExtractElevation:
     def test_length_matches_station_count(self):
@@ -141,11 +151,13 @@ class TestExtractElevation:
 
     def test_zero_elev_emits_warning(self):
         """Synthetic EDI with elev=0 should trigger UserWarning."""
+
         class _ZeroElev:
             class _Head:
                 elev = 0.0
                 lat = 0.0
                 lon = 0.0
+
             Head = _Head()
 
         with pytest.warns(UserWarning, match="elevation"):
@@ -155,6 +167,7 @@ class TestExtractElevation:
 # ---------------------------------------------------------------------------
 # extract_chainage
 # ---------------------------------------------------------------------------
+
 
 class TestExtractChainage:
     def test_length_matches_station_count(self):
@@ -237,6 +250,7 @@ class TestExtractChainage:
 # extract_station_names
 # ---------------------------------------------------------------------------
 
+
 class TestExtractStationNames:
     def test_length_matches_station_count(self):
         edis, _ = _get_l18()
@@ -260,7 +274,9 @@ class TestExtractStationNames:
     def test_unique_within_profile(self):
         edis, _ = _get_l18()
         names = extract_station_names(edis)
-        assert len(names) == len(set(names)), "Duplicate station names in L18PLT"
+        assert len(names) == len(set(names)), (
+            "Duplicate station names in L18PLT"
+        )
 
     def test_collection_equals_list(self):
         edis, coll = _get_l18()
@@ -268,6 +284,7 @@ class TestExtractStationNames:
 
     def test_fallback_for_missing_name(self):
         """If dataid is missing, should fall back to S000-style names."""
+
         class _NoName:
             class Head:
                 dataid = None
@@ -291,6 +308,7 @@ class TestExtractStationNames:
 # Edge cases / robustness
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     def test_extract_elevation_single_edi(self):
         edis, _ = _get_l18()
@@ -306,6 +324,7 @@ class TestEdgeCases:
 
     def test_old_head_attribute_style(self):
         """Verify compatibility with old MTpy-style .Head attribute."""
+
         class _OldHead:
             elev = 250.0
             lat = 10.0

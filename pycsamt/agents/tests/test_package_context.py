@@ -33,21 +33,23 @@ class TestContextBuilder(unittest.TestCase):
     """PACKAGE_CONTEXT singleton."""
 
     def test_non_empty(self):
-        self.assertGreater(
-            len(PACKAGE_CONTEXT), 500
-        )
+        self.assertGreater(len(PACKAGE_CONTEXT), 500)
 
     def test_contains_pycsamt_header(self):
         self.assertIn("pycsamt", PACKAGE_CONTEXT)
 
     def test_contains_workflow_keywords(self):
         for kw in (
-            "qc", "static_shift",
-            "phase_analysis", "ai_inversion",
-            "pinn_inversion", "report",
+            "qc",
+            "static_shift",
+            "phase_analysis",
+            "ai_inversion",
+            "pinn_inversion",
+            "report",
         ):
             self.assertIn(
-                kw, PACKAGE_CONTEXT,
+                kw,
+                PACKAGE_CONTEXT,
                 msg=f"Workflow keyword missing: {kw!r}",
             )
 
@@ -59,17 +61,14 @@ class TestContextBuilder(unittest.TestCase):
             "MTLoaderAgent",
         ):
             self.assertIn(
-                name, PACKAGE_CONTEXT,
+                name,
+                PACKAGE_CONTEXT,
                 msg=f"Agent class missing: {name!r}",
             )
 
     def test_contains_usage_examples(self):
-        self.assertIn(
-            "Usage examples", PACKAGE_CONTEXT
-        )
-        self.assertIn(
-            "from pycsamt", PACKAGE_CONTEXT
-        )
+        self.assertIn("Usage examples", PACKAGE_CONTEXT)
+        self.assertIn("from pycsamt", PACKAGE_CONTEXT)
 
     def test_rebuild_with_custom_limits(self):
         ctx = build_package_context(
@@ -94,21 +93,24 @@ class TestCollectors(unittest.TestCase):
     def test_collect_agents_nonempty(self):
         agents = _collect_agents()
         self.assertGreater(
-            len(agents), 0,
+            len(agents),
+            0,
             "No agents collected — import failed?",
         )
 
     def test_collect_agents_static_shift(self):
         agents = _collect_agents()
         self.assertIn(
-            "StaticShiftAgent", agents,
+            "StaticShiftAgent",
+            agents,
             "StaticShiftAgent not collected",
         )
 
     def test_collect_agents_qc(self):
         agents = _collect_agents()
         self.assertIn(
-            "DataQCAgent", agents,
+            "DataQCAgent",
+            agents,
             "DataQCAgent not collected",
         )
 
@@ -119,7 +121,8 @@ class TestCollectors(unittest.TestCase):
     def test_collect_core_sites(self):
         core = _collect_core()
         self.assertIn(
-            "Sites", core,
+            "Sites",
+            core,
             "Sites class not collected",
         )
 
@@ -134,9 +137,7 @@ class TestHelpers(unittest.TestCase):
         self.assertNotIn("the", kw)
 
     def test_keywords_extracts_terms(self):
-        kw = _keywords(
-            "StaticShiftAgent corrects galvanic shift"
-        )
+        kw = _keywords("StaticShiftAgent corrects galvanic shift")
         self.assertIn("staticshiftagent", kw)
         self.assertIn("corrects", kw)
         self.assertIn("galvanic", kw)
@@ -145,6 +146,7 @@ class TestHelpers(unittest.TestCase):
         from pycsamt.agents.static_shift import (
             StaticShiftAgent,
         )
+
         doc = _short_doc(StaticShiftAgent, 50)
         self.assertLessEqual(len(doc), 60)
 
@@ -152,6 +154,7 @@ class TestHelpers(unittest.TestCase):
         from pycsamt.agents.static_shift import (
             StaticShiftAgent,
         )
+
         doc = _short_doc(StaticShiftAgent)
         self.assertGreater(len(doc), 5)
 
@@ -159,6 +162,7 @@ class TestHelpers(unittest.TestCase):
         from pycsamt.agents.static_shift import (
             StaticShiftAgent,
         )
+
         sig = _sig(StaticShiftAgent)
         self.assertIsInstance(sig, str)
 
@@ -166,6 +170,7 @@ class TestHelpers(unittest.TestCase):
         from pycsamt.agents.static_shift import (
             StaticShiftAgent,
         )
+
         sig = _sig(StaticShiftAgent)
         self.assertNotIn("self", sig)
 

@@ -50,6 +50,7 @@ Style sections
 * :class:`CorrectionStyle` — before/after pair for any 1-D correction workflow
 * :class:`RawDataStyle` — black diagnostic traces for unprocessed observations
 """
+
 from __future__ import annotations
 
 import copy
@@ -75,15 +76,19 @@ from ._rose_style import (
 # Map base_color → sequential cmap where HIGH fraction = DARK shade.
 # We use non-reversed cmaps so linspace(dark, light) = dark-first.
 _COLOR_TO_CMAP: dict[str, str] = {
-    "blue":    "Blues",    "b":      "Blues",
-    "red":     "Reds",     "r":      "Reds",
-    "green":   "Greens",   "g":      "Greens",
-    "orange":  "Oranges",
-    "purple":  "Purples",
-    "grey":    "Greys",    "gray":   "Greys",
-    "teal":    "GnBu",
-    "brown":   "YlOrBr",
-    "navy":    "Blues",
+    "blue": "Blues",
+    "b": "Blues",
+    "red": "Reds",
+    "r": "Reds",
+    "green": "Greens",
+    "g": "Greens",
+    "orange": "Oranges",
+    "purple": "Purples",
+    "grey": "Greys",
+    "gray": "Greys",
+    "teal": "GnBu",
+    "brown": "YlOrBr",
+    "navy": "Blues",
     "crimson": "Reds",
 }
 
@@ -128,19 +133,28 @@ class MultilineStyle:
         Colour list used when *mode* is ``"cycle"``.
     """
 
-    mode:           str            = "gradient"
-    base_color:     str            = "blue"
-    cmap:           str | None  = None
-    dark:           float          = 0.85
-    light:          float          = 0.25
-    reverse:        bool           = False
-    lw:             float          = 1.5
-    alpha:          float          = 0.85
-    cycle_palette:  list[str]      = field(default_factory=lambda: [
-        "#1f77b4", "#d62728", "#2ca02c", "#ff7f0e",
-        "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
-        "#bcbd22", "#17becf",
-    ])
+    mode: str = "gradient"
+    base_color: str = "blue"
+    cmap: str | None = None
+    dark: float = 0.85
+    light: float = 0.25
+    reverse: bool = False
+    lw: float = 1.5
+    alpha: float = 0.85
+    cycle_palette: list[str] = field(
+        default_factory=lambda: [
+            "#1f77b4",
+            "#d62728",
+            "#2ca02c",
+            "#ff7f0e",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ]
+    )
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -172,6 +186,7 @@ class MultilineStyle:
             return [pal[i % len(pal)] for i in range(n)]
         # gradient
         import matplotlib.pyplot as plt
+
         cm_name = self.cmap or _COLOR_TO_CMAP.get(
             self.base_color.lower(), "Blues_r"
         )
@@ -184,7 +199,9 @@ class MultilineStyle:
             fracs = fracs[::-1]
         return [cm(float(f)) for f in fracs]
 
-    def line_kwargs(self, idx: int, n: int, **overrides: Any) -> dict[str, Any]:
+    def line_kwargs(
+        self, idx: int, n: int, **overrides: Any
+    ) -> dict[str, Any]:
         """Return ``ax.plot`` keyword arguments for line *idx* of *n*.
 
         Parameters
@@ -218,6 +235,7 @@ class MultilineStyle:
 # MTComponentStyle
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class _MTComp:
     """Visual properties for a single MT impedance component or mode.
@@ -248,19 +266,19 @@ class _MTComp:
         Error-bar cap size in points.
     """
 
-    color:           str   = "#1f77b4"
-    ls:              str   = "-"
-    lw:              float = 1.5
-    marker:          str   = "o"
-    ms:              float = 4.0
-    mfc:             str   = "white"
-    mew:             float = 1.2
-    alpha:           float = 0.90
-    label:           str   = ""
-    elinewidth:      float = 0.8
-    capsize:         float = 2.5
-    predicted_color: str   = ""  # empty → fall back to `color`
-    predicted_ls:    str   = ":" # line style for model-predicted overlay
+    color: str = "#1f77b4"
+    ls: str = "-"
+    lw: float = 1.5
+    marker: str = "o"
+    ms: float = 4.0
+    mfc: str = "white"
+    mew: float = 1.2
+    alpha: float = 0.90
+    label: str = ""
+    elinewidth: float = 0.8
+    capsize: float = 2.5
+    predicted_color: str = ""  # empty → fall back to `color`
+    predicted_ls: str = ":"  # line style for model-predicted overlay
 
     def plot_kwargs(self, **overrides: Any) -> dict[str, Any]:
         """Keyword arguments for :func:`matplotlib.axes.Axes.plot`.
@@ -270,9 +288,14 @@ class _MTComp:
         >>> ax.plot(period, rho_xy, **style.mt.xy.plot_kwargs())
         """
         d: dict[str, Any] = dict(
-            color=self.color, ls=self.ls, lw=self.lw,
-            marker=self.marker, ms=self.ms,
-            mfc=self.mfc, mew=self.mew, alpha=self.alpha,
+            color=self.color,
+            ls=self.ls,
+            lw=self.lw,
+            marker=self.marker,
+            ms=self.ms,
+            mfc=self.mfc,
+            mew=self.mew,
+            alpha=self.alpha,
         )
         if self.label:
             d["label"] = self.label
@@ -290,8 +313,9 @@ class _MTComp:
         >>> ax.errorbar(period, rho_xy, rho_err, **style.mt.xy.errorbar_kwargs())
         """
         import matplotlib.colors as mc
+
         rgba = list(mc.to_rgba(self.color))
-        rgba[3] = 0.50          # semi-transparent error bars
+        rgba[3] = 0.50  # semi-transparent error bars
         d = self.plot_kwargs()
         d.update(
             ecolor=tuple(rgba),
@@ -309,8 +333,10 @@ class _MTComp:
         return new
 
     def __repr__(self) -> str:  # noqa: D105
-        return (f"_MTComp(color={self.color!r}, ls={self.ls!r}, "
-                f"lw={self.lw}, marker={self.marker!r}, label={self.label!r})")
+        return (
+            f"_MTComp(color={self.color!r}, ls={self.ls!r}, "
+            f"lw={self.lw}, marker={self.marker!r}, label={self.label!r})"
+        )
 
 
 @dataclass
@@ -349,34 +375,83 @@ class MTComponentStyle:
         PYCSAMT_STYLE.mt.xy.color = "#003f88"
     """
 
-    xy:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#1f77b4", ls="-",  lw=1.5, marker="o", ms=4.0,
-        mfc="white", label="XY",
-    ))
-    yx:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#d62728", ls="-",  lw=1.5, marker="s", ms=4.0,
-        mfc="white", label="YX",
-    ))
-    xx:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#2ca02c", ls="--", lw=1.2, marker="^", ms=3.5,
-        mfc="white", label="XX",
-    ))
-    yy:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#9467bd", ls="--", lw=1.2, marker="v", ms=3.5,
-        mfc="white", label="YY",
-    ))
-    te:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#1f77b4", ls="-",  lw=1.5, marker="o", ms=4.0,
-        mfc="white", label="TE",
-    ))
-    tm:  _MTComp = field(default_factory=lambda: _MTComp(
-        color="#d62728", ls="-",  lw=1.5, marker="s", ms=4.0,
-        mfc="white", label="TM",
-    ))
-    det: _MTComp = field(default_factory=lambda: _MTComp(
-        color="#7f7f7f", ls="-",  lw=1.3, marker="D", ms=3.5,
-        mfc="white", label="det",
-    ))
+    xy: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#1f77b4",
+            ls="-",
+            lw=1.5,
+            marker="o",
+            ms=4.0,
+            mfc="white",
+            label="XY",
+        )
+    )
+    yx: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#d62728",
+            ls="-",
+            lw=1.5,
+            marker="s",
+            ms=4.0,
+            mfc="white",
+            label="YX",
+        )
+    )
+    xx: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#2ca02c",
+            ls="--",
+            lw=1.2,
+            marker="^",
+            ms=3.5,
+            mfc="white",
+            label="XX",
+        )
+    )
+    yy: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#9467bd",
+            ls="--",
+            lw=1.2,
+            marker="v",
+            ms=3.5,
+            mfc="white",
+            label="YY",
+        )
+    )
+    te: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#1f77b4",
+            ls="-",
+            lw=1.5,
+            marker="o",
+            ms=4.0,
+            mfc="white",
+            label="TE",
+        )
+    )
+    tm: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#d62728",
+            ls="-",
+            lw=1.5,
+            marker="s",
+            ms=4.0,
+            mfc="white",
+            label="TM",
+        )
+    )
+    det: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#7f7f7f",
+            ls="-",
+            lw=1.3,
+            marker="D",
+            ms=3.5,
+            mfc="white",
+            label="det",
+        )
+    )
 
     # ── convenience ───────────────────────────────────────────────────────────
 
@@ -411,6 +486,7 @@ class MTComponentStyle:
 # ═══════════════════════════════════════════════════════════════════════════════
 # CorrectionStyle
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class CorrectionStyle:
@@ -458,28 +534,32 @@ class CorrectionStyle:
         )
     """
 
-    before: _MTComp = field(default_factory=lambda: _MTComp(
-        color="#1f77b4",   # matplotlib blue — same as mt.xy
-        ls="--",           # dashed → visually "unfinished / before"
-        lw=1.5,
-        marker="o",
-        ms=4.0,
-        mfc="white",       # hollow markers for both curves
-        mew=1.2,
-        alpha=0.85,
-        label="before",
-    ))
-    after: _MTComp = field(default_factory=lambda: _MTComp(
-        color="#d62728",   # matplotlib red — same as mt.yx
-        ls="-",            # solid → visually "settled / after"
-        lw=1.5,
-        marker="o",
-        ms=4.0,
-        mfc="white",
-        mew=1.2,
-        alpha=0.90,
-        label="after",
-    ))
+    before: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#1f77b4",  # matplotlib blue — same as mt.xy
+            ls="--",  # dashed → visually "unfinished / before"
+            lw=1.5,
+            marker="o",
+            ms=4.0,
+            mfc="white",  # hollow markers for both curves
+            mew=1.2,
+            alpha=0.85,
+            label="before",
+        )
+    )
+    after: _MTComp = field(
+        default_factory=lambda: _MTComp(
+            color="#d62728",  # matplotlib red — same as mt.yx
+            ls="-",  # solid → visually "settled / after"
+            lw=1.5,
+            marker="o",
+            ms=4.0,
+            mfc="white",
+            mew=1.2,
+            alpha=0.90,
+            label="after",
+        )
+    )
 
     def copy(self) -> CorrectionStyle:
         """Return a deep copy."""
@@ -497,6 +577,7 @@ class CorrectionStyle:
 # ═══════════════════════════════════════════════════════════════════════════════
 # RawDataStyle
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class RawDataStyle:
@@ -563,19 +644,19 @@ class RawDataStyle:
 
 # Recognised c_by values and their natural cmaps / symmetry flag
 _PT_CMAP_DEFAULTS: dict[str, tuple[str, bool]] = {
-    "skew":      ("RdBu_r",  True),   # diverging — symmetric around 0
-    "beta":      ("RdBu_r",  True),
-    "|skew|":    ("Reds",    False),   # absolute → sequential
-    "|beta|":    ("Reds",    False),
-    "theta":     ("hsv",     False),   # circular — 0–180°
-    "|theta|":   ("plasma",  False),
-    "ellipt":    ("viridis", False),   # 0–1 sequential
-    "phi_mean":  ("viridis", False),
-    "phi_max":   ("plasma",  False),
-    "phi_min":   ("plasma",  False),
-    "s1":        ("plasma",  False),
-    "s2":        ("plasma",  False),
-    "alpha":     ("coolwarm",True),
+    "skew": ("RdBu_r", True),  # diverging — symmetric around 0
+    "beta": ("RdBu_r", True),
+    "|skew|": ("Reds", False),  # absolute → sequential
+    "|beta|": ("Reds", False),
+    "theta": ("hsv", False),  # circular — 0–180°
+    "|theta|": ("plasma", False),
+    "ellipt": ("viridis", False),  # 0–1 sequential
+    "phi_mean": ("viridis", False),
+    "phi_max": ("plasma", False),
+    "phi_min": ("plasma", False),
+    "s1": ("plasma", False),
+    "s2": ("plasma", False),
+    "alpha": ("coolwarm", True),
 }
 
 
@@ -693,33 +774,33 @@ class PhaseTensorEllipseStyle:
     """
 
     # ── sizing ────────────────────────────────────────────────────────────────
-    normalise_by:  str             = "cell"
-    scale:         float           = 0.85
-    s1_ref:        float | None = None
-    min_aspect:    float           = 0.18
+    normalise_by: str = "cell"
+    scale: float = 0.85
+    s1_ref: float | None = None
+    min_aspect: float = 0.18
 
     # ── fill colour ───────────────────────────────────────────────────────────
-    c_by:           str                            = "skew"
-    cmap:           str | None                  = "RdBu_r"
-    clim:           tuple[float, float] | None  = None
-    clim_pct:       tuple[float, float]            = (5.0, 95.0)
-    symmetric_clim: bool                           = True
-    alpha:          float                          = 0.92
+    c_by: str = "skew"
+    cmap: str | None = "RdBu_r"
+    clim: tuple[float, float] | None = None
+    clim_pct: tuple[float, float] = (5.0, 95.0)
+    symmetric_clim: bool = True
+    alpha: float = 0.92
 
     # ── edge / border ─────────────────────────────────────────────────────────
-    edgecolor:  str   = "k"
-    linewidth:  float = 0.2
+    edgecolor: str = "k"
+    linewidth: float = 0.2
 
     # ── 3-D cell marker ───────────────────────────────────────────────────────
     skew_threshold: float | None = 3.0
-    mark_3d:        bool            = True
-    lw_3d_factor:   float           = 3.0  # applied when plot functions support it
+    mark_3d: bool = True
+    lw_3d_factor: float = 3.0  # applied when plot functions support it
 
     # ── reference circle ──────────────────────────────────────────────────────
-    show_ref:       bool  = True
-    ref_edgecolor:  str   = "k"
-    ref_lw:         float = 0.8
-    ref_fontsize:   float = 6.5
+    show_ref: bool = True
+    ref_edgecolor: str = "k"
+    ref_lw: float = 0.8
+    ref_fontsize: float = 6.5
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -759,21 +840,21 @@ class PhaseTensorEllipseStyle:
         >>> ax = plot_phase_tensor_psection(sites, **PYCSAMT_STYLE.pt_ellipse.to_kwargs())
         """
         return dict(
-            normalise_by   = self.normalise_by,
-            scale          = self.scale,
-            s1_ref         = self.s1_ref,
-            min_aspect     = self.min_aspect,
-            c_by           = self.c_by,
-            cmap           = self.resolve_cmap(),
-            clim           = self.clim,
-            clim_pct       = self.clim_pct,
-            symmetric_clim = self.resolve_symmetric_clim(),
-            alpha          = self.alpha,
-            edgecolor      = self.edgecolor,
-            linewidth      = self.linewidth,
-            skew_threshold = self.skew_threshold,
-            mark_3d        = self.mark_3d,
-            ref_ellipse    = self.show_ref,
+            normalise_by=self.normalise_by,
+            scale=self.scale,
+            s1_ref=self.s1_ref,
+            min_aspect=self.min_aspect,
+            c_by=self.c_by,
+            cmap=self.resolve_cmap(),
+            clim=self.clim,
+            clim_pct=self.clim_pct,
+            symmetric_clim=self.resolve_symmetric_clim(),
+            alpha=self.alpha,
+            edgecolor=self.edgecolor,
+            linewidth=self.linewidth,
+            skew_threshold=self.skew_threshold,
+            mark_3d=self.mark_3d,
+            ref_ellipse=self.show_ref,
         )
 
     def copy(self, **kw: Any) -> PhaseTensorEllipseStyle:
@@ -801,6 +882,7 @@ class PhaseTensorEllipseStyle:
 # ═══════════════════════════════════════════════════════════════════════════════
 # PyCSAMTStyle — main container
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class PyCSAMTStyle:
     """Global visual-style container for pyCSAMT.
@@ -857,11 +939,11 @@ class PyCSAMTStyle:
             self.use(preset)
 
     def _init_defaults(self) -> None:
-        self.rose       = RoseStyle()
-        self.multiline  = MultilineStyle()
-        self.mt         = MTComponentStyle()
+        self.rose = RoseStyle()
+        self.multiline = MultilineStyle()
+        self.mt = MTComponentStyle()
         self.correction = CorrectionStyle()
-        self.raw        = RawDataStyle()
+        self.raw = RawDataStyle()
         self.pt_ellipse = PhaseTensorEllipseStyle()
 
     # ── named presets ─────────────────────────────────────────────────────────
@@ -917,7 +999,7 @@ class PyCSAMTStyle:
                 setattr(comp, k, v)
 
     def _apply_correction(self, corr_spec: dict[str, Any]) -> None:
-        for curve_name, attrs in corr_spec.items():   # "before" / "after"
+        for curve_name, attrs in corr_spec.items():  # "before" / "after"
             comp = getattr(self.correction, curve_name, None)
             if comp is None:
                 continue
@@ -991,11 +1073,11 @@ class PyCSAMTStyle:
         >>> with PYCSAMT_STYLE.context("publication", mt__xy__lw=2.0):
         ...     fig = plot_phase_tensor_rose(sites)
         """
-        saved_rose       = copy.deepcopy(self.rose)
-        saved_multiline  = copy.deepcopy(self.multiline)
-        saved_mt         = copy.deepcopy(self.mt)
+        saved_rose = copy.deepcopy(self.rose)
+        saved_multiline = copy.deepcopy(self.multiline)
+        saved_mt = copy.deepcopy(self.mt)
         saved_correction = copy.deepcopy(self.correction)
-        saved_raw        = copy.deepcopy(self.raw)
+        saved_raw = copy.deepcopy(self.raw)
         saved_pt_ellipse = copy.deepcopy(self.pt_ellipse)
         try:
             if preset is not None:
@@ -1004,11 +1086,11 @@ class PyCSAMTStyle:
                 self.configure(**kw)
             yield self
         finally:
-            self.rose       = saved_rose
-            self.multiline  = saved_multiline
-            self.mt         = saved_mt
+            self.rose = saved_rose
+            self.multiline = saved_multiline
+            self.mt = saved_mt
             self.correction = saved_correction
-            self.raw        = saved_raw
+            self.raw = saved_raw
             self.pt_ellipse = saved_pt_ellipse
 
     # ── reset ─────────────────────────────────────────────────────────────────
@@ -1024,16 +1106,32 @@ class PyCSAMTStyle:
         lines = ["PyCSAMTStyle"]
         lines.append(f"  rose.bar_style          = {self.rose.bar_style!r}")
         lines.append(f"  rose.cmap               = {self.rose.cmap!r}")
-        lines.append(f"  rose.compass_labels     = {self.rose.compass_labels!r}")
+        lines.append(
+            f"  rose.compass_labels     = {self.rose.compass_labels!r}"
+        )
         lines.append(f"  rose.show_mean          = {self.rose.show_mean}")
-        lines.append(f"  rose.show_secondary     = {self.rose.show_secondary}")
+        lines.append(
+            f"  rose.show_secondary     = {self.rose.show_secondary}"
+        )
         lines.append(f"  multiline.mode          = {self.multiline.mode!r}")
-        lines.append(f"  multiline.base_color    = {self.multiline.base_color!r}")
-        lines.append(f"  multiline.dark/light    = {self.multiline.dark}/{self.multiline.light}")
-        lines.append(f"  mt.xy  color={self.mt.xy.color!r}  marker={self.mt.xy.marker!r}")
-        lines.append(f"  mt.yx  color={self.mt.yx.color!r}  marker={self.mt.yx.marker!r}")
-        lines.append(f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}")
-        lines.append(f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}")
+        lines.append(
+            f"  multiline.base_color    = {self.multiline.base_color!r}"
+        )
+        lines.append(
+            f"  multiline.dark/light    = {self.multiline.dark}/{self.multiline.light}"
+        )
+        lines.append(
+            f"  mt.xy  color={self.mt.xy.color!r}  marker={self.mt.xy.marker!r}"
+        )
+        lines.append(
+            f"  mt.yx  color={self.mt.yx.color!r}  marker={self.mt.yx.marker!r}"
+        )
+        lines.append(
+            f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}"
+        )
+        lines.append(
+            f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}"
+        )
         b = self.correction.before
         a = self.correction.after
         lines.append(
@@ -1066,150 +1164,436 @@ class PyCSAMTStyle:
 # Full-package presets
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def _register_preset(name: str, spec: dict[str, Any]) -> None:
     PyCSAMTStyle._PRESETS[name.lower()] = spec
 
 
 # "pycsamt" — default package look
-_register_preset("pycsamt", {
-    "rose": "pycsamt",              # string → resolved via _ROSE_PRESETS
-    "multiline": dict(
-        mode="gradient", base_color="blue", cmap=None,
-        dark=0.85, light=0.25, reverse=False, lw=1.5, alpha=0.85,
-    ),
-    "mt": {
-        "xy":  dict(color="#1f77b4", ls="-",  lw=1.5, marker="o", ms=4.0,
-                    mfc="white", label="XY"),
-        "yx":  dict(color="#d62728", ls="-",  lw=1.5, marker="s", ms=4.0,
-                    mfc="white", label="YX"),
-        "xx":  dict(color="#2ca02c", ls="--", lw=1.2, marker="^", ms=3.5,
-                    mfc="white", label="XX"),
-        "yy":  dict(color="#9467bd", ls="--", lw=1.2, marker="v", ms=3.5,
-                    mfc="white", label="YY"),
-        "te":  dict(color="#1f77b4", ls="-",  lw=1.5, marker="o", ms=4.0,
-                    mfc="white", label="TE"),
-        "tm":  dict(color="#d62728", ls="-",  lw=1.5, marker="s", ms=4.0,
-                    mfc="white", label="TM"),
-        "det": dict(color="#7f7f7f", ls="-",  lw=1.3, marker="D", ms=3.5,
-                    mfc="white", label="det"),
+_register_preset(
+    "pycsamt",
+    {
+        "rose": "pycsamt",  # string → resolved via _ROSE_PRESETS
+        "multiline": dict(
+            mode="gradient",
+            base_color="blue",
+            cmap=None,
+            dark=0.85,
+            light=0.25,
+            reverse=False,
+            lw=1.5,
+            alpha=0.85,
+        ),
+        "mt": {
+            "xy": dict(
+                color="#1f77b4",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label="XY",
+            ),
+            "yx": dict(
+                color="#d62728",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="white",
+                label="YX",
+            ),
+            "xx": dict(
+                color="#2ca02c",
+                ls="--",
+                lw=1.2,
+                marker="^",
+                ms=3.5,
+                mfc="white",
+                label="XX",
+            ),
+            "yy": dict(
+                color="#9467bd",
+                ls="--",
+                lw=1.2,
+                marker="v",
+                ms=3.5,
+                mfc="white",
+                label="YY",
+            ),
+            "te": dict(
+                color="#1f77b4",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label="TE",
+            ),
+            "tm": dict(
+                color="#d62728",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="white",
+                label="TM",
+            ),
+            "det": dict(
+                color="#7f7f7f",
+                ls="-",
+                lw=1.3,
+                marker="D",
+                ms=3.5,
+                mfc="white",
+                label="det",
+            ),
+        },
+        # blue-dashed / red-solid — matches fig5b_static_shift_1d convention
+        "correction": {
+            "before": dict(
+                color="#1f77b4",
+                ls="--",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                mew=1.2,
+                alpha=0.85,
+                label="before",
+            ),
+            "after": dict(
+                color="#d62728",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                mew=1.2,
+                alpha=0.90,
+                label="after",
+            ),
+        },
+        "raw": dict(
+            color="black",
+            ls=":",
+            lw=0.8,
+            marker=".",
+            ms=3.0,
+            mfc="black",
+            mew=0.5,
+            alpha=0.85,
+            capsize=1.5,
+            elinewidth=0.6,
+            label="raw",
+        ),
+        # phase-tensor ellipse defaults — Caldwell 2004 / pycsamt house style
+        "pt_ellipse": dict(
+            normalise_by="cell",
+            scale=0.85,
+            s1_ref=None,
+            c_by="skew",
+            cmap="RdBu_r",
+            clim=None,
+            clim_pct=(5.0, 95.0),
+            symmetric_clim=True,
+            alpha=0.92,
+            edgecolor="k",
+            linewidth=0.2,
+            skew_threshold=3.0,
+            mark_3d=True,
+            lw_3d_factor=3.0,
+            show_ref=True,
+            ref_edgecolor="k",
+            ref_lw=0.8,
+            ref_fontsize=6.5,
+        ),
     },
-    # blue-dashed / red-solid — matches fig5b_static_shift_1d convention
-    "correction": {
-        "before": dict(color="#1f77b4", ls="--", lw=1.5, marker="o", ms=4.0,
-                       mfc="white", mew=1.2, alpha=0.85, label="before"),
-        "after":  dict(color="#d62728", ls="-",  lw=1.5, marker="o", ms=4.0,
-                       mfc="white", mew=1.2, alpha=0.90, label="after"),
-    },
-    "raw": dict(
-        color="black", ls=":", lw=0.8, marker=".", ms=3.0,
-        mfc="black", mew=0.5, alpha=0.85, capsize=1.5,
-        elinewidth=0.6, label="raw",
-    ),
-    # phase-tensor ellipse defaults — Caldwell 2004 / pycsamt house style
-    "pt_ellipse": dict(
-        normalise_by="cell", scale=0.85, s1_ref=None,
-        c_by="skew", cmap="RdBu_r",
-        clim=None, clim_pct=(5.0, 95.0), symmetric_clim=True,
-        alpha=0.92,
-        edgecolor="k", linewidth=0.2,
-        skew_threshold=3.0, mark_3d=True, lw_3d_factor=3.0,
-        show_ref=True, ref_edgecolor="k", ref_lw=0.8, ref_fontsize=6.5,
-    ),
-})
+)
 
 # "publication" — grayscale / BW-friendly for journals
-_register_preset("publication", {
-    "rose": "publication",
-    "multiline": dict(
-        mode="gradient", base_color="grey", cmap="Greys",
-        dark=0.80, light=0.20, reverse=False, lw=1.5, alpha=0.90,
-    ),
-    "mt": {
-        "xy":  dict(color="black",  ls="-",  lw=1.5, marker="o", ms=4.0,
-                    mfc="white", label="XY"),
-        "yx":  dict(color="black",  ls="-",  lw=1.5, marker="s", ms=4.0,
-                    mfc="black", label="YX"),
-        "xx":  dict(color="#555555", ls="--", lw=1.2, marker="^", ms=3.5,
-                    mfc="white", label="XX"),
-        "yy":  dict(color="#555555", ls="--", lw=1.2, marker="v", ms=3.5,
-                    mfc="#555555", label="YY"),
-        "te":  dict(color="black",  ls="-",  lw=1.5, marker="o", ms=4.0,
-                    mfc="white", label="TE"),
-        "tm":  dict(color="black",  ls="--", lw=1.5, marker="s", ms=4.0,
-                    mfc="black", label="TM"),
-        "det": dict(color="#777777", ls=":",  lw=1.3, marker="D", ms=3.5,
-                    mfc="white", label="det"),
+_register_preset(
+    "publication",
+    {
+        "rose": "publication",
+        "multiline": dict(
+            mode="gradient",
+            base_color="grey",
+            cmap="Greys",
+            dark=0.80,
+            light=0.20,
+            reverse=False,
+            lw=1.5,
+            alpha=0.90,
+        ),
+        "mt": {
+            "xy": dict(
+                color="black",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label="XY",
+            ),
+            "yx": dict(
+                color="black",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="black",
+                label="YX",
+            ),
+            "xx": dict(
+                color="#555555",
+                ls="--",
+                lw=1.2,
+                marker="^",
+                ms=3.5,
+                mfc="white",
+                label="XX",
+            ),
+            "yy": dict(
+                color="#555555",
+                ls="--",
+                lw=1.2,
+                marker="v",
+                ms=3.5,
+                mfc="#555555",
+                label="YY",
+            ),
+            "te": dict(
+                color="black",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label="TE",
+            ),
+            "tm": dict(
+                color="black",
+                ls="--",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="black",
+                label="TM",
+            ),
+            "det": dict(
+                color="#777777",
+                ls=":",
+                lw=1.3,
+                marker="D",
+                ms=3.5,
+                mfc="white",
+                label="det",
+            ),
+        },
+        # BW-friendly: distinguish before/after by linestyle only
+        "correction": {
+            "before": dict(
+                color="#444444",
+                ls="--",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                mew=1.2,
+                alpha=0.85,
+                label="before",
+            ),
+            "after": dict(
+                color="#000000",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="black",
+                mew=1.2,
+                alpha=0.92,
+                label="after",
+            ),
+        },
+        "raw": dict(
+            color="black",
+            ls=":",
+            lw=0.75,
+            marker=".",
+            ms=2.8,
+            mfc="black",
+            mew=0.4,
+            alpha=0.88,
+            capsize=1.2,
+            elinewidth=0.55,
+            label="raw",
+        ),
+        # grayscale ellipses: no fill colour, edge-only on white paper
+        "pt_ellipse": dict(
+            normalise_by="cell",
+            scale=0.82,
+            s1_ref=None,
+            c_by="skew",
+            cmap="RdBu_r",  # keep colour for information
+            clim=None,
+            clim_pct=(5.0, 95.0),
+            symmetric_clim=True,
+            alpha=0.85,
+            edgecolor="k",
+            linewidth=0.35,  # slightly thicker for print
+            skew_threshold=3.0,
+            mark_3d=True,
+            lw_3d_factor=2.5,
+            show_ref=True,
+            ref_edgecolor="k",
+            ref_lw=1.0,
+            ref_fontsize=6.0,
+        ),
     },
-    # BW-friendly: distinguish before/after by linestyle only
-    "correction": {
-        "before": dict(color="#444444", ls="--", lw=1.5, marker="o", ms=4.0,
-                       mfc="white", mew=1.2, alpha=0.85, label="before"),
-        "after":  dict(color="#000000", ls="-",  lw=1.5, marker="o", ms=4.0,
-                       mfc="black", mew=1.2, alpha=0.92, label="after"),
-    },
-    "raw": dict(
-        color="black", ls=":", lw=0.75, marker=".", ms=2.8,
-        mfc="black", mew=0.4, alpha=0.88, capsize=1.2,
-        elinewidth=0.55, label="raw",
-    ),
-    # grayscale ellipses: no fill colour, edge-only on white paper
-    "pt_ellipse": dict(
-        normalise_by="cell", scale=0.82, s1_ref=None,
-        c_by="skew", cmap="RdBu_r",         # keep colour for information
-        clim=None, clim_pct=(5.0, 95.0), symmetric_clim=True,
-        alpha=0.85,
-        edgecolor="k", linewidth=0.35,       # slightly thicker for print
-        skew_threshold=3.0, mark_3d=True, lw_3d_factor=2.5,
-        show_ref=True, ref_edgecolor="k", ref_lw=1.0, ref_fontsize=6.0,
-    ),
-})
+)
 
 # "dark" — optimised for dark-background Jupyter / presentation slides
-_register_preset("dark", {
-    "rose": "pycsamt",              # keep the default rose preset
-    "multiline": dict(
-        mode="gradient", base_color="blue", cmap="cool",
-        dark=0.95, light=0.45, reverse=False, lw=2.0, alpha=0.90,
-    ),
-    "mt": {
-        "xy":  dict(color="#74b9ff", ls="-",  lw=2.0, marker="o", ms=4.5,
-                    mfc="#74b9ff", label="XY"),
-        "yx":  dict(color="#ff7675", ls="-",  lw=2.0, marker="s", ms=4.5,
-                    mfc="#ff7675", label="YX"),
-        "xx":  dict(color="#55efc4", ls="--", lw=1.6, marker="^", ms=4.0,
-                    mfc="#55efc4", label="XX"),
-        "yy":  dict(color="#a29bfe", ls="--", lw=1.6, marker="v", ms=4.0,
-                    mfc="#a29bfe", label="YY"),
-        "te":  dict(color="#74b9ff", ls="-",  lw=2.0, marker="o", ms=4.5,
-                    mfc="#74b9ff", label="TE"),
-        "tm":  dict(color="#ff7675", ls="-",  lw=2.0, marker="s", ms=4.5,
-                    mfc="#ff7675", label="TM"),
-        "det": dict(color="#dfe6e9", ls="-",  lw=1.5, marker="D", ms=4.0,
-                    mfc="#dfe6e9", label="det"),
+_register_preset(
+    "dark",
+    {
+        "rose": "pycsamt",  # keep the default rose preset
+        "multiline": dict(
+            mode="gradient",
+            base_color="blue",
+            cmap="cool",
+            dark=0.95,
+            light=0.45,
+            reverse=False,
+            lw=2.0,
+            alpha=0.90,
+        ),
+        "mt": {
+            "xy": dict(
+                color="#74b9ff",
+                ls="-",
+                lw=2.0,
+                marker="o",
+                ms=4.5,
+                mfc="#74b9ff",
+                label="XY",
+            ),
+            "yx": dict(
+                color="#ff7675",
+                ls="-",
+                lw=2.0,
+                marker="s",
+                ms=4.5,
+                mfc="#ff7675",
+                label="YX",
+            ),
+            "xx": dict(
+                color="#55efc4",
+                ls="--",
+                lw=1.6,
+                marker="^",
+                ms=4.0,
+                mfc="#55efc4",
+                label="XX",
+            ),
+            "yy": dict(
+                color="#a29bfe",
+                ls="--",
+                lw=1.6,
+                marker="v",
+                ms=4.0,
+                mfc="#a29bfe",
+                label="YY",
+            ),
+            "te": dict(
+                color="#74b9ff",
+                ls="-",
+                lw=2.0,
+                marker="o",
+                ms=4.5,
+                mfc="#74b9ff",
+                label="TE",
+            ),
+            "tm": dict(
+                color="#ff7675",
+                ls="-",
+                lw=2.0,
+                marker="s",
+                ms=4.5,
+                mfc="#ff7675",
+                label="TM",
+            ),
+            "det": dict(
+                color="#dfe6e9",
+                ls="-",
+                lw=1.5,
+                marker="D",
+                ms=4.0,
+                mfc="#dfe6e9",
+                label="det",
+            ),
+        },
+        # light blue / light red — readable on dark background
+        "correction": {
+            "before": dict(
+                color="#74b9ff",
+                ls="--",
+                lw=2.0,
+                marker="o",
+                ms=4.5,
+                mfc="#74b9ff",
+                mew=1.2,
+                alpha=0.85,
+                label="before",
+            ),
+            "after": dict(
+                color="#ff7675",
+                ls="-",
+                lw=2.0,
+                marker="o",
+                ms=4.5,
+                mfc="#ff7675",
+                mew=1.2,
+                alpha=0.92,
+                label="after",
+            ),
+        },
+        "raw": dict(
+            color="#f2f2f2",
+            ls=":",
+            lw=0.9,
+            marker=".",
+            ms=3.2,
+            mfc="#f2f2f2",
+            mew=0.5,
+            alpha=0.88,
+            capsize=1.5,
+            elinewidth=0.6,
+            label="raw",
+        ),
+        # dark-mode ellipses: lighter edge, slightly higher alpha
+        "pt_ellipse": dict(
+            normalise_by="cell",
+            scale=0.85,
+            s1_ref=None,
+            c_by="skew",
+            cmap="coolwarm",  # coolwarm reads better on dark bg
+            clim=None,
+            clim_pct=(5.0, 95.0),
+            symmetric_clim=True,
+            alpha=0.88,
+            edgecolor="#dddddd",
+            linewidth=0.25,  # light grey edge on dark canvas
+            skew_threshold=3.0,
+            mark_3d=True,
+            lw_3d_factor=3.0,
+            show_ref=True,
+            ref_edgecolor="#aaaaaa",
+            ref_lw=0.8,
+            ref_fontsize=6.5,
+        ),
     },
-    # light blue / light red — readable on dark background
-    "correction": {
-        "before": dict(color="#74b9ff", ls="--", lw=2.0, marker="o", ms=4.5,
-                       mfc="#74b9ff", mew=1.2, alpha=0.85, label="before"),
-        "after":  dict(color="#ff7675", ls="-",  lw=2.0, marker="o", ms=4.5,
-                       mfc="#ff7675", mew=1.2, alpha=0.92, label="after"),
-    },
-    "raw": dict(
-        color="#f2f2f2", ls=":", lw=0.9, marker=".", ms=3.2,
-        mfc="#f2f2f2", mew=0.5, alpha=0.88, capsize=1.5,
-        elinewidth=0.6, label="raw",
-    ),
-    # dark-mode ellipses: lighter edge, slightly higher alpha
-    "pt_ellipse": dict(
-        normalise_by="cell", scale=0.85, s1_ref=None,
-        c_by="skew", cmap="coolwarm",        # coolwarm reads better on dark bg
-        clim=None, clim_pct=(5.0, 95.0), symmetric_clim=True,
-        alpha=0.88,
-        edgecolor="#dddddd", linewidth=0.25,  # light grey edge on dark canvas
-        skew_threshold=3.0, mark_3d=True, lw_3d_factor=3.0,
-        show_ref=True, ref_edgecolor="#aaaaaa", ref_lw=0.8, ref_fontsize=6.5,
-    ),
-})
+)
 
 # "modem" — colour convention for ModEM inversion response / pseudo-section
 # ─────────────────────────────────────────────────────────────────────────
@@ -1220,31 +1604,90 @@ _register_preset("dark", {
 #
 # Only the "mt" section is overridden; all other style sections
 # (rose, multiline, correction …) stay at the package default.
-_register_preset("modem", {
-    "mt": {
-        "xx": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
-                   mfc="white", label=r"$Z_{xx}$",
-                   predicted_color="#00FF00", predicted_ls=":"),
-        "xy": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
-                   mfc="white", label=r"$Z_{xy}$",
-                   predicted_color="#00FF00", predicted_ls=":"),
-        "yx": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
-                   mfc="white", label=r"$Z_{yx}$",
-                   predicted_color="#CC338B", predicted_ls=":"),
-        "yy": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
-                   mfc="white", label=r"$Z_{yy}$",
-                   predicted_color="#CC338B", predicted_ls=":"),
-        "te": dict(color="#0000FF", ls="-",  lw=1.5, marker="o", ms=4.0,
-                   mfc="white", label="TE",
-                   predicted_color="#00FF00", predicted_ls=":"),
-        "tm": dict(color="#FF2C2C", ls="-",  lw=1.5, marker="s", ms=4.0,
-                   mfc="white", label="TM",
-                   predicted_color="#CC338B", predicted_ls=":"),
-        "det": dict(color="#7f7f7f", ls="-",  lw=1.3, marker="D", ms=3.5,
-                    mfc="white", label="det",
-                    predicted_color="#aaaaaa", predicted_ls=":"),
+_register_preset(
+    "modem",
+    {
+        "mt": {
+            "xx": dict(
+                color="#0000FF",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label=r"$Z_{xx}$",
+                predicted_color="#00FF00",
+                predicted_ls=":",
+            ),
+            "xy": dict(
+                color="#0000FF",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label=r"$Z_{xy}$",
+                predicted_color="#00FF00",
+                predicted_ls=":",
+            ),
+            "yx": dict(
+                color="#FF2C2C",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="white",
+                label=r"$Z_{yx}$",
+                predicted_color="#CC338B",
+                predicted_ls=":",
+            ),
+            "yy": dict(
+                color="#FF2C2C",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="white",
+                label=r"$Z_{yy}$",
+                predicted_color="#CC338B",
+                predicted_ls=":",
+            ),
+            "te": dict(
+                color="#0000FF",
+                ls="-",
+                lw=1.5,
+                marker="o",
+                ms=4.0,
+                mfc="white",
+                label="TE",
+                predicted_color="#00FF00",
+                predicted_ls=":",
+            ),
+            "tm": dict(
+                color="#FF2C2C",
+                ls="-",
+                lw=1.5,
+                marker="s",
+                ms=4.0,
+                mfc="white",
+                label="TM",
+                predicted_color="#CC338B",
+                predicted_ls=":",
+            ),
+            "det": dict(
+                color="#7f7f7f",
+                ls="-",
+                lw=1.3,
+                marker="D",
+                ms=3.5,
+                mfc="white",
+                label="det",
+                predicted_color="#aaaaaa",
+                predicted_ls=":",
+            ),
+        },
     },
-})
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pandas as pd
@@ -57,14 +56,17 @@ Z.mwgt,Z.pwgt,Freq, Tx.Amp,E.mag,E.phz,B.mag,B.phz,Z.mag,Z.phz,ARes.mag,E.%err,E
 # Helpers
 # -----------------------------
 
+
 def _write(tmp_path: Path, name: str, text: str) -> Path:
     p = tmp_path / name
     p.write_text(text, encoding="utf-8")
     return p
 
+
 # -----------------------------
 # Tests
 # -----------------------------
+
 
 def test_classify_avg_format_for_k1_and_k2(tmp_path):
     p1 = _write(tmp_path, "sample_k1.avg", K1_TEXT)
@@ -124,22 +126,27 @@ def test_load_avg_kind2_reads_all_blocks_and_stamps_station(tmp_path):
     assert {float(b["Rx.Stn"]) for b in meta["blocks"]} == {25.0, 75.0}
 
 
-def test_write_avg_default_path_and_header_case(
-        tmp_path, monkeypatch):
+def test_write_avg_default_path_and_header_case(tmp_path, monkeypatch):
     # Create a tiny canonical core frame
-    core = pd.DataFrame({
-        "station": [10, 10],
-        "freq": [1.0, 2.0],
-        "rho": [100.0, 200.0],   # should be exported as "ARes.mag"
-        "phase": [-100.0, -110.0],
-    })
+    core = pd.DataFrame(
+        {
+            "station": [10, 10],
+            "freq": [1.0, 2.0],
+            "rho": [100.0, 200.0],  # should be exported as "ARes.mag"
+            "phase": [-100.0, -110.0],
+        }
+    )
 
     # Run in a temp cwd so default file lands here
     monkeypatch.chdir(tmp_path)
 
-    out_path = write_avg(core=core, extra=None,
-                         meta={"Survey.Type": "CSAMT"},
-                         path=None, stamp=False)
+    out_path = write_avg(
+        core=core,
+        extra=None,
+        meta={"Survey.Type": "CSAMT"},
+        path=None,
+        stamp=False,
+    )
     assert out_path.exists()
     assert out_path.name == "exported_kind2.avg"
 
@@ -154,7 +161,7 @@ def test_kind2_comment_lines_are_ignored(tmp_path):
     # Insert comment lines among rows and ensure parsing is unaffected
     k2_with_comments = K2_TEXT.replace(
         "ARes.mag,E.%err",
-        'ARes.mag,E.%err\n\\ this is a comment line that must be ignored'
+        "ARes.mag,E.%err\n\\ this is a comment line that must be ignored",
     )
     p = _write(tmp_path, "k2c.avg", k2_with_comments)
     df, meta = load_avg(p)
@@ -165,5 +172,5 @@ def test_kind2_comment_lines_are_ignored(tmp_path):
     assert "Survey.Type" in meta
 
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

@@ -67,7 +67,7 @@ def triangle_areas(
         e = e - 1
     y = n[:, 0]
     z = n[:, 1]
-    yt = y[e]   # (n_el, 3)
+    yt = y[e]  # (n_el, 3)
     zt = z[e]
     # shoelace formula
     areas = 0.5 * np.abs(

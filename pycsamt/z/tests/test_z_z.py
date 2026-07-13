@@ -9,10 +9,7 @@ from pycsamt.z.z import Z
 
 
 def _z2x2():
-    return np.array(
-        [[0.0 + 0.0j, 0.0 + 1.0j],
-         [0.0 - 1.0j, 0.0 + 0.0j]]
-    )
+    return np.array([[0.0 + 0.0j, 0.0 + 1.0j], [0.0 - 1.0j, 0.0 + 0.0j]])
 
 
 def test_init_from_2x2_and_freq_compute_rp():
@@ -22,19 +19,11 @@ def test_init_from_2x2_and_freq_compute_rp():
     assert obj.resistivity.shape == (1, 2, 2)
     assert obj.phase.shape == (1, 2, 2)
     #  |Z|=1 on off-diagonals -> rho = 0.2 / f = 0.2
-    np.testing.assert_allclose(
-        obj.resistivity[0, 0, 1], 0.2, rtol=1e-12
-    )
-    np.testing.assert_allclose(
-        obj.resistivity[0, 1, 0], 0.2, rtol=1e-12
-    )
+    np.testing.assert_allclose(obj.resistivity[0, 0, 1], 0.2, rtol=1e-12)
+    np.testing.assert_allclose(obj.resistivity[0, 1, 0], 0.2, rtol=1e-12)
     # phases: angle(1j)=+90, angle(-1j)=-90
-    np.testing.assert_allclose(
-        obj.phase[0, 0, 1], 90.0, rtol=1e-12
-    )
-    np.testing.assert_allclose(
-        obj.phase[0, 1, 0], -90.0, rtol=1e-12
-    )
+    np.testing.assert_allclose(obj.phase[0, 0, 1], 90.0, rtol=1e-12)
+    np.testing.assert_allclose(obj.phase[0, 1, 0], -90.0, rtol=1e-12)
 
 
 def test_len_and_freq_mismatch_raises():
@@ -64,21 +53,21 @@ def test_z_setter_promotion_and_shape_guard():
 #     with pytest.raises(ZError):
 #         obj.z_err = np.ones((3, 2, 2))
 
+
 def test_z_err_setter_promotion_for_single_freq():
     obj = Z(z_array=np.zeros((1, 2, 2), complex))
     obj.z_err = np.ones((2, 2)) * 0.1  # promote to (1, 2, 2)
     assert obj.z_err.shape == (1, 2, 2)
+
 
 def test_z_err_setter_mismatch_raises_for_multi_freq():
     obj = Z(z_array=np.zeros((2, 2, 2), complex))
     with pytest.raises(ZError):
         obj.z_err = np.ones((2, 2)) * 0.1  # cannot broadcast to (2, 2, 2)
 
+
 def test_inverse_no_error_and_with_error():
-    z = np.array(
-        [[[0.0 + 0.0j, 1.0 + 0.0j],
-          [-1.0 + 0.0j, 0.0 + 0.0j]]]
-    )
+    z = np.array([[[0.0 + 0.0j, 1.0 + 0.0j], [-1.0 + 0.0j, 0.0 + 0.0j]]])
     obj = Z(z_array=z, freq=np.array([1.0]))
     inv = obj.inverse
     exp = np.linalg.inv(z[0])
@@ -90,10 +79,7 @@ def test_inverse_no_error_and_with_error():
 
 
 def test_inverse_singular_raises():
-    z = np.array(
-        [[[1.0 + 0.0j, 0.0 + 0.0j],
-          [0.0 + 0.0j, 0.0 + 0.0j]]]
-    )
+    z = np.array([[[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, 0.0 + 0.0j]]])
     obj = Z(z_array=z, freq=np.array([1.0]))
     with pytest.raises(ZError):
         _ = obj.inverse
@@ -109,9 +95,7 @@ def test_rotate_updates_history_and_360_noop():
     # history accumulates modulo 360
     obj.rotate(90.0)
     obj.rotate(270.0)
-    np.testing.assert_allclose(
-        obj.rotation_angle, np.zeros(2), atol=1e-12
-    )
+    np.testing.assert_allclose(obj.rotation_angle, np.zeros(2), atol=1e-12)
 
 
 def test_resphase_error_propagation_from_z_err():
@@ -120,13 +104,9 @@ def test_resphase_error_propagation_from_z_err():
     obj.z_err = np.full((1, 2, 2), 0.1)
     obj.compute_resistivity_phase()
     # For |Z|=1 and dz=0.1 -> rho_rel=0.2, rho=0.2 -> 0.04
-    np.testing.assert_allclose(
-        obj.resistivity_err[0, 0, 1], 0.04, rtol=1e-3
-    )
+    np.testing.assert_allclose(obj.resistivity_err[0, 0, 1], 0.04, rtol=1e-3)
     # phase_err = atan(0.1) deg ~ 5.7106
-    np.testing.assert_allclose(
-        obj.phase_err[0, 0, 1], 5.710593, rtol=1e-3
-    )
+    np.testing.assert_allclose(obj.phase_err[0, 0, 1], 5.710593, rtol=1e-3)
 
 
 def test_remove_static_shift_identity():
@@ -173,8 +153,7 @@ def test_trace_skew_det_norm_and_errors():
     np.testing.assert_allclose(obj.skew, z[:, 0, 1] - z[:, 1, 0])
     detz = np.linalg.det(z)
     np.testing.assert_allclose(obj.det, detz)
-    np.testing.assert_allclose(obj.norm,
-                               np.linalg.norm(z, axis=(1, 2)))
+    np.testing.assert_allclose(obj.norm, np.linalg.norm(z, axis=(1, 2)))
     # with errors
     obj.z_err = np.full((2, 2, 2), 0.05)
     assert obj.trace_err.shape == (2,)
@@ -189,10 +168,17 @@ def test_invariants_keys_and_shapes():
     obj = Z(z_array=z, freq=np.array([10.0, 1.0, 0.1]))
     inv = obj.invariants
     keys = {
-        "z1", "det", "det_real", "det_imag",
-        "trace", "skew", "norm",
-        "lambda_plus", "lambda_minus",
-        "sigma_plus", "sigma_minus",
+        "z1",
+        "det",
+        "det_real",
+        "det_imag",
+        "trace",
+        "skew",
+        "norm",
+        "lambda_plus",
+        "lambda_minus",
+        "sigma_plus",
+        "sigma_minus",
     }
     assert keys.issubset(inv.keys())
     for k in inv:
@@ -220,5 +206,4 @@ def test_from_res_phase_roundtrip_simple():
     zobj = Z.from_res_phase(rho, phi, f)
     # |Z| = sqrt(5 f rho) = sqrt(25) = 5
     np.testing.assert_allclose(np.abs(zobj.z), 5.0, rtol=1e-12)
-    np.testing.assert_allclose(np.angle(zobj.z, deg=True),
-                               0.0, atol=1e-12)
+    np.testing.assert_allclose(np.angle(zobj.z, deg=True), 0.0, atol=1e-12)

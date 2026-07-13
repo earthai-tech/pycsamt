@@ -36,31 +36,33 @@ def _icon(name: str) -> QIcon:
             return QIcon(str(p))
     return QIcon()
 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Colours (match dark_theme.qss palette)
 # ──────────────────────────────────────────────────────────────────────────────
-_C_TRACK   = QColor("#313244")
-_C_RANGE   = QColor("#89b4fa")
-_C_HANDLE  = QColor("#cdd6f4")
-_C_BORDER  = QColor("#89b4fa")
-_C_TICK    = QColor("#585b70")
-_C_TEXT    = QColor("#a6adc8")
-_C_RANGE_A = QColor(137, 180, 250, 60)   # translucent fill
+_C_TRACK = QColor("#313244")
+_C_RANGE = QColor("#89b4fa")
+_C_HANDLE = QColor("#cdd6f4")
+_C_BORDER = QColor("#89b4fa")
+_C_TICK = QColor("#585b70")
+_C_TEXT = QColor("#a6adc8")
+_C_RANGE_A = QColor(137, 180, 250, 60)  # translucent fill
 
 _LOG_DECADES = [0.001, 0.01, 0.1, 1, 10, 100, 1_000, 10_000]
-_HANDLE_R    = 7
-_TRACK_H     = 5
-_TICK_H      = 6
+_HANDLE_R = 7
+_TRACK_H = 5
+_TICK_H = 6
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Internal range-slider widget
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class _RangeSlider(QWidget):
     """Low-level dual-handle log-frequency slider (no labels)."""
 
-    range_changed = Signal(float, float)   # (lo_hz, hi_hz)
+    range_changed = Signal(float, float)  # (lo_hz, hi_hz)
 
     def __init__(
         self,
@@ -69,11 +71,11 @@ class _RangeSlider(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._f_min  = max(f_min,  1e-9)
-        self._f_max  = max(f_max,  self._f_min * 10)
-        self._lo_hz  = self._f_min
-        self._hi_hz  = self._f_max
-        self._drag   = None   # 'lo' | 'hi'
+        self._f_min = max(f_min, 1e-9)
+        self._f_max = max(f_max, self._f_min * 10)
+        self._lo_hz = self._f_min
+        self._hi_hz = self._f_max
+        self._drag = None  # 'lo' | 'hi'
         self.setMouseTracking(True)
         self.setMinimumHeight(36)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -134,8 +136,8 @@ class _RangeSlider(QWidget):
         mid_y = self.height() // 2
         lo_px = self._px(self._lo_hz)
         hi_px = self._px(self._hi_hz)
-        pad   = self._pad()
-        tw    = self._track_width()
+        pad = self._pad()
+        tw = self._track_width()
 
         # Background track
         p.setPen(Qt.PenStyle.NoPen)
@@ -159,7 +161,9 @@ class _RangeSlider(QWidget):
         for decade in _LOG_DECADES:
             if self._f_min <= decade <= self._f_max:
                 tx = self._px(decade)
-                p.drawLine(tx, mid_y + _TRACK_H, tx, mid_y + _TRACK_H + _TICK_H)
+                p.drawLine(
+                    tx, mid_y + _TRACK_H, tx, mid_y + _TRACK_H + _TICK_H
+                )
 
         # Handles
         for px in (lo_px, hi_px):
@@ -197,6 +201,7 @@ class _RangeSlider(QWidget):
 # Public FreqSelector widget
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class FreqSelector(QWidget):
     """
     Dual-handle log-scale range selector for frequency / period.
@@ -213,7 +218,7 @@ class FreqSelector(QWidget):
         Emitted on handle move: ``(lo_hz, hi_hz)`` always in Hz.
     """
 
-    range_changed = Signal(float, float)   # (lo_hz, hi_hz)
+    range_changed = Signal(float, float)  # (lo_hz, hi_hz)
 
     def __init__(
         self,

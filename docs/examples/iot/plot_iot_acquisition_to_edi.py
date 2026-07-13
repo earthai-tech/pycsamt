@@ -73,21 +73,27 @@ if not ts_is_real:
 sample_rate = 1.0 / float(record.dt)
 channels = [c.lower() for c in record.channels()]
 
-block = np.column_stack([np.asarray(record.get(c.upper()), float)
-                         for c in channels])
+block = np.column_stack(
+    [np.asarray(record.get(c.upper()), float) for c in channels]
+)
 edge = EdgeProcessor(
     EdgeProcessingConfig(finite_threshold=0.9, warn_finite_threshold=0.999)
 ).process(block, channel_names=channels)
 coverage_band = estimate_frequency_coverage(record.get("EX"), sample_rate)
 dropout = detect_sensor_dropout(record.get("EX"))
 
-print(f"station={record.station}  fs={sample_rate:g} Hz  "
-      f"n={record.n_samples:,}")
-print(f"edge decision: {edge.decision.value}  "
-      f"(coverage={edge.metrics['finite_coverage']:.4f}, "
-      f"nan={dropout['nan_fraction']:.2%})")
-print(f"resolvable band: {coverage_band.f_low_hz*1e3:.2f}"
-      f"-{coverage_band.f_high_hz*1e3:.2f} mHz")
+print(
+    f"station={record.station}  fs={sample_rate:g} Hz  n={record.n_samples:,}"
+)
+print(
+    f"edge decision: {edge.decision.value}  "
+    f"(coverage={edge.metrics['finite_coverage']:.4f}, "
+    f"nan={dropout['nan_fraction']:.2%})"
+)
+print(
+    f"resolvable band: {coverage_band.f_low_hz * 1e3:.2f}"
+    f"-{coverage_band.f_high_hz * 1e3:.2f} mHz"
+)
 
 # %%
 # 2. Process the accepted recording to impedance
@@ -108,8 +114,10 @@ rho = {"xy": z.resistivity[:, 0, 1], "yx": z.resistivity[:, 1, 0]}
 # yx phase is in the third quadrant; bring it to the first (standard MT
 # convention, +180 deg) so both curves are comparable.
 phase = {"xy": z.phase[:, 0, 1], "yx": z.phase[:, 1, 0] + 180.0}
-print(f"processed {z.n_freq} frequencies  "
-      f"({period.min():.1f}-{period.max():.0f} s period)")
+print(
+    f"processed {z.n_freq} frequencies  "
+    f"({period.min():.1f}-{period.max():.0f} s period)"
+)
 
 # %%
 # 3. The MT sounding, annotated with the QC-resolvable band
@@ -122,30 +130,54 @@ print(f"processed {z.n_freq} frequencies  "
 p_lo, p_hi = 1.0 / coverage_band.f_high_hz, 1.0 / coverage_band.f_low_hz
 
 fig, (ax_rho, ax_phi) = plt.subplots(
-    2, 1, figsize=(8.5, 7.2), sharex=True, constrained_layout=True,
+    2,
+    1,
+    figsize=(8.5, 7.2),
+    sharex=True,
+    constrained_layout=True,
     gridspec_kw={"height_ratios": [2, 1]},
 )
 for comp, color in (("xy", C_XY), ("yx", C_YX)):
     good = np.isfinite(period) & np.isfinite(rho[comp]) & (rho[comp] > 0)
-    ax_rho.loglog(period[good], rho[comp][good], "o-", ms=5, lw=1.6,
-                  color=color, label=rf"$\rho_{{{comp}}}$")
+    ax_rho.loglog(
+        period[good],
+        rho[comp][good],
+        "o-",
+        ms=5,
+        lw=1.6,
+        color=color,
+        label=rf"$\rho_{{{comp}}}$",
+    )
     good_p = np.isfinite(period) & np.isfinite(phase[comp])
-    ax_phi.semilogx(period[good_p], phase[comp][good_p], "o-", ms=5, lw=1.6,
-                    color=color, label=rf"$\phi_{{{comp}}}$")
+    ax_phi.semilogx(
+        period[good_p],
+        phase[comp][good_p],
+        "o-",
+        ms=5,
+        lw=1.6,
+        color=color,
+        label=rf"$\phi_{{{comp}}}$",
+    )
 
 for ax in (ax_rho, ax_phi):
     ax.axvspan(p_lo, p_hi, color=BAND_FILL, alpha=0.10, lw=0)
     style_axis(ax)
-ax_rho.set(ylabel=r"apparent resistivity ($\Omega\!\cdot\!$m)",
-           title=f"MT sounding from IoT-QC'd time series - {record.station}")
+ax_rho.set(
+    ylabel=r"apparent resistivity ($\Omega\!\cdot\!$m)",
+    title=f"MT sounding from IoT-QC'd time series - {record.station}",
+)
 ax_rho.legend(frameon=False, ncol=2, loc="best")
 ax_phi.set(xlabel="period (s)", ylabel="phase (deg)", ylim=(0, 90))
 ax_phi.set_yticks([0, 30, 45, 60, 90])
 ax_phi.legend(frameon=False, ncol=2, loc="best")
 ax_rho.annotate(
-    "QC-resolvable band", xy=((p_lo * p_hi) ** 0.5, ax_rho.get_ylim()[1]),
-    xytext=(0, -14), textcoords="offset points", ha="center",
-    fontsize=9, color="#2f7d5b",
+    "QC-resolvable band",
+    xy=((p_lo * p_hi) ** 0.5, ax_rho.get_ylim()[1]),
+    xytext=(0, -14),
+    textcoords="offset points",
+    ha="center",
+    fontsize=9,
+    color="#2f7d5b",
 )
 
 # %%
@@ -159,11 +191,15 @@ ax_rho.annotate(
 out_dir = Path(tempfile.gettempdir()) / "kap103_acquisition"
 out_dir.mkdir(exist_ok=True)
 edi_path = ts_to_edi(
-    record, out="kap103_from_ts.edi", savepath=str(out_dir),
-    nfft=8192, per_decade=6,
+    record,
+    out="kap103_from_ts.edi",
+    savepath=str(out_dir),
+    nfft=8192,
+    per_decade=6,
 )
-print(f"wrote EDI: {Path(edi_path).name} "
-      f"({os.path.getsize(edi_path):,} bytes)")
+print(
+    f"wrote EDI: {Path(edi_path).name} ({os.path.getsize(edi_path):,} bytes)"
+)
 
 provenance = ProvenanceRecord(
     station_id=record.station,
@@ -182,13 +218,17 @@ provenance = ProvenanceRecord(
 if ts_is_real:
     provenance.add_raw_file(str(ts_path))
 manifest = build_acquisition_manifest(
-    record.station, records=[provenance], method="mt",
+    record.station,
+    records=[provenance],
+    method="mt",
 )
 bundle = export_reproducibility_bundle(manifest, str(out_dir / "provenance"))
 print(f"provenance steps: {provenance.processing_steps}")
 print(f"manifest content hash: {manifest.as_dict()['content_hash'][:16]}...")
-print(f"bundle: {Path(bundle['manifest']).name} "
-      f"+ {len(bundle['audits'])} audit(s)")
+print(
+    f"bundle: {Path(bundle['manifest']).name} "
+    f"+ {len(bundle['audits'])} audit(s)"
+)
 
 # %%
 # 5. Sign the manifest and seed a re-occupation from the EDI
@@ -205,12 +245,18 @@ signed_path = manifest.write_signed(
     str(out_dir / "provenance" / "manifest.signed.json"), key
 )
 signed = json.loads(Path(signed_path).read_text())
-print(f"signed manifest verifies: {verify_manifest(signed, key)}  "
-      f"(wrong key: {verify_manifest(signed, 'nope')})")
+print(
+    f"signed manifest verifies: {verify_manifest(signed, key)}  "
+    f"(wrong key: {verify_manifest(signed, 'nope')})"
+)
 
-reoccupy = field_session_from_edis(edi_path, survey_id="REOCCUPY", method="mt")
-print(f"re-occupation session: {reoccupy.n_stations} station(s), "
-      f"{reoccupy.n_devices} node(s)")
+reoccupy = field_session_from_edis(
+    edi_path, survey_id="REOCCUPY", method="mt"
+)
+print(
+    f"re-occupation session: {reoccupy.n_stations} station(s), "
+    f"{reoccupy.n_devices} node(s)"
+)
 print(edi_survey_table(edi_path).to_string(index=False))
 
 plt.show()

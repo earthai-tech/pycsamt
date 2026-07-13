@@ -47,6 +47,7 @@ def resolve_target(
     if registry is None:
         try:
             from .project_registry import ProjectRegistry
+
             registry = ProjectRegistry.from_default()
         except Exception:  # noqa: BLE001
             registry = None
@@ -94,17 +95,12 @@ def run_workflow(
     target = resolve_target(line_or_path, registry=registry)
     edi_dir = target.get("edi_dir") or target.get("path")
     if not target.get("exists"):
-        raise FileNotFoundError(
-            f"EDI directory not found: {edi_dir!r}"
-        )
+        raise FileNotFoundError(f"EDI directory not found: {edi_dir!r}")
 
-    out = (
-        output_dir
-        or target.get("output_root")
-        or "pycsamt_workflow_output"
-    )
+    out = output_dir or target.get("output_root") or "pycsamt_workflow_output"
 
     import pycsamt.agents as A
+
     agent_cls = getattr(A, _WORKFLOW_AGENTS[workflow])
     agent = agent_cls(**agent_kwargs)
     result = agent.execute({"path": edi_dir, "output_dir": out})
@@ -122,6 +118,7 @@ def run_workflow(
     if history is not None:
         try:
             from ..memory.workflow_history import WorkflowRun
+
             history.record(
                 WorkflowRun(
                     workflow=workflow,

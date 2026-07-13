@@ -81,13 +81,21 @@ class ErrorModel:
             return np.maximum(err, self.min_error)
 
         if comp == "rho":
-            err = np.maximum(np.abs(arr) * self.rho_relative, self.rho_absolute)
+            err = np.maximum(
+                np.abs(arr) * self.rho_relative, self.rho_absolute
+            )
         elif comp == "phase":
-            err = np.maximum(np.abs(arr) * self.phase_relative, self.phase_absolute)
+            err = np.maximum(
+                np.abs(arr) * self.phase_relative, self.phase_absolute
+            )
         elif comp == "tdem":
-            err = np.maximum(np.abs(arr) * self.tdem_relative, self.tdem_absolute)
+            err = np.maximum(
+                np.abs(arr) * self.tdem_relative, self.tdem_absolute
+            )
         elif comp in {"z_real", "z_imag", "impedance"}:
-            err = np.maximum(np.abs(arr) * self.impedance_relative, self.impedance_absolute)
+            err = np.maximum(
+                np.abs(arr) * self.impedance_relative, self.impedance_absolute
+            )
         else:
             err = np.maximum(np.abs(arr) * self.rho_relative, self.min_error)
         if relative:
@@ -121,7 +129,9 @@ class ErrorModel:
         comp = _canonical_component(component)
         raw = self.masks.get(comp, self.masks.get(component, None))
         if raw is None:
-            raw = self.masks.get("station", self.masks.get("station_mask", None))
+            raw = self.masks.get(
+                "station", self.masks.get("station_mask", None)
+            )
         if raw is None:
             return np.ones(arr.shape, dtype=bool)
         mask = np.asarray(raw, dtype=bool)
@@ -237,13 +247,21 @@ def error_model_from_config(cfg: Any) -> ErrorModel:
         return nested.get(name, opts.get(name, default))
 
     return ErrorModel(
-        rho_relative=float(pick("rho_relative", getattr(cfg, "error_floor", 0.05))),
+        rho_relative=float(
+            pick("rho_relative", getattr(cfg, "error_floor", 0.05))
+        ),
         rho_absolute=float(pick("rho_absolute", 1e-12)),
-        phase_absolute=float(pick("phase_absolute", getattr(cfg, "phase_error", 3.0))),
+        phase_absolute=float(
+            pick("phase_absolute", getattr(cfg, "phase_error", 3.0))
+        ),
         phase_relative=float(pick("phase_relative", 0.0)),
-        tdem_relative=float(pick("tdem_relative", getattr(cfg, "error_floor", 0.05))),
+        tdem_relative=float(
+            pick("tdem_relative", getattr(cfg, "error_floor", 0.05))
+        ),
         tdem_absolute=float(pick("tdem_absolute", 1e-30)),
-        impedance_relative=float(pick("impedance_relative", getattr(cfg, "error_floor", 0.05))),
+        impedance_relative=float(
+            pick("impedance_relative", getattr(cfg, "error_floor", 0.05))
+        ),
         impedance_absolute=float(pick("impedance_absolute", 1e-12)),
         min_error=float(pick("min_error", 1e-12)),
         masks=dict(pick("masks", opts.get("masks", {})) or {}),
@@ -363,7 +381,7 @@ def weighted_rms(observed, predicted, errors=None) -> float:
     if not np.any(mask):
         return float("nan")
     resid = (pred[mask] - obs[mask]) / err[mask]
-    return float(np.sqrt(np.mean(resid ** 2)))
+    return float(np.sqrt(np.mean(resid**2)))
 
 
 def _canonical_component(component: str) -> str:

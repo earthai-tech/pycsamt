@@ -35,6 +35,7 @@ to let users jump straight to the relevant settings:
     dlg.settings_changed.connect(handler)
     dlg.exec()
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
@@ -61,11 +62,11 @@ from pycsamt.app.desktop.widgets.settings_pages import (
 
 # Ordered tab registry: (tab_key, display_label, PageClass)
 _TABS = [
-    ("pseudosections",  "Pseudosections",   PseudosectionsPage),
-    ("view_controls",   "View Controls",    ViewControlsPage),
-    ("display",         "Display",          DisplayPage),
-    ("topography",      "Topography",       TopographyPage),
-    ("interpretation",  "Interpretation",   InterpretationPage),
+    ("pseudosections", "Pseudosections", PseudosectionsPage),
+    ("view_controls", "View Controls", ViewControlsPage),
+    ("display", "Display", DisplayPage),
+    ("topography", "Topography", TopographyPage),
+    ("interpretation", "Interpretation", InterpretationPage),
 ]
 
 # Map tab_key → index (built at module level for open_tab look-ups)
@@ -98,7 +99,7 @@ class APIConfigDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("API Configuration")
         self.setMinimumSize(560, 480)
-        self._ctrl     = ctrl
+        self._ctrl = ctrl
         self._snapshot = ctrl.snapshot()  # for Cancel
         self._pages: list = []
         self._build_ui()
@@ -123,7 +124,9 @@ class APIConfigDialog(QDialog):
         btn_row = QHBoxLayout()
 
         self._reset_btn = QPushButton("Reset Tab")
-        self._reset_btn.setToolTip("Reset the current tab's settings to package defaults")
+        self._reset_btn.setToolTip(
+            "Reset the current tab's settings to package defaults"
+        )
         self._reset_btn.clicked.connect(self._on_reset_tab)
         btn_row.addWidget(self._reset_btn)
         btn_row.addStretch()
@@ -133,7 +136,9 @@ class APIConfigDialog(QDialog):
             | QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
-        box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+        box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(
+            self._on_apply
+        )
         box.accepted.connect(self._on_ok)
         box.rejected.connect(self._on_cancel)
         btn_row.addWidget(box)
@@ -187,8 +192,8 @@ class APIConfigDialog(QDialog):
 
     def _on_reset_tab(self) -> None:
         """Reset the active tab's singletons and re-populate its page."""
-        idx  = self._tabs.currentIndex()
-        key  = _TABS[idx][0]
+        idx = self._tabs.currentIndex()
+        key = _TABS[idx][0]
         page = self._pages[idx]
         try:
             page.reset()

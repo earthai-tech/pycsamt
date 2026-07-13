@@ -60,7 +60,11 @@ def _nearest_index(centers: np.ndarray, value: float) -> int:
         return 0
     if idx >= centers.size:
         return centers.size - 1
-    return idx if abs(centers[idx] - value) < abs(centers[idx - 1] - value) else idx - 1
+    return (
+        idx
+        if abs(centers[idx] - value) < abs(centers[idx - 1] - value)
+        else idx - 1
+    )
 
 
 def _grid_offset(widths: np.ndarray, coords: np.ndarray) -> float:
@@ -106,11 +110,11 @@ def station_curtain(
     x_centers = _cell_centers(model.x_widths)
     y_centers = _cell_centers(model.y_widths)
 
-    z_widths_earth = np.asarray(model.z_widths[model.n_air:], dtype=float)
+    z_widths_earth = np.asarray(model.z_widths[model.n_air :], dtype=float)
     z_nodes = np.concatenate([[0.0], np.cumsum(z_widths_earth)])
     z_centers = z_nodes[:-1] + z_widths_earth / 2.0
 
-    rho_earth = model.rho_linear[model.n_air:, :, :]
+    rho_earth = model.rho_linear[model.n_air :, :, :]
 
     offset_x = _grid_offset(model.x_widths, data.x_coords)
     offset_y = _grid_offset(model.y_widths, data.y_coords)

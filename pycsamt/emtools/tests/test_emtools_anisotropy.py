@@ -1,6 +1,7 @@
 """
 Tests for pycsamt.emtools.anisotropy
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -18,17 +19,19 @@ from pycsamt.emtools.anisotropy import (
 # Fixtures / helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     """Minimal EDI-like object (duck-type compatible with is_edi_file)."""
+
     def __init__(self, station, z, freq):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
 
     def get_section(self, *_, **__):
@@ -43,7 +46,7 @@ def _isotropic_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     """1-D isotropic Z: Z_xy = -Z_yx, Z_xx = Z_yy = 0."""
     z_abs = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -57,7 +60,7 @@ def _anisotropic_z(
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
     z_xy = np.sqrt(5.0 * freqs * rho_xy)
     z_yx = np.sqrt(5.0 * freqs * rho_yx)
-    z[:, 0, 1] =  z_xy * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_xy * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_yx * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -104,6 +107,7 @@ def _3d_site(station: str, n: int = 10) -> _FakeSite:
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_aniso_ratio_thresh_positive():
     assert ANISO_RATIO_THRESH > 0
 
@@ -114,22 +118,29 @@ def test_swift_skew_thresh_positive():
 
 def test_constants_values():
     assert ANISO_RATIO_THRESH == pytest.approx(0.1)
-    assert SWIFT_SKEW_THRESH  == pytest.approx(0.2)
+    assert SWIFT_SKEW_THRESH == pytest.approx(0.2)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # analyze_anisotropy — columns / shape
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_analyze_columns_present():
     sites = [_iso_site("S00")]
     df = analyze_anisotropy(sites)
     expected = {
-        "station", "freq_hz", "period_s",
-        "rho_xy_ohmm", "rho_yx_ohmm",
-        "phi_xy_deg", "phi_yx_deg",
-        "ratio_log10", "phase_diff_deg",
-        "swift_skew", "strike_deg",
+        "station",
+        "freq_hz",
+        "period_s",
+        "rho_xy_ohmm",
+        "rho_yx_ohmm",
+        "phi_xy_deg",
+        "phi_yx_deg",
+        "ratio_log10",
+        "phase_diff_deg",
+        "swift_skew",
+        "strike_deg",
     }
     assert expected.issubset(df.columns)
 
@@ -182,6 +193,7 @@ def test_analyze_rho_positive():
 # analyze_anisotropy — isotropic site (ratio_log10 ≈ 0)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_iso_ratio_near_zero():
     """Isotropic 1-D: ρ_xy = ρ_yx → ratio_log10 ≈ 0."""
     sites = [_iso_site("S00")]
@@ -199,6 +211,7 @@ def test_iso_swift_skew_zero():
 # ─────────────────────────────────────────────────────────────────────────────
 # analyze_anisotropy — anisotropic site
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_aniso_ratio_nonzero():
     """Anisotropic: |Z_xy| ≠ |Z_yx| → ratio_log10 ≠ 0."""
@@ -219,7 +232,7 @@ def test_aniso_ratio_known_value():
 
 def test_aniso_ratio_sign():
     """ρ_xy < ρ_yx → ratio_log10 < 0; ρ_xy > ρ_yx → ratio_log10 > 0."""
-    sites_neg = [_aniso_site("S00", rho_xy=50.0,  rho_yx=200.0)]
+    sites_neg = [_aniso_site("S00", rho_xy=50.0, rho_yx=200.0)]
     sites_pos = [_aniso_site("S01", rho_xy=200.0, rho_yx=50.0)]
     df_neg = analyze_anisotropy(sites_neg)
     df_pos = analyze_anisotropy(sites_pos)
@@ -244,6 +257,7 @@ def test_aniso_skew_zero_for_no_diagonal():
 # ─────────────────────────────────────────────────────────────────────────────
 # analyze_anisotropy — phase / strike
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_iso_phase_diff_near_zero():
     """Isotropic 1-D: φ_xy and φ_yx share same angle → diff ≈ 0."""
@@ -272,12 +286,15 @@ def test_strike_finite():
 # anisotropy_table — shape / columns
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_table_columns_present():
     sites = [_iso_site("S00")]
     df = anisotropy_table(sites)
     expected = {
-        "station", "n_freq",
-        "mean_ratio_log10", "max_abs_ratio_log10",
+        "station",
+        "n_freq",
+        "mean_ratio_log10",
+        "max_abs_ratio_log10",
         "mean_phase_diff_deg",
         "mean_swift_skew",
         "median_strike_deg",
@@ -315,6 +332,7 @@ def test_table_flag_dtype():
 # anisotropy_table — flag logic
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_table_flag_false_for_isotropic():
     """Isotropic: both ratio and skew are tiny → no flag."""
     sites = [_iso_site("S00")]
@@ -339,7 +357,7 @@ def test_table_flag_true_for_3d():
 def test_table_max_abs_ratio_ge_mean_abs():
     sites = [_aniso_site("S00")]
     df = anisotropy_table(sites)
-    max_r  = float(df["max_abs_ratio_log10"].iloc[0])
+    max_r = float(df["max_abs_ratio_log10"].iloc[0])
     mean_r = abs(float(df["mean_ratio_log10"].iloc[0]))
     if np.isfinite(max_r) and np.isfinite(mean_r):
         assert max_r >= mean_r - 1e-8
@@ -349,11 +367,14 @@ def test_table_max_abs_ratio_ge_mean_abs():
 # plot_anisotropy
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_returns_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_iso_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites)
     assert ax is not None
@@ -363,8 +384,10 @@ def test_plot_returns_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_existing_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     _, ax_in = plt.subplots()
     sites = [_iso_site("S00")]
     ax_out = plot_anisotropy(sites, ax=ax_in)
@@ -375,8 +398,10 @@ def test_plot_existing_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_empty_input():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     ax = plot_anisotropy([])
     assert ax is not None
     plt.close("all")
@@ -385,8 +410,10 @@ def test_plot_empty_input():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_swift_skew_metric():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_3d_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, metric="swift_skew")
     assert ax is not None
@@ -396,8 +423,10 @@ def test_plot_swift_skew_metric():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_strike_deg_metric():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_3d_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, metric="strike_deg")
     assert ax is not None
@@ -407,8 +436,10 @@ def test_plot_strike_deg_metric():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_phase_diff_metric():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_aniso_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, metric="phase_diff_deg")
     assert ax is not None
@@ -418,8 +449,10 @@ def test_plot_phase_diff_metric():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_freq_axis():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_iso_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, period_axis=False)
     assert ax is not None
@@ -429,8 +462,10 @@ def test_plot_freq_axis():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_linear_y():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_iso_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, log_y=False)
     assert ax is not None
@@ -440,8 +475,10 @@ def test_plot_linear_y():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_no_contour():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_iso_site(f"S{i:02d}") for i in range(3)]
     ax = plot_anisotropy(sites, contour_zero=False)
     assert ax is not None

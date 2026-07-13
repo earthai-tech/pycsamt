@@ -16,11 +16,12 @@ from typing import (
 import numpy as np
 
 __all__ = [
-    'select_anomaly_peak',
-    'find_position_bounds',
-    'find_closest_positions',
-    'find_nearest_indices'
+    "select_anomaly_peak",
+    "find_position_bounds",
+    "find_closest_positions",
+    "find_nearest_indices",
 ]
+
 
 def select_anomaly_peak(
     resistivity: Sequence[float],
@@ -30,7 +31,7 @@ def select_anomaly_peak(
     rank: int = 1,
     user_peak: Optional[float] = None,
     anomaly_infos: Optional[dict[str, np.ndarray]] = None,
-    return_bounds: bool = True
+    return_bounds: bool = True,
 ) -> dict[str, Any]:
     """
     Select anomaly peak position and its boundaries.
@@ -119,14 +120,12 @@ def select_anomaly_peak(
         else:
             positions = np.asarray(positions, float)
             if positions.size != n:
-                raise ValueError(
-                    "positions length must match resistivity"
-                )
+                raise ValueError("positions length must match resistivity")
         # find index of ranked anomaly
         if rank != 1:
             # sort indices by ascending resistivity
             order = np.argsort(profile)
-            idx = int(order[rank-1])
+            idx = int(order[rank - 1])
         else:
             idx = int(np.argmin(profile))
         rho_peak = float(profile[idx])
@@ -136,22 +135,16 @@ def select_anomaly_peak(
         up = float(user_peak)
         mn, mx = positions.min(), positions.max()
         if not (mn <= up <= mx):
-            warnings.warn(
-                f"user_peak {up} outside [{mn},{mx}]", stacklevel=2
-            )
+            warnings.warn(f"user_peak {up} outside [{mn},{mx}]", stacklevel=2)
         else:
             peak_pos = up
-    result = {
-        'peak_pos': peak_pos,
-        'rho_peak': rho_peak,
-        'profile': profile
-    }
+    result = {"peak_pos": peak_pos, "rho_peak": rho_peak, "profile": profile}
     if return_bounds:
         # full extents
         pos_min, pos_max = positions.min(), positions.max()
         rho_min, rho_max = profile.min(), profile.max()
-        result['pos_bounds'] = (pos_min, pos_max)
-        result['rho_bounds'] = (rho_min, rho_max)
+        result["pos_bounds"] = (pos_min, pos_max)
+        result["rho_bounds"] = (rho_min, rho_max)
     return result
 
 
@@ -160,7 +153,7 @@ def find_position_bounds(
     rho_peak: float,
     rho_range: Sequence[float],
     positions: Optional[Sequence[float]] = None,
-    dipole: float = 1.0
+    dipole: float = 1.0,
 ) -> dict[str, float]:
     """
     Compute spatial and resistivity bounds around an anomaly peak.
@@ -195,7 +188,7 @@ def find_position_bounds(
     # parse peak position
     if isinstance(peak, str):
         # extract numeric part
-        num = ''.join(ch for ch in peak if ch.isdigit() or ch in '.-')
+        num = "".join(ch for ch in peak if ch.isdigit() or ch in ".-")
         try:
             pk_pos = float(num)
         except Exception:
@@ -232,10 +225,10 @@ def find_position_bounds(
     rho_max = float(rho_arr.max())
 
     return {
-        'pos_min': pos_min,
-        'pos_max': pos_max,
-        'rho_min': rho_min,
-        'rho_max': rho_max
+        "pos_min": pos_min,
+        "pos_max": pos_max,
+        "rho_min": rho_min,
+        "rho_max": rho_max,
     }
 
 
@@ -243,7 +236,7 @@ def find_closest_positions(
     reference: Sequence[float],
     targets: Sequence[float],
     *,
-    return_values: bool = False
+    return_values: bool = False,
 ) -> Union[list[int], tuple[list[int], list[float]]]:
     """
     For each target, find index of nearest reference element.
@@ -264,7 +257,7 @@ def find_closest_positions(
     """
     ref = np.asarray(reference, float)
     tgt = np.asarray(targets, float)
-    if ref.ndim !=1 or tgt.ndim !=1:
+    if ref.ndim != 1 or tgt.ndim != 1:
         raise ValueError("reference and targets must be 1D")
     idxs = []
     vals = []
@@ -276,12 +269,13 @@ def find_closest_positions(
         return idxs, vals
     return idxs
 
+
 def find_nearest_indices(
     reference: Sequence[float],
     targets: Sequence[float],
     *,
-    side: str = 'both',
-    return_values: bool = False
+    side: str = "both",
+    return_values: bool = False,
 ) -> Union[list[int], tuple[list[int], list[float]]]:
     """
     Find nearest index(es) in `reference` for each `target`.
@@ -327,12 +321,12 @@ def find_nearest_indices(
     if ref.ndim != 1 or tgt.ndim != 1:
         raise ValueError("reference and targets must be 1D")
     side = side.lower()
-    if side not in ('both','left','right'):
+    if side not in ("both", "left", "right"):
         raise ValueError(f"Invalid side argument: {side!r}")
     idxs: list[int] = []
     vals: list[float] = []
     for t in tgt:
-        if side == 'left':
+        if side == "left":
             mask = ref <= t
             if np.any(mask):
                 cand = ref[mask]
@@ -340,7 +334,7 @@ def find_nearest_indices(
                 idx0 = np.where(mask)[0][np.argmin(diffs)]
             else:
                 idx0 = 0
-        elif side == 'right':
+        elif side == "right":
             mask = ref >= t
             if np.any(mask):
                 cand = ref[mask]

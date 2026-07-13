@@ -27,6 +27,7 @@ from pycsamt.cli.survey import (
 # Picklable fake Sites (MagicMock is not picklable across subprocesses)
 # ---------------------------------------------------------------------------
 
+
 class _FakeSite:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -53,6 +54,7 @@ def _make_sites(n: int = 3, prefix: str = "S") -> _FakeSites:
 # _cache_key
 # ---------------------------------------------------------------------------
 
+
 class TestCacheKey:
     def test_same_path_same_key(self, tmp_path: Path) -> None:
         p = tmp_path / "survey"
@@ -73,6 +75,7 @@ class TestCacheKey:
 # ---------------------------------------------------------------------------
 # SurveyContext
 # ---------------------------------------------------------------------------
+
 
 class TestSurveyContext:
     def test_load_returns_none_when_missing(
@@ -111,6 +114,7 @@ class TestSurveyContext:
 # ---------------------------------------------------------------------------
 # Cache helpers
 # ---------------------------------------------------------------------------
+
 
 class TestCacheHelpers:
     def test_write_and_read_roundtrip(
@@ -173,11 +177,13 @@ class TestCacheHelpers:
 # resolve_survey
 # ---------------------------------------------------------------------------
 
+
 class TestResolveSurvey:
     def test_raises_usage_error_with_no_context(
         self, isolated_home: Path
     ) -> None:
         import click
+
         with pytest.raises(click.UsageError, match="No active survey"):
             resolve_survey(None)
 
@@ -189,7 +195,9 @@ class TestResolveSurvey:
         (path / "dummy.edi").write_text("dummy")
         fake_sites = _make_sites(3)
 
-        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
+        with patch(
+            "pycsamt.cli.survey._build_sites", return_value=fake_sites
+        ):
             sites = resolve_survey(path)
         assert len(sites) == 3
 
@@ -201,7 +209,9 @@ class TestResolveSurvey:
         (path / "dummy.edi").write_text("dummy")
         fake_sites = _make_sites(4)
 
-        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
+        with patch(
+            "pycsamt.cli.survey._build_sites", return_value=fake_sites
+        ):
             set_survey(path)
             sites = resolve_survey(None)
         assert len(sites) == 4
@@ -219,9 +229,11 @@ class TestResolveSurvey:
             call_count["n"] += 1
             return _make_sites(2)
 
-        with patch("pycsamt.cli.survey._build_sites", side_effect=counting_build):
-            resolve_survey(path)              # build #1
-            resolve_survey(path)              # from cache — no build
+        with patch(
+            "pycsamt.cli.survey._build_sites", side_effect=counting_build
+        ):
+            resolve_survey(path)  # build #1
+            resolve_survey(path)  # from cache — no build
             resolve_survey(path, fresh=True)  # forced build #2
 
         assert call_count["n"] == 2
@@ -231,10 +243,9 @@ class TestResolveSurvey:
 # survey_summary
 # ---------------------------------------------------------------------------
 
+
 class TestSurveySummary:
-    def test_returns_none_when_no_context(
-        self, isolated_home: Path
-    ) -> None:
+    def test_returns_none_when_no_context(self, isolated_home: Path) -> None:
         assert survey_summary() is None
 
     def test_returns_dict_after_set(
@@ -245,7 +256,9 @@ class TestSurveySummary:
         (path / "dummy.edi").write_text("dummy")
         fake_sites = _make_sites(7)
 
-        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
+        with patch(
+            "pycsamt.cli.survey._build_sites", return_value=fake_sites
+        ):
             set_survey(path)
 
         s = survey_summary()

@@ -78,8 +78,14 @@ def _synthetic_survey(tmp: Path) -> str:
     for i in range(6):
         zxy = (1 + 1j) * np.sqrt(freq) * (1.0 + 0.2 * i)
         z = impedance_to_z(zxy, freq, station=f"S{i:02d}")
-        z_to_edi(z, station=f"S{i:02d}", lat=32.12 + 0.002 * i,
-                 lon=119.13 + 0.001 * i, elevation=20.0, savepath=str(tmp))
+        z_to_edi(
+            z,
+            station=f"S{i:02d}",
+            lat=32.12 + 0.002 * i,
+            lon=119.13 + 0.001 * i,
+            elevation=20.0,
+            savepath=str(tmp),
+        )
     return str(tmp)
 
 
@@ -94,8 +100,11 @@ if not is_real:
 table = edi_survey_table(str(survey_dir))
 records = read_edi_survey(str(survey_dir))
 print(f"survey: {len(records)} stations from {survey_dir.name}")
-print(table[["station", "lat", "lon", "n_freq", "f_min_hz", "f_max_hz"]]
-      .head(6).to_string(index=False))
+print(
+    table[["station", "lat", "lon", "n_freq", "f_min_hz", "f_max_hz"]]
+    .head(6)
+    .to_string(index=False)
+)
 
 # %%
 # 2. Seed the re-occupation plan
@@ -106,19 +115,24 @@ print(table[["station", "lat", "lon", "n_freq", "f_min_hz", "f_max_hz"]]
 # frequency, a safe margin below Nyquist for the re-survey.
 
 session = field_session_from_edis(
-    str(survey_dir), survey_id="WILLY-L18-REOCCUPY", method="amt",
+    str(survey_dir),
+    survey_id="WILLY-L18-REOCCUPY",
+    method="amt",
     operator="return-crew",
 )
 deployment = deployment_from_edis(
-    str(survey_dir), survey_id="WILLY-L18-REOCCUPY",
+    str(survey_dir),
+    survey_id="WILLY-L18-REOCCUPY",
     capabilities=["telemetry", "edge_processing", "synchronization"],
 )
 sites = session.to_sites()
 rate_hz = {
     d.station: d.sample_rate_hz for d in deployment.devices if d.station
 }
-print(f"re-occupation session: {session.n_stations} stations, "
-      f"{session.n_devices} nodes")
+print(
+    f"re-occupation session: {session.n_stations} stations, "
+    f"{session.n_devices} nodes"
+)
 example_rate = next(iter(rate_hz.values()))
 print(f"suggested sample rate (per station): ~{example_rate:g} Hz")
 
@@ -136,13 +150,19 @@ try:
     med_frac = float(np.nanmedian(qc["frac_ok"]))
     med_snr = float(np.nanmedian(qc["snr_med"]))
     med_skew = float(np.nanmedian(qc["skew_med"]))
-    print(f"emtools QC on {len(qc)} stations: median frac_ok={med_frac:.2f}, "
-          f"SNR={med_snr:.1f}, skew={med_skew:.1f} deg")
-    print("  high median skew flags 3-D/galvanic distortion worth a closer "
-          "look on the re-survey.")
+    print(
+        f"emtools QC on {len(qc)} stations: median frac_ok={med_frac:.2f}, "
+        f"SNR={med_snr:.1f}, skew={med_skew:.1f} deg"
+    )
+    print(
+        "  high median skew flags 3-D/galvanic distortion worth a closer "
+        "look on the re-survey."
+    )
 except Exception as exc:  # pragma: no cover - optional geospatial stack
-    print(f"emtools QC skipped ({type(exc).__name__}); geospatial stack "
-          "not available.")
+    print(
+        f"emtools QC skipped ({type(exc).__name__}); geospatial stack "
+        "not available."
+    )
 
 
 def _skew_for(station: str) -> float:
@@ -155,6 +175,7 @@ def _skew_for(station: str) -> float:
             return float(row["skew_med"])
     return float("nan")
 
+
 # %%
 # 4. Map the line and the plan
 # ----------------------------
@@ -162,8 +183,12 @@ def _skew_for(station: str) -> float:
 # quick data-density proxy); the right panel shows the re-occupation
 # sample-rate hint per station. Together they are the re-survey brief.
 
-lat = np.array([r["lat"] if r["lat"] is not None else np.nan for r in records])
-lon = np.array([r["lon"] if r["lon"] is not None else np.nan for r in records])
+lat = np.array(
+    [r["lat"] if r["lat"] is not None else np.nan for r in records]
+)
+lon = np.array(
+    [r["lon"] if r["lon"] is not None else np.nan for r in records]
+)
 nfreq = np.array([r["n_freq"] for r in records], dtype=float)
 skew = np.array([_skew_for(r["station"]) for r in records])
 have_xy = np.isfinite(lat) & np.isfinite(lon)
@@ -175,24 +200,46 @@ else:
     colour, clabel, cmap = nfreq, "resolved frequencies", "viridis"
 
 fig, (ax_map, ax_rate) = plt.subplots(
-    1, 2, figsize=(11.5, 5.2), constrained_layout=True,
+    1,
+    2,
+    figsize=(11.5, 5.2),
+    constrained_layout=True,
     gridspec_kw={"width_ratios": [3, 2]},
 )
 
 if have_xy.any():
     sc = ax_map.scatter(
-        lon[have_xy], lat[have_xy], c=colour[have_xy], s=90,
-        cmap=cmap, edgecolor="#222", linewidth=0.6, zorder=3,
+        lon[have_xy],
+        lat[have_xy],
+        c=colour[have_xy],
+        s=90,
+        cmap=cmap,
+        edgecolor="#222",
+        linewidth=0.6,
+        zorder=3,
     )
-    ax_map.plot(lon[have_xy], lat[have_xy], "-", color="#888", lw=0.8,
-                alpha=0.6, zorder=1)
+    ax_map.plot(
+        lon[have_xy],
+        lat[have_xy],
+        "-",
+        color="#888",
+        lw=0.8,
+        alpha=0.6,
+        zorder=1,
+    )
     fig.colorbar(sc, ax=ax_map, label=clabel, shrink=0.85)
-    ax_map.set(xlabel="longitude", ylabel="latitude",
-               title=f"{survey_dir.name}: re-occupation targets")
+    ax_map.set(
+        xlabel="longitude",
+        ylabel="latitude",
+        title=f"{survey_dir.name}: re-occupation targets",
+    )
 else:  # positions unavailable -> fall back to station index
     ax_map.plot(nfreq, "o-", color=OK_BLUE)
-    ax_map.set(xlabel="station index", ylabel="resolved frequencies",
-               title="Survey stations")
+    ax_map.set(
+        xlabel="station index",
+        ylabel="resolved frequencies",
+        title="Survey stations",
+    )
 style_axis(ax_map)
 
 order = np.argsort(nfreq)
@@ -205,8 +252,10 @@ ax_rate.set_yticklabels(
     [stations[i] for i in range(0, len(stations), max(1, len(y) // 12))],
     fontsize=7,
 )
-ax_rate.set(xlabel="suggested sample rate (kHz)",
-            title="Re-occupation acquisition plan")
+ax_rate.set(
+    xlabel="suggested sample rate (kHz)",
+    title="Re-occupation acquisition plan",
+)
 style_axis(ax_rate)
 
 plt.show()

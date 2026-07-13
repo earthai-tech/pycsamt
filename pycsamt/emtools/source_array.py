@@ -27,6 +27,7 @@ Beam-steering condition (eq. 23):
 Earth wavenumber for CSAMT (real part of complex k₁):
     k_eff = sqrt(π f μ₀ / ρ)   [m⁻¹]
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -47,13 +48,14 @@ __all__ = [
     "plot_radiation_pattern",
 ]
 
-_MU0: float = 4.0 * np.pi * 1e-7   # H/m
-_C0:  float = 299_792_458.0         # m/s  (free-space speed of light)
+_MU0: float = 4.0 * np.pi * 1e-7  # H/m
+_C0: float = 299_792_458.0  # m/s  (free-space speed of light)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Wavenumber helper
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def wavenumber(
     freq: float,
@@ -91,6 +93,7 @@ def wavenumber(
 # Single-dipole (SDAS) element pattern
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def sdas_element_pattern(
     theta_deg: float | np.ndarray,
     l: float,
@@ -127,10 +130,10 @@ def sdas_element_pattern(
     F(θ) = |[cos(kl cosθ/2) − cos(kl/2)]| / |sinθ|.
     The singularity at θ = 0° and 180° resolves to zero by L'Hôpital's rule.
     """
-    theta  = np.deg2rad(np.asarray(theta_deg, dtype=float))
-    cos_t  = np.cos(theta)
-    sin_t  = np.sin(theta)
-    num    = np.cos(k * l * cos_t / 2.0) - np.cos(k * l / 2.0)
+    theta = np.deg2rad(np.asarray(theta_deg, dtype=float))
+    cos_t = np.cos(theta)
+    sin_t = np.sin(theta)
+    num = np.cos(k * l * cos_t / 2.0) - np.cos(k * l / 2.0)
 
     with np.errstate(divide="ignore", invalid="ignore"):
         F = np.where(np.abs(sin_t) < 1e-10, 0.0, np.abs(num / sin_t))
@@ -146,6 +149,7 @@ def sdas_element_pattern(
 # ─────────────────────────────────────────────────────────────────────────────
 # Array factor
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def array_factor(
     theta_b_deg: float | np.ndarray,
@@ -185,8 +189,8 @@ def array_factor(
     AF_n = sin(N ψ/2) / [N sin(ψ/2)],  ψ = k d sinθ_b + β.
     """
     theta_b = np.deg2rad(np.asarray(theta_b_deg, dtype=float))
-    psi     = k * d * np.sin(theta_b) + beta
-    half    = psi / 2.0
+    psi = k * d * np.sin(theta_b) + beta
+    half = psi / 2.0
 
     with np.errstate(divide="ignore", invalid="ignore"):
         AF = np.where(
@@ -201,6 +205,7 @@ def array_factor(
 # ─────────────────────────────────────────────────────────────────────────────
 # Combined PAS pattern
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def pas_pattern(
     theta_b_deg: float | np.ndarray,
@@ -243,8 +248,8 @@ def pas_pattern(
     theta_b_deg = np.asarray(theta_b_deg, dtype=float)
 
     # Element pattern: θ from y-axis = 90° − broadside angle
-    theta_dipole_deg = 90.0 - np.abs(theta_b_deg)   # [0°, 90°]
-    F  = sdas_element_pattern(theta_dipole_deg, l, k, normalize=False)
+    theta_dipole_deg = 90.0 - np.abs(theta_b_deg)  # [0°, 90°]
+    F = sdas_element_pattern(theta_dipole_deg, l, k, normalize=False)
     AF = array_factor(theta_b_deg, N, d, k, beta)
 
     pattern = F * AF
@@ -259,6 +264,7 @@ def pas_pattern(
 # ─────────────────────────────────────────────────────────────────────────────
 # Beam-steering design
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def beam_steer(
     theta_m_deg: float,
@@ -329,6 +335,7 @@ def steering_angles(
 # Directivity and gain
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def sdas_directivity(
     l: float,
     k: float,
@@ -355,8 +362,8 @@ def sdas_directivity(
     """
     # Integrate over full circle, using element pattern vs dipole axis angle
     theta = np.linspace(1e-6, np.pi - 1e-6, n_theta)
-    F     = sdas_element_pattern(np.rad2deg(theta), l, k, normalize=False)
-    U     = F ** 2
+    F = sdas_element_pattern(np.rad2deg(theta), l, k, normalize=False)
+    U = F**2
     P_rad = float(np.trapezoid(U * np.sin(theta), theta) * 2.0 * np.pi)
     U_max = float(U.max())
     if P_rad < 1e-100:
@@ -387,6 +394,7 @@ def snr_gain_db(N: int) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 # Visualisation
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_radiation_pattern(
     theta_b_deg: np.ndarray | Sequence,
@@ -435,7 +443,7 @@ def plot_radiation_pattern(
     import matplotlib.pyplot as plt
 
     theta_b = np.asarray(theta_b_deg, dtype=float)
-    pats    = np.atleast_2d(np.asarray(patterns, dtype=float))
+    pats = np.atleast_2d(np.asarray(patterns, dtype=float))
 
     if normalize:
         peak = pats.max(axis=1, keepdims=True)
@@ -445,15 +453,20 @@ def plot_radiation_pattern(
     if log_scale:
         with np.errstate(divide="ignore"):
             pats = 20.0 * np.log10(np.maximum(pats, 1e-10))
-        pats = np.maximum(pats, db_floor) - db_floor   # shift to ≥ 0
+        pats = np.maximum(pats, db_floor) - db_floor  # shift to ≥ 0
 
     n_pat = pats.shape[0]
-    lbls  = labels if labels is not None else [f"pattern {i+1}" for i in range(n_pat)]
+    lbls = (
+        labels
+        if labels is not None
+        else [f"pattern {i + 1}" for i in range(n_pat)]
+    )
 
     if ax is None:
         if polar:
-            _, ax = plt.subplots(subplot_kw={"projection": "polar"},
-                                 figsize=figsize)
+            _, ax = plt.subplots(
+                subplot_kw={"projection": "polar"}, figsize=figsize
+            )
         else:
             _, ax = plt.subplots(figsize=figsize)
 

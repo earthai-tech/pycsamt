@@ -108,6 +108,7 @@ def _make_raw_dir(tmp_dir: Path, n: int = 3, n_rows: int = 3) -> Path:
 # _station_number
 # ---------------------------------------------------------------------------
 
+
 class TestStationNumber:
     def test_three_digit_suffix(self):
         assert _station_number("X2HX.001") == 1
@@ -123,6 +124,7 @@ class TestStationNumber:
 # _edi_sort_key
 # ---------------------------------------------------------------------------
 
+
 class TestEdiSortKey:
     def test_orders_by_number(self):
         paths = [
@@ -131,12 +133,17 @@ class TestEdiSortKey:
             Path("Z2HX001.edi"),
         ]
         sorted_paths = sorted(paths, key=_edi_sort_key)
-        assert [p.stem for p in sorted_paths] == ["Z2HX001", "Z2HX002", "Z2HX010"]
+        assert [p.stem for p in sorted_paths] == [
+            "Z2HX001",
+            "Z2HX002",
+            "Z2HX010",
+        ]
 
 
 # ---------------------------------------------------------------------------
 # _read_19col
 # ---------------------------------------------------------------------------
+
 
 class TestRead19Col:
     def test_parses_valid_rows(self, tmp_path):
@@ -145,15 +152,15 @@ class TestRead19Col:
         mat = _read_19col(f)
         assert mat.shape == (3, 19)
         assert mat[0, 0] == pytest.approx(11.3)
-        assert mat[1, 2] == pytest.approx(0.0)   # zero stack row
+        assert mat[1, 2] == pytest.approx(0.0)  # zero stack row
 
     def test_zero_stack_detected(self, tmp_path):
         f = tmp_path / "X.001"
         f.write_text(_RAW_19COL, encoding="utf-8")
         mat = _read_19col(f)
         stacks = mat[:, 2].astype(int)
-        assert stacks[1] == 0     # second row has stack = 0
-        assert stacks[0] == 24    # first row: 24 stacks
+        assert stacks[1] == 0  # second row has stack = 0
+        assert stacks[0] == 24  # first row: 24 stacks
 
     def test_empty_file_returns_zeros(self, tmp_path):
         f = tmp_path / "X.001"
@@ -165,6 +172,7 @@ class TestRead19Col:
 # ---------------------------------------------------------------------------
 # StratagemRawReader
 # ---------------------------------------------------------------------------
+
 
 class TestStratagemRawReader:
     def test_fit_returns_self(self, tmp_path):
@@ -184,8 +192,8 @@ class TestStratagemRawReader:
         _make_raw_dir(tmp_path, n=2)
         rdr = StratagemRawReader(tmp_path / "raw").fit()
         # row 1 (index 1) has stack=0 → snr_mask False
-        assert not rdr.snr_mask_[0, 1]   # second row of file has stack=0
-        assert rdr.snr_mask_[0, 0]       # first row has stack=24
+        assert not rdr.snr_mask_[0, 1]  # second row of file has stack=0
+        assert rdr.snr_mask_[0, 0]  # first row has stack=24
 
     def test_missing_dir_raises(self):
         with pytest.raises(Exception):
@@ -211,6 +219,7 @@ class TestStratagemRawReader:
 # ---------------------------------------------------------------------------
 # EDIBatch
 # ---------------------------------------------------------------------------
+
 
 class TestEDIBatch:
     def test_fit_returns_self(self, tmp_path):

@@ -101,8 +101,7 @@ def test_project_en_to_lonlat_roundtrip_if_pyproj() -> None:
 
     # choose a lon/lat inside UTM zone 31N (EPSG:32631)
     lon0, lat0 = 3.0, 45.0
-    t_fwd = Transformer.from_crs("EPSG:4326", "EPSG:32631",
-                                 always_xy=True)
+    t_fwd = Transformer.from_crs("EPSG:4326", "EPSG:32631", always_xy=True)
     e0, n0 = t_fwd.transform(lon0, lat0)
 
     lon, lat = ed._project_en_to_lonlat(

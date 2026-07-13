@@ -91,31 +91,38 @@ __all__ = [
     "MU0",
 ]
 
-MU0 = 4.0 * np.pi * 1e-7          # H/m
+MU0 = 4.0 * np.pi * 1e-7  # H/m
 
 
 # ---------------------------------------------------------------------------
 # Biot-Savart static field helpers
 # ---------------------------------------------------------------------------
 
-def _hz_horiz_seg(y0: float, x1: float, x2: float,
-                  rx: float, ry: float) -> float:
+
+def _hz_horiz_seg(
+    y0: float, x1: float, x2: float, rx: float, ry: float
+) -> float:
     """Hz from a horizontal wire segment at y=y0, running x1→x2."""
     d = ry - y0
     if abs(d) < 1e-14:
         return 0.0
     u1, u2 = x1 - rx, x2 - rx
-    return (1.0 / d) * (u2 / np.sqrt(d*d + u2*u2) - u1 / np.sqrt(d*d + u1*u1))
+    return (1.0 / d) * (
+        u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1)
+    )
 
 
-def _hz_vert_seg(x0: float, y1: float, y2: float,
-                 rx: float, ry: float) -> float:
+def _hz_vert_seg(
+    x0: float, y1: float, y2: float, rx: float, ry: float
+) -> float:
     """Hz from a vertical wire segment at x=x0, running y1→y2."""
     d = rx - x0
     if abs(d) < 1e-14:
         return 0.0
     u1, u2 = y1 - ry, y2 - ry
-    return -(1.0 / d) * (u2 / np.sqrt(d*d + u2*u2) - u1 / np.sqrt(d*d + u1*u1))
+    return -(1.0 / d) * (
+        u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1)
+    )
 
 
 def _biot_savart_rect_hz(
@@ -152,10 +159,10 @@ def _biot_savart_rect_hz(
        3rd ed., Prentice Hall — §5.4 (Biot-Savart law for line current).
     """
     hz = (
-        _hz_horiz_seg(-b, -a, +a, rx, ry) +   # bottom: (−a,−b) → (+a,−b)
-        _hz_vert_seg(+a,  -b, +b, rx, ry) +    # right:  (+a,−b) → (+a,+b)
-        _hz_horiz_seg(+b, +a, -a, rx, ry) +    # top:    (+a,+b) → (−a,+b)
-        _hz_vert_seg(-a,  +b, -b, rx, ry)      # left:   (−a,+b) → (−a,−b)
+        _hz_horiz_seg(-b, -a, +a, rx, ry)  # bottom: (−a,−b) → (+a,−b)
+        + _hz_vert_seg(+a, -b, +b, rx, ry)  # right:  (+a,−b) → (+a,+b)
+        + _hz_horiz_seg(+b, +a, -a, rx, ry)  # top:    (+a,+b) → (−a,+b)
+        + _hz_vert_seg(-a, +b, -b, rx, ry)  # left:   (−a,+b) → (−a,−b)
     )
     return hz / (4.0 * np.pi)
 
@@ -182,23 +189,27 @@ def _biot_savart_rect_hz_segments(
     Used by :func:`_in_loop_geometry_factor_td` to weight each segment's
     contribution by the EM diffusion length at each time gate.
     """
-    hz_rx   = np.array([
-        _hz_horiz_seg(-b, -a, +a, rx,  ry),    # bottom
-        _hz_vert_seg( +a, -b, +b, rx,  ry),    # right
-        _hz_horiz_seg(+b, +a, -a, rx,  ry),    # top
-        _hz_vert_seg( -a, +b, -b, rx,  ry),    # left
-    ]) / (4.0 * np.pi)
+    hz_rx = np.array(
+        [
+            _hz_horiz_seg(-b, -a, +a, rx, ry),  # bottom
+            _hz_vert_seg(+a, -b, +b, rx, ry),  # right
+            _hz_horiz_seg(+b, +a, -a, rx, ry),  # top
+            _hz_vert_seg(-a, +b, -b, rx, ry),  # left
+        ]
+    ) / (4.0 * np.pi)
 
-    hz_00   = np.array([
-        _hz_horiz_seg(-b, -a, +a, 0.0, 0.0),
-        _hz_vert_seg( +a, -b, +b, 0.0, 0.0),
-        _hz_horiz_seg(+b, +a, -a, 0.0, 0.0),
-        _hz_vert_seg( -a, +b, -b, 0.0, 0.0),
-    ]) / (4.0 * np.pi)
+    hz_00 = np.array(
+        [
+            _hz_horiz_seg(-b, -a, +a, 0.0, 0.0),
+            _hz_vert_seg(+a, -b, +b, 0.0, 0.0),
+            _hz_horiz_seg(+b, +a, -a, 0.0, 0.0),
+            _hz_vert_seg(-a, +b, -b, 0.0, 0.0),
+        ]
+    ) / (4.0 * np.pi)
 
     # Perpendicular distances from (rx,ry) and (0,0) to each segment's line
     dist_rx = np.array([abs(ry + b), abs(a - rx), abs(b - ry), abs(rx + a)])
-    dist_00 = np.array([b,           a,            b,           a          ])
+    dist_00 = np.array([b, a, b, a])
 
     return hz_rx, hz_00, dist_rx, dist_00
 
@@ -234,7 +245,7 @@ def _biot_savart_circle_hz(
 
     xw = radius * np.cos(theta)
     yw = radius * np.sin(theta)
-    dlx = -radius * np.sin(theta) * dtheta   # tangent × arc length
+    dlx = -radius * np.sin(theta) * dtheta  # tangent × arc length
     dly = +radius * np.cos(theta) * dtheta
 
     dx = rx - xw
@@ -267,23 +278,24 @@ def _biot_savart_circle_hz_segments(
     dist_00 : ndarray (n_seg,)
         Distance from each element to ``(0, 0)`` = ``radius`` (uniform).
     """
-    theta  = np.linspace(0.0, 2.0 * np.pi, n_seg, endpoint=False)
-    dt     = 2.0 * np.pi / n_seg
+    theta = np.linspace(0.0, 2.0 * np.pi, n_seg, endpoint=False)
+    dt = 2.0 * np.pi / n_seg
 
-    xw  = radius * np.cos(theta)
-    yw  = radius * np.sin(theta)
+    xw = radius * np.cos(theta)
+    yw = radius * np.sin(theta)
     dlx = -radius * np.sin(theta) * dt
     dly = +radius * np.cos(theta) * dt
 
     # At (rx, ry)
-    dx_rx = rx - xw;  dy_rx = ry - yw
-    r3_rx = (dx_rx ** 2 + dy_rx ** 2) ** 1.5
+    dx_rx = rx - xw
+    dy_rx = ry - yw
+    r3_rx = (dx_rx**2 + dy_rx**2) ** 1.5
     hz_rx = (dlx * dy_rx - dly * dx_rx) / r3_rx / (4.0 * np.pi)
 
     # At (0, 0)  — all wire elements at the same distance = radius
-    hz_00 = (dlx * (-yw) - dly * (-xw)) / radius ** 3 / (4.0 * np.pi)
+    hz_00 = (dlx * (-yw) - dly * (-xw)) / radius**3 / (4.0 * np.pi)
 
-    dist_rx = np.sqrt(dx_rx ** 2 + dy_rx ** 2)
+    dist_rx = np.sqrt(dx_rx**2 + dy_rx**2)
     dist_00 = radius * np.ones(n_seg)
 
     return hz_rx, hz_00, dist_rx, dist_00
@@ -360,7 +372,7 @@ def _in_loop_geometry_factor(
 
     if hz_00 < 1e-30:
         return 1.0
-    return float(max(hz_rx / hz_00, 0.01))   # guard against unphysical values
+    return float(max(hz_rx / hz_00, 0.01))  # guard against unphysical values
 
 
 def _in_loop_geometry_factor_td(
@@ -429,8 +441,8 @@ def _in_loop_geometry_factor_td(
     """
     from scipy.special import erf
 
-    t   = np.asarray(t)
-    n   = len(t)
+    t = np.asarray(t)
+    n = len(t)
 
     if abs(rx) < 1e-10 and abs(ry) < 1e-10:
         return np.ones(n)
@@ -442,32 +454,38 @@ def _in_loop_geometry_factor_td(
         else:
             a = float(loop_dims[0]) / 2.0
             b = float(loop_dims[1]) / 2.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(rx, ry, a, b)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            rx, ry, a, b
+        )
     elif loop_shape == "circle":
         r_loop = float(loop_dims[0])
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(rx, ry, r_loop)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(
+            rx, ry, r_loop
+        )
     else:
         a = b = np.sqrt(float(loop_dims[0])) / 2.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(rx, ry, a, b)
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
+            rx, ry, a, b
+        )
 
     # --- diffusion length per gate ---
     rho_safe = np.maximum(np.asarray(rho_a), 1e-6)
-    lam      = np.sqrt(4.0 * rho_safe * t / MU0)        # (n,)
+    lam = np.sqrt(4.0 * rho_safe * t / MU0)  # (n,)
 
     # --- per-segment weights (n_seg, n) ---
-    d_rx = np.maximum(dist_rx[:, None], 1e-12)           # avoid /0
+    d_rx = np.maximum(dist_rx[:, None], 1e-12)  # avoid /0
     d_00 = np.maximum(dist_00[:, None], 1e-12)
-    w_rx = erf(lam[None, :] / d_rx)                      # (n_seg, n)
+    w_rx = erf(lam[None, :] / d_rx)  # (n_seg, n)
     w_00 = erf(lam[None, :] / d_00)
 
     # --- time-dependent weighted Hz ---
-    hz_td_rx = (hz_rx[:, None] * w_rx).sum(axis=0)       # (n,)
+    hz_td_rx = (hz_rx[:, None] * w_rx).sum(axis=0)  # (n,)
     hz_td_00 = (hz_00[:, None] * w_00).sum(axis=0)
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        eta_t = np.where(np.abs(hz_td_00) > 1e-30,
-                         hz_td_rx / hz_td_00,
-                         np.ones(n))
+        eta_t = np.where(
+            np.abs(hz_td_00) > 1e-30, hz_td_rx / hz_td_00, np.ones(n)
+        )
 
     return eta_t
 
@@ -491,6 +509,7 @@ def _loop_inner_radius(loop_shape: str, loop_dims: tuple) -> float:
 # ---------------------------------------------------------------------------
 # Apparent-resistivity formulas
 # ---------------------------------------------------------------------------
+
 
 def _rho_a_late_time(
     dBdt: np.ndarray,
@@ -533,8 +552,8 @@ def _rho_a_late_time(
        electromagnetic prospecting methods.  SEG, Vol. 2.
     """
     with np.errstate(divide="ignore", invalid="ignore"):
-        arg = (moment * MU0 ** 2.5) / (
-            10.0 * np.sqrt(np.pi) * np.abs(dBdt) * t ** 2.5
+        arg = (moment * MU0**2.5) / (
+            10.0 * np.sqrt(np.pi) * np.abs(dBdt) * t**2.5
         )
         rho = arg ** (2.0 / 3.0)
     return np.where(np.isfinite(rho) & (rho > 0.0), rho, np.nan)
@@ -607,10 +626,14 @@ def _rho_a_in_loop(
     for _ in range(n_iter):
         # Fill NaN/non-positive ρ_a with median for stable η(t) computation
         finite = rho_a[np.isfinite(rho_a) & (rho_a > 0.0)]
-        fill   = float(np.median(finite)) if len(finite) > 0 else 100.0
-        rho_for_eta = np.where(np.isfinite(rho_a) & (rho_a > 0.0), rho_a, fill)
+        fill = float(np.median(finite)) if len(finite) > 0 else 100.0
+        rho_for_eta = np.where(
+            np.isfinite(rho_a) & (rho_a > 0.0), rho_a, fill
+        )
 
-        eta_t = _in_loop_geometry_factor_td(rx, ry, loop_shape, loop_dims, t, rho_for_eta)
+        eta_t = _in_loop_geometry_factor_td(
+            rx, ry, loop_shape, loop_dims, t, rho_for_eta
+        )
         rho_a = _rho_a_late_time(dBdt, t, moment * eta_t)
 
     return rho_a
@@ -685,8 +708,8 @@ def _rho_a_offset_loop(
             f"(got {offset:.3g} m).  Use offset=0 for central-loop."
         )
     with np.errstate(divide="ignore", invalid="ignore"):
-        arg = (moment * MU0 ** 2.5) / (
-            20.0 * np.sqrt(np.pi) * np.abs(dBdt) * (offset ** 3) * t ** 2.5
+        arg = (moment * MU0**2.5) / (
+            20.0 * np.sqrt(np.pi) * np.abs(dBdt) * (offset**3) * t**2.5
         )
         rho = arg ** (2.0 / 3.0)
     return np.where(np.isfinite(rho) & (rho > 0.0), rho, np.nan)
@@ -695,6 +718,7 @@ def _rho_a_offset_loop(
 # ---------------------------------------------------------------------------
 # Shared downstream helpers (unchanged from v1)
 # ---------------------------------------------------------------------------
+
 
 def _pseudo_freq(t: np.ndarray, convention: str = "skin_depth") -> np.ndarray:
     r"""
@@ -745,7 +769,9 @@ def _phase_from_rho(
         phase_deg[~np.isfinite(rho_a)] = np.nan
         return phase_deg
 
-    raise ValueError(f"Unknown phase mode '{mode}'. Use 'homogeneous' or 'weidelt'.")
+    raise ValueError(
+        f"Unknown phase mode '{mode}'. Use 'homogeneous' or 'weidelt'."
+    )
 
 
 def _build_z_array(
@@ -799,12 +825,13 @@ def _z_error_from_rho_error(
 try:
     from ..ai.nets.gcn import build_adjacency
 except Exception:
-    build_adjacency = None   # type: ignore[assignment]
+    build_adjacency = None  # type: ignore[assignment]
 
 
 # ---------------------------------------------------------------------------
 # Waveform deconvolution helpers
 # ---------------------------------------------------------------------------
+
 
 def _waveform_moments(waveform, n_samples: int = 2000) -> tuple[float, float]:
     r"""
@@ -859,26 +886,26 @@ def _waveform_moments(waveform, n_samples: int = 2000) -> tuple[float, float]:
         t_ramp = float(waveform.ramp_off)
         return t_ramp / 2.0, t_ramp
 
-    hp = 0.5 / float(waveform.base_frequency)   # half-period
+    hp = 0.5 / float(waveform.base_frequency)  # half-period
     I0 = float(waveform.current_at(np.array([0.0]))[0])
 
     if I0 > 0.01:
         # Turn-off begins at (or just after) t=0 — sample [0, 2×hp]
         tau_grid = np.linspace(0.0, 2.0 * hp, n_samples + 1)
-        I        = waveform.current_at(tau_grid)
-        dI       = np.diff(I)
-        tau_mid  = 0.5 * (tau_grid[:-1] + tau_grid[1:])
-        w        = np.where(dI < 0.0, -dI, 0.0)
+        I = waveform.current_at(tau_grid)
+        dI = np.diff(I)
+        tau_mid = 0.5 * (tau_grid[:-1] + tau_grid[1:])
+        w = np.where(dI < 0.0, -dI, 0.0)
 
         total = float(w.sum())
         if total <= 0.0:
             return 0.0, 0.0
 
-        w_norm   = w / total
-        tau_eff  = float(np.dot(tau_mid, w_norm))
+        w_norm = w / total
+        tau_eff = float(np.dot(tau_mid, w_norm))
 
         cumulative = np.cumsum(w_norm)
-        idx        = int(np.searchsorted(cumulative, 0.99))
+        idx = int(np.searchsorted(cumulative, 0.99))
         tau_window = float(tau_mid[min(idx, len(tau_mid) - 1)])
 
         return tau_eff, tau_window
@@ -886,25 +913,25 @@ def _waveform_moments(waveform, n_samples: int = 2000) -> tuple[float, float]:
     else:
         # Turn-off completed before t=0 — find the last turn-off in [-2hp, 0]
         tau_grid = np.linspace(-2.0 * hp, 0.0, n_samples + 1)
-        I        = waveform.current_at(tau_grid)
-        dI       = np.diff(I)
-        tau_mid  = 0.5 * (tau_grid[:-1] + tau_grid[1:])
-        w        = np.where(dI < 0.0, -dI, 0.0)
+        I = waveform.current_at(tau_grid)
+        dI = np.diff(I)
+        tau_mid = 0.5 * (tau_grid[:-1] + tau_grid[1:])
+        w = np.where(dI < 0.0, -dI, 0.0)
 
         # Isolate the last contiguous turn-off (nearest to t=0)
-        inc_idx  = np.where(dI > 0.0)[0]
-        start    = int(inc_idx[-1]) + 1 if len(inc_idx) > 0 else 0
-        w_last   = np.zeros_like(w)
+        inc_idx = np.where(dI > 0.0)[0]
+        start = int(inc_idx[-1]) + 1 if len(inc_idx) > 0 else 0
+        w_last = np.zeros_like(w)
         w_last[start:] = w[start:]
 
         total = float(w_last.sum())
         if total <= 0.0:
             return 0.0, 0.0
 
-        w_norm  = w_last / total
+        w_norm = w_last / total
         # centroid is at some tau < 0; tau_eff is the positive lag to t=0
         tau_eff = -float(np.dot(tau_mid, w_norm))
-        return tau_eff, 0.0   # turn-off already complete: no gate rejection
+        return tau_eff, 0.0  # turn-off already complete: no gate rejection
 
 
 def _apply_waveform_correction(
@@ -967,9 +994,9 @@ def _apply_waveform_correction(
     if tau_eff <= 0.0:
         return dBdt, t, error
 
-    t_corr   = t + tau_eff
+    t_corr = t + tau_eff
     amp_corr = 1.0 + tau_eff / (2.0 * t_corr)
-    valid    = t_corr > tau_window
+    valid = t_corr > tau_window
 
     err_corr = error[valid] if error is not None else None
     return dBdt[valid] * amp_corr[valid], t_corr[valid], err_corr
@@ -981,7 +1008,7 @@ def _apply_waveform_correction(
 
 _CONFIG_CENTRAL = "central"
 _CONFIG_IN_LOOP = "in_loop"
-_CONFIG_OFFSET  = "offset"
+_CONFIG_OFFSET = "offset"
 
 
 class LateTimeTransform(PyCSAMTObject):
@@ -1091,7 +1118,7 @@ class LateTimeTransform(PyCSAMTObject):
         t: np.ndarray,
     ) -> np.ndarray:
         """Route to the correct ρ_a formula for the sounding geometry."""
-        M   = sounding.moment
+        M = sounding.moment
         cfg = self._detect_config(sounding)
 
         if cfg == _CONFIG_CENTRAL or not self.loop_geometry_correction:
@@ -1100,13 +1127,20 @@ class LateTimeTransform(PyCSAMTObject):
         if cfg == _CONFIG_IN_LOOP:
             # Use rx_position if provided (2-D offset), else scalar offset along x
             if getattr(sounding, "rx_position", None) is not None:
-                rx, ry = float(sounding.rx_position[0]), float(sounding.rx_position[1])
+                rx, ry = (
+                    float(sounding.rx_position[0]),
+                    float(sounding.rx_position[1]),
+                )
             else:
                 rx, ry = float(sounding.offset), 0.0
             return _rho_a_in_loop(
-                dBdt, t, M,
-                sounding.loop_shape, sounding.loop_dims,
-                rx, ry,
+                dBdt,
+                t,
+                M,
+                sounding.loop_shape,
+                sounding.loop_dims,
+                rx,
+                ry,
                 n_iter=self.in_loop_n_iter,
             )
 
@@ -1131,8 +1165,8 @@ class LateTimeTransform(PyCSAMTObject):
             ``station_name``, ``x``, ``y``, ``elevation``,
             ``loop_config``.
         """
-        dBdt  = sounding.dBdt()
-        t     = sounding.time_gates.copy()
+        dBdt = sounding.dBdt()
+        t = sounding.time_gates.copy()
         error = sounding.error.copy() if sounding.error is not None else None
 
         if self.waveform_correction:
@@ -1146,35 +1180,35 @@ class LateTimeTransform(PyCSAMTObject):
                 )
 
         rho_a = self._compute_rho_a(sounding, dBdt, t)
-        freq  = _pseudo_freq(t, self.freq_convention)
+        freq = _pseudo_freq(t, self.freq_convention)
 
         if self.drop_nan:
             mask = np.isfinite(rho_a) & np.isfinite(freq) & (freq > 0.0)
-            rho_a  = rho_a[mask]
-            freq   = freq[mask]
-            t      = t[mask]
-            dBdt   = dBdt[mask]
+            rho_a = rho_a[mask]
+            freq = freq[mask]
+            t = t[mask]
+            dBdt = dBdt[mask]
             err_raw = error[mask] if error is not None else None
         else:
             err_raw = error
 
         # sort ascending frequency
-        order  = np.argsort(freq)
-        freq   = freq[order]
-        rho_a  = rho_a[order]
+        order = np.argsort(freq)
+        freq = freq[order]
+        rho_a = rho_a[order]
         if err_raw is not None:
             err_raw = err_raw[order]
 
         # ρ_a error → Z_err
         if err_raw is not None:
-            rho_err = (2.0 / 3.0) * rho_a * np.abs(
-                err_raw / (dBdt[order] + 1e-300)
+            rho_err = (
+                (2.0 / 3.0) * rho_a * np.abs(err_raw / (dBdt[order] + 1e-300))
             )
         else:
             rho_err = None
 
         phase_xy = _phase_from_rho(rho_a, freq, mode=self.phase_mode)
-        Z_arr    = _build_z_array(rho_a, phase_xy, freq)
+        Z_arr = _build_z_array(rho_a, phase_xy, freq)
 
         Z_err = (
             _z_error_from_rho_error(rho_a, rho_err, freq)
@@ -1183,16 +1217,16 @@ class LateTimeTransform(PyCSAMTObject):
         )
 
         return {
-            "freq":         freq,
-            "Z":            Z_arr,
-            "Z_err":        Z_err,
-            "rho_a":        rho_a,
-            "phase_xy":     phase_xy,
+            "freq": freq,
+            "Z": Z_arr,
+            "Z_err": Z_err,
+            "rho_a": rho_a,
+            "phase_xy": phase_xy,
             "station_name": sounding.station_name,
-            "x":            sounding.x,
-            "y":            sounding.y,
-            "elevation":    sounding.elevation,
-            "loop_config":  self._detect_config(sounding),
+            "x": sounding.x,
+            "y": sounding.y,
+            "elevation": sounding.elevation,
+            "loop_config": self._detect_config(sounding),
         }
 
     def transform_many(
@@ -1206,6 +1240,7 @@ class LateTimeTransform(PyCSAMTObject):
 # ---------------------------------------------------------------------------
 # Fourier / Kramers-Kronig numerical helpers
 # ---------------------------------------------------------------------------
+
 
 def _cosine_transform_1d(
     g: np.ndarray,
@@ -1251,10 +1286,10 @@ def _cosine_transform_1d(
         t_fine = t
         g_fine = g
 
-    log_t  = np.log(t_fine)
+    log_t = np.log(t_fine)
     result = np.empty(len(omega_arr))
     for i, w in enumerate(omega_arr):
-        integrand = g_fine * np.cos(w * t_fine) * t_fine   # ×t : d(log t)→dt
+        integrand = g_fine * np.cos(w * t_fine) * t_fine  # ×t : d(log t)→dt
         result[i] = np.trapezoid(integrand, log_t)
     return result
 
@@ -1287,21 +1322,23 @@ def _kramers_kronig_re(
     -------
     ndarray (n,)   real part of the kernel
     """
-    n         = len(omega)
+    n = len(omega)
     log_omega = np.log(omega)
-    num_base  = omega ** 2 * im_k    # ω'^2 Im[K] — numerator in log-ω integrand
-    re_k      = np.zeros(n)
+    num_base = omega**2 * im_k  # ω'^2 Im[K] — numerator in log-ω integrand
+    re_k = np.zeros(n)
 
     for i in range(n):
-        w2       = omega[i] ** 2
-        den      = omega ** 2 - w2   # zero only at j == i
-        tol      = 1e-10 * max(w2, 1e-100)
-        mask_ok  = np.abs(den) > tol
+        w2 = omega[i] ** 2
+        den = omega**2 - w2  # zero only at j == i
+        tol = 1e-10 * max(w2, 1e-100)
+        mask_ok = np.abs(den) > tol
 
-        integrand           = np.where(mask_ok, num_base / np.where(mask_ok, den, 1.0), 0.0)
-        bad                 = np.where(~mask_ok)[0]
+        integrand = np.where(
+            mask_ok, num_base / np.where(mask_ok, den, 1.0), 0.0
+        )
+        bad = np.where(~mask_ok)[0]
         for j in bad:
-            left  = j - 1 if j > 0     else j + 1
+            left = j - 1 if j > 0 else j + 1
             right = j + 1 if j < n - 1 else j - 1
             integrand[j] = 0.5 * (integrand[left] + integrand[right])
 
@@ -1313,6 +1350,7 @@ def _kramers_kronig_re(
 # ---------------------------------------------------------------------------
 # FourierTransform
 # ---------------------------------------------------------------------------
+
 
 class FourierTransform(PyCSAMTObject):
     r"""
@@ -1397,27 +1435,35 @@ class FourierTransform(PyCSAMTObject):
         verbose: int = 0,
         logger: object | None = None,
     ) -> None:
-        self.n_freq              = int(n_freq)
-        self.freq_min            = freq_min
-        self.freq_max            = freq_max
-        self.n_aux               = int(max(n_aux, 4 * n_freq))
-        self.n_interp            = int(n_interp)
+        self.n_freq = int(n_freq)
+        self.freq_min = freq_min
+        self.freq_max = freq_max
+        self.n_aux = int(max(n_aux, 4 * n_freq))
+        self.n_interp = int(n_interp)
         self.waveform_correction = bool(waveform_correction)
-        self.drop_nan            = bool(drop_nan)
-        self.verbose             = int(verbose)
-        self.logger              = logger
+        self.drop_nan = bool(drop_nan)
+        self.verbose = int(verbose)
+        self.logger = logger
 
     # ── frequency grids ──────────────────────────────────────────────────
 
     def _output_freqs(self, t: np.ndarray) -> np.ndarray:
-        f_lo = self.freq_min if self.freq_min is not None else 1.0 / (2.0 * np.pi * t[-1])
-        f_hi = self.freq_max if self.freq_max is not None else 1.0 / (2.0 * np.pi * t[0])
+        f_lo = (
+            self.freq_min
+            if self.freq_min is not None
+            else 1.0 / (2.0 * np.pi * t[-1])
+        )
+        f_hi = (
+            self.freq_max
+            if self.freq_max is not None
+            else 1.0 / (2.0 * np.pi * t[0])
+        )
         f_lo = max(f_lo, 1e-8)
         return np.logspace(np.log10(f_lo), np.log10(f_hi), self.n_freq)
 
     def _aux_freqs(self, t: np.ndarray) -> np.ndarray:
         f_lo = max(0.5 / (2.0 * np.pi * t[-1]), 1e-8)
-        f_hi = 2.0  / (2.0 * np.pi * t[0])
+        f_hi = 2.0 / (2.0 * np.pi * t[0])
         return np.logspace(np.log10(f_lo), np.log10(f_hi), self.n_aux)
 
     # ── core kernel computation ──────────────────────────────────────────
@@ -1431,7 +1477,7 @@ class FourierTransform(PyCSAMTObject):
         omega_out: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Return (re_k, im_k) at omega_out."""
-        fc       = _cosine_transform_1d(dBdt / moment, t, omega_aux, self.n_interp)
+        fc = _cosine_transform_1d(dBdt / moment, t, omega_aux, self.n_interp)
         im_k_aux = np.where(omega_aux > 0.0, fc / omega_aux, 0.0)
         re_k_aux = _kramers_kronig_re(omega_aux, im_k_aux)
 
@@ -1453,7 +1499,7 @@ class FourierTransform(PyCSAMTObject):
         "fourier"``.
         """
         dBdt = sounding.dBdt()
-        t    = sounding.time_gates.copy()
+        t = sounding.time_gates.copy()
 
         if len(t) < 4:
             raise ValueError(
@@ -1480,25 +1526,31 @@ class FourierTransform(PyCSAMTObject):
         )
 
         # Z = iωμ₀K = -ωμ₀ Im[K] + i ωμ₀ Re[K]
-        Z_xy    = -omega_out * MU0 * im_k + 1j * omega_out * MU0 * re_k
-        rho_a   = np.abs(Z_xy) ** 2 / (omega_out * MU0)
+        Z_xy = -omega_out * MU0 * im_k + 1j * omega_out * MU0 * re_k
+        rho_a = np.abs(Z_xy) ** 2 / (omega_out * MU0)
         phase_xy = np.clip(np.angle(Z_xy, deg=True), 0.0, 90.0)
 
         # error propagation
         if sounding.error is not None:
-            fc_err   = _cosine_transform_1d(
+            fc_err = _cosine_transform_1d(
                 sounding.error, sounding.time_gates, omega_aux, self.n_interp
             )
-            ik_err_a = np.where(omega_aux > 0.0,
-                                fc_err / (sounding.moment * omega_aux), 0.0)
-            ik_err   = np.interp(np.log(omega_out), np.log(omega_aux), ik_err_a)
-            rho_err  = 2.0 * np.abs(ik_err) * rho_a / np.maximum(np.abs(im_k), 1e-300)
+            ik_err_a = np.where(
+                omega_aux > 0.0, fc_err / (sounding.moment * omega_aux), 0.0
+            )
+            ik_err = np.interp(np.log(omega_out), np.log(omega_aux), ik_err_a)
+            rho_err = (
+                2.0
+                * np.abs(ik_err)
+                * rho_a
+                / np.maximum(np.abs(im_k), 1e-300)
+            )
         else:
             rho_err = None
 
-        n     = len(freqs_out)
+        n = len(freqs_out)
         Z_arr = np.zeros((n, 2, 2), dtype=complex)
-        Z_arr[:, 0, 1] =  Z_xy
+        Z_arr[:, 0, 1] = Z_xy
         Z_arr[:, 1, 0] = -Z_xy
         Z_err = (
             _z_error_from_rho_error(rho_a, rho_err, freqs_out)
@@ -1507,26 +1559,26 @@ class FourierTransform(PyCSAMTObject):
         )
 
         if self.drop_nan:
-            mask      = np.isfinite(rho_a) & (rho_a > 0.0) & np.isfinite(phase_xy)
+            mask = np.isfinite(rho_a) & (rho_a > 0.0) & np.isfinite(phase_xy)
             freqs_out = freqs_out[mask]
-            rho_a     = rho_a[mask]
-            phase_xy  = phase_xy[mask]
-            Z_arr     = Z_arr[mask]
-            Z_err     = Z_err[mask]
+            rho_a = rho_a[mask]
+            phase_xy = phase_xy[mask]
+            Z_arr = Z_arr[mask]
+            Z_err = Z_err[mask]
 
         order = np.argsort(freqs_out)
         return {
-            "freq":         freqs_out[order],
-            "Z":            Z_arr[order],
-            "Z_err":        Z_err[order],
-            "rho_a":        rho_a[order],
-            "phase_xy":     phase_xy[order],
+            "freq": freqs_out[order],
+            "Z": Z_arr[order],
+            "Z_err": Z_err[order],
+            "rho_a": rho_a[order],
+            "phase_xy": phase_xy[order],
             "station_name": sounding.station_name,
-            "x":            sounding.x,
-            "y":            sounding.y,
-            "elevation":    sounding.elevation,
-            "loop_config":  "fourier",
-            "method":       "fourier",
+            "x": sounding.x,
+            "y": sounding.y,
+            "elevation": sounding.elevation,
+            "loop_config": "fourier",
+            "method": "fourier",
         }
 
     def transform_many(
@@ -1540,6 +1592,7 @@ class FourierTransform(PyCSAMTObject):
 # ---------------------------------------------------------------------------
 # TEMtoEDI — high-level dispatcher
 # ---------------------------------------------------------------------------
+
 
 class TEMtoEDI(PyCSAMTObject):
     r"""
@@ -1599,7 +1652,7 @@ class TEMtoEDI(PyCSAMTObject):
         verbose: int = 0,
         logger: object | None = None,
     ) -> None:
-        self.method  = method.lower()
+        self.method = method.lower()
         self.out_dir = out_dir
         self.verbose = int(verbose)
         self.logger = logger
@@ -1624,12 +1677,12 @@ class TEMtoEDI(PyCSAMTObject):
 
     def transform(self, sounding: TEMSounding):
         result = self._transformer.transform(sounding)
-        edi    = self._result_to_edifile(result)
+        edi = self._result_to_edifile(result)
         return self._make_collection([edi])
 
     def transform_many(self, soundings: Sequence[TEMSounding]):
         results = self._transformer.transform_many(soundings)
-        edis    = [self._result_to_edifile(r) for r in results]
+        edis = [self._result_to_edifile(r) for r in results]
         return self._make_collection(edis)
 
     def save(self, sounding_or_soundings, path=None):
@@ -1648,14 +1701,16 @@ class TEMtoEDI(PyCSAMTObject):
         written = []
         for snd in soundings:
             result = self._transformer.transform(snd)
-            edi    = self._result_to_edifile(result)
-            name   = (result["station_name"] or "tem_site") + ".edi"
-            fp     = str(out / name)
+            edi = self._result_to_edifile(result)
+            name = (result["station_name"] or "tem_site") + ".edi"
+            fp = str(out / name)
             edi.write(new_edifn=name, savepath=str(out))
             written.append(fp)
             if self.verbose:
                 cfg = result.get("loop_config", "?")
-                print(f"  Wrote {fp}  ({result['freq'].size} freq, cfg={cfg})")
+                print(
+                    f"  Wrote {fp}  ({result['freq'].size} freq, cfg={cfg})"
+                )
 
         return written
 
@@ -1667,8 +1722,8 @@ class TEMtoEDI(PyCSAMTObject):
         from ..seg.edi import EDIFile
 
         edi = EDIFile()
-        edi.Z.freq  = result["freq"]
-        edi.Z.z     = result["Z"]
+        edi.Z.freq = result["freq"]
+        edi.Z.z = result["Z"]
         z_err = self._finite_z_error(result.get("Z_err"))
         if z_err is not None:
             edi.Z.z_err = z_err
@@ -1692,12 +1747,13 @@ class TEMtoEDI(PyCSAMTObject):
         cfg = result.get("loop_config", "central")
         try:
             from ..seg.heads import Head
+
             head = Head()
             head.dataid = result["station_name"] or "TEM_SITE"
-            head.lon    = float(result.get("x", 0.0))
-            head.lat    = float(result.get("y", 0.0))
-            head.elev   = float(result.get("elevation", 0.0))
-            head.acqby  = "pyCSAMT.tdem"
+            head.lon = float(result.get("x", 0.0))
+            head.lat = float(result.get("y", 0.0))
+            head.elev = float(result.get("elevation", 0.0))
+            head.acqby = "pyCSAMT.tdem"
             head.fileby = "pyCSAMT.tdem"
             edi.add_section("head", head)
         except Exception:
@@ -1705,6 +1761,7 @@ class TEMtoEDI(PyCSAMTObject):
 
         try:
             from ..seg.heads import Info
+
             info = Info()
             info.info_list = [
                 "Data origin: TEM (time-domain EM) transformed to MT equivalent",
@@ -1719,4 +1776,5 @@ class TEMtoEDI(PyCSAMTObject):
     @staticmethod
     def _make_collection(edis: list):
         from ..seg.collection import EDICollection
+
         return EDICollection(items=edis)

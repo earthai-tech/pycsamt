@@ -36,6 +36,7 @@ from ._steps import Step
 # Preset dataclass
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Preset:
     """A named, ordered collection of pipeline steps.
@@ -65,7 +66,6 @@ class Preset:
 # ---------------------------------------------------------------------------
 
 PRESETS: dict[str, Preset] = {
-
     "basic_qc": Preset(
         name="basic_qc",
         description=(
@@ -73,29 +73,27 @@ PRESETS: dict[str, Preset] = {
             "Good for quick-look inspection."
         ),
         steps=[
-            ("notch",            Step("NR001")),
-            ("drop_duplicates",  Step("FREQ002")),
-            ("select_band",      Step("FREQ001")),
-            ("align_grid",       Step("FREQ004")),
-            ("qc_snapshot",      Step("QC001")),
+            ("notch", Step("NR001")),
+            ("drop_duplicates", Step("FREQ002")),
+            ("select_band", Step("FREQ001")),
+            ("align_grid", Step("FREQ004")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     "noise_reduction": Preset(
         name="noise_reduction",
         description=(
             "Stacked noise-removal chain for high-EMI environments."
         ),
         steps=[
-            ("notch",         Step("NR001")),
-            ("hampel",        Step("NR004")),
-            ("spatial_med",   Step("NR005")),
-            ("shrink_trend",  Step("NR003")),
-            ("mask_incoher",  Step("NR010")),
-            ("qc_snapshot",   Step("QC001")),
+            ("notch", Step("NR001")),
+            ("hampel", Step("NR004")),
+            ("spatial_med", Step("NR005")),
+            ("shrink_trend", Step("NR003")),
+            ("mask_incoher", Step("NR010")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     "full_processing": Preset(
         name="full_processing",
         description=(
@@ -103,17 +101,16 @@ PRESETS: dict[str, Preset] = {
             "noise → frequency → skew gate → static-shift → strike rotation."
         ),
         steps=[
-            ("notch",           Step("NR001")),
-            ("drop_dup",        Step("FREQ002")),
-            ("select_band",     Step("FREQ001")),
-            ("align_grid",      Step("FREQ004")),
-            ("mask_skew",       Step("SK001")),
-            ("rotate_strike",   Step("TZ001")),
-            ("correct_ss",      Step("SS001")),
-            ("qc_snapshot",     Step("QC001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            ("select_band", Step("FREQ001")),
+            ("align_grid", Step("FREQ004")),
+            ("mask_skew", Step("SK001")),
+            ("rotate_strike", Step("TZ001")),
+            ("correct_ss", Step("SS001")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     "tensor_analysis": Preset(
         name="tensor_analysis",
         description=(
@@ -121,14 +118,13 @@ PRESETS: dict[str, Preset] = {
             "sigma-clip, and off-diagonal balance."
         ),
         steps=[
-            ("rotate_strike",  Step("TZ001")),
-            ("antisymm",       Step("TZ002")),
-            ("sigma_clip",     Step("TZ003")),
-            ("balance",        Step("TZ004")),
-            ("qc_snapshot",    Step("QC001")),
+            ("rotate_strike", Step("TZ001")),
+            ("antisymm", Step("TZ002")),
+            ("sigma_clip", Step("TZ003")),
+            ("balance", Step("TZ004")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     "dimensionality_filter": Preset(
         name="dimensionality_filter",
         description=(
@@ -136,13 +132,12 @@ PRESETS: dict[str, Preset] = {
             "and project to 2-D."
         ),
         steps=[
-            ("classify_dim",  Step("DIM001")),
-            ("mask_dim",      Step("DIM002")),
-            ("project_2d",    Step("DIM003")),
-            ("qc_snapshot",   Step("QC001")),
+            ("classify_dim", Step("DIM001")),
+            ("mask_dim", Step("DIM002")),
+            ("project_2d", Step("DIM003")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     "publication_ready": Preset(
         name="publication_ready",
         description=(
@@ -151,18 +146,17 @@ PRESETS: dict[str, Preset] = {
             "static-shift correction, strike rotation, and skew gating."
         ),
         steps=[
-            ("notch",          Step("NR001")),
-            ("drop_dup",       Step("FREQ002")),
-            ("select_band",    Step("FREQ001")),
-            ("align_grid",     Step("FREQ004")),
-            ("correct_ss",     Step("SS001")),
-            ("rotate_strike",  Step("TZ001")),
-            ("antisymm",       Step("TZ002")),
-            ("mask_skew",      Step("SK001")),
-            ("qc_snapshot",    Step("QC001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            ("select_band", Step("FREQ001")),
+            ("align_grid", Step("FREQ004")),
+            ("correct_ss", Step("SS001")),
+            ("rotate_strike", Step("TZ001")),
+            ("antisymm", Step("TZ002")),
+            ("mask_skew", Step("SK001")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
-
     # ── Stratagem-specific preset ─────────────────────────────────────────
     "stratagem_mt": Preset(
         name="stratagem_mt",
@@ -177,19 +171,18 @@ PRESETS: dict[str, Preset] = {
         ),
         steps=[
             # static shift first — requires complete frequency range
-            ("correct_ss",    Step("SS001")),
+            ("correct_ss", Step("SS001")),
             # trim to AMT acquisition band
-            ("select_band",   Step("FREQ001", band_hz=(10.0, 1e5))),
+            ("select_band", Step("FREQ001", band_hz=(10.0, 1e5))),
             # drop duplicate frequencies from multi-band acquisition
-            ("drop_dup",      Step("FREQ002")),
+            ("drop_dup", Step("FREQ002")),
             # powerline harmonics (50 Hz grid, 30 harmonics covers AMT range)
-            ("notch",         Step("NR001", mains_hz=50.0, n_harm=30,
-                                   tol_hz=0.08)),
+            ("notch", Step("NR001", mains_hz=50.0, n_harm=30, tol_hz=0.08)),
             # Hampel outlier filter on impedance tensor
-            ("hampel",        Step("NR004")),
+            ("hampel", Step("NR004")),
             # mask frequencies that are incoherent across the profile
-            ("mask_incoher",  Step("NR010")),
-            ("qc_snapshot",   Step("QC001")),
+            ("mask_incoher", Step("NR010")),
+            ("qc_snapshot", Step("QC001")),
         ],
     ),
 }
@@ -198,6 +191,7 @@ PRESETS: dict[str, Preset] = {
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def list_presets() -> list[Preset]:
     """Return all available :class:`Preset` objects."""
@@ -215,8 +209,7 @@ def get_preset(name: str) -> Preset:
     if name not in PRESETS:
         available = sorted(PRESETS)
         raise KeyError(
-            f"Unknown preset {name!r}.  "
-            f"Available presets: {available}"
+            f"Unknown preset {name!r}.  Available presets: {available}"
         )
     return PRESETS[name]
 

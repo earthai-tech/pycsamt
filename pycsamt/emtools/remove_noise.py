@@ -67,7 +67,9 @@ class EMAPFilterResult:
     def __repr__(self) -> str:  # noqa: D105
         return self.summary()
 
+
 # ----------------------------- SNR table -------------------------------- #
+
 
 def snr_table(
     sites: Any,
@@ -78,8 +80,11 @@ def snr_table(
     verbose: int = 0,
 ) -> pd.DataFrame:
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     rows = []
     for i, ed in enumerate(_iter_items(S)):
@@ -130,8 +135,11 @@ def emi_mitigation_report(
     spatial median, RPCA, or EMAP filtering.
     """
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     measures = list(applied_measures or [])
     if not measures:
@@ -175,37 +183,41 @@ def emi_mitigation_report(
         if Z is not None and fr is not None:
             fr = np.asarray(fr, dtype=float).ravel()
             n_freq = int(fr.size)
-            harm_z = int(np.count_nonzero(
-                _harm_mask(fr, mains_hz, n_harm, tol_hz)
-            ))
+            harm_z = int(
+                np.count_nonzero(_harm_mask(fr, mains_hz, n_harm, tol_hz))
+            )
         harm_tipper = 0
         if T is not None and ft is not None:
             ft = np.asarray(ft, dtype=float).ravel()
-            harm_tipper = int(np.count_nonzero(
-                _harm_mask(ft, mains_hz, n_harm, tol_hz)
-            ))
-        rows.append(dict(
-            station=station,
-            remote_reference_attempted=bool(remote_reference_attempted),
-            remote_reference_available=bool(rr_available),
-            remote_reference_reason=str(reason),
-            coherent_noise_subtraction=bool(coherent_noise_subtraction),
-            mains_hz=float(mains_hz),
-            n_harm=int(n_harm),
-            tol_hz=float(tol_hz),
-            notch_mode=str(notch_mode),
-            n_frequency=int(n_freq),
-            harmonic_z_samples=int(harm_z),
-            harmonic_tipper_samples=int(harm_tipper),
-            applied_measures="; ".join(str(m) for m in measures),
-        ))
+            harm_tipper = int(
+                np.count_nonzero(_harm_mask(ft, mains_hz, n_harm, tol_hz))
+            )
+        rows.append(
+            dict(
+                station=station,
+                remote_reference_attempted=bool(remote_reference_attempted),
+                remote_reference_available=bool(rr_available),
+                remote_reference_reason=str(reason),
+                coherent_noise_subtraction=bool(coherent_noise_subtraction),
+                mains_hz=float(mains_hz),
+                n_harm=int(n_harm),
+                tol_hz=float(tol_hz),
+                notch_mode=str(notch_mode),
+                n_frequency=int(n_freq),
+                harmonic_z_samples=int(harm_z),
+                harmonic_tipper_samples=int(harm_tipper),
+                applied_measures="; ".join(str(m) for m in measures),
+            )
+        )
     return pd.DataFrame.from_records(rows)
 
 
 # --------------------------- power-line notching ------------------------- #
 
-def _harm_mask(fr: np.ndarray, mains: float, n_harm: int,
-               tol_hz: float) -> np.ndarray:
+
+def _harm_mask(
+    fr: np.ndarray, mains: float, n_harm: int, tol_hz: float
+) -> np.ndarray:
     kk = np.arange(1, int(n_harm) + 1, dtype=float)
     fH = kk * float(mains)
     m = np.zeros(fr.size, dtype=bool)
@@ -245,11 +257,11 @@ def _interp_rows(
 def notch_powerline(
     sites: Any,
     *,
-    mains_hz: float = 50.0,   # 50 or 60
+    mains_hz: float = 50.0,  # 50 or 60
     n_harm: int = 30,
-    tol_hz: float = 0.08,     # Hz window around each harmonic
-    mode: str = "interp",     # mask|interp
-    also: str = "both",       # z|tipper|both
+    tol_hz: float = 0.08,  # Hz window around each harmonic
+    mode: str = "interp",  # mask|interp
+    also: str = "both",  # z|tipper|both
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -258,8 +270,11 @@ def notch_powerline(
 ):
     """Suppress mains-frequency harmonics in impedance and tipper data."""
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
 
     def _one(Si):
@@ -295,6 +310,7 @@ def notch_powerline(
 
 # ------------------------- log-frequency smoothing ----------------------- #
 
+
 def _smooth1d(y: np.ndarray, win: int, kind: str) -> np.ndarray:
     if win <= 1:
         return y
@@ -316,8 +332,8 @@ def smooth_logfreq(
     sites: Any,
     *,
     win: int = 5,
-    kind: str = "tri",         # box|tri
-    also: str = "both",        # z|tipper|both
+    kind: str = "tri",  # box|tri
+    also: str = "both",  # z|tipper|both
     gate_snr: float | None = None,
     inplace: bool = False,
     recursive: bool = True,
@@ -326,8 +342,11 @@ def smooth_logfreq(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     ST = snr_table(S) if gate_snr is not None else None
 
@@ -344,7 +363,7 @@ def smooth_logfreq(
             if not sdf.empty:
                 idx = np.searchsorted(sdf["freq"].to_numpy(), fr)
                 idx = np.clip(idx, 0, len(sdf) - 1)
-                ok &= (sdf["snr"].to_numpy()[idx] >= gate_snr)
+                ok &= sdf["snr"].to_numpy()[idx] >= gate_snr
         y2 = y.copy()
         y2[ok] = _smooth1d(y[ok], win, kind)
         Z.z = y2.reshape(z.shape)
@@ -552,8 +571,11 @@ or sequence, default "offdiag"
     """
     if not smooth_rho and not smooth_phase:
         return ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
 
     comps = _resolve_components(components)
@@ -563,8 +585,11 @@ or sequence, default "offdiag"
 
     if inplace:
         S = ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
     else:
         from ..site.base import to_edis
@@ -578,8 +603,11 @@ or sequence, default "offdiag"
             verbose=verbose,
         )
         S = ensure_sites(
-            edis, recursive=False, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            edis,
+            recursive=False,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
 
     for ed in _iter_items(S):
@@ -623,9 +651,9 @@ or sequence, default "offdiag"
                 )
                 if blend < 1.0:
                     log_rho_fit = (
-                        (1.0 - blend) * log_rho + blend * log_rho_fit
-                    )
-                rho_fit = 10.0 ** log_rho_fit
+                        1.0 - blend
+                    ) * log_rho + blend * log_rho_fit
+                rho_fit = 10.0**log_rho_fit
                 ok_fit = ok_rho & np.isfinite(rho_fit) & (rho_fit > 0.0)
                 amp_new[ok_fit] = np.sqrt(5.0 * fr[ok_fit] * rho_fit[ok_fit])
 
@@ -645,7 +673,9 @@ or sequence, default "offdiag"
                 phase_new[ok_phi] = phase_fit[ok_phi]
 
             ok = valid_freq & np.isfinite(amp_new) & np.isfinite(phase_new)
-            z2[ok, i, j] = amp_new[ok] * np.exp(1j * np.deg2rad(phase_new[ok]))
+            z2[ok, i, j] = amp_new[ok] * np.exp(
+                1j * np.deg2rad(phase_new[ok])
+            )
 
         try:
             z_full = np.asarray(Z.z, dtype=np.complex128).copy()
@@ -658,6 +688,7 @@ or sequence, default "offdiag"
 
 
 # --------------------- group-trend shrinkage (robust) -------------------- #
+
 
 def _build_group_trend(
     sites: Any,
@@ -699,7 +730,7 @@ def shrink_to_group_trend(
     *,
     groups: dict[str, list[str]] | None = None,
     group_key: str | None = None,
-    lam: float = 0.25,          # 0..1; 0=no change, 1=trend
+    lam: float = 0.25,  # 0..1; 0=no change, 1=trend
     gate_harm: bool = True,
     mains_hz: float = 50.0,
     n_harm: int = 30,
@@ -712,8 +743,11 @@ def shrink_to_group_trend(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if groups is None:
         # auto: single group with all stations
@@ -728,7 +762,8 @@ def shrink_to_group_trend(
         g = None
         for k, v in groups.items():
             if st in v:
-                g = k; break
+                g = k
+                break
         if g is None or g not in Tref:
             return Si
         (Gu, Zu) = Tref[g]["_union"]
@@ -757,6 +792,7 @@ def shrink_to_group_trend(
 
 
 # ------------------------------ pipeline --------------------------------- #
+
 
 def remove_noise_pipeline(
     sites: Any,
@@ -820,13 +856,13 @@ def remove_noise_pipeline(
         )
     if inplace:
         # copy back into input sites
-        _ = _apply_each(
-            sites, lambda Si: Si, inplace=True, verbose=verbose
-        )
+        _ = _apply_each(sites, lambda Si: Si, inplace=True, verbose=verbose)
         return sites
     return S
 
+
 # ------------------------- 1) Hampel outlier filter --------------------- #
+
 
 def _hampel_1d(y: np.ndarray, k: int, nsig: float) -> np.ndarray:
     if y.size == 0 or k <= 0:
@@ -834,7 +870,8 @@ def _hampel_1d(y: np.ndarray, k: int, nsig: float) -> np.ndarray:
     y2 = y.copy()
     n = y.size
     for i in range(n):
-        lo = max(0, i - k); hi = min(n, i + k + 1)
+        lo = max(0, i - k)
+        hi = min(n, i + k + 1)
         win = y[lo:hi]
         med = np.nanmedian(win)
         mad = np.nanmedian(np.abs(win - med)) + 1e-12
@@ -848,8 +885,8 @@ def hampel_filter_freq(
     *,
     win: int = 3,
     nsig: float = 3.0,
-    on: str = "both",          # z|tipper|both
-    domain: str = "reim",      # reim|magphase
+    on: str = "both",  # z|tipper|both
+    domain: str = "reim",  # reim|magphase
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -858,8 +895,11 @@ def hampel_filter_freq(
 ):
     """Remove frequency-domain outliers with a sliding Hampel filter."""
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
 
     def _one(Si):
@@ -868,37 +908,51 @@ def hampel_filter_freq(
         if Z is not None:
             Y = z.reshape(z.shape[0], -1)
             if domain == "magphase":
-                m = np.abs(Y); p = np.angle(Y)
-                m2 = np.vstack([
-                    _hampel_1d(m[:, j], win, nsig)
-                    for j in range(m.shape[1])
-                ]).T
+                m = np.abs(Y)
+                p = np.angle(Y)
+                m2 = np.vstack(
+                    [
+                        _hampel_1d(m[:, j], win, nsig)
+                        for j in range(m.shape[1])
+                    ]
+                ).T
                 Y2 = m2 * np.exp(1j * p)
             else:
-                R = np.real(Y); I = np.imag(Y)
-                R2 = np.vstack([
-                    _hampel_1d(R[:, j], win, nsig)
-                    for j in range(R.shape[1])
-                ]).T
-                I2 = np.vstack([
-                    _hampel_1d(I[:, j], win, nsig)
-                    for j in range(I.shape[1])
-                ]).T
+                R = np.real(Y)
+                I = np.imag(Y)
+                R2 = np.vstack(
+                    [
+                        _hampel_1d(R[:, j], win, nsig)
+                        for j in range(R.shape[1])
+                    ]
+                ).T
+                I2 = np.vstack(
+                    [
+                        _hampel_1d(I[:, j], win, nsig)
+                        for j in range(I.shape[1])
+                    ]
+                ).T
                 Y2 = R2 + 1j * I2
             Z.z = Y2.reshape(z.shape)
         if on in ("tipper", "both"):
             from ._core import _get_t_block
+
             T, t, ft = _get_t_block(ed)
             if T is not None:
-                r = np.real(t); im = np.imag(t)
-                r2 = np.vstack([
-                    _hampel_1d(r[:, j], win, nsig)
-                    for j in range(r.shape[1])
-                ]).T
-                i2 = np.vstack([
-                    _hampel_1d(im[:, j], win, nsig)
-                    for j in range(im.shape[1])
-                ]).T
+                r = np.real(t)
+                im = np.imag(t)
+                r2 = np.vstack(
+                    [
+                        _hampel_1d(r[:, j], win, nsig)
+                        for j in range(r.shape[1])
+                    ]
+                ).T
+                i2 = np.vstack(
+                    [
+                        _hampel_1d(im[:, j], win, nsig)
+                        for j in range(im.shape[1])
+                    ]
+                ).T
                 T.tipper = r2 + 1j * i2
         return Si
 
@@ -907,12 +961,13 @@ def hampel_filter_freq(
 
 # -------- 2) Spatial median smooth (across stations at fixed freq) ------ #
 
+
 def spatial_median_filter(
     sites: Any,
     *,
     half_window: int = 2,
-    lam: float = 0.25,          # 0..1 shrink toward local median
-    on: str = "z",              # z|tipper|both
+    lam: float = 0.25,  # 0..1 shrink toward local median
+    on: str = "z",  # z|tipper|both
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -920,8 +975,11 @@ def spatial_median_filter(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     items = list(_iter_items(S))
     n = len(items)
@@ -963,9 +1021,7 @@ def spatial_median_filter(
                     Zj, zj, frj = ZB[j]
                     if Zj is None:
                         continue
-                    jj = np.clip(
-                        np.searchsorted(frj, fr[k]), 0, frj.size - 1
-                    )
+                    jj = np.clip(np.searchsorted(frj, fr[k]), 0, frj.size - 1)
                     pool.append(zj[jj])
                 if pool:
                     med = np.nanmedian(np.asarray(pool), axis=0)
@@ -987,8 +1043,7 @@ def spatial_median_filter(
                         if Tj is None:
                             continue
                         jj = np.clip(
-                            np.searchsorted(ftj, ft[k]),
-                            0, ftj.size - 1
+                            np.searchsorted(ftj, ft[k]), 0, ftj.size - 1
                         )
                         pool.append(tj[jj])
                     if pool:
@@ -1001,6 +1056,7 @@ def spatial_median_filter(
 
 
 # --------- 3) Low-rank denoise (profile RPCA-ish on |Z_xy|,|Z_yx|) ------ #
+
 
 def _svd_rank_k(M: np.ndarray, r: int) -> np.ndarray:
     try:
@@ -1026,9 +1082,13 @@ def rpca_offdiag_denoise(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
+
     def _sta_name(ed) -> str:
         """Stable station key that survives the copies made by
         ``_apply_each(inplace=False)`` (object identity does not)."""
@@ -1038,10 +1098,7 @@ def rpca_offdiag_denoise(
                 return str(v)
         site = getattr(ed, "site", None)
         if site is not None:
-            v = (
-                getattr(site, "name", None)
-                or getattr(site, "station", None)
-            )
+            v = getattr(site, "name", None) or getattr(site, "station", None)
             if v:
                 return str(v)
         return repr(ed)
@@ -1057,7 +1114,9 @@ def rpca_offdiag_denoise(
             np.stack([np.abs(z[:, 0, 1]), np.abs(z[:, 1, 0])], axis=1),
             axis=1,
         )
-        ST.append(i); FR.append(fr); MAG.append(np.log10(m + 1e-24))
+        ST.append(i)
+        FR.append(fr)
+        MAG.append(np.log10(m + 1e-24))
         NAMES.append(_sta_name(ed))
     if not ST:
         return S
@@ -1089,6 +1148,7 @@ def rpca_offdiag_denoise(
         return S
     M = np.where(np.isfinite(M), M, np.nanmedian(M))
     L = _svd_rank_k(M, rank)
+
     # push back magnitudes; keep phase if requested
     def _one(Si):
         ed = next(_iter_items(Si))
@@ -1102,7 +1162,7 @@ def rpca_offdiag_denoise(
         idx = np.clip(idx, 0, G.size - 1)
         mag_clean = 10 ** L[i, idx]
         # per off-diagonal component scale
-        for (a, b) in [(0, 1), (1, 0)]:
+        for a, b in [(0, 1), (1, 0)]:
             comp = z[:, a, b]
             if keep_phase:
                 ph = np.angle(comp)
@@ -1118,11 +1178,12 @@ def rpca_offdiag_denoise(
 
 # -------- 4) Off-diagonal consistency (sym/anti-sym blend) -------------- #
 
+
 def enforce_offdiag_consistency(
     sites: Any,
     *,
-    mode: str = "anti",        # anti|sym
-    lam: float = 0.5,          # blend toward constraint
+    mode: str = "anti",  # anti|sym
+    lam: float = 0.5,  # blend toward constraint
     inplace: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1130,8 +1191,11 @@ def enforce_offdiag_consistency(
     verbose: int = 0,
 ):
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
 
     def _one(Si):
@@ -1139,7 +1203,8 @@ def enforce_offdiag_consistency(
         Z, z, fr = _get_z_block(ed)
         if Z is None:
             return Si
-        xy = z[:, 0, 1]; yx = z[:, 1, 0]
+        xy = z[:, 0, 1]
+        yx = z[:, 1, 0]
         if mode == "sym":
             target_xy = 0.5 * (xy + yx)
             target_yx = target_xy
@@ -1156,11 +1221,12 @@ def enforce_offdiag_consistency(
 
 # ------------- 5) Incoherent-frequency vote mask (SNR-based) ------------ #
 
+
 def mask_incoherent_freqs(
     sites: Any,
     *,
     snr_thresh: float = 2.5,
-    min_frac: float = 0.4,     # keep if ≥ this fraction pass
+    min_frac: float = 0.4,  # keep if ≥ this fraction pass
     also: str = "both",
     inplace: bool = False,
     recursive: bool = True,
@@ -1170,8 +1236,11 @@ def mask_incoherent_freqs(
 ):
     """Mask frequencies that fail the requested cross-station SNR vote."""
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     T = snr_table(S)
     if T.empty:
@@ -1193,7 +1262,8 @@ def mask_incoherent_freqs(
             idx = np.searchsorted(G, fr)
             idx = np.clip(idx, 0, G.size - 1)
             keep = keepG[idx]
-            z2 = z.copy(); z2[~keep] = np.nan
+            z2 = z.copy()
+            z2[~keep] = np.nan
             Z.z = z2
         if also in ("tipper", "both"):
             Tt, t, ft = _get_t_block(ed)
@@ -1201,7 +1271,8 @@ def mask_incoherent_freqs(
                 idx = np.searchsorted(G, ft)
                 idx = np.clip(idx, 0, G.size - 1)
                 keep = keepG[idx]
-                t2 = t.copy(); t2[~keep] = np.nan
+                t2 = t.copy()
+                t2[~keep] = np.nan
                 Tt.tipper = t2
         return Si
 
@@ -1244,24 +1315,39 @@ def drop_freqs_manual(
 
     if drop_arr.size == 0:
         return ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
 
     if inplace:
         S = ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
     else:
         from ..site.base import to_edis
+
         edis = to_edis(
-            sites, copy=True,
-            recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            copy=True,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
-        S = ensure_sites(edis, recursive=False, on_dup=on_dup,
-                         strict=strict, verbose=verbose)
+        S = ensure_sites(
+            edis,
+            recursive=False,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
 
     def _mask_for(fr: np.ndarray) -> np.ndarray:
         fr = np.asarray(fr, dtype=float)
@@ -1372,6 +1458,7 @@ def drop_freqs_manual(
 
 # --------- 6) Static-shift removal — Torres-Verdín & Bostick (1992) ----- #
 
+
 def _hanning_weights(dx: np.ndarray, w_H: float) -> np.ndarray:
     """Hanning (von Hann) spatial filter weights (Torres-Verdín & Bostick 1992).
 
@@ -1436,17 +1523,20 @@ def correct_static_shift(
         Sites with static-shift-corrected Z tensors (when ``inplace=False``).
     """
     S = ensure_sites(
-        sites, recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
 
     items = list(_iter_items(S))
     if not items:
         return S
 
-    names     = [_name(ed, i) for i, ed in enumerate(items)]
+    names = [_name(ed, i) for i, ed in enumerate(items)]
     positions = _station_positions(items, spacing_m)
-    N         = len(items)
+    N = len(items)
 
     # --- collect ρ_a on native frequency grids ---------------------------
     rho_data: list[tuple[np.ndarray | None, np.ndarray | None]] = []
@@ -1462,7 +1552,7 @@ def correct_static_shift(
             mag2 = np.abs(z[:, 0, 1]) ** 2
         elif comp == "yx":
             mag2 = np.abs(z[:, 1, 0]) ** 2
-        else:   # det
+        else:  # det
             mag2 = 0.5 * (np.abs(z[:, 0, 1]) ** 2 + np.abs(z[:, 1, 0]) ** 2)
         # 0.2*|Z|^2/f, for Z in practical units (mV/km per nT) — matches
         # pycsamt.emtools.csumt's convention. The correction factor below
@@ -1470,7 +1560,7 @@ def correct_static_shift(
         # before this fix (any constant scale factor cancels), but the
         # correct formula is used regardless for consistency.
         rho = 0.2 * mag2 / fr_safe
-        lr  = np.where(rho > 0.0, np.log(rho), np.nan)
+        lr = np.where(rho > 0.0, np.log(rho), np.nan)
         rho_data.append((fr, lr))
         all_freqs.append(fr)
 
@@ -1490,16 +1580,16 @@ def correct_static_shift(
         log_rho_mat[i, idx] = lr_i
 
     # --- vectorised Hanning spatial smooth --------------------------------
-    dx_mat = positions[:, None] - positions[None, :]   # [N, N]
-    w_mat  = _hanning_weights(dx_mat, window_m)         # [N, N]
+    dx_mat = positions[:, None] - positions[None, :]  # [N, N]
+    w_mat = _hanning_weights(dx_mat, window_m)  # [N, N]
 
-    valid = np.isfinite(log_rho_mat).astype(float)     # [N, F]
+    valid = np.isfinite(log_rho_mat).astype(float)  # [N, F]
     # broadcast: w_mat[N,N,1] × valid[1,N,F] × log_rho[1,N,F]
-    w3    = w_mat[:, :, None]
-    lr3   = log_rho_mat[None, :, :]
-    v3    = valid[None, :, :]
-    num   = np.sum(w3 * v3 * lr3, axis=1)              # [N, F]
-    denom = np.sum(w3 * v3,       axis=1)               # [N, F]
+    w3 = w_mat[:, :, None]
+    lr3 = log_rho_mat[None, :, :]
+    v3 = valid[None, :, :]
+    num = np.sum(w3 * v3 * lr3, axis=1)  # [N, F]
+    denom = np.sum(w3 * v3, axis=1)  # [N, F]
     log_rho_smooth = np.where(denom > 1e-30, num / denom, log_rho_mat)
 
     # --- log correction factor C = sqrt(ρ_smooth / ρ_obs) ----------------
@@ -1520,7 +1610,7 @@ def correct_static_shift(
         G_c, C_arr = corr_map[st]
         idx = np.searchsorted(G_c, fr)
         idx = np.clip(idx, 0, G_c.size - 1)
-        C   = C_arr[idx]
+        C = C_arr[idx]
         Z.z = z * C[:, None, None]
         return Si
 
@@ -1595,10 +1685,7 @@ def _boxcar_spatial_filter(
     blocks = []
     for ed in items:
         blocks.append(_get_z_block(ed))
-    name_to_index = {
-        _name(ed, i): i
-        for i, ed in enumerate(items)
-    }
+    name_to_index = {_name(ed, i): i for i, ed in enumerate(items)}
 
     def _neighbors(index: int) -> list[int]:
         lo = max(0, index - half)
@@ -1914,8 +2001,7 @@ def confidence_gated_emap_filter(
         verbose=verbose,
     )
     before_map = {
-        _name(ed, i): ed
-        for i, ed in enumerate(_iter_items(before))
+        _name(ed, i): ed for i, ed in enumerate(_iter_items(before))
     }
     comps = _emap_component_indices(component)
     decisions = []
@@ -1934,7 +2020,9 @@ def confidence_gated_emap_filter(
             if fr0.size == 0:
                 continue
             idx0 = int(np.nanargmin(np.abs(fr0 - freq)))
-            if not np.isclose(fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12):
+            if not np.isclose(
+                fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12
+            ):
                 continue
             ci = conf[idx0]
             if not np.isfinite(ci):
@@ -1959,9 +2047,8 @@ def confidence_gated_emap_filter(
                 original = z0[idx0, a, b]
                 filtered_value = zf[j, a, b]
                 znew[j, a, b] = (
-                    (1.0 - alpha) * original
-                    + alpha * filtered_value
-                )
+                    1.0 - alpha
+                ) * original + alpha * filtered_value
                 before_mag.append(abs(original))
                 after_mag.append(abs(znew[j, a, b]))
             before_ref = float(np.nanmedian(before_mag))
@@ -1972,9 +2059,7 @@ def confidence_gated_emap_filter(
                     frequency_hz=float(freq),
                     period_s=float(1.0 / freq) if freq else np.nan,
                     log10_period=(
-                        float(np.log10(1.0 / freq))
-                        if freq > 0
-                        else np.nan
+                        float(np.log10(1.0 / freq)) if freq > 0 else np.nan
                     ),
                     confidence=float(ci) if np.isfinite(ci) else np.nan,
                     blend_weight=float(alpha),
@@ -1999,6 +2084,7 @@ def confidence_gated_emap_filter(
 
 
 # -------------------- NOISE REMOVAL QC PLOTS ---------------------------- #
+
 
 def _offdiag_logmag(z: np.ndarray) -> np.ndarray:
     m = np.nanmedian(
@@ -2119,8 +2205,12 @@ def _station_style_top(
     style = copy.copy(style)
     style.side = "top"
     style.max_labels = max(int(style.max_labels), len(labels))
-    style.every = 1 if station_label_step is None else int(
-        station_label_step,
+    style.every = (
+        1
+        if station_label_step is None
+        else int(
+            station_label_step,
+        )
     )
     x = np.arange(len(labels), dtype=float)
     style.apply(ax, x, labels, xlim=(-0.5, len(labels) - 0.5))
@@ -2141,15 +2231,13 @@ def _component_index(component: str) -> tuple[int, int]:
     return mapping[component]
 
 
-def _paired_z_items(before_sites: Any,
-                    after_sites: Any) -> list[tuple[str, Any, Any]]:
+def _paired_z_items(
+    before_sites: Any, after_sites: Any
+) -> list[tuple[str, Any, Any]]:
     """Pair before/after Z-bearing items by station name."""
     before = ensure_sites(before_sites, recursive=False, strict=False)
     after = ensure_sites(after_sites, recursive=False, strict=False)
-    after_map = {
-        _name(ed, i): ed
-        for i, ed in enumerate(_iter_items(after))
-    }
+    after_map = {_name(ed, i): ed for i, ed in enumerate(_iter_items(after))}
     pairs = []
     for i, ed0 in enumerate(_iter_items(before)):
         station = _name(ed0, i)
@@ -2162,9 +2250,9 @@ def _paired_z_items(before_sites: Any,
     return pairs
 
 
-def _nearest_component_value(ed: Any,
-                             freq_hz: float | None,
-                             component: str) -> tuple[float, complex]:
+def _nearest_component_value(
+    ed: Any, freq_hz: float | None, component: str
+) -> tuple[float, complex]:
     """Return nearest frequency and complex tensor component magnitude."""
     _, z, fr = _get_z_block(ed)
     a, b = _component_index(component)
@@ -2217,12 +2305,10 @@ def emap_filter_report(
             component=component,
             n_matched_freq=int(vals_arr.size),
             median_delta_log10_abs_z=(
-                float(np.nanmedian(vals_arr))
-                if vals_arr.size
-                else np.nan
+                float(np.nanmedian(vals_arr)) if vals_arr.size else np.nan
             ),
             rms_delta_log10_abs_z=(
-                float(np.sqrt(np.nanmean(vals_arr ** 2)))
+                float(np.sqrt(np.nanmean(vals_arr**2)))
                 if vals_arr.size
                 else np.nan
             ),
@@ -2492,6 +2578,7 @@ def plot_emap_filter_psection(
 
 # 1) Δ log|Z_off| pseudosection (station × log-period) ------------------- #
 
+
 def nr_qc_delta_offdiag_psection(
     sites: Any,
     *,
@@ -2516,6 +2603,7 @@ def nr_qc_delta_offdiag_psection(
     I0 = [st0.index(s) for s in labs]
     I1 = [st1.index(s) for s in labs]
     G = np.unique(np.concatenate([G0, G1]))
+
     def _resample(M, Gs):
         out = np.full((M.shape[0], G.size), np.nan)
         for i in range(M.shape[0]):
@@ -2523,7 +2611,8 @@ def nr_qc_delta_offdiag_psection(
             idx = np.clip(idx, 0, G.size - 1)
             out[i, idx] = M[i]
             # fill as above
-            r = out[i]; g = np.isfinite(r)
+            r = out[i]
+            g = np.isfinite(r)
             if g.sum() >= 2:
                 xi = np.where(g)[0]
                 for j in np.where(~g)[0]:
@@ -2534,6 +2623,7 @@ def nr_qc_delta_offdiag_psection(
                     t = 0 if a == b else (j - a) / (b - a)
                     r[j] = (1 - t) * r[a] + t * r[b]
         return out
+
     A = _resample(M0[I0], G0)
     B = _resample(M1[I1], G1)
     D = (B - A).T  # (freq, station)
@@ -2576,6 +2666,7 @@ def nr_qc_delta_offdiag_psection(
 
 # 2) SNR gain profile (per-station dB improvement) ----------------------- #
 
+
 def nr_qc_snr_gain_profile(
     sites: Any,
     *,
@@ -2595,12 +2686,14 @@ def nr_qc_snr_gain_profile(
             _, ax = plt.subplots(figsize=figsize)
         ax.text(0.5, 0.5, "no snr", ha="center", va="center")
         return ax
+
     def _band(v, f):
         if pband is None:
             return np.nanmedian(v)
         lo, hi = pband
         m = (1.0 / f >= lo) & (1.0 / f <= hi)
         return np.nanmedian(v[m]) if np.any(m) else np.nan
+
     labs, gain = [], []
     for st in sorted(set(T0["station"]) & set(T1["station"])):
         s0 = T0[T0["station"] == st]
@@ -2635,6 +2728,7 @@ def nr_qc_snr_gain_profile(
 
 # 3) Harmonic waterfall (Δ dB at mains harmonics) ------------------------ #
 
+
 def nr_qc_harmonic_waterfall(
     sites: Any,
     *,
@@ -2649,8 +2743,12 @@ def nr_qc_harmonic_waterfall(
     """Plot harmonic-noise reduction by station and mains harmonic."""
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = _denoise_sites(
-        S0, method, inplace=False,
-        mains_hz=mains_hz, n_harm=n_harm, tol_hz=tol_hz,
+        S0,
+        method,
+        inplace=False,
+        mains_hz=mains_hz,
+        n_harm=n_harm,
+        tol_hz=tol_hz,
         **denoise,
     )
     sts = []
@@ -2666,9 +2764,7 @@ def nr_qc_harmonic_waterfall(
             hv = []
             for k in kk:
                 m = np.abs(fr - k * mains_hz) <= float(tol_hz)
-                hv.append(
-                    float(np.nanmedian(lm[m])) if np.any(m) else np.nan
-                )
+                hv.append(float(np.nanmedian(lm[m])) if np.any(m) else np.nan)
             rows.append(hv)
             if i == 0:
                 labs.append(_name(ed, j))
@@ -2711,6 +2807,7 @@ def nr_qc_harmonic_waterfall(
 
 # 4) Station curves (off-diag mag with mains guides) --------------------- #
 
+
 def nr_qc_station_offdiag_curves(
     sites: Any,
     *,
@@ -2736,13 +2833,13 @@ def nr_qc_station_offdiag_curves(
     if ed0 is None:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
-        ax.text(0.5, 0.5, "station not found",
-                ha="center", va="center")
+        ax.text(0.5, 0.5, "station not found", ha="center", va="center")
         return ax
     # match from S1
     for ed in _iter_items(S1):
         if _name(ed, 0) == station:
-            ed1 = ed; break
+            ed1 = ed
+            break
     else:
         ed1 = None
     if ed1 is None:
@@ -2771,7 +2868,8 @@ def nr_qc_station_offdiag_curves(
         ax.axvspan(
             1.0 / (f + tol_hz),
             1.0 / max(1e-12, (f - tol_hz)),
-            alpha=0.08, color="r",
+            alpha=0.08,
+            color="r",
         )
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("|Z_off|")

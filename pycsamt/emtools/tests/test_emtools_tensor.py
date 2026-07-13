@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.tensor"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -20,16 +21,17 @@ from pycsamt.emtools.tensor import (
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     def __init__(self, station, z, freq):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
 
     def get_section(self, *_, **__):
@@ -43,7 +45,7 @@ def _freqs(n: int = 10, f_lo: float = 1.0, f_hi: float = 1e4) -> np.ndarray:
 def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
     amp = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  amp * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = amp * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -amp * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -51,7 +53,7 @@ def _iso_z(freqs: np.ndarray, rho: float = 100.0) -> np.ndarray:
 def _3d_z(freqs: np.ndarray, skew_frac: float = 0.4) -> np.ndarray:
     z = _iso_z(freqs)
     amp = np.abs(z[:, 0, 1])
-    z[:, 0, 0] =  skew_frac * amp * (0.6 + 0.8j)
+    z[:, 0, 0] = skew_frac * amp * (0.6 + 0.8j)
     z[:, 1, 0] = -skew_frac * amp * (0.5 + 0.7j)
     return z
 
@@ -67,10 +69,11 @@ def _site(name: str, z=None, n: int = 10) -> _FakeSite:
 # build_phase_tensor_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestBuildPhaseTensorTable:
 
+class TestBuildPhaseTensorTable:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sites = [_site("S00")]
         df = build_phase_tensor_table(sites)
         assert isinstance(df, pd.DataFrame)
@@ -95,6 +98,7 @@ class TestBuildPhaseTensorTable:
 
     def test_empty_input_empty_df(self):
         import pandas as pd
+
         df = build_phase_tensor_table([])
         assert isinstance(df, pd.DataFrame)
 
@@ -115,10 +119,11 @@ class TestBuildPhaseTensorTable:
 # rotate
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestRotate:
 
+class TestRotate:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_site("S00")]
         result = rotate(sites, 30.0)
         assert isinstance(result, Sites)
@@ -138,6 +143,7 @@ class TestRotate:
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -154,6 +160,7 @@ class TestRotate:
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -163,6 +170,7 @@ class TestRotate:
 
     def test_empty_sites(self):
         from pycsamt.site.base import Sites
+
         result = rotate([], 30.0)
         assert isinstance(result, Sites)
 
@@ -171,10 +179,11 @@ class TestRotate:
 # antisymmetrize
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestAntisymmetrize:
 
+class TestAntisymmetrize:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_site("S00")]
         result = antisymmetrize(sites)
         assert isinstance(result, Sites)
@@ -182,13 +191,14 @@ class TestAntisymmetrize:
     def test_offdiag_antisymmetry_enforced(self):
         """After antisymmetrize, |Zxy| == |Zyx| (average mode)."""
         fr = _freqs(6)
-        z0 = _3d_z(fr)   # asymmetric off-diagonal
+        z0 = _3d_z(fr)  # asymmetric off-diagonal
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = antisymmetrize(sites, how="rms")
         from pycsamt.emtools._core import (
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -198,6 +208,7 @@ class TestAntisymmetrize:
 
     def test_empty_sites(self):
         from pycsamt.site.base import Sites
+
         result = antisymmetrize([])
         assert isinstance(result, Sites)
 
@@ -206,10 +217,11 @@ class TestAntisymmetrize:
 # invert
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestInvert:
 
+class TestInvert:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_site("S00")]
         result = invert(sites)
         assert isinstance(result, Sites)
@@ -224,6 +236,7 @@ class TestInvert:
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(twice))
         _, z2, _ = _get_z_block(ed)
         if z2 is not None:
@@ -233,6 +246,7 @@ class TestInvert:
 
     def test_empty_sites(self):
         from pycsamt.site.base import Sites
+
         result = invert([])
         assert isinstance(result, Sites)
 
@@ -241,10 +255,11 @@ class TestInvert:
 # sigma_clip_z
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSigmaClipZ:
 
+class TestSigmaClipZ:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_site("S00")]
         result = sigma_clip_z(sites, sigma=3.0)
         assert isinstance(result, Sites)
@@ -259,6 +274,7 @@ class TestSigmaClipZ:
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -271,23 +287,25 @@ class TestSigmaClipZ:
 # balance_offdiag
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestBalanceOffdiag:
 
+class TestBalanceOffdiag:
     def test_returns_sites(self):
         from pycsamt.site.base import Sites
+
         sites = [_site("S00")]
         result = balance_offdiag(sites)
         assert isinstance(result, Sites)
 
     def test_offdiag_equal_magnitude_after_balance(self):
         fr = _freqs(6)
-        z0 = _3d_z(fr)   # |Zxy| != |Zyx|
+        z0 = _3d_z(fr)  # |Zxy| != |Zyx|
         sites = [_FakeSite("S00", z0.copy(), fr)]
         result = balance_offdiag(sites, mode="avgabs")
         from pycsamt.emtools._core import (
             _get_z_block,
             _iter_items,
         )
+
         ed = next(_iter_items(result))
         _, z1, _ = _get_z_block(ed)
         if z1 is not None:
@@ -297,6 +315,7 @@ class TestBalanceOffdiag:
 
     def test_empty_sites(self):
         from pycsamt.site.base import Sites
+
         result = balance_offdiag([])
         assert isinstance(result, Sites)
 
@@ -305,28 +324,33 @@ class TestBalanceOffdiag:
 # plot_strike_director_field
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotStrikeDirectorField:
 
+class TestPlotStrikeDirectorField:
     def _sites(self, n_sta: int = 5, n_freq: int = 12):
-        return [_site(f"S{i:02d}", _3d_z(_freqs(n_freq)), n_freq)
-                for i in range(n_sta)]
+        return [
+            _site(f"S{i:02d}", _3d_z(_freqs(n_freq)), n_freq)
+            for i in range(n_sta)
+        ]
 
     def test_returns_axes(self):
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         ax = plot_strike_director_field(self._sites())
         assert isinstance(ax, plt.Axes)
         plt.close("all")
 
     def test_exported_from_package(self):
         from pycsamt.emtools import plot_strike_director_field
+
         assert callable(plot_strike_director_field)
 
     def test_empty_input_no_crash(self):
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         ax = plot_strike_director_field([])
         assert isinstance(ax, plt.Axes)
         plt.close("all")
@@ -335,12 +359,15 @@ class TestPlotStrikeDirectorField:
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         n_sta, n_freq = 4, 10
-        ax = plot_strike_director_field(self._sites(n_sta, n_freq),
-                                        streamlines=False)
+        ax = plot_strike_director_field(
+            self._sites(n_sta, n_freq), streamlines=False
+        )
         # exactly one quiver collection holding n_sta * n_freq directors
-        quivers = [c for c in ax.collections
-                   if c.__class__.__name__ == "Quiver"]
+        quivers = [
+            c for c in ax.collections if c.__class__.__name__ == "Quiver"
+        ]
         assert len(quivers) == 1
         assert quivers[0].N == n_sta * n_freq
         plt.close("all")
@@ -349,6 +376,7 @@ class TestPlotStrikeDirectorField:
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         ax = plot_strike_director_field(self._sites(), streamlines=True)
         assert isinstance(ax, plt.Axes)
         plt.close("all")
@@ -357,9 +385,13 @@ class TestPlotStrikeDirectorField:
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         ax = plot_strike_director_field(
-            self._sites(), color_by="ellipt", length_by=None,
-            streamlines=False, show_legend=False,
+            self._sites(),
+            color_by="ellipt",
+            length_by=None,
+            streamlines=False,
+            show_legend=False,
         )
         assert isinstance(ax, plt.Axes)
         plt.close("all")
@@ -368,8 +400,10 @@ class TestPlotStrikeDirectorField:
         from pycsamt.emtools.tensor import (
             plot_strike_director_field,
         )
+
         fig, ax0 = plt.subplots()
-        ax = plot_strike_director_field(self._sites(), ax=ax0,
-                                        streamlines=False)
+        ax = plot_strike_director_field(
+            self._sites(), ax=ax0, streamlines=False
+        )
         assert ax is ax0
         plt.close("all")

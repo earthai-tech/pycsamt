@@ -55,7 +55,9 @@ class Regularization(PyCSAMTObject, MetadataMixin):
         True
         """
         if self.kind not in {"none", "smooth", "damped", "blocky"}:
-            raise ValueError("regularization kind must be none/smooth/damped/blocky.")
+            raise ValueError(
+                "regularization kind must be none/smooth/damped/blocky."
+            )
         for name in ("alpha_s", "alpha_x", "alpha_z", "reference_weight"):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative.")
@@ -168,7 +170,9 @@ def regularization_weight(cfg: Any, *, default: float = 0.0) -> float:
     3.0
     """
     opts = dict(getattr(cfg, "backend_options", {}) or {})
-    return float(opts.get("regularization_weight", opts.get("reg_weight", default)))
+    return float(
+        opts.get("regularization_weight", opts.get("reg_weight", default))
+    )
 
 
 def pygimli_lambda(cfg: Any, *, default: float = 20.0) -> float:
@@ -196,10 +200,12 @@ def pygimli_lambda(cfg: Any, *, default: float = 20.0) -> float:
     7.0
     """
     opts = dict(getattr(cfg, "backend_options", {}) or {})
-    return float(opts.get(
-        "lam",
-        opts.get("lambda", opts.get("regularization_weight", default)),
-    ))
+    return float(
+        opts.get(
+            "lam",
+            opts.get("lambda", opts.get("regularization_weight", default)),
+        )
+    )
 
 
 def regularization_residual(
@@ -273,8 +279,12 @@ def regularization_residual(
     if reg.kind == "damped" and alpha_s == 0.0:
         alpha_s = 1.0
     if alpha_s > 0.0:
-        ref_weight = max(float(reg.reference_weight), 1.0 if reference is not None else 0.0)
-        scale = np.sqrt(alpha_s * max(ref_weight, 1.0 if reg.kind == "damped" else 0.0))
+        ref_weight = max(
+            float(reg.reference_weight), 1.0 if reference is not None else 0.0
+        )
+        scale = np.sqrt(
+            alpha_s * max(ref_weight, 1.0 if reg.kind == "damped" else 0.0)
+        )
         if scale > 0.0:
             parts.append(scale * (arr - ref).reshape(-1))
 
@@ -289,7 +299,7 @@ def regularization_residual(
                 continue
             diff = np.diff(arr, axis=axis)
             if reg.kind == "blocky":
-                diff = diff / np.sqrt(diff ** 2 + blocky_eps ** 2)
+                diff = diff / np.sqrt(diff**2 + blocky_eps**2)
             parts.append(np.sqrt(alpha) * diff.reshape(-1))
 
     if not parts:

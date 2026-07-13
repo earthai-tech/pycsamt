@@ -5,6 +5,7 @@
 This module provides foundational base classes and configuration
 objects for the Zonge subpackage.
 """
+
 from __future__ import annotations
 
 import copy
@@ -126,15 +127,11 @@ class Zonge:
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
         attrs = {
-            k: v for k, v in self.__dict__.items()
-            if not k.startswith('_')
+            k: v for k, v in self.__dict__.items() if not k.startswith("_")
         }
         attrs_str = ", ".join(f"{k}={v!r}" for k, v in attrs.items())
         return f"<{self.__class__.__name__}({attrs_str})>"
 
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""
-        return (
-            f"{self.__class__.__name__}(verbose={self.verbose})"
-        )
-
+        return f"{self.__class__.__name__}(verbose={self.verbose})"

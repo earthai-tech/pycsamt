@@ -120,6 +120,7 @@ __all__ = [
 # StratagemPreset  (Level 2 — StratagemSurvey-based presets)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class StratagemPreset:
     """Named configuration bundle for :class:`~pycsamt.stratagem.survey.StratagemSurvey`.
@@ -150,7 +151,6 @@ class StratagemPreset:
 
 
 STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
-
     "basic": StratagemPreset(
         name="basic",
         description=(
@@ -160,16 +160,32 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
         ),
         survey_defaults={"epsg": 32649, "utm_zone": "49N"},
         steps=[
-            ("remove_static_shift", {"sort_by": "lon", "half_window": 3, "weights": "tri"}),
-            ("drop_frequencies",    {"fmin": 10.0, "snr_thresh": 2.5, "min_frac": 0.4,
-                                     "use_hardware_mask": True}),
-            ("remove_noises",       {"mains_hz": 50.0, "n_harm": 30, "hampel_win": 3,
-                                     "smooth": False}),
-            ("export",  {}),
-            ("rename",  {}),
+            (
+                "remove_static_shift",
+                {"sort_by": "lon", "half_window": 3, "weights": "tri"},
+            ),
+            (
+                "drop_frequencies",
+                {
+                    "fmin": 10.0,
+                    "snr_thresh": 2.5,
+                    "min_frac": 0.4,
+                    "use_hardware_mask": True,
+                },
+            ),
+            (
+                "remove_noises",
+                {
+                    "mains_hz": 50.0,
+                    "n_harm": 30,
+                    "hampel_win": 3,
+                    "smooth": False,
+                },
+            ),
+            ("export", {}),
+            ("rename", {}),
         ],
     ),
-
     "full_processing": StratagemPreset(
         name="full_processing",
         description=(
@@ -178,19 +194,48 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
         ),
         survey_defaults={"epsg": 32649, "utm_zone": "49N"},
         steps=[
-            ("run_qc",              {"include_skew": True, "min_frac_ok": 0.6,
-                                     "min_snr_med": 2.0, "max_skew_med": 6.0}),
-            ("remove_static_shift", {"sort_by": "lon", "half_window": 3,
-                                     "weights": "tri", "max_skew": 6.0}),
-            ("drop_frequencies",    {"fmin": 10.0, "fmax": 1e5, "snr_thresh": 2.5,
-                                     "min_frac": 0.4, "use_hardware_mask": True}),
-            ("remove_noises",       {"mains_hz": 50.0, "n_harm": 30, "hampel_win": 3,
-                                     "smooth": True, "smooth_win": 3}),
-            ("export",  {}),
-            ("rename",  {}),
+            (
+                "run_qc",
+                {
+                    "include_skew": True,
+                    "min_frac_ok": 0.6,
+                    "min_snr_med": 2.0,
+                    "max_skew_med": 6.0,
+                },
+            ),
+            (
+                "remove_static_shift",
+                {
+                    "sort_by": "lon",
+                    "half_window": 3,
+                    "weights": "tri",
+                    "max_skew": 6.0,
+                },
+            ),
+            (
+                "drop_frequencies",
+                {
+                    "fmin": 10.0,
+                    "fmax": 1e5,
+                    "snr_thresh": 2.5,
+                    "min_frac": 0.4,
+                    "use_hardware_mask": True,
+                },
+            ),
+            (
+                "remove_noises",
+                {
+                    "mains_hz": 50.0,
+                    "n_harm": 30,
+                    "hampel_win": 3,
+                    "smooth": True,
+                    "smooth_win": 3,
+                },
+            ),
+            ("export", {}),
+            ("rename", {}),
         ],
     ),
-
     "publication_ready": StratagemPreset(
         name="publication_ready",
         description=(
@@ -199,17 +244,48 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
         ),
         survey_defaults={"epsg": 32649, "utm_zone": "49N"},
         steps=[
-            ("run_qc",              {"include_skew": True, "min_frac_ok": 0.5,
-                                     "min_snr_med": 3.0, "max_skew_med": 5.0}),
-            ("remove_static_shift", {"sort_by": "lon", "half_window": 5,
-                                     "weights": "tri", "max_skew": 5.0}),
-            ("drop_frequencies",    {"fmin": 15.0, "fmax": 1e5, "snr_thresh": 3.0,
-                                     "min_frac": 0.5, "use_hardware_mask": True}),
-            ("remove_noises",       {"mains_hz": 50.0, "n_harm": 30, "tol_hz": 0.05,
-                                     "hampel_win": 3, "hampel_nsig": 3.0,
-                                     "smooth": True, "smooth_win": 3}),
-            ("export",  {}),
-            ("rename",  {}),
+            (
+                "run_qc",
+                {
+                    "include_skew": True,
+                    "min_frac_ok": 0.5,
+                    "min_snr_med": 3.0,
+                    "max_skew_med": 5.0,
+                },
+            ),
+            (
+                "remove_static_shift",
+                {
+                    "sort_by": "lon",
+                    "half_window": 5,
+                    "weights": "tri",
+                    "max_skew": 5.0,
+                },
+            ),
+            (
+                "drop_frequencies",
+                {
+                    "fmin": 15.0,
+                    "fmax": 1e5,
+                    "snr_thresh": 3.0,
+                    "min_frac": 0.5,
+                    "use_hardware_mask": True,
+                },
+            ),
+            (
+                "remove_noises",
+                {
+                    "mains_hz": 50.0,
+                    "n_harm": 30,
+                    "tol_hz": 0.05,
+                    "hampel_win": 3,
+                    "hampel_nsig": 3.0,
+                    "smooth": True,
+                    "smooth_win": 3,
+                },
+            ),
+            ("export", {}),
+            ("rename", {}),
         ],
     ),
 }
@@ -244,6 +320,7 @@ def stratagem_preset_catalogue() -> str:
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
+
 
 def _coerce_to_sites(sites: Any) -> Any:
     """Normalise any Stratagem-compatible input to a :class:`~pycsamt.site.base.Sites`.
@@ -349,6 +426,7 @@ def _rename_processed(
 # ---------------------------------------------------------------------------
 # StratagemPipeline  (Level 1 — proper Pipeline subclass)
 # ---------------------------------------------------------------------------
+
 
 class StratagemPipeline(Pipeline):
     """A :class:`~._pipeline.Pipeline` extended with Stratagem pre/post-processing.
@@ -528,6 +606,7 @@ class StratagemPipeline(Pipeline):
             from ..api.pipe import (
                 PYCSAMT_PIPE,  # noqa: PLC0415
             )
+
             cfg = api or PYCSAMT_PIPE
             processed_sub = getattr(cfg, "processed_subdir", "processed")
             processed_dir = result.outdir / processed_sub
@@ -608,6 +687,7 @@ class StratagemPipeline(Pipeline):
 # ---------------------------------------------------------------------------
 # run_stratagem_preset  (Level 2 — StratagemSurvey-based convenience fn)
 # ---------------------------------------------------------------------------
+
 
 def run_stratagem_preset(
     preset: str,
@@ -706,12 +786,18 @@ def run_stratagem_preset(
         if method_name == "export":
             sv.export(export_dir, overwrite=overwrite)
         elif method_name == "rename":
-            sv.rename(basename=rename_basename, dst_path=ren_dir, overwrite=overwrite)
+            sv.rename(
+                basename=rename_basename,
+                dst_path=ren_dir,
+                overwrite=overwrite,
+            )
         else:
             method = getattr(sv, method_name, None)
             if method is not None:
                 method(**kw)
             elif verbose:
-                print(f"[run_stratagem_preset] unknown step {method_name!r}, skip")
+                print(
+                    f"[run_stratagem_preset] unknown step {method_name!r}, skip"
+                )
 
     return sv

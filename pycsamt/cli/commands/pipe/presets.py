@@ -135,6 +135,7 @@ def presets(
         from pycsamt.pipeline import (
             preset_catalogue,  # noqa: PLC0415
         )
+
         click.echo(preset_catalogue())
         click.echo(
             "  Tip: pycsamt pipe presets --expand <name>  to see a preset's steps."

@@ -3,6 +3,7 @@
 """
 Pytest suite for the Topography and Station classes.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from pycsamt.zonge.survey import Topography
 
 # --- Test Data Fixtures -------------------------------------------
+
 
 @pytest.fixture
 def sample_stn_content():
@@ -22,12 +24,14 @@ def sample_stn_content():
         "300,500300,4000110,210\n"
     )
 
+
 @pytest.fixture
 def sample_stn_file(tmp_path, sample_stn_content):
     """Creates a temporary .stn file and returns its path."""
     f = tmp_path / "sample.stn"
     f.write_text(sample_stn_content)
     return f
+
 
 # --- Tests for Topography Class -----------------------------------
 class TestTopography:
@@ -42,7 +46,10 @@ class TestTopography:
         assert not topo._frame.empty
         assert len(topo._frame) == 3
         assert list(topo._frame.columns) == [
-            "station", "easting", "northing", "elevation"
+            "station",
+            "easting",
+            "northing",
+            "elevation",
         ]
         assert topo.stations[0] == 100
 
@@ -56,7 +63,7 @@ class TestTopography:
             start_coord=start_coord,
             n_stations=n_stations,
             step=step,
-            azimuth=azimuth
+            azimuth=azimuth,
         )
         assert isinstance(topo, Topography)
         assert len(topo._frame) == n_stations
@@ -68,15 +75,15 @@ class TestTopography:
 
     def test_generate_ll(self):
         """Test generating a line from Lat/Lon and converting."""
-        start_coord = (40.0, -110.0) # Lat, Lon
+        start_coord = (40.0, -110.0)  # Lat, Lon
         topo = Topography.generate(
             start_coord=start_coord,
             n_stations=5,
             step=100,
-            azimuth=0, # North
-            coord_type='ll'
+            azimuth=0,  # North
+            coord_type="ll",
         )
-        assert 'easting' in topo._frame.columns
+        assert "easting" in topo._frame.columns
         # Check that the UTM coordinates are reasonable
         assert topo.easting[0] > 100000
         assert topo.northing[0] > 1000000
@@ -97,10 +104,10 @@ class TestTopography:
         """Test the coordinate regularization method."""
         # Create a slightly irregular line
         data = {
-            'station': [1, 2, 3, 4],
-            'easting': [100, 200, 305, 400],
-            'northing': [100, 102, 98, 101],
-            'elevation': [10, 11, 12, 11]
+            "station": [1, 2, 3, 4],
+            "easting": [100, 200, 305, 400],
+            "northing": [100, 102, 98, 101],
+            "elevation": [10, 11, 12, 11],
         }
         df = pd.DataFrame(data)
         topo = Topography(data=df)
@@ -124,5 +131,6 @@ class TestTopography:
         # Check that the grid has interpolated values
         assert not np.all(np.isnan(grid_z))
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

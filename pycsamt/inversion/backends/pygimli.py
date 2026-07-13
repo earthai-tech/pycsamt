@@ -106,7 +106,9 @@ class PyGIMLiBackend(BaseInversionBackend):
         em_data = self.prepare_data(data)
         if self.config.method == "tdem":
             if not em_data.has_tdem_response:
-                raise ValueError("pyGIMLi TDEM backend requires times plus values.")
+                raise ValueError(
+                    "pyGIMLi TDEM backend requires times plus values."
+                )
         elif not em_data.has_mt_response:
             raise ValueError(
                 "pyGIMLi MT backend requires frequencies plus rho_a and/or phase."
@@ -115,7 +117,9 @@ class PyGIMLiBackend(BaseInversionBackend):
             return self._run_profile(em_data, modules)
         return self._run_sounding(em_data, modules, station_index=None)
 
-    def _run_profile(self, em_data: EMData, modules: _PyGIMLiModules) -> InversionResult:
+    def _run_profile(
+        self, em_data: EMData, modules: _PyGIMLiModules
+    ) -> InversionResult:
         cfg = self.config
         n_st = em_data.n_stations
         names = _station_names(em_data, n_st)
@@ -128,9 +132,13 @@ class PyGIMLiBackend(BaseInversionBackend):
 
         for idx in range(n_st):
             try:
-                result = self._run_sounding(_station_data(em_data, idx), modules, station_index=idx)
+                result = self._run_sounding(
+                    _station_data(em_data, idx), modules, station_index=idx
+                )
             except Exception as exc:
-                warnings.append(f"{names[idx]}: pyGIMLi inversion failed: {exc}")
+                warnings.append(
+                    f"{names[idx]}: pyGIMLi inversion failed: {exc}"
+                )
                 continue
             station_results.append(result)
             used.append(idx)
@@ -169,7 +177,9 @@ class PyGIMLiBackend(BaseInversionBackend):
             data=em_data,
             predicted=[r.predicted for r in station_results],
             rms=float(np.nanmean(rms_values)),
-            objective=float(np.nansum([r.objective for r in station_results])),
+            objective=float(
+                np.nansum([r.objective for r in station_results])
+            ),
             n_iter=int(np.sum([r.n_iter for r in station_results])),
             workdir=cfg.workdir,
             native=station_results,
@@ -190,8 +200,12 @@ class PyGIMLiBackend(BaseInversionBackend):
         station_index: int | None,
     ) -> InversionResult:
         if self.config.method == "tdem":
-            return self._run_tdem_sounding(em_data, modules, station_index=station_index)
-        return self._run_mt_sounding(em_data, modules, station_index=station_index)
+            return self._run_tdem_sounding(
+                em_data, modules, station_index=station_index
+            )
+        return self._run_mt_sounding(
+            em_data, modules, station_index=station_index
+        )
 
     def _run_mt_sounding(
         self,
@@ -203,7 +217,9 @@ class PyGIMLiBackend(BaseInversionBackend):
         cfg = self.config
         pg = modules.pg
         em = modules.em
-        start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)
+        start = StartingModel.coerce(
+            cfg.starting_model, n_layers=cfg.n_layers
+        )
         periods = 1.0 / np.asarray(em_data.frequencies, dtype=float)
         np.asarray(start.thicknesses, dtype=float)
         observed = _pack_mt_observations(em_data)
@@ -211,11 +227,13 @@ class PyGIMLiBackend(BaseInversionBackend):
 
         opts = cfg.backend_options
         verbose = bool(opts.get("verbose", False))
-        fop, start_model, operator_name, parameterization = _make_mt_forward_operator(
-            em,
-            periods,
-            start,
-            opts,
+        fop, start_model, operator_name, parameterization = (
+            _make_mt_forward_operator(
+                em,
+                periods,
+                start,
+                opts,
+            )
         )
 
         inv = _make_inversion(pg, fop, verbose=verbose)
@@ -263,12 +281,16 @@ class PyGIMLiBackend(BaseInversionBackend):
         cfg = self.config
         pg = modules.pg
         em = modules.em
-        start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)
+        start = StartingModel.coerce(
+            cfg.starting_model, n_layers=cfg.n_layers
+        )
         thk = np.asarray(start.thicknesses, dtype=float)
         values = np.asarray(em_data.values, dtype=float)
         errors = _tdem_errors(em_data, cfg)
         opts = cfg.backend_options
-        tx_area = float(opts.get("tx_area", opts.get("txArea", np.pi * 50.0 ** 2)))
+        tx_area = float(
+            opts.get("tx_area", opts.get("txArea", np.pi * 50.0**2))
+        )
         rx_area = opts.get("rx_area", opts.get("rxArea", None))
 
         verbose = bool(opts.get("verbose", False))
@@ -297,9 +319,11 @@ class PyGIMLiBackend(BaseInversionBackend):
         )
         response = np.asarray(fop.response(recovered_raw), dtype=float)
         recovered = StartingModel(recovered_raw, thk, name="pygimli_tdem_1d")
-        rms = weighted_rms(np.log10(np.maximum(np.abs(values), 1e-30)),
-                           np.log10(np.maximum(np.abs(response), 1e-30)),
-                           errors)
+        rms = weighted_rms(
+            np.log10(np.maximum(np.abs(values), 1e-30)),
+            np.log10(np.maximum(np.abs(response), 1e-30)),
+            errors,
+        )
         return _result_from_pygimli(
             cfg,
             em_data,
@@ -357,19 +381,27 @@ def _make_mt_forward_operator(
     block = "block" in operator_name.lower()
     attempts = []
     if block:
-        attempts.extend([
-            {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
-            {"periods": periods, "nLayers": start.n_layers, "verbose": verbose},
-            {"T": periods, "nlay": start.n_layers, "verbose": verbose},
-            {"T": periods, "thk": thk, "verbose": verbose},
-        ])
+        attempts.extend(
+            [
+                {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
+                {
+                    "periods": periods,
+                    "nLayers": start.n_layers,
+                    "verbose": verbose,
+                },
+                {"T": periods, "nlay": start.n_layers, "verbose": verbose},
+                {"T": periods, "thk": thk, "verbose": verbose},
+            ]
+        )
     else:
-        attempts.extend([
-            {"T": periods, "thk": thk, "verbose": verbose},
-            {"periods": periods, "thk": thk, "verbose": verbose},
-            {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
-            {"T": periods, "verbose": verbose},
-        ])
+        attempts.extend(
+            [
+                {"T": periods, "thk": thk, "verbose": verbose},
+                {"periods": periods, "thk": thk, "verbose": verbose},
+                {"T": periods, "nLayers": start.n_layers, "verbose": verbose},
+                {"T": periods, "verbose": verbose},
+            ]
+        )
     fop = _construct_operator(cls, attempts, operator_name)
     if block:
         start_model = np.r_[thk, start.resistivities]
@@ -377,7 +409,12 @@ def _make_mt_forward_operator(
     else:
         start_model = start.resistivities
         parameterization = "resistivity"
-    return fop, np.asarray(start_model, dtype=float), operator_name, parameterization
+    return (
+        fop,
+        np.asarray(start_model, dtype=float),
+        operator_name,
+        parameterization,
+    )
 
 
 def _make_tdem_forward_operator(
@@ -452,8 +489,10 @@ def _resolve_operator(
         if operator is not None:
             return operator, name
     available = sorted(
-        name for name in dir(em)
-        if "modelling" in name.lower() or name.lower().startswith(("mt", "tdem"))
+        name
+        for name in dir(em)
+        if "modelling" in name.lower()
+        or name.lower().startswith(("mt", "tdem"))
     )
     raise NotImplementedError(
         f"pyGIMLi does not expose a supported {label} modelling operator. "
@@ -462,10 +501,14 @@ def _resolve_operator(
     )
 
 
-def _construct_operator(cls: Any, attempts: list[dict[str, Any]], name: str) -> Any:
+def _construct_operator(
+    cls: Any, attempts: list[dict[str, Any]], name: str
+) -> Any:
     errors = []
     for kwargs in attempts:
-        clean = {key: value for key, value in kwargs.items() if value is not None}
+        clean = {
+            key: value for key, value in kwargs.items() if value is not None
+        }
         try:
             return cls(**clean)
         except TypeError as exc:
@@ -483,7 +526,9 @@ def _make_inversion(pg: Any, fop: Any, *, verbose: bool) -> Any:
         return pg.Inversion(fop, verbose=verbose)
 
 
-def _run_inversion(inv: Any, observed: np.ndarray, **kwargs: Any) -> np.ndarray:
+def _run_inversion(
+    inv: Any, observed: np.ndarray, **kwargs: Any
+) -> np.ndarray:
     try:
         return np.asarray(inv.run(observed, **kwargs), dtype=float)
     except TypeError:
@@ -514,18 +559,24 @@ def _pack_mt_errors(em_data: EMData, cfg: Any) -> np.ndarray:
     errors = []
     if em_data.rho_a is not None:
         rho = np.asarray(em_data.rho_a, dtype=float)
-        errors.extend(component_errors(
-            rho,
-            cfg,
-            component="rho",
-            explicit=em_data.errors,
-            relative=True,
-        ).tolist())
+        errors.extend(
+            component_errors(
+                rho,
+                cfg,
+                component="rho",
+                explicit=em_data.errors,
+                relative=True,
+            ).tolist()
+        )
     if em_data.phase is not None:
         phase = np.asarray(em_data.phase, dtype=float)
         # pyGIMLi inversion error values are relative, so convert degrees
         # to a conservative relative phase error.
-        errors.extend(component_errors(phase, cfg, component="phase", relative=True).tolist())
+        errors.extend(
+            component_errors(
+                phase, cfg, component="phase", relative=True
+            ).tolist()
+        )
     return np.asarray(errors, dtype=float)
 
 
@@ -545,9 +596,11 @@ def _recover_mt_model(raw: np.ndarray, start: StartingModel) -> StartingModel:
         return StartingModel(raw, start.thicknesses, name="pygimli_mt_1d")
     if raw.size == 2 * start.n_layers - 1:
         thk = raw[: start.n_layers - 1]
-        rho = raw[start.n_layers - 1:]
+        rho = raw[start.n_layers - 1 :]
         return StartingModel(rho, thk, name="pygimli_mt_1d")
-    return StartingModel(raw[-start.n_layers:], start.thicknesses, name="pygimli_mt_1d")
+    return StartingModel(
+        raw[-start.n_layers :], start.thicknesses, name="pygimli_mt_1d"
+    )
 
 
 def _result_from_pygimli(
@@ -574,9 +627,11 @@ def _result_from_pygimli(
         data=em_data,
         predicted=response,
         rms=rms,
-        objective=float(getattr(inv, "chi2", lambda: np.nan)()
-                        if callable(getattr(inv, "chi2", None))
-                        else getattr(inv, "chi2", np.nan)),
+        objective=float(
+            getattr(inv, "chi2", lambda: np.nan)()
+            if callable(getattr(inv, "chi2", None))
+            else getattr(inv, "chi2", np.nan)
+        ),
         n_iter=int(getattr(inv, "iter", 0)),
         workdir=cfg.workdir,
         native={"inversion": inv, "fop": fop},
@@ -606,7 +661,9 @@ def _station_data(em_data: EMData, idx: int) -> EMData:
         values=None if em_data.values is None else _row(em_data.values, idx),
         errors=None if em_data.errors is None else _row(em_data.errors, idx),
         station_names=[_station_names(em_data, em_data.n_stations)[idx]],
-        station_x=np.array([_station_x(em_data, em_data.n_stations)[idx]], dtype=float),
+        station_x=np.array(
+            [_station_x(em_data, em_data.n_stations)[idx]], dtype=float
+        ),
         source=em_data.source,
         metadata=em_data.metadata_dict(),
     )

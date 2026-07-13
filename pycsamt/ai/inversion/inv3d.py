@@ -55,6 +55,7 @@ Example
 >>> inv.fit(X, y, adjacency=A, epochs=5, verbose=False)  # doctest: +SKIP
 GCNInverter3D(n_features=40, n_layers=5, ..., n_stations=30, fitted)
 """
+
 from __future__ import annotations
 
 import copy
@@ -113,7 +114,9 @@ class GCNInverter3D(BaseEMNet):
         device: str | None = None,
         **net_kwargs,
     ) -> None:
-        super().__init__(arch="gcn", n_layers=n_layers, solver="mt3d", device=device)
+        super().__init__(
+            arch="gcn", n_layers=n_layers, solver="mt3d", device=device
+        )
         self.n_features = int(n_features)
         self.n_out = 2 * n_layers - 1
         self.hidden = tuple(int(h) for h in hidden)
@@ -131,6 +134,7 @@ class GCNInverter3D(BaseEMNet):
 
     def _build_network(self) -> Any:
         from ..nets.gcn import GCNNet
+
         factory = GCNNet(
             n_features=self.n_features,
             n_out=self.n_out,
@@ -151,6 +155,7 @@ class GCNInverter3D(BaseEMNet):
     ) -> np.ndarray:
         """Return a float32 normalised adjacency ``(n_stations, n_stations)``."""
         from ..nets.gcn import build_adjacency
+
         if adjacency is not None:
             A = np.asarray(adjacency, dtype=np.float32)
             if A.ndim != 2 or A.shape[0] != A.shape[1]:
@@ -171,7 +176,8 @@ class GCNInverter3D(BaseEMNet):
             "Neither adjacency nor coords supplied; using identity adjacency "
             "(no inter-station coupling).  Pass coords= or adjacency= for "
             "full GCN spatial modelling benefits.",
-            UserWarning, stacklevel=3,
+            UserWarning,
+            stacklevel=3,
         )
         return np.eye(n_stations, dtype=np.float32)
 
@@ -224,7 +230,7 @@ class GCNInverter3D(BaseEMNet):
         X = np.asarray(X, dtype=np.float32)
         y = np.asarray(y, dtype=np.float32)
 
-        if X.ndim == 2:          # single survey → add sample dim
+        if X.ndim == 2:  # single survey → add sample dim
             X, y = X[np.newaxis], y[np.newaxis]
         if X.ndim != 3:
             raise ValueError(f"X must be 2-D or 3-D; got {X.ndim}-D.")
@@ -236,9 +242,9 @@ class GCNInverter3D(BaseEMNet):
 
         # Global z-score normalisation
         self._x_mean = float(np.nanmean(X))
-        self._x_std  = float(np.nanstd(X)) + 1e-8
+        self._x_std = float(np.nanstd(X)) + 1e-8
         self._y_mean = float(np.nanmean(y))
-        self._y_std  = float(np.nanstd(y)) + 1e-8
+        self._y_std = float(np.nanstd(y)) + 1e-8
 
         Xn = (X - self._x_mean) / self._x_std
         yn = (y - self._y_mean) / self._y_std
@@ -262,15 +268,30 @@ class GCNInverter3D(BaseEMNet):
 
         if self._backend_name == "tensorflow":
             hist, best_val = self._fit_tensorflow(
-                Xn[ti], yn[ti], Xn[vi], yn[vi], A,
-                epochs=epochs, batch_size=batch_size, lr=lr,
-                patience=patience, verbose=verbose,
+                Xn[ti],
+                yn[ti],
+                Xn[vi],
+                yn[vi],
+                A,
+                epochs=epochs,
+                batch_size=batch_size,
+                lr=lr,
+                patience=patience,
+                verbose=verbose,
             )
         else:
             hist, best_val = self._fit_torch(
-                Xn[ti], yn[ti], Xn[vi], yn[vi], A,
-                epochs=epochs, batch_size=batch_size, lr=lr,
-                patience=patience, grad_clip=grad_clip, verbose=verbose,
+                Xn[ti],
+                yn[ti],
+                Xn[vi],
+                yn[vi],
+                A,
+                epochs=epochs,
+                batch_size=batch_size,
+                lr=lr,
+                patience=patience,
+                grad_clip=grad_clip,
+                verbose=verbose,
             )
 
         self._history = hist
@@ -281,8 +302,19 @@ class GCNInverter3D(BaseEMNet):
     # ── internal training loops ───────────────────────────────────────────────
 
     def _fit_torch(
-        self, Xtr, ytr, Xva, yva, A, *,
-        epochs, batch_size, lr, patience, grad_clip, verbose,
+        self,
+        Xtr,
+        ytr,
+        Xva,
+        yva,
+        A,
+        *,
+        epochs,
+        batch_size,
+        lr,
+        patience,
+        grad_clip,
+        verbose,
     ):
         import torch
         import torch.nn as nn
@@ -290,11 +322,14 @@ class GCNInverter3D(BaseEMNet):
 
         dev = resolve_device(self.device)
         self._network = self._network.to(dev)
-        A_t = torch.from_numpy(A).to(dev)      # (n_sta, n_sta) — fixed
+        A_t = torch.from_numpy(A).to(dev)  # (n_sta, n_sta) — fixed
 
-        opt   = torch.optim.Adam(self._network.parameters(), lr=lr)
+        opt = torch.optim.Adam(self._network.parameters(), lr=lr)
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt, factor=0.5, patience=max(5, patience // 3), min_lr=1e-6,
+            opt,
+            factor=0.5,
+            patience=max(5, patience // 3),
+            min_lr=1e-6,
         )
         mse = nn.MSELoss()
 
@@ -309,19 +344,23 @@ class GCNInverter3D(BaseEMNet):
             self._network.train()
             ep_loss = 0.0
 
-            for xb, yb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
-                xb, yb = xb.to(dev), yb.to(dev)   # (b, n_sta, n_feat/n_out)
+            for xb, yb in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
+                xb, yb = xb.to(dev), yb.to(dev)  # (b, n_sta, n_feat/n_out)
                 b = xb.shape[0]
                 # Process each survey in the mini-batch; n_sta is typically
                 # small (< 300) so per-survey iteration has negligible overhead
                 preds = torch.stack(
                     [self._network(xb[i], A_t) for i in range(b)], dim=0
-                )                                  # (b, n_sta, n_out)
+                )  # (b, n_sta, n_out)
                 loss = mse(preds, yb)
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
+                    nn.utils.clip_grad_norm_(
+                        self._network.parameters(), grad_clip
+                    )
                 opt.step()
                 ep_loss += loss.item() * b
 
@@ -347,8 +386,10 @@ class GCNInverter3D(BaseEMNet):
                 no_improve += 1
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(f"  GCNInverter3D  ep {ep:>4d}/{epochs}  "
-                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
+                print(
+                    f"  GCNInverter3D  ep {ep:>4d}/{epochs}  "
+                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
+                )
 
             if no_improve >= patience:
                 if verbose:
@@ -361,18 +402,31 @@ class GCNInverter3D(BaseEMNet):
         return {"train_loss": train_losses, "val_loss": val_losses}, best_val
 
     def _fit_tensorflow(
-        self, Xtr, ytr, Xva, yva, A, *,
-        epochs, batch_size, lr, patience, verbose,
+        self,
+        Xtr,
+        ytr,
+        Xva,
+        yva,
+        A,
+        *,
+        epochs,
+        batch_size,
+        lr,
+        patience,
+        verbose,
     ):
         import tensorflow as tf
 
-        A_t = tf.constant(A)   # (n_sta, n_sta)
+        A_t = tf.constant(A)  # (n_sta, n_sta)
 
         def _forward_batch(X_batch, A_c, training):
             b = X_batch.shape[0]
             return tf.stack(
-                [self._network([X_batch[i], A_c], training=training)
-                 for i in range(b)], axis=0
+                [
+                    self._network([X_batch[i], A_c], training=training)
+                    for i in range(b)
+                ],
+                axis=0,
             )
 
         def make_dataset(X, y, shuffle=False):
@@ -397,33 +451,37 @@ class GCNInverter3D(BaseEMNet):
             for xb, yb in tr_ds:
                 with tf.GradientTape() as tape:
                     preds = _forward_batch(xb, A_t, training=True)
-                    loss  = mse(yb, preds)
+                    loss = mse(yb, preds)
                 grads = tape.gradient(loss, self._network.trainable_variables)
-                opt.apply_gradients(zip(grads, self._network.trainable_variables))
-                ep_loss  += float(loss)
+                opt.apply_gradients(
+                    zip(grads, self._network.trainable_variables)
+                )
+                ep_loss += float(loss)
                 n_batches += 1
             ep_loss /= max(n_batches, 1)
 
             v_loss, n_vb = 0.0, 0
             for xb, yb in va_ds:
-                preds  = _forward_batch(xb, A_t, training=False)
+                preds = _forward_batch(xb, A_t, training=False)
                 v_loss += float(mse(yb, preds))
-                n_vb   += 1
+                n_vb += 1
             v_loss /= max(n_vb, 1)
 
             train_losses.append(ep_loss)
             val_losses.append(v_loss)
 
             if v_loss < best_val - 1e-6:
-                best_val     = v_loss
+                best_val = v_loss
                 best_weights = self._network.get_weights()
-                no_improve   = 0
+                no_improve = 0
             else:
                 no_improve += 1
 
             if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(f"  GCNInverter3D (TF)  ep {ep:>4d}/{epochs}  "
-                      f"train={ep_loss:.5f}  val={v_loss:.5f}")
+                print(
+                    f"  GCNInverter3D (TF)  ep {ep:>4d}/{epochs}  "
+                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
+                )
 
             if no_improve >= patience:
                 if verbose:
@@ -486,30 +544,38 @@ class GCNInverter3D(BaseEMNet):
 
         if self._backend_name == "tensorflow":
             import tensorflow as tf
+
             A_t = tf.constant(A)
-            out = np.stack([
-                self._network([Xn[i], A_t], training=False).numpy()
-                for i in range(n_samples)
-            ], axis=0)
+            out = np.stack(
+                [
+                    self._network([Xn[i], A_t], training=False).numpy()
+                    for i in range(n_samples)
+                ],
+                axis=0,
+            )
         else:
             import torch
+
             dev = next(self._network.parameters()).device
             A_t = torch.from_numpy(A).to(dev)
             self._network.eval()
             with torch.no_grad():
-                out = np.stack([
-                    self._network(
-                        torch.from_numpy(Xn[i]).to(dev), A_t
-                    ).cpu().numpy()
-                    for i in range(n_samples)
-                ], axis=0)
+                out = np.stack(
+                    [
+                        self._network(torch.from_numpy(Xn[i]).to(dev), A_t)
+                        .cpu()
+                        .numpy()
+                        for i in range(n_samples)
+                    ],
+                    axis=0,
+                )
 
-        y_log = out * self._y_std + self._y_mean   # de-normalise
+        y_log = out * self._y_std + self._y_mean  # de-normalise
 
         if squeeze:
             y_log = y_log[0]
 
-        return y_log if as_log_rho else 10.0 ** y_log
+        return y_log if as_log_rho else 10.0**y_log
 
     def predict_with_uncertainty(
         self,
@@ -541,7 +607,9 @@ class GCNInverter3D(BaseEMNet):
         std  : ndarray — same shape
         """
         if not self._is_fitted:
-            raise RuntimeError("Call fit() before predict_with_uncertainty().")
+            raise RuntimeError(
+                "Call fit() before predict_with_uncertainty()."
+            )
 
         X = np.asarray(X, dtype=np.float32)
         squeeze = X.ndim == 2
@@ -561,32 +629,44 @@ class GCNInverter3D(BaseEMNet):
 
         if self._backend_name == "tensorflow":
             import tensorflow as tf
+
             A_t = tf.constant(A)
             for _ in range(n_mc):
-                out = np.stack([
-                    self._network([Xn[i], A_t], training=True).numpy()
-                    for i in range(n_samples)
-                ], axis=0)
+                out = np.stack(
+                    [
+                        self._network([Xn[i], A_t], training=True).numpy()
+                        for i in range(n_samples)
+                    ],
+                    axis=0,
+                )
                 mc_samples.append(out * self._y_std + self._y_mean)
         else:
             import torch
+
             dev = next(self._network.parameters()).device
             A_t = torch.from_numpy(A).to(dev)
             self._network.train()  # activate dropout for MC passes
             with torch.no_grad():
                 for _ in range(n_mc):
-                    out = np.stack([
-                        self._network(
-                            torch.from_numpy(Xn[i]).to(dev), A_t
-                        ).cpu().numpy()
-                        for i in range(n_samples)
-                    ], axis=0)
+                    out = np.stack(
+                        [
+                            self._network(
+                                torch.from_numpy(Xn[i]).to(dev), A_t
+                            )
+                            .cpu()
+                            .numpy()
+                            for i in range(n_samples)
+                        ],
+                        axis=0,
+                    )
                     mc_samples.append(out * self._y_std + self._y_mean)
             self._network.eval()
 
-        stacked = np.stack(mc_samples, axis=0)    # (n_mc, n_samples, n_sta, n_out)
+        stacked = np.stack(
+            mc_samples, axis=0
+        )  # (n_mc, n_samples, n_sta, n_out)
         mean = stacked.mean(axis=0)
-        std  = stacked.std(axis=0)
+        std = stacked.std(axis=0)
 
         if squeeze:
             mean, std = mean[0], std[0]
@@ -598,10 +678,10 @@ class GCNInverter3D(BaseEMNet):
     def _get_params(self) -> dict[str, Any]:
         return {
             "n_features": self.n_features,
-            "n_layers":   self.n_layers,
-            "hidden":     list(self.hidden),
-            "dropout":    self.dropout,
-            "device":     self.device,
+            "n_layers": self.n_layers,
+            "hidden": list(self.hidden),
+            "dropout": self.dropout,
+            "device": self.device,
         }
 
     def _get_weights(self) -> dict[str, np.ndarray]:
@@ -623,6 +703,7 @@ class GCNInverter3D(BaseEMNet):
         self._backend_name = backend_name
 
         from pycsamt.backends import set_backend
+
         set_backend(backend_name)
 
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):

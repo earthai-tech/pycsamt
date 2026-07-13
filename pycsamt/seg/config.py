@@ -14,6 +14,7 @@ them.
 
 
 """
+
 from __future__ import annotations
 
 import inspect
@@ -83,7 +84,6 @@ class _NoOp:  # pragma: no cover
     pass
 
 
-
 def _import_first(module: str, names: Iterable[str]) -> type:
     """Try to import the first available class symbol.
 
@@ -110,6 +110,7 @@ def _import_first(module: str, names: Iterable[str]) -> type:
         if inspect.isclass(obj):
             return obj  # type: ignore[return-value]
     return _NoOp
+
 
 def discover_mixins() -> tuple[type, ...]:
     """Discover available component mixins.
@@ -174,9 +175,7 @@ class _Facade:
 
         meth = cls._delegate_cls("from_file")
         if meth is None:
-            raise NotImplementedError(
-                "No mixin implements from_file"
-            )
+            raise NotImplementedError("No mixin implements from_file")
         return meth(path, **kw)  # bound if classmethod
 
     @classmethod
@@ -191,7 +190,6 @@ class _Facade:
         if meth is None:
             raise NotImplementedError("No loads available")
         return meth(text, **kw)
-
 
     def _delegate_self(self, name: str):
         """Find the first instance method implementation.
@@ -233,7 +231,6 @@ class _Facade:
         if meth is None:
             raise NotImplementedError("No dumps available")
         return meth(self, **kw)
-
 
     def asdict(self) -> dict:
         """Merge ``asdict`` from mixins if present.
@@ -280,8 +277,7 @@ SEG = type(
     (*_mixins, _Facade),
     {
         "__doc__": (
-            "Facade that inherits from all discovered SEG "
-            "components."
+            "Facade that inherits from all discovered SEG components."
         ),
         "__mixins__": _mixins,
         "__config__": SEGConfig(),

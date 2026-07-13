@@ -52,6 +52,7 @@ F_MAX_CSUMT: float = 614.4e3
 
 # ------------------------------ helpers ----------------------------------- #
 
+
 def _unwrap(ed: Any) -> Any:
     """Unwrap a Sites-level Site wrapper to the underlying EDI-like object."""
     edi = getattr(ed, "edi", None)
@@ -68,6 +69,7 @@ def _rho_a_det(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
 
 
 # ====================== pure survey-planning API ========================== #
+
 
 def bostick_depth_from_rho(
     rho: float | np.ndarray,
@@ -94,7 +96,7 @@ def bostick_depth_from_rho(
     ----------
     Zhang et al. (2025), Eq. (1), *Measurement*.
     """
-    rho  = np.asarray(rho,  dtype=float)
+    rho = np.asarray(rho, dtype=float)
     freq = np.asarray(freq, dtype=float)
     return BOSTICK_CONST * np.sqrt(
         np.maximum(rho, 0.0) / np.maximum(freq, 1e-24)
@@ -129,11 +131,13 @@ def vertical_resolution_pair(
     ----------
     Zhang et al. (2025), Eq. (2), *Measurement*.
     """
-    rho  = max(float(rho), 0.0)
+    rho = max(float(rho), 0.0)
     f_lo = max(float(f_lo), 1e-24)
     f_hi = max(float(f_hi), 1e-24)
-    return BOSTICK_CONST * np.sqrt(rho) * (
-        1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi)
+    return (
+        BOSTICK_CONST
+        * np.sqrt(rho)
+        * (1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi))
     )
 
 
@@ -215,9 +219,7 @@ def frequency_schedule(
     Zhang et al. (2025), "Controlled source ultra-audio frequency
     magnetotellurics (CSUMT) transmitter", *Measurement*.
     """
-    depths = np.unique(
-        np.asarray(target_depths, dtype=float).ravel()
-    )
+    depths = np.unique(np.asarray(target_depths, dtype=float).ravel())
     depths = depths[depths > 0]
     if depths.size == 0:
         return np.array([], dtype=float)
@@ -262,6 +264,7 @@ def frequency_schedule(
 
 # ======================= sites-based analysis API ========================= #
 
+
 def bostick_depth(
     sites: Any,
     *,
@@ -299,8 +302,10 @@ def bostick_depth(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     _COLS = ["station", "freq_hz", "period_s", "rho_a_ohmm", "depth_m"]
     rows = []
@@ -311,15 +316,17 @@ def bostick_depth(
         if z is None or fr is None:
             continue
         rho_a = _rho_a_det(z, fr)
-        depth  = bostick_depth_from_rho(rho_a, fr)
+        depth = bostick_depth_from_rho(rho_a, fr)
         for j in range(fr.size):
-            rows.append({
-                "station":   station,
-                "freq_hz":   float(fr[j]),
-                "period_s":  1.0 / max(float(fr[j]), 1e-24),
-                "rho_a_ohmm": float(rho_a[j]),
-                "depth_m":   float(depth[j]),
-            })
+            rows.append(
+                {
+                    "station": station,
+                    "freq_hz": float(fr[j]),
+                    "period_s": 1.0 / max(float(fr[j]), 1e-24),
+                    "rho_a_ohmm": float(rho_a[j]),
+                    "depth_m": float(depth[j]),
+                }
+            )
     if not rows:
         return pd.DataFrame(columns=_COLS)
     return pd.DataFrame(rows, columns=_COLS)
@@ -365,12 +372,19 @@ def vertical_resolution(
     """
     S = ensure_sites(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     _COLS = [
-        "station", "freq_lo_hz", "freq_hi_hz",
-        "depth_lo_m", "depth_hi_m", "delta_depth_m", "rho_a_ohmm",
+        "station",
+        "freq_lo_hz",
+        "freq_hi_hz",
+        "depth_lo_m",
+        "depth_hi_m",
+        "delta_depth_m",
+        "rho_a_ohmm",
     ]
     rows = []
     for i, ed in enumerate(_iter_items(S)):
@@ -381,8 +395,8 @@ def vertical_resolution(
             continue
         # sort ascending by frequency
         order = np.argsort(fr)
-        fr_s  = fr[order]
-        z_s   = z[order]
+        fr_s = fr[order]
+        z_s = z[order]
         rho_a = _rho_a_det(z_s, fr_s)
 
         for j in range(fr_s.size - 1):
@@ -390,21 +404,23 @@ def vertical_resolution(
             f_hi = float(fr_s[j + 1])
             if rho_override is not None:
                 rho_c = float(rho_override)
-                d_lo  = bostick_depth_from_rho(rho_c, f_lo)
-                d_hi  = bostick_depth_from_rho(rho_c, f_hi)
+                d_lo = bostick_depth_from_rho(rho_c, f_lo)
+                d_hi = bostick_depth_from_rho(rho_c, f_hi)
             else:
                 rho_c = float(np.sqrt(rho_a[j] * rho_a[j + 1]))
-                d_lo  = bostick_depth_from_rho(float(rho_a[j]),     f_lo)
-                d_hi  = bostick_depth_from_rho(float(rho_a[j + 1]), f_hi)
-            rows.append({
-                "station":       station,
-                "freq_lo_hz":    f_lo,
-                "freq_hi_hz":    f_hi,
-                "depth_lo_m":    float(d_lo),
-                "depth_hi_m":    float(d_hi),
-                "delta_depth_m": float(d_lo - d_hi),
-                "rho_a_ohmm":    rho_c,
-            })
+                d_lo = bostick_depth_from_rho(float(rho_a[j]), f_lo)
+                d_hi = bostick_depth_from_rho(float(rho_a[j + 1]), f_hi)
+            rows.append(
+                {
+                    "station": station,
+                    "freq_lo_hz": f_lo,
+                    "freq_hi_hz": f_hi,
+                    "depth_lo_m": float(d_lo),
+                    "depth_hi_m": float(d_hi),
+                    "delta_depth_m": float(d_lo - d_hi),
+                    "rho_a_ohmm": rho_c,
+                }
+            )
     if not rows:
         return pd.DataFrame(columns=_COLS)
     return pd.DataFrame(rows, columns=_COLS)
@@ -437,19 +453,27 @@ def depth_coverage_table(
     """
     bd = bostick_depth(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     vr = vertical_resolution(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     _COLS = [
-        "station", "n_freq",
-        "freq_min_hz", "freq_max_hz",
-        "depth_min_m", "depth_max_m",
-        "mean_resolution_m", "median_resolution_m",
+        "station",
+        "n_freq",
+        "freq_min_hz",
+        "freq_max_hz",
+        "depth_min_m",
+        "depth_max_m",
+        "mean_resolution_m",
+        "median_resolution_m",
     ]
     if bd.empty:
         return pd.DataFrame(columns=_COLS)
@@ -459,17 +483,27 @@ def depth_coverage_table(
         sub_bd = bd[bd["station"] == st]
         sub_vr = vr[vr["station"] == st] if not vr.empty else pd.DataFrame()
 
-        dres = sub_vr["delta_depth_m"].dropna().values if not sub_vr.empty else np.array([])
-        rows.append({
-            "station":           st,
-            "n_freq":            len(sub_bd),
-            "freq_min_hz":       float(sub_bd["freq_hz"].min()),
-            "freq_max_hz":       float(sub_bd["freq_hz"].max()),
-            "depth_min_m":       float(sub_bd["depth_m"].min()),
-            "depth_max_m":       float(sub_bd["depth_m"].max()),
-            "mean_resolution_m":   float(np.nanmean(dres))   if dres.size else float("nan"),
-            "median_resolution_m": float(np.nanmedian(dres)) if dres.size else float("nan"),
-        })
+        dres = (
+            sub_vr["delta_depth_m"].dropna().values
+            if not sub_vr.empty
+            else np.array([])
+        )
+        rows.append(
+            {
+                "station": st,
+                "n_freq": len(sub_bd),
+                "freq_min_hz": float(sub_bd["freq_hz"].min()),
+                "freq_max_hz": float(sub_bd["freq_hz"].max()),
+                "depth_min_m": float(sub_bd["depth_m"].min()),
+                "depth_max_m": float(sub_bd["depth_m"].max()),
+                "mean_resolution_m": float(np.nanmean(dres))
+                if dres.size
+                else float("nan"),
+                "median_resolution_m": float(np.nanmedian(dres))
+                if dres.size
+                else float("nan"),
+            }
+        )
     return pd.DataFrame(rows, columns=_COLS)
 
 
@@ -517,23 +551,34 @@ def plot_depth_section(
 
     df = bostick_depth(
         sites,
-        recursive=recursive, on_dup=on_dup,
-        strict=strict, verbose=verbose,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
     )
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     if df.empty:
-        ax.text(0.5, 0.5, "no data", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "no data",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+        )
         return ax
 
     # station order
     stations = df["station"].unique().tolist()
     if sort_by in ("lon", "lat"):
         S = ensure_sites(
-            sites, recursive=recursive, on_dup=on_dup,
-            strict=strict, verbose=verbose,
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
         )
         coords: dict[str, float] = {}
         for ii, ed in enumerate(_iter_items(S)):

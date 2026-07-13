@@ -27,8 +27,8 @@ from pycsamt.utils.validation import (
     isinstance_relaxed,
 )
 
-
 # ----------------------------- ensure_n_items -------------------------
+
 
 def test_ensure_n_items_positional_and_iterable():
     assert ensure_n_items(1, 2) == (1, 2)
@@ -46,21 +46,23 @@ def test_ensure_n_items_wrong_count_raises_or_warns():
         out = ensure_n_items(1, 2, 3, n=2, error="warn")
     assert out == (1, 2)
     with pytest.warns(UserWarning):
-        padded = ensure_n_items(items=[1], n=2, error="warn",
-                                allow_none=True)
+        padded = ensure_n_items(items=[1], n=2, error="warn", allow_none=True)
     assert padded == (1, None)
 
 
 def test_ensure_n_items_numeric_policy():
-    assert ensure_n_items("1", "2.5", expect="numeric",
-                          coerce=True) == (1.0, 2.5)
+    assert ensure_n_items("1", "2.5", expect="numeric", coerce=True) == (
+        1.0,
+        2.5,
+    )
     with pytest.raises(TypeError):
         ensure_n_items("a", "b", expect="numeric")
     with pytest.raises(ValueError):
         ensure_n_items(0.5, 9.0, expect="numeric", bounds=(0, 1))
-    assert ensure_n_items(
-        0.2, 0.8, expect="numeric", bounds=(0, 1)
-    ) == (0.2, 0.8)
+    assert ensure_n_items(0.2, 0.8, expect="numeric", bounds=(0, 1)) == (
+        0.2,
+        0.8,
+    )
 
 
 def test_ensure_n_items_string_policy_and_none():
@@ -79,6 +81,7 @@ def test_ensure_n_items_unique_and_to_string():
 
 
 # ------------------------ has_read / check_has_read -------------------
+
 
 class _Reader:
     def __init__(self):
@@ -135,6 +138,7 @@ def test_check_has_read_decorator_blocks_until_load():
 
 # ----------------------------- check_is_fitted ------------------------
 
+
 def test_check_is_fitted_variants():
     class WithDunder:
         def __is_fitted__(self):
@@ -166,6 +170,7 @@ def test_check_is_fitted_variants():
 
 # ---------------------------- _assert_all_types -----------------------
 
+
 def test_assert_all_types_pass_and_fail():
     assert _assert_all_types(3, int) == 3
     assert _assert_all_types(3.0, (int, float)) == 3.0
@@ -176,6 +181,7 @@ def test_assert_all_types_pass_and_fail():
 
 
 # --------------------------------- isin -------------------------------
+
 
 def test_isin_reduction_modes():
     assert isin([1, 2, 3], [2, 5], match="any") is True
@@ -195,15 +201,15 @@ def test_isin_mask_and_extras():
 def test_isin_equal_nan_handling():
     # regression: equal_nan used to be forwarded to np.isin,
     # which does not accept it (TypeError on every call)
-    assert isin([1.0, np.nan], [np.nan], match="all",
-                equal_nan=True) is True
-    assert isin([1.0, np.nan], [np.nan], match="all",
-                equal_nan=False) is False
-    mask = isin([1.0, np.nan], [np.nan], return_mask=True,
-                equal_nan=True)
+    assert isin([1.0, np.nan], [np.nan], match="all", equal_nan=True) is True
+    assert (
+        isin([1.0, np.nan], [np.nan], match="all", equal_nan=False) is False
+    )
+    mask = isin([1.0, np.nan], [np.nan], return_mask=True, equal_nan=True)
     assert mask.tolist() == [False, True]
-    inv = isin([1.0, np.nan], [np.nan], return_mask=True,
-               equal_nan=True, invert=True)
+    inv = isin(
+        [1.0, np.nan], [np.nan], return_mask=True, equal_nan=True, invert=True
+    )
     assert inv.tolist() == [True, False]
 
     result, missing = isin([1, 2, 3], [2, 5], return_missing=True)
@@ -216,21 +222,21 @@ def test_isin_equal_nan_handling():
 
 # -------------------------------- isin_if ------------------------------
 
+
 def test_isin_if_error_modes_and_returns():
     with pytest.raises(ValueError):
         isin_if(["a", "b"], ["c"])
     with pytest.warns(UserWarning):
         assert isin_if(["a", "b"], ["c"], error="warn") is None
     assert isin_if(["a", "b"], "a") is None
-    assert isin_if(["a", "b"], ["a", "c"],
-                   return_diff=True) == ["c"]
-    assert isin_if(["a", "b"], ["a", "c"],
-                   return_intersect=True) == ["a"]
+    assert isin_if(["a", "b"], ["a", "c"], return_diff=True) == ["c"]
+    assert isin_if(["a", "b"], ["a", "c"], return_intersect=True) == ["a"]
     with pytest.raises(TypeError):
         isin_if(42, ["a"])
 
 
 # ------------------------------ assert_ratio ---------------------------
+
 
 def test_assert_ratio_values_and_percent():
     assert assert_ratio(0.5) == 0.5
@@ -252,18 +258,21 @@ def test_assert_ratio_errors():
 
 # ----------------------------- _validate_name_in ----------------------
 
+
 def test_validate_name_in_modes():
     assert _validate_name_in("east", ("east", "north")) is True
-    assert _validate_name_in("EAST ", ("east",),
-                             expect_name="easting") == "easting"
+    assert (
+        _validate_name_in("EAST ", ("east",), expect_name="easting")
+        == "easting"
+    )
     assert _validate_name_in("no", ("east",)) is False
     assert _validate_name_in("ast", "east", deep=True) is True
     with pytest.raises(KeyError):
-        _validate_name_in("no", ("east",),
-                          exception=KeyError("bad name"))
+        _validate_name_in("no", ("east",), exception=KeyError("bad name"))
 
 
 # ---------------------------- isinstance_relaxed ----------------------
+
 
 def test_isinstance_relaxed_direct_and_by_name():
     class A:
@@ -284,6 +293,7 @@ def test_isinstance_relaxed_direct_and_by_name():
 
 
 # ------------------------- dtype / size helpers -----------------------
+
 
 def test_is_numeric_dtype():
     assert _is_numeric_dtype(np.arange(3))

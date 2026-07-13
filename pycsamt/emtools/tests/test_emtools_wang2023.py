@@ -4,6 +4,7 @@ Tests for Wang & Lin (2023) methods in pycsamt.emtools.source_effects:
   - correct_near_field
   - plot_normalized_response
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -22,15 +23,16 @@ from pycsamt.emtools.source_effects import (
 
 class _FakeZ:
     def __init__(self, z, freq):
-        self.z    = np.asarray(z, dtype=complex)
+        self.z = np.asarray(z, dtype=complex)
         self.freq = np.asarray(freq, dtype=float)
 
 
 class _FakeSite:
     """Minimal EDI-like object accepted by ensure_sites."""
+
     def __init__(self, station, z, freq, offset=None):
         self.station = station
-        self.Z    = _FakeZ(z, freq)
+        self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
         if offset is not None:
             self.source_offset = float(offset)
@@ -46,7 +48,7 @@ def _make_z(freqs: np.ndarray, rho: float) -> np.ndarray:
     """
     z_abs = np.sqrt(5.0 * freqs * rho)
     z = np.zeros((freqs.size, 2, 2), dtype=complex)
-    z[:, 0, 1] =  z_abs * (1 + 1j) / np.sqrt(2)
+    z[:, 0, 1] = z_abs * (1 + 1j) / np.sqrt(2)
     z[:, 1, 0] = -z_abs * (1 + 1j) / np.sqrt(2)
     return z
 
@@ -76,13 +78,22 @@ def _site_no_off(
 # normalize_response — columns and shape
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_normalize_response_columns():
     sites = [_site()]
     df = normalize_response(sites)
     expected = {
-        "station", "freq_hz", "period_s", "offset_m",
-        "rho_a_ohmm", "rho_n", "phi_obs_deg", "phi_ref_deg",
-        "phi_diff_deg", "zone", "kr",
+        "station",
+        "freq_hz",
+        "period_s",
+        "offset_m",
+        "rho_a_ohmm",
+        "rho_n",
+        "phi_obs_deg",
+        "phi_ref_deg",
+        "phi_diff_deg",
+        "zone",
+        "kr",
     }
     assert expected.issubset(df.columns)
 
@@ -114,6 +125,7 @@ def _normalize_response_required_cols():
 # ─────────────────────────────────────────────────────────────────────────────
 # normalize_response — values
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_normalize_response_rho_n_positive():
     sites = [_site()]
@@ -163,6 +175,7 @@ def test_normalize_response_phi_diff_correct():
 # normalize_response — zone and kr
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_normalize_response_zone_labels_valid():
     sites = [_site(offset=3000.0)]
     df = normalize_response(sites)
@@ -201,6 +214,7 @@ def test_normalize_response_kr_positive_when_offset_given():
 # normalize_response — comp parameter
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_normalize_response_comp_xy():
     sites = [_site()]
     df = normalize_response(sites, comp="xy")
@@ -223,7 +237,9 @@ def test_normalize_response_invalid_comp():
 def test_normalize_response_dict_offset():
     s1 = _site_no_off("A")
     s2 = _site_no_off("B")
-    df = normalize_response([s1, s2], source_offset={"A": 2000.0, "B": 8000.0})
+    df = normalize_response(
+        [s1, s2], source_offset={"A": 2000.0, "B": 8000.0}
+    )
     assert not df[df.station == "A"]["kr"].isna().any()
     assert not df[df.station == "B"]["kr"].isna().any()
 
@@ -232,8 +248,10 @@ def test_normalize_response_dict_offset():
 # correct_near_field — return type and shape
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_correct_near_field_returns_sites():
     from pycsamt.site.base import Sites
+
     sites = [_site("S01"), _site("S02")]
     result = correct_near_field(sites, source_offset=5000.0)
     assert isinstance(result, Sites)
@@ -248,6 +266,7 @@ def test_correct_near_field_station_count():
 
 def test_correct_near_field_empty_input():
     from pycsamt.site.base import Sites
+
     result = correct_near_field([], source_offset=1000.0)
     assert isinstance(result, Sites)
     assert len(result) == 0
@@ -256,6 +275,7 @@ def test_correct_near_field_empty_input():
 # ─────────────────────────────────────────────────────────────────────────────
 # correct_near_field — correction values
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _z_from_sites(result):
     """Extract all Z tensors from a Sites result as a list of arrays."""
@@ -343,11 +363,14 @@ def test_correct_near_field_z_finite():
 # plot_normalized_response
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_returns_tuple():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_site(f"S{i:02d}") for i in range(3)]
     result = plot_normalized_response(sites, rho_ref=100.0)
     assert isinstance(result, tuple)
@@ -358,8 +381,10 @@ def test_plot_normalized_response_returns_tuple():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_axes_not_none():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_site(f"S{i:02d}") for i in range(3)]
     ax1, ax2 = plot_normalized_response(sites, rho_ref=100.0)
     assert ax1 is not None
@@ -370,8 +395,10 @@ def test_plot_normalized_response_axes_not_none():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_empty_input():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     ax1, ax2 = plot_normalized_response([])
     assert ax1 is not None
     assert ax2 is not None
@@ -381,8 +408,10 @@ def test_plot_normalized_response_empty_input():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_existing_axes():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     _, (a1, a2) = plt.subplots(1, 2)
     sites = [_site(f"S{i:02d}") for i in range(3)]
     r1, r2 = plot_normalized_response(sites, axes=(a1, a2))
@@ -394,8 +423,10 @@ def test_plot_normalized_response_existing_axes():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_freq_axis():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_site(f"S{i:02d}") for i in range(2)]
     ax1, ax2 = plot_normalized_response(sites, period_axis=False)
     assert ax1 is not None
@@ -405,8 +436,10 @@ def test_plot_normalized_response_freq_axis():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_custom_cmaps():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_site(f"S{i:02d}") for i in range(2)]
     ax1, ax2 = plot_normalized_response(
         sites, cmap_rho="viridis", cmap_phi="plasma"
@@ -418,8 +451,10 @@ def test_plot_normalized_response_custom_cmaps():
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_plot_normalized_response_custom_lims():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     sites = [_site(f"S{i:02d}") for i in range(2)]
     ax1, ax2 = plot_normalized_response(
         sites, rho_n_lim=(0.5, 2.0), phi_diff_lim=(-30.0, 30.0)

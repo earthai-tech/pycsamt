@@ -1,6 +1,6 @@
 """Tests for Phase-6 builder methods:
-    OccamData.from_edi, OccamMesh.from_data,
-    OccamModel.from_mesh, OccamStartup.from_model, InputBuilder.build
+OccamData.from_edi, OccamMesh.from_data,
+OccamModel.from_mesh, OccamStartup.from_model, InputBuilder.build
 """
 
 import math
@@ -12,15 +12,29 @@ import pytest
 # Synthetic site fixture (no pyproj / full EDI stack required)
 # ---------------------------------------------------------------------------
 
+
 class _FakeSite:
     """Minimal duck-typed site object accepted by OccamData.from_edi."""
 
-    def __init__(self, name, lat, lon, freqs, rho_xy, rho_yx, phs_xy, phs_yx,
-                 rho_xy_err=None, rho_yx_err=None, phs_xy_err=None, phs_yx_err=None):
-        self.name  = name
+    def __init__(
+        self,
+        name,
+        lat,
+        lon,
+        freqs,
+        rho_xy,
+        rho_yx,
+        phs_xy,
+        phs_yx,
+        rho_xy_err=None,
+        rho_yx_err=None,
+        phs_xy_err=None,
+        phs_yx_err=None,
+    ):
+        self.name = name
         self.coords = (lat, lon, 0.0)
         n = len(freqs)
-        self.freq  = np.asarray(freqs, dtype=float)
+        self.freq = np.asarray(freqs, dtype=float)
         # Build full 2×2 rho/phase arrays (only xy/yx used)
         rho = np.zeros((n, 2, 2), dtype=float)
         rho[:, 0, 1] = rho_xy
@@ -50,20 +64,25 @@ class _FakeSite:
 
 
 def _make_sites(n_sites=3, n_freqs=10):
-    freqs = np.logspace(4, -1, n_freqs)   # 10 kHz → 0.1 Hz
+    freqs = np.logspace(4, -1, n_freqs)  # 10 kHz → 0.1 Hz
     sites = []
     for i in range(n_sites):
-        lon  = 0.0 + i * 0.01              # spaced ~1 km east
-        rho  = np.full(n_freqs, 100.0)     # 100 Ω·m half-space
-        phs  = np.full(n_freqs, 45.0)      # 45° half-space (TE)
+        lon = 0.0 + i * 0.01  # spaced ~1 km east
+        rho = np.full(n_freqs, 100.0)  # 100 Ω·m half-space
+        phs = np.full(n_freqs, 45.0)  # 45° half-space (TE)
         phs_yx = np.full(n_freqs, -135.0)  # ≡ 45° after +180° normalisation
-        sites.append(_FakeSite(
-            name=f"S{i:02d}",
-            lat=0.0, lon=lon,
-            freqs=freqs,
-            rho_xy=rho, rho_yx=rho,
-            phs_xy=phs, phs_yx=phs_yx,
-        ))
+        sites.append(
+            _FakeSite(
+                name=f"S{i:02d}",
+                lat=0.0,
+                lon=lon,
+                freqs=freqs,
+                rho_xy=rho,
+                rho_yx=rho,
+                phs_xy=phs,
+                phs_yx=phs_yx,
+            )
+        )
     return sites
 
 
@@ -71,8 +90,10 @@ def _make_sites(n_sites=3, n_freqs=10):
 # OccamData.from_edi
 # ---------------------------------------------------------------------------
 
+
 def test_from_edi_basic():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(3, 8)
     d = OccamData.from_edi(sites, modes=["TE", "TM"])
     assert d.n_sites == 3
@@ -82,6 +103,7 @@ def test_from_edi_basic():
 
 def test_from_edi_site_names():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(3)
     d = OccamData.from_edi(sites)
     assert d.sites[0] == "S00"
@@ -89,6 +111,7 @@ def test_from_edi_site_names():
 
 def test_from_edi_offsets_monotone():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(4)
     d = OccamData.from_edi(sites)
     assert np.all(np.diff(d.offsets) >= 0), "offsets not monotone"
@@ -96,6 +119,7 @@ def test_from_edi_offsets_monotone():
 
 def test_from_edi_frequencies_descending():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 6)
     d = OccamData.from_edi(sites)
     assert np.all(np.diff(d.frequencies) < 0), "frequencies not descending"
@@ -103,17 +127,19 @@ def test_from_edi_frequencies_descending():
 
 def test_from_edi_type_codes():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 5)
     d = OccamData.from_edi(sites, modes=["TE", "TM"])
     codes = set(d.data_blocks[:, 2].astype(int))
-    assert 1 in codes   # RhoTE
-    assert 2 in codes   # PhsTE
-    assert 5 in codes   # RhoTM
-    assert 6 in codes   # PhsTM
+    assert 1 in codes  # RhoTE
+    assert 2 in codes  # PhsTE
+    assert 5 in codes  # RhoTM
+    assert 6 in codes  # PhsTM
 
 
 def test_from_edi_te_only():
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 5)
     d = OccamData.from_edi(sites, modes=["TE"])
     codes = set(d.data_blocks[:, 2].astype(int))
@@ -124,15 +150,19 @@ def test_from_edi_te_only():
 def test_from_edi_phs_tm_normalised():
     """PhsTM should be phase_yx + 180 = -135 + 180 = 45 degrees."""
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 5)
     d = OccamData.from_edi(sites, modes=["TM"])
     phs = d.data_blocks[d.data_blocks[:, 2] == 6, 3]
-    assert np.all(np.abs(phs - 45.0) < 0.1), f"PhsTM not normalised: {phs[:3]}"
+    assert np.all(np.abs(phs - 45.0) < 0.1), (
+        f"PhsTM not normalised: {phs[:3]}"
+    )
 
 
 def test_from_edi_rho_te_log10():
     """RhoTE datum should be log10(100) = 2.0 for half-space data."""
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 5)
     d = OccamData.from_edi(sites, modes=["TE"])
     rho = d.data_blocks[d.data_blocks[:, 2] == 1, 3]
@@ -142,20 +172,26 @@ def test_from_edi_rho_te_log10():
 def test_from_edi_error_floor():
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 4)
-    cfg   = OccamConfig(error_floor_rho=0.05, error_floor_phase=0.5)
+    cfg = OccamConfig(error_floor_rho=0.05, error_floor_phase=0.5)
     d = OccamData.from_edi(sites, config=cfg)
-    rho_errs = d.data_blocks[np.isin(d.data_blocks[:, 2].astype(int), [1, 5]), 4]
+    rho_errs = d.data_blocks[
+        np.isin(d.data_blocks[:, 2].astype(int), [1, 5]), 4
+    ]
     assert np.all(rho_errs > 0)
-    phs_errs = d.data_blocks[np.isin(d.data_blocks[:, 2].astype(int), [2, 6]), 4]
+    phs_errs = d.data_blocks[
+        np.isin(d.data_blocks[:, 2].astype(int), [2, 6]), 4
+    ]
     assert np.all(phs_errs >= cfg.error_floor_phase - 1e-9)
 
 
 def test_from_edi_freq_band():
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(2, 10)
-    cfg   = OccamConfig(freq_min=1.0, freq_max=100.0)
+    cfg = OccamConfig(freq_min=1.0, freq_max=100.0)
     d = OccamData.from_edi(sites, config=cfg)
     assert d.frequencies.min() >= 1.0
     assert d.frequencies.max() <= 100.0
@@ -163,6 +199,7 @@ def test_from_edi_freq_band():
 
 def test_from_edi_empty_source_raises():
     from pycsamt.models.occam2d.data import OccamData
+
     with pytest.raises(ValueError, match="no sites"):
         OccamData.from_edi([])
 
@@ -170,6 +207,7 @@ def test_from_edi_empty_source_raises():
 def test_from_edi_roundtrip(tmp_path):
     """from_edi → write → read should reproduce the data."""
     from pycsamt.models.occam2d.data import OccamData
+
     sites = _make_sites(3, 6)
     d = OccamData.from_edi(sites)
     out = tmp_path / "OccamDataFile.dat"
@@ -185,10 +223,12 @@ def test_from_edi_roundtrip(tmp_path):
 # OccamMesh.from_data
 # ---------------------------------------------------------------------------
 
+
 def _simple_data(n=3):
     from pycsamt.models.occam2d.data import OccamData
+
     d = OccamData()
-    d.sites   = [f"S{i:02d}" for i in range(n)]
+    d.sites = [f"S{i:02d}" for i in range(n)]
     d.offsets = np.linspace(0, (n - 1) * 500.0, n)
     d.frequencies = np.array([100.0, 10.0, 1.0])
     return d
@@ -197,6 +237,7 @@ def _simple_data(n=3):
 def test_mesh_from_data_shape():
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(5)
     cfg = OccamConfig(n_layers=10, n_airlayers=3, cell_size_horizontal=100.0)
     m = OccamMesh.from_data(d, config=cfg)
@@ -206,6 +247,7 @@ def test_mesh_from_data_shape():
 
 def test_mesh_from_data_xcells_even():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(4)
     m = OccamMesh.from_data(d)
     assert m.n_xcells % 2 == 0, f"n_xcells={m.n_xcells} is not even"
@@ -213,6 +255,7 @@ def test_mesh_from_data_xcells_even():
 
 def test_mesh_from_data_xwidths_positive():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(3)
     m = OccamMesh.from_data(d)
     assert np.all(m.x_widths > 0)
@@ -220,6 +263,7 @@ def test_mesh_from_data_xwidths_positive():
 
 def test_mesh_from_data_zwidths_positive():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(3)
     m = OccamMesh.from_data(d)
     assert np.all(m.z_widths > 0)
@@ -228,9 +272,10 @@ def test_mesh_from_data_zwidths_positive():
 def test_mesh_from_data_cell_rows_count():
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.mesh import OccamMesh
-    d   = _simple_data(3)
+
+    d = _simple_data(3)
     cfg = OccamConfig(n_layers=5, n_airlayers=2)
-    m   = OccamMesh.from_data(d, config=cfg)
+    m = OccamMesh.from_data(d, config=cfg)
     # 4 rows per z-cell
     assert len(m.cell_rows) == 4 * m.n_zcells
 
@@ -239,17 +284,19 @@ def test_mesh_from_data_air_rows_fixed():
     """Air rows should use '0'; active rows use '?'."""
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.mesh import OccamMesh
-    d   = _simple_data(3)
+
+    d = _simple_data(3)
     cfg = OccamConfig(n_layers=5, n_airlayers=2)
-    m   = OccamMesh.from_data(d, config=cfg)
-    for row in m.cell_rows[:8]:    # first 2 z-cells × 4 rows = air
+    m = OccamMesh.from_data(d, config=cfg)
+    for row in m.cell_rows[:8]:  # first 2 z-cells × 4 rows = air
         assert "?" not in row
-    for row in m.cell_rows[8:]:    # rest are active
+    for row in m.cell_rows[8:]:  # rest are active
         assert "0" not in row
 
 
 def test_mesh_from_data_roundtrip(tmp_path):
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(4)
     m = OccamMesh.from_data(d)
     out = tmp_path / "Occam2DMesh"
@@ -263,6 +310,7 @@ def test_mesh_from_data_roundtrip(tmp_path):
 
 def test_mesh_from_data_single_station():
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = _simple_data(1)
     m = OccamMesh.from_data(d)
     assert m.n_xcells > 0
@@ -271,6 +319,7 @@ def test_mesh_from_data_single_station():
 def test_mesh_from_data_no_stations_raises():
     from pycsamt.models.occam2d.data import OccamData
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     d = OccamData()
     d.offsets = np.array([])
     with pytest.raises(ValueError, match="no station offsets"):
@@ -281,31 +330,35 @@ def test_mesh_from_data_no_stations_raises():
 # OccamModel.from_mesh
 # ---------------------------------------------------------------------------
 
+
 def _simple_mesh(n_xcells=50, n_zcells=8, n_air=2):
     from pycsamt.models.occam2d.mesh import OccamMesh
+
     # Build a mesh with exactly n_xcells x-cells (even, >= 14)
     # achieved by n_pad=7 each side + interior
     n_xcells - 14
     m = OccamMesh()
-    m.x_widths   = np.ones(n_xcells) * 100.0
-    m.z_widths   = np.ones(n_zcells) * 50.0
-    m.x_nodes    = np.concatenate([[0.0], np.cumsum(m.x_widths)])
-    m.z_nodes    = np.concatenate([[0.0], np.cumsum(m.z_widths)])
+    m.x_widths = np.ones(n_xcells) * 100.0
+    m.z_widths = np.ones(n_zcells) * 50.0
+    m.x_nodes = np.concatenate([[0.0], np.cumsum(m.x_widths)])
+    m.z_nodes = np.concatenate([[0.0], np.cumsum(m.z_widths)])
     m.n_airlayers = n_air
-    m.cell_rows  = ["?" * n_xcells] * (4 * n_zcells)
+    m.cell_rows = ["?" * n_xcells] * (4 * n_zcells)
     return m
 
 
 def test_model_from_mesh_n_layers():
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(50, 10, 2)
     mod = OccamModel.from_mesh(m)
-    assert mod.n_layers == 8   # 10 - 2 air
+    assert mod.n_layers == 8  # 10 - 2 air
 
 
 def test_model_from_mesh_code_sum():
     """Sum of codes per layer must equal n_xcells."""
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(50, 8, 2)
     mod = OccamModel.from_mesh(m)
     for layer in mod.layers:
@@ -314,6 +367,7 @@ def test_model_from_mesh_code_sum():
 
 def test_model_from_mesh_odd_interior_width_absorbs_remainder():
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(17, 8, 2)
     mod = OccamModel.from_mesh(m)
     for layer in mod.layers:
@@ -324,16 +378,18 @@ def test_model_from_mesh_odd_interior_width_absorbs_remainder():
 def test_model_from_mesh_boundary_codes():
     """First and last code in each layer must be 7."""
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(50, 8, 2)
     mod = OccamModel.from_mesh(m)
     for layer in mod.layers:
-        assert layer["params"][0]  == 7
+        assert layer["params"][0] == 7
         assert layer["params"][-1] == 7
 
 
 def test_model_from_mesh_interior_codes_even():
     """All interior codes (not first/last) must be even."""
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(50, 8, 2)
     mod = OccamModel.from_mesh(m)
     for layer in mod.layers:
@@ -343,6 +399,7 @@ def test_model_from_mesh_interior_codes_even():
 
 def test_model_from_mesh_n_params_positive():
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(50, 8, 2)
     mod = OccamModel.from_mesh(m)
     assert mod.n_params > 0
@@ -350,7 +407,8 @@ def test_model_from_mesh_n_params_positive():
 
 def test_model_from_mesh_roundtrip(tmp_path):
     from pycsamt.models.occam2d.model import OccamModel
-    m   = _simple_mesh(50, 8, 2)
+
+    m = _simple_mesh(50, 8, 2)
     mod = OccamModel.from_mesh(m)
     out = tmp_path / "Occam2DModel"
     mod.write(out)
@@ -363,14 +421,16 @@ def test_model_from_mesh_roundtrip(tmp_path):
 
 def test_model_from_mesh_too_narrow_raises():
     from pycsamt.models.occam2d.model import OccamModel
-    m = _simple_mesh(10, 5, 1)   # 10 < 14
+
+    m = _simple_mesh(10, 5, 1)  # 10 < 14
     with pytest.raises(ValueError, match="too narrow"):
         OccamModel.from_mesh(m)
 
 
 def test_model_from_mesh_no_active_raises():
     from pycsamt.models.occam2d.model import OccamModel
-    m = _simple_mesh(50, 3, 3)   # all air
+
+    m = _simple_mesh(50, 3, 3)  # all air
     with pytest.raises(ValueError, match="no active layers"):
         OccamModel.from_mesh(m)
 
@@ -379,47 +439,54 @@ def test_model_from_mesh_no_active_raises():
 # OccamStartup.from_model
 # ---------------------------------------------------------------------------
 
+
 def _simple_model(n_xcells=50, n_layers=5):
     from pycsamt.models.occam2d.model import OccamModel
+
     m = _simple_mesh(n_xcells, n_layers + 2, 2)
     return OccamModel.from_mesh(m)
 
 
 def test_startup_from_model_n_params():
     from pycsamt.models.occam2d.startup import OccamStartup
+
     mod = _simple_model()
-    su  = OccamStartup.from_model(mod)
+    su = OccamStartup.from_model(mod)
     assert su.n_params == mod.n_params
 
 
 def test_startup_from_model_param_values():
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.startup import OccamStartup
+
     mod = _simple_model()
     cfg = OccamConfig(initial_rho=100.0)
-    su  = OccamStartup.from_model(mod, config=cfg)
+    su = OccamStartup.from_model(mod, config=cfg)
     expected = math.log10(100.0)
     assert np.allclose(su.param_values, expected, atol=1e-6)
 
 
 def test_startup_from_model_iteration_zero():
     from pycsamt.models.occam2d.startup import OccamStartup
+
     mod = _simple_model()
-    su  = OccamStartup.from_model(mod)
+    su = OccamStartup.from_model(mod)
     assert su.iteration == 0
 
 
 def test_startup_from_model_param_count():
     from pycsamt.models.occam2d.startup import OccamStartup
+
     mod = _simple_model()
-    su  = OccamStartup.from_model(mod)
+    su = OccamStartup.from_model(mod)
     assert len(su.param_values) == su.n_params
 
 
 def test_startup_from_model_roundtrip(tmp_path):
     from pycsamt.models.occam2d.startup import OccamStartup
+
     mod = _simple_model()
-    su  = OccamStartup.from_model(mod)
+    su = OccamStartup.from_model(mod)
     out = tmp_path / "Startup"
     su.write(out)
     back = OccamStartup.read(out)
@@ -431,7 +498,8 @@ def test_startup_from_model_roundtrip(tmp_path):
 def test_startup_from_model_no_params_raises():
     from pycsamt.models.occam2d.model import OccamModel
     from pycsamt.models.occam2d.startup import OccamStartup
-    mod = OccamModel()   # empty model, n_params = 0
+
+    mod = OccamModel()  # empty model, n_params = 0
     with pytest.raises(ValueError, match="no parameters"):
         OccamStartup.from_model(mod)
 
@@ -439,6 +507,7 @@ def test_startup_from_model_no_params_raises():
 # ---------------------------------------------------------------------------
 # InputBuilder (integration test — uses synthetic OccamData, skips from_edi)
 # ---------------------------------------------------------------------------
+
 
 def test_input_builder_integration(tmp_path):
     """Full pipeline: data → mesh → model → startup → files on disk."""
@@ -455,22 +524,28 @@ def test_input_builder_integration(tmp_path):
     )
 
     # Build the four objects manually (bypassing from_edi)
-    cfg = OccamConfig(n_layers=5, n_airlayers=2,
-                      cell_size_horizontal=200.0, depth_scale=1.3)
+    cfg = OccamConfig(
+        n_layers=5, n_airlayers=2, cell_size_horizontal=200.0, depth_scale=1.3
+    )
 
     data = OccamData.from_edi(_make_sites(3, 4), config=cfg)
     mesh = OccamMesh.from_data(data, config=cfg)
-    mod  = OccamModel.from_mesh(mesh, config=cfg)
-    su   = OccamStartup.from_model(mod, config=cfg)
+    mod = OccamModel.from_mesh(mesh, config=cfg)
+    su = OccamStartup.from_model(mod, config=cfg)
 
     # Write to tmp dir
     data.write(tmp_path / cfg.data_file)
     mesh.write(tmp_path / cfg.mesh_file)
-    mod.write(tmp_path  / cfg.model_file)
-    su.write(tmp_path   / cfg.startup_file)
+    mod.write(tmp_path / cfg.model_file)
+    su.write(tmp_path / cfg.startup_file)
 
     # All files exist
-    for fname in [cfg.data_file, cfg.mesh_file, cfg.model_file, cfg.startup_file]:
+    for fname in [
+        cfg.data_file,
+        cfg.mesh_file,
+        cfg.model_file,
+        cfg.startup_file,
+    ]:
         assert (tmp_path / fname).exists(), f"missing {fname}"
 
     # Validation predicates recognise each file
@@ -490,13 +565,19 @@ def test_input_builder_build_writes_all_required_files(tmp_path):
     from pycsamt.models.occam2d.builder import InputBuilder
     from pycsamt.models.occam2d.config import OccamConfig
 
-    cfg = OccamConfig(n_layers=5, n_airlayers=2,
-                      cell_size_horizontal=200.0, depth_scale=1.3)
+    cfg = OccamConfig(
+        n_layers=5, n_airlayers=2, cell_size_horizontal=200.0, depth_scale=1.3
+    )
     builder = InputBuilder(_make_sites(3, 4), workdir=tmp_path, config=cfg)
 
     builder.build()
 
-    for fname in [cfg.data_file, cfg.mesh_file, cfg.model_file, cfg.startup_file]:
+    for fname in [
+        cfg.data_file,
+        cfg.mesh_file,
+        cfg.model_file,
+        cfg.startup_file,
+    ]:
         assert (tmp_path / fname).exists(), f"missing {fname}"
     assert builder.is_ready
     assert builder.startup.n_params == builder.model.n_params
@@ -514,11 +595,11 @@ def test_input_builder_summary(tmp_path):
     from pycsamt.models.occam2d.model import OccamModel
     from pycsamt.models.occam2d.startup import OccamStartup
 
-    cfg  = OccamConfig(n_layers=4, n_airlayers=1)
-    ib   = InputBuilder(_make_sites(2, 3), workdir=tmp_path, config=cfg)
-    ib.data    = OccamData.from_edi(_make_sites(2, 3), config=cfg)
-    ib.mesh    = OccamMesh.from_data(ib.data, config=cfg)
-    ib.model   = OccamModel.from_mesh(ib.mesh, config=cfg)
+    cfg = OccamConfig(n_layers=4, n_airlayers=1)
+    ib = InputBuilder(_make_sites(2, 3), workdir=tmp_path, config=cfg)
+    ib.data = OccamData.from_edi(_make_sites(2, 3), config=cfg)
+    ib.mesh = OccamMesh.from_data(ib.data, config=cfg)
+    ib.model = OccamModel.from_mesh(ib.mesh, config=cfg)
     ib.startup = OccamStartup.from_model(ib.model, config=cfg)
 
     summary = ib.summary()

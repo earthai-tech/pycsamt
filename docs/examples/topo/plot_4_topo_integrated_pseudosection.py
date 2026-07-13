@@ -48,7 +48,6 @@ from pycsamt.topo import (
     has_elevation,
 )
 
-
 line_dir = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 sites = ensure_sites(line_dir, recursive=False, verbose=0)
 
@@ -65,7 +64,9 @@ summary = SitesReport(sites).to_dataframe(api=False)
 
 print(f"Stations: {len(names)}")
 print(f"Has usable elevation: {has_elevation(sites)}")
-print(f"Frequency rows per station: {summary['nfreq'].min()}-{summary['nfreq'].max()}")
+print(
+    f"Frequency rows per station: {summary['nfreq'].min()}-{summary['nfreq'].max()}"
+)
 print(f"Profile length: {chain_km[-1]:.3f} km")
 print(f"Elevation range: {elev_m.min():.1f}-{elev_m.max():.1f} m")
 
@@ -96,7 +97,9 @@ for i, slope in enumerate(slope_deg):
         }
     )
 
-segments = sorted(segments, key=lambda row: abs(row["slope_deg"]), reverse=True)
+segments = sorted(
+    segments, key=lambda row: abs(row["slope_deg"]), reverse=True
+)
 print("Steepest station-to-station segments:")
 for row in segments[:5]:
     print(row)
@@ -107,12 +110,20 @@ for row in segments[:5]:
 fig, axs = plt.subplots(2, 1, figsize=(9.5, 5.8), sharex=True)
 
 axs[0].plot(chain_km, elev_m, marker="o", color="#92400e", lw=1.8)
-axs[0].fill_between(chain_km, elev_m, elev_m.min() - 10, color="#fed7aa", alpha=0.45)
+axs[0].fill_between(
+    chain_km, elev_m, elev_m.min() - 10, color="#fed7aa", alpha=0.45
+)
 axs[0].set_ylabel("Elevation (m)")
 axs[0].set_title("Topography pre-flight: WILLY L18")
 axs[0].grid(alpha=0.25)
 
-axs[1].bar(chain_km[:-1], slope_deg, width=np.diff(chain_km), align="edge", color="#0369a1")
+axs[1].bar(
+    chain_km[:-1],
+    slope_deg,
+    width=np.diff(chain_km),
+    align="edge",
+    color="#0369a1",
+)
 axs[1].axhline(0, color="black", lw=0.8)
 axs[1].set_xlabel("Chainage (km)")
 axs[1].set_ylabel("Segment slope (deg)")
@@ -165,7 +176,9 @@ fig.subplots_adjust(top=0.82, bottom=0.14, left=0.08, right=0.96, wspace=0.18)
 
 print("Global topo enabled before context:", PYCSAMT_TOPO.enabled)
 
-with PYCSAMT_TOPO.context(enabled=True, strip_height_ratio=0.22, exaggeration=1.8):
+with PYCSAMT_TOPO.context(
+    enabled=True, strip_height_ratio=0.22, exaggeration=1.8
+):
     fig, ax = plt.subplots(figsize=(9.5, 4.8))
     pseudosection(
         sites,

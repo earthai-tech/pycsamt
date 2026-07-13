@@ -153,9 +153,9 @@ class Tipper(BaseEM):
         freq: Sequence[float] | None = None,
         *,
         name: str | None = None,
-        **kw:  Any
+        **kw: Any,
     ) -> None:
-        super().__init__(name=name,**kw)
+        super().__init__(name=name, **kw)
 
         self._tipper: np.ndarray | None = None
         self._tipper_err: np.ndarray | None = None
@@ -182,13 +182,10 @@ class Tipper(BaseEM):
         if freq is not None:
             self.freq = freq
 
-        if (
-            self._tipper is not None
-            and isinstance(self.rotation_angle, float)
+        if self._tipper is not None and isinstance(
+            self.rotation_angle, float
         ):
-            self.rotation_angle = np.zeros(
-                self._tipper.shape[0], dtype=float
-            )
+            self.rotation_angle = np.zeros(self._tipper.shape[0], dtype=float)
 
         if self._tipper is not None:
             self.compute_amp_phase()
@@ -221,16 +218,12 @@ class Tipper(BaseEM):
                     f"got {t.shape!r}."
                 )
         else:
-            raise ZError(
-                f"Unsupported tipper shape: {t.shape!r}."
-            )
+            raise ZError(f"Unsupported tipper shape: {t.shape!r}.")
 
         self._tipper = t.astype(complex, copy=False)
 
         if isinstance(self.rotation_angle, float):
-            self.rotation_angle = np.zeros(
-                self._tipper.shape[0], dtype=float
-            )
+            self.rotation_angle = np.zeros(self._tipper.shape[0], dtype=float)
 
     @property
     def tipper_err(self) -> np.ndarray | None:
@@ -263,9 +256,7 @@ class Tipper(BaseEM):
                     f"(n_freq, 1, 2); got {e.shape!r}."
                 )
         else:
-            raise ZError(
-                f"Unsupported tipper error shape: {e.shape!r}."
-            )
+            raise ZError(f"Unsupported tipper error shape: {e.shape!r}.")
 
         if self._tipper is not None and e.shape != self._tipper.shape:
             raise ZError(
@@ -287,21 +278,15 @@ class Tipper(BaseEM):
 
         ff = np.asarray(f, dtype=float).ravel()
 
-        if (
-            self._tipper is not None
-            and ff.size != self._tipper.shape[0]
-        ):
+        if self._tipper is not None and ff.size != self._tipper.shape[0]:
             raise ZError(
                 "Length of 'freq' must match tipper stack: "
                 f"{ff.size} vs {self._tipper.shape[0]}."
             )
         if np.any(ff <= 0.0):
-            raise ZError(
-                "Frequencies must be strictly positive."
-            )
+            raise ZError("Frequencies must be strictly positive.")
 
         self._freq = ff
-
 
     def compute_amp_phase(self) -> None:
         r"""
@@ -364,9 +349,7 @@ class Tipper(BaseEM):
                 im = T[k, 0, j].imag
                 dr = E[k, 0, j]
                 dim = E[k, 0, j]
-                r_e, p_e = propagate_error_rect2polar(
-                    r, dr, im, dim
-                )
+                r_e, p_e = propagate_error_rect2polar(r, dr, im, dim)
                 amp_err[k, 0, j] = r_e
                 ph_err[k, 0, j] = p_e
 
@@ -429,19 +412,11 @@ class Tipper(BaseEM):
         Tx = self._tipper[:, 0, 0]
         Ty = self._tipper[:, 0, 1]
 
-        self._mag_real = np.sqrt(
-            Tx.real ** 2 + Ty.real ** 2
-        )
-        self._mag_imag = np.sqrt(
-            Tx.imag ** 2 + Ty.imag ** 2
-        )
+        self._mag_real = np.sqrt(Tx.real**2 + Ty.real**2)
+        self._mag_imag = np.sqrt(Tx.imag**2 + Ty.imag**2)
 
-        self._angle_real = np.degrees(
-            np.arctan2(-Ty.real, -Tx.real)
-        )
-        self._angle_imag = np.degrees(
-            np.arctan2(-Ty.imag, -Tx.imag)
-        )
+        self._angle_real = np.degrees(np.arctan2(-Ty.real, -Tx.real))
+        self._angle_imag = np.degrees(np.arctan2(-Ty.imag, -Tx.imag))
 
         if self._tipper_err is None:
             self._mag_err = None
@@ -451,7 +426,7 @@ class Tipper(BaseEM):
         Ex = self._tipper_err[:, 0, 0]
         Ey = self._tipper_err[:, 0, 1]
 
-        self._mag_err = np.sqrt(Ex ** 2 + Ey ** 2)
+        self._mag_err = np.sqrt(Ex**2 + Ey**2)
 
         with np.errstate(divide="ignore", invalid="ignore"):
             ang = np.degrees(np.arctan2(Ex, Ey))
@@ -559,9 +534,7 @@ class Tipper(BaseEM):
             x = np.asarray(a)
             if np.iscomplexobj(x):
                 if np.linalg.norm(np.imag(x)) != 0:
-                    raise ZError(
-                        f'"{name}" must be real-valued.'
-                    )
+                    raise ZError(f'"{name}" must be real-valued.')
                 x = np.real(x)
             if x.ndim == 1 and x.shape[0] == 2:
                 x = x[None, None, :]
@@ -582,9 +555,7 @@ class Tipper(BaseEM):
                         f"got {x.shape!r}."
                     )
             else:
-                raise ZError(
-                    f"Unsupported {name} shape: {x.shape!r}."
-                )
+                raise ZError(f"Unsupported {name} shape: {x.shape!r}.")
             return x.astype(float, copy=False)
 
         r = _normalize(r_array, "r")
@@ -676,9 +647,7 @@ class Tipper(BaseEM):
                     f'"{name}" must be a scalar or length-{n} '
                     f"vector; got length {a.size}."
                 )
-            return a if a.size == n else np.full(
-                n, a[0], dtype=float
-            )
+            return a if a.size == n else np.full(n, a[0], dtype=float)
 
         Mr = _as_vec(mag_real, "mag_real")
         Mi = _as_vec(mag_imag, "mag_imag")
@@ -752,29 +721,19 @@ class Tipper(BaseEM):
         n = self._tipper.shape[0]
 
         if np.isscalar(alpha) or (
-            isinstance(alpha, (list, tuple))
-            and len(alpha) == 1
+            isinstance(alpha, (list, tuple)) and len(alpha) == 1
         ):
             ang = float(np.asarray(alpha).ravel()[0]) % 360.0
             alphas = np.full(n, ang, dtype=float)
         else:
             a = np.asarray(alpha, dtype=float).ravel()
             if a.size not in (1, n):
-                raise ZError(
-                    f"Expected 1 angle or {n} angles; "
-                    f"got {a.size}."
-                )
-            alphas = (
-                a % 360.0
-                if a.size == n
-                else np.full(n, a[0] % 360.0)
-            )
+                raise ZError(f"Expected 1 angle or {n} angles; got {a.size}.")
+            alphas = a % 360.0 if a.size == n else np.full(n, a[0] % 360.0)
 
         if isinstance(self.rotation_angle, float):
             self.rotation_angle = np.zeros(n, dtype=float)
-        self.rotation_angle = (
-            self.rotation_angle + alphas
-        ) % 360.0
+        self.rotation_angle = (self.rotation_angle + alphas) % 360.0
 
         T_rot = np.empty_like(self._tipper, dtype=complex)
         Terr_rot = (
@@ -802,4 +761,3 @@ class Tipper(BaseEM):
 
         self.compute_mag_direction()
         self.compute_amp_phase()
-

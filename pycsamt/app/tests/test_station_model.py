@@ -18,16 +18,19 @@ from pycsamt.app.desktop.models.station_model import (
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def sample_df():
-    return pd.DataFrame({
-        "ID":        ["S01", "S02", "S03"],
-        "Latitude":  [48.5001, 48.5102, 48.5203],
-        "Longitude": [7.7501,  7.7602,  7.7703],
-        "Elevation": [200.0,   210.0,   220.0],
-        "N_freq":    [32,      32,      24],
-        "Tipper":    [True,    False,   True],
-    })
+    return pd.DataFrame(
+        {
+            "ID": ["S01", "S02", "S03"],
+            "Latitude": [48.5001, 48.5102, 48.5203],
+            "Longitude": [7.7501, 7.7602, 7.7703],
+            "Elevation": [200.0, 210.0, 220.0],
+            "N_freq": [32, 32, 24],
+            "Tipper": [True, False, True],
+        }
+    )
 
 
 @pytest.fixture
@@ -38,6 +41,7 @@ def model(qapp, sample_df):
 
 
 # ── StationModel ──────────────────────────────────────────────────────────
+
 
 def test_empty_model_row_count(qapp):
     assert StationModel().rowCount() == 0
@@ -62,12 +66,12 @@ def test_header_data_vertical_is_row_number(model):
 
 
 def test_display_role_id(model):
-    idx = model.index(0, 0)   # column 0 = ID
+    idx = model.index(0, 0)  # column 0 = ID
     assert model.data(idx, Qt.ItemDataRole.DisplayRole) == "S01"
 
 
 def test_display_role_latitude_precision(model):
-    idx = model.index(0, 1)   # Latitude
+    idx = model.index(0, 1)  # Latitude
     val = model.data(idx, Qt.ItemDataRole.DisplayRole)
     assert "." in val
     # 5 decimal places
@@ -75,19 +79,20 @@ def test_display_role_latitude_precision(model):
 
 
 def test_display_role_tipper_yes_no(model):
-    idx_yes = model.index(0, 5)   # Tipper = True
-    idx_no  = model.index(1, 5)   # Tipper = False
+    idx_yes = model.index(0, 5)  # Tipper = True
+    idx_no = model.index(1, 5)  # Tipper = False
     assert model.data(idx_yes, Qt.ItemDataRole.DisplayRole) == "yes"
-    assert model.data(idx_no,  Qt.ItemDataRole.DisplayRole) == "no"
+    assert model.data(idx_no, Qt.ItemDataRole.DisplayRole) == "no"
 
 
 def test_user_role_returns_raw_value(model):
-    idx = model.index(0, 4)   # N_freq
+    idx = model.index(0, 4)  # N_freq
     assert model.data(idx, Qt.ItemDataRole.UserRole) == 32
 
 
 def test_invalid_index_returns_none(model):
     from PySide6.QtCore import QModelIndex
+
     assert model.data(QModelIndex()) is None
 
 
@@ -114,10 +119,12 @@ def test_clear_resets_row_count(model):
 
 # ── StationTable ──────────────────────────────────────────────────────────
 
+
 def test_station_table_creates(qapp):
     from pycsamt.app.desktop.widgets.station_table import (
         StationTable,
     )
+
     t = StationTable()
     assert t is not None
     t.close()
@@ -127,6 +134,7 @@ def test_station_table_set_dataframe(qapp, sample_df):
     from pycsamt.app.desktop.widgets.station_table import (
         StationTable,
     )
+
     t = StationTable()
     t.set_dataframe(sample_df)
     assert t._model.rowCount() == 3
@@ -137,6 +145,7 @@ def test_station_table_emits_rows_selected(qapp, sample_df):
     from pycsamt.app.desktop.widgets.station_table import (
         StationTable,
     )
+
     t = StationTable()
     t.set_dataframe(sample_df)
 

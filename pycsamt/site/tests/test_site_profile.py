@@ -10,6 +10,7 @@ from pycsamt.site.profile import (
 
 # ----- tiny EDI-like mocks ---------------------------------------
 
+
 class _Head:
     def __init__(self, lat=None, lon=None, long=None, dataid=None):
         # support both lon/long spellings
@@ -25,6 +26,7 @@ class _Head:
                 pass
         self.dataid = dataid
 
+
 class _EDI:
     def __init__(self, name, lat, lon):
         self.station = name
@@ -33,13 +35,14 @@ class _EDI:
     def get_section(self, key):
         return self._head if key.lower() == "head" else None
 
+
 # helper to generate a line of mock sites
 def _make_line(prefix, n, lat0, lon0, d_lon_deg=0.0, d_lat_deg=0.0):
     edis = []
     for i in range(n):
         lat = lat0 + i * d_lat_deg
         lon = lon0 + i * d_lon_deg
-        edis.append(_EDI(f"{prefix}{i+1:02d}", lat, lon))
+        edis.append(_EDI(f"{prefix}{i + 1:02d}", lat, lon))
     return edis
 
 

@@ -8,6 +8,7 @@ minimum quality thresholds, so regressions in intent/workflow/line
 classification or retrieval recall fail CI. Hermetic harness tests use a
 tiny in-memory retriever.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -47,25 +48,29 @@ class TestEvalSuiteGate(unittest.TestCase):
 
     def test_intent_accuracy(self):
         self.assertGreaterEqual(
-            self.report.metrics["intent_accuracy"], _MIN_INTENT,
+            self.report.metrics["intent_accuracy"],
+            _MIN_INTENT,
             msg=self.report.summary(),
         )
 
     def test_workflow_accuracy(self):
         self.assertGreaterEqual(
-            self.report.metrics["workflow_accuracy"], _MIN_WORKFLOW,
+            self.report.metrics["workflow_accuracy"],
+            _MIN_WORKFLOW,
             msg=self.report.summary(),
         )
 
     def test_line_accuracy(self):
         self.assertGreaterEqual(
-            self.report.metrics["line_accuracy"], _MIN_LINE,
+            self.report.metrics["line_accuracy"],
+            _MIN_LINE,
             msg=self.report.summary(),
         )
 
     def test_symbol_recall(self):
         self.assertGreaterEqual(
-            self.report.metrics["symbol_recall"], _MIN_SYMBOL_RECALL,
+            self.report.metrics["symbol_recall"],
+            _MIN_SYMBOL_RECALL,
             msg=self.report.summary(),
         )
 
@@ -77,20 +82,23 @@ class TestEvalSuiteGate(unittest.TestCase):
     def test_no_test_file_pollution(self):
         # Tier 0/2 guard: a unit-test module must never be retrieved.
         self.assertEqual(
-            self.report.test_pollution, [],
+            self.report.test_pollution,
+            [],
             msg=str(self.report.test_pollution),
         )
 
     def test_workflow_in_topk(self):
         # Tier 1/2 guard: paraphrased queries surface the right workflow.
         self.assertGreaterEqual(
-            self.report.metrics["workflow_in_topk"], _MIN_WF_IN_TOPK,
+            self.report.metrics["workflow_in_topk"],
+            _MIN_WF_IN_TOPK,
             msg=self.report.summary(),
         )
 
     def test_retrieval_nonempty(self):
         self.assertGreaterEqual(
-            self.report.metrics["retrieval_nonempty"], _MIN_NONEMPTY,
+            self.report.metrics["retrieval_nonempty"],
+            _MIN_NONEMPTY,
             msg=self.report.summary(),
         )
 
@@ -99,14 +107,19 @@ class TestHarnessHermetic(unittest.TestCase):
     """Harness mechanics on a tiny controlled corpus."""
 
     def _retriever(self):
-        return Retriever([
-            RAGChunk(
-                id="1", text="estimate_ss_ama AMA static shift factors",
-                source_path="pycsamt/emtools/ss.py", kind="python_symbol",
-                workflow="static_shift", priority=3,
-                symbol="pycsamt.emtools.ss.estimate_ss_ama",
-            ),
-        ])
+        return Retriever(
+            [
+                RAGChunk(
+                    id="1",
+                    text="estimate_ss_ama AMA static shift factors",
+                    source_path="pycsamt/emtools/ss.py",
+                    kind="python_symbol",
+                    workflow="static_shift",
+                    priority=3,
+                    symbol="pycsamt.emtools.ss.estimate_ss_ama",
+                ),
+            ]
+        )
 
     def test_symbol_recall_and_violation(self):
         recs = [
@@ -141,26 +154,33 @@ class TestHarnessHermetic(unittest.TestCase):
 
     def test_detects_test_file_pollution(self):
         # A retriever that surfaces a test module must be flagged.
-        retr = Retriever([
-            RAGChunk(
-                id="t", text="estimate_ss_ama static shift unit test",
-                source_path="pycsamt/emtools/tests/test_ss.py",
-                kind="python_symbol", workflow="static_shift",
-                symbol="pycsamt.emtools.tests.test_ss.test_ama",
-            ),
-        ])
+        retr = Retriever(
+            [
+                RAGChunk(
+                    id="t",
+                    text="estimate_ss_ama static shift unit test",
+                    source_path="pycsamt/emtools/tests/test_ss.py",
+                    kind="python_symbol",
+                    workflow="static_shift",
+                    symbol="pycsamt.emtools.tests.test_ss.test_ama",
+                ),
+            ]
+        )
         rep = evaluate(
             [{"query": "estimate_ss_ama static shift"}],
-            retriever=retr, registry=None,
+            retriever=retr,
+            registry=None,
         )
         self.assertEqual(len(rep.test_pollution), 1)
         self.assertEqual(rep.metrics["no_test_in_topk"], 0.0)
 
     def test_workflow_in_topk_metric(self):
-        recs = [{
-            "query": "estimate_ss_ama static shift",
-            "expected_retrieval_workflow": "static_shift",
-        }]
+        recs = [
+            {
+                "query": "estimate_ss_ama static shift",
+                "expected_retrieval_workflow": "static_shift",
+            }
+        ]
         rep = evaluate(recs, retriever=self._retriever(), registry=None)
         self.assertEqual(rep.metrics["workflow_in_topk"], 1.0)
         self.assertEqual(rep.metrics["no_test_in_topk"], 1.0)

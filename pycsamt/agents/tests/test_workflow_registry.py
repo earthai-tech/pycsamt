@@ -12,6 +12,7 @@ Run::
 
     pytest pycsamt/agents/tests/test_workflow_registry.py -v
 """
+
 from __future__ import annotations
 
 import unittest
@@ -58,7 +59,8 @@ class TestSharedRegistry(unittest.TestCase):
         producible = set(WORKFLOW_KEYWORDS) | set(WORKFLOW_DESCRIPTIONS)
         for alias, target in WORKFLOW_ALIASES.items():
             self.assertIn(
-                target, producible,
+                target,
+                producible,
                 msg=f"alias {alias!r} -> unknown {target!r}",
             )
 
@@ -77,9 +79,7 @@ class TestSharedRegistry(unittest.TestCase):
             "geoelectric strike",
             "skew analysis",
         ):
-            self.assertEqual(
-                classify_workflow(t), "phase_analysis", msg=t
-            )
+            self.assertEqual(classify_workflow(t), "phase_analysis", msg=t)
 
     def test_rotation_still_wins_over_strike(self):
         # rotation is checked first and owns "rotate"/"strike rotation"
@@ -88,9 +88,7 @@ class TestSharedRegistry(unittest.TestCase):
             "tensor rotation",
             "strike rotation",
         ):
-            self.assertEqual(
-                classify_workflow(t), "rotation", msg=t
-            )
+            self.assertEqual(classify_workflow(t), "rotation", msg=t)
 
     def test_classify_default_none(self):
         self.assertIsNone(classify_workflow("xyzzy no keywords here"))
@@ -120,7 +118,8 @@ class TestConsumersAgree(unittest.TestCase):
                 disagreements.append((phrase, ctx, orch))
 
         self.assertEqual(
-            disagreements, [],
+            disagreements,
+            [],
             msg=(
                 "context vs orchestrator disagree (registry drift):\n"
                 + "\n".join(

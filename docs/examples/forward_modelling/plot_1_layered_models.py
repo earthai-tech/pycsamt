@@ -23,18 +23,23 @@ sounding, 2-D, and 3-D examples that follow.
 # geothermal profile with a shallow conductive clay cap, a uniform
 # half-space, and a buried conductive layer.
 
-
 from pycsamt.forward import LayeredModel, plot_model_1d
 
-M_SEDIMENTARY = LayeredModel([1_000., 20., 5., 300.], [200., 600., 1_500.],
-                             name="sedimentary")
-M_CRYSTALLINE = LayeredModel([800., 8_000., 600.], [2_000., 15_000.],
-                             name="crystalline")
-M_GEOTHERMAL = LayeredModel([500., 8., 250., 3_000.], [100., 400., 2_500.],
-                            name="geothermal")
-M_HALFSPACE = LayeredModel([100.], [], name="halfspace")
-M_CONDUCTIVE = LayeredModel([200., 5., 400., 100.], [150., 500., 2_000.],
-                            name="conductive-layer")
+M_SEDIMENTARY = LayeredModel(
+    [1_000.0, 20.0, 5.0, 300.0], [200.0, 600.0, 1_500.0], name="sedimentary"
+)
+M_CRYSTALLINE = LayeredModel(
+    [800.0, 8_000.0, 600.0], [2_000.0, 15_000.0], name="crystalline"
+)
+M_GEOTHERMAL = LayeredModel(
+    [500.0, 8.0, 250.0, 3_000.0], [100.0, 400.0, 2_500.0], name="geothermal"
+)
+M_HALFSPACE = LayeredModel([100.0], [], name="halfspace")
+M_CONDUCTIVE = LayeredModel(
+    [200.0, 5.0, 400.0, 100.0],
+    [150.0, 500.0, 2_000.0],
+    name="conductive-layer",
+)
 
 # %%
 # 1. A single model as a depth profile
@@ -57,8 +62,13 @@ ax = plot_model_1d(M_SEDIMENTARY, title="Sedimentary model")
 
 ax = plot_model_1d(
     [M_SEDIMENTARY, M_CRYSTALLINE, M_GEOTHERMAL, M_CONDUCTIVE, M_HALFSPACE],
-    labels=["sedimentary", "crystalline", "geothermal",
-            "conductive-layer", "halfspace"],
+    labels=[
+        "sedimentary",
+        "crystalline",
+        "geothermal",
+        "conductive-layer",
+        "halfspace",
+    ],
     figsize=(4.5, 6),
 )
 
@@ -73,7 +83,13 @@ ax = plot_model_1d(
 # :ref:`AI-inversion <user_guide_ai_inversion>` models.
 
 rng_models, rng_labels = [], []
-for scenario in ("sedimentary", "crystalline", "geothermal", "marine", "permafrost"):
+for scenario in (
+    "sedimentary",
+    "crystalline",
+    "geothermal",
+    "marine",
+    "permafrost",
+):
     m = LayeredModel.from_geology(scenario, seed=42)
     m.name = scenario
     rng_models.append(m)

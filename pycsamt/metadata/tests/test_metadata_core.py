@@ -24,8 +24,8 @@ from pycsamt.metadata.frequency import (
 )
 from pycsamt.metadata.survey import BBox, SurveyMeta
 
-
 # ---------------------------- FrequencyBand ---------------------------
+
 
 def test_band_period_and_decades():
     b = MT_BANDS["AMT"]
@@ -90,6 +90,7 @@ def test_band_to_dict_roundtrip_fields():
 
 # ------------------------- registry helpers ---------------------------
 
+
 def test_band_for_frequency_sorted_by_width():
     matches = band_for_frequency(1000.0)
     assert matches, "1 kHz must belong to at least one band"
@@ -121,6 +122,7 @@ def test_doi_estimate_scalar():
 
 # --------------------------------- BBox --------------------------------
 
+
 def test_bbox_geometry():
     bbox = BBox(27.8, 28.9, 101.5, 103.2)
     assert bbox.centre == pytest.approx((28.35, 102.35))
@@ -131,11 +133,11 @@ def test_bbox_geometry():
 
 def test_bbox_membership_forms():
     bbox = BBox(27.8, 28.9, 101.5, 103.2)
-    assert 28.0 in bbox                      # latitude scalar
-    assert (28.0, 102.0) in bbox             # (lat, lon) tuple
+    assert 28.0 in bbox  # latitude scalar
+    assert (28.0, 102.0) in bbox  # (lat, lon) tuple
     assert (10.0, 102.0) not in bbox
     assert "junk" not in bbox
-    assert bbox.contains(27.8, 101.5)        # boundary inclusive
+    assert bbox.contains(27.8, 101.5)  # boundary inclusive
 
 
 def test_bbox_validation_and_roundtrip():
@@ -149,6 +151,7 @@ def test_bbox_validation_and_roundtrip():
 
 
 # ------------------------------ SurveyMeta -----------------------------
+
 
 def test_survey_meta_validation_and_duration():
     with pytest.raises(ValueError):
@@ -209,8 +212,11 @@ def test_survey_meta_from_sites_builds_bbox():
         def __init__(self, lat, lon):
             self.coords = (lat, lon, 0.0)
 
-    sites = [FakeSite(28.0, 102.0), FakeSite(28.5, 102.5),
-             FakeSite(None, None)]
+    sites = [
+        FakeSite(28.0, 102.0),
+        FakeSite(28.5, 102.5),
+        FakeSite(None, None),
+    ]
     meta = SurveyMeta.from_sites(sites, name="from-sites", method="AMT")
     assert meta.n_stations == 3
     assert meta.bbox is not None

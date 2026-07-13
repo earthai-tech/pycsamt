@@ -66,6 +66,7 @@ _SKIN_DEPTH_COEFF = 503.3
 # FrequencyBand
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FrequencyBand:
     """Specification of an EM geophysical frequency band.
@@ -240,18 +241,18 @@ class FrequencyBand:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "name":        self.name,
-            "label":       self.label,
-            "f_min":       self.f_min,
-            "f_max":       self.f_max,
-            "period_min":  self.period_min,
-            "period_max":  self.period_max,
-            "method":      self.method,
+            "name": self.name,
+            "label": self.label,
+            "f_min": self.f_min,
+            "f_max": self.f_max,
+            "period_min": self.period_min,
+            "period_max": self.period_max,
+            "method": self.method,
             "doi_ref_rho": self.doi_ref_rho,
             "doi_shallow_m": self.doi_range_m()[0],
-            "doi_deep_m":    self.doi_range_m()[1],
-            "n_decades":   round(self.n_decades, 2),
-            "notes":       self.notes,
+            "doi_deep_m": self.doi_range_m()[1],
+            "n_decades": round(self.n_decades, 2),
+            "notes": self.notes,
         }
 
     def __repr__(self) -> str:
@@ -352,6 +353,7 @@ REGISTRY: dict[str, FrequencyBand] = dict(MT_BANDS)
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def register_band(band: FrequencyBand) -> None:
     """Add or replace a :class:`FrequencyBand` in the global registry.

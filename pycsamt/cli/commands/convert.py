@@ -63,7 +63,8 @@ def _collect_inputs(source: Path) -> list[Path]:
     """Return sorted list of convertible files from a file or directory."""
     if source.is_dir():
         return sorted(
-            p for p in source.iterdir()
+            p
+            for p in source.iterdir()
             if p.is_file() and p.suffix.lower() in _SUPPORTED_EXTS
         )
     if source.suffix.lower() in _SUPPORTED_EXTS:
@@ -75,6 +76,7 @@ def _collect_inputs(source: Path) -> list[Path]:
 # Per-format converters
 # ---------------------------------------------------------------------------
 
+
 def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
     """Convert a Jones J-file to EDI."""
     try:
@@ -83,8 +85,12 @@ def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
             _meta_from_jfile,  # noqa: PLC0415
         )
     except ImportError as exc:
-        return {"src": str(src), "dst": str(dst), "status": "error",
-                "message": f"jones package unavailable: {exc}"}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": f"jones package unavailable: {exc}",
+        }
 
     try:
         jf = JFile(src)
@@ -94,11 +100,19 @@ def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
         dst.write_text(edi_text, encoding="utf-8")
         if verbose >= 1:
             click.echo(f"  {src.name}  →  {dst.name}", err=True)
-        return {"src": str(src), "dst": str(dst), "status": "ok",
-                "station": station}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "ok",
+            "station": station,
+        }
     except Exception as exc:  # noqa: BLE001
-        return {"src": str(src), "dst": str(dst), "status": "error",
-                "message": str(exc)}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": str(exc),
+        }
 
 
 def _jfile_to_edi_text(jf: Any, meta: dict[str, Any]) -> str:
@@ -166,30 +180,44 @@ def _convert_avg(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
     """Convert a Zonge AVG file to EDI (stub — wired to zonge package)."""
     try:
         from pycsamt.zonge import AVGFile  # noqa: PLC0415
+
         avg = AVGFile(src)
         avg.to_edi(dst)
         if verbose >= 1:
             click.echo(f"  {src.name}  →  {dst.name}", err=True)
         return {"src": str(src), "dst": str(dst), "status": "ok"}
     except ImportError:
-        return {"src": str(src), "dst": str(dst), "status": "error",
-                "message": "zonge package unavailable — AVG conversion not supported yet"}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": "zonge package unavailable — AVG conversion not supported yet",
+        }
     except Exception as exc:  # noqa: BLE001
-        return {"src": str(src), "dst": str(dst), "status": "error",
-                "message": str(exc)}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": str(exc),
+        }
 
 
 def _convert_edi(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
     """Pass-through / re-export an existing EDI file."""
     import shutil  # noqa: PLC0415
+
     try:
         shutil.copy2(src, dst)
         if verbose >= 1:
             click.echo(f"  {src.name}  →  {dst.name}  (copy)", err=True)
         return {"src": str(src), "dst": str(dst), "status": "ok"}
     except Exception as exc:  # noqa: BLE001
-        return {"src": str(src), "dst": str(dst), "status": "error",
-                "message": str(exc)}
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": str(exc),
+        }
 
 
 _CONVERTERS = {
@@ -202,6 +230,7 @@ _CONVERTERS = {
 # ---------------------------------------------------------------------------
 # Formatters
 # ---------------------------------------------------------------------------
+
 
 def _fmt_text(results: list[dict[str, Any]]) -> str:
     ok = [r for r in results if r["status"] == "ok"]
@@ -235,6 +264,7 @@ def _fmt_csv(results: list[dict[str, Any]]) -> str:
 # ---------------------------------------------------------------------------
 # Command
 # ---------------------------------------------------------------------------
+
 
 @click.command("convert")
 @click.argument(
@@ -326,22 +356,26 @@ def convert(
     for src in inputs:
         dst = output_dir / (src.stem + ".edi")
         if dst.exists() and not overwrite:
-            results.append({
-                "src": str(src),
-                "dst": str(dst),
-                "status": "skipped",
-                "message": "output exists (use --overwrite to replace)",
-            })
+            results.append(
+                {
+                    "src": str(src),
+                    "dst": str(dst),
+                    "status": "skipped",
+                    "message": "output exists (use --overwrite to replace)",
+                }
+            )
             continue
 
         converter = _CONVERTERS.get(src.suffix.lower())
         if converter is None:
-            results.append({
-                "src": str(src),
-                "dst": str(dst),
-                "status": "error",
-                "message": f"no converter for extension {src.suffix!r}",
-            })
+            results.append(
+                {
+                    "src": str(src),
+                    "dst": str(dst),
+                    "status": "error",
+                    "message": f"no converter for extension {src.suffix!r}",
+                }
+            )
             continue
 
         results.append(converter(src, dst, verbose))

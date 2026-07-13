@@ -33,6 +33,7 @@ from .utils import set_coords as _set_coords
 
 __all__ = ["SiteMixin", "Site", "Sites", "to_sites", "to_edis"]
 
+
 class SiteMixin(CoreObject):
     r"""
     Lightweight wrapper exposing station-centric accessors
@@ -230,8 +231,15 @@ class SiteMixin(CoreObject):
         info = _safe_get(self.edi, "INFO")
         out: dict[str, Any] = {}
         if h is not None:
-            for k in ("station", "name", "lat", "lon", "elev",
-                      "dataid", "sitename"):
+            for k in (
+                "station",
+                "name",
+                "lat",
+                "lon",
+                "elev",
+                "dataid",
+                "sitename",
+            ):
                 v = _safe_get(h, k)
                 if v is not None:
                     out[k] = v
@@ -239,7 +247,9 @@ class SiteMixin(CoreObject):
             out["INFO"] = dict(getattr(info, "__dict__", {}))
         return out
 
-    def to_dataframe(self, kind: str = "z", *, api: bool | None = None) -> Any:
+    def to_dataframe(
+        self, kind: str = "z", *, api: bool | None = None
+    ) -> Any:
         r"""
         Export core arrays to a tidy :class:`pandas.DataFrame`.
 
@@ -281,9 +291,11 @@ class SiteMixin(CoreObject):
         """
 
         arrs = _extract_z_arrays(self.edi)
-        f = (np.asarray(arrs["freq"], float)
-             if arrs["freq"] is not None
-             else np.asarray([], float))
+        f = (
+            np.asarray(arrs["freq"], float)
+            if arrs["freq"] is not None
+            else np.asarray([], float)
+        )
         idx = pd.Index(f, name="f")
 
         def _out(df: pd.DataFrame) -> Any:
@@ -349,7 +361,6 @@ class SiteMixin(CoreObject):
             return _out(pd.DataFrame(data, index=idx))
 
         raise ValueError(f"Unknown kind: {kind!r}")
-
 
     def quality_flags(self) -> dict[str, bool]:
         r"""
@@ -445,7 +456,6 @@ class SiteMixin(CoreObject):
         a = z[:, i]
         return a.size > 0 and np.any(np.isfinite(a))
 
-
     def summary(self) -> dict[str, Any]:
         r"""
         Summarize site identity, geometry, and data coverage.
@@ -466,12 +476,13 @@ class SiteMixin(CoreObject):
 
         lat, lon, elev = self.coords
         arrs = _extract_z_arrays(self.edi)
-        f = (np.asarray(arrs["freq"])
-             if arrs["freq"] is not None else np.asarray([], float))
+        f = (
+            np.asarray(arrs["freq"])
+            if arrs["freq"] is not None
+            else np.asarray([], float)
+        )
         nfreq = int(f.size)
-        present = [
-            c for c in _component_names() if self.has_component(c)
-        ]
+        present = [c for c in _component_names() if self.has_component(c)]
         return {
             "name": self.name,
             "nfreq": nfreq,
@@ -570,14 +581,18 @@ class SiteMixin(CoreObject):
 
         if inplace:
             _set_coords(
-                self.edi, lat=float(lat), lon=float(lon),
+                self.edi,
+                lat=float(lat),
+                lon=float(lon),
                 elev=(None if elev is None else float(elev)),
                 inplace=True,
             )
             return self  # type: ignore[return-value]
         ed = _clone_edi(self.edi)
         _set_coords(
-            ed, lat=float(lat), lon=float(lon),
+            ed,
+            lat=float(lat),
+            lon=float(lon),
             elev=(None if elev is None else float(elev)),
             inplace=True,
         )
@@ -754,7 +769,6 @@ class Site(SiteMixin):
            Magnetotellurics. Cambridge University Press.
     """
 
-
     def __init__(self, edi: EDIFile) -> None:
         super().__init__(edi)
         try:
@@ -791,7 +805,6 @@ class Site(SiteMixin):
         """
 
         return _maybe_copy(self.edi) if copy else self.edi
-
 
     def __repr__(self) -> str:
         r"""
@@ -974,8 +987,8 @@ class Sites(CoreObject):
         self,
         edic: EDICollection | Sequence[EDIFile],
     ) -> None:
-        if isinstance (edic, EDIFile):
-            edic= [edic]
+        if isinstance(edic, EDIFile):
+            edic = [edic]
 
         items = list(edic)
         self._items: list[Site] = [Site(e) for e in items]
@@ -1118,7 +1131,6 @@ class Sites(CoreObject):
         except Exception:
             return None
 
-
     def as_list(self) -> list[EDIFile]:
         r"""
         Return the underlying list of EDI objects.
@@ -1259,8 +1271,8 @@ class Sites(CoreObject):
 
         from .location import distance
 
-        la = float(assert_lat_value(lat))   # type: ignore[arg-type]
-        lo = float(assert_lon_value(lon))   # type: ignore[arg-type]
+        la = float(assert_lat_value(lat))  # type: ignore[arg-type]
+        lo = float(assert_lon_value(lon))  # type: ignore[arg-type]
 
         best: tuple[Site | None, float]
         best = (None, float("inf"))
@@ -1268,8 +1280,7 @@ class Sites(CoreObject):
             sla, slo, _ = s.coords
             if not np.isfinite(sla) or not np.isfinite(slo):
                 continue
-            d = distance((la, lo), (float(sla), float(slo)),
-                         mode="geodetic")
+            d = distance((la, lo), (float(sla), float(slo)), mode="geodetic")
             if d < best[1]:
                 best = (s, d)
         if best[0] is None:
@@ -1449,6 +1460,7 @@ class Sites(CoreObject):
         """
 
         from .location import apply_topography
+
         edis = self.as_list()
         out = apply_topography(edis, frame, inplace=inplace)
         # apply_topography returns list when given list
@@ -1494,10 +1506,7 @@ class Sites(CoreObject):
         out: list[EDIFile] = []
         if names:
             wanted = {str(n).lower() for n in names}
-            out.extend(
-                s.edi for s in self._items
-                if s.name.lower() in wanted
-            )
+            out.extend(s.edi for s in self._items if s.name.lower() in wanted)
         elif predicate:
             out.extend(s.edi for s in self._items if predicate(s))
         else:
@@ -1552,9 +1561,7 @@ class Sites(CoreObject):
             obj = nz.load(source)
         if isinstance(obj, EDICollection):
             return cls(obj)
-        if isinstance(obj, list) and all(
-            isinstance(x, EDIFile) for x in obj
-        ):
+        if isinstance(obj, list) and all(isinstance(x, EDIFile) for x in obj):
             return cls(obj)  # type: ignore[arg-type]
         if isinstance(obj, EDIFile):
             return cls([obj])
@@ -1693,6 +1700,7 @@ class Sites(CoreObject):
         try:
             from .location import Coord
             from .profile import Profile  # type: ignore
+
             prof = Profile.from_sites(
                 self._items,
                 origin=Coord(float(origin[0]), float(origin[1]), 0.0),
@@ -1725,14 +1733,15 @@ class Sites(CoreObject):
             "sites": [s for _, s in items],
         }
 
-def to_sites (
+
+def to_sites(
     x: Any,
     *,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
-    ):
+):
     r"""
     Coerce an arbitrary EDI-like input into a ``Sites`` wrapper.
 
@@ -1797,11 +1806,8 @@ def to_sites (
     pycsamt.site.base.Sites.from_any :
         Alternate constructor with session normalization.
     """
-    return _to_sites (
-        x, recursive = recursive,
-        on_dup =on_dup,
-        strict= strict,
-        verbose= verbose
+    return _to_sites(
+        x, recursive=recursive, on_dup=on_dup, strict=strict, verbose=verbose
     )
 
 
@@ -1939,9 +1945,7 @@ def _is_seq_of_pathlike(x: Any) -> bool:
 
 def _is_edi_like(obj: Any) -> bool:
     return (
-        obj is not None
-        and hasattr(obj, "get_section")
-        and hasattr(obj, "Z")
+        obj is not None and hasattr(obj, "get_section") and hasattr(obj, "Z")
     )
 
 
@@ -2092,9 +2096,7 @@ def _map_on_dup_for_collection(on_dup: str) -> str:
     )
 
 
-def _dedup_collection_names(
-    coll, *, policy: str, verbose: int = 0
-):
+def _dedup_collection_names(coll, *, policy: str, verbose: int = 0):
     """
     Apply post-hoc duplicate policy ('keep_first', 'keep_last', 'raise')
     when the collection was built from non-path inputs.
@@ -2129,8 +2131,7 @@ def _dedup_collection_names(
         elif key == "raise":
             if n in name_to_idx:
                 raise ValueError(
-                    f"Duplicate site '{n}' encountered with "
-                    "on_dup='raise'."
+                    f"Duplicate site '{n}' encountered with on_dup='raise'."
                 )
             name_to_idx[n] = i
 
@@ -2138,8 +2139,7 @@ def _dedup_collection_names(
         dups = sorted({n for n in names if names.count(n) > 1})
         if dups:
             warnings.warn(
-                f"to_sites: duplicates {dups} handled with "
-                f"policy='{key}'.",
+                f"to_sites: duplicates {dups} handled with policy='{key}'.",
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -2221,9 +2221,7 @@ def _to_sites(
 
     # Enforce any post-hoc duplicate policy not covered by the collection
     if on_dup.strip().lower() in {"keep_first", "keep_last", "raise"}:
-        coll = _dedup_collection_names(
-            coll, policy=on_dup, verbose=verbose
-        )
+        coll = _dedup_collection_names(coll, policy=on_dup, verbose=verbose)
 
     # Sites wrapper
     try:
@@ -2235,13 +2233,13 @@ def _to_sites(
 def _station_name(edi: EDIFile) -> str:
     h = _get_head(edi)
     if h is not None:
-        for k in ("dataid", "station", "sitename",
-                  "name", "STATION"):
+        for k in ("dataid", "station", "sitename", "name", "STATION"):
             v = _safe_get(h, k, default=None)
             if v:
                 return str(v)
     nm = _stem_from_edi(edi)
     return nm or "site"
+
 
 def _z_to_2d(a: Any) -> np.ndarray:
     z = np.asarray(a)
@@ -2265,8 +2263,8 @@ def _set_station_name(edi: EDIFile, name: str) -> None:
     except Exception:
         pass
 
-def _safe_get(obj: Any, *names: str,
-              default: Any = None) -> Any:
+
+def _safe_get(obj: Any, *names: str, default: Any = None) -> Any:
     for n in names:
         try:
             return getattr(obj, n)
@@ -2277,6 +2275,7 @@ def _safe_get(obj: Any, *names: str,
         except:
             pass
     return default
+
 
 def _clone_edi(ed: EDIFile) -> EDIFile:
     try:
@@ -2289,6 +2288,7 @@ def _clone_edi(ed: EDIFile) -> EDIFile:
             except:
                 setattr(c, k, v)
         return c
+
 
 def _component_names() -> list[str]:
     return ["Zxx", "Zxy", "Zyx", "Zyy"]
@@ -2316,9 +2316,7 @@ def _extract_z_arrays(ed: EDIFile) -> dict[str, Any]:
     out: dict[str, Any] = {}
     out["freq"] = _safe_get(Z, "freq", "frequency")
     out["z"] = _safe_get(Z, "z", "impedance")
-    out["z_err"] = _safe_get(
-        Z, "z_error", "z_err", "impedance_err"
-    )
+    out["z_err"] = _safe_get(Z, "z_error", "z_err", "impedance_err")
     out["rho"] = _safe_get(Z, "rho", "res", "resistivity")
     out["phase"] = _safe_get(Z, "phase", "phi")
     tip = _safe_get(ed, "T", "TIP", "Tip", "tipper", "Tipper")
@@ -2327,11 +2325,13 @@ def _extract_z_arrays(ed: EDIFile) -> dict[str, Any]:
     out["tipper"] = tip
     return out
 
+
 def _slice_fields(Z: Any, sl: slice) -> None:
     """
     Slice Z fields atomically to keep freq/z aligned.
     Use private attrs to avoid partial recomputations.
     """
+
     # Fetch (prefer privates if present)
     def _ga(name: str, alt: str | None = None):
         if hasattr(Z, f"_{name}"):
@@ -2379,7 +2379,10 @@ def _slice_fields(Z: Any, sl: slice) -> None:
 
     # Finalize: compute rho/phi once arrays are consistent
     try:
-        if getattr(Z, "_z", None) is not None and getattr(Z, "_freq", None) is not None:
+        if (
+            getattr(Z, "_z", None) is not None
+            and getattr(Z, "_freq", None) is not None
+        ):
             Z.compute_resistivity_phase()
     except Exception:
         # Be tolerant; tests only require freq slicing to succeed

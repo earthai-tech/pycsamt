@@ -29,6 +29,7 @@ __all__ = ["ModEmModel3D"]
 # Low-level parser
 # ----------------------------------------------------------------------
 
+
 def _parse_model3d(path: Path) -> dict:
     """Parse a ModEM 3-D model file into plain Python values."""
     with path.open("r", errors="replace") as fh:
@@ -38,8 +39,7 @@ def _parse_model3d(path: Path) -> dict:
     i = 0
     # skip blank / comment lines before the control line
     while i < N and (
-        not lines[i].strip()
-        or lines[i].strip().startswith("#")
+        not lines[i].strip() or lines[i].strip().startswith("#")
     ):
         i += 1
 
@@ -73,8 +73,8 @@ def _parse_model3d(path: Path) -> dict:
                 pass
 
     x_widths = np.array(float_tokens[:nx], dtype=float)
-    y_widths = np.array(float_tokens[nx:nx + ny], dtype=float)
-    z_widths = np.array(float_tokens[nx + ny:target], dtype=float)
+    y_widths = np.array(float_tokens[nx : nx + ny], dtype=float)
+    z_widths = np.array(float_tokens[nx + ny : target], dtype=float)
 
     # read rho grid: Nz * Ny rows of Nx values
     total = nx * ny * nz
@@ -86,9 +86,7 @@ def _parse_model3d(path: Path) -> dict:
             continue
         # Stop at possible centre coordinates or rotation lines.
         parts = ln.split()
-        if len(parts) <= 3 and all(
-            _is_simple_numeric(p) for p in parts
-        ):
+        if len(parts) <= 3 and all(_is_simple_numeric(p) for p in parts):
             # Could be trailing centre/rotation. Stop only if we have
             # most of the data we need
             if len(rho_flat) >= total - nx:
@@ -110,7 +108,7 @@ def _parse_model3d(path: Path) -> dict:
         with np.errstate(divide="ignore", invalid="ignore"):
             rho_loge = np.log(np.where(rho_arr > 0, rho_arr, np.nan))
     else:
-        rho_loge = rho_arr   # already LOGE
+        rho_loge = rho_arr  # already LOGE
 
     return {
         "nx": nx,
@@ -136,6 +134,7 @@ def _is_simple_numeric(s: str) -> bool:
 # ----------------------------------------------------------------------
 # ModEmModel3D
 # ----------------------------------------------------------------------
+
 
 class ModEmModel3D(ModEmBase):
     def __init__(self, config: ModEmConfig | None = None, **kwargs):
@@ -319,8 +318,7 @@ class ModEmModel3D(ModEmBase):
 
         if obj.verbose:
             obj.logger.info(
-                "ModEmModel3D.halfspace: %d x %d x %d grid, "
-                "rho=%.1f ohm m",
+                "ModEmModel3D.halfspace: %d x %d x %d grid, rho=%.1f ohm m",
                 nx_tot,
                 ny_tot,
                 nz_tot,
@@ -427,9 +425,7 @@ class ModEmModel3D(ModEmBase):
             for i in range(0, len(arr), per_row):
                 rows.append(
                     "  "
-                    + "  ".join(
-                        f"{v:>12.4f}" for v in arr[i:i + per_row]
-                    )
+                    + "  ".join(f"{v:>12.4f}" for v in arr[i : i + per_row])
                 )
             return "\n".join(rows) + "\n"
 
@@ -449,8 +445,7 @@ class ModEmModel3D(ModEmBase):
                 lines.append(
                     "  "
                     + "  ".join(
-                        f"{v:>12.5E}"
-                        for v in self.rho_loge[iz, iy, :]
+                        f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :]
                     )
                     + "\n"
                 )

@@ -28,9 +28,7 @@ def _R(theta_deg: float) -> np.ndarray:
 
 
 def test_rotate_impedance_basic() -> None:
-    Z = np.array(
-        [[[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]]], complex
-    )
+    Z = np.array([[[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]]], complex)
     th = 90.0
     R = _R(th)
     exp = (R @ Z[0] @ R.T)[None, ...]
@@ -80,8 +78,7 @@ def test_coherence_ms_limits_and_value() -> None:
     coh = coherence_ms(Sxy, Sxx, Syy)
     assert np.allclose(coh, [1.0, 1.0])
     # zeros in denom → 0
-    coh2 = coherence_ms(np.array([1.0]), np.array([0.0]),
-                        np.array([2.0]))
+    coh2 = coherence_ms(np.array([1.0]), np.array([0.0]), np.array([2.0]))
     assert float(coh2[0]) == 0.0
 
 
@@ -103,8 +100,7 @@ def test_pack_unpack_hermitian() -> None:
 
 
 def test_rotate_spectra_against_manual() -> None:
-    C = np.array([[2.0 + 0j, 1.0 + 1.0j],
-                  [1.0 - 1.0j, 1.5 + 0j]], complex)
+    C = np.array([[2.0 + 0j, 1.0 + 1.0j], [1.0 - 1.0j, 1.5 + 0j]], complex)
     th = 45.0
     R = _R(th)
     exp = R @ C @ R.T

@@ -33,8 +33,11 @@ from collections.abc import Sequence
 
 # Absolute path to the shared SVG icon set
 _ICONS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),   # .../app/web/
-    "..", "desktop", "resources", "icons",
+    os.path.dirname(os.path.abspath(__file__)),  # .../app/web/
+    "..",
+    "desktop",
+    "resources",
+    "icons",
 )
 _ICONS_DIR = os.path.normpath(_ICONS_DIR)
 
@@ -68,7 +71,9 @@ def _browser_url(host: str, port: int) -> str:
 
 def _open_browser_later(url: str, delay: float) -> None:
     """Open *url* in the default browser after a short delay."""
-    timer = threading.Timer(max(0.0, float(delay)), lambda: webbrowser.open(url))
+    timer = threading.Timer(
+        max(0.0, float(delay)), lambda: webbrowser.open(url)
+    )
     timer.daemon = True
     timer.start()
 
@@ -161,7 +166,10 @@ def create_app(debug: bool = False):
         title="pyCSAMT",
         update_title="pyCSAMT — loading…",
         meta_tags=[
-            {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+            {
+                "name": "viewport",
+                "content": "width=device-width, initial-scale=1",
+            },
         ],
     )
     if bg_manager is not None:

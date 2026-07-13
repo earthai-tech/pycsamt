@@ -74,9 +74,11 @@ _log = logging.getLogger(__name__)
 # Result container
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _FailRecord:
     """A single failed conversion."""
+
     source: str
     error: str
 
@@ -105,6 +107,7 @@ class TransformResult:
         for f in result.failures:
             print(f.source, "->", f.error)
     """
+
     collection: EDICollection
     failures: list[_FailRecord] = field(default_factory=list)
 
@@ -117,14 +120,13 @@ class TransformResult:
         return len(self.failures)
 
     def __repr__(self) -> str:
-        return (
-            f"TransformResult(ok={self.n_ok}, fail={self.n_fail})"
-        )
+        return f"TransformResult(ok={self.n_ok}, fail={self.n_fail})"
 
 
 # ---------------------------------------------------------------------------
 # SpectraToEDI
 # ---------------------------------------------------------------------------
+
 
 class SpectraToEDI(TransformerMixin):
     r"""Transform SEG spectra-EDI files to MT-impedance EDI files.
@@ -223,15 +225,15 @@ class SpectraToEDI(TransformerMixin):
         verbose: int = 0,
     ) -> None:
         super().__init__()
-        self.e_labels      = tuple(e_labels)
-        self.h_labels      = tuple(h_labels)
-        self.ridge         = ridge
-        self.estimate_error= estimate_error
-        self.dof           = dof
-        self.use_remote    = use_remote
-        self.station_suffix= station_suffix
-        self.skip_errors   = skip_errors
-        self.verbose       = verbose
+        self.e_labels = tuple(e_labels)
+        self.h_labels = tuple(h_labels)
+        self.ridge = ridge
+        self.estimate_error = estimate_error
+        self.dof = dof
+        self.use_remote = use_remote
+        self.station_suffix = station_suffix
+        self.skip_errors = skip_errors
+        self.verbose = verbose
 
     # ------------------------------------------------------------------
     # Public API
@@ -283,7 +285,9 @@ class SpectraToEDI(TransformerMixin):
             station_name=station_name,
         )
         if result.n_fail and not self.skip_errors:
-            msgs = "\n  ".join(f"{r.source}: {r.error}" for r in result.failures)
+            msgs = "\n  ".join(
+                f"{r.source}: {r.error}" for r in result.failures
+            )
             raise RuntimeError(
                 f"{result.n_fail} file(s) failed to convert:\n  {msgs}"
             )
@@ -402,7 +406,8 @@ class SpectraToEDI(TransformerMixin):
         if self.verbose >= 2:
             _log.debug(
                 "  to_edi(station=%s, estimate_error=%s)",
-                station_name, self.estimate_error,
+                station_name,
+                self.estimate_error,
             )
 
         ed = sp.to_edi(
@@ -426,7 +431,9 @@ class SpectraToEDI(TransformerMixin):
 
         if isinstance(source, Spectra):
             # Already a parsed Spectra — we need its backing file
-            p = getattr(source, "_path", None) or getattr(source, "name", None)
+            p = getattr(source, "_path", None) or getattr(
+                source, "name", None
+            )
             if p is not None:
                 return [Path(p).resolve()]
             raise TypeError(
@@ -437,7 +444,9 @@ class SpectraToEDI(TransformerMixin):
         if isinstance(source, EDIFile):
             if source.path:
                 return [Path(source.path).resolve()]
-            raise TypeError("EDIFile has no path; pass the file path directly.")
+            raise TypeError(
+                "EDIFile has no path; pass the file path directly."
+            )
 
         if isinstance(source, EDICollection):
             paths = []
@@ -453,9 +462,7 @@ class SpectraToEDI(TransformerMixin):
                 return sorted(p.glob("*.edi"))
             if p.suffix.lower() == ".edi":
                 return [p.resolve()]
-            raise ValueError(
-                f"{source!r} is not a .edi file or a directory."
-            )
+            raise ValueError(f"{source!r} is not a .edi file or a directory.")
 
         if isinstance(source, (list, tuple)):
             paths: list[Path] = []
@@ -484,7 +491,9 @@ class SpectraToEDI(TransformerMixin):
                 _log.info("  -> wrote %s", Path(out).name if out else out_dir)
             return Path(out) if out else out_dir
         except Exception as exc:  # noqa: BLE001
-            _log.warning("write failed for %s: %s", getattr(ed, "station", "?"), exc)
+            _log.warning(
+                "write failed for %s: %s", getattr(ed, "station", "?"), exc
+            )
             raise
 
     # ------------------------------------------------------------------

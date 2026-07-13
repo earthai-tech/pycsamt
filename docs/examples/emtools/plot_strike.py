@@ -51,12 +51,18 @@ t_pt = estimate_strike_phase_tensor(survey)
 t_cons = estimate_strike_consensus(survey)
 
 print(t_sweep.head())
-print(f"sweep     ang range: {t_sweep['ang'].min():.1f} to "
-      f"{t_sweep['ang'].max():.1f} deg  (iqr median {t_sweep['iqr'].median():.1f})")
-print(f"phase-tns ang range: {t_pt['ang'].min():.1f} to "
-      f"{t_pt['ang'].max():.1f} deg  (iqr median {t_pt['iqr'].median():.1f})")
-print(f"consensus ang range: {t_cons['ang'].min():.1f} to "
-      f"{t_cons['ang'].max():.1f} deg  (iqr median {t_cons['iqr'].median():.1f})")
+print(
+    f"sweep     ang range: {t_sweep['ang'].min():.1f} to "
+    f"{t_sweep['ang'].max():.1f} deg  (iqr median {t_sweep['iqr'].median():.1f})"
+)
+print(
+    f"phase-tns ang range: {t_pt['ang'].min():.1f} to "
+    f"{t_pt['ang'].max():.1f} deg  (iqr median {t_pt['iqr'].median():.1f})"
+)
+print(
+    f"consensus ang range: {t_cons['ang'].min():.1f} to "
+    f"{t_cons['ang'].max():.1f} deg  (iqr median {t_cons['iqr'].median():.1f})"
+)
 
 # %%
 # **Reading this output.** Every station's *reported* angle
@@ -139,8 +145,10 @@ print(f"mean |strike| after  rotation: {after['ang'].abs().mean():.1f} deg")
 
 curve = strike_curve_sweep(survey)
 print(curve.shape, list(curve.columns))
-print(f"stations x frequencies: {curve['station'].nunique()} x "
-      f"{curve.groupby('station').size().iloc[0]}")
+print(
+    f"stations x frequencies: {curve['station'].nunique()} x "
+    f"{curve.groupby('station').size().iloc[0]}"
+)
 
 ax = plot_strike_ribbon(survey, method="sweep")
 
@@ -157,8 +165,7 @@ ax = plot_strike_ribbon(survey, method="sweep")
 
 fig = plot_strike_rose(survey)
 ax_all = fig.get_axes()[0]
-print("single-rose annotation:",
-      [t.get_text() for t in ax_all.texts])
+print("single-rose annotation:", [t.get_text() for t in ax_all.texts])
 
 # %%
 # **Reading this output.** The annotation reads ``143.1 deg, n=28`` —
@@ -196,7 +203,8 @@ for ax in fig2.get_axes():
 # one rose, showing whether shallow and deep structure share a strike.
 
 fig3 = plot_strike_rose(
-    survey, bar_style="bands",
+    survey,
+    bar_style="bands",
     freq_bands=[(0.001, 0.01), (0.01, 1.0)],
     band_labels=["short period", "long period"],
 )

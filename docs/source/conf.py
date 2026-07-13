@@ -47,11 +47,14 @@ copyright = "2022-2026, earthai-tech"
 
 try:
     from pycsamt import __version__ as release
-    version = ".".join(release.split(".")[:2])   # e.g. "2.0"
+
+    version = ".".join(release.split(".")[:2])  # e.g. "2.0"
 except Exception:
     version = release = "2.0"
 
-switcher_version_match = os.environ.get("READTHEDOCS_VERSION", f"v{version.split('.')[0]}")
+switcher_version_match = os.environ.get(
+    "READTHEDOCS_VERSION", f"v{version.split('.')[0]}"
+)
 if switcher_version_match in {"latest", "stable"}:
     switcher_version_match = "v2"
 
@@ -67,14 +70,14 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     # Third-party
-    "myst_parser",          # parse .md files (e.g. CHANGELOG, README)
-    "sphinx_copybutton",    # copy-button on code blocks
-    "sphinx_design",        # grid / tab / card directives
+    "myst_parser",  # parse .md files (e.g. CHANGELOG, README)
+    "sphinx_copybutton",  # copy-button on code blocks
+    "sphinx_design",  # grid / tab / card directives
     "sphinx_toggleprompt",  # show/hide >>> prompts on doctest blocks
     "sphinx_gallery.gen_gallery",  # execute example scripts, embed output
     # Local (docs/source/_ext)
-    "gallery_hub",          # compact animated-card landing page for examples/
-    "public_api_catalog",   # grouped public modules/classes/functions tables
+    "gallery_hub",  # compact animated-card landing page for examples/
+    "public_api_catalog",  # grouped public modules/classes/functions tables
 ]
 
 # -- sphinx-copybutton -----------------------------------------------------
@@ -99,8 +102,8 @@ from sphinx_gallery.sorting import (
 )
 
 sphinx_gallery_conf = {
-    "examples_dirs":  ["../examples"],
-    "gallery_dirs":   ["examples"],
+    "examples_dirs": ["../examples"],
+    "gallery_dirs": ["examples"],
     # Section order on the Examples landing page; "*" catches any section
     # added later that is not listed explicitly yet.
     "subsection_order": ExplicitOrder(
@@ -145,44 +148,44 @@ sphinx_gallery_conf = {
     "ignore_pattern": r"(^|[\\/])_",
 }
 
-templates_path    = ["_templates"]
-exclude_patterns  = ["_build", "Thumbs.db", ".DS_Store"]
-source_suffix     = {".rst": "restructuredtext", ".md": "markdown"}
-master_doc        = "index"
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
+master_doc = "index"
 
 # -- autodoc / autosummary -----------------------------------------------------
-autosummary_generate      = True          # stubs not yet written; generate on build
-autodoc_default_options   = {
-    "members":          True,
-    "undoc-members":    False,
+autosummary_generate = True  # stubs not yet written; generate on build
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": False,
     "show-inheritance": True,
-    "member-order":     "bysource",
+    "member-order": "bysource",
 }
-autodoc_typehints          = "description"
-autodoc_typehints_format   = "short"
+autodoc_typehints = "description"
+autodoc_typehints_format = "short"
 
 # -- Napoleon (NumPy-style docstrings) -----------------------------------------
-napoleon_google_docstring       = False
-napoleon_numpy_docstring        = True
-napoleon_include_init_with_doc  = False
-napoleon_use_param              = True
-napoleon_use_rtype              = True
-napoleon_use_ivar               = True
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_use_ivar = True
 
 # -- numpydoc ------------------------------------------------------------------
-numpydoc_show_class_members        = False
+numpydoc_show_class_members = False
 numpydoc_show_inherited_class_members = False
-numpydoc_class_members_toctree     = False
-numpydoc_validation_checks         = set()
+numpydoc_class_members_toctree = False
+numpydoc_validation_checks = set()
 
 # -- intersphinx ---------------------------------------------------------------
 intersphinx_mapping = {
-    "python":     ("https://docs.python.org/3", None),
-    "numpy":      ("https://numpy.org/doc/stable", None),
-    "scipy":      ("https://docs.scipy.org/doc/scipy", None),
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
-    "pandas":     ("https://pandas.pydata.org/docs", None),
-    "sklearn":    ("https://scikit-learn.org/stable", None),
+    "pandas": ("https://pandas.pydata.org/docs", None),
+    "sklearn": ("https://scikit-learn.org/stable", None),
 }
 
 # -- MathJax -------------------------------------------------------------------
@@ -191,7 +194,7 @@ mathjax3_config = {
 }
 
 # -- todo ----------------------------------------------------------------------
-todo_include_todos = True          # flip to False before public release
+todo_include_todos = True  # flip to False before public release
 
 # -- MyST (Markdown) -----------------------------------------------------------
 myst_enable_extensions = [
@@ -214,9 +217,9 @@ html_theme_options = {
     # size, adapts to dark mode, and stays selectable/accessible.
     "logo": {
         "image_light": "_static/logo/pycsamt-v2-symbol.svg",
-        "image_dark":  "_static/logo/pycsamt-v2-symbol.svg",
-        "text":        "pyCSAMT",
-        "alt_text":    "pyCSAMT",
+        "image_dark": "_static/logo/pycsamt-v2-symbol.svg",
+        "text": "pyCSAMT",
+        "alt_text": "pyCSAMT",
     },
     # Navbar: version switcher sits next to the brand (numpy/pandas style);
     # search + icon links + theme toggle stay inline at the far right so
@@ -230,12 +233,12 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url":  "https://github.com/earthai-tech/pycsamt",
+            "url": "https://github.com/earthai-tech/pycsamt",
             "icon": "fa-brands fa-github",
         },
         {
             "name": "PyPI",
-            "url":  "https://pypi.org/project/pycsamt/",
+            "url": "https://pypi.org/project/pycsamt/",
             "icon": "fa-brands fa-python",
         },
     ],
@@ -247,10 +250,10 @@ html_theme_options = {
     # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
     # dark mode falls back to black-on-dark unreadable tokens.
     "pygment_light_style": "tango",
-    "pygment_dark_style":  "monokai",
+    "pygment_dark_style": "monokai",
     # Footer
     "footer_start": ["copyright"],
-    "footer_end":   ["sphinx-version", "theme-version"],
+    "footer_end": ["sphinx-version", "theme-version"],
     # Announcement banner (remove before release)
     "announcement": (
         "pyCSAMT v2 docs are under active construction. "
@@ -281,32 +284,32 @@ rst_epilog = """
 .. |Tests| replace:: :bdg-primary:`Tests`
 """
 
-html_title            = f"pyCSAMT {version}"
-html_short_title      = "pyCSAMT"
-html_favicon          = "_static/logo/pycsamt-v2-symbol.ico"
-html_static_path      = ["_static"]
+html_title = f"pyCSAMT {version}"
+html_short_title = "pyCSAMT"
+html_favicon = "_static/logo/pycsamt-v2-symbol.ico"
+html_static_path = ["_static"]
 # Static assets are organised by kind: _static/css/, _static/js/, _static/logo/
 # (paths below are relative to the _static output root).
-html_css_files        = [
+html_css_files = [
     "css/custom.css",
     "css/pycsamt-home.css",
     "css/gallery.css",
     "css/gallery-hub.css",
     "css/code-action.css",
 ]
-html_js_files         = [
+html_js_files = [
     ("js/pycsamt-home.js", {"defer": "defer"}),
-    ("js/mega-menu.js",    {"defer": "defer"}),
-    ("js/gallery-hub.js",  {"defer": "defer"}),
-    ("js/code-action.js",  {"defer": "defer"}),
-    ("js/api-search.js",   {"defer": "defer"}),
+    ("js/mega-menu.js", {"defer": "defer"}),
+    ("js/gallery-hub.js", {"defer": "defer"}),
+    ("js/code-action.js", {"defer": "defer"}),
+    ("js/api-search.js", {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).
-html_sidebars         = {"index": []}
-html_show_sourcelink  = True
-html_show_sphinx      = False
-html_copy_source      = False
+html_sidebars = {"index": []}
+html_show_sourcelink = True
+html_show_sphinx = False
+html_copy_source = False
 
 # -- LaTeX / PDF ---------------------------------------------------------------
 latex_elements = {

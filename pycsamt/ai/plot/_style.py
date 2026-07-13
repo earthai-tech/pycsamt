@@ -37,6 +37,7 @@ Alternatively use as a decorator:
 ... def make_figure():
 ...     ...
 """
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -55,29 +56,29 @@ __all__ = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 EM_COLORS = {
-    "primary": "#2166ac",      # steel blue — predicted model, main lines
-    "secondary": "#d6604d",    # terracotta — true model, reference lines
-    "true": "#1b7837",         # dark green — ground truth
-    "pred": "#762a83",         # purple — predicted
-    "error": "#b2182b",        # red — large error / warning
+    "primary": "#2166ac",  # steel blue — predicted model, main lines
+    "secondary": "#d6604d",  # terracotta — true model, reference lines
+    "true": "#1b7837",  # dark green — ground truth
+    "pred": "#762a83",  # purple — predicted
+    "error": "#b2182b",  # red — large error / warning
     "background": "white",
     "grid": "#ededed",
     "text": "#1a1a1a",
 }
 
 EM_CMAPS = {
-    "resistivity": "RdYlBu_r",    # diverging, log-scaled
-    "uncertainty": "YlOrRd",       # sequential, low-to-high spread
-    "misfit": "RdBu_r",            # diverging, centred on zero
-    "conductivity": "RdYlBu",      # inverted for conductivity maps
+    "resistivity": "RdYlBu_r",  # diverging, log-scaled
+    "uncertainty": "YlOrRd",  # sequential, low-to-high spread
+    "misfit": "RdBu_r",  # diverging, centred on zero
+    "conductivity": "RdYlBu",  # inverted for conductivity maps
 }
 
 EM_FIGSIZE = {
-    "single": (3.5, 4.5),    # single-column journal figure
-    "double": (7.0, 4.5),    # double-column / two-panel
-    "wide": (10.0, 4.0),     # wide section / profile plot
-    "square": (5.0, 5.0),    # scatter / calibration plots
-    "tall": (3.5, 6.0),      # deep 1-D profile
+    "single": (3.5, 4.5),  # single-column journal figure
+    "double": (7.0, 4.5),  # double-column / two-panel
+    "wide": (10.0, 4.0),  # wide section / profile plot
+    "square": (5.0, 5.0),  # scatter / calibration plots
+    "tall": (3.5, 6.0),  # deep 1-D profile
 }
 
 _EM_RC = {
@@ -121,6 +122,7 @@ _EM_RC = {
 # Context manager / decorator
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class EMStyle:
     """
     Context manager that applies the shared EM plot style.
@@ -142,6 +144,7 @@ class EMStyle:
 
     def __enter__(self):
         import matplotlib as mpl
+
         self._rc_backup = dict(mpl.rcParams)
         rc = dict(_EM_RC)
         rc.update(self._overrides)
@@ -150,6 +153,7 @@ class EMStyle:
 
     def __exit__(self, *_):
         import matplotlib as mpl
+
         mpl.rcParams.update(self._rc_backup)
 
     def __call__(self, func):
@@ -160,6 +164,7 @@ class EMStyle:
         def wrapper(*args, **kwargs):
             with self.__class__(self._overrides):
                 return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -178,6 +183,7 @@ def em_context(**overrides):
 # ─────────────────────────────────────────────────────────────────────────────
 # Station-axis tick configuration
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class StationTickConfig:
     """
@@ -225,10 +231,10 @@ class StationTickConfig:
         fontsize: int = 7,
         fmt: str = "{}",
     ) -> None:
-        self.every    = every
+        self.every = every
         self.rotation = rotation
         self.fontsize = fontsize
-        self.fmt      = fmt
+        self.fmt = fmt
 
     # ── public ────────────────────────────────────────────────────────────
 
@@ -262,14 +268,16 @@ class StationTickConfig:
 
         # Projected label footprint at given rotation
         # char_width ≈ fontsize × 0.006 in (empirical for 7-8 pt sans-serif)
-        char_w   = self.fontsize * 0.006
-        r        = abs(float(self.rotation))
-        r_rad    = r * 3.14159 / 180.0
-        lbl_w    = char_w * max(max_label_len, 2)
-        lbl_h    = self.fontsize * 0.014           # line height
-        eff_w    = lbl_w * abs(__import__("math").sin(r_rad)) \
-                 + lbl_h * abs(__import__("math").cos(r_rad)) \
-                 + 0.025   # small padding
+        char_w = self.fontsize * 0.006
+        r = abs(float(self.rotation))
+        r_rad = r * 3.14159 / 180.0
+        lbl_w = char_w * max(max_label_len, 2)
+        lbl_h = self.fontsize * 0.014  # line height
+        eff_w = (
+            lbl_w * abs(__import__("math").sin(r_rad))
+            + lbl_h * abs(__import__("math").cos(r_rad))
+            + 0.025
+        )  # small padding
 
         if space_per_station >= eff_w:
             return 1
@@ -308,7 +316,7 @@ class StationTickConfig:
         """
         import matplotlib.pyplot as _plt  # noqa: F401 — ensure plt available
 
-        n  = len(labels)
+        n = len(labels)
         fw = ax.figure.get_figwidth() if ax.figure is not None else 10.0
         ml = max((len(str(lbl)) for lbl in labels), default=4)
         every = self.compute_every(n, fw, ml)
@@ -341,6 +349,7 @@ class StationTickConfig:
 # Shared colorbar helper
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def add_colorbar(
     mappable,
     ax,
@@ -370,9 +379,11 @@ def add_colorbar(
     cbar : Colorbar
     """
     from mpl_toolkits.axes_grid1 import make_axes_locatable
+
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size=size, pad=pad)
     import matplotlib.pyplot as plt
+
     cbar = plt.colorbar(mappable, cax=cax)
     cbar.set_label(label, fontsize=10)
     cbar.ax.tick_params(labelsize=9)

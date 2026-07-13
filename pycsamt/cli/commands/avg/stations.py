@@ -80,9 +80,9 @@ def stations(
 
     # Basic station info from AVG
     st = obj.info.station
-    names  = list(st.names)  if st.names  else []
+    names = list(st.names) if st.names else []
     values = list(st.values) if st.values is not None else []
-    unit   = getattr(st, "unit", "m")
+    unit = getattr(st, "unit", "m")
 
     rows = [
         {"name": n, "position": v, "unit": unit}
@@ -96,22 +96,38 @@ def stations(
         try:
             obj.add_topography(str(stn_file))
             topo = obj.topo
-            if topo is not None and hasattr(topo, "frame") and topo.frame is not None:
+            if (
+                topo is not None
+                and hasattr(topo, "frame")
+                and topo.frame is not None
+            ):
                 topo_frame = topo.frame
                 topo_attached = True
         except Exception as exc:  # noqa: BLE001
-            click.echo(f"Warning: could not load {stn_file.name}: {exc}", err=True)
+            click.echo(
+                f"Warning: could not load {stn_file.name}: {exc}", err=True
+            )
 
     if topo_attached and topo_frame is not None:
         import numpy as np  # noqa: PLC0415
+
         tf = topo_frame.copy()
         stn_col = (
             tf["station"].to_numpy(float, na_value=float("nan"))
             if "station" in tf.columns
             else np.arange(len(tf), dtype=float)
         )
-        topo_cols = [c for c in ("easting", "northing", "elevation",
-                                  "latitude", "longitude") if c in tf.columns]
+        topo_cols = [
+            c
+            for c in (
+                "easting",
+                "northing",
+                "elevation",
+                "latitude",
+                "longitude",
+            )
+            if c in tf.columns
+        ]
         for r in rows:
             pos = r.get("position")
             if pos is not None:
@@ -149,19 +165,23 @@ def stations(
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
+
         tbl = Table("Name", f"Position ({unit})")
         if has_topo:
             for c in ["Easting", "Northing", "Elev (m)", "Lat", "Lon"]:
                 tbl.add_column(c, justify="right")
         for r in rows:
-            row_vals = [str(r.get("name", "?")), f"{r.get('position', 0):.1f}"]
+            row_vals = [
+                str(r.get("name", "?")),
+                f"{r.get('position', 0):.1f}",
+            ]
             if has_topo:
                 row_vals += [
-                    f"{r.get('easting',  float('nan')):.1f}",
+                    f"{r.get('easting', float('nan')):.1f}",
                     f"{r.get('northing', float('nan')):.1f}",
-                    f"{r.get('elevation',float('nan')):.1f}",
+                    f"{r.get('elevation', float('nan')):.1f}",
                     f"{r.get('latitude', float('nan')):.5f}",
-                    f"{r.get('longitude',float('nan')):.5f}",
+                    f"{r.get('longitude', float('nan')):.5f}",
                 ]
             tbl.add_row(*row_vals)
         Console().print(tbl)
@@ -172,14 +192,16 @@ def stations(
         click.echo(hdr)
         click.echo("-" * len(hdr))
         for r in rows:
-            line = f"{str(r.get('name','?')):<10} {r.get('position', 0):>10.1f}"
+            line = (
+                f"{str(r.get('name', '?')):<10} {r.get('position', 0):>10.1f}"
+            )
             if has_topo:
                 line += (
-                    f" {r.get('easting',  float('nan')):>12.1f}"
+                    f" {r.get('easting', float('nan')):>12.1f}"
                     f" {r.get('northing', float('nan')):>12.1f}"
-                    f" {r.get('elevation',float('nan')):>9.1f}"
+                    f" {r.get('elevation', float('nan')):>9.1f}"
                     f" {r.get('latitude', float('nan')):>12.5f}"
-                    f" {r.get('longitude',float('nan')):>12.5f}"
+                    f" {r.get('longitude', float('nan')):>12.5f}"
                 )
             click.echo(line)
 

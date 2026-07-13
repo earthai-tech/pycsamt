@@ -51,6 +51,7 @@ from typing import Any
 # Raw-dict → step list helper
 # ---------------------------------------------------------------------------
 
+
 def _steps_from_list(
     raw_steps: list[dict[str, Any]],
 ) -> list[tuple[str, Any]]:
@@ -99,6 +100,7 @@ def _pipeline_from_dict(cfg: dict[str, Any]) -> Any:
 # ---------------------------------------------------------------------------
 # Format-specific loaders
 # ---------------------------------------------------------------------------
+
 
 def load_yaml(path: str | Path) -> dict[str, Any]:
     """Parse a YAML pipeline config file and return the raw dict."""
@@ -156,6 +158,7 @@ def load_py(path: str | Path) -> dict[str, Any]:
 # Pipeline serialiser (YAML string output)
 # ---------------------------------------------------------------------------
 
+
 def _coerce_for_yaml(obj: Any) -> Any:
     """Recursively convert tuples → lists so yaml.safe_load can reload."""
     if isinstance(obj, dict):
@@ -188,6 +191,7 @@ def pipeline_to_yaml(
 
     try:
         import yaml
+
         return yaml.dump(
             _coerce_for_yaml(data),
             default_flow_style=False,

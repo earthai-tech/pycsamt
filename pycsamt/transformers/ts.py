@@ -190,23 +190,23 @@ class TStoEDI(TransformerMixin):
         **spectra_kws: Any,
     ) -> None:
         super().__init__()
-        self.estimator       = estimator
-        self.remote          = remote
-        self.nfft            = nfft
-        self.overlap         = overlap
-        self.per_decade      = per_decade
-        self.fmin            = fmin
-        self.fmax            = fmax
-        self.robust          = robust
-        self.ridge           = ridge
-        self.estimate_error  = estimate_error
+        self.estimator = estimator
+        self.remote = remote
+        self.nfft = nfft
+        self.overlap = overlap
+        self.per_decade = per_decade
+        self.fmin = fmin
+        self.fmax = fmax
+        self.robust = robust
+        self.ridge = ridge
+        self.estimate_error = estimate_error
         self.include_spectra = include_spectra
         self.include_tseries = include_tseries
-        self.reader_kws      = dict(reader_kws or {})
-        self.station_suffix  = station_suffix
-        self.skip_errors     = skip_errors
-        self.verbose         = verbose
-        self.spectra_kws     = dict(spectra_kws)
+        self.reader_kws = dict(reader_kws or {})
+        self.station_suffix = station_suffix
+        self.skip_errors = skip_errors
+        self.verbose = verbose
+        self.spectra_kws = dict(spectra_kws)
 
     # ------------------------------------------------------------------
     # Public API
@@ -259,12 +259,10 @@ class TStoEDI(TransformerMixin):
         )
         if result.n_fail and not self.skip_errors:
             msgs = "\n  ".join(
-                f"{r.source}: {r.error}"
-                for r in result.failures
+                f"{r.source}: {r.error}" for r in result.failures
             )
             raise RuntimeError(
-                f"{result.n_fail} record(s) failed to "
-                f"convert:\n  {msgs}"
+                f"{result.n_fail} record(s) failed to convert:\n  {msgs}"
             )
         return result.collection
 
@@ -295,10 +293,7 @@ class TStoEDI(TransformerMixin):
                 "directory, or a TSData object."
             )
 
-        out_dir = (
-            Path(output_dir) if output_dir is not None
-            else None
-        )
+        out_dir = Path(output_dir) if output_dir is not None else None
         if out_dir is not None:
             out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -310,39 +305,26 @@ class TStoEDI(TransformerMixin):
             sname = station_name if single else None
             label = self._label(rec)
             try:
-                ed = self._transform_one(
-                    rec, station_name=sname
-                )
+                ed = self._transform_one(rec, station_name=sname)
                 if out_dir is not None:
-                    self._write_edi(
-                        ed, out_dir, verbose=self.verbose
-                    )
+                    self._write_edi(ed, out_dir, verbose=self.verbose)
                 edis.append(ed)
                 if self.verbose >= 1:
-                    tip_str = (
-                        "with tipper" if ed.has_tipper
-                        else "no tipper"
-                    )
+                    tip_str = "with tipper" if ed.has_tipper else "no tipper"
                     _log.info(
                         "Converted %-30s  Z=%d freq  %s",
                         label,
-                        ed.Z.n_freq if ed.Z is not None
-                        else 0,
+                        ed.Z.n_freq if ed.Z is not None else 0,
                         tip_str,
                     )
             except Exception as exc:  # noqa: BLE001
                 msg = str(exc)
-                failures.append(
-                    _FailRecord(source=label, error=msg)
-                )
+                failures.append(_FailRecord(source=label, error=msg))
                 if not self.skip_errors:
                     raise RuntimeError(
-                        f"Conversion failed for {label}: "
-                        f"{msg}"
+                        f"Conversion failed for {label}: {msg}"
                     ) from exc
-                _log.warning(
-                    "Skipping %s — %s", label, msg
-                )
+                _log.warning("Skipping %s — %s", label, msg)
 
         return TransformResult(
             collection=EDICollection(items=edis, verbose=0),
@@ -410,9 +392,7 @@ class TStoEDI(TransformerMixin):
             )
         return str(record)
 
-    def _resolve_sources(
-        self, source: Any
-    ) -> list[Path | TSData]:
+    def _resolve_sources(self, source: Any) -> list[Path | TSData]:
         """Normalise *source* to records (paths or TSData)."""
         if isinstance(source, TSData):
             return [source]
@@ -424,30 +404,17 @@ class TStoEDI(TransformerMixin):
             if p.is_dir():
                 found: list[Path] = []
                 for pat in _TS_PATTERNS:
-                    found.extend(
-                        f for f in p.rglob(pat)
-                        if f.is_file()
-                    )
+                    found.extend(f for f in p.rglob(pat) if f.is_file())
                 return sorted(set(found))
-            raise ValueError(
-                f"{source!r} is neither a file nor a "
-                "directory."
-            )
+            raise ValueError(f"{source!r} is neither a file nor a directory.")
 
         if isinstance(source, (list, tuple)):
             records: list[Path | TSData] = []
             for item in source:
-                records.extend(
-                    self._resolve_sources(item)
-                )
+                records.extend(self._resolve_sources(item))
             # keep TSData objects; de-duplicate paths only
-            paths = sorted(
-                {r for r in records if isinstance(r, Path)}
-            )
-            objs = [
-                r for r in records
-                if isinstance(r, TSData)
-            ]
+            paths = sorted({r for r in records if isinstance(r, Path)})
+            objs = [r for r in records if isinstance(r, TSData)]
             return objs + paths
 
         raise TypeError(
@@ -462,15 +429,11 @@ class TStoEDI(TransformerMixin):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _write_edi(
-        ed: EDIFile, out_dir: Path, verbose: int = 0
-    ) -> Path:
+    def _write_edi(ed: EDIFile, out_dir: Path, verbose: int = 0) -> Path:
         """Write *ed* to *out_dir* and return the path."""
         try:
             name = f"{ed.station or 'site'}_ts.edi"
-            out = ed.write(
-                new_edifn=name, savepath=str(out_dir)
-            )
+            out = ed.write(new_edifn=name, savepath=str(out_dir))
             if verbose >= 1:
                 _log.info(
                     "  -> wrote %s",
@@ -480,7 +443,8 @@ class TStoEDI(TransformerMixin):
         except Exception as exc:  # noqa: BLE001
             _log.warning(
                 "write failed for %s: %s",
-                getattr(ed, "station", "?"), exc,
+                getattr(ed, "station", "?"),
+                exc,
             )
             raise
 
@@ -494,8 +458,6 @@ class TStoEDI(TransformerMixin):
         return cls(estimate_error=True, **kw)
 
     @classmethod
-    def with_remote(
-        cls, remote: TSData, **kw: Any
-    ) -> TStoEDI:
+    def with_remote(cls, remote: TSData, **kw: Any) -> TStoEDI:
         """Return a remote-reference transformer."""
         return cls(estimator="rr", remote=remote, **kw)

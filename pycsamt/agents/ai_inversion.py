@@ -44,9 +44,9 @@ Reply in plain scientific English.
 """
 
 # ── default training config ───────────────────────────────────────────────────
-_DEFAULT_FREQS  = np.logspace(-4, 3, 40)  # 40 frequencies 10⁻⁴ – 10³ Hz
-_DEFAULT_N_SAMP = 2_000                   # fast default; 10 000 for production
-_DEFAULT_EPOCHS = 30                      # fast default; 100+ for production
+_DEFAULT_FREQS = np.logspace(-4, 3, 40)  # 40 frequencies 10⁻⁴ – 10³ Hz
+_DEFAULT_N_SAMP = 2_000  # fast default; 10 000 for production
+_DEFAULT_EPOCHS = 30  # fast default; 100+ for production
 
 
 class AIInversionAgent(BaseAgent):
@@ -131,9 +131,12 @@ class AIInversionAgent(BaseAgent):
             get_pretrained_info,
         )
 
-        info      = get_pretrained_info(model_name)
+        info = get_pretrained_info(model_name)
         ckpt_path = download_checkpoint(
-            model_name, cache_dir=cache_dir, force=force_download, verbose=True,
+            model_name,
+            cache_dir=cache_dir,
+            force=force_download,
+            verbose=True,
         )
         return cls(
             api_key=api_key,
@@ -164,12 +167,12 @@ class AIInversionAgent(BaseAgent):
             llm_provider=llm_provider,
             section_preset="inversion",
         )
-        self.arch             = arch
-        self.n_layers         = n_layers
-        self.n_train_samples  = n_train_samples
-        self.epochs           = epochs
-        self._freqs_cfg       = freqs
-        self.pretrained       = pretrained
+        self.arch = arch
+        self.n_layers = n_layers
+        self.n_train_samples = n_train_samples
+        self.epochs = epochs
+        self._freqs_cfg = freqs
+        self.pretrained = pretrained
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -184,8 +187,11 @@ class AIInversionAgent(BaseAgent):
                 ForwardDataset,
                 generate_dataset,
             )
+
             if get_backend_instance() is None:
-                raise ImportError("No DL backend available (torch or tensorflow).")
+                raise ImportError(
+                    "No DL backend available (torch or tensorflow)."
+                )
         except ImportError as exc:
             return AgentResult.failed(
                 f"AI inversion requires PyTorch or TensorFlow: {exc}",
@@ -205,18 +211,22 @@ class AIInversionAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time()-t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time()-t0)
+            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        arch             = str(input_data.get("arch",             self.arch))
-        epochs           = int(input_data.get("epochs",           self.epochs))
-        n_train          = int(input_data.get("n_train_samples",  self.n_train_samples))
-        output_dir       = input_data.get("output_dir")
-        freqs            = np.asarray(input_data.get("freqs") or self._freqs_cfg
-                                      or _DEFAULT_FREQS, dtype=float)
+        arch = str(input_data.get("arch", self.arch))
+        epochs = int(input_data.get("epochs", self.epochs))
+        n_train = int(input_data.get("n_train_samples", self.n_train_samples))
+        output_dir = input_data.get("output_dir")
+        freqs = np.asarray(
+            input_data.get("freqs") or self._freqs_cfg or _DEFAULT_FREQS,
+            dtype=float,
+        )
 
         # ── fast-fail: require usable impedance BEFORE training ───────────────
         # Training synthesises data and fits a network (can take minutes)
@@ -257,16 +267,21 @@ class AIInversionAgent(BaseAgent):
         if self.pretrained and Path(self.pretrained).exists():
             try:
                 inverter = EMInverter1D.load(self.pretrained)
-                self._log.info("Loaded pre-trained model from %s", self.pretrained)
+                self._log.info(
+                    "Loaded pre-trained model from %s", self.pretrained
+                )
             except Exception as exc:
-                warnings.append(f"Could not load pre-trained model: {exc}. Training fresh.")
+                warnings.append(
+                    f"Could not load pre-trained model: {exc}. Training fresh."
+                )
                 self.pretrained = None
 
         if not self.pretrained:
             # generate synthetic training set
             self._log.info(
                 "Generating %d synthetic training samples (freqs=%d) …",
-                n_train, len(freqs),
+                n_train,
+                len(freqs),
             )
             try:
                 dataset = generate_dataset(
@@ -281,7 +296,8 @@ class AIInversionAgent(BaseAgent):
                 )
                 self._log.info("Training %s for %d epochs …", arch, epochs)
                 inverter.fit(
-                    dataset.X, dataset.y,
+                    dataset.X,
+                    dataset.y,
                     epochs=epochs,
                     batch_size=min(256, n_train // 4),
                     patience=max(5, epochs // 5),
@@ -322,46 +338,39 @@ class AIInversionAgent(BaseAgent):
                 _models = inverter.predict_models(X_obs[None, :])
                 model = _models[0] if _models else None
                 if model is None:
-                    warnings.append(
-                        f"{nm}: prediction produced no model."
-                    )
+                    warnings.append(f"{nm}: prediction produced no model.")
                     continue
                 rhos = np.asarray(model.resistivity, dtype=float)
-                ths  = np.asarray(model.thickness, dtype=float)
+                ths = np.asarray(model.thickness, dtype=float)
                 log_rho_pred = np.log10(np.clip(rhos, 1e-12, None))
                 predictions[nm] = log_rho_pred
 
                 # forward RMS: response of the predicted model vs observed
                 from ..forward import MT1DForward
+
                 try:
                     resp = MT1DForward(freqs=freqs).run(model)
                     rho_fwd = np.asarray(resp.rho_a)
                     rho_fwd_xy = (
-                        rho_fwd[:, 0, 1] if rho_fwd.ndim == 3
-                        else rho_fwd
+                        rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
                     )
                     per_obs = 1.0 / np.where(fr == 0, np.nan, fr)
                     per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
                     rho_obs_xy = getattr(Zobj, "resistivity_xy", None)
                     if rho_obs_xy is None:
                         rho_obs_xy = (
-                            (0.2 / np.where(fr == 0, np.nan, fr))
-                            * np.abs(z[:, 0, 1]) ** 2
-                        )
+                            0.2 / np.where(fr == 0, np.nan, fr)
+                        ) * np.abs(z[:, 0, 1]) ** 2
                     rho_obs_xy = np.asarray(rho_obs_xy, float).ravel()
                     # forward curve sorted by ascending period (np.interp
                     # requires an increasing x grid)
                     fwd_ok = np.isfinite(per_fwd) & (rho_fwd_xy > 0)
                     o = np.argsort(per_fwd[fwd_ok])
                     xp = np.log10(per_fwd[fwd_ok][o])
-                    fp = np.log10(
-                        np.clip(rho_fwd_xy[fwd_ok][o], 1e-6, None)
-                    )
+                    fp = np.log10(np.clip(rho_fwd_xy[fwd_ok][o], 1e-6, None))
                     mask = np.isfinite(per_obs) & (rho_obs_xy > 0)
                     if mask.sum() >= 2 and xp.size >= 2:
-                        interp = np.interp(
-                            np.log10(per_obs[mask]), xp, fp
-                        )
+                        interp = np.interp(np.log10(per_obs[mask]), xp, fp)
                         obs_log = np.log10(
                             np.clip(rho_obs_xy[mask], 1e-6, None)
                         )
@@ -369,26 +378,27 @@ class AIInversionAgent(BaseAgent):
                             np.sqrt(np.mean((obs_log - interp) ** 2))
                         )
                 except Exception as _rms_exc:
-                    warnings.append(
-                        f"{nm}: RMS not computed ({_rms_exc})."
-                    )
+                    warnings.append(f"{nm}: RMS not computed ({_rms_exc}).")
 
                 if not best_model:
                     best_model = {
-                        "station":     nm,
+                        "station": nm,
                         "resistivity": list(rhos),
-                        "thickness":   list(ths),
-                        "log_rho":     list(log_rho_pred),
+                        "thickness": list(ths),
+                        "log_rho": list(log_rho_pred),
                     }
             except Exception as exc:
                 warnings.append(f"Prediction failed for {nm}: {exc}")
 
-        rms_global = float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        rms_global = (
+            float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        )
         n_pred = len(predictions)
 
         # ── save model ────────────────────────────────────────────────────────
         if output_dir:
             import os
+
             os.makedirs(output_dir, exist_ok=True)
             try:
                 model_path = f"{output_dir}/ai_inverter_{arch}.pkl"
@@ -406,14 +416,26 @@ class AIInversionAgent(BaseAgent):
                 from ..ai.plot.convergence import (
                     plot_convergence,
                 )
+
                 fig_cv = plot_convergence(train_history)
                 if fig_cv is not None:
-                    f = fig_cv if hasattr(fig_cv,"savefig") else (
-                        fig_cv.get_figure() if hasattr(fig_cv,"get_figure") else None)
+                    f = (
+                        fig_cv
+                        if hasattr(fig_cv, "savefig")
+                        else (
+                            fig_cv.get_figure()
+                            if hasattr(fig_cv, "get_figure")
+                            else None
+                        )
+                    )
                     if f is not None:
                         figures["convergence"] = f
-                        p = self._save_figure(f, output_dir, "ai_convergence",
-                                              warnings_list=warnings)
+                        p = self._save_figure(
+                            f,
+                            output_dir,
+                            "ai_convergence",
+                            warnings_list=warnings,
+                        )
                         if p:
                             fig_paths["convergence"] = p
             except Exception as exc:
@@ -425,8 +447,12 @@ class AIInversionAgent(BaseAgent):
                 fig_sec = _plot_ai_section(predictions, self.n_layers, freqs)
                 if fig_sec is not None:
                     figures["ai_section"] = fig_sec
-                    p = self._save_figure(fig_sec, output_dir, "ai_model_section",
-                                          warnings_list=warnings)
+                    p = self._save_figure(
+                        fig_sec,
+                        output_dir,
+                        "ai_model_section",
+                        warnings_list=warnings,
+                    )
                     if p:
                         fig_paths["ai_section"] = p
             except Exception as exc:
@@ -449,7 +475,9 @@ class AIInversionAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=250)
 
         elapsed = time.time() - t0
-        rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        rms_str = (
+            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        )
         if n_pred == 0:
             summary = (
                 f"AI inversion ({arch}, {self.n_layers} layers) trained, "
@@ -466,15 +494,15 @@ class AIInversionAgent(BaseAgent):
             status="success" if n_pred > 0 else "needs_review",
             summary=summary,
             data={
-                "inverter":         inverter,
-                "predictions":      predictions,
-                "best_model":       best_model,
-                "rms_per_station":  rms_per,
-                "rms_global":       rms_global,
-                "train_history":    train_history,
-                "figures":          figures,
-                "figure_paths":     fig_paths,
-                "freqs":            freqs,
+                "inverter": inverter,
+                "predictions": predictions,
+                "best_model": best_model,
+                "rms_per_station": rms_per,
+                "rms_global": rms_global,
+                "train_history": train_history,
+                "figures": figures,
+                "figure_paths": fig_paths,
+                "freqs": freqs,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -484,6 +512,7 @@ class AIInversionAgent(BaseAgent):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _z_to_features(
     z_obj: Any,
@@ -535,18 +564,15 @@ def _z_to_features(
             return None
 
         order = np.argsort(lf[mask])
-        lf_obs  = lf[mask][order]
+        lf_obs = lf[mask][order]
         rho_obs = np.log10(np.clip(rho_xy[mask], 1e-12, None))[order]
         pha_obs = pha_xy[mask][order]
 
-        lf_t  = np.log10(freqs_target)
+        lf_t = np.log10(freqs_target)
         rho_i = np.interp(lf_t, lf_obs, rho_obs)
         pha_i = np.interp(lf_t, lf_obs, pha_obs)
 
-        feat = (
-            np.concatenate([rho_i, pha_i])
-            if include_phase else rho_i
-        )
+        feat = np.concatenate([rho_i, pha_i]) if include_phase else rho_i
         return feat.astype(np.float32)
     except Exception:
         return None
@@ -554,10 +580,12 @@ def _z_to_features(
 
 def _default_thicknesses(n_layers: int, freqs: np.ndarray) -> np.ndarray:
     """Return log-spaced thicknesses spanning Bostick depth range."""
-    rho_ref = 100.0   # Ω·m reference
+    rho_ref = 100.0  # Ω·m reference
     per_max = float(1.0 / freqs.min())
-    d_max   = np.sqrt(rho_ref * per_max / (4 * np.pi * 1e-7 * 2 * np.pi))
-    ths = np.logspace(np.log10(max(d_max / 100, 50)), np.log10(d_max), n_layers - 1)
+    d_max = np.sqrt(rho_ref * per_max / (4 * np.pi * 1e-7 * 2 * np.pi))
+    ths = np.logspace(
+        np.log10(max(d_max / 100, 50)), np.log10(d_max), n_layers - 1
+    )
     return ths.astype(float)
 
 
@@ -583,7 +611,7 @@ def _plot_ai_section(
         mat[:n, si] = log_rho[:n]
 
     ths = _default_thicknesses(n_layers, freqs)
-    depths = np.concatenate([[0], np.cumsum(ths)]) / 1000.0   # km
+    depths = np.concatenate([[0], np.cumsum(ths)]) / 1000.0  # km
 
     section = PYCSAMT_SECTION.style_for("inversion")
     fig_w, fig_h = section.figsize_for(n_stations=n_st, n_y=n_layers)
@@ -600,14 +628,20 @@ def _plot_ai_section(
         interpolation="nearest",
     )
     from ..api.station import PYCSAMT_STATION_RENDERING
+
     PYCSAMT_STATION_RENDERING.apply(
-        ax, np.arange(n_st, dtype=float), station_names,
-        preset="inversion", xlim=(-0.5, n_st - 0.5),
+        ax,
+        np.arange(n_st, dtype=float),
+        station_names,
+        preset="inversion",
+        xlim=(-0.5, n_st - 0.5),
     )
     ax.set_ylabel("Depth (km)", fontsize=9)
     ax.tick_params(axis="y", labelsize=8)
     section.add_colorbar(im, ax, label="$\\log_{10}\\rho$ (Ω·m)")
-    ax.set_title("AI-predicted resistivity section", fontsize=10, fontweight="bold")
+    ax.set_title(
+        "AI-predicted resistivity section", fontsize=10, fontweight="bold"
+    )
     fig.tight_layout()
     return fig
 

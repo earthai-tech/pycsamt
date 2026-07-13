@@ -201,14 +201,23 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
                 pass
         if isinstance(self.model, dict) and "rho_2d" in self.model:
             rho = np.asarray(self.model["rho_2d"], dtype=float)
-            x = np.asarray(self.model.get("x_centers", np.arange(rho.shape[1])), dtype=float)
-            z = np.asarray(self.model.get("z_centers", np.arange(rho.shape[0])), dtype=float)
+            x = np.asarray(
+                self.model.get("x_centers", np.arange(rho.shape[1])),
+                dtype=float,
+            )
+            z = np.asarray(
+                self.model.get("z_centers", np.arange(rho.shape[0])),
+                dtype=float,
+            )
             return ResistivityModel.from_array(
                 rho,
                 x,
                 z,
-                station_x=np.asarray(self.model.get("station_x", x), dtype=float),
-                station_names=list(self.model.get("station_names", [])) or None,
+                station_x=np.asarray(
+                    self.model.get("station_x", x), dtype=float
+                ),
+                station_names=list(self.model.get("station_names", []))
+                or None,
                 method=f"{self.backend}:{self.method}",
                 rms=self.rms,
             )
@@ -216,11 +225,19 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
             raise ValueError("result has no model to convert.")
 
         resistivity = np.asarray(
-            getattr(self.model, "resistivities", getattr(self.model, "resistivity", [])),
+            getattr(
+                self.model,
+                "resistivities",
+                getattr(self.model, "resistivity", []),
+            ),
             dtype=float,
         )
         thickness = np.asarray(
-            getattr(self.model, "thicknesses", getattr(self.model, "thickness", [])),
+            getattr(
+                self.model,
+                "thicknesses",
+                getattr(self.model, "thickness", []),
+            ),
             dtype=float,
         )
         if resistivity.size == 0 or thickness.size != resistivity.size - 1:

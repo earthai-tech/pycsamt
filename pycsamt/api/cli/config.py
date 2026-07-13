@@ -52,6 +52,7 @@ _VERBOSE_LEVELS = {0: "quiet", 1: "info", 2: "debug"}
 # Sub-config dataclasses
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LogConfig:
     """Logging / verbosity settings."""
@@ -101,6 +102,7 @@ class BuildConfig:
 # ---------------------------------------------------------------------------
 # Container
 # ---------------------------------------------------------------------------
+
 
 class PyCSAMTCLI:
     """Package-wide CLI configuration container.

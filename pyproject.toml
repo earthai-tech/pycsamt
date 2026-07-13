@@ -95,6 +95,10 @@ docs = [
     "sphinx-gallery>=0.16",
     "sphinx-autodoc-typehints>=2.0",
     "sphinx-autobuild>=2024.2",
+    # Interactive map gallery (docs/examples/map_3d): Plotly figures are
+    # scraped as HTML embeds; Kaleido is used for static image export.
+    "plotly>=5.20",
+    "kaleido",
 ]
 
 # Desktop application

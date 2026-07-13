@@ -42,7 +42,8 @@ from ._base import _get_sites, site
     help="Rotate impedance tensor by this azimuthal angle (degrees).",
 )
 @click.option(
-    "--freq", "freq_range",
+    "--freq",
+    "freq_range",
     type=FreqRange(),
     default=None,
     metavar="FMIN:FMAX",
@@ -133,8 +134,14 @@ def edit(
     configure_cli(log__level=verbose, log__color=not no_color)
 
     # Require at least one edit operation
-    ops = [rotate_deg, freq_range, fill_missing,
-           recompute_rho_phase, set_coords, coords_table]
+    ops = [
+        rotate_deg,
+        freq_range,
+        fill_missing,
+        recompute_rho_phase,
+        set_coords,
+        coords_table,
+    ]
     if not any(op is not None and op is not False for op in ops):
         raise click.UsageError(
             "Specify at least one edit operation: "
@@ -163,7 +170,9 @@ def edit(
     if freq_range is not None:
         ops_applied.append(f"select_freq({freq_range[0]}–{freq_range[1]} Hz)")
         if not dry_run:
-            result = edit_mod.select_freq_all(result, freq_range[0], freq_range[1])
+            result = edit_mod.select_freq_all(
+                result, freq_range[0], freq_range[1]
+            )
 
     if fill_missing:
         ops_applied.append("fill_missing")
@@ -206,6 +215,7 @@ def edit(
     from pycsamt.site.export import (
         write_sites,  # noqa: PLC0415
     )
+
     try:
         written = write_sites(result, output_dir, exist_ok=overwrite)
     except Exception as exc:  # noqa: BLE001

@@ -65,8 +65,11 @@ class TDEMWindow(PanelWindow):
     def _build_params(self, layout: QVBoxLayout) -> None:
         # ── Data loading ──────────────────────────────────────────────
         grp_load, lay_load = make_group("Data")
-        self._btn_browse = icon_button("📂  Browse folder…", "open",
-                                       "Select folder with .AVG / .Z / .LOG files")
+        self._btn_browse = icon_button(
+            "📂  Browse folder…",
+            "open",
+            "Select folder with .AVG / .Z / .LOG files",
+        )
         self._btn_browse.clicked.connect(self._on_browse)
         lay_load.addWidget(self._btn_browse)
 
@@ -77,7 +80,9 @@ class TDEMWindow(PanelWindow):
         self._load_progress.setVisible(False)
         lay_load.addWidget(self._load_progress)
 
-        self._info_lbl = QLabel("No TDEM data loaded.\nBrowse to a folder\ncontaining .AVG files.")
+        self._info_lbl = QLabel(
+            "No TDEM data loaded.\nBrowse to a folder\ncontaining .AVG files."
+        )
         self._info_lbl.setObjectName("InfoLabel")
         self._info_lbl.setWordWrap(True)
         self._info_lbl.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -90,7 +95,9 @@ class TDEMWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_cat.addWidget(self._combo_category)
         layout.addWidget(grp_cat)
 
@@ -112,10 +119,12 @@ class TDEMWindow(PanelWindow):
 
         # ── Actions ───────────────────────────────────────────────────
         grp_act, lay_act = make_group("Actions")
-        self._btn_run    = icon_button("↻  Run / Refresh", "tdem",
-                                       "Render the selected TDEM plot")
-        self._btn_export = icon_button("⬆  Export…", "export",
-                                       "Save figure to file")
+        self._btn_run = icon_button(
+            "↻  Run / Refresh", "tdem", "Render the selected TDEM plot"
+        )
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Save figure to file"
+        )
         self._btn_run.clicked.connect(self._on_run)
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_run)
@@ -156,7 +165,9 @@ class TDEMWindow(PanelWindow):
         self._load_progress.setValue(0)
         self._btn_run.setEnabled(False)
 
-        ok = self._ctrl.load_folder(folder, progress_cb=self._load_progress.setValue)
+        ok = self._ctrl.load_folder(
+            folder, progress_cb=self._load_progress.setValue
+        )
 
         self._load_progress.setVisible(False)
         self._btn_run.setEnabled(True)
@@ -165,7 +176,9 @@ class TDEMWindow(PanelWindow):
             self._info_lbl.setText(self._ctrl.summary)
             self._status_lbl.setText("Data loaded — click Run to render.")
         else:
-            self._info_lbl.setText(self._ctrl.summary or "No TDEM files found.")
+            self._info_lbl.setText(
+                self._ctrl.summary or "No TDEM files found."
+            )
             self._status_lbl.setText("Load failed.")
 
     def _on_category_changed(self, row: int) -> None:
@@ -181,7 +194,7 @@ class TDEMWindow(PanelWindow):
         self._update_desc(row, 0)
 
     def _on_run(self) -> None:
-        cat_row  = self._combo_category.currentIndex()
+        cat_row = self._combo_category.currentIndex()
         plot_row = self._combo_plot.currentIndex()
         if cat_row < 0 or plot_row < 0:
             return
@@ -193,7 +206,9 @@ class TDEMWindow(PanelWindow):
         self._status_lbl.setText(f"Running {class_name}…")
         self._btn_run.setEnabled(False)
         try:
-            new_fig = self._ctrl.draw(class_name, has_ax, data_key, self._canvas.figure)
+            new_fig = self._ctrl.draw(
+                class_name, has_ax, data_key, self._canvas.figure
+            )
             if new_fig is not None:
                 self._canvas.show_figure(new_fig)
             else:
@@ -208,6 +223,7 @@ class TDEMWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── Helpers ───────────────────────────────────────────────────────

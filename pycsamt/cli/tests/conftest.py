@@ -35,16 +35,17 @@ from click.testing import CliRunner
 #   parents[2] = <repo>/pycsamt/
 #   parents[3] = <repo>/                ← repo root
 
-_PROJECT_ROOT  = Path(__file__).resolve().parents[3]   # pycsamt/ repo root
-_EDI_OUT       = _PROJECT_ROOT / "edi_out"
-_DATA_3EDIS    = _PROJECT_ROOT / "data" / "3edis"
-_DATA_AMT_TIP  = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
-_DATA_WILLY    = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]  # pycsamt/ repo root
+_EDI_OUT = _PROJECT_ROOT / "edi_out"
+_DATA_3EDIS = _PROJECT_ROOT / "data" / "3edis"
+_DATA_AMT_TIP = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
+_DATA_WILLY = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _first_edi_dir(*candidates: Path) -> Path | None:
     """Return the first candidate that contains at least one .edi file."""
@@ -57,6 +58,7 @@ def _first_edi_dir(*candidates: Path) -> Path | None:
 # ---------------------------------------------------------------------------
 # EDI directory fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def edi_dir() -> Path:
@@ -103,6 +105,7 @@ def site_edi_dir_writable(site_edi_dir: Path, tmp_path: Path) -> Path:
 # CLI runner
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def runner() -> CliRunner:
     """Click test runner."""
@@ -112,6 +115,7 @@ def runner() -> CliRunner:
 # ---------------------------------------------------------------------------
 # Isolated home directory (avoids polluting ~/.pycsamt during tests)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -124,17 +128,19 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     import pycsamt.cli.commands.survey as _cmd_survey
     import pycsamt.cli.survey as _survey
 
-    fake_home   = tmp_path / "home"
+    fake_home = tmp_path / "home"
     pycsamt_dir = fake_home / ".pycsamt"
-    cache_root  = pycsamt_dir / "cache"
+    cache_root = pycsamt_dir / "cache"
     fake_home.mkdir()
     pycsamt_dir.mkdir()
 
-    monkeypatch.setattr(_survey, "_PYCSAMT_DIR",  pycsamt_dir)
-    monkeypatch.setattr(_survey, "_CONTEXT_FILE", pycsamt_dir / "context.json")
-    monkeypatch.setattr(_survey, "_CACHE_ROOT",   cache_root)
-    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT",   cache_root)
-    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR",  pycsamt_dir)
+    monkeypatch.setattr(_survey, "_PYCSAMT_DIR", pycsamt_dir)
+    monkeypatch.setattr(
+        _survey, "_CONTEXT_FILE", pycsamt_dir / "context.json"
+    )
+    monkeypatch.setattr(_survey, "_CACHE_ROOT", cache_root)
+    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root)
+    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR", pycsamt_dir)
 
     return fake_home
 
@@ -143,15 +149,23 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 # Fake Sites (picklable, no EDI I/O needed)
 # ---------------------------------------------------------------------------
 
+
 class _FakeSite:
     """Minimal picklable Site-like object for unit tests."""
-    def __init__(self, name: str, lat: float = 0.0, lon: float = 0.0,
-                 elev: float = 0.0, nfreq: int = 10) -> None:
-        self.name  = name
-        self._lat  = lat
-        self._lon  = lon
+
+    def __init__(
+        self,
+        name: str,
+        lat: float = 0.0,
+        lon: float = 0.0,
+        elev: float = 0.0,
+        nfreq: int = 10,
+    ) -> None:
+        self.name = name
+        self._lat = lat
+        self._lon = lon
         self._elev = elev
-        self._nfreq= nfreq
+        self._nfreq = nfreq
 
     @property
     def coords(self):
@@ -160,9 +174,12 @@ class _FakeSite:
 
 class _FakeSites:
     """Minimal picklable Sites-like container for unit tests."""
+
     def __init__(self, names: list[str]) -> None:
-        self._items = [_FakeSite(n, lat=float(i), lon=float(i + 100))
-                       for i, n in enumerate(names)]
+        self._items = [
+            _FakeSite(n, lat=float(i), lon=float(i + 100))
+            for i, n in enumerate(names)
+        ]
 
     def __len__(self) -> int:
         return len(self._items)
@@ -188,6 +205,7 @@ def make_fake_sites(n: int = 4, prefix: str = "S") -> _FakeSites:
 # CLI runner
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def runner() -> CliRunner:
     """Click test runner."""
@@ -197,6 +215,7 @@ def runner() -> CliRunner:
 # ---------------------------------------------------------------------------
 # Isolated home directory (avoids polluting ~/.pycsamt during tests)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -209,23 +228,25 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     import pycsamt.cli.commands.survey as _cmd_survey
     import pycsamt.cli.survey as _survey
 
-    fake_home   = tmp_path / "home"
+    fake_home = tmp_path / "home"
     pycsamt_dir = fake_home / ".pycsamt"
-    cache_root  = pycsamt_dir / "cache"
+    cache_root = pycsamt_dir / "cache"
     fake_home.mkdir()
     pycsamt_dir.mkdir()
 
     # patch the core module
-    monkeypatch.setattr(_survey, "_PYCSAMT_DIR",  pycsamt_dir)
-    monkeypatch.setattr(_survey, "_CONTEXT_FILE", pycsamt_dir / "context.json")
-    monkeypatch.setattr(_survey, "_CACHE_ROOT",   cache_root)
+    monkeypatch.setattr(_survey, "_PYCSAMT_DIR", pycsamt_dir)
+    monkeypatch.setattr(
+        _survey, "_CONTEXT_FILE", pycsamt_dir / "context.json"
+    )
+    monkeypatch.setattr(_survey, "_CACHE_ROOT", cache_root)
 
     # patch the command module; raising=False because it only imports a
     # subset of these names (e.g. _PYCSAMT_DIR is no longer re-exported)
-    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root,
-                        raising=False)
-    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR", pycsamt_dir,
-                        raising=False)
+    monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root, raising=False)
+    monkeypatch.setattr(
+        _cmd_survey, "_PYCSAMT_DIR", pycsamt_dir, raising=False
+    )
 
     return fake_home
 
@@ -233,6 +254,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 # ---------------------------------------------------------------------------
 # Minimal inversion workdir fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def occam_workdir(tmp_path: Path) -> Path:

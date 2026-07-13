@@ -48,6 +48,7 @@ from ._base import _get_sites, _unwrap_edis, site
 # compute — sub-group
 # ---------------------------------------------------------------------------
 
+
 @site.group("compute")
 @click.pass_context
 def compute(ctx: click.Context) -> None:
@@ -74,6 +75,7 @@ def compute(ctx: click.Context) -> None:
 # Shared output helper
 # ---------------------------------------------------------------------------
 
+
 def _emit(data: object, output_format: str) -> None:
     """Print *data* (a dict, DataFrame, or APIFrame) in the requested format."""
     import pandas as pd  # noqa: PLC0415
@@ -81,7 +83,7 @@ def _emit(data: object, output_format: str) -> None:
     # site.compute helpers return an APIFrame wrapper when the API view
     # is enabled; unwrap it or the fallback constructor below strips the
     # column names
-    if hasattr(data, "df") and isinstance(getattr(data, "df"), pd.DataFrame):
+    if hasattr(data, "df") and isinstance(data.df, pd.DataFrame):
         data = data.df
 
     if isinstance(data, dict):
@@ -92,7 +94,9 @@ def _emit(data: object, output_format: str) -> None:
         df = pd.DataFrame(data)
 
     if output_format == "json":
-        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
+        click.echo(
+            df.to_json(orient="records", indent=2, default_handler=str)
+        )
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:
@@ -102,6 +106,7 @@ def _emit(data: object, output_format: str) -> None:
 # ---------------------------------------------------------------------------
 # strike
 # ---------------------------------------------------------------------------
+
 
 @compute.command("strike")
 @click.argument(
@@ -155,6 +160,7 @@ def compute_strike(
     from pycsamt.site.compute import (
         strike_estimate,  # noqa: PLC0415
     )
+
     try:
         result = strike_estimate(_unwrap_edis(sites_obj), method=method)
     except Exception as exc:  # noqa: BLE001
@@ -168,6 +174,7 @@ def compute_strike(
 # resistivity
 # ---------------------------------------------------------------------------
 
+
 @compute.command("resistivity")
 @click.argument(
     "edi_source",
@@ -179,7 +186,8 @@ def compute_strike(
 @survey_option
 @fresh_option
 @click.option(
-    "--freq", "target_freq",
+    "--freq",
+    "target_freq",
     type=float,
     required=True,
     metavar="HZ",
@@ -221,6 +229,7 @@ def compute_resistivity(
     from pycsamt.site.compute import (
         res_at_freq,  # noqa: PLC0415
     )
+
     try:
         result = res_at_freq(_unwrap_edis(sites_obj), target_freq, how=how)
     except Exception as exc:  # noqa: BLE001
@@ -233,6 +242,7 @@ def compute_resistivity(
 # ---------------------------------------------------------------------------
 # phase-slope
 # ---------------------------------------------------------------------------
+
 
 @compute.command("phase-slope")
 @click.argument(
@@ -294,6 +304,7 @@ def compute_phase_slope(
     else:
         # infer full range from the data
         import numpy as np  # noqa: PLC0415
+
         all_freqs = []
         for s in sites_obj:
             try:
@@ -311,6 +322,7 @@ def compute_phase_slope(
     from pycsamt.site.compute import (
         phase_slope,  # noqa: PLC0415
     )
+
     try:
         result = phase_slope(_unwrap_edis(sites_obj), freq_band)
     except Exception as exc:  # noqa: BLE001
@@ -324,6 +336,7 @@ def compute_phase_slope(
 # tipper
 # ---------------------------------------------------------------------------
 
+
 @compute.command("tipper")
 @click.argument(
     "edi_source",
@@ -335,7 +348,8 @@ def compute_phase_slope(
 @survey_option
 @fresh_option
 @click.option(
-    "--freq", "target_freq",
+    "--freq",
+    "target_freq",
     type=float,
     default=None,
     metavar="HZ",
@@ -369,6 +383,7 @@ def compute_tipper(
     from pycsamt.site.compute import (
         tipper_magnitude,  # noqa: PLC0415
     )
+
     try:
         result = tipper_magnitude(_unwrap_edis(sites_obj))
     except Exception as exc:  # noqa: BLE001

@@ -52,15 +52,28 @@ S_all = load_sites("amt_willy", recursive=True)
 groups = line_groups(S_all)
 
 plot_strike_rose(
-    S_all, groups=groups, method="consensus", bins=24,
-    bar_style="gradient", cmap="YlOrRd",
-    outer_ring_lw=2.5, outer_ring_color="0.12", n_rings=3,
-    spoke_every=45.0, compass_labels="NESW", compass_fontsize=7.5,
-    mean_color="crimson", mean_lw=2.2,
-    show_secondary=True, secondary_ls="--", annotation_fontsize=8.0,
-    show_n_stations=True, subplot_size=3.0, n_cols=5,
+    S_all,
+    groups=groups,
+    method="consensus",
+    bins=24,
+    bar_style="gradient",
+    cmap="YlOrRd",
+    outer_ring_lw=2.5,
+    outer_ring_color="0.12",
+    n_rings=3,
+    spoke_every=45.0,
+    compass_labels="NESW",
+    compass_fontsize=7.5,
+    mean_color="crimson",
+    mean_lw=2.2,
+    show_secondary=True,
+    secondary_ls="--",
+    annotation_fontsize=8.0,
+    show_n_stations=True,
+    subplot_size=3.0,
+    n_cols=5,
     suptitle="Geoelectric strike rose diagrams  "
-             "(WILLY_DATA — 5 profile lines, 128 stations)",
+    "(WILLY_DATA — 5 profile lines, 128 stations)",
     suptitle_fontsize=10,
 )
 
@@ -73,12 +86,18 @@ plot_strike_rose(
 # different deep one.
 
 plot_strike_rose(
-    L22, bar_style="bands",
+    L22,
+    bar_style="bands",
     freq_bands=[(1e-4, 1e-2), (1e-2, 1e0)],
     band_labels=["Short period  (0.1–10 ms)", "Long period  (10 ms–1 s)"],
-    bins=24, outer_ring_lw=2.5, outer_ring_color="0.12",
-    spoke_every=45.0, compass_labels="NESW", annotation_fontsize=8.5,
-    show_n_stations=True, subplot_size=4.2,
+    bins=24,
+    outer_ring_lw=2.5,
+    outer_ring_color="0.12",
+    spoke_every=45.0,
+    compass_labels="NESW",
+    annotation_fontsize=8.5,
+    show_n_stations=True,
+    subplot_size=4.2,
     suptitle="Strike rose: short vs long period  (L22PLT)",
     suptitle_fontsize=10,
 )

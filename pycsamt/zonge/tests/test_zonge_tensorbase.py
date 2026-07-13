@@ -14,6 +14,7 @@ class DummyTensor(TensorBase):
     Minimal concrete subclass so we can feed a tidy DataFrame
     directly into `_frame` and use TensorBase helpers.
     """
+
     def read(self, source, meta=None, **kws):
         if not isinstance(source, pd.DataFrame):
             raise TypeError("DummyTensor.read expects a DataFrame")
@@ -62,7 +63,7 @@ def test_to_tensor_single_station_csamt_positions():
     obj = DummyTensor.from_avg((df, {}))  # uses base.from_avg -> read(df)
 
     T, freqs, stations = obj.to_tensor(var="rho", station=100.0)
-    assert T.shape == (3, 2, 2)   # (n_freq, 2, 2)
+    assert T.shape == (3, 2, 2)  # (n_freq, 2, 2)
     assert stations.size == 0
     assert np.allclose(freqs, [1.0, 2.0, 4.0])
 
@@ -125,8 +126,12 @@ def test_to_tensor_multi_station_union_and_intersection():
     # Both stations have ExHy at freq=2
     i_st100 = int(np.where(st_u == 100.0)[0][0])
     i_st150 = int(np.where(st_u == 150.0)[0][0])
-    assert np.isclose(T_u[i_st100, int(np.where(f_u == 2.0)[0][0]), 0, 1], 20.0)
-    assert np.isclose(T_u[i_st150, int(np.where(f_u == 2.0)[0][0]), 0, 1], 200.0)
+    assert np.isclose(
+        T_u[i_st100, int(np.where(f_u == 2.0)[0][0]), 0, 1], 20.0
+    )
+    assert np.isclose(
+        T_u[i_st150, int(np.where(f_u == 2.0)[0][0]), 0, 1], 200.0
+    )
 
 
 def test_to_tensor_invalid_align_raises():
@@ -141,9 +146,9 @@ def test_duplicate_rows_are_averaged():
     df = pd.DataFrame(
         {
             "station": [100.0, 100.0],
-            "freq":    [1.0, 1.0],
-            "comp":    ["ExHy", "ExHy"],
-            "rho":     [10.0, 14.0],  # mean=12.0
+            "freq": [1.0, 1.0],
+            "comp": ["ExHy", "ExHy"],
+            "rho": [10.0, 14.0],  # mean=12.0
         }
     )
     obj = DummyTensor.from_avg((df, {}))
@@ -177,7 +182,9 @@ def test_from_tensor_roundtrip_single_station_csamt():
     assert np.isclose(v22, 2.4)
 
 
-@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
+@pytest.mark.skipif(
+    pytest.importorskip("xarray") is None, reason="xarray required"
+)
 def test_to_xarray_tensor_dims_and_coords_single_and_multi():
     df = _df_single_station_csamt()
     obj = DummyTensor.from_avg((df, {}))
@@ -195,5 +202,6 @@ def test_to_xarray_tensor_dims_and_coords_single_and_multi():
     assert da2.dims == ("station", "freq", "e", "h")
     assert np.all(np.unique(da2.coords["station"]) == np.array([100.0]))
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

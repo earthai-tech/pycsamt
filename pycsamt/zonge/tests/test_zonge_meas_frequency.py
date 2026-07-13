@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import math
@@ -35,7 +34,7 @@ def test_frequency_reads_dataframe_with_aliases_and_missing_markers():
     df = pd.DataFrame(
         {
             "Station": [100, 100, 100],
-            "Freq.": ["1", ".5", "*"],      # legacy quirks: '.5' and '*'
+            "Freq.": ["1", ".5", "*"],  # legacy quirks: '.5' and '*'
             "Comp": ["ExHy", "ExHy", "ExHy"],
         }
     )
@@ -53,8 +52,8 @@ def test_frequency_unique_and_by_station_tolerant_dedup():
     df = pd.DataFrame(
         {
             "station": [100.0, 100.0, 100.0, 150.0, 150.0, 150.0],
-            "freq":    [1.0, 2.0, 4.0, 1.0*(1+1e-12), 2.0, 4.0],
-            "comp":    ["ExHy"] * 6,
+            "freq": [1.0, 2.0, 4.0, 1.0 * (1 + 1e-12), 2.0, 4.0],
+            "comp": ["ExHy"] * 6,
         }
     )
     f = Frequency.from_avg((df, {}))
@@ -69,14 +68,15 @@ def test_frequency_unique_and_by_station_tolerant_dedup():
 
 
 @pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required")
+    pytest.importorskip("xarray") is None, reason="xarray required"
+)
 def test_frequency_to_xarray_shapes_and_values():
     # full grid: 2 stations × 3 freqs × 1 comp
     df = pd.DataFrame(
         {
             "station": [100.0, 100.0, 100.0, 150.0, 150.0, 150.0],
-            "freq":    [1.0, 2.0, 4.0, 1.0, 2.0, 4.0],
-            "comp":    ["ExHy"] * 6,
+            "freq": [1.0, 2.0, 4.0, 1.0, 2.0, 4.0],
+            "comp": ["ExHy"] * 6,
         }
     )
     f = Frequency.from_avg((df, {}))
@@ -99,34 +99,35 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     df = pd.DataFrame(
         {
             "station": [100.0, 100.0, 150.0],
-            "freq":    [1.0, 2.0, 4.0],
-            "comp":    ["ExHy", "ExHy", "ExHy"],
+            "freq": [1.0, 2.0, 4.0],
+            "comp": ["ExHy", "ExHy", "ExHy"],
         }
     )
     f = Frequency.from_avg((df, {}))
     lines = f.write()
 
     # Title banner present
-    assert _has_line(lines, lambda ln: ln.strip(
-        ).startswith("\\ $Frequency Block"))
+    assert _has_line(
+        lines, lambda ln: ln.strip().startswith("\\ $Frequency Block")
+    )
 
     # Default meta exported
-    assert _has_line(lines, lambda ln: ln.strip(
-        ).startswith("$Unit.Freq=Hz"))
+    assert _has_line(lines, lambda ln: ln.strip().startswith("$Unit.Freq=Hz"))
 
     # Written timestamp is present
-    assert _has_line(lines, lambda ln: ln.strip(
-        ).startswith("$Written="))
+    assert _has_line(lines, lambda ln: ln.strip().startswith("$Written="))
 
     # CSV header present
-    assert _has_line(lines, lambda ln: ln.strip(
-        ) == "station,freq,comp")
+    assert _has_line(lines, lambda ln: ln.strip() == "station,freq,comp")
 
     # And we have as many CSV rows as data rows
     # find header index and count subsequent rows
     try:
-        header_idx = next(i for i, ln in enumerate(
-            lines) if ln.strip() == "station,freq,comp")
+        header_idx = next(
+            i
+            for i, ln in enumerate(lines)
+            if ln.strip() == "station,freq,comp"
+        )
     except StopIteration:
         pytest.fail("CSV header not found in Frequency.write() output")
 
@@ -134,8 +135,10 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     assert len(csv_rows) == len(df)
 
     # spot-check one row content (tolerant on float formatting)
-    assert any(re.match(r"^100(\.0)?,1(\.0)?,ExHy$", ln.strip()) for ln in csv_rows)
+    assert any(
+        re.match(r"^100(\.0)?,1(\.0)?,ExHy$", ln.strip()) for ln in csv_rows
+    )
 
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

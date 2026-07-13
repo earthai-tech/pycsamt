@@ -13,6 +13,7 @@ tipper    — Tipper components               → matplotlib PNG  (IMG_TIPPER.sr
 section   — 2-D inversion section           → matplotlib PNG  (IMG_SECTION.src)
 pub       — Publication-ready MT response   → matplotlib PNG  (IMG_PUB.src)
 """
+
 from __future__ import annotations
 
 from dash import (
@@ -45,18 +46,24 @@ _TAB_IDX = {t: i for i, t in enumerate(_TAB_IDS)}
 _NO_SRC = no_update
 _NO_FIG = no_update
 _SKIP = (
-    _NO_SRC, _NO_SRC, _NO_SRC,   # rho-phi, tipper, pt  src
-    _NO_FIG, _NO_FIG,             # rho-ps, phi-ps  figure
-    _NO_SRC, _NO_SRC,             # section, pub  src
-    no_update, no_update,         # ps-comp bar headers
-    False, "",                    # toast
+    _NO_SRC,
+    _NO_SRC,
+    _NO_SRC,  # rho-phi, tipper, pt  src
+    _NO_FIG,
+    _NO_FIG,  # rho-ps, phi-ps  figure
+    _NO_SRC,
+    _NO_SRC,  # section, pub  src
+    no_update,
+    no_update,  # ps-comp bar headers
+    False,
+    "",  # toast
 )
 
 _COMP_CLS = {"xy": "te", "yx": "tm", "xx": "diag", "yy": "diag"}
 _COMP_LBL = {"xy": "Z_XY", "yx": "Z_YX", "xx": "Z_XX", "yy": "Z_YY"}
 _PHASE_MAP = {
-    "0_90":     (0.0,    90.0),
-    "-90_90":   (-90.0,  90.0),
+    "0_90": (0.0, 90.0),
+    "-90_90": (-90.0, 90.0),
     "-180_180": (-180.0, 180.0),
     "-360_360": (-360.0, 360.0),
 }
@@ -65,8 +72,9 @@ _PHASE_MAP = {
 def _comp_bar(comps, plot_type: str):
     """Component-info bar children for a pseudosection panel."""
     from dash import html
+
     prefix = "ρₐ" if plot_type == "rho" else "φ"
-    pills  = [
+    pills = [
         html.Span(
             _COMP_LBL.get(c, c.upper()),
             className=f"prof-ps-pill {_COMP_CLS.get(c, '')}".strip(),
@@ -74,9 +82,14 @@ def _comp_bar(comps, plot_type: str):
         for c in comps
     ]
     return [
-        html.Span(f"{prefix} sections:",
-                  style={"color": "var(--sub0)", "marginRight": "8px",
-                         "fontSize": "10.5px"}),
+        html.Span(
+            f"{prefix} sections:",
+            style={
+                "color": "var(--sub0)",
+                "marginRight": "8px",
+                "fontSize": "10.5px",
+            },
+        ),
         *pills,
     ]
 
@@ -112,19 +125,19 @@ def register_profile(app) -> None:
         }
         """,
         Output("prof-panel-rho-phi", "style"),
-        Output("prof-panel-rho-ps",  "style"),
-        Output("prof-panel-phi-ps",  "style"),
-        Output("prof-panel-pt",      "style"),
-        Output("prof-panel-tipper",  "style"),
+        Output("prof-panel-rho-ps", "style"),
+        Output("prof-panel-phi-ps", "style"),
+        Output("prof-panel-pt", "style"),
+        Output("prof-panel-tipper", "style"),
         Output("prof-panel-section", "style"),
-        Output("prof-panel-pub",     "style"),
-        Output("prof-tab-rho-phi",   "className"),
-        Output("prof-tab-rho-ps",    "className"),
-        Output("prof-tab-phi-ps",    "className"),
-        Output("prof-tab-pt",        "className"),
-        Output("prof-tab-tipper",    "className"),
-        Output("prof-tab-section",   "className"),
-        Output("prof-tab-pub",       "className"),
+        Output("prof-panel-pub", "style"),
+        Output("prof-tab-rho-phi", "className"),
+        Output("prof-tab-rho-ps", "className"),
+        Output("prof-tab-phi-ps", "className"),
+        Output("prof-tab-pt", "className"),
+        Output("prof-tab-tipper", "className"),
+        Output("prof-tab-section", "className"),
+        Output("prof-tab-pub", "className"),
         Input(IDs.PROF_ACTIVE_TAB, "data"),
         prevent_initial_call=False,
     )
@@ -140,33 +153,43 @@ def register_profile(app) -> None:
 
     # ── 4. Main render callback ───────────────────────────────────────────────
     @app.callback(
-        Output(IDs.IMG_RHO_PHI,  "src"),
-        Output(IDs.IMG_TIPPER,   "src"),
-        Output(IDs.IMG_PT,       "src"),
-        Output(IDs.IMG_RHO_PS,   "figure"),
+        Output(IDs.IMG_RHO_PHI, "src"),
+        Output(IDs.IMG_TIPPER, "src"),
+        Output(IDs.IMG_PT, "src"),
+        Output(IDs.IMG_RHO_PS, "figure"),
         Output(IDs.IMG_PHASE_PS, "figure"),
-        Output(IDs.IMG_SECTION,  "src"),
-        Output(IDs.IMG_PUB,      "src"),
+        Output(IDs.IMG_SECTION, "src"),
+        Output(IDs.IMG_PUB, "src"),
         Output("prof-ps-rho-header", "children"),
         Output("prof-ps-phi-header", "children"),
-        Output(IDs.TOAST_ERROR,  "is_open",  allow_duplicate=True),
-        Output(IDs.TOAST_BODY,   "children", allow_duplicate=True),
-        Input(IDs.PROF_ACTIVE_TAB,           "data"),
-        Input(IDs.STORE_SELECTION,           "data"),
-        Input(IDs.STORE_DATA,                "data"),
-        Input(IDs.STORE_THEME,               "data"),
-        Input(IDs.PROFILE_PAGE_ERRBAR,       "value"),
-        Input("profile-page-comps",          "value"),
-        Input("profile-page-refresh",        "n_clicks"),
-        Input(IDs.PROFILE_PAGE_PHASE_RANGE,  "value"),
-        State(IDs.FREQ_SLIDER,               "value"),
-        State(IDs.SESSION_ID,                "data"),
-        State(IDs.STORE_ACTIVE_LINES,        "data"),
+        Output(IDs.TOAST_ERROR, "is_open", allow_duplicate=True),
+        Output(IDs.TOAST_BODY, "children", allow_duplicate=True),
+        Input(IDs.PROF_ACTIVE_TAB, "data"),
+        Input(IDs.STORE_SELECTION, "data"),
+        Input(IDs.STORE_DATA, "data"),
+        Input(IDs.STORE_THEME, "data"),
+        Input(IDs.PROFILE_PAGE_ERRBAR, "value"),
+        Input("profile-page-comps", "value"),
+        Input("profile-page-refresh", "n_clicks"),
+        Input(IDs.PROFILE_PAGE_PHASE_RANGE, "value"),
+        State(IDs.FREQ_SLIDER, "value"),
+        State(IDs.SESSION_ID, "data"),
+        State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def update_profile(active_tab, selection, store_data, theme,
-                       show_errbar, components, _refresh,
-                       phase_range, freq_range, session_id, active_lines_store):
+    def update_profile(
+        active_tab,
+        selection,
+        store_data,
+        theme,
+        show_errbar,
+        components,
+        _refresh,
+        phase_range,
+        freq_range,
+        session_id,
+        active_lines_store,
+    ):
         if not store_data or not session_id:
             return _SKIP
 
@@ -177,18 +200,26 @@ def register_profile(app) -> None:
         dark = (theme or "dark") == "dark"
 
         # Active-lines filter
-        _als   = active_lines_store or {}
+        _als = active_lines_store or {}
         active = _als.get("active", _als.get("all"))
         if active is not None:
-            records  = (store_data or {}).get("station_records", [])
+            records = (store_data or {}).get("station_records", [])
             filtered = filter_sites_by_lines(sites, records, active)
             if filtered is None:
                 warn = no_active_lines_src(dark)
-                return (warn, warn, warn,
-                        no_update, no_update,
-                        warn, warn,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    warn,
+                    warn,
+                    warn,
+                    no_update,
+                    no_update,
+                    warn,
+                    warn,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
             sites = filtered
 
         if dark:
@@ -196,7 +227,7 @@ def register_profile(app) -> None:
         else:
             apply_web_light_theme()
 
-        idx   = _TAB_IDX.get(active_tab, 0)
+        idx = _TAB_IDX.get(active_tab, 0)
         comps = tuple(components) if components else ("xy", "yx")
 
         T_min, T_max = None, None
@@ -209,22 +240,42 @@ def register_profile(app) -> None:
         try:
             # ── Plotly pseudosection tabs ──────────────────────────────────────
             if idx == 1:
-                fig = build_multi_pseudosection(sites, list(comps), "rho", dark)
+                fig = build_multi_pseudosection(
+                    sites, list(comps), "rho", dark
+                )
                 hdr = _comp_bar(comps, "rho")
-                return (_NO_SRC, _NO_SRC, _NO_SRC,
-                        fig, _NO_FIG,
-                        _NO_SRC, _NO_SRC,
-                        hdr, no_update,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_SRC,
+                    fig,
+                    _NO_FIG,
+                    _NO_SRC,
+                    _NO_SRC,
+                    hdr,
+                    no_update,
+                    False,
+                    "",
+                )
 
             if idx == 2:
-                fig = build_multi_pseudosection(sites, list(comps), "phi", dark)
+                fig = build_multi_pseudosection(
+                    sites, list(comps), "phi", dark
+                )
                 hdr = _comp_bar(comps, "phi")
-                return (_NO_SRC, _NO_SRC, _NO_SRC,
-                        _NO_FIG, fig,
-                        _NO_SRC, _NO_SRC,
-                        no_update, hdr,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_FIG,
+                    fig,
+                    _NO_SRC,
+                    _NO_SRC,
+                    no_update,
+                    hdr,
+                    False,
+                    "",
+                )
 
             # ── matplotlib PNG tabs ────────────────────────────────────────────
             import matplotlib.pyplot as plt
@@ -244,61 +295,110 @@ def register_profile(app) -> None:
                 ctrl.draw_rho_phi(fig_mpl)
                 src = fig_to_src(fig_mpl)
                 plt.close("all")
-                return (src, _NO_SRC, _NO_SRC,
-                        _NO_FIG, _NO_FIG,
-                        _NO_SRC, _NO_SRC,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    src,
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_FIG,
+                    _NO_FIG,
+                    _NO_SRC,
+                    _NO_SRC,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
 
             if idx == 3:
                 fig_mpl, ax = plt.subplots(figsize=(9, 4))
                 ctrl.draw_phase_tensor(ax)
                 src = fig_to_src(fig_mpl)
                 plt.close("all")
-                return (_NO_SRC, _NO_SRC, src,
-                        _NO_FIG, _NO_FIG,
-                        _NO_SRC, _NO_SRC,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    _NO_SRC,
+                    src,
+                    _NO_FIG,
+                    _NO_FIG,
+                    _NO_SRC,
+                    _NO_SRC,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
 
             if idx == 4:
                 fig_mpl, ax = plt.subplots(figsize=(9, 4))
                 ctrl.draw_tipper(ax)
                 src = fig_to_src(fig_mpl)
                 plt.close("all")
-                return (_NO_SRC, src, _NO_SRC,
-                        _NO_FIG, _NO_FIG,
-                        _NO_SRC, _NO_SRC,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    src,
+                    _NO_SRC,
+                    _NO_FIG,
+                    _NO_FIG,
+                    _NO_SRC,
+                    _NO_SRC,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
 
             if idx == 5:
                 src = _draw_section(ctrl)
-                return (_NO_SRC, _NO_SRC, _NO_SRC,
-                        _NO_FIG, _NO_FIG,
-                        src, _NO_SRC,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_FIG,
+                    _NO_FIG,
+                    src,
+                    _NO_SRC,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
 
             if idx == 6:
                 fig_mpl = plt.figure(figsize=(14, 8))
                 ctrl.draw_publication_view(fig_mpl)
                 src = fig_to_src(fig_mpl)
                 plt.close("all")
-                return (_NO_SRC, _NO_SRC, _NO_SRC,
-                        _NO_FIG, _NO_FIG,
-                        _NO_SRC, src,
-                        no_update, no_update,
-                        False, "")
+                return (
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_SRC,
+                    _NO_FIG,
+                    _NO_FIG,
+                    _NO_SRC,
+                    src,
+                    no_update,
+                    no_update,
+                    False,
+                    "",
+                )
 
         except Exception as exc:
             import traceback
+
             msg = f"Profile render failed ({active_tab}):\n{exc}\n{traceback.format_exc()}"
-            return (_NO_SRC, _NO_SRC, _NO_SRC,
-                    _NO_FIG, _NO_FIG,
-                    _NO_SRC, _NO_SRC,
-                    no_update, no_update,
-                    True, msg)
+            return (
+                _NO_SRC,
+                _NO_SRC,
+                _NO_SRC,
+                _NO_FIG,
+                _NO_FIG,
+                _NO_SRC,
+                _NO_SRC,
+                no_update,
+                no_update,
+                True,
+                msg,
+            )
 
         return _SKIP
 
@@ -319,32 +419,34 @@ def register_profile(app) -> None:
             i = ids.index(current_id)
         except ValueError:
             return no_update
-        new_idx = (i - 1 if ctx.triggered_id == IDs.PROFILE_PAGE_PREV
-                   else i + 1) % len(ids)
+        new_idx = (
+            i - 1 if ctx.triggered_id == IDs.PROFILE_PAGE_PREV else i + 1
+        ) % len(ids)
         return {"station_id": ids[new_idx]}
 
     # ── 6. Export current tab figure ──────────────────────────────────────────
     @app.callback(
         Output("profile-page-download", "data"),
-        Input("profile-page-export",    "n_clicks"),
-        State(IDs.PROF_ACTIVE_TAB,  "data"),
-        State(IDs.IMG_RHO_PHI,  "src"),
-        State(IDs.IMG_TIPPER,   "src"),
-        State(IDs.IMG_PT,       "src"),
-        State(IDs.IMG_SECTION,  "src"),
-        State(IDs.IMG_PUB,      "src"),
+        Input("profile-page-export", "n_clicks"),
+        State(IDs.PROF_ACTIVE_TAB, "data"),
+        State(IDs.IMG_RHO_PHI, "src"),
+        State(IDs.IMG_TIPPER, "src"),
+        State(IDs.IMG_PT, "src"),
+        State(IDs.IMG_SECTION, "src"),
+        State(IDs.IMG_PUB, "src"),
         prevent_initial_call=True,
     )
-    def export_profile_tab(n, active_tab, src_rho_phi, src_tipper,
-                           src_pt, src_section, src_pub):
+    def export_profile_tab(
+        n, active_tab, src_rho_phi, src_tipper, src_pt, src_section, src_pub
+    ):
         if not n:
             return no_update
         src_map = {
             "rho-phi": (src_rho_phi, "pycsamt_rho_phi.png"),
-            "tipper":  (src_tipper,  "pycsamt_tipper.png"),
-            "pt":      (src_pt,      "pycsamt_phase_tensor.png"),
+            "tipper": (src_tipper, "pycsamt_tipper.png"),
+            "pt": (src_pt, "pycsamt_phase_tensor.png"),
             "section": (src_section, "pycsamt_2d_section.png"),
-            "pub":     (src_pub,     "pycsamt_publication.png"),
+            "pub": (src_pub, "pycsamt_publication.png"),
         }
         if active_tab not in src_map:
             return no_update
@@ -352,10 +454,13 @@ def register_profile(app) -> None:
         if not src or not src.startswith("data:image"):
             return no_update
         _, b64 = src.split(",", 1)
-        return dict(content=b64, filename=filename, base64=True, type="image/png")
+        return dict(
+            content=b64, filename=filename, base64=True, type="image/png"
+        )
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────
+
 
 def _draw_section(ctrl: PlotController) -> str:
     import matplotlib.pyplot as plt
@@ -366,12 +471,26 @@ def _draw_section(ctrl: PlotController) -> str:
     try:
         ctrl.draw_2d_section(ax)
     except AttributeError:
-        ax.text(0.5, 0.5, "2D section not available\n(run inversion first)",
-                ha="center", va="center", transform=ax.transAxes, fontsize=12)
+        ax.text(
+            0.5,
+            0.5,
+            "2D section not available\n(run inversion first)",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=12,
+        )
         ax.set_axis_off()
     except Exception as exc:
-        ax.text(0.5, 0.5, f"Section error:\n{exc}",
-                ha="center", va="center", transform=ax.transAxes, fontsize=10)
+        ax.text(
+            0.5,
+            0.5,
+            f"Section error:\n{exc}",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=10,
+        )
         ax.set_axis_off()
     src = fig_to_src(fig_mpl)
     plt.close("all")

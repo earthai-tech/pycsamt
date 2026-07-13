@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.spectra (analysis functions)"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -31,20 +32,22 @@ def _no_api_view():
 # Fake Spectra object
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _FakeSpectra:
     """Minimal Spectra duck-type with 3 channels and N frequencies."""
 
-    def __init__(self, n_freq: int = 8, n_chan: int = 3,
-                 name: str = "STA01") -> None:
+    def __init__(
+        self, n_freq: int = 8, n_chan: int = 3, name: str = "STA01"
+    ) -> None:
         self.name = name
         fr = np.logspace(0, 3, n_freq)
         self.freq = fr
-        self.bw     = np.full(n_freq, 0.5)
-        self.avgt   = np.full(n_freq, 10.0)
-        self.avgf   = fr.copy()
+        self.bw = np.full(n_freq, 0.5)
+        self.avgt = np.full(n_freq, 10.0)
+        self.avgf = fr.copy()
         self.rotspec = np.zeros(n_freq)
-        self.segnum  = np.full(n_freq, 4, dtype=int)
-        self.band    = [f"B{i}" for i in range(n_freq)]
+        self.segnum = np.full(n_freq, 4, dtype=int)
+        self.band = [f"B{i}" for i in range(n_freq)]
         self.chan_ids = [str(i + 1) for i in range(n_chan)]
         self.id_to_chtype = {"1": "Ex", "2": "Ey", "3": "Hx"}
 
@@ -52,7 +55,9 @@ class _FakeSpectra:
         rng = np.random.default_rng(42)
         S = np.zeros((n_freq, n_chan, n_chan), dtype=complex)
         for k in range(n_freq):
-            A = rng.standard_normal((n_chan, n_chan)) + 1j * rng.standard_normal((n_chan, n_chan))
+            A = rng.standard_normal(
+                (n_chan, n_chan)
+            ) + 1j * rng.standard_normal((n_chan, n_chan))
             S[k] = A @ A.conj().T + np.eye(n_chan) * 2.0
         self._S = S
 
@@ -77,8 +82,8 @@ def _sp(n_freq=8, n_chan=3, name="STA01") -> _FakeSpectra:
 # coherence_matrix
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestCoherenceMatrix:
 
+class TestCoherenceMatrix:
     def test_shape(self):
         sp = _sp(8, 3)
         coh = coherence_matrix(sp)
@@ -114,10 +119,11 @@ class TestCoherenceMatrix:
 # psd_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPsdTable:
 
+class TestPsdTable:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sp = _sp()
         df = psd_table({"STA01": sp}, api=False)
         assert isinstance(df, pd.DataFrame)
@@ -151,7 +157,8 @@ class TestPsdTable:
         assert df["psd"].max() <= 1.0 + 1e-9
 
     def test_dict_input(self):
-        sp1 = _sp(name="A"); sp2 = _sp(name="B")
+        sp1 = _sp(name="A")
+        sp2 = _sp(name="B")
         df = psd_table({"A": sp1, "B": sp2})
         assert df["station"].nunique() == 2
 
@@ -165,10 +172,11 @@ class TestPsdTable:
 # coherence_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestCoherenceTable:
 
+class TestCoherenceTable:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sp = _sp()
         df = coherence_table({"STA01": sp}, api=False)
         assert isinstance(df, pd.DataFrame)
@@ -203,12 +211,13 @@ class TestCoherenceTable:
 # snr_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSnrTable:
 
+class TestSnrTable:
     def test_returns_tabular(self):
         import pandas as pd
 
         from pycsamt.api.view.frame import APIFrame
+
         sp = _sp()
         df = snr_table({"STA01": sp})
         assert isinstance(df, (pd.DataFrame, APIFrame))
@@ -228,8 +237,8 @@ class TestSnrTable:
 # band_select
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestBandSelect:
 
+class TestBandSelect:
     def test_returns_spectra(self):
         sp = _sp(n_freq=12)
         result = band_select(sp, f_min=10.0, f_max=1000.0)
@@ -252,8 +261,8 @@ class TestBandSelect:
 # mask_low_coherence
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestMaskLowCoherence:
 
+class TestMaskLowCoherence:
     def test_returns_spectra(self):
         sp = _sp()
         result = mask_low_coherence(sp, threshold=0.5)
@@ -275,10 +284,11 @@ class TestMaskLowCoherence:
 # spectra_summary
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSpectraSummary:
 
+class TestSpectraSummary:
     def test_returns_dataframe(self):
         import pandas as pd
+
         sp = _sp()
         df = spectra_summary(sp, api=False)
         assert isinstance(df, pd.DataFrame)

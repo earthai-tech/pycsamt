@@ -20,6 +20,7 @@ Layout
 Every "Generate" click adds a new tab in the plot studio and a thumbnail in
 the gallery.  Tabs can be closed, renamed (double-click), or exported.
 """
+
 from __future__ import annotations
 
 import io
@@ -60,8 +61,10 @@ from pycsamt.app.desktop.windows._base import (
 
 # ── Background workers ────────────────────────────────────────────────────────
 
+
 class _RunWorker(QThread):
     """Runs a heavy InterpController computation off the GUI thread."""
+
     finished = Signal(str)
 
     def __init__(self, fn, parent=None):
@@ -78,20 +81,23 @@ class _RunWorker(QThread):
 
 class _GeneratePlotWorker(QThread):
     """Generates a matplotlib Figure off the GUI thread, then signals it."""
-    finished = Signal(object, str)   # (Figure, label)
-    failed   = Signal(str)
 
-    def __init__(self, ctrl, method_name: str, label: str, kwargs: dict,
-                 parent=None):
+    finished = Signal(object, str)  # (Figure, label)
+    failed = Signal(str)
+
+    def __init__(
+        self, ctrl, method_name: str, label: str, kwargs: dict, parent=None
+    ):
         super().__init__(parent)
-        self._ctrl        = ctrl
+        self._ctrl = ctrl
         self._method_name = method_name
-        self._label       = label
-        self._kwargs      = kwargs
+        self._label = label
+        self._kwargs = kwargs
 
     def run(self):
         import matplotlib
-        matplotlib.use("Agg")   # ensure non-interactive backend in thread
+
+        matplotlib.use("Agg")  # ensure non-interactive backend in thread
         try:
             fig = self._ctrl.generate(self._method_name, **self._kwargs)
             self.finished.emit(fig, self._label)
@@ -100,6 +106,7 @@ class _GeneratePlotWorker(QThread):
 
 
 # ── Interpretation Window ─────────────────────────────────────────────────────
+
 
 class InterpretationWindow(PanelWindow):
     """
@@ -155,7 +162,9 @@ class InterpretationWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_nav.addWidget(self._combo_category)
 
         self._combo_plot = QComboBox()
@@ -190,7 +199,7 @@ class InterpretationWindow(PanelWindow):
         btn_add_las = QPushButton("+ LAS")
         btn_add_las.setObjectName("FileListBtn")
         btn_add_las.clicked.connect(self._add_borehole_las)
-        btn_rem_bh  = QPushButton("Remove")
+        btn_rem_bh = QPushButton("Remove")
         btn_rem_bh.setObjectName("FileListBtn")
         btn_rem_bh.clicked.connect(self._remove_borehole)
         bh_row.addWidget(btn_add_csv)
@@ -203,22 +212,27 @@ class InterpretationWindow(PanelWindow):
         # ── Run actions ───────────────────────────────────────────────────
         grp_run, lay_run = make_group("Actions")
 
-        self._btn_generate = icon_button("▶  Generate Plot", tooltip="Render the selected plot")
+        self._btn_generate = icon_button(
+            "▶  Generate Plot", tooltip="Render the selected plot"
+        )
         self._btn_generate.clicked.connect(self._on_generate)
         lay_run.addWidget(self._btn_generate)
 
-        self._btn_run_geo = icon_button("⚙  Run Geological",
-                                         tooltip="Classify resistivity → strat. logs")
+        self._btn_run_geo = icon_button(
+            "⚙  Run Geological", tooltip="Classify resistivity → strat. logs"
+        )
         self._btn_run_geo.clicked.connect(self._on_run_geological)
         lay_run.addWidget(self._btn_run_geo)
 
-        self._btn_run_hydro = icon_button("⚙  Run Hydrology",
-                                           tooltip="Compute K, Sw, water table")
+        self._btn_run_hydro = icon_button(
+            "⚙  Run Hydrology", tooltip="Compute K, Sw, water table"
+        )
         self._btn_run_hydro.clicked.connect(self._on_run_hydro)
         lay_run.addWidget(self._btn_run_hydro)
 
-        self._btn_run_mc = icon_button("🎲  Run Monte Carlo",
-                                        tooltip="Uncertainty propagation")
+        self._btn_run_mc = icon_button(
+            "🎲  Run Monte Carlo", tooltip="Uncertainty propagation"
+        )
         self._btn_run_mc.clicked.connect(self._on_run_mc)
         lay_run.addWidget(self._btn_run_mc)
 
@@ -231,13 +245,19 @@ class InterpretationWindow(PanelWindow):
         # ── Export ────────────────────────────────────────────────────────
         grp_exp, lay_exp = make_group("Export")
         exp_row1 = QHBoxLayout()
-        for label, slot in [("XYZ", self._export_xyz), ("LAS", self._export_las)]:
+        for label, slot in [
+            ("XYZ", self._export_xyz),
+            ("LAS", self._export_las),
+        ]:
             b = QPushButton(label)
             b.setObjectName("FileListBtn")
             b.clicked.connect(slot)
             exp_row1.addWidget(b)
         exp_row2 = QHBoxLayout()
-        for label, slot in [("CSV", self._export_csv), ("VTK", self._export_vtk)]:
+        for label, slot in [
+            ("CSV", self._export_csv),
+            ("VTK", self._export_vtk),
+        ]:
             b = QPushButton(label)
             b.setObjectName("FileListBtn")
             b.clicked.connect(slot)
@@ -245,8 +265,9 @@ class InterpretationWindow(PanelWindow):
         lay_exp.addLayout(exp_row1)
         lay_exp.addLayout(exp_row2)
 
-        btn_export_fig = icon_button("⬆  Export Current Plot", "export",
-                                      "Save the active plot to file")
+        btn_export_fig = icon_button(
+            "⬆  Export Current Plot", "export", "Save the active plot to file"
+        )
         btn_export_fig.clicked.connect(self._export_current_figure)
         lay_exp.addWidget(btn_export_fig)
         layout.addWidget(grp_exp)
@@ -287,7 +308,9 @@ class InterpretationWindow(PanelWindow):
         ph_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ph_lay.addWidget(ph_lbl)
         self._tab_widget.addTab(self._placeholder, "  Welcome  ")
-        self._tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+        self._tab_widget.tabBar().setTabButton(
+            0, QTabBar.ButtonPosition.RightSide, None
+        )
 
         studio_splitter.addWidget(self._tab_widget)
 
@@ -311,8 +334,12 @@ class InterpretationWindow(PanelWindow):
         self._gallery.setIconSize(QSize(80, 56))
         self._gallery.setSpacing(3)
         self._gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self._gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self._gallery.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._gallery.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        )
+        self._gallery.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self._gallery.itemClicked.connect(self._on_gallery_click)
         gallery_lay.addWidget(self._gallery)
         studio_splitter.addWidget(gallery_frame)
@@ -327,15 +354,15 @@ class InterpretationWindow(PanelWindow):
 
     def _populate_category_combo(self) -> None:
         icons = {
-            "Setup & Model":       "📐",
-            "Geological":          "🪨",
-            "Hydrology":           "💧",
-            "Field Constraints":   "📍",
-            "EM Diagnostics":      "📡",
-            "Uncertainty (MC)":    "📊",
-            "Advanced Plots":      "🔬",
+            "Setup & Model": "📐",
+            "Geological": "🪨",
+            "Hydrology": "💧",
+            "Field Constraints": "📍",
+            "EM Diagnostics": "📡",
+            "Uncertainty (MC)": "📊",
+            "Advanced Plots": "🔬",
             "Fusion & Time-Lapse": "🔀",
-            "Export":              "💾",
+            "Export": "💾",
         }
         self._combo_category.blockSignals(True)
         for cat in CATEGORIES:
@@ -391,10 +418,10 @@ class InterpretationWindow(PanelWindow):
 
         elif cat == "Hydrology":
             for name, label, default, lo, hi, step in [
-                ("m",     "Archie m",    2.0, 1.0, 3.5, 0.1),
-                ("n",     "Archie n",    2.0, 1.0, 3.5, 0.1),
-                ("rho_w", "ρ_w (Ω·m)",  10.0, 0.1, 1000.0, 0.1),
-                ("phi",   "Porosity",   0.35, 0.01, 0.80, 0.01),
+                ("m", "Archie m", 2.0, 1.0, 3.5, 0.1),
+                ("n", "Archie n", 2.0, 1.0, 3.5, 0.1),
+                ("rho_w", "ρ_w (Ω·m)", 10.0, 0.1, 1000.0, 0.1),
+                ("phi", "Porosity", 0.35, 0.01, 0.80, 0.01),
             ]:
                 w = QDoubleSpinBox()
                 w.setRange(lo, hi)
@@ -413,12 +440,12 @@ class InterpretationWindow(PanelWindow):
             self._param_form.addRow("Samples:", n_w)
 
         elif cat == "Export":
-            pass   # export uses file dialogs, no inline params
+            pass  # export uses file dialogs, no inline params
 
     # ── Generate plot ─────────────────────────────────────────────────────
 
     def _on_generate(self) -> None:
-        cat_row  = self._combo_category.currentIndex()
+        cat_row = self._combo_category.currentIndex()
         plot_idx = self._combo_plot.currentIndex()
         if cat_row < 0 or plot_idx < 0:
             return
@@ -434,7 +461,9 @@ class InterpretationWindow(PanelWindow):
                 v = widget.currentText()
                 kwargs[key] = "" if v == "(all)" else v
             else:
-                kwargs[key] = widget.text() if hasattr(widget, "text") else None
+                kwargs[key] = (
+                    widget.text() if hasattr(widget, "text") else None
+                )
 
         self._btn_generate.setEnabled(False)
         self._run_status.setText(f"Generating {label}…")
@@ -458,7 +487,10 @@ class InterpretationWindow(PanelWindow):
     def _add_plot_tab(self, fig, title: str) -> None:
         """Add fig as a new tab and a thumbnail to the gallery."""
         # Remove placeholder tab if still there
-        if self._tab_widget.count() == 1 and self._tab_widget.widget(0) is self._placeholder:
+        if (
+            self._tab_widget.count() == 1
+            and self._tab_widget.widget(0) is self._placeholder
+        ):
             self._tab_widget.clear()
 
         canvas = MplCanvas(self, toolbar=True)
@@ -479,13 +511,24 @@ class InterpretationWindow(PanelWindow):
         """Render a 80×56 px thumbnail from the figure."""
         try:
             buf = io.BytesIO()
-            fig.savefig(buf, format="png", dpi=30,
-                        bbox_inches="tight", facecolor=fig.get_facecolor())
+            fig.savefig(
+                buf,
+                format="png",
+                dpi=30,
+                bbox_inches="tight",
+                facecolor=fig.get_facecolor(),
+            )
             buf.seek(0)
             pix = QPixmap()
             pix.loadFromData(buf.read())
-            icon = QIcon(pix.scaled(80, 56, Qt.AspectRatioMode.KeepAspectRatio,
-                                    Qt.TransformationMode.SmoothTransformation))
+            icon = QIcon(
+                pix.scaled(
+                    80,
+                    56,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
         except Exception:
             icon = QIcon()
         item = QListWidgetItem(icon, "")
@@ -512,8 +555,11 @@ class InterpretationWindow(PanelWindow):
         if idx < 0 or self._tab_widget.widget(idx) is self._placeholder:
             return
         from PySide6.QtWidgets import QInputDialog
+
         current = self._tab_widget.tabText(idx).strip()
-        name, ok = QInputDialog.getText(self, "Rename Tab", "New name:", text=current)
+        name, ok = QInputDialog.getText(
+            self, "Rename Tab", "New name:", text=current
+        )
         if ok and name:
             self._tab_widget.setTabText(idx, f"  {name}  ")
 
@@ -527,11 +573,15 @@ class InterpretationWindow(PanelWindow):
     def _on_run_geological(self) -> None:
         self._run_status.setText("Running geological classification…")
         self._btn_run_geo.setEnabled(False)
+
         def _fn():
             return self._ctrl.run_geological()
+
         self._worker = _RunWorker(_fn, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_geo.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_geo.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_hydro(self) -> None:
@@ -546,7 +596,9 @@ class InterpretationWindow(PanelWindow):
         self._btn_run_hydro.setEnabled(False)
         self._worker = _RunWorker(self._ctrl.run_hydro, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_hydro.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_hydro.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_mc(self) -> None:
@@ -554,11 +606,15 @@ class InterpretationWindow(PanelWindow):
         n_samples = n.value() if n else 200
         self._run_status.setText(f"Running MC ({n_samples} samples)…")
         self._btn_run_mc.setEnabled(False)
+
         def _fn():
             return self._ctrl.run_monte_carlo(n_samples=n_samples)
+
         self._worker = _RunWorker(_fn, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_mc.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_mc.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_finished(self, msg: str) -> None:
@@ -575,7 +631,9 @@ class InterpretationWindow(PanelWindow):
             if model is not None:
                 self._ctrl.set_model(model)
                 self._update_status_card()
-                self._run_status.setText("Model loaded from Inversion window.")
+                self._run_status.setText(
+                    "Model loaded from Inversion window."
+                )
                 return
         self._run_status.setText("No model available from Inversion window.")
 
@@ -607,7 +665,10 @@ class InterpretationWindow(PanelWindow):
 
     def _add_borehole_las(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load borehole LAS", "", "LAS files (*.las *.LAS);;All files (*)"
+            self,
+            "Load borehole LAS",
+            "",
+            "LAS files (*.las *.LAS);;All files (*)",
         )
         if path:
             try:
@@ -640,7 +701,9 @@ class InterpretationWindow(PanelWindow):
             w = getattr(self, "_param_widgets", {}).get("station")
             if w and isinstance(w, QComboBox):
                 station = w.currentText()
-            self._run_status.setText(self._ctrl.export_las(path, station=station))
+            self._run_status.setText(
+                self._ctrl.export_las(path, station=station)
+            )
 
     def _export_csv(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
@@ -664,6 +727,7 @@ class InterpretationWindow(PanelWindow):
         from pycsamt.app.desktop.dialogs.export_dlg import (
             ExportDialog,
         )
+
         ExportDialog(figure=canvas.figure, parent=self).exec()
 
     # ── Public API ────────────────────────────────────────────────────────
@@ -683,23 +747,28 @@ class InterpretationWindow(PanelWindow):
         st = self._ctrl.model_status
         if not st["loaded"]:
             sites = self._ctrl.state.sites
-            n_st  = ""
+            n_st = ""
             if sites is not None:
                 try:
                     from pycsamt.emtools._core import (
                         _iter_items,
                     )
-                    n_st = f"  {len(list(_iter_items(sites)))} stations loaded\n"
+
+                    n_st = (
+                        f"  {len(list(_iter_items(sites)))} stations loaded\n"
+                    )
                 except Exception:
                     pass
-            self._status_card.setText(f"{n_st}No resistivity model\nLoad from inversion or file")
+            self._status_card.setText(
+                f"{n_st}No resistivity model\nLoad from inversion or file"
+            )
             return
         depth = st["depth_max"]
-        prof  = st["profile_m"]
-        rms   = st["rms"]
-        txt   = (
+        prof = st["profile_m"]
+        rms = st["rms"]
+        txt = (
             f"✓ {st['method']}  ·  {st['n_x']} × {st['n_z']}\n"
-            f"Depth: {depth:.0f} m   Profile: {(prof or 0)/1e3:.1f} km\n"
+            f"Depth: {depth:.0f} m   Profile: {(prof or 0) / 1e3:.1f} km\n"
             f"RMS: {rms or '—'}"
         )
         self._status_card.setText(txt)
@@ -715,7 +784,10 @@ class InterpretationWindow(PanelWindow):
                     _iter_items,
                     _name,
                 )
-                return [_name(ed, i) for i, ed in enumerate(_iter_items(sites))]
+
+                return [
+                    _name(ed, i) for i, ed in enumerate(_iter_items(sites))
+                ]
             except Exception:
                 pass
         return []

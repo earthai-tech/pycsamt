@@ -53,8 +53,10 @@ detail = analyze_anisotropy(survey)
 table = anisotropy_table(survey)
 
 print(f"{len(table)} stations, {len(detail)} station-frequency rows")
-print(f"flagged at defaults (|ratio|>{ANISO_RATIO_THRESH} or skew>{SWIFT_SKEW_THRESH}): "
-      f"{int(table['anisotropy_flag'].sum())}/{len(table)}")
+print(
+    f"flagged at defaults (|ratio|>{ANISO_RATIO_THRESH} or skew>{SWIFT_SKEW_THRESH}): "
+    f"{int(table['anisotropy_flag'].sum())}/{len(table)}"
+)
 
 # %%
 # 1. One station's raw metrics vs. period
@@ -79,7 +81,9 @@ ax1.set_title(f"{station} — anisotropy ratio and Swift skew vs. period")
 ax1.grid(alpha=0.3)
 
 ax2.semilogx(d["period_s"], d["swift_skew"], "o-", ms=3, color="#d62728")
-ax2.axhline(SWIFT_SKEW_THRESH, color="0.4", ls="--", lw=1, label="flag threshold")
+ax2.axhline(
+    SWIFT_SKEW_THRESH, color="0.4", ls="--", lw=1, label="flag threshold"
+)
 ax2.set_ylabel("Swift skew S")
 ax2.set_xlabel("Period (s)")
 ax2.legend(fontsize=8, loc="upper left")
@@ -232,8 +236,13 @@ corr = both["mean_ratio_log10"].abs().corr(both["mean_swift_skew"])
 fig, ax = plt.subplots(figsize=(6, 5))
 for line, marker in [("L18PLT", "o"), ("L22PLT", "^")]:
     sub = both[both["line"] == line]
-    ax.scatter(sub["mean_swift_skew"], sub["mean_ratio_log10"].abs(),
-               label=line, marker=marker, alpha=0.8)
+    ax.scatter(
+        sub["mean_swift_skew"],
+        sub["mean_ratio_log10"].abs(),
+        label=line,
+        marker=marker,
+        alpha=0.8,
+    )
 ax.set_xlabel("mean Swift skew")
 ax.set_ylabel(r"$|\overline{\log_{10}(\rho_{xy}/\rho_{yx})}|$")
 ax.set_title(f"Ratio vs. skew across both lines  (Pearson r = {corr:.2f})")

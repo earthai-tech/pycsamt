@@ -43,10 +43,15 @@ rot = curves(S_rot, "rho")
 
 stations = list(raw)
 pick = [stations[3], stations[len(stations) // 2], stations[-4]]
-plot_before_after(raw, rot, pick, quantity="rho",
-                  labels=("measurement axes", "rotated to strike"),
-                  colors=("#b0b7c3", "#7c3aed"),
-                  title="Impedance rotated onto geoelectric strike")
+plot_before_after(
+    raw,
+    rot,
+    pick,
+    quantity="rho",
+    labels=("measurement axes", "rotated to strike"),
+    colors=("#b0b7c3", "#7c3aed"),
+    title="Impedance rotated onto geoelectric strike",
+)
 
 # %%
 # Does rotation improve 2-D-ness?
@@ -73,13 +78,19 @@ x = np.arange(len(r_before))
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(figsize=(10, 3.8), constrained_layout=True)
-ax.bar(x - 0.2, r_before, width=0.4, color="#b0b7c3", label="measurement axes")
-ax.bar(x + 0.2, r_after, width=0.4, color="#7c3aed", label="rotated to strike")
+ax.bar(
+    x - 0.2, r_before, width=0.4, color="#b0b7c3", label="measurement axes"
+)
+ax.bar(
+    x + 0.2, r_after, width=0.4, color="#7c3aed", label="rotated to strike"
+)
 ax.set_xticks(x)
 ax.set_xticklabels(stations, rotation=90, fontsize=6)
 ax.set_ylabel(r"median $|Z_{xx}|/|Z_{xy}|$")
-ax.set_title(f"Departure from 2-D  (mean {r_before.mean():.2f} -> "
-             f"{r_after.mean():.2f}, lower is better)")
+ax.set_title(
+    f"Departure from 2-D  (mean {r_before.mean():.2f} -> "
+    f"{r_after.mean():.2f}, lower is better)"
+)
 ax.legend(fontsize=8)
 
 # %%
@@ -91,10 +102,15 @@ ax.legend(fontsize=8)
 
 S_anti = antisymmetrize(S_rot, recursive=False)
 anti = curves(S_anti, "rho")
-plot_before_after(rot, anti, pick, quantity="rho",
-                  labels=("rotated", "antisymmetrised"),
-                  colors=("#7c3aed", "#16a34a"),
-                  title="Antisymmetrised for 2-D inversion")
+plot_before_after(
+    rot,
+    anti,
+    pick,
+    quantity="rho",
+    labels=("rotated", "antisymmetrised"),
+    colors=("#7c3aed", "#16a34a"),
+    title="Antisymmetrised for 2-D inversion",
+)
 
 # %%
 # **Takeaway.** Estimate the strike, confirm it is consistent along the line,

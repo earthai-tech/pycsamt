@@ -58,7 +58,7 @@ def test_field_vs_offset_monotonic_decay():
 
 def test_field_vs_offset_detects_bump():
     amp = _decaying_amplitude().copy()
-    amp[3] = amp[2] * 1.5              # a receiver reading that increases
+    amp[3] = amp[2] * 1.5  # a receiver reading that increases
     resp = field_vs_offset(OFFSETS, amp)
     assert not resp.monotonic_decay
 
@@ -93,7 +93,7 @@ def test_field_vs_offset_drops_nonfinite():
     offsets = [1000.0, 2000.0, np.nan, 4000.0]
     amps = [3.0, 2.0, 1.0, 0.5]
     resp = field_vs_offset(offsets, amps)
-    assert resp.n_offsets == 3            # NaN offset dropped
+    assert resp.n_offsets == 3  # NaN offset dropped
 
 
 def test_field_vs_offset_single_point():
@@ -136,6 +136,11 @@ def test_csem_edge_report_and_table():
     assert "offset_response" in report
     table = csem_edge_table({"1.0Hz": report})
     assert table.shape[0] == 1
-    for col in ("frequency_hz", "n_detectable", "max_detectable_offset_m",
-                "monotonic_decay", "dynamic_range_db"):
+    for col in (
+        "frequency_hz",
+        "n_detectable",
+        "max_detectable_offset_m",
+        "monotonic_decay",
+        "dynamic_range_db",
+    ):
         assert col in table.columns

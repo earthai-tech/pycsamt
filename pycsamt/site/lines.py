@@ -6,6 +6,7 @@ site/lines.py — survey-line detection and naming helpers.
 Core functions used by both the web app and the desktop GUI so that
 line-detection logic is not duplicated in the UI layer.
 """
+
 from __future__ import annotations
 
 import re
@@ -85,7 +86,9 @@ def detect_lines_from_station_ids(
 
     # Merge small groups
     if min_stations_per_line > 1:
-        tiny = [k for k, v in groups.items() if len(v) < min_stations_per_line]
+        tiny = [
+            k for k, v in groups.items() if len(v) < min_stations_per_line
+        ]
         if tiny:
             unassigned = groups.setdefault("unassigned", [])
             for k in tiny:

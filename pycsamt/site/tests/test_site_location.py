@@ -27,34 +27,38 @@ def _load_edi(p: Path) -> EDIFile:
 
 def _dup_edi(tmp_path: Path, src: Path, stem: str) -> Path:
     dst = tmp_path / f"{stem}.edi"
-    dst.write_text(src.read_text(encoding="utf-8"),
-                   encoding="utf-8")
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dst
 
 
 def _has_pyproj_or_gdal() -> bool:
     try:
         import pyproj  # noqa: F401
+
         return True
     except Exception:
         try:
             from osgeo import osr  # noqa: F401
+
             return True
         except Exception:
             return False
+
 
 def test_parse_lat_lon_elev_variants():
     assert parse_lat("45N") == pytest.approx(45.0)
     assert parse_lat("45.5") == pytest.approx(45.5)
     assert parse_lat("45 30 0 S") == pytest.approx(-45.5)
     assert parse_lon("123W") == pytest.approx(-123.0)
-    assert parse_lon("123 15 30 E") == \
-        pytest.approx(123 + 15/60 + 30/3600)
+    assert parse_lon("123 15 30 E") == pytest.approx(
+        123 + 15 / 60 + 30 / 3600
+    )
 
     assert parse_elev("1200") == 1200.0
     assert math.isnan(parse_elev("oops"))
     assert math.isnan(parse_lat("??"))
     assert math.isnan(parse_lon(None))
+
 
 def test_ensure_head_coords_on_stub():
     class Stub:
@@ -69,7 +73,10 @@ def test_ensure_head_coords_on_stub():
 
     ed = Stub()
     h = ensure_head_coords(
-        ed, lat="10N", lon="20E", elev="300",
+        ed,
+        lat="10N",
+        lon="20E",
+        elev="300",
     )
     assert h.lat == pytest.approx(10.0)
     assert h.lon == pytest.approx(20.0)
@@ -89,11 +96,18 @@ def test_ensure_head_coords_on_real_edi(simulated_edi: Path):
     assert getattr(h1, "dataid", None) == getattr(h0, "dataid", None)
 
 
-@pytest.mark.parametrize("use_list,inplace", [
-    (False, True), (True, True), (True, False),
-])
+@pytest.mark.parametrize(
+    "use_list,inplace",
+    [
+        (False, True),
+        (True, True),
+        (True, False),
+    ],
+)
 def test_apply_topography_updates_coords(
-    tmp_path: Path, simulated_edi: Path, use_list: bool,
+    tmp_path: Path,
+    simulated_edi: Path,
+    use_list: bool,
     inplace: bool,
 ):
     pd = pytest.importorskip("pandas")
@@ -103,20 +117,21 @@ def test_apply_topography_updates_coords(
 
     sid = ed.get_section("head").dataid  # type: ignore
 
-    df = pd.DataFrame({
-        "station": [sid, "OTHER"],
-        "latitude": [35.125, 0.0],
-        "longitude": [12.75, 0.0],
-        "elevation": [1234.0, 0.0],
-    })
+    df = pd.DataFrame(
+        {
+            "station": [sid, "OTHER"],
+            "latitude": [35.125, 0.0],
+            "longitude": [12.75, 0.0],
+            "elevation": [1234.0, 0.0],
+        }
+    )
 
     obj = [ed] if use_list else ed
     out = apply_topography(obj, df, inplace=inplace)
 
     def _coords(e):
         h = e.get_section("head")  # type: ignore
-        return float(h.lat), float(h.lon), \
-            float(h.elev)
+        return float(h.lat), float(h.lon), float(h.elev)
 
     if use_list and not inplace:
         # new list returned; original unchanged
@@ -159,8 +174,7 @@ def test_distance_bearing_chainage_simple():
 )
 def test_project_identity_epsg4326():
     # lon/lat order (always_xy=True in implementation)
-    x, y = project((12.5, 35.25), crs_from="EPSG:4326",
-                   crs_to="EPSG:4326")
+    x, y = project((12.5, 35.25), crs_from="EPSG:4326", crs_to="EPSG:4326")
     assert isinstance(x, np.ndarray) and isinstance(y, np.ndarray)
     assert x.size == 1 and y.size == 1
     assert x[0] == pytest.approx(12.5, abs=1e-9)

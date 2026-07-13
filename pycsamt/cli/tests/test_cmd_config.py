@@ -30,6 +30,7 @@ from pycsamt.cli.commands.config._base import (
 # Fixture: redirect TOML_PATH to a tmp file
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def isolated_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect TOML_PATH to a temporary file for every test.
@@ -39,6 +40,7 @@ def isolated_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """
     fake_toml = tmp_path / ".pycsamt.toml"
     import pycsamt.cli.commands.config._base as _b
+
     monkeypatch.setattr(_b, "TOML_PATH", fake_toml)
     return fake_toml
 
@@ -46,6 +48,7 @@ def isolated_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 # ---------------------------------------------------------------------------
 # Unit tests for helpers
 # ---------------------------------------------------------------------------
+
 
 class TestParseKey:
     def test_two_parts(self) -> None:
@@ -65,11 +68,13 @@ class TestParseKey:
 
     def test_unknown_section_raises(self) -> None:
         import click
+
         with pytest.raises(click.BadParameter):
             parse_key("unknown.field")
 
     def test_missing_dot_raises(self) -> None:
         import click
+
         with pytest.raises(click.BadParameter):
             parse_key("plotdpi")
 
@@ -111,6 +116,7 @@ class TestTomlReadWrite:
 class TestApplySection:
     def test_apply_plot_dpi(self) -> None:
         from pycsamt.api.plot import PLOT_CONFIG
+
         original = PLOT_CONFIG.dpi
         apply_section("plot", {"dpi": 99})
         assert PLOT_CONFIG.dpi == 99
@@ -119,6 +125,7 @@ class TestApplySection:
 
     def test_apply_control_rho_view(self) -> None:
         from pycsamt.api.control import PYCSAMT_CONTROL
+
         original = PYCSAMT_CONTROL.rho.view
         apply_section("control", {"rho__view": "linear"})
         assert PYCSAMT_CONTROL.rho.view == "linear"
@@ -127,6 +134,7 @@ class TestApplySection:
 
     def test_apply_view_backend(self) -> None:
         from pycsamt.api.view.config import PYCSAMT_API_VIEW
+
         original = PYCSAMT_API_VIEW.backend
         apply_section("view", {"backend": "pandas"})
         assert PYCSAMT_API_VIEW.backend == "pandas"
@@ -135,6 +143,7 @@ class TestApplySection:
 
     def test_apply_pipe_error_mode(self) -> None:
         from pycsamt.api.pipe.config import PYCSAMT_PIPE
+
         original = PYCSAMT_PIPE.on_step_error
         apply_section("pipe", {"on_step_error": "skip"})
         assert PYCSAMT_PIPE.on_step_error == "skip"
@@ -143,6 +152,7 @@ class TestApplySection:
 
     def test_load_all_config(self) -> None:
         from pycsamt.api.plot import PLOT_CONFIG
+
         original = PLOT_CONFIG.dpi
         load_all_config({"plot": {"dpi": 77}})
         assert PLOT_CONFIG.dpi == 77
@@ -153,18 +163,39 @@ class TestApplySection:
 # CLI help wiring
 # ---------------------------------------------------------------------------
 
+
 class TestConfigGroup:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["config", "--help"])
         assert result.exit_code == 0
-        for sub in ("list", "get", "set", "unset", "reset", "show", "env",
-                     "style", "interp", "agent"):
+        for sub in (
+            "list",
+            "get",
+            "set",
+            "unset",
+            "reset",
+            "show",
+            "env",
+            "style",
+            "interp",
+            "agent",
+        ):
             assert sub in result.output
 
-    @pytest.mark.parametrize("sub", [
-        "list", "get", "set", "unset", "reset", "show", "env",
-        "style", "interp",
-    ])
+    @pytest.mark.parametrize(
+        "sub",
+        [
+            "list",
+            "get",
+            "set",
+            "unset",
+            "reset",
+            "show",
+            "env",
+            "style",
+            "interp",
+        ],
+    )
     def test_each_subcommand_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["config", sub, "--help"])
         assert result.exit_code == 0
@@ -180,30 +211,43 @@ class TestConfigGroup:
 # config set / get / list / unset / reset
 # ---------------------------------------------------------------------------
 
+
 class TestConfigSetGet:
-    def test_set_plot_dpi(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_set_plot_dpi(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "set", "plot.dpi", "250"])
         assert result.exit_code == 0
         assert "250" in result.output
 
-    def test_set_persists_to_toml(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_set_persists_to_toml(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "250"])
         data = _read_toml()
         assert data.get("plot", {}).get("dpi") == 250
 
-    def test_set_string_value(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_set_string_value(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "set", "plot.fmt", "pdf"])
         assert result.exit_code == 0
         data = _read_toml()
         assert data["plot"]["fmt"] == "pdf"
 
-    def test_set_bool_value(self, runner: CliRunner, isolated_toml: Path) -> None:
-        result = runner.invoke(main, ["config", "set", "control.phase.wrap", "true"])
+    def test_set_bool_value(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
+        result = runner.invoke(
+            main, ["config", "set", "control.phase.wrap", "true"]
+        )
         assert result.exit_code == 0
         data = _read_toml()
         assert data["control"]["phase__wrap"] is True
 
-    def test_set_dry_run_no_write(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_set_dry_run_no_write(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(
             main, ["config", "set", "plot.dpi", "999", "--dry-run"]
         )
@@ -211,8 +255,11 @@ class TestConfigSetGet:
         assert "dry-run" in result.output.lower()
         assert not isolated_toml.exists()
 
-    def test_get_existing_key(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_get_existing_key(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         from pycsamt.api.plot import PLOT_CONFIG
+
         result = runner.invoke(main, ["config", "get", "plot.dpi"])
         assert result.exit_code == 0
         assert str(PLOT_CONFIG.dpi) in result.output
@@ -230,22 +277,30 @@ class TestConfigSetGet:
         assert result.exit_code != 0
 
     def test_set_unknown_section_fails(self, runner: CliRunner) -> None:
-        result = runner.invoke(main, ["config", "set", "nosection.key", "val"])
+        result = runner.invoke(
+            main, ["config", "set", "nosection.key", "val"]
+        )
         assert result.exit_code != 0
 
 
 class TestConfigList:
-    def test_list_empty_config(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_list_empty_config(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "list"])
         assert result.exit_code == 0
 
-    def test_list_after_set(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_list_after_set(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "list"])
         assert result.exit_code == 0
         assert "dpi" in result.output or "300" in result.output
 
-    def test_list_section_filter(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_list_section_filter(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "list", "plot"])
         assert result.exit_code == 0
@@ -261,23 +316,27 @@ class TestConfigList:
 
 
 class TestConfigUnsetReset:
-    def test_unset_existing_key(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_unset_existing_key(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "unset", "plot.dpi"])
         assert result.exit_code == 0
         data = _read_toml()
         assert "dpi" not in data.get("plot", {})
 
-    def test_unset_nonexistent_warns(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_unset_nonexistent_warns(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "unset", "plot.dpi"])
         # should exit 0 with a warning (not a hard failure)
         assert result.exit_code == 0
 
-    def test_reset_section(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_reset_section(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
-        result = runner.invoke(
-            main, ["config", "reset", "plot", "--yes"]
-        )
+        result = runner.invoke(main, ["config", "reset", "plot", "--yes"])
         assert result.exit_code == 0
         data = _read_toml()
         assert "plot" not in data
@@ -315,24 +374,32 @@ class TestConfigEnv:
     def test_env_section_filter(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["config", "env", "--section", "plot"])
         assert result.exit_code == 0
-        assert "PYCSAMT_DPI" in result.output or "PYCSAMT_FMT" in result.output
+        assert (
+            "PYCSAMT_DPI" in result.output or "PYCSAMT_FMT" in result.output
+        )
 
 
 class TestConfigPresets:
-    def test_style_preset(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_style_preset(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "style", "publication"])
         assert result.exit_code == 0
         data = _read_toml()
         assert data.get("style", {}).get("preset") == "publication"
 
-    def test_style_preset_no_persist(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_style_preset_no_persist(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(
             main, ["config", "style", "dark", "--no-persist"]
         )
         assert result.exit_code == 0
         assert not isolated_toml.exists()
 
-    def test_interp_preset(self, runner: CliRunner, isolated_toml: Path) -> None:
+    def test_interp_preset(
+        self, runner: CliRunner, isolated_toml: Path
+    ) -> None:
         result = runner.invoke(main, ["config", "interp", "accessible"])
         assert result.exit_code == 0
         data = _read_toml()
@@ -353,10 +420,10 @@ class TestConfigAgent:
         assert "provider" in data
 
     @pytest.mark.parametrize("provider", ["claude", "openai", "gemini"])
-    def test_set_key_instructions(self, runner: CliRunner, provider: str) -> None:
-        result = runner.invoke(
-            main, ["config", "agent", "set-key", provider]
-        )
+    def test_set_key_instructions(
+        self, runner: CliRunner, provider: str
+    ) -> None:
+        result = runner.invoke(main, ["config", "agent", "set-key", provider])
         assert result.exit_code == 0
         # Should show the env var name
         expected = {

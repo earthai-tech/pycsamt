@@ -40,7 +40,9 @@ from pycsamt.emtools import (
 freq, rho = 8.0, 300.0
 k_earth = wavenumber(freq, rho)
 k_free = wavenumber(freq)
-print(f"earth wavelength at {freq:g} Hz, {rho:g} ohm.m: {2 * np.pi / k_earth:,.0f} m")
+print(
+    f"earth wavelength at {freq:g} Hz, {rho:g} ohm.m: {2 * np.pi / k_earth:,.0f} m"
+)
 print(f"free-space wavelength at {freq:g} Hz: {2 * np.pi / k_free:,.0f} m")
 
 theta = np.linspace(0.0, 180.0, 721)
@@ -77,7 +79,9 @@ print(f"d / wavelength at {freq:g} Hz: {d / (2 * np.pi / k_earth):.3f}")
 
 patterns_lf = [array_factor(theta_b, N, d, k_earth) for N in (1, 2, 4, 8)]
 plot_radiation_pattern(
-    theta_b, patterns_lf, labels=[f"N={n}" for n in (1, 2, 4, 8)],
+    theta_b,
+    patterns_lf,
+    labels=[f"N={n}" for n in (1, 2, 4, 8)],
     title=f"Array factor at {freq:g} Hz (d/λ ≈ 0.10)",
 )
 
@@ -100,18 +104,26 @@ plot_radiation_pattern(
 freq_hf = 1024.0
 k_hf = wavenumber(freq_hf, rho)
 wl_hf = 2 * np.pi / k_hf
-print(f"earth wavelength at {freq_hf:g} Hz: {wl_hf:.0f} m;  d/wavelength = {d / wl_hf:.3f}")
+print(
+    f"earth wavelength at {freq_hf:g} Hz: {wl_hf:.0f} m;  d/wavelength = {d / wl_hf:.3f}"
+)
 
 patterns_hf = [array_factor(theta_b, N, d, k_hf) for N in (1, 2, 4, 8)]
 plot_radiation_pattern(
-    theta_b, patterns_hf, labels=[f"N={n}" for n in (1, 2, 4, 8)],
+    theta_b,
+    patterns_hf,
+    labels=[f"N={n}" for n in (1, 2, 4, 8)],
     title=f"Array factor at {freq_hf:g} Hz (d/λ ≈ 1.17)",
 )
 
 fig, ax = plt.subplots(figsize=(8, 4.5))
 plot_radiation_pattern(
-    theta_b, patterns_hf, labels=[f"N={n}" for n in (1, 2, 4, 8)],
-    polar=False, log_scale=True, ax=ax,
+    theta_b,
+    patterns_hf,
+    labels=[f"N={n}" for n in (1, 2, 4, 8)],
+    polar=False,
+    log_scale=True,
+    ax=ax,
     title=f"Array factor at {freq_hf:g} Hz, Cartesian dB view",
 )
 
@@ -136,7 +148,9 @@ plot_radiation_pattern(
 beta_20 = beam_steer(20.0, d, k_hf)
 af_steered = array_factor(theta_b, 4, d, k_hf, beta=beta_20)
 peak_angle = theta_b[np.argmax(af_steered)]
-print(f"target 20 deg -> beta={beta_20:.4f} rad, actual peak at {peak_angle:.2f} deg")
+print(
+    f"target 20 deg -> beta={beta_20:.4f} rad, actual peak at {peak_angle:.2f} deg"
+)
 
 angles = steering_angles(4, d, k_hf, beta_20, n_range=3)
 print("all main-lobe angles (target + grating lobes):", angles)
@@ -161,7 +175,8 @@ print("all main-lobe angles (target + grating lobes):", angles)
 pat_broadside = pas_pattern(theta_b, N=4, d=d, k=k_hf, beta=0.0, l=1000.0)
 pat_steered = pas_pattern(theta_b, N=4, d=d, k=k_hf, beta=beta_20, l=1000.0)
 plot_radiation_pattern(
-    theta_b, [pat_broadside, pat_steered],
+    theta_b,
+    [pat_broadside, pat_steered],
     labels=["broadside", "steered to 20 deg"],
     title=f"4-element PAS combined pattern, {freq_hf:g} Hz",
 )
@@ -183,7 +198,9 @@ plot_radiation_pattern(
 
 for length in (500.0, 1000.0, 2000.0, 5000.0, 10000.0):
     d0 = sdas_directivity(length, k_hf)
-    print(f"l={length:>6.0f} m (l/wavelength={length / wl_hf:.2f}): D0={d0:.3f}")
+    print(
+        f"l={length:>6.0f} m (l/wavelength={length / wl_hf:.2f}): D0={d0:.3f}"
+    )
 
 print()
 for n_elem in (1, 2, 4, 8, 16):
@@ -210,16 +227,22 @@ for n_elem in (1, 2, 4, 8, 16):
 
 N_design = 8
 beta_25 = beam_steer(25.0, d, k_hf)
-pattern_design = pas_pattern(theta_b, N=N_design, d=d, k=k_hf, beta=beta_25, l=1000.0)
-pattern_single = sdas_element_pattern(90.0 - np.abs(theta_b), l=1000.0, k=k_hf)
+pattern_design = pas_pattern(
+    theta_b, N=N_design, d=d, k=k_hf, beta=beta_25, l=1000.0
+)
+pattern_single = sdas_element_pattern(
+    90.0 - np.abs(theta_b), l=1000.0, k=k_hf
+)
 
 fig = plt.figure(figsize=(12.0, 5.0))
 axp = fig.add_subplot(1, 2, 1, projection="polar")
 axc = fig.add_subplot(1, 2, 2)
 plot_radiation_pattern(
-    theta_b, [pattern_single, pattern_design],
+    theta_b,
+    [pattern_single, pattern_design],
     labels=["1 SDAS", f"{N_design}-element PAS, steered 25 deg"],
-    ax=axp, title="",
+    ax=axp,
+    title="",
 )
 # Isolate the *main* lobe's own half-power width — the crude global
 # span of all points >= 0.5 also catches the section-4 grating lobe on
@@ -242,7 +265,9 @@ axc.legend(fontsize=8)
 axc.grid(True, ls=":", alpha=0.5)
 fig.tight_layout()
 
-print(f"{N_design}-element array SNR gain over 1 SDAS: {snr_gain_db(N_design):.1f} dB")
+print(
+    f"{N_design}-element array SNR gain over 1 SDAS: {snr_gain_db(N_design):.1f} dB"
+)
 print(f"steered main-lobe half-power width: {beamwidth:.1f} deg")
 
 # %%

@@ -33,17 +33,14 @@ from typing import Any
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-ParamSpec  = dict[str, Any]
+ParamSpec = dict[str, Any]
 AgentEntry = dict[str, Any]
 
 AGENT_REGISTRY: dict[str, AgentEntry] = {
-
     # ══════════════════════════════════════════════════════════════════════════
     # LLM agents (require API key)
     # ══════════════════════════════════════════════════════════════════════════
-
     # ── Data Loading ──────────────────────────────────────────────────────────
-
     "MT Loader": {
         "type": "llm",
         "category": "Data Loading",
@@ -66,7 +63,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Context Parser": {
         "type": "llm",
         "category": "Data Loading",
@@ -75,9 +71,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         "params": {},
         "result_plot": None,
     },
-
     # ── Quality Control ───────────────────────────────────────────────────────
-
     "QC Analysis": {
         "type": "llm",
         "category": "Quality Control",
@@ -116,7 +110,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": "plot_qc_quicklook",
     },
-
     "Anomaly Detection": {
         "type": "llm",
         "category": "Quality Control",
@@ -148,9 +141,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Pre-processing ─────────────────────────────────────────────────────────
-
     "Static Shift": {
         "type": "llm",
         "category": "Pre-processing",
@@ -181,7 +172,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": "plot_ss_station_curves",
     },
-
     "Tensor Rotation": {
         "type": "llm",
         "category": "Pre-processing",
@@ -199,7 +189,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Denoising": {
         "type": "llm",
         "category": "Pre-processing",
@@ -232,7 +221,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Frequency Decimation": {
         "type": "llm",
         "category": "Pre-processing",
@@ -269,9 +257,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Phase & Dimensionality ─────────────────────────────────────────────────
-
     "Phase Analysis": {
         "type": "llm",
         "category": "Phase & Dimensionality",
@@ -295,7 +281,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": "plot_dimensionality_psection",
     },
-
     "Tipper Analysis": {
         "type": "llm",
         "category": "Phase & Dimensionality",
@@ -325,7 +310,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Sensitivity": {
         "type": "llm",
         "category": "Phase & Dimensionality",
@@ -349,9 +333,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Forward Modelling ─────────────────────────────────────────────────────
-
     "Forward Model": {
         "type": "llm",
         "category": "Forward Modelling",
@@ -368,9 +350,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Inversion Preparation ─────────────────────────────────────────────────
-
     "Inversion Prep": {
         "type": "llm",
         "category": "Inversion",
@@ -394,7 +374,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Occam2D": {
         "type": "llm",
         "category": "Inversion",
@@ -424,7 +403,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "ModEM": {
         "type": "llm",
         "category": "Inversion",
@@ -447,7 +425,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "MARE2DEM": {
         "type": "llm",
         "category": "Inversion",
@@ -490,7 +467,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Inversion Backend": {
         "type": "llm",
         "category": "Inversion",
@@ -545,9 +521,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── AI Inversion ──────────────────────────────────────────────────────────
-
     "AI Inversion (1-D)": {
         "type": "llm",
         "category": "AI Inversion",
@@ -591,7 +565,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "AI Inversion (2-D)": {
         "type": "llm",
         "category": "AI Inversion",
@@ -635,7 +608,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "AI Inversion (3-D)": {
         "type": "llm",
         "category": "AI Inversion",
@@ -681,7 +653,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Ensemble Inversion": {
         "type": "llm",
         "category": "AI Inversion",
@@ -724,7 +695,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Joint Inversion": {
         "type": "llm",
         "category": "AI Inversion",
@@ -754,7 +724,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Model Zoo": {
         "type": "llm",
         "category": "AI Inversion",
@@ -770,9 +739,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Post-processing & Evaluation ──────────────────────────────────────────
-
     "Inversion Evaluation": {
         "type": "llm",
         "category": "Post-processing",
@@ -781,7 +748,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         "params": {},
         "result_plot": None,
     },
-
     "Inversion Comparison": {
         "type": "llm",
         "category": "Post-processing",
@@ -790,7 +756,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         "params": {},
         "result_plot": None,
     },
-
     "Resistivity Map": {
         "type": "llm",
         "category": "Post-processing",
@@ -819,9 +784,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Interpretation & Reporting ─────────────────────────────────────────────
-
     "Interpretation": {
         "type": "llm",
         "category": "Interpretation & Reporting",
@@ -837,7 +800,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Report": {
         "type": "llm",
         "category": "Interpretation & Reporting",
@@ -858,7 +820,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Code Generation": {
         "type": "llm",
         "category": "Interpretation & Reporting",
@@ -873,7 +834,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "EDI Export": {
         "type": "llm",
         "category": "Interpretation & Reporting",
@@ -894,9 +854,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ── Workflow & Orchestration ───────────────────────────────────────────────
-
     "Workflow Orchestrator": {
         "type": "llm",
         "category": "Workflow",
@@ -927,7 +885,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Pipeline": {
         "type": "llm",
         "category": "Workflow",
@@ -936,7 +893,13 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         "params": {
             "preset": {
                 "type": "combo",
-                "options": ["basic_qc", "full_qc", "inversion_prep", "ai_inversion", "full"],
+                "options": [
+                    "basic_qc",
+                    "full_qc",
+                    "inversion_prep",
+                    "ai_inversion",
+                    "full",
+                ],
                 "default": "basic_qc",
                 "label": "Pipeline preset",
                 "tip": "Named preset defining the sequence of processing steps.",
@@ -944,7 +907,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     "Batch Survey": {
         "type": "llm",
         "category": "Workflow",
@@ -974,11 +936,9 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
-
     # ══════════════════════════════════════════════════════════════════════════
     # Processing operations (no API key required)
     # ══════════════════════════════════════════════════════════════════════════
-
     "QC Quicklook": {
         "type": "processing",
         "fn_name": "plot_qc_quicklook",
@@ -986,7 +946,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         "params": {},
         "result_plot": "plot_qc_quicklook",
     },
-
     "Dimensionality": {
         "type": "processing",
         "fn_name": "classify_dimensionality",
@@ -1009,7 +968,6 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": "plot_dimensionality_psection",
     },
-
     "Static Shift (fast)": {
         "type": "processing",
         "fn_name": "correct_static_shift",
@@ -1049,6 +1007,7 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
 # Helper functions used by RunAgentDialog and AgentWorker
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def agent_names() -> list[str]:
     """Return all registered agent display names."""
     return list(AGENT_REGISTRY.keys())
@@ -1080,7 +1039,4 @@ def get_entry(name: str) -> AgentEntry | None:
 def default_params(name: str) -> dict[str, Any]:
     """Return a {param_name: default_value} dict for the named agent."""
     entry = AGENT_REGISTRY.get(name, {})
-    return {
-        k: v.get("default")
-        for k, v in entry.get("params", {}).items()
-    }
+    return {k: v.get("default") for k, v in entry.get("params", {}).items()}

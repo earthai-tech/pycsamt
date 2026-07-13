@@ -46,6 +46,7 @@ def test_avgtoedi_k1_stn_utm_coordinates_are_written_to_edi(tmp_path):
     assert "REFLAT=" in text
     assert "REFLONG=" in text
 
+
 @pytest.mark.usefixtures("modern_data_file", "stn_file_k2")
 def test_avg_with_topo_injection_adds_head(
     modern_data_file: Path,
@@ -110,7 +111,6 @@ def test_avg_collection_size_matches_sites(
     modern_data_file: Path,
     stn_file_k2: Path,
 ):
-
 
     avg = AVG.from_file(modern_data_file).add_topography(stn_file_k2)
     try:

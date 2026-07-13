@@ -171,4 +171,3 @@ A common processing chain is:
 Add ``TensorRotationAgent`` after strike estimation when inversion or export
 requires a consistent coordinate frame.  Add ``DenoisingAgent`` before
 analysis or inversion when QC flags noisy data.
-:html_theme.sidebar_secondary.remove:

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import re
@@ -20,7 +19,7 @@ from pycsamt.zonge.property import (
 # SkipFlag                                                             #
 # -------------------------------------------------------------------- #
 def test_skipflag_codes_and_labels():
-    s = SkipFlag()                      # default "2"
+    s = SkipFlag()  # default "2"
     assert s.code == "2"
     assert s.get() == "good"
 
@@ -37,11 +36,13 @@ def test_skipflag_codes_and_labels():
     assert s.get() == "nodata"
 
     with pytest.raises(ValueError):
-        s.set("3")                      # invalid code
+        s.set("3")  # invalid code
+
 
 # -------------------------------------------------------------------- #
 # Hardware                                                             #
 # -------------------------------------------------------------------- #
+
 
 def test_hardware_keywords_roundtrip():
     hw = Hardware()
@@ -78,6 +79,7 @@ def test_hardware_keywords_roundtrip():
 # -------------------------------------------------------------------- #
 # SurveyAnnotation / SurveyConfiguration                               #
 # -------------------------------------------------------------------- #
+
 
 def test_annotation_update_and_export():
     ann = SurveyAnnotation()
@@ -184,8 +186,7 @@ def test_tx_update_and_export_minimal():
     assert kw["Tx.Type"] == "Natural"
     assert kw["Tx.GdpStn"] == 20
     assert kw["Tx.Stn"] == 20
-    assert kw["Tx.Length"] == '5000 m'
-
+    assert kw["Tx.Length"] == "5000 m"
 
 
 # Header facade
@@ -253,6 +254,7 @@ def test_header_from_lines_parses_banner_and_keywords():
     assert "$Tx.Stn=20" in text
     assert re.search(r"^\$Written=\d{4}-\d{2}-\d{2}T", text, re.M)
 
+
 def test_header_read_from_meta_mapping_directly():
     meta = {
         "$Job.Name": "North Silverbell",
@@ -271,6 +273,7 @@ def test_header_read_from_meta_mapping_directly():
     # check that a number was parsed for length.
     assert pytest.approx(hdr.rx.length_m, rel=0, abs=1e-6) == 200.0
 
+
 # -------------------------------------------------------------------- #
 # smoke: __str__                                                       #
 # -------------------------------------------------------------------- #
@@ -282,5 +285,6 @@ def test_strs_are_informative():
     assert "Transmitter" in Transmitter().__str__()
     assert "Header(" in Header().__str__()
 
-if __name__=='__main__': # pragma: no-cover
-   pytest.main( [__file__])
+
+if __name__ == "__main__":  # pragma: no-cover
+    pytest.main([__file__])

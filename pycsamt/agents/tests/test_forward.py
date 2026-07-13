@@ -6,16 +6,16 @@ import unittest
 
 
 class TestForwardModelAgent(unittest.TestCase):
-
     def setUp(self):
         from pycsamt.agents import ForwardModelAgent
+
         self.agent = ForwardModelAgent()
 
     def _simple_model(self):
         return {
             "model": {
                 "resistivity": [200.0, 20.0, 5000.0],
-                "thickness":   [300.0, 800.0],
+                "thickness": [300.0, 800.0],
             }
         }
 
@@ -47,15 +47,15 @@ class TestForwardModelAgent(unittest.TestCase):
         self.assertIsNotNone(r.status)
 
     def test_single_layer_model(self):
-        r = self.agent.execute({
-            "model": {"resistivity": [100.0], "thickness": []}
-        })
+        r = self.agent.execute(
+            {"model": {"resistivity": [100.0], "thickness": []}}
+        )
         self.assertIn(r.status, ("success", "needs_review", "failed"))
 
     def test_negative_resistivity_handled(self):
-        r = self.agent.execute({
-            "model": {"resistivity": [-50.0, 200.0], "thickness": [500.0]}
-        })
+        r = self.agent.execute(
+            {"model": {"resistivity": [-50.0, 200.0], "thickness": [500.0]}}
+        )
         # should not raise, either fails gracefully or warns
         self.assertIsNotNone(r.status)
 

@@ -1,4 +1,5 @@
 """Tests for pycsamt.emtools.lcurve"""
+
 from __future__ import annotations
 
 import matplotlib
@@ -13,11 +14,12 @@ from pycsamt.emtools.lcurve import lcurve_table, plot_lcurve
 # Synthetic L-curve data
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _ldata(n: int = 20):
     """Return (misfit, roughness, lambda) arrays describing a clean L-curve."""
     lam = np.logspace(3, -3, n)
-    rough  = lam ** -1.2   # roughness decreases with λ
-    misfit = lam **  0.8   # misfit decreases as λ decreases
+    rough = lam**-1.2  # roughness decreases with λ
+    misfit = lam**0.8  # misfit decreases as λ decreases
     return misfit, rough, lam
 
 
@@ -25,10 +27,11 @@ def _ldata(n: int = 20):
 # lcurve_table
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestLcurveTable:
 
+class TestLcurveTable:
     def test_returns_dataframe(self):
         import pandas as pd
+
         m, r, l = _ldata()
         df = lcurve_table(m, r, l)
         assert isinstance(df, pd.DataFrame)
@@ -90,8 +93,8 @@ class TestLcurveTable:
 # plot_lcurve
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestPlotLcurve:
 
+class TestPlotLcurve:
     def test_returns_axes(self):
         m, r, l = _ldata()
         ax = plot_lcurve(m, r, l)
@@ -108,8 +111,9 @@ class TestPlotLcurve:
     def test_multiple_curves(self):
         m1, r1, l1 = _ldata(15)
         m2, r2, l2 = _ldata(20)
-        ax = plot_lcurve([m1, m2], [r1, r2], [l1, l2],
-                         labels=["run-A", "run-B"])
+        ax = plot_lcurve(
+            [m1, m2], [r1, r2], [l1, l2], labels=["run-A", "run-B"]
+        )
         plt.close("all")
         assert ax is not None
 

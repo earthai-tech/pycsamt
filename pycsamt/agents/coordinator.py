@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 # ── workflow step descriptor ──────────────────────────────────────────────────
 
+
 class WorkflowStep:
     """One step in an :class:`AgentCoordinator` workflow.
 
@@ -56,14 +57,15 @@ class WorkflowStep:
         description: str = "",
         required: bool = True,
     ) -> None:
-        self.name        = name
-        self.agent       = agent
-        self.input_fn    = input_fn
+        self.name = name
+        self.agent = agent
+        self.input_fn = input_fn
         self.description = description or f"Run {type(agent).__name__}"
-        self.required    = required
+        self.required = required
 
 
 # ── coordinator ───────────────────────────────────────────────────────────────
+
 
 class AgentCoordinator:
     """Orchestrate a sequence of pycsamt agents as a named workflow.
@@ -106,15 +108,19 @@ class AgentCoordinator:
         verbose: bool = True,
     ) -> None:
         self.workflow_name = workflow_name
-        self.verbose       = verbose
-        self._steps: list[WorkflowStep]    = []
+        self.verbose = verbose
+        self._steps: list[WorkflowStep] = []
         self._agents: dict[str, BaseAgent] = {}
 
         if checkpoint_dir is None:
-            checkpoint_dir = Path(f"pycsamt_agent_checkpoints/{workflow_name}")
+            checkpoint_dir = Path(
+                f"pycsamt_agent_checkpoints/{workflow_name}"
+            )
         self._ckpt_dir = Path(checkpoint_dir)
 
-        self._log = logging.getLogger(f"pycsamt.agents.coordinator.{workflow_name}")
+        self._log = logging.getLogger(
+            f"pycsamt.agents.coordinator.{workflow_name}"
+        )
 
     # ── step registration ─────────────────────────────────────────────────────
 
@@ -149,7 +155,8 @@ class AgentCoordinator:
             raise ValueError(f"Step {name!r} already registered.")
         self._steps.append(
             WorkflowStep(
-                name, agent,
+                name,
+                agent,
                 input_fn=input_fn,
                 description=description,
                 required=required,
@@ -186,7 +193,8 @@ class AgentCoordinator:
             agent = step.agent
             llm_str = (
                 f"{agent.llm_provider}/{agent.model}"
-                if agent.api_key else "no-LLM"
+                if agent.api_key
+                else "no-LLM"
             )
             req_str = "" if step.required else " [optional]"
             lines.append(
@@ -195,13 +203,16 @@ class AgentCoordinator:
                 f"       LLM    : {llm_str}\n"
                 f"       Action : {step.description}"
             )
-            step_meta.append({
-                "step": i, "name": step.name,
-                "agent": type(agent).__name__,
-                "llm": llm_str,
-                "description": step.description,
-                "required": step.required,
-            })
+            step_meta.append(
+                {
+                    "step": i,
+                    "name": step.name,
+                    "agent": type(agent).__name__,
+                    "llm": llm_str,
+                    "description": step.description,
+                    "required": step.required,
+                }
+            )
         lines.append("─" * 60)
         plan = "\n".join(lines)
         self._print(plan)
@@ -247,7 +258,11 @@ class AgentCoordinator:
         total_cost = 0.0
         all_warnings: list[str] = []
 
-        self._log.info("Starting workflow %r (%d steps)", self.workflow_name, len(self._steps))
+        self._log.info(
+            "Starting workflow %r (%d steps)",
+            self.workflow_name,
+            len(self._steps),
+        )
 
         for step in self._steps:
             # ── resume: skip completed checkpoints ───────────────────────────
@@ -258,7 +273,9 @@ class AgentCoordinator:
                     self._print(f"  ↩  [{step.name}] resumed from checkpoint")
                     continue
                 except Exception as exc:
-                    self._log.warning("Failed to load checkpoint for %r: %s", step.name, exc)
+                    self._log.warning(
+                        "Failed to load checkpoint for %r: %s", step.name, exc
+                    )
 
             # ── build input ──────────────────────────────────────────────────
             try:
@@ -288,16 +305,18 @@ class AgentCoordinator:
                 )
 
             results[step.name] = result
-            total_cost        += result.cost_estimate_usd
-            all_warnings      += result.warnings
+            total_cost += result.cost_estimate_usd
+            all_warnings += result.warnings
 
             # ── checkpoint ───────────────────────────────────────────────────
             self._save_checkpoint(step.name, result)
 
             # ── status check ─────────────────────────────────────────────────
-            status_icon = {"success": "✔", "failed": "✘", "needs_review": "⚠"}.get(
-                result.status, "?"
-            )
+            status_icon = {
+                "success": "✔",
+                "failed": "✘",
+                "needs_review": "⚠",
+            }.get(result.status, "?")
             cost_str = format_cost(result.cost_estimate_usd)
             self._print(
                 f"  {status_icon}  [{step.name}] {result.summary} "
@@ -305,7 +324,9 @@ class AgentCoordinator:
             )
 
             if result.status == "failed" and step.required:
-                self._log.error("Required step %r failed; aborting workflow.", step.name)
+                self._log.error(
+                    "Required step %r failed; aborting workflow.", step.name
+                )
                 return AgentResult(
                     status="failed",
                     summary=f"Workflow aborted at required step {step.name!r}: {result.error}",
@@ -318,14 +339,14 @@ class AgentCoordinator:
                 )
 
         elapsed = time.time() - t_workflow
-        n_ok  = sum(1 for r in results.values() if r.status == "success")
+        n_ok = sum(1 for r in results.values() if r.status == "success")
         n_tot = len(results)
         summary = (
             f"Workflow {self.workflow_name!r} complete: "
             f"{n_ok}/{n_tot} steps succeeded "
             f"in {elapsed:.1f}s ({format_cost(total_cost)})."
         )
-        self._print(f"\n  {'━'*52}\n  {summary}\n  {'━'*52}")
+        self._print(f"\n  {'━' * 52}\n  {summary}\n  {'━' * 52}")
         self._save_workflow_state(results, summary)
 
         return AgentResult(
@@ -349,6 +370,7 @@ class AgentCoordinator:
         so they are dropped from the checkpoint.
         """
         from dataclasses import replace
+
         try:
             from matplotlib.figure import Figure
         except Exception:  # pragma: no cover - matplotlib always present
@@ -364,8 +386,7 @@ class AgentCoordinator:
             return False
 
         safe_data = {
-            k: v for k, v in (result.data or {}).items()
-            if not _has_fig(v)
+            k: v for k, v in (result.data or {}).items() if not _has_fig(v)
         }
         return replace(result, data=safe_data)
 
@@ -432,6 +453,7 @@ class AgentCoordinator:
             # progress glyphs (▶ ↩ ━). Re-encode with replacement so
             # verbose output never crashes the workflow.
             import sys
+
             enc = getattr(sys.stdout, "encoding", None) or "ascii"
             print(msg.encode(enc, errors="replace").decode(enc))
 
@@ -439,8 +461,11 @@ class AgentCoordinator:
         """Delete all saved checkpoints for this workflow."""
         if self._ckpt_dir.exists():
             import shutil
+
             shutil.rmtree(self._ckpt_dir)
-            self._log.info("Checkpoints cleared for workflow %r", self.workflow_name)
+            self._log.info(
+                "Checkpoints cleared for workflow %r", self.workflow_name
+            )
 
     def __repr__(self) -> str:
         return (

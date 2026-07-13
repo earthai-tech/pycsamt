@@ -97,7 +97,6 @@ class ParseMixin:
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
-
     EDI_SUFFIXES = {".edi"}
 
     def _as_path(self, p: Pathish) -> Path:
@@ -146,9 +145,11 @@ class ParseMixin:
 
             # directory -> (r)glob for *.edi
             if p.exists() and p.is_dir():
-                it = p.rglob("*.edi") if getattr(
-                    self, "recursive", True
-                ) else p.glob("*.edi")
+                it = (
+                    p.rglob("*.edi")
+                    if getattr(self, "recursive", True)
+                    else p.glob("*.edi")
+                )
                 for m in it:
                     if m.is_file():
                         yield m
@@ -158,27 +159,25 @@ class ParseMixin:
             if _is_glob(str(p)):
                 if p.is_absolute():
                     parent, name = p.parent, p.name
-                    it = parent.rglob(name) if "**" in name else \
-                         parent.glob(name)
+                    it = (
+                        parent.rglob(name)
+                        if "**" in name
+                        else parent.glob(name)
+                    )
                 else:
                     pat = str(p)
-                    it = base.rglob(pat) if "**" in pat else \
-                         base.glob(pat)
+                    it = base.rglob(pat) if "**" in pat else base.glob(pat)
                 any_yielded = False
                 for m in it:
                     if m.is_file():
                         any_yielded = True
                         yield m
                 if not any_yielded:
-                    self._push_error(
-                        src, f"No match for pattern: {src}"
-                    )
+                    self._push_error(src, f"No match for pattern: {src}")
                 continue
 
             # anything else: record as not found
-            self._push_error(
-                src, f"Not found or unsupported: {src}"
-            )
+            self._push_error(src, f"Not found or unsupported: {src}")
 
     def _fast_station(self, p: Path) -> str | None:
         """
@@ -191,10 +190,10 @@ class ParseMixin:
                     s = raw.strip()
                     if not s:
                         continue
-                    if s.startswith(">=") or (s.startswith(">") and
-                                              not s.upper().startswith(
-                                                  ">HEAD"
-                                              )):
+                    if s.startswith(">=") or (
+                        s.startswith(">")
+                        and not s.upper().startswith(">HEAD")
+                    ):
                         if in_head:
                             break
                     if s.upper().startswith(">HEAD"):
@@ -205,6 +204,7 @@ class ParseMixin:
         except Exception:
             return None
         return None
+
 
 @dataclass
 class _ParseResult:
@@ -319,7 +319,8 @@ class CoreParser(ParseMixin):
         self._errors.clear()
 
         for p in self._iter_edi_files(
-            sources if isinstance(sources, list)
+            sources
+            if isinstance(sources, list)
             else list(self._iter_paths(sources))
         ):
             res = self._read_one(p)
@@ -356,6 +357,7 @@ class CoreParser(ParseMixin):
         # ---------- NEW ----------
         out.extend(self._errors)
         return out
+
 
 class CBBase:
     r"""
@@ -438,7 +440,6 @@ class CBBase:
     .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
-
 
     def __init__(
         self,
@@ -578,7 +579,6 @@ class CBBase:
             paths.append(s)
         return paths
 
-
     def summary(self) -> list[dict[str, object]]:
         rows: list[dict[str, object]] = []
         for ed in self._items:
@@ -606,9 +606,7 @@ class CBBase:
         return getattr(self, "_items", [])
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"CBBase(n={len(self)}, stations={self.stations()!r})"
-        )
+        return f"CBBase(n={len(self)}, stations={self.stations()!r})"
 
     def __str__(self) -> str:  # pragma: no cover
         lines = ["CBBase"]

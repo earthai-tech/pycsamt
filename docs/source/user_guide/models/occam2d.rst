@@ -653,8 +653,8 @@ Next Steps
   archive practice.
 * :doc:`choosing_backend` for deciding when Occam2D is the right model
   integration.
-* :doc:`../tutorials/prepare_occam2d_inversion` for a practical Occam2D
+* :doc:`../../tutorials/prepare_occam2d_inversion` for a practical Occam2D
   workflow.
 * :ref:`inversion_concepts` for Occam-style objective functions and
   regularization.
-* :doc:`../api/models` for generated API details.
+* :doc:`../../api/models` for generated API details.

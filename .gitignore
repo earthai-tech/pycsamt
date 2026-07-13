@@ -276,6 +276,12 @@ docs/examples/**/*.py[cod]
 # C&G paper submission files — not for public distribution
 /cag-paper/
 
+# Reviewer-response handoff artifacts — local drafts/results for students
+/QUESTIONS-TO-ANSWERS.md
+/docs/reviewer_response_emtools.tex
+/results/reviewer_response_emtools/
+/pycsamt/pycsamt-project.zip
+
 # Agent workflow checkpoints — generated at runtime, not source
 pycsamt_agent_checkpoints/
 checkpoints/

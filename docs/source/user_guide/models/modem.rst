@@ -887,4 +887,4 @@ Next Steps
 * :doc:`occam2d` documents the 2-D Occam-style alternative.
 * :ref:`inversion_concepts` introduces misfit, regularization, and inversion
   diagnostics.
-* :doc:`../api/models` links to generated API pages for the ModEM objects.
+* :doc:`../../api/models` links to generated API pages for the ModEM objects.

@@ -823,4 +823,4 @@ Next Steps
   practice.
 * :doc:`choosing_backend` for deciding when MARE2DEM is the right integration.
 * :ref:`inversion_concepts` for regularized inversion and misfit concepts.
-* :doc:`../api/models` for generated API reference pages.
+* :doc:`../../api/models` for generated API reference pages.

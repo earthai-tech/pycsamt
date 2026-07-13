@@ -207,7 +207,7 @@ class JointInversionAgent(BaseAgent):
             _, z, fr = _get_z_block(ed)
             if z is None:
                 continue
-            feat = _z_to_features(z, fr, freqs_mt)
+            feat = _z_to_features(ed, z, fr, freqs_mt)
             if feat is None:
                 warnings.append(f"{nm}: skipped (bad MT data).")
                 continue

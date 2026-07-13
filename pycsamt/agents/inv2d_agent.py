@@ -174,7 +174,7 @@ class Inv2DAgent(BaseAgent):
             _, z, fr = _get_z_block(ed)
             if z is None:
                 continue
-            feat = _z_to_features(z, fr, freqs)
+            feat = _z_to_features(ed, z, fr, freqs)
             if feat is None:
                 warnings.append(f"{nm}: skipped (bad data).")
                 continue
@@ -188,9 +188,13 @@ class Inv2DAgent(BaseAgent):
             )
 
         n_sta = len(station_names)
-        # X_obs: (n_components, n_freqs, n_sta)
-        X_obs = np.stack(obs_feats, axis=2)  # (n_freqs, n_components, n_sta)
-        X_obs = X_obs.transpose(1, 0, 2)  # (n_components, n_freqs, n_sta)
+        # each observed feature is flat [log10(rho_xy) | phase_xy]
+        # (length 2 * n_freqs): fold back into (n_components=2, n_freqs)
+        comp_feats = [
+            np.asarray(f, dtype=np.float32).reshape(2, -1)
+            for f in obs_feats
+        ]
+        X_obs = np.stack(comp_feats, axis=2)  # (n_components, n_freqs, n_sta)
         X_obs_4d = X_obs[None, ...]  # (1, n_components, n_freqs, n_sta)
 
         # ── generate synthetic 2-D training data ───────────────────────────────

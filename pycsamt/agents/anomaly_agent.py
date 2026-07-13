@@ -142,12 +142,13 @@ class AnomalyDetectionAgent(BaseAgent):
             _, z, fr = _get_z_block(ed)
             if z is None:
                 continue
-            feat = _z_to_features(z, fr, freqs)
+            # flat [log10(rho_a_xy), phase_xy] vector, length 2*n_freq
+            feat = _z_to_features(ed, z, fr, freqs)
             if feat is None:
                 warnings.append(f"{nm}: skipped.")
                 continue
             station_names.append(nm)
-            feat_list.append(feat)  # (n_freqs, n_comp)
+            feat_list.append(np.asarray(feat, dtype=float).ravel())
 
         if len(feat_list) < 3:
             return AgentResult.failed(
@@ -156,9 +157,8 @@ class AnomalyDetectionAgent(BaseAgent):
             )
 
         n_sta = len(station_names)
-        # X: (n_obs=n_sta, n_features=n_freqs*n_comp)
-        n_freq, n_comp = feat_list[0].shape
-        X = np.stack(feat_list, axis=0).reshape(n_sta, -1).astype(np.float32)
+        # X: (n_obs=n_sta, n_features=2*n_freqs) — flat feature rows
+        X = np.stack(feat_list, axis=0).astype(np.float32)
         n_feat = X.shape[1]
 
         # ── fit AnomalyDetector ────────────────────────────────────────────────

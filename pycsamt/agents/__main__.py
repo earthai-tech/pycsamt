@@ -31,7 +31,23 @@ Launch the Gradio web interface::
 
 from __future__ import annotations
 
+import builtins
 import sys
+
+
+def print(*args, **kwargs):  # noqa: A001 — module-local shadow
+    """Console-safe print: legacy Windows consoles use cp1252, which
+    cannot encode the box-drawing/emoji characters in this CLI's
+    output. Degrade lossily instead of crashing."""
+    try:
+        builtins.print(*args, **kwargs)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        cleaned = [
+            str(a).encode(enc, errors="replace").decode(enc)
+            for a in args
+        ]
+        builtins.print(*cleaned, **kwargs)
 
 
 def _cmd_preview(request: str) -> None:
@@ -192,7 +208,9 @@ def _cmd_zoo(args: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    argv = argv or sys.argv[1:]
+    # explicit empty argv must mean "no arguments" (help), not fall
+    # through to sys.argv
+    argv = sys.argv[1:] if argv is None else argv
 
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__)

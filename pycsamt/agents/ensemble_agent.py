@@ -249,7 +249,7 @@ class EnsembleAgent(BaseAgent):
             _, z, fr = _get_z_block(ed)
             if z is None:
                 continue
-            X_obs = _z_to_features(z, fr, freqs)
+            X_obs = _z_to_features(ed, z, fr, freqs)
             if X_obs is None:
                 warnings.append(f"{nm}: could not build feature vector.")
                 continue
@@ -319,7 +319,7 @@ class EnsembleAgent(BaseAgent):
                     nm = _name(ed, ii)
                     if nm == first_station:
                         _, z, fr = _get_z_block(ed)
-                        X_first = _z_to_features(z, fr, freqs)
+                        X_first = _z_to_features(ed, z, fr, freqs)
                         break
                 if X_first is not None:
                     fig_prof = ens.plot_uncertainty_profile(

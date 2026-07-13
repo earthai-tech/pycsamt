@@ -159,6 +159,9 @@ class InversionBackendAgent(BaseAgent):
         output_dir = input_data.get("output_dir", "pycsamt_inversion_output")
 
         # ── check backend availability ────────────────────────────────────
+        # available_backends() returns the registered NAMES only; a name
+        # may still be unusable when its optional dependency is missing,
+        # so probe the lazy import before committing to it.
         avail = available_backends()
         if backend not in avail:
             warnings.append(
@@ -167,12 +170,17 @@ class InversionBackendAgent(BaseAgent):
             )
             backend = "builtin"
 
-        if avail.get(backend) is False:
-            warnings.append(
-                f"Backend {backend!r} is registered but its dependencies are "
-                "not installed. Falling back to 'builtin'."
-            )
-            backend = "builtin"
+        if backend != "builtin":
+            try:
+                from ..inversion.backends import get_backend
+
+                get_backend(backend)
+            except Exception as exc:
+                warnings.append(
+                    f"Backend {backend!r} is registered but unavailable "
+                    f"({exc}). Falling back to 'builtin'."
+                )
+                backend = "builtin"
 
         # ── build InversionConfig ─────────────────────────────────────────
         try:

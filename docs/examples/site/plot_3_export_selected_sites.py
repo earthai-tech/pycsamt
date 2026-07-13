@@ -36,6 +36,7 @@ The original EDI files are never modified.  The generated files are written to
 
 import csv
 import os
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -97,6 +98,13 @@ if len(selected_sites) == 0:
     raise RuntimeError(
         "The export selection is empty; nothing can be written."
     )
+
+if export_dir.exists():
+    shutil.rmtree(export_dir)
+if archive_path.exists():
+    archive_path.unlink()
+if archive_manifest_csv.exists():
+    archive_manifest_csv.unlink()
 
 selected_table = SitesReport(selected_sites).to_dataframe()
 

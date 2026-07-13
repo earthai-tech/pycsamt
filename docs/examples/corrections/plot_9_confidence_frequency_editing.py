@@ -217,16 +217,21 @@ def impedance_magnitude_curves(sites, component="xy"):
 
 
 def plot_impedance_compare(before, after, selected, *, label, color, title):
+    common_selected = [station for station in selected if station in after]
+    if len(common_selected) == 0:
+        raise RuntimeError(
+            "No selected stations are available after frequency editing."
+        )
     fig, axes = plt.subplots(
         1,
-        len(selected),
-        figsize=(4.0 * len(selected), 4.2),
+        len(common_selected),
+        figsize=(4.0 * len(common_selected), 4.2),
         sharey=True,
         constrained_layout=True,
     )
-    if len(selected) == 1:
+    if len(common_selected) == 1:
         axes = [axes]
-    for ax, station in zip(axes, selected):
+    for ax, station in zip(axes, common_selected):
         pb, vb = before[station]
         pa, va = after[station]
         ax.loglog(pb, vb, ".", ms=3, color="#a8a29e", label="raw")
@@ -247,8 +252,20 @@ permissive_curves = impedance_magnitude_curves(
 conservative_curves = impedance_magnitude_curves(
     conservative.sites, component="xy"
 )
-stations = list(raw_curves)
-pick = [stations[2], stations[len(stations) // 2], stations[-4]]
+common_stations = [
+    station
+    for station in raw_curves
+    if station in permissive_curves and station in conservative_curves
+]
+if len(common_stations) < 3:
+    raise RuntimeError(
+        "Need at least three stations shared by both editing policies."
+    )
+pick = [
+    common_stations[2],
+    common_stations[len(common_stations) // 2],
+    common_stations[-4],
+]
 
 plot_impedance_compare(
     raw_curves,

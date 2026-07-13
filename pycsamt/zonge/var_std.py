@@ -39,7 +39,7 @@ import pandas as pd
 from ..exceptions import AvgDataError
 from ..log.logger import get_logger
 from .base import AVGComponentBase
-from .utils import find_and_rename_column
+from .utils import find_and_rename_column, to_numeric_if_possible
 
 logger = get_logger(__name__)
 
@@ -157,7 +157,7 @@ class PhaseStdBase(AVGComponentBase):
             df["freq"] = np.nan
 
         # coerce numerics
-        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["station"] = to_numeric_if_possible(df["station"])
         df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
 
@@ -252,7 +252,7 @@ class PhaseStdBase(AVGComponentBase):
         #   mangle labels; keep as-is when not numeric.
         # - freq should be numeric for sorting/gridding.
         if "station" in idx_cols:
-            df["station"] = pd.to_numeric(df["station"], errors="ignore")
+            df["station"] = to_numeric_if_possible(df["station"])
         if "freq" in idx_cols:
             df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
 

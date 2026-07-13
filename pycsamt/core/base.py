@@ -16,7 +16,8 @@ from typing import (
 import numpy as np
 
 from ..api.property import PyCSAMTObject
-from .config import StationNamePolicy, get_adapter, get_config
+from . import config as _core_config
+from .config import StationNamePolicy, get_config
 
 __all__ = [
     "TFBundle",
@@ -548,7 +549,7 @@ def to_edi(
     if not k:
         raise RuntimeError("Cannot infer adapter key")
 
-    factory = get_adapter(k)
+    factory = _core_config.get_adapter(k)
     if not factory:
         raise RuntimeError(f"No adapter registered for: {k}")
 

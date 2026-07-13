@@ -25,7 +25,7 @@ from .heads import Header
 from .meas import Amps, CompMeas, Frequency
 from .resphase import Phase, Resistivity
 from .survey import Station
-from .utils import load_avg
+from .utils import _standardise_columns, load_avg
 from .var_pc import PcEmag, PcHmag, PcRho
 from .var_std import SEphz, SHphz, SPhz
 from .z import Z
@@ -177,7 +177,9 @@ class DataInfo(Zonge):
         """
         Orchestrate reading data into all sub-components.
         """
-        self.df = source
+        self.df = _standardise_columns(source.copy())
+        if "comp" not in self.df.columns:
+            self.df["comp"] = "ExHy"
         self.meta = meta or {}
 
         # Populate header from metadata

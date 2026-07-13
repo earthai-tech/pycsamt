@@ -15,10 +15,6 @@ Usage::
 
 from __future__ import annotations
 
-import matplotlib
-
-matplotlib.use("QtAgg")  # must be set before importing Figure / canvas
-
 from matplotlib.backends.backend_qtagg import (
     FigureCanvasQTAgg,
     NavigationToolbar2QT,

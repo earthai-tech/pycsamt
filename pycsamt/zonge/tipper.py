@@ -101,7 +101,9 @@ class Tipper(AVGComponentBase):
             raise AvgDataError("Tipper requires a 'freq' column.")
 
         # Normalize types
-        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        from .utils import to_numeric_if_possible
+
+        df["station"] = to_numeric_if_possible(df["station"])
         df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
         df["tx"] = df["tx"].map(_to_complex)
         df["ty"] = df["ty"].map(_to_complex)

@@ -66,6 +66,7 @@ __all__ = [
     "chunk_by_frequency",
     "write_avg",
     "to_xarray",
+    "to_numeric_if_possible",
 ]
 
 logger = get_logger(__name__)
@@ -425,6 +426,27 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns=rename_dict)
 
 
+def to_numeric_if_possible(values):
+    """Return numeric values when coercion succeeds, else original values.
+
+    This avoids ``pd.to_numeric(errors="ignore")`` because Dask-backed
+    pandas objects reject the ``"ignore"`` mode under newer CI stacks.
+    """
+    try:
+        numeric = pd.to_numeric(values, errors="coerce")
+    except Exception:
+        return values
+
+    try:
+        original_na = pd.isna(values)
+        converted_na = pd.isna(numeric)
+        if bool((converted_na & ~original_na).any()):
+            return values
+    except Exception:
+        return values
+    return numeric
+
+
 def split_by_station(df: pd.DataFrame) -> dict[Any, pd.DataFrame]:
     """
     Split a tidy AVG DataFrame into per-station sub-frames.
@@ -557,9 +579,9 @@ def to_xarray(
     # Light type normalisation: make station/freq numeric when
     # possible; keep comp as string/categorical.
     if "station" in idx_cols:
-        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["station"] = to_numeric_if_possible(df["station"])
     if "freq" in idx_cols:
-        df["freq"] = pd.to_numeric(df["freq"], errors="ignore")
+        df["freq"] = to_numeric_if_possible(df["freq"])
 
     # Provide a stable, interpretable order for 'comp'.  Keep a
     # canonical order first, then append any unexpected labels.

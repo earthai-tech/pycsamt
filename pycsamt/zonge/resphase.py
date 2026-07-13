@@ -34,7 +34,12 @@ import pandas as pd
 
 from ..exceptions import AvgDataError
 from .tensor import TensorBase
-from .utils import _norm_comp, _to_num, find_and_rename_column
+from .utils import (
+    _norm_comp,
+    _to_num,
+    find_and_rename_column,
+    to_numeric_if_possible,
+)
 from .utils import to_xarray as _to_xr
 
 __all__ = ["Resistivity", "Phase"]
@@ -130,7 +135,7 @@ class Resistivity(TensorBase):
             raise AvgDataError("Resistivity requires a 'freq' column.")
 
         # normalize dtypes
-        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["station"] = to_numeric_if_possible(df["station"])
         df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
         df["comp"] = df["comp"].map(_norm_comp)
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)
@@ -296,7 +301,7 @@ class Phase(TensorBase):
         if "freq" not in df.columns:
             raise AvgDataError("Phase requires a 'freq' column.")
 
-        df["station"] = pd.to_numeric(df["station"], errors="ignore")
+        df["station"] = to_numeric_if_possible(df["station"])
         df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
         df["comp"] = df["comp"].map(_norm_comp)
         df[self.VAR_NAME] = df[self.VAR_NAME].map(_to_num)

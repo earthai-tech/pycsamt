@@ -2127,86 +2127,81 @@ class AMTAVG(AVG):
     def z_yy_err(self):
         return self.z.z_yy_err
 
+    @staticmethod
+    def _component_series(
+        df: pd.DataFrame,
+        comp: str,
+        column: str,
+    ) -> pd.Series:
+        if df.empty or "comp" not in df.columns or column not in df.columns:
+            return pd.Series(dtype="float64")
+        mask = df["comp"].astype(str).str.upper() == comp.upper()
+        return df.loc[mask, column]
+
     # --- Resistivity Tensor Components ---
     @property
     def res_xx(self):
-        df = self.resistivity.frame
-        return df[df.comp == "ExHx"]["rho"]
+        return self._component_series(self.resistivity.frame, "ExHx", "rho")
 
     @property
     def res_xy(self):
-        df = self.resistivity.frame
-        return df[df.comp == "ExHy"]["rho"]
+        return self._component_series(self.resistivity.frame, "ExHy", "rho")
 
     @property
     def res_yx(self):
-        df = self.resistivity.frame
-        return df[df.comp == "EyHx"]["rho"]
+        return self._component_series(self.resistivity.frame, "EyHx", "rho")
 
     @property
     def res_yy(self):
-        df = self.resistivity.frame
-        return df[df.comp == "EyHy"]["rho"]
+        return self._component_series(self.resistivity.frame, "EyHy", "rho")
 
     # --- Resistivity Error Components ---
     @property
     def res_xx_err(self):
-        df = self.info.pc_rho.frame
-        return df[df.comp == "ExHx"]["pc_rho"]
+        return self._component_series(self.info.pc_rho.frame, "ExHx", "pc_rho")
 
     @property
     def res_xy_err(self):
-        df = self.info.pc_rho.frame
-        return df[df.comp == "ExHy"]["pc_rho"]
+        return self._component_series(self.info.pc_rho.frame, "ExHy", "pc_rho")
 
     @property
     def res_yx_err(self):
-        df = self.info.pc_rho.frame
-        return df[df.comp == "EyHx"]["pc_rho"]
+        return self._component_series(self.info.pc_rho.frame, "EyHx", "pc_rho")
 
     @property
     def res_yy_err(self):
-        df = self.info.pc_rho.frame
-        return df[df.comp == "EyHy"]["pc_rho"]
+        return self._component_series(self.info.pc_rho.frame, "EyHy", "pc_rho")
 
     # --- Phase Tensor Components ---
     @property
     def phase_xx(self):
-        df = self.phase.frame
-        return df[df.comp == "ExHx"]["phase"]
+        return self._component_series(self.phase.frame, "ExHx", "phase")
 
     @property
     def phase_xy(self):
-        df = self.phase.frame
-        return df[df.comp == "ExHy"]["phase"]
+        return self._component_series(self.phase.frame, "ExHy", "phase")
 
     @property
     def phase_yx(self):
-        df = self.phase.frame
-        return df[df.comp == "EyHx"]["phase"]
+        return self._component_series(self.phase.frame, "EyHx", "phase")
 
     @property
     def phase_yy(self):
-        df = self.phase.frame
-        return df[df.comp == "EyHy"]["phase"]
+        return self._component_series(self.phase.frame, "EyHy", "phase")
 
     # --- Phase Error Components ---
     @property
     def phase_xx_err(self):
-        df = self.info.s_phz.frame
-        return df[df.comp == "ExHx"]["s_phz"]
+        return self._component_series(self.info.s_phz.frame, "ExHx", "s_phz")
 
     @property
     def phase_xy_err(self):
-        df = self.info.s_phz.frame
-        return df[df.comp == "ExHy"]["s_phz"]
+        return self._component_series(self.info.s_phz.frame, "ExHy", "s_phz")
 
     @property
     def phase_yx_err(self):
-        df = self.info.s_phz.frame
-        return df[df.comp == "EyHx"]["s_phz"]
+        return self._component_series(self.info.s_phz.frame, "EyHx", "s_phz")
 
     @property
     def phase_yy_err(self):
-        df = self.info.s_phz.frame
-        return df[df.comp == "EyHy"]["s_phz"]
+        return self._component_series(self.info.s_phz.frame, "EyHy", "s_phz")

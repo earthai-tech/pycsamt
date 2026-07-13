@@ -10,10 +10,6 @@ recreating the widget.
 
 from __future__ import annotations
 
-import matplotlib
-
-matplotlib.use("QtAgg")
-
 import matplotlib.cm as mcm
 import matplotlib.colors as mcolors
 from matplotlib.backends.backend_qtagg import (

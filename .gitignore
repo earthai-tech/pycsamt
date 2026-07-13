@@ -252,6 +252,21 @@ data/MT/SPECTRA/*
 data/modem/*
 !data/modem/willy_27freq_watex_line02_sample
 !data/modem/willy_27freq_watex_line02_sample/**
+!data/modem/rerun-amt-bhs
+!data/modem/rerun-amt-bhs/**
+
+# Exception: compact TEMAVG sample set used by TDEM reader, workflow, CLI,
+# and plotting tests. The complete JIANGSU line remains local-only; keep one
+# full TEM100 companion set plus TEM1020.AVG for quality-marker coverage.
+!data/TEMAVG
+data/TEMAVG/*
+!data/TEMAVG/JIANGSU
+data/TEMAVG/JIANGSU/*
+!data/TEMAVG/JIANGSU/TEM100.AVG
+!data/TEMAVG/JIANGSU/TEM100.LOG
+!data/TEMAVG/JIANGSU/TEM100.Z
+!data/TEMAVG/JIANGSU/TEM100.mde
+!data/TEMAVG/JIANGSU/TEM1020.AVG
 
 # Inversion-plot runs (rendered PNGs, ~18 MB) are local-only outputs and
 # must never be committed — GitHub repo-size hygiene. ``data/*`` already

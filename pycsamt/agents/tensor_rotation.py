@@ -304,6 +304,13 @@ def _write_rotated_edi(
 ) -> str | None:
     """Write rotated impedance to a new EDI file. Returns path or None."""
     try:
+        # Site wrappers have no writer of their own: materialise the
+        # underlying EDIFile (which has write/write_new_edi)
+        if not (
+            hasattr(ed, "write") or hasattr(ed, "write_new_edi")
+        ) and callable(getattr(ed, "to_edi", None)):
+            ed = ed.to_edi()
+
         # Try write_new_edi if the EDI object supports it
         if (
             hasattr(ed, "write_new_edi")

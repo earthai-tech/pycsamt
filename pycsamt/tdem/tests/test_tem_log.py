@@ -91,7 +91,8 @@ def test_log_to_records_contains_expected_columns():
 def test_survey_parses_log_files():
     """Survey reader should expose parsed LOG files by stem."""
     survey = read_temavg_survey(DATA_DIR)
+    expected_logs = len(list(DATA_DIR.glob("*.LOG")))
 
-    assert survey.n_log_files == 55
+    assert survey.n_log_files == expected_logs
     assert "TEM100" in survey.log_files
     assert survey.get_log("TEM100").n_records == 51

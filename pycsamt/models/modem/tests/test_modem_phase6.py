@@ -23,16 +23,22 @@ _EX3D = (
     / "3D_MT"
     / "BLOCK2"
 )
-
-pytestmark = pytest.mark.skipif(
-    not _EX2D.exists(), reason="ModEMv626 example data not available"
+_BUNDLED_3D = (
+    Path(__file__).parents[4]
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
 )
+
+_RESULT_3D = _BUNDLED_3D if _BUNDLED_3D.exists() else _EX3D
 
 
 @pytest.fixture(scope="module")
 def result_2d():
     from pycsamt.models.modem.results import InversionResult
 
+    if not _EX2D.exists():
+        pytest.skip("2D ModEM example data not available")
     return InversionResult(_EX2D)
 
 
@@ -40,7 +46,9 @@ def result_2d():
 def result_3d():
     from pycsamt.models.modem.results import InversionResult
 
-    return InversionResult(_EX3D)
+    if not _RESULT_3D.exists():
+        pytest.skip("3D ModEM example data not available")
+    return InversionResult(_RESULT_3D)
 
 
 # ---------------------------------------------------------------------------
@@ -48,12 +56,12 @@ def result_3d():
 # ---------------------------------------------------------------------------
 
 
-def test_plot_misfit_returns_figure(result_2d):
+def test_plot_misfit_returns_figure(result_3d):
     import matplotlib.figure
 
     from pycsamt.models.modem.plot import PlotMisfit
 
-    fig = PlotMisfit(result=result_2d).plot()
+    fig = PlotMisfit(result=result_3d).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
 
@@ -148,12 +156,12 @@ def test_plot_model3d_custom_depths(result_3d):
 # ---------------------------------------------------------------------------
 
 
-def test_plot_response_returns_figure(result_2d):
+def test_plot_response_returns_figure(result_3d):
     import matplotlib.figure
 
     from pycsamt.models.modem.plot import PlotResponse
 
-    fig = PlotResponse(result=result_2d, max_stations=4).plot()
+    fig = PlotResponse(result=result_3d, max_stations=4).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)
 
@@ -172,17 +180,17 @@ def test_plot_response_no_data_raises(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_plot_pseudo_returns_figure(result_2d):
+def test_plot_pseudo_returns_figure(result_3d):
     import matplotlib.figure
 
     from pycsamt.models.modem.plot import PlotPseudo
 
     # discover available component from first block
     comp = (
-        result_2d.data_obs.blocks[0]["rows"][0][5]
-        if result_2d.data_obs
+        result_3d.data_obs.blocks[0]["rows"][0][5]
+        if result_3d.data_obs
         else "TE"
     )
-    fig = PlotPseudo(result=result_2d, component=comp).plot()
+    fig = PlotPseudo(result=result_3d, component=comp).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)

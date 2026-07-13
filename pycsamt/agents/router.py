@@ -170,10 +170,15 @@ _GREETINGS = frozenset(
 # Explicit code-generation phrases → CODE.
 _CODE_PHRASES = (
     "write code",
+    "write python code",
+    "write a python script",
     "generate code",
+    "generate a script",
     "python script",
     "code for",
     "script for",
+    "script that",
+    "script to",
     "write a script",
     "write function",
     "write a function",
@@ -255,6 +260,23 @@ _QUESTION_STARTS = (
 )
 
 _PATH_RE = re.compile(r"[/~][\w/\\.\-]{3,}")
+_LINE_RE = re.compile(r"\bL\d{2}PLT\b", re.I)
+
+_AMBIGUOUS_COMMANDS = frozenset(
+    {
+        "run the workflow",
+        "process my data",
+        "fix the line",
+        "make the plot",
+        "do the inversion",
+        "analyse this survey",
+        "analyze this survey",
+        "correct it",
+        "prepare files",
+        "run everything",
+        "use the checkpoint",
+    }
+)
 
 
 def classify_intent_offline(text: str) -> tuple[str, float]:
@@ -301,14 +323,18 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
         return METRICS, 0.82
 
     has_path = bool(_PATH_RE.search(text))
+    has_line = bool(_LINE_RE.search(text))
     has_wf_verb = any(v in t for v in _WORKFLOW_VERBS)
+
+    if t in _AMBIGUOUS_COMMANDS:
+        return CLARIFY, 0.72
 
     # ── QUESTION: genuine "what/how/why…" or trailing "?" ──────────────────
     is_question = t.endswith("?") or t.startswith(_QUESTION_STARTS)
     if is_question:
         # An imperative *with* a data path is a workflow phrased politely
         # ("can you run QC on /data/x?") — keep it a workflow.
-        if has_wf_verb and has_path:
+        if has_wf_verb and (has_path or has_line):
             return WORKFLOW, 0.7
         return QUESTION, 0.8
 

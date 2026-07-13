@@ -1,0 +1,103 @@
+TEMAVG 7.77, Processed: 24 Oct 24
+
+GLOBAL MODE LIST:
+ษออออออออออออออออออออออออออออออออออออออออออออหออออออออออออออหออออออออออออออป
+บฤดCOMPANYรฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบฤดJOBNUMBรฤฤฤฤบฤดTXLENรฤฤฤฤฤฤบ
+บฑ                                        ฑฑฑบฑ          ฑฑฑบฑ          ฑฑฑบ
+บฤดCLIENTรฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบฤดJOBDATEรฤฤฤฤบฤดTXBRGรฤฤฤฤฤฤบ
+บฑ                                        ฑฑฑบฑ          ฑฑฑบฑ          ฑฑฑบ
+บฤดPROJECTรฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบฤดJOBLINEรฤฤฤฤบฤดTXDISรฤฤฤฤฤฤบ
+บฑ                                        ฑฑฑบฑ          ฑฑฑบฑ          ฑฑฑบ
+ฬออออออออออออออัออออออออออออออัออออออออออออออฮออออออออออออออน              บ
+บฤดBRGBACKรฤฤฤฤณฤดRXBRGรฤฤฤฤฤฤณฤดBRGLINEรฤฤฤฤบฤดFRQLOรฤฤฤฤฤฤบฤดRX2TXรฤฤฤฤฤฤบ
+บฑ          ฑฑฑณฑ          ฑฑฑณฑ          ฑฑฑบฑ  NONE    ฑฑฑบฑ          ฑฑฑบ
+บฤดSTNLOรฤฤฤฤฤฤณฤดSTNDELTรฤฤฤฤณฤดSTNHIรฤฤฤฤฤฤบฤดFRQHIรฤฤฤฤฤฤบฤดTXCXรฤฤฤฤฤฤฤบ
+บฑ  NONE    ฑฑฑณฑ     1.0  ฑฑฑณฑ  NONE    ฑฑฑบฑ  NONE    ฑฑฑบฑ          ฑฑฑบ
+บฤดLBLFRSTรฤฤฤฤณฤดLBLDELTรฤฤฤฤณฤดPLTREVรฤฤฤฤฤบฤดUNITSรฤฤฤฤฤฤบฤดTXCYรฤฤฤฤฤฤฤบ
+บฑ STNLO    ฑฑฑณฑ     1.0  ฑฑฑณฑ   NO   ฑฑฑฑฑบฑ METERS ฑฑฑฑฑบฑ          ฑฑฑบ
+ศออออออออออออออฯออออออออออออออฯออออออออออออออสออออออออออออออสออออออออออออออผ
+
+PROCESSING MODES USED:
+ษCONTROL MODESอัอAutoRunอัDataอออออัResearchอัอResist.อัHalfSpaceัอHomoRhoอป
+บ   mode names ณ AUTO    ณ AVERAGE ณ RESEARCHณ RHOCALC ณ HOMO    ณ RHOMO   บ
+บ  mode values ุ    NO   ุ    YES  ุ    NO   ุ   RAMP  ุ   NONE  ุ    30.omน
+วOUTPUT FILES ฤยListFileฤยAvgFileฤฤยPlotFileฤยฤฤฤฤฤฤฤฤฤยDataFileฤยSTN Coordถ
+บ   mode names ณ LFILE   ณ DFILE   ณ ZFILE   ณ         ณ SPLIT   ณ STNDIR  บ
+บ  mode values ุ   NONE  ุ   AVG   ุ   MAG   ุ         ุ    YES  ุ   AUTO  น
+วDEPTH MODES  ฤยDepthLimฤยDepthExtฤยDepthWinฤยฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤยฤDebugฤฤฤถ
+บ   mode names ณ DEPTH   ณ DEXT    ณ DWIN    ณ         ณ         ณ DEBUG   บ
+บ  mode values ุ   NONE  ุ    NO   ุ   NONE  ุ         ุ         ุ    NO   น
+วPROCESS MODESฤยComponentยFrequencyยPltSelectยTimeCutofยTimeFileฤยTimeShiftถ
+บ   mode names ณCOMPONENTณFREQUENCYณ PSELECT ณ TCUTOFF ณ TIMEFILEณ TOFFSET บ
+บ  mode values ุ    ALL  ุ   NONE  ุ    YES  ุ    0.0msุ   NONE  ุ    NONE น
+วWINDOW MODES ฤยฤWinTimesยฤWinTimesยฤWinTimesยWinFilterยฤฤฤฤฤฤฤฤฤยฤCrystalฤถ
+บ   mode names ณ TIME    ณ SHALLOW ณ WINDOWS ณ SMOOTH  ณ         ณ XTAL    บ
+บ  mode values ุ   AUTO  ุ  ZONGE  ุ    NO   ุ     NO  ุ         ุ   Auto  น
+วPLOT OPTIONS ฤยLog-Logฤฤยฤ#CurvesฤยฤAxisEndsยฤErrorBarยฤฤฤฤฤฤฤฤฤยฤPreviewฤถ
+บ   mode names ณ PLOT    ณNUMCURVESณ PFIX    ณERRORBARSณ         ณ VIEW    บ
+บ  mode values ุ   NONE  ุ    10   ุ   TRIM  ุ    YES  ุ         ุ   NONE  น
+ศออออออออออออออฯอออออออออฯอออออออออฯอออออออออฯอออออออออฯอออออออออฯอออออออออผ
+
+Reading "TEM100.FLD" . . .
+[CLOCK]  Data uses BINARY CLOCK (1.9us).
+
+ Blk  Line a p  Station Freq Loop Cmp Stks Crnt Duty Window1 #W RxMoment Ts
+ AVG                100    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                120    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                140    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                160    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                180    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                200    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                220    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                240    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                260    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                280    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                300    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                320    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                340    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                360    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                380    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                400    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                420    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                440    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                460    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                480    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                500    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                520    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                540    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                560    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                580    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                600    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                620    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                640    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                660    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                680    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                700    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                720    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                740    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                760    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                780    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                800    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                820    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                840    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                860    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                880    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                900    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                920    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                940    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                960    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG                980    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1000    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1020    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1040    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1060    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1080    16 INL  Hz            50%  58.32u     10000.0 31b
+ AVG               1100    16 INL  Hz            50%  58.32u     10000.0 31b
+
+Combine .Z-file data . . .
+Combine .AVG-file data . . .
+File "TEM100.AVG" contains averaged data for  51 data sets.
+
+Data uses 4.98 MHz (binary) clock (1.9usec).
+Data uses 4.98 MHz (binary) clock (1.9usec).
+Log file "TEM100.LOG" closed.

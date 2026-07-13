@@ -1,0 +1,33 @@
+$ Job.Name = ""
+$ Job.Area = ""
+$ Job.For = ""
+$ Job.By = ""
+$ Job.Number = ""
+$ Survey.Array = INL
+$ Line.Name = "0"
+$ Line.Number = 0
+$ Line.Azimuth = 90
+$ Rx.HPR = *,*
+$ Unit.Length = m
+$ Unit.Time = msec
+$ Unit.dBdt = uV/A
+$ Stn.GdpBeg = 0
+$ Stn.GdpInc = 1
+$ Stn.Beg = 0
+$ Stn.Inc = 1
+$ Tx.Center = 0,0 m
+$ Tx.Length = 360,360 m
+$ Tx.Area = 1.2960E+05 m^2
+ 
+! Legacy keywords for zplot
+$ ZPLOT: Project = 
+$ ZPLOT: Client  = 
+$ ZPLOT: JobNumb = 
+$ ZPLOT: JobDate = 
+$ ZPLOT: JobLine = 0
+$ ZPLOT: BrgLine= East
+$ ZPLOT: BrgBack= West
+$ ZPLOT: STNLOW = 0
+$ ZPLOT: STNDELT = 1
+$ ZPLOT: LBLFRST = 0
+$ ZPLOT: LBLDELT = 1

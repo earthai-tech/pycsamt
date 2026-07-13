@@ -20,7 +20,8 @@ import pytest
 # ── paths ─────────────────────────────────────────────────────────────────────
 
 _AGENTS_TESTS = Path(__file__).resolve().parent  # agents/tests/
-_PROJECT_ROOT = _AGENTS_TESTS.parents[3]  # repo root
+# parents: [0] agents/  [1] pycsamt/ (package)  [2] repo root
+_PROJECT_ROOT = _AGENTS_TESTS.parents[2]
 _EDI_DIR = _PROJECT_ROOT / "data" / "3edis"
 
 

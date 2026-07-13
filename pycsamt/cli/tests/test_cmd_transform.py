@@ -8,7 +8,7 @@ Test strategy
 * **Help tests** — always run; verify Click wiring and option names.
 * **Unit tests** — use ``SpectraToEDI`` directly (no CLI overhead)
   to verify the transformer class itself.
-* **Live integration tests** — require ``data/AMT/SPECTRA/`` (spectra EDIs),
+* **Live integration tests** — require ``data/MT/SPECTRA/`` (spectra EDIs),
   ``data/avg/`` (AVG files), and Jones J files from ``edi_out/`` or
   ``data/``.  All live tests skip gracefully when data is absent.
 """
@@ -29,7 +29,7 @@ from pycsamt.cli import main
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_SPECTRA_DIR = _PROJECT_ROOT / "data" / "AMT" / "SPECTRA"
+_SPECTRA_DIR = _PROJECT_ROOT / "data" / "MT" / "SPECTRA"
 _AVG_DIR = _PROJECT_ROOT / "data" / "avg"
 _J_DIR = _PROJECT_ROOT / "edi_out"  # has test_j_kb0-s001.edi
 
@@ -78,7 +78,7 @@ class TestSpectraToEDIUnit:
     def require_spectra(self) -> None:
         if not _has_spectra():
             pytest.skip(
-                "data/AMT/SPECTRA/ not found — skipping spectra unit tests"
+                "data/MT/SPECTRA/ not found — skipping spectra unit tests"
             )
 
     def test_single_file_returns_collection(self) -> None:
@@ -228,7 +228,7 @@ class TestTransformSpectraCLI:
     @pytest.fixture(autouse=True)
     def require_spectra(self) -> None:
         if not _has_spectra():
-            pytest.skip("data/AMT/SPECTRA/ not found")
+            pytest.skip("data/MT/SPECTRA/ not found")
 
     def test_dry_run_no_output(
         self, runner: CliRunner, tmp_path: Path

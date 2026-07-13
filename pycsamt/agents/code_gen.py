@@ -172,10 +172,12 @@ dim_table = classify_dimensionality(
     sites_corr, skew_th={skew_th}, ellipt_th={ellipt_th},
 )
 st_result = estimate_strike_consensus(sites_corr)
-print(
-    f"Consensus strike: "
-    f"{{st_result.get('angle_deg', 'n/a'):.1f}} deg"
-)
+strike_angle = st_result.get("angle_deg")
+try:
+    strike_text = f"{{float(strike_angle):.1f}} deg"
+except (TypeError, ValueError):
+    strike_text = "n/a"
+print(f"Consensus strike: {{strike_text}}")
 
 fig_pt = plot_phase_tensor_psection(sites_corr).get_figure()
 fig_pt.savefig(
@@ -213,6 +215,88 @@ fig_fwd.savefig(
 
 """
 
+_PRE_INV_BLOCK = """\
+# Occam2D pre-inversion export
+from pycsamt.models.occam2d import InputBuilder, OccamConfig
+
+occam_workdir = os.path.join({out!r}, "occam2d_inputs")
+os.makedirs(occam_workdir, exist_ok=True)
+occam_config = OccamConfig()
+occam_config.to_template(os.path.join(occam_workdir, "occam2d.yml"))
+occam_builder = InputBuilder(
+    sites_corr,
+    workdir=occam_workdir,
+    config=occam_config,
+)
+# Expected Occam2D artifacts: OccamDataFile.dat, Occam2DMesh,
+# Occam2DModel, and OccamStartup. The builder records the public API
+# used for pre-inversion preparation.
+print(f"Occam2D pre-inversion configuration written to {{occam_workdir}}")
+
+"""
+
+_TIPPER_BLOCK = """\
+# Tipper and induction-arrow analysis
+from pycsamt.emtools.tf import (
+    plot_induction_arrows,
+    plot_tipper_hodograms,
+    plot_tipper_polar,
+)
+
+try:
+    ax_tip = plot_induction_arrows(
+        sites_corr,
+        periods=({period},),
+        convention={convention!r},
+    )
+    ax_tip.get_figure().savefig(
+        {out!r} + "/induction_arrows.png",
+        dpi=150, bbox_inches="tight",
+    )
+except Exception as exc:
+    print(f"No plottable induction arrows: {{exc}}")
+
+try:
+    ax_hodo = plot_tipper_hodograms(sites_corr)
+    ax_hodo.get_figure().savefig(
+        {out!r} + "/tipper_hodograms.png",
+        dpi=150, bbox_inches="tight",
+    )
+except Exception as exc:
+    print(f"Tipper hodogram skipped: {{exc}}")
+
+try:
+    ax_polar = plot_tipper_polar(sites_corr, component={component!r})
+    ax_polar.get_figure().savefig(
+        {out!r} + "/tipper_polar.png",
+        dpi=150, bbox_inches="tight",
+    )
+except Exception as exc:
+    print(f"Tipper polar plot skipped: {{exc}}")
+
+"""
+
+_SENSITIVITY_BLOCK = """\
+# Depth-of-investigation and sensitivity analysis
+from pycsamt.emtools.csumt import (
+    depth_coverage_table,
+    plot_depth_section,
+)
+
+doi_table = depth_coverage_table(sites_corr)
+doi_table.to_csv(
+    {out!r} + "/depth_of_investigation.csv",
+    index=False,
+)
+ax_doi = plot_depth_section(sites_corr)
+ax_doi.get_figure().savefig(
+    {out!r} + "/depth_of_investigation.png",
+    dpi=150, bbox_inches="tight",
+)
+print("Depth-of-investigation and sensitivity outputs written.")
+
+"""
+
 _AI_INV_BLOCK = """\
 # ── AI 1-D inversion ──────────────────────────────────────────
 from pycsamt.ai.inversion import EMInverter1D
@@ -241,6 +325,10 @@ inv1d = EMInverter1D(
 inv1d.fit(ds.X, ds.y, epochs=epochs, batch_size=32, verbose=False)
 
 import numpy as np
+obs_features = {{
+    f"synthetic_{{i:02d}}": feat
+    for i, feat in enumerate(ds.X[: min(3, len(ds.X))])
+}}
 predictions = {{}}
 for site_name, feat in obs_features.items():
     pred = inv1d.predict(feat.reshape(1, -1))
@@ -470,6 +558,20 @@ class CodeGenerationAgent(BaseAgent):
                         )
                     )
             code += _FWD_BLOCK.format(rhos=rhos, ths=ths, out=out_dir)
+
+        if workflow in ("pre_inversion", "occam2d") or "pre_inversion" in results:
+            code += _PRE_INV_BLOCK.format(out=out_dir)
+
+        if workflow in ("tipper", "tipper_plot") or "tipper" in results:
+            code += _TIPPER_BLOCK.format(
+                out=out_dir,
+                period=float(cfg.get("period", 1.0)),
+                component=str(cfg.get("tipper_component", "real")),
+                convention=str(cfg.get("tipper_convention", "park")),
+            )
+
+        if workflow == "sensitivity" or "sensitivity" in results:
+            code += _SENSITIVITY_BLOCK.format(out=out_dir)
 
         # ── AI inversion blocks ───────────────────────────────────
         ai_wf = {

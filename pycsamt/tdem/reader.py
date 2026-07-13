@@ -412,21 +412,30 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
         reader_fn, _ = _REGISTRY[resolved_fmt]
 
         merged = self._merge(**kwargs)
+
+        # The instance-level defaults carry acquisition kwargs that not
+        # every reader accepts (e.g. gate_times_unit for read_xyz);
+        # keep only what the target reader's signature declares so the
+        # caller's own required kwargs (current, tx_area, ...) survive.
+        import inspect as _inspect
+
+        try:
+            params = _inspect.signature(reader_fn).parameters
+            has_var_kw = any(
+                sp.kind is _inspect.Parameter.VAR_KEYWORD
+                for sp in params.values()
+            )
+            if not has_var_kw:
+                merged = {
+                    k: v for k, v in merged.items() if k in params
+                }
+        except (TypeError, ValueError):  # pragma: no cover
+            pass
+
         self._info(f"Reading {p.name!r} as {resolved_fmt!r}")
         self._debug(f"  full path: {p}  kwargs: {merged}")
 
-        try:
-            result = reader_fn(p, **merged)
-        except TypeError as exc:
-            # Some readers (temavg, tem_z, tem_log) do not accept
-            # acquisition kwargs; retry without them.
-            self._debug(
-                f"  retrying {resolved_fmt!r} without acquisition kwargs "
-                f"({exc})"
-            )
-            safe_keys = {"verbose", "logger"}
-            safe_kw = {k: v for k, v in merged.items() if k in safe_keys}
-            result = reader_fn(p, **safe_kw)
+        result = reader_fn(p, **merged)
 
         n = len(result) if hasattr(result, "__len__") else 1
         self._info(f"  {n} record(s) loaded from {p.name!r}")

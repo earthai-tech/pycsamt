@@ -222,11 +222,20 @@ def _per_item_export(
             continue
 
         try:
-            if hasattr(ed, "write"):
-                path = ed.write(new_edifn=out_path)
+            target = ed
+            # Site wrappers expose no writer of their own but can
+            # materialise an EDIFile (which has one)
+            if not (
+                hasattr(target, "write")
+                or hasattr(target, "write_new_edi")
+            ) and callable(getattr(target, "to_edi", None)):
+                target = target.to_edi()
+
+            if hasattr(target, "write"):
+                path = target.write(new_edifn=out_path)
                 written.append(str(path or out_path))
-            elif hasattr(ed, "write_new_edi"):
-                path = ed.write_new_edi(edi_fn=out_path)
+            elif hasattr(target, "write_new_edi"):
+                path = target.write_new_edi(edi_fn=out_path)
                 written.append(str(path or out_path))
             else:
                 failed.append((nm, "no write method"))

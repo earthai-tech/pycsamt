@@ -81,13 +81,13 @@ def stn_file_k2(data_path: Path) -> Path:
 @pytest.fixture(scope="session")
 def edi_path(project_root: Path) -> Path:
     """Base path to bundled EDI data."""
-    return project_root / "data" / "edi"
+    return project_root / "data"
 
 
 @pytest.fixture(scope="session")
 def edi_imp_file(edi_path: Path) -> Path:
-    """Path to 15125A_imp.edi; skip if missing."""
-    p = edi_path / "15125A_imp.edi"
+    """Path to a bundled MT impedance EDI; skip if missing."""
+    p = edi_path / "MT" / "kap03lmt_edis" / "kap103.edi"
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
     return p
@@ -95,8 +95,8 @@ def edi_imp_file(edi_path: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def edi_spe_file(edi_path: Path) -> Path:
-    """Path to 15125A_spe.edi; skip if missing."""
-    p = edi_path / "15125A_spe.edi"
+    """Path to a bundled spectra EDI; skip if missing."""
+    p = edi_path / "MT" / "SPECTRA" / "spectra01.edi"
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
     return p
@@ -104,8 +104,8 @@ def edi_spe_file(edi_path: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def edi_csamt_file(edi_path: Path) -> Path:
-    """Path to 000CSA_csamt.edi; skip if missing."""
-    p = edi_path / "000CSA_csamt.edi"
+    """Path to a bundled CSAMT EDI; skip if missing."""
+    p = edi_path / "CSAMT" / "csa000.edi"
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
     return p
@@ -114,16 +114,16 @@ def edi_csamt_file(edi_path: Path) -> Path:
 @pytest.fixture(
     scope="session",
     params=[
-        "15125A_imp.edi",
-        "15125A_spe.edi",
-        "000CSA_csamt.edi",
+        Path("MT") / "kap03lmt_edis" / "kap103.edi",
+        Path("MT") / "SPECTRA" / "spectra01.edi",
+        Path("CSAMT") / "csa000.edi",
     ],
 )
 def any_edi_file(request: pytest.FixtureRequest, edi_path: Path) -> Path:
     """
     Parametrized EDI path. Skips the case if a file is absent.
     """
-    p = edi_path / str(request.param)
+    p = edi_path / request.param
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")
     return p

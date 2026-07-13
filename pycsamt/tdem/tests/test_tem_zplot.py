@@ -85,7 +85,8 @@ def test_z_magnitude_matches_avg_magnitude():
 def test_survey_parses_z_files():
     """Survey reader should expose parsed Z files by stem."""
     survey = read_temavg_survey(DATA_DIR)
+    expected_z = len(list(DATA_DIR.glob("*.Z")))
 
-    assert survey.n_z_files == 55
+    assert survey.n_z_files == expected_z
     assert "TEM100" in survey.z_files
     assert survey.get_z("TEM100").n_records == 1275

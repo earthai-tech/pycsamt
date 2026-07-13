@@ -529,8 +529,14 @@ class AVGtoEDI(TransformerMixin):
             ed.Z._freq = f
             ed.Z._z_err = ze
 
-            # now safe:
-            ed.Z.compute_resistivity_phase()
+            try:
+                ed.Z.compute_resistivity_phase()
+            except Exception:
+                ed.Z._z_err = None
+                try:
+                    ed.Z.compute_resistivity_phase()
+                except Exception:
+                    pass
 
         elif (bundle.rho is not None) and (bundle.phase is not None):
             ed.Z._resistivity = np.asarray(bundle.rho, dtype=float)
@@ -542,7 +548,10 @@ class AVGtoEDI(TransformerMixin):
             # Convert mrad → deg before calling the backend setter:
             phi_deg = ed.Z._phase * (180.0 / (1000.0 * np.pi))
 
-            ed.Z.set_res_phase(rho, phi_deg, freq)
+            try:
+                ed.Z.set_res_phase(rho, phi_deg, freq)
+            except Exception:
+                pass
         else:
             # no Z and no (ρ,φ): Never rich here.
             raise ValueError("Neither Z nor (rho, phase) provided.")

@@ -62,7 +62,7 @@ def test_pick_adapter_key_inference():
     assert b.pick_adapter_key(object(), hint="avg") == "avg"
 
 
-def test_to_edi_errors_when_no_key_or_adapter():
+def test_to_edi_errors_when_no_key_or_adapter(monkeypatch):
     class Unknown:  # no recognizable module name
         pass
 
@@ -70,6 +70,7 @@ def test_to_edi_errors_when_no_key_or_adapter():
         b.to_edi(Unknown())
 
     # Explicit key but no adapter registered
+    monkeypatch.delitem(regmod._ADAPTERS, "avg", raising=False)
     with pytest.raises(RuntimeError):
         b.to_edi(object(), key="avg")
 
@@ -83,7 +84,7 @@ def test_to_edi_with_registered_adapter(monkeypatch):
         calls["kw"] = kw
         return {"ok": True, "src": src}
 
-    regmod.register_adapter("avg", dummy_avg_adapter)
+    monkeypatch.setitem(regmod._ADAPTERS, "avg", dummy_avg_adapter)
 
     Avg = type("Avg", (), {})
     Avg.__module__ = "pycsamt.zonge.avg"

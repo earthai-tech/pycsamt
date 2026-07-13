@@ -677,7 +677,7 @@ def plot_confidence(  # plot_confidence_in
     )
 
     if view == "2d":
-        from ..plot.utils import (
+        from .plot import (
             plot2d,  # only needed for 2D path
         )
 

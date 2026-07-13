@@ -16,7 +16,9 @@ import warnings
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import matplotlib.transforms as transforms
+from matplotlib.colors import BoundaryNorm
 import numpy as np
 from matplotlib.patches import Ellipse
 
@@ -70,6 +72,136 @@ D_STYLES = [
     "dashdot",
     "dotted",
 ]
+
+
+def plot2d(
+    ar,
+    *,
+    y=None,
+    x=None,
+    distance: float = 50.0,
+    stnlist: list[str] | None = None,
+    prefix: str = "S",
+    how: str = "py",
+    to_log10: bool = False,
+    plot_contours: bool = False,
+    top_label: str = "",
+    cb_label: str = "",
+    rotate_xlabel: float = 0.0,
+    cmap: str = "jet_r",
+    plt_style: str = "pcolormesh",
+    fig_size: tuple[float, float] = (8.0, 4.0),
+    fig_dpi: int = 150,
+    font_size: float = 7.0,
+    ax: plt.Axes | None = None,
+    **_extra,
+) -> plt.Axes:
+    """Plot a 2-D pseudosection from a matrix."""
+    ar = np.asarray(ar, dtype=float)
+    if ar.ndim != 2:
+        raise ValueError(f"plot2d expects a 2-D array; got shape {ar.shape}")
+
+    n_rows, n_cols = ar.shape
+
+    if to_log10:
+        ar = np.log10(ar)
+        if y is not None:
+            y = np.log10(np.asarray(y, dtype=float))
+
+    y_vec = (
+        np.arange(n_rows, dtype=float)
+        if y is None
+        else np.asarray(y, dtype=float)
+    )
+    x_vec = (
+        (np.arange(n_cols) * float(distance))
+        if x is None
+        else np.asarray(x, dtype=float)
+    )
+
+    if stnlist is None:
+        start = 0 if how == "py" else 1
+        stnlist = [f"{prefix}{i:02d}" for i in range(start, start + n_cols)]
+
+    if ax is None:
+        fig, axe = plt.subplots(1, figsize=fig_size, dpi=fig_dpi)
+    else:
+        axe = ax
+        fig = axe.get_figure()
+
+    if plt_style == "imshow":
+        mappable = axe.imshow(
+            ar,
+            interpolation="nearest",
+            cmap=cmap,
+            aspect="auto",
+            origin="lower",
+            extent=(x_vec.min(), x_vec.max(), y_vec.min(), y_vec.max()),
+        )
+    else:
+        X, Y = np.meshgrid(x_vec, y_vec)
+        vmin, vmax = np.nanmin(ar), np.nanmax(ar)
+
+        if plot_contours:
+            levels = mticker.MaxNLocator(nbins=15).tick_values(vmin, vmax)
+            norm = BoundaryNorm(
+                levels, ncolors=plt.get_cmap(cmap).N, clip=True
+            )
+            mappable = axe.pcolormesh(
+                X, Y, np.flipud(ar), cmap=cmap, norm=norm, shading="auto"
+            )
+            dx = dy = 0.05
+            axe.contourf(
+                X + dx / 2,
+                Y + dy / 2,
+                np.flipud(ar),
+                levels=levels,
+                cmap=cmap,
+            )
+        else:
+            mappable = axe.pcolormesh(
+                X,
+                Y,
+                np.flipud(ar),
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax,
+                shading="auto",
+            )
+
+    axe.set_xlim(x_vec.min(), x_vec.max())
+    axe.set_ylim(y_vec.min(), y_vec.max())
+    axe.set_xlabel("Distance (m)", fontsize=1.5 * font_size)
+    axe.tick_params(labelsize=font_size)
+
+    cbar = fig.colorbar(mappable, ax=axe)
+    cbar.ax.tick_params(axis="y", direction="in", labelsize=font_size)
+    if cb_label:
+        cbar.set_label(cb_label, fontsize=1.2 * font_size)
+
+    axe2 = axe.twiny()
+    axe2.set_xlim(axe.get_xlim())
+    max_labels = 20
+    if n_cols > max_labels:
+        step = max(1, n_cols // max_labels)
+        tick_x = x_vec[::step]
+        tick_lbl = [stnlist[i] for i in range(0, n_cols, step)]
+    else:
+        tick_x = x_vec
+        tick_lbl = list(stnlist)
+    axe2.set_xticks(tick_x)
+    axe2.set_xticklabels(
+        tick_lbl,
+        rotation=rotate_xlabel if rotate_xlabel else 90,
+        fontsize=font_size,
+        ha="left",
+    )
+    axe2.tick_params(labelsize=font_size)
+    if top_label:
+        axe2.set_xlabel(top_label, fontsize=1.5 * font_size)
+
+    fig.tight_layout()
+    return axe
 
 
 def set_axis_grid(

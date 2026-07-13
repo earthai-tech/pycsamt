@@ -274,6 +274,9 @@ def impute_missing(
         if col not in df2.columns:
             raise KeyError(f"Column {col!r} not found in DataFrame")
         series = df2[col]
+        numeric = pd.api.types.is_numeric_dtype(series)
+        if strat in {"mean", "median"} and not numeric:
+            continue
         # Compute fill value
         if strat == "mean":
             val = series.mean()
@@ -285,7 +288,7 @@ def impute_missing(
         else:  # constant
             val = fill_value
         # Fill missing
-        series.fillna(val, inplace=True)
+        df2[col] = series.fillna(val)
     return df2
 
 

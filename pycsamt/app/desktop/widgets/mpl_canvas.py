@@ -15,10 +15,6 @@ Usage::
 
 from __future__ import annotations
 
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg,
-    NavigationToolbar2QT,
-)
 from matplotlib.figure import Figure
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
@@ -26,6 +22,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+def _qt_mpl_classes():
+    from matplotlib.backends.backend_qtagg import (
+        FigureCanvasQTAgg,
+        NavigationToolbar2QT,
+    )
+
+    return FigureCanvasQTAgg, NavigationToolbar2QT
 
 
 class MplCanvas(QWidget):
@@ -45,6 +50,7 @@ class MplCanvas(QWidget):
         toolbar: bool = True,
     ) -> None:
         super().__init__(parent)
+        FigureCanvasQTAgg, NavigationToolbar2QT = _qt_mpl_classes()
 
         self.figure = Figure(tight_layout=True)
         self.axes = self.figure.add_subplot(111)
@@ -91,6 +97,7 @@ class MplCanvas(QWidget):
             return
 
         layout = self.layout()
+        FigureCanvasQTAgg, _NavigationToolbar2QT = _qt_mpl_classes()
 
         # ── Remove and discard the old canvas ─────────────────────────
         layout.removeWidget(self._canvas)

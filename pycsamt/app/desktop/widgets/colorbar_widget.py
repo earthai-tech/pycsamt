@@ -12,15 +12,18 @@ from __future__ import annotations
 
 import matplotlib.cm as mcm
 import matplotlib.colors as mcolors
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg,
-)
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import (
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
+
+
+def _qt_canvas_class():
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+
+    return FigureCanvasQTAgg
 
 
 class ColorbarWidget(QWidget):
@@ -46,6 +49,8 @@ class ColorbarWidget(QWidget):
     # ── Construction ──────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
+        FigureCanvasQTAgg = _qt_canvas_class()
+
         if self._orientation == "vertical":
             figsize = (0.7, 3.5)
         else:

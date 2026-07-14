@@ -146,9 +146,10 @@ sphinx_gallery_conf = {
     # (e.g. two _datasets.py) share it via sys.modules across the whole
     # build, so such helpers must be kept byte-identical supersets.
     "ignore_pattern": r"(^|[\\/])_",
-    # Execute examples in parallel worker processes (joblib). Biggest lever
-    # on cold-build time for CI hosts with a 15-minute budget (RTD, Netlify).
-    "parallel": 4,
+    # NOTE: do NOT enable "parallel" here. The inversion section is an
+    # ordered chain (plot_4 writes a validation report that plot_5 reads,
+    # plot_5 writes the run-folder audit that plot_6 reads); parallel
+    # workers execute out of order and break it on fresh CI machines.
 }
 
 templates_path = ["_templates"]
@@ -319,6 +320,35 @@ html_sidebars = {"index": []}
 html_show_sourcelink = True
 html_show_sphinx = False
 html_copy_source = False
+
+
+def _remove_secondary_sidebar_for_landing_pages(
+    app, pagename, templatename, context, doctree
+):
+    """Hide the right page TOC only on landing/index pages.
+
+    Ordinary documentation pages should keep the pydata secondary sidebar
+    ("On this page").  Wide landing pages, generated gallery index pages, and
+    API catalogue index pages get the same metadata flag that can be written
+    by hand in an ``.rst`` file as ``:html_theme.sidebar_secondary.remove:``.
+    """
+    is_index_page = pagename == "index" or pagename.endswith("/index")
+    if not is_index_page:
+        context.get("meta", {}).pop(
+            "html_theme.sidebar_secondary.remove", None
+        )
+        return
+
+    meta = context.setdefault("meta", {})
+    meta["html_theme.sidebar_secondary.remove"] = ""
+
+
+def setup(app):
+    app.connect(
+        "html-page-context",
+        _remove_secondary_sidebar_for_landing_pages,
+    )
+
 
 # -- LaTeX / PDF ---------------------------------------------------------------
 latex_elements = {

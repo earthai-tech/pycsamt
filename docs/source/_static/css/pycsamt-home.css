@@ -599,19 +599,43 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
   color: var(--pyc-accent, var(--pyc-blue));
 }
 
-.pyc-feature-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed var(--pyc-border);
-  color: var(--pyc-accent, var(--pyc-blue));
-  font-size: 0.9rem;
-  font-weight: 750;
-  text-decoration: none;
+/* Card hero images — real package output rendered by scripts/home_card_*.py
+   into _static/images/home/card-*.png (regenerate by re-running a script). */
+.pyc-feature-hero { margin: 0 0 0.95rem; }
+
+.pyc-feature-hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--pyc-border);
+  border-radius: 12px;
+  background: #fff;
 }
 
-.pyc-feature--gold .pyc-feature-more { color: #b57a12; }
+/* scikit-learn-style full-width action button in the card accent colour */
+.pyc-feature-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: var(--pyc-accent, var(--pyc-blue));
+  color: #fff !important;
+  font-size: 0.92rem;
+  font-weight: 750;
+  text-decoration: none !important;
+  transition: filter 150ms ease, transform 150ms ease;
+}
+
+/* white text needs a deeper gold than the card's top border */
+.pyc-feature--gold .pyc-feature-more { background: #b57a12; }
+
+.pyc-feature-more:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
 
 .pyc-feature-more i { transition: transform 150ms ease; }
 .pyc-feature:hover .pyc-feature-more i { transform: translateX(4px); }
@@ -620,43 +644,145 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
    Code-in-action section (styles sphinx-design tabs)
    -------------------------------------------------------------------------- */
 .pyc-code-panel {
-  max-width: 880px;
+  position: relative;
+  max-width: 920px;
   margin: 0 auto;
 }
 
-.pyc-code-panel .sd-tab-set {
-  margin: 0;
-  border: 1px solid var(--pyc-border);
-  border-radius: var(--pyc-radius);
-  background: var(--pyc-surface);
-  box-shadow: var(--pyc-shadow-sm);
-  padding: 0.45rem 1.1rem 1.1rem;
+/* soft brand glow behind the editor window */
+.pyc-code-panel::before {
+  content: "";
+  position: absolute;
+  inset: -2.4rem -3.5rem;
+  background:
+    radial-gradient(26rem 13rem at 15% 0%,
+      color-mix(in srgb, var(--pyc-blue) 14%, transparent), transparent 70%),
+    radial-gradient(22rem 13rem at 88% 100%,
+      color-mix(in srgb, var(--pyc-gold) 16%, transparent), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.pyc-code-panel .sd-tab-set > label {
-  border-radius: 8px 8px 0 0;
+html[data-theme="dark"] .pyc-code-panel::before {
+  background:
+    radial-gradient(26rem 13rem at 15% 0%,
+      color-mix(in srgb, var(--pyc-blue) 22%, transparent), transparent 70%),
+    radial-gradient(22rem 13rem at 88% 100%,
+      color-mix(in srgb, var(--pyc-orange) 10%, transparent), transparent 70%);
+}
+
+/* the editor window */
+.pyc-code-panel .sd-tab-set {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0 0 0.4rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 16px;
+  background: var(--pyc-surface);
+  box-shadow:
+    0 20px 48px rgba(31, 68, 144, 0.16),
+    0 2px 10px rgba(31, 68, 144, 0.07);
+  overflow: hidden;
+}
+
+html[data-theme="dark"] .pyc-code-panel .sd-tab-set {
+  border-color: color-mix(in srgb, var(--pyc-blue) 34%, transparent);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+/* window chrome bar: traffic lights + session name */
+.pyc-code-panel .sd-tab-set::before {
+  content: "pycsamt · live session";
+  display: block;
+  padding: 0.66rem 1rem 0.66rem 4.6rem;
+  border-bottom: 1px solid var(--pyc-border);
+  background:
+    radial-gradient(circle at 1.25rem 50%, #ff5f57 0 5.5px, transparent 6.5px),
+    radial-gradient(circle at 2.4rem 50%, #febc2e 0 5.5px, transparent 6.5px),
+    radial-gradient(circle at 3.55rem 50%, #28c840 0 5.5px, transparent 6.5px),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--pyc-blue) 6%, var(--pyc-surface)),
+      var(--pyc-surface));
   color: var(--pyc-muted);
-  font-weight: 750;
-  font-size: 0.92rem;
+  font: 650 0.74rem/1 var(--pst-font-family-monospace, Consolas, monospace);
+  letter-spacing: 0.07em;
+}
+
+html[data-theme="dark"] .pyc-code-panel .sd-tab-set::before {
+  background:
+    radial-gradient(circle at 1.25rem 50%, #ff5f57 0 5.5px, transparent 6.5px),
+    radial-gradient(circle at 2.4rem 50%, #febc2e 0 5.5px, transparent 6.5px),
+    radial-gradient(circle at 3.55rem 50%, #28c840 0 5.5px, transparent 6.5px),
+    linear-gradient(180deg, #1a2233, #151b28);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* filename-style tabs */
+.pyc-code-panel .sd-tab-set > label {
+  margin: 0.5rem 0.1rem 0;
+  padding: 0.5rem 0.95rem 0.55rem;
+  border-radius: 9px 9px 0 0;
+  color: var(--pyc-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.pyc-code-panel .sd-tab-set > label:first-of-type { margin-left: 0.85rem; }
+
+.pyc-code-panel .sd-tab-set > label:hover {
+  color: var(--pyc-orange);
+  background: color-mix(in srgb, var(--pyc-orange) 7%, transparent);
 }
 
 .pyc-code-panel .sd-tab-set > input:checked + label {
   color: var(--pyc-orange);
   border-color: var(--pyc-orange);
-}
-
-.pyc-code-panel .sd-tab-set > label:hover {
-  color: var(--pyc-orange);
+  background: color-mix(in srgb, var(--pyc-orange) 10%, transparent);
 }
 
 .pyc-code-panel .sd-tab-content {
-  padding-top: 0.9rem;
-  border-top: 2px solid var(--pyc-border);
+  padding: 0.9rem 1.15rem 1rem;
+  border-top: 1px solid var(--pyc-border);
 }
 
+/* code surface inside the window */
 .pyc-code-panel div.highlight pre {
-  font-size: 0.88rem;
-  line-height: 1.7;
+  font-size: 0.87rem;
+  line-height: 1.75;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--pyc-blue) 10%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pyc-blue) 4%, var(--pyc-surface-2));
+}
+
+html[data-theme="dark"] .pyc-code-panel div.highlight pre {
+  border-color: color-mix(in srgb, var(--pyc-blue) 28%, transparent);
+  background: #0d1320;
+}
+
+/* caption rendered as a small file chip (no-JS fallback; the live player
+   lifts captions into its own header) */
+.pyc-code-panel .code-block-caption {
+  padding: 0 0 0.45rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--pyc-muted);
+  font: 650 0.78rem/1.2 var(--pst-font-family-monospace, Consolas, monospace);
+}
+
+.pyc-code-panel .code-block-caption::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--pyc-orange);
+  vertical-align: 6%;
 }
 
 /* Typewriter caret used by the code-in-action animation (JS section 6). */

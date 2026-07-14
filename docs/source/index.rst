@@ -192,6 +192,10 @@
              <a href="user_guide/site/index.html">Site tools</a>
              <span>EDI</span><span>AVG</span><span>J</span><span>emdata</span>
            </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-dataio.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
+           </div>
            <a class="pyc-feature-more" href="user_guide/data_loading.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
@@ -210,6 +214,10 @@
            <div class="pyc-feature-tags">
              <a href="user_guide/processing/index.html">Catalogue</a>
              <span>Static shift</span><span>Notch</span><span>Phase tensor</span>
+           </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-processing.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
            </div>
            <a class="pyc-feature-more" href="user_guide/processing/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
@@ -231,6 +239,10 @@
              <a href="theory/index.html">Theory</a>
              <span>MT</span><span>CSAMT</span><span>TDEM</span>
            </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-forward.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
+           </div>
            <a class="pyc-feature-more" href="user_guide/forward/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
@@ -250,6 +262,10 @@
              <a href="user_guide/models/index.html">Solvers</a>
              <a href="user_guide/ai_inversion/index.html">PINN</a>
              <span>Occam2D</span><span>ModEM</span><span>MARE2DEM</span>
+           </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-inversion.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
            </div>
            <a class="pyc-feature-more" href="user_guide/inversion/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
@@ -271,6 +287,10 @@
              <a href="user_guide/map/index.html">Mapping guide</a>
              <span>Pseudosection</span><span>3-D</span>
            </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-interpretation.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
+           </div>
            <a class="pyc-feature-more" href="user_guide/interpretation/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
@@ -290,6 +310,10 @@
              <a href="user_guide/pipeline/index.html">Pipeline</a>
              <a href="user_guide/agents/index.html">AI agents</a>
              <a href="applications/index.html">Apps</a>
+           </div>
+           <div class="pyc-feature-hero" aria-hidden="true">
+             <img src="_static/images/home/card-pipeline.png"
+                  alt="" loading="lazy" width="1280" height="600"/>
            </div>
            <a class="pyc-feature-more" href="user_guide/pipeline/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>

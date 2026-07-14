@@ -68,6 +68,16 @@ Changed
   every tool family (:doc:`/examples/index`), task-based user guides,
   application manuals, and a full autodoc reference.
 
+* |Docs| **Docs live at** `pycsamt.org <https://pycsamt.org>`__.
+  The documentation is built and hosted on Netlify with cached
+  incremental builds, under the project's own domain. The landing page
+  follows the scikit-learn pattern — a hero carousel and capability
+  cards rendered from *real package output* (denoising, forward
+  responses, inversion sections, pseudosections, pipeline runs, QC
+  audits) — and the "Code in action" panel plays live examples in a
+  themed editor window. The former Read the Docs site remains as the
+  v1 legacy archive.
+
 Upgrade notes
 ~~~~~~~~~~~~~
 

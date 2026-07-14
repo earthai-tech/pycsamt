@@ -17,7 +17,7 @@
 .pyc-ca-status {
   font-size: 0.7rem;
   line-height: 1;
-  color: var(--pst-color-primary);
+  color: var(--pyc-orange, var(--pst-color-primary));
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -37,8 +37,12 @@
 }
 
 .pyc-ca-head.pyc-ca-running .pyc-ca-title {
-  color: var(--pst-color-primary);
+  color: var(--pyc-blue-dark, var(--pst-color-primary));
   opacity: 1;
+}
+
+html[data-theme="dark"] .pyc-ca-head.pyc-ca-running .pyc-ca-title {
+  color: #b9cdf3;
 }
 
 .pyc-ca-dots {
@@ -66,13 +70,13 @@
 }
 
 .pyc-ca-dot:hover {
-  border-color: var(--pst-color-primary);
-  color: var(--pst-color-primary);
+  border-color: var(--pyc-orange, var(--pst-color-primary));
+  color: var(--pyc-orange, var(--pst-color-primary));
 }
 
 .pyc-ca-dot-on {
-  background: var(--pst-color-primary);
-  border-color: var(--pst-color-primary);
+  background: var(--pyc-orange, var(--pst-color-primary));
+  border-color: var(--pyc-orange, var(--pst-color-primary));
   color: #fff;
 }
 
@@ -92,7 +96,7 @@
   height: 1.05em;
   margin-left: 1px;
   vertical-align: -0.18em;
-  background: var(--pst-color-primary);
+  background: var(--pyc-orange, var(--pst-color-primary));
   animation: pyc-ca-blink 0.9s step-end infinite;
 }
 

@@ -89,6 +89,11 @@ Fixed
 * |Fix| **Robust agent previews** — ``AgentCoordinator`` dry-run previews
   route their output through an encoding-safe printer, so a preview never
   crashes on non-ASCII glyphs (:mod:`pycsamt.agents`).
+* |Fix| **Qt-free headless imports** — matplotlib Qt backends are imported
+  lazily, so CI runners and documentation builds never pull Qt in.
+* |Fix| **Docs sidebar handler crash on full rebuilds** — pages whose HTML
+  context carries ``meta=None`` no longer break the ``html-page-context``
+  hook (``'NoneType' object has no attribute 'pop'``).
 
 Removed
 ~~~~~~~
@@ -107,9 +112,35 @@ Docs & tooling
 * |Docs| **Documentation rebuilt** — executed example galleries for every
   tool family (:doc:`/examples/index`), task-based user guides,
   application manuals, and a full autodoc reference.
-* |Docs| **Reference hub** — a new :doc:`Resources <resources>` landing
-  page groups the :doc:`Glossary <glossary>` of MT/AMT/CSAMT terms and the
-  :doc:`bibliography <references>`.
+* |Docs| **Documentation moved to** `pycsamt.org <https://pycsamt.org>`__ —
+  hosted on Netlify with cached incremental builds (only changed gallery
+  examples re-execute). Canonical URLs, the version switcher, README
+  badges, and every in-app *Documentation* link now point at the new
+  domain; the Read the Docs configuration is retired and its site remains
+  as the v1 legacy archive.
+* |Docs| **scikit-learn-style landing page** — full-bleed hero carousel
+  with a rotating survey-method keyword and clickable workflow strip; the
+  six capability cards show *real package output* (noise removal, forward
+  responses, a ModEM section beside a learned inversion, pseudosection and
+  stratigraphic fence, pipeline timings with an agent dry-run chain, and a
+  QC coverage audit), each regenerable via ``scripts/home_card_*.py``; the
+  "Code in action" panel is a themed editor window in light and dark mode.
+* |Docs| **Navigation polish** — the right "On this page" sidebar is back
+  on ordinary pages (only the home page, the API reference tables, and the
+  gallery index pages stay full-width); Map Tools and Tutorials indexes
+  gained icon card grids; Site Tools uses a two-column grid; the legacy
+  ``applications/desktop`` and ``applications/web`` stubs auto-redirect to
+  the new guides; header icon links now include the issue tracker and
+  Stack Overflow.
+* |Build| **Faster documentation builds** — third-party module
+  highlighting disabled in ``viewcode``, the Sphinx environment and the
+  executed gallery persist between Netlify deploys, and the docs
+  environment installs CPU-only torch so the AI examples run without
+  CUDA wheels.
+* |Build| **Test-coverage lift** — offline agent contract batteries,
+  TDEM/AVG parser suites, and map topography/export tests; coverage now
+  omits externally sourced shims and static configuration modules
+  (``compat/``, ``_typing.py``, ``config.py``, ``projection.py``).
 * |Build| **PyPI-installable** — pure ``pyproject.toml``; ``setup.py``
   removed.
 

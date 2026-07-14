@@ -12,6 +12,16 @@ omit =
     */pycsamt/utils/exmath.py
     # v1-legacy module slated for deprecation
     */pycsamt/utils/em.py
+    # externally sourced compatibility shims — not ours to test
+    */pycsamt/compat/*
+    # v1 plotting subpackage removed from the tree; keep old reports honest
+    */pycsamt/plot/*
+    # type aliases only, nothing executable to test
+    */pycsamt/_typing.py
+    # static configuration containers
+    */pycsamt/config.py
+    # geospatial standard configuration (EPSG/projection constants)
+    */pycsamt/projection.py
 
 
 [report]

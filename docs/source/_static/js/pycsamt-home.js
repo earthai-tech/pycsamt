@@ -1,10 +1,10 @@
 /* pyCSAMT v2 — landing page enhancements.
  * Progressive only: the page is fully usable with JS disabled.
  *  1. Tags the <body> so home-only CSS applies (fallback for :has()).
- *  2. Copy-to-clipboard on the pip-install pill.
- *  3. Scroll-reveal via IntersectionObserver.
- *  4. Count-up animation on the hero stats strip.
- *  5. Rotating survey-method keyword in the hero subtitle.
+ *  2. Scroll-reveal via IntersectionObserver.
+ *  3. Count-up animation on the stats bar.
+ *  4. Rotating survey-method keyword in the hero subtitle.
+ *  5. Hero background carousel (slides + dots, auto-advance).
  *  6. Typewriter animation on the code-in-action tabs.
  * All motion respects prefers-reduced-motion.
  */
@@ -27,44 +27,7 @@
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
-    /* ---- 2. copy install command ------------------------------------- */
-    document.querySelectorAll(".pyc-copy-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var text = btn.getAttribute("data-copy") || "pip install pycsamt";
-        var done = function () {
-          if (btn.classList.contains("is-copied")) return;
-          btn.classList.add("is-copied");
-          // The theme loads Font Awesome in SVG+JS mode, which replaces
-          // <i> with <svg>; swap the whole markup and let FA's observer
-          // re-convert the restored <i> tag.
-          var original = btn.innerHTML;
-          btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-          window.setTimeout(function () {
-            btn.classList.remove("is-copied");
-            btn.innerHTML = original;
-          }, 1800);
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(done, done);
-        } else {
-          var ta = document.createElement("textarea");
-          ta.value = text;
-          ta.style.position = "fixed";
-          ta.style.opacity = "0";
-          document.body.appendChild(ta);
-          ta.select();
-          try {
-            document.execCommand("copy");
-          } catch (e) {
-            /* clipboard unavailable — button feedback still shown */
-          }
-          document.body.removeChild(ta);
-          done();
-        }
-      });
-    });
-
-    /* ---- 3. scroll reveal --------------------------------------------- */
+    /* ---- 2. scroll reveal --------------------------------------------- */
     var revealed = home.querySelectorAll(".pyc-reveal");
     if (reduceMotion || !("IntersectionObserver" in window)) {
       revealed.forEach(function (el) {
@@ -87,7 +50,7 @@
       });
     }
 
-    /* ---- 4. stat counters ---------------------------------------------- */
+    /* ---- 3. stat counters ---------------------------------------------- */
     function animateCounter(el) {
       var target = parseInt(el.getAttribute("data-counter"), 10);
       if (isNaN(target)) return;
@@ -129,7 +92,7 @@
       });
     }
 
-    /* ---- 5. rotating hero keyword --------------------------------------- */
+    /* ---- 4. rotating hero keyword --------------------------------------- */
     var rotator = home.querySelector(".pyc-rotator");
     if (rotator && !reduceMotion) {
       var words;
@@ -149,6 +112,66 @@
           }, 270);
         }, 2600);
       }
+    }
+
+    /* ---- 5. hero background carousel ------------------------------------ */
+    /* Crossfades the .pyc-slide layers and keeps the dots in sync. Dots
+     * always work; auto-advance is skipped under prefers-reduced-motion
+     * and pauses while the hero is hovered or the tab is hidden. */
+    var slides = Array.prototype.slice.call(
+      home.querySelectorAll(".pyc-hero .pyc-slide")
+    );
+    var dots = Array.prototype.slice.call(
+      home.querySelectorAll(".pyc-hero-dots button")
+    );
+    if (slides.length > 1) {
+      var current = 0;
+      var slideTimer = null;
+
+      var showSlide = function (i) {
+        current = ((i % slides.length) + slides.length) % slides.length;
+        slides.forEach(function (s, k) {
+          s.classList.toggle("is-active", k === current);
+        });
+        dots.forEach(function (d, k) {
+          d.classList.toggle("is-active", k === current);
+          d.setAttribute("aria-selected", k === current ? "true" : "false");
+        });
+      };
+
+      var stopSlides = function () {
+        if (slideTimer) {
+          window.clearInterval(slideTimer);
+          slideTimer = null;
+        }
+      };
+
+      var playSlides = function () {
+        if (reduceMotion || slideTimer || document.hidden) return;
+        slideTimer = window.setInterval(function () {
+          showSlide(current + 1);
+        }, 7000);
+      };
+
+      dots.forEach(function (d, k) {
+        d.addEventListener("click", function () {
+          stopSlides();
+          showSlide(k);
+          playSlides();
+        });
+      });
+
+      var hero = home.querySelector(".pyc-hero");
+      if (hero) {
+        hero.addEventListener("mouseenter", stopSlides);
+        hero.addEventListener("mouseleave", playSlides);
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) stopSlides();
+        else playSlides();
+      });
+
+      playSlides();
     }
 
     /* ---- 6. typewriter animation on the code-in-action tabs ------------- */

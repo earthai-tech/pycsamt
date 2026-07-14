@@ -13,7 +13,14 @@
 
    <!-- ================================ HERO ================================ -->
    <section class="pyc-hero">
-     <div class="pyc-wrap">
+     <div class="pyc-hero-bg" aria-hidden="true">
+       <div class="pyc-slide pyc-slide--a is-active"></div>
+       <div class="pyc-slide pyc-slide--b"></div>
+       <div class="pyc-slide pyc-slide--c"></div>
+       <div class="pyc-hero-scrim"></div>
+     </div>
+
+     <div class="pyc-wrap pyc-hero-grid">
        <div class="pyc-hero-copy">
          <div class="pyc-hero-badges">
            <span class="pyc-chip pyc-chip--accent"><i class="fa-solid fa-tag"></i> v2.0 · LGPL-3.0</span>
@@ -59,13 +66,6 @@
                  data-words='["CSAMT","AMT","MT","TDEM","CSEM"]'>CSAMT</span>
            surveys.
          </p>
-         <p class="pyc-hero-text">
-           pyCSAMT takes you through the full survey workflow: load data
-           from multiple field formats, apply quality control and
-           industry-standard corrections, then invert with classical
-           solvers or physics-informed neural networks, and interpret
-           and map the results.
-         </p>
          <div class="pyc-hero-actions">
            <a class="pyc-btn pyc-btn--primary" href="getting_started/index.html">
              <i class="fa-solid fa-rocket"></i> Get started
@@ -79,65 +79,88 @@
              <i class="fa-brands fa-github"></i> GitHub
            </a>
          </div>
-         <div class="pyc-install">
-           <span><span class="pyc-dollar">$</span> <code>pip install pycsamt</code></span>
-           <button class="pyc-copy-btn" data-copy="pip install pycsamt"
-                   type="button" aria-label="Copy install command">
-             <i class="fa-regular fa-copy"></i>
-           </button>
-         </div>
        </div>
 
-       <div class="pyc-hero-demo">
-         <div class="pyc-terminal" role="img"
-              aria-label="Terminal session showing a pyCSAMT processing pipeline">
-           <div class="pyc-terminal-bar">
-             <span></span><span></span><span></span>
-             <em>pycsamt — survey L22</em>
+       <aside class="pyc-hero-points" aria-label="Why pyCSAMT">
+         <div class="pyc-point">
+           <span class="pyc-point-icon"><i class="fa-solid fa-user-group"></i></span>
+           <div class="pyc-point-text">
+             <b>Built for researchers and practitioners</b>
+             <span>One toolkit from field QC to publication figures.</span>
            </div>
-           <pre><span class="t-prompt">$</span> <span class="t-cmd">pip install pycsamt</span>
-   <span class="t-prompt">$</span> <span class="t-cmd">python</span>
-   <span class="t-com">>>></span> <span class="t-kw">from</span> pycsamt.pipeline <span class="t-kw">import</span> Pipeline, Step
-   <span class="t-com">>>></span> pipe = <span class="t-fn">Pipeline</span>([
-   <span class="t-com">...</span>     (<span class="t-str">"notch"</span>,        <span class="t-fn">Step</span>(<span class="t-str">"NR001"</span>, mains_hz=<span class="t-num">50</span>)),
-   <span class="t-com">...</span>     (<span class="t-str">"static_shift"</span>, <span class="t-fn">Step</span>(<span class="t-str">"SS001"</span>)),
-   <span class="t-com">...</span> ])
-   <span class="t-com">>>></span> pipe.<span class="t-fn">run</span>(sites, outdir=<span class="t-str">"outputs/run01/"</span>)
-   <span class="t-ok">&#10003;</span> 2 steps · 24 stations · manifest written</pre>
          </div>
-       </div>
+         <div class="pyc-point">
+           <span class="pyc-point-icon"><i class="fa-solid fa-puzzle-piece"></i></span>
+           <div class="pyc-point-text">
+             <b>Modular, easy to extend and integrate</b>
+             <span>Estimator-style objects you can script and chain.</span>
+           </div>
+         </div>
+         <div class="pyc-point">
+           <span class="pyc-point-icon"><i class="fa-solid fa-rocket"></i></span>
+           <div class="pyc-point-text">
+             <b>From simple scripts to large-scale studies</b>
+             <span>The same API drives one site or a whole campaign.</span>
+           </div>
+         </div>
+       </aside>
      </div>
 
-     <div class="pyc-hero-waves" aria-hidden="true">
-       <svg class="wave-a" viewBox="0 0 2400 90" preserveAspectRatio="none">
-         <path fill="#3e65b0"
-               d="M0 60 Q150 5 300 60 T600 60 T900 60 T1200 60 T1500 60 T1800 60 T2100 60 T2400 60 V90 H0 Z"/>
-       </svg>
-       <svg class="wave-b" viewBox="0 0 2400 90" preserveAspectRatio="none">
-         <path fill="#f15a29"
-               d="M0 65 Q100 25 200 65 T400 65 T600 65 T800 65 T1000 65 T1200 65 T1400 65 T1600 65 T1800 65 T2000 65 T2200 65 T2400 65 V90 H0 Z"/>
-       </svg>
-     </div>
+     <div class="pyc-wrap pyc-hero-foot">
+       <nav class="pyc-hero-flow" aria-label="Survey workflow">
+         <a class="pyc-flow-step" href="user_guide/data_loading.html">
+           <i class="fa-solid fa-wave-square"></i><span>Acquire</span>
+         </a>
+         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+         <a class="pyc-flow-step" href="user_guide/processing/index.html">
+           <i class="fa-solid fa-sliders"></i><span>Process</span>
+         </a>
+         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+         <a class="pyc-flow-step" href="user_guide/site/index.html">
+           <i class="fa-solid fa-magnifying-glass-chart"></i><span>Analyze</span>
+         </a>
+         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+         <a class="pyc-flow-step" href="user_guide/inversion/index.html">
+           <i class="fa-solid fa-chart-line"></i><span>Invert</span>
+         </a>
+         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+         <a class="pyc-flow-step" href="user_guide/interpretation/index.html">
+           <i class="fa-solid fa-map"></i><span>Interpret</span>
+         </a>
+       </nav>
 
-     <div class="pyc-stats">
-       <div class="pyc-stat">
-         <b data-counter="9" data-suffix="+">9+</b>
-         <span>data formats</span>
-       </div>
-       <div class="pyc-stat">
-         <b data-counter="25">25</b>
-         <span>correction methods</span>
-       </div>
-       <div class="pyc-stat">
-         <b data-counter="3">3</b>
-         <span>classical solvers</span>
-       </div>
-       <div class="pyc-stat">
-         <b data-counter="4">4</b>
-         <span>interfaces</span>
+       <div class="pyc-hero-dots" role="tablist" aria-label="Hero background slides">
+         <button type="button" class="is-active" role="tab" aria-selected="true"
+                 aria-label="Slide 1"></button>
+         <button type="button" role="tab" aria-selected="false" aria-label="Slide 2"></button>
+         <button type="button" role="tab" aria-selected="false" aria-label="Slide 3"></button>
        </div>
      </div>
    </section>
+
+   <!-- ===================== ANIMATED STATS (below hero) =================== -->
+   <div class="pyc-statsbar">
+     <div class="pyc-wrap">
+       <div class="pyc-stats">
+         <div class="pyc-stat">
+           <b data-counter="9" data-suffix="+">9+</b>
+           <span>data formats</span>
+         </div>
+         <div class="pyc-stat">
+           <b data-counter="25">25</b>
+           <span>correction methods</span>
+         </div>
+         <div class="pyc-stat">
+           <b data-counter="3">3</b>
+           <span>classical solvers</span>
+         </div>
+         <div class="pyc-stat">
+           <b data-counter="4">4</b>
+           <span>interfaces</span>
+         </div>
+       </div>
+     </div>
+   </div>
 
    <!-- ============================ FEATURE BOXES =========================== -->
    <section class="pyc-section">

@@ -4,7 +4,7 @@
   <em>Scientific Python for electromagnetic geophysics &mdash; processing, inversion, AI agents, and apps.</em>
   <br/><br/>
   <a href="https://pypi.org/project/pycsamt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pycsamt?color=orange&label=PyPI"/></a>
-  <a href="https://pycsamt.org"><img alt="Docs" src="https://img.shields.io/badge/docs-pycsamt.org-3e65b0"/></a>
+  <a href="https://app.netlify.com/projects/pycsamt/deploys"><img alt="Netlify Status" src="https://api.netlify.com/api/v1/badges/cf36d8dd-6a69-4e69-84e4-539acd0b33e8/deploy-status"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml?query=branch%3Av2"><img alt="CI" src="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml/badge.svg?branch=v2"/></a>
   <a href="https://codecov.io/github/earthai-tech/pycsamt?branch=v2"><img alt="Coverage" src="https://codecov.io/github/earthai-tech/pycsamt/graph/badge.svg?branch=v2"/></a>
   <a href="https://opensource.org/licenses/LGPL-3.0"><img alt="License" src="https://img.shields.io/badge/license-LGPL--3.0-blue"/></a>

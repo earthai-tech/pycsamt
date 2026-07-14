@@ -54,7 +54,7 @@ _ICONS = Path(__file__).parent.parent / "resources" / "icons"
 _LOGO_SVG = _ICONS / "pycsamt_logo.svg"
 
 # ── External links ────────────────────────────────────────────────────────────
-_URL_DOCS = "http://pycsamt.readthedocs.io/"
+_URL_DOCS = "https://pycsamt.org/"
 _URL_GH = "https://github.com/earthai-tech/pycsamt"
 
 # ── Brand palette ─────────────────────────────────────────────────────────────

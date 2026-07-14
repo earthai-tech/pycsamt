@@ -157,10 +157,10 @@ full = [
 # ---------------------------------------------------------------------------
 [project.urls]
 Homepage        = "https://github.com/earthai-tech/pycsamt"
-Documentation   = "https://pycsamt.readthedocs.io"
+Documentation   = "https://pycsamt.org"
 "Bug Tracker"   = "https://github.com/earthai-tech/pycsamt/issues"
 "Source Code"   = "https://github.com/earthai-tech/pycsamt"
-Changelog       = "https://pycsamt.readthedocs.io/en/latest/changelog.html"
+Changelog       = "https://pycsamt.org/changelog.html"
 
 # ---------------------------------------------------------------------------
 # Entry points

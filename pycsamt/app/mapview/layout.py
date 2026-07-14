@@ -2045,7 +2045,7 @@ def _help_modal() -> dbc.Modal:
                     html.Div(className="mv-topbar-spacer"),
                     html.A(
                         [html.I(className="bi bi-book me-1"), "Docs"],
-                        href="https://pycsamt.readthedocs.io",
+                        href="https://pycsamt.org",
                         target="_blank",
                         className="mv-help-link",
                     ),

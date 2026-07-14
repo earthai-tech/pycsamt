@@ -3,7 +3,7 @@
 """
 pycsamt v2 — Python toolbox for audio-magnetotellurics (AMT & CSAMT).
 
-Documentation: https://pycsamt.readthedocs.io/en/latest/
+Documentation: https://pycsamt.org/
 Source:        https://github.com/earthai-tech/pycsamt
 """
 

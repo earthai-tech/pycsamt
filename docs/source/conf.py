@@ -264,11 +264,6 @@ html_theme_options = {
     # Footer
     "footer_start": ["copyright"],
     "footer_end": ["sphinx-version", "theme-version"],
-    # Announcement banner (remove before release)
-    "announcement": (
-        "pyCSAMT v2 docs are under active construction. "
-        "APIs may change before the stable release."
-    ),
     # Search
     "search_bar_text": "Search pyCSAMT docs...",
     "switcher": {

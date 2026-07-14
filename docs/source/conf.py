@@ -320,6 +320,35 @@ html_show_sourcelink = True
 html_show_sphinx = False
 html_copy_source = False
 
+
+def _remove_secondary_sidebar_for_landing_pages(
+    app, pagename, templatename, context, doctree
+):
+    """Hide the right page TOC only on landing/index pages.
+
+    Ordinary documentation pages should keep the pydata secondary sidebar
+    ("On this page").  Wide landing pages, generated gallery index pages, and
+    API catalogue index pages get the same metadata flag that can be written
+    by hand in an ``.rst`` file as ``:html_theme.sidebar_secondary.remove:``.
+    """
+    is_index_page = pagename == "index" or pagename.endswith("/index")
+    if not is_index_page:
+        context.get("meta", {}).pop(
+            "html_theme.sidebar_secondary.remove", None
+        )
+        return
+
+    meta = context.setdefault("meta", {})
+    meta["html_theme.sidebar_secondary.remove"] = ""
+
+
+def setup(app):
+    app.connect(
+        "html-page-context",
+        _remove_secondary_sidebar_for_landing_pages,
+    )
+
+
 # -- LaTeX / PDF ---------------------------------------------------------------
 latex_elements = {
     "papersize": "a4paper",

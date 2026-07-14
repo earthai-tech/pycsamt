@@ -19,10 +19,6 @@
   --pyc-shadow:      0 10px 34px rgba(31, 68, 144, 0.10);
   --pyc-shadow-sm:   0 4px 14px rgba(31, 68, 144, 0.08);
   --pyc-radius:      14px;
-  --pyc-hero-grad:
-    radial-gradient(52rem 30rem at 88% -12%, color-mix(in srgb, var(--pyc-gold) 26%, transparent), transparent 60%),
-    radial-gradient(44rem 30rem at -8% 8%,  color-mix(in srgb, var(--pyc-blue) 18%, transparent), transparent 62%),
-    linear-gradient(180deg, var(--pyc-surface-2), var(--pyc-surface));
 }
 
 html[data-theme="dark"] {
@@ -33,10 +29,6 @@ html[data-theme="dark"] {
   --pyc-border:    color-mix(in srgb, var(--pyc-blue) 38%, transparent);
   --pyc-shadow:    0 10px 34px rgba(0, 0, 0, 0.45);
   --pyc-shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.35);
-  --pyc-hero-grad:
-    radial-gradient(52rem 30rem at 88% -12%, color-mix(in srgb, var(--pyc-gold) 14%, transparent), transparent 60%),
-    radial-gradient(44rem 30rem at -8% 8%,  color-mix(in srgb, var(--pyc-blue) 26%, transparent), transparent 62%),
-    linear-gradient(180deg, #101623, var(--pyc-surface));
 }
 
 /* --------------------------------------------------------------------------
@@ -108,24 +100,82 @@ body.pycsamt-home-page .bd-content,
 .pyc-center .pyc-lead { margin-inline: auto; }
 
 /* --------------------------------------------------------------------------
-   Hero
+   Hero — full-bleed carousel artwork with overlay copy (scikit-learn style)
    -------------------------------------------------------------------------- */
 .pyc-hero {
   position: relative;
+  isolation: isolate;          /* slide layers stack below the copy */
   overflow: hidden;
-  padding: clamp(1.1rem, 2.2vw, 1.8rem) 0 0;
-  background: var(--pyc-hero-grad);
+  padding: clamp(1.2rem, 2.4vw, 2rem) 0 0;
+  background: var(--pyc-surface-2);
   border-bottom: 1px solid var(--pyc-border);
 }
 
-.pyc-hero .pyc-wrap {
+/* Rotating background: three panning views of one panoramic artwork.
+   To extend the carousel, add a .pyc-slide--x rule (new position or new
+   image) plus a matching slide div and dot in index.rst. */
+.pyc-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.pyc-slide {
+  position: absolute;
+  inset: 0;
+  background-image: url("../images/home/hero-carousel.webp");
+  background-size: cover;
+  opacity: 0;
+  transition: opacity 1100ms ease;
+  will-change: opacity, transform;
+}
+
+.pyc-slide--a { background-position: 10% 30%; }
+.pyc-slide--b { background-position: 50% 45%; }
+.pyc-slide--c { background-position: 90% 62%; }
+
+.pyc-slide.is-active { opacity: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pyc-slide.is-active { animation: pyc-kenburns 9s ease-out forwards; }
+}
+
+@keyframes pyc-kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.055); }
+}
+
+/* Readability scrims: white wash under the copy, deepening to the right */
+.pyc-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg,
+      rgba(255, 255, 255, 0.94) 0%,
+      rgba(255, 255, 255, 0.80) 30%,
+      rgba(255, 255, 255, 0.46) 54%,
+      rgba(255, 255, 255, 0.36) 76%,
+      rgba(255, 255, 255, 0.32) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 32%);
+}
+
+html[data-theme="dark"] .pyc-slide { filter: saturate(0.9); }
+
+html[data-theme="dark"] .pyc-hero-scrim {
+  background:
+    linear-gradient(90deg,
+      rgba(11, 16, 27, 0.95) 0%,
+      rgba(11, 16, 27, 0.88) 34%,
+      rgba(11, 16, 27, 0.66) 62%,
+      rgba(11, 16, 27, 0.58) 100%);
+}
+
+.pyc-hero-grid {
   position: relative;
-  z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: clamp(1.6rem, 4vw, 3.4rem);
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: clamp(1.6rem, 4vw, 3.6rem);
   align-items: center;
-  padding-bottom: clamp(2.6rem, 6vw, 4rem);
 }
 
 .pyc-hero-badges {
@@ -156,12 +206,11 @@ body.pycsamt-home-page .bd-content,
 
 .pyc-hero-logo {
   display: flex;
-  justify-content: center;
   margin: 0 0 0.9rem;
 }
 
 .pyc-wm {
-  width: 300px;
+  width: 236px;
   max-width: 100%;
   height: auto;
   display: block;
@@ -199,6 +248,9 @@ html[data-theme="dark"] .pyc-wm .cls-1 { fill: #9db8ea; }
   .pyc-wm .wm-sheen {
     display: none;
   }
+  .pyc-slide {
+    transition: none;
+  }
 }
 
 .pyc-hero-sub {
@@ -220,20 +272,11 @@ html[data-theme="dark"] .pyc-wm .cls-1 { fill: #9db8ea; }
   transform: translateY(0.35rem);
 }
 
-.pyc-hero-text {
-  max-width: 36rem;
-  margin: 0 0 1.6rem;
-  color: var(--pyc-muted);
-  font-size: 1.05rem;
-  line-height: 1.75;
-}
-
 .pyc-hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.7rem;
-  margin-bottom: 1.4rem;
 }
 
 .pyc-btn {
@@ -274,151 +317,166 @@ html[data-theme="dark"] .pyc-btn--ghost { color: #b9cdf3 !important; }
   background: color-mix(in srgb, var(--pyc-blue) 10%, var(--pyc-surface));
 }
 
-/* pip install pill */
-.pyc-install {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  max-width: 100%;
-  padding: 0.55rem 0.6rem 0.55rem 1rem;
-  border: 1px solid var(--pyc-border);
-  border-radius: 12px;
-  background: var(--pyc-surface);
-  box-shadow: var(--pyc-shadow-sm);
-  font-family: var(--pst-font-family-monospace, "SFMono-Regular", Consolas, monospace);
-  font-size: 0.95rem;
+/* Right column: "why pyCSAMT" points straight on the artwork */
+.pyc-hero-points {
+  display: grid;
+  gap: 0.4rem;
+  justify-self: end;
+  width: min(100%, 28rem);
 }
 
-.pyc-install code {
-  border: 0;
-  background: transparent;
-  color: var(--pyc-ink);
-  font-weight: 650;
-  white-space: nowrap;
+.pyc-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.55rem 0.3rem;
 }
 
-.pyc-install .pyc-dollar { color: var(--pyc-orange); font-weight: 800; }
-
-.pyc-copy-btn {
+.pyc-point-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border: 1px solid var(--pyc-border);
-  border-radius: 8px;
-  background: var(--pyc-surface-2);
+  flex: 0 0 auto;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pyc-blue) 14%, transparent);
   color: var(--pyc-blue);
-  cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
+  font-size: 1rem;
 }
 
-.pyc-copy-btn:hover { background: color-mix(in srgb, var(--pyc-blue) 12%, var(--pyc-surface)); }
-
-.pyc-copy-btn.is-copied {
-  border-color: color-mix(in srgb, #2e9e5b 60%, transparent);
-  color: #2e9e5b;
+.pyc-point:nth-child(2) .pyc-point-icon {
+  background: color-mix(in srgb, var(--pyc-orange) 14%, transparent);
+  color: var(--pyc-orange);
 }
 
-/* Terminal mock card (hero, right column) */
-.pyc-terminal {
+.pyc-point:nth-child(3) .pyc-point-icon {
+  background: color-mix(in srgb, var(--pyc-gold) 20%, transparent);
+  color: #b57a12;
+}
+
+.pyc-point-text b {
+  display: block;
+  color: var(--pyc-ink);
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.pyc-point-text span {
+  color: var(--pyc-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Hero footer: workflow strip and carousel dots */
+.pyc-hero-foot {
   position: relative;
-  border: 1px solid var(--pyc-border);
-  border-radius: var(--pyc-radius);
-  background: #101623;
-  box-shadow: var(--pyc-shadow);
-  overflow: hidden;
-  transform: rotate(0.6deg);
+  padding-top: clamp(0.8rem, 2vw, 1.3rem);
+  padding-bottom: 4.2rem;      /* room for the overlapping stats bar */
+  text-align: center;
 }
 
-.pyc-terminal-bar {
+.pyc-hero-flow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.65rem 0.95rem;
-  background: #1a2233;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  justify-content: center;
+  gap: clamp(0.4rem, 1.5vw, 1rem);
 }
 
-.pyc-terminal-bar span {
-  width: 0.72rem;
-  height: 0.72rem;
-  border-radius: 50%;
+.pyc-flow-step {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.38rem;
+  min-width: 4.8rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  color: var(--pyc-blue-dark) !important;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none !important;
+  transition: transform 150ms ease, background 150ms ease, color 150ms ease;
 }
 
-.pyc-terminal-bar span:nth-child(1) { background: #ff5f57; }
-.pyc-terminal-bar span:nth-child(2) { background: #febc2e; }
-.pyc-terminal-bar span:nth-child(3) { background: #28c840; }
+.pyc-flow-step i {
+  font-size: 1.25rem;
+  color: var(--pyc-blue);
+  transition: color 150ms ease;
+}
 
-.pyc-terminal-bar em {
-  margin-left: 0.55rem;
-  color: #8fa3c4;
+.pyc-flow-step:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, #ffffff 60%, transparent);
+  color: var(--pyc-orange) !important;
+}
+
+.pyc-flow-step:hover i { color: var(--pyc-orange); }
+
+.pyc-flow-sep {
+  color: color-mix(in srgb, var(--pyc-blue) 45%, transparent);
   font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 650;
-  letter-spacing: 0.04em;
 }
 
-.pyc-terminal pre {
-  margin: 0;
-  padding: 1.05rem 1.15rem 1.25rem;
-  background: transparent;
+html[data-theme="dark"] .pyc-flow-step { color: #b9cdf3 !important; }
+html[data-theme="dark"] .pyc-flow-step i { color: #9db8ea; }
+
+html[data-theme="dark"] .pyc-flow-step:hover {
+  background: color-mix(in srgb, var(--pyc-blue) 20%, transparent);
+  color: var(--pyc-gold) !important;
+}
+
+html[data-theme="dark"] .pyc-flow-step:hover i { color: var(--pyc-gold); }
+
+.pyc-hero-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.pyc-hero-dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
   border: 0;
-  color: #dbe6f7;
-  font-size: 0.86rem;
-  line-height: 1.75;
-  overflow-x: auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pyc-blue) 32%, transparent);
+  cursor: pointer;
+  transition: width 160ms ease, background 160ms ease;
 }
 
-.pyc-terminal .t-prompt { color: var(--pyc-gold); }
-.pyc-terminal .t-cmd    { color: #e8eefc; font-weight: 600; }
-.pyc-terminal .t-kw     { color: #7aa2f7; }
-.pyc-terminal .t-str    { color: #9ece6a; }
-.pyc-terminal .t-num    { color: #ff9e64; }
-.pyc-terminal .t-fn     { color: #7dcfff; }
-.pyc-terminal .t-com    { color: #5f7096; }
-.pyc-terminal .t-ok     { color: #28c840; font-weight: 700; }
-
-/* animated EM waves along the hero bottom edge */
-.pyc-hero-waves {
-  position: absolute;
-  inset: auto 0 -2px 0;
-  z-index: 1;
-  width: 100%;
-  height: 90px;
-  pointer-events: none;
+.pyc-hero-dots button:hover {
+  background: color-mix(in srgb, var(--pyc-blue) 58%, transparent);
 }
 
-.pyc-hero-waves svg {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 200%;
-  height: 100%;
+.pyc-hero-dots button.is-active {
+  width: 22px;
+  background: var(--pyc-orange);
 }
 
-.pyc-hero-waves .wave-a { animation: pyc-drift 26s linear infinite; opacity: 0.5; }
-.pyc-hero-waves .wave-b { animation: pyc-drift 17s linear infinite reverse; opacity: 0.35; }
-
-@keyframes pyc-drift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-/* Stats strip */
-.pyc-stats {
+/* Animated stats — floating card overlapping the hero bottom edge */
+.pyc-statsbar {
   position: relative;
-  z-index: 2;
+  z-index: 3;
+  margin-top: -2.7rem;
+}
+
+.pyc-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
-  border-top: 1px solid var(--pyc-border);
+  overflow: hidden;
+  border: 1px solid var(--pyc-border);
+  border-radius: 16px;
   background: var(--pyc-border);
+  box-shadow: var(--pyc-shadow);
 }
 
 .pyc-stat {
-  padding: 1.15rem 1rem;
-  background: color-mix(in srgb, var(--pyc-surface) 88%, transparent);
+  padding: 1.25rem 1rem;
+  background: var(--pyc-surface);
   text-align: center;
 }
 
@@ -856,9 +914,11 @@ body.pycsamt-home-page .prev-next-area,
 }
 
 @media (max-width: 880px) {
-  .pyc-hero .pyc-wrap { grid-template-columns: 1fr; }
-  .pyc-terminal { transform: none; }
+  .pyc-hero-grid { grid-template-columns: 1fr; }
+  .pyc-hero-points { justify-self: stretch; width: 100%; }
+  .pyc-flow-sep { display: none; }
   .pyc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pyc-statsbar { margin-top: -2.2rem; }
   .pyc-duo { grid-template-columns: 1fr; }
 }
 
@@ -866,5 +926,4 @@ body.pycsamt-home-page .prev-next-area,
   .pyc-features { grid-template-columns: 1fr; }
   .pyc-interfaces { grid-template-columns: 1fr; }
   .pyc-explore { grid-template-columns: 1fr; }
-  .pyc-install { width: 100%; justify-content: space-between; }
 }

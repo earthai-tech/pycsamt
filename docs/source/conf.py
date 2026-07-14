@@ -146,12 +146,21 @@ sphinx_gallery_conf = {
     # (e.g. two _datasets.py) share it via sys.modules across the whole
     # build, so such helpers must be kept byte-identical supersets.
     "ignore_pattern": r"(^|[\\/])_",
+    # Execute examples in parallel worker processes (joblib). Biggest lever
+    # on cold-build time for CI hosts with a 15-minute budget (RTD, Netlify).
+    "parallel": 4,
 }
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 master_doc = "index"
+
+# -- viewcode --------------------------------------------------------------------
+# Only highlight pycsamt's own modules. The default (True) follows every
+# imported object and ends up syntax-highlighting third-party internals
+# (pandas.core.frame, ...) — minutes of build time for pages nobody links to.
+viewcode_follow_imported_members = False
 
 # -- autodoc / autosummary -----------------------------------------------------
 autosummary_generate = True  # stubs not yet written; generate on build

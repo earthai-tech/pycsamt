@@ -1,0 +1,8 @@
+{
+  "name": "pycsamt-docs-build",
+  "private": true,
+  "description": "Node manifest used only by Netlify to install docs build plugins (see netlify.toml); not part of the Python package.",
+  "devDependencies": {
+    "netlify-plugin-cache": "^1.0.0"
+  }
+}

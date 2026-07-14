@@ -18,7 +18,7 @@
   # Skip deploys for commits that cannot affect the docs (exit 0 = skip).
   # On the very first build CACHED_COMMIT_REF is unset, git diff exits
   # non-zero, and the build proceeds — the safe direction.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs pycsamt pyproject.toml netlify.toml .python-version"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs pycsamt pyproject.toml netlify.toml .python-version package.json"
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read
@@ -27,10 +27,11 @@
   PYTHON_VERSION = "3.12"
   PIP_DISABLE_PIP_VERSION_CHECK = "1"
 
-# Persists the listed directories in Netlify's build cache (the plugin is
-# installed automatically from npm at build time). Trade-off: html removed
-# from the source tree lingers in the cached output until a "Clear cache and
-# deploy" — same as any incremental Sphinx build.
+# Persists the listed directories in Netlify's build cache. The plugin is a
+# community package, so it must be declared in package.json (repo root) for
+# Netlify's npm step to install it — netlify.toml alone is not enough.
+# Trade-off: html removed from the source tree lingers in the cached output
+# until a "Clear cache and deploy" — same as any incremental Sphinx build.
 [[plugins]]
   package = "netlify-plugin-cache"
 

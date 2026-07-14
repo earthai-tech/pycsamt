@@ -82,9 +82,3 @@ For development from a source checkout:
    web/index
    agent_master/index
    mapview/index
-
-.. toctree::
-   :hidden:
-
-   desktop
-   web

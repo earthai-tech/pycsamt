@@ -1,3 +1,5 @@
+:orphan:
+
 .. _desktop_application:
 
 Desktop Application

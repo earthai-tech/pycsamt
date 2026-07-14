@@ -243,9 +243,19 @@ html_theme_options = {
             "icon": "fa-brands fa-github",
         },
         {
+            "name": "Issue tracker",
+            "url": "https://github.com/earthai-tech/pycsamt/issues",
+            "icon": "fa-solid fa-bug",
+        },
+        {
             "name": "PyPI",
             "url": "https://pypi.org/project/pycsamt/",
             "icon": "fa-brands fa-python",
+        },
+        {
+            "name": "Stack Overflow",
+            "url": "https://stackoverflow.com/questions/tagged/pycsamt",
+            "icon": "fa-brands fa-stack-overflow",
         },
     ],
     # Sidebar
@@ -320,23 +330,27 @@ html_copy_source = False
 def _remove_secondary_sidebar_for_landing_pages(
     app, pagename, templatename, context, doctree
 ):
-    """Hide the right page TOC only on landing/index pages.
+    """Hide the right page TOC only on wide, hand-designed landing pages.
 
-    Ordinary documentation pages should keep the pydata secondary sidebar
-    ("On this page").  Wide landing pages, generated gallery index pages, and
-    API catalogue index pages get the same metadata flag that can be written
-    by hand in an ``.rst`` file as ``:html_theme.sidebar_secondary.remove:``.
+    Every ordinary page — index or not — keeps the pydata secondary sidebar
+    ("On this page").  Only three kinds of pages collapse it: the home page,
+    the API reference pages (their tables need the width), and the generated
+    examples-gallery index pages (card grids).  Any other page can still opt
+    in by hand with the ``:html_theme.sidebar_secondary.remove:`` metadata
+    field, which this handler no longer strips.
     """
+    collapse = (
+        pagename == "index"
+        or pagename in {"api_landing", "api/index"}
+        or (pagename.startswith("examples/") and pagename.endswith("index"))
+    )
+    if not collapse:
+        return
+
     # context["meta"] can be present but None (e.g. templated/special pages),
     # so a plain .get("meta", {}) is not enough — normalise it to a dict.
     meta = context.get("meta") or {}
     context["meta"] = meta
-
-    is_index_page = pagename == "index" or pagename.endswith("/index")
-    if not is_index_page:
-        meta.pop("html_theme.sidebar_secondary.remove", None)
-        return
-
     meta["html_theme.sidebar_secondary.remove"] = ""
 
 

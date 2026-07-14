@@ -26,7 +26,7 @@ Use this section when you need to:
 Guide Sections
 --------------
 
-.. grid:: 1 1 2 4
+.. grid:: 1 1 2 2
    :gutter: 3
    :class-container: cta-tiles
 
@@ -138,9 +138,6 @@ For a complete EDI rewrite workflow, use :func:`pycsamt.site.recompute.recompute
    )
 
    print(result.output_root)
-
-Documentation Contents
-----------------------
 
 .. toctree::
    :maxdepth: 2

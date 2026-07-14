@@ -188,8 +188,94 @@ The tutorials usually show both forms when a CLI command exists.
 Tutorial Index
 --------------
 
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: cta-tiles
+
+   .. grid-item-card:: Read an EDI Survey
+      :link: read_edi_survey
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-data-loading.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Load one file, a line directory, or a survey tree and inspect
+      what pyCSAMT found.
+
+   .. grid-item-card:: Inspect & QC a Survey
+      :link: inspect_and_qc_survey
+      :link-type: doc
+      :img-top: ../_static/icons/diagnostic.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Review coverage, usable frequencies, signal quality, and stations
+      that need attention.
+
+   .. grid-item-card:: Compare Survey Lines
+      :link: compare_survey_lines_for_qc
+      :link-type: doc
+      :img-top: ../_static/icons/external-validation.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Decide whether two lines can share one first-pass QC and
+      processing configuration.
+
+   .. grid-item-card:: Correct Static Shift
+      :link: correct_static_shift
+      :link-type: doc
+      :img-top: ../_static/icons/static-shift.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Estimate, inspect, apply, and export a conservative static-shift
+      correction.
+
+   .. grid-item-card:: Condition an MT Line
+      :link: condition_mt_line_with_tipper_and_rotation
+      :link-type: doc
+      :img-top: ../_static/icons/transfer-tipper.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Tipper review, bad-frequency screening, phase tensors, strike,
+      and rotation before inversion.
+
+   .. grid-item-card:: Prepare Occam2D Inversion
+      :link: prepare_occam2d_inversion
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-inversion.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Build the data, model, startup, and run-directory files for a
+      2-D Occam2D workspace.
+
+   .. grid-item-card:: AI Inversion from EDIs
+      :link: ai_inversion_from_corrected_edis
+      :link-type: doc
+      :img-top: ../_static/icons/user-guide-ai.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Choose between 1-D, 2-D, and 3-D AI code paths starting from
+      corrected EDIs.
+
+   .. grid-item-card:: Essential 3-D AI Inversion
+      :link: essential_3d_ai_inversion
+      :link-type: doc
+      :img-top: ../_static/icons/model.svg
+      :class-card: pycsamt-card sd-text-center
+
+      A focused L18PLT 3-D AI run with real station geometry and
+      embedded topography.
+
+   .. grid-item-card:: Run a Pipeline from Config
+      :link: run_pipeline_from_config
+      :link-type: doc
+      :img-top: ../_static/icons/workflow.svg
+      :class-card: pycsamt-card sd-text-center
+
+      Store the workflow in YAML, JSON, or Python and rerun it from
+      Python or the CLI.
+
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    read_edi_survey
    inspect_and_qc_survey
@@ -198,6 +284,7 @@ Tutorial Index
    condition_mt_line_with_tipper_and_rotation
    prepare_occam2d_inversion
    ai_inversion_from_corrected_edis
+   essential_3d_ai_inversion
    run_pipeline_from_config
 
 Related Sections

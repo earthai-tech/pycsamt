@@ -1,3 +1,5 @@
+:orphan:
+
 .. _web_application:
 
 Web Application

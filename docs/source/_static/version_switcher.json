@@ -1,17 +1,8 @@
 [
   {
-    "name": "v2",
+    "name": "v2 (stable)",
     "version": "v2",
-    "url": "https://pycsamt.readthedocs.io/en/v2/"
-  },
-  {
-    "name": "dev",
-    "version": "latest",
-    "url": "https://pycsamt.readthedocs.io/en/latest/"
-  },
-  {
-    "name": "stable",
-    "version": "stable",
-    "url": "https://pycsamt.readthedocs.io/en/stable/"
+    "url": "https://pycsamt.org/",
+    "preferred": true
   }
 ]

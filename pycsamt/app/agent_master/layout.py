@@ -27,7 +27,7 @@ _PROMPT_CHIPS = [
 ]
 
 _URLS = {
-    "docs": ("https://pycsamt.readthedocs.io"),
+    "docs": ("https://pycsamt.org"),
     "github": ("https://github.com/earthai-tech/pycsamt"),
     "web": "http://localhost:8051",
 }
@@ -1879,7 +1879,7 @@ def _help_modal() -> dbc.Modal:
                             html.I(className="bi bi-book me-1"),
                             "Docs",
                         ],
-                        href="https://pycsamt.readthedocs.io",
+                        href="https://pycsamt.org",
                         target="_blank",
                         className="am-help-link",
                     ),

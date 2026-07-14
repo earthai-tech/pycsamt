@@ -1,6 +1,6 @@
-# Netlify configuration for building and hosting the pyCSAMT documentation.
-# Mirrors .readthedocs.yml: Python 3.12, `pip install .[docs,geo]`, Sphinx
-# HTML written to docs/build/html.
+# Netlify configuration for building and hosting the pyCSAMT documentation
+# (https://pycsamt.org): Python 3.12, `pip install .[docs,geo]`, Sphinx HTML
+# written to docs/build/html.
 #
 # Netlify's default build timeout is 15 minutes too — what makes it viable
 # here is the cache plugin at the bottom: docs/build (Sphinx environment,
@@ -25,8 +25,7 @@
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read
-  # the .python-version file at the repo root instead; both are pinned to
-  # the same version as .readthedocs.yml.
+  # the .python-version file at the repo root instead; keep both in sync.
   PYTHON_VERSION = "3.12"
   PIP_DISABLE_PIP_VERSION_CHECK = "1"
 

@@ -1030,7 +1030,7 @@ _HELP_MENU = dbc.DropdownMenu(
     children=[
         dbc.DropdownMenuItem(
             [_icon("docs", size=13, cls="menu-item-icon"), " Documentation"],
-            href="https://pycsamt.readthedocs.io",
+            href="https://pycsamt.org",
             target="_blank",
             className="navbar-menu-item",
         ),
@@ -5192,7 +5192,7 @@ def _about_modal() -> dbc.Modal:
                             _icon("docs", size=13, cls="menu-item-icon"),
                             " Documentation",
                         ],
-                        href="https://pycsamt.readthedocs.io",
+                        href="https://pycsamt.org",
                         target="_blank",
                         className="btn btn-outline-secondary btn-sm me-2",
                     ),

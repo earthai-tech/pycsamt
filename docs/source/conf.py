@@ -52,11 +52,7 @@ try:
 except Exception:
     version = release = "2.0"
 
-switcher_version_match = os.environ.get(
-    "READTHEDOCS_VERSION", f"v{version.split('.')[0]}"
-)
-if switcher_version_match in {"latest", "stable"}:
-    switcher_version_match = "v2"
+switcher_version_match = f"v{version.split('.')[0]}"
 
 # -- General configuration -----------------------------------------------------
 extensions = [
@@ -289,6 +285,10 @@ rst_epilog = """
 .. |Tests| replace:: :bdg-primary:`Tests`
 """
 
+# Canonical URL of the published docs (Netlify + custom domain); the theme
+# emits <link rel="canonical"> tags from this for search engines.
+html_baseurl = "https://pycsamt.org/"
+
 html_title = f"pyCSAMT {version}"
 html_short_title = "pyCSAMT"
 html_favicon = "_static/logo/pycsamt-v2-symbol.ico"
@@ -327,14 +327,16 @@ def _remove_secondary_sidebar_for_landing_pages(
     API catalogue index pages get the same metadata flag that can be written
     by hand in an ``.rst`` file as ``:html_theme.sidebar_secondary.remove:``.
     """
+    # context["meta"] can be present but None (e.g. templated/special pages),
+    # so a plain .get("meta", {}) is not enough — normalise it to a dict.
+    meta = context.get("meta") or {}
+    context["meta"] = meta
+
     is_index_page = pagename == "index" or pagename.endswith("/index")
     if not is_index_page:
-        context.get("meta", {}).pop(
-            "html_theme.sidebar_secondary.remove", None
-        )
+        meta.pop("html_theme.sidebar_secondary.remove", None)
         return
 
-    meta = context.setdefault("meta", {})
     meta["html_theme.sidebar_secondary.remove"] = ""
 
 

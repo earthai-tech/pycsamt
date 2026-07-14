@@ -162,8 +162,8 @@ docs/source/sg_execution_times.rst
 # PyBuilder
 target/
 
-# pyenv python configuration file
-.python-version
+# .python-version is tracked on purpose: it pins the docs build runtime on
+# Netlify's mise/pyenv-based images (see netlify.toml).
 
 # virtual-environ 
 venv/

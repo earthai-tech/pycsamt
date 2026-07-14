@@ -1,0 +1,41 @@
+# Netlify configuration for building and hosting the pyCSAMT documentation.
+# Mirrors .readthedocs.yml: Python 3.12, `pip install .[docs,geo]`, Sphinx
+# HTML written to docs/build/html.
+#
+# Netlify's default build timeout is 15 minutes too — what makes it viable
+# here is the cache plugin at the bottom: docs/build (Sphinx environment,
+# doctrees, written html) and docs/source/examples (executed sphinx-gallery
+# output) persist between deploys, so a push only re-executes the example
+# scripts whose .py actually changed and only rewrites affected pages.
+# Only the first, cold build runs everything; if that one hits the timeout,
+# deploy once with `-D plot_gallery=0` appended to the sphinx command (or ask
+# Netlify support to raise the site's timeout), then restore this command.
+
+[build]
+  publish = "docs/build/html"
+  command = "python -m pip install .[docs,geo] && python -m sphinx -b html -j auto docs/source docs/build/html"
+
+  # Skip deploys for commits that cannot affect the docs (exit 0 = skip).
+  # On the very first build CACHED_COMMIT_REF is unset, git diff exits
+  # non-zero, and the build proceeds — the safe direction.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs pycsamt pyproject.toml netlify.toml .python-version"
+
+[build.environment]
+  # Python runtime on Netlify's build image. Newer (mise-based) images read
+  # the .python-version file at the repo root instead; both are pinned to
+  # the same version as .readthedocs.yml.
+  PYTHON_VERSION = "3.12"
+  PIP_DISABLE_PIP_VERSION_CHECK = "1"
+
+# Persists the listed directories in Netlify's build cache (the plugin is
+# installed automatically from npm at build time). Trade-off: html removed
+# from the source tree lingers in the cached output until a "Clear cache and
+# deploy" — same as any incremental Sphinx build.
+[[plugins]]
+  package = "netlify-plugin-cache"
+
+  [plugins.inputs]
+    paths = [
+      "docs/build",           # doctrees + environment pickle + written html
+      "docs/source/examples", # gallery output: unchanged examples are not re-run
+    ]

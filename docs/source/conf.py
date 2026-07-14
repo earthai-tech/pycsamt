@@ -146,9 +146,10 @@ sphinx_gallery_conf = {
     # (e.g. two _datasets.py) share it via sys.modules across the whole
     # build, so such helpers must be kept byte-identical supersets.
     "ignore_pattern": r"(^|[\\/])_",
-    # Execute examples in parallel worker processes (joblib). Biggest lever
-    # on cold-build time for CI hosts with a 15-minute budget (RTD, Netlify).
-    "parallel": 4,
+    # NOTE: do NOT enable "parallel" here. The inversion section is an
+    # ordered chain (plot_4 writes a validation report that plot_5 reads,
+    # plot_5 writes the run-folder audit that plot_6 reads); parallel
+    # workers execute out of order and break it on fresh CI machines.
 }
 
 templates_path = ["_templates"]

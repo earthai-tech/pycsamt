@@ -273,7 +273,10 @@ html_theme_options = {
     # Search
     "search_bar_text": "Search pyCSAMT docs...",
     "switcher": {
-        "json_url": "_static/version_switcher.json",
+        # Absolute on purpose: the theme resolves a relative json_url
+        # against the address-bar URL, so directory-style URLs like
+        # /examples/ 404 and the pill sticks at "Choose version".
+        "json_url": "https://pycsamt.org/_static/version_switcher.json",
         "version_match": switcher_version_match,
     },
 }

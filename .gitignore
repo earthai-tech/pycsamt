@@ -165,6 +165,9 @@ target/
 # .python-version is tracked on purpose: it pins the docs build runtime on
 # Netlify's mise/pyenv-based images (see netlify.toml).
 
+# Node deps installed by Netlify for build plugins (package.json)
+node_modules/
+
 # virtual-environ 
 venv/
 

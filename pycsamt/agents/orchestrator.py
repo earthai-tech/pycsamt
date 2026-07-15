@@ -805,6 +805,27 @@ _WORKFLOW_STEPS = {
 _PREP_FILE_STEPS = frozenset({"occam2d", "modem", "mare2dem"})
 
 
+def _make_outdir_injector(fn, od):
+    """Wrap step *fn* so its returned input dict always carries ``output_dir``.
+
+    Only the root step (``input_fn=None``) receives the run's
+    ``exec_config`` (and therefore ``output_dir``) directly; every other
+    step's ``input_fn`` chain only carries upstream results. Without this,
+    figure-saving agents (e.g. DataQCAgent, StaticShiftAgent) silently
+    drop their figures and ReportAgent falls back to a hardcoded relative
+    ``pycsamt_report/`` in the process's CWD instead of the run's
+    ``output_dir``. ``setdefault`` so a more specific value already set by
+    the step (e.g. a per-code prep subfolder) is never overridden.
+    """
+
+    def _injected(r):
+        base = fn(r)
+        base.setdefault("output_dir", od)
+        return base
+
+    return _injected
+
+
 class WorkflowOrchestratorAgent(BaseAgent):
     """Intelligently route an NL request to the correct agent chain.
 
@@ -1065,15 +1086,6 @@ class WorkflowOrchestratorAgent(BaseAgent):
             # subfolder so provenance JSONs and
             # solver inputs don't mix.
             if step_name in _PREP_FILE_STEPS and step_fn is not None:
-
-                def _make_outdir_injector(fn, od):
-                    def _injected(r):
-                        base = fn(r)
-                        base.setdefault("output_dir", od)
-                        return base
-
-                    return _injected
-
                 step_fn = _make_outdir_injector(
                     step_fn,
                     os.path.join(
@@ -1081,6 +1093,11 @@ class WorkflowOrchestratorAgent(BaseAgent):
                         f"pycsamt_{step_name}",
                     ),
                 )
+            elif step_fn is not None:
+                # Every other non-root step needs the run's output_dir
+                # too, or its figures/report silently miss the run
+                # folder (see _make_outdir_injector docstring).
+                step_fn = _make_outdir_injector(step_fn, output_dir)
 
             coord.add_step(
                 step_name,

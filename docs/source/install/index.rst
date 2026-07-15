@@ -29,6 +29,16 @@ when you need the full pip/conda picture.
       A guided first run: set up an environment, install pyCSAMT, load a
       bundled survey, and produce your first result.
 
+Which one do I need?
+---------------------
+
+- New to pyCSAMT, or just want to see it work? Start with **Getting
+  started** — a short guided walkthrough from a fresh environment to
+  your first figure.
+- Already comfortable with pip/conda and want the full picture (extras,
+  compiled solvers, backend requirements, verification)? Go to
+  **Installation**.
+
 .. toctree::
    :maxdepth: 1
    :hidden:

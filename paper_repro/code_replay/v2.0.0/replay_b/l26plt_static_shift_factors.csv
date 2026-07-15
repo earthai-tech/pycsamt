@@ -1,0 +1,4 @@
+index,paper_label,station,delta_log10_rho,rho_correction_factor,impedance_factor
+0,S01,23-26-001A,0,1,1
+1,S02,23-26-013U,0,1,1
+2,S03,23-26-025U,0,1,1

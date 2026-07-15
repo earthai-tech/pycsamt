@@ -1,0 +1,10 @@
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-224", "must_not_contain": [], "query": "run the workflow"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-225", "must_not_contain": [], "query": "process my data"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-226", "must_not_contain": [], "query": "fix the line"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-227", "must_not_contain": [], "query": "make the plot"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-228", "must_not_contain": [], "query": "do the inversion"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-229", "must_not_contain": [], "query": "analyse this survey"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-230", "must_not_contain": [], "query": "correct it"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-231", "must_not_contain": [], "query": "prepare files"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-232", "must_not_contain": [], "query": "run everything"}
+{"category": "clarify", "expected_intent": "clarify", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-233", "must_not_contain": [], "query": "use the checkpoint"}

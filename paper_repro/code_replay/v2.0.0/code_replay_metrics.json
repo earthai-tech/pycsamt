@@ -1,0 +1,439 @@
+{
+  "n_code_records": 46,
+  "plan_validity_rate": 0.9117647058823529,
+  "code_syntax_rate": 1.0,
+  "code_import_rate": 1.0,
+  "code_execution_rate": 1.0,
+  "code_scientific_rate": 1.0,
+  "ungrounded_hallucination_rate": 0.0,
+  "replay_plan_agreement": 1.0,
+  "replay_output_completeness": 1.0,
+  "replay_max_difference": 0.0,
+  "replay_tolerance": 1e-09,
+  "replay_warning_agreement": 1.0,
+  "replay_overhead": 0.9789353307355627,
+  "code_details": [
+    {
+      "query": "write Python code to run QC for line L18PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a QC script for L18PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write Python code to run QC for line L22PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a QC script for L22PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write Python code to run QC for line L26PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a QC script for L26PLT",
+      "workflow": "qc",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write the static shift code for line L18PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script that applies AMA correction to L18PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write the static shift code for line L22PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script that applies AMA correction to L22PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write the static shift code for line L26PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script that applies AMA correction to L26PLT",
+      "workflow": "static_shift",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate code for dimensionality analysis on L18PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write a phase tensor plotting script for L18PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate code for dimensionality analysis on L22PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write a phase tensor plotting script for L22PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate code for dimensionality analysis on L26PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write a phase tensor plotting script for L26PLT",
+      "workflow": "phase_analysis",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to denoise line L18PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script for robust filtering on L18PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to denoise line L22PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script for robust filtering on L22PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to denoise line L26PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script for robust filtering on L26PLT",
+      "workflow": "denoise",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to prepare Occam2D inputs for L18PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a pre-inversion export script for L18PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to prepare Occam2D inputs for L22PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a pre-inversion export script for L22PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to prepare Occam2D inputs for L26PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a pre-inversion export script for L26PLT",
+      "workflow": "pre_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to run AI inversion for L18PLT",
+      "workflow": "ai_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a script to load the 1-D checkpoint",
+      "workflow": "ai_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to run AI inversion for L22PLT",
+      "workflow": "ai_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code to run AI inversion for L26PLT",
+      "workflow": "ai_inversion",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for tipper analysis on L18PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate induction-arrow plotting code for L18PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for tipper analysis on L22PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate induction-arrow plotting code for L22PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for tipper analysis on L26PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate induction-arrow plotting code for L26PLT",
+      "workflow": "tipper",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for depth sensitivity on L18PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a depth-of-investigation script for L18PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for depth sensitivity on L22PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a depth-of-investigation script for L22PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "write code for depth sensitivity on L26PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    },
+    {
+      "query": "generate a depth-of-investigation script for L26PLT",
+      "workflow": "sensitivity",
+      "syntax_ok": true,
+      "imports_ok": true,
+      "scientific_ok": true,
+      "execution_ok": true,
+      "execution_error": ""
+    }
+  ],
+  "replay_returncodes": [
+    0,
+    0
+  ],
+  "replay_stderr": [
+    "",
+    ""
+  ]
+}

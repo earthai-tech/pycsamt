@@ -510,6 +510,50 @@ class BaseAgent(ABC):
                             break
         return None
 
+    # ── RAG grounding helper ──────────────────────────────────────────────────
+
+    def _retrieve_context(
+        self,
+        query: str,
+        *,
+        session: dict | None = None,
+    ) -> Any | None:
+        """Return an ``AssembledContext`` for *query*, or ``None``.
+
+        Lazily uses :mod:`pycsamt.assistant.rag`; any failure (assistant
+        not installed, no source tree, empty retrieval) degrades silently
+        so callers keep working without retrieval. Shared by agents that
+        ground a plan or an answer in real, retrieved package context.
+        """
+        if not query:
+            return None
+        try:
+            from ..assistant.rag.context_builder import (
+                default_context_builder,
+            )
+
+            builder = default_context_builder()
+            if builder is None:
+                return None
+            ctx = builder.build(query, session=session)
+            return None if ctx.is_empty() else ctx
+        except Exception:  # noqa: BLE001 — RAG is best-effort
+            return None
+
+    @staticmethod
+    def _citation_paths(context: Any | None, limit: int = 8) -> list[str]:
+        """Return deduplicated ``source_path`` values from *context*."""
+        if context is None or not getattr(context, "citations", None):
+            return []
+        paths: list[str] = []
+        for c in context.citations:
+            p = c.get("source_path")
+            if p and p not in paths:
+                paths.append(p)
+                if len(paths) >= limit:
+                    break
+        return paths
+
     # ── input validation helpers ──────────────────────────────────────────────
 
     def require_keys(

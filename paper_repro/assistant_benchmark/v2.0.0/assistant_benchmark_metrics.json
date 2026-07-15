@@ -1,0 +1,45 @@
+{
+  "suite_dir": "paper_repro\\benchmark\\v2.0.0",
+  "n_records": 240,
+  "expected_records": 240,
+  "development_only": false,
+  "elapsed_seconds": 40.6396721,
+  "records_by_source": {
+    "clarify.jsonl": 10,
+    "code_generation.jsonl": 46,
+    "meta.jsonl": 10,
+    "metrics.jsonl": 10,
+    "plot.jsonl": 16,
+    "question.jsonl": 27,
+    "question_general.jsonl": 7,
+    "retrieval_paraphrase.jsonl": 24,
+    "workflow_direct.jsonl": 90
+  },
+  "harness_metrics": {
+    "intent_accuracy": 0.9351851851851852,
+    "workflow_accuracy": 0.8333333333333334,
+    "line_accuracy": 0.9933333333333333,
+    "symbol_recall": 0.875,
+    "no_test_in_topk": 1.0,
+    "retrieval_nonempty": 0.9958333333333333,
+    "workflow_in_topk": 0.8823529411764706
+  },
+  "intent_macro_f1": 0.8003090686181462,
+  "workflow_macro_f1": 0.8174913733609386,
+  "workflow_macro_f1_raw": 0.7565748181066034,
+  "slot_micro_f1": 0.9933333333333333,
+  "grounded_hallucination_rate": 0.0,
+  "ungrounded_hallucination_rate": null,
+  "unsafe_execution_rate": 0.05,
+  "review_recall": 1.0,
+  "intent_accuracy_ci": [
+    0.9027777777777778,
+    0.9675925925925926
+  ],
+  "workflow_accuracy_ci": [
+    0.7777777777777778,
+    0.8888888888888888
+  ],
+  "violations": [],
+  "test_pollution": []
+}

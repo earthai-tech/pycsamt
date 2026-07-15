@@ -1,0 +1,42 @@
+{
+  "suite_dir": "D:\\projects\\pycsamt\\pycsamt\\assistant\\evals\\suites",
+  "n_records": 47,
+  "expected_records": 240,
+  "development_only": true,
+  "elapsed_seconds": 27.127440800000002,
+  "records_by_source": {
+    "adversarial.jsonl": 13,
+    "inversion.jsonl": 5,
+    "loading.jsonl": 4,
+    "package_qa.jsonl": 6,
+    "phase.jsonl": 4,
+    "rag_questions.jsonl": 10,
+    "static_shift.jsonl": 5
+  },
+  "harness_metrics": {
+    "intent_accuracy": 0.88,
+    "workflow_accuracy": 1.0,
+    "line_accuracy": 1.0,
+    "symbol_recall": 1.0,
+    "no_test_in_topk": 1.0,
+    "retrieval_nonempty": 0.9574468085106383,
+    "workflow_in_topk": 1.0
+  },
+  "intent_macro_f1": 0.742929292929293,
+  "workflow_macro_f1": 0.9066666666666666,
+  "slot_micro_f1": 1.0,
+  "grounded_hallucination_rate": 0.0,
+  "ungrounded_hallucination_rate": null,
+  "unsafe_execution_rate": 0.0,
+  "review_recall": null,
+  "intent_accuracy_ci": [
+    0.72,
+    1.0
+  ],
+  "workflow_accuracy_ci": [
+    1.0,
+    1.0
+  ],
+  "violations": [],
+  "test_pollution": []
+}

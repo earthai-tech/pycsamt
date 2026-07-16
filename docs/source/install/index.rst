@@ -7,31 +7,6 @@ Everything needed to get pyCSAMT onto your machine and productive: a
 guided first run for newcomers, and the complete installation reference
 when you need the full pip/conda picture.
 
-.. grid:: 1 1 2 2
-   :gutter: 3
-   :class-container: cta-tiles
-
-   .. grid-item-card:: Installation
-      :link: ../installation
-      :link-type: doc
-      :img-top: ../_static/icons/pypi.svg
-      :class-card: pycsamt-card sd-text-center
-
-      The complete reference: pip/conda matrix, optional extras, compiled
-      solvers, backend requirements, and verification.
-
-   .. grid-item-card:: Getting started
-      :link: ../getting_started/index
-      :link-type: doc
-      :img-top: ../_static/icons/getting-started-icon-rocket-takeoff.svg
-      :class-card: pycsamt-card sd-text-center
-
-      A guided first run: set up an environment, install pyCSAMT, load a
-      bundled survey, and produce your first result.
-
-Which one do I need?
----------------------
-
 - New to pyCSAMT, or just want to see it work? Start with **Getting
   started** — a short guided walkthrough from a fresh environment to
   your first figure.
@@ -40,8 +15,9 @@ Which one do I need?
   **Installation**.
 
 .. toctree::
+   :numbered: 4
    :maxdepth: 1
-   :hidden:
+   :class: pycsamt-guide-toc
 
    ../installation
    ../getting_started/index

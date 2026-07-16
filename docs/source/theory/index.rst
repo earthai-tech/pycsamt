@@ -14,61 +14,19 @@ Use this section when you need to understand why a workflow asks for a
 particular component, error floor, dimensionality, correction, or
 diagnostic plot.
 
-Concept Pages
--------------
+.. toctree::
+   :numbered: 4
+   :maxdepth: 1
+   :class: pycsamt-guide-toc
 
-.. grid:: 1 1 2 3
-   :gutter: 3
-   :class-container: cta-tiles
-
-   .. grid-item-card:: CSAMT, AMT, and MT overview
-      :link: csamt_amt_mt_overview
-      :link-type: doc
-      :img-top: ../_static/icons/amt-csamt-mt-electromag.svg
-      :class-card: pycsamt-card sd-text-center
-
-      How CSAMT, AMT, MT, CSEM, and TDEM relate: source types,
-      frequency-domain assumptions, and the survey-design consequences.
-
-   .. grid-item-card:: Impedance tensor
-      :link: impedance_tensor
-      :link-type: doc
-      :img-top: ../_static/icons/impedance.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Field coupling, tensor components, apparent resistivity and
-      phase, dimensionality indicators, and rotation — the language of
-      EDI data.
-
-   .. grid-item-card:: Static shift
-      :link: static_shift
-      :link-type: doc
-      :img-top: ../_static/icons/static-shift.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Near-surface galvanic distortion: symptoms, correction
-      strategies, and the uncertainty that remains after correction.
-
-   .. grid-item-card:: Inversion concepts
-      :link: inversion_concepts
-      :link-type: doc
-      :img-top: ../_static/icons/inversion-concepts.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Forward models, misfit and RMS, regularization, roughness, and
-      how to read inversion diagnostics before trusting a model.
-
-   .. grid-item-card:: TDEM basics
-      :link: tdem_basics
-      :link-type: doc
-      :img-top: ../_static/icons/tdem.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Transient EM diffusion, time gates, transmitter/receiver
-      geometry, and how TDEM data align with frequency-domain results.
+   csamt_amt_mt_overview
+   impedance_tensor
+   static_shift
+   inversion_concepts
+   tdem_basics
 
 Recommended Reading Paths
--------------------------
+-----------------------------
 
 For MT, AMT, or CSAMT impedance workflows:
 
@@ -94,7 +52,7 @@ For model-backend decisions:
 #. Continue to :doc:`../user_guide/models/choosing_backend`.
 
 Core Quantities
----------------
+-------------------
 
 Many pyCSAMT workflows revolve around a small set of physical quantities.
 
@@ -131,7 +89,7 @@ Many pyCSAMT workflows revolve around a small set of physical quantities.
      - Summarizes data fit relative to assigned uncertainties.
 
 Relationship To Other Sections
-------------------------------
+-----------------------------------
 
 Theory pages connect directly to the applied documentation:
 
@@ -142,13 +100,3 @@ Theory pages connect directly to the applied documentation:
 * :doc:`../user_guide/pipeline/index` explains how repeated processing and
   inversion workflows are organized.
 * :doc:`../tutorials/index` gives worked examples that apply these concepts.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   csamt_amt_mt_overview
-   impedance_tensor
-   static_shift
-   inversion_concepts
-   tdem_basics

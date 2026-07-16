@@ -63,7 +63,9 @@ Documentation Map
 -----------------
 
 .. toctree::
+   :numbered: 4
    :maxdepth: 1
+   :class: pycsamt-guide-toc
 
    concepts
    configuration_files

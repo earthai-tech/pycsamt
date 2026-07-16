@@ -464,3 +464,24 @@ When in doubt, start with the group help, then inspect the subcommand
 you intend to run. The command-specific documentation pages in this
 section provide examples and workflow notes beyond the terminal help.
 
+Relationship To The Python API
+-------------------------------
+
+Each command family is a convenience layer over package modules. The CLI
+should be used when command-line composition is enough; the Python API
+should be used when you need custom loops, plotting control, in-memory
+data access, or integration with notebooks and applications.
+
+Typical transitions are:
+
+* from ``pycsamt site info`` to ``pycsamt.emtools._core.ensure_sites``;
+* from ``pycsamt pipe run`` to the pipeline Python API;
+* from ``pycsamt invert results`` to inversion result loader objects;
+* from ``pycsamt map plot`` to the map plotting builders and view
+  classes;
+* from ``pycsamt interp classify`` to the interpretation and export
+  functions.
+
+The command pages include API notes where that transition is especially
+useful.
+

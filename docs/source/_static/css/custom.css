@@ -799,6 +799,82 @@ h3 .sd-badge {
   top: -0.12em;
 }
 
+/* User Guide landing page: a scikit-learn-style bold, numbered outline
+   rendered straight from the toctree, instead of a grid of cards. Depth is
+   conveyed by size/weight/colour rather than bullets or icons. */
+.pycsamt-guide-toc.toctree-wrapper {
+  margin-top: 1.75rem;
+}
+
+.pycsamt-guide-toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.pycsamt-guide-toc li {
+  margin: 0;
+}
+
+.pycsamt-guide-toc .toctree-l1 {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--pycsamt-border);
+}
+
+.pycsamt-guide-toc .toctree-l1:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.pycsamt-guide-toc .toctree-l1 > a {
+  display: inline-block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--pycsamt-blue-dark);
+  text-decoration: none;
+}
+
+.pycsamt-guide-toc .toctree-l1 > a:hover {
+  color: var(--pycsamt-orange);
+}
+
+.pycsamt-guide-toc .toctree-l1 > ul {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.pycsamt-guide-toc .toctree-l2 > a {
+  display: inline-block;
+  padding: 0.2rem 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--pycsamt-blue);
+  text-decoration: none;
+}
+
+.pycsamt-guide-toc .toctree-l2 > a:hover {
+  color: var(--pycsamt-orange);
+}
+
+.pycsamt-guide-toc .toctree-l2 > ul {
+  padding-left: 1.25rem;
+}
+
+.pycsamt-guide-toc .toctree-l3 > a {
+  display: inline-block;
+  padding: 0.1rem 0;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--pycsamt-muted);
+  text-decoration: none;
+}
+
+.pycsamt-guide-toc .toctree-l3 > a:hover {
+  color: var(--pycsamt-orange);
+}
+
 /* Migration table: monospace the v1 column, comfortable row height. */
 table.migration-table td:first-child,
 table.migration-table th:first-child {

@@ -10,35 +10,15 @@ reproducible trace, documentation fixes, new gallery examples, field
 wisdom about a data format, or code. You do not need to be a
 geophysicist *and* a software engineer — either half is valuable.
 
-.. grid:: 1 1 2 3
-   :gutter: 3
-   :class-container: cta-tiles
-
-   .. grid-item-card:: Report an issue
-      :link: https://github.com/earthai-tech/pycsamt/issues
-      :img-top: _static/icons/stackoverflow.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Found a bug, a confusing result, or a gap in the docs? The issue
-      tracker is the front door — see the checklist below.
-
-   .. grid-item-card:: Improve the documentation
-      :link: development/documentation_build
-      :link-type: doc
-      :img-top: _static/icons/doc-build.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Docs and gallery examples are code too: build them locally,
-      fix a page, or add an executed example.
-
-   .. grid-item-card:: Contribute code
-      :link: development/index
-      :link-type: doc
-      :img-top: _static/icons/developer-notes-icon-tools.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Set up a development install and follow the workflow below;
-      the development section covers style, CI, and API policy.
+* **Report an issue** — found a bug, a confusing result, or a gap in the
+  docs? The `issue tracker <https://github.com/earthai-tech/pycsamt/issues>`_
+  is the front door; see "Reporting Issues" below for what to include.
+* **Improve the documentation** — docs and gallery examples are code too:
+  build them locally with :doc:`development/documentation_build`, fix a
+  page, or add an executed example.
+* **Contribute code** — set up a development install and follow the
+  workflow below; :doc:`development/index` covers style, CI, and API
+  policy.
 
 Development Setup
 -----------------

@@ -23,87 +23,22 @@ Use this section when you need to:
 * export cleaned sites, write manifests, create zip packages, and generate
   human-readable site reports.
 
-Guide Sections
---------------
+.. toctree::
+   :numbered: 4
+   :maxdepth: 2
+   :class: pycsamt-guide-toc
 
-.. grid:: 1 1 2 2
-   :gutter: 3
-   :class-container: cta-tiles
-
-   .. grid-item-card:: Containers
-      :link: containers
-      :link-type: doc
-      :img-top: ../../_static/icons/container.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Work with ``SiteMixin``, ``Site``, ``Sites``, ``to_sites``, and
-      ``to_edis`` wrappers around EDI files and survey collections.
-
-   .. grid-item-card:: Location & Profile
-      :link: location_profile
-      :link-type: doc
-      :img-top: ../../_static/icons/location.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Parse coordinates, infer survey profiles, compute distances, bearings,
-      chainage, elevation, and line geometry.
-
-   .. grid-item-card:: Selection
-      :link: selection
-      :link-type: doc
-      :img-top: ../../_static/icons/selection.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Filter stations by name, index, chainage, frequency coverage,
-      coordinates, bounding box, and custom quality predicates.
-
-   .. grid-item-card:: Editing
-      :link: editing
-      :link-type: doc
-      :img-top: ../../_static/icons/edit.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Rotate tensors, rename stations, assign coordinates, subset
-      frequencies, fill missing arrays, and recompute response products.
-
-   .. grid-item-card:: Recompute
-      :link: recompute
-      :link-type: doc
-      :img-top: ../../_static/icons/recompute.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Rewrite EDI files with pyCSAMT, preserve line-folder structure, flatten
-      outputs, show progress, and generate manifests.
-
-   .. grid-item-card:: Diagnostics
-      :link: computed_diagnostics
-      :link-type: doc
-      :img-top: ../../_static/icons/diagnostic.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Compute strike estimates, apparent resistivity at a frequency, phase
-      slope, and tipper magnitude diagnostics.
-
-   .. grid-item-card:: Export & Reporting
-      :link: export_reporting
-      :link-type: doc
-      :img-top: ../../_static/icons/export.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Write cleaned sites, batch exports, zip packages, manifests, and
-      human-readable site reports.
-
-   .. grid-item-card:: Utilities
-      :link: utilities
-      :link-type: doc
-      :img-top: ../../_static/icons/controls.svg
-      :class-card: pycsamt-card sd-text-center
-
-      Use shared helpers for EDI detection, collection coercion, station
-      names, coordinates, frequency matching, and angle conversion.
+   containers
+   location_profile
+   selection
+   editing
+   recompute
+   computed_diagnostics
+   export_reporting
+   utilities
 
 Typical Workflow
-----------------
+-----------------
 
 The site layer is commonly used as an early survey preparation stage.
 
@@ -138,16 +73,3 @@ For a complete EDI rewrite workflow, use :func:`pycsamt.site.recompute.recompute
    )
 
    print(result.output_root)
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-
-   containers
-   location_profile
-   selection
-   editing
-   recompute
-   computed_diagnostics
-   export_reporting
-   utilities

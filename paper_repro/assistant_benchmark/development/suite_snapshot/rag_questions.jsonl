@@ -1,0 +1,10 @@
+{"query": "what does StaticShiftAgent do?", "expected_intent": "question", "expected_workflow": "static_shift", "expected_symbols": ["pycsamt.agents.static_shift.StaticShiftAgent"]}
+{"query": "how do I correct static shift with AMA", "expected_intent": "question", "expected_workflow": "static_shift", "must_not_contain": ["from pycsamt import static_shift"]}
+{"query": "estimate_ss_ama parameters and return columns", "expected_intent": "question", "expected_workflow": "static_shift", "expected_symbols": ["pycsamt.emtools.ss.estimate_ss_ama"]}
+{"query": "write the static shift code for line L22PLT", "expected_intent": "code", "expected_workflow": "static_shift", "expected_line": "L22PLT"}
+{"query": "generate code for dimensionality", "expected_intent": "code", "expected_workflow": "phase_analysis"}
+{"query": "run phase tensor and dimensionality analysis", "expected_intent": "workflow", "expected_workflow": "phase_analysis", "expected_symbols": ["pycsamt.agents.phase_analysis.PhaseAnalysisAgent"]}
+{"query": "run quality control on the survey data", "expected_intent": "workflow", "expected_workflow": "qc"}
+{"query": "how do I load EDI files into Sites", "expected_intent": "question", "expected_workflow": null}
+{"query": "what can you do?", "expected_intent": "meta", "expected_workflow": null}
+{"query": "process line L18PLT", "expected_intent": "workflow", "expected_line": "L18PLT"}

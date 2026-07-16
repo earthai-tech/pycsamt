@@ -13,6 +13,16 @@ Start here when you are new to pyCSAMT v2, when you are setting up a new
 machine, or when you need a reproducible first-pass workflow for a survey
 directory.
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Getting Started Pages
+
+   installation
+   data_formats
+   configuration
+   first_survey
+   quickstart
+
 Fast Path
 ---------
 
@@ -173,13 +183,3 @@ Once the getting-started workflow is working, continue with:
 * :doc:`../agents/overview` for AI-assisted survey review, processing plans,
   and result summaries;
 * :doc:`../development/index` if you are contributing to pyCSAMT itself.
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Getting Started Pages
-
-   installation
-   data_formats
-   configuration
-   first_survey
-   quickstart

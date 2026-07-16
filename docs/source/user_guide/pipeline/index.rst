@@ -21,6 +21,17 @@ The pipeline API follows a scikit-learn-style shape: a pipeline is an ordered
 sequence of labelled steps, and each step is a configured operation from the
 registry.
 
+.. toctree::
+   :maxdepth: 3
+   :class: pycsamt-guide-toc
+
+   concepts
+   configuration_files
+   cli_pipe
+   presets
+   steps
+   outputs
+
 Minimal Example
 ---------------
 
@@ -61,16 +72,6 @@ A typical output directory contains:
 
 Documentation Map
 -----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   concepts
-   configuration_files
-   cli_pipe
-   presets
-   steps
-   outputs
 
 .. list-table::
    :header-rows: 1

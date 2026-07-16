@@ -140,7 +140,9 @@ class ContextInputAgent(BaseAgent):
         api_key: str | None = None,
         model: str | None = None,
         llm_provider: str = "claude",
+        use_rag: bool = True,
     ) -> None:
+        self.use_rag = use_rag
         super().__init__(
             "ContextInputAgent",
             api_key=api_key,
@@ -173,11 +175,29 @@ class ContextInputAgent(BaseAgent):
         regex_cfg = _regex_extract(request)
         regex_wf = regex_cfg.get("workflow", "")
 
+        # Ground the parse in retrieved, real package context (workflow
+        # names, recipes, symbols) before asking the LLM to extract a
+        # config — this is what lets the plan cite real evidence rather
+        # than the LLM's unmoored prior over what pycsamt looks like.
+        rag = (
+            self._retrieve_context(request, session=input_data.get("session"))
+            if self.use_rag
+            else None
+        )
+        citations = self._citation_paths(rag)
+
         config: dict[str, Any] | None = None
         llm_raw: str | None = None
 
         if self.api_key:
-            llm_raw = self.query_llm(request)
+            llm_input = request
+            if rag is not None and rag.context_text:
+                llm_input = (
+                    "Retrieved pyCSAMT context (prefer these real "
+                    "workflow names and symbols):\n"
+                    f"{rag.context_text}\n\nRequest: {request}"
+                )
+            llm_raw = self.query_llm(llm_input)
             if llm_raw:
                 config = self.extract_json(llm_raw)
                 if config:
@@ -207,6 +227,7 @@ class ContextInputAgent(BaseAgent):
             config,
             request=request,
             provider=(self.llm_provider if self.api_key else "offline"),
+            citations=citations,
         )
 
         # ── optional LLM summary ──────────────────────────────────
@@ -242,6 +263,7 @@ class ContextInputAgent(BaseAgent):
                 "workflow_plan": plan,
                 "raw_request": request,
                 "llm_raw": llm_raw,
+                "rag_citations": citations,
             },
             warnings=warnings,
             llm_interpretation=interpretation,

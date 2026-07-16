@@ -1,0 +1,45 @@
+{
+  "version": "v2.0.0",
+  "record_count": 240,
+  "categories": {
+    "workflow_direct": 90,
+    "code_generation": 46,
+    "plot": 16,
+    "question": 27,
+    "retrieval_paraphrase": 24,
+    "meta": 10,
+    "metrics": 10,
+    "clarify": 10,
+    "question_general": 7
+  },
+  "intents": {
+    "workflow": 90,
+    "code": 46,
+    "plot": 16,
+    "question": 34,
+    "None": 24,
+    "meta": 10,
+    "metrics": 10,
+    "clarify": 10
+  },
+  "workflows": {
+    "qc": 24,
+    "None": 60,
+    "static_shift": 24,
+    "phase_analysis": 24,
+    "denoise": 23,
+    "pre_inversion": 20,
+    "ai_inversion": 18,
+    "tipper": 23,
+    "sensitivity": 23,
+    "code_gen": 1
+  },
+  "lines": {
+    "L18PLT": 46,
+    "L22PLT": 45,
+    "L26PLT": 37,
+    "L30PLT": 22,
+    "None": 90
+  },
+  "note": "Candidate frozen 240-request suite. Requires human adjudication before final publication freeze."
+}

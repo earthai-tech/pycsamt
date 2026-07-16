@@ -7,6 +7,39 @@ This page lists common pyCSAMT desktop problems, what they usually mean, and
 the first checks to make.  Start with the symptom you see in the GUI, status
 bar, log dock, or terminal.
 
+Troubleshooting Strategy
+------------------------
+
+Most desktop problems belong to one of five layers.  Identify the layer before
+changing settings or reinstalling packages:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 34 44
+
+   * - Layer
+     - Typical Symptom
+     - First Place To Look
+   * - Environment
+     - Command not found, missing ``PySide6``, startup import error.
+     - Terminal output and active Python environment.
+   * - Loading
+     - No data loaded, wrong station count, loader failure.
+     - Load dialog, status bar, log dock, station table.
+   * - Data state
+     - Plot looks different than expected, raw/corrected state is unclear.
+     - Main status bar, recent files, correction stack, recomputed folder.
+   * - Workflow
+     - Correction, pipeline, inversion, or export stops mid-step.
+     - Panel-specific log tab and output folder.
+   * - Output/reproducibility
+     - Missing files, confusing folder names, result cannot be reviewed.
+     - Export folder, pipeline JSON, manifests, solver logs.
+
+Fix the earliest failing layer first.  For example, do not debug inversion
+settings until loading, station geometry, QC, and the active data state are
+clear.
+
 Quick Checks
 ------------
 
@@ -26,6 +59,23 @@ Useful launch commands:
    pycsamt-desktop
    pycsamt-gui
    python -m pycsamt.app.desktop
+
+Fast Recovery Path
+------------------
+
+When you are not sure what went wrong, use this sequence:
+
+1. Save or note the current output folder if a workflow produced files.
+2. Read the main status bar and log dock.
+3. Return to the station table and confirm the active survey state.
+4. Open map and profile viewers for one representative station.
+5. If the active state is unclear, reload the intended input folder.
+6. If a panel failed, rerun only the failing panel step.
+7. If a command fails before the GUI opens, diagnose the environment.
+
+This sequence protects the current project state while narrowing the problem.
+Reloading a known input is often faster than trying to reason from an
+uncertain active session.
 
 Missing PySide6
 ---------------
@@ -94,6 +144,39 @@ If that works, reinstall the package so console scripts are regenerated:
 If the module entry point fails too, verify that ``python`` belongs to the
 ``pycsamt-v2`` environment.
 
+Wrong Python Environment
+------------------------
+
+**Symptom**
+
+One terminal can launch the desktop, but another terminal cannot import
+pyCSAMT, cannot find ``pycsamt-desktop``, or reports missing optional
+dependencies.
+
+**Cause**
+
+The shell is using a different Python environment from the one where pyCSAMT
+was installed.  This is common when switching between Anaconda Prompt,
+PowerShell, Git Bash, IDE terminals, and system Python.
+
+**Fix**
+
+Check which Python is active:
+
+.. code-block:: bash
+
+   python -c "import sys; print(sys.executable)"
+
+Then activate the intended environment and retry:
+
+.. code-block:: bash
+
+   conda activate pycsamt-v2
+   pycsamt-desktop
+
+If the executable path is not the expected environment, fix the shell
+activation before reinstalling packages.
+
 Desktop Opens But No Data Load
 ------------------------------
 
@@ -159,6 +242,34 @@ If strict loading is used in custom code, an empty input can raise:
 .. code-block:: text
 
    ensure_sites(strict=True): no sites were resolved from the given input.
+
+Raw, Corrected, Or Recomputed State Is Confusing
+------------------------------------------------
+
+**Symptom**
+
+The map, profile, or QC plot looks different than expected, or you are unsure
+whether the active survey is raw, corrected, recomputed, converted, or loaded
+from a recent file.
+
+**Cause**
+
+Several desktop workflows can replace or reload the active ``Sites`` object:
+manual loading, **Commit to Main**, format conversion, recompute, pipeline
+output, and recent-file loading.
+
+**Fix**
+
+1. Read the main status bar.
+2. Check the station count and selected station in the main window.
+3. Open a representative profile and compare it with the expected data state.
+4. If still uncertain, reload the intended folder explicitly with
+   **Open / Load EDI...**.
+5. Keep raw, corrected, recomputed, and pipeline EDI folders separate.
+
+When the active state matters for a result, export a short note or use an
+output folder name that includes the state, such as
+``L30_corrected_static_shift_ama``.
 
 No Data Dialog
 --------------
@@ -311,6 +422,27 @@ Return to QC and profile views:
 If AMA returns no useful factors, do not force the correction.  It may be
 telling you that the assumptions are not satisfied.
 
+Correction Was Committed By Mistake
+-----------------------------------
+
+**Symptom**
+
+After **Commit to Main**, downstream maps, profiles, QC, or inversion panels
+use corrected data, but you intended to continue from the raw survey.
+
+**Cause**
+
+**Commit to Main** replaces the active desktop survey with the corrected
+``Sites`` object.  This is intentional, but it can surprise users who expected
+the correction window to remain isolated.
+
+**Fix**
+
+Reload the raw EDI folder from **Open / Load EDI...**.  If the correction was
+exported, keep the corrected output folder separate and label it clearly.  If
+you want to compare raw and corrected states, open one state at a time and
+export named figures rather than mixing both states in one active session.
+
 Pipeline Stops Or Exports Nothing
 ---------------------------------
 
@@ -333,6 +465,28 @@ Run the failing step alone.  Check the centre parameter panel, then read the
 right-side log tab.  For export, choose a new empty output folder.  Save the
 pipeline JSON only after the chain has produced acceptable intermediate
 diagnostics.
+
+Pipeline Output Does Not Match Manual Processing
+------------------------------------------------
+
+**Symptom**
+
+The pipeline exported EDIs or preview figures differ from the result you saw
+when running QC and corrections manually.
+
+**Likely causes**
+
+* the pipeline used a different input state;
+* step parameters differ from the manual correction settings;
+* a step was skipped or failed and the run continued;
+* the pipeline output folder contains files from an older run;
+* a default method was used where the manual workflow used a tuned method.
+
+**Fix**
+
+Compare the pipeline JSON, run log, and manual notes.  Empty the output folder
+or choose a new one, run one step at a time, and compare each preview with the
+manual figure before running the full chain again.
 
 Inversion Workdir Or Binary Errors
 ----------------------------------
@@ -381,6 +535,29 @@ not only generated inputs.  Read the solver log before plotting.  If the input
 files exist but results do not, rerun the external solver or point the desktop
 to the correct workdir.
 
+Inversion Runs But Result Is Not Trustworthy
+--------------------------------------------
+
+**Symptom**
+
+The solver produces output, but the model looks geologically unreasonable or
+does not match the QC/profile evidence.
+
+**Likely causes**
+
+* the input data state was not the one intended;
+* frequency bands or error floors were too broad or too optimistic;
+* static-shift, rotation, or dimensionality assumptions were weak;
+* starting model or mesh settings were inappropriate;
+* topography or station order was wrong before input generation.
+
+**Fix**
+
+Do not tune only the solver.  Return to the processing gates: loading,
+map/profile inspection, QC, correction evidence, strike or dimensionality
+diagnostics, and exported input files.  Build a new run folder with corrected
+assumptions rather than overwriting the questionable run.
+
 AI Or Agent Runs Fail
 ---------------------
 
@@ -428,6 +605,33 @@ is unusable, close the desktop and move or rename the session file:
    ~/.pycsamt/session.json
 
 The next launch will create a fresh default session.
+
+Export Folder Is Confusing Or Incomplete
+----------------------------------------
+
+**Symptom**
+
+You have figures, EDIs, logs, or solver outputs, but cannot tell which data
+state produced them or whether the package is complete.
+
+**Cause**
+
+Exports were saved ad hoc rather than as a reproducible package.
+
+**Fix**
+
+Create a new review folder and collect:
+
+* raw input location or station inventory;
+* QC figures;
+* before/after correction figures, if data changed;
+* corrected or recomputed EDIs, if produced;
+* pipeline JSON and log, if a pipeline was used;
+* inversion input files, logs, and result figures, if applicable;
+* a short note naming the active data state and major assumptions.
+
+Then use this cleaned folder for sharing or archiving.  Keep the confusing
+folder as an intermediate scratch folder if you still need it.
 
 Windows PowerShell Profile Warning
 ----------------------------------

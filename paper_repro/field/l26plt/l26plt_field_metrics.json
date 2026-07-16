@@ -1,0 +1,38 @@
+{
+  "edi_dir": "D:\\projects\\pycsamt\\data\\AMT\\WILLY_DATA\\L26PLT",
+  "station_count": 25,
+  "frequency_count": 53,
+  "period_min_s": 9.615384615384615e-05,
+  "period_max_s": 0.9920634920634921,
+  "static_shift_period_min_s": 0.0001,
+  "static_shift_period_max_s": 1.0,
+  "static_shift_period_samples": 52,
+  "field_frequency_retention": 0.9811320754716981,
+  "field_frequency_retention_text": "98.1\\%",
+  "field_output_completeness": 1.0,
+  "field_output_completeness_text": "8/8 expected artefacts",
+  "field_required_step_success": 1.0,
+  "field_required_step_success_text": "100\\%",
+  "field_phase_difference_degrees": 0.0,
+  "field_phase_difference_text": "0.0$^{\\circ}$",
+  "field_runtime_seconds": 5.777690499999999,
+  "field_runtime_text": "5.78~s",
+  "largest_upward_correction_station": "23-26-017U",
+  "largest_upward_correction_label": "S17",
+  "largest_downward_correction_station": "23-26-006A",
+  "largest_downward_correction_label": "S06",
+  "positive_offset_summary": "S17/23-26-017U (+0.667), S23/23-26-023A (+0.386), S25/23-26-025U (+0.362), S09/23-26-009A (+0.322), S18/23-26-018A (+0.291)",
+  "negative_offset_summary": "S06/23-26-006A (-0.318), S21/23-26-021U (-0.217), S05/23-26-005U (-0.166), S16/23-26-016A (-0.160), S22/23-26-022U (-0.130)",
+  "edi_sha256": "c9a499944d1556b66ee69deeaad869a0e47f65885969674203068b127ead4fc6",
+  "figures": [
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\figures\\fig_l26plt_static_shift_summary.png",
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\figures\\fig_l26plt_static_shift_summary.svg",
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\figures\\fig_l26plt_static_shift_curves.png",
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\figures\\fig_l26plt_static_shift_curves.svg"
+  ],
+  "three_station_replay_subset": [
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\results\\l26plt_field\\three_station_replay_subset\\26-001A.edi",
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\results\\l26plt_field\\three_station_replay_subset\\26-013U.edi",
+    "D:\\projects\\pycsamt\\cag-paper\\new-version\\results\\l26plt_field\\three_station_replay_subset\\26-025U.edi"
+  ]
+}

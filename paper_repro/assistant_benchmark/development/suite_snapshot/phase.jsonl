@@ -1,0 +1,4 @@
+{"query": "run phase tensor and dimensionality analysis", "expected_intent": "workflow", "expected_workflow": "phase_analysis", "expected_symbols": ["pycsamt.agents.phase_analysis.PhaseAnalysisAgent"]}
+{"query": "get the geoelectric strike of the line", "expected_workflow": "phase_analysis"}
+{"query": "compute skew and dimensionality", "expected_workflow": "phase_analysis"}
+{"query": "generate code for dimensionality", "expected_intent": "code", "expected_workflow": "phase_analysis"}

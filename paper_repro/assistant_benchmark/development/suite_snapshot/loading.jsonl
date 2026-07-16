@@ -1,0 +1,4 @@
+{"query": "how do I load EDI files into Sites?", "expected_intent": "question", "expected_workflow": null}
+{"query": "read the EDI directory and build a Sites object", "expected_workflow": null, "expected_symbols": ["pycsamt.site.base.Sites"]}
+{"query": "load line L26PLT", "expected_line": "L26PLT"}
+{"query": "what is ensure_sites", "expected_intent": "question", "expected_symbols": ["pycsamt.emtools._core.ensure_sites"]}

@@ -1,0 +1,5 @@
+{"query": "what does StaticShiftAgent do?", "expected_intent": "question", "expected_workflow": "static_shift", "expected_symbols": ["pycsamt.agents.static_shift.StaticShiftAgent"]}
+{"query": "correct galvanic static shift with the AMA method", "expected_intent": "question", "expected_workflow": "static_shift", "expected_symbols": ["pycsamt.agents.static_shift.StaticShiftAgent"], "must_not_contain": ["from pycsamt import static_shift"]}
+{"query": "estimate_ss_ama parameters and return columns", "expected_workflow": "static_shift", "expected_symbols": ["pycsamt.emtools.ss.estimate_ss_ama"]}
+{"query": "run static shift on line L22PLT", "expected_intent": "workflow", "expected_workflow": "static_shift", "expected_line": "L22PLT"}
+{"query": "write the static shift code for line L18PLT", "expected_intent": "code", "expected_workflow": "static_shift", "expected_line": "L18PLT"}

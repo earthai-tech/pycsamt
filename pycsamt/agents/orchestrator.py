@@ -69,12 +69,15 @@ Supported workflow types
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
 import sys
 import time
+from datetime import datetime, timezone
 from importlib.metadata import version as _pkg_version
+from pathlib import Path
 from typing import Any
 
 from ..api.agents import AGENT_CONFIG
@@ -802,6 +805,27 @@ _WORKFLOW_STEPS = {
 _PREP_FILE_STEPS = frozenset({"occam2d", "modem", "mare2dem"})
 
 
+def _make_outdir_injector(fn, od):
+    """Wrap step *fn* so its returned input dict always carries ``output_dir``.
+
+    Only the root step (``input_fn=None``) receives the run's
+    ``exec_config`` (and therefore ``output_dir``) directly; every other
+    step's ``input_fn`` chain only carries upstream results. Without this,
+    figure-saving agents (e.g. DataQCAgent, StaticShiftAgent) silently
+    drop their figures and ReportAgent falls back to a hardcoded relative
+    ``pycsamt_report/`` in the process's CWD instead of the run's
+    ``output_dir``. ``setdefault`` so a more specific value already set by
+    the step (e.g. a per-code prep subfolder) is never overridden.
+    """
+
+    def _injected(r):
+        base = fn(r)
+        base.setdefault("output_dir", od)
+        return base
+
+    return _injected
+
+
 class WorkflowOrchestratorAgent(BaseAgent):
     """Intelligently route an NL request to the correct agent chain.
 
@@ -1062,15 +1086,6 @@ class WorkflowOrchestratorAgent(BaseAgent):
             # subfolder so provenance JSONs and
             # solver inputs don't mix.
             if step_name in _PREP_FILE_STEPS and step_fn is not None:
-
-                def _make_outdir_injector(fn, od):
-                    def _injected(r):
-                        base = fn(r)
-                        base.setdefault("output_dir", od)
-                        return base
-
-                    return _injected
-
                 step_fn = _make_outdir_injector(
                     step_fn,
                     os.path.join(
@@ -1078,6 +1093,11 @@ class WorkflowOrchestratorAgent(BaseAgent):
                         f"pycsamt_{step_name}",
                     ),
                 )
+            elif step_fn is not None:
+                # Every other non-root step needs the run's output_dir
+                # too, or its figures/report silently miss the run
+                # folder (see _make_outdir_injector docstring).
+                step_fn = _make_outdir_injector(step_fn, output_dir)
 
             coord.add_step(
                 step_name,
@@ -1095,18 +1115,49 @@ class WorkflowOrchestratorAgent(BaseAgent):
             )
 
         # ── build and validate WorkflowPlan ──────────────────────
-        from ._workflow_plan import WorkflowPlan
+        from ._workflow_plan import WorkflowPlan, validate_workflow_plan
 
         plan_config = dict(config)
         plan_config.setdefault("workflow", workflow_type)
         plan_config.setdefault("data_path", data_path)
         plan_config.setdefault("output_dir", output_dir)
+
+        # Ground the plan in retrieved package evidence (same retrieval
+        # layer PackageQAAgent uses) so the provenance trail can cite
+        # what the request was matched against, not just what was parsed.
+        rag = self._retrieve_context(request) if request else None
+        plan_citations = self._citation_paths(rag)
+
         plan = WorkflowPlan.from_config(
             plan_config,
             request=request,
             provider=(self.llm_provider if self.api_key else "offline"),
+            citations=plan_citations,
         )
         warnings.extend(plan.risk_flags)
+
+        # ── validation gate: a plan with hard errors never touches
+        # disk. Preview (dry_run) is exempt since it executes nothing. ──
+        plan_errors = validate_workflow_plan(plan)
+        if plan_errors and not dry_run:
+            elapsed = time.time() - t0
+            return AgentResult(
+                status="failed",
+                summary=(
+                    f"WorkflowPlan for {workflow_type!r} failed "
+                    f"validation; execution blocked."
+                ),
+                data={
+                    "workflow_type": workflow_type,
+                    "reasoning": reasoning,
+                    "workflow_plan": plan,
+                    "steps": step_meta,
+                },
+                warnings=warnings,
+                error="; ".join(plan_errors),
+                elapsed_seconds=elapsed,
+                cost_estimate_usd=self._last_cost,
+            )
 
         # ── run (or preview) ──────────────────────────────────────
         exec_config = {
@@ -1176,6 +1227,8 @@ def _write_provenance(
     * ``workflow_plan.json``   — validated :class:`WorkflowPlan`
     * ``agent_trace.json``     — execution trace
     * ``environment.json``     — Python / package versions
+    * ``output_manifest.json`` — every other produced file, with the
+      step that produced it, size, sha256 hash, and creation time
     """
     try:
         os.makedirs(output_dir, exist_ok=True)
@@ -1225,6 +1278,23 @@ def _write_provenance(
         with open(trace_path, "w", encoding="utf-8") as fh:
             json.dump(trace, fh, indent=2, default=str)
 
+        # output_manifest.json — every artefact this run produced on
+        # disk (figures, reports, inversion files, generated scripts, …),
+        # attributed to a producing step where the path makes that
+        # inferable, with a hash so a result can be checked against
+        # the file that supposedly produced it.
+        manifest = {
+            "run_output_dir": os.path.abspath(output_dir),
+            "generated": datetime.now(timezone.utc).isoformat(),
+            "files": _build_output_manifest(
+                output_dir,
+                [s["name"] for s in step_meta],
+            ),
+        }
+        manifest_path = os.path.join(output_dir, "output_manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as fh:
+            json.dump(manifest, fh, indent=2)
+
     except Exception as exc:
         import logging
 
@@ -1232,6 +1302,80 @@ def _write_provenance(
             "Could not write provenance: %s",
             exc,
         )
+
+
+_PROVENANCE_FILES = frozenset(
+    {
+        "workflow_plan.json",
+        "agent_trace.json",
+        "environment.json",
+        "output_manifest.json",
+    }
+)
+
+
+def _sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    """Return the sha256 hex digest of *path*, reading in chunks."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _infer_producing_step(rel_path: str, step_names: list) -> str | None:
+    """Best-effort match of a produced file to the step that wrote it.
+
+    Per-code inversion-prep steps write into a ``pycsamt_<step>``
+    subfolder (see ``_PREP_FILE_STEPS``); other steps commonly stamp
+    the step name into the filename itself (e.g. ``qc_report.md``).
+    """
+    for name in step_names:
+        if f"pycsamt_{name}" in rel_path or name in rel_path:
+            return name
+    return None
+
+
+def _build_output_manifest(
+    output_dir: str,
+    step_names: list,
+) -> list[dict[str, Any]]:
+    """Walk *output_dir* and record every produced file's path, size,
+    sha256 hash, creation time, and (best-effort) producing step.
+
+    Checkpoint directories and the provenance JSONs themselves are
+    excluded — the manifest describes scientific/report outputs, not
+    its own bookkeeping.
+    """
+    root = Path(output_dir)
+    if not root.exists():
+        return []
+
+    entries: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*")):
+        if path.is_dir() or ".checkpoints" in path.parts:
+            continue
+        if path.name in _PROVENANCE_FILES:
+            continue
+        rel = path.relative_to(root).as_posix()
+        try:
+            stat = path.stat()
+            entries.append(
+                {
+                    "path": rel,
+                    "producing_step": _infer_producing_step(
+                        rel, step_names
+                    ),
+                    "size_bytes": stat.st_size,
+                    "sha256": _sha256_file(path),
+                    "created": datetime.fromtimestamp(
+                        stat.st_ctime, tz=timezone.utc
+                    ).isoformat(),
+                }
+            )
+        except OSError as exc:
+            entries.append({"path": rel, "error": str(exc)})
+    return entries
 
 
 def _keyword_classify(text: str) -> tuple[str, str]:

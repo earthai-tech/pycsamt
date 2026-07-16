@@ -1,0 +1,100 @@
+# Occam2D source-of-truth configuration
+# Edit values, then load with from_file().
+# Comments are ignored by the YAML reader.
+
+# ---- Data Options ----
+# Electromagnetic modes written to the Occam data file. Use 'TE' for
+# Zxy, 'TM' for Zyx, or both modes when both apparent resistivity and
+# phase curves should be exported.
+modes: ["TE", "TM"]
+
+# Relative apparent-resistivity error floor. A value of 0.05 means
+# five percent and is converted to the log10 data units used by Occam.
+error_floor_rho: 0.05
+
+# Minimum absolute phase uncertainty in degrees. This prevents phase
+# rows with very small source errors from dominating the normalized
+# misfit.
+error_floor_phase: 0.5
+
+# Optional lower frequency limit in hertz. Frequencies below this
+# value are excluded when building data from EDI-like sources.
+freq_min: null
+
+# Optional upper frequency limit in hertz. Frequencies above this
+# value are excluded when building data from EDI-like sources.
+freq_max: null
+
+# ---- Mesh Options ----
+# Number of active earth layers in the Occam model. Larger values
+# allow more vertical structure but increase the inversion parameter
+# count.
+n_layers: 30
+
+# Number of air layers above the earth model. These layers help
+# represent the air-earth boundary.
+n_airlayers: 5
+
+# Target horizontal cell width in metres near stations. Smaller values
+# provide finer lateral detail and larger meshes.
+cell_size_horizontal: 100.0
+
+# Thickness in metres of the top earth layer and current air-layer
+# cells.
+cell_size_vertical_top: 10.0
+
+# Geometric multiplier applied to layer thickness with depth. Values
+# greater than one make deeper layers progressively thicker.
+depth_scale: 1.2
+
+# Number of horizontal padding cells added on each side of the survey
+# profile.
+n_padding_x: 7
+
+# ---- Startup Options ----
+# Maximum number of Occam inversion iterations requested in the
+# startup file.
+max_iterations: 100
+
+# Target normalized RMS misfit. Values near one are typical when data
+# errors are realistic.
+target_misfit: 1.0
+
+# Roughness penalty type passed to Occam. The standard gradient
+# penalty commonly uses value 1.
+roughness_type: 1
+
+# Flag controlling diagonal roughness penalties in the startup file. A
+# value of 0 disables them.
+diagonal_penalties: 0
+
+# Maximum number of Lagrange step-size reductions allowed during a
+# line-search stage.
+stepsize_cut_count: 8
+
+# Debug verbosity level passed to the Occam executable.
+debug_level: 1
+
+# Starting half-space resistivity in ohm metres. The startup vector is
+# initialized as log10(initial_rho).
+initial_rho: 100.0
+
+# Initial Lagrange multiplier written to the startup file.
+lagrange_start: 5.0
+
+# ---- File Options ----
+# Data filename written inside the Occam2D run directory.
+data_file: "OccamDataFile.dat"
+
+# Mesh filename written inside the Occam2D run directory.
+mesh_file: "Occam2DMesh"
+
+# Model-definition filename written inside the run directory.
+model_file: "Occam2DModel"
+
+# Startup filename passed to the Occam executable.
+startup_file: "Startup"
+
+# ---- Binary ----
+# Occam2D executable name or path used by the runner.
+binary_name: "Occam2D"

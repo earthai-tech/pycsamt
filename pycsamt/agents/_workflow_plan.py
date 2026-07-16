@@ -86,6 +86,9 @@ class WorkflowPlan:
         Files / artefacts the workflow should produce.
     provider : str
         LLM provider used for parsing, or ``'offline'``.
+    grounding_citations : list of str
+        Source paths retrieved by RAG to ground this plan, when
+        retrieval was available (empty offline or on a cold index).
     """
 
     request: str
@@ -97,6 +100,7 @@ class WorkflowPlan:
     requires_human_review: bool = False
     expected_outputs: list[str] = field(default_factory=list)
     provider: str = "offline"
+    grounding_citations: list[str] = field(default_factory=list)
 
     # ── validation ────────────────────────────────────────────
 
@@ -140,6 +144,7 @@ class WorkflowPlan:
         config: dict[str, Any],
         request: str = "",
         provider: str = "offline",
+        citations: list[str] | None = None,
     ) -> WorkflowPlan:
         """
         Build a :class:`WorkflowPlan` from a config dict
@@ -180,6 +185,7 @@ class WorkflowPlan:
             requires_human_review=needs_review,
             expected_outputs=expected,
             provider=provider,
+            grounding_citations=list(citations) if citations else [],
         )
 
 
@@ -188,7 +194,12 @@ class WorkflowPlan:
 
 def _expected_outputs(workflow_type: str) -> list[str]:
     """Return a list of expected output artefacts for *workflow_type*."""
-    base = ["agent_trace.json", "workflow_plan.json"]
+    base = [
+        "workflow_plan.json",
+        "agent_trace.json",
+        "environment.json",
+        "output_manifest.json",
+    ]
     extras: dict[str, list[str]] = {
         "qc": ["qc_confidence.png", "qc_report.md"],
         "phase_analysis": [

@@ -248,9 +248,3 @@ Next Steps
 * :doc:`getting_started/data_formats` — identify your field data format.
 * :doc:`getting_started/configuration` — configure outputs and styles.
 * :doc:`getting_started/first_survey` — load and QC a first survey.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   getting_started/index

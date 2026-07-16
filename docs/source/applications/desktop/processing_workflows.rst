@@ -69,6 +69,50 @@ Do not treat **Apply**, **Commit to Main**, or **Run All** as routine buttons.
 They are state-changing actions.  Use them only after the current figure tells
 you what will change and why.
 
+Processing Stage Gates
+----------------------
+
+Use the workflow as a sequence of gates.  A gate is not a button; it is the
+minimum evidence needed before moving to the next kind of work.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 34 24 22
+
+   * - Gate
+     - Continue When
+     - Stop When
+     - Save
+   * - Loaded survey
+     - Station count, coordinates, and frequency coverage match the intended
+       line or station group.
+     - The wrong folder, mixed data states, or missing metadata are visible.
+     - Load notes or station inventory.
+   * - First QC
+     - Coverage and SNR are good enough for the target band and method.
+     - Bands or stations are too weak to support correction or inversion.
+     - Coverage and SNR figures.
+   * - Correction preview
+     - The preview reduces a diagnosed artifact without hiding real structure.
+     - The correction is only cosmetic or affects unexpected stations.
+     - Before/after and parameter notes.
+   * - Commit to main
+     - The correction stack is understood and the output data state is named.
+     - You cannot explain what changed or why.
+     - Corrected EDIs or manifest.
+   * - Model/inversion prep
+     - Geometry, bands, dimensionality, and starting model are documented.
+     - Strike, errors, station selection, or workdir are still uncertain.
+     - Input files and setup figure.
+   * - Pipeline run
+     - Manual choices have already been tested and encoded.
+     - The pipeline is being used to discover parameters for the first time.
+     - Pipeline JSON and log.
+
+If a gate fails, go back to the previous inspection view.  This is not wasted
+time; it prevents a weak early assumption from becoming a polished but
+unreliable output.
+
 Quality Control
 ---------------
 
@@ -151,6 +195,43 @@ Practical QC checks:
 * Use static-shift and source-effect diagnostics to decide whether correction
   is justified.
 * Export figures that justify processing choices, especially for reports.
+
+When QC Is Enough
+-----------------
+
+QC does not need to make the data perfect.  It needs to make the next decision
+defensible.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Next Step
+     - QC Is Enough When
+     - QC Is Not Enough When
+   * - Map/profile interpretation
+     - Station coverage and response bands are sufficient for visual
+       comparison.
+     - Key stations or frequency bands are missing without explanation.
+   * - Static-shift preview
+     - Apparent-resistivity offsets are visible and phase behaviour suggests
+       an amplitude-style issue.
+     - The anomaly is only one noisy station or the phase also changes
+       strongly.
+   * - Noise removal
+     - Low-SNR bands or stations are localized enough to target.
+     - The entire survey is unstable or the source of noise is unknown.
+   * - Strike/dimensionality
+     - Useful periods are present and the profile is coherent enough to
+       compare stations.
+     - Band coverage is too sparse to support directional interpretation.
+   * - Inversion preparation
+     - Station selection, bands, errors, and assumptions can be written down.
+     - You are still guessing which data are trustworthy.
+
+Use this table to decide whether to proceed or return to the profile and map
+viewers.  A QC figure should either open a path forward or explain why the
+workflow should pause.
 
 Data Corrections
 ----------------
@@ -241,6 +322,39 @@ modelling, and inversion windows will work from the corrected data.
 After committing any correction, immediately re-open the profile and QC views.
 The check is simple: the intended artifact should be reduced, and no new
 station-order, component, or response-shape problem should appear.
+
+Correction Decision Rules
+-------------------------
+
+Before committing a correction, write down or export enough evidence to answer
+these questions:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 36 36
+
+   * - Question
+     - Good Answer
+     - Warning Sign
+   * - What problem is being corrected?
+     - A QC or profile figure shows a specific artifact.
+     - The correction is being tried because a plot "looks nicer."
+   * - Which stations or bands are affected?
+     - Affected stations and period/frequency ranges are visible.
+     - The correction changes unexpected areas of the survey.
+   * - Does phase support the interpretation?
+     - Phase behaviour is consistent with the proposed correction type.
+     - Phase changes suggest structure or noise rather than static shift.
+   * - Is the method parameter defensible?
+     - Window size, reference, rotation, or filter choice has a reason.
+     - Defaults are accepted without comparing before/after evidence.
+   * - What is the new data state called?
+     - Output folder and notes name the correction clearly.
+     - Corrected EDIs overwrite or mix with raw inputs.
+
+When the warning signs dominate, keep the raw survey active and return to QC
+or map/profile inspection.  A correction that cannot be explained should not
+become the main data state.
 
 Advanced Diagnostics
 --------------------
@@ -363,6 +477,40 @@ Advanced Tools can also convert AVG, J, and Spectra files to EDI.  When using
 conversion, preview the station profile and topography first, write EDIs to a
 dedicated output folder, then reload the exported EDIs as a normal survey.
 
+When Advanced Diagnostics Are Required
+--------------------------------------
+
+Use advanced diagnostics when a later workflow depends on an assumption that
+the basic QC page cannot defend:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 36 36
+
+   * - Assumption
+     - Diagnostic Evidence Needed
+     - If Evidence Is Weak
+   * - One regional strike angle
+     - Strike summary, stability bands, and mapsticks agree over the target
+       band.
+     - Avoid one survey-wide rotation or document segmented/uncertain strike.
+   * - 1-D modelling is adequate
+     - Dimensionality diagnostics cluster near 1-D for the relevant band.
+     - Treat 1-D results as exploratory and compare with 2-D/3-D indicators.
+   * - 2-D profile inversion is defensible
+     - Profile geometry, phase tensor, tipper, and strike are broadly
+       consistent.
+     - Use cautious interpretation and document 3-D or local distortion risk.
+   * - Topography should be carried forward
+     - Elevation is populated, ordered, and plausible along the profile.
+     - Fix metadata or exclude topography until the geometry is trustworthy.
+   * - Converted EDIs are ready for processing
+     - Converted station profiles and topography match the source survey.
+     - Keep converted data separate and reload only after inspection.
+
+Advanced diagnostics are not extra decoration.  They are the evidence that
+turns modelling assumptions into documented choices.
+
 Forward Modelling
 -----------------
 
@@ -461,6 +609,21 @@ Use **Send to Inversion** when the forward model should seed the inversion
 panel.  The handoff carries the model parameters, and the inversion window can
 load them as the starting model.
 
+Forward Model Readiness
+-----------------------
+
+Use forward modelling when you can state the question being tested.  Examples:
+
+* "Could a shallow conductive layer create this profile response?"
+* "Which periods are sensitive to the target depth?"
+* "Is this starting model reasonable before inversion?"
+* "Would the station spacing see this anomaly at all?"
+
+Do not use forward modelling to force an interpretation after QC has already
+shown that the data are too weak.  A synthetic model can explain many shapes;
+the useful model is the one constrained by the loaded survey, period band,
+station geometry, and geological context.
+
 Inversion Preparation
 ---------------------
 
@@ -514,6 +677,27 @@ Before pressing **Run**, check:
 * the starting model is documented or imported from Forward Modelling;
 * external binary paths are set for solver runs that need them;
 * generated input files are reviewed before long external inversions.
+
+Ready For Inversion Checklist
+-----------------------------
+
+The desktop data state is ready for inversion preparation when:
+
+* the active survey state is named: raw, corrected, recomputed, or pipeline
+  output;
+* station selection is intentional and matches the profile being modelled;
+* frequency or period bands were chosen from QC evidence;
+* static shift, noise removal, and rotation choices are documented;
+* dimensionality and strike assumptions are supported or explicitly marked
+  uncertain;
+* topography and coordinates have been checked;
+* starting model or prior is documented;
+* the working directory is unique for this run attempt;
+* generated input files can be inspected before solver execution.
+
+If one item is missing, the inversion panel can still build files, but the run
+will be harder to audit.  Fix the missing evidence before spending compute
+time or sharing the result.
 
 Processing Pipeline
 -------------------
@@ -588,6 +772,35 @@ Suggested pipeline naming:
 
 The name should describe the input state and the main processing choices.  A
 generic name such as ``run1`` is hard to audit later.
+
+When To Use The Pipeline
+------------------------
+
+Use the pipeline for repeatability, not discovery:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 34 34
+
+   * - Use Pipeline When
+     - Avoid Pipeline When
+     - Safer Alternative
+   * - The same choices need to be repeated for several lines.
+     - You have not manually checked the first line yet.
+     - Run map/profile/QC/correction panels by hand first.
+   * - Parameters are already justified by figures.
+     - Defaults are being used because they are convenient.
+     - Tune one step at a time and compare previews.
+   * - You need JSON and logs for reproducibility.
+     - You only need a quick visual inspection.
+     - Export figures and notes instead of processed EDIs.
+   * - A processed EDI set must be regenerated later.
+     - Raw and corrected states are mixed or unclear.
+     - Reload the intended input state before running the pipeline.
+
+When a pipeline result differs from the manual result, trust neither
+automatically.  Compare logs, parameters, active input state, and preview
+figures until the difference is understood.
 
 Agent-Assisted Review
 ---------------------

@@ -34,6 +34,13 @@ Everything documented here is importable directly from ``pycsamt.api``:
    survey = read_edis("data/edi/", progress="auto")
    print(survey.summary())        # APIFrame: compact, metadata-rich
 
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   views
+   configuration
+
 One Pattern Everywhere
 ----------------------
 
@@ -138,10 +145,3 @@ In This Section
 
    :doc:`../api/api`
        Auto-generated reference for every ``pycsamt.api`` function and class.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   views
-   configuration

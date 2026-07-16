@@ -1,0 +1,103 @@
+{
+  "suite_dir": "D:\\projects\\pycsamt\\paper_repro\\benchmark\\v2.0.0",
+  "n_records": 208,
+  "index_manifest": {
+    "version": 2,
+    "created": "2026-07-13T20:03:28",
+    "root": "D:\\projects\\pycsamt",
+    "n_chunks": 10109,
+    "stats": {
+      "total": 10109,
+      "kind:doc_section": 4333,
+      "wf:qc": 199,
+      "wf:rotation": 62,
+      "kind:module_doc": 669,
+      "kind:python_symbol": 2398,
+      "kind:python_method": 2674,
+      "wf:inv2d": 33,
+      "wf:pre_inversion": 421,
+      "wf:ai_inversion": 242,
+      "wf:tipper": 288,
+      "wf:code_gen": 6,
+      "wf:static_shift": 283,
+      "wf:denoise": 65,
+      "wf:forward": 248,
+      "wf:phase_analysis": 469,
+      "wf:inv3d": 52,
+      "wf:mare2dem": 188,
+      "wf:modem": 221,
+      "wf:report": 11,
+      "wf:sensitivity": 82,
+      "kind:recipe": 35
+    },
+    "source_fingerprint": "ede88c756df9f1126ebbf626eb6e6ddb1ffdf422e75104976b3b4e0d4f2be18e",
+    "embedded": false,
+    "out_dir": "D:\\projects\\pycsamt\\.pycsamt_rag"
+  },
+  "rows": {
+    "BOne": {
+      "name": "Static package context",
+      "n": 208,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.25961538461538464,
+      "mrr": 0.12396978021978013,
+      "ndcg_at_10": 0.18690508610346243,
+      "median_latency_ms": 0.0024999999936881068
+    },
+    "BTwo": {
+      "name": "BM25",
+      "n": 208,
+      "recall_at_1": 0.7019230769230769,
+      "recall_at_5": 0.8076923076923077,
+      "mrr": 0.7425976800976802,
+      "ndcg_at_10": 0.7604758518370923,
+      "median_latency_ms": 5.6129999999967595
+    },
+    "BThree": {
+      "name": "Hashed dense",
+      "n": 208,
+      "recall_at_1": 0.39903846153846156,
+      "recall_at_5": 0.6778846153846154,
+      "mrr": 0.5186622405372405,
+      "ndcg_at_10": 0.5719986503511112,
+      "median_latency_ms": 28.08339999999987
+    },
+    "BFour": {
+      "name": "BM25+hashed dense RRF",
+      "n": 208,
+      "recall_at_1": 0.6298076923076923,
+      "recall_at_5": 0.7836538461538461,
+      "mrr": 0.7004197191697193,
+      "ndcg_at_10": 0.7215504363971568,
+      "median_latency_ms": 31.42040000000179
+    },
+    "BFive": {
+      "name": "Full deterministic retrieval",
+      "n": 208,
+      "recall_at_1": 0.7548076923076923,
+      "recall_at_5": 0.8365384615384616,
+      "mrr": 0.7873645451770452,
+      "ndcg_at_10": 0.7998698217449728,
+      "median_latency_ms": 5.004399999990028
+    },
+    "BSix": {
+      "name": "Full deterministic retrieval+local reranking",
+      "n": 208,
+      "recall_at_1": 0.6298076923076923,
+      "recall_at_5": 0.8557692307692307,
+      "mrr": 0.715521978021978,
+      "ndcg_at_10": 0.7677277445342896,
+      "median_latency_ms": 38.19279999999026
+    }
+  },
+  "best": {
+    "name": "Full deterministic retrieval",
+    "n": 208,
+    "recall_at_1": 0.7548076923076923,
+    "recall_at_5": 0.8365384615384616,
+    "mrr": 0.7873645451770452,
+    "ndcg_at_10": 0.7998698217449728,
+    "median_latency_ms": 5.004399999990028
+  },
+  "note": "All ablations are deterministic and offline; B3/B4 use hashed token vectors rather than an external embedding API."
+}

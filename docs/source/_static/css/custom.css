@@ -43,6 +43,12 @@ dt code.sig-name {
   --pycsamt-surface-2: #f6f8fc;
   --pycsamt-soft-gold: #fff7e8;
   --pycsamt-border: color-mix(in srgb, var(--pycsamt-blue) 16%, transparent);
+  /* Numbered-outline ramp (see .pycsamt-guide-toc). Kept separate from the
+     brand blues because those are also used as fills, where a dark-theme
+     lightening would be wrong. Light theme deepens on hover. */
+  --pycsamt-toc-strong: var(--pycsamt-blue-dark);
+  --pycsamt-toc-link: var(--pycsamt-blue);
+  --pycsamt-toc-hover: #14306b;
 }
 
 html[data-theme="dark"] {
@@ -52,6 +58,11 @@ html[data-theme="dark"] {
   --pycsamt-surface-2: #1a2130;
   --pycsamt-soft-gold: #2b2418;
   --pycsamt-border: color-mix(in srgb, var(--pycsamt-blue) 36%, transparent);
+  /* The brand navy is unreadable on the dark surface, so the outline lifts to
+     tints of it and brightens (rather than deepens) on hover. */
+  --pycsamt-toc-strong: #a8c8f7;
+  --pycsamt-toc-link: #8fb3ec;
+  --pycsamt-toc-hover: #dbe9ff;
 }
 
 .navbar-brand img {
@@ -799,6 +810,112 @@ h3 .sd-badge {
   top: -0.12em;
 }
 
+/* User Guide landing page: a scikit-learn-style bold, numbered outline
+   rendered straight from the toctree, instead of a grid of cards. Depth is
+   conveyed by size/weight/colour rather than bullets or icons. */
+.pycsamt-guide-toc.toctree-wrapper {
+  margin-top: 1.75rem;
+}
+
+.pycsamt-guide-toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.pycsamt-guide-toc li {
+  margin: 0;
+}
+
+.pycsamt-guide-toc .toctree-l1 {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--pycsamt-border);
+}
+
+.pycsamt-guide-toc .toctree-l1:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Every entry is underlined, scikit-learn style: the outline reads as a list
+   of links, not as headings. The page's own <h1> stays underline-free -- it is
+   a title, not a destination. Hover stays inside the blue ramp (no orange):
+   the colour deepens and the rule thickens.
+
+   NOTE on the ``.toctree-wrapper.pycsamt-guide-toc li.toctree-lN`` selectors
+   below: the theme ships ``.toctree-wrapper li[class^="toctree-l"] > a`` at
+   specificity (0,2,2), which outranks a plain ``.pycsamt-guide-toc
+   .toctree-l1 > a`` (0,2,1) and silently pins every level to its 1.1em. Only
+   font-size loses that fight -- colour and weight land -- so the outline looks
+   styled while all three levels render the same size. Keep these selectors at
+   (0,3,2) or the size hierarchy quietly disappears. */
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l1 > a,
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l2 > a,
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l3 > a {
+  display: inline-block;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  transition: color 0.12s ease, text-decoration-color 0.12s ease;
+}
+
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l1 > a:hover,
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l2 > a:hover,
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l3 > a:hover {
+  color: var(--pycsamt-toc-hover);
+  text-decoration-thickness: 2px;
+  text-decoration-color: currentColor;
+}
+
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l1 > a {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pycsamt-toc-strong);
+}
+
+.pycsamt-guide-toc .toctree-l1 > ul {
+  margin-top: 0.6rem;
+  padding-left: 1.5rem;
+}
+
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l2 > a {
+  padding: 0.25rem 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--pycsamt-toc-link);
+}
+
+.pycsamt-guide-toc .toctree-l2 > ul {
+  padding-left: 1.5rem;
+}
+
+.toctree-wrapper.pycsamt-guide-toc li.toctree-l3 > a {
+  padding: 0.15rem 0;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--pycsamt-toc-link);
+}
+
+/* The "1.", "1.2.", "1.2.3." prefix Sphinx emits for a :numbered: toctree.
+   Tabular figures keep the numbers from jittering between rows. */
+.pycsamt-guide-toc .section-number,
+.bd-article h1 .section-number,
+.bd-article h2 .section-number,
+.bd-article h3 .section-number {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page titles carry the number but never the underline. */
+.bd-article h1,
+.bd-article h2,
+.bd-article h3 {
+  text-decoration: none;
+}
+
 /* Migration table: monospace the v1 column, comfortable row height. */
 table.migration-table td:first-child,
 table.migration-table th:first-child {
@@ -810,4 +927,87 @@ table.migration-table td,
 table.migration-table th {
   padding: 0.5rem 0.7rem;
   vertical-align: top;
+}
+
+/* Secondary-sidebar support card, shown on section landings only. The slot
+   scikit-learn gives its sponsor; pyCSAMT has none, so it asks for a star
+   instead of advertising a donation link that does not exist yet. */
+.pycsamt-support-box {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--pycsamt-border);
+  border-radius: 10px;
+  background: var(--pycsamt-surface-2);
+}
+
+.pycsamt-support-box__label {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pycsamt-muted);
+}
+
+.pycsamt-support-box__cta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--pycsamt-border);
+  border-radius: 8px;
+  background: var(--pycsamt-surface);
+  color: var(--pycsamt-ink);
+  text-decoration: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.pycsamt-support-box__cta + .pycsamt-support-box__cta {
+  margin-top: 0.45rem;
+}
+
+.pycsamt-support-box__cta:hover {
+  border-color: var(--pycsamt-blue);
+  background: color-mix(in srgb, var(--pycsamt-blue) 8%, var(--pycsamt-surface));
+  text-decoration: none;
+}
+
+.pycsamt-support-box__mark {
+  flex: 0 0 auto;
+  color: var(--pycsamt-ink);
+}
+
+.pycsamt-support-box__cta-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.pycsamt-support-box__cta-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--pycsamt-ink);
+}
+
+.pycsamt-support-box__repo {
+  font-size: 0.74rem;
+  color: var(--pycsamt-muted);
+  overflow-wrap: anywhere;
+}
+
+.pycsamt-support-box__note {
+  margin: 0.7rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--pycsamt-muted);
+}
+
+.pycsamt-support-box__note a {
+  color: var(--pycsamt-toc-link);
+  font-weight: 600;
+}
+
+.pycsamt-support-box__note a:hover {
+  color: var(--pycsamt-toc-hover);
 }

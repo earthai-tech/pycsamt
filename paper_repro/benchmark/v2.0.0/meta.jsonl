@@ -1,0 +1,10 @@
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-204", "must_not_contain": [], "query": "what can you do"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-205", "must_not_contain": [], "query": "which workflows are supported"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-206", "must_not_contain": [], "query": "list the available agents"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-207", "must_not_contain": [], "query": "show me the assistant capabilities"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-208", "must_not_contain": [], "query": "what tasks can pyCSAMT-Agent run"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-209", "must_not_contain": [], "query": "which pipelines are available"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-210", "must_not_contain": [], "query": "summarise the supported workflow catalogue"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-211", "must_not_contain": [], "query": "what geophysical tools can you coordinate"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-212", "must_not_contain": [], "query": "list all processing agents"}
+{"category": "meta", "expected_intent": "meta", "expected_line": null, "expected_symbols": [], "expected_workflow": null, "id": "paper-v2-213", "must_not_contain": [], "query": "what are the main assistant modes"}

@@ -260,6 +260,8 @@ html_theme_options = {
     ],
     # Sidebar
     "show_toc_level": 2,
+    # Per-page override lives in _configure_secondary_sidebar() below; this is
+    # the fallback for any page that handler does not touch.
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "primary_sidebar_end": [],
     # Code highlighting — NOTE: pydata-sphinx-theme spells these
@@ -330,38 +332,52 @@ html_show_sphinx = False
 html_copy_source = False
 
 
-def _remove_secondary_sidebar_for_landing_pages(
-    app, pagename, templatename, context, doctree
-):
-    """Hide the right page TOC only on wide, hand-designed landing pages.
+# Pages that render full-width, with no secondary ("On this page") sidebar at
+# all: the hand-designed home page, the API reference whose object table needs
+# every pixel, and the generated examples-gallery grids (matched by pattern).
+_NO_SECONDARY_SIDEBAR = {"index", "api/index"}
 
-    Every ordinary page — index or not — keeps the pydata secondary sidebar
-    ("On this page").  Only three kinds of pages collapse it: the home page,
-    the API reference pages (their tables need the width), and the generated
-    examples-gallery index pages (card grids).  Any other page can still opt
-    in by hand with the ``:html_theme.sidebar_secondary.remove:`` metadata
-    field, which this handler no longer strips.
-    """
-    collapse = (
-        pagename == "index"
-        or pagename in {"api_landing", "api/index"}
-        or (pagename.startswith("examples/") and pagename.endswith("index"))
+# The support card is a site-wide appeal, not page content: it belongs on the
+# section landings people arrive at, not on all ~300 leaf pages.
+_SIDEBAR_WITH_SUPPORT = ["page-toc", "support-box", "edit-this-page"]
+_SIDEBAR_PLAIN = ["page-toc", "edit-this-page"]
+
+
+def _is_landing_page(pagename):
+    """True for section landings -- ``*/index`` plus the API landing."""
+    return (
+        pagename == "api_landing"
+        or pagename == "index"
+        or pagename.rsplit("/", 1)[-1] == "index"
     )
-    if not collapse:
+
+
+def _configure_secondary_sidebar(app, pagename, templatename, context, doctree):
+    """Decide the right-hand sidebar per page: drop it, or pick its contents.
+
+    Runs before the theme's own ``set_secondary_sidebar_items`` (priority 400
+    vs the default 500) so the per-page item list below is the one the theme
+    reads.  Doing this here rather than via a ``secondary_sidebar_items`` dict
+    is deliberate: the theme warns on every page matching two wildcard
+    patterns, and "all pages" plus "index pages" necessarily overlap.
+    """
+    if pagename in _NO_SECONDARY_SIDEBAR or (
+        pagename.startswith("examples/") and pagename.endswith("index")
+    ):
+        # context["meta"] can be present but None (e.g. templated/special
+        # pages), so a plain .get("meta", {}) is not enough — normalise it.
+        meta = context.get("meta") or {}
+        context["meta"] = meta
+        meta["html_theme.sidebar_secondary.remove"] = ""
         return
 
-    # context["meta"] can be present but None (e.g. templated/special pages),
-    # so a plain .get("meta", {}) is not enough — normalise it to a dict.
-    meta = context.get("meta") or {}
-    context["meta"] = meta
-    meta["html_theme.sidebar_secondary.remove"] = ""
+    context["theme_secondary_sidebar_items"] = (
+        _SIDEBAR_WITH_SUPPORT if _is_landing_page(pagename) else _SIDEBAR_PLAIN
+    )
 
 
 def setup(app):
-    app.connect(
-        "html-page-context",
-        _remove_secondary_sidebar_for_landing_pages,
-    )
+    app.connect("html-page-context", _configure_secondary_sidebar, priority=400)
 
 
 # -- LaTeX / PDF ---------------------------------------------------------------

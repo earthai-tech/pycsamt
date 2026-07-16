@@ -19,6 +19,16 @@ interfaces**.  Modules such as ``web.py``, ``__main__.py``, and ``_pricing.py``
 support agent usage, but they are not listed as workflow agents because they
 do not define an executable ``BaseAgent`` subclass.
 
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   foundation_agents
+   processing_agents
+   inversion_agents
+   ai_model_zoo_agents
+   orchestration_output_agents
+
 
 How to read the catalogue
 -------------------------
@@ -37,16 +47,6 @@ Most users should think in terms of a workflow lifecycle:
 
 The agent groups follow that lifecycle.  Each group page contains deeper
 examples and agent-specific input/output notes.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   foundation_agents
-   processing_agents
-   inversion_agents
-   ai_model_zoo_agents
-   orchestration_output_agents
 
 
 Catalogue groups

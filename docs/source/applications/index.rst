@@ -10,7 +10,7 @@ and ends with exports and troubleshooting.
 
 .. toctree::
    :numbered: 4
-   :maxdepth: 2
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

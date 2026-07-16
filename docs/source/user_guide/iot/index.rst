@@ -17,8 +17,7 @@ IoT-enabled field survey: telemetry, edge QC, monitoring, power,
 synchronisation, security, and provenance.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 2
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    basic_session

@@ -17,8 +17,7 @@ design, test, or validate inversion choices. The common Python interface
 itself lives at :doc:`../../api/inversion`.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 2
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

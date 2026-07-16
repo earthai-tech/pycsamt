@@ -23,8 +23,7 @@ from :doc:`../ai_inversion/index`, which covers learned inversion methods.
    execution is explicit rather than automatic.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

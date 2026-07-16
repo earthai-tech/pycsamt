@@ -30,8 +30,7 @@ Configuration → Welcome & Chat → Workflows & Agents → Tools, Memory &
 Outputs → Agent Master & Other Apps → Troubleshooting**.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

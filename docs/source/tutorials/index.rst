@@ -16,8 +16,7 @@ basic survey object and QC workflow, and the later pages build on that
 foundation.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

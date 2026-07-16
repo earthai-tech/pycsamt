@@ -18,8 +18,7 @@ UI state and callbacks do not live here.
    inversion models.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    loading
@@ -30,21 +29,3 @@ UI state and callbacks do not live here.
    export
    mapview
    api
-
-Typical workflow
-------------------
-
-.. code-block:: python
-
-   from pycsamt.map import MapView
-
-   mv = MapView.from_folder(
-       "data/AMT/WILLY_DATA",
-       detect="folder",
-   )
-
-   station = mv.station(overlay="rho", frequency=10.0)
-   section = mv.pseudosection(component="xy")
-   fence = mv.map3d(mode="fence", depth_range=(0.0, 2000.0))
-
-   mv.export("station.html", view="station", overlay="rho")

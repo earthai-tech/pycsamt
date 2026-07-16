@@ -12,16 +12,11 @@ for the full reference of every agent group.
 
 .. toctree::
    :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    orchestrator
    overview
    agent_catalogue
    llm_configuration
-   foundation_agents
-   processing_agents
-   inversion_agents
-   ai_model_zoo_agents
-   orchestration_output_agents
    coordinator

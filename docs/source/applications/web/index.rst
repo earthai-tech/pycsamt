@@ -31,8 +31,7 @@ Loading & Sessions → Maps & Profiles → Processing Pages → Exports →
 Deployment → Troubleshooting**.
 
 .. toctree::
-   :numbered: 4
-   :maxdepth: 1
+   :maxdepth: 3
    :class: pycsamt-guide-toc
 
    overview

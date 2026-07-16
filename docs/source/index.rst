@@ -112,7 +112,7 @@
            <i class="fa-solid fa-wave-square"></i><span>Acquire</span>
          </a>
          <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-         <a class="pyc-flow-step" href="user_guide/processing/index.html">
+         <a class="pyc-flow-step" href="user_guide/emtools/index.html">
            <i class="fa-solid fa-sliders"></i><span>Process</span>
          </a>
          <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
@@ -204,7 +204,7 @@
          <div class="pyc-feature pyc-feature--orange pyc-reveal">
            <div class="pyc-feature-head">
              <span class="pyc-feature-icon"><i class="fa-solid fa-sliders"></i></span>
-             <h3><a href="user_guide/processing/index.html">Processing &amp; corrections</a></h3>
+             <h3><a href="user_guide/emtools/index.html">Processing &amp; corrections</a></h3>
            </div>
            <p>
              A catalogue of 25 correction methods in six categories: notch
@@ -212,14 +212,14 @@
              analysis, and more — each with a stable identifier.
            </p>
            <div class="pyc-feature-tags">
-             <a href="user_guide/processing/index.html">Catalogue</a>
+             <a href="user_guide/emtools/index.html">Catalogue</a>
              <span>Static shift</span><span>Notch</span><span>Phase tensor</span>
            </div>
            <div class="pyc-feature-hero" aria-hidden="true">
              <img src="_static/images/home/card-processing.png"
                   alt="" loading="lazy" width="1280" height="600"/>
            </div>
-           <a class="pyc-feature-more" href="user_guide/processing/index.html">
+           <a class="pyc-feature-more" href="user_guide/emtools/index.html">
              Learn more <i class="fa-solid fa-arrow-right"></i>
            </a>
          </div>
@@ -744,5 +744,4 @@
    development/index
    release_notes/index
    changelog
-   contributing
    resources

@@ -21,7 +21,7 @@ assumptions are suitable. A reproducible inversion package should retain:
   explicitly requested;
 * residual, convergence, response-fit, and model-appraisal products.
 
-Useful preparation pages are :doc:`../processing/index`,
+Useful preparation pages are :doc:`../emtools/index`,
 :doc:`../emtools/index`, :doc:`../models/choosing_backend`, and
 :doc:`../../theory/inversion_concepts`.
 

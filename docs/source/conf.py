@@ -342,13 +342,40 @@ _NO_SECONDARY_SIDEBAR = {"index", "api/index"}
 _SIDEBAR_WITH_SUPPORT = ["page-toc", "support-box", "edit-this-page"]
 _SIDEBAR_PLAIN = ["page-toc", "edit-this-page"]
 
+# Reference pages built from a directive rather than from sections: they have
+# no headings, so their page-toc renders empty and -- with edit-this-page also
+# empty -- the theme would drop the sidebar entirely. Carrying the support card
+# keeps the column, which is why they are listed here rather than left to the
+# structural test below.
+_SUPPORT_ON_HEADINGLESS = {"glossary"}
 
-def _is_landing_page(pagename):
-    """True for section landings -- ``*/index`` plus the API landing."""
+
+def _has_guide_outline(doctree):
+    """True when the page body is one of the numbered guide outlines.
+
+    Structural rather than name-based on purpose: ``resources`` is every bit a
+    section landing but is not called ``index``, and a name test silently left
+    it with an empty page-toc, no support card, and therefore -- since the
+    theme drops a sidebar with nothing in it -- no right sidebar at all.
+    """
+    if doctree is None:
+        return False
+    from docutils import nodes
+
+    return any(
+        "pycsamt-guide-toc" in node.get("classes", [])
+        for node in doctree.findall(nodes.compound)
+    )
+
+
+def _is_landing_page(pagename, doctree):
+    """True for pages that should carry the support card: any page whose body
+    is a guide outline, the API landing (a grid of cards instead), and the
+    heading-less reference pages that would otherwise lose their sidebar."""
     return (
         pagename == "api_landing"
-        or pagename == "index"
-        or pagename.rsplit("/", 1)[-1] == "index"
+        or pagename in _SUPPORT_ON_HEADINGLESS
+        or _has_guide_outline(doctree)
     )
 
 
@@ -372,7 +399,9 @@ def _configure_secondary_sidebar(app, pagename, templatename, context, doctree):
         return
 
     context["theme_secondary_sidebar_items"] = (
-        _SIDEBAR_WITH_SUPPORT if _is_landing_page(pagename) else _SIDEBAR_PLAIN
+        _SIDEBAR_WITH_SUPPORT
+        if _is_landing_page(pagename, doctree)
+        else _SIDEBAR_PLAIN
     )
 
 

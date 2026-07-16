@@ -21,9 +21,9 @@ Reading Paths
 Different users usually arrive here with different goals:
 
 - **New survey users** should begin with :doc:`data_loading`, then continue
-  through :doc:`processing/index`, :doc:`map/index`, and
+  through :doc:`emtools/index`, :doc:`map/index`, and
   :doc:`interpretation/index`.
-- **Processing and QC users** should pair :doc:`processing/index` with
+- **Processing and QC users** should pair :doc:`emtools/index` with
   :doc:`emtools/index` and :doc:`site/index`.
 - **Inversion users** should read :doc:`inversion/index`, then move into the
   :doc:`models/index` and :doc:`pipeline/index` guides.

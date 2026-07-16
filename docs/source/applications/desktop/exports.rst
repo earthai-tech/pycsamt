@@ -14,6 +14,44 @@ The guiding rule is simple: every exported result should carry enough context
 for another user to understand what data state it came from and which settings
 produced it.
 
+Think In Data States
+--------------------
+
+Before exporting, name the data state you are working from.  Most confusion in
+desktop projects comes from mixing raw, corrected, recomputed, and pipeline
+outputs in the same folder or figure caption.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 38 38
+
+   * - Data State
+     - Meaning
+     - Export Habit
+   * - ``raw``
+     - Original files loaded from the field or source archive.
+     - Keep immutable; do not overwrite or mix with processed EDIs.
+   * - ``qc_reviewed``
+     - Raw data with QC figures and notes, but no data values changed.
+     - Save figures, station inventory, and review notes.
+   * - ``corrected``
+     - Active survey after a correction was committed to the desktop session.
+     - Export corrected EDIs plus before/after figures and parameters.
+   * - ``recomputed``
+     - EDIs rewritten by the recompute tool after rotation, trimming, filling,
+       or impedance-derived value updates.
+     - Save the recompute manifest and reload the output before using it.
+   * - ``pipeline``
+     - Output from an automated processing chain.
+     - Save pipeline JSON, logs, preview figures, and exported EDIs together.
+   * - ``inversion_input``
+     - Files prepared for an external or internal inversion run.
+     - Save input files with the QC/correction evidence that defines them.
+
+Use these state names in folder names and captions.  A file named
+``L30_corrected_static_shift_ama_rhoa_phase.png`` is easier to audit than
+``profile_final.png``.
+
 Export Types
 ------------
 
@@ -105,6 +143,28 @@ filename:
 Avoid generic names such as ``figure1.png``.  They become untraceable as soon
 as several windows are open.
 
+Figure Naming Pattern
+---------------------
+
+A useful figure name usually contains:
+
+.. code-block:: text
+
+   <line>_<data-state>_<view>_<component-or-band>_<purpose>.<ext>
+
+Examples:
+
+.. code-block:: text
+
+   L30_raw_station_map_geometry_check.png
+   L30_qc_reviewed_snr_before_filtering.png
+   L30_corrected_static_shift_ama_before_after.pdf
+   L30_recomputed_rot30_profile_xy_1s.svg
+   L30_pipeline_qc_ss_rotate_coverage_after.png
+
+Use short names, but include the part that would otherwise be forgotten:
+line, data state, view, component or band, and purpose.
+
 Batch Plot Export
 -----------------
 
@@ -131,6 +191,37 @@ Batch export saves visual evidence.  It does not save the processing settings
 that produced corrected data.  Pair it with pipeline JSON, correction notes,
 or exported EDIs when reproducibility matters.
 
+Minimum Evidence Set
+--------------------
+
+When a processing decision changes the data state, save at least:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 36 36
+
+   * - Decision
+     - Minimum Figures
+     - Minimum Machine-Readable Files
+   * - Frequency or band selection
+     - Coverage and SNR before/after.
+     - Pipeline JSON or notes listing selected bands.
+   * - Static-shift correction
+     - Before/after station curves and pseudosection.
+     - Corrected EDIs or correction parameters.
+   * - Rotation
+     - Strike/stability evidence and profile comparison.
+     - Recomputed EDIs plus manifest or pipeline JSON.
+   * - Source-effect correction
+     - Diagnostic figure and before/after response comparison.
+     - Corrected EDIs in a clearly named output folder.
+   * - Inversion setup
+     - QC summary, profile/map figure, and starting model figure.
+     - Solver input files, run config, and log.
+
+This minimum set is what lets another user understand both what changed and
+why it changed.
+
 Survey Metadata Export
 ----------------------
 
@@ -149,6 +240,21 @@ product.
 Metadata export is useful before sharing a survey because it lets a reviewer
 check station count, coordinate coverage, and frequency availability without
 opening every EDI file.
+
+Metadata Review Uses
+--------------------
+
+Station metadata exports are especially useful for:
+
+* checking whether all expected stations are present;
+* comparing field sheets with loaded station IDs;
+* reviewing coordinate or elevation problems in a spreadsheet;
+* documenting frequency coverage before processing;
+* sharing a lightweight inventory when the EDI files are too large or private;
+* giving inversion collaborators a quick summary of the profile.
+
+Metadata are not a replacement for EDIs or QC figures.  Treat them as the
+project index.
 
 EDI Data Products
 -----------------
@@ -182,6 +288,22 @@ mental state by reopening the folder.  Check the station count, map geometry,
 profile curves, and QC coverage before using the exported product for
 inversion.
 
+EDI Product Safety Rules
+------------------------
+
+Use these rules whenever the desktop writes EDI files:
+
+* never write corrected EDIs into the raw input folder;
+* keep one output folder per correction, recompute, or pipeline attempt;
+* include method names in folder names, not only dates;
+* keep failed or experimental outputs separate from accepted outputs;
+* reload exported EDIs before using them as inversion input;
+* keep the figures and parameter files beside the exported EDIs;
+* do not rename station files in a way that breaks station identity.
+
+An EDI folder is a data product.  Once another program consumes it, the folder
+name and nearby evidence become the processing history.
+
 Recomputed EDIs
 ---------------
 
@@ -205,6 +327,23 @@ Use recomputed EDIs when you need a clean, explicit handoff to external
 software.  Do not use this tool as a hidden correction step; save the manifest
 and the diagnostic figures that justify every transformation.
 
+Recompute Audit Checklist
+-------------------------
+
+Before accepting a recomputed EDI folder:
+
+* confirm the output folder name states the operation, for example
+  ``rotated_30deg_trim_1e-3_1e2hz``;
+* save the manifest CSV when available;
+* reload the recomputed folder in the desktop;
+* compare station count with the source folder;
+* inspect one early, one middle, and one late station profile;
+* verify frequency limits, rotation, or filled values are visible as expected;
+* keep the source EDIs unchanged and nearby.
+
+If the recomputed folder cannot pass this audit, keep it as an experiment and
+do not use it as the accepted inversion input.
+
 Pipeline Configurations
 -----------------------
 
@@ -225,6 +364,34 @@ Save the pipeline JSON beside the pipeline output:
 When you rerun a saved configuration, confirm that step 1 is using the
 intended input source.  A valid JSON file can still produce the wrong output if
 it is run against a different active survey.
+
+Pipeline Export Package
+-----------------------
+
+A pipeline export is complete when it contains:
+
+* the pipeline JSON;
+* the run log;
+* exported EDIs, when the final step writes data;
+* preview or summary figures for important steps;
+* a short note naming the input data state;
+* a clear output folder name that includes line and major methods.
+
+For example:
+
+.. code-block:: text
+
+   pipeline/
+     L30_raw_to_qc_ss_rotate/
+       L30_raw_to_qc_ss_rotate.json
+       L30_raw_to_qc_ss_rotate.log
+       figures/
+       exported_edi/
+       README.md
+
+The ``README.md`` can be short.  One or two sentences about input state,
+major choices, and accepted output are enough to make the folder easier to
+review later.
 
 Inversion Exports
 -----------------
@@ -254,6 +421,26 @@ Before archiving an inversion folder, save:
 * result plots;
 * the QC and correction figures that define the input data state.
 
+Inversion Run Naming
+--------------------
+
+Use run names that can survive months of project history:
+
+.. code-block:: text
+
+   <line>_<engine>_<data-state>_<model-or-band>_<attempt>
+
+Examples:
+
+.. code-block:: text
+
+   L30_occam2d_corrected_ss_v01
+   L30_mare2dem_recomputed_rot30_v02
+   L18_modem_pipeline_qc_ss_rotate_v01
+
+Avoid names such as ``test``, ``final``, ``new_final``, or ``run2``.  They
+only make sense on the day they are created.
+
 Interpretation Exports
 ----------------------
 
@@ -277,6 +464,11 @@ them:
        L30_model.vtk
        station_logs/
 
+Interpretation outputs should not be separated from their parent inversion
+context.  A VTK grid or CSV classification is only meaningful if the reviewer
+can find the model, inversion run, corrected data state, and assumptions that
+produced it.
+
 Session And Settings
 --------------------
 
@@ -294,6 +486,22 @@ inversion/interpretation folders in the project directory.
 Settings profiles are separate JSON snapshots of application/API settings.
 Use them when you want to move a configuration between machines or preserve a
 known set of plotting and processing defaults.
+
+What Not To Rely On
+-------------------
+
+Do not rely on these as the only record of a project:
+
+* screenshots copied from the screen;
+* the desktop session file alone;
+* recent-file history;
+* a solver result folder without input files;
+* corrected EDIs without before/after figures;
+* pipeline EDIs without the JSON configuration;
+* an interpretation export without its parent inversion run.
+
+These items are useful, but alone they do not explain the processing chain.
+Pair visual, data, and configuration outputs whenever a result matters.
 
 Recommended Project Layout
 --------------------------

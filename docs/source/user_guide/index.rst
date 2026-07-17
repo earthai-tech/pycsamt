@@ -25,4 +25,3 @@ User Guide
    forward/index
    pipeline/index
    ../tutorials/index
-   processing/index

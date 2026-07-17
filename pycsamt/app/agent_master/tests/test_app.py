@@ -29,6 +29,79 @@ def test_create_app():
     assert app.layout is not None
 
 
+def test_create_app_title():
+    pytest.importorskip("dash")
+    pytest.importorskip("dash_bootstrap_components")
+    from pycsamt.app.agent_master import create_app
+
+    app = create_app()
+    assert app.title == "pyCSAMT — Agent"
+
+
+def test_create_app_callbacks_registered():
+    pytest.importorskip("dash")
+    pytest.importorskip("dash_bootstrap_components")
+    from pycsamt.app.agent_master import create_app
+
+    app = create_app()
+    assert len(app.callback_map) > 0
+
+
+def test_icon_route_registered():
+    pytest.importorskip("dash")
+    pytest.importorskip("dash_bootstrap_components")
+    from pycsamt.app.agent_master import create_app
+
+    app = create_app()
+    rules = [str(r) for r in app.server.url_map.iter_rules()]
+    assert any("am-icons" in r for r in rules)
+
+
+class TestLaunch:
+    def test_launch_runs_app_with_host_and_port(self, monkeypatch):
+        pytest.importorskip("dash")
+        pytest.importorskip("dash_bootstrap_components")
+        from pycsamt.app.agent_master import app as app_mod
+
+        recorded = {}
+
+        class _FakeApp:
+            def run(self, **kwargs):
+                recorded["run_kwargs"] = kwargs
+
+        monkeypatch.setattr(
+            app_mod, "create_app", lambda debug=False: _FakeApp()
+        )
+        app_mod.launch(open_browser=False, port=9003)
+        assert recorded["run_kwargs"]["host"] == "127.0.0.1"
+        assert recorded["run_kwargs"]["port"] == 9003
+
+    def test_launch_opens_browser_thread(self, monkeypatch):
+        pytest.importorskip("dash")
+        pytest.importorskip("dash_bootstrap_components")
+        from pycsamt.app.agent_master import app as app_mod
+
+        class _FakeApp:
+            def run(self, **kwargs):
+                pass
+
+        monkeypatch.setattr(
+            app_mod, "create_app", lambda debug=False: _FakeApp()
+        )
+        started = {"n": 0}
+
+        class _FakeThread:
+            def __init__(self, target=None, daemon=None):
+                self._target = target
+
+            def start(self):
+                started["n"] += 1
+
+        monkeypatch.setattr("threading.Thread", _FakeThread)
+        app_mod.launch(open_browser=True)
+        assert started["n"] == 1
+
+
 def test_ids_unique():
     from pycsamt.app.agent_master._ids import IDs
 

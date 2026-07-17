@@ -6,19 +6,31 @@ Contributing
 pyCSAMT is developed in the open at
 `github.com/earthai-tech/pycsamt <https://github.com/earthai-tech/pycsamt>`_,
 and contributions of every kind move it forward: bug reports with a
-reproducible trace, documentation fixes, new gallery examples, field
-wisdom about a data format, or code. You do not need to be a
-geophysicist *and* a software engineer — either half is valuable.
+reproducible trace, documentation fixes, new gallery examples, field wisdom
+about a data format, or code. You do not need to be a geophysicist *and* a
+software engineer — either half is valuable.
 
-* **Report an issue** — found a bug, a confusing result, or a gap in the
-  docs? The `issue tracker <https://github.com/earthai-tech/pycsamt/issues>`_
-  is the front door; see "Reporting Issues" below for what to include.
-* **Improve the documentation** — docs and gallery examples are code too:
-  build them locally with :doc:`development/documentation_build`, fix a
-  page, or add an executed example.
-* **Contribute code** — set up a development install and follow the
-  workflow below; :doc:`development/index` covers style, CI, and API
-  policy.
+This page is the front door: how to set up, how a change travels from your
+clone to a merged pull request, and how to report a problem. It deliberately
+does not restate the rules it links to — the rest of this section is the
+reference, and each page below goes deeper than a summary here could:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - When you need
+     - Read
+   * - Docstring conventions for anything public
+     - :doc:`development/docstring_style`
+   * - What counts as public API, and what changing it costs
+     - :doc:`development/api_policy`
+   * - Which base class a new object should inherit
+     - :doc:`development/extending`
+   * - Building the docs, and where each page lives
+     - :doc:`development/documentation_build`
+   * - What CI runs, and how to reproduce a failure locally
+     - :doc:`development/ci`
 
 Development Setup
 -----------------
@@ -32,114 +44,51 @@ extras:
    cd pycsamt
    pip install -e ".[full,docs,dev]"
 
-Verify the install by running a fast subset of the test suite:
+Verify the install with a fast subset of the suite:
 
 .. code-block:: bash
 
    python -m pytest pycsamt/emtools/tests -q
 
-Development Workflow
---------------------
+The Contribution Workflow
+-------------------------
 
-#. **Branch** — create a feature branch from the active development
-   branch rather than committing to it directly.
+#. **Branch** — create a feature branch from the active development branch
+   rather than committing to it directly.
 
-#. **Change with tests** — every subpackage keeps its tests next to the
-   code (``pycsamt/<subpackage>/tests/``). A bug fix comes with a test
-   that fails before the fix; a feature comes with tests that document
-   its contract.
+#. **Change with tests** — every subpackage keeps its tests beside the code
+   (``pycsamt/<subpackage>/tests/``). A bug fix comes with a test that fails
+   before the fix; a feature comes with tests that document its contract.
+   Tests must not write inside the repository — use ``tmp_path`` or the system
+   temp directory for generated files.
 
-#. **Lint and test locally** — the same checks CI runs:
+#. **Run the checks locally** — the same two commands CI runs first, so a
+   failure costs you seconds instead of a round trip:
 
    .. code-block:: bash
 
       python -m ruff check pycsamt/
       python -m pytest pycsamt/ -v --tb=short
 
-#. **Build the docs when they are affected** — see
-   :ref:`contributing-docs` below.
+   While iterating, scope pytest to what you touched
+   (``python -m pytest pycsamt/iot/tests -q``).
+   :doc:`development/ci` covers the full matrix and how to reproduce any job.
 
-#. **Open a pull request** — small and focused beats large and mixed.
-   Describe what changed and why, mention the affected subpackages, and
-   include before/after screenshots for documentation or application UI
-   changes.
+#. **Build the docs if you changed them** — the layout, the build commands,
+   and how to register a new gallery section are in
+   :doc:`development/documentation_build`. Gallery examples execute at build
+   time, so a new ``plot_*.py`` must be self-contained and run from bundled
+   sample data or synthetics.
 
-Code Style
-----------
+#. **Open a pull request** — small and focused beats large and mixed. Say what
+   changed and why, name the affected subpackages, and include before/after
+   screenshots for documentation or application UI changes.
 
-* Linting is enforced with `ruff <https://docs.astral.sh/ruff/>`_; the
-  configuration lives in ``pyproject.toml``, so ``python -m ruff check``
-  picks it up automatically.
-* Public functions, classes, and modules follow the numpydoc
-  conventions documented in :doc:`development/docstring_style`.
-* What counts as public API — and what a change to it requires — is
-  defined in :doc:`development/api_policy`.
-* New classes inherit from the package base objects
-  (``PyCSAMTObject``, ``CoreObject``, ``MTBase``) rather than plain
-  ``object`` — :doc:`development/extending` explains what each base
-  provides.
-* Match the style of the file you are editing: naming, comment density,
-  and import grouping are kept locally consistent.
+Commit And Pull Request Conventions
+-----------------------------------
 
-Running The Tests
------------------
-
-The full suite:
-
-.. code-block:: bash
-
-   python -m pytest pycsamt/ -v --tb=short
-
-One subpackage or one file while iterating:
-
-.. code-block:: bash
-
-   python -m pytest pycsamt/iot/tests -q
-   python -m pytest pycsamt/emtools/tests/test_emtools_tensor.py -q
-
-Tests should not write inside the repository — use ``tmp_path`` or the
-system temp directory for generated files.
-
-.. _contributing-docs:
-
-Documentation Contributions
----------------------------
-
-The docs build with Sphinx from ``docs/``:
-
-.. code-block:: bash
-
-   cd docs
-   pip install -r requirements-docs.txt
-   python -m sphinx -M html source build
-   # open build/html/index.html
-
-Two frequent contributions have a well-worn footprint:
-
-* **Gallery examples** — every page under :doc:`Examples </examples/index>`
-  is an executed script. Add a ``plot_*.py`` to an existing section
-  under ``docs/examples/<section>/``, or create a new section with its
-  own ``README.txt`` and register it in ``subsection_order`` in
-  ``docs/source/conf.py``. Scripts run at build time, so they must be
-  self-contained and use bundled data or synthetics.
-* **Guide pages** — task-based narrative lives under
-  ``docs/source/user_guide/``; the :doc:`development/documentation_build`
-  page covers the build environment and layout in detail.
-
-Continuous Integration
-----------------------
-
-Every push and pull request runs the GitHub Actions pipeline: a
-Python 3.9–3.12 test matrix on Linux with a ruff lint step, the pytest
-suite, and coverage upload to Codecov. Releases are published to PyPI
-automatically from version tags. :doc:`development/ci` describes the
-pipeline and how to reproduce it locally.
-
-Commit Style
-------------
-
-* Descriptive imperative subject line (≤ 72 characters), with the body
-  explaining *why* when it is not obvious.
+* Imperative subject line (≤ 72 characters); use the body to explain *why*
+  when it is not self-evident from the diff.
 * Group related changes into one commit rather than many fragments.
 * Co-author line:
   ``Co-Authored-By: earthai-tech <earthai-tech@users.noreply.github.com>``.
@@ -148,25 +97,24 @@ Reporting Issues
 ----------------
 
 Use the `GitHub issue tracker
-<https://github.com/earthai-tech/pycsamt/issues>`_. A report that can be
-acted on quickly includes:
+<https://github.com/earthai-tech/pycsamt/issues>`_. A report that can be acted
+on quickly includes:
 
 * the pyCSAMT version
-  (``python -c "import pycsamt; print(pycsamt.__version__)"``),
-  Python version, and operating system;
-* the smallest command or snippet that reproduces the problem —
-  ideally against the bundled sample data (``data/``);
-* the full traceback or the wrong output, and what you expected
-  instead;
-* for data-format issues: a minimal anonymised sample file when
-  sharing is possible.
+  (``python -c "import pycsamt; print(pycsamt.__version__)"``), Python
+  version, and operating system;
+* the smallest command or snippet that reproduces the problem — ideally
+  against the bundled sample data (``data/``);
+* the full traceback or the wrong output, and what you expected instead;
+* for data-format issues: a minimal anonymised sample file when sharing is
+  possible.
 
-Feature requests are welcome through the same tracker — describe the
-workflow you are trying to achieve rather than only the API you expect.
+Feature requests are welcome through the same tracker — describe the workflow
+you are trying to achieve rather than only the API you expect.
 
 License And Citation
 --------------------
 
-pyCSAMT is distributed under the LGPL-3.0 license; contributions are
-accepted under the same terms. If pyCSAMT supports published work,
-please cite the project — see :doc:`references` for the citable papers.
+pyCSAMT is distributed under the LGPL-3.0 license; contributions are accepted
+under the same terms. If pyCSAMT supports published work, please cite the
+project — see :doc:`references` for the citable papers.

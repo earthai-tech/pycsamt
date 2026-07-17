@@ -254,6 +254,15 @@ data/MT/SPECTRA/*
 data/CSAMT/*
 !data/CSAMT/csa000.edi
 
+# Exception: bundled Jones (.j) sample data used by pycsamt.jones tests
+# (j_single_file / jc_path fixtures in conftest.py) — one standalone file
+# plus a small 4-station collection.
+!data/j
+data/j/*
+!data/j/kb0-s001.txt
+!data/j/nia
+!data/j/nia/*
+
 # Exception: compact ModEM result subset used by inversion-gallery examples.
 # The complete production result directory is large and remains local-only;
 # this folder keeps only controls, logs, input data, and three representative

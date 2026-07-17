@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from pycsamt.compat.python import zip_strict
 from pycsamt.tdem import (
     TEMAVG,
     TEMZPlot,
@@ -76,7 +77,7 @@ def test_z_magnitude_matches_avg_magnitude():
     z_rows = zplot.rows_for_station(160.0)
 
     assert len(avg_rows) == len(z_rows)
-    for avg_row, z_row in zip(avg_rows, z_rows, strict=True):
+    for avg_row, z_row in zip_strict(avg_rows, z_rows):
         assert z_row.time == pytest.approx(avg_row.time, rel=5e-4)
         assert z_row.magnitude == pytest.approx(avg_row.magnitude)
         assert z_row.window == avg_row.window

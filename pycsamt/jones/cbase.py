@@ -110,7 +110,13 @@ class JParseMixin:
             self._errors = []  # type: ignore[attr-defined]
             store = self._errors
         err = FileNotFoundError(msg)
-        store.append((self._as_path(src), err))
+        try:
+            # src may be an unmatched glob pattern; resolving it can raise
+            # on Windows (GetFinalPathNameByHandle rejects "*"/"?"/"[]").
+            p = self._as_path(src)
+        except OSError:
+            p = Path(str(src))
+        store.append((p, err))
 
     def _iter_j_files(
         self,
@@ -134,12 +140,12 @@ class JParseMixin:
                     self._push_error(src, f"Not a J file: {src}")
                 continue
 
-            # directory -> (r)glob for *.j
+            # directory -> (r)glob, filtered to J_SUFFIXES (.j/.jones/.txt/.dat)
             if p.exists() and p.is_dir():
                 it = (
-                    p.rglob("*.j")
+                    p.rglob("*")
                     if getattr(self, "recursive", True)
-                    else p.glob("*.j")
+                    else p.glob("*")
                 )
                 any_yielded = False
                 for m in it:

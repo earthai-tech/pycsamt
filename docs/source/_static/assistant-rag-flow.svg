@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="520" viewBox="0 0 1040 520" role="img" aria-labelledby="title desc">
+  <title id="title">Agent Master and pyCSAMT Assistant RAG data flow</title>
+  <desc id="desc">Diagram showing user request, routing, retrieval, context assembly, optional LLM answer, validation, and response.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#245b75" />
+    </marker>
+    <style>
+      .box { fill: #f8fbfc; stroke: #245b75; stroke-width: 2; rx: 10; }
+      .store { fill: #fff8e8; stroke: #8a6420; stroke-width: 2; rx: 10; }
+      .guard { fill: #f7f5ff; stroke: #5a4b91; stroke-width: 2; rx: 10; }
+      .text { font: 16px Arial, sans-serif; fill: #17252c; }
+      .small { font: 13px Arial, sans-serif; fill: #41545c; }
+      .title { font: 18px Arial, sans-serif; font-weight: 700; fill: #10252f; }
+      .line { stroke: #245b75; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #8a6420; stroke-width: 2; stroke-dasharray: 6 5; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="30" y="40" width="150" height="78" class="box" />
+  <text x="105" y="72" text-anchor="middle" class="title">User</text>
+  <text x="105" y="96" text-anchor="middle" class="small">request</text>
+
+  <rect x="230" y="36" width="190" height="86" class="box" />
+  <text x="325" y="68" text-anchor="middle" class="title">Agent Master</text>
+  <text x="325" y="92" text-anchor="middle" class="small">chat UI and session</text>
+
+  <rect x="470" y="36" width="190" height="86" class="box" />
+  <text x="565" y="68" text-anchor="middle" class="title">Router</text>
+  <text x="565" y="92" text-anchor="middle" class="small">intent and workflow</text>
+
+  <rect x="720" y="36" width="210" height="86" class="box" />
+  <text x="825" y="68" text-anchor="middle" class="title">Context Builder</text>
+  <text x="825" y="92" text-anchor="middle" class="small">citations and API cards</text>
+
+  <rect x="90" y="210" width="220" height="120" class="store" />
+  <text x="200" y="242" text-anchor="middle" class="title">RAG Index</text>
+  <text x="200" y="268" text-anchor="middle" class="small">source, docs, examples</text>
+  <text x="200" y="290" text-anchor="middle" class="small">recipes, symbols</text>
+  <text x="200" y="312" text-anchor="middle" class="small">.pycsamt_rag</text>
+
+  <rect x="390" y="210" width="220" height="120" class="store" />
+  <text x="500" y="242" text-anchor="middle" class="title">Retriever</text>
+  <text x="500" y="268" text-anchor="middle" class="small">BM25 + expansion</text>
+  <text x="500" y="290" text-anchor="middle" class="small">workflow boosts</text>
+  <text x="500" y="312" text-anchor="middle" class="small">optional embeddings</text>
+
+  <rect x="690" y="210" width="220" height="120" class="store" />
+  <text x="800" y="242" text-anchor="middle" class="title">Project Memory</text>
+  <text x="800" y="268" text-anchor="middle" class="small">line registry</text>
+  <text x="800" y="290" text-anchor="middle" class="small">session state</text>
+  <text x="800" y="312" text-anchor="middle" class="small">workflow history</text>
+
+  <rect x="210" y="405" width="210" height="76" class="guard" />
+  <text x="315" y="437" text-anchor="middle" class="title">LLM or Offline</text>
+  <text x="315" y="461" text-anchor="middle" class="small">answer synthesis</text>
+
+  <rect x="500" y="405" width="210" height="76" class="guard" />
+  <text x="605" y="437" text-anchor="middle" class="title">Validation</text>
+  <text x="605" y="461" text-anchor="middle" class="small">imports and symbols</text>
+
+  <rect x="790" y="405" width="170" height="76" class="box" />
+  <text x="875" y="437" text-anchor="middle" class="title">Response</text>
+  <text x="875" y="461" text-anchor="middle" class="small">answer or script</text>
+
+  <path d="M180 79 H230" class="line" />
+  <path d="M420 79 H470" class="line" />
+  <path d="M660 79 H720" class="line" />
+  <path d="M825 122 V180 Q825 200 805 210" class="line" />
+  <path d="M310 270 H390" class="line" />
+  <path d="M610 270 H690" class="line" />
+  <path d="M720 122 C650 160 585 180 535 210" class="line" />
+  <path d="M500 330 C465 365 405 390 345 405" class="dash" />
+  <path d="M800 330 C760 365 700 390 635 405" class="dash" />
+  <path d="M420 443 H500" class="line" />
+  <path d="M710 443 H790" class="line" />
+</svg>

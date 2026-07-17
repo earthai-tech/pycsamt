@@ -13,7 +13,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-import pycsamt.map.topo as topo_mod
 from pycsamt.map import MapView, apply_elevations, parse_elevation_file
 from pycsamt.map._core import MapData, StationRecord
 from pycsamt.map.export import (
@@ -33,7 +32,6 @@ from pycsamt.map.geometry import (
     survey_uv,
 )
 from pycsamt.map.topo import export_elevations, fetch_elevations
-
 
 # ── fake survey (no file IO) ───────────────────────────
 

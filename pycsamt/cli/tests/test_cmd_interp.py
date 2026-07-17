@@ -133,7 +133,13 @@ def _patch_classify_in_module(
     )
 
     rm_mock = MagicMock()
-    rm_mock.from_occam2d = staticmethod(lambda result: model)
+    # Plain callable, not staticmethod(...): rm_mock is a bare MagicMock,
+    # not a real class, so attribute access never goes through the
+    # descriptor protocol. staticmethod objects only became directly
+    # callable in Python 3.10 (bpo-43682) — on 3.9,
+    # rm_mock.from_occam2d(result) would raise
+    # "TypeError: 'staticmethod' object is not callable".
+    rm_mock.from_occam2d = lambda result: model
     monkeypatch.setattr(_interp, "ResistivityModel", rm_mock)
     monkeypatch.setattr(
         _interp,

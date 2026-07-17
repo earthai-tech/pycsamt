@@ -486,22 +486,42 @@ def _site_id_from_edi(ed: EDIFile) -> str:
     return ed.station or "unknown_site"
 
 
+def _site_location(ed: EDIFile) -> tuple[float | None, float | None, float | None]:
+    """Site (lat, lon, elev), falling back to DEFINEMEAS REFLAT/REFLONG/REFELEV
+    when the HEAD section carries no LAT/LONG/ELEV (common for BIRRP/JONES
+    processed EDI, e.g. kap03lmt)."""
+    head = ed.get_section("head")
+    dm = ed.get_section("definemeas")
+
+    lat = getattr(head, "lat", None) if head else None
+    if lat is None:
+        lat = getattr(dm, "reflat", None) if dm else None
+
+    lon = getattr(head, "long", None) if head else None
+    if lon is None:
+        lon = getattr(dm, "reflong", None) if dm else None
+
+    elev = getattr(head, "elev", None) if head else None
+    if elev is None:
+        elev = getattr(dm, "refelev", None) if dm else None
+
+    return lat, lon, elev
+
+
 def _meta_from_edi(ed: EDIFile) -> dict[str, object]:
     """Extract metadata from an EDIFile object for a single site."""
-    head = ed.get_section("head")
     p = ed.path
     software = ed.processingsoftware
+    lat, lon, elev = _site_location(ed)
 
     return {
         "site": _site_id_from_edi(ed),
         "path": str(p) if isinstance(p, Path) else None,
         "filename": p.name if isinstance(p, Path) else None,
         "dataid": ed.station,
-        "lat": getattr(head, "lat", None) if head else None,
-        "lon": (getattr(head, "long", None) or getattr(head, "lon", None))
-        if head
-        else None,
-        "elev": getattr(head, "elev", None) if head else None,
+        "lat": lat,
+        "lon": lon,
+        "elev": elev,
         "has_tip": ed.has_tipper,
         "nfreq": ed.n_freq,
         "has_spec": ed.get_section("spectra") is not None,
@@ -567,9 +587,6 @@ def _meta(ed: EDIFile) -> dict[str, object]:
 
     p = getattr(ed, "path", None)
 
-    def _get(obj, name, dv=None):
-        return getattr(obj, name, dv) if obj else dv
-
     dataid = getattr(head, "dataid", None) if head else None
     if dataid is None:
         dataid = getattr(spec, "name", None) or getattr(ed, "station", None)
@@ -585,13 +602,15 @@ def _meta(ed: EDIFile) -> dict[str, object]:
         # accept either an object with .name or a plain string
         software = getattr(sw, "name", sw)
 
+    lat, lon, elev = _site_location(ed)
+
     return {
         "path": str(p) if isinstance(p, Path) else None,
         "filename": p.name if isinstance(p, Path) else None,
         "dataid": dataid,
-        "lat": _get(head, "lat", None),
-        "lon": _get(head, "long", None) or _get(head, "lon", None),
-        "elev": _get(head, "elev", None),
+        "lat": lat,
+        "lon": lon,
+        "elev": elev,
         "has_tip": bool(
             getattr(ed.Tip, "tipper", None) is not None
             and getattr(ed.Tip.tipper, "size", 0) > 0

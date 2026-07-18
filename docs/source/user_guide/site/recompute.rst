@@ -6,11 +6,11 @@ EDI Recompute Workflow
 .. currentmodule:: pycsamt.site.recompute
 
 The :mod:`pycsamt.site.recompute` module provides a higher-level workflow for
-normalizing EDI files and rewriting them with pyCSAMT. It is intended for
-surveys where EDI files may come from another package or commercial software,
-and you want to rebuild the transfer-function blocks, derived
-resistivity/phase values, station names, and output folder layout in a
-controlled way.
+normalizing :term:`EDI` files and rewriting them with pyCSAMT. It is intended
+for surveys where EDI files may come from another package or commercial
+software, and you want to rebuild the transfer-function blocks, derived
+:term:`apparent resistivity`/:term:`phase` values, station names, and output
+folder layout in a controlled way.
 
 Use this workflow when you need to:
 
@@ -58,7 +58,10 @@ Tool Map
 Quick Start
 -----------
 
-Recompute a single line folder and keep the line name in the output tree:
+The examples on this page recompute the bundled WILLY AMT survey,
+``data/AMT/WILLY_DATA``, which contains five line folders: ``L18PLT``,
+``L22PLT``, ``L26PLT``, ``L30PLT``, and ``L34PLT``. Recompute a single line
+folder and keep the line name in the output tree:
 
 .. code-block:: python
    :linenos:
@@ -66,7 +69,7 @@ Recompute a single line folder and keep the line name in the output tree:
    from pycsamt.site.recompute import recompute_edis
 
    result = recompute_edis(
-       "WILLY_DATA/L18PLT",
+       "data/AMT/WILLY_DATA/L18PLT",
        rotate_angle=30.0,
        template="{source_stem}.edi",
        overwrite=True,
@@ -74,30 +77,45 @@ Recompute a single line folder and keep the line name in the output tree:
        verbose=1,
    )
 
-   print(result.output_root)
-   print(result.paths)
-
-For the input:
+   print(result.output_root.name)
+   print(sorted(p.name for p in result.paths)[:5])
+   print(len(result.paths))
 
 .. code-block:: text
-   :linenos:
+
+   recomputed_edis
+   ['18-001A.edi', '18-002U.edi', '18-003A.edi', '18-004A.edi', '18-005U.edi']
+   28
+
+``output_root`` is resolved next to the source line folder -- here, a
+``recomputed_edis`` directory created beside ``WILLY_DATA`` -- normally as
+an absolute path, so only its name is printed above; the exact prefix
+depends on where your checkout of the repository lives. For the input:
+
+.. code-block:: text
 
    WILLY_DATA/
      L18PLT/
-       S001.edi
-       S002.edi
+       18-001A.edi
+       18-002U.edi
+       ...
 
 the default output is:
 
 .. code-block:: text
-   :linenos:
 
    WILLY_DATA/
      recomputed_edis/
        L18PLT/
-         S001.edi
-         S002.edi
+         18-001A.edi
+         18-002U.edi
+         ...
        manifest.csv
+
+The explicit ``template="{source_stem}.edi"`` above is deliberate rather than
+decorative. See :ref:`recompute_filename_templates` for why the class
+default, ``{station}``, would *not* reproduce these filenames on this
+dataset.
 
 Whole Survey Folders
 --------------------
@@ -106,14 +124,17 @@ When the source directory contains subdirectories with EDI files, each
 subdirectory is treated as a survey line.
 
 .. code-block:: text
-   :linenos:
 
    WILLY_DATA/
      L18PLT/
        *.edi
-     L32PLT/
-       *.edi
      L22PLT/
+       *.edi
+     L26PLT/
+       *.edi
+     L30PLT/
+       *.edi
+     L34PLT/
        *.edi
 
 Run:
@@ -131,20 +152,34 @@ Run:
        overwrite=True,
    )
 
-   result = runner.run("WILLY_DATA")
+   result = runner.run("data/AMT/WILLY_DATA")
+
+   import collections
+   print(collections.Counter(record.line for record in result.records))
+   print(len(result.paths))
+   print(len(result.failed))
+
+.. code-block:: text
+
+   Counter({'L18PLT': 28, 'L22PLT': 25, 'L26PLT': 25, 'L30PLT': 25, 'L34PLT': 25})
+   128
+   0
 
 The output preserves the line structure:
 
 .. code-block:: text
-   :linenos:
 
    WILLY_DATA/
      recomputed_edis/
        L18PLT/
          *.edi
-       L32PLT/
-         *.edi
        L22PLT/
+         *.edi
+       L26PLT/
+         *.edi
+       L30PLT/
+         *.edi
+       L34PLT/
          *.edi
        manifest.csv
 
@@ -159,22 +194,30 @@ filename template to avoid collisions between stations from different lines.
    :linenos:
 
    result = recompute_edis(
-       "WILLY_DATA",
+       "data/AMT/WILLY_DATA",
        preserve_line_dirs=False,
        template="{line}_{source_stem}.edi",
        overwrite=True,
    )
 
+   print(sorted(p.name for p in result.paths)[:3])
+   print(len(result.paths))
+
+.. code-block:: text
+
+   ['L18PLT_18-001A.edi', 'L18PLT_18-002U.edi', 'L18PLT_18-003A.edi']
+   128
+
 This writes:
 
 .. code-block:: text
-   :linenos:
 
    WILLY_DATA/
      recomputed_edis/
-       L18PLT_S001.edi
-       L32PLT_S001.edi
-       L22PLT_S001.edi
+       L18PLT_18-001A.edi
+       L22PLT_22-013VF.edi
+       L26PLT_26-001A.edi
+       ...
        manifest.csv
 
 Operation Order
@@ -195,17 +238,36 @@ For each station, :class:`EDIRecomputer` applies operations in this order:
 
 This order is important. For example, when a frequency band is selected,
 resistivity and phase are recomputed only for the retained frequency rows.
+Internally, frequency subsetting slices several aligned arrays (frequency,
+:term:`impedance tensor`, its errors, resistivity, phase, and :term:`tipper`)
+one at a time; you may see one benign ``Failed to compute rho/phi after
+setting Z`` log line per station while that happens. It reflects a
+transient, self-correcting intermediate state -- the next array in the
+sequence brings resistivity and phase back into agreement with the new
+frequency count -- not a failure of the recomputation itself.
 
 Rotation Control
 ----------------
 
-By default, both impedance and tipper are rotated when present.
+By default, both impedance and tipper are rotated when present, using the
+same congruence rotation as the tensor-editing tools in
+:mod:`pycsamt.emtools`:
+
+.. math::
+
+   Z' = R(\alpha) Z R(\alpha)^T,
+   \qquad
+   R(\alpha) =
+   \begin{bmatrix}
+   \cos\alpha & \sin\alpha \\
+   -\sin\alpha & \cos\alpha
+   \end{bmatrix}.
 
 .. code-block:: python
    :linenos:
 
    result = recompute_edis(
-       "WILLY_DATA/L18PLT",
+       "data/AMT/WILLY_DATA/L18PLT",
        rotate_angle=30.0,
        rotate_components=("Z", "Tip"),
    )
@@ -216,7 +278,7 @@ Rotate only impedance:
    :linenos:
 
    result = recompute_edis(
-       "WILLY_DATA/L18PLT",
+       "data/AMT/WILLY_DATA/L18PLT",
        rotate_angle=30.0,
        rotate_components=("Z",),
    )
@@ -227,10 +289,27 @@ Rotate only tipper:
    :linenos:
 
    result = recompute_edis(
-       "WILLY_DATA/L18PLT",
+       "data/AMT/WILLY_DATA/L18PLT",
        rotate_angle=30.0,
        rotate_components=("Tip",),
    )
+
+``rotate_components=("Z",)`` and ``("Z", "Tip")`` rotate impedance
+identically; the difference only shows up in stations that carry tipper
+data. For ``18-001A``, which has no tipper, the first frequency row of
+:math:`Z` rotates the same way under both settings:
+
+.. code-block:: text
+
+   Z[0] before:            [[  708.5 +138.7j  1583.0+1016.0j]
+                            [-1887.0- 985.0j  -542.0-258.2j]]
+   Z[0] after Z-only:      [[  264.2  +52.9j  1117.5+ 836.4j]
+                            [-2352.5-1164.6j   -97.7-172.4j]]
+   Z[0] after Z-and-Tip:   [[  264.2  +52.9j  1117.5+ 836.4j]
+                            [-2352.5-1164.6j   -97.7-172.4j]]
+
+and ``rotate_components=("Tip",)`` leaves this station's :math:`Z` completely
+untouched, since there is no tipper for it to rotate instead.
 
 Frequency And Missing Values
 ----------------------------
@@ -241,25 +320,60 @@ Keep a frequency band before recomputing derived quantities:
    :linenos:
 
    result = recompute_edis(
-       "WILLY_DATA",
+       "data/AMT/WILLY_DATA",
        fmin=1.0,
        fmax=1000.0,
        recompute_resphase=True,
+       write=False,
    )
 
-Fill missing values before recomputation:
+   station0 = result.sites[0]
+   print(station0.freq.size)
+   print(station0.freq.min(), station0.freq.max())
+
+.. code-block:: text
+
+   39
+   1.008 863.9
+
+The retained rows are the 39 stations-by-frequency samples that actually
+fall in ``[1.0, 1000.0]`` Hz, whether the EDI stores frequency ascending or
+-- as in this survey -- descending; ``freq``, :math:`Z`, its errors, and the
+recomputed resistivity/phase all stay aligned to the same 39 rows.
+
+Fill missing values before recomputation. ``how="zero"`` replaces
+non-finite entries with ``0``; ``how="nan"`` leaves them as ``NaN`` so they
+stay visibly missing instead of looking like a real zero-amplitude reading:
 
 .. code-block:: python
    :linenos:
 
-   result = recompute_edis(
-       "WILLY_DATA",
-       fill_missing_values="nan",
-   )
+   import numpy as np
+
+   from pycsamt.seg.edi import EDIFile
+   from pycsamt.site.edit import fill_missing
+
+   edi = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
+   edi.Z.z[5, 0, 1] = np.nan  # simulate one bad reading
+
+   filled_zero = fill_missing(edi, how="zero", inplace=False)
+   filled_nan = fill_missing(edi, how="nan", inplace=False)
+
+   print(filled_zero.Z.z[5, 0, 1])
+   print(filled_nan.Z.z[5, 0, 1])
+
+.. code-block:: text
+
+   0j
+   (nan+0j)
 
 Use ``"zero"`` only when zeros are meaningful for your downstream workflow.
 For quality-control workflows, ``"nan"`` is often safer because missing values
-remain visible in later checks.
+remain visible in later checks. In ``recompute_edis``, pass
+``fill_missing_values="zero"`` or ``"nan"`` to apply this survey-wide before
+the resistivity/phase recomputation step.
+
+.. _recompute_filename_templates:
 
 Filename Templates
 ------------------
@@ -273,7 +387,8 @@ The recompute workflow supports these filename template keys:
    * - Key
      - Meaning
    * - ``{station}``
-     - Station name after optional renaming.
+     - :term:`Station identity` after optional renaming -- the EDI's own
+       ``dataid``, not the source filename.
    * - ``{index}``
      - Zero-based order across all recomputed inputs.
    * - ``{line}``
@@ -281,25 +396,61 @@ The recompute workflow supports these filename template keys:
    * - ``{source_stem}``
      - Stem of the source EDI filename.
 
-Examples:
+``{station}`` and ``{source_stem}`` are easy to conflate, but they read from
+different places. ``{source_stem}`` is the file's own name on disk;
+``{station}`` is resolved from the EDI header the same way
+:meth:`pycsamt.site.base.Site.name` is, *before* the constructor-level
+stabilization described in :doc:`containers` has a chance to run --
+``recompute_edis`` reads raw EDI objects directly, not :class:`Site`
+wrappers, so that stabilization step never happens here.
+
+On this bundled survey the two disagree. Each station's on-disk filename is
+its short line/station code (``18-001A.edi``), but its EDI header ``dataid``
+still carries the original acquisition-year prefix used when the line was
+collected (``23-18-001A``):
+
+.. code-block:: python
+   :linenos:
+
+   result = recompute_edis(
+       "data/AMT/WILLY_DATA/L18PLT",
+       template="{index:04d}_{station}.edi",
+       write=False,
+   )
+
+   print(result.records[0].station)
+   print([p.name for p in result.paths][:1] if result.paths else "no write")
+
+.. code-block:: text
+
+   23-18-001A
+   no write
+
+Using the class default template, ``{station}.edi``, would therefore write
+``23-18-001A.edi``, not ``18-001A.edi`` -- which is exactly why every
+worked example on this page passes ``template="{source_stem}.edi"``
+explicitly rather than relying on the default. Prefer ``{station}`` only
+when the EDI ``dataid`` values are the identifiers you actually want on
+disk; otherwise ``{source_stem}`` keeps written filenames matching their
+inputs regardless of what a header happens to say.
 
 .. code-block:: python
    :linenos:
 
    recompute_edis(
-       "WILLY_DATA",
+       "data/AMT/WILLY_DATA",
        template="{source_stem}.edi",
    )
 
    recompute_edis(
-       "WILLY_DATA",
+       "data/AMT/WILLY_DATA",
        preserve_line_dirs=False,
        template="{line}_{source_stem}.edi",
    )
 
    recompute_edis(
-       "WILLY_DATA",
-       template="{index:04d}_{station}.edi",
+       "data/AMT/WILLY_DATA",
+       template="{index:04d}_{source_stem}.edi",
    )
 
 If a template does not end with ``.edi``, the extension is appended
@@ -314,20 +465,37 @@ and written paths.
 .. code-block:: python
    :linenos:
 
-   result = recompute_edis("WILLY_DATA/L18PLT")
+   result = recompute_edis(
+       "data/AMT/WILLY_DATA/L18PLT",
+       template="{source_stem}.edi",
+       overwrite=True,
+   )
 
    edis = result.edis
    sites = result.sites
    paths = result.paths
    failed = result.failed
 
-   for record in result.records:
-       print(record.station, record.status, record.output)
+   print(len(edis), type(sites).__name__, len(paths), len(failed))
+   for record in result.records[:3]:
+       print(record.station, record.status, record.output.name)
 
-The ``sites`` attribute is a :class:`pycsamt.site.base.Sites` wrapper for
-convenient station-centric inspection. The ``edis`` property preserves every
-recomputed EDI object, including cases where imported files originally had
-duplicate station identifiers.
+.. code-block:: text
+
+   28 Sites 28 0
+   23-18-001A ok 18-001A.edi
+   23-18-002U ok 18-002U.edi
+   23-18-003A ok 18-003A.edi
+
+The manifest ``station`` column tracks the EDI ``dataid`` (``23-18-001A``),
+while ``record.output`` follows the ``{source_stem}`` template
+(``18-001A.edi``) -- the same divergence introduced above. The ``sites``
+attribute is a :class:`pycsamt.site.base.Sites` wrapper for convenient
+station-centric inspection; wrapping normalizes the name, so
+``sites[0].name`` reads ``18-001A`` even though ``result.records[0].station``
+reads ``23-18-001A``. The ``edis`` property preserves every recomputed EDI
+object, including cases where imported files originally had duplicate
+station identifiers.
 
 Manifest CSV
 ------------
@@ -359,13 +527,43 @@ The manifest contains:
    * - ``message``
      - Error text for failed rows.
 
+A real row from this survey looks like:
+
+.. code-block:: text
+
+   source,output,line,station,status,message
+   .../WILLY_DATA/L18PLT/18-001A.edi,.../recomputed_edis/L18PLT/18-001A.edi,L18PLT,23-18-001A,ok,
+
+``source`` and ``output`` are always full, absolute paths on your machine;
+only the ``.../`` prefixes above are shortened for the page. Failed rows
+keep ``output`` empty and carry the exception type and message in
+``message`` instead of raising, so one bad station does not stop the whole
+survey.
+
 You can also write a manifest manually:
 
 .. code-block:: python
    :linenos:
 
-   result = recompute_edis("WILLY_DATA", manifest_csv=False)
-   result.to_manifest("reports/recompute_manifest.csv")
+   result = recompute_edis(
+       "data/AMT/WILLY_DATA/L18PLT",
+       template="{source_stem}.edi",
+       manifest_csv=False,
+       overwrite=True,
+   )
+   manifest_path = result.to_manifest("reports/recompute_manifest.csv")
+   print(manifest_path)
+   print((result.output_root / "manifest.csv").exists())
+
+.. code-block:: text
+
+   reports/recompute_manifest.csv
+   False
+
+``manifest_csv=False`` skips the automatic ``manifest.csv`` next to the
+written EDI files entirely -- the second line above confirms it was never
+created -- so ``to_manifest`` becomes the only place the manifest is
+written, and it creates any missing parent directories for you.
 
 In-Memory Recompute
 -------------------
@@ -376,6 +574,13 @@ disk.
 .. code-block:: python
    :linenos:
 
+   from pycsamt.seg.edi import EDIFile
+
+   edis = [
+       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi"),
+       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-002U.edi"),
+   ]
+
    result = recompute_edis(
        edis,
        rotate_angle=15.0,
@@ -383,9 +588,21 @@ disk.
    )
 
    recomputed_edis = result.edis
+   print(len(recomputed_edis))
+   print(result.output_root)
+   print(len(result.paths))
 
-This is useful in notebooks, tests, or workflows that pass EDI objects directly
-to another pyCSAMT layer.
+.. code-block:: text
+
+   2
+   None
+   0
+
+With ``write=False``, ``output_root`` is ``None`` and ``paths`` is empty --
+nothing was ever written to check -- but ``recomputed_edis`` still holds two
+fully rotated, in-memory :class:`~pycsamt.seg.edi.EDIFile` objects. This is
+useful in notebooks, tests, or workflows that pass EDI objects directly to
+another pyCSAMT layer.
 
 Command-Line Use
 ----------------
@@ -393,42 +610,57 @@ Command-Line Use
 The same workflow is exposed through:
 
 .. code-block:: console
-   :linenos:
 
-   pycsamt site recompute WILLY_DATA/L18PLT --rotate 30 --progress
+   $ pycsamt site recompute data/AMT/WILLY_DATA/L18PLT --rotate 30 --progress
+   Recomputed 28/28 EDI file(s) -> /path/to/data/AMT/WILLY_DATA/recomputed_edis
+   Manifest: /path/to/data/AMT/WILLY_DATA/recomputed_edis/manifest.csv
+
+As with the Python API, the destination printed after ``->`` is resolved
+beside ``WILLY_DATA``, normally as an absolute path; only the ``/path/to/``
+prefix above stands in for wherever that folder lives on your machine.
 
 Recompute a whole survey folder and preserve line folders:
 
 .. code-block:: console
-   :linenos:
 
-   pycsamt site recompute WILLY_DATA --rotate 30 --overwrite
+   $ pycsamt site recompute data/AMT/WILLY_DATA --rotate 30 --overwrite
+   Recomputed 128/128 EDI file(s) -> /path/to/data/AMT/WILLY_DATA/recomputed_edis
+   Manifest: /path/to/data/AMT/WILLY_DATA/recomputed_edis/manifest.csv
 
 Flatten all output files into one directory:
 
 .. code-block:: console
-   :linenos:
 
-   pycsamt site recompute WILLY_DATA \
+   $ pycsamt site recompute data/AMT/WILLY_DATA \
        --flatten \
        --template "{line}_{source_stem}.edi" \
        --overwrite
+   Recomputed 128/128 EDI file(s) -> /path/to/data/AMT/WILLY_DATA/recomputed_edis
 
 Use an explicit output directory:
 
 .. code-block:: console
-   :linenos:
 
-   pycsamt site recompute WILLY_DATA \
+   $ pycsamt site recompute data/AMT/WILLY_DATA \
        --output-dir cleaned_edis \
        --template "{source_stem}.edi"
+   Recomputed 128/128 EDI file(s) -> cleaned_edis
+   Manifest: cleaned_edis/manifest.csv
+
+The key difference from the default is *where* the output tree is anchored,
+not just its name. Without ``--output-dir``, output is anchored beside the
+source survey folder (``WILLY_DATA/recomputed_edis``) regardless of your
+current directory. With ``--output-dir cleaned_edis``, output is anchored
+relative to wherever you ran the command from, independent of where
+``WILLY_DATA`` lives -- pass an absolute ``--output-dir`` if the destination
+must not depend on the working directory.
 
 Dry-run without writing files:
 
 .. code-block:: console
-   :linenos:
 
-   pycsamt site recompute WILLY_DATA/L18PLT --rotate 30 --dry-run
+   $ pycsamt site recompute data/AMT/WILLY_DATA/L18PLT --rotate 30 --dry-run
+   Dry run - recomputed 28/28 EDI file(s) in memory; no files written.
 
 Available CLI options include ``--rotate``, ``--components``, ``--freq``,
 ``--fill-missing``, ``--skip-rho-phase``, ``--datatype``,

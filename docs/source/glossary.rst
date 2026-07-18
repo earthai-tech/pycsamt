@@ -734,6 +734,29 @@ definitions here are the single source of truth.
       The Electrical Data Interchange file format — the SEG standard text format
       for storing MT/AMT impedances, :term:`tipper`, and metadata per station.
 
+   EDI-like object
+      Any Python object that behaves like an EDI station record for pyCSAMT site
+      tools. At minimum, computed diagnostics expect a ``get_section`` method
+      and a ``Z`` section exposing frequency and impedance arrays; tipper
+      diagnostics also look for ``Tip``, ``TIP``, ``T``, or ``Z``-attached
+      tipper arrays.
+
+   Off-diagonal component
+      One of the cross-coupled impedance tensor elements :math:`Z_{xy}` or
+      :math:`Z_{yx}`. These components usually carry the primary TE/TM
+      information for 1-D and 2-D MT-style interpretation, while diagonal
+      components are expected to be small after rotation to strike.
+
+   Native frequency
+      A frequency value that is already present in a station's recorded
+      frequency grid, before interpolation or resampling to a requested common
+      comparison frequency.
+
+   Frequency decade
+      A factor-of-ten interval in frequency. A slope reported in degrees per
+      decade means the fitted phase change for each unit increase in
+      :math:`\log_{10}(f)`.
+
    AVG file
       Zonge instrument-averaged CSAMT/AMT export format; pyCSAMT reads it and can
       transform it to :term:`EDI`.
@@ -921,3 +944,41 @@ definitions here are the single source of truth.
       station order when any station is missing a finite coordinate,
       so a distance axis is never silently wrong -- only degraded to
       an index.
+
+   Station identity
+      The normalized name pyCSAMT assigns to one site container. It is
+      resolved from EDI ``HEAD`` fields in a fixed order --
+      ``dataid``, ``station``, ``sitename``, ``name``, ``STATION``,
+      falling back to the file stem when none are present -- and, once
+      resolved, is written back into ``dataid`` (and ``station`` when
+      absent) so that later name-based lookups and joins see one
+      consistent label per station.
+
+   Geodetic distance
+      The great-circle separation between two ``(lat, lon)`` points on
+      a spherical Earth of radius :math:`R`, used by station
+      nearest-neighbour search. pyCSAMT evaluates the haversine formula
+
+      .. math::
+
+         d = 2R \arcsin\left(\sqrt{\sin^2\tfrac{\Delta\phi}{2}
+             + \cos\phi_1\cos\phi_2\sin^2\tfrac{\Delta\lambda}{2}}\right)
+
+      with latitudes and longitudes in radians, returning a distance in
+      metres.
+
+   Chainage
+      The signed distance of a station from a chosen origin, measured
+      along a survey line's azimuth :math:`A` rather than along
+      latitude/longitude directly. Writing local east/north offsets
+      from the origin as :math:`dx` and :math:`dy`, chainage is
+
+      .. math::
+
+         s = dx\sin A + dy\cos A,
+
+      so stations ahead of the origin along the line get positive
+      values and stations behind it get negative values. It is the
+      coordinate that :term:`profile line` construction sorts stations
+      by, and it is distinct from :term:`station distance`, which
+      accumulates separation without reference to a single azimuth.

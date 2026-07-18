@@ -4,9 +4,11 @@ Export And Reporting
 ====================
 
 The export and reporting tools are the last mile of a site workflow. Export
-functions write cleaned EDI-like objects to disk or package them into an
-archive. Report classes summarize one station or a whole survey for terminal
-inspection, notebooks, QA logs, and downstream tables.
+functions write cleaned :term:`EDI-like object`\ s to disk or package them into
+an archive. Report classes summarize one station or a whole survey for terminal
+inspection, notebooks, QA logs, and downstream tables. In practice, this page
+connects three things that should always agree: the station object in memory,
+the file written to disk, and the row recorded in the manifest.
 
 Use this page when you need to:
 
@@ -46,46 +48,182 @@ Tool Map
    * - :class:`pycsamt.site.report.SiteReport`
      - :mod:`pycsamt.site.report`
      - Compute and display statistics for one
-       :class:`pycsamt.site.base.Site`.
+       :class:`pycsamt.site.base.Site`-like object.
    * - :class:`pycsamt.site.report.SitesReport`
      - :mod:`pycsamt.site.report`
      - Compute and display survey-level and per-station statistics for a
        collection.
 
-Export Workflow
----------------
+Reproducible Demo Sites
+-----------------------
 
-Export normally happens after loading, selecting, editing, and quality checks.
+The examples below use a small synthetic site class so the outputs can be
+reproduced without local survey files. A real EDI object can replace
+``DemoSite`` as long as it exposes a header, frequency array, impedance arrays,
+and one supported writer method.
 
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.collection import EDICollection
+   from pathlib import Path
+   from tempfile import TemporaryDirectory
+
+   import numpy as np
+   import pandas as pd
+
+
+   class Head:
+       def __init__(self, station, lat, lon, elev):
+           self.dataid = station
+           self.station = station
+           self.lat = lat
+           self.lon = lon
+           self.long = lon
+           self.elev = elev
+
+
+   class ZBlock:
+       def __init__(self, freq):
+           self.freq = np.asarray(freq, dtype=float)
+
+
+   class DemoSite:
+       def __init__(self, station, lat, lon, elev, chainage, scale=1.0):
+           self.name = station
+           self.station = station
+           self.Head = Head(station, lat, lon, elev)
+           self.Z = ZBlock([1.0, 10.0, 100.0, 1000.0])
+           self.freq = self.Z.freq
+           self.chainage = chainage
+
+           self.z = np.ones((4, 2, 2), dtype=complex) * scale
+           self.z[:, 0, 1] = [1 + 1j, 2 + 2j, 3 + 3j, 4 + 4j]
+           self.z[:, 1, 0] = [1 - 1j, 2 - 2j, 3 - 3j, 4 - 4j]
+
+           self.rho = np.array(
+               [
+                   [[20, 100 * scale], [95 * scale, 18]],
+                   [[22, 120 * scale], [110 * scale, 19]],
+                   [[24, 140 * scale], [130 * scale, 20]],
+                   [[26, 160 * scale], [150 * scale, 21]],
+               ],
+               dtype=float,
+           )
+           self.phase = np.array(
+               [
+                   [[5, 42], [-41, 6]],
+                   [[5, 44], [-43, 6]],
+                   [[5, 46], [-45, 6]],
+                   [[5, 48], [-47, 6]],
+               ],
+               dtype=float,
+           )
+           self.tipper = np.zeros((4, 2))
+
+       @property
+       def coords(self):
+           return (self.Head.lat, self.Head.lon, self.Head.elev)
+
+       def get_section(self, name):
+           if str(name).lower() == "head":
+               return self.Head
+           raise KeyError(name)
+
+       def has_component(self, name):
+           return name.lower() in {"zxx", "zxy", "zyx", "zyy"}
+
+       def to_file(self, path):
+           path = Path(path)
+           path.write_text(
+               f"station={self.name}\n"
+               f"lat={self.Head.lat:.3f}\n"
+               f"lon={self.Head.lon:.3f}\n"
+               f"nfreq={len(self.freq)}\n"
+           )
+
+       def to_dataframe(self, kind="resphase", api=False):
+           return pd.DataFrame(
+               {
+                   "freq_hz": self.freq,
+                   "rho_xy": self.rho[:, 0, 1],
+                   "phase_xy": self.phase[:, 0, 1],
+               }
+           )
+
+
+   def demo_sites():
+       return [
+           DemoSite("S01", 35.100, -117.200, 620.0, 0.0, 1.0),
+           DemoSite("S02", 35.115, -117.185, 635.0, 250.0, 1.1),
+           DemoSite("S03", 35.140, -117.170, 660.0, 520.0, 0.9),
+       ]
+
+The station summaries use the same impedance convention used elsewhere in the
+site guide. For a frequency index :math:`k`, the impedance tensor is
+
+.. math::
+
+   \mathbf{Z}(f_k) =
+   \begin{bmatrix}
+   Z_{xx}(f_k) & Z_{xy}(f_k)\\
+   Z_{yx}(f_k) & Z_{yy}(f_k)
+   \end{bmatrix}.
+
+Report statistics then reduce finite values component-wise. For example, the
+mean apparent resistivity reported for the ``xy`` component is
+
+.. math::
+
+   \overline{\rho}_{xy}
+   =
+   \frac{1}{|\mathcal{K}_{xy}|}
+   \sum_{k \in \mathcal{K}_{xy}} \rho_{xy}(f_k),
+   \qquad
+   \mathcal{K}_{xy} =
+   \{k:\rho_{xy}(f_k)\ \text{is finite and positive}\}.
+
+This is a reporting reduction only. It does not edit the source arrays or
+change the exported EDI files.
+
+Export Workflow
+---------------
+
+Export normally happens after loading, selecting, editing, and quality checks.
+The example uses a temporary directory but prints only stable artifact names.
+
+.. code-block:: python
+   :linenos:
+
    from pycsamt.site.export import write_sites
-   from pycsamt.site.selection import drop_empty, keep_finite_z
 
-   sites = EDICollection.from_sources("data/edi")
+   sites = demo_sites()
 
-   sites = drop_empty(sites)
-   sites = keep_finite_z(sites)
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp)
+       paths = write_sites(
+           sites,
+           outdir=root / "clean_edi",
+           template="{index:03d}_{station}",
+           manifest_csv=root / "clean_edi_manifest.csv",
+       )
 
-   paths = write_sites(
-       sites,
-       outdir="deliveries/clean_edi",
-       template="{index:03d}_{station}.edi",
-       manifest_csv="deliveries/clean_edi_manifest.csv",
-   )
+       print([path.name for path in paths])
+       manifest = pd.read_csv(root / "clean_edi_manifest.csv")
+       print(manifest[["index", "station", "filename"]])
 
-   print(paths)
+Output:
 
-The export functions accept:
+.. code-block:: text
 
-* a :class:`pycsamt.site.base.Sites` object;
-* an ``EDICollection``;
-* a list or other iterable of EDI-like objects;
-* a single EDI-like object.
+   ['000_S01.edi', '001_S02.edi', '002_S03.edi']
+      index station     filename
+   0      0     S01  000_S01.edi
+   1      1     S02  001_S02.edi
+   2      2     S03  002_S03.edi
 
-An object is EDI-like for export when it supports at least one common writer
+The export functions accept a :class:`pycsamt.site.base.Sites` object, an
+``EDICollection``, a list of EDI-like objects, or a single EDI-like object. For
+writing, an object is EDI-like when it supports at least one common writer
 method: ``write(new_edifn=...)``, ``write(path)``, ``to_file(path)``, or
 ``save(path)``.
 
@@ -98,17 +236,25 @@ known and you are only writing one object.
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.edi import EDIFile
    from pycsamt.site.export import write_site
 
-   edi = EDIFile("data/edi/S01.edi")
+   with TemporaryDirectory() as tmp:
+       out = write_site(
+           demo_sites()[0],
+           Path(tmp) / "single" / "S01_corrected.edi",
+       )
 
-   out = write_site(
-       edi,
-       "deliveries/single/S01_corrected.edi",
-   )
+       print(out.name)
+       print(out.exists())
+       print(out.read_text().splitlines()[0])
 
-   print(out)
+Output:
+
+.. code-block:: text
+
+   S01_corrected.edi
+   True
+   station=S01
 
 The parent directory is created automatically. If the target file already
 exists, overwrite behavior depends on the underlying EDI writer. For explicit
@@ -126,16 +272,25 @@ group.
 
    from pycsamt.site.export import write_sites
 
-   written = write_sites(
-       sites,
-       outdir="deliveries/line_01",
-       template="{index:03d}_{station}",
-       exist_ok=False,
-       manifest_csv="deliveries/line_01_manifest.csv",
-   )
+   with TemporaryDirectory() as tmp:
+       written = write_sites(
+           demo_sites(),
+           outdir=Path(tmp) / "line_01",
+           template="{index:03d}_{station}",
+           exist_ok=False,
+           manifest_csv=Path(tmp) / "line_01_manifest.csv",
+       )
 
-   for path in written:
-       print(path.name)
+       for path in written:
+           print(path.name)
+
+Output:
+
+.. code-block:: text
+
+   000_S01.edi
+   001_S02.edi
+   002_S03.edi
 
 If the rendered file name does not end with ``.edi``, the extension is added
 automatically. In the example above, a station named ``S01`` at index ``0`` is
@@ -145,7 +300,17 @@ Filename Templates
 ------------------
 
 Filename templates are rendered from a context collected from each EDI header
-and its input order.
+and its input order. Let :math:`s_i` be the resolved :term:`station identity`
+for the :math:`i`-th site and let :math:`c_i` be its chainage. A template is a
+function
+
+.. math::
+
+   g(i, s_i, \phi_i, \lambda_i, h_i, c_i) \rightarrow \text{filename}_i,
+
+where :math:`\phi_i` is latitude, :math:`\lambda_i` is longitude, and
+:math:`h_i` is elevation. Missing template values are rendered as empty fields,
+then ``.edi`` is appended when the suffix is absent.
 
 .. list-table::
    :header-rows: 1
@@ -179,46 +344,70 @@ Examples:
 .. code-block:: python
    :linenos:
 
-   write_sites(
-       sites,
-       "out/by_station",
-       template="{station}.edi",
-   )
+   templates = {
+       "by_station": "{station}.edi",
+       "by_order": "{index:03d}_{station}",
+       "by_line_position": "{index:03d}_{station}_{chainage:.0f}m",
+   }
 
-   write_sites(
-       sites,
-       "out/by_order",
-       template="{index:03d}_{station}",
-   )
+   with TemporaryDirectory() as tmp:
+       for folder, template in templates.items():
+           paths = write_sites(
+               demo_sites()[:2],
+               Path(tmp) / folder,
+               template=template,
+           )
+           print(folder, [path.name for path in paths])
 
-   write_sites(
-       sites,
-       "out/by_line_position",
-       template="{index:03d}_{station}_{chainage:.0f}m",
-   )
+Output:
 
-Unknown template keys are rendered as empty strings. Keep templates simple and
-avoid path separators inside station names when building files for external
-delivery.
+.. code-block:: text
+
+   by_station ['S01.edi', 'S02.edi']
+   by_order ['000_S01.edi', '001_S02.edi']
+   by_line_position ['000_S01_0m.edi', '001_S02_250m.edi']
+
+Keep templates simple and avoid path separators inside station names when
+building files for external delivery.
 
 Collision Policy
 ----------------
 
 By default, :func:`pycsamt.site.export.write_sites` refuses to overwrite an
-existing file.
+existing file. Internally, each rendered filename is also checked against the
+names already produced in the same batch, so duplicate station names are
+disambiguated before writing.
 
 .. code-block:: python
    :linenos:
 
    from pycsamt.site.export import write_sites
 
-   # Raises FileExistsError if any rendered file already exists.
-   write_sites(
-       sites,
-       "deliveries/line_01",
-       template="{station}.edi",
-       exist_ok=False,
-   )
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp)
+       write_sites(
+           [demo_sites()[0]],
+           root / "line_01",
+           template="000_S01.edi",
+       )
+
+       try:
+           write_sites(
+               [demo_sites()[0]],
+               root / "line_01",
+               template="000_S01.edi",
+               exist_ok=False,
+           )
+       except FileExistsError as exc:
+           print(type(exc).__name__)
+           print(str(exc).replace(str(root), "<tmp>"))
+
+Output:
+
+.. code-block:: text
+
+   FileExistsError
+   <tmp>\line_01\000_S01.edi
 
 Pass ``exist_ok=True`` when an export directory is intentionally being
 refreshed.
@@ -226,19 +415,43 @@ refreshed.
 .. code-block:: python
    :linenos:
 
-   write_sites(
-       sites,
-       "deliveries/line_01",
-       template="{station}.edi",
-       exist_ok=True,
-   )
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp)
+       write_sites([demo_sites()[0]], root / "line_01", template="000_S01.edi")
+
+       refreshed = write_sites(
+           [demo_sites()[0]],
+           root / "line_01",
+           template="000_S01.edi",
+           exist_ok=True,
+       )
+
+       print([path.name for path in refreshed])
+
+Output:
+
+.. code-block:: text
+
+   ['000_S01.edi']
 
 Manifest CSV
 ------------
 
 Both :func:`pycsamt.site.export.write_sites` and
 :func:`pycsamt.site.export.pack_zip` can write a manifest CSV. The manifest is
-a compact audit table for exported stations.
+a compact audit table for exported stations. If the exported station set is
+:math:`\mathcal{S}=\{S_0,\ldots,S_{n-1}\}`, then the manifest contains one row
+
+.. math::
+
+   m_i =
+   (i, s_i, \phi_i, \lambda_i, h_i, c_i, p_i),
+   \qquad i=0,\ldots,n-1,
+
+where :math:`p_i` is the directory path or archive path recorded for the file.
+This row-level mapping is what makes a delivered set reproducible: a reviewer
+can trace each file back to the input order, station name, coordinate tuple,
+and rendered filename.
 
 .. list-table::
    :header-rows: 1
@@ -269,19 +482,36 @@ a compact audit table for exported stations.
 
    import pandas as pd
 
-   from pycsamt.site.export import write_sites
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp)
+       write_sites(
+           demo_sites(),
+           root / "clean_edi",
+           template="{index:03d}_{station}",
+           manifest_csv=root / "clean_edi_manifest.csv",
+       )
 
-   write_sites(
-       sites,
-       "deliveries/clean_edi",
-       template="{index:03d}_{station}",
-       manifest_csv="deliveries/clean_edi_manifest.csv",
-   )
+       manifest = pd.read_csv(root / "clean_edi_manifest.csv")
+       print(manifest[["index", "station", "filename"]].to_string(index=False))
 
-   manifest = pd.read_csv("deliveries/clean_edi_manifest.csv")
-   print(manifest[["index", "station", "filename"]])
+Output:
+
+.. code-block:: text
+
+    index station    filename
+        0     S01 000_S01.edi
+        1     S02 001_S02.edi
+        2     S03 002_S03.edi
 
 The manifest is only written when at least one row exists.
+
+.. figure:: ../../images/user_guide/site/export_reporting_artifacts.png
+   :alt: Two-panel export summary showing manifest station positions and EDI artifact sizes.
+   :width: 95%
+
+   A compact visual check of the same synthetic delivery: station coordinates
+   come from the manifest fields, and artifact sizes come from the exported
+   EDI files.
 
 Zip Packaging
 -------------
@@ -292,49 +522,83 @@ delivery, web upload, or reproducible artifact.
 .. code-block:: python
    :linenos:
 
+   from zipfile import ZipFile
+
    from pycsamt.site.export import pack_zip
 
-   archive = pack_zip(
-       sites,
-       out_zip="deliveries/line_01_clean.zip",
-       template="{station}.edi",
-       manifest_csv="deliveries/line_01_clean_manifest.csv",
-   )
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp)
+       archive = pack_zip(
+           demo_sites()[:2],
+           out_zip=root / "line_01_clean.zip",
+           template="{station}.edi",
+           manifest_csv=root / "line_01_clean_manifest.csv",
+       )
 
-   print(archive)
+       print(archive.name)
+       with ZipFile(archive, "r") as zf:
+           print(sorted(zf.namelist()))
+
+       manifest = pd.read_csv(root / "line_01_clean_manifest.csv")
+       print(manifest[["index", "station", "filename"]].to_string(index=False))
+
+Output:
+
+.. code-block:: text
+
+   line_01_clean.zip
+   ['S01.edi', 'S02.edi']
+    index station filename
+        0     S01  S01.edi
+        1     S02  S02.edi
 
 The function writes each site to a temporary directory, then stores those
 files inside the archive with ``zipfile.ZIP_DEFLATED`` compression. The
 original EDI sources are not deleted or modified by packaging.
 
-You can inspect the archive names with the standard library:
-
-.. code-block:: python
-   :linenos:
-
-   from zipfile import ZipFile
-
-   with ZipFile("deliveries/line_01_clean.zip", "r") as zf:
-       print(sorted(zf.namelist()))
-
 Reporting Workflow
 ------------------
 
-Reports are read-only summaries. They do not modify site data.
+Reports are read-only summaries. They do not modify site data. A site report
+summarizes one station, while a survey report repeats the same calculation for
+each station and then adds survey-level coverage.
 
 .. code-block:: python
    :linenos:
 
-   from pycsamt.site.base import Sites
-   from pycsamt.site.report import SitesReport
+   from pycsamt.site.report import SiteReport
 
-   sites = Sites.from_any("data/edi")
+   site = demo_sites()[0]
+   report = SiteReport(site)
 
-   report = SitesReport(sites)
-   report.report(top=10)
+   print(report.summary())
+   info = report.to_dict()
+   print(
+       {
+           key: info[key]
+           for key in [
+               "name",
+               "nfreq",
+               "freq_min",
+               "freq_max",
+               "rho_xy_mean",
+               "phi_xy_mean",
+           ]
+       }
+   )
 
-   table = report.to_dataframe(api=False)
-   print(table.head())
+   z_frame = report.to_dataframe("resphase", api=False)
+   print(z_frame.head(2).to_string(index=False))
+
+Output:
+
+.. code-block:: text
+
+   SiteReport('S01'  4 freq  ρ_xy=130 Ω·m  φ_xy=45.0°)
+   {'name': 'S01', 'nfreq': 4, 'freq_min': 1.0, 'freq_max': 1000.0, 'rho_xy_mean': 130.0, 'phi_xy_mean': 45.0}
+    freq_hz  rho_xy  phase_xy
+        1.0   100.0      42.0
+       10.0   120.0      44.0
 
 If the optional :mod:`rich` package is installed, terminal reports use rich
 panels and tables. Without ``rich``, pyCSAMT falls back to plain-text output.
@@ -343,25 +607,8 @@ Single-Site Reports
 -------------------
 
 :class:`pycsamt.site.report.SiteReport` computes statistics for one
-:class:`pycsamt.site.base.Site`-like object.
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.site.base import Site
-   from pycsamt.site.report import SiteReport
-
-   site = Site(edi)
-   report = SiteReport(site)
-
-   print(report.summary())
-   report.report()
-
-   info = report.to_dict()
-   z_frame = report.to_dataframe("z", api=False)
-
-The dictionary returned by :meth:`pycsamt.site.report.SiteReport.to_dict`
-contains:
+:class:`pycsamt.site.base.Site`-like object. The dictionary returned by
+:meth:`pycsamt.site.report.SiteReport.to_dict` contains:
 
 * ``name``, ``lat``, ``lon``, and ``elev``;
 * ``nfreq``, ``freq_min``, ``freq_max``, ``per_min``, and ``per_max``;
@@ -371,10 +618,26 @@ contains:
   the ``xy`` and ``yx`` components;
 * per-component finite-data quality fractions.
 
-The DataFrame returned by
-:meth:`pycsamt.site.report.SiteReport.to_dataframe` delegates to the
-underlying site ``to_dataframe`` method. Use the ``kind`` argument to choose
-the station table representation supported by :class:`pycsamt.site.base.Site`.
+The period bounds are derived directly from the frequency bounds:
+
+.. math::
+
+   T_\min = \frac{1}{f_\max},
+   \qquad
+   T_\max = \frac{1}{f_\min}.
+
+The finite-data quality fraction for a component :math:`c` is
+
+.. math::
+
+   q_c =
+   \frac{\sum_{k=0}^{n-1} \mathbf{1}\{Z_c(f_k)\ \text{is finite}\}}{n}.
+
+For complex impedance, both real and imaginary parts must be finite. The
+DataFrame returned by :meth:`pycsamt.site.report.SiteReport.to_dataframe`
+delegates to the underlying site ``to_dataframe`` method. Use the ``kind``
+argument to choose the station table representation supported by the site
+object.
 
 Survey Reports
 --------------
@@ -387,16 +650,31 @@ and a survey-level summary.
 
    from pycsamt.site.report import SitesReport
 
-   report = SitesReport(sites)
+   report = SitesReport(demo_sites())
 
    print(report.summary())
-   report.report(top=20)
+   frame = report.to_dataframe(api=False)
+   print(
+       frame[
+           ["station", "nfreq", "freq_min", "freq_max", "rho_xy", "phi_xy"]
+       ].to_string(index=False)
+   )
 
    records = report.to_dict()
-   frame = report.to_dataframe(api=False)
-
    print(len(records))
-   print(frame.columns)
+   print(list(frame.columns[:6]))
+
+Output:
+
+.. code-block:: text
+
+   SitesReport(3 stations  freq 1 Hz → 1 kHz)
+   station  nfreq  freq_min  freq_max  rho_xy  phi_xy
+       S01      4       1.0    1000.0   130.0    45.0
+       S02      4       1.0    1000.0   143.0    45.0
+       S03      4       1.0    1000.0   117.0    45.0
+   3
+   ['station', 'lat', 'lon', 'elev', 'nfreq', 'freq_min']
 
 The survey DataFrame contains one row per station with columns:
 
@@ -446,11 +724,21 @@ Report DataFrame methods accept ``api``:
 
    from pycsamt.site.report import SiteReport, SitesReport
 
-   one_station = SiteReport(site).to_dataframe("resphase", api=False)
-   survey_view = SitesReport(sites).to_dataframe(api=True)
+   one_station = SiteReport(demo_sites()[0]).to_dataframe(
+       "resphase",
+       api=False,
+   )
+   survey_frame = SitesReport(demo_sites()).to_dataframe(api=False)
 
-   print(type(one_station))
-   print(survey_view.kind)
+   print(type(one_station).__name__)
+   print(type(survey_frame).__name__)
+
+Output:
+
+.. code-block:: text
+
+   DataFrame
+   DataFrame
 
 Use plain DataFrames for local analysis and API views when returning data from
 public-facing pyCSAMT APIs.
@@ -459,51 +747,52 @@ End-To-End Delivery Example
 ---------------------------
 
 The following pattern creates a cleaned station export, a manifest, an archive,
-and a survey report table.
+and a survey report table. In a real project, replace ``demo_sites()`` with the
+output of your loading, selection, and editing pipeline.
 
 .. code-block:: python
    :linenos:
 
-   from pathlib import Path
-
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.edit import select_freq_all
    from pycsamt.site.export import pack_zip, write_sites
    from pycsamt.site.report import SitesReport
-   from pycsamt.site.selection import by_freq, drop_empty, keep_finite_z
 
-   root = Path("deliveries/line_01")
-   root.mkdir(parents=True, exist_ok=True)
+   with TemporaryDirectory() as tmp:
+       root = Path(tmp) / "line_01"
+       sites = demo_sites()
 
-   sites = EDICollection.from_sources("data/edi")
-   sites = drop_empty(sites)
-   sites = keep_finite_z(sites)
-   sites = by_freq(sites, fmin=0.1, fmax=100.0)
-   sites = select_freq_all(
-       sites,
-       fmin=0.1,
-       fmax=100.0,
-       inplace=False,
-   )
+       exported = write_sites(
+           sites,
+           root / "edi",
+           template="{index:03d}_{station}",
+           manifest_csv=root / "manifest.csv",
+       )
 
-   write_sites(
-       sites,
-       root / "edi",
-       template="{index:03d}_{station}",
-       manifest_csv=root / "manifest.csv",
-   )
+       archive = pack_zip(
+           sites,
+           root / "edi.zip",
+           template="{index:03d}_{station}.edi",
+           manifest_csv=root / "zip_manifest.csv",
+       )
 
-   pack_zip(
-       sites,
-       root / "edi.zip",
-       template="{index:03d}_{station}.edi",
-       manifest_csv=root / "zip_manifest.csv",
-   )
+       summary = SitesReport(sites).to_dataframe(api=False)
+       summary.to_csv(root / "site_report.csv", index=False)
 
-   report = SitesReport(sites)
-   report.report(top=15)
-   summary = report.to_dataframe(api=False)
-   summary.to_csv(root / "site_report.csv", index=False)
+       print([path.name for path in exported])
+       print(archive.name)
+       print((root / "site_report.csv").name)
+       print(summary[["station", "nfreq"]].to_string(index=False))
+
+Output:
+
+.. code-block:: text
+
+   ['000_S01.edi', '001_S02.edi', '002_S03.edi']
+   edi.zip
+   site_report.csv
+   station  nfreq
+       S01      4
+       S02      4
+       S03      4
 
 Common Mistakes
 ---------------

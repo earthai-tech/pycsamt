@@ -61,6 +61,28 @@ def test_select_freq_by_keep_and_range(simulated_edi: Path) -> None:
     out2 = ed.select_freq(edf, fmin=fmin, inplace=False)
     f2 = ed.get_freq(out2)
     assert 1 <= f2.size <= f0.size
+    # the retained rows must actually satisfy the requested range,
+    # regardless of whether Z stores freq ascending or descending.
+    assert np.all(f2 >= fmin)
+    assert out2.Z.z.shape[0] == f2.size
+
+
+def test_select_freq_keeps_z_aligned_with_descending_native_order(
+    simulated_edi: Path,
+) -> None:
+    edf = _load_edi(simulated_edi)
+
+    native_freq = np.asarray(edf.Z.freq, dtype=float)
+    if native_freq.size < 2 or not np.all(np.diff(native_freq) < 0):
+        pytest.skip("fixture Z.freq is not natively descending")
+
+    fmin, fmax = 1.0, float(native_freq[len(native_freq) // 2])
+    out = ed.select_freq(edf, fmin=fmin, fmax=fmax, inplace=False)
+
+    # rows kept in Z's own (descending) order must match the same
+    # band, not the first/last N rows by position.
+    assert np.all(out.Z.freq >= fmin)
+    assert np.all(out.Z.freq <= fmax)
 
 
 def test_rename_explicit_and_policy(simulated_edi: Path) -> None:

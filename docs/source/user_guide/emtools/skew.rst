@@ -38,11 +38,25 @@ shape ``(n_freq, 2, 2)`` or a flattened block of shape ``(n_freq, 4)``.
            {|Z_{xx}-Z_{yy}|^2 + |Z_{xy}+Z_{yx}|^2}
    }
 
-Phase-tensor skew is the Caldwell-Bibby-Bahr phase-tensor angle
-:math:`\beta`. ``skew_table`` returns the same table produced by the
-phase-tensor workflow, including ``station``, ``freq``, ``period``,
-``beta``, and ``skew``. In this module, ``skew`` is the phase-tensor
-skew column used by the masking and voting helpers.
+Phase-tensor skew starts from the phase tensor itself, built from the
+real and imaginary parts of the same impedance tensor,
+
+.. math::
+
+   \Phi = X^{-1} Y, \qquad X = \mathrm{Re}(Z), \quad Y = \mathrm{Im}(Z),
+
+and the skew angle is then the Caldwell-Bibby-Bahr invariant
+
+.. math::
+
+   \beta = \frac{1}{2}\operatorname{atan2}\!\bigl(
+   \Phi_{xy} + \Phi_{yx},\ \Phi_{xx} - \Phi_{yy}\bigr),
+
+reported in degrees. ``skew_table`` returns the same table produced by
+the phase-tensor workflow, including ``station``, ``freq``, ``period``,
+``beta``, and ``skew`` — in this module ``skew`` is just an alias for
+``beta``, kept because that is the column name the masking and voting
+helpers below were written against.
 
 The two measures are related but not interchangeable. Bahr
 :math:`\eta` is a direct invariant of ``Z``. Phase-tensor
@@ -252,9 +266,37 @@ dimensionality.
 Masking By Skew
 ---------------
 
-``mask_by_skew`` applies a phase-tensor skew threshold. The default mode
-is ``"abs_gt"``: keep rows where ``abs(skew) <= thresh`` and set the
-others to ``NaN``.
+``mask_by_skew`` applies a phase-tensor skew threshold row by row. Every
+mode reduces to the same shape — keep the row unless :math:`\beta`
+crosses a one-sided or two-sided bound — but which side of
+:math:`\beta` gets rejected changes with the mode:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 26 58
+
+   * - Mode
+     - Keep rule
+     - Use it to
+   * - ``"abs_gt"`` (default)
+     - :math:`|\beta| \le \text{thresh}`
+     - reject rows too skewed in either direction — the usual symmetric
+       threshold.
+   * - ``"gt"``
+     - :math:`\beta \le \text{thresh}`
+     - reject only large *positive* skew, keeping large negative skew.
+   * - ``"lt"``
+     - :math:`\beta \ge \text{thresh}`
+     - reject only large *negative* skew, keeping large positive skew.
+   * - ``"abs_lt"``
+     - :math:`|\beta| \ge \text{thresh}`
+     - the inverse of the default: keep only the strongly skewed rows,
+       useful for isolating high-skew examples rather than removing
+       them.
+
+``"gt"`` and ``"lt"`` are asymmetric on purpose. They let a survey
+tolerate skew of one sign — say, from a known distortion direction —
+while still rejecting the other.
 
 .. code-block:: python
    :linenos:
@@ -278,7 +320,7 @@ others to ``NaN``.
 * ``"both"`` masks impedance and tipper rows at the same rejected
   frequencies.
 
-Other modes are available for specialized workflows:
+The three non-default modes from the table above, in the same order:
 
 .. code-block:: python
    :linenos:
@@ -407,9 +449,23 @@ Survey-Wide Low-Skew Band
 -------------------------
 
 ``select_low_skew_band`` looks for frequencies supported by a fraction
-of stations. The function first builds each station's own acceptable
-band, then votes on a union frequency grid. Rows are kept where at least
-``frac`` of stations support the band.
+of stations. It first builds each station's own accepted band exactly as
+``keep_longest_low_skew`` would — the longest contiguous
+:math:`|\beta| \le \text{thresh}` run, extended by ``pad`` — and only
+then projects every station's band onto a shared union frequency grid
+:math:`G` and votes:
+
+.. math::
+
+   \mathrm{keep}(f) =
+   \frac{1}{N}\sum_{n=1}^{N} \mathbf{1}\bigl[f \in \mathrm{band}_n\bigr]
+   \ \ge\ \text{frac}, \qquad f \in G,
+
+where :math:`N` is the number of stations and :math:`\mathrm{band}_n`
+is station :math:`n`'s own accepted run. A frequency survives only if
+it falls inside the *contiguous* accepted band of at least a
+``frac``-fraction of stations — not merely inside any low-skew row,
+which is the weaker condition the vote-band plot below checks.
 
 .. code-block:: python
    :linenos:
@@ -512,8 +568,26 @@ does not have a clean low-skew window under the chosen metric.
 Vote-Band Plot
 --------------
 
-``plot_skew_vote_band`` plots the fraction of stations with
-``abs(beta) <= thresh`` in log-period bins.
+``plot_skew_vote_band`` bins the survey in log-period, and within each
+bin :math:`b` a station is counted as passing if a majority of *its own*
+rows in that bin are low-skew:
+
+.. math::
+
+   \mathrm{pass}_n(b) =
+   \frac{1}{|R_{n,b}|}\sum_{f \in R_{n,b}} \mathbf{1}\bigl[|\beta(f)| \le
+   \text{thresh}\bigr] \; > \; 0.5,
+
+   \qquad
+   \mathrm{vote}(b) = \frac{1}{N}\sum_{n=1}^{N} \mathbf{1}\bigl[
+   \mathrm{pass}_n(b)\bigr],
+
+where :math:`R_{n,b}` is station :math:`n`'s rows falling in bin
+:math:`b`. This is a *pointwise* vote — it never checks whether a
+station's low-skew rows in neighboring bins are contiguous, which is
+exactly what ``select_low_skew_band`` requires above. A period range can
+therefore look well-supported here while still failing the stricter
+survey-wide band selection.
 
 .. code-block:: python
    :linenos:
@@ -538,10 +612,10 @@ Vote-Band Plot
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-skew-13.png
    :width: 100%
 
-This plot is diagnostic only. It counts pointwise low-skew rows in each
-period bin. ``select_low_skew_band`` is stricter because it also requires
-station-wise contiguous bands before the survey-wide vote. The two can
-therefore report different apparent support for the same threshold.
+Treat this plot as diagnostic rather than a substitute for
+``select_low_skew_band``: a high vote here says many stations are
+individually low-skew somewhere in the bin, not that they share one
+continuous band.
 
 Suggested Interpretation Pattern
 --------------------------------

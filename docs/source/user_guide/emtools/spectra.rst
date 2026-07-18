@@ -513,8 +513,36 @@ electric and magnetic channel powers can span many orders of magnitude.
 Recovering Impedance From Spectra
 ---------------------------------
 
-``plot_z_from_spectra`` calls ``Spectra.to_Z`` internally and plots
-apparent resistivity and phase from the spectra-derived impedance.
+Every table above works with coherence and power alone; recovering an
+actual impedance tensor means going back to the full complex
+cross-power matrix and solving for the linear system relating the
+electric and magnetic fields. ``plot_z_from_spectra`` calls
+``Spectra.to_Z`` internally, which forms the per-frequency
+least-squares solution directly from cross-power sub-blocks:
+
+.. math::
+
+   Z(f) = S_{EH}(f)\, S_{HH}(f)^{-1},
+
+where :math:`S_{HH}` is the :math:`2\times2` cross-power block between
+the two horizontal magnetic channels and :math:`S_{EH}` is the
+:math:`2\times2` cross-power block between the electric and magnetic
+channels — this is the standard single-station cross-spectral
+transfer-function estimator (Chave & Jones, 2012; Bendat & Piersol,
+2011), the same estimator that ordinary EDI processing already applied
+before writing the final ``Z`` block; this module just lets you redo
+it yourself, or redo it differently, from the raw spectra. When
+``ridge`` is set, :math:`S_{HH}` is stabilized before inversion,
+
+.. math::
+
+   Z(f) = S_{EH}(f)\,\bigl[S_{HH}(f) + \text{ridge}\,I\bigr]^{-1},
+
+which trades a small, deliberate bias for a solvable system when the
+two magnetic channels are nearly collinear (for example, during strong
+plane-wave-like source conditions) and :math:`S_{HH}` is close to
+singular. ``plot_z_from_spectra`` plots apparent resistivity and phase
+from the resulting impedance.
 
 .. code-block:: python
    :linenos:
@@ -557,14 +585,41 @@ For programmatic access, call ``to_Z`` on the ``Spectra`` object:
    3.9104053794314146 119.75913187624168
 
 Use ``ridge`` when the magnetic cross-power block is poorly conditioned.
-Keep ``estimate_error=False`` if degrees-of-freedom metadata is
-incomplete and you do not need uncertainty envelopes.
+When ``estimate_error=True``, per-component 1-sigma uncertainties come
+from first-order error propagation under a complex-Wishart noise model,
+
+.. math::
+
+   \mathrm{Var}(Z_{ij}) \approx \frac{E_{ii}\,G_{jj}}{M}, \qquad
+   G = S_{HH}^{-1} S_{HH}^{-\mathsf{H}}, \qquad
+   E = S_{EE} - S_{EH}\,S_{HH}^{-1}\,S_{EH}^{\mathsf{H}},
+
+where :math:`M` is the effective degrees of freedom — taken from
+``segnum`` when available, otherwise from ``round(avgt \times bw)`` —
+and :math:`E` is the residual electric power left unexplained by the
+magnetic fit. Errors scale as :math:`1/\sqrt{M}`, so short, coarsely
+averaged records give wide error bars even when the point estimate of
+:math:`Z` looks clean. Keep ``estimate_error=False`` if
+degrees-of-freedom metadata is incomplete and you do not need
+uncertainty envelopes — the errors would otherwise come back as
+``NaN`` anyway once :math:`M` cannot be resolved.
 
 Recovering Tipper From Spectra
 ------------------------------
 
 ``plot_tipper_from_spectra`` recovers induction tipper components from
-the same spectra object when an ``HZ`` channel is available.
+the same spectra object when an ``HZ`` channel is available, using the
+same magnetic sub-block already inverted for ``Z``:
+
+.. math::
+
+   T(f) = S_{ZH}(f)\, S_{HH}(f)^{-1},
+
+where :math:`S_{ZH}` is the :math:`1\times2` cross-power block between
+the vertical and the two horizontal magnetic channels. Because
+:math:`T` reuses the same :math:`S_{HH}^{-1}` as :math:`Z`, the same
+``ridge`` value stabilizes both simultaneously — there is no separate
+tipper-specific regularization to tune.
 
 .. code-block:: python
    :linenos:

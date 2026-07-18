@@ -190,7 +190,7 @@ def mask_by_skew(
         elif mode == "lt":
             keep = sk >= thresh
         elif mode == "abs_lt":
-            keep = a <= thresh
+            keep = a >= thresh
         else:
             keep = (
                 a <= thresh

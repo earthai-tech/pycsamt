@@ -144,6 +144,42 @@ These functions are best used on one station at a time, or on a
 survey-median summary, when you want to understand tensor behaviour
 before interpreting a full profile.
 
+All five diagnostics in this block start from the complex impedance
+tensor
+
+.. math::
+
+   \mathbf{Z}(f)
+   =
+   \begin{bmatrix}
+   Z_{xx}(f) & Z_{xy}(f) \\
+   Z_{yx}(f) & Z_{yy}(f)
+   \end{bmatrix}.
+
+When a function studies rotation, pyCSAMT uses
+
+.. math::
+
+   \mathbf{Z}_\theta(f)
+   =
+   \mathbf{R}(\theta)\,
+   \mathbf{Z}(f)\,
+   \mathbf{R}(\theta)^T,
+   \qquad
+   \mathbf{R}(\theta)
+   =
+   \begin{bmatrix}
+   \cos\theta & \sin\theta \\
+   -\sin\theta & \cos\theta
+   \end{bmatrix}.
+
+Mohr circles ask how the tensor changes under every rotation.  Argand
+diagrams ask how the complex value itself moves with period.  Bode plots
+ask whether phase is consistent with the resistivity slope.  Polar
+diagrams ask how resistivity changes with rotation direction.  The
+phase-tensor clock asks whether tensor orientation and ellipticity remain
+stable with period.
+
 .. code-block:: python
    :linenos:
 
@@ -198,6 +234,12 @@ Bode plots compare observed phase against the phase implied by local
 ``rho_a`` varies with rotation angle. The phase-tensor period clock
 compresses period-dependent phase-tensor ellipse shape and orientation
 into concentric rings.
+
+Read this grid left to right as a station-level audit.  If the Mohr
+circles are offset, the Argand curves loop sharply, the Bode phase
+separates from the observed phase, and the polar petals rotate with
+period, then the station is giving several independent warnings that a
+simple 1-D/2-D interpretation is fragile.
 
 Dimensionality And Distortion
 -----------------------------
@@ -385,6 +427,24 @@ Implementation
     two selected tensor components as closed curves in separate real and
     imaginary panels.
 
+    For component pair :math:`a,b`, the real-panel trajectory is
+
+    .. math::
+
+       \theta \mapsto
+       \left(\Re Z_{\theta,a}, \Re Z_{\theta,b}\right),
+
+    and the imaginary-panel trajectory is
+
+    .. math::
+
+       \theta \mapsto
+       \left(\Im Z_{\theta,a}, \Im Z_{\theta,b}\right).
+
+    Each selected period therefore gives one closed curve.  Period color
+    coding shows whether the rotational behaviour is shallow-only, deep-only,
+    or persistent across the sounding.
+
 Key parameters
     ``station`` selects the station; ``periods`` gives exact target periods;
     ``n_periods`` chooses log-spaced periods automatically; ``components``
@@ -428,6 +488,21 @@ Implementation
     The function extracts each requested component, sorts samples by period,
     plots ``Re(Z_ij)`` against ``Im(Z_ij)``, color-codes by period, and adds
     arrows in the direction of increasing period.
+
+    For component :math:`Z_{ij}`, the plotted trajectory is
+
+    .. math::
+
+       \gamma_{ij}(T)
+       =
+       \left(
+       \Re Z_{ij}(T),
+       \Im Z_{ij}(T)
+       \right).
+
+    With ``normalize=True``, the component is divided by a robust amplitude
+    scale before plotting, so the diagram emphasizes trajectory shape rather
+    than absolute impedance magnitude.
 
 Key parameters
     ``components`` controls the tensor entries; ``period_range`` isolates a
@@ -478,6 +553,22 @@ Implementation
 
     and compares it to the observed phase.
 
+    In the code, the derivative is estimated on the sampled curve
+    :math:`\log_{10}\rho_a` versus :math:`\log_{10}T`:
+
+    .. math::
+
+       s(T)
+       =
+       {d\log_{10}\rho_a \over d\log_{10}T},
+       \qquad
+       \phi_\mathrm{Bode}(T)
+       =
+       45^\circ(1+s(T)).
+
+    The shaded area in the plot is the discrepancy between
+    :math:`\phi_\mathrm{obs}` and :math:`\phi_\mathrm{Bode}`.
+
 Key parameters
     ``component`` chooses ``"xy"`` or ``"yx"``; ``smooth_window`` applies a
     centered moving average before the derivative is estimated.
@@ -520,6 +611,28 @@ Implementation
     ``rho_a_xy(theta)`` is computed at each angle. Each period becomes one
     polar petal.
 
+    The petal radius is
+
+    .. math::
+
+       r_\rho(\theta, f)
+       =
+       \rho_{a,xy}(\theta, f)
+       =
+       {0.2 \over f}
+       |Z_{\theta,xy}(f)|^2.
+
+    With ``normalize=True``, each period is scaled by its own maximum:
+
+    .. math::
+
+       \tilde{r}_\rho(\theta, f)
+       =
+       {r_\rho(\theta, f) \over \max_\theta r_\rho(\theta, f)}.
+
+    This lets the user compare directional shape across periods even when
+    absolute apparent resistivity changes strongly.
+
 Key parameters
     ``n_periods`` controls the number of petals; ``normalize=True`` emphasizes
     petal shape rather than amplitude; ``period_range`` restricts periods.
@@ -560,6 +673,20 @@ Implementation
     The function builds the phase-tensor table, chooses log-spaced period
     rings, and draws an ellipse on each ring. If ``station`` is omitted, it
     uses survey-median values.
+
+    The phase tensor is
+
+    .. math::
+
+       \boldsymbol{\Phi}(f)
+       =
+       \Re(\mathbf{Z}(f))^{-1}
+       \Im(\mathbf{Z}(f)).
+
+    Each ring uses the median phase-tensor strike
+    :math:`\theta_\Phi` and ellipticity :math:`e_\Phi` in that period
+    neighborhood.  The ellipse is rotated by :math:`\theta_\Phi`; its
+    minor axis is shortened as ellipticity grows.
 
 Key parameters
     ``station`` switches between station-specific and survey-median mode;
@@ -604,6 +731,30 @@ Implementation
     3-D membership, while ellipticity helps separate 1-D and 2-D behaviour
     when skew is low.
 
+    The soft memberships are
+
+    .. math::
+
+       u_{3D}
+       =
+       \operatorname{clip}
+       \left({|\beta| \over \beta_\mathrm{th}},0,1\right),
+
+    .. math::
+
+       u_{1D}
+       =
+       (1-u_{3D})
+       \operatorname{clip}
+       \left(1-{e \over e_\mathrm{th}},0,1\right),
+       \qquad
+       u_{2D}=1-u_{1D}-u_{3D}.
+
+    Here :math:`\beta` is phase-tensor skew, :math:`e` is ellipticity,
+    and the thresholds are ``beta_thresh`` and ``ellipt_thresh``.  The
+    plotted ternary point is the barycentric coordinate
+    :math:`(u_{1D},u_{2D},u_{3D})`.
+
 Key parameters
     ``beta_thresh`` controls how quickly skew maps to 3-D membership;
     ``ellipt_thresh`` controls ellipticity sensitivity; ``period_range``
@@ -645,6 +796,26 @@ Implementation
     Swift-style behaviour, Bahr-style behaviour, phase asymmetry, absolute
     skew, ellipticity-related behaviour, and strike instability. Each station
     becomes one polygon.
+
+    Two of the radar axes are
+
+    .. math::
+
+       \nu =
+       {|Z_{xx}+Z_{yy}|
+       \over
+       |Z_{xy}-Z_{yx}|+\varepsilon},
+       \qquad
+       \eta =
+       {|Z_{xy}+Z_{yx}|
+       \over
+       |Z_{xy}-Z_{yx}|+\varepsilon}.
+
+    They are converted to bounded scores with
+    :math:`s=\nu/(1+\nu)` or :math:`s=\eta/(1+\eta)`.  Phase asymmetry is
+    summarized from :math:`|\phi_{xy}+\phi_{yx}-180^\circ|/90^\circ`,
+    while strike instability comes from the interquartile range of
+    phase-tensor strike angles in the selected band.
 
 Key parameters
     ``stations`` selects named stations; ``max_stations`` limits automatic
@@ -692,6 +863,18 @@ Implementation
     ``rho_a`` and bar height approximates the sensitivity window from local
     ``d log rho_a / d log T``.
 
+    The local slope is
+
+    .. math::
+
+       q(T)
+       =
+       {d\log_{10}\rho_a \over d\log_{10}T}.
+
+    Large changes in this slope imply a broader or less stable pseudo-depth
+    contribution, so read the section as sensitivity coverage rather than as
+    a resolved layer boundary.
+
 Key parameters
     ``component`` selects ``"xy"`` or ``"yx"``; ``depth_unit`` selects
     ``"km"`` or ``"m"``; ``depth_max`` clips the view; ``rho_lim`` fixes
@@ -730,6 +913,19 @@ Purpose
 Implementation
     The plotted value is ``log10(rho_xy / rho_yx)``. Warm cells mean
     ``rho_xy`` is larger; cool cells mean ``rho_yx`` is larger.
+
+    The displayed proxy is
+
+    .. math::
+
+       A_\rho
+       =
+       \log_{10}
+       \left({\rho_{xy}\over\rho_{yx}}\right).
+
+    Thus :math:`A_\rho=0` means the two off-diagonal modes agree,
+    :math:`A_\rho=1` means :math:`\rho_{xy}` is ten times
+    :math:`\rho_{yx}`, and :math:`A_\rho=-1` means the reverse.
 
 Key parameters
     ``show_pt_arrows=True`` overlays phase-tensor principal-axis directions;
@@ -771,6 +967,19 @@ Implementation
     Phase-tensor skew and ellipticity are converted into 3-D membership. Each
     period sample is placed at Bostick depth using the selected impedance
     component.
+
+    The color value is
+
+    .. math::
+
+       u_{3D}
+       =
+       \operatorname{clip}
+       \left({|\beta| \over \beta_\mathrm{th}},0,1\right),
+
+    the same 3-D membership used by the ternary plot.  The vertical
+    coordinate is pseudo-depth, so clusters of high :math:`u_{3D}` mark
+    depth intervals where simple dimensional assumptions are least reliable.
 
 Key parameters
     ``component`` controls the apparent resistivity used for depth;
@@ -815,6 +1024,28 @@ Implementation
     an anisotropy proxy based on trace magnitude relative to the difference
     between off-diagonal magnitudes.
 
+    The determinant panel uses
+
+    .. math::
+
+       |\det\mathbf{Z}|^{1/2}
+       =
+       |Z_{xx}Z_{yy}-Z_{xy}Z_{yx}|^{1/2}.
+
+    The trace-difference proxy uses
+
+    .. math::
+
+       \chi
+       =
+       {|Z_{xx}+Z_{yy}|
+       \over
+       ||Z_{xy}|-|Z_{yx}||+\varepsilon}.
+
+    These panels are more robust than single raw tensor components, but
+    high values should still be treated as prompts for closer review rather
+    than standalone geological labels.
+
 Key parameters
     ``period_range`` isolates a band; ``station_order`` preserves profile
     order; ``axes`` embeds the four panels in a custom figure.
@@ -854,6 +1085,11 @@ Implementation
     skew, ellipticity, strike angle, and maximum phase. Optional quantities
     include minimum phase and absolute skew.
 
+    The fingerprint is useful because all panels share the same grid
+    :math:`(s,\log_{10}T)`.  A feature visible in only one metric may be
+    metric-specific; a feature that aligns across skew, ellipticity, strike,
+    and phase is harder to dismiss.
+
 Key parameters
     ``quantities`` selects metrics; ``cell_aspect`` changes cell proportions;
     ``station_order`` fixes station sequence.
@@ -891,6 +1127,20 @@ Purpose
 Implementation
     The function can display apparent resistivity, phase, absolute skew,
     strike, and SNR. Apparent resistivity is displayed in log10 space.
+
+    The default rows combine
+
+    .. math::
+
+       \log_{10}\rho_a,\quad
+       \phi,\quad
+       |\beta|,\quad
+       \theta_\Phi,\quad
+       \mathrm{SNR}
+
+    on the same station-period grid.  This lets you reject a tempting
+    resistivity feature if it occurs exactly where skew is high or SNR is
+    weak.
 
 Key parameters
     ``component`` chooses ``"xy"`` or ``"yx"`` for rho, phase, and SNR;
@@ -930,6 +1180,18 @@ Implementation
     SNR is computed as ``abs(Z) / abs(Z_err)`` when impedance errors are
     available. Each selected component gets its own panel. A contour marks
     ``snr_thresh``.
+
+    For component :math:`Z_{ij}`, the plotted quantity is
+
+    .. math::
+
+       \mathrm{SNR}_{ij}
+       =
+       {|Z_{ij}| \over |\sigma_{Z_{ij}}|+\varepsilon}.
+
+    When no impedance-error array is available, the function fills the
+    corresponding cells with ``NaN`` rather than inventing a confidence
+    estimate.
 
 Key parameters
     ``components`` usually includes ``("xy", "yx")``; ``snr_thresh`` sets the
@@ -971,6 +1233,18 @@ Implementation
     period-dependent bands so method agreement and period stability are visible
     together.
 
+    Strike is axial, so agreement is evaluated with wrapped angular
+    differences:
+
+    .. math::
+
+       \Delta\theta
+       =
+       ((\theta_1-\theta_2+90^\circ)\bmod 180^\circ)-90^\circ.
+
+    The consensus band marks periods where methods fall within
+    ``agreement_tol`` degrees on this axial scale.
+
 Key parameters
     ``methods`` chooses strike estimators; ``period_range`` isolates a band.
     Use this after basic phase-tensor and dimensionality checks.
@@ -1010,6 +1284,16 @@ Implementation
     log-apparent-resistivity curves onto a common period grid, computes
     Pearson correlation for station pairs, and draws edges for correlations
     above ``threshold``.
+
+    For station :math:`s`, let :math:`\mathbf{r}_s` be the interpolated
+    :math:`\log_{10}\rho_a(T)` vector.  An edge is drawn when
+
+    .. math::
+
+       \operatorname{corr}(\mathbf{r}_s,\mathbf{r}_t) \ge \tau,
+
+    where :math:`\tau` is ``threshold``.  The network compares curve shape
+    over the selected band, not a single period sample.
 
 Key parameters
     ``component`` chooses the mode; ``threshold`` sets minimum correlation;

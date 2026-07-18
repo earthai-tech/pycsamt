@@ -17,6 +17,19 @@ pyCSAMT reports station-level strike in the compact ``[-90, 90]`` range
 for estimator tables, while rose diagrams fold angles into ``0`` to
 ``180`` and mirror the histogram around the full polar circle.
 
+The wrapping used throughout the strike tools is
+
+.. math::
+
+   \operatorname{wrap}_{90}(\theta)
+   =
+   ((\theta + 90^\circ) \bmod 180^\circ) - 90^\circ .
+
+Here :math:`\theta` is any strike angle in degrees.  This convention
+keeps equivalent axes, such as :math:`-80^\circ` and :math:`100^\circ`,
+on the same branch before station medians, differences, or plots are
+computed.
+
 Use this page when you need to answer concrete processing questions:
 
 .. list-table::
@@ -102,6 +115,47 @@ a ``pandas.DataFrame`` with the same practical columns:
 The impedance sweep rotates each tensor through a grid of trial angles
 and chooses the angle that optimizes a metric.
 
+For a trial angle :math:`\alpha`, the impedance tensor is rotated as
+
+.. math::
+
+   \mathbf{Z}'(\alpha, f)
+   =
+   \mathbf{R}(\alpha)\,\mathbf{Z}(f)\,\mathbf{R}(\alpha)^T,
+   \qquad
+   \mathbf{R}(\alpha)
+   =
+   \begin{bmatrix}
+   \cos \alpha & \sin \alpha \\
+   -\sin \alpha & \cos \alpha
+   \end{bmatrix}.
+
+The default sweep metric compares the diagonal and off-diagonal energy
+after rotation,
+
+.. math::
+
+   D(\alpha, f)
+   =
+   \sqrt{|Z'_{xx}|^2 + |Z'_{yy}|^2},
+   \qquad
+   O(\alpha, f)
+   =
+   \sqrt{|Z'_{xy}|^2 + |Z'_{yx}|^2},
+
+.. math::
+
+   S(\alpha, f)
+   =
+   \frac{D(\alpha, f)}{O(\alpha, f) + \varepsilon}.
+
+The frequency-level strike is the trial angle that minimizes
+:math:`S(\alpha, f)`.  The station-level value reported as ``ang`` is
+the axial median of those frequency-level angles inside the selected
+period band, after unwrapping jumps across the :math:`\pm 90^\circ`
+boundary.  The reported ``iqr`` is the interquartile range of the same
+unwrapped angle population.
+
 .. code-block:: python
    :linenos:
 
@@ -159,6 +213,21 @@ The phase-tensor estimator summarizes the phase tensor ``theta`` angle.
 It is often more stable than a raw impedance sweep because the phase
 tensor is less affected by static-shift amplitude distortion.
 
+Writing the complex impedance as
+:math:`\mathbf{Z}=\mathbf{X}+i\mathbf{Y}`, the phase tensor is
+
+.. math::
+
+   \boldsymbol{\Phi}(f) = \mathbf{X}(f)^{-1}\mathbf{Y}(f).
+
+Static shift changes real apparent-resistivity amplitudes, but it does
+not multiply :math:`\mathbf{X}` and :math:`\mathbf{Y}` by different
+factors.  The phase tensor therefore preserves directional phase
+information that is often cleaner than the amplitude-sensitive sweep.
+``estimate_strike_phase_tensor`` takes the tensor azimuth
+:math:`\theta_{\Phi}(f)` at each frequency and reports its robust axial
+median over the chosen period band.
+
 .. code-block:: python
    :linenos:
 
@@ -206,6 +275,26 @@ tensor is less affected by static-shift amplitude distortion.
 
 The consensus estimator blends the sweep and phase-tensor estimates.
 Use it when neither method should dominate the processing decision.
+
+Before blending, pyCSAMT places both angles on the same axial branch.  A
+two-estimator consensus can be read as
+
+.. math::
+
+   \theta_\mathrm{cons}
+   =
+   \operatorname{wrap}_{90}
+   \left(
+   w_s\,\tilde{\theta}_s
+   +
+   w_\Phi\,\tilde{\theta}_\Phi
+   \right),
+
+where :math:`\tilde{\theta}_s` is the unwrapped sweep estimate,
+:math:`\tilde{\theta}_\Phi` is the unwrapped phase-tensor estimate, and
+:math:`w_s` and :math:`w_\Phi` are the sweep and phase-tensor weights.
+Use weights that sum to one when you want the consensus to remain a
+direct weighted average.
 
 .. code-block:: python
    :linenos:
@@ -265,6 +354,15 @@ Compare Axial Angles Correctly
 Do not compare strike estimates with ordinary subtraction unless you
 first account for the ``180`` degree ambiguity.  The axial difference
 between ``89`` and ``-89`` degrees is ``2`` degrees, not ``178`` degrees.
+For two angles :math:`\theta_1` and :math:`\theta_2`, use
+
+.. math::
+
+   \Delta\theta
+   =
+   ((\theta_1 - \theta_2 + 90^\circ) \bmod 180^\circ)
+   -
+   90^\circ .
 
 .. code-block:: python
    :linenos:
@@ -402,6 +500,21 @@ Rotate Data Onto Strike
 that station's impedance tensor.  Keep the original and rotated data
 separate until you have checked the result.
 
+For station :math:`s`, the rotation applied to every frequency sample is
+
+.. math::
+
+   \mathbf{Z}^{\,\mathrm{rot}}_s(f)
+   =
+   \mathbf{R}(\theta_s)\,
+   \mathbf{Z}_s(f)\,
+   \mathbf{R}(\theta_s)^T,
+
+where :math:`\theta_s` is the station-level strike selected by the
+requested method.  In a 2-D interpretation this tries to place the
+dominant response into the off-diagonal modes, but the formula is only a
+coordinate rotation; it does not remove 3-D induction or bad data.
+
 .. code-block:: python
    :linenos:
 
@@ -507,12 +620,36 @@ are wrapped back into the axial range.  Increase it only when you want a
 smoother visual trend; do not use smoothing to hide genuine strike
 changes.
 
+The smoothing is applied to an unwrapped axial sequence, so a transition
+near :math:`90^\circ` is treated as a continuation of the same axis
+rather than a jump across the plot.  With an odd window length
+:math:`m`, the displayed trend is approximately
+
+.. math::
+
+   \bar{\theta}_j
+   =
+   \operatorname{wrap}_{90}
+   \left(
+   \frac{1}{m}
+   \sum_{k=j-h}^{j+h}\tilde{\theta}_k
+   \right),
+   \qquad h = \frac{m-1}{2},
+
+where :math:`\tilde{\theta}_k` are the locally unwrapped
+frequency-level sweep angles.
+
 Ribbon Plot
 -----------
 
 ``plot_strike_ribbon`` converts the per-frequency strike curve to a
 station-by-period image.  Hue encodes strike angle.  Saturation encodes
 local stability: desaturated colors indicate high local variance.
+
+This makes the ribbon more than a color table.  A saturated, coherent
+stripe means nearby period samples agree on the same axial direction.  A
+pale or mottled interval means the local angular variance is high, so a
+single strike from that interval should be treated cautiously.
 
 .. code-block:: python
    :linenos:
@@ -543,6 +680,28 @@ Rose Diagrams
 ``plot_strike_rose`` draws axial strike histograms.  It mirrors the
 ``0`` to ``180`` degree histogram around the full circle, so both halves
 of the polar plot represent the same set of axes.
+
+When inverse-IQR weighting is requested, stations with stable frequency
+behavior carry more weight:
+
+.. math::
+
+   w_s = \frac{1}{|\operatorname{IQR}_s| + \varepsilon}.
+
+The rose mean is computed as an axial mean, not an ordinary circular
+mean.  Internally this is equivalent to doubling the angles, averaging
+the unit vectors, and halving the result:
+
+.. math::
+
+   \bar{\theta}
+   =
+   \frac{1}{2}
+   \operatorname{atan2}
+   \left(
+   \sum_s w_s \sin 2\theta_s,\,
+   \sum_s w_s \cos 2\theta_s
+   \right).
 
 .. code-block:: python
    :linenos:
@@ -729,6 +888,24 @@ Combined Strike Analysis
 ``plot_strike_analysis`` creates a three-panel rose figure: impedance
 strike, phase-tensor azimuth, and tipper strike.  The tipper panel is
 empty when the data do not contain vertical magnetic transfer functions.
+
+For tipper vectors, pyCSAMT uses the real induction vector direction
+
+.. math::
+
+   \theta_T
+   =
+   \operatorname{atan2}
+   \left(
+   \Re(T_{zy}),\,
+   \Re(T_{zx})
+   \right)
+   \bmod 180^\circ ,
+
+where :math:`T_{zx}` and :math:`T_{zy}` are the horizontal magnetic-field
+transfer functions into the vertical magnetic component.  Compare this
+azimuth with impedance and phase-tensor strike as an independent
+directional diagnostic, not as a guaranteed rotation angle.
 
 .. code-block:: python
    :linenos:

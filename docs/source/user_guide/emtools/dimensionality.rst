@@ -65,16 +65,23 @@ impedance quantities:
      - Tipper amplitude when tipper data are available; otherwise
        ``NaN``.
 
-The determinant-style apparent resistivity uses the same practical EDI
-unit convention used elsewhere in ``emtools``:
+The determinant-style apparent resistivity and phase use the same
+practical EDI unit convention used elsewhere in ``emtools`` (see
+:ref:`emtools_csumt`):
 
 .. math::
 
-   \rho_{det} =
+   \rho_{a,\det} =
    \sqrt{
    \left(0.2 {|Z_{xy}|^2 \over f}\right)
    \left(0.2 {|Z_{yx}|^2 \over f}\right)
-   }
+   },
+   \qquad
+   \phi_{\det} = \arg\bigl[\det(Z)\bigr]
+   = \arg\bigl(Z_{xx}Z_{yy} - Z_{xy}Z_{yx}\bigr),
+
+with ``logrho_det`` storing :math:`\log_{10}\rho_{a,\det}` and
+``phi_det`` storing :math:`\phi_{\det}` in degrees.
 
 Rule-Based Labels
 -----------------
@@ -366,8 +373,31 @@ Plot The Dimensionality Grid
 ----------------------------
 
 ``plot_dim_confidence_grid`` maps class labels onto station x period
-space. Color shows class. Opacity shows a confidence margin from the
-threshold rule.
+space. Color shows the class; opacity shows how far each sample sits
+from the nearest threshold it could have crossed:
+
+.. math::
+
+   m =
+   \begin{cases}
+   \min(\text{skew\_th}-\beta_{\mathrm{abs}},\ \
+        \text{ellipt\_th}-\varepsilon_{\mathrm{abs}}), & \dim = 0
+        \ (\text{1-D}), \\[4pt]
+   \min(\text{skew\_th}-\beta_{\mathrm{abs}},\ \
+        \varepsilon_{\mathrm{abs}}-\text{ellipt\_th}), & \dim = 1
+        \ (\text{2-D}), \\[4pt]
+   \beta_{\mathrm{abs}}-\text{skew\_th}, & \dim = 2\ (\text{3-D}),
+   \end{cases}
+
+clipped at ``0`` and then robustly rescaled to ``[0, 1]`` by its 5th and
+95th percentiles across the survey. A 1-D sample is only shown as
+confident if it clears *both* the skew and ellipticity boundaries by a
+margin; a 2-D sample must clear the skew boundary but stay clear of the
+ellipticity one from the other side; a 3-D sample only needs to be
+comfortably past the skew threshold, since ellipticity plays no role
+once skew alone has already pushed a sample to 3-D. A cell near full
+opacity is not merely on the correct side of a threshold — it is far
+from the boundary that could have flipped its label.
 
 .. code-block:: python
    :linenos:
@@ -513,7 +543,22 @@ Important columns include:
 - ``rotated_to_strike`` and ``rotation_angle_deg``: rotation audit.
 - ``groom_bailey_attempted`` and ``groom_bailey_applied``: distortion
   correction audit.
-- ``recommendation``: simple screening recommendation.
+- ``recommendation``: simple screening recommendation, from the rule
+
+  .. code-block:: text
+     :linenos:
+
+     if frac_3d > 0.5:
+         recommendation = "review_3d_effects_before_2d"
+     elif strike_consensus_iqr_deg > 20.0:
+         recommendation = "unstable_strike_review_band"
+     else:
+         recommendation = "acceptable_for_2d_with_documented_rotation"
+
+  checked in that order, so a station that is both mostly 3-D and
+  strike-unstable is reported for its dimensionality problem first — the
+  strike instability is still visible in ``strike_consensus_iqr_deg``
+  itself, just not surfaced as the headline recommendation.
 
 This table is useful in manuscripts and reports because it records not
 only the selected strike, but also whether the assumptions behind a 2-D
@@ -576,9 +621,49 @@ The dictionary route learns patterns from four standardized features:
    logrho_det
    tip_amp
 
-It is unsupervised. It does not know geology. It learns atoms that
-represent repeated feature patterns, encodes each sample with sparse
-coefficients, and assigns a dimensionality class from the dominant atom.
+It is unsupervised. It does not know geology. Each feature is first
+z-scored across the whole survey, :math:`x' = (x - \mu)/\sigma`, so that
+skew in degrees, ellipticity, log-resistivity, and tipper amplitude all
+compete on the same footing regardless of their native units. The
+model then learns a small set of :math:`k` atoms (``n_atoms``, default
+``6``) — feature-space directions that repeated patterns in the survey
+tend to align with — and represents every standardized sample
+:math:`z` as a sparse combination of them by solving a Lasso-style
+problem:
+
+.. math::
+
+   \hat{a} = \arg\min_{a}\ \tfrac12\lVert z - D a \rVert_2^2
+   + \lambda \lVert a \rVert_1,
+
+where ``lam`` is :math:`\lambda`. The :math:`\ell_1` penalty is what
+makes the code sparse: most atoms end up with a coefficient of exactly
+``0`` for a given sample, and only the few atoms that actually explain
+that sample's feature pattern get a nonzero weight — visible in the
+``a0``...``a5`` columns of the example below. This is solved by ISTA
+(iterative soft-thresholding), alternating a gradient step against the
+residual with a shrinkage step that zeros out small coefficients,
+repeated ``code_iter`` times per sample. Fitting the dictionary itself
+(``learn_dim_dictionary``) alternates this coding step over every
+sample with a dictionary update — re-solving :math:`D` in closed form
+from the current codes (the MOD rule, ``D = X A^\top (A A^\top)^{-1}``,
+followed by rescaling every atom back to unit norm) — for ``n_iter``
+rounds.
+
+Once fit, each atom is itself labelled 1-D/2-D/3-D by applying fixed
+thresholds to its own standardized loadings — ``0.35`` on the atom's
+``beta_abs`` component and ``0.15`` on its ``ellipt_abs`` component,
+the same three-way logic as the rule-based classifier but evaluated in
+standardized units rather than degrees, since an atom has no native
+units of its own. A sample is then assigned the label of whichever
+atom dominates its code,
+
+.. math::
+
+   \mathrm{dim\_pred} = \mathrm{label}\Bigl(\arg\max_j |\hat{a}_j|\Bigr),
+
+so ``encode_dimensionality`` labels a sample by which single learned
+pattern explains it most strongly, not by a vote across all of them.
 
 .. code-block:: python
    :linenos:
@@ -663,14 +748,34 @@ replacement for the rule.
 
 Agreement near 100 percent means the learned atoms reproduce the rule.
 Lower agreement means the data-driven features are separating samples
-differently. That can be useful, but it needs interpretation.
+differently — and some disagreement is expected by construction here,
+since the atom labels are thresholded in standardized units while
+``classify_dimensionality`` uses ``skew_th``/``ellipt_th`` in raw
+degrees and ellipticity. Low agreement is a prompt to look at which
+samples disagree, not proof that either labeling is wrong.
 
 Dictionary Masking And Atom Plots
 ---------------------------------
 
 ``mask_by_dictionary`` applies the same idea as ``mask_by_dimensionality``
 but uses ``dim_pred`` from the learned dictionary. ``plot_atom_psection``
-shows which learned atom dominates each station-period cell.
+shows which learned atom dominates each station-period cell, and shades
+each cell by how much of that sample's code the dominant atom actually
+accounts for:
+
+.. math::
+
+   \mathrm{energy} =
+   \begin{cases}
+   \sum_j |a_j| & \text{energy="l1"}, \\
+   \max_j |a_j| & \text{energy="max"}, \\
+   \sqrt{\sum_j a_j^2} & \text{energy="l2" (default)},
+   \end{cases}
+
+robustly rescaled to ``[0, 1]`` the same way the confidence grid above
+is. A cell can have a clear dominant atom yet low total energy — a weak,
+barely-nonzero code — so treat pale cells as ambiguous even where the
+color looks decisive.
 
 .. code-block:: python
    :linenos:

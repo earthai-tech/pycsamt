@@ -66,11 +66,29 @@ The regional tensor is forced to be anti-diagonal:
    \end{bmatrix}
 
 The observed tensor is then approximated by multiplying this 2-D tensor
-by ``D``. The fit alternates between estimating the anti-diagonal
-regional tensor and solving for the rows of the real distortion matrix.
+by ``D``. Because the model :math:`Z_{obs} = D\,Z_{2D}` is bilinear —
+linear in ``D`` for fixed :math:`Z_{2D}`, and linear in :math:`u, v` for
+fixed ``D`` — each half of the fit has a closed-form least-squares
+solution, and the iteration just alternates between them. With ``D``
+held fixed, the best anti-diagonal tensor at each frequency is the
+projection
 
-The fitted matrix is normalized by determinant scale, then summarized
-as gain, twist, shear, and anisotropy-style parameters.
+.. math::
+
+   u(f) = \frac{D_{xx} Z_{xy}(f) + D_{yx} Z_{yy}(f)}{D_{xx}^2 + D_{yx}^2},
+   \qquad
+   v(f) = \frac{D_{xy} Z_{xx}(f) + D_{yy} Z_{yx}(f)}{D_{xy}^2 + D_{yy}^2},
+
+and with :math:`u, v` held fixed across all frequencies, each row of
+``D`` is refit by ordinary least squares against the corresponding
+tensor components. The loop repeats until the relative RMS residual
+(defined below) stops improving by more than ``tol``, or ``max_iter``
+is reached.
+
+After each row-solve, the fitted matrix is rescaled so that
+:math:`|\det D| = 1` — with :math:`u, v` rescaled inversely so the
+product :math:`D\,Z_{2D}` is unchanged — before it is summarized as
+gain, twist, shear, and anisotropy-style parameters below.
 
 Fit A Distortion Table
 ----------------------
@@ -146,7 +164,8 @@ Successful rows have ``status == "ok"`` and include:
    * - ``distortion_xx`` ... ``distortion_yy``
      - Entries of the fitted real 2 x 2 distortion matrix.
    * - ``gain``
-     - Matrix scale from the determinant normalization.
+     - :math:`\sqrt{|\det D|}` of the matrix handed to the twist/shear
+       decomposition — see the note below.
    * - ``twist_deg``
      - Twist angle inferred from the normalized matrix.
    * - ``shear``
@@ -173,6 +192,66 @@ Rows with too few valid frequencies have
 ``n_freq``. Increase the band, lower ``min_freq`` only with care, or
 exclude that station from correction.
 
+The twist/shear/anisotropy decomposition takes whatever matrix
+``distortion_xx`` ... ``distortion_yy`` reports — call it :math:`D` —
+and unwinds it into a rotation, a shear, and an anisotropy, the same
+way a 2x2 real matrix decomposes in general:
+
+.. math::
+
+   \mathrm{gain} = \sqrt{|\det D|}, \qquad D_n = D / \mathrm{gain},
+
+.. math::
+
+   \mathrm{twist\_deg} = \operatorname{atan2}\!\bigl(
+   D_{n,xy} - D_{n,yx},\ D_{n,xx} + D_{n,yy}\bigr) \times
+   \frac{180}{\pi},
+
+.. math::
+
+   M = R(-\mathrm{twist\_deg})\, D_n, \qquad
+   \mathrm{shear} = \frac{M_{xy}+M_{yx}}{M_{xx}+M_{yy}}, \qquad
+   \mathrm{anisotropy} = \frac{M_{xx}-M_{yy}}{M_{xx}+M_{yy}},
+
+with ``shear`` and ``anisotropy`` clipped to :math:`[-0.99, 0.99]`
+against the case :math:`M_{xx}+M_{yy}\approx 0`. The residual and
+diagonal-ratio columns are:
+
+.. math::
+
+   \mathrm{rms\_fit} =
+   \frac{\sqrt{\left\langle |Z_{obs}-D\,Z_{2D}|^2\right\rangle}}
+        {\sqrt{\left\langle |Z_{obs}|^2\right\rangle}},
+   \qquad
+   \mathrm{diagonal\_ratio} = \mathrm{median}\!\left(
+   \frac{\sqrt{|Z_{xx}|^2+|Z_{yy}|^2}}{\sqrt{|Z_{xy}|^2+|Z_{yx}|^2}}
+   \right),
+
+where :math:`\langle \cdot \rangle` averages over every frequency and
+tensor component in the fitted band. ``diagonal_ratio`` is computed the
+same way before correction (on the raw tensor) and after (on the fitted
+inverse matrix applied to the fitted band) — it is *not* the same
+quantity as the ``diagonal`` confidence score in :ref:`emtools_qc`,
+which reports a leakage *fraction* rather than a raw ratio.
+
+The twist formula is structurally the same
+:math:`\arctan2`-of-off-diagonal-over-diagonal shape as the phase-tensor
+skew :math:`\beta` in :ref:`emtools_skew` — both come from decomposing a
+real 2x2 matrix into a rotation plus a symmetric remainder — but the two
+quantities are not interchangeable: one describes distortion in ``D``,
+the other describes the regional tensor itself.
+
+One honest caveat about ``gain``: the iterative fit already rescales its
+working matrix to :math:`|\det D| = 1` after every row-solve (see
+*Core Assumptions* above), and that rescaled matrix is what gets stored
+in ``distortion_xx`` ... ``distortion_yy``. Recomputing
+:math:`\sqrt{|\det D|}` from that already-normalized matrix returns
+``1.0`` for every successful fit — which is exactly what you will see if
+you print the column. Read ``gain`` as confirmation that the stored
+matrix is in unit-determinant form, not as a per-station distortion
+amplitude; the classic gain/static-shift ambiguity this page already
+warns about is not something this column resolves.
+
 Reading The Parameters
 ----------------------
 
@@ -188,8 +267,8 @@ The most useful diagnostic columns are usually:
   inspection.
 - ``n_freq``: low values make the fit less stable.
 
-Do not over-interpret ``gain`` as a unique static-shift estimate. The
-scalar gain ambiguity is not uniquely resolved by this decomposition.
+``gain`` is not one of them — as explained above, it is always ``1.0``
+by construction, not a per-station static-shift estimate.
 
 Rank Stations For Review
 ------------------------
@@ -346,8 +425,28 @@ The result container records:
 Compare Robust And Non-Robust Fits
 ----------------------------------
 
-Robust weighting downweights high-residual frequencies during fitting.
-Compare both modes when outliers are suspected.
+With ``robust=True``, every iteration after the first re-weights
+frequencies by a Huber-style rule built from the per-frequency residual
+norm :math:`r_i = \sqrt{\langle |Z_{obs,i}-D\,Z_{2D,i}|^2\rangle}`
+(averaged over the four tensor components at frequency :math:`i`):
+
+.. math::
+
+   c = 1.4826\,\mathrm{med}\bigl(|r_i - \mathrm{med}(r)|\bigr)
+       \times 1.345,
+   \qquad
+   w_i = \mathrm{clip}\!\left(\min\!\left(1,\ \frac{c}{r_i}\right),\
+   0.05,\ 1\right),
+
+so a frequency at or below the robust scale :math:`c` keeps full
+weight, and one far above it is downweighted roughly in proportion to
+how far it overshoots — never dropped to zero, since that could make an
+already-unstable fit rank-deficient. The constant ``1.4826`` converts a
+median absolute deviation to a normal-equivalent standard deviation, and
+``1.345`` is the standard Huber tuning constant for 95% efficiency under
+Gaussian residuals — this is the same M-estimator recipe used for
+robust regression generally, not something specific to galvanic
+distortion. Compare both modes when outliers are suspected.
 
 .. code-block:: python
    :linenos:

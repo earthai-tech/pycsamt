@@ -3,6 +3,22 @@
 CSUMT Bostick Depth And Survey Design
 =====================================
 
+CSUMT means **Controlled-Source Ultra-Audio Magnetotellurics**.  It is
+a controlled-source electromagnetic method that works in the
+ultra-audio frequency band, typically higher than conventional AMT/MT.
+Instead of waiting for natural source fields, the survey uses a
+transmitter to inject a known signal and receivers measure the
+horizontal electric and magnetic fields along a line.  The measured
+field ratios are converted to impedance, then to apparent resistivity
+and phase, just as in other magnetotelluric workflows.
+
+The important practical consequence is depth.  High frequencies give
+good near-surface resolution but they do not penetrate as deeply as
+lower-frequency AMT/MT signals.  A CSUMT design therefore starts with a
+simple question: for the expected resistivity, can the transmitter band
+reach the target depth?  This page answers that question with Bostick
+depth estimates and quick vertical-resolution checks.
+
 ``pycsamt.emtools.csumt`` provides two related workflows:
 
 - plan a controlled-source survey from target depths and an estimated
@@ -14,6 +30,12 @@ The module is intentionally lightweight. It does not run an inversion
 and it does not estimate a layered earth model. It gives you fast,
 transparent quantities that are useful before field acquisition and
 during early quality control of CSAMT/AMT lines.
+
+Use these outputs as planning and quality-control diagnostics, not as a
+final geological model.  A Bostick depth is a one-dimensional transform
+of apparent resistivity at one frequency; it helps you see the depth
+scale implied by the data, but it cannot replace a constrained 1-D, 2-D,
+or 3-D inversion when absolute layer geometry matters.
 
 Full callable signatures live in the :doc:`API reference <../../api/emtools>`.
 This page focuses on practical use, interpretation, and reproducible
@@ -214,6 +236,29 @@ of requested target depths with the number of returned frequencies.
 ``min_resolution_m`` inserts log-spaced frequencies between adjacent
 schedule frequencies when their vertical resolution gap is too large.
 ``as_khz=True`` only changes the units of the returned array.
+
+The schedule is built by first mapping each requested depth
+:math:`D_i` to a candidate frequency,
+
+.. math::
+
+   f_i = \rho_c \left({356 \over D_i}\right)^2,
+
+then keeping only candidates inside the allowed transmitter band,
+
+.. math::
+
+   \mathcal{F}_{keep} =
+   \{f_i: f_{min} \le f_i \le f_{max}\}.
+
+If ``min_resolution_m`` is used, extra log-spaced frequencies are
+inserted whenever :math:`\Delta D(f_k, f_{k+1})` exceeds the requested
+spacing.  The plot below makes the silent clipping visible: requested
+targets are drawn first, then the frequencies that survive the CSUMT
+band check are overlaid.
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-03.png
+   :width: 100%
 
 Resolution Between Two Frequencies
 ----------------------------------
@@ -489,6 +534,22 @@ apparent resistivity at low frequency can create a large Bostick depth.
 Use the table as a ranking and a quality-control clue, then inspect the
 curves and pseudo-section.
 
+For each station :math:`s`, the table is the reduction
+
+.. math::
+
+   D_{min,s} = \min_j D_{s,j}, \qquad
+   D_{max,s} = \max_j D_{s,j},
+
+with resolution summaries taken from the adjacent-frequency gaps
+:math:`\Delta D_{s,j}`.  This is why two stations with the same
+frequency schedule can still have different depth coverage: the
+resistivity term in :math:`D_{s,j}=356\sqrt{\rho_{a,s,j}/f_{s,j}}`
+changes from station to station.
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-06.png
+   :width: 100%
+
 Depth Pseudo-Section
 --------------------
 
@@ -526,6 +587,108 @@ Useful plotting options:
 - ``period_axis=True`` uses period on the y-axis. Set it to ``False``
   for frequency.
 - ``ax=...`` lets you place several lines in one figure.
+
+Mathematically, the pseudo-section is only a gridded display of the
+table produced by ``bostick_depth``:
+
+.. math::
+
+   G_{k,s} = D(f_k, s)
+   = 356\sqrt{\rho_a(f_k, s) \over f_k}.
+
+When ``log_color=True``, the displayed color value is
+:math:`\log_{10}(G_{k,s})`.  That logarithmic color scale prevents a
+few very deep estimates from hiding the shallow CSUMT/AMT structure.
+
+Resolution Coarsening With Depth
+--------------------------------
+
+The fixed-resistivity formula says vertical resolution should become
+coarser as the sampled depth increases.  The measured-data check below
+bins adjacent-frequency gaps by their midpoint depth and compares the
+median measured gap with the analytical curve for the line's median
+apparent resistivity.
+
+.. code-block:: python
+   :linenos:
+
+   import numpy as np
+   import matplotlib.pyplot as plt
+
+   from pycsamt.emtools.csumt import (
+       bostick_depth,
+       bostick_depth_from_rho,
+       vertical_resolution,
+       vertical_resolution_pair,
+   )
+
+   survey = "data/AMT/WILLY_DATA/L18PLT"
+
+   depth = bostick_depth(survey)
+   resolution = vertical_resolution(survey)
+   resolution["mid_depth"] = (
+       0.5
+       * (resolution["depth_lo_m"] + resolution["depth_hi_m"]).abs()
+   )
+
+   bins = np.logspace(0.5, 4, 12)
+   centers = np.sqrt(bins[:-1] * bins[1:])
+   bin_idx = np.digitize(resolution["mid_depth"], bins)
+   binned = (
+       resolution.groupby(bin_idx)["delta_depth_m"]
+       .apply(lambda s: np.median(np.abs(s)))
+       .loc[lambda s: (s.index >= 1) & (s.index <= len(centers))]
+   )
+
+   rho_med = float(depth["rho_a_ohmm"].median())
+   f_sweep = np.logspace(
+       np.log10(depth["freq_hz"].min()),
+       np.log10(depth["freq_hz"].max()),
+       40,
+   )
+
+   analytic_depth = []
+   analytic_resolution = []
+   for f_lo, f_hi in zip(f_sweep[:-1], f_sweep[1:]):
+       analytic_depth.append(
+           np.sqrt(
+               bostick_depth_from_rho(rho_med, f_lo)
+               * bostick_depth_from_rho(rho_med, f_hi)
+           )
+       )
+       analytic_resolution.append(
+           vertical_resolution_pair(rho_med, f_lo, f_hi)
+       )
+
+   fig, ax = plt.subplots(figsize=(7, 5))
+   ax.loglog(centers[binned.index - 1], binned, "o-")
+   ax.loglog(analytic_depth, analytic_resolution, "--", color="0.3")
+   ax.set_xlabel("Depth (m)")
+   ax.set_ylabel("Vertical resolution (m)")
+   fig.tight_layout()
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-csumt-09.png
+   :width: 100%
+
+For a measured adjacent pair, the midpoint depth used for binning is
+
+.. math::
+
+   D_{mid,j} = {1 \over 2}|D(f_j) + D(f_{j+1})|,
+
+and each bin reports
+
+.. math::
+
+   \widetilde{\Delta D}_b =
+   \operatorname{median}_{j\in B_b}
+   \left(|D(f_j)-D(f_{j+1})|\right).
+
+The comparison is useful because it separates a normal consequence of
+log-frequency sampling from true data irregularity.  If the measured
+curve follows the analytical trend, the resolution loss is mostly
+geometric.  If it departs strongly, the apparent-resistivity structure
+is controlling the depth estimates.
 
 Comparing Neighboring Lines
 ---------------------------

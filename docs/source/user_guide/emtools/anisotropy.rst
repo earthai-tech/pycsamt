@@ -87,9 +87,36 @@ The module also computes Swift skew:
 
    S = {|Z_{xx} - Z_{yy}| \over |Z_{xy} + Z_{yx}|}
 
-and a per-frequency Swift strike angle. The skew is useful because it
-uses the diagonal tensor terms, while the ratio uses the off-diagonal
-modes. Those two indicators are related, but they are not redundant.
+The skew is useful because it uses the diagonal tensor terms, while the
+ratio uses the off-diagonal modes. Those two indicators are related, but
+they are not redundant.
+
+Alongside skew, the module reports a per-frequency Swift strike angle
+:math:`\theta`, found by rotating :math:`Z` to the angle that minimizes
+its diagonal terms:
+
+.. math::
+
+   \tan(2\theta) =
+   \frac{2\,\mathrm{Re}\bigl[(Z_{xy}+Z_{yx})(Z_{xx}-Z_{yy})^{*}\bigr]}
+        {|Z_{xy}+Z_{yx}|^2 - |Z_{xx}-Z_{yy}|^2},
+
+solved as :math:`\theta = \tfrac12\operatorname{atan2}` of the numerator
+and denominator above so the correct quadrant is kept. Because it comes
+from the same diagonal/off-diagonal split as ``swift_skew``, a strike
+estimate is only as trustworthy as the skew that produced it: a large
+``swift_skew`` with an unstable ``strike_deg`` from one frequency to the
+next means the "minimizing" rotation itself is poorly constrained, not
+merely that the earth is 3-D.
+
+The remaining detail columns are plain phase differences of the two
+off-diagonal modes, in degrees:
+
+.. math::
+
+   \varphi_{xy} = \arg(Z_{xy}), \qquad
+   \varphi_{yx} = \arg(Z_{yx}), \qquad
+   \Delta\varphi = \varphi_{xy} - \varphi_{yx}.
 
 Data Contract
 -------------

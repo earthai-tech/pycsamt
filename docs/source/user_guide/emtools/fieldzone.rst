@@ -5,8 +5,8 @@ CSAMT Field-Zone Classification
 
 ``pycsamt.emtools.fieldzone`` checks whether a controlled-source AMT
 measurement is far enough from the transmitter to behave like a
-plane-wave MT response. This matters because the usual apparent
-resistivity formula assumes far-field behavior. If the receiver is in
+plane-wave MT response.  This matters because the usual apparent
+resistivity formula assumes far-field behavior.  If the receiver is in
 the near or transition zone, apparent resistivity can be biased by the
 source geometry rather than only by subsurface structure.
 
@@ -14,6 +14,11 @@ This page is specific to controlled-source work. Natural-source AMT/MT
 does not have a transmitter offset, so the field-zone workflow needs
 either a real source-receiver distance or an explicit assumed distance
 for sensitivity testing.
+
+In other words, the method is not a generic data-quality score.  It asks
+a narrower physical question: at this frequency, resistivity level, and
+source-receiver distance, is the receiver many diffusion lengths away
+from the source, or is it still seeing the transmitter geometry directly?
 
 Full callable signatures live in the :doc:`API reference <../../api/emtools>`.
 This page focuses on the workflow, outputs, examples, and interpretation.
@@ -25,30 +30,57 @@ The core quantity is the dimensionless distance:
 
 .. math::
 
-   |k r| = {r \over \delta_B}
+   |k r| = {r \over \delta_B}.
 
 where ``r`` is the source-receiver offset in metres and
 ``delta_B`` is the Bostick depth approximation:
 
 .. math::
 
-   \delta_B = 356 \sqrt{\rho_a / f}
+   \delta_B = 356 \sqrt{\rho_a \over f}.
+
+Here :math:`f` is frequency in hertz, :math:`\rho_a` is apparent
+resistivity in ohm metres, and :math:`\delta_B` is in metres.  The
+constant ``356`` is the Bostick depth coefficient used by this module;
+it is the skin-depth scale divided by :math:`\sqrt{2}`.  Thus
+:math:`|kr|` is best read as source offset measured in Bostick-depth
+units.
 
 The measured apparent resistivity is computed from the two off-diagonal
 impedance modes using the practical EDI convention used in pyCSAMT:
 
 .. math::
 
+   \rho_{xy} = 0.2 {|Z_{xy}|^2 \over f},
+   \qquad
+   \rho_{yx} = 0.2 {|Z_{yx}|^2 \over f},
+
+.. math::
+
    \rho_a =
-   \sqrt{
-   \left(0.2 {|Z_{xy}|^2 \over f}\right)
-   \left(0.2 {|Z_{yx}|^2 \over f}\right)
-   }
+   \sqrt{\rho_{xy}\rho_{yx}}.
+
+The geometric mean keeps the field-zone diagnostic from depending on
+only one transverse mode.  If one mode is noisy or locally distorted, the
+classification can still be affected, so treat the resulting ``zone`` as
+a geometry-and-response diagnostic rather than a replacement for
+ordinary impedance quality control.
 
 Higher frequencies and larger offsets increase ``|k r|`` and push the
 measurement toward the far field. Larger apparent resistivity increases
 ``delta_B`` and can push the same offset back toward transition or near
 field.
+
+For fixed :math:`r`, the scaling is
+
+.. math::
+
+   |kr| \propto r\sqrt{f \over \rho_a}.
+
+This compact relationship explains the main pattern in field-zone
+plots: short periods usually move downward toward far-field behavior,
+whereas long periods and high-resistivity intervals tend to move toward
+transition or near-field behavior.
 
 Zone Rules
 ----------
@@ -63,15 +95,18 @@ The default classification thresholds are:
 
 The labels are assigned as:
 
-.. code-block:: text
-   :linenos:
+.. math::
 
-   if kr >= far_threshold:
-       zone = "far"
-   elif kr >= near_threshold:
-       zone = "transition"
-   else:
-       zone = "near"
+   \mathrm{zone}(|kr|)
+   =
+   \begin{cases}
+   \text{far},        & |kr| \ge \tau_f, \\
+   \text{transition}, & \tau_n \le |kr| < \tau_f, \\
+   \text{near},       & |kr| < \tau_n,
+   \end{cases}
+
+where :math:`\tau_f` is ``far_threshold`` and :math:`\tau_n` is
+``near_threshold``.
 
 Interpret the zones as:
 
@@ -163,6 +198,11 @@ The output columns are:
 - ``kr``: dimensionless ``|k r|``.
 - ``zone``: ``far``, ``transition``, or ``near``.
 
+The table is tidy: every row is one station-frequency sample.  That
+shape is intentional because it lets you merge the result with QC,
+static-shift, skew, or inversion masks before deciding which periods to
+keep.
+
 Single-Station Curve
 --------------------
 
@@ -217,6 +257,28 @@ When it is close to ``1``, the response is far-field-like. Large
 departures indicate near-field bias. Apparent resistivity bias scales
 approximately with ``abs(F)^2``.
 
+The complex wavenumber used for this factor is
+
+.. math::
+
+   k =
+   {1+i \over \sqrt{2}}
+   \sqrt{\omega\mu_0 \over \rho_a},
+   \qquad
+   \omega = 2\pi f,
+
+so
+
+.. math::
+
+   p = k r.
+
+The classification parameter uses only the magnitude scale
+:math:`|kr|`, while ``nf_factor`` keeps the phase of the diffusive
+wavenumber.  That is why the two outputs are complementary: ``zone`` is
+easy to threshold and map; ``nf_factor`` shows how quickly the
+near-field expression departs from the far-field limit.
+
 .. code-block:: python
    :linenos:
 
@@ -257,6 +319,19 @@ Plot Field Zones
 
 ``plot_field_zones`` maps zone labels onto station x period space and
 can overlay ``|k r|`` contours.
+
+The plotted image is a matrix
+
+.. math::
+
+   Z_{ij}
+   =
+   \mathrm{zone}\left(|kr|_{ij}\right),
+
+where :math:`i` indexes period or frequency and :math:`j` indexes
+station.  Dashed contours are drawn from the continuous
+:math:`|kr|_{ij}` grid, so the colors show the thresholded decision and
+the contours show how close each area is to a boundary.
 
 .. code-block:: python
    :linenos:
@@ -325,6 +400,22 @@ Offset Sensitivity
 If the source offset is uncertain, run a sensitivity sweep. The same
 observed impedances can move between far and near zones solely because
 the assumed offset changes.
+
+For an assumed offset :math:`r_m`, the zone fraction is
+
+.. math::
+
+   P_z(r_m)
+   =
+   {1 \over N}
+   \sum_{s,f}
+   \mathbf{1}\left[
+   \mathrm{zone}_{s,f}(r_m) = z
+   \right],
+
+where :math:`N` is the number of classified station-frequency samples.
+This is a simple summary, but it is very effective at exposing whether a
+processing conclusion depends on an assumed transmitter distance.
 
 .. code-block:: python
    :linenos:
@@ -401,6 +492,19 @@ The near-field factor can show how strongly a sounding might be biased.
 The example below divides apparent resistivity by ``nf_factor ** 2`` as
 an illustrative correction. Use the appropriate controlled-source
 convention and survey geometry before applying this in production.
+
+The illustrative curve is
+
+.. math::
+
+   \rho_a^\mathrm{illustrative}
+   =
+   {\rho_a^\mathrm{measured} \over |F(p)|^2}.
+
+This follows the module's equatorial HED approximation, where the field
+amplitude bias enters apparent resistivity as a squared factor.  It is a
+diagnostic visualization, not a universal correction recipe for every
+CSAMT transmitter layout.
 
 .. code-block:: python
    :linenos:

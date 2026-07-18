@@ -314,9 +314,24 @@ the main lobe:
 
    \beta = -k d \sin(\theta_m)
 
-Use ``steering_angles`` immediately after ``beam_steer``. It solves the
-periodic steering equation and reveals whether the requested beam has
-additional main-lobe solutions.
+Use ``steering_angles`` immediately after ``beam_steer``. The array
+factor is periodic in :math:`\psi`, so the same main-lobe condition
+:math:`\psi = kd\sin\theta_b+\beta = 0` that fixes the target angle is
+also satisfied whenever :math:`\psi` is any other multiple of
+:math:`2\pi`:
+
+.. math::
+
+   kd\sin\theta_n + \beta = 2\pi n, \qquad n = 0, \pm1, \pm2, \dots,
+   \qquad
+   \theta_n = \arcsin\!\left(\frac{2\pi n - \beta}{kd}\right),
+
+keeping only the integers :math:`n` for which the argument of
+:math:`\arcsin` stays in :math:`[-1, 1]` — a real broadside angle. Every
+extra solution besides the intended :math:`\theta_m` is a grating lobe:
+a second, equally strong main lobe pointed somewhere you did not design
+for. ``steering_angles`` reveals whether the requested beam has any of
+these additional solutions.
 
 .. code-block:: python
    :linenos:
@@ -409,10 +424,23 @@ the finite dipole element pattern.
 Directivity
 -----------
 
-``sdas_directivity`` numerically integrates the single-dipole element
-pattern and returns dimensionless directivity. A value of ``1`` would be
-omnidirectional in the integration convention; a larger value means more
-concentrated radiation.
+``sdas_directivity`` treats the element pattern as a radiation
+intensity, :math:`U(\theta) = F(\theta)^2`, and applies the standard
+antenna definition of directivity — peak intensity over the intensity
+averaged across all directions:
+
+.. math::
+
+   D_0 = \frac{4\pi\,U_{\max}}{P_\mathrm{rad}}, \qquad
+   P_\mathrm{rad} = \int_0^{2\pi}\!\!\int_0^{\pi}
+   U(\theta)\sin\theta \, d\theta \, d\phi
+   = 2\pi \int_0^{\pi} U(\theta)\sin\theta\, d\theta,
+
+evaluated numerically over ``n_theta`` samples in :math:`\theta`. A
+perfectly omnidirectional source has :math:`U(\theta)` constant, which
+drives :math:`D_0 \to 1`; a larger value means more of the radiated
+power is concentrated near the peak direction rather than spread evenly
+in :math:`4\pi` steradians.
 
 .. code-block:: python
    :linenos:

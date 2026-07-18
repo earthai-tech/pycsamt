@@ -53,10 +53,44 @@ impedance data.
 
    from pathlib import Path
 
+   import matplotlib.pyplot as plt
+
    from pycsamt.emtools import ensure_sites
+   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
+   from pycsamt.emtools.ss import _rho_det_from_z
 
    edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
    sites = ensure_sites(edi_dir, recursive=True, verbose=0)
+
+   stations = ["18-001A", "18-016A", "18-021U", "18-025A"]
+
+   fig, ax = plt.subplots(figsize=(7.8, 4.6))
+   for station in stations:
+       for i, edi in enumerate(_iter_items(sites)):
+           if _name(edi, i) == station:
+               _, z, freq = _get_z_block(edi)
+               rho = _rho_det_from_z(z, freq)
+               ax.loglog(1.0 / freq, rho, "-o", ms=3, lw=1.2, label=station)
+               break
+
+   ax.set_xlabel("Period (s)")
+   ax.set_ylabel(r"$\rho_{a,det}$ ($\Omega\,m$)")
+   ax.set_title("L18PLT: raw station-level apparent-resistivity offsets")
+   ax.grid(True, which="both", alpha=0.25)
+   ax.legend(fontsize=8)
+   fig.tight_layout()
+
+   out = Path("docs/source/images/user_guide/emtools")
+   fig.savefig(out / "user-guide-emtools-ss-01.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-01.png
+   :width: 100%
+
+The four raw curves show the static-shift problem before any estimator
+is called: stations can keep broadly comparable curve shapes while
+sitting at very different apparent-resistivity levels.  That vertical
+offset is the part a static-shift correction can address.
 
 For static-shift work, station order matters.  The AMA method estimates a
 local spatial trend from neighbouring stations, so choose ``sort_by`` to
@@ -84,9 +118,47 @@ moving-average: for each station, pyCSAMT builds a weighted local
 reference from neighbouring stations, compares the target station with
 that reference in ``log10(rho_det)``, and reduces the per-frequency
 residuals to one static-shift value.
+For station :math:`s` and frequency :math:`f_i`, the determinant
+apparent resistivity is written as :math:`\rho_{a,det}(s,f_i)`.  The
+local reference is a weighted neighbourhood trend,
+
+.. math::
+
+   r_s(f_i)
+   =
+   \frac{\sum_{j \in \mathcal{N}(s)} w_{sj}
+   \log_{10}\rho_{a,det}(j,f_i)}
+   {\sum_{j \in \mathcal{N}(s)} w_{sj}},
+
+where :math:`\mathcal{N}(s)` is the station neighbourhood and
+:math:`w_{sj}` comes from ``weights``.  The station residual is then
+
+.. math::
+
+   d_s(f_i) =
+   \log_{10}\rho_{a,det}(s,f_i) - r_s(f_i).
+
+After period-band and skew filtering, ``robust_freq`` and
+``robust_overall`` reduce the finite residuals to the reported
+:math:`\delta_s`.  The correction factors are
+
+.. math::
+
+   F_{\rho,s} = 10^{-\delta_s},
+   \qquad
+   F_{Z,s} = 10^{-\delta_s/2}.
+
+The square root appears because apparent resistivity scales as
+:math:`|Z|^2`.  Positive :math:`\delta_s` therefore lowers the impedance
+level, while negative :math:`\delta_s` raises it.
 
 .. code-block:: python
    :linenos:
+
+   from pathlib import Path
+
+   import matplotlib.pyplot as plt
+   import numpy as np
 
    from pycsamt.emtools import estimate_ss_ama
 
@@ -102,6 +174,29 @@ residuals to one static-shift value.
    )
 
    print(factors[["station", "delta_log10_rho", "fac_rho", "fac_z", "n_used"]])
+
+   fig, ax1 = plt.subplots(figsize=(10.5, 4.2))
+   x = np.arange(len(factors))
+   colors = np.where(factors["delta_log10_rho"] >= 0.0, "C0", "C3")
+
+   ax1.bar(x, factors["delta_log10_rho"], color=colors, alpha=0.82)
+   ax1.axhline(0.0, color="0.2", lw=0.8)
+   ax1.set_ylabel(r"$\delta\log_{10}\rho$")
+   ax1.set_xticks(x[::2])
+   ax1.set_xticklabels(factors["station"].iloc[::2], rotation=90)
+   ax1.set_xlabel("Station")
+   ax1.grid(True, axis="y", alpha=0.25)
+
+   ax2 = ax1.twinx()
+   ax2.plot(x, factors["n_used"], "o-", color="0.25", ms=3, lw=1.1)
+   ax2.set_ylabel("Frequency samples used")
+
+   ax1.set_title("L18PLT AMA static-shift factors and sample support")
+   fig.tight_layout()
+
+   out = Path("docs/source/images/user_guide/emtools")
+   fig.savefig(out / "user-guide-emtools-ss-02.png", dpi=200)
+   plt.close(fig)
 
 .. code-block:: text
 
@@ -134,6 +229,15 @@ residuals to one static-shift value.
    25  18-023V         0.342848   0.454101  0.673870      11
    26  18-024U         0.003641   0.991652  0.995817       9
    27  18-025A        -1.909562  81.201150  9.011168      17
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-ss-02.png
+   :width: 100%
+
+The bar sign follows the estimated bias being removed.  Blue positive
+bars mark stations whose raw resistivity sits above the local trend and
+will be lowered; red negative bars mark stations that will be raised.
+The black line gives ``n_used``, so a large factor with little frequency
+support can be flagged before it is applied.
 
 The returned table has one row per station with these columns:
 

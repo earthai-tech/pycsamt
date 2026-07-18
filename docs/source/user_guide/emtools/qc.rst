@@ -108,6 +108,52 @@ The default weights are:
      - ``0.10``
      - Coherence with neighbouring stations.
 
+Every component follows the same shape. Each one reduces the tensor to a
+single non-negative "badness" statistic :math:`m_k`, compares it against
+a tolerance :math:`\tau_k`, and folds the excess back into a
+:math:`[0, 1]` trust score:
+
+.. math::
+
+   s_k = \mathrm{clip}_{[0,1]}\!\left(1 - \frac{m_k}{\tau_k}\right).
+
+A statistic of ``0`` scores a perfect ``1``; as :math:`m_k` grows toward
+:math:`\tau_k` the score decays linearly to ``0`` and stays there beyond
+it, so nothing is ever penalized twice or rewarded for being
+implausibly clean. Concretely, the six statistics are:
+
+- ``coverage`` needs no tolerance — it is already the fraction of finite
+  tensor entries, in ``[0, 1]``.
+- ``uncertainty`` uses :math:`m = \mathrm{median}(|Z_{\mathrm{err}}| /
+  |Z|)` against ``relerr_threshold`` (default ``0.20``): how large the
+  reported error is relative to the signal.
+- ``offdiag`` uses :math:`m = \left|\log_{10}(|Z_{xy}| /
+  |Z_{yx}|)\right|` against ``offdiag_tolerance_log10`` (default
+  ``0.35``): how far the two off-diagonal modes disagree in log
+  amplitude.
+- ``diagonal`` uses :math:`m = \mathrm{med}(|Z_{xx}|, |Z_{yy}|) \big/
+  \left[\mathrm{med}(|Z_{xx}|, |Z_{yy}|) + \mathrm{med}(|Z_{xy}|,
+  |Z_{yx}|)\right]` against ``diagonal_leakage_max`` (default ``0.35``):
+  the fraction of tensor amplitude sitting on the diagonal, where a 1-D
+  or 2-D earth should keep most of it off-diagonal.
+- ``phase`` uses :math:`m = \mathrm{med}|\Delta\varphi_{xy,yx}|`, the
+  median absolute jump in degrees between the unwrapped phase of
+  neighbouring frequencies, against ``phase_jump_tolerance_deg``
+  (default ``90``).
+- ``spatial`` uses :math:`m = \left|\log_{10}\rho -
+  \mathrm{median}(\log_{10}\rho_{\mathrm{neighbours}})\right|` against
+  ``spatial_tolerance_log10`` (default ``0.60``), where :math:`\rho` is a
+  determinant-style apparent-resistivity proxy compared against the
+  immediately adjacent stations (or, at the frequency level, the same
+  frequency at the two nearest stations by distance).
+
+At the station level each :math:`m_k` is one median taken over every
+frequency row, which is why ``station_confidence_table`` returns one
+score per station. At the frequency level, further down, the same six
+formulas are evaluated one row at a time instead, so a station that
+looks coherent overall can still carry a handful of untrustworthy
+individual frequencies underneath.
+
 The default confidence bands are:
 
 * ``CR >= 0.95``: safe / retained;
@@ -146,9 +192,26 @@ the same weighted formula used by the tables.
 
    CR=0.861 +/- 0.141
 
-``confidence_err`` is the spread of the available component scores. If
-only one score is available, it falls back to
-``sqrt(CR * (1 - CR) / n_freq)``.
+``confidence_err`` is not a formal statistical uncertainty on
+:math:`\mathrm{CR}` — it is a cheap, honest stand-in for one:
+
+.. math::
+
+   \sigma_{\mathrm{CR}} =
+   \begin{cases}
+   \mathrm{std}\bigl(\{s_k\}\bigr), & \text{two or more finite } s_k, \\[4pt]
+   \sqrt{\mathrm{CR}\,(1 - \mathrm{CR}) / n_{\mathrm{freq}}}, & \text{otherwise.}
+   \end{cases}
+
+With six components on hand, as in the example above,
+:math:`\sigma_{\mathrm{CR}}` is simply the population standard deviation
+of ``{1.00, 0.82, 0.76, 0.55, 0.90, 0.88}``, which is exactly the
+``0.141`` printed above — the components disagree with each other, and
+that disagreement *is* the reported uncertainty. When only one
+component survives (most often ``coverage`` alone, when no error tensor
+or neighbouring station exists to score against), there is nothing to
+disagree with, so the formula falls back to the binomial-style standard
+error :math:`\sqrt{\mathrm{CR}(1-\mathrm{CR})/n_{\mathrm{freq}}}` instead.
 
 Station QC Summary
 ------------------
@@ -366,8 +429,12 @@ Frequency-Level Confidence
 --------------------------
 
 ``frequency_confidence_table`` returns one row per station-frequency
-sample. This is the table to use for period-band decisions, masks, and
-inversion down-weighting.
+sample, scored with the same six formulas and the same
+:math:`\mathrm{CR}_{i,f}` weighting as the station table above — the
+only change is that each :math:`m_k` is now evaluated at a single
+frequency rather than medianed across the whole station. This is the
+table to use for period-band decisions, masks, and inversion
+down-weighting.
 
 .. code-block:: python
    :linenos:
@@ -676,9 +743,28 @@ off-diagonal amplitude proxy.
 Consistency Fan
 ---------------
 
-``plot_consistency_fan`` propagates impedance errors through apparent
-resistivity by Monte Carlo sampling. It can compare ``xy`` and ``yx``
-apparent-resistivity bands for one station.
+Apparent resistivity is a nonlinear function of impedance, so a
+symmetric error on :math:`Z` does not become a symmetric error on
+:math:`\rho_a` — the ``uncertainty`` score above summarizes that error
+as one number, but it cannot show its shape. ``plot_consistency_fan``
+shows the shape directly by Monte Carlo sampling: it draws
+:math:`n_{\mathrm{draws}}` complex Gaussian perturbations with standard
+deviation equal to the reported error,
+
+.. math::
+
+   Z^{(d)} = Z + E^{(d)}, \qquad
+   E^{(d)} \sim \mathcal{CN}(0,\, |Z_{\mathrm{err}}|^2), \qquad
+   d = 1, \dots, n_{\mathrm{draws}},
+
+recomputes :math:`\rho_a^{(d)} = 0.2\,|Z^{(d)}|^2 / f` for each draw, and
+plots the requested percentiles of the resulting distribution — the
+``10``/``50``/``90`` default draws a band around the median rather than
+a single curve. It can compare ``xy`` and ``yx`` apparent-resistivity
+bands for one station, which is exactly where the ``offdiag`` score
+above would flag a problem, but here you see the two bands and can
+judge for yourself whether they merely disagree or actually fail to
+overlap.
 
 .. code-block:: python
    :linenos:
@@ -722,9 +808,23 @@ you use it in a report.
 XY/YX Crossover Map
 -------------------
 
-``plot_xyyx_crossover_map`` marks periods where ``rho_xy`` and
-``rho_yx`` swap which one is larger. It is a cheap anisotropy and
-mode-consistency diagnostic.
+Away from a 1-D earth, ``rho_xy`` and ``rho_yx`` need not agree, but
+which one is larger should not flip back and forth erratically with
+period. ``plot_xyyx_crossover_map`` tracks the sign of
+:math:`d(f) = \rho_{a,xy}(f) - \rho_{a,yx}(f)` along each station's
+sounding and marks every period where it changes,
+
+.. math::
+
+   \operatorname{sign}\bigl(d(f_j)\bigr) \ne
+   \operatorname{sign}\bigl(d(f_{j+1})\bigr),
+
+placing the marker at the log-period linearly interpolated between
+:math:`f_j` and :math:`f_{j+1}`, weighted by how close each side came to
+zero. A station with one or two crossovers across a smooth sounding is
+unremarkable; a station peppered with them is a cheap, effective
+anisotropy and mode-consistency diagnostic worth following up with the
+consistency fan above.
 
 .. code-block:: python
    :linenos:

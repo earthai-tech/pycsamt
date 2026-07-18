@@ -1,43 +1,47 @@
 .. _user_guide_iot_provenance:
 
 Provenance and Reproducibility
-==============================
+===============================
 
 Provenance records explain what happened during acquisition and make a
-field session reproducible after the instruments have left the site. In an
-IoT workflow, that audit trail should include station occupation metadata,
-devices, QC decisions, raw-file integrity hashes, processing steps, and
-the environment used to create the manifest.
+:term:`field session` reproducible after the instruments have left the
+site. In an IoT workflow, that :term:`provenance manifest` should include
+station occupation metadata, devices, :term:`quality control` decisions,
+raw-file integrity hashes, processing steps, and the environment used to
+create the manifest itself.
 
 This page uses one real file from the repository demo data,
 ``data/AMT/WILLY_DATA/L18PLT/18-001A.edi``, for the raw-file hash. The IoT
-QC packets are synthetic because provenance is documenting acquisition
-events around the data, not reprocessing the EDI file itself.
+:term:`telemetry packet`\ s are synthetic because provenance is documenting
+acquisition events around the data, not reprocessing the :term:`EDI` file
+itself.
 
 Hash A Raw File
----------------
+----------------
 
-Use :func:`pycsamt.iot.hash_raw_file` to create an integrity record. The
-full digest is stored in manifests; the example prints only a prefix to
-keep the documentation readable.
+Use :func:`pycsamt.iot.hash_raw_file` to create an integrity record. It
+streams the file in fixed-size chunks through SHA-256 rather than loading
+it whole, so :math:`\mathrm{digest} = \mathrm{SHA256}(\mathrm{bytes})` comes
+out identically however the file is read -- in one pass or in chunks, on
+this machine or another. The full digest is stored in manifests; the
+example prints only a prefix to keep the documentation readable.
 
 .. code-block:: python
    :linenos:
 
+   import json
    from pathlib import Path
 
    from pycsamt.iot import hash_raw_file
 
    raw_file = Path("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
    raw_hash = hash_raw_file(str(raw_file))
-   print(
-       {
-           "name": raw_hash["name"],
-           "bytes": raw_hash["bytes"],
-           "algo": raw_hash["algo"],
-           "digest_prefix": raw_hash["digest"][:16],
-       }
-   )
+   print(json.dumps({
+       "name": raw_hash["name"],
+       "bytes": raw_hash["bytes"],
+       "algo": raw_hash["algo"],
+       "digest_prefix": raw_hash["digest"][:16],
+   }, indent=2))
 
 Output:
 
@@ -51,11 +55,13 @@ Output:
    }
 
 Log QC Decisions
-----------------
+-----------------
 
 Use :func:`pycsamt.iot.log_qc_decision` for normalized audit records. It
 standardizes station IDs, channel names, decisions, reasons, timestamps,
-and optional acquisition windows.
+and optional acquisition windows into the same shape every time, which
+matters later: these records are exactly what feeds the :term:`hash chain`
+built further down this page.
 
 .. code-block:: python
    :linenos:
@@ -71,7 +77,7 @@ and optional acquisition windows.
        timestamp=1_700_000_120.0,
        window=(1_700_000_060.0, 1_700_000_120.0),
    )
-   print(qc_reject)
+   print(json.dumps(qc_reject, indent=2))
 
 Output:
 
@@ -93,10 +99,10 @@ Output:
    }
 
 Build A Session Manifest
-------------------------
+-------------------------
 
-The easiest route is to build a :class:`pycsamt.iot.FieldSession`, add
-devices, stations, and packets, then call
+The easiest route is to build a :term:`field session`, add devices,
+stations, and packets, then call
 :meth:`pycsamt.iot.FieldSession.to_manifest`. The manifest can still be
 enriched afterward with raw-file hashes, extra QC decisions, and processing
 steps.
@@ -200,18 +206,17 @@ steps.
    manifest.add_processing_step("recorded synthetic IoT QC packet decisions")
 
    manifest_dict = manifest.as_dict()
-   print(
-       {
-           "survey_id": manifest_dict["survey_id"],
-           "method": manifest_dict["method"],
-           "operator": manifest_dict["operator"],
-           "n_records": len(manifest_dict["records"]),
-           "n_devices": len(manifest_dict["devices"]),
-           "n_files": len(manifest_dict["files"]),
-           "n_qc_decisions": len(manifest_dict["qc_decisions"]),
-           "content_hash_prefix": manifest_dict["content_hash"][:16],
-       }
-   )
+   print(json.dumps({
+       "survey_id": manifest_dict["survey_id"],
+       "method": manifest_dict["method"],
+       "operator": manifest_dict["operator"],
+       "tool_version": manifest_dict["tool_version"],
+       "n_records": len(manifest_dict["records"]),
+       "n_devices": len(manifest_dict["devices"]),
+       "n_files": len(manifest_dict["files"]),
+       "n_qc_decisions": len(manifest_dict["qc_decisions"]),
+       "content_hash_prefix": manifest_dict["content_hash"][:16],
+   }, indent=2))
 
 Output:
 
@@ -221,15 +226,62 @@ Output:
      "survey_id": "WILLY-L18-PROVENANCE-DEMO",
      "method": "amt",
      "operator": "pyCSAMT documentation",
+     "tool_version": "2.0.0rc1",
      "n_records": 1,
      "n_devices": 1,
      "n_files": 1,
      "n_qc_decisions": 3,
-     "content_hash_prefix": "f609c0a3c301389a"
+     "content_hash_prefix": "13d3c3ba52a1514e"
    }
 
+That ``content_hash`` is what makes the manifest self-checking. Every field
+of the payload -- including ``tool_version`` above -- is serialised to a
+*canonical* JSON encoding :math:`C(\cdot)`: keys sorted, no surrounding or
+separating whitespace, so the same content always produces the same bytes
+regardless of field-insertion order. The :term:`content hash` is then
+
+.. math::
+
+   H(M) = \mathrm{SHA256}\bigl(C(M)\bigr), \qquad
+   M_{\mathrm{payload}}[\texttt{"content\_hash"}] = H(M_{\mathrm{payload}}
+   \setminus \{\texttt{"content\_hash"}\}),
+
+i.e. the hash covers every field of the manifest *except* itself, which is
+what lets a reviewer strip ``content_hash`` back out, recompute :math:`H`,
+and compare. Doing exactly that independently of pyCSAMT's own bookkeeping
+confirms the manifest above was not altered after export:
+
+.. code-block:: python
+   :linenos:
+
+   import hashlib
+
+   payload_no_hash = {
+       k: v for k, v in manifest_dict.items() if k != "content_hash"
+   }
+   canonical = json.dumps(
+       payload_no_hash, sort_keys=True, default=str, separators=(",", ":")
+   )
+   recomputed = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+   print(f"recomputed == content_hash: {recomputed == manifest_dict['content_hash']}")
+   print(f"canonical JSON length: {len(canonical)} bytes")
+
+Output:
+
+.. code-block:: text
+
+   recomputed == content_hash: True
+   canonical JSON length: 2365 bytes
+
+Because ``tool_version`` is part of what gets hashed, the same acquisition
+inputs will still produce a *different* ``content_hash`` after a pyCSAMT
+upgrade -- the digest is a snapshot of the manifest bytes, not a
+content-only fingerprint of the survey. Pin or record ``tool_version``
+alongside any digest you archive for long-term comparison, rather than
+expecting it to stay constant across releases.
+
 Inspect A Station Record
-------------------------
+--------------------------
 
 Each station record collects occupation metadata and QC decisions for that
 station. Session-derived records are convenient when packets already carry
@@ -239,16 +291,14 @@ station, method, channel, and battery metadata.
    :linenos:
 
    record = manifest.as_dict()["records"][0]
-   print(
-       {
-           "station_id": record["station_id"],
-           "operator": record["operator"],
-           "sample_rate_hz": record["sample_rate_hz"],
-           "battery_status": record["battery_status"],
-           "accepted_band_hz": record["accepted_band_hz"],
-           "qc_decisions": record["qc_decisions"],
-       }
-   )
+   print(json.dumps({
+       "station_id": record["station_id"],
+       "operator": record["operator"],
+       "sample_rate_hz": record["sample_rate_hz"],
+       "battery_status": record["battery_status"],
+       "accepted_band_hz": record["accepted_band_hz"],
+       "qc_decisions": record["qc_decisions"],
+   }, indent=2))
 
 Output:
 
@@ -288,12 +338,13 @@ Output:
    }
 
 Build A Manual Audit
---------------------
+----------------------
 
 Use :class:`pycsamt.iot.ProvenanceRecord` and
 :func:`pycsamt.iot.build_acquisition_manifest` when you are assembling a
 manifest from a station sheet, field notes, and file hashes instead of a
-live :class:`~pycsamt.iot.FieldSession`.
+live :term:`field session`. The resulting manifest gets the same
+:math:`H(\cdot)` treatment as above:
 
 .. code-block:: python
    :linenos:
@@ -350,10 +401,113 @@ Output:
 
 .. code-block:: text
 
-   12d8f383d727517a
+   d01448863ac21a84
+
+Tamper-Evident QC Logs And Signed Manifests
+----------------------------------------------
+
+A single ``content_hash`` tells a reviewer whether *the whole manifest*
+still matches what was exported. Two sharper questions need their own
+tools: which QC entry, if any, was altered inside a running log, and can
+someone other than the exporter prove they produced this manifest?
+
+:func:`pycsamt.iot.hash_chain` answers the first by folding each entry's
+hash into the next, the same way a chain of *given* blocks would, using
+the same canonical-JSON :math:`H(\cdot)` from above. The first entry
+chains from an empty genesis hash:
+
+.. math::
+
+   h_0 = H\bigl(e_0 \cup \{\texttt{seq}: 0,\ \texttt{prev\_hash}: {\texttt{""}}\}\bigr),
+   \qquad
+   h_i = H\bigl(e_i \cup \{\texttt{seq}: i,\ \texttt{prev\_hash}: h_{i-1}\}\bigr),
+   \quad i \ge 1.
+
+Because :math:`h_i` depends on :math:`h_{i-1}`, editing, deleting, or
+reordering any entry :math:`e_j` changes :math:`h_j` and therefore every
+hash after it -- :func:`~pycsamt.iot.verify_hash_chain` just recomputes the
+recurrence and checks it still matches what was stored:
+
+.. code-block:: python
+   :linenos:
+
+   from pycsamt.iot.provenance import hash_chain, verify_hash_chain
+
+   chain = hash_chain([qc_accept, qc_reject])
+   for entry in chain:
+       print(
+           f"seq={entry['seq']} "
+           f"prev_hash={entry['prev_hash'][:8] or '(genesis)'} "
+           f"entry_hash={entry['entry_hash'][:8]}"
+       )
+   print(f"verify_hash_chain (untouched): {verify_hash_chain(chain)}")
+
+   tampered = [dict(e) for e in chain]
+   tampered[1]["reasons"] = ["tampered_after_the_fact"]
+   print(f"verify_hash_chain (tampered):  {verify_hash_chain(tampered)}")
+
+Output:
+
+.. code-block:: text
+
+   seq=0 prev_hash=(genesis) entry_hash=f6d7c1d0
+   seq=1 prev_hash=f6d7c1d0 entry_hash=4e91a4f8
+   verify_hash_chain (untouched): True
+   verify_hash_chain (tampered):  False
+
+Editing only ``chain[1]["reasons"]`` was enough to break verification --
+notice that entry 0 was never touched, but the chain still fails as a
+whole because entry 1's stored ``entry_hash`` no longer matches what the
+recurrence recomputes for its (now-different) contents.
+
+:func:`~pycsamt.iot.sign_mapping` answers the second question: it wraps the
+same canonical JSON in an HMAC rather than a plain hash,
+
+.. math::
+
+   \mathrm{signature} = \mathrm{HMAC\text{-}SHA256}\bigl(\mathrm{key}, C(M)\bigr),
+
+so only someone holding ``key`` could have produced that signature, and
+:func:`~pycsamt.iot.verify_manifest` checks both the :term:`manifest
+signature` and the wrapped :term:`content hash` in one call:
+
+.. code-block:: python
+   :linenos:
+
+   import json
+
+   from pycsamt.iot.provenance import verify_manifest
+
+   signed = manual_manifest.sign("demo-shared-key")
+   print(f"signature_algo: {signed['signature_algo']}")
+   print(f"signature prefix: {signed['signature'][:16]}")
+   print(f"verify_manifest (untouched): {verify_manifest(signed, 'demo-shared-key')}")
+
+   tampered_signed = json.loads(json.dumps(signed))
+   tampered_signed["manifest"]["operator"] = "someone else"
+   print(f"verify_manifest (tampered):  {verify_manifest(tampered_signed, 'demo-shared-key')}")
+   print(f"verify_manifest (wrong key): {verify_manifest(signed, 'not-the-key')}")
+
+Output:
+
+.. code-block:: text
+
+   signature_algo: hmac-sha256
+   signature prefix: 2fca1351a93d865d
+   verify_manifest (untouched): True
+   verify_manifest (tampered):  False
+   verify_manifest (wrong key): False
+
+Both failure modes matter for different reasons: a tampered payload fails
+because its recomputed :term:`content hash` no longer matches, while a
+correct payload checked against the wrong key fails the HMAC comparison
+even though the JSON itself is untouched. A :term:`hash chain` is enough
+for a single-party audit trail that only needs tamper *evidence*; add a
+:term:`manifest signature` when a second party needs to verify *who*
+produced the manifest, not just that it is internally consistent.
 
 Export A Reproducibility Bundle
--------------------------------
+----------------------------------
 
 Use :func:`pycsamt.iot.export_reproducibility_bundle` to write the
 manifest and one JSON audit per station. Set ``zip_bundle=True`` when you
@@ -378,14 +532,12 @@ you intentionally want raw files copied into the bundle.
        manual_record,
        f"{out_dir}/single_station_audit.json",
    )
-   print(
-       {
-           "manifest_name": Path(bundle["manifest"]).name,
-           "audit_count": len(bundle["audits"]),
-           "zip_name": Path(bundle["zip"]).name,
-           "single_station_audit": Path(audit_path).name,
-       }
-   )
+   print(json.dumps({
+       "manifest_name": Path(bundle["manifest"]).name,
+       "audit_count": len(bundle["audits"]),
+       "zip_name": Path(bundle["zip"]).name,
+       "single_station_audit": Path(audit_path).name,
+   }, indent=2))
 
 Output:
 
@@ -399,17 +551,20 @@ Output:
    }
 
 Field Interpretation
---------------------
+----------------------
 
 The manifest gives reviewers enough information to understand and verify
 the acquisition trail: which station was occupied, which device was used,
 which QC decisions were made, which raw file was referenced, and whether
-the manifest content changed after export. The ``content_hash`` is a
-stable digest of the manifest payload. Raw-file hashes protect the
-integrity of data files, while station audits preserve the field context
-around those files.
+the manifest content changed after export. Raw-file hashes protect the
+integrity of data files; a :term:`content hash` protects the manifest that
+describes them; a :term:`hash chain` protects the order and content of a
+running QC log; and a :term:`manifest signature` protects who is allowed
+to be believed as the source of all of the above. Station audits preserve
+the field context around those files independently of any of the four.
 
 For production surveys, write the manifest beside the processed products
 and keep the raw-file hash records even when raw files are too large to
-bundle. That makes later reporting, reprocessing, and external review much
+bundle, and record the exporting ``tool_version`` alongside any archived
+digest. That makes later reporting, reprocessing, and external review much
 less fragile.

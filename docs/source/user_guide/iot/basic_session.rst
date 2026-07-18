@@ -4,17 +4,18 @@ Basic Session
 =============
 
 A :class:`pycsamt.iot.FieldSession` is the operational wrapper around an
-IoT-enabled survey. It stores field devices, station metadata, telemetry
-packets, monitoring thresholds, and the hand-off metadata that later
-processing can audit.
+IoT-enabled survey — the :term:`field session`. It stores field devices,
+station metadata, the accumulated :term:`telemetry packet` stream,
+monitoring thresholds, and the hand-off metadata that later processing can
+audit.
 
-This example uses the repository's real AMT demo line
-``data/AMT/WILLY_DATA/L18PLT`` to discover station identifiers from EDI
-filenames. The live telemetry packets are synthetic because the EDI files
-represent processed survey data, not an IoT packet stream. That split is
-typical in documentation and testing: use real survey inventory where it
-exists, then generate explicit synthetic telemetry for the acquisition
-layer.
+This example uses the repository's real :term:`AMT` demo line
+``data/AMT/WILLY_DATA/L18PLT`` to discover station identifiers from
+:term:`EDI` filenames. The live telemetry packets are synthetic because the
+EDI files represent processed survey data, not an IoT packet stream. That
+split is typical in documentation and testing: use real survey inventory
+where it exists, then generate explicit synthetic telemetry for the
+acquisition layer.
 
 Discover Stations From The Demo Data
 ------------------------------------
@@ -108,8 +109,8 @@ Build The Field Session
 -----------------------
 
 The monitoring configuration records the operational expectations for the
-survey: required AMT channels, expected packet interval, battery limit,
-clock-offset limit, and frequency band.
+survey: required :term:`AMT` channels, expected packet interval, battery
+limit, clock-offset limit, and frequency band.
 
 .. code-block:: python
    :linenos:
@@ -158,9 +159,10 @@ Output:
 Add Synthetic QC Telemetry
 --------------------------
 
-The next block creates synthetic ``qc`` packets. Four stations report
-accepted windows. The last station reports one rejected window and a low
-battery value so that the monitoring status has something useful to flag.
+The next block creates synthetic ``qc`` :term:`telemetry packet`\ s. Four
+stations report accepted windows. The last station reports one rejected
+window and a low battery value so that the :term:`monitoring status` has
+something useful to flag.
 
 .. code-block:: python
    :linenos:
@@ -207,11 +209,81 @@ battery value so that the monitoring status has something useful to flag.
                )
            )
 
+Mathematical Definitions
+------------------------
+
+``session.assess`` enriches each :term:`telemetry packet` payload, then
+reduces the stream to a :term:`monitoring status`. Every quantity below is
+reproducible outside pyCSAMT from the raw packet payloads.
+
+The :term:`packet success rate` is the mean of the transport
+acknowledgement flag :math:`a_i \in \{0, 1\}` (``ack_ok``, true by default
+when absent) over the :math:`N` packets in the stream:
+
+.. math::
+
+   R_\mathrm{packet} = \frac{1}{N} \sum_{i=1}^{N} a_i.
+
+The :term:`edge acceptance rate` only considers the subset of :math:`M \le
+N` packets that carry an edge :term:`quality control` decision
+:math:`d_j \in \{0, 1\}` (``accepted``/``decision`` in the payload). It is
+defined as
+
+.. math::
+
+   R_\mathrm{edge} =
+   \begin{cases}
+   \dfrac{1}{M} \sum_{j=1}^{M} d_j & M > 0 \\[4pt]
+   1 & M = 0,
+   \end{cases}
+
+so a stream with no edge decisions at all defaults to full acceptance
+rather than being penalised for missing metadata. In this example
+:math:`N = M = 15`, giving :math:`R_\mathrm{packet} = 1.0` (every packet
+was acknowledged) and :math:`R_\mathrm{edge} = 14/15 \approx 0.933` (one
+rejected window on the last station).
+
+The remaining status fields are simple order statistics over the packet
+timestamps :math:`t_i`, battery readings :math:`v_i`, and clock offsets
+:math:`c_i`:
+
+.. math::
+
+   g_\mathrm{max} = \max_i \left( t_{(i+1)} - t_{(i)} \right), \qquad
+   v_\mathrm{min} = \min_i v_i, \qquad
+   c_\mathrm{max} = \max_i |c_i|,
+
+with :math:`t_{(i)}` the sorted timestamps. ``session.assess`` compares
+these five quantities against the thresholds in
+:class:`~pycsamt.iot.MonitoringConfig` (``min_packet_success_rate``,
+``min_edge_acceptance_rate``, ``min_battery_v``, ``max_clock_offset_ms``,
+``max_gap_s``/``expected_interval_s``), plus method and channel coverage
+checks. Any violated threshold is recorded as an issue string; the overall
+:term:`monitoring status` level is ``critical`` if the violated set
+intersects a fixed critical subset (packet success, edge acceptance,
+battery, clock offset, method mismatch, or missing required channels),
+``warning`` if other issues remain, and ``ok`` otherwise. Here the low
+battery reading on the last packet (``10.7`` V, below ``min_battery_v =
+11.0``) alone is enough to set the level to ``critical``.
+
+The :term:`pipeline hand-off` reports a *per-station* acceptance rate
+rather than the stream-wide :math:`R_\mathrm{edge}`. For station
+:math:`s` with :math:`n_\mathrm{accept}(s)` accepted and
+:math:`n_\mathrm{reject}(s)` rejected packets,
+
+.. math::
+
+   R_\mathrm{edge}(s) =
+   \frac{n_\mathrm{accept}(s)}{n_\mathrm{accept}(s) + n_\mathrm{reject}(s)},
+
+which is why the first two stations below report ``1.00`` even though the
+stream-wide :math:`R_\mathrm{edge}` is below one.
+
 Inspect The Session Tables
 --------------------------
 
-The session can produce station tables, packet tables, monitoring status,
-and a compact pipeline hand-off.
+The :term:`field session` can produce station tables, packet tables, a
+:term:`monitoring status`, and a compact :term:`pipeline hand-off`.
 
 .. code-block:: python
    :linenos:
@@ -304,7 +376,8 @@ Plot The Basic Session
 ----------------------
 
 The field dashboard gives a quick operational view of station health,
-edge-QC acceptance, battery/synchronisation state, and packet timing.
+edge-:term:`QC` acceptance, battery/synchronisation state, and packet
+timing.
 
 .. code-block:: python
    :linenos:
@@ -335,8 +408,8 @@ What To Carry Forward
 
 The station inventory is grounded in the real L18 demo dataset, while the
 telemetry is synthetic and explicitly marked as such. That distinction is
-important: EDI files are downstream geophysical products, but an IoT
-``FieldSession`` records the operational evidence around acquisition. The
-pipeline hand-off keeps those layers connected by carrying station IDs,
-channels, frequency-band coverage, packet counts, and acceptance rates
-forward into later processing or reporting.
+important: :term:`EDI` files are downstream geophysical products, but an
+IoT :term:`field session` records the operational evidence around
+acquisition. The :term:`pipeline hand-off` keeps those layers connected by
+carrying station IDs, channels, frequency-band coverage, packet counts, and
+acceptance rates forward into later processing or reporting.

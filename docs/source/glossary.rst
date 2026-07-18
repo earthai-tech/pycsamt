@@ -23,6 +23,18 @@ definitions here are the single source of truth.
       giving shallow-to-intermediate depth resolution. The natural source is
       weak in the AMT "dead band" near 1–5 kHz.
 
+   1D
+      A one-dimensional earth representation in which resistivity varies only
+      with depth. In magnetotelluric and audio-magnetotelluric inversion, a 1D
+      model is commonly represented as horizontal layers with resistivity and
+      thickness parameters.
+
+   3D
+      A three-dimensional earth representation in which resistivity can vary
+      with horizontal position and depth. A 3D interpretation is needed when
+      strike-invariant or layered assumptions cannot explain the measured
+      electromagnetic response.
+
    CSAMT
    Controlled-source audio-frequency magnetotellurics
       An active-source variant of :term:`AMT` that uses a grounded electric
@@ -71,6 +83,12 @@ definitions here are the single source of truth.
       inversion objective function, so a forward assumption that does not
       match the true physics can bias the recovered model even while the data
       misfit looks small.
+
+   Forward model
+      A concrete earth model and solver setup used to compute synthetic
+      electromagnetic data from assumed subsurface parameters. In validation,
+      related noise realizations generated from the same forward model should
+      stay in the same data partition.
 
    Half-space
       The lowermost, infinitely thick layer of a :term:`layered model`,
@@ -457,6 +475,192 @@ definitions here are the single source of truth.
       earth models. A forward-model prior may define layer-count limits,
       resistivity bounds, anomaly geometry, geological class, or spatial
       correlation length.
+
+   AI inversion
+      An inversion workflow that uses a learned or differentiable model to map
+      electromagnetic observations to candidate earth-model parameters. Its
+      result is conditional on the training distribution, feature contract,
+      forward operator, regularization, and validation evidence.
+
+   Supervised AI inversion
+      A learned inverse mapping trained from response-model pairs, usually
+      synthetic examples where both the forward response and target vector are
+      known. It minimizes target error on the sampled examples and must still
+      be checked in response space.
+
+   Physics-informed inversion
+      An inversion workflow that includes a differentiable physics residual in
+      the optimization objective, commonly combining data fit with model
+      regularization. The word physics-informed does not imply exact physics,
+      uniqueness, or automatic field validity.
+
+   Hybrid inversion
+      A workflow that combines an AI estimate with physics-based refinement,
+      for example by using the learned prediction as a starting model, prior,
+      or proposal before iterative inversion.
+
+   Feature contract
+      The complete agreement between training and inference arrays: feature
+      names, order, units, transformations, frequency or period grid, masking,
+      interpolation, normalization statistics, component convention, station
+      order, and padding.
+
+   Training distribution
+      The probability distribution that generated the training examples. In AI
+      inversion it acts as a model prior because the network is mainly tested
+      on structures, responses, noise, and nuisance effects sampled from it.
+
+   Domain gap
+      The mismatch between examples used to train or validate a model and the
+      field observations where the model is applied. It can arise from physics,
+      noise, survey geometry, processing, dimensionality, or geology outside
+      the synthetic prior.
+
+   Non-uniqueness
+      The property that more than one earth model can fit the same
+      electromagnetic observations within uncertainty. It is a physical
+      limitation of the inverse problem, not a limitation that disappears
+      because a neural network predicts one model quickly.
+
+   Calibration set
+      Held-out data used to calibrate uncertainty or interval coverage after a
+      base model has been trained. It should not be reused for fitting network
+      weights or selecting the final test result.
+
+   Exchangeability
+      The assumption that calibration examples and future examples are drawn in
+      a comparable way, so their residuals can be treated as interchangeable
+      for coverage calculations such as conformal prediction.
+
+   Aleatoric uncertainty
+      Uncertainty associated with observation noise, incomplete measurements,
+      or irreducible ambiguity in the data.
+
+   Epistemic uncertainty
+      Uncertainty in learned model parameters or predictions caused by limited
+      or incomplete training evidence.
+
+   Distributional uncertainty
+      Uncertainty caused by applying a model to inputs that differ from the
+      training or calibration distribution.
+
+   Structural uncertainty
+      Uncertainty caused by an incorrect dimensionality, parameterization,
+      forward physics, architecture, or geological assumption.
+
+   Model-space metric
+      A validation metric computed directly on earth-model parameters, such as
+      log-resistivity error, thickness error, interface depth error, or section
+      similarity when synthetic truth is known.
+
+   Response-space metric
+      A validation metric computed after forwarding the predicted model and
+      comparing the reconstructed response with observed or synthetic data.
+
+   Out-of-distribution diagnostic
+      A check that estimates whether an input lies outside the distribution
+      represented by training, validation, or calibration examples.
+
+   Dataset card
+      A structured documentation record describing a dataset's purpose,
+      generation process, field sources, feature and target contracts, splits,
+      known gaps, limitations, and intended use.
+
+   Model card
+      A structured documentation record describing a model's identity,
+      intended use, training data, architecture, evaluation, uncertainty,
+      limitations, and operational constraints.
+
+   Checkpoint
+      A saved model artifact containing learned parameters and enough
+      architecture/backend information to restore inference. It is not
+      scientifically interpretable without its feature contract, dataset
+      record, checksum, and validation evidence.
+
+   AgentResult
+      The standardised return value of every :term:`agent` in
+      :mod:`pycsamt.agents`: an execution ``status`` (success, failed, or
+      needs_review), a human-readable summary, agent-specific arrays and
+      figures under ``data``, non-fatal ``warnings``, and elapsed time and
+      cost fields. Its uniform shape lets orchestration code branch on
+      outcome without knowing which agent produced it, but a success status
+      only means the programmed workflow returned, not that the result
+      meets scientific acceptance criteria.
+
+   Ensemble inversion
+   Deep ensemble
+      An uncertainty-aware :term:`supervised AI inversion` that trains
+      several independent estimators from the same architecture and
+      synthetic dataset with different random seeds, then reports the
+      spread across members as one uncertainty source. It captures
+      training-driven variability but not the :term:`calibration set`'s
+      domain limits, so its empirical coverage still needs to be checked
+      before it is read as a field-valid confidence interval.
+
+   Conformal prediction
+      A distribution-free calibration method that turns point predictions
+      into prediction intervals with a guaranteed marginal coverage on
+      held-out data, provided the :term:`calibration set` and future
+      inputs are :term:`exchangeability`-compatible. It does not certify
+      per-station coverage, and its guarantee degrades under
+      :term:`domain gap`.
+
+   Monte Carlo dropout
+      A stochastic-inference technique that keeps a network's dropout
+      layers active at prediction time and repeats the forward pass to
+      obtain a spread of outputs, treated as one epistemic-uncertainty
+      estimate. It is one contributor to :term:`epistemic uncertainty`
+      alongside :term:`ensemble inversion`, not a substitute for
+      :term:`aleatoric uncertainty` or :term:`distributional uncertainty`
+      sources it does not model.
+
+   Model zoo
+      A registry of named, versioned pre-trained :term:`checkpoint`\ s
+      with recorded architecture, layer count, and solver metadata, so a
+      released model can be listed, downloaded, and applied without
+      repeating training. Using a zoo entry still requires checking that
+      its :term:`feature contract` and :term:`training distribution`
+      match the field survey.
+
+   Report package
+      The versioned collection of structured outputs, cards, manifests,
+      figures, metrics, predictions, review records, and rendered narrative
+      used to release an AI inversion result for a declared purpose.
+
+   Response reconstruction
+      The diagnostic step that forwards a predicted earth model and compares
+      the synthetic response with observed data in a declared residual space.
+
+   Station status
+      The per-station or per-profile decision attached to an inference result,
+      commonly accepted, needs review, or rejected, with a reason and domain
+      evidence.
+
+   Validation leakage
+      Any path by which information from validation, calibration, test, field,
+      or challenge data influences model fitting, preprocessing, model
+      selection, thresholds, or interpretation before those data are formally
+      evaluated.
+
+   Challenge set
+      A held-out validation set deliberately shifted toward difficult or
+      boundary cases, used to map failure modes and operating limits rather
+      than to tune the model.
+
+   Operating envelope
+      The documented range of methods, components, frequencies, geometry,
+      geology, noise, missingness, and quality conditions under which a model
+      may be used with its stated acceptance evidence.
+
+   Baseline model
+      A simpler or established method used as a comparison point, such as a
+      median target predictor, nearest-neighbour regression, or classical
+      inversion workflow evaluated on the same held-out cases.
+
+   Ablation study
+      A controlled comparison in which one input, component, architecture
+      feature, loss term, or augmentation is removed or changed to test whether
+      it materially contributes to validation performance.
 
    Geological prior
       A named model prior tied to an expected geological setting, such as a

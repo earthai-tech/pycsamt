@@ -3,11 +3,12 @@
 AI inversion validation
 =======================
 
-Validation determines whether an AI inversion model is fit for a stated use,
-not merely whether it can predict a synthetic test array.  A defensible result
-must be accurate in parameter space, reproduce the EM response, remain stable
-under realistic perturbations, behave honestly when uncertain, and add value
-relative to simpler or classical alternatives.
+Validation determines whether an :term:`AI inversion` model is fit for a
+stated use, not merely whether it can predict a synthetic test array.  A
+defensible result must be accurate in parameter space, reproduce the
+electromagnetic response, remain stable under realistic perturbations, behave
+honestly when uncertain, and add value relative to a simpler
+:term:`baseline model` or to an established classical inversion.
 
 This page provides a validation protocol for models trained as described in
 :doc:`training`.  Uncertainty calibration is treated in :doc:`uncertainty`,
@@ -16,19 +17,28 @@ while the final evidence package is assembled in :doc:`reporting`.
 Validation is a claim with a scope
 ----------------------------------
 
-Write the intended-use statement before computing metrics.  It should name:
+Write the intended-use statement before computing metrics.  It is the domain
+condition attached to every number that follows.  If a fitted model is
+represented by :math:`g_\theta` and the measured feature vector by
+:math:`\mathbf{x}`, validation is not the unconditional claim that
+:math:`g_\theta(\mathbf{x})` is correct everywhere.  It is the narrower claim
+that, for samples drawn from a declared domain :math:`\mathcal{D}`, the
+prediction :math:`\hat{\mathbf{m}} = g_\theta(\mathbf{x})` is accurate enough
+for a named decision and fails visibly outside that domain.  The statement
+should name:
 
-* survey method and components, such as AMT/MT apparent resistivity and phase;
+* survey method and components, such as :term:`AMT`, :term:`MT`,
+  :term:`apparent resistivity`, and :term:`phase`;
 * frequency range, station spacing, and expected data-quality range;
 * geological families and resistivity contrasts represented;
-* output dimensionality, layer count, depth range, and parameter units;
+* output :term:`dimensionality`, layer count, depth range, and parameter units;
 * whether the result is for screening, initialization, interpretation, or a
   decision requiring quantitative accuracy;
 * conditions under which the model must abstain or be reviewed.
 
-A model validated for five-layer synthetic 1-D earths is not thereby validated
-for a strongly 3-D field setting.  Every acceptance statement should be read
-as "validated for this declared domain under these tests."
+A model validated for five-layer synthetic :term:`1D` earths is not thereby
+validated for a strongly :term:`3D` field setting.  Every acceptance statement
+should be read as "validated for this declared domain under these tests."
 
 The evaluation partitions
 -------------------------
@@ -50,14 +60,20 @@ Keep the roles of data partitions distinct:
 ``challenge``
    Optional deliberately shifted cases used to identify failure boundaries.
 
-The test set is not a second validation set.  If its results cause another
-round of tuning, it has become development data and a new untouched test set
-is required.
+The :term:`calibration set` and :term:`challenge set` have different jobs.  A
+calibration set adjusts uncertainty statements after the model architecture is
+chosen; a challenge set maps the failure boundary and should not quietly become
+a source of tuning decisions.  The test set is not a second validation set.  If
+its results cause another round of tuning, it has become development data and a
+new untouched test set is required.
 
 Split by independent geological realization or survey, not merely by row.
-Noise variants from one forward model, overlapping profile windows, or nodes
-from one synthetic graph must remain in the same partition.  Record the split
-manifest and verify that parent identifiers do not cross boundaries.
+Noise variants from one :term:`forward model`, overlapping profile windows, or
+nodes from one synthetic graph must remain in the same partition.  Record the
+split manifest and verify that parent identifiers do not cross boundaries.  Any
+path by which held-out information influences model selection, preprocessing,
+or threshold setting is :term:`validation leakage`; it usually makes the final
+score optimistic in a way that is difficult to repair after the fact.
 
 .. important:: The current high-level supervised trainers estimate
    normalization statistics before making their internal training/validation
@@ -71,7 +87,7 @@ Freeze the artifact before testing
 
 Before opening the test set, preserve:
 
-* model checkpoint and checksum;
+* model :term:`checkpoint` and checksum;
 * configuration and random seeds;
 * dataset and split identifiers;
 * preprocessing and target transforms;
@@ -91,22 +107,57 @@ stored targets.  The default output of
 :meth:`pycsamt.ai.inversion.EMInverter1D.predict` contains logarithmic
 resistivity and, when ``log_thickness=True``, logarithmic thickness.
 
-.. code-block:: python
+:term:`Model-space metric` values are easiest to audit when each target
+quantity keeps its own units.  For sample :math:`i` and layer :math:`\ell`,
+let :math:`y^{\rho}_{i\ell}=\log_{10}\rho_{i\ell}` and
+:math:`\hat{y}^{\rho}_{i\ell}` be the predicted log-resistivity.  The
+log-space error is
+:math:`e^{\rho}_{i\ell}=\hat{y}^{\rho}_{i\ell}-y^{\rho}_{i\ell}`, while the
+corresponding multiplicative physical error is
+:math:`10^{|e^{\rho}_{i\ell}|}`.  If :math:`\mathcal{M}` is the finite-value
+mask for the entries included in a metric, the masked RMSE is
 
-   import numpy as np
-   from pycsamt.ai.training.metrics import (
-       layer_rmse,
-       summarise,
-   )
+.. math::
 
-   y_pred = inverter.predict(X_test, as_log_rho=True)
+   \operatorname{RMSE}
+   =
+   \sqrt{
+     \frac{1}{|\mathcal{M}|}
+     \sum_{(i,j)\in\mathcal{M}}
+     \left(\hat{y}_{ij}-y_{ij}\right)^2
+   }.
 
-   overall = summarise(y_test, y_pred, n_layers=n_layers)
-   per_parameter = layer_rmse(y_test, y_pred)
+A trained workflow would call ``inverter.predict(X_test, as_log_rho=True)``.
+The miniature example below isolates the metric semantics with fixed arrays so
+the reported output is reproducible:
 
-   print(overall)
-   print("resistivity RMSE by layer:", per_parameter[:n_layers])
-   print("thickness RMSE by interface:", per_parameter[n_layers:])
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.training.metrics import layer_rmse, summarise
+   >>>
+   >>> n_layers = 3
+   >>> y_test = np.array([
+   ...     [2.0, 2.5, 3.0, 60.0, 120.0],
+   ...     [2.3, 2.8, 3.2, 80.0, 160.0],
+   ...     [1.9, 2.4, 2.9, np.nan, 140.0],
+   ... ])
+   >>> y_pred = np.array([
+   ...     [2.1, 2.4, 3.1, 65.0, 110.0],
+   ...     [2.2, 2.9, 3.1, 90.0, 150.0],
+   ...     [2.0, 2.5, 3.0, 75.0, 135.0],
+   ... ])
+   >>>
+   >>> overall = summarise(y_test, y_pred, n_layers=n_layers)
+   >>> per_parameter = layer_rmse(y_test, y_pred)
+   >>> {name: round(value, 4) for name, value in overall.items()}
+   {'rmse': 5.4778, 'mae': 3.3933, 'r2': 0.9944, 'relative_rmse': 0.0692, 'depth_rmse': 0.0577}
+   >>> print("resistivity RMSE by layer:", np.round(per_parameter[:n_layers], 4))
+   resistivity RMSE by layer: [0.1 0.1 0.1]
+   >>> print("thickness RMSE by interface:", np.round(per_parameter[n_layers:], 4))
+   thickness RMSE by interface: [ 7.0711 10.    ]
+   >>> print("finite target values:", int(np.isfinite(y_test).sum()))
+   finite target values: 15
 
 The available metric helpers ignore non-finite entries.  Report how many
 values each metric used; a score based on a small surviving fraction can look
@@ -133,25 +184,27 @@ Depth-weighted RMSE
    helper gives deeper layers less influence; it does not replace explicit
    depth-resolved results.
 
+The first scalar RMSE in the example is intentionally poor as a headline
+number: it mixes log-resistivity entries and metre-valued thickness entries.
 Never combine resistivity and thickness into one headline score without also
 showing their separate physical-unit errors.  Convert predictions back to
 ohm-m and metres for decision-facing tables:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   y_pred_linear = inverter.predict(X_test, as_log_rho=False)
-
-   rho_true = 10.0 ** y_test[:, :n_layers]
-   rho_pred = y_pred_linear[:, :n_layers]
-
-   if inverter.log_thickness:
-       h_true = 10.0 ** y_test[:, n_layers:]
-   else:
-       h_true = y_test[:, n_layers:]
-   h_pred = y_pred_linear[:, n_layers:]
-
-   rho_factor_error = np.maximum(rho_pred / rho_true, rho_true / rho_pred)
-   thickness_abs_error = np.abs(h_pred - h_true)
+   >>> rho_true = 10.0 ** y_test[:, :n_layers]
+   >>> rho_pred = 10.0 ** y_pred[:, :n_layers]
+   >>> h_true = y_test[:, n_layers:]
+   >>> h_pred = y_pred[:, n_layers:]
+   >>>
+   >>> rho_factor_error = np.maximum(rho_pred / rho_true, rho_true / rho_pred)
+   >>> thickness_abs_error = np.abs(h_pred - h_true)
+   >>> print("median rho factor error:", np.round(np.nanmedian(rho_factor_error, axis=0), 3))
+   median rho factor error: [1.259 1.259 1.259]
+   >>> print("median thickness abs error m:", np.round(np.nanmedian(thickness_abs_error, axis=0), 3))
+   median thickness abs error m: [ 5. 10.]
+   >>> print("worst rho factor error:", round(float(np.nanmax(rho_factor_error)), 3))
+   worst rho factor error: 1.259
 
 Report medians, upper quantiles, and worst credible cases in addition to means.
 Aggregate metrics should be broken down by layer, cumulative interface depth,
@@ -161,7 +214,10 @@ Model geometry and boundary recovery
 ------------------------------------
 
 Layered targets need geometry-aware diagnostics.  Compute interface depths by
-cumulatively summing thicknesses for every sample.  Then evaluate:
+cumulatively summing thicknesses for every sample,
+:math:`z_{ik}=\sum_{\ell=1}^{k}h_{i\ell}`, where :math:`h_{i\ell}` is layer
+thickness and :math:`z_{ik}` is the depth to interface :math:`k`.  Then
+evaluate:
 
 * interface-depth absolute and relative error;
 * whether important conductive or resistive units are detected;
@@ -179,21 +235,61 @@ Response-space validation
 -------------------------
 
 The strongest physical check is to forward-model the predicted earth and
-compare its response with the input observation.  For 1-D MT predictions:
+compare its response with the input observation.  If :math:`F` is the
+:term:`forward operator`, :math:`\hat{\mathbf{m}}_i` is the predicted earth
+model, :math:`\mathbf{d}_i` is the observed response vector, and
+:math:`\sigma_{ij}` is the observational standard error for component
+:math:`j`, the normalized residual is
 
-.. code-block:: python
+.. math::
 
-   from pycsamt.forward import MT1DForward
+   r_{ij}
+   =
+   \frac{F_j(\hat{\mathbf{m}}_i)-d_{ij}}{\sigma_{ij}}.
 
-   predicted_models = inverter.predict_models(X_test)
-   solver = MT1DForward(freqs)
+The normalized :term:`response-space metric` is then
 
-   predicted_responses = [
-       solver.run(model) if model is not None else None
-       for model in predicted_models
-   ]
+.. math::
 
-``predict_models`` converts the network output to
+   \operatorname{NRMS}
+   =
+   \sqrt{
+     \frac{1}{|\mathcal{M}|}
+     \sum_{(i,j)\in\mathcal{M}} r_{ij}^{2}
+   }.
+
+For a trained 1-D MT model, ``inverter.predict_models(X_test)`` can be passed
+to :class:`pycsamt.forward.MT1DForward`.  The compact example below uses
+already reconstructed responses so the residual definition is explicit:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>>
+   >>> observed = np.array([
+   ...     [2.0, 2.2, 2.4, 45.0, 47.0, 49.0],
+   ...     [1.8, 2.1, 2.5, 43.0, 46.0, 50.0],
+   ... ])
+   >>> reconstructed = np.array([
+   ...     [2.0, 2.1, 2.4, 44.0, 47.5, 49.5],
+   ...     [1.9, 2.0, 2.6, 42.5, 46.0, 50.0],
+   ... ])
+   >>> sigma = np.array([
+   ...     [0.1, 0.2, 0.2, 2.0, 2.0, 3.0],
+   ...     [0.1, 0.2, 0.2, 1.0, 2.0, 3.0],
+   ... ])
+   >>>
+   >>> residual = (reconstructed - observed) / sigma
+   >>> nrms = np.sqrt(np.mean(residual ** 2))
+   >>> inside_one_sigma = np.mean(np.abs(residual) <= 1.0)
+   >>> print("normalized RMS:", round(float(nrms), 3))
+   normalized RMS: 0.961
+   >>> print("fraction within 1 sigma:", round(float(inside_one_sigma), 3))
+   fraction within 1 sigma: 0.667
+   >>> print("per-feature mean residual:", np.round(residual.mean(axis=0), 3))
+   per-feature mean residual: [ 0.    -0.5    0.    -0.5    0.25   0.167]
+
+In the full workflow, ``predict_models`` converts the network output to
 :class:`pycsamt.forward.synthetic.LayeredModel` objects and enforces positive
 minimum values.  Preserve the raw network output as well; otherwise automatic
 flooring can hide invalid predictions.
@@ -216,9 +312,9 @@ its validation can share the same simulator bias.
 Baselines and ablations
 -----------------------
 
-AI validation requires comparisons that answer whether the complexity adds
-value.  Use the same held-out cases, preprocessing, units, and metrics for all
-methods.  Relevant baselines include:
+:term:`AI inversion` validation requires comparisons that answer whether the
+complexity adds value.  Use the same held-out cases, preprocessing, units, and
+metrics for all methods.  Relevant :term:`baseline model` choices include:
 
 * a constant predictor based only on training-target medians;
 * a simple nearest-neighbour or low-capacity regression baseline;
@@ -232,10 +328,10 @@ failure rate, and analyst effort.  A model that is faster but less accurate may
 still be valuable as an initializer; state that narrower role rather than
 claiming replacement of classical inversion.
 
-Ablations determine which inputs and mechanisms matter.  Repeat evaluation
-after removing phase, individual components, auxiliary modalities, graph
-edges, augmentation, or a physics-loss term.  An unchanged score may reveal
-that a claimed information source is being ignored.
+:term:`Ablation study` results determine which inputs and mechanisms matter.
+Repeat evaluation after removing :term:`phase`, individual components,
+auxiliary modalities, graph edges, augmentation, or a physics-loss term.  An
+unchanged score may reveal that a claimed information source is being ignored.
 
 Robustness and stress testing
 -----------------------------
@@ -253,16 +349,16 @@ and then test realistic combinations:
 * graph radius, connectivity, and isolated stations;
 * alternative forward-model or discretization settings.
 
-Plot performance against stress severity.  Define the operating envelope at
-the point where error, coverage, or failure rate crosses a predeclared limit.
-Stress tests are not expected to all pass; their purpose is to reveal when the
-model should abstain.
+Plot performance against stress severity.  Define the :term:`operating
+envelope` at the point where error, coverage, or failure rate crosses a
+predeclared limit.  Stress tests are not expected to all pass; their purpose is
+to reveal when the model should abstain.
 
 Uncertainty validation
 ----------------------
 
-For an ensemble, point accuracy and uncertainty quality are separate axes.
-On an untouched test set, examine:
+For an :term:`ensemble inversion`, point accuracy and uncertainty quality are
+separate axes.  On an untouched test set, examine:
 
 * empirical versus nominal conformal coverage;
 * interval width or sharpness;
@@ -271,24 +367,54 @@ On an untouched test set, examine:
 * forward-response coverage after propagating parameter draws;
 * behavior on deliberately shifted challenge cases.
 
-.. code-block:: python
+For interval estimates :math:`[L_{ij}(\alpha), U_{ij}(\alpha)]` designed to
+cover target entry :math:`y_{ij}` at nominal probability :math:`1-\alpha`, the
+entry-wise empirical coverage is
 
-   diagnostics = ensemble.coverage_diagnostics(
-       X_test,
-       y_test,
-       alphas=(0.20, 0.10, 0.05),
-   )
+.. math::
 
-   center, lower, upper = ensemble.predict_intervals(
-       X_test, alpha=0.10
-   )
-   mean_width = np.mean(upper - lower, axis=0)
+   \widehat{C}(\alpha)
+   =
+   \frac{1}{|\mathcal{M}|}
+   \sum_{(i,j)\in\mathcal{M}}
+   \mathbf{1}\{L_{ij}(\alpha)\le y_{ij}\le U_{ij}(\alpha)\}.
 
-Coverage without sharpness can be achieved by unhelpfully wide intervals.
+The mean interval width,
+:math:`|\mathcal{M}|^{-1}\sum_{(i,j)\in\mathcal{M}}
+\left(U_{ij}(\alpha)-L_{ij}(\alpha)\right)`, must be reported beside
+coverage, because overly wide intervals can cover well while still being
+scientifically unhelpful.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>>
+   >>> y_test = np.array([
+   ...     [2.0, 2.5, 3.0],
+   ...     [2.1, 2.6, 2.9],
+   ... ])
+   >>> lower = np.array([
+   ...     [1.85, 2.35, 2.85],
+   ...     [1.95, 2.45, 2.75],
+   ... ])
+   >>> upper = np.array([
+   ...     [2.15, 2.65, 3.15],
+   ...     [2.25, 2.75, 3.05],
+   ... ])
+   >>> diagnostics = {
+   ...     alpha: float(np.mean((lower <= y_test) & (y_test <= upper)))
+   ...     for alpha in (0.20, 0.10, 0.05)
+   ... }
+   >>> mean_width = np.mean(upper - lower, axis=0)
+   >>> diagnostics
+   {0.2: 1.0, 0.1: 1.0, 0.05: 1.0}
+   >>> print("mean 90% interval width:", np.round(mean_width, 3))
+   mean 90% interval width: [0.3 0.3 0.3]
+
 Coverage measured on individual entries with ``ensemble.coverage`` is not the
 same diagnostic as the conformal simultaneous sample coverage.  Label the
-definition used.  See :doc:`uncertainty` for the exchangeability assumptions
-and calibration-set requirements.
+definition used.  See :doc:`uncertainty` for the :term:`exchangeability`
+assumptions and :term:`calibration set` requirements.
 
 Field-data validation
 ---------------------
@@ -300,7 +426,7 @@ lines of evidence:
 Data compatibility
    Confirm component order, units, phase convention, frequency support,
    missing-value handling, station geometry, and preprocessing match the
-   validated pipeline.
+   validated :term:`feature contract`.
 
 Quality control
    Review impedance validity, uncertainty, coherence or quality indicators,
@@ -310,8 +436,9 @@ Quality control
 
 Distribution support
    Compare field feature ranges and distances with training and calibration
-   distributions.  Flag extrapolation rather than interpreting a narrow
-   ensemble spread as safety.
+   distributions.  Flag :term:`domain gap` and
+   :term:`out-of-distribution diagnostic` results rather than interpreting a
+   narrow ensemble spread as safety.
 
 Forward consistency
    Forward-model predicted structures and compare with the measured response
@@ -360,7 +487,7 @@ Joint models
 PINN and hybrid models
    Validate total and component losses, initial-model sensitivity, physics
    residual, observed-data misfit, regularization sensitivity, and convergence
-   from multiple seeds.  See :doc:`pinn_2d`.
+   from multiple seeds.  See :doc:`hybrid` and :doc:`pinn_2d`.
 
 Failure analysis
 ----------------

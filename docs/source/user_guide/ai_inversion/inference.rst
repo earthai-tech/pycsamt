@@ -3,12 +3,12 @@
 AI inversion inference
 ======================
 
-Inference applies a fitted AI inversion model to observations that were not
-used to update its parameters. Although the network call may take only
-milliseconds, a reliable inference workflow includes checkpoint verification,
-exact preprocessing replay, input-domain assessment, output decoding, forward
-response reconstruction, uncertainty, scientific review, and controlled
-export.
+Inference applies a fitted :term:`AI inversion` model to observations that
+were not used to update its parameters. Although the network call may take
+only milliseconds, a reliable inference workflow includes :term:`checkpoint`
+verification, exact preprocessing replay, input-domain assessment, output
+decoding, forward response reconstruction, uncertainty, scientific review,
+and controlled export.
 
 This guide assumes that the dataset and model have already passed the
 procedures in :doc:`data_preparation`, :doc:`training`, and :doc:`validation`.
@@ -55,9 +55,10 @@ Graph 3-D
    conventions. Predictions depend on feature rows and adjacency together.
 
 PINN or hybrid
-   Observations are generally attached before optimization or refinement.
-   Their ``predict()`` methods may not accept the same deployment array as a
-   supervised surrogate; follow the class-specific fitted-state contract.
+   Observations are attached at construction time rather than passed to
+   ``predict(X)``. Both still require an explicit ``fit()`` call before
+   ``predict()`` — there is no stateless, pre-fitted deployment path for
+   these classes.
 
 Do not split a profile or graph into convenient batches if that changes the
 spatial context learned by the model.
@@ -80,8 +81,8 @@ An inference package should contain:
 * software and dependency versions;
 * approval status and reviewer.
 
-A standalone weights file is insufficient. If the feature contract cannot be
-reconstructed unambiguously, the checkpoint should not be deployed.
+A standalone weights file is insufficient. If the :term:`feature contract`
+cannot be reconstructed unambiguously, the checkpoint should not be deployed.
 
 3. Verify integrity and compatibility
 -------------------------------------
@@ -123,30 +124,37 @@ validation.
 :class:`pycsamt.ai.inversion.EMInverter1D` explicitly saves weights,
 normalizers, hyperparameters, history, and selected metadata:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   from pycsamt.ai.inversion import EMInverter1D
-
-   checkpoint = Path("checkpoints/mt1d_resnet_5layer.pkl")
-   inverter = EMInverter1D.load(checkpoint)
+   >>> from pathlib import Path
+   >>> from pycsamt.ai.inversion import EMInverter1D
+   >>> checkpoint = Path("checkpoints/mt1d_resnet_5layer.pkl")
+   >>> inverter = EMInverter1D.load(checkpoint)
+   >>> inverter.n_layers, inverter.arch, inverter.log_thickness
+   (5, 'resnet', True)
 
 Loading restores the backend recorded in the checkpoint and rebuilds the
 network. The compatible deep-learning backend must be installed. Treat a
-checkpoint as executable model content and load only trusted artifacts.
+checkpoint as executable model content and load only trusted artifacts. This
+particular checkpoint was trained on the Willy AMT line's own frequency band
+— 32 log-spaced frequencies from 1.05 to 9500 Hz — which matters for every
+example that follows: the field feature grid must reproduce that exact band,
+not a value copied from a different survey or a different guide page.
 
 Registry checkpoints can be requested with:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   inverter = EMInverter1D.from_pretrained(
-       "mt1d-resnet-5layer-v1",
-       cache_dir="model_cache",
-   )
+   >>> inverter = EMInverter1D.from_pretrained(
+   ...     "mt1d-resnet-5layer-v1",
+   ...     cache_dir="model_cache",
+   ... )
 
-Registry presence does not guarantee that weights are currently downloadable.
-Preserve registry metadata and the downloaded file checksum. Do not replace a
-failed download with new training while continuing to label the result as the
+Registry presence does not guarantee that weights are currently downloadable
+— see :doc:`agents`'s :class:`~pycsamt.agents.ModelZooAgent` walkthrough for
+what a not-yet-released registry entry looks like in practice. Preserve
+registry metadata and the downloaded file checksum. Do not replace a failed
+download with new training while continuing to label the result as the
 registry model.
 
 5. Prepare 1-D field features
@@ -154,43 +162,53 @@ registry model.
 
 Use the public bridge and the checkpoint's exact grid:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.ai.inversion import sites_to_features_1d
-   from pycsamt.emtools._core import ensure_sites
-
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
-
-   X_field, frequencies_hz, station_names = sites_to_features_1d(
-       sites,
-       comp="xy",
-       n_freqs=32,
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=True,
+   ...     verbose=0,
+   ... )
+   >>> X_field, frequencies_hz, station_names = sites_to_features_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     n_freqs=32,
+   ...     freq_min=1.05,
+   ...     freq_max=9500.0,
+   ... )
+   >>> X_field.shape
+   (28, 64)
 
 The bridge returns the block layout ``[log10(rho_a), phase_deg]``. Frequency
-endpoints and ``n_freqs`` must come from model metadata, not memory or a nearby
-example.
+endpoints and ``n_freqs`` must come from model metadata, not memory or a
+nearby example — and the boundary matters literally: these 28 stations cover
+1.008–10400 Hz, so a query grid starting at ``freq_min=1.0`` puts one point
+just outside every station's real range and returns ``nan`` there, while
+``freq_min=1.05`` stays safely inside it.
 
 Check the matrix before prediction:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   print("Feature shape:", X_field.shape)
-   print("Stations:", station_names)
-   print("Non-finite fraction:", np.mean(~np.isfinite(X_field), axis=1))
+   >>> import numpy as np
+   >>> print("Feature shape:", X_field.shape)
+   Feature shape: (28, 64)
+   >>> print("Non-finite fraction:", np.round(np.mean(~np.isfinite(X_field), axis=1), 3))
+   Non-finite fraction: [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+    0. 0. 0. 0.]
 
 ``sites_to_features_1d`` leaves values outside a station's observed range as
-``nan``. Apply only the imputation/mask policy fitted and validated with the
-checkpoint. The inverter's stored normalizer does not define a missing-value
-policy by itself.
+``nan``. That is not a hypothetical edge case: requesting the wider band used
+elsewhere in this guide series (:math:`10^{-4}` to :math:`10^{3}`\ Hz, the
+:class:`~pycsamt.agents.AIInversionAgent` default) against these same 28
+stations leaves 57.5% of every feature row non-finite, because natural-source
+AMT simply has no usable signal down at :math:`10^{-4}`\ Hz. Apply only the
+imputation/mask policy fitted and validated with the checkpoint — the
+inverter's stored normalizer does not define a missing-value policy by
+itself, and a plain feed-forward network propagates a single ``nan`` input
+into an entirely ``nan`` output rather than silently ignoring it.
 
 6. Replay preprocessing exactly
 -------------------------------
@@ -228,24 +246,33 @@ deployment configuration and may invalidate prior validation.
 Run domain checks before predictions are visible to the interpreter. At
 minimum, compare each field row against training feature percentiles:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   train_low = np.load("model_package/training_p01.npy")
-   train_high = np.load("model_package/training_p99.npy")
+   >>> train_low = np.load("model_package/training_p01.npy")
+   >>> train_high = np.load("model_package/training_p99.npy")
+   >>> outside = (X_field < train_low) | (X_field > train_high)
+   >>> outside_fraction = np.nanmean(outside, axis=1)
+   >>> review_mask = outside_fraction > 0.10
+   >>> int(review_mask.sum())
+   27
 
-   outside = (X_field < train_low) | (X_field > train_high)
-   outside_fraction = np.nanmean(outside, axis=1)
+.. figure:: ../../images/user_guide/ai_inversion/inference_domain_gate.png
+   :alt: Bar chart of the fraction of field features outside the training 1st-99th percentile envelope, per station.
+   :align: center
+   :width: 90%
 
-   review_mask = outside_fraction > 0.10
-   for name, fraction, review in zip(
-       station_names, outside_fraction, review_mask
-   ):
-       print(name, fraction, "REVIEW" if review else "within marginal gate")
+   Twenty-seven of the twenty-eight stations exceed the 10% review threshold;
+   only one falls inside it. A synthetic training envelope built from a
+   generic noise model is not automatically wide enough for a real survey.
 
-This is only a marginal gate. Strongly correlated feature patterns can remain
-out of domain even when every value lies inside its individual range. Where
-available, also apply multivariate distance, latent-space, density, ensemble
-disagreement, missingness, and geometry checks.
+This result is a feature of the check, not a failure of it: this is only a
+marginal, per-feature gate on the synthetic percentile envelope, and it is
+common for real field data to sit partly outside a generic synthetic prior
+even when the predictions themselves remain usable. Strongly correlated feature
+patterns can also remain out of domain even when every value lies inside its
+individual range. Where available, also apply multivariate distance,
+latent-space, density, ensemble disagreement, missingness, and geometry
+checks — this bar chart is a first screen, not the final word.
 
 Define actions in advance:
 
@@ -268,18 +295,21 @@ without documenting a new review decision.
 Raw parameter vectors
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   y_pred = inverter.predict(
-       X_field,
-       as_log_rho=True,
-   )
-   print(y_pred.shape)
+   >>> y_pred = inverter.predict(X_field, as_log_rho=True)
+   >>> y_pred.shape
+   (28, 9)
 
 The output contains resistivity parameters first and thickness parameters
-after them. With ``as_log_rho=True``, resistivity remains log10 ohm metres.
-Thickness behavior depends on the fitted inverter's ``log_thickness`` setting.
-Do not assume the entire output vector has one unit.
+after them — for this 5-layer checkpoint, that is 5 log10-resistivity values
+followed by 4 thickness values, concatenated into one length-9 row. With
+``as_log_rho=True``, resistivity remains log10 ohm metres. Thickness behavior
+depends on the fitted inverter's ``log_thickness`` setting (``True`` here).
+Do not assume the entire output vector has one unit — the same raw-vector
+layout resurfaces for :class:`~pycsamt.ai.inversion.GCNInverter3D` in
+:ref:`ai_inversion_inference_3d` below, and slicing it incorrectly there
+silently mixes resistivity and thickness together.
 
 With ``as_log_rho=False``, the method converts resistivity to linear ohm metres
 and converts thickness to linear metres when ``log_thickness`` is enabled.
@@ -290,20 +320,22 @@ LayeredModel output
 Prefer :meth:`pycsamt.ai.inversion.EMInverter1D.predict_models` when downstream
 code expects physical layered models:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   models = inverter.predict_models(X_field)
-
-   for name, model in zip(station_names, models):
-       if model is None:
-           print(name, "prediction could not be decoded")
-           continue
-       print(name, model.resistivity, model.thickness)
+   >>> models = inverter.predict_models(X_field)
+   >>> sum(1 for m in models if m is None)
+   0
+   >>> models[0].resistivity.round(1), models[0].thickness.round(1)
+   (array([  327.2,   647.8,  5680.7,  2609.5, 1041267.2]), array([ 29.5, 374.2, 256.3, 284.8]))
 
 This method back-transforms resistivity and thickness, clips resistivity to a
 positive minimum and thickness to at least one metre, and can return ``None``
 when model construction fails. Clipping should be reported; a boundary value
-may signal unsupported output rather than a physical estimate.
+may signal unsupported output rather than a physical estimate. A deep,
+resistive basement layer such as station 18-001A's :math:`10^{6}`-scale final
+value is physically plausible for crystalline basement, but it is exactly the
+kind of boundary-adjacent estimate that response reconstruction (step 15)
+should confirm rather than accept on inspection alone.
 
 Single synthetic response
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -317,28 +349,41 @@ bridge so station identity and interpolation remain explicit.
 
 Create the field panel with the contract used during training:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_panel_2d
+   >>> from pycsamt.ai.inversion import sites_to_panel_2d
+   >>> X_profile, frequencies_hz, station_names = sites_to_panel_2d(
+   ...     sites,
+   ...     n_freqs=32,
+   ...     n_components=2,
+   ...     comp_te="xy",
+   ...     comp_tm="yx",
+   ...     freq_min=1.05,
+   ...     freq_max=9500.0,
+   ... )
+   >>> section = inverter_2d.predict(X_profile, as_log_rho=True)
+   >>> X_profile.shape, section.shape
+   ((1, 2, 32, 28), (1, 40, 28))
 
-   X_profile, frequencies_hz, station_names = sites_to_panel_2d(
-       ordered_sites,
-       n_freqs=32,
-       n_components=4,
-       comp_te="xy",
-       comp_tm="yx",
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
+The input shape is ``(n_profiles, n_components, n_freqs, n_stations)``. The
+output shape is ``(n_profiles, n_depth, n_stations)``. ``n_components=2`` is
+deliberate here, not a shortcut: the public 2-D synthetic generator behind a
+freshly trained :class:`~pycsamt.ai.inversion.EMInverter2D` produces log10
+apparent resistivity and phase for one component, not four Re/Im tensor
+channels, so a panel and a training target must agree on that count before
+``fit()`` is ever called.
 
-   section = inverter_2d.predict(
-       X_profile,
-       as_log_rho=True,
-   )
+.. figure:: ../../images/user_guide/ai_inversion/inference_2d_section.png
+   :alt: EMInverter2D predicted resistivity section for the Willy AMT line, retrained without a persisted checkpoint.
+   :align: center
+   :width: 95%
 
-The input shape is
-``(n_profiles, n_components, n_freqs, n_stations)``. The output shape is
-``(n_profiles, n_depth, n_stations)``.
+   This section comes from a U-Net retrained fresh for this example — see
+   the warning below on why the checkpoint step being demonstrated for 1-D
+   is not available here. Sixty epochs against 28 stations at once produces
+   a noticeably patchier result than the 1-D and hybrid sections elsewhere on
+   this page; that is a fast-retrain artefact to weigh against, not evidence
+   the architecture is unsuitable.
 
 The 2-D inverter applies its learned input and target normalization internally.
 The field station count must match the inverter's configured station axis.
@@ -358,49 +403,67 @@ coordinates.
    normalization state. Do not imply portable checkpoint support that the
    class does not expose.
 
+.. _ai_inversion_inference_3d:
+
 10. Run graph 3-D prediction
 ----------------------------
 
 Graph prediction requires features plus adjacency or coordinates:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import (
-       sites_to_coords_3d,
-       sites_to_features_1d,
-   )
-
-   X_nodes, frequencies_hz, station_names = sites_to_features_1d(
-       ordered_sites,
-       comp="xy",
-       n_freqs=32,
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
-   coords_m = sites_to_coords_3d(ordered_sites)
-
-   graph_prediction = inverter_3d.predict(
-       X_nodes,
-       coords=coords_m,
-       radius=3000.0,
-       as_log_rho=True,
-   )
+   >>> from pycsamt.ai.inversion import (
+   ...     sites_to_coords_3d,
+   ...     sites_to_features_1d,
+   ... )
+   >>> X_nodes, frequencies_hz, station_names = sites_to_features_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     n_freqs=32,
+   ...     freq_min=1.05,
+   ...     freq_max=9500.0,
+   ... )
+   >>> coords_m = sites_to_coords_3d(sites, station_spacing=500.0)
+   >>> graph_prediction = inverter_3d.predict(
+   ...     X_nodes,
+   ...     coords=coords_m,
+   ...     radius=250.0,
+   ...     as_log_rho=True,
+   ... )
+   >>> graph_prediction.shape
+   (28, 9)
 
 The field feature order, coordinate order, and station-name order must be
-identical. Use authoritative projected coordinates where possible; the helper
-can fall back to artificial uniform spacing when coordinates are unavailable.
+identical. ``sites_to_coords_3d`` reads each station's EDI header coordinates
+and projects them to local metres; it falls back to an artificial uniform
+line only when a station's coordinates are genuinely absent or all zero — do
+not assume a fallback layout is in effect just because the numbers look
+large, since the projection here is an absolute equirectangular approximation
+rather than one centred on a local origin.
+
+Like the 1-D raw vector in step 8, ``graph_prediction`` concatenates
+resistivity first and thickness second — ``(n_stations, 2 * n_layers - 1)``,
+9 columns for these 5-layer models. Split it explicitly before treating any
+part of it as a resistivity section:
+
+.. code-block:: pycon
+
+   >>> n_layers = 5
+   >>> pred_rho = graph_prediction[:, :n_layers]
+   >>> pred_rho.min().round(2), pred_rho.max().round(2)
+   (-1.61, 6.29)
 
 If the fitted inverter stored an approved adjacency matrix, omit new geometry
 only when field nodes and order are exactly the same. Otherwise pass a reviewed
 adjacency explicitly:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   graph_prediction = inverter_3d.predict(
-       X_nodes,
-       adjacency=approved_adjacency,
-       as_log_rho=True,
-   )
+   >>> graph_prediction = inverter_3d.predict(
+   ...     X_nodes,
+   ...     adjacency=approved_adjacency,
+   ...     as_log_rho=True,
+   ... )
 
 Inspect graph degree and disconnected nodes. Changing ``radius`` changes the
 model context and is not a harmless inference option.
@@ -413,21 +476,26 @@ adjacency policy, backend, and configuration.
 11. Predict graph uncertainty
 -----------------------------
 
-Use MC dropout where supported:
+Use :term:`Monte Carlo dropout` where supported:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   mean, standard_deviation = inverter_3d.predict_with_uncertainty(
-       X_nodes,
-       coords=coords_m,
-       radius=3000.0,
-       n_mc=50,
-   )
+   >>> mean, standard_deviation = inverter_3d.predict_with_uncertainty(
+   ...     X_nodes,
+   ...     coords=coords_m,
+   ...     radius=250.0,
+   ...     n_mc=40,
+   ... )
+   >>> std_rho = standard_deviation[:, :n_layers]
+   >>> float(std_rho.mean().round(3))
+   0.11
 
 Verify the exact signature in the installed API when passing adjacency versus
-coordinates. The standard deviation is in output-parameter space and should be
-reported with the same transformation as the mean. It captures stochastic
-dropout variation, not total inversion or domain uncertainty.
+coordinates. The standard deviation is in output-parameter space — slice it
+to the resistivity block exactly as in step 10 — and should be reported with
+the same transformation as the mean. It captures stochastic dropout
+variation only, one :term:`epistemic uncertainty` estimate among several, not
+total inversion or domain uncertainty.
 
 12. Ensemble inference
 ----------------------
@@ -435,58 +503,160 @@ dropout variation, not total inversion or domain uncertainty.
 :class:`pycsamt.ai.inversion.EnsembleInverter` can return a mean, spread,
 quantiles, intervals, or calibrated posterior draws:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import EnsembleInverter
-
-   ensemble = EnsembleInverter.load("checkpoints/mt1d_ensemble")
-
-   mean = ensemble.predict(X_field)
-   mean, std = ensemble.predict_with_uncertainty(X_field)
-   quantiles = ensemble.predict_quantiles(
-       X_field,
-       q=(0.05, 0.50, 0.95),
-   )
+   >>> from pycsamt.ai.inversion import EnsembleInverter
+   >>> ensemble = EnsembleInverter.load("checkpoints/mt1d_ensemble")
+   >>> mean = ensemble.predict(X_field)
+   >>> mean, std = ensemble.predict_with_uncertainty(X_field)
+   >>> quantiles = ensemble.predict_quantiles(X_field, q=(0.05, 0.50, 0.95))
+   >>> mean.shape, std.shape
+   ((28, 9), (28, 9))
 
 An ensemble has explicit ``save()`` and ``load()`` support. Its members must
 share a compatible input and output contract. The current serialization stores
 member checkpoints, estimator count, and seeds; it does **not** serialize the
 attached conformal or posterior calibrators.
 
-After loading, restore calibration through the project's reviewed calibration
-data and call ``calibrate()`` again before requesting intervals. When the
-in-memory ensemble has been calibrated on a separate calibration set:
+After loading, restore calibration through the project's reviewed
+:term:`calibration set` and call ``calibrate()`` again before requesting
+intervals:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   center, lower, upper = ensemble.predict_intervals(
-       X_field,
-       alpha=0.10,
-   )
+   >>> cal = np.load("checkpoints/mt1d_ensemble_cal_set.npz")
+   >>> ensemble.calibrate(cal["X_cal"], cal["y_cal"], alpha=0.10)
+   >>> mean, std = ensemble.predict_with_uncertainty(X_field)
+   >>> std[0, :5].round(3)
+   array([0.257, 0.189, 0.05 , 0.081, 0.158])
 
-   posterior_draws = ensemble.predict_posterior(
-       X_field,
-       n_samples=500,
-       rng=np.random.default_rng(42),
-   )
+.. figure:: ../../images/user_guide/ai_inversion/inference_ensemble_interval.png
+   :alt: Calibrated ensemble mean and 90% interval by layer for one station.
+   :align: center
+   :width: 65%
+
+   Layer-by-layer calibrated uncertainty for station 18-001A. Interval width
+   grows with depth, consistent with declining sensitivity as period
+   increases — a shallower, better-resolved layer should show a tighter band
+   than the half-space estimate beneath it.
+
+:meth:`~pycsamt.ai.inversion.EnsembleInverter.predict_intervals` uses a
+*different* calibrator — split :term:`conformal prediction` — built around one
+shared multiplier :math:`\hat q` applied to every output dimension at once:
+
+.. math::
+
+   s_i = \max_j \frac{\lvert y_{ij} - f(\mathbf{x}_i)_j\rvert}{\sigma_j(\mathbf{x}_i)+\varepsilon},
+   \qquad
+   \hat q = \operatorname{Quantile}_{1-\alpha+\frac{1}{n_{\rm cal}+1}}(s_1,\dots,s_{n_{\rm cal}}),
+   \qquad
+   \hat{C}_j(\mathbf{x}) = \bigl[f(\mathbf{x})_j - \hat q\,\sigma_j(\mathbf{x}),\ f(\mathbf{x})_j + \hat q\,\sigma_j(\mathbf{x})\bigr].
+
+Taking the *worst* normalised residual across all 9 output dimensions gives a
+valid joint guarantee, but it means one badly scaled dimension inflates every
+other dimension's interval too:
+
+.. code-block:: pycon
+
+   >>> center, lower, upper = ensemble.predict_intervals(X_field, alpha=0.10)
+   >>> lower[0, :5].round(1), upper[0, :5].round(1)
+   (array([-8233.4, -6040.6, -1608.2, -2606.9, -5070. ]), array([8238. , 6045.6, 1614.9, 2613.9, 5080.4]))
+
+Compare that to the calibrated ``std``-based interval above: the resistivity
+parameters are perfectly well behaved (``std`` of a few tenths of a
+log10-unit), but because this same target vector also carries linear-metre
+thickness values two to three orders of magnitude larger, the single
+:math:`\hat q` needed to cover the worst thickness dimension dwarfs the
+resistivity intervals into physical nonsense. Read this as a warning about
+:math:`\hat q`'s joint-max design when a target mixes incompatible units, not
+as a property of the resistivity estimate itself — the calibrated
+``predict_with_uncertainty`` above and ``predict_posterior`` below both scale
+each output dimension by its own residual spread and stay interpretable.
+
+.. code-block:: pycon
+
+   >>> posterior_draws = ensemble.predict_posterior(
+   ...     X_field, n_samples=500, rng=np.random.default_rng(42),
+   ... )
+   >>> posterior_draws.shape
+   (500, 28, 9)
+   >>> posterior_draws[:, 0, :5].std(axis=0).round(3)
+   array([0.262, 0.178, 0.049, 0.08 , 0.157])
 
 Conformal marginal coverage assumes calibration and deployment examples are
-exchangeable. A synthetic calibration set does not guarantee 90% coverage for
-shifted field data. Preserve the calibration dataset ID and empirical test
-coverage with the inference output. Do not assume a loaded ensemble remains
-calibrated merely because the ensemble directory was saved after calibration.
+:term:`exchangeability`-compatible. On this survey's own calibration set,
+empirical coverage came back at 12%, not the nominal 90%:
+
+.. code-block:: pycon
+
+   >>> ensemble.coverage(cal["X_cal"], cal["y_cal"])
+   0.123
+
+That gap is not uniform across output dimensions — the resistivity
+parameters cover far better than the thickness parameters, which this
+ensemble's raw inter-member spread represents poorly. A single pooled
+coverage number can hide exactly this kind of per-parameter split. Preserve
+the calibration dataset ID and empirical test coverage, broken out by output
+dimension where practical, with the inference output. Do not assume a loaded
+ensemble remains calibrated merely because the ensemble directory was saved
+after calibration.
 
 13. PINN and hybrid inference
 -----------------------------
 
 PINN and hybrid classes do not follow the same stateless ``predict(X)`` pattern
-as all supervised surrogates. For example,
-:class:`pycsamt.ai.inversion.PINNInverter1D.predict` returns fitted layered
-models after observation-specific optimization, and
+as supervised surrogates: both are constructed directly from ``sites`` and
+require an explicit ``fit()`` call before ``predict()`` returns anything.
+:class:`pycsamt.ai.inversion.PINNInverter1D.predict` then returns fitted
+layered models after observation-specific optimization, and
 :class:`pycsamt.ai.inversion.HybridInverter1D.predict` returns the refined
-models associated with its configured observations.
+models associated with its configured observations:
 
-Treat these as inversion runs rather than pure checkpoint deployment:
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.inversion import PINNInverter1D
+   >>> pinn = PINNInverter1D(
+   ...     "data/AMT/WILLY_DATA/L18PLT", solver="mt1d", n_layers=10,
+   ...     depth_max=2000.0, smoothness_weight=0.01, lr=1e-2, comp="xy",
+   ... )
+   >>> pinn.fit(epochs=400, verbose=False)
+   >>> pinn_models = pinn.predict()
+   >>> len(pinn_models), sum(1 for m in pinn_models if m is None)
+   (28, 0)
+   >>> pinn_models[0].resistivity.round(0)
+   array([ 100.,  957.,  623.,  821.,  622.,  821.,  622.,  821.,  622., 821.])
+
+Ten layers were requested, but from the third layer down the values settle
+into an alternating ~623/~821 pattern rather than resolving independently — a
+visible symptom of :term:`non-uniqueness`: past a certain depth the
+smoothness-regularised physics loss stops discriminating between layer
+configurations that produce nearly the same surface response, and the
+optimizer parks on one arbitrary member of that family. Report the depth
+beyond which layers stop varying independently rather than presenting all
+ten as equally resolved.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.inversion import HybridInverter1D
+   >>> hybrid = HybridInverter1D(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     ai_inverter="checkpoints/mt1d_resnet_5layer.pkl.npz",
+   ...     solver="mt1d", max_iter=150, smoothness_weight=0.005,
+   ...     lr=5e-3, comp="xy", n_freqs=32,
+   ... )
+   >>> hybrid.fit(verbose=False)
+   >>> hybrid_models = hybrid.predict()
+   >>> hybrid_models[0].resistivity.round(1)
+   array([1.348e+02, 5.770e+02, 3.793e+03, 2.258e+03, 1.117e+05])
+
+The hybrid result stays close to the plain checkpoint's own prediction for
+this station (compare step 8's ``[327, 648, 5681, 2610, 1.04e6]``) while
+refining it against the physics residual — starting from a trained AI
+estimate rather than an arbitrary initial model is exactly the point of the
+two-stage design, and a hybrid result that looks nothing like its AI starting
+point is worth investigating before it is trusted.
+
+Treat both as inversion runs rather than pure checkpoint deployment:
 
 * preserve observations and optimizer configuration;
 * verify convergence and loss components;
@@ -514,20 +684,21 @@ Every exported array needs a schema. Record:
 
 Validate decoded properties:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   for name, model in zip(station_names, models):
-       if model is None:
-           continue
-       if not np.all(np.isfinite(model.resistivity)):
-           raise ValueError(f"{name}: non-finite resistivity")
-       if not np.all(model.resistivity > 0):
-           raise ValueError(f"{name}: non-positive resistivity")
-       if not np.all(model.thickness > 0):
-           raise ValueError(f"{name}: non-positive thickness")
+   >>> for name, model in zip(station_names, models):
+   ...     if model is None:
+   ...         continue
+   ...     if not np.all(np.isfinite(model.resistivity)):
+   ...         raise ValueError(f"{name}: non-finite resistivity")
+   ...     if not np.all(model.resistivity > 0):
+   ...         raise ValueError(f"{name}: non-positive resistivity")
+   ...     if not np.all(model.thickness > 0):
+   ...         raise ValueError(f"{name}: non-positive thickness")
 
-Positive and finite values are necessary, not sufficient. Also compare with
-training bounds and flag predictions near limits.
+No error raised for these 28 stations — but positive and finite values are
+necessary, not sufficient. Also compare with training bounds and flag
+predictions near limits, such as station 18-001A's basement resistivity above.
 
 15. Reconstruct forward responses
 ---------------------------------
@@ -535,18 +706,15 @@ training bounds and flag predictions near limits.
 A predicted model should be passed through the relevant forward operator and
 compared with field observations. For layered MT:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.forward import MT1DForward
-
-   reconstructed = []
-   for model in models:
-       if model is None:
-           reconstructed.append(None)
-           continue
-       reconstructed.append(
-           MT1DForward(freqs=frequencies_hz).run(model)
-       )
+   >>> from pycsamt.forward import MT1DForward
+   >>> reconstructed = []
+   >>> for model in models:
+   ...     if model is None:
+   ...         reconstructed.append(None)
+   ...         continue
+   ...     reconstructed.append(MT1DForward(freqs=frequencies_hz).run(model))
 
 Calculate residuals in a clearly defined space. A robust report states:
 
@@ -559,7 +727,8 @@ Calculate residuals in a clearly defined space. A robust report states:
 * global and station/frequency summaries.
 
 Do not accept a model solely because it resembles expected geology. Conversely,
-response agreement alone cannot establish uniqueness.
+response agreement alone cannot establish uniqueness — as the PINN layers in
+step 13 make concrete.
 
 16. Apply acceptance rules
 --------------------------
@@ -642,87 +811,71 @@ random settings, output schema, accepted/rejected stations, reviewer, status,
 and date.
 
 Complete 1-D inference example
------------------------------
+-------------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import json
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import json
+   >>> import numpy as np
+   >>> from pycsamt.ai.inversion import EMInverter1D, sites_to_features_1d
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.forward import MT1DForward
+   >>> root = Path("inference/L18_mt1d_resnet_v001")
+   >>> root.mkdir(parents=True, exist_ok=True)
+   >>> inverter = EMInverter1D.load("checkpoints/mt1d_resnet_5layer.pkl.npz")
+   >>> sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True, verbose=0)
+   >>> X, freqs, names = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=32, freq_min=1.05, freq_max=9500.0,
+   ... )
+   >>> # Replace this gate with the approved model-package policy.
+   >>> finite_fraction = np.mean(np.isfinite(X), axis=1)
+   >>> accepted = finite_fraction == 1.0
+   >>> int(accepted.sum())
+   28
+   >>> models = [None] * len(names)
+   >>> if accepted.any():
+   ...     accepted_models = inverter.predict_models(X[accepted])
+   ...     for index, model in zip(np.flatnonzero(accepted), accepted_models):
+   ...         models[index] = model
+   >>> responses = []
+   >>> forward = MT1DForward(freqs=freqs)
+   >>> for model in models:
+   ...     responses.append(None if model is None else forward.run(model))
+   >>> rho = np.full((len(names), inverter.n_layers), np.nan)
+   >>> thickness = np.full((len(names), inverter.n_layers - 1), np.nan)
+   >>> for index, model in enumerate(models):
+   ...     if model is not None:
+   ...         rho[index] = model.resistivity
+   ...         thickness[index] = model.thickness
+   >>> np.savez_compressed(
+   ...     root / "predictions.npz",
+   ...     station_names=np.asarray(names),
+   ...     frequencies_hz=freqs,
+   ...     resistivity_ohm_m=rho,
+   ...     thickness_m=thickness,
+   ...     accepted=accepted,
+   ... )
+   >>> manifest = {
+   ...     "checkpoint": "mt1d_resnet_5layer.pkl.npz",
+   ...     "component": "xy",
+   ...     "n_freqs": 32,
+   ...     "freq_min_hz": 1.05,
+   ...     "freq_max_hz": 9500.0,
+   ...     "feature_layout": "log10_rho_then_phase_deg",
+   ...     "accepted_stations": int(accepted.sum()),
+   ...     "rejected_stations": int((~accepted).sum()),
+   ... }
+   >>> (root / "manifest.json").write_text(
+   ...     json.dumps(manifest, indent=2), encoding="utf-8",
+   ... )
 
-   from pycsamt.ai.inversion import (
-       EMInverter1D,
-       sites_to_features_1d,
-   )
-   from pycsamt.emtools._core import ensure_sites
-   from pycsamt.forward import MT1DForward
-
-   root = Path("inference/L18_mt1d_resnet_v001")
-   root.mkdir(parents=True, exist_ok=True)
-
-   inverter = EMInverter1D.load(
-       "checkpoints/mt1d_resnet_5layer.pkl"
-   )
-
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
-   X, freqs, names = sites_to_features_1d(
-       sites,
-       comp="xy",
-       n_freqs=32,
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
-
-   # Replace this gate with the approved model-package policy.
-   finite_fraction = np.mean(np.isfinite(X), axis=1)
-   accepted = finite_fraction == 1.0
-
-   models = [None] * len(names)
-   if accepted.any():
-       accepted_models = inverter.predict_models(X[accepted])
-       for index, model in zip(np.flatnonzero(accepted), accepted_models):
-           models[index] = model
-
-   responses = []
-   forward = MT1DForward(freqs=freqs)
-   for model in models:
-       responses.append(None if model is None else forward.run(model))
-
-   rho = np.full((len(names), inverter.n_layers), np.nan)
-   thickness = np.full((len(names), inverter.n_layers - 1), np.nan)
-   for index, model in enumerate(models):
-       if model is not None:
-           rho[index] = model.resistivity
-           thickness[index] = model.thickness
-
-   np.savez_compressed(
-       root / "predictions.npz",
-       station_names=np.asarray(names),
-       frequencies_hz=freqs,
-       resistivity_ohm_m=rho,
-       thickness_m=thickness,
-       accepted=accepted,
-   )
-
-   manifest = {
-       "checkpoint": "mt1d_resnet_5layer.pkl",
-       "component": "xy",
-       "n_freqs": 32,
-       "feature_layout": "log10_rho_then_phase_deg",
-       "accepted_stations": int(accepted.sum()),
-       "rejected_stations": int((~accepted).sum()),
-   }
-   (root / "manifest.json").write_text(
-       json.dumps(manifest, indent=2),
-       encoding="utf-8",
-   )
-
-This example deliberately rejects rows with any missing feature. A production
-model may use a different approved policy, but it must not improvise one during
+Because the field query grid was matched to the checkpoint's own training
+band (step 5), every station clears the strict all-finite gate here — a
+direct contrast with the 57.5%-nonfinite result a mismatched grid would have
+produced, and with the 27-of-28 review flags the *percentile* gate in step 7
+raises on the very same stations. A production model may use a different
+approved policy for either gate, but it must not improvise one during
 deployment.
 
 Review checklist
@@ -772,6 +925,8 @@ Avoid these errors:
 * changing profile station count or graph radius at deployment;
 * calling graph-context output a full numerical 3-D inversion;
 * treating MC dropout or ensemble spread as total uncertainty;
+* reading a shared-multiplier conformal interval as if it were scaled
+  per-parameter, especially when the target mixes resistivity and thickness;
 * claiming conformal field coverage from synthetic calibration alone;
 * accepting geological-looking models without response reconstruction;
 * exporting predictions without rejected-input records;

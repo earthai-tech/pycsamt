@@ -3,12 +3,13 @@
 AI inversion reporting
 ======================
 
-AI inversion reporting documents how a prediction was produced, where it is
-valid, how it was tested, and what decisions it may support. A resistivity
-section and a training-loss curve are not a complete report. The deliverable
-must connect the field survey to a versioned dataset, feature contract, model
-selection record, checkpoint, inference run, response reconstruction,
-uncertainty analysis, and scientific review.
+:term:`AI inversion` reporting documents how a prediction was produced, where
+it is valid, how it was tested, and what decisions it may support. A
+resistivity section and a training-loss curve are not a complete report. The
+deliverable must connect the field survey to a versioned dataset,
+:term:`feature contract`, model selection record, :term:`checkpoint`,
+inference run, :term:`response reconstruction`, uncertainty analysis, and
+scientific review.
 
 This page focuses on AI-specific reporting. For the later geological and
 hydrogeophysical interpretation package, also use
@@ -45,7 +46,7 @@ Recommended reporting workflow
 
 #. assign stable IDs to dataset, model, checkpoint, and inference run;
 #. freeze the structured numerical outputs before writing narrative;
-#. generate dataset and model cards;
+#. generate :term:`dataset card` and :term:`model card` records;
 #. report model-selection evidence and rejected candidates;
 #. report training, calibration, synthetic test, and field validation results;
 #. report input-domain status and per-station inference decisions;
@@ -53,7 +54,8 @@ Recommended reporting workflow
 #. state limitations, prohibited uses, and follow-up requirements;
 #. assemble machine-readable artifacts, figures, and narrative;
 #. perform scientific, ML, technical, and editorial review;
-#. publish an immutable approved revision with a manifest and checksums.
+#. publish an immutable approved revision with a :term:`provenance manifest`
+   and checksums.
 
 1. Define report status and audience
 ------------------------------------
@@ -176,17 +178,17 @@ prediction values.
 4. Write a dataset card
 -----------------------
 
-The dataset card should describe both synthetic and field inputs.
+The :term:`dataset card` should describe both synthetic and field inputs.
 
 Purpose and scope
    Intended inversion task, method, dimension, parameterization, target depth,
    and prohibited uses.
 
-Synthetic model distribution
+:term:`Training distribution`
    Resistivity/thickness ranges, dependencies, geology scenarios, lateral
    correlation, rare targets, rejected samples, and sample count.
 
-Forward physics
+:term:`Forward operator`
    Solver, dimension, frequencies/times, source geometry, numerical settings,
    approximations, and code version.
 
@@ -194,7 +196,7 @@ Observation effects
    Noise types and levels, missingness, outliers, static shift, source effects,
    coordinate perturbations, and augmentation probabilities.
 
-Feature contract
+:term:`Feature contract`
    Names, order, units, transformations, grid, component convention, masks,
    imputation, and normalization.
 
@@ -213,13 +215,13 @@ Field data
 Known gaps
    Physics, geology, noise, or geometry not represented.
 
-The dataset card must travel with the checkpoint. A model cannot be reviewed
-without knowing the distribution it learned.
+The dataset card must travel with the :term:`checkpoint`. A model cannot be
+reviewed without knowing the distribution it learned.
 
 5. Write a model card
 ---------------------
 
-A model card should contain:
+A :term:`model card` should contain:
 
 Model identity
    Name, version, checkpoint ID/checksum, code revision, backend, and status.
@@ -329,14 +331,14 @@ curve is not a supervised validation curve.
 Model-space metrics
 ~~~~~~~~~~~~~~~~~~~
 
-State whether values represent log10 resistivity, linear resistivity,
-thickness, boundary depth, or a section. Include units, aggregation, and depth
-or scenario stratification.
+For each :term:`model-space metric`, state whether values represent log10
+resistivity, linear resistivity, thickness, boundary depth, or a section.
+Include units, aggregation, and depth or scenario stratification.
 
 Response-space metrics
 ~~~~~~~~~~~~~~~~~~~~~~
 
-State:
+For each :term:`response-space metric`, state:
 
 * forward operator;
 * apparent resistivity, phase, impedance, or decay channels;
@@ -345,7 +347,19 @@ State:
 * frequency/time mask;
 * station/component aggregation.
 
-Do not label an unweighted log-apparent-resistivity RMS as a full impedance RMS.
+If the observed data vector is :math:`\mathbf d_{\mathrm{obs}}` and the
+response reconstructed from the prediction is
+:math:`F(\hat{\mathbf m})`, a weighted residual should state the weighting:
+
+.. math::
+
+   r_j = w_j\left(F_j(\hat{\mathbf m}) - d_{\mathrm{obs},j}\right),
+   \qquad
+   \mathrm{RMS}_r =
+   \sqrt{\frac{1}{N}\sum_{j=1}^{N} r_j^2}.
+
+Do not label an unweighted log-:term:`apparent resistivity`
+:term:`RMS misfit` as a full :term:`impedance tensor` RMS.
 
 Structural and decision metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -372,7 +386,7 @@ One aggregate test score can conceal operationally unacceptable failure.
 9. Report field-domain status
 -----------------------------
 
-Every inference station or profile should have a status table:
+Every inference station or profile should have a :term:`station status` table:
 
 .. code-block:: text
 
@@ -526,26 +540,59 @@ layered values.
 :class:`pycsamt.agents.ReportAgent` can assemble selected agent results into a
 survey-level Markdown report and optional HTML:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.agents import ReportAgent
+   >>> from pathlib import Path
+   >>> from pycsamt.agents import AgentResult, ReportAgent
 
-   reporter = ReportAgent(
-       report_title="L18 AI inversion review",
-       formats=["md", "html"],
-   )
+   >>> load_result = AgentResult(
+   ...     status="success",
+   ...     summary="Loaded 28 stations.",
+   ...     data={
+   ...         "n_stations": 28,
+   ...         "summary_stats": {
+   ...             "global_t_min_s": 0.001,
+   ...             "global_t_max_s": 1000.0,
+   ...             "mean_qc_score": 87.0,
+   ...         },
+   ...     },
+   ... )
+   >>> qc_result = AgentResult(
+   ...     status="success",
+   ...     summary="QC accepted 24 stations.",
+   ...     data={
+   ...         "n_flagged": 4,
+   ...         "flagged_stations": ["18-013U", "18-021B"],
+   ...     },
+   ...     warnings=["4 stations require review"],
+   ... )
+   >>> ai_result = AgentResult(
+   ...     status="success",
+   ...     summary="AI inversion accepted 24 stations.",
+   ...     data={"accepted": 24, "needs_review": 3, "rejected": 1},
+   ... )
 
-   report_result = reporter.execute({
-       "results": {
-           "load": load_result,
-           "qc": qc_result,
-           "ai_inversion": ai_result,
-       },
-       "output_dir": "report/agent_draft",
-   })
+   >>> reporter = ReportAgent(
+   ...     api_key="",
+   ...     report_title="L18 AI inversion review",
+   ...     formats=["md"],
+   ... )
 
-   print(report_result["report_path_md"])
-   print(report_result.warnings)
+   >>> report_result = reporter.execute({
+   ...     "results": {
+   ...         "load": load_result,
+   ...         "qc": qc_result,
+   ...         "ai_inversion": ai_result,
+   ...     },
+   ...     "output_dir": "tmp_reporting_agent",
+   ... })
+
+   >>> print(report_result["report_path_md"])
+   tmp_reporting_agent\survey_report.md
+   >>> print(report_result.warnings)
+   []
+   >>> print(Path(report_result["report_path_md"]).exists())
+   True
 
 The current implementation has predefined narrative sections for loading, QC,
 static shift, phase analysis, forward modeling, and recommendations. It copies
@@ -557,7 +604,8 @@ Although the module documentation mentions PDF as an intended format, the
 current ``execute()`` implementation does not generate or return a PDF path.
 Do not promise PDF output from this agent without an additional tested step.
 
-Use ``ReportAgent`` as a draft survey-report assembler, not as the complete AI
+The ``api_key=""`` argument keeps this example offline and deterministic. Use
+``ReportAgent`` as a draft survey-report assembler, not as the complete AI
 governance package described on this page.
 
 16. Handle optional LLM narrative
@@ -750,69 +798,93 @@ Complete reporting skeleton
 The following code writes core structured inference products. It assumes the
 arrays and statuses have already been validated:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import csv
-   import json
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import csv
+   >>> import json
+   >>> import numpy as np
 
-   root = Path("L18_ai_inversion_20260712_r01")
-   predictions_dir = root / "predictions"
-   metrics_dir = root / "metrics"
-   predictions_dir.mkdir(parents=True, exist_ok=True)
-   metrics_dir.mkdir(parents=True, exist_ok=True)
+   >>> root = Path("tmp_L18_ai_inversion_20260712_r01")
+   >>> predictions_dir = root / "predictions"
+   >>> metrics_dir = root / "metrics"
+   >>> predictions_dir.mkdir(parents=True, exist_ok=True)
+   >>> metrics_dir.mkdir(parents=True, exist_ok=True)
 
-   np.savez_compressed(
-       predictions_dir / "predicted_models.npz",
-       station_names=np.asarray(station_names),
-       resistivity_ohm_m=resistivity_ohm_m,
-       thickness_m=thickness_m,
-       accepted=accepted_mask,
-       needs_review=review_mask,
-   )
+   >>> station_names = np.asarray(["S00", "S01", "S02"])
+   >>> resistivity_ohm_m = np.asarray([
+   ...     [120.0, 80.0, 35.0],
+   ...     [100.0, 65.0, 30.0],
+   ...     [90.0, 55.0, 25.0],
+   ... ])
+   >>> thickness_m = np.asarray([
+   ...     [40.0, 120.0],
+   ...     [35.0, 115.0],
+   ...     [30.0, 110.0],
+   ... ])
+   >>> accepted_mask = np.asarray([True, False, False])
+   >>> review_mask = np.asarray([False, True, False])
+   >>> status_reasons = [
+   ...     "",
+   ...     "missing_high_frequency_band",
+   ...     "unsupported_frequency_coverage",
+   ... ]
 
-   status_rows = []
-   for index, name in enumerate(station_names):
-       if accepted_mask[index]:
-           status = "accepted"
-       elif review_mask[index]:
-           status = "needs_review"
-       else:
-           status = "rejected"
-       status_rows.append({
-           "station": name,
-           "prediction_status": status,
-           "reason": status_reasons[index],
-       })
+   >>> np.savez_compressed(
+   ...     predictions_dir / "predicted_models.npz",
+   ...     station_names=station_names,
+   ...     resistivity_ohm_m=resistivity_ohm_m,
+   ...     thickness_m=thickness_m,
+   ...     accepted=accepted_mask,
+   ...     needs_review=review_mask,
+   ... )
 
-   with (predictions_dir / "station_status.csv").open(
-       "w", newline="", encoding="utf-8"
-   ) as stream:
-       writer = csv.DictWriter(
-           stream,
-           fieldnames=["station", "prediction_status", "reason"],
-       )
-       writer.writeheader()
-       writer.writerows(status_rows)
+   >>> status_rows = []
+   >>> for index, name in enumerate(station_names):
+   ...     if accepted_mask[index]:
+   ...         status = "accepted"
+   ...     elif review_mask[index]:
+   ...         status = "needs_review"
+   ...     else:
+   ...         status = "rejected"
+   ...     status_rows.append({
+   ...         "station": str(name),
+   ...         "prediction_status": status,
+   ...         "reason": status_reasons[index],
+   ...     })
 
-   manifest = {
-       "report_package_id": "L18_ai_inversion_20260712_r01",
-       "status": "review",
-       "dataset_id": "mt1d_5layer_v001",
-       "checkpoint_id": "mt1d_resnet_5l_ckpt_r01",
-       "inference_run_id": "L18_inference_r01",
-       "n_stations": len(station_names),
-       "accepted": int(np.sum(accepted_mask)),
-       "needs_review": int(np.sum(review_mask)),
-       "rejected": int(np.sum(~accepted_mask & ~review_mask)),
-       "resistivity_unit": "ohm_m",
-       "thickness_unit": "m",
-   }
-   (root / "manifest.json").write_text(
-       json.dumps(manifest, indent=2),
-       encoding="utf-8",
-   )
+   >>> with (predictions_dir / "station_status.csv").open(
+   ...     "w", newline="", encoding="utf-8"
+   ... ) as stream:
+   ...     writer = csv.DictWriter(
+   ...         stream,
+   ...         fieldnames=["station", "prediction_status", "reason"],
+   ...     )
+   ...     writer.writeheader()
+   ...     writer.writerows(status_rows)
+
+   >>> manifest = {
+   ...     "report_package_id": "L18_ai_inversion_20260712_r01",
+   ...     "status": "review",
+   ...     "dataset_id": "mt1d_5layer_v001",
+   ...     "checkpoint_id": "mt1d_resnet_5l_ckpt_r01",
+   ...     "inference_run_id": "L18_inference_r01",
+   ...     "n_stations": len(station_names),
+   ...     "accepted": int(np.sum(accepted_mask)),
+   ...     "needs_review": int(np.sum(review_mask)),
+   ...     "rejected": int(np.sum(~accepted_mask & ~review_mask)),
+   ...     "resistivity_unit": "ohm_m",
+   ...     "thickness_unit": "m",
+   ... }
+   >>> (root / "manifest.json").write_text(
+   ...     json.dumps(manifest, indent=2),
+   ...     encoding="utf-8",
+   ... )
+   335
+   >>> print(sorted(p.name for p in predictions_dir.iterdir()))
+   ['predicted_models.npz', 'station_status.csv']
+   >>> print(manifest["accepted"], manifest["needs_review"], manifest["rejected"])
+   1 1 1
 
 This skeleton does not replace dataset/model cards, checksums, response
 residuals, uncertainty, figures, narrative, or approval records.

@@ -4,8 +4,8 @@ Training AI inversion models
 ============================
 
 Training turns a selected architecture and a prepared synthetic dataset into
-an inversion model that can be tested on data it has never seen.  In EM
-inversion, a decreasing loss is not sufficient evidence of success.  The
+an :term:`AI inversion` model that can be tested on data it has never seen.
+In EM inversion, a decreasing loss is not sufficient evidence of success.  The
 trained model must also recover physically plausible parameters, reproduce
 the observations through a forward solver, remain stable under noise, and
 generalize to acquisition conditions close to the field survey.
@@ -27,8 +27,9 @@ pyCSAMT supports two distinct training patterns:
   :class:`~pycsamt.ai.inversion.GCNInverter3D`, and
   :class:`~pycsamt.ai.inversion.JointInverter`;
 * **observation-specific optimization** adjusts a model for one observed
-  profile by minimizing data and physics losses.  The PINN and hybrid
-  workflows use this pattern and are explained in :doc:`pinn_2d`.
+  profile by minimizing data and physics losses.  :term:`Hybrid inversion` is
+  explained in :doc:`hybrid`, while direct :term:`physics-informed inversion`
+  is explained in :doc:`pinn_2d`.
 
 The first produces a reusable predictor.  The second produces a result tied
 to the observation being optimized.  Record which meaning applies whenever
@@ -41,33 +42,62 @@ Freeze the scientific choices before tuning the optimizer.  At minimum,
 record:
 
 * the dataset file, checksum or immutable version identifier;
-* frequency grid, component ordering, phase units, and missing-value policy;
+* frequency grid, component ordering, phase units, and missing-value policy,
+  which together form the :term:`feature contract`;
 * target parameterization, layer count, bounds, and whether thickness is
   logarithmic;
 * simulator and noise model used to create the examples;
 * split rule and random seed;
 * architecture, backend, package version, device, and training arguments;
-* the field survey or geological domain for which the model is intended.
+* the field survey or geological domain for which the model is intended;
+* the expected :term:`training distribution` and likely :term:`domain gap`
+  when the model is later applied to field data.
 
 Inspect shapes and finite-value counts immediately before fitting.  A 1-D
 input has shape ``(n_samples, n_features)``.  Its target contains layer
 resistivities followed by interface thicknesses, so a model with ``L``
 layers predicts ``2 * L - 1`` values.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
-
-   print("X:", X.shape, "y:", y.shape)
-   print("finite X:", np.isfinite(X).mean())
-   print("finite y:", np.isfinite(y).mean())
-
-   assert X.shape[0] == y.shape[0]
-   assert y.shape[1] == 2 * n_layers - 1
+   >>> import numpy as np
+   >>>
+   >>> n_layers = 5
+   >>> X = np.ones((12, 64))
+   >>> y = np.ones((12, 2 * n_layers - 1))
+   >>> y[0, -1] = np.nan
+   >>> print("X:", X.shape, "y:", y.shape)
+   X: (12, 64) y: (12, 9)
+   >>> print("finite X:", round(float(np.isfinite(X).mean()), 3))
+   finite X: 1.0
+   >>> print("finite y:", round(float(np.isfinite(y).mean()), 3))
+   finite y: 0.991
+   >>> assert X.shape[0] == y.shape[0]
+   >>> assert y.shape[1] == 2 * n_layers - 1
 
 Do not silently replace invalid targets by arbitrary numbers.  Missing target
 values have a scientific meaning and must be either excluded under a written
 rule or handled by a loss that explicitly masks them.
+
+For a masked target matrix :math:`\mathbf{Y}` and prediction
+:math:`\hat{\mathbf{Y}}`, the supervised training loss should be interpreted
+as a finite-entry objective,
+
+.. math::
+
+   \mathcal{L}_{\mathrm{sup}}
+   =
+   \frac{
+      \sum_{i,j} M_{ij}\left(\hat{Y}_{ij}-Y_{ij}\right)^2
+   }{
+      \sum_{i,j} M_{ij}
+   },
+   \qquad
+   M_{ij}=\mathbf{1}\{Y_{ij}\ \mathrm{is\ finite}\}.
+
+The denominator matters.  A batch with many masked target entries contributes
+less information than a complete batch; it should not accidentally dominate
+training because missing values were filled with zeros.
 
 Splits, leakage, and normalization
 ----------------------------------
@@ -89,6 +119,18 @@ same earth model, stations from the same synthetic survey, or several noise
 realizations of one response should not be scattered across splits.  A
 random row split can otherwise measure memorization of a parent model rather
 than geological generalization.
+
+Let :math:`p(i)` be the parent earth, profile, or survey identifier for sample
+:math:`i`.  A leakage-resistant split requires
+
+.. math::
+
+   p(i)=p(k) \Longrightarrow s_i=s_k,
+
+where :math:`s_i` is the assigned split.  If this condition is violated, the
+validation curve may look good because the model has already seen siblings of
+the validation case during training.  That is :term:`validation leakage`, even
+when no literal validation row was passed as a training row.
 
 .. important:: Current high-level supervised ``fit`` methods compute their
    normalization statistics on the supplied arrays before making their
@@ -112,18 +154,17 @@ Configuration-first 1-D training
 settings together.  A versioned configuration file is preferable to a
 notebook cell whose state may be unclear.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import RunConfig
-
-   # Create once, edit deliberately, and commit with the experiment record.
-   RunConfig.write_template("configs/mt1d_run.yml")
-   run = RunConfig.from_file("configs/mt1d_run.yml")
-   run.validate()
-
-   inverter = run.to_inverter()
-   inverter.fit(dataset, **run.to_fit_kwargs())
-   inverter.save("checkpoints/mt1d_final")
+   >>> from pycsamt.ai.inversion import RunConfig
+   >>>
+   >>> # Create once, edit deliberately, and commit with the experiment record.
+   >>> # RunConfig.write_template("configs/mt1d_run.yml")  # doctest: +SKIP
+   >>> run = RunConfig()  # doctest: +SKIP
+   >>> run.validate()  # doctest: +SKIP
+   >>> inverter = run.to_inverter()  # doctest: +SKIP
+   >>> inverter.fit(dataset, **run.to_fit_kwargs())  # doctest: +SKIP
+   >>> inverter.save("checkpoints/mt1d_final")  # doctest: +SKIP
 
 ``RunConfig.validate()`` checks configuration consistency; it cannot prove
 that the frequency coverage, parameter bounds, noise model, or synthetic
@@ -140,35 +181,37 @@ geology are adequate for the field problem.
 Direct 1-D fitting
 ------------------
 
-The direct interface is useful for a controlled experiment:
+The direct interface is useful for a controlled experiment.  The constructor
+must match the selected architecture names described in :doc:`model_selection`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import EMInverter1D
-
-   inverter = EMInverter1D(
-       n_features=X_train_pool.shape[1],
-       n_layers=n_layers,
-       arch="mlp",
-       solver="pytorch",
-       device="auto",
-       log_thickness=True,
-       augment_noise=0.01,
-   )
-
-   inverter.fit(
-       X_train_pool,
-       y_train_pool,
-       epochs=300,
-       batch_size=256,
-       lr=1e-3,
-       patience=30,
-       val_frac=0.15,
-       grad_clip=1.0,
-       seed=42,
-       verbose=True,
-   )
-   inverter.save("checkpoints/mt1d_seed42")
+   >>> from pycsamt.ai.inversion import EMInverter1D
+   >>>
+   >>> inverter = EMInverter1D(
+   ...     n_features=64,
+   ...     n_layers=5,
+   ...     arch="resnet",
+   ...     solver="mt1d",
+   ...     device="cpu",
+   ...     log_thickness=True,
+   ...     augment_noise=0.01,
+   ... )
+   >>> print(inverter.__class__.__name__, inverter.arch, inverter.n_layers, inverter.solver)
+   EMInverter1D resnet 5 mt1d
+   >>> inverter.fit(  # doctest: +SKIP
+   ...     X_train_pool,
+   ...     y_train_pool,
+   ...     epochs=300,
+   ...     batch_size=256,
+   ...     lr=1e-3,
+   ...     patience=30,
+   ...     val_frac=0.15,
+   ...     grad_clip=1.0,
+   ...     seed=42,
+   ...     verbose=True,
+   ... )
+   >>> inverter.save("checkpoints/mt1d_seed42")  # doctest: +SKIP
 
 ``X_train_pool`` excludes the external test set.  When a forward dataset is
 passed instead of arrays, its metadata and model layout are used by the
@@ -230,16 +273,34 @@ diagnostics but is private and therefore not a stable public API.  Reporting
 code should tolerate its absence or consume history exposed by the agent
 workflow.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   history = getattr(inverter, "_history", None)
-   if history:
-       best = int(min(
-           range(len(history["val_loss"])),
-           key=history["val_loss"].__getitem__,
-       ))
-       print("best epoch:", best + 1)
-       print("best validation loss:", history["val_loss"][best])
+   >>> history = {
+   ...     "train_loss": [0.42, 0.31, 0.25, 0.23],
+   ...     "val_loss": [0.45, 0.34, 0.33, 0.36],
+   ...     "lr": [1e-3, 1e-3, 5e-4, 5e-4],
+   ... }
+   >>> best = int(min(
+   ...     range(len(history["val_loss"])),
+   ...     key=history["val_loss"].__getitem__,
+   ... ))
+   >>> print("best epoch:", best + 1)
+   best epoch: 3
+   >>> print("best validation loss:", history["val_loss"][best])
+   best validation loss: 0.33
+
+For a fitted inverter, the same pattern is:
+
+.. code-block:: pycon
+
+   >>> history = getattr(inverter, "_history", None)  # doctest: +SKIP
+   >>> if history:  # doctest: +SKIP
+   ...     best = int(min(
+   ...         range(len(history["val_loss"])),
+   ...         key=history["val_loss"].__getitem__,
+   ...     ))
+   ...     print("best epoch:", best + 1)
+   ...     print("best validation loss:", history["val_loss"][best])
 
 Interpret the curves jointly:
 
@@ -252,6 +313,19 @@ Interpret the curves jointly:
 * a low normalized loss can still hide large errors in a scientifically
   important layer, so inspect per-parameter errors in physical units.
 
+For reproducibility, the early-stopping rule can be written as a selection of
+the epoch
+
+.. math::
+
+   e^\star = \operatorname*{arg\,min}_{e\le E}
+   \mathcal{L}_{\mathrm{val}}(e),
+
+subject to the patience rule.  The final weights should be those from
+:math:`e^\star`, not necessarily the last epoch.  Record both the last epoch
+and the selected epoch because a long tail of non-improving epochs can reveal
+optimizer instability or an overly patient run.
+
 Training a 2-D U-Net
 --------------------
 
@@ -259,29 +333,31 @@ Training a 2-D U-Net
 and matching resistivity images.  Confirm the constructor dimensions and
 array axes against :doc:`data_preparation` before fitting.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import EMInverter2D
-
-   inv2d = EMInverter2D(
-       n_components=X2_train_pool.shape[1],
-       n_freqs=X2_train_pool.shape[2],
-       n_stations=X2_train_pool.shape[3],
-       n_depth=y2_train_pool.shape[1],
-       solver="pytorch",
-       device="auto",
-   )
-   inv2d.fit(
-       X2_train_pool,
-       y2_train_pool,
-       epochs=200,
-       batch_size=16,
-       lr=1e-3,
-       patience=20,
-       val_frac=0.15,
-       grad_clip=1.0,
-       seed=42,
-   )
+   >>> from pycsamt.ai.inversion import EMInverter2D
+   >>>
+   >>> inv2d = EMInverter2D(
+   ...     n_components=4,
+   ...     n_freqs=32,
+   ...     n_stations=48,
+   ...     n_depth=64,
+   ...     solver="pytorch",
+   ...     device="cpu",
+   ... )
+   >>> print(inv2d.__class__.__name__, inv2d.n_components, inv2d.n_freqs, inv2d.n_stations, inv2d.n_depth)
+   EMInverter2D 4 32 48 64
+   >>> inv2d.fit(  # doctest: +SKIP
+   ...     X2_train_pool,
+   ...     y2_train_pool,
+   ...     epochs=200,
+   ...     batch_size=16,
+   ...     lr=1e-3,
+   ...     patience=20,
+   ...     val_frac=0.15,
+   ...     grad_clip=1.0,
+   ...     seed=42,
+   ... )
 
 The internal random split is along the profile-example axis, not the station
 axis inside a profile.  Keep profiles descended from the same synthetic earth
@@ -292,6 +368,24 @@ The current 2-D class does not expose the same documented public checkpoint
 workflow as ``EMInverter1D``, so verify persistence requirements before a
 long production run.
 
+The 2-D loss is an image-like objective, but the target is still a geophysical
+section.  If :math:`U_{bzk}` is log-resistivity for batch item :math:`b`, depth
+cell :math:`z`, and station :math:`k`, a masked section loss is
+
+.. math::
+
+   \mathcal{L}_{2D}
+   =
+   \frac{
+      \sum_{b,z,k} M_{bzk}
+      \left(\hat{U}_{bzk}-U_{bzk}\right)^2
+   }{
+      \sum_{b,z,k} M_{bzk}
+   }.
+
+Pair this with boundary and response diagnostics.  A visually smooth section
+can have low pixel loss while placing a conductor top at the wrong depth.
+
 Training a graph model
 ----------------------
 
@@ -299,28 +393,30 @@ Training a graph model
 an adjacency matrix.  Graph construction is part of the experiment, not a
 minor preprocessing detail.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import GCNInverter3D
-
-   gcn = GCNInverter3D(
-       n_features=X3_train_pool.shape[-1],
-       n_layers=n_layers,
-       solver="pytorch",
-       device="auto",
-   )
-   gcn.fit(
-       X3_train_pool,
-       y3_train_pool,
-       adjacency=adjacency,
-       coords=station_xy,
-       epochs=250,
-       batch_size=8,
-       lr=1e-3,
-       patience=25,
-       val_frac=0.15,
-       seed=42,
-   )
+   >>> from pycsamt.ai.inversion import GCNInverter3D
+   >>>
+   >>> gcn = GCNInverter3D(
+   ...     n_features=64,
+   ...     n_layers=5,
+   ...     solver="pytorch",
+   ...     device="cpu",
+   ... )
+   >>> print(gcn.__class__.__name__, gcn.n_features, gcn.n_layers)
+   GCNInverter3D 64 5
+   >>> gcn.fit(  # doctest: +SKIP
+   ...     X3_train_pool,
+   ...     y3_train_pool,
+   ...     adjacency=adjacency,
+   ...     coords=station_xy,
+   ...     epochs=250,
+   ...     batch_size=8,
+   ...     lr=1e-3,
+   ...     patience=25,
+   ...     val_frac=0.15,
+   ...     seed=42,
+   ... )
 
 Audit node order, coordinate units, isolated nodes, degree distribution, and
 connected components.  If neither a valid adjacency nor usable coordinates
@@ -330,75 +426,109 @@ inversion.  Split along independent synthetic surveys.  Do not split nodes
 from one survey between training and validation unless that transductive task
 is explicitly the scientific objective.
 
+For graph training, write the graph construction rule beside the loss.  If
+:math:`A` is the adjacency matrix and :math:`H^{(t)}` is a hidden node matrix,
+the GCN update is conditioned on a neighborhood aggregation of the form
+
+.. math::
+
+   H^{(t+1)} = \sigma\!\left(\tilde{A}H^{(t)}W^{(t)}\right),
+
+where :math:`\tilde{A}` is the normalized adjacency used by the implementation.
+Changing coordinate units, edge radius, or node order changes
+:math:`\tilde{A}` and therefore changes the model being trained.
+
 Joint and ensemble training
 ---------------------------
 
 A :class:`~pycsamt.ai.inversion.JointInverter` receives one feature matrix per
 modality.  All matrices and the target must share the same row order.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import JointInverter
-
-   joint = JointInverter(
-       n_features_list=(X_mt.shape[1], X_aux.shape[1]),
-       n_layers=n_layers,
-       solver="pytorch",
-   )
-   joint.fit(
-       [X_mt_train_pool, X_aux_train_pool],
-       y_train_pool,
-       epochs=250,
-       batch_size=128,
-       lr=1e-3,
-       patience=25,
-       val_frac=0.15,
-       seed=42,
-   )
+   >>> from pycsamt.ai.inversion import JointInverter
+   >>>
+   >>> joint = JointInverter(
+   ...     n_features_list=(64, 25),
+   ...     n_layers=5,
+   ...     solver="pytorch",
+   ... )
+   >>> print(joint.__class__.__name__, joint.n_features_list, joint.n_layers)
+   JointInverter (64, 25) 5
+   >>> joint.fit(  # doctest: +SKIP
+   ...     [X_mt_train_pool, X_aux_train_pool],
+   ...     y_train_pool,
+   ...     epochs=250,
+   ...     batch_size=128,
+   ...     lr=1e-3,
+   ...     patience=25,
+   ...     val_frac=0.15,
+   ...     seed=42,
+   ... )
 
 Test a shuffled or missing auxiliary modality as an ablation.  If performance
 does not change, the claimed joint information may not be used.  Remember
 that the current joint trainer also estimates its modality normalizers before
 its internal split.
 
+Joint training is vulnerable to row-alignment errors because all modalities
+share a target.  A safe pre-fit invariant is
+
+.. math::
+
+   \operatorname{id}^{(1)}_i
+   =
+   \operatorname{id}^{(2)}_i
+   =
+   \operatorname{id}^{(y)}_i
+   \quad \text{for every row } i.
+
+Do not rely on array length alone.  Equal lengths can still describe different
+stations, times, or synthetic parent models if the join order was lost.
+
 :class:`~pycsamt.ai.inversion.EnsembleInverter` deep-copies and trains the
 base estimator with different seeds:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import EMInverter1D, EnsembleInverter
-
-   base = EMInverter1D(
-       n_features=X_train_pool.shape[1],
-       n_layers=n_layers,
-       solver="pytorch",
-   )
-   ensemble = EnsembleInverter(base, n_estimators=5, seed=42)
-   ensemble.fit(
-       X_train_pool,
-       y_train_pool,
-       epochs=250,
-       batch_size=256,
-       patience=25,
-       val_frac=0.15,
-       verbose=True,
-   )
-   ensemble.save("checkpoints/mt1d_ensemble")
+   >>> from pycsamt.ai.inversion import EMInverter1D, EnsembleInverter
+   >>>
+   >>> base = EMInverter1D(
+   ...     n_features=64,
+   ...     n_layers=5,
+   ...     solver="mt1d",
+   ... )
+   >>> ensemble = EnsembleInverter(base, n_estimators=5, seeds=[42, 43, 44, 45, 46])
+   >>> print(ensemble.__class__.__name__, ensemble.n_estimators, ensemble.seeds[:2])
+   EnsembleInverter 5 [42, 43]
+   >>> ensemble.fit(  # doctest: +SKIP
+   ...     X_train_pool,
+   ...     y_train_pool,
+   ...     epochs=250,
+   ...     batch_size=256,
+   ...     patience=25,
+   ...     val_frac=0.15,
+   ...     verbose=True,
+   ... )
+   >>> ensemble.save("checkpoints/mt1d_ensemble")  # doctest: +SKIP
 
 Budget approximately one full training run per member.  Member seeds affect
 both the random split and model optimization, so ensemble spread combines
-those sources of variation.  Calibrate prediction intervals only on a
-separate calibration set.  Persist calibration products separately because
-the current ensemble checkpoint does not preserve fitted calibrators.
+those sources of variation.  In uncertainty language, ensembles mainly probe
+:term:`epistemic uncertainty`; input noise and incomplete measurements
+contribute :term:`aleatoric uncertainty`.  Calibrate prediction intervals only
+on a separate :term:`calibration set`.  Persist calibration products separately
+because the current ensemble checkpoint does not preserve fitted calibrators.
 
 PINN and hybrid optimization
 ----------------------------
 
-Do not transfer the supervised recipe mechanically to a PINN.  PINN and
-hybrid runs must track the data-misfit term, physics residual, regularization
-terms, their weights, forward-solver settings, and the initial model.  A low
-total loss is ambiguous if one weighted term dominates.  See :doc:`pinn_2d`
-for the staged workflow and required diagnostics.
+Do not transfer the supervised recipe mechanically to a PINN or hybrid run.
+Both workflows must track the data-misfit term, physics residual,
+regularization terms, their weights, forward-solver settings, and the initial
+model.  A low total loss is ambiguous if one weighted term dominates.  See
+:doc:`hybrid` and :doc:`pinn_2d` for the staged workflow and required
+diagnostics.
 
 Reproducible experiment design
 ------------------------------

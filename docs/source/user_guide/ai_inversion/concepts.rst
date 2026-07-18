@@ -3,20 +3,20 @@
 AI inversion concepts
 =====================
 
-AI inversion estimates an earth model from electromagnetic observations with
-a learned or differentiable computational model. In pyCSAMT, this includes
-three related approaches:
+:term:`AI inversion` estimates an earth model from electromagnetic
+observations with a learned or differentiable computational model. In pyCSAMT,
+this includes three related approaches:
 
-* **supervised surrogate inversion**, which learns from synthetic
+* :term:`supervised AI inversion`, which learns from synthetic
   response–model pairs;
-* **physics-informed inversion**, which optimizes model parameters through a
-  differentiable forward-physics loss without labelled earth models;
-* **hybrid inversion**, which uses an AI estimate as a starting point or prior
-  for subsequent physics-based refinement.
+* :term:`physics-informed inversion`, which optimizes model parameters through
+  a differentiable forward-physics loss without labelled earth models;
+* :term:`hybrid inversion`, which uses an AI estimate as a starting point or
+  :term:`model prior` for subsequent physics-based refinement.
 
 These approaches can make repeated inversion fast, provide useful screening
 models, and support uncertainty experiments. They do not remove the
-non-uniqueness of electromagnetic inversion. Their results remain conditional
+:term:`non-uniqueness` of electromagnetic inversion. Their results remain conditional
 on data quality, parameterization, physics, training coverage, regularization,
 and validation evidence.
 
@@ -47,19 +47,20 @@ The stages have distinct roles:
 
 Forward modeling
    Predicts observations :math:`\mathbf d` from an earth model
-   :math:`\mathbf m` through :math:`\mathbf d=F(\mathbf m)`.
+   :math:`\mathbf m` through the :term:`forward operator`
+   :math:`\mathbf d=F(\mathbf m)`.
 
 Classical inversion
    Searches for a model by repeatedly evaluating physics and minimizing an
    objective such as data misfit plus regularization.
 
-Supervised AI inversion
+:term:`Supervised AI inversion`
    Learns an approximation :math:`G_\theta` to the inverse relationship from
    examples and predicts :math:`\hat{\mathbf m}=G_\theta(\mathbf d)`.
 
-Physics-informed inversion
+:term:`Physics-informed inversion`
    Uses differentiable physics during optimization, often minimizing
-   :math:`\|F(\mathbf m_\theta)-\mathbf d_{obs}\|` plus constraints.
+   :math:`\|F(\mathbf m_\theta)-\mathbf d_{\mathrm{obs}}\|` plus constraints.
 
 Interpretation
    Connects the reviewed resistivity model to geology or hydrogeology. It is
@@ -77,9 +78,9 @@ ambiguity.
 
 Classical inversion manages this with regularization, error models, starting
 models, constraints, and model appraisal. Supervised AI manages it implicitly
-through the training distribution, target representation, loss, architecture,
-and data augmentation. Those choices are forms of prior information even when
-they are not called regularization.
+through the :term:`training distribution`, target representation, loss,
+architecture, and data augmentation. Those choices are forms of prior
+information even when they are not called regularization.
 
 Consequently:
 
@@ -95,8 +96,21 @@ Three AI inversion families
 Supervised surrogate inversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The supervised workflow samples earth models, calculates synthetic responses,
-and fits a network to recover the sampled parameters. pyCSAMT provides:
+The supervised workflow samples earth models from a chosen
+:term:`model prior`, calculates synthetic responses, and fits a network to
+recover the sampled parameters. If :math:`p(\mathbf m)` is the model-sampling
+law and :math:`p(\boldsymbol\epsilon\mid\mathbf m)` describes the
+:term:`noise model`, each training pair is generated as
+
+.. math::
+
+   \mathbf d_i = F(\mathbf m_i) + \boldsymbol\epsilon_i,
+   \qquad
+   \mathbf m_i \sim p(\mathbf m).
+
+The learned map :math:`G_\theta` is therefore tied to the sampled
+resistivities, thicknesses, geometry, frequency grid, components, and noise
+that produced those pairs. pyCSAMT provides:
 
 * :class:`pycsamt.ai.inversion.EMInverter1D`;
 * :class:`pycsamt.ai.inversion.EMInverter2D`;
@@ -118,8 +132,10 @@ pyCSAMT exposes:
 * :class:`pycsamt.ai.inversion.PINNInverter3D`.
 
 These approaches optimize through a physics loss and do not require labelled
-training models in the same way as supervised inversion. They still depend on
-the selected forward operator, model parameterization, regularization weights,
+training models in the same way as supervised inversion. A network or
+differentiable parameterization :math:`\mathbf m_\theta` is adjusted until its
+forward response resembles the observation. They still depend on the selected
+:term:`forward operator`, model parameterization, regularization weights,
 boundary assumptions, optimizer, and stopping rule. "Physics-informed" does
 not mean exact physics or unique recovery.
 
@@ -132,7 +148,7 @@ pyCSAMT provides:
 * :class:`pycsamt.ai.inversion.HybridInverter2D`;
 * :class:`pycsamt.ai.inversion.HybridInverter3D`.
 
-A hybrid workflow combines learned speed with physics-based correction. For
+:term:`Hybrid inversion` combines learned speed with physics-based correction. For
 example, an AI result can initialize an iterative refinement. This can reduce
 runtime or starting-model sensitivity, but refinement cannot rescue an
 incompatible parameterization or missing physics automatically.
@@ -172,9 +188,10 @@ predicts layered parameters at spatial stations and shares information through
 adjacency. The label 3-D should not be interpreted as proof that a full 3-D EM
 forward operator was used in every supervised training example.
 
-Select dimension using strike, tensor dimensionality, tipper behavior, survey
-layout, target geometry, station spacing, and classical response evidence—not
-because a higher number sounds more advanced.
+Select dimension using :term:`strike`, :term:`dimensionality`,
+:term:`tipper` behavior, :term:`survey geometry`, target geometry, station
+spacing, and classical response evidence—not because a higher number sounds
+more advanced.
 
 Model parameterization
 ----------------------
@@ -184,8 +201,8 @@ The network can only recover parameters represented in its output.
 Layered 1-D target
 ~~~~~~~~~~~~~~~~~~
 
-A common target contains ``n_layers`` resistivities and ``n_layers - 1``
-thicknesses:
+A common :term:`target vector` contains ``n_layers`` resistivities and
+``n_layers - 1`` thicknesses:
 
 .. code-block:: text
 
@@ -193,7 +210,10 @@ thicknesses:
         log10(h_1), ..., log10(h_(L-1))]
 
 Resistivity is commonly expressed in ohm metres and thickness in metres before
-log10 transformation. The bottom layer is a half-space and has no thickness.
+the base-10 logarithm is taken. With :math:`L` layers, the target dimension is
+:math:`2L-1` because the bottom :term:`half-space` has no thickness. Inverting
+the transformed output returns
+:math:`\rho_\ell=10^{y_\ell}` and :math:`h_\ell=10^{y_{L+\ell}}`.
 Increasing layer count increases flexibility but also ambiguity and training
 difficulty.
 
@@ -226,7 +246,8 @@ Parameterization decisions include:
 Data representation
 -------------------
 
-The input representation determines what the network can use.
+The input representation determines what the network can use. In pyCSAMT this
+is the :term:`feature vector` or matrix handed to the learned model.
 
 Possible features include:
 
@@ -262,7 +283,8 @@ frequency coverage, masking, and finite values.
 The feature contract
 --------------------
 
-Training and inference must use the same:
+The :term:`feature contract` is the reproducibility boundary between a
+checkpoint and the data sent into it. Training and inference must use the same:
 
 * feature names and order;
 * units and transformations;
@@ -281,7 +303,7 @@ predictions.
 Training distribution as prior
 ------------------------------
 
-The synthetic model distribution defines which earth structures the network
+The :term:`training distribution` defines which earth structures the network
 expects. It therefore acts as an implicit prior.
 
 .. figure:: ../../images/user_guide/ai_inversion/training_distribution.png
@@ -322,8 +344,8 @@ coverage.
 Simulation-to-field domain gap
 ------------------------------
 
-The domain gap is the difference between synthetic training examples and field
-observations. Sources include:
+The :term:`domain gap` is the difference between synthetic training examples
+and field observations. Sources include:
 
 * incomplete forward physics;
 * wrong dimensionality;
@@ -343,26 +365,30 @@ help only when trustworthy labels exist and leakage is controlled.
 Supervised learning objective
 -----------------------------
 
-A supervised inverter minimizes a model-space loss over examples:
+A supervised inverter minimizes a :term:`model-space metric` over examples:
 
 .. math::
 
-   \mathcal L_{model}(\theta)
+   \mathcal L_{\mathrm{model}}(\theta)
    = \frac{1}{N}\sum_i
    \ell\!\left(G_\theta(\mathbf d_i),\mathbf m_i\right).
 
 This rewards resemblance to the selected synthetic target. It does not
 guarantee that the predicted model reconstructs the field response. A stronger
-workflow also evaluates a physics-space diagnostic:
+workflow also evaluates a :term:`response-space metric`:
 
 .. math::
 
-   \mathcal L_{data}
-   = \left\|W_d\left(F(\hat{\mathbf m})-mathbf d_{obs}\right)\right\|^2.
+   \mathcal L_{\mathrm{data}}
+   = \left\|\mathbf W_d
+     \left(F(\hat{\mathbf m})-\mathbf d_{\mathrm{obs}}\right)\right\|_2^2.
 
-The forward operator, error weights, components, and residual space must be
-stated. An unweighted RMS of log apparent resistivity is not equivalent to a
-full complex-impedance likelihood.
+Here :math:`\mathbf W_d` is usually built from data standard deviations or
+quality weights, so high-uncertainty observations carry less influence than
+well-constrained ones. The forward operator, error weights, components, and
+residual space must be stated. An unweighted :term:`RMS misfit` of log
+:term:`apparent resistivity` is not equivalent to a full complex-impedance
+likelihood.
 
 Physics-informed objective
 --------------------------
@@ -371,11 +397,11 @@ A PINN-style objective can combine data fit and regularization:
 
 .. math::
 
-   \mathcal L
-   = \mathcal L_{data}
-   + \lambda_v\mathcal R_v
-   + \lambda_l\mathcal R_l
-   + \lambda_g\mathcal R_g,
+   \mathcal L(\theta)
+   = \mathcal L_{\mathrm{data}}(\theta)
+   + \lambda_v\mathcal R_v(\mathbf m_\theta)
+   + \lambda_l\mathcal R_l(\mathbf m_\theta)
+   + \lambda_g\mathcal R_g(\mathbf m_\theta),
 
 where vertical, lateral, or graph regularizers apply according to dimension.
 The weights determine the balance between fit and structure. They must be
@@ -448,11 +474,11 @@ Evaluation hierarchy
 
 Evaluate at several levels:
 
-Model-space metrics
+:term:`Model-space metrics <Model-space metric>`
    Error in log resistivity, thickness, boundary depth, or complete sections on
    synthetic cases with known truth.
 
-Response-space metrics
+:term:`Response-space metrics <Response-space metric>`
    Difference between observed responses and responses recomputed from the
    prediction.
 
@@ -464,7 +490,7 @@ Calibration metrics
    Interval coverage, reliability, and sharpness on held-out calibration/test
    data.
 
-Out-of-distribution diagnostics
+:term:`Out-of-distribution diagnostics <Out-of-distribution diagnostic>`
    Distance or coverage relative to synthetic inputs and latent
    representations.
 
@@ -493,20 +519,20 @@ Uncertainty concepts
 
 Useful distinctions are:
 
-Aleatoric uncertainty
+:term:`Aleatoric uncertainty`
    Variation associated with observation noise or irreducible ambiguity.
 
-Epistemic uncertainty
+:term:`Epistemic uncertainty`
    Uncertainty in learned parameters due to finite or incomplete training data.
 
-Distributional uncertainty
+:term:`Distributional uncertainty`
    Risk that the field input comes from a different distribution than training.
 
 Inverse non-uniqueness
    Multiple earth models fit the observations. A deterministic network can
    collapse these possibilities into one conditional estimate.
 
-Structural uncertainty
+:term:`Structural uncertainty`
    Wrong dimension, parameterization, forward physics, architecture, or
    geological assumptions.
 
@@ -523,7 +549,7 @@ the graph inverter. Each covers only part of this taxonomy.
    Predictive spread should be interpreted conditionally on the ensemble,
    calibration set, or dropout model that produced it.
 
-Conformal coverage applies under exchangeability assumptions between
+Conformal coverage applies under :term:`exchangeability` assumptions between
 calibration and future examples. Synthetic calibration does not guarantee the
 same coverage on shifted field data. Narrow intervals can be confidently
 wrong when structural uncertainty is omitted.
@@ -536,14 +562,52 @@ Configuration objects
 configuration. Configuration-first work is preferable to undocumented notebook
 state:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import RunConfig
+   >>> from pycsamt.ai.inversion import RunConfig
 
-   RunConfig.write_template("ai_inversion.yml")
-   config = RunConfig.from_file("ai_inversion.yml")
-   config.validate()
-   print(config.summary())
+   >>> RunConfig.write_template("ai_inversion.py")
+   >>> config = RunConfig.from_file("ai_inversion.py")
+   >>> config.validate()
+   >>> print(config.summary())
+   RunConfig
+
+     ForwardConfig
+       solver               = 'mt1d'
+       freq_min             = 0.0001 Hz
+       freq_max             = 1e+04 Hz
+       n_freqs              = 30
+       n_layers             = 3-7
+       rho_min              = 1 Ohm m
+       rho_max              = 1e+04 Ohm m
+       depth_max            = 2e+03 m
+       n_samples            = 10,000
+       noise_level          = 0.05  (gaussian)
+       seed                 = None
+       n_jobs               = 1
+       output               = ./forward_dataset.npz
+
+     InversionConfig
+       -- Architecture --
+       arch                   = 'resnet'
+       n_layers               = 5
+       solver                 = 'mt1d'
+       device                 = None  (None -> auto)
+       include_phase          = yes
+       log_thickness          = yes
+       augment_noise          = 0.02
+       -- Training --
+       epochs                 = 100
+       batch_size             = 256
+       lr                     = 0.001
+       weight_decay           = 1e-05
+       patience               = 20  (min_delta=1e-05)
+       val_frac               = 0.1
+       grad_clip              = 1.0
+       seed                   = None
+       -- Checkpointing --
+       checkpoint             = checkpoints\em_inverter.npz
+       save_best              = True
 
 Validation checks internal configuration consistency. It cannot establish that
 the selected ranges, noise, physics, or architecture represent a particular
@@ -554,26 +618,32 @@ The Sites bridge
 
 Use the canonical loader and public bridge utilities:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.emtools._core import ensure_sites
-   from pycsamt.ai.inversion import (
-       sites_to_features_1d,
-       sites_to_obs_1d,
-   )
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.ai.inversion import (
+   ...     sites_to_features_1d,
+   ...     sites_to_obs_1d,
+   ... )
 
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=True,
+   ...     verbose=0,
+   ... )
 
-   observations = sites_to_obs_1d(sites)
-   X, frequencies_hz, station_names = sites_to_features_1d(
-       sites,
-       comp="xy",
-       n_freqs=32,
-   )
+   >>> observations = sites_to_obs_1d(sites)
+   >>> X, frequencies_hz, station_names = sites_to_features_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     n_freqs=32,
+   ... )
+   >>> type(observations).__name__, len(observations)
+   ('list', 28)
+   >>> X.shape, frequencies_hz.shape, len(station_names)
+   ((28, 64), (32,), 28)
+   >>> station_names[:3]
+   ['18-001A', '18-002U', '18-003A']
 
 Before using these arrays, inspect their documented return type and shape in
 the installed version, station names, frequency grid, components, and missing
@@ -715,6 +785,7 @@ Continue in this order:
 * :doc:`validation` to establish acceptance evidence;
 * :doc:`inference` to apply an approved checkpoint;
 * :doc:`uncertainty` to assess predictive calibration and domain shift;
+* :doc:`hybrid` for AI warm-start plus physics refinement;
 * :doc:`pinn_2d` for physics-informed profile inversion;
 * :doc:`agents` for standard orchestration;
 * :doc:`reporting` for model cards and release packages.

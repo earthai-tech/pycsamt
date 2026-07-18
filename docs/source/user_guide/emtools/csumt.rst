@@ -3,7 +3,7 @@
 CSUMT Bostick Depth And Survey Design
 =====================================
 
-CSUMT means **Controlled-Source Ultra-Audio Magnetotellurics**.  It is
+Controlled-Source Ultra-Audio Magnetotellurics ( :term:`CSUMT` ) is
 a controlled-source electromagnetic method that works in the
 ultra-audio frequency band, typically higher than conventional AMT/MT.
 Instead of waiting for natural source fields, the survey uses a

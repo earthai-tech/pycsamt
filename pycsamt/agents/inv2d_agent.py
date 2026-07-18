@@ -58,7 +58,8 @@ class Inv2DAgent(BaseAgent):
     n_freqs : int
         Number of input frequencies (default 32).
     n_components : int
-        Number of impedance components in input (default 4: Re/Im × xy/yx).
+        Number of channels in the input pseudosection (default 2:
+        log10 apparent resistivity and phase for the xy component).
     arch : str
         U-Net variant (default ``"unet"``).
     n_train_profiles : int
@@ -95,7 +96,7 @@ class Inv2DAgent(BaseAgent):
         llm_provider: str = "claude",
         n_depth: int = 40,
         n_freqs: int = 32,
-        n_components: int = 4,
+        n_components: int = 2,
         arch: str = "unet",
         n_train_profiles: int = 200,
         n_stations_per_profile: int = 20,
@@ -217,17 +218,20 @@ class Inv2DAgent(BaseAgent):
                 n_jobs=1,
                 verbose=False,
             )
-            # X1d: (n_1d, n_freqs, n_comp=4)  →  reshape to profiles
-            X1d = ds1d.X  # (n_1d, n_freqs, 4)
-            y1d = ds1d.y  # (n_1d, n_layers)
+            # X1d: (n_1d, n_freqs * 2) flat [log10(rho_xy) | phase_xy]
+            # → reshape to profiles
+            X1d = ds1d.X  # (n_1d, n_freqs * 2)
+            # ds1d.y is [log10(rho) (n_layers) | log10(h) (n_layers - 1)];
+            # the 2-D section target is log10(rho) by depth only.
+            y1d = ds1d.y[:, :n_layers]  # (n_1d, n_layers)
 
             n_samp = n_1d // n_sta
             X1d = X1d[: n_samp * n_sta]
             y1d = y1d[: n_samp * n_sta]
 
-            # reshape: (n_samp, n_sta, n_freqs, 4)
-            X2d_raw = X1d.reshape(n_samp, n_sta, self.n_freqs, 4)
-            # → (n_samp, 4, n_freqs, n_sta)
+            # reshape: (n_samp, n_sta, n_freqs, 2)
+            X2d_raw = X1d.reshape(n_samp, n_sta, self.n_freqs, 2)
+            # → (n_samp, 2, n_freqs, n_sta)
             X2d = X2d_raw.transpose(0, 3, 2, 1)
 
             y2d_raw = y1d.reshape(n_samp, n_sta, n_layers)

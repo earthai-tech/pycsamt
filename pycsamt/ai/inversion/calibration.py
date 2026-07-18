@@ -353,24 +353,30 @@ class PosteriorCalibrator:
     draws from a calibrated posterior.
 
     **Step 1 — fit the recalibration map** on
-    :math:`(y_{\rm cal}, \hat{y}_{\rm cal}, \sigma_{\rm cal})`:
+    :math:`(y_{\rm cal}, \hat{y}_{\rm cal}, \sigma_{\rm cal})`, one residual
+    scale :math:`s_j` per output parameter :math:`j` so that pooling
+    residuals across parameters is meaningful even when they carry
+    incompatible units (e.g. log10-resistivity and linear-metre thickness):
 
     .. math::
 
-        p_i = \Phi\!\left(\frac{y_i - \hat{y}_i}{\sigma_i}\right),
+        z_{ij} = \frac{y_{ij} - \hat{y}_{ij}}{\sigma_{ij}}, \qquad
+        s_j = \operatorname{std}_i(z_{ij}), \qquad
+        p_i = \Phi\!\left(\frac{z_{ij}}{s_j}\right),
         \qquad
         g = \text{PAVA}\!\left(p_{(i)},\, \frac{i}{n_{\rm cal}}\right)
 
     where :math:`p_{(i)}` are the sorted predicted CDF values and
     :math:`i/n_{\rm cal}` are the empirical CDF targets.
 
-    **Step 2 — calibrated posterior samples**:
+    **Step 2 — calibrated posterior samples**, with :math:`\sigma_j`
+    rescaled by the same per-parameter :math:`s_j`:
 
     .. math::
 
         u \sim \mathcal{U}(0,1),\quad
         p^* = g^{-1}(u),\quad
-        \theta^* = \hat{y} + \sigma \cdot \Phi^{-1}(p^*)
+        \theta^*_j = \hat{y}_j + \frac{\sigma_j}{s_j} \cdot \Phi^{-1}(p^*)
 
     The map :math:`g^{-1}` (inverse PAVA) is computed via linear
     interpolation.  Because the composition
@@ -405,7 +411,7 @@ class PosteriorCalibrator:
         # fitted quantities
         self._p_knots: np.ndarray | None = None  # sorted predicted CDF
         self._q_targets: np.ndarray | None = None  # empirical CDF targets
-        self._sigma_scale: float | None = None  # global variance scale
+        self._sigma_scale: np.ndarray | None = None  # per-parameter scale
         self._is_fitted: bool = False
 
     # ── fitting ──────────────────────────────────────────────────────────────
@@ -444,8 +450,20 @@ class PosteriorCalibrator:
         # Standardised residuals: one scalar per (sample, param)
         z_cal = (y_cal - y_pred_cal) / (sigma_cal + eps)  # (n_cal, n_params)
 
+        # Per-parameter scaling factor, computed *before* pooling across
+        # parameters. Output parameters routinely mix incompatible scales
+        # (e.g. log10-resistivity vs. linear-metre thickness), so a single
+        # scale shared across all columns lets whichever parameter has the
+        # largest raw residual dominate the pooled distribution and the
+        # fitted map for every other parameter. Standardising each column
+        # by its own residual spread first keeps the pooled CDF values
+        # comparable across parameters.
+        col_std = np.std(z_cal, axis=0)
+        col_std = np.where(col_std > 0, col_std, 1.0)
+        z_cal_scaled = z_cal / col_std[np.newaxis, :]
+
         # Predicted CDF values — treat each (sample, param) as one observation
-        p_pred = ndtr(z_cal).ravel()  # U[0,1] if calibrated
+        p_pred = ndtr(z_cal_scaled).ravel()  # U[0,1] if calibrated
 
         # Sort and assign empirical CDF targets
         order = np.argsort(p_pred)
@@ -471,12 +489,11 @@ class PosteriorCalibrator:
         self._g_inv_x = g_knots[sort_g]
         self._g_inv_y = p_knots[sort_g]
 
-        # Global sigma scaling factor: ratio std(z_cal * sigma_scale) → 1
-        # Equivalent to learning a global variance correction
-        z_cal_flat = z_cal.ravel()
-        self._sigma_scale = (
-            float(np.std(z_cal_flat)) if np.std(z_cal_flat) > 0 else 1.0
-        )
+        # Per-parameter sigma scaling factor, shape (n_params,). Broadcasts
+        # against (n_pts, n_params) arrays in calibrated_std()/
+        # predict_posterior() so each parameter is rescaled by its own
+        # calibration-set residual spread rather than a pooled one.
+        self._sigma_scale = col_std
 
         self._is_fitted = True
         return self

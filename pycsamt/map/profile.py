@@ -120,10 +120,14 @@ def build_pseudosection(
 ) -> Any:
     """Build the concrete pseudosection figure."""
     if options.backend == "matplotlib":
+        if options.by_line:
+            return _matplotlib_line_grid_pseudosection(data, options)
         return _matplotlib_pseudosection(data, options)
     if options.backend != "plotly":
         msg = f"Unknown profile backend: {options.backend}"
         raise ValueError(msg)
+    if options.by_line:
+        return _line_grid_pseudosection(data, options)
     if len(options.components) > 1:
         return _multi_component_pseudosection(data, options)
     return _single_pseudosection(
@@ -196,6 +200,134 @@ def _single_pseudosection(
     _style_profile(fig, colors, title)
     if options.x_axis == "distance":
         fig.update_xaxes(title_text="Distance (km)")
+    return fig
+
+
+def _line_grid_pseudosection(data: MapData, options: ProfileMapOptions):
+    """Build one pseudosection panel per line, laid out in a grid.
+
+    A merged pseudosection concatenates every line's stations onto one
+    x-axis, which reads as a single continuous section even though the
+    lines are unrelated traverses. This renders each line as its own
+    small-multiple panel instead, sharing one color scale so panels
+    stay comparable.
+    """
+    go = require_plotly()
+    make_subplots = require_plotly_subplots()
+
+    quantity = _quantity_name(options.quantity)
+    component = options.component
+    table = pseudosection_table(
+        data,
+        quantity=quantity,
+        component=component,
+    )
+    table = _filter_table(table, options, quantity)
+    colors = theme_colors(options.theme)
+    if table.empty:
+        return _empty_profile_figure(colors)
+
+    lines = sorted(str(v) for v in table["line"].dropna().unique())
+    if len(lines) <= 1:
+        return _single_pseudosection(data, options, component=component)
+
+    x_col = "distance" if options.x_axis == "distance" else "station"
+    if quantity == "rho":
+        colorbar = "log₁₀ ρ (Ω·m)" if options.log_rho else "ρ (Ω·m)"
+        cmap = options.cmap or "Jet"
+    else:
+        colorbar = "φ (°)"
+        cmap = options.cmap or "RdBu_r"
+
+    panels: list[tuple[list, np.ndarray, np.ndarray] | None] = []
+    finite_values = []
+    for line in lines:
+        piv = (
+            table[table["line"] == line]
+            .pivot_table(
+                index="period",
+                columns=x_col,
+                values="value",
+                aggfunc="median",
+            )
+            .sort_index()
+        )
+        if piv.empty:
+            panels.append(None)
+            continue
+        z = _profile_values_for_plot(
+            piv.to_numpy(dtype=float),
+            quantity,
+            options,
+        )
+        y = np.log10(piv.index.to_numpy(dtype=float))
+        panels.append((list(piv.columns), y, z))
+        finite = z[np.isfinite(z)]
+        if finite.size:
+            finite_values.append(finite)
+
+    zmin, zmax = _zmin(options), _zmax(options)
+    if (zmin is None or zmax is None) and finite_values:
+        merged = np.concatenate(finite_values)
+        zmin = float(merged.min()) if zmin is None else zmin
+        zmax = float(merged.max()) if zmax is None else zmax
+
+    cols = max(
+        1,
+        int(options.line_cols) if options.line_cols else min(3, len(lines)),
+    )
+    rows = -(-len(lines) // cols)
+
+    fig = make_subplots(
+        rows=rows,
+        cols=cols,
+        subplot_titles=lines,
+        shared_yaxes=True,
+        horizontal_spacing=0.06,
+        vertical_spacing=0.12,
+    )
+    scale_shown = False
+    last_row_for_col: dict[int, int] = {}
+    for idx, panel in enumerate(panels):
+        if panel is None:
+            continue
+        row, col = divmod(idx, cols)
+        x, y, z = panel
+        fig.add_trace(
+            go.Heatmap(
+                z=z,
+                x=x,
+                y=y,
+                colorscale=to_plotly_cmap(cmap),
+                zmin=zmin,
+                zmax=zmax,
+                showscale=not scale_shown,
+                colorbar=dict(title=dict(text=colorbar, side="right")),
+                hovertemplate=(
+                    "<b>%{x}</b><br>"
+                    "log10(T): %{y:.2f}<br>"
+                    "value: %{z:.2f}<extra></extra>"
+                ),
+            ),
+            row=row + 1,
+            col=col + 1,
+        )
+        scale_shown = True
+        last_row_for_col[col] = max(last_row_for_col.get(col, 0), row + 1)
+
+    fig.update_yaxes(autorange="reversed")
+    fig.update_yaxes(title_text="log10 period (s)", col=1)
+    x_title = "Distance (km)" if x_col == "distance" else "Station"
+    for col, row in last_row_for_col.items():
+        fig.update_xaxes(title_text=x_title, row=row, col=col + 1)
+
+    fig.update_layout(
+        title=f"{quantity.upper()} {component.upper()} pseudosection by line",
+        paper_bgcolor=colors["paper"],
+        plot_bgcolor=colors["plot"],
+        font=dict(color=colors["text"]),
+        height=max(320, int(options.height_per_panel) * rows),
+    )
     return fig
 
 
@@ -287,6 +419,131 @@ def _draw_mpl_panel(
     ax.figure.colorbar(im, ax=ax)
 
 
+def _matplotlib_line_grid_pseudosection(
+    data: MapData,
+    options: ProfileMapOptions,
+):
+    plt = require_matplotlib_pyplot()
+
+    quantity = _quantity_name(options.quantity)
+    component = options.component
+    table = pseudosection_table(
+        data,
+        quantity=quantity,
+        component=component,
+    )
+    table = _filter_table(table, options, quantity)
+    colors = theme_colors(options.theme)
+    if table.empty:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        fig.patch.set_facecolor(colors["paper"])
+        ax.set_facecolor(colors["plot"])
+        ax.text(
+            0.5,
+            0.5,
+            "No profile data available",
+            ha="center",
+            va="center",
+            color=colors["text"],
+            transform=ax.transAxes,
+        )
+        return fig
+
+    lines = sorted(str(v) for v in table["line"].dropna().unique())
+    if len(lines) <= 1:
+        return _matplotlib_pseudosection(
+            data,
+            replace(options, components=(component,)),
+        )
+
+    x_col = "distance" if options.x_axis == "distance" else "station"
+    pivots: list[Any] = []
+    finite_values = []
+    for line in lines:
+        piv = (
+            table[table["line"] == line]
+            .pivot_table(
+                index="period",
+                columns=x_col,
+                values="value",
+                aggfunc="median",
+            )
+            .sort_index()
+        )
+        pivots.append(piv)
+        if piv.empty:
+            continue
+        z = _profile_values_for_plot(
+            piv.to_numpy(dtype=float),
+            quantity,
+            options,
+        )
+        finite = z[np.isfinite(z)]
+        if finite.size:
+            finite_values.append(finite)
+
+    vmin, vmax = _zmin(options), _zmax(options)
+    if (vmin is None or vmax is None) and finite_values:
+        merged = np.concatenate(finite_values)
+        vmin = float(merged.min()) if vmin is None else vmin
+        vmax = float(merged.max()) if vmax is None else vmax
+
+    cols = max(
+        1,
+        int(options.line_cols) if options.line_cols else min(3, len(lines)),
+    )
+    rows = -(-len(lines) // cols)
+    fig, axes = plt.subplots(
+        rows,
+        cols,
+        figsize=(4.2 * cols, 3.0 * rows),
+        squeeze=False,
+    )
+    fig.patch.set_facecolor(colors["paper"])
+    for idx, (line, piv) in enumerate(zip(lines, pivots)):
+        row, col = divmod(idx, cols)
+        ax = axes[row][col]
+        ax.set_facecolor(colors["plot"])
+        ax.tick_params(colors=colors["text"])
+        if piv.empty:
+            ax.text(
+                0.5,
+                0.5,
+                "No data",
+                ha="center",
+                va="center",
+                color=colors["text"],
+                transform=ax.transAxes,
+            )
+            continue
+        z_values = _profile_values_for_plot(
+            piv.to_numpy(dtype=float),
+            quantity,
+            options,
+        )
+        im = ax.imshow(
+            z_values,
+            aspect="auto",
+            origin="upper",
+            cmap=options.cmap or _default_profile_cmap(quantity),
+            vmin=vmin,
+            vmax=vmax,
+        )
+        ax.set_title(line, color=colors["text"])
+        ax.set_xlabel(x_col.title(), color=colors["text"])
+        fig.colorbar(im, ax=ax)
+    for idx in range(len(lines), rows * cols):
+        row, col = divmod(idx, cols)
+        axes[row][col].axis("off")
+    axes[0][0].set_ylabel("Period index", color=colors["text"])
+    fig.suptitle(
+        f"{quantity.upper()} {component.upper()} pseudosection by line",
+        color=colors["text"],
+    )
+    fig.tight_layout()
+    return fig
+
+
 def _multi_component_pseudosection(
     data: MapData,
     options: ProfileMapOptions,
@@ -324,6 +581,12 @@ def _multi_component_pseudosection(
         colors,
         "Multi-component pseudosection",
     )
+    # ``_style_profile`` sets the x-axis title on row 1's axis, which
+    # ``shared_xaxes`` hides beneath the next subplot's title. Move it
+    # onto the bottom row, where the (only) visible x-axis ticks are.
+    fig.update_layout(xaxis_title=None)
+    x_title = "Distance (km)" if options.x_axis == "distance" else "Station"
+    fig.update_xaxes(title_text=x_title, row=len(components), col=1)
     fig.update_layout(
         height=max(
             320,

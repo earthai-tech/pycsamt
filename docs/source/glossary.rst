@@ -29,6 +29,13 @@ definitions here are the single source of truth.
       dipole or magnetic loop transmitter to overcome the weak natural signal,
       at the cost of near-field and source-overprint corrections.
 
+   CSUMT
+   Controlled-source ultra-audio magnetotellurics
+      A controlled-source magnetotelluric method operating above the usual
+      audio-frequency AMT band, commonly in the kilohertz to hundreds of
+      kilohertz range. In pyCSAMT, CSUMT tools are used for shallow target-depth
+      planning, Bostick-depth estimates, and transmitter frequency scheduling.
+
    CSEM
       Controlled-source electromagnetics — the broader family of active-source
       EM methods to which :term:`CSAMT` belongs.
@@ -755,7 +762,162 @@ definitions here are the single source of truth.
       Root-mean-square misfit between observed and predicted responses, normalised
       by data error; the primary goodness-of-fit measure for an inversion.
 
+   MapData
+      The normalized survey container used by ``pycsamt.map``. It stores the
+      loaded site objects, one :term:`station record` per station, one
+      :term:`profile line` per survey line, and loader metadata so different
+      map renderers use the same station order and grouping.
+
+   Station record
+      A single normalized station row in :term:`MapData`, containing the station
+      identifier, latitude, longitude, elevation, profile-line name, zero-based
+      station index, and the original EDI-like source object.
+
+   Profile line
+      A named ordered group of station records. Map loaders use profile lines to
+      keep stations from different survey traverses separate while still
+      allowing combined 2-D and 3-D views.
+
+   Pseudosection
+      A profile plot where stations or along-line distance form the horizontal
+      axis and period or frequency forms the vertical axis. Values such as
+      apparent resistivity or phase are sampled from each station response and
+      gridded for visual continuity; the result is a display aid, not a true
+      depth section.
+
+   Frequency grid
+      The ordered set of frequencies available in one station response. Nearby
+      stations may not share exactly the same grid, so pyCSAMT records the
+      requested frequency, selected frequency, absolute difference, and relative
+      difference when extracting map values.
+
+   Coordinate reference system
+   CRS
+      The coordinate definition used to interpret map coordinates, including
+      datum, projection, units, and axis order. A CRS transform makes station
+      coordinates comparable when one source is projected in metres and another
+      expects WGS84 longitude and latitude.
+
+   Basemap
+      The geographic tile layer and map-camera settings used behind station
+      traces, labels, contours, and profile lines. In pyCSAMT map helpers the
+      basemap configuration stores style, center, zoom, and bearing separately
+      from the data traces.
+
+   Contour overlay
+      A map layer made by interpolating scattered station values onto a regular
+      grid and drawing filled bands, contour lines, or both. It is useful for
+      visual continuity between stations, but it should be interpreted as an
+      interpolation of sampled values rather than a measured continuous field.
+
+   Topography overlay
+      A 3-D terrain layer built from scattered station elevations or a regular
+      elevation grid. It provides surface context for map and volume views
+      without changing the underlying electromagnetic response values.
+
+   Station map
+      A 2-D map view that shows station positions or station order, optional
+      profile-line traces and station labels, and one scalar overlay value per
+      station. It is usually the first spatial quality-control view for a
+      loaded survey.
+
+   Scalar overlay
+      A single numeric value assigned to each station for coloring a map marker
+      or building an interpolated layer. Station maps commonly use station
+      index, elevation, apparent resistivity, phase, or skin depth as scalar
+      overlays.
+
+   Density layer
+      A Plotly map layer that displays the spatial concentration or intensity of
+      finite station values beneath the station markers. In station maps it is
+      used as a quick visual trend layer, not as a replacement for measured
+      station values.
+
+   Figure export
+      The process of writing a map figure to a persistent artifact such as HTML,
+      PNG, SVG, PDF, JSON, or a dictionary-style figure specification. pyCSAMT
+      map exports return the final path so workflows can record exactly which
+      artifact was produced.
+
+   Figure specification
+      The serialized structure of a Plotly figure, including data traces,
+      layout, color scales, and map settings. It is useful for testing and
+      audit workflows because it can be compared without rendering pixels.
+
+   3-D quick-look map
+      A non-inversion 3-D visualization built from station or pseudosection
+      values. In pyCSAMT volume views, apparent resistivity and period are used
+      to estimate pseudo-depth so survey trends can be inspected before a
+      constrained inversion model is available.
+
+   Pseudo-depth
+      A depth-like plotting coordinate estimated from electromagnetic sampling
+      scale rather than recovered by inversion. For pyCSAMT EDI volume maps it
+      is computed from apparent resistivity and period using the skin-depth
+      relation :math:`z \approx 503\sqrt{\rho_a T}`.
+
+   Depth slice
+      A horizontal 3-D quick-look surface sampled at one pseudo-depth. Values
+      are interpolated from the station/profile grids and should be interpreted
+      as a visualization of the pseudosection-derived point cloud, not a
+      geological layer boundary.
+
+   Block volume
+      A sparse 3-D volume rendering built from the finite pseudo-depth samples
+      across all survey lines. It gives a compact impression of the full survey
+      volume, but it can hide individual line structure when station spacing is
+      sparse.
+
+   Isosurface
+      A 3-D surface connecting points with the same plotted value. In pyCSAMT
+      volume maps it is built from a dense interpolation of the finite
+      pseudo-depth point cloud and is controlled by ``iso_range`` and
+      ``surface_count``.
+
+   Static image export
+      Writing a non-interactive image such as PNG, SVG, PDF, or WebP from a
+      figure. Matplotlib static image export uses ``savefig`` directly, while
+      Plotly static image export requires an image engine such as Kaleido.
+
+   Kaleido
+      Plotly's static-image export engine. It converts Plotly figures to image
+      files such as PNG, SVG, PDF, and WebP when interactive HTML is not the
+      desired artifact.
+
    Agent
       In :mod:`pycsamt.agents`, a small composable unit that performs one step of
       a workflow (routing, parsing, QC, forward modelling, inversion, reporting)
       and returns a standardised ``AgentResult``.
+
+   MapView session
+      The in-memory, code-first survey handle created by
+      ``pycsamt.map.MapView``. It wraps one normalized
+      :term:`MapData` object, possibly spanning several survey lines,
+      so that station maps, :term:`pseudosection`\ s, 3-D
+      :term:`fence view`\ s, and exports all read from the same loaded
+      data instead of re-parsing EDI files for every figure.
+
+   Fence view
+      A 3-D "fence diagram" that renders each survey line as its own
+      vertical resistivity curtain, positioned in 3-D by station offset
+      and line spacing, with the vertical axis converted from period to
+      a pseudo-depth via :math:`\delta \approx 503\sqrt{\bar\rho\,T}` --
+      the same :term:`skin depth` relation used elsewhere, evaluated
+      with the per-period median :term:`apparent resistivity`
+      :math:`\bar\rho` across the line and period :math:`T`. It is one
+      of the modes built by :mod:`pycsamt.map.volume`, alongside block,
+      depth-slice, and surface modes, and remains a pseudo-depth
+      visualization rather than a constrained inversion model.
+
+   Station distance
+      The cumulative along-line separation between stations, in
+      kilometres, used as the ``x_axis="distance"`` option on
+      :term:`profile line` and :term:`pseudosection` views. pyCSAMT
+      projects latitude/longitude to a local equirectangular frame,
+      :math:`x=\lambda\cdot111.320\cos\bar\phi` and
+      :math:`y=\phi\cdot110.574`, with :math:`\bar\phi` the mean
+      station latitude, then sums consecutive point separations
+      :math:`\sqrt{\Delta x^2+\Delta y^2}`. It falls back to plain
+      station order when any station is missing a finite coordinate,
+      so a distance axis is never silently wrong -- only degraded to
+      an index.

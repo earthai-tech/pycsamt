@@ -547,6 +547,9 @@ def pseudosection_table(
         station.id: float(distances[i])
         for i, station in enumerate(data.stations)
     }
+    line_by_id = {
+        station.id: str(station.line or "line") for station in data.stations
+    }
     for edi in data.iter_edis():
         sid = _station_id_from_edi(edi)
         z_obj = getattr(edi, "Z", None)
@@ -579,6 +582,7 @@ def pseudosection_table(
             rows.append(
                 {
                     "station": sid,
+                    "line": line_by_id.get(sid, "line"),
                     "distance": dist_by_id.get(sid, np.nan),
                     "period": float(period),
                     "value": float(value),

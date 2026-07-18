@@ -62,10 +62,17 @@ def _first_edi_dir(*candidates: Path) -> Path | None:
 
 @pytest.fixture(scope="session")
 def edi_dir() -> Path:
-    """Directory containing real EDI files (edi_out/ only)."""
-    if not _EDI_OUT.exists() or not list(_EDI_OUT.glob("*.edi")):
-        pytest.skip("edi_out/ not found — skipping live EDI tests")
-    return _EDI_OUT
+    """Directory containing real EDI files.
+
+    Prefers edi_out/ (local, generated — richer sample set on a dev
+    machine) but falls back to the bundled data/3edis/ sample so these
+    tests still run in CI, where edi_out/ never exists (it's a local
+    export directory, not tracked by git).
+    """
+    found = _first_edi_dir(_EDI_OUT, _DATA_3EDIS)
+    if found is None:
+        pytest.skip("No EDI directory found — skipping live EDI tests")
+    return found
 
 
 @pytest.fixture(scope="session")

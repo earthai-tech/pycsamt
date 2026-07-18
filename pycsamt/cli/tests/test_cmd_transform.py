@@ -434,10 +434,17 @@ class TestTransformAvgCLI:
 class TestTransformJCLI:
     @pytest.fixture(autouse=True)
     def require_j(self) -> None:
-        # Look for .j files in data/
-        j_files = list((_PROJECT_ROOT / "data").rglob("*.j"))
+        # J files may carry .j/.jones/.txt/.dat (see JParseMixin.J_SUFFIXES);
+        # the bundled sample (data/j/nia/) uses .dat.
+        from pycsamt.jones.cbase import JParseMixin
+
+        j_files = [
+            p
+            for p in (_PROJECT_ROOT / "data").rglob("*")
+            if p.is_file() and p.suffix.lower() in JParseMixin.J_SUFFIXES
+        ]
         if not j_files:
-            pytest.skip("No .j files found — skipping J transform tests")
+            pytest.skip("No J files found — skipping J transform tests")
         self.j_dir = j_files[0].parent
 
     def test_dry_run(self, runner: CliRunner) -> None:

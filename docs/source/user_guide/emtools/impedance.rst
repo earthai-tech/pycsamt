@@ -4,8 +4,9 @@ Impedance-Tensor Diagnostics
 ============================
 
 ``pycsamt.emtools.impedance`` gives direct views of the complex
-impedance tensor before it is reduced to apparent resistivity, phase,
-phase-tensor attributes, dimensionality classes, or inversion input.
+:term:`impedance tensor` before it is reduced to :term:`apparent
+resistivity`, :term:`phase`, :term:`phase tensor` attributes,
+:term:`dimensionality` classes, or inversion input.
 Use this page when you want to look at the tensor itself and ask:
 
 * do ``Zxy`` and ``Zyx`` behave like an approximately antisymmetric
@@ -133,9 +134,9 @@ The Phasor Wheel
 ----------------
 
 ``plot_phasor_wheel`` draws selected impedance components as complex
-phasors. For each frequency sample, the component phase becomes the
-polar angle and the component magnitude becomes the radius. Colour
-encodes log-period, so a station becomes a period-ordered complex
+:term:`phasor` values. For each frequency sample, the component phase
+becomes the polar angle and the component magnitude becomes the radius.
+Colour encodes log-period, so a station becomes a period-ordered complex
 trajectory.
 For component :math:`Z_c(f_k)`, the plotted polar coordinate is
 
@@ -387,9 +388,9 @@ Two limiting cases are useful:
    Z_{yx} = Z_{xy}
    \quad \Rightarrow \quad r \approx 1 .
 
-The first case is the ideal antisymmetric off-diagonal pair. The second
-case means the two terms reinforce rather than cancel, which is not the
-expected 1-D/2-D off-diagonal structure.
+The first case is the ideal :term:`off-diagonal antisymmetry` pair. The
+second case means the two terms reinforce rather than cancel, which is
+not the expected 1-D/2-D off-diagonal structure.
 
 .. code-block:: python
    :linenos:
@@ -589,8 +590,8 @@ the full impedance tensor:
 
    \det(Z) = Z_{xx} Z_{yy} - Z_{xy} Z_{yx}.
 
-The determinant is useful because it is invariant under a rotation of
-the horizontal coordinate frame.  If
+The :term:`determinant response` is useful because it is invariant under
+a rotation of the horizontal coordinate frame.  If
 
 .. math::
 

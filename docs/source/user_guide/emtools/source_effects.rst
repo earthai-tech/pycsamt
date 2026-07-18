@@ -7,12 +7,12 @@ Source Effects And Near-Field Correction
 CSAMT transmitter is influencing the measured response. Natural-source
 MT interpretation assumes a plane-wave source. CSAMT does not have that
 luxury: the transmitter has a finite offset from each receiver, and the
-offset can control whether a station-frequency row behaves like near
-field, transition field, or far field.
+offset can control whether a station-frequency row behaves like
+:term:`near field`, :term:`transition field`, or :term:`far field`.
 
 The module contains two related but independent families of tools:
 
-* Yan and Fu / Da et al. source-overprint diagnostics, based on the
+* Yan and Fu / Da et al. :term:`source overprint` diagnostics, based on the
   ground-wave to surface-wave amplitude ratio :math:`\beta_{Ey}`.
 * Wang and Lin normalized-response and near-field correction tools,
   based on skin-depth field zones and an equatorial horizontal electric
@@ -102,7 +102,37 @@ Overprint Beta
 
 ``overprint_beta`` is the pure mathematical interface. It does not need
 EDI files. It evaluates the Yan and Fu ground-wave to surface-wave ratio
-and returns :math:`\beta_{Ey}` in percent.
+and returns :math:`\beta_{Ey}` in percent. In this workflow,
+:term:`source overprint` means the finite transmitter contribution is
+large enough to bias a plane-wave interpretation.
+
+The measured field at the receiver is the sum of a ground wave that
+travels directly through the earth from the source and a surface wave
+guided along the air-earth interface; a plane-wave (natural-source MT)
+interpretation is only valid once the ground wave dominates. Yan & Fu
+(2004, eq. 6) quantify that balance as the ratio of how sharply each
+term varies near the receiver:
+
+.. math::
+
+   \beta_{Ey} =
+   \left|\frac{\partial^2 P}{\partial z^2}\right|
+   \Big/
+   \left|\frac{\partial^3 N}{\partial x^2\,\partial z}\right|,
+   \qquad
+   P = \frac{e^{-k_1 r_3}}{r_3}, \qquad
+   N = I_0(p)\,K_0(q),
+
+where :math:`P` is the Sommerfeld ground-wave term, :math:`r_3` is the
+3-D distance from the dipole source to the evaluation point, :math:`N`
+is the Foster surface-wave term built from modified Bessel functions
+:math:`I_0` and :math:`K_0`, and :math:`k_1 = \sqrt{i\omega\mu_0/\rho}`
+is the complex earth wavenumber. ``overprint_beta`` evaluates the
+required partial derivatives by central finite differences rather than
+a closed-form expression, which is why it needs a half-space
+resistivity, not just an offset — the same offset can sit deep in the
+near field over resistive ground and comfortably in the far field over
+conductive ground.
 
 .. code-block:: python
    :linenos:
@@ -139,7 +169,21 @@ Per-Frequency Overprint Detection
 
 ``detect_source_overprint`` applies ``overprint_beta`` to every
 station-frequency row using apparent resistivity computed from the
-observed impedance tensor.
+observed impedance tensor. Alongside ``beta_pct``, it reports ``kr``,
+a dimensionless field-zone parameter that recurs throughout this page:
+
+.. math::
+
+   kr = |k_1|\, r = \frac{r}{\delta_\mathrm{Bostick}}, \qquad
+   |k_1| = \sqrt{\frac{\omega\mu_0}{\rho_a}},
+
+the source-receiver offset measured in Bostick skin depths at that
+frequency. Small ``kr`` means the offset is well inside one skin depth
+— the near field, where ``beta_pct`` is expected to be large — while
+large ``kr`` means the offset is many skin depths away, deep in the far
+field where ``beta_pct`` should be small. The output below shows
+exactly that pattern: ``kr`` starts around ``65`` at the highest
+frequency and ``beta_pct`` is vanishingly small.
 
 .. code-block:: python
    :linenos:
@@ -199,6 +243,25 @@ Station-Level Summary
 ``source_overprint_table`` summarizes the long-form table by station. It
 adds maximum and mean :math:`\beta`, the number and fraction of flagged
 rows, and a low-/high-frequency slope comparison inspired by Da et al.
+(2016). ``f_split`` splits each station's rows into a low-frequency and
+a high-frequency group, and each group gets its own ordinary
+least-squares slope of log-apparent-resistivity against log-frequency:
+
+.. math::
+
+   \mathrm{lf\_slope} = \frac{d\log_{10}\rho_a}{d\log_{10}f}
+   \bigg|_{f < f_\mathrm{split}}, \qquad
+   \mathrm{hf\_slope} = \frac{d\log_{10}\rho_a}{d\log_{10}f}
+   \bigg|_{f \ge f_\mathrm{split}}, \qquad
+   \mathrm{slope\_delta} = \mathrm{lf\_slope} - \mathrm{hf\_slope}.
+
+A source sitting over a resistive body radiates differently than one
+over a conductor, and that difference shows up as a change in slope
+between the two bands rather than as a single anomalous value — a
+strongly negative ``slope_delta`` (low-frequency slope much shallower
+than high-frequency slope) is the Da et al. signature of a resistivity
+contrast beneath the source dipole itself, distinct from a genuine
+subsurface target under the receiver.
 
 .. code-block:: python
    :linenos:
@@ -294,12 +357,12 @@ effects. It computes:
 
    \phi_\mathrm{diff} = \phi_\mathrm{obs} - \phi_\mathrm{ref}
 
-It also classifies each row using the skin-depth relation
+It also classifies each row using the :term:`skin depth` relation
 :math:`\delta = 503\sqrt{\rho_a/f}` and the source offset:
 
-* ``near`` when ``r / delta < 0.5``;
-* ``transition`` when ``0.5 <= r / delta < 4``;
-* ``far`` when ``r / delta >= 4``.
+* ``near`` when ``r / delta < 0.5`` (:term:`near field`);
+* ``transition`` when ``0.5 <= r / delta < 4`` (:term:`transition field`);
+* ``far`` when ``r / delta >= 4`` (:term:`far field`).
 
 .. code-block:: python
    :linenos:
@@ -385,7 +448,7 @@ the field-zone column from ``normalize_response``.
 Near-Field Correction
 ---------------------
 
-``correct_near_field`` divides each impedance tensor row by a complex
+``correct_near_field`` divides each :term:`impedance tensor` row by a complex
 near-field factor:
 
 .. math::
@@ -394,11 +457,17 @@ near-field factor:
 
 .. math::
 
-   F(p) = 1 - 3/p^2 + 3/p^3
+   F(p) = 1 - 3/p^2 + 3/p^3, \qquad
+   p = k_1 r = kr\,\frac{1+i}{\sqrt2},
 
-The factor tends toward ``1`` in the far field. In the near field it can
-be very large, so the correction can strongly change apparent
-resistivity.
+the equatorial horizontal-electric-dipole transfer-function ratio,
+where :math:`k_1` is the same complex earth wavenumber used above and
+:math:`p` is simply that wavenumber times the offset — a complex
+version of the ``kr`` field-zone parameter, with :math:`|p| = kr`. The
+factor tends toward ``1`` in the far field, where :math:`p` is large
+and the correction term vanishes. In the near field, where :math:`p` is
+small, dividing by :math:`3/p^3` can make ``F`` very large, so the
+correction can strongly change apparent resistivity.
 
 .. code-block:: python
    :linenos:

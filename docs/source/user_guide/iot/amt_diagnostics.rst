@@ -3,11 +3,12 @@
 AMT/CSAMT Edge Diagnostics
 ==========================
 
-The :mod:`pycsamt.iot.edge_amt` module adds acquisition diagnostics that
-are specific to AMT, MT, and CSAMT field telemetry. These routines are
-intended for the edge side of a survey: they run on short time windows,
-produce compact metrics, and help decide whether a packet should be
-accepted, warned, or rejected before downstream impedance processing.
+The :mod:`pycsamt.iot.edge_amt` module adds :term:`edge diagnostics` that
+are specific to :term:`AMT`, :term:`MT`, and :term:`CSAMT` field
+telemetry. These routines are intended for the edge side of a survey:
+they run on short time windows, produce compact metrics, and help decide
+whether a packet should be accepted, warned, or rejected before
+downstream :term:`impedance tensor` processing.
 
 The examples below use synthetic data. No EDI or field logger file is
 required. The synthetic window is deliberately built with useful AMT-like
@@ -53,9 +54,10 @@ Build A Synthetic Edge Window
 -----------------------------
 
 This first block creates a deterministic synthetic window. ``Ex`` contains
-useful low-frequency energy plus 50 Hz and 100 Hz harmonics. ``Ey`` is
-also clipped to mimic an overloaded channel. ``Ex`` then receives a short
-flatline and two NaNs to mimic a sensor dropout.
+useful low-frequency energy plus 50 Hz and 100 Hz
+:term:`powerline harmonics`. ``Ey`` is also clipped to mimic an overloaded
+:term:`ADC` channel. ``Ex`` then receives a short flatline and two NaNs to
+mimic a :term:`sensor dropout`.
 
 .. code-block:: python
    :linenos:
@@ -91,12 +93,93 @@ flatline and two NaNs to mimic a sensor dropout.
 
    ey_clipped = np.clip(2.6 * ey, -1.0, 1.0)
 
+Before sending that window into the checks, it helps to know what each
+number means. The spectral routines work on a finite channel
+:math:`x_n`, sampled at rate :math:`f_s`; non-finite values are replaced
+by the finite channel mean before the spectrum is estimated. The
+one-sided :term:`power spectral density` is computed with Welch averaging
+and is written below as :math:`P(f)`.
+
+The mains check then integrates the spectrum around each harmonic
+:math:`f_k = k f_m`, where :math:`f_m` is 50 or 60 Hz:
+
+.. math::
+
+   r_k =
+   \frac{\int_{f_k-\Delta f}^{f_k+\Delta f} P(f)\,df}
+        {\int_0^{f_s/2} P(f)\,df}.
+
+The total contamination ratio is :math:`R = \sum_k r_k`. A harmonic is
+flagged when :math:`r_k` is greater than or equal to the configured
+``threshold_ratio``. In this example, :math:`f_m=50` Hz and the 50 Hz
+line is expected to be the dominant flagged harmonic. The same spectrum
+also gives the channel :term:`SNR`: useful in-band power is compared with
+the remaining spectral power,
+
+.. math::
+
+   \operatorname{SNR}_{dB} =
+   10 \log_{10}
+   \left(
+   \frac{\int_{f_1}^{f_2} P(f)\,df}
+        {\int_0^{f_s/2} P(f)\,df - \int_{f_1}^{f_2} P(f)\,df}
+   \right).
+
+where :math:`f_1=4` Hz and :math:`f_2=40` Hz for the AMT band used below.
+The saturation check is more direct. With full-scale limit :math:`L`, a
+finite sample is clipped when :math:`|x_n| \ge L`, and the clip fraction
+is
+
+.. math::
+
+   c = \frac{N(|x_n| \ge L)}{N_\mathrm{finite}}.
+
+The channel is marked saturated when :math:`c` is greater than
+``max_clip_fraction``. The contact check should be read in the same
+field-practical spirit: ``check_contact_resistance`` is a
+:term:`contact resistance proxy`, not a direct injected-current
+measurement, and it uses robust electric-channel noise/drift symptoms to
+flag channels that deserve field inspection.
+
+For frequency coverage, pyCSAMT takes the median positive PSD value as a
+noise floor :math:`P_{50}`. A frequency is resolved when
+
+.. math::
+
+   10 \log_{10}\left(\frac{P(f)}{P_{50}}\right) \ge S_\mathrm{floor}.
+
+The lowest and highest resolved frequencies define
+:math:`[f_\mathrm{low}, f_\mathrm{high}]`; the number of covered decades
+is :math:`\log_{10}(f_\mathrm{high}/f_\mathrm{low})`. A target band is
+counted as covered only when its lower and upper bounds both lie inside
+that resolved interval. Finally, impedance stability is checked on a
+stack of complex :term:`impedance tensor` estimates :math:`Z_{ij}` from
+repeated windows. For each frequency or component, pyCSAMT computes the
+magnitude :term:`coefficient of variation`
+
+.. math::
+
+   \mathrm{CV}(|Z|) =
+   \frac{\operatorname{std}(|Z|)}{\operatorname{mean}(|Z|)}
+
+and the standard deviation of the impedance phase
+:math:`\arg(Z)` in degrees. The returned summary is the average CV and
+average phase scatter over the supplied impedance columns. A window set
+is stable only when both metrics stay below ``max_cv`` and
+``max_phase_std_deg``.
+
+Finally, ``detect_sensor_dropout`` scans the original sample sequence.
+It reports the number of NaNs and the longest run of consecutive finite
+samples satisfying :math:`|x_n - x_{n-1}| \le \epsilon`. A channel is a
+dropout candidate if any NaN is present or if a flat run reaches
+``min_flat_run`` samples.
+
 Run The Edge Diagnostics
 ------------------------
 
 The same window can be passed through the AMT-specific checks. The
 ``target_bands`` argument says which bands the deployment cares about,
-while ``signal_band_hz`` controls the SNR estimate.
+while ``signal_band_hz`` controls the :term:`SNR` estimate.
 
 .. code-block:: python
    :linenos:
@@ -224,9 +307,10 @@ Plot The Diagnostics
 --------------------
 
 The same variables can be plotted for review or embedded into an edge
-report. The first figure shows the synthetic window and the live power
-spectrum. The second figure condenses the key QC fractions and compares
-stable versus unstable impedance windows.
+report. The first figure shows the synthetic window and the live
+:term:`power spectral density`. The second figure condenses the key
+:term:`quality control` fractions and compares stable versus unstable
+impedance windows.
 
 .. code-block:: python
    :linenos:
@@ -321,18 +405,19 @@ The synthetic packet should not be treated as a clean acquisition window.
 The mains detector flags contamination because the 50 Hz and 100 Hz bands
 carry a large fraction of the spectral power. The clipped ``Ey`` channel
 is also unusable for impedance estimation because more than half of its
-samples are at the ADC limit. The contact proxy is a warning rather than a
-true resistance measurement; passive AMT data cannot measure contact
-resistance directly, but high drift and high channel noise are useful
-field-side symptoms.
+samples are at the :term:`ADC` limit. The :term:`contact resistance proxy`
+is a warning rather than a true resistance measurement; passive
+:term:`AMT` data cannot measure contact resistance directly, but high
+drift and high channel noise are useful field-side symptoms.
 
-The frequency-coverage result says that only one of the requested target
-bands is fully represented by this short window. That does not mean the
-survey failed; it means this packet alone should not be used to support
-the missing bands. The impedance stability check demonstrates the same
-principle at transfer-function level: low coefficient of variation and
-low phase scatter mark stable windows, while high magnitude and phase
-scatter mark windows that should be down-weighted or rejected.
+The :term:`frequency coverage` result says that only one of the requested
+target bands is fully represented by this short window. That does not
+mean the survey failed; it means this packet alone should not be used to
+support the missing bands. The :term:`impedance stability` check
+demonstrates the same principle at :term:`transfer function` level: low
+:term:`coefficient of variation` and low phase scatter mark stable
+windows, while high magnitude and phase scatter mark windows that should
+be down-weighted or rejected.
 
 Using These Metrics In Telemetry
 --------------------------------

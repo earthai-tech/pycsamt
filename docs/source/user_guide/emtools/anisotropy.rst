@@ -4,9 +4,17 @@ Anisotropy Diagnostics
 ======================
 
 ``pycsamt.emtools.anisotropy`` is the user-facing workflow for checking
-whether a CSAMT/AMT impedance tensor behaves like an isotropic 1-D/2-D
-earth, or whether the two off-diagonal modes and the tensor diagonal
-terms suggest axial anisotropy or 3-D structure.
+whether a CSAMT/AMT :term:`impedance tensor` behaves like an isotropic
+1-D/2-D earth, or whether the two off-diagonal modes and the tensor
+diagonal terms suggest :term:`axial anisotropy` or 3-D structure.
+
+In this page, :term:`anisotropy` means directional electrical behavior:
+the apparent resistivity or phase inferred in one horizontal direction
+is not the same as the response inferred in the perpendicular
+direction.  That does not automatically prove a unique geology.  It is
+a diagnostic sign that the data may contain directional structure,
+local distortion, or 3-D effects that should be checked before a simple
+1-D or 2-D interpretation is trusted.
 
 The module follows the axial-anisotropy diagnostic idea described by
 Wang and Tan (2017) for CSAMT data. In a practical field workflow, the
@@ -27,9 +35,9 @@ Why This Matters
 
 In ideal 1-D MT/CSAMT, the off-diagonal impedance modes carry the useful
 response and the diagonal terms are close to zero. Real survey data are
-messier. Galvanic distortion, 3-D bodies, local conductors, acquisition
-noise, and genuine electrical anisotropy can all make the tensor depart
-from that ideal form.
+messier. :term:`Galvanic distortion`, 3-D bodies, local conductors,
+acquisition noise, and genuine electrical :term:`anisotropy` can all
+make the tensor depart from that ideal form.
 
 The anisotropy module does not prove a geological model by itself. It is
 a diagnostic layer. Use it after loading and quality control, before
@@ -50,7 +58,7 @@ impedance tensor:
    Z_{yx} & Z_{yy}
    \end{bmatrix}
 
-The two Cagniard apparent resistivities are computed from the
+The two Cagniard :term:`apparent resistivity` values are computed from the
 off-diagonal modes using the practical-unit convention used by EDI
 impedance values in pyCSAMT:
 
@@ -90,6 +98,12 @@ The module also computes Swift skew:
 The skew is useful because it uses the diagonal tensor terms, while the
 ratio uses the off-diagonal modes. Those two indicators are related, but
 they are not redundant.
+
+Swift skew is therefore a dimensionality clue, not an anisotropy proof.
+A high value says that the full tensor does not look like a clean
+1-D/2-D response in the selected coordinate system.  The ratio
+:math:`\Lambda` asks a different question: whether the two off-diagonal
+apparent-resistivity modes disagree strongly.
 
 Alongside skew, the module reports a per-frequency Swift strike angle
 :math:`\theta`, found by rotating :math:`Z` to the angle that minimizes

@@ -3,24 +3,28 @@
 Monitoring
 ==========
 
-Telemetry monitoring turns IoT packets into an operational survey status.
-It checks whether packets are arriving, whether packet acknowledgements
-are healthy, whether edge QC is accepting enough windows, and whether
-field thresholds for latency, packet gaps, battery, clock offset, required
-channels, and frequency coverage are being respected.
+Telemetry monitoring turns :term:`telemetry packet` streams into an
+operational :term:`monitoring status`. It checks whether packets are
+arriving, whether :term:`packet acknowledgement` values are healthy,
+whether :term:`edge diagnostics` are accepting enough windows, and
+whether field thresholds for :term:`latency`, :term:`packet gap`,
+:term:`battery voltage`, :term:`clock offset`, required channels, and
+:term:`configured frequency band` are being respected.
 
 The example below uses synthetic telemetry packets for three stations on
 the L18 demo line. Synthetic packets are appropriate here because the
-monitor operates on live IoT messages, not EDI impedance files. The packet
-stream is deliberately mixed: one station is healthy, one has a rejected
-edge-QC window and an acknowledgement failure, and one has clock and
-frequency-band issues.
+monitor operates on live IoT messages, not :term:`EDI` impedance files.
+The packet stream is deliberately mixed: one station is healthy, one has
+a rejected edge-QC window and an acknowledgement failure, and one has
+clock and frequency-band issues.
 
 Create A Monitored Session
 --------------------------
 
 Start with devices and a :class:`pycsamt.iot.MonitoringConfig`. The config
-records the operational contract for the stream.
+records the operational contract for the stream: the expected sampling of
+packets, the minimum acceptable packet and edge-QC rates, and the field
+limits that should turn into warnings or critical issues.
 
 .. code-block:: python
    :linenos:
@@ -79,9 +83,9 @@ Add Synthetic Telemetry Packets
 -------------------------------
 
 Each packet is a ``qc`` message with fields that the monitor knows how to
-enrich: station, method, channel list, accepted/rejected decision,
-acknowledgement status, latency, battery voltage, clock offset, and
-frequency band.
+enrich: station, method, channel list, accepted/rejected
+:term:`edge decision`, acknowledgement status, latency, battery voltage,
+clock offset, and frequency band.
 
 .. code-block:: python
    :linenos:
@@ -134,6 +138,8 @@ Packet Tables And Counts
 
 Use :func:`pycsamt.iot.packet_table` for raw packet inventory and
 :func:`pycsamt.iot.telemetry_summary` for packet counts by device/topic.
+These tables are intentionally simple. They answer: "what arrived?" before
+the monitor decides whether what arrived was healthy.
 
 .. code-block:: python
    :linenos:
@@ -171,7 +177,16 @@ Inspect Enriched Rows
 
 The monitor normalises payload fields into analysis-ready columns. This is
 the best view when you need to debug why a status became warning or
-critical.
+critical. If packet latency is not carried in the payload and ``now`` is
+provided, pyCSAMT computes it as
+
+.. math::
+
+   L_i = t_\mathrm{now} - t_i,
+
+where :math:`t_i` is the packet timestamp. In this example latency is
+provided directly by the payload so the displayed values are the field
+values rather than computed wall-clock differences.
 
 .. code-block:: python
    :linenos:
@@ -212,9 +227,30 @@ Assess Stream Status
 --------------------
 
 The status level is one of ``ok``, ``warning``, ``critical``, or
-``no_data``. Critical issues include packet success below threshold,
-edge-acceptance failure, low battery, high clock offset, method mismatch,
-or missing required channels.
+``no_data``. The stream-level :term:`packet success rate` is
+
+.. math::
+
+   R_\mathrm{packet} =
+   \frac{N(\mathrm{ack\_ok}=\mathrm{True})}{N_\mathrm{packet}},
+
+and the :term:`edge acceptance rate` is computed only from packets that
+carry an edge-QC acceptance value,
+
+.. math::
+
+   R_\mathrm{edge} =
+   \frac{N(\mathrm{edge\_accepted}=\mathrm{True})}
+        {N(\mathrm{edge\_accepted}\ \mathrm{is\ known})}.
+
+The maximum packet gap is the largest difference between sorted packet
+timestamps, :math:`\max_i(t_{i+1}-t_i)`. Battery and clock checks use the
+most conservative values in the stream: minimum battery voltage and
+maximum absolute clock offset. Critical issues include packet success
+below threshold, edge-acceptance failure, low battery, high clock offset,
+method mismatch, or missing required channels. Gap, latency, and
+frequency-band problems are warnings unless they appear with a critical
+issue.
 
 .. code-block:: python
    :linenos:
@@ -259,7 +295,10 @@ Plot A Monitoring Audit
 
 The figure below is built from the enriched monitor table and status
 metrics. It shows which thresholds were violated without requiring the
-reader to inspect every packet by hand.
+reader to inspect every packet by hand. The station panel uses the same
+acceptance-rate definition as the stream status, while the operations
+panel compares the minimum battery voltage and maximum absolute clock
+offset against their configured thresholds.
 
 .. code-block:: python
    :linenos:
@@ -359,11 +398,11 @@ Field Interpretation
 The stream is ``critical`` because packet acknowledgement success is below
 the configured threshold, one gap is too long, the minimum battery voltage
 falls below 11.2 V, the clock offset exceeds 5 ms, and one packet reports a
-frequency band outside the configured AMT band. The edge-acceptance rate
-is still above the stream-level threshold, but station ``002U`` is visibly
-weaker than the others and should be reviewed.
+frequency band outside the configured :term:`AMT` band. The edge-acceptance
+rate is still above the stream-level threshold, but station ``002U`` is
+visibly weaker than the others and should be reviewed.
 
 In a live deployment, these status rows should be logged with the
-acquisition manifest. They explain why a station was accepted, repeated,
-or excluded before downstream impedance, dimensionality, or inversion
-workflows begin.
+:term:`provenance manifest`. They explain why a station was accepted,
+repeated, or excluded before downstream :term:`impedance tensor`,
+:term:`dimensionality`, or inversion workflows begin.

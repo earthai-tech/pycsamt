@@ -4,25 +4,33 @@ Visualization
 =============
 
 The IoT plotting layer lives in :mod:`pycsamt.iot.plot` and is re-exported
-from :mod:`pycsamt.iot`. These figures are operational acquisition plots:
-they show telemetry health, edge-QC decisions, power budget, and clock
-synchronisation before the data are converted into impedance products or
-inversion inputs.
+from :mod:`pycsamt.iot`. These figures are
+:term:`operational acquisition plot`\ s: they show telemetry health,
+:term:`edge decision`\ s, :term:`power budget`, and clock synchronisation
+before the data are converted into impedance products or inversion inputs.
 
 The plotting functions accept high-level objects such as
-:class:`pycsamt.iot.FieldSession`, telemetry packets, energy estimates,
-sync status objects, or serialised mappings. Each returned Matplotlib
-figure also carries the normalised data used to draw the panels in a
+:class:`pycsamt.iot.FieldSession`, :term:`telemetry packet`\ s,
+:term:`energy estimate`\ s, :term:`synchronisation status` objects, or
+serialised mappings. Each returned :term:`Matplotlib figure` also carries
+the :term:`normalised plot data` used to draw the panels in a
 ``fig.pycsamt_iot_*`` attribute. This makes report generation auditable:
-the image and the plotted rows stay together.
+the image and the plotted rows stay together, so a reviewer can reproduce
+the figure from the same station, packet, QC, power, or sync rows.
 
 Build A Visualisation Session
 -----------------------------
 
-This example is synthetic and deterministic. It creates three stations on
-profile ``L18``: one healthy station, one station with poor finite
-coverage, and one station with spike and timing problems. The goal is to
-exercise all visual panels, not to represent a real field deployment.
+This example is :term:`synthetic data` and deterministic. It creates three
+stations on profile ``L18``: one healthy station, one station with poor
+:term:`finite coverage`, and one station with spike and timing problems.
+The goal is to exercise all visual panels, not to represent a real field
+deployment. The construction has three packets per station: a QC packet, a
+health packet, and a power packet, followed by one sync packet per station.
+With :math:`N_s=3` stations, the total packet count is therefore
+:math:`3N_s + N_s = 12`. The edge-QC decision for each station is produced
+from the same processor used in the edge documentation, so the plot is tied
+to executable QC logic rather than hand-written labels.
 
 .. code-block:: python
    :linenos:
@@ -225,11 +233,19 @@ Output:
 Plot The Field Dashboard
 ------------------------
 
-Use :func:`pycsamt.iot.plot_field_dashboard` for an at-a-glance field
-status. The four panels show station health, edge-QC acceptance, power or
-synchronisation state, and packet timing. Set ``station_axis="profile"``
-for line work and ``station_axis="map"`` when all stations have valid
-coordinates.
+Use :func:`pycsamt.iot.plot_field_dashboard` for an at-a-glance
+:term:`field dashboard`. The four panels show station health, edge-QC
+acceptance, power or synchronisation state, and packet timing. Set
+``station_axis="profile"`` for line work and ``station_axis="map"`` when all
+stations have valid coordinates. Internally the dashboard starts from
+``session.to_pipeline_input()`` and the packet stream, then joins the latest
+battery voltage, runtime, power state, clock offset, and sync quality onto
+each station row. A station is marked critical when its power state is
+critical, its sync quality is poor, or its acceptance rate is below 0.85; it
+is marked warning when the acceptance rate is below 0.95 or when power/sync
+is warning/fair. The acceptance panel displays
+:math:`A_i=n_{\mathrm{accepted},i}/n_{\mathrm{qc},i}` for each station, and
+the timeline uses minutes since the first finite packet timestamp.
 
 .. code-block:: python
    :linenos:
@@ -273,7 +289,15 @@ Plot Edge-QC Detail
 Use :func:`pycsamt.iot.plot_edge_qc_summary` when the dashboard indicates
 that edge quality is the problem. The function accepts a
 :class:`pycsamt.iot.FieldSession`, one or more QC telemetry packets, or
-raw :class:`pycsamt.iot.EdgeProcessingResult` objects.
+raw :class:`pycsamt.iot.EdgeProcessingResult` objects. The plotter
+normalises these inputs into one row per station/channel pair. From that row
+set it counts decisions, displays :term:`finite coverage` against the
+configured warning/rejection thresholds, shows
+:term:`robust spike fraction`, and aggregates rejection or warning reasons. If
+:math:`C_{i,c}` is the finite coverage for station :math:`i` and channel
+:math:`c`, the coverage panel is simply a bar plot of :math:`C_{i,c}`;
+similarly, the spike panel plots the per-channel fraction
+:math:`S_{i,c}` of robust outliers.
 
 .. code-block:: python
    :linenos:
@@ -308,7 +332,15 @@ Plot Power Budgets
 Use :func:`pycsamt.iot.plot_power_budget` to compare daily load, harvest,
 runtime, and power states. The input can be a session containing power
 packets, a list of :class:`pycsamt.iot.EnergyConfig` objects, power
-telemetry packets, or energy estimates.
+telemetry packets, or energy estimates. The rows attached to the figure are
+the same :term:`energy estimate` records described in the power-management
+page. The first panel compares daily load :math:`L_i` with harvested energy
+:math:`H_i`; the runtime panel compares estimated runtime
+:math:`T_i=E_{\mathrm{usable},i}/\max(L_i-H_i,0)` with
+:term:`no-harvest autonomy`; the breakdown panel stacks base, telemetry,
+edge-processing, and auxiliary load components so the sum returns
+:math:`L_i`. The final panel counts :term:`power state` values and lists the
+most common issues.
 
 .. code-block:: python
    :linenos:
@@ -351,7 +383,15 @@ Plot Clock Synchronisation
 
 Use :func:`pycsamt.iot.plot_sync_quality` to inspect offset, drift, jitter,
 reference support, GPS lock, and quality grades. Threshold arguments draw
-reference lines but do not mutate the data.
+reference lines but do not mutate the data. Each sync row carries the same
+quantities used by the clock-sync audit: :term:`clock offset`
+:math:`o_i`, :term:`clock drift` :math:`d_i`, :term:`timing jitter`
+:math:`j_i`, :term:`GPS lock`, and the number of reference points. The
+visual thresholds are overlays only: a tolerance line at
+:math:`|o|=o_{\max}`, a drift line at :math:`|d|=d_{\max}`, and a jitter
+line at :math:`j=j_{\max}`. Because the figure keeps
+``fig.pycsamt_iot_sync_quality``, the plotted bars can be audited directly
+from the returned row dictionaries.
 
 .. code-block:: python
    :linenos:
@@ -387,7 +427,9 @@ Generated Figures
 -----------------
 
 The figures are displayed in a two-column grid so the page remains compact
-while still showing each diagnostic family clearly.
+while still showing each diagnostic family clearly. They are generated by
+the code blocks above and saved into ``docs/source/images/user_guide/iot``,
+then referenced here from the documentation image folder.
 
 .. grid:: 1 1 2 2
 

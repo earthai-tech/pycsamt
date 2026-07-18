@@ -3,23 +3,24 @@
 Generic Edge QC
 ===============
 
-Generic edge QC is the lightweight screening step that can run on a field
-node before data are transmitted or stored. It is not a replacement for
-AMT/CSAMT processing. It answers simpler operational questions: is the
-window finite, are there obvious spikes, how many samples would be emitted
-after decimation, and should the packet be accepted, warned, or rejected?
+Generic :term:`edge diagnostics` are the lightweight screening step that
+can run on a field node before data are transmitted or stored. They are
+not a replacement for :term:`AMT`/:term:`CSAMT` processing. They answer
+simpler operational questions: is the window mostly finite, are there
+obvious spikes, how many samples would be emitted after :term:`decimation`,
+and which :term:`edge decision` should be attached to the packet?
 
 The examples below use synthetic four-channel AMT-style windows. That is
-appropriate here because generic edge QC works on live time-series arrays,
-not on EDI files. Three windows are created: a clean window, a marginal
-window with missing ``Ey`` samples, and a bad window with missing electric
-and magnetic samples plus spikes.
+appropriate here because generic edge QC works on live :term:`time series`
+arrays, not on :term:`EDI` files. Three windows are created: a clean
+window, a marginal window with missing ``Ey`` samples, and a bad window
+with missing electric and magnetic samples plus spikes.
 
 Build Synthetic Edge Windows
 ----------------------------
 
-Each row is a time sample and each column is a channel. The channel order
-is ``Ex``, ``Ey``, ``Hx``, ``Hy``.
+Each row is a :term:`time series` sample and each column is a channel.
+The channel order is ``Ex``, ``Ey``, ``Hx``, ``Hy``.
 
 .. code-block:: python
    :linenos:
@@ -58,10 +59,37 @@ is ``Ex``, ``Ey``, ``Hx``, ``Hy``.
 Configure And Run The Processor
 -------------------------------
 
-The processor decimates every fourth sample, checks finite coverage,
-computes per-channel summaries, and estimates a robust spike fraction. A
-window below ``finite_threshold`` is rejected. A window above the hard
-threshold but below ``warn_finite_threshold`` is accepted with a warning.
+The processor decimates every fourth sample, checks
+:term:`finite coverage`, computes one :term:`channel summary` per channel,
+and estimates a :term:`robust spike fraction`. With decimation factor
+:math:`d`, pyCSAMT keeps samples :math:`0, d, 2d, \ldots`; for an original
+window of :math:`N` samples, the emitted count is
+:math:`\lceil N/d \rceil`. After decimation, finite coverage is
+
+.. math::
+
+   C_f = \frac{N_\mathrm{finite}}{N_\mathrm{total}}.
+
+A window below ``finite_threshold`` is rejected. A window above the hard
+threshold but below ``warn_finite_threshold`` is accepted with a warning,
+so the data can keep flowing while the field audit trail still records
+that the packet was marginal.
+
+Spike detection is intentionally robust. For each channel, the centre is
+the median :math:`m`, and the scale is
+:math:`1.4826\,\operatorname{median}(|x_i-m|)`, the usual normalised
+:term:`median absolute deviation`. If that scale collapses to zero,
+pyCSAMT falls back to the standard deviation. A finite sample is counted
+as a spike when
+
+.. math::
+
+   |x_i - m| > k\,s,
+
+where :math:`k` is ``spike_threshold`` and :math:`s` is the robust scale.
+The channel spike fraction is the number of flagged finite samples divided
+by the number of finite samples; the window-level spike metric is the
+maximum channel spike fraction.
 
 .. code-block:: python
    :linenos:
@@ -109,8 +137,10 @@ Inspect Per-Channel QC
 ----------------------
 
 Use :func:`pycsamt.iot.edge_summary_table` to inspect one row per channel.
-The result index identifies which edge window produced the channel row:
-``0`` is clean, ``1`` is marginal, and ``2`` is bad.
+Each row carries finite coverage, RMS, basic finite-sample statistics, the
+spike fraction, and any channel-level rejection reasons. The result index
+identifies which edge window produced the channel row: ``0`` is clean,
+``1`` is marginal, and ``2`` is bad.
 
 .. code-block:: python
    :linenos:
@@ -154,9 +184,9 @@ Encode QC As Telemetry
 ----------------------
 
 An :class:`~pycsamt.iot.EdgeProcessingResult` can be converted directly to
-a ``qc`` packet. The packet stores the compact metrics and all channel
-summaries, so a downstream monitor can audit the edge decision without
-shipping the full waveform.
+a ``qc`` :term:`telemetry packet`. The packet stores the compact metrics
+and all channel summaries, so a downstream monitor can audit the edge
+decision without shipping the full waveform.
 
 .. code-block:: python
    :linenos:
@@ -240,8 +270,9 @@ The clean window can be transmitted or stored as accepted telemetry. The
 marginal window is still usable at the window level, but the ``Ey`` channel
 coverage is low enough to keep the warning in the audit trail. The bad
 window fails both global finite coverage and spike-fraction thresholds, so
-it should not be used for downstream transfer-function or impedance work.
+it should not be used for downstream :term:`transfer function` or
+:term:`impedance tensor` work.
 
 In a field workflow, keep the thresholds in the deployment configuration
-or provenance manifest. That makes later decisions reproducible when the
-same survey is reviewed away from the instrument.
+or :term:`provenance manifest`. That makes later decisions reproducible
+when the same survey is reviewed away from the instrument.

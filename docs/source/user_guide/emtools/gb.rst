@@ -4,9 +4,16 @@ Groom-Bailey Galvanic Distortion
 ================================
 
 ``pycsamt.emtools.gb`` estimates and optionally removes
-frequency-independent galvanic distortion from MT/AMT/CSAMT impedance
-tensors. It is designed as an auditable preprocessing step before 2-D
-interpretation and inversion.
+frequency-independent :term:`galvanic distortion` from MT/AMT/CSAMT
+:term:`impedance tensor` data. It is designed as an auditable
+preprocessing step before 2-D interpretation and inversion.
+
+Galvanic distortion is a near-surface effect. Small local conductivity
+heterogeneities deflect and scale the electric field before the receiver
+records it, so the measured tensor can contain diagonal leakage and mode
+mixing that are not part of the deeper regional induction response. The
+:term:`Groom-Bailey decomposition` is one common way to describe that
+effect when the regional response is close enough to 2-D.
 
 The fitted model is:
 
@@ -16,9 +23,11 @@ The fitted model is:
 
 where:
 
-- ``Z_obs`` is the observed impedance tensor;
-- ``D`` is a real, frequency-independent 2 x 2 distortion matrix;
-- ``Z_2D`` is the best anti-diagonal regional tensor at each frequency.
+- ``Z_obs`` is the observed :term:`impedance tensor`;
+- ``D`` is a real, frequency-independent 2 x 2
+  :term:`distortion matrix`;
+- ``Z_2D`` is the best anti-diagonal :term:`regional tensor` at each
+  frequency.
 
 Full callable signatures live in the :doc:`API reference <../../api/emtools>`.
 This page explains how to fit the table, read the distortion parameters,
@@ -27,16 +36,17 @@ apply the correction, and record the result in a pre-2D workflow.
 When To Use Groom-Bailey
 ------------------------
 
-Use this workflow when the data appear close enough to 2-D for galvanic
-distortion correction to be meaningful, but the impedance tensor has
-diagonal leakage or station-dependent distortion that should be
-documented before inversion.
+Use this workflow when the data appear close enough to 2-D for
+:term:`galvanic distortion` correction to be meaningful, but the
+:term:`impedance tensor` has diagonal leakage or station-dependent
+distortion that should be documented before inversion.
 
 Good use cases include:
 
 - preparing a 2-D inversion input after dimensionality and strike checks;
 - testing whether diagonal tensor leakage is reduced after correction;
-- documenting twist, shear, and anisotropy-style distortion parameters;
+- documenting :term:`twist`, :term:`shear`, and anisotropy-style
+  distortion parameters;
 - comparing corrected and uncorrected impedance curves at the same
   station.
 
@@ -54,6 +64,13 @@ The implementation fits a real distortion matrix that is constant over
 the selected period band. That is the galvanic assumption: the
 distortion is local and frequency-independent, while the regional tensor
 varies with frequency.
+
+This assumption is powerful but narrow. It says the shallow distortion
+changes the measured electric-field axes, while the deeper
+:term:`regional tensor` still carries the frequency-dependent induction
+physics. If the data are strongly 3-D across the whole band, the fitted
+matrix may become only a mathematical approximation, not a meaningful
+correction.
 
 The regional tensor is forced to be anti-diagonal:
 
@@ -162,18 +179,19 @@ Successful rows have ``status == "ok"`` and include:
    * - ``rotate_deg``
      - Rotation angle applied before fitting, or ``NaN``.
    * - ``distortion_xx`` ... ``distortion_yy``
-     - Entries of the fitted real 2 x 2 distortion matrix.
+     - Entries of the fitted real 2 x 2 :term:`distortion matrix`.
    * - ``gain``
      - :math:`\sqrt{|\det D|}` of the matrix handed to the twist/shear
        decomposition — see the note below.
    * - ``twist_deg``
-     - Twist angle inferred from the normalized matrix.
+     - :term:`Twist` angle inferred from the normalized matrix.
    * - ``shear``
-     - Dimensionless shear-style parameter, clipped to ``[-0.99, 0.99]``.
+     - Dimensionless :term:`shear`-style parameter, clipped to
+       ``[-0.99, 0.99]``.
    * - ``shear_angle_deg``
      - ``atan(shear)`` in degrees.
    * - ``anisotropy``
-     - Dimensionless anisotropy-style parameter, clipped to
+     - Dimensionless :term:`anisotropy`-style parameter, clipped to
        ``[-0.99, 0.99]``.
    * - ``rms_fit``
      - Relative fit residual.
@@ -191,6 +209,12 @@ Rows with too few valid frequencies have
 ``status == "insufficient_frequencies"`` and include the available
 ``n_freq``. Increase the band, lower ``min_freq`` only with care, or
 exclude that station from correction.
+
+In the terminology used by this table, :term:`twist` is rotational
+mixing, :term:`shear` is non-orthogonal mixing, and the reported
+:term:`anisotropy` parameter is the directional scaling left after the
+twist part has been removed. These are distortion parameters, not a
+complete geological interpretation by themselves.
 
 The twist/shear/anisotropy decomposition takes whatever matrix
 ``distortion_xx`` ... ``distortion_yy`` reports — call it :math:`D` —
@@ -261,8 +285,8 @@ The most useful diagnostic columns are usually:
   selected band better.
 - ``diagonal_ratio_before`` and ``diagonal_ratio_after``: correction is
   behaving sensibly when the after value is lower.
-- ``twist_deg``: large twist can imply strong galvanic distortion or a
-  poor 2-D assumption.
+- ``twist_deg``: large :term:`twist` can imply strong
+  :term:`galvanic distortion` or a poor 2-D assumption.
 - ``shear`` and ``anisotropy``: large absolute values deserve station
   inspection.
 - ``n_freq``: low values make the fit less stable.

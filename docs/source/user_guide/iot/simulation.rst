@@ -5,20 +5,43 @@ Simulation
 
 The IoT simulator creates deterministic field-like data for documentation,
 tests, demos, and pipeline development when hardware is not available. It
-can generate AMT channel windows, station/device inventories, telemetry
-packets, packet loss, GPS clock drift, and battery decay. Every simulator
-accepts a ``seed`` argument so examples can be reproduced exactly.
+can generate AMT channel windows, station/device inventories,
+:term:`telemetry packet`\ s, :term:`packet loss`, :term:`GPS` clock drift,
+and :term:`battery decay`. Every simulator accepts a :term:`random seed`
+argument so examples can be reproduced exactly.
 
-These examples are synthetic by design. They are not substitutes for real
-EDI or logger data; they are controlled inputs for testing the IoT layer
-around acquisition.
+These examples are :term:`synthetic data` by design. They are not
+substitutes for real :term:`EDI` or logger data; they are controlled inputs
+for testing the IoT layer around acquisition. Reproducibility comes from
+treating each simulator as a deterministic function of its arguments and
+seed: if the arguments and seed are unchanged, the generated samples,
+packets, and figures are unchanged.
 
 Simulate AMT Channels
 ---------------------
 
 Use :func:`pycsamt.iot.simulate_amt_channel` to create one live channel
-window. The signal includes band-limited AMT-like energy, Gaussian noise,
-optional powerline harmonics, and optional dropout gaps.
+window. The signal includes band-limited AMT-like energy,
+:term:`Gaussian noise`, optional :term:`powerline harmonics`, and optional
+:term:`dropout gap`\ s. For a sample rate :math:`f_s` and
+:math:`N` samples, the time vector is :math:`t_i=i/f_s`. The simulator first
+builds a normalised signal from five random sinusoids,
+
+.. math::
+
+   s_i =
+   \frac{\sum_{j=1}^{5} a_j \sin(2\pi f_j t_i + \phi_j)}
+        {\operatorname{std}\left(\sum_{j=1}^{5}
+        a_j \sin(2\pi f_j t_i + \phi_j)\right)} ,
+
+where :math:`a_j`, :math:`f_j`, and :math:`\phi_j` are drawn from the seeded
+random generator. A requested :term:`SNR` of :math:`S_\mathrm{dB}` is
+converted to :math:`S_\mathrm{lin}=10^{S_\mathrm{dB}/10}`, then white noise
+:math:`\epsilon_i \sim \mathcal{N}(0, 1/S_\mathrm{lin})` is added. If a
+mains component is requested, the simulator adds
+:math:`\sum_{k=1}^{K} (A/k)\sin(2\pi k f_m t_i+\psi_k)`. Finally, the
+configured dropout rate replaces a reproducible number of contiguous samples
+with ``NaN`` values.
 
 .. code-block:: python
    :linenos:
@@ -103,7 +126,20 @@ Simulate One Station
 
 Use :func:`pycsamt.iot.simulate_amt_station` when you need station
 metadata, a device config, channel arrays, and basic health/QC packets in
-one object.
+one object. Each requested channel is generated with its own child seed from
+the station generator. The station-level :term:`finite coverage` is the mean
+of per-channel finite fractions,
+
+.. math::
+
+   C =
+   \frac{1}{M}\sum_{m=1}^{M}
+   \frac{\#\{i : x_{m,i}\ \mathrm{is\ finite}\}}{N},
+
+where :math:`M` is the number of channels and :math:`N` is the samples per
+channel. The synthetic QC packet is accepted when :math:`C \ge 0.95` and the
+configured channel SNR is at least 6 dB; otherwise it is rejected. That makes
+station simulation useful for testing both clean and failed edge cases.
 
 .. code-block:: python
    :linenos:
@@ -146,7 +182,13 @@ Use :func:`pycsamt.iot.simulate_iot_network` to create many stations
 across one or more profiles. With ``detail=True``, the return value
 contains station dictionaries and a flat packet list. Use
 :func:`pycsamt.iot.simulate_packet_loss` to drop a reproducible fraction of
-packets.
+packets. Stations are assigned to profiles in round-robin order, and their
+profile positions advance by the configured spacing. Packet loss is a
+seeded Bernoulli keep/drop experiment: for packet :math:`p_i`, draw
+:math:`u_i \sim U(0,1)` and keep the packet when
+:math:`u_i \ge q`, where :math:`q` is ``dropout_rate``. This means the exact
+kept packet inventory is reproducible, while still behaving like a lossy
+field link.
 
 .. code-block:: python
    :linenos:
@@ -214,7 +256,12 @@ Monitor Simulated Packets
 
 Simulated packets can be fed directly into the monitoring layer. This is
 useful when testing dashboard behavior or packet-loss handling before
-hardware exists.
+hardware exists. The same monitoring definitions used for real telemetry
+apply here: the :term:`monitoring status` counts packets, estimates the
+:term:`edge acceptance rate`, checks the maximum :term:`packet gap`, and
+compares latency with the configured threshold. Because the packet stream is
+synthetic, a warning can be reproduced and debugged without waiting for a
+field outage.
 
 .. code-block:: python
    :linenos:
@@ -255,6 +302,31 @@ Simulate GPS Drift And Battery Decay
 Use :func:`pycsamt.iot.simulate_gps_drift` to generate paired local and
 reference timestamps for synchronisation tests. Use
 :func:`pycsamt.iot.simulate_battery_decay` for power and monitoring demos.
+The clock simulator starts from a :term:`reference clock` time
+:math:`r_i=t_0+i\Delta t` and creates a local timestamp
+
+.. math::
+
+   \ell_i =
+   r_i + \frac{o_\mathrm{ms}}{1000}
+   + d_\mathrm{ppm}\,10^{-6}(r_i-t_0)
+   + \eta_i ,
+
+where :math:`o_\mathrm{ms}` is the initial offset, :math:`d_\mathrm{ppm}` is
+the :term:`clock drift` in :term:`PPM`, and
+:math:`\eta_i \sim \mathcal{N}(0, \sigma_\mathrm{jitter}^2)` is timing
+jitter in seconds. When simulated GPS lock is lost, the local clock receives
+an additional drift term to mimic free-running behavior. Battery decay uses
+an exponential sag from initial voltage :math:`V_0` toward final voltage
+:math:`V_f`,
+
+.. math::
+
+   V_i = V_f + (V_0 - V_f)\exp(-2\alpha_i) + \nu_i,
+   \qquad
+   \alpha_i \in [0,1],
+
+with small seeded voltage noise :math:`\nu_i`.
 
 .. code-block:: python
    :linenos:
@@ -313,7 +385,9 @@ Plot Simulation Outputs
 
 The first figure shows channel time series and a spectrum with simulated
 mains contamination. The second shows the simulated network, packet counts
-after loss, clock drift, and battery decay.
+after loss, clock drift, and battery decay. Both figures are generated from
+the same variables used in the examples above, so the visual output is tied
+to the captured text output rather than to a separate hidden dataset.
 
 .. code-block:: python
    :linenos:

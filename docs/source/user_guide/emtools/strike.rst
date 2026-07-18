@@ -3,13 +3,14 @@
 Geoelectric Strike
 ==================
 
-Geoelectric strike is the preferred 2-D structural direction inferred
-from electromagnetic data.  It is one of the checks you make before
-rotating impedances, preparing 2-D inversion inputs, or interpreting
-transverse electric and transverse magnetic modes.  In pyCSAMT, the
-strike tools estimate the direction from impedance rotation, phase
-tensor azimuth, or a consensus of both, then visualize the result as
-tables, profiles, ribbons, map-sticks, and rose diagrams.
+:term:`Geoelectric strike` is the preferred 2-D structural direction
+inferred from electromagnetic data.  It is one of the checks you make
+before rotating impedances, preparing 2-D inversion inputs, or
+interpreting :term:`TE mode` and :term:`TM mode` responses.  In
+pyCSAMT, the strike tools estimate the direction from impedance
+rotation, :term:`phase tensor` azimuth, or a consensus of both, then
+visualize the result as tables, profiles, ribbons, map-sticks, and rose
+diagrams.
 
 Strike angles are axial.  A strike of ``0`` degrees and a strike of
 ``180`` degrees are the same geological direction.  For that reason,
@@ -210,8 +211,9 @@ useful impedance-based strike diagnostic, but it can be sensitive to
 noise, 3-D effects, and weak diagonal/off-diagonal contrast.
 
 The phase-tensor estimator summarizes the phase tensor ``theta`` angle.
-It is often more stable than a raw impedance sweep because the phase
-tensor is less affected by static-shift amplitude distortion.
+It is often more stable than a raw impedance sweep because the
+:term:`phase tensor` is less affected by :term:`static shift` amplitude
+distortion.
 
 Writing the complex impedance as
 :math:`\mathbf{Z}=\mathbf{X}+i\mathbf{Y}`, the phase tensor is
@@ -886,8 +888,9 @@ Combined Strike Analysis
 ------------------------
 
 ``plot_strike_analysis`` creates a three-panel rose figure: impedance
-strike, phase-tensor azimuth, and tipper strike.  The tipper panel is
-empty when the data do not contain vertical magnetic transfer functions.
+strike, phase-tensor azimuth, and :term:`tipper` strike.  The tipper
+panel is empty when the data do not contain vertical magnetic transfer
+functions.
 
 For tipper vectors, pyCSAMT uses the real induction vector direction
 

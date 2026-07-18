@@ -23,9 +23,21 @@ The forward package separates three responsibilities:
    apparent resistivities, phases, time-domain decays, station coordinates, and
    feature-array helpers.
 
-This separation matters because survey design, synthetic dataset generation,
-machine-learning workflows, and inversion handoff all need the same response
-arrays but may use different model constructors and different solver settings.
+This separation matters because survey design, :term:`synthetic dataset`
+generation, machine-learning workflows, and inversion handoff all need the same
+response arrays but may use different :term:`model container`\ s and different
+solver settings. The practical contract is:
+
+.. math::
+
+   \mathbf{d} = F(\mathbf{m}; \mathbf{a}, \mathbf{s}),
+
+where :math:`\mathbf{m}` is the earth model, :math:`\mathbf{a}` is the sampled
+axis such as frequency or time, :math:`\mathbf{s}` is the survey geometry, and
+:math:`\mathbf{d}` is the predicted :term:`forward response`. pyCSAMT keeps
+these pieces separate so the same model can be plotted, solved, noised,
+converted to features, or handed to an inversion workflow without quietly
+changing the physical inputs.
 
 Solver Map
 ----------
@@ -62,15 +74,31 @@ The currently documented forward solver families are:
      - Approximate tensor components on a station grid.
 
 The forward solvers are deterministic for a fixed model, axis, and solver
-configuration. Noise is applied later by the noise utilities, which keeps the
+configuration. :term:`Noise model`\ s are applied later, which keeps the
 physical response and the observation model separate.
 
 1-D Layered Models
 ------------------
 
 :class:`pycsamt.forward.LayeredModel` represents a stack of horizontal layers.
-The final resistivity is the halfspace, so the ``thickness`` array has one
-fewer entry than ``resistivity``.
+The final resistivity is the :term:`halfspace`, so the ``thickness`` array has
+one fewer entry than ``resistivity``. If there are :math:`L` layers, pyCSAMT
+stores
+
+.. math::
+
+   \boldsymbol{\rho} = [\rho_0,\rho_1,\ldots,\rho_{L-1}],
+   \qquad
+   \mathbf{h} = [h_0,h_1,\ldots,h_{L-2}],
+
+with top-of-layer depths
+
+.. math::
+
+   z_0 = 0,\qquad z_j = \sum_{k=0}^{j-1}h_k.
+
+The last layer :math:`\rho_{L-1}` extends downward indefinitely. This is why a
+three-layer model has three resistivities but only two thicknesses.
 
 .. code-block:: python
    :linenos:
@@ -90,6 +118,19 @@ fewer entry than ``resistivity``.
 
    print(response.rho_a.shape)
    print(response.phase.shape)
+
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(response.rho_a.shape)
+   (40,)
+   >>> print(response.phase.shape)
+   (40,)
+   >>> print(model.depth)
+   [   0.  300. 1100.]
+   >>> print(model.to_vector())
+   [  2.        1.        2.69897 300.      800.     ]
 
 Layered models are useful for:
 
@@ -115,9 +156,52 @@ shallower structure, while low frequencies sample deeper structure.
 1-D MT And CSAMT Solvers
 ------------------------
 
-``MT1DForward`` computes a plane-wave natural-source response using layered
-earth impedance recursion. ``CSAMT1DForward`` uses the same layered-earth base
-and can apply a controlled-source correction when source geometry is supplied.
+``MT1DForward`` computes a :term:`plane-wave field` natural-source response
+using layered-earth impedance recursion. ``CSAMT1DForward`` uses the same
+layered-earth base and can apply a :term:`controlled-source` correction when
+source geometry is supplied.
+
+For one angular frequency :math:`\omega = 2\pi f`, the implementation starts
+from the bottom halfspace and recursively moves upward. In layer :math:`j`,
+
+.. math::
+
+   k_j = \sqrt{\frac{i\omega\mu_0}{\rho_j}},
+   \qquad
+   Z^0_j = \frac{i\omega\mu_0}{k_j},
+
+where :math:`k_j` is the complex propagation constant and :math:`Z^0_j` is the
+intrinsic layer impedance. If :math:`Z_{j+1}` is the effective impedance below
+layer :math:`j`, then the upward recursion used by the code is
+
+.. math::
+
+   Z_j = Z^0_j
+   \frac{Z_{j+1} + Z^0_j\tanh(k_j h_j)}
+        {Z^0_j + Z_{j+1}\tanh(k_j h_j)}.
+
+At the surface, :math:`Z_0` becomes the predicted impedance. Apparent
+resistivity and phase are then derived consistently as
+
+.. math::
+
+   \rho_a(f) = \frac{|Z_0(f)|^2}{\omega\mu_0},
+   \qquad
+   \phi(f) = \arg Z_0(f).
+
+When ``CSAMT1DForward`` receives ``source_offset``, it applies a first-order
+near-field factor based on the first-layer skin depth
+:math:`\delta=\sqrt{2\rho_0/(\omega\mu_0)}`:
+
+.. math::
+
+   g_\mathrm{nf}(f) =
+   \frac{1}{1 + (r/\delta)^{-2}},
+   \qquad
+   \rho_{a,\mathrm{csamt}} = g_\mathrm{nf}\rho_{a,\mathrm{mt}}.
+
+As :math:`r/\delta` becomes large, the correction approaches one and the CSAMT
+response approaches the MT plane-wave response.
 
 .. code-block:: python
    :linenos:
@@ -144,6 +228,30 @@ and can apply a controlled-source correction when source geometry is supplied.
    mt_features = mt_response.to_array(log_rho=True, include_phase=True)
    csamt_features = csamt_response.to_array(log_rho=True, include_phase=True)
 
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(mt_response.z.shape, mt_response.rho_a.shape, mt_response.phase.shape)
+   (32,) (32,) (32,)
+   >>> print(mt_features.shape)
+   (64,)
+   >>> print(csamt_features.shape)
+   (64,)
+   >>> print(csamt_response.rho_a[0] / mt_response.rho_a[0])
+   0.1098213847369481
+   >>> print(csamt_response.rho_a[-1] / mt_response.rho_a[-1])
+   0.9999189496227823
+
+.. figure:: ../../images/user_guide/forward/solvers_1d_mt_csamt.png
+   :alt: Layered model with MT and corrected CSAMT response curves.
+   :align: center
+   :width: 100%
+
+   The CSAMT correction is strongest where :math:`r/\delta` is small. At
+   frequencies where the source is effectively far field, the corrected CSAMT
+   curve returns to the MT-like response.
+
 For MT and CSAMT 1-D responses:
 
 * ``response.freqs`` has shape ``(n_freqs,)``;
@@ -158,8 +266,30 @@ response. Use 2-D or 3-D grids when lateral geometry is part of the experiment.
 1-D TDEM Solver
 ---------------
 
-``TEM1DForward`` computes a central-loop step-off response for a layered earth.
-It uses time gates rather than frequencies as the primary output axis.
+``TEM1DForward`` computes a central-loop step-off response for a
+:term:`layered earth`. It uses :term:`time gate`\ s rather than frequencies as
+the primary output axis. Internally the solver still evaluates a
+frequency-domain kernel first. For horizontal wavenumber :math:`\lambda`, the
+TE admittance recursion uses
+
+.. math::
+
+   \nu_j^2 = \lambda^2 + i\omega\mu_0\sigma_j,
+   \qquad
+   Y^0_j = \frac{\nu_j}{i\omega\mu_0},
+
+then integrates the reflected field with a Hankel-type kernel involving
+:math:`J_1(\lambda a)`, where :math:`a` is the loop radius. The step-off decay
+is obtained with a cosine transform:
+
+.. math::
+
+   \frac{dB_z}{dt}(t) \approx
+   \frac{2}{\pi}\int_0^\infty
+   \omega\,\Im\{H_z(\omega)\}\cos(\omega t)\,d\omega.
+
+The implementation evaluates that integral numerically, which is why TEM
+examples are usually slower than MT1D examples.
 
 .. code-block:: python
    :linenos:
@@ -184,6 +314,18 @@ It uses time gates rather than frequencies as the primary output axis.
 
    print(response.times.shape)
    print(response.dBz_dt.shape)
+   print(response.to_array().shape)
+
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(response.times.shape)
+   (30,)
+   >>> print(response.dBz_dt.shape)
+   (30,)
+   >>> print(response.to_array().shape)
+   (30,)
 
 For TDEM responses:
 
@@ -198,8 +340,8 @@ curve but remain insensitive to the target interval.
 2-D Profile Grid Concepts
 -------------------------
 
-:class:`pycsamt.forward.Grid2D` stores a finite-difference grid for a profile.
-It contains:
+:class:`pycsamt.forward.Grid2D` stores a :term:`finite-difference grid` for a
+profile. It contains:
 
 * horizontal cell widths ``dx``;
 * vertical cell heights ``dz``;
@@ -209,7 +351,20 @@ It contains:
 * node and cell-centre coordinate helpers.
 
 The grid uses depth-positive ``z`` coordinates. Resistivity is stored
-top-to-bottom and left-to-right. Stations must lie inside the grid extent.
+top-to-bottom and left-to-right. Stations must lie inside the grid extent. If
+``n_pad`` is non-zero, the constructor arguments ``nx`` and ``nz`` describe the
+core model; the stored arrays are larger because :term:`padding cells` are
+added on the left, right, and bottom. Thus a core grid with
+:math:`n_x^\mathrm{core}` columns, :math:`n_z^\mathrm{core}` rows, and
+:math:`p` padding cells is stored approximately as
+
+.. math::
+
+   n_x = n_x^\mathrm{core} + 2p,\qquad
+   n_z = n_z^\mathrm{core} + p.
+
+The exact physical width also grows because padded cell sizes are expanded by
+``pad_factor``.
 
 The core region is the scientific model of interest. Padding cells are added on
 the left, right, and bottom to reduce boundary influence. The ``n_pad`` value
@@ -235,6 +390,20 @@ can distinguish core cells from numerical buffer cells.
    print(grid.resistivity.shape)
    print(grid.x_stations)
    print(grid.x_nodes[0], grid.x_nodes[-1])
+
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(grid.resistivity.shape)
+   (36, 56)
+   >>> print(np.round(grid.x_stations, 1))
+   [ 6203.   6930.3  7657.5  8384.8  9112.1  9839.4 10566.6 11293.9
+    12021.2 12748.5 13475.7 14203. ]
+   >>> print(grid.x_nodes[0], grid.x_nodes[-1])
+   0.0 20405.999163999997
+   >>> print(grid.core_resistivity.shape)
+   (28, 40)
 
 2-D Profile Grid Constructors
 -----------------------------
@@ -291,11 +460,50 @@ A compact block-anomaly grid looks like this:
 ``(x_lo, x_hi, z_lo, z_hi)``. The constructor internally accounts for padding
 when placing the anomaly into the full numerical grid.
 
+.. figure:: ../../images/user_guide/forward/solvers_2d_full_grid_padding.png
+   :alt: Full 2-D grid showing core model, padding, anomaly, and stations.
+   :align: center
+   :width: 90%
+
+   The full numerical grid includes padding cells. This view is useful for
+   debugging boundary influence, not for geological interpretation.
+
+.. figure:: ../../images/user_guide/forward/solvers_2d_core_grid.png
+   :alt: Core 2-D anomaly grid without padding cells.
+   :align: center
+   :width: 90%
+
+   The clipped core view shows the scientific model: a conductive block inside a
+   resistive background, sampled by surface stations.
+
 2-D MT Solver
 -------------
 
-``MT2DForward`` solves the 2-D MT finite-difference problem for TE and TM modes.
-It returns a :class:`pycsamt.forward.ForwardResponse2D`.
+``MT2DForward`` solves the 2-D MT finite-difference problem for
+:term:`TE mode` and :term:`TM mode`. It returns a
+:class:`pycsamt.forward.ForwardResponse2D`.
+
+The code solves scalar frequency-domain problems on the grid nodes. For a
+conductivity field :math:`\sigma(x,z)=1/\rho(x,z)`, the TE unknown is
+:math:`E_y`; the TM unknown is :math:`H_y`. In compact continuous notation the
+operators can be read as
+
+.. math::
+
+   \nabla^2 E_y - i\omega\mu_0\sigma E_y = 0,
+
+and
+
+.. math::
+
+   \nabla\cdot\left(\rho\,\nabla H_y\right)
+   - i\omega\mu_0 H_y = 0.
+
+The implementation discretises these equations with finite differences,
+enforces boundary values from 1-D edge-column responses, solves the sparse
+linear systems, then estimates surface impedance at the stations. The response
+conversion is the same impedance-to-observable relation used in 1-D:
+:math:`\rho_a=|Z|^2/(\omega\mu_0)` and :math:`\phi=\arg Z`.
 
 .. code-block:: python
    :linenos:
@@ -316,6 +524,31 @@ It returns a :class:`pycsamt.forward.ForwardResponse2D`.
        log_rho=True,
        include_phase=True,
    )
+
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(response.rho_a_te.shape)
+   (3, 16)
+   >>> print(response.phase_te.shape)
+   (3, 16)
+   >>> print(features_te.shape)
+   (16, 6)
+   >>> print(features_both.shape)
+   (16, 12)
+   >>> print(np.round(station_0["rho_a_te"], 2))
+   [156.17 424.41 607.92]
+   >>> print(np.round(station_0["phase_te"], 2))
+   [47.38 59.66 50.  ]
+
+.. figure:: ../../images/user_guide/forward/solvers_2d_te_pseudosection.png
+   :alt: TE apparent-resistivity pseudo-section from a 2-D anomaly response.
+   :align: center
+   :width: 85%
+
+   The pseudo-section is frequency-response geometry, not geology. It shows how
+   the anomaly perturbs apparent resistivity across stations and periods.
 
 Response array shapes are always frequency first:
 
@@ -375,7 +608,7 @@ selected response arrays:
 ------------------------
 
 :class:`pycsamt.forward.Grid3D` stores a 3-D resistivity volume and a 2-D
-station layout. It contains:
+:term:`station layout`. It contains:
 
 * cell widths ``dx``, ``dy``, and ``dz``;
 * resistivity with shape ``(nz, ny, nx)``;
@@ -404,9 +637,20 @@ station layout. It contains:
    print(grid.resistivity.shape)
    print(grid.stations_xy.shape)
 
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(grid.resistivity.shape)
+   (21, 32, 32)
+   >>> print(grid.stations_xy.shape)
+   (25, 2)
+
 The regular station grid is created over the core model and shifted into the
 padded numerical coordinate system. As in 2-D, stations must lie inside the full
-grid extent.
+grid extent. The stored resistivity array follows ``(nz, ny, nx)`` order, so
+depth is the first axis even though map coordinates are usually discussed as
+``x`` and ``y`` first.
 
 3-D Volume Grid Constructors
 ----------------------------
@@ -455,6 +699,14 @@ The main constructors are:
        grid=grid,
    ).run()
 
+.. figure:: ../../images/user_guide/forward/solvers_3d_block_model.png
+   :alt: Orthogonal slices through a 3-D block anomaly model.
+   :align: center
+   :width: 100%
+
+   The 3-D grid is inspected through XZ, YZ, and XY slices. This is the fastest
+   way to check whether anomaly bounds, depth range, and station coverage agree.
+
 Quasi-3-D Solver
 ----------------
 
@@ -471,6 +723,25 @@ Conceptually:
 * off-diagonal tensor components ``Z_xy`` and ``Z_yx`` carry the main response;
 * diagonal components ``Z_xx`` and ``Z_yy`` are represented as approximate
   tensor outputs and should be interpreted carefully.
+
+The assembly can be read as a survey-design approximation. For station
+:math:`s=(x_s,y_s)`, the XZ slice through :math:`y_s` gives one estimate of
+the profile response along :math:`x`; the YZ slice through :math:`x_s` gives
+another estimate along :math:`y`. pyCSAMT stores the resulting tensor-like
+components as
+
+.. math::
+
+   \mathbf{Z}_s(f) =
+   \begin{bmatrix}
+      Z_{xx,s}(f) & Z_{xy,s}(f) \\
+      Z_{yx,s}(f) & Z_{yy,s}(f)
+   \end{bmatrix},
+
+then computes :math:`\rho_a` and :math:`\phi` component by component. The
+off-diagonal terms usually carry the most stable MT-style information; the
+diagonal terms are useful diagnostics but should not be over-interpreted as a
+validated full-3-D solution.
 
 The output is :class:`pycsamt.forward.ForwardResponse3D`.
 
@@ -493,6 +764,30 @@ The output is :class:`pycsamt.forward.ForwardResponse3D`.
        include_phase=False,
    )
 
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(response.rho_a_xy.shape)
+   (3, 16)
+   >>> print(response.phase_xy.shape)
+   (3, 16)
+   >>> print(response.stations_xy.shape)
+   (16, 2)
+   >>> print(features.shape)
+   (16, 12)
+   >>> print(all_components.shape)
+   (16, 12)
+
+.. figure:: ../../images/user_guide/forward/solvers_3d_tensor_components.png
+   :alt: Four quasi-3-D apparent-resistivity tensor component maps.
+   :align: center
+   :width: 100%
+
+   Tensor-component maps are best read comparatively: look for stable
+   off-diagonal structure first, then treat diagonal panels as diagnostics of
+   dimensionality and approximation limits.
+
 As with the 2-D response, physical arrays are frequency-first:
 ``(n_freqs, n_stations)``. Feature arrays are station-first:
 ``(n_stations, n_features)``.
@@ -513,8 +808,9 @@ trusting a response, check these points.
    should be small enough to sample the expected lateral anomaly signature.
 
 ``Padding``
-   Padding reduces boundary effects. Increase ``n_pad`` or ``pad_factor`` if
-   the response changes noticeably when the model extent is increased.
+   :term:`Padding cells` reduce boundary effects. Increase ``n_pad`` or
+   ``pad_factor`` if the response changes noticeably when the model extent is
+   increased.
 
 ``Near-surface resolution``
    Shallow cells should resolve high-frequency or early-time sensitivity. A
@@ -535,6 +831,20 @@ trusting a response, check these points.
    quasi-3-D grids for survey design or synthetic AI catalogues. Move to native
    external backends when production 2-D or 3-D inversion files are required.
 
+A useful numerical rule is to compare the target depth with the skin-depth
+range implied by the frequency axis:
+
+.. math::
+
+   \delta_\mathrm{min} \approx 503\sqrt{\rho_\mathrm{ref}/f_\mathrm{max}},
+   \qquad
+   \delta_\mathrm{max} \approx 503\sqrt{\rho_\mathrm{ref}/f_\mathrm{min}}.
+
+The grid bottom should usually extend beyond the deeper end of the sensitivity
+range, while the near-surface cells should be fine enough for the shallow end.
+This estimate is only a screening tool, but it catches many poor frequency-grid
+and depth-extent choices before a solver run.
+
 A compact grid-check helper can be useful in notebooks:
 
 .. code-block:: python
@@ -553,11 +863,23 @@ A compact grid-check helper can be useful in notebooks:
 
    describe_grid2d(grid)
 
+Captured output for the anomaly grid above:
+
+.. code-block:: pycon
+
+   >>> describe_grid2d(grid)
+   cells: nz=43, nx=66
+   stations: 16
+   x extent: 0.0 to 22406.0 m
+   z extent: 0.0 to 11316.9 m
+   rho range: 5 to 500 ohm m
+   padding cells: 8
+
 Response Containers And Feature Arrays
 --------------------------------------
 
-Response containers preserve the physical arrays and also expose feature helpers
-for machine-learning and batch processing.
+:term:`Response container`\ s preserve the physical arrays and also expose
+feature helpers for machine-learning and batch processing.
 
 .. list-table::
    :header-rows: 1

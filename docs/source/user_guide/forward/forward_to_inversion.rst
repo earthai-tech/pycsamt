@@ -3,31 +3,27 @@
 From Forward Modelling To Inversion
 ===================================
 
-Forward modelling and inversion are the two directions of the same physical
-operator. A forward model predicts observations from a known earth model. An
-inversion searches for an earth model that explains observed data while also
-respecting the assumptions imposed by the chosen parameterization and
-regularization.
+Forward modelling and inversion are the two directions of the same
+:term:`forward operator`. A forward model predicts observations from a known
+earth model:
 
 .. math::
 
-   d_\mathrm{pred} = F(m)
+   d_{\mathrm{pred}} = F(m).
 
-and
+An inversion runs the same operator inside a search, adjusting :math:`m`
+until predicted and observed data agree while the model itself stays well
+behaved:
 
 .. math::
 
-   m_\mathrm{inv} =
-   \arg\min_m
-   \left[
-      \| W_d(F(m) - d_\mathrm{obs}) \|_2^2
-      + \lambda R(m)
-   \right].
+   \Phi(m) = \Phi_d(m) + \lambda \Phi_m(m), \qquad
+   \Phi_d(m) = \left\| W_d \left(d_{\mathrm{obs}} - F(m)\right) \right\|_2^2.
 
-Here :math:`F` is the forward operator, :math:`m` is the model vector,
-:math:`d_\mathrm{obs}` is the observed data vector, :math:`W_d` contains data
-uncertainties, :math:`R(m)` is the regularization term, and :math:`\lambda`
-controls the trade-off between data fit and model simplicity.
+:math:`W_d` contains the data uncertainties, :math:`\Phi_m` is the model
+penalty, and :math:`\lambda` controls the trade-off between fitting the data
+and keeping the model simple -- see :doc:`concepts` and
+:doc:`../../theory/inversion_concepts` for how each piece is built up.
 
 In pyCSAMT, the forward package helps answer the question:
 
@@ -55,10 +51,11 @@ following contract explicit.
      - Forward-side meaning
      - Inversion-side requirement
    * - Method
-     - MT, AMT, CSAMT, EMAP, or TDEM response type.
+     - :term:`MT`, :term:`AMT`, :term:`CSAMT`, :term:`EMAP`, or :term:`TDEM`
+       response type.
      - ``InversionConfig.method`` must match the data family.
-   * - Dimensionality
-     - 1-D layered model, 2-D profile, or quasi-3-D grid.
+   * - :term:`Dimensionality`
+     - 1-D :term:`layered model`, 2-D profile, or :term:`quasi-3-D` grid.
      - ``InversionConfig.dimension`` and ``backend`` must support the same
        interpretation.
    * - Frequency or time axis
@@ -78,7 +75,7 @@ following contract explicit.
      - Provide ``StartingModel`` or a compatible mapping when the backend uses
        layered parameters.
    * - Truth model
-     - The known model used in a synthetic recovery experiment.
+     - The known model used in a :term:`synthetic recovery` experiment.
      - Store it as metadata or in the experiment archive for later comparison.
 
 The most common backend-neutral data mappings are:
@@ -116,9 +113,10 @@ from ``MT2DForward`` to a profile inversion.
 Why Synthetic Recovery Comes First
 ----------------------------------
 
-A forward response shows whether a target can influence the data. A synthetic
-recovery test checks whether the planned inversion can recover that influence
-under realistic assumptions. This is a different and stricter question.
+A forward response shows whether a target can influence the data. A
+:term:`synthetic recovery` test checks whether the planned inversion can
+recover that influence under realistic assumptions. This is a different and
+stricter question.
 
 A useful recovery loop is:
 
@@ -141,7 +139,9 @@ non-uniqueness, poor sensitivity, and resolution limits.
 
 The smallest complete bridge is a 1-D layered MT recovery. The forward response
 is converted into the backend-neutral inversion mapping using ``freqs``,
-``rho_a``, and ``phase``.
+``rho_a``, and ``phase``. Paste the whole block into a script: it builds the
+truth model, the noisy synthetic data, and the inversion configuration in one
+pass.
 
 .. code-block:: python
    :linenos:
@@ -188,21 +188,59 @@ is converted into the backend-neutral inversion mapping using ``freqs``,
 
    print(result.summary())
    recovered = result.model
+   print("recovered resistivities:", np.round(recovered.resistivities, 1))
+   print("truth resistivities:    ", truth.resistivity)
 
-Use the result diagnostics, not only the recovered layer values. For example:
+Captured output:
+
+.. code-block:: text
+
+   InversionResult(method='mt', dimension='1d', backend='builtin', status='converged', rms=0.851)
+   recovered resistivities: [ 74.3  25.6 596. ]
+   truth resistivities:     [ 80.  25. 600.]
+
+The starting model was off by 20-100% on every layer, and 25 iterations were
+enough to land within a few percent of the truth on all three -- the middle
+conductive layer, which dominates the mid-period response, recovers almost
+exactly. Plotting the two side by side makes the same point visually:
+
+.. figure:: ../../images/user_guide/forward/forward_to_inversion_1d_mt_recovery.png
+   :align: center
+   :width: 70%
+   :alt: Recovered 1-D MT resistivity model overlaid on the true model
+
+   Truth and recovered models, plotted with
+   :func:`pycsamt.forward.plot.plot_model_1d`.
+
+Use the result diagnostics, not only the recovered layer values, to judge
+whether that agreement is trustworthy rather than lucky:
 
 .. code-block:: python
    :linenos:
 
    if result.history is not None:
        history = result.history.arrays()
-       print(history.get("objective"))
-       print(history.get("rms"))
+       print("objective (final):", round(float(history["objective"][-1]), 4))
+       print("rms (final):", round(float(history["rms"][-1]), 4))
 
    if result.uncertainty is not None:
-       print(result.uncertainty.confidence)
+       print("uncertainty.confidence shape:", result.uncertainty.confidence.shape)
 
    model_for_export = result.to_resistivity_model()
+   print("model_for_export.method:", model_for_export.method)
+
+Captured output:
+
+.. code-block:: text
+
+   objective (final): 23.1926
+   rms (final): 0.8513
+   uncertainty.confidence shape: (3, 1)
+   model_for_export.method: builtin:mt:1d
+
+An :term:`RMS misfit` near 1 means the recovered model fits the noisy data
+about as well as the assigned 5% error floor and 3-degree phase error allow
+-- neither over-fitting the noise nor leaving obvious structure unexplained.
 
 Important interpretation points:
 
@@ -217,8 +255,9 @@ Important interpretation points:
 1-D TDEM Recovery
 -----------------
 
-TDEM uses a time axis and decay values rather than apparent resistivity and
-phase. The backend-neutral mapping therefore uses ``times`` and ``values``.
+:term:`TDEM` uses a time axis and decay values rather than apparent resistivity
+and phase. The backend-neutral mapping therefore uses ``times`` and
+``values``.
 
 .. code-block:: python
    :linenos:
@@ -271,8 +310,9 @@ Stitched 2-D Profile Recovery
 
 The simplest 2-D profile inversion path treats each station as a 1-D sounding
 and stitches the recovered columns into a section. This is fast and useful for
-screening data quality, static-shift effects, and starting models. It is not a
-substitute for native 2-D physics when lateral currents are important.
+screening data quality, :term:`static shift` effects, and starting models. It
+is not a substitute for native 2-D physics when lateral currents are
+important.
 
 .. code-block:: python
    :linenos:
@@ -317,9 +357,36 @@ substitute for native 2-D physics when lateral currents are important.
    result = InversionWorkflow(cfg).run()
    section = result.to_resistivity_model()
 
+   print(result.summary())
+   print("section.rho_2d.shape:", section.rho_2d.shape)
+   print("section.station_names:", section.station_names)
+
+Captured output:
+
+.. code-block:: text
+
+   InversionResult(method='mt', dimension='2d', backend='builtin', status='success', rms=1.11e-08)
+   section.rho_2d.shape: (3, 3)
+   section.station_names: ['S1', 'S2', 'S3']
+
 The important shape convention is visible in the ``np.vstack`` call:
 ``rho_a`` and ``phase`` are station-by-frequency matrices. The first row belongs
 to the first station, and the first column belongs to the first frequency.
+The near-zero RMS above is expected: with noise-free 1-D data and three free
+layers per station, each column has enough freedom to match its own sounding
+almost exactly, so this configuration mainly checks the plumbing rather than
+resolution under noise. Plotting the section shows the three station columns
+recovering the lateral trend built into ``station_models`` -- a shallower,
+more conductive middle layer under station 1 that deepens and weakens toward
+station 3:
+
+.. figure:: ../../images/user_guide/forward/forward_to_inversion_stitched_2d.png
+   :align: center
+   :width: 80%
+   :alt: Stitched 1-D MT section across three stations
+
+   Recovered section, plotted with
+   :func:`pycsamt.inversion.plot.plot_model`.
 
 True 2-D Forward Response Handoff
 ---------------------------------
@@ -381,10 +448,20 @@ inversion profile API, transpose the selected component.
 
    result = InversionWorkflow(cfg).run()
 
-This example is intentionally small. It demonstrates the data contract and the
-``profile_mode="fd2d"`` option without making the documentation build depend on
-a large numerical run. For production studies, increase the grid resolution,
-station count, frequency coverage, padding, and regularization with care.
+   print(result.summary())
+
+Captured output:
+
+.. code-block:: text
+
+   InversionResult(method='mt', dimension='2d', backend='builtin', status='converged', rms=0)
+
+This example is intentionally small -- a 2x2 halfspace grid started from the
+halfspace itself, so a single iteration already fits exactly. It demonstrates
+the data contract and the ``profile_mode="fd2d"`` option without making the
+documentation build depend on a large numerical run. For production studies,
+increase the grid resolution, station count, frequency coverage, padding, and
+regularization with care.
 
 Backend Choice After Forward Tests
 ----------------------------------
@@ -407,16 +484,16 @@ Use the forward experiment to decide which inverse backend is appropriate.
      - Move to ``pygimli`` when your workflow requires its TDEM tools.
    * - Station-by-station profile
      - ``backend="builtin"`` with ``dimension="2d"``.
-     - Move to ``occam2d`` when lateral 2-D physics and native Occam2D files
-       are required.
+     - Move to ``occam2d`` when lateral 2-D physics and native :term:`Occam2D`
+       files are required.
    * - 2-D MT finite-difference test
      - Built-in finite-difference profile mode for compact experiments.
-     - Move to Occam2D, MARE2DEM, or a specialized workflow for production
-       2-D inversion.
-   * - Quasi-3-D forward grid
+     - Move to :term:`Occam2D`, :term:`MARE2DEM`, or a specialized workflow
+       for production 2-D inversion.
+   * - :term:`Quasi-3-D` forward grid
      - Use for survey design, sensitivity, and synthetic catalogue creation.
      - Move to ``modem`` when a native 3-D inversion dataset and mesh are
-       required.
+       required (see :term:`ModEM`).
 
 External backends are lifecycle adapters. They may prepare and validate native
 files without launching an executable. Use ``run_external=True`` only after the
@@ -443,11 +520,14 @@ The inversion objective weights residuals by the supplied data uncertainty:
 
 .. math::
 
-   r = W_d \left( F(m) - d_\mathrm{obs} \right).
+   r = W_d \left( d_{\mathrm{obs}} - F(m) \right).
 
 If :math:`W_d` is too strong because uncertainties are too small, the inversion
 may chase noise. If :math:`W_d` is too weak because uncertainties are too large,
-the inversion may stop at an oversmoothed model.
+the inversion may stop at an oversmoothed model. The ``rms`` values printed
+throughout this page are exactly this residual, reduced to a single
+:term:`RMS misfit` number -- close to 1 is the target, not as close to 0 as
+possible.
 
 What To Compare
 ---------------
@@ -461,8 +541,8 @@ For a synthetic recovery test, compare four things.
 
 ``Data recovery``
    Does the predicted response fit the noisy observations within the intended
-   uncertainty? A beautiful model with poor residuals is not a successful
-   inversion.
+   uncertainty, giving an :term:`RMS misfit` near 1? A beautiful model with
+   poor residuals is not a successful inversion.
 
 ``Sensitivity``
    Is the recovered feature inside the depth and frequency range to which the
@@ -503,8 +583,7 @@ Common Failure Modes
    under the chosen parameterization. Try a simpler target, a different
    starting model, or a backend with more suitable dimensionality.
 
-``The stitched 2-D section looks plausible but disagrees with a 2-D forward
-test.``
+``The stitched 2-D section looks plausible but disagrees with a 2-D forward test.``
    Lateral currents or off-station structure may be important. Use native 2-D
    inversion rather than interpreting stitched 1-D columns as true 2-D physics.
 
@@ -537,7 +616,7 @@ Use this sequence before a field inversion:
 
 Useful next pages:
 
-* :doc:`../theory/inversion_concepts`
+* :doc:`../../theory/inversion_concepts`
 * :doc:`../models/choosing_backend`
 * :doc:`../models/occam2d`
 * :doc:`../models/modem`

@@ -3,9 +3,10 @@
 Forward Plotting
 ================
 
-Forward plots are quality-control tools. They help you see whether a model,
-grid, response, or dataset looks physically plausible before it is used for
-inversion, AI training, reports, or tutorials.
+Forward plots are :term:`quality control` tools. They help you see whether a
+model, grid, :term:`forward response`, or :term:`synthetic dataset` looks
+physically plausible before it is used for inversion, AI training, reports, or
+tutorials.
 
 In pyCSAMT, plotting functions are deliberately lightweight wrappers around
 Matplotlib. They do not run the solver. They inspect objects that already
@@ -19,8 +20,11 @@ exist:
 * :class:`pycsamt.forward.ForwardResponse3D`.
 
 Most plotting functions return Matplotlib ``Axes`` objects, while composite
-figures return a ``Figure`` or an array of axes. This makes it easy to customize
-labels, save files, or place plots inside your own dashboards and notebooks.
+figures return a :term:`Matplotlib figure` or an array of axes. This makes it
+easy to customize labels, save files, or place plots inside your own dashboards
+and notebooks. The helpers deliberately keep plotting separate from modelling:
+the solver produces the arrays, and the plotting layer only makes those arrays
+auditable.
 
 Plot Selection Guide
 --------------------
@@ -124,6 +128,22 @@ It returns two axes: ``[ax_rho, ax_phase]``.
        title="MT1D response",
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_1d_response.png
+   :alt: MT1D apparent resistivity and phase response.
+   :align: center
+   :width: 90%
+
+   The two returned axes show :term:`apparent resistivity` and :term:`phase`
+   against period. For the conductive middle layer, the resistivity curve drops
+   over the period band that is most sensitive to the layer.
+
+The example produces two axes and a 40-sample response:
+
+.. code-block:: pycon
+
+   >>> len(axes), response.rho_a.shape, response.phase.shape
+   (2, (40,), (40,))
+
 Read this plot as a quick physical sanity check:
 
 * a simple halfspace should produce a smooth response;
@@ -147,6 +167,18 @@ quickly inspected with the response object's own ``plot`` method:
    response = TEM1DForward(np.logspace(-6, -3, 25)).run(model)
 
    ax = response.plot()
+   print(response.times.shape, response.dBz_dt.shape)
+
+Captured output:
+
+.. code-block:: pycon
+
+   >>> print(response.times.shape, response.dBz_dt.shape)
+   (25,) (25,)
+
+A TEM response uses :term:`time gate`\ s instead of frequency samples, and
+``response.plot()`` reads them off the same object rather than needing a
+separate axis argument.
 
 1-D Model Plots
 ---------------
@@ -168,6 +200,14 @@ axis.
        depth_max=2000.0,
        title="Layered models",
    )
+
+.. figure:: ../../images/user_guide/forward/plotting_1d_models.png
+   :alt: Truth and starting layered-earth resistivity models.
+   :align: center
+   :width: 55%
+
+   Overlaying the truth and starting model makes the prior information visible
+   before running a synthetic recovery test.
 
 This is especially useful when preparing a synthetic recovery test. Plot the
 truth model and the starting model together so it is clear how much prior
@@ -198,6 +238,14 @@ single 1-D forward run. It returns a Matplotlib ``Figure``.
        model=model,
        title="Forward validation",
    )
+
+.. figure:: ../../images/user_guide/forward/plotting_1d_composite.png
+   :alt: Composite 1-D earth model, apparent resistivity, and phase figure.
+   :align: center
+   :width: 100%
+
+   The composite view keeps the model and response together, which is useful
+   when reviewing whether a curve feature is consistent with a layer boundary.
 
 If ``model`` is omitted, the function returns a two-panel response-only figure.
 
@@ -231,6 +279,14 @@ it clips padding cells and displays the core model region.
        station_preset="inversion",
        title="2-D anomaly model",
    )
+
+.. figure:: ../../images/user_guide/forward/plotting_2d_model.png
+   :alt: Two-dimensional resistivity grid with a conductive anomaly and stations.
+   :align: center
+   :width: 90%
+
+   The core model is shown without padding cells. Station markers provide a
+   quick check that the :term:`station layout` samples the anomaly.
 
 Important options:
 
@@ -271,6 +327,14 @@ response. It works on :class:`pycsamt.forward.ForwardResponse2D`.
        title="TE apparent resistivity",
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_2d_pseudosection.png
+   :alt: TE apparent resistivity pseudo-section from a 2-D forward response.
+   :align: center
+   :width: 85%
+
+   The pseudo-section arranges response values by station and period. It is a
+   display of the forward response, not a recovered depth model.
+
 Valid ``mode`` values are ``"te"`` and ``"tm"``. Valid ``quantity`` values are
 ``"rho_a"`` and ``"phase"``. Apparent resistivity uses a ``jet_r`` style colour
 map by default, while phase uses ``RdBu_r``.
@@ -297,6 +361,14 @@ profile at selected frequencies.
        freq_indices=[0, 1, 2],
        title="Lateral response profiles",
    )
+
+.. figure:: ../../images/user_guide/forward/plotting_2d_profiles.png
+   :alt: Lateral apparent-resistivity profiles at selected frequencies.
+   :align: center
+   :width: 85%
+
+   Frequency slices make lateral shifts and broadening easier to see than in a
+   filled pseudo-section alone.
 
 If ``freq_indices`` is omitted, the function chooses a small number of
 approximately evenly spaced frequencies. This plot is useful for detecting
@@ -335,6 +407,14 @@ three axes: ``[ax_xz, ax_yz, ax_xy]``.
        title="3-D block anomaly",
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_3d_model.png
+   :alt: Orthogonal slices through a 3-D block-anomaly resistivity model.
+   :align: center
+   :width: 100%
+
+   Orthogonal slices expose the same resistivity volume from three directions,
+   so misplaced bounds are usually visible before a solver run.
+
 The three panels show:
 
 * XZ slice through the middle y position;
@@ -368,6 +448,14 @@ as a map-view station scatter plot.
        title="Zxy apparent resistivity map",
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_3d_map.png
+   :alt: Map-view Zxy apparent resistivity response over a 3-D station grid.
+   :align: center
+   :width: 75%
+
+   A response map shows one tensor component at one frequency across the station
+   grid.
+
 Valid components are ``"xy"``, ``"yx"``, ``"xx"``, and ``"yy"``. Valid
 quantities are ``"rho_a"`` and ``"phase"``.
 
@@ -390,6 +478,14 @@ one y-row of the station layout.
        n_contours=5,
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_3d_section.png
+   :alt: Period-by-station 3-D response section through the middle y-row.
+   :align: center
+   :width: 85%
+
+   With ``y_row=None``, the section is extracted through the middle row of the
+   station grid.
+
 When ``y_row=None``, the middle y-row is selected. Use an explicit row index to
 inspect different profile lines through the station grid.
 
@@ -410,6 +506,14 @@ frequency.
        quantity="rho_a",
        title="Tensor component comparison",
    )
+
+.. figure:: ../../images/user_guide/forward/plotting_3d_tensor_components.png
+   :alt: Four tensor-component apparent-resistivity maps from a 3-D response.
+   :align: center
+   :width: 100%
+
+   The four-panel layout keeps diagonal and off-diagonal components comparable
+   at the same frequency and colour scale.
 
 The panels are arranged as:
 
@@ -453,6 +557,14 @@ prevents accidental use of unrealistic noise levels or corrupted axes.
        axes=axes,
    )
 
+.. figure:: ../../images/user_guide/forward/plotting_noisy_response.png
+   :alt: Clean and noisy MT1D apparent resistivity and phase curves overlaid.
+   :align: center
+   :width: 90%
+
+   A noisy sample should perturb the clean curve without destroying the
+   physically meaningful trend.
+
 When overlaying multiple responses, keep labels explicit. A noisy synthetic
 curve should still look like a possible field response. If the curve is
 dominated by spikes or negative-looking artefacts, reduce the noise level or
@@ -481,6 +593,14 @@ the original configuration. A simple feature plot can still catch many issues.
 
    ax = plot_dataset_sample(dataset, index=0)
 
+.. figure:: ../../images/user_guide/forward/plotting_dataset_sample.png
+   :alt: One synthetic dataset feature vector plotted by feature index.
+   :align: center
+   :width: 80%
+
+   A raw feature-vector plot is not geophysical interpretation, but it quickly
+   exposes NaNs, clipping, scale jumps, or unexpected feature ordering.
+
 For MT/CSAMT datasets with phase included, the first half of the feature vector
 is log apparent resistivity and the second half is phase. Splitting the feature
 vector before plotting often makes the QA clearer.
@@ -502,6 +622,14 @@ vector before plotting often makes the QA clearer.
        axes[1].set_ylabel("phase")
        axes[1].set_xlabel("period (s)")
        return axes
+
+.. figure:: ../../images/user_guide/forward/plotting_mt_feature_sample.png
+   :alt: MT feature vector split into log apparent resistivity and phase panels.
+   :align: center
+   :width: 80%
+
+   Splitting the feature vector restores the physical axes and makes dataset QA
+   easier to compare with ordinary MT response plots.
 
 Plotting Checklist
 ------------------

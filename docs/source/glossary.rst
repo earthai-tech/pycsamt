@@ -62,6 +62,53 @@ definitions here are the single source of truth.
       most defensible when the transmitter is far enough away for this
       approximation to hold.
 
+   Forward operator
+      The function :math:`F` mapping a resistivity model :math:`m` to
+      predicted data, :math:`d_{\mathrm{pred}} = F(m)`. In :mod:`pycsamt.forward`
+      it is implemented by the 1-D, 2-D, and :term:`quasi-3-D` solvers, and in
+      :mod:`pycsamt.models` by external engines such as :term:`Occam2D`,
+      :term:`ModEM`, and :term:`MARE2DEM`. The same operator sits inside the
+      inversion objective function, so a forward assumption that does not
+      match the true physics can bias the recovered model even while the data
+      misfit looks small.
+
+   Half-space
+      The lowermost, infinitely thick layer of a :term:`layered model`,
+      assigned a resistivity but no thickness. It represents the electrical
+      properties below the deepest resolved interface and anchors the
+      long-period asymptote of the :term:`apparent resistivity` curve.
+
+   Layered model
+      A 1-D resistivity model built from horizontal layers,
+      :math:`\rho(\mathbf{x}) = \rho(z)`, each carrying a resistivity and a
+      thickness except the terminal :term:`half-space`. pyCSAMT's
+      ``LayeredModel`` builds one from explicit values or from ``random``,
+      ``blocky``, ``smooth``, and ``from_geology`` priors.
+
+   Quasi-3-D
+      A forward-modelling approximation that assembles an approximate 3-D
+      tensor response from orthogonal 2-D slices through a 3-D grid, instead
+      of solving the full 3-D Maxwell equations. pyCSAMT's ``MT3DForward``
+      uses it for survey-scale synthetic experiments where a full production
+      3-D solver would be too costly. It is a distinct idea from the
+      site-level :term:`dimensionality` classification used when interpreting
+      recorded MT data.
+
+   Feature array
+      A flattened numeric array built from a forward response's apparent
+      resistivity and phase, produced by a response object's ``to_array`` or
+      ``to_feature_array`` method. It is the data-vector shape expected by AI
+      training and inversion code, as distinct from the physical per-frequency
+      or per-station arrays a solver returns directly.
+
+   Synthetic recovery
+      A validation workflow that forward-models a known model, adds
+      controlled noise, inverts the resulting response, and compares the
+      recovered model with the known one. A successful synthetic recovery
+      test shows that an inversion workflow can recover a known model under
+      controlled assumptions; it does not, by itself, prove that a field
+      inversion of unknown structure is correct.
+
    Grounded dipole transmitter
       A controlled-source transmitter that injects current between two grounded
       electrodes. Its length, current, frequency, and receiver offset are part
@@ -354,6 +401,111 @@ definitions here are the single source of truth.
       rather than NaN or infinity. Low finite coverage usually indicates gaps,
       logger faults, or corrupted packets.
 
+   Forward modelling
+      The calculation of a synthetic electromagnetic response from a prescribed
+      earth model, survey geometry, source description, and solver setup. It is
+      the reproducible "given the model, predict the data" counterpart to
+      inversion, which tries to recover a model from observed data.
+
+   Forward response
+      The predicted data produced by a forward solver for a specified model and
+      survey setup. Depending on method and dimensionality it may contain
+      impedance, apparent resistivity, phase, transient decay values, station
+      positions, and tensor components.
+
+   Synthetic dataset
+      A collection of model parameters, computed forward responses, metadata,
+      and optional train/validation/test splits generated from known inputs
+      rather than acquired in the field. It is useful for algorithm development
+      because the target model is known.
+
+   Feature vector
+      The numeric input row passed to a learning algorithm or diagnostic plot.
+      In pyCSAMT forward datasets it is usually built from transformed response
+      quantities, such as log apparent resistivity followed by phase.
+
+   Target vector
+      The numeric output row that a supervised learning model is expected to
+      predict. For layered-earth forward datasets it contains log-resistivities
+      and layer thicknesses, with NaN padding when different samples have
+      different layer counts.
+
+   Dataset split
+      A deterministic partition of a dataset into training, validation, and
+      test subsets. Keeping the split seed fixed makes model-performance
+      comparisons reproducible.
+
+   Layered earth
+      A one-dimensional earth model in which electrical resistivity changes only
+      with depth. Each layer has a resistivity and, except for the bottom
+      half-space, a thickness.
+
+   Survey geometry
+      The spatial and source-receiver arrangement used by a simulation or field
+      acquisition, including station positions, profile layout, transmitter
+      geometry, offsets, and dimensionality.
+
+   Configuration file
+      A persistent text file that records the parameters used by a run, such as
+      solver type, frequency or time sampling, model bounds, station layout,
+      noise settings, random seed, and output paths. In pyCSAMT forward
+      workflows it is treated as the source of truth for rebuilding a synthetic
+      dataset or response.
+
+   Model prior
+      The assumptions used before simulation or inversion to restrict plausible
+      earth models. A forward-model prior may define layer-count limits,
+      resistivity bounds, anomaly geometry, geological class, or spatial
+      correlation length.
+
+   Geological prior
+      A named model prior tied to an expected geological setting, such as a
+      geothermal, marine, sedimentary, crystalline, or permafrost target. It
+      narrows synthetic-model sampling so generated examples resemble the
+      intended application instead of arbitrary resistivity variation.
+
+   Noise model
+      The rule used to perturb a synthetic response so it resembles measured
+      data. It defines the error distribution, scale, and sometimes
+      field-style behaviour applied after the noise-free forward response is
+      computed.
+
+   Station layout
+      The receiver positions used to sample a modelled response. For profile
+      simulations this is usually an along-line station count and spacing; for
+      map or quasi-3-D simulations it may be a two-dimensional receiver grid.
+
+   Finite-difference grid
+      A discretised numerical mesh on which derivatives in the governing
+      electromagnetic equations are approximated by differences between
+      neighbouring cells. Cell size, padding, and model extent control both
+      numerical accuracy and boundary effects.
+
+   Model container
+      A Python object that stores the earth model and survey geometry needed by
+      a forward solver, without itself solving the electromagnetic equations.
+      Examples include ``LayeredModel``, ``Grid2D``, and ``Grid3D``.
+
+   Response container
+      A Python object that stores predicted fields and derived quantities from a
+      forward run. Response containers keep physical arrays, coordinates, and
+      feature-array helpers together so plotting, inversion handoff, and machine
+      learning use the same computed result.
+
+   Halfspace
+      A uniform earth model that extends infinitely downward. In layered-earth
+      notation it is the final layer, which has resistivity but no finite
+      thickness.
+
+   Padding cells
+      Numerical buffer cells added outside the scientific core of a finite
+      difference grid. They reduce boundary effects but should not be interpreted
+      as part of the target model.
+
+   Time gate
+      One sample time in a transient electromagnetic decay curve. A TEM
+      configuration uses a sequence of time gates rather than a frequency grid.
+
    Edge decision
       The compact accept/warning/reject state assigned by edge-side quality
       control. It travels with QC telemetry so downstream monitoring can audit
@@ -528,6 +680,20 @@ definitions here are the single source of truth.
       Random noise whose samples follow a normal distribution. pyCSAMT
       simulation examples use it for background channel noise, clock jitter, and
       small battery-voltage perturbations.
+
+   Multiplicative noise
+      A noise model that perturbs a response in log-space, so the added
+      scatter scales with signal magnitude instead of being a fixed absolute
+      value. It suits responses such as :term:`apparent resistivity` that
+      span several orders of magnitude better than :term:`Gaussian noise`
+      alone.
+
+   Field-realistic noise
+      A noise model that layers frequency-dependent uncertainty, AMT
+      dead-band-style degradation, and :term:`powerline harmonics`-like
+      contamination onto a clean synthetic response, approximating field data
+      quality more closely than :term:`Gaussian noise` or
+      :term:`Multiplicative noise` alone.
 
    Dropout gap
       A contiguous interval of missing samples inserted into a simulated or

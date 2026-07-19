@@ -643,7 +643,7 @@ Build a data file from EDI sites and write it to disk:
 
 >>> from pycsamt.models.occam2d import OccamData
 >>> from pycsamt.site import Sites
->>> sites = Sites.from_dir("edi")
+>>> sites = Sites.from_any("edi")
 >>> data = OccamData.from_edi(sites, modes=["TE", "TM"])
 >>> data.write("occam_run/OccamDataFile.dat")
 
@@ -739,7 +739,7 @@ Build TE and TM rows from a site collection:
 
 >>> from pycsamt.models.occam2d import OccamData
 >>> from pycsamt.site import Sites
->>> sites = Sites.from_dir("edi")
+>>> sites = Sites.from_any("edi")
 >>> data = OccamData.from_edi(sites, modes=["TE", "TM"])
 
 Restrict the frequency range through ``OccamConfig``:

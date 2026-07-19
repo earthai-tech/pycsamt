@@ -16,7 +16,7 @@ Usage
 >>> from pycsamt.models.occam2d import InputBuilder
 >>> from pycsamt.site import Sites
 >>>
->>> sites   = Sites.from_dir("edi/")
+>>> sites   = Sites.from_any("edi/")
 >>> builder = InputBuilder(sites, workdir="occam_run/")
 >>> builder.build(modes=["TE", "TM"], n_layers=30)
 >>> # → writes four files to occam_run/
@@ -228,7 +228,7 @@ Build default TE/TM run files from a directory of EDI files:
 
 >>> from pycsamt.models.occam2d import InputBuilder
 >>> from pycsamt.site import Sites
->>> sites = Sites.from_dir("edi")
+>>> sites = Sites.from_any("edi")
 >>> builder = InputBuilder(sites, workdir="occam_run")
 >>> builder.build()
 >>> builder.is_ready
@@ -335,7 +335,7 @@ Build a standard run:
 
 >>> from pycsamt.models.occam2d import InputBuilder
 >>> from pycsamt.site import Sites
->>> sites = Sites.from_dir("edi")
+>>> sites = Sites.from_any("edi")
 >>> builder = InputBuilder(sites, workdir="run")
 >>> builder.build(modes=["TE", "TM"], n_layers=30)
 

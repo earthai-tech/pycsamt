@@ -30,7 +30,7 @@ Examples
 ...     InputBuilder, OccamRunner, InversionResult,
 ... )
 >>> from pycsamt.site import Sites
->>> sites = Sites.from_dir("edi")
+>>> sites = Sites.from_any("edi")
 >>> InputBuilder(sites, workdir="occam_run").build()
 >>> OccamRunner("occam_run").run(target_misfit=1.0)
 >>> result = InversionResult("occam_run")

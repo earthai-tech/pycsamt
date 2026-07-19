@@ -29,11 +29,87 @@ definitions here are the single source of truth.
       model is commonly represented as horizontal layers with resistivity and
       thickness parameters.
 
+   2-D
+   2D
+      A two-dimensional earth representation in which resistivity varies along a
+      profile and with depth, :math:`\rho=\rho(x,z)`, while being assumed
+      approximately constant along geoelectric strike. It is the usual
+      assumption behind profile inversions such as :term:`Occam2D`.
+
    3D
       A three-dimensional earth representation in which resistivity can vary
       with horizontal position and depth. A 3D interpretation is needed when
       strike-invariant or layered assumptions cannot explain the measured
       electromagnetic response.
+
+   Backend
+      The computational route used to prepare, solve, or load an inversion
+      problem. In pyCSAMT a backend may be pure Python, an optional scientific
+      library, or an adapter around an external native engine.
+
+   Inversion backend
+      The backend selected by ``InversionConfig.backend`` in
+      :mod:`pycsamt.inversion`. It gives the backend-neutral workflow a named
+      solver route while preserving a common configuration and result interface.
+
+   Model integration
+      A direct interface under :mod:`pycsamt.models` for working with a native
+      inversion engine's files, runner, and result objects. It is used when the
+      native project itself is part of the reproducible deliverable.
+
+   Mesh
+      The discretised numerical domain on which a forward or inverse problem is
+      solved. A mesh may consist of 1-D layers, a 2-D profile grid, triangular
+      finite elements, or a 3-D volume of cells, depending on the backend.
+
+   Objective function
+      The scalar quantity minimized during inversion, usually combining a data
+      misfit term with a regularization term so the recovered model fits the
+      observations without becoming unnecessarily rough or unstable.
+
+   Regularization
+      Constraints or penalties added to an inverse problem to stabilize
+      non-unique solutions. Common examples penalize roughness, departure from a
+      reference model, or implausible parameter values.
+
+   Error floor
+      A minimum uncertainty assigned to a datum or data component before
+      inversion. It prevents unrealistically small formal errors from forcing
+      the inversion to fit noise, processing artefacts, or modelling
+      assumptions too strongly.
+
+   Starting model
+      The initial resistivity or conductivity model supplied to an inversion
+      before iterations begin. It can influence convergence and should be
+      archived with the run because a different starting model may reach a
+      different acceptable solution.
+
+   Residual
+      The difference between observed and predicted data,
+      :math:`r_i=d_{obs,i}-d_{pred,i}`, usually inspected after weighting by
+      the assigned data uncertainty. Residual patterns by station, component,
+      or frequency are often more informative than a single global RMS value.
+
+   Covariance
+      In inversion file formats such as ModEM, a description of how model
+      cells are smoothed, linked, masked, or otherwise regularized. It is part
+      of the model prior, not merely an output uncertainty table.
+
+   Topography
+      The elevation of the ground surface represented in a model or plotting
+      workflow. In inversion, topography can affect mesh geometry, air cells,
+      receiver elevations, and the interpretation of near-surface structure.
+
+   Sensitivity
+      The degree to which a change in a model parameter affects the predicted
+      data. Low-sensitivity regions may be displayed in a model mesh but should
+      not be interpreted with the same confidence as well-sampled regions.
+
+   Resolution
+      The ability of an acquisition and inversion setup to distinguish one
+      subsurface feature from another. Resolution depends on frequency or time
+      coverage, survey geometry, errors, regularization, and the physics of the
+      selected backend.
 
    CSAMT
    Controlled-source audio-frequency magnetotellurics
@@ -925,6 +1001,123 @@ definitions here are the single source of truth.
       processing code that does not have direct access to the raw
       :term:`telemetry packet` stream.
 
+   Processing pipeline
+      The ordered pyCSAMT workflow that loads a site collection, applies one or
+      more configured processing steps, records per-step results, and writes
+      optional processed EDI files, plots, reports, and a reproduced
+      ``pipeline.yaml``.
+
+   Pipeline configuration file
+      A YAML, JSON, or trusted Python file that serialises the name, output
+      directory, optional preset, ordered step list, and parameter overrides
+      for a pyCSAMT processing pipeline.
+
+   Pipeline output directory
+      The root folder created for one output-enabled pipeline run. It contains
+      the reproduced ``pipeline.yaml``, processed EDI files, QC figures,
+      reports, and any optional intermediate snapshots for that run.
+
+   Output artifact
+      A file or in-memory record produced by a pipeline run, such as a
+      processed EDI file, QC figure, report, step result, or pipeline snapshot.
+
+   Site collection
+      The ordered in-memory group of EDI-like station objects passed between
+      pyCSAMT site, emtools, and pipeline functions. Pipeline steps treat this
+      collection as the current survey state.
+
+   Pipeline preset
+      A named built-in processing workflow, such as ``basic_qc`` or
+      ``publication_ready``, that expands to an ordered list of registered
+      pipeline steps with default parameters.
+
+   Preset expansion
+      The act of turning a named pipeline preset into its explicit ordered
+      list of step labels, registry codes, and parameters. Expansion is useful
+      before review because it exposes the exact recipe that will run.
+
+   Preset comparison run
+      A controlled set of pipeline runs where the same input site collection is
+      processed with different presets and separate output roots so reports,
+      plots, processed EDIs, and pipeline snapshots can be compared.
+
+   Pipeline step code
+      A stable short identifier for a registered processing operation, such as
+      ``NR001`` or ``QC001``. Step codes are accepted by the CLI and config
+      files so workflows can refer to operations without depending on display
+      labels.
+
+   Step label
+      The user-facing name assigned to one occurrence of a pipeline step inside
+      a configuration file or constructed pipeline. It can describe the role of
+      the occurrence, for example ``trim_to_amt_band``, even when the registry
+      operation is still ``FREQ001``.
+
+   Parameter override
+      A value supplied in a pipeline configuration that replaces the registered
+      default for the same step parameter while leaving unspecified defaults
+      unchanged.
+
+   Step registry
+      The catalogue of processing operations known to the pipeline engine. Each
+      registry entry defines a code, name, category, default parameters,
+      callable transform, optional plot functions, and whether the operation
+      returns a modified site collection.
+
+   StepSpec
+      The registry metadata object for one pipeline operation. It binds the
+      stable step code, snake-case name, category, transform function, default
+      parameters, QC plot functions, and diagnostic-vs-transform behavior.
+
+   Transform step
+      A pipeline step whose function returns a modified site collection that
+      becomes the input to the next step.
+
+   Diagnostic step
+      A pipeline step used for QC, figures, or summaries that intentionally
+      passes the site collection through unchanged.
+
+   QC plot function
+      A plotting callable attached to a step registry entry. After a successful
+      step transform, the pipeline calls each registered QC plot function and
+      saves any returned Matplotlib figures when plot output is enabled.
+
+   Step ordering
+      The scientific and computational sequence in which pipeline steps are
+      applied. Ordering matters because every transform receives the survey
+      state produced by the previous transform.
+
+   Canonical pipeline snapshot
+      The normalised YAML, JSON, or Python representation exported from a
+      constructed pipeline. It records the resolved step order and parameters
+      so a reviewer can compare what was intended with what was run.
+
+   Processed EDI
+      An EDI file written after a processing pipeline has transformed a site
+      collection. It should be stored separately from raw EDI files because it
+      reflects filtering, editing, correction, or QC decisions.
+
+   QC figure
+      A diagnostic Matplotlib figure produced by a registered pipeline step to
+      show whether the transformed data remain physically plausible and useful
+      for the next processing or inversion stage.
+
+   PipelineResult
+      The Python object returned by ``Pipeline.run``. It carries the input and
+      output site collections, per-step results, saved paths, output root,
+      runtime, and overall success state.
+
+   StepResult
+      The per-step record stored inside a ``PipelineResult``. It records the
+      step index, user label, registry code, parameters, elapsed time, site
+      counts, saved plot paths, and any captured error.
+
+   Active survey context
+      The survey path remembered by the survey CLI for the current project or
+      session. It is convenient for interactive command sequences, but an
+      explicit positional path or ``--survey`` option is clearer for
+      reproducible scripts.
+
    Provenance manifest
       A reproducibility record for a field session or processing run. It keeps
       acquisition metadata, thresholds, QC decisions, accepted bands, rejected
@@ -1152,8 +1345,22 @@ definitions here are the single source of truth.
 
    RMS
    RMS misfit
-      Root-mean-square misfit between observed and predicted responses, normalised
-      by data error; the primary goodness-of-fit measure for an inversion.
+      Root-mean-square misfit between observed and predicted responses,
+      normalised by data error. Writing the :term:`residual` at datum
+      :math:`i` as :math:`r_i` and its assigned uncertainty as
+      :math:`\sigma_i`,
+
+      .. math::
+
+         \mathrm{RMS} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}
+             \left(\frac{r_i}{\sigma_i}\right)^2},
+
+      over the :math:`N` fitted data. It is the primary goodness-of-fit
+      measure for an inversion; a value near :math:`1` means the fit is
+      consistent with the assigned :term:`error floor` and uncertainties,
+      while a much larger value points to underestimated errors, a poor
+      starting model, or physics the :term:`forward operator` cannot
+      represent.
 
    MapData
       The normalized survey container used by ``pycsamt.map``. It stores the
@@ -1352,3 +1559,86 @@ definitions here are the single source of truth.
       coordinate that :term:`profile line` construction sorts stations
       by, and it is distinct from :term:`station distance`, which
       accumulates separation without reference to a single azimuth.
+
+   Native file
+      A file format read or written directly by an external modelling or
+      inversion engine, such as an :term:`Occam2D` mesh or a :term:`ModEM`
+      model file. It differs from a pyCSAMT :term:`configuration file` in
+      that it is the exact record the engine's binary consumed or produced,
+      not the editable parameters used to build it.
+
+   Startup file
+      The :term:`Occam2D` control file that names the paired data, mesh, and
+      model files and sets the roughness type, initial resistivity, and
+      iteration limits for the first solver call. pyCSAMT's
+      ``OccamStartup.from_model`` writes it as the last step of
+      ``InputBuilder.build``, after the data, mesh, and model files.
+
+   Control file
+      The :term:`ModEM` settings file that schedules the non-linear
+      conjugate-gradient search: starting and exit values for the trade-off
+      parameter :math:`\lambda`, the step-size scale :math:`\alpha`, the
+      smoothing-iteration count, and the maximum iterations and RMS
+      tolerance that stop the run.
+
+   Response file
+      The engine-written file holding predicted data for the current model,
+      such as an Occam2D ``.resp`` file or a MARE2DEM ``.EMResp`` file. It is
+      compared against the observed data file to obtain the :term:`RMS
+      misfit`; loading it without also inspecting the misfit and residual
+      pattern can hide a model that fits poorly in specific components.
+
+   Iteration file
+      A per-iteration engine record, such as an Occam2D ``.iter`` file,
+      pairing one candidate model with its :term:`RMS misfit` and
+      roughness at that step. Keeping the full sequence rather than only the
+      final iteration makes it possible to check convergence behaviour and
+      to roll back to an earlier, better-regularized model.
+
+   Roughness
+      A scalar penalty on how much a model changes between adjacent cells,
+      minimized alongside the :term:`RMS misfit` in an
+      :term:`objective function`. In :term:`Occam2D`, roughness typically
+      *rises* across iterations while RMS falls, because the smoothest
+      model that still fits the target misfit is usually rougher than the
+      near-uniform starting half-space; a run whose roughness keeps
+      climbing after RMS has already reached target is a sign to stop
+      rather than keep iterating.
+
+   Lagrange multiplier
+      The trade-off weight between data misfit and :term:`roughness` at one
+      inversion step, analogous to the ModEM :term:`control file`'s
+      :math:`\lambda`. Occam reduces it during a line search --
+      ``stepsize_cut_count`` bounds how many reductions are tried -- until
+      the resulting model improves the objective function.
+
+   Type code
+      The integer tag on an :term:`Occam2D` data row identifying which
+      response component it carries: ``1``/``2`` for TE apparent
+      resistivity/phase and ``5``/``6`` for TM apparent resistivity/phase.
+      Plot and diagnostic helpers select rows by type code rather than by
+      column position.
+
+   NLCG
+      Nonlinear conjugate-gradient, the iterative search algorithm
+      :term:`ModEM` uses to minimize its :term:`objective function`. Each
+      step moves along a search direction built from the current gradient
+      and the previous step, scaled by the trade-off parameter tracked in
+      the :term:`control file`; ``Modular_NLCG`` in ModEM's log and output
+      filenames names this algorithm, not the survey or model.
+
+   PSLG
+      Planar straight-line graph: the boundary representation Triangle-based
+      finite-element :term:`mesh` generators build from, given as nodes,
+      connecting segments, and interior region seed points. :term:`MARE2DEM`
+      reads and writes this geometry as a ``.poly`` file before it (or an
+      external Triangle call) refines it into the ``.node``/``.ele`` files
+      an inversion actually solves on.
+
+   Free parameter
+      A resistivity region in a :term:`MARE2DEM` model that the inversion is
+      allowed to adjust, as opposed to a fixed region such as air, ocean, or
+      a boundary padding cell held at a reference value. A region file lists
+      every region regardless of type, so filtering to free parameters only
+      is often necessary before a resistivity histogram or summary statistic
+      is meaningful.

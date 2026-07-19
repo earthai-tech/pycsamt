@@ -188,12 +188,15 @@ class PlotStratigraphicLog:
                 **self.annotation_kws,
             )
 
+        z_bottom = max(
+            float(np.nanmax(log.z_centers)),
+            max((layer.bottom for layer in log.layers), default=0.0),
+        )
         ax_log.set_xlim(0, 1)
-        ax_log.set_ylim(log.z_centers[-1] + 10, -5)
+        ax_log.set_ylim(z_bottom, 0.0)
         ax_log.set_xticks([])
         ax_log.set_ylabel(f"Depth ({self.depth_unit})")
         ax_log.set_title("Lithology", fontsize=9)
-        ax_log.invert_yaxis()
 
         # ── right: resistivity curve ─────────────────────────────────
         valid = ~np.isnan(log.rho_log10)
@@ -279,7 +282,13 @@ class PlotFenceDiagram:
         if n == 1:
             axes = [axes]
 
-        z_max = self.max_depth or max(log.z_centers[-1] for log in self.logs)
+        z_max = self.max_depth or max(
+            max(
+                float(np.nanmax(log.z_centers)),
+                max((layer.bottom for layer in log.layers), default=0.0),
+            )
+            for log in self.logs
+        )
 
         for ax, log in zip(axes, self.logs):
             for layer in log.layers:
@@ -298,10 +307,9 @@ class PlotFenceDiagram:
                 )
 
             ax.set_xlim(0, 1)
-            ax.set_ylim(z_max + 10, -5)
+            ax.set_ylim(z_max, 0.0)
             ax.set_xticks([])
             ax.set_title(log.station_name, fontsize=7, pad=3)
-            ax.invert_yaxis()
 
         axes[0].set_ylabel("Depth (m)")
         fig.suptitle(self.title, fontweight="bold")

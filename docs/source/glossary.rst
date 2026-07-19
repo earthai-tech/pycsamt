@@ -52,6 +52,67 @@ definitions here are the single source of truth.
       :mod:`pycsamt.inversion`. It gives the backend-neutral workflow a named
       solver route while preserving a common configuration and result interface.
 
+   Inversion model
+      The resistivity or conductivity distribution recovered by an inversion
+      workflow from observed electromagnetic data and modelling assumptions.
+      In reporting it is the reviewed source object from which interpreted,
+      calibrated, gridded, and plotted products must be traced.
+
+   Calculated resistivity model
+   CRM
+      The source resistivity model calculated by inversion before
+      interpretation calibration is applied. In pyCSAMT interpretation reports
+      it is usually stored as :math:`m=\log_{10}\rho`, with :math:`\rho` in
+      ohm metres, and is kept distinct from field observations and from the
+      calibrated model used for delivery products.
+
+   Calibrated new model
+   NM
+      The resistivity model after applying documented calibration constraints,
+      borehole evidence, or interpretation parameters to the calculated
+      resistivity model. It remains model-derived evidence, not a direct
+      geological observation.
+
+   Archie's law
+      The petrophysical relation :math:`\rho = a\,\rho_w\,\phi^{-m}\,S_w^{-n}`
+      linking formation resistivity to porosity :math:`\phi`, water saturation
+      :math:`S_w`, and pore-water resistivity :math:`\rho_w`, implemented as
+      :class:`pycsamt.interp.petrophysics.ArchieModel`. Most defensible in
+      relatively clean, clay-poor material; see :term:`Waxman-Smits model` for
+      clay-bearing formations.
+
+   Waxman-Smits model
+      A petrophysical model extending :term:`Archie's law` with a surface
+      (clay) conductivity term, implemented as
+      :class:`pycsamt.interp.petrophysics.WaxmanSmitsModel`. In the current
+      :class:`~pycsamt.interp.hydromodel.EMHydroModel`, its parameters are
+      converted to an Archie-form approximation for water-table detection and
+      cell-wise inversion; ``sigma_s`` is not yet propagated through those
+      inverse steps.
+
+   Water table (hydrogeophysical)
+      In :mod:`pycsamt.interp`, the shallowest depth per resistivity-model
+      column where Archie-inverse water saturation first reaches
+      ``Sw_water_table_threshold``. It is an operational detection threshold
+      derived from resistivity and configured parameters, not a directly
+      measured phreatic surface; ``nan`` marks a column where no qualifying
+      transition was found.
+
+   Transmissivity
+      Aquifer transmissivity :math:`T=\int K\,dz` integrated over the
+      saturated interval represented by a resistivity model column, returned
+      by :class:`pycsamt.interp.hydromodel.EMHydroModel` and propagated by
+      :class:`~pycsamt.interp.uncertainty.MonteCarloHydro`. It inherits all
+      uncertainty in water-table detection, hydraulic conductivity, and the
+      model's represented depth range.
+
+   Dar-Zarrouk parameters
+      Transverse resistance :math:`TR=\sum \rho_i h_i` and longitudinal
+      conductance :math:`S=\sum h_i/\rho_i`, integrated over a resistivity
+      model column's complete depth range. They summarize the whole column
+      for comparative screening but do not by themselves determine aquifer
+      productivity.
+
    Model integration
       A direct interface under :mod:`pycsamt.models` for working with a native
       inversion engine's files, runner, and result objects. It is used when the
@@ -1566,6 +1627,25 @@ definitions here are the single source of truth.
       model file. It differs from a pyCSAMT :term:`configuration file` in
       that it is the exact record the engine's binary consumed or produced,
       not the editable parameters used to build it.
+
+   Interpretation package
+      A controlled set of interpretation deliverables, usually including source
+      run identifiers, configuration, evidence tables, exported grids or logs,
+      figures, narrative report text, review status, checksums, and a
+      :term:`provenance manifest`. It is the unit a reviewer or client can
+      audit and, when approved, archive.
+
+   LAS
+      Log ASCII Standard, a text format widely used for well-log curves. In
+      pyCSAMT interpretation exports, LAS files can carry EM-derived station
+      depth curves, but they should not be described as drilled well logs unless
+      the station is actually tied to a borehole and validated as such.
+
+   VTK
+      Visualization Toolkit file format family. pyCSAMT interpretation exports
+      use an ASCII rectilinear-grid VTK file for model resistivity values so the
+      grid can be opened in tools such as ParaView or GIS viewers that support
+      VTK.
 
    Startup file
       The :term:`Occam2D` control file that names the paired data, mesh, and

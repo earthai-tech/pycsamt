@@ -121,22 +121,28 @@ Follow :doc:`workflow` to construct and audit a
 
 At minimum, check:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   assert resistivity_model.rho_2d.shape == (
-       resistivity_model.n_z, resistivity_model.n_x
-   )
-   assert np.all(np.diff(resistivity_model.x_centers) > 0)
-   assert np.all(np.diff(resistivity_model.z_centers) > 0)
+   >>> assert resistivity_model.rho_2d.shape == (
+   ...     resistivity_model.n_z, resistivity_model.n_x
+   ... )
+   >>> assert np.all(np.diff(resistivity_model.x_centers) > 0)
+   >>> assert np.all(np.diff(resistivity_model.z_centers) > 0)
 
-   finite = np.isfinite(resistivity_model.rho_2d)
-   if not finite.any():
-       raise ValueError("No finite resistivity cells are available.")
+   >>> finite = np.isfinite(resistivity_model.rho_2d)
+   >>> if not finite.any():
+   ...     raise ValueError("No finite resistivity cells are available.")
 
-   rho = 10.0 ** resistivity_model.rho_2d[finite]
-   print("Linear resistivity range:", rho.min(), rho.max(), "ohm m")
+   >>> rho = 10.0 ** resistivity_model.rho_2d[finite]
+   >>> print("Linear resistivity range:", rho.min(), rho.max(), "ohm m")
+   Linear resistivity range: 35.0 2099.999999999999 ohm m
+
+The captured output above comes from the five-station documentation fixture
+introduced in :doc:`workflow` (the same ``x_m``, ``z_m``, and ``rho_ohm_m``
+arrays used there for ``ModelCalibrator``), reused throughout this guide as
+``resistivity_model``.
 
 Exclude or clearly mask air cells, model padding, inactive regions, numerical
 sentinels, and depths without meaningful sensitivity. The deterministic
@@ -180,7 +186,7 @@ profile.
 Archie model
 ~~~~~~~~~~~~
 
-:class:`pycsamt.interp.petrophysics.ArchieModel` implements
+:class:`pycsamt.interp.petrophysics.ArchieModel` implements :term:`Archie's law`:
 
 .. math::
 
@@ -194,24 +200,30 @@ resistivity, :math:`\phi` is porosity, :math:`S_w` is water saturation,
 Archie is most defensible in relatively clean, clay-poor material where
 electrical conduction is dominated by connected pore water:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp.petrophysics import ArchieModel
+   >>> from pycsamt.interp.petrophysics import ArchieModel
 
-   archie = ArchieModel(m=1.8, n=2.0, a=1.0)
+   >>> archie = ArchieModel(m=1.8, n=2.0, a=1.0)
 
 The class also exposes forward and inverse calculations for sensitivity
 checks:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   rho_predicted = archie.forward(phi=0.28, Sw=1.0, rho_w=20.0)
-   Sw_inferred = archie.saturation(
-       rho=250.0, phi=0.28, rho_w=20.0
-   )
-   phi_inferred = archie.porosity(
-       rho=250.0, Sw=1.0, rho_w=20.0
-   )
+   >>> rho_predicted = archie.forward(phi=0.28, Sw=1.0, rho_w=20.0)
+   >>> round(rho_predicted, 4)
+   197.7632
+   >>> Sw_inferred = archie.saturation(
+   ...     rho=250.0, phi=0.28, rho_w=20.0
+   ... )
+   >>> round(Sw_inferred, 4)
+   0.8894
+   >>> phi_inferred = archie.porosity(
+   ...     rho=250.0, Sw=1.0, rho_w=20.0
+   ... )
+   >>> round(phi_inferred, 4)
+   0.2458
 
 Use these scalar checks to understand parameter influence before processing a
 complete section.
@@ -219,21 +231,24 @@ complete section.
 Waxman–Smits model
 ~~~~~~~~~~~~~~~~~~
 
-:class:`pycsamt.interp.petrophysics.WaxmanSmitsModel` adds a surface
-conductivity term for clay-bearing material. Its ``sigma_s`` parameter must be
-supported by cation-exchange or calibration evidence rather than chosen only
-to improve visual agreement.
+:class:`pycsamt.interp.petrophysics.WaxmanSmitsModel` implements the
+:term:`Waxman-Smits model`, adding a surface conductivity term for
+clay-bearing material. Its ``sigma_s`` parameter must be supported by
+cation-exchange or calibration evidence rather than chosen only to improve
+visual agreement.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp.petrophysics import WaxmanSmitsModel
+   >>> from pycsamt.interp.petrophysics import WaxmanSmitsModel
 
-   shaly_model = WaxmanSmitsModel(
-       m=1.8,
-       n=2.0,
-       a=1.0,
-       sigma_s=0.01,
-   )
+   >>> shaly_model = WaxmanSmitsModel(
+   ...     m=1.8,
+   ...     n=2.0,
+   ...     a=1.0,
+   ...     sigma_s=0.01,
+   ... )
+   >>> shaly_model
+   WaxmanSmitsModel(m=1.8, n=2.0, a=1.0, sigma_s=0.01)
 
 .. warning::
 
@@ -253,24 +268,27 @@ site contains both clean aquifer material and conductive clays.
 :class:`pycsamt.interp.PetrophysicalConfig` holds all parameters used by
 :class:`~pycsamt.interp.EMHydroModel`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import PetrophysicalConfig
-   from pycsamt.interp.petrophysics import ArchieModel
+   >>> from pycsamt.interp import PetrophysicalConfig
+   >>> from pycsamt.interp.petrophysics import ArchieModel
 
-   config = PetrophysicalConfig(
-       petro=ArchieModel(m=1.8, n=2.0, a=1.0),
-       rho_w=20.0,
-       porosity_prior=0.25,
-       Sw_water_table_threshold=0.85,
-       d50_m=2.5e-4,
-       kozeny_C=180.0,
-       kozeny_tortuosity=0.5,
-       fracture_depth_m=None,
-       fracture_rho_matrix=5000.0,
-       specific_storage=1e-4,
-       min_wt_search_depth=0.5,
-   )
+   >>> config = PetrophysicalConfig(
+   ...     petro=ArchieModel(m=1.8, n=2.0, a=1.0),
+   ...     rho_w=20.0,
+   ...     porosity_prior=0.25,
+   ...     Sw_water_table_threshold=0.85,
+   ...     d50_m=2.5e-4,
+   ...     kozeny_C=180.0,
+   ...     kozeny_tortuosity=0.5,
+   ...     fracture_depth_m=None,
+   ...     fracture_rho_matrix=5000.0,
+   ...     specific_storage=1e-4,
+   ...     min_wt_search_depth=0.5,
+   ... )
+
+This is the central configuration used for every captured result in this
+guide, run against the ``resistivity_model`` fixture from :doc:`workflow`.
 
 Parameter interpretation
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -327,7 +345,9 @@ Water-table pass
 
 For each model column, the code estimates saturation from resistivity using
 the prior porosity and scans for the first depth meeting
-``Sw_water_table_threshold`` below ``min_wt_search_depth``. If no transition
+``Sw_water_table_threshold`` below ``min_wt_search_depth``. This is the
+:term:`water table (hydrogeophysical)` defined by this package -- an
+operational detection, not a directly measured level. If no transition
 is found, the water-table output is ``nan``.
 
 Cell-property pass
@@ -357,16 +377,16 @@ range.
 7. Run the model
 ----------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import EMHydroModel
+   >>> from pycsamt.interp import EMHydroModel
 
-   hydro_model = EMHydroModel(
-       resistivity_model,
-       config,
-       method_tag="AMT",
-   )
-   result = hydro_model.fit()
+   >>> hydro_model = EMHydroModel(
+   ...     resistivity_model,
+   ...     config,
+   ...     method_tag="AMT",
+   ... )
+   >>> result = hydro_model.fit()
 
 ``method_tag`` is provenance only; it does not switch the petrophysical
 equations. Use a concise tag such as ``"TDEM"``, ``"AMT"``, ``"MT"``, or
@@ -374,7 +394,7 @@ equations. Use a concise tag such as ``"TDEM"``, ``"AMT"``, ``"MT"``, or
 
 Configuration overrides are available for small experiments:
 
-.. code-block:: python
+.. code-block:: pycon
 
    trial = EMHydroModel(
        resistivity_model,
@@ -393,14 +413,25 @@ traceable.
 Start with the water table because it controls the saturated/vadose split used
 by later calculations:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   detected = np.isfinite(result.water_table)
-   print("Detected columns:", detected.sum(), "/", detected.size)
-   print("Detection fraction:", detected.mean())
-   print("Water-table depths:", result.water_table)
+   >>> detected = np.isfinite(result.water_table)
+   >>> print("Detected columns:", detected.sum(), "/", detected.size)
+   Detected columns: 5 / 5
+   >>> print("Detection fraction:", detected.mean())
+   Detection fraction: 1.0
+   >>> print("Water-table depths:", result.water_table)
+   Water-table depths: [15. 15. 15. 15. 15.]
+
+On this fixture the water table locks onto the same 15 m cell at every
+station -- the first depth where Archie-inverse saturation crosses 0.85 given
+``porosity_prior=0.25`` and ``rho_w=20``. A perfectly flat water table across
+five widely-spaced columns is itself a signal worth investigating on a real
+section: it can mean a genuinely flat table, or that detection is finding the
+same mesh row rather than a real transition. Confirm against independent
+evidence before reporting it as a real hydrogeological flat.
 
 Investigate:
 
@@ -421,16 +452,30 @@ fallback is scientifically justified.
 9. Audit porosity and saturation
 --------------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   finite_phi = np.isfinite(result.porosity)
-   finite_Sw = np.isfinite(result.saturation)
+   >>> finite_phi = np.isfinite(result.porosity)
+   >>> finite_Sw = np.isfinite(result.saturation)
 
-   print("Porosity range:",
-         np.nanmin(result.porosity), np.nanmax(result.porosity))
-   print("Saturation range:",
-         np.nanmin(result.saturation), np.nanmax(result.saturation))
-   print("Finite fractions:", finite_phi.mean(), finite_Sw.mean())
+   >>> print("Porosity range:",
+   ...       np.nanmin(result.porosity), np.nanmax(result.porosity))
+   Porosity range: 0.07535586442064053 0.73278886567084
+   >>> print("Saturation range:",
+   ...       np.nanmin(result.saturation), np.nanmax(result.saturation))
+   Saturation range: 0.726089362450991 1.0
+   >>> print("Finite fractions:", finite_phi.mean(), finite_Sw.mean())
+   Finite fractions: 1.0 1.0
+
+The upper porosity value (0.73) is the raw Archie-inverse porosity for the
+fixture's most conductive saturated cell (35 Ω·m at 30 m depth, station
+``S02``): solving :math:`\phi=(a\rho_w S_w^{-n}/\rho)^{1/m}` at
+:math:`S_w=1` for that resistivity. It sits below the model's
+``3.0 * porosity_prior`` soft-clip ceiling (0.75), so it was not clipped --
+it is what Archie's law implies for a 35 Ω·m cell under these ``rho_w`` and
+exponent choices. A porosity that high is not physically defensible for any
+real aquifer material; it signals that this cell's resistivity is too low to
+be explained by porosity alone (clay, salinity, or mineralization are more
+likely) and should be investigated rather than reported at face value.
 
 Check for broad areas pinned at 0, 1, the prior porosity, or internal clipping
 limits. These patterns can reveal that assumptions rather than data dominate
@@ -439,13 +484,21 @@ resolution.
 
 Plot a cross-plot to inspect how resistivity maps into hydro properties:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import plot as iplot
+   >>> from pycsamt.interp import plot as iplot
 
-   fig = iplot.PlotPetrophysicalCrossPlot(result).plot()
-   fig.savefig("review/petrophysical_crossplot.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotPetrophysicalCrossPlot(result).plot()
+   >>> fig.savefig("review/petrophysical_crossplot.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/hydro_petrophysical_crossplot.png
+   :alt: Resistivity versus porosity cross-plot colored by saturation.
+   :width: 85%
+
+   Cross-plot of the fixture's 25 model cells: resistivity versus inferred
+   porosity, colored by saturation, with the Archie curve and
+   Hashin-Shtrikman bounds overlaid.
 
 10. Audit hydraulic conductivity
 --------------------------------
@@ -454,15 +507,22 @@ Hydraulic conductivity is returned in metres per second and commonly spans
 orders of magnitude. Work in log space for visualization, while preserving
 linear values for integration:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   K = result.hydraulic_K
-   valid_K = np.isfinite(K) & (K > 0)
-   log10_K = np.full_like(K, np.nan)
-   log10_K[valid_K] = np.log10(K[valid_K])
+   >>> K = result.hydraulic_K
+   >>> valid_K = np.isfinite(K) & (K > 0)
+   >>> log10_K = np.full_like(K, np.nan)
+   >>> log10_K[valid_K] = np.log10(K[valid_K])
 
-   print("log10 K range:",
-         np.nanmin(log10_K), np.nanmax(log10_K))
+   >>> print("log10 K range:",
+   ...       np.nanmin(log10_K), np.nanmax(log10_K))
+   log10 K range: -6.069351546945825 -2.027525991817306
+
+That is roughly :math:`8\times10^{-7}` to :math:`9\times10^{-3}` m/s across
+the fixture -- from silt/fine-sand-like conductivity in the resistive,
+low-porosity cells to coarse-sand-like conductivity in the high-porosity
+conductive cell discussed above, using the default ``d50_m=2.5e-4`` grain
+size for every cell.
 
 Compare predictions at slug-test depths and against lithology-specific ranges.
 Remember that Kozeny–Carman assumes a porous-medium relationship involving
@@ -476,25 +536,30 @@ Fractured-basement option
 Enable the fracture branch only where structural and hydrogeological evidence
 supports it:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fractured_config = PetrophysicalConfig(
-       petro=ArchieModel(m=2.0, n=2.0),
-       rho_w=20.0,
-       porosity_prior=0.12,
-       fracture_depth_m=120.0,
-       fracture_rho_matrix=5000.0,
-   )
+   >>> fractured_config = PetrophysicalConfig(
+   ...     petro=ArchieModel(m=2.0, n=2.0),
+   ...     rho_w=20.0,
+   ...     porosity_prior=0.12,
+   ...     fracture_depth_m=60.0,
+   ...     fracture_rho_matrix=2200.0,
+   ... )
 
-   fractured_result = EMHydroModel(
-       resistivity_model,
-       fractured_config,
-       method_tag="AMT-fracture-scenario",
-   ).fit()
+   >>> fractured_result = EMHydroModel(
+   ...     resistivity_model,
+   ...     fractured_config,
+   ...     method_tag="AMT-fracture-scenario",
+   ... ).fit()
 
-The fracture depth is applied across the profile and blended over a fixed
-transition. A real weathering or fracture boundary may vary laterally, so
-compare this simplified scenario with boreholes and alternative models.
+On the fixture, setting ``fracture_depth_m=60.0`` (between the 55 m and 90 m
+cell centers) and a matrix resistivity close to the deepest cell's
+1200-2100 Ω·m range blends Kozeny-Carman into the cubic-law fracture
+relationship across that depth, narrowing the log10 K range to about
+:math:`-5.4` to :math:`-3.4`. The fracture depth is applied across the
+profile and blended over a fixed transition. A real weathering or fracture
+boundary may vary laterally, so compare this simplified scenario with
+boreholes and alternative models.
 
 11. Interpret integrated properties
 -----------------------------------
@@ -502,7 +567,7 @@ compare this simplified scenario with boreholes and alternative models.
 Transmissivity
 ~~~~~~~~~~~~~~
 
-The code calculates
+The code calculates the :term:`transmissivity`
 
 .. math::
 
@@ -530,7 +595,8 @@ pore water drains under gravity; describe this output as an approximation.
 Dar–Zarrouk parameters
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Transverse resistance and longitudinal conductance summarize the complete
+The :term:`Dar-Zarrouk parameters` -- transverse resistance and longitudinal
+conductance -- summarize the complete
 resistivity column represented by the model. They can support comparative
 screening, but they do not uniquely determine aquifer productivity. Their
 values depend on the chosen depth range, so compare columns only over a
@@ -548,23 +614,30 @@ conversion relationship affect field interpretation.
 12. Create station summaries
 ----------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   rows = result.station_report()
-   for row in rows[:3]:
-       print(row)
+   >>> rows = result.station_report()
+   >>> for row in rows[:3]:
+   ...     print(row)
+   {'station': 'S00', 'x_m': 0.0, 'water_table_m': 15.0, 'mean_porosity_sat': 0.3182951311460824, 'mean_K_ms': 0.0004931765331997994, 'transmissivity_m2s': 0.03833191997809863, 'storativity_confined': 0.00975, 'storativity_unconfined': 0.3182951311460824, 'dar_zarrouk_TR_ohm_m2': 76999.99999999999, 'dar_zarrouk_S_siemens': 0.6360569985569986, 'tds_mg_per_L': 320.0}
+   {'station': 'S01', 'x_m': 250.0, 'water_table_m': 15.0, 'mean_porosity_sat': 0.3650319860788422, 'mean_K_ms': 0.0011980733905843357, 'transmissivity_m2s': 0.09381705353785036, 'storativity_confined': 0.00975, 'storativity_unconfined': 0.3650319860788422, 'dar_zarrouk_TR_ohm_m2': 64027.500000000015, 'dar_zarrouk_S_siemens': 0.81531328320802, 'tds_mg_per_L': 320.0}
+   {'station': 'S02', 'x_m': 500.0, 'water_table_m': 15.0, 'mean_porosity_sat': 0.41229733884293235, 'mean_K_ms': 0.002585295387799111, 'transmissivity_m2s': 0.20169533480583396, 'storativity_confined': 0.00975, 'storativity_unconfined': 0.41229733884293235, 'dar_zarrouk_TR_ohm_m2': 51874.999999999985, 'dar_zarrouk_S_siemens': 0.9952380952380953, 'tds_mg_per_L': 320.0}
 
-   result.station_report_csv("deliverables/hydro_by_station.csv")
-   result.to_csv("deliverables/hydro_cells.csv")
+   >>> result.station_report_csv("deliverables/hydro_by_station.csv")
+   >>> result.to_csv("deliverables/hydro_cells.csv")
 
 ``station_report()`` includes water-table depth, mean saturated porosity,
 mean saturated K, transmissivity, confined and unconfined storativity,
 Dar–Zarrouk parameters, and TDS. ``to_csv()`` writes cell-level resistivity,
-porosity, saturation, and hydraulic conductivity.
+porosity, saturation, and hydraulic conductivity. All three stations share
+``tds_mg_per_L=320.0`` and near-identical ``storativity_confined`` -- both
+are direct functions of the scalar ``rho_w`` and ``specific_storage``
+configuration values, not of the resistivity section, which is exactly the
+"empirical indicator, not a spatial map" caveat below.
 
 If pandas is installed:
 
-.. code-block:: python
+.. code-block:: pycon
 
    frame = result.to_dataframe()
    print(frame.describe())
@@ -578,15 +651,22 @@ project databases.
 Section plots
 ~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = iplot.PlotHydroSection(
-       result,
-       quantity="K",
-       depth_max=200.0,
-   ).plot()
-   fig.savefig("review/hydraulic_K.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotHydroSection(
+   ...     result,
+   ...     quantity="K",
+   ...     depth_max=200.0,
+   ... ).plot()
+   >>> fig.savefig("review/hydraulic_K.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/hydro_K_section.png
+   :alt: Log10 hydraulic conductivity section with the water table overlaid.
+   :width: 100%
+
+   Hydraulic conductivity section for the fixture, with the flat 15 m water
+   table drawn across all five stations.
 
 Review the plotting class implementation or API reference for supported
 quantities and styling. Keep color scales fixed when comparing scenarios.
@@ -594,11 +674,18 @@ quantities and styling. Keep color scales fixed when comparing scenarios.
 Water-table profile
 ~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = iplot.PlotWaterTableProfile(result).plot()
-   fig.savefig("review/water_table.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotWaterTableProfile(result).plot()
+   >>> fig.savefig("review/water_table.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/hydro_water_table_profile.png
+   :alt: Water-table depth and transmissivity along the profile.
+   :width: 90%
+
+   Water-table depth (top) and transmissivity (bottom) along the fixture
+   profile.
 
 Always distinguish detected values from gaps. Connecting across ``nan`` values
 can imply continuity unsupported by the model.
@@ -606,11 +693,18 @@ can imply continuity unsupported by the model.
 Aquifer characterization
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = iplot.PlotAquiferCharacterization(result).plot()
-   fig.savefig("review/aquifer_characterization.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotAquiferCharacterization(result).plot()
+   >>> fig.savefig("review/aquifer_characterization.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/hydro_aquifer_characterization.png
+   :alt: Dar-Zarrouk transverse resistance, longitudinal conductance, water table, and transmissivity panels.
+   :width: 90%
+
+   Dar-Zarrouk transverse resistance (TR) and longitudinal conductance (S),
+   with water table and transmissivity, along the fixture profile.
 
 Use summary graphics for review, not as a replacement for the underlying
 values, assumptions, and detection diagnostics.
@@ -618,70 +712,101 @@ values, assumptions, and detection diagnostics.
 14. Calibrate with field measurements
 -------------------------------------
 
-The quantitative constraint classes connect predictions to field evidence:
+The quantitative constraint classes connect predictions to field evidence.
+The values below are scaled to the fixture's shallow, 90 m-deep section --
+adapt magnitudes to the actual depth range and units of a real project:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import (
-       ConstrainedCalibrator,
-       ECConstraint,
-       PumpingTestConstraint,
-       SlugTestConstraint,
-       WaterLevelConstraint,
-   )
+   >>> from pycsamt.interp import (
+   ...     ConstrainedCalibrator,
+   ...     ECConstraint,
+   ...     PumpingTestConstraint,
+   ...     SlugTestConstraint,
+   ...     WaterLevelConstraint,
+   ... )
 
-   constraints = [
-       WaterLevelConstraint(
-           x=500.0,
-           depth_m=18.5,
-           uncertainty_m=1.0,
-           station="BH01",
-       ),
-       PumpingTestConstraint(
-           x=900.0,
-           T_m2s=2.5e-3,
-           uncertainty_factor=3.0,
-           station="PW02",
-       ),
-       SlugTestConstraint(
-           x=500.0,
-           depth_m=42.0,
-           K_ms=1.2e-5,
-           uncertainty_factor=5.0,
-           station="BH01-42m",
-       ),
-       ECConstraint(
-           x=500.0,
-           ec_mscm=0.5,
-           uncertainty_mscm=0.05,
-           station="BH01-water",
-       ),
-   ]
+   >>> constraints = [
+   ...     WaterLevelConstraint(
+   ...         x=500.0,
+   ...         depth_m=12.0,
+   ...         uncertainty_m=1.0,
+   ...         station="BH01",
+   ...     ),
+   ...     PumpingTestConstraint(
+   ...         x=750.0,
+   ...         T_m2s=1.8e-4,
+   ...         uncertainty_factor=3.0,
+   ...         station="PW02",
+   ...     ),
+   ...     SlugTestConstraint(
+   ...         x=500.0,
+   ...         depth_m=30.0,
+   ...         K_ms=3.0e-6,
+   ...         uncertainty_factor=5.0,
+   ...         station="BH01-30m",
+   ...     ),
+   ...     ECConstraint(
+   ...         x=500.0,
+   ...         ec_mscm=0.5,
+   ...         uncertainty_mscm=0.05,
+   ...         station="BH01-water",
+   ...     ),
+   ... ]
 
-   calibrator = ConstrainedCalibrator(
-       constraints,
-       calibrate_rho_w=True,
-       calibrate_m=True,
-       calibrate_phi_prior=True,
-       rho_w_bounds=(1.0, 100.0),
-       m_bounds=(1.2, 2.8),
-       phi_bounds=(0.05, 0.50),
-       n_restarts=5,
-       verbose=True,
-   )
+   >>> field_calibrator = ConstrainedCalibrator(
+   ...     constraints,
+   ...     calibrate_rho_w=True,
+   ...     calibrate_m=True,
+   ...     calibrate_phi_prior=True,
+   ...     rho_w_bounds=(1.0, 100.0),
+   ...     m_bounds=(1.2, 2.8),
+   ...     phi_bounds=(0.05, 0.50),
+   ...     n_restarts=5,
+   ...     verbose=True,
+   ... )
 
-   calibrated = calibrator.fit(hydro_model)
-   residuals = calibrator.constraint_residuals(calibrated)
+   >>> calibrated_result = field_calibrator.fit(hydro_model)
+   ConstrainedCalibrator: final misfit=10.0659  restarts=5
+     petro: ArchieModel(m=1.2, n=2.0, a=1.0)
+     rho_w: 19.817293960490485
+     porosity_prior: 0.05
+   >>> residuals = field_calibrator.constraint_residuals(calibrated_result)
 
 Calibration uses SciPy's L-BFGS-B optimizer. Bounds, uncertainty assignments,
 constraint density, and starting values influence the fit. Multiple restarts
 can reduce dependence on one starting point but do not resolve conceptual
-non-uniqueness.
+non-uniqueness. Here, three of five restarts converged to a worse local
+misfit (36.23) than the best one (10.07):
+
+.. code-block:: pycon
+
+   >>> [round(v, 4) for v in field_calibrator.misfit_history_]
+   [36.2263, 36.2263, 36.2263, 10.0659, 36.2263]
 
 Inspect every residual rather than only the total objective. A good aggregate
-fit can hide a severe mismatch at one important well. Preserve
-``calibrator.calibrated_config_``, ``calibrator.misfit_history_``, and the
-constraint definitions with the result.
+fit can hide a severe mismatch at one important well. On the fixture, the
+water-level residual is the largest contributor:
+
+.. code-block:: pycon
+
+   >>> for row in residuals:
+   ...     print(row)
+   {'type': 'WaterLevelConstraint', 'x_m': 500.0, 'station': 'BH01', 'observed': 12.0, 'predicted': 15.0, 'residual_m': 3.0, 'normalized': 3.0}
+   {'type': 'PumpingTestConstraint', 'x_m': 750.0, 'station': 'PW02', 'observed_T_m2s': 0.00018, 'predicted_T_m2s': 0.0004484794930505305, 'residual_log10': 0.39647008439807774, 'normalized': 0.8309629480477198}
+   {'type': 'SlugTestConstraint', 'x_m': 500.0, 'station': 'BH01-30m', 'observed_K_ms': 3e-06, 'predicted_K_ms': 7.955774221453294e-06, 'residual_log10': 0.4235611949755329, 'normalized': 0.6059790725610488}
+   {'type': 'ECConstraint', 'x_m': 500.0, 'station': 'BH01-water', 'observed_ec_mscm': 0.5, 'rho_w_from_ec': 20.0, 'rho_w_model': 19.817293960490485, 'residual_rho_w': -0.18270603950951525}
+
+The normalized water-level residual (3.0 -- three full uncertainty widths) is
+the worst of the four even though the optimizer minimizes a *weighted sum*
+across all constraints; it was outvoted by the other three. This is exactly
+why per-constraint residuals must be inspected individually, as the next
+paragraph states. Also note that the fitted ``porosity_prior`` (0.05) sits
+exactly on its lower search bound -- a sign that this parameter is not well
+constrained by these four observations and the bound itself, not the data,
+is driving the fit. Preserve ``field_calibrator.calibrated_config_``,
+``field_calibrator.misfit_history_``, and the constraint definitions with
+the result.
 
 15. Validate independently
 ---------------------------
@@ -790,63 +915,72 @@ Complete deterministic example
 ------------------------------
 
 This example assumes ``resistivity_model`` has already been normalized and
-reviewed:
+reviewed -- it is the five-station fixture from :doc:`workflow`, run for real
+to produce the values shown:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import numpy as np
 
-   from pycsamt.interp import (
-       EMHydroModel,
-       PetrophysicalConfig,
-       plot as iplot,
-   )
-   from pycsamt.interp.petrophysics import ArchieModel
+   >>> from pycsamt.interp import (
+   ...     EMHydroModel,
+   ...     PetrophysicalConfig,
+   ...     plot as iplot,
+   ... )
+   >>> from pycsamt.interp.petrophysics import ArchieModel
 
-   output = Path("hydro_interpretation")
-   review = output / "review"
-   deliverables = output / "deliverables"
-   review.mkdir(parents=True, exist_ok=True)
-   deliverables.mkdir(parents=True, exist_ok=True)
+   >>> output = Path("hydro_interpretation")
+   >>> review = output / "review"
+   >>> deliverables = output / "deliverables"
+   >>> review.mkdir(parents=True, exist_ok=True)
+   >>> deliverables.mkdir(parents=True, exist_ok=True)
 
-   config = PetrophysicalConfig(
-       petro=ArchieModel(m=1.8, n=2.0, a=1.0),
-       rho_w=20.0,
-       porosity_prior=0.25,
-       Sw_water_table_threshold=0.85,
-       d50_m=2.5e-4,
-       kozeny_C=180.0,
-       kozeny_tortuosity=0.5,
-       specific_storage=1e-4,
-       min_wt_search_depth=1.0,
-   )
+   >>> config = PetrophysicalConfig(
+   ...     petro=ArchieModel(m=1.8, n=2.0, a=1.0),
+   ...     rho_w=20.0,
+   ...     porosity_prior=0.25,
+   ...     Sw_water_table_threshold=0.85,
+   ...     d50_m=2.5e-4,
+   ...     kozeny_C=180.0,
+   ...     kozeny_tortuosity=0.5,
+   ...     specific_storage=1e-4,
+   ...     min_wt_search_depth=1.0,
+   ... )
 
-   result = EMHydroModel(
-       resistivity_model,
-       config,
-       method_tag="AMT",
-   ).fit()
+   >>> result = EMHydroModel(
+   ...     resistivity_model,
+   ...     config,
+   ...     method_tag="AMT",
+   ... ).fit()
 
-   detected = np.isfinite(result.water_table)
-   print("Water-table detection:", detected.sum(), "/", detected.size)
-   print("Porosity:", np.nanmin(result.porosity),
-         np.nanmax(result.porosity))
-   print("Saturation:", np.nanmin(result.saturation),
-         np.nanmax(result.saturation))
+   >>> detected = np.isfinite(result.water_table)
+   >>> print("Water-table detection:", detected.sum(), "/", detected.size)
+   Water-table detection: 5 / 5
+   >>> print("Porosity:", np.nanmin(result.porosity),
+   ...       np.nanmax(result.porosity))
+   Porosity: 0.07535586442064053 0.73278886567084
+   >>> print("Saturation:", np.nanmin(result.saturation),
+   ...       np.nanmax(result.saturation))
+   Saturation: 0.726089362450991 1.0
 
-   result.to_csv(deliverables / "hydro_cells.csv")
-   result.station_report_csv(deliverables / "hydro_by_station.csv")
+   >>> result.to_csv(deliverables / "hydro_cells.csv")
+   >>> result.station_report_csv(deliverables / "hydro_by_station.csv")
 
-   fig = iplot.PlotHydroSection(
-       result, quantity="K", depth_max=200.0
-   ).plot()
-   fig.savefig(review / "hydraulic_K.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotHydroSection(
+   ...     result, quantity="K", depth_max=200.0
+   ... ).plot()
+   >>> fig.savefig(review / "hydraulic_K.png", dpi=200,
+   ...             bbox_inches="tight")
 
-   fig = iplot.PlotWaterTableProfile(result).plot()
-   fig.savefig(review / "water_table.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotWaterTableProfile(result).plot()
+   >>> fig.savefig(review / "water_table.png", dpi=200,
+   ...             bbox_inches="tight")
+
+Raising ``min_wt_search_depth`` from 0.5 to 1.0 m does not change any of
+these values on this fixture, because the detected water table (15 m) is far
+above the cutoff either way; it only matters when a resistive near-surface
+cell would otherwise be misread as a shallow water table.
 
 Review checklist
 ----------------

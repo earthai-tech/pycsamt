@@ -87,7 +87,7 @@ Backend Matrix
 
 .. list-table::
    :header-rows: 1
-   :widths: 17 14 17 20 18 14
+   :widths: auto
 
    * - Path
      - Dimensionality

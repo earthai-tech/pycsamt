@@ -724,6 +724,26 @@ definitions here are the single source of truth.
       only means the programmed workflow returned, not that the result
       meets scientific acceptance criteria.
 
+   Steps trace
+      The ordered, user-visible record of workflow steps reported by Agent
+      Master after a request completes. It summarises which routed steps ran,
+      whether each one succeeded or produced warnings, elapsed time, generated
+      figures, and cost metadata, so a conversational request can be reviewed
+      as a reproducible workflow rather than only as prose.
+
+   LLM cost
+      The estimated provider charge associated with large-language-model calls
+      made during an agent or workflow run. pyCSAMT records it in
+      ``AgentResult.cost_estimate_usd`` and computes it from input and output
+      token counts and configured per-million-token rates. Offline and purely
+      local workflows report zero cost.
+
+   Generated script
+      A standalone Python script emitted by Agent Master's code-generation
+      workflow to reproduce an interactive pyCSAMT run outside the browser. It
+      should use public pyCSAMT APIs directly, record the relevant workflow
+      steps, and be validated for syntax and import resolution before use.
+
    Agent coordinator
       The explicit workflow runner in :mod:`pycsamt.agents` that executes a
       named sequence of registered agent steps, passes selected outputs from
@@ -1219,6 +1239,175 @@ definitions here are the single source of truth.
       explicit positional path or ``--survey`` option is clearer for
       reproducible scripts.
 
+   Active survey
+      The in-memory survey object currently loaded in a pyCSAMT application.
+      It is the shared state read by maps, profiles, quality-control panels,
+      correction previews, modelling pages, exports, and agents. Conceptually
+      it is a set of stations and survey lines,
+      :math:`\mathcal{S}=\{s_i\}_{i=1}^{N_s}` with optional line labels
+      :math:`\ell_i`, where each station carries frequency-dependent response
+      data such as impedance, apparent resistivity, phase, coordinates, and
+      metadata.
+
+   Survey line
+   Survey lines
+      A named subgroup of stations inside an :term:`Active survey`, usually
+      corresponding to one acquisition profile or one loaded EDI folder. In
+      application views, activating a subset of lines applies a station mask
+      before plotting or processing so page-level operations use
+      :math:`\mathcal{S}_{active}=\{s_i:\ell_i\in L_{active}\}`.
+
+   Navigation rail
+      The collapsible left-hand application menu used by pyCSAMT browser and
+      desktop-style interfaces to move between workflow pages. It changes the
+      visible page without reloading the active survey, selected station, or
+      line selection.
+
+   Correction chain
+      A non-destructive ordered list of data-correction operations applied to
+      an active survey. If the original response is :math:`d_0` and the chain
+      contains operations :math:`C_1,\ldots,C_k`, the previewed response is
+      :math:`d_k=C_k(\cdots C_2(C_1(d_0)))`; undo removes operations from the
+      chain rather than editing the raw survey in place.
+
+   Processing page
+      A pyCSAMT application page that performs a scientific operation on the
+      active survey, such as quality control, correction, forward modelling,
+      inversion, interpretation, export, or agent execution. A processing page
+      should be read as a user interface over package functions, not as a
+      separate numerical implementation.
+
+   Primary action
+      The explicit button or command that starts computation on an application
+      page, such as **Plot**, **Generate**, **Run**, **Run Forward**,
+      **Run Inversion**, **Preview**, or **Apply**. It marks the moment where
+      selected controls are converted into a reproducible package call.
+
+   Line picker
+   Station picker
+      A page-level control that restricts a processing operation to selected
+      survey lines or stations. It applies a mask to the active survey before
+      computation, so the output must be interpreted together with the selected
+      line and station set.
+
+   Result tab
+   Result tabs
+      A grouped output panel in a pyCSAMT application page, commonly separating
+      model images, convergence curves, statistics, response fits, logs, and
+      export previews. Tabs change how results are inspected, not which
+      scientific computation produced them.
+
+   Run log
+      The text record produced by an application run, pipeline step, or agent
+      execution. It records selected parameters, step status, warnings, errors,
+      and output paths so an interactive action can be audited after the page
+      state has changed.
+
+   Frequency edit
+      A processing operation that removes, restores, masks, or resamples
+      selected frequencies before correction or inversion. It changes the data
+      vector :math:`d` by applying a frequency mask :math:`M_f`, giving
+      :math:`d' = M_f d`; the mask should be archived because a different
+      frequency set changes coverage, RMS misfit, and model resolution.
+
+   Noise removal
+      A processing operation that suppresses incoherent, unstable, or
+      contaminated response values before later correction or inversion. In
+      pyCSAMT it may use filters, confidence scores, robust statistics, or
+      component-aware editing, and should be checked against residual and
+      response-shape diagnostics so real geologic signal is not smoothed away.
+
+   Strike rotation
+      Rotation of horizontal electromagnetic response components into the
+      estimated geoelectric-strike frame. For a rotation angle :math:`\theta`,
+      horizontal fields are transformed by a 2-D rotation matrix
+      :math:`\mathbf{R}(\theta)`, and the impedance tensor transforms as
+      :math:`\mathbf{Z}'=\mathbf{R}(\theta)\,\mathbf{Z}\,\mathbf{R}^T(\theta)`.
+      The rotated frame is used to separate TE and TM modes for 2-D
+      interpretation.
+
+   Static-shift correction
+      A correction that rescales apparent-resistivity curves to compensate for
+      frequency-independent galvanic static shift. If a station has shift
+      factor :math:`g`, the corrected apparent resistivity is commonly written
+      :math:`\rho_a'=\rho_a/g`, while phase is not shifted by the same galvanic
+      factor.
+
+   AMA
+   Adaptive moving average
+      A spatial static-shift correction strategy that estimates a station's
+      shift from neighbouring stations inside a configurable window, usually
+      with robust weighting or smoothing. It is useful when static offsets vary
+      laterally but neighbouring stations still sample a comparable regional
+      response.
+
+   Traditional inversion
+      A physics-based iterative inversion that updates model parameters by
+      repeatedly evaluating a forward operator, residuals, and regularization
+      terms. Its objective is commonly written
+      :math:`\Phi(m)=\|W_d(d_{obs}-F(m))\|_2^2+\lambda\|W_m(m-m_{ref})\|_2^2`,
+      where :math:`W_d` weights data errors, :math:`W_m` encodes model
+      roughness or prior structure, and :math:`\lambda` controls the trade-off.
+
+   PINN
+   Physics-informed neural network
+      A neural model trained with a loss that includes both data or target
+      error and a physics residual. In electromagnetic inversion, a simplified
+      form is :math:`\mathcal{L}=\mathcal{L}_{data}
+      +\alpha\mathcal{L}_{phys}+\beta\mathcal{L}_{reg}`, where the physics
+      term penalizes violations of the selected forward equations or response
+      constraints.
+
+   Training convergence
+      The evolution of an optimization metric during AI or PINN training,
+      usually shown as training and validation loss versus epoch. A decreasing
+      curve indicates optimization progress, but final scientific acceptance
+      still requires response-space checks and uncertainty review.
+
+   Data fit
+      The comparison between observed data and the response predicted by a
+      model. It is usually inspected as curves, residuals, and RMS misfit;
+      a visually acceptable model should fit within assigned uncertainty
+      without systematic residual patterns by station, component, or frequency.
+
+   Browser session
+      Application state persisted by a web browser rather than by the Python
+      package configuration directory. In the pyCSAMT web app it includes
+      interface preferences, selected view state, and downloadable session JSON
+      used to resume or share an interactive review.
+
+   Session JSON
+      A downloadable JSON file that records browser-session state for the
+      pyCSAMT web app, such as selected survey metadata, line choices, view
+      settings, workflow state, and computation options. It is a reproducibility
+      companion to the original survey folder, not a replacement for raw EDI,
+      AVG, J, or inversion result files.
+
+   Exported product
+      A file written from an application or processing workflow for use outside
+      the current session. Examples include figures, corrected EDI files,
+      inversion inputs or results, reports, and session JSON. A reproducible
+      exported product should be traceable to the input survey, options,
+      correction chain, software version, and output path.
+
+   Corrected-data export
+      A data file written after a correction chain has been applied to the
+      active survey. In the web app this may be a downloadable table or a
+      processed EDI product, depending on the page and workflow; it should be
+      archived with the correction parameters and original survey source.
+
+   Batch export
+      A tool-assisted export that writes several figures or products in one
+      pass from the same loaded survey and settings. It reduces manual
+      screenshot variation and helps keep a report figure set internally
+      consistent.
+
+   Export manifest
+      A small record, formal or informal, that ties exported products to their
+      source survey, selected lines and stations, method parameters, correction
+      chain, software version, run log, and output paths. It is the audit trail
+      that turns a folder of figures into a reproducible deliverable.
+
    Provenance manifest
       A reproducibility record for a field session or processing run. It keeps
       acquisition metadata, thresholds, QC decisions, accepted bands, rejected
@@ -1275,15 +1464,56 @@ definitions here are the single source of truth.
       authorise a client. API keys are secrets and should be redacted outside
       the live transport boundary.
 
+   App extra
+      The optional Python dependency group installed with
+      ``pip install "pycsamt[app]"``. It adds the graphical-application stack,
+      including Dash, Dash Bootstrap Components, Plotly, and related packages,
+      while the scientific pyCSAMT core remains available from the base
+      installation.
+
    Basic authentication
       A username/password authentication scheme whose header contains the
       Base64 encoding of ``username:password``. The encoding is not encryption,
       so basic authentication should be used only over TLS.
 
+   Console script
+      A command-line launcher installed from a Python package entry point, such
+      as ``pycsamt-agent`` for Agent Master. It imports the package's Python
+      entry function and passes command-line arguments to it, so it should be
+      installed in the same environment that contains pyCSAMT.
+
+   Dash
+      A Python web-application framework used by pyCSAMT's browser-based
+      application surfaces. Dash combines a Flask HTTP server, React-backed UI
+      components, and Python callbacks so local scientific workflows can be
+      controlled from a browser.
+
+   Dash debug mode
+      Dash's development mode, enabled in pyCSAMT Dash applications with
+      ``--debug``. It exposes callback diagnostics and development reload
+      behaviour, which is helpful while editing the app but inappropriate for
+      shared or exposed sessions.
+
    Environment variable
       A process-level key/value setting used to inject deployment-specific
       configuration at runtime. pyCSAMT security helpers can read
       ``PYCSAMT_IOT_*`` variables for credentials and TLS paths.
+
+   LLM provider
+      The external or local large-language-model service selected to answer
+      Agent Master requests, such as Anthropic Claude, OpenAI, Gemini,
+      DeepSeek, MiniMax, or offline mode. Provider choice determines which
+      model id, API key, and request policy the assistant uses.
+
+   Local server
+      A server process bound to the user's own machine, commonly at an address
+      such as ``127.0.0.1``. Agent Master uses this pattern: Python hosts the
+      Dash application and the browser connects to it over HTTP without moving
+      survey files to a separate hosted service.
+
+   Plotly
+      The interactive plotting library used by pyCSAMT application pages for
+      browser-rendered figures, maps, and exportable figure specifications.
 
    Protocol policy
       A local allow-list that decides whether a requested telemetry protocol is
@@ -1540,10 +1770,33 @@ definitions here are the single source of truth.
       map exports return the final path so workflows can record exactly which
       artifact was produced.
 
+   Plotly modebar
+      The floating toolbar attached to an interactive Plotly figure. It exposes
+      view controls such as pan, zoom, autoscale, reset, and camera-style image
+      download; the downloaded image captures the current browser view rather
+      than a newly recomputed model.
+
    Figure specification
       The serialized structure of a Plotly figure, including data traces,
       layout, color scales, and map settings. It is useful for testing and
       audit workflows because it can be compared without rendering pixels.
+
+   Chat session
+      The active conversational state in Agent Master, including user messages,
+      assistant replies, loaded survey context, pending parameter prompts,
+      workflow traces, and figure references. It is distinct from the source
+      survey files: saving the session preserves the working context, while the
+      original EDI folders remain the scientific input.
+
+   Command bar
+      The top-level control strip in pyCSAMT applications. In Agent Master it
+      contains global actions such as loading EDI data, saving the session,
+      opening settings, changing theme, and showing the current survey badge.
+
+   Suggestion chip
+      A pre-written prompt displayed in the empty Agent Master chat area. A
+      chip is not a special command; clicking it sends the same kind of
+      natural-language request the user could type manually.
 
    3-D quick-look map
       A non-inversion 3-D visualization built from station or pseudosection

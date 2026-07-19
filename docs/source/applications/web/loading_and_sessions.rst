@@ -3,16 +3,18 @@
 Loading Data And Sessions
 =========================
 
-Everything in the web app operates on one **active survey**.  This page covers
-how to load that survey from a browser, how to organise it into survey lines,
-how to recompute transfer functions, and how to save and restore browser
-sessions.
+Everything in the web app operates on one **active survey** (see the Main
+Concepts table in :doc:`overview`): every page reads the same loaded data, so
+getting the load right here is what keeps QC, correction, maps, and modelling
+consistent with each other later. This page covers how to load that survey
+from a browser, how to organise it into survey lines, how to recompute
+:term:`transfer function`\ s, and how to save and restore browser sessions.
 
 Loading A Survey
 ----------------
 
-Open the loader with **Load Data** on the command bar (or **Load EDI Data —
-Start** on the welcome screen).  The loader is a modal with two tabs.
+Open the loader with **Load Data** on the :term:`command bar` (or **Load EDI
+Data — Start** on the welcome screen).  The loader is a modal with two tabs.
 
 .. figure:: ../../_static/applications/web/load-data-modal.png
    :alt: The Load Survey Data modal with browse-folder and drag-and-drop panels
@@ -28,9 +30,11 @@ Start** on the welcome screen).  The loader is a modal with two tabs.
 
 You provide data in one of two ways:
 
-* **Browse folder** -- pick a parent folder.  The loader selects all ``.edi``,
-  ``.avg``, and ``.j`` files it finds **recursively**, so pointing at a survey
-  root loads every line at once.
+* **Browse folder** -- pick a parent folder.  The loader selects every
+  ``.edi`` (:term:`EDI`), ``.avg`` (:term:`AVG file`), and ``.j``
+  (:term:`J-file`) file it finds **recursively**, so pointing at a survey
+  root loads every line at once, whatever format each field day happened to
+  export.
 * **Drag & drop** -- drop files or whole folders onto the drop zone.  The same
   file types are accepted.
 
@@ -55,8 +59,8 @@ dashboard with the survey in place.
 Adding Lines To An Existing Survey
 ----------------------------------
 
-Use **+Lines** on the command bar (or the *Add lines* tab of the loader) to
-merge more data into the survey you already have.
+Use **+Lines** on the :term:`command bar` (or the *Add lines* tab of the
+loader) to merge more data into the survey you already have.
 
 .. figure:: ../../_static/applications/web/load-add-lines.png
    :alt: The Add Lines to Survey modal merging additional folders
@@ -73,8 +77,8 @@ extra profiles into a survey you have already started reviewing.
 Managing Survey Lines
 ---------------------
 
-Open the **Lines** drawer from the command bar to control which lines are
-active and how they are named.
+Open the **Lines** drawer from the :term:`command bar` to control which
+lines are active and how they are named.
 
 .. figure:: ../../_static/applications/web/lines-manager.png
    :alt: The Survey Lines drawer with line assignment and active toggles
@@ -106,9 +110,10 @@ finer control.
 Recomputing Transfer Functions
 ------------------------------
 
-Use **Recompute** on the command bar when you want to regenerate apparent
-resistivity and phase from impedance — for example after rotating components or
-when you want to work in a restricted frequency band.
+Use **Recompute** on the :term:`command bar` when you want to regenerate
+:term:`apparent resistivity` and :term:`phase` from impedance — for example
+after rotating components or when you want to work in a restricted frequency
+band.
 
 .. figure:: ../../_static/applications/web/recompute-transfer-functions.png
    :alt: The Recompute Transfer Functions drawer
@@ -117,14 +122,32 @@ when you want to work in a restricted frequency band.
    The Recompute drawer.  Choose a data source, then recompute ρₐ/φ from the
    impedance tensor, optionally rotating and restricting the frequency band.
 
-The drawer offers:
+Recompute treats the :term:`impedance tensor` :math:`\mathbf{Z}` you already
+loaded as the single source of truth and re-derives everything else from it,
+rather than adjusting apparent resistivity and phase directly. That ordering
+matters physically: rotating the tensor and then reducing it to scalars
+gives the correct rotated ρₐ and φ, whereas rotating already-reduced ρₐ/φ
+values directly would not. For one component :math:`Z` the app applies
+
+.. math::
+
+   \rho_a = 0.2\,\frac{|Z|^2}{f}, \qquad
+   \phi = \tan^{-1}\!\left(\frac{\operatorname{Im}Z}{\operatorname{Re}Z}\right),
+
+with :math:`Z` in field units (mV/km per nT) and :math:`f` in Hz. When a
+rotation angle :math:`\theta` is set, it is applied to the tensor first,
+:math:`\mathbf{Z}'(\theta) = \mathbf{R}(\theta)\,\mathbf{Z}\,\mathbf{R}(\theta)^{\mathsf T}`
+with :math:`\mathbf{R}(\theta)` the usual 2-D rotation matrix, and the
+:term:`tipper` is rotated by the same angle as a vector; :math:`\rho_a` and
+:math:`\phi` recomputed afterwards already reflect the new orientation. The
+drawer exposes each stage of that pipeline as a control:
 
 * **Data source** -- use the currently loaded data, or load fresh data from a
   folder path.
 * **Recompute ρₐ / φ from impedance Z** (recommended) -- rebuild the apparent
-  resistivity and phase from the impedance tensor.
+  resistivity and phase from the impedance tensor using the relations above.
 * **Rotation angle** and **Rotate components** -- optionally rotate ``Z`` and
-  the tipper by a fixed angle.
+  the tipper by a fixed angle before ρₐ/φ are derived.
 * **Frequency band** -- restrict to a ``f min``–``f max`` window; leave blank
   to keep all frequencies.
 * **Fill missing values** -- optionally fill gaps.
@@ -133,15 +156,18 @@ Click **Recompute & Load** to apply.  The result becomes the new active survey.
 
 .. note::
 
-   Recompute rebuilds derived quantities; it does not itself apply a physical
-   correction such as static shift.  For evidence-based corrections, use the
+   Recompute rebuilds derived quantities from the impedance tensor; it does
+   not itself apply a physical correction such as :term:`static shift`,
+   which changes the observed impedance itself rather than how Recompute
+   reduces it to ρₐ/φ.  For evidence-based corrections, use the
    :doc:`Correction page <processing_pages>` with its non-destructive chain.
 
 Browser Sessions
 ----------------
 
 The web app keeps a **browser session** so your work survives page reloads and
-can be shared across machines.  Open it with **Session** on the command bar.
+can be shared across machines.  Open it with **Session** on the
+:term:`command bar`.
 
 .. figure:: ../../_static/applications/web/session-drawer.png
    :alt: The Workflow Session drawer with download and restore controls

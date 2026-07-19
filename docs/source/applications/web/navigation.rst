@@ -61,8 +61,8 @@ On the right are the survey actions that operate on the active survey:
      - Open the loader in *Add lines* mode to merge more lines into the
        current survey.
    * - **Recompute**
-     - Recompute apparent resistivity and phase from impedance, optionally
-       with rotation and a frequency band.
+     - Recompute :term:`apparent resistivity` and :term:`phase` from
+       impedance, optionally with rotation and a frequency band.
    * - **Lines**
      - Open the Survey Lines drawer to assign, rename, and toggle active
        lines.
@@ -94,6 +94,15 @@ which widens the plotting area — useful on the map, 3-D, and results pages
 where the figure benefits from the extra width.  The active page is
 highlighted, and the app version is shown at the bottom of the rail.
 
+.. figure:: ../../_static/applications/web/rail-collapsed.png
+   :alt: The navigation rail collapsed to an icon-only strip, with the home dashboard widened behind it
+   :class: pycsamt-screenshot
+
+   The same session with the rail collapsed.  Group headings and page names
+   disappear, group order is preserved as icon stacks, and the freed width
+   goes straight to the content body — here the Home dashboard's centre
+   column.
+
 Clicking a rail entry swaps the content body to that page.  The active survey,
 selected station, and line selection persist across pages, so you can move from
 Map View to Quality Control to Correction without reloading data.
@@ -104,16 +113,29 @@ The Home Dashboard
 **Home** is the landing page after data is loaded.  It summarises the survey
 and offers shortcuts, but does not change any data.
 
+.. figure:: ../../_static/applications/web/home-dashboard-loaded.png
+   :alt: The Home dashboard with a 5-line, 128-station survey loaded, showing the station ranking analytics slide
+   :class: pycsamt-screenshot
+
+   Home with the WILLY AMT survey loaded (128 stations across five
+   :term:`profile line`\ s).  This is the *Station Ranking* slide of the
+   analytics carousel; the dot indicators above the chart mark the other six.
+
 * **KPI cards** across the top report the headline counts: number of
-  **stations**, number of **frequencies**, number of **profiles** (lines), and
-  the **survey** name or source.
+  **stations**, number of **frequencies**, number of **profiles**
+  (:term:`profile line`\ s), and the **survey** name or source.
 * The **Stations** list on the left shows every station with its line tag,
   coordinates, elevation, and frequency count.  Line chips (for example
   ``L34PLT``, ``L30PLT``) filter the list to one line; **All** clears the
   filter.  Selecting a station here syncs it to the map and profile pages.
 * The **Survey Dashboard** in the centre reports data-health checks — how many
-  stations have coordinates, the average frequencies per station, tipper
-  availability — and a **Station Analytics** carousel of small summary charts.
+  stations have coordinates, the average frequencies per station,
+  :term:`tipper` availability — and a **Station Analytics** carousel that
+  auto-rotates through seven small summary charts: tipper coverage,
+  frequencies per station, a per-station quality radar, survey geometry,
+  station ranking by coverage, a coverage heatmap, and per-line frequency
+  distribution.  Click a dot to jump straight to a slide, or click a station
+  in the list to refresh the quality-radar slide for that station.
 * **Survey Insights** on the right lists loaded lines and offers **Quick
   Workflows** — one-click shortcuts such as *QC Analysis*, *Static Shift*,
   *Skew / Dim.*, and *Inversion Prep* — plus a **Last Run** area and a shortcut
@@ -143,15 +165,17 @@ The **Settings** menu opens a right-hand drawer with two groups.
    The Settings drawer: AI provider and API key at the top, computation
    defaults below.
 
-* **AI & Agents** -- choose the LLM **provider** (Claude, OpenAI, Gemini, or
-  DeepSeek), paste an **API key**, pick a **model**, and use **Test
+* **AI & Agents** -- choose the :term:`LLM provider` (Claude, OpenAI, Gemini,
+  or DeepSeek), paste an **API key**, pick a **model**, and use **Test
   Connection** to verify it.  The API key is stored in the browser's
   ``localStorage`` only — it is not written to disk on the server.  Agent
   configuration is used by the AI Agents page and the in-app chat.
 * **Computation** -- defaults that affect how plots and derived quantities are
-  computed, including the **pseudosection interpolation** method, the
-  **skin-depth formula** (for example *Standard (Cagniard)*), and the
-  **topography DEM source** used when elevation enrichment is requested.
+  computed, including the **pseudosection interpolation** method used to
+  grid :term:`pseudosection`\ s, the **skin-depth formula** (for example
+  *Standard (Cagniard)*) behind the :term:`skin depth` used in section and
+  3-D pseudo-depth conversions, and the **topography DEM source** used when
+  elevation enrichment is requested.
 
 Help / About
 ------------

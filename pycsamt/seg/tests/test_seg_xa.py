@@ -12,7 +12,7 @@ import pytest
 
 from pycsamt.seg.collection import EDICollection
 from pycsamt.seg.edi import EDIFile
-from pycsamt.seg.xa import XAMixin, build_dataset
+from pycsamt.seg.xa import XAMixin, _site_location, build_dataset
 
 # Mark all tests in this file as requiring the 'xarray' package
 pytestmark = pytest.mark.requires_xarray
@@ -56,8 +56,10 @@ def test_build_dataset_single_imp(edi_imp_file: Path) -> None:
     assert ds["lat"].dims == ("site",)
     assert ds["lon"].dims == ("site",)
 
-    # Check a specific metadata value
-    assert np.isclose(ds["lat"].item(), ed.get_section("head").lat)
+    # Check a specific metadata value (falls back to DEFINEMEAS REFLAT
+    # when HEAD carries no LAT, as with this BIRRP/JONES-processed file)
+    expected_lat, _, _ = _site_location(ed)
+    assert np.isclose(ds["lat"].item(), expected_lat)
 
 
 @pytest.mark.usefixtures("edi_collection")

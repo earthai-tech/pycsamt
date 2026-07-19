@@ -3,15 +3,17 @@
 Choosing A Model Backend
 ========================
 
-Choosing Occam2D, ModEM, MARE2DEM, SimPEG, pyGIMLi, or the built-in pyCSAMT
-backend is a scientific decision first and a software decision second. A
-backend is not only a solver. It encodes assumptions about dimensionality,
-source physics, mesh geometry, regularization, file formats, and how much
+Choosing :term:`Occam2D`, :term:`ModEM`, :term:`MARE2DEM`, SimPEG, pyGIMLi,
+or the built-in pyCSAMT :term:`inversion backend` is a scientific decision
+first and a software decision second. A :term:`backend` is not only a solver.
+It encodes assumptions about :term:`dimensionality`, source physics,
+:term:`mesh` geometry, :term:`regularization`, file formats, and how much
 native-engine control the user must manage.
 
 This page helps you decide which path to use before you start preparing
-files. It complements :ref:`inversion_concepts`, which explains objective
-functions, regularization, RMS, and non-uniqueness.
+files. It complements :ref:`inversion_concepts`, which explains the
+:term:`objective function`, :term:`regularization`, :term:`RMS misfit`, and
+:term:`non-uniqueness`.
 
 Two Different Choices
 ---------------------
@@ -25,13 +27,12 @@ pyCSAMT has two related but different model choices:
 
 The backend-neutral inversion API currently accepts:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.inversion.backends import available_backends
-
-   print(available_backends())
-   # ['builtin', 'modem', 'occam2d', 'pygimli', 'simpeg']
+   >>> from pycsamt.inversion.backends import available_backends
+   >>> available_backends()
+   ['builtin', 'modem', 'occam2d', 'pygimli', 'simpeg']
 
 The :mod:`pycsamt.models` documentation covers:
 
@@ -40,9 +41,9 @@ The :mod:`pycsamt.models` documentation covers:
 * :mod:`pycsamt.models.mare2dem`;
 * shared configuration and native file I/O.
 
-At the time of writing, MARE2DEM is a rich model integration, not a value for
-``InversionConfig(backend=...)``. Use the MARE2DEM package directly for
-source management, input building, execution, and output loading.
+At the time of writing, :term:`MARE2DEM` is a rich :term:`model integration`,
+not a value for ``InversionConfig(backend=...)``. Use the MARE2DEM package
+directly for source management, input building, execution, and output loading.
 
 Quick Recommendation
 --------------------
@@ -86,7 +87,7 @@ Backend Matrix
 
 .. list-table::
    :header-rows: 1
-   :widths: 17 14 17 20 18 14
+   :widths: auto
 
    * - Path
      - Dimensionality
@@ -134,7 +135,15 @@ Backend Matrix
 Decision Axis 1: Dimensionality
 -------------------------------
 
-Dimensionality is the most important choice.
+Dimensionality is the most important choice because it defines what the
+forward problem is allowed to vary. In a :term:`1D` model, electrical
+resistivity is only a function of depth,
+:math:`\rho(\mathbf{x})=\rho(z)`. In a :term:`2-D` profile model it varies
+across the section and with depth,
+:math:`\rho(\mathbf{x})=\rho(x,z)`, while being assumed constant along
+:term:`geoelectric strike`. In a :term:`3D` model it can vary in all spatial
+directions, :math:`\rho(\mathbf{x})=\rho(x,y,z)`. The more freedom the model
+has, the more data support, computation, and prior control it needs.
 
 Use a **1-D** path when:
 
@@ -160,7 +169,7 @@ Use a **3-D** path when:
 * 2-D inversions leave systematic station/component misfits;
 * the project can support the larger computation and modelling effort.
 
-Use a **2.5-D** path such as MARE2DEM when:
+Use a **2.5-D** path such as :term:`MARE2DEM` when:
 
 * the model is a 2-D section but sources/receivers or fields need richer
   finite-element treatment;
@@ -169,6 +178,25 @@ Use a **2.5-D** path such as MARE2DEM when:
 
 Decision Axis 2: Data Type
 --------------------------
+
+Once dimensionality is defensible, match the data to the physics that produced
+it. Passive :term:`MT`/:term:`AMT` workflows usually interpret the impedance
+relation
+
+.. math::
+
+   \mathbf{E}(\omega) = \mathbf{Z}(\omega)\,\mathbf{H}(\omega),
+
+where :math:`\mathbf{Z}` is the complex :term:`impedance tensor` at angular
+frequency :math:`\omega=2\pi f`. :term:`Apparent resistivity` and
+:term:`phase` then reduce each usable impedance component to
+:math:`\rho_a=(\mu_0\omega)^{-1}|Z|^2` and
+:math:`\phi=\tan^{-1}(\operatorname{Im}Z/\operatorname{Re}Z)`. In
+:term:`CSAMT` and :term:`CSEM`, the transmitter is explicit, so the same
+far-field impedance interpretation is only appropriate after source effects
+have been checked. In :term:`TDEM`, the measured signal is a transient decay
+rather than a steady frequency-domain impedance, so a time-gate inversion and
+an EDI-style conversion answer different questions.
 
 .. list-table::
    :header-rows: 1
@@ -214,6 +242,23 @@ Choose the direct :mod:`pycsamt.models` route when:
 * you need to run, reload, compare, or plot native outputs independently;
 * the external executable is managed outside the Python workflow;
 * the project requires detailed provenance at the file level.
+
+Both routes eventually compare observed data :math:`\mathbf{d}_{obs}` with a
+prediction from a :term:`forward operator`, :math:`F(\mathbf{m})`, for model
+parameters :math:`\mathbf{m}`. A common smooth inversion minimizes
+
+.. math::
+
+   \Phi(\mathbf{m}) =
+   \left\|\mathbf{W}_d\left(\mathbf{d}_{obs} - F(\mathbf{m})\right)\right\|_2^2
+   + \lambda^2\left\|\mathbf{W}_m\left(\mathbf{m}-\mathbf{m}_{ref}\right)\right\|_2^2,
+
+where :math:`\mathbf{W}_d` weights data by their errors,
+:math:`\mathbf{W}_m` controls model roughness or departure from a reference
+model :math:`\mathbf{m}_{ref}`, and :math:`\lambda` balances fit against
+smoothness. Backend choice decides the form of :math:`F`, the available mesh
+and model controls, and how transparently those choices are written to native
+files.
 
 Typical File Responsibility
 ---------------------------
@@ -295,29 +340,36 @@ Connection To InversionConfig
 -----------------------------
 
 The backend-neutral route uses :class:`pycsamt.inversion.config.InversionConfig`.
+The example below keeps ``run_external=False`` so it can be used to validate
+configuration and file responsibility before any external executable is
+launched.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.inversion import InversionConfig, InversionWorkflow
-
-   cfg = InversionConfig(
-       method="mt",
-       dimension="2d",
-       backend="occam2d",
-       data="data/edis",
-       workdir="runs/occam2d_profile",
-       run_external=False,
-       backend_options={
-           "files": {
-               "data": "OccamData.dat",
-               "mesh": "OccamMesh",
-               "model": "OccamModel",
-           },
-       },
-   )
-
-   result = InversionWorkflow(cfg).run()
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow
+   >>> cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="2d",
+   ...     backend="occam2d",
+   ...     data="data/3edis",
+   ...     workdir="runs/occam2d_profile",
+   ...     run_external=False,
+   ...     backend_options={
+   ...         "files": {
+   ...             "data": "OccamData.dat",
+   ...             "mesh": "OccamMesh",
+   ...             "model": "OccamModel",
+   ...         },
+   ...     },
+   ... )
+   >>> cfg.backend
+   'occam2d'
+   >>> cfg.run_external
+   False
+   >>> cfg.workdir
+   'runs/occam2d_profile'
+   >>> # result = InversionWorkflow(cfg).run()
 
 This style is useful for pipeline-friendly experiments. For native-project
 work, instantiate the model package directly.
@@ -327,26 +379,29 @@ Direct Model Integration Example
 
 Direct model use gives you the native builder/runner/result objects:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d import (
-       InputBuilder,
-       InversionResult,
-       OccamConfig,
-       OccamRunner,
-   )
-   from pycsamt.site import Sites
-
-   sites = Sites.from_dir("data/edis")
-   cfg = OccamConfig()
-
-   InputBuilder(sites, workdir="runs/occam2d_profile", config=cfg).build()
-
-   runner = OccamRunner("runs/occam2d_profile", config=cfg)
-   # runner.run(target_misfit=1.0)
-
-   result = InversionResult("runs/occam2d_profile", config=cfg)
+   >>> from pycsamt.models.occam2d import (
+   ...     InputBuilder,
+   ...     InversionResult,
+   ...     OccamConfig,
+   ...     OccamRunner,
+   ... )
+   >>> from pycsamt.emtools import ensure_sites
+   >>> sites = ensure_sites("data/3edis", recursive=True, verbose=0)
+   >>> type(sites).__name__, len(sites)
+   ('Sites', 3)
+   >>> cfg = OccamConfig()
+   >>> builder = InputBuilder(sites, workdir="runs/occam2d_profile", config=cfg)
+   >>> builder.__class__.__name__
+   'InputBuilder'
+   >>> runner = OccamRunner("runs/occam2d_profile", config=cfg)
+   >>> runner.__class__.__name__
+   'OccamRunner'
+   >>> # builder.build()
+   >>> # runner.run(target_misfit=1.0)
+   >>> # result = InversionResult("runs/occam2d_profile", config=cfg)
 
 Use the same pattern mentally for ModEM and MARE2DEM: configuration,
 builder, optional runner, result loader, plots, archive.
@@ -361,7 +416,8 @@ Before committing to a backend, check:
   correct?
 * **Units** - Are impedance, apparent resistivity, phase, time gates, or CSEM
   values in expected units?
-* **Errors** - Are error floors realistic, and are bad samples masked?
+* **Errors** - Are :term:`error floor`\ s realistic, and are bad samples
+  masked?
 * **Source physics** - Are CSAMT/CSEM/TDEM source assumptions represented?
 * **Topography** - Does the backend need explicit topography or air cells?
 * **Executable** - Can the binary run reproducibly on the target machine?
@@ -382,8 +438,8 @@ Avoid these backend-selection mistakes:
   model integration is required;
 * hiding native file choices inside an undocumented script;
 * running an external binary before validating data, mesh, and coordinates;
-* judging the backend only by final RMS instead of residual structure and
-  geological plausibility.
+* judging the backend only by final :term:`RMS misfit` instead of residual
+  structure and geological plausibility.
 
 Recommended Path By Deliverable
 -------------------------------

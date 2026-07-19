@@ -4,10 +4,10 @@ Telemetry Transports
 ====================
 
 Telemetry is the message layer between IoT field hardware and the rest of
-the pyCSAMT acquisition workflow. A telemetry packet carries a device id,
-timestamp, canonical topic, packet kind, QoS flag, retained flag, and a
-JSON-serialisable payload. The same packet can be sent to MQTT, HTTP,
-serial, WebSocket, a JSON-lines file, or a dry-run recorder.
+the pyCSAMT acquisition workflow. A :term:`telemetry packet` carries a
+device id, timestamp, canonical topic, packet kind, QoS flag, retained
+flag, and a JSON-serialisable payload. The same packet can be sent to
+MQTT, HTTP, serial, WebSocket, a JSON-lines file, or a dry-run recorder.
 
 Use dry-run clients while developing notebooks, dashboards, and examples:
 they validate packets and record what would have been sent without opening
@@ -138,6 +138,13 @@ Output:
    qos: 1
    retained: False
    payload_keys: battery_v, firmware, station, temperature_c
+
+That topic is not free-form -- ``DeviceConfig.topic`` always builds it as
+``pycsamt/{survey_id}/{station}/{device_id}/{kind}`` (dropping the survey
+segment when *survey_id* is omitted), so any two devices reporting the
+same :term:`AMT` survey land under the same prefix and a monitoring
+dashboard can subscribe with one wildcard instead of one pattern per
+device.
 
 Record A Dry-Run Transport
 --------------------------
@@ -283,10 +290,15 @@ Output:
 Assess Telemetry In A Session
 -----------------------------
 
-Add packets to a :class:`pycsamt.iot.FieldSession` when you want telemetry
-to interact with station metadata, monitoring thresholds, and dashboards.
+Add packets to a :term:`field session` when you want telemetry to
+interact with station metadata, monitoring thresholds, and dashboards.
 The example below is intentionally synthetic and deterministic: station
-``L18-002`` rejects one QC packet, so the session is marked critical.
+``L18-002`` rejects one QC packet, so the :term:`monitoring status` is
+marked critical. :doc:`basic_session` derives the :term:`packet success
+rate`, :term:`edge acceptance rate`, and :term:`packet gap` formulas
+behind ``status`` in full; here the same status is read off a stream that
+was built from real telemetry packets and transports rather than
+hand-built packet dicts.
 
 .. code-block:: python
    :linenos:
@@ -421,27 +433,117 @@ field endpoint.
 Surviving an intermittent uplink
 --------------------------------
 
-Remote nodes lose their link. Wrap any client in a
+Remote nodes lose their link. Wrap any client in a :term:`store-and-forward`
 :class:`~pycsamt.iot.StoreAndForwardClient` so a failed send queues the
 packet instead of dropping it; :meth:`flush` later drains the backlog in
-order, and an optional spool file carries it across a restart:
+order, and an optional spool file carries it across a restart. The demo
+below stands in a transport that is deliberately down for its first three
+send attempts, so the queueing, backoff, and eventual drain are all
+visible in real output rather than asserted in a comment:
 
 .. code-block:: python
+   :linenos:
 
-   from pycsamt.iot import StoreAndForwardClient, build_telemetry_client
+   from pycsamt.iot import StoreAndForwardClient
+   from pycsamt.iot.protocols.base import (
+       BaseTelemetryClient,
+       IoTProtocol,
+       TelemetryError,
+   )
 
-   client = build_telemetry_client("http", endpoint="https://hub/ingest",
-                                   dry_run=False)
-   buffered = StoreAndForwardClient(client, spool_path="spool.jsonl",
-                                    max_queue=5000)
 
-   buffered.send(packet)        # delivered, or queued if the link is down
-   # ... later, when connectivity returns ...
-   buffered.flush()             # drains the queue in order (at-least-once)
+   class FlakyClient(BaseTelemetryClient):
+       """Stands in for a real HTTP/MQTT client whose uplink is down."""
 
-Delivery is at-least-once and order-preserving, ``max_queue`` bounds the
-buffer with a drop-oldest policy, and ``next_retry_delay_s`` provides an
-exponential-backoff hint for a scheduling loop.
+       protocol = IoTProtocol.HTTP
+
+       def __init__(self, *, fail_times: int = 3, **kwargs):
+           super().__init__(dry_run=False, **kwargs)
+           self._fail_times = fail_times
+           self._attempts = 0
+
+       def _transport_send(self, packet):
+           self._attempts += 1
+           if self._attempts <= self._fail_times:
+               raise TelemetryError(
+                   f"simulated uplink outage (attempt {self._attempts})"
+               )
+           return f"sent after outage (attempt {self._attempts})"
+
+
+   uplink = FlakyClient(endpoint="https://hub/ingest", fail_times=3)
+   buffered = StoreAndForwardClient(
+       uplink, max_queue=5000, base_backoff_s=2.0, max_backoff_s=60.0,
+   )
+
+   ack1 = buffered.send(packets[0])
+   print(f"send health#1: ok={ack1.ok} detail={ack1.detail!r} "
+         f"pending={buffered.pending}")
+   ack2 = buffered.send(packets[2])
+   print(f"send health#2: ok={ack2.ok} detail={ack2.detail!r} "
+         f"pending={buffered.pending}")
+   print(f"next_retry_delay_s: {buffered.next_retry_delay_s}")
+
+   for i in range(1, 4):
+       sent = buffered.flush()
+       print(f"flush #{i}: sent={sent} pending={buffered.pending} "
+             f"next_retry_delay_s={buffered.next_retry_delay_s}")
+
+Output:
+
+.. code-block:: text
+
+   send health#1: ok=False detail='queued: simulated uplink outage (attempt 1)' pending=1
+   send health#2: ok=False detail='queued behind backlog' pending=2
+   next_retry_delay_s: 2.0
+   flush #1: sent=0 pending=2 next_retry_delay_s=2.0
+   flush #2: sent=0 pending=2 next_retry_delay_s=4.0
+   flush #3: sent=2 pending=0 next_retry_delay_s=0.0
+
+The first send attempts a real delivery -- because the queue starts empty
+-- fails, and queues; the second never even tries the transport, since a
+backlog is never overtaken by fresh packets (order-preserving,
+at-least-once delivery). Each failed :meth:`flush` increments an internal
+failure counter :math:`n`, and ``next_retry_delay_s`` grows as
+
+.. math::
+
+   \mathrm{delay} =
+   \min\!\left(b \cdot 2^{\,n-1},\ b_{\max}\right), \qquad n \ge 1,
+
+with base delay :math:`b=` ``base_backoff_s`` and ceiling
+:math:`b_{\max}=` ``max_backoff_s`` -- here :math:`2.0 \to 4.0` seconds
+after the two failed flushes above, before the third flush finally
+succeeds (the uplink stops failing after its third attempt) and drains
+both packets in order, resetting the delay to ``0.0``.
+
+``max_queue`` bounds the buffer with a drop-oldest policy: once it is
+full, the newest packet is always kept and the oldest is discarded,
+because live survey monitoring cares more about the current state than a
+stale backlog entry.
+
+.. code-block:: python
+   :linenos:
+
+   overflow = StoreAndForwardClient(
+       FlakyClient(endpoint="https://hub/ingest", fail_times=99),
+       max_queue=3,
+   )
+   for i in range(5):
+       p = TelemetryPacket.from_device(
+           devices[0], timestamp=1_700_000_000.0 + i,
+           kind=PacketKind.HEALTH, payload={"seq": i},
+       )
+       overflow.send(p)
+   print(f"pending: {overflow.pending}, n_dropped: {overflow.n_dropped}")
+   print(f"kept seqs: {[pkt.payload['seq'] for pkt in overflow.queue]}")
+
+Output:
+
+.. code-block:: text
+
+   pending: 3, n_dropped: 2
+   kept seqs: [2, 3, 4]
 
 Field Interpretation
 --------------------
@@ -449,10 +551,19 @@ Field Interpretation
 Telemetry tables answer operational questions before geophysical
 processing starts: which node reported, what kind of packet was sent,
 which station it belongs to, and whether the payload contains health,
-QC, sync, or power information. Monitoring then turns those packets into
-a survey status. In this example the packet stream is complete, but the
-edge acceptance rate is only ``0.500``, so the session is flagged
-``critical`` even though packet delivery itself is healthy.
+:term:`QC`, sync, or power information. Monitoring then turns those
+packets into a :term:`monitoring status`. In this example the packet
+stream is complete, but the :term:`edge acceptance rate` is only
+``0.500``, so the session is flagged ``critical`` even though packet
+delivery itself is healthy -- a reminder that :term:`packet success rate`
+and edge acceptance answer different questions, transport versus content.
+
+The :term:`store-and-forward` demo above answers a related but distinct
+question: not whether a packet's *content* was accepted, but whether it
+was *delivered* at all. A node that queues through a three-attempt outage
+and then drains its backlog never shows up as a missing packet in the
+tables above -- it just arrives late and in order, with the same
+at-least-once delivery guarantee as the rest of the transport layer.
 
 For real surveys, keep topic names stable across the acquisition campaign
 and persist file logs or broker exports with the processing report. That

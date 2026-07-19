@@ -239,7 +239,7 @@ def j_single_file(j_path: Path) -> Path:
 @pytest.fixture(scope="session")
 def jc_path(project_root: Path) -> Path:
     """Base path to a J collection (S00.dat, ...)."""
-    p = project_root / "data" / "jc"
+    p = project_root / "data" / "j" / "nia"
     if not p.exists():
         pytest.skip(f"Missing J collection: {p}")
     return p

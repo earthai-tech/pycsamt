@@ -70,6 +70,8 @@ geo = [
     "pyproj>=3.3",
     "xarray>=2022.6",
     "contextily>=1.6",
+    # optional HDF5 elevation export/import (pycsamt.map.topo)
+    "h5py>=3.8",
 ]
 
 # Development & testing

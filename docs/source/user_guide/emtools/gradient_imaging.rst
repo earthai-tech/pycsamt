@@ -5,7 +5,7 @@ Gradient-Based Pseudo-Sections
 
 ``pycsamt.emtools.gradient_imaging`` builds CSAMT/AMT apparent
 resistivity pseudo-sections from gradients rather than from
-resistivity values alone. The goal is boundary emphasis: highlight
+resistivity values alone.  The goal is boundary emphasis: highlight
 where apparent resistivity changes laterally, vertically, or in both
 directions at once.
 
@@ -33,6 +33,13 @@ That difference matters in CSAMT/AMT interpretation. Boundary-like
 features can be clearer in derivatives than in raw values, especially
 when the background has broad smooth variation.
 
+The method starts from a sampled apparent-resistivity surface
+:math:`\rho_a(x,T)`, where :math:`x` is station position and
+:math:`T=1/f` is period.  The implemented quantities are finite
+differences on that sampled surface.  They are not a substitute for an
+inversion model, but they are a useful way to make station-period
+boundaries visible before or alongside inversion.
+
 The Three Quantities
 --------------------
 
@@ -41,13 +48,27 @@ default it uses the determinant-style geometric mean:
 
 .. math::
 
+   \rho_{xy} =
+   0.2 {|Z_{xy}|^2 \over f},
+   \qquad
+   \rho_{yx} =
+   0.2 {|Z_{yx}|^2 \over f},
+
+.. math::
+
    \rho_a =
-   \sqrt{
-   \left(0.2 {|Z_{xy}|^2 \over f}\right)
-   \left(0.2 {|Z_{yx}|^2 \over f}\right)
-   }
+   \sqrt{\rho_{xy}\rho_{yx}}.
 
 You can also use one component only with ``comp="xy"`` or ``comp="yx"``.
+
+The depth column is an apparent skin-depth scale,
+
+.. math::
+
+   \delta = 503 \sqrt{\rho_a \over f},
+
+reported in metres.  It should be read as an approximate plotting depth,
+not as an inversion depth.
 
 The three gradient products are:
 
@@ -82,6 +103,20 @@ Always report the spacing assumption when using fallback spacing. The
 gradient values are apparent-resistivity differences, but the x-axis
 and pair spacing still affect interpretation of lateral scale.
 
+For adjacent stations :math:`j-1` and :math:`j`, the midpoint and spacing
+stored in the tables are
+
+.. math::
+
+   x_{j-1/2} = {x_{j-1}+x_j \over 2},
+   \qquad
+   \Delta x_j = x_j - x_{j-1}.
+
+The current tables report finite differences in ohm metres.  If you
+need a normalized lateral derivative, divide
+``delta_rho_x`` or ``delta_rho_zx`` by ``dx_m`` in your own workflow and
+state the resulting units.
+
 Spatial Gradient
 ----------------
 
@@ -91,7 +126,12 @@ frequency.
 .. math::
 
    \Delta\rho_a^x(j, f)
-   \approx \rho_a(j, f) - \rho_a(j - 1, f)
+   =
+   \rho_a(x_j, f) - \rho_a(x_{j-1}, f).
+
+The value is assigned to the midpoint between the two stations.  Its
+sign is directional: positive means apparent resistivity increases to
+the right along the sorted line, while negative means it decreases.
 
 .. code-block:: python
    :linenos:
@@ -118,6 +158,9 @@ frequency.
 
    [5 rows x 9 columns]
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-01.png
+   :width: 100%
+
 The output columns are:
 
 - ``station_a`` and ``station_b``: adjacent station pair.
@@ -141,7 +184,13 @@ station.
 .. math::
 
    \Delta\rho_a^z(j, f_k)
-   \approx \rho_a(j, f_k) - \rho_a(j, f_{k-1})
+   =
+   \rho_a(x_j, f_k) - \rho_a(x_j, f_{k-1}).
+
+The implementation uses the sorted frequency grid and assigns the result
+to the upper frequency :math:`f_k`.  Because frequency and depth are
+linked only approximately, this is a frequency-direction contrast, not a
+true derivative with respect to physical depth.
 
 .. code-block:: python
    :linenos:
@@ -159,12 +208,15 @@ station.
 
 .. code-block:: text
 
-       period_s  rho_a_ohmm  delta_rho_z
+      period_s  rho_a_ohmm  delta_rho_z
    51  0.000096   80.630809    -7.264990
    50  0.000115   86.503532    -4.480456
    49  0.000137  102.020596   -26.553673
    48  0.000164  133.745279   -36.895692
    47  0.000196  154.026762    -3.667275
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-02.png
+   :width: 100%
 
 The output columns are:
 
@@ -202,6 +254,14 @@ Expanded:
    -
    [\rho_a(j, f_{k-1}) - \rho_a(j-1, f_{k-1})]
 
+This is a mixed finite difference on the station-frequency grid:
+
+.. math::
+
+   \Delta\rho_a^{zx}
+   =
+   \Delta_f\left(\Delta_x\rho_a\right).
+
 .. code-block:: python
    :linenos:
 
@@ -227,6 +287,9 @@ Expanded:
 
    [5 rows x 8 columns]
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-03.png
+   :width: 100%
+
 The output columns are:
 
 - ``station_a`` and ``station_b``: adjacent station pair.
@@ -246,6 +309,18 @@ Plot Gradient Sections
 
 ``plot_gradient_section`` is the main visualization helper. It accepts
 ``quantity="spatial"``, ``"frequency"``, or ``"joint"``.
+
+The plotted grid is assembled as
+
+.. math::
+
+   G_{i,j} = q(T_i, x_j),
+
+where :math:`q` is one of
+:math:`\Delta\rho_a^x`, :math:`\Delta\rho_a^z`, or
+:math:`\Delta\rho_a^{zx}`.  A diverging color map centered at zero is
+used because zero means "no local change" for the selected finite
+difference, while the sign tells the direction of the contrast.
 
 .. code-block:: python
    :linenos:
@@ -396,6 +471,19 @@ One practical check is to compare the spread of the spatial and joint
 gradients. A joint gradient that is quieter in background areas should
 often have a narrower distribution, while preserving strong localized
 values.
+
+The reported ratio is
+
+.. math::
+
+   R =
+   {\operatorname{std}(\Delta\rho_a^{zx})
+   \over
+   \operatorname{std}(\Delta\rho_a^x)}.
+
+Values below one mean the joint gradient is globally narrower than the
+spatial gradient.  That supports, but does not prove, the idea that
+background variation has been reduced.
 
 .. code-block:: python
    :linenos:

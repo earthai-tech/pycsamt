@@ -35,6 +35,27 @@ The phase tensor follows the Caldwell et al. style decomposition.  For
 each frequency, pyCSAMT splits the impedance tensor into real and
 imaginary parts, then computes the phase tensor
 ``Phi = real(Z)^-1 imag(Z)`` and its invariants.
+Writing
+
+.. math::
+
+   Z = X + iY,
+   \qquad
+   X = \Re(Z), \quad Y = \Im(Z),
+
+the phase tensor is
+
+.. math::
+
+   \Phi = X^{-1}Y .
+
+If :math:`X` is singular, pyCSAMT falls back to a pseudo-inverse.  The
+important interpretation point is that :math:`\Phi` is built from a
+ratio of the imaginary and real impedance parts.  A real, frequency
+independent static-shift multiplier scales :math:`X` and :math:`Y`
+together, so it largely cancels in :math:`X^{-1}Y`.  That is why phase
+tensor plots are such useful companions to apparent-resistivity and
+static-shift diagnostics.
 
 The examples in this guide use public two-level imports from
 ``pycsamt.emtools``.  One name needs special attention:
@@ -73,6 +94,53 @@ Build The Phase-Tensor Table
 
 ``build_phase_tensor_table`` is the foundation for the plotting tools.
 It returns one row per station and frequency.
+For a phase tensor
+
+.. math::
+
+   \Phi =
+   \begin{bmatrix}
+   a & b \\
+   c & d
+   \end{bmatrix},
+
+pyCSAMT reports the Caldwell-style angles
+
+.. math::
+
+   \beta =
+   \frac{1}{2}
+   \tan^{-1}
+   \left(
+   \frac{b+c}{a-d}
+   \right),
+   \qquad
+   \alpha =
+   \frac{1}{2}
+   \tan^{-1}
+   \left(
+   \frac{-(b-c)}{a+d}
+   \right),
+
+using ``atan2`` internally so the quadrant is preserved.  The table
+stores ``beta`` again as ``skew``.  The principal values :math:`\phi_{\max}`
+and :math:`\phi_{\min}` are the singular values of :math:`\Phi`; these
+appear in the table as ``s1`` and ``s2``.  The ellipse orientation
+``theta`` is the angle of the dominant left singular vector.  Since an
+ellipse has no arrow head, ``theta`` is axial: :math:`\theta` and
+:math:`\theta+180^\circ` describe the same direction.
+
+The ellipticity is
+
+.. math::
+
+   e =
+   \frac{\phi_{\max}-\phi_{\min}}
+        {\phi_{\max}+\phi_{\min}+\epsilon}.
+
+Values near zero are close to circular.  Larger values mean the tensor
+has a stronger preferred axis, but that axis should still be read
+together with skew and period stability.
 
 .. code-block:: python
    :linenos:
@@ -282,6 +350,23 @@ The default ``3`` degree skew threshold is strict.  It is useful as a
 textbook 1-D/2-D screen, but it can classify many real field samples as
 3-D.  That is not a failure of the function; it is a warning about the
 data and the 2-D assumption.
+In compact notation, the rule used by the example is
+
+.. math::
+
+   \mathrm{class} =
+   \begin{cases}
+   \mathrm{1D}, & |\beta| \le \beta_0
+      \ \mathrm{and}\ |e| \le e_0,\\
+   \mathrm{2D}, & |\beta| \le \beta_0
+      \ \mathrm{and}\ |e| > e_0,\\
+   \mathrm{3D}, & |\beta| > \beta_0,
+   \end{cases}
+
+where :math:`\beta_0` is ``skew_threshold`` and :math:`e_0` is
+``ellipt_threshold``.  The threshold is a decision rule, not a law of
+nature.  For a field survey, report the threshold and the period band
+with the result.
 
 Simple Phase-Tensor Views
 -------------------------
@@ -434,12 +519,51 @@ you want the 45-degree, 1-D reference to have an explicit visual meaning.
 Use ``normalise_by="abs"`` only when absolute ellipse sizes in data units
 are intentional.
 
+The ellipse drawn at a station-period cell has semi-axes proportional to
+:math:`\phi_{\max}` and :math:`\phi_{\min}` and is rotated by :math:`\theta`.
+In local plot coordinates, before normalization, the ellipse satisfies
+
+.. math::
+
+   \left(\frac{x'}{\phi_{\max}}\right)^2
+   +
+   \left(\frac{y'}{\phi_{\min}}\right)^2
+   =
+   1,
+
+where
+
+.. math::
+
+   \begin{bmatrix} x' \\ y' \end{bmatrix}
+   =
+   R(-\theta)
+   \begin{bmatrix} x \\ y \end{bmatrix}.
+
+Changing ``normalise_by`` changes how those axes are scaled for display;
+it does not change the phase-tensor values in the table.
+
 Strike As A Director Field
 --------------------------
 
 ``theta`` is axial.  A director field is often easier to interpret than
 a scatter plot because the glyph has no arrow head and therefore
 respects the 180-degree ambiguity.
+For comparing two strike estimates, use an axial difference rather than
+ordinary subtraction:
+
+.. math::
+
+   \Delta\theta =
+   \left[
+   (\theta_2-\theta_1+90^\circ) \bmod 180^\circ
+   \right]
+   - 90^\circ .
+
+This keeps differences in the interval
+:math:`[-90^\circ, 90^\circ]`.  Without this adjustment, a harmless jump
+from :math:`179^\circ` to :math:`1^\circ` looks like a
+:math:`178^\circ` change instead of a :math:`2^\circ` change.
 
 .. code-block:: python
    :linenos:
@@ -770,6 +894,24 @@ Impedance-Tensor Editing
 Tensor editing functions change ``Z``.  They should be treated as
 processing operations, not as harmless plots.  Keep ``inplace=False``
 unless you deliberately want to mutate the object in memory.
+The rotation convention used by the tensor tools is a congruence
+rotation of the horizontal coordinate frame:
+
+.. math::
+
+   Z' = R(\alpha) Z R(\alpha)^T,
+   \qquad
+   R(\alpha) =
+   \begin{bmatrix}
+   \cos\alpha & \sin\alpha \\
+   -\sin\alpha & \cos\alpha
+   \end{bmatrix}.
+
+A fixed-angle rotation applies the same :math:`\alpha` everywhere.
+``rotate_by_map`` lets :math:`\alpha=\alpha_s` vary by station, and
+``rotate_z_to_strike`` estimates an angle before applying the same
+operation.  Because rotation mixes all four tensor components, always
+compare phase-tensor and impedance diagnostics before and after.
 
 .. list-table::
    :header-rows: 1
@@ -878,6 +1020,33 @@ Antisymmetrize And Balance
 
 ``antisymmetrize`` enforces off-diagonal antisymmetry.  ``balance_offdiag``
 balances ``|Zxy|`` and ``|Zyx|`` while preserving phase.
+For an off-diagonal pair :math:`Z_{xy}` and :math:`Z_{yx}`,
+antisymmetrization replaces the pair by a common antisymmetric target,
+schematically
+
+.. math::
+
+   Z^*_{xy} = A,
+   \qquad
+   Z^*_{yx} = -A,
+
+where :math:`A` is chosen by the backend utility according to ``how``.
+With ``how="rms"``, the target amplitude is tied to the root-mean-square
+scale of the two original off-diagonal terms.
+
+``balance_offdiag(mode="avgabs")`` keeps each component phase but gives
+both off-diagonal terms the same magnitude
+
+.. math::
+
+   m = \frac{|Z_{xy}|+|Z_{yx}|}{2},
+   \qquad
+   Z'_{xy} = m\,e^{i\arg Z_{xy}},
+   \qquad
+   Z'_{yx} = m\,e^{i\arg Z_{yx}}.
+
+This is gentler than antisymmetrization because it does not force a
+180-degree phase relationship.
 
 .. code-block:: python
    :linenos:
@@ -935,6 +1104,23 @@ Sigma Clip Outliers
 ``sigma_clip_z`` flags outlying entries in the complex impedance tensor
 and sets them to ``NaN``.
 
+The clipping mask is applied component-wise to complex entries.  In
+plain statistical terms, a value is rejected when its standardized
+departure exceeds the requested threshold:
+
+.. math::
+
+   \left|
+   \frac{Z_{ij} - \mu_{ij}}
+        {\sigma_{ij}+\epsilon}
+   \right|
+   >
+   n_\sigma .
+
+After clipping, rerun coverage and QC checks.  A small number of clipped
+entries may remove isolated spikes; a large number means the survey or
+threshold needs review.
+
 .. code-block:: python
    :linenos:
 
@@ -947,14 +1133,23 @@ and sets them to ``NaN``.
        recursive=False,
    )
 
-After clipping, rerun coverage and QC checks.  A small number of clipped
-entries may remove isolated spikes; a large number means the survey or
-threshold needs review.
-
 Invert Tensor
 -------------
 
 ``invert`` applies the 2-by-2 matrix inverse frequency by frequency.
+For each frequency,
+
+.. math::
+
+   Z^{-1}
+   =
+   \frac{1}{\det Z}
+   \begin{bmatrix}
+   Z_{yy} & -Z_{xy} \\
+   -Z_{yx} & Z_{xx}
+   \end{bmatrix},
+   \qquad
+   \det Z = Z_{xx}Z_{yy}-Z_{xy}Z_{yx}.
 
 .. code-block:: python
    :linenos:

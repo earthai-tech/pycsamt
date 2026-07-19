@@ -223,10 +223,12 @@ class AIInversionAgent(BaseAgent):
         epochs = int(input_data.get("epochs", self.epochs))
         n_train = int(input_data.get("n_train_samples", self.n_train_samples))
         output_dir = input_data.get("output_dir")
-        freqs = np.asarray(
-            input_data.get("freqs") or self._freqs_cfg or _DEFAULT_FREQS,
-            dtype=float,
-        )
+        freqs_cfg = input_data.get("freqs")
+        if freqs_cfg is None:
+            freqs_cfg = self._freqs_cfg
+        if freqs_cfg is None:
+            freqs_cfg = _DEFAULT_FREQS
+        freqs = np.asarray(freqs_cfg, dtype=float)
 
         # ── fast-fail: require usable impedance BEFORE training ───────────────
         # Training synthesises data and fits a network (can take minutes)
@@ -304,8 +306,8 @@ class AIInversionAgent(BaseAgent):
                     verbose=False,
                 )
                 # collect training history
-                if hasattr(inverter, "history_"):
-                    train_history = dict(inverter.history_)
+                if getattr(inverter, "_history", None):
+                    train_history = dict(inverter._history)
             except Exception as exc:
                 return AgentResult.failed(
                     f"AI training failed: {exc}",

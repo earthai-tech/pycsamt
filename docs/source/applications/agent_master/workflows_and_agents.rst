@@ -3,10 +3,15 @@
 Workflows And Agents
 ====================
 
-When you send a request, Agent Master does not answer from the language model
-alone.  An **orchestrator** interprets the request, chooses the matching
-pyCSAMT workflow, collects any parameters it needs, runs the real agents, and
-returns the products with a provenance trace.  This page describes that loop.
+When you send a request, Agent Master does not just reply — it resolves the
+request to a concrete pyCSAMT workflow and runs it. An **orchestrator**
+interprets the request, chooses the matching workflow, collects any
+parameters it needs, runs the real agents, and returns the products with a
+provenance trace. That routing step works the same way whether or not an LLM
+provider is configured: with a provider it also reasons about ambiguous
+phrasing, and without one it falls back to the same deterministic keyword
+classifier described in :doc:`llm_configuration`. This page describes that
+loop.
 
 The Workflow Catalogue
 ----------------------
@@ -40,9 +45,11 @@ The core set is:
      - Full pre-inversion preparation.
 
 Beyond these, the orchestrator can run **inversion** (AI-neural, PINN, hybrid,
-and classic solver preparation such as Occam2D), **report** generation, and
-**code generation** (below).  You do not call these by name — you describe the
-goal and the orchestrator routes to the right one.
+ensemble, joint, and classic solver preparation for Occam2D, ModEM, or
+MARE2DEM), **report** generation, and **code generation** (below).  You do not
+call these by name — you describe the goal and the orchestrator routes to the
+right one; the full registry of workflow identifiers and their agent chains is
+listed in :doc:`/user_guide/agents/orchestrator`.
 
 Making A Request
 ----------------
@@ -96,14 +103,18 @@ starts.
 Orchestration, Traces, And Cost
 -------------------------------
 
-Every completed request reports what happened:
+Every completed request reports what happened, and every field in that report
+traces back to the :term:`AgentResult` the coordinator returned internally —
+none of it is written after the fact for display:
 
 * the **routing** decision — for example *Orchestrator routed to 'report'
   workflow (3 steps)*;
 * the **outcome** — *Workflow 'orchestrated_report' complete: 3/3 steps
   succeeded in 3.3 s*;
-* the **cost** of any LLM calls (often ``$0.000000`` for local processing
-  steps);
+* the **cost** of any LLM calls — ``$0.000000`` whenever Offline mode is
+  active, since no provider is billed, and still frequently ``$0.000000``
+  with a provider configured, because most steps here are local numerical
+  processing rather than LLM calls;
 * an expandable **steps trace** and a count of **figures generated**.
 
 .. figure:: ../../_static/applications/agent_master/analyse-sensitivity.png
@@ -134,4 +145,5 @@ Next Steps
 
 * :doc:`tools_memory_outputs` -- traces, figures, generated code, and cost in
   depth.
-* :doc:`llm_configuration` -- the model that powers request understanding.
+* :doc:`llm_configuration` -- the offline default and the optional model that
+  sharpens request understanding.

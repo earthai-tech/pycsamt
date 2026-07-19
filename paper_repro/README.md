@@ -58,6 +58,58 @@ five-layer MT inverse problem: layer boundaries are weakly identifiable from a
 single 1-D response, and many models can fit the same apparent resistivity and
 phase. It should not be presented as highly accurate layer-boundary recovery.
 
+## AI-Inversion Ablation Status
+
+This archive now contains the small ablation ladder used to strengthen the
+AI-inversion result before freezing the manuscript macros. The goal was not to
+claim that a neural network uniquely recovers five-layer thicknesses from a
+single MT1D response. The goal was to choose a reproducible configuration that
+improves held-out data-space fit while reporting the remaining model-space
+non-uniqueness honestly.
+
+| Run | Samples train/val/test | Architecture | Dropout | Blocks | Checkpoint | Model-space result | Data-space result |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `ai1d_mt1d_resnet5` | 10000/2000/2000 | ResNet baseline | default | default | `0826c29c217b98ce9f10367b89884ca18bf4c74e6c39a6271481e32ff404b9f4` | log-resistivity RMSE 0.742; mean thickness relative error 226.4% | apparent-resistivity misfit 0.352 log10; phase RMSE 9.28 degrees |
+| `ai1d_mt1d_resnet5_wide` | 50000/5000/5000 | ResNet channels `(64, 128, 256, 512)` | 0.1 | 3 | `3f316ca0958d73f980e548e2eab4ff7c931465a91d76dc97927c8c030b91850c` | log-resistivity RMSE 0.701; mean thickness relative error 220.6% | apparent-resistivity misfit 0.279 log10; phase RMSE 7.06 degrees |
+
+The wide run is the selected paper configuration because it improves the
+held-out re-forwarded response metrics and slightly improves model-space
+resistivity error. It does not solve layer-boundary identifiability, so the
+paper should emphasize response fit, resistivity-scale recovery, inference
+speed, and limitations rather than exact layer-thickness accuracy.
+
+The following strengthening steps have been completed in this archive:
+
+1. **Fixed target contract.** The training, validation, test, prediction, and
+   generated code paths retain `n_layers=5` metadata. The archive must not mix
+   five-layer targets with merged arrays that have lost layer-count metadata.
+2. **Larger held-out experiment.** The selected run uses 50000/5000/5000
+   synthetic responses instead of the smaller 10000/2000/2000 baseline.
+3. **Wider/deeper ResNet.** The selected run uses channels
+   `(64, 128, 256, 512)`, 3 residual blocks, dropout 0.1, and 0.01
+   augmentation noise.
+4. **Data-space reporting.** The selected metrics include apparent-resistivity
+   misfit and phase RMSE from re-forwarded responses, not only normalized
+   parameter error.
+5. **Frozen checkpoint and macros.** The selected checkpoint is checksummed and
+   the paper macros in `ai_inversion/ai1d_mt1d_resnet5_wide/` are generated
+   from that frozen result.
+
+Remaining limitations to state explicitly:
+
+- The current synthetic prior is still broad; a constrained geological prior
+  with monotonic depth limits, minimum layer thickness, and scenario classes
+  would make layer-boundary targets more interpretable.
+- Exact per-layer thickness remains weakly identifiable. If the manuscript
+  reports layer metrics, it should frame them as diagnostic rather than as the
+  main scientific claim.
+- Robust target metrics such as depth-to-first-conductor, basement
+  resistivity, and response-domain fit are more defensible than exact
+  individual layer thicknesses.
+- The current frozen paper run is a single selected seed set. A future
+  ensemble of 3-5 independently trained seeds would support uncertainty bands
+  and expose training instability.
+
 ## Current Assistant-Benchmark Status
 
 The candidate 240-request suite has been generated and run. It is structurally
@@ -109,42 +161,16 @@ mostly concrete code-template gaps rather than syntax or import failures.
 - Replay maximum normalised difference: 0.00e+00 at tolerance 1.0e-09
 - Replay overhead: 0.98x
 
-## How To Strengthen The AI Result
+## Frozen AI Result Policy
 
-For a robust C&G paper result, run a small ablation ladder and report the best
-frozen configuration only after it improves held-out data-space and model-space
-metrics:
+For the manuscript, use only the selected wide run unless a new ablation is
+performed and the whole archive is regenerated. A replacement run must:
 
-1. **Fix the target contract**
-   Keep `n_layers=5` metadata through training and evaluation. This archive now
-   does that; do not train on merged arrays without metadata.
-
-2. **Use a constrained geological prior**
-   Replace fully random five-layer thicknesses with a realistic prior:
-   monotonic cumulative depth limits, minimum layer thickness, and scenario
-   classes such as cover-conductor-basement. This makes thickness recovery a
-   scientifically meaningful target instead of an underdetermined permutation.
-
-3. **Train larger and regularise less aggressively**
-   Test 50000/5000/5000 samples, dropout 0.05-0.15, and deeper/wider ResNet
-   channels such as `(64, 128, 256, 512)` with 3 residual blocks. The current
-   run overfits after about 12 epochs, suggesting the default model/data
-   pairing is not optimal.
-
-4. **Add a physics/data-space selection criterion**
-   Select checkpoints by validation apparent-resistivity and phase misfit, not
-   only normalised parameter MSE. Report both model-space and re-forwarded
-   response metrics.
-
-5. **Report identifiable targets**
-   Add robust metrics for depth-to-first-conductor, basement resistivity, and
-   data-space fit. These are more defensible than exact individual layer
-   thicknesses for non-unique 1-D EM inversion.
-
-6. **Use an ensemble or uncertainty bands**
-   Train 3-5 independent seeds and report median plus bootstrap/seed intervals.
-   This will expose instability instead of hiding it.
-
-7. **Freeze only after ablation**
-   Once the final configuration is chosen, regenerate this archive, checksum the
-   checkpoint, and include only the frozen macros in the paper.
+1. preserve the `n_layers=5` target contract from data generation through
+   evaluation;
+2. improve held-out data-space metrics, especially apparent-resistivity misfit
+   and phase RMSE;
+3. report model-space metrics and identifiable target metrics side by side;
+4. include the run configuration, predictions, metrics, generated macros, and
+   checkpoint SHA-256;
+5. state whether the result is a single-seed run or an ensemble.

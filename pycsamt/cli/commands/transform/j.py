@@ -68,9 +68,18 @@ def j(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    files = sorted(source.glob("*.j")) if source.is_dir() else [source]
+    from ....jones.cbase import JParseMixin  # noqa: PLC0415
+
+    if source.is_dir():
+        files = sorted(
+            p
+            for p in source.iterdir()
+            if p.is_file() and p.suffix.lower() in JParseMixin.J_SUFFIXES
+        )
+    else:
+        files = [source]
     if not files:
-        click.echo(f"No .j files found in {source}.", err=True)
+        click.echo(f"No J file found in {source}.", err=True)
         sys.exit(1)
 
     if dry_run:

@@ -1258,7 +1258,6 @@ class EDIFile(EDIMixin, EDIOMixin):
             raise ImportError("SciPy is required for interpolation.") from exc
 
         nf = np.asarray(new_freq, float)
-        nf = np.around(nf, 2)
 
         of = np.asarray(self.Z.freq, float)
         if of.ndim != 1 or of.size == 0:

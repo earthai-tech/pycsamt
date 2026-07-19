@@ -2,9 +2,10 @@ Overlays
 ========
 
 The overlay helpers are reusable building blocks for custom maps and
-application views.  They are useful when you want to add CRS
-transforms, contours, labels, profile lines, or topography to figures
-that you control yourself.
+application views.  They are useful when you want to add
+:term:`coordinate reference system` transforms, :term:`contour overlay`
+layers, labels, profile lines, or :term:`topography overlay` traces to
+figures that you control yourself.
 
 Use the high-level map builders first when you can:
 :class:`pycsamt.map.StationMap`, :class:`pycsamt.map.ProfileMap`, and
@@ -12,6 +13,11 @@ Use the high-level map builders first when you can:
 Use this page when you need to assemble traces manually, add your own
 computed values, or keep the same overlay logic in scripts, notebooks,
 and application callbacks.
+The important idea is that overlays are not a second data model.  They
+are visual layers derived from the same :term:`MapData` station records:
+coordinates define where a trace is drawn, values define how it is
+colored or gridded, and labels keep the visual layer auditable back to
+station identifiers.
 
 Overlay Workflow
 ----------------
@@ -46,12 +52,17 @@ Most overlay workflows follow the same pattern:
    fig.add_trace(build_profile_line_overlay(lon, lat, geo=False))
    fig.add_trace(build_station_label_overlay(lon, lat, labels))
 
+Here the coordinates are plain Cartesian axes because ``geo=False`` is
+used for the profile line and labels.  If the same longitude and
+latitude arrays are placed on a geographic :term:`basemap`, set
+``geo=True`` so Plotly builds map traces instead.
+
 Coordinate Reference Systems
 ----------------------------
 
-Many CSAMT surveys store station positions in projected coordinates,
-while web maps usually expect WGS84 longitude and latitude.  The CRS
-helpers keep that conversion explicit.
+Many :term:`CSAMT` and :term:`CSUMT` surveys store station positions in
+projected coordinates, while web maps usually expect WGS84 longitude
+and latitude.  The :term:`CRS` helpers keep that conversion explicit.
 
 ``CRSConfig``
    Describes a source CRS, target CRS, and coordinate-axis convention.
@@ -80,10 +91,35 @@ CRS Helpers
        crs=CRSConfig(source=32630, target=4326),
    )
 
+   print("transform lon", np.round(lon, 6).tolist())
+   print("transform lat", np.round(lat, 6).tolist())
+
 The returned arrays are NumPy arrays.  With the default
 ``always_xy=True``, the input order is always ``x, y`` and the output
 for EPSG:4326 is ``lon, lat``.  This avoids the common latitude/longitude
 axis-order surprise in modern PROJ/GDAL stacks.
+
+Captured output:
+
+.. code-block:: text
+
+   transform lon [-3.0, -2.997733]
+   transform lat [7.689755, 7.691564]
+
+Mathematically, the transform applies a CRS-dependent mapping
+:math:`T_{\mathrm{src}\rightarrow\mathrm{dst}}` to each finite station
+coordinate pair:
+
+.. math::
+
+   (\lambda_i,\phi_i)
+   =
+   T_{\mathrm{src}\rightarrow 4326}(x_i,y_i),
+
+where :math:`x_i,y_i` are source coordinates, :math:`\lambda_i` is
+longitude, and :math:`\phi_i` is latitude.  The ``always_xy`` option
+keeps the function arguments in the same order as this equation even
+when a CRS definition advertises latitude before longitude.
 
 For display text or logs, use :func:`pycsamt.map.resolve_crs_info`.
 
@@ -95,9 +131,18 @@ For display text or logs, use :func:`pycsamt.map.resolve_crs_info`.
    print(resolve_crs_info("utm", zone=30, hemisphere="N"))
    print(resolve_crs_info("custom", epsg=32630))
 
+Captured output:
+
+.. code-block:: text
+
+   EPSG:4326 Geographic lat/lon (WGS 84)
+   EPSG:32630 UTM Zone 30N (WGS 84)
+   EPSG:32630
+
 Basemaps
 --------
 
+:term:`Basemap` settings describe the tile style and map camera.
 ``build_basemap_layout`` creates the geographic map settings shared by
 station maps and application views.  It does not return a full Plotly
 layout dictionary; it returns a :class:`pycsamt.map.BasemapConfig`
@@ -116,8 +161,22 @@ legacy Mapbox-backed figures.
    )
 
    print(basemap.style)
-   print(basemap.center)
-   print(basemap.zoom)
+   print({key: round(value, 6) for key, value in basemap.center.items()})
+   print(round(basemap.zoom, 3))
+
+Captured output for the CRS example coordinates above:
+
+.. code-block:: text
+
+   open-street-map
+   {'lat': 7.690659, 'lon': -2.998867}
+   14
+
+The center is the midpoint of the finite coordinate extent,
+:math:`\bar{\lambda}=(\lambda_{\min}+\lambda_{\max})/2` and
+:math:`\bar{\phi}=(\phi_{\min}+\phi_{\max})/2`.  The zoom is then chosen
+from the larger geographic span so the stations remain visible without
+requiring a tile token.
 
 Default styles are public and token-free:
 
@@ -143,11 +202,11 @@ world-scale center at ``{"lat": 0.0, "lon": 0.0}`` and zoom ``1``.
 Contours
 --------
 
-Contours interpolate scattered values to a regular grid.  SciPy is
-used when available; otherwise the helper falls back to a nearest
-neighbour grid.  This makes contour overlays useful in lightweight
-environments where SciPy is not installed, while still giving smoother
-linear interpolation when SciPy is available.
+:term:`Contour overlay` traces interpolate scattered values to a regular
+grid.  SciPy is used when available; otherwise the helper falls back to
+a nearest-neighbour grid.  This makes contour overlays useful in
+lightweight environments where SciPy is not installed, while still
+giving smoother linear interpolation when SciPy is available.
 
 .. code-block:: python
 
@@ -163,8 +222,27 @@ linear interpolation when SciPy is available.
        mode="both",
    )
 
+   print("contour type", contour.type)
+   print("contour colorscale first", contour.colorscale[0])
+   print("contour n x", len(contour.x), "n y", len(contour.y))
+
+Captured output from inspecting the returned trace:
+
+.. code-block:: text
+
+   contour type contour
+   contour colorscale first (0.0, '#440154')
+   contour n x 80 n y 80
+
 The coordinate arrays and value array must contain at least three
 finite points.  Non-finite points are ignored before interpolation.
+If the finite samples are :math:`(x_i,y_i,v_i)` for
+:math:`i=1,\ldots,n`, the helper builds regular grid coordinates
+:math:`x'_j` and :math:`y'_k`, then estimates
+:math:`\hat{v}_{jk}=I(x'_j,y'_k)`.  With SciPy available, :math:`I` is a
+linear scattered-data interpolator inside the sampled footprint.  The
+nearest-neighbour fallback instead uses the value from the closest
+finite station, which is more blocky but remains deterministic.
 
 Important options:
 
@@ -192,14 +270,26 @@ When you need the interpolated grid rather than a Plotly trace, call
 
 .. code-block:: python
 
+   import numpy as np
+
    from pycsamt.map import interpolate_overlay_grid
 
    xi, yi, grid = interpolate_overlay_grid(
        lon,
        lat,
        values,
-       grid_size=120,
+       grid_size=12,
    )
+
+   print("grid shapes", xi.shape, yi.shape, grid.shape)
+   print("grid finite", int(np.isfinite(grid).sum()))
+
+Captured output for a small ``grid_size=12`` check:
+
+.. code-block:: text
+
+   grid shapes (12,) (12,) (12, 12)
+   grid finite 72
 
 Labels And Profile Lines
 ------------------------
@@ -222,6 +312,18 @@ scatter map.
        ["S00", "S01"],
        geo=True,
    )
+
+   print("line type", line.type)
+   print("labels type", labels.type)
+   print("labels text", tuple(labels.text))
+
+Captured output:
+
+.. code-block:: text
+
+   line type scattermap
+   labels type scattermap
+   labels text ('S00', 'S01')
 
 Use ``geo=True`` when ``x`` and ``y`` are longitude and latitude for a
 Plotly map trace.  Use ``geo=False`` for ordinary Cartesian figures,
@@ -248,11 +350,15 @@ including profile plots and local projected-coordinate maps.
 
 The helpers use Plotly's modern ``Scattermap`` trace when available and
 fall back to ``Scattermapbox`` for older Plotly versions.
+The profile line is drawn in station order, so the visible polyline is
+:math:`(x_0,y_0)\rightarrow(x_1,y_1)\rightarrow\cdots`.  If station
+order matters geologically, confirm the order in :term:`MapData` before
+using the overlay as a field-line interpretation.
 
 Topography
 ----------
 
-``build_topography_overlay`` returns ``Mesh3d`` for scattered
+:term:`Topography overlay` helpers return ``Mesh3d`` for scattered
 elevations and ``Surface`` for 2-D elevation grids.
 
 Scattered station elevations:
@@ -283,6 +389,12 @@ Regular elevation grid:
 Use topography overlays in 3-D figures where the vertical dimension is
 meaningful.  For station maps, use elevation as a station overlay or a
 contour value instead of adding a 3-D terrain trace.
+For scattered station elevations, the surface points are
+:math:`(x_i,y_i,h_i)`, where :math:`h_i` is elevation.  For a regular
+grid, the surface is :math:`h(x'_j,y'_k)`.  Keeping elevation as
+topography, rather than mixing it into resistivity or phase values,
+preserves the distinction between terrain geometry and electromagnetic
+response.
 
 Adding Overlays To Figures
 --------------------------
@@ -367,6 +479,29 @@ Contour station resistivity at one frequency:
        mode="both",
    )
 
+   print("practical stations", len(values))
+   print("rho min max", round(min(values), 3), round(max(values), 3))
+
+Captured output from the sample line:
+
+.. code-block:: text
+
+   practical stations 28
+   rho min max 22.899 2461.779
+
+The static figure below reproduces the same idea with Matplotlib for
+the documentation build: station values are interpolated as
+:math:`\log_{10}(\rho_a)`, the profile line is drawn over the grid, and
+every fourth station is labelled to keep the map legible.
+
+.. figure:: ../../images/user_guide/map/map_overlays_contour_profile_labels.png
+   :alt: Contour, profile-line, and station-label overlays for the L18 sample line.
+   :align: center
+   :width: 88%
+
+   Contour, profile-line, and station-label overlays derived from
+   ``data/AMT/WILLY_DATA/L18PLT`` at the selected 102.4 Hz sample.
+
 Build labels for every profile in a multi-line survey:
 
 .. code-block:: python
@@ -401,6 +536,30 @@ Build labels for every profile in a multi-line survey:
                geo=True,
            )
        )
+
+   print("profiles", data.lines)
+   print("trace count", len(traces))
+
+Captured output:
+
+.. code-block:: text
+
+   profiles ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+   trace count 10
+
+The figure uses a compact grid rather than stacking five separate
+images.  Each panel keeps one profile line, its first and last station
+labels, and the same coordinate axes so line spacing can be compared
+without changing scale from panel to panel.
+
+.. figure:: ../../images/user_guide/map/map_overlays_multiline_grid.png
+   :alt: Grid of profile-line overlays for the WILLY_DATA multi-line survey.
+   :align: center
+   :width: 88%
+
+   Profile-line overlays for the five ``WILLY_DATA`` folders.  The
+   Python example creates two Plotly traces per profile: one line trace
+   and one station-label trace.
 
 Troubleshooting
 ---------------

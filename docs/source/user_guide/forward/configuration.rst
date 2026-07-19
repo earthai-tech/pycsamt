@@ -3,10 +3,10 @@
 Forward Configuration
 =====================
 
-Forward modelling should be reproducible. A synthetic response, training
-dataset, or grid experiment is only useful when another user can reconstruct
-the solver, model prior, sampled axis, station layout, noise model, and
-random seed.
+:term:`Forward modelling` should be reproducible. A synthetic response,
+training dataset, or grid experiment is only useful when another user can
+reconstruct the solver, :term:`model prior`, sampled axis,
+:term:`station layout`, :term:`noise model`, and :term:`random seed`.
 
 The forward package provides three configuration dataclasses:
 
@@ -50,29 +50,44 @@ Configuration Classes
 Template Files
 --------------
 
-Forward configuration files can be written as Python, JSON, YML, or YAML. The
-file extension selects the format automatically. Templates include parameter
-comments, which makes them good review artifacts for scientific projects.
+Forward :term:`configuration file`\ s can be written as Python, JSON, YML, or
+YAML. The file extension selects the format automatically. Templates include
+parameter comments, which makes them good review artifacts for scientific
+projects.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig, ForwardConfig2D, ForwardConfig3D
+   >>> from pycsamt.forward import ForwardConfig, ForwardConfig2D, ForwardConfig3D
 
-   ForwardConfig.write_template("configs/forward_1d.yml")
-   ForwardConfig2D.write_template("configs/forward_2d.yml")
-   ForwardConfig3D.write_template("configs/forward_3d.yml")
+   >>> ForwardConfig.write_template("configs/forward_1d.yml")
+   >>> ForwardConfig2D.write_template("configs/forward_2d.yml")
+   >>> ForwardConfig3D.write_template("configs/forward_3d.yml")
 
 Load the edited files with strict validation of keys:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig
+   >>> from pycsamt.forward import ForwardConfig
 
-   cfg = ForwardConfig.from_file("configs/forward_1d.yml", strict=True)
-   cfg.validate()
-   print(cfg.summary())
+   >>> cfg = ForwardConfig.from_file("configs/forward_1d.yml", strict=True)
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig
+     solver               = 'mt1d'
+     freq_min             = 0.0001 Hz
+     freq_max             = 1e+04 Hz
+     n_freqs              = 30
+     n_layers             = 3-8
+     rho_min              = 1 Ohm.m
+     rho_max              = 1e+04 Ohm.m
+     depth_max            = 2e+03 m
+     n_samples            = 100
+     noise_level          = 0.05  (gaussian)
+     seed                 = None
+     n_jobs               = 1
+     output               = forward_dataset.npz
 
 ``strict=True`` is recommended for production runs because misspelled keys
 raise an error instead of being ignored. Use ``strict=False`` only when
@@ -81,8 +96,17 @@ loading a file that intentionally contains extra metadata.
 1-D Configuration
 -----------------
 
-``ForwardConfig`` controls the 1-D solver, frequency or time grid, random
-layered model prior, noise model, output path, and parallel worker count.
+``ForwardConfig`` controls the 1-D solver, :term:`frequency grid` or
+:term:`time gate` grid, random layered :term:`model prior`,
+:term:`noise model`, output path, and parallel worker count. The sampled axis
+is logarithmic: for frequency-domain solvers,
+:math:`f_i = 10^{a + i(b-a)/(n_f-1)}` where :math:`a=\log_{10}(f_\min)`,
+:math:`b=\log_{10}(f_\max)`, and :math:`i=0,\ldots,n_f-1`. For TEM,
+the same construction is applied to time gates,
+:math:`t_i = 10^{c + i(d-c)/(n_t-1)}`, using
+:math:`c=\log_{10}(t_\min)` and :math:`d=\log_{10}(t_\max)`. This makes the
+configuration compact while still recording every sampled point
+deterministically.
 
 .. list-table::
    :header-rows: 1
@@ -123,44 +147,61 @@ The solver controls which sampled axis is active:
 
 Generate a 1-D MT training dataset:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig, generate_dataset
+   >>> from pycsamt.forward import ForwardConfig, generate_dataset
 
-   cfg = ForwardConfig(
-       solver="mt1d",
-       freq_min=1e-3,
-       freq_max=1e4,
-       n_freqs=40,
-       n_layers_min=3,
-       n_layers_max=7,
-       rho_min=1.0,
-       rho_max=10_000.0,
-       depth_max=3000.0,
-       n_samples=5000,
-       noise_level=0.05,
-       noise_type="field",
-       include_phase=True,
-       seed=42,
-       n_jobs=1,
-       output_dir="runs/forward",
-       output_name="mt1d_training",
-   )
+   >>> cfg = ForwardConfig(
+   ...     solver="mt1d",
+   ...     freq_min=1e-3,
+   ...     freq_max=1e4,
+   ...     n_freqs=40,
+   ...     n_layers_min=3,
+   ...     n_layers_max=7,
+   ...     rho_min=1.0,
+   ...     rho_max=10_000.0,
+   ...     depth_max=3000.0,
+   ...     n_samples=5000,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     output_dir="runs/forward",
+   ...     output_name="mt1d_training",
+   ... )
 
-   cfg.validate()
-   dataset = generate_dataset(**cfg.to_dataset_kwargs())
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig
+     solver               = 'mt1d'
+     freq_min             = 0.001 Hz
+     freq_max             = 1e+04 Hz
+     n_freqs              = 40
+     n_layers             = 3-7
+     rho_min              = 1 Ohm.m
+     rho_max              = 1e+04 Ohm.m
+     depth_max            = 3e+03 m
+     n_samples            = 5,000
+     noise_level          = 0.05  (field)
+     seed                 = 42
+     n_jobs               = 1
+     output               = runs/forward/mt1d_training.npz
+   >>> dataset = generate_dataset(**cfg.to_dataset_kwargs())
 
 ``to_dataset_kwargs()`` builds the correct frequency or time array and
-constructs the output path. This reduces the risk of the config and the
+constructs the output path. In this example the resolved frequency grid starts
+at ``0.001`` Hz and ends at ``10000`` Hz, with intermediate samples spaced
+evenly in :math:`\log_{10}(f)`. This reduces the risk of the config and the
 actual dataset generation call drifting apart.
 
 Geological Priors
 -----------------
 
 ``ForwardConfig.geology`` can replace broad ``rho_min``/``rho_max`` and
-``depth_max`` sampling with a named geological prior. This is useful when an
-AI dataset should represent a known target class instead of arbitrary
+``depth_max`` sampling with a named :term:`geological prior`. This is useful
+when an AI dataset should represent a known target class instead of arbitrary
 layered-earth variation.
 
 Common prior names include:
@@ -174,25 +215,38 @@ Common prior names include:
    marine
    permafrost
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig, generate_dataset
+   >>> from pycsamt.forward import ForwardConfig, generate_dataset
 
-   cfg = ForwardConfig(
-       solver="mt1d",
-       geology="geothermal",
-       n_layers_min=4,
-       n_layers_max=7,
-       n_samples=20_000,
-       noise_type="field",
-       seed=12,
-       output_dir="runs/forward",
-       output_name="geothermal_mt1d",
-   )
+   >>> cfg = ForwardConfig(
+   ...     solver="mt1d",
+   ...     geology="geothermal",
+   ...     n_layers_min=4,
+   ...     n_layers_max=7,
+   ...     n_samples=20_000,
+   ...     noise_type="field",
+   ...     seed=12,
+   ...     output_dir="runs/forward",
+   ...     output_name="geothermal_mt1d",
+   ... )
 
-   cfg.validate()
-   dataset = generate_dataset(**cfg.to_dataset_kwargs())
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig
+     solver               = 'mt1d'
+     freq_min             = 0.0001 Hz
+     freq_max             = 1e+04 Hz
+     n_freqs              = 30
+     n_layers             = 4-7
+     geology              = 'geothermal'
+     n_samples            = 20,000
+     noise_level          = 0.05  (field)
+     seed                 = 12
+     n_jobs               = 1
+     output               = runs/forward/geothermal_mt1d.npz
+   >>> dataset = generate_dataset(**cfg.to_dataset_kwargs())
 
 When ``geology`` is set, the geological prior should be documented in the
 project notes. A neural network trained on a narrow prior may not generalize
@@ -201,31 +255,52 @@ outside that geological setting.
 TEM Configuration
 -----------------
 
-TEM uses time gates rather than frequency samples.
+TEM uses :term:`time gate`\ s rather than frequency samples. The loop radius
+:math:`a` enters the transmitter geometry, while the configured gates
+:math:`t_i` control where the decay curve is sampled after current shutoff.
+Because the response changes rapidly at early time and slowly at late time,
+logarithmic spacing gives useful resolution across several decades without
+requiring a dense linear grid.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig, generate_dataset
+   >>> from pycsamt.forward import ForwardConfig, generate_dataset
 
-   cfg = ForwardConfig(
-       solver="tem1d",
-       time_min=1e-6,
-       time_max=1e-2,
-       n_times=25,
-       loop_radius=50.0,
-       n_layers_min=3,
-       n_layers_max=6,
-       n_samples=1000,
-       noise_type="gaussian",
-       noise_level=0.03,
-       seed=5,
-       output_dir="runs/forward",
-       output_name="tem1d_training",
-   )
+   >>> cfg = ForwardConfig(
+   ...     solver="tem1d",
+   ...     time_min=1e-6,
+   ...     time_max=1e-2,
+   ...     n_times=25,
+   ...     loop_radius=50.0,
+   ...     n_layers_min=3,
+   ...     n_layers_max=6,
+   ...     n_samples=1000,
+   ...     noise_type="gaussian",
+   ...     noise_level=0.03,
+   ...     seed=5,
+   ...     output_dir="runs/forward",
+   ...     output_name="tem1d_training",
+   ... )
 
-   cfg.validate()
-   dataset = generate_dataset(**cfg.to_dataset_kwargs())
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig
+     solver               = 'tem1d'
+     time_min             = 1e-06 s
+     time_max             = 0.01 s
+     n_times              = 25
+     loop_radius          = 50.0 m
+     n_layers             = 3-6
+     rho_min              = 1 Ohm.m
+     rho_max              = 1e+04 Ohm.m
+     depth_max            = 2e+03 m
+     n_samples            = 1,000
+     noise_level          = 0.03  (gaussian)
+     seed                 = 5
+     n_jobs               = 1
+     output               = runs/forward/tem1d_training.npz
+   >>> dataset = generate_dataset(**cfg.to_dataset_kwargs())
 
 TEM generation can be slower than MT1D because the current implementation
 uses numerical integration for the step-off response. Start with a small
@@ -235,7 +310,15 @@ uses numerical integration for the step-off response. Start with a small
 -----------------
 
 ``ForwardConfig2D`` creates a :class:`pycsamt.forward.Grid2D` and solver
-keyword arguments for :class:`pycsamt.forward.MT2DForward`.
+keyword arguments for :class:`pycsamt.forward.MT2DForward`. The
+:term:`finite-difference grid` stores resistivity as a cell model
+:math:`\rho(x,z)`. For the rectangular anomaly case, the background
+resistivity :math:`\rho_b` is used everywhere except inside the configured
+box, where :math:`\rho(x,z)=\rho_a` for
+:math:`x_\mathrm{lo}\le x\le x_\mathrm{hi}` and
+:math:`z_\mathrm{lo}\le z\le z_\mathrm{hi}`. Padding extends the numerical
+domain beyond the core survey area so boundary conditions are less visible in
+the predicted response.
 
 .. list-table::
    :header-rows: 1
@@ -272,47 +355,58 @@ The supported ``model_type`` values are:
 
 Example 2-D anomaly run:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig2D, MT2DForward
+   >>> from pycsamt.forward import ForwardConfig2D, MT2DForward
 
-   cfg = ForwardConfig2D(
-       freq_min=1e-2,
-       freq_max=1e3,
-       n_freqs=25,
-       nx=50,
-       nz=35,
-       x_max=10_000.0,
-       z_max=6000.0,
-       n_pad=8,
-       pad_factor=1.3,
-       bg_rho=300.0,
-       model_type="anomaly",
-       anomaly_rho=10.0,
-       anomaly_x_lo=2500.0,
-       anomaly_x_hi=6500.0,
-       anomaly_z_lo=400.0,
-       anomaly_z_hi=1800.0,
-       n_stations=16,
-       verbose=True,
-   )
+   >>> cfg = ForwardConfig2D(
+   ...     freq_min=1e-2,
+   ...     freq_max=1e3,
+   ...     n_freqs=25,
+   ...     nx=50,
+   ...     nz=35,
+   ...     x_max=10_000.0,
+   ...     z_max=6000.0,
+   ...     n_pad=8,
+   ...     pad_factor=1.3,
+   ...     bg_rho=300.0,
+   ...     model_type="anomaly",
+   ...     anomaly_rho=10.0,
+   ...     anomaly_x_lo=2500.0,
+   ...     anomaly_x_hi=6500.0,
+   ...     anomaly_z_lo=400.0,
+   ...     anomaly_z_hi=1800.0,
+   ...     n_stations=16,
+   ...     verbose=True,
+   ... )
 
-   cfg.validate()
-   print(cfg.summary())
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig2D
+     model_type             = 'anomaly'
+     bg_rho                 = 300.0 Ohm.m
+     freq range             = 0.01-1e+03 Hz  (25 pts)
+     grid (nx x nz)         = 50 x 35  (core, +8 pad)
+     x_max                  = 10000 m
+     z_max                  = 6000 m
+     n_stations             = 16
+     anomaly                = 10.0 Ohm.m  x=[2500.0,6500.0]  z=[400.0,1800.0]
 
-   grid = cfg.to_grid()
-   solver = MT2DForward(grid=grid, **cfg.to_solver_kwargs())
-   response = solver.run()
+   >>> grid = cfg.to_grid()
+   >>> solver = MT2DForward(grid=grid, **cfg.to_solver_kwargs())
+   >>> response = solver.run()
 
 ``to_grid()`` accepts a ``seed`` argument for random models:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   cfg = ForwardConfig2D(model_type="random")
-   cfg.validate()
-   grid = cfg.to_grid(seed=42)
+   >>> cfg = ForwardConfig2D(model_type="random")
+   >>> cfg.validate()
+   >>> grid = cfg.to_grid(seed=42)
+   >>> grid.rho.shape
+   (50, 30)
 
 2-D Grid Tuning
 ---------------
@@ -344,7 +438,12 @@ Example 2-D anomaly run:
 -----------------
 
 ``ForwardConfig3D`` builds a :class:`pycsamt.forward.Grid3D` and keyword
-arguments for :class:`pycsamt.forward.MT3DForward`.
+arguments for :class:`pycsamt.forward.MT3DForward`. The model is written as
+:math:`\rho(x,y,z)`, with station samples arranged over the horizontal
+:math:`x` and :math:`y` axes. In the documented quasi-3-D path, each requested
+frequency still follows the same log grid as the 2-D case, while the solver
+uses a practical approximation to produce survey-scale synthetic responses
+over a 3-D resistivity volume.
 
 .. list-table::
    :header-rows: 1
@@ -383,62 +482,72 @@ The supported ``model_type`` values are:
 
 Example quasi-3-D block anomaly:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig3D, MT3DForward
+   >>> from pycsamt.forward import ForwardConfig3D, MT3DForward
 
-   cfg = ForwardConfig3D(
-       freq_min=1e-2,
-       freq_max=1e3,
-       n_freqs=15,
-       method="quasi3d",
-       nx=24,
-       ny=24,
-       nz=18,
-       x_max=9000.0,
-       y_max=9000.0,
-       z_max=5000.0,
-       n_pad=8,
-       bg_rho=500.0,
-       model_type="block_anomaly",
-       anomaly_rho=20.0,
-       anomaly_x_lo=2500.0,
-       anomaly_x_hi=6500.0,
-       anomaly_y_lo=2500.0,
-       anomaly_y_hi=6500.0,
-       anomaly_z_lo=500.0,
-       anomaly_z_hi=2000.0,
-       nx_stations=6,
-       ny_stations=6,
-       verbose=True,
-   )
+   >>> cfg = ForwardConfig3D(
+   ...     freq_min=1e-2,
+   ...     freq_max=1e3,
+   ...     n_freqs=15,
+   ...     method="quasi3d",
+   ...     nx=24,
+   ...     ny=24,
+   ...     nz=18,
+   ...     x_max=9000.0,
+   ...     y_max=9000.0,
+   ...     z_max=5000.0,
+   ...     n_pad=8,
+   ...     bg_rho=500.0,
+   ...     model_type="block_anomaly",
+   ...     anomaly_rho=20.0,
+   ...     anomaly_x_lo=2500.0,
+   ...     anomaly_x_hi=6500.0,
+   ...     anomaly_y_lo=2500.0,
+   ...     anomaly_y_hi=6500.0,
+   ...     anomaly_z_lo=500.0,
+   ...     anomaly_z_hi=2000.0,
+   ...     nx_stations=6,
+   ...     ny_stations=6,
+   ...     verbose=True,
+   ... )
 
-   cfg.validate()
-   print(cfg.summary())
+   >>> cfg.validate()
+   >>> print(cfg.summary())
+   ForwardConfig3D
+     method                   = 'quasi3d'
+     model_type               = 'block_anomaly'  (bg=500.0 Ohm.m)
+     freq range               = 0.01-1e+03 Hz  (15 pts)
+     grid (nx x ny x nz)      = 24 x 24 x 18  (core, +8 pad)
+     extents (x,y,z)          = 9000 m x 9000 m x 5000 m
+     stations                 = 6 x 6 = 36 total
+     anomaly                  = 20.0 Ohm.m  x=[2500.0,6500.0]  y=[2500.0,6500.0]  z=[500.0,2000.0]
 
-   grid = cfg.to_grid()
-   response = MT3DForward(grid=grid, **cfg.to_solver_kwargs()).run()
+   >>> grid = cfg.to_grid()
+   >>> response = MT3DForward(grid=grid, **cfg.to_solver_kwargs()).run()
 
 Random layered 3-D model:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   cfg = ForwardConfig3D(
-       model_type="random_layered",
-       n_layers=5,
-       lateral_variation=True,
-       corr_length=2500.0,
-       nx_stations=7,
-       ny_stations=7,
-   )
+   >>> cfg = ForwardConfig3D(
+   ...     model_type="random_layered",
+   ...     n_layers=5,
+   ...     lateral_variation=True,
+   ...     corr_length=2500.0,
+   ...     nx_stations=7,
+   ...     ny_stations=7,
+   ... )
 
-   cfg.validate()
-   grid = cfg.to_grid(seed=42)
+   >>> cfg.validate()
+   >>> grid = cfg.to_grid(seed=42)
+   >>> grid.rho.shape
+   (20, 20, 15)
 
 3-D Configuration Notes
-----------------------
+-----------------------
 
 ``ForwardConfig3D.method`` currently validates to ``"quasi3d"``. The
 underlying solver code contains experimental hooks for fuller 3-D methods,
@@ -458,17 +567,18 @@ Call ``validate()`` before any expensive run. Validation catches basic range
 errors such as negative frequencies, invalid model types, impossible anomaly
 bounds, and invalid station counts.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig2D
+   >>> from pycsamt.forward import ForwardConfig2D
 
-   cfg = ForwardConfig2D(freq_min=100.0, freq_max=10.0)
+   >>> cfg = ForwardConfig2D(freq_min=100.0, freq_max=10.0)
 
-   try:
-       cfg.validate()
-   except ValueError as exc:
-       print(f"Configuration problem: {exc}")
+   >>> try:
+   ...     cfg.validate()
+   ... except ValueError as exc:
+   ...     print(f"Configuration problem: {exc}")
+   Configuration problem: freq_min must be > 0 and freq_max > freq_min.
 
 Validation does not prove that the model is geologically meaningful. It only
 checks that the parameters are internally acceptable for the builder and
@@ -480,18 +590,20 @@ Summaries And Provenance
 Each config object provides ``summary()`` and ``repr`` output that can be
 saved in logs or reports.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pathlib import Path
+   >>> from pathlib import Path
+   >>> from pycsamt.forward import ForwardConfig2D
 
-   cfg = ForwardConfig2D(model_type="anomaly")
-   cfg.validate()
+   >>> cfg = ForwardConfig2D(model_type="anomaly")
+   >>> cfg.validate()
 
-   run_dir = Path("runs/forward/2d_anomaly")
-   run_dir.mkdir(parents=True, exist_ok=True)
-   (run_dir / "summary.txt").write_text(cfg.summary())
-   cfg.to_template(run_dir / "forward_config_2d.yml")
+   >>> run_dir = Path("runs/forward/2d_anomaly")
+   >>> run_dir.mkdir(parents=True, exist_ok=True)
+   >>> (run_dir / "summary.txt").write_text(cfg.summary())
+   363
+   >>> cfg.to_template(run_dir / "forward_config_2d.yml")
 
 What To Record
 --------------

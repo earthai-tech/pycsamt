@@ -9,8 +9,9 @@ The site utility module contains the shared helper functions used by the
 station containers, selectors, editors, profile tools, exporters, and reports.
 Most users will interact with these helpers indirectly through higher-level
 APIs. They are still useful when you need a small, explicit operation in a
-script: identify EDI-like inputs, coerce paths into an ``EDICollection``, read
-station metadata, select frequency indices, or match station names.
+script: identify :term:`EDI-like object`\ s, coerce paths into an
+``EDICollection``, read :term:`station identity` and coordinates, select
+frequency indices, or match station names.
 
 Use this page when you need to:
 
@@ -18,10 +19,62 @@ Use this page when you need to:
 * iterate safely over EDI-like objects;
 * read or update station names and coordinates;
 * implement copy-aware helper functions with an ``inplace`` flag;
-* build frequency index selections for editing;
+* build :term:`frequency grid` index selections for editing;
 * match station names with literals, wildcards, regular expressions, or
   callables;
 * convert azimuths and angle units.
+
+The examples below use a small synthetic EDI-like class. It exposes the same
+``get_section("head")`` and ``Z.freq`` attributes that the utilities inspect,
+so the printed output is reproducible without local EDI files.
+
+.. code-block:: python
+   :linenos:
+
+   import copy
+   import numpy as np
+
+   class Head:
+       def __init__(self, name="S01", lat=np.nan, lon=np.nan, elev=np.nan):
+           self.dataid = name
+           self.station = name
+           self.lat = lat
+           self.long = lon
+           self.lon = lon
+           self.elev = elev
+
+   class ZBlock:
+       def __init__(self, freq):
+           self.freq = np.asarray(freq, float)
+           self.z = np.zeros((len(freq), 2, 2), dtype=complex)
+
+   class DemoEDI:
+       def __init__(
+           self,
+           name="S01",
+           freq=(1000.0, 100.0, 10.0, 1.0),
+           lat=np.nan,
+           lon=np.nan,
+           elev=np.nan,
+       ):
+           self.name = name
+           self.station = name
+           self.Head = Head(name, lat, lon, elev)
+           self.Z = ZBlock(freq)
+
+       def get_section(self, key):
+           if str(key).lower() == "head":
+               return self.Head
+           return None
+
+       def set_section(self, key, value):
+           if str(key).lower() == "head":
+               self.Head = value
+
+       def __copy__(self):
+           new = type(self).__new__(type(self))
+           new.__dict__ = copy.deepcopy(self.__dict__)
+           return new
 
 Utility Map
 -----------
@@ -68,7 +121,6 @@ with pyCSAMT EDI classes and compatible EDI-like test or adapter objects.
 
    from pathlib import Path
 
-   from pycsamt.seg.edi import EDIFile
    from pycsamt.site.utils import (
        is_edi_collection,
        is_edi_file,
@@ -76,11 +128,19 @@ with pyCSAMT EDI classes and compatible EDI-like test or adapter objects.
    )
 
    path = Path("data/edi/S01.edi")
-   edi = EDIFile(path)
+   edi = DemoEDI("A01")
 
    print(is_pathlike(path))
    print(is_edi_file(edi))
    print(is_edi_collection([edi]))
+
+Output:
+
+.. code-block:: text
+
+   True
+   True
+   True
 
 Detection rules:
 
@@ -107,10 +167,19 @@ skipped, and path-like inputs yield nothing.
 
    from pycsamt.site.utils import iter_edifiles, station_name
 
+   edi_a = DemoEDI("A01")
+   edi_b = DemoEDI("B02")
    mixed = [edi_a, object(), edi_b]
 
    for ed in iter_edifiles(mixed):
        print(station_name(ed))
+
+Output:
+
+.. code-block:: text
+
+   A01
+   B02
 
 A single EDI-like object is yielded once:
 
@@ -119,6 +188,12 @@ A single EDI-like object is yielded once:
 
    items = list(iter_edifiles(edi_a))
    print(len(items))
+
+Output:
+
+.. code-block:: text
+
+   1
 
 Use this helper when writing functions that should accept either one station
 or many stations.
@@ -134,17 +209,18 @@ Coercing To EDICollection
 
    from pycsamt.site.utils import as_edicollection
 
-   from_directory = as_edicollection(
-       "data/edi",
-       recursive=True,
-       strict=False,
-       on_dup="replace",
-   )
-
    from_list = as_edicollection([edi_a, edi_b])
+   empty = as_edicollection([])
 
-   if from_directory is None:
-       raise RuntimeError("No EDI files were discovered")
+   print(from_list is not None)
+   print(empty is None)
+
+Output:
+
+.. code-block:: text
+
+   True
+   True
 
 The coercion order is:
 
@@ -173,13 +249,18 @@ The lookup order is:
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.edi import EDIFile
    from pycsamt.site.utils import station_name
 
-   edi = EDIFile("data/edi/S01.edi")
+   edi = DemoEDI("A01")
 
    name = station_name(edi)
    print(name)
+
+Output:
+
+.. code-block:: text
+
+   A01
 
 The matching and export tools use this same resolution pattern, so using
 ``station_name`` in your own scripts keeps naming behavior consistent.
@@ -197,6 +278,14 @@ Updating Station Names
 
    set_station_name(edi, "L01_S001", inplace=True)
    print(station_name(edi))
+   print(edi.Head.dataid)
+
+Output:
+
+.. code-block:: text
+
+   L01_S001
+   L01_S001
 
 Use ``inplace=False`` when you want a copy-like update.
 
@@ -212,20 +301,29 @@ Use ``inplace=False`` when you want a copy-like update.
    print(station_name(renamed))
    print(station_name(edi))
 
+Output:
+
+.. code-block:: text
+
+   L01_S001_REVIEWED
+   L01_S001
+
 If ``name`` is omitted, the helper delegates to the core station-name policy
-utility using ``station_id`` and ``policy``.
+utility using ``station_id`` and a pyCSAMT station policy object. For simple
+scripts, it is often clearer to build the desired string explicitly:
 
 .. code-block:: python
    :linenos:
 
-   renamed = set_station_name(
-       edi,
-       station_id=12,
-       policy=lambda value: f"S{int(value):03d}",
-       inplace=False,
-   )
+   renamed = set_station_name(edi, name=f"S{12:03d}", inplace=False)
 
    print(station_name(renamed))
+
+Output:
+
+.. code-block:: text
+
+   S012
 
 Coordinate Access
 -----------------
@@ -239,11 +337,20 @@ Coordinate Access
 
    from pycsamt.site.utils import get_coords
 
+   edi = DemoEDI("S01", lat=35.125, lon=12.750, elev=1234.0)
    coords = get_coords(edi)
 
    print(coords.lat)
    print(coords.lon)
    print(coords.elev)
+
+Output:
+
+.. code-block:: text
+
+   35.125
+   12.75
+   1234.0
 
 Missing or unreadable coordinate fields return ``NaN`` values. The helper
 supports the legacy header spelling ``long`` for longitude.
@@ -259,15 +366,24 @@ Values left as ``None`` are not changed.
 
    from pycsamt.site.utils import get_coords, set_coords
 
+   edi = DemoEDI("S01", lat=35.125, lon=12.750, elev=1234.0)
    corrected = set_coords(
        edi,
-       lat=35.125,
-       lon=12.750,
-       elev=1234.0,
+       lat=35.200,
+       lon=12.900,
+       elev=1180.0,
        inplace=False,
    )
 
    print(get_coords(corrected))
+   print(get_coords(edi))
+
+Output:
+
+.. code-block:: text
+
+   _Coord(lat=35.2, lon=12.9, elev=1180.0)
+   _Coord(lat=35.125, lon=12.75, elev=1234.0)
 
 Longitude is written to both ``lon`` and ``long`` when the header allows it.
 This keeps newer code and older EDI conventions aligned.
@@ -294,11 +410,23 @@ pattern consistent.
    def rename_to_reviewed(ed):
        return set_station_name(ed, "REVIEWED", inplace=True)
 
+   edi = DemoEDI("S01", lat=35.125, lon=12.750, elev=1234.0)
    reviewed = apply_inplace(
        edi,
        rename_to_reviewed,
        inplace=False,
    )
+   print(station_name(reviewed))
+   print(station_name(edi))
+   print(reviewed is edi)
+
+Output:
+
+.. code-block:: text
+
+   REVIEWED
+   S01
+   False
 
 This pattern is useful when writing your own small site-editing helper:
 
@@ -313,6 +441,18 @@ This pattern is useful when writing your own small site-editing helper:
 
        return apply_inplace(ed, update, inplace=inplace)
 
+   edi = DemoEDI("S01", lat=35.125, lon=12.750, elev=1234.0)
+   zeroed = force_zero_elevation(edi, inplace=False)
+   print(get_coords(zeroed).elev)
+   print(get_coords(edi).elev)
+
+Output:
+
+.. code-block:: text
+
+   0.0
+   1234.0
+
 Frequency Access
 ----------------
 
@@ -325,13 +465,22 @@ order.
 
    from pycsamt.site.utils import get_freq
 
+   edi = DemoEDI("F", freq=(1000.0, 100.0, 10.0, 1.0))
    freq = get_freq(edi)
 
    print(freq[:5])
    print(freq.size)
 
+Output:
+
+.. code-block:: text
+
+   [   1.   10.  100. 1000.]
+   4
+
 If no frequency vector is available, an empty array is returned. The helper is
-read-only: it does not reorder the data arrays in the EDI object.
+read-only: it returns a sorted copy for matching convenience, but it does not
+reorder the data arrays in the EDI object.
 
 Frequency Matching
 ------------------
@@ -353,13 +502,27 @@ more target frequencies within an absolute tolerance.
    f = np.array([1.0, 10.0, 10.0000004, 100.0])
 
    idx = freq_match(f, 10.0, tol=5e-7)
-   print(idx)
+   print(idx.tolist())
 
    idx = freq_match(f, [1.0, 100.0])
-   print(idx)
+   print(idx.tolist())
+
+Output:
+
+.. code-block:: text
+
+   [1, 2]
+   [0, 3]
 
 Non-finite frequency values never match. Duplicate values are all returned
-when they fall within the tolerance window.
+when they fall within the tolerance window. In set notation the returned
+indices are
+
+.. math::
+
+   I = \{\,i : \exists t \in T,\ |f_i - t| \le \epsilon\,\},
+
+where :math:`T` is the target set and :math:`\epsilon` is ``tol``.
 
 Frequency Selection
 -------------------
@@ -380,9 +543,17 @@ indices.
    mid_band = freq_select(f, slice(10.0, 1_000.0))
    exact = freq_select(f, [10.0, 100.0])
 
-   print(low_band)
-   print(mid_band)
-   print(exact)
+   print(low_band.tolist())
+   print(mid_band.tolist())
+   print(exact.tolist())
+
+Output:
+
+.. code-block:: text
+
+   [0, 1, 2]
+   [1, 2, 3]
+   [1, 2]
 
 Selection rules:
 
@@ -394,6 +565,11 @@ Selection rules:
 Use this helper when building masks for
 :func:`pycsamt.site.edit.select_freq` or custom frequency-indexed
 transformations.
+
+When you select from ``get_freq(ed)``, remember that ``get_freq`` returns a
+sorted copy. Apply the indices to that sorted vector, or use
+:func:`pycsamt.site.edit.select_freq` when you need the original arrays sliced
+consistently.
 
 Name Matching
 -------------
@@ -423,6 +599,14 @@ Supported pattern types are:
    print(match_name(re.compile(r"^X\d+$"), "X123"))
    print(match_name(lambda name: name.endswith("99"), "A99"))
 
+Output:
+
+.. code-block:: text
+
+   True
+   True
+   True
+
 String matching is case-insensitive. Glob-like strings are translated to
 regular expressions internally. Regex-looking strings are compiled with
 case-insensitive matching.
@@ -438,9 +622,20 @@ an input and returns a list of matching EDI objects.
 
    from pycsamt.site.utils import select_by_name, station_name
 
+   sites = [
+       DemoEDI("L01_S001"),
+       DemoEDI("L01_S002"),
+       DemoEDI("L02_S003"),
+   ]
    selected = select_by_name(sites, "L01_*")
 
    print([station_name(ed) for ed in selected])
+
+Output:
+
+.. code-block:: text
+
+   ['L01_S001', 'L01_S002']
 
 For a higher-level container result, use :func:`pycsamt.site.selection.by_names`
 instead. ``select_by_name`` is the lightweight list-returning utility used by
@@ -459,6 +654,13 @@ Angle Helpers
 
    print(wrap_azimuth(-10.0))
    print(wrap_azimuth(730.0))
+
+Output:
+
+.. code-block:: text
+
+   350.0
+   10.0
 
 :func:`deg_to_mrad` and :func:`mrad_to_deg` convert between degrees and
 milliradians.
@@ -482,8 +684,15 @@ milliradians.
    angles_mrad = deg_to_mrad(angles_deg)
    restored = mrad_to_deg(angles_mrad)
 
-   print(angles_mrad)
-   print(restored)
+   print(np.round(angles_mrad, 3).tolist())
+   print(np.round(restored, 3).tolist())
+
+Output:
+
+.. code-block:: text
+
+   [0.0, 1570.796, 3141.593]
+   [0.0, 90.0, 180.0]
 
 These helpers accept scalars or NumPy arrays and return NumPy arrays.
 
@@ -496,36 +705,86 @@ metadata, selects a frequency band, and collects a named subset.
 .. code-block:: python
    :linenos:
 
-   from pycsamt.site.edit import select_freq
    from pycsamt.site.utils import (
-       as_edicollection,
        freq_select,
        get_freq,
        iter_edifiles,
        select_by_name,
        set_station_name,
+       station_name,
    )
 
-   collection = as_edicollection("data/edi")
-   if collection is None:
-       raise RuntimeError("No EDI files found")
+   collection = [
+       DemoEDI("raw-1"),
+       DemoEDI("raw-2"),
+       DemoEDI("raw-3"),
+   ]
 
    prepared = []
 
    for i, ed in enumerate(iter_edifiles(collection)):
        ed = set_station_name(
            ed,
-           station_id=i + 1,
-           policy=lambda n: f"L01_S{int(n):03d}",
+           name=f"L01_S{i + 1:03d}",
            inplace=False,
        )
 
        freq = get_freq(ed)
-       keep = freq_select(freq, (0.1, 100.0))
-       ed = select_freq(ed, keep=keep, inplace=False)
+       keep = freq_select(freq, (10.0, 1000.0))
+       ed.Z.freq = freq[keep]
        prepared.append(ed)
 
    line_start = select_by_name(prepared, "L01_S00?")
+   print([(station_name(ed), get_freq(ed).tolist()) for ed in line_start])
+
+Output:
+
+.. code-block:: text
+
+   [('L01_S001', [10.0, 100.0, 1000.0]), ('L01_S002', [10.0, 100.0, 1000.0]), ('L01_S003', [10.0, 100.0, 1000.0])]
+
+The same two decisions can be shown as a small audit figure: station names on
+one side, selected frequency rows on the other.
+
+.. code-block:: python
+   :linenos:
+
+   import matplotlib.pyplot as plt
+
+   fig, ax = plt.subplots(1, 2, figsize=(8, 3.2), constrained_layout=True)
+
+   all_names = [station_name(ed) for ed in prepared]
+   keep_names = [station_name(ed) for ed in line_start]
+   ax[0].bar(
+       all_names,
+       [1 if name in keep_names else 0 for name in all_names],
+   )
+   ax[0].set_ylim(0, 1.2)
+   ax[0].set_ylabel("selected")
+   ax[0].set_title("Name filter")
+
+   freq = np.array([1.0, 10.0, 100.0, 1000.0])
+   keep = freq_select(freq, (10.0, 1000.0))
+   ax[1].plot(freq, np.ones_like(freq), marker="o", label="available")
+   ax[1].scatter(freq[keep], np.ones_like(keep), s=90, label="selected")
+   ax[1].set_xscale("log")
+   ax[1].set_yticks([])
+   ax[1].set_xlabel("frequency (Hz)")
+   ax[1].set_title("Frequency selection")
+   ax[1].legend(frameon=False)
+
+   for axis in ax:
+       axis.grid(True, alpha=0.25)
+
+   fig.savefig("utilities_selection_flow.png", dpi=160)
+
+.. figure:: ../../images/user_guide/site/utilities_selection_flow.png
+   :alt: Two-panel utility audit plot showing selected station names and selected frequency rows.
+   :width: 90%
+   :align: center
+
+   Lightweight utility checks are often easiest to audit when the name filter
+   and the frequency selection are shown together.
 
 Common Mistakes
 ---------------

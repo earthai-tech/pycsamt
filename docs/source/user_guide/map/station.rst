@@ -1,14 +1,14 @@
 Station Maps
 ============
 
-Station maps show station positions, line traces, labels, and scalar
-overlays.  Use them for survey QC, coverage inspection, and quick
-comparison of per-station quantities.
+:term:`Station map`\ s show station positions, line traces, labels, and
+:term:`scalar overlay` values.  Use them for survey :term:`QC`,
+coverage inspection, and quick comparison of per-station quantities.
 
 The station-map API is intentionally code-first.  It accepts the same
 sources described in :doc:`loading`: EDI folders, EDI files, file
 lists, EDI-like objects, ``Sites`` containers, or an already-normalized
-:class:`pycsamt.map.MapData`.
+:class:`pycsamt.map.MapData` / :term:`MapData` object.
 
 What A Station Map Shows
 ------------------------
@@ -22,6 +22,13 @@ A station map combines three kinds of information:
 If at least one finite coordinate pair is available, the Plotly backend
 builds a geographic map.  If no coordinates are available, it falls
 back to a profile-style station-index plot rather than failing.
+In normalized form, station :math:`s_i` contributes a coordinate pair
+:math:`(\lambda_i,\phi_i)` when longitude and latitude are finite, and
+an overlay value :math:`v_i`.  Geographic maps draw
+:math:`(\lambda_i,\phi_i,v_i)`; fallback maps draw
+:math:`(i,v_i)`, where :math:`i` is the zero-based station index.  This
+keeps the diagnostic reproducible even before coordinate cleanup is
+complete.
 
 Function API
 ------------
@@ -49,6 +56,20 @@ notebooks.  Rendering options are passed with
 The function returns a Plotly figure by default.  You can display it in
 a notebook with ``fig.show()`` or export it with the helpers described
 in :doc:`export`.
+
+Captured output from inspecting the figure and the selected values:
+
+.. code-block:: text
+
+   function traces 2
+   function trace types ('scattermap', 'scattermap')
+   function stations with rho 28
+   function actual frequencies [10.16]
+
+The two traces are the station markers and the profile line.  The
+requested 10 Hz sample is taken from the nearest available
+:term:`frequency grid` value, 10.16 Hz, for every station in this sample
+line.
 
 Reusing Loaded Data
 -------------------
@@ -85,6 +106,24 @@ For repeated maps, load once and reuse the same
        ),
    )
 
+Captured output:
+
+.. code-block:: text
+
+   reuse rho traces 2
+   reuse phase traces 2
+   reuse rho range 22.899 2461.779
+   reuse phase range 3.313 59.84
+
+.. figure:: ../../images/user_guide/map/map_station_rho_phase_comparison.png
+   :alt: Side-by-side rho and phase station overlays for the L18 sample line.
+   :align: center
+   :width: 88%
+
+   The same loaded :term:`MapData` rendered twice: once as
+   :math:`\rho_{a,xy}` and once as :math:`\phi_{xy}` at the selected
+   102.4 Hz sample.
+
 Builder API
 -----------
 
@@ -106,6 +145,13 @@ reuse the same normalized data.
 This pattern is convenient when a notebook or application lets a user
 switch overlays without re-reading the EDI files.
 
+Captured output:
+
+.. code-block:: text
+
+   builder traces 2
+   builder labels shown False
+
 Overlays
 --------
 
@@ -118,10 +164,10 @@ Supported overlay names include:
    Station elevation, when present.
 
 ``rho`` or ``resistivity``
-   Apparent resistivity at the nearest frequency.
+   :term:`Apparent resistivity` at the nearest frequency.
 
 ``phase``
-   Phase at the nearest frequency.
+   :term:`Phase` at the nearest frequency.
 
 ``skin_depth`` or ``depth``
    Skin-depth scale computed from apparent resistivity and the actual
@@ -156,6 +202,14 @@ the nearest finite positive frequency for each station.  Use
        ),
    )
 
+Captured output from the same data:
+
+.. code-block:: text
+
+   freq strict values 28
+   freq selected actual [102.4]
+   freq relative delta [0.024]
+
 The ``component`` option accepts the same component names used by the
 map core helpers:
 
@@ -171,6 +225,22 @@ map core helpers:
 
 When ``log_color=True``, only positive values are transformed with
 ``log10``.  Non-positive values become gaps in the color scale.
+For a requested frequency :math:`f_r`, station :math:`i` selects
+:math:`f_i^\*` by minimizing :math:`|f_{ik}-f_r|` over its finite
+positive grid.  A finite tolerance :math:`\tau` keeps the station only
+when :math:`|f_i^\*-f_r|\le\tau`.  For the ``xy`` apparent-resistivity
+overlay, the plotted value is
+
+.. math::
+
+   v_i = \rho_{a,xy}(f_i^\*) =
+   0.2\,\frac{|Z_{xy}(f_i^\*)|^2}{f_i^\*}.
+
+For phase, :math:`v_i=\arg Z_{xy}(f_i^\*)` in degrees.  For skin depth,
+the map computes
+:math:`v_i \approx 503\sqrt{\rho_{a,xy}(f_i^\*)/f_i^\*}` metres.  Keep
+``frequency``, ``frequency_tolerance``, ``component``, and
+``log_color`` fixed when comparing exported maps.
 
 Labels, Lines, And Selection
 ----------------------------
@@ -199,6 +269,24 @@ highlight one station.
 ``line_filter`` compares against normalized line names in
 ``data.lines``.  ``selected_id`` increases the selected station marker
 size; it does not remove other stations.
+
+Captured output:
+
+.. code-block:: text
+
+   selection lines ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+   selection traces 4
+   selection trace types ('scattermap', 'scattermap', 'scattermap', 'scattermap')
+   selection coordinate counts (28, 28, 25, 25)
+
+.. figure:: ../../images/user_guide/map/map_station_filtered_elevation.png
+   :alt: Filtered station map showing L18PLT and L22PLT elevation overlays.
+   :align: center
+   :width: 82%
+
+   Filtering keeps only ``L18PLT`` and ``L22PLT`` for display.  The
+   highlighted station remains part of the same station set; it is not a
+   separate filtered dataset.
 
 Basemaps
 --------
@@ -232,7 +320,7 @@ the shared basemap helpers.  Common style names include
 Density And Contour Layers
 --------------------------
 
-For quick spatial trends, enable a density layer:
+For quick spatial trends, enable a :term:`density layer`:
 
 .. code-block:: python
 
@@ -248,6 +336,13 @@ For quick spatial trends, enable a density layer:
 
 ``show_contours`` adds a density-style Plotly map layer when at least
 three finite coordinate/value triples are available.
+
+Captured output:
+
+.. code-block:: text
+
+   density traces 3
+   density types ('densitymap', 'scattermap', 'scattermap')
 
 For a filled image layer similar to a Surfer-style contour map, enable
 ``contour_image``:
@@ -271,6 +366,15 @@ it below station markers as a map image layer.  It returns no layer
 when there are fewer than three finite points or when log scaling would
 leave fewer than three positive values.
 
+.. figure:: ../../images/user_guide/map/map_station_density_contours.png
+   :alt: Contour layer beneath station markers for the L18 rho overlay.
+   :align: center
+   :width: 82%
+
+   A static rendering of the contour idea: the station
+   :math:`\log_{10}(\rho_a)` values are interpolated to a regular grid,
+   then station markers are drawn over the gridded layer.
+
 Themes And Color Scales
 -----------------------
 
@@ -293,6 +397,10 @@ Station maps share the map theme and color utilities.
 Use ``value_range=(min, max)`` for stable comparisons across multiple
 maps.  This is especially important when exporting a sequence of maps
 for a report.
+If two maps use different automatic color limits, the same value can
+appear as different colors.  A fixed range makes the color transform a
+single function :math:`c(v)` across the full sequence, which is the
+more reproducible choice for reports.
 
 Backends
 --------
@@ -308,6 +416,12 @@ figures for reports and batch processing.
        "data/AMT/WILLY_DATA/L18PLT",
        options=StationMapOptions(backend="matplotlib"),
    )
+
+Captured output:
+
+.. code-block:: text
+
+   matplotlib type Figure
 
 Backend behavior differs slightly:
 
@@ -337,6 +451,12 @@ exist, it creates a Cartesian station-index plot.
 
    if not data.has_geo:
        print("Using profile fallback because coordinates are incomplete.")
+
+Captured output for the sample line:
+
+.. code-block:: text
+
+   has geo True
 
 For production geographic maps, validate ``data.has_geo`` before
 plotting when every station must appear at a real location, and fix

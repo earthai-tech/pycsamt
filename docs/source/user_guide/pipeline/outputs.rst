@@ -3,44 +3,56 @@
 Pipeline Outputs
 ================
 
-Pipeline outputs are the files and programmatic objects produced by a
-:class:`pycsamt.pipeline.Pipeline` run.  A normal run writes a reproducible
-output directory containing processed EDI files, QC figures, reports, and the
-exact pipeline configuration used for that run.  The same run also returns a
-:class:`pycsamt.pipeline.PipelineResult` object for Python workflows.
+Pipeline outputs are the on-disk files and in-memory objects produced by
+:meth:`pycsamt.pipeline.Pipeline.run`.  A normal run creates one
+:term:`pipeline output directory` containing a reproduced
+:term:`canonical pipeline snapshot`, optional :term:`processed EDI` files,
+optional :term:`QC figure` files, and text or HTML reports.  The same run also
+returns a :term:`PipelineResult` for Python workflows.
 
-Use this page when you need to know:
+The useful way to think about outputs is not simply "files were written".
+A pipeline run transforms an input :term:`site collection`
+:math:`S_0` through an ordered set of processing steps
+:math:`T_1,\ldots,T_n`:
 
-* where processed EDI files are written;
-* how plot directories are named;
-* what ``summary.txt`` and ``report.html`` contain;
-* how ``pipeline.yaml`` supports reproducibility;
-* how to disable selected output families;
-* how to run completely in memory;
-* how to inspect output paths from Python.
+.. math::
 
-Output Philosophy
------------------
+   S_j = T_j(S_{j-1}; \theta_j), \qquad j=1,\ldots,n.
 
-The pipeline output system is built around three rules.
+The returned ``PipelineResult`` carries :math:`S_0`, :math:`S_n`, and one
+:term:`StepResult` for each transform.  The output directory records the same
+run in a form that a reviewer can open without Python: ``pipeline.yaml`` for
+the recipe, ``processed/`` for the final data state, ``plots/`` for per-step
+diagnostics, and reports for a human-readable audit trail.
 
-Outputs are explicit
-    A run writes files only when an output directory is resolved.  Passing
-    ``outdir=None`` to :meth:`pycsamt.pipeline.Pipeline.run` is an explicit
-    in-memory run and produces no filesystem side effects.
+Use this page when you need to know where files are written, which flags
+control each :term:`output artifact`, how to run in memory, and how to inspect
+the result object from Python.
 
-Outputs are reproducible
-    When output is enabled, pyCSAMT writes ``pipeline.yaml`` before processing
-    starts.  This file captures the resolved step list and parameters.
+Output Lifecycle
+----------------
 
-Outputs are organized by responsibility
-    Final processed data go under ``processed/``.  Per-step QC figures go
-    under ``plots/``.  Human-readable summaries live at the output root.
+An output-enabled run follows a fixed order:
+
+1. Resolve the output root.
+2. Create the root, ``processed/``, and ``plots/`` directories.
+3. Write ``pipeline.yaml`` before the first processing step starts.
+4. Run each step, recording one ``StepResult``.
+5. Save QC figures for successful steps when plotting is enabled.
+6. Optionally save intermediate EDI snapshots after successful steps.
+7. Write final processed EDIs after the last step when EDI export is enabled.
+8. Write ``summary.txt`` and/or ``report.html`` when reports are enabled.
+9. Return the ``PipelineResult`` object.
+
+This order matters for reproducibility.  If a later step fails and the run is
+configured to continue, the output directory can still contain the original
+pipeline snapshot, the completed step records, any figures produced before the
+failure, and the final in-memory state used by the returned result.
 
 Canonical Directory Tree
 ------------------------
 
-A typical run writes this directory tree:
+A typical run writes this tree:
 
 .. code-block:: text
    :linenos:
@@ -67,56 +79,72 @@ A typical run writes this directory tree:
    |-- report.html
    `-- summary.txt
 
-The exact plot names depend on the QC functions attached to each registered
-step.  A step may produce zero, one, or several figures.
+The exact plot names depend on the QC functions registered for each step.  A
+step may produce zero, one, or several figures.  The step folder name is
+deterministic:
+
+.. math::
+
+   f_j = \mathrm{plots}/\mathrm{format}("\%02d\_\%s", j, \ell_j),
+
+where :math:`j` is the 1-based step index and :math:`\ell_j` is the configured
+step label.  Stable labels therefore make output folders easier to compare
+between processing runs.
 
 Output Directory Resolution
 ---------------------------
 
-When using Python, the output root is resolved in this order:
+Python resolves the output root with three cases:
 
-1. explicit ``outdir`` passed to ``Pipeline.run``;
-2. ``output_dir`` stored on a pipeline loaded from a config file;
-3. global ``PYCSAMT_PIPE.output_root`` default, which is ``pipe_results``.
+.. math::
 
-Examples:
+   d_{\mathrm{root}} =
+   \begin{cases}
+   \varnothing, & \text{if } \mathrm{outdir}=\texttt{None},\\
+   \mathrm{outdir}, & \text{if an explicit path is passed},\\
+   d_{\mathrm{pipeline}} \text{ or } d_{\mathrm{global}},
+      & \text{if outdir is omitted}.
+   \end{cases}
 
-.. code-block:: python
+The first case is an explicit in-memory run.  The third case uses the
+``output_dir`` stored on a pipeline loaded from a configuration file, or falls
+back to the global ``PYCSAMT_PIPE.output_root`` default, ``pipe_results``.
+
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline
+   >>> from pycsamt.pipeline import Pipeline
+   >>> pipe = Pipeline.from_preset("basic_qc")
+   >>> result = pipe.run(sites, outdir="results/basic_qc")
+   >>> result.outdir
+   WindowsPath('results/basic_qc')
 
-   pipe = Pipeline.from_preset("basic_qc")
+   >>> result = pipe.run(sites)
+   >>> result.outdir
+   WindowsPath('pipe_results')
 
-   # Explicit output directory.
-   result = pipe.run(sites, outdir="results/basic_qc")
-
-   # Use the pipeline or global default.
-   result = pipe.run(sites)
-
-   # Run in memory and write nothing.
-   result = pipe.run(sites, outdir=None)
+   >>> result = pipe.run(sites, outdir=None)
+   >>> result.outdir is None
+   True
 
 From the CLI, ``--out`` controls the output root:
 
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/basic_qc
 
-If ``--out`` is omitted, the CLI uses the pipeline config value when
-available, otherwise the global default ``pipe_results``.
+If ``--out`` is omitted, the CLI uses the config file's ``output_dir`` when
+available, otherwise the global default.
 
-OutputDir
----------
+OutputDir And Defaults
+----------------------
 
 The on-disk tree is managed internally by ``OutputDir``.  It creates the root,
-``processed/``, and ``plots/`` directories when a run starts.
-
-The default subdirectory names come from
-:class:`pycsamt.api.pipe.PipelineAPIConfig`:
+``processed/``, and ``plots/`` directories when a run starts.  The defaults
+come from :class:`pycsamt.api.pipe.PipelineAPIConfig`:
 
 .. list-table::
    :header-rows: 1
@@ -127,7 +155,7 @@ The default subdirectory names come from
      - Meaning
    * - ``output_root``
      - ``pipe_results``
-     - Default output root when no explicit ``outdir`` or config
+     - Default output root when neither an explicit ``outdir`` nor config
        ``output_dir`` is available.
    * - ``processed_subdir``
      - ``processed``
@@ -146,87 +174,125 @@ The default subdirectory names come from
      - Report files to write when reports are enabled.
    * - ``save_intermediate``
      - ``False``
-     - When true, save EDI snapshots after successful intermediate steps.
+     - Save EDI snapshots after successful intermediate steps.
 
 Configure global defaults:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.api.pipe import configure_pipe
+   >>> from pycsamt.api.pipe import configure_pipe, reset_pipe, PYCSAMT_PIPE
+   >>> configure_pipe(
+   ...     output_root="results/default_pipe",
+   ...     processed_subdir="edis_processed",
+   ...     plots_subdir="figures",
+   ...     plot_dpi=300,
+   ...     plot_fmt="pdf",
+   ... )
+   >>> PYCSAMT_PIPE.plot_fmt
+   'pdf'
+   >>> reset_pipe()
 
-   configure_pipe(
-       output_root="results/default_pipe",
-       processed_subdir="edis_processed",
-       plots_subdir="figures",
-       plot_dpi=300,
-       plot_fmt="pdf",
-   )
+For temporary changes, use the context manager so the previous settings are
+restored automatically:
 
-Or override them temporarily:
-
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> with PYCSAMT_PIPE.context(plot_dpi=300, plot_fmt="svg"):
+   ...     result = pipe.run(sites, outdir="results/svg_qc")
+   >>> PYCSAMT_PIPE.plot_fmt
+   'png'
 
-   with PYCSAMT_PIPE.context(plot_dpi=300, plot_fmt="svg"):
-       result = pipe.run(sites, outdir="results/svg_qc")
+Captured Minimal Run
+--------------------
+
+The following transcript was run against ``data/3edis`` with plots and EDI
+export disabled so the output is small:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pathlib import Path
+   >>> from pycsamt.api import read_edis
+   >>> from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> from pycsamt.pipeline import Pipeline
+   >>> sites = read_edis("data/3edis", strict=False).to_collection()
+   >>> pipe = Pipeline.from_preset("basic_qc", pipeline_name="basic_qc")
+   >>> with PYCSAMT_PIPE.context(show_progress=False, plot_dpi=72):
+   ...     result = pipe.run(
+   ...         sites,
+   ...         outdir=".tmp/docs_outputs/basic_qc",
+   ...         save_plots=False,
+   ...         save_edis=False,
+   ...         save_report=True,
+   ...     )
+   >>> print(result.summary())
+   PipelineResult  'basic_qc'
+     Sites   : 3 in -> 3 out
+     Steps   : 5 (5 ok, 0 err)
+     Time    : 0.95 s
+     Plots   : 0
+     Output  : .tmp\docs_outputs\basic_qc
+   >>> sorted(p.name for p in Path(".tmp/docs_outputs/basic_qc").iterdir())
+   ['pipeline.yaml', 'plots', 'processed', 'report.html', 'summary.txt']
+
+Even with ``save_plots=False`` and ``save_edis=False``, the directories are
+created because the run is output-enabled.  The disabled families simply do
+not add files beneath them.
 
 Processed EDI Files
 -------------------
 
-Final processed EDI files are written under ``<outdir>/processed/`` when
-``save_edis=True``.  The pipeline writes the site collection produced after
-the last step.
+Final processed EDIs are written under ``<outdir>/processed/`` when
+``save_edis=True``.  They represent :math:`S_n`, the site collection after the
+last step, and should not be mixed with raw field EDIs.
 
 CLI:
 
 .. code-block:: console
    :linenos:
 
-   # Write processed EDIs.
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/basic_qc
 
-   # Skip processed EDI export.
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/no_edi \
        --no-edi
 
 Python:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(
-       sites,
-       outdir="results/basic_qc",
-       save_edis=True,
-   )
-
-   print(result.processed_paths)
+   >>> result = pipe.run(
+   ...     sites,
+   ...     outdir="results/basic_qc",
+   ...     save_edis=True,
+   ... )
+   >>> len(result.processed_paths) >= 0
+   True
 
 If EDI export fails, pyCSAMT warns and returns an empty or partial
-``processed_paths`` list.  The run may still contain valid step results and
-QC plots, so inspect ``summary.txt`` and ``report.html`` before discarding the
-whole run.
+``processed_paths`` list.  The transform may still have succeeded, so inspect
+``result.ok``, the step results, and the reports before discarding the run.
 
 QC Figures
 ----------
 
-Each registered step may declare one or more QC plot functions.  When
+Each registered step may declare QC plotting functions.  When
 ``save_plots=True`` and the step succeeds, pyCSAMT calls those functions and
-saves the resulting Matplotlib figures under:
+saves the returned :term:`Matplotlib figure` objects under:
 
 .. code-block:: text
    :linenos:
 
    <outdir>/plots/<step_index>_<step_label>/<qc_function_name>.<plot_fmt>
 
-Example:
+Examples:
 
 .. code-block:: text
    :linenos:
@@ -240,102 +306,94 @@ Control plotting from the CLI:
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset publication_ready \
        --out results/publication_ready_pdf \
        --dpi 300 \
        --plot-fmt pdf
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/no_plots \
        --no-plots
 
 Control plotting from Python:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(
-       sites,
-       outdir="results/no_plots",
-       save_plots=False,
-   )
+   >>> result = pipe.run(
+   ...     sites,
+   ...     outdir="results/no_plots",
+   ...     save_plots=False,
+   ... )
+   >>> result.plots
+   []
 
-   print(result.plots)
-
-QC plot failures are skipped so that a successful transform does not become a
-failed processing step only because a diagnostic figure could not be drawn.
-If an expected figure is missing, check whether the step succeeded, whether
-plots were disabled, and whether the current data contain the quantities
-required by that QC function.
+QC plot failures are skipped individually so that a successful transform does
+not become a failed processing step only because a diagnostic figure could not
+be drawn.  Missing figures usually mean one of four things: plots were
+disabled, the step failed, the step has no registered QC functions, or the
+current data do not contain the quantities required by that QC function.
 
 Reports
 -------
 
 When ``save_report=True``, the pipeline writes reports according to
-``PYCSAMT_PIPE.report_formats``.  By default it writes both:
+``PYCSAMT_PIPE.report_formats``.  By default it writes both ``summary.txt`` and
+``report.html``.
 
 ``summary.txt``
     Plain-text report for terminals, CI logs, quick review, and diffable
     processing notes.
 
 ``report.html``
-    Self-contained HTML report with summary metadata, per-step cards, linked
-    plot thumbnails, errors, parameters, and the pipeline configuration.
+    Self-contained HTML report with run metadata, per-step cards, linked plot
+    thumbnails, errors, parameter values, and embedded pipeline YAML.
 
-The text report contains:
+A text report starts like this:
 
-* pipeline name;
-* run timestamp;
-* input and output site counts;
-* total runtime;
-* one row per step;
-* status, step code, elapsed time, site counts, and plot count;
-* error messages for failed steps;
-* output directory pointers.
+.. code-block:: text
+   :linenos:
 
-The HTML report contains the same run summary plus richer per-step cards:
+   pyCSAMT Pipeline Report
+   Pipeline : basic_qc
+   Run at   : 2026-07-18 20:43:38
+   Sites    : 3 in -> 3 out
+   Total    : 0.95s
 
-* step label and registry code;
-* step status;
-* human-readable registry label;
-* input and output site counts;
-* elapsed time;
-* parameter values;
-* linked plot thumbnails when figures were saved;
-* embedded pipeline YAML.
+   Step results
+     #  Name                   Code     Status Time(s)       Sites  Plots
 
 Disable report writing:
 
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/no_report \
        --no-report
 
 Python equivalent:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(
-       sites,
-       outdir="results/no_report",
-       save_report=False,
-   )
+   >>> result = pipe.run(
+   ...     sites,
+   ...     outdir="results/no_report",
+   ...     save_report=False,
+   ... )
 
 Write only one report format:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.api.pipe import PYCSAMT_PIPE
-
-   with PYCSAMT_PIPE.context(report_formats=("txt",)):
-       result = pipe.run(sites, outdir="results/text_only")
+   >>> from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> with PYCSAMT_PIPE.context(report_formats=("txt",)):
+   ...     result = pipe.run(sites, outdir="results/text_only")
 
 Pipeline Snapshot
 -----------------
@@ -353,43 +411,42 @@ source of truth for reproducing the processing sequence.
 
 Reload a saved pipeline:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline
+   >>> from pycsamt.pipeline import Pipeline
+   >>> pipe = Pipeline.from_yaml("results/basic_qc/pipeline.yaml")
+   >>> rerun = pipe.run(sites, outdir="results/basic_qc_rerun")
+   >>> rerun.pipeline_name
+   'basic_qc'
 
-   pipe = Pipeline.from_yaml("results/basic_qc/pipeline.yaml")
-   rerun = pipe.run(sites, outdir="results/basic_qc_rerun")
-
-Use ``pipeline.yaml`` to:
-
-* rerun a workflow after changing data loading code;
-* review exactly which step parameters were active;
-* compare two output directories;
-* archive a processing recipe with reports and figures;
-* debug a CLI run from Python.
+Use ``pipeline.yaml`` to rerun a workflow, review active parameters, compare
+two output directories, archive a processing recipe with reports and figures,
+or debug a CLI run from Python.
 
 In-Memory Runs
 --------------
 
-Pass ``outdir=None`` when you want a pure Python result without writing files.
+Pass ``outdir=None`` when you want a pure Python result without writing files:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(
-       sites,
-       outdir=None,
-       save_plots=False,
-       save_edis=False,
-       save_report=False,
-   )
-
-   assert result.outdir is None
-   assert result.processed_paths == []
+   >>> result = pipe.run(
+   ...     sites,
+   ...     outdir=None,
+   ...     save_plots=False,
+   ...     save_edis=False,
+   ...     save_report=False,
+   ... )
+   >>> result.outdir is None
+   True
+   >>> result.processed_paths
+   []
 
 This is useful in tests, notebooks, and exploratory workflows where the
-processed ``Sites`` object is enough.
+processed ``Sites`` object is enough.  The mathematical run state still exists
+in memory as :math:`S_n`; only the filesystem projection is disabled.
 
 Intermediate EDI Snapshots
 --------------------------
@@ -405,25 +462,21 @@ plot directory:
 
 Enable snapshots temporarily:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.api.pipe import PYCSAMT_PIPE
-
-   with PYCSAMT_PIPE.context(save_intermediate=True):
-       result = pipe.run(sites, outdir="results/debug_snapshots")
+   >>> from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> with PYCSAMT_PIPE.context(save_intermediate=True):
+   ...     result = pipe.run(sites, outdir="results/debug_snapshots")
 
 Use this option for debugging only.  It can create many files, especially for
 large surveys or long pipelines.
 
-PipelineResult
---------------
+PipelineResult And StepResult
+-----------------------------
 
-The return value of :meth:`pycsamt.pipeline.Pipeline.run` is a
-``PipelineResult``.  It is the programmatic companion to the files written on
-disk.
-
-Important fields:
+The return value of ``Pipeline.run`` is the programmatic companion to the
+files on disk.  Important ``PipelineResult`` fields are:
 
 .. list-table::
    :header-rows: 1
@@ -452,33 +505,39 @@ Important fields:
    * - ``n_errors``
      - Number of failed steps.
 
-Example:
+Inspect the run:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(sites, outdir="results/basic_qc")
+   >>> print(result.summary())  # doctest: +ELLIPSIS
+   PipelineResult  'basic_qc'
+     Sites   : 3 in -> 3 out
+     Steps   : 5 (5 ok, 0 err)
+     ...
+   >>> result.ok
+   True
+   >>> result.n_errors
+   0
+   >>> [(sr.step_idx, sr.step_name, sr.step_code, sr.ok)
+   ...  for sr in result.step_results]
+   [(1, 'notch', 'NR001', True), ..., (5, 'qc_snapshot', 'QC001', True)]
 
-   print(result.summary())
-   print(result.ok)
-   print(result.outdir)
-   print(result.processed_paths)
+Each ``StepResult`` also stores the parameters passed to the step, elapsed
+time, input and output site counts, saved plot paths, and any captured error.
+For review, the most important relation is
 
-   for step_result in result.step_results:
-       print(
-           step_result.step_idx,
-           step_result.step_name,
-           step_result.step_code,
-           step_result.ok,
-           step_result.n_sites_in,
-           step_result.n_sites_out,
-           len(step_result.plots),
-       )
+.. math::
+
+   \mathrm{ok}_{\mathrm{run}}
+   = \bigwedge_{j=1}^{n} \mathrm{ok}_j,
+
+so ``result.ok`` is true only when every step result is true.
 
 Output Control Matrix
 ---------------------
 
-The output flags are independent, but they only have an effect when an output
+The output flags are independent, but they only write files when an output
 directory exists.
 
 .. list-table::
@@ -551,7 +610,9 @@ Run:
        --out results/basic_qc
 
 This layout prevents accidental overwrites of raw files and makes it easy to
-compare multiple processing strategies.
+compare multiple processing strategies.  Use a new output root for each
+experimental branch, especially when changing step order, frequency bands,
+notch parameters, static-shift corrections, or inversion-preparation logic.
 
 Comparing Two Runs
 ------------------
@@ -568,14 +629,10 @@ When comparing output directories, inspect the same files in each run:
    results/basic_qc/pipeline.yaml
    results/noise_reduction/pipeline.yaml
 
-Useful comparisons:
-
-* step status and error count in ``summary.txt``;
-* site counts before and after each step;
-* plot counts per step;
-* parameter differences in ``pipeline.yaml``;
-* visual differences in matching ``plots/<step>/`` folders;
-* EDI differences under ``processed/``.
+Useful comparisons include step status and error count in ``summary.txt``,
+site counts before and after each step, plot counts per step, parameter
+differences in ``pipeline.yaml``, visual differences in matching
+``plots/<step>/`` folders, and EDI differences under ``processed/``.
 
 Stratagem Output Note
 ---------------------
@@ -586,8 +643,8 @@ copy or rename processed EDI files from ``processed/`` into a ``renamed/``
 directory, or into a custom ``rename_dir``.
 
 For raw Stratagem convenience workflows using ``run_stratagem_preset``, the
-function writes a Stratagem-oriented output layout, including ``corrected``
-and ``renamed`` directories under the requested output root.
+function writes a Stratagem-oriented output layout, including ``corrected`` and
+``renamed`` directories under the requested output root.
 
 Troubleshooting
 ---------------

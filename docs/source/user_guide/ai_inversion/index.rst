@@ -5,8 +5,8 @@ AI inversion
 
 The AI inversion guide documents the complete learned-inversion lifecycle in
 pyCSAMT: scientific assumptions, training-data generation, architecture
-selection, training, inference, validation, uncertainty, PINN workflows,
-agent-assisted execution, and reporting.
+selection, training, inference, validation, uncertainty, hybrid refinement,
+PINN workflows, agent-assisted execution, and reporting.
 
 AI inversion is a peer of :doc:`../forward/index` and
 :doc:`../models/index`. Forward modeling generates responses from known earth
@@ -34,6 +34,7 @@ requirements remain distinct.
    inference
    validation
    uncertainty
+   hybrid
    pinn_2d
    agents
    reporting

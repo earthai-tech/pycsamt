@@ -177,6 +177,8 @@ def _has_geo(df) -> bool:
 def _geo_station_map(df, opts, colors, dark: bool):
     go = require_plotly()
 
+    cmin, cmax = _shared_color_range(df, opts)
+    scale_shown = False
     fig = go.Figure()
     for line, group in df.groupby("Line", dropna=False):
         line_name = str(line or "line")
@@ -201,12 +203,12 @@ def _geo_station_map(df, opts, colors, dark: bool):
                     color=group["_plot_value"],
                     colorscale=to_plotly_cmap(opts.cmap),
                     opacity=opts.opacity,
-                    showscale=True,
-                    cmin=_cmin(opts),
-                    cmax=_cmax(opts),
+                    showscale=not scale_shown,
+                    cmin=cmin,
+                    cmax=cmax,
                     colorbar=dict(
                         title=dict(
-                            text=_color_title(group, opts),
+                            text=_color_title(df, opts),
                             side="right",
                         ),
                     ),
@@ -219,6 +221,7 @@ def _geo_station_map(df, opts, colors, dark: bool):
                 ),
             )
         )
+        scale_shown = True
         if opts.show_profiles and len(group) > 1:
             fig.add_trace(
                 build_profile_line_overlay(
@@ -436,6 +439,27 @@ def _cmax(opts) -> float | None:
     if opts.log_color and hi > 0:
         return float(np.log10(hi))
     return float(hi)
+
+
+def _shared_color_range(df, opts) -> tuple[float | None, float | None]:
+    """Resolve one cmin/cmax pair shared by every line trace.
+
+    Falls back to the finite range of ``df["_plot_value"]`` so that
+    colors stay comparable across lines when ``opts.value_range`` is
+    not set, instead of each line auto-scaling to its own values.
+    """
+    cmin, cmax = _cmin(opts), _cmax(opts)
+    if cmin is not None and cmax is not None:
+        return cmin, cmax
+    values = np.asarray(df["_plot_value"], dtype=float)
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return cmin, cmax
+    if cmin is None:
+        cmin = float(finite.min())
+    if cmax is None:
+        cmax = float(finite.max())
+    return cmin, cmax
 
 
 def _add_density_layer(fig, group, opts) -> None:

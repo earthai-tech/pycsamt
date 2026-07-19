@@ -4,7 +4,7 @@ First-Look Survey Inspection
 ============================
 
 ``pycsamt.emtools.inspect`` is the first module to use after loading a
-survey. It answers practical questions before you run deeper
+survey.  It answers practical questions before you run deeper
 diagnostics, static-shift correction, dimensionality analysis, or
 inversion:
 
@@ -26,6 +26,13 @@ Inspection is not interpretation yet. It is the quality gate between
 The inspection tools are intentionally plain: tables, coverage masks,
 simple curves, pseudo-sections, tipper components, and one complete
 station dashboard.
+
+The guiding idea is to separate existence from trust.  A frequency
+sample can be present, finite, and plottable, while still being noisy,
+distorted, or inconsistent with neighboring stations.  Inspection
+therefore answers the first question, "what do we actually have?", and
+leaves stronger claims to the QC, tensor, skew, strike, and correction
+tools.
 
 Run this stage before:
 
@@ -102,6 +109,22 @@ Per-Site Summary
 ``sites_summary`` returns one row per station. By default it reports
 station name, number of frequency samples, whether tipper data are
 present, period range, and coordinates.
+
+For station :math:`s`, the summary period limits are computed from its
+frequency vector :math:`\{f_{s,j}\}`:
+
+.. math::
+
+   T_{s,j} = {1 \over f_{s,j}},
+   \qquad
+   T_s^\mathrm{min} = \min_j T_{s,j},
+   \qquad
+   T_s^\mathrm{max} = \max_j T_{s,j}.
+
+The ``has_tipper`` flag is not a plain attribute check.  It uses the
+same transfer-function extraction path used by the plotting tools, so a
+placeholder tipper object is not counted unless usable tipper samples
+are present.
 
 .. code-block:: python
    :linenos:
@@ -300,6 +323,21 @@ Frequency Coverage Tables
 
 ``frequency_coverage`` has three modes.
 
+For station :math:`s`, let :math:`F_s` be its set of valid positive
+frequencies.  The survey union and intersection are
+
+.. math::
+
+   F_\cup = \bigcup_s F_s,
+   \qquad
+   F_\cap = \bigcap_s F_s.
+
+``mode="per-site"`` returns the individual :math:`F_s` arrays,
+``mode="union"`` returns :math:`F_\cup`, and ``mode="intersection"``
+returns :math:`F_\cap`.  A large union with an empty or tiny
+intersection means the survey needs frequency-grid alignment before
+station-by-station comparisons are treated as common-period statistics.
+
 .. code-block:: python
    :linenos:
 
@@ -364,6 +402,21 @@ Plot Frequency Coverage
 ``plot_coverage`` converts the frequency dictionary into a station by
 frequency presence mask.
 
+On the union grid :math:`F_\cup=\{g_i\}`, the plotted mask is
+
+.. math::
+
+   M_{i,s}
+   =
+   \begin{cases}
+   1, & g_i \in F_s, \\
+   0, & g_i \notin F_s.
+   \end{cases}
+
+The image therefore shows data availability only.  It does not know
+whether the impedance estimate at that frequency is stable, low-noise,
+or geologically reasonable.
+
 .. code-block:: python
    :linenos:
 
@@ -398,6 +451,26 @@ Quick Rho And Phase Curves
 ``plot_rhoa_phi`` plots apparent resistivity and phase for one or more
 stations. It accepts components such as ``"xy"``, ``"yx"``, ``"xx"``,
 and ``"yy"`` when those columns exist in the station dataframe.
+
+For an impedance component :math:`Z_{ij}(f)`, the displayed quantities
+are
+
+.. math::
+
+   \rho_{a,ij}(f)
+   =
+   0.2\,{|Z_{ij}(f)|^2 \over f},
+   \qquad
+   \phi_{ij}(f)
+   =
+   \tan^{-1}
+   {\Im Z_{ij}(f) \over \Re Z_{ij}(f)} .
+
+Resistivity is drawn on logarithmic axes because multiplicative shifts
+and band-limited anomalies are easier to compare by ratio than by
+absolute difference.  Phase stays in degrees, so jumps, wraps, or
+component sign conventions should be checked before reading them as
+smooth physical trends.
 
 .. code-block:: python
    :linenos:
@@ -439,6 +512,22 @@ quantity such as ``"rho_xy"``, ``"rho_yx"``, ``"phi_xy"``, or
 ``"phi_yx"``. Values are pivoted by station and period, with median
 aggregation for duplicate cells.
 
+For quantity :math:`q`, station :math:`s`, and period :math:`T`, the
+cell value is
+
+.. math::
+
+   P(T,s)
+   =
+   \operatorname{median}
+   \left\{
+   q_{s,j}: T_{s,j}=T
+   \right\}.
+
+The median aggregation is defensive: if duplicate rows exist after
+loading or merging, one repeated value cannot dominate the cell by
+counting more than once in a mean.
+
 .. code-block:: python
    :linenos:
 
@@ -476,6 +565,11 @@ Use fixed ``vmin`` and ``vmax`` when comparing two lines. Otherwise a
 line with a narrow value range can look as dramatic as a line with a
 much stronger anomaly.
 
+For two lines :math:`A` and :math:`B`, use one shared color transform
+:math:`C(q; v_\min, v_\max)`.  Otherwise each panel silently rescales
+its own values and a weak anomaly on one line can appear visually equal
+to a much stronger anomaly on another.
+
 .. code-block:: python
    :linenos:
 
@@ -511,6 +605,17 @@ Tipper Components
 ``plot_tipper_components`` draws real and imaginary parts of ``Tx`` and
 ``Ty`` versus period or frequency. Use it only after confirming that
 the survey actually contains tipper data.
+
+The plotted curves are the four scalar tracks
+
+.. math::
+
+   \Re(T_x),\quad \Im(T_x),\quad \Re(T_y),\quad \Im(T_y).
+
+The vector magnitude used later by transfer-function maps is
+:math:`|\mathbf{T}|=\sqrt{|T_x|^2+|T_y|^2}`, but this component view is
+often better for finding sign flips, isolated spikes, or a single
+component that is driving the whole anomaly.
 
 .. code-block:: python
    :linenos:
@@ -557,6 +662,17 @@ Full Station Response
 apparent resistivity, phase, and, when available, the four tipper
 sub-panels for one station.
 
+For each selected impedance component, the station response keeps the
+period mask explicit:
+
+.. math::
+
+   T_\mathrm{min} \le T_j \le T_\mathrm{max}.
+
+This matters because a station can look clean over one band and unstable
+over another.  Keep the plotted ``period_range`` close to the band you
+will later use for inversion, strike, or dimensionality decisions.
+
 .. code-block:: python
    :linenos:
 
@@ -597,6 +713,29 @@ When ``sites_model`` is supplied, the station response overlays a
 second dataset as dashed curves. If observed and model resistivity are
 both available, the function appends an RMS value to component titles.
 The RMS is computed in ``log10(rho)`` space.
+
+For a component with observed resistivity :math:`\rho_j^\mathrm{obs}`
+and model resistivity :math:`\rho_j^\mathrm{mod}` interpolated onto the
+observed periods, the displayed RMS is
+
+.. math::
+
+   \mathrm{RMS}
+   =
+   \sqrt{
+   {1 \over N}
+   \sum_{j=1}^{N}
+   \left[
+   \log_{10}
+   \left(
+   {\rho_j^\mathrm{obs} \over \rho_j^\mathrm{mod}}
+   \right)
+   \right]^2
+   }.
+
+Because the misfit is logarithmic, a factor-of-two error at low
+resistivity is weighted the same as a factor-of-two error at high
+resistivity.
 
 .. code-block:: python
    :linenos:

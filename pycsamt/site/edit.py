@@ -246,7 +246,6 @@ def select_freq(
     """
 
     ed = _to_mutable(site, inplace=inplace)
-    f = get_freq(ed)
 
     if keep is not None:
         sel = np.asarray(list(keep))
@@ -257,6 +256,21 @@ def select_freq(
             if obj is not None:
                 _slice_fields(obj, sel)
         return ed
+
+    # ``get_freq`` returns an ascending-sorted copy, which would
+    # misalign a positional boolean mask against arrays stored in
+    # their native (often descending) order. Read the native-order
+    # frequency vector here so the mask lines up with ``_slice_fields``.
+    Z = getattr(ed, "Z", None)
+    f = None
+    if Z is not None:
+        for k in ("freq", "_freq"):
+            val = getattr(Z, k, None)
+            if val is not None:
+                f = np.asarray(val, float).ravel()
+                break
+    if f is None:
+        f = np.asarray([], float)
 
     if f.size == 0:
         return ed

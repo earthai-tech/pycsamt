@@ -6,6 +6,11 @@ Installation And Launch
 MapView ships with the same optional application extra as the desktop
 and web apps — one install covers all pyCSAMT application surfaces:
 
+.. tip::
+
+   Want to try MapView without installing anything? A hosted instance
+   is linked from :ref:`applications-hosted`.
+
 .. code-block:: bash
 
    pip install "pycsamt[app]"

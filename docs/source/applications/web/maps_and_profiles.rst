@@ -34,7 +34,7 @@ from running ahead of basic data checks:
 Map View
 --------
 
-Map View opens the interactive station basemap.  It starts with station
+Map View opens the interactive :term:`station map`.  It starts with station
 geometry, which is the first thing to inspect after loading — it shows whether
 station order, line grouping, and coordinates make sense before any
 interpolation or colouring.
@@ -53,13 +53,14 @@ interpolation or colouring.
 * **Selected Station** card — the station currently in focus, with its line,
   latitude, longitude, elevation, frequency count, and tipper availability.
 * **Map Type** — what the map draws.  *Station overview* shows locations and
-  labels; other types colour stations by a spatial attribute.
-* **Colour by** — the quantity used to colour markers (for example station
-  index, elevation, or apparent resistivity).
+  labels; other types colour stations by a :term:`scalar overlay` or draw a
+  :term:`density layer`.
+* **Colour by** — the quantity used as the :term:`scalar overlay` (for example
+  station index, elevation, or apparent resistivity).
 * **Display** — marker style, labels, and overlays.
-* **Coordinate System** — how station coordinates are interpreted (geographic
-  latitude/longitude, a UTM zone, or a custom EPSG code).  Set this before
-  enabling basemap tiles.
+* **Coordinate System** — the :term:`coordinate reference system` used to
+  interpret station coordinates (geographic latitude/longitude, a UTM zone,
+  or a custom EPSG code).  Set this before enabling basemap tiles.
 * **Basemap** — optional map tiles for external context.
 
 **Top toolbar**
@@ -81,20 +82,22 @@ list and to Profile View.
 
    Check the **Coordinate System** before trusting any geophysical pattern.
    If the station cloud looks stretched, mirrored, or far from its expected
-   area, the input CRS is usually wrong — fix it before enabling basemap tiles
-   or reading contours.
+   area, the input :term:`CRS` is usually wrong — fix it before enabling
+   basemap tiles or reading contours.
 
-Contours over station locations are an interpolation.  Read them with the
-station layout in mind: do not treat closed patches outside station coverage as
-mapped geology, and switch back to the station overview if a contour shape is
-dominated by edge effects.
+Each :term:`contour overlay` is an interpolation over the finite station
+values, not a measured continuous field.  Read it with the station layout in
+mind: do not treat closed patches outside station coverage as mapped geology,
+and switch back to the station overview if a contour shape is dominated by
+edge effects.
 
 Profile View
 ------------
 
-Profile View is the per-station response workbench.  It starts with apparent
-resistivity and phase for the selected station and exposes tabs for
-pseudosections, tipper, phase tensor, a 2-D section, and a publication view.
+Profile View is the per-station response workbench.  It starts with
+:term:`apparent resistivity` and :term:`phase` for the selected station and
+exposes tabs for :term:`pseudosection`\ s, :term:`tipper`, :term:`phase
+tensor`, a 2-D section, and a publication view.
 
 .. figure:: ../../_static/applications/web/profile-view.png
    :alt: The Profile View page showing apparent-resistivity pseudosections
@@ -103,6 +106,12 @@ pseudosections, tipper, phase tensor, a 2-D section, and a publication view.
    Profile View on the ρₐ Section tab.  Left: station selector, period range,
    component toggles, phase range, and error bars.  Centre: the Z_XY (TE) and
    Z_YX (TM) apparent-resistivity pseudosections along the line.
+
+The ρₐ and φ section tabs grid station (or along-line distance) against
+period, so a :term:`pseudosection` is a useful continuity check across a
+line — but, like any interpolated display, it is a visual aid rather than a
+true depth section, and gaps between widely spaced stations should be read
+as missing information rather than as smooth structure.
 
 **Tabs**
 
@@ -133,20 +142,26 @@ pseudosections, tipper, phase tensor, a 2-D section, and a publication view.
   from the dropdown.  The header shows the line, coordinates, elevation,
   frequency count, and tipper status.
 * **Period range** — limit the visible period (``log10(T)``) interval.
-* **Components** — toggle ``Zxy (TE)``, ``Zyx (TM)``, ``Zxx``, and ``Zyy``.
+* **Components** — toggle the :term:`impedance tensor` elements ``Zxy (TE)``,
+  ``Zyx (TM)``, ``Zxx``, and ``Zyy``.
 * **Phase range** — automatic (data range) or a fixed interval.
 * **Error bars** — show uncertainty where available.
 
-The default component set emphasises the off-diagonal ``Zxy`` and ``Zyx``
-responses.  Enable ``Zxx`` and ``Zyy`` when diagnosing diagonal leakage,
-distortion, or 3-D behaviour — if the diagonal components dominate, be cautious
-before assuming a simple 2-D interpretation.
+The default component set emphasises the :term:`off-diagonal component`\ s
+``Zxy`` and ``Zyx``, which usually carry the primary TE/TM information.
+Enable ``Zxx`` and ``Zyy`` when diagnosing diagonal leakage, :term:`galvanic
+distortion`, or 3-D behaviour — if the diagonal components dominate, be
+cautious before assuming a simple 2-D interpretation.
 
 Phase Tensor Pseudosection
 --------------------------
 
 The **Phase Tensor** tab draws a station-by-period ellipse pseudosection,
-coloured by skew β.  Use it before strike and dimensionality decisions.
+coloured by skew β.  Unlike the raw :term:`impedance tensor`, the
+:term:`phase tensor` is built to stay immune to :term:`static shift`, so its
+ellipse shape and skew colouring are read as evidence of true earth
+structure rather than a near-surface artefact.  Use it before
+:term:`strike` and :term:`dimensionality` decisions.
 
 .. figure:: ../../_static/applications/web/profile-phase-tensor.png
    :alt: The Profile View Phase Tensor tab showing an ellipse pseudosection
@@ -163,9 +178,11 @@ views.
 3D Map
 ------
 
-The **3D Map** page builds an interactive 3-D resistivity scene from the
-survey.  It is a Results-group page, best used after the maps and profiles look
-credible.
+The **3D Map** page builds an interactive :term:`3-D quick-look map` from the
+survey.  It is a Results-group page, best used after the maps and profiles
+look credible, because everything it draws is a projection of the same
+station-level ρₐ and period values you have just been reading in Profile
+View — there is no constrained inversion model behind it yet.
 
 .. figure:: ../../_static/applications/web/3d-map.png
    :alt: The 3D Map page showing a fence section with topography
@@ -174,26 +191,36 @@ credible.
    The 3-D Resistivity Map in Fence mode: resistivity panels along each line,
    station markers on the terrain, and a resistivity colour bar.
 
+Depth in this scene is a :term:`pseudo-depth`, estimated from each sample's
+apparent resistivity and period through the same :term:`skin depth` relation
+used elsewhere in pyCSAMT, :math:`z \approx 503\sqrt{\rho_a T}` (metres, with
+:math:`\rho_a` in ohm·m and :math:`T` in seconds) — a sampling-scale
+coordinate, not a recovered interface depth.
+
 **Modes**
 
-* **Fence** — vertical resistivity panels along each survey line, with
+* **Fence** — a :term:`fence view`: vertical resistivity panels along each
+  survey line, positioned in 3-D by station offset and line spacing, with
   controls for line spacing, azimuth offset, and panel thickness.
-* **Block** — a filled volume.
-* **Slices** — horizontal depth slices.
+* **Block** — a :term:`block volume` built from the finite pseudo-depth
+  samples across every line.
+* **Slices** — horizontal :term:`depth slice`\ s through the same
+  interpolated point cloud.
 
-Additional panels control **Annotations**, **Topography** (draping the scene on
-station elevations), and **Export**.  **Load & Generate 3D** builds the scene;
-after the first build, the controls update the view live.  The scene is a
-Plotly 3-D figure — drag to rotate, scroll to zoom, and use the modebar camera
-for a PNG, or export an interactive **HTML** file from the Export panel.
+Additional panels control **Annotations**, **Topography** (a :term:`topography
+overlay` draping the scene on station elevations), and **Export**.  **Load &
+Generate 3D** builds the scene; after the first build, the controls update the
+view live.  The scene is a Plotly 3-D figure — drag to rotate, scroll to zoom,
+and use the modebar camera for a PNG, or export an interactive **HTML** file
+from the Export panel.
 
 Figure Export And Code Parity
 -----------------------------
 
 Every interactive figure on these pages is a Plotly figure with a modebar:
 use the camera button for a quick PNG, and the Export panels (on 3-D and the
-results pages) for PNG or standalone HTML.  See :doc:`exports` for the full
-export story.
+results pages) for a :term:`figure export` to PNG or standalone HTML.  See
+:doc:`exports` for the full export story.
 
 Because the web app shares controllers with the Python package, the same maps
 and 3-D scenes can be reproduced in code with the ``pycsamt.map`` façade, so a
@@ -207,9 +234,10 @@ No stations appear
     populated.  If it is empty, return to :doc:`loading_and_sessions`.
 
 Stations plot in the wrong place
-    Check the **Coordinate System** panel in Map View.  Standard EDI files are
-    usually geographic latitude/longitude, but some project files use UTM or
-    another EPSG code.
+    Check the **Coordinate System** panel in Map View — the wrong
+    :term:`CRS` is the usual cause.  Standard EDI files are usually
+    geographic latitude/longitude, but some project files use UTM or another
+    EPSG code.
 
 Profile tabs are empty
     Select a station with valid impedance data and enough frequency samples.

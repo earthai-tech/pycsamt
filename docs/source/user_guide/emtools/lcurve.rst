@@ -24,13 +24,29 @@ fits the data more closely but allows a rough model. A large
 regularization parameter usually makes the model smoother but increases
 the data misfit.
 
+In a standard Tikhonov problem the model :math:`m_\lambda` is obtained
+by minimizing
+
+.. math::
+
+   \Phi_\lambda(m)
+   =
+   \|Gm - d\|_2^2
+   +
+   \lambda^2\|Lm\|_2^2,
+
+where :math:`G` is the forward operator, :math:`d` is the data vector,
+:math:`L` is the roughness or damping operator, and :math:`\lambda`
+controls how much roughness is penalized.  The L-curve is built after
+solving this problem for many candidate values of :math:`\lambda`.
+
 The L-curve plots these two quantities against each other:
 
 .. math::
 
-   x = ||Lm||,
+   x(\lambda) = \|Lm_\lambda\|_2,
    \qquad
-   y = ||Gm - d||.
+   y(\lambda) = \|Gm_\lambda - d\|_2.
 
 The useful value is often near the "corner" of the curve: the point
 where adding more smoothness begins to cost noticeably more data fit.
@@ -44,6 +60,18 @@ Inputs Expected By The Module
 Internally, non-finite and non-positive values are filtered out before
 log-scale calculations. The shortest valid array length controls the
 number of rows used.
+
+The scoring is done in log-log space,
+
+.. math::
+
+   X_i = \log_{10} x_i,
+   \qquad
+   Y_i = \log_{10} y_i,
+
+because the trade-off is usually multiplicative: a useful corner often
+means "this much extra smoothness costs this many times more misfit",
+not a fixed additive change in raw units.
 
 .. code-block:: python
    :linenos:
@@ -154,6 +182,19 @@ corner selection numerically.
 numerical curvature of the log-log curve. With ``method="maxdist"``, it
 is the perpendicular distance from the line connecting the first and
 last log-log points.
+
+For the curvature method, the score is the discrete version of
+
+.. math::
+
+   \kappa(t)
+   =
+   {|X'(t)Y''(t) - Y'(t)X''(t)|
+   \over
+   \left(X'(t)^2 + Y'(t)^2\right)^{3/2}},
+
+where :math:`t` is the ordered sweep index.  The selected corner is the
+valid point with largest :math:`\kappa`.
 
 Use A Dictionary Result
 -----------------------
@@ -267,9 +308,34 @@ Two corner-picking methods are available.
    curvature lambda*: 1.1937766417144369
    maxdist lambda*: 0.8376776400682924
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-06.png
+   :width: 100%
+
 If the two methods choose similar values, the corner is probably stable.
 If they disagree strongly, inspect the curve and consider widening the
 lambda sweep.
+
+The max-distance method works directly on the chord between the first
+and last log-log points.  If
+:math:`\mathbf{p}_0=(X_0,Y_0)` and
+:math:`\mathbf{p}_1=(X_n,Y_n)`, the score for point
+:math:`\mathbf{p}_i=(X_i,Y_i)` is
+
+.. math::
+
+   d_i
+   =
+   {|
+   (Y_n-Y_0)(X_i-X_0)
+   -
+   (X_n-X_0)(Y_i-Y_0)
+   |
+   \over
+   \sqrt{(X_n-X_0)^2 + (Y_n-Y_0)^2}}.
+
+This score is less sensitive to local numerical derivatives, which is
+why it is often a good cross-check for noisy or sparsely sampled
+sweeps.
 
 Smoothing And Endpoint Skipping
 -------------------------------
@@ -303,10 +369,31 @@ corner.
    smooth=5: lambda*=0.8377
    smooth=7: lambda*=0.8377
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-07.png
+   :width: 100%
+
 Be cautious with heavy smoothing. It can move the curvature maximum
 away from the visual corner, especially for short curves. ``maxdist`` is
 often a useful cross-check because it does not use numerical
 derivatives.
+
+With ``smooth > 1``, pyCSAMT applies a moving average to
+:math:`X_i=\log_{10}x_i` and :math:`Y_i=\log_{10}y_i` before computing
+derivatives:
+
+.. math::
+
+   \bar{X}_i
+   =
+   {1 \over w}
+   \sum_{k=i-h}^{i+h} X_k,
+   \qquad
+   h = {w-1 \over 2}.
+
+The same operation is applied to :math:`Y_i`.  Smoothing is useful when
+the score curve is jagged, but it changes the curve being
+differentiated, so the selected :math:`\lambda^\ast` should still be
+checked against the plotted model.
 
 Plot A Single Curve
 -------------------
@@ -425,6 +512,21 @@ The example below builds a small Tikhonov smoothing problem from one
 station's apparent resistivity. It is not a full inversion; it is a
 transparent way to produce real misfit and roughness arrays.
 
+The model vector is the smoothed
+:math:`\log_{10}\rho_a(T)` curve.  The second-difference operator is
+
+.. math::
+
+   (Dm)_i = m_i - 2m_{i+1} + m_{i+2},
+
+so :math:`\|Dm\|_2` penalizes curvature in the sounding rather than its
+absolute level.  For this simple smoothing problem, the normal equation
+is
+
+.. math::
+
+   (I + \lambda^2 D^T D)m_\lambda = d.
+
 .. code-block:: python
    :linenos:
 
@@ -496,11 +598,23 @@ the smoothed model is from the observed log-resistivity curve.
 ``roughness`` measures how curved the smoothed model remains after
 applying the second-difference operator.
 
+The important part is not that this is a full inversion; it is that the
+arrays passed to ``lcurve_table`` come from a real regularized solve.  In
+production you would replace this small smoothing system with the
+misfit and roughness reported by your inversion engine.
+
 Inspect What Lambda Does
 ------------------------
 
 After choosing a corner, plot the model at the corner against clearly
 under- and over-regularized choices. This is the best sanity check.
+
+For a small :math:`\lambda`, the term
+:math:`\|Gm-d\|_2^2` dominates and the model follows the data closely.
+For a large :math:`\lambda`, the roughness penalty dominates and the
+model approaches the smoothest curve allowed by :math:`L`.  The corner
+is useful only if the model at :math:`\lambda^\ast` is a credible
+compromise between those two behaviors.
 
 .. code-block:: python
    :linenos:

@@ -5,7 +5,7 @@ Cross-Spectra Analysis
 
 ``pycsamt.emtools.spectra`` works below the processed impedance tensor.
 Most ``emtools`` workflows start from an EDI ``Z`` tensor. This module
-starts from the raw cross-power spectral matrix stored in a
+starts from the raw :term:`cross-power spectrum` matrix stored in a
 ``pycsamt.seg.spectra.Spectra`` object: one complex Hermitian
 ``(n_channel, n_channel)`` matrix for each frequency in an EDI
 ``>=SPECTRASECT`` block.
@@ -13,8 +13,8 @@ starts from the raw cross-power spectral matrix stored in a
 Use this module when you need to inspect spectra before they become
 impedance and tipper estimates:
 
-* channel power spectral density (PSD);
-* inter-channel squared coherence;
+* channel :term:`power spectral density` (PSD);
+* inter-channel squared :term:`coherence`;
 * coherence-derived SNR;
 * frequency-band selection from coherence;
 * the full cross-power matrix at one frequency;
@@ -133,13 +133,14 @@ A ``Spectra`` object exposes the core arrays used by this module:
    (51,)
    ['31.003', '32.003', '33.003', '34.003', '35.003', '36.003', '37.003']
 
-The matrix ``sp1.S[k]`` is the full channel-by-channel cross-power
-matrix at one frequency.
+The matrix ``sp1.S[k]`` is the full channel-by-channel
+:term:`cross-power spectrum` matrix at one frequency.
 
 Coherence Matrix
 ----------------
 
-``coherence_matrix`` computes squared coherence for every channel pair:
+``coherence_matrix`` computes squared :term:`coherence` for every
+channel pair:
 
 .. math::
 
@@ -175,9 +176,10 @@ two channels carry a stable relationship at a given frequency.
 PSD Table
 ---------
 
-``psd_table`` extracts the diagonal of the cross-power matrix as a tidy
-table. It accepts one ``Spectra`` object, a list of spectra, or a
-dictionary of station names to spectra.
+``psd_table`` extracts the :term:`power spectral density` values from
+the diagonal of the cross-power matrix as a tidy table. It accepts one
+``Spectra`` object, a list of spectra, or a dictionary of station names
+to spectra.
 
 .. code-block:: python
    :linenos:
@@ -219,9 +221,9 @@ different physical units and raw PSD magnitudes.
 Coherence Table
 ---------------
 
-``coherence_table`` converts the coherence cube into a tidy table. By
-default it includes all upper-triangle channel pairs. Pass ``pairs`` to
-focus on physically meaningful pairs.
+``coherence_table`` converts the :term:`coherence` cube into a tidy
+table. By default it includes all upper-triangle channel pairs. Pass
+``pairs`` to focus on physically meaningful pairs.
 
 .. code-block:: python
    :linenos:
@@ -265,7 +267,7 @@ carry duplicate reference channels or project-specific channel ordering.
 Coherence-Derived SNR
 ---------------------
 
-``snr_table`` estimates SNR from squared coherence:
+``snr_table`` estimates SNR from squared :term:`coherence`:
 
 .. math::
 
@@ -482,9 +484,9 @@ to one channel pair.
 Full Spectral Matrix
 --------------------
 
-``plot_spectra_matrix`` visualizes the complete cross-power matrix at
-one frequency. The diagonal cells are auto-spectra. Off-diagonal cells
-are cross-spectra.
+``plot_spectra_matrix`` visualizes the complete :term:`cross-power
+spectrum` matrix at one frequency. The diagonal cells are auto-spectra.
+Off-diagonal cells are cross-spectra.
 
 .. code-block:: python
    :linenos:
@@ -513,8 +515,38 @@ electric and magnetic channel powers can span many orders of magnitude.
 Recovering Impedance From Spectra
 ---------------------------------
 
-``plot_z_from_spectra`` calls ``Spectra.to_Z`` internally and plots
-apparent resistivity and phase from the spectra-derived impedance.
+Every table above works with coherence and power alone; recovering an
+actual impedance tensor means going back to the full complex
+cross-power matrix and solving for the linear system relating the
+electric and magnetic fields. ``plot_z_from_spectra`` calls
+``Spectra.to_Z`` internally, which forms the per-frequency
+least-squares solution directly from :term:`cross-power spectrum`
+sub-blocks:
+
+.. math::
+
+   Z(f) = S_{EH}(f)\, S_{HH}(f)^{-1},
+
+where :math:`S_{HH}` is the :math:`2\times2` cross-power block between
+the two horizontal magnetic channels and :math:`S_{EH}` is the
+:math:`2\times2` cross-power block between the electric and magnetic
+channels — this is the standard single-station cross-spectral
+transfer-function estimator (Chave & Jones, 2012; Bendat & Piersol,
+2011), the same estimator that ordinary EDI processing already applied
+before writing the final ``Z`` block; this module just lets you redo
+it yourself, or redo it differently, from the raw spectra. When
+``ridge`` is set, :math:`S_{HH}` is stabilized by
+:term:`ridge regularization` before inversion,
+
+.. math::
+
+   Z(f) = S_{EH}(f)\,\bigl[S_{HH}(f) + \text{ridge}\,I\bigr]^{-1},
+
+which trades a small, deliberate bias for a solvable system when the
+two magnetic channels are nearly collinear (for example, during strong
+plane-wave-like source conditions) and :math:`S_{HH}` is close to
+singular. ``plot_z_from_spectra`` plots apparent resistivity and phase
+from the resulting impedance.
 
 .. code-block:: python
    :linenos:
@@ -557,14 +589,41 @@ For programmatic access, call ``to_Z`` on the ``Spectra`` object:
    3.9104053794314146 119.75913187624168
 
 Use ``ridge`` when the magnetic cross-power block is poorly conditioned.
-Keep ``estimate_error=False`` if degrees-of-freedom metadata is
-incomplete and you do not need uncertainty envelopes.
+When ``estimate_error=True``, per-component 1-sigma uncertainties come
+from first-order error propagation under a complex-Wishart noise model,
+
+.. math::
+
+   \mathrm{Var}(Z_{ij}) \approx \frac{E_{ii}\,G_{jj}}{M}, \qquad
+   G = S_{HH}^{-1} S_{HH}^{-\mathsf{H}}, \qquad
+   E = S_{EE} - S_{EH}\,S_{HH}^{-1}\,S_{EH}^{\mathsf{H}},
+
+where :math:`M` is the effective degrees of freedom — taken from
+``segnum`` when available, otherwise from ``round(avgt \times bw)`` —
+and :math:`E` is the residual electric power left unexplained by the
+magnetic fit. Errors scale as :math:`1/\sqrt{M}`, so short, coarsely
+averaged records give wide error bars even when the point estimate of
+:math:`Z` looks clean. Keep ``estimate_error=False`` if
+degrees-of-freedom metadata is incomplete and you do not need
+uncertainty envelopes — the errors would otherwise come back as
+``NaN`` anyway once :math:`M` cannot be resolved.
 
 Recovering Tipper From Spectra
 ------------------------------
 
 ``plot_tipper_from_spectra`` recovers induction tipper components from
-the same spectra object when an ``HZ`` channel is available.
+the same spectra object when an ``HZ`` channel is available, using the
+same magnetic sub-block already inverted for ``Z``:
+
+.. math::
+
+   T(f) = S_{ZH}(f)\, S_{HH}(f)^{-1},
+
+where :math:`S_{ZH}` is the :math:`1\times2` cross-power block between
+the vertical and the two horizontal magnetic channels. Because
+:math:`T` reuses the same :math:`S_{HH}^{-1}` as :math:`Z`, the same
+``ridge`` value stabilizes both simultaneously — there is no separate
+tipper-specific regularization to tune.
 
 .. code-block:: python
    :linenos:

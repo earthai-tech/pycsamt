@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import griddata
 
-from ..compat.python import dc
+from ..compat.python import dc, zip_strict
 from ..exceptions import ProcessingError, StationError
 from ..gis.utils import (
     assert_xy_coordinate_system,
@@ -1171,7 +1171,7 @@ class Station(AVGComponentBase):
         # name→index map (same row indices as value map)
         self.index_by_name = {
             nm: self.index_by_value[val]
-            for nm, val in zip(self.names, self.values, strict=True)
+            for nm, val in zip_strict(self.names, self.values)
         }
 
         # stash the frame + a small meta view in the component payload
@@ -1231,7 +1231,7 @@ class Station(AVGComponentBase):
     def label_map(self) -> dict[float, str]:
         """Map station numeric value → generated label (e.g., 'S03')."""
         return {
-            float(v): n for v, n in zip(self.values, self.names, strict=True)
+            float(v): n for v, n in zip_strict(self.values, self.names)
         }
 
     def to_keywords(self) -> dict[str, Any]:

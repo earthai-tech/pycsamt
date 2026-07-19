@@ -7,16 +7,38 @@ The transfer-function tools in ``pycsamt.emtools`` focus on the
 vertical-field response, usually called the tipper.  The tipper relates
 the vertical magnetic field to the horizontal magnetic field:
 
-.. code-block:: text
+.. math::
 
-   Hz = Tx Hx + Ty Hy
+   H_z(f) = T_x(f) H_x(f) + T_y(f) H_y(f).
 
-where ``Tx`` and ``Ty`` are complex, frequency-dependent transfer
-functions.  When the subsurface is laterally uniform, the vertical field
-is weak.  When current is channelled by lateral conductors or sharp
-resistivity contrasts, the tipper grows and induction arrows become one
-of the fastest qualitative diagnostics for conductor position, strike,
-and period-dependent structure.
+Here :math:`H_x`, :math:`H_y`, and :math:`H_z` are magnetic-field
+Fourier coefficients at frequency :math:`f`, while :math:`T_x` and
+:math:`T_y` are complex, frequency-dependent transfer functions.  In a
+laterally uniform 1-D earth, the horizontal magnetic field has no
+preferred lateral induction contrast to couple into :math:`H_z`, so the
+tipper is weak.  When current is channelled by conductors or sharp
+resistivity contrasts, the vertical field grows and induction arrows
+become one of the fastest qualitative diagnostics for conductor
+position, strike, and period-dependent structure.
+
+It is useful to treat the tipper as a two-component complex vector,
+
+.. math::
+
+   \mathbf{T}(f)
+   =
+   \begin{bmatrix}
+   T_x(f) \\
+   T_y(f)
+   \end{bmatrix}
+   =
+   \Re\{\mathbf{T}(f)\}
+   +
+   i\,\Im\{\mathbf{T}(f)\}.
+
+The real part is the in-phase induction response, the imaginary part is
+the quadrature response, and their relative size often changes with
+period.
 
 This page covers two related workflows:
 
@@ -102,12 +124,47 @@ You usually do not need to extract these arrays manually.  The plotting
 functions read them from the site objects.  Still, understanding the
 components helps interpret the figures.
 
+For a selected component :math:`c`, pyCSAMT summarizes vector strength as
+
+.. math::
+
+   |\mathbf{T}_c|
+   =
+   \sqrt{T_{x,c}^{\,2} + T_{y,c}^{\,2}},
+
+where :math:`c` can be the real part, imaginary part, or complex
+magnitude.  For ``component="real"``,
+:math:`T_{x,c}=\Re(T_x)` and :math:`T_{y,c}=\Re(T_y)`.  For
+``component="imag"``, the imaginary parts are used.  For
+``component="abs"``, the norm is built from :math:`|T_x|` and
+:math:`|T_y|`.  This is the quantity behind color scales in maps and
+sections, and behind the polar radius in single-station views.
+
 Choose Periods And Bands
 ------------------------
 
 Tipper diagnostics are strongly period-dependent.  A station may be weak
 at short period, strong at mid-period, and weak again at long period.
 Choose periods and period bands deliberately.
+
+The period is
+
+.. math::
+
+   T = \frac{1}{f}.
+
+When a requested period :math:`T_0` does not exist exactly in every EDI,
+the plotting functions use the nearest available sampled period,
+
+.. math::
+
+   j^\ast
+   =
+   \operatorname*{arg\,min}_j |T_j - T_0|.
+
+This keeps maps and roses reproducible across stations with slightly
+different frequency grids, but it also means that a very narrow band
+should be chosen only when the original sampling supports it.
 
 .. code-block:: python
    :linenos:
@@ -138,6 +195,19 @@ Single-Station Hodograms
 Start with ``plot_tipper_hodograms`` when inspecting one station.  It
 plots ``Tx`` and ``Ty`` in the complex plane, with colors split by period
 band.
+
+For each component, the hodogram point is simply the complex coefficient
+written as Cartesian coordinates:
+
+.. math::
+
+   T_x(f) = \Re(T_x(f)) + i\Im(T_x(f)),
+   \qquad
+   T_y(f) = \Re(T_y(f)) + i\Im(T_y(f)).
+
+Smooth curves through these points indicate that the station response
+evolves coherently with period.  A scattered cloud means the azimuth and
+amplitude plots should be interpreted with more caution.
 
 .. code-block:: python
    :linenos:
@@ -178,6 +248,23 @@ Single-Station Polar View
 magnitude versus period.  The polar angle is the tipper direction, radius
 is magnitude, and color is log-period.
 
+For the real component, the displayed azimuth and radius are
+
+.. math::
+
+   \theta_\mathrm{real}(f)
+   =
+   \operatorname{atan2}\left(\Re(T_y), \Re(T_x)\right),
+   \qquad
+   r_\mathrm{real}(f)
+   =
+   \sqrt{\Re(T_x)^2 + \Re(T_y)^2}.
+
+The same formula is used for ``component="imag"`` after replacing the
+real parts by imaginary parts.  With ``component="abs"``, the radius is
+the complex-vector norm and the displayed direction follows the
+component convention used by the plotting helper.
+
 .. code-block:: python
    :linenos:
 
@@ -207,6 +294,20 @@ Induction Map At One Period
 ``plot_induction_map`` draws real and imaginary induction arrows at a
 single target period.  The function picks the nearest available period
 for each station.
+
+At station :math:`s`, the in-phase arrow is formed from
+:math:`\Re(T_x)` and :math:`\Re(T_y)` at the selected period.  The
+quadrature arrow is formed from :math:`\Im(T_x)` and :math:`\Im(T_y)`.
+The plotted length is scaled for readability,
+
+.. math::
+
+   \mathbf{a}_s^\mathrm{plot}
+   =
+   q\,\mathbf{a}_s,
+
+where :math:`q` is the display scale.  Changing ``scale`` changes only
+the drawing length; it does not change the transfer function.
 
 .. code-block:: python
    :linenos:
@@ -280,6 +381,25 @@ Induction-vector interpretation depends on convention.  The two common
 views are Parkinson and Wiese.  They are rotated relative to each other,
 so a figure can be misread if the convention is not stated.
 
+With the real induction vector written as
+:math:`\mathbf{p}=(\Re(T_x),\Re(T_y))`, the Wiese vector can be read as a
+quarter-turn rotation,
+
+.. math::
+
+   \mathbf{w}
+   =
+   \begin{bmatrix}
+   0 & -1 \\
+   1 & 0
+   \end{bmatrix}
+   \mathbf{p}.
+
+The sign convention controls whether an arrow is interpreted as pointing
+toward a conductor, away from it, or along the related strike-normal
+direction.  State the convention in captions whenever induction vectors
+are used for interpretation.
+
 ``plot_induction_convention`` puts Parkinson/Wiese and real/imaginary
 components in one 2-by-2 figure.
 
@@ -311,6 +431,21 @@ Period Pseudosection
 ``plot_induction_section`` shows tipper magnitude or component strength
 over stations and period.
 
+For station :math:`s` and period :math:`T_j`, the section cell is
+
+.. math::
+
+   M_{s,j}
+   =
+   \begin{cases}
+   \sqrt{\Re(T_x)^2 + \Re(T_y)^2}, & \text{real}, \\
+   \sqrt{\Im(T_x)^2 + \Im(T_y)^2}, & \text{imag}, \\
+   \sqrt{|T_x|^2 + |T_y|^2},       & \text{abs}.
+   \end{cases}
+
+This is why ``component="abs"`` is useful for anomaly strength, while
+``"real"`` and ``"imag"`` separate in-phase and quadrature behavior.
+
 .. code-block:: python
    :linenos:
 
@@ -341,6 +476,21 @@ Induction Rose
 
 ``plot_induction_rose`` summarizes arrow azimuths over all stations and
 selected periods.
+
+For each selected sample, the rose angle is
+
+.. math::
+
+   \theta
+   =
+   \operatorname{atan2}(a_y, a_x)
+   \bmod 360^\circ,
+
+where :math:`\mathbf{a}=(a_x,a_y)` is the chosen real, imaginary, or
+magnitude-based induction vector.  Unlike geoelectric strike, induction
+arrows are directional vectors, so the full :math:`0^\circ` to
+:math:`360^\circ` circle is meaningful unless you deliberately fold the
+result for a separate structural-axis comparison.
 
 .. code-block:: python
    :linenos:
@@ -474,6 +624,36 @@ Spectra-Direct Workflows
 The spectra-direct helpers work before final EDI assembly.  They expect
 ``Spectra`` objects or dictionaries of spectra objects and recover the
 tipper from spectral estimates.
+
+At the spectra stage, the same transfer function can be estimated from
+cross-spectral relationships.  In compact least-squares form, each
+frequency solves
+
+.. math::
+
+   \min_{T_x,T_y}
+   \left\|
+   \mathbf{h}_z
+   -
+   \mathbf{H}_{xy}
+   \begin{bmatrix}
+   T_x \\
+   T_y
+   \end{bmatrix}
+   \right\|_2^2,
+   \qquad
+   \mathbf{H}_{xy}
+   =
+   \begin{bmatrix}
+   h_{x,1} & h_{y,1} \\
+   \vdots  & \vdots  \\
+   h_{x,N} & h_{y,N}
+   \end{bmatrix}.
+
+Here the rows represent time windows or spectral estimates at the same
+frequency.  The plotting API does not require you to perform this solve
+manually; it asks each spectra object for its tipper and then applies
+the same map, polar, and rose formulas used for EDI-based data.
 
 Use these functions when your workflow is still at the spectra stage:
 

@@ -4,14 +4,29 @@ AI model selection
 ==================
 
 Model selection chooses the scientific representation, learning strategy, and
-architecture used for AI inversion. It is not simply a search for the network
-with the lowest validation loss. The selected model must match survey physics,
-geometry, data volume, target parameterization, deployment constraints, and the
-evidence required for field acceptance.
+architecture used for :term:`AI inversion`.  It is not simply a search for the
+network with the lowest validation loss.  The selected model must match survey
+physics, geometry, data volume, target parameterization, deployment
+constraints, and the evidence required for field acceptance.
 
 pyCSAMT supports supervised 1-D, profile 2-D, graph-context 3-D, joint,
 ensemble, physics-informed, and hybrid workflows. Each answers a different
-question and encodes different priors.
+question and encodes different :term:`model prior` assumptions.  The selection
+task is therefore a constrained decision:
+
+.. math::
+
+   c^\star
+   =
+   \operatorname*{arg\,min}_{c\in\mathcal{C}_{\mathrm{valid}}}
+   S(c),
+
+where :math:`c` is a candidate workflow and architecture, :math:`S(c)` is the
+predeclared selection score, and :math:`\mathcal{C}_{\mathrm{valid}}` contains
+only candidates that satisfy the survey physics, data contract, validation,
+deployment, and reproducibility constraints.  A model with the smallest
+synthetic loss is not selectable if it cannot be restored, violates the
+intended :term:`operating envelope`, or fails response diagnostics.
 
 .. admonition:: Prefer the simplest defensible model
    :class: important
@@ -25,14 +40,15 @@ Selection workflow
 ------------------
 
 #. define the decision, output, and acceptance metrics;
-#. determine defensible physical dimension from the survey;
-#. freeze the feature and target contracts;
-#. establish non-AI and simple AI baselines;
+#. determine defensible physical :term:`dimensionality` from the survey;
+#. freeze the :term:`feature contract` and target contract;
+#. establish non-AI and simple AI :term:`baseline model` comparisons;
 #. identify candidate model families rather than arbitrary hyperparameters;
 #. define leakage-resistant training, validation, calibration, and test roles;
 #. train candidates under comparable budgets;
-#. compare model-space, response-space, calibration, and field metrics;
-#. test robustness, domain shift, compute, and persistence;
+#. compare :term:`model-space metric`, :term:`response-space metric`,
+   calibration, and field metrics;
+#. test robustness, :term:`domain gap`, compute, and persistence;
 #. select once using the declared rule and confirm on an untouched test set;
 #. document rejected candidates and the reason for the final choice.
 
@@ -50,13 +66,47 @@ Different objectives can select different models. Examples include:
 * remain stable under missing frequency bands or station dropout.
 
 Declare a primary metric, secondary constraints, and unacceptable failure
-modes before comparing candidates. Do not select using whichever metric looks
-best after training.
+modes before comparing candidates.  Do not select using whichever metric looks
+best after training.  A compact decision score can be useful when it is
+declared before results are inspected:
+
+.. math::
+
+   S(c)
+   =
+   \operatorname{RMSE}_{\log\rho}(c)
+   + \alpha\,\operatorname{NRMS}_{\mathrm{resp}}(c)
+   + \beta\,\operatorname{Cost}(c)
+   + \gamma\,\operatorname{Risk}(c).
+
+The weights :math:`\alpha`, :math:`\beta`, and :math:`\gamma` do not make the
+decision objective; the scientific decision makes the weights.  For example,
+a screening tool may tolerate larger model-space error if it is fast and
+well-calibrated, while a drill-target interpretation may give much more weight
+to conductor-top depth, response reconstruction, and failure visibility.
 
 2. Decide dimension before architecture
 ---------------------------------------
 
-Dimension is a geophysical assumption.
+Dimension is a geophysical assumption, not a neural-network preference.  A
+candidate's output shape should follow the survey evidence.  A useful mental
+model is
+
+.. math::
+
+   \rho(\mathbf{x}) =
+   \begin{cases}
+      \rho(z), & \text{1-D layered earth},\\
+      \rho(x,z), & \text{2-D profile with invariant strike direction},\\
+      \rho(x,y,z), & \text{3-D volume or graph-context setting}.
+   \end{cases}
+
+The selected dimension controls what the model can represent and what it is
+allowed to ignore.  A 1-D model is transparent but cannot represent lateral
+boundaries.  A 2-D profile can represent lateral structure but assumes the line
+and strike convention are meaningful.  A graph-context 3-D model can borrow
+information from nearby stations, but its graph is a spatial prior and may not
+mean the training examples used full 3-D electromagnetic physics.
 
 Choose 1-D when
 ~~~~~~~~~~~~~~~
@@ -68,6 +118,9 @@ Choose 1-D when
 * a transparent baseline is needed.
 
 Use :class:`pycsamt.ai.inversion.EMInverter1D`, a 1-D PINN, or a 1-D hybrid.
+Document why the 1-D assumption is adequate.  If the goal is only screening,
+state that; if the result will guide interpretation, pair it with response
+residuals and dimensionality diagnostics.
 
 Choose profile 2-D when
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,8 +135,13 @@ Use :class:`pycsamt.ai.inversion.EMInverter2D`,
 :class:`pycsamt.ai.inversion.PINNInverter2D`, or
 :class:`pycsamt.ai.inversion.HybridInverter2D`.
 
+Profile 2-D selection should be tied to the line geometry.  Record the station
+ordering, spacing, strike convention, and how off-line stations are handled.
+If profiles have variable station counts, choose one validated policy before
+training: crop, pad, resample, train separate models, or use a graph workflow.
+
 Choose graph-context 3-D when
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * stations form several lines or an areal layout;
 * projected coordinates and station order are reliable;
@@ -99,8 +157,20 @@ The GCN shares information among station nodes. It does not automatically mean
 that supervised examples were generated with a full numerical 3-D EM solver.
 Do not select it merely to label the product "3-D."
 
+When dimension is uncertain, compare conservative alternatives.  A common
+selection record includes a 1-D baseline, a 2-D or graph candidate, and a note
+explaining whether the higher-dimensional candidate improved a declared
+criterion enough to justify its stronger assumptions.  If the improvement is
+only cosmetic in section images and not visible in response fit, field
+evidence, or decision stability, keep the simpler model.
+
 3. Compare model families
 -------------------------
+
+Compare families before fine-tuning hyperparameters.  This keeps the question
+scientific: "Which representation is justified?" comes before "Which dropout
+value won?"  For each family, identify the information it can use, the prior it
+adds, and the failure it may hide.
 
 .. list-table::
    :header-rows: 1
@@ -142,23 +212,32 @@ Do not select it merely to label the product "3-D."
      - Combines fast initialization with response-space refinement.
      - Two-stage provenance and failure behavior are more complex.
 
+The table should not be read as a ranking.  A supervised 1-D inverter can be
+the best production choice when the operating envelope is narrow and
+well-tested.  A PINN or hybrid can be stronger when observation-specific
+response fit is required.  An ensemble is justified when uncertainty quality is
+part of the decision.  A joint model is justified only when the extra modality
+changes the decision in a repeatable way.
+
 4. Choose the 1-D architecture
 ------------------------------
 
 :class:`pycsamt.ai.inversion.EMInverter1D` supports ``"fcn"``, ``"cnn1d"``,
 and ``"resnet"``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import EMInverter1D
-
-   candidate = EMInverter1D(
-       arch="resnet",
-       n_layers=5,
-       solver="mt1d",
-       include_phase=True,
-       log_thickness=True,
-   )
+   >>> from pycsamt.ai.inversion import EMInverter1D
+   >>>
+   >>> candidate = EMInverter1D(
+   ...     arch="resnet",
+   ...     n_layers=5,
+   ...     solver="mt1d",
+   ...     include_phase=True,
+   ...     log_thickness=True,
+   ... )
+   >>> print(candidate.__class__.__name__, candidate.arch, candidate.n_layers, candidate.solver)
+   EMInverter1D resnet 5 mt1d
 
 FCN
 ~~~
@@ -209,6 +288,29 @@ CNN1D under the same data, split, optimization budget, and selection metric.
 
 For a layered model, output size is commonly ``2 * n_layers - 1``. Increasing
 ``n_layers`` adds resistivity and interface parameters, expanding ambiguity.
+For :math:`L` layers, the target vector is commonly
+
+.. math::
+
+   \mathbf{y}
+   =
+   \left[
+      \log_{10}\rho_1,\ldots,\log_{10}\rho_L,
+      \tau_1,\ldots,\tau_{L-1}
+   \right],
+   \qquad
+   \dim(\mathbf{y})=2L-1,
+
+where :math:`\tau_\ell` is either thickness :math:`h_\ell` or
+:math:`\log_{10}h_\ell`, depending on the target transform.  Interface depths
+are derived quantities,
+
+.. math::
+
+   z_k = \sum_{\ell=1}^{k} h_\ell,
+
+so thickness errors accumulate with depth.  This is why layer-count selection
+should include interface-depth diagnostics, not only per-entry target loss.
 
 Select layer count using:
 
@@ -228,6 +330,13 @@ a thin critical conductor.
 Use a fixed layer count for straightforward supervised outputs. Variable-layer
 targets from ``generate_dataset`` are NaN-padded and require a proven mask-aware
 strategy; they do not automatically make the network variable-output.
+
+When several layer counts are plausible, prefer the smallest count that passes
+the decision criterion.  If a deeper parameterization improves aggregate loss
+but moves conductor tops or water-table proxies unpredictably, it is adding
+degrees of freedom without improving the interpretation.  Keep rejected
+layer-count results in the selection record because they explain why the final
+parameterization is not arbitrary.
 
 6. Select solver and feature content
 ------------------------------------
@@ -262,25 +371,48 @@ Grid extent controls sensitivity and deployment compatibility. A larger
 information absent from the field observations. Prefer a common range with
 adequate coverage across required stations.
 
+The frequency grid is a reproducibility object.  Store the exact frequencies or
+periods, interpolation convention, fill policy, and mask.  A model trained on
+log-spaced synthetic frequencies and deployed on linearly interpolated field
+features is no longer seeing the same input distribution, even if the vector
+length matches.
+
 7. Select the 2-D U-Net configuration
 -------------------------------------
 
 :class:`pycsamt.ai.inversion.EMInverter2D` maps
 ``(n_components, n_freqs, n_stations)`` panels to
-``(n_depth, n_stations)`` sections.
+``(n_depth, n_stations)`` sections.  The shape is part of the model contract:
 
-.. code-block:: python
+.. math::
 
-   from pycsamt.ai.inversion import EMInverter2D
+   \mathbf{X}\in\mathbb{R}^{C\times F\times S}
+   \longmapsto
+   \hat{\mathbf{U}}\in\mathbb{R}^{D\times S},
 
-   candidate_2d = EMInverter2D(
-       n_components=4,
-       n_freqs=32,
-       n_stations=48,
-       n_depth=64,
-       arch="unet",
-       dropout=0.20,
-   )
+where :math:`C` is component count, :math:`F` is frequency count, :math:`S` is
+station count, and :math:`D` is depth-cell count.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.inversion import EMInverter2D
+   >>>
+   >>> candidate_2d = EMInverter2D(
+   ...     n_components=4,
+   ...     n_freqs=32,
+   ...     n_stations=48,
+   ...     n_depth=64,
+   ...     arch="unet",
+   ...     dropout=0.20,
+   ... )
+   >>> print(
+   ...     candidate_2d.__class__.__name__,
+   ...     candidate_2d.n_components,
+   ...     candidate_2d.n_freqs,
+   ...     candidate_2d.n_stations,
+   ...     candidate_2d.n_depth,
+   ... )
+   EMInverter2D 4 32 48 64
 
 Selection variables include:
 
@@ -310,22 +442,30 @@ Selection variables include:
 Select using complete-profile holdouts and boundary/response metrics. Never
 split stations from one synthetic profile across training and validation.
 
+For U-Net-style models, station padding and cropping can become hidden priors.
+Padding with zeros, NaNs, edge values, or learned masks are different choices.
+If the profile width is fixed at :math:`S=48`, a 35-station field line should
+not be silently stretched to 48 stations without a documented test showing that
+the transformation preserves target geometry and response diagnostics.
+
 8. Select graph architecture and adjacency
 ------------------------------------------
 
 :class:`pycsamt.ai.inversion.GCNInverter3D` requires per-station features,
 layer count, hidden widths, dropout, and graph context:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import GCNInverter3D
-
-   candidate_3d = GCNInverter3D(
-       n_features=64,
-       n_layers=5,
-       hidden=(256, 128, 64),
-       dropout=0.10,
-   )
+   >>> from pycsamt.ai.inversion import GCNInverter3D
+   >>>
+   >>> candidate_3d = GCNInverter3D(
+   ...     n_features=64,
+   ...     n_layers=5,
+   ...     hidden=(256, 128, 64),
+   ...     dropout=0.10,
+   ... )
+   >>> print(candidate_3d.__class__.__name__, candidate_3d.n_features, candidate_3d.n_layers, candidate_3d.hidden)
+   GCNInverter3D 64 5 (256, 128, 64)
 
 Adjacency is as important as network width. If neither adjacency nor
 coordinates is passed, the implementation warns and uses identity adjacency,
@@ -346,25 +486,41 @@ radius that is too large shares information across unrelated structures.
 Select radius as a spatial prior in coordinate units, not as a generic neural
 hyperparameter.
 
+For a radius graph, the adjacency can be written
+
+.. math::
+
+   A_{ij}
+   =
+   \mathbf{1}\{\|\mathbf{s}_i-\mathbf{s}_j\|_2 \le r\},
+
+where :math:`\mathbf{s}_i` is station coordinate and :math:`r` is the selected
+radius.  That one number controls node degree, connected components, and how
+much information crosses geological boundaries.  Report the degree
+distribution for every candidate radius.  If the graph has many isolated
+nodes, the architecture is not using the intended spatial context.
+
 9. Decide whether joint inversion is justified
 ----------------------------------------------
 
 :class:`pycsamt.ai.inversion.JointInverter` fuses two or more feature matrices
 into one layered target:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import JointInverter
-
-   joint = JointInverter(
-       n_features_list=(64, 25),
-       n_layers=5,
-       growth_rate=32,
-       n_dense_layers=6,
-       hidden_dim=256,
-       dropout=0.20,
-       log_thickness=True,
-   )
+   >>> from pycsamt.ai.inversion import JointInverter
+   >>>
+   >>> joint = JointInverter(
+   ...     n_features_list=(64, 25),
+   ...     n_layers=5,
+   ...     growth_rate=32,
+   ...     n_dense_layers=6,
+   ...     hidden_dim=256,
+   ...     dropout=0.20,
+   ...     log_thickness=True,
+   ... )
+   >>> print(joint.__class__.__name__, joint.n_features_list, joint.n_layers)
+   JointInverter (64, 25) 5
 
 Joint inversion is justified when modalities:
 
@@ -378,6 +534,12 @@ Joint inversion is justified when modalities:
 Compare against each modality alone. A fused network that improves aggregate
 loss may rely almost entirely on one modality or learn spurious correlations.
 Test missing-modality behavior explicitly.
+
+Use an :term:`ablation study` for joint models.  Train or evaluate variants
+with one modality removed, shuffled, corrupted, or replaced by a baseline.  If
+the joint model still performs well after a supposedly important modality is
+shuffled, the model is not using that modality in a scientifically meaningful
+way.
 
 10. Decide between supervised, PINN, and hybrid
 -----------------------------------------------
@@ -518,6 +680,55 @@ Field
 Aggregate averages can hide failure in deep layers, rare conductive targets,
 or sparse stations. Report distributions and scenario-stratified results.
 
+When a scalar ranking is required, normalize each metric against an agreed
+reference before combining it.  One defensible pattern is
+
+.. math::
+
+   S_c
+   =
+   w_m\frac{M_c}{M_b}
+   +
+   w_r\frac{R_c}{R_b}
+   +
+   w_u\frac{U_c}{U_b}
+   +
+   w_t\frac{T_c}{T_b}
+   +
+   P_c,
+
+where :math:`M_c` is a model-space error, :math:`R_c` is a response-space
+error, :math:`U_c` is an uncertainty penalty, :math:`T_c` is runtime or
+resource cost, subscript :math:`b` denotes the baseline, and :math:`P_c` is a
+hard penalty for failing mandatory gates.  Lower is better only if all
+quantities are defined that way.
+
+.. code-block:: pycon
+
+   >>> candidates = {
+   ...     "fcn": {"model": 0.32, "response": 1.18, "uncertainty": 0.20, "runtime": 1.0, "gate": 0.0},
+   ...     "resnet": {"model": 0.24, "response": 0.94, "uncertainty": 0.16, "runtime": 1.6, "gate": 0.0},
+   ...     "unet2d": {"model": 0.22, "response": 0.91, "uncertainty": 0.28, "runtime": 3.4, "gate": 0.5},
+   ... }
+   >>> baseline = candidates["fcn"]
+   >>> weights = {"model": 0.35, "response": 0.35, "uncertainty": 0.20, "runtime": 0.10}
+   >>> scores = {}
+   >>> for name, row in candidates.items():
+   ...     score = row["gate"]
+   ...     for metric, weight in weights.items():
+   ...         score += weight * row[metric] / baseline[metric]
+   ...     scores[name] = round(score, 3)
+   >>> scores
+   {'fcn': 1.0, 'resnet': 0.861, 'unet2d': 1.631}
+   >>> min(scores, key=scores.get)
+   'resnet'
+
+The score does not replace scientific review.  In this toy example, the 2-D
+candidate has strong model and response errors but receives a gate penalty,
+which might represent unresolved profile-width handling, missing persistence,
+or unacceptable field residuals.  Without that penalty, the ranking would
+silently ignore a deployment or validation failure.
+
 15. Consider persistence and deployment
 ---------------------------------------
 
@@ -548,31 +759,34 @@ Also evaluate:
 
 :class:`pycsamt.ai.inversion.InversionConfig` captures supported 1-D settings:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import InversionConfig
-
-   config = InversionConfig(
-       arch="resnet",
-       n_layers=5,
-       solver="mt1d",
-       include_phase=True,
-       log_thickness=True,
-       augment_noise=0.02,
-       epochs=150,
-       batch_size=256,
-       lr=1e-3,
-       patience=20,
-       val_frac=0.15,
-       grad_clip=1.0,
-       seed=42,
-       checkpoint_dir="checkpoints",
-       checkpoint_name="mt1d_resnet_5l",
-   )
-   config.validate()
-
-   inverter = config.to_inverter()
-   inverter.fit(dataset, **config.to_fit_kwargs())
+   >>> from pycsamt.ai.inversion import InversionConfig
+   >>>
+   >>> config = InversionConfig(
+   ...     arch="resnet",
+   ...     n_layers=5,
+   ...     solver="mt1d",
+   ...     include_phase=True,
+   ...     log_thickness=True,
+   ...     augment_noise=0.02,
+   ...     epochs=150,
+   ...     batch_size=256,
+   ...     lr=1e-3,
+   ...     patience=20,
+   ...     val_frac=0.15,
+   ...     grad_clip=1.0,
+   ...     seed=42,
+   ...     checkpoint_dir="checkpoints",
+   ...     checkpoint_name="mt1d_resnet_5l",
+   ... )
+   >>> config.validate()
+   >>> inverter = config.to_inverter()
+   >>> fit_kwargs = config.to_fit_kwargs()
+   >>> print(config.arch, config.n_layers, fit_kwargs["epochs"], inverter.__class__.__name__)
+   resnet 5 150 EMInverter1D
+   >>> # Training needs a prepared dataset:
+   >>> # inverter.fit(dataset, **fit_kwargs)
 
 ``validate()`` checks supported architecture, solver, device, and numerical
 ranges. It does not evaluate scientific suitability.
@@ -624,55 +838,41 @@ split comparison. A controlled study should supply pre-separated arrays or a
 project harness with frozen indices. Final selection must use project metrics,
 not only the validation score stored by the inverter:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import csv
-   from pathlib import Path
+   >>> from pycsamt.ai.inversion import InversionConfig
+   >>>
+   >>> planned = []
+   >>> for arch in ("fcn", "cnn1d", "resnet"):
+   ...     for seed in (11, 22, 33):
+   ...         cfg = InversionConfig(
+   ...             arch=arch,
+   ...             n_layers=5,
+   ...             solver="mt1d",
+   ...             include_phase=True,
+   ...             epochs=100,
+   ...             batch_size=256,
+   ...             lr=1e-3,
+   ...             patience=15,
+   ...             val_frac=0.15,
+   ...             seed=seed,
+   ...             checkpoint_dir=None,
+   ...             verbose=False,
+   ...         )
+   ...         cfg.validate()
+   ...         planned.append((cfg.arch, cfg.seed, cfg.to_fit_kwargs()["epochs"]))
+   >>> len(planned)
+   9
+   >>> planned[:3]
+   [('fcn', 11, 100), ('fcn', 22, 100), ('fcn', 33, 100)]
+   >>> # In a real study, train each candidate on a prepared dataset:
+   >>> # model = cfg.to_inverter()
+   >>> # model.fit(dataset, **cfg.to_fit_kwargs())
 
-   from pycsamt.ai.inversion import InversionConfig
-
-   output = Path("model_selection")
-   output.mkdir(parents=True, exist_ok=True)
-
-   rows = []
-   for arch in ("fcn", "cnn1d", "resnet"):
-       for seed in (11, 22, 33):
-           cfg = InversionConfig(
-               arch=arch,
-               n_layers=5,
-               solver="mt1d",
-               include_phase=True,
-               epochs=100,
-               batch_size=256,
-               lr=1e-3,
-               patience=15,
-               val_frac=0.15,
-               seed=seed,
-               checkpoint_dir=None,
-               verbose=False,
-           )
-           cfg.validate()
-           model = cfg.to_inverter()
-           model.fit(dataset, **cfg.to_fit_kwargs())
-
-           rows.append({
-               "architecture": arch,
-               "seed": seed,
-               "best_validation_loss": model._meta.get(
-                   "best_val_loss", float("nan")
-               ),
-           })
-
-   with (output / "candidate_validation.csv").open(
-       "w", newline="", encoding="utf-8"
-   ) as stream:
-       writer = csv.DictWriter(stream, fieldnames=rows[0])
-       writer.writeheader()
-       writer.writerows(rows)
-
-This example reads a private metadata attribute for compact illustration.
-Production selection should use stable public histories or independently
-computed metrics and should never make a decision solely from private internals.
+This example only builds and validates the candidate grid.  Production
+selection should then train each candidate on prepared data, write stable
+public histories or independently computed metrics, and never make a decision
+solely from private internals.
 
 Selection checklist
 -------------------
@@ -736,5 +936,6 @@ Continue with:
 * :doc:`validation` to run the final acceptance protocol;
 * :doc:`inference` to deploy the approved model contract;
 * :doc:`uncertainty` to select and calibrate predictive intervals;
+* :doc:`hybrid` for AI warm-start plus physics refinement choices;
 * :doc:`pinn_2d` for detailed physics-informed profile choices;
 * :doc:`reporting` for the model-selection record and model card.

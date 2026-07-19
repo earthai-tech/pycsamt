@@ -222,6 +222,24 @@ Power-Line Notching
 ``mains_hz * k`` for harmonics ``k = 1 .. n_harm``. It can either set
 those rows to ``NaN`` with ``mode="mask"`` or replace them by
 interpolation from neighboring frequencies with ``mode="interp"``.
+In symbols, for a sampled frequency :math:`f_j`, the harmonic mask is
+
+.. math::
+
+   m_j =
+   \begin{cases}
+   1, & \min_{1 \le k \le n_h}
+          |f_j - k f_m| \le \Delta f,\\
+   0, & \text{otherwise},
+   \end{cases}
+
+where :math:`f_m` is the mains frequency, :math:`n_h` is the number of
+harmonics, and :math:`\Delta f` is ``tol_hz``. With ``mode="mask"``,
+rows with :math:`m_j=1` are left missing. With ``mode="interp"``, the
+same rows are first marked missing and then filled from neighboring
+unmasked rows. This distinction matters: masking preserves the evidence
+of contamination, while interpolation prepares a complete grid for tools
+that cannot accept gaps.
 
 .. code-block:: python
    :linenos:
@@ -259,11 +277,33 @@ Log-Frequency Smoothing
 rows along the frequency axis. It is a local smoother. It does not assume
 a global resistivity model; it only says that neighboring log-frequency
 samples should be less jagged.
+For each selected tensor component :math:`Z_{ab}`, the local operation is
+the weighted convolution
+
+.. math::
+
+   \widetilde{Z}_{ab}(f_i)
+   =
+   \sum_{r=-q}^{q} w_r Z_{ab}(f_{i+r}),
+   \qquad
+   \sum_{r=-q}^{q} w_r = 1 .
+
+Here :math:`w_r` is either a box weight or a triangular weight, and the
+window length is controlled by ``win``. When ``gate_snr`` is supplied,
+only rows that pass the SNR gate are smoothed. The filter therefore
+reduces point-to-point scatter without forcing a station to follow one
+global curve shape.
 
 .. code-block:: python
    :linenos:
 
+   from pathlib import Path
+
+   import matplotlib.pyplot as plt
+   import numpy as np
+
    from pycsamt.emtools import ensure_sites, smooth_logfreq
+   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
 
@@ -275,6 +315,39 @@ samples should be less jagged.
        gate_snr=2.5,
        inplace=False,
    )
+
+   def rho_xy(survey, station="18-016A"):
+       for i, edi in enumerate(_iter_items(survey)):
+           if _name(edi, i) == station:
+               _, z, freq = _get_z_block(edi)
+               return 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq, freq
+       raise KeyError(station)
+
+   rho_raw, freq = rho_xy(sites)
+   rho_smooth, _ = rho_xy(smoothed)
+
+   fig, ax = plt.subplots(figsize=(8, 4.4))
+   ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
+   ax.loglog(
+       1.0 / freq,
+       rho_smooth,
+       "-",
+       lw=2,
+       label="smooth_logfreq, triangular window",
+   )
+   ax.set_xlabel("Period (s)")
+   ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
+   ax.set_title("18-016A: local log-frequency smoothing")
+   ax.grid(True, which="both", alpha=0.25)
+   ax.legend(fontsize=8)
+   fig.tight_layout()
+
+   out = Path("docs/source/images/user_guide/emtools")
+   fig.savefig(out / "user-guide-emtools-remove-noise-04.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-04.png
+   :width: 100%
 
 ``win`` is the number of frequency rows used by the moving window.
 ``kind="tri"`` gives the center row more weight than the edges;
@@ -289,11 +362,55 @@ Rho/Phase Trend Smoothing
 components to apparent resistivity and phase, fits a polynomial trend in
 log-frequency space, unwraps phase, then rebuilds complex impedance from
 the smoothed curves.
+For a component :math:`Z_{ab}=|Z_{ab}|\exp(i\phi_{ab})`, pyCSAMT uses
+the practical apparent-resistivity convention
+
+.. math::
+
+   \rho_{a,ab}(f) =
+   \frac{|Z_{ab}(f)|^2}{5 f},
+   \qquad
+   x = \log_{10} f .
+
+The fitted trends are
+
+.. math::
+
+   \log_{10}\widetilde{\rho}_{a,ab}(x)
+   =
+   \sum_{p=0}^{d} a_p x^p,
+   \qquad
+   \widetilde{\phi}_{ab}(x)
+   =
+   \sum_{p=0}^{d} b_p x^p ,
+
+with degree :math:`d` set by ``degree``. If ``robust=True``, isolated
+points are down-weighted during the fit. The complex tensor is then
+rebuilt as
+
+.. math::
+
+   \widetilde{Z}_{ab}(f)
+   =
+   \sqrt{5 f\,\widetilde{\rho}_{a,ab}(f)}
+   \exp\!\left(i\widetilde{\phi}_{ab}(f)\right).
+
+The ``blend`` argument controls how far to move toward the trend:
+:math:`Z^{new}=(1-\lambda)Z+\lambda\widetilde{Z}`, where :math:`\lambda`
+is ``blend``. A partial blend is often a good first pass when the curve
+is noisy but still carries short-period structure that should not be
+flattened completely.
 
 .. code-block:: python
    :linenos:
 
+   from pathlib import Path
+
+   import matplotlib.pyplot as plt
+   import numpy as np
+
    from pycsamt.emtools import ensure_sites, smooth_rho_phase
+   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
 
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
 
@@ -310,6 +427,40 @@ the smoothed curves.
        inplace=False,
    )
 
+   def rho_xy(survey, station="18-016A"):
+       for i, edi in enumerate(_iter_items(survey)):
+           if _name(edi, i) == station:
+               _, z, freq = _get_z_block(edi)
+               return 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq, freq
+       raise KeyError(station)
+
+   rho_raw, freq = rho_xy(sites)
+   rho_trend, _ = rho_xy(trend)
+
+   fig, ax = plt.subplots(figsize=(8, 4.4))
+   ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
+   ax.loglog(
+       1.0 / freq,
+       rho_trend,
+       "-",
+       lw=2,
+       color="C3",
+       label="smooth_rho_phase, robust degree 3",
+   )
+   ax.set_xlabel("Period (s)")
+   ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
+   ax.set_title("18-016A: rho/phase trend smoothing")
+   ax.grid(True, which="both", alpha=0.25)
+   ax.legend(fontsize=8)
+   fig.tight_layout()
+
+   out = Path("docs/source/images/user_guide/emtools")
+   fig.savefig(out / "user-guide-emtools-remove-noise-05.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-05.png
+   :width: 100%
+
 Choose ``smooth_logfreq`` for local jitter. Choose ``smooth_rho_phase``
 when you expect a station curve to follow a smooth global trend.
 ``components`` can be ``"offdiag"``, ``"diagonal"``, ``"all"``, or an
@@ -322,6 +473,22 @@ Outlier And Spatial Denoising
 
 Outlier removal can operate along one station's frequency curve, across
 neighboring stations, or across the whole survey matrix.
+The three filters below use different definitions of "unlikely". The
+Hampel filter compares a row with the median of its own local frequency
+window:
+
+.. math::
+
+   |y_i - \mathrm{median}(W_i)|
+   >
+   n_\sigma\,1.4826\,
+   \mathrm{median}_{y \in W_i}
+   |y - \mathrm{median}(W_i)| .
+
+Here :math:`y_i` is either a real/imaginary value or a magnitude value,
+:math:`W_i` is the moving frequency window, and :math:`n_\sigma` is
+``nsig``. The factor 1.4826 scales the median absolute deviation toward
+a standard-deviation equivalent for Gaussian noise.
 
 .. code-block:: python
    :linenos:
@@ -370,6 +537,37 @@ so it should be applied only when station order has spatial meaning.
 ``rpca_offdiag_denoise`` can be powerful, but a low-rank model may damp a
 real station anomaly if that anomaly is not shared by the rest of the
 line. Always inspect before/after curves when using it.
+For the spatial median filter, station :math:`s` at frequency
+:math:`f_i` is blended toward the median of its neighboring stations
+:math:`\mathcal{N}(s)`:
+
+.. math::
+
+   Z^{new}_{s,ab}(f_i)
+   =
+   (1-\lambda) Z_{s,ab}(f_i)
+   +
+   \lambda\,
+   \mathrm{median}_{r \in \mathcal{N}(s)}
+   Z_{r,ab}(f_i).
+
+For the low-rank denoiser, the survey is first represented by a matrix
+
+.. math::
+
+   M_{s,i}
+   =
+   \log_{10}
+   \left[
+   \mathrm{median}
+   \left(|Z_{xy}(s,f_i)|,\ |Z_{yx}(s,f_i)|\right)
+   \right],
+
+and the cleaned magnitude comes from the rank-:math:`r` singular-value
+approximation :math:`L_r = U_r\Sigma_r V_r^T`. The phase can be kept
+from the original tensor. This is why RPCA-style denoising should be
+used with care: it preserves what is coherent across the line and may
+attenuate a genuine station-local anomaly.
 
 Off-Diagonal Consistency
 ------------------------
@@ -378,6 +576,24 @@ For a simple 1-D or approximately 2-D response, the off-diagonal
 impedance terms often satisfy an anti-symmetric relationship:
 ``Zxy ~= -Zyx``. ``enforce_offdiag_consistency`` blends the observed
 off-diagonal components toward that target.
+In ``mode="anti"``, the target pair is
+
+.. math::
+
+   Z^{*}_{xy} = \frac{Z_{xy} - Z_{yx}}{2},
+   \qquad
+   Z^{*}_{yx} = -Z^{*}_{xy}.
+
+The output is the blend
+
+.. math::
+
+   Z^{new}_{ab} = (1-\lambda)Z_{ab} + \lambda Z^{*}_{ab},
+
+where :math:`\lambda` is ``lam``. With ``mode="sym"``, the target uses
+:math:`(Z_{xy}+Z_{yx})/2` instead. The anti-symmetric mode is the usual
+choice for checking whether off-diagonal MT/CSAMT responses can be made
+more internally consistent before inversion.
 
 .. code-block:: python
    :linenos:
@@ -405,6 +621,20 @@ Masking And Manual Frequency Drops
 ``mask_incoherent_freqs`` uses the survey SNR table to identify
 frequencies where too few stations pass an SNR threshold. It masks those
 frequencies rather than pretending they are reliable.
+For each frequency :math:`f_i`, the vote fraction is
+
+.. math::
+
+   p_i =
+   \frac{1}{N_i}
+   \sum_{s=1}^{N_i}
+   \mathbf{1}\!\left(\mathrm{SNR}_{s,i} \ge \tau\right),
+
+where :math:`N_i` is the number of stations with that frequency and
+:math:`\tau` is ``snr_thresh``. The row is kept only if
+:math:`p_i \ge p_{min}`, with :math:`p_{min}` supplied by ``min_frac``.
+This makes the decision survey-wide: a frequency can be removed even if
+one station looks acceptable, because too few stations support it.
 
 .. code-block:: python
    :linenos:
@@ -442,6 +672,24 @@ Group-Trend Shrinkage
 ``shrink_to_group_trend`` pulls station curves toward a group median
 trend. By default it is gated to harmonic rows, which makes it a
 targeted EMI treatment rather than a blanket smoothing operation.
+For a group :math:`g`, pyCSAMT forms a median tensor trend
+:math:`T_g(f_i)` from the stations in that group. The shrinkage step is
+
+.. math::
+
+   Z^{new}_{s}(f_i)
+   =
+   \begin{cases}
+   (1-\lambda)Z_s(f_i) + \lambda T_g(f_i),
+      & \text{if } f_i \text{ is inside the gate},\\
+   Z_s(f_i),
+      & \text{otherwise}.
+   \end{cases}
+
+The gate is the same harmonic mask used by ``notch_powerline`` when
+``gate_harm=True``. Turning the gate off changes the meaning of the
+operation: it becomes a general spatial shrinkage toward the line trend,
+not only an EMI correction.
 
 .. code-block:: python
    :linenos:
@@ -479,14 +727,62 @@ The module contains two related families of station-profile filters.
 Hanning adaptive moving-average correction. ``apply_emap_filter`` is a
 dispatcher for adaptive moving average (``"ama"``), fixed-length moving
 average (``"flma"``), and trimmed moving average (``"tma"``).
+The adaptive moving-average correction works in log apparent
+resistivity along station position :math:`x_s`. With a Hanning window of
+full width :math:`W_H`, the spatial weight between stations :math:`s`
+and :math:`r` is
+
+.. math::
+
+   w_{sr} =
+   \begin{cases}
+   \dfrac{1+\cos(2\pi(x_s-x_r)/W_H)}{W_H},
+      & |x_s-x_r| \le W_H/2,\\
+   0, & \text{otherwise}.
+   \end{cases}
+
+The smoothed log-resistivity is
+
+.. math::
+
+   \log \rho^{smooth}_{a,s}(f_i)
+   =
+   \frac{
+   \sum_r w_{sr}\log \rho_{a,r}(f_i)
+   }{
+   \sum_r w_{sr}
+   } .
+
+The impedance correction factor is then
+
+.. math::
+
+   C_s(f_i)
+   =
+   \sqrt{
+   \frac{\rho^{smooth}_{a,s}(f_i)}
+        {\rho^{obs}_{a,s}(f_i)}
+   },
+   \qquad
+   Z^{new}_{s,ab}(f_i) = C_s(f_i) Z_{s,ab}(f_i).
+
+This formulation is useful for static shift because a near-surface
+galvanic multiplier mainly changes apparent-resistivity level while
+leaving phase much less affected. The filter estimates that multiplier
+from neighboring stations rather than from a single isolated curve.
 
 .. code-block:: python
    :linenos:
+
+   from pathlib import Path
+
+   import matplotlib.pyplot as plt
 
    from pycsamt.emtools import (
        apply_emap_filter,
        correct_static_shift,
        ensure_sites,
+       plot_emap_filter_profile,
    )
 
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
@@ -514,12 +810,42 @@ average (``"flma"``), and trimmed moving average (``"tma"``).
        inplace=False,
    )
 
+   fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.0), sharey=True)
+   for ax, method, filtered in zip(
+       axes,
+       ("ama", "flma", "tma"),
+       (ama_static, flma, tma),
+   ):
+       plot_emap_filter_profile(
+           sites,
+           filtered,
+           method=method,
+           component="xy",
+           ax=ax,
+           station_label_step=4,
+       )
+       ax.set_title(method.upper())
+
+   axes[0].set_ylabel(r"$\log_{10}|Z_{XY}|$")
+   fig.suptitle("L18PLT station-profile response to EMAP-style filters", y=1.02)
+   fig.tight_layout()
+
+   out = Path("docs/source/images/user_guide/emtools")
+   fig.savefig(out / "user-guide-emtools-remove-noise-06.png", dpi=200)
+   plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-06.png
+   :width: 100%
+
 These filters assume that station order and station spacing are
 meaningful. They are most useful on survey lines where neighboring
 stations should share a broad geoelectric trend and sudden
 station-to-station jumps are likely to be static shift or local noise.
 They are less appropriate when a sharp station-local feature is a known
-target.
+target. The comparison above shows the practical difference: AMA follows
+a distance-weighted Hanning correction, FLMA applies a fixed station
+window, and TMA keeps the same spatial idea while reducing the influence
+of extreme neighbors before averaging.
 
 EMAP Reports And Plots
 ----------------------
@@ -606,6 +932,12 @@ profile along the line. ``plot_emap_filter_psection`` shows the
 before/after/delta pseudo-section across stations and periods. Use both:
 one exposes station-to-station behavior clearly, and the other shows
 whether corrections concentrate in a narrow period band.
+In the profile plot, a useful correction usually softens isolated
+station jumps while preserving the broader along-line trend. In the
+pseudo-section grid, look for corrections that remain localized in
+station-period space. A uniform color wash across the delta panel is a
+warning that the filter may be rewriting the survey rather than removing
+a specific noise pattern.
 
 Confidence-Gated EMAP Filtering
 -------------------------------
@@ -618,6 +950,37 @@ use:
 * confidence above ``ci_hi``: preserve the original row;
 * confidence below ``ci_lo``: use the filtered row;
 * confidence between the thresholds: blend original and filtered rows.
+
+The blend weight for a row with confidence :math:`c_{s,i}` is
+
+.. math::
+
+   \alpha_{s,i}
+   =
+   \left[
+   \mathrm{clip}
+   \left(
+   \frac{c_{hi}-c_{s,i}}{c_{hi}-c_{lo}},
+   0,
+   1
+   \right)
+   \right]^{p},
+
+where :math:`c_{hi}` is ``ci_hi``, :math:`c_{lo}` is ``ci_lo``, and
+:math:`p` is ``blend_power``. The final selected component is
+
+.. math::
+
+   Z^{new}_{s,ab}(f_i)
+   =
+   (1-\alpha_{s,i})Z^{raw}_{s,ab}(f_i)
+   +
+   \alpha_{s,i}Z^{emap}_{s,ab}(f_i).
+
+Thus high-confidence data keep their measured value, low-confidence data
+move fully to the spatially filtered estimate, and middle-confidence
+data move only part of the way. This is often the most defensible EMAP
+workflow because the correction strength is tied to the QC evidence.
 
 .. code-block:: python
    :linenos:
@@ -841,6 +1204,13 @@ changed in station-period space. ``nr_qc_snr_gain_profile`` summarizes
 SNR gain by station. ``nr_qc_harmonic_waterfall`` is specific to
 power-line harmonic reduction. ``nr_qc_station_offdiag_curves`` is the
 plainest check: one station, before and after, on the same axes.
+Read the four-panel grid as a compact audit trail. The delta
+pseudo-section answers where the tensor changed; the SNR profile answers
+which stations benefited; the harmonic waterfall answers whether the
+power-line rows were actually touched; and the station curve verifies
+that a representative response remains geologically plausible after the
+pipeline. The figures are intentionally complementary, because a single
+pretty before/after curve can hide survey-wide over-smoothing.
 
 Choosing A Treatment
 --------------------
@@ -929,6 +1299,12 @@ A practical processing bundle usually contains four outputs:
 Keep the raw SNR table, EMI report, processing script, and representative
 QC figures together. That gives reviewers enough information to
 understand both the data quality and the editing decisions.
+The bundle is also a compact mathematical record: the SNR table gives
+:math:`\mathrm{SNR}_{s,i}`, the EMI report records the harmonic mask
+:math:`m_i`, the script records the chosen blend weights and thresholds,
+and the figures show the realized
+:math:`\Delta\log_{10}|Z_{\mathrm{off}}|`. Together they make the
+processing reproducible instead of merely visually convincing.
 
 Worked Example
 --------------

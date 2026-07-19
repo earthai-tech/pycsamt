@@ -3,16 +3,18 @@
 AI inversion data preparation
 =============================
 
-Data preparation defines the inverse problem that an AI model learns. It
-includes much more than converting EDI files into arrays: the workflow must
-define an earth-model distribution, generate physically consistent synthetic
-responses, reproduce field noise and missingness, preserve feature semantics,
-separate datasets without leakage, and demonstrate that field observations are
-supported by the training domain.
+Data preparation defines the inverse problem that an :term:`AI inversion`
+model learns. It includes much more than converting :term:`EDI` files into
+arrays: the workflow must define an earth-model distribution, generate
+physically consistent synthetic responses, reproduce field noise and
+missingness, preserve feature semantics, separate datasets without leakage,
+and demonstrate that field observations are supported by the
+:term:`training distribution`.
 
 In pyCSAMT, two data paths meet at inference:
 
-* :mod:`pycsamt.forward.batch` generates synthetic feature–target pairs;
+* :mod:`pycsamt.forward.batch` generates :term:`synthetic dataset`
+  feature–target pairs;
 * :mod:`pycsamt.ai.inversion` bridge utilities convert real
   :class:`pycsamt.site.Sites` into compatible observations, feature matrices,
   profile panels, or coordinates.
@@ -20,9 +22,10 @@ In pyCSAMT, two data paths meet at inference:
 .. admonition:: The dataset is part of the model
    :class: important
 
-   A checkpoint cannot be interpreted independently of its dataset. Model
-   priors, forward solver, frequency grid, feature order, noise, preprocessing,
-   target parameterization, and split policy all belong to the trained model's
+   A checkpoint cannot be interpreted independently of its dataset.
+   :term:`Model prior`\ s, :term:`forward operator`, :term:`frequency grid`,
+   feature order, :term:`noise model`, preprocessing, target parameterization,
+   and :term:`dataset split` policy all belong to the trained model's
    scientific definition.
 
 Data preparation workflow
@@ -30,7 +33,7 @@ Data preparation workflow
 
 #. define the field question and required output parameterization;
 #. inventory and quality-control the observed survey;
-#. freeze the feature and target contracts;
+#. freeze the :term:`feature contract` and target contracts;
 #. design a geologically defensible synthetic model distribution;
 #. choose forward physics and acquisition geometry;
 #. add realistic noise, gaps, distortions, and nuisance effects;
@@ -39,7 +42,8 @@ Data preparation workflow
 #. fit preprocessing on training data only;
 #. transform validation, test, calibration, and field data identically;
 #. compare field observations with the synthetic coverage envelope;
-#. version arrays, metadata, split indices, and provenance together.
+#. version arrays, metadata, split indices, and :term:`provenance manifest`
+   together.
 
 1. Start from the decision and parameterization
 -----------------------------------------------
@@ -67,21 +71,22 @@ identifiable at the available bandwidth.
 2. Load field data canonically
 ------------------------------
 
-Use :func:`pycsamt.emtools._core.ensure_sites` so EDI files, directories, and
-existing site containers follow the same validation path:
+Use :func:`pycsamt.emtools._core.ensure_sites` so :term:`EDI` files,
+directories, and existing site containers follow the same validation path:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.emtools._core import ensure_sites
 
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       strict=False,
-       on_dup="replace",
-       verbose=0,
-   )
-   print("Loaded stations:", len(sites))
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=True,
+   ...     strict=False,
+   ...     on_dup="replace",
+   ...     verbose=0,
+   ... )
+   >>> print("Loaded stations:", len(sites))
+   Loaded stations: 28
 
 Files without valid impedance are skipped by the canonical loader. That is a
 minimum structural check, not complete quality control.
@@ -89,14 +94,15 @@ minimum structural check, not complete quality control.
 Before building ML arrays, review:
 
 * station names and duplicates;
-* coordinates, CRS, profile order, and elevations;
-* frequency coverage and sampling density;
+* coordinates, :term:`CRS`, profile order, and elevations;
+* :term:`frequency coverage` and sampling density;
 * tensor-component availability;
-* finite apparent resistivity and phase;
+* finite :term:`apparent resistivity` and :term:`phase`;
 * error estimates and masks;
-* static shift, source effects, near-field behavior, and cultural noise;
-* dimensionality, strike, skew, and tipper evidence;
-* every correction applied to the impedance;
+* :term:`static shift`, source effects, :term:`near field` behavior, and
+  cultural noise;
+* :term:`dimensionality`, :term:`strike`, skew, and :term:`tipper` evidence;
+* every correction applied to the :term:`impedance tensor`;
 * stations or frequency bands excluded from later interpretation.
 
 Preserve the original EDI inventory and QC results. AI preparation should
@@ -111,23 +117,26 @@ before interpolation.
 1-D observations
 ~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_obs_1d
+   >>> from pycsamt.ai.inversion import sites_to_obs_1d
 
-   observations_1d = sites_to_obs_1d(
-       sites,
-       comp="xy",
-       verbose=1,
-   )
+   >>> observations_1d = sites_to_obs_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     verbose=0,
+   ... )
 
-   first = observations_1d[0]
-   print(first.name)
-   print(first.freq.shape, first.rho_obs.shape, first.phase_obs.shape)
+   >>> first = observations_1d[0]
+   >>> print(first.name)
+   18-001A
+   >>> print(first.freq.shape, first.rho_obs.shape, first.phase_obs.shape)
+   (53,) (53,) (53,)
 
 Each :class:`pycsamt.ai.inversion.SiteObs1D` contains frequency in hertz,
-linear apparent resistivity in ohm metres, and phase in degrees. Frequencies
-are sorted from high to low and invalid values are removed.
+linear :term:`apparent resistivity` in ohm metres, and :term:`phase` in
+degrees. Frequencies are sorted from high to low and invalid values are
+removed.
 
 Supported component names are ``"xy"``, ``"yx"``, ``"xx"``, and ``"yy"``.
 Component choice is a scientific decision; it must match training and the
@@ -136,20 +145,34 @@ survey's mode convention.
 2-D observations
 ~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_obs_2d
+   >>> from pycsamt.ai.inversion import sites_to_obs_2d
 
-   observations_2d = sites_to_obs_2d(
-       sites,
-       comp_te="xy",
-       comp_tm="yx",
-       verbose=1,
-   )
+   >>> observations_2d = sites_to_obs_2d(
+   ...     sites,
+   ...     comp_te="xy",
+   ...     comp_tm="yx",
+   ...     verbose=0,
+   ... )
+   >>> type(observations_2d).__name__, len(observations_2d)
+   ('list', 28)
+   >>> first = observations_2d[0]
+   >>> print(first.name)
+   18-001A
+   >>> print(
+   ...     first.freq.shape,
+   ...     first.rho_te.shape,
+   ...     first.phase_te.shape,
+   ...     first.rho_tm.shape,
+   ...     first.phase_tm.shape,
+   ... )
+   (53,) (53,) (53,) (53,) (53,)
 
 Each :class:`pycsamt.ai.inversion.SiteObs2D` stores TE and TM apparent
-resistivity and phase. The current bridge treats ``xy`` as TE and ``yx`` as TM
-by default and stores the TM phase magnitude. Confirm that this convention is
+resistivity and :term:`phase`. The current bridge treats ``xy`` as
+:term:`TE mode` and ``yx`` as :term:`TM mode` by default and stores the TM
+phase magnitude. Confirm that this convention is
 appropriate for the profile orientation and strike analysis.
 
 When TM values are missing at samples retained by the TE mask, the bridge can
@@ -163,20 +186,22 @@ panel.
 :func:`pycsamt.ai.inversion.sites_to_features_1d` creates the public 1-D field
 feature matrix:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_features_1d
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
 
-   X_field, frequencies_hz, station_names = sites_to_features_1d(
-       sites,
-       comp="xy",
-       n_freqs=32,
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
+   >>> X_field, frequencies_hz, station_names = sites_to_features_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     n_freqs=32,
+   ...     freq_min=1e-3,
+   ...     freq_max=1e3,
+   ... )
 
-   print(X_field.shape)       # (n_stations, 64)
-   print(frequencies_hz.shape)  # (32,)
+   >>> print(X_field.shape)
+   (28, 64)
+   >>> print(frequencies_hz.shape)
+   (32,)
 
 The block layout is:
 
@@ -185,9 +210,20 @@ The block layout is:
    [log10(rho_a at f_1 ... f_n),
     phase at f_1 ... f_n]
 
-The common grid is logarithmically spaced. Interpolation occurs in log
-frequency; apparent resistivity is interpolated in log10 space and phase in
-linear degrees.
+Equivalently, for station :math:`s` and a common frequency grid
+:math:`\{f_j\}_{j=1}^{n_f}`, the row is
+
+.. math::
+
+   \mathbf x_s =
+   \left[
+   \log_{10}\rho_a(s,f_1),\ldots,\log_{10}\rho_a(s,f_{n_f}),
+   \phi(s,f_1),\ldots,\phi(s,f_{n_f})
+   \right].
+
+The common grid is logarithmically spaced. Interpolation occurs in
+:math:`\log_{10}f`; :term:`apparent resistivity` is interpolated in
+:math:`\log_{10}\rho_a` space and :term:`phase` in linear degrees.
 
 .. warning::
 
@@ -224,22 +260,22 @@ Record the contract as machine-readable metadata:
 :func:`pycsamt.ai.inversion.sites_to_panel_2d` produces a batch containing one
 field profile:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_panel_2d
+   >>> from pycsamt.ai.inversion import sites_to_panel_2d
 
-   X_profile, frequencies_hz, station_names = sites_to_panel_2d(
-       sites,
-       n_freqs=32,
-       n_components=4,
-       comp_te="xy",
-       comp_tm="yx",
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
+   >>> X_profile, frequencies_hz, station_names = sites_to_panel_2d(
+   ...     sites,
+   ...     n_freqs=32,
+   ...     n_components=4,
+   ...     comp_te="xy",
+   ...     comp_tm="yx",
+   ...     freq_min=1e-3,
+   ...     freq_max=1e3,
+   ... )
 
-   print(X_profile.shape)
-   # (1, 4, 32, n_stations)
+   >>> print(X_profile.shape)
+   (1, 4, 32, 28)
 
 For four channels, the order is:
 
@@ -257,13 +293,19 @@ station count, document padding, cropping, resampling, and masks.
 
 Inspect missingness by channel and station:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   missing_fraction = np.mean(~np.isfinite(X_profile), axis=(0, 2))
-   for name, fraction in zip(station_names, missing_fraction):
-       print(name, fraction)
+   >>> missing_fraction = np.mean(~np.isfinite(X_profile), axis=(0, 1, 2))
+   >>> print(missing_fraction.shape)
+   (28,)
+   >>> for name, fraction in list(zip(station_names, missing_fraction))[:4]:
+   ...     print(name, round(float(fraction), 3))
+   18-001A 0.5
+   18-002U 0.5
+   18-003A 0.5
+   18-004A 0.5
 
 Do not fill all missing values with a smooth interpolation unless training
 contains the same pattern. Interpolation can manufacture lateral continuity.
@@ -274,15 +316,20 @@ contains the same pattern. Interpolation can manufacture lateral continuity.
 :func:`pycsamt.ai.inversion.sites_to_coords_3d` returns station coordinates in
 metres:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import sites_to_coords_3d
+   >>> from pycsamt.ai.inversion import sites_to_coords_3d
 
-   coords_m = sites_to_coords_3d(
-       sites,
-       station_spacing=500.0,
-   )
-   print(coords_m.shape)  # (n_stations, 2)
+   >>> coords_m = sites_to_coords_3d(
+   ...     sites,
+   ...     station_spacing=500.0,
+   ... )
+   >>> print(coords_m.shape)
+   (28, 2)
+   >>> print(coords_m[:3])
+   [[    8.19238802 -1300.78745238]
+    [   14.47695964 -1208.02078571]
+    [    9.76353092 -1102.26678571]]
 
 The helper attempts a local flat-earth conversion from site latitude and
 longitude. When coordinates are absent or do not span a meaningful range, it
@@ -298,7 +345,7 @@ error. Verify:
 * order matches feature rows and station names;
 * duplicate coordinates are resolved;
 * inter-station distances are plausible;
-* CRS and projection are recorded;
+* :term:`CRS` and projection are recorded;
 * adjacency does not cross known structural barriers unintentionally.
 
 7. Design synthetic earth models
@@ -330,6 +377,21 @@ The 1-D generator uses ``LayeredModel.to_vector(log_rho=True)``. The target
 contains log10 resistivities followed by interface thicknesses according to
 the current model-vector contract. Inspect the generated target and inverter
 configuration rather than assuming all target blocks use the same scaling.
+For a fixed :math:`L`-layer target, a common supervised target is
+
+.. math::
+
+   \mathbf y =
+   \left[
+   \log_{10}\rho_1,\ldots,\log_{10}\rho_L,
+   h_1,\ldots,h_{L-1}
+   \right],
+
+where :math:`\rho_\ell` is resistivity in ohm metres and :math:`h_\ell` is
+the finite layer thickness in metres. If ``log_thickness=True`` is used later
+by an inverter, record whether thickness was transformed during dataset
+generation, target preprocessing, or model training; mixing those locations is
+an easy way to make a checkpoint unreproducible.
 
 Variable layer counts produce vectors of different length; the batch generator
 pads shorter targets with ``nan`` to the largest parameter length. Not every
@@ -343,32 +405,35 @@ strategy.
 :func:`pycsamt.forward.batch.generate_dataset` supports ``"mt1d"``,
 ``"csamt1d"``, and ``"tem1d"``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.forward.batch import generate_dataset
+   >>> import numpy as np
+   >>> from pycsamt.forward.batch import generate_dataset
 
-   frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(-3, 3, 32)
 
-   dataset = generate_dataset(
-       solver="mt1d",
-       n_samples=20_000,
-       freqs=frequencies_hz,
-       n_layers=5,
-       rho_range=(1.0, 10_000.0),
-       depth_max=2000.0,
-       noise_level=0.05,
-       noise_type="field",
-       include_phase=True,
-       seed=42,
-       n_jobs=1,
-       output="datasets/mt1d_5layer.npz",
-       verbose=True,
-   )
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=40,
+   ...     freqs=frequencies_hz,
+   ...     n_layers=5,
+   ...     rho_range=(1.0, 10_000.0),
+   ...     depth_max=2000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     output=None,
+   ...     verbose=False,
+   ... )
 
-   print(dataset)
-   print(dataset.X.shape)
-   print(dataset.y.shape)
+   >>> print(dataset)
+   ForwardDataset(n=40, n_features=64, n_params=9, solver='mt1d')
+   >>> print(dataset.X.shape)
+   (40, 64)
+   >>> print(dataset.y.shape)
+   (40, 9)
 
 For MT with phase, ``X`` contains a log10 apparent-resistivity block followed
 by a phase block. For TEM, it contains log10 absolute decay values. Confirm the
@@ -382,7 +447,8 @@ Generator parameters
    Forward method. It must match the field method and feature contract.
 
 ``n_samples``
-   Number of synthetic examples. Adequacy depends on parameter dimension,
+   Number of synthetic examples. The small value above keeps the documentation
+   example quick; adequacy in a real run depends on parameter dimension,
    distribution complexity, architecture, and rare-case coverage.
 
 ``n_layers``
@@ -440,12 +506,14 @@ Pilot the physics and storage requirements before launching a large dataset.
 
 Save and load without pickle:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.forward.batch import ForwardDataset
+   >>> from pycsamt.forward.batch import ForwardDataset
 
-   dataset.save("datasets/mt1d_5layer.npz")
-   restored = ForwardDataset.load("datasets/mt1d_5layer.npz")
+   >>> dataset.save("datasets/mt1d_5layer.npz")
+   >>> restored = ForwardDataset.load("datasets/mt1d_5layer.npz")
+   >>> print(restored)
+   ForwardDataset(n=40, n_features=64, n_params=9, solver='mt1d')
 
 The current NPZ serialization preserves arrays, solver, frequency/time grids,
 and metadata fields for layer count and noise level. It does not preserve the
@@ -459,35 +527,40 @@ or YAML manifest.
 :func:`pycsamt.forward.batch.generate_dataset_3d` creates spatially correlated
 layered station models for :class:`pycsamt.ai.inversion.GCNInverter3D`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.forward.batch import generate_dataset_3d
+   >>> from pycsamt.forward.batch import generate_dataset_3d
 
-   surveys = generate_dataset_3d(
-       solver="mt1d",
-       n_surveys=2000,
-       n_stations=25,
-       n_layers=5,
-       freqs=frequencies_hz,
-       extent=10_000.0,
-       corr_length=2000.0,
-       log_rho_mean=2.0,
-       log_rho_std=0.6,
-       thickness_range=(100.0, 1500.0),
-       station_layout="grid",
-       noise_level=0.03,
-       noise_type="field",
-       include_phase=True,
-       seed=42,
-       n_jobs=1,
-       output="datasets/mt_graph_surveys.npz",
-   )
+   >>> surveys = generate_dataset_3d(
+   ...     solver="mt1d",
+   ...     n_surveys=20,
+   ...     n_stations=25,
+   ...     n_layers=5,
+   ...     freqs=frequencies_hz,
+   ...     extent=10_000.0,
+   ...     corr_length=2000.0,
+   ...     log_rho_mean=2.0,
+   ...     log_rho_std=0.6,
+   ...     thickness_range=(100.0, 1500.0),
+   ...     station_layout="grid",
+   ...     noise_level=0.03,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     output=None,
+   ... )
 
-   print(surveys.X.shape)
-   print(surveys.y.shape)
-   print(surveys.coords.shape)
+   >>> print(surveys.X.shape)
+   (20, 25, 64)
+   >>> print(surveys.y.shape)
+   (20, 25, 9)
+   >>> print(surveys.coords.shape)
+   (25, 2)
 
-The generator currently uses the MT 1-D forward solver at every graph node.
+The small ``n_surveys`` value above is for documentation speed; production
+graph training usually needs many more survey realizations. The generator
+currently uses the MT 1-D forward solver at every graph node.
 Per-layer log resistivities are drawn from a spatially correlated Gaussian
 random field. Layer thicknesses are log-uniform and spatially constant within
 one synthetic survey. All surveys share one station layout.
@@ -553,21 +626,28 @@ new earth structures.
 
 Run structural and numerical checks immediately after generation:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   assert dataset.X.ndim == 2
-   assert dataset.y.ndim == 2
-   assert len(dataset.X) == len(dataset.y)
-   assert np.all(np.isfinite(dataset.X))
+   >>> assert dataset.X.ndim == 2
+   >>> assert dataset.y.ndim == 2
+   >>> assert len(dataset.X) == len(dataset.y)
+   >>> assert np.all(np.isfinite(dataset.X))
 
-   target_finite = np.isfinite(dataset.y)
-   print("Target finite fraction:", target_finite.mean())
-   print("Feature percentiles:",
-         np.nanpercentile(dataset.X, [0, 1, 50, 99, 100]))
-   print("Target percentiles:",
-         np.nanpercentile(dataset.y, [0, 1, 50, 99, 100]))
+   >>> target_finite = np.isfinite(dataset.y)
+   >>> print("Target finite fraction:", target_finite.mean())
+   Target finite fraction: 1.0
+   >>> print(
+   ...     "Feature percentiles:",
+   ...     np.round(np.nanpercentile(dataset.X, [0, 1, 50, 99, 100]), 3),
+   ... )
+   Feature percentiles: [4.8000e-02 3.4500e-01 3.9080e+00 8.2043e+01 8.9931e+01]
+   >>> print(
+   ...     "Target percentiles:",
+   ...     np.round(np.nanpercentile(dataset.y, [0, 1, 50, 99, 100]), 3),
+   ... )
+   Target percentiles: [4.700000e-02 1.370000e-01 3.660000e+00 1.364546e+03 1.710847e+03]
 
 Also inspect:
 
@@ -590,13 +670,17 @@ missing rare target class.
 
 ``ForwardDataset.split`` provides a random row split:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   train, validation, test = dataset.split(
-       val_frac=0.15,
-       test_frac=0.15,
-       seed=42,
-   )
+   >>> train, validation, test = dataset.split(
+   ...     val_frac=0.15,
+   ...     test_frac=0.15,
+   ...     seed=42,
+   ... )
+   >>> print(len(train), len(validation), len(test))
+   28 6 6
+   >>> print(train.X.shape, validation.X.shape, test.X.shape)
+   (28, 64) (6, 64) (6, 64)
 
 This is appropriate only when rows are independent and exchangeable. It does
 not enforce grouping by geological scenario, parent model, augmentation
@@ -623,16 +707,23 @@ or data preparation decisions, that set has become validation data.
 If features or targets are standardized, compute statistics from the training
 set only:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   x_mean = np.nanmean(train.X, axis=0)
-   x_std = np.nanstd(train.X, axis=0)
-   x_std = np.where(x_std > 0, x_std, 1.0)
+   >>> x_mean = np.nanmean(train.X, axis=0)
+   >>> x_std = np.nanstd(train.X, axis=0)
+   >>> x_std = np.where(x_std > 0, x_std, 1.0)
 
-   X_train_scaled = (train.X - x_mean) / x_std
-   X_val_scaled = (validation.X - x_mean) / x_std
-   X_test_scaled = (test.X - x_mean) / x_std
-   X_field_scaled = (X_field - x_mean) / x_std
+   >>> X_train_scaled = (train.X - x_mean) / x_std
+   >>> X_val_scaled = (validation.X - x_mean) / x_std
+   >>> X_test_scaled = (test.X - x_mean) / x_std
+   >>> X_field_scaled = (X_field - x_mean) / x_std
+   >>> print(
+   ...     X_train_scaled.shape,
+   ...     X_val_scaled.shape,
+   ...     X_test_scaled.shape,
+   ...     X_field_scaled.shape,
+   ... )
+   (28, 64) (6, 64) (6, 64) (28, 64)
 
 This example does not resolve NaNs; apply the documented mask or imputation
 policy first or within a pipeline designed for missing values.
@@ -649,20 +740,25 @@ round trip returns the original target within numerical tolerance.
 Before training acceptance or field inference, compare ``X_field`` with
 training data:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   train_low = np.nanpercentile(train.X, 1, axis=0)
-   train_high = np.nanpercentile(train.X, 99, axis=0)
+   >>> train_low = np.nanpercentile(train.X, 1, axis=0)
+   >>> train_high = np.nanpercentile(train.X, 99, axis=0)
 
-   outside = (X_field < train_low) | (X_field > train_high)
-   outside_fraction = np.nanmean(outside, axis=1)
+   >>> outside = (X_field < train_low) | (X_field > train_high)
+   >>> outside_fraction = np.nanmean(outside, axis=1)
 
-   for name, fraction in zip(station_names, outside_fraction):
-       print(name, fraction)
+   >>> for name, fraction in list(zip(station_names, outside_fraction))[:4]:
+   ...     print(name, round(float(fraction), 3))
+   18-001A 0.375
+   18-002U 0.375
+   18-003A 0.375
+   18-004A 0.391
 
 This per-feature envelope is only a basic diagnostic. It ignores feature
-correlation and does not prove in-distribution status. Add multivariate or
-latent-distance diagnostics where appropriate.
+correlation and does not prove in-distribution status; with only 40 synthetic
+examples it is intentionally a smoke test, not acceptance evidence. Add
+multivariate or latent-distance diagnostics where appropriate.
 
 Review domain coverage by:
 
@@ -724,92 +820,99 @@ versioned set.
 Complete 1-D preparation example
 --------------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import json
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import json
+   >>> import numpy as np
 
-   from pycsamt.ai.inversion import sites_to_features_1d
-   from pycsamt.emtools._core import ensure_sites
-   from pycsamt.forward.batch import generate_dataset
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.forward.batch import generate_dataset
 
-   root = Path("datasets/mt1d_5layer_v001")
-   root.mkdir(parents=True, exist_ok=True)
+   >>> root = Path("datasets/mt1d_5layer_v001")
+   >>> root.mkdir(parents=True, exist_ok=True)
 
-   frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(-3, 3, 32)
 
-   # Synthetic data.
-   dataset = generate_dataset(
-       solver="mt1d",
-       n_samples=20_000,
-       freqs=frequencies_hz,
-       n_layers=5,
-       rho_range=(1.0, 10_000.0),
-       depth_max=2000.0,
-       noise_level=0.05,
-       noise_type="field",
-       include_phase=True,
-       seed=42,
-       n_jobs=1,
-       verbose=True,
-   )
-   dataset.save(root / "dataset.npz")
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=40,
+   ...     freqs=frequencies_hz,
+   ...     n_layers=5,
+   ...     rho_range=(1.0, 10_000.0),
+   ...     depth_max=2000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     verbose=False,
+   ... )
+   >>> dataset.save(root / "dataset.npz")
 
-   # Frozen split.
-   train, validation, test = dataset.split(
-       val_frac=0.15,
-       test_frac=0.15,
-       seed=42,
-   )
-   train.save(root / "train.npz")
-   validation.save(root / "validation.npz")
-   test.save(root / "test.npz")
+   >>> train, validation, test = dataset.split(
+   ...     val_frac=0.15,
+   ...     test_frac=0.15,
+   ...     seed=42,
+   ... )
+   >>> train.save(root / "train.npz")
+   >>> validation.save(root / "validation.npz")
+   >>> test.save(root / "test.npz")
 
-   # Field features on exactly the same grid.
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
-   X_field, field_freqs, station_names = sites_to_features_1d(
-       sites,
-       comp="xy",
-       n_freqs=32,
-       freq_min=float(frequencies_hz.min()),
-       freq_max=float(frequencies_hz.max()),
-   )
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=True,
+   ...     verbose=0,
+   ... )
+   >>> X_field, field_freqs, station_names = sites_to_features_1d(
+   ...     sites,
+   ...     comp="xy",
+   ...     n_freqs=32,
+   ...     freq_min=float(frequencies_hz.min()),
+   ...     freq_max=float(frequencies_hz.max()),
+   ... )
 
-   if not np.allclose(field_freqs, frequencies_hz):
-       raise ValueError("Synthetic and field frequency grids differ.")
+   >>> if not np.allclose(field_freqs, frequencies_hz):
+   ...     raise ValueError("Synthetic and field frequency grids differ.")
 
-   np.savez_compressed(
-       root / "field_features.npz",
-       X=X_field,
-       freqs=field_freqs,
-       station_names=np.asarray(station_names),
-   )
+   >>> np.savez_compressed(
+   ...     root / "field_features.npz",
+   ...     X=X_field,
+   ...     freqs=field_freqs,
+   ...     station_names=np.asarray(station_names),
+   ... )
 
-   manifest = {
-       "dataset_id": "mt1d_5layer_v001",
-       "solver": "mt1d",
-       "n_samples": 20_000,
-       "n_layers": 5,
-       "rho_range_ohm_m": [1.0, 10_000.0],
-       "depth_max_m": 2000.0,
-       "noise_type": "field",
-       "noise_level": 0.05,
-       "seed": 42,
-       "component": "xy",
-       "feature_layout": "log10_rho_block_then_phase_deg_block",
-   }
-   (root / "manifest.json").write_text(
-       json.dumps(manifest, indent=2),
-       encoding="utf-8",
-   )
+   >>> manifest = {
+   ...     "dataset_id": "mt1d_5layer_v001",
+   ...     "solver": "mt1d",
+   ...     "n_samples": 40,
+   ...     "n_layers": 5,
+   ...     "rho_range_ohm_m": [1.0, 10_000.0],
+   ...     "depth_max_m": 2000.0,
+   ...     "noise_type": "field",
+   ...     "noise_level": 0.05,
+   ...     "seed": 42,
+   ...     "component": "xy",
+   ...     "feature_layout": "log10_rho_block_then_phase_deg_block",
+   ... }
+   >>> (root / "manifest.json").write_text(
+   ...     json.dumps(manifest, indent=2),
+   ...     encoding="utf-8",
+   ... )
+   339
+   >>> print(dataset)
+   ForwardDataset(n=40, n_features=64, n_params=9, solver='mt1d')
+   >>> print(train.X.shape, validation.X.shape, test.X.shape)
+   (28, 64) (6, 64) (6, 64)
+   >>> print(X_field.shape, len(station_names))
+   (28, 64) 28
+   >>> print(sorted(p.name for p in root.iterdir()))
+   ['dataset.npz', 'field_features.npz', 'manifest.json', 'test.npz', 'train.npz', 'validation.npz']
 
 For a controlled project, save the exact split indices rather than only the
-three subset files, and add checksums plus field-coverage diagnostics.
+three subset files, use a production-scale sample count, and add checksums
+plus field-coverage diagnostics.
 
 Review checklist
 ----------------

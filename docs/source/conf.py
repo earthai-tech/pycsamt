@@ -82,6 +82,11 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ "
 copybutton_prompt_is_regexp = True
 
 # -- sphinx-toggleprompt ---------------------------------------------------
+# Show Python console prompts (>>> / ...) by default so reviewer-facing
+# doctest examples read like interactive sessions. Readers can still hide
+# prompts with the toggle button, and sphinx-copybutton still strips prompts
+# from copied code.
+toggleprompt_default_hidden = "false"
 # Shift the toggle left so it does not overlap the copy button.
 toggleprompt_offset_right = 40
 

@@ -84,13 +84,13 @@ class TestSpectraToEDIUnit:
     def test_single_file_returns_collection(self) -> None:
         from pycsamt.transformers import SpectraToEDI
 
-        col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
+        col = SpectraToEDI().transform(_SPECTRA_DIR / "spectra01.edi")
         assert len(col) == 1
 
     def test_single_file_has_z(self) -> None:
         from pycsamt.transformers import SpectraToEDI
 
-        col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
+        col = SpectraToEDI().transform(_SPECTRA_DIR / "spectra01.edi")
         ed = col[0]
         assert ed.Z is not None
         assert ed.Z.n_freq > 0
@@ -98,7 +98,7 @@ class TestSpectraToEDIUnit:
     def test_single_file_has_tipper(self) -> None:
         from pycsamt.transformers import SpectraToEDI
 
-        col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
+        col = SpectraToEDI().transform(_SPECTRA_DIR / "spectra01.edi")
         ed = col[0]
         assert ed.has_tipper
 
@@ -113,7 +113,7 @@ class TestSpectraToEDIUnit:
         from pycsamt.transformers import SpectraToEDI
 
         col = SpectraToEDI(station_suffix="_IMP").transform(
-            _SPECTRA_DIR / "HBH03.edi"
+            _SPECTRA_DIR / "spectra01.edi"
         )
         assert col[0].station.endswith("_IMP")
 
@@ -121,7 +121,7 @@ class TestSpectraToEDIUnit:
         from pycsamt.transformers import SpectraToEDI
 
         col = SpectraToEDI().transform(
-            _SPECTRA_DIR / "HBH03.edi",
+            _SPECTRA_DIR / "spectra01.edi",
             station_name="CUSTOM_01",
         )
         assert col[0].station == "CUSTOM_01"
@@ -130,7 +130,7 @@ class TestSpectraToEDIUnit:
         from pycsamt.transformers import SpectraToEDI
 
         col = SpectraToEDI(estimate_error=True).transform(
-            _SPECTRA_DIR / "HBH03.edi"
+            _SPECTRA_DIR / "spectra01.edi"
         )
         assert col[0].Z.n_freq > 0
 
@@ -138,7 +138,7 @@ class TestSpectraToEDIUnit:
         from pycsamt.transformers import SpectraToEDI
 
         SpectraToEDI().transform(
-            _SPECTRA_DIR / "HBH03.edi",
+            _SPECTRA_DIR / "spectra01.edi",
             output_dir=tmp_path,
         )
         written = list(tmp_path.glob("*.edi"))
@@ -212,7 +212,7 @@ class TestSpectraToEDIUnit:
 
         from pycsamt.transformers import SpectraToEDI
 
-        col = SpectraToEDI().transform(_SPECTRA_DIR / "HBH03.edi")
+        col = SpectraToEDI().transform(_SPECTRA_DIR / "spectra01.edi")
         z = col[0].Z.z
         assert z.ndim == 3
         assert z.shape[1:] == (2, 2)
@@ -434,10 +434,17 @@ class TestTransformAvgCLI:
 class TestTransformJCLI:
     @pytest.fixture(autouse=True)
     def require_j(self) -> None:
-        # Look for .j files in data/
-        j_files = list((_PROJECT_ROOT / "data").rglob("*.j"))
+        # J files may carry .j/.jones/.txt/.dat (see JParseMixin.J_SUFFIXES);
+        # the bundled sample (data/j/nia/) uses .dat.
+        from pycsamt.jones.cbase import JParseMixin
+
+        j_files = [
+            p
+            for p in (_PROJECT_ROOT / "data").rglob("*")
+            if p.is_file() and p.suffix.lower() in JParseMixin.J_SUFFIXES
+        ]
         if not j_files:
-            pytest.skip("No .j files found — skipping J transform tests")
+            pytest.skip("No J files found — skipping J transform tests")
         self.j_dir = j_files[0].parent
 
     def test_dry_run(self, runner: CliRunner) -> None:

@@ -531,10 +531,22 @@ class Inv3DAgent(BaseAgent):
 def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:
     """Return (x_m, y_m) for one station from EDI header lat/lon."""
     try:
-        lat = float(getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0))
-        lon = float(getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0))
+        coords = getattr(ed, "coords", None)
+        if coords is not None and len(coords) >= 2:
+            lat, lon = float(coords[0]), float(coords[1])
+        else:
+            lat = float(
+                getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0)
+            )
+            lon = float(
+                getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0)
+            )
     except Exception:
-        lat, lon = 0.0, float(idx) * 0.001  # fallback: spaced 1 m apart
+        lat, lon = 0.0, 0.0
+    if lat == 0.0 and lon == 0.0:
+        return np.array(
+            [float(idx) * 1.0, 0.0], dtype=np.float64
+        )  # fallback: spaced 1 m apart
 
     # approximate UTM-like local projection (metres)
     x_m = lon * 111_320.0 * np.cos(np.radians(lat))

@@ -3,12 +3,13 @@
 Physics-informed 2-D inversion
 ==============================
 
-:class:`pycsamt.ai.inversion.PINNInverter2D` jointly optimizes layered models
-for all stations on a profile. It uses a differentiable 1-D MT forward
-recursion at each station and couples adjacent station models with lateral
-smoothness. The result is a pseudo-2-D resistivity section: a set of jointly
-regularized 1-D models, not a full finite-element or finite-difference 2-D EM
-forward inversion.
+:class:`pycsamt.ai.inversion.PINNInverter2D` is a
+:term:`physics-informed inversion` workflow that jointly optimizes layered
+models for all stations on a profile. It uses a differentiable 1-D MT
+:term:`forward operator` at each station and couples adjacent station models
+with lateral smoothness. The result is a pseudo-2-D resistivity section: a set
+of jointly regularized 1-D models, not a full finite-element or
+finite-difference 2-D EM forward inversion.
 
 This distinction is central to scientific use. The workflow can provide a
 useful profile estimate when locally layered physics and lateral smoothness are
@@ -31,13 +32,15 @@ When to use this workflow
 Consider PINN 2-D when:
 
 * stations form an ordered survey profile;
-* dimensionality evidence suggests locally 1-D or gently varying 2-D
-  structure;
-* a common layered parameterization is scientifically acceptable;
+* :term:`dimensionality` evidence suggests locally 1-D or gently varying 2-D
+  structure, with :term:`phase tensor` and strike diagnostics reviewed;
+* a common layered parameterization is scientifically acceptable as a
+  :term:`model prior`;
 * no labelled model dataset is available or desired;
 * direct response-space optimization is preferred to supervised prediction;
 * a fast pseudo-2-D baseline or starting model is useful;
-* the result will be compared with classical inversion and independent data.
+* the result will be compared with classical inversion,
+  :term:`response reconstruction`, and independent data.
 
 Prefer a full 2-D or 3-D classical solver when:
 
@@ -57,7 +60,7 @@ Workflow
 #. define the common frequency grid and supported depth;
 #. choose layer count, smoothness weights, optimizer, and epochs;
 #. run baseline and sensitivity configurations;
-#. inspect convergence and response residuals;
+#. inspect convergence and :term:`response-space metric` residuals;
 #. compare section, thicknesses, and reconstructed responses across scenarios;
 #. validate against classical inversion and independent evidence;
 #. report the pseudo-2-D physics and all limitations explicitly.
@@ -76,6 +79,22 @@ Both arrays are optimized jointly. Resistivity is represented as
 :math:`\log_{10}(\rho/\Omega\mathrm{m})`; thickness is represented internally
 in log10 metres and converted back for output.
 
+The optimized station model is therefore
+
+.. math::
+
+   \mathbf{m}_s =
+   \left[
+      u_{s1},\ldots,u_{sL},
+      q_{s1},\ldots,q_{s,L-1}
+   \right],
+
+where :math:`u_{s\ell}=\log_{10}\rho_{s\ell}` and
+:math:`q_{s\ell}=\log_{10}h_{s\ell}`. The pseudo-2-D section is the matrix
+:math:`U=[u_{s\ell}]`, but the forward response at station :math:`s` still
+depends only on :math:`\mathbf{m}_s`. Lateral coupling enters through
+regularization, not through a 2-D electromagnetic field calculation.
+
 The public section methods transpose the internal station-major layout:
 
 .. code-block:: text
@@ -87,6 +106,16 @@ Each station has its own interface thicknesses. Consequently, layer index is a
 parameter correspondence, not automatically a continuous geological horizon.
 Inspect cumulative interface depths before drawing boundaries between
 stations.
+
+For each station, cumulative interface depth is
+
+.. math::
+
+   z_{sk}=\sum_{\ell=1}^{k}10^{q_{s\ell}}.
+
+If thickness varies laterally, the same layer index can sit at different
+physical depths from station to station. Plotting only layer index is useful
+for debugging, but it is not a physical-depth interpretation.
 
 ``depth_max`` guides the layered depth parameterization and initialization; it
 does not establish a geophysical depth of investigation. The defensible
@@ -122,9 +151,25 @@ in log10 apparent resistivity and normalized phase:
 ``N_v`` is the number of finite observations after common-grid interpolation.
 Missing cells are excluded from the data term.
 
+Equivalently, with finite-data mask :math:`M_{sf}`,
+
+.. math::
+
+   N_v = \sum_{s,f} M_{sf}.
+
+A station with fewer valid frequencies contributes fewer residual terms. It
+may still look smooth in the final section because lateral regularization
+borrows structure from neighboring stations. Inspect valid-cell counts before
+interpreting weakly constrained stations.
+
 The 90-degree phase normalization makes the two residual blocks numerically
 comparable but is not an observational covariance model. Formal errors and
 station-specific uncertainty are not explicit weights in this objective.
+
+If project errors are available, compare the final section with an external
+normalized :term:`RMS misfit` calculation in :doc:`validation`. The optimizer
+loss and a formal error-weighted inversion RMS are related diagnostics, not the
+same statistic.
 
 Vertical regularization
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,12 +179,28 @@ resistivity between adjacent layers at each station. Larger values favor
 vertically smooth models; smaller values permit sharper changes and greater
 instability.
 
+In station-layer notation, a representative vertical penalty is
+
+.. math::
+
+   \mathcal R_z =
+   \sum_{s=1}^{S}\sum_{\ell=1}^{L-1}
+   \left(u_{s,\ell+1}-u_{s,\ell}\right)^2.
+
 Lateral regularization
 ~~~~~~~~~~~~~~~~~~~~~~
 
 ``lateral_weight`` is :math:`\lambda_x`. It penalizes log-resistivity
 differences between adjacent stations at the same layer index. It assumes the
 input station order represents profile adjacency.
+
+The corresponding chain penalty is
+
+.. math::
+
+   \mathcal R_x =
+   \sum_{s=1}^{S-1}\sum_{\ell=1}^{L}
+   \left(u_{s+1,\ell}-u_{s,\ell}\right)^2.
 
 The lateral term does not currently scale differences by physical station
 spacing. Closely and widely spaced station pairs are treated as adjacent
@@ -160,15 +221,15 @@ confirmed in the backend kernel. Audit thickness stability separately.
 Load the profile canonically and verify station order before constructing the
 inverter:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.emtools._core import ensure_sites
-
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
+   >>> from pycsamt.emtools import ensure_sites
+   >>>
+   >>> sites = ensure_sites(  # doctest: +SKIP
+   ...     "data/AMT/WILLY_DATA/L18",
+   ...     recursive=True,
+   ...     verbose=0,
+   ... )
 
 The inverter uses :func:`pycsamt.ai.inversion.sites_to_obs_2d` internally and
 preserves the order returned by the input. It does not sort stations by
@@ -220,17 +281,17 @@ before accepting the defaults.
 The constructor extracts valid observations and builds a log-spaced common
 grid with ``n_freqs`` points spanning the combined available range:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import PINNInverter2D
-
-   inversion = PINNInverter2D(
-       sites,
-       n_layers=10,
-       depth_max=2000.0,
-       n_freqs=32,
-       mode="te",
-   )
+   >>> from pycsamt.ai.inversion import PINNInverter2D
+   >>>
+   >>> inversion = PINNInverter2D(  # doctest: +SKIP
+   ...     sites,
+   ...     n_layers=10,
+   ...     depth_max=2000.0,
+   ...     n_freqs=32,
+   ...     mode="te",
+   ... )
 
 Each station is interpolated to this grid in log-frequency space. Values
 outside a station's own range become NaN and do not contribute to the data
@@ -252,13 +313,17 @@ same depth sensitivity.
 Start with the simplest parameterization able to represent expected electrical
 units. Test several defensible combinations, for example:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   candidates = [
-       {"n_layers": 6, "depth_max": 1500.0},
-       {"n_layers": 10, "depth_max": 2000.0},
-       {"n_layers": 14, "depth_max": 3000.0},
-   ]
+   >>> candidates = [
+   ...     {"n_layers": 6, "depth_max": 1500.0},
+   ...     {"n_layers": 10, "depth_max": 2000.0},
+   ...     {"n_layers": 14, "depth_max": 3000.0},
+   ... ]
+   >>> len(candidates)
+   3
+   >>> candidates[1]
+   {'n_layers': 10, 'depth_max': 2000.0}
 
 Increasing layers can reduce response residuals while adding unstable
 interfaces. Increasing ``depth_max`` can allocate parameters below meaningful
@@ -287,13 +352,17 @@ The defaults are:
 Treat them as starting values, not universal choices. Run a grid of plausible
 weights:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   scenarios = [
-       (0.001, 0.0005),
-       (0.01, 0.005),
-       (0.05, 0.02),
-   ]
+   >>> scenarios = [
+   ...     (0.001, 0.0005),
+   ...     (0.01, 0.005),
+   ...     (0.05, 0.02),
+   ... ]
+   >>> len(scenarios)
+   3
+   >>> scenarios[0]
+   (0.001, 0.0005)
 
 For each scenario, retain total loss, response residuals, roughness measures,
 section differences, and target stability. The reported convergence curve
@@ -329,30 +398,29 @@ and learning rates.
 9. Run a baseline inversion
 ----------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import PINNInverter2D
-
-   inversion = PINNInverter2D(
-       sites,
-       n_layers=10,
-       depth_max=2000.0,
-       n_freqs=32,
-       mode="te",
-       smoothness_weight=0.01,
-       lateral_weight=0.005,
-       epochs=300,
-       lr=1e-2,
-       comp_te="xy",
-       comp_tm="yx",
-       device=None,
-       verbose=0,
-   )
-
-   inversion.fit(verbose=True, log_every=25)
-   print(inversion)
-   print(inversion.stations)
-   print(inversion.n_sites)
+   >>> from pycsamt.ai.inversion import PINNInverter2D
+   >>>
+   >>> inversion = PINNInverter2D(  # doctest: +SKIP
+   ...     sites,
+   ...     n_layers=10,
+   ...     depth_max=2000.0,
+   ...     n_freqs=32,
+   ...     mode="te",
+   ...     smoothness_weight=0.01,
+   ...     lateral_weight=0.005,
+   ...     epochs=300,
+   ...     lr=1e-2,
+   ...     comp_te="xy",
+   ...     comp_tm="yx",
+   ...     device=None,
+   ...     verbose=0,
+   ... )
+   >>> inversion.fit(verbose=True, log_every=25)  # doctest: +SKIP
+   >>> print(inversion)  # doctest: +SKIP
+   >>> print(inversion.stations)  # doctest: +SKIP
+   >>> print(inversion.n_sites)  # doctest: +SKIP
 
 The constructor performs data extraction immediately and can raise before
 ``fit()`` when no valid observations survive. The deep-learning backend is
@@ -361,27 +429,42 @@ required when fitting.
 10. Extract resistivity and thickness
 -------------------------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   log10_rho = inversion.resistivity_section(as_log10=True)
-   rho_ohm_m = inversion.resistivity_section(as_log10=False)
-   thickness_m = inversion.thickness_section()
+   >>> import numpy as np
+   >>> log10_rho = np.ones((4, 3)) * 2.0
+   >>> rho_ohm_m = 10.0 ** log10_rho
+   >>> thickness_m = np.array([
+   ...     [50.0, 60.0, 55.0],
+   ...     [100.0, 120.0, 110.0],
+   ...     [200.0, 240.0, 220.0],
+   ... ])
+   >>> print(log10_rho.shape)
+   (4, 3)
+   >>> print(thickness_m.shape)
+   (3, 3)
 
-   print(log10_rho.shape)
-   print(thickness_m.shape)
+For a fitted inverter, use the public section methods:
+
+.. code-block:: pycon
+
+   >>> log10_rho = inversion.resistivity_section(as_log10=True)  # doctest: +SKIP
+   >>> rho_ohm_m = inversion.resistivity_section(as_log10=False)  # doctest: +SKIP
+   >>> thickness_m = inversion.thickness_section()  # doctest: +SKIP
 
 Build interface depths per station from cumulative thickness:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
-
-   interface_depth_m = np.cumsum(thickness_m, axis=0)
-
-   assert np.all(np.isfinite(rho_ohm_m))
-   assert np.all(rho_ohm_m > 0)
-   assert np.all(np.isfinite(thickness_m))
-   assert np.all(thickness_m > 0)
+   >>> interface_depth_m = np.cumsum(thickness_m, axis=0)
+   >>> print(interface_depth_m.shape)
+   (3, 3)
+   >>> print(interface_depth_m[:, 0].astype(int).tolist())
+   [50, 150, 350]
+   >>> assert np.all(np.isfinite(rho_ohm_m))
+   >>> assert np.all(rho_ohm_m > 0)
+   >>> assert np.all(np.isfinite(thickness_m))
+   >>> assert np.all(thickness_m > 0)
 
 Check predictions against explicit parameter bounds used in project scenarios.
 The optimizer's positivity through log representation does not guarantee
@@ -390,10 +473,10 @@ geological plausibility.
 11. Review convergence
 ----------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   curve = inversion.convergence_curve()
-   print(curve.tail())
+   >>> curve = inversion.convergence_curve()  # doctest: +SKIP
+   >>> print(curve.tail())  # doctest: +SKIP
 
 The returned pandas DataFrame contains ``epoch`` and total ``loss``.
 
@@ -415,24 +498,23 @@ model.
 12. Review residuals
 --------------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   residuals = inversion.residuals()
-   residuals["log_rho_residual"] = (
-       np.log10(residuals["rho_pred"])
-       - np.log10(residuals["rho_obs"])
-   )
-   residuals["phase_residual_deg"] = (
-       residuals["phase_pred"] - residuals["phase_obs"]
-   )
-
-   summary = residuals.groupby("station").agg(
-       rho_rms=("log_rho_residual",
-                lambda values: float(np.sqrt(np.nanmean(values**2)))),
-       phase_rms_deg=("phase_residual_deg",
-                      lambda values: float(np.sqrt(np.nanmean(values**2)))),
-   )
-   print(summary)
+   >>> residuals = inversion.residuals()  # doctest: +SKIP
+   >>> residuals["log_rho_residual"] = (  # doctest: +SKIP
+   ...     np.log10(residuals["rho_pred"])
+   ...     - np.log10(residuals["rho_obs"])
+   ... )
+   >>> residuals["phase_residual_deg"] = (  # doctest: +SKIP
+   ...     residuals["phase_pred"] - residuals["phase_obs"]
+   ... )
+   >>> summary = residuals.groupby("station").agg(  # doctest: +SKIP
+   ...     rho_rms=("log_rho_residual",
+   ...              lambda values: float(np.sqrt(np.nanmean(values**2)))),
+   ...     phase_rms_deg=("phase_residual_deg",
+   ...                    lambda values: float(np.sqrt(np.nanmean(values**2)))),
+   ... )
+   >>> print(summary)  # doctest: +SKIP
 
 The residual table uses each station's original frequencies, not only the
 common optimization grid.
@@ -455,22 +537,25 @@ mode-dependent mismatch.
 The section is defined by varying thicknesses, so ``imshow`` on layer index can
 misrepresent depth. For a quick layer-index diagnostic:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   fig, ax = plt.subplots(figsize=(10, 5))
-   image = ax.imshow(
-       log10_rho,
-       aspect="auto",
-       origin="upper",
-       interpolation="nearest",
-   )
-   ax.set_xlabel("Station index")
-   ax.set_ylabel("Layer index")
-   fig.colorbar(image, ax=ax, label="log10 resistivity (ohm m)")
-   fig.savefig("review/pinn2d_layer_index.png", dpi=200,
-               bbox_inches="tight")
+   >>> import matplotlib.pyplot as plt  # doctest: +SKIP
+   >>>
+   >>> fig, ax = plt.subplots(figsize=(10, 5))  # doctest: +SKIP
+   >>> image = ax.imshow(  # doctest: +SKIP
+   ...     log10_rho,
+   ...     aspect="auto",
+   ...     origin="upper",
+   ...     interpolation="nearest",
+   ... )
+   >>> ax.set_xlabel("Station index")  # doctest: +SKIP
+   >>> ax.set_ylabel("Layer index")  # doctest: +SKIP
+   >>> fig.colorbar(image, ax=ax, label="log10 resistivity (ohm m)")  # doctest: +SKIP
+   >>> fig.savefig(  # doctest: +SKIP
+   ...     "review/pinn2d_layer_index.png",
+   ...     dpi=200,
+   ...     bbox_inches="tight",
+   ... )
 
 Label this explicitly as layer index. For a physical-depth section, resample
 each layered model onto a common depth grid using its cumulative thicknesses,
@@ -485,26 +570,26 @@ meaning and stability.
 
 A defensible study includes separate modes:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   results = {}
-   for mode in ("te", "tm"):
-       inv = PINNInverter2D(
-           sites,
-           n_layers=10,
-           depth_max=2000.0,
-           n_freqs=32,
-           mode=mode,
-           smoothness_weight=0.01,
-           lateral_weight=0.005,
-           epochs=300,
-           lr=1e-2,
-       ).fit(verbose=False)
-       results[mode] = {
-           "log10_rho": inv.resistivity_section(),
-           "thickness_m": inv.thickness_section(),
-           "residuals": inv.residuals(),
-       }
+   >>> results = {}  # doctest: +SKIP
+   >>> for mode in ("te", "tm"):  # doctest: +SKIP
+   ...     inv = PINNInverter2D(
+   ...         sites,
+   ...         n_layers=10,
+   ...         depth_max=2000.0,
+   ...         n_freqs=32,
+   ...         mode=mode,
+   ...         smoothness_weight=0.01,
+   ...         lateral_weight=0.005,
+   ...         epochs=300,
+   ...         lr=1e-2,
+   ...     ).fit(verbose=False)
+   ...     results[mode] = {
+   ...         "log10_rho": inv.resistivity_section(),
+   ...         "thickness_m": inv.thickness_section(),
+   ...         "residuals": inv.residuals(),
+   ...     }
 
 Compare:
 
@@ -536,37 +621,34 @@ normalization and missing-value mask need not match the classical solver's RMS.
 Do not rank methods by incomparable scalar values.
 
 16. Use the PINN agent for orchestration
----------------------------------------
+----------------------------------------
 
 :class:`pycsamt.agents.PINNInversionAgent` wraps the workflow and returns an
 :class:`pycsamt.agents.AgentResult`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.agents import PINNInversionAgent
-
-   agent = PINNInversionAgent(
-       dim=2,
-       n_layers=10,
-       depth_max=2000.0,
-       smoothness_weight=0.01,
-       lateral_weight=0.005,
-       epochs=300,
-       lr=1e-2,
-       solver="mt1d",
-   )
-
-   result = agent.execute({
-       "sites": sites,
-       "output_dir": "outputs/pinn2d/L18",
-   })
-
-   if result.status == "failed":
-       raise RuntimeError(result.error)
-
-   section = result["section"]
-   loss_table = result.get("loss_df")
-   residual_table = result.get("residuals_df")
+   >>> from pycsamt.agents import PINNInversionAgent
+   >>>
+   >>> agent = PINNInversionAgent(  # doctest: +SKIP
+   ...     dim=2,
+   ...     n_layers=10,
+   ...     depth_max=2000.0,
+   ...     smoothness_weight=0.01,
+   ...     lateral_weight=0.005,
+   ...     epochs=300,
+   ...     lr=1e-2,
+   ...     solver="mt1d",
+   ... )
+   >>> result = agent.execute({  # doctest: +SKIP
+   ...     "sites": sites,
+   ...     "output_dir": "outputs/pinn2d/L18",
+   ... })
+   >>> if result.status == "failed":  # doctest: +SKIP
+   ...     raise RuntimeError(result.error)
+   >>> section = result["section"]  # doctest: +SKIP
+   >>> loss_table = result.get("loss_df")  # doctest: +SKIP
+   >>> residual_table = result.get("residuals_df")  # doctest: +SKIP
 
 The agent is convenient for figures and standardized results, but inspect its
 constructor mapping: the generic agent interface does not expose every
@@ -580,27 +662,26 @@ level class when those controls matter.
 :class:`pycsamt.ai.inversion.EMInverter2D` to initialize the same joint physics
 refinement:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.ai.inversion import HybridInverter2D
-
-   hybrid = HybridInverter2D(
-       sites,
-       ai_inverter=fitted_ai_2d,
-       n_layers=10,
-       depth_max=2000.0,
-       n_freqs=32,
-       mode="te",
-       smoothness_weight=0.005,
-       lateral_weight=0.003,
-       epochs=150,
-       lr=5e-3,
-   ).fit()
-
-   stage1 = hybrid.stage1_section()
-   stage2 = hybrid.resistivity_section()
-   residuals_stage1 = hybrid.residuals(stage=1)
-   residuals_stage2 = hybrid.residuals(stage=2)
+   >>> from pycsamt.ai.inversion import HybridInverter2D
+   >>>
+   >>> hybrid = HybridInverter2D(  # doctest: +SKIP
+   ...     sites,
+   ...     ai_inverter=fitted_ai_2d,
+   ...     n_layers=10,
+   ...     depth_max=2000.0,
+   ...     n_freqs=32,
+   ...     mode="te",
+   ...     smoothness_weight=0.005,
+   ...     lateral_weight=0.003,
+   ...     epochs=150,
+   ...     lr=5e-3,
+   ... ).fit()
+   >>> stage1 = hybrid.stage1_section()  # doctest: +SKIP
+   >>> stage2 = hybrid.resistivity_section()  # doctest: +SKIP
+   >>> residuals_stage1 = hybrid.residuals(stage=1)  # doctest: +SKIP
+   >>> residuals_stage2 = hybrid.residuals(stage=2)  # doctest: +SKIP
 
 The hybrid is justified only if Stage 2 improves response fit or scientific
 stability without introducing unsupported structure. Preserve both stages.
@@ -634,6 +715,24 @@ Summarize model spread on a common physical depth grid and distinguish
 optimizer variability from structural and data uncertainty. See
 :doc:`uncertainty` for the wider framework.
 
+For scenario set :math:`\mathcal{C}`, report spread in the same quantity used
+for interpretation. For example, if :math:`u_c(z,x)` is the log-resistivity
+section for scenario :math:`c`, a simple scenario standard deviation is
+
+.. math::
+
+   \sigma_u(z,x)
+   =
+   \sqrt{
+      \frac{1}{|\mathcal{C}|-1}
+      \sum_{c\in\mathcal{C}}
+      \left(u_c(z,x)-\bar{u}(z,x)\right)^2
+   }.
+
+This is not a posterior distribution. It is a sensitivity diagnostic showing
+where the interpretation depends on mode, regularization, layer count, data
+masks, or optimizer settings.
+
 19. Preserve a run record
 -------------------------
 
@@ -666,69 +765,63 @@ status.
 Complete example
 ----------------
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import json
-   import numpy as np
-
-   from pycsamt.ai.inversion import PINNInverter2D
-   from pycsamt.emtools._core import ensure_sites
-
-   output = Path("pinn2d/L18_te_r001")
-   (output / "outputs").mkdir(parents=True, exist_ok=True)
-
-   sites = ensure_sites(
-       "data/AMT/WILLY_DATA/L18",
-       recursive=True,
-       verbose=0,
-   )
-
-   inversion = PINNInverter2D(
-       sites,
-       n_layers=10,
-       depth_max=2000.0,
-       n_freqs=32,
-       mode="te",
-       smoothness_weight=0.01,
-       lateral_weight=0.005,
-       epochs=300,
-       lr=1e-2,
-       comp_te="xy",
-       comp_tm="yx",
-       verbose=0,
-   ).fit(verbose=True, log_every=25)
-
-   log10_rho = inversion.resistivity_section()
-   thickness_m = inversion.thickness_section()
-   interface_depth_m = np.cumsum(thickness_m, axis=0)
-   convergence = inversion.convergence_curve()
-   residuals = inversion.residuals()
-
-   np.save(output / "outputs" / "log10_resistivity.npy", log10_rho)
-   np.save(output / "outputs" / "thickness_m.npy", thickness_m)
-   np.save(output / "outputs" / "interface_depth_m.npy", interface_depth_m)
-   convergence.to_csv(output / "outputs" / "convergence.csv", index=False)
-   residuals.to_csv(output / "outputs" / "residuals.csv", index=False)
-
-   manifest = {
-       "workflow": "PINNInverter2D",
-       "physics": "per_station_mt1d_with_lateral_smoothing",
-       "mode": "te",
-       "component": "xy",
-       "stations": inversion.stations,
-       "n_layers": 10,
-       "depth_max_m": 2000.0,
-       "n_freqs": 32,
-       "smoothness_weight": 0.01,
-       "lateral_weight": 0.005,
-       "epochs": 300,
-       "learning_rate": 1e-2,
-   }
-   (output / "manifest.json").write_text(
-       json.dumps(manifest, indent=2),
-       encoding="utf-8",
-   )
+   >>> from pathlib import Path  # doctest: +SKIP
+   >>> import json  # doctest: +SKIP
+   >>> import numpy as np  # doctest: +SKIP
+   >>> from pycsamt.ai.inversion import PINNInverter2D  # doctest: +SKIP
+   >>> from pycsamt.emtools import ensure_sites  # doctest: +SKIP
+   >>>
+   >>> output = Path("pinn2d/L18_te_r001")  # doctest: +SKIP
+   >>> (output / "outputs").mkdir(parents=True, exist_ok=True)  # doctest: +SKIP
+   >>> sites = ensure_sites(  # doctest: +SKIP
+   ...     "data/AMT/WILLY_DATA/L18",
+   ...     recursive=True,
+   ...     verbose=0,
+   ... )
+   >>> inversion = PINNInverter2D(  # doctest: +SKIP
+   ...     sites,
+   ...     n_layers=10,
+   ...     depth_max=2000.0,
+   ...     n_freqs=32,
+   ...     mode="te",
+   ...     smoothness_weight=0.01,
+   ...     lateral_weight=0.005,
+   ...     epochs=300,
+   ...     lr=1e-2,
+   ...     comp_te="xy",
+   ...     comp_tm="yx",
+   ...     verbose=0,
+   ... ).fit(verbose=True, log_every=25)
+   >>> log10_rho = inversion.resistivity_section()  # doctest: +SKIP
+   >>> thickness_m = inversion.thickness_section()  # doctest: +SKIP
+   >>> interface_depth_m = np.cumsum(thickness_m, axis=0)  # doctest: +SKIP
+   >>> convergence = inversion.convergence_curve()  # doctest: +SKIP
+   >>> residuals = inversion.residuals()  # doctest: +SKIP
+   >>> np.save(output / "outputs" / "log10_resistivity.npy", log10_rho)  # doctest: +SKIP
+   >>> np.save(output / "outputs" / "thickness_m.npy", thickness_m)  # doctest: +SKIP
+   >>> np.save(output / "outputs" / "interface_depth_m.npy", interface_depth_m)  # doctest: +SKIP
+   >>> convergence.to_csv(output / "outputs" / "convergence.csv", index=False)  # doctest: +SKIP
+   >>> residuals.to_csv(output / "outputs" / "residuals.csv", index=False)  # doctest: +SKIP
+   >>> manifest = {  # doctest: +SKIP
+   ...     "workflow": "PINNInverter2D",
+   ...     "physics": "per_station_mt1d_with_lateral_smoothing",
+   ...     "mode": "te",
+   ...     "component": "xy",
+   ...     "stations": inversion.stations,
+   ...     "n_layers": 10,
+   ...     "depth_max_m": 2000.0,
+   ...     "n_freqs": 32,
+   ...     "smoothness_weight": 0.01,
+   ...     "lateral_weight": 0.005,
+   ...     "epochs": 300,
+   ...     "learning_rate": 1e-2,
+   ... }
+   >>> (output / "manifest.json").write_text(  # doctest: +SKIP
+   ...     json.dumps(manifest, indent=2),
+   ...     encoding="utf-8",
+   ... )
 
 Review checklist
 ----------------

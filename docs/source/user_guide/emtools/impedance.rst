@@ -4,8 +4,9 @@ Impedance-Tensor Diagnostics
 ============================
 
 ``pycsamt.emtools.impedance`` gives direct views of the complex
-impedance tensor before it is reduced to apparent resistivity, phase,
-phase-tensor attributes, dimensionality classes, or inversion input.
+:term:`impedance tensor` before it is reduced to :term:`apparent
+resistivity`, :term:`phase`, :term:`phase tensor` attributes,
+:term:`dimensionality` classes, or inversion input.
 Use this page when you want to look at the tensor itself and ask:
 
 * do ``Zxy`` and ``Zyx`` behave like an approximately antisymmetric
@@ -38,10 +39,39 @@ The tensor components are indexed as:
    Z_{yx} & Z_{yy}
    \end{bmatrix}.
 
-The diagnostics on this page use ``Z`` directly. That is important:
-apparent resistivity and phase are derived products, while the phasor
-wheel, antisymmetry residual, and determinant track keep the complex
-tensor visible.
+The tensor connects horizontal electric and magnetic fields by
+
+.. math::
+
+   \begin{bmatrix} E_x \\ E_y \end{bmatrix}
+   =
+   \begin{bmatrix}
+   Z_{xx} & Z_{xy} \\
+   Z_{yx} & Z_{yy}
+   \end{bmatrix}
+   \begin{bmatrix} H_x \\ H_y \end{bmatrix}.
+
+Each entry is complex: :math:`Z_{ij}=a_{ij}+i b_{ij}`.  Its magnitude
+and phase are
+
+.. math::
+
+   |Z_{ij}| = \sqrt{a_{ij}^2+b_{ij}^2},
+   \qquad
+   \phi_{ij} = \operatorname{atan2}(b_{ij}, a_{ij}).
+
+The familiar apparent resistivity is derived from the same component:
+
+.. math::
+
+   \rho_{a,ij}(f) =
+   \frac{|Z_{ij}(f)|^2}{5f},
+
+using pyCSAMT's practical EDI convention for :math:`Z`. The diagnostics
+on this page use ``Z`` directly. That is important: apparent
+resistivity and phase are derived products, while the phasor wheel,
+antisymmetry residual, and determinant track keep the complex tensor
+visible.
 
 Load A Survey Once
 ------------------
@@ -104,10 +134,34 @@ The Phasor Wheel
 ----------------
 
 ``plot_phasor_wheel`` draws selected impedance components as complex
-phasors. For each frequency sample, the component phase becomes the
-polar angle and the component magnitude becomes the radius. Colour
-encodes log-period, so a station becomes a period-ordered complex
+:term:`phasor` values. For each frequency sample, the component phase
+becomes the polar angle and the component magnitude becomes the radius.
+Colour encodes log-period, so a station becomes a period-ordered complex
 trajectory.
+For component :math:`Z_c(f_k)`, the plotted polar coordinate is
+
+.. math::
+
+   \theta_k = \arg Z_c(f_k),
+   \qquad
+   r_k =
+   \begin{cases}
+   |Z_c(f_k)|, & \text{if } \texttt{radius="abs"},\\
+   |Z_c(f_k)| / Q_{0.95}(|Z_c|), & \text{if } \texttt{radius="norm"}.
+   \end{cases}
+
+The colour coordinate is a normalized log-period value,
+
+.. math::
+
+   q_k =
+   \frac{\log_{10} T_k - \min(\log_{10} T)}
+        {\max(\log_{10} T) - \min(\log_{10} T)},
+   \qquad
+   T_k = \frac{1}{f_k}.
+
+Thus the wheel is not a phase-tensor plot and not a rose diagram.  It is
+the complex impedance itself, drawn as a path through period.
 
 .. code-block:: python
    :linenos:
@@ -193,6 +247,17 @@ If the short-period and long-period arcs have the same shape but
 different radii, the main change is magnitude. If they rotate into
 different angular sectors or the ``xy`` and ``yx`` relation changes,
 the complex response itself is changing with period.
+In mathematical terms, ``pband=(T_1,T_2)`` applies the mask
+
+.. math::
+
+   T_1 \le T_k \le T_2 .
+
+Comparing two period bands therefore asks whether
+:math:`\arg Z_{ij}(T)` and :math:`|Z_{ij}(T)|` remain coherent across
+scale. A static multiplier changes :math:`|Z|` but leaves
+:math:`\arg Z` unchanged; a change in angular sector points to a change
+in inductive response, coordinate frame, or noise regime.
 
 Include The Diagonal Terms
 --------------------------
@@ -202,6 +267,19 @@ zero. For a 2-D earth in the correct strike coordinate system, the
 off-diagonal terms dominate. In field data, ``Zxx`` and ``Zyy`` rarely
 vanish exactly, but their size relative to ``Zxy`` and ``Zyx`` is still
 informative.
+A compact way to summarize the same idea is the diagonal energy ratio
+
+.. math::
+
+   \eta_{\mathrm{diag}}(f)
+   =
+   \frac{|Z_{xx}(f)|^2 + |Z_{yy}(f)|^2}
+        {|Z_{xy}(f)|^2 + |Z_{yx}(f)|^2 + \epsilon}.
+
+Small :math:`\eta_{\mathrm{diag}}` is compatible with a coordinate frame
+where the off-diagonal modes dominate. Large values do not identify a
+single cause by themselves: they may reflect 3-D structure, a poor
+strike rotation, galvanic distortion, or data-quality problems.
 
 .. code-block:: python
    :linenos:
@@ -234,8 +312,8 @@ Compute Component Magnitudes
 ----------------------------
 
 The plot is useful, but a station report should also write the numbers.
-The lower-level helper ``_get_z_block`` returns the validated tensor
-and frequency arrays used by the plotting functions.
+The lower-level helper ``_get_z_block`` returns the validated tensor and
+frequency arrays used by the plotting functions.
 
 .. code-block:: python
    :linenos:
@@ -291,9 +369,28 @@ components depart from the ideal cancellation relation:
    r =
    {|Z_{xy} + Z_{yx}| \over |Z_{xy}| + |Z_{yx}| + \epsilon}.
 
-The implementation clips the result to ``0 <= r <= 1``. Values near
-zero mean the off-diagonal terms cancel well. Larger values mean the
-two off-diagonal terms are less antisymmetric.
+The implementation clips the result to ``0 <= r <= 1``. Values near zero
+mean the off-diagonal terms cancel well. Larger values mean the two
+off-diagonal terms are less antisymmetric.
+The normalization is deliberate.  If both off-diagonal amplitudes are
+large, :math:`|Z_{xy}+Z_{yx}|` alone can look large even when the
+relative cancellation is good.  Dividing by
+:math:`|Z_{xy}|+|Z_{yx}|` makes the residual dimensionless and bounded.
+Two limiting cases are useful:
+
+.. math::
+
+   Z_{yx} = -Z_{xy}
+   \quad \Rightarrow \quad r = 0,
+
+.. math::
+
+   Z_{yx} = Z_{xy}
+   \quad \Rightarrow \quad r \approx 1 .
+
+The first case is the ideal :term:`off-diagonal antisymmetry` pair. The
+second case means the two terms reinforce rather than cancel, which is
+not the expected 1-D/2-D off-diagonal structure.
 
 .. code-block:: python
    :linenos:
@@ -399,6 +496,36 @@ Compare With Anisotropy Or Skew
 The antisymmetry residual is related to, but not identical with,
 diagonal skew or apparent anisotropy. The best practice is to compare
 metrics instead of assuming they flag the same stations.
+For example, the residual above is an off-diagonal cancellation measure,
+whereas a Swift-style skew compares diagonal and off-diagonal energy:
+
+.. math::
+
+   \kappa_{\mathrm{Swift}}
+   =
+   \frac{|Z_{xx}+Z_{yy}|}
+        {|Z_{xy}-Z_{yx}|+\epsilon}.
+
+An apparent anisotropy ratio instead compares the two off-diagonal
+apparent resistivities:
+
+.. math::
+
+   \Lambda =
+   \log_{10}
+   \left(
+   \frac{\rho_{a,xy}}{\rho_{a,yx}}
+   \right)
+   =
+   2\log_{10}
+   \left(
+   \frac{|Z_{xy}|}{|Z_{yx}|}
+   \right).
+
+These quantities can move together, but they do not have to. A station
+can have small diagonal terms and still poor off-diagonal cancellation;
+another can have strong diagonal terms while :math:`Z_{xy}` and
+:math:`Z_{yx}` remain nearly antisymmetric.
 
 .. code-block:: python
    :linenos:
@@ -462,6 +589,32 @@ the full impedance tensor:
 .. math::
 
    \det(Z) = Z_{xx} Z_{yy} - Z_{xy} Z_{yx}.
+
+The :term:`determinant response` is useful because it is invariant under
+a rotation of the horizontal coordinate frame.  If
+
+.. math::
+
+   R(\alpha) =
+   \begin{bmatrix}
+   \cos\alpha & \sin\alpha \\
+   -\sin\alpha & \cos\alpha
+   \end{bmatrix},
+   \qquad
+   Z' = R(\alpha) Z R(\alpha)^T,
+
+then
+
+.. math::
+
+   \det(Z') =
+   \det(R)\det(Z)\det(R^T)
+   =
+   \det(Z),
+
+because :math:`\det(R)=1`.  This does not make the determinant immune to
+noise or distortion, but it does make it a compact station-level summary
+that does not depend on choosing a strike angle first.
 
 The plot has two panels: ``|det(Z)|`` and determinant phase versus
 period. If impedance errors are available as ``z_err``, pyCSAMT draws a
@@ -548,6 +701,43 @@ Measure Determinant Band Width
 
 For reports, compute a simple relative band-width number instead of
 judging the shaded region by eye.
+The Monte Carlo helper samples each complex tensor component as
+
+.. math::
+
+   Z^{(m)}_{ij}(f_k)
+   =
+   Z_{ij}(f_k)
+   +
+   \epsilon^{(m)}_{ij}(f_k),
+   \qquad
+   \epsilon^{(m)}_{ij}
+   \sim
+   \mathcal{CN}(0,\sigma_{ij}^2),
+
+where :math:`\sigma_{ij}` comes from ``z_err``.  For each draw,
+
+.. math::
+
+   D^{(m)}(f_k)
+   =
+   Z^{(m)}_{xx}Z^{(m)}_{yy}
+   -
+   Z^{(m)}_{xy}Z^{(m)}_{yx}.
+
+The plotted magnitude is the median of :math:`|D^{(m)}|`, and the band
+is the requested percentile interval. The relative width used below is
+
+.. math::
+
+   W_{\mathrm{rel}}(f_k)
+   =
+   \frac{D_{hi}(f_k)-D_{lo}(f_k)}
+        {|D|_{\mathrm{median}}(f_k)+\epsilon}.
+
+This gives a scale-free number: 0.2 is a narrow band relative to the
+determinant magnitude, while 1.0 means the uncertainty span is about as
+large as the reported magnitude itself.
 
 .. code-block:: python
    :linenos:

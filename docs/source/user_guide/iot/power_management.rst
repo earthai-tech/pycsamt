@@ -4,15 +4,17 @@ Power Management
 ================
 
 Power management estimates whether field IoT nodes can survive the planned
-deployment. The :mod:`pycsamt.iot.power` helpers combine battery capacity,
-reserve, active/sleep duty cycle, regulator losses, telemetry windows,
-edge-processing overhead, auxiliary loads, and optional solar harvesting.
+deployment. The :mod:`pycsamt.iot.power` helpers combine
+:term:`battery capacity`, :term:`energy reserve`,
+:term:`active/sleep duty cycle`, :term:`regulator efficiency`,
+:term:`telemetry window` energy, :term:`edge-processing overhead`,
+:term:`auxiliary load`, and optional :term:`solar harvesting`.
 
 The examples below use synthetic L18-style field nodes. That is the right
-level for this page because power budgeting depends on device operations,
-not EDI impedance files. The three scenarios represent a solar-assisted
-node, a marginal node with high telemetry demand, and a critical node with
-small battery capacity and no harvesting.
+level for this page because :term:`power budget` calculations depend on
+device operations, not :term:`EDI` impedance files. The three scenarios
+represent a solar-assisted node, a marginal node with high telemetry
+demand, and a critical node with small battery capacity and no harvesting.
 
 Build Device Power Profiles
 ---------------------------
@@ -80,7 +82,55 @@ Estimate One Device
 
 Use :func:`pycsamt.iot.estimate_energy_budget` for a single device. The
 estimate reports daily load, daily harvest, net daily draw, runtime, state,
-and machine-readable issues.
+and machine-readable issues. The calculation starts by holding back the
+reserved battery energy,
+
+.. math::
+
+   E_\mathrm{usable} = E_\mathrm{battery}(1-r),
+
+where :math:`r` is ``reserve_fraction``. The active/sleep duty cycle gives
+the base average power,
+
+.. math::
+
+   P_\mathrm{base}
+   = dP_\mathrm{active} + (1-d)P_\mathrm{sleep}.
+
+Daily load is then the regulator-corrected base draw plus radio,
+edge-processing, and auxiliary loads:
+
+.. math::
+
+   E_\mathrm{load/day}
+   =
+   \frac{24P_\mathrm{base}}{\eta_\mathrm{reg}}
+   + P_\mathrm{tel}\frac{t_\mathrm{tel/day}}{3600}
+   + 24P_\mathrm{edge}d_\mathrm{edge}
+   + E_\mathrm{aux/day}.
+
+Usable daily harvest is
+:math:`E_\mathrm{harvest/day}=E_\mathrm{solar/day}\eta_\mathrm{charge}`,
+so the net daily draw is
+
+.. math::
+
+   E_\mathrm{net/day}
+   = E_\mathrm{load/day} - E_\mathrm{harvest/day}.
+
+If :math:`E_\mathrm{net/day} \le 0`, runtime is infinite in the idealised
+budget because harvest covers the daily load. Otherwise,
+
+.. math::
+
+   T_\mathrm{runtime}
+   =
+   \frac{E_\mathrm{usable}}{E_\mathrm{net/day}}
+   \quad \mathrm{days}.
+
+pyCSAMT also reports :term:`no-harvest autonomy`,
+:math:`E_\mathrm{usable}/E_\mathrm{load/day}`, so a solar-assisted station
+still has a clear fallback runtime for cloudy periods or panel failure.
 
 .. code-block:: python
    :linenos:
@@ -116,7 +166,10 @@ Estimate A Deployment
 
 Use :func:`pycsamt.iot.estimate_deployment_energy` when several nodes must
 be compared. ``runtime_days`` is infinite when daily harvest is greater
-than or equal to daily load.
+than or equal to daily load. The ``state`` column is a compact
+:term:`power state`: ``sustaining`` when harvest covers load, ``ok`` when
+runtime reaches the configured minimum, ``warning`` when runtime is at
+least half of the minimum, and ``critical`` below that.
 
 .. code-block:: python
    :linenos:
@@ -160,8 +213,9 @@ Encode Power Telemetry
 ----------------------
 
 An :class:`~pycsamt.iot.EnergyEstimate` can be encoded as a ``power``
-packet and added to a :class:`pycsamt.iot.FieldSession`. This keeps power
-evidence next to edge QC, synchronisation, and station metadata.
+:term:`telemetry packet` and added to a :class:`pycsamt.iot.FieldSession`.
+This keeps power evidence next to :term:`edge diagnostics`,
+synchronisation, and station metadata.
 
 .. code-block:: python
    :linenos:
@@ -204,8 +258,11 @@ Output:
 Plot Power Budgets
 ------------------
 
-The plotting helper summarises daily load and harvest, runtime, no-harvest
-autonomy, daily load components, and state counts.
+The plotting helper summarises daily load and harvest, runtime,
+no-harvest autonomy, daily load components, and state counts. The load
+components come directly from the equation above: regulator-corrected
+base recorder draw, telemetry energy, edge-processing energy, and
+auxiliary energy.
 
 .. code-block:: python
    :linenos:
@@ -236,11 +293,12 @@ Field Interpretation
 ``l18-node-01`` is sustaining because harvested energy exceeds daily load.
 Its no-harvest autonomy is still finite, so the deployment remains exposed
 to cloudy weather or panel failure. ``l18-node-02`` and ``l18-node-03``
-both have a daily energy deficit and fall below the seven-day minimum
-runtime. The third node is the highest-risk case because it has small
-battery capacity, high duty cycle, long telemetry windows, and no harvest.
+both have a :term:`daily energy deficit` and fall below the seven-day
+minimum runtime. The third node is the highest-risk case because it has
+small battery capacity, high duty cycle, long telemetry windows, and no
+harvest.
 
 In field planning, revise the critical nodes before deployment: reduce
 duty cycle, shorten telemetry windows, add battery capacity, add solar
 harvesting, or lower auxiliary load. Record the final budget in the
-acquisition manifest so runtime assumptions remain auditable.
+:term:`provenance manifest` so runtime assumptions remain auditable.

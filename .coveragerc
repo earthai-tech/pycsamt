@@ -22,6 +22,8 @@ omit =
     */pycsamt/config.py
     # geospatial standard configuration (EPSG/projection constants)
     */pycsamt/projection.py
+    # legacy site/borehole location helper, slated for removal
+    */pycsamt/loc.py
 
 
 [report]

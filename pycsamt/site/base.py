@@ -2322,6 +2322,11 @@ def _extract_z_arrays(ed: EDIFile) -> dict[str, Any]:
     tip = _safe_get(ed, "T", "TIP", "Tip", "tipper", "Tipper")
     if tip is None:
         tip = _safe_get(Z, "tipper", "tip")
+    if tip is not None and not isinstance(tip, np.ndarray):
+        # ``tip`` may be a Tipper wrapper object rather than the raw
+        # array; unwrap it so downstream consumers see a plain array
+        # (or None when no tipper data is stored).
+        tip = _safe_get(tip, "tipper", "tip", default=tip)
     out["tipper"] = tip
     return out
 

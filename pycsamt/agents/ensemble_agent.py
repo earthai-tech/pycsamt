@@ -256,18 +256,18 @@ class EnsembleAgent(BaseAgent):
             try:
                 X_in = X_obs[None, :]
                 mu, sigma = ens.predict_with_uncertainty(X_in)
-                lo_hi = ens.predict_intervals(
-                    X_in
-                )  # (lo, hi, mean) or (mean, lo, hi)
-                pred_mean[nm] = mu[0]
-                pred_std[nm] = sigma[0]
-                # unpack intervals — order depends on implementation
-                if len(lo_hi) == 3:
-                    lo_arr, hi_arr, _ = lo_hi
-                    pred_lo[nm] = lo_arr[0]
-                    pred_hi[nm] = hi_arr[0]
+                # predict_intervals() returns (center, lower, upper); the
+                # base estimator's raw vector is
+                # [log10(rho) (n_layers) | log10(h) (n_layers - 1)], so
+                # only the first n_layers entries are log10(rho).
+                center, lo_arr, hi_arr = ens.predict_intervals(X_in)
+                n = self.n_layers
+                pred_mean[nm] = mu[0][:n]
+                pred_std[nm] = sigma[0][:n]
+                pred_lo[nm] = lo_arr[0][:n]
+                pred_hi[nm] = hi_arr[0][:n]
                 # compute forward RMS
-                rms = _forward_rms(ed, mu[0], freqs, self.n_layers)
+                rms = _forward_rms(ed, mu[0][:n], freqs, self.n_layers)
                 if rms is not None:
                     rms_list.append(rms)
             except Exception as exc:

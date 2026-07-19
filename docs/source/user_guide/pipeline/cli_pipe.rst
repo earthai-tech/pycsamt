@@ -4,18 +4,28 @@ Pipeline CLI
 ============
 
 The ``pycsamt pipe`` command group is the command-line interface to the
-pyCSAMT processing pipeline.  It uses the same pipeline engine as the Python
-API, so a workflow can move between a terminal, a notebook, and a project
-configuration file without changing meaning.
+pyCSAMT :term:`processing pipeline`.  It uses the same pipeline engine as the
+Python API, so a workflow can move between a terminal, a notebook, and a
+project configuration file without changing meaning.  The CLI is therefore not
+a lighter or separate implementation: it is a reproducible shell around the
+same :class:`pycsamt.pipeline.Pipeline`, :class:`pycsamt.pipeline.Step`, and
+``PipelineResult`` objects used from Python.
+
+Use the CLI when the work needs to leave a clear command trail.  A notebook is
+excellent for exploration, but a terminal command is easier to rerun in
+continuous integration, paste into a field-processing log, or compare across
+survey revisions.  The important idea is that the command, resolved step list,
+input survey, output directory, generated ``pipeline.yaml``, and saved reports
+together form the audit record for the processing decision.
 
 Use ``pycsamt pipe`` when you want to:
 
-* list available pipeline presets;
-* inspect registered processing step codes;
+* list available :term:`pipeline preset`\ s;
+* inspect registered :term:`pipeline step code`\ s;
 * scaffold a YAML, JSON, or Python pipeline config;
 * preview a config before running it;
 * run a preset, config file, or ad-hoc step list against an EDI directory;
-* save processed EDI files, plots, reports, and a reproducible
+* save processed :term:`EDI` files, plots, reports, and a reproducible
   ``pipeline.yaml`` snapshot.
 
 Command Overview
@@ -59,6 +69,17 @@ version:
 The examples below assume the survey data live in ``data/edis`` and outputs
 should be written under ``results/``.
 
+If you are running directly from a source checkout where the console script is
+not installed on ``PATH``, the equivalent entry point is:
+
+.. code-block:: console
+   :linenos:
+
+   python -m pycsamt.cli pipe --help
+
+The documentation uses ``pycsamt pipe`` because that is the installed command
+users normally run.
+
 Typical First Run
 -----------------
 
@@ -77,7 +98,7 @@ For a first survey, run the ``basic_qc`` preset:
 
 This command:
 
-* reads the EDI directory;
+* reads the :term:`EDI` directory;
 * resolves the ``basic_qc`` preset;
 * runs each step in order;
 * writes processed EDI files to ``results/basic_qc/processed``;
@@ -85,8 +106,23 @@ This command:
 * writes ``report.html`` and ``summary.txt``;
 * saves ``results/basic_qc/pipeline.yaml`` for reproducibility.
 
+Under the hood the run can be thought of as a composition of site-collection
+transforms.  If :math:`S_0` is the loaded survey and the resolved pipeline has
+step functions :math:`f_1,\ldots,f_n`, then a successful run produces
+
+.. math::
+
+   S_n = f_n(\cdots f_2(f_1(S_0))\cdots).
+
+Each step also produces a ``StepResult`` containing status, runtime, messages,
+errors, and output artefacts.  The final ``PipelineResult.ok`` flag is true
+only when the executed step results are acceptable under the selected error
+policy.
+
 Use ``--dry-run`` first when you want to confirm the pipeline and site count
-without writing files:
+without writing files.  A dry run resolves the survey, config or preset,
+slicing flags, and output target, then stops before mutating data or creating
+artefacts:
 
 .. code-block:: console
    :linenos:
@@ -104,6 +140,12 @@ Input Survey Resolution
 1. positional ``EDI_DIR`` argument;
 2. ``--survey EDI_DIR`` option;
 3. active survey context, if one was configured through the survey CLI.
+
+This priority prevents accidental reuse of stale state.  A positional path is
+the most explicit statement of intent, so it wins over ``--survey`` and over a
+stored :term:`active survey context`.  The active context is convenient for
+interactive command sequences, but it should be treated as session state, not
+as a substitute for a documented input path in a reproducible script.
 
 Examples:
 
@@ -139,6 +181,13 @@ an ad-hoc comma-separated step list.  The priority is:
 
 If ``--config`` is present, the config file is the source of truth and
 ``--preset`` or ``--steps`` are ignored.
+
+The priority is deliberately conservative.  A configuration file can carry a
+pipeline name, output directory, labels, and per-step ``params``; allowing an
+extra ``--preset`` or ``--steps`` value to partially override it would make the
+run harder to reconstruct.  Use CLI overrides for execution controls such as
+``--out``, ``--format``, ``--dry-run``, and slicing, then keep the processing
+definition itself in one place.
 
 Run from a config file:
 
@@ -196,6 +245,30 @@ Get machine-readable output:
    pycsamt pipe presets --expand basic_qc --format json
    pycsamt pipe presets --format csv
 
+A shortened JSON listing looks like this:
+
+.. code-block:: json
+   :linenos:
+
+   [
+     {
+       "name": "basic_qc",
+       "description": "Minimal denoising + frequency cleanup.  Good for quick-look inspection.",
+       "n_steps": 5,
+       "codes": ["NR001", "FREQ002", "FREQ001", "FREQ004", "QC001"]
+     },
+     {
+       "name": "full_processing",
+       "description": "Standard end-to-end workflow: noise -> frequency -> skew gate -> static-shift -> strike rotation.",
+       "n_steps": 8,
+       "codes": ["NR001", "FREQ002", "FREQ001", "FREQ004", "SK001", "TZ001", "SS001", "QC001"]
+     }
+   ]
+
+The full command also lists ``noise_reduction``, ``tensor_analysis``,
+``dimensionality_filter``, ``publication_ready``, and ``stratagem_mt`` in the
+current package.
+
 Common preset choices:
 
 ``basic_qc``
@@ -248,6 +321,30 @@ Print only step codes:
    pycsamt pipe steps --codes-only
    pycsamt pipe steps --category static_shift --codes-only
 
+Captured output begins with the frequency-editing steps and then continues
+through noise removal, static shift, tensor/strike tools, source checks, and
+QC:
+
+.. code-block:: text
+   :linenos:
+
+   FREQ001
+   FREQ002
+   FREQ003
+   FREQ004
+   FREQ005
+   FREQ006
+   FREQ007
+   FREQ008
+   FREQ009
+   NR001
+   NR002
+   ...
+   QC001
+   QC002
+   QC003
+   QC004
+
 Machine-readable formats:
 
 .. code-block:: console
@@ -259,7 +356,10 @@ Machine-readable formats:
 
 Use ``pycsamt pipe steps --info CODE`` before editing ``params`` in a config
 file.  It shows the registry defaults, transform function, QC plots, and
-whether the step returns a modified site collection.
+whether the step returns a modified site collection.  This matters because a
+pipeline is not only a list of labels.  Each step has a declared transform,
+parameter defaults, category, and optional review plots; changing ``params``
+changes the scientific operation applied to the survey.
 
 Generate Config Files
 ---------------------
@@ -310,6 +410,12 @@ as ``<name>.<format>`` in the current directory.
 
 See :doc:`configuration_files` for the config schema and editing guidance.
 
+Prefer generated starter files over hand-written configs for production
+workflows.  The scaffold captures the schema expected by the installed
+version, while still leaving every step parameter visible for review.  A
+typical review question is not "can the command run?", but "can someone tell
+which operation happened at each station and frequency?"
+
 Show A Pipeline Before Running
 ------------------------------
 
@@ -347,10 +453,22 @@ Use JSON or CSV when another tool needs the resolved step list:
    pycsamt pipe show --preset full_processing --format json
    pycsamt pipe show config/line22_basic_qc.yaml --format csv
 
+``show`` is also the safest place to verify pipeline slicing.  Slicing changes
+which transforms are actually executed, so it should be visible before any
+processed EDI files or plots are written.
+
 Run Controls
 ------------
 
 ``pycsamt pipe run`` supports slicing options that make debugging easier.
+
+Slicing is evaluated after the pipeline has been resolved from ``--config``,
+``--preset``, or ``--steps``.  If the full ordered sequence is
+:math:`(s_1,\ldots,s_n)`, then ``--from-step`` and ``--until-step`` choose a
+contiguous subsequence and ``--n-steps`` truncates that subsequence.  The
+resulting run is still a valid pipeline run, but its ``pipeline.yaml`` and
+summary should be read as a partial execution, not as evidence that the full
+workflow passed.
 
 Run only the first N steps:
 
@@ -429,6 +547,13 @@ Examples:
 Use ``raise`` while debugging.  Use ``warn`` for exploratory runs where the
 report should show every step that failed.
 
+The error policy controls continuation, not scientific acceptance.  With
+``warn`` or ``skip``, a later step may run on the last valid site collection
+instead of on the failed step's intended output.  That is useful for diagnosis
+because the report can show several failures in one pass, but the resulting
+processed files should not be treated as final deliverables until the failed
+steps have been resolved.
+
 Output Controls
 ---------------
 
@@ -463,6 +588,12 @@ Control saved figure format:
 
 Supported plot formats are ``png``, ``pdf``, and ``svg``.
 
+For reproducible reports, choose ``png`` for quick review and lightweight
+HTML, ``pdf`` for publication-oriented vector handoff, and ``svg`` when plots
+must remain inspectable in text-based review.  The numeric plot content comes
+from the step result; ``--dpi`` and ``--plot-fmt`` only control how the figure
+is written.
+
 Output Summary Formats
 ----------------------
 
@@ -493,6 +624,11 @@ CSV summary:
 Use JSON or CSV in automation when another script needs step status,
 runtime, output directory, and error information.
 
+The terminal summary format is intentionally separate from saved artefacts.
+Changing ``--format`` from ``text`` to ``json`` changes what is printed to
+stdout, but it does not remove ``summary.txt``, ``report.html``, figures, or
+the reproduced ``pipeline.yaml`` when those output families are enabled.
+
 Verbose And Color Options
 -------------------------
 
@@ -516,6 +652,12 @@ The ``--jobs`` option is accepted as a shared CLI option.  Current pipeline
 steps run through the pipeline engine in order; treat ``--jobs`` as a
 forward-compatible option unless a specific step documents parallel behavior.
 
+Sequential execution is important for correctness.  Many processing steps
+consume the edited site collection produced by the previous step, so the
+pipeline is ordered dataflow rather than a bag of independent tasks.  Parallel
+work is only safe inside a step that explicitly documents how it partitions
+stations, frequencies, or plots.
+
 Exit Status
 -----------
 
@@ -523,6 +665,11 @@ Exit Status
 ``PipelineResult.ok`` is true.  If one or more steps failed and the command
 continued under ``--on-error warn`` or ``--on-error skip``, the command prints
 the summary and exits nonzero.
+
+In automation, treat the exit status as the hard gate and the JSON/CSV summary
+as the explanation.  A successful process exit means the pipeline accepted the
+run under the selected policy; a nonzero exit means a script should stop,
+archive the summary, and surface the failing step names.
 
 This makes the command useful in automation:
 

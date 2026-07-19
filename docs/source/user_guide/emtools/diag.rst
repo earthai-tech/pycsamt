@@ -46,6 +46,19 @@ The empirical coverage of a station is the mean of those binary values.
 For a nominal 90 percent interval, a station with empirical coverage
 above ``0.9`` is flagged as calibrated by the default rule.
 
+For station :math:`s`, with :math:`n_s` evaluated frequencies, this is
+
+.. math::
+
+   \widehat{P}_s =
+   {1 \over n_s}\sum_{j=1}^{n_s} c_{s,j},
+   \qquad
+   calibrated_s =
+   \mathbf{1}\{\widehat{P}_s \ge p_{nom}\}.
+
+Here :math:`p_{nom}` is the requested nominal coverage probability,
+for example :math:`0.90` for a 90 percent interval.
+
 The module also reports relative interval width:
 
 .. math::
@@ -94,6 +107,18 @@ For real work, the dictionary form is usually best. Each array must be
 aligned with that station's frequency array. When a station key is
 missing from the dictionary, that station is skipped.
 
+That alignment is literal. For station :math:`s`, the vectors
+
+.. math::
+
+   \mathbf{f}_s = (f_{s,1}, \ldots, f_{s,n_s}),\quad
+   \mathbf{L}_s = (L_{s,1}, \ldots, L_{s,n_s}),\quad
+   \mathbf{U}_s = (U_{s,1}, \ldots, U_{s,n_s})
+
+must describe the same ordered samples. If :math:`L_{s,j}` and
+:math:`U_{s,j}` are shifted relative to :math:`f_{s,j}`, the coverage
+score becomes a number with no physical meaning.
+
 Pure Coverage Score
 -------------------
 
@@ -117,6 +142,9 @@ files. Use it when you already have observed values and interval bounds.
 .. code-block:: text
 
    empirical coverage = 0.60
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-01.png
+   :width: 100%
 
 Line 9 computes the fraction of observations that fall inside their
 interval. In this toy example, values below ``q_lo`` or above ``q_hi``
@@ -175,6 +203,36 @@ the diagnostics using real observed EDI data.
 Lines 7-12 use ``rho_coverage`` with infinite bounds as a convenient
 way to extract observed apparent resistivity. Lines 31-33 build
 station-specific lower bounds, upper bounds, and point predictions.
+
+In mathematical form, the center line is a rolling median in
+log-resistivity,
+
+.. math::
+
+   m_j =
+   10^{\operatorname{median}_{k\in W_j}
+   \left(\log_{10}\rho_{a,obs,k}\right)},
+
+where :math:`W_j` is the local smoothing window. The half-width is made
+larger at longer periods,
+
+.. math::
+
+   h_j =
+   0.15 + 0.30\,
+   {\log_{10}T_j-\min(\log_{10}T)
+   \over
+   \max(\log_{10}T)-\min(\log_{10}T)},
+
+and the interval is then
+
+.. math::
+
+   L_j = m_j(1-h_j), \qquad U_j = m_j(1+h_j).
+
+This is deliberately transparent: the diagnostics are being tested
+against a smooth baseline, not hidden behind a separate inversion or
+machine-learning model.
 
 Per-Frequency Coverage
 ----------------------
@@ -302,6 +360,9 @@ Use ``coverage_table`` to summarize each station.
    24  18-023A      53       0.886792       61.066131            False
    1   18-002U      53       0.886792       63.691545            False
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-05.png
+   :width: 100%
+
 The output columns are:
 
 - ``station``: station name.
@@ -321,6 +382,22 @@ Coverage Visualization
 ``plot_polar_coverage`` maps frequency to polar angle and observed
 resistivity to radius. Green points are covered. Red points are misses.
 Thin radial segments show the prediction interval.
+
+With logarithmic radius, the polar coordinates are
+
+.. math::
+
+   \theta_j =
+   2\pi\,
+   {\log_{10}f_j-\min(\log_{10}f)
+   \over
+   \max(\log_{10}f)-\min(\log_{10}f)},
+   \qquad
+   r_j = \log_{10}\rho_{a,obs,j}.
+
+The radial segment spans :math:`\log_{10}L_j` to
+:math:`\log_{10}U_j`, so equal resistivity ratios occupy comparable
+visual distance.
 
 .. code-block:: python
    :linenos:
@@ -357,6 +434,15 @@ Width Drift
 ``plot_width_drift`` bins relative interval width by frequency band.
 It answers a different question from coverage: how expensive was the
 coverage in interval width?
+
+For a frequency bin :math:`B_b`, the plotted mean width is
+
+.. math::
+
+   \overline{w}_b =
+   {1 \over |B_b|}
+   \sum_{j\in B_b}
+   100 {U_j-L_j \over \rho_{a,obs,j}}.
 
 .. code-block:: python
    :linenos:
@@ -410,6 +496,26 @@ Point-Prediction Error
 
 Use ``rho_error_stats`` and ``plot_polar_errors`` when you have a point
 prediction, not only interval bounds.
+
+The signed error keeps the bias direction:
+
+.. math::
+
+   e_j =
+   100{\rho_{a,pred,j}-\rho_{a,obs,j} \over \rho_{a,obs,j}}.
+
+In the polar summary, samples are grouped into frequency sectors
+:math:`B_b`. The bar height is
+
+.. math::
+
+   H_b = {1 \over |B_b|}\sum_{j\in B_b}|e_j|,
+
+while the color follows the sign of
+
+.. math::
+
+   \overline{e}_b = {1 \over |B_b|}\sum_{j\in B_b}e_j.
 
 .. code-block:: python
    :linenos:
@@ -505,6 +611,9 @@ underconfident intervals.
    1   overconfident       0.766846       24.914878             0
    2  underconfident       0.986523      186.861587            28
 
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-09.png
+   :width: 100%
+
 Read this table as a trade-off. Overconfident intervals should have low
 coverage and narrow width. Underconfident intervals should have high
 coverage and wide intervals. A useful model is the one that reaches the
@@ -513,6 +622,18 @@ target coverage without making the intervals unnecessarily wide.
 Lines 15-19 scale the interval half-width around the same point
 prediction. That keeps the comparison fair: only the uncertainty width
 changes, not the model center.
+
+The scaled bounds are
+
+.. math::
+
+   L_j^{(\alpha)} = m_j - \alpha(m_j-L_j),
+   \qquad
+   U_j^{(\alpha)} = m_j + \alpha(U_j-m_j),
+
+where :math:`m_j` is the point prediction and :math:`\alpha` is the
+scenario multiplier. Values :math:`\alpha<1` make the model more
+confident; values :math:`\alpha>1` make it more conservative.
 
 Reading The Results
 -------------------

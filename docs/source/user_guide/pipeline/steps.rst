@@ -4,15 +4,17 @@ Pipeline Steps
 ==============
 
 Pipeline steps are the atomic processing operations used by
-:class:`pycsamt.pipeline.Pipeline`.  Each step is registered once in the
-pipeline registry and can then be used from the Python API, YAML/JSON/Python
-configuration files, presets, and the ``pycsamt pipe`` command line.
+:class:`pycsamt.pipeline.Pipeline`.  Each operation is defined once in the
+:term:`step registry` and can then be used from the Python API, YAML/JSON/Python
+configuration files, :term:`pipeline preset` recipes, and the ``pycsamt pipe``
+command line.
 
-The registry gives every operation a stable code such as ``FREQ001`` or
-``NR001``.  The code is intentionally short because it appears in terminal
-output, saved reports, plots, and reproducible ``pipeline.yaml`` files.  Each
-code also has a snake-case name such as ``select_band`` or
-``notch_powerline``; both forms are accepted when constructing a step.
+The registry gives every operation a stable :term:`pipeline step code`, such
+as ``FREQ001`` or ``NR001``.  The code is intentionally short because it
+appears in terminal output, saved reports, plot folders, and reproducible
+``pipeline.yaml`` files.  Each code also has a snake-case registry name such
+as ``select_band`` or ``notch_powerline``; both forms are accepted when
+constructing a step.
 
 Use this page when you need to:
 
@@ -22,37 +24,54 @@ Use this page when you need to:
 * write a custom pipeline configuration;
 * extend the registry in a controlled way for new processing operations.
 
-Step Model
-----------
+Step Contract
+-------------
 
 A registered step has two layers.
 
 ``StepSpec``
-    Registry metadata.  It stores the code, name, human label, category,
-    default parameters, transform function, QC plot functions, and whether
-    the operation returns a modified site collection.
+    :term:`StepSpec` registry metadata.  It stores the code, name, human
+    label, category, default parameters, transform function,
+    :term:`QC plot function` entries, and whether the operation returns a
+    modified :term:`site collection`.
 
 ``Step``
     A configured instance used inside a pipeline.  It binds a ``StepSpec`` to
-    parameter overrides.
+    user :term:`parameter override` values.
+
+The relationship is deterministic.  If a registry entry has defaults
+:math:`\theta_{\mathrm{default}}` and the user supplies overrides
+:math:`\theta_{\mathrm{user}}`, the configured parameters are
+
+.. math::
+
+   \theta_{\mathrm{step}}
+   = \theta_{\mathrm{default}} \cup \theta_{\mathrm{user}},
+
+where the right-hand values win for keys that appear in both dictionaries.
+This is why a short configuration can override only ``mains_hz`` for
+``NR001`` while keeping the default ``n_harm`` and ``tol_hz``.
 
 In Python, a step is created with :class:`pycsamt.pipeline.Step`:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Step
-
-   notch = Step("NR001", mains_hz=50, n_harm=30)
-   band = Step("select_band", band_hz=(0.01, 10000.0))
+   >>> from pycsamt.pipeline import Step
+   >>> notch = Step("NR001", mains_hz=50, n_harm=30)
+   >>> notch.params
+   {'mains_hz': 50, 'n_harm': 30, 'tol_hz': 0.08}
+   >>> band = Step("select_band", band_hz=(0.01, 10000.0))
+   >>> band.spec.code
+   'FREQ001'
 
 The two lookup styles are equivalent:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   Step("NR001")
-   Step("notch_powerline")
+   >>> Step("NR001").spec is Step("notch_powerline").spec
+   True
 
 The first form is better for compact configs and reports.  The second form is
 often easier to read in Python code.
@@ -60,7 +79,22 @@ often easier to read in Python code.
 How Steps Execute
 -----------------
 
-During a run, the pipeline applies each step in order:
+During a run, the pipeline applies each step in order.  If the input state is
+:math:`S_{j-1}` and the configured step is :math:`T_j`, then a normal
+:term:`transform step` computes
+
+.. math::
+
+   S_j = T_j(S_{j-1}; \theta_j).
+
+A :term:`diagnostic step` instead records figures or summaries while passing
+the same site collection forward:
+
+.. math::
+
+   S_j = S_{j-1}.
+
+Operationally, each step follows this sequence:
 
 1. count the input sites;
 2. call the step transform function;
@@ -76,17 +110,13 @@ to generate plots or summaries at useful checkpoints.
 
 Example result fields:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = pipe.run(sites, outdir="results/basic_qc")
-
-   for step_result in result.step_results:
-       print(step_result.step_code)
-       print(step_result.step_name)
-       print(step_result.ok)
-       print(step_result.n_sites_in, step_result.n_sites_out)
-       print(step_result.plots)
+   >>> result = pipe.run(sites, outdir="results/basic_qc")
+   >>> [(sr.step_code, sr.step_name, sr.ok, sr.n_sites_in, sr.n_sites_out)
+   ...  for sr in result.step_results]
+   [('NR001', 'notch', True, 3, 3), ..., ('QC001', 'qc_snapshot', True, 3, 3)]
 
 Discover Steps From The CLI
 ---------------------------
@@ -111,35 +141,76 @@ Machine-readable output is useful for notebooks, dashboards, or scripts:
    pycsamt pipe steps --format json
    pycsamt pipe steps --category static_shift --format csv
 
+Captured frequency catalogue excerpt:
+
+.. code-block:: json
+   :linenos:
+
+   {
+     "frequency": [
+       {
+         "code": "FREQ001",
+         "name": "select_band",
+         "label": "Frequency Band Select",
+         "defaults": {"band_hz": [0.001, 10000.0]},
+         "returns_sites": true
+       },
+       {
+         "code": "FREQ002",
+         "name": "drop_duplicates",
+         "label": "Drop Duplicate Frequencies",
+         "defaults": {},
+         "returns_sites": true
+       }
+     ]
+   }
+
+Captured ``NR001`` information, simplified to ASCII:
+
+.. code-block:: text
+   :linenos:
+
+   NR001  Power-line Harmonic Notch  [noise_removal]
+   name     : notch_powerline
+   function : pycsamt.emtools.remove_noise.notch_powerline
+   defaults : mains_hz=50  n_harm=30  tol_hz=0.08
+   qc plots : nr_qc_harmonic_waterfall, nr_qc_snr_gain_profile
+   returns  : Sites (transform)
+   Usage:
+     Step("NR001")
+     Step("NR001", mains_hz=50)
+     Step("notch_powerline")
+
 Discover Steps From Python
 --------------------------
 
 The same registry is available from Python:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import categories, list_steps, lookup_step
-
-   print(categories())
-
-   for spec in list_steps("frequency"):
-       print(spec.code, spec.name, spec.label, spec.defaults)
-
-   nr001 = lookup_step("NR001")
-   same = lookup_step("notch_powerline")
-   assert nr001 is same
+   >>> from pycsamt.pipeline import categories, list_steps, lookup_step
+   >>> categories()
+   ['dimensionality', 'frequency', 'noise_removal', 'qc', 'skew', 'source_effects', 'static_shift', 'tensor']
+   >>> {c: len(list_steps(c)) for c in categories()}
+   {'dimensionality': 3, 'frequency': 9, 'noise_removal': 14, 'qc': 4, 'skew': 4, 'source_effects': 2, 'static_shift': 4, 'tensor': 7}
+   >>> [(spec.code, spec.name, spec.defaults)
+   ...  for spec in list_steps("frequency")[:2]]
+   [('FREQ001', 'select_band', {'band_hz': (0.001, 10000.0)}), ('FREQ002', 'drop_duplicates', {})]
+   >>> lookup_step("NR001") is lookup_step("notch_powerline")
+   True
 
 Use :meth:`pycsamt.pipeline.Pipeline.step_info` when you want a formatted
 human-readable explanation:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline
-
-   print(Pipeline.step_info("NR001"))
-   print(Pipeline.catalogue("static_shift"))
+   >>> from pycsamt.pipeline import Pipeline
+   >>> "Power-line Harmonic Notch" in Pipeline.step_info("NR001")
+   True
+   >>> "SS001" in Pipeline.catalogue("static_shift")
+   True
 
 Registered Categories
 ---------------------
@@ -187,8 +258,11 @@ The current registry contains 46 processing and diagnostic steps.
 Recommended Ordering
 --------------------
 
-The registry does not force a single scientific workflow, but most survey
-pipelines are easier to reason about when the steps follow this order:
+The registry does not force a single scientific workflow, because survey
+physics and data quality differ.  Still, most survey pipelines are easier to
+reason about when :term:`step ordering` follows the data dependency:
+operations that define the sampling axis should come before operations that
+estimate physical structure from that axis.  A useful high-level order is:
 
 1. frequency cleanup;
 2. noise removal;
@@ -197,6 +271,27 @@ pipelines are easier to reason about when the steps follow this order:
 5. tensor rotation or tensor balancing;
 6. source-effect correction, when needed;
 7. QC snapshots and final output.
+
+In symbolic form, a reviewed processing chain often looks like
+
+.. math::
+
+   S_{\mathrm{final}} =
+   Q\!\left(
+   R_{\mathrm{tensor}}\!\left(
+   C_{\mathrm{ss}}\!\left(
+   G_{\mathrm{dim/skew}}\!\left(
+   N_{\mathrm{noise}}\!\left(
+   F_{\mathrm{freq}}(S_0)\right)\right)\right)\right)\right),
+
+where :math:`F_{\mathrm{freq}}` defines the usable frequency axis,
+:math:`N_{\mathrm{noise}}` suppresses artifacts, :math:`G_{\mathrm{dim/skew}}`
+masks intervals that fail the interpretation assumptions, :math:`C_{\mathrm{ss}}`
+corrects static shift, :math:`R_{\mathrm{tensor}}` rotates or balances tensor
+components, and :math:`Q` records final diagnostics.  This is a guide, not a
+law.  For example, ``stratagem_mt`` runs static-shift correction before AMT
+band trimming because that workflow expects the complete Stratagem frequency
+range for the static-shift estimate.
 
 A compact first-pass chain looks like this:
 
@@ -209,21 +304,22 @@ A compact first-pass chain looks like this:
 
 The equivalent Python pipeline is:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline, Step
-
-   pipe = Pipeline(
-       [
-           ("drop_duplicates", Step("FREQ002")),
-           ("select_band", Step("FREQ001", band_hz=(0.001, 10000.0))),
-           ("align_grid", Step("FREQ004")),
-           ("notch", Step("NR001", mains_hz=50)),
-           ("qc", Step("QC001")),
-       ],
-       name="basic_manual",
-   )
+   >>> from pycsamt.pipeline import Pipeline, Step
+   >>> pipe = Pipeline(
+   ...     [
+   ...         ("drop_duplicates", Step("FREQ002")),
+   ...         ("select_band", Step("FREQ001", band_hz=(0.001, 10000.0))),
+   ...         ("align_grid", Step("FREQ004")),
+   ...         ("notch", Step("NR001", mains_hz=50)),
+   ...         ("qc", Step("QC001")),
+   ...     ],
+   ...     name="basic_manual",
+   ... )
+   >>> len(pipe)
+   5
 
 Ordering matters because each step receives the site collection produced by
 the previous step.  For example, it is usually better to drop duplicate
@@ -500,21 +596,22 @@ control.
 
 Example:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline, Step
-
-   pipe = Pipeline(
-       [
-           ("drop_duplicates", Step("FREQ002")),
-           ("select_band", Step("FREQ001", band_hz=(1.0, 10000.0))),
-           ("static_shift", Step("SS001")),
-           ("rotate", Step("TZ001", method="swift")),
-           ("qc", Step("QC001")),
-       ],
-       name="tensor_ready",
-   )
+   >>> from pycsamt.pipeline import Pipeline, Step
+   >>> pipe = Pipeline(
+   ...     [
+   ...         ("drop_duplicates", Step("FREQ002")),
+   ...         ("select_band", Step("FREQ001", band_hz=(1.0, 10000.0))),
+   ...         ("static_shift", Step("SS001")),
+   ...         ("rotate", Step("TZ001", method="swift")),
+   ...         ("qc", Step("QC001")),
+   ...     ],
+   ...     name="tensor_ready",
+   ... )
+   >>> [label for label, step in pipe]
+   ['drop_duplicates', 'select_band', 'static_shift', 'rotate', 'qc']
 
 Dimensionality Steps
 --------------------
@@ -692,19 +789,28 @@ Parameters And Defaults
 -----------------------
 
 User parameters are merged on top of registry defaults.  If a default is not
-overridden, the registry value is used.
+overridden, the registry value is used.  The merge is shallow and
+right-biased:
 
-.. code-block:: python
+.. math::
+
+   \theta_{\mathrm{active}}[k] =
+   \begin{cases}
+   \theta_{\mathrm{user}}[k], & k \in \theta_{\mathrm{user}},\\
+   \theta_{\mathrm{default}}[k], & k \notin \theta_{\mathrm{user}}.
+   \end{cases}
+
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Step
-
-   step = Step("NR001", mains_hz=60)
-
-   # The registry default n_harm and tol_hz remain active.
-   assert step.params["mains_hz"] == 60
-   assert step.params["n_harm"] == 30
-   assert step.params["tol_hz"] == 0.08
+   >>> from pycsamt.pipeline import Step
+   >>> step = Step("NR001", mains_hz=60)
+   >>> step.params["mains_hz"]
+   60
+   >>> step.params["n_harm"]
+   30
+   >>> step.params["tol_hz"]
+   0.08
 
 In YAML, place overrides under ``params``:
 
@@ -721,7 +827,9 @@ In YAML, place overrides under ``params``:
 
 Keep parameter names aligned with the underlying emtools function.  Use
 ``pycsamt pipe steps --info CODE`` or ``Pipeline.step_info("CODE")`` before
-editing an unfamiliar step.
+editing an unfamiliar step.  For reviewed work, write every scientifically
+important parameter explicitly even when it equals the default; that makes the
+processing choice visible in the configuration file.
 
 Step Labels
 -----------
@@ -746,9 +854,24 @@ distinguish them because their labels differ.
 Diagnostic Plots
 ----------------
 
-Each ``StepSpec`` may declare QC plot functions.  When plotting is enabled,
-the pipeline calls those functions after a successful transform and saves the
-figures under the run output directory.
+Each :term:`StepSpec` may declare :term:`QC plot function` entries.  When
+plotting is enabled, the pipeline calls those functions after a successful
+transform and saves the figures under the run output directory.  The files are
+diagnostic artifacts; they do not feed back into the next transform unless a
+separate step explicitly uses the underlying data.
+
+The plot call order for step :math:`j` is
+
+.. math::
+
+   S_j = T_j(S_{j-1};\theta_j)
+   \quad\Longrightarrow\quad
+   \mathrm{plots}_j =
+   \{q(S_j): q \in Q_j\},
+
+where :math:`Q_j` is the set of registered QC plot functions for that step.
+Diagnostic-only QC steps have :math:`S_j=S_{j-1}`, but their plots still
+describe the current state of the survey at that checkpoint.
 
 Examples:
 
@@ -907,21 +1030,21 @@ To add a new built-in step:
 
 Minimal registry entry pattern:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   StepSpec(
-       code="NR015",
-       name="my_new_filter",
-       label="My New Noise Filter",
-       category="noise_removal",
-       mod="pycsamt.emtools.remove_noise",
-       fn_name="my_new_filter",
-       defaults={"window": 5},
-       qc_defs=[
-           ("pycsamt.emtools.remove_noise", "nr_qc_station_offdiag_curves"),
-       ],
-   )
+   >>> StepSpec(
+   ...     code="NR015",
+   ...     name="my_new_filter",
+   ...     label="My New Noise Filter",
+   ...     category="noise_removal",
+   ...     mod="pycsamt.emtools.remove_noise",
+   ...     fn_name="my_new_filter",
+   ...     defaults={"window": 5},
+   ...     qc_defs=[
+   ...         ("pycsamt.emtools.remove_noise", "nr_qc_station_offdiag_curves"),
+   ...     ],
+   ... )
 
 For two-phase operations, use an ``override_fn`` wrapper that receives
 ``sites`` and keyword parameters, then returns the modified site collection.
@@ -932,24 +1055,24 @@ Testing New Steps
 
 At minimum, a new step should be covered by tests like these:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline, Step, lookup_step
-
-   def test_registry_lookup_for_new_step():
-       spec = lookup_step("NR015")
-       assert spec.name == "my_new_filter"
-       assert lookup_step("my_new_filter") is spec
-
-   def test_step_defaults_and_overrides():
-       step = Step("NR015", window=7)
-       assert step.params["window"] == 7
-
-   def test_pipeline_accepts_new_step(sites):
-       pipe = Pipeline([("new_filter", Step("NR015"))])
-       result = pipe.run(sites, outdir=None, save_plots=False)
-       assert result.ok
+   >>> from pycsamt.pipeline import Pipeline, Step, lookup_step
+   >>>
+   >>> def test_registry_lookup_for_new_step():
+   ...     spec = lookup_step("NR015")
+   ...     assert spec.name == "my_new_filter"
+   ...     assert lookup_step("my_new_filter") is spec
+   ...
+   >>> def test_step_defaults_and_overrides():
+   ...     step = Step("NR015", window=7)
+   ...     assert step.params["window"] == 7
+   ...
+   >>> def test_pipeline_accepts_new_step(sites):
+   ...     pipe = Pipeline([("new_filter", Step("NR015"))])
+   ...     result = pipe.run(sites, outdir=None, save_plots=False)
+   ...     assert result.ok
 
 Also test YAML loading if the step is expected to be used from configuration
 files.

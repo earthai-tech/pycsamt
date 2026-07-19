@@ -3,9 +3,12 @@
 Data Loading
 ============
 
-Data loading is the first boundary in a pyCSAMT workflow. The goal is to
-turn files, directories, parsed EDI objects, or existing site containers into
-one predictable object that the science tools can use.
+Data loading is the first boundary in a pyCSAMT workflow. The goal is to turn
+files, directories, parsed :term:`EDI-like object`\ s, or existing site
+containers into one predictable object that the science tools can use. Once
+that boundary is crossed, downstream code should be able to assume a stable
+station order, a resolved :term:`station identity` for every item, and a
+frequency-bearing object for every station that survived parsing.
 
 For processing workflows, the canonical loader is
 :func:`pycsamt.emtools._core.ensure_sites`. It returns a
@@ -17,34 +20,138 @@ Use :func:`pycsamt.api.read_edis` when you want a public API survey view for
 notebooks, reports, and API-style tables. The survey view still wraps the same
 EDI-level data, but ``ensure_sites`` is the direct science/workflow input.
 
-Loading EDI Directories
+Reproducible Demo Input
 -----------------------
 
-The common case is a directory containing one or more ``.edi`` files. The
-example below uses one of the repository's example survey lines.
+The examples below use a small in-memory EDI-like object. This keeps the
+outputs reproducible while still exercising the real ``ensure_sites`` and
+``Sites`` code paths. In project code, replace ``demo_edis()`` with a directory
+path, file list, parsed ``EDIFile`` objects, or an ``EDICollection``.
 
 .. code-block:: python
    :linenos:
 
+   from pathlib import Path
+   from tempfile import TemporaryDirectory
+
+   import numpy as np
+
    from pycsamt.emtools import ensure_sites
 
-   edi_dir = "data/AMT/WILLY_DATA/L18PLT"
+
+   class Head:
+       def __init__(self, station, lat, lon, elev):
+           self.dataid = station
+           self.station = station
+           self.lat = lat
+           self.lon = lon
+           self.long = lon
+           self.elev = elev
+
+
+   class ZBlock:
+       def __init__(self, freq):
+           self.freq = np.asarray(freq, dtype=float)
+           self.z = np.ones((len(freq), 2, 2), dtype=complex)
+
+
+   class DemoEDI:
+       def __init__(self, station, lat, lon, elev, tipper=True):
+           self.station = station
+           self.Head = Head(station, lat, lon, elev)
+           self.Z = ZBlock([1.0, 10.0, 100.0, 1000.0])
+           self.Tipper = np.zeros((4, 2)) if tipper else None
+
+       def get_section(self, name):
+           if str(name).lower() == "head":
+               return self.Head
+           raise KeyError(name)
+
+       def to_file(self, path):
+           Path(path).write_text(
+               f"station={self.station}\n"
+               f"nfreq={len(self.Z.freq)}\n"
+           )
+
+
+   def demo_edis():
+       return [
+           DemoEDI("S01", 35.100, -117.200, 620.0, True),
+           DemoEDI("S02", 35.115, -117.185, 635.0, False),
+           DemoEDI("S03", 35.140, -117.170, 660.0, True),
+       ]
+
+The loader preserves input order unless duplicate handling removes or replaces
+items. If the input sequence is
+
+.. math::
+
+   \mathcal{E} = (E_0, E_1, \ldots, E_{n-1}),
+
+then successful loading creates a site sequence
+
+.. math::
+
+   \mathcal{S}
+   =
+   (S_i : E_i\ \text{can be coerced to a site and passes duplicate policy}).
+
+Each site stores its coordinates as :math:`(\phi_i,\lambda_i,h_i)`, where
+:math:`\phi_i` is latitude, :math:`\lambda_i` is longitude, and :math:`h_i` is
+elevation. Frequency-dependent tools then read the station's
+:term:`frequency grid`
+
+.. math::
+
+   \mathbf{f}_i = (f_{i,0}, f_{i,1}, \ldots, f_{i,m_i-1}),
+
+where :math:`m_i` is the number of available frequency samples for station
+:math:`S_i`.
+
+Loading EDI Directories
+-----------------------
+
+The common project case is a directory containing one or more ``.edi`` files.
+When the source is a path, ``recursive=True`` searches subdirectories,
+``strict=False`` allows malformed or unrelated files to be skipped, and
+``on_dup="replace"`` keeps the latest station encountered when duplicated
+station names are found.
+
+.. code-block:: python
+   :linenos:
+
    sites = ensure_sites(
-       edi_dir,
+       demo_edis(),
+       recursive=False,
+       strict=True,
+       on_dup="replace",
+       verbose=0,
+   )
+
+   print(type(sites).__name__, len(sites))
+   print([site.name for site in sites])
+
+Output:
+
+.. code-block:: text
+
+   Sites 3
+   ['S01', 'S02', 'S03']
+
+For real files, the same call usually starts from a directory. This project
+pattern is intentionally shown without captured output because the station
+count depends on the local survey directory:
+
+.. code-block:: python
+   :linenos:
+
+   sites = ensure_sites(
+       "data/AMT/WILLY_DATA/L18PLT",
        recursive=True,
        strict=False,
        on_dup="replace",
        verbose=0,
    )
-
-   print(f"Loaded {len(sites)} stations")
-   print([site.name for site in list(sites)[:3]])
-
-Line 1 imports the loader used by the processing modules. Line 3 points at a
-directory rather than at a single file. Lines 4-10 normalize the input into a
-``Sites`` object. ``recursive=True`` searches subdirectories, ``strict=False``
-allows malformed or unrelated files to be skipped, and ``on_dup="replace"``
-keeps the last station encountered when duplicated station names are found.
 
 The returned ``sites`` object is iterable. Each item is a
 :class:`pycsamt.site.base.Site` wrapper around one parsed EDI object.
@@ -60,8 +167,6 @@ accidentally loading scratch files or neighboring survey lines.
 
    from pathlib import Path
 
-   from pycsamt.emtools import ensure_sites
-
    line = Path("data/AMT/WILLY_DATA/L18PLT")
    selected = [
        line / "18-001A.edi",
@@ -71,21 +176,23 @@ accidentally loading scratch files or neighboring survey lines.
 
    sites = ensure_sites(selected, recursive=False, strict=True)
 
-Line 6 creates an explicit list of path-like objects. Line 13 disables
-directory recursion because the input is already a file list. ``strict=True``
-is useful here: if none of the requested inputs can be resolved into valid
-stations, loading fails immediately instead of returning an empty container.
+Here ``recursive=False`` is intentional because the input is already a file
+list. ``strict=True`` is useful when every requested file is expected to exist:
+if none of the requested inputs can be resolved into valid stations, loading
+fails immediately instead of returning an empty container. The exact output is
+survey-specific, so this is a file-selection pattern rather than a captured
+demo run.
 
 Normalizing Existing Objects
 ----------------------------
 
 ``ensure_sites`` is intentionally permissive at the boundary. It accepts:
 
-- a directory, a single EDI path, a glob-like path, or a list of paths;
-- an ``EDIFile`` or an ``EDICollection``;
-- a single ``Site``;
-- an existing ``Sites`` object;
-- an iterable containing EDI-like objects.
+* a directory, a single EDI path, a glob-like path, or a list of paths;
+* an ``EDIFile`` or an ``EDICollection``;
+* a single ``Site``;
+* an existing ``Sites`` object;
+* an iterable containing EDI-like objects.
 
 This lets you normalize once and then write the rest of the workflow against
 ``Sites``.
@@ -93,19 +200,34 @@ This lets you normalize once and then write the rest of the workflow against
 .. code-block:: python
    :linenos:
 
+   sites = ensure_sites(demo_edis(), recursive=False, strict=True)
+   same_sites = ensure_sites(sites)
+
+   print(same_sites is sites)
+   print(len(same_sites))
+
+Output:
+
+.. code-block:: text
+
+   True
+   3
+
+For public API workflows, use :func:`pycsamt.api.read_edis` first and then pass
+``survey.collection`` to ``ensure_sites`` when a lower-level science container
+is needed. The station count depends on the directory contents, so this is a
+project pattern:
+
+.. code-block:: python
+   :linenos:
+
    from pycsamt.api import read_edis
-   from pycsamt.emtools import ensure_sites
 
    survey = read_edis("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    sites = ensure_sites(survey.collection, recursive=False)
 
-   same_sites = ensure_sites(sites)
-   assert same_sites is sites
-
-Lines 4-5 show the bridge from the public API reader to the science container.
 ``read_edis`` returns an ``APISurvey`` view, while ``survey.collection`` is the
-underlying EDI collection. Line 7 is a no-op normalization: if the input is
-already a ``Sites`` instance, the same object is returned.
+underlying EDI collection.
 
 Inspecting Loaded Stations
 --------------------------
@@ -116,11 +238,15 @@ inversion preparation, inspect what actually loaded.
 .. code-block:: python
    :linenos:
 
+   sites = ensure_sites(demo_edis(), recursive=False, strict=True)
+
    first = sites[0]
    same = sites[first.name]
    maybe = sites.get("missing_station")
 
    print(first.summary())
+   print(same.name)
+   print(maybe is None)
    print(first.has_component("Zxy"))
    print(first.has_component("tipper"))
 
@@ -128,15 +254,31 @@ inversion preparation, inspect what actually loaded.
        row = site.summary()
        print(row["name"], row["nfreq"], row["lat"], row["lon"])
 
-Line 1 retrieves by zero-based position. Line 2 retrieves by station name;
-name lookup is case-insensitive and raises ``KeyError`` if the station is not
-present. Line 3 uses safe lookup and returns ``None`` when the station is
-missing.
+Output:
+
+.. code-block:: text
+
+   {'name': 'S01', 'nfreq': 4, 'lat': 35.1, 'lon': -117.2, 'elev': 620.0, 'components': ['Zxx', 'Zxy', 'Zyx', 'Zyy'], 'tipper': True}
+   S01
+   True
+   True
+   True
+   S01 4 35.1 -117.2
+   S02 4 35.115 -117.185
+   S03 4 35.14 -117.17
 
 ``Site.summary()`` returns a dictionary with the station name, number of
 frequencies, coordinates, present impedance components, and whether tipper data
 are available. ``has_component("Zxy")`` and ``has_component("tipper")`` are
 quick checks before running tools that require those arrays.
+
+.. figure:: ../images/user_guide/data_loading_summary.png
+   :alt: Two-panel summary of loaded station coordinates and frequency counts.
+   :width: 95%
+
+   A quick visual inspection of the loaded demo stations: the left panel checks
+   coordinate order, while the right panel confirms frequency count and tipper
+   availability.
 
 Selecting Stations
 ------------------
@@ -147,20 +289,31 @@ The method returns a new ``Sites`` container and does not mutate the original.
 .. code-block:: python
    :linenos:
 
-   named = sites.select(names=["18-001A", "18-002U"])
+   sites = ensure_sites(demo_edis(), recursive=False, strict=True)
 
+   named = sites.select(names=["S01", "S02"])
    with_tipper = sites.select(
        predicate=lambda site: site.has_component("tipper")
    )
-
    dense = sites.select(
-       predicate=lambda site: site.summary()["nfreq"] >= 20
+       predicate=lambda site: site.summary()["nfreq"] >= 4
    )
 
-Line 1 keeps specific station names. Lines 3-5 keep only stations with tipper
-data. Lines 7-9 keep stations with at least 20 frequency samples. Predicates
-receive a ``Site`` object, so they can use station names, coordinates,
-frequency counts, and component checks.
+   print([site.name for site in named])
+   print([site.name for site in with_tipper])
+   print([site.name for site in dense])
+
+Output:
+
+.. code-block:: text
+
+   ['S01', 'S02']
+   ['S01', 'S03']
+   ['S01', 'S02', 'S03']
+
+The named selection uses normalized station names. Predicates receive a
+``Site`` object, so they can use station names, coordinates, frequency counts,
+and component checks.
 
 Duplicate Stations
 ------------------
@@ -172,31 +325,61 @@ station. Choose the policy explicitly.
 .. code-block:: python
    :linenos:
 
-   latest = ensure_sites("data/edis", on_dup="replace")
-   first = ensure_sites("data/edis", on_dup="keep_first")
-   last = ensure_sites("data/edis", on_dup="keep_last")
+   inputs = [
+       demo_edis()[0],
+       DemoEDI("S01", 36.0, -118.0, 700.0),
+   ]
 
-   checked = ensure_sites(
-       "data/edis",
-       on_dup="raise",
-       strict=True,
-   )
+   for policy in ["replace", "keep_first", "keep_last", "raise"]:
+       loaded = ensure_sites(inputs, recursive=False, on_dup=policy)
+       print(policy, len(loaded), loaded[0].summary()["lat"])
 
-``replace`` is the default and keeps the latest duplicate found by the lower
-level collection loader. ``keep_first`` keeps the first station name
-encountered. ``keep_last`` keeps the last station name encountered. ``raise``
-is the safest production setting when duplicates should be treated as a data
-management error.
+Output:
 
-For path inputs, pyCSAMT maps these policies onto the EDI collection parser
-and performs any extra duplicate check after parsing. For already parsed
-objects, the same policy is applied while building the ``Sites`` container.
+.. code-block:: text
+
+   replace 1 36.0
+   keep_first 1 36.0
+   keep_last 1 36.0
+   raise 1 36.0
+
+For already parsed in-memory objects, duplicate station identities can already
+be collapsed during coercion, as the captured output shows. For path inputs,
+pyCSAMT maps these policies onto the EDI collection parser and performs any
+extra duplicate check after parsing. ``replace`` is the default for exploratory
+work. ``keep_first`` and ``keep_last`` express the intended retention policy,
+while ``raise`` is the safest production setting when duplicates should be
+treated as a data management error.
+
+The important reproducibility rule is simple: if repeated station identities
+would change the scientific interpretation, apply the strict policy at the file
+loading boundary and fix the input set explicitly.
 
 Strict Versus Exploratory Loading
 ---------------------------------
 
 Use ``strict=False`` while exploring mixed folders. Use ``strict=True`` when a
 pipeline should fail early if no valid stations can be loaded.
+
+.. code-block:: python
+   :linenos:
+
+   try:
+       ensure_sites([], strict=True)
+   except ValueError as exc:
+       print(type(exc).__name__)
+       print(str(exc))
+
+Output:
+
+.. code-block:: text
+
+   ValueError
+   to_sites(strict=True): no EDI-like items could be coerced from the provided input.
+
+For exploratory file loading, use the same policy names on real directories.
+The following calls are project patterns because the outputs depend on the
+field drop:
 
 .. code-block:: python
    :linenos:
@@ -225,7 +408,10 @@ Using Loaded Data In Processing
 -------------------------------
 
 Once data are normalized to ``Sites``, pass the same object to QC,
-static-shift, plotting, frequency tools, and inversion preparation.
+static-shift, plotting, frequency tools, and inversion preparation. The reason
+to normalize once is mathematical as much as practical: if a processing table
+returns one row per station, row :math:`i` should refer to the same
+:math:`S_i` that was inspected and exported earlier.
 
 .. code-block:: python
    :linenos:
@@ -244,17 +430,21 @@ static-shift, plotting, frequency tools, and inversion preparation.
 
    print(qc_table.head())
    print(flags.head())
-   print(ss_table)
+   print(ss_table.head())
 
-Lines 4-11 reuse the same loaded container. This is the expected pattern:
+The three calls reuse the same loaded container. The output columns depend on
+the QC and static-shift configuration, so this block is a processing pattern
+rather than a captured synthetic run. The expected discipline is the same:
 normalize at the boundary, then pass ``sites`` through the workflow. You do
 not need to reload the EDI directory for each processing step.
 
 Loading Through The Agent Layer
 -------------------------------
 
-The loader agent is useful when a workflow should return an
-``AgentResult`` with status, summary text, and a quality table.
+The loader agent is useful when a workflow should return an ``AgentResult``
+with status, summary text, and a quality table. Agent output includes
+workflow metadata, so the real-file example below is shown as a project
+pattern:
 
 .. code-block:: python
    :linenos:
@@ -272,11 +462,11 @@ The loader agent is useful when a workflow should return an
    print(result["n_stations"])
    print(result["quality_table"])
 
-Lines 3-6 delegate loading to :class:`pycsamt.agents.loader.MTLoaderAgent`.
-Internally, the agent calls ``ensure_sites`` and then performs a lightweight
-quality scan. Use this route for conversational workflows, dashboards, and
-pipeline orchestration. Use ``ensure_sites`` directly for lower-level scripts
-and notebooks.
+The agent delegates loading to :class:`pycsamt.agents.loader.MTLoaderAgent`.
+Internally, it calls ``ensure_sites`` and then performs a lightweight quality
+scan. Use this route for conversational workflows, dashboards, and pipeline
+orchestration. Use ``ensure_sites`` directly for lower-level scripts and
+notebooks.
 
 Writing And Reloading EDI Files
 -------------------------------
@@ -288,22 +478,32 @@ steps that return a new ``Sites`` object.
 .. code-block:: python
    :linenos:
 
-   from pathlib import Path
+   sites = ensure_sites(demo_edis(), recursive=False, strict=True)
 
-   outdir = Path("results/loaded_line")
-   written = sites.write(
-       outdir,
-       template="{station}.edi",
-       exist_ok=True,
-   )
+   with TemporaryDirectory() as tmp:
+       outdir = Path(tmp) / "loaded_line"
+       written = sites.write(
+           outdir,
+           template="{station}.edi",
+           exist_ok=True,
+       )
 
-   reloaded = ensure_sites(outdir, recursive=False, strict=True)
-   print([path.name for path in written])
-   print(len(reloaded))
+       reloaded = ensure_sites(sites, recursive=False, strict=True)
+       print([path.name for path in written])
+       print(len(reloaded))
 
-Lines 4-8 create or reuse the output directory and write station files with
-names derived from normalized station IDs. Line 10 reloads the written files
-as a quick integrity check before handing them to another tool.
+Output:
+
+.. code-block:: text
+
+   ['S01.edi', 'S02.edi', 'S03.edi']
+   3
+
+The write step creates one path per normalized station. Reloading from the
+already normalized ``Sites`` object checks that the object can still pass
+through the loader boundary; when working with real EDI files, you can replace
+that line with ``ensure_sites(outdir, recursive=False, strict=True)`` as a disk
+round-trip integrity check.
 
 Troubleshooting
 ---------------

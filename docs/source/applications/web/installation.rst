@@ -9,6 +9,11 @@ scientific core.  This page covers installing those dependencies, launching
 the server, and the command-line options that control host, port, browser, and
 debug behaviour.
 
+.. tip::
+
+   Want to try the web app without installing anything? A hosted
+   instance is linked from :ref:`applications-hosted`.
+
 Install The App Extra
 ---------------------
 

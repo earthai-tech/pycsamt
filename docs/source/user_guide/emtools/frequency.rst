@@ -121,8 +121,30 @@ Frequency Confidence
 --------------------
 
 Confidence-based editing uses ``frequency_confidence_table`` from the
-QC workflow. The frequency module computes that table internally, but
-you should inspect it before editing.
+QC workflow (:ref:`emtools_qc`). Every station-frequency sample is
+scored with the same composite confidence ratio defined there, which
+folds six bounded diagnostics into one number:
+
+.. math::
+
+   \mathrm{CR}_{i,f} =
+   { \sum_k w_k\, s_{k,i,f}\, \mathbf{1}_{s_{k,i,f}\ \mathrm{finite}}
+     \over
+     \sum_k w_k\, \mathbf{1}_{s_{k,i,f}\ \mathrm{finite}} },
+   \qquad 0 \le s_k \le 1,
+
+where :math:`i` indexes the station, :math:`f` the frequency, and
+:math:`k` runs over ``coverage``, ``uncertainty``, ``offdiag``,
+``diagonal``, ``phase``, and ``spatial``, weighted respectively
+``0.35, 0.20, 0.15, 0.10, 0.10, 0.10``. A missing component drops out of
+both the numerator and the denominator, so a station with no tipper is
+not penalized twice for the same gap. ``ci_hi`` and ``ci_lo`` then cut
+the ``[0, 1]`` range of :math:`\mathrm{CR}` into three working classes:
+at or above ``ci_hi`` a row is trusted and kept as-is, between ``ci_lo``
+and ``ci_hi`` it is a candidate for interpolation, and below ``ci_lo``
+it is a rejection candidate. The frequency module computes this table
+internally, but you should look at its distribution before editing
+anything.
 
 .. code-block:: python
    :linenos:
@@ -172,15 +194,36 @@ you should inspect it before editing.
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-04.png
    :width: 100%
 
-The key lesson is simple: do not choose ``ci_hi`` or ``threshold`` before
-looking at the confidence distribution. If no row reaches ``ci_hi``,
-recovery has no trusted rows to interpolate from.
+The key lesson is simple: do not choose ``ci_hi``, ``ci_lo``, or
+``threshold`` before looking at the confidence distribution above. In
+this survey the median :math:`\mathrm{CR}` sits near ``0.65`` and the
+maximum barely reaches ``0.86``. Leaving ``ci_hi`` at a textbook value
+like ``0.90`` would mean no row is ever trusted enough to act as an
+interpolation donor, and recovery would silently have nothing to work
+from. Read the ``describe()`` output first, then set ``ci_hi`` and
+``ci_lo`` (or ``threshold``) to values this particular survey can
+actually reach.
 
 Drop Or Mask Low-Confidence Rows
 --------------------------------
 
-Dropping removes rows from the frequency grid. Masking keeps the grid
-but replaces low-confidence tensor rows with ``NaN``.
+Once a threshold is chosen, both functions apply the same keep rule to
+row :math:`(i, f)`:
+
+.. math::
+
+   \text{keep}_{i,f} =
+   \bigl(\mathrm{CR}_{i,f}\ \text{undefined}\bigr)
+   \ \lor\
+   \bigl(\mathrm{CR}_{i,f} \ge \text{threshold}\bigr).
+
+Rows with no confidence score at all (for example, a frequency present
+in the impedance block but absent from the confidence table) are kept
+rather than silently discarded — undefined is not the same as bad. What
+differs between the two functions is what happens to the rows that fail
+the rule. Dropping removes them from the frequency grid entirely.
+Masking keeps the grid the same length but replaces the corresponding
+tensor rows with ``NaN``.
 
 .. code-block:: python
    :linenos:
@@ -228,10 +271,35 @@ The ``also`` argument controls which blocks are edited:
 Recover Low-Confidence Rows
 ---------------------------
 
-``recover_low_confidence_frequencies`` treats rows in
-``[ci_lo, ci_hi)`` as recoverable and interpolates them from trusted
-rows whose confidence is at least ``ci_hi``. Rows below ``ci_lo`` are
-handled by ``reject``.
+``recover_low_confidence_frequencies`` splits a station's rows into
+three sets from the same :math:`\mathrm{CR}_{i,f}` used above:
+
+.. math::
+
+   G = \{f : \mathrm{CR}_{i,f} \ge \text{ci\_hi}\}, \qquad
+   R = \{f : \text{ci\_lo} \le \mathrm{CR}_{i,f} < \text{ci\_hi}\}, \qquad
+   B = \{f : \mathrm{CR}_{i,f} < \text{ci\_lo}\},
+
+the trusted donors :math:`G`, the recoverable rows :math:`R`, and the
+rejected rows :math:`B`. Every row in :math:`R` is filled by
+interpolating the complex tensor value at that frequency from the rows
+in :math:`G`, in log-frequency space and independently for the real and
+imaginary parts:
+
+.. math::
+
+   Z(f_i) = \mathrm{interp}\bigl(\log_{10} f_i;\
+   \{\log_{10} f_g\}_{f_g \in G},\ \{Z(f_g)\}_{f_g \in G}\bigr),
+   \qquad f_i \in R,
+
+with ``interpolation="linear"`` performing ordinary linear interpolation
+in :math:`\log_{10} f` and ``"nearest"`` copying the closest donor
+instead. Working in :math:`\log_{10} f` rather than raw hertz matters
+because CSAMT/AMT bands are sampled logarithmically — linear
+interpolation in hertz would be dominated by the widely spaced
+high-frequency end and would barely constrain the low-frequency end at
+all. Rows in :math:`B` are not interpolated; they are handled entirely
+by ``reject``.
 
 .. code-block:: python
    :linenos:
@@ -264,9 +332,13 @@ Valid interpolation modes are ``"linear"`` and ``"nearest"``. Valid
    * - ``"keep"``
      - Leave rejected rows unchanged.
 
-Recovery is interpolation, not magic. At band edges, interpolation can
-behave like holding the nearest trusted value. Always inspect the result
-when many rows are recovered.
+Recovery is interpolation, not magic: it can only be as good as the
+donors in :math:`G`. When a recoverable row sits outside the span of
+:math:`\log_{10} f_g` covered by the donors, ``interp`` clamps to the
+nearest edge, so "linear" quietly degrades to "nearest" exactly at the
+band edges where recovery is riskiest. Always inspect the result when
+many rows are recovered, and treat edge-of-band recoveries with more
+suspicion than interior ones.
 
 High-Level Editing Workflow
 ---------------------------
@@ -500,15 +572,37 @@ Use ``regrid_to`` when you already have the target frequencies.
        inplace=False,
    )
 
-``method`` controls interpolation behavior. The implementation supports
-nearest-neighbor and log-frequency interpolation paths used by the
-module's helpers. Use a target grid that is meaningful for your
-inversion or comparison, not merely convenient.
+``regrid_to`` reuses the same log-frequency interpolator introduced
+above for recovery, except every target frequency is filled from the
+*entire* native grid rather than from a confidence-selected subset of
+it — there is no trusted/recoverable split here, only the target grid
+you hand it. ``method="linear"`` interpolates the real and imaginary
+parts in :math:`\log_{10} f`; ``method="nearest"`` copies the closest
+native row instead of interpolating. Choose a target grid that is
+meaningful for the inversion or comparison you are preparing for, not
+merely one that is convenient to type.
 
 Build A Log-Spaced Grid
 -----------------------
 
-Use ``regrid_logspace`` to generate a grid automatically.
+Typing out a target grid by hand gets tedious once a survey needs a
+regular per-decade sampling. ``regrid_logspace`` builds one automatically
+by geometric progression:
+
+.. math::
+
+   f_k = f_{\min} \left(\frac{f_{\max}}{f_{\min}}\right)^{k / (n - 1)},
+   \qquad k = 0, \dots, n - 1,
+   \qquad n = \max\!\left(2,\ \left\lceil
+   \log_{10}(f_{\max} / f_{\min}) \times \text{per\_decade}
+   \right\rceil\right).
+
+Equal steps in :math:`k` are equal steps in :math:`\log_{10} f`, so
+``per_decade`` directly controls resolution: ``per_decade=6`` places six
+points in every factor-of-ten span, matching the density a typical
+CSAMT/AMT band is actually sampled at. When ``fmin``/``fmax`` are
+omitted, they default to the min/max of the union grid across all
+stations.
 
 .. code-block:: python
    :linenos:
@@ -531,8 +625,26 @@ Use ``regrid_logspace`` to generate a grid automatically.
 Decimation And Moving Average Smoothing
 ---------------------------------------
 
-Use ``decimate_step`` to keep every ``step`` row. Use ``smooth_mavg`` to
-apply a moving average along frequency.
+``decimate_step`` keeps rows at indices :math:`0, \text{step}, 2\cdot
+\text{step}, \dots` along the native (not log-spaced) frequency array —
+it thins the grid but does not touch the tensor values that survive.
+``smooth_mavg`` does the opposite: it keeps every row but replaces each
+tensor value with a centered moving average of width :math:`k`,
+computed independently on the real and imaginary parts,
+
+.. math::
+
+   Z'(f_i) = \frac{1}{k} \sum_{j=-\lfloor k/2 \rfloor}^{\lceil k/2
+   \rceil - 1} Z(f_{i+j}),
+
+so it is a smoothing filter over row order, not over :math:`\log_{10}
+f`, and it changes every value it touches rather than removing any.
+Near the two ends of the grid the window runs past the available rows;
+the implementation still divides by the full :math:`k` rather than
+shrinking the window, which pulls the first and last :math:`\lfloor
+k/2\rfloor` smoothed values slightly toward zero. Keep ``k`` small
+relative to the number of rows in a station's band if the edge rows
+still need to be trusted afterward.
 
 .. code-block:: python
    :linenos:
@@ -608,6 +720,26 @@ Coverage And Quality Heatmap
 
 ``plot_coverage_quality_heatmap`` shows which station-frequency cells
 exist and how reliable they are according to relative impedance error.
+This is a separate, lighter-weight score than the composite
+:math:`\mathrm{CR}` used above — it looks only at the off-diagonal
+impedance error, so it stays cheap enough to compute for a full survey
+heatmap. For each cell it averages the relative error of the two
+off-diagonal modes and maps that to a quality in ``(0, 1]``:
+
+.. math::
+
+   r_{i,f} = \frac{1}{2}\left(
+   \frac{|\sigma_{Z_{xy}}|}{|Z_{xy}|} +
+   \frac{|\sigma_{Z_{yx}}|}{|Z_{yx}|}
+   \right),
+   \qquad
+   q_{i,f} = \frac{1}{1 + r_{i,f}},
+
+where :math:`\sigma_Z` is the reported impedance error at that cell. A
+noise-free measurement has :math:`r = 0` and :math:`q = 1`; as the error
+grows relative to the signal, :math:`q` decays smoothly toward ``0``
+instead of blowing up, which keeps the colour scale usable even for
+badly noisy cells.
 
 .. code-block:: python
    :linenos:
@@ -627,19 +759,38 @@ exist and how reliable they are according to relative impedance error.
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-15.png
    :width: 100%
 
-The color is ``1 / (1 + relative_error)``. Values closer to ``1`` are
-higher quality. Missing cells indicate no frequency row on the union
-grid for that station.
+Values closer to ``1`` are higher quality; missing cells simply mean
+that station has no row at that union-grid frequency, which is a
+coverage gap rather than a quality problem.
 
 Apparent Depth Pseudo-Section
 -----------------------------
 
-``plot_apparent_depth_psection`` converts determinant apparent
-resistivity and frequency into a skin-depth-style apparent depth:
+``plot_apparent_depth_psection`` turns each station-frequency cell into
+a rough sense of investigation depth. It first needs an apparent
+resistivity, which it gets from the determinant of the two off-diagonal
+impedance modes — the same geometric-mean convention used elsewhere in
+``emtools`` (see :ref:`emtools_csumt`):
 
 .. math::
 
-   depth \approx 503 \sqrt{\rho / f}
+   \rho_{a,\det} =
+   \sqrt{
+   \left(0.2\,\frac{|Z_{xy}|^2}{f}\right)
+   \left(0.2\,\frac{|Z_{yx}|^2}{f}\right)
+   },
+
+and then converts that resistivity and frequency into a skin-depth-style
+apparent depth,
+
+.. math::
+
+   \delta \approx 503 \sqrt{\rho_{a,\det} / f},
+
+with :math:`\delta` in metres when :math:`\rho_{a,\det}` is in
+:math:`\Omega\,\mathrm{m}` and :math:`f` is in hertz. Lower frequencies
+and higher apparent resistivity both push :math:`\delta` deeper, which
+is exactly the trade-off a CSAMT/AMT sounding is designed to exploit.
 
 .. code-block:: python
    :linenos:
@@ -661,18 +812,33 @@ resistivity and frequency into a skin-depth-style apparent depth:
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-16.png
    :width: 100%
 
-This is a diagnostic visualization, not an inversion result. Use it to
-see how apparent depth varies across stations and periods.
+This is a diagnostic visualization, not an inversion result — :math:`\delta`
+is a proxy, not a layer boundary. Use it to see how apparent depth
+varies across stations and periods before committing to a model
+parameterization.
 
 Band Microstrips
 ----------------
 
-``plot_band_microstrips`` collapses periods into bands and plots three
-summary metrics per station and band:
+A full pseudo-section is the right tool for inspecting one survey
+closely, but it stops being readable once you want to compare many
+lines side by side. ``plot_band_microstrips`` collapses the period axis
+into a handful of bands and reduces each station-band cell to three
+median summary metrics:
 
-- median ``log10`` determinant apparent resistivity;
-- median determinant phase;
-- median tipper amplitude when available.
+.. math::
+
+   \log_{10}\rho_{a,\det}, \qquad
+   \varphi_{\det} = \arg\bigl[\det(Z)\bigr]
+   = \arg\bigl(Z_{xx}Z_{yy} - Z_{xy}Z_{yx}\bigr), \qquad
+   |T| = \sqrt{|T_x|^2 + |T_y|^2},
+
+the log-apparent-resistivity defined above, the determinant phase (in
+degrees, using the same :math:`\det(Z)` convention as the tensor pages),
+and the tipper magnitude when a station has one. Each metric gets its
+own marker — circle, square, triangle — and its own colour
+normalization, so a single compact grid of dots can stand in for what
+would otherwise be three separate pseudo-sections per line.
 
 .. code-block:: python
    :linenos:

@@ -3,9 +3,11 @@ Loading Map Data
 
 The mapping package uses one normalized object,
 :class:`pycsamt.map.MapData`, for every station map, profile
-pseudosection, and 3-D view.  You rarely need to build
-``MapData`` by hand.  Most public plotting functions accept the
-same inputs directly and call the normalizer for you.
+:term:`pseudosection`, and 3-D view.  In the documentation this object
+is also referenced as :term:`MapData`: the loader's reproducible record
+of stations, profile membership, source objects, and metadata.  You
+rarely need to build it by hand.  Most public plotting functions accept
+the same inputs directly and call the normalizer for you.
 
 Use this page when you want explicit control over loading, line
 grouping, or pre-flight checks before drawing a map.
@@ -14,18 +16,26 @@ Loading Philosophy
 ------------------
 
 The loader follows the science API rather than the web app internals.
-It delegates EDI parsing to
+It delegates :term:`EDI` parsing to
 :func:`pycsamt.emtools._core.ensure_sites`, then extracts the small
 mapping contract needed by the renderers:
 
 * station identifier;
 * latitude, longitude, and elevation when available;
 * profile or survey-line name;
-* the original EDI-like object, including its impedance ``Z`` object.
+* the original EDI-like object, including its :term:`impedance tensor`
+  ``Z`` object.
 
 This means a code workflow and the web workflow can start from the
 same survey files, but code users can inspect, group, transform, and
-export each intermediate object.
+export each intermediate object.  The contract is deliberately small:
+if station :math:`i` is normalized as
+:math:`s_i=(\mathrm{id}_i,\phi_i,\lambda_i,h_i,\ell_i,i)`, then the
+renderers read the same station identifier, latitude
+:math:`\phi_i`, longitude :math:`\lambda_i`, elevation :math:`h_i`,
+line name :math:`\ell_i`, and zero-based index :math:`i` everywhere.
+That shared tuple is what keeps station, profile, and 3-D views from
+silently disagreeing about order or line membership.
 
 Input Types
 -----------
@@ -33,7 +43,7 @@ Input Types
 All loading helpers accept flexible EDI sources:
 
 ``str`` or ``pathlib.Path``
-   A single EDI file or a directory containing EDI files.
+   A single :term:`EDI` file or a directory containing EDI files.
 
 sequence of paths
    A list or tuple of EDI files.  A sequence of directories is treated
@@ -50,6 +60,13 @@ EDI-like iterable
 ``MapData``
    Returned unchanged, so it is safe to pass normalized data through
    higher-level builders.
+
+Regardless of the input form, the normalizer tries to produce the same
+mathematical object: an ordered station set
+:math:`S=(s_0,\ldots,s_{N-1})` and a partition of that set into
+profile lines :math:`L_1,\ldots,L_K`.  A partition means each station
+belongs to one resolved line, while the combined survey still keeps the
+global index :math:`i` needed for reproducible sorting and exports.
 
 Single-Line Loading
 -------------------
@@ -70,11 +87,34 @@ directly or pass the source to a plotting helper.
 
    fig = plot_station_map(data, frequency=100.0)
 
+Captured output from the sample ``WILLY_DATA/L18PLT`` folder:
+
+.. code-block:: text
+
+   ('18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A', '18-007U', '18-008U', '18-009A', '18-010U', '18-011A', '18-012A', '18-013U', '18-014A', '18-015U', '18-016A', '18-017U', '18-018A', '18-019U', '18-020A', '18-021B', '18-021U', '18-022U', '18-022V', '18-023A', '18-023V', '18-024U', '18-025A')
+   ('line',)
+   True
+
+The figure returned by ``plot_station_map`` can also be rendered with a
+static backend for reports:
+
+.. figure:: ../../images/user_guide/map/map_loading_station_map.png
+   :alt: Station map for the L18 sample line colored by elevation.
+   :align: center
+   :width: 85%
+
+   Station locations loaded from ``data/AMT/WILLY_DATA/L18PLT`` and
+   colored by elevation.
+
 ``ensure_map_data`` does not force every station to have geographic
 coordinates.  ``data.has_geo`` tells you whether all normalized
 stations have finite latitude and longitude.  If coordinates are
 missing, profile views can still use station order or distance, while
-geographic station maps may need CRS or coordinate preprocessing.
+geographic station maps may need CRS or coordinate preprocessing.  In
+set notation, ``data.has_geo`` is true only when
+:math:`\phi_i,\lambda_i \in \mathbb{R}` for every station
+:math:`s_i \in S`; missing or non-finite coordinates are represented as
+``None`` before a renderer decides how to proceed.
 
 Multiple-Line Loading
 ---------------------
@@ -97,9 +137,22 @@ block, or depth-slice views.
    print(data.metadata["n_lines"])
    print(data.station_ids[:5])
 
+Captured output:
+
+.. code-block:: text
+
+   ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+   5
+   ('18-001A', '18-002U', '18-003A', '18-004A', '18-005U')
+
 Each station is re-indexed across the combined survey and tagged with
 its resolved line name.  The renderers then use ``data.profiles`` to
-draw separate profiles or offset lines in 3-D.
+draw separate profiles or offset lines in 3-D.  For five loaded lines,
+the combined station set is still one sequence
+:math:`S=(s_0,\ldots,s_{N-1})`, but each station carries a line label
+:math:`\ell_i \in \{L18PLT,L22PLT,L26PLT,L30PLT,L34PLT\}`.  This is
+why a station map can show all stations together while a fence or
+pseudosection view can split them back into their profile lines.
 
 Grouping Modes
 --------------
@@ -138,6 +191,25 @@ You can inspect the grouping without loading impedance data by calling
    for line, source in groups.items():
        print(line, len(source))
 
+Captured output:
+
+.. code-block:: text
+
+   L18PLT 28
+   L22PLT 25
+   L26PLT 25
+   L30PLT 25
+   L34PLT 25
+
+The grouping operation is simply the line partition before data
+normalization.  For a directory source :math:`D`, ``detect="folder"``
+maps each discovered EDI path :math:`p` to the immediate parent name
+:math:`g(p)`.  ``detect="flat"`` uses one constant group for all paths,
+and ``detect="auto"`` derives :math:`g(p)` from the station-name prefix.
+Writing that rule down matters for reproducibility because changing
+only the grouping rule can change profile labels even when the EDI
+files are identical.
+
 Explicit Line Mapping
 ---------------------
 
@@ -155,7 +227,9 @@ The most reproducible multi-line workflow is an explicit mapping:
 
 Mapping values may be directories, file lists, or EDI-like iterables.
 This is useful in notebooks and scripts where line names should be
-stable even if folder names later change.
+stable even if folder names later change.  An explicit mapping fixes
+the function :math:`g(p)=\ell` in the script itself, so the line label
+comes from the mapping key rather than from a mutable folder name.
 
 If your EDI-like objects do not carry line metadata, but you already
 know station membership, pass ``line_map`` to
@@ -184,10 +258,14 @@ order is:
 * station lookup in ``line_map``;
 * default line name ``"line"``.
 
+That priority order is deterministic.  If two sources could assign a
+line name, the first non-empty value in the list wins, and the resulting
+line label is stored on each :term:`station record`.
+
 Normalized Contract
 -------------------
 
-``MapData`` exposes the surface that all map renderers share:
+:term:`MapData` exposes the surface that all map renderers share:
 
 .. code-block:: python
 
@@ -199,7 +277,8 @@ Normalized Contract
    data.profiles         # tuple[ProfileLine, ...]
    data.metadata         # counts and loader metadata
 
-Each :class:`pycsamt.map.StationRecord` contains:
+Each :class:`pycsamt.map.StationRecord` contains one
+:term:`station record`:
 
 .. code-block:: python
 
@@ -214,6 +293,12 @@ Each :class:`pycsamt.map.StationRecord` contains:
 ``station.source`` is the original EDI-like object.  Keep it when you
 need to inspect impedance arrays, frequencies, or file-level metadata
 after loading.
+
+The profile contract is similarly compact.  Each
+:class:`pycsamt.map.ProfileLine` is a :term:`profile line` with a
+``name`` and an ordered tuple of stations.  The order is the loader
+order, so any derived coordinate such as along-line station number is
+reproducible from the normalized object.
 
 Pre-Flight Checks
 -----------------
@@ -248,10 +333,48 @@ A good loading workflow checks the normalized survey before plotting:
    )
    print("stations with values:", len(values))
 
+Captured output:
+
+.. code-block:: text
+
+   requested: 100.0
+   actual: 102.4
+   relative delta: 0.024000000000000056
+   stations with values: 28
+
 This is especially helpful when different stations have slightly
-different frequency grids.  Map extraction chooses the nearest finite
-positive frequency per station and can enforce a tolerance when you
-need a strict match.
+different :term:`frequency grid`\ s.  Map extraction chooses the
+nearest finite positive frequency per station and can enforce a
+tolerance when you need a strict match.  For a requested frequency
+:math:`f_r` and a station grid
+:math:`F_i=\{f_{i0},\ldots,f_{im}\}`, the selected sample is
+
+.. math::
+
+   k_i = \operatorname*{arg\,min}_k |f_{ik}-f_r|,
+   \qquad
+   f_i^\* = f_{ik_i}.
+
+The reported relative delta is
+:math:`|f_i^\*-f_r|/|f_r|` when :math:`f_r` is positive.  Once the
+frequency index is selected, the requested :term:`impedance tensor`
+component is read from
+
+.. math::
+
+   \mathbf{Z}(f_i^\*) =
+   \begin{bmatrix}
+   Z_{xx}(f_i^\*) & Z_{xy}(f_i^\*) \\
+   Z_{yx}(f_i^\*) & Z_{yy}(f_i^\*)
+   \end{bmatrix}.
+
+For apparent resistivity maps, pyCSAMT then uses the same field-unit
+convention as the rest of the package,
+:math:`\rho_a = 0.2 |Z_{ab}|^2/f_i^\*`, where ``component="xy"``
+selects :math:`Z_{xy}`.  For phase maps, the plotted value is the phase
+angle of the selected complex component.  Keeping :math:`f_r`,
+:math:`f_i^\*`, the component name, and the tolerance in the script is
+therefore enough for another user to reproduce the extraction.
 
 Handling Missing or Partial Data
 --------------------------------

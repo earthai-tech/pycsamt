@@ -10,13 +10,13 @@ ModEM executable, loading completed runs, and plotting the results.
 
 ModEM projects are file-oriented. A reproducible run is normally defined by an
 observed data file, an initial model file, an inversion-control file, and, for
-3-D inversions, a covariance file. The solver then produces iteration models,
-predicted responses, and logs. pyCSAMT keeps those files explicit so a project
-can move between Python, command-line ModEM, and archived native run folders
-without losing provenance.
+3-D inversions, a :term:`covariance` file. The solver then produces iteration
+models, predicted responses, and logs. pyCSAMT keeps those files explicit so a
+project can move between Python, command-line ModEM, and archived
+:term:`native file` folders without losing provenance.
 
 When To Use ModEM
------------------
+-------------------
 
 Use ModEM when the survey, interpretation target, or legacy project requires a
 native ModEM workflow.
@@ -38,7 +38,7 @@ For large 3-D MT or AMT modelling, ModEM is usually the more appropriate
 native backend.
 
 Dimensionality
---------------
+----------------
 
 ModEM supports both 2-D and 3-D modes in pyCSAMT. The mode controls the model
 class, file set, executable name, and whether a covariance file is expected.
@@ -78,7 +78,7 @@ class, file set, executable name, and whether a covariance file is expected.
      - ``data``, ``model``, ``covariance``, ``control``
 
 Package Map
------------
+-------------
 
 The public ModEM API is grouped around native file roles.
 
@@ -118,6 +118,10 @@ The public ModEM API is grouped around native file roles.
        ``PlotResponse``, ``PlotPseudo``
      - Matplotlib diagnostics for convergence, model inspection, station
        responses, and pseudo-sections.
+   * - ``pycsamt.models.modem.plot.PlotSection``
+     - Vertical curtain through a 3-D model along a profile line, with
+       optional terrain and station-name context. Not re-exported at the
+       package top level; import it from ``.plot`` directly.
    * - ``detect_file_type`` and ``is_*`` validators
      - Identify ModEM data, model, covariance, control, and log files before
        reading or routing them.
@@ -127,51 +131,60 @@ The public ModEM API is grouped around native file roles.
        file formats.
 
 Configuration
--------------
+---------------
 
 Most workflows start with :class:`~pycsamt.models.modem.ModEmConfig`. The same
 configuration object is passed to the builder, runner, control file, model
 factory, covariance factory, and result loader.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmConfig
+   >>> from pycsamt.models.modem import ModEmConfig
 
-   cfg = ModEmConfig(
-       mode="3d",
-       component_type="Full_Impedance",
-       error_floor_z=0.05,
-       initial_rho=100.0,
-       nx=24,
-       ny=24,
-       nz=36,
-       cell_size_h=500.0,
-       cell_size_v_top=10.0,
-       depth_scale=1.18,
-       n_padding_xy=8,
-       smooth_x=0.2,
-       smooth_y=0.2,
-       smooth_z=0.1,
-       n_smooth_iter=2,
-       max_iterations=80,
-       target_rms=1.05,
-       binary_3d="Mod3DMT",
-       use_mpi=True,
-       n_procs=16,
-   )
+   >>> cfg = ModEmConfig(
+   ...     mode="3d",
+   ...     component_type="Full_Impedance",
+   ...     error_floor_z=0.05,
+   ...     initial_rho=100.0,
+   ...     nx=24,
+   ...     ny=24,
+   ...     nz=36,
+   ...     cell_size_h=500.0,
+   ...     cell_size_v_top=10.0,
+   ...     depth_scale=1.18,
+   ...     n_padding_xy=8,
+   ...     smooth_x=0.2,
+   ...     smooth_y=0.2,
+   ...     smooth_z=0.1,
+   ...     n_smooth_iter=2,
+   ...     max_iterations=80,
+   ...     target_rms=1.05,
+   ...     binary_3d="Mod3DMT",
+   ...     use_mpi=True,
+   ...     n_procs=16,
+   ... )
 
-   cfg.write_template("modem_config.ini")
+   >>> cfg.write_template("runs/modem_3d_v01/modem_config.yml")
 
 The template can be edited and loaded again:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmConfig
+   >>> from pycsamt.models.modem import ModEmConfig
 
-   cfg = ModEmConfig.from_file("modem_config.ini", strict=True)
-   print(cfg.mode, cfg.binary_name)
+   >>> cfg = ModEmConfig.from_file("runs/modem_3d_v01/modem_config.yml", strict=True)
+   >>> print(cfg.mode, cfg.binary_name)
+   3d Mod3DMT
+
+Use a ``.py``, ``.json``, ``.yml``, or ``.yaml`` suffix -- the same formats
+:mod:`pycsamt.models.config_io` supports everywhere else in pyCSAMT. A
+``.ini`` suffix is silently accepted by ``write_template`` (it falls back to
+the default ``.py`` writer while keeping the ``.ini`` name), but
+``from_file`` then rejects that same file, because it dispatches strictly on
+the file extension: ``ValueError: Unsupported config suffix. Use .py, .json,
+.yml, or .yaml.`` Pick a real suffix from the start.
 
 Important settings are grouped as follows.
 
@@ -207,11 +220,17 @@ Important settings are grouped as follows.
      - ``binary_2d``, ``binary_3d``, ``use_mpi``, ``n_procs``,
        ``mpi_command``.
 
+The nonlinear-inversion group drives the same :term:`NLCG` search that writes
+``Modular_NLCG`` files: ``initial_lambda`` and ``lambda_divisor`` schedule the
+trade-off parameter, ``initial_alpha`` sets the first line-search step, and
+``rms_diff_tol``/``lambda_exit`` decide when the search has stalled rather
+than converged.
+
 Native Files
-------------
+--------------
 
 A ModEM run folder should be understandable without Python. pyCSAMT therefore
-writes and reads the same native file roles that the executable uses.
+writes and reads the same :term:`native file` roles that the executable uses.
 
 .. list-table::
    :header-rows: 1
@@ -247,22 +266,44 @@ writes and reads the same native file roles that the executable uses.
      - Loaded by :class:`~pycsamt.models.modem.InversionResult` as
        ``data_pred`` when a predicted response file is present.
 
-Validate files before routing them into a workflow:
+Validate files before routing them into a workflow. ``detect_file_type``
+returns a plain string, not an object with a ``.value`` attribute -- compare
+it against ``ModEmFileType`` constants or other strings directly:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pathlib import Path
+   >>> from pathlib import Path
 
-   from pycsamt.models.modem import detect_file_type
+   >>> from pycsamt.models.modem import ModEmFileType, detect_file_type
 
-   for path in Path("runs/modem_3d").iterdir():
-       kind = detect_file_type(path)
-       if kind.value != "unknown":
-           print(path.name, kind.value)
+   >>> sample_dir = Path("data/modem/willy_27freq_watex_line02_sample")
+   >>> for path in sorted(sample_dir.iterdir()):
+   ...     kind = detect_file_type(path)
+   ...     if kind != ModEmFileType.UNKNOWN:
+   ...         print(path.name, kind)
+   27-freq-run-watex01.cov covariance
+   27-freq-run-watex01.dat data
+   27-freq-run-watex01.rho model_3d
+   inv.ctrl control
+   Modular_NLCG.log log
+   Modular_NLCG_000.dat data
+   Modular_NLCG_000.rho model_3d
+   Modular_NLCG_030.dat data
+   Modular_NLCG_030.res data
+   Modular_NLCG_030.rho model_3d
+   Modular_NLCG_073.dat data
+   Modular_NLCG_073.res data
+   Modular_NLCG_073.rho model_3d
+
+``run.slurm``, ``fwd.ctrl``, ``fort.2000``, ``CSUr2.err``, and ``README.txt``
+are correctly left out -- they are real files in this bundled sample
+directory, just not ones ``detect_file_type`` claims to recognize.
+``.res`` residual files are classified as ``data`` alongside the ``.dat``
+files they pair with.
 
 Data Files And Components
--------------------------
+----------------------------
 
 :class:`~pycsamt.models.modem.ModEmData` stores observed or predicted response
 rows. pyCSAMT can read existing ModEM data files or build new ones from
@@ -300,25 +341,30 @@ The configuration selects which response components are written. Supported
    * - ``"Phase_Tensor"``
      - ``PTxx``, ``PTxy``, ``PTyx``, ``PTyy``
 
-.. code-block:: python
+``ModEmData.from_edi`` accepts the same kind of survey source as the Occam2D
+builder -- a :class:`~pycsamt.site.Sites` container, not a bare path string:
+
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmConfig, ModEmData
+   >>> from pycsamt.models.modem import ModEmConfig, ModEmData
+   >>> from pycsamt.site import Sites
 
-   cfg = ModEmConfig(
-       mode="3d",
-       component_type="Off_Diagonal_Impedance",
-       error_floor_z=0.05,
-       freq_min=1e-3,
-       freq_max=1e3,
-   )
+   >>> sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
 
-   data = ModEmData.from_edi(stations, config=cfg)
-   data.write("runs/modem_3d/ModEMData.dat")
+   >>> cfg = ModEmConfig(
+   ...     mode="3d",
+   ...     component_type="Off_Diagonal_Impedance",
+   ...     error_floor_z=0.05,
+   ...     freq_min=1e-3,
+   ...     freq_max=1e3,
+   ... )
 
-   print(data.n_sites)
-   print(data.n_periods)
-   print(data.component_types)
+   >>> data = ModEmData.from_edi(sites, config=cfg)
+   >>> data.write("runs/modem_3d_v01/native/ModEMData.dat")
+
+   >>> print(data.n_sites, data.n_periods, data.component_types)
+   28 53 ['Off_Diagonal_Impedance']
 
 .. important::
 
@@ -328,49 +374,56 @@ The configuration selects which response components are written. Supported
    metres, kilometres, and geographic degrees inside the same run folder.
 
 Build A 3-D Input Set
----------------------
+------------------------
 
 :class:`~pycsamt.models.modem.InputBuilder` creates the standard 3-D input
 set: observed data, starting model, covariance, and control file.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pathlib import Path
+   >>> from pathlib import Path
 
-   from pycsamt.models.modem import InputBuilder, ModEmConfig
+   >>> from pycsamt.models.modem import InputBuilder, ModEmConfig
+   >>> from pycsamt.site import Sites
 
-   workdir = Path("runs/modem_3d/native")
-   cfg = ModEmConfig(
-       mode="3d",
-       component_type="Full_Impedance",
-       initial_rho=100.0,
-       nx=28,
-       ny=28,
-       nz=38,
-       n_airlayers=5,
-       cell_size_h=500.0,
-       cell_size_v_top=10.0,
-       depth_scale=1.18,
-       n_padding_xy=8,
-       smooth_x=0.2,
-       smooth_y=0.2,
-       smooth_z=0.1,
-       n_smooth_iter=2,
-   )
+   >>> sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
 
-   builder = InputBuilder(config=cfg)
-   files = builder.build(
-       stations,
-       workdir=workdir,
-       data_filename=cfg.data_file,
-       model_filename="m0.ws",
-       cov_filename=cfg.covariance_file,
-       ctrl_filename=cfg.control_file,
-   )
+   >>> workdir = Path("runs/modem_3d_v01/native")
+   >>> cfg = ModEmConfig(
+   ...     mode="3d",
+   ...     component_type="Full_Impedance",
+   ...     initial_rho=100.0,
+   ...     nx=28,
+   ...     ny=28,
+   ...     nz=38,
+   ...     n_airlayers=5,
+   ...     cell_size_h=500.0,
+   ...     cell_size_v_top=10.0,
+   ...     depth_scale=1.18,
+   ...     n_padding_xy=8,
+   ...     smooth_x=0.2,
+   ...     smooth_y=0.2,
+   ...     smooth_z=0.1,
+   ...     n_smooth_iter=2,
+   ... )
 
-   for role, path in files.items():
-       print(role, path)
+   >>> builder = InputBuilder(config=cfg)
+   >>> files = builder.build(
+   ...     sites,
+   ...     workdir=workdir,
+   ...     data_filename=cfg.data_file,
+   ...     model_filename="m0.ws",
+   ...     cov_filename=cfg.covariance_file,
+   ...     ctrl_filename=cfg.control_file,
+   ... )
+
+   >>> for role, path in sorted(files.items()):
+   ...     print(role, path.name)
+   control ModEM.inv
+   covariance ModEM.cov
+   data ModEMData.dat
+   model m0.ws
 
 The returned mapping contains ``data``, ``model``, ``covariance``, and
 ``control``. The builder also keeps the populated objects on
@@ -378,67 +431,73 @@ The returned mapping contains ``data``, ``model``, ``covariance``, and
 ``builder.control`` for inspection.
 
 Build A 2-D Input Set
----------------------
+------------------------
 
 The 2-D builder path writes data, a 2-D half-space model, and a control file.
 It does not create a 3-D covariance file.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import InputBuilder, ModEmConfig
+   >>> from pycsamt.models.modem import InputBuilder, ModEmConfig
 
-   cfg = ModEmConfig(
-       mode="2d",
-       component_type="TE_Impedance",
-       initial_rho=100.0,
-       nx_2d=120,
-       nz_2d=60,
-       n_airlayers_2d=5,
-       cell_size_h_2d=100.0,
-       cell_size_v_top_2d=10.0,
-       depth_scale_2d=1.18,
-       n_padding_x_2d=8,
-       max_iterations=60,
-   )
+   >>> cfg = ModEmConfig(
+   ...     mode="2d",
+   ...     component_type="TE_Impedance",
+   ...     initial_rho=100.0,
+   ...     nx_2d=120,
+   ...     nz_2d=60,
+   ...     n_airlayers_2d=5,
+   ...     cell_size_h_2d=100.0,
+   ...     cell_size_v_top_2d=10.0,
+   ...     depth_scale_2d=1.18,
+   ...     n_padding_x_2d=8,
+   ...     max_iterations=60,
+   ... )
 
-   files = InputBuilder(config=cfg).build(
-       profile_stations,
-       workdir="runs/modem_2d/native",
-       data_filename="ModEMData.dat",
-       model_filename="m0.rho",
-       ctrl_filename="ModEM.inv",
-   )
+   >>> files = InputBuilder(config=cfg).build(
+   ...     sites,
+   ...     workdir="runs/modem_2d_v01/native",
+   ...     data_filename="ModEMData.dat",
+   ...     model_filename="m0.rho",
+   ...     ctrl_filename="ModEM.inv",
+   ... )
 
-   assert "covariance" not in files
+   >>> print(sorted(files))
+   ['control', 'data', 'model']
+   >>> assert "covariance" not in files
 
 Build From Existing Data
-------------------------
+---------------------------
 
 Use ``build_from_data`` when the observed data object has already been read,
 filtered, or edited. In this mode the builder creates the model, covariance
 when needed, and control file. The caller is responsible for writing the data
 file itself.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import InputBuilder, ModEmConfig, ModEmData
+   >>> from pycsamt.models.modem import InputBuilder, ModEmConfig, ModEmData
 
-   cfg = ModEmConfig(mode="3d")
-   data = ModEmData.read("survey/ModEMData.dat")
-   data.write("runs/modem_3d/native/ModEMData.dat")
+   >>> cfg = ModEmConfig(mode="3d")
+   >>> data = ModEmData.read(
+   ...     "data/modem/willy_27freq_watex_line02_sample/27-freq-run-watex01.dat"
+   ... )
+   >>> data.write("runs/modem_3d_v02/native/ModEMData.dat")
 
-   files = InputBuilder(config=cfg).build_from_data(
-       data,
-       workdir="runs/modem_3d/native",
-       model_filename="m0.ws",
-       cov_filename="ModEM.cov",
-       ctrl_filename="ModEM.inv",
-   )
+   >>> files = InputBuilder(config=cfg).build_from_data(
+   ...     data,
+   ...     workdir="runs/modem_3d_v02/native",
+   ...     model_filename="m0.ws",
+   ...     cov_filename="ModEM.cov",
+   ...     ctrl_filename="ModEM.inv",
+   ... )
+   >>> print(sorted(files))
+   ['control', 'covariance', 'model']
 
 Models
-------
+--------
 
 The model objects store cell widths and resistivity values. Internally,
 resistivity is stored in natural-log units because ModEM solves for log
@@ -447,58 +506,69 @@ resistivity. The ``rho_linear`` property returns resistivity in linear
 
 Create and inspect a 3-D starting model:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmData, ModEmModel3D, ModEmConfig
+   >>> from pycsamt.models.modem import ModEmData, ModEmModel3D, ModEmConfig
 
-   cfg = ModEmConfig(mode="3d", initial_rho=100.0)
-   data = ModEmData.read("runs/modem_3d/native/ModEMData.dat")
+   >>> cfg = ModEmConfig(mode="3d", initial_rho=100.0)
+   >>> data = ModEmData.read("runs/modem_3d_v01/native/ModEMData.dat")
 
-   model = ModEmModel3D.halfspace(data, config=cfg)
-   model.write("runs/modem_3d/native/m0.ws")
+   >>> model = ModEmModel3D.halfspace(data, config=cfg)
+   >>> model.write("runs/modem_3d_v01/native/m0.ws")
 
-   print(model.shape)
-   print(model.n_air)
-   print(model.rho_linear.min(), model.rho_linear.max())
+   >>> print(model.shape)
+   (35, 30, 40)
+   >>> print(model.n_air)
+   5
+   >>> print(model.rho_linear.min(), model.rho_linear.max())
+   100.00000000000004 999999999999.999
+
+The maximum is not a bug: air cells are assigned an enormous placeholder
+resistivity (:math:`\sim 10^{12}\,\Omega\cdot\mathrm{m}`) rather than
+:math:`\infty`, so ``rho_linear.max()`` on a fresh half-space always reports
+the air value, not anything about the earth model.
 
 Create and inspect a 2-D starting model:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmData, ModEmModel2D, ModEmConfig
+   >>> from pycsamt.models.modem import ModEmData, ModEmModel2D, ModEmConfig
 
-   cfg = ModEmConfig(mode="2d", initial_rho=100.0)
-   data = ModEmData.read("runs/modem_2d/native/ModEMData.dat")
+   >>> cfg = ModEmConfig(mode="2d", initial_rho=100.0)
+   >>> data = ModEmData.read("runs/modem_2d_v01/native/ModEMData.dat")
 
-   model = ModEmModel2D.halfspace(data, config=cfg)
-   model.write("runs/modem_2d/native/m0.rho")
+   >>> model = ModEmModel2D.halfspace(data, config=cfg)
+   >>> model.write("runs/modem_2d_v01/native/m0.rho")
 
-   print(model.nx, model.nz)
-   print(model.x_nodes[-1], model.z_nodes[-1])
+   >>> print(model.nx, model.nz)
+   42 55
+   >>> print(model.x_nodes[-1], model.z_nodes[-1])
+   50861.204999999994 455021.9075001069
 
 The half-space factories are intentionally conservative. They are useful for a
 first run, but a production inversion usually deserves a deliberate mesh
 review: station spacing, padding, first-layer thickness, air layers, expected
-skin depths, and target depth all matter.
+:term:`skin depth`\ s, and target depth all matter.
 
 Covariance
-----------
+------------
 
-The covariance file is central to 3-D ModEM interpretation. It controls the
-model regularization term through smoothing coefficients and integer masks.
-pyCSAMT creates a uniform active earth region by default, then lets advanced
-users edit masks and exceptions before writing the file.
+The :term:`covariance` file is central to 3-D ModEM interpretation. It
+controls the model :term:`regularization` term through smoothing
+coefficients and integer masks. pyCSAMT creates a uniform active earth region
+by default, then lets advanced users edit masks and exceptions before writing
+the file.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmCovariance
+   >>> from pycsamt.models.modem import ModEmCovariance
 
-   cov = ModEmCovariance.from_model(model, config=cfg)
-   cov.exceptions.append((1, 2, 0.0))  # turn off smoothing across two regions
-   cov.write("runs/modem_3d/native/ModEM.cov")
+   >>> cov = ModEmCovariance.from_model(model, config=cfg)
+   >>> cov.exceptions.append((1, 2, 0.0))  # turn off smoothing across two regions
+   >>> cov.write("runs/modem_3d_v01/native/ModEM.cov")
 
 Mask values follow the ModEM convention:
 
@@ -507,39 +577,42 @@ Mask values follow the ModEM convention:
 * ``1`` through ``8`` are user-defined earth regions.
 
 ``ModEmCovariance.from_model`` excludes air layers from the covariance grid.
-The number of covariance layers is therefore ``model.nz - model.n_air``.
+``model.shape`` is ``(nz, ny, nx)`` -- for the 3-D starting model built above
+that is ``(35, 30, 40)``, so ``model.nz`` is ``35``, not the ``nx=40`` most
+readers' eyes land on first. With ``model.n_air=5``, the covariance carries
+``model.nz - model.n_air = 30`` layers.
 
 Control Files
--------------
+----------------
 
 :class:`~pycsamt.models.modem.ModEmControl` stores the nonlinear inversion
 settings written to the ``.inv`` file.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmConfig, ModEmControl
+   >>> from pycsamt.models.modem import ModEmConfig, ModEmControl
 
-   cfg = ModEmConfig(
-       output_stem="ModEM_out",
-       initial_lambda=10.0,
-       lambda_divisor=100.0,
-       initial_alpha=10.0,
-       rms_diff_tol=5e-4,
-       target_rms=1.05,
-       lambda_exit=1e-4,
-       max_iterations=100,
-   )
+   >>> cfg = ModEmConfig(
+   ...     output_stem="ModEM_out",
+   ...     initial_lambda=10.0,
+   ...     lambda_divisor=100.0,
+   ...     initial_alpha=10.0,
+   ...     rms_diff_tol=5e-4,
+   ...     target_rms=1.05,
+   ...     lambda_exit=1e-4,
+   ...     max_iterations=100,
+   ... )
 
-   control = ModEmControl.from_config(cfg)
-   control.write("runs/modem_3d/native/ModEM.inv")
+   >>> control = ModEmControl.from_config(cfg)
+   >>> control.write("runs/modem_3d_v01/native/ModEM.inv")
 
 The control file does not replace data-quality assessment. A low target RMS is
 meaningful only when uncertainty floors, component selection, and bad-period
 masking are realistic.
 
 Run ModEM
----------
+-----------
 
 :class:`~pycsamt.models.modem.ModEmRunner` assembles the external command and
 can execute it with :func:`subprocess.run`. The executable is resolved from
@@ -548,54 +621,60 @@ subdirectories.
 
 Always inspect the command first:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmConfig, ModEmRunner
+   >>> from pycsamt.models.modem import ModEmConfig, ModEmRunner
 
-   cfg = ModEmConfig(
-       mode="3d",
-       binary_3d="Mod3DMT",
-       use_mpi=True,
-       n_procs=16,
-       mpi_command="mpirun",
-   )
+   >>> cfg = ModEmConfig(
+   ...     mode="3d",
+   ...     binary_3d="Mod3DMT",
+   ...     use_mpi=True,
+   ...     n_procs=16,
+   ...     mpi_command="mpirun",
+   ... )
 
-   runner = ModEmRunner("runs/modem_3d/native", config=cfg)
-   command = runner.command(
-       "m0.ws",
-       "ModEMData.dat",
-       "ModEM.inv",
-       covariance="ModEM.cov",
-   )
-   print(command)
+   >>> runner = ModEmRunner("runs/modem_3d_v01/native", config=cfg)
+   >>> command = runner.command(
+   ...     "m0.ws",
+   ...     "ModEMData.dat",
+   ...     "ModEM.inv",
+   ...     covariance="ModEM.cov",
+   ... )
+   >>> print(command)
+   mpirun -np 16 Mod3DMT -I NLCG m0.ws ModEMData.dat ModEM.inv ModEM.cov
 
 Run the inversion only after file paths, executable names, and MPI settings
 are correct:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   result = runner.run(
-       "m0.ws",
-       "ModEMData.dat",
-       "ModEM.inv",
-       covariance="ModEM.cov",
-       timeout=24 * 3600,
-       load_result=True,
-   )
+   >>> # result = runner.run(
+   >>> #     "m0.ws",
+   >>> #     "ModEMData.dat",
+   >>> #     "ModEM.inv",
+   >>> #     covariance="ModEM.cov",
+   >>> #     timeout=24 * 3600,
+   >>> #     load_result=True,
+   >>> # )
+
+There is no bundled, pre-compiled ``Mod3DMT`` binary -- like :doc:`occam2d`'s
+Fortran executable, ModEM must be compiled locally, so ``runner.run`` stays
+commented out here rather than showing a fabricated result. ``command()``
+above is exactly what would be launched, and inspecting it costs nothing.
 
 For a forward response check, call ``run_forward``:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   runner.run_forward(
-       "m0.ws",
-       "ModEMData.dat",
-       timeout=3600,
-       load_result=False,
-   )
+   >>> # runner.run_forward(
+   >>> #     "m0.ws",
+   >>> #     "ModEMData.dat",
+   >>> #     timeout=3600,
+   >>> #     load_result=False,
+   >>> # )
 
 .. warning::
 
@@ -605,28 +684,48 @@ For a forward response check, call ``run_forward``:
    aid, not as a scientific approval stamp.
 
 Load Results
-------------
+--------------
 
 :class:`~pycsamt.models.modem.InversionResult` scans a completed run directory
 and loads what it finds: logs, controls, covariance, data files, and iteration
 models.
 
-.. code-block:: python
+None of the sections above actually launched ModEM -- there is no compiled
+binary in a documentation-build environment. From here on, the examples load
+a genuinely finished run instead: the compact ``willy_27freq_watex_line02_sample``
+bundled with pyCSAMT, built specifically for documentation and gallery use
+from a real 3-D MT inversion (see its ``README.txt`` for provenance). It keeps
+only three representative iteration snapshots -- 0, 30, and 73 -- rather than
+every step the production run wrote.
+
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import InversionResult
+   >>> from pycsamt.models.modem import InversionResult
 
-   result = InversionResult("runs/modem_3d/native", config=cfg)
+   >>> result = InversionResult("data/modem/willy_27freq_watex_line02_sample")
 
-   print(result.mode)
-   print(result.n_iter)
-   print(result.final_rms)
-   print(result.best_rms)
-   print(result.iteration_numbers)
+   >>> print(result.mode, result.n_iter)
+   3d 74
+   >>> print(round(result.final_rms, 4), round(result.best_rms, 4))
+   3.0572 3.0572
+   >>> print(sorted(result.models))
+   ['iter_0000', 'iter_0030', 'iter_0073']
 
-   final_model = result.model_final
-   observed = result.data_obs
-   predicted = result.data_pred
+   >>> final_model = result.model_final
+   >>> observed = result.data_obs
+   >>> predicted = result.data_pred
+   >>> print(final_model.shape, observed.n_sites)
+   (41, 50, 288) 125
+
+``result.n_iter`` (74) counts iterations recorded in the log, not how many
+``.rho`` snapshots are physically present -- only 3 of those 74 models are
+bundled. ``final_rms`` equals ``best_rms`` here only because this particular
+run's RMS happened to keep falling, slowly, all the way to iteration 73; nothing
+in the loader guarantees that in general, which is exactly why both numbers
+exist separately. An RMS of 3.06 is well above the target of 1.0 -- this run
+did not converge, and every plot in the next two sections should be read with
+that in mind.
 
 The result loader recognizes common ModEM output naming patterns, including
 numbered ``Modular_NLCG`` products. The lowest numbered response can be used
@@ -634,83 +733,182 @@ as an observed-data fallback and the highest numbered response can be used as
 the predicted response when explicit filenames are not available.
 
 Log Diagnostics
----------------
+------------------
 
 Use :class:`~pycsamt.models.modem.ModEmLog` when the convergence history is
 the primary diagnostic.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import ModEmLog
+   >>> from pycsamt.models.modem import ModEmLog
 
-   log = ModEmLog.read("runs/modem_3d/native/Modular_NLCG.log")
+   >>> log = ModEmLog.read(
+   ...     "data/modem/willy_27freq_watex_line02_sample/Modular_NLCG.log"
+   ... )
 
-   print(log.n_iter)
-   print(log.final_rms)
-   print(log.best_iter)
-   print(log.rms)
-   print(log.lagrange)
+   >>> print(log.n_iter, round(log.final_rms, 4), log.best_iter)
+   74 3.0572 73
+   >>> print(round(log.rms[0], 4), round(log.rms[-1], 4))
+   3.5197 3.0572
+   >>> print(log.lagrange[:5])
+   [20. 20. 20. 20. 20.]
 
 Review more than the final RMS. Sudden RMS stalls, unstable lambda changes,
 or a best iteration far earlier than the final iteration can indicate
 overfitting, inconsistent errors, or a regularization setting that should be
-revisited.
+revisited. Here ``best_iter`` (73) *is* the final iteration, which is the
+unremarkable case; a best iteration well before the end is the pattern
+actually worth stopping for.
 
 Plotting
---------
+----------
 
 The ModEM plotters operate on
 :class:`~pycsamt.models.modem.InversionResult` objects and return Matplotlib
-figures.
+figures. All of the figures below come from the same
+``willy_27freq_watex_line02_sample`` result loaded above.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import (
-       InversionResult,
-       PlotMisfit,
-       PlotModel3D,
-       PlotPseudo,
-       PlotResponse,
-   )
+   >>> from pathlib import Path
 
-   result = InversionResult("runs/modem_3d/native")
+   >>> from pycsamt.models.modem import PlotMisfit, PlotModel3D, PlotPseudo, PlotResponse
 
-   fig = PlotMisfit(result=result).plot()
-   fig.savefig("runs/modem_3d/figures/rms.png", dpi=200)
+   >>> Path("runs/modem_3d_v01/figures").mkdir(parents=True, exist_ok=True)
 
-   fig = PlotModel3D(
-       result=result,
-       depths=[500, 1000, 2000, 4000],
-       rho_min=1.0,
-       rho_max=1000.0,
-   ).plot()
-   fig.savefig("runs/modem_3d/figures/model_slices.png", dpi=200)
+   >>> fig = PlotMisfit(result=result).plot()
+   >>> fig.savefig("runs/modem_3d_v01/figures/rms.png", dpi=200)
 
-   fig = PlotResponse(
-       result=result,
-       stations=["S001", "S002"],
-       max_stations=2,
-   ).plot()
-   fig.savefig("runs/modem_3d/figures/responses.png", dpi=200)
+   >>> fig = PlotModel3D(
+   ...     result=result,
+   ...     depths=[500, 1000, 2000, 4000],
+   ...     rho_min=1.0,
+   ...     rho_max=1000.0,
+   ... ).plot()
+   >>> fig.savefig("runs/modem_3d_v01/figures/model_slices.png", dpi=200)
 
-   fig = PlotPseudo(result=result, component="ZXY").plot()
-   fig.savefig("runs/modem_3d/figures/pseudo_zxy.png", dpi=200)
+   >>> stations = list(result.data_obs.site_names)[:2]
+   >>> fig = PlotResponse(result=result, stations=stations, max_stations=2).plot()
+   >>> fig.savefig("runs/modem_3d_v01/figures/responses.png", dpi=200)
 
-For 2-D results, use :class:`pycsamt.models.modem.PlotModel2D`:
+   >>> fig = PlotPseudo(result=result, component="ZXY").plot()
+   >>> fig.savefig("runs/modem_3d_v01/figures/pseudo_zxy.png", dpi=200)
 
-.. code-block:: python
+.. figure:: ../../images/user_guide/models/modem_misfit_convergence.png
+   :alt: ModEM RMS misfit by iteration, stalling around 3.06 well above the RMS=1 target line.
+   :align: center
+   :width: 80%
+
+   RMS drops from 3.52 to 3.06 over 74 iterations but never gets close to the
+   dashed target line at 1.0. Two long flat stretches (iterations 5-25 and
+   40-55) suggest the search was making very slow progress well before it
+   stopped -- worth checking against ``log.lagrange`` and the control file's
+   ``rms_diff_tol`` before trusting the final model.
+
+.. figure:: ../../images/user_guide/models/modem_model3d_slices.png
+   :alt: Four depth slices through the final ModEM 3-D model, all appearing nearly uniform.
+   :align: center
+   :width: 85%
+
+   Four depth slices through ``model_final``, all essentially uniform at
+   this color scale. That is not a plotting mistake -- it is what a model
+   looks like after an inversion that stalled at RMS 3.06: with the data
+   still fit this poorly, the regularization has not been pushed hard enough
+   by the data misfit to build much lateral contrast. A suspiciously
+   featureless model slice is a reason to check the convergence plot, not a
+   reason to conclude the subsurface is uniform.
+
+.. figure:: ../../images/user_guide/models/modem_response_stations.png
+   :alt: Observed versus predicted apparent resistivity and phase for two stations, showing the predicted curves diverging from observed at long period.
+   :align: center
+   :width: 90%
+
+   Station-level detail behind that RMS 3.06: for both stations, the
+   predicted curves (dotted) track the observed apparent resistivity
+   (solid, with error bars) at short period but drift away at long period,
+   and the phase panels barely follow the observed trend at all in three of
+   the four off-diagonal components. This is what "did not converge" looks
+   like at the response level, not just as a single summary number.
+
+.. figure:: ../../images/user_guide/models/modem_pseudo_zxy.png
+   :alt: ZXY apparent resistivity and phase pseudo-section across the survey.
+   :align: center
+   :width: 85%
+
+   ``component="ZXY"`` pseudo-section over all 125 stations. The banded
+   structure -- alternating resistive and conductive columns rather than a
+   smooth lateral trend -- reflects that this is an areal 3-D deployment
+   sampled along an arbitrary station ordering, not a single profile line;
+   compare with :doc:`occam2d`'s pseudosection, which is genuinely
+   profile-ordered by :term:`chainage`.
+
+For 2-D results, use :class:`pycsamt.models.modem.PlotModel2D` the same way:
+
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.modem import InversionResult, PlotModel2D
+   >>> from pycsamt.models.modem import InversionResult, PlotModel2D
 
-   result = InversionResult("runs/modem_2d/native")
-   fig = PlotModel2D(result=result, depth_max=5000.0).plot()
-   fig.savefig("runs/modem_2d/figures/model_section.png", dpi=200)
+   >>> result_2d = InversionResult("runs/modem_2d_v01/native")
+   >>> fig = PlotModel2D(result=result_2d, depth_max=5000.0).plot()
+   >>> fig.savefig("runs/modem_2d_v01/figures/model_section.png", dpi=200)
+
+No finished 2-D ModEM sample ships with pyCSAMT, so this one is shown without
+a captured figure -- ``runs/modem_2d_v01/native`` here is the half-space
+starting model built earlier, not a converged result.
+
+A Vertical Section Through The 3-D Model
+-------------------------------------------
+
+For 3-D results, a single vertical curtain along a profile line is often more
+useful for interpretation than isolated depth slices. ``PlotSection`` (import
+it from ``pycsamt.models.modem.plot``, not the package top level) extracts one:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.models.modem.plot import PlotSection
+
+   >>> plotter = PlotSection(
+   ...     result=result,
+   ...     direction="NS",
+   ...     profile_offset=0.0,
+   ...     which="final",
+   ...     depth_max=5000.0,
+   ...     rho_min=1.0,
+   ...     rho_max=3000.0,
+   ...     cmap="turbo_r",
+   ...     show_station_names=True,
+   ... )
+   >>> fig = plotter.plot()
+   >>> ax = fig.axes[0]
+
+   >>> ylo, _ = ax.get_ylim()  # (-5.696, 0.0): 0 is the surface, at the axes top
+   >>> ax.set_ylim(ylo, 1.4)   # reserve headroom so labels don't collide with the title
+   >>> fig.savefig("runs/modem_3d_v01/figures/section_ns.png", dpi=200)
+
+Station-name labels are drawn starting exactly at the surface line and
+growing upward, with no headroom reserved above it -- without the
+``set_ylim`` adjustment they overlap the title directly. This is the same
+class of matplotlib default seen in :doc:`occam2d`'s rotated station labels:
+nothing places text safely on its own, so the caller reserves the room.
+
+.. figure:: ../../images/user_guide/models/modem_section_ns.png
+   :alt: North-South vertical section through the final ModEM 3-D model, with a resistive body visible near the profile's northern end.
+   :align: center
+   :width: 90%
+
+   A resistive body (dark blue/purple, exceeding the 3000 ohm-m color
+   ceiling) sits under the stations between roughly +0.9 and +1.5 km,
+   confined to the top ~1.3 km -- the same profile-relative signature
+   ``PlotModel3D``'s depth slices above were too uniform-looking to convey.
+   With RMS still at 3.06, treat this as a candidate feature to re-run and
+   re-check, not a finished interpretation.
 
 Conversion And Utility Tools
-----------------------------
+-------------------------------
 
 The ModEM package also exposes utility functions for existing projects and
 format conversion.
@@ -737,52 +935,65 @@ format conversion.
      - ``skin_depth``, ``imp_units_factor``, ``loge_to_log10``,
        ``log10_to_loge``, ``loge_to_linear``, ``linear_to_loge``.
 
+``skin_depth`` implements the same :math:`\delta \approx 503\sqrt{\rho T}`
+relation used throughout pyCSAMT's :term:`skin depth` diagnostics, taking
+period rather than frequency:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.models.modem import skin_depth
+
+   >>> print(round(skin_depth(period=1.0, rho=100.0), 1))
+   5032.9
+
 These helpers are most useful when a project arrives with older ModEM,
 Mackie, or impedance-list files and pyCSAMT is being used as a bridge into a
 clean v2 run directory.
 
 Backend-Neutral Workflows
--------------------------
+----------------------------
 
 The native objects above are the most explicit way to work with ModEM. pyCSAMT
 also exposes ModEM through the backend-neutral inversion interface.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.inversion.config import InversionConfig
-   from pycsamt.inversion.backends.modem import ModEMBackend
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow
+   >>> from pycsamt.site import Sites
 
-   inv_cfg = InversionConfig(
-       method="mt",
-       dimension="3d",
-       backend="modem",
-       workdir="runs/modem_3d/native",
-       run_external=False,
-       backend_options={
-           "config": {
-               "component_type": "Full_Impedance",
-               "initial_rho": 100.0,
-               "binary_3d": "Mod3DMT",
-               "use_mpi": True,
-               "n_procs": 16,
-           },
-           "files": {
-               "data": "ModEMData.dat",
-               "model": "m0.ws",
-               "control": "ModEM.inv",
-               "covariance": "ModEM.cov",
-           },
-           "runner": {
-               "timeout": 24 * 3600,
-               "load_result": True,
-           },
-       },
-   )
+   >>> inv_cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="3d",
+   ...     backend="modem",
+   ...     data="data/AMT/WILLY_DATA/L18PLT",
+   ...     workdir="runs/modem_3d_backend_neutral/native",
+   ...     run_external=False,
+   ...     backend_options={
+   ...         "config": {
+   ...             "component_type": "Full_Impedance",
+   ...             "initial_rho": 100.0,
+   ...             "binary_3d": "Mod3DMT",
+   ...             "use_mpi": True,
+   ...             "n_procs": 16,
+   ...         },
+   ...     },
+   ... )
+   >>> workflow = InversionWorkflow(inv_cfg)
+   >>> sites = Sites.from_any(inv_cfg.data)
+   >>> outcome = workflow.run(data=sites)
+   >>> print(outcome.status, outcome.rms)
+   loaded nan
 
-   result = ModEMBackend(inv_cfg).run()
-   print(result.status)
-   print(result.metadata["command"])
+``status="loaded"`` here does not mean an inversion ran -- ``rms`` is
+``nan`` right next to it. The Occam2D backend only reports ``"loaded"``
+once it has reconstructed a real resistivity grid from an actual iteration
+file; the ModEM backend's loaded-check is coarser (`` "has anything
+InversionResult can parse" ``), and a just-built starting model already
+satisfies that after ``InputBuilder`` runs, whether or not ModEM ever
+executed. Check ``rms`` -- or, better, ``result.n_iter`` -- before treating
+``status="loaded"`` from this backend as evidence of a finished run.
 
 With ``run_external=False``, the backend prepares or validates the run folder
 and reports the command that would be executed. Set ``run_external=True`` only
@@ -790,7 +1001,7 @@ when the external ModEM executable is installed and the run directory has been
 reviewed.
 
 Recommended Run Layout
-----------------------
+-------------------------
 
 A stable ModEM project layout separates native inputs, figures, and notes:
 
@@ -798,22 +1009,23 @@ A stable ModEM project layout separates native inputs, figures, and notes:
    :linenos:
 
    runs/
-     modem_3d/
+     modem_3d_v01/
        README.md
        config/
-         modem_config.ini
+         modem_config.yml
        native/
          ModEMData.dat
          m0.ws
          ModEM.cov
          ModEM.inv
          Modular_NLCG.log
-         Modular_NLCG_001.rho
-         Modular_NLCG_001.dat
+         Modular_NLCG_030.rho
+         Modular_NLCG_030.dat
        figures/
          rms.png
          model_slices.png
          responses.png
+         section_ns.png
        exports/
          final_model.vtk
 
@@ -822,7 +1034,7 @@ outputs and response grids can be archived separately if repository size is a
 concern.
 
 Pre-Run Checklist
------------------
+--------------------
 
 Before starting a ModEM inversion, verify:
 
@@ -840,7 +1052,7 @@ Before starting a ModEM inversion, verify:
 * MPI process count matches the machine and executable build.
 
 Post-Run Checklist
-------------------
+----------------------
 
 After a run finishes, review:
 
@@ -854,7 +1066,7 @@ After a run finishes, review:
   version.
 
 Common Mistakes
----------------
+------------------
 
 ``The command is ready but the executable cannot be found.``
    Check ``binary_2d`` or ``binary_3d`` in :class:`ModEmConfig`. The runner
@@ -877,8 +1089,20 @@ Common Mistakes
    Confirm the output stem in the control file and inspect the run directory
    for numbered ``Modular_NLCG`` response files.
 
+``A config template written with a ".ini" suffix will not load back.``
+   ``write_template`` accepts the path anyway and writes Python-format
+   content into it; ``from_file`` then rejects the same file because it reads
+   the extension, not the content. Use ``.py``, ``.json``, ``.yml``, or
+   ``.yaml``.
+
+``The backend-neutral result says "loaded" but nothing was ever run.``
+   Check ``result.rms`` too. The ModEM backend reports ``"loaded"`` as soon
+   as ``InversionResult`` can parse anything in the workdir, which includes a
+   freshly built starting model -- it is not the stronger guarantee the
+   Occam2D backend gives for the same status string.
+
 Next Steps
-----------
+------------
 
 * :doc:`choosing_backend` explains when ModEM is preferable to other model
   backends.

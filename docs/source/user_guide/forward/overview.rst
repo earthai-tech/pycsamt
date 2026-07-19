@@ -4,7 +4,7 @@ Overview
 ========
 
 Forward And Model Integrations
----------------------------------
+--------------------------------
 
 The :mod:`pycsamt.forward` and :mod:`pycsamt.models` packages are related, but
 they should not be treated as the same layer.
@@ -17,7 +17,7 @@ they should not be treated as the same layer.
      - Main responsibility
      - Typical use
    * - :mod:`pycsamt.forward`
-     - Compute controlled synthetic responses inside Python using pyCSAMT
+     - Compute controlled :term:`forward response`\ s inside Python using pyCSAMT
        model containers, solvers, dataset generators, noise models, and
        plotting helpers.
      - Test survey design, generate training data, validate inversion
@@ -29,10 +29,12 @@ they should not be treated as the same layer.
      - Prepare native engine files, run external binaries, load engine
        outputs, and manage backend-specific inversion projects.
 
-Use :mod:`pycsamt.forward` when you need a controlled synthetic response from
-a known model. Use :mod:`pycsamt.models` when you need to prepare, run, or load
-a native external-engine project. The two layers meet when a forward synthetic
-experiment is converted into an inversion benchmark.
+Use :mod:`pycsamt.forward` when you need a controlled :term:`synthetic dataset`
+or response from a known model. Use :mod:`pycsamt.models` when you need to
+prepare, run, or load a native external-engine project. The two layers meet
+when a forward synthetic experiment is converted into an inversion benchmark:
+the known model gives the reference answer, and the inversion workflow tests
+whether that answer can be recovered from the predicted data.
 
 Package Map
 -------------
@@ -48,11 +50,12 @@ The public forward API is built around a small set of object families.
      - Role
    * - Configuration
      - ``ForwardConfig``, ``ForwardConfig2D``, ``ForwardConfig3D``
-     - Store reproducible frequency/time axes, model ranges, station layouts,
-       solver options, noise settings, and output choices.
+     - Store reproducible frequency/time axes, model ranges,
+       :term:`station layout`\ s, solver options, noise settings, and output
+       choices.
    * - Model containers
      - ``LayeredModel``, ``Grid2D``, ``Grid3D``
-     - Represent 1-D layered earths, 2-D profile grids, and quasi-3-D
+     - Represent 1-D :term:`layered earth`\ s, 2-D profile grids, and quasi-3-D
        resistivity volumes.
    * - Solvers
      - ``MT1DForward``, ``CSAMT1DForward``, ``TEM1DForward``, ``MT2DForward``,
@@ -60,8 +63,9 @@ The public forward API is built around a small set of object families.
      - Compute predicted electromagnetic responses from model containers.
    * - Response containers
      - ``ForwardResponse``, ``ForwardResponse2D``, ``ForwardResponse3D``
-     - Hold predicted apparent resistivity, phase, transient values,
-       impedance components, station geometry, and array conversion helpers.
+     - Hold predicted :term:`apparent resistivity`, :term:`phase`, transient
+       values, :term:`impedance tensor` components, :term:`survey geometry`,
+       and array conversion helpers.
    * - Noise models
      - ``GaussianNoise``, ``MultiplicativeNoise``, ``FieldRealisticNoise``
      - Convert ideal synthetic responses into more realistic observations.
@@ -78,26 +82,48 @@ The public forward API is built around a small set of object families.
 Core Workflow
 ---------------
 
-A typical forward modelling workflow has six stages.
+A typical :term:`forward modelling` workflow has six stages. The smallest
+version starts with a 1-D :term:`layered earth` because the geometry is easy to
+audit: resistivity is a function of depth only, :math:`\rho=\rho(z)`, and the
+MT solver predicts the impedance :math:`Z(f)` for each frequency. The reported
+curves are then derived in the usual way from impedance magnitude and phase,
+with apparent resistivity proportional to :math:`|Z|^2/f`. In other words, the
+model is compact, but the response still carries the frequency-dependent
+signature that an inversion or interpretation workflow would need.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, MT1DForward, plot_response_and_model_1d
+   >>> from pycsamt.forward import LayeredModel, MT1DForward, plot_response_and_model_1d
 
-   freqs = np.logspace(-2, 3, 40)
-   model = LayeredModel(
-       resistivity=[100.0, 15.0, 800.0],
-       thickness=[250.0, 700.0],
-   )
+   >>> freqs = np.logspace(-2, 3, 40)
+   >>> model = LayeredModel(
+   ...     resistivity=[100.0, 15.0, 800.0],
+   ...     thickness=[250.0, 700.0],
+   ... )
 
-   solver = MT1DForward(freqs)
-   response = solver.run(model)
+   >>> solver = MT1DForward(freqs)
+   >>> response = solver.run(model)
+   >>> print(f"response: {response.method}, {response.freqs.size} frequencies")
+   response: MT1D, 40 frequencies
+   >>> print(f"rho_a range: {response.rho_a.min():.2f}-{response.rho_a.max():.2f} Ohm.m")
+   rho_a range: 20.57-475.29 Ohm.m
+   >>> print(f"phase range: {response.phase.min():.2f}-{response.phase.max():.2f} deg")
+   phase range: 18.14-61.70 deg
 
-   fig = plot_response_and_model_1d(response, model)
-   fig.savefig("runs/forward/mt1d_response.png", dpi=200)
+   >>> fig = plot_response_and_model_1d(response, model)
+   >>> fig.savefig("runs/forward/mt1d_response.png", dpi=200)
+
+.. figure:: ../../images/user_guide/forward/overview_mt1d_response.png
+   :alt: MT1D layered-earth model with apparent resistivity and phase response.
+   :align: center
+   :width: 100%
+
+   A three-layer MT1D example generated from the code above. The conductive
+   middle layer lowers :math:`\rho_a` over part of the period range, while the
+   phase curve records the transition between layers.
 
 For production work, the same idea should be driven by a configuration file
 and archived with outputs:
@@ -106,7 +132,7 @@ and archived with outputs:
 #. create a ``ForwardConfig*`` template;
 #. build a model or grid from the configuration;
 #. run the selected solver;
-#. apply a documented noise model when simulating observations;
+#. apply a documented :term:`noise model` when simulating observations;
 #. plot and archive the model, response, configuration, and metadata.
 
 Choosing A Path
@@ -142,15 +168,16 @@ Different users enter the forward section with different goals.
      - :doc:`synthetic_datasets`, :doc:`forward_to_inversion`
 
 Relationship To Theory
--------------------------
+----------------------
 
-Forward modelling is practical, but it is not detached from theory. When a
-plot or synthetic response looks surprising, the relevant background pages are:
+:term:`Forward modelling` is practical, but it is not detached from theory.
+When a plot or synthetic response looks surprising, the relevant background
+pages are:
 
-* :doc:`../../theory/csamt_amt_mt_overview` for the distinction between CSAMT,
-  AMT, MT, and TDEM survey assumptions;
-* :doc:`../../theory/impedance_tensor` for impedance, apparent resistivity, phase,
-  and tensor notation;
+* :doc:`../../theory/csamt_amt_mt_overview` for the distinction between
+  :term:`CSAMT`, :term:`AMT`, :term:`MT`, and :term:`TEM` survey assumptions;
+* :doc:`../../theory/impedance_tensor` for impedance,
+  :term:`apparent resistivity`, :term:`phase`, and tensor notation;
 * :doc:`../../theory/static_shift` for shallow distortion effects that can make
   synthetic and field curves disagree;
 * :doc:`../../theory/inversion_concepts` for how forward responses are used inside

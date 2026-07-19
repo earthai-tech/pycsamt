@@ -599,8 +599,14 @@ def to_xarray(
             "Zdet",
         ]
         present = pd.Series(df["comp"].astype(str).unique()).tolist()
-        extras = [c for c in present if c not in canon]
-        cats = canon + extras
+        # Only categories actually present in the data: including
+        # unused canonical labels here would make the later
+        # set_index(...).to_xarray() densify a full cartesian grid
+        # over all 10 canonical components, not just the ones the
+        # file actually reports.
+        cats = [c for c in canon if c in present] + [
+            c for c in present if c not in canon
+        ]
         df["comp"] = pd.Categorical(
             df["comp"].astype(str),
             categories=cats,

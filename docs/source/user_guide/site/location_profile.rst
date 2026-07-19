@@ -6,20 +6,67 @@ Location And Profiles
 .. currentmodule:: pycsamt.site.location
 
 The site location tools handle station coordinates, topography assignment,
-coordinate projection, distance and bearing calculations, and survey-line
-chainage. The profile tools in :mod:`pycsamt.site.profile` build a 1-D line
-model from station locations so that a survey can be sorted, sliced, checked
-for gaps, and passed cleanly into processing or inversion preparation.
+coordinate projection, :term:`geodetic distance` and bearing calculations, and
+survey-line :term:`chainage`. The profile tools in
+:mod:`pycsamt.site.profile` build a 1-D :term:`profile line` model from station
+locations so that a survey can be sorted, sliced, checked for gaps, and passed
+cleanly into processing or inversion preparation.
 
 Use this page when you need to:
 
 * parse latitude, longitude, or elevation values from field tables;
 * normalize EDI ``HEAD`` coordinate fields;
 * apply corrected GPS or topography tables to EDI sites;
-* project lon/lat coordinates into another CRS;
-* compute station spacing, bearing, or chainage along a survey line;
+* project lon/lat coordinates into another :term:`coordinate reference system`;
+* compute station spacing, bearing, or :term:`chainage` along a survey line;
 * infer the dominant line orientation from station coordinates;
 * build a :class:`pycsamt.site.profile.Profile` for line-ordered workflows.
+
+The examples below use a small synthetic station class. It exposes the same
+``get_section("head")`` pattern that pyCSAMT uses for EDI headers, so the
+outputs can be reproduced without depending on local EDI files.
+
+.. code-block:: python
+   :linenos:
+
+   import copy
+   import numpy as np
+
+   class Head:
+       def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
+           self.dataid = name
+           self.station = name
+           self.lat = lat
+           self.lon = lon
+           self.long = lon
+           self.elev = elev
+
+   class DemoSite:
+       def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
+           self.name = name
+           self.Head = Head(name, lat, lon, elev)
+
+       def get_section(self, key):
+           if str(key).lower() == "head":
+               return self.Head
+           return None
+
+       def set_section(self, key, value):
+           if str(key).lower() == "head":
+               self.Head = value
+
+       def __copy__(self):
+           new = type(self).__new__(type(self))
+           new.__dict__ = copy.deepcopy(self.__dict__)
+           return new
+
+   def demo_sites():
+       return [
+           DemoSite("S01", 35.100, 12.700, 100.0),
+           DemoSite("S02", 35.105, 12.711, 105.0),
+           DemoSite("S03", 35.110, 12.722, 109.0),
+           DemoSite("S04", 35.125, 12.755, 120.0),
+       ]
 
 Location Tool Map
 -----------------
@@ -102,6 +149,14 @@ object is clearer than passing loose tuples.
    print(station.lon)
    print(station.elev)
 
+Output:
+
+.. code-block:: text
+
+   10.25
+   20.75
+   640.0
+
 ``Coord`` does not validate values at construction time. Validation happens in
 helpers such as :func:`ensure_head_coords`, :func:`distance`,
 :func:`bearing`, and :func:`chainage_along`.
@@ -127,6 +182,14 @@ values and common degree/minute/second style strings.
    print(lon1, lon2)
    print(elev)
 
+Output:
+
+.. code-block:: text
+
+   45.0 -45.5
+   -123.0 123.25833333333334
+   1200.0
+
 Parsing conventions:
 
 * north and east are positive;
@@ -148,10 +211,9 @@ object. It guarantees that the ``HEAD`` section carries numeric ``lat``,
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.edi import EDIFile
    from pycsamt.site.location import ensure_head_coords
 
-   edi = EDIFile("data/edi/S01.edi")
+   edi = DemoSite("S01")
 
    head = ensure_head_coords(
        edi,
@@ -162,13 +224,34 @@ object. It guarantees that the ``HEAD`` section carries numeric ``lat``,
 
    print(head.lat, head.lon, head.long, head.elev)
 
+Output:
+
+.. code-block:: text
+
+   35.125 12.75 12.75 1234.0
+
 If a coordinate is missing or invalid, the function uses ``empty`` as the
 fallback sentinel. By default ``empty`` is ``0.0``.
+
+For an invalid or absent coordinate, the sentinel is written explicitly:
 
 .. code-block:: python
    :linenos:
 
-   head = ensure_head_coords(edi, empty=-9999.0)
+   head = ensure_head_coords(
+       DemoSite("BAD"),
+       lat="bad",
+       lon=None,
+       elev=None,
+       empty=-9999.0,
+   )
+   print(head.lat, head.lon, head.elev)
+
+Output:
+
+.. code-block:: text
+
+   -9999.0 -9999.0 -9999.0
 
 Use this helper early when downstream code expects numeric coordinates.
 
@@ -183,21 +266,31 @@ Applying Topography Tables
 
    import pandas as pd
 
-   from pycsamt.seg.collection import EDICollection
    from pycsamt.site.location import apply_topography
 
-   collection = EDICollection.from_sources("data/edi")
+   collection = demo_sites()
 
    topo = pd.DataFrame(
        {
-           "station": ["S01", "S02", "S03"],
-           "latitude": [35.125, 35.200, 35.275],
-           "longitude": [12.750, 12.900, 13.050],
-           "elevation": [1234.0, 1180.0, 1215.0],
+           "station": ["S01", "S02", "S03", "S04"],
+           "latitude": [35.100, 35.105, 35.110, 35.125],
+           "longitude": [12.700, 12.711, 12.722, 12.755],
+           "elevation": [101.0, 106.0, 110.0, 122.0],
        }
    )
 
    updated = apply_topography(collection, topo, inplace=False)
+   for site in updated:
+       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+
+Output:
+
+.. code-block:: text
+
+   S01 35.1 12.7 101.0
+   S02 35.105 12.711 106.0
+   S03 35.11 12.722 110.0
+   S04 35.125 12.755 122.0
 
 Station identifiers are matched case-insensitively against common columns:
 ``station``, ``site``, ``dataid``, ``id``, and ``name``. Coordinate columns are
@@ -240,9 +333,18 @@ systems. When :mod:`pyproj` is available, pyCSAMT uses it with
    print(x)
    print(y)
 
+Output:
+
+.. code-block:: text
+
+   [272542.60324923 281777.00583762]
+   [3903632.81369047 3908954.71755057]
+
 Important convention: projected coordinate pairs are interpreted as ``(x, y)``.
 For geographic CRS values, that means ``(lon, lat)`` when using
-``EPSG:4326`` with this function.
+``EPSG:4326`` with this function. Keeping this order explicit is important
+for reproducibility because the same two numbers swapped as ``(lat, lon)``
+project to a different place.
 
 If neither pyproj nor GDAL is available, :func:`project` raises
 ``RuntimeError``.
@@ -278,10 +380,17 @@ Three modes are available:
    print(d)   # about 111 km at the equator
    print(az)  # about 90 degrees, east
 
+Output:
+
+.. code-block:: text
+
+   111194.92664455874
+   90.0
+
 :func:`bearing` uses the same mode names. It returns azimuth in degrees with
 0 degrees pointing north and 90 degrees pointing east.
 
-The geodetic distance is based on:
+The :term:`geodetic distance` is based on:
 
 .. math::
 
@@ -325,6 +434,12 @@ line convention used in pyCSAMT: 0 degrees is north and 90 degrees is east.
    s = chainage_along(origin, azimuth=90.0, pts=station)
    print(s)
 
+Output:
+
+.. code-block:: text
+
+   1000.0
+
 For local offsets :math:`dx` east and :math:`dy` north, chainage is:
 
 .. math::
@@ -348,6 +463,12 @@ points.
    chainages = chainage_along(origin, 90.0, points)
    print(chainages)
 
+Output:
+
+.. code-block:: text
+
+   [   0. 1000. 2000.]
+
 Inferring Line Orientation
 --------------------------
 
@@ -360,18 +481,37 @@ The principal component with the largest variance defines the line direction.
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.collection import EDICollection
    from pycsamt.site.profile import infer_line_orientation
 
-   collection = EDICollection.from_sources("data/edi")
-
+   collection = demo_sites()
    azimuth = infer_line_orientation(collection)
-   print(azimuth)
+   print(round(azimuth, 1))
+
+Output:
+
+.. code-block:: text
+
+   60.9
 
 The returned azimuth is in degrees, with 0 degrees north and 90 degrees east.
 Because a line axis has no intrinsic direction, the result should be
 interpreted modulo 180 degrees. For example, 45 degrees and 225 degrees
 describe the same line axis.
+
+Mathematically, pyCSAMT first converts station coordinates to local offsets
+:math:`x` east and :math:`y` north about the mean station position:
+
+.. math::
+
+   x_i = (\lambda_i-\bar{\lambda})\,M\cos\bar{\phi},
+   \qquad
+   y_i = (\phi_i-\bar{\phi})\,M,
+
+where :math:`M` is the metres-per-degree scale, :math:`\lambda` is longitude,
+and :math:`\phi` is latitude. PCA then finds the unit vector
+:math:`\mathbf{v}=(v_x,v_y)` with maximum projected variance. The profile
+azimuth is the north-clockwise angle of that vector,
+:math:`A=\operatorname{atan2}(v_x,v_y)`.
 
 Building Profiles
 -----------------
@@ -389,20 +529,72 @@ Build one from sites:
 .. code-block:: python
    :linenos:
 
-   from pycsamt.seg.collection import EDICollection
    from pycsamt.site.profile import Profile
 
-   collection = EDICollection.from_sources("data/edi")
-
+   collection = demo_sites()
    profile = Profile.from_sites(collection)
 
-   print(profile.azimuth)
-   print(profile.chainages)
-   print(profile.spacing_stats)
-   print(profile.gaps)
+   print(round(profile.azimuth, 1))
+   print({k: round(v, 1) for k, v in profile.chainages.items()})
+   print({k: round(v, 1) for k, v in profile.spacing_stats.items()})
+   print([(round(a, 1), round(b, 1)) for a, b in profile.gaps])
+
+Output:
+
+.. code-block:: text
+
+   60.9
+   {'S01': 0.0, 'S02': 1142.8, 'S03': 2285.6, 'S04': 5713.9}
+   {'spacing_mean': 1904.6, 'spacing_med': 1142.8, 'spacing_min': 1142.8, 'spacing_max': 3428.3}
+   [(2285.6, 5713.9)]
 
 If no ``origin`` is supplied, the first finite site coordinate is used. If no
 ``azimuth`` is supplied, :func:`infer_line_orientation` is used.
+
+.. code-block:: python
+   :linenos:
+
+   import matplotlib.pyplot as plt
+   import numpy as np
+
+   lons = np.array([site.Head.lon for site in collection])
+   lats = np.array([site.Head.lat for site in collection])
+   names = [site.name for site in collection]
+   chainage = np.array([profile.chainages[name] for name in names])
+   elev = np.array([site.Head.elev for site in collection])
+
+   fig, ax = plt.subplots(1, 2, figsize=(8, 3.4), constrained_layout=True)
+   ax[0].plot(lons, lats, marker="o")
+   for lon, lat, name in zip(lons, lats, names):
+       ax[0].annotate(name, (lon, lat), textcoords="offset points", xytext=(4, 4))
+   ax[0].set_xlabel("longitude")
+   ax[0].set_ylabel("latitude")
+   ax[0].set_title("Station map")
+   ax[0].margins(0.08)
+
+   ax[1].plot(chainage, elev, marker="s")
+   for s, z, name in zip(chainage, elev, names):
+       ax[1].annotate(name, (s, z), textcoords="offset points", xytext=(4, 4))
+   for left, right in profile.gaps:
+       ax[1].axvspan(left, right, alpha=0.15)
+   ax[1].set_xlabel("chainage (m)")
+   ax[1].set_ylabel("elevation (m)")
+   ax[1].set_title("Profile chainage")
+   ax[1].margins(0.08)
+
+   for axis in ax:
+       axis.grid(True, alpha=0.25)
+
+   fig.savefig("location_profile_chainage.png", dpi=160)
+
+.. figure:: ../../images/user_guide/site/location_profile_chainage.png
+   :alt: Two-panel location-profile plot showing station map positions and elevation versus chainage with a highlighted spacing gap.
+   :width: 90%
+   :align: center
+
+   The same four stations shown geographically and as a line profile. The
+   shaded interval marks the large chainage gap detected by the profile
+   summary rule.
 
 You can also force both:
 
@@ -417,6 +609,25 @@ You can also force both:
        azimuth=90.0,
    )
 
+For the synthetic line, forcing an east-directed profile from the first
+station gives simple east-west chainages:
+
+.. code-block:: python
+   :linenos:
+
+   profile = Profile.from_sites(
+       collection,
+       origin=Coord(35.1, 12.7, 0.0),
+       azimuth=90.0,
+   )
+   print({k: round(v, 1) for k, v in profile.chainages.items()})
+
+Output:
+
+.. code-block:: text
+
+   {'S01': 0.0, 'S02': 999.0, 'S03': 1997.9, 'S04': 4994.8}
+
 Sorting And Slicing Profiles
 ----------------------------
 
@@ -429,13 +640,25 @@ Sites without finite coordinates are dropped.
    ordered = profile.sort_sites(collection)
    print([site.name for site in ordered if hasattr(site, "name")])
 
+Output:
+
+.. code-block:: text
+
+   ['S01', 'S02', 'S03', 'S04']
+
 Use :meth:`Profile.slice` to select a chainage window:
 
 .. code-block:: python
    :linenos:
 
    window = profile.slice(500.0, 2500.0)
-   print(window)
+   print({k: round(v, 1) for k, v in window.items()})
+
+Output:
+
+.. code-block:: text
+
+   {'S02': 1142.8, 'S03': 2285.6}
 
 The returned mapping is ordered by chainage.
 
@@ -449,7 +672,13 @@ maximum station chainage.
    :linenos:
 
    grid = profile.resample(step=250.0)
-   print(grid)
+   print(np.round(grid, 1).tolist())
+
+Output:
+
+.. code-block:: text
+
+   [0.0, 250.0, 500.0, 750.0, 1000.0, 1250.0, 1500.0, 1750.0, 2000.0, 2250.0, 2500.0, 2750.0, 3000.0, 3250.0, 3500.0, 3750.0, 4000.0, 4250.0, 4500.0, 4750.0, 5000.0, 5250.0, 5500.0]
 
 :meth:`Profile.summary` returns spacing and gap information:
 
@@ -462,6 +691,15 @@ maximum station chainage.
    print(summary.get("spacing_mean"))
    print(summary.get("spacing_med"))
    print(summary["n_gaps"])
+
+Output:
+
+.. code-block:: text
+
+   4.0
+   1904.640080713573
+   1142.7840484281436
+   1.0
 
 Spacing statistics include:
 
@@ -501,6 +739,12 @@ intervals.
        for left, right in profile.gaps:
            print(f"Gap from {left:.1f} m to {right:.1f} m")
 
+Output:
+
+.. code-block:: text
+
+   Gap from 2285.6 m to 5713.9 m
+
 This is a simple QC rule, not a geological interpretation. Use it to find
 survey-line acquisition holes, missing stations, or irregular spacing before
 building inversions or pseudo-sections.
@@ -516,22 +760,35 @@ survey, and checks spacing.
 
    import pandas as pd
 
-   from pycsamt.seg.collection import EDICollection
    from pycsamt.site.location import apply_topography
    from pycsamt.site.profile import Profile
 
-   collection = EDICollection.from_sources("data/edi")
-
-   topo = pd.read_csv("data/station_coordinates.csv")
+   collection = demo_sites()
+   topo = pd.DataFrame(
+       {
+           "station": ["S01", "S02", "S03", "S04"],
+           "latitude": [35.100, 35.105, 35.110, 35.125],
+           "longitude": [12.700, 12.711, 12.722, 12.755],
+           "elevation": [101.0, 106.0, 110.0, 122.0],
+       }
+   )
    collection = apply_topography(collection, topo, inplace=False)
 
    profile = Profile.from_sites(collection)
    ordered = profile.sort_sites(collection)
    summary = profile.summary()
 
-   print(profile.azimuth)
-   print(summary)
+   print(round(profile.azimuth, 1))
+   print({k: round(v, 1) for k, v in summary.items()})
    print([site.name for site in ordered if hasattr(site, "name")])
+
+Output:
+
+.. code-block:: text
+
+   60.9
+   {'spacing_mean': 1904.6, 'spacing_med': 1142.8, 'spacing_min': 1142.8, 'spacing_max': 3428.3, 'n_sites': 4.0, 's_min': 0.0, 's_max': 5713.9, 'n_gaps': 1.0}
+   ['S01', 'S02', 'S03', 'S04']
 
 Common Mistakes
 ---------------

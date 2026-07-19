@@ -34,10 +34,10 @@ The recommended sequence is:
 #. collect the inversion result and independent constraints;
 #. normalize the result as a :class:`~pycsamt.interp.ResistivityModel`;
 #. validate coordinates, depth convention, shape, units, and coverage;
-#. preserve an unmodified calculated resistivity model (CRM);
+#. preserve an unmodified :term:`calculated resistivity model`;
 #. load borehole information where it exists;
 #. calibrate and classify the model, or classify from the rock database only;
-#. compare the CRM and calibrated new model (NM), including their misfit;
+#. compare the CRM and :term:`calibrated new model`, including their misfit;
 #. review station logs and spatial continuity against independent evidence;
 #. document uncertainty and competing interpretations;
 #. export review products together with parameters and provenance.
@@ -105,7 +105,7 @@ Occam2D results
 Use the dedicated adapter when the loaded Occam2D result contains its mesh and
 resistivity grid:
 
-.. code-block:: python
+.. code-block:: pycon
 
    from pycsamt.interp import ResistivityModel
 
@@ -121,7 +121,7 @@ Generic, AI, and converted results
 Use :meth:`~pycsamt.interp.ResistivityModel.from_array` when arrays have
 already been extracted from another backend:
 
-.. code-block:: python
+.. code-block:: pycon
 
    import numpy as np
    from pycsamt.interp import ResistivityModel
@@ -135,6 +135,34 @@ already been extracted from another backend:
        method="modem",
        rms=1.18,
    )
+
+The five-station documentation fixture used throughout this guide builds the
+same way, from a plain linear-resistivity array:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.interp import ResistivityModel
+
+   >>> x_m = np.array([0.0, 250.0, 500.0, 750.0, 1000.0])
+   >>> z_m = np.array([5.0, 15.0, 30.0, 55.0, 90.0])
+   >>> rho_ohm_m = np.array([
+   ...     [420, 380, 350, 410, 460],
+   ...     [120,  95,  70, 110, 150],
+   ...     [ 55,  42,  35,  48,  65],
+   ...     [240, 190, 160, 210, 280],
+   ...     [1800, 1500, 1200, 1650, 2100],
+   ... ], dtype=float)
+   >>> model = ResistivityModel.from_array(
+   ...     np.log10(rho_ohm_m),
+   ...     x_m,
+   ...     z_m,
+   ...     station_x=x_m,
+   ...     station_names=["S00", "S01", "S02", "S03", "S04"],
+   ...     method="demonstration",
+   ... )
+   >>> model.rho_2d.shape
+   (5, 5)
 
 If ``station_x`` is omitted it defaults to every horizontal cell center. If
 ``station_names`` is omitted, names such as ``S000`` are generated.
@@ -150,26 +178,28 @@ If ``station_x`` is omitted it defaults to every horizontal cell center. If
 
 Run explicit checks before geological classification:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   assert model.rho_2d.shape == (
-       len(model.z_centers), len(model.x_centers)
-   )
-   assert np.all(np.isfinite(model.x_centers))
-   assert np.all(np.isfinite(model.z_centers))
-   assert np.all(np.diff(model.x_centers) > 0)
-   assert np.all(np.diff(model.z_centers) > 0)
-   assert len(model.station_x) == len(model.station_names)
+   >>> assert model.rho_2d.shape == (
+   ...     len(model.z_centers), len(model.x_centers)
+   ... )
+   >>> assert np.all(np.isfinite(model.x_centers))
+   >>> assert np.all(np.isfinite(model.z_centers))
+   >>> assert np.all(np.diff(model.x_centers) > 0)
+   >>> assert np.all(np.diff(model.z_centers) > 0)
+   >>> assert len(model.station_x) == len(model.station_names)
 
-   finite = np.isfinite(model.rho_2d)
-   if not finite.any():
-       raise ValueError("The interpretation grid contains no finite values.")
+   >>> finite = np.isfinite(model.rho_2d)
+   >>> if not finite.any():
+   ...     raise ValueError("The interpretation grid contains no finite values.")
 
-   rho_linear = 10.0 ** model.rho_2d[finite]
-   print("Resistivity range:", rho_linear.min(), rho_linear.max(), "ohm m")
-   print("Profile length:", model.profile_length, "m")
+   >>> rho_linear = 10.0 ** model.rho_2d[finite]
+   >>> print("Resistivity range:", rho_linear.min(), rho_linear.max(), "ohm m")
+   Resistivity range: 35.0 2099.999999999999 ohm m
+   >>> print("Profile length:", model.profile_length, "m")
+   Profile length: 1000.0 m
 
 Also verify these questions manually:
 
@@ -183,13 +213,18 @@ Also verify these questions manually:
 
 Inspect individual columns when a section-wide pattern looks suspicious:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   rho_s17_log10 = model.station_column("S17")
-   rho_at_1050_m = model.column_nearest(1050.0)
+   >>> rho_s17_log10 = model.station_column("S17")
+   >>> rho_at_1050_m = model.column_nearest(1050.0)
 
 These methods return copies, so exploratory edits do not alter the source
-model.
+model. On the fixture, the middle station's column is:
+
+.. code-block:: pycon
+
+   >>> np.round(model.station_column("S02"), 3)
+   array([2.544, 1.845, 1.544, 2.204, 3.079])
 
 5. Preserve the calculated resistivity model
 ---------------------------------------------
@@ -237,7 +272,7 @@ The default CSV columns are ``top``, ``bottom``, ``lithology``, and optional
 Load the file and give the borehole a position in the same profile coordinate
 system as the model:
 
-.. code-block:: python
+.. code-block:: pycon
 
    from pycsamt.interp import Borehole
 
@@ -247,6 +282,17 @@ system as the model:
        x=1050.0,
        collar_elevation=238.4,
    )
+
+Loading the ``BH01.csv`` fixture shown above at ``x=500.0`` (the middle
+station, matching the profile position used throughout this guide) gives:
+
+.. code-block:: pycon
+
+   >>> bh = Borehole.from_csv(
+   ...     "constraints/BH01.csv", name="BH01", x=500.0
+   ... )
+   >>> bh
+   Borehole('BH01', x=500.0 m, 4 intervals, depth=120.0 m)
 
 Custom column names can be supplied with ``top_col``, ``bottom_col``,
 ``lithology_col``, and ``resistivity_col``. LAS 2.0 input is available through
@@ -265,7 +311,7 @@ Where a nearby borehole has TRES values, cells within the fractional tolerance
 ``ptol`` can be softly matched to those values. Remaining cells are assigned
 using the nearest entry in the rock database in log-resistivity space.
 
-.. code-block:: python
+.. code-block:: pycon
 
    from pycsamt.interp import ModelCalibrator
 
@@ -281,6 +327,16 @@ using the nearest entry in the rock database in log-resistivity space.
        model="nm",
        merge_tolerance=0.20,
    )
+
+Fitting the fixture model against ``BH01`` (``max_borehole_distance=400.0``)
+prints a verbose summary and reports the mean misfit:
+
+.. code-block:: pycon
+
+   >>> calibrator = ModelCalibrator(
+   ...     ptol=0.10, max_borehole_distance=400.0, verbose=True,
+   ... ).fit(model, [bh])
+     ModelCalibrator: fitted 5 columns, 1 borehole(s), mean misfit G = 8.51 %
 
 The main parameters require geological judgment:
 
@@ -300,7 +356,7 @@ The main parameters require geological judgment:
 
 Calibration without boreholes is permitted:
 
-.. code-block:: python
+.. code-block:: pycon
 
    calibrator = ModelCalibrator(verbose=False).fit(model)
    logs = calibrator.stratigraphic_logs()
@@ -317,26 +373,44 @@ change between the calculated and calibrated models. Low change can indicate
 agreement; high change identifies areas where interpretation depends strongly
 on calibration or database assignment.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   misfit = calibrator.misfit_map()
-   print("Mean calibration change (%):", np.nanmean(misfit))
-   print("Maximum calibration change (%):", np.nanmax(misfit))
+   >>> misfit = calibrator.misfit_map()
+   >>> print("Mean calibration change (%):", np.nanmean(misfit))
+   Mean calibration change (%): 8.511650542895473
+   >>> print("Maximum calibration change (%):", np.nanmax(misfit))
+   Maximum calibration change (%): 12.409715335169182
+
+Per-column, the fixture's five stations were corrected by very different
+amounts, because the borehole constrains the columns nearest ``x=500`` most
+strongly:
+
+.. code-block:: pycon
+
+   >>> np.round(misfit[0, :], 3)
+   array([ 3.572, 11.045, 12.41 , 12.186,  3.347])
 
 Plot the original model, calibrated model, and misfit together:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import plot as iplot
+   >>> from pycsamt.interp import plot as iplot
 
-   fig = iplot.PlotCalibratedModel(
-       model,
-       calibrator.calibrated_model(),
-       calibrator.misfit_map(),
-   ).plot()
-   fig.savefig("review/crm_nm_misfit.png", dpi=200, bbox_inches="tight")
+   >>> fig = iplot.PlotCalibratedModel(
+   ...     model,
+   ...     calibrator.calibrated_model(),
+   ...     calibrator.misfit_map(),
+   ... ).plot()
+   >>> fig.savefig("review/crm_nm_misfit.png", dpi=200, bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/workflow_crm_nm_misfit.png
+   :alt: CRM, calibrated NM, and misfit panels for the five-station fixture.
+   :width: 100%
+
+   CRM (top), calibrated NM (middle), and misfit G (%) (bottom) for the
+   documentation fixture, produced by :class:`~pycsamt.interp.plot.PlotCalibratedModel`.
 
 Investigate broad high-misfit regions, abrupt changes at the borehole influence
 limit, classifications that contradict field geology, and thin alternating
@@ -351,16 +425,35 @@ assumptions and evidence.
 :class:`pycsamt.interp.StratigraphicLog` per station. Compare both calibrated
 and original classifications when assessing the influence of calibration:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   logs_nm = calibrator.stratigraphic_logs(model="nm")
-   logs_crm = calibrator.stratigraphic_logs(model="crm")
+   >>> logs_nm = calibrator.stratigraphic_logs(model="nm")
+   >>> logs_crm = calibrator.stratigraphic_logs(model="crm")
 
-   target = logs_nm[0]
-   print(target.to_dict())
+   >>> target = logs_nm[2]
+   >>> target.to_dict()
+   {'station_name': 'S02', 'station_x': 500.0, 'layers': [
+    {'top': 0.0, 'bottom': 10.0, 'rho_log10': 2.6989700043360187, 'lithology': 'Sandstone'},
+    {'top': 7.5, 'bottom': 42.5, 'rho_log10': 1.5, 'lithology': 'Aquifer'},
+    {'top': 37.5, 'bottom': 72.5, 'rho_log10': 2.5, 'lithology': 'Granite (weathered)'},
+    {'top': 72.5, 'bottom': 107.5, 'rho_log10': 3.5, 'lithology': 'Dolomite'}]}
 
-   fig = iplot.PlotStratigraphicLog(target).plot()
-   fig.savefig("review/first_station_log.png", dpi=200, bbox_inches="tight")
+   >>> fig = iplot.PlotStratigraphicLog(target).plot()
+   >>> fig.savefig("review/first_station_log.png", dpi=200, bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/workflow_station_log.png
+   :alt: Pseudo-stratigraphic log and resistivity curve for station S02.
+   :width: 70%
+
+   Two-panel log for station ``S02`` from
+   :class:`~pycsamt.interp.plot.PlotStratigraphicLog`: lithology blocks on
+   the left, the log10-resistivity depth curve on the right.
+
+Layer boundaries come from midpoints between adjacent depth cells, so on an
+irregular vertical mesh (this fixture uses 10, 15, 25, and 35 m spacing)
+consecutive un-merged layers can report overlapping ``top``/``bottom`` values,
+as in the ``Sandstone``/``Aquifer`` pair above. Treat layer boundaries as
+approximate cell-edge estimates rather than exact geological contacts.
 
 Review logs as a connected profile, not as isolated columns. Ask whether layer
 boundaries have geologically credible continuity, whether apparent offsets
@@ -415,20 +508,22 @@ continuity. Color choice or visual sharpness is not a confidence measure.
 
 The interpretation export module writes station logs to common formats:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   from pycsamt.interp import export
+   >>> from pathlib import Path
+   >>> from pycsamt.interp import export
 
-   out = Path("deliverables")
-   export.to_csv(logs_nm, out / "station_logs.csv")
-   export.to_oasis_montaj_xyz(logs_nm, out / "profile.xyz")
-   export.to_las(logs_nm[0], out / "S000.las")
-   export.to_vtk(calibrated_model, out / "calibrated_model.vtk")
+   >>> out = Path("deliverables")
+   >>> export.to_csv(logs_nm, out / "station_logs.csv")
+   >>> export.to_oasis_montaj_xyz(logs_nm, out / "profile.xyz")
+   >>> export.to_las(logs_nm[0], out / "S000.las")
+   >>> export.to_vtk(calibrated_model, out / "calibrated_model.vtk")
 
 CSV is useful for auditing and downstream analysis. Oasis Montaj XYZ supports
 profile exchange. LAS writes a single station log. VTK carries the calibrated
-resistivity grid into compatible scientific viewers.
+resistivity grid into compatible scientific viewers. See :doc:`reporting` for
+the field-by-field format documentation and captured file contents for each
+of these exporters.
 
 Exports are not a substitute for provenance. Accompany them with the input
 model identifier, coordinate reference, software version, rock database,
@@ -438,68 +533,82 @@ the date and author of the interpretation.
 Complete minimal example
 ------------------------
 
-The following example demonstrates the complete mechanics using a small
-synthetic log-resistivity grid. Replace the arrays and borehole path with
-reviewed project data.
+The following example demonstrates the complete mechanics using the small
+synthetic log-resistivity grid and ``BH01`` borehole used throughout this
+guide. It was run against a real ``pycsamt.interp`` install to produce the
+values shown; replace the arrays and borehole path with reviewed project
+data.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import numpy as np
 
-   from pycsamt.interp import (
-       Borehole,
-       ModelCalibrator,
-       ResistivityModel,
-       export,
-       plot as iplot,
-   )
+   >>> from pycsamt.interp import (
+   ...     Borehole,
+   ...     ModelCalibrator,
+   ...     ResistivityModel,
+   ...     export,
+   ...     plot as iplot,
+   ... )
 
-   # Grid convention: rows are depths, columns are profile positions.
-   x_m = np.array([0.0, 250.0, 500.0, 750.0, 1000.0])
-   z_m = np.array([5.0, 15.0, 30.0, 55.0, 90.0])
-   rho_ohm_m = np.array([
-       [420, 380, 350, 410, 460],
-       [120,  95,  70, 110, 150],
-       [ 55,  42,  35,  48,  65],
-       [240, 190, 160, 210, 280],
-       [1800, 1500, 1200, 1650, 2100],
-   ], dtype=float)
+   >>> # Grid convention: rows are depths, columns are profile positions.
+   >>> x_m = np.array([0.0, 250.0, 500.0, 750.0, 1000.0])
+   >>> z_m = np.array([5.0, 15.0, 30.0, 55.0, 90.0])
+   >>> rho_ohm_m = np.array([
+   ...     [420, 380, 350, 410, 460],
+   ...     [120,  95,  70, 110, 150],
+   ...     [ 55,  42,  35,  48,  65],
+   ...     [240, 190, 160, 210, 280],
+   ...     [1800, 1500, 1200, 1650, 2100],
+   ... ], dtype=float)
 
-   model = ResistivityModel.from_array(
-       np.log10(rho_ohm_m),
-       x_m,
-       z_m,
-       station_x=x_m,
-       station_names=["S00", "S01", "S02", "S03", "S04"],
-       method="demonstration",
-   )
+   >>> model = ResistivityModel.from_array(
+   ...     np.log10(rho_ohm_m),
+   ...     x_m,
+   ...     z_m,
+   ...     station_x=x_m,
+   ...     station_names=["S00", "S01", "S02", "S03", "S04"],
+   ...     method="demonstration",
+   ... )
 
-   bh = Borehole.from_csv(
-       "constraints/BH01.csv",
-       name="BH01",
-       x=500.0,
-   )
+   >>> bh = Borehole.from_csv(
+   ...     "constraints/BH01.csv",
+   ...     name="BH01",
+   ...     x=500.0,
+   ... )
 
-   calibrator = ModelCalibrator(
-       ptol=0.10,
-       max_borehole_distance=400.0,
-       verbose=True,
-   ).fit(model, [bh])
+   >>> calibrator = ModelCalibrator(
+   ...     ptol=0.10,
+   ...     max_borehole_distance=400.0,
+   ...     verbose=True,
+   ... ).fit(model, [bh])
+     ModelCalibrator: fitted 5 columns, 1 borehole(s), mean misfit G = 8.51 %
 
-   nm = calibrator.calibrated_model()
-   logs = calibrator.stratigraphic_logs(merge_tolerance=0.20)
+   >>> nm = calibrator.calibrated_model()
+   >>> logs = calibrator.stratigraphic_logs(merge_tolerance=0.20)
 
-   out = Path("deliverables")
-   export.to_csv(logs, out / "station_logs.csv")
-   export.to_oasis_montaj_xyz(logs, out / "profile.xyz")
-   export.to_vtk(nm, out / "calibrated_model.vtk")
+   >>> out = Path("deliverables")
+   >>> p_csv = export.to_csv(logs, out / "station_logs.csv")
+   >>> p_xyz = export.to_oasis_montaj_xyz(logs, out / "profile.xyz")
+   >>> p_vtk = export.to_vtk(nm, out / "calibrated_model.vtk")
+   >>> print(p_csv.as_posix())
+   deliverables/station_logs.csv
+   >>> print(p_xyz.as_posix())
+   deliverables/profile.xyz
+   >>> print(p_vtk.as_posix())
+   deliverables/calibrated_model.vtk
 
-   fig = iplot.PlotCalibratedModel(
-       model, nm, calibrator.misfit_map()
-   ).plot()
-   fig.savefig(out / "calibration_review.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotCalibratedModel(
+   ...     model, nm, calibrator.misfit_map()
+   ... ).plot()
+   >>> fig.savefig(out / "calibration_review.png", dpi=200,
+   ...             bbox_inches="tight")
+
+Each exporter returns the :class:`pathlib.Path` it wrote. Print
+``.as_posix()`` rather than the path itself when logging it for a manifest --
+plain ``str()``/``print()`` renders native separators, so the same call
+prints with backslashes on Windows and forward slashes on Linux or macOS.
 
 Interpretation review checklist
 -------------------------------

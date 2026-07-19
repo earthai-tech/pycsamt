@@ -117,24 +117,33 @@ Quantitative Monte Carlo propagation starts with a reviewed
 :class:`~pycsamt.interp.ResistivityModel` and a central
 :class:`~pycsamt.interp.PetrophysicalConfig`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import EMHydroModel, PetrophysicalConfig
-   from pycsamt.interp.petrophysics import ArchieModel
+   >>> from pycsamt.interp import EMHydroModel, PetrophysicalConfig
+   >>> from pycsamt.interp.petrophysics import ArchieModel
 
-   central_config = PetrophysicalConfig(
-       petro=ArchieModel(m=1.8, n=2.0),
-       rho_w=20.0,
-       porosity_prior=0.25,
-       Sw_water_table_threshold=0.85,
-       d50_m=2.5e-4,
-   )
+   >>> central_config = PetrophysicalConfig(
+   ...     petro=ArchieModel(m=1.8, n=2.0),
+   ...     rho_w=20.0,
+   ...     porosity_prior=0.25,
+   ...     Sw_water_table_threshold=0.85,
+   ...     d50_m=2.5e-4,
+   ... )
 
-   central = EMHydroModel(
-       resistivity_model,
-       central_config,
-       method_tag="AMT",
-   ).fit()
+   >>> central = EMHydroModel(
+   ...     resistivity_model,
+   ...     central_config,
+   ...     method_tag="AMT",
+   ... ).fit()
+
+This and every other result in this guide is run against the five-station
+``resistivity_model`` fixture from :doc:`workflow`, whose central water table
+sits at 15 m for every column:
+
+.. code-block:: pycon
+
+   >>> central.water_table
+   array([15., 15., 15., 15., 15.])
 
 Review the deterministic result before propagation. Check finite values,
 spatial patterns, water-table detection, and physical units. Monte Carlo
@@ -155,20 +164,22 @@ many samples of an unsuitable equation does not make it suitable.
 :class:`pycsamt.interp.UncertaintyBounds` activates only the ranges that are
 provided. Other values remain fixed at the central configuration.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import UncertaintyBounds
+   >>> from pycsamt.interp import UncertaintyBounds
 
-   bounds = UncertaintyBounds(
-       rho_w_range=(5.0, 80.0),
-       m_range=(1.5, 2.2),
-       n_range=(1.8, 2.4),
-       phi_prior_range=(0.15, 0.40),
-       dist="uniform",
-   )
+   >>> bounds = UncertaintyBounds(
+   ...     rho_w_range=(5.0, 80.0),
+   ...     m_range=(1.5, 2.2),
+   ...     n_range=(1.8, 2.4),
+   ...     phi_prior_range=(0.15, 0.40),
+   ...     dist="uniform",
+   ... )
 
-   print(bounds.n_free)
-   print(bounds.free_names)
+   >>> print(bounds.n_free)
+   4
+   >>> print(bounds.free_names)
+   ['rho_w', 'm', 'n', 'phi_prior']
 
 Supported uncertain parameters are:
 
@@ -201,7 +212,7 @@ more probable center.
 With ``dist="normal"``, each tuple is interpreted as ``(mean, standard
 deviation)``:
 
-.. code-block:: python
+.. code-block:: pycon
 
    bounds_normal = UncertaintyBounds(
        rho_w_range=(20.0, 4.0),
@@ -233,20 +244,27 @@ That converts uncertainty analysis into outcome selection.
 the full deterministic hydrogeophysical transform for every draw, and
 aggregates ensemble statistics:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import MonteCarloHydro
+   >>> from pycsamt.interp import MonteCarloHydro
 
-   mc = MonteCarloHydro(
-       resistivity_model,
-       central_config,
-       bounds,
-       n_samples=300,
-       seed=42,
-       method_tag="AMT",
-       verbose=True,
-   )
-   uncertainty = mc.run()
+   >>> mc = MonteCarloHydro(
+   ...     resistivity_model,
+   ...     central_config,
+   ...     bounds,
+   ...     n_samples=300,
+   ...     seed=42,
+   ...     method_tag="AMT",
+   ...     verbose=True,
+   ... )
+   >>> uncertainty = mc.run()
+     MC sample 0/300 ...
+     MC sample 50/300 ...
+     MC sample 100/300 ...
+     MC sample 150/300 ...
+     MC sample 200/300 ...
+     MC sample 250/300 ...
+     MC complete: 300 samples  n_free=4  free=['rho_w', 'm', 'n', 'phi_prior']
 
 The random seed makes the sampling repeatable. Keep it in the project
 configuration and report it with the sample count and bounds.
@@ -294,8 +312,10 @@ have shape ``(n_z, n_x)``.
 Water table
 ~~~~~~~~~~~
 
-``mean_wt``, ``std_wt``, ``p10_wt``, ``p50_wt``, and ``p90_wt`` are
-one-dimensional arrays over profile columns. Depth is positive downward.
+``mean_wt``, ``std_wt``, ``p10_wt``, ``p50_wt``, and ``p90_wt`` describe the
+ensemble distribution of the :term:`water table (hydrogeophysical)` per
+column. They are one-dimensional arrays over profile columns. Depth is
+positive downward.
 
 ``wt_detection_rate`` is the fraction of realizations in which a water table
 was detected. Treat it as a first-order reliability diagnostic. A narrow
@@ -305,8 +325,9 @@ samples produced no detectable transition.
 Transmissivity
 ~~~~~~~~~~~~~~
 
-``mean_T``, ``std_T``, ``p10_T``, ``p50_T``, and ``p90_T`` are station
-profiles in square metres per second. Because transmissivity may span orders
+``mean_T``, ``std_T``, ``p10_T``, ``p50_T``, and ``p90_T`` describe the
+ensemble distribution of :term:`transmissivity` as station profiles in
+square metres per second. Because transmissivity may span orders
 of magnitude, compare it in log space when appropriate.
 
 Sampled parameters
@@ -315,12 +336,20 @@ Sampled parameters
 ``sampled_params`` has shape ``(n_samples, n_free)``. Its columns follow
 ``bounds.free_names``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   for column, name in enumerate(uncertainty.bounds.free_names):
-       values = uncertainty.sampled_params[:, column]
-       values = values[np.isfinite(values)]
-       print(name, values.min(), np.median(values), values.max())
+   >>> for column, name in enumerate(uncertainty.bounds.free_names):
+   ...     values = uncertainty.sampled_params[:, column]
+   ...     values = values[np.isfinite(values)]
+   ...     print(name, values.min(), np.median(values), values.max())
+   rho_w 5.5522 40.9253 79.4282
+   m 1.5038 1.8594 2.1994
+   n 1.8007 2.1013 2.3992
+   phi_prior 0.1501 0.2727 0.3999
+
+All 300 samples succeeded here (none of the four ranges pushed the model into
+a numerically degenerate configuration), so every column's min/max sits near
+its requested uniform bound and the median is close to the midpoint.
 
 Rows containing ``nan`` can indicate a failed realization. Count them and
 investigate before accepting ensemble statistics.
@@ -330,23 +359,35 @@ investigate before accepting ensemble statistics.
 
 Inspect station summaries:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   rows = uncertainty.station_report()
-   for row in rows[:3]:
-       print(row)
+   >>> rows = uncertainty.station_report()
+   >>> for row in rows[:3]:
+   ...     print(row)
+   {'station': 'S00', 'x_m': 0.0, 'mean_wt_m': 8.2, 'std_wt_m': 5.635601121442134, 'p10_wt_m': 5.0, 'p90_wt_m': 15.0, 'wt_range_m': 10.0, 'wt_detection_pct': 100.0, 'mean_T_m2s': 29.922880957502095, 'std_T_m2s': 91.4235735314147, 'p10_T_m2s': 0.010832097161760954, 'p90_T_m2s': 26.99080900184981, 'log10_T_range': 3.3965033550681705}
+   {'station': 'S01', 'x_m': 250.0, 'mean_wt_m': 7.683333333333334, 'std_wt_m': 4.835602915413508, 'p10_wt_m': 5.0, 'p90_wt_m': 15.0, 'wt_range_m': 10.0, 'wt_detection_pct': 100.0, 'mean_T_m2s': 46.706797644506835, 'std_T_m2s': 113.06793501638288, 'p10_T_m2s': 0.01950623840318546, 'p90_T_m2s': 330.6261198617054, 'log10_T_range': 4.229163632564438}
+   {'station': 'S02', 'x_m': 500.0, 'mean_wt_m': 7.366666666666666, 'std_wt_m': 4.250359461922668, 'p10_wt_m': 5.0, 'p90_wt_m': 15.0, 'wt_range_m': 10.0, 'wt_detection_pct': 100.0, 'mean_T_m2s': 66.87986518980702, 'std_T_m2s': 142.21726455562947, 'p10_T_m2s': 0.02663907248039477, 'p90_T_m2s': 331.03916257569597, 'log10_T_range': 4.094360275205425}
 
-   uncertainty.to_csv("review/uncertainty_by_station.csv")
+   >>> uncertainty.to_csv("review/uncertainty_by_station.csv")
 
 The report includes water-table mean, standard deviation, P10, P90, detection
-percentage, and transmissivity statistics.
+percentage, and transmissivity statistics. Note ``mean_T_m2s`` (30-67 m²/s)
+sitting far above ``p90_T_m2s`` (27-331 m²/s) at some stations, with
+``std_T_m2s`` several times the mean: the ensemble mean is dominated by a
+small number of extreme draws (low ``m``, high ``phi_prior``, low ``rho_w``
+together push a few realizations' K toward the model's numerical ceiling).
+Reporting only the mean here would be actively misleading; P10/P50/P90 in log
+space are the honest summary, which is exactly the point of the *decision
+quantities* framing in the introduction.
 
 For a depth threshold, estimate the probability that the water table is
 shallower than the threshold:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   probability = uncertainty.prob_wt_shallower_than(20.0)
+   >>> probability = uncertainty.prob_wt_shallower_than(20.0)
+   >>> np.round(probability, 4)
+   array([0.9819, 0.9946, 0.9985, 0.9913, 0.9551])
 
 Without the raw ensemble, this method uses a Gaussian approximation based on
 the stored mean and standard deviation. Use the raw ensemble when the
@@ -358,16 +399,25 @@ distribution is skewed, multimodal, truncated, or has many non-detections.
 Use :meth:`pycsamt.interp.MonteCarloHydro.run_ensemble` to retain water-table
 and transmissivity draws:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   uncertainty, wt_ensemble, T_ensemble = mc.run_ensemble()
+   >>> uncertainty, wt_ensemble, T_ensemble = mc.run_ensemble()
 
-   probability = uncertainty.prob_wt_shallower_than(
-       20.0,
-       wt_ensemble=wt_ensemble,
-   )
+   >>> probability = uncertainty.prob_wt_shallower_than(
+   ...     20.0,
+   ...     wt_ensemble=wt_ensemble,
+   ... )
+   >>> np.round(probability, 4)
+   array([0.9733, 0.99  , 1.    , 0.9867, 0.9467])
+   >>> wt_ensemble.shape
+   (300, 5)
 
-The returned arrays have shapes ``(n_samples, n_x)``. Raw draws support
+The raw-ensemble probabilities differ slightly from the Gaussian
+approximation above (0.9733 vs 0.9819 at station ``S00``, for example) --
+the water-table distribution is bounded and right-skewed (P10 through P90 all
+sit between 5 m and 15 m, against a nominal search range extending far
+deeper), so a Gaussian fit to its mean and standard deviation is only
+approximate. The returned arrays have shapes ``(n_samples, n_x)``. Raw draws support
 histograms, empirical probabilities, failure analysis, and non-Gaussian
 diagnostics. They consume more memory, so archive them in a binary scientific
 format with metadata rather than flattening them into a very large CSV.
@@ -380,36 +430,52 @@ Section view
 
 Plot median hydraulic conductivity and its coefficient of variation:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.interp import plot as iplot
+   >>> from pycsamt.interp import plot as iplot
 
-   fig = iplot.PlotUncertaintySection(
-       uncertainty,
-       quantity="K",
-       depth_max=200.0,
-   ).plot()
-   fig.savefig("review/K_uncertainty.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintySection(
+   ...     uncertainty,
+   ...     quantity="K",
+   ...     depth_max=200.0,
+   ... ).plot()
+   >>> fig.savefig("review/K_uncertainty.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/uncertainty_K_section.png
+   :alt: P50 log10 hydraulic conductivity and coefficient of variation sections.
+   :width: 100%
+
+   P50 log10 hydraulic conductivity (top) and its coefficient of variation
+   (bottom) across the 300-sample ensemble on the fixture.
 
 The supported quantities are ``"K"``, ``"saturation"``, and ``"porosity"``.
-The conductivity panel uses log10 K for the P50 view and ``cv_K`` for spread.
-Saturation spread uses P90 minus P10. Porosity spread is displayed from twice
-its standard deviation.
+The conductivity panel uses log10 K for the P50 view and ``cv_K`` for spread
+(``cv_K`` ranges 0.73-5.10 on this fixture -- a coefficient of variation
+above 1 means the standard deviation exceeds the mean, one more signal of
+the skewed K distribution discussed above). Saturation spread uses P90 minus
+P10. Porosity spread is displayed from twice its standard deviation.
 
 Profile view
 ~~~~~~~~~~~~
 
 Plot water-table and transmissivity envelopes along the profile:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = iplot.PlotUncertaintyProfile(
-       uncertainty,
-       reference_depth=20.0,
-   ).plot()
-   fig.savefig("review/profile_uncertainty.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintyProfile(
+   ...     uncertainty,
+   ...     reference_depth=20.0,
+   ... ).plot()
+   >>> fig.savefig("review/profile_uncertainty.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/uncertainty_profile.png
+   :alt: Water-table and transmissivity envelopes with P10-P90 shading.
+   :width: 90%
+
+   Water-table depth (top) and log10 transmissivity (bottom) along the
+   profile, with P10-P90 shading and the P50 median line.
 
 Distribution view
 ~~~~~~~~~~~~~~~~~
@@ -417,16 +483,23 @@ Distribution view
 Use raw ensembles to show station distributions without relying on a Gaussian
 approximation:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = iplot.PlotUncertaintyHistogram(
-       uncertainty,
-       quantity="water_table",
-       stations=["S00", "S05", "S10"],
-       wt_ensemble=wt_ensemble,
-   ).plot()
-   fig.savefig("review/water_table_distributions.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintyHistogram(
+   ...     uncertainty,
+   ...     quantity="water_table",
+   ...     stations=["S00", "S02", "S04"],
+   ...     wt_ensemble=wt_ensemble,
+   ... ).plot()
+   >>> fig.savefig("review/water_table_distributions.png", dpi=200,
+   ...             bbox_inches="tight")
+
+.. figure:: ../../images/user_guide/interpretation/uncertainty_wt_histograms.png
+   :alt: Water-table depth posterior histograms for three stations.
+   :width: 100%
+
+   Water-table depth posteriors at stations ``S00``, ``S02``, and ``S04``,
+   built from the raw 300-sample ensemble with P10/P50/P90 markers.
 
 For transmissivity, set ``quantity="transmissivity"`` and pass
 ``T_ensemble=T_ensemble``.
@@ -501,7 +574,7 @@ The package supports quantitative field constraints:
 
 For example:
 
-.. code-block:: python
+.. code-block:: pycon
 
    from pycsamt.interp import (
        ConstrainedCalibrator,
@@ -543,7 +616,10 @@ For example:
 
 This optimization requires SciPy. Parameter bounds and constraint uncertainty
 directly affect the fitted result. Multiple restarts reduce sensitivity to one
-starting point but do not prove uniqueness.
+starting point but do not prove uniqueness. See :doc:`hydrogeophysics` for a
+fully worked, verified calibration against the same kind of constraints
+(scaled to the shallower documentation fixture used throughout these guides),
+including per-restart misfit values and per-constraint residuals.
 
 After calibration, use ``fitter.calibrated_config_`` as a documented central
 configuration and define Monte Carlo bounds from measurement uncertainty and
@@ -637,77 +713,89 @@ Complete example
 ----------------
 
 This example assumes ``resistivity_model`` has already passed the checks in
-:doc:`workflow`:
+:doc:`workflow`. It is the same fixture used throughout this guide, with a
+wider ensemble (500 samples, narrower ``rho_w`` and ``phi_prior`` ranges than
+the earlier 300-sample pilot):
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pathlib import Path
-   import numpy as np
+   >>> from pathlib import Path
+   >>> import numpy as np
 
-   from pycsamt.interp import (
-       MonteCarloHydro,
-       PetrophysicalConfig,
-       UncertaintyBounds,
-       plot as iplot,
-   )
-   from pycsamt.interp.petrophysics import ArchieModel
+   >>> from pycsamt.interp import (
+   ...     MonteCarloHydro,
+   ...     PetrophysicalConfig,
+   ...     UncertaintyBounds,
+   ...     plot as iplot,
+   ... )
+   >>> from pycsamt.interp.petrophysics import ArchieModel
 
-   output = Path("review/uncertainty")
-   output.mkdir(parents=True, exist_ok=True)
+   >>> output = Path("review/uncertainty")
+   >>> output.mkdir(parents=True, exist_ok=True)
 
-   config = PetrophysicalConfig(
-       petro=ArchieModel(m=1.8, n=2.0),
-       rho_w=20.0,
-       porosity_prior=0.25,
-   )
+   >>> config = PetrophysicalConfig(
+   ...     petro=ArchieModel(m=1.8, n=2.0),
+   ...     rho_w=20.0,
+   ...     porosity_prior=0.25,
+   ... )
 
-   bounds = UncertaintyBounds(
-       rho_w_range=(8.0, 50.0),
-       m_range=(1.5, 2.2),
-       n_range=(1.8, 2.4),
-       phi_prior_range=(0.18, 0.35),
-       dist="uniform",
-   )
+   >>> bounds = UncertaintyBounds(
+   ...     rho_w_range=(8.0, 50.0),
+   ...     m_range=(1.5, 2.2),
+   ...     n_range=(1.8, 2.4),
+   ...     phi_prior_range=(0.18, 0.35),
+   ...     dist="uniform",
+   ... )
 
-   mc = MonteCarloHydro(
-       resistivity_model,
-       config,
-       bounds,
-       n_samples=500,
-       seed=42,
-       method_tag="AMT",
-       verbose=True,
-   )
+   >>> mc = MonteCarloHydro(
+   ...     resistivity_model,
+   ...     config,
+   ...     bounds,
+   ...     n_samples=500,
+   ...     seed=42,
+   ...     method_tag="AMT",
+   ...     verbose=True,
+   ... )
 
-   unc, wt_ensemble, T_ensemble = mc.run_ensemble()
-   unc.to_csv(output / "station_summary.csv")
+   >>> unc, wt_ensemble, T_ensemble = mc.run_ensemble()
+   >>> unc.to_csv(output / "station_summary.csv")
 
-   valid_samples = np.all(np.isfinite(unc.sampled_params), axis=1)
-   print("Successful samples:", valid_samples.sum(), "/", unc.n_samples)
-   print("Median WT detection rate:", np.nanmedian(unc.wt_detection_rate))
-   print("P(WT < 20 m):", unc.prob_wt_shallower_than(
-       20.0, wt_ensemble=wt_ensemble
-   ))
+   >>> valid_samples = np.all(np.isfinite(unc.sampled_params), axis=1)
+   >>> print("Successful samples:", valid_samples.sum(), "/", unc.n_samples)
+   Successful samples: 500 / 500
+   >>> print("Median WT detection rate:", np.nanmedian(unc.wt_detection_rate))
+   Median WT detection rate: 1.0
+   >>> print("P(WT < 20 m):", unc.prob_wt_shallower_than(
+   ...     20.0, wt_ensemble=wt_ensemble
+   ... ))
+   P(WT < 20 m): [0.992 1.    1.    0.996 0.976]
 
-   fig = iplot.PlotUncertaintySection(
-       unc, quantity="K", depth_max=200.0
-   ).plot()
-   fig.savefig(output / "K_section.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintySection(
+   ...     unc, quantity="K", depth_max=200.0
+   ... ).plot()
+   >>> fig.savefig(output / "K_section.png", dpi=200,
+   ...             bbox_inches="tight")
 
-   fig = iplot.PlotUncertaintyProfile(
-       unc, reference_depth=20.0
-   ).plot()
-   fig.savefig(output / "WT_T_profile.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintyProfile(
+   ...     unc, reference_depth=20.0
+   ... ).plot()
+   >>> fig.savefig(output / "WT_T_profile.png", dpi=200,
+   ...             bbox_inches="tight")
 
-   fig = iplot.PlotUncertaintyHistogram(
-       unc,
-       quantity="water_table",
-       wt_ensemble=wt_ensemble,
-   ).plot()
-   fig.savefig(output / "WT_histograms.png", dpi=200,
-               bbox_inches="tight")
+   >>> fig = iplot.PlotUncertaintyHistogram(
+   ...     unc,
+   ...     quantity="water_table",
+   ...     wt_ensemble=wt_ensemble,
+   ... ).plot()
+   >>> fig.savefig(output / "WT_histograms.png", dpi=200,
+   ...             bbox_inches="tight")
+
+Narrowing ``rho_w_range`` and ``phi_prior_range`` relative to the earlier
+300-sample pilot raised P(WT < 20 m) at every station -- for example from
+0.9733 to 0.992 at ``S00`` -- and every sample succeeded (no non-finite
+rows). Both are worth reporting alongside the interval itself: a narrower
+prior mechanically narrows the result, and a 100% success rate confirms the
+tighter bounds did not push the model into a degenerate region.
 
 Review checklist
 ----------------

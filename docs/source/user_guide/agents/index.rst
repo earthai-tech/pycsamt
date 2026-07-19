@@ -16,6 +16,7 @@ for the full reference of every agent group.
    :class: pycsamt-guide-toc
 
    orchestrator
+   assistant_rag
    overview
    agent_catalogue
    llm_configuration

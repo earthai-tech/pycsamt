@@ -62,6 +62,8 @@ class ProfileMapOptions:
     height_per_panel: int = 260
     show_errbar: bool = False
     cmap: str | None = None
+    by_line: bool = False
+    line_cols: int | None = None
 
 
 @dataclass

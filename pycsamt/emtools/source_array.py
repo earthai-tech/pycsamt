@@ -34,6 +34,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
+from ..compat.numpy import trapz as _trapz
 from ._core import hide_polar_radius_labels
 
 __all__ = [
@@ -364,7 +365,7 @@ def sdas_directivity(
     theta = np.linspace(1e-6, np.pi - 1e-6, n_theta)
     F = sdas_element_pattern(np.rad2deg(theta), l, k, normalize=False)
     U = F**2
-    P_rad = float(np.trapezoid(U * np.sin(theta), theta) * 2.0 * np.pi)
+    P_rad = float(_trapz(U * np.sin(theta), theta) * 2.0 * np.pi)
     U_max = float(U.max())
     if P_rad < 1e-100:
         return np.nan

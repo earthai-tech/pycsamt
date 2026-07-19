@@ -3,25 +3,24 @@
 Pipeline Presets
 ================
 
-Pipeline presets are named, opinionated processing recipes.  They are useful
-when you want a tested starting point without writing a full step list by
-hand.  A preset is not a hidden mode: internally it is just an ordered list of
-``(label, Step)`` tuples, so it can be inspected, exported to a config file,
-customized, and reviewed like any other pipeline.
+A :term:`pipeline preset` is a named, built-in processing recipe.  It gives a
+survey a tested starting order without forcing the user to write every
+:term:`pipeline step code` by hand.  A preset is not a hidden processing mode:
+inside pyCSAMT it is an ordered list of ``(label, Step)`` tuples.  That list
+can be inspected, expanded, exported to a :term:`pipeline configuration file`,
+edited, reviewed, and archived like any other :term:`processing pipeline`.
 
-Use presets when you want to:
+Use presets for quick first-pass QC, standard comparisons between processing
+strategies, teaching safe default step order, and generating starter configs.
+For serious survey processing, treat the preset as the beginning of the
+conversation, not the final scientific decision.  The reproducible record is
+the expanded step sequence written to ``pipeline.yaml`` or to a committed
+configuration file.
 
-* run a first-pass QC workflow quickly;
-* compare a few standard processing strategies;
-* scaffold a reproducible YAML, JSON, or Python config;
-* teach new users a safe default order for common MT/AMT processing tasks;
-* keep command-line workflows concise while preserving a saved
-  ``pipeline.yaml`` in the output directory.
+Preset Mental Model
+-------------------
 
-Preset Model
-------------
-
-Each built-in preset is represented by a ``Preset`` object with three fields:
+Each built-in preset is represented by a small object with three fields:
 
 ``name``
     Stable identifier used by the CLI and Python API, for example
@@ -31,25 +30,76 @@ Each built-in preset is represented by a ``Preset`` object with three fields:
     Short explanation shown in preset catalogues.
 
 ``steps``
-    Ordered list of ``(label, Step)`` tuples.  The labels become report names
-    and output subdirectory names; the ``Step`` objects hold registry codes
-    and parameter defaults.
+    Ordered list of ``(label, Step)`` tuples.  The label becomes the
+    :term:`step label` used in reports and plot directories.  The ``Step``
+    object holds the registry code and the parameters passed to the transform.
+
+Mathematically, a preset defines a fixed composition of transforms:
+
+.. math::
+
+   P(S_0) =
+   T_n(\cdots T_2(T_1(S_0;\theta_1);\theta_2)\cdots;\theta_n),
+
+where :math:`S_0` is the input :term:`site collection`, :math:`T_j` is the
+registered operation at position :math:`j`, and :math:`\theta_j` is the
+resolved parameter dictionary for that step.  The order is part of the
+meaning.  Running ``FREQ001`` before ``NR001`` is not the same workflow as
+running ``NR001`` before ``FREQ001`` because each step receives a different
+intermediate survey state.
 
 The preset API is intentionally small:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import get_preset, list_presets, preset_catalogue
+   >>> from pycsamt.pipeline import get_preset, list_presets, preset_catalogue
+   >>> preset = get_preset("basic_qc")
+   >>> preset.name
+   'basic_qc'
+   >>> [(label, step.spec.code) for label, step in preset.steps]
+   [('notch', 'NR001'), ('drop_duplicates', 'FREQ002'), ('select_band', 'FREQ001'), ('align_grid', 'FREQ004'), ('qc_snapshot', 'QC001')]
+   >>> [(p.name, len(p.steps)) for p in list_presets()]
+   [('basic_qc', 5), ('noise_reduction', 6), ('full_processing', 8), ('tensor_analysis', 5), ('dimensionality_filter', 4), ('publication_ready', 9), ('stratagem_mt', 7)]
 
-   print(preset_catalogue())
+The CLI exposes the same information:
 
-   preset = get_preset("basic_qc")
-   for label, step in preset.steps:
-       print(label, step.spec.code, step.spec.name, step.params)
+.. code-block:: console
+   :linenos:
 
-   for preset in list_presets():
-       print(preset.name, len(preset.steps))
+   pycsamt pipe presets
+   pycsamt pipe presets --format json
+   pycsamt pipe presets --expand basic_qc --format json
+
+Captured expansion excerpt:
+
+.. code-block:: json
+   :linenos:
+
+   {
+     "name": "basic_qc",
+     "description": "Minimal denoising + frequency cleanup.  Good for quick-look inspection.",
+     "n_steps": 5,
+     "steps": [
+       {
+         "label": "notch",
+         "code": "NR001",
+         "name": "notch_powerline",
+         "category": "noise_removal",
+         "params": {"mains_hz": 50, "n_harm": 30, "tol_hz": 0.08}
+       },
+       {
+         "label": "drop_duplicates",
+         "code": "FREQ002",
+         "name": "drop_duplicates",
+         "category": "frequency",
+         "params": {}
+       }
+     ]
+   }
+
+The excerpt is deliberately partial.  In practice, use the full expansion when
+reviewing or exporting a preset.
 
 Run A Preset
 ------------
@@ -59,47 +109,25 @@ From the command line:
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/basic_qc \
        -v
 
 From Python:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline
+   >>> from pycsamt.pipeline import Pipeline
+   >>> pipe = Pipeline.from_preset("basic_qc")
+   >>> [(label, step.spec.code) for label, step in pipe]
+   [('notch', 'NR001'), ('drop_duplicates', 'FREQ002'), ('select_band', 'FREQ001'), ('align_grid', 'FREQ004'), ('qc_snapshot', 'QC001')]
+   >>> result = pipe.run(sites, outdir="results/basic_qc")
 
-   pipe = Pipeline.from_preset("basic_qc")
-   result = pipe.run(sites, outdir="results/basic_qc")
-
-Inspect Presets Before Running
-------------------------------
-
-List all presets:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe presets
-
-Expand one preset into its step sequence:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe presets --expand full_processing
-   pycsamt pipe show --preset full_processing
-
-Use JSON or CSV when another tool needs the preset list:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe presets --format json
-   pycsamt pipe presets --expand basic_qc --format json
-   pycsamt pipe presets --format csv
+When output is enabled, the run writes ``results/basic_qc/pipeline.yaml``.
+That file is the run-specific :term:`canonical pipeline snapshot`; it records
+the step sequence that actually ran.
 
 Built-In Preset Summary
 -----------------------
@@ -108,7 +136,7 @@ The normal pipeline registry currently provides seven presets.
 
 .. list-table::
    :header-rows: 1
-   :widths: 24 16 36 24
+   :widths: 24 14 38 24
 
    * - Preset
      - Steps
@@ -129,8 +157,8 @@ The normal pipeline registry currently provides seven presets.
        ``TZ001``, ``SS001``, ``QC001``
    * - ``tensor_analysis``
      - 5
-     - Tensor-focused cleanup after data already have an acceptable
-       frequency grid.
+     - Tensor-focused cleanup after frequency and noise handling are already
+       acceptable.
      - ``TZ001``, ``TZ002``, ``TZ003``, ``TZ004``, ``QC001``
    * - ``dimensionality_filter``
      - 4
@@ -151,11 +179,13 @@ The normal pipeline registry currently provides seven presets.
 Choosing A Preset
 -----------------
 
-Start with the narrowest preset that answers your current question.
+Start with the narrowest preset that answers the current question.  A narrow
+preset is easier to diagnose because fewer transforms stand between
+:math:`S_0` and the output state :math:`S_n`.
 
 .. list-table::
    :header-rows: 1
-   :widths: 34 33 33
+   :widths: 34 30 36
 
    * - Situation
      - Start with
@@ -197,8 +227,6 @@ basic_qc
 solve every processing problem; it prepares a clean enough view to understand
 what the data need next.
 
-Sequence:
-
 .. code-block:: text
    :linenos:
 
@@ -208,28 +236,22 @@ Sequence:
    align_grid       FREQ004 align_grid
    qc_snapshot      QC001   qc_snapshot
 
-Run:
+The default transform is
 
-.. code-block:: console
-   :linenos:
+.. math::
 
-   pycsamt pipe run data/edis \
-       --preset basic_qc \
-       --out results/basic_qc \
-       --on-error warn
+   S_5 =
+   T_{\mathrm{QC001}}(
+   T_{\mathrm{FREQ004}}(
+   T_{\mathrm{FREQ001}}(
+   T_{\mathrm{FREQ002}}(
+   T_{\mathrm{NR001}}(S_0))))).
 
-Use ``basic_qc`` when:
-
-* you need quick figures before committing to a processing plan;
-* you want to verify that EDI loading and output generation work;
-* you are comparing surveys and want the same minimal cleanup everywhere.
-
-Move beyond ``basic_qc`` when:
-
-* static shift is obvious;
-* skew or dimensionality gates are needed;
-* power-line removal is not enough for the noise environment;
-* you need a processing chain suitable for inversion preparation.
+Use ``basic_qc`` when you need quick figures before committing to a processing
+plan, want to verify that EDI loading and output generation work, or need the
+same minimal cleanup across several surveys.  Move beyond it when static
+shift, skew gating, dimensionality filtering, or stronger denoising is clearly
+justified by the data.
 
 noise_reduction
 ~~~~~~~~~~~~~~~
@@ -237,8 +259,6 @@ noise_reduction
 ``noise_reduction`` concentrates on denoising.  It is useful when the first
 inspection shows power-line harmonics, local spikes, spatially coherent
 outliers, or incoherent frequency bins.
-
-Sequence:
 
 .. code-block:: text
    :linenos:
@@ -250,33 +270,22 @@ Sequence:
    mask_incoher  NR010 mask_incoherent
    qc_snapshot   QC001 qc_snapshot
 
-Run:
+Run it next to ``basic_qc`` rather than replacing the first pass silently:
 
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
-       --preset noise_reduction \
-       --out results/noise_reduction
-
-Use this preset to compare denoising impact against ``basic_qc``:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe run data/edis --preset basic_qc \
+   pycsamt pipe run data/3edis --preset basic_qc \
        --out results/compare/basic_qc
-   pycsamt pipe run data/edis --preset noise_reduction \
+   pycsamt pipe run data/3edis --preset noise_reduction \
        --out results/compare/noise_reduction
 
 full_processing
 ~~~~~~~~~~~~~~~
 
-``full_processing`` is the standard end-to-end workflow.  It starts with
-noise and frequency cleanup, then applies a skew gate, strike rotation,
+``full_processing`` is the standard end-to-end workflow.  It starts with noise
+and frequency cleanup, then applies a skew gate, strike rotation,
 static-shift correction, and QC.
-
-Sequence:
 
 .. code-block:: text
    :linenos:
@@ -290,29 +299,15 @@ Sequence:
    correct_ss     SS001   correct_ss_ama
    qc_snapshot    QC001   qc_snapshot
 
-Run:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe run data/edis \
-       --preset full_processing \
-       --out results/full_processing \
-       -v
-
-Use this preset when:
-
-* the survey needs a broad processing pass;
-* you want an auditable default before building an inversion-specific config;
-* you need one chain that exercises the main processing families.
+Use this preset when the survey needs a broad processing pass, when you want
+an auditable default before building an inversion-specific config, or when you
+need one chain that exercises the main processing families.
 
 tensor_analysis
 ~~~~~~~~~~~~~~~
 
 ``tensor_analysis`` assumes the data are already in reasonable condition and
 focuses on tensor operations.
-
-Sequence:
 
 .. code-block:: text
    :linenos:
@@ -332,8 +327,6 @@ dimensionality_filter
 ``dimensionality_filter`` is for 1-D / 2-D / 3-D screening and 2-D projection
 workflows.
 
-Sequence:
-
 .. code-block:: text
    :linenos:
 
@@ -342,25 +335,15 @@ Sequence:
    project_2d    DIM003 project_2d
    qc_snapshot   QC001  qc_snapshot
 
-Run:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe run data/edis \
-       --preset dimensionality_filter \
-       --out results/dimensionality
-
 Use it after basic cleanup when the main question is whether the remaining
-intervals are compatible with a 2-D interpretation or inversion assumption.
+intervals are compatible with a :term:`2-D` interpretation or inversion
+assumption.
 
 publication_ready
 ~~~~~~~~~~~~~~~~~
 
 ``publication_ready`` is the longest built-in general-purpose preset.  It is
 designed for polished processing output rather than quick exploration.
-
-Sequence:
 
 .. code-block:: text
    :linenos:
@@ -380,28 +363,25 @@ Run:
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset publication_ready \
        --out results/publication_ready \
        --dpi 300 \
        --plot-fmt pdf \
        -v
 
-Use this preset when:
-
-* you already inspected the data with a lighter preset;
-* the default step order is scientifically acceptable for your survey;
-* you need high-quality saved figures and a complete run report.
+Use this preset after a lighter pass has shown that its assumptions are
+reasonable for the survey.  The name does not make the output publication
+ready by itself; the review comes from inspecting the report, figures,
+processed EDIs, and saved pipeline snapshot.
 
 stratagem_mt
 ~~~~~~~~~~~~
 
-``stratagem_mt`` is a normal emtools pipeline preset specialized for
-Stratagem AMT data that are already loaded as a ``Sites`` object.  It does
-not perform raw-coordinate injection, raw hardware-file parsing, or station
-renaming by itself.
-
-Sequence:
+``stratagem_mt`` is a normal emtools pipeline preset specialized for Stratagem
+AMT data that are already loaded as a ``Sites`` object.  It does not perform
+raw-coordinate injection, raw hardware-file parsing, or station renaming by
+itself.
 
 .. code-block:: text
    :linenos:
@@ -414,16 +394,15 @@ Sequence:
    mask_incoher  NR010   mask_incoherent
    qc_snapshot   QC001   qc_snapshot
 
-Use this preset with the normal pipeline API when your input is already a
-site collection:
+Use it with the normal pipeline API when your input is already a site
+collection:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline
-
-   pipe = Pipeline.from_preset("stratagem_mt")
-   result = pipe.run(sites, outdir="results/stratagem_mt")
+   >>> from pycsamt.pipeline import Pipeline
+   >>> pipe = Pipeline.from_preset("stratagem_mt")
+   >>> result = pipe.run(sites, outdir="results/stratagem_mt")
 
 Use :class:`pycsamt.pipeline.stratagem.StratagemPipeline` or
 ``run_stratagem_preset`` when you also need the full raw EDI plus GPS CSV
@@ -432,11 +411,9 @@ workflow.
 Export A Preset To A Config
 ---------------------------
 
-For serious work, use a preset to generate a config and then commit the
-expanded recipe to your project.  This makes the workflow auditable and easy
-to rerun.
-
-Generate YAML:
+:term:`Preset expansion` is the safest transition from exploration to
+reproducible work.  Generate the preset once, review the explicit list, then
+commit the config with the survey project.
 
 .. code-block:: console
    :linenos:
@@ -447,44 +424,44 @@ Generate YAML:
        --outdir results/line22_publication_ready \
        --output config/line22_publication_ready.yaml
 
-Generate Python:
-
-.. code-block:: console
-   :linenos:
-
-   pycsamt pipe init \
-       --preset basic_qc \
-       --format py \
-       --output config/basic_qc.py
-
 Preview before running:
 
 .. code-block:: console
    :linenos:
 
    pycsamt pipe show config/line22_publication_ready.yaml
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --config config/line22_publication_ready.yaml \
        --dry-run
+
+Generate Python or JSON instead:
+
+.. code-block:: console
+   :linenos:
+
+   pycsamt pipe init --preset basic_qc --format py \
+       --output config/basic_qc.py
+   pycsamt pipe init --preset basic_qc --format json \
+       --output config/basic_qc.json
 
 Customizing Presets Safely
 --------------------------
 
-There are three ways to customize a preset.
+There are three supported customization patterns.
 
-Use the preset directly, then edit the pipeline in Python:
+Edit a pipeline object in Python:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline import Pipeline, Step
+   >>> from pycsamt.pipeline import Pipeline, Step
+   >>> pipe = Pipeline.from_preset("basic_qc")
+   >>> pipe.replace("notch", Step("NR001", mains_hz=60, n_harm=25)) is pipe
+   True
+   >>> pipe.append("static_shift", Step("SS001")) is pipe
+   True
 
-   pipe = Pipeline.from_preset("basic_qc")
-   pipe.replace("notch", Step("NR001", mains_hz=60, n_harm=25))
-   pipe.append("static_shift", Step("SS001"))
-
-Use ``pycsamt pipe init`` to expand a preset into an explicit config, then
-edit the generated step parameters:
+Expand a preset into an explicit config and edit the generated parameters:
 
 .. code-block:: yaml
    :linenos:
@@ -523,11 +500,16 @@ Append extra steps after a preset in a config:
      - name: final_qc
        code: QC001
 
-Important: in a config file, ``preset: basic_qc`` loads all preset steps
-first, then appends the explicit ``steps`` list.  It does not modify an
-existing preset step.  If you need to change ``NR001`` from 50 Hz to 60 Hz,
-use an explicit expanded step list instead of ``preset: basic_qc`` plus a
-second ``NR001`` step.
+The third pattern appends.  It does not edit the preset.  In symbols, the
+loaded step list is
+
+.. math::
+
+   S_{\mathrm{final}} = S_{\mathrm{preset}} \Vert S_{\mathrm{explicit}},
+
+where ``\Vert`` means append.  If you need to change ``NR001`` from 50 Hz to
+60 Hz, use an explicit expanded step list instead of ``preset: basic_qc`` plus
+a second ``NR001`` step.
 
 CLI Priority
 ------------
@@ -541,51 +523,51 @@ CLI Priority
 If ``--config`` is supplied, ``--preset`` and ``--steps`` are ignored because
 the config file is the source of truth.
 
-Examples:
-
 .. code-block:: console
    :linenos:
 
-   # Uses the config.  The preset argument is ignored.
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --config config/basic_qc.yaml \
        --preset publication_ready
 
-   # Uses the preset.
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset publication_ready
 
-   # Uses the ad-hoc steps.
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --steps FREQ002,FREQ001,FREQ004,NR001,QC001
 
 Compare Presets
 ---------------
 
-A useful way to choose a recipe is to run several presets into separate
-output directories and compare the reports:
+A :term:`preset comparison run` keeps the input fixed and changes only the
+recipe.  Let :math:`P_a` and :math:`P_b` be two presets.  The comparison is
+meaningful only when both are applied to the same initial state:
+
+.. math::
+
+   S_n^{(a)} = P_a(S_0), \qquad S_m^{(b)} = P_b(S_0).
+
+Run the branches into separate output roots:
 
 .. code-block:: console
    :linenos:
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset basic_qc \
        --out results/compare/basic_qc
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset noise_reduction \
        --out results/compare/noise_reduction
 
-   pycsamt pipe run data/edis \
+   pycsamt pipe run data/3edis \
        --preset full_processing \
        --out results/compare/full_processing
 
-Compare:
-
-* ``summary.txt`` for step failures, runtime, and site counts;
-* ``report.html`` for per-step status and embedded pipeline YAML;
-* ``plots/`` for visual differences between cleanup strategies;
-* ``processed/`` for exported EDI differences.
+Compare ``summary.txt`` for step failures and site counts, ``report.html`` for
+per-step status and embedded YAML, ``plots/`` for visual differences,
+``processed/`` for exported EDI differences, and ``pipeline.yaml`` for the
+exact recipe behind each branch.
 
 Stratagem Presets
 -----------------
@@ -613,55 +595,52 @@ The Stratagem convenience presets are:
      - Main workflow
      - Best for
    * - ``basic``
-     - coordinate injection, AMA static shift, frequency trim, noise removal,
-       export, rename
+     - Coordinate injection, AMA static shift, frequency trim, noise removal,
+       export, rename.
      - Direct replacement for the legacy Stratagem processing script.
    * - ``full_processing``
      - QC, AMA static shift, hardware-aware frequency filtering, smoothed
-       noise removal, export, rename
+       noise removal, export, rename.
      - Raw Stratagem workflows with hardware files and a full QC pass.
    * - ``publication_ready``
-     - stricter QC, hardware SNR masking, AMT band trimming, stronger
-       smoothing, export, rename
+     - Stricter QC, hardware SNR masking, AMT band trimming, stronger
+       smoothing, export, rename.
      - Polished Stratagem outputs after the basic workflow has been reviewed.
 
 Run a raw Stratagem convenience preset:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline.stratagem import run_stratagem_preset
-
-   survey = run_stratagem_preset(
-       "full_processing",
-       edi_dir="2/2EDI",
-       coord_file="2.csv",
-       raw_dir="raw/2HX",
-       outdir="results/stratagem",
-       epsg=32649,
-       utm_zone="49N",
-       rename_basename="T2.",
-       overwrite=True,
-       verbose=1,
-   )
+   >>> from pycsamt.pipeline.stratagem import run_stratagem_preset
+   >>> survey = run_stratagem_preset(
+   ...     "full_processing",
+   ...     edi_dir="2/2EDI",
+   ...     coord_file="2.csv",
+   ...     raw_dir="raw/2HX",
+   ...     outdir="results/stratagem",
+   ...     epsg=32649,
+   ...     utm_zone="49N",
+   ...     rename_basename="T2.",
+   ...     overwrite=True,
+   ...     verbose=1,
+   ... )
 
 Build a Stratagem pipeline object from a normal emtools preset:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.pipeline.stratagem import StratagemPipeline
-
-   pipe = StratagemPipeline.from_preset(
-       "stratagem_mt",
-       coord_file="2.csv",
-       raw_dir="raw/2HX",
-       epsg=32649,
-       utm_zone="49N",
-       rename_basename="T2.",
-   )
-
-   result = pipe.run("2/2EDI", outdir="results/stratagem_mt")
+   >>> from pycsamt.pipeline.stratagem import StratagemPipeline
+   >>> pipe = StratagemPipeline.from_preset(
+   ...     "stratagem_mt",
+   ...     coord_file="2.csv",
+   ...     raw_dir="raw/2HX",
+   ...     epsg=32649,
+   ...     utm_zone="49N",
+   ...     rename_basename="T2.",
+   ... )
+   >>> result = pipe.run("2/2EDI", outdir="results/stratagem_mt")
 
 Troubleshooting
 ---------------
@@ -673,8 +652,7 @@ Unknown preset
 I changed ``preset: basic_qc`` but the notch is still 50 Hz
     A config ``preset`` expands the preset first.  Explicit ``steps`` are
     appended; they do not edit existing preset steps.  Generate an expanded
-    config with ``pycsamt pipe init --preset basic_qc`` and edit the
-    ``NR001`` parameters directly.
+    config and edit the ``NR001`` parameters directly.
 
 The preset is too aggressive
     Move to a narrower preset such as ``basic_qc`` or export the preset to a

@@ -724,6 +724,46 @@ definitions here are the single source of truth.
       only means the programmed workflow returned, not that the result
       meets scientific acceptance criteria.
 
+   Agent coordinator
+      The explicit workflow runner in :mod:`pycsamt.agents` that executes a
+      named sequence of registered agent steps, passes selected outputs from
+      previous :term:`AgentResult`\ s into later inputs, writes resumable
+      workflow checkpoints, and returns one workflow-level
+      :term:`AgentResult`. It is used when the step order is already known and
+      should be reproducible.
+
+   Workflow step
+      One named unit inside an :term:`agent coordinator` workflow. A step
+      stores an agent instance, a stable step name, an optional input-mapping
+      callback, a human-readable description, and a required/optional flag
+      that controls whether failure aborts the workflow.
+
+   Input mapping
+      The explicit conversion from accumulated previous step results to the
+      input dictionary expected by the next agent. In
+      ``AgentCoordinator.add_step`` this is the ``input_fn`` callback. It is a
+      reproducibility boundary because it documents exactly which upstream
+      output keys are consumed by each downstream step.
+
+   Workflow checkpoint
+      A serialized record written after an :term:`agent coordinator` step so a
+      later run can resume without recomputing completed work. pyCSAMT writes a
+      pickled, figure-stripped ``AgentResult`` for execution and a JSON sidecar
+      for human inspection; checkpoints accelerate resume but do not replace
+      archived scientific deliverables.
+
+   Dry run
+      A non-executing preview of a command or workflow. In the pyCSAMT agent
+      layer, ``dry_run=True`` returns an :term:`AgentResult` containing the
+      planned step order, agent classes, required/optional flags, and LLM
+      configuration without calling the registered agents' ``execute`` methods
+      or writing workflow outputs. An :term:`agent coordinator` returns the
+      formatted preview under ``data["plan"]``, while
+      ``WorkflowOrchestratorAgent`` -- which builds a coordinator internally
+      after classifying a natural-language request -- returns it under
+      ``data["workflow_plan"]``; both expose the same structured
+      ``data["steps"]`` list.
+
    Ensemble inversion
    Deep ensemble
       An uncertainty-aware :term:`supervised AI inversion` that trains
@@ -1549,6 +1589,114 @@ definitions here are the single source of truth.
       In :mod:`pycsamt.agents`, a small composable unit that performs one step of
       a workflow (routing, parsing, QC, forward modelling, inversion, reporting)
       and returns a standardised ``AgentResult``.
+
+   RAG
+   Retrieval-augmented generation
+      Grounding a model's answer in evidence retrieved from a corpus at
+      query time, rather than relying only on parameters learned during
+      training. :mod:`pycsamt.assistant.rag` implements the pyCSAMT
+      instance: an offline, deterministic :term:`BM25` retriever over an
+      indexed :term:`chunk` corpus, with dense embeddings as an optional
+      addition rather than a requirement.
+
+   Chunk
+      One retrievable unit of the RAG corpus, represented by
+      :class:`pycsamt.assistant.rag.schemas.RAGChunk`. A chunk carries
+      searchable text plus metadata -- source path, ``kind`` (for example
+      ``python_symbol``, ``doc_section``, or ``recipe``), an optional
+      workflow tag, a static :term:`priority`, and a stable id derived from
+      its source location -- so a retrieval result can be ranked, filtered,
+      and cited back to a real file and line range.
+
+   Priority
+      A static importance score attached to a :term:`chunk` from its
+      source path alone (``pycsamt/agents``, ``pycsamt/emtools``, and
+      similar high-value implementation paths score highest, general
+      documentation next, everything else the baseline). It is a ranking
+      boost applied at retrieval time, not a measure of a chunk's textual
+      relevance to any specific query.
+
+   BM25
+   Okapi BM25
+      A term-frequency ranking function that scores how well a document
+      matches a query without semantic embeddings, used as the default
+      lexical ranker in :mod:`pycsamt.assistant.rag`. For a document
+      (:term:`chunk`) :math:`c` and query terms :math:`t`, pyCSAMT's
+      implementation scores
+
+      .. math::
+
+         \mathrm{BM25}(c, q) = \sum_{t \in q}
+         \mathrm{idf}(t)\,
+         \frac{f_{t,c}\,(k_1 + 1)}
+              {f_{t,c} + k_1\left(1 - b + b\,\dfrac{|c|}{\mathrm{avgdl}}\right)},
+         \qquad
+         \mathrm{idf}(t) = \ln\!\left(1 + \frac{N - n_t + 0.5}{n_t + 0.5}\right),
+
+      where :math:`f_{t,c}` is how often :math:`t` occurs in :math:`c`,
+      :math:`|c|` is the chunk's token count, :math:`\mathrm{avgdl}` is the
+      corpus's average chunk length, :math:`N` is the corpus size, and
+      :math:`n_t` is the number of chunks containing :math:`t`. pyCSAMT
+      uses the conventional :math:`k_1=1.5`, :math:`b=0.75`. A chunk that
+      shares no term with the query scores exactly ``0`` and is dropped
+      before any boost is applied.
+
+   Query expansion
+      A deterministic, zero-dependency substitute for semantic matching in
+      :mod:`pycsamt.assistant.rag`: a fixed table maps specific
+      natural-language trigger phrases (for example "vertical offset") to
+      extra domain terms that are known to exist in the corpus vocabulary
+      (``static``, ``shift``, ``galvanic``). Expansion terms are scored by
+      the same :term:`BM25` function but added at a fixed ``0.35`` weight,
+      so they can surface the right :term:`chunk` when a user's wording and
+      the code's vocabulary do not overlap, without ever outweighing the
+      user's own words.
+
+   Reciprocal Rank Fusion
+   RRF
+      A rank-based (not score-based) method for combining two or more
+      ranked lists into one, used by :mod:`pycsamt.assistant.rag` to blend
+      lexical (:term:`BM25`) and optional dense retrieval. Each ranking
+      :math:`r` contributes
+
+      .. math::
+
+         \mathrm{RRF}(i) = \sum_r \frac{w_r}{k + \mathrm{rank}_r(i)},
+
+      summed over the rankings :math:`i` appears in (0-based rank; absence
+      from a ranking contributes nothing), with pyCSAMT's default
+      :math:`k=60` and equal weights :math:`w_r=1`. Rank-based fusion sidesteps
+      the problem of combining BM25 scores and cosine similarities directly:
+      the two live on incomparable numeric scales, while ranks do not.
+
+   Confidence proxy
+      A single numeric stand-in for "does the assistant actually know the
+      answer," computed as the top :term:`chunk`'s post-boost retrieval
+      score (``RetrievedContext.top_score``) with no query-independent
+      calibration. :class:`~pycsamt.assistant.rag.context_builder.AssembledContext`
+      is considered confident when project context was resolved or this
+      score reaches a fixed floor (``25.0``); below that, with no session
+      context to fall back on, the assistant asks a clarifying question
+      instead of guessing.
+
+   Hallucination guard
+      An evaluation check that flags a forbidden string -- typically an
+      invented import or API name -- appearing anywhere in the text of the
+      :term:`chunk`\ s retrieved for a query. It is declared per-record via
+      a suite's ``must_not_contain`` list and reported as a hard violation
+      count by :mod:`pycsamt.assistant.evals`, distinct from the
+      generated-code validator, which checks a specific script's imports
+      rather than the retrieved evidence itself.
+
+   Corpus fingerprint
+      A SHA-256 digest of the indexed source tree used to detect a stale
+      persisted RAG index: every indexable file is hashed individually,
+      and the fingerprint folds each file's repository-relative path and
+      content hash into one running digest over paths sorted
+      deterministically. Because it hashes content rather than
+      modification time, a tool that rewrites a file byte-for-byte does
+      not trigger a false "stale index" warning; any real change to
+      indexed source, documentation, examples, or recipes does.
 
    MapView session
       The in-memory, code-first survey handle created by

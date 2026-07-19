@@ -3,25 +3,27 @@
 Assistant And RAG
 =================
 
-``pycsamt.assistant`` is the retrieval-augmented assistant layer used by
-Agent Master.  It gives the conversational interface a technical memory of
-the pyCSAMT codebase, documentation, recipes, project registry, and workflow
-history, so that answers and generated scripts can be grounded in real
-symbols instead of plausible-looking package names.
+``pycsamt.assistant`` is the :term:`retrieval-augmented generation` (RAG)
+layer used by Agent Master.  It gives the conversational interface a
+technical memory of the pyCSAMT codebase, documentation, recipes, project
+registry, and workflow history, so that answers and generated scripts can
+be grounded in real symbols instead of plausible-looking package names.
 
 The Assistant layer is deliberately separate from :mod:`pycsamt.agents`.
 The agent package performs geophysical workflow actions: loading surveys,
 quality control, static-shift correction, phase analysis, inversion
-preparation, reporting, and orchestration.  The Assistant package supports
-those actions by retrieving relevant implementation context, assembling cited
-context for an answering model, validating generated code, and evaluating
-retrieval quality.
+preparation, reporting, and orchestration -- each one an :term:`agent`
+returning a standardised ``AgentResult``.  The Assistant package supports
+those actions from outside the workflow itself, by retrieving relevant
+implementation context, assembling cited context for an answering model,
+validating generated code, and evaluating retrieval quality.
 
-For reviewers and reproducibility, the most important design point is that
-the default RAG path is local and deterministic.  A persisted BM25 index can
-be built without an API key, without a vector database, and without contacting
-an external LLM provider.  Dense embeddings are optional and are added only
-when explicitly requested.
+For professionals and reproducibility, the most important design point is that
+the default RAG path is local and deterministic.  A persisted :term:`BM25`
+index can be built without an API key, without a vector database, and
+without contacting an external LLM provider.  Dense embeddings are optional
+and are added only when explicitly requested -- every number and formula in
+this page describes the offline path unless stated otherwise.
 
 
 What The Assistant Solves
@@ -101,7 +103,7 @@ Corpus Policy
 -------------
 
 The RAG corpus is built from a selected subset of the repository.  The policy
-lives in ``pycsamt.assistant.rag.config`` so reviewers can inspect exactly
+lives in ``pycsamt.assistant.rag.config`` so experts or professionals can inspect exactly
 what is indexed and what is excluded.
 
 Indexed roots include:
@@ -142,7 +144,7 @@ technical corpus focused on APIs, documentation, and workflow guidance.
 Chunk Types And Metadata
 ------------------------
 
-Each retrievable unit is represented by
+Each retrievable unit is a :term:`chunk`, represented by
 :class:`pycsamt.assistant.rag.schemas.RAGChunk`.  A chunk carries both text
 and metadata so retrieval results can be ranked, filtered, cited, and used for
 code generation.
@@ -173,7 +175,9 @@ Important fields include:
        ``phase_analysis``, ``ai_inversion``, ``pre_inversion``, or
        ``forward``.
    * - ``priority``
-     - Static importance score used as a ranking boost.
+     - Static :term:`priority` used as a ranking boost -- see
+       :ref:`Retrieval Model <assistant-rag-retrieval-model>` for how it
+       enters the score.
    * - ``metadata``
      - Extra structured information such as signatures, parameters, returns,
        headings, or line spans.
@@ -202,15 +206,31 @@ By default, this creates:
      manifest.json
      chunks.jsonl
 
-``chunks.jsonl`` stores one serialized ``RAGChunk`` per line.  The manifest
+``chunks.jsonl`` stores one serialized :term:`chunk` per line.  The manifest
 stores the index version, creation time, corpus counts, per-kind and
-per-workflow statistics, output directory, and a source fingerprint.
+per-workflow statistics, output directory, and a :term:`corpus fingerprint`.
 
-The fingerprint is content-based: it hashes the indexed files and their
-repository-relative paths.  This avoids false stale-index warnings when tools
-touch file modification times without changing content.  If indexed source,
-documentation, examples, or recipes change, the fingerprint changes and the
-index can be rebuilt.
+The fingerprint is content-based, not timestamp-based -- deliberately, since
+merely running the test suite can rewrite a file byte-for-byte and bump its
+modification time without changing a single indexed token.  For the sorted
+set of indexable files :math:`p_1, \ldots, p_n`, it folds each file's
+repository-relative path and content digest into one running SHA-256:
+
+.. math::
+
+   \mathrm{fp} = \mathrm{SHA256}\Big(
+     \mathrm{relpath}(p_1) \,\Vert\, \texttt{":"} \,\Vert\,
+     \mathrm{SHA256}(\mathrm{bytes}(p_1))
+     \,\Vert\, \cdots \,\Vert\,
+     \mathrm{relpath}(p_n) \,\Vert\, \texttt{":"} \,\Vert\,
+     \mathrm{SHA256}(\mathrm{bytes}(p_n))
+   \Big),
+
+with paths sorted deterministically before hashing so the result does not
+depend on filesystem iteration order.  If indexed source, documentation,
+examples, or recipes change -- content, not mtime -- the fingerprint
+changes and a stale-index check (compare :math:`\mathrm{fp}` against a
+freshly computed one) flags the persisted index for rebuilding.
 
 Useful inspection commands:
 
@@ -349,6 +369,8 @@ These numbers should be regenerated for each release artifact because the
 corpus changes whenever source files, recipes, or documentation change.
 
 
+.. _assistant-rag-retrieval-model:
+
 Retrieval Model
 ---------------
 
@@ -367,15 +389,15 @@ The ranking components are:
    * - Identifier-aware tokenization
      - Splits names such as ``StaticShiftAgent`` and ``estimate_ss_ama`` into
        searchable whole-token and sub-token terms.
-   * - BM25 scoring
+   * - :term:`BM25` scoring
      - Ranks chunks using Okapi BM25 over tokenized chunk text.
-   * - Deterministic query expansion
+   * - Deterministic :term:`query expansion`
      - Maps domain phrasing to corpus vocabulary.  For example, "vertical
        offset" can add static-shift and galvanic-distortion terms.
    * - Workflow inference
      - Infers workflow tags from the query and applies a boost to matching
        chunks.
-   * - Static priority
+   * - Static :term:`priority`
      - Boosts high-value implementation areas such as ``pycsamt.agents``,
        ``pycsamt.emtools``, ``pycsamt.models``, ``pycsamt.api``,
        ``pycsamt.forward``, ``pycsamt.inversion``, and recipes.
@@ -391,6 +413,41 @@ Query expansion is intentionally conservative.  It only fires on specific
 phrases and its terms are scored at lower weight than the user's own words.
 This lets natural geophysical language find code vocabulary while keeping
 off-topic questions from drifting into unrelated areas.
+
+These components do not vote independently; they compose into one score per
+chunk, and the order of composition matters for reproducibility as much as
+the individual pieces do.  The lexical stage first blends the query's own
+:term:`BM25` score with a discounted BM25 pass over its expansion terms
+:math:`e(q)` -- the full BM25 derivation is in the glossary --
+
+.. math::
+
+   L(c) = \mathrm{BM25}(c, q) + 0.35 \cdot \mathrm{BM25}(c, e(q)).
+
+A chunk with :math:`L(c) = 0` -- sharing no token with the query or its
+expansion -- is dropped immediately: no downstream boost can manufacture a
+relevance that lexical matching did not find.  Every surviving chunk is then
+rescaled by structural evidence, multiplicatively rather than by weighted
+sum, so one strong signal (an exact symbol match, say) cannot be diluted
+back down by several weak ones:
+
+.. math::
+
+   s(c) = L(c)\,
+   \bigl[1 + 0.12\,(\mathrm{priority}(c) - 1)\bigr]\,
+   b_{\mathrm{wf}}(c)\, b_{\mathrm{recipe}}(c)\, b_{\mathrm{sym}}(c)\, b_{\mathrm{fb}}(c),
+
+where each :math:`b_*` factor is :math:`1` unless its condition fires:
+:math:`b_{\mathrm{wf}} = 1.6` when the chunk's workflow tag matches the
+query's inferred workflow, :math:`b_{\mathrm{recipe}} = 1.25` for a recipe
+chunk, :math:`b_{\mathrm{sym}} = 1.5` when the query text literally contains
+the chunk's leaf symbol name, and :math:`b_{\mathrm{fb}}` applies a learned
+per-symbol delta from prior user feedback, floored at :math:`0.15` so a hard
+negative can demote a chunk but never erase it from consideration entirely.
+The ranked chunks are exposed through ``RetrievedContext.top_score``, the
+raw :math:`s(c)` of the best match, which resurfaces later as the
+:term:`confidence proxy` behind the assistant's decision to answer or ask a
+clarifying question.
 
 
 Optional Dense Retrieval
@@ -411,10 +468,30 @@ manifest and chunk file.  The default embedding backend is OpenAI embeddings
 when an API key is supplied.  The interface is backend-agnostic, so a local
 embedding backend can be added without changing the retrieval callers.
 
-The dense path is fused with the lexical ranking using Reciprocal Rank Fusion
-rather than raw score fusion.  This matters because BM25 scores and cosine
-similarities live on different numeric scales.  If vectors or an embedding
-backend are absent, the retriever degrades to the deterministic BM25 path.
+The dense path is fused with the lexical ranking using :term:`Reciprocal
+Rank Fusion` rather than raw score fusion.  This matters because BM25 scores
+and cosine similarities live on different numeric scales -- a score-level
+average would let whichever ranker happens to produce larger numbers quietly
+dominate.  Ranks are scale-free, so fusion instead asks only "how early does
+each ranker place this chunk":
+
+.. math::
+
+   \mathrm{RRF}(i) = \frac{1}{k + \mathrm{rank}_{\mathrm{lex}}(i)}
+                    + \frac{1}{k + \mathrm{rank}_{\mathrm{dense}}(i)},
+   \qquad k = 60,
+
+with 0-based ranks and a chunk missing from one ranking simply contributing
+nothing from that term.  Before fusion, the dense ranking itself is built
+from cosine similarity between the (L2-normalised) query embedding and every
+stored chunk vector, keeping only chunks at or above a similarity floor of
+``0.20`` so near-orthogonal, plainly unrelated chunks are never dragged into
+contention regardless of how the lexical side ranked them; only the top
+``max(k * 5, 50)`` chunks of each ranking are fused, not the full corpus.  If
+vectors or an embedding backend are absent, or embedding the query fails for
+any reason, the retriever degrades silently to the deterministic
+:term:`BM25` path above -- dense retrieval is additive, never a single point
+of failure for retrieval itself.
 
 
 Context Assembly
@@ -433,12 +510,32 @@ The assembled context contains:
 * project context resolved from the project registry;
 * related symbols;
 * API cards extracted from code chunks;
-* a confidence proxy based on top retrieval score or project-line matches.
+* a :term:`confidence proxy` based on top retrieval score or project-line
+  matches.
 
 API cards are important for generated code.  They expose the real signature,
 parameters, defaults, and return information of retrieved functions or
 classes.  This makes code generation less dependent on prose and reduces the
 chance of invented argument names.
+
+The confidence proxy is what turns a retrieval score into a decision.
+Rather than trusting every top hit, ``AssembledContext.is_confident``
+reduces the whole retrieval pass to one boolean:
+
+.. math::
+
+   \mathrm{confident} \iff
+   \text{project context resolved} \;\lor\; s_{\max} \geq \tau, \qquad \tau = 25.0,
+
+where :math:`s_{\max}` is exactly the top chunk's composed score
+:math:`s(c)` from the retrieval model above.  A resolved project context
+(the query already names a survey line the registry recognizes) is treated
+as confident on its own, independent of the text score, because knowing
+*which data* the user means is often worth more than any one chunk's
+wording match.  Below the floor, with no session context to anchor a guess,
+the assistant asks a clarifying question instead of answering from weak
+evidence -- deliberately biased toward admitting uncertainty over
+fabricating a plausible-sounding but ungrounded response.
 
 When no LLM key is configured, the context builder can compose a deterministic
 offline answer from the top retrieved chunks.  With an LLM key, the model is
@@ -448,24 +545,46 @@ expected to synthesize a fluent response from the same cited context.
 Generated-Code Validation
 -------------------------
 
-The Assistant includes deterministic checks for generated scripts.  The
-validator parses generated Python code with ``ast`` and inspects imports from
-``pycsamt``.  For each import it can verify, it checks whether the referenced
-module, attribute, or submodule actually exists.
+The Assistant includes deterministic checks for generated scripts, run by
+:func:`pycsamt.assistant.tools.validation_tools.validate_generated_code`.
+The validator parses generated Python code with ``ast`` and inspects
+imports from ``pycsamt``.  For each import it can verify, it checks whether
+the referenced module, attribute, or submodule actually exists -- and only
+ever flags a symbol it can *prove* absent; an import it cannot check (an
+optional heavy dependency, say) is reported as a warning, not an error, so
+the validator never blocks generation on its own inability to verify.
 
-This catches common hallucinations such as:
+This catches common hallucinations such as a plausible-looking but
+non-existent top-level import:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt import static_shift
+   >>> from pycsamt.assistant.tools.validation_tools import validate_generated_code
 
-when no such public symbol exists.  The validator reports syntax errors,
-missing symbols, warnings for imports that cannot be verified because of
-optional dependencies, and the list of checked symbols.
+   >>> validate_generated_code("from pycsamt import static_shift\n")
+   {'ok': False, 'syntax_ok': True,
+    'errors': ["'pycsamt' has no attribute or submodule 'static_shift'"],
+    'warnings': [], 'checked': []}
 
-The validation layer does not prove that a script is scientifically correct.
-It provides a narrower but valuable guarantee: generated code should not rely
-on pyCSAMT APIs that are known to be absent.
+against the real symbol the same request should have produced:
+
+.. code-block:: pycon
+
+   >>> validate_generated_code("from pycsamt.agents import StaticShiftAgent\n")
+   {'ok': True, 'syntax_ok': True, 'errors': [],
+    'warnings': [], 'checked': ['pycsamt.agents.StaticShiftAgent']}
+
+``static_shift`` reads like a reasonable module name -- it is the workflow
+tag used throughout this page -- which is exactly why a lexical or even a
+fluent language model can produce it with confidence; only checking the
+real package namespace catches the mismatch.  This validator is a narrower,
+complementary check to the :term:`hallucination guard` used in
+:mod:`pycsamt.assistant.evals`: the guard flags forbidden strings inside
+*retrieved evidence* before an answer is composed, while this validator
+checks a specific *generated script*'s imports after the fact.  Neither
+proves a script is scientifically correct; together they provide a
+narrower but valuable guarantee -- generated code should not reference
+pyCSAMT APIs already known to be absent.
 
 
 Memory And Project Context
@@ -509,10 +628,14 @@ Run the default retrieval evaluation with:
 
 The evaluation harness reports metrics such as intent accuracy, workflow
 accuracy, line accuracy, mean symbol recall, retrieval workflow coverage,
-non-empty retrieval rate, hallucination-guard violations, and test-file
-pollution.  Test-file pollution is tracked because unit tests are excluded
-from the intended retrieval corpus; retrieving them would indicate a corpus
-policy problem.
+non-empty retrieval rate, :term:`hallucination guard` violations, and
+test-file pollution.  A violation is counted per record whenever one of its
+declared ``must_not_contain`` strings turns up in the text of the chunks
+retrieved for that query -- so the metric measures what evidence retrieval
+surfaced, not what any answering model went on to say.  Test-file pollution
+is tracked separately because unit tests are excluded from the intended
+retrieval corpus; retrieving them would indicate a corpus policy problem
+rather than a hallucination.
 
 Bundled suites:
 
@@ -688,13 +811,13 @@ The Assistant supports two retrieval modes:
    * - Mode
      - Strengths
      - Tradeoffs
-   * - Offline BM25
+   * - Offline :term:`BM25`
      - Deterministic, local, fast to inspect, reproducible without network
        access, and good for exact symbols, workflow vocabulary, CLI names,
        and documented terms.
      - Can miss paraphrases when the user's language and the code/docs share
-       little vocabulary; conservative query expansion is used to reduce this
-       gap.
+       little vocabulary; conservative :term:`query expansion` is used to
+       reduce this gap.
    * - BM25 plus dense embeddings
      - Better semantic matching for paraphrases and broader conceptual
        questions when a suitable embedding model is available.
@@ -710,10 +833,10 @@ Dense retrieval is opt-in:
    python -m pycsamt.assistant.rag build --embed
    python -m pycsamt.assistant.rag query --dense "static shift correction"
 
-In dense mode, lexical and vector rankings are combined by Reciprocal Rank
-Fusion.  The paper should report both the embedding model and whether dense
-retrieval was enabled, because the default release configuration is the
-offline BM25 path.
+In dense mode, lexical and vector rankings are combined by :term:`Reciprocal
+Rank Fusion`.  The paper should report both the embedding model and whether
+dense retrieval was enabled, because the default release configuration is
+the offline BM25 path.
 
 
 Assistant Recipe Authoring And Review
@@ -797,8 +920,8 @@ Known limitations:
 
 * retrieval quality depends on the indexed documentation, docstrings, and
   recipes;
-* BM25 can miss paraphrases unless query expansion or embeddings bridge the
-  vocabulary gap;
+* :term:`BM25` can miss paraphrases unless :term:`query expansion` or
+  embeddings bridge the vocabulary gap;
 * optional dense embeddings may improve semantic matching but introduce an
   external model dependency;
 * generated-code validation checks symbol existence, not scientific validity;

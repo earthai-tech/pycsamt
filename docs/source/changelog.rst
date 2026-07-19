@@ -128,10 +128,9 @@ Docs & tooling
 * |Docs| **Navigation polish** — the right "On this page" sidebar is back
   on ordinary pages (only the home page, the API reference tables, and the
   gallery index pages stay full-width); Map Tools and Tutorials indexes
-  gained icon card grids; Site Tools uses a two-column grid; the legacy
-  ``applications/desktop`` and ``applications/web`` stubs auto-redirect to
-  the new guides; header icon links now include the issue tracker and
-  Stack Overflow.
+  gained icon card grids; Site Tools uses a two-column grid; the desktop and
+  web application entries point directly to their deep guides; header icon
+  links now include the issue tracker and Stack Overflow.
 * |Build| **Faster documentation builds** — third-party module
   highlighting disabled in ``viewcode``, the Sphinx environment and the
   executed gallery persist between Netlify deploys, and the docs

@@ -123,7 +123,6 @@ def test_public_api_all(env):
 
 def test_session_wraps_to_edi_and_transformers(env, tmp_path, monkeypatch):
     ctx = _import_ctx()
-    smod = importlib.import_module("pycsamt._session")
 
     called = {"to_edi": 0, "x": 0, "j": 0}
 
@@ -131,7 +130,7 @@ def test_session_wraps_to_edi_and_transformers(env, tmp_path, monkeypatch):
         called["to_edi"] += 1
         return {"ok": True}
 
-    monkeypatch.setattr(smod, "to_edi", fake_to_edi)
+    monkeypatch.setattr(b, "to_edi", fake_to_edi)
 
     def fake_x(self, *a, **k):  # noqa: ANN001
         called["x"] += 1

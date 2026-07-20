@@ -10,10 +10,56 @@ tests can instantiate Qt widgets without a real display.
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+_exit_status = 0
+_qt_active = False
+
+
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+    global _exit_status
+    _exit_status = int(exitstatus)
+
+
+def pytest_unconfigure(config):  # noqa: ARG001
+    """
+    Hard-kill the process to dodge a PySide6/Shiboken shutdown crash.
+
+    Widgets created across the whole test session build up reference
+    cycles that CPython's normal shutdown GC resolves in an order
+    Shiboken doesn't expect (``QObject: shared QObject was deleted
+    directly``), segfaulting *after* results and coverage have already
+    been written. Nothing meaningful happens between here and process
+    exit, so leave before interpreter shutdown touches the Qt object
+    graph — without importing Qt or querying ``QApplication.instance()``
+    here, since that state may already be corrupted.
+
+    ``os._exit`` maps straight to the ``_exit(2)`` syscall on POSIX
+    (where CI actually runs): it skips ``Py_Finalize`` entirely, and
+    since shared objects loaded via the dynamic linker get no
+    equivalent of a DLL-unload notification on ``_exit``, that's
+    enough. On Windows, ``ExitProcess`` (which ``os._exit`` still goes
+    through) *does* run ``DLL_PROCESS_DETACH`` for every loaded DLL,
+    including Qt's native ones, so it crashes the same way there;
+    ``TerminateProcess`` is the only call that skips that too, and it
+    takes the exit code directly so status reporting stays intact.
+    """
+    if not _qt_active:
+        return
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if os.name == "nt":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), _exit_status)
+    else:
+        os._exit(_exit_status)
+
 
 # ── Qt / offscreen setup ───────────────────────────────────────────────────
 
@@ -29,6 +75,9 @@ def qt_offscreen():
 def qapp():
     """Single QApplication shared across the whole test session."""
     from PySide6.QtWidgets import QApplication
+
+    global _qt_active
+    _qt_active = True
 
     existing = QApplication.instance()
     if existing is not None:

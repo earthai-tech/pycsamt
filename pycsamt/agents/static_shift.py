@@ -7,8 +7,10 @@ pycsamt.agents.static_shift
 Wraps :mod:`pycsamt.emtools.ss`:
 
 * :func:`~pycsamt.emtools.ss.correct_ss_ama`             — AMA correction (default)
-* :func:`~pycsamt.emtools.ss.correct_ss_loess`           — LOESS smooth correction
+* :func:`~pycsamt.emtools.ss.estimate_ss_loess`          — LOESS smooth estimate
 * :func:`~pycsamt.emtools.ss.estimate_ss_refmedian`      — reference-median estimate
+* :func:`~pycsamt.emtools.ss.estimate_ss_bilateral`      — bilateral-filter estimate
+* :func:`~pycsamt.emtools.ss.apply_ss_factors`           — applies loess/refmedian/bilateral factors
 * :func:`~pycsamt.emtools.ss.ss_comparison_psection`     — before/after section
 * :func:`~pycsamt.emtools.ss.plot_ss_summary`            — summary dashboard
 * :func:`~pycsamt.emtools.ss.plot_ss_1d_curves`          — per-station 1-D curves
@@ -135,6 +137,7 @@ class StaticShiftAgent(BaseAgent):
         from ..emtools.ss import (
             apply_ss_factors,
             correct_ss_ama,
+            estimate_ss_bilateral,
             estimate_ss_loess,
             estimate_ss_refmedian,
             plot_ss_1d_curves,
@@ -174,6 +177,19 @@ class StaticShiftAgent(BaseAgent):
                 corrected_sites = apply_ss_factors(
                     sites,
                     result_loess,
+                    inplace=self.inplace,
+                    verbose=0,
+                )
+            elif method == "bilateral":
+                result_bilateral = estimate_ss_bilateral(
+                    sites,
+                    half_window=self.half_window,
+                    pband=self.pband,
+                    verbose=0,
+                )
+                corrected_sites = apply_ss_factors(
+                    sites,
+                    result_bilateral,
                     inplace=self.inplace,
                     verbose=0,
                 )

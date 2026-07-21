@@ -127,7 +127,14 @@ class _HoverRevealButton(QPushButton):
     # ── Event filter on parent container ──────────────────────────────────────
 
     def eventFilter(self, obj, event) -> bool:
-        if obj is self._container:
+        # ``self`` can be re-entered here while its own C++ object is being
+        # torn down: destroying this button sends a ChildRemoved event to
+        # ``container``, and since this button is registered as one of
+        # ``container``'s filters, Qt calls back into this very instance --
+        # possibly after CPython has already cleared its ``__dict__`` as
+        # part of deallocation. ``getattr`` guards that reentrant case
+        # instead of raising out of a virtual-method override.
+        if obj is getattr(self, "_container", None):
             t = event.type()
             if t == QEvent.Type.Resize:
                 self._reposition()
@@ -707,8 +714,13 @@ class AgentRunnerWindow(PanelWindow):
 
         self._tabs.addTab(_sum_widget, _icon("summary"), "Summary")
 
-        # Hover-reveal pop-out button — floats over the result container
-        _HoverRevealButton(
+        # Hover-reveal pop-out button — floats over the result container.
+        # Keep a reference on self: PySide6 only owns the button on the C++
+        # side via its `container` parent, so an unassigned Python wrapper
+        # can be garbage-collected while the C++ object survives. Qt then
+        # has to re-wrap it from the bare C++ pointer without going through
+        # __init__, and the resulting instance is missing `_container`.
+        self._result_pop_out_button = _HoverRevealButton(
             container=_result_container,
             get_canvas_fn=lambda: (
                 w

@@ -89,9 +89,28 @@ def _unwrap(ed: Any) -> Any:
 
 
 def _rho_a_det(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
-    rxy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(fr, 1e-24)
-    ryx = 0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(fr, 1e-24)
-    return np.sqrt(np.maximum(rxy * ryx, 1e-12))
+    """Geometric-mean apparent resistivity from off-diagonal Z (Ω·m).
+
+    Falls back to whichever off-diagonal component is actually
+    populated when the other is identically zero, e.g. scalar
+    single-component CSAMT surveys that only record Zxy (or Zyx).
+    Naively multiplying rxy and ryx in that case silently collapses
+    to zero rather than signalling missing data.
+    """
+    zxy = np.abs(z[:, 0, 1])
+    zyx = np.abs(z[:, 1, 0])
+    rxy = 0.2 * zxy**2 / np.maximum(fr, 1e-24)
+    ryx = 0.2 * zyx**2 / np.maximum(fr, 1e-24)
+    xy_ok = zxy > 0
+    yx_ok = zyx > 0
+    both = xy_ok & yx_ok
+    out = np.full(rxy.shape, np.nan)
+    out[both] = np.sqrt(np.maximum(rxy[both] * ryx[both], 1e-12))
+    only_xy = xy_ok & ~yx_ok
+    out[only_xy] = rxy[only_xy]
+    only_yx = yx_ok & ~xy_ok
+    out[only_yx] = ryx[only_yx]
+    return out
 
 
 def _k1_scalar(rho: float, freq: float) -> complex:
@@ -659,9 +678,7 @@ def _rho_a_comp(z: np.ndarray, fr: np.ndarray, comp: str) -> np.ndarray:
         return 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(fr, 1e-24)
     if comp == "yx":
         return 0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(fr, 1e-24)
-    rxy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(fr, 1e-24)
-    ryx = 0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(fr, 1e-24)
-    return np.sqrt(np.maximum(rxy * ryx, 1e-12))
+    return _rho_a_det(z, fr)
 
 
 def _phase_comp_deg(z: np.ndarray, comp: str) -> np.ndarray:

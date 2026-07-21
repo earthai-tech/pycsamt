@@ -53,7 +53,9 @@ pycsamt_inversion_prep/
 pycsamt_report/
 pycsamt_workflow_output/
 results/
+runs/
 /edi_new_out/
+/edi_out/
 
 # Unit test / coverage reports
 .coverage
@@ -247,12 +249,15 @@ data/MT/SPECTRA/*
 !data/MT/SPECTRA/spectra02.edi
 !data/MT/SPECTRA/README.md
 
-# Exception: single bundled CSAMT EDI used by pycsamt.seg true-file tests
-# (edi_csamt_file / any_edi_file fixtures in conftest.py). The other csa*.edi
-# lines in this folder stay ignored (usable locally, never committed).
+# Exception: bundled CSAMT survey (Tongkeng area, Hunan Province, China)
+# used by pycsamt.seg true-file tests (edi_csamt_file / any_edi_file
+# fixtures in conftest.py) and CSAMT theory/user-guide examples. Published
+# in Kouadio et al. (2020, J. Applied Geophysics) — see data/CSAMT/README.md
+# and docs/source/references.rst — so the full 10-station line is tracked.
 !data/CSAMT
 data/CSAMT/*
-!data/CSAMT/csa000.edi
+!data/CSAMT/csa*.edi
+!data/CSAMT/README.md
 
 # Exception: bundled Jones (.j) sample data used by pycsamt.jones tests
 # (j_single_file / jc_path fixtures in conftest.py) — one standalone file

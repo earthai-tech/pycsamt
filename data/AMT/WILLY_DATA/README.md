@@ -10,7 +10,9 @@ Five station lines were recorded, but **only `L18PLT` and `L22PLT` are
 tracked in this repository** to keep it small. `L26PLT`, `L30PLT`, and
 `L34PLT` are excluded via `.gitignore` — if you already have them locally
 (e.g. from the original delivery of this dataset), they stay usable on
-disk and untouched by git; they are simply never committed.
+disk and untouched by git; they are simply never committed. If you need
+those additional lines and do not already have them, contact the
+corresponding author of the paper cited below.
 
 | Line     | Tracked in git | Stations |
 |----------|:--------------:|---------:|
@@ -19,6 +21,20 @@ disk and untouched by git; they are simply never committed.
 | L26PLT   | no (local only)| —        |
 | L30PLT   | no (local only)| —        |
 | L34PLT   | no (local only)| —        |
+
+## Citation
+
+This survey is the field dataset behind the published AMT study of the
+Baohuashan Cu-Mo porphyry deposit (Jiangsu Province). If you reuse this
+data, please cite:
+
+> Kouabena, K.A.W., Zhou, J., Chen, R., Yin, L., Cai, H., Lu, Z., Gu, J.,
+> Yu, W. (2025). Enhanced prediction of deep-seated Cu-Mo porphyry
+> mineralization: A comprehensive interpretation based on 2D inversion of
+> audio-magnetotelluric data. *Ore Geology Reviews*, 185, 106798.
+> https://doi.org/10.1016/j.oregeorev.2025.106798
+
+See also [Kouabena2025] in `docs/source/references.rst`.
 
 ## Survey characteristics (from the EDI headers)
 

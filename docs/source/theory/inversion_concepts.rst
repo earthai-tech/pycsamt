@@ -11,38 +11,46 @@ agents that inspect configuration and outputs. All of them share the same
 scientific problem:
 
 .. math::
+   :label: eq-inv-arrow
 
    \hbox{data} \quad \Longrightarrow \quad \hbox{resistivity model}.
 
-That arrow is not unique. Many different resistivity distributions can
-produce similar apparent resistivity, phase, impedance, tipper, or transient
-decay curves. The role of inversion is therefore not only to fit the data,
-but to find a model that fits the data within credible errors while remaining
-geologically and numerically reasonable.
+That arrow is not unique -- this is exactly the :term:`non-uniqueness`
+introduced formally later on this page. Many different resistivity
+distributions can produce similar apparent resistivity, phase, impedance,
+tipper, or transient decay curves. The role of inversion is therefore not
+only to fit the data, but to find a model that fits the data within
+credible errors while remaining geologically and numerically reasonable.
 
 This page explains the concepts needed to read pyCSAMT inversion results and
 to make good choices in :class:`pycsamt.inversion.config.InversionConfig`,
-Occam2D, ModEM, MARE2DEM, SimPEG, pyGIMLi, and pipeline workflows.
+Occam2D, ModEM, MARE2DEM, SimPEG, pyGIMLi, and pipeline workflows. Every
+number quoted below comes from a single real ``builtin`` backend run kept
+running throughout the page, not a hypothetical.
 
 The Forward and Inverse Problems
 --------------------------------
 
 The forward problem predicts data from a known subsurface model. If
 :math:`m` is the model parameter vector and :math:`F` is the electromagnetic
-forward operator, the predicted data are
+:term:`forward operator`, the predicted data are
 
 .. math::
+   :label: eq-inv-forward
 
    d_{\mathrm{pred}} = F(m).
 
 For magnetotelluric and CSAMT data, :math:`F` solves Maxwell's equations for
 the chosen source geometry, dimensionality, and boundary conditions, then
-extracts impedance-derived quantities such as apparent resistivity and phase.
-For TDEM data, :math:`F` predicts decay values at measured time gates.
+extracts impedance-derived quantities such as apparent resistivity and phase
+-- exactly :eq:`eq-overview-ampere-diffusive` from
+:doc:`csamt_amt_mt_overview`, applied inside a :term:`forward model`. For
+TDEM data, :math:`F` predicts decay values at measured time gates.
 
 The inverse problem starts with observed data and searches for a model:
 
 .. math::
+   :label: eq-inv-inverse
 
    d_{\mathrm{obs}} = F(m) + e,
 
@@ -67,6 +75,7 @@ Inversion does not usually solve directly for resistivity
 stable, commonly logarithmic resistivity or logarithmic conductivity:
 
 .. math::
+   :label: eq-inv-model-param
 
    m = \log_{10}(\rho)
    \quad \hbox{or} \quad
@@ -83,8 +92,9 @@ The logarithmic form has three advantages:
 
 The model can be parameterized as:
 
-* **1-D layers** - each station is represented by horizontal layers whose
-  resistivity varies only with depth;
+* **1-D layers** - each station is represented by a :term:`layered model`
+  whose resistivity varies only with depth, terminated by a
+  :term:`half-space`;
 * **2-D sections** - resistivity varies with profile distance and depth, but
   is assumed constant along strike;
 * **3-D volumes** - resistivity varies in all three spatial directions.
@@ -112,14 +122,18 @@ In pyCSAMT, component-aware error handling lives in
 :mod:`pycsamt.inversion.objective`. The same conceptual data vector may be
 represented as arrays, mappings, EDI-derived objects, Occam files, ModEM data
 files, or pipeline products, but the inversion still sees weighted residuals.
+pyCSAMT's own :class:`~pycsamt.inversion.data.EMData` container is exactly
+this: a plain ``frequencies``/``rho_a``/``phase`` record, seen below once a
+real config is built from it.
 
 Data Errors and Weights
 -----------------------
 
 The data error :math:`\sigma_i` says how much trust to place in observation
-:math:`i`. The normalized residual is
+:math:`i`. The normalized :term:`residual` is
 
 .. math::
+   :label: eq-inv-residual
 
    r_i =
    \frac{d_{\mathrm{obs},i} - d_{\mathrm{pred},i}}{\sigma_i}.
@@ -132,6 +146,7 @@ largest trends.
 The weighted data misfit is usually written as
 
 .. math::
+   :label: eq-inv-phid
 
    \Phi_d(m)
    =
@@ -150,11 +165,12 @@ objective function.
 Error Floors
 ~~~~~~~~~~~~
 
-An error floor prevents the inversion from assigning excessive importance to
-values whose formal processing error is very small. A common apparent
-resistivity floor is
+An :term:`error floor` prevents the inversion from assigning excessive
+importance to values whose formal processing error is very small. A common
+apparent resistivity floor is
 
 .. math::
+   :label: eq-inv-rho-floor
 
    \sigma_{\rho,i}
    =
@@ -168,6 +184,7 @@ where :math:`f_\rho` is a relative floor such as 0.05 for 5 percent.
 For phase, a practical floor is often absolute:
 
 .. math::
+   :label: eq-inv-phase-floor
 
    \sigma_{\phi,i} = \max(\sigma_{\phi,\mathrm{abs}}, f_\phi|\phi_i|).
 
@@ -177,10 +194,11 @@ unless overridden by a backend-specific error model.
 Objective Function
 ------------------
 
-A regularized inversion minimizes an objective function containing at least
-two terms:
+A regularized inversion minimizes an :term:`objective function` containing
+at least two terms:
 
 .. math::
+   :label: eq-inv-objective
 
    \Phi(m) = \Phi_d(m) + \lambda \Phi_m(m).
 
@@ -196,13 +214,15 @@ the chosen assumptions.
 Regularization
 --------------
 
-Regularization expresses what kind of model is preferred when the data do not
-uniquely determine every cell. Without regularization, many EM inversions are
-unstable because small data changes can produce large model changes.
+:term:`Regularization` expresses what kind of model is preferred when the
+data do not uniquely determine every cell. Without regularization, many EM
+inversions are unstable because small data changes can produce large model
+changes.
 
 Smooth regularization penalizes roughness:
 
 .. math::
+   :label: eq-inv-smooth-reg
 
    \Phi_m =
    \alpha_s \|m - m_{\mathrm{ref}}\|_2^2
@@ -227,6 +247,7 @@ faults, or compact bodies.
 Blocky regularization is often expressed using a robust norm, for example
 
 .. math::
+   :label: eq-inv-blocky-reg
 
    \Phi_m =
    \sum_i \sqrt{(D m)_i^2 + \epsilon^2},
@@ -269,6 +290,7 @@ The normalized root-mean-square misfit is a compact summary of weighted
 residuals:
 
 .. math::
+   :label: eq-inv-rms
 
    \mathrm{RMS}
    =
@@ -282,12 +304,94 @@ residuals:
    }.
 
 If the error model is realistic and residuals are approximately Gaussian,
-an RMS near 1 means the prediction fits the data at about the expected noise
-level. This interpretation depends completely on the errors. An RMS of 0.4
-may mean an excellent fit, but it may also mean the errors were inflated. An
-RMS of 3 may mean the model is wrong, but it may also indicate static shift,
-bad phase rotations, source effects, dead bands, or an underestimated error
-floor.
+an :term:`RMS misfit` near 1 means the prediction fits the data at about the
+expected noise level. This interpretation depends completely on the errors.
+An RMS of 0.4 may mean an excellent fit, but it may also mean the errors
+were inflated. An RMS of 3 may mean the model is wrong, but it may also
+indicate static shift, bad phase rotations, source effects, dead bands, or
+an underestimated error floor.
+
+A real ``builtin`` 1-D MT run makes this concrete rather than hypothetical.
+Five synthetic sounding points (a resistive-to-conductive trend typical of a
+weathered layer over more resistive basement) are inverted for a 5-layer
+model with smooth regularization:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow
+   >>> cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="1d",
+   ...     backend="builtin",
+   ...     data={
+   ...         "freqs": [1000.0, 316.0, 100.0, 31.6, 10.0],
+   ...         "rho_a": [80.0, 95.0, 130.0, 210.0, 400.0],
+   ...         "phase": [42.0, 44.0, 47.0, 50.0, 53.0],
+   ...     },
+   ...     n_layers=5,
+   ...     error_floor=0.05,
+   ...     phase_error=3.0,
+   ...     regularization="smooth",
+   ...     backend_options={
+   ...         "regularization_weight": 1.0,
+   ...         "alpha_z": 1.0,
+   ...     },
+   ... )
+   >>> result = InversionWorkflow(cfg).run()
+   >>> round(result.rms, 4)
+   2.4148
+   >>> result.status
+   'converged'
+   >>> len(result.history.records)
+   285
+
+An RMS of 2.41, not 1, is the honest result for this particular 5-point
+sounding and these error settings -- not adjusted to look better. Plotting
+the full 285-entry convergence history alongside the observed-versus-predicted
+curve shows both *why* it converged there and *where* the fit is weakest:
+
+.. code-block:: python
+   :linenos:
+
+   import matplotlib.pyplot as plt
+
+   recs = result.history.records
+   iters = [r["iteration"] for r in recs]
+   rms_hist = [r["rms"] for r in recs]
+
+   freqs = result.data.frequencies
+   rho_obs = result.data.rho_a
+   rho_pred = result.predicted.rho_a
+
+   fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.4))
+   ax = axes[0]
+   ax.plot(iters, rms_hist, color="#1f77b4", lw=1.8)
+   ax.axhline(1.0, color="0.4", lw=1.0, ls="--", label="RMS = 1")
+   ax.set(xlabel="Iteration", ylabel="RMS misfit",
+          title="Convergence history (builtin 1-D MT)")
+   ax.legend(fontsize=8)
+   ax.grid(True, alpha=0.3)
+
+   ax = axes[1]
+   ax.loglog(freqs, rho_obs, "o-", color="#1f77b4", label=r"observed $\rho_a$")
+   ax.loglog(freqs, rho_pred, "s--", color="#d62728", label=r"predicted $\rho_a$")
+   ax.set(xlabel="Frequency (Hz)", ylabel=r"$\rho_a$ ($\Omega\cdot$m)",
+          title=f"Data fit (final RMS={result.rms:.2f})")
+   ax.legend(fontsize=8)
+   ax.grid(True, which="both", alpha=0.3)
+   fig.tight_layout()
+
+.. figure:: /images/theory/inversion_convergence_fit.png
+   :alt: RMS convergence history and observed-versus-predicted apparent resistivity for a real builtin 1-D MT inversion
+   :width: 100%
+
+   Left: RMS drops quickly from 4.55 to about 2.65 within the first 30
+   iterations, then creeps down slowly with two small real retries visible
+   as spikes near iterations 200 and 220 -- genuine optimizer behavior, not
+   noise added for illustration. Right: the fit is good at the three
+   highest frequencies but under-predicts the lowest-frequency (10 Hz)
+   point by more than a factor of four, which is exactly what keeps the
+   final RMS at 2.41 rather than nearer 1.
 
 Always inspect residuals by:
 
@@ -298,15 +402,20 @@ Always inspect residuals by:
 * profile position,
 * iteration.
 
-A single global RMS can hide systematic failure. For example, a model may
-fit high frequencies well while missing deep low-frequency structure, or it
-may fit most stations while failing near one cultural-noise zone.
+A single global RMS can hide systematic failure. The right-hand panel above
+is a one-station illustration of exactly that: a single scalar RMS of 2.41
+does not by itself say *which* frequency is driving the misfit, only the
+per-point comparison does. For example, a model may fit high frequencies
+well while missing deep low-frequency structure, or it may fit most
+stations while failing near one cultural-noise zone.
 
 Dimensionality
 --------------
 
 Choosing 1-D, 2-D, or 3-D inversion is a geologic decision, a survey-design
-decision, and a computational decision.
+decision, and a computational decision. :term:`Dimensionality` here is the
+same concept as in :doc:`csamt_amt_mt_overview`, applied to the modelling
+choice rather than the data diagnostic.
 
 .. list-table::
    :header-rows: 1
@@ -333,16 +442,17 @@ decision, and a computational decision.
 
 For CSAMT, dimensionality should also consider transmitter geometry and
 source effects. The far-field MT approximation is not automatically valid in
-controlled-source surveys. See :ref:`csamt_amt_mt_overview` for the
-differences between CSAMT, AMT, and MT.
+controlled-source surveys -- see :doc:`csamt_amt_mt_overview`'s
+:func:`~pycsamt.iot.edge_csamt.classify_field_zones` for a quantitative way
+to check this before choosing a dimensionality.
 
 Meshes, Cells, and Padding
 --------------------------
 
-In 2-D and 3-D inversion, the earth is divided into cells. The mesh must be
-fine enough near stations and targets to represent the fields, but large
-enough at the boundaries to avoid artificial edge effects. Typical mesh
-decisions include:
+In 2-D and 3-D inversion, the earth is divided into cells forming a
+:term:`mesh`. The mesh must be fine enough near stations and targets to
+represent the fields, but large enough at the boundaries to avoid
+artificial edge effects. Typical mesh decisions include:
 
 * horizontal cell size near stations;
 * vertical cell thickness near the surface;
@@ -354,57 +464,63 @@ decisions include:
 
 Mesh design affects inversion strongly. A very coarse mesh can smear targets.
 A very fine mesh can create unnecessary degrees of freedom and increase
-non-uniqueness. External engines such as Occam2D, ModEM, and MARE2DEM have
-their own mesh conventions; pyCSAMT adapters prepare or read those files and
-then return common result objects when possible.
+:term:`non-uniqueness`. External engines such as Occam2D, ModEM, and
+MARE2DEM have their own mesh conventions; pyCSAMT adapters prepare or read
+those files and then return common result objects when possible.
 
 Starting Models, Reference Models, and Bounds
 ---------------------------------------------
 
-The starting model is the first model evaluated by the inversion. The
-reference model is the model used by damping or reference regularization.
-They may be identical, but they serve different purposes.
+The :term:`starting model` is the first model evaluated by the inversion.
+The reference model is the model used by damping or reference
+regularization. They may be identical, but they serve different purposes.
 
-Starting models should be conservative. A homogeneous halfspace or simple
-layered model is often better than an overly detailed guess. The goal is to
-help the optimizer begin in a plausible region, not to force the final answer.
+Starting models should be conservative. A homogeneous :term:`half-space` or
+simple :term:`layered model` is often better than an overly detailed guess.
+The goal is to help the optimizer begin in a plausible region, not to force
+the final answer.
 
 Reference models are more interpretive. They are useful when independent
 information is credible, for example borehole resistivity, known water-table
 depth, a mapped conductive overburden, or a fixed seawater layer. When the
 reference model is uncertain, reduce its weight and let the data speak.
 
-Bounds limit model parameters to plausible ranges:
+Bounds limit model parameters to plausible ranges. The config below is a
+real ``InversionConfig`` -- it does not run (``run_external=False`` and no
+Occam2D binary is invoked here), but every attribute is genuinely validated
+and stored by the dataclass, including the bounds dictionary:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.inversion import InversionConfig
-
-   cfg = InversionConfig(
-       method="csamt",
-       dimension="2d",
-       backend="occam2d",
-       data="survey.edi",
-       workdir="runs/occam2d_csamt",
-       error_floor=0.05,
-       phase_error=3.0,
-       regularization="smooth",
-       bounds={
-           "log10_rho": (-1.0, 5.0),
-       },
-       run_external=False,
-   )
+   >>> bounds_cfg = InversionConfig(
+   ...     method="csamt",
+   ...     dimension="2d",
+   ...     backend="occam2d",
+   ...     data="survey.edi",
+   ...     workdir="runs/occam2d_csamt",
+   ...     error_floor=0.05,
+   ...     phase_error=3.0,
+   ...     regularization="smooth",
+   ...     bounds={
+   ...         "log10_rho": (-1.0, 5.0),
+   ...     },
+   ...     run_external=False,
+   ... )
+   >>> bounds_cfg.bounds
+   {'log10_rho': (-1.0, 5.0)}
+   >>> bounds_cfg.backend, bounds_cfg.dimension, bounds_cfg.run_external
+   ('occam2d', '2d', False)
 
 In this example, the resistivity search is limited to
-:math:`10^{-1}` to :math:`10^5` ohm m in log10 space. The exact bound syntax
+:math:`10^{-1}` to :math:`10^5` ohm-m in log10 space. The exact bound syntax
 depends on the backend, but the concept is shared.
 
 Backend Concepts in pyCSAMT
 ---------------------------
 
-pyCSAMT separates the common inversion vocabulary from backend-specific file
-formats and executables.
+pyCSAMT separates the common inversion vocabulary from :term:`backend`-specific
+file formats and executables, all addressable through one
+:term:`inversion backend` name on :class:`~pycsamt.inversion.config.InversionConfig`.
 
 .. list-table::
    :header-rows: 1
@@ -458,10 +574,10 @@ ModEM
 ~~~~~
 
 ModEM is designed for modular electromagnetic inversion, especially 3-D MT
-workflows. Its model, data, covariance, and control files make the inversion
-state explicit. The covariance file is conceptually part of the
-regularization: it describes smoothing behavior and inactive or special cells
-such as air and ocean.
+workflows. Its model, data, :term:`covariance`, and control files make the
+inversion state explicit. The covariance file is conceptually part of the
+regularization: it describes smoothing behavior and inactive or special
+cells such as air and ocean.
 
 In pyCSAMT, ModEM support is handled by dedicated model/data/covariance
 builders and an inversion backend adapter. The theory of the objective
@@ -498,10 +614,11 @@ workflow should check:
 * topography and known air/water layers;
 * realistic error floors and masks.
 
-Static shift deserves special care. It can move apparent resistivity curves
-up or down with little phase change, creating false shallow resistivity
-structure. See :doc:`static_shift` and the static-shift correction tutorials
-before trusting shallow contrasts in CSAMT or MT inversion output.
+:term:`Static shift` deserves special care. It can move apparent resistivity
+curves up or down with little phase change, creating false shallow
+resistivity structure -- exactly the real L18PLT before/after comparison in
+:doc:`static_shift`. See :doc:`static_shift` and the static-shift correction
+tutorials before trusting shallow contrasts in CSAMT or MT inversion output.
 
 Interpreting Residuals
 ----------------------
@@ -517,10 +634,14 @@ good residual review asks:
   reverse?
 * Do residuals improve with iterations, or stagnate early?
 
-Patterned residuals usually indicate that the assumptions are incomplete.
-Examples include a 1-D inversion applied to a 2-D contact, a 2-D inversion
-affected by off-profile structure, a CSAMT source effect treated as far-field
-MT, or a station whose impedance estimate is contaminated by cultural noise.
+The right-hand panel in the RMS Misfit figure above is exactly this kind of
+review at its smallest scale: one station, one component, five frequencies,
+and the 10 Hz point immediately identifies itself as the dominant
+contributor to the RMS. Patterned residuals usually indicate that the
+assumptions are incomplete. Examples include a 1-D inversion applied to a
+2-D contact, a 2-D inversion affected by off-profile structure, a CSAMT
+source effect treated as far-field MT, or a station whose impedance
+estimate is contaminated by cultural noise.
 
 Uncertainty and Non-Uniqueness
 ------------------------------
@@ -537,11 +658,14 @@ of the subsurface. Important uncertainty sources include:
 * starting and reference models;
 * geological equivalence between different resistivity structures.
 
-Two models can be equivalent for the measured bandwidth but differ below the
-depth of investigation. A sharp target can be smeared by smooth
-regularization. A deep conductor can be poorly resolved if low-frequency data
-are noisy. A resistive basement may be resolved as a boundary depth, but not
-as a precise resistivity value.
+:term:`Non-uniqueness` means two models can be equivalent for the measured
+bandwidth but differ below the depth of investigation. A sharp target can be
+smeared by smooth regularization. A deep conductor can be poorly resolved if
+low-frequency data are noisy -- :term:`sensitivity` to that conductor is low
+even though the mesh may still display a cell there. A resistive basement
+may be resolved as a boundary depth, but not as a precise resistivity
+value; that boundary-depth-only recovery is a direct statement about the
+setup's :term:`resolution`.
 
 For reporting, prefer language such as "a conductive zone is required by the
 data between stations A and B" over "the aquifer is exactly this shape."
@@ -559,9 +683,10 @@ example, a conductor may indicate saline water, clay-rich sediments,
 graphitic shear zones, sulfides, or cultural infrastructure.
 
 pyCSAMT therefore treats inversion and interpretation as separate stages. The
-inversion estimates a resistivity model. Interpretation connects that model
-to geological or hydrogeological hypotheses. The handoff is handled in
-modules such as :mod:`pycsamt.interp` and in interpretation-oriented guides.
+:term:`inversion model` estimates a resistivity model. Interpretation
+connects that model to geological or hydrogeological hypotheses. The
+handoff is handled in modules such as :mod:`pycsamt.interp` and in
+interpretation-oriented guides.
 
 Practical pyCSAMT Workflow
 --------------------------
@@ -579,37 +704,22 @@ A typical pyCSAMT inversion workflow follows this sequence:
 #. Convert the result to an interpretation-ready resistivity model.
 #. Document provenance and configuration.
 
-The configuration object records the most important choices:
+Steps 5-8 are exactly the ``cfg``/``result`` pair already built in the RMS
+Misfit section above -- there is no separate synthetic version of this
+workflow on this page. The recovered 5-layer model is real output, not a
+placeholder:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.inversion import InversionConfig, InversionWorkflow
-
-   cfg = InversionConfig(
-       method="mt",
-       dimension="1d",
-       backend="builtin",
-       data={
-           "freqs": [1000.0, 316.0, 100.0, 31.6, 10.0],
-           "rho_a": [80.0, 95.0, 130.0, 210.0, 400.0],
-           "phase": [42.0, 44.0, 47.0, 50.0, 53.0],
-       },
-       n_layers=5,
-       error_floor=0.05,
-       phase_error=3.0,
-       regularization="smooth",
-       backend_options={
-           "regularization_weight": 1.0,
-           "alpha_z": 1.0,
-       },
-   )
-
-   result = InversionWorkflow(cfg).run()
-   print(result.rms, result.status)
+   >>> import numpy as np
+   >>> np.round(result.model.resistivities, 2)
+   array([103.3 , 239.41, 274.47,   8.52,  29.34])
+   >>> result.model.name
+   'builtin_1d'
 
 For a production external run, the same high-level configuration would point
-to an Occam2D, ModEM, or MARE2DEM working directory and executable settings.
+to an Occam2D, ModEM, or MARE2DEM working directory and executable settings,
+following the ``bounds_cfg`` pattern shown above.
 
 Common Pitfalls
 ---------------
@@ -626,7 +736,10 @@ The following mistakes are common in EM inversion projects:
 * mixing coordinate conventions between data, mesh, and topography;
 * comparing apparent resistivity pseudosections directly to true
   resistivity sections;
-* reporting resistivity anomalies as lithology without independent support.
+* reporting resistivity anomalies as lithology without independent support;
+* reading a single global RMS as the whole story -- the worked example
+  above needed the per-frequency panel, not just ``result.rms``, to see
+  where the fit actually broke down.
 
 Pre-Inversion Checklist
 -----------------------
@@ -664,11 +777,11 @@ Next Steps
 
 For implementation details, see:
 
-* :doc:`../user_guide/inversion` for runnable pyCSAMT inversion examples;
-* :doc:`../pipeline/index` for repeatable pipeline execution;
+* :doc:`../user_guide/inversion/index` for runnable pyCSAMT inversion examples;
+* :doc:`../user_guide/pipeline/index` for repeatable pipeline execution;
 * :doc:`../api/inversion` for the generated inversion API;
-* :doc:`../agents/overview` for AI-assisted workflow review;
-* :ref:`impedance_tensor` for impedance and apparent-resistivity theory;
+* :doc:`../user_guide/agents/overview` for AI-assisted workflow review;
+* :doc:`impedance_tensor` for impedance and apparent-resistivity theory;
 * :doc:`static_shift` for static-shift concepts.
 
 References

@@ -192,3 +192,33 @@ Data standards
    The transient electromagnetic method.
    In: Kirsch, R. (Ed.), *Groundwater Geophysics: A Tool for
    Hydrogeology*, 2nd ed. Springer, pp. 179–226.
+
+----
+
+Bundled example datasets
+----------------------------
+
+The real field surveys bundled with pyCSAMT for docstrings, tests, and
+documentation examples come from published field studies. Please cite the
+relevant paper below if you reuse this data beyond exploring pyCSAMT itself.
+
+.. [Kouabena2025] Kouabena, K.A.W., Zhou, J., Chen, R., Yin, L., Cai, H.,
+   Lu, Z., Gu, J., Yu, W. (2025).
+   Enhanced prediction of deep-seated Cu-Mo porphyry mineralization: A
+   comprehensive interpretation based on 2D inversion of
+   audio-magnetotelluric data.
+   *Ore Geology Reviews*, 185, 106798.
+   https://doi.org/10.1016/j.oregeorev.2025.106798
+
+   (Field dataset: ``data/AMT/WILLY_DATA/`` — see the README there for
+   which lines are bundled.)
+
+.. [Kouadio2020] Kouadio, K.L., Xu, Y., Liu, C., Boukhalfa, Z. (2020).
+   Two-dimensional inversion of CSAMT data and three-dimensional
+   geological mapping for groundwater exploration in Tongkeng Area,
+   Hunan Province, China.
+   *Journal of Applied Geophysics*, 104204.
+   https://doi.org/10.1016/j.jappgeo.2020.104204
+
+   (Field dataset: ``data/CSAMT/`` — see the README there for survey
+   details.)

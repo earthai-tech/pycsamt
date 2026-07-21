@@ -364,14 +364,14 @@ terrain fill/line styling, or ``station_marker=`` with an explicit
 markers -- for example, to match a project's existing black-marker
 convention rather than this function's default.
 
-Two render modes, worked end to end
------------------------------------------
+Terrain-draped section, one call
+--------------------------------
 
 Putting a full example together -- a synthetic
 :class:`~pycsamt.interp.ResistivityModel` built on the real L18PLT
 station positions, with a conductive body centred beneath the
-profile -- shows both ``kind`` values against the same data and the
-same colour scale:
+profile -- shows the default ``kind="pcolormesh"`` render against real
+terrain and real station spacing:
 
 .. code-block:: pycon
 
@@ -388,42 +388,32 @@ same colour scale:
    ...     method="occam2d", rms=1.31,
    ... )
 
-   >>> fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15.5, 5.0))
-   >>> fig.subplots_adjust(wspace=0.45)
-   >>> _ = plot_topo_section(rm, sites=sites, ax=ax1, kind="pcolormesh",
-   ...                        vmin=0.6, vmax=2.2, colorbar=True, title='kind="pcolormesh"')
-   >>> _ = plot_topo_section(rm, sites=sites, ax=ax2, kind="imshow",
-   ...                        vmin=0.6, vmax=2.2, colorbar=True, title='kind="imshow"')
+   >>> fig, ax = plt.subplots(figsize=(10.5, 5.2))
+   >>> _ = plot_topo_section(rm, sites=sites, ax=ax, kind="pcolormesh",
+   ...                        vmin=0.6, vmax=2.2, colorbar=True)
    >>> fig.savefig("section_two_kinds.png", dpi=170, bbox_inches="tight")
 
 .. figure:: ../../images/user_guide/topo/section_two_kinds.png
-   :alt: The same synthetic resistivity body plotted with kind="pcolormesh" (terrain-draped) on the left and kind="imshow" (flat pseudosection with an elevation strip) on the right.
+   :alt: The synthetic resistivity body plotted with kind="pcolormesh", terrain-draped over the real L18PLT station elevations.
    :width: 100%
 
-   Same model, same colour scale, same station order -- only ``kind``
-   differs. On the left the conductive body visibly follows the
-   terrain the way :doc:`concepts` first showed, the sky stays plain
-   white above the terrain line, and the white-faced markers read
-   clearly against both the pale-blue background and the darker
-   conductive body. On the right the grid is flat and the same terrain
-   is reduced to the strip above it; the strip's background is
-   transparent rather than a filled box, so it sits on the figure
-   rather than inside a visibly separate panel -- but its axes were
-   still sized for :doc:`overlay`'s original use case, a full-width
-   pseudosection, so its tick labels and "Elev (m)" label are legible
-   but noticeably tighter here than in a full-width standalone figure.
-   A solo ``kind="imshow"`` call, or a wider panel than this
-   side-by-side comparison uses, gives the strip more room to breathe.
+   The conductive body visibly follows the terrain the way
+   :doc:`concepts` first showed, the sky stays plain white above the
+   terrain line, and the white-faced markers read clearly against both
+   the pale-blue background and the darker conductive body. A single
+   wide panel gives the terrain line and station markers room to
+   breathe, which is why this is the ``kind`` this guide leads with;
+   :func:`~pycsamt.topo.section.plot_topo_section` also accepts
+   ``kind="imshow"`` for a flat pseudosection with a separate elevation
+   strip, but that path is less mature and not covered further here.
 
-Both panels used the identical ``rm``/``sites``/``vmin``/``vmax``
-arguments and differed only in ``kind`` and which axes they drew into
--- exactly the point of collapsing :doc:`extract`, :doc:`drape`, and
-:doc:`overlay` into one call: the earlier pages' manual pipeline still
-runs underneath, in the same order, but a caller only has to decide
-*what* to plot and *how*, not re-derive axes-limit ordering or pick
-between ``drape_section`` and a flat ``imshow`` by hand every time.
-From here, :doc:`../inversion/index` and :doc:`../ai_inversion/index`
-cover the result objects this page's adapters consume in more
-scientific depth -- what an RMS value or a recovered model actually
-means -- while this page's job was narrower: getting any of them onto
-a page, over real terrain, correctly.
+The example above is exactly the point of collapsing :doc:`extract`,
+:doc:`drape`, and :doc:`overlay` into one call: the earlier pages'
+manual pipeline still runs underneath, in the same order, but a caller
+only has to decide *what* to plot, not re-derive axes-limit ordering or
+pick between ``drape_section`` and a flat ``imshow`` by hand every
+time. From here, :doc:`../inversion/index` and
+:doc:`../ai_inversion/index` cover the result objects this page's
+adapters consume in more scientific depth -- what an RMS value or a
+recovered model actually means -- while this page's job was narrower:
+getting any of them onto a page, over real terrain, correctly.

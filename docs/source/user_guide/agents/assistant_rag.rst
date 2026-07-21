@@ -136,9 +136,9 @@ because they often contain artificial calls, negative examples, fixtures, and
 mock objects that are useful for development but poor reference material for
 end-user answers.
 
-This policy gives reviewers a concrete answer to the question "what evidence
-can the assistant use?"  It is not the whole repository; it is a curated
-technical corpus focused on APIs, documentation, and workflow guidance.
+This policy gives a concrete answer to the question "what evidence can the
+assistant use?"  It is not the whole repository; it is a curated technical
+corpus focused on APIs, documentation, and workflow guidance.
 
 
 Chunk Types And Metadata
@@ -243,8 +243,8 @@ Useful inspection commands:
 
 The ``stats`` command reports corpus counts.  The ``query`` command prints
 the top retrieved chunks, including chunk kind, workflow tag, label, and
-source path.  These commands are useful for paper reviewers because they
-expose the retrieval layer directly, before any LLM-generated answer.
+source path.  These commands are useful for inspecting the retrieval layer
+directly, before any LLM-generated answer is produced.
 
 
 Current Corpus Statistics
@@ -674,8 +674,8 @@ Bundled suites:
      - Phase tensor, dimensionality, skew, geoelectric strike, and related
        code-generation routing.
 
-For paper reproduction, record the command, pyCSAMT version, git commit,
-manifest statistics, and whether embeddings were enabled.
+For reproducible evaluation results, record the command, pyCSAMT version,
+git commit, manifest statistics, and whether embeddings were enabled.
 
 
 Representative Retrieval Examples
@@ -683,7 +683,7 @@ Representative Retrieval Examples
 
 The examples below were produced with the rebuilt offline index and default
 BM25 retrieval.  They are intentionally shown before any LLM synthesis so
-reviewers can inspect the evidence exposed to the assistant.
+the evidence exposed to the assistant can be inspected directly.
 
 Static-shift query:
 
@@ -822,8 +822,8 @@ The Assistant supports two retrieval modes:
      - Better semantic matching for paraphrases and broader conceptual
        questions when a suitable embedding model is available.
      - Requires an embedding backend and a vector cache; results may depend on
-       the embedding model version and should therefore be recorded in paper
-       reproduction notes.
+       the embedding model version, so the model name and version should be
+       recorded alongside any reported retrieval results.
 
 Dense retrieval is opt-in:
 
@@ -834,9 +834,9 @@ Dense retrieval is opt-in:
    python -m pycsamt.assistant.rag query --dense "static shift correction"
 
 In dense mode, lexical and vector rankings are combined by :term:`Reciprocal
-Rank Fusion`.  The paper should report both the embedding model and whether
-dense retrieval was enabled, because the default release configuration is
-the offline BM25 path.
+Rank Fusion`.  Record both the embedding model and whether dense retrieval
+was enabled when documenting results, because the default release
+configuration is the offline BM25 path.
 
 
 Assistant Recipe Authoring And Review
@@ -864,11 +864,11 @@ not bypass scientific caveats documented elsewhere.  After recipe changes,
 rebuild the RAG index and run the relevant evaluation suite.
 
 
-Reproducible Reviewer Workflow
-------------------------------
+Direct Inspection Workflow
+--------------------------
 
-The following sequence gives reviewers a direct way to inspect the Assistant
-without running Agent Master:
+The following sequence is a direct way to inspect the Assistant's retrieval
+layer without running Agent Master:
 
 .. code-block:: bash
    :linenos:
@@ -880,7 +880,7 @@ without running Agent Master:
    python -m pycsamt.assistant.rag query "prepare Occam2D input files"
    python -m pycsamt.assistant.rag eval
 
-For each query, reviewers should inspect:
+For each query, inspect:
 
 * whether the top results come from relevant source files or documentation;
 * whether workflow tags match the task;
@@ -889,10 +889,10 @@ For each query, reviewers should inspect:
 * whether evaluation reports hallucination or test-pollution violations.
 
 
-Paper Supplement Checklist
+Reproducibility Checklist
 --------------------------
 
-For paper or supplementary-material reproduction, record:
+For reproducible reporting of Assistant behavior, record:
 
 * pyCSAMT version and git commit;
 * Python version and operating system;
@@ -904,7 +904,7 @@ For paper or supplementary-material reproduction, record:
 * embedding provider and model when dense retrieval was enabled;
 * evaluation command and suite path;
 * evaluation metrics and any hallucination/test-pollution violations;
-* representative query outputs used in the manuscript;
+* representative query outputs kept for later comparison;
 * any local project registry used to resolve survey-line names;
 * any API keys or external services used, described by provider and model
   name only, not by secret value.

@@ -1663,10 +1663,28 @@ definitions here are the single source of truth.
       frequency grid, before interpolation or resampling to a requested common
       comparison frequency.
 
+   Stack count
+      The number of raw time-series windows a hardware instrument averaged
+      together to produce one frequency-bin measurement. Stratagem records
+      it per station and frequency in column 2 of each raw
+      19-column component file; a stack count of zero means no usable
+      signal was captured at that bin, which
+      :class:`~pycsamt.stratagem.io.StratagemRawReader` turns into a
+      boolean ``snr_mask_``.
+
    Frequency decade
       A factor-of-ten interval in frequency. A slope reported in degrees per
       decade means the fitted phase change for each unit increase in
       :math:`\log_{10}(f)`.
+
+   WinGLink
+      The Geometrics/EMI desktop program that converts raw Stratagem
+      hardware files into :term:`EDI`. It is an external, manual step --
+      :mod:`pycsamt.stratagem` neither reads Stratagem's raw spectral
+      capture nor calls WinGLink itself, only the files and correction
+      stages downstream of its export. A freshly exported EDI carries
+      placeholder ``LAT``/``LONG`` (``0:00:00.00``) and no static-shift or
+      noise correction; both are added later in the workflow.
 
    AVG file
       Zonge instrument-averaged CSAMT/AMT export format; pyCSAMT reads it and can
@@ -1745,6 +1763,17 @@ definitions here are the single source of truth.
       datum, projection, units, and axis order. A CRS transform makes station
       coordinates comparable when one source is projected in metres and another
       expects WGS84 longitude and latitude.
+
+   Gauss-Kruger
+      A transverse-Mercator projected :term:`CRS` family, in China
+      typically referenced to the Beijing 1954 datum, that expresses
+      position as metre-scale easting/northing rather than
+      longitude/latitude. Field GPS tables projected this way commonly
+      label their columns ``longitude``/``latitude`` out of habit even
+      though the values are really easting/northing -- the column
+      *name* cannot be trusted, only the value magnitude (northing is
+      the larger of the two in the northern hemisphere) reliably
+      distinguishes them.
 
    Basemap
       The geographic tile layer and map-camera settings used behind station
@@ -2000,6 +2029,14 @@ definitions here are the single source of truth.
       station order when any station is missing a finite coordinate,
       so a distance axis is never silently wrong -- only degraded to
       an index.
+
+   Natural sort
+      Ordering file names by their embedded numeric value rather than
+      lexicographically, so ``station.2`` sorts before ``station.10``.
+      pyCSAMT applies it when loading a directory of Stratagem raw
+      hardware or :term:`EDI` files, since a plain path sort places
+      ``…10`` before ``…2`` as soon as a delivery's station numbers are
+      not all zero-padded to the same width.
 
    Station identity
       The normalized name pyCSAMT assigns to one site container. It is

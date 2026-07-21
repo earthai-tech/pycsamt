@@ -31,6 +31,7 @@ Rows where col 2 == 0 carry no useful signal and are marked False in the
 from __future__ import annotations
 
 import re
+import warnings
 from pathlib import Path
 
 # Stratagem hardware files store values in scientific notation without spaces
@@ -422,7 +423,8 @@ class StratagemRawReader(PyCSAMTObject):
         valid_stacks = np.where(
             self.stack_counts_ > 0, self.stack_counts_, np.nan
         )
-        with np.errstate(all="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=1)
 
         return pd.DataFrame(
@@ -458,7 +460,8 @@ class StratagemRawReader(PyCSAMTObject):
         valid_stacks = np.where(
             self.stack_counts_ > 0, self.stack_counts_, np.nan
         )
-        with np.errstate(all="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=0)
 
         return pd.DataFrame(

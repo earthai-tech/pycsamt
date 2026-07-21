@@ -145,6 +145,38 @@ class TestDetectCoordCols:
         with pytest.raises(Exception):
             _detect_coord_cols(df, None, None, exclude={"elev"})
 
+    def test_raises_when_too_many_cols(self):
+        """>2 numeric candidates is ambiguous — must raise, not guess.
+
+        Regression: a station-index column (small median) used to get
+        silently picked as 'easting' instead of the real easting column.
+        """
+        df = pd.DataFrame(
+            {
+                "station_num": [1, 2, 3],  # small median — not a coordinate
+                "longitude": [2_850_835.0, 2_850_815.0, 2_850_795.0],
+                "latitude": [362_589.0, 362_609.0, 362_629.0],
+                "elev": [261.9, 262.0, 262.1],
+            }
+        )
+        with pytest.raises(Exception):
+            _detect_coord_cols(df, None, None, exclude={"elev"})
+
+    def test_explicit_cols_bypass_ambiguity(self):
+        """Explicit easting_col/northing_col still work with >2 candidates."""
+        df = pd.DataFrame(
+            {
+                "station_num": [1, 2, 3],
+                "longitude": [2_850_835.0, 2_850_815.0, 2_850_795.0],
+                "latitude": [362_589.0, 362_609.0, 362_629.0],
+                "elev": [261.9, 262.0, 262.1],
+            }
+        )
+        e, n = _detect_coord_cols(
+            df, "latitude", "longitude", exclude={"elev"}
+        )
+        assert e == "latitude" and n == "longitude"
+
 
 # ---------------------------------------------------------------------------
 # StationLocator

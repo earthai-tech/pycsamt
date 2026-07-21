@@ -21,6 +21,7 @@ User Guide
    inversion/index
    interpretation/index
    iot/index
+   stratagem/index
    emtools/index
    site/index
    forward/index

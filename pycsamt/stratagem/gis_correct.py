@@ -32,8 +32,13 @@ Chinese Gauss-Kruger tables frequently use column names ``longitude`` and
 is northing by comparing the median values: the column with the larger
 median is assumed to be northing (N-S distance from equator), the smaller
 is easting.  This heuristic is correct for all standard UTM / GK zones in
-the northern hemisphere.  Pass explicit ``easting_col`` / ``northing_col``
-to override.
+the northern hemisphere, but it only has a sound basis when **exactly two**
+numeric candidate columns remain after ``elev_col``/``station_col``/``step``
+exclusion — with a third (e.g. a station-index or chainage column), min/max
+selection has no guarantee of picking the actual coordinate pair, so
+auto-detection raises :class:`~pycsamt.exceptions.ValidationError` instead
+of guessing. Pass explicit ``easting_col`` / ``northing_col`` to resolve
+that, or to override the heuristic outright.
 """
 
 from __future__ import annotations
@@ -97,7 +102,11 @@ def _detect_coord_cols(
     the one with the **smaller** median is the easting (E-W), the one
     with the **larger** median is the northing (N-S).  This is reliable
     for northern-hemisphere UTM / Gauss-Kruger projections where
-    northing >> easting.
+    northing >> easting — but only when exactly two numeric candidates
+    remain after exclusion. With three or more (e.g. a station index or
+    a chainage/step column that wasn't in ``exclude``), min/max selection
+    is a guess with no guarantee of picking the real coordinate pair, so
+    this raises instead of silently returning a wrong column.
 
     Parameters
     ----------
@@ -114,7 +123,9 @@ def _detect_coord_cols(
     Raises
     ------
     ValidationError
-        When fewer than two candidate columns remain after exclusion.
+        When fewer than two candidate columns remain after exclusion, or
+        (when both ``easting_col`` and ``northing_col`` are omitted) when
+        more than two remain and auto-detection would be a guess.
     """
     if easting_col is not None and northing_col is not None:
         return easting_col, northing_col
@@ -133,8 +144,23 @@ def _detect_coord_cols(
             f"after exclusion: {numeric_cols}.  Pass explicit easting_col and "
             "northing_col to CoordinateInjector.fit()."
         )
+    if (
+        len(numeric_cols) > 2
+        and easting_col is None
+        and northing_col is None
+    ):
+        raise ValidationError(
+            f"Cannot auto-detect easting/northing unambiguously: "
+            f"{len(numeric_cols)} numeric candidate columns remain after "
+            f"exclusion: {numeric_cols}.  Picking the min/max-median pair "
+            "among more than two candidates is a guess (e.g. a station "
+            "index or chainage column could be mistaken for a coordinate). "
+            "Pass explicit easting_col and northing_col to "
+            "CoordinateInjector.fit(), or add the extra columns to the "
+            "exclusion set."
+        )
 
-    medians = {c: float(df[c].median()) for c in numeric_cols[:6]}
+    medians = {c: float(df[c].median()) for c in numeric_cols}
     sorted_cols = sorted(medians, key=lambda c: medians[c])
     detected_easting = sorted_cols[0]
     detected_northing = sorted_cols[-1]

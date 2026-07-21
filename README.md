@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/source/_static/logo/pycsamt-v2-symbol-logo.svg" alt="pyCSAMT v2" width="380"/>
+  <img src="https://raw.githubusercontent.com/earthai-tech/pycsamt/master/docs/source/_static/logo/pycsamt-v2-symbol-logo.svg" alt="pyCSAMT v2" width="380"/>
   <br/>
   <em>Scientific Python for electromagnetic geophysics &mdash; processing, inversion, AI agents, and apps.</em>
   <br/><br/>

@@ -77,7 +77,10 @@ class CoreObject(PyCSAMTObject):
         return f"{name}({inside})"
 
     def __str__(self) -> str:  # noqa: D401
-        return self.summary()
+        # subclasses may override summary() to return a non-str value
+        # (e.g. Site.summary() returns a dict) for programmatic use --
+        # coerce so __str__ always honours its own str contract.
+        return str(self.summary())
 
     def summary(self, *, max_fields: int = 6) -> str:
         r"""

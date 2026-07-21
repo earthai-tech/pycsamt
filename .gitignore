@@ -287,6 +287,42 @@ data/TEMAVG/JIANGSU/*
 !data/TEMAVG/JIANGSU/TEM100.mde
 !data/TEMAVG/JIANGSU/TEM1020.AVG
 
+# Exception: real Stratagem (Geometrics/EMI K2) AMT field survey — bundled
+# sample data for pycsamt.stratagem docs/tests. WinGLink-exported EDIs, the
+# GPS reference table, and the field report are kept in full; only the
+# usable (ASCII 19-column) raw hardware files are kept — X2HX.*/Z2HX.* plus
+# calibration/sensor files. Y2HX.* raw files stay local-only: they are
+# binary time-series captures, not the 19-column ASCII format
+# StratagemRawReader parses, and account for ~127 MB of the 133 MB k2-HX
+# directory.
+!data/stratagem
+data/stratagem/*
+!data/stratagem/K2
+data/stratagem/K2/*
+!data/stratagem/K2/README.md
+!data/stratagem/K2/k2-gps-ref.csv
+!data/stratagem/K2/k2-gps-aligned.csv
+!data/stratagem/K2/build_gps_aligned.py
+!data/stratagem/K2/k2-gps.xls
+!data/stratagem/K2/k2-field-report.docx
+!data/stratagem/K2/k2-edi
+!data/stratagem/K2/k2-edi/**
+!data/stratagem/K2/k2-corrected-sample
+!data/stratagem/K2/k2-corrected-sample/**
+!data/stratagem/K2/k2-renamed-sample
+!data/stratagem/K2/k2-renamed-sample/**
+!data/stratagem/K2/k2-HX
+data/stratagem/K2/k2-HX/*
+!data/stratagem/K2/k2-HX/X2HX.*
+!data/stratagem/K2/k2-HX/Z2HX.*
+!data/stratagem/K2/k2-HX/SENSORS.TBL
+!data/stratagem/K2/k2-HX/@
+!data/stratagem/K2/k2-HX/@S
+!data/stratagem/K2/k2-HX/AFEV3.*
+!data/stratagem/K2/k2-HX/BE26V2.*
+!data/stratagem/K2/k2-HX/S746_HX.*
+!data/stratagem/K2/k2-HX/S747_HY.*
+
 # Inversion-plot runs (rendered PNGs, ~18 MB) are local-only outputs and
 # must never be committed — GitHub repo-size hygiene. ``data/*`` already
 # ignores them; the previous "!" exception that tracked 27-frequ-watex-
@@ -368,3 +404,10 @@ paper_repro/models/*_metadata.json
 docs/examples/**/edi_out/
 docs/examples/**/workspaces/
 docs/examples/topo/l18_prepared_workspace/
+
+# StratagemSurvey.export()/.rename() output from the K2 worked examples in
+# data/stratagem/K2/README.md and docs/source/user_guide/stratagem/ — regenerable
+# pipeline output, not source data. A small curated sample is tracked instead at
+# data/stratagem/K2/k2-corrected-sample/ and k2-renamed-sample/.
+/k2_corrected/
+/k2_renamed/

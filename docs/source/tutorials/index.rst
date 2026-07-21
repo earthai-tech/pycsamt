@@ -28,4 +28,5 @@ foundation.
    prepare_occam2d_inversion
    ai_inversion_from_corrected_edis
    essential_3d_ai_inversion
+   map_porphyry_mineralization_from_noisy_amt
    run_pipeline_from_config

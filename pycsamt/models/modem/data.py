@@ -496,6 +496,7 @@ class ModEmData(ModEmBase):
         items = _normalise_source(source)
         if not items:
             raise ValueError("ModEmData.from_edi: source is empty")
+        items = _adapt_source_items(items)
 
         # ---- collect global unique periods (sorted descending) ----
         all_freqs: list[float] = []
@@ -675,6 +676,55 @@ def _normalise_source(source) -> list:
         except Exception:
             return list(source.edic)
     return list(source)
+
+
+class _EDISiteView:
+    """Adapt a real EDI-like object to the flat ``name``/``coords``/
+    ``freq``/``z``/``z_err`` contract used by the rest of :meth:`from_edi`.
+
+    ``seg.edi.EDIFile`` (and the ``Site`` wrappers returned by
+    :func:`pycsamt.api.read_edis`) store coordinates under the EDI
+    ``HEAD.Location`` section and the impedance tensor under ``.Z``, not as
+    flat attributes. This view exposes the same data through the flat
+    attribute names so real EDI objects work the same way the synthetic
+    duck-typed fixtures do.
+    """
+
+    __slots__ = ("name", "coords", "freq", "z", "z_err")
+
+    def __init__(self, ed) -> None:
+        from pycsamt.emtools._core import _get_z_block
+        from pycsamt.emtools._core import _name as _station_name
+        from pycsamt.topo.extract import _read_elev, _read_latlon
+
+        _, z, freq = _get_z_block(ed)
+        self.name = str(_station_name(ed, 0))
+        self.freq = (
+            np.asarray(freq, dtype=float)
+            if freq is not None
+            else np.array([], dtype=float)
+        )
+        self.z = np.asarray(z, dtype=complex) if z is not None else None
+        z_err = getattr(getattr(ed, "Z", None), "z_err", None)
+        self.z_err = (
+            np.asarray(z_err, dtype=float) if z_err is not None else None
+        )
+        latlon = _read_latlon([ed])
+        elev = _read_elev(ed)
+        lat, lon = latlon[0] if latlon else (0.0, 0.0)
+        self.coords = (float(lat), float(lon), float(elev or 0.0))
+
+
+def _adapt_source_items(items: list) -> list:
+    """Wrap items lacking a flat ``freq`` attribute in :class:`_EDISiteView`.
+
+    Items that already expose ``freq`` directly (e.g. the duck-typed
+    fixtures used in the test suite) pass through unchanged.
+    """
+    return [
+        it if getattr(it, "freq", None) is not None else _EDISiteView(it)
+        for it in items
+    ]
 
 
 def _unique_periods(all_freqs: list, rtol: float = 0.01) -> np.ndarray:

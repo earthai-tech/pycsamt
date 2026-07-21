@@ -205,6 +205,15 @@ def _per_item_export(
     written: list[str] = []
     failed: list[tuple[str, str]] = []
 
+    # Both EDIFile.write() and write_new_edi() root a bare filename under
+    # `savepath` (default cwd/edi_out) rather than under a directory folded
+    # into `new_edifn`/`edi_fn`. Resolve the target directory once and
+    # always pass it as `savepath` with a bare filename, instead of joining
+    # them into one relative path beforehand — the previous approach
+    # resolved to `<cwd>/edi_out/<output_dir>/<file>.edi` for any
+    # `output_dir` that wasn't already absolute.
+    out_dir_abs = os.path.abspath(output_dir)
+
     for i, ed in enumerate(_iter_items(sites)):
         nm = _name(ed, i)
         try:
@@ -212,7 +221,7 @@ def _per_item_export(
         except (KeyError, ValueError):
             filename = f"{nm}.edi"
 
-        out_path = os.path.join(output_dir, filename)
+        out_path = os.path.join(out_dir_abs, filename)
 
         if os.path.exists(out_path) and not overwrite:
             warnings.append(
@@ -231,11 +240,15 @@ def _per_item_export(
             ) and callable(getattr(target, "to_edi", None)):
                 target = target.to_edi()
 
-            if hasattr(target, "write"):
-                path = target.write(new_edifn=out_path)
+            if hasattr(target, "write_new_edi"):
+                path = target.write_new_edi(
+                    edi_fn=filename, savepath=out_dir_abs
+                )
                 written.append(str(path or out_path))
-            elif hasattr(target, "write_new_edi"):
-                path = target.write_new_edi(edi_fn=out_path)
+            elif hasattr(target, "write"):
+                path = target.write(
+                    savepath=out_dir_abs, new_edifn=filename
+                )
                 written.append(str(path or out_path))
             else:
                 failed.append((nm, "no write method"))

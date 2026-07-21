@@ -410,6 +410,44 @@ definitions here are the single source of truth.
       The intermediate regime between near field and far field, where source
       effects may be present but are not as dominant as in the near field.
 
+   Field zone
+      A CSAMT classification of a station-period measurement as
+      :term:`far field`, :term:`transition field`, or :term:`near field`,
+      based on the dimensionless parameter :math:`|k r| = r/\delta_B`, where
+      :math:`r` is the source-receiver offset and :math:`\delta_B` is the
+      :term:`Bostick depth`. The classification assumes a real controlled
+      source at a known offset; for plane-wave AMT or MT surveys with no such
+      transmitter, a field-zone run is a diagnostic exercise, not evidence of
+      genuine near-field bias.
+
+   Skew
+      The phase-tensor asymmetry angle
+      :math:`\beta=\tfrac{1}{4}\arctan\!\big[(\Phi_{12}-\Phi_{21})/
+      (\Phi_{11}+\Phi_{22})\big]`, derived from the :term:`Phase tensor`.
+      Values near zero support a 1-D/2-D regional structure; large
+      :math:`|\beta|` flags 3-D structure, noise, or unresolved
+      :term:`galvanic distortion` and should be reviewed before rotating a
+      line to a single strike angle.
+
+   Dictionary learning
+   Sparse coding
+      An unsupervised technique that represents a set of feature vectors
+      (for example phase-tensor :term:`Skew`, ellipticity, determinant
+      :term:`apparent resistivity`, and tipper amplitude) as sparse linear
+      combinations of a small learned set of atoms. In pyCSAMT it classifies
+      station-period rows by dimensionality or noise behaviour without
+      predefined thresholds, complementing skew- and ellipticity-based rules.
+
+   Porphyry
+   Porphyry deposit
+      A large-volume, disseminated ore deposit associated with felsic to
+      intermediate porphyritic intrusions, for example granodiorite or
+      quartz diorite, commonly zoned with a resistive, weakly altered
+      intrusive core surrounded by lower-resistivity hydrothermally altered
+      or sulfide-bearing zones. Cu-Mo porphyry systems are a common AMT and
+      CSAMT exploration target because that resistivity contrast between
+      fresh intrusion and alteration/mineralization is often detectable.
+
    Phased-array source
    PAS
       A controlled-source transmitter layout made from multiple source dipoles
@@ -1350,6 +1388,15 @@ definitions here are the single source of truth.
       :math:`\rho_a'=\rho_a/g`, while phase is not shifted by the same galvanic
       factor.
 
+   EMAP
+   Electromagnetic array profiling
+      A processing style that treats a line of closely spaced stations as
+      one spatial array and smooths or corrects each response using its
+      along-profile neighbours, rather than treating stations independently.
+      :term:`AMA`, :term:`FLMA`, and :term:`TMA` are EMAP-style spatial
+      filters used in pyCSAMT for static-shift and incoherent-noise
+      suppression.
+
    AMA
    Adaptive moving average
       A spatial static-shift correction strategy that estimates a station's
@@ -1357,6 +1404,20 @@ definitions here are the single source of truth.
       with robust weighting or smoothing. It is useful when static offsets vary
       laterally but neighbouring stations still sample a comparable regional
       response.
+
+   FLMA
+   Fixed-length moving average
+      An :term:`EMAP`-style filter that smooths a response along a profile
+      using a fixed count of neighbouring stations rather than a physical
+      distance window. It is less sensitive to irregular station spacing
+      than a purely distance-based :term:`AMA` window.
+
+   TMA
+   Trimmed moving average
+      A :term:`FLMA`-style fixed-length spatial filter that discards the
+      smallest and largest values inside the window before averaging. The
+      trimming reduces sensitivity to one or two anomalous stations compared
+      with a plain fixed-length average.
 
    Traditional inversion
       A physics-based iterative inversion that updates model parameters by
@@ -1635,6 +1696,15 @@ definitions here are the single source of truth.
       amplitude, :math:`\delta \approx 503\,\sqrt{\rho / f}` metres. It sets the
       depth of investigation for a given period and resistivity.
 
+   Bostick depth
+      An empirical depth estimate,
+      :math:`\delta_B \approx 356\,\sqrt{\rho_a / f}` metres -- about
+      0.71 times the plain :term:`skin depth` -- used as the length
+      scale in the dimensionless CSAMT field-zone parameter
+      :math:`|k\cdot r|`. Unlike skin depth, it is computed directly
+      from the observed :term:`apparent resistivity` at each frequency
+      rather than from an assumed half-space value.
+
    TE mode
    TM mode
       The transverse-electric (electric field along strike) and transverse-magnetic
@@ -1774,6 +1844,36 @@ definitions here are the single source of truth.
       *name* cannot be trusted, only the value magnitude (northing is
       the larger of the two in the northern hemisphere) reliably
       distinguishes them.
+
+   Ellipsoid
+   Reference ellipsoid
+      A mathematical oblate-spheroid approximation of the Earth's shape,
+      defined by an equatorial radius and an eccentricity (or flattening).
+      Different surveys and eras adopted different ellipsoids -- WGS-84 is
+      the modern GPS default, while legacy national grids such as
+      :term:`Gauss-Kruger` may reference an older ellipsoid/datum pair.
+      Ellipsoid choice affects computed UTM easting/northing by tens of
+      metres, so it must match the source data's original datum.
+
+   EPSG
+   EPSG code
+      A numeric identifier from the EPSG Geodetic Parameter Dataset that
+      unambiguously specifies a :term:`CRS` (ellipsoid, datum, projection,
+      units, and axis order) -- for example ``4326`` for geographic
+      WGS-84 longitude/latitude, or ``326XX`` for a WGS-84 UTM zone. Passing
+      the wrong EPSG code silently reprojects coordinates rather than
+      raising an error, so it should always be confirmed against the data
+      provider's metadata rather than assumed.
+
+   UTM
+   Universal Transverse Mercator
+      A family of conformal projected :term:`CRS` that divides the globe
+      into 60 six-degree-wide longitude zones, each further split into
+      latitude bands lettered C through X (excluding I and O), giving zone
+      labels such as ``49R``. Within a zone, position is expressed as
+      metre-scale easting/northing rather than longitude/latitude, with a
+      false easting of 500,000 m and a scale factor of 0.9996 at the
+      central meridian.
 
    Basemap
       The geographic tile layer and map-camera settings used behind station

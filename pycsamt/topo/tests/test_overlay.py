@@ -361,3 +361,69 @@ class TestAddStationLabels:
             fontsize=9,
         )
         assert ax.texts[0].get_fontsize() == pytest.approx(9.0)
+
+
+# ---------------------------------------------------------------------------
+# marker_style override (draw_topo_section / draw_topo_strip)
+# ---------------------------------------------------------------------------
+
+
+class TestMarkerStyleOverride:
+    def test_draw_topo_section_default_uses_global_marker(self):
+        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+
+        chain, elev, names = _simple_inputs()
+        _, ax = _make_section_axes()
+        draw_topo_section(ax, chain, elev, names)
+        scatter = ax.collections[0]
+        expected = PYCSAMT_STATION_RENDERING.inversion.marker.facecolor
+        import matplotlib.colors as mcolors
+
+        assert tuple(scatter.get_facecolor()[0]) == mcolors.to_rgba(expected)
+
+    def test_draw_topo_section_marker_style_override(self):
+        from pycsamt.api.station import StationMarkerStyle
+
+        chain, elev, names = _simple_inputs()
+        _, ax = _make_section_axes()
+        custom = StationMarkerStyle(facecolor="white", edgecolor="black")
+        draw_topo_section(ax, chain, elev, names, marker_style=custom)
+        scatter = ax.collections[0]
+        assert tuple(scatter.get_facecolor()[0]) == (1.0, 1.0, 1.0, 1.0)
+        assert tuple(scatter.get_edgecolor()[0]) == (0.0, 0.0, 0.0, 1.0)
+
+    def test_draw_topo_strip_marker_style_override(self):
+        from pycsamt.api.station import StationMarkerStyle
+
+        chain, elev, names = _simple_inputs()
+        fig, ax = _make_ps_axes()
+        custom = StationMarkerStyle(facecolor="white", edgecolor="black")
+        ax_strip = draw_topo_strip(fig, ax, chain, elev, names, marker_style=custom)
+        # collections[0] is the fill_between ground polygon; the scatter is last.
+        scatter = ax_strip.collections[-1]
+        assert tuple(scatter.get_facecolor()[0]) == (1.0, 1.0, 1.0, 1.0)
+
+    def test_draw_topo_strip_light_mode_background_is_transparent_by_default(self):
+        chain, elev, names = _simple_inputs()
+        fig, ax = _make_ps_axes()
+        ax_strip = draw_topo_strip(fig, ax, chain, elev, names, dark=False)
+        r, g, b, a = ax_strip.get_facecolor()
+        assert a == pytest.approx(0.0)
+
+    def test_draw_topo_strip_facecolor_override(self):
+        chain, elev, names = _simple_inputs()
+        fig, ax = _make_ps_axes()
+        ax_strip = draw_topo_strip(
+            fig, ax, chain, elev, names, dark=False, facecolor="#eff1f5"
+        )
+        import matplotlib.colors as mcolors
+
+        assert ax_strip.get_facecolor() == mcolors.to_rgba("#eff1f5")
+
+    def test_draw_topo_strip_dark_mode_background_unchanged(self):
+        chain, elev, names = _simple_inputs()
+        fig, ax = _make_ps_axes()
+        ax_strip = draw_topo_strip(fig, ax, chain, elev, names, dark=True)
+        import matplotlib.colors as mcolors
+
+        assert ax_strip.get_facecolor() == mcolors.to_rgba("#181825")

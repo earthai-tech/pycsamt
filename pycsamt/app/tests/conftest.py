@@ -151,6 +151,17 @@ def no_modal_dialogs(monkeypatch):
     yield
 
 
+# ── Dash web app ─────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(scope="session")
+def web_app():
+    """Single fully-wired Dash app (all callbacks registered) for reuse."""
+    from pycsamt.app.web.app import create_app
+
+    return create_app()
+
+
 # ── EDI fixtures ───────────────────────────────────────────────────────────
 
 

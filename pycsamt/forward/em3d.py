@@ -240,7 +240,7 @@ class ForwardResponse3D:
             y=y,
             coords=self.stations_xy.astype(np.float32),
             freqs=self.freqs.astype(np.float32),
-            solver="quasi3d",
+            solver=self.method,
         )
 
     def station_response(self, station: int) -> dict:

@@ -161,6 +161,23 @@ definitions here are the single source of truth.
       workflow. In inversion, topography can affect mesh geometry, air cells,
       receiver elevations, and the interpretation of near-surface structure.
 
+   Terrain-following coordinates
+      A depth-section coordinate frame in which the flat datum
+      :math:`z=0` at every profile position :math:`x` is replaced by the
+      local :term:`topography` elevation, so that
+
+      .. math::
+
+         z_{\mathrm{real}}(x,z) = \mathrm{elev}(x) - z,
+
+      with :math:`\mathrm{elev}(x)` in the same units as :math:`z`. Cell
+      values keep their flat-datum depth :math:`z`; only the plotted
+      vertical position moves, so a :class:`~pycsamt.topo.section.TopoSection`
+      drapes correctly over real relief instead of implying every station
+      sits at the same elevation. It is distinct from a
+      :term:`pseudosection`, whose vertical axis is period or frequency
+      and carries no elevation information at all.
+
    Sensitivity
       The degree to which a change in a model parameter affects the predicted
       data. Low-sensitivity regions may be displayed in a model mesh but should

@@ -165,7 +165,7 @@ def _write_python(
     if lines[-1] == "":
         lines.pop()
     lines.append("}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_json(
@@ -198,7 +198,7 @@ def _write_json(
         "config": values,
     }
     text = json.dumps(payload, indent=2, sort_keys=False)
-    path.write_text(text + "\n")
+    path.write_text(text + "\n", encoding="utf-8")
 
 
 def _write_yaml(
@@ -223,7 +223,7 @@ def _write_yaml(
                 lines.extend(_comment_lines(entry.description, "# "))
             lines.append(f"{name}: {_yaml_value(values[name])}")
             lines.append("")
-    path.write_text("\n".join(lines).rstrip() + "\n")
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def write_config_template(
@@ -272,7 +272,7 @@ def write_config_template(
 
 def _read_python(path: Path) -> dict[str, Any]:
     """Read a Python template containing ``CONFIG``."""
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
@@ -301,7 +301,7 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     except ImportError as exc:
         msg = "Reading YAML configuration files requires PyYAML."
         raise ImportError(msg) from exc
-    data = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if data is None:
         return {}
     if not isinstance(data, dict):
@@ -312,7 +312,7 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 def _read_json(path: Path) -> dict[str, Any]:
     """Read a JSON configuration mapping."""
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         msg = f"JSON config {path!s} must contain an object."
         raise ValueError(msg)

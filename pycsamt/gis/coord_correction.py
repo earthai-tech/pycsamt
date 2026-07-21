@@ -379,9 +379,9 @@ def correct_elevation_smooth(
     if method == "loess":
         smooth_elev = _loess_smooth(chain_s, elev_s, span=window)
     else:  # running mean
-        from scipy.ndimage import uniform_filter1d
-
         try:
+            from scipy.ndimage import uniform_filter1d
+
             smooth_elev = uniform_filter1d(elev_s, size=max(2, window))
         except ImportError:
             k = max(1, window // 2)

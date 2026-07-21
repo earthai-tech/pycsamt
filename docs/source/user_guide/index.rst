@@ -17,6 +17,7 @@ User Guide
    prerequisites
    data_loading
    map/index
+   topo/index
    inversion/index
    interpretation/index
    iot/index

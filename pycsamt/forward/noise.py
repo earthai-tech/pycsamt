@@ -108,8 +108,12 @@ class GaussianNoise(_BaseNoiseModel):
     ----------
     level : float
         Relative noise standard deviation (e.g. 0.05 = 5 %).
-    apply_to : {'rho_phase', 'z', 'both'}
-        Which quantities to perturb.  Default ``'rho_phase'``.
+    apply_to : {'rho_phase', 'z', 'both', 'rho', 'phase'}
+        Which quantities to perturb.  ``'rho_phase'``, ``'both'`` and
+        ``'z'`` are equivalent: they jointly perturb ρₐ and phase, which
+        together determine the perturbed complex impedance Z.  ``'rho'``
+        and ``'phase'`` perturb only one of the two. Default
+        ``'rho_phase'``.
     phase_level : float or None
         Separate noise level for phase in degrees.  If ``None``,
         *level* is used scaled to the typical 45° phase range.
@@ -157,13 +161,13 @@ class GaussianNoise(_BaseNoiseModel):
         rho_a = resp.rho_a.copy()
         phase = resp.phase.copy()
 
-        if self.apply_to in ("rho_phase", "both", "rho"):
+        if self.apply_to in ("rho_phase", "both", "z", "rho"):
             # Noise in log₁₀ space then exponentiate
             log_rho = np.log10(rho_a)
             log_rho += rng.normal(0.0, self.level, rho_a.shape)
             rho_a = 10.0**log_rho
 
-        if self.apply_to in ("rho_phase", "both", "phase"):
+        if self.apply_to in ("rho_phase", "both", "z", "phase"):
             phase += rng.normal(0.0, self.phase_level, phase.shape)
 
         # Recompute Z consistent with perturbed rho_a and phase

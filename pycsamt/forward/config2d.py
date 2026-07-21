@@ -331,7 +331,8 @@ class ForwardConfig2D:
                 ),
                 **kw,
             )
-        # random
+        # random: Grid2D.random() has no station_x_max parameter.
+        kw.pop("station_x_max")
         return Grid2D.random(seed=seed, **kw)
 
     def to_solver_kwargs(self) -> dict[str, Any]:

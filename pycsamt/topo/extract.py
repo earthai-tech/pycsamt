@@ -7,7 +7,7 @@ topography rendering pipeline.  They operate on any object that contains
 EDI-like items with HEAD lat/lon/elev attributes — including
 :class:`~pycsamt.site.base.Sites`, plain lists of
 :class:`~pycsamt.seg.edi.EDIFile`, and
-:class:`~pycsamt.stratagem.ediio.EDIBatch` objects.
+:class:`~pycsamt.stratagem.io.EDIBatch` objects.
 
 Examples
 --------

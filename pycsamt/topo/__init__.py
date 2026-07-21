@@ -55,6 +55,15 @@ Public API
     Add a topo elevation strip above a pseudosection image axes.
 :func:`add_station_labels`
     Draw rotated station name labels at marker positions.
+:func:`plot_topo_section`
+    One-call topography-embedded section plot for any pycsamt
+    resistivity model or inversion result.
+:func:`build_topo_section`
+    Resolve a model + topography source into a :class:`TopoSection`
+    without plotting.
+:class:`TopoSection`
+    Resolved terrain-draped section data returned by
+    :func:`build_topo_section`.
 """
 
 from .config import (  # noqa: F401
@@ -80,6 +89,11 @@ from .overlay import (  # noqa: F401
     draw_topo_section,
     draw_topo_strip,
 )
+from .section import (  # noqa: F401
+    TopoSection,
+    build_topo_section,
+    plot_topo_section,
+)
 
 __all__ = [
     # config
@@ -101,4 +115,8 @@ __all__ = [
     "draw_topo_section",
     "draw_topo_strip",
     "add_station_labels",
+    # section
+    "TopoSection",
+    "build_topo_section",
+    "plot_topo_section",
 ]

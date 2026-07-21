@@ -365,7 +365,8 @@ def smooth_logfreq(
                 idx = np.clip(idx, 0, len(sdf) - 1)
                 ok &= sdf["snr"].to_numpy()[idx] >= gate_snr
         y2 = y.copy()
-        y2[ok] = _smooth1d(y[ok], win, kind)
+        if ok.any():
+            y2[ok] = _smooth1d(y[ok], win, kind)
         Z.z = y2.reshape(z.shape)
         if also in ("tipper", "both"):
             T, t, ft = _get_t_block(ed)

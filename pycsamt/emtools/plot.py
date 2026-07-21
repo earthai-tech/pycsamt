@@ -211,7 +211,6 @@ def _errorbar_from_style(
     if color is not None:
         kwargs["color"] = color
         kwargs["ecolor"] = color
-        kwargs["mec"] = color
     marker = kwargs.pop("marker", "o")
     ms = kwargs.pop("ms", kwargs.pop("markersize", 4.0))
     mfc = kwargs.pop("mfc", "white")

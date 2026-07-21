@@ -81,6 +81,18 @@ def _station_xy(ed: Any, i: int) -> tuple[float, float]:
         y = getattr(ed, ky, None)
         if isinstance(x, (int, float)) and isinstance(y, (int, float)):
             return float(x), float(y)
+    # Site-wrapped objects expose neither flat lon/lat attributes nor an
+    # ``edi`` header directly; their geographic position lives on the
+    # ``coords`` property as ``(lat, lon, elev)``. Use it (as x=lon,
+    # y=lat, matching the lon/lat pair order above) when finite.
+    coords = getattr(ed, "coords", None)
+    if coords is not None:
+        try:
+            lat, lon = float(coords[0]), float(coords[1])
+        except (TypeError, ValueError, IndexError):
+            lat = lon = float("nan")
+        if np.isfinite(lat) and np.isfinite(lon):
+            return lon, lat
     return float(i), 0.0  # fallback: index on a line
 
 

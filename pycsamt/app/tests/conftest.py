@@ -27,6 +27,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 _exit_status = 0
 _qt_active = False
+_IS_WINDOWS = sys.platform == "win32"
 
 
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
@@ -61,7 +62,7 @@ def pytest_unconfigure(config):  # noqa: ARG001
         return
     sys.stdout.flush()
     sys.stderr.flush()
-    if os.name == "nt":
+    if _IS_WINDOWS:
         import ctypes
 
         kernel32 = ctypes.windll.kernel32

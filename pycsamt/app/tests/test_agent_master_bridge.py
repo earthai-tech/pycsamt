@@ -10,6 +10,7 @@ not leak between tests or into a real desktop-app session.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from unittest import mock
 
@@ -174,30 +175,43 @@ def test_launch_spawns_new_process(monkeypatch):
 
 
 def test_launch_spawns_new_process_sets_windows_creationflags(monkeypatch):
+    process_os_name = os.name
     monkeypatch.setattr(bridge, "is_agent_master_running", lambda h, p: False)
     bridge._PROCESS = None
     fake_popen = mock.MagicMock(return_value=mock.MagicMock())
     monkeypatch.setattr(bridge.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(bridge.threading, "Thread", mock.MagicMock())
-    monkeypatch.setattr(bridge.os, "name", "nt")
+    # ``bridge.os`` normally references the process-wide ``os`` module.
+    # Patching ``bridge.os.name`` would therefore also change ``os.name``
+    # inside pathlib and pytest, making Linux try to instantiate WindowsPath.
+    fake_os = mock.Mock(wraps=bridge.os)
+    fake_os.name = "nt"
+    fake_os.environ = bridge.os.environ
+    monkeypatch.setattr(bridge, "os", fake_os)
 
     bridge.launch_agent_master(open_browser=False)
 
+    assert os.name == process_os_name
     kwargs = fake_popen.call_args[1]
     assert "creationflags" in kwargs
     assert "start_new_session" not in kwargs
 
 
 def test_launch_spawns_new_process_sets_posix_start_new_session(monkeypatch):
+    process_os_name = os.name
     monkeypatch.setattr(bridge, "is_agent_master_running", lambda h, p: False)
     bridge._PROCESS = None
     fake_popen = mock.MagicMock(return_value=mock.MagicMock())
     monkeypatch.setattr(bridge.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(bridge.threading, "Thread", mock.MagicMock())
-    monkeypatch.setattr(bridge.os, "name", "posix")
+    fake_os = mock.Mock(wraps=bridge.os)
+    fake_os.name = "posix"
+    fake_os.environ = bridge.os.environ
+    monkeypatch.setattr(bridge, "os", fake_os)
 
     bridge.launch_agent_master(open_browser=False)
 
+    assert os.name == process_os_name
     kwargs = fake_popen.call_args[1]
     assert kwargs.get("start_new_session") is True
     assert "creationflags" not in kwargs

@@ -24,6 +24,7 @@ diagnostic plot.
    csamt_amt_mt_overview
    field_zones
    impedance_tensor
+   dimensionality
    static_shift
    inversion_concepts
    tdem_basics

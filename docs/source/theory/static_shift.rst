@@ -145,7 +145,11 @@ This is why static-shift correction should be paired with tensor
 diagnostics. If phase tensor skew, induction vectors, or component
 residuals suggest strong 3-D mixing, a simple station-level amplitude
 factor may not be enough. See :doc:`impedance_tensor` for the impedance and
-phase-tensor background.
+phase-tensor background, and :doc:`dimensionality` for the full
+Groom-Bailey decomposition of :math:`\mathbf{C}` into twist, shear, and
+anisotropy -- including a real, honest example of the correction making
+some stations' diagonal terms worse rather than better, which is exactly
+the kind of 3-D mixing this section warns about.
 
 Why Phase Is Less Affected
 --------------------------

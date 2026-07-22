@@ -515,6 +515,11 @@ good, it does not eliminate inductive 3-D effects, and it does not replace
 model-based interpretation. It is a diagnostic that helps decide which
 processing and inversion assumptions are defensible.
 
+:doc:`dimensionality` derives the orientation angle :math:`\alpha` and skew
+angle :math:`\beta` behind these ellipses in full, including a real bug this
+documentation project found in the angle formulas, and uses them to classify
+1-D/2-D/3-D behavior station by station on real data.
+
 Skew And Dimensionality
 -----------------------
 
@@ -562,7 +567,10 @@ As a practical guide:
 
 pyCSAMT pipeline steps can mask, select, or close gaps in low-skew frequency
 bands. Those operations should be documented in the workflow report because
-they affect which data enter inversion.
+they affect which data enter inversion. :doc:`dimensionality` also covers
+the Groom-Bailey galvanic-distortion decomposition, a more complete
+alternative to Bahr skewness when a real distortion matrix (not just a
+scalar skew) needs to be estimated and removed.
 
 Tipper And Vertical Magnetic Field
 ----------------------------------

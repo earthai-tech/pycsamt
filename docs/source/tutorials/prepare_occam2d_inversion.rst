@@ -618,6 +618,10 @@ See Also
 :doc:`correct_static_shift`
     Review static-shift correction.
 
+:doc:`run_classical_inversions`
+    Locating or building the Occam2D/ModEM/MARE2DEM binaries and running
+    the files prepared here, alongside the other classical engines.
+
 :doc:`../user_guide/models/occam2d`
     Full Occam2D backend documentation.
 

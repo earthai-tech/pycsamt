@@ -47,7 +47,8 @@ composing the full raw-to-corrected-EDI pipeline with
 :class:`~pycsamt.stratagem.survey.StratagemSurvey`. :doc:`tutorial` runs
 that same workflow as one visual, reproducible case study, using
 :mod:`pycsamt.map` and :mod:`pycsamt.emtools` to check the result at
-each step rather than only reading printed numbers.
+each step rather than only reading printed numbers. For the complete
+callable reference, see :doc:`../../api/stratagem`.
 
 .. toctree::
    :maxdepth: 3

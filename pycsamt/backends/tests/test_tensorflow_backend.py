@@ -9,16 +9,42 @@ everywhere else.
 
 from __future__ import annotations
 
-import importlib.util
+import subprocess
+import sys
 from unittest import mock
 
 import numpy as np
 import pytest
 
-_HAS_TF = importlib.util.find_spec("tensorflow") is not None
+
+def _tf_importable() -> bool:
+    """Probe TensorFlow importability out-of-process.
+
+    `find_spec` alone is not enough: the package can be installed (spec
+    found) while the native runtime fails to load (e.g. a broken DLL) —
+    that must skip, not fail, this file. Importing it in-process to check
+    is *not* safe either: on a broken install, `import tensorflow` can
+    trigger a native access violation that crashes the whole pytest
+    process outright (observed with a DLL conflict against an
+    already-loaded torch/numpy here) rather than raising a catchable
+    Python exception. Running the probe in a subprocess isolates any such
+    crash from the test runner.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", "import tensorflow"],
+            capture_output=True,
+            timeout=60,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+_HAS_TF = _tf_importable()
 
 pytestmark = pytest.mark.skipif(
-    not _HAS_TF, reason="TensorFlow not installed"
+    not _HAS_TF, reason="TensorFlow not installed or not importable"
 )
 
 

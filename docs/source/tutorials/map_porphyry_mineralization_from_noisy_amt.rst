@@ -15,7 +15,7 @@ This tutorial works two lines instead of the usual single-line examples:
 ``L26PLT`` and ``L30PLT`` from ``data/AMT/WILLY_DATA``. Every other WILLY
 tutorial in this documentation uses ``L18PLT``/``L22PLT``, the two lines
 tracked in git; ``L26PLT`` and ``L30PLT`` are excluded from the repository
-by ``.gitignore`` to keep it small (see ``data/AMT/WILLY_DATA/README.md``).
+to keep it small (see ``data/AMT/WILLY_DATA/README.md``).
 Both are present on the machine this page was written on, so every number
 and figure below is real, but a fresh checkout of the repository will not
 have them -- either substitute ``L18PLT``/``L22PLT``, or your own two-line
@@ -113,20 +113,22 @@ to flatter it.
    >>> qc30 = build_qc_table(sites30, include_skew=True, recursive=False, api=True).to_pandas()
    >>> qc26[["station", "snr_med", "skew_med"]].head(3).round(2)
       station  snr_med  skew_med
-   0  26-001A    13.00     45.06
-   1  26-002A    15.59     48.13
-   2  26-003U    19.88     55.05
+   0  26-001A    13.00     15.85
+   1  26-002A    15.59     12.63
+   2  26-003U    19.88      9.40
    >>> round(qc26["skew_med"].min(), 2), round(qc26["skew_med"].max(), 2)
-   (26.46, 63.99)
+   (4.3, 61.36)
    >>> round(qc30["skew_med"].min(), 2), round(qc30["skew_med"].max(), 2)
-   (21.02, 65.89)
+   (4.5, 61.38)
 
-A median phase-tensor :term:`skew` between roughly 21 and 66 degrees, on
-every single station, is well above the few-degree range a clean 2-D line
-would show. On its own this does not say *why* the line is disturbed --
-that is what the next several sections screen for -- but it means every
-station needs the same level of scrutiny; there is no "good half" of either
-line to fall back on.
+Per-station median phase-tensor :term:`skew` spans a wide 4-61 degree range
+on both lines, not a uniformly high one. That spread is itself informative:
+a handful of stations sit in the single digits, well inside a clean 2-D
+range, while others exceed 60 degrees -- squarely 3-D or distortion-affected
+territory. On its own this does not say *why* any one station is disturbed
+-- that is what the next several sections screen for -- but it means the
+line cannot be treated as uniformly good or uniformly bad; the per-station
+and per-period detail matters more than a single summary number here.
 
 .. code-block:: pycon
 
@@ -315,17 +317,20 @@ threshold.
    >>> model26 = learn_dim_dictionary(notched26, n_atoms=6, lam=0.05, n_iter=40, code_iter=50, recursive=False)
    >>> enc26 = encode_dimensionality(notched26, model26, recursive=False, api=True).to_pandas()
    >>> enc26["dim_pred"].value_counts().to_dict()
-   {2: 850, 1: 475}
+   {2: 930, 1: 395}
    >>> model30 = learn_dim_dictionary(notched30, n_atoms=6, lam=0.05, n_iter=40, code_iter=50, recursive=False)
    >>> enc30 = encode_dimensionality(notched30, model30, recursive=False, api=True).to_pandas()
    >>> enc30["dim_pred"].value_counts().to_dict()
-   {2: 930, 1: 395}
+   {2: 971, 1: 354}
 
-Label ``1`` (moderate skew, low ellipticity) makes up roughly a third of
-each line and label ``2`` (the higher-skew/higher-ellipticity atom) the
+Label ``1`` (moderate skew, low ellipticity) makes up roughly a
+quarter to a third of each line (30 percent of ``L26PLT``, 27 percent of
+``L30PLT``) and label ``2`` (the higher-skew/higher-ellipticity atom) the
 rest; no row on either line lands in the cleanest label ``0``. That is
-consistent with the skew range already seen -- this is a 3-D-flavoured or
-noisy line almost everywhere, not one with a clean 1-D/2-D core.
+consistent with the wide but real skew range already seen -- most rows
+still carry enough skew or ellipticity to read as 3-D-flavoured or noisy,
+but a genuine minority sit in the calmer label ``1`` rather than every row
+looking equally disturbed.
 
 .. code-block:: python
    :linenos:
@@ -644,17 +649,22 @@ changed the skew and dimensionality picture, rather than assuming it.
    >>> from pycsamt.emtools import build_phase_tensor_table
    >>> pt26 = build_phase_tensor_table(corr26, recursive=False)
    >>> len(pt26), round(pt26["beta"].abs().median(), 2), round(pt26["beta"].abs().quantile(0.9), 2)
-   (1246, 44.36, 83.49)
+   (1246, 13.03, 44.82)
    >>> pt30 = build_phase_tensor_table(corr30, recursive=False)
    >>> len(pt30), round(pt30["beta"].abs().median(), 2), round(pt30["beta"].abs().quantile(0.9), 2)
-   (1168, 52.05, 83.41)
+   (1168, 14.72, 53.23)
 
 The correction chain removes powerline spikes, galvanic distortion, static
 shift, incoherent noise, and weak rows -- it does not, and should not,
 manufacture a low-skew line out of genuinely 3-D or noisy data. A median
-skew still above 40 degrees after correction means the line is honestly
-this complicated; the corrections make the remaining structure
-trustworthy, they do not flatten it away.
+skew around 13-15 degrees after correction is a real improvement over the
+uncorrected, per-station picture in the Baseline Quality Check above (which
+ranged as high as 61 degrees): most of the corrected data now sits close to
+the classical few-degree "clean 2-D" range. The 90th percentile still
+reaching 45-53 degrees is the honest remainder -- correction removes
+identifiable distortion and noise, it does not manufacture 2-D structure
+where the earth is genuinely 3-D, and roughly a tenth of the corrected data
+still reads that way.
 
 .. code-block:: python
    :linenos:
@@ -674,10 +684,15 @@ trustworthy, they do not flatten it away.
    :alt: Skew and dimensionality grid for both corrected lines
    :width: 100%
 
-   Both lines show elevated skew across almost the entire period range
-   rather than at isolated bands, which is the pattern expected near
-   industrial infrastructure and around a genuinely 3-D porphyry alteration
-   system, not the signature of a single leftover processing artefact.
+   Dimensionality now shows real period-dependent structure rather than a
+   uniform wash: both lines carry a genuine mix of 1-D (dark) and 2-D
+   (teal) labels at short period, concentrated roughly between
+   :math:`\log_{10}(T)=-4` and :math:`-2.3`, before the classification
+   settles into predominantly 3-D (yellow) at longer periods on most
+   stations. Shallower structure reading closer to 1-D/2-D and deeper
+   structure reading more 3-D is exactly the pattern expected approaching a
+   genuinely 3-D porphyry alteration system at depth, rather than a
+   uniform artefact of one leftover processing issue at every period.
 
 Estimate Strike
 ---------------
@@ -921,14 +936,29 @@ combine both lines into a single 3-D survey with
    model, coarse cells further out to satisfy the boundary conditions
    cheaply.
 
-There is no ModEM tutorial page elsewhere in this documentation yet, so this
-is also the first worked ModEM preparation example: ``data.dat``,
-``m0.ws``, ``covariance.cov``, and ``control.inv`` are now in
-``runs/willy_modem_3d``, ready for an external ``Mod3DMT`` run (typically
-launched with MPI, for example ``mpirun -np N Mod3DMT -F data.dat m0.ws
-covariance.cov control.inv``, which is well outside this tutorial's scope
-given realistic 3-D ModEM runtimes). Reload a completed run's model with
-:class:`pycsamt.models.modem.plot.PlotModel3D` once results exist.
+``data.dat``, ``m0.ws``, ``covariance.cov``, and ``control.inv`` are now in
+``runs/willy_modem_3d``. As with the Occam2D lines above, this tutorial stops
+at file preparation; the actual solve runs outside Python, against a locally
+compiled ``Mod3DMT``. :class:`pycsamt.models.modem.ModEmRunner` builds that
+command from the same ``cfg3d`` used above, so the launch stays tied to the
+configuration that generated the files rather than retyped by hand:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.models.modem import ModEmRunner
+   >>> runner = ModEmRunner("runs/willy_modem_3d", config=cfg3d)
+   >>> command = runner.command(
+   ...     "m0.ws", "data.dat", "control.inv", covariance="covariance.cov",
+   ... )
+   >>> print(command)
+   Mod3DMT -I NLCG m0.ws data.dat control.inv covariance.cov
+
+Set ``cfg3d.use_mpi = True`` and ``cfg3d.n_procs`` beforehand to get an
+``mpirun -np N ...`` form instead. Run that command externally, then reload
+the finished run with :class:`pycsamt.models.modem.InversionResult` and plot
+it with :class:`pycsamt.models.modem.PlotModel3D`. :doc:`../user_guide/models/modem`
+covers the full ModEM workflow -- configuration, native files, the runner, and
+diagnostics -- against a bundled, already-converged sample run.
 
 2-D And 3-D AI Inversion
 ------------------------
@@ -1344,6 +1374,10 @@ See Also
 :doc:`prepare_occam2d_inversion`
     The Occam2D preparation pattern reused above, in full single-line
     depth.
+
+:doc:`run_classical_inversions`
+    How to locate or build the Occam2D/ModEM binaries, launch the runs
+    prepared above, and load the results.
 
 :doc:`essential_3d_ai_inversion`
     The topography-draped AI 3-D construction reused in the closing

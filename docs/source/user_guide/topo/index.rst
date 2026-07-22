@@ -16,7 +16,8 @@ ModEM results, or AI inversion results directly.
 Use this section when a section plot -- pseudosection or inversion
 depth section -- needs to reflect the real ground surface instead of a
 flat datum, or when you need fine control over how terrain is
-extracted, draped, and rendered.
+extracted, draped, and rendered. For the complete callable reference,
+see :doc:`../../api/topo`.
 
 .. toctree::
    :maxdepth: 3
@@ -27,4 +28,3 @@ extracted, draped, and rendered.
    drape
    overlay
    section
-   api

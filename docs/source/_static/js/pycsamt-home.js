@@ -6,6 +6,7 @@
  *  4. Rotating survey-method keyword in the hero subtitle.
  *  5. Hero background carousel (slides + dots, auto-advance).
  *  6. Typewriter animation on the code-in-action tabs.
+ *  7. Click-to-copy on the "pip install pycsamt" workflow-strip pill.
  * All motion respects prefers-reduced-motion.
  */
 
@@ -297,6 +298,40 @@
         },
         true
       );
+    }
+
+    /* ---- 7. install-pill click-to-copy ---------------------------------- */
+    var installBtn = home.querySelector(".pyc-flow-install");
+    if (installBtn) {
+      installBtn.addEventListener("click", function () {
+        var text = installBtn.getAttribute("data-copy") || "";
+        var flash = function () {
+          installBtn.classList.add("is-copied");
+          window.clearTimeout(installBtn._pycCopyTimer);
+          installBtn._pycCopyTimer = window.setTimeout(function () {
+            installBtn.classList.remove("is-copied");
+          }, 1600);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(flash, flash);
+        } else {
+          // Fallback for non-secure contexts / older browsers.
+          var tmp = document.createElement("textarea");
+          tmp.value = text;
+          tmp.style.position = "fixed";
+          tmp.style.opacity = "0";
+          document.body.appendChild(tmp);
+          tmp.focus();
+          tmp.select();
+          try {
+            document.execCommand("copy");
+          } catch (err) {
+            /* clipboard unavailable; the command is still selected/visible */
+          }
+          document.body.removeChild(tmp);
+          flash();
+        }
+      });
     }
   });
 })();

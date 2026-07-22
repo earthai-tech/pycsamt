@@ -99,6 +99,22 @@ CSAMT / MT methodology and source effects
 
 ----
 
+Tensor decomposition and dimensionality
+-------------------------------------------
+
+.. [Caldwell2004] Caldwell, T.G., Bibby, H.M., Brown, C. (2004). ‡
+   The magnetotelluric phase tensor.
+   *Geophysical Journal International*, 158(2), 457–469.
+   https://doi.org/10.1111/j.1365-246X.2004.02281.x
+
+.. [GroomBailey1989] Groom, R.W., Bailey, R.C. (1989). ‡
+   Decomposition of magnetotelluric impedance tensors in the presence of
+   local three-dimensional galvanic distortion.
+   *Journal of Geophysical Research: Solid Earth*, 94(B2), 1913–1925.
+   https://doi.org/10.1029/JB094iB02p01913
+
+----
+
 Deep learning and AI-assisted inversion
 -----------------------------------------
 

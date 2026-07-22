@@ -444,7 +444,10 @@ For CSAMT, dimensionality should also consider transmitter geometry and
 source effects. The far-field MT approximation is not automatically valid in
 controlled-source surveys -- see :doc:`csamt_amt_mt_overview`'s
 :func:`~pycsamt.iot.edge_csamt.classify_field_zones` for a quantitative way
-to check this before choosing a dimensionality.
+to check this before choosing a dimensionality. :doc:`dimensionality` covers
+the phase-tensor skew/ellipticity classifier behind the 1-D/2-D/3-D counts
+in more depth, plus the Groom-Bailey distortion correction that can be
+applied before committing to a dimensionality.
 
 Meshes, Cells, and Padding
 --------------------------

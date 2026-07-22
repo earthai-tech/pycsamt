@@ -562,6 +562,9 @@ different idea from :term:`Quasi-3-D` forward modelling, which approximates
 a full 3-D response from 2-D slices for synthetic experiments -- one
 describes what the recorded data actually look like, the other is a
 computational shortcut for generating synthetic data in the first place.
+:doc:`dimensionality` derives the phase tensor's orientation and skew angles
+and works through a real 28-station example where the rule-based classifier
+labels the majority of station-periods 3-D.
 
 Source Type And Data Interpretation
 -----------------------------------

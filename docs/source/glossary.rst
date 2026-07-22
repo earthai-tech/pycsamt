@@ -349,6 +349,13 @@ definitions here are the single source of truth.
       :term:`static shift`. Its ellipse and skew angle summarise dimensionality
       and strike without distortion.
 
+   Ellipticity
+      The normalised difference between the phase tensor's two singular
+      values, :math:`\lambda = (\phi_{\max}-\phi_{\min})/(\phi_{\max}+
+      \phi_{\min})`. Zero for a perfectly circular (1-D) phase tensor;
+      growing values indicate 2-D or 3-D phase anisotropy. Used together
+      with :term:`Skew` to classify :term:`Dimensionality`.
+
    Static shift
       A frequency-independent vertical shift of the :term:`apparent resistivity`
       curve caused by galvanic charges on small near-surface heterogeneities.
@@ -422,7 +429,7 @@ definitions here are the single source of truth.
 
    Skew
       The phase-tensor asymmetry angle
-      :math:`\beta=\tfrac{1}{4}\arctan\!\big[(\Phi_{12}-\Phi_{21})/
+      :math:`\beta=\tfrac{1}{2}\arctan\!\big[(\Phi_{12}-\Phi_{21})/
       (\Phi_{11}+\Phi_{22})\big]`, derived from the :term:`Phase tensor`.
       Values near zero support a 1-D/2-D regional structure; large
       :math:`|\beta|` flags 3-D structure, noise, or unresolved

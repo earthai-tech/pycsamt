@@ -196,7 +196,7 @@ def simulated_edi(tmp_path_factory):
         " REFLAT=48:30:0.0",
         " REFLONG=7:45:0.0",
         " REFELEV=200.0",
-        ">MTSECT",
+        ">=MTSECT",
         " SECTID=SIM001",
         f" NFREQ={nfreq}",
         " HX=1001.001",

@@ -16,6 +16,7 @@ User Guide
 
    prerequisites
    data_loading
+   transformers
    map/index
    topo/index
    inversion/index

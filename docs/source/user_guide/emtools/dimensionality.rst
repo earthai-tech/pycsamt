@@ -128,11 +128,8 @@ Start with the raw feature table before interpreting any labels.
    :linenos:
 
    from pathlib import Path
-
    from pycsamt.emtools.dimensionality import phase_features_table
-
    edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-
    features = phase_features_table(
        edi_dir,
        recursive=True,
@@ -140,7 +137,6 @@ Start with the raw feature table before interpreting any labels.
        strict=False,
        verbose=0,
    )
-
    cols = [
        "station",
        "freq",
@@ -161,7 +157,6 @@ Start with the raw feature table before interpreting any labels.
    2  18-001A   7289.0  0.000137  ...    1.948138  59.889966      NaN
    3  18-001A   6102.0  0.000164  ...    2.061820  58.836496      NaN
    4  18-001A   5108.0  0.000196  ...    2.182395  51.323119      NaN
-
    [5 rows x 8 columns]
 
 Line 7 loads the EDI directory through the shared ``ensure_sites``
@@ -223,22 +218,18 @@ table.
    :linenos:
 
    import pandas as pd
-
    from pycsamt.emtools.dimensionality import classify_dimensionality
-
    dim = classify_dimensionality(
        "data/AMT/WILLY_DATA/L18PLT",
        skew_th=3.0,
        ellipt_th=0.2,
    )
-
    counts = (
        dim.groupby("station")["dim"]
        .value_counts(normalize=True)
        .rename("fraction")
        .reset_index()
    )
-
    label = {0: "1D", 1: "2D", 2: "3D"}
    counts["label"] = counts["dim"].map(label)
    print(counts.head(12))
@@ -323,16 +314,12 @@ dimensionality fractions change.
 
    import numpy as np
    import pandas as pd
-
    from pycsamt.emtools.dimensionality import phase_features_table
-
    features = phase_features_table("data/AMT/WILLY_DATA/L18PLT")
-
    beta = features["beta_abs"].to_numpy()
    ellipt = features["ellipt_abs"].to_numpy()
    skew_thresholds = np.array([1, 2, 3, 5, 8, 12, 18, 25, 35, 50])
    ellipt_th = 0.2
-
    rows = []
    for skew_th in skew_thresholds:
        low_skew = beta <= skew_th
@@ -347,7 +334,6 @@ dimensionality fractions change.
                "frac_3d": frac_3d,
            }
        )
-
    sensitivity = pd.DataFrame(rows)
    print(sensitivity)
 
@@ -490,7 +476,6 @@ strike stability, rotation status, and Groom-Bailey status.
    :linenos:
 
    from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
-
    assessment = pre2d_inversion_assessment(
        "data/AMT/WILLY_DATA/L18PLT",
        band=(0.001, 1.0),
@@ -502,7 +487,6 @@ strike stability, rotation status, and Groom-Bailey status.
        groom_bailey_applied=False,
        groom_bailey_reason="Not attempted in this screening run.",
    )
-
    print(
        assessment[
            [
@@ -526,7 +510,6 @@ strike stability, rotation status, and Groom-Bailey status.
    2  18-003A      0.0  ...                  65.0  review_3d_effects_before_2d
    3  18-004A      0.0  ...                  89.5  review_3d_effects_before_2d
    4  18-005U      0.0  ...                  72.1  review_3d_effects_before_2d
-
    [5 rows x 8 columns]
 
 Important columns include:
@@ -672,7 +655,6 @@ pattern explains it most strongly, not by a vote across all of them.
        encode_dimensionality,
        learn_dim_dictionary,
    )
-
    model = learn_dim_dictionary(
        "data/AMT/WILLY_DATA/L18PLT",
        n_atoms=6,
@@ -680,14 +662,12 @@ pattern explains it most strongly, not by a vote across all of them.
        n_iter=40,
        code_iter=50,
    )
-
    encoded = encode_dimensionality(
        "data/AMT/WILLY_DATA/L18PLT",
        model,
        lam=0.05,
        code_iter=50,
    )
-
    print(encoded.filter(regex="station|period|dim_pred|^a").head())
 
 .. code-block:: text
@@ -722,18 +702,15 @@ replacement for the rule.
    :linenos:
 
    import pandas as pd
-
    from pycsamt.emtools.dimensionality import (
        classify_dimensionality,
        encode_dimensionality,
        learn_dim_dictionary,
    )
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
    rule = classify_dimensionality(survey)
    model = learn_dim_dictionary(survey, n_atoms=6)
    encoded = encode_dimensionality(survey, model)
-
    compare = rule[["station", "period", "dim"]].merge(
        encoded[["station", "period", "dim_pred"]],
        on=["station", "period"],

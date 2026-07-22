@@ -138,12 +138,9 @@ conductive ground.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import BETA_THRESH_PCT, overprint_beta
-
    freq = np.logspace(-1, 3, 60)
    rho = 300.0
-
    for offset in (500.0, 2000.0, 8000.0):
        beta_pct = overprint_beta(rho=rho, freq=freq, offset=offset)
        contaminated = freq[beta_pct > BETA_THRESH_PCT]
@@ -189,15 +186,12 @@ frequency and ``beta_pct`` is vanishingly small.
    :linenos:
 
    from pycsamt.emtools import detect_source_overprint, ensure_sites
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    detail = detect_source_overprint(
        sites,
        source_offset=2000.0,
        beta_threshold=3.0,
    )
-
    print(detail.head())
    print(detail["beta_pct"].describe())
    print(detail["overprint_flag"].value_counts())
@@ -210,7 +204,6 @@ frequency and ``beta_pct`` is vanishingly small.
    2  18-001A   7289.0  0.000137  ...  50.931906  5.904384e-13           False
    3  18-001A   6102.0  0.000164  ...  40.883790  5.793214e-10           False
    4  18-001A   5108.0  0.000196  ...  32.557630  1.670487e-07           False
-
    [5 rows x 8 columns]
    count    1.484000e+03
    mean     2.321404e+01
@@ -267,16 +260,13 @@ subsurface target under the receiver.
    :linenos:
 
    from pycsamt.emtools import ensure_sites, source_overprint_table
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    summary = source_overprint_table(
        sites,
        source_offset=2000.0,
        beta_threshold=3.0,
        f_split=50.0,
    )
-
    cols = [
        "station",
        "beta_max_pct",
@@ -298,7 +288,6 @@ subsurface target under the receiver.
    14  18-015U     49.902471      29.096502  ... -0.443341     1.169621            True
    0   18-001A     49.994860      26.105160  ... -0.319272     0.165193            True
    19  18-020A     49.997356      27.507910  ...  0.334994    -1.132669            True
-
    [5 rows x 9 columns]
 
 ``f_split`` separates low- and high-frequency bands for slope analysis.
@@ -368,9 +357,7 @@ It also classifies each row using the :term:`skin depth` relation
    :linenos:
 
    from pycsamt.emtools import ensure_sites, normalize_response
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    norm = normalize_response(
        sites,
        rho_ref=300.0,
@@ -378,7 +365,6 @@ It also classifies each row using the :term:`skin depth` relation
        comp="det",
        phi_ref_deg=45.0,
    )
-
    print(norm.head())
    print(norm["zone"].value_counts(dropna=False))
    print(norm[["station", "freq_hz", "rho_n", "phi_diff_deg", "zone", "kr"]].head())
@@ -391,7 +377,6 @@ It also classifies each row using the :term:`skin depth` relation
    2  18-001A   7289.0  0.000137  ...   -106.709024   far  36.035211
    3  18-001A   6102.0  0.000164  ...   -107.090701   far  28.925994
    4  18-001A   5108.0  0.000196  ...   -112.671464   far  23.035091
-
    [5 rows x 11 columns]
    zone
    far           603
@@ -502,20 +487,16 @@ response tables:
        ensure_sites,
        normalize_response,
    )
-
    raw = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    corrected = correct_near_field(raw, source_offset=2000.0, inplace=False)
-
    before = normalize_response(raw, rho_ref=300.0, source_offset=2000.0)
    after = normalize_response(corrected, rho_ref=300.0, source_offset=2000.0)
-
    joined = before.merge(
        after,
        on=["station", "freq_hz"],
        suffixes=("_raw", "_corrected"),
    )
    joined["rho_n_ratio"] = joined["rho_n_corrected"] / joined["rho_n_raw"]
-
    print(
        joined[
            ["station", "freq_hz", "zone_raw", "rho_n_raw", "rho_n_corrected", "rho_n_ratio"]
@@ -549,18 +530,14 @@ source geometry is controlling part of the response.
        ensure_sites,
        normalize_response,
    )
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    beta = detect_source_overprint(sites, source_offset=2000.0)
    zones = normalize_response(sites, rho_ref=300.0, source_offset=2000.0)
-
    merged = beta.merge(
        zones[["station", "freq_hz", "zone", "kr"]],
        on=["station", "freq_hz"],
        how="left",
    )
-
    print(merged.groupby("zone")["overprint_flag"].mean())
    print(merged.groupby("zone")["beta_pct"].describe())
 
@@ -576,7 +553,6 @@ source geometry is controlling part of the response.
    far         603.0   0.763099   1.397676  ...   0.003908   0.796716   5.785135
    near        413.0  49.569662   0.497681  ...  49.797164  49.934040  49.998036
    transition  468.0  28.882940  14.214307  ...  30.364481  43.199542  47.934809
-
    [3 rows x 8 columns]
 
 If ``near`` and ``transition`` rows are usually overprint-flagged while
@@ -627,11 +603,9 @@ Use this sequence before applying a correction:
        normalize_response,
        source_overprint_table,
    )
-
    detail = detect_source_overprint(sites, source_offset=2000.0)
    summary = source_overprint_table(sites, source_offset=2000.0, f_split=50.0)
    norm = normalize_response(sites, rho_ref=300.0, source_offset=2000.0)
-
    print(detail["overprint_flag"].mean())
    print(summary.sort_values("overprint_frac", ascending=False).head())
    print(norm["zone"].value_counts(dropna=False))
@@ -645,7 +619,6 @@ Use this sequence before applying a correction:
    14  18-015U      53    2000.0  ... -0.443341     1.169621            True
    0   18-001A      53    2000.0  ... -0.319272     0.165193            True
    19  18-020A      53    2000.0  ...  0.334994    -1.132669            True
-
    [5 rows x 11 columns]
    zone
    far           603

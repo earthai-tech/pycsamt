@@ -7,7 +7,6 @@
   <a href="https://github.com/earthai-tech/pycsamt/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/earthai-tech/pycsamt?label=release&color=blueviolet"/></a>
   <a href="https://app.netlify.com/projects/pycsamt/deploys"><img alt="Netlify Status" src="https://api.netlify.com/api/v1/badges/cf36d8dd-6a69-4e69-84e4-539acd0b33e8/deploy-status"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml?query=branch%3Av2"><img alt="CI" src="https://github.com/earthai-tech/pycsamt/actions/workflows/ci.yml/badge.svg?branch=v2"/></a>
-  <a href="https://github.com/earthai-tech/pycsamt/actions/workflows/python-publish.yml?query=branch%3Amaster"><img alt="Publish" src="https://github.com/earthai-tech/pycsamt/actions/workflows/python-publish.yml/badge.svg?branch=master"/></a>
   <a href="https://codecov.io/github/earthai-tech/pycsamt?branch=v2"><img alt="Coverage" src="https://codecov.io/github/earthai-tech/pycsamt/graph/badge.svg?branch=v2"/></a>
   <a href="https://opensource.org/licenses/LGPL-3.0"><img alt="License" src="https://img.shields.io/badge/license-LGPL--3.0-blue"/></a>
   <img alt="Semver" src="https://img.shields.io/badge/semver-2.0.0-informational"/>
@@ -15,6 +14,7 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white"/>
   <img alt="Backends" src="https://img.shields.io/badge/backend-PyTorch%20%7C%20TensorFlow-EE4C2C?logo=pytorch&logoColor=white"/>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey"/>
+  <a href="https://github.com/astral-sh/ruff"><img alt="Code style: ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"/></a>
   <br/>
   <a href="https://pypi.org/project/pycsamt/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pycsamt?label=downloads&color=brightgreen"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/commits/v2"><img alt="Last commit" src="https://img.shields.io/github/last-commit/earthai-tech/pycsamt/v2"/></a>

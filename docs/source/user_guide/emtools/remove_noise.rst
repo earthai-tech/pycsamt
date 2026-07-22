@@ -111,13 +111,10 @@ cannot make a data-driven decision from error bars.
 
    from pycsamt.emtools import ensure_sites
    from pycsamt.emtools.remove_noise import snr_table
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    snr = snr_table(sites)
-
    print(snr.head())
    print(snr["snr"].describe())
-
    weak_rows = snr.loc[snr["snr"] < 3.0, ["station", "freq", "snr"]]
    weak_by_station = (
        weak_rows.groupby("station", as_index=False)
@@ -986,9 +983,7 @@ workflow because the correction strength is tied to the QC evidence.
    :linenos:
 
    from pycsamt.emtools import confidence_gated_emap_filter, ensure_sites
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    result = confidence_gated_emap_filter(
        sites,
        method="flma",
@@ -997,11 +992,9 @@ workflow because the correction strength is tied to the QC evidence.
        ci_lo=0.50,
        component="xy",
    )
-
    print(result.summary())
    print(result.report.head())
    print(result.decisions.head())
-
    gated_sites = result.sites
 
 .. code-block:: text
@@ -1013,7 +1006,6 @@ workflow because the correction strength is tied to the QC evidence.
    2  18-003A      53  ...           0.666613                  0.046988
    3  18-004A      53  ...           0.735994                  0.004156
    4  18-005U      53  ...           0.728841                 -0.025544
-
    [5 rows x 8 columns]
       station  frequency_hz  period_s  ...  blend_weight   action  delta_log10_abs_z
    0  18-001A       10400.0  0.000096  ...      0.109609  blended          -0.002075
@@ -1021,7 +1013,6 @@ workflow because the correction strength is tied to the QC evidence.
    2  18-001A        7289.0  0.000137  ...      0.142135  blended          -0.001559
    3  18-001A        6102.0  0.000164  ...      0.236784  blended          -0.006566
    4  18-001A        5108.0  0.000196  ...      0.437715  blended          -0.007875
-
    [5 rows x 8 columns]
 
 The return value is an ``EMAPFilterResult``. It keeps the processed
@@ -1034,14 +1025,11 @@ for logging.
    :linenos:
 
    from pycsamt.emtools import confidence_gated_emap_filter, ensure_sites
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    result = confidence_gated_emap_filter(sites, method="flma")
-
    print(result.n_preserved)
    print(result.n_blended)
    print(result.n_filtered)
-
    most_filtered = (
        result.report.sort_values(
            ["n_filtered", "median_confidence"],

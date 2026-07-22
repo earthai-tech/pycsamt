@@ -155,19 +155,15 @@ inverts the Bostick formula:
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools.csumt import (
        F_MAX_CSUMT,
        F_MIN_CSUMT,
        frequency_for_depth,
    )
-
    rho_estimate = 300.0
    targets_m = np.array([5.0, 10.0, 20.0, 35.0, 50.0, 75.0])
-
    freq_hz = frequency_for_depth(targets_m, rho_estimate)
    in_band = (freq_hz >= F_MIN_CSUMT) & (freq_hz <= F_MAX_CSUMT)
-
    for depth, freq, keep in zip(targets_m, freq_hz, in_band):
        status = "inside CSUMT band" if keep else "outside CSUMT band"
        print(f"{depth:5.1f} m -> {freq:9.1f} Hz  {status}")
@@ -195,12 +191,9 @@ optionally add intermediate frequencies.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools.csumt import frequency_schedule
-
    rho_estimate = 300.0
    targets_m = np.array([10.0, 20.0, 35.0, 50.0, 65.0])
-
    schedule_hz = frequency_schedule(targets_m, rho_estimate)
    padded_hz = frequency_schedule(
        targets_m,
@@ -213,7 +206,6 @@ optionally add intermediate frequencies.
        min_resolution_m=5.0,
        as_khz=True,
    )
-
    print("requested targets:", len(targets_m))
    print("kept frequencies:", len(schedule_hz))
    print("padded frequencies:", len(padded_hz))
@@ -281,14 +273,12 @@ where ``f_lo`` is the lower frequency and therefore the deeper point.
    :linenos:
 
    from pycsamt.emtools.csumt import vertical_resolution_pair
-
    rho_estimate = 300.0
    adjacent_pairs = [
        (9600.0, 19200.0),
        (19200.0, 38400.0),
        (38400.0, 76800.0),
    ]
-
    for f_lo, f_hi in adjacent_pairs:
        delta_m = vertical_resolution_pair(rho_estimate, f_lo, f_hi)
        print(f"{f_lo:8.0f}-{f_hi:8.0f} Hz: {delta_m:6.2f} m")
@@ -359,7 +349,6 @@ Use ``bostick_depth`` when you want the raw station-frequency transform.
    :linenos:
 
    from pycsamt.emtools.csumt import bostick_depth
-
    depth = bostick_depth(
        "data/AMT/WILLY_DATA/L18PLT",
        recursive=True,
@@ -367,7 +356,6 @@ Use ``bostick_depth`` when you want the raw station-frequency transform.
        strict=False,
        verbose=0,
    )
-
    print(depth.head())
    depth.to_csv("l18plt_bostick_depth.csv", index=False)
 
@@ -429,37 +417,29 @@ Measured Vertical Resolution
 Use ``vertical_resolution`` to compute the depth gap between adjacent
 frequencies at each station.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.csumt import vertical_resolution
-
-   measured = vertical_resolution("data/AMT/WILLY_DATA/L18PLT")
-   fixed_rho = vertical_resolution(
-       "data/AMT/WILLY_DATA/L18PLT",
-       rho_override=300.0,
-   )
-
-   print(measured.head())
-   print(fixed_rho.head())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.csumt import vertical_resolution
+   >>> measured = vertical_resolution("data/AMT/WILLY_DATA/L18PLT")
+   >>> fixed_rho = vertical_resolution(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     rho_override=300.0,
+   ... )
+   >>> print(measured.head())
       station  freq_lo_hz  freq_hi_hz  ...    depth_hi_m  delta_depth_m   rho_a_ohmm
    0  18-001A       1.008       1.204  ...  15344.900917   -1741.179129  1814.534975
    1  18-001A       1.204       1.438  ...  11898.474477    3446.426441  1895.605946
    2  18-001A       1.438       1.718  ...  11376.860958     521.613519  1678.822421
    3  18-001A       1.718       2.052  ...  20671.989002   -9295.128044  3484.215253
    4  18-001A       2.052       2.451  ...  13906.815678    6765.173324  5087.100314
-
    [5 rows x 7 columns]
+   >>> print(fixed_rho.head())
       station  freq_lo_hz  freq_hi_hz  ...   depth_hi_m  delta_depth_m  rho_a_ohmm
    0  18-001A       1.008       1.204  ...  5619.496200     522.087278       300.0
    1  18-001A       1.204       1.438  ...  5141.989463     477.506737       300.0
    2  18-001A       1.438       1.718  ...  4704.343719     437.645744       300.0
    3  18-001A       1.718       2.052  ...  4304.492417     399.851302       300.0
    4  18-001A       2.052       2.451  ...  3938.573638     365.918779       300.0
-
    [5 rows x 7 columns]
 
 The measured output columns are:
@@ -485,11 +465,8 @@ Use ``depth_coverage_table`` when you want one row per station.
    :linenos:
 
    from pycsamt.emtools.csumt import depth_coverage_table
-
    coverage = depth_coverage_table("data/AMT/WILLY_DATA/L18PLT")
-
    ranked = coverage.sort_values("depth_max_m", ascending=False)
-
    print(
        ranked[
            [
@@ -517,7 +494,6 @@ Use ``depth_coverage_table`` when you want one row per station.
    6   18-007U      53  ...  19380.271567            50.198288
    7   18-008U      53  ...  19024.796081            50.476517
    16  18-017U      53  ...  17389.552044            48.953237
-
    [10 rows x 7 columns]
 
 The output columns are:

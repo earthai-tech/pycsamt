@@ -278,14 +278,12 @@ usually better than accepting the first number silently:
        half_window=3,
        max_skew=6.0,
    )
-
    survey_factors = estimate_ss_ama(
        sites,
        sort_by="lat",
        half_window=3,
        max_skew=45.0,
    )
-
    print("strict stations:", len(strict_factors))
    print("survey stations:", len(survey_factors))
    print("median samples:", survey_factors["n_used"].median())
@@ -317,7 +315,6 @@ so the correction factor is greater than one.
            lambda value: "lower Z" if value > 0 else "raise Z"
        )
    )
-
    print(
        view[
            ["station", "delta_log10_rho", "fac_z", "n_used", "direction"]

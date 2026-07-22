@@ -161,16 +161,13 @@ unwrapped angle population.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import estimate_strike_sweep
-
    sweep = estimate_strike_sweep(
        sites,
        angles=np.arange(-90.0, 91.0, 1.0),
        metric="diag_ratio",
        band=(0.001, 10.0),
    )
-
    print(sweep[["station", "ang", "iqr", "n"]])
 
 .. code-block:: text
@@ -234,13 +231,11 @@ median over the chosen period band.
    :linenos:
 
    from pycsamt.emtools import estimate_strike_phase_tensor
-
    pt = estimate_strike_phase_tensor(
        sites,
        band=(0.001, 10.0),
        robust=True,
    )
-
    print(pt[["station", "ang", "iqr", "n"]])
 
 .. code-block:: text
@@ -302,7 +297,6 @@ direct weighted average.
    :linenos:
 
    from pycsamt.emtools import estimate_strike_consensus
-
    consensus = estimate_strike_consensus(
        sites,
        band=(0.001, 10.0),
@@ -310,7 +304,6 @@ direct weighted average.
        w_pt=0.6,
        metric="diag_ratio",
    )
-
    print(consensus[["station", "ang", "iqr", "n"]])
 
 .. code-block:: text
@@ -374,13 +367,10 @@ For two angles :math:`\theta_1` and :math:`\theta_2`, use
        on="station",
        suffixes=("_sweep", "_pt"),
    )
-
    axial_diff = (
        (merged["ang_sweep"] - merged["ang_pt"] + 90.0) % 180.0
    ) - 90.0
-
    merged["abs_axial_diff"] = axial_diff.abs()
-
    print(
        merged[
            ["station", "ang_sweep", "ang_pt", "abs_axial_diff"]
@@ -439,23 +429,19 @@ behavior from deeper, long-period behavior.
        sites,
        band=(0.001, 0.1),
    )
-
    long_period = estimate_strike_consensus(
        sites,
        band=(0.1, 10.0),
    )
-
    band_compare = short_period[["station", "ang", "iqr"]].merge(
        long_period[["station", "ang", "iqr"]],
        on="station",
        suffixes=("_short", "_long"),
    )
-
    band_compare["band_axial_diff"] = (
        (band_compare["ang_short"] - band_compare["ang_long"] + 90.0)
        % 180.0
    ) - 90.0
-
    print(band_compare)
 
 .. code-block:: text
@@ -521,7 +507,6 @@ coordinate rotation; it does not remove 3-D induction or bad data.
    :linenos:
 
    from pycsamt.emtools import rotate_to_strike
-
    rotated = rotate_to_strike(
        sites,
        method="consensus",
@@ -529,7 +514,6 @@ coordinate rotation; it does not remove 3-D induction or bad data.
        metric="diag_ratio",
        inplace=False,
    )
-
    before = estimate_strike_consensus(
        sites,
        band=(0.001, 10.0),
@@ -538,7 +522,6 @@ coordinate rotation; it does not remove 3-D induction or bad data.
        rotated,
        band=(0.001, 10.0),
    )
-
    print("before mean abs strike:", before["ang"].abs().mean())
    print("after mean abs strike:", after["ang"].abs().mean())
 
@@ -566,14 +549,12 @@ stations whose strike flips with period.
    :linenos:
 
    from pycsamt.emtools import strike_curve_sweep
-
    curve = strike_curve_sweep(
        sites,
        angles=np.arange(-90.0, 91.0, 1.0),
        metric="diag_ratio",
        smooth=5,
    )
-
    print(curve.head())
    print(curve.groupby("station")["ang"].agg(["median", "std", "count"]))
 

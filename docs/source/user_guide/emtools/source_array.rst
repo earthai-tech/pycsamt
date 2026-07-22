@@ -110,18 +110,13 @@ wrong scale for CSAMT array geometry.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import wavenumber
-
    freq = 8.0      # Hz
    rho = 300.0     # ohm.m
-
    k_earth = wavenumber(freq, rho=rho)
    k_free = wavenumber(freq)
-
    wavelength_earth = 2.0 * np.pi / k_earth
    wavelength_free = 2.0 * np.pi / k_free
-
    print(f"earth wavelength: {wavelength_earth:,.0f} m")
    print(f"free-space wavelength: {wavelength_free:,.0f} m")
 
@@ -133,14 +128,10 @@ wrong scale for CSAMT array geometry.
 Use the earth wavelength to judge whether the chosen element spacing is
 small, moderate, or large in wavelengths:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   d = 2000.0
-   print(f"d / earth wavelength = {d / wavelength_earth:.3f}")
-
-.. code-block:: text
-
+   >>> d = 2000.0
+   >>> print(f"d / earth wavelength = {d / wavelength_earth:.3f}")
    d / earth wavelength = 0.103
 
 A physical spacing that is small at low frequency can become larger than
@@ -339,28 +330,23 @@ the requested beam has any of these additional solutions.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import (
        array_factor,
        beam_steer,
        steering_angles,
        wavenumber,
    )
-
    freq = 1024.0
    rho = 300.0
    d = 2000.0
    N = 4
    target_angle = 20.0
-
    k = wavenumber(freq, rho=rho)
    beta = beam_steer(target_angle, d=d, k=k)
-
    theta_b = np.linspace(-90.0, 90.0, 1801)
    af = array_factor(theta_b, N=N, d=d, k=k, beta=beta)
    peak_angle = theta_b[np.argmax(af)]
    all_lobes = steering_angles(N=N, d=d, k=k, beta=beta, n_range=3)
-
    print(f"beta = {beta:.4f} rad")
    print(f"peak angle = {peak_angle:.2f} deg")
    print(f"all steering-angle solutions = {all_lobes}")
@@ -448,11 +434,9 @@ in :math:`4\pi` steradians.
    :linenos:
 
    from pycsamt.emtools import sdas_directivity, wavenumber
-
    freq = 1024.0
    rho = 300.0
    k = wavenumber(freq, rho=rho)
-
    for length in (500.0, 1000.0, 2000.0, 5000.0):
        directivity = sdas_directivity(length, k=k, n_theta=2000)
        print(f"length={length:7.0f} m  directivity={directivity:.3f}")
@@ -481,7 +465,6 @@ SNR Gain
    :linenos:
 
    from pycsamt.emtools import snr_gain_db
-
    for n_elem in (1, 2, 4, 8, 16):
        print(f"N={n_elem:2d}: {snr_gain_db(n_elem):5.2f} dB")
 

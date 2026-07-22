@@ -350,7 +350,6 @@ a station-level report, and a row-level decision table in one object.
    :linenos:
 
    from pycsamt.emtools.frequency import edit_frequencies_by_confidence
-
    result = edit_frequencies_by_confidence(
        "data/AMT/WILLY_DATA/L18PLT",
        mode="recover",
@@ -360,7 +359,6 @@ a station-level report, and a row-level decision table in one object.
        interpolation="linear",
        api=False,
    )
-
    print(result.summary())
    print(result.report.head())
    print(result.decisions.head())
@@ -374,7 +372,6 @@ a station-level report, and a row-level decision table in one object.
    2  18-003A             53  ...                     3          0.061644
    3  18-004A             53  ...                     3         -0.026442
    4  18-005U             53  ...                     1          0.026781
-
    [5 rows x 18 columns]
       station  frequency_hz  period_s  ...  present_after  finite_after action
    0  18-001A       10400.0  0.000096  ...           True          True   kept
@@ -382,7 +379,6 @@ a station-level report, and a row-level decision table in one object.
    2  18-001A        7289.0  0.000137  ...           True          True   kept
    3  18-001A        6102.0  0.000164  ...           True          True   kept
    4  18-001A        5108.0  0.000196  ...           True          True   kept
-
    [5 rows x 10 columns]
 
 ``result`` is a ``FrequencyEditResult`` with:
@@ -477,7 +473,6 @@ station-frequency sample.
        edit_frequencies_by_confidence,
        frequency_edit_decision_table,
    )
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
    result = edit_frequencies_by_confidence(
        survey,
@@ -487,14 +482,12 @@ station-frequency sample.
        reject="drop",
        api=False,
    )
-
    decisions = frequency_edit_decision_table(
        survey,
        result.sites,
        ci_hi=0.72,
        ci_lo=0.50,
    )
-
    print(decisions["action"].value_counts())
 
 .. code-block:: text

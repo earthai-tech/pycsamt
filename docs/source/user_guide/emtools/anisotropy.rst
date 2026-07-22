@@ -196,11 +196,8 @@ diagnostics. It returns one row for each station and frequency.
    :linenos:
 
    from pathlib import Path
-
    from pycsamt.emtools.anisotropy import analyze_anisotropy
-
    edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-
    detail = analyze_anisotropy(
        edi_dir,
        ratio_threshold=0.1,
@@ -210,7 +207,6 @@ diagnostics. It returns one row for each station and frequency.
        strict=False,
        verbose=0,
    )
-
    cols = [
        "station",
        "freq_hz",
@@ -221,7 +217,6 @@ diagnostics. It returns one row for each station and frequency.
        "swift_skew",
        "strike_deg",
    ]
-
    print(detail[cols].head())
    detail.to_csv("l18plt_anisotropy_detail.csv", index=False)
 
@@ -233,7 +228,6 @@ diagnostics. It returns one row for each station and frequency.
    2  18-001A   7289.0  0.000137  ...    -0.145718    3.846208  -75.453650
    3  18-001A   6102.0  0.000164  ...    -0.247039    2.369018  -67.350131
    4  18-001A   5108.0  0.000196  ...    -0.397532    1.729795  -60.108794
-
    [5 rows x 8 columns]
 
 The important output columns are:
@@ -314,13 +308,11 @@ Use ``anisotropy_table`` when you want one row per station. It calls
    :linenos:
 
    from pycsamt.emtools.anisotropy import anisotropy_table
-
    table = anisotropy_table(
        "data/AMT/WILLY_DATA/L18PLT",
        ratio_threshold=0.1,
        skew_threshold=0.2,
    )
-
    ranked = (
        table.assign(abs_mean_ratio=table["mean_ratio_log10"].abs())
        .sort_values(
@@ -328,7 +320,6 @@ Use ``anisotropy_table`` when you want one row per station. It calls
            ascending=[False, False, False],
        )
    )
-
    print(
        ranked[
            [
@@ -356,7 +347,6 @@ Use ``anisotropy_table`` when you want one row per station. It calls
    8   18-009A      53  ...          24.360106             True
    26  18-024U      53  ...         -29.242651             True
    27  18-025A      53  ...         -20.822334             True
-
    [10 rows x 7 columns]
 
 The summary columns are:

@@ -16,6 +16,15 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+# Some tests import both torch and scipy in the same process (e.g.
+# pycsamt.app.web.callbacks.inversion pulls in torch at module scope, then
+# a "Traditional" inversion test calls scipy.optimize.least_squares for
+# real). On Windows/conda that combination can abort the whole interpreter
+# ("OMP: Error #15: Initializing libiomp5md.dll, but found ... already
+# initialized") -- duplicate OpenMP runtime registration, not a bug in
+# either library. Must be set before either one is imported.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 _exit_status = 0
 _qt_active = False
 

@@ -130,14 +130,10 @@ are present.
    :linenos:
 
    import pandas as pd
-
    from pycsamt.emtools import ensure_sites, sites_summary
-
    survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
    summary = sites_summary(survey, api=False)
    print(summary.head())
-
    overview = {
        "n_sites": len(summary),
        "has_any_tipper": bool(summary["has_tipper"].any()),
@@ -177,7 +173,6 @@ printing reports or comparing several lines.
    :linenos:
 
    from pycsamt.emtools import sites_summary
-
    compact = sites_summary(
        "data/AMT/WILLY_DATA/L18PLT",
        fields=(
@@ -189,7 +184,6 @@ printing reports or comparing several lines.
        ),
        api=False,
    )
-
    print(compact.to_string(index=False))
 
 .. code-block:: text
@@ -239,14 +233,11 @@ sections. The most common checks are ``"mt"`` for impedance and
    :linenos:
 
    from pycsamt.emtools import ensure_sites, list_missing_sections
-
    survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
    missing = list_missing_sections(
        survey,
        require=("mt", "tipper"),
    )
-
    for station, sections in missing.items():
        print(f"{station}: missing {', '.join(sections)}")
 
@@ -295,7 +286,6 @@ difference explicit before writing code that assumes tipper exists.
    :linenos:
 
    from pycsamt.emtools import list_missing_sections
-
    amt_missing = list_missing_sections(
        "data/AMT/WILLY_DATA/L18PLT",
        require=("tipper",),
@@ -304,7 +294,6 @@ difference explicit before writing code that assumes tipper exists.
        "data/MT/kap03lmt_edis",
        require=("tipper",),
    )
-
    print(f"L18PLT stations missing tipper: {len(amt_missing)}")
    print(f"KAP03 stations missing tipper: {len(mt_missing)}")
 
@@ -342,19 +331,14 @@ station-by-station comparisons are treated as common-period statistics.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import ensure_sites, frequency_coverage
-
    survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-
    per_site = frequency_coverage(survey, mode="per-site")
    union = frequency_coverage(survey, mode="union")
    intersection = frequency_coverage(survey, mode="intersection")
-
    print(f"stations: {len(per_site)}")
    print(f"union frequency count: {union.size}")
    print(f"common frequency count: {intersection.size}")
-
    for station, freq in per_site.items():
        missing_from_union = np.setdiff1d(union, freq)
        if missing_from_union.size:

@@ -170,7 +170,6 @@ the same weighted formula used by the tables.
    :linenos:
 
    from pycsamt.emtools.qc import confidence_ratio
-
    scores = {
        "coverage": 1.00,
        "uncertainty": 0.82,
@@ -179,13 +178,11 @@ the same weighted formula used by the tables.
        "phase": 0.90,
        "spatial": 0.88,
    }
-
    cr, cr_err = confidence_ratio(
        scores,
        n_freq=53,
        return_error=True,
    )
-
    print(f"CR={cr:.3f} +/- {cr_err:.3f}")
 
 .. code-block:: text
@@ -225,15 +222,12 @@ skew.
    :linenos:
 
    from pycsamt.emtools import build_qc_table, ensure_sites
-
    survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
    qc = build_qc_table(
        survey,
        include_skew=True,
        api=False,
    )
-
    print(
        qc[
            [
@@ -258,7 +252,6 @@ skew.
    2  18-003A      53    53      1.0  ...  12.031672  0.000096  0.992063  31.245824
    3  18-004A      53    53      1.0  ...  10.430580  0.000096  0.992063  31.005169
    4  18-005U      53    53      1.0  ...  14.360341  0.000096  0.992063  36.404849
-
    [5 rows x 9 columns]
 
 Read ``frac_ok`` as completeness, not as full confidence. Read
@@ -275,14 +268,12 @@ Station Flags
    :linenos:
 
    from pycsamt.emtools import qc_flags
-
    flags = qc_flags(
        "data/AMT/WILLY_DATA/L18PLT",
        min_frac_ok=0.60,
        min_snr_med=2.0,
        max_skew_med=6.0,
    )
-
    flagged = flags[flags["flags"] != ""]
    print(flagged[["station", "frac_ok", "snr_med", "skew_med", "flags"]])
 
@@ -333,7 +324,6 @@ scores.
    :linenos:
 
    from pycsamt.emtools import station_confidence_table
-
    presence = station_confidence_table(
        "data/AMT/WILLY_DATA/L18PLT",
        method="presence",
@@ -344,13 +334,10 @@ scores.
        method="composite",
        api=False,
    )
-
    print("presence range")
    print(presence["confidence"].min(), presence["confidence"].max())
-
    print("composite range")
    print(composite["confidence"].min(), composite["confidence"].max())
-
    ranked = composite.sort_values("confidence")
    print(ranked[["station", "confidence", "coverage", "uncertainty",
                  "offdiag", "diagonal", "phase", "spatial"]].head())
@@ -367,7 +354,6 @@ scores.
    17  18-018A    0.578410       1.0  ...  0.086979  0.957546  0.000000
    16  18-017U    0.595479       1.0  ...  0.261699  0.969783  0.038160
    18  18-019U    0.615292       1.0  ...  0.000000  0.959348  0.541804
-
    [5 rows x 8 columns]
 
 If presence confidence is high everywhere but composite confidence
@@ -386,7 +372,6 @@ spatial coherence.
    :linenos:
 
    from pycsamt.emtools import station_confidence_table
-
    weights = {
        "coverage": 0.40,
        "uncertainty": 0.30,
@@ -395,7 +380,6 @@ spatial coherence.
        "phase": 0.05,
        "spatial": 0.10,
    }
-
    table = station_confidence_table(
        "data/AMT/WILLY_DATA/L18PLT",
        method="composite",
@@ -407,7 +391,6 @@ spatial coherence.
        spatial_tolerance_log10=0.60,
        api=False,
    )
-
    print(table.sort_values("confidence").head())
 
 .. code-block:: text
@@ -418,7 +401,6 @@ spatial coherence.
    17  18-018A      3400.0    0.666682  ...  0.201107  0.957546  0.000000
    16  18-017U      3200.0    0.672222  ...  0.353986  0.969783  0.038160
    14  18-015U      2800.0    0.708737  ...  0.514479  0.965328  0.575751
-
    [5 rows x 13 columns]
 
 Changing thresholds changes the meaning of the scores. Record custom
@@ -440,7 +422,6 @@ down-weighting.
    :linenos:
 
    from pycsamt.emtools import frequency_confidence_table
-
    freq_qc = frequency_confidence_table(
        "data/AMT/WILLY_DATA/L18PLT",
        method="composite",
@@ -448,11 +429,9 @@ down-weighting.
        ci_lo=0.85,
        api=False,
    )
-
    print(freq_qc.columns.tolist())
    print(freq_qc[["station", "frequency_hz", "period_s",
                   "confidence", "flags"]].head())
-
    rejected = freq_qc[freq_qc["flags"].str.contains("reject", na=False)]
    print("rejected cells:", len(rejected))
 
@@ -465,7 +444,6 @@ down-weighting.
    2  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
    3  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
    4  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
-
    [5 rows x 5 columns]
    rejected cells: 1479
 
@@ -483,18 +461,15 @@ the confidence table.
    :linenos:
 
    from pycsamt.emtools import frequency_confidence_table
-
    table = frequency_confidence_table(
        "data/AMT/WILLY_DATA/L18PLT",
        method="composite",
        ci_lo=0.85,
        api=False,
    )
-
    keep = table["confidence"] >= 0.85
    review = (table["confidence"] >= 0.70) & (table["confidence"] < 0.85)
    drop = table["confidence"] < 0.70
-
    print("keep:", int(keep.sum()))
    print("review:", int(review.sum()))
    print("drop:", int(drop.sum()))

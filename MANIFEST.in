@@ -8,8 +8,13 @@ include LICENSE.md
 include pyproject.toml
 include MANIFEST.in
 
-# Documentation source
-graft docs/source
+# Documentation is intentionally NOT shipped in the sdist. `graft docs/source`
+# used to pull the whole tree in -- multi-MB walkthrough GIFs, hundreds of
+# screenshots, and the generated sphinx-gallery output (docs/source/examples/**,
+# .rst files with base64-embedded images at ~10 MB each). That inflated the
+# sdist past PyPI's 100 MB per-file limit, so only the wheel could upload. Docs
+# live in the repo and on the docs site; the sdist only needs to build/install
+# the package.
 
 # Package data (mirrors [tool.setuptools.package-data] in pyproject.toml)
 include pycsamt/log/p.configlog.yml
@@ -22,12 +27,28 @@ recursive-include pycsamt/app/web/assets *
 recursive-include pycsamt/app/mapview/assets *
 recursive-include pycsamt/data/inversionFiles *
 
+# Exclude test suites entirely (code + fixtures) -- not needed to install or
+# run the package. The packages.find `exclude` in pyproject.toml drops the
+# test packages (so their modules never enter wheel or sdist); these
+# name-based rules also strip any stray test files/fixtures at any depth. CI
+# runs the tests from the repo checkout, not the installed package.
+global-exclude conftest.py
+global-exclude test_*.py
+global-exclude *_test.py
+
 # Exclude build artefacts and caches
 global-exclude *.py[cod]
 global-exclude __pycache__/*
 global-exclude *.so *.dylib
 global-exclude .coverage .coverage.*
 global-exclude .DS_Store
+
+# Exclude docs, local scratch/output dirs, and dev workspaces
+prune docs
+prune paper
+prune .tmp
+prune pycsamt_report
+prune pycsamt_workflow_output
 
 # Exclude legacy v1 artefacts
 prune pycsamt/*_v1*

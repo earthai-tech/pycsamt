@@ -63,6 +63,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from ..api.property import PyCSAMTObject
+from ..compat.numpy import trapz as _trapz
 from ._base import TEMSounding
 
 __all__ = [
@@ -1290,7 +1291,7 @@ def _cosine_transform_1d(
     result = np.empty(len(omega_arr))
     for i, w in enumerate(omega_arr):
         integrand = g_fine * np.cos(w * t_fine) * t_fine  # ×t : d(log t)→dt
-        result[i] = np.trapezoid(integrand, log_t)
+        result[i] = _trapz(integrand, log_t)
     return result
 
 
@@ -1342,7 +1343,7 @@ def _kramers_kronig_re(
             right = j + 1 if j < n - 1 else j - 1
             integrand[j] = 0.5 * (integrand[left] + integrand[right])
 
-        re_k[i] = (2.0 / np.pi) * np.trapezoid(integrand, log_omega)
+        re_k[i] = (2.0 / np.pi) * _trapz(integrand, log_omega)
 
     return re_k
 

@@ -27,6 +27,15 @@ recursive-include pycsamt/app/web/assets *
 recursive-include pycsamt/app/mapview/assets *
 recursive-include pycsamt/data/inversionFiles *
 
+# Exclude test suites entirely (code + fixtures) -- not needed to install or
+# run the package. The packages.find `exclude` in pyproject.toml drops the
+# test packages (so their modules never enter wheel or sdist); these
+# name-based rules also strip any stray test files/fixtures at any depth. CI
+# runs the tests from the repo checkout, not the installed package.
+global-exclude conftest.py
+global-exclude test_*.py
+global-exclude *_test.py
+
 # Exclude build artefacts and caches
 global-exclude *.py[cod]
 global-exclude __pycache__/*

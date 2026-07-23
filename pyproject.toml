@@ -196,6 +196,10 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where   = ["."]
 include = ["pycsamt*"]
+# Test suites are not needed to install or run the package -- drop them from
+# the built distributions (they still live in the repo, which is what CI runs
+# against). Keeps the wheel/sdist light.
+exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
 
 [tool.setuptools.package-data]
 "pycsamt" = [
